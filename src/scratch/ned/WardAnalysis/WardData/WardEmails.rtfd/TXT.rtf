@@ -1,0 +1,311 @@
+{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf100
+{\fonttbl\f0\fswiss\fcharset77 Helvetica-Bold;\f1\fswiss\fcharset77 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue221;\red0\green99\blue18;\red84\green0\blue0;
+}
+\margl1440\margr1440\vieww20180\viewh10920\viewkind0
+\deftab160
+\pard\tqr\tx1120\tx1140\pardeftab160\li1140\fi-1140\ql\qnatural
+
+\f0\b\fs24 \cf0 From: 
+\f1\b0 	  ward@pmc.ucsc.edu\
+\pard\tqr\tx1120\tx1220\pardeftab100\li1220\fi-1220\sa20\ql\qnatural
+
+\f0\b \cf0 Subject: 
+\f1\b0 	
+\f0\b Re: simulation data   1 of 2\
+Date: 
+\f1\b0 	August 25, 2005 9:13:16 AM PDT\
+\pard\tqr\tx1120\tx1140\pardeftab160\li1140\fi-1140\ql\qnatural
+
+\f0\b \cf0 To: 
+\f1\b0 	  field@caltech.edu\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\ql\qnatural\pardirnatural
+\cf0 Hi Ned,\
+\
+OK, let me see if I can get you this information. You still want it?  I don't want to give you more than you need.\
+\
+It will come in two pieces as straight ascii files\
+\
+First file fort.11  will be the fault map.  It consists of 101 fault "segments" with 1500 fault "elements".  It looks like this\
+\
+  101                   !this one uses char_mag   10/8/04\
+   30.0 20.0  6.00  0.0 12.0   1 1 A7    SAF-Creeping\
+   30.0 20.0  6.60 34.0 12.0   2 1 A8    SAF-Parkfield\
+   30.0 20.0  7.60 34.0 12.0   3 1 A9    SAF-Cholame\
+   30.0 20.0  7.80 34.0 12.0   4 1 A10   SAF-Carrizo\
+   30.0 20.0  7.20 30.0 12.0   5 1 A11   SAF-Mojave\
+   30.0 20.0  7.75 24.0 18.0   6 1 A12   SAF-San Bernar\
+   30.0 20.0  7.70 18.0 12.0   7 1 A13   SAF-Coachella\
+   30.0 20.0  6.30  5.0 12.0   8 1 A14   Brawley\
+   30.0 20.0  7.05 20.0 12.0   9 1 A15N  Imperial-N\
+   30.0 20.0  6.75 20.0 12.0  10 1 A15C  Imperial-C\
+   30.0 20.0  6.55 20.0 12.0  11 1 A15S  Imperial-S\
+   30.0 20.0  6.80 15.0 15.0  12 1 SJ8   San Bernardino\
+   30.0 20.0  6.90 15.0 18.0  13 1 SJ9   San Jacinto\
+   30.0 20.0  7.80 15.0 18.0  14 1 SJ10  Anza\
+   30.0 20.0  5.90  5.0 15.0  15 1 SJ11  Coyote Cr\
+   30.0 20.0  5.95  4.0 12.0  16 1 SJ12  Borrego\
+   30.0 20.0  6.80  5.0 12.0  17 1 SJ13  Superstion Mt.\
+   30.0 20.0  6.80  4.0 12.0  18 1 SJ14  Superstion Hll\
+   30.0 20.0  7.30  2.5 15.0  19 1 EL15  Whittier\
+   30.0 20.0  6.20  5.0 15.0  20 1 EL16  Glen Ivy\
+   30.0 20.0  7.10  5.0 15.0  21 1 EL17  Temecula\
+   30.0 20.0  7.80  3.0 15.0  22 1 EL18  Julian\
+   30.0 20.0  7.00  3.0 15.0  23 1 EL19  Coyote Mt.\
+   30.0 20.0  7.20  2.0 15.0  24 1 EL21  Earthqk Valley\
+   30.0 20.0  6.90  1.5 22.0  25 2 LA02  B Northridge\
+   30.0 20.0  7.60  3.0 18.0  26 2 LA04  Sierra Mad-cn\
+   30.0 20.0  7.00  2.0 18.0  27 2 LA05  Sierra Mad-SFd\
+   30.0 20.0  7.30  5.0 18.0  28 2 LA08  Cucamonga\
+   30.0 20.0  7.60  3.0 13.0  29 1 LA12  Palos Verdes\
+   30.0 20.0  7.80  3.0 13.0  30 1 SD03  Pals V-Corbank\
+   30.0 20.0  6.80  1.5 15.0  31 2 LA15  B Elpark\
+   30.0 20.0  6.90  1.5 15.0  32 2 LA14  B Compton\
+   30.0 20.0  7.40  2.0 23.0  33 2 SB02  N Chan Slope\
+   30.0 20.0  6.90  2.0  3.0  34-1 SB03  Snta Ynez-W\
+   30.0 20.0  7.10  2.0 13.0  35-1 SB05  Snta Ynez-E\
+   30.0 20.0  6.90  2.0 15.0  36 2 SB06  Red Mtn\
+   30.0 20.0  7.30  6.0 15.0  37 2 SB09  San Cayetano\
+   30.0 20.0  7.10  4.0 14.0  38 2 SB10  Oakridge-onsho\
+   30.0 20.0  6.90  5.0 16.0  39 2 SB12  Santa Susana\
+   30.0 20.0  7.20  2.0 21.0  40 2 BB01  White Wolf\
+   30.0 20.0  7.20  2.0 38.0  41 2 BB02  Pleito\
+   30.0 20.0  7.60  3.0 28.0  42 2 CI03  Anacapa-Dume\
+   30.0 20.0  7.10  3.0 20.0  43 2 CI05  Oakr-off\
+   30.0 20.0  7.20  1.2 13.0  44 1 SD01  Nwprt Ing-off\
+   30.0 20.0  7.50  1.5 13.0  45 1 SD02  Rose Cny-off\
+   30.0 20.0  7.70  7.0 12.0  46-1 SE02  Garlock E\
+   30.0 20.0  7.50  6.0 12.0  47-1 SE01  Garlock W\
+   30.0 20.0  7.60  2.5 13.0  48-1 SE12  Pinto Mtn\
+   30.0 20.0  6.90  3.0 13.0  49-1 SE13  Cleghorn\
+   30.0 20.0  7.50  2.5 12.0  50 1 CC01  Hosgri\
+   30.0 20.0  6.60  2.0 12.0  51-1 SN23  Owl Lk\
+   30.0 20.0  7.50  4.0 13.0  52 1 SN22  Death Vlly-S\
+   30.0 20.0  7.50  4.0 15.0  53-2 SN21  Death Vlly-Grb\
+   30.0 20.0  7.40  2.5 13.0  54 1 SN17  Hunter Mtn\
+   30.0 20.0  7.60  2.5 13.0  55 1 SN19  Panamint\
+   30.0 20.0  7.80  1.5 13.0  56 1 SN16  Owens Vlly\
+   30.0 20.0  7.70  5.0 13.0  57 1 SN15  Death Vlly-N\
+   30.0 20.0  7.70  3.5 15.0  58 1 EL20  Laguna Salada\
+   30.0 20.0  6.20  1.0 12.0  59-1 SJ15  Elmore Ranch\
+   30.0 20.0  6.80  1.0 13.0  60 2 LA01  Santa Monica\
+   30.0 20.0  7.10  1.0 13.0  61 1 LA03  San Gabriel\
+   30.0 20.0  6.80  0.5 18.0  62 2 LA06  Verdugo\
+   30.0 20.0  6.50  0.5 18.0  63 2 LA07  Clamshell\
+   30.0 20.0  7.00  1.0 14.0  64 2 LA09  Hollywood\
+   30.0 20.0  6.80  0.5 13.0  65 2 LA10  Raymond\
+   30.0 20.0  6.50  0.5 13.0  66 2 LA11  San Jose\
+   30.0 20.0  7.60  1.0 13.0  67 1 LA13  Newport Ing\
+   30.0 20.0  6.80  1.0 17.0  68 1 LA16  Chino Central\
+   30.0 20.0  6.80  0.7 20.0  69 2 SB01  Los Alamos\
+   30.0 20.0  7.10  0.4 15.0  70 2 SB04  Arroyo-MRidge\
+   30.0 20.0  7.00  1.0 13.0  71 2 SB07  Ventura\
+   30.0 20.0  6.90  1.0 11.0  72 2 SB08  Mont Oakridge\
+   30.0 20.0  6.90  1.0 15.0  73 2 SB11  Simi\
+   30.0 20.0  6.20  0.4 14.0  74 2 SB13  Holser\
+   30.0 20.0  6.70  0.8 13.0  75-1 BB03  Bigpine\
+   30.0 20.0  7.40  1.0 13.0  76-1 CI01  Santa Rosa Isl\
+   30.0 20.0  7.40  1.0 13.0  77-1 CI02  Santa Cruz Isl\
+   30.0 20.0  6.70  0.3 13.0  78 2 CI06  Malibu Coast\
+   30.0 20.0  7.40  0.6 13.0  79 1 SE03  Blackwater\
+   30.0 20.0  7.10  0.6 13.0  80 1 SE04  Harper Lk\
+   30.0 20.0  7.60  0.6 13.0  81 1 SE05  Helendale\
+   30.0 20.0  7.70  0.6 13.0  82 1 SE06  Lockhart\
+   30.0 20.0  7.50  0.6 13.0  83 1 SE07  Hidalgo-Wc\
+   30.0 20.0  7.50  0.6 13.0  84 1 SE08  Bullion-Mesq\
+   30.0 20.0  7.40  0.6 13.0  85 1 SE09  Johnson Vly-N\
+   30.0 20.0  7.50  0.6 13.0  86 1 SE10  Landers\
+   30.0 20.0  7.40  0.6 13.0  87 1 SE11  Emerson-CopMt\
+   30.0 20.0  7.20  1.0 18.0  88 2 SE14  N Frontal-W\
+   30.0 20.0  7.10  0.5 18.0  89 2 SE15  N Frontal-E\
+   30.0 20.0  6.40  0.6 13.0  90 1 SE16  Burnt Mtn\
+   30.0 20.0  6.40  0.6 13.0  91 1 SE17  Eureka Peak\
+   30.0 20.0  6.50  0.2 10.0  92 2 CC03  Casmalia\
+   30.0 20.0  6.60  0.5 14.0  93 2 CC05  Los Osos\
+   30.0 20.0  7.20  1.0 13.0  94 1 CC06  San Juan\
+   30.0 20.0  6.40  1.0 15.0  95-2 SN20  Tank Cyn\
+   30.0 20.0  6.90  0.7 15.0  96 1 SN18  Little Lake\
+   30.0 20.0  6.20  0.7 15.0  97-2 SN10  Birch Ck\
+   30.0 20.0  7.30 20.0 12.0  98 1 MX01  Cerro Prieto-N\
+   30.0 20.0  7.30 15.0 12.0  99 1 MX01  Cerro Prieto-S\
+   30.0 20.0  7.10  5.0 12.0 100 1 MX02  Cerro Prieto-W\
+   30.0 20.0  6.20  0.2 12.0 101 1 MX03  San Miguel\
+    1    1    1 255.992111-255.213745   3.559974 140.827469  A7    SAF-Creeping     36.270 -120.846\
+    2    1    1 253.231537-252.965927   3.559980 140.861008  A7    SAF-Creeping     36.245 -120.820\
+    3    1    1 250.469894-250.719391   3.559999 140.881516  A7    SAF-Creeping     36.221 -120.795\
+    4    1    1 247.707718-248.473526   3.559990 140.889038  A7    SAF-Creeping     36.197 -120.769\
+    5    1    1 244.945496-246.227722   3.559987 140.883545  A7    SAF-Creeping     36.173 -120.743\
+    6    1    1 242.183762-243.981323   3.559983 140.865051  A7    SAF-Creeping     36.148 -120.717\
+    7    1    1 239.422974-241.733749   3.559991 140.833557  A7    SAF-Creeping     36.124 -120.691\
+    8    1    1 236.663712-239.484329   3.559974 140.789047  A7    SAF-Creeping     36.100 -120.665\
+    9    1    1 233.906433-237.232468   3.559981 140.731537  A7    SAF-Creeping     36.076 -120.639\
+   10    1    1 231.151718-234.977524   3.559947 140.661026  A7    SAF-Creeping     36.051 -120.614\
+   11    1    1 228.399994-232.718918   3.559956 140.577515  A7    SAF-Creeping     36.027 -120.588\
+   12    1    1 225.651871-230.455963   3.559936 140.480972  A7    SAF-Creeping     36.003 -120.562\
+   13    1    2 222.907471-228.188492   3.559938 140.399048  A8    SAF-Parkfield    35.979 -120.536\
+.\
+.\
+.\
+ 1493   79  100-241.241379 310.880493   3.560073 142.464615  MX02  Cerro Prieto-W   31.786 -114.711\
+ 1494   80  101-253.071838 196.873184   3.559479 133.666855  MX03  San Miguel       31.706 -115.919\
+ 1495   80  101-255.529526 199.448013   3.559490 133.666855  MX03  San Miguel       31.684 -115.893\
+ 1496   80  101-257.987274 202.022858   3.559544 133.666870  MX03  San Miguel       31.661 -115.866\
+ 1497   80  101-260.444946 204.597641   3.559447 133.666870  MX03  San Miguel       31.639 -115.839\
+ 1498   80  101-262.902649 207.172470   3.559501 133.666870  MX03  San Miguel       31.616 -115.813\
+ 1499   80  101-265.360352 209.747314   3.559512 133.666855  MX03  San Miguel       31.594 -115.786\
+ 1500   80  101-267.818054 212.322098   3.559468 133.666855  MX03  San Miguel       31.571 -115.759\
+\
+The first 101 entries gives the segment info eg.\
+\
+   30.0 20.0  7.60 34.0 12.0   3 1 A9    SAF-Cholame\
+\
+ NA,  NA,  NA, slip rate (mm/y), down dip width (km), segment number, NA, segment code, segment name\
+\
+[NA means not applicable to your needs)\
+\
+The next 1500 entries gives the fault element info eg\
+\
+   13    1    2 222.907471-228.188492   3.559938 140.399048  A8    SAF-Parkfield    35.979 -120.536\
+\
+element number,   fault number,  segment number, NA, NA, length along strike (km),  azimuth, segment code, segment name, lat, long\
+\
+Once you read these in you should know all you need about the fault map itself.\
+\
+The ruptures will be given in terms of element numbers like   323-398   that is, that event broke from element 323 to element 398.\
+You should be able then to look up the endpoint positions and fault area.\
+\
+Ruptures sequence to come  next.....\
+\
+These events all have variable slip along strike - do you need this info too?\
+\
+Steve\
+\
+\
+\
+\
+\
+\pard\tqr\tx1120\tx1140\pardeftab160\li1140\fi-1140\ql\qnatural
+
+\f0\b \cf0 From: 
+\f1\b0 	  ward@pmc.ucsc.edu\
+\pard\tqr\tx1120\tx1220\pardeftab100\li1220\fi-1220\sa20\ql\qnatural
+
+\f0\b \cf0 Subject: 
+\f1\b0 	
+\f0\b Re: simulation data  2 of 2\
+Date: 
+\f1\b0 	August 25, 2005 9:48:28 AM PDT\
+\pard\tqr\tx1120\tx1140\pardeftab160\li1140\fi-1140\ql\qnatural
+
+\f0\b \cf0 To: 
+\f1\b0 	  field@caltech.edu\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\li200\ql\qnatural\pardirnatural
+\cf2 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\ql\qnatural\pardirnatural
+\cf0 \
+The second file FOR088.DAT contains 2006 years of earthquakes.\
+There were ~4200 in this run, many in the M4 range.\
+The figure shows the quakes as bars versus position and time\
+\
+ It data file looks like\
+\
+\
+   1  1  15  16  1.948582E+17  5.49309  2.00000  16\
+   2  2  167  167  2.140823E+16  4.85367  2.00000  167\
+   3  3  244  249  2.116388E+17  5.51701  2.00000  245\
+   4  4  668  683  1.098963E+19  6.66059  2.00000  672\
+   5  5  1462  1462  2.165220E+17  5.52361  2.00000  1462\
+   6  1  67  67  1.230259E+17  5.35994  5.00000  67\
+   7  2  70  70  2.568963E+17  5.57312  5.00000  70\
+   8  3  244  244  8.338806E+15  4.58069  5.00000  244\
+   9  4  697  709  9.979791E+18  6.63268  5.00000  703\
+   10  1  548  548  1.148586E+18  6.00672  7.00000  548\
+   11  2  550  554  4.490205E+18  6.40145  7.00000  550\
+   12  3  1066  1066  1.656300E+17  5.44604  7.00000  1066\
+   13  1  16  17  2.153929E+17  5.52210  8.00000  17\
+   14  2  177  178  1.324698E+16  4.71470  8.00000  177\
+   15  3  244  248  1.502061E+17  5.41774  8.00000  244\
+   16  1  18  18  9.370671E+16  5.28113  9.00000  18\
+   17  1  17  17  1.007559E+17  5.30213  10.0000  17\
+.\
+.\
+.\
+   4191  4  204  204  2.330977E+17  5.54497  2000.00  204\
+   4192  5  247  247  1.575556E+16  4.76491  2000.00  247\
+   4193  1  1478  1478  2.394802E+17  5.55279  2002.00  1478\
+   4194  2  1492  1493  2.827353E+17  5.60086  2002.00  1492\
+   4195  1  167  167  2.253231E+16  4.86849  2004.00  167\
+   4196  2  180  180  4.793287E+17  5.75370  2004.00  180\
+   4197  1  15  16  2.630722E+17  5.58000  2006.00  16\
+   4198  2  478  478  2.953759E+17  5.61353  2006.00  478\
+\
+The entries are\
+\
+quake number, NA, starting element number, ending element number, moment, magnitude, date, NA\
+\
+From the moment, length and down dip widths you can get mean slip.  As I say, I do have actual\
+slip values along strike for all events if you need this too.\
+\
+If you need anything else or have questions, please ask.\
+\
+Steve\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\li200\ql\qnatural\pardirnatural
+\cf0 {{\NeXTGraphic events.jpg \width15600 \height11750
+}¬}\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\li200\ql\qnatural\pardirnatural
+\cf2 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\ql\qnatural\pardirnatural
+\cf0 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\li200\ql\qnatural\pardirnatural
+\cf2 \
+\pard\tqr\tx1120\tx1140\pardeftab160\li1140\fi-1140\ql\qnatural
+
+\f0\b \cf0 From: 
+\f1\b0 	  ward@pmc.ucsc.edu\
+\pard\tqr\tx1120\tx1220\pardeftab100\li1220\fi-1220\sa20\ql\qnatural
+
+\f0\b \cf0 Subject: 
+\f1\b0 	
+\f0\b Re: simulation data  2 of 2\
+Date: 
+\f1\b0 	August 26, 2005 10:30:08 AM PDT\
+\pard\tqr\tx1120\tx1140\pardeftab160\li1140\fi-1140\ql\qnatural
+
+\f0\b \cf0 To: 
+\f1\b0 	  field@caltech.edu\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\ql\qnatural\pardirnatural
+\cf0 Ned,\
+\
+For your viewing delight, a movie of those quakes (years 200 - 1000) is here\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\ql\qnatural\pardirnatural
+{\field{\*\fldinst{HYPERLINK "http://es.ucsc.edu/~ward/sim.mov"}}{\fldrslt \cf0 http://es.ucsc.edu/~ward/sim.mov}}\
+\
+Steve\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\li400\ql\qnatural\pardirnatural
+\cf3 \
+\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\li600\ql\qnatural\pardirnatural
+\cf4 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\li400\ql\qnatural\pardirnatural
+\cf3 \
+\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\li200\ql\qnatural\pardirnatural
+\cf2 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\ql\qnatural\pardirnatural
+\cf0 \
+\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardeftab160\li200\ql\qnatural\pardirnatural
+\cf2 \
+\
+}

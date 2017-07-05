@@ -1,0 +1,42 @@
+This contains info on Rundle's VC data (from http://hirsute.cse.ucdavis.edu/~rundle/VC_FILES/FOR_NED/), and my analysis thereof.
+
+
+The *.pro files are for some analysis program he uses.
+
+VC_FAULTS_2001v6.d - is his input file specifying fault sections
+
+	Note:  All segments are vertically dipping rectangles.  
+	Coordinate system is x-axis east, y-axis north.  
+	Coordinates are in km with respect to origin at 
+	31 degrees N Lattitude, 121 degrees W Longitude
+	Col 1    Depth to bottom of segment (all of them are 15 km)	Col 2    Depth to top of segment (all of them are 0 km)	Col 3    x-coord of west end of segment	Col 4    y-coord of west end of segment	Col 5    x-coord of east end of segment	Col 6    y-coord of east end of segment	Col 7    long term rate of slip of segement in cm/yr.  
+		(+ sign = right lateral.  - sign = left lateral).	Col 8    a meaningless number
+
+	I made a version with a "txt" rather than "d" extension for ease of reading into apps.
+
+VC_Fault_Activity_SAF.d	
+
+	the original fault activity file.  In this file, the
+	physics of fault failure involves a dynamic stress triggering
+	mechanism (DynStr=.6) that operates only on the San Andreas fault.
+	Originates from files VC_2001v8_14q.d to VC_2001v8_17q.d
+
+VC_Fault_Activity_ALLF.d
+
+	which is a new file where the physics of fault failure involves 
+	the same dynamic stress triggering mechanism, but this time
+	it operates on all faults.  Originates from files VC_2001v8_13j.d
+	to VC_2001v8_16j.d  
+
+I created faultNames-Segments.txt from Table 1 in the paper.  This contains the fault name and index of the first and last segment.
+
+All other files (e.g., VC_faultNamesNumPts.txt & VC_faultTraces.txt) were made from my Java code or from the Igor analysis.
+
+The *Rand* files were cases where event times were randomized (which took a bit of hacking of the Java code because years went from ints to doubles).
+
+	Note: I think there may be a problem here because "VC_segRandNumYearSlip.txt" 
+	does not seem compatible with the other files.
+
+John told me that events at the beginning are safe to use.
+
+I'm still not sure how to interpret the creeping section (see his July 27th, 2005 email).

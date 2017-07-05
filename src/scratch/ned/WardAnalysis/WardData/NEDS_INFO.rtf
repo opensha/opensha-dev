@@ -1,0 +1,46 @@
+{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf110
+{\fonttbl\f0\fswiss\fcharset77 Helvetica;\f1\fnil\fcharset77 LucidaGrande;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww18120\viewh11900\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+
+\f0\fs24 \cf0 This directory contains info on the analysis of Steve Ward's simulation data.\
+\
+The files he provided are:\
+\
+	
+\f1 FOR088.DAT\
+	fort1.1
+\f0 \
+\
+These are described in the file\
+\
+	
+\f1 WardEmails.rtfd\
+\
+which I compiled from his emails.\
+\
+to make this analysis simple I copied the file:\
+\
+	RundleAnalysis/VC_Analysis.java\
+\
+to the parent directory here as WardAnalysis.java and edited it accordingly.\
+\
+Note that Ward has faults, segments, and elements.  The element correspond to the segments in the Rundle analysis (I changed names accordingly).\
+\
+Note also that a Magnitude threshold can be imposed when reading the event data from FOR088.DAT (e.g., don't want little events considered when considering date or amount of slip in last event).  A magnitude threshold can also be applied in IgorAnalysis when looking at the rurrence  statistics.  So far the following looks best (although this selective searching is probably biasing the results):\
+\
+	Mag 5.5 filter on reading FOR088.DAT and Mag 6.5 filer on the recurrence statistics.\
+\
+	This implies M\'b36.5 events can be model as renewal when considering M\'b35.5 last-event data (date of or amount of slip).\
+\
+Note also that until I use the file below, the slips  on each element used to determine next-event time are average slips in the last event (not actual slips).  This is one difference from Rundle's implementation.\
+\
+The file:\
+\
+	disp.out.txt \
+\
+has the displacement for each element info (I haven't done anything with it yet).\
+\
+\
+}

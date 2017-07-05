@@ -1,0 +1,43 @@
+REPOSITORY
+branches/goulet_s1:
+checked-out and modified on 2010-01-05. Changed UCERF2 and GUIs default for sensitivity tests 
+Change:
+sha.gui.beans.IMLorProbSelectorGuiBean.java
+-line 56 use 0.02
+sha.gui.beans.Site_GuiBean.java
+- lines 91 & 93, change default lat long
+sha.gui.controls.DisaggregationControlPanel
+- line 66, change to 0.02
+- line 82, change boolean to true of false to show or not fault disag
+- line 91, change boolean to true of false to show or not bin rate disag
+sha.gui.infoTools.AttenuationRelationshipsInstance
+- line 100 or so, make sure the default desired IMR is 10th in list
+- line 185 or so, comment the auto sort IMR: "Collections.sort(AttenRelObjects, new ImrComparator());"
+sha.gui.HazardCurveLocalModeApplication
+line 135 or so: put "erf_Classes.add(WGCEP_AVG_UCERF_2_CLASS_NAME);" as first line of block to make it default
+
+sha.earthquake.rupForecastImpl.WGCEP_UCERF2_Final.MeanUcerf2.MeanUcerf2.java
+- line 102 or so replace:
+		public final static String PROB_MODEL_WGCEP_PREF_BLEND = "WGCEP Preferred Blend";
+    	public final static String PROB_MODEL_DEFAULT = PROB_MODEL_WGCEP_PREF_BLEND;
+	with:
+		public final static String PROB_MODEL_WGCEP_PREF_BLEND = "WGCEP Preferred Blend";
+		//    public final static String PROB_MODEL_DEFAULT = PROB_MODEL_WGCEP_PREF_BLEND;
+		public final static String PROB_MODEL_POISSON = "Poisson";
+		public final static String PROB_MODEL_DEFAULT = PROB_MODEL_POISSON;
+		protected StringParameter probModelParam;
+- line 109 or so Change:
+	DURATION_DEFAULT = 50;
+	START_TIME_DEFAULT = 2009;
+	START_TIME_MIN = 2009;
+sha.earthquake.rupForecastImpl.WGCEP_UCERF2_Final.Ucerf2.java
+- line 103 or so, change BACK_SEIS_DEFAULT to BACK_SEIS_EXCLUDE
+
+
+WORKSPACE - see notes in Excel for details on versions
+OpenSHA_goulet_s1_20100105: clean version of branches/goulet_s1
+OpenSHA_goulet_s1_mod1: kept only Sierra [Madre (SF)] and [Santa Susana alt1], used different combinations 
+OpenSHA_goulet_s1_mod2: kept a single fault that is [Madre (SF) + Santa Susana alt1]
+OpenSHA_goulet_s1_mod: 
+
+blabla

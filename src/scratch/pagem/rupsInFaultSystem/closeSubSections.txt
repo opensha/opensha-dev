@@ -1,0 +1,877 @@
+
+San Andreas (Offshore), Subsection 1  connections:
+
+	San Andreas (Offshore), Subsection 2	0.55012894
+	San Andreas (North Coast), Subsection 35	0.5856667
+
+San Andreas (Offshore), Subsection 2  connections:
+
+	San Andreas (Offshore), Subsection 1	0.0
+	San Andreas (Offshore), Subsection 3	0.55012894
+
+San Andreas (Offshore), Subsection 3  connections:
+
+	San Andreas (Offshore), Subsection 2	0.0
+	San Andreas (Offshore), Subsection 4	0.55012894
+
+San Andreas (Offshore), Subsection 4  connections:
+
+	San Andreas (Offshore), Subsection 3	0.0
+	San Andreas (Offshore), Subsection 5	0.55012894
+
+San Andreas (Offshore), Subsection 5  connections:
+
+	San Andreas (Offshore), Subsection 4	0.0
+	San Andreas (Offshore), Subsection 6	0.55012894
+
+San Andreas (Offshore), Subsection 6  connections:
+
+	San Andreas (Offshore), Subsection 5	0.0
+	San Andreas (Offshore), Subsection 7	0.55012894
+
+San Andreas (Offshore), Subsection 7  connections:
+
+	San Andreas (Offshore), Subsection 6	0.0
+	San Andreas (Offshore), Subsection 8	0.55012894
+
+San Andreas (Offshore), Subsection 8  connections:
+
+	San Andreas (Offshore), Subsection 7	0.0
+	San Andreas (Offshore), Subsection 9	0.55012894
+
+San Andreas (Offshore), Subsection 9  connections:
+
+	San Andreas (Offshore), Subsection 8	0.0
+	San Andreas (Offshore), Subsection 10	0.55012894
+
+San Andreas (Offshore), Subsection 10  connections:
+
+	San Andreas (Offshore), Subsection 9	0.0
+	San Andreas (Offshore), Subsection 11	0.55012894
+
+San Andreas (Offshore), Subsection 11  connections:
+
+	San Andreas (Offshore), Subsection 10	0.0
+	San Andreas (Offshore), Subsection 12	0.55012894
+
+San Andreas (Offshore), Subsection 12  connections:
+
+	San Andreas (Offshore), Subsection 11	0.0
+	San Andreas (Offshore), Subsection 13	0.55012894
+
+San Andreas (Offshore), Subsection 13  connections:
+
+	San Andreas (Offshore), Subsection 12	0.0
+	San Andreas (Offshore), Subsection 14	0.55012894
+
+San Andreas (Offshore), Subsection 14  connections:
+
+	San Andreas (Offshore), Subsection 13	0.0
+	San Andreas (Offshore), Subsection 15	0.55012894
+
+San Andreas (Offshore), Subsection 15  connections:
+
+	San Andreas (Offshore), Subsection 14	0.0
+	San Andreas (Offshore), Subsection 16	0.55012894
+
+San Andreas (Offshore), Subsection 16  connections:
+
+	San Andreas (Offshore), Subsection 15	0.0
+	San Andreas (Offshore), Subsection 17	0.55012894
+
+San Andreas (Offshore), Subsection 17  connections:
+
+	San Andreas (Offshore), Subsection 16	0.0
+	San Andreas (Offshore), Subsection 18	0.55012894
+
+San Andreas (Offshore), Subsection 18  connections:
+
+	San Andreas (Offshore), Subsection 17	0.0
+	San Andreas (Offshore), Subsection 19	0.55012894
+
+San Andreas (Offshore), Subsection 19  connections:
+
+	San Andreas (Offshore), Subsection 18	0.0
+	San Andreas (Offshore), Subsection 20	0.55012894
+
+San Andreas (Offshore), Subsection 20  connections:
+
+	San Andreas (Offshore), Subsection 19	0.0
+	San Andreas (Offshore), Subsection 21	0.55012906
+
+San Andreas (Offshore), Subsection 21  connections:
+
+	San Andreas (Offshore), Subsection 20	0.0
+	San Andreas (Offshore), Subsection 22	0.55012894
+
+San Andreas (Offshore), Subsection 22  connections:
+
+	San Andreas (Offshore), Subsection 21	0.0
+	San Andreas (Offshore), Subsection 23	0.55012894
+
+San Andreas (Offshore), Subsection 23  connections:
+
+	San Andreas (Offshore), Subsection 22	0.0
+	San Andreas (Offshore), Subsection 24	0.55012894
+
+San Andreas (Offshore), Subsection 24  connections:
+
+	San Andreas (Offshore), Subsection 23	0.0
+	San Andreas (Offshore), Subsection 25	0.55012894
+
+San Andreas (Offshore), Subsection 25  connections:
+
+	San Andreas (Offshore), Subsection 24	0.0
+
+San Andreas (North Coast), Subsection 1  connections:
+
+	San Andreas (North Coast), Subsection 2	0.58566684
+	San Andreas (Peninsula), Subsection 14	0.041655794
+	San Gregorio (No), Subsection 1	4.2066255
+
+San Andreas (North Coast), Subsection 2  connections:
+
+	San Andreas (North Coast), Subsection 1	0.0
+	San Andreas (North Coast), Subsection 3	0.58566684
+
+San Andreas (North Coast), Subsection 3  connections:
+
+	San Andreas (North Coast), Subsection 2	0.0
+	San Andreas (North Coast), Subsection 4	0.58566684
+
+San Andreas (North Coast), Subsection 4  connections:
+
+	San Andreas (North Coast), Subsection 3	0.0
+	San Andreas (North Coast), Subsection 5	0.58566684
+
+San Andreas (North Coast), Subsection 5  connections:
+
+	San Andreas (North Coast), Subsection 4	0.0
+	San Andreas (North Coast), Subsection 6	0.58566684
+
+San Andreas (North Coast), Subsection 6  connections:
+
+	San Andreas (North Coast), Subsection 5	0.0
+	San Andreas (North Coast), Subsection 7	0.58566684
+
+San Andreas (North Coast), Subsection 7  connections:
+
+	San Andreas (North Coast), Subsection 6	0.0
+	San Andreas (North Coast), Subsection 8	0.58566684
+
+San Andreas (North Coast), Subsection 8  connections:
+
+	San Andreas (North Coast), Subsection 7	0.0
+	San Andreas (North Coast), Subsection 9	0.58566684
+
+San Andreas (North Coast), Subsection 9  connections:
+
+	San Andreas (North Coast), Subsection 8	0.0
+	San Andreas (North Coast), Subsection 10	0.58566684
+
+San Andreas (North Coast), Subsection 10  connections:
+
+	San Andreas (North Coast), Subsection 9	0.0
+	San Andreas (North Coast), Subsection 11	0.5856669
+
+San Andreas (North Coast), Subsection 11  connections:
+
+	San Andreas (North Coast), Subsection 10	0.0
+	San Andreas (North Coast), Subsection 12	0.58566684
+
+San Andreas (North Coast), Subsection 12  connections:
+
+	San Andreas (North Coast), Subsection 11	0.0
+	San Andreas (North Coast), Subsection 13	0.58566684
+
+San Andreas (North Coast), Subsection 13  connections:
+
+	San Andreas (North Coast), Subsection 12	0.0
+	San Andreas (North Coast), Subsection 14	0.58566684
+
+San Andreas (North Coast), Subsection 14  connections:
+
+	San Andreas (North Coast), Subsection 13	0.0
+	San Andreas (North Coast), Subsection 15	0.58566684
+
+San Andreas (North Coast), Subsection 15  connections:
+
+	San Andreas (North Coast), Subsection 14	0.0
+	San Andreas (North Coast), Subsection 16	0.58566684
+
+San Andreas (North Coast), Subsection 16  connections:
+
+	San Andreas (North Coast), Subsection 15	0.0
+	San Andreas (North Coast), Subsection 17	0.58566684
+
+San Andreas (North Coast), Subsection 17  connections:
+
+	San Andreas (North Coast), Subsection 16	0.0
+	San Andreas (North Coast), Subsection 18	0.58566684
+
+San Andreas (North Coast), Subsection 18  connections:
+
+	San Andreas (North Coast), Subsection 17	0.0
+	San Andreas (North Coast), Subsection 19	0.58566684
+
+San Andreas (North Coast), Subsection 19  connections:
+
+	San Andreas (North Coast), Subsection 18	0.0
+	San Andreas (North Coast), Subsection 20	0.58566684
+
+San Andreas (North Coast), Subsection 20  connections:
+
+	San Andreas (North Coast), Subsection 19	0.0
+	San Andreas (North Coast), Subsection 21	0.58566684
+
+San Andreas (North Coast), Subsection 21  connections:
+
+	San Andreas (North Coast), Subsection 20	0.0
+	San Andreas (North Coast), Subsection 22	0.58566684
+
+San Andreas (North Coast), Subsection 22  connections:
+
+	San Andreas (North Coast), Subsection 21	0.0
+	San Andreas (North Coast), Subsection 23	0.58566684
+
+San Andreas (North Coast), Subsection 23  connections:
+
+	San Andreas (North Coast), Subsection 22	0.0
+	San Andreas (North Coast), Subsection 24	0.58566684
+
+San Andreas (North Coast), Subsection 24  connections:
+
+	San Andreas (North Coast), Subsection 23	0.0
+	San Andreas (North Coast), Subsection 25	0.58566684
+
+San Andreas (North Coast), Subsection 25  connections:
+
+	San Andreas (North Coast), Subsection 24	0.0
+	San Andreas (North Coast), Subsection 26	0.58566684
+
+San Andreas (North Coast), Subsection 26  connections:
+
+	San Andreas (North Coast), Subsection 25	0.0
+	San Andreas (North Coast), Subsection 27	0.58566684
+
+San Andreas (North Coast), Subsection 27  connections:
+
+	San Andreas (North Coast), Subsection 26	0.0
+	San Andreas (North Coast), Subsection 28	0.58566684
+
+San Andreas (North Coast), Subsection 28  connections:
+
+	San Andreas (North Coast), Subsection 27	0.0
+	San Andreas (North Coast), Subsection 29	0.58566684
+
+San Andreas (North Coast), Subsection 29  connections:
+
+	San Andreas (North Coast), Subsection 28	0.0
+	San Andreas (North Coast), Subsection 30	0.58566684
+
+San Andreas (North Coast), Subsection 30  connections:
+
+	San Andreas (North Coast), Subsection 29	0.0
+	San Andreas (North Coast), Subsection 31	0.58566684
+
+San Andreas (North Coast), Subsection 31  connections:
+
+	San Andreas (North Coast), Subsection 30	0.0
+	San Andreas (North Coast), Subsection 32	0.58566684
+
+San Andreas (North Coast), Subsection 32  connections:
+
+	San Andreas (North Coast), Subsection 31	0.0
+	San Andreas (North Coast), Subsection 33	0.58566684
+
+San Andreas (North Coast), Subsection 33  connections:
+
+	San Andreas (North Coast), Subsection 32	0.0
+	San Andreas (North Coast), Subsection 34	0.58566684
+
+San Andreas (North Coast), Subsection 34  connections:
+
+	San Andreas (North Coast), Subsection 33	0.0
+	San Andreas (North Coast), Subsection 35	0.58566684
+
+San Andreas (North Coast), Subsection 35  connections:
+
+	San Andreas (North Coast), Subsection 34	0.0
+	San Andreas (Offshore), Subsection 1	0.0
+
+San Andreas (Peninsula), Subsection 1  connections:
+
+	San Andreas (Peninsula), Subsection 2	0.04165557
+
+San Andreas (Peninsula), Subsection 2  connections:
+
+	San Andreas (Peninsula), Subsection 1	0.0
+	San Andreas (Peninsula), Subsection 3	0.04165557
+
+San Andreas (Peninsula), Subsection 3  connections:
+
+	San Andreas (Peninsula), Subsection 2	0.0
+	San Andreas (Peninsula), Subsection 4	0.041655395
+
+San Andreas (Peninsula), Subsection 4  connections:
+
+	San Andreas (Peninsula), Subsection 3	0.0
+	San Andreas (Peninsula), Subsection 5	0.04165557
+
+San Andreas (Peninsula), Subsection 5  connections:
+
+	San Andreas (Peninsula), Subsection 4	0.0
+	San Andreas (Peninsula), Subsection 6	0.04165553
+
+San Andreas (Peninsula), Subsection 6  connections:
+
+	San Andreas (Peninsula), Subsection 5	0.0
+	San Andreas (Peninsula), Subsection 7	0.04165557
+
+San Andreas (Peninsula), Subsection 7  connections:
+
+	San Andreas (Peninsula), Subsection 6	0.0
+	San Andreas (Peninsula), Subsection 8	0.041655567
+
+San Andreas (Peninsula), Subsection 8  connections:
+
+	San Andreas (Peninsula), Subsection 7	0.0
+	San Andreas (Peninsula), Subsection 9	0.04165557
+
+San Andreas (Peninsula), Subsection 9  connections:
+
+	San Andreas (Peninsula), Subsection 8	0.0
+	San Andreas (Peninsula), Subsection 10	0.04165557
+
+San Andreas (Peninsula), Subsection 10  connections:
+
+	San Andreas (Peninsula), Subsection 9	0.0
+	San Andreas (Peninsula), Subsection 11	0.04165557
+
+San Andreas (Peninsula), Subsection 11  connections:
+
+	San Andreas (Peninsula), Subsection 10	0.0
+	San Andreas (Peninsula), Subsection 12	0.04165557
+
+San Andreas (Peninsula), Subsection 12  connections:
+
+	San Andreas (Peninsula), Subsection 11	0.0
+	San Andreas (Peninsula), Subsection 13	0.04165557
+
+San Andreas (Peninsula), Subsection 13  connections:
+
+	San Andreas (Peninsula), Subsection 12	0.0
+	San Andreas (Peninsula), Subsection 14	0.04165557
+
+San Andreas (Peninsula), Subsection 14  connections:
+
+	San Andreas (Peninsula), Subsection 13	0.0
+	San Andreas (North Coast), Subsection 1	0.0
+	San Gregorio (No), Subsection 1	4.2113853
+
+Rodgers Creek, Subsection 1  connections:
+
+	Rodgers Creek, Subsection 2	0.326345
+	Hayward (No), Subsection 6	0.19315629
+
+Rodgers Creek, Subsection 2  connections:
+
+	Rodgers Creek, Subsection 1	0.0
+	Rodgers Creek, Subsection 3	0.326345
+
+Rodgers Creek, Subsection 3  connections:
+
+	Rodgers Creek, Subsection 2	0.0
+	Rodgers Creek, Subsection 4	0.326345
+
+Rodgers Creek, Subsection 4  connections:
+
+	Rodgers Creek, Subsection 3	0.0
+	Rodgers Creek, Subsection 5	0.326345
+
+Rodgers Creek, Subsection 5  connections:
+
+	Rodgers Creek, Subsection 4	0.0
+	Rodgers Creek, Subsection 6	0.326345
+
+Rodgers Creek, Subsection 6  connections:
+
+	Rodgers Creek, Subsection 5	0.0
+	Rodgers Creek, Subsection 7	0.326345
+
+Rodgers Creek, Subsection 7  connections:
+
+	Rodgers Creek, Subsection 6	0.0
+	Rodgers Creek, Subsection 8	0.326345
+
+Rodgers Creek, Subsection 8  connections:
+
+	Rodgers Creek, Subsection 7	0.0
+	Rodgers Creek, Subsection 9	0.326345
+
+Rodgers Creek, Subsection 9  connections:
+
+	Rodgers Creek, Subsection 8	0.0
+	Rodgers Creek, Subsection 10	0.326345
+
+Rodgers Creek, Subsection 10  connections:
+
+	Rodgers Creek, Subsection 9	0.0
+	Rodgers Creek, Subsection 11	0.326345
+
+Rodgers Creek, Subsection 11  connections:
+
+	Rodgers Creek, Subsection 10	0.0
+
+Hayward (No), Subsection 1  connections:
+
+	Hayward (No), Subsection 2	0.19315629
+	Hayward (So), Subsection 9	0.16751471
+
+Hayward (No), Subsection 2  connections:
+
+	Hayward (No), Subsection 1	0.0
+	Hayward (No), Subsection 3	0.19315629
+
+Hayward (No), Subsection 3  connections:
+
+	Hayward (No), Subsection 2	0.0
+	Hayward (No), Subsection 4	0.19315629
+
+Hayward (No), Subsection 4  connections:
+
+	Hayward (No), Subsection 3	0.0
+	Hayward (No), Subsection 5	0.19315629
+
+Hayward (No), Subsection 5  connections:
+
+	Hayward (No), Subsection 4	0.0
+	Hayward (No), Subsection 6	0.19315629
+
+Hayward (No), Subsection 6  connections:
+
+	Hayward (No), Subsection 5	0.0
+	Rodgers Creek, Subsection 1	0.0
+
+Hayward (So), Subsection 1  connections:
+
+	Hayward (So), Subsection 2	0.16751479
+	Calaveras (No), Subsection 7	3.291052
+	Calaveras (Central), Subsection 1	3.831782
+
+Hayward (So), Subsection 2  connections:
+
+	Hayward (So), Subsection 1	0.0
+	Hayward (So), Subsection 3	0.16751479
+
+Hayward (So), Subsection 3  connections:
+
+	Hayward (So), Subsection 2	0.0
+	Hayward (So), Subsection 4	0.16751479
+
+Hayward (So), Subsection 4  connections:
+
+	Hayward (So), Subsection 3	0.0
+	Hayward (So), Subsection 5	0.16751479
+
+Hayward (So), Subsection 5  connections:
+
+	Hayward (So), Subsection 4	0.0
+	Hayward (So), Subsection 6	0.16751479
+
+Hayward (So), Subsection 6  connections:
+
+	Hayward (So), Subsection 5	0.0
+	Hayward (So), Subsection 7	0.1675148
+
+Hayward (So), Subsection 7  connections:
+
+	Hayward (So), Subsection 6	0.0
+	Hayward (So), Subsection 8	0.16751485
+
+Hayward (So), Subsection 8  connections:
+
+	Hayward (So), Subsection 7	0.0
+	Hayward (So), Subsection 9	0.16751479
+
+Hayward (So), Subsection 9  connections:
+
+	Hayward (So), Subsection 8	0.0
+	Hayward (No), Subsection 1	0.0
+
+Calaveras (No), Subsection 1  connections:
+
+	Calaveras (No), Subsection 2	0.46319985
+	Concord, Subsection 1	9.391459
+	Mount Diablo Thrust, Subsection 4	3.358478
+
+Calaveras (No), Subsection 2  connections:
+
+	Calaveras (No), Subsection 1	0.0
+	Calaveras (No), Subsection 3	0.46319985
+
+Calaveras (No), Subsection 3  connections:
+
+	Calaveras (No), Subsection 2	0.0
+	Calaveras (No), Subsection 4	0.46319985
+
+Calaveras (No), Subsection 4  connections:
+
+	Calaveras (No), Subsection 3	0.0
+	Calaveras (No), Subsection 5	0.46319985
+
+Calaveras (No), Subsection 5  connections:
+
+	Calaveras (No), Subsection 4	0.0
+	Calaveras (No), Subsection 6	0.46319982
+
+Calaveras (No), Subsection 6  connections:
+
+	Calaveras (No), Subsection 5	0.0
+	Calaveras (No), Subsection 7	0.46319985
+
+Calaveras (No), Subsection 7  connections:
+
+	Calaveras (No), Subsection 6	0.0
+	Hayward (So), Subsection 1	0.0
+	Calaveras (Central), Subsection 1	0.46319994
+
+Calaveras (Central), Subsection 1  connections:
+
+	Calaveras (Central), Subsection 2	0.6414859
+	Hayward (So), Subsection 1	0.0
+	Calaveras (No), Subsection 7	0.0
+
+Calaveras (Central), Subsection 2  connections:
+
+	Calaveras (Central), Subsection 1	0.0
+	Calaveras (Central), Subsection 3	0.6414859
+
+Calaveras (Central), Subsection 3  connections:
+
+	Calaveras (Central), Subsection 2	0.0
+	Calaveras (Central), Subsection 4	0.6414859
+
+Calaveras (Central), Subsection 4  connections:
+
+	Calaveras (Central), Subsection 3	0.0
+	Calaveras (Central), Subsection 5	0.6414859
+
+Calaveras (Central), Subsection 5  connections:
+
+	Calaveras (Central), Subsection 4	0.0
+	Calaveras (Central), Subsection 6	0.641486
+
+Calaveras (Central), Subsection 6  connections:
+
+	Calaveras (Central), Subsection 5	0.0
+	Calaveras (Central), Subsection 7	0.6414859
+
+Calaveras (Central), Subsection 7  connections:
+
+	Calaveras (Central), Subsection 6	0.0
+	Calaveras (Central), Subsection 8	0.6414859
+
+Calaveras (Central), Subsection 8  connections:
+
+	Calaveras (Central), Subsection 7	0.0
+	Calaveras (Central), Subsection 9	0.6414859
+
+Calaveras (Central), Subsection 9  connections:
+
+	Calaveras (Central), Subsection 8	0.0
+	Calaveras (Central), Subsection 10	0.6414859
+
+Calaveras (Central), Subsection 10  connections:
+
+	Calaveras (Central), Subsection 9	0.0
+	Calaveras (Central), Subsection 11	0.6414859
+
+Calaveras (Central), Subsection 11  connections:
+
+	Calaveras (Central), Subsection 10	0.0
+	Calaveras (So), Subsection 4	0.23181467
+
+Calaveras (So), Subsection 1  connections:
+
+	Calaveras (So), Subsection 2	0.8358435
+
+Calaveras (So), Subsection 2  connections:
+
+	Calaveras (So), Subsection 1	0.0
+	Calaveras (So), Subsection 3	0.8358435
+
+Calaveras (So), Subsection 3  connections:
+
+	Calaveras (So), Subsection 2	0.0
+	Calaveras (So), Subsection 4	0.8358435
+
+Calaveras (So), Subsection 4  connections:
+
+	Calaveras (So), Subsection 3	0.0
+	Calaveras (Central), Subsection 11	0.0
+
+Green Valley (No), Subsection 1  connections:
+
+	Green Valley (No), Subsection 2	0.6879181
+	Green Valley (So), Subsection 4	0.29518187
+
+Green Valley (No), Subsection 2  connections:
+
+	Green Valley (No), Subsection 1	0.0
+	Green Valley (No), Subsection 3	0.6879181
+
+Green Valley (No), Subsection 3  connections:
+
+	Green Valley (No), Subsection 2	0.0
+
+Green Valley (So), Subsection 1  connections:
+
+	Green Valley (So), Subsection 2	0.29518187
+	Concord, Subsection 3	0.268221
+
+Green Valley (So), Subsection 2  connections:
+
+	Green Valley (So), Subsection 1	0.0
+	Green Valley (So), Subsection 3	0.29518187
+
+Green Valley (So), Subsection 3  connections:
+
+	Green Valley (So), Subsection 2	0.0
+	Green Valley (So), Subsection 4	0.29518187
+
+Green Valley (So), Subsection 4  connections:
+
+	Green Valley (So), Subsection 3	0.0
+	Green Valley (No), Subsection 1	0.0
+
+Concord, Subsection 1  connections:
+
+	Concord, Subsection 2	0.268221
+	Calaveras (No), Subsection 1	0.0
+	Mount Diablo Thrust, Subsection 4	0.7459136
+
+Concord, Subsection 2  connections:
+
+	Concord, Subsection 1	0.0
+	Concord, Subsection 3	0.268221
+
+Concord, Subsection 3  connections:
+
+	Concord, Subsection 2	0.0
+	Green Valley (So), Subsection 1	0.0
+
+San Gregorio (No), Subsection 1  connections:
+
+	San Gregorio (No), Subsection 2	0.22645256
+	San Andreas (North Coast), Subsection 1	0.0
+	San Andreas (Peninsula), Subsection 14	0.0
+
+San Gregorio (No), Subsection 2  connections:
+
+	San Gregorio (No), Subsection 1	0.0
+	San Gregorio (No), Subsection 3	0.22645256
+
+San Gregorio (No), Subsection 3  connections:
+
+	San Gregorio (No), Subsection 2	0.0
+	San Gregorio (No), Subsection 4	0.22645256
+
+San Gregorio (No), Subsection 4  connections:
+
+	San Gregorio (No), Subsection 3	0.0
+	San Gregorio (No), Subsection 5	0.22645256
+
+San Gregorio (No), Subsection 5  connections:
+
+	San Gregorio (No), Subsection 4	0.0
+	San Gregorio (No), Subsection 6	0.22645256
+
+San Gregorio (No), Subsection 6  connections:
+
+	San Gregorio (No), Subsection 5	0.0
+	San Gregorio (No), Subsection 7	0.22645256
+
+San Gregorio (No), Subsection 7  connections:
+
+	San Gregorio (No), Subsection 6	0.0
+	San Gregorio (No), Subsection 8	0.22645256
+
+San Gregorio (No), Subsection 8  connections:
+
+	San Gregorio (No), Subsection 7	0.0
+	San Gregorio (No), Subsection 9	0.22645256
+
+San Gregorio (No), Subsection 9  connections:
+
+	San Gregorio (No), Subsection 8	0.0
+	San Gregorio (No), Subsection 10	0.22645256
+
+San Gregorio (No), Subsection 10  connections:
+
+	San Gregorio (No), Subsection 9	0.0
+	San Gregorio (No), Subsection 11	0.22645259
+
+San Gregorio (No), Subsection 11  connections:
+
+	San Gregorio (No), Subsection 10	0.0
+	San Gregorio (No), Subsection 12	0.22645256
+
+San Gregorio (No), Subsection 12  connections:
+
+	San Gregorio (No), Subsection 11	0.0
+	San Gregorio (No), Subsection 13	0.22645256
+
+San Gregorio (No), Subsection 13  connections:
+
+	San Gregorio (No), Subsection 12	0.0
+	San Gregorio (No), Subsection 14	0.22645256
+
+San Gregorio (No), Subsection 14  connections:
+
+	San Gregorio (No), Subsection 13	0.0
+	San Gregorio (No), Subsection 15	0.22645256
+
+San Gregorio (No), Subsection 15  connections:
+
+	San Gregorio (No), Subsection 14	0.0
+	San Gregorio (No), Subsection 16	0.22645256
+
+San Gregorio (No), Subsection 16  connections:
+
+	San Gregorio (No), Subsection 15	0.0
+	San Gregorio (No), Subsection 17	0.22645256
+
+San Gregorio (No), Subsection 17  connections:
+
+	San Gregorio (No), Subsection 16	0.0
+	San Gregorio (No), Subsection 18	0.22645256
+
+San Gregorio (No), Subsection 18  connections:
+
+	San Gregorio (No), Subsection 17	0.0
+	San Gregorio (No), Subsection 19	0.22645256
+
+San Gregorio (No), Subsection 19  connections:
+
+	San Gregorio (No), Subsection 18	0.0
+	San Gregorio (So), Subsection 12	0.6970552
+
+San Gregorio (So), Subsection 1  connections:
+
+	San Gregorio (So), Subsection 2	0.47394425
+
+San Gregorio (So), Subsection 2  connections:
+
+	San Gregorio (So), Subsection 1	0.0
+	San Gregorio (So), Subsection 3	0.47394425
+
+San Gregorio (So), Subsection 3  connections:
+
+	San Gregorio (So), Subsection 2	0.0
+	San Gregorio (So), Subsection 4	0.47394425
+
+San Gregorio (So), Subsection 4  connections:
+
+	San Gregorio (So), Subsection 3	0.0
+	San Gregorio (So), Subsection 5	0.47394425
+
+San Gregorio (So), Subsection 5  connections:
+
+	San Gregorio (So), Subsection 4	0.0
+	San Gregorio (So), Subsection 6	0.47394425
+
+San Gregorio (So), Subsection 6  connections:
+
+	San Gregorio (So), Subsection 5	0.0
+	San Gregorio (So), Subsection 7	0.47394428
+
+San Gregorio (So), Subsection 7  connections:
+
+	San Gregorio (So), Subsection 6	0.0
+	San Gregorio (So), Subsection 8	0.47394425
+
+San Gregorio (So), Subsection 8  connections:
+
+	San Gregorio (So), Subsection 7	0.0
+	San Gregorio (So), Subsection 9	0.47394425
+
+San Gregorio (So), Subsection 9  connections:
+
+	San Gregorio (So), Subsection 8	0.0
+	San Gregorio (So), Subsection 10	0.47394425
+
+San Gregorio (So), Subsection 10  connections:
+
+	San Gregorio (So), Subsection 9	0.0
+	San Gregorio (So), Subsection 11	0.47394428
+
+San Gregorio (So), Subsection 11  connections:
+
+	San Gregorio (So), Subsection 10	0.0
+	San Gregorio (So), Subsection 12	0.47394425
+
+San Gregorio (So), Subsection 12  connections:
+
+	San Gregorio (So), Subsection 11	0.0
+	San Gregorio (No), Subsection 19	0.0
+
+Greenville (No), Subsection 1  connections:
+
+	Greenville (No), Subsection 2	0.63703376
+
+Greenville (No), Subsection 2  connections:
+
+	Greenville (No), Subsection 1	0.0
+	Greenville (No), Subsection 3	0.6370337
+	Mount Diablo Thrust, Subsection 1	0.70550334
+
+Greenville (No), Subsection 3  connections:
+
+	Greenville (No), Subsection 2	0.0
+	Greenville (No), Subsection 4	0.63703376
+
+Greenville (No), Subsection 4  connections:
+
+	Greenville (No), Subsection 3	0.0
+	Greenville (So), Subsection 1	0.6370339
+
+Greenville (So), Subsection 1  connections:
+
+	Greenville (So), Subsection 2	0.10219524
+	Greenville (No), Subsection 4	0.0
+
+Greenville (So), Subsection 2  connections:
+
+	Greenville (So), Subsection 1	0.0
+	Greenville (So), Subsection 3	0.102195196
+
+Greenville (So), Subsection 3  connections:
+
+	Greenville (So), Subsection 2	0.0
+	Greenville (So), Subsection 4	0.10219521
+
+Greenville (So), Subsection 4  connections:
+
+	Greenville (So), Subsection 3	0.0
+
+Mount Diablo Thrust, Subsection 1  connections:
+
+	Mount Diablo Thrust, Subsection 2	0.25965604
+	Greenville (No), Subsection 2	0.0
+
+Mount Diablo Thrust, Subsection 2  connections:
+
+	Mount Diablo Thrust, Subsection 1	0.0
+	Mount Diablo Thrust, Subsection 3	0.25965562
+
+Mount Diablo Thrust, Subsection 3  connections:
+
+	Mount Diablo Thrust, Subsection 2	0.0
+	Mount Diablo Thrust, Subsection 4	0.2596552
+
+Mount Diablo Thrust, Subsection 4  connections:
+
+	Mount Diablo Thrust, Subsection 3	0.0
+	Calaveras (No), Subsection 1	0.0
+	Concord, Subsection 1	0.0
