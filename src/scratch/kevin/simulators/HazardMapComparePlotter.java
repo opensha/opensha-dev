@@ -1,6 +1,7 @@
 package scratch.kevin.simulators;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -53,7 +54,9 @@ public class HazardMapComparePlotter {
 //		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_slipWeakening_calibrated_2-vs-ucerf3-m6.5"); minMag = 6.5;
 //		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_slipWeakening_calibrated_2-vs-ucerf3-m7.0"); minMag = 7.0;
 //		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_shortTestCatalog-vs-ucerf3-m6.5"); minMag = 6.5;
-		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_shortTestCatalog-vs-ucerf3-m7.0"); minMag = 7.0;
+//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_shortTestCatalog-vs-ucerf3-m7.0"); minMag = 7.0;
+//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_05-bruce2194-vs-ucerf3-m6.5"); minMag = 6.5;
+		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_05-bruce2194-vs-ucerf3-m7.0"); minMag = 7.0;
 		
 		// fallback
 		Map<Double, File> u3Files = Maps.newHashMap();
@@ -243,6 +246,8 @@ public class HazardMapComparePlotter {
 		xyzGP.saveAsPDF(new File(outputDir, prefix+"_hist2D.pdf").getAbsolutePath());
 		
 		if (log) {
+			boolean logY = true;
+			
 			double[] logRatioArray = Doubles.toArray(logRatioVals);
 			HistogramFunction oneDHist = HistogramFunction.getEncompassingHistogram(
 					StatUtils.min(logRatioArray), StatUtils.max(logRatioArray), 0.025);
@@ -256,11 +261,24 @@ public class HazardMapComparePlotter {
 			oneDHist.normalizeBySumOfY_Vals();
 			oneDHist.setName("Histogram");
 			
+			Range yRange = null;
+			if (logY) {
+				double minNonZero = Double.POSITIVE_INFINITY;
+				for (Point2D pt : oneDHist)
+					if (pt.getY() > 0)
+						minNonZero = Math.min(minNonZero, pt.getY());
+				yRange = new Range(minNonZero*0.7, oneDHist.getMaxY()*1.5);
+			}
+			
 			funcs.add(oneDHist);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.DARK_GRAY));
 			
 			DefaultXY_DataSet meanLine = new DefaultXY_DataSet();
 			meanLine.set(mean, 0d);
+			if (logY) {
+				meanLine.set(mean, yRange.getLowerBound());
+				meanLine.set(mean, yRange.getUpperBound());
+			}
 			meanLine.set(mean, oneDHist.getMaxY());
 			meanLine.setName("Mean: "+(float)mean+", Std Dev: "+(float)stdDev);
 			
@@ -272,7 +290,7 @@ public class HazardMapComparePlotter {
 			
 			HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 			
-			gp.drawGraphPanel(spec, false, false);
+			gp.drawGraphPanel(spec, false, logY, null, yRange);
 			gp.getChartPanel().setSize(800, 600);
 			gp.saveAsPNG(new File(outputDir, "hist_1d.png").getAbsolutePath());
 			gp.saveAsPDF(new File(outputDir, "hist_1d.pdf").getAbsolutePath());
