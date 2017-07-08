@@ -45,7 +45,6 @@ import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.nshmp2.erf.source.PointSource13b;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
-import org.opensha.sha.cybershake.etas.ETASModProbConfig.ETAS_CyberShake_Scenarios;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.griddedSeis.Point2Vert_FaultPoisSource;
 import org.opensha.sha.imr.AttenRelRef;

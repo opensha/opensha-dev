@@ -34,6 +34,7 @@ import org.opensha.sha.simulators.iden.RegionIden;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
+import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import scratch.UCERF3.utils.MatrixIO;
 import scratch.kevin.simulators.SimAnalysisCatLoader;
@@ -199,7 +200,7 @@ public class SimulatorMomRateVarCalc {
 	
 	private static void plotMomRateVar(List<SimulatorEvent> events, int windowLen, String name,
 			int plotStartYears, int plotEndYears, boolean logSmooth, File outputFile) throws IOException {
-		int years = (int)General_EQSIM_Tools.getSimulationDurationYears(events);
+		int years = (int)SimulatorUtils.getSimulationDurationYears(events);
 		double minTime = events.get(0).getTimeInYears();
 		
 		double[] yearlyMoRates = new double[years];
@@ -411,7 +412,7 @@ public class SimulatorMomRateVarCalc {
 	static void plotMomRateVar(List<? extends SimulatorEvent> events, int[] windowLens, String name,
 			int plotStartYears, int plotEndYears, boolean hanningTaper, boolean twoWay, File outputFile)
 					throws IOException {
-//		int years = (int)General_EQSIM_Tools.getSimulationDurationYears(events);
+//		int years = (int)SimulatorUtils.getSimulationDurationYears(events);
 		
 		double secsPerYear = General_EQSIM_Tools.SECONDS_PER_YEAR;
 		

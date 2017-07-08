@@ -11,7 +11,6 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.util.XYZHashMap;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.sha.cybershake.plot.HazardMapScatterCreator;
 
 public class EEWScatterMaker {
 	
@@ -48,7 +47,7 @@ public class EEWScatterMaker {
 			
 			Color color = cpt.getColor((float) val);
 			double size = 0.15;
-			String colorStr = HazardMapScatterCreator.getGMTColorString(color);
+			String colorStr = getGMTColorString(color);
 			String outline = "-W" + (float)(size * 0.09) + "i,0/0/0";
 			String line = "echo " + loc.getLongitude() + " " + loc.getLatitude() + " | ";
 			line += "psxy $1 $2 -S" + symbol + size + "i " + colorStr + " " + outline + " -O -K >> $3";
@@ -56,6 +55,10 @@ public class EEWScatterMaker {
 		}
 		
 		fw.close();
+	}
+	
+	public static String getGMTColorString(Color color) {
+		return "-G" + color.getRed() + "/" + color.getGreen() + "/" + color.getBlue();
 	}
 	
 	public static void main(String args[]) throws FileNotFoundException, IOException {

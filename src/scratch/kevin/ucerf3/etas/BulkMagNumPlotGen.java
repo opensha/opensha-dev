@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.dom4j.DocumentException;
@@ -87,15 +86,16 @@ public class BulkMagNumPlotGen {
 		List<PDDocument> subDocs = Lists.newArrayList();
 		for (File pdfFile : pdfFiles) {
 			PDDocument part = PDDocument.load(pdfFile);
-			List<PDPage> list = part.getDocumentCatalog().getAllPages();
-			document.addPage(list.get(0));
+//			List<PDPage> list = part.getDocumentCatalog().getAllPages();
+			PDPage page0 = part.getDocumentCatalog().getPages().get(0);
+			document.addPage(page0);
 			subDocs.add(part);
 		}
-		try {
+//		try {
 			document.save(new File(outputDir, "mag_vs_num_combined.pdf"));
-		} catch (COSVisitorException e) {
-			ExceptionUtils.throwAsRuntimeException(e);
-		}
+//		} catch (COSVisitorException e) {
+//			ExceptionUtils.throwAsRuntimeException(e);
+//		}
 		document.close();
 		for (PDDocument doc : subDocs)
 			doc.close();

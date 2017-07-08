@@ -16,6 +16,7 @@ import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.parsers.EQSIMv06FileReader;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
+import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import com.google.common.collect.Lists;
 
@@ -35,7 +36,7 @@ public class MomentRateVariation {
 		System.out.println("Loading events...");
 		List<? extends SimulatorEvent> events = EQSIMv06FileReader.readEventsFile(eventFile, tools.getElementsList());
 		
-		int years = (int)General_EQSIM_Tools.getSimulationDurationYears(events);
+		int years = (int)SimulatorUtils.getSimulationDurationYears(events);
 		double minTime = events.get(0).getTimeInYears();
 		
 		double[] yearlyMoRates = new double[years];

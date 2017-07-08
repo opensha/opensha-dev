@@ -12,7 +12,7 @@ import org.apache.commons.cli.Options;
 import org.dom4j.DocumentException;
 import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.commons.util.ClassUtils;
-import org.opensha.sha.cybershake.plot.HazardCurvePlotter;
+import org.opensha.commons.util.DataUtils;
 import org.opensha.sha.imr.AttenRelRef;
 
 import com.google.common.base.Preconditions;
@@ -83,7 +83,7 @@ public class MPJ_ETAS_CatalogEALCalculator extends MPJTaskCalculator {
 		
 		dataDirs = Lists.newArrayList();
 		String dataDirsStr = cmd.getOptionValue("data-dirs");
-		for (String dirStr : HazardCurvePlotter.commaSplit(dataDirsStr)) {
+		for (String dirStr : DataUtils.commaSplit(dataDirsStr)) {
 			File dir = new File(dirStr);
 			Preconditions.checkState(dir.exists());
 			dataDirs.add(dir);

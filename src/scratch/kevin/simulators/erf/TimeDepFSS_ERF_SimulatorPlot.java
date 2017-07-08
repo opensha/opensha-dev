@@ -29,6 +29,7 @@ import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.iden.SupraSeisRupIden;
 import org.opensha.sha.simulators.parsers.EQSIMv06FileReader;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
+import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
@@ -241,7 +242,7 @@ public class TimeDepFSS_ERF_SimulatorPlot {
 //			events = supraSeisEvents;
 //		}
 		
-		double durationYears = General_EQSIM_Tools.getSimulationDurationYears(events);
+		double durationYears = SimulatorUtils.getSimulationDurationYears(events);
 		
 		List<SimulatorElement> elements = tools.getElementsList();
 		SubSectionBiulder subSectBuilder = new SubSectionBiulder(elements);

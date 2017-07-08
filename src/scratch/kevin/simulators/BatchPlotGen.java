@@ -34,6 +34,7 @@ import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.parsers.EQSIMv06FileReader;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
+import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 
@@ -155,7 +156,7 @@ public class BatchPlotGen {
 		MinMaxAveTracker eventMagTrack = new MinMaxAveTracker();
 		for (SimulatorEvent e : events)
 			eventMagTrack.addValue(e.getMagnitude());
-		double totalEventDuration = General_EQSIM_Tools.getSimulationDurationYears(events);
+		double totalEventDuration = SimulatorUtils.getSimulationDurationYears(events);
 		
 		List<Map<Integer, Double>> indepParticRatesList = Lists.newArrayList();
 		for (double[] particRange : particRanges)

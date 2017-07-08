@@ -21,6 +21,7 @@ import org.opensha.sha.simulators.iden.EventsInWindowsMatcher;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.parsers.EQSIMv06FileReader;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
+import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -53,7 +54,7 @@ public class OmorisLawComparison {
 		Region reg = new CaliforniaRegions.RELM_SOCAL();
 		HashSet<Integer> elementsInRegion = MFDCalc.getElementsInsideRegion(tools.getElementsList(), reg);
 		
-		double totalEventDuration = General_EQSIM_Tools.getSimulationDurationYears(events);
+		double totalEventDuration = SimulatorUtils.getSimulationDurationYears(events);
 		
 		double daysPerYear = BatchPlotGen.DAYS_PER_YEAR;
 		

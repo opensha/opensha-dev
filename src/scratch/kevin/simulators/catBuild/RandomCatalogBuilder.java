@@ -13,6 +13,7 @@ import org.opensha.sha.simulators.iden.LogicalAndRupIden;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
+import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import scratch.kevin.simulators.PeriodicityPlotter;
 import scratch.kevin.simulators.dists.ActualDistReturnPeriodProvider;
@@ -187,7 +188,7 @@ public class RandomCatalogBuilder {
 			List<List<? extends SimulatorEvent>> eventListsToResample = Lists.newArrayList();
 			List<RandomReturnPeriodProvider> randomRPsList = Lists.newArrayList();
 			
-			double totTime = General_EQSIM_Tools.getSimulationDurationYears(events);
+			double totTime = SimulatorUtils.getSimulationDurationYears(events);
 			
 			for (int i=0; i<rupIdens.size(); i++) {
 				List<SimulatorEvent> eventsToResample = Lists.newArrayList(matchesLists.get(i));

@@ -10,6 +10,7 @@ import org.opensha.sha.simulators.iden.ElementMagRangeDescription;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.parsers.EQSIMv06FileReader;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
+import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import scratch.kevin.simulators.catBuild.RandomCatalogBuilder;
 import scratch.kevin.simulators.dists.RandomDistType;
@@ -99,7 +100,7 @@ public class Within5YrsStatisticsGen {
 		List<? extends SimulatorEvent> givenMatches = givenIden.getMatches(events);
 		
 		System.out.println("target="+targetMatches.size()+"\tgiven="+givenMatches.size()
-				+"\tduration="+General_EQSIM_Tools.getSimulationDuration(events));
+				+"\tduration="+SimulatorUtils.getSimulationDuration(events));
 		
 		int numBefore = 0;
 		int numCorupture = 0;
@@ -154,7 +155,7 @@ public class Within5YrsStatisticsGen {
 				getProb(numBefore, givenMatches.size()),
 				getProb(numAfter, givenMatches.size()),
 				getProb(numTotal, givenMatches.size()),
-				getProb(targetMatches.size(), General_EQSIM_Tools.getSimulationDurationYears(events)));
+				getProb(targetMatches.size(), SimulatorUtils.getSimulationDurationYears(events)));
 		
 		// now do within calcs
 		int withinNumCorupture = 0;

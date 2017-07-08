@@ -5,6 +5,11 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.List;
 
 import org.opensha.commons.data.function.AbstractXY_DataSet;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
@@ -1112,14 +1117,50 @@ public class ETAS_Simulator {
 		}
 		
 		try {
-			ETAS_Utils.writeEQCatFile(new File(dirToSaveData+"catalog.sc"), allAftershocks);
+			writeEQCatFile(new File(dirToSaveData+"catalog.sc"), allAftershocks);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 			
 	}
 	
-	
+	public static void writeEQCatFile(File file, List<PrimaryAftershock> aftershocks) throws IOException {
+		Date orig = new Date();
+		GregorianCalendar cal = new GregorianCalendar();
+
+		ArrayList<Date> dates = new ArrayList<Date>();
+		ArrayList<String> lines = new ArrayList<String>();
+
+		for (PrimaryAftershock eq : aftershocks) {
+			cal.setTime(orig);
+			cal.add(Calendar.SECOND, (int)(60d*eq.getOriginTime()+0.5));
+			Date myDate = cal.getTime();
+
+			int insertionPoint;
+			for (insertionPoint=0; insertionPoint<dates.size(); insertionPoint++) {
+				if (myDate.after(dates.get(insertionPoint)))
+					break;
+			}
+
+			Location loc = eq.getHypocenterLocation();
+
+			// id date/time lon lat depth mag
+			String line = eq.getID()+" "+ETAS_Utils.cat_df.format(myDate)+" "
+					+loc.getLongitude()+" "+loc.getLatitude()+" "+loc.getDepth()+" "+eq.getMag();
+
+			dates.add(insertionPoint, myDate);
+			lines.add(insertionPoint, line);
+		}
+
+		Collections.reverse(lines);
+
+		FileWriter fw = new FileWriter(file);
+
+		for (String line : lines)
+			fw.write(line+"\n");
+
+		fw.close();
+	}
 	
 	
 

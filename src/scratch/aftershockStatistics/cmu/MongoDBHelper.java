@@ -18,7 +18,7 @@ public enum MongoDBHelper {
     private MongoDBHelper() {
         Configuration config = new Configuration();
 
-        try {
+//        try {
 
             MongoCredential credentials = MongoCredential.createCredential(config.getDb_user(), config.getDb_name(), config.getDb_password().toCharArray());
             ServerAddress serverAddress = new ServerAddress(config.getDb_host(), config.getDb_port());
@@ -31,9 +31,9 @@ public enum MongoDBHelper {
             this.datastore = morphia.createDatastore(mongoClient, config.getDb_name());
 
             morphia.mapPackage("package");
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
+//        } catch (UnknownHostException e) {
+//            e.printStackTrace();
+//        }
 
     }
 

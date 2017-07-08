@@ -1,20 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry excluding="**/_nobuild/*" kind="src" path="src"/>
+	<classpathentry excluding="resources/" kind="src" path="src"/>
 	<classpathentry kind="src" path="test"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="lib/OpenSHA_complete.jar"/>
-	<classpathentry kind="lib" path="lib/ProductClient.jar"/>
-	<classpathentry kind="lib" path="lib/jackson-annotations-2.8.4.jar"/>
-	<classpathentry kind="lib" path="lib/jackson-core-2.8.4.jar"/>
-	<classpathentry kind="lib" path="lib/jackson-databind-2.8.4.jar"/>
-	<classpathentry kind="lib" path="lib/mongo-java-driver-2.14.2.jar"/>
-	<classpathentry kind="lib" path="lib/morphia-1.3.2.jar"/>
-	<classpathentry kind="lib" path="lib/EventWebService.jar"/>
-	<classpathentry kind="lib" path="lib/mpj-0.38.jar"/>
-	<classpathentry kind="lib" path="lib/activemq-all-5.14.3.jar"/>
-	<classpathentry kind="lib" path="lib/junit-4.11.jar"/>
-	<classpathentry kind="lib" path="lib/commons-collections-3.2.1.jar"/>
-	<classpathentry kind="lib" path="lib/pdfbox-app-1.8.2.jar"/>
-	<classpathentry kind="output" path="classes"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8/"/>
+	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
+	<classpathentry kind="output" path="bin"/>
 </classpath>

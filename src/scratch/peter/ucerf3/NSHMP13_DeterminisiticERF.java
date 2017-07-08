@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.pdfbox.pdfviewer.MapEntry;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.util.DataUtils;

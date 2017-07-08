@@ -7,8 +7,8 @@ import java.util.HashSet;
 
 import org.opensha.sra.gui.portfolioeal.Asset;
 import org.opensha.sra.gui.portfolioeal.Portfolio;
-import org.opensha.sra.gui.portfolioeal.PortfolioEALCalculatorController;
 import org.opensha.sra.vulnerability.Vulnerability;
+import org.opensha.sra.vulnerability.VulnerabilityFetcher;
 
 public class VulnPortfolioMismatchTest {
 
@@ -24,7 +24,7 @@ public class VulnPortfolioMismatchTest {
 		Portfolio port = Portfolio.createPortfolio(portfolioFile);
 		System.out.println("DONE.");
 		System.out.println("Parsing Vulnerabilities: "+vulnFile.getName());
-		HashMap<String, Vulnerability> vulnMap = PortfolioEALCalculatorController.getVulnerabilities(vulnFile);
+		HashMap<String, Vulnerability> vulnMap = VulnerabilityFetcher.getVulnerabilities(vulnFile);
 		System.out.println("DONE.");
 		
 		HashSet<String> alreadyDones = new HashSet<String>();

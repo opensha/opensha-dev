@@ -15,7 +15,6 @@ import java.util.Map;
 
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.stat.StatUtils;
-import org.apache.pdfbox.exceptions.COSVisitorException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.jfree.chart.annotations.XYAnnotation;
@@ -43,6 +42,7 @@ import org.opensha.sha.simulators.iden.QuietPeriodIdenMatcher;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.parsers.EQSIMv06FileReader;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
+import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import scratch.UCERF3.enumTreeBranches.MaxMagOffFault;
 import scratch.UCERF3.utils.IDPairing;
@@ -646,7 +646,7 @@ public class PeriodicityPlotter {
 			percentWithin5NonCorupture *= 100;
 			System.out.println(name1+" to "+name2+": "+(float)percentWithin5NonCorupture+" % within 5 years no co-rupture");
 //			double timeIndepExpectedWithin = 100d * ((double)(matches1.size() - numCoruptures) * 10d
-//					/ General_EQSIM_Tools.getSimulationDurationYears(events));
+//					/ SimulatorUtils.getSimulationDurationYears(events));
 //			System.out.println(name1+" to "+name2+": "+(float)timeIndepExpectedWithin+" % within 5 years no co-rupture (RANDOM)");
 		}
 		
@@ -1228,15 +1228,12 @@ public class PeriodicityPlotter {
 		List<PDDocument> subDocs = Lists.newArrayList();
 		for (File pdfFile : pdfFiles) {
 			PDDocument part = PDDocument.load(pdfFile);
-			List<PDPage> list = part.getDocumentCatalog().getAllPages();
-			document.addPage(list.get(0));
+//			List<PDPage> list = part.getDocumentCatalog().getAllPages();
+			PDPage page0 = part.getDocumentCatalog().getPages().get(0);
+			document.addPage(page0);
 			subDocs.add(part);
 		}
-		try {
-			document.save(outputFile);
-		} catch (COSVisitorException e) {
-			ExceptionUtils.throwAsRuntimeException(e);
-		}
+		document.save(outputFile);
 		document.close();
 		for (PDDocument doc : subDocs)
 			doc.close();
@@ -1279,7 +1276,7 @@ public class PeriodicityPlotter {
 			List<? extends SimulatorEvent> events, List<RuptureIdentifier> rupIdens) throws IOException {
 		List<List<? extends SimulatorEvent>> eventLists = Lists.newArrayList();
 		
-		double totEventTime = General_EQSIM_Tools.getSimulationDurationYears(events);
+		double totEventTime = SimulatorUtils.getSimulationDurationYears(events);
 		
 		Arrays.sort(windowLengths);
 		

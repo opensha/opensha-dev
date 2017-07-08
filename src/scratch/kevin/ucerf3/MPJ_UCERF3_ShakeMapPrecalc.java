@@ -20,15 +20,17 @@ import org.apache.commons.cli.Options;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
+import org.dom4j.io.SAXReader;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.GeoTools;
 import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.XMLUtils;
-import org.opensha.sha.cybershake.gui.util.AttenRelSaver;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.imr.AbstractIMR;
+import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
@@ -93,7 +95,12 @@ public class MPJ_UCERF3_ShakeMapPrecalc extends MPJTaskCalculator {
 		File gmpeFile = new File(cmd.getOptionValue("gmpe-file"));
 		gmpes = new ScalarIMR[getNumThreads()];
 		for (int i=0; i<gmpes.length; i++) {
-			gmpes[i] = AttenRelSaver.LOAD_ATTEN_REL_FROM_FILE(gmpeFile.getAbsolutePath());
+			SAXReader reader = new SAXReader();
+			
+			Document doc = reader.read(gmpeFile);
+			
+			Element el = doc.getRootElement().element(AbstractIMR.XML_METADATA_NAME);
+			gmpes[i] = (AttenuationRelationship)AttenuationRelationship.fromXMLMetadata(el, null);
 			gmpes[i].setParamDefaults();
 		}
 		
