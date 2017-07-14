@@ -33,6 +33,8 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
+import org.opensha.sha.simulators.SimulatorEvent;
+import org.opensha.sha.simulators.iden.AbstractRuptureIdentifier;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
@@ -54,51 +56,69 @@ import scratch.UCERF3.utils.FaultSystemIO;
 public class HazardMapCompareScriptGen {
 
 	public static void main(String[] args) throws IOException, DocumentException {
-//		String runName = "2017_06_28-bruce2142-vs-ucerf3-m6.0";
-//		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
-//		File geomFile = new File(catalogDir, "zfault_Deepen.in");
-		
-		String runName = "2017_07_05-bruce2194-vs-ucerf3-m6.5";
-		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2194");
+		String runName = "2017_07_14-bruce2142";
+		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
 		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-//		String runName = "2017_06_28-jacqui_slipWeakening_calibrated_2-vs-ucerf3-m6.5";
+//		String runName = "2017_07_14-bruce2194";
+//		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2194");
+//		File geomFile = new File(catalogDir, "zfault_Deepen.in");
+		
+//		String runName = "2017_06_28-jacqui_slipWeakening_calibrated_2-vs-ucerf3";
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/baseCatalog_slipWeakening_calibrated_2");
-//		String runName = "2017_06_28-jacqui_shortTestCatalog-vs-ucerf3-m7.0";
+//		String runName = "2017_06_28-jacqui_shortTestCatalog-vs-ucerf3";
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/shortTestCatalog");
 //		File geomFile = new File(catalogDir, "UCERF3.D3.1.1km.tri.2.flt");
 		
 		boolean doUCERF3 = true;
+		boolean u3SupraMinMag = true;
 		double minMag = 6.5d;
+		double minFractForInclusion = 0.1;
+		if (u3SupraMinMag)
+			runName += "-matchU3supra";
+		else
+			runName += "-m"+(float)minMag;
+		if (minFractForInclusion > 0)
+			runName += "-sectArea"+(float)minFractForInclusion;
 		FaultModels fm = FaultModels.FM3_1;
 		DeformationModels dm = DeformationModels.GEOLOGIC;
 		
 		// load/process U3 catalog
 		FaultSystemSolution u3Sol = null;
-		if (doUCERF3) {
+		if (doUCERF3 || u3SupraMinMag) {
 			System.out.println("Loading/filtering U3 solution");
 			File localU3File = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 					+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
 			u3Sol = FaultSystemIO.loadSol(localU3File);
-			FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
-			double[] modRates = new double[u3RupSet.getNumRuptures()];
-			for (int r=0; r<modRates.length; r++)
-				if (u3RupSet.getMagForRup(r) >= minMag)
-					modRates[r] = u3Sol.getRateForRup(r);
-			u3Sol = new FaultSystemSolution(u3RupSet, modRates);
+			if (!u3SupraMinMag) {
+				FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
+				double[] modRates = new double[u3RupSet.getNumRuptures()];
+				for (int r=0; r<modRates.length; r++)
+					if (u3RupSet.getMagForRup(r) >= minMag)
+						modRates[r] = u3Sol.getRateForRup(r);
+				u3Sol = new FaultSystemSolution(u3RupSet, modRates);
+			}
 		}
 		
 		// load RSQSim catalog
 		System.out.println("Loading RSQSim catalog");
 		List<SimulatorElement> geom = RSQSimFileReader.readGeometryFile(geomFile, 11, 'S');
 		List<RuptureIdentifier> rupIdens = Lists.newArrayList();
-		rupIdens.add(new MagRangeRuptureIdentifier(minMag, 11d));
+		if (u3SupraMinMag) {
+			int minSubSectIndex = Integer.MAX_VALUE;
+			for (SimulatorElement elem : geom)
+				if (elem.getSectionID() < minSubSectIndex)
+					minSubSectIndex = elem.getSectionID();
+			rupIdens.add(new U3SupraSeisRuptureIdentifier(u3Sol.getRupSet(), minSubSectIndex));
+		} else {
+			rupIdens.add(new MagRangeRuptureIdentifier(minMag, 11d));
+		}
 		List<RSQSimEvent> events = RSQSimFileReader.readEventsFile(catalogDir, geom, rupIdens);
 		double length = events.get(events.size()-1).getTimeInYears() - events.get(0).getTimeInYears();
 		System.out.println("Duration: "+(float)length+" years");
 		System.out.println("Building RSQSim FSS");
 		FaultSystemSolution rsqsimSol = RSQSimUtils.buildFaultSystemSolution(
-				RSQSimUtils.getUCERF3SubSectsForComparison(fm, dm), geom, events, minMag);
+				RSQSimUtils.getUCERF3SubSectsForComparison(fm, dm), geom, events, 0d, minFractForInclusion);
 		
 		File localMainDir = new File("/home/kevin/Simulators/hazard");
 		File remoteMainDir = new File("/home/scec-02/kmilner/simulators/hazard");
@@ -211,6 +231,41 @@ public class HazardMapCompareScriptGen {
 			File pbsFile = new File(localSubDir, subDirName+".pbs");
 			JavaShellScriptWriter.writeScript(pbsFile, script);
 		}
+	}
+	
+	private static class U3SupraSeisRuptureIdentifier extends AbstractRuptureIdentifier {
+		
+		private double[] subSectMinMags;
+		private int subSectOffset;
+		
+		public U3SupraSeisRuptureIdentifier(FaultSystemRupSet u3RupSet, int subSectOffset) {
+			subSectMinMags = new double[u3RupSet.getNumSections()];
+			this.subSectOffset = subSectOffset;
+			
+			for (int s=0; s<subSectMinMags.length; s++) {
+				double minMag = Double.POSITIVE_INFINITY;
+				for (int r : u3RupSet.getRupturesForSection(s))
+					minMag = Math.min(minMag, u3RupSet.getMagForRup(r));
+				subSectMinMags[s] = minMag;
+			}
+		}
+
+		@Override
+		public boolean isMatch(SimulatorEvent event) {
+			double rupMag = event.getMagnitude();
+			for (SimulatorElement elem : event.getAllElements()) {
+				int subSectID = elem.getSectionID() - subSectOffset;
+				if (rupMag >= subSectMinMags[subSectID])
+					return true;
+			}
+			return false;
+		}
+
+		@Override
+		public String getName() {
+			return "U3 SupraSeismogenic Min Mag filter";
+		}
+		
 	}
 
 }

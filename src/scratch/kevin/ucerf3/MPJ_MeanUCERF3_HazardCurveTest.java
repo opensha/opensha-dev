@@ -11,7 +11,6 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
@@ -37,6 +36,8 @@ import scratch.UCERF3.logicTree.LogicTreeBranch;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 public class MPJ_MeanUCERF3_HazardCurveTest extends MPJTaskCalculator {
 	

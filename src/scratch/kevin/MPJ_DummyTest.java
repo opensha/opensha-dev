@@ -7,8 +7,9 @@ import java.io.IOException;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.commons.util.ExceptionUtils;
+
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 public class MPJ_DummyTest extends MPJTaskCalculator {
 	

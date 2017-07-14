@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Random;
 
 import mpi.MPI;
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -18,7 +19,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.LocationUtils;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.commons.util.threads.Task;
 import org.opensha.commons.util.threads.ThreadedTaskComputer;

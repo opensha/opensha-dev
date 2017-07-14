@@ -16,7 +16,6 @@ import org.apache.commons.cli.Options;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.nshmp2.calc.ERF_ID;
 import org.opensha.nshmp2.calc.HazardCalc;
 import org.opensha.nshmp2.calc.HazardResult;
@@ -33,6 +32,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 /**
  * Curves at sites for a compound solution.

@@ -6,7 +6,8 @@ import java.lang.reflect.InvocationTargetException;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
+
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 /**
  * Tests functioning of MPJ lib.

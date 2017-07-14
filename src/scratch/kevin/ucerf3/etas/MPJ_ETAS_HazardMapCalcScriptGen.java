@@ -14,7 +14,6 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
@@ -23,6 +22,7 @@ import org.opensha.sha.imr.AttenuationRelationship;
 
 import com.google.common.base.Preconditions;
 
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.kevin.ucerf3.MPJ_UCERF3_ShakeMapPrecalcScriptGen;
 

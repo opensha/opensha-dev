@@ -18,7 +18,6 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.geo.GriddedRegion;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.calc.hazardMap.components.BinaryCurveArchiver;
 import org.opensha.sha.calc.hazardMap.components.CurveMetadata;
@@ -34,6 +33,7 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
 import mpi.MPI;
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;

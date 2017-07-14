@@ -15,7 +15,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.opensha.commons.geo.LocationList;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.nshmp2.calc.ERF_ID;
 import org.opensha.nshmp2.calc.HazardResultWriter;
 import org.opensha.nshmp2.calc.HazardResultWriterLocal;
@@ -31,6 +30,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.io.Flushables;
+
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 public class UC3_CalcMPJ_MapCompound extends MPJTaskCalculator {
 	

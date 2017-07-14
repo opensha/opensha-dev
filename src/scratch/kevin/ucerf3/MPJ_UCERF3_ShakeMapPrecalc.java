@@ -23,7 +23,6 @@ import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.GeoTools;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.XMLUtils;
@@ -39,6 +38,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.utils.FaultSystemIO;

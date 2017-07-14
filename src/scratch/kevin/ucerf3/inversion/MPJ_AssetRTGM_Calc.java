@@ -20,7 +20,6 @@ import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
-import org.opensha.commons.hpc.mpj.taskDispatch.MPJTaskCalculator;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.sha.calc.HazardCurveCalculator;
@@ -36,6 +35,8 @@ import org.opensha.sra.gui.portfolioeal.CalculationExceptionHandler;
 import org.opensha.sra.gui.portfolioeal.Portfolio;
 import org.opensha.sra.rtgm.RTGM;
 import org.opensha.sra.rtgm.RTGM.Frequency;
+
+import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 public class MPJ_AssetRTGM_Calc extends MPJ_EAL_Calc {
 
