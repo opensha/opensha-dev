@@ -168,6 +168,11 @@ public class MPJ_ETAS_HazardMapCalc extends MPJTaskCalculator {
 			mapCalc.setScenarioForElasticRebound(scenario);
 		}
 		
+		if (cmd.hasOption("dist-cutoff")) {
+			double distCutoff = Double.parseDouble(cmd.getOptionValue("dist-cutoff"));
+			mapCalc.setDistanceCutoff(distCutoff);
+		}
+		
 		executor = mapCalc.createExecutor(getNumThreads());
 		
 		if (calcFault && raFile != null)
@@ -436,6 +441,11 @@ public class MPJ_ETAS_HazardMapCalc extends MPJTaskCalculator {
 				"Applies elastic rebound for UCERF3-TD for the given ETAS scenario name");
 		elastic.setRequired(false);
 		ops.addOption(elastic);
+		
+		Option distCutoff = new Option("dc", "dist-cutoff", true,
+				"Durations to calculate (comma separated)");
+		distCutoff.setRequired(false);
+		ops.addOption(distCutoff);
 		
 		return ops;
 	}

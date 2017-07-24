@@ -37,16 +37,16 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 //		String longTermDurations = "THREE";
 		
 		// 5/17 USGS Exercise
-//		String etasSimName = "2017_05_17-USGS_Exercise_Catalog-10yr-full_td-subSeisSupraNucl-gridSeisCorr-scale1.14-noSpont";
-		String etasSimName = "2017_05_17-USGS_Exercise_Catalog-10yr-full_td-subSeisSupraNucl-gridSeisCorr-scale1.14-noSpont-sect-reset-1pm";
-		String etasFileName = "results_m5.bin";
-		String etasShortName = "2017_05-usgs_exercise-1pm";
-		TestScenario scenario = null;
+////		String etasSimName = "2017_05_17-USGS_Exercise_Catalog-10yr-full_td-subSeisSupraNucl-gridSeisCorr-scale1.14-noSpont";
+//		String etasSimName = "2017_05_17-USGS_Exercise_Catalog-10yr-full_td-subSeisSupraNucl-gridSeisCorr-scale1.14-noSpont-sect-reset-1pm";
+//		String etasFileName = "results_m5.bin";
+//		String etasShortName = "2017_05-usgs_exercise-1pm";
+//		TestScenario scenario = null;
 		// Haywired Fault
-//		String etasSimName = "2016_06_15-haywired_m7-10yr-full_td-no_ert-combined";
-//		String etasFileName = "results_descendents_m5.bin";
-//		String etasShortName = "haywired_m7_combined_descendents";
-//		TestScenario scenario = TestScenario.HAYWIRED_M7;
+		String etasSimName = "2016_06_15-haywired_m7-10yr-full_td-no_ert-combined";
+		String etasFileName = "results_descendents_m5.bin";
+		String etasShortName = "haywired_m7_combined_descendents";
+		TestScenario scenario = TestScenario.HAYWIRED_M7;
 		// Haywired Gridded
 //		String etasSimName = "2017_01_02-haywired_m7-10yr-gridded-only-200kcombined";
 //		String etasFileName = "results_descendents_m5_preserve.bin";
@@ -92,6 +92,7 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 		gmpe.setParamDefaults();
 		boolean siteEffects = true;
 		boolean basinDepth = true;
+		boolean disableDistCutoff = true;
 		// --------------------
 		String[] imts = { "pgv", "pga" };
 		double[] periods = { Double.NaN, Double.NaN };
@@ -106,6 +107,8 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 		} else {
 			shakemapShortName += "-no-site-effects";
 		}
+		if (disableDistCutoff)
+			shakemapShortName += "-no-dist-cutoff";
 		
 		double griddedSpacing = 0.01;
 		
@@ -203,8 +206,8 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 			
 			remoteShakemapDir = new File("/home/scec-02/kmilner/ucerf3/shakemap_precalc");
 			
-//			remoteETASDir = new File("/home/scec-00/kmilner/ucerf3_etas_results_stampede/");
-			remoteETASDir = new File("/home/scec-02/kmilner/ucerf3/etas_sim/");
+			remoteETASDir = new File("/home/scec-00/kmilner/ucerf3_etas_results_stampede/");
+//			remoteETASDir = new File("/home/scec-02/kmilner/ucerf3/etas_sim/");
 			remoteFSSFile = new File("/home/scec-02/kmilner/ucerf3/inversion_compound_plots/2013_05_10-ucerf3p3-production-10runs/"
 					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip");
 		}
@@ -266,6 +269,8 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 				if (scenario != null)
 					argz += " --elastic-rebound "+scenario.name();
 			}
+			if (disableDistCutoff)
+				argz += " --dist-cutoff 10000";
 			
 			List<String> script = mpjWrite.buildScript(MPJ_ETAS_HazardMapCalc.class.getName(), argz);
 			

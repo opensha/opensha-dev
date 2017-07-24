@@ -56,24 +56,28 @@ import scratch.UCERF3.utils.FaultSystemIO;
 public class HazardMapCompareScriptGen {
 
 	public static void main(String[] args) throws IOException, DocumentException {
-		String runName = "2017_07_14-bruce2142";
-		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
-		File geomFile = new File(catalogDir, "zfault_Deepen.in");
-		
-//		String runName = "2017_07_14-bruce2194";
-//		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2194");
+//		String runName = "2017_07_14-bruce2142";
+//		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
 //		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-//		String runName = "2017_06_28-jacqui_slipWeakening_calibrated_2-vs-ucerf3";
+		String bruceDate = "2017_07_21";
+		String bruceDirNum = "2234";
+		String runName = bruceDate+"-bruce"+bruceDirNum;
+		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
+		File geomFile = new File(catalogDir, "zfault_Deepen.in");
+		
+//		String runName = "2017_07_20-jacqui_slipWeakening_calibrated_1";
+//		File catalogDir = new File("/home/kevin/Simulators/catalogs/baseCatalog_slipWeakening_calibrated_1");
+//		String runName = "2017_07_18-jacqui_slipWeakening_calibrated_2";
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/baseCatalog_slipWeakening_calibrated_2");
-//		String runName = "2017_06_28-jacqui_shortTestCatalog-vs-ucerf3";
+//		String runName = "2017_07_18-jacqui_shortTestCatalog";
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/shortTestCatalog");
 //		File geomFile = new File(catalogDir, "UCERF3.D3.1.1km.tri.2.flt");
 		
-		boolean doUCERF3 = true;
-		boolean u3SupraMinMag = true;
+		boolean doUCERF3 = false;
+		boolean u3SupraMinMag = false;
 		double minMag = 6.5d;
-		double minFractForInclusion = 0.1;
+		double minFractForInclusion = 0.2;
 		if (u3SupraMinMag)
 			runName += "-matchU3supra";
 		else

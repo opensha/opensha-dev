@@ -44,14 +44,23 @@ import scratch.UCERF3.griddedSeismicity.GridSourceFileReader;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.utils.FaultSystemIO;
 
-public class GriddedSiesImportanceHazardMapCalc {
+public class GriddedSeisImportanceHazardMapCalc {
 	
-	private static enum CalcType {
-		FULL,
-		SUPRA_ONLY,
-		SUPRA_PLUS_SUB_ONLY,
-		GRIDDED_ONLY,
-		OFF_FAULT_ONLY
+	static enum CalcType {
+		FULL("Full"),
+		SUPRA_ONLY("Fault Supra"),
+		SUPRA_PLUS_SUB_ONLY("Fault Supra+Sub"),
+		GRIDDED_ONLY("Gridded (Off/Sub)"),
+		OFF_FAULT_ONLY("Off Only");
+		
+		private String label;
+		private CalcType(String label) {
+			this.label = label;
+		}
+		
+		public String getLabel() {
+			return label;
+		}
 	}
 
 	public static void main(String[] args) throws IOException, DocumentException {

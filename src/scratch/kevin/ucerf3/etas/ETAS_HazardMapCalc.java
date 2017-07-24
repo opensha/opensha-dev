@@ -502,6 +502,10 @@ public class ETAS_HazardMapCalc {
 		this.calcLongTerm = calcLongTerm;
 	}
 	
+	public void setDistanceCutoff(double distCutoff) {
+		this.distCutoff = distCutoff;
+	}
+	
 	public void setScenarioForElasticRebound(TestScenario scenario) {
 		if (scenario.getFSS_Index() < 0)
 			return;
@@ -828,6 +832,7 @@ public class ETAS_HazardMapCalc {
 		FaultSystemSolutionERF erf = checkOutERF();
 		ScalarIMR gmpe = checkOutGMPE();
 		HazardCurveCalculator calc = new HazardCurveCalculator();
+		calc.setMaxSourceDistance(distCutoff);
 		
 		// first calculate a 1 year time independent curve which will be scaled to any other durations
 		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
