@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.List;
 
 import mpi.MPI;
-import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;

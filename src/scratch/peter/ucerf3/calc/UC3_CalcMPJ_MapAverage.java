@@ -31,7 +31,7 @@ import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.io.Flushables;
 
-import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 public class UC3_CalcMPJ_MapAverage extends MPJTaskCalculator {
 	

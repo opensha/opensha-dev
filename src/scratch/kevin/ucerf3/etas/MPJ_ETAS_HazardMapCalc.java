@@ -33,7 +33,7 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
 import mpi.MPI;
-import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;

@@ -38,7 +38,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.utils.FaultSystemIO;

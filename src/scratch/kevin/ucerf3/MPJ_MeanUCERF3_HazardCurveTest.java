@@ -37,7 +37,7 @@ import scratch.UCERF3.logicTree.LogicTreeBranch;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 public class MPJ_MeanUCERF3_HazardCurveTest extends MPJTaskCalculator {
 	

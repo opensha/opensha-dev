@@ -106,7 +106,7 @@ public class HazardMapComparePlotter {
 		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2234-m6.5-sectArea0.2"));
 		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2240-m6.5-sectArea0.2"));
 		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2241-m6.5-sectArea0.2"));
-//		
+		
 		// fallback
 		Map<Double, File> u3Files = Maps.newHashMap();
 		u3Files.put(5.5, new File("/home/kevin/Simulators/hazard/2017_06_27-bruce2142-vs-ucerf3-m5.5/ucerf3/curves/imrs1.bin"));
@@ -199,7 +199,8 @@ public class HazardMapComparePlotter {
 			if (plotHist) {
 				plotHists(u3Curves, rsqsimCurves, gridReg, histRPs, histHighlightIndex, jobDir, true);
 				plotHists(u3Curves, rsqsimCurves, gridReg, histRPs, histHighlightIndex, jobDir, false);
-				plotMeanStdDevTrend(500, 30000, u3Curves, rsqsimCurves, gridReg, jobDir);
+//				plotMeanStdDevTrend(500, 30000, u3Curves, rsqsimCurves, gridReg, jobDir);
+				plotMeanStdDevTrend(1e-6, u3Curves, rsqsimCurves, gridReg, jobDir);
 			}
 			
 			if (plotCurves) {
@@ -487,23 +488,25 @@ public class HazardMapComparePlotter {
 	
 	private static final DecimalFormat fourDigits = new DecimalFormat("0.0000");
 	
-	private static void plotMeanStdDevTrend(int minRP, int maxRP, Map<Location, ArbitrarilyDiscretizedFunc> ucerf3Curves,
+	private static void plotMeanStdDevTrend(double minProb, Map<Location, ArbitrarilyDiscretizedFunc> ucerf3Curves,
 			Map<Location, ArbitrarilyDiscretizedFunc> rsqsimCurves, GriddedRegion gridReg, File outputDir) throws IOException {
-		int numRPs = 20;
+		double logMinProb = Math.log10(minProb);
+		double logMaxProb = 0;
+		int numProbs = (int)(logMaxProb - logMinProb)*5 + 1;
 		
-		EvenlyDiscretizedFunc meanFunc = new EvenlyDiscretizedFunc((double)minRP, (double)maxRP, numRPs);
-		EvenlyDiscretizedFunc stdDevFunc = new EvenlyDiscretizedFunc((double)minRP, (double)maxRP, numRPs);
+		EvenlyDiscretizedFunc meanFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
+		EvenlyDiscretizedFunc stdDevFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
 		
 		double[] pga_thresholds = {0.0, 0.1, 0.2, 0.4, 0.8, 1.2};
 		CPT pgaWeightCPT = new CPT(pga_thresholds[0], pga_thresholds[pga_thresholds.length-1], Color.GRAY, Color.BLACK);
 		EvenlyDiscretizedFunc[] pgaWeightFuncs = new EvenlyDiscretizedFunc[pga_thresholds.length];
 		for (int p=0; p<pga_thresholds.length; p++)
-			pgaWeightFuncs[p] = new EvenlyDiscretizedFunc((double)minRP, (double)maxRP, numRPs);
+			pgaWeightFuncs[p] = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
 		EvenlyDiscretizedFunc[] pgaWeightStdDevFuncs = new EvenlyDiscretizedFunc[pga_thresholds.length];
 		for (int p=0; p<pga_thresholds.length; p++)
-			pgaWeightStdDevFuncs[p] = new EvenlyDiscretizedFunc((double)minRP, (double)maxRP, numRPs);
+			pgaWeightStdDevFuncs[p] = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
 		
-		EvenlyDiscretizedFunc nehrpMeanFunc = new EvenlyDiscretizedFunc((double)minRP, (double)maxRP, numRPs);
+		EvenlyDiscretizedFunc nehrpMeanFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
 		
 		HashSet<Integer> nehrpGridIndexes = new HashSet<>();
 		for (NEHRP_TestCity city : NEHRP_TestCity.getCA()) {
@@ -511,10 +514,10 @@ public class HazardMapComparePlotter {
 			nehrpGridIndexes.add(gridReg.indexForLocation(loc));
 		}
 		
-		for (int i=0; i<numRPs; i++) {
-			double rp = meanFunc.getX(i);
-			GriddedGeoDataSet ucerf3 = loadFromBinary(gridReg, ucerf3Curves, false, 1d/rp);
-			GriddedGeoDataSet rsqsim = loadFromBinary(gridReg, rsqsimCurves, false, 1d/rp);
+		for (int i=0; i<numProbs; i++) {
+			double prob = Math.pow(10, meanFunc.getX(i));
+			GriddedGeoDataSet ucerf3 = loadFromBinary(gridReg, ucerf3Curves, false, prob);
+			GriddedGeoDataSet rsqsim = loadFromBinary(gridReg, rsqsimCurves, false, prob);
 			
 			List<Double> ratioVals = new ArrayList<>();
 			
@@ -567,11 +570,11 @@ public class HazardMapComparePlotter {
 //			System.out.println(rp+" "+mean+" "+stdDev+" "+ratioVals.size());
 		}
 		
-		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<DiscretizedFunc> logFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
 		for (int p=0; p<pga_thresholds.length; p++) {
-			funcs.add(pgaWeightFuncs[p]);
+			logFuncs.add(pgaWeightFuncs[p]);
 			String name;
 			if (p == 0 || p == pga_thresholds.length-1)
 				name = "PGA_0="+(float)pga_thresholds[p];
@@ -583,24 +586,28 @@ public class HazardMapComparePlotter {
 		}
 		
 		for (int p=0; p<pga_thresholds.length; p++) {
-			funcs.add(pgaWeightStdDevFuncs[p]);
+			logFuncs.add(pgaWeightStdDevFuncs[p]);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f+2f*(float)pga_thresholds[p],
 					pgaWeightCPT.getColor((float)pga_thresholds[p])));
 		}
 		
-		funcs.add(nehrpMeanFunc);
+		logFuncs.add(nehrpMeanFunc);
 		nehrpMeanFunc.setName("NEHRP City Mean");
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN.darker()));
 		
-		funcs.add(meanFunc);
+		logFuncs.add(meanFunc);
 		meanFunc.setName("Mean");
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLUE));
 		
-		funcs.add(stdDevFunc);
+		logFuncs.add(stdDevFunc);
 		stdDevFunc.setName("StdDev");
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.RED));
 		
-		PlotSpec spec = new PlotSpec(funcs, chars, "Mean/StdDev Trend", "Return Period (yr)", "Ln(RSQSim/UCERF3)");
+		List<DiscretizedFunc> linearFuncs = new ArrayList<>();
+		for (DiscretizedFunc logFunc : logFuncs)
+			linearFuncs.add(toLinearX(logFunc));
+		
+		PlotSpec spec = new PlotSpec(linearFuncs, chars, "Mean/StdDev Trend", "Annual Probability", "Ln(RSQSim/UCERF3)");
 		spec.setLegendVisible(true);
 		
 		PlotPreferences plotPrefs = PlotPreferences.getDefault();
@@ -611,10 +618,22 @@ public class HazardMapComparePlotter {
 		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 		
-		gp.drawGraphPanel(spec, false, false, null, null);
+		gp.drawGraphPanel(spec, true, false, new Range(minProb, 1d), null);
 		gp.getChartPanel().setSize(800, 600);
 		gp.saveAsPNG(new File(outputDir, "hist_0d.png").getAbsolutePath());
 		gp.saveAsPDF(new File(outputDir, "hist_0d.pdf").getAbsolutePath());
+		gp.saveAsTXT(new File(outputDir, "hist_0d.txt").getAbsolutePath());
+	}
+	
+	private static DiscretizedFunc toLinearX(DiscretizedFunc logXFunc) {
+		ArbitrarilyDiscretizedFunc linearFunc = new ArbitrarilyDiscretizedFunc();
+		linearFunc.setName(logXFunc.getName());
+		
+		for (int i=0; i<logXFunc.size(); i++)
+			if (Double.isFinite(logXFunc.getY(i)))
+				linearFunc.set(Math.pow(10d, logXFunc.getX(i)), logXFunc.getY(i));
+		
+		return linearFunc;
 	}
 	
 	private static CPT getRPlogCPT(int[] rps) {

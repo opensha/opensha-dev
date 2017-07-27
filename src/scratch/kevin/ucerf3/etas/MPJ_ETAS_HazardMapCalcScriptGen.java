@@ -22,7 +22,7 @@ import org.opensha.sha.imr.AttenuationRelationship;
 
 import com.google.common.base.Preconditions;
 
-import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.kevin.ucerf3.MPJ_UCERF3_ShakeMapPrecalcScriptGen;
 

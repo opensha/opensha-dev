@@ -60,10 +60,10 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int hours = 24;
 //		int nodes = 50;
 		
-//		double duration = 1000;
-//		int numSims = 5000;
-//		int hours = 24;
-//		int nodes = 60;
+		double duration = 1000;
+		int numSims = 500;
+		int hours = 24;
+		int nodes = 34;
 		
 //		double duration = 30;
 //		int numSims = 5000;
@@ -76,11 +76,11 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int nodes = 60;
 		
 		// CSEP benchmarks
-//		double duration = 1d/365.25;
-		double duration = 3d/12d;
-		int numSims = 10000;
-		int hours = 24;
-		int nodes = 10;
+////		double duration = 1d/365.25;
+//		double duration = 3d/12d;
+//		int numSims = 10000;
+//		int hours = 24;
+//		int nodes = 10;
 		
 		// for scenarios
 //		double duration = 10; // SIM duration!!
@@ -128,13 +128,13 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //				TestScenario.MOJAVE_M6pt3_FSS, TestScenario.MOJAVE_M7};
 //		boolean includeSpontaneous = true;
 //		TestScenario[] scenarios = {TestScenario.HAYWIRED_M7};
-//		TestScenario[] scenarios = { null };
-//		boolean includeSpontaneous = false;
-//		String customCatalog = null;
-//		long customOT = Long.MIN_VALUE;
-//		String resetSectsArg = null;
-//		boolean griddedOnly = false;
-//		boolean customCatIncludeHistSurfaces = false;
+		TestScenario[] scenarios = { null };
+		boolean includeSpontaneous = true;
+		String customCatalog = null;
+		long customOT = Long.MIN_VALUE;
+		String resetSectsArg = null;
+		boolean griddedOnly = true;
+		boolean customCatIncludeHistSurfaces = false;
 		
 //		TestScenario[] scenarios = { null };
 ////		boolean includeSpontaneous = false;
@@ -145,13 +145,13 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		long customOT = 1474990200000l;
 		
 		// CSEP like benchmark tests
-		TestScenario[] scenarios = { null };
-		boolean includeSpontaneous = false;
-		String customCatalog = "CSEP_1yr_Input_Catalog.txt";
-		boolean customCatIncludeHistSurfaces = false;
-		long customOT = 1498201200000l;
-		boolean griddedOnly = false;
-		String resetSectsArg = null;
+//		TestScenario[] scenarios = { null };
+//		boolean includeSpontaneous = false;
+//		String customCatalog = "CSEP_1yr_Input_Catalog.txt";
+//		boolean customCatIncludeHistSurfaces = false;
+//		long customOT = 1498201200000l;
+//		boolean griddedOnly = false;
+//		String resetSectsArg = null;
 		
 		// USGS 5/17/17 exercise
 //		TestScenario[] scenarios = { null };

@@ -36,7 +36,7 @@ import org.opensha.sra.gui.portfolioeal.Portfolio;
 import org.opensha.sra.rtgm.RTGM;
 import org.opensha.sra.rtgm.RTGM.Frequency;
 
-import net.kevinmilner.mpj.taskDispatch.MPJTaskCalculator;
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 
 public class MPJ_AssetRTGM_Calc extends MPJ_EAL_Calc {
 
