@@ -67,10 +67,12 @@ public class GriddedSeisImportanceHazardMapCalc {
 		File remoteBaseDir = new File("/home/scec-02/kmilner/ucerf3/maps");
 		File localBaseDir = new File("/home/kevin/OpenSHA/UCERF3/maps");
 		
-		String dirName = "2017_07_14-ucerf3-gridded-tests";
+//		String dirName = "2017_07_14-ucerf3-gridded-tests";
+		String dirName = "2017_08_07-ucerf3-full-ba-gridded-tests";
 		
 		File localU3File = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
-				+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
+//				+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
+				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
 		FaultSystemSolution u3Sol = FaultSystemIO.loadSol(localU3File);
 		
 		Region region = new CaliforniaRegions.RELM_TESTING();
@@ -86,7 +88,7 @@ public class GriddedSeisImportanceHazardMapCalc {
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
 		
 		int mins = 24*60;
-		int nodes = 18;
+		int nodes = 4;
 		int ppn = 20;
 		String queue = "scec";
 		

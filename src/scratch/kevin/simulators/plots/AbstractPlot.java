@@ -56,15 +56,15 @@ public abstract class AbstractPlot {
 		this.outputPrefix = outputPrefix;
 	}
 	
-	public String getCatalogName() {
+	protected String getCatalogName() {
 		return catalogName;
 	}
 
-	public File getOutputDir() {
+	protected File getOutputDir() {
 		return outputDir;
 	}
 
-	public String getOutputPrefix() {
+	protected String getOutputPrefix() {
 		return outputPrefix;
 	}
 
@@ -203,7 +203,7 @@ public abstract class AbstractPlot {
 		return gp;
 	}
 	
-	public synchronized XYZGraphPanel getXYZGraphPanel() {
+	protected synchronized XYZGraphPanel getXYZGraphPanel() {
 		if (xyzGP == null)
 			xyzGP = new XYZGraphPanel(getGraphPanel().getPlotPrefs());
 		return xyzGP;

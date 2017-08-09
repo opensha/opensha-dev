@@ -26,6 +26,8 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.UCERF2;
+import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -35,8 +37,10 @@ import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.iden.AbstractRuptureIdentifier;
+import org.opensha.sha.simulators.iden.LogicalAndRupIden;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
+import org.opensha.sha.simulators.iden.SkipYearsLoadIden;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.util.TectonicRegionType;
@@ -60,21 +64,26 @@ public class HazardMapCompareScriptGen {
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
 //		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-		String bruceDate = "2017_07_21";
-		String bruceDirNum = "2234";
-		String runName = bruceDate+"-bruce"+bruceDirNum;
-		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
-		File geomFile = new File(catalogDir, "zfault_Deepen.in");
+//		String bruceDate = "2017_08_07";
+////		String bruceDirNum = "2142";
+////		String bruceDirNum = "2194";
+//		String bruceDirNum = "2241";
+//		String runName = bruceDate+"-bruce"+bruceDirNum;
+//		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
+//		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-//		String runName = "2017_07_20-jacqui_slipWeakening_calibrated_1";
+//		String runName = "2017_08_07-jacqui_slipWeakening_calibrated_1";
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/baseCatalog_slipWeakening_calibrated_1");
-//		String runName = "2017_07_18-jacqui_slipWeakening_calibrated_2";
+//		String runName = "2017_08_07-jacqui_slipWeakening_calibrated_2";
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/baseCatalog_slipWeakening_calibrated_2");
-//		String runName = "2017_07_18-jacqui_shortTestCatalog";
-//		File catalogDir = new File("/home/kevin/Simulators/catalogs/shortTestCatalog");
-//		File geomFile = new File(catalogDir, "UCERF3.D3.1.1km.tri.2.flt");
+		String runName = "2017_08_07-jacqui_shortTestCatalog";
+		File catalogDir = new File("/home/kevin/Simulators/catalogs/shortTestCatalog");
+		File geomFile = new File(catalogDir, "UCERF3.D3.1.1km.tri.2.flt");
+		
+		double skipYears = 5000;
 		
 		boolean doUCERF3 = false;
+		boolean doUCERF2 = false;
 		boolean u3SupraMinMag = false;
 		double minMag = 6.5d;
 		double minFractForInclusion = 0.2;
@@ -84,6 +93,8 @@ public class HazardMapCompareScriptGen {
 			runName += "-m"+(float)minMag;
 		if (minFractForInclusion > 0)
 			runName += "-sectArea"+(float)minFractForInclusion;
+		if (skipYears > 0)
+			runName += "-skip"+(int)skipYears+"yr";
 		FaultModels fm = FaultModels.FM3_1;
 		DeformationModels dm = DeformationModels.GEOLOGIC;
 		
@@ -107,16 +118,19 @@ public class HazardMapCompareScriptGen {
 		// load RSQSim catalog
 		System.out.println("Loading RSQSim catalog");
 		List<SimulatorElement> geom = RSQSimFileReader.readGeometryFile(geomFile, 11, 'S');
-		List<RuptureIdentifier> rupIdens = Lists.newArrayList();
+		RuptureIdentifier loadIden;
 		if (u3SupraMinMag) {
 			int minSubSectIndex = Integer.MAX_VALUE;
 			for (SimulatorElement elem : geom)
 				if (elem.getSectionID() < minSubSectIndex)
 					minSubSectIndex = elem.getSectionID();
-			rupIdens.add(new U3SupraSeisRuptureIdentifier(u3Sol.getRupSet(), minSubSectIndex));
+			loadIden = new U3SupraSeisRuptureIdentifier(u3Sol.getRupSet(), minSubSectIndex);
 		} else {
-			rupIdens.add(new MagRangeRuptureIdentifier(minMag, 11d));
+			loadIden = new MagRangeRuptureIdentifier(minMag, 11d);
 		}
+		if (skipYears > 0)
+			loadIden = new LogicalAndRupIden(new SkipYearsLoadIden(skipYears), loadIden);
+		List<RuptureIdentifier> rupIdens = Lists.newArrayList(loadIden);
 		List<RSQSimEvent> events = RSQSimFileReader.readEventsFile(catalogDir, geom, rupIdens);
 		double length = events.get(events.size()-1).getTimeInYears() - events.get(0).getTimeInYears();
 		System.out.println("Duration: "+(float)length+" years");
@@ -138,6 +152,11 @@ public class HazardMapCompareScriptGen {
 		File remoteDir = new File(remoteMainDir, runName);
 		System.out.println(localDir.getAbsolutePath()+" => "+remoteDir.getAbsolutePath());
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
+		
+		File localComareDir = new File(localMainDir, "ucerf-comparisons");
+		if (doUCERF2 || doUCERF3)
+			Preconditions.checkState(localComareDir.exists() || localComareDir.mkdir());
+		File remoteComareDir = new File(remoteMainDir, "ucerf-comparisons");
 		
 		int mins = 24*60;
 		int nodes = 18;
@@ -166,7 +185,7 @@ public class HazardMapCompareScriptGen {
 		CalculationSettings calcSettings = new CalculationSettings(xValues, maxSourceDistance);
 		
 		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
-		File jarFile = new File(remoteDir, "OpenSHA_complete.jar");
+		File jarFile = new File(remoteDir, "opensha-dev-all.jar");
 		
 		List<File> classpath = Lists.newArrayList();
 		classpath.add(jarFile);
@@ -186,26 +205,38 @@ public class HazardMapCompareScriptGen {
 		else
 			bools = new boolean[] { true };
 		for (boolean rsqsim : bools) {
-			String subDirName;
-			if (rsqsim)
-				subDirName = "rsqsim";
-			else
-				subDirName = "ucerf3";
-			System.out.println("Processing "+subDirName);
-			File localSubDir = new File(localDir, subDirName);
-			Preconditions.checkState(localSubDir.exists() || localSubDir.mkdir());
-			File remoteSubDir = new File(remoteDir, subDirName);
+//			String subDirName;
+//			if (rsqsim)
+//				subDirName = "rsqsim";
+//			else
+//				subDirName = "ucerf3";
+			File localJobDir, remoteJobDir;
+			if (rsqsim) {
+				System.out.println("Doing RSQSim");
+				localJobDir = localDir;
+				remoteJobDir = remoteDir;
+			} else {
+				System.out.println("Doing UCERF3");
+				String u3Name;
+				if (u3SupraMinMag)
+					u3Name = "ucerf3-supra";
+				else
+					u3Name = "ucerf3-m"+(float)minMag;
+				localJobDir = new File(localComareDir, u3Name);
+				remoteJobDir = new File(remoteComareDir, u3Name);
+			}
+			Preconditions.checkState(localJobDir.exists() || localJobDir.mkdir());
 			
 			File localSolFile;
 			if (rsqsim) {
 				// write solution
-				localSolFile = new File(localSubDir, "rsqsim_solution.zip");
+				localSolFile = new File(localJobDir, "rsqsim_solution.zip");
 				FaultSystemIO.writeSol(rsqsimSol, localSolFile);
 			} else {
-				localSolFile = new File(localSubDir, "ucerf3_sol_filtered.zip");
+				localSolFile = new File(localJobDir, "ucerf3_sol_filtered.zip");
 				FaultSystemIO.writeSol(u3Sol, localSolFile);
 			}
-			File remoteSolFile = new File(remoteSubDir, localSolFile.getName());
+			File remoteSolFile = new File(remoteJobDir, localSolFile.getName());
 			
 			FaultSystemSolutionERF erf = new FaultSystemSolutionERF();
 			erf.setParameter(FaultSystemSolutionERF.FILE_PARAM_NAME, remoteSolFile);
@@ -213,15 +244,15 @@ public class HazardMapCompareScriptGen {
 			erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
 			erf.getTimeSpan().setDuration(duration);
 			
-			File curveDir = new File(remoteSubDir, "curves");
+			File curveDir = new File(remoteJobDir, "curves");
 //			CurveResultsArchiver archiver = new AsciiFileCurveArchiver(
 //				curveDir.getAbsolutePath()+File.separator, true, false);
 			CurveResultsArchiver archiver = new BinaryCurveArchiver(curveDir, sites.size(), xValsMap);
 			
 			CalculationInputsXMLFile inputs = new CalculationInputsXMLFile(erf, imrMaps, sites, calcSettings, archiver);
 			
-			File localInputsFile = new File(localSubDir, "inputs.xml");
-			File remoteInputsFile = new File(remoteSubDir, "inputs.xml");
+			File localInputsFile = new File(localJobDir, "inputs.xml");
+			File remoteInputsFile = new File(remoteJobDir, "inputs.xml");
 			XMLUtils.writeObjectToXMLAsRoot(inputs, localInputsFile);
 			
 //			String cliArgs = "--max-dispatch 1000 --mult-erfs "+inputsFile.getAbsolutePath();
@@ -232,8 +263,52 @@ public class HazardMapCompareScriptGen {
 			
 			script = writer.buildScript(script, mins, nodes, ppn, queue);
 			
-			File pbsFile = new File(localSubDir, subDirName+".pbs");
+			File pbsFile = new File(localJobDir, localJobDir.getName()+".pbs");
 			JavaShellScriptWriter.writeScript(pbsFile, script);
+		}
+		
+		if (doUCERF2) {
+			MeanUCERF2 erf = new MeanUCERF2();
+			
+			for (boolean includeBackground : new boolean[] { true, false }) {
+				String u2Name;
+				if (includeBackground) {
+					u2Name = "ucerf2-full";
+					erf.setParameter(UCERF2.BACK_SEIS_NAME, UCERF2.BACK_SEIS_INCLUDE);
+				} else {
+					u2Name = "ucerf2-faults";
+					erf.setParameter(UCERF2.BACK_SEIS_NAME, UCERF2.BACK_SEIS_EXCLUDE);
+				}
+				System.out.println("Doing "+u2Name);
+				File localJobDir = new File(localComareDir, u2Name);
+				Preconditions.checkState(localJobDir.exists() || localJobDir.mkdir());
+				File remoteJobDir = new File(remoteComareDir, u2Name);
+				
+				erf.setParameter(UCERF2.PROB_MODEL_PARAM_NAME, UCERF2.PROB_MODEL_POISSON);
+				erf.getTimeSpan().setDuration(duration);
+				
+				File curveDir = new File(remoteJobDir, "curves");
+//				CurveResultsArchiver archiver = new AsciiFileCurveArchiver(
+//					curveDir.getAbsolutePath()+File.separator, true, false);
+				CurveResultsArchiver archiver = new BinaryCurveArchiver(curveDir, sites.size(), xValsMap);
+				
+				CalculationInputsXMLFile inputs = new CalculationInputsXMLFile(erf, imrMaps, sites, calcSettings, archiver);
+				
+				File localInputsFile = new File(localJobDir, "inputs.xml");
+				File remoteInputsFile = new File(remoteJobDir, "inputs.xml");
+				XMLUtils.writeObjectToXMLAsRoot(inputs, localInputsFile);
+				
+//				String cliArgs = "--max-dispatch 1000 --mult-erfs "+inputsFile.getAbsolutePath();
+				String cliArgs = "--max-dispatch 1000 "+remoteInputsFile.getAbsolutePath();
+				
+				List<String> script = mpj.buildScript(MPJHazardCurveDriver.class.getName(), cliArgs);
+				USC_HPCC_ScriptWriter writer = new USC_HPCC_ScriptWriter();
+				
+				script = writer.buildScript(script, mins, nodes, ppn, queue);
+				
+				File pbsFile = new File(localJobDir, localJobDir.getName()+".pbs");
+				JavaShellScriptWriter.writeScript(pbsFile, script);
+			}
 		}
 	}
 	

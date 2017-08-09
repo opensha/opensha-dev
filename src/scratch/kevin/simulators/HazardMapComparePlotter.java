@@ -1,10 +1,14 @@
 package scratch.kevin.simulators;
 
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,8 +19,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import javax.imageio.ImageIO;
+
 import org.apache.commons.math3.stat.StatUtils;
+import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
+import org.jfree.ui.TextAnchor;
+import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -27,9 +37,11 @@ import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
+import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.GMT_MapException;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -43,76 +55,75 @@ import org.opensha.commons.mapping.gmt.GMT_Map;
 import org.opensha.commons.mapping.gmt.elements.CoastAttributes;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.mapping.gmt.elements.TopographicSlopeFile;
+import org.opensha.commons.param.ParameterList;
+import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.nshmp.NEHRP_TestCity;
+import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
 import org.opensha.sha.calc.hazardMap.BinaryHazardCurveReader;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
+import org.opensha.sha.calc.params.IncludeMagDistFilterParam;
+import org.opensha.sha.calc.params.MagDistCutoffParam;
+import org.opensha.sha.calc.params.MaxDistanceParam;
+import org.opensha.sha.calc.params.NonSupportedTRT_OptionsParam;
+import org.opensha.sha.calc.params.PtSrcDistanceCorrectionParam;
+import org.opensha.sha.calc.params.SetTRTinIMR_FromSourceParam;
+import org.opensha.sha.earthquake.AbstractERF;
+import org.opensha.sha.earthquake.ERF;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
+import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.gui.infoTools.DisaggregationPlotViewerWindow;
+import org.opensha.sha.gui.infoTools.IMT_Info;
+import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Doubles;
 
+import scratch.UCERF3.FaultSystemRupSet;
+import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
+import scratch.UCERF3.utils.FaultSystemIO;
 
 public class HazardMapComparePlotter {
 	
 	private static final boolean map_parallel = true;
+	private static final boolean disagg_parallel = true;
 
 	public static void main(String[] args) throws Exception {
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_23-bruce2142-vs-ucerf3-m7.0");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_27-bruce2142-vs-ucerf3-m5.5");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_27-bruce2142-vs-ucerf3-m6.5");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-bruce2142-vs-ucerf3-m6.0");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_slipWeakening_calibrated_1-vs-ucerf3-m6.5");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_slipWeakening_calibrated_1-vs-ucerf3-m7.0");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_slipWeakening_calibrated_2-vs-ucerf3-m6.5");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_slipWeakening_calibrated_2-vs-ucerf3-m7.0");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_shortTestCatalog-vs-ucerf3-m6.5");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_06_28-jacqui_shortTestCatalog-vs-ucerf3-m7.0");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_05-bruce2194-vs-ucerf3-m6.5");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_05-bruce2194-vs-ucerf3-m7.0");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_13-bruce2142-m6.5-sectArea0.1");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_13-bruce2142-m6.5-sectArea0.3");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_13-bruce2142-m6.5-sectArea0.5");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_13-bruce2194-m6.5-sectArea0.1");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_13-bruce2194-m6.5-sectArea0.3");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_13-bruce2194-m6.5-sectArea0.5");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2142-m6.5-sectArea0.1");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2142-m6.5-sectArea0.2");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2142-m6.5-sectArea0.4");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2142-matchU3supra-sectArea0.1");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2142-matchU3supra-sectArea0.2");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2142-matchU3supra-sectArea0.4");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2194-m6.5-sectArea0.1");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2194-m6.5-sectArea0.2");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2194-m6.5-sectArea0.4");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2194-matchU3supra-sectArea0.1");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2194-matchU3supra-sectArea0.2");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2194-matchU3supra-sectArea0.4");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_18-jacqui_shortTestCatalog-m6.5-sectArea0.1");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_18-jacqui_slipWeakening_calibrated_2-m6.5-sectArea0.1");
-//		File jobDir = new File("/home/kevin/Simulators/hazard/2017_07_20-jacqui_slipWeakening_calibrated_1-m6.5-sectArea0.1");
+		
+		boolean u3SupraMinMag = false;
+		double minMag = 6.5d;
+		
+		File mainDir = new File("/home/kevin/Simulators/hazard/");
+		
+		String catalogName = "RSQSim";
+		String catalogFileName = "rsqsim";
 		
 		List<File> jobDirs = Lists.newArrayList();
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_18-jacqui_slipWeakening_calibrated_2-m6.5-sectArea0.1"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_20-jacqui_slipWeakening_calibrated_1-m6.5-sectArea0.1"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2142-m6.5-sectArea0.2"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_14-bruce2194-m6.5-sectArea0.2"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2230-m6.5-sectArea0.2"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2231-m6.5-sectArea0.2"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2232-m6.5-sectArea0.2"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2233-m6.5-sectArea0.2"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2234-m6.5-sectArea0.2"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2240-m6.5-sectArea0.2"));
-		jobDirs.add(new File("/home/kevin/Simulators/hazard/2017_07_21-bruce2241-m6.5-sectArea0.2"));
+		jobDirs.add(new File(mainDir, "2017_08_07-bruce2142-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-bruce2194-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-bruce2230-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-bruce2231-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-bruce2232-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-bruce2233-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-bruce2234-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-bruce2240-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-bruce2241-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-jacqui_shortTestCatalog-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-jacqui_slipWeakening_calibrated_1-m6.5-sectArea0.2-skip5000yr"));
+		jobDirs.add(new File(mainDir, "2017_08_07-jacqui_slipWeakening_calibrated_2-m6.5-sectArea0.2-skip5000yr"));
 		
-		// fallback
-		Map<Double, File> u3Files = Maps.newHashMap();
-		u3Files.put(5.5, new File("/home/kevin/Simulators/hazard/2017_06_27-bruce2142-vs-ucerf3-m5.5/ucerf3/curves/imrs1.bin"));
-		u3Files.put(6.0, new File("/home/kevin/Simulators/hazard/2017_06_28-bruce2142-vs-ucerf3-m6.0/ucerf3/curves/imrs1.bin"));
-		u3Files.put(6.5, new File("/home/kevin/Simulators/hazard/2017_06_27-bruce2142-vs-ucerf3-m6.5/ucerf3/curves/imrs1.bin"));
-		u3Files.put(7.0, new File("/home/kevin/Simulators/hazard/2017_06_23-bruce2142-vs-ucerf3-m7.0/ucerf3/curves/imrs1.bin"));
 		Region region = new CaliforniaRegions.RELM_TESTING();
 		double spacing = 0.02;
 		GriddedRegion gridReg = new GriddedRegion(region, spacing, null);
@@ -120,13 +131,15 @@ public class HazardMapComparePlotter {
 		File u3FullFile = new File("/home/kevin/OpenSHA/UCERF3/maps/2017_07_14-ucerf3-gridded-tests/full/curves/imrs1.bin");
 		
 		boolean plotMaps = false;
-		boolean plotHist = true;
+		boolean plotHist = false;
 		boolean plotCurves = false;
-		boolean plotDisagg = false;
+		boolean plotDisagg = true;
+		boolean plotMags = false;
 		
 		int[] mapRPs = { 1000, 2500, 10000};
 		
 		int[] histRPs = { 1000, 2500, 5000, 10000 };
+		int[] nehrpRPs = { 2500 };
 		int histHighlightIndex = 1;
 		
 		Map<String, Location> curveLocs = new HashMap<>();
@@ -138,28 +151,39 @@ public class HazardMapComparePlotter {
 		}
 		
 		String imt = "PGA (g)";
+		String gmpeIMT = PGA_Param.NAME;
+		double period = Double.NaN;
+		
+		File compareDir = new File(mainDir, "ucerf-comparisons");
+		File u3Dir;
+		if (u3SupraMinMag)
+			u3Dir = new File(compareDir, "ucerf3-supra");
+		else
+			u3Dir = new File(compareDir, "ucerf3-m"+(float)minMag);
+		File u3File = new File(u3Dir, "curves/imrs1.bin");
+		System.out.println("Loading UCERF3 from: "+u3File.getAbsolutePath());
+		BinaryHazardCurveReader u3Reader = new BinaryHazardCurveReader(u3File.getAbsolutePath());
+		Map<Location, ArbitrarilyDiscretizedFunc> u3Curves = u3Reader.getCurveMap();
+		Map<Location, ArbitrarilyDiscretizedFunc> u3FullCurves = null;
+		if (plotCurves && u3FullFile != null) {
+			BinaryHazardCurveReader u3FullReader = new BinaryHazardCurveReader(u3FullFile.getAbsolutePath());
+			u3FullCurves = u3FullReader.getCurveMap();
+		}
+		
+		AbstractERF u3ERF = null;
+		File u3SolFile = new File(u3Dir, "ucerf3_sol_filtered.zip");
+		FaultSystemSolution u3Sol = null;
 		
 		for (int d=0; d<jobDirs.size(); d++) {
 			File jobDir = jobDirs.get(d);
 			System.out.println("Processing "+(d+1)+"/"+jobDirs.size()+": "+jobDir);
-			File rsqsimFile = new File(jobDir, "rsqsim/curves/imrs1.bin");
-			File u3File = new File(jobDir, "ucerf3/curves/imrs1.bin");
-			if (!u3File.exists()) {
-				u3File = u3Files.get(6.5);
-				System.out.println("Using fallback UCERF3 file: "+u3File.getAbsolutePath());
-			}
 			
-			BinaryHazardCurveReader rsqsimReader = new BinaryHazardCurveReader(rsqsimFile.getAbsolutePath());
-			BinaryHazardCurveReader u3Reader = new BinaryHazardCurveReader(u3File.getAbsolutePath());
+			File curveFile = new File(jobDir, "curves/imrs1.bin");
+			BinaryHazardCurveReader curveReader = new BinaryHazardCurveReader(curveFile.getAbsolutePath());
+			File rsSolFile = new File(jobDir, "rsqsim_solution.zip");
+			FaultSystemSolution rsSol = null;
 			
-			Map<Location, ArbitrarilyDiscretizedFunc> rsqsimCurves = rsqsimReader.getCurveMap();
-			Map<Location, ArbitrarilyDiscretizedFunc> u3Curves = u3Reader.getCurveMap();
-			
-			Map<Location, ArbitrarilyDiscretizedFunc> u3FullCurves = null;
-			if (plotCurves && u3FullFile != null) {
-				BinaryHazardCurveReader u3FullReader = new BinaryHazardCurveReader(u3FullFile.getAbsolutePath());
-				u3FullCurves = u3FullReader.getCurveMap();
-			}
+			Map<Location, ArbitrarilyDiscretizedFunc> curves = curveReader.getCurveMap();
 			
 			CPT hazardCPT = GMT_CPT_Files.MAX_SPECTRUM.instance();
 			hazardCPT = hazardCPT.rescale(0d, 1.2d);
@@ -170,12 +194,12 @@ public class HazardMapComparePlotter {
 				
 				String durationLabel = mapRP+"yr";
 				
-				GriddedGeoDataSet rsqsimData = loadFromBinary(gridReg, rsqsimCurves, isProbAtIML, level);
+				GriddedGeoDataSet rsqsimData = loadFromBinary(gridReg, curves, isProbAtIML, level);
 				GriddedGeoDataSet u3Data = loadFromBinary(gridReg, u3Curves, isProbAtIML, level);
 				
 				if (plotMaps) {
-					plotMaps(jobDir, "map_"+durationLabel+"_rsqsim", rsqsimData, region,
-							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), "RSQSim, "+durationLabel, hazardCPT, false);
+					plotMaps(jobDir, "map_"+durationLabel+"_"+catalogFileName, rsqsimData, region,
+							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), catalogName+", "+durationLabel, hazardCPT, false);
 					plotMaps(jobDir, "map_"+durationLabel+"_u3"+durationLabel, u3Data, region,
 							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), "UCERF3, "+durationLabel, hazardCPT, false);
 				}
@@ -189,18 +213,19 @@ public class HazardMapComparePlotter {
 					CPT ratioCPT = GMT_CPT_Files.GMT_POLAR.instance();
 					ratioCPT = ratioCPT.rescale(-0.2d, 0.2d);
 					plotMaps(jobDir, "map_"+durationLabel+"_ratio_log_tight", ratioData, region, (double)ratioCPT.getMinValue(),
-							(double)ratioCPT.getMaxValue(), "Ln(RSQSim / UCERF3), "+durationLabel, ratioCPT, false);
+							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel, ratioCPT, false);
 					ratioCPT = ratioCPT.rescale(-0.5d, 0.5d);
 					plotMaps(jobDir, "map_"+durationLabel+"_ratio_log", ratioData, region, (double)ratioCPT.getMinValue(),
-							(double)ratioCPT.getMaxValue(), "Ln(RSQSim / UCERF3), "+durationLabel, ratioCPT, false);
+							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel, ratioCPT, false);
 				}
 			}
 			
 			if (plotHist) {
-				plotHists(u3Curves, rsqsimCurves, gridReg, histRPs, histHighlightIndex, jobDir, true);
-				plotHists(u3Curves, rsqsimCurves, gridReg, histRPs, histHighlightIndex, jobDir, false);
+				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, jobDir, true);
+				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, jobDir, false);
+				plotNEHRP_Hists(u3Curves, curves, catalogName, gridReg, nehrpRPs, jobDir);
 //				plotMeanStdDevTrend(500, 30000, u3Curves, rsqsimCurves, gridReg, jobDir);
-				plotMeanStdDevTrend(1e-6, u3Curves, rsqsimCurves, gridReg, jobDir);
+				plotMeanStdDevTrend(1e-6, u3Curves, curves, catalogName, gridReg, jobDir);
 			}
 			
 			if (plotCurves) {
@@ -215,17 +240,78 @@ public class HazardMapComparePlotter {
 					System.out.println(siteName+" is "+(float)dist+" km away from nearest grid point");
 					
 					DiscretizedFunc u3Curve = u3Curves.get(gridLoc);
-					DiscretizedFunc rsqsimCurve = rsqsimCurves.get(gridLoc);
+					DiscretizedFunc rsqsimCurve = curves.get(gridLoc);
 					DiscretizedFunc u3FullCurve = null;
 					if (u3FullCurves != null)
 						u3FullCurve = u3FullCurves.get(gridLoc);
 					
-					plotCurves(u3Curve, u3FullCurve, rsqsimCurve, curveDir, siteName, imt, mapRPs);
+					plotCurves(u3Curve, u3FullCurve, rsqsimCurve, catalogName, curveDir, siteName, imt, mapRPs);
 				}
+			}
+			if (plotDisagg) {
+				System.out.println("Building RSQSim ERF");
+				rsSol = FaultSystemIO.loadSol(rsSolFile);
+				FaultSystemSolutionERF rsERF = buildERF(rsSol);
+				if (u3ERF == null) {
+					System.out.println("Building UCERF3 ERF");
+					u3Sol = FaultSystemIO.loadSol(u3SolFile);
+					u3ERF = buildERF(u3Sol);
+				}
+				
+				File disaggDir = new File(jobDir, "disagg");
+				Preconditions.checkState(disaggDir.exists() || disaggDir.mkdir());
+				
+				double disaggMinMag;
+				if (u3SupraMinMag)
+					disaggMinMag = 6;
+				else
+					disaggMinMag = minMag;
+				
+				calcDisagg(u3ERF, rsERF, curveLocs, catalogName, disaggDir, gmpeIMT, period, new int[] {2500}, disaggMinMag);
+			}
+			
+			if (plotMags) {
+				if (rsSol == null)
+					rsSol = FaultSystemIO.loadSol(rsSolFile);
+				if (u3Sol == null)
+					u3Sol = FaultSystemIO.loadSol(u3SolFile);
+				calcCumulantMedianMag(u3Sol, rsSol, catalogName, jobDir);
 			}
 		}
 		
-		waitOnMaps();
+		waitOnFutures();
+	}
+	
+	private static ArrayDeque<ScalarIMR> gmpeDeque;
+	
+	private synchronized static ScalarIMR checkOutGMPE(String imt, double period) {
+		if (gmpeDeque == null)
+			gmpeDeque = new ArrayDeque<>();
+		ScalarIMR gmpe;
+		if (gmpeDeque.isEmpty()) {
+			// build a new one
+			gmpe = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+		} else {
+			gmpe = gmpeDeque.pop();
+		}
+		gmpe.setParamDefaults();
+		gmpe.setIntensityMeasure(imt);
+		if (imt.equals(SA_Param.NAME))
+			SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), period);
+		return gmpe;
+	}
+	
+	private synchronized void checkInGMPE(ScalarIMR gmpe) {
+		gmpeDeque.push(gmpe);
+	}
+	
+	private static FaultSystemSolutionERF buildERF(FaultSystemSolution sol) {
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
+		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
+		erf.getTimeSpan().setDuration(1d);
+		erf.updateForecast();
+		return erf;
 	}
 	
 	private static GriddedGeoDataSet loadFromBinary(GriddedRegion gridReg, Map<Location, ArbitrarilyDiscretizedFunc> curves,
@@ -241,7 +327,7 @@ public class HazardMapComparePlotter {
 		return data;
 	}
 	
-	private static void plotMaps(File outputDir, String prefix, GriddedGeoDataSet data, Region region,
+	static void plotMaps(File outputDir, String prefix, GriddedGeoDataSet data, Region region,
 			Double customMin, Double customMax, String label, CPT cpt, boolean rescaleCPT)
 					throws GMT_MapException, IOException {
 		
@@ -270,49 +356,56 @@ public class HazardMapComparePlotter {
 				try {
 					FaultBasedMapGen.plotMap(outputDir, prefix, false, map);
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
 		};
 		
-		if (map_parallel) {
-			if (mapExec == null) {
-				mapExec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-				mapFutures = new ArrayList<>();
-			}
-			mapFutures.add(mapExec.submit(run));
+		if (map_parallel)
+			submitRunnable(run, 1000);
+		else
+			run.run();
+	}
+	
+	private static synchronized void submitRunnable(Runnable run, long sleepMillis) {
+		if (exec == null) {
+			exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+			futures = new ArrayList<>();
+		}
+		futures.add(exec.submit(run));
+		if (sleepMillis > 0) {
 			try {
-				Thread.sleep(1000);
+				Thread.sleep(sleepMillis);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		} else {
-			run.run();
 		}
 	}
 	
-	private static void waitOnMaps() {
-		if (mapFutures == null)
+	private static void waitOnFutures() {
+		if (futures == null)
 			return;
-		System.out.println("Waiting on "+mapFutures.size()+" maps...");
-		for (Future<?> future : mapFutures) {
+		System.out.println("Waiting on "+futures.size()+" maps...");
+		int count = 0;
+		for (Future<?> future : futures) {
 			try {
 				future.get();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+			count++;
+			if (count % 10 == 0)
+				System.out.println("\tFutures "+count+"/"+futures.size()+" done");
 		}
-		System.out.print("DONE");
-		mapExec.shutdown();
+		System.out.println("DONE");
+		exec.shutdown();
 	}
 	
-	private static ExecutorService mapExec;
-	private static List<Future<?>> mapFutures;
+	private static ExecutorService exec;
+	private static List<Future<?>> futures;
 	
-	private static void plotHists(Map<Location, ArbitrarilyDiscretizedFunc> ucerf3Curves,
-			Map<Location, ArbitrarilyDiscretizedFunc> rsqsimCurves, GriddedRegion gridReg,
+	static void plotHists(Map<Location, ArbitrarilyDiscretizedFunc> ucerf3Curves,
+			Map<Location, ArbitrarilyDiscretizedFunc> rsqsimCurves, String catalogName, GriddedRegion gridReg,
 			int[] returnPeriods, int hightlightIndex, File outputDir, boolean log) throws IOException {
 		
 		PlotPreferences plotPrefs = PlotPreferences.getDefault();
@@ -380,7 +473,7 @@ public class HazardMapComparePlotter {
 			cpt.setBelowMinColor(Color.WHITE);
 			
 			String xAxisLabel = "UCERF3 1/"+rp+"yr";
-			String yAxisLabel = "RSQSim 1/"+rp+"yr";
+			String yAxisLabel = catalogName+" 1/"+rp+"yr";
 			if (log) {
 				xAxisLabel = "Ln "+xAxisLabel;
 				yAxisLabel = "Ln "+yAxisLabel;
@@ -474,7 +567,7 @@ public class HazardMapComparePlotter {
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 4f, Color.BLACK));
 			}
 			
-			PlotSpec spec = new PlotSpec(funcs, chars, "Hazard 1D Histogram", "Ln(RSQSim/UCERF3)", "Fraction");
+			PlotSpec spec = new PlotSpec(funcs, chars, "Hazard 1D Histogram", "Ln("+catalogName+"/UCERF3)", "Fraction");
 			spec.setLegendVisible(true);
 			
 			HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
@@ -488,8 +581,9 @@ public class HazardMapComparePlotter {
 	
 	private static final DecimalFormat fourDigits = new DecimalFormat("0.0000");
 	
-	private static void plotMeanStdDevTrend(double minProb, Map<Location, ArbitrarilyDiscretizedFunc> ucerf3Curves,
-			Map<Location, ArbitrarilyDiscretizedFunc> rsqsimCurves, GriddedRegion gridReg, File outputDir) throws IOException {
+	static void plotMeanStdDevTrend(double minProb, Map<Location, ArbitrarilyDiscretizedFunc> ucerf3Curves,
+			Map<Location, ArbitrarilyDiscretizedFunc> rsqsimCurves, String catalogName,
+			GriddedRegion gridReg, File outputDir) throws IOException {
 		double logMinProb = Math.log10(minProb);
 		double logMaxProb = 0;
 		int numProbs = (int)(logMaxProb - logMinProb)*5 + 1;
@@ -607,7 +701,7 @@ public class HazardMapComparePlotter {
 		for (DiscretizedFunc logFunc : logFuncs)
 			linearFuncs.add(toLinearX(logFunc));
 		
-		PlotSpec spec = new PlotSpec(linearFuncs, chars, "Mean/StdDev Trend", "Annual Probability", "Ln(RSQSim/UCERF3)");
+		PlotSpec spec = new PlotSpec(linearFuncs, chars, "Mean/StdDev Trend", "Annual Probability", "Ln("+catalogName+"/UCERF3)");
 		spec.setLegendVisible(true);
 		
 		PlotPreferences plotPrefs = PlotPreferences.getDefault();
@@ -649,8 +743,91 @@ public class HazardMapComparePlotter {
 		return new CPT(Math.log10(minRP), Math.log10(maxRP), Color.LIGHT_GRAY, Color.BLACK);
 	}
 	
-	private static void plotCurves(DiscretizedFunc ucerf3Compare, DiscretizedFunc ucerf3Full,
-			DiscretizedFunc rsqsim, File outputDir, String siteName,
+	static void plotNEHRP_Hists(Map<Location, ArbitrarilyDiscretizedFunc> ucerf3Curves,
+			Map<Location, ArbitrarilyDiscretizedFunc> rsqsimCurves, String catalogName, GriddedRegion gridReg,
+			int[] returnPeriods, File outputDir) throws IOException {
+		HashSet<Integer> nehrpGridIndexes = new HashSet<>();
+		for (NEHRP_TestCity city : NEHRP_TestCity.getCA()) {
+			Location loc = city.getSite().getLocation();
+			nehrpGridIndexes.add(gridReg.indexForLocation(loc));
+		}
+		
+		for (int rp : returnPeriods) {
+			List<Double> ratioVals = new ArrayList<>();
+			
+			GriddedGeoDataSet ucerf3 = loadFromBinary(gridReg, ucerf3Curves, false, 1d/(double)rp);
+			GriddedGeoDataSet rsqsim = loadFromBinary(gridReg, rsqsimCurves, false, 1d/(double)rp);
+			
+			for (int index : nehrpGridIndexes) {
+				double u3 = ucerf3.get(index);
+				double rs = rsqsim.get(index);
+//				if (u3 == 0 || rs == 0 || Double.isNaN(u3) || Double.isNaN(rs))
+//					continue;
+				
+				double ratio = Math.log(rs/u3);
+				Preconditions.checkState(Double.isFinite(ratio), "Bad ratio: Ln(%s/%s) = %s", rs, u3, ratio);
+				
+				ratioVals.add(ratio);
+			}
+			
+			double[] ratioArray = Doubles.toArray(ratioVals);
+			
+			double mean = StatUtils.mean(ratioArray);
+			double stdDev = Math.sqrt(StatUtils.variance(ratioArray));
+			
+			double minX = -0.5;
+			double maxX = 0.5;
+			
+			HistogramFunction hist = HistogramFunction.getEncompassingHistogram(minX, maxX, 0.05);
+			for (double val : ratioArray)
+				hist.add(hist.getClosestXIndex(val), 1d);
+			hist.normalizeBySumOfY_Vals();
+			
+			List<XY_DataSet> funcs = new ArrayList<>();
+			List<PlotCurveCharacterstics> chars = new ArrayList<>();
+			
+			funcs.add(hist);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.DARK_GRAY));
+			
+			Range xRange = new Range(minX, maxX);
+			Range yRange = new Range(hist.getMinY()*0.9, hist.getMaxY()*1.1);
+			
+			PlotSpec spec = new PlotSpec(funcs, chars, "NEHRP City Residuals, "+rp+"yr",
+					"Ln("+catalogName+"/UCERF3)", "Fraction");
+			
+			double x = minX + 0.1;
+			double y1 = yRange.getUpperBound()*0.9;
+			double y2 = yRange.getUpperBound()*0.8;
+			List<XYTextAnnotation> anns = new ArrayList<>();
+			XYTextAnnotation meanAnn = new XYTextAnnotation("Mean: "+fourDigits.format(mean), x, y1);
+			meanAnn.setTextAnchor(TextAnchor.TOP_LEFT);
+			meanAnn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+			anns.add(meanAnn);
+			XYTextAnnotation stdDevAnn = new XYTextAnnotation("StdDev: "+fourDigits.format(stdDev), x, y2);
+			stdDevAnn.setTextAnchor(TextAnchor.TOP_LEFT);
+			stdDevAnn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+			anns.add(stdDevAnn);
+			spec.setPlotAnnotations(anns);
+			
+			PlotPreferences plotPrefs = PlotPreferences.getDefault();
+			plotPrefs.setTickLabelFontSize(18);
+			plotPrefs.setAxisLabelFontSize(20);
+			plotPrefs.setPlotLabelFontSize(21);
+			plotPrefs.setBackgroundColor(Color.WHITE);
+			
+			HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+			
+			gp.drawGraphPanel(spec, false, false, xRange, yRange);
+			gp.getChartPanel().setSize(800, 600);
+			String prefix = "nehrp_hist1d_"+rp;
+			gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
+			gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
+			gp.saveAsTXT(new File(outputDir, prefix+".txt").getAbsolutePath());
+		}
+	}
+	
+	static void plotCurves(DiscretizedFunc ucerf3Compare, DiscretizedFunc ucerf3Full,
+			DiscretizedFunc rsqsim, String catalogName, File outputDir, String siteName,
 			String imt, int[] rps) throws IOException {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -668,7 +845,7 @@ public class HazardMapComparePlotter {
 		funcs.add(ucerf3Compare);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
 		
-		rsqsim.setName("RSQSim");
+		rsqsim.setName(catalogName);
 		funcs.add(rsqsim);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
 		
@@ -704,6 +881,254 @@ public class HazardMapComparePlotter {
 		gp.saveAsPNG(new File(outputDir, prefix).getAbsolutePath()+".png");
 		gp.saveAsPDF(new File(outputDir, prefix).getAbsolutePath()+".pdf");
 		gp.saveAsTXT(new File(outputDir, prefix).getAbsolutePath()+".txt");
+	}
+	
+	static void calcDisagg(AbstractERF u3ERF, AbstractERF rsERF,
+			Map<String, Location> curveLocs, String catalogName, File outputDir,
+			String imt, double period, int[] rps, double minMag) throws IOException {
+		DisaggCalculator calc = new DisaggCalculator(u3ERF, rsERF, catalogName, outputDir, imt, period, rps, minMag);
+		
+		for (String siteName : curveLocs.keySet())
+			calc.calcForSite(siteName, curveLocs.get(siteName));
+	}
+	
+	private static class DisaggCalculator {
+		
+		private final AbstractERF u3ERF;
+		private final AbstractERF rsERF;
+		private final String catalogName;
+		private final File outputDir;
+		private final String imt;
+		private final double period;
+		private final int[] rps;
+		
+		private final DiscretizedFunc xVals;
+		private final DiscretizedFunc logXVals;
+		
+		private final ParameterList disaggParams;
+		
+		// disagg plot settings
+		private final double minMag;
+		private final int numMags;
+		private final double deltaMag;
+
+		private static final int numSourcesForDisag = 100;
+
+		private static final boolean showSourceDistances = true;
+
+		private static final double maxZAxis = Double.NaN;
+
+		public DisaggCalculator(AbstractERF u3ERF, AbstractERF rsERF, String catalogName, File outputDir,
+				String imt, double period, int[] rps, double minMag) {
+			this.u3ERF = u3ERF;
+			this.rsERF = rsERF;
+			this.catalogName = catalogName;
+			this.outputDir = outputDir;
+			this.imt = imt;
+			this.period = period;
+			this.rps = rps;
+			
+			this.minMag = minMag;
+			this.deltaMag = 0.2;
+			this.numMags = (int)((8.6d - minMag)/deltaMag + 0.5);
+
+			xVals = new IMT_Info().getDefaultHazardCurve(imt);
+			logXVals = new ArbitrarilyDiscretizedFunc();
+			for (Point2D pt : xVals)
+				logXVals.set(Math.log(pt.getX()), 1d);
+			
+//			DisaggregationCalculator disaggCalc = new DisaggregationCalculator();
+			disaggParams = new ParameterList();
+			disaggParams.addParameter(new MaxDistanceParam());
+			disaggParams.addParameter(new IncludeMagDistFilterParam());
+			disaggParams.addParameter(new MagDistCutoffParam());
+			disaggParams.addParameter(new SetTRTinIMR_FromSourceParam());
+			disaggParams.addParameter(new NonSupportedTRT_OptionsParam());
+			disaggParams.addParameter(new PtSrcDistanceCorrectionParam());
+		}
+		
+		public void calcForSite(String siteName, Location loc) {
+			Runnable run = new Runnable() {
+				
+				@Override
+				public void run() {
+					try {
+						HazardCurveCalculator curveCalc = new HazardCurveCalculator();
+						DisaggregationCalculator disaggCalc = new DisaggregationCalculator();
+						
+						System.out.println("Disaggregating for "+siteName);
+						
+						ScalarIMR gmpe = checkOutGMPE(imt, period);
+						
+						Site site = new Site(loc);
+						site.addParameterList(gmpe.getSiteParams());
+						
+						List<File> rsPNGs = new ArrayList<>();
+						List<File> u3PNGs = new ArrayList<>();
+						
+						String sitePrefix = "disagg_"+siteName.replaceAll(" ", "_");
+						
+						for (boolean rs : new boolean[] {true, false}) {
+							AbstractERF erf;
+							if (rs) {
+								erf = rsERF;
+							} else {
+								erf = u3ERF;
+							}
+							DiscretizedFunc logCurve = logXVals.deepClone();
+							curveCalc.getHazardCurve(logCurve, site, gmpe, erf);
+							DiscretizedFunc linearCurve = new ArbitrarilyDiscretizedFunc();
+							for (int i=0; i<logCurve.size(); i++)
+								linearCurve.set(xVals.getX(i), logCurve.getY(i));
+							
+							for (int rp : rps) {
+								String prefix;
+								if (rs) {
+									prefix = sitePrefix+"_"+rp+"yr_"+catalogName.replaceAll(" ", "_").toLowerCase();
+								} else {
+									prefix = sitePrefix+"_"+rp+"yr_ucerf3";
+								}
+								
+								double prob = 1d/(double)rp;
+								double iml = HazardDataSetLoader.getCurveVal(linearCurve, false, prob); // iml at prob
+								if (!Double.isFinite(iml)) {
+									System.out.println("Couldn't get IML for "+siteName+", "+rp+"yr. Skipping disagg!");
+									return;
+								}
+
+								System.out.println("Disaggregating for prob="+prob+", iml="+iml);
+								disaggCalc.setMagRange(minMag, numMags, deltaMag);
+								disaggCalc.setNumSourcestoShow(numSourcesForDisag);
+								disaggCalc.setShowDistances(showSourceDistances);
+								boolean success = disaggCalc.disaggregate(Math.log(iml), site, gmpe, erf, disaggParams);
+								if (!success)
+									throw new RuntimeException("Disagg calc failed (see errors above, if any).");
+								disaggCalc.setMaxZAxisForPlot(maxZAxis);
+								System.out.println("Done Disaggregating");
+								String metadata = "temp metadata";
+
+								System.out.println("Fetching plot...");
+								String address = disaggCalc.getDisaggregationPlotUsingServlet(metadata);
+
+								String meanModeText = disaggCalc.getMeanAndModeInfo();
+								String binDataText = disaggCalc.getBinData();
+								String sourceDataText = disaggCalc.getDisaggregationSourceInfo();
+
+								File outputFile = new File(outputDir, prefix);
+
+								String metadataText = "Custom disagg";
+
+								File pdfFile = new File(outputFile.getAbsolutePath()+".pdf");
+								File pngFile = new File(outputFile.getAbsolutePath()+".png");
+								DisaggregationPlotViewerWindow.saveAsPDF(
+										address+DisaggregationCalculator.DISAGGREGATION_PLOT_PDF_NAME,
+										pdfFile.getAbsolutePath(), meanModeText, metadataText, binDataText, sourceDataText);
+								FileUtils.downloadURL(address+DisaggregationCalculator.DISAGGREGATION_PLOT_PNG_NAME,
+										pngFile);
+								DisaggregationPlotViewerWindow.saveAsTXT(outputFile.getAbsolutePath()+".txt", meanModeText, metadataText,
+										binDataText, sourceDataText);
+								
+								if (rs)
+									rsPNGs.add(pngFile);
+								else
+									u3PNGs.add(pngFile);
+							}
+						}
+						
+						// now write combined PNG
+						for (int i=0; i<rps.length; i++) {
+							String prefix = sitePrefix+"_"+rps[i]+"yr_combined";
+							BufferedImage rsImg = ImageIO.read(rsPNGs.get(i));
+							BufferedImage u3Img = ImageIO.read(u3PNGs.get(i));
+							int height = rsImg.getHeight();
+							if (u3Img.getHeight() > rsImg.getHeight())
+								height = u3Img.getHeight();
+							int width = rsImg.getWidth()+u3Img.getWidth();
+							
+							BufferedImage comb = new BufferedImage(width, height, rsImg.getType());
+							
+							int xOffset = 0;
+							for (int x=0; x<rsImg.getWidth(); x++)
+								for (int y=0; y<rsImg.getHeight(); y++)
+									comb.setRGB(x+xOffset, y, rsImg.getRGB(x, y));
+							xOffset = rsImg.getWidth();
+							for (int x=0; x<u3Img.getWidth(); x++)
+								for (int y=0; y<u3Img.getHeight(); y++)
+									comb.setRGB(x+xOffset, y, u3Img.getRGB(x, y));
+							
+							Graphics g = comb.getGraphics();
+							g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 30));
+							g.setColor(Color.BLACK);
+							g.drawString(catalogName, 20, 40);
+							g.drawString("UCERF3", rsImg.getWidth()+20, 40);
+							
+							ImageIO.write(comb, "png", new File(outputDir, prefix+".png"));
+						}
+					} catch (IOException e) {
+						ExceptionUtils.throwAsRuntimeException(e);
+					}
+				}
+			};
+			if (disagg_parallel)
+				submitRunnable(run, 100);
+			else
+				run.run();
+		}
+		
+	}
+	
+	static void calcCumulantMedianMag(FaultSystemSolution u3Sol, FaultSystemSolution rsSol,
+			String catalogName, File outputDir) throws IOException, GMT_MapException, RuntimeException {
+		CSVFile<String> csv = new CSVFile<>(true);
+		csv.addLine("Sect Index", "Sect Name", catalogName, "UCERF3");
+		
+		FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
+		FaultSystemRupSet rsRupSet = rsSol.getRupSet();
+		
+		Preconditions.checkState(u3RupSet.getNumSections() == rsRupSet.getNumSections());
+		
+		List<Double> rsVals = new ArrayList<>();
+		List<Double> u3Vals = new ArrayList<>();
+		
+		for (int s=0; s<u3RupSet.getNumSections(); s++) {
+			List<String> line = new ArrayList<>();
+			line.add(s+"");
+			line.add(u3RupSet.getFaultSectionData(s).getName());
+			double rsVal = calcCumulantMedianMag(rsSol, s);
+			rsVals.add(rsVal);
+			line.add(rsVal+"");
+			double u3Val = calcCumulantMedianMag(u3Sol, s);
+			u3Vals.add(u3Val);
+			line.add(u3Val+"");
+			csv.addLine(line);
+		}
+		
+		csv.writeToFile(new File(outputDir, "mag_cumulant_medians.csv"));
+		
+		List<LocationList> faults = new ArrayList<>();
+		for (FaultSectionPrefData fault : u3RupSet.getFaultSectionDataList())
+			faults.add(fault.getFaultTrace());
+		
+		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(6d,  8.5d);
+		Region reg = new CaliforniaRegions.RELM_TESTING();
+		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(u3Vals), reg, outputDir,
+				"mag_cumulant_medians_ucerf3", false, false, "UCERF3 Mag Cumulant Median");
+		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(rsVals), reg, outputDir,
+				"mag_cumulant_medians_"+catalogName.toLowerCase(), false, false, catalogName+" Mag Cumulant Median");
+	}
+	
+	private static double calcCumulantMedianMag(FaultSystemSolution sol, int s) {
+		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(5d, 9d, (int)((9d-5d)/0.01) + 1);
+		for (int r : sol.getRupSet().getRupturesForSection(s)) {
+			double mag = sol.getRupSet().getMagForRup(r);
+			int i = func.getClosestXIndex(mag);
+			for (int x=i; x<func.size(); x++)
+				func.add(x, MagUtils.magToMoment(mag));
+		}
+		if (func.calcSumOfY_Vals() == 0)
+			return Double.NaN;
+		func.scale(1d/func.getMaxY());
+		return func.getFirstInterpolatedX(0.5);
 	}
 
 }
