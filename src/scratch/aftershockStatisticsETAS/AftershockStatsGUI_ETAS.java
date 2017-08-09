@@ -1765,6 +1765,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 		System.out.println("rateModel min max: " + + genericRateModel.getMinZ() + " " + genericRateModel.getMaxZ());
 		
+		//new comment
 		
 		if (progress != null)
 			progress.updateProgress(1,1);
