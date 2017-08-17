@@ -118,7 +118,7 @@ public class ETAS_ShakingForecastCalc {
 		return curves;
 	}
 	
-	private static class GriddedForecast extends AbstractERF {
+	public static class GriddedForecast extends AbstractERF {
 		
 		private GeoDataSet rateModel;
 		private double refMag;
