@@ -108,6 +108,9 @@ public abstract class AbstractGMPEInterpolation<E> implements Iterable<E> {
 			double index = binBefore + beforeDelta/(beforeDelta + afterDelta);
 			Preconditions.checkState(index >= 0 && index <= numBins-1, "Index outside bounds. value=%s, binBefore=%s, beforeDelta=%s",
 					value, binBefore, beforeDelta);
+//			Preconditions.checkState(getValue((int)index) <= value);
+//			if (index < numBins-1)
+//				Preconditions.checkState(getValue((int)index+1) >= value);
 			return index;
 		}
 		

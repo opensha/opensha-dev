@@ -3,6 +3,8 @@ package scratch.kevin.griddedInterpGMPE;
 import java.util.Set;
 
 import org.opensha.commons.data.Site;
+import org.opensha.commons.param.Parameter;
+import org.opensha.commons.param.impl.WarningDoubleParameter;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.imr.ScalarIMR;
@@ -18,7 +20,11 @@ public class DoubleParameterInterpolator extends EvenlySpacedDouble {
 
 	@Override
 	public void setGMPE_Params(ScalarIMR gmpe, ProbEqkSource source, int index) {
-		gmpe.getParameter(getName()).setValue(getValue(index));
+		Parameter<Double> param = gmpe.getParameter(getName());
+		if (param instanceof WarningDoubleParameter)
+			((WarningDoubleParameter)param).setValueIgnoreWarning(getValue(index));
+		else
+			param.setValue(getValue(index));
 	}
 
 	@Override

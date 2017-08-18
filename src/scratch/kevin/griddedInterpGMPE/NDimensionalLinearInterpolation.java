@@ -35,11 +35,55 @@ public class NDimensionalLinearInterpolation {
 		}
 	}
 	
+	private NDimensionalLinearInterpolation(int numDimensions, NDimArrayCalc[] arrayCalcs, List<List<int[]>> subInterpIndexes) {
+		this.numDimensions = numDimensions;
+		this.arrayCalcs = arrayCalcs;
+		this.subInterpIndexes = subInterpIndexes;
+	}
+	
+	private NDimensionalLinearInterpolation collapsed;
+	
+	private synchronized NDimensionalLinearInterpolation getCollapsedInterpolator() {
+		Preconditions.checkState(numDimensions > 1, "Can't collapse with only 1 dimension!");
+		if (collapsed == null) {
+			collapsed = new NDimensionalLinearInterpolation(numDimensions-1,
+					Arrays.copyOfRange(arrayCalcs, 1, arrayCalcs.length), subInterpIndexes.subList(1, subInterpIndexes.size()));
+		}
+		return collapsed;
+	}
+	
 	public double interpolate(double[] flatDataArray, NDimArrayCalc arrayCalc, double[] indexes) {
 		Preconditions.checkState(arrayCalc.getNumDimensions() == numDimensions);
+		
+		// check for any fixed values and collapse to avoid unnecessary interpolation
+		if (indexes.length > 1) {
+			for (int i=0; i<indexes.length; i++) {
+				if ((int)indexes[i] == (float)indexes[i]) {
+					// remove that index
+					double[] collapsed = new double[indexes.length-1];
+					for (int j=0; j<collapsed.length; j++) {
+						if (j < i)
+							collapsed[j] = indexes[j];
+						else
+							collapsed[j] = indexes[j+1];
+					}
+					NDimensionalLinearInterpolation cInterp = getCollapsedInterpolator();
+					return cInterp.interpolate(flatDataArray, arrayCalc.getCollapsedView(i, (int)indexes[i]), collapsed);
+				}
+			}
+		} else {
+			// only one dimension
+			if ((int)indexes[0] == (float)indexes[0]) {
+				return flatDataArray[arrayCalc.getIndex((int)indexes[0])];
+			}
+		}
+		
 		int[] dimensions = arrayCalc.getDimensions();
-		for (int dimension : dimensions)
-			Preconditions.checkArgument(dimension > 1, "Only dimensions with size >1 are supported");
+		for (int j=0; j<dimensions.length; j++) {
+			int dimension = dimensions[j];
+			Preconditions.checkArgument(dimension > 1,
+					"Only dimensions with size >1 are supported, encountered %s at dim %s/%s", dimension, j+1, dimensions.length);
+		}
 		
 		// convert to array where each dimension has 2 values, and delta is fraction between those 2 values
 		// handles edge cases where index is on the greater edge
@@ -51,7 +95,7 @@ public class NDimensionalLinearInterpolation {
 			if (baseIndexes[i] == dimensions[i] - 1) {
 				// we're at an edge, move index down and set delta to 1
 				Preconditions.checkState(indexes[i] == dimensions[i] - 1,
-						"we're index is outside of range for dimension %s, size=%s, index=%s", i, dimensions[i], indexes[i]);
+						"Index is outside of range for dimension %s, size=%s, index=%s", i, dimensions[i], indexes[i]);
 				baseIndexes[i]--;
 				deltas[i] = 1d;
 			} else {
@@ -64,8 +108,8 @@ public class NDimensionalLinearInterpolation {
 		double[] subFlatArray = new double[arrayCalcs[0].rawArraySize()];
 		
 		if (numDimensions == 1) {
-			subFlatArray[0] = flatDataArray[baseIndexes[0]];
-			subFlatArray[1] = flatDataArray[baseIndexes[0]+1];
+			subFlatArray[0] = flatDataArray[arrayCalc.getIndex(baseIndexes[0])];
+			subFlatArray[1] = flatDataArray[arrayCalc.getIndex(baseIndexes[0]+1)];
 		} else {
 			for (int[] subIndexes : subInterpIndexes.get(1)) {
 				int[] origNextIndexes = new int[subIndexes.length];

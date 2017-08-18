@@ -4,10 +4,12 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 
 public class NDimensionalLinearInterpolationTest {
 	
@@ -154,7 +156,7 @@ public class NDimensionalLinearInterpolationTest {
 				double y = ((double)j/(double)(numTestPerDimension-1)) * (data[0].length-1);
 				double expected = ref2D(data, x, y);
 				double actual = interp.interpolate(flatArray, arrayCalc, new double[] { x, y });
-				assertEquals("x="+x+", y="+y, expected, actual, tolerance);
+				assertEquals("x["+i+"]="+x+", y["+j+"]="+y, expected, actual, tolerance);
 			}
 		}
 	}
@@ -276,6 +278,55 @@ public class NDimensionalLinearInterpolationTest {
 		double interpZ1 = ref2D(dataZ1, x, y);
 		
 		return ref1D(new double[] { interpZ0, interpZ1 }, dz);
+	}
+	
+	@Test
+	public void test3Dspeed() {
+		int nx = 20;
+		int ny = 36;
+		int nz = 20;
+		double[][][] data = new double[nx][ny][nx];
+//		NDimArrayCalc arrayCalc = new NDimArrayCalc(new int[] { nx, ny, nz});
+		NDimArrayCalc arrayCalc = new NDimArrayCalc(new int[] { nx, ny, nz, 2 });
+		double[] flatData = new double[arrayCalc.rawArraySize()];
+		for (int x=0; x<nx; x++) {
+			for (int y=0; y<ny; y++) {
+				for (int z=0; z<nz; z++) {
+					data[x][y][z] = r.nextDouble();
+//					flatData[arrayCalc.getIndex(x, y, z)] = data[x][y][z];
+					flatData[arrayCalc.getIndex(x, y, z, 0)] = data[x][y][z];
+					flatData[arrayCalc.getIndex(x, y, z, 1)] = data[x][y][z];
+				}
+			}
+		}
+		
+		NDimensionalLinearInterpolation interp = new NDimensionalLinearInterpolation(arrayCalc.getNumDimensions());
+		
+		int numTests = 1000000;
+		Stopwatch watch = Stopwatch.createStarted();
+		for (int i=0; i<numTests; i++) {
+			double x = r.nextDouble()*(nx-1);
+			double y = r.nextDouble()*(ny-1);
+			double z = r.nextDouble()*(nz-1);
+			ref3D(data, x, y, z);
+//			interp.interpolate(flatData, arrayCalc, new double[] {x,y,z});
+		}
+		watch.stop();
+		double secs = (double)watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		System.out.println("Ref took "+secs+" secs");
+		
+		watch = Stopwatch.createStarted();
+		for (int i=0; i<numTests; i++) {
+			double x = r.nextDouble()*(nx-1);
+			double y = r.nextDouble()*(ny-1);
+			double z = r.nextDouble()*(nz-1);
+//			ref3D(data, x, y, z);
+//			interp.interpolate(flatData, arrayCalc, new double[] {x,y,z});
+			interp.interpolate(flatData, arrayCalc, new double[] {x,y,z,0});
+		}
+		watch.stop();
+		secs = (double)watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		System.out.println("NDim took "+secs+" secs");
 	}
 
 }

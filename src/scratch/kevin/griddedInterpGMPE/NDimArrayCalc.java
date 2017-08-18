@@ -22,6 +22,12 @@ public class NDimArrayCalc {
 		}
 	}
 	
+	private NDimArrayCalc(int[] dimensions, int[] strides, int size) {
+		this.dimensions = dimensions;
+		this.strides = strides;
+		this.size = size;
+	}
+	
 	public int getNumDimensions() {
 		return dimensions.length;
 	}
@@ -46,6 +52,65 @@ public class NDimArrayCalc {
 	
 	public int rawArraySize() {
 		return size;
+	}
+	
+	public NDimArrayCalc getCollapsedView(int index, int value) {
+		Preconditions.checkState(getNumDimensions() > 1, "Can't collapse with only 1 dimension!");
+		return new CollapsedNDimArrayCalc(this, index, value);
+	}
+	
+	private static int[] collapseRemove(int[] orig, int index) {
+		Preconditions.checkState(index < orig.length && index >= 0);
+		int[] collapsed = new int[orig.length-1];
+		for (int i=0; i<collapsed.length; i++) {
+			if (i < index)
+				collapsed[i] = orig[i];
+			else
+				collapsed[i] = orig[i+1];
+		}
+		return collapsed;
+	}
+	
+	private static int[] expandAdd(int[] orig, int index, int value) {
+		Preconditions.checkState(index <= orig.length && index >= 0, "Bad expand index with orig len=%s, index=%s, value=%s",
+				orig.length, index, value);
+		int[] expanded = new int[orig.length+1];
+		for (int i=0; i<expanded.length; i++) {
+			if (i == index)
+				expanded[i] = value;
+			else if (i < index)
+				expanded[i] = orig[i];
+			else
+				expanded[i] = orig[i-1];
+		}
+		return expanded;
+	}
+	
+	private class CollapsedNDimArrayCalc extends NDimArrayCalc {
+
+		private NDimArrayCalc orig;
+		private int index;
+		private int value;
+
+		public CollapsedNDimArrayCalc(NDimArrayCalc orig, int index, int value) {
+			super(collapseRemove(orig.dimensions, index), null, orig.size);
+			this.orig = orig;
+			this.index = index;
+			this.value = value;
+		}
+
+		@Override
+		public int getIndex(int firstIndex, int[] nextIndexes) {
+			if (this.index == 0)
+				return orig.getIndex(value, expandAdd(nextIndexes, 0, firstIndex));
+			return orig.getIndex(firstIndex, expandAdd(nextIndexes, index-1, value));
+		}
+
+		@Override
+		public int getIndex(int... indexes) {
+			return orig.getIndex(expandAdd(indexes, index, value));
+		}
+		
 	}
 
 }
