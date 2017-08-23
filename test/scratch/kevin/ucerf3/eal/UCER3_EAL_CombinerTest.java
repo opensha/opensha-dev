@@ -42,18 +42,23 @@ import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.enumTreeBranches.MaxMagOffFault;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.erf.FSS_ERF_ParamTest;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceFileReader;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
+import scratch.UCERF3.inversion.SectionCluster;
+import scratch.UCERF3.inversion.SectionClusterList;
+import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.utils.DeformationModelFetcher;
+import scratch.UCERF3.utils.IDPairing;
 
 public class UCER3_EAL_CombinerTest {
 	
@@ -69,10 +74,62 @@ public class UCER3_EAL_CombinerTest {
 	private static final int numSols = 50;
 	
 	private static final Random r = new Random();
+	
+	public static InversionFaultSystemRupSet buildSmallTestRupSet() {
+		LogicTreeBranch branch = LogicTreeBranch.UCERF2;
+		// this list will store our subsections
+		List<FaultSectionPrefData> subSections = Lists.newArrayList();
+		
+		FaultModels fm = branch.getValue(FaultModels.class);
+		List<FaultSectionPrefData> fsd = fm.fetchFaultSections();
+		double maxSubSectionLength = 0.5;
+		double maxDistance = 5d;
+		
+		// build the subsections
+		int sectIndex = 0;
+		for (FaultSectionPrefData parentSect : fsd) {
+			if (parentSect.getSectionId() != 301)
+				// only one fault, Mojave S
+				continue;
+			double ddw = parentSect.getOrigDownDipWidth();
+			double maxSectLength = ddw*maxSubSectionLength;
+			// the "2" here sets a minimum number of sub sections
+			List<FaultSectionPrefData> newSubSects = parentSect.getSubSectionsList(maxSectLength, sectIndex, 2);
+			subSections.addAll(newSubSects);
+			sectIndex += newSubSects.size();
+		}
+				
+		LaughTestFilter laughTest = LaughTestFilter.getDefault();
+		laughTest.setCoulombFilter(null);
+		
+		// calculate distances between each subsection
+		Map<IDPairing, Double> subSectionDistances = DeformationModelFetcher.calculateDistances(maxDistance, subSections);
+		Map<IDPairing, Double> reversed = Maps.newHashMap();
+		// now add the reverse distance
+		for (IDPairing pair : subSectionDistances.keySet()) {
+			IDPairing reverse = pair.getReversed();
+			reversed.put(reverse, subSectionDistances.get(pair));
+		}
+		subSectionDistances.putAll(reversed);
+		Map<IDPairing, Double> subSectionAzimuths = DeformationModelFetcher.getSubSectionAzimuthMap(
+				subSectionDistances.keySet(), subSections);
+		
+		SectionClusterList clusters = new SectionClusterList(
+				fm, DeformationModels.GEOLOGIC, laughTest, null, subSections, subSectionDistances, subSectionAzimuths);
+		
+		List<List<Integer>> ruptures = Lists.newArrayList();
+		for (SectionCluster cluster : clusters) {
+			ruptures.addAll(cluster.getSectionIndicesForRuptures());
+		}
+		
+		System.out.println("Created "+ruptures.size()+" ruptures");
+		
+		return new InversionFaultSystemRupSet(branch, clusters, subSections);
+	}
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
-		rupSet = FSS_ERF_ParamTest.buildSmallTestRupSet();
+		rupSet = buildSmallTestRupSet();
 		List<Integer> mapping = Lists.newArrayList();
 		// simple 1 to 1 mapping, only mag variation
 		for (int i=0; i<rupSet.getNumRuptures(); i++)
