@@ -1,6 +1,8 @@
 package scratch.kevin.ucerf3;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -15,6 +17,7 @@ import scratch.UCERF3.inversion.InversionInputGenerator;
 import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
 import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;
 import scratch.UCERF3.simulatedAnnealing.completion.TimeCompletionCriteria;
+import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoProbabilityModel;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
@@ -42,10 +45,11 @@ public class GRMemTest {
 			
 			ArrayList<PaleoRateConstraint> paleoConstraints =
 					UCERF3_PaleoRateConstraintFetcher.getConstraints(rupSet.getFaultSectionDataList());
+			List<AveSlipConstraint> aveSlipConstraints = AveSlipConstraint.load(rupSet.getFaultSectionDataList());
 			PaleoProbabilityModel paleoModel = InversionInputGenerator.loadDefaultPaleoProbabilityModel();
 			
 			InversionInputGenerator gen =
-					new InversionInputGenerator(rupSet, config, paleoConstraints, null, paleoModel);
+					new InversionInputGenerator(rupSet, config, paleoConstraints, aveSlipConstraints, null, paleoModel);
 			
 			System.out.println("Generating inputs...");
 			Stopwatch watch = Stopwatch.createStarted();

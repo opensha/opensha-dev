@@ -52,10 +52,13 @@ import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.EqkRuptureParams.MagParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
@@ -66,22 +69,30 @@ public class GriddedInterpGMPE_Calc {
 	
 	private ScalarIMR gmpe;
 	
-	private DistanceInterpolator distInterp;
-	private MagnitudeInterpolator magInterp;
-	private AbstractGMPEInterpolation<?>[] otherInterps;
+	private MagnitudeInterpolator magInterp; // index 0
+	private DistanceInterpolator distInterp; // index 1
+	private AbstractGMPEInterpolation<?>[] otherInterps; // indexes 2+
+	
+	private DiscretizedFunc xVals;
+	private DiscretizedFunc logXVals;
 	
 	private List<AbstractGMPEInterpolation<?>> allInterps;
 	
 	private IncrementalMagFreqDist inputMFD;
 	
 	private NDimArrayCalc arrayCalc;
-	private Map<FocalMech, double[]> means;
-	private Map<FocalMech, double[]> stdDevs;
+	private Map<FocalMech, double[]> exceedProbs;
 	private NDimensionalLinearInterpolation interpolator;
 	
-	public GriddedInterpGMPE_Calc(ScalarIMR gmpe, DistanceInterpolator distInterp,
-			MagnitudeInterpolator magInterp, AbstractGMPEInterpolation<?>... otherInterps) {
+	public GriddedInterpGMPE_Calc(ScalarIMR gmpe, DiscretizedFunc xVals,
+			DistanceInterpolator distInterp, MagnitudeInterpolator magInterp,
+			AbstractGMPEInterpolation<?>... otherInterps) {
 		this.gmpe = gmpe;
+		
+		this.xVals = xVals;
+		logXVals = new ArbitrarilyDiscretizedFunc();
+		for (Point2D pt : xVals)
+			logXVals.set(Math.log(pt.getX()), 1d);
 		
 		this.distInterp = distInterp;
 		this.magInterp = magInterp;
@@ -100,14 +111,14 @@ public class GriddedInterpGMPE_Calc {
 		for (int i=0; i<inputMFD.size(); i++)
 			inputMFD.set(i, 1d);
 		
-		int[] dimensions = new int[allInterps.size()];
-		for (int i=0; i<dimensions.length; i++)
-			dimensions[i] = allInterps.get(i).getNumBins();
+		int[] dimensions = new int[allInterps.size()+1]; // +1 for iml
+		dimensions[0] = xVals.size();
+		for (int i=1; i<dimensions.length; i++)
+			dimensions[i] = allInterps.get(i-1).getNumBins();
 		arrayCalc = new NDimArrayCalc(dimensions);
 		interpolator = new NDimensionalLinearInterpolation(dimensions.length);
 		
-		means = Maps.newHashMap();
-		stdDevs = Maps.newHashMap();
+		exceedProbs = Maps.newHashMap();
 	}
 	
 	public void precalc(double[] depths) {
@@ -133,8 +144,7 @@ public class GriddedInterpGMPE_Calc {
 		numRupsTrack = new MinMaxAveTracker();
 		
 		for (FocalMech mech : FocalMech.values()) {
-			double[] means = new double[arrayCalc.rawArraySize()];
-			double[] stdDevs = new double[arrayCalc.rawArraySize()];
+			double[] exceedProbs = new double[arrayCalc.rawArraySize()];
 			
 			HashSet<EqkRupture> mechRups = new HashSet<>();
 			for (EqkRupture rup : ruptures) {
@@ -142,9 +152,13 @@ public class GriddedInterpGMPE_Calc {
 					mechRups.add(rup);
 			}
 			
-			precalcRecursive(new int[0], source, mechRups, means, stdDevs);
-			this.means.put(mech, means);
-			this.stdDevs.put(mech, stdDevs);
+			precalcRecursive(new int[0], source, mechRups, exceedProbs);
+			int numNonZero = 0;
+			for (double val : exceedProbs)
+				if (val > 0)
+					numNonZero++;
+			System.out.println(numNonZero+"/"+exceedProbs.length+" are non-zero for "+mech);
+			this.exceedProbs.put(mech, exceedProbs);
 		}
 		System.out.println("Done precalculating!");
 		System.out.println("Num Rups tracker: "+numRupsTrack);
@@ -152,7 +166,7 @@ public class GriddedInterpGMPE_Calc {
 	
 	private MinMaxAveTracker numRupsTrack;
 	
-	private void precalcRecursive(int[] upstreamIndexes, PointSource13b source, Set<EqkRupture> curRuptures, double[] means, double[] stdDevs) {
+	private void precalcRecursive(int[] upstreamIndexes, PointSource13b source, Set<EqkRupture> curRuptures, double[] exceedProbs) {
 		int curIndex = upstreamIndexes.length;
 		AbstractGMPEInterpolation<?> interp = allInterps.get(curIndex);
 		int[] indexes = Arrays.copyOf(upstreamIndexes, curIndex+1);
@@ -165,32 +179,43 @@ public class GriddedInterpGMPE_Calc {
 			if (indexes.length == allInterps.size()) {
 				// time to actually calculate
 				numRupsTrack.addValue(rups.size());
-				int arrayIndex = arrayCalc.getIndex(indexes);
-				Preconditions.checkState(means[arrayIndex] == 0, "Duplicate calc?");
-				Preconditions.checkState(stdDevs[arrayIndex] == 0, "Duplicate calc?");
+				int arrayIndex = arrayCalc.getIndex(0, indexes);
+				Preconditions.checkState(exceedProbs[arrayIndex] == 0, "Duplicate calc?");
 				double wtEach = 1d/rups.size();
+				
 				for (EqkRupture rup : rups) {
 					gmpe.setEqkRupture(rup);
-					// TODO remove hardcoded
-					double current = (Double)gmpe.getParameter(Vs30_Param.NAME).getValue();
-					double expected = (Double)allInterps.get(allInterps.size()-1).getValue(indexes[indexes.length-1]);
-					Preconditions.checkState(current == expected,
-							"Vs30 issue! Is actually %s, expected %s", current, expected);
-					means[arrayIndex] += wtEach*gmpe.getMean();
-					stdDevs[arrayIndex] += wtEach*gmpe.getStdDev();
+//					exceedProbs[arrayIndex] += wtEach*gmpe.getExceedProbability();
+					gmpe.getExceedProbabilities(logXVals);
+					for (int j=0; j<logXVals.size(); j++) {
+						arrayIndex = arrayCalc.getIndex(j, indexes);
+						exceedProbs[arrayIndex] += wtEach*logXVals.getY(j);
+					}
+//					if (Math.random() < 0.01) {
+//						System.out.print("Probs:");
+//						for (Point2D pt : logXVals)
+//							System.out.print(pt.getY());
+//						System.out.println();
+//					}
+					
+//					if (Math.random() < 0.001) {
+//						System.out.println("Indexes: "+indexes[0]+" "+indexes[1]+" "+indexes[2]);
+//						System.out.println("Distances. GMPE: "+gmpe.getParameter(DistanceRupParameter.NAME).getValue()
+//								+", Interp[1]["+indexes[1]+"]: "+allInterps.get(1).getValue(indexes[1]));
+//						System.out.println("Mags. GMPE: "+gmpe.getParameter(MagParam.NAME).getValue()
+//								+", Interp[0]["+indexes[0]+"]: "+allInterps.get(0).getValue(indexes[0]));
+//						System.out.println("Vs30. GMPE: "+gmpe.getParameter(Vs30_Param.NAME).getValue()
+//								+", Interp[2]["+indexes[2]+"]: "+allInterps.get(2).getValue(indexes[2]));
+//					}
 				}
 			} else {
 				// pass to the next level
-				precalcRecursive(indexes, source, rups, means, stdDevs);
+				precalcRecursive(indexes, source, rups, exceedProbs);
 			}
 		}
 	}
 	
-	public DiscretizedFunc[] calc(List<ProbEqkSource> sources, List<Site> sites, DiscretizedFunc xVals) {
-		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
-		for (Point2D pt : xVals)
-			logXVals.set(Math.log(pt.getX()), 1);
-		
+	public DiscretizedFunc[] calc(List<ProbEqkSource> sources, List<Site> sites) {
 		DiscretizedFunc[] curves = new DiscretizedFunc[sites.size()];
 		
 		for (int i=0; i<sites.size(); i++) {
@@ -200,7 +225,7 @@ public class GriddedInterpGMPE_Calc {
 				curves[i].set(j, 1d);
 		}
 		
-		double[] indexes = new double[allInterps.size()];
+		double[] indexes = new double[allInterps.size()+1];
 		
 		for (ProbEqkSource source : sources) {
 			// calculate distances
@@ -213,44 +238,43 @@ public class GriddedInterpGMPE_Calc {
 				// these 2 are common to all
 				Preconditions.checkState(rup.getMag() >= magInterp.getMin() && rup.getMag() <= magInterp.getMax(),
 						"Rup mag=%s outisde of range [%s %s]", rup.getMag(), magInterp.getMin(), magInterp.getMax());
-				indexes[0] = magInterp.getInterpolatedBinIndex(rup.getMag());
+				indexes[1] = magInterp.getInterpolatedBinIndex(rup.getMag());
 				FocalMech mech = FocalMechInterpolator.forRake(rup.getAveRake());
-				double[] means = this.means.get(mech);
-				double[] stdDevs = this.stdDevs.get(mech);
+				double[] exceedProbs = this.exceedProbs.get(mech);
 				for (int s=0; s<sites.size(); s++) {
 					Site site = sites.get(s);
 					if (distances[s] > distInterp.getMax())
 						continue;
 //					System.out.println("dist: "+distances[s]);
 					// set dist and any other params
-					indexes[1] = distInterp.getInterpolatedBinIndex(distances[s]);
+					indexes[2] = distInterp.getInterpolatedBinIndex(distances[s]);
 					for (int j=2; j<allInterps.size(); j++)
-						indexes[j] = allInterps.get(j).detectInterpolatedBinIndex(gmpe, site);
-					
-					if (Math.random() < 0.01)
-						System.out.println("Indexes: "+(float)indexes[0]+" "+(float)indexes[1]+" "+(float)indexes[2]);
+						indexes[j+1] = allInterps.get(j).detectInterpolatedBinIndex(null, site);
 					
 					// multi-dimensional interpolation
-					double mean = interpolator.interpolate(means, arrayCalc, indexes);
-					double stdDev = interpolator.interpolate(stdDevs, arrayCalc, indexes);
+//					double mean = interpolator.interpolate(means, arrayCalc, indexes);
+//					double stdDev = interpolator.interpolate(stdDevs, arrayCalc, indexes);
 //					gmpe.setSite(site);
 //					gmpe.setEqkRupture(rup);
 //					double mean = gmpe.getMean();
 //					double stdDev = gmpe.getStdDev();
 					
-					if (debugMeanScatter != null) {
-						gmpe.setSite(site);
-						gmpe.setEqkRupture(rup);
-						double mean2 = gmpe.getMean();
-						double stdDev2 = gmpe.getStdDev();
-						debugMeanScatter.set(mean2, mean);
-						debugStdDevScatter.set(stdDev2, stdDev);
-					}
+//					if (debugMeanScatter != null) {
+//						gmpe.setSite(site);
+//						gmpe.setEqkRupture(rup);
+//						double mean2 = gmpe.getMean();
+//						double stdDev2 = gmpe.getStdDev();
+//						debugMeanScatter.set(mean2, mean);
+//						debugStdDevScatter.set(stdDev2, stdDev);
+//					}
 					
-					for (int i=0; i<curves[s].size(); i++) {
-						double x = logXVals.getX(i);
-						double y = AttenuationRelationship.getExceedProbability(mean, stdDev, x, null, null);
-						curves[s].set(i,curves[s].getY(i)*Math.pow(1-rup.getProbability(), y));
+					for (int i=0; i<xVals.size(); i++) {
+						indexes[0] = i; // IML index
+						double exceedProb = interpolator.interpolate(exceedProbs, arrayCalc, indexes);
+//						if (Math.random() < 0.00001)
+//							System.out.println("Indexes: "+(float)indexes[0]+" "+(float)indexes[1]
+//								+" "+(float)indexes[2]+" "+(float)indexes[3]+" ==> "+exceedProb);
+						curves[s].set(i, curves[s].getY(i)*Math.pow(1-rup.getProbability(), exceedProb));
 					}
 				}
 			}
@@ -264,8 +288,8 @@ public class GriddedInterpGMPE_Calc {
 		return curves;
 	}
 	
-	private DefaultXY_DataSet debugMeanScatter = new DefaultXY_DataSet();
-	private DefaultXY_DataSet debugStdDevScatter = new DefaultXY_DataSet();
+//	private DefaultXY_DataSet debugMeanScatter = new DefaultXY_DataSet();
+//	private DefaultXY_DataSet debugStdDevScatter = new DefaultXY_DataSet();
 	
 	private DiscretizedFunc[] calcTraditional(ERF erf, List<Site> sites, DiscretizedFunc xVals) {
 		HazardCurveCalculator calc = new HazardCurveCalculator();
@@ -289,10 +313,15 @@ public class GriddedInterpGMPE_Calc {
 	
 	public static void main(String[] args) throws IOException {
 		ScalarIMR gmpe = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+//		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null);
 		gmpe.setParamDefaults();
 		gmpe.setIntensityMeasure(PGA_Param.NAME);
+
+		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(gmpe.getIntensityMeasure());
+		IntensityMeasureLevelInterpolator imlInterp =
+				new IntensityMeasureLevelInterpolator(gmpe.getIntensityMeasure().getName(), xVals, true);
 		
-		DistanceInterpolator distInterp = new DistanceInterpolator(0d, 200d, 200);
+		DistanceInterpolator distInterp = new DistanceInterpolator(0d, 200d, 20);
 		
 		double refMag = 5d;
 		double maxMag = 8.5d;
@@ -304,9 +333,9 @@ public class GriddedInterpGMPE_Calc {
 //		FocalMechInterpolator mechInterp = new FocalMechInterpolator();
 		
 		DoubleParameterInterpolator vs30Interp = new DoubleParameterInterpolator(
-				Vs30_Param.NAME, 180, 760, 200, false, false); // matches Wald Allen range
+				Vs30_Param.NAME, 180, 760, 20, false, false); // matches Wald Allen range
 		
-		GriddedInterpGMPE_Calc calc = new GriddedInterpGMPE_Calc(gmpe, distInterp, magInterp, vs30Interp);
+		GriddedInterpGMPE_Calc calc = new GriddedInterpGMPE_Calc(gmpe, xVals, distInterp, magInterp, vs30Interp);
 		double[] depths = { 7, 2 };
 		calc.precalc(depths);
 		
@@ -349,11 +378,9 @@ public class GriddedInterpGMPE_Calc {
 		
 		System.out.println(sites.size()+" sites");
 		
-		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(gmpe.getIntensityMeasure());
-		
 		System.out.println("Calculating interpolated");
 		Stopwatch watch = Stopwatch.createStarted();
-		DiscretizedFunc[] interpCurves = calc.calc(erf.getSourceList(), sites, xVals);
+		DiscretizedFunc[] interpCurves = calc.calc(erf.getSourceList(), sites);
 		watch.stop();
 		System.out.println("Took "+watch.elapsed(TimeUnit.SECONDS)+" seconds");
 		
@@ -432,33 +459,33 @@ public class GriddedInterpGMPE_Calc {
 			gw.setYLog(true);
 		}
 		
-		if (calc.debugMeanScatter != null) {
-			List<XY_DataSet> funcs = new ArrayList<>();
-			List<PlotCurveCharacterstics> chars = new ArrayList<>();
-			
-			funcs.add(calc.debugMeanScatter);
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
-			
-			PlotSpec spec = new PlotSpec(funcs, chars, "Mean Scatter", "GMPE", "Interpolated");
-			gw = new GraphWindow(spec);
-			Range range = new Range(Math.min(calc.debugMeanScatter.getMinX(), calc.debugMeanScatter.getMinY()),
-					Math.max(calc.debugMeanScatter.getMaxX(), calc.debugMeanScatter.getMaxY()));
-			gw.setX_AxisRange(range);
-			gw.setY_AxisRange(range);
-			
-			funcs = new ArrayList<>();
-			chars = new ArrayList<>();
-			
-			funcs.add(calc.debugStdDevScatter);
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
-			
-			spec = new PlotSpec(funcs, chars, "Std Dev Scatter", "GMPE", "Interpolated");
-			gw = new GraphWindow(spec);
-			range = new Range(Math.min(calc.debugStdDevScatter.getMinX(), calc.debugStdDevScatter.getMinY()),
-					Math.max(calc.debugStdDevScatter.getMaxX(), calc.debugStdDevScatter.getMaxY()));
-			gw.setX_AxisRange(range);
-			gw.setY_AxisRange(range);
-		}
+//		if (calc.debugMeanScatter != null) {
+//			List<XY_DataSet> funcs = new ArrayList<>();
+//			List<PlotCurveCharacterstics> chars = new ArrayList<>();
+//			
+//			funcs.add(calc.debugMeanScatter);
+//			chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
+//			
+//			PlotSpec spec = new PlotSpec(funcs, chars, "Mean Scatter", "GMPE", "Interpolated");
+//			gw = new GraphWindow(spec);
+//			Range range = new Range(Math.min(calc.debugMeanScatter.getMinX(), calc.debugMeanScatter.getMinY()),
+//					Math.max(calc.debugMeanScatter.getMaxX(), calc.debugMeanScatter.getMaxY()));
+//			gw.setX_AxisRange(range);
+//			gw.setY_AxisRange(range);
+//			
+//			funcs = new ArrayList<>();
+//			chars = new ArrayList<>();
+//			
+//			funcs.add(calc.debugStdDevScatter);
+//			chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
+//			
+//			spec = new PlotSpec(funcs, chars, "Std Dev Scatter", "GMPE", "Interpolated");
+//			gw = new GraphWindow(spec);
+//			range = new Range(Math.min(calc.debugStdDevScatter.getMinX(), calc.debugStdDevScatter.getMinY()),
+//					Math.max(calc.debugStdDevScatter.getMaxX(), calc.debugStdDevScatter.getMaxY()));
+//			gw.setX_AxisRange(range);
+//			gw.setY_AxisRange(range);
+//		}
 	}
 
 }

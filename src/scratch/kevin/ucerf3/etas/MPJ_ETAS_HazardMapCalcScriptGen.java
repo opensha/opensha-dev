@@ -43,15 +43,15 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 //		String etasShortName = "2017_05-usgs_exercise-1pm";
 //		TestScenario scenario = null;
 		// Haywired Fault
-		String etasSimName = "2016_06_15-haywired_m7-10yr-full_td-no_ert-combined";
-		String etasFileName = "results_descendents_m5.bin";
-		String etasShortName = "haywired_m7_combined_descendents";
-		TestScenario scenario = TestScenario.HAYWIRED_M7;
-		// Haywired Gridded
-//		String etasSimName = "2017_01_02-haywired_m7-10yr-gridded-only-200kcombined";
-//		String etasFileName = "results_descendents_m5_preserve.bin";
-//		String etasShortName = "haywired_m7_gridded_descendents";
+//		String etasSimName = "2016_06_15-haywired_m7-10yr-full_td-no_ert-combined";
+//		String etasFileName = "results_descendents_m5.bin";
+//		String etasShortName = "haywired_m7_combined_descendents";
 //		TestScenario scenario = TestScenario.HAYWIRED_M7;
+		// Haywired Gridded
+		String etasSimName = "2017_01_02-haywired_m7-10yr-gridded-only-200kcombined";
+		String etasFileName = "results_descendents_m5_preserve.bin";
+		String etasShortName = "haywired_m7_gridded_descendents";
+		TestScenario scenario = TestScenario.HAYWIRED_M7;
 		// Northridge Fault
 //		String etasSimName = "2017_02_01-northridge-m6.7-10yr-full_td-no_ert-combined";
 //		String etasFileName = "results_descendents_m5.bin";
@@ -128,8 +128,8 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 //		String queue = null;
 //		boolean scecLarge = false;
 		
-		boolean stampede = false;
-		boolean knl = false;
+		boolean stampede = true;
+		boolean knl = true;
 		boolean scecLarge = false;
 		int nodes;
 		if (scecLarge)
@@ -172,12 +172,12 @@ public class MPJ_ETAS_HazardMapCalcScriptGen {
 			((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 			pbsWrite = new StampedeScriptWriter(knl);
 			
-			remoteMainDir = new File("/work/00950/kevinm/ucerf3/etas_hazard");
+			remoteMainDir = new File("/work/00950/kevinm/stampede2/ucerf3/etas_hazard");
 			
 			remoteShakemapDir = null;
 			
-			remoteETASDir = new File("/work/00950/kevinm/ucerf3/etas_sim");
-			remoteFSSFile = new File("/work/00950/kevinm/ucerf3/inversion/compound_plots/2013_05_10-ucerf3p3-production-10runs/"
+			remoteETASDir = new File("/work/00950/kevinm/stampede2/ucerf3/etas_sim");
+			remoteFSSFile = new File("/work/00950/kevinm/stampede2/ucerf3/inversion/compound_plots/2013_05_10-ucerf3p3-production-10runs/"
 					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip");
 		} else {
 			if (queue == null) {

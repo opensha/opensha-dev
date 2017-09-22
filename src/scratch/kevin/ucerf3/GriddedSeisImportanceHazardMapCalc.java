@@ -68,7 +68,8 @@ public class GriddedSeisImportanceHazardMapCalc {
 		File localBaseDir = new File("/home/kevin/OpenSHA/UCERF3/maps");
 		
 //		String dirName = "2017_07_14-ucerf3-gridded-tests";
-		String dirName = "2017_08_07-ucerf3-full-ba-gridded-tests";
+//		String dirName = "2017_08_07-ucerf3-full-ba-gridded-tests";
+		String dirName = "2017_09_06-ucerf3-geol-gridded-tests-sa-1.0s";
 		
 		File localU3File = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 //				+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
@@ -77,8 +78,10 @@ public class GriddedSeisImportanceHazardMapCalc {
 		
 		Region region = new CaliforniaRegions.RELM_TESTING();
 		double spacing = 0.02;
-		String imt = PGA_Param.NAME;
-		double period = 0d;
+//		String imt = PGA_Param.NAME;
+//		double period = 0d;
+		String imt = SA_Param.NAME;
+		double period = 1d;
 		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
 		double duration = 1d;
 		

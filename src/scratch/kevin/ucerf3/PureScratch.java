@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
 import org.apache.commons.math3.stat.StatUtils;
 import org.dom4j.DocumentException;
+import org.jfree.data.Range;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -87,6 +88,7 @@ import org.opensha.sha.imr.attenRelImpl.USGS_Combined_2004_AttenRel;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -98,6 +100,7 @@ import scratch.UCERF3.AverageFaultSystemSolution;
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
@@ -110,6 +113,7 @@ import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
+import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.UCERF3_GridSourceGenerator;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
@@ -1003,47 +1007,123 @@ public class PureScratch {
 		System.out.println("ERF rups from FSS: "+erf.getTotNumRupsFromFaultSystem());
 		System.out.println("Gridded ERF rups: "+(erf.getTotNumRups() - erf.getTotNumRupsFromFaultSystem()));
 	}
+	
+	private static void test38() throws IOException, DocumentException {
+		FaultSystemSolution sol = FaultSystemIO.loadSol(
+				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
+						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
+
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+//		// Poisson
+//		erf.getParameter(ProbabilityModelParam.NAME).setValue(ProbabilityModelOptions.POISSON);
+		// UCERF3 TD
+		erf.getParameter(ProbabilityModelParam.NAME).setValue(ProbabilityModelOptions.U3_PREF_BLEND);
+		erf.getTimeSpan().setStartTime(2017); // start year
+		erf.setParameter(HistoricOpenIntervalParam.NAME, // historical open interval
+				 erf.getTimeSpan().getStartTimeYear()-1875d);
+
+		// duration - only really necessary for TD calculations, as MFD later is annualized
+		erf.getTimeSpan().setDuration(1d);
+
+		erf.updateForecast();
+		
+		double cholameProb = FaultSysSolutionERF_Calc.calcParticipationProbForParentSects(erf, 7.8, 285);
+		System.out.println("Cholame prob: "+cholameProb);
+		double ssafProb = FaultSysSolutionERF_Calc.calcParticipationProbForParentSects(erf, 7.8, 285, 300, 287, 286, 301, 282, 283, 284, 295);
+		System.out.println("S.SAF prob: "+ssafProb);
+	}
+	
+	private static void test39() throws IOException, DocumentException {
+		FaultSystemSolution sol = FaultSystemIO.loadSol(
+				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
+						+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip"));
+
+		IncrementalMagFreqDist supraMFD = new IncrementalMagFreqDist(5.05, 41, 0.1);
+		supraMFD.setName("Fault Supra");
+		IncrementalMagFreqDist subMFD = new IncrementalMagFreqDist(5.05, 51, 0.1);
+		subMFD.setName("Fault Sub");
+		IncrementalMagFreqDist offMFD = new IncrementalMagFreqDist(5.05, 51, 0.1);
+		offMFD.setName("Off Fault");
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		
+		for (int r=0; r<rupSet.getNumRuptures(); r++)
+			supraMFD.add(supraMFD.getClosestXIndex(rupSet.getMagForRup(r)), sol.getRateForRup(r));
+		
+		GridSourceProvider gridProv = sol.getGridSourceProvider();
+		
+		for (int n=0; n<gridProv.size(); n++) {
+			IncrementalMagFreqDist nodeOffMFD = gridProv.getNodeUnassociatedMFD(n);
+			IncrementalMagFreqDist nodeSubSeisMFD = gridProv.getNodeSubSeisMFD(n);
+			
+			if (nodeOffMFD != null) {
+				for (int i=0; i<nodeOffMFD.size(); i++) {
+					if (nodeOffMFD.getX(i) >= offMFD.getMinX())
+						offMFD.add(nodeOffMFD.getX(i), nodeOffMFD.getY(i));
+				}
+			}
+			if (nodeSubSeisMFD != null) {
+				for (int i=0; i<nodeSubSeisMFD.size(); i++) {
+					if (nodeSubSeisMFD.getX(i) >= offMFD.getMinX())
+						subMFD.add(nodeSubSeisMFD.getX(i), nodeSubSeisMFD.getY(i));
+				}
+			}
+		}
+		
+		SummedMagFreqDist totalMFD = new SummedMagFreqDist(supraMFD.getMinX(), supraMFD.getMaxX(), supraMFD.size());
+		totalMFD.setName("Total (on+off)");
+		SummedMagFreqDist faultMFD = new SummedMagFreqDist(supraMFD.getMinX(), supraMFD.getMaxX(), supraMFD.size());
+		faultMFD.setName("Fault Sub+Supra");
+		
+		totalMFD.addIncrementalMagFreqDist(supraMFD);
+		totalMFD.addIncrementalMagFreqDist(subMFD);
+		totalMFD.addIncrementalMagFreqDist(offMFD);
+		
+		faultMFD.addIncrementalMagFreqDist(supraMFD);
+		faultMFD.addIncrementalMagFreqDist(subMFD);
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(offMFD);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+		
+		funcs.add(subMFD);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
+		
+		funcs.add(supraMFD);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		
+		funcs.add(faultMFD);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		
+		funcs.add(totalMFD);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, "FM3.1 Geol MFDs", "Magnitude", "Incremental Rate (1/yr)");
+		spec.setLegendVisible(true);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setBackgroundColor(Color.WHITE);
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		
+		String prefix = "/tmp/fm3_1_geol_mfds";
+		
+		gp.drawGraphPanel(spec, false, true, new Range(5d, 9d), new Range(1e-8, 1e1));
+		gp.getChartPanel().setSize(1000, 800);
+		gp.saveAsPNG(prefix+".png");
+		gp.saveAsPDF(prefix+".pdf");
+		gp.saveAsTXT(prefix+".txt");
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		//		test1();
-		//		test3();
-		//		test4();
-		//		test5();
-		//		test6();
-		//		test7();
-		//		test8();
-		//		test9();
-		//		test10();
-		//		test11();
-//		test13();
-//		test14();
-//		test15();
-//		test16();
-//		test17();
-//		test18();
-//		test19();
-//		test20();
-//		test21();
-//		test22();
-//		test23();
-//		test24();
-//		test25();
-//		test26();
-//		test27();
-//		test28();
-//		test29();
-//		test30();
-//		test31();
-//		test32();
-//		test33();
-//		test34();
-//		test35();
-//		test36();
-		test37();
+		test39();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
