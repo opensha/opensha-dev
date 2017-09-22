@@ -1,0 +1,405 @@
+package scratch.kevin.simulators.multiFault;
+
+import java.awt.Color;
+import java.awt.Font;
+import java.io.File;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.math3.stat.StatUtils;
+import org.dom4j.DocumentException;
+import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYBoxAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.data.Range;
+import org.jfree.ui.TextAnchor;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.HistogramFunction;
+import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotElement;
+import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.SimulatorElement;
+import org.opensha.sha.simulators.SimulatorEvent;
+import org.opensha.sha.simulators.Vertex;
+import org.opensha.sha.simulators.iden.LogicalAndRupIden;
+import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
+import org.opensha.sha.simulators.iden.RuptureIdentifier;
+import org.opensha.sha.simulators.iden.SkipYearsLoadIden;
+import org.opensha.sha.simulators.parsers.RSQSimFileReader;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
+import org.opensha.sha.simulators.utils.SimulatorUtils;
+
+import com.google.common.base.Preconditions;
+
+import scratch.UCERF3.FaultSystemRupSet;
+import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.enumTreeBranches.DeformationModels;
+import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.UCERF3.inversion.SectionClusterList;
+import scratch.UCERF3.inversion.coulomb.CoulombRates;
+import scratch.UCERF3.inversion.laughTest.AbstractLaughTest;
+import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.laughTest.MinSectsPerParentFilter;
+import scratch.UCERF3.inversion.laughTest.MinSectsPerParentFilter.CleanupFilter;
+import scratch.UCERF3.inversion.laughTest.MinSectsPerParentFilter.ContinualFilter;
+import scratch.UCERF3.utils.DeformationModelFetcher;
+import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.IDPairing;
+import scratch.UCERF3.utils.UCERF3_DataUtils;
+
+public class RSQSimU3RuptureCompare {
+
+	public static void main(String[] args) throws IOException, DocumentException {
+		File catalogDir = new File("/data/kevin/simulators/catalogs/rundir2194_long");
+		File geomFile = new File(catalogDir, "zfault_Deepen.in");
+		
+//		File catalogDir = new File("/data/kevin/simulators/catalogs/jacqui_12km_K");
+//		File geomFile = new File(catalogDir, "UCERF3wFixed12kmDepth.flt");
+		
+		File outputDir = new File(catalogDir, "laugh_test");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		double minMag = 6.5;
+		int skipYears = 5000;
+		double minFractForInclusion = 0.2;
+		
+		FaultModels fm = FaultModels.FM3_1;
+		DeformationModels dm = DeformationModels.GEOLOGIC;
+		
+		String catParams = "m"+(float)minMag+"_skip"+skipYears+"_sectArea"+(float)minFractForInclusion;
+		File solFile = new File(outputDir, "rsqsim_sol_"+catParams+".zip");
+		FaultSystemSolution sol;
+		if (solFile.exists()) {
+			System.out.println("Loading solution from: "+solFile.getAbsolutePath());
+			sol = FaultSystemIO.loadSol(solFile);
+		} else {
+			System.out.println("Loading events from: "+catalogDir.getAbsolutePath());
+			List<SimulatorElement> geom = RSQSimFileReader.readGeometryFile(geomFile, 11, 's');
+			RuptureIdentifier loadIden = new LogicalAndRupIden(new MagRangeRuptureIdentifier(minMag, 10),
+					new SkipYearsLoadIden(skipYears));
+			List<RuptureIdentifier> loadIdens = new ArrayList<>();
+			loadIdens.add(loadIden);
+			List<RSQSimEvent> events = RSQSimFileReader.readEventsFile(catalogDir, geom, loadIdens);
+			System.out.println(SimulatorUtils.getSimulationDurationYears(events)+" years, "+events.size()+" rups");
+			List<FaultSectionPrefData> subSects = RSQSimUtils.getUCERF3SubSectsForComparison(fm, dm);
+			System.out.println("Building solution");
+			sol = RSQSimUtils.buildFaultSystemSolution(subSects, geom, events, minMag, minFractForInclusion);
+			System.out.println("Writing solution to: "+solFile.getAbsolutePath());
+			FaultSystemIO.writeSol(sol, solFile);
+		}
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		System.out.println(rupSet.getNumRuptures()+" unique ruptures");
+		
+		LaughTestFilter filter = LaughTestFilter.getDefault();
+		
+		File scratchDir = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/");
+		DeformationModelFetcher fetch = new DeformationModelFetcher(fm, dm, scratchDir, 0.1);
+		List<FaultSectionPrefData> datas = fetch.getSubSectionList();
+		
+		Map<IDPairing, Double> distances = fetch.getSubSectionDistanceMap(1000d);
+		Map<IDPairing, Double> azimuths = fetch.getSubSectionAzimuthMap(distances.keySet());
+		Map<Integer, Double> rakesMap = new HashMap<Integer, Double>();
+		for (FaultSectionPrefData data : rupSet.getFaultSectionDataList())
+			rakesMap.put(data.getSectionId(), data.getAveRake());
+		boolean applyGarlockPintoMtnFix = true;
+		
+		CoulombRates coulombRates = null;
+		if (filter.getCoulombFilter() != null) {
+			try {
+				coulombRates = CoulombRates.loadUCERF3CoulombRates(fm);
+			} catch (IOException e) {
+				ExceptionUtils.throwAsRuntimeException(e);
+			}
+		}
+		
+		// we want actual catalog rupture counts before binning into U3 style ruptures
+		// find the smallest rate, which will be 1/catLen, then numRups = solRate/minRate
+		double minRate = StatUtils.min(sol.getRateForAllRups());
+		
+		List<List<Integer>> sectionConnectionsListList = SectionClusterList.computeCloseSubSectionsListList(
+				datas, distances, filter.getMaxJumpDist(), coulombRates);
+		
+		List<AbstractLaughTest> tests = filter.buildLaughTests(azimuths, distances, rakesMap, coulombRates, applyGarlockPintoMtnFix,
+				sectionConnectionsListList, rupSet.getFaultSectionDataList());
+		
+		// doesn't come with jump dist filter by default (it is included explicitly in generation for UCERF3)
+		tests.add(0, new JumpDistFilter(distances, 5d));
+		
+		// replace the separate min sects per parent filters with a single one
+		tests.add(1, new CombinedMinSectsFilter(removeByClass(tests, ContinualFilter.class),
+				removeByClass(tests, CleanupFilter.class)));
+		
+		Color[] colors = { Color.DARK_GRAY, Color.RED, Color.BLUE, Color.GREEN.darker(), Color.CYAN, Color.ORANGE };
+		
+		int allPassCount = 0;
+		int[] failCounts = new int[tests.size()];
+		int[] onlyFailCounts = new int[tests.size()];
+		int[] erredCounts = new int[tests.size()];
+		
+		int tot = 0;
+		
+		for (int r=0; r<rupSet.getNumRuptures(); r++) {
+			int numCatalogOccurances = (int)Math.round(sol.getRateForRup(r)/minRate);
+			tot += numCatalogOccurances;
+			Preconditions.checkState(numCatalogOccurances >= 1);
+			List<FaultSectionPrefData> rupture = rupSet.getFaultSectionDataForRupture(r);
+			boolean allPass = true;
+			int onlyFailureIndex = -1;
+			for (int t=0; t<tests.size(); t++) {
+				AbstractLaughTest test = tests.get(t);
+				boolean subPass;
+				try {
+					subPass = test.doesRupturePass(rupture);
+				} catch (Exception e) {
+					if (erredCounts[t] == 0) {
+						System.err.println("First exception for "+test.getName()+":");
+						e.printStackTrace();
+					}
+					erredCounts[t] += numCatalogOccurances;
+					subPass = false;
+				}
+				if (!subPass && allPass) {
+					// this is the first failure
+					onlyFailureIndex = t;
+				} else if (!subPass) {
+					// failed more than 1
+					onlyFailureIndex = -1;
+				}
+				allPass = subPass && allPass;
+				if (!subPass)
+					failCounts[t] += numCatalogOccurances;
+			}
+			if (allPass)
+				allPassCount += numCatalogOccurances;
+			if (onlyFailureIndex >= 0)
+				onlyFailCounts[onlyFailureIndex] += numCatalogOccurances;
+		}
+		System.out.println("Passed all filters: "+countStats(allPassCount, tot));
+		for (int t=0; t<tests.size(); t++) {
+			System.out.println(tests.get(t).getName());
+			System.out.println("\tFailed: "+countStats(failCounts[t], tot));
+			System.out.println("\tOnly Failure: "+countStats(onlyFailCounts[t], tot));
+			System.out.println("\tErred: "+countStats(erredCounts[t], tot));
+		}
+		
+		// now plot
+		double dx = 1d;
+		double buffer = 0.2*dx;
+		double deltaEachSide = (dx - buffer)/2d;
+		float thickness = 80f;
+		double maxY = 50;
+		
+		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 18);
+		
+		List<PlotElement> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(new DefaultXY_DataSet(new double[] {0d, 1d}, new double[] {0d, 0d}));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 0f, Color.WHITE));
+		
+		List<XYAnnotation> anns = new ArrayList<>();
+		
+		for (int i=0; i<tests.size(); i++) {
+			double x = i*dx + 0.5*dx;
+			double percentFailed = 100d*failCounts[i]/tot;
+			double percentOnly = 100d*onlyFailCounts[i]/tot;
+			double percentErred = 100d*erredCounts[i]/tot;
+			
+			Color c = colors[i % colors.length];
+			
+//			funcs.add(vertLine(x, 0, percentFailed));
+//			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, c));
+			anns.add(box(x-deltaEachSide, 0, x+deltaEachSide, percentFailed, c));
+			
+			if (percentOnly > 0) {
+//				funcs.add(vertLine(x, 0, percentOnly));
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, darker(c)));
+				anns.add(box(x-deltaEachSide, 0, x+deltaEachSide, percentOnly, darker(c)));
+			}
+			
+//			if (percentErred > 0) {
+////				funcs.add(vertLine(x, percentFailed, percentFailed + percentErred));
+////				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, Color.LIGHT_GRAY));
+//				anns.add(box(x-deltaEachSide, percentFailed, x+deltaEachSide, percentFailed + percentErred, Color.LIGHT_GRAY));
+//			}
+			
+			XYTextAnnotation ann = new XYTextAnnotation(tests.get(i).getShortName(), x, maxY*0.95);
+			ann.setTextAnchor(TextAnchor.TOP_CENTER);
+			ann.setPaint(c);
+			ann.setFont(font);
+			
+			anns.add(ann);
+			
+			ann = new XYTextAnnotation(percentDF.format(percentFailed/100d), x, percentFailed+0.6);
+			ann.setTextAnchor(TextAnchor.BOTTOM_CENTER);
+			ann.setPaint(Color.BLACK);
+			ann.setFont(font);
+			
+			anns.add(ann);
+		}
+		
+		XYTextAnnotation ann = new XYTextAnnotation(
+				percentDF.format((double)allPassCount/tot)+" passed all", dx*0.25, maxY*0.88);
+		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+		ann.setPaint(Color.BLACK);
+		ann.setFont(font);
+		
+		anns.add(ann);
+		
+		String title = "Rupture Plausibility Filters, M≥"+(float)minMag+", SectArea≥"+(float)minFractForInclusion;
+		PlotSpec spec = new PlotSpec(funcs, chars, title, " ", "Percent Failed");
+		spec.setPlotAnnotations(anns);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setBackgroundColor(Color.WHITE);
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		
+		String prefix = new File(outputDir, "filters_"+catParams).getAbsolutePath();
+		
+		gp.drawGraphPanel(spec, false, false, new Range(0, tests.size()*dx), new Range(0, maxY));
+		gp.getXAxis().setTickLabelsVisible(false);
+//		gp.getXAxis().setvisi
+		gp.getChartPanel().setSize(1000, 500);
+		gp.saveAsPNG(prefix+".png");
+		gp.saveAsPDF(prefix+".pdf");
+	}
+	
+	private static Color darker(Color c) {
+		int r = c.getRed();
+		int g = c.getGreen();
+		int b = c.getBlue();
+//		r += (255-r)/2;
+//		g += (255-g)/2;
+//		b += (255-b)/2;
+		r /= 2;
+		g /= 2;
+		b /= 2;
+		return new Color(r, g, b);
+	}
+	
+	private static DefaultXY_DataSet vertLine(double x, double y0, double y1) {
+		DefaultXY_DataSet line = new DefaultXY_DataSet();
+		line.set(x, y0);
+		line.set(x, y1);
+		return line;
+	}
+	
+	private static XYBoxAnnotation box(double x0, double y0, double x1, double y1, Color c) {
+		XYBoxAnnotation ann = new XYBoxAnnotation(x0, y0, x1, y1, null, null, c);
+		return ann;
+	}
+	
+	private static final DecimalFormat percentDF = new DecimalFormat("0.00%");
+	private static String countStats(int count, int tot) {
+		return count+"/"+tot+" ("+percentDF.format((double)count/(double)tot)+")";
+	}
+	
+	private static class JumpDistFilter extends AbstractLaughTest {
+		
+		private Map<IDPairing, Double> distances;
+		private double maxJumpDist;
+		
+		public JumpDistFilter(Map<IDPairing, Double> distances, double maxJumpDist) {
+			this.distances = distances;
+			this.maxJumpDist = maxJumpDist;
+		}
+
+		@Override
+		public String getShortName() {
+			return "JumpDist";
+		}
+
+		@Override
+		public String getName() {
+			return "Maximum Jump Dist";
+		}
+
+		@Override
+		public boolean doesLastSectionPass(List<FaultSectionPrefData> rupture, List<IDPairing> pairings,
+				List<Integer> junctionIndexes) {
+			if (junctionIndexes.isEmpty())
+				return true;
+			IDPairing pair = pairings.get(junctionIndexes.size()-1);
+			return distances.get(pair) <= maxJumpDist;
+		}
+
+		@Override
+		public boolean isContinueOnFaulure() {
+			return false;
+		}
+
+		@Override
+		public boolean isApplyJunctionsOnly() {
+			return true;
+		}
+	}
+	
+	private static class CombinedMinSectsFilter extends AbstractLaughTest {
+		
+		private ContinualFilter continualFilter;
+		private CleanupFilter cleanupFilter;
+
+		public CombinedMinSectsFilter(MinSectsPerParentFilter.ContinualFilter continualFilter,
+				MinSectsPerParentFilter.CleanupFilter cleanupFilter) {
+			this.continualFilter = continualFilter;
+			this.cleanupFilter = cleanupFilter;
+		}
+
+		@Override
+		public String getShortName() {
+			return "SectsPerParent";
+		}
+
+		@Override
+		public String getName() {
+			return "Min Sects Per Parent";
+		}
+
+		@Override
+		public boolean doesLastSectionPass(List<FaultSectionPrefData> rupture, List<IDPairing> pairings,
+				List<Integer> junctionIndexes) {
+			boolean passContinual = continualFilter.doesLastSectionPass(rupture, pairings, junctionIndexes);
+			boolean passCleanup = cleanupFilter.doesLastSectionPass(rupture, pairings, junctionIndexes);
+//			if (!junctionIndexes.isEmpty() && junctionIndexes.get(junctionIndexes.size()-1) == pairings.size()-1)
+//				return cleanupFilter.doesLastSectionPass(rupture, pairings, junctionIndexes);
+			int i = rupture.size()-1;
+			boolean junction = i > 0 &&
+					rupture.get(i).getParentSectionId() != rupture.get(i-1).getParentSectionId();
+			return passContinual && (!junction || passCleanup);
+		}
+
+		@Override
+		public boolean isContinueOnFaulure() {
+			return true;
+		}
+
+		@Override
+		public boolean isApplyJunctionsOnly() {
+			return false;
+		}
+		
+	}
+	
+	private static <E extends AbstractLaughTest> E removeByClass(List<AbstractLaughTest> tests, Class<E> clazz) {
+		for (int i=tests.size(); --i>=0;) {
+			AbstractLaughTest test = tests.get(i);
+			if (clazz.isInstance(test))
+				return (E)tests.remove(i);
+		}
+		throw new IllegalStateException();
+	}
+
+}

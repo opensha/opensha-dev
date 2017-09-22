@@ -1,4 +1,4 @@
-package scratch.kevin.simulators;
+package scratch.kevin.simulators.hazard;
 
 import java.io.File;
 import java.io.IOException;
@@ -64,26 +64,37 @@ public class HazardMapCompareScriptGen {
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
 //		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-//		String bruceDate = "2017_08_07";
-////		String bruceDirNum = "2142";
-////		String bruceDirNum = "2194";
+		String bruceDate = "2017_08_24";
+		String bruceDirNum = "2142";
+//		String bruceDirNum = "2194";
 //		String bruceDirNum = "2241";
-//		String runName = bruceDate+"-bruce"+bruceDirNum;
-//		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
-//		File geomFile = new File(catalogDir, "zfault_Deepen.in");
+		String runName = bruceDate+"-bruce"+bruceDirNum;
+		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
+		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
 //		String runName = "2017_08_07-jacqui_slipWeakening_calibrated_1";
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/baseCatalog_slipWeakening_calibrated_1");
 //		String runName = "2017_08_07-jacqui_slipWeakening_calibrated_2";
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/baseCatalog_slipWeakening_calibrated_2");
-		String runName = "2017_08_07-jacqui_shortTestCatalog";
-		File catalogDir = new File("/home/kevin/Simulators/catalogs/shortTestCatalog");
-		File geomFile = new File(catalogDir, "UCERF3.D3.1.1km.tri.2.flt");
+//		String runName = "2017_08_07-jacqui_shortTestCatalog";
+//		File catalogDir = new File("/home/kevin/Simulators/catalogs/shortTestCatalog");
+//		File geomFile = new File(catalogDir, "UCERF3.D3.1.1km.tri.2.flt");
+		
+		int numPointsMultiplier = 8;
+		
+//		String imt = PGA_Param.NAME;
+//		double period = 0d;
+		String imt = SA_Param.NAME;
+		double period = 0.2d;
+		
+//		double fixedStdDev = 0.0;
+		double fixedStdDev = -1;
 		
 		double skipYears = 5000;
 		
 		boolean doUCERF3 = false;
-		boolean doUCERF2 = false;
+		boolean doUCERF2 = true;
+		boolean isUCERF2Full = false;
 		boolean u3SupraMinMag = false;
 		double minMag = 6.5d;
 		double minFractForInclusion = 0.2;
@@ -95,8 +106,19 @@ public class HazardMapCompareScriptGen {
 			runName += "-sectArea"+(float)minFractForInclusion;
 		if (skipYears > 0)
 			runName += "-skip"+(int)skipYears+"yr";
+		runName += "-"+imt.toLowerCase();
+		if (imt.equals(SA_Param.NAME))
+			runName += "-"+(float)period+"s";
+		if (fixedStdDev >= 0d)
+			runName += "-stdDev"+(float)fixedStdDev;
+		if (numPointsMultiplier > 1)
+			runName += "-"+numPointsMultiplier+"xPoints";
 		FaultModels fm = FaultModels.FM3_1;
 		DeformationModels dm = DeformationModels.GEOLOGIC;
+		
+		String curveDirName = getCurveDirName(imt, period);
+		String imtLabel = getIMTLabel(imt, period);
+		String inputsName = "inputs_"+imtLabel+".xml";
 		
 		// load/process U3 catalog
 		FaultSystemSolution u3Sol = null;
@@ -143,9 +165,6 @@ public class HazardMapCompareScriptGen {
 		
 		Region region = new CaliforniaRegions.RELM_TESTING();
 		double spacing = 0.02;
-		String imt = PGA_Param.NAME;
-		double period = 0d;
-		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
 		double duration = 1d;
 		
 		File localDir = new File(localMainDir, runName);
@@ -163,12 +182,18 @@ public class HazardMapCompareScriptGen {
 		int ppn = 20;
 		String queue = "scec";
 		
-		GriddedRegion gridded = new GriddedRegion(region, spacing, null);
-		
-		imr.setParamDefaults();
+		ScalarIMR imr;
+		if (fixedStdDev >= 0) {
+			imr = new FixedStdDevNGAW2_GMPE(fixedStdDev);
+		} else {
+			imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+			imr.setParamDefaults();
+		}
 		imr.setIntensityMeasure(imt);
 		if (period > 0)
 			SA_Param.setPeriodInSA_Param(imr.getIntensityMeasure(), period);
+		
+		GriddedRegion gridded = new GriddedRegion(region, spacing, null);
 		
 		List<Site> sites = Lists.newArrayList();
 		for (int i=0; i<gridded.getNodeCount(); i++) {
@@ -178,10 +203,24 @@ public class HazardMapCompareScriptGen {
 		}
 		
 		ArbitrarilyDiscretizedFunc xValues = new IMT_Info().getDefaultHazardCurve(imt);
+		if (numPointsMultiplier > 0) {
+			ArbitrarilyDiscretizedFunc newXValues = new ArbitrarilyDiscretizedFunc();
+			for (int i=0; i<xValues.size()-1; i++) {
+				double x0 = Math.log(xValues.getX(i));
+				double x1 = Math.log(xValues.getX(i+1));
+				double dx = (x1 - x0)/numPointsMultiplier;
+				for (int j=0; j<numPointsMultiplier; j++)
+					newXValues.set(Math.exp(x0 + j*dx), 1d);
+			}
+			newXValues.set(xValues.getMaxX(), 1d);
+			System.out.println("Orig func:\n"+xValues);
+			System.out.println("New func:\n"+newXValues);
+			xValues = newXValues;
+		}
 		double maxSourceDistance = 200;
 		
 		Map<String, DiscretizedFunc> xValsMap = Maps.newHashMap();
-		xValsMap.put("curves", xValues);
+		xValsMap.put(curveDirName, xValues);
 		CalculationSettings calcSettings = new CalculationSettings(xValues, maxSourceDistance);
 		
 		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
@@ -222,6 +261,10 @@ public class HazardMapCompareScriptGen {
 					u3Name = "ucerf3-supra";
 				else
 					u3Name = "ucerf3-m"+(float)minMag;
+				if (fixedStdDev >= 0)
+					u3Name += "-stdDev"+(float)fixedStdDev;
+				if (numPointsMultiplier > 1)
+					u3Name += "-"+numPointsMultiplier+"xPoints";
 				localJobDir = new File(localComareDir, u3Name);
 				remoteJobDir = new File(remoteComareDir, u3Name);
 			}
@@ -244,15 +287,15 @@ public class HazardMapCompareScriptGen {
 			erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
 			erf.getTimeSpan().setDuration(duration);
 			
-			File curveDir = new File(remoteJobDir, "curves");
+			File curveDir = new File(remoteJobDir, curveDirName);
 //			CurveResultsArchiver archiver = new AsciiFileCurveArchiver(
 //				curveDir.getAbsolutePath()+File.separator, true, false);
 			CurveResultsArchiver archiver = new BinaryCurveArchiver(curveDir, sites.size(), xValsMap);
 			
 			CalculationInputsXMLFile inputs = new CalculationInputsXMLFile(erf, imrMaps, sites, calcSettings, archiver);
 			
-			File localInputsFile = new File(localJobDir, "inputs.xml");
-			File remoteInputsFile = new File(remoteJobDir, "inputs.xml");
+			File localInputsFile = new File(localJobDir, inputsName);
+			File remoteInputsFile = new File(remoteJobDir, inputsName);
 			XMLUtils.writeObjectToXMLAsRoot(inputs, localInputsFile);
 			
 //			String cliArgs = "--max-dispatch 1000 --mult-erfs "+inputsFile.getAbsolutePath();
@@ -263,14 +306,29 @@ public class HazardMapCompareScriptGen {
 			
 			script = writer.buildScript(script, mins, nodes, ppn, queue);
 			
-			File pbsFile = new File(localJobDir, localJobDir.getName()+".pbs");
+			String jobName = localJobDir.getName();
+			if (!rsqsim) {
+				jobName += "_"+imt.toLowerCase();
+				if (imt.equalsIgnoreCase(SA_Param.NAME))
+					jobName += "_"+(float)period+"s";
+			}
+			File pbsFile = new File(localJobDir, jobName+".pbs");
 			JavaShellScriptWriter.writeScript(pbsFile, script);
 		}
 		
 		if (doUCERF2) {
-			MeanUCERF2 erf = new MeanUCERF2();
+			MeanUCERF2 erf;
 			
-			for (boolean includeBackground : new boolean[] { true, false }) {
+			boolean[] backgrounds;
+			if (isUCERF2Full) {
+				erf = new MeanUCERF2();
+				backgrounds = new boolean[] {true, false};
+			} else {
+				erf = new MagThreshUCERF2(minMag);
+				backgrounds = new boolean[] {false};
+			}
+			
+			for (boolean includeBackground : backgrounds) {
 				String u2Name;
 				if (includeBackground) {
 					u2Name = "ucerf2-full";
@@ -279,6 +337,12 @@ public class HazardMapCompareScriptGen {
 					u2Name = "ucerf2-faults";
 					erf.setParameter(UCERF2.BACK_SEIS_NAME, UCERF2.BACK_SEIS_EXCLUDE);
 				}
+				if (!isUCERF2Full)
+					u2Name += "-m"+(float)minMag;
+				if (fixedStdDev >= 0)
+					u2Name += "-stdDev"+(float)fixedStdDev;
+				if (numPointsMultiplier > 1)
+					u2Name += "-"+numPointsMultiplier+"xPoints";
 				System.out.println("Doing "+u2Name);
 				File localJobDir = new File(localComareDir, u2Name);
 				Preconditions.checkState(localJobDir.exists() || localJobDir.mkdir());
@@ -287,15 +351,15 @@ public class HazardMapCompareScriptGen {
 				erf.setParameter(UCERF2.PROB_MODEL_PARAM_NAME, UCERF2.PROB_MODEL_POISSON);
 				erf.getTimeSpan().setDuration(duration);
 				
-				File curveDir = new File(remoteJobDir, "curves");
+				File curveDir = new File(remoteJobDir, curveDirName);
 //				CurveResultsArchiver archiver = new AsciiFileCurveArchiver(
 //					curveDir.getAbsolutePath()+File.separator, true, false);
 				CurveResultsArchiver archiver = new BinaryCurveArchiver(curveDir, sites.size(), xValsMap);
 				
 				CalculationInputsXMLFile inputs = new CalculationInputsXMLFile(erf, imrMaps, sites, calcSettings, archiver);
 				
-				File localInputsFile = new File(localJobDir, "inputs.xml");
-				File remoteInputsFile = new File(remoteJobDir, "inputs.xml");
+				File localInputsFile = new File(localJobDir, inputsName);
+				File remoteInputsFile = new File(remoteJobDir, inputsName);
 				XMLUtils.writeObjectToXMLAsRoot(inputs, localInputsFile);
 				
 //				String cliArgs = "--max-dispatch 1000 --mult-erfs "+inputsFile.getAbsolutePath();
@@ -306,7 +370,10 @@ public class HazardMapCompareScriptGen {
 				
 				script = writer.buildScript(script, mins, nodes, ppn, queue);
 				
-				File pbsFile = new File(localJobDir, localJobDir.getName()+".pbs");
+				String jobName = localJobDir.getName()+"_"+imt.toLowerCase();
+				if (imt.equalsIgnoreCase(SA_Param.NAME))
+					jobName += "_"+(float)period+"s";
+				File pbsFile = new File(localJobDir, jobName+".pbs");
 				JavaShellScriptWriter.writeScript(pbsFile, script);
 			}
 		}
@@ -345,6 +412,17 @@ public class HazardMapCompareScriptGen {
 			return "U3 SupraSeismogenic Min Mag filter";
 		}
 		
+	}
+	
+	static String getIMTLabel(String imt, double period) {
+		String label = imt.toLowerCase();
+		if (imt.equals(SA_Param.NAME))
+			label += "_"+(float)period+"s";
+		return label;
+	}
+	
+	static String getCurveDirName(String imt, double period) {
+		return "curves_"+getIMTLabel(imt, period);
 	}
 
 }
