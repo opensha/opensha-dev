@@ -64,6 +64,8 @@ public class RSQSimRupSpectraPageGen {
 		lines.addAll(catalog.getMarkdownMetadataTable());
 		lines.add("");
 		
+		int tocIndex = lines.size();
+		
 		lines.add("## Rupture Plots");
 		BBP_SourceFile bbpSource = null;
 		Location[] bbpSourceRect = null;
@@ -108,7 +110,7 @@ public class RSQSimRupSpectraPageGen {
 			System.out.println("Site: "+site.getName());
 			lines.add("## Site "+site.getName());
 			Location loc = site.getLoc();
-			lines.add("*"+(float)loc.getLatitude()+", "+(float)loc.getLongitude()+"*");
+			lines.add("*Location: "+(float)loc.getLatitude()+", "+(float)loc.getLongitude()+"*");
 			
 			// calculate distances
 			TableBuilder table = MarkdownUtils.tableBuilder();
@@ -153,7 +155,7 @@ public class RSQSimRupSpectraPageGen {
 			
 			File fasFile = SpectraPlotter.findFASFile(eventBBPDir, site.getName());
 			if (fasFile.exists()) {
-				lines.add("### Fourrier Amplitude Spectra");
+				lines.add("### "+site.getName()+" Fourrier Amplitude Spectra");
 				String title = "Event "+eventID+" "+site.getName()+" FAS Spectra";
 				String prefix = "fas_spectra_"+site.getName();
 				if (refBBPDir.exists()) {
@@ -177,7 +179,7 @@ public class RSQSimRupSpectraPageGen {
 					System.out.println("DONE.");
 				}
 				
-				lines.add("### RotD50 Spectra");
+				lines.add("### "+site.getName()+" RotD50 Spectra");
 				String title = "Event "+eventID+" "+site.getName()+" RotD50 Spectra";
 				String prefix = "rotd50_spectra_"+site.getName();
 				if (refBBPDir.exists()) {
@@ -190,6 +192,10 @@ public class RSQSimRupSpectraPageGen {
 				lines.add("!["+site.getName()+" RotD50 Plot]("+resourcesDir.getName()+"/"+prefix+".png)");
 			}
 		}
+		
+		// add TOC
+		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));
+		lines.add(tocIndex, "## Table Of Contents");
 		
 		// write markdown
 		MarkdownUtils.writeReadmeAndHTML(lines, eventDir);

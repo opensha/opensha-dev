@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.commonmark.Extension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
+import org.commonmark.ext.heading.anchor.HeadingAnchorExtension;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -83,6 +84,29 @@ public class MarkdownUtils {
 		writeHTML(str.toString(), htmlFile);
 	}
 	
+	public static List<String> buildTOC(List<String> lines, int minLevel) {
+		LinkedList<String> toc = new LinkedList<>();
+		
+		for (String line : lines) {
+			if (line.startsWith("#")) {
+				String headerPart = line.substring(0, line.lastIndexOf('#')+1);
+				int level = headerPart.length();
+				if (level >= minLevel) {
+					String tocLine = "";
+					while ((level > minLevel)) {
+						tocLine += "  ";
+						level--;
+					}
+					String title = line.substring(headerPart.length()).trim();
+					String anchor = title.replaceAll(" ", "-").toLowerCase();
+					tocLine += "* ["+title+"](#"+anchor+")";
+					toc.add(tocLine);
+				}
+			}
+		}
+		return toc;
+	}
+	
 	public static void writeHTML(List<String> lines, File outputFile) throws IOException {
 		StringBuilder str = new StringBuilder();
 		for (String line : lines)
@@ -90,7 +114,7 @@ public class MarkdownUtils {
 		writeHTML(str.toString(), outputFile);
 	}
 	public static void writeHTML(String markdown, File outputFile) throws IOException {
-		List<Extension> extensions = Arrays.asList(TablesExtension.create());
+		List<Extension> extensions = Arrays.asList(TablesExtension.create(), HeadingAnchorExtension.create());
 		Parser parser = Parser.builder().extensions(extensions).build();
 		Node document = parser.parse(markdown);
 		HtmlRenderer renderer = HtmlRenderer.builder().extensions(extensions).build();
