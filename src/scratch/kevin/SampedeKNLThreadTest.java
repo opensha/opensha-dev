@@ -36,8 +36,10 @@ public class SampedeKNLThreadTest {
 	}
 	
 	public static void main(String args[]) {
-		int numEach = 5000;
-		int[] threads = { 68/4, 68/2, 68, 68*2, 68*3, 68*4 };
+		int numEach = 10000;
+//		int[] threads = { 1, 2, 4, 8, 16, 68/4, 68/2, 68, 68*2, 68*3, 68*4 };
+		int[] threads = { 4, 8, 68/4, 68/2, 68, 68*2, 68*3, 68*4 };
+//		int[] threads = { 68/4, 68/2, 68, 68*2, 68*3, 68*4 };
 		
 		AbstractERF erf = new Frankel96_AdjustableEqkRupForecast();
 		erf.updateForecast();

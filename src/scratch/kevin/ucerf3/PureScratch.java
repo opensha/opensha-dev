@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.TimeZone;
 import java.util.zip.ZipException;
 
@@ -41,6 +42,7 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.geo.PlaneUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.RegionUtils;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -1117,13 +1119,31 @@ public class PureScratch {
 		gp.saveAsPDF(prefix+".pdf");
 		gp.saveAsTXT(prefix+".txt");
 	}
+	
+	private static void test40() {
+		int num = 100;
+		Random r = new Random();
+		for (int i=0; i<num; i++) {
+//			long seed = System.nanoTime()*r.nextLong();
+			long seed = System.nanoTime()+r.nextLong();
+			System.out.println(seed);
+		}
+	}
+	
+	public static void test41() {
+		double strike = 90;
+		double dip = 90;
+		double rake = 90;
+		double[] vect = PlaneUtils.getSlipVector(new double[] {strike, dip, rake});
+		System.out.println(vect[0]+" "+vect[1]+" "+vect[2]);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test39();
+		test41();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

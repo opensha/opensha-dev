@@ -45,7 +45,7 @@ public class LaHabraProbCalc {
 	private static ObsEqkRupList fetchComcat(Region reg) {
 		EventWebService service;
 		try {
-			service = new EventWebService(new URL("http://earthquake.usgs.gov/fdsnws/event/1/"));
+			service = new EventWebService(new URL("https://earthquake.usgs.gov/fdsnws/event/1/"));
 		} catch (MalformedURLException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
@@ -55,7 +55,8 @@ public class LaHabraProbCalc {
 		query.setMaxDepth(new BigDecimal(100d));
 		
 		query.setStartTime(new GregorianCalendar(1900, 0, 1).getTime());
-		query.setEndTime(new GregorianCalendar(2015, 10, 1).getTime());
+//		query.setEndTime(new GregorianCalendar(2015, 10, 1).getTime());
+		query.setEndTime(new GregorianCalendar(2018, 10, 1).getTime());
 		
 		query.setMinLatitude(new BigDecimal(reg.getMinLat()));
 		query.setMaxLatitude(new BigDecimal(reg.getMaxLat()));
