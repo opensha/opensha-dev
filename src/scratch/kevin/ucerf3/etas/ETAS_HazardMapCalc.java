@@ -1081,7 +1081,12 @@ public class ETAS_HazardMapCalc {
 		Preconditions.checkNotNull(etasCurve);
 		etasCurve.setName("UCERF3-ETAS");
 		Duration longTermDuration = getLongTermCompatibleDuration(duration);
-		DiscretizedFunc tiCurve = curves.get(longTermDuration, MapType.U3TI)[index];
+		DiscretizedFunc[] tis = curves.get(longTermDuration, MapType.U3TI);
+		if (tis == null) {
+			System.out.println("No curves for "+title+", duration: "+duration);
+			return;
+		}
+		DiscretizedFunc tiCurve = tis[index];
 		Preconditions.checkNotNull(etasCurve);
 		tiCurve.setName("UCERF3-TI");
 		DiscretizedFunc tdCurve = curves.get(longTermDuration, MapType.U3TD)[index];
@@ -1182,7 +1187,10 @@ public class ETAS_HazardMapCalc {
 		spec.setLegendVisible(true);
 		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setUserBounds(1e-2, 1e1, 1e-10, 1d);
+		if (imtName.equals(PGV_Param.NAME))
+			gp.setUserBounds(1e-2, 1e3, 1e-10, 1d);
+		else
+			gp.setUserBounds(1e-2, 1e1, 1e-10, 1d);
 		
 		gp.setBackgroundColor(Color.WHITE);
 		gp.setTickLabelFontSize(22);
@@ -1927,8 +1935,8 @@ public class ETAS_HazardMapCalc {
 		boolean calcGridded = true;
 		boolean calcLongTerm = true;
 		boolean mapParallel = true;
-		boolean plotCurves = false;
-		boolean plotMaps = true;
+		boolean plotCurves = true;
+		boolean plotMaps = false;
 		boolean plotLongTerm = false;
 		boolean onlyGainLongTerm = true;
 		boolean plotShakeMap = false;
@@ -1965,21 +1973,21 @@ public class ETAS_HazardMapCalc {
 //				+ "2017_03_21-mojave_m7_combined_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_22-mojave_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin");
 				// final Powell set
-//				+ "2017_03_23-haywired_m7_combined_descendents-NGA2-0.02-site-effects-with-basin");
+				+ "2017_03_23-haywired_m7_combined_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-haywired_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-mojave_m7_combined_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-mojave_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-northridge_combined_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-northridge_gridded_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-2016_bombay_swarm_combined_descendents-NGA2-0.02-site-effects-with-basin");
-				+ "2017_07_19-haywired_m7_combined_descendents-NGA2-0.02-site-effects-with-basin-no-dist-cutoff");
+//				+ "2017_07_19-haywired_m7_combined_descendents-NGA2-0.02-site-effects-with-basin-no-dist-cutoff");
 //				+ "2017_09_19-haywired_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin-no-dist-cutoff");
 				// other
 //				+ "2017_05_17-2017_05-usgs_exercise-1pm-NGA2-0.02-site-effects-with-basin");
 		
-//		File griddedComparePrecalcDir = null;
-		File griddedComparePrecalcDir = new File(precalcDir.getParent(),
-				"2017_09_19-haywired_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin-no-dist-cutoff");
+		File griddedComparePrecalcDir = null;
+//		File griddedComparePrecalcDir = new File(precalcDir.getParent(),
+//				"2017_09_19-haywired_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin-no-dist-cutoff");
 		
 //		File faultBasedPrecalc = null;
 //		double spacing = 0.5;
@@ -2017,10 +2025,10 @@ public class ETAS_HazardMapCalc {
 		boolean mapPOE = true;
 		boolean mmpProb6 = true;
 		
-//		String imtName = PGA_Param.NAME;
-//		double period = Double.NaN;
-//		String imtLabel = "PGA";
-//		String imtFileLabel = "pga";
+		String imtName = PGA_Param.NAME;
+		double period = Double.NaN;
+		String imtLabel = "PGA";
+		String imtFileLabel = "pga";
 //		String imtName = PGV_Param.NAME;
 //		double period = Double.NaN;
 //		String imtLabel = "PGV";
@@ -2029,10 +2037,10 @@ public class ETAS_HazardMapCalc {
 //		double period = 1d;
 //		String imtLabel = "1s Sa";
 //		String imtFileLabel = "sa_1s";
-		String imtName = MMI_Param.NAME;
-		double period = Double.NaN;
-		String imtLabel = "MMI";
-		String imtFileLabel = "mmi";
+//		String imtName = MMI_Param.NAME;
+//		double period = Double.NaN;
+//		String imtLabel = "MMI";
+//		String imtFileLabel = "mmi";
 		GriddedRegion region = new CaliforniaRegions.RELM_TESTING_GRIDDED(spacing);
 		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(SA_Param.NAME);
 		AttenRelRef gmpeRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;

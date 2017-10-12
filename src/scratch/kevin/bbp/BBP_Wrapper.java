@@ -11,6 +11,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.dom4j.Document;
 import org.dom4j.Element;
 import org.opensha.commons.util.ExceptionUtils;
@@ -37,10 +38,13 @@ public class BBP_Wrapper implements Runnable {
 	private File sitesFile;
 	private File outputDir;
 	
+	private File bbpDataDir = null;
+	
 	private int maxRetries = 5;
 	private boolean doHF = true;
 	private boolean doRotD50 = true;
 	private boolean doFAS = true;
+	private boolean dataOnly = false;
 	
 	private String xmlFileName = "inputs.xml";
 	private String scriptFileName = "run.sh";
@@ -58,11 +62,15 @@ public class BBP_Wrapper implements Runnable {
 	}
 	
 	public void run() {
+		run(System.nanoTime());
+	}
+	
+	public void run(long simID) {
 		try {
 			int retries = 0;
 			boolean success = false;
 			while (retries < maxRetries) {
-				success = doRun();
+				success = doRun(simID);
 				if (success)
 					break;
 				retries++;
@@ -117,76 +125,49 @@ public class BBP_Wrapper implements Runnable {
 	public void setDoFAS(boolean doFAS) {
 		this.doFAS = doFAS;
 	}
+	
+	public void setDataOnly(boolean dataOnly) {
+		this.dataOnly = dataOnly;
+	}
 
 	public void setXMLFileName(String xmlFileName) {
 		this.xmlFileName = xmlFileName;
 	}
 
-	private boolean doRun() throws IOException {
+	public void setBBPDataDir(File bbpDataDir) {
+		this.bbpDataDir = bbpDataDir;
+	}
+
+	private boolean doRun(long simID) throws IOException {
 		Preconditions.checkState(srcFile.exists(), "Source file doesn't exist: %s", srcFile.getAbsolutePath());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		if (seedOverride != null)
 			srcFile = writeSrcFileNewSeed(srcFile, seedOverride, outputDir);
 		
-		long simID = System.currentTimeMillis();
-		
 		File bbpRunDir = doRun(outputDir, scriptFileName, xmlFileName, simID,
-				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doFAS);
-		
-//		File inputsFile = new File(outputDir, inputsFileName);
-//		
-//		File srfFile = this.srfFile;
-//		if (disableHF) {
-//			String newSRFPrefix = inputsFileName;
-//			if (newSRFPrefix.endsWith(".txt"))
-//				newSRFPrefix = newSRFPrefix.substring(0, newSRFPrefix.indexOf(".txt"));
-//			File newSRF = new File(outputDir, newSRFPrefix+"_noHF.srf");
-//			if (srfFile != null) {
-//				// easy, just remove the header from the SRF file
-//				removeSRF_PlaneHeader(srfFile, newSRF);
-//				srfFile = newSRF;
-//			} else {
-//				// have to run the platform to generate the SRF, then re-run
-//				File slipImputFile = new File(outputDir, "genslip_"+inputsFileName);
-//				writeBBP_InputsFile(slipImputFile, vmIndex, methodIndex, srcFile, srfFile, sitesFile);
-//				File slipScriptfile = new File(outputDir, "genslip_"+scriptFileName);
-//				writeBBP_Script(slipScriptfile, slipImputFile, System.currentTimeMillis(), "GenSlip");
-//				
-//				System.out.println("Running GenSlip only BBP with outputDir: "+outputDir.getAbsolutePath());
-//				File bbpRunDir = runBBP_Script(slipScriptfile);
-//				if (bbpRunDir == null)
-//					return false;
-//				String srcPrefix = srcFile.getName();
-//				srcPrefix = srcPrefix.substring(0, srcPrefix.indexOf(".src"));
-//				File genSRF = new File(bbpRunDir, srcPrefix+".srf");
-//				Preconditions.checkState(genSRF.exists());
-//				removeSRF_PlaneHeader(genSRF, newSRF);
-//				srfFile = newSRF;
-//			}
-//		}
-//		
-//		writeBBP_InputsFile(inputsFile, vmIndex, methodIndex, srcFile, srfFile, sitesFile);
-//		
-//		File scriptFile = new File(outputDir, scriptFileName);
-//		writeBBP_Script(scriptFile, inputsFile, System.currentTimeMillis());
-//		
-//		System.out.println("Running BBP with outputDir: "+outputDir.getAbsolutePath());
-//		File bbpRunDir = runBBP_Script(scriptFile);
+				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doFAS, dataOnly, bbpDataDir);
 		if (bbpRunDir == null)
 			return false;
 		
 		System.out.println("Detected BBP dir, moving data: "+bbpRunDir.getAbsolutePath());
 		Preconditions.checkState(bbpRunDir.exists());
 		for (File file : bbpRunDir.listFiles())
-			move(file, new File(outputDir, file.getName()));
+			move(file, new File(outputDir, file.getName()), dataOnly);
 		bbpRunDir.delete();
+		
+		File mainBBPdir = bbpRunDir.getParentFile().getParentFile();
+		for (String dirName : new String[] { "tmpdata", "indata" }) {
+			File tempDir = new File(new File(mainBBPdir, dirName), bbpRunDir.getName());
+			if (tempDir.exists())
+				FileUtils.deleteDirectory(tempDir);
+		}
 		
 		return true;
 	}
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
 			File srcFile, File srfFile, File siteFile, VelocityModel vm, Method method,
-			boolean doHF, boolean doRotD50, boolean doFAS) throws IOException {
+			boolean doHF, boolean doRotD50, boolean doFAS, boolean dataOnly, File bbpDataDir) throws IOException {
 		Preconditions.checkState(method == Method.GP, "Only GP supported currently");
 		List<BBP_Module> modules = new ArrayList<>();
 		if (srfFile == null)
@@ -198,7 +179,7 @@ public class BBP_Wrapper implements Runnable {
 		} else {
 			String preScriptName = "lf_only_"+scriptFileName;
 			String preXMLFileName = "lf_only_"+xmlFileName;
-			File dir = doRun(outputDir, preScriptName, preXMLFileName, simID, modules, siteFile);
+			File dir = doRun(outputDir, preScriptName, preXMLFileName, simID, modules, siteFile, bbpDataDir);
 			if (dir == null)
 				return null;
 			File tempDir = new File(new File(dir.getParentFile().getParentFile(), "tmpdata"), dir.getName());
@@ -228,29 +209,32 @@ public class BBP_Wrapper implements Runnable {
 			scriptFileName = "pp_only_"+scriptFileName;
 			xmlFileName = "pp_only_"+xmlFileName;
 		}
-		modules.add(BBP_Module.buildPlotMap(srcFile, srfFile, siteFile));
-		modules.add(BBP_Module.buildPlotSeis(siteFile, srcFile));
+		if (!dataOnly) {
+			modules.add(BBP_Module.buildPlotMap(srcFile, srfFile, siteFile));
+			modules.add(BBP_Module.buildPlotSeis(siteFile, srcFile));
+		}
 		if (doRotD50)
 			modules.add(BBP_Module.buildRotD50(siteFile));
 		if (doFAS)
 			modules.add(BBP_Module.buildFAS(siteFile));
-		modules.add(BBP_Module.buildGenHTML(vm, method, siteFile, srcFile));
+		if (!dataOnly)
+			modules.add(BBP_Module.buildGenHTML(vm, method, siteFile, srcFile));
 		
-		return doRun(outputDir, scriptFileName, xmlFileName, simID, modules, siteFile);
+		return doRun(outputDir, scriptFileName, xmlFileName, simID, modules, siteFile, bbpDataDir);
 	}
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
-			List<BBP_Module> modules, File siteFile) throws IOException {
+			List<BBP_Module> modules, File siteFile, File bbpDataDir) throws IOException {
 		File scriptFile = new File(outputDir, scriptFileName);
 		File xmlFile = new File(outputDir, xmlFileName);
 		writeBBP_XML_File(xmlFile, siteFile, modules);
-		writeBBP_Script(scriptFile, xmlFile, simID);
+		writeBBP_Script(scriptFile, xmlFile, simID, bbpDataDir);
 		
 		System.out.println("Running BBP with simulation ID "+simID);
 		return runBBP_Script(scriptFile);
 	}
 	
-	private static void writeBBP_Script(File scriptFile, File xmlFile, long simID) throws IOException {
+	private static void writeBBP_Script(File scriptFile, File xmlFile, long simID, File bbpDataDir) throws IOException {
 		FileWriter fw = new FileWriter(scriptFile);
 		fw.write("#!/bin/bash"+"\n");
 		fw.write("\n");
@@ -258,10 +242,14 @@ public class BBP_Wrapper implements Runnable {
 		fw.write("    . ~/.bash_profile\n");
 		fw.write("fi\n");
 		fw.write("\n");
-		fw.write("if [ -z ${BBP_DATA_DIR+x} ];then\n");
-		fw.write("    echo \"BBP_DATA_DIR is undefined\"\n");
-		fw.write("    exit 2\n");
-		fw.write("fi\n");
+		if (bbpDataDir != null) {
+			fw.write("export BBP_DATA_DIR="+bbpDataDir+"\n");
+		} else {
+			fw.write("if [ -z ${BBP_DATA_DIR+x} ];then\n");
+			fw.write("    echo \"BBP_DATA_DIR is undefined\"\n");
+			fw.write("    exit 2\n");
+			fw.write("fi\n");
+		}
 		fw.write("if [ ! -e $BBP_DATA_DIR ];then\n");
 		fw.write("    echo \"BBP_DATA_DIR doesn't exist\"\n");
 		fw.write("    exit 2\n");
@@ -321,35 +309,35 @@ public class BBP_Wrapper implements Runnable {
 		return null;
 	}
 	
-	private static void removeSRF_PlaneHeader(File inputSRF, File outputSRF) throws IOException {
-		List<String> srf = Files.readLines(inputSRF, Charset.defaultCharset());
-		List<String> modSRF = new ArrayList<>();
-		boolean isPlane = false;
-		for (String line : srf) {
-			if (line.startsWith("PLANE"))
-				isPlane = true;
-			else if (line.startsWith("POINTS"))
-				isPlane = false;
-			if (!isPlane)
-				modSRF.add(line);
-		}
-		System.out.println("Stripped out "+(srf.size() - modSRF.size())+" plane header lines");
-		FileWriter fw = new FileWriter(outputSRF);
-		
-		for (String line : modSRF)
-			fw.write(line+"\n");
-		
-		fw.close();
-	}
-	
-	private static void move(File from, File to) throws IOException {
+	private static void move(File from, File to, boolean dataOnly) throws IOException {
 		if (from.isDirectory()) {
+			if (dataOnly && !containsData(from))
+				return;
 			Preconditions.checkState((to.exists() && to.isDirectory()) || to.mkdir());
 			for (File file : from.listFiles())
-				move(file, new File(to, file.getName()));
+				move(file, new File(to, file.getName()), dataOnly);
 		} else {
-			Files.move(from, to);
+			if (!dataOnly || isDataFile(from))
+				Files.move(from, to);
 		}
+	}
+	
+	private static boolean containsData(File dir) {
+		boolean contains = false;
+		for (File file : dir.listFiles()) {
+			if (file.isDirectory())
+				contains = containsData(file);
+			else
+				contains = isDataFile(file);
+			if (contains)
+				break;
+		}
+		return contains;
+	}
+	
+	private static boolean isDataFile(File file) {
+		String name = file.getName();
+		return name.endsWith(".bbp") || name.endsWith(".rd50") || name.endsWith(".fs.col");
 	}
 	
 	private static List<String> streamToLines(InputStream stream) throws IOException {
@@ -466,7 +454,7 @@ public class BBP_Wrapper implements Runnable {
 //		File srfFile = new File(eventDir, "event_136704_0.05s_ADJ_VEL.srf");
 		File srfFile = null;
 		File sitesFile = new File("/home/kevin/bbp/bbp_data/run/stations_cs_sites.stl");
-		File outputDir = new File("/tmp/bbp_test6");
+		File outputDir = new File("/tmp/bbp_test7");
 		
 //		runBBP(2, 1, srcFile, null, srfFile, sitesFile, outputDir);
 //		removeSRF_PlaneHeader(new File("/tmp/test.srf"));
@@ -475,6 +463,7 @@ public class BBP_Wrapper implements Runnable {
 		BBP_Wrapper wrapper = new BBP_Wrapper(VelocityModel.LA_BASIN, Method.GP, srcFile, null, srfFile, sitesFile, outputDir);
 		wrapper.maxRetries = 1;
 		wrapper.doHF = true;
+		wrapper.dataOnly = true;
 		wrapper.run();
 		
 //		velToAccel(new File("/data/kevin/bbp/bbp_data/outdata/1507151299716/1507151299716.SBSM.vel.bbp"),

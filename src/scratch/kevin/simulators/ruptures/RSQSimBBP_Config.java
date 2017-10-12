@@ -37,7 +37,7 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class RSQSimBBP_Config {
 	
-	private static BBP_PlanarSurface estimateBBP_PlanarSurface(SimulatorEvent event) {
+	public static BBP_PlanarSurface estimateBBP_PlanarSurface(SimulatorEvent event) {
 		double length = SimulatorUtils.estimateRuptureLength(event);
 		double zTOR = Double.POSITIVE_INFINITY;
 		double zBOR = Double.NEGATIVE_INFINITY;
@@ -51,8 +51,8 @@ public class RSQSimBBP_Config {
 		}
 		if (zTOR < 0)
 			zTOR = 0;
-		System.out.println("zTOR = "+zTOR);
-		System.out.println("zBOR = "+zBOR);
+//		System.out.println("zTOR = "+zTOR);
+//		System.out.println("zBOR = "+zBOR);
 		List<Double> strikes = new ArrayList<>();
 		List<Double> rakes = new ArrayList<>();
 		List<Double> dips = new ArrayList<>();
@@ -93,7 +93,7 @@ public class RSQSimBBP_Config {
 		return new BBP_PlanarSurface(topCenter, length, width, mech);
 	}
 	
-	private static BBP_PlanarSurface planarEquivalentU3Surface(RSQSimCatalog catalog, RSQSimEvent event,
+	public static BBP_PlanarSurface planarEquivalentU3Surface(RSQSimCatalog catalog, RSQSimEvent event,
 			double minFractForInclusion, boolean adjWidthMatchArea) {
 		EqkRupture rup = catalog.getGMPE_Rupture(event, minFractForInclusion);
 		RuptureSurface u3Surf = rup.getRuptureSurface();
@@ -132,7 +132,7 @@ public class RSQSimBBP_Config {
 		return angleDiff;
 	}
 	
-	private static BBP_SourceFile buildBBP_Source(SimulatorEvent event, RSQSimEventSlipTimeFunc func,
+	public static BBP_SourceFile buildBBP_Source(SimulatorEvent event, RSQSimEventSlipTimeFunc func,
 			BBP_PlanarSurface surface, int seed) {
 		ArrayList<SimulatorElement> elems = event.getAllElements();
 		
@@ -163,7 +163,7 @@ public class RSQSimBBP_Config {
 		meanArea /= elems.size();
 		double sqSideLen = Math.sqrt(meanArea);
 		
-		System.out.println("Mean area: "+meanArea+", dx: "+sqSideLen);
+//		System.out.println("Mean area: "+meanArea+", dx: "+sqSideLen);
 		
 		return new BBP_SourceFile(surface, event.getMagnitude(), hypoAlongStrike, hypoDownDip, sqSideLen, sqSideLen, 0.15, seed);
 //		return new BBP_SourceFile(event.getMagnitude(), topCenter, length, width, mech, hypoAlongStrike, hypoDownDip,
@@ -201,7 +201,7 @@ public class RSQSimBBP_Config {
 		List<FaultSectionPrefData> subSects = catalog.getU3SubSects();
 		RSQSimUtils.cleanVertFocalMechs(elements, subSects);
 		System.out.println("Loading events...");
-		List<RSQSimEvent> events = catalog.loadEventsByID(eventIDs);
+		List<RSQSimEvent> events = catalog.loader().byIDs(eventIDs);
 		System.out.println("Loaded "+events.size()+" events");
 		Preconditions.checkState(events.size() == eventIDs.length);
 		

@@ -45,9 +45,13 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 public class SpectraPlotter {
 	
 	private static DiscretizedFunc[] loadAll(File file) throws IOException {
+		return loadAll(Files.readLines(file, Charset.defaultCharset()));
+	}
+	
+	private static DiscretizedFunc[] loadAll(List<String> lines) {
 		DiscretizedFunc[] ret = null;
 		String[] names = null;
-		for (String line : Files.readLines(file, Charset.defaultCharset())) {
+		for (String line : lines) {
 			line = line.trim();
 			if (names == null && line.startsWith("#")) {
 				String nameStr = line.substring(1).trim();
@@ -88,6 +92,11 @@ public class SpectraPlotter {
 		DiscretizedFunc[] ret = loadAll(file);
 		return ret[ret.length-1];
 	}
+	
+	public static DiscretizedFunc loadRotD50(List<String> lines) {
+		DiscretizedFunc[] ret = loadAll(lines);
+		return ret[ret.length-1];
+	}
 
 	public static void plotRotD50(File file) throws IOException {
 		plotRotD50(file, null, null, null);
@@ -113,6 +122,11 @@ public class SpectraPlotter {
 		
 		plotSpectra(funcArray, file.getName(), "Period (s)", "PSA (g)", true, true, new Range(1e-3, 1e1),
 				outputDir, prefix, gmpes);
+	}
+	
+	public static DiscretizedFunc loadFAS(List<String> lines) {
+		DiscretizedFunc[] ret = loadAll(lines);
+		return ret[ret.length-1];
 	}
 	
 	public static DiscretizedFunc loadFAS(File file) throws IOException {
@@ -414,24 +428,8 @@ public class SpectraPlotter {
 		return files;
 	}
 	
-	public static UncertainArbDiscDataset calcGMPE_RotD50(EqkRupture rupture, Location loc, VelocityModel vm, ScalarIMR gmpe) {
-		Site site = new Site(loc);
-		
-		Vs30_Param vs30Param = new Vs30_Param(vm.getVs30());
-		vs30Param.setValueAsDefault();
-		site.addParameter(vs30Param);
-		
-		Vs30_TypeParam vs30TypeParam = new Vs30_TypeParam();
-		vs30TypeParam.setValue(Vs30_TypeParam.VS30_TYPE_MEASURED); // TODO
-		site.addParameter(vs30TypeParam);
-		
-		DepthTo1pt0kmPerSecParam z10Param = new DepthTo1pt0kmPerSecParam();
-		z10Param.setValue(null);
-		site.addParameter(z10Param);
-		
-		DepthTo2pt5kmPerSecParam z25Param = new DepthTo2pt5kmPerSecParam();
-		z25Param.setValue(null);
-		site.addParameter(z25Param);
+	public static UncertainArbDiscDataset calcGMPE_RotD50(EqkRupture rupture, BBP_Site bbpSite, VelocityModel vm, ScalarIMR gmpe) {
+		Site site = bbpSite.buildGMPE_Site(vm);
 		
 		gmpe.setSite(site);
 		gmpe.setEqkRupture(rupture);
@@ -479,8 +477,6 @@ public class SpectraPlotter {
 		ScalarIMR[] gmpes = { AttenRelRef.ASK_2014.instance(null), AttenRelRef.BSSA_2014.instance(null),
 				AttenRelRef.CB_2014.instance(null), AttenRelRef.CY_2014.instance(null) };
 		
-		String[] siteNames = { "USC", "SBSM" };
-		Location[] locs = { new Location(34.0192, -118.286), new Location(34.064986, -117.29201) };
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
@@ -494,6 +490,8 @@ public class SpectraPlotter {
 		File srfDir = new File(catalog.getCatalogDir(), "event_srfs");
 		File rsDir = new File(srfDir, "event_"+eventID+"_0.05s_ADJ_VEL_bbp");
 		
+		List<BBP_Site> sites = BBP_Site.readFile(refDir);
+		
 		int numRefRuns = 200;
 		VelocityModel vm = VelocityModel.LA_BASIN;
 		double minFractForInclusion = 0.2;
@@ -503,21 +501,20 @@ public class SpectraPlotter {
 			for (ScalarIMR gmpe : gmpes)
 				gmpe.setParamDefaults();
 			System.out.println("Loading event...");
-			RSQSimEvent event = catalog.loadEventByID(eventID);
+			RSQSimEvent event = catalog.loader().byID(eventID);
 			gmpeRup = catalog.getGMPE_Rupture(event, minFractForInclusion);
 			System.out.println("DONE");
 		}
 		
-		for (int s=0; s<siteNames.length; s++) {
-			String siteName = siteNames[s];
-			Location loc = locs[s];
+		for (BBP_Site site : sites) {
+			String siteName = site.getName();
 			File rsRD50File = findRotD50File(rsDir, siteName);
 			UncertainArbDiscDataset[] gmpeSpectra = null;
 			if (gmpes != null) {
 				gmpeSpectra = new UncertainArbDiscDataset[gmpes.length];
 				for (int i=0; i<gmpes.length; i++) {
 					System.out.println("Calculating spectra for "+gmpes[i].getShortName());
-					gmpeSpectra[i] = calcGMPE_RotD50(gmpeRup, loc, vm, gmpes[i]);
+					gmpeSpectra[i] = calcGMPE_RotD50(gmpeRup, site, vm, gmpes[i]);
 				}
 				System.out.println("DONE spectra");
 			}

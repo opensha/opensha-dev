@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
@@ -19,16 +20,15 @@ import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.EventIDsRupIden;
 import org.opensha.sha.simulators.iden.LogicalAndRupIden;
-import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
+import org.opensha.sha.simulators.iden.SkipYearsLoadIden;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -75,6 +75,7 @@ public class RSQSimCatalog {
 	private List<SimulatorElement> elements;
 	private RSQSimStateTransitionFileReader transReader;
 	private List<FaultSectionPrefData> subSects;
+	private Map<Integer, Double> subSectAreas;
 	
 	private RSQSimCatalog(String name, String author, GregorianCalendar date, String metadata,
 			FaultModels fm, DeformationModels dm, double slipVel) {
@@ -134,7 +135,7 @@ public class RSQSimCatalog {
 		builder.addLine("Author", getAuthor()+", "+dateFormat.format(getDate().getTime()));
 		builder.addLine("Description", getMetadata());
 		builder.addLine("Fault/Def Model", fm+", "+dm);
-		builder.addLine("Slim Velocity", (float)slipVel+" m/s");
+		builder.addLine("Slip Velocity", (float)slipVel+" m/s");
 		try {
 			double aveArea = 0d;
 			for (SimulatorElement e : getElements())
@@ -153,6 +154,41 @@ public class RSQSimCatalog {
 		lines.add("# "+getName());
 		lines.addAll(getMarkdownMetadataTable());
 		
+		List<String> eventLinks = new ArrayList<>();
+		List<String> eventNames = new ArrayList<>();
+		
+		List<String> gmpeLinks = new ArrayList<>();
+		List<String> gmpeNames = new ArrayList<>();
+		
+		for (File subDir : dir.listFiles()) {
+			if (!subDir.isDirectory())
+				continue;
+			File mdFile = new File(subDir, "README.md");
+			if (!mdFile.exists())
+				continue;
+			String name = subDir.getName();
+			if (name.startsWith("event_")) {
+				eventNames.add(MarkdownUtils.getTitle(mdFile));
+				eventLinks.add(name);
+			} else if (name.startsWith("gmpe_bbp_comparisons_")) {
+				gmpeNames.add(name.substring("gmpe_bbp_comparisons_".length()));
+				gmpeLinks.add(name);
+			}
+		}
+		
+		if (!eventNames.isEmpty()) {
+			lines.add("");
+			lines.add("## Event Comparisons");
+			for (int i=0; i<eventNames.size(); i++)
+				lines.add("* ["+eventNames.get(i)+"]("+eventLinks.get(i)+"/)");
+		}
+		if (!gmpeNames.isEmpty()) {
+			lines.add("");
+			lines.add("## GMPE Comparisons");
+			for (int i=0; i<gmpeNames.size(); i++)
+				lines.add("* ["+gmpeNames.get(i)+"]("+gmpeLinks.get(i)+"/)");
+		}
+		
 		MarkdownUtils.writeReadmeAndHTML(lines, dir);
 	}
 
@@ -161,7 +197,7 @@ public class RSQSimCatalog {
 			String name = file.getName().toLowerCase();
 			if (name.endsWith(".flt"))
 				return file;
-			if (name.startsWith("zfault") && name.endsWith(".in"))
+			if (name.startsWith("zfault") && name.endsWith(".in") && !name.contains("Deepen_"))
 				return file;
 		}
 		throw new FileNotFoundException("No geometry file found in "+dir.getAbsolutePath());
@@ -175,30 +211,8 @@ public class RSQSimCatalog {
 		return elements;
 	}
 	
-	public RSQSimEvent loadEventByID(int eventID) throws IOException {
-		List<RSQSimEvent> events = loadEvents(new EventIDsRupIden(new int[] {eventID}));
-		Preconditions.checkState(events.size() == 1);
-		return events.get(0);
-	}
-	
-	public List<RSQSimEvent> loadEventsByID(int... eventIDs) throws IOException {
-		return loadEvents(new EventIDsRupIden(eventIDs));
-	}
-	
-	public List<RSQSimEvent> loadEventsByMag(double minMag) throws IOException {
-		return loadEvents(new MagRangeRuptureIdentifier(minMag, Double.POSITIVE_INFINITY));
-	}
-	
-	public List<RSQSimEvent> loadEvents(RuptureIdentifier loadIden) throws IOException {
-		return RSQSimFileReader.readEventsFile(dir, getElements(), Lists.newArrayList(loadIden));
-	}
-	
-	public List<RSQSimEvent> loadEventsLogicalAnd(RuptureIdentifier... loadIdens) throws IOException {
-		return loadEvents(new LogicalAndRupIden(loadIdens));
-	}
-	
-	public List<RSQSimEvent> loadEventsLogicalOr(RuptureIdentifier... loadIdens) throws IOException {
-		return loadEvents(new LogicalOrRupIden(loadIdens));
+	public Loader loader() throws IOException {
+		return new Loader(getElements(), getCatalogDir());
 	}
 	
 	private static File getTransFile(File dir) throws FileNotFoundException {
@@ -218,7 +232,7 @@ public class RSQSimCatalog {
 		return transReader;
 	}
 	
-	public RSQSimEventSlipTimeFunc getSlipTimeFunc(RSQSimEvent event) throws IOException {
+	public synchronized RSQSimEventSlipTimeFunc getSlipTimeFunc(RSQSimEvent event) throws IOException {
 		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event), slipVel);
 	}
 
@@ -232,22 +246,86 @@ public class RSQSimCatalog {
 		return subSects;
 	}
 	
+	private synchronized Map<Integer, Double> getSubSectAreas() throws IOException {
+		if (subSectAreas == null)
+			subSectAreas = RSQSimUtils.calcSubSectAreas(getElements());
+		return subSectAreas;
+	}
+	
 	public EqkRupture getGMPE_Rupture(RSQSimEvent event, double minFractForInclusion) {
 		List<RSQSimEvent> events = new ArrayList<>();
 		events.add(event);
 		List<SimulatorElement> elements;
+		Map<Integer, Double> subSectAreas = null;
 		try {
 			elements = getElements();
+			if (minFractForInclusion > 0d)
+				subSectAreas = getSubSectAreas();
 		} catch (IOException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
-		FaultSystemRupSet rupSet = RSQSimUtils.buildFaultSystemSolution(
-				getU3SubSects(), elements, events, 0d, minFractForInclusion).getRupSet();
-		Preconditions.checkState(rupSet.getNumRuptures() == 1);
 		
-		RuptureSurface surf = rupSet.getSurfaceForRupupture(0, 1d, false);
+		return RSQSimUtils.buildSubSectBasedRupture(event, getU3SubSects(), elements, minFractForInclusion, subSectAreas);
+	}
+	
+	public class Loader {
+		private List<SimulatorElement> elements;
+		private File catalogDir;
 		
-		return new EqkRupture(event.getMagnitude(), rupSet.getAveRakeForRup(0), surf, null);
+		private List<RuptureIdentifier> loadIdens;
+		
+		private Loader(List<SimulatorElement> elements, File catalogDir) {
+			super();
+			this.elements = elements;
+			this.catalogDir = catalogDir;
+			
+			loadIdens = new ArrayList<>();
+		}
+		
+		public Loader minMag(double minMag) {
+			loadIdens.add(new MagRangeRuptureIdentifier(minMag, Double.POSITIVE_INFINITY));
+			return this;
+		}
+		
+		public Loader maxMag(double maxMag) {
+			loadIdens.add(new MagRangeRuptureIdentifier(Double.NEGATIVE_INFINITY, maxMag));
+			return this;
+		}
+		
+		public Loader skipYears(double years) {
+			loadIdens.add(new SkipYearsLoadIden(years));
+			return this;
+		}
+		
+		public Loader matches(RuptureIdentifier iden) {
+			loadIdens.add(iden);
+			return this;
+		}
+		
+		public RSQSimEvent byID(int eventID) throws IOException {
+			List<RSQSimEvent> events = this.byIDs(eventID);
+			Preconditions.checkState(events.size() == 1, "Event "+eventID+" not found");
+			return events.get(0);
+		}
+		
+		public List<RSQSimEvent> byIDs(int... eventIDs) throws IOException {
+			loadIdens.add(new EventIDsRupIden(eventIDs));
+			return this.load();
+		}
+		
+		public List<RSQSimEvent> load() throws IOException {
+			LogicalAndRupIden loadIden = new LogicalAndRupIden(loadIdens);
+			List<RuptureIdentifier> rupIdens = new ArrayList<>();
+			rupIdens.add(loadIden);
+			return RSQSimFileReader.readEventsFile(catalogDir, elements, rupIdens);
+		}
+		
+		public Iterable<RSQSimEvent> iterable() throws IOException {
+			LogicalAndRupIden loadIden = new LogicalAndRupIden(loadIdens);
+			List<RuptureIdentifier> rupIdens = new ArrayList<>();
+			rupIdens.add(loadIden);
+			return RSQSimFileReader.getEventsIterable(catalogDir, elements, rupIdens);
+		}
 	}
 
 }

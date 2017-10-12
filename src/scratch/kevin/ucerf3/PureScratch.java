@@ -53,6 +53,7 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.commons.util.FileUtils;
 import org.opensha.nshmp2.imr.impl.AB2006_140_AttenRel;
 import org.opensha.refFaultParamDb.dao.db.DB_AccessAPI;
 import org.opensha.refFaultParamDb.dao.db.DB_ConnectionPool;
@@ -1130,12 +1131,16 @@ public class PureScratch {
 		}
 	}
 	
-	public static void test41() {
+	private static void test41() {
 		double strike = 90;
 		double dip = 90;
 		double rake = 90;
 		double[] vect = PlaneUtils.getSlipVector(new double[] {strike, dip, rake});
 		System.out.println(vect[0]+" "+vect[1]+" "+vect[2]);
+	}
+	
+	private static void test42() throws IOException {
+		FileUtils.createZipFile(new File("/tmp/bbp_test7.zip"), new File("/tmp/bbp_test7"), false);
 	}
 
 	/**
@@ -1143,7 +1148,7 @@ public class PureScratch {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test41();
+		test42();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
