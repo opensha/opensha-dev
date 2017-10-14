@@ -24,7 +24,7 @@ public class MarkdownUtils {
 	
 	public static class TableBuilder {
 		
-		private LinkedList<String> lines;
+		private List<String[]> lines;
 		
 		private List<String> curLine;
 		
@@ -37,9 +37,7 @@ public class MarkdownUtils {
 		}
 		
 		public TableBuilder addLine(String... vals) {
-			lines.add(tableLine(vals));
-			if (lines.size() == 1)
-				lines.add(generateTableDashLine(vals.length));
+			lines.add(vals);
 			
 			return this;
 		}
@@ -65,9 +63,53 @@ public class MarkdownUtils {
 			return this;
 		}
 		
+		public TableBuilder wrap(int maxDataCols, int headerCols) {
+			if (curLine != null)
+				finalizeLine();
+			int curDataCols = lines.get(0).length - headerCols;
+			if (curDataCols <= maxDataCols)
+				return this;
+			int numWraps = (int)Math.ceil((double)curDataCols / (double)maxDataCols);
+			int newDataCols = (int)Math.ceil((double)curDataCols/(double)numWraps);
+			
+			System.out.println("Wrapping data from "+lines.size()+"x"+curDataCols+" to "+(lines.size()*numWraps)+"x"+newDataCols);
+			
+			List<String[]> newLines = new ArrayList<>(lines.size()*numWraps);
+			
+			// init new lines with headers if necessary
+			for (int i=0; i<lines.size()*numWraps; i++) {
+				String[] newLine = new String[headerCols+newDataCols];
+				for (int h=0; h<headerCols; h++)
+					newLine[h] = lines.get(i % numWraps)[h];
+				newLines.add(newLine);
+			}
+			
+			// fill in data
+			for (int i=0; i<lines.size(); i++) {
+				for (int c=0; c<curDataCols; c++) {
+					int row = i + (c/newDataCols)*lines.size();
+					int col = headerCols + c%newDataCols;
+					newLines.get(row)[col] = lines.get(i)[c];
+				}
+			}
+			
+			this.lines = newLines;
+			
+			return this;
+		}
+		
 		public List<String> build() {
-			Preconditions.checkState(lines.size() > 1);
-			return lines;
+			Preconditions.checkState(lines.size() >= 1);
+			
+			List<String> strings = new ArrayList<>(lines.size()+1);
+			
+			for (int i=0; i<lines.size(); i++) {
+				strings.add(tableLine(lines.get(i)));
+				if (i == 0)
+					strings.add(generateTableDashLine(lines.get(i).length));
+			}
+			
+			return strings;
 		}
 	}
 	

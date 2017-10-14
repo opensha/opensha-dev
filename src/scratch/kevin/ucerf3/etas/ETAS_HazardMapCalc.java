@@ -1419,8 +1419,13 @@ public class ETAS_HazardMapCalc {
 			typeFileName = type1.fileName+"_"+type2.fileName;
 			// data data is combined, now get just the denomenator and compute gain
 			GriddedGeoDataSet data2 = calcMap(type2, null, getLongTermCompatibleDuration(duration), isProbAt_IML, level);
-			for (int i=0; i<data.size(); i++)
-				data.set(i, data.get(i)/data2.get(i));
+			if (type2 == MapType.GRIDDED_COMP && imtName.equals(MMI_Param.NAME) && !isProbAt_IML) {
+				for (int i=0; i<data.size(); i++)
+					data.set(i, data.get(i) - data2.get(i));				
+			} else {
+				for (int i=0; i<data.size(); i++)
+					data.set(i, data.get(i)/data2.get(i));
+			}
 		}
 		if (isProbAt_IML)
 			System.out.println("Generating map for poe="+level+", "+printDescription+", "+duration.plotName);
@@ -1435,11 +1440,19 @@ public class ETAS_HazardMapCalc {
 		
 		CPT cpt;
 		if (type2 != null) {
-			data.log10();
 			if (type2 == MapType.GRIDDED_COMP) {
-				cpt = GMT_CPT_Files.GMT_POLAR.instance().rescale(-2, 2);
+				if (imtName.equals(MMI_Param.NAME) && !isProbAt_IML) {
+					cpt = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1, 1);
+					label = "Fault ETAS - Gridded ETAS "+label;
+				} else {
+					cpt = GMT_CPT_Files.GMT_POLAR.instance().rescale(-2, 2);
+					label = "Log10 Gain ETAS/"+type2.name()+" "+label;
+					data.log10();
+				}
 			} else {
 				cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0, 4);
+				label = "Log10 Gain ETAS/"+type2.name()+" "+label;
+				data.log10();
 //			cpt = GMT_CPT_Files.UCERF3_ETAS_GAIN.instance(); // from 0 to 1, we want to rescale the portion from 0.5 to 1
 //			for (int i=cpt.size(); --i>=0;)
 //				if (cpt.get(i).start <= 0.5f)
@@ -1449,7 +1462,6 @@ public class ETAS_HazardMapCalc {
 			}
 			
 //			cpt = GMT_CPT_Files.GMT_POLAR.instance().rescale(0, 2d);
-			label = "Log10 Gain ETAS/"+type2.name()+" "+label;
 		} else {
 			if (isProbAt_IML) {
 				cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(-6, 0);
@@ -1935,12 +1947,13 @@ public class ETAS_HazardMapCalc {
 		boolean calcGridded = true;
 		boolean calcLongTerm = true;
 		boolean mapParallel = true;
-		boolean plotCurves = true;
-		boolean plotMaps = false;
+		boolean plotCurves = false;
+		boolean plotMaps = true;
 		boolean plotLongTerm = false;
 		boolean onlyGainLongTerm = true;
 		boolean plotShakeMap = false;
 		boolean plotShakeMapPOE = false;
+		boolean griddedCompOnly = false;
 		HashSet<MapType> mapTypePlotSubset = new HashSet<MapType>(Lists.newArrayList(MapType.COMBINED));
 //		HashSet<MapType> mapTypePlotSubset = new HashSet<MapType>(Lists.newArrayList(MapType.COMBINED, MapType.U3TD, MapType.U3TI));
 //		HashSet<MapType> mapTypePlotSubset = null;
@@ -1973,13 +1986,13 @@ public class ETAS_HazardMapCalc {
 //				+ "2017_03_21-mojave_m7_combined_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_22-mojave_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin");
 				// final Powell set
-				+ "2017_03_23-haywired_m7_combined_descendents-NGA2-0.02-site-effects-with-basin");
+//				+ "2017_03_23-haywired_m7_combined_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-haywired_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-mojave_m7_combined_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-mojave_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-northridge_combined_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_03_23-northridge_gridded_descendents-NGA2-0.02-site-effects-with-basin");
-//				+ "2017_03_23-2016_bombay_swarm_combined_descendents-NGA2-0.02-site-effects-with-basin");
+				+ "2017_03_23-2016_bombay_swarm_combined_descendents-NGA2-0.02-site-effects-with-basin");
 //				+ "2017_07_19-haywired_m7_combined_descendents-NGA2-0.02-site-effects-with-basin-no-dist-cutoff");
 //				+ "2017_09_19-haywired_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin-no-dist-cutoff");
 				// other
@@ -1988,6 +2001,8 @@ public class ETAS_HazardMapCalc {
 		File griddedComparePrecalcDir = null;
 //		File griddedComparePrecalcDir = new File(precalcDir.getParent(),
 //				"2017_09_19-haywired_m7_gridded_descendents-NGA2-0.02-site-effects-with-basin-no-dist-cutoff");
+		if (griddedComparePrecalcDir == null)
+			griddedCompOnly = false;
 		
 //		File faultBasedPrecalc = null;
 //		double spacing = 0.5;
@@ -1999,13 +2014,13 @@ public class ETAS_HazardMapCalc {
 //		File precalcDir = null;
 		
 		TestScenario scenarioForRebound = null;
-		String etasDirName = "2016_06_15-haywired_m7-10yr-full_td-no_ert-combined"; scenarioForRebound = TestScenario.HAYWIRED_M7;
+//		String etasDirName = "2016_06_15-haywired_m7-10yr-full_td-no_ert-combined"; scenarioForRebound = TestScenario.HAYWIRED_M7;
 //		String etasDirName = "2017_01_02-haywired_m7-10yr-gridded-only-200kcombined"; scenarioForRebound = TestScenario.HAYWIRED_M7;
 //		String etasDirName = "2016_02_22-mojave_m7-10yr-full_td-no_ert-combined"; scenarioForRebound = TestScenario.MOJAVE_M7;
 //		String etasDirName = "2016_12_03-mojave_m7-10yr-gridded-only"; scenarioForRebound = TestScenario.MOJAVE_M7;
 //		String etasDirName = "2017_02_01-northridge-m6.7-10yr-full_td-no_ert-combined"; scenarioForRebound = TestScenario.NORTHRIDGE;
 //		String etasDirName = "2017_02_01-northridge-m6.7-10yr-gridded-only-combined200k"; scenarioForRebound = TestScenario.NORTHRIDGE;
-//		String etasDirName = "2016_10_27-2016_bombay_swarm-10yr-full_td-no_ert-combined";
+		String etasDirName = "2016_10_27-2016_bombay_swarm-10yr-full_td-no_ert-combined";
 //		String etasDirName = "2017_05_17-USGS_Exercise_Catalog-10yr-full_td-subSeisSupraNucl-gridSeisCorr-scale1.14-noSpont-sect-reset-1pm";
 //		String etasFileName = "results_descendents_m5_preserve.bin";
 //		String etasFileName = "results_descendents_m5.bin";
@@ -2025,10 +2040,10 @@ public class ETAS_HazardMapCalc {
 		boolean mapPOE = true;
 		boolean mmpProb6 = true;
 		
-		String imtName = PGA_Param.NAME;
-		double period = Double.NaN;
-		String imtLabel = "PGA";
-		String imtFileLabel = "pga";
+//		String imtName = PGA_Param.NAME;
+//		double period = Double.NaN;
+//		String imtLabel = "PGA";
+//		String imtFileLabel = "pga";
 //		String imtName = PGV_Param.NAME;
 //		double period = Double.NaN;
 //		String imtLabel = "PGV";
@@ -2037,10 +2052,10 @@ public class ETAS_HazardMapCalc {
 //		double period = 1d;
 //		String imtLabel = "1s Sa";
 //		String imtFileLabel = "sa_1s";
-//		String imtName = MMI_Param.NAME;
-//		double period = Double.NaN;
-//		String imtLabel = "MMI";
-//		String imtFileLabel = "mmi";
+		String imtName = MMI_Param.NAME;
+		double period = Double.NaN;
+		String imtLabel = "MMI";
+		String imtFileLabel = "mmi";
 		GriddedRegion region = new CaliforniaRegions.RELM_TESTING_GRIDDED(spacing);
 		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(SA_Param.NAME);
 		AttenRelRef gmpeRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
@@ -2365,11 +2380,12 @@ public class ETAS_HazardMapCalc {
 				for (MapType type : types) {
 					if (type == MapType.GRIDDED_COMP) {
 						// this is a comparison from a gridded-only run, plot gain
+						System.out.println("Gridded comp!");
 						if (types.contains(MapType.COMBINED)) {
 							type1s.add(MapType.COMBINED);
 							type2s.add(MapType.GRIDDED_COMP);
 						}
-					} else if (!type.isETAS()) {
+					} else if (!type.isETAS() && !griddedCompOnly) {
 						// this is UCERF3 - plot gain instead
 						MapType etas;
 						if (types.contains(MapType.COMBINED)) {
@@ -2380,6 +2396,7 @@ public class ETAS_HazardMapCalc {
 							Preconditions.checkState(!types.contains(MapType.FAULT_ONLY));
 							etas = MapType.GRIDDED_ONLY;
 						}
+						System.out.println(etas+" vs"+type);
 						// add ratio map
 						type1s.add(etas);
 						type2s.add(type);
@@ -2388,11 +2405,9 @@ public class ETAS_HazardMapCalc {
 							type1s.add(type);
 							type2s.add(null);
 						}
-					} else {
-						if (!onlyGainLongTerm) {
-							type1s.add(type);
-							type2s.add(null);
-						}
+					} else  if (!onlyGainLongTerm && !griddedCompOnly) {
+						type1s.add(type);
+						type2s.add(null);
 					}
 				}
 				

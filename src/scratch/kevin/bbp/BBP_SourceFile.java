@@ -13,6 +13,7 @@ import org.opensha.commons.geo.LocationVector;
 import org.opensha.sha.earthquake.FocalMechanism;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.QuadSurface;
+import org.opensha.sha.faultSurface.RuptureSurface;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
@@ -33,6 +34,9 @@ public class BBP_SourceFile {
 		private double length;
 		private double width;
 		private FocalMechanism mech;
+		
+		private Location[] rect = null;
+		private QuadSurface quad = null;
 		
 		public BBP_PlanarSurface(Location topCenter, double length, double width, FocalMechanism mech) {
 			this.topCenter = topCenter;
@@ -55,6 +59,66 @@ public class BBP_SourceFile {
 
 		public FocalMechanism getFocalMechanism() {
 			return mech;
+		}
+		
+		public synchronized Location[] getRectangle() {
+			if (rect == null) {
+				rect = new Location[4];
+				
+				double strikeRad = Math.toRadians(mech.getStrike());
+				Location topRight = LocationUtils.location(topCenter, strikeRad, length*0.5);
+				Location topLeft = LocationUtils.location(topCenter, strikeRad+Math.PI, length*0.5);
+				
+				LocationVector downDipVect = getDownDipVector(width);
+				Location botRight = LocationUtils.location(topRight, downDipVect);
+				Location botLeft = LocationUtils.location(topLeft, downDipVect);
+				
+				rect[0] = topLeft;
+				rect[1] = topRight;
+				rect[2] = botRight;
+				rect[3] = botLeft;
+			}
+			
+			return rect;
+		}
+		
+		private LocationVector getDownDipVector(double ddw) {
+			double downDipRad = Math.toRadians(mech.getStrike()) + Math.PI/2d;
+			double dipRad = Math.toRadians(mech.getDip());
+			double downDipHorz = Math.cos(dipRad)*ddw;
+			double downDipVert = Math.sin(dipRad)*ddw;
+			// az in degrees here
+			return new LocationVector(Math.toDegrees(downDipRad), downDipHorz, downDipVert);
+		}
+		
+		public double getHorizontalDistance(Location loc) {
+			QuadSurface surf = getQuadSurface();
+			return surf.getDistanceJB(loc);
+		}
+		
+		public double getLinearDistance(Location loc) {
+			QuadSurface surf = getQuadSurface();
+			return surf.getDistanceRup(loc);
+		}
+		
+//		public double getMaxTraceDistance(RuptureSurface surf) {
+//			Location[] rect = getRectangle();
+//			
+//			double maxDist = 0d;
+//			for (Location loc : surf.getEvenlyDiscritizedUpperEdge()) {
+//				maxDist = Math.max(maxDist, Math.abs(a))
+//			}
+//		}
+		
+		public synchronized QuadSurface getQuadSurface() {
+			if (quad == null) {
+				Location[] rect = getRectangle();
+				FaultTrace trace = new FaultTrace("");
+				trace.add(rect[0]);
+				trace.add(rect[1]);
+				quad = new QuadSurface(trace, getFocalMechanism().getDip(), getWidth());
+			}
+			return quad;
 		}
 	}
 
@@ -169,66 +233,15 @@ public class BBP_SourceFile {
 		return cornerFreq;
 	}
 	
-	public Location[] buildRectangle() {
-		Location[] rect = new Location[4];
-		
-		double strikeRad = Math.toRadians(surface.mech.getStrike());
-		Location topRight = LocationUtils.location(surface.topCenter, strikeRad, surface.length*0.5);
-		Location topLeft = LocationUtils.location(surface.topCenter, strikeRad+Math.PI, surface.length*0.5);
-		
-		LocationVector downDipVect = getDownDipVector(surface.width);
-		Location botRight = LocationUtils.location(topRight, downDipVect);
-		Location botLeft = LocationUtils.location(topLeft, downDipVect);
-		
-		rect[0] = topLeft;
-		rect[1] = topRight;
-		rect[2] = botRight;
-		rect[3] = botLeft;
-		
-		return rect;
-	}
-	
-	private LocationVector getDownDipVector(double ddw) {
-		double downDipRad = Math.toRadians(surface.mech.getStrike()) + Math.PI/2d;
-		double dipRad = Math.toRadians(surface.mech.getDip());
-		double downDipHorz = Math.cos(dipRad)*ddw;
-		double downDipVert = Math.sin(dipRad)*ddw;
-		// az in degrees here
-		return new LocationVector(Math.toDegrees(downDipRad), downDipHorz, downDipVert);
-	}
-	
 	public Location getHypoLoc() {
 		double strikeRad = Math.toRadians(surface.mech.getStrike());
 		Location hypoAlongTop = LocationUtils.location(surface.topCenter, strikeRad, hypoAlongStrike);
-		LocationVector downDipVect = getDownDipVector(hypoDownDip);
+		LocationVector downDipVect = surface.getDownDipVector(hypoDownDip);
 		return LocationUtils.location(hypoAlongTop, downDipVect);
 	}
 	
 	public BBP_PlanarSurface getSurface() {
 		return surface;
-	}
-	
-	public double getHorizontalDistance(Location loc) {
-		QuadSurface surf = getQuadSurface();
-		return surf.getDistanceJB(loc);
-	}
-	
-	public double getLinearDistance(Location loc) {
-		QuadSurface surf = getQuadSurface();
-		return surf.getDistanceRup(loc);
-	}
-	
-	private QuadSurface quad = null;
-	
-	public synchronized QuadSurface getQuadSurface() {
-		if (quad == null) {
-			Location[] rect = buildRectangle();
-			FaultTrace trace = new FaultTrace("");
-			trace.add(rect[0]);
-			trace.add(rect[1]);
-			quad = new QuadSurface(trace, getFocalMechanism().getDip(), getSurface().getWidth());
-		}
-		return quad;
 	}
 
 }

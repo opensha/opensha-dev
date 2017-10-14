@@ -18,7 +18,7 @@ import com.google.common.io.Files;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 
-public class MPJ_BBP_WrapperScriptGen {
+public class MPJ_BBP_RupGenSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
 		VelocityModel vm = VelocityModel.LA_BASIN; // 1 on HPC
@@ -40,6 +40,7 @@ public class MPJ_BBP_WrapperScriptGen {
 		String queue = "scec";
 		int mins = 10*60;
 		boolean splitSites = true;
+		String bbpDataDir = "${TMPDIR}";
 		
 		int numSims = threads*nodes;
 		if (splitSites)
@@ -79,6 +80,8 @@ public class MPJ_BBP_WrapperScriptGen {
 			argz += " --split-sites";
 		if (noHF)
 			argz += " --no-hf";
+		if (bbpDataDir != null && !bbpDataDir.isEmpty())
+			argz += " --bbp-data-dir "+bbpDataDir;
 		
 		int heapSizeMB = 10*1024;
 		List<File> classpath = new ArrayList<>();
@@ -88,7 +91,7 @@ public class MPJ_BBP_WrapperScriptGen {
 		
 		MPJExpressShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
 				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
-		List<String> script = mpjWrite.buildScript(MPJ_BBP_Wrapper.class.getName(), argz);
+		List<String> script = mpjWrite.buildScript(MPJ_BBP_RupGenSim.class.getName(), argz);
 		
 		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
 		pbsWrite.writeScript(new File(localJobDir, "bbp_parallel.pbs"), script);

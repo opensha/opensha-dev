@@ -262,24 +262,40 @@ public class SpectraPlotter {
 	
 	public static void plotMultiRotD50(List<File> refFiles, String refName, File dataFile, String dataName, String title,
 			File outputDir, String prefix, UncertainArbDiscDataset[] gmpes) throws IOException {
-		plotMultiSpectra(refFiles, refName, dataFile, dataName, title, outputDir, prefix, true, gmpes);
+		List<DiscretizedFunc> refSpectra = new ArrayList<>();
+		for (File refFile : refFiles)
+			refSpectra.add(loadRotD50(refFile));
+		DiscretizedFunc dataSpectra = loadRotD50(dataFile);
+		plotMultiRotD50(refSpectra, refName, dataSpectra, dataName, title, outputDir, prefix, gmpes);
+	}
+	
+	public static void plotMultiRotD50(List<DiscretizedFunc> refFiles, String refName, DiscretizedFunc dataSpectra, String dataName,
+			String title, File outputDir, String prefix, UncertainArbDiscDataset[] gmpes) throws IOException {
+		plotMultiSpectra(refFiles, refName, dataSpectra, dataName, title, outputDir, prefix, true, gmpes);
 	}
 	
 	public static void plotMultiFAS(List<File> refFiles, String refName, File dataFile, String dataName, String title,
 			File outputDir, String prefix) throws IOException {
-		plotMultiSpectra(refFiles, refName, dataFile, dataName, title, outputDir, prefix, false, null);
+		List<DiscretizedFunc> refSpectra = new ArrayList<>();
+		for (File refFile : refFiles)
+			refSpectra.add(loadFAS(refFile));
+		DiscretizedFunc dataSpectra = loadFAS(dataFile);
+		plotMultiFAS(refSpectra, refName, dataSpectra, dataName, title, outputDir, prefix);
 	}
 	
-	private static void plotMultiSpectra(List<File> refFiles, String refName, File dataFile, String dataName, String title,
-			File outputDir, String prefix, boolean rotD50, UncertainArbDiscDataset[] gmpes) throws IOException {
+	public static void plotMultiFAS(List<DiscretizedFunc> refFiles, String refName, DiscretizedFunc dataSpectra,
+			String dataName, String title, File outputDir, String prefix) throws IOException {
+		plotMultiSpectra(refFiles, refName, dataSpectra, dataName, title, outputDir, prefix, false, null);
+	}
+	
+	private static void plotMultiSpectra(List<DiscretizedFunc> refSpectra, String refName, DiscretizedFunc dataSpectra,
+			String dataName, String title, File outputDir, String prefix, boolean rotD50, UncertainArbDiscDataset[] gmpes)
+					throws IOException {
 		XY_DataSetList refFuncs = new XY_DataSetList();
 		List<Double> relativeWts = new ArrayList<>();
-		for (File refFile : refFiles) {
-			if (rotD50)
-				refFuncs.add(loadRotD50(refFile));
-			else
-				refFuncs.add(loadFAS(refFile));
+		for (DiscretizedFunc refFunc : refSpectra){
 			relativeWts.add(1d);
+			refFuncs.add(refFunc);
 		}
 		FractileCurveCalculator refFractCalc = new FractileCurveCalculator(refFuncs, relativeWts);
 		
@@ -339,16 +355,11 @@ public class SpectraPlotter {
 			}
 		}
 		
-		DiscretizedFunc dataFunc;
-		if (rotD50)
-			dataFunc = loadRotD50(dataFile);
-		else
-			dataFunc = loadFAS(dataFile);
-		for (Point2D pt : dataFunc)
+		for (Point2D pt : dataSpectra)
 			if (pt.getY() > 0)
 				minY = Math.min(minY, pt.getY());
-		dataFunc.setName(dataName);
-		funcs.add(dataFunc);
+		dataSpectra.setName(dataName);
+		funcs.add(dataSpectra);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		
 		String xAxisLabel, yAxisLabel;

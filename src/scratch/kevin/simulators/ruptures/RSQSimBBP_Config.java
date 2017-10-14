@@ -3,6 +3,7 @@ package scratch.kevin.simulators.ruptures;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.opensha.commons.geo.Location;
@@ -12,6 +13,7 @@ import org.opensha.commons.util.FaultUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.FocalMechanism;
+import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -29,6 +31,7 @@ import com.google.common.base.Preconditions;
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.bbp.BBP_Wrapper;
@@ -135,6 +138,7 @@ public class RSQSimBBP_Config {
 	public static BBP_SourceFile buildBBP_Source(SimulatorEvent event, RSQSimEventSlipTimeFunc func,
 			BBP_PlanarSurface surface, int seed) {
 		ArrayList<SimulatorElement> elems = event.getAllElements();
+		Preconditions.checkState(elems.size() > 0, "No elements for event %s", event.getID());
 		
 		Location hypo = null;
 		double earliestTime = Double.POSITIVE_INFINITY;
@@ -145,6 +149,8 @@ public class RSQSimBBP_Config {
 				hypo = elem.getCenterLocation();
 			}
 		}
+		Preconditions.checkNotNull(hypo, "Couldn't detect hypocenter for event %s. Start %s, end %s",
+				event.getID(), func.getStartTime(), func.getEndTime());
 		LocationVector hypoVector = LocationUtils.vector(surface.getTopCenter(), hypo);
 		double hypoAlongStrike = hypoVector.getHorzDistance();
 		if (hypoAlongStrike > surface.getLength())
@@ -169,87 +175,134 @@ public class RSQSimBBP_Config {
 //		return new BBP_SourceFile(event.getMagnitude(), topCenter, length, width, mech, hypoAlongStrike, hypoDownDip,
 //				sqSideLen, sqSideLen, 0.15, seed);
 	}
-
-	public static void main(String[] args) throws IOException {
-		File baseDir = new File("/data/kevin/simulators/catalogs");
+	
+	static final String EVENT_SRF_DIR_NAME = "event_srfs";
+	
+	static File getEventSrcFile(RSQSimCatalog catalog, int eventID) {
+		File srfDir = new File(catalog.getCatalogDir(), EVENT_SRF_DIR_NAME);
+		Preconditions.checkState(srfDir.exists() || srfDir.mkdir());
+		return new File(srfDir, "event_"+eventID+".src");
+	}
+	
+	static File getEventSRFFile(RSQSimCatalog catalog, int eventID, SRFInterpolationMode interp, double dt) {
+		File srfDir = new File(catalog.getCatalogDir(), EVENT_SRF_DIR_NAME);
+		Preconditions.checkState(srfDir.exists() || srfDir.mkdir());
+		return new File(srfDir, "event_"+eventID+"_"+(float)dt+"s_"+interp.name()+".srf");
+	}
+	
+	static File getEventBBPDir(RSQSimCatalog catalog, int eventID, SRFInterpolationMode interp, double dt) {
+		File srfDir = new File(catalog.getCatalogDir(), EVENT_SRF_DIR_NAME);
+		Preconditions.checkState(srfDir.exists() || srfDir.mkdir());
+		return new File(srfDir, "event_"+eventID+"_"+(float)dt+"s_"+interp.name()+"_bbp");
+	}
+	
+	static final boolean U3_SURFACES = true;
+	static final VelocityModel VM = VelocityModel.LA_BASIN;
+	static final Method METHOD = Method.GP;
+	static final SRFInterpolationMode SRF_INTERP_MODE = SRFInterpolationMode.ADJ_VEL;
+	static final double SRF_DT = 0.05;
+	static final double SRF_VERSION = 1.0;
+	static final int DEFAULT_SEED = 12345;
+	static final double MIN_SUB_SECT_FRACT = 0.2;
+	static final boolean ADJ_WIDTH_MATCH_AREA = true;
+	static final boolean DO_HF = false;
+	
+	static final double MAX_DIST = 200d;
+	
+	static final double LO_PASS_FREQ = 0.15;
+	static final double HI_PASS_FREQ = 100;
+	
+	private static final List<BBP_Site> allSites;
+	static {
+		List<BBP_Site> sites = new ArrayList<>();
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
-//		int[] eventIDs = { 399681 };
-		int[] eventIDs = { 136704, 145982 };
+		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		sites.add(new BBP_Site("SBSM", new Location(34.064986, -117.29201), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
 		
-//		RSQSimCatalog catalog = Catalogs.JG_UCERF3_millionElement.instance(baseDir);
-//		int[] eventIDs = { 4099020 };
+		allSites = Collections.unmodifiableList(sites);
+	}
+	
+	public static List<BBP_Site> getStandardSites() {
+		return allSites;
+	}
+	
+	public static List<BBP_Site> getStandardSites(BBP_SourceFile source) {
+		List<BBP_Site> sites = new ArrayList<>();
 		
-		File bbpSiteFile = new File("/home/kevin/bbp/bbp_data/run/stations_cs_sites.stl");
+		QuadSurface surf = source.getSurface().getQuadSurface();
+		for (BBP_Site site : allSites)
+			if (surf.getDistanceJB(site.getLoc()) <= MAX_DIST)
+				sites.add(site);
 		
-		boolean runBBP = false;
-		boolean u3Surfaces = true;
+		return sites;
+	}
+	
+	public static List<BBP_Site> getStandardSites(File bbpRunDir) {
+		List<BBP_Site> sites = new ArrayList<>();
 		
-		VelocityModel vm = VelocityModel.LA_BASIN;
-		Method method = Method.GP;
-		
-		File outputDir = new File(catalog.getCatalogDir(), "event_srfs");
-		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-		
-		System.out.println("Loading geometry...");
-		List<SimulatorElement> elements = catalog.getElements();
-		double meanArea = 0d;
-		for (SimulatorElement e : elements)
-			meanArea += e.getArea()/1000000d; // to km^2
-		meanArea /= elements.size();
-		System.out.println("Loaded "+elements.size()+" elements. Mean area: "+(float)meanArea+" km^2");
-		List<FaultSectionPrefData> subSects = catalog.getU3SubSects();
-		RSQSimUtils.cleanVertFocalMechs(elements, subSects);
-		System.out.println("Loading events...");
-		List<RSQSimEvent> events = catalog.loader().byIDs(eventIDs);
-		System.out.println("Loaded "+events.size()+" events");
-		Preconditions.checkState(events.size() == eventIDs.length);
-		
-		SRFInterpolationMode mode = SRFInterpolationMode.ADJ_VEL;
-		double dt = 0.05;
-		double srfVersion = 1.0;
-		
-		int seed = 12345;
-		
-		for (RSQSimEvent event : events) {
-			System.out.println("Event: "+event.getID()+", M"+(float)event.getMagnitude());
-			int eventID = event.getID();
-			RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
-			String eventStr = "event_"+eventID;
-			
-			BBP_PlanarSurface surface;
-			if (u3Surfaces)
-				surface = planarEquivalentU3Surface(catalog, event, 0.2, true);
-			else
-				surface = estimateBBP_PlanarSurface(event);
-			BBP_SourceFile bbpSource = buildBBP_Source(event, func, surface, seed);
-			File srcFile = new File(outputDir, eventStr+".src");
-			bbpSource.writeToFile(srcFile);
-			
-			SimulatorUtils.estimateVertexDAS(event);
-			Location[] sourceRect = bbpSource.buildRectangle();
-			Location sourceHypo = bbpSource.getHypoLoc();
-			RupturePlotGenerator.writeSlipPlot(event, func, outputDir, eventStr, sourceRect, sourceHypo, null);
-			RupturePlotGenerator.writeMapPlot(elements, event, func, outputDir, eventStr+"_map", sourceRect, sourceHypo, null);
-			
-			File eventOutputDir = new File(outputDir, eventStr+"_"+(float)dt+"s");
-			System.out.println("dt="+dt+" => "+outputDir.getAbsolutePath());
-			Preconditions.checkState(eventOutputDir.exists() || eventOutputDir.mkdir());
-			
-			ArrayList<SimulatorElement> patches = event.getAllElements();
-			
-			File srfFile = new File(eventOutputDir.getAbsolutePath()+"_"+mode.name()+".srf");
-			System.out.println("Generating SRF for dt="+(float)dt+", "+mode);
-			List<SRF_PointData> srf = RSQSimSRFGenerator.buildSRF(func, patches, dt, mode);
-			SRF_PointData.writeSRF(srfFile, srf, srfVersion);
-			
-			if (runBBP) {
-				File bbpOutputDir = new File(eventOutputDir.getAbsolutePath()+"_"+mode.name()+"_bbp");
-				BBP_Wrapper bbpWrap = new BBP_Wrapper(vm, method, srcFile, null, srfFile, bbpSiteFile, bbpOutputDir);
-				bbpWrap.setDoHF(false);
-				bbpWrap.run();
+		for (BBP_Site site : allSites) {
+			for (File file : bbpRunDir.listFiles()) {
+				if (file.getName().endsWith(".rd50") && file.getName().contains(site.getName())) {
+					sites.add(site);
+					break;
+				}
 			}
 		}
+		
+		return sites;
+	}
+	
+	public static BBP_SourceFile generateBBP_Inputs(RSQSimCatalog catalog, RSQSimEvent event, boolean overwrite)
+			throws IOException {
+		File srcFile = getEventSrcFile(catalog, event.getID());
+		
+		RSQSimEventSlipTimeFunc func = null;
+		
+		BBP_SourceFile bbpSource;
+		if (!srcFile.exists() || overwrite) {
+			func = catalog.getSlipTimeFunc(event);
+			
+			BBP_PlanarSurface surface;
+			if (U3_SURFACES)
+				surface = planarEquivalentU3Surface(catalog, event, MIN_SUB_SECT_FRACT, ADJ_WIDTH_MATCH_AREA);
+			else
+				surface = estimateBBP_PlanarSurface(event);
+			bbpSource = buildBBP_Source(event, func, surface, DEFAULT_SEED);
+			bbpSource.writeToFile(srcFile);
+		} else {
+			bbpSource = BBP_SourceFile.readFile(srcFile);
+		}
+		
+		File srfFile = getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT);
+		if (!srfFile.exists() || overwrite) {
+			if (func == null)
+				func = catalog.getSlipTimeFunc(event);
+			System.out.println("Generating SRF for dt="+(float)SRF_DT+", "+SRF_INTERP_MODE);
+			List<SRF_PointData> srf = RSQSimSRFGenerator.buildSRF(func, event.getAllElements(), SRF_DT, SRF_INTERP_MODE);
+			SRF_PointData.writeSRF(srfFile, srf, SRF_VERSION);
+		}
+		
+		return bbpSource;
+	}
+	
+	public static void runBBP(RSQSimCatalog catalog, RSQSimEvent event) throws IOException {
+		runBBP(catalog, event, null);
+	}
+	
+	public static void runBBP(RSQSimCatalog catalog, RSQSimEvent event, List<BBP_Site> sites) throws IOException {
+		BBP_SourceFile source = generateBBP_Inputs(catalog, event, false);
+		if (sites == null)
+			sites = getStandardSites(source);
+		File bbpOutputDir = getEventBBPDir(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT);
+		Preconditions.checkState(bbpOutputDir.exists() || bbpOutputDir.mkdir());
+		
+		File sitesFile = new File(bbpOutputDir, "sites.stl");
+		BBP_Site.writeToFile(sitesFile, sites);
+		
+		BBP_Wrapper bbpWrap = new BBP_Wrapper(VM, METHOD, getEventSrcFile(catalog, event.getID()), null,
+				getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT), sitesFile, bbpOutputDir);
+		bbpWrap.setDoHF(DO_HF);
+		bbpWrap.run();
 	}
 
 }

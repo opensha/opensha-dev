@@ -2,19 +2,12 @@ package scratch.kevin.simulators.ruptures;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.zip.Deflater;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -32,9 +25,7 @@ import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 import org.opensha.sha.simulators.srf.SRF_PointData;
 
 import com.google.common.base.Preconditions;
-import com.google.common.io.Files;
 
-import edu.usc.kmilner.mpj.taskDispatch.AsyncPostBatchHook;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
@@ -42,6 +33,8 @@ import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.bbp.BBP_Wrapper;
+import scratch.kevin.bbp.MPJ_BBP_RupGenSim;
+import scratch.kevin.bbp.MPJ_BBP_Utils;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
 
@@ -112,7 +105,7 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 		// load the catalog
 		catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
 				null, null, null, null, null, slipVel);
-		Loader loader = catalog.loader();
+		Loader loader = catalog.loader().hasTransitions();
 		if (cmd.hasOption("min-mag"))
 			loader.minMag(Double.parseDouble(cmd.getOptionValue("min-mag")));
 		if (cmd.hasOption("skip-years"))
@@ -137,6 +130,11 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 			// initialize parent directories
 			for (SimulatorEvent e : events)
 				getRunParentDir(e.getID());
+			
+			// wait a few seconds to make sure dir creation propagates through the NFS
+			try {
+				Thread.sleep(5000);
+			} catch (InterruptedException e1) {}
 		}
 		
 		if (rank == 0)
@@ -186,69 +184,27 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 		return runDir;
 	}
 	
-	private class MasterZipHook extends AsyncPostBatchHook {
-		
-		private ZipOutputStream out;
-		private byte[] buffer = new byte[18024];
+	private class MasterZipHook extends MPJ_BBP_Utils.MasterZipHook {
 
 		public MasterZipHook() {
-			super(1);
+			super(new File(resultsDir.getParentFile(), resultsDir.getName()+".zip"),
+					new File(resultsDir.getParentFile(), resultsDir.getName()+"_rotD.zip"));
 		}
 
 		@Override
-		protected synchronized void batchProcessedAsync(int[] batch, int processIndex) {
-			debug("running async post-batch hook for process "+processIndex+", size="+batch.length);
-			try {
-				if (out == null) {
-					File zip = new File(resultsDir.getParentFile(), resultsDir.getName()+".zip");
-					if (zip.exists())
-						Files.move(zip, new File(zip.getAbsolutePath()+".prev"));
-					out = new ZipOutputStream(new FileOutputStream(zip));
-					out.setLevel(Deflater.DEFAULT_COMPRESSION);
-				}
-				for (int index : batch) {
-					int eventID = events.get(index).getID();
-					File subZipFile = getZipFile(eventID);
-					Preconditions.checkState(subZipFile.exists());
-					
-					String eventDirName = "event_"+eventID+"/";
-					ZipEntry dirEntry = new ZipEntry(eventDirName);
-					out.putNextEntry(dirEntry);
-					out.closeEntry();
-					
-					ZipFile sub = new ZipFile(subZipFile);
-					Enumeration<? extends ZipEntry> entries = sub.entries();
-					while (entries.hasMoreElements()) {
-						ZipEntry e = entries.nextElement();
-						ZipEntry outEntry = new ZipEntry(eventDirName+e.getName());
-						out.putNextEntry(outEntry);
-						
-						InputStream in = sub.getInputStream(e);
-						
-						int len;
-						while ((len = in.read(buffer)) > 0)
-							out.write(buffer, 0, len);
-
-						// Close the current entry
-						out.closeEntry();
-					}
-					sub.close();
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-				abortAndExit(2);
-			}
-			debug("done running async post-batch hook for process "+processIndex+", size="+batch.length);
+		protected void debug(String message) {
+			MPJ_BBP_CatalogSim.this.debug(message);
 		}
 
 		@Override
-		public void shutdown() {
-			super.shutdown();
-			try {
-				out.close();
-			} catch (IOException e) {
-				ExceptionUtils.throwAsRuntimeException(e);
-			}
+		protected void abortAndExit(int status) {
+			MPJTaskCalculator.abortAndExit(status);
+		}
+
+		@Override
+		protected File getSimZipFile(int index) {
+			int eventID = events.get(index).getID();
+			return getZipFile(eventID);
 		}
 		
 	}
@@ -343,27 +299,7 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 	}
 	
 	public static Options createOptions() {
-		Options ops = MPJTaskCalculator.createOptions();
-		
-		Option vmOp = new Option("vm", "vm", true, "Velocity model");
-		vmOp.setRequired(true);
-		ops.addOption(vmOp);
-		
-		Option methodOp = new Option("m", "method", true, "BBP method");
-		methodOp.setRequired(true);
-		ops.addOption(methodOp);
-		
-		Option sitesFile = new Option("sites", "sites-file", true, "Sites file");
-		sitesFile.setRequired(true);
-		ops.addOption(sitesFile);
-		
-		Option outputDir = new Option("o", "output-dir", true, "Output dir");
-		outputDir.setRequired(true);
-		ops.addOption(outputDir);
-		
-		Option noHF = new Option("nhf", "no-hf", false, "Flag to disable high-frequency");
-		noHF.setRequired(false);
-		ops.addOption(noHF);
+		Options ops = MPJ_BBP_Utils.addCommonOptions(MPJTaskCalculator.createOptions(), true, false, false, false);
 		
 		Option dt = new Option("dt", "time-step", true, "SRF time step");
 		dt.setRequired(true);
@@ -388,10 +324,6 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 		Option skipYears = new Option("skip", "skip-years", true, "Skip the given number of years at the start");
 		skipYears.setRequired(false);
 		ops.addOption(skipYears);
-		
-		Option dataDir = new Option("data", "bbp-data-dir", true, "Path to bbp_data dir");
-		dataDir.setRequired(false);
-		ops.addOption(dataDir);
 		
 		return ops;
 	}

@@ -64,7 +64,7 @@ import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
 
-public class RSQSimRupGMPE_Compare {
+public class RSQSimCatalogGMPE_Compare {
 	
 	private RSQSimCatalog catalog;
 	private BBP_CatalogSimZipLoader bbpZipFile;
@@ -83,7 +83,7 @@ public class RSQSimRupGMPE_Compare {
 	
 	private File gmpeCacheDir;
 
-	public RSQSimRupGMPE_Compare(RSQSimCatalog catalog, ZipFile bbpZipFile, List<BBP_Site> sites, double minMag, int skipYears,
+	public RSQSimCatalogGMPE_Compare(RSQSimCatalog catalog, ZipFile bbpZipFile, List<BBP_Site> sites, double minMag, int skipYears,
 			VelocityModel vm, double minFractForInclusion, File gmpeCacheDir) throws IOException {
 		this.catalog = catalog;
 		this.bbpZipFile = new BBP_CatalogSimZipLoader(bbpZipFile, sites);
@@ -106,7 +106,7 @@ public class RSQSimRupGMPE_Compare {
 			loader.skipYears(skipYears);
 		loader.matches(new LogicalOrRupIden(siteRegIdens));
 		System.out.println("Loading events...");
-		events = loader.load();
+		events = loader.minMag(minMag).load();
 		System.out.println("Loaded "+events.size()+" events");
 		eventsMap = new HashMap<>();
 		for (RSQSimEvent event : events)
@@ -123,13 +123,15 @@ public class RSQSimRupGMPE_Compare {
 		exec.shutdown();
 	}
 	
-	private synchronized EqkRupture getGMPE_Rup(RSQSimEvent event) {
-		EqkRupture rup = gmpeRupsMap.get(event.getID());
-		if (rup == null) {
-			rup = catalog.getGMPE_Rupture(event, minFractForInclusion);
-			gmpeRupsMap.put(event.getID(), rup);
+	private EqkRupture getGMPE_Rup(RSQSimEvent event) {
+		synchronized(event) {
+			EqkRupture rup = gmpeRupsMap.get(event.getID());
+			if (rup == null) {
+				rup = catalog.getGMPE_Rupture(event, minFractForInclusion);
+				gmpeRupsMap.put(event.getID(), rup);
+			}
+			return rup;
 		}
-		return rup;
 	}
 	
 	private ScalarIMR checkOutGMPE(AttenRelRef gmpeRef) {
@@ -550,6 +552,8 @@ public class RSQSimRupGMPE_Compare {
 		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 	}
 	
+	private static int max_table_fig_columns = 3;
+	
 	public void generateGMPE_Page(File outputDir, AttenRelRef gmpeRef, double[] periods,
 			boolean distJB) throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
@@ -587,11 +591,16 @@ public class RSQSimRupGMPE_Compare {
 		List<Range> magRanges = new ArrayList<>();
 		if (minMag < 6d) {
 			magRanges.add(new Range(minMag, 6d));
-			magRanges.add(new Range(6d, 7d));
+			magRanges.add(new Range(6d, 6.5d));
+			magRanges.add(new Range(6.5d, 7d));
+		} else if (minMag < 6.5d) {
+			magRanges.add(new Range(minMag, 6.5d));
+			magRanges.add(new Range(6.5d, 7d));
 		} else if (minMag < 7d) {
 			magRanges.add(new Range(minMag, 7d));
 		}
-		magRanges.add(new Range(7d, 8d));
+		magRanges.add(new Range(7d, 7.5d));
+		magRanges.add(new Range(7.5, 8d));
 		if (maxCatalogMag > 8d) {
 			if (maxCatalogMag < 8.5)
 				magRanges.add(new Range(8d, 8.5));
@@ -608,9 +617,13 @@ public class RSQSimRupGMPE_Compare {
 					+optionalDigitDF.format(magRange.getUpperBound()));
 		
 		List<Range> distRanges = new ArrayList<>();
-		distRanges.add(new Range(0d, 70d));
-		distRanges.add(new Range(70d, 140d));
-		distRanges.add(new Range(140d, MPJ_BBP_CatalogSim.CUTOFF_DIST));
+		// 0-10, 10-20, 20-40, 40-80, 80-160
+		distRanges.add(new Range(0d, 10d));
+		distRanges.add(new Range(10d, 20d));
+		distRanges.add(new Range(20d, 40d));
+		distRanges.add(new Range(40d, 80d));
+		distRanges.add(new Range(80d, 160d));
+		distRanges.add(new Range(160d, MPJ_BBP_CatalogSim.CUTOFF_DIST));
 		List<String> distLabels = new ArrayList<>();
 		for (Range distRange : distRanges)
 			distLabels.add(optionalDigitDF.format(distRange.getLowerBound())+" km < "+distShortName+" < "
@@ -660,44 +673,43 @@ public class RSQSimRupGMPE_Compare {
 				lines.add("* Green Line: Linear Regression");
 				
 				TableBuilder table = MarkdownUtils.tableBuilder();
-				table.initNewLine().addColumn("SA Period");
+				table.initNewLine().addColumn("**Distance Bin**");
+				for (double period : periods)
+					table.addColumn("**"+optionalDigitDF.format(period)+" s**");
+				table.finalizeLine();
 				
 				for (int d=0; d<distRanges.size(); d++) {
 					List<RSQSimEvent> eventsForMagDist = eventsForMagDists.get(d);
 					if (eventsForMagDist.isEmpty()) {
 						System.out.println("No events for "+site.getName()+", "+distLabels.get(d)+", "+magLabels.get(m));
-						continue;
 					}
-					table.addColumn(distLabels.get(d));
-				}
-				table.finalizeLine();
-				for (double period : periods) {
-					table.initNewLine().addColumn("**"+optionalDigitDF.format(period)+" s**");
 					
-					for (int d=0; d<distRanges.size(); d++) {
-						List<String> binDescriptions = Lists.newArrayList(distLabels.get(d),
-								magLabels.get(m), optionalDigitDF.format(period)+"s SA, "+gmpeRef.getShortName());
+					table.initNewLine().addColumn("**"+distLabels.get(d)+"**");
+					
+					for (double period : periods) {
 						String prefix = site.getName()+"_"+magFileLabels.get(m)+"_"+distFileLabels.get(d)
-								+"_"+optionalDigitDF.format(period)+"s_"+gmpeRef.getShortName()+"_scatter";
-						
+						+"_"+optionalDigitDF.format(period)+"s_"+gmpeRef.getShortName()+"_scatter";
+				
 						System.out.println("Plotting Scatter: "+prefix);
 						
-						List<RSQSimEvent> eventsForMagDist = eventsForMagDists.get(d);
 						if (eventsForMagDist.isEmpty()) {
 							table.addColumn("N/A");
 						} else {
+							List<String> binDescriptions = Lists.newArrayList(distLabels.get(d),
+									magLabels.get(m), optionalDigitDF.format(period)+"s SA, "+gmpeRef.getShortName());
 							plotScatter(eventsForMagDist, site, period, gmpeRef, gmpeVals.column(period),
 									binDescriptions, resourcesDir, prefix);
 							File scatterPlot = new File(resourcesDir, prefix+".png");
 							Preconditions.checkState(scatterPlot.exists());
 							table.addColumn("![Scatter Plot]("+resourcesDir.getName()
-								+"/"+scatterPlot.getName()+")");
+							+"/"+scatterPlot.getName()+")");
 						}
 					}
+					
 					table.finalizeLine();
 				}
 				lines.add("");
-				lines.addAll(table.build());
+				lines.addAll(table.wrap(max_table_fig_columns, 1).build());
 				
 				lines.add("#### "+site.getName()+", "+magLabels.get(m)+", Standard Normal Plots");
 				lines.add(topLink); lines.add("");
@@ -721,7 +733,7 @@ public class RSQSimRupGMPE_Compare {
 						System.out.println("No events for "+site.getName()+", "+distLabels.get(d)+", "+magLabels.get(m));
 						continue;
 					}
-					table.addColumn(distLabels.get(d));
+					table.addColumn("**"+distLabels.get(d)+"**");
 				}
 				table.finalizeLine();
 				
@@ -746,7 +758,7 @@ public class RSQSimRupGMPE_Compare {
 				}
 				table.finalizeLine();
 				lines.add("");
-				lines.addAll(table.build());
+				lines.addAll(table.wrap(max_table_fig_columns, 0).build());
 			}
 		}
 		
@@ -765,15 +777,15 @@ public class RSQSimRupGMPE_Compare {
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
-		
-//		RSQSimCatalog catalog = Catalogs.JG_UCERF3_millionElement.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2273.instance(baseDir);
 		
 		VelocityModel vm = VelocityModel.LA_BASIN;
 		double minFractForInclusion = 0.2;
 		
-		double[] periods = { 1, 2, 3, 5, 10 };
-		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG, AttenRelRef.ASK_2014,
+//		double[] periods = { 1, 2, 3, 5, 10 };
+		double[] periods = { 1, 2, 5 };
+		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
 				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 		boolean distJB = true;
 		
@@ -820,7 +832,7 @@ public class RSQSimRupGMPE_Compare {
 		
 		ZipFile zipFile = new ZipFile(new File(bbpDir, "results.zip"));
 		
-		RSQSimRupGMPE_Compare comp = new RSQSimRupGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
+		RSQSimCatalogGMPE_Compare comp = new RSQSimCatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
 				vm, minFractForInclusion, gmpeCacheDir);
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());

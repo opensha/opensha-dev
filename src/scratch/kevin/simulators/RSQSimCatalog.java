@@ -8,6 +8,7 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,7 @@ import org.opensha.sha.simulators.iden.SkipYearsLoadIden;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
+import org.opensha.sha.simulators.srf.RSQSimTransValidIden;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
@@ -33,6 +35,7 @@ import com.google.common.base.Preconditions;
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.MarkdownUtils;
 import scratch.kevin.MarkdownUtils.TableBuilder;
 
@@ -44,7 +47,10 @@ public class RSQSimCatalog {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC, 1d),
 		BRUCE_2194_LONG("rundir2194_long", "Bruce 2194 Long", "Bruce Shaw (extended by Jacqui Gilchrist)", cal(2017, 8, 31),
 				"Catalog with decent large event scaling and distribution of sizes while not using"
-				+ " any of the enhanced frictional weakening terms.", FaultModels.FM3_1, DeformationModels.GEOLOGIC, 1d);
+				+ " any of the enhanced frictional weakening terms.", FaultModels.FM3_1, DeformationModels.GEOLOGIC, 1d),
+		BRUCE_2273("bruce/rundir2273", "Bruce 2273", "Bruce Shaw", cal(2017, 10, 13),
+				"Stress loading, more refined geometry, does not contain projection fix (some location discrepancies "
+				+ "are present relative to UCERF3 faults).", FaultModels.FM3_1, DeformationModels.GEOLOGIC, 1d);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -76,6 +82,7 @@ public class RSQSimCatalog {
 	private RSQSimStateTransitionFileReader transReader;
 	private List<FaultSectionPrefData> subSects;
 	private Map<Integer, Double> subSectAreas;
+	private Map<IDPairing, Double> subSectDistsCache;
 	
 	private RSQSimCatalog(String name, String author, GregorianCalendar date, String metadata,
 			FaultModels fm, DeformationModels dm, double slipVel) {
@@ -128,6 +135,11 @@ public class RSQSimCatalog {
 	
 	private static DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
 	private static DecimalFormat areaDF = new DecimalFormat("0.00");
+	private static DecimalFormat groupedIntDF = new DecimalFormat("#");
+	static {
+		groupedIntDF.setGroupingUsed(true);
+		groupedIntDF.setGroupingSize(3);
+	}
 	
 	public List<String> getMarkdownMetadataTable() {
 		TableBuilder builder = MarkdownUtils.tableBuilder();
@@ -137,16 +149,43 @@ public class RSQSimCatalog {
 		builder.addLine("Fault/Def Model", fm+", "+dm);
 		builder.addLine("Slip Velocity", (float)slipVel+" m/s");
 		try {
-			double aveArea = 0d;
-			for (SimulatorElement e : getElements())
-				aveArea += e.getArea()*1e-6;
-			aveArea /= getElements().size();
+			double  aveArea = getAveArea();
 			builder.addLine("Average Element Area", areaDF.format(aveArea)+" km^2");
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		try {
+			int numEvents = getNumEvents();
+			double durationYears = getDurationYears();
+			builder.addLine("Length", groupedIntDF.format(numEvents)+" events in "
+					+groupedIntDF.format(durationYears)+" years");
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return builder.build();
+	}
+	
+	public double getAveArea() throws IOException {
+		List<SimulatorElement> elements = getElements();
+		double aveArea = 0d;
+		for (SimulatorElement e : elements)
+			aveArea += e.getArea()*1e-6;
+		aveArea /= elements.size();
+		return aveArea;
+	}
+	
+	private int numEvents = -1;
+	public synchronized int getNumEvents() throws IOException {
+		if (numEvents < 0)
+			numEvents = RSQSimFileReader.getNumEvents(getCatalogDir());
+		return numEvents;
+	}
+	
+	private double durationYears = Double.NaN;
+	public synchronized double getDurationYears() throws IOException {
+		if (Double.isNaN(durationYears))
+			durationYears = RSQSimFileReader.getDurationYears(getCatalogDir());
+		return durationYears;
 	}
 	
 	public void writeMarkdownSummary(File dir) throws IOException {
@@ -252,9 +291,13 @@ public class RSQSimCatalog {
 		return subSectAreas;
 	}
 	
+	private synchronized Map<IDPairing, Double> getSubSectDistsCache() {
+		if (subSectDistsCache == null)
+			subSectDistsCache = new HashMap<>();
+		return subSectDistsCache;
+	}
+	
 	public EqkRupture getGMPE_Rupture(RSQSimEvent event, double minFractForInclusion) {
-		List<RSQSimEvent> events = new ArrayList<>();
-		events.add(event);
 		List<SimulatorElement> elements;
 		Map<Integer, Double> subSectAreas = null;
 		try {
@@ -265,7 +308,29 @@ public class RSQSimCatalog {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
 		
-		return RSQSimUtils.buildSubSectBasedRupture(event, getU3SubSects(), elements, minFractForInclusion, subSectAreas);
+		return RSQSimUtils.buildSubSectBasedRupture(event, getU3SubSects(), elements,
+				minFractForInclusion, subSectAreas, getSubSectDistsCache());
+	}
+	
+	public List<FaultSectionPrefData> getSubSectsForRupture(RSQSimEvent event, double minFractForInclusion) {
+		List<SimulatorElement> elements;
+		Map<Integer, Double> subSectAreas = null;
+		try {
+			elements = getElements();
+			if (minFractForInclusion > 0d)
+				subSectAreas = getSubSectAreas();
+		} catch (IOException e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
+		
+		int minSectIndex = RSQSimUtils.getSubSectIndexOffset(elements, getU3SubSects());
+		
+		List<List<FaultSectionPrefData>> bundled =  RSQSimUtils.getSectionsForRupture(event, minSectIndex,
+				getU3SubSects(), getSubSectDistsCache(), minFractForInclusion, subSectAreas);
+		List<FaultSectionPrefData> allSects = new ArrayList<>();
+		for (List<FaultSectionPrefData> sects : bundled)
+			allSects.addAll(sects);
+		return allSects;
 	}
 	
 	public class Loader {
@@ -302,6 +367,11 @@ public class RSQSimCatalog {
 			return this;
 		}
 		
+		public Loader hasTransitions() throws IOException {
+			loadIdens.add(new RSQSimTransValidIden(getTransitions()));
+			return this;
+		}
+		
 		public RSQSimEvent byID(int eventID) throws IOException {
 			List<RSQSimEvent> events = this.byIDs(eventID);
 			Preconditions.checkState(events.size() == 1, "Event "+eventID+" not found");
@@ -325,6 +395,18 @@ public class RSQSimCatalog {
 			List<RuptureIdentifier> rupIdens = new ArrayList<>();
 			rupIdens.add(loadIden);
 			return RSQSimFileReader.getEventsIterable(catalogDir, elements, rupIdens);
+		}
+	}
+	
+	public static void main(String args[]) throws IOException {
+		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File baseDir = new File("/data/kevin/simulators/catalogs");
+		for (Catalogs cat : Catalogs.values()) {
+			RSQSimCatalog catalog = cat.instance(baseDir);
+			System.out.println(catalog.getName());
+			File catGitDir = new File(gitDir, catalog.getCatalogDir().getName());
+			Preconditions.checkState(catGitDir.exists() || catGitDir.mkdir());
+			catalog.writeMarkdownSummary(catGitDir);
 		}
 	}
 
