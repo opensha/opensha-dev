@@ -26,7 +26,7 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 
 import com.google.common.collect.Lists;
 
-public class GroundMotionScatterPlot {
+class GroundMotionScatterPlot {
 	
 	public static int PLOT_WIDTH = 900;
 	public static boolean WRITE_PDF = true;;

@@ -19,7 +19,7 @@ import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
 
-public class MPJ_BBP_CatalogSimScriptGen {
+class MPJ_BBP_CatalogSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
@@ -28,7 +28,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(jacquiCSDir, "UCERF3_millionElement");
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_long");
 //		File catalogDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/rundir2194_long");
-		File catalogDir = new File(myHPCDir, "rundir2273");
+		File catalogDir = new File(myHPCDir, "rundir2320");
 		
 		double slipVel = 1d;
 		double minMag = 6;

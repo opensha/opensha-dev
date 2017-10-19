@@ -118,7 +118,7 @@ public class MFDPlot extends AbstractPlot {
 	}
 
 	@Override
-	protected void finalize() throws IOException {
+	public void finalizePlot() throws IOException {
 		mfd = mfd.deepClone();
 		double durationYears = getCurrentDurationYears();
 		Preconditions.checkState(durationYears >= 0d);
@@ -204,7 +204,7 @@ public class MFDPlot extends AbstractPlot {
 			funcs.add(cumulative);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, getPrimaryColor()));
 			if (hasBoth)
-				cumulative.setName(catalogName+" Cumulative");
+				cumulative.setName("Cumulative");
 			else
 				cumulative.setName(catalogName);
 		}
@@ -249,7 +249,7 @@ public class MFDPlot extends AbstractPlot {
 		
 		HeadlessGraphPanel gp = getGraphPanel();
 		gp.drawGraphPanel(plot, false, true, xRange, yRange);
-		gp.getChartPanel().setSize(1000, 800);
+		gp.getChartPanel().setSize(getPlotWidth(), getPlotHeight());
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 		gp.saveAsTXT(new File(outputDir, prefix+".txt").getAbsolutePath());

@@ -96,7 +96,7 @@ public class SubSectRecurrenceSummary extends AbstractPlot {
 	}
 
 	@Override
-	protected void finalize() throws IOException {
+	public void finalizePlot() throws IOException {
 		CSVFile<String> csv = new CSVFile<String>(true);
 		List<String> header = Lists.newArrayList("Index", "Name");
 		for (double minMag : minMags) {
@@ -163,7 +163,7 @@ public class SubSectRecurrenceSummary extends AbstractPlot {
 				
 				HeadlessGraphPanel gp = getGraphPanel();
 				gp.drawGraphPanel(plot, true, true, range, range);
-				gp.getChartPanel().setSize(1000, 800);
+				gp.getChartPanel().setSize(getPlotWidth(), getPlotHeight());
 				gp.saveAsPNG(new File(getOutputDir(), myPrefix+".png").getAbsolutePath());
 				gp.saveAsPDF(new File(getOutputDir(), myPrefix+".pdf").getAbsolutePath());
 			}

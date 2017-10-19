@@ -14,7 +14,7 @@ import org.opensha.sha.simulators.srf.RSQSimStateTime;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
-public class EventDebug {
+class EventDebug {
 	
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");

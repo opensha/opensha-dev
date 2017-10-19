@@ -2,6 +2,7 @@ package scratch.kevin.bbp;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -107,7 +108,7 @@ public class SeismogramPlotter {
 		vertFuncs.add(seismograms[2]);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
 		
-		double maxX = seismograms[0].getMaxX();
+		Range xRange = detectXRange(seismograms);
 		double horzMinY = -horzMax;
 		double vertMinY = -vertMax;
 		
@@ -116,7 +117,7 @@ public class SeismogramPlotter {
 		if (comps != null) {
 			for (int i=0; i<comps.size(); i++) {
 				DiscretizedFunc[] comp = comps.get(i);
-				maxX = Math.max(maxX, seismograms[0].getMaxX());
+				xRange = getMaxRange(xRange, detectXRange(comp));
 				nsFuncs.add(0, offset(comp[0], -horzMax*offsetMult*(i+1)));
 				ewFuncs.add(0, offset(comp[1], -horzMax*offsetMult*(i+1)));
 				vertFuncs.add(0, offset(comp[2], -vertMax*offsetMult*(i+1)));
@@ -136,11 +137,15 @@ public class SeismogramPlotter {
 		PlotSpec ewSpec = new PlotSpec(ewFuncs, chars, title, xAxisLabel, yAxisLabel);
 		PlotSpec vertSpec = new PlotSpec(vertFuncs, chars, title, xAxisLabel, yAxisLabel);
 		
+		if (!split) {
+			nsSpec.setYAxisLabel("");
+			vertSpec.setYAxisLabel("");
+		}
+		
 		specs.add(nsSpec);
 		specs.add(ewSpec);
 		specs.add(vertSpec);
 		
-		Range xRange = new Range(0d, maxX);
 		List<Range> xRanges = new ArrayList<>();
 		xRanges.add(xRange);
 		Range horzYRange = new Range(horzMinY, horzMax);
@@ -189,7 +194,45 @@ public class SeismogramPlotter {
 			gp.saveAsPNG(file.getAbsolutePath()+".png");
 			gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 		}
+	}
+	
+	private static final double seis_plot_thresh_fract = 0.02;
+	private static final double seis_plot_thresh_buffer = 5;
+	
+	private static Range detectXRange(DiscretizedFunc... seismograms) {
+		Range range = null;
+		for (DiscretizedFunc seis : seismograms) {
+			Preconditions.checkState(seis.getMinX() >= 0);
+			double maxY = Math.max(Math.abs(seis.getMaxY()), Math.abs(seis.getMinY()));
+			double firstX = -1;
+			double lastX = -1;
+			double thresh = maxY*seis_plot_thresh_fract;
+			for (Point2D pt : seis) {
+				double y = Math.abs(pt.getY());
+				boolean exceeds = y >= thresh;
+				if (firstX < 0 && exceeds)
+					firstX = pt.getX();
+				if (exceeds)
+					lastX = pt.getX();
+			}
+			lastX += seis_plot_thresh_buffer;
+			firstX -= seis_plot_thresh_buffer;
+			
+			firstX = Math.max(firstX, seis.getMinX());
+			lastX = Math.min(lastX, seis.getMaxX());
+			
+			range = getMaxRange(range, new Range(firstX, lastX));
+		}
 		
+		return range;
+	}
+	
+	private static Range getMaxRange(Range r1, Range r2) {
+		if (r1 == null)
+			return r2;
+		if (r2 == null)
+			return r1;
+		return new Range(Math.min(r1.getLowerBound(), r2.getLowerBound()), Math.max(r1.getUpperBound(), r2.getUpperBound()));
 	}
 	
 	private static HeadlessGraphPanel buildGP() {
@@ -221,17 +264,21 @@ public class SeismogramPlotter {
 		String siteName = "SBSM";
 		
 		boolean accel = false;
-		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(rsDir, siteName, accel));
-		List<DiscretizedFunc[]> comps = null;
+//		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(rsDir, siteName, accel));
+//		List<DiscretizedFunc[]> comps = null;
+//		
+//		File compDir = new File("/home/kevin/bbp/parallel/2017_10_04-rundir2194_long-event136704-dx1.16-noHF/results");
+//		comps = new ArrayList<>();
+//		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(compDir, "run_0"), siteName, accel)));
+//		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(compDir, "run_1"), siteName, accel)));
+//		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(compDir, "run_2"), siteName, accel)));
+//		
+//		plotSeismograms(seis, "Event 136704, SBSM", accel, new File("/tmp"), "test_seis", true, comps);
+//		plotSeismograms(seis, "Event 136704, SBSM", accel, new File("/tmp"), "test_seis", false, comps);
 		
-		File compDir = new File("/home/kevin/bbp/parallel/2017_10_04-rundir2194_long-event136704-dx1.16-noHF/results");
-		comps = new ArrayList<>();
-		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(compDir, "run_0"), siteName, accel)));
-		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(compDir, "run_1"), siteName, accel)));
-		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(compDir, "run_2"), siteName, accel)));
 		
-		plotSeismograms(seis, "Event 136704, SBSM", accel, new File("/tmp"), "test_seis", true, comps);
-		plotSeismograms(seis, "Event 136704, SBSM", accel, new File("/tmp"), "test_seis", false, comps);
+		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(new File("/home/kevin/bbp/bbp_data/outdata/8174257"), "TEST", accel));
+		plotSeismograms(seis, "Event 136704, TEST", accel, new File("/tmp"), "test_seis", false, null);
 	}
 
 }

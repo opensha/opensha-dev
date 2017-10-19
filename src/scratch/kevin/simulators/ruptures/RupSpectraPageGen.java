@@ -43,8 +43,9 @@ import scratch.kevin.bbp.ShakemapPlotter;
 import scratch.kevin.bbp.SpectraPlotter;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+import scratch.kevin.simulators.plots.RuptureVelocityPlot;
 
-public class RSQSimRupSpectraPageGen {
+class RupSpectraPageGen {
 	
 	private RSQSimCatalog catalog;
 	private File outputDir;
@@ -60,7 +61,7 @@ public class RSQSimRupSpectraPageGen {
 	private List<BBP_Site> shakemapSites;
 	private ScalarIMR shakemapGMPE;
 
-	public RSQSimRupSpectraPageGen(RSQSimCatalog catalog, File outputDir, VelocityModel vm) {
+	public RupSpectraPageGen(RSQSimCatalog catalog, File outputDir, VelocityModel vm) {
 		this.catalog = catalog;
 		this.outputDir = outputDir;
 		this.vm = vm;
@@ -146,7 +147,7 @@ public class RSQSimRupSpectraPageGen {
 		Preconditions.checkState(rupAnim.exists());
 		lines.add("### Slip/Vel Animation");
 		lines.add(topLink); lines.add("");
-		lines.add("![Slip/Time Plot]("+resourcesDir.getName()+"/"+rupAnim.getName()+")");
+		lines.add("[Click here to view Slip/Velocity Animation]("+resourcesDir.getName()+"/"+rupAnim.getName()+")");
 		
 		// map view plot
 		String mapRupPlotPrefix = "rupture_map_plot_"+eventID;
@@ -158,13 +159,23 @@ public class RSQSimRupSpectraPageGen {
 		lines.add(topLink); lines.add("");
 		lines.add("![Map Plot]("+resourcesDir.getName()+"/"+rupMapPlot.getName()+")");
 		
+		// rupture velocity plot
+		lines.add("### Rupture Velocity Plot");
+		RuptureVelocityPlot rupVelPlot = new RuptureVelocityPlot(catalog.getElements(), 0d);
+		rupVelPlot.initialize(catalog.getName(), resourcesDir, "rupture_velocity");
+		rupVelPlot.processEvent(event);
+		rupVelPlot.finalizePlot();
+		lines.add(topLink); lines.add("");
+		lines.add("![Rupture Velocity Plot]("+resourcesDir.getName()+"/rupture_velocity_scatter_dist.png)");
+		
 		lines.add("");
 		lines.add("## Spectra Plots");
 		lines.add(topLink); lines.add("");
 		
 		for (BBP_Site site : sites) {
-			System.out.println("Site: "+site.getName());
-			lines.add("### Site "+site.getName());
+			String siteName = RSQSimBBP_Config.siteCleanName(site);
+			System.out.println("Site: "+siteName);
+			lines.add("### Site "+siteName);
 			lines.add(topLink); lines.add("");
 			Location loc = site.getLoc();
 			lines.add("*Location: "+(float)loc.getLatitude()+", "+(float)loc.getLongitude()+"*");
@@ -212,9 +223,9 @@ public class RSQSimRupSpectraPageGen {
 			
 			File fasFile = SpectraPlotter.findFASFile(eventBBPDir, site.getName());
 			if (fasFile.exists()) {
-				lines.add("#### "+site.getName()+" Fourier Amplitude Spectra");
+				lines.add("#### "+siteName+" Fourier Amplitude Spectra");
 				lines.add(topLink); lines.add("");
-				String title = "Event "+eventID+" "+site.getName()+" FAS Spectra";
+				String title = "Event "+eventID+" "+siteName+" FAS Spectra";
 				String prefix = "fas_spectra_"+site.getName();
 				if (refLoader != null) {
 					List<DiscretizedFunc> refSpectra = new ArrayList<>();
@@ -226,7 +237,7 @@ public class RSQSimRupSpectraPageGen {
 				} else {
 					SpectraPlotter.plotFAS(fasFile, resourcesDir, prefix);
 				}
-				lines.add("!["+site.getName()+" FAS Plot]("+resourcesDir.getName()+"/"+prefix+".png)");
+				lines.add("!["+siteName+" FAS Plot]("+resourcesDir.getName()+"/"+prefix+".png)");
 				
 			}
 			
@@ -241,9 +252,9 @@ public class RSQSimRupSpectraPageGen {
 					System.out.println("DONE.");
 				}
 				
-				lines.add("#### "+site.getName()+" RotD50 Spectra");
+				lines.add("#### "+siteName+" RotD50 Spectra");
 				lines.add(topLink); lines.add("");
-				String title = "Event "+eventID+" "+site.getName()+" RotD50 Spectra";
+				String title = "Event "+eventID+" "+siteName+" RotD50 Spectra";
 				String prefix = "rotd50_spectra_"+site.getName();
 				if (refLoader != null) {
 					List<DiscretizedFunc> refSpectra = new ArrayList<>();
@@ -256,7 +267,7 @@ public class RSQSimRupSpectraPageGen {
 				} else {
 					SpectraPlotter.plotRotD50(rotD50File, resourcesDir, prefix, gmpeSpectra);
 				}
-				lines.add("!["+site.getName()+" RotD50 Plot]("+resourcesDir.getName()+"/"+prefix+".png)");
+				lines.add("!["+siteName+" RotD50 Plot]("+resourcesDir.getName()+"/"+prefix+".png)");
 			}
 			
 			File accelFile = SeismogramPlotter.findBBP_SeisFile(eventBBPDir, site.getName(), true);
@@ -267,15 +278,15 @@ public class RSQSimRupSpectraPageGen {
 				for (int i=0; i<numComps; i++)
 					accelComps.add(refLoader.readAccelSeis(site, i));
 			String accelPrefix = "seis_accel_"+site.getName();
-			SeismogramPlotter.plotSeismograms(accelSeis, "Event "+eventID+", "+site.getName(), true,
+			SeismogramPlotter.plotSeismograms(accelSeis, "Event "+eventID+", "+siteName, true,
 					resourcesDir, accelPrefix, false, accelComps);
-			lines.add("#### "+site.getName()+" Acceleration Seismograms");
+			lines.add("#### "+siteName+" Acceleration Seismograms");
 			lines.add(topLink); lines.add("");
 			if (!accelComps.isEmpty()) {
 				lines.add("RSQSim ruptures in blue. Gray seismograms are "+refName+" comparisons.");
 				lines.add("");
 			}
-			lines.add("!["+site.getName()+" Acceleration Seismograms]("+resourcesDir.getName()+"/"+accelPrefix+".png)");
+			lines.add("!["+siteName+" Acceleration Seismograms]("+resourcesDir.getName()+"/"+accelPrefix+".png)");
 			
 			File velFile = SeismogramPlotter.findBBP_SeisFile(eventBBPDir, site.getName(), false);
 			DiscretizedFunc[] velSeis = SeismogramPlotter.loadBBP_Seis(velFile);
@@ -284,15 +295,15 @@ public class RSQSimRupSpectraPageGen {
 				for (int i=0; i<numComps; i++)
 					velComps.add(refLoader.readVelSeis(site, i));
 			String velPrefix = "seis_vel_"+site.getName();
-			SeismogramPlotter.plotSeismograms(velSeis, "Event "+eventID+", "+site.getName(), false,
+			SeismogramPlotter.plotSeismograms(velSeis, "Event "+eventID+", "+siteName, false,
 					resourcesDir, velPrefix, false, velComps);
-			lines.add("#### "+site.getName()+" Velocity Seismograms");
+			lines.add("#### "+siteName+" Velocity Seismograms");
 			lines.add(topLink); lines.add("");
 			if (!velComps.isEmpty()) {
 				lines.add("RSQSim ruptures in blue. Gray seismograms are "+refName+" comparisons.");
 				lines.add("");
 			}
-			lines.add("!["+site.getName()+" Velocity Seismograms]("+resourcesDir.getName()+"/"+velPrefix+".png)");
+			lines.add("!["+siteName+" Velocity Seismograms]("+resourcesDir.getName()+"/"+velPrefix+".png)");
 		}
 		
 		if (shakemap != null) {
@@ -300,7 +311,7 @@ public class RSQSimRupSpectraPageGen {
 			lines.add("## ShakeMaps");
 			lines.add(topLink); lines.add("");
 			
-			double[] periods = { 1d, 2d, 5d, 10d };
+			double[] periods = { 1d, 2d, 3d, 4d, 5d, 7.5, 10d };
 			String prefix = "shakemap";
 			File[] mapFiles = new File[periods.length];
 			File[] gmpeMapFiles = null;
@@ -398,8 +409,14 @@ public class RSQSimRupSpectraPageGen {
 //		RSQSimCatalog catalog = Catalogs.JG_UCERF3_millionElement.instance(baseDir);
 //		int eventID = 4099020;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2273.instance(baseDir);
-		int eventID = 412778;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2273.instance(baseDir);
+//		int eventID = 412778;
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2310.instance(baseDir);
+//		int eventID = 3802809;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2320.instance(baseDir);
+		int eventID = 6195527;
 		
 		File eventBBPDir = new File(new File(catalog.getCatalogDir(), RSQSimBBP_Config.EVENT_SRF_DIR_NAME),
 				"event_"+eventID+"_"+RSQSimBBP_Config.SRF_DT+"s_"+RSQSimBBP_Config.SRF_INTERP_MODE.name()+"_bbp");
@@ -411,8 +428,11 @@ public class RSQSimRupSpectraPageGen {
 		for (File dir : refDirs) {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalog.getCatalogDir().getName()) && name.contains(eventID+"")
-					&& name.contains("-gp-") && !name.contains("shakemap"))
-				refBBPDir = dir;
+					&& name.contains("-gp-") && !name.contains("shakemap")) {
+				File zipFile = new File(dir, "results.zip");
+				if (zipFile.exists())
+					refBBPDir = dir;
+			}
 		}
 		if (refBBPDir != null)
 			System.out.println("Located ref BBP dir: "+refBBPDir.getAbsolutePath());
@@ -422,7 +442,7 @@ public class RSQSimRupSpectraPageGen {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalog.getCatalogDir().getName()) && name.contains(eventID+"")
 					&& name.contains("shakemap")) {
-				File shakemapFile = new File(dir, "results_rd50.zip");
+				File shakemapFile = new File(dir, "results_rotD.zip");
 				if (!shakemapFile.exists())
 					shakemapFile = new File(dir, "results.zip");
 				if (shakemapFile.exists())
@@ -464,7 +484,7 @@ public class RSQSimRupSpectraPageGen {
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		RSQSimRupSpectraPageGen gen = new RSQSimRupSpectraPageGen(catalog, catalogOutputDir, vm);
+		RupSpectraPageGen gen = new RupSpectraPageGen(catalog, catalogOutputDir, vm);
 		
 		EqkRupture gmpeRup = null;
 		
@@ -485,7 +505,8 @@ public class RSQSimRupSpectraPageGen {
 		
 		gen.generatePage(event, eventBBPDir, sites, rebuildGIF, rebuildMaps);
 		
-		catalog.writeMarkdownSummary(catalogOutputDir);
+		catalog.writeMarkdownSummary(catalogOutputDir, true, false);
+		RSQSimCatalog.writeCatalogsIndex(outputDir);
 	}
 
 }

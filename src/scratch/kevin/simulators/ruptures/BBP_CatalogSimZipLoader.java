@@ -9,20 +9,27 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.sha.simulators.RSQSimEvent;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 
 import scratch.kevin.bbp.BBP_SimZipLoader;
 import scratch.kevin.bbp.BBP_Site;
 
 public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader {
 	
+	private Table<Integer, BBP_Site, DiscretizedFunc> rd50Table;
+	
 	public BBP_CatalogSimZipLoader(File file, List<BBP_Site> sites) throws ZipException, IOException {
 		super(file, sites);
+		rd50Table = HashBasedTable.create();
 	}
 	
 	public BBP_CatalogSimZipLoader(ZipFile zip, List<BBP_Site> sites) throws ZipException, IOException {
 		super(zip, sites);
+		rd50Table = HashBasedTable.create();
 	}
 	
 	private static String getDirName(int eventID) {
@@ -34,8 +41,21 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader {
 		return Integer.parseInt(dirName.substring("event_".length()));
 	}
 	
+	public boolean contains(BBP_Site site, int eventID) {
+		return contains(site, getDirName(eventID));
+	}
+	
 	public DiscretizedFunc readRotD50(BBP_Site site, int eventID) throws IOException {
-		return readRotD50(site, getDirName(eventID));
+		if (rd50Table.contains(eventID, site))
+			return rd50Table.get(eventID, site);
+		synchronized (rd50Table) {
+			// repeat here as could have been populated while waiting for the lock
+			if (rd50Table.contains(eventID, site))
+				return rd50Table.get(eventID, site);
+			DiscretizedFunc spectra = readRotD50(site, getDirName(eventID));
+			rd50Table.put(eventID, site, spectra);
+			return spectra;
+		}
 	}
 	
 	public DiscretizedFunc readFAS(BBP_Site site, int eventID) throws IOException {

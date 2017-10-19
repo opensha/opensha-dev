@@ -7,8 +7,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.opensha.commons.hpc.JavaShellScriptWriter;
+import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
+import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
@@ -26,7 +29,7 @@ import scratch.kevin.bbp.MPJ_BBP_ShakeMapSim;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
-public class MPJ_BBP_RuptureScriptsGen {
+class MPJ_BBP_RuptureScriptsGen {
 
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
@@ -35,13 +38,19 @@ public class MPJ_BBP_RuptureScriptsGen {
 //		int eventID = 136704;
 //		RSQSimCatalog catalog = Catalogs.JG_UCERF3_millionElement.instance(baseDir);
 //		int eventID = 4099020;
-		RSQSimCatalog catalog = Catalogs.BRUCE_2273.instance(baseDir);
-		int eventID = 412778;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2273.instance(baseDir);
+//		int eventID = 412778;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2310.instance(baseDir);
+//		int eventID = 3802809;
+		RSQSimCatalog catalog = Catalogs.BRUCE_2320.instance(baseDir);
+		int eventID = 6195527;
 		
 		File catalogDir = catalog.getCatalogDir();
 		
+		boolean stampede = true;
+		
 		boolean doGP = true;
-		boolean doShakeMap = true;
+		boolean doShakeMap = false;
 		
 		int numGP = 200;
 		double mapSpacing = 0.05;
@@ -63,26 +72,43 @@ public class MPJ_BBP_RuptureScriptsGen {
 		}
 		Preconditions.checkState(srcFile.exists(), "Source file doesn't exist: %s", srcFile.getAbsolutePath());
 		
-		int threads = 20;
-		String queue = "scec";
 		int gpMins = 10*60;
 		int mapMins = 24*60;
 		boolean gpSplitSites = true;
-		String bbpDataDir = "${TMPDIR}";
+		int heapSizeMB = 40*1024;
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
-		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
+		
+		int threads;
+		String queue;
+		File remoteDir;
+		String bbpDataDir;
+		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
+		
+		JavaShellScriptWriter mpjWrite;
+		if (stampede) {
+			threads = 68;
+			queue = "normal";
+			remoteDir = new File("/work/00950/kevinm/stampede2/bbp/parallel");
+			bbpDataDir = "/tmp";
+			pbsWrite = new StampedeScriptWriter(true);
+			mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, null, StampedeScriptWriter.FMPJ_HOME);
+			((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+		} else {
+			threads = 20;
+			queue = "scec";
+			remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
+			bbpDataDir = "${TMPDIR}";
+			pbsWrite = new USC_HPCC_ScriptWriter();
+			mpjWrite = new MPJExpressShellScriptWriter(
+					USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, null, USC_HPCC_ScriptWriter.MPJ_HOME);
+		}
 		
 		String dateStr = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 		
-		int heapSizeMB = 40*1024;
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
-		
-		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
-		
-		MPJExpressShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
+		mpjWrite.setClasspath(classpath);
 		
 		if (doGP) {
 			String jobName = dateStr;
@@ -95,6 +121,8 @@ public class MPJ_BBP_RuptureScriptsGen {
 				jobName += "-dx"+len;
 			if (!RSQSimBBP_Config.DO_HF)
 				jobName += "-noHF";
+			if (stampede)
+				jobName += "-stampede";
 			
 			System.out.println("Writing GP sim to "+jobName);
 			
@@ -149,6 +177,8 @@ public class MPJ_BBP_RuptureScriptsGen {
 			
 			if (!RSQSimBBP_Config.DO_HF)
 				jobName += "-noHF";
+			if (stampede)
+				jobName += "-stampede";
 			
 			System.out.println("Writing ShakeMap sim to "+jobName);
 			

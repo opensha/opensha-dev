@@ -150,7 +150,7 @@ public class RecurrenceIntervalPlot extends AbstractPlot {
 	}
 
 	@Override
-	protected void finalize() throws IOException {
+	public void finalizePlot() throws IOException {
 		for (int i=0; i<minMags.length; i++) {
 			String magLabel = getCleanMagLabel(minMags[i]);
 			String myPrefix = getOutputPrefix()+"_m"+magLabel;
@@ -195,7 +195,7 @@ public class RecurrenceIntervalPlot extends AbstractPlot {
 			
 			HeadlessGraphPanel gp = getGraphPanel();
 			gp.drawGraphPanel(plot, false, false, xRange, yRange);
-			gp.getChartPanel().setSize(1000, 800);
+			gp.getChartPanel().setSize(getPlotWidth(), getPlotHeight());
 			gp.saveAsTXT(new File(getOutputDir(), myPrefix+".txt").getAbsolutePath());
 			gp.saveAsPNG(new File(getOutputDir(), myPrefix+".png").getAbsolutePath());
 			gp.saveAsPDF(new File(getOutputDir(), myPrefix+".pdf").getAbsolutePath());

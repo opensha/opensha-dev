@@ -53,10 +53,17 @@ public class ShakemapPlotter {
 			double max = xyzs[p].getMaxZ();
 			if (gmpes != null)
 				max = Math.max(max, gmpes[p].getMaxZ());
+			GriddedGeoDataSet origXYZ = xyzs[p];
+			GriddedGeoDataSet origGMPE = null;
+			if (gmpes != null)
+				origGMPE = gmpes[p];
 			if (log) {
+				origXYZ = origXYZ.copy();
 				xyzs[p].log10();
-				if (gmpes != null)
+				if (gmpes != null) {
+					origGMPE = origGMPE.copy();
 					gmpes[p].log10();
+				}
 				double logMax = Math.log10(max);
 				double cleanLogMax = Math.ceil(logMax);
 				if (cleanLogMax - logMax > 0.5)
@@ -103,13 +110,8 @@ public class ShakemapPlotter {
 				// now ratio
 				CPT ratioCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-2, 2);
 				GriddedGeoDataSet ratioData = new GriddedGeoDataSet(gridReg, false);
-				if (!log) {
-					// log it
-					xyzs[p].log10();
-					gmpes[p].log10();
-				}
 				for (int i=0; i<ratioData.size(); i++)
-					ratioData.set(i, xyzs[p].get(i)/gmpes[p].get(i));
+					ratioData.set(i, Math.log10(origXYZ.get(i)/origGMPE.get(i)));
 				
 				map.setGriddedData(ratioData);
 				map.setCustomLabel("Log10 Ratio "+pStr+"s SA (RotD50)");

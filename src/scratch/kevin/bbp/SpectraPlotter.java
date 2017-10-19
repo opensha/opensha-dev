@@ -16,6 +16,7 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.AbstractXY_DataSet;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.function.XY_DataSetList;
@@ -90,12 +91,12 @@ public class SpectraPlotter {
 	
 	public static DiscretizedFunc loadRotD50(File file) throws IOException {
 		DiscretizedFunc[] ret = loadAll(file);
-		return ret[ret.length-1];
+		return new LightFixedXFunc(ret[ret.length-1]);
 	}
 	
 	public static DiscretizedFunc loadRotD50(List<String> lines) {
 		DiscretizedFunc[] ret = loadAll(lines);
-		return ret[ret.length-1];
+		return new LightFixedXFunc(ret[ret.length-1]);
 	}
 
 	public static void plotRotD50(File file) throws IOException {

@@ -31,6 +31,9 @@ public abstract class AbstractPlot {
 	private static final int plot_width_default = 1000;
 	private static final int plot_height_default = 800;
 	
+	private int plotWidth = plot_width_default;
+	private int plotHeight = plot_height_default;
+	
 	private HeadlessGraphPanel gp;
 	private XYZGraphPanel xyzGP;
 	private String catalogName;
@@ -70,7 +73,7 @@ public abstract class AbstractPlot {
 
 	protected abstract void doProcessEvent(SimulatorEvent e);
 	
-	protected abstract void finalize() throws IOException;
+	public abstract void finalizePlot() throws IOException;
 	
 	/**
 	 * This allows a plot to specify which elements it is applicable to for efficiency. If null, processEvent(e)
@@ -193,9 +196,10 @@ public abstract class AbstractPlot {
 	protected synchronized HeadlessGraphPanel getGraphPanel() {
 		if (gp == null) {
 			PlotPreferences plotPrefs = PlotPreferences.getDefault();
-			plotPrefs.setTickLabelFontSize(18);
-			plotPrefs.setAxisLabelFontSize(20);
-			plotPrefs.setPlotLabelFontSize(21);
+			plotPrefs.setTickLabelFontSize(20);
+			plotPrefs.setAxisLabelFontSize(22);
+			plotPrefs.setPlotLabelFontSize(24);
+			plotPrefs.setLegendFontSize(22);
 			plotPrefs.setBackgroundColor(Color.WHITE);
 			gp = new HeadlessGraphPanel(plotPrefs);
 		}
@@ -209,12 +213,17 @@ public abstract class AbstractPlot {
 		return xyzGP;
 	}
 	
+	public void setPlotSize(int plotWidth, int plotHeight) {
+		this.plotWidth = plotWidth;
+		this.plotHeight = plotHeight;
+	}
+	
 	protected int getPlotHeight() {
-		return plot_height_default;
+		return plotHeight;
 	}
 	
 	protected int getPlotWidth() {
-		return plot_width_default;
+		return plotWidth;
 	}
 	
 	protected XY_DataSet getLine(String name, double x1, double y1, double x2, double y2) {

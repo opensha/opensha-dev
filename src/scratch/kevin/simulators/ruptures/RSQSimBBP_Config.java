@@ -10,6 +10,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.util.FaultUtils;
+import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.FocalMechanism;
@@ -219,11 +220,26 @@ public class RSQSimBBP_Config {
 		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
 		sites.add(new BBP_Site("SBSM", new Location(34.064986, -117.29201), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
 		
+		for (NEHRP_TestCity site : NEHRP_TestCity.getShortListCA()) {
+			String name = site.name();
+			if (name.length() > 10)
+				name = name.substring(0, 10);
+			sites.add(new BBP_Site(name, site.location(), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		}
+		
 		allSites = Collections.unmodifiableList(sites);
 	}
 	
 	public static List<BBP_Site> getStandardSites() {
 		return allSites;
+	}
+	
+	public static String siteCleanName(BBP_Site site) {
+		for (NEHRP_TestCity city : NEHRP_TestCity.values()) {
+			if (city.name().startsWith(site.getName()))
+				return city.toString();
+		}
+		return site.getName();
 	}
 	
 	public static List<BBP_Site> getStandardSites(BBP_SourceFile source) {

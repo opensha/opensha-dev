@@ -1,5 +1,6 @@
 package scratch.kevin.bbp;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -28,7 +29,7 @@ public class MPJ_BBP_Utils {
 		
 		private ZipOutputStream out;
 		private ZipOutputStream outRD;
-		private byte[] buffer = new byte[18024];
+		private byte[] buffer = new byte[1048576];
 
 		public MasterZipHook(File zipFile, File rdZipFile) {
 			super(1);
@@ -38,16 +39,17 @@ public class MPJ_BBP_Utils {
 
 		@Override
 		protected synchronized void batchProcessedAsync(int[] batch, int processIndex) {
-			debug("running async post-batch hook for process "+processIndex+", size="+batch.length);
+			debug("running async post-batch hook for process "+processIndex+". "+getCountsString());
 			try {
 				if (out == null) {
 					if (zipFile.exists())
 						Files.move(zipFile, new File(zipFile.getAbsolutePath()+".prev"));
 					if (rdZipFile.exists())
 						Files.move(rdZipFile, new File(rdZipFile.getAbsolutePath()+".prev"));
-					out = new ZipOutputStream(new FileOutputStream(zipFile));
+					out = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(zipFile), buffer.length*4));
 					out.setLevel(Deflater.DEFAULT_COMPRESSION);
-					outRD = new ZipOutputStream(new FileOutputStream(rdZipFile));
+//					outRD = new ZipOutputStream(new FileOutputStream(rdZipFile));
+					outRD = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(rdZipFile), buffer.length*4));
 					outRD.setLevel(Deflater.DEFAULT_COMPRESSION);
 				}
 				for (int index : batch) {
@@ -95,7 +97,7 @@ public class MPJ_BBP_Utils {
 				e.printStackTrace();
 				abortAndExit(2);
 			}
-			debug("done running async post-batch hook for process "+processIndex+", size="+batch.length);
+			debug("done running async post-batch hook for process "+processIndex+". "+getCountsString());
 		}
 
 		@Override

@@ -835,7 +835,7 @@ public class HazardMapComparePlotter {
 		return linearFunc;
 	}
 	
-	private static CPT getRPlogCPT(int[] rps) {
+	public static CPT getRPlogCPT(int[] rps) {
 		int minRP = Integer.MAX_VALUE;
 		int maxRP = 0;
 		

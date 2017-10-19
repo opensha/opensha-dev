@@ -53,7 +53,7 @@ public class MagAreaScalingPlot extends AbstractPlot {
 	}
 
 	@Override
-	protected void finalize() throws IOException {
+	public void finalizePlot() throws IOException {
 		// scatter plot
 		
 		List<XY_DataSet> funcs = Lists.newArrayList();

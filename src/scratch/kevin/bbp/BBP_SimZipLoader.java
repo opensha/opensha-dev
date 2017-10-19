@@ -180,6 +180,10 @@ public class BBP_SimZipLoader {
 				+entriesTable.rowKeySet().size()+" sites and "+entriesTable.columnKeySet().size()+" dirs");
 	}
 	
+	protected boolean contains(BBP_Site site, String entryName) {
+		return entriesTable.contains(site, entryName);
+	}
+	
 	protected BBP_Site forEntry(String entryName, List<BBP_Site> sites) {
 		for (BBP_Site site : sites)
 			if (entryName.contains(site.getName()))
