@@ -132,15 +132,15 @@ public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 	private File getRunBundleDir(int index, boolean create) {
 		int siteBase = BUNDLE_SIZE*(int)(index / BUNDLE_SIZE);
 		File parentDir = new File(resultsDir, "sites_"+siteBase+"_"+(siteBase+BUNDLE_SIZE));
-		Preconditions.checkState(!create || parentDir.exists() || parentDir.mkdir(),
-				"Run parent dir could not be created: %s", parentDir.getAbsolutePath());
+		if (create)
+			MPJ_BBP_Utils.waitOnDir(parentDir, 10, 2000);
 		return parentDir;
 	}
 	
 	private File getRunDir(int index, boolean create) {
 		File runDir = new File(getRunBundleDir(index, create), "site_"+index);
-		Preconditions.checkState(runDir.exists() || !create || runDir.mkdir(),
-				"Run dir could not be created: %s", runDir.getAbsolutePath());
+		if (create)
+			MPJ_BBP_Utils.waitOnDir(runDir, 10, 2000);
 		return runDir;
 	}
 	

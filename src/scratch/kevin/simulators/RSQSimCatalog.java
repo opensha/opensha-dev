@@ -63,28 +63,34 @@ public class RSQSimCatalog implements XMLSaveable {
 	public enum Catalogs {
 		JG_UCERF3_millionElement("JG_UCERF3_millionElement", "U3 1mil Element Test", "Jacqui Gilchrist", cal(2017, 9, 27),
 				"Test 1 million element catalog on UCERF3 fault system, ~0.25 km^2 trianglar elements",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC, 1d),
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2194_LONG("rundir2194_long", "Bruce 2194 Long", "Bruce Shaw (extended by Jacqui Gilchrist)", cal(2017, 8, 31),
 				"Catalog with decent large event scaling and distribution of sizes while not using"
-				+ " any of the enhanced frictional weakening terms.", FaultModels.FM3_1, DeformationModels.GEOLOGIC, 1d),
+				+ " any of the enhanced frictional weakening terms.", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2273("bruce/rundir2273", "Bruce 2273", "Bruce Shaw", cal(2017, 10, 13),
 				"Stress loading, more refined geometry, does not contain projection fix (some location discrepancies "
-				+ "are present relative to UCERF3 faults).", FaultModels.FM3_1, DeformationModels.GEOLOGIC, 1d),
+				+ "are present relative to UCERF3 faults).", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2310("bruce/rundir2310", "Bruce 2310", "Bruce Shaw", cal(2017, 10, 16),
 				"Backslip loading, more refined geometry, projection fix (but all faults surface breaking)",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC, 1d),
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2320("bruce/rundir2320", "Bruce 2320", "Bruce Shaw", cal(2017, 10, 17),
 				"Backslip loading, less refined geometry, projection fix (but all\n" + 
 				"faults surface breaking), same as rundir2310 but less resolved",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC, 1d);
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2336("bruce/rundir2336", "Bruce 2336", "Bruce Shaw", cal(2017, 10, 20),
+				"Larger slip velocity (1.5 m/s), backslipFromStress loading",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2337("bruce/rundir2337", "Bruce 2337", "Bruce Shaw", cal(2017, 10, 20),
+				"Larger slip velocity (2.0 m/s), backslipFromStress loading",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
 		
 		private Catalogs(String dirName, String name, String author, GregorianCalendar date, String metadata,
-				FaultModels fm, DeformationModels dm, double slipVel) {
+				FaultModels fm, DeformationModels dm) {
 			this.dirName = dirName;
-			catalog = new RSQSimCatalog(name, author, date, metadata, fm, dm, slipVel);
+			catalog = new RSQSimCatalog(name, author, date, metadata, fm, dm);
 		}
 		
 		public RSQSimCatalog instance(File baseDir) {
@@ -102,8 +108,8 @@ public class RSQSimCatalog implements XMLSaveable {
 	private String metadata;
 	private FaultModels fm;
 	private DeformationModels dm;
-	private double slipVel;
 	
+	private double slipVel = Double.NaN;
 	private double aveArea = Double.NaN;
 	private int numEvents = -1;
 	private double durationYears = Double.NaN;
@@ -118,12 +124,12 @@ public class RSQSimCatalog implements XMLSaveable {
 	public static final String XML_METADATA_NAME = "RSQSimCatalog";
 	
 	private RSQSimCatalog(String name, String author, GregorianCalendar date, String metadata,
-			FaultModels fm, DeformationModels dm, double slipVel) {
-		this(null, name, author, date, metadata, fm, dm, slipVel);
+			FaultModels fm, DeformationModels dm) {
+		this(null, name, author, date, metadata, fm, dm);
 	}
 
 	public RSQSimCatalog(File dir, String name, String author, GregorianCalendar date, String metadata,
-			FaultModels fm, DeformationModels dm, double slipVel) {
+			FaultModels fm, DeformationModels dm) {
 		this.dir = dir;
 		this.name = name;
 		this.author = author;
@@ -131,7 +137,6 @@ public class RSQSimCatalog implements XMLSaveable {
 		this.metadata = metadata;
 		this.fm = fm;
 		this.dm = dm;
-		this.slipVel = slipVel;
 	}
 	
 	public File getCatalogDir() {
@@ -162,7 +167,13 @@ public class RSQSimCatalog implements XMLSaveable {
 		return dm;
 	}
 	
-	public double getSlipVelocity() {
+	public synchronized double getSlipVelocity() throws IOException {
+		if (Double.isNaN(slipVel)) {
+			Map<String, String> params = getParams();
+			String ddotEQ = params.get("ddotEQ_1");
+			Preconditions.checkNotNull(ddotEQ, "ddotEQ_1 not in params file");
+			slipVel = Double.parseDouble(ddotEQ);
+		}
 		return slipVel;
 	}
 	
@@ -180,7 +191,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		builder.addLine("**Author**", getAuthor()+", "+dateFormat.format(getDate().getTime()));
 		builder.addLine("**Description**", getMetadata());
 		builder.addLine("**Fault/Def Model**", fm+", "+dm);
-		builder.addLine("**Slip Velocity**", (float)slipVel+" m/s");
+		try {
+			builder.addLine("**Slip Velocity**", (float)getSlipVelocity()+" m/s");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		try {
 			double  aveArea = getAveArea();
 			builder.addLine("**Average Element Area**", areaDF.format(aveArea)+" km^2");
@@ -400,7 +415,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public synchronized RSQSimEventSlipTimeFunc getSlipTimeFunc(RSQSimEvent event) throws IOException {
-		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event), slipVel);
+		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event), getSlipVelocity());
 	}
 
 	private static GregorianCalendar cal(int year, int month, int day) {
@@ -496,7 +511,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		
 		public Loader hasTransitions() throws IOException {
-			loadIdens.add(new RSQSimTransValidIden(getTransitions()));
+			loadIdens.add(new RSQSimTransValidIden(getTransitions(), getSlipVelocity()));
 			return this;
 		}
 		
@@ -645,8 +660,8 @@ public class RSQSimCatalog implements XMLSaveable {
 			el.addAttribute("fm", fm.name());
 		if (dm != null)
 			el.addAttribute("dm", dm.name());
-		el.addAttribute("slipVel", slipVel+"");
 		try {
+			el.addAttribute("slipVel", getSlipVelocity()+"");
 			el.addAttribute("aveArea", getAveArea()+"");
 			el.addAttribute("numEvents", getNumEvents()+"");
 			el.addAttribute("durationYears", getDurationYears()+"");
@@ -679,10 +694,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		if (el.attribute("durationYears") != null)
 			durationYears = Double.parseDouble(el.attributeValue("durationYears"));
 		
-		RSQSimCatalog cat = new RSQSimCatalog(name, author, cal, metadata, fm, dm, slipVel);
+		RSQSimCatalog cat = new RSQSimCatalog(name, author, cal, metadata, fm, dm);
 		cat.aveArea = aveArea;
 		cat.numEvents = numEvents;
 		cat.durationYears = durationYears;
+		cat.slipVel = slipVel;
 		return cat;
 	}
 	
@@ -744,6 +760,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		boolean replot = false;
 		
 		File baseDir = new File("/data/kevin/simulators/catalogs");
+		
 		for (Catalogs cat : Catalogs.values()) {
 //		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2310 }) {
 			RSQSimCatalog catalog = cat.instance(baseDir);

@@ -45,7 +45,6 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 	
 	private double dt;
 	private SRFInterpolationMode interp;
-	private double slipVel;
 	
 	private RSQSimCatalog catalog;
 	private List<RSQSimEvent> events;
@@ -75,7 +74,6 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 		File sitesFile = new File(cmd.getOptionValue("sites-file"));
 		Preconditions.checkState(sitesFile.exists());
 		dt = Double.parseDouble(cmd.getOptionValue("time-step"));
-		slipVel = Double.parseDouble(cmd.getOptionValue("slip-velocity"));
 		interp = SRFInterpolationMode.valueOf(cmd.getOptionValue("srf-interp"));
 		mainOutputDir = new File(cmd.getOptionValue("output-dir"));
 		resultsDir = new File(mainOutputDir, "results");
@@ -104,7 +102,7 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 		
 		// load the catalog
 		catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
-				null, null, null, null, null, slipVel);
+				null, null, null, null, null);
 		Loader loader = catalog.loader().hasTransitions();
 		if (cmd.hasOption("min-mag"))
 			loader.minMag(Double.parseDouble(cmd.getOptionValue("min-mag")));
@@ -171,16 +169,16 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 	static File getRunParentDir(File resultsDir, int eventID, boolean create, int bundleSize) {
 		int eventBase = bundleSize*(int)(eventID / bundleSize);
 		File parentDir = new File(resultsDir, "events_"+eventBase+"_"+(eventBase+bundleSize));
-		Preconditions.checkState(!create || parentDir.exists() || parentDir.mkdir(),
-				"Run parent dir could not be created: %s", parentDir.getAbsolutePath());
+		if (create)
+			MPJ_BBP_Utils.waitOnDir(parentDir, 10, 2000);
 		return parentDir;
 	}
 	
 	static File getRunDir(File resultsDir, int eventID, boolean create, int bundleSize) {
 		File parentDir = getRunParentDir(resultsDir, eventID, create, bundleSize);
 		File runDir = new File(parentDir, "event_"+eventID);
-		Preconditions.checkState(!create || runDir.exists() || runDir.mkdir(),
-				"Run dir could not be created: %s", runDir.getAbsolutePath());
+		if (create)
+			MPJ_BBP_Utils.waitOnDir(runDir, 10, 2000);
 		return runDir;
 	}
 	
@@ -304,10 +302,6 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 		Option dt = new Option("dt", "time-step", true, "SRF time step");
 		dt.setRequired(true);
 		ops.addOption(dt);
-		
-		Option slipVel = new Option("vel", "slip-velocity", true, "Slip velocity (m/s)");
-		slipVel.setRequired(true);
-		ops.addOption(slipVel);
 		
 		Option interp = new Option("interp", "srf-interp", true, "SRF interpolation mode");
 		interp.setRequired(true);

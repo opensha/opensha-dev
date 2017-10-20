@@ -28,9 +28,8 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(jacquiCSDir, "UCERF3_millionElement");
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_long");
 //		File catalogDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/rundir2194_long");
-		File catalogDir = new File(myHPCDir, "rundir2320");
+		File catalogDir = new File(myHPCDir, "rundir2336");
 		
-		double slipVel = 1d;
 		double minMag = 6;
 		int skipYears = 5000;
 		
@@ -60,13 +59,12 @@ class MPJ_BBP_CatalogSimScriptGen {
 		BBP_Site.writeToFile(sitesFile, sites);
 		File remoteSitesFile = new File(remoteJobDir, sitesFile.getName());
 		
-		String argz = "--max-dispatch 1000 --threads "+threads;
+		String argz = "--min-dispatch "+threads+" --max-dispatch 500 --threads "+threads;
 		argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();
 		argz += " --sites-file "+remoteSitesFile.getAbsolutePath();
 		argz += " --catalog-dir "+catalogDir.getAbsolutePath();
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
-		argz += " --slip-velocity "+(float)slipVel;
 		argz += " --min-mag "+(float)minMag+" --skip-years "+skipYears;
 		if (RSQSimBBP_Config.DO_HF)
 			argz += " --no-hf";

@@ -6,7 +6,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.FaultIDIden;
@@ -24,12 +27,13 @@ public class RuptureSearch {
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2320.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2337.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		
 		int parentID = 301; // Mojave S
 		double minMag = 7;
+		Region hypocenterReg = new Region(new Location(34.25, -117.5), 20d);
 		
 		int numToPlot = 5;
 		File outputDir = new File(catalog.getCatalogDir(), "search_events");
@@ -45,7 +49,7 @@ public class RuptureSearch {
 		}
 		aveSectArea /= numSects;
 		double elementOffPenalty = 20d * aveElemArea / aveSectArea;
-		System.out.print("Stray penalty (each): "+elementOffPenalty);
+		System.out.println("Stray penalty (each): "+elementOffPenalty);
 		
 		List<RSQSimEvent> events = catalog.loader().minMag(minMag).matches(
 				new FaultIDIden("FID", catalog.getElements(), parentID)).load();
@@ -55,6 +59,22 @@ public class RuptureSearch {
 		List<EventScore> scores = new ArrayList<>();
 		
 		for (RSQSimEvent event : events) {
+			if (hypocenterReg != null) {
+				Location hypoLoc = null;
+				double minTime = Double.POSITIVE_INFINITY;
+				for (EventRecord e : event) {
+					List<SimulatorElement> elems = e.getElements();
+					double[] times = e.getElementTimeFirstSlips();
+					for (int i=0; i<elems.size(); i++) {
+						if (times[i] < minTime) {
+							minTime = times[i];
+							hypoLoc = elems.get(i).getCenterLocation();
+						}
+					}
+				}
+				if (!hypocenterReg.contains(hypoLoc))
+					continue;
+			}
 			List<FaultSectionPrefData> sects = catalog.getSubSectsForRupture(
 					event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT);
 			int numOn = 0;

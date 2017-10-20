@@ -122,8 +122,8 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 		} else {
 			runDir = new File(resultsDir, "run_"+index);
 		}
-		Preconditions.checkState(runDir.exists() || !create || runDir.mkdir(),
-				"Run dir could not be created: %s", runDir.getAbsolutePath());
+		if (create)
+			MPJ_BBP_Utils.waitOnDir(runDir, 10, 2000);
 		return runDir;
 	}
 	

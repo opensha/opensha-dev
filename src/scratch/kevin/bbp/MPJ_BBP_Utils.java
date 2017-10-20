@@ -4,7 +4,6 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Enumeration;
 
 import org.apache.commons.cli.Option;
@@ -154,6 +153,20 @@ public class MPJ_BBP_Utils {
 		ops.addOption(dataDir);
 		
 		return ops;
+	}
+	
+	public static void waitOnDir(File dir, int maxRetries, long sleepMillis) {
+		int retry = 0;
+		while (!(dir.exists() || dir.mkdir())) {
+			try {
+				Thread.sleep(sleepMillis);
+			} catch (InterruptedException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			if (retry++ > maxRetries)
+				throw new IllegalStateException("Directory doesn't exist and couldn't be created after "
+						+maxRetries+" retries: "+dir.getAbsolutePath());
+		}
 	}
 
 }
