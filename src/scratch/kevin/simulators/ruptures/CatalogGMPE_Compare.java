@@ -1185,9 +1185,10 @@ class CatalogGMPE_Compare {
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2273.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2310.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2320.instance(baseDir);
 		
 		String[] highlightNames = { "USC", "SBSM" };
 //		String[] highlightNames = null;

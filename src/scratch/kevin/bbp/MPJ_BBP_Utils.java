@@ -6,13 +6,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
-import java.util.zip.Deflater;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.opensha.commons.util.ExceptionUtils;
 
 import com.google.common.base.Preconditions;
@@ -27,8 +26,8 @@ public class MPJ_BBP_Utils {
 		private File zipFile;
 		private File rdZipFile;
 		
-		private ZipOutputStream out;
-		private ZipOutputStream outRD;
+		private ZipArchiveOutputStream out;
+		private ZipArchiveOutputStream outRD;
 		private byte[] buffer = new byte[1048576];
 
 		public MasterZipHook(File zipFile, File rdZipFile) {
@@ -40,17 +39,20 @@ public class MPJ_BBP_Utils {
 		@Override
 		protected synchronized void batchProcessedAsync(int[] batch, int processIndex) {
 			debug("running async post-batch hook for process "+processIndex+". "+getCountsString());
+			debug("async post-batch extimates: "+getRatesString());
 			try {
 				if (out == null) {
 					if (zipFile.exists())
 						Files.move(zipFile, new File(zipFile.getAbsolutePath()+".prev"));
 					if (rdZipFile.exists())
 						Files.move(rdZipFile, new File(rdZipFile.getAbsolutePath()+".prev"));
-					out = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(zipFile), buffer.length*4));
-					out.setLevel(Deflater.DEFAULT_COMPRESSION);
+					out = new ZipArchiveOutputStream(new BufferedOutputStream(
+							new FileOutputStream(zipFile), buffer.length*4));
+//					out.setLevel(Deflater.DEFAULT_COMPRESSION);
 //					outRD = new ZipOutputStream(new FileOutputStream(rdZipFile));
-					outRD = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(rdZipFile), buffer.length*4));
-					outRD.setLevel(Deflater.DEFAULT_COMPRESSION);
+					outRD = new ZipArchiveOutputStream(new BufferedOutputStream(
+							new FileOutputStream(rdZipFile), buffer.length*4));
+//					outRD.setLevel(Deflater.DEFAULT_COMPRESSION);
 				}
 				for (int index : batch) {
 					File subZipFile = getSimZipFile(index);
@@ -58,38 +60,30 @@ public class MPJ_BBP_Utils {
 					Preconditions.checkState(subZipFile.exists() && subZipName.endsWith(".zip"));
 					
 					String simDirName = subZipName.substring(0, subZipName.indexOf(".zip"))+"/";
-					ZipEntry dirEntry = new ZipEntry(simDirName);
-					out.putNextEntry(dirEntry);
-					out.closeEntry();
-					outRD.putNextEntry(dirEntry);
-					outRD.closeEntry();
+					ZipArchiveEntry dirEntry = new ZipArchiveEntry(simDirName);
+					out.putArchiveEntry(dirEntry);
+					out.closeArchiveEntry();
+					outRD.putArchiveEntry(dirEntry);
+					outRD.closeArchiveEntry();
 					
 					ZipFile sub = new ZipFile(subZipFile);
-					Enumeration<? extends ZipEntry> entries = sub.entries();
+					Enumeration<? extends ZipArchiveEntry> entries = sub.getEntries();
 					while (entries.hasMoreElements()) {
-						ZipEntry e = entries.nextElement();
-						ZipEntry outEntry = new ZipEntry(simDirName+e.getName());
-						out.putNextEntry(outEntry);
-						
-						InputStream in = sub.getInputStream(e);
-						
-						int len;
-						while ((len = in.read(buffer)) > 0)
-							out.write(buffer, 0, len);
-
-						// Close the current entry
-						out.closeEntry();
-						if (e.getName().endsWith(".rd50") || e.getName().endsWith(".rd100")) {
-							outRD.putNextEntry(outEntry);
-							
-							in = sub.getInputStream(e);
-							
-							while ((len = in.read(buffer)) > 0)
-								outRD.write(buffer, 0, len);
-
-							// Close the current entry
-							outRD.closeEntry();
-						}
+						ZipArchiveEntry e = entries.nextElement();
+						ZipArchiveEntry outEntry = new ZipArchiveEntry(simDirName+e.getName());
+						outEntry.setCompressedSize(e.getCompressedSize());
+						outEntry.setCrc(e.getCrc());
+						outEntry.setExternalAttributes(e.getExternalAttributes());
+						outEntry.setExtra(e.getExtra());
+						outEntry.setExtraFields(e.getExtraFields());
+						outEntry.setGeneralPurposeBit(e.getGeneralPurposeBit());
+						outEntry.setInternalAttributes(e.getInternalAttributes());
+						outEntry.setMethod(e.getMethod());
+						outEntry.setRawFlag(e.getRawFlag());
+						outEntry.setSize(e.getSize());
+						out.addRawArchiveEntry(outEntry, sub.getRawInputStream(e));
+						if (e.getName().endsWith(".rd50") || e.getName().endsWith(".rd100"))
+							outRD.addRawArchiveEntry(outEntry, sub.getRawInputStream(e));
 					}
 					sub.close();
 				}

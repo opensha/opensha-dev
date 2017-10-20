@@ -56,6 +56,7 @@ import scratch.kevin.simulators.plots.MFDPlot;
 import scratch.kevin.simulators.plots.MagAreaScalingPlot;
 import scratch.kevin.simulators.plots.RecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
+import scratch.kevin.simulators.plots.StationarityPlot;
 
 public class RSQSimCatalog implements XMLSaveable {
 	
@@ -318,6 +319,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add("");
 			lines.add("## Single Event Comparisons");
 			lines.add(topLink);
+			lines.add("");
 			for (int i=0; i<eventNames.size(); i++)
 				lines.add("* ["+eventNames.get(i)+"]("+eventLinks.get(i)+"/)");
 		}
@@ -325,6 +327,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add("");
 			lines.add("## Full Catalog GMPE Comparisons");
 			lines.add(topLink);
+			lines.add("");
 			for (int i=0; i<gmpeNames.size(); i++)
 				lines.add("* ["+gmpeNames.get(i)+"]("+gmpeLinks.get(i)+"/)");
 		}
@@ -538,6 +541,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		lines.add("### Magnitude-Frequency Plot");
 		lines.add(topLink);
+		lines.add("");
 		lines.add("![MFD]("+outputDir.getName()+"/mfd.png)");
 		
 		if (replot || !new File(outputDir, "mag_area_hist2D.png").exists()) {
@@ -547,6 +551,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		lines.add("### Magnitude-Area Plots");
 		lines.add(topLink);
+		lines.add("");
 		table = MarkdownUtils.tableBuilder();
 		table.addLine("Scatter", "2-D Hist");
 		table.initNewLine();
@@ -562,6 +567,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		lines.add("### Rupture Velocity Plots");
 		lines.add(topLink);
+		lines.add("");
 		table = MarkdownUtils.tableBuilder();
 		table.initNewLine().addColumn("**Scatter**");
 		table.addColumn("![Rupture Velocity Scatter]("+outputDir.getName()+"/rupture_velocity_scatter.png)");
@@ -580,6 +586,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		lines.add("### Interevent-Time Distributions");
 		lines.add(topLink);
+		lines.add("");
 		table = MarkdownUtils.tableBuilder();
 		table.initNewLine();
 		for (double riMinMag : riMinMags)
@@ -595,6 +602,16 @@ public class RSQSimCatalog implements XMLSaveable {
 				table.addColumn("![Interevent Times]("+outputDir.getName()+"/interevent_times_m"+(float)riMinMag+".png)");
 		table.finalizeLine();
 		lines.addAll(table.build());
+		
+		if (replot || !new File(outputDir, "stationarity.png").exists()) {
+			StationarityPlot stationarityPlot = new StationarityPlot(minMag, 7d);
+			stationarityPlot.initialize(getName(), outputDir, "stationarity");
+			plots.add(stationarityPlot);
+		}
+		lines.add("### Stationarity Plot");
+		lines.add(topLink);
+		lines.add("");
+		lines.add("![Stationarity]("+outputDir.getName()+"/stationarity.png)");
 		
 		if (plots.isEmpty())
 			return lines;

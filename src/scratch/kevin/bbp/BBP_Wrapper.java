@@ -454,7 +454,7 @@ public class BBP_Wrapper implements Runnable {
 //		File srfFile = new File(eventDir, "event_136704_0.05s_ADJ_VEL.srf");
 		File srfFile = null;
 		File sitesFile = new File("/home/kevin/bbp/bbp_data/run/stations_cs_sites.stl");
-		File outputDir = new File("/tmp/bbp_test7");
+		File outputDir = new File("/tmp/bbp_test1");
 		
 //		runBBP(2, 1, srcFile, null, srfFile, sitesFile, outputDir);
 //		removeSRF_PlaneHeader(new File("/tmp/test.srf"));
@@ -462,7 +462,7 @@ public class BBP_Wrapper implements Runnable {
 //		BBP_Wrapper wrapper = new BBP_Wrapper(2, 1, srcFile, null, null, sitesFile, outputDir);
 		BBP_Wrapper wrapper = new BBP_Wrapper(VelocityModel.LA_BASIN, Method.GP, srcFile, null, srfFile, sitesFile, outputDir);
 		wrapper.maxRetries = 1;
-		wrapper.doHF = true;
+		wrapper.doHF = false;
 		wrapper.dataOnly = true;
 		wrapper.run();
 		

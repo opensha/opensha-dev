@@ -133,7 +133,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 		String customCatalog = null;
 		long customOT = Long.MIN_VALUE;
 		String resetSectsArg = null;
-		boolean griddedOnly = true;
+		boolean griddedOnly = false;
 		boolean customCatIncludeHistSurfaces = false;
 		
 //		TestScenario[] scenarios = { null };
@@ -361,7 +361,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 					System.out.println(jobName);
 					
 					List<File> subClasspath = Lists.newArrayList(classpath);
-					subClasspath.add(new File(remoteJobDir, "OpenSHA_complete.jar"));
+					subClasspath.add(new File(remoteJobDir, "opensha-dev-all.jar"));
 					mpjWrite.setClasspath(subClasspath);
 					
 					String pbsName = jobName;
