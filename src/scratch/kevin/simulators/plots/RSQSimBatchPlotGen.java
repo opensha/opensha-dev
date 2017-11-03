@@ -26,6 +26,7 @@ import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
@@ -277,18 +278,18 @@ public class RSQSimBatchPlotGen {
 			System.out.println("Hardcoded test!");
 //			File dir = new File("/home/kevin/Simulators/UCERF3_JG_supraSeisGeo2");
 //			File geomFile = new File(dir, "UCERF3.D3.1.1km.tri.2.flt");
-			File dir = new File("/data/kevin/simulators/catalogs/bruce/rundir2310");
+			File dir = new File("/data/kevin/simulators/catalogs/bruce/rundir2326");
 			File geomFile = new File(dir, "zfault_Deepen.in");
 			File outputDir = new File("/tmp/rsqsim_plots");
 			File solFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
 			String argStr = "--geometry-file "+geomFile.getAbsolutePath()+" --catalog-file "+dir.getAbsolutePath()
-					+" --output-dir "+outputDir.getAbsolutePath()+" --name TestCatalog"
+					+" --output-dir "+outputDir.getAbsolutePath()+" --name r2326"
 					+" --ucerf-sol "+solFile.getAbsolutePath();
 //			argStr += " --plot-all --min-mag 4";
 //			argStr += " --mag-area-scaling --min-mag 4";
 			argStr += " --skip-years 5000";
-			argStr += " --rupture-velocity --min-mag 6";
+			argStr += " --rupture-velocity --min-mag 6 --parent-sect-mfds";
 			args = Splitter.on(" ").splitToList(argStr).toArray(new String[0]);
 		}
 		
@@ -331,6 +332,10 @@ public class RSQSimBatchPlotGen {
 		if (cmd.hasOption("ucerf-sol")) {
 			u3Sol = FaultSystemIO.loadSol(new File(cmd.getOptionValue("ucerf-sol")));
 			rupSet = u3Sol.getRupSet();
+			if (elements.get(0).getFaultID() < 0)
+				RSQSimUtils.populateFaultIDWithParentIDs(elements, rupSet.getFaultSectionDataList());
+			if (!elements.get(0).getSectionName().toLowerCase().contains("subsection"))
+				RSQSimUtils.populateSubSectionNames(elements, rupSet.getFaultSectionDataList());
 		}
 		
 		System.out.println("Building section/fault element bundles");

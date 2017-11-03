@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -29,6 +30,8 @@ import com.google.common.base.Preconditions;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import scratch.UCERF3.enumTreeBranches.DeformationModels;
+import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
@@ -61,6 +64,7 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 	private boolean keepSRFs = false;
 	private File bbpDataDir = null;
 	private int bundleSize;
+	private int numRG = 0;
 	
 	private ExecutorService exec;
 
@@ -102,7 +106,7 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 		
 		// load the catalog
 		catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
-				null, null, null, null, null);
+				null, null, null, FaultModels.FM3_1, DeformationModels.GEOLOGIC); // TODO
 		Loader loader = catalog.loader().hasTransitions();
 		if (cmd.hasOption("min-mag"))
 			loader.minMag(Double.parseDouble(cmd.getOptionValue("min-mag")));
@@ -133,6 +137,12 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 			try {
 				Thread.sleep(5000);
 			} catch (InterruptedException e1) {}
+		}
+		
+		if (cmd.hasOption("rup-gen-sims")) {
+			numRG = Integer.parseInt(cmd.getOptionValue("rup-gen-sims"));
+			if (rank == 0)
+				debug("also doing "+numRG+" rupture generation simulations each");
 		}
 		
 		if (rank == 0)
@@ -185,7 +195,7 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 	private class MasterZipHook extends MPJ_BBP_Utils.MasterZipHook {
 
 		public MasterZipHook() {
-			super(new File(resultsDir.getParentFile(), resultsDir.getName()+".zip"),
+			super(numRG > 0 ? null : new File(resultsDir.getParentFile(), resultsDir.getName()+".zip"),
 					new File(resultsDir.getParentFile(), resultsDir.getName()+"_rotD.zip"));
 		}
 
@@ -252,8 +262,12 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				
 				// write SRC
 				debug("bulding/writing SRC for "+eventID);
-				BBP_PlanarSurface bbpSurface = RSQSimBBP_Config.estimateBBP_PlanarSurface(event);
-				BBP_SourceFile bbpSource = RSQSimBBP_Config.buildBBP_Source(event, func, bbpSurface, 12345);
+				BBP_PlanarSurface bbpSurface;
+				if (numRG > 0 && RSQSimBBP_Config.U3_SURFACES)
+					bbpSurface = RSQSimBBP_Config.planarEquivalentU3Surface(catalog, event);
+				else
+					bbpSurface = RSQSimBBP_Config.estimateBBP_PlanarSurface(event);
+				BBP_SourceFile bbpSource = RSQSimBBP_Config.buildBBP_Source(event, bbpSurface, 12345);
 				File srcFile = new File(runDir, runDir.getName()+".src");
 				bbpSource.writeToFile(srcFile);
 				
@@ -271,11 +285,31 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				BBP_Wrapper wrapper = new BBP_Wrapper(vm, method, srcFile, null, srfFile, sitesFile, runDir);
 				wrapper.setDoHF(doHF);
 				wrapper.setDataOnly(true);
+				wrapper.setDoFAS(false);
+				wrapper.setDoRotD100(true);
+				wrapper.setDoRotD50(false);
 				wrapper.setBBPDataDir(bbpDataDir);
 				wrapper.run();
 				
 				if (!keepSRFs)
 					srfFile.delete();
+				
+				if (numRG > 0) {
+					Random r = new Random();
+					for (int i=0; i<numRG; i++) {
+						File rgDir = new File(runDir, "rup_gen_"+i);
+						Preconditions.checkState(rgDir.exists() || rgDir.mkdir());
+						debug("running BBP for "+eventID+", RG "+i+"/"+numRG);
+						wrapper = new BBP_Wrapper(vm, method, srcFile, (long)r.nextInt(Short.MAX_VALUE), null, sitesFile, rgDir);
+						wrapper.setDoHF(doHF);
+						wrapper.setDataOnly(true);
+						wrapper.setDoFAS(false);
+						wrapper.setDoRotD100(true);
+						wrapper.setDoRotD50(false);
+						wrapper.setBBPDataDir(bbpDataDir);
+						wrapper.run();
+					}
+				}
 				
 				// zip it
 				FileUtils.createZipFile(zipFile, runDir, true);
@@ -318,6 +352,11 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 		Option skipYears = new Option("skip", "skip-years", true, "Skip the given number of years at the start");
 		skipYears.setRequired(false);
 		ops.addOption(skipYears);
+		
+		Option gp = new Option("rgs", "rup-gen-sims", true, "If supplied, do this amount of simulations with a rupture "
+				+ "generator for each rupture. Only RotD50 will be archived.");
+		gp.setRequired(false);
+		ops.addOption(gp);
 		
 		return ops;
 	}

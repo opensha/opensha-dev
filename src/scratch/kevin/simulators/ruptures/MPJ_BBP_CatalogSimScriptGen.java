@@ -23,14 +23,21 @@ class MPJ_BBP_CatalogSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
+		@SuppressWarnings("unused")
 		File myHPCDir = new File("/auto/scec-02/kmilner/simulators/catalogs/");
 		File jacquiCSDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/");
 //		File catalogDir = new File(jacquiCSDir, "UCERF3_millionElement");
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_long");
 //		File catalogDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/rundir2194_long");
-		File catalogDir = new File(myHPCDir, "rundir2336");
+//		File catalogDir = new File(myHPCDir, "rundir2342");
+		File catalogDir = new File(jacquiCSDir, "rundir2194_K2");
 		
 		double minMag = 6;
+//		double minMag = 7;
+		int numRG = 0;
+//		double minMag = 7;
+//		int numRG = 20;
+		
 		int skipYears = 5000;
 		
 		int threads = 20;
@@ -47,6 +54,8 @@ class MPJ_BBP_CatalogSimScriptGen {
 		jobName += "-"+catalogDir.getName()+"-all-m"+(float)minMag+"-skipYears"+skipYears;
 		if (!RSQSimBBP_Config.DO_HF)
 			jobName += "-noHF";
+		if (numRG > 0)
+			jobName += "-rg"+numRG;
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -66,10 +75,12 @@ class MPJ_BBP_CatalogSimScriptGen {
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
 		argz += " --min-mag "+(float)minMag+" --skip-years "+skipYears;
-		if (RSQSimBBP_Config.DO_HF)
+		if (!RSQSimBBP_Config.DO_HF)
 			argz += " --no-hf";
 		if (bbpDataDir != null && !bbpDataDir.isEmpty())
 			argz += " --bbp-data-dir "+bbpDataDir;
+		if (numRG > 0)
+			argz += " --rup-gen-sims "+numRG;
 		
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));

@@ -114,6 +114,12 @@ public class BBP_Module implements XMLSaveable {
 		return new BBP_Module("RotD50", stagedFiles, arguments, null);
 	}
 	
+	public static BBP_Module buildRotD100(File siteFile) {
+		List<String> stagedFiles = Lists.newArrayList(siteFile.getAbsolutePath());
+		List<Argument> arguments = Lists.newArrayList(stringArg(siteFile.getName()));
+		return new BBP_Module("RotD100", stagedFiles, arguments, null);
+	}
+	
 	public static BBP_Module buildFAS(File siteFile) {
 		List<String> stagedFiles = Lists.newArrayList(siteFile.getAbsolutePath());
 		List<Argument> arguments = Lists.newArrayList(stringArg(siteFile.getName()));

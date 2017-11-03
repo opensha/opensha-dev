@@ -23,6 +23,7 @@ import java.util.concurrent.Future;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
@@ -36,14 +37,21 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.xyz.GriddedGeoDataSet;
+import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
+import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.cpt.CPT;
@@ -58,8 +66,10 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.RegionIden;
+import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import com.google.common.base.Joiner;
@@ -73,7 +83,10 @@ import com.google.common.primitives.Ints;
 import scratch.kevin.MarkdownUtils;
 import scratch.kevin.MarkdownUtils.TableBuilder;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
+import scratch.kevin.bbp.SpectraPlotter;
 import scratch.kevin.bbp.BBP_Site;
+import scratch.kevin.bbp.BBP_SourceFile;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
@@ -93,13 +106,23 @@ class CatalogGMPE_Compare {
 	private double catDurationYears;
 	private Map<Integer, RSQSimEvent> eventsMap;
 	private Map<Integer, EqkRupture> gmpeRupsMap;
+	private Table<RSQSimEvent, BBP_Site, Double> rupSiteAzMap;
 	
 	private Map<AttenRelRef, LinkedList<ScalarIMR>> gmpesInstancesCache;
 	private ExecutorService exec;
 	
+	private boolean rupGen = false;
+	
 	private File gmpeCacheDir;
 	
 	private RSQSimBBP_HazardCurveCalc bbpCurveCalc = null;
+	
+	private List<Range> magRanges;
+	private List<String> magLabels;
+	private List<String> magFileLabels;
+	private List<Range> distRanges;
+	private List<String> distLabels;
+	private List<String> distFileLabels;
 
 	public CatalogGMPE_Compare(RSQSimCatalog catalog, ZipFile bbpZipFile, List<BBP_Site> sites, double minMag, int skipYears,
 			VelocityModel vm, double minFractForInclusion, File gmpeCacheDir) throws IOException {
@@ -144,8 +167,71 @@ class CatalogGMPE_Compare {
 		
 		gmpesInstancesCache = new HashMap<>();
 		gmpeRupsMap = new HashMap<>();
+		rupSiteAzMap = HashBasedTable.create();
 		
 		exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		
+		initBins();
+	}
+	
+	private void initBins() {
+
+		
+		double maxCatalogMag = 0d;
+		for (RSQSimEvent e : events)
+			maxCatalogMag = Math.max(maxCatalogMag, e.getMagnitude());
+		
+		magRanges = new ArrayList<>();
+		if (minMag < 6d) {
+			magRanges.add(new Range(minMag, 6d));
+			magRanges.add(new Range(6d, 6.5d));
+			magRanges.add(new Range(6.5d, 7d));
+		} else if (minMag < 6.5d) {
+			magRanges.add(new Range(minMag, 6.5d));
+			magRanges.add(new Range(6.5d, 7d));
+		} else if (minMag < 7d) {
+			magRanges.add(new Range(minMag, 7d));
+		}
+		magRanges.add(new Range(7d, 7.5d));
+		magRanges.add(new Range(7.5, 8d));
+		if (maxCatalogMag > 8d) {
+			if (maxCatalogMag < 8.5)
+				magRanges.add(new Range(8d, 8.5));
+			else
+				magRanges.add(new Range(8d, 9));
+		}
+		magLabels = new ArrayList<>();
+		for (Range magRange : magRanges)
+			magLabels.add(optionalDigitDF.format(magRange.getLowerBound())+" < Mw < "
+					+optionalDigitDF.format(magRange.getUpperBound()));
+		magFileLabels = new ArrayList<>();
+		for (Range magRange : magRanges)
+			magFileLabels.add("mag_"+optionalDigitDF.format(magRange.getLowerBound())+"_"
+					+optionalDigitDF.format(magRange.getUpperBound()));
+		
+		distRanges = new ArrayList<>();
+		// 0-10, 10-20, 20-40, 40-80, 80-160
+		distRanges.add(new Range(0d, 10d));
+		distRanges.add(new Range(10d, 20d));
+		distRanges.add(new Range(20d, 40d));
+		distRanges.add(new Range(40d, 80d));
+		distRanges.add(new Range(80d, 160d));
+		distRanges.add(new Range(160d, MPJ_BBP_CatalogSim.CUTOFF_DIST));
+		distLabels = new ArrayList<>();
+		String distShortName = getDistShortName();
+		for (Range distRange : distRanges)
+			distLabels.add(optionalDigitDF.format(distRange.getLowerBound())+" km < "+distShortName+" < "
+					+optionalDigitDF.format(distRange.getUpperBound())+" km");
+		distFileLabels = new ArrayList<>();
+		for (Range distRange : distRanges)
+			distFileLabels.add("dist_"+optionalDigitDF.format(distRange.getLowerBound())+"_"
+					+optionalDigitDF.format(distRange.getUpperBound()));
+	}
+	
+	public void setDoRupGen(boolean rupGen, File gmpeCacheDir) {
+		this.rupGen = rupGen;
+		this.gmpeCacheDir = gmpeCacheDir;
+		gmpeRupsMap.clear();
 	}
 	
 	public void shutdown() {
@@ -173,7 +259,19 @@ class CatalogGMPE_Compare {
 		synchronized(event) {
 			EqkRupture rup = gmpeRupsMap.get(event.getID());
 			if (rup == null) {
-				rup = catalog.getGMPE_Rupture(event, minFractForInclusion);
+				if (rupGen) {
+					BBP_PlanarSurface plane = null;
+					if (RSQSimBBP_Config.U3_SURFACES)
+						plane = RSQSimBBP_Config.planarEquivalentU3Surface(catalog, event);
+					else
+						plane = RSQSimBBP_Config.estimateBBP_PlanarSurface(event);
+					BBP_SourceFile source = RSQSimBBP_Config.buildBBP_Source(event, plane, RSQSimBBP_Config.DEFAULT_SEED);
+					rup = new EqkRupture(event.getMagnitude(), source.getFocalMechanism().getRake(),
+							plane.getQuadSurface(), source.getHypoLoc());
+					rup.setRuptureSurface(plane.getQuadSurface());
+				} else {
+					rup = catalog.getGMPE_Rupture(event, minFractForInclusion);
+				}
 				gmpeRupsMap.put(event.getID(), rup);
 			}
 			return rup;
@@ -517,17 +615,24 @@ class CatalogGMPE_Compare {
 	}
 	
 	public boolean plotScatter(Collection<EventComparison> eventComps, List<BBP_Site> sites, double period, AttenRelRef gmpe,
-			EventComparisonFilter filter, List<String> binDescriptions, File outputDir, String prefix) throws IOException {
+			EventComparisonFilter filter, List<String> binDescriptions, File outputDir, String prefix)
+					throws IOException {
 		DefaultXY_DataSet xy = new DefaultXY_DataSet();
 		
 		for (BBP_Site site : sites) {
 			for (EventComparison comp : eventComps) {
-				if (!comp.isComputed(site, period) || !filter.matches(comp, site))
+				if (!comp.isComputed(site, period) || (filter != null && !filter.matches(comp, site)))
 					continue;
-				DiscretizedFunc spectra = bbpZipFile.readRotD50(site, comp.getEvent().getID());
-				double rsVal = spectra.getY(period);
-				double gmpeVal = Math.exp(comp.getLogMean(site, period));
-				xy.set(gmpeVal, rsVal);
+				DiscretizedFunc[] spectras;
+				if (rupGen)
+					spectras = bbpZipFile.readRupGenRotD50(site, comp.getEvent().getID());
+				else
+					spectras = new DiscretizedFunc[] { bbpZipFile.readRotD50(site, comp.getEvent().getID()) };
+				for (DiscretizedFunc spectra : spectras) {
+					double rsVal = spectra.getY(period);
+					double gmpeVal = Math.exp(comp.getLogMean(site, period));
+					xy.set(gmpeVal, rsVal);
+				}
 			}
 		}
 		if (xy.size() == 0)
@@ -535,7 +640,11 @@ class CatalogGMPE_Compare {
 		
 		String title = gmpe.getShortName()+" Comparison Scatter";
 		String xAxisLabel = gmpe.getShortName()+" "+(float)period+" s SA (g)";
-		String yAxisLabel = "RSQSim "+(float)period+" s SA (g)";
+		String yAxisLabel;
+		if (rupGen)
+			yAxisLabel = "BBP Rupture Generator "+(float)period+" s SA (g)";
+		else
+			yAxisLabel = "RSQSim "+(float)period+" s SA (g)";
 		
 		GroundMotionScatterPlot.PLOT_WIDTH = 600;
 		GroundMotionScatterPlot.WRITE_PDF = false;
@@ -544,7 +653,8 @@ class CatalogGMPE_Compare {
 	}
 	
 	public boolean plotStandardNormal(Collection<EventComparison> eventComps, BBP_Site site, double[] periods, AttenRelRef gmpe,
-			EventComparisonFilter filter, List<String> binDescriptions, File outputDir, String prefix) throws IOException {
+			EventComparisonFilter filter, List<String> binDescriptions, File outputDir, String prefix)
+			throws IOException {
 		List<BBP_Site> sites;
 		if (site == null) {
 			sites = this.sites;
@@ -566,10 +676,11 @@ class CatalogGMPE_Compare {
 		xRanges.add(new Range(-numStdDev, numStdDev));
 		
 		List<Double> means = new ArrayList<>();
+		List<Double> stdDevs = new ArrayList<>();
 		int numMatches = 0;
 		for (BBP_Site site : sites) {
 			for (EventComparison comp : eventComps) {
-				if (!comp.isComputed(site, periods[0]) || !filter.matches(comp, site))
+				if (!comp.isComputed(site, periods[0]) || (filter != null && !filter.matches(comp, site)))
 					continue;
 				numMatches++;
 			}
@@ -589,26 +700,36 @@ class CatalogGMPE_Compare {
 			HistogramFunction hist = new HistogramFunction(-numStdDev, numStdDev, numBins);
 			
 			double mean = 0d;
+			List<Double> allVals = new ArrayList<>();
 			int count = 0;
 			for (BBP_Site site : sites) {
 				for (EventComparison comp : eventComps) {
-					if (!comp.isComputed(site, period) || !filter.matches(comp, site))
+					if (!comp.isComputed(site, period) || (filter != null && !filter.matches(comp, site)))
 						continue;
-					DiscretizedFunc spectra = bbpZipFile.readRotD50(site, comp.getEvent().getID());
-					// in log space
-					double rsVal = Math.log(spectra.getY(period));
-					double gmpeVal = comp.getLogMean(site, period);
-					
-					double val = (rsVal - gmpeVal)/comp.getStdDev(site, period);
-					hist.add(hist.getClosestXIndex(val), 1d);
-					mean += val;
-					count++;
+					DiscretizedFunc[] spectras;
+					if (rupGen)
+						spectras = bbpZipFile.readRupGenRotD50(site, comp.getEvent().getID());
+					else
+						spectras = new DiscretizedFunc[] { bbpZipFile.readRotD50(site, comp.getEvent().getID()) };
+					for (DiscretizedFunc spectra : spectras) {
+						// in log space
+						double rsVal = Math.log(spectra.getY(period));
+						double gmpeVal = comp.getLogMean(site, period);
+						
+						double val = (rsVal - gmpeVal)/comp.getStdDev(site, period);
+						hist.add(hist.getClosestXIndex(val), 1d);
+						mean += val;
+						allVals.add(val);
+						count++;
+					}
 				}
 			}
 			if (count == 0)
 				return false;
 			mean /= count;
 			means.add(mean);
+			double stdDev = Math.sqrt(StatUtils.variance(Doubles.toArray(allVals), mean));
+			stdDevs.add(stdDev);
 			
 			double area = 0d;
 			for (Point2D pt : hist)
@@ -627,7 +748,10 @@ class CatalogGMPE_Compare {
 			}
 			
 			funcs.add(hist);
-			hist.setName("RSQSim");
+			if (rupGen)
+				hist.setName("BBP Rupture Generator");
+			else
+				hist.setName("RSQSim");
 			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
 			
 			funcs.add(stdNormal);
@@ -677,6 +801,10 @@ class CatalogGMPE_Compare {
 			meanAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 			meanAnn.setFont(bigFont);
 			anns.add(meanAnn);
+			XYTextAnnotation stdDevAnn = new XYTextAnnotation("σ = "+optionalDigitDF.format(stdDevs.get(i)), -x, y-yEach);
+			stdDevAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+			stdDevAnn.setFont(bigFont);
+			anns.add(stdDevAnn);
 			
 			for (int j=0; j<labels.size(); j++) {
 				String label = labels.get(j);
@@ -770,9 +898,11 @@ class CatalogGMPE_Compare {
 	}
 	
 	private static int[] hazard_curve_rps = { 1000, 2500, 10000 };
-	private static double[] gmpe_truncs = { 0d, 3d, 2d };
-	private static PlotLineType[] gmpe_trunc_line_types = { PlotLineType.SOLID, PlotLineType.DASHED, PlotLineType.DOTTED };
+	private static double[] gmpe_truncs = { 0d, 3d, 2d, 1d };
+	private static PlotLineType[] gmpe_trunc_line_types = { PlotLineType.SOLID, PlotLineType.DASHED,
+			PlotLineType.DOTTED, PlotLineType.DOTTED_AND_DASHED };
 	
+	@SuppressWarnings("unchecked")
 	public File plotHazardCurve(BBP_Site site, double period, AttenRelRef gmpeRef, File outputDir)
 			throws IOException {
 		String xAxisLabel = (float)period+"s SA (g)";
@@ -783,8 +913,9 @@ class CatalogGMPE_Compare {
 			bbpCurveCalc = new RSQSimBBP_HazardCurveCalc(bbpZipFile, catDurationYears);
 		
 		System.out.println("Calculating BBP curve for "+site.getName()+", "+xAxisLabel);
-		DiscretizedFunc bbpCurve = bbpCurveCalc.calc(site, period, curveDuration);
+		DiscretizedFunc bbpCurve = bbpCurveCalc.calc(site, period, curveDuration, rupGen);
 		
+		double rateEach = 1d/catDurationYears;
 		double probEach = curveDuration/catDurationYears;
 		
 		// now calculate GMPE
@@ -799,6 +930,9 @@ class CatalogGMPE_Compare {
 			for (int i=0; i<gmpeCurves[t].size(); i++)
 				gmpeCurves[t].set(i, 1d);
 		}
+		DiscretizedFunc gmpeMeanCurve = bbpCurve.deepClone();
+		for (int i=0; i<gmpeMeanCurve.size(); i++)
+			gmpeMeanCurve.set(i, 0);
 		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
 		for (Point2D pt : gmpeCurves[0])
 			logXVals.set(Math.log(pt.getX()), 1d);
@@ -819,11 +953,22 @@ class CatalogGMPE_Compare {
 				for(int k=0; k<logXVals.size(); k++)
 					gmpeCurves[i].set(k, gmpeCurves[i].getY(k)*Math.pow(1d-probEach, logXVals.getY(k)));
 			}
+			double mean = gmpe.getMean();
+			Preconditions.checkState(Doubles.isFinite(mean));
+			for(int k=0; k<logXVals.size(); k++)
+				if (mean >= logXVals.getX(k))
+					gmpeMeanCurve.set(k, gmpeMeanCurve.getY(k) + rateEach);
 		}
 		// convert to exceedance probabilities
 		for (DiscretizedFunc gmpeCurve : gmpeCurves)
 			for (int i=0; i<gmpeCurve.size(); i++)
 				gmpeCurve.set(i, 1d-gmpeCurve.getY(i));
+		// now mean curve -> probabilities
+		for (int i=0; i<gmpeMeanCurve.size(); i++) {
+			double rate = gmpeMeanCurve.getY(i);
+			double prob = 1d - Math.exp(-rate*curveDuration);
+			gmpeMeanCurve.set(i, prob);
+		}
 		checkInGMPE(gmpeRef, gmpe);
 		
 		// now plot
@@ -842,13 +987,17 @@ class CatalogGMPE_Compare {
 				name = gmpeRef.getShortName();
 				thickness = 3f;
 			} else {
-				name = optionalDigitDF.format(gmpe_truncs[i])+" σ truncation";
+				name = optionalDigitDF.format(gmpe_truncs[i])+" σ";
 				thickness = 2f;
 			}
 			gmpeCurve.setName(name);
 			funcs.add(gmpeCurve);
 			chars.add(new PlotCurveCharacterstics(gmpe_trunc_line_types[i % gmpe_trunc_line_types.length], thickness, Color.BLUE));
 		}
+		
+		gmpeMeanCurve.setName("Mean Only");
+		funcs.add(gmpeMeanCurve);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GREEN.darker()));
 		
 		bbpCurve.setName("RSQSim/BBP");
 		funcs.add(bbpCurve);
@@ -890,28 +1039,266 @@ class CatalogGMPE_Compare {
 		return pngFile;
 	}
 	
+	private synchronized double getRupAzimuthDiff(RSQSimEvent event, BBP_Site site) {
+		Double az = rupSiteAzMap.get(event, site);
+		if (az == null) {
+			az = calcRupAzimuthDiff(event, getGMPE_Rup(event), site.getLoc());
+			rupSiteAzMap.put(event, site, az);
+		}
+		return az;
+	}
+	
+	private static double calcRupAzimuthDiff(RSQSimEvent event, EqkRupture rup, Location loc) {
+		Location loc1 = rup.getRuptureSurface().getFirstLocOnUpperEdge();
+		Location loc2 = rup.getRuptureSurface().getLastLocOnUpperEdge();
+		
+		double aveLat = 0d;
+		double aveLon = 0d;
+		ArrayList<SimulatorElement> elems = event.getAllElements();
+		for (SimulatorElement elem : elems) {
+			Location l = elem.getCenterLocation();
+			aveLat += l.getLatitude();
+			aveLon += l.getLongitude();
+		}
+		aveLat /= elems.size();
+		aveLon /= elems.size();
+		Location centroid = new Location(aveLat, aveLon);
+		
+		Location hypo = rup.getHypocenterLocation();
+		double hypoDist1 = LocationUtils.horzDistanceFast(hypo, loc1);
+		double hypoDist2 = LocationUtils.horzDistanceFast(hypo, loc2);
+		if (hypoDist2 < hypoDist1) {
+			// flip so that hypocenter is closest to loc1
+			Location t = loc1;
+			loc1 = loc2;
+			loc2 = t;
+		}
+		
+//		double locDist1 = LocationUtils.horzDistanceFast(loc, loc1);
+//		double locDist2 = LocationUtils.horzDistanceFast(loc, loc2);
+//		
+//		double refAz;
+//		Location[] refLine;
+//		if (locDist1 < locDist2) {
+//			refAz = LocationUtils.azimuth(loc1, centroid);
+//			refLine = new Location[] {loc1, centroid};
+//		} else {
+//			refAz = LocationUtils.azimuth(centroid, loc2);
+//			refLine = new Location[] {centroid, loc2};
+//		}
+//		
+//		double locAz = LocationUtils.azimuth(refLine[0], loc1);
+//		
+//		return locAz - refAz;
+		
+		double refAz = LocationUtils.azimuth(loc1, loc2);
+		double locAz = LocationUtils.azimuth(centroid, loc);
+		double diff1 = Math.abs(locAz - refAz);
+		double diff2 = Math.abs((360+locAz) - refAz);
+		double diff3 = Math.abs(locAz - (360+refAz));
+		double diff = Math.min(diff1, Math.min(diff2, diff3));
+		Preconditions.checkState(diff <= 180);
+		return diff;
+	}
+	
+	private void testPlotRupAzDiffs() throws IOException {
+		for (RSQSimEvent event : events) {
+			if (event.getMagnitude() > 7 && Math.random() < 0.001)
+				testPlotRupAzDiff(event);
+		}
+		
+		while (true);
+	}
+	
+	private void testPlotRupAzDiff(RSQSimEvent event) throws IOException {
+		EqkRupture rup = getGMPE_Rup(event);
+		
+		Location loc1 = rup.getRuptureSurface().getFirstLocOnUpperEdge();
+		Location loc2 = rup.getRuptureSurface().getLastLocOnUpperEdge();
+		LocationList line = new LocationList();
+		line.add(loc1);
+		line.add(loc2);
+		
+		Region reg = new Region(line, 100);
+		
+		GriddedRegion gridReg = new GriddedRegion(reg, 0.02, null);
+		GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg, false);
+		
+		for (int i=0; i<xyz.size(); i++)
+			xyz.set(i, calcRupAzimuthDiff(event, rup, xyz.getLocation(i)));
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		PlotCurveCharacterstics surfChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY);
+		
+		XY_DataSet hypoXY = new DefaultXY_DataSet();
+		Location hypo = rup.getHypocenterLocation();
+		hypoXY.set(hypo.getLongitude(), hypo.getLatitude());
+		
+		RupturePlotGenerator.addElementOutline(funcs, chars, event.getAllElements(), surfChar, reg);
+		
+		funcs.add(hypoXY);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_INV_TRIANGLE, 7f, Color.WHITE));
+		
+		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0, 180d);
+		
+		XYZPlotSpec spec = new XYZPlotSpec(xyz, cpt, "Event "+event.getID(), "Latitude", "Longitude", "Azimuth");
+		spec.setXYElems(funcs);
+		spec.setXYChars(chars);
+		Range xRange = new Range(xyz.getMinLon(), xyz.getMaxLon());
+		Range yRange = new Range(xyz.getMinLat(), xyz.getMaxLat());
+		
+		XYZPlotWindow gw = new XYZPlotWindow(spec, xRange, yRange);
+		gw.setDefaultCloseOperation(XYZPlotWindow.EXIT_ON_CLOSE);
+	}
+	
+	public boolean plotAggregateRotDRatio(Range magRange, File outputDir, String prefix) throws IOException {
+		List<DiscretizedFunc[]> rotDs = new ArrayList<>();
+		
+		for (BBP_Site site : sites) {
+			for (Integer eventID : bbpZipFile.getEventIDs(site)) {
+				RSQSimEvent event = eventsMap.get(eventID);
+				if (magRange != null && !magRange.contains(event.getMagnitude()))
+					continue;
+				
+//				double az = getRupAzimuthDiff(event, site);
+//				if (azRange != null && !azRange.contains(az))
+//					continue;
+				
+				rotDs.add(bbpZipFile.readRotD(site, eventID));
+			}
+		}
+		if (rotDs.isEmpty())
+			return false;
+		
+		String title = "RotD100/50 Ratio";
+		if (magRange == null)
+			title += ", All Mags";
+		else
+			title += ", "+optionalDigitDF.format(magRange.getLowerBound())
+				+"≤M≤"+optionalDigitDF.format(magRange.getUpperBound());
+		
+		SpectraPlotter.plotRotDRatio(rotDs, "RSQSim", title, outputDir, prefix);
+		
+		return true;
+	}
+	
+	public boolean plotRotDRatioDependence(Range magRange, Range distRange, double[] periods, boolean scatter, File outputDir, String prefix,
+			boolean doDist, boolean doAzimuth, boolean doRotD50) throws IOException {
+		Preconditions.checkState(doDist || doAzimuth || doRotD50);
+		Preconditions.checkState(!(doDist && doAzimuth) && !(doAzimuth && doRotD50) && !(doDist && doRotD50));
+		
+		List<DiscretizedFunc[]> rotDs = new ArrayList<>();
+		List<Double> scalars = new ArrayList<>();
+		
+		for (BBP_Site site : sites) {
+			for (Integer eventID : bbpZipFile.getEventIDs(site)) {
+				RSQSimEvent event = eventsMap.get(eventID);
+				if (magRange != null && !magRange.contains(event.getMagnitude()))
+					continue;
+				
+				double dist = Double.NaN;
+				if (distRange != null || doDist) {
+					RuptureSurface surf = getGMPE_Rup(event).getRuptureSurface();
+					if (DIST_JB)
+						dist = surf.getDistanceJB(site.getLoc());
+					else
+						dist = surf.getDistanceRup(site.getLoc());
+					if (distRange != null && !distRange.contains(dist))
+						continue;
+				}
+				
+				if (doDist) {
+					scalars.add(dist);
+				} else if (doAzimuth) {
+					scalars.add(getRupAzimuthDiff(event, site));
+				} else if (doRotD50) {
+					// filled in later for each period
+					scalars = null;
+				}
+				
+				rotDs.add(bbpZipFile.readRotD(site, eventID));
+			}
+		}
+		if (rotDs.isEmpty())
+			return false;
+		
+		String title = "RotD100/50";
+		
+		String scalarLabel;
+		if (doDist) {
+			scalarLabel = getDistShortName();
+			title += " Distance Dependence";
+		} else if (doAzimuth) {
+			scalarLabel = "Azimuth";
+			title += " Azimuth Dependence";
+		} else if (doRotD50) {
+			scalarLabel = "RotD50";
+			title += " Amplitude Dependence";
+		} else {
+			throw new IllegalStateException();
+		}
+		
+		if (magRange == null)
+			title += ", All Mags";
+		else
+			title += ", "+optionalDigitDF.format(magRange.getLowerBound())
+				+"≤M≤"+optionalDigitDF.format(magRange.getUpperBound());
+		
+		if (scatter) {
+			for (double period : periods) {
+				String myPrefix = prefix+"_"+optionalDigitDF.format(period)+"s";
+				if (doRotD50) {
+					Preconditions.checkState(scalars == null);
+					SpectraPlotter.plotRotDRatioVsRd50Scatter(rotDs, period, "RSQSim", title, outputDir, myPrefix, 10);
+				} else {
+					SpectraPlotter.plotRotDRatioScatter(rotDs, scalars, scalarLabel, period,
+							"RSQSim", title, outputDir, myPrefix, false, 10);
+				}
+			}
+		} else {
+			SpectraPlotter.plotRotDRatioDependence(rotDs, scalars, scalarLabel, 10, periods,
+					"RSQSim", title, outputDir, prefix, doRotD50);
+		}
+		
+		return true;
+	}
+	
+	private String getDistDescription() {
+		if (DIST_JB)
+			return "Joyner-Boore distance (**rJB**), the shortest horizontal distance from a site to the "
+					+ "surface projection of the rupture surface";
+		return "rupture surface distance (**rRup**), the shortest 3-d distance from a site to the "
+					+ "rupture surface";
+	}
+	
+	private String getDistShortName() {
+		if (DIST_JB)
+			return "rJB";
+		return "rRup";
+	}
+	
 	private static int max_table_fig_columns = 3;
 	
-	public void generateGMPE_Page(File outputDir, AttenRelRef gmpeRef, double[] periods,
-			boolean distJB) throws IOException {
+	public void generateGMPE_Page(File outputDir, AttenRelRef gmpeRef, double[] periods)
+			throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		LinkedList<String> lines = new LinkedList<>();
 		
-		String distShortName;
-		String distDescription;
-		if (distJB) {
-			distShortName = "rJB";
-			distDescription = "Joyner-Boore distance (**rJB**), the shortest horizontal distance from a site to the "
-					+ "surface projection of the rupture surface";
-		} else {
-			distShortName = "rRup";
-			distDescription = "rupture surface distance (**rRup**), the shortest 3-d distance from a site to the "
-					+ "rupture surface";
-		}
+		String distDescription = getDistDescription();
 		
 		// header
-		lines.add("# "+catalog.getName()+" BBP/"+gmpeRef.getShortName()+" GMPE Comparisons");
+		if (rupGen) {
+			lines.add("# "+catalog.getName()+" BBP Rupture Generator/"+gmpeRef.getShortName()+" GMPE Comparisons");
+			lines.add("");
+			lines.add("**NOTE: These tests use the BBP Rupture Generator, not RSQSim slip/time histories.**");
+			lines.add("");
+			lines.add("*All calculations here (both BBP & GMPE) use simple planar surface representations, which can be "
+					+ "a poor approximation for many ruptures, but the same surface is used for both calculations.*");
+		} else {
+			lines.add("# "+catalog.getName()+" BBP/"+gmpeRef.getShortName()+" GMPE Comparisons");
+		}
 		lines.add("");
 		lines.add("**GMPE: "+gmpeRef.getName()+"**");
 		lines.add("");
@@ -921,55 +1308,6 @@ class CatalogGMPE_Compare {
 		
 		int tocIndex = lines.size();
 		String topLink = "*[(top)](#table-of-contents)*";
-		
-		double maxCatalogMag = 0d;
-		for (RSQSimEvent e : events)
-			maxCatalogMag = Math.max(maxCatalogMag, e.getMagnitude());
-		
-		List<Range> magRanges = new ArrayList<>();
-		if (minMag < 6d) {
-			magRanges.add(new Range(minMag, 6d));
-			magRanges.add(new Range(6d, 6.5d));
-			magRanges.add(new Range(6.5d, 7d));
-		} else if (minMag < 6.5d) {
-			magRanges.add(new Range(minMag, 6.5d));
-			magRanges.add(new Range(6.5d, 7d));
-		} else if (minMag < 7d) {
-			magRanges.add(new Range(minMag, 7d));
-		}
-		magRanges.add(new Range(7d, 7.5d));
-		magRanges.add(new Range(7.5, 8d));
-		if (maxCatalogMag > 8d) {
-			if (maxCatalogMag < 8.5)
-				magRanges.add(new Range(8d, 8.5));
-			else
-				magRanges.add(new Range(8d, 9));
-		}
-		List<String> magLabels = new ArrayList<>();
-		for (Range magRange : magRanges)
-			magLabels.add(optionalDigitDF.format(magRange.getLowerBound())+" < Mw < "
-					+optionalDigitDF.format(magRange.getUpperBound()));
-		List<String> magFileLabels = new ArrayList<>();
-		for (Range magRange : magRanges)
-			magFileLabels.add("mag_"+optionalDigitDF.format(magRange.getLowerBound())+"_"
-					+optionalDigitDF.format(magRange.getUpperBound()));
-		
-		List<Range> distRanges = new ArrayList<>();
-		// 0-10, 10-20, 20-40, 40-80, 80-160
-		distRanges.add(new Range(0d, 10d));
-		distRanges.add(new Range(10d, 20d));
-		distRanges.add(new Range(20d, 40d));
-		distRanges.add(new Range(40d, 80d));
-		distRanges.add(new Range(80d, 160d));
-		distRanges.add(new Range(160d, MPJ_BBP_CatalogSim.CUTOFF_DIST));
-		List<String> distLabels = new ArrayList<>();
-		for (Range distRange : distRanges)
-			distLabels.add(optionalDigitDF.format(distRange.getLowerBound())+" km < "+distShortName+" < "
-					+optionalDigitDF.format(distRange.getUpperBound())+" km");
-		List<String> distFileLabels = new ArrayList<>();
-		for (Range distRange : distRanges)
-			distFileLabels.add("dist_"+optionalDigitDF.format(distRange.getLowerBound())+"_"
-					+optionalDigitDF.format(distRange.getUpperBound()));
 		
 		// precalc for all sites
 		System.out.println("Precalculating/caching for all sites");
@@ -1034,7 +1372,7 @@ class CatalogGMPE_Compare {
 				
 				List<EventComparisonFilter> filters = new ArrayList<>();
 				for (Range distRange : distRanges) {
-					if (distJB)
+					if (DIST_JB)
 						filters.add(new DistJBFilter(distRange.getLowerBound(), distRange.getUpperBound()));
 					else
 						filters.add(new DistRupFilter(distRange.getLowerBound(), distRange.getUpperBound()));
@@ -1130,6 +1468,28 @@ class CatalogGMPE_Compare {
 				lines.add("");
 				lines.addAll(table.wrap(max_table_fig_columns, 0).build());
 			}
+			String prefix = siteName.replaceAll(" ", "_")+"_all_mags_all_dists_"+gmpeRef.getShortName()+"_std_norm";
+			boolean success = plotStandardNormal(siteEventComps.values(), site, periods, gmpeRef, null,
+					new ArrayList<>(), resourcesDir, prefix);
+			if (success) {
+				lines.add("### "+siteName+", All Ruptures, Standard Normal Plots");
+				lines.add(topLink); lines.add("");
+				lines.add("");
+				lines.add("z-score standard normal plots across all magnitudes/distances");
+				lines.add("");
+				lines.add("**z-score**: (ln(*RSQSim*) - ln(*GMPE-mean*)) / *GMPE-sigma*");
+				lines.add("");
+				lines.add("**Legend**");
+				lines.add("* Black Line: Standard Normal distribution (in natural log space)");
+				lines.add("* Gray Histogram: z-score for each rupture");
+				lines.add("* Blue Dashed Line: RSQSim Mean");
+				
+				lines.add("");
+				File plotFile = new File(resourcesDir, prefix+".png");
+				Preconditions.checkState(plotFile.exists());
+				lines.add("![Standard Normal Plot]("+resourcesDir.getName()
+					+"/"+plotFile.getName()+")");
+			}
 		}
 		
 		// now hazard curves
@@ -1139,7 +1499,7 @@ class CatalogGMPE_Compare {
 			curveFiles.add(plotHazardCurves(curveSites, period, gmpeRef, resourcesDir));
 		
 		lines.add("## Hazard Curves");
-		lines.add("");
+		lines.add(topLink); lines.add("");
 		lines.add("**Legend**:");
 		lines.add("* Black Solid Line: RSQSim/BBP");
 		for (int i=0; i<gmpe_truncs.length; i++) {
@@ -1147,10 +1507,11 @@ class CatalogGMPE_Compare {
 			if (gmpe_truncs[i] > 0)
 				truncAdd = " "+optionalDigitDF.format(gmpe_truncs[i])+"-sigma truncation";
 			PlotLineType type = gmpe_trunc_line_types[i % gmpe_trunc_line_types.length];
-			String lineType = type.name();
+			String lineType = type.name().replaceAll("_", " ");
 			lineType = lineType.substring(0, 1).toUpperCase()+lineType.substring(1).toLowerCase();
 			lines.add("* Blue "+lineType+" Line: "+gmpeRef.getShortName()+truncAdd);
 		}
+		lines.add("* Green Dashed Line: "+gmpeRef.getShortName()+" mean values only");
 		lines.add("* Gray Dashed Lines: "+Joiner.on(" yr, ").join(Ints.asList(hazard_curve_rps))+" yr return periods");
 		lines.add("");
 		TableBuilder table = MarkdownUtils.tableBuilder();
@@ -1178,31 +1539,179 @@ class CatalogGMPE_Compare {
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
 	}
 	
+	public void generateRotDRatioPage(File outputDir, double[] periods) throws IOException {
+		Preconditions.checkState(bbpZipFile.hasRotD100());
+		File resourcesDir = new File(outputDir, "resources");
+		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
+		LinkedList<String> lines = new LinkedList<>();
+		
+		String distShortName = getDistShortName();
+		String distDescription = getDistDescription();
+		
+		// header
+		lines.add("# "+catalog.getName()+" BBP RotD100/RotD50 Ratios");
+		lines.add("");
+		lines.add("Distance dependent plots use the "+distDescription+" distance metric");
+		lines.add("");
+		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
+		
+		int tocIndex = lines.size();
+		String topLink = "*[(top)](#table-of-contents)*";
+		
+		lines.add("## Site List");
+		lines.add("");
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		table.addLine("Name", "Location", "# Events");
+		for (BBP_Site s : this.sites) {
+			table.initNewLine();
+			table.addColumn(RSQSimBBP_Config.siteCleanName(s));
+			Location loc = s.getLoc();
+			table.addColumn("*"+(float)loc.getLatitude()+", "+(float)loc.getLongitude()+"*");
+			table.addColumn(bbpZipFile.getEventIDs(s).size()+"");
+			table.finalizeLine();
+		}
+		lines.addAll(table.build());
+		
+		Range totalDistRange = new Range(0d, RSQSimBBP_Config.MAX_DIST);
+		
+		for (int m=-1; m<magRanges.size(); m++) {
+			Range magRange;
+			String magLabel;
+			String magFileLabel;
+			if (m < 0) {
+				magRange = null;
+				magFileLabel = "all_mags";
+				magLabel = "All Mags";
+			} else {
+				magRange = magRanges.get(m);
+				if (magRange.getUpperBound() > 8)
+					// not useful here
+					continue;
+				magFileLabel = magFileLabels.get(m);
+				magLabel = magLabels.get(m);
+			}
+
+			lines.add("## "+magLabel);
+			lines.add(topLink); lines.add("");
+			
+			// first total
+			System.out.println("Plotting "+magLabel+" total RotD ratio");
+			String prefix = "rot_d_ratio_"+magFileLabel+"_aggregated";
+			Preconditions.checkState(plotAggregateRotDRatio(magRange, resourcesDir, prefix));
+			lines.add("![RotD Ratio]("+resourcesDir.getName()+"/"+prefix+".png)");
+			lines.add("");
+			
+			lines.add("### "+magLabel+", "+distShortName+" Dependence");
+			lines.add(topLink); lines.add("");
+			System.out.println("Plotting "+magLabel+" RotD ratio distance dependence");
+			prefix = "rot_d_ratio_"+magFileLabel+"_"+distShortName+"_dependence";
+			Preconditions.checkState(plotRotDRatioDependence(
+					magRange, totalDistRange, periods, false, resourcesDir, prefix, true, false, false));
+			lines.add("![RotD Ratio]("+resourcesDir.getName()+"/"+prefix+".png)");
+			lines.add("");
+			
+			lines.add("### "+magLabel+", Azimuth Dependence");
+			lines.add(topLink); lines.add("");
+			System.out.println("Plotting "+magLabel+" RotD ratio azimuth dependence");
+			prefix = "rot_d_ratio_"+magFileLabel+"_az_dependence";
+			Preconditions.checkState(plotRotDRatioDependence(
+					magRange, totalDistRange, periods, false, resourcesDir, prefix, false, true, false));
+			lines.add("![RotD Ratio]("+resourcesDir.getName()+"/"+prefix+".png)");
+			lines.add("");
+			
+			lines.add("### "+magLabel+", RotD50 Dependence");
+			lines.add(topLink); lines.add("");
+			System.out.println("Plotting "+magLabel+" RotD ratio amplitude dependence");
+			prefix = "rot_d_ratio_"+magFileLabel+"_amplitude_dependence";
+			Preconditions.checkState(plotRotDRatioDependence(
+					magRange, totalDistRange, periods, false, resourcesDir, prefix, false, false, true));
+			lines.add("![RotD Ratio]("+resourcesDir.getName()+"/"+prefix+".png)");
+			lines.add("");
+			
+			lines.add("#### "+magLabel+", RotD50 Dependence Scatters");
+			lines.add(topLink); lines.add("");
+			
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			table.addColumn("Distance");
+			for (double period : periods)
+				table.addColumn("**"+optionalDigitDF.format(period)+"s**");
+			table.finalizeLine();
+			for (int d=0; d<distRanges.size(); d++) {
+				Range distRange = distRanges.get(d);
+				String distLabel = distLabels.get(d);
+				String distFileLabel = distFileLabels.get(d);
+				
+				table.initNewLine().addColumn("**"+distLabel+"**");
+				
+				prefix = "rot_d_ratio_"+magFileLabel+"_"+distFileLabel+"_scatter";
+				Preconditions.checkState(plotRotDRatioDependence(magRange, distRange, periods, true, resourcesDir, prefix,
+						false, false, true));
+				for (double period : periods) {
+					File plotFile = new File(resourcesDir, prefix+"_"+optionalDigitDF.format(period)+"s.png");
+					Preconditions.checkState(plotFile.exists());
+					table.addColumn("![RotD Ratio]("+resourcesDir.getName()+"/"+plotFile.getName()+")");
+				}
+				
+				table.finalizeLine();
+			}
+			lines.addAll(table.build());
+			lines.add("");
+//			table.addLine("Azimuth", "RotD100/RotD50 Ratio");
+//			for (int a=0; a<azRanges.size(); a++) {
+//				Range azRange = azRanges.get(a);
+//				prefix = "rot_d_ratio_"+magFileLabel+"_"+azFileLabels.get(a);
+//				table.initNewLine();
+//				if (azRange == null)
+//					table.addColumn("All");
+//				else
+//					table.addColumn(optionalDigitDF.format(azRange.getLowerBound())
+//							+"°≤Az≤"+optionalDigitDF.format(azRange.getUpperBound())+"°");
+//				if (plotRotDRatio(magRange, azRange, resourcesDir, prefix))
+//					table.addColumn("![RotD Ratio]("+resourcesDir.getName()+"/"+prefix+".png)");
+//				else
+//					table.addColumn("N/A");
+//				table.finalizeLine();
+//			}
+//			lines.addAll(table.build());
+		}
+		
+		// add TOC
+		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));
+		lines.add(tocIndex, "## Table Of Contents");
+
+		// write markdown
+		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
+	}
+	
 	private static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
+	
+	static final boolean DIST_JB = true;
 	
 	public static void main(String[] args) throws ZipException, IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2273.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2310.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2320.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2336.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.JG_2194_K2.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2349.instance(baseDir);
+		
+		boolean doGMPE = false;
+		boolean doRotD = true;
 		
 		String[] highlightNames = { "USC", "SBSM" };
 //		String[] highlightNames = null;
 		
 		VelocityModel vm = VelocityModel.LA_BASIN;
 		double minFractForInclusion = 0.2;
+		boolean skipRGdirs = true;
+		boolean rgOnlyIfPossible = true;
 		
 //		double[] periods = { 1, 2, 3, 5, 10 };
 		double[] periods = { 1, 2, 5 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.BSSA_2014 };
-		boolean distJB = true;
 		
 		// find BBP parallel dir
 		String catalogDirName = catalog.getCatalogDir().getName();
@@ -1216,6 +1725,8 @@ class CatalogGMPE_Compare {
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-all")) {
+				if (skipRGdirs && name.contains("-rg"))
+					continue;
 				File zipFile = new File(dir, "results.zip");
 				if (!zipFile.exists())
 					zipFile = new File(dir, "results_rotD.zip");
@@ -1251,23 +1762,48 @@ class CatalogGMPE_Compare {
 			System.out.println("Detected skipYears="+skipYears);
 		}
 		
+		boolean hasRG = bbpDirName.contains("-rg");
+		
 		List<BBP_Site> sites = BBP_Site.readFile(bbpDir);
 		
+		System.out.println("Zip file: "+bbpZipFile.getAbsolutePath());
 		ZipFile zipFile = new ZipFile(bbpZipFile);
 		
 		CatalogGMPE_Compare comp = new CatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
 				vm, minFractForInclusion, gmpeCacheDir);
+		System.out.println("Has RotD100? "+comp.bbpZipFile.hasRotD100());
 		if (highlightNames != null)
 			comp.setHighlightSites(highlightNames);
+//		comp.testPlotRupAzDiffs();
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
 		try {
-			for (AttenRelRef gmpeRef : gmpeRefs) {
-				File catalogGMPEDir = new File(catalogOutputDir, "gmpe_bbp_comparisons_"+gmpeRef.getShortName());
-				Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
-				comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, periods, distJB);
+			if (doGMPE) {
+				if (!hasRG || !rgOnlyIfPossible) {
+					for (AttenRelRef gmpeRef : gmpeRefs) {
+						File catalogGMPEDir = new File(catalogOutputDir, "gmpe_bbp_comparisons_"+gmpeRef.getShortName());
+						Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
+						comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, periods);
+					}
+				}
+				if (hasRG) {
+					System.out.println("Has Rupture Generator!");
+					gmpeCacheDir = new File(bbpDir, "gmpe_cache_bbp_rg");
+					Preconditions.checkState(gmpeCacheDir.exists() || gmpeCacheDir.mkdir());
+					comp.setDoRupGen(true, gmpeCacheDir);
+					for (AttenRelRef gmpeRef : gmpeRefs) {
+						File catalogGMPEDir = new File(catalogOutputDir, "gmpe_bbp_rg_comparisons_"+gmpeRef.getShortName());
+						Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
+						comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, periods);
+					}
+				}
+			}
+			if (doRotD && comp.bbpZipFile.hasRotD100()) {
+				File catalogRotDDir = new File(catalogOutputDir, "catalog_rotd_ratio_comparisons");
+				Preconditions.checkState(catalogRotDDir.exists() || catalogRotDDir.mkdir());
+				comp.generateRotDRatioPage(catalogRotDDir, periods);
 			}
 			
 			catalog.writeMarkdownSummary(catalogOutputDir, true, false);

@@ -27,12 +27,12 @@ public class RuptureSearch {
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2337.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.JG_2194_K2.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		
 		int parentID = 301; // Mojave S
-		double minMag = 7;
+		double minMag = 7.3;
 		Region hypocenterReg = new Region(new Location(34.25, -117.5), 20d);
 		
 		int numToPlot = 5;

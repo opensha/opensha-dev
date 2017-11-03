@@ -60,10 +60,10 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int hours = 24;
 //		int nodes = 50;
 		
-		double duration = 1000;
-		int numSims = 500;
-		int hours = 24;
-		int nodes = 34;
+//		double duration = 1000;
+//		int numSims = 500;
+//		int hours = 24;
+//		int nodes = 34;
 		
 //		double duration = 30;
 //		int numSims = 5000;
@@ -83,20 +83,19 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int nodes = 10;
 		
 		// for scenarios
-//		double duration = 10; // SIM duration!!
-////		int numSims = 25000;
-////		int hours = 24;
-////		int nodes = 60;
-//		int numSims = 10000;
+		double duration = 10; // SIM duration!!
+//		int numSims = 25000;
 //		int hours = 24;
-//////		int nodes = 100;
-//		int nodes = 34;
-//		if (largeSCEC && !stampede)
-//			nodes = 4;
-////		int numSims = 1000;
-////		int hours = 2;
-//////		int nodes = 100;
-////		int nodes = 5;
+//		int nodes = 60;
+		int numSims = 200000;
+		int hours = 24;
+		int nodes = 34;
+		if (largeSCEC && !stampede)
+			nodes = 4;
+//		int numSims = 1000;
+//		int hours = 2;
+////		int nodes = 100;
+//		int nodes = 5;
 		
 //		Scenarios scenario = Scenarios.LA_HABRA;
 //		Scenarios[] scenarios = Scenarios.values();
@@ -127,13 +126,13 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		TestScenario[] scenarios = {TestScenario.MOJAVE_M5p5, TestScenario.MOJAVE_M6pt3_ptSrc,
 //				TestScenario.MOJAVE_M6pt3_FSS, TestScenario.MOJAVE_M7};
 //		boolean includeSpontaneous = true;
-//		TestScenario[] scenarios = {TestScenario.HAYWIRED_M7};
-		TestScenario[] scenarios = { null };
+		TestScenario[] scenarios = {TestScenario.HAYWIRED_M7};
+//		TestScenario[] scenarios = { null };
 		boolean includeSpontaneous = true;
 		String customCatalog = null;
 		long customOT = Long.MIN_VALUE;
 		String resetSectsArg = null;
-		boolean griddedOnly = false;
+		boolean griddedOnly = true;
 		boolean customCatIncludeHistSurfaces = false;
 		
 //		TestScenario[] scenarios = { null };

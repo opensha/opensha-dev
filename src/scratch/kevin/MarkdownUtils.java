@@ -200,13 +200,36 @@ public class MarkdownUtils {
 			str.append(line).append("\n");
 		writeHTML(str.toString(), outputFile);
 	}
+	
+	public static int MAX_WIDTH = 1000;
+	
 	public static void writeHTML(String markdown, File outputFile) throws IOException {
 		List<Extension> extensions = Arrays.asList(TablesExtension.create(), HeadingAnchorExtension.create());
 		Parser parser = Parser.builder().extensions(extensions).build();
 		Node document = parser.parse(markdown);
 		HtmlRenderer renderer = HtmlRenderer.builder().extensions(extensions).build();
+		
 		FileWriter fw = new FileWriter(outputFile);
+		fw.write("<!DOCTYPE html>\n");
+		fw.write("<html>\n");
+		fw.write("<head>\n");
+		if (MAX_WIDTH > 0) {
+			fw.write("<style>\n");
+			fw.write("body {\n");
+			fw.write("\tmax-width:"+MAX_WIDTH+"px;\n");
+			fw.write("\tmargin: auto;\n");
+			fw.write("}\n");
+			fw.write("img {\n");
+			fw.write("\tmax-width: 100%;\n");
+			fw.write("\tmax-height: 100%;\n");
+			fw.write("}\n");
+			fw.write("</style>\n");
+		}
+		fw.write("</head>\n");
+		fw.write("<body>\n");
 		renderer.render(document, fw);
+		fw.write("</body>\n");
+		fw.write("</html>\n");
 		fw.close();
 	}
 

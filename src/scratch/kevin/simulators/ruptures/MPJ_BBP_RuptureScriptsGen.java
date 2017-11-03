@@ -46,8 +46,10 @@ class MPJ_BBP_RuptureScriptsGen {
 //		int eventID = 6195527;
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2336.instance(baseDir);
 //		int eventID = 131670;
-		RSQSimCatalog catalog = Catalogs.BRUCE_2337.instance(baseDir);
-		int eventID = 203769;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2337.instance(baseDir);
+//		int eventID = 203769;
+		RSQSimCatalog catalog = Catalogs.JG_2194_K2.instance(baseDir);
+		int eventID = 18840012;
 		
 		File catalogDir = catalog.getCatalogDir();
 		

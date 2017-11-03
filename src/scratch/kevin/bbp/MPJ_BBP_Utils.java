@@ -40,19 +40,19 @@ public class MPJ_BBP_Utils {
 			debug("running async post-batch hook for process "+processIndex+". "+getCountsString());
 			debug("async post-batch extimates: "+getRatesString());
 			try {
-				if (out == null) {
+				if (out == null && zipFile != null) {
 					if (zipFile.exists())
 						Files.move(zipFile, new File(zipFile.getAbsolutePath()+".prev"));
-					if (rdZipFile.exists())
-						Files.move(rdZipFile, new File(rdZipFile.getAbsolutePath()+".prev"));
 					out = new ZipArchiveOutputStream(new BufferedOutputStream(
 							new FileOutputStream(zipFile), buffer.length*4));
-//					out.setLevel(Deflater.DEFAULT_COMPRESSION);
-//					outRD = new ZipOutputStream(new FileOutputStream(rdZipFile));
+				}
+				if (outRD == null && rdZipFile != null) {
+					if (rdZipFile.exists())
+						Files.move(rdZipFile, new File(rdZipFile.getAbsolutePath()+".prev"));
 					outRD = new ZipArchiveOutputStream(new BufferedOutputStream(
 							new FileOutputStream(rdZipFile), buffer.length*4));
-//					outRD.setLevel(Deflater.DEFAULT_COMPRESSION);
 				}
+				Preconditions.checkState(out != null || outRD != null);
 				for (int index : batch) {
 					File subZipFile = getSimZipFile(index);
 					String subZipName = subZipFile.getName();
@@ -60,15 +60,22 @@ public class MPJ_BBP_Utils {
 					
 					String simDirName = subZipName.substring(0, subZipName.indexOf(".zip"))+"/";
 					ZipArchiveEntry dirEntry = new ZipArchiveEntry(simDirName);
-					out.putArchiveEntry(dirEntry);
-					out.closeArchiveEntry();
-					outRD.putArchiveEntry(dirEntry);
-					outRD.closeArchiveEntry();
+					if (out != null) {
+						out.putArchiveEntry(dirEntry);
+						out.closeArchiveEntry();
+					}
+					if (outRD != null) {
+						outRD.putArchiveEntry(dirEntry);
+						outRD.closeArchiveEntry();
+					}
 					
 					ZipFile sub = new ZipFile(subZipFile);
 					Enumeration<? extends ZipArchiveEntry> entries = sub.getEntries();
 					while (entries.hasMoreElements()) {
 						ZipArchiveEntry e = entries.nextElement();
+						boolean rd = e.getName().endsWith(".rd50") || e.getName().endsWith(".rd100");
+						if (out == null && !rd)
+							continue;
 						ZipArchiveEntry outEntry = new ZipArchiveEntry(simDirName+e.getName());
 						outEntry.setCompressedSize(e.getCompressedSize());
 						outEntry.setCrc(e.getCrc());
@@ -80,8 +87,9 @@ public class MPJ_BBP_Utils {
 						outEntry.setMethod(e.getMethod());
 						outEntry.setRawFlag(e.getRawFlag());
 						outEntry.setSize(e.getSize());
-						out.addRawArchiveEntry(outEntry, sub.getRawInputStream(e));
-						if (e.getName().endsWith(".rd50") || e.getName().endsWith(".rd100"))
+						if (out != null)
+							out.addRawArchiveEntry(outEntry, sub.getRawInputStream(e));
+						if (rd && outRD != null)
 							outRD.addRawArchiveEntry(outEntry, sub.getRawInputStream(e));
 					}
 					sub.close();
@@ -97,8 +105,10 @@ public class MPJ_BBP_Utils {
 		public void shutdown() {
 			super.shutdown();
 			try {
-				out.close();
-				outRD.close();
+				if (out != null)
+					out.close();
+				if (outRD != null)
+					outRD.close();
 			} catch (IOException e) {
 				ExceptionUtils.throwAsRuntimeException(e);
 			}

@@ -82,6 +82,22 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2337("bruce/rundir2337", "Bruce 2337", "Bruce Shaw", cal(2017, 10, 20),
 				"Larger slip velocity (2.0 m/s), backslipFromStress loading",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2326("bruce/rundir2326", "Bruce 2326", "Bruce Shaw", cal(2017, 10, 23),
+				"reference_1: a=.001 b=.008  Veq=1.0  sigmaN=100. backslipFromStress",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2342("bruce/rundir2342", "Bruce 2342", "Bruce Shaw", cal(2017, 10, 23),
+				"larger Veq=1.2          relative to reference_1",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2343("bruce/rundir2343", "Bruce 2343", "Bruce Shaw", cal(2017, 10, 23),
+				"smaller Veq=0.8        relative to reference_1",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2349("bruce/rundir2349", "Bruce 2349", "Bruce Shaw", cal(2017, 10, 23),
+				"smaller sigmaN=80   relative to reference_1",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_2194_K2("rundir2194_K2", "JG 2194 K2", "Jacqui Gilchrist", cal(2017, 10, 16),
+				"Keith's fault geometry, normal backslip with U3 geologic long-term slip rates,"
+				+ " and the same parameter values as Bruce's 2194",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -314,6 +330,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<String> gmpeLinks = new ArrayList<>();
 		List<String> gmpeNames = new ArrayList<>();
 		
+		List<String> gmpeRGLinks = new ArrayList<>();
+		List<String> gmpeRGNames = new ArrayList<>();
+		
+		String rotDDLink = null;
+		
 		for (File subDir : dir.listFiles()) {
 			if (!subDir.isDirectory())
 				continue;
@@ -327,6 +348,12 @@ public class RSQSimCatalog implements XMLSaveable {
 			} else if (name.startsWith("gmpe_bbp_comparisons_")) {
 				gmpeNames.add(name.substring("gmpe_bbp_comparisons_".length()));
 				gmpeLinks.add(name);
+			} else if (name.startsWith("gmpe_bbp_rg_comparisons_")) {
+				gmpeRGNames.add(name.substring("gmpe_bbp_rg_comparisons_".length()));
+				gmpeRGLinks.add(name);
+			} else if (name.equals("catalog_rotd_ratio_comparisons")) {
+				Preconditions.checkState(rotDDLink == null, "Duplicate RotDD dirs! %s and %s", name, rotDDLink);
+				rotDDLink = name;
 			}
 		}
 		
@@ -345,6 +372,21 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add("");
 			for (int i=0; i<gmpeNames.size(); i++)
 				lines.add("* ["+gmpeNames.get(i)+"]("+gmpeLinks.get(i)+"/)");
+		}
+		if (!gmpeRGNames.isEmpty()) {
+			lines.add("");
+			lines.add("## Full Catalog GMPE Comparisons with BBP Rupture Generator");
+			lines.add(topLink);
+			lines.add("");
+			for (int i=0; i<gmpeRGNames.size(); i++)
+				lines.add("* ["+gmpeRGNames.get(i)+"]("+gmpeRGLinks.get(i)+"/)");
+		}
+		if (rotDDLink != null) {
+			lines.add("");
+			lines.add("## Full Catalog RotD100/RotD50 Ratios");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[Full Catalog RotD100/RotD50 Ratios Plotted Here]("+rotDDLink+"/)");
 		}
 		
 		if (plots) {

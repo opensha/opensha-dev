@@ -223,6 +223,9 @@ public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 				debug("running BBP for "+index);
 				wrapper.setDoHF(doHF);
 				wrapper.setDataOnly(true);
+				wrapper.setDoFAS(false);
+				wrapper.setDoRotD100(true);
+				wrapper.setDoRotD50(false);
 				wrapper.setBBPDataDir(bbpDataDir);
 				wrapper.run();
 				

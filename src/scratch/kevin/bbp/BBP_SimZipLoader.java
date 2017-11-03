@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
@@ -24,6 +25,7 @@ public class BBP_SimZipLoader {
 	
 	private enum FileType {
 		RotD50(".rd50"),
+		RotD100(".rd100"),
 		VEL_SEIS(".vel.bbp"),
 		ACC_SEIS(".acc.bbp"),
 		FAS(".fs.col");
@@ -61,7 +63,8 @@ public class BBP_SimZipLoader {
 		}
 		
 		public int getNumSims() {
-			return getEntriesTable().row(getEntriesTable().rowKeySet().iterator().next()).keySet().size();
+			BBP_Site firstSite = getEntriesTable().rowKeySet().iterator().next();
+			return getEntriesTable().row(firstSite).keySet().size();
 		}
 		
 		private String getDirName(int index, BBP_Site site) {
@@ -72,6 +75,14 @@ public class BBP_SimZipLoader {
 		
 		public DiscretizedFunc readRotD50(BBP_Site site, int index) throws IOException {
 			return readRotD50(site, getDirName(index, site));
+		}
+		
+		public DiscretizedFunc readRotD100(BBP_Site site, int index) throws IOException {
+			return readRotD100(site, getDirName(index, site));
+		}
+		
+		public DiscretizedFunc[] readRotD(BBP_Site site, int index) throws IOException {
+			return readRotD(site, getDirName(index, site));
 		}
 		
 		public DiscretizedFunc readFAS(BBP_Site site, int index) throws IOException {
@@ -103,7 +114,7 @@ public class BBP_SimZipLoader {
 		}
 		
 		public int getNumSims() {
-			return getEntriesTable().row(getEntriesTable().rowKeySet().iterator().next()).keySet().size();
+			return getEntriesTable().rowKeySet().size();
 		}
 		
 		private String getDirName(int index) {
@@ -112,6 +123,14 @@ public class BBP_SimZipLoader {
 		
 		public DiscretizedFunc readRotD50(int index) throws IOException {
 			return readRotD50(sites.get(index), getDirName(index));
+		}
+		
+		public DiscretizedFunc readRotD100(int index) throws IOException {
+			return readRotD100(sites.get(index), getDirName(index));
+		}
+		
+		public DiscretizedFunc[] readRotD(int index) throws IOException {
+			return readRotD(sites.get(index), getDirName(index));
 		}
 		
 		public DiscretizedFunc readFAS(int index) throws IOException {
@@ -139,6 +158,7 @@ public class BBP_SimZipLoader {
 	}
 	
 	private Table<BBP_Site, String, Map<FileType, ZipEntry>> entriesTable;
+	private HashSet<FileType> allTypes;
 	private ZipFile zip;
 	
 	public BBP_SimZipLoader(File file, List<BBP_Site> sites) throws ZipException, IOException {
@@ -148,6 +168,7 @@ public class BBP_SimZipLoader {
 	public BBP_SimZipLoader(ZipFile zip, List<BBP_Site> sites) {
 		this.zip = zip;
 		entriesTable = HashBasedTable.create();
+		allTypes = new HashSet<>();
 		
 		System.out.println("Mapping entries...");
 		int numFiles = 0;
@@ -161,7 +182,9 @@ public class BBP_SimZipLoader {
 				for (FileType type : FileType.values()) {
 					if (type.matches(name)) {
 						Preconditions.checkState(name.contains("/"));
-						String dirName = name.substring(0, name.indexOf("/"));
+						String dirName = name.substring(0, name.lastIndexOf("/"));
+						if (dirName.endsWith("/FAS"))
+							dirName = dirName.substring(0, dirName.lastIndexOf("/"));
 						Map<FileType, ZipEntry> fileMap = entriesTable.get(site, dirName);
 						if (fileMap == null) {
 							fileMap = new HashMap<>();
@@ -169,6 +192,7 @@ public class BBP_SimZipLoader {
 							numSims++;
 						}
 						fileMap.put(type, entry);
+						allTypes.add(type);
 						numFiles++;
 						break;
 					}
@@ -199,7 +223,7 @@ public class BBP_SimZipLoader {
 		Map<FileType, ZipEntry> fileMap = entriesTable.get(site, dirName);
 		Preconditions.checkNotNull(fileMap, "No files for dir %s, site %s", dirName, site.getName());
 		ZipEntry entry = fileMap.get(type);
-		Preconditions.checkNotNull("No file of type %s for dir %s, site %s", type.name(), dirName, site.getName());
+		Preconditions.checkNotNull(entry, "No file of type %s for dir %s, site %s", type.name(), dirName, site.getName());
 		return entry;
 	}
 	
@@ -215,8 +239,36 @@ public class BBP_SimZipLoader {
 	}
 	
 	public DiscretizedFunc readRotD50(BBP_Site site, String dirName) throws IOException {
-		ZipEntry entry = locate(site, dirName, FileType.RotD50);
+		ZipEntry entry;
+		try {
+			entry = locate(site, dirName, FileType.RotD50);
+		} catch (NullPointerException e) {
+			// RotD50 also stored in RotD100 files
+			entry = locate(site, dirName, FileType.RotD100);
+		}
 		return SpectraPlotter.loadRotD50(loadFileLines(entry));
+	}
+	
+	public DiscretizedFunc readRotD100(BBP_Site site, String dirName) throws IOException {
+		ZipEntry entry = locate(site, dirName, FileType.RotD100);
+		return SpectraPlotter.loadRotD100(loadFileLines(entry));
+	}
+	
+	public DiscretizedFunc[] readRotD(BBP_Site site, String dirName) throws IOException {
+		ZipEntry entry = locate(site, dirName, FileType.RotD100);
+		return SpectraPlotter.loadRotD(loadFileLines(entry));
+	}
+	
+	public boolean hasRotD50() {
+		return allTypes.contains(FileType.RotD50);
+	}
+	
+	public boolean hasRotD100() {
+		return allTypes.contains(FileType.RotD100);
+	}
+	
+	public boolean hasFAS() {
+		return allTypes.contains(FileType.FAS);
 	}
 	
 	public DiscretizedFunc readFAS(BBP_Site site, String dirName) throws IOException {
@@ -224,9 +276,17 @@ public class BBP_SimZipLoader {
 		return SpectraPlotter.loadRotD50(loadFileLines(entry));
 	}
 	
+	public boolean hasAccelSeis() {
+		return allTypes.contains(FileType.ACC_SEIS);
+	}
+	
 	public DiscretizedFunc[] readAccelSeis(BBP_Site site, String dirName) throws IOException {
 		ZipEntry entry = locate(site, dirName, FileType.ACC_SEIS);
 		return SeismogramPlotter.loadBBP_Seis(loadFileLines(entry));
+	}
+	
+	public boolean hasVelSeis() {
+		return allTypes.contains(FileType.VEL_SEIS);
 	}
 	
 	public DiscretizedFunc[] readVelSeis(BBP_Site site, String dirName) throws IOException {

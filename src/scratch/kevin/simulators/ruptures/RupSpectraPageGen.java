@@ -102,7 +102,8 @@ class RupSpectraPageGen {
 		if (refBBPDir != null) {
 			File zipFile = new File(refBBPDir, "results.zip");
 			refLoader = new BBP_RupGenSimZipLoader(zipFile, sites);
-			lines.add("**"+refName+" Simulations: "+refLoader.getNumSims()+"**");
+			lines.add("**"+refName+" Simulations: "+refLoader.getNumSims()+" per site**");
+			System.out.println("Found "+refLoader.getNumSims()+" sims in "+zipFile.getAbsolutePath());
 			lines.add("");
 		}
 		
@@ -241,33 +242,57 @@ class RupSpectraPageGen {
 				
 			}
 			
-			File rotD50File = SpectraPlotter.findRotD50File(eventBBPDir, site.getName());
-			if (rotD50File.exists()) {
-				UncertainArbDiscDataset[] gmpeSpectra = null;
-				if (spectraGMPEs != null && spectraGMPEs.length > 0) {
-					System.out.print("Calculating GMPEs...");
-					gmpeSpectra = new UncertainArbDiscDataset[spectraGMPEs.length];
-					for (int i=0; i<gmpeSpectra.length; i++)
-						gmpeSpectra[i] = SpectraPlotter.calcGMPE_RotD50(gmpeRup, site, vm, spectraGMPEs[i]);
-					System.out.println("DONE.");
-				}
-				
-				lines.add("#### "+siteName+" RotD50 Spectra");
+			boolean hasRD100;
+			File rotDFile;
+			try {
+				rotDFile = SpectraPlotter.findRotD100File(eventBBPDir, site.getName());
+				hasRD100 = true;
+			} catch (FileNotFoundException e) {
+				rotDFile = SpectraPlotter.findRotD50File(eventBBPDir, site.getName());
+				hasRD100 = false;
+			}
+			UncertainArbDiscDataset[] gmpeSpectra = null;
+			if (spectraGMPEs != null && spectraGMPEs.length > 0) {
+				System.out.print("Calculating GMPEs...");
+				gmpeSpectra = new UncertainArbDiscDataset[spectraGMPEs.length];
+				for (int i=0; i<gmpeSpectra.length; i++)
+					gmpeSpectra[i] = SpectraPlotter.calcGMPE_RotD50(gmpeRup, site, vm, spectraGMPEs[i]);
+				System.out.println("DONE.");
+			}
+			
+			lines.add("#### "+siteName+" RotD50 Spectra");
+			lines.add(topLink); lines.add("");
+			String title = "Event "+eventID+" "+siteName+" RotD50 Spectra";
+			String prefix = "rotd50_spectra_"+site.getName();
+			if (refLoader != null) {
+				List<DiscretizedFunc> refSpectra = new ArrayList<>();
+				int numSims = refLoader.getNumSims();
+				for (int i=0; i<numSims; i++)
+					refSpectra.add(refLoader.readRotD50(site, i));
+				DiscretizedFunc dataSpectra = SpectraPlotter.loadRotD50(rotDFile);
+				SpectraPlotter.plotMultiRotD50(refSpectra, refName, dataSpectra, "RSQSim", title,
+						resourcesDir, prefix, gmpeSpectra);
+			} else {
+				SpectraPlotter.plotRotD(rotDFile, resourcesDir, prefix, true, hasRD100, gmpeSpectra);
+			}
+			lines.add("!["+siteName+" RotD50 Plot]("+resourcesDir.getName()+"/"+prefix+".png)");
+			
+			if (hasRD100) {
+				lines.add("#### "+siteName+" RotD Ratio");
 				lines.add(topLink); lines.add("");
-				String title = "Event "+eventID+" "+siteName+" RotD50 Spectra";
-				String prefix = "rotd50_spectra_"+site.getName();
+				title = "Event "+eventID+" "+siteName+" RotD100/RotD50 Ratio";
+				prefix = "rotd_ratio_"+site.getName();
 				if (refLoader != null) {
-					List<DiscretizedFunc> refSpectra = new ArrayList<>();
+					List<DiscretizedFunc[]> refSpectra = new ArrayList<>();
 					int numSims = refLoader.getNumSims();
 					for (int i=0; i<numSims; i++)
-						refSpectra.add(refLoader.readRotD50(site, i));
-					DiscretizedFunc dataSpectra = SpectraPlotter.loadRotD50(rotD50File);
-					SpectraPlotter.plotMultiRotD50(refSpectra, refName, dataSpectra, "RSQSim", title,
-							resourcesDir, prefix, gmpeSpectra);
+						refSpectra.add(refLoader.readRotD(site, i));
+					DiscretizedFunc[] dataSpectra = SpectraPlotter.loadRotD(rotDFile);
+					SpectraPlotter.plotRotDRatio(dataSpectra, "RSQSim", refSpectra, refName, title, resourcesDir, prefix);
 				} else {
-					SpectraPlotter.plotRotD50(rotD50File, resourcesDir, prefix, gmpeSpectra);
+					SpectraPlotter.plotRotDRatio(rotDFile, "RSQSim", title, resourcesDir, prefix);
 				}
-				lines.add("!["+siteName+" RotD50 Plot]("+resourcesDir.getName()+"/"+prefix+".png)");
+				lines.add("!["+siteName+" RotD Ratio Plot]("+resourcesDir.getName()+"/"+prefix+".png)");
 			}
 			
 			File accelFile = SeismogramPlotter.findBBP_SeisFile(eventBBPDir, site.getName(), true);
@@ -320,6 +345,12 @@ class RupSpectraPageGen {
 				gmpeMapFiles = new File[periods.length];
 				ratioMapFiles = new File[periods.length];
 			}
+			File[] rd100MapFiles = null;
+			File[] rdRatioMapFiles = null;
+			if (shakemap.hasRotD100()) {
+				rd100MapFiles = new File[periods.length];
+				rdRatioMapFiles = new File[periods.length];
+			}
 			for (int i=0; i<periods.length; i++) {
 				double p = periods[i];
 				String name;
@@ -334,6 +365,10 @@ class RupSpectraPageGen {
 					ratioMapFiles[i] = new File(resourcesDir,
 							prefix+"_"+name+"_"+shakemapGMPE.getShortName()+"_ratio.png");
 				}
+				if (shakemap.hasRotD100()) {
+					rd100MapFiles[i] = new File(resourcesDir, prefix+"_"+name+"_rd100.png");
+					rdRatioMapFiles[i] = new File(resourcesDir, prefix+"_"+name+"_rd100_ratio.png");
+				}
 			}
 			
 			double[] plotPeriods = periods;
@@ -344,6 +379,8 @@ class RupSpectraPageGen {
 					boolean skip = mapFiles[i].exists();
 					if (shakemapGMPE != null)
 						skip = skip && gmpeMapFiles[i].exists() && ratioMapFiles[i].exists();
+					if (shakemap.hasRotD100())
+						skip = skip && rd100MapFiles[i].exists() && rdRatioMapFiles[i].exists();
 					if (!skip)
 						retainedPeriods.add(periods[i]);
 				}
@@ -377,6 +414,45 @@ class RupSpectraPageGen {
 			
 			lines.add("");
 			lines.addAll(table.build());
+			
+			if (shakemap.hasRotD100()) {
+				lines.add("### Region RotD100/RotD50 Ratio");
+				lines.add(topLink); lines.add("");
+				List<DiscretizedFunc[]> rds = new ArrayList<>();
+				for (int i=0; i<shakemap.getNumSims(); i++)
+					rds.add(shakemap.readRotD(i));
+				String title = "Event "+eventID+" ShakeMap RotD100/RotD50 Ratio";
+				prefix = "rotd_ratio_shakemap";
+				SpectraPlotter.plotRotDRatio(rds, "RSQSim", title, resourcesDir, prefix);
+				lines.add("![ShakeMap RotD Ratio Plot]("+resourcesDir.getName()+"/"+prefix+".png)");
+				List<Double> dists = new ArrayList<>();
+				for (BBP_Site shakeSite : shakemapSites) {
+					Location loc = shakeSite.getLoc();
+					if (CatalogGMPE_Compare.DIST_JB)
+						dists.add(gmpeSurf.getDistanceJB(loc));
+					else
+						dists.add(gmpeSurf.getDistanceRup(loc));
+				}
+				String distLabel = CatalogGMPE_Compare.DIST_JB ? "rJB (km)" : "rRup (km)";
+				prefix = "rotd_ratio_shakemap_dist_dependence";
+				SpectraPlotter.plotRotDRatioDependence(rds, dists, distLabel, 10, periods,
+						"RSQSim", title, resourcesDir, prefix, false);
+				lines.add("");
+				lines.add("![ShakeMap RotD Dist Dependence]("+resourcesDir.getName()+"/"+prefix+".png)");
+				
+				table = MarkdownUtils.tableBuilder();
+				table.addLine("SA Period", "RotD50", "RotD100", "RotD100/RotD50 Ratio");
+				for (int i=0; i<periods.length; i++) {
+					table.initNewLine().addColumn("**"+(float)periods[i]+" s**");
+					table.addColumn("![RotD50 Map]("+resourcesDir.getName()+"/"+mapFiles[i].getName()+")");
+					table.addColumn("![RotD100 Map]("+resourcesDir.getName()+"/"+rd100MapFiles[i].getName()+")");
+					table.addColumn("![RotD Ratio Map]("+resourcesDir.getName()+"/"+rdRatioMapFiles[i].getName()+")");
+					table.finalizeLine();
+				}
+				
+				lines.add("");
+				lines.addAll(table.build());
+			}
 		}
 		
 		// add TOC
@@ -415,8 +491,17 @@ class RupSpectraPageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2310.instance(baseDir);
 //		int eventID = 3802809;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2320.instance(baseDir);
-		int eventID = 6195527;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2320.instance(baseDir);
+//		int eventID = 6195527;
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2336.instance(baseDir);
+//		int eventID = 131670;
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2337.instance(baseDir);
+//		int eventID = 203769;
+		
+		RSQSimCatalog catalog = Catalogs.JG_2194_K2.instance(baseDir);
+		int eventID = 18840012;
 		
 		File eventBBPDir = new File(new File(catalog.getCatalogDir(), RSQSimBBP_Config.EVENT_SRF_DIR_NAME),
 				"event_"+eventID+"_"+RSQSimBBP_Config.SRF_DT+"s_"+RSQSimBBP_Config.SRF_INTERP_MODE.name()+"_bbp");
@@ -458,7 +543,16 @@ class RupSpectraPageGen {
 		if (refBBPDir != null)
 			sites = BBP_Site.readFile(refBBPDir);
 		
-		boolean runBBP = !eventBBPDir.exists();
+		boolean runBBP = true;
+		if (eventBBPDir.exists()) {
+			// look for RotD100 files
+			for (File file : eventBBPDir.listFiles()) {
+				if (file.getName().endsWith(".rd100")) {
+					runBBP = false;
+					break;
+				}
+			}
+		}
 		if (!runBBP) {
 			if (sites == null) {
 				sites = BBP_Site.readFile(eventBBPDir);

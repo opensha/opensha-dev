@@ -1,6 +1,7 @@
 package scratch.kevin.bbp;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,12 +11,19 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
+import org.jfree.ui.TextAnchor;
 import org.opensha.commons.calc.FractileCurveCalculator;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.AbstractXY_DataSet;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
@@ -25,6 +33,8 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -35,9 +45,11 @@ import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.util.component.ShahiBaker2014Trans;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
+import com.google.common.primitives.Doubles;
 
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.RSQSimCatalog;
@@ -91,24 +103,64 @@ public class SpectraPlotter {
 	
 	public static DiscretizedFunc loadRotD50(File file) throws IOException {
 		DiscretizedFunc[] ret = loadAll(file);
-		return new LightFixedXFunc(ret[ret.length-1]);
+		Preconditions.checkState(ret.length == 3 || ret.length == 4);
+		return new LightFixedXFunc(ret[2]);
 	}
 	
 	public static DiscretizedFunc loadRotD50(List<String> lines) {
 		DiscretizedFunc[] ret = loadAll(lines);
-		return new LightFixedXFunc(ret[ret.length-1]);
-	}
-
-	public static void plotRotD50(File file) throws IOException {
-		plotRotD50(file, null, null, null);
+		Preconditions.checkState(ret.length == 3 || ret.length == 4);
+		return new LightFixedXFunc(ret[2]);
 	}
 	
-	public static void plotRotD50(File file, File outputDir, String prefix, UncertainArbDiscDataset[] gmpes)
+	public static DiscretizedFunc loadRotD100(File file) throws IOException {
+		DiscretizedFunc[] ret = loadAll(file);
+		Preconditions.checkState(ret.length == 4);
+		return new LightFixedXFunc(ret[3]);
+	}
+	
+	public static DiscretizedFunc loadRotD100(List<String> lines) {
+		DiscretizedFunc[] ret = loadAll(lines);
+		Preconditions.checkState(ret.length == 4);
+		return new LightFixedXFunc(ret[3]);
+	}
+	
+	/**
+	 * 
+	 * @param file
+	 * @return array of [RotD50, RotD100]
+	 * @throws IOException
+	 */
+	public static DiscretizedFunc[] loadRotD(File file) throws IOException {
+		DiscretizedFunc[] ret = loadAll(file);
+		Preconditions.checkState(ret.length == 4);
+		return new DiscretizedFunc[] { new LightFixedXFunc(ret[2]), new LightFixedXFunc(ret[3]) };
+	}
+	
+	/**
+	 * 
+	 * @param lines
+	 * @return array of [RotD50, RotD100]
+	 */
+	public static DiscretizedFunc[] loadRotD(List<String> lines) {
+		DiscretizedFunc[] ret = loadAll(lines);
+		Preconditions.checkState(ret.length == 4);
+		return new DiscretizedFunc[] { new LightFixedXFunc(ret[2]), new LightFixedXFunc(ret[3]) };
+	}
+
+	public static void plotRotD(File file, boolean rd50, boolean rd100) throws IOException {
+		plotRotD(file, null, null, rd50, rd100, null);
+	}
+	
+	public static void plotRotD(File file, File outputDir, String prefix, boolean rd50, boolean rd100, UncertainArbDiscDataset[] gmpes)
 			throws IOException {
+		Preconditions.checkState(rd50 || rd100);
 		if (file.isDirectory()) {
 			for (File sub : file.listFiles()) {
-				if (sub.getName().endsWith(".rd50"))
-					plotRotD50(sub, outputDir, prefix, gmpes);
+				if (!rd100 && sub.getName().endsWith(".rd50"))
+					plotRotD(sub, outputDir, prefix, rd50, rd100, gmpes);
+				else if (sub.getName().endsWith(".rd100"))
+					plotRotD(sub, outputDir, prefix, rd50, rd100, gmpes);
 			}
 			return;
 		}
@@ -122,7 +174,7 @@ public class SpectraPlotter {
 			prefix = file.getName();
 		
 		plotSpectra(funcArray, file.getName(), "Period (s)", "PSA (g)", true, true, new Range(1e-3, 1e1),
-				outputDir, prefix, gmpes);
+				outputDir, prefix, gmpes, false, rd50, rd100);
 	}
 	
 	public static DiscretizedFunc loadFAS(List<String> lines) {
@@ -156,14 +208,16 @@ public class SpectraPlotter {
 			prefix = file.getName();
 		
 		plotSpectra(funcArray, file.getName(), "Frequency (hz)", "Fourier Amplitude (cm/s)",
-				true, true, null, outputDir, prefix, null);
+				true, true, null, outputDir, prefix, null, true, false, false);
 	}
 	
 	private static Color[] GMPE_COLORS = { Color.RED.brighter(), Color.YELLOW.brighter(),
 			Color.CYAN.brighter(), Color.MAGENTA.brighter() };
 	
 	private static void plotSpectra(DiscretizedFunc[] funcArray, String title, String xAxisLable, String yAxisLabel,
-			boolean xLog, boolean yLog, Range yRange, File outputDir, String prefix, UncertainArbDiscDataset[] gmpes) throws IOException {
+			boolean xLog, boolean yLog, Range yRange, File outputDir, String prefix, UncertainArbDiscDataset[] gmpes,
+			boolean fas, boolean rd50, boolean rd100) throws IOException {
+		Preconditions.checkState(fas || rd50 || rd100);
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
@@ -186,9 +240,13 @@ public class SpectraPlotter {
 		
 		for (int i=0; i<funcArray.length; i++) {
 			funcs.add(funcArray[i]);
-			if (i == funcArray.length -1) {
-				// RotD50
+			if (i == funcArray.length -1 && (fas || (rd50 && !rd100))
+					|| i == funcArray.length -2 && rd50 && rd100) {
+				// RotD50 or FAS
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+			} else if (i == funcArray.length -1 && rd100) {
+				// RotD100
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.BLACK));
 			} else {
 				chars.add(new PlotCurveCharacterstics(
 						individualCompLineTypes[i % individualCompLineTypes.length],1f, Color.GRAY));
@@ -292,6 +350,60 @@ public class SpectraPlotter {
 	private static void plotMultiSpectra(List<DiscretizedFunc> refSpectra, String refName, DiscretizedFunc dataSpectra,
 			String dataName, String title, File outputDir, String prefix, boolean rotD50, UncertainArbDiscDataset[] gmpes)
 					throws IOException {
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		populateRefRangeFuncs(refSpectra, refName, funcs, chars);
+		
+		if (gmpes != null) {
+			for (int i=0; i<gmpes.length; i++) {
+				Color color = GMPE_COLORS[i % GMPE_COLORS.length];
+				PlotCurveCharacterstics outsideChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, color);
+				PlotCurveCharacterstics meanChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, color);
+				
+				funcs.add(gmpes[i]);
+				chars.add(meanChar);
+				
+				funcs.add(gmpes[i].getUpper());
+				chars.add(outsideChar);
+				
+				funcs.add(gmpes[i].getLower());
+				chars.add(outsideChar);
+			}
+		}
+		
+		dataSpectra.setName(dataName);
+		funcs.add(dataSpectra);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		
+		String xAxisLabel, yAxisLabel;
+		if (rotD50) {
+			xAxisLabel = "Period (s)";
+			yAxisLabel =  "RotD50 (g)";
+		} else {
+			xAxisLabel = "Frequency (hz)";
+			yAxisLabel =  "Fourier Amplitude (cm/s)";
+		}
+		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
+		spec.setLegendVisible(true);
+		
+		HeadlessGraphPanel gp = buildGP();
+		
+		Range yRange;
+		if (rotD50)
+			yRange = new Range(1e-3, 1e1);
+		else
+			yRange = getYRange(funcs, true);
+		gp.drawGraphPanel(spec, true, true, getXRange(funcs, true), yRange);
+		
+		File file = new File(outputDir, prefix);
+		gp.getChartPanel().setSize(800, 800);
+		gp.saveAsPNG(file.getAbsolutePath()+".png");
+		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
+	}
+	
+	private static Range populateRefRangeFuncs(List<DiscretizedFunc> refSpectra, String refName,
+			List<XY_DataSet> funcs, List<PlotCurveCharacterstics> chars) {
 		XY_DataSetList refFuncs = new XY_DataSetList();
 		List<Double> relativeWts = new ArrayList<>();
 		for (DiscretizedFunc refFunc : refSpectra){
@@ -313,9 +425,6 @@ public class SpectraPlotter {
 		fractiles.add(new double[] { 0.16, 0.84 });
 		fractileColors.add(Color.GREEN.brighter());
 		
-		List<XY_DataSet> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
 		DiscretizedFunc refMean = (DiscretizedFunc) refFractCalc.getMeanCurve();
 		refMean.setName(refName+" Mean");
 		
@@ -331,6 +440,8 @@ public class SpectraPlotter {
 			funcs.add(rangeFunc);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, fractileColors.get(i)));
 			maxY = Math.max(maxY, upperFunc.getMaxY());
+//			System.out.println("Fractiles for "+rangeFunc.getName());
+//			System.out.println(rangeFunc);
 			for (Point2D pt : lowerFunc)
 				if (pt.getY() > 0)
 					minY = Math.min(minY, pt.getY());
@@ -339,56 +450,362 @@ public class SpectraPlotter {
 		funcs.add(refMean);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GRAY));
 		
-		if (gmpes != null) {
-			for (int i=0; i<gmpes.length; i++) {
-				Color color = GMPE_COLORS[i % GMPE_COLORS.length];
-				PlotCurveCharacterstics outsideChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, color);
-				PlotCurveCharacterstics meanChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, color);
-				
-				funcs.add(gmpes[i]);
-				chars.add(meanChar);
-				
-				funcs.add(gmpes[i].getUpper());
-				chars.add(outsideChar);
-				
-				funcs.add(gmpes[i].getLower());
-				chars.add(outsideChar);
+		return new Range(minY, maxY);
+	}
+	
+	private static Range rot_d_ratio_y_range = new Range(1d, 1.5d);
+	
+	public static void plotRotDRatio(File dataFile, String dataName,
+			String title, File outputDir, String prefix) throws IOException {
+		plotRotDRatio(loadRotD(dataFile), dataName, null, null, title, outputDir, prefix);
+	}
+	
+	public static void plotRotDRatio(DiscretizedFunc[] dataRD, String dataName,
+			String title, File outputDir, String prefix) throws IOException {
+		plotRotDRatio(dataRD, dataName, null, null, title, outputDir, prefix);
+	}
+	
+	public static void plotRotDRatio(List<DiscretizedFunc[]> refRDs, String refName, String title, File outputDir, String prefix)
+			throws IOException {
+		plotRotDRatio(null, null, refRDs, refName, title, outputDir, prefix);
+	}
+	
+	public static void plotRotDRatio(DiscretizedFunc[] dataRD, String dataName, List<DiscretizedFunc[]> refRDs, String refName,
+			String title, File outputDir, String prefix) throws IOException {
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		DiscretizedFunc refPeriods = null;
+		
+		if (refRDs != null && !refRDs.isEmpty()) {
+			System.out.println("Calculating ratios for "+refRDs.size()+" inputs");
+			List<DiscretizedFunc> refRatios = new ArrayList<>();
+			for (DiscretizedFunc[] refRD : refRDs)
+				refRatios.add(calcRotDRatio(refRD));
+			populateRefRangeFuncs(refRatios, refName, funcs, chars);
+			refPeriods = refRatios.get(0);
+		}
+		
+		if (dataRD != null) {
+			DiscretizedFunc dataRatio = calcRotDRatio(dataRD);
+			dataRatio.setName(dataName);
+			funcs.add(dataRatio);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+			refPeriods = dataRatio;
+		}
+		
+		// Shahi & Baker
+		ShahiBaker2014Trans shahi = new ShahiBaker2014Trans();
+		DiscretizedFunc shahiFunc = new ArbitrarilyDiscretizedFunc();
+		Preconditions.checkNotNull(refPeriods, "Must supply either single or range of data (or both)");
+		for (Point2D pt : refPeriods) {
+			double period = pt.getX();
+			if (period < shahi.getMinPeriod() || period > shahi.getMaxPeriod())
+				continue;
+			shahiFunc.set(period, shahi.getScalingFactor(period));
+		}
+		shahiFunc.setName(shahi.getName());
+		funcs.add(shahiFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.BLUE));
+		
+		String xAxisLabel = "Period (s)";
+		String yAxisLabel = "RotD100/RotD50 Ratio";
+		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
+		spec.setLegendVisible(true);
+		
+		HeadlessGraphPanel gp = buildGP();
+		gp.drawGraphPanel(spec, true, false, getXRange(funcs, true), rot_d_ratio_y_range);
+		
+		File file = new File(outputDir, prefix);
+		gp.getChartPanel().setSize(800, 500);
+		gp.saveAsPNG(file.getAbsolutePath()+".png");
+		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
+	}
+	
+	public static void plotRotDRatioDependence(List<DiscretizedFunc[]> rds, List<Double> scalars, String scalarLabel,
+			int numBins, double[] periods, String dataName, String title, File outputDir, String prefix, boolean logX)
+					throws IOException {
+		Preconditions.checkArgument(scalars == null || scalars.size() == rds.size());
+		
+		List<DiscretizedFunc> ratios = new ArrayList<>();
+		for (DiscretizedFunc[] rd : rds)
+			ratios.add(calcRotDRatio(rd));
+		
+		List<List<Double>> periodScalars = new ArrayList<>();
+		if (scalars == null) {
+			for (double period : periods) {
+				List<Double> myScalars = new ArrayList<>();
+				for (DiscretizedFunc[] rd : rds)
+					myScalars.add(rd[0].getInterpolatedY(period));
+				periodScalars.add(myScalars);
+			}
+		} else {
+			for (int p=0; p<periods.length; p++)
+				periodScalars.add(scalars);
+		}
+		
+		double minScalar = Double.POSITIVE_INFINITY;
+		double maxScalar = 0;
+		for (List<Double> myScalars : periodScalars) {
+			for (double scalar : myScalars) {
+				Preconditions.checkState(!logX || scalar > 0);
+				minScalar = Math.min(minScalar, scalar);
+				maxScalar = Math.max(maxScalar, scalar);
 			}
 		}
 		
-		for (Point2D pt : dataSpectra)
-			if (pt.getY() > 0)
-				minY = Math.min(minY, pt.getY());
-		dataSpectra.setName(dataName);
-		funcs.add(dataSpectra);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		String xAxisLabel, yAxisLabel;
-		if (rotD50) {
-			xAxisLabel = "Period (s)";
-			yAxisLabel =  "RotD50 (g)";
-		} else {
-			xAxisLabel = "Frequency (hz)";
-			yAxisLabel =  "Fourier Amplitude (cm/s)";
+		List<XY_DataSet> rangeFuncs = new ArrayList<>();
+		List<PlotCurveCharacterstics> rangeChars = new ArrayList<>();
+		
+		CPT periodCPT = new CPT(Doubles.min(periods), Doubles.max(periods), Color.DARK_GRAY, Color.RED.darker());
+		
+		int minBinCount = Integer.MAX_VALUE;
+		int maxBinCount = 0;
+		
+		for (int p=0; p<periods.length; p++) {
+			double period = periods[p];
+			EvenlyDiscretizedFunc xValsFunc;
+			if (logX)
+				xValsFunc = new EvenlyDiscretizedFunc(Math.log10(minScalar), Math.log10(maxScalar), numBins);
+			else
+				xValsFunc = new EvenlyDiscretizedFunc(minScalar, maxScalar, numBins);
+			ArbitrarilyDiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc upperFunc = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
+			List<List<Double>> vals = new ArrayList<>();
+			for (int i=0; i<numBins; i++)
+				vals.add(new ArrayList<>());
+			
+			List<Double> myScalars = periodScalars.get(p);
+			
+			for (int i=0; i<ratios.size(); i++) {
+				int binIndex;
+				if (logX)
+					binIndex = xValsFunc.getClosestXIndex(Math.log10(myScalars.get(i)));
+				else
+					binIndex = xValsFunc.getClosestXIndex(myScalars.get(i));
+				vals.get(binIndex).add(ratios.get(i).getInterpolatedY(period));
+			}
+			for (int i=0; i<numBins; i++) {
+				double[] binVals = Doubles.toArray(vals.get(i));
+				int count = binVals.length;
+				if (count < minBinCount)
+					minBinCount = count;
+				if (count > maxBinCount)
+					maxBinCount = count;
+				double mean, stdDev;
+				if (count > 0) {
+					mean = StatUtils.mean(binVals);
+					stdDev = Math.sqrt(StatUtils.variance(binVals));
+					double x;
+					if (logX)
+						x = Math.pow(10, xValsFunc.getX(i));
+					else
+						x = xValsFunc.getX(i);
+					meanFunc.set(x, mean);
+					lowerFunc.set(x, mean - stdDev);
+					upperFunc.set(x, mean + stdDev);
+				}
+			}
+			
+			UncertainArbDiscDataset rangeFunc = new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+			Color c = periodCPT.getColor((float)period);
+			
+			rangeFuncs.add(rangeFunc);
+			rangeChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
+					new Color(c.getRed(), c.getGreen(), c.getBlue(), 50)));
+			
+			meanFunc.setName((float)period+"s");
+			funcs.add(meanFunc);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, PlotSymbol.FILLED_CIRCLE, 3.5f, c));
 		}
+		
+		funcs.addAll(0, rangeFuncs);
+		chars.addAll(0, rangeChars);
+		
+		String xAxisLabel = scalarLabel;
+		String yAxisLabel = "RotD100/RotD50 Ratio";
 		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
 		spec.setLegendVisible(true);
 		
 		HeadlessGraphPanel gp = buildGP();
 		
-		minY = Math.pow(10, Math.floor(Math.log10(minY)));
-		maxY = Math.pow(10, Math.ceil(Math.log10(maxY)));
-		Range yRange;
-		if (rotD50)
-			yRange = new Range(1e-3, 1e1);
+		Range xRange;
+		if (logX)
+			xRange = getNiceLogRange(minScalar, maxScalar);
 		else
-			yRange = getYRange(funcs, true);
-		gp.drawGraphPanel(spec, true, true, getXRange(funcs, true), yRange);
+			xRange = new Range(minScalar, maxScalar);
+		
+		List<XYTextAnnotation> anns = new ArrayList<>();
+		double annY = rot_d_ratio_y_range.getUpperBound();
+		XYTextAnnotation countAnn = new XYTextAnnotation("  "+rds.size()+" Spectra", xRange.getLowerBound(), annY);
+		countAnn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
+		countAnn.setTextAnchor(TextAnchor.TOP_LEFT);
+		anns.add(countAnn);
+		XYTextAnnotation binsAnn = new XYTextAnnotation("["+minBinCount+" - "+maxBinCount+"] Per Bin  ", xRange.getUpperBound(), annY);
+		binsAnn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
+		binsAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+		anns.add(binsAnn);
+		spec.setPlotAnnotations(anns);
+		
+		gp.drawGraphPanel(spec, logX, false, xRange, rot_d_ratio_y_range);
 		
 		File file = new File(outputDir, prefix);
-		gp.getChartPanel().setSize(800, 800);
+		gp.getChartPanel().setSize(800, 500);
 		gp.saveAsPNG(file.getAbsolutePath()+".png");
 		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
+	}
+	
+	public static void plotRotDRatioVsRd50Scatter(List<DiscretizedFunc[]> rds, double period,
+			String dataName, String title, File outputDir, String prefix, int numMeanBins) throws IOException {
+		List<Double> scalars = new ArrayList<>();
+		for (DiscretizedFunc[] rd : rds)
+			scalars.add(rd[0].getInterpolatedY(period));
+		plotRotDRatioScatter(rds, scalars, (float)period+"s RotD50", period, dataName, title, outputDir, prefix, true, numMeanBins);
+	}
+	
+	public static void plotRotDRatioScatter(List<DiscretizedFunc[]> rds, List<Double> scalars, String scalarLabel,
+			double period, String dataName, String title, File outputDir, String prefix, boolean logX, int numMeanBins)
+					throws IOException {
+		Preconditions.checkArgument(scalars.size() == rds.size());
+		
+		List<DiscretizedFunc> ratios = new ArrayList<>();
+		for (DiscretizedFunc[] rd : rds)
+			ratios.add(calcRotDRatio(rd));
+		
+		double minScalar = Double.POSITIVE_INFINITY;
+		double maxScalar = 0;
+		for (double dist : scalars) {
+			minScalar = Math.min(minScalar, dist);
+			maxScalar = Math.max(maxScalar, dist);
+		}
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		DefaultXY_DataSet scatter = new DefaultXY_DataSet();
+		
+		for (int i=0; i<ratios.size(); i++)
+			scatter.set(scalars.get(i), ratios.get(i).getInterpolatedY(period));
+		
+		funcs.add(scatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
+		
+		// regression
+//		SimpleRegression regression = new SimpleRegression();
+//		for (Point2D pt : scatter) {
+//			if (logX)
+//				regression.addData(Math.log10(pt.getX()), pt.getY());
+//			else
+//				regression.addData(pt.getX(), pt.getY());
+//		}
+//		double b = regression.getIntercept();
+//		double m = regression.getSlope();
+//		DefaultXY_DataSet fit = new DefaultXY_DataSet();
+//		double[] regXs = { minScalar, maxScalar };
+//		for (double origX : regXs) {
+//			double x = origX;
+//			if (logX)
+//				x = Math.log10(origX);
+//			double y = m*x + b;
+//			fit.set(origX, y);
+//		}
+//		funcs.add(fit);
+//		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN.darker()));
+		
+		if (numMeanBins > 0) {
+			EvenlyDiscretizedFunc xVals;
+			if (logX) {
+				Preconditions.checkState(minScalar > 0);
+				xVals = new EvenlyDiscretizedFunc(Math.log10(minScalar), Math.log10(maxScalar), numMeanBins);
+			} else {
+				xVals = new EvenlyDiscretizedFunc(minScalar, maxScalar, numMeanBins);
+			}
+			List<List<Double>> valsList = new ArrayList<>();
+			for (int i=0; i<numMeanBins; i++)
+				valsList.add(new ArrayList<>());
+			for (Point2D pt : scatter) {
+				int binIndex;
+				if (logX)
+					binIndex = xVals.getClosestXIndex(Math.log10(pt.getX()));
+				else
+					binIndex = xVals.getClosestXIndex(pt.getX());
+				valsList.get(binIndex).add(pt.getY());
+			}
+			
+			ArbitrarilyDiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc upperFunc = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
+			
+			for (int i=0; i<numMeanBins; i++) {
+				double[] binVals = Doubles.toArray(valsList.get(i));
+				int count = binVals.length;
+				double mean, stdDev;
+				if (count > 0) {
+					mean = StatUtils.mean(binVals);
+					stdDev = Math.sqrt(StatUtils.variance(binVals));
+					double x;
+					if (logX)
+						x = Math.pow(10, xVals.getX(i));
+					else
+						x = xVals.getX(i);
+					meanFunc.set(x, mean);
+					lowerFunc.set(x, mean - stdDev);
+					upperFunc.set(x, mean + stdDev);
+				}
+			}
+			
+			UncertainArbDiscDataset rangeFunc = new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+			Color c = new Color(0, 200, 0);
+			
+			funcs.add(rangeFunc);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
+					new Color(c.getRed(), c.getGreen(), c.getBlue(), 50)));
+			
+			meanFunc.setName((float)period+"s");
+			funcs.add(meanFunc);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, PlotSymbol.FILLED_CIRCLE, 3.5f, c));
+		}
+		
+		String xAxisLabel = scalarLabel;
+		String yAxisLabel = (period)+"s RotD100/RotD50 Ratio";
+		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
+		spec.setLegendVisible(true);
+		
+		HeadlessGraphPanel gp = buildGP();
+		
+		Range xRange;
+		if (logX)
+			xRange = getNiceLogRange(minScalar, maxScalar);
+		else
+			xRange = new Range(minScalar, maxScalar);
+		
+		gp.drawGraphPanel(spec, logX, false, xRange, rot_d_ratio_y_range);
+		
+		File file = new File(outputDir, prefix);
+		gp.getChartPanel().setSize(800, 500);
+		gp.saveAsPNG(file.getAbsolutePath()+".png");
+//		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
+	}
+	
+	private static DiscretizedFunc calcRotDRatio(DiscretizedFunc[] spectra) {
+		Preconditions.checkState(spectra.length == 2);
+		ArbitrarilyDiscretizedFunc ret = new ArbitrarilyDiscretizedFunc();
+		
+		for (int i=0; i<spectra[0].size(); i++) {
+			double period = spectra[0].getX(i);
+			double rd50 = spectra[0].getY(i);
+			double rd100 = spectra[1].getY(i);
+			double ratio = rd100/rd50;
+//			System.out.println(period+"s: "+rd100+" / "+rd50+" = "+ratio);
+			Preconditions.checkState(Doubles.isFinite(ratio), "Bad ratio! p=%s, rd50=%s, rd100=%s, ratio=%s", period, rd50, rd100, ratio);
+			ret.set(period, ratio);
+		}
+		
+		return ret;
 	}
 	
 	private static HeadlessGraphPanel buildGP() {
@@ -408,6 +825,15 @@ public class SpectraPlotter {
 				return file;
 		}
 		throw new FileNotFoundException("No .rd50 files found for site "+siteName+" in "+dir.getAbsolutePath());
+	}
+	
+	public static File findRotD100File(File dir, String siteName) throws FileNotFoundException {
+		for (File file : dir.listFiles()) {
+			String name = file.getName();
+			if (name.endsWith(".rd100") && name.contains(siteName))
+				return file;
+		}
+		throw new FileNotFoundException("No .rd100 files found for site "+siteName+" in "+dir.getAbsolutePath());
 	}
 	
 	public static File findFASFile(File dir, String siteName) throws FileNotFoundException {
@@ -477,13 +903,16 @@ public class SpectraPlotter {
 	}
 
 	public static void main(String[] args) throws IOException {
+		plotRotDRatio(new File("/tmp/bbp_test1/774284145569850.SBSM.rd100"), "Test Data", "Test Ratio",
+				new File("/tmp/bbp_test1"), "rot_d_ratio");
+//		plotRotD(new File("/tmp/bbp_test1"), true, true);
 //		plotRotD50(new File("/home/kevin/bbp/bbp_data/outdata/6462338"));
 //		plotRotD50(new File("/home/kevin/bbp/bbp_data/outdata/6450680"));
 //		plotRotD50(new File("/data/kevin/simulators/catalogs/JG_UCERF3_millionElement/event_srfs/"
 //				+ "event_4099020_0.05s_ADJ_VEL_seis"));
 //		plotRotD50(new File("/data/kevin/simulators/catalogs/JG_UCERF3_millionElement/event_srfs/event_4099020_0.05s_ADJ_VEL_bbp"));
 //		plotFAS(new File("/data/kevin/simulators/catalogs/JG_UCERF3_millionElement/event_srfs/event_4099020_0.05s_ADJ_VEL_bbp"));
-//		System.exit(0);
+		System.exit(0);
 		
 //		ScalarIMR[] gmpes = null;
 		ScalarIMR[] gmpes = { AttenRelRef.ASK_2014.instance(null), AttenRelRef.BSSA_2014.instance(null),
@@ -530,7 +959,7 @@ public class SpectraPlotter {
 				}
 				System.out.println("DONE spectra");
 			}
-			plotRotD50(rsRD50File, null, null, gmpeSpectra);
+			plotRotD(rsRD50File, null, null, true, false, gmpeSpectra);
 			List<File> refRD50Files = new ArrayList<>();
 			File rsFASFile = findFASFile(rsDir, siteName);
 			plotFAS(rsFASFile);

@@ -1,5 +1,6 @@
 package scratch.kevin.bbp;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -40,7 +41,10 @@ public class ShakemapPlotter {
 	public static void plotShakemaps(BBP_ShakeMapSimZipLoader loader, GriddedRegion gridReg, List<BBP_Site> sites,
 			String label, File outputDir, String prefix, boolean log, ScalarIMR gmpe, EqkRupture rup, VelocityModel vm,
 			double... periods) throws IOException, GMT_MapException {
-		GriddedGeoDataSet[] xyzs = load(loader, gridReg, sites, periods);
+		GriddedGeoDataSet[] xyzs = load(loader, gridReg, sites, periods, false);
+		GriddedGeoDataSet[] rd100xyzs = null;
+		if (loader.hasRotD100())
+			rd100xyzs = load(loader, gridReg, sites, periods, true);
 		
 		GriddedGeoDataSet[] gmpes = null;
 		if (gmpe != null)
@@ -80,12 +84,14 @@ public class ShakemapPlotter {
 			map.setBlackBackground(false);
 			map.setJPGFileName(null);
 			map.setPDFFileName(null);
+			Double mapInterval = null;
 			if (log) {
 				double cptDelta = cpt.getMaxValue() - cpt.getMinValue();
 				if (cptDelta > 2)
-					map.setCPTCustomInterval(1d);
+					mapInterval = 1d;
 				else
-					map.setCPTCustomInterval(0.5);
+					mapInterval = 0.5;
+				map.setCPTCustomInterval(mapInterval);
 			}
 			
 			String pStr;
@@ -99,10 +105,44 @@ public class ShakemapPlotter {
 			
 			FaultBasedMapGen.plotMap(outputDir, myPrefix, false, map);
 			
+			if (rd100xyzs != null) {
+				map.setCustomLabel("Log10 "+label+" "+pStr+"s SA (RotD100)");
+				myPrefix = prefix+"_"+pStr+"s_rd100";
+				GriddedGeoDataSet origRD_XYZ = rd100xyzs[p];
+				if (log) {
+					origRD_XYZ = origRD_XYZ.copy();
+					rd100xyzs[p].log10();
+				}
+				map.setCPTCustomInterval(mapInterval);
+				map.setGriddedData(rd100xyzs[p]);
+				
+				FaultBasedMapGen.plotMap(outputDir, myPrefix, false, map);
+				
+//				0.375	255	255	255	0.625	255	255	127
+//				0.625	255	255	0	0.875	255	0	0
+//				0.875	255	0	0	1.00	127	0	0
+				CPT ratioCPT = new CPT(1d, 1.5, Color.WHITE, new Color(255, 255, 127),
+						new Color(255, 255, 0), Color.RED, new Color(127, 0, 0));
+				
+				GriddedGeoDataSet ratioXYZ = new GriddedGeoDataSet(gridReg, false);
+				for (int i=0; i<ratioXYZ.size(); i++)
+					ratioXYZ.set(i, origRD_XYZ.get(i)/origXYZ.get(i));
+				
+				map.setCustomLabel(label+" "+pStr+"s SA RotD100/RotD50 Ratio");
+				myPrefix = prefix+"_"+pStr+"s_rd100_ratio";
+				map.setCPTCustomInterval(0.1);
+				map.setGriddedData(ratioXYZ);
+				map.setCpt(ratioCPT);
+				
+				FaultBasedMapGen.plotMap(outputDir, myPrefix, false, map);
+			}
+			
 			if (gmpe != null) {
 				// plot GMPE
 				map.setGriddedData(gmpes[p]);
+				map.setCpt(cpt);
 				map.setCustomLabel("Log10 "+gmpe.getShortName()+" "+pStr+"s SA (RotD50)");
+				map.setCPTCustomInterval(mapInterval);
 				myPrefix = prefix+"_"+pStr+"s_"+gmpe.getShortName();
 				
 				FaultBasedMapGen.plotMap(outputDir, myPrefix, false, map);
@@ -125,7 +165,7 @@ public class ShakemapPlotter {
 	}
 	
 	private static GriddedGeoDataSet[] load(BBP_ShakeMapSimZipLoader loader, GriddedRegion gridReg,
-			List<BBP_Site> sites, double[] periods) throws IOException {
+			List<BBP_Site> sites, double[] periods, boolean rotD100) throws IOException {
 		Preconditions.checkState(gridReg.getNodeCount() == sites.size(), "Sites/gridded region mismatch!");
 		GriddedGeoDataSet[] ret = new GriddedGeoDataSet[periods.length];
 		for (int i=0; i<periods.length; i++)
@@ -133,10 +173,14 @@ public class ShakemapPlotter {
 		
 		System.out.println("Loading shakemaps for "+periods.length+" periods...");
 		for (int i=0; i<sites.size(); i++) {
-			DiscretizedFunc rd50 = loader.readRotD50(i);
+			DiscretizedFunc spectra;
+			if (rotD100)
+				spectra = loader.readRotD100(i);
+			else
+				spectra = loader.readRotD50(i);
 			
 			for (int p=0; p<periods.length; p++)
-				ret[p].set(i, rd50.getInterpolatedY(periods[p]));
+				ret[p].set(i, spectra.getInterpolatedY(periods[p]));
 		}
 		System.out.println("DONE");
 		

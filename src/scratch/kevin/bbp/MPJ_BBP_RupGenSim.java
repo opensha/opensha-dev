@@ -202,6 +202,9 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 				Preconditions.checkNotNull(srcFile, "No src file in %s", runDir.getAbsolutePath());
 				BBP_Wrapper wrapper = new BBP_Wrapper(vm, method, srcFile, null, null, mySitesFile, runDir);
 				wrapper.setDoHF(doHF);
+				wrapper.setDoFAS(true);
+				wrapper.setDoRotD100(true);
+				wrapper.setDoRotD50(false);
 				wrapper.setDataOnly(true);
 				if (individualSiteFiles != null) {
 					wrapper.setXMLFileName("inputs_"+siteName+".xml");
@@ -211,7 +214,6 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 				// run BBP
 				debug("running BBP for "+index);
 				wrapper.setDoHF(doHF);
-				wrapper.setDataOnly(true);
 				wrapper.setBBPDataDir(bbpDataDir);
 				wrapper.run();
 				

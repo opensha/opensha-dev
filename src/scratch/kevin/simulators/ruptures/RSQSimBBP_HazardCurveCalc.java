@@ -42,7 +42,7 @@ public class RSQSimBBP_HazardCurveCalc {
 		this.xVals = xVals;
 	}
 	
-	public DiscretizedFunc calc(BBP_Site site, double period, double curveDuration) throws IOException {
+	public DiscretizedFunc calc(BBP_Site site, double period, double curveDuration, boolean rupGen) throws IOException {
 		double rateEach = 1d/durationYears;
 		
 		// annual rate curve
@@ -50,11 +50,21 @@ public class RSQSimBBP_HazardCurveCalc {
 		for (int i=0; i<curve.size(); i++)
 			curve.set(i, 0d);
 		for (int eventID : zip.getEventIDs(site)) {
-			DiscretizedFunc spectra = zip.readRotD50(site, eventID);
-			double rd50 = spectra.getInterpolatedY(period);
-			for (int i=0; i<curve.size(); i++)
-				if (curve.getX(i) <= rd50)
-					curve.set(i, curve.getY(i)+rateEach);
+			DiscretizedFunc[] spectras;
+			double myRateEach;
+			if (rupGen) {
+				spectras = zip.readRupGenRotD50(site, eventID);
+				myRateEach = rateEach/spectras.length;
+			} else {
+				spectras = new DiscretizedFunc[] {zip.readRotD50(site, eventID)};
+				myRateEach = rateEach;
+			}
+			for (DiscretizedFunc spectra : spectras) {
+				double rd50 = spectra.getInterpolatedY(period);
+				for (int i=0; i<curve.size(); i++)
+					if (curve.getX(i) <= rd50)
+						curve.set(i, curve.getY(i)+myRateEach);
+			}
 		}
 		
 		// now probabilities

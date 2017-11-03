@@ -16,6 +16,7 @@ import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.FocalMechanism;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -97,6 +98,10 @@ public class RSQSimBBP_Config {
 		return new BBP_PlanarSurface(topCenter, length, width, mech);
 	}
 	
+	public static BBP_PlanarSurface planarEquivalentU3Surface(RSQSimCatalog catalog, RSQSimEvent event) {
+		return planarEquivalentU3Surface(catalog, event, MIN_SUB_SECT_FRACT, ADJ_WIDTH_MATCH_AREA);
+	}
+	
 	public static BBP_PlanarSurface planarEquivalentU3Surface(RSQSimCatalog catalog, RSQSimEvent event,
 			double minFractForInclusion, boolean adjWidthMatchArea) {
 		EqkRupture rup = catalog.getGMPE_Rupture(event, minFractForInclusion);
@@ -122,7 +127,7 @@ public class RSQSimBBP_Config {
 		
 		if (adjWidthMatchArea) {
 			double eventArea = event.getArea()*1e-6; // to km^2
-			width = eventArea/length;
+			width = Math.min(eventArea/length, MAX_ADJ_WIDTH);
 		}
 		
 		return new BBP_PlanarSurface(topCenter, length, width, mech);
@@ -136,22 +141,24 @@ public class RSQSimBBP_Config {
 		return angleDiff;
 	}
 	
-	public static BBP_SourceFile buildBBP_Source(SimulatorEvent event, RSQSimEventSlipTimeFunc func,
-			BBP_PlanarSurface surface, int seed) {
+	public static BBP_SourceFile buildBBP_Source(SimulatorEvent event, BBP_PlanarSurface surface, int seed) {
 		ArrayList<SimulatorElement> elems = event.getAllElements();
 		Preconditions.checkState(elems.size() > 0, "No elements for event %s", event.getID());
 		
 		Location hypo = null;
 		double earliestTime = Double.POSITIVE_INFINITY;
-		for (SimulatorElement elem : elems) {
-			double time = func.getTimeOfFirstSlip(elem.getID());
-			if (time < earliestTime) {
-				earliestTime = time;
-				hypo = elem.getCenterLocation();
+		for (EventRecord rec : event) {
+			List<SimulatorElement> patches = rec.getElements();
+			double[] patchTimes = rec.getElementTimeFirstSlips();
+			for (int i=0; i<patches.size(); i++) {
+				if (patchTimes[i] < earliestTime) {
+					earliestTime = patchTimes[i];
+					hypo = patches.get(i).getCenterLocation();
+				}
 			}
 		}
-		Preconditions.checkNotNull(hypo, "Couldn't detect hypocenter for event %s. Start %s, end %s",
-				event.getID(), func.getStartTime(), func.getEndTime());
+		Preconditions.checkNotNull(hypo, "Couldn't detect hypocenter for event %s.",
+				event.getID());
 		LocationVector hypoVector = LocationUtils.vector(surface.getTopCenter(), hypo);
 		double hypoAlongStrike = hypoVector.getHorzDistance();
 		if (hypoAlongStrike > surface.getLength())
@@ -206,6 +213,7 @@ public class RSQSimBBP_Config {
 	static final int DEFAULT_SEED = 12345;
 	static final double MIN_SUB_SECT_FRACT = 0.2;
 	static final boolean ADJ_WIDTH_MATCH_AREA = true;
+	static final double MAX_ADJ_WIDTH = 30;
 	static final boolean DO_HF = false;
 	
 	static final double MAX_DIST = 200d;
@@ -272,18 +280,14 @@ public class RSQSimBBP_Config {
 			throws IOException {
 		File srcFile = getEventSrcFile(catalog, event.getID());
 		
-		RSQSimEventSlipTimeFunc func = null;
-		
 		BBP_SourceFile bbpSource;
 		if (!srcFile.exists() || overwrite) {
-			func = catalog.getSlipTimeFunc(event);
-			
 			BBP_PlanarSurface surface;
 			if (U3_SURFACES)
 				surface = planarEquivalentU3Surface(catalog, event, MIN_SUB_SECT_FRACT, ADJ_WIDTH_MATCH_AREA);
 			else
 				surface = estimateBBP_PlanarSurface(event);
-			bbpSource = buildBBP_Source(event, func, surface, DEFAULT_SEED);
+			bbpSource = buildBBP_Source(event, surface, DEFAULT_SEED);
 			bbpSource.writeToFile(srcFile);
 		} else {
 			bbpSource = BBP_SourceFile.readFile(srcFile);
@@ -291,8 +295,7 @@ public class RSQSimBBP_Config {
 		
 		File srfFile = getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT);
 		if (!srfFile.exists() || overwrite) {
-			if (func == null)
-				func = catalog.getSlipTimeFunc(event);
+			RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
 			System.out.println("Generating SRF for dt="+(float)SRF_DT+", "+SRF_INTERP_MODE);
 			List<SRF_PointData> srf = RSQSimSRFGenerator.buildSRF(func, event.getAllElements(), SRF_DT, SRF_INTERP_MODE);
 			SRF_PointData.writeSRF(srfFile, srf, SRF_VERSION);

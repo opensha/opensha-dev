@@ -42,7 +42,8 @@ public class BBP_Wrapper implements Runnable {
 	
 	private int maxRetries = 5;
 	private boolean doHF = true;
-	private boolean doRotD50 = true;
+	private boolean doRotD50 = false;
+	private boolean doRotD100 = true;
 	private boolean doFAS = true;
 	private boolean dataOnly = false;
 	
@@ -122,6 +123,10 @@ public class BBP_Wrapper implements Runnable {
 		this.doRotD50 = doRotD50;
 	}
 
+	public void setDoRotD100(boolean doRotD100) {
+		this.doRotD100 = doRotD100;
+	}
+
 	public void setDoFAS(boolean doFAS) {
 		this.doFAS = doFAS;
 	}
@@ -145,7 +150,7 @@ public class BBP_Wrapper implements Runnable {
 			srcFile = writeSrcFileNewSeed(srcFile, seedOverride, outputDir);
 		
 		File bbpRunDir = doRun(outputDir, scriptFileName, xmlFileName, simID,
-				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doFAS, dataOnly, bbpDataDir);
+				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doRotD100, doFAS, dataOnly, bbpDataDir);
 		if (bbpRunDir == null)
 			return false;
 		
@@ -167,7 +172,8 @@ public class BBP_Wrapper implements Runnable {
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
 			File srcFile, File srfFile, File siteFile, VelocityModel vm, Method method,
-			boolean doHF, boolean doRotD50, boolean doFAS, boolean dataOnly, File bbpDataDir) throws IOException {
+			boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS, boolean dataOnly, File bbpDataDir)
+					throws IOException {
 		Preconditions.checkState(method == Method.GP, "Only GP supported currently");
 		List<BBP_Module> modules = new ArrayList<>();
 		if (srfFile == null)
@@ -215,6 +221,8 @@ public class BBP_Wrapper implements Runnable {
 		}
 		if (doRotD50)
 			modules.add(BBP_Module.buildRotD50(siteFile));
+		if (doRotD100)
+			modules.add(BBP_Module.buildRotD100(siteFile));
 		if (doFAS)
 			modules.add(BBP_Module.buildFAS(siteFile));
 		if (!dataOnly)
@@ -337,7 +345,7 @@ public class BBP_Wrapper implements Runnable {
 	
 	private static boolean isDataFile(File file) {
 		String name = file.getName();
-		return name.endsWith(".bbp") || name.endsWith(".rd50") || name.endsWith(".fs.col");
+		return name.endsWith(".bbp") || name.endsWith(".rd100") || name.endsWith(".rd50") || name.endsWith(".fs.col");
 	}
 	
 	private static List<String> streamToLines(InputStream stream) throws IOException {
