@@ -240,6 +240,7 @@ public abstract class AbstractPlot {
 		else return (float)mag+"";
 	}
 	
-	protected static DecimalFormat yearDF = new DecimalFormat("0.00");
+	protected static final DecimalFormat yearDF = new DecimalFormat("0.00");
+	protected static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
 
 }

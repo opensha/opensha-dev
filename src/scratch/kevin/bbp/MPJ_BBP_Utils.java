@@ -12,6 +12,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.compress.archivers.zip.ZipFile;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.FileUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
@@ -69,7 +70,20 @@ public class MPJ_BBP_Utils {
 						outRD.closeArchiveEntry();
 					}
 					
-					ZipFile sub = new ZipFile(subZipFile);
+					ZipFile sub;
+					try {
+						sub = new ZipFile(subZipFile);
+					} catch (Exception e1) {
+						debug("Error with "+subZipFile.getAbsolutePath()+": "+e1.getMessage());
+						File subDir = new File(subZipFile.getParentFile(), simDirName);
+						if (subDir.exists()) {
+							debug("Re-zipping "+simDirName+" from directory");
+							FileUtils.createZipFile(subZipFile, subDir, true);
+							FileUtils.deleteRecursive(subDir);
+							sub = new ZipFile(subZipFile);
+						}
+						throw ExceptionUtils.asRuntimeException(e1);
+					}
 					Enumeration<? extends ZipArchiveEntry> entries = sub.getEntries();
 					while (entries.hasMoreElements()) {
 						ZipArchiveEntry e = entries.nextElement();

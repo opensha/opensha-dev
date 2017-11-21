@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -98,6 +99,22 @@ public class RSQSimCatalog implements XMLSaveable {
 		JG_2194_K2("rundir2194_K2", "JG 2194 K2", "Jacqui Gilchrist", cal(2017, 10, 16),
 				"Keith's fault geometry, normal backslip with U3 geologic long-term slip rates,"
 				+ " and the same parameter values as Bruce's 2194",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_tuneBase1m("tuneBase1m", "JG Tune Base 1M", "Jacqui Gilchrist", cal(2017, 11, 2),
+				"U3 fault geometry with 1km^2 triangles, normal backslip loading with U3 geologic slip rates,"
+				+ "calibrated to U3 supraseismogenic recurrence intervals, and default a/b",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_modLoad_testB("modLoad_testB", "JG Mod Load Test B", "Jacqui Gilchrist", cal(2017, 11, 14),
+				"Bruce's modified loading with higher values of frictional parameters",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_baseCatalog2("baseCatalog2", "JG Base Catalog 2", "Jacqui Gilchrist", cal(2017, 11, 16),
+				"Untuned version of tuneBase1m. Same fault model and frictional parameters, without any stress adjustments",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_tuneBaseSW_1e5("tuneBaseSW_1e5", "JG Tune Base SW", "Jacqui Gilchrist", cal(2017, 11, 20),
+				"Tuned, additional slip weakening parameters using Keith's fault geometry. muSlipAmp = 0.2, muSlipInvDist_1 = 2.0, cohesion = 6.",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_baseCatalogSW_10("baseCatalogSW_10", "JG Base SW", "Jacqui Gilchrist", cal(2017, 11, 20),
+				"Untuned, additional slip weakening parameters using Keith's fault geometry. muSlipAmp = 0.2, muSlipInvDist_1 = 2.0, cohesion = 6.",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -421,7 +438,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			String name = file.getName().toLowerCase();
 			if (name.endsWith(".flt"))
 				return file;
-			if (name.startsWith("zfault") && name.endsWith(".in") && !name.contains("Deepen_"))
+			if (name.startsWith("zfault") && name.endsWith(".in") && !name.contains("deepen_"))
 				return file;
 		}
 		throw new FileNotFoundException("No geometry file found in "+dir.getAbsolutePath());
@@ -795,6 +812,16 @@ public class RSQSimCatalog implements XMLSaveable {
 		MarkdownUtils.writeReadmeAndHTML(lines, dir);
 	}
 	
+	private static class CatEnumDateComparator implements Comparator<Catalogs> {
+
+		@Override
+		public int compare(Catalogs o1, Catalogs o2) {
+			// reverse sorted, newest first
+			return o2.catalog.getDate().compareTo(o1.catalog.getDate());
+		}
+		
+	}
+	
 	public static void main(String args[]) throws IOException, DocumentException {
 		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
@@ -803,8 +830,14 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		for (Catalogs cat : Catalogs.values()) {
+		Catalogs[] cats = Catalogs.values();
+		Arrays.sort(cats, new CatEnumDateComparator());
+		GregorianCalendar minDate = cal(2000, 1, 1);
+		
+		for (Catalogs cat : cats) {
 //		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2310 }) {
+			if (cat.catalog.getDate().before(minDate))
+				continue;
 			RSQSimCatalog catalog = cat.instance(baseDir);
 			System.out.print(catalog.getName()+" ? ");
 			File catGitDir = new File(gitDir, catalog.getCatalogDir().getName());
@@ -822,5 +855,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		writeCatalogsIndex(gitDir);
 	}
+	
+	
 
 }

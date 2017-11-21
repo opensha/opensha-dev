@@ -1,4 +1,4 @@
-package scratch.kevin.simulators.ruptures;
+package scratch.kevin.simCompare;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -26,7 +26,7 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 
 import com.google.common.collect.Lists;
 
-class GroundMotionScatterPlot {
+public class GroundMotionScatterPlot {
 	
 	public static int PLOT_WIDTH = 900;
 	public static boolean WRITE_PDF = true;;

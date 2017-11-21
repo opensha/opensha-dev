@@ -52,6 +52,7 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
 
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
@@ -481,13 +482,15 @@ public class SpectraPlotter {
 			System.out.println("Calculating ratios for "+refRDs.size()+" inputs");
 			List<DiscretizedFunc> refRatios = new ArrayList<>();
 			for (DiscretizedFunc[] refRD : refRDs)
-				refRatios.add(calcRotDRatio(refRD));
+				refRatios.add(SimulationRotDProvider.calcRotDRatio(refRD));
+			System.out.println("Done calculating ratios, populating range funcs");
 			populateRefRangeFuncs(refRatios, refName, funcs, chars);
+			System.out.println("Done populating range funcs");
 			refPeriods = refRatios.get(0);
 		}
 		
 		if (dataRD != null) {
-			DiscretizedFunc dataRatio = calcRotDRatio(dataRD);
+			DiscretizedFunc dataRatio = SimulationRotDProvider.calcRotDRatio(dataRD);
 			dataRatio.setName(dataName);
 			funcs.add(dataRatio);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
@@ -525,24 +528,23 @@ public class SpectraPlotter {
 	public static void plotRotDRatioDependence(List<DiscretizedFunc[]> rds, List<Double> scalars, String scalarLabel,
 			int numBins, double[] periods, String dataName, String title, File outputDir, String prefix, boolean logX)
 					throws IOException {
-		Preconditions.checkArgument(scalars == null || scalars.size() == rds.size());
+		List<List<Double>> periodScalars = new ArrayList<>();
+		for (int p=0; p<periods.length; p++)
+			periodScalars.add(scalars);
+		plotRotDRatioPeriodDependence(rds, periodScalars, scalarLabel, numBins, periods, dataName, title, outputDir, prefix, logX);
+	}
+	
+	public static void plotRotDRatioPeriodDependence(List<DiscretizedFunc[]> rds, List<List<Double>> periodScalars, String scalarLabel,
+			int numBins, double[] periods, String dataName, String title, File outputDir, String prefix, boolean logX)
+					throws IOException {
+		Preconditions.checkArgument(periodScalars.size() == periods.length,
+				"Have %s periods but %s lists", periods.length, periodScalars.size());
+		Preconditions.checkArgument(periodScalars.get(0).size() == rds.size(),
+				"Each list should be %s long (first is %s)", rds.size(), periodScalars.get(0).size());
 		
 		List<DiscretizedFunc> ratios = new ArrayList<>();
 		for (DiscretizedFunc[] rd : rds)
-			ratios.add(calcRotDRatio(rd));
-		
-		List<List<Double>> periodScalars = new ArrayList<>();
-		if (scalars == null) {
-			for (double period : periods) {
-				List<Double> myScalars = new ArrayList<>();
-				for (DiscretizedFunc[] rd : rds)
-					myScalars.add(rd[0].getInterpolatedY(period));
-				periodScalars.add(myScalars);
-			}
-		} else {
-			for (int p=0; p<periods.length; p++)
-				periodScalars.add(scalars);
-		}
+			ratios.add(SimulationRotDProvider.calcRotDRatio(rd));
 		
 		double minScalar = Double.POSITIVE_INFINITY;
 		double maxScalar = 0;
@@ -674,7 +676,7 @@ public class SpectraPlotter {
 		
 		List<DiscretizedFunc> ratios = new ArrayList<>();
 		for (DiscretizedFunc[] rd : rds)
-			ratios.add(calcRotDRatio(rd));
+			ratios.add(SimulationRotDProvider.calcRotDRatio(rd));
 		
 		double minScalar = Double.POSITIVE_INFINITY;
 		double maxScalar = 0;
@@ -720,6 +722,7 @@ public class SpectraPlotter {
 			EvenlyDiscretizedFunc xVals;
 			if (logX) {
 				Preconditions.checkState(minScalar > 0);
+				// TODO this puts a bin center on the edges of the data, fix
 				xVals = new EvenlyDiscretizedFunc(Math.log10(minScalar), Math.log10(maxScalar), numMeanBins);
 			} else {
 				xVals = new EvenlyDiscretizedFunc(minScalar, maxScalar, numMeanBins);
@@ -789,23 +792,6 @@ public class SpectraPlotter {
 		gp.getChartPanel().setSize(800, 500);
 		gp.saveAsPNG(file.getAbsolutePath()+".png");
 //		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
-	}
-	
-	private static DiscretizedFunc calcRotDRatio(DiscretizedFunc[] spectra) {
-		Preconditions.checkState(spectra.length == 2);
-		ArbitrarilyDiscretizedFunc ret = new ArbitrarilyDiscretizedFunc();
-		
-		for (int i=0; i<spectra[0].size(); i++) {
-			double period = spectra[0].getX(i);
-			double rd50 = spectra[0].getY(i);
-			double rd100 = spectra[1].getY(i);
-			double ratio = rd100/rd50;
-//			System.out.println(period+"s: "+rd100+" / "+rd50+" = "+ratio);
-			Preconditions.checkState(Doubles.isFinite(ratio), "Bad ratio! p=%s, rd50=%s, rd100=%s, ratio=%s", period, rd50, rd100, ratio);
-			ret.set(period, ratio);
-		}
-		
-		return ret;
 	}
 	
 	private static HeadlessGraphPanel buildGP() {

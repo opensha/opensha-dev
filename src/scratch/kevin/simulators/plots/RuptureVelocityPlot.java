@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -27,6 +28,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -44,12 +46,13 @@ public class RuptureVelocityPlot extends AbstractPlot {
 	
 	private Map<Integer, SimulatorElement> elemsMap;
 	private double minMag;
+	private List<Range> subMagRanges;
 	
 	private EvenlyDiscretizedFunc distFunc;
-	private HistogramFunction[] distBins;
-	private double[] binnedAverages;
-	private double[] binnedMins;
-	private double[] binnedMaxs;
+	private HistogramFunction[][] distBins;
+	private double[][] binnedAverages;
+	private double[][] binnedMins;
+	private double[][] binnedMaxs;
 	
 	private XY_DataSet magVelFunc;
 	private XY_DataSet distVelFunc;
@@ -66,35 +69,54 @@ public class RuptureVelocityPlot extends AbstractPlot {
 	}
 	
 	public RuptureVelocityPlot(Map<Integer, SimulatorElement> elemsMap, double minMag) {
-		this(elemsMap, minMag, 200d, 20d, 0, 6, 0.5);
+		this(elemsMap, 200d, 20d, 0, 6, 0.5, minMag);
 	}
 	
-	public RuptureVelocityPlot(Map<Integer, SimulatorElement> elemsMap, double minMag,
-			double maxDist, double deltaDist, double minVelocity, double maxVelocity, double deltaVelocity) {
+	public RuptureVelocityPlot(Map<Integer, SimulatorElement> elemsMap, double maxDist, double deltaDist,
+			double minVelocity, double maxVelocity, double deltaVelocity, double minMag) {
 		this.elemsMap = elemsMap;
 		this.minMag = minMag;
+		
+		subMagRanges = new ArrayList<>();
+		subMagRanges.add(new Range(minMag, 10d));
+		double lowerMag = Math.floor(minMag*2)/2;
+		double deltaMag = 0.5;
+		while ((float)lowerMag < (float)8.5) {
+			subMagRanges.add(new Range(lowerMag, lowerMag + deltaMag));
+			lowerMag += deltaMag;
+		}
+		// this makes the max bin unbounded
+		if (subMagRanges.size() > 2) {
+			int maxIndex = subMagRanges.size()-1;
+			Range maxRange = subMagRanges.get(maxIndex);
+			subMagRanges.set(maxIndex, new Range(maxRange.getLowerBound(), 10d));
+		}
 		
 		CacheBuilder<Object, Object> build = CacheBuilder.newBuilder();
 		build.concurrencyLevel(Integer.max(4, Runtime.getRuntime().availableProcessors()));
 		elemDistCache = build.build(new Loader());
 		
 		distFunc = HistogramFunction.getEncompassingHistogram(0d, maxDist, deltaDist);
-		distBins = new HistogramFunction[distFunc.size()];
-		for (int i=0; i<distBins.length; i++)
-			distBins[i] = HistogramFunction.getEncompassingHistogram(minVelocity, maxVelocity, deltaVelocity);
-		binnedAverages = new double[distBins.length];
-		binnedMins = new double[distBins.length];
-		for (int i=0; i<binnedMins.length; i++)
-			binnedMins[i] = Double.POSITIVE_INFINITY;
-		binnedMaxs = new double[distBins.length];
-		
+		distBins = new HistogramFunction[subMagRanges.size()][distFunc.size()];
+		binnedAverages = new double[subMagRanges.size()][distFunc.size()];
+		binnedMins = new double[subMagRanges.size()][distFunc.size()];
+		binnedMaxs = new double[subMagRanges.size()][distFunc.size()];
+		for (int m=0; m<subMagRanges.size(); m++) {
+			for (int i=0; i<distBins[m].length; i++)
+				distBins[m][i] = HistogramFunction.getEncompassingHistogram(minVelocity, maxVelocity, deltaVelocity);
+			for (int i=0; i<binnedMins[m].length; i++)
+				binnedMins[m][i] = Double.POSITIVE_INFINITY;
+		}
+
 		magVelFunc = new DefaultXY_DataSet();
+		// single event scatter
 		distVelFunc = new DefaultXY_DataSet();
 	}
 
 	@Override
 	protected void doProcessEvent(SimulatorEvent e) {
-		if (e.getMagnitude() < minMag)
+		double mag = e.getMagnitude();
+		if (mag < minMag)
 			return;
 		double minTime = Double.POSITIVE_INFINITY;
 		int hypoID = -1;
@@ -136,11 +158,15 @@ public class RuptureVelocityPlot extends AbstractPlot {
 						Preconditions.checkState(Double.isFinite(vel) && vel > 0,
 								"Bad velocity! vel = %s / %s = %s", dist, tDelta, vel);
 						int distBin = distFunc.getClosestXIndex(dist);
-						int velBin = distBins[distBin].getClosestXIndex(vel);
-						distBins[distBin].add(velBin, 1d);
-						binnedAverages[distBin] += vel;
-						binnedMins[distBin] = Math.min(binnedMins[distBin], vel);
-						binnedMaxs[distBin] = Math.max(binnedMaxs[distBin], vel);
+						for (int m=0; m<subMagRanges.size(); m++) {
+							if (subMagRanges.get(m).contains(mag)) {
+								int velBin = distBins[m][distBin].getClosestXIndex(vel);
+								distBins[m][distBin].add(velBin, 1d);
+								binnedAverages[m][distBin] += vel;
+								binnedMins[m][distBin] = Math.min(binnedMins[m][distBin], vel);
+								binnedMaxs[m][distBin] = Math.max(binnedMaxs[m][distBin], vel);
+							}
+						}
 						aveVel += vel;
 						num++;
 						if (distVelFunc != null)
@@ -154,7 +180,7 @@ public class RuptureVelocityPlot extends AbstractPlot {
 		
 		if (num > 0)
 			aveVel /= num;
-		magVelFunc.set(e.getMagnitude(), aveVel);
+		magVelFunc.set(mag, aveVel);
 	}
 
 	@Override
@@ -247,35 +273,42 @@ public class RuptureVelocityPlot extends AbstractPlot {
 	
 	private void plotDistScaling() throws IOException {
 		double totalMean = 0d;
-		ArbitrarilyDiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+//		ArbitrarilyDiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
 //		ArbitrarilyDiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
 //		ArbitrarilyDiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();
 		ArbitrarilyDiscretizedFunc minusSigmaFunc = new ArbitrarilyDiscretizedFunc();
 		ArbitrarilyDiscretizedFunc plusSigmaFunc = new ArbitrarilyDiscretizedFunc();
-		for (int i=0; i<distBins.length; i++) {
-			double numInBin = distBins[i].calcSumOfY_Vals();
-			if (numInBin == 0)
-				continue;
-			totalMean += binnedAverages[i]/numInBin;
-			binnedAverages[i]/=numInBin;
-			double stdDev = 0;
-			stdDev = distBins[i].computeStdDev();
-			
-			double x = distFunc.getX(i);
-			meanFunc.set(x, binnedAverages[i]);
-//			minFunc.set(x, binnedMins[i]);
-//			maxFunc.set(x, binnedMaxs[i]);
-			minusSigmaFunc.set(x, binnedAverages[i] - stdDev);
-			plusSigmaFunc.set(x, binnedAverages[i] + stdDev);
-			
-//			System.out.println(x+" "+binnedAverages[i]+" "+stdDev);
+		
+		List<ArbitrarilyDiscretizedFunc> subMagFuncs = new ArrayList<>();
+		for (int m=0; m<subMagRanges.size(); m++) {
+			ArbitrarilyDiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+			subMagFuncs.add(meanFunc);
+			for (int i=0; i<distFunc.size(); i++) {
+				double numInBin = distBins[m][i].calcSumOfY_Vals();
+//				System.out.println("Mag "+m+" ("+subMagRanges.get(m).getLowerBound()+" "
+//						+subMagRanges.get(m).getUpperBound()+"), dist "+i+" has "+numInBin);
+				if (numInBin == 0)
+					continue;
+				totalMean += binnedAverages[m][i]/numInBin;
+				binnedAverages[m][i]/=numInBin;
+				
+				double x = distFunc.getX(i);
+				meanFunc.set(x, binnedAverages[m][i]);
+				if (m == 0) {
+					double stdDev = 0;
+					stdDev = distBins[m][i].computeStdDev();
+					minusSigmaFunc.set(x, binnedAverages[m][i] - stdDev);
+					plusSigmaFunc.set(x, binnedAverages[m][i] + stdDev);
+				}
+				
+//				System.out.println(x+" "+binnedAverages[i]+" "+stdDev);
+			}
 		}
 		
-		double maxY = Math.min(plot_max_vel, plusSigmaFunc.getMaxY()*1.2);
+		double maxY = Math.min(plot_max_vel, plusSigmaFunc.getMaxY()*1.4);
 //		double maxY = Math.min(plot_max_vel, maxFunc.getMaxY()*1.2);
 		
-		UncertainArbDiscDataset stdDevData = new UncertainArbDiscDataset(meanFunc, minusSigmaFunc, plusSigmaFunc);
-//		UncertainArbDiscDataset minMaxData = new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
+		UncertainArbDiscDataset stdDevData = new UncertainArbDiscDataset(subMagFuncs.get(0), minusSigmaFunc, plusSigmaFunc);
 		
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -288,9 +321,27 @@ public class RuptureVelocityPlot extends AbstractPlot {
 		funcs.add(stdDevData);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(0, 255, 0, 100)));
 		
-		meanFunc.setName("Mean");
-		funcs.add(meanFunc);
+		subMagFuncs.get(0).setName("Mean");
+		funcs.add(subMagFuncs.get(0));
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		
+		double maxMin = minMag;
+		for (Range range : subMagRanges)
+			maxMin = Math.max(range.getLowerBound(), maxMin);
+		CPT subCPT = new CPT(minMag, maxMin, Color.LIGHT_GRAY, Color.DARK_GRAY);
+		for (int m=1; m<subMagRanges.size() && distVelFunc == null; m++) {
+			Range range = subMagRanges.get(m);
+			Color c = subCPT.getColor((float)range.getLowerBound());
+			ArbitrarilyDiscretizedFunc func = subMagFuncs.get(m);
+			if (func.calcSumOfY_Vals() == 0d)
+				continue;
+			if (range.getUpperBound() > 9)
+				func.setName("M"+optionalDigitDF.format(range.getLowerBound())+"+");
+			else
+				func.setName("M"+optionalDigitDF.format(range.getLowerBound())+"-"+optionalDigitDF.format(range.getUpperBound()));
+			funcs.add(func);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, c));
+		}
 		
 		String title = "Rupture Velocity vs Distance";
 		String xAxisLabel = "Hypocentral Distance (km)";
@@ -300,6 +351,7 @@ public class RuptureVelocityPlot extends AbstractPlot {
 		plot.setLegendVisible(true);
 		
 		HeadlessGraphPanel gp = getGraphPanel();
+		gp.setLegendFontSize(20);
 		gp.drawGraphPanel(plot, false, false, null, new Range(0, maxY));
 		gp.getChartPanel().setSize(getPlotWidth(), (int)(getPlotHeight()*0.6));
 		File outputDir = getOutputDir();
