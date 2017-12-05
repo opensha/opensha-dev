@@ -81,8 +81,9 @@ public class MPJ_BBP_Utils {
 							FileUtils.createZipFile(subZipFile, subDir, true);
 							FileUtils.deleteRecursive(subDir);
 							sub = new ZipFile(subZipFile);
+						} else {
+							throw e1;
 						}
-						throw ExceptionUtils.asRuntimeException(e1);
 					}
 					Enumeration<? extends ZipArchiveEntry> entries = sub.getEntries();
 					while (entries.hasMoreElements()) {

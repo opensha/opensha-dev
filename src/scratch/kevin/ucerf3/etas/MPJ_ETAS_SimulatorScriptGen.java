@@ -36,20 +36,28 @@ public class MPJ_ETAS_SimulatorScriptGen {
 		File localDir = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations");
 		
 		boolean stampede = false;
+		boolean hpcSkipRoot = false;
 //		int threads = 2;
 //		String queue = null;
 //		String pbsNameAdd = null;
 		boolean largeSCEC = false;
 		int threads;
 		String pbsNameAdd;
-		if (largeSCEC) {
-			threads = 20;
-			pbsNameAdd = "-scec-large";
+		String queue;
+		if (stampede) {
+			queue = "normal";
+			pbsNameAdd = "-stampede";
+			threads = 10;
 		} else {
-			threads = 8;
-			pbsNameAdd = "-scec";
+			queue = "scec";
+			if (largeSCEC) {
+				threads = 20;
+				pbsNameAdd = "-scec-large";
+			} else {
+				threads = 8;
+				pbsNameAdd = "-scec";
+			}
 		}
-		String queue = "scec";
 		boolean smallTest = false;
 		
 		boolean writeConsolidate = true;
@@ -60,10 +68,10 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int hours = 24;
 //		int nodes = 50;
 		
-//		double duration = 1000;
-//		int numSims = 500;
-//		int hours = 24;
-//		int nodes = 34;
+		double duration = 1000;
+		int numSims = 500;
+		int hours = 24;
+		int nodes = 34;
 		
 //		double duration = 30;
 //		int numSims = 5000;
@@ -83,19 +91,19 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int nodes = 10;
 		
 		// for scenarios
-		double duration = 10; // SIM duration!!
-//		int numSims = 25000;
+//		double duration = 10; // SIM duration!!
+////		int numSims = 25000;
+////		int hours = 24;
+////		int nodes = 60;
+//		int numSims = 200000;
 //		int hours = 24;
-//		int nodes = 60;
-		int numSims = 200000;
-		int hours = 24;
-		int nodes = 34;
-		if (largeSCEC && !stampede)
-			nodes = 4;
-//		int numSims = 1000;
-//		int hours = 2;
-////		int nodes = 100;
-//		int nodes = 5;
+//		int nodes = 34;
+//		if (largeSCEC && !stampede)
+//			nodes = 4;
+////		int numSims = 1000;
+////		int hours = 2;
+//////		int nodes = 100;
+////		int nodes = 5;
 		
 //		Scenarios scenario = Scenarios.LA_HABRA;
 //		Scenarios[] scenarios = Scenarios.values();
@@ -126,13 +134,13 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		TestScenario[] scenarios = {TestScenario.MOJAVE_M5p5, TestScenario.MOJAVE_M6pt3_ptSrc,
 //				TestScenario.MOJAVE_M6pt3_FSS, TestScenario.MOJAVE_M7};
 //		boolean includeSpontaneous = true;
-		TestScenario[] scenarios = {TestScenario.HAYWIRED_M7};
-//		TestScenario[] scenarios = { null };
+//		TestScenario[] scenarios = {TestScenario.HAYWIRED_M7};
+		TestScenario[] scenarios = { null };
 		boolean includeSpontaneous = true;
 		String customCatalog = null;
 		long customOT = Long.MIN_VALUE;
 		String resetSectsArg = null;
-		boolean griddedOnly = true;
+		boolean griddedOnly = false;
 		boolean customCatIncludeHistSurfaces = false;
 		
 //		TestScenario[] scenarios = { null };
@@ -222,7 +230,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 		int memGigs;
 		int ppn;
 		if (stampede)
-			ppn = 16;
+			ppn = threads;
 		else
 			ppn = 8;
 		
@@ -232,13 +240,13 @@ public class MPJ_ETAS_SimulatorScriptGen {
 		
 		if (stampede) {
 			memGigs = 26;
-			remoteDir = new File("/work/00950/kevinm/ucerf3/etas_sim");
-			remoteSolFile = new File("/work/00950/kevinm/ucerf3/inversion/compound_plots/2013_05_10-ucerf3p3-production-10runs/"
+			remoteDir = new File("/work/00950/kevinm/stampede2/ucerf3/etas_sim");
+			remoteSolFile = new File("/work/00950/kevinm/stampede2/ucerf3/inversion/compound_plots/2013_05_10-ucerf3p3-production-10runs/"
 					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip");
 			mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, memGigs*1024,
 					null, StampedeScriptWriter.FMPJ_HOME);
 			((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-			pbsWrite = new StampedeScriptWriter();
+			pbsWrite = new StampedeScriptWriter(true);
 			cacheDir = new File(remoteDir, "cache_fm3p1_ba");
 		} else {
 			if (queue == null)
@@ -262,6 +270,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 						null, USC_HPCC_ScriptWriter.MPJ_HOME);
 			}
 			pbsWrite = new USC_HPCC_ScriptWriter();
+			((USC_HPCC_ScriptWriter)pbsWrite).setSkipRootNode(hpcSkipRoot);
 			cacheDir = new File(remoteDir, "cache_fm3p1_ba");
 		}
 		

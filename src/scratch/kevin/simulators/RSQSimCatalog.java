@@ -24,6 +24,7 @@ import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.opensha.commons.metadata.XMLSaveable;
 import org.opensha.commons.util.ComparablePairing;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
@@ -45,6 +46,7 @@ import org.opensha.sha.simulators.utils.RSQSimUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -115,6 +117,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		JG_baseCatalogSW_10("baseCatalogSW_10", "JG Base SW", "Jacqui Gilchrist", cal(2017, 11, 20),
 				"Untuned, additional slip weakening parameters using Keith's fault geometry. muSlipAmp = 0.2, muSlipInvDist_1 = 2.0, cohesion = 6.",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_tunedBase1m_ddotEQmod("tunedBase1m_ddotEQmod", "JG Tune Base Mod Vel", "Jacqui Gilchrist", cal(2017, 11, 26),
+				"New version of tuneBase1m, with patch-specific slip velocities.",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -142,7 +147,8 @@ public class RSQSimCatalog implements XMLSaveable {
 	private FaultModels fm;
 	private DeformationModels dm;
 	
-	private double slipVel = Double.NaN;
+	private double constSlipVel = Double.NaN;
+	private Map<Integer, Double> slipVels = null;
 	private double aveArea = Double.NaN;
 	private int numEvents = -1;
 	private double durationYears = Double.NaN;
@@ -200,14 +206,50 @@ public class RSQSimCatalog implements XMLSaveable {
 		return dm;
 	}
 	
-	public synchronized double getSlipVelocity() throws IOException {
-		if (Double.isNaN(slipVel)) {
-			Map<String, String> params = getParams();
-			String ddotEQ = params.get("ddotEQ_1");
-			Preconditions.checkNotNull(ddotEQ, "ddotEQ_1 not in params file");
-			slipVel = Double.parseDouble(ddotEQ);
+	public synchronized Map<Integer, Double> getSlipVelocities() throws IOException {
+		if (slipVels == null) {
+			if (Doubles.isFinite(constSlipVel) && constSlipVel > 0) {
+				List<SimulatorElement> elems = getElements();
+				slipVels = new HashMap<>();
+				for (int i=0; i<elems.size(); i++)
+					slipVels.put(elems.get(i).getID(), constSlipVel);
+			} else {
+				Map<String, String> params = getParams();
+				String ddotEQFname = params.get("ddotEQFname");
+				if (ddotEQFname != null && !ddotEQFname.trim().isEmpty()) {
+					File ddotEQFile = new File(getCatalogDir(), ddotEQFname);
+					Preconditions.checkState(ddotEQFile.exists(),
+							"ddotEQFname = %s doesn't exist in %s", ddotEQFname, getCatalogDir().getAbsolutePath());
+					double[] velArray = loadDoubleInputFile(ddotEQFile);
+					List<SimulatorElement> elems = getElements();
+					Preconditions.checkState(velArray.length == elems.size(), "expected %s patch velocities, have %s", elems.size(), velArray.length);
+					slipVels = new HashMap<>();
+					for (int i=0; i<elems.size(); i++)
+						slipVels.put(elems.get(i).getID(), velArray[i]);
+					constSlipVel = Double.NaN;
+				} else {
+					String ddotEQ = params.get("ddotEQ_1");
+					Preconditions.checkNotNull(ddotEQ, "ddotEQ_1 not in params file");
+					constSlipVel = Double.parseDouble(ddotEQ);
+					List<SimulatorElement> elems = getElements();
+					slipVels = new HashMap<>();
+					for (int i=0; i<elems.size(); i++)
+						slipVels.put(elems.get(i).getID(), constSlipVel);
+				}
+			}
 		}
-		return slipVel;
+		return slipVels;
+	}
+	
+	private static double[] loadDoubleInputFile(File file) throws IOException {
+		List<Double> vals = new ArrayList<>();
+		for (String line : Files.readLines(file, Charset.defaultCharset())) {
+			line = line.trim();
+			if (line.isEmpty() || line.startsWith("#"))
+				continue;
+			vals.add(Double.parseDouble(line));
+		}
+		return Doubles.toArray(vals);
 	}
 	
 	private static DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
@@ -225,7 +267,17 @@ public class RSQSimCatalog implements XMLSaveable {
 		builder.addLine("**Description**", getMetadata());
 		builder.addLine("**Fault/Def Model**", fm+", "+dm);
 		try {
-			builder.addLine("**Slip Velocity**", (float)getSlipVelocity()+" m/s");
+			Map<Integer, Double> slipVels = getSlipVelocities();
+			String velStr;
+			if (Double.isFinite(constSlipVel)) {
+				velStr = (float)constSlipVel+" m/s";
+			} else {
+				MinMaxAveTracker velTrack = new MinMaxAveTracker();
+				for (Double vel : slipVels.values())
+					velTrack.addValue(vel);
+				velStr = "Variable, range=["+(float)velTrack.getMin()+" "+(float)velTrack.getMax()+"], mean="+(float)velTrack.getAverage();
+			}
+			builder.addLine("**Slip Velocity**", velStr);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -286,6 +338,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		if (params == null) {
 			File paramFile = findParamFile();
 			if (paramFile != null) {
+				System.out.println("Loading params from "+paramFile.getAbsolutePath());
 				params = new HashMap<>();
 				for (String line : Files.readLines(paramFile, Charset.defaultCharset())) {
 					line = line.trim();
@@ -311,8 +364,8 @@ public class RSQSimCatalog implements XMLSaveable {
 			if (!name.endsWith(".in"))
 				continue;
 			String lower = name.toLowerCase();
-			if (lower.contains("deepen") || lower.contains("dotmod"))
-				continue;
+//			if (lower.contains("deepen") || lower.contains("dotmod"))
+//				continue;
 			if (isParamFile(file))
 				return file;
 		}
@@ -474,7 +527,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public synchronized RSQSimEventSlipTimeFunc getSlipTimeFunc(RSQSimEvent event) throws IOException {
-		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event), getSlipVelocity());
+		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event), getSlipVelocities());
 	}
 
 	private static GregorianCalendar cal(int year, int month, int day) {
@@ -570,7 +623,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		
 		public Loader hasTransitions() throws IOException {
-			loadIdens.add(new RSQSimTransValidIden(getTransitions(), getSlipVelocity()));
+			loadIdens.add(new RSQSimTransValidIden(getTransitions(), getSlipVelocities()));
 			return this;
 		}
 		
@@ -720,7 +773,17 @@ public class RSQSimCatalog implements XMLSaveable {
 		if (dm != null)
 			el.addAttribute("dm", dm.name());
 		try {
-			el.addAttribute("slipVel", getSlipVelocity()+"");
+			Map<Integer, Double> slipVels = getSlipVelocities();
+			el.addAttribute("slipVel", constSlipVel+"");
+			if (!Double.isFinite(constSlipVel)) {
+				// write individual
+				Element slipVelsEl = el.addElement("SlipVelocities");
+				for (int patchID : slipVels.keySet()) {
+					Element patchEl = slipVelsEl.addElement("Patch");
+					patchEl.addAttribute("id", patchID+"");
+					patchEl.addAttribute("velocity", slipVels.get(patchID)+"");
+				}
+			}
 			el.addAttribute("aveArea", getAveArea()+"");
 			el.addAttribute("numEvents", getNumEvents()+"");
 			el.addAttribute("durationYears", getDurationYears()+"");
@@ -742,7 +805,19 @@ public class RSQSimCatalog implements XMLSaveable {
 		DeformationModels dm = null;
 		if (el.attribute("dm") != null)
 			dm = DeformationModels.valueOf(el.attributeValue("dm"));
-		double slipVel = Double.parseDouble(el.attributeValue("slipVel"));
+		double constSlipVel = Double.parseDouble(el.attributeValue("slipVel"));
+		Map<Integer, Double> slipVels = null;
+		if (!Double.isFinite(constSlipVel)) {
+			Element slipVelEl = el.element("SlipVelocities");
+			if (slipVelEl != null) {
+				slipVels = new HashMap<>();
+				for (Element patchEl : XMLUtils.getSubElementsList(slipVelEl)) {
+					int patchID = Integer.parseInt(patchEl.attributeValue("id"));
+					double patchVel = Double.parseDouble(patchEl.attributeValue("velocity"));
+					slipVels.put(patchID, patchVel);
+				}
+			}
+		}
 		double aveArea = Double.NaN;
 		if (el.attribute("aveArea") != null)
 			aveArea = Double.parseDouble(el.attributeValue("aveArea"));
@@ -757,7 +832,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		cat.aveArea = aveArea;
 		cat.numEvents = numEvents;
 		cat.durationYears = durationYears;
-		cat.slipVel = slipVel;
+		cat.constSlipVel = constSlipVel;
+		cat.slipVels = slipVels;
 		return cat;
 	}
 	
@@ -855,7 +931,4 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		writeCatalogsIndex(gitDir);
 	}
-	
-	
-
 }

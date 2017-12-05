@@ -64,10 +64,10 @@ public class HazardMapCompareScriptGen {
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
 //		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-		String bruceDate = "2017_08_24";
-		String bruceDirNum = "2142";
-//		String bruceDirNum = "2194";
-//		String bruceDirNum = "2241";
+		String bruceDate = "2017_12_05";
+//		String bruceDirNum = "2349";
+//		String bruceDirNum = "2326";
+		String bruceDirNum = "2343";
 		String runName = bruceDate+"-bruce"+bruceDirNum;
 		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
 		File geomFile = new File(catalogDir, "zfault_Deepen.in");
@@ -82,10 +82,10 @@ public class HazardMapCompareScriptGen {
 		
 		int numPointsMultiplier = 8;
 		
-//		String imt = PGA_Param.NAME;
-//		double period = 0d;
-		String imt = SA_Param.NAME;
-		double period = 0.2d;
+		String imt = PGA_Param.NAME;
+		double period = 0d;
+//		String imt = SA_Param.NAME;
+//		double period = 0.2d;
 		
 //		double fixedStdDev = 0.0;
 		double fixedStdDev = -1;
@@ -93,7 +93,7 @@ public class HazardMapCompareScriptGen {
 		double skipYears = 5000;
 		
 		boolean doUCERF3 = false;
-		boolean doUCERF2 = true;
+		boolean doUCERF2 = false;
 		boolean isUCERF2Full = false;
 		boolean u3SupraMinMag = false;
 		double minMag = 6.5d;
@@ -231,6 +231,7 @@ public class HazardMapCompareScriptGen {
 		
 		MPJExpressShellScriptWriter mpj = new MPJExpressShellScriptWriter(javaBin, 60000, classpath,
 				USC_HPCC_ScriptWriter.MPJ_HOME);
+		mpj.setUseLaunchWrapper(true);
 		
 		List<Map<TectonicRegionType, ScalarIMR>> imrMaps = Lists.newArrayList();
 		

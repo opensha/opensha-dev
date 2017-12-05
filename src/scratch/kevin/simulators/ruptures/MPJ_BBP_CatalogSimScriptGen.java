@@ -32,7 +32,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(myHPCDir, "rundir2342");
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_K2");
 //		File catalogDir = new File(jacquiCSDir, "modLoad_testB");
-		File catalogDir = new File(jacquiCSDir, "baseCatalogSW_10");
+		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
 		
 		double minMag = 6;
 //		double minMag = 7;
