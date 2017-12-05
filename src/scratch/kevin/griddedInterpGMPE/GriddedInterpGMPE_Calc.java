@@ -56,6 +56,7 @@ import org.opensha.sha.imr.param.EqkRuptureParams.MagParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Joiner;
@@ -69,24 +70,27 @@ public class GriddedInterpGMPE_Calc {
 	
 	private ScalarIMR gmpe;
 	
-	private MagnitudeInterpolator magInterp; // index 0
-	private DistanceInterpolator distInterp; // index 1
-	private AbstractGMPEInterpolation<?>[] otherInterps; // indexes 2+
+	private DistanceInterpolator distInterp; // index 0
+	private IntensityMeasureLevelInterpolator imlInterp; // index N-1
+	
+	private List<AbstractGMPEInterpolation<?>> allInterps;
 	
 	private DiscretizedFunc xVals;
 	private DiscretizedFunc logXVals;
 	
-	private List<AbstractGMPEInterpolation<?>> allInterps;
-	
 	private IncrementalMagFreqDist inputMFD;
 	
 	private NDimArrayCalc arrayCalc;
-	private Map<FocalMech, double[]> exceedProbs;
+	private double[] allExceedRates; // source non-exceedance rates
 	private NDimensionalLinearInterpolation interpolator;
 	
-	public GriddedInterpGMPE_Calc(ScalarIMR gmpe, DiscretizedFunc xVals,
-			DistanceInterpolator distInterp, MagnitudeInterpolator magInterp,
-			AbstractGMPEInterpolation<?>... otherInterps) {
+	public GriddedInterpGMPE_Calc(ScalarIMR gmpe, DiscretizedFunc xVals, double b, double minMag, double maxMag, int numMag,
+			DistanceInterpolator distInterp, AbstractGMPEInterpolation<?>... otherInterps) {
+		this(gmpe, xVals, new GutenbergRichterMagFreqDist(b, 1d, minMag, maxMag, numMag), distInterp, otherInterps);
+	}
+	
+	public GriddedInterpGMPE_Calc(ScalarIMR gmpe, DiscretizedFunc xVals, IncrementalMagFreqDist inputMFD,
+			DistanceInterpolator distInterp, AbstractGMPEInterpolation<?>... otherInterps) {
 		this.gmpe = gmpe;
 		
 		this.xVals = xVals;
@@ -95,40 +99,40 @@ public class GriddedInterpGMPE_Calc {
 			logXVals.set(Math.log(pt.getX()), 1d);
 		
 		this.distInterp = distInterp;
-		this.magInterp = magInterp;
-		this.otherInterps = otherInterps;
+		this.imlInterp = new IntensityMeasureLevelInterpolator("IML", xVals, true);
 		
 		allInterps = new ArrayList<>();
-		
-		allInterps.add(magInterp);
 		allInterps.add(distInterp);
-		for (AbstractGMPEInterpolation<?> interp : otherInterps)
-			allInterps.add(interp);
+		for (AbstractGMPEInterpolation<?> o : otherInterps)
+			allInterps.add(o);
+		allInterps.add(imlInterp);
 		
-		// build input MFD with mag range
-		inputMFD = new IncrementalMagFreqDist(magInterp.getValue(0),
-				magInterp.getValue(magInterp.getNumBins()-1),magInterp.getNumBins());
+		this.inputMFD = inputMFD;
+		
+		inputMFD.scaleToCumRate(0, 1d);
+		System.out.print("Input MFD");
 		for (int i=0; i<inputMFD.size(); i++)
-			inputMFD.set(i, 1d);
+			System.out.println("\t"+(float)+inputMFD.getX(i)+"\t"+(float)inputMFD.getY(i));
 		
-		int[] dimensions = new int[allInterps.size()+1]; // +1 for iml
-		dimensions[0] = xVals.size();
-		for (int i=1; i<dimensions.length; i++)
-			dimensions[i] = allInterps.get(i-1).getNumBins();
+		int[] dimensions = new int[allInterps.size()];
+		for (int i=0; i<dimensions.length; i++)
+			dimensions[i] = allInterps.get(i).getNumBins();
 		arrayCalc = new NDimArrayCalc(dimensions);
 		interpolator = new NDimensionalLinearInterpolation(dimensions.length);
 		
-		exceedProbs = Maps.newHashMap();
+		allExceedRates = new double[arrayCalc.rawArraySize()];
+		for (int i=0; i<allExceedRates.length; i++)
+			allExceedRates[i] = Double.NaN;
 	}
 	
-	public void precalc(double[] depths) {
+	public void precalc(double duration, double[] depths, Map<FocalMech, Double> mechWtMap) {
 		Location loc = new Location(0d, 0d);
 		
-		Map<FocalMech, Double> mechWtMap = new HashMap<>();
-		double wtEach = 1d/FocalMech.values().length;
-		for (FocalMech mech : FocalMech.values())
-			mechWtMap.put(mech, wtEach);
-		PointSource13b source = new PointSource13b(loc, inputMFD, 1d, depths, mechWtMap);
+//		Map<FocalMech, Double> mechWtMap = new HashMap<>();
+//		double wtEach = 1d/FocalMech.values().length;
+//		for (FocalMech mech : FocalMech.values())
+//			mechWtMap.put(mech, wtEach);
+		PointSource13b source = new PointSource13b(loc, inputMFD, duration, depths, mechWtMap);
 		
 		System.out.println("Precalculating GMPE for "+allInterps.size()+" dimensions, "+arrayCalc.rawArraySize()+" values");
 		
@@ -141,81 +145,85 @@ public class GriddedInterpGMPE_Calc {
 		gmpe.setSite(site);
 		gmpe.setEqkRupture(ruptures.iterator().next());
 		
-		numRupsTrack = new MinMaxAveTracker();
+		precalcRecursive(new int[0], source);
 		
-		for (FocalMech mech : FocalMech.values()) {
-			double[] exceedProbs = new double[arrayCalc.rawArraySize()];
-			
-			HashSet<EqkRupture> mechRups = new HashSet<>();
-			for (EqkRupture rup : ruptures) {
-				if (FocalMechInterpolator.forRake(rup.getAveRake()) == mech)
-					mechRups.add(rup);
-			}
-			
-			precalcRecursive(new int[0], source, mechRups, exceedProbs);
-			int numNonZero = 0;
-			for (double val : exceedProbs)
-				if (val > 0)
-					numNonZero++;
-			System.out.println(numNonZero+"/"+exceedProbs.length+" are non-zero for "+mech);
-			this.exceedProbs.put(mech, exceedProbs);
-		}
-		System.out.println("Done precalculating!");
-		System.out.println("Num Rups tracker: "+numRupsTrack);
+//		numRupsTrack = new MinMaxAveTracker();
+		
+//		for (FocalMech mech : FocalMech.values()) {
+//			double[] exceedProbs = new double[arrayCalc.rawArraySize()];
+//			
+//			HashSet<EqkRupture> mechRups = new HashSet<>();
+//			for (EqkRupture rup : ruptures) {
+//				if (FocalMechInterpolator.forRake(rup.getAveRake()) == mech)
+//					mechRups.add(rup);
+//			}
+//			
+//			precalcRecursive(new int[0], source, mechRups, exceedProbs);
+//			int numNonZero = 0;
+//			for (double val : exceedProbs)
+//				if (val > 0)
+//					numNonZero++;
+//			System.out.println(numNonZero+"/"+exceedProbs.length+" are non-zero for "+mech);
+//			this.exceedProbs.put(mech, exceedProbs);
+//		}
+//		System.out.println("Done precalculating!");
+//		System.out.println("Num Rups tracker: "+numRupsTrack);
 	}
 	
-	private MinMaxAveTracker numRupsTrack;
+//	private MinMaxAveTracker numRupsTrack;
 	
-	private void precalcRecursive(int[] upstreamIndexes, PointSource13b source, Set<EqkRupture> curRuptures, double[] exceedProbs) {
+	private void precalcRecursive(int[] upstreamIndexes, PointSource13b source) {
 		int curIndex = upstreamIndexes.length;
 		AbstractGMPEInterpolation<?> interp = allInterps.get(curIndex);
 		int[] indexes = Arrays.copyOf(upstreamIndexes, curIndex+1);
-		for (int i=0; i<interp.getNumBins(); i++) {
-			indexes[indexes.length-1] = i;
-			interp.setGMPE_Params(gmpe, source, i);
-			Set<EqkRupture> rups = interp.getViableRuptures(curRuptures, i);
-			Preconditions.checkState(!rups.isEmpty(), "No viable ruptures for %s=%s", interp.getName(), interp.getValue(i));
+		
+		if (interp instanceof IntensityMeasureLevelInterpolator) {
+			// we're at the IML level, time to actually calculate
+			Preconditions.checkState(indexes.length == allInterps.size(), "IML interpolator must be last");
 			
-			if (indexes.length == allInterps.size()) {
-				// time to actually calculate
-				numRupsTrack.addValue(rups.size());
-				int arrayIndex = arrayCalc.getIndex(0, indexes);
-				Preconditions.checkState(exceedProbs[arrayIndex] == 0, "Duplicate calc?");
-				double wtEach = 1d/rups.size();
+			// all parameters except for the actual site should be set now
+			
+			Preconditions.checkState(logXVals.size() == interp.getNumBins());
+			double[] sourceExceedRates = new double[logXVals.size()];
+			
+			for (ProbEqkRupture rup : source) {
+				gmpe.setEqkRupture(rup);
+				gmpe.getExceedProbabilities(logXVals);
 				
-				for (EqkRupture rup : rups) {
-					gmpe.setEqkRupture(rup);
-//					exceedProbs[arrayIndex] += wtEach*gmpe.getExceedProbability();
-					gmpe.getExceedProbabilities(logXVals);
-					for (int j=0; j<logXVals.size(); j++) {
-						arrayIndex = arrayCalc.getIndex(j, indexes);
-						exceedProbs[arrayIndex] += wtEach*logXVals.getY(j);
-					}
-//					if (Math.random() < 0.01) {
-//						System.out.print("Probs:");
-//						for (Point2D pt : logXVals)
-//							System.out.print(pt.getY());
-//						System.out.println();
-//					}
-					
-//					if (Math.random() < 0.001) {
-//						System.out.println("Indexes: "+indexes[0]+" "+indexes[1]+" "+indexes[2]);
-//						System.out.println("Distances. GMPE: "+gmpe.getParameter(DistanceRupParameter.NAME).getValue()
-//								+", Interp[1]["+indexes[1]+"]: "+allInterps.get(1).getValue(indexes[1]));
-//						System.out.println("Mags. GMPE: "+gmpe.getParameter(MagParam.NAME).getValue()
-//								+", Interp[0]["+indexes[0]+"]: "+allInterps.get(0).getValue(indexes[0]));
-//						System.out.println("Vs30. GMPE: "+gmpe.getParameter(Vs30_Param.NAME).getValue()
-//								+", Interp[2]["+indexes[2]+"]: "+allInterps.get(2).getValue(indexes[2]));
-//					}
-				}
-			} else {
-				// pass to the next level
-				precalcRecursive(indexes, source, rups, exceedProbs);
+				double rupProb = rup.getProbability();
+				double rupRate = -Math.log(1 - rupProb);
+				
+				for (int i=0; i<sourceExceedRates.length; i++)
+					sourceExceedRates[i] = sourceExceedRates[i] + rupRate * logXVals.getY(i);
+			}
+			
+			// now fold my values into the global array
+			for (int i=0; i<sourceExceedRates.length; i++) {
+				indexes[indexes.length-1] = i;
+				int arrayIndex = arrayCalc.getIndex(indexes);
+				Preconditions.checkState(Double.isNaN(allExceedRates[arrayIndex]), "Value already set?");
+				allExceedRates[arrayIndex] = sourceExceedRates[i];
+			}
+			
+//			indexes[0] = i; // IML index
+//			double exceedProb = interpolator.interpolate(exceedProbs, arrayCalc, indexes);
+////			if (Math.random() < 0.00001)
+////				System.out.println("Indexes: "+(float)indexes[0]+" "+(float)indexes[1]
+////					+" "+(float)indexes[2]+" "+(float)indexes[3]+" ==> "+exceedProb);
+//			curves[s].set(i, curves[s].getY(i)*Math.pow(1-rup.getProbability(), exceedProb));
+		} else {
+			Preconditions.checkState(indexes.length < allInterps.size(), "We're at the end but not an IML interpolator");
+			
+			for (int i=0; i<interp.getNumBins(); i++) {
+				indexes[indexes.length-1] = i;
+				interp.setGMPE_Params(gmpe, source, i);
+				
+				precalcRecursive(indexes, source);
 			}
 		}
 	}
 	
-	public DiscretizedFunc[] calc(List<ProbEqkSource> sources, List<Site> sites) {
+	public DiscretizedFunc[] calc(GeoDataSet griddedTotCumRates, List<Site> sites) {
 		DiscretizedFunc[] curves = new DiscretizedFunc[sites.size()];
 		
 		for (int i=0; i<sites.size(); i++) {
@@ -225,60 +233,91 @@ public class GriddedInterpGMPE_Calc {
 				curves[i].set(j, 1d);
 		}
 		
-		double[] indexes = new double[allInterps.size()+1];
+		double[] indexes = new double[allInterps.size()];
 		
-		for (ProbEqkSource source : sources) {
-			// calculate distances
-			Preconditions.checkState(source.getSourceSurface() instanceof PointSurface, "Only point sources supported");
-			Location sourceLoc = ((PointSurface)source.getSourceSurface()).getLocation();
-			double[] distances = new double[sites.size()];
-			for (int s=0; s<sites.size(); s++)
-				distances[s] = LocationUtils.horzDistanceFast(sourceLoc, sites.get(s).getLocation());
-			for (ProbEqkRupture rup : source) {
-				// these 2 are common to all
-				Preconditions.checkState(rup.getMag() >= magInterp.getMin() && rup.getMag() <= magInterp.getMax(),
-						"Rup mag=%s outisde of range [%s %s]", rup.getMag(), magInterp.getMin(), magInterp.getMax());
-				indexes[1] = magInterp.getInterpolatedBinIndex(rup.getMag());
-				FocalMech mech = FocalMechInterpolator.forRake(rup.getAveRake());
-				double[] exceedProbs = this.exceedProbs.get(mech);
-				for (int s=0; s<sites.size(); s++) {
-					Site site = sites.get(s);
-					if (distances[s] > distInterp.getMax())
-						continue;
-//					System.out.println("dist: "+distances[s]);
-					// set dist and any other params
-					indexes[2] = distInterp.getInterpolatedBinIndex(distances[s]);
-					for (int j=2; j<allInterps.size(); j++)
-						indexes[j+1] = allInterps.get(j).detectInterpolatedBinIndex(null, site);
+		double inputMFD_totCumRate = inputMFD.getCumRate(0);
+		
+		for (int g=0; g<griddedTotCumRates.size(); g++) {
+			Location sourceLoc = griddedTotCumRates.getLocation(g);
+			double totCumRate = griddedTotCumRates.get(g);
+			double rateScalar = totCumRate / inputMFD_totCumRate;
+			
+			for (int s=0; s<sites.size(); s++) {
+				Site site = sites.get(s);
+				double dist = LocationUtils.horzDistanceFast(sourceLoc, site.getLocation());
+				indexes[0] = distInterp.getInterpolatedBinIndex(dist);
+				
+				for (int j=1; j<allInterps.size()-1; j++)
+					indexes[j] = allInterps.get(j).detectInterpolatedBinIndex(null, site);
+				
+				for (int i=0; i<xVals.size(); i++) {
+					indexes[indexes.length-1] = i;
+					double sourceExceedRate = interpolator.interpolate(allExceedRates, arrayCalc, indexes);
 					
-					// multi-dimensional interpolation
-//					double mean = interpolator.interpolate(means, arrayCalc, indexes);
-//					double stdDev = interpolator.interpolate(stdDevs, arrayCalc, indexes);
-//					gmpe.setSite(site);
-//					gmpe.setEqkRupture(rup);
-//					double mean = gmpe.getMean();
-//					double stdDev = gmpe.getStdDev();
+					// now we scale to the actual rate of this source
+					sourceExceedRate *= rateScalar;
 					
-//					if (debugMeanScatter != null) {
-//						gmpe.setSite(site);
-//						gmpe.setEqkRupture(rup);
-//						double mean2 = gmpe.getMean();
-//						double stdDev2 = gmpe.getStdDev();
-//						debugMeanScatter.set(mean2, mean);
-//						debugStdDevScatter.set(stdDev2, stdDev);
-//					}
+					double sourceExceedProb = 1d - Math.exp(-sourceExceedRate);
 					
-					for (int i=0; i<xVals.size(); i++) {
-						indexes[0] = i; // IML index
-						double exceedProb = interpolator.interpolate(exceedProbs, arrayCalc, indexes);
-//						if (Math.random() < 0.00001)
-//							System.out.println("Indexes: "+(float)indexes[0]+" "+(float)indexes[1]
-//								+" "+(float)indexes[2]+" "+(float)indexes[3]+" ==> "+exceedProb);
-						curves[s].set(i, curves[s].getY(i)*Math.pow(1-rup.getProbability(), exceedProb));
-					}
+					double sourceNonExceedProb = 1d - sourceExceedProb;
+					
+					curves[s].set(i, curves[s].getY(i)*sourceNonExceedProb);
 				}
 			}
 		}
+		
+//		for (ProbEqkSource source : sources) {
+//			// calculate distances
+//			Preconditions.checkState(source.getSourceSurface() instanceof PointSurface, "Only point sources supported");
+//			Location sourceLoc = ((PointSurface)source.getSourceSurface()).getLocation();
+//			double[] distances = new double[sites.size()];
+//			for (int s=0; s<sites.size(); s++)
+//				distances[s] = LocationUtils.horzDistanceFast(sourceLoc, sites.get(s).getLocation());
+//			for (ProbEqkRupture rup : source) {
+//				// these 2 are common to all
+//				Preconditions.checkState(rup.getMag() >= magInterp.getMin() && rup.getMag() <= magInterp.getMax(),
+//						"Rup mag=%s outisde of range [%s %s]", rup.getMag(), magInterp.getMin(), magInterp.getMax());
+//				indexes[1] = magInterp.getInterpolatedBinIndex(rup.getMag());
+//				FocalMech mech = FocalMechInterpolator.forRake(rup.getAveRake());
+//				double[] exceedProbs = this.exceedProbs.get(mech);
+//				for (int s=0; s<sites.size(); s++) {
+//					Site site = sites.get(s);
+//					if (distances[s] > distInterp.getMax())
+//						continue;
+////					System.out.println("dist: "+distances[s]);
+//					// set dist and any other params
+//					indexes[2] = distInterp.getInterpolatedBinIndex(distances[s]);
+//					for (int j=2; j<allInterps.size(); j++)
+//						indexes[j+1] = allInterps.get(j).detectInterpolatedBinIndex(null, site);
+//					
+//					// multi-dimensional interpolation
+////					double mean = interpolator.interpolate(means, arrayCalc, indexes);
+////					double stdDev = interpolator.interpolate(stdDevs, arrayCalc, indexes);
+////					gmpe.setSite(site);
+////					gmpe.setEqkRupture(rup);
+////					double mean = gmpe.getMean();
+////					double stdDev = gmpe.getStdDev();
+//					
+////					if (debugMeanScatter != null) {
+////						gmpe.setSite(site);
+////						gmpe.setEqkRupture(rup);
+////						double mean2 = gmpe.getMean();
+////						double stdDev2 = gmpe.getStdDev();
+////						debugMeanScatter.set(mean2, mean);
+////						debugStdDevScatter.set(stdDev2, stdDev);
+////					}
+//					
+//					for (int i=0; i<xVals.size(); i++) {
+//						indexes[0] = i; // IML index
+//						double exceedProb = interpolator.interpolate(exceedProbs, arrayCalc, indexes);
+////						if (Math.random() < 0.00001)
+////							System.out.println("Indexes: "+(float)indexes[0]+" "+(float)indexes[1]
+////								+" "+(float)indexes[2]+" "+(float)indexes[3]+" ==> "+exceedProb);
+//						curves[s].set(i, curves[s].getY(i)*Math.pow(1-rup.getProbability(), exceedProb));
+//					}
+//				}
+//			}
+//		}
 		
 		// convert to exceedance probabilities (currently non-exceedance)
 		for (DiscretizedFunc curve : curves)
@@ -312,42 +351,39 @@ public class GriddedInterpGMPE_Calc {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		ScalarIMR gmpe = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
-//		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null);
+//		ScalarIMR gmpe = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null);
 		gmpe.setParamDefaults();
 		gmpe.setIntensityMeasure(PGA_Param.NAME);
 
 		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(gmpe.getIntensityMeasure());
-		IntensityMeasureLevelInterpolator imlInterp =
-				new IntensityMeasureLevelInterpolator(gmpe.getIntensityMeasure().getName(), xVals, true);
+//		IntensityMeasureLevelInterpolator imlInterp =
+//				new IntensityMeasureLevelInterpolator(gmpe.getIntensityMeasure().getName(), xVals, true);
 		
-		DistanceInterpolator distInterp = new DistanceInterpolator(0d, 200d, 20);
+		DistanceInterpolator distInterp = new DistanceInterpolator(0d, 200d, 100);
 		
 		double refMag = 5d;
 		double maxMag = 8.5d;
 		double magDelta = 0.1;
 		int numMag = (int)((maxMag - refMag)/magDelta + 0.5) + 1;
 		System.out.println("NumMag: "+numMag);
-		MagnitudeInterpolator magInterp = new MagnitudeInterpolator(refMag, maxMag, numMag);
+//		MagnitudeInterpolator magInterp = new MagnitudeInterpolator(refMag, maxMag, numMag);
 		
 //		FocalMechInterpolator mechInterp = new FocalMechInterpolator();
 		
-		DoubleParameterInterpolator vs30Interp = new DoubleParameterInterpolator(
-				Vs30_Param.NAME, 180, 760, 20, false, false); // matches Wald Allen range
-		
-		GriddedInterpGMPE_Calc calc = new GriddedInterpGMPE_Calc(gmpe, xVals, distInterp, magInterp, vs30Interp);
-		double[] depths = { 7, 2 };
-		calc.precalc(depths);
-		
-		GeoDataSet rateModel = ArbDiscrGeoDataSet.loadXYZFile("/tmp/rateMap.txt", true);
-		double b = 1;
-		
-		System.out.println(gmpe.getIntensityMeasure().getName());
-		
+//		WaldAllenGlobalVs30 vs30Provider = null;
 		WaldAllenGlobalVs30 vs30Provider = new WaldAllenGlobalVs30();
 		vs30Provider.setActiveCoefficients();
 		
+		DoubleParameterInterpolator vs30Interp = null;
+		if (vs30Provider != null)
+			vs30Interp = new DoubleParameterInterpolator(
+				Vs30_Param.NAME, 180, 760, 20, false, false); // matches Wald Allen range
+		
+		double b = 1;
+		
 		double durationYears = 30d/365d;
+//		double durationYears = 1d;
 		
 		Map<FocalMech, Double> mechWts = new HashMap<>();
 		mechWts.put(FocalMech.STRIKE_SLIP, 0.5);
@@ -359,20 +395,36 @@ public class GriddedInterpGMPE_Calc {
 		List<Map<FocalMech, Double>> mechWtsList = new ArrayList<>();
 		mechWtsList.add(mechWts);
 		
-		ERF erf = new ETAS_ShakingForecastCalc.GriddedForecast(rateModel, refMag, maxMag, b, mechWtsList, depths, durationYears);
-		erf.updateForecast();
+		GriddedInterpGMPE_Calc calc;
+		if (vs30Provider == null)
+			calc = new GriddedInterpGMPE_Calc(gmpe, xVals, b, refMag, maxMag, numMag, distInterp);
+		else
+			calc = new GriddedInterpGMPE_Calc(gmpe, xVals, b, refMag, maxMag, numMag, distInterp, vs30Interp);
+		double[] depths = { 7, 2 };
+		calc.precalc(durationYears, depths, mechWts);
 		
-		double calcSpacing = 1.0;
-		GriddedRegion calcRegion = new GriddedRegion(new Region(new Location(rateModel.getMaxLat(), rateModel.getMaxLon()),
-						new Location(rateModel.getMinLat(), rateModel.getMinLon())), calcSpacing, null);
+		GeoDataSet griddedTotCumRates = ArbDiscrGeoDataSet.loadXYZFile("/home/kevin/OpenSHA/oaf/etas_tests/rateMap.txt", true);
+		
+		System.out.println(gmpe.getIntensityMeasure().getName());
+		
+		ERF erf = new ETAS_ShakingForecastCalc.GriddedForecast(griddedTotCumRates, refMag, maxMag, b, mechWtsList, depths, durationYears);
+		erf.updateForecast();
+		Preconditions.checkState(erf.getTimeSpan().getDuration() == durationYears);
+		
+		double calcSpacing = 0.1;
+		GriddedRegion calcRegion = new GriddedRegion(new Region(new Location(griddedTotCumRates.getMaxLat(), griddedTotCumRates.getMaxLon()),
+						new Location(griddedTotCumRates.getMinLat(), griddedTotCumRates.getMinLon())), calcSpacing, null);
 		List<Site> sites = new ArrayList<>();
-		List<Double> vs30s = vs30Provider.getValues(calcRegion.getNodeList());
+		List<Double> vs30s = null;
+		if (vs30Provider != null)
+			vs30s = vs30Provider.getValues(calcRegion.getNodeList());
 		for (int i=0; i<calcRegion.getNodeCount(); i++) {
 			Site site = new Site(calcRegion.locationForIndex(i));
 			for (Parameter<?> param : gmpe.getSiteParams())
 				site.addParameter((Parameter<?>) param.clone());
-//			site.getParameter(Double.class, Vs30_Param.NAME).setValue(vs30s.get(i));
-			site.getParameter(Double.class, Vs30_Param.NAME).setValue(325d);
+			if (vs30s != null)
+				site.getParameter(Double.class, Vs30_Param.NAME).setValue(vs30s.get(i));
+//			site.getParameter(Double.class, Vs30_Param.NAME).setValue(325d);
 			sites.add(site);
 		}
 		
@@ -380,7 +432,8 @@ public class GriddedInterpGMPE_Calc {
 		
 		System.out.println("Calculating interpolated");
 		Stopwatch watch = Stopwatch.createStarted();
-		DiscretizedFunc[] interpCurves = calc.calc(erf.getSourceList(), sites);
+		DiscretizedFunc[] interpCurves = calc.calc(griddedTotCumRates, sites);
+//		DiscretizedFunc[] interpCurves = calc.calc(erf.getSourceList(), sites);
 		watch.stop();
 		System.out.println("Took "+watch.elapsed(TimeUnit.SECONDS)+" seconds");
 		
@@ -391,8 +444,8 @@ public class GriddedInterpGMPE_Calc {
 		watch.stop();
 		System.out.println("Took "+watch.elapsed(TimeUnit.SECONDS)+" seconds");
 		
-		GriddedGeoDataSet interpMap = ETAS_ShakingForecastCalc.extractMap(calcRegion, interpCurves, false, 0.5);
-		GriddedGeoDataSet traditionalMap = ETAS_ShakingForecastCalc.extractMap(calcRegion, traditionalCurves, false, 0.5);
+		GriddedGeoDataSet interpMap = ETAS_ShakingForecastCalc.extractMap(calcRegion, interpCurves, false, 0.1);
+		GriddedGeoDataSet traditionalMap = ETAS_ShakingForecastCalc.extractMap(calcRegion, traditionalCurves, false, 0.1);
 		
 		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, Math.max(interpMap.getMaxZ(), traditionalMap.getMaxZ()));
 		

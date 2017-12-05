@@ -29,10 +29,10 @@ public class DistanceInterpolator extends AbstractGMPEInterpolation.EvenlySpaced
 		gmpe.setSiteLocation(siteLoc);
 	}
 
-	@Override
-	public Set<EqkRupture> getViableRuptures(Set<EqkRupture> ruptures, int index) {
-		return ruptures;
-	}
+//	@Override
+//	public Set<EqkRupture> getViableRuptures(Set<EqkRupture> ruptures, int index) {
+//		return ruptures;
+//	}
 
 	@Override
 	public Double detectCurrentVal(ScalarIMR gmpe, Site site) {

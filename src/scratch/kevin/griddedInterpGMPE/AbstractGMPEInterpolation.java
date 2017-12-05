@@ -168,7 +168,7 @@ public abstract class AbstractGMPEInterpolation<E> implements Iterable<E> {
 	
 	public abstract void setGMPE_Params(ScalarIMR gmpe, ProbEqkSource source, int index);
 	
-	public abstract Set<EqkRupture> getViableRuptures(Set<EqkRupture> ruptures, int index);
+//	public abstract Set<EqkRupture> getViableRuptures(Set<EqkRupture> ruptures, int index);
 	
 	public abstract E detectCurrentVal(ScalarIMR gmpe, Site site);
 	

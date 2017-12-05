@@ -169,8 +169,6 @@ public class ETAS_ShakingForecastCalc {
 				double rate = rateModel.get(i);
 				if (rate == 0)
 					continue;
-				// convert rate to annual
-				rate /= durationYears;
 				
 				// rate should be total cumulative rate
 				GutenbergRichterMagFreqDist mfd = new GutenbergRichterMagFreqDist(b, rate, refMag, maxMag, mfdNum);
