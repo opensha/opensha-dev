@@ -128,6 +128,8 @@ public class GenericRJ_ParametersFetch {
 	}
 	
 	public TectonicRegime getRegion(Location loc) {
+		while (loc.getLongitude() > 180)
+			loc = new Location(loc.getLatitude(), loc.getLongitude()-360, loc.getDepth());
 		ArrayList<SiteDataValue<?>> datas = regimeProviders.getBestAvailableData(loc);
 		if (datas.isEmpty())
 			return null;
@@ -191,16 +193,22 @@ public class GenericRJ_ParametersFetch {
 	
 	public static void main(String[] args) {
 		LocationList locs = new LocationList();
-		
-		locs.add(new Location(28.2305, 84.7314, 8.22));
-		locs.add(new Location(35, -118, 7d));
-		locs.add(new Location(35, -50, 7d));
-		for (int i=0; i<5; i++) {
-			double lat = 180d*Math.random()-90d;
-			double lon = 360d*Math.random()-180d;
-			double depth = 20d*Math.random();
-			locs.add(new Location(lat, lon, depth));
-		}
+
+		locs.add(new Location(56.04640, -149.0728, 25.00000));
+		locs.add(new Location(56.04640, 210.92720, 25.00000));
+		locs.add(new Location(56.04640, 210.92720, 20.00000));
+		locs.add(new Location(56.04640, 210.92720, 15.00000));
+		locs.add(new Location(56.04640, 210.92720, 10.00000));
+		locs.add(new Location(56.04640, 210.92720, 5.00000));
+		locs.add(new Location(56.04640, 210.92720, 0.00000));
+//		locs.add(new Location(35, -118, 7d));
+//		locs.add(new Location(35, -50, 7d));
+//		for (int i=0; i<5; i++) {
+//			double lat = 180d*Math.random()-90d;
+//			double lon = 360d*Math.random()-180d;
+//			double depth = 20d*Math.random();
+//			locs.add(new Location(lat, lon, depth));
+//		}
 		
 		GenericRJ_ParametersFetch fetch = new GenericRJ_ParametersFetch();
 		for (Location loc : locs) {
