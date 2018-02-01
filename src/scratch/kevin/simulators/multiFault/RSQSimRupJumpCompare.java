@@ -51,6 +51,9 @@ import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.IDPairing;
 
 public class RSQSimRupJumpCompare {
+	
+	private static final Color u3Color = Color.GRAY;
+	private static final Color rsColor = Color.RED;
 
 	public static void main(String[] args) throws IOException, DocumentException {
 		File outputDir = new File("/home/kevin/Simulators/multiFault/2017_am");
@@ -68,11 +71,6 @@ public class RSQSimRupJumpCompare {
 		FaultModels fm = FaultModels.FM3_1;
 		DeformationModels dm = DeformationModels.GEOLOGIC;
 		
-		Color u3Color = Color.GRAY;
-		
-		List<FaultSystemSolution> rsSols = new ArrayList<>();
-		List<String> rsNames = new ArrayList<>();
-		List<Color> rsColors = new ArrayList<>();
 //		List<File> rsGeomFiles = new ArrayList<>();
 //		List<List<? extends SimulatorElement>> rsGeoms = new ArrayList<>();
 //		List<SimElemDistCalculator> rsElemDists = new ArrayList<>();
@@ -83,11 +81,9 @@ public class RSQSimRupJumpCompare {
 		int skipYears = 5000;
 		double minFractForInclusion = 0.5;
 		
-		rsSols.add(FaultSystemIO.loadSol(new File("/data/kevin/simulators/catalogs/rundir2194_long/laugh_test/"
-				+ "rsqsim_sol_m6.5_skip5000_sectArea0.2.zip")));
-//		rsGeomFiles.add(new File("/data/kevin/simulators/catalogs/rundir2194_long/zfault_Deepen.in"));
-		rsNames.add("Shaw 2194");
-		rsColors.add(Color.RED);
+		FaultSystemSolution rsSol = FaultSystemIO.loadSol(new File("/data/kevin/simulators/catalogs/rundir2194_long/laugh_test/"
+				+ "rsqsim_sol_m6.5_skip5000_sectArea0.2.zip"));
+		String rsName = "Shaw 2194";
 		
 //		if (calcMaxJumpHist || calcFixedJumpHist) {
 //			// need to load events
@@ -128,128 +124,15 @@ public class RSQSimRupJumpCompare {
 		Map<IDPairing, Double> distances = fetch.getSubSectionDistanceMap(1000d);
 		
 		if (calcFixedJumpHist) {
-			DiscretizedFunc u3Func = CommandLineInversionRunner.getJumpFuncs(u3Sol, distances, jumpDist, minMag, null)[0];
-			u3Func.scale(1d/u3Func.calcSumOfY_Vals());
-			
-			List<DiscretizedFunc> funcs = new ArrayList<>();
-			List<PlotCurveCharacterstics> chars = new ArrayList<>();
-			
-			funcs.add(u3Func);
-			u3Func.setName("UCERF3");
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, u3Color));
-			
-			for (int i=0; i<rsSols.size(); i++) {
-				DiscretizedFunc rsFunc = CommandLineInversionRunner.getJumpFuncs(rsSols.get(i), distances, jumpDist, minMag, null)[0];
-				rsFunc.scale(1d/rsFunc.calcSumOfY_Vals());
-				rsFunc.setName(rsNames.get(i));
-				funcs.add(rsFunc);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, rsColors.get(i)));
-			}
-			
-			PlotSpec spec = new PlotSpec(funcs, chars, "M≥"+(float)minMag+" Jump Comparison",
-					"Num Jumps ≥"+(float)jumpDist+"km", "Fraction (Rate-Weighted)");
-			spec.setLegendVisible(true);
-			
-			HeadlessGraphPanel gp = new HeadlessGraphPanel();
-			gp.setBackgroundColor(Color.WHITE);
-			gp.setTickLabelFontSize(18);
-			gp.setAxisLabelFontSize(20);
-			gp.setPlotLabelFontSize(21);
-			
-			String prefix = new File(outputDir, "jumps_"+(float)jumpDist+"km").getAbsolutePath();
-			
-			gp.drawGraphPanel(spec, false, false, null, new Range(0d, 1d));
-			TickUnits tus = new TickUnits();
-			TickUnit tu = new NumberTickUnit(1d);
-			tus.add(tu);
-			gp.getXAxis().setStandardTickUnits(tus);
-			gp.getChartPanel().setSize(1000, 500);
-			gp.saveAsPNG(prefix+".png");
-			gp.saveAsPDF(prefix+".pdf");
-			gp.saveAsTXT(prefix+".txt");
+			plotFixedJumpDist(u3Sol, distances, rsSol, rsName, minMag, jumpDist, outputDir);
 		}
 		
 		if (calcLengthHist) {
 			// now length hists
-			double lenBinWidth = 50;
-			double lenMax = 1250;
-			HistogramFunction u3LengthHist = calcLengthHist(u3Sol, minMag, lenBinWidth, lenMax);
-			
-			List<DiscretizedFunc> funcs = new ArrayList<>();
-			List<PlotCurveCharacterstics> chars = new ArrayList<>();
-			
-			u3LengthHist.setName("UCERF3");
-			funcs.add(u3LengthHist);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, u3Color));
-			
-			for (int i=0; i<rsSols.size(); i++) {
-				HistogramFunction rsLengthHist = calcLengthHist(rsSols.get(i), minMag, lenBinWidth, lenMax);
-				rsLengthHist.setName(rsNames.get(i));
-				funcs.add(rsLengthHist);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, rsColors.get(i)));
-			}
-			
-			PlotSpec spec = new PlotSpec(funcs, chars, "M≥"+(float)minMag+" Length Comparison",
-					"Rupture Length (km)", "Fraction (Rate-Weighted)");
-			spec.setLegendVisible(true);
-			
-			HeadlessGraphPanel gp = new HeadlessGraphPanel();
-			gp.setBackgroundColor(Color.WHITE);
-			gp.setTickLabelFontSize(18);
-			gp.setAxisLabelFontSize(20);
-			gp.setPlotLabelFontSize(21);
-			
-			String prefix = new File(outputDir, "lenths").getAbsolutePath();
-			
-			gp.drawGraphPanel(spec, false, true, new Range(0d, lenMax), new Range(1e-6, 1));
-			gp.getChartPanel().setSize(1000, 500);
-			gp.saveAsPNG(prefix+".png");
-			gp.saveAsPDF(prefix+".pdf");
-			gp.saveAsTXT(prefix+".txt");
 		}
 		
 		if (calcMaxJumpHist) {
-			// now length hists
-			double deltaJump = 0.5;
-			double maxJump = 30d;
-			HistogramFunction u3Hist = calcMaxJumpDistHist(u3Sol, distances, maxJump, deltaJump);
-			
-			List<DiscretizedFunc> funcs = new ArrayList<>();
-			List<PlotCurveCharacterstics> chars = new ArrayList<>();
-			
-			u3Hist.setName("UCERF3");
-			funcs.add(u3Hist);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, u3Color));
-			
-			for (int i=0; i<rsSols.size(); i++) {
-				HistogramFunction rsHist = calcMaxJumpDistHist(rsSols.get(i), distances, maxJump, deltaJump);
-				rsHist.setName(rsNames.get(i)+" Sub Sects");
-				funcs.add(rsHist);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, rsColors.get(i)));
-				
-//				rsHist = calcActualSimulatorJumpDistHist(rsEvents.get(i), rsElemDists.get(i), maxJump, deltaJump);
-//				rsHist.setName(rsNames.get(i)+" Actual");
-//				funcs.add(rsHist);
-//				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, rsColors.get(i)));
-			}
-			
-			PlotSpec spec = new PlotSpec(funcs, chars, "M≥"+(float)minMag+" Max Jump Histogram",
-					"Max Jump Dist Per Rupture (km)", "Fraction (Rate-Weighted)");
-			spec.setLegendVisible(true);
-			
-			HeadlessGraphPanel gp = new HeadlessGraphPanel();
-			gp.setBackgroundColor(Color.WHITE);
-			gp.setTickLabelFontSize(18);
-			gp.setAxisLabelFontSize(20);
-			gp.setPlotLabelFontSize(21);
-			
-			String prefix = new File(outputDir, "max_jumps").getAbsolutePath();
-			
-			gp.drawGraphPanel(spec, false, true, new Range(0d, maxJump), new Range(1e-6, 1));
-			gp.getChartPanel().setSize(1000, 500);
-			gp.saveAsPNG(prefix+".png");
-			gp.saveAsPDF(prefix+".pdf");
-			gp.saveAsTXT(prefix+".txt");
+			plotMaxJumpHist(u3Sol, distances, rsSol, rsName, minMag, outputDir);
 		}
 		
 //		if (!rsDistFiles.isEmpty()) {
@@ -279,6 +162,133 @@ public class RSQSimRupJumpCompare {
 //	}
 	
 //	private static ArbitrarilyDiscretizedFunc calcNumJumpsFunc(FaultSystemSolution sol, )
+	
+	public static void plotFixedJumpDist(FaultSystemSolution u3Sol, Map<IDPairing, Double> distances,
+			FaultSystemSolution rsSol, String rsName, double minMag, double jumpDist, File outputDir) throws IOException {
+		DiscretizedFunc u3Func = CommandLineInversionRunner.getJumpFuncs(u3Sol, distances, jumpDist, minMag, null)[0];
+		u3Func.scale(1d/u3Func.calcSumOfY_Vals());
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(u3Func);
+		u3Func.setName("UCERF3");
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, u3Color));
+		
+		DiscretizedFunc rsFunc = CommandLineInversionRunner.getJumpFuncs(rsSol, distances, jumpDist, minMag, null)[0];
+		rsFunc.scale(1d/rsFunc.calcSumOfY_Vals());
+		rsFunc.setName(rsName);
+		funcs.add(rsFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, rsColor));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, "M≥"+(float)minMag+" Jump Comparison",
+				"Num Jumps ≥"+(float)jumpDist+"km", "Fraction (Rate-Weighted)");
+		spec.setLegendVisible(true);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setBackgroundColor(Color.WHITE);
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		
+		String prefix = new File(outputDir, "jumps_"+(float)jumpDist+"km").getAbsolutePath();
+		
+		gp.drawGraphPanel(spec, false, false, null, new Range(0d, 1d));
+		TickUnits tus = new TickUnits();
+		TickUnit tu = new NumberTickUnit(1d);
+		tus.add(tu);
+		gp.getXAxis().setStandardTickUnits(tus);
+		gp.getChartPanel().setSize(1000, 500);
+		gp.saveAsPNG(prefix+".png");
+		gp.saveAsPDF(prefix+".pdf");
+		gp.saveAsTXT(prefix+".txt");
+	}
+	
+	public static void plotMaxLengthHist(FaultSystemSolution u3Sol, FaultSystemSolution rsSol, String rsName,
+			double minMag, File outputDir) throws IOException {
+		double lenBinWidth = 50;
+		double lenMax = 1250;
+		HistogramFunction u3LengthHist = calcLengthHist(u3Sol, minMag, lenBinWidth, lenMax);
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		u3LengthHist.setName("UCERF3");
+		funcs.add(u3LengthHist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, u3Color));
+		
+		HistogramFunction rsLengthHist = calcLengthHist(rsSol, minMag, lenBinWidth, lenMax);
+		rsLengthHist.setName(rsName);
+		funcs.add(rsLengthHist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, rsColor));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, "M≥"+(float)minMag+" Length Comparison",
+				"Rupture Length (km)", "Fraction (Rate-Weighted)");
+		spec.setLegendVisible(true);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setBackgroundColor(Color.WHITE);
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		
+		String prefix = new File(outputDir, "lenths").getAbsolutePath();
+		
+		gp.drawGraphPanel(spec, false, true, new Range(0d, lenMax), new Range(1e-6, 1));
+		gp.getChartPanel().setSize(1000, 500);
+		gp.saveAsPNG(prefix+".png");
+		gp.saveAsPDF(prefix+".pdf");
+		gp.saveAsTXT(prefix+".txt");
+	}
+	
+	public static void plotMaxJumpHist(FaultSystemSolution u3Sol, Map<IDPairing, Double> distances,
+			FaultSystemSolution rsSol, String rsName, double minMag, File outputDir) throws IOException {
+		double deltaJump = 0.5;
+		double maxJump = 30d;
+		HistogramFunction u3Hist = calcMaxJumpDistHist(u3Sol, distances, maxJump, deltaJump);
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		u3Hist.setName("UCERF3");
+		funcs.add(u3Hist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, u3Color));
+		
+		HistogramFunction rsHist = calcMaxJumpDistHist(rsSol, distances, maxJump, deltaJump);
+		rsHist.setName(rsName+" Sub Sects");
+		funcs.add(rsHist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, rsColor));
+		
+//		for (int i=0; i<rsSols.size(); i++) {
+//			HistogramFunction rsHist = calcMaxJumpDistHist(rsSols.get(i), distances, maxJump, deltaJump);
+//			rsHist.setName(rsNames.get(i)+" Sub Sects");
+//			funcs.add(rsHist);
+//			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, rsColors.get(i)));
+//			
+////			rsHist = calcActualSimulatorJumpDistHist(rsEvents.get(i), rsElemDists.get(i), maxJump, deltaJump);
+////			rsHist.setName(rsNames.get(i)+" Actual");
+////			funcs.add(rsHist);
+////			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, rsColors.get(i)));
+//		}
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, "M≥"+(float)minMag+" Max Jump Histogram",
+				"Max Jump Dist Per Rupture (km)", "Fraction (Rate-Weighted)");
+		spec.setLegendVisible(true);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setBackgroundColor(Color.WHITE);
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		
+		String prefix = new File(outputDir, "max_jumps").getAbsolutePath();
+		
+		gp.drawGraphPanel(spec, false, true, new Range(0d, maxJump), new Range(1e-6, 1));
+		gp.getChartPanel().setSize(1000, 500);
+		gp.saveAsPNG(prefix+".png");
+		gp.saveAsPDF(prefix+".pdf");
+		gp.saveAsTXT(prefix+".txt");
+	}
 	
 	private static HistogramFunction calcLengthHist(FaultSystemSolution sol, double minMag, double binWidth, double maxLen) {
 		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(0d, maxLen, binWidth);

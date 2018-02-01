@@ -1,5 +1,6 @@
 package scratch.kevin.simCompare;
 
+import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +43,10 @@ public class SimulationHazardCurveCalc<E> {
 		this.xVals = xVals;
 	}
 	
+	public DiscretizedFunc getXVals() {
+		return xVals;
+	}
+	
 	public DiscretizedFunc calc(Site site, double period, double curveDuration) throws IOException {
 		// annual rate curve
 		DiscretizedFunc curve = xVals.deepClone();
@@ -64,6 +69,16 @@ public class SimulationHazardCurveCalc<E> {
 			double rate = curve.getY(i);
 			double prob = 1d - Math.exp(-rate*curveDuration);
 			curve.set(i, prob);
+		}
+		
+		double minRate = simProv.getMinimumCurvePlotRate();
+		if (minRate > 0) {
+			// truncate curve to remove x values never seen in finite catalog
+			ArbitrarilyDiscretizedFunc truncatedCurve = new ArbitrarilyDiscretizedFunc();
+			for (Point2D pt : curve)
+				if (pt.getY() >= minRate)
+					truncatedCurve.set(pt);
+			curve = truncatedCurve;
 		}
 		
 		return curve;

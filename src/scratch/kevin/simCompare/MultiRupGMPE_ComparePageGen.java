@@ -46,10 +46,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.google.common.primitives.Ints;
 
-import scratch.kevin.MarkdownUtils;
-import scratch.kevin.MarkdownUtils.TableBuilder;
 import scratch.kevin.bbp.SpectraPlotter;
 import scratch.kevin.simulators.hazard.HazardMapComparePlotter;
+import scratch.kevin.util.MarkdownUtils;
+import scratch.kevin.util.MarkdownUtils.TableBuilder;
 
 public abstract class MultiRupGMPE_ComparePageGen<E> {
 	
@@ -301,12 +301,12 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		System.out.println("Calculating "+gmpeRef.getShortName()+" curve for "+site.getName()+", "+xAxisLabel);
 		DiscretizedFunc[] gmpeCurves = new DiscretizedFunc[gmpe_truncs.length];
 		for (int t=0; t<gmpeCurves.length; t++) {
-			gmpeCurves[t] = simCurve.deepClone();
+			gmpeCurves[t] = simCurveCalc.getXVals().deepClone();
 			// init to 1, non-exceedance curves
 			for (int i=0; i<gmpeCurves[t].size(); i++)
 				gmpeCurves[t].set(i, 1d);
 		}
-		DiscretizedFunc gmpeMeanCurve = simCurve.deepClone();
+		DiscretizedFunc gmpeMeanCurve = simCurveCalc.getXVals().deepClone();
 		for (int i=0; i<gmpeMeanCurve.size(); i++)
 			gmpeMeanCurve.set(i, 0);
 		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();

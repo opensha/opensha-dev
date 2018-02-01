@@ -50,10 +50,13 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FileUtils;
+import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.nshmp2.imr.impl.AB2006_140_AttenRel;
 import org.opensha.refFaultParamDb.dao.db.DB_AccessAPI;
 import org.opensha.refFaultParamDb.dao.db.DB_ConnectionPool;
@@ -1142,13 +1145,87 @@ public class PureScratch {
 	private static void test42() throws IOException {
 		FileUtils.createZipFile(new File("/tmp/bbp_test7.zip"), new File("/tmp/bbp_test7"), false);
 	}
+	
+	private static void test43() throws IOException {
+		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, 10d);
+		double fract = 0.7;
+		for (CPTVal cv : cpt) {
+			Color c1 = cv.minColor;
+			Color c2 = cv.maxColor;
+			c1 = new Color((int)(c1.getRed()*fract), (int)(c1.getGreen()*fract), (int)(c1.getBlue()*fract));
+			c2 = new Color((int)(c2.getRed()*fract), (int)(c2.getGreen()*fract), (int)(c2.getBlue()*fract));
+			cv.minColor = c1;
+			cv.maxColor = c2;
+		}
+		cpt.setBelowMinColor(cpt.getMinColor());
+		cpt.setAboveMaxColor(cpt.getMaxColor());
+		cpt.setNanColor(Color.LIGHT_GRAY);
+		cpt.writeCPTFile(new File("/tmp/dark_cpt.cpt"));
+	}
+	
+	private static void test44() {
+		double r1 = 0.02;
+		double t1 = 50;
+		
+		double r1Star = r1*(1 + 0.5*r1);
+		System.out.println("r1 = "+r1);
+		System.out.println("r1* = "+r1Star);
+		System.out.println(-Math.log(1-r1));
+		System.out.println("T1 = "+t1);
+		
+		double[] rps = { 1d, 50d, 500d, 1547.0297, 1733, 2474, 2500 };
+		
+		for (double t2 : rps) {
+			double r2Star = r1Star*t2/t1;
+			
+			double r2 = Math.sqrt(1 + 2*r2Star) - 1;
+			
+			System.out.println("T2="+(float)t2+"\tR2*="+(float)r2Star+"\tR2="+(float)r2);
+		}
+		
+		System.out.println("Median test with fixed r2");
+		double r2 = 0.5;
+		double r2Star = r2*(1 + 0.5*r2);
+		System.out.println("r2="+(float)r2+"\tr2*="+r2Star);
+		double t2 = t1*r2Star/r1Star;
+		System.out.println("t2="+(float)t2);
+		
+		System.out.println("Median test with fixed r2*");
+		r2Star = 0.5;
+		r2 = Math.sqrt(1 + 2d*r2Star) - 1;
+		System.out.println("r2="+(float)r2+"\tr2*="+r2Star);
+		t2 = t1*r2Star/r1Star;
+		System.out.println("t2="+(float)t2);
+	}
+	
+	private static void test45() {
+		List<Integer> list1 = new ArrayList<>();
+		List<Integer> list2 = new ArrayList<>();
+		
+		list1.add(0);
+		list1.add(1);
+		list1.add(4);
+		list1.add(5);
+		list1.add(8);
+		
+		list2.add(0);
+		list2.add(1);
+		list2.add(4);
+		list2.add(5);
+		list2.add(8);
+		
+		System.out.println("Hash1: "+list1.hashCode());
+		System.out.println("Hash2: "+list2.hashCode());
+		
+		System.out.println("Equals? "+list1.equals(list2));
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test42();
+		test45();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

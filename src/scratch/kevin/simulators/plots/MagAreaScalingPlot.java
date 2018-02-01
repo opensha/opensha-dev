@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.jfree.data.Range;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagAreaRelationship;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -81,7 +82,17 @@ public class MagAreaScalingPlot extends AbstractPlot {
 			wcFunc.set(i, wc.getMedianMag(wcFunc.getX(i)));
 		wcFunc.setName("W-C 1994");
 		funcs.add(wcFunc);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		PlotCurveCharacterstics wcChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED.darker());
+		chars.add(wcChar);
+		
+		Ellsworth_B_WG02_MagAreaRel elb = new Ellsworth_B_WG02_MagAreaRel();
+		EvenlyDiscretizedFunc elbFunc = new EvenlyDiscretizedFunc(scatter.getMinX(), scatter.getMaxX(), 1000);
+		for (int i=0; i<elbFunc.size(); i++)
+			elbFunc.set(i, elb.getMedianMag(elbFunc.getX(i)));
+		elbFunc.setName("EllsworthB");
+		funcs.add(elbFunc);
+		PlotCurveCharacterstics elbChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE.darker());
+		chars.add(elbChar);
 		
 		String title = "Mag-Area Scaling";
 		String xAxisLabel = "Area (km^2)";
@@ -179,7 +190,12 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		for (Point2D pt : wcFunc)
 			logWCFunc.set(Math.log10(pt.getX()), pt.getY());
 		funcs.add(logWCFunc);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		chars.add(wcChar);
+		ArbitrarilyDiscretizedFunc logEllBFunc = new ArbitrarilyDiscretizedFunc();
+		for (Point2D pt : elbFunc)
+			logEllBFunc.set(Math.log10(pt.getX()), pt.getY());
+		funcs.add(logEllBFunc);
+		chars.add(elbChar);
 		xyzSpec.setXYElems(funcs);
 		xyzSpec.setXYChars(chars);
 		

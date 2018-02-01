@@ -6,9 +6,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
@@ -240,6 +243,25 @@ public class RSQSimBBP_Config {
 	
 	public static List<BBP_Site> getStandardSites() {
 		return allSites;
+	}
+	
+	public static List<BBP_Site> getCAGriddedSites(double spacing) {
+		return getGriddedSites(new CaliforniaRegions.RELM_TESTING(), spacing);
+	}
+	
+	public static List<BBP_Site> getGriddedSites(Region region, double spacing) {
+		GriddedRegion gridReg = new GriddedRegion(region, spacing, null);
+		System.out.println("Creting "+gridReg.getNodeCount()+" gridded BBP sites");
+		
+		List<BBP_Site> sites = new ArrayList<>();
+		
+		for (int i=0; i<gridReg.getNodeCount(); i++) {
+			String name = "grid"+i;
+			Preconditions.checkState(name.length() <= 10);
+			sites.add(new BBP_Site(name, gridReg.getLocation(i), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		}
+		
+		return sites;
 	}
 	
 	public static String siteCleanName(BBP_Site site) {

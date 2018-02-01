@@ -83,8 +83,6 @@ import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 
-import scratch.kevin.MarkdownUtils;
-import scratch.kevin.MarkdownUtils.TableBuilder;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.simCompare.GroundMotionScatterPlot;
@@ -98,6 +96,8 @@ import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
 import scratch.kevin.simulators.hazard.HazardMapComparePlotter;
+import scratch.kevin.util.MarkdownUtils;
+import scratch.kevin.util.MarkdownUtils.TableBuilder;
 
 class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	
@@ -551,8 +551,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2326.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2495.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = true;

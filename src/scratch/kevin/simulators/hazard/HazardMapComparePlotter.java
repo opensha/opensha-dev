@@ -6,19 +6,23 @@ import java.awt.Graphics;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.zip.GZIPOutputStream;
 
 import javax.imageio.ImageIO;
 
@@ -59,6 +63,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.mapping.gmt.elements.TopographicSlopeFile;
 import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.ComparablePairing;
+import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.cpt.CPT;
@@ -98,6 +103,10 @@ import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.kevin.simulators.RSQSimCatalog;
+import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+import scratch.kevin.util.MarkdownUtils;
+import scratch.kevin.util.MarkdownUtils.TableBuilder;
 
 public class HazardMapComparePlotter {
 	
@@ -110,33 +119,92 @@ public class HazardMapComparePlotter {
 		boolean u3SupraMinMag = false;
 		double minMag = 6.5d;
 		
-		File mainDir = new File("/home/kevin/Simulators/hazard/");
+		File hazardJobDir = new File("/home/kevin/Simulators/hazard/");
+		File catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
+		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
 		List<File> jobDirs = Lists.newArrayList();
 		
-//		String catalogName = "RSQSim";
-//		String catalogFileName = "rsqsim";
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-pga-stdDev0.0-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-0.2s-stdDev0.0-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-10.0s-stdDev0.0-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-1.0s-stdDev0.0-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-5.0s-stdDev0.0-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-2.0s-stdDev0.0-8xPoints"));
+		String catalogName = "RSQSim";
+		String catalogFileName = "rsqsim";
 		
-		String catalogName = "UCERF2";
-		String catalogFileName = "ucerf2";
-//		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-pga-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-sa-0.2s-8xPoints"));
-		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-sa-2.0s-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-sa-10.0s-8xPoints"));
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2142.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2142-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-gmpeBSSA2014"));
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2194.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2349.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2017_12_05-bruce2349-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2349-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2349-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2349-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2349-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2343.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2017_12_05-bruce2343-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2343-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2343-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2343-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2343-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2326.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2017_12_05-bruce2326-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2326-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2326-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2326-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2326-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2381.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2388.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2457.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2495.instance(catalogsBaseDir);
+		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+		File catOutDir = new File(mainOutputDir, catalog.getCatalogDir().getName());
+		Preconditions.checkState(catOutDir.exists() || catOutDir.mkdir());
+		
+		
+//		String catalogName = "UCERF2";
+//		String catalogFileName = "ucerf2";
+////		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-pga-8xPoints"));
+////		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(mainJobDir, "2017_09_05-ucerf2-faults-m6.5-sa-1.0s-8xPoints"));
+////		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-sa-2.0s-8xPoints"));
+////		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-sa-5.0s-8xPoints"));
+////		jobDirs.add(new File(mainDir, "2017_09_05-ucerf2-faults-m6.5-sa-10.0s-8xPoints"));
 		
 		Region region = new CaliforniaRegions.RELM_TESTING();
 		double spacing = 0.02;
@@ -148,15 +216,13 @@ public class HazardMapComparePlotter {
 		u3FullFiles.put(1d, new File("/home/kevin/OpenSHA/UCERF3/maps/"
 				+ "2017_09_06-ucerf3-geol-gridded-tests-sa-1.0s/full/curves/imrs1.bin"));
 		
-		boolean plotAll = false;
+		boolean plotAll = true;
 		
-		boolean plotMaps = false || plotAll;
-		boolean plotHist = false || plotAll;
+		boolean plotMaps = true || plotAll;
+		boolean plotHist = true || plotAll;
 		boolean plotCurves = true || plotAll;
-		boolean plotDisagg = false || (plotAll && !catalogName.contains("UCERF2"));
-//		boolean plotDisagg = false;
-		boolean plotMags = false || (plotAll && !catalogName.contains("UCERF2"));
-		boolean plotConnectivity = false || (plotAll && !catalogName.contains("UCERF2"));
+//		boolean plotDisagg = false || (plotAll && !catalogName.contains("UCERF2"));
+		boolean plotDisagg = false;
 		boolean plotCurveProfile = false; // only if specified
 		
 		int[] mapRPs = { 1000, 2500, 10000};
@@ -173,7 +239,7 @@ public class HazardMapComparePlotter {
 			curveLocs.put(city.toString(), city.location());
 		}
 		
-		File compareDir = new File(mainDir, "ucerf-comparisons");
+		File compareDir = new File(hazardJobDir, "ucerf-comparisons");
 		File u3Dir;
 		if (u3SupraMinMag)
 			u3Dir = new File(compareDir, "ucerf3-supra");
@@ -192,6 +258,7 @@ public class HazardMapComparePlotter {
 			
 			String imtLabel = "PGA (g)";
 			String imt = PGA_Param.NAME;
+			String imtFileLabel;
 			double period = Double.NaN;
 			// try to detect other IMT
 			if (jobDir.getName().toLowerCase().contains("-sa-")) {
@@ -202,8 +269,10 @@ public class HazardMapComparePlotter {
 				period = Double.parseDouble(periodStr);
 				imtLabel = (float)period+"s SA (g)";
 				System.out.println("Detected IMT: "+imtLabel);
+				imtFileLabel = "sa_"+(float)period+"s";
 			} else {
 				System.out.println("Assuming IMT: "+imtLabel);
+				imtFileLabel = "pga";
 			}
 			
 			double stdDev = -1;
@@ -215,7 +284,45 @@ public class HazardMapComparePlotter {
 				stdDev = Double.parseDouble(stdDevStr);
 				
 				imtLabel += ", σ="+(float)stdDev;
+				imtFileLabel += "_sigma"+(float)stdDev;
 			}
+			
+			if (jobDir.getName().contains("-gmpe")) {
+				String jobName = jobDir.getName();
+				String gmpeStr = jobName.substring(jobName.indexOf("-gmpe")+5);
+				if (gmpeStr.contains("-"))
+					gmpeStr = gmpeStr.substring(0, gmpeStr.indexOf("-"));
+				String gmpeName = gmpeStr;
+				
+				imtLabel += ", "+gmpeName;
+				imtFileLabel += "_gmpe"+gmpeName;
+			}
+			
+			File catHazardOutDir = new File(catOutDir, "hazard_"+imtFileLabel);
+			Preconditions.checkState(catHazardOutDir.exists() || catHazardOutDir.mkdir());
+			File resourcesDir = new File(catHazardOutDir, "resources");
+			Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
+			
+			List<String> lines = new ArrayList<>();
+			
+			// header
+			lines.add("# Hazard Comparisons");
+			lines.add("");
+			lines.add("*IMT: "+imtLabel+"*");
+			lines.add("");
+			if (jobDir.getName().contains("sectArea")) {
+				String str = jobDir.getName();
+				str = str.substring(str.indexOf("sectArea")+"sectArea".length());
+				str = str.substring(0, str.indexOf("-"));
+				double minFractForInclusion = Double.parseDouble(str);
+				lines.add("*Subsections participates in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
+				lines.add("");
+			}
+			lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
+			lines.add("");
+			
+			int tocIndex = lines.size();
+			String topLink = "*[(top)](#table-of-contents)*";
 			
 			Map<Location, ArbitrarilyDiscretizedFunc> u3Curves;
 			Map<Location, ArbitrarilyDiscretizedFunc> u3FullCurves;
@@ -267,6 +374,7 @@ public class HazardMapComparePlotter {
 				else
 					hazardCPT = hazardCPT.rescale(0d, 0.6);
 			}
+			hazardCPT.setNanColor(Color.WHITE);
 			
 			if (plotMaps) {
 				System.out.println("Plotting maps");
@@ -279,9 +387,21 @@ public class HazardMapComparePlotter {
 					GriddedGeoDataSet rsqsimData = loadFromBinary(gridReg, curves, isProbAtIML, level);
 					GriddedGeoDataSet u3Data = loadFromBinary(gridReg, u3Curves, isProbAtIML, level);
 					
-					plotMaps(jobDir, "map_"+durationLabel+"_"+catalogFileName, rsqsimData, region,
+					File csvFile = new File(resourcesDir, "map_"+durationLabel+".csv.gz");
+					CSVFile<String> csv = new CSVFile<>(true);
+					csv.addLine("Index", "Longitude", "Latitude", catalogName, "UCERF3");
+					for (int i=0; i<gridReg.getNodeCount(); i++) {
+						Location loc = rsqsimData.getLocation(i);
+						csv.addLine(i+"", (float)loc.getLongitude()+"", (float)loc.getLatitude()+"",
+								(float)rsqsimData.get(i)+"", (float)u3Data.get(i)+"");
+					}
+					System.out.println("Writing CSV to "+csvFile.getAbsolutePath());
+					OutputStream gzFileOut = new GZIPOutputStream(new FileOutputStream(csvFile));
+					csv.writeToStream(gzFileOut);
+					
+					plotMaps(resourcesDir, "map_"+durationLabel+"_"+catalogFileName, rsqsimData, region,
 							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), catalogName+", "+durationLabel, hazardCPT, false);
-					plotMaps(jobDir, "map_"+durationLabel+"_u3"+durationLabel, u3Data, region,
+					plotMaps(resourcesDir, "map_"+durationLabel+"_u3", u3Data, region,
 							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), "UCERF3, "+durationLabel, hazardCPT, false);
 					
 					GriddedGeoDataSet ratioData = new GriddedGeoDataSet(gridReg, false);
@@ -290,27 +410,28 @@ public class HazardMapComparePlotter {
 					ratioData.log();
 					
 					CPT ratioCPT = GMT_CPT_Files.GMT_POLAR.instance();
+					ratioCPT.setNanColor(Color.WHITE);
 					ratioCPT = ratioCPT.rescale(-0.2d, 0.2d);
-					plotMaps(jobDir, "map_"+durationLabel+"_ratio_log_tight", ratioData, region, (double)ratioCPT.getMinValue(),
+					plotMaps(resourcesDir, "map_"+durationLabel+"_ratio_log_tight", ratioData, region, (double)ratioCPT.getMinValue(),
 							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel, ratioCPT, false);
 					ratioCPT = ratioCPT.rescale(-0.5d, 0.5d);
-					plotMaps(jobDir, "map_"+durationLabel+"_ratio_log", ratioData, region, (double)ratioCPT.getMinValue(),
+					plotMaps(resourcesDir, "map_"+durationLabel+"_ratio_log", ratioData, region, (double)ratioCPT.getMinValue(),
 							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel, ratioCPT, false);
 				}
 			}
 			
 			if (plotHist) {
 				System.out.println("Plotting hists");
-				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, jobDir, true);
-				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, jobDir, false);
-				plotNEHRP_Hists(u3Curves, curves, catalogName, gridReg, nehrpRPs, jobDir);
-//				plotMeanStdDevTrend(500, 30000, u3Curves, rsqsimCurves, gridReg, jobDir);
-				plotMeanStdDevTrend(1e-6, u3Curves, curves, catalogName, gridReg, jobDir);
+				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, resourcesDir, true);
+				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, resourcesDir, false);
+				plotNEHRP_Hists(u3Curves, curves, catalogName, gridReg, nehrpRPs, resourcesDir);
+//				plotMeanStdDevTrend(500, 30000, u3Curves, rsqsimCurves, gridReg, resourcesDir);
+				plotMeanStdDevTrend(1e-6, u3Curves, curves, catalogName, gridReg, resourcesDir);
 			}
 			
 			if (plotCurves) {
 				System.out.println("Plotting curves");
-				File curveDir = new File(jobDir, "curves");
+				File curveDir = new File(resourcesDir, "curves");
 				Preconditions.checkState(curveDir.exists() || curveDir.mkdir());
 				
 				for (String siteName : curveLocs.keySet()) {
@@ -329,6 +450,7 @@ public class HazardMapComparePlotter {
 					plotCurves(u3Curve, u3FullCurve, rsqsimCurve, catalogName, curveDir, siteName, imtLabel, mapRPs);
 				}
 			}
+			
 			if (plotDisagg) {
 				System.out.println("Plotting disagg");
 				System.out.println("Building RSQSim ERF");
@@ -340,7 +462,7 @@ public class HazardMapComparePlotter {
 					u3ERF = buildERF(u3Sol);
 				}
 				
-				File disaggDir = new File(jobDir, "disagg");
+				File disaggDir = new File(resourcesDir, "disagg");
 				Preconditions.checkState(disaggDir.exists() || disaggDir.mkdir());
 				
 				double disaggMinMag;
@@ -352,32 +474,124 @@ public class HazardMapComparePlotter {
 				calcDisagg(u3ERF, rsERF, curveLocs, catalogName, disaggDir, imt, period, disaggRPs, disaggMinMag);
 			}
 			
-			if (plotMags) {
-				System.out.println("Plotting mags");
-				if (rsSol == null)
-					rsSol = FaultSystemIO.loadSol(rsSolFile);
-				if (u3Sol == null)
-					u3Sol = FaultSystemIO.loadSol(u3SolFile);
-				calcCumulantMedianMag(u3Sol, rsSol, catalogName, jobDir);
-			}
-			
-			if (plotConnectivity) {
-				System.out.println("Plotting connectivity");
-				if (rsSol == null)
-					rsSol = FaultSystemIO.loadSol(rsSolFile);
-				if (u3Sol == null)
-					u3Sol = FaultSystemIO.loadSol(u3SolFile);
-				plotConnectivity(u3Sol.getRupSet(), jobDir, "connectivity_ucerf3", "UCERF3 Connectivity");
-				plotConnectivity(rsSol.getRupSet(), jobDir, "connectivity_"+catalogFileName, catalogName+" Connectivity");
-			}
-			
 			if (plotCurveProfile) {
 				Location startLoc = new Location(40, -120);
-				plotCurveProfile(u3Curves, curves, gridReg, imtLabel, jobDir, "curve_profile", startLoc, 15, 0d, 0.02);
+				plotCurveProfile(u3Curves, curves, gridReg, imtLabel, resourcesDir, "curve_profile", startLoc, 15, 0d, 0.02);
 			}
+			
+			waitOnFutures(false);
+			
+			if (plotMaps || new File(resourcesDir, "map_"+mapRPs[0]+"yr_"+catalogFileName+".png").exists()) {
+				lines.add("## Hazard Maps");
+				lines.add(topLink); lines.add("");
+				TableBuilder table = MarkdownUtils.tableBuilder();
+				table.addLine("Return Period", catalogName, "UCERF3", "Ratio", "Tight Ratio");
+				for (int mapRP : mapRPs) {
+					String durationLabel = mapRP+"yr";
+					table.initNewLine();
+					table.addColumn("**"+mapRP+" yr**");
+					File rsPlot = new File(resourcesDir, "map_"+mapRP+"yr_"+catalogFileName+".png");
+					Preconditions.checkState(rsPlot.exists());
+					table.addColumn("![Catalog Map]("+resourcesDir.getName()+"/"+rsPlot.getName()+")");
+					File u3Plot = new File(resourcesDir, "map_"+mapRP+"yr_u3.png");
+					Preconditions.checkState(u3Plot.exists());
+					table.addColumn("![UCERF3 Map]("+resourcesDir.getName()+"/"+u3Plot.getName()+")");
+					File ratioPlot = new File(resourcesDir, "map_"+mapRP+"yr_ratio_log.png");
+					Preconditions.checkState(ratioPlot.exists());
+					table.addColumn("![Ratio Map]("+resourcesDir.getName()+"/"+ratioPlot.getName()+")");
+					File tightRatioPlot = new File(resourcesDir, "map_"+mapRP+"yr_ratio_log_tight.png");
+					Preconditions.checkState(tightRatioPlot.exists());
+					table.addColumn("![Tight Ratio Map]("+resourcesDir.getName()+"/"+tightRatioPlot.getName()+")");
+					
+					table.finalizeLine();
+				}
+				lines.add("");
+				lines.addAll(table.build());
+				lines.add("");
+			}
+			
+			if (plotHist || new File(resourcesDir, "hist_0d.png").exists()) {
+				lines.add("## Histograms");
+				lines.add("");
+				lines.add("## 0-D Histogram");
+				lines.add(topLink); lines.add("");
+				lines.add("![0-D Hist]("+resourcesDir.getName()+"/hist_0d.png)");
+				lines.add("");
+				lines.add("## 1-D Histogram");
+				lines.add(topLink); lines.add("");
+				lines.add("![1-D Hist]("+resourcesDir.getName()+"/hist_1d.png)");
+				lines.add("");
+				lines.add("## 2-D Histograms");
+				lines.add(topLink); lines.add("");
+				TableBuilder table = MarkdownUtils.tableBuilder();
+				table.addLine("Return Period", "2-D Histogram");
+				for (int rp : histRPs) {
+					table.initNewLine();
+					table.addColumn("**"+rp+" yr**");
+					table.addColumn("![2-D Hist]("+resourcesDir.getName()+"/hist_2d_"+rp+"yr.png)");
+					table.finalizeLine();
+				}
+				lines.addAll(table.build());
+				lines.add("");
+			}
+			
+			if (plotCurves || new File(resourcesDir, "curves").exists()) {
+				lines.add("## Hazard Curves");
+				lines.add(topLink); lines.add("");
+				
+				List<String> siteNames = new ArrayList<>(curveLocs.keySet());
+				Collections.sort(siteNames);
+				
+				File curveDir = new File(resourcesDir, "curves");
+				
+				TableBuilder table = MarkdownUtils.tableBuilder();
+				table.initNewLine();
+				for (String siteName : siteNames) {
+					File plot = new File(curveDir, "curves_"+siteName.replaceAll(" ", "_")+".png");
+					Preconditions.checkState(plot.exists());
+					table.addColumn("!["+siteName+"]("+resourcesDir.getName()+"/curves/"+plot.getName()+")");
+				}
+				table.finalizeLine();
+				table.wrap(4, 0);
+				
+				lines.addAll(table.build());
+				lines.add("");
+			}
+			
+			if (plotDisagg || new File(resourcesDir, "disagg").exists()) {
+				lines.add("## Hazard Disaggregations");
+				lines.add(topLink); lines.add("");
+				
+				List<String> siteNames = new ArrayList<>(curveLocs.keySet());
+				Collections.sort(siteNames);
+				
+				File disaggDir = new File(resourcesDir, "disagg");
+				
+				TableBuilder table = MarkdownUtils.tableBuilder();
+				for (String siteName : siteNames) {
+					for (int rp : disaggRPs) {
+						File plot = new File(disaggDir, "disagg_"+siteName.replaceAll(" ", "_")+"_"+rp+"yr_combined.png");
+//						Preconditions.checkState(plot.exists());
+						table.addLine("**"+siteName+", "+rp+" yr**", "!["+siteName+"]("+resourcesDir.getName()+"/disagg/"+plot.getName()+")");
+					}
+				}
+				
+				lines.addAll(table.build());
+				lines.add("");
+			}
+			
+			// add TOC
+			lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));
+			lines.add(tocIndex, "## Table Of Contents");
+			
+			// write markdown
+			MarkdownUtils.writeReadmeAndHTML(lines, catHazardOutDir);
 		}
 		
-		waitOnFutures();
+		catalog.writeMarkdownSummary(catOutDir, true, false);
+		RSQSimCatalog.writeCatalogsIndex(mainOutputDir);
+		
+		waitOnFutures(true);
 	}
 	
 	private static ArrayDeque<ScalarIMR> gmpeDeque;
@@ -443,6 +657,8 @@ public class HazardMapComparePlotter {
 		map.setCustomScaleMax(customMax);
 		map.setRescaleCPT(rescaleCPT);
 		map.setBlackBackground(false);
+		map.setPDFFileName(null);
+		map.setJPGFileName(null);
 		
 		System.out.println("Making map...");
 		FaultBasedMapGen.LOCAL_MAPGEN = true;
@@ -468,7 +684,7 @@ public class HazardMapComparePlotter {
 	private static synchronized void submitRunnable(Runnable run, long sleepMillis) {
 		if (exec == null) {
 			exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-			futures = new ArrayList<>();
+			futures = new LinkedList<>();
 		}
 		futures.add(exec.submit(run));
 		if (sleepMillis > 0) {
@@ -480,12 +696,13 @@ public class HazardMapComparePlotter {
 		}
 	}
 	
-	private static void waitOnFutures() {
+	private static void waitOnFutures(boolean shutdown) {
 		if (futures == null)
 			return;
 		System.out.println("Waiting on "+futures.size()+" maps...");
 		int count = 0;
-		for (Future<?> future : futures) {
+		while (!futures.isEmpty()) {
+			Future<?> future = futures.removeFirst();
 			try {
 				future.get();
 			} catch (Exception e) {
@@ -493,14 +710,15 @@ public class HazardMapComparePlotter {
 			}
 			count++;
 			if (count % 10 == 0)
-				System.out.println("\tFutures "+count+"/"+futures.size()+" done");
+				System.out.println("\t"+count+" Futures done, "+futures.size()+" left");
 		}
 		System.out.println("DONE");
-		exec.shutdown();
+		if (shutdown)
+			exec.shutdown();
 	}
 	
 	private static ExecutorService exec;
-	private static List<Future<?>> futures;
+	private static LinkedList<Future<?>> futures;
 	
 	static void plotHists(Map<Location, ArbitrarilyDiscretizedFunc> ucerf3Curves,
 			Map<Location, ArbitrarilyDiscretizedFunc> rsqsimCurves, String catalogName, GriddedRegion gridReg,
@@ -540,6 +758,10 @@ public class HazardMapComparePlotter {
 			}
 			
 			HistogramFunction sampleHist = HistogramFunction.getEncompassingHistogram(minZ, maxZ, delta);
+			while (sampleHist.size() < 30) {
+				delta /= 2;
+				sampleHist = HistogramFunction.getEncompassingHistogram(minZ, maxZ, delta);
+			}
 			
 			EvenlyDiscrXYZ_DataSet xyz = new EvenlyDiscrXYZ_DataSet(sampleHist.size(), sampleHist.size(), minZ, minZ, delta);
 			
@@ -688,6 +910,8 @@ public class HazardMapComparePlotter {
 		
 		EvenlyDiscretizedFunc meanFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
 		EvenlyDiscretizedFunc stdDevFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
+		EvenlyDiscretizedFunc medianFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
+		EvenlyDiscretizedFunc meanAbsDiffFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
 		
 		double[] pga_thresholds = {0.0, 0.1, 0.2, 0.4, 0.8, 1.2};
 		CPT pgaWeightCPT = new CPT(pga_thresholds[0], pga_thresholds[pga_thresholds.length-1], Color.GRAY, Color.BLACK);
@@ -742,11 +966,34 @@ public class HazardMapComparePlotter {
 			
 			double[] ratioArray = Doubles.toArray(ratioVals);
 			
+			// calc MAD
+			double meanAbsDiff, median;
+			if (ratioVals.isEmpty()) {
+				meanAbsDiff = Double.NaN;
+				median = Double.NaN;
+			} else {
+				median = DataUtils.median(ratioArray);
+				meanAbsDiff = 0d;
+				for (int j=0; j<ratioArray.length; j++)
+					meanAbsDiff += Math.abs(ratioArray[j]);
+				meanAbsDiff /= ratioArray.length;
+//				int onePercent = ratioArray.length / 100;
+//				for (int j=0; j<ratioArray.length; j++) {
+//					if (j % onePercent == 0)
+//						System.out.println("j="+j+"/"+ratioArray.length);
+//					for (int k=0; k<ratioArray.length; k++)
+//						meanAbsDiff += Math.abs(ratioArray[j] - ratioArray[k]);
+//				}
+//				meanAbsDiff /= ratioArray.length*ratioArray.length;
+			}
+			
 			double mean = StatUtils.mean(ratioArray);
 			double stdDev = Math.sqrt(StatUtils.variance(ratioArray));
 			
 			meanFunc.set(i, mean);
 			stdDevFunc.set(i, stdDev);
+			medianFunc.set(i, median);
+			meanAbsDiffFunc.set(i, meanAbsDiff);
 			
 			double nehrpMean = StatUtils.mean(Doubles.toArray(nehrpRatios));
 			nehrpMeanFunc.set(i, nehrpMean);
@@ -794,6 +1041,14 @@ public class HazardMapComparePlotter {
 		logFuncs.add(stdDevFunc);
 		stdDevFunc.setName("StdDev");
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.RED));
+		
+		logFuncs.add(medianFunc);
+		medianFunc.setName("Median");
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.MAGENTA));
+		
+		logFuncs.add(meanAbsDiffFunc);
+		meanAbsDiffFunc.setName("MeanAbsDiff");
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.ORANGE.darker()));
 		
 		List<DiscretizedFunc> linearFuncs = new ArrayList<>();
 		for (DiscretizedFunc logFunc : logFuncs)
@@ -1180,137 +1435,6 @@ public class HazardMapComparePlotter {
 				run.run();
 		}
 		
-	}
-	
-	static void calcCumulantMedianMag(FaultSystemSolution u3Sol, FaultSystemSolution rsSol,
-			String catalogName, File outputDir) throws IOException, GMT_MapException, RuntimeException {
-		CSVFile<String> csv = new CSVFile<>(true);
-		csv.addLine("Sect Index", "Sect Name", catalogName, "UCERF3");
-		
-		FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
-		FaultSystemRupSet rsRupSet = rsSol.getRupSet();
-		
-		Preconditions.checkState(u3RupSet.getNumSections() == rsRupSet.getNumSections());
-		
-		List<Double> rsVals = new ArrayList<>();
-		List<Double> u3Vals = new ArrayList<>();
-		
-		for (int s=0; s<u3RupSet.getNumSections(); s++) {
-			List<String> line = new ArrayList<>();
-			line.add(s+"");
-			line.add(u3RupSet.getFaultSectionData(s).getName());
-			double rsVal = calcCumulantMedianMag(rsSol, s);
-			rsVals.add(rsVal);
-			line.add(rsVal+"");
-			double u3Val = calcCumulantMedianMag(u3Sol, s);
-			u3Vals.add(u3Val);
-			line.add(u3Val+"");
-			csv.addLine(line);
-		}
-		
-		csv.writeToFile(new File(outputDir, "mag_cumulant_medians.csv"));
-		
-		List<LocationList> faults = new ArrayList<>();
-		for (FaultSectionPrefData fault : u3RupSet.getFaultSectionDataList())
-			faults.add(fault.getFaultTrace());
-		
-		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(6d,  8.5d);
-		Region reg = new CaliforniaRegions.RELM_TESTING();
-		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(u3Vals), reg, outputDir,
-				"mag_cumulant_medians_ucerf3", false, false, "UCERF3 Mag Cumulant Median");
-		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(rsVals), reg, outputDir,
-				"mag_cumulant_medians_"+catalogName.toLowerCase(), false, false, catalogName+" Mag Cumulant Median");
-		
-		CPT diffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
-		double[] diffVals = new double[faults.size()];
-		
-		for (int i=0; i<diffVals.length; i++)
-			diffVals[i] = rsVals.get(i) - u3Vals.get(i);
-		
-		FaultBasedMapGen.makeFaultPlot(diffCPT, faults, diffVals, reg, outputDir,
-				"mag_cumulant_medians_diff", false, false, catalogName+"-U3 Mag Cumulant Median");
-	}
-	
-	private static double calcCumulantMedianMag(FaultSystemSolution sol, int s) {
-		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(5d, 9d, (int)((9d-5d)/0.01) + 1);
-		for (int r : sol.getRupSet().getRupturesForSection(s)) {
-			double mag = sol.getRupSet().getMagForRup(r);
-			int i = func.getClosestXIndex(mag);
-			for (int x=i; x<func.size(); x++)
-				func.add(x, MagUtils.magToMoment(mag));
-		}
-		if (func.calcSumOfY_Vals() == 0)
-			return Double.NaN;
-		func.scale(1d/func.getMaxY());
-		return func.getFirstInterpolatedX(0.5);
-	}
-	
-	static void plotConnectivity(FaultSystemRupSet rupSet, File outputDir, String prefix, String title)
-			throws IOException, GMT_MapException, RuntimeException {
-		List<HashSet<Integer>> clusters = new ArrayList<>();
-		Map<Integer, Integer> sectIndexToClusterIndexMap = new HashMap<>();
-		
-		for (int s=0; s<rupSet.getNumSections(); s++)
-			processClusterRecursive(rupSet, s, clusters.size(), clusters, sectIndexToClusterIndexMap);
-		
-		System.out.println("Detected "+clusters.size()+" clusters for "+prefix);
-		
-		CPT refCPT = GMT_CPT_Files.MAX_SPECTRUM.instance();
-		refCPT = refCPT.rescale(0d, 1d);
-		// list of values for each discrete color, initially sorted from first color to last
-		List<Double> colorValues = Lists.newArrayList();
-//		for (CPTVal cptVal : refCPT)
-//			colorValues.add((double)cptVal.start);
-//		colorValues.add((double)refCPT.get(refCPT.size()-1).end);
-		for (double v=0; v<=1d; v+=0.1)
-			colorValues.add(v);
-		// now sorted from last color to first
-		Collections.reverse(colorValues);
-		refCPT.setNanColor(Color.GRAY);
-		
-		// sort from smallest to largest
-		List<Integer> sizes = Lists.newArrayList();
-		for (HashSet<Integer> cluster : clusters)
-			sizes.add(cluster.size());
-		clusters = ComparablePairing.getSortedData(sizes, clusters);
-		// now reverse, largest to smallest
-		Collections.reverse(clusters);
-		
-		if (clusters.size() > colorValues.size())
-			clusters = clusters.subList(0, colorValues.size());
-		
-		List<LocationList> faults = new ArrayList<>();
-		List<Double> values = new ArrayList<>();
-		
-		for (int s=0; s<rupSet.getNumSections(); s++) {
-			faults.add(rupSet.getFaultSectionData(s).getFaultTrace());
-			double val = Double.NaN;
-			for (int i=0; i<clusters.size(); i++) {
-				if (clusters.get(i).contains(s))
-					val = colorValues.get(i);
-			}
-			values.add(val);
-		}
-		
-		Region reg = new CaliforniaRegions.RELM_TESTING();
-		FaultBasedMapGen.makeFaultPlot(refCPT, faults, Doubles.toArray(values), reg, outputDir,
-				prefix, false, false, title+" ("+colorValues.size()+" largest)");
-	}
-	
-	private static void processClusterRecursive(FaultSystemRupSet rupSet, int sect, int clusterIndex, List<HashSet<Integer>> clusters,
-			Map<Integer, Integer> sectIndexToClusterIndexMap) {
-		if (sectIndexToClusterIndexMap.containsKey(sect))
-			// we've already done this one
-			return;
-		if (clusters.size() == clusterIndex)
-			clusters.add(new HashSet<>());
-		clusters.get(clusterIndex).add(sect);
-		sectIndexToClusterIndexMap.put(sect, clusterIndex);
-		for (int r : rupSet.getRupturesForSection(sect)) {
-			for (int sect2 : rupSet.getSectionsIndicesForRup(r)) {
-				processClusterRecursive(rupSet, sect2, clusterIndex, clusters, sectIndexToClusterIndexMap);
-			}
-		}
 	}
 	
 	private static void plotCurveProfile(Map<Location, ArbitrarilyDiscretizedFunc> u3Curves,

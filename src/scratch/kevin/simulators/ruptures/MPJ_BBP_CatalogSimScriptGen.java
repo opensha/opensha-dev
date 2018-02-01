@@ -32,7 +32,12 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(myHPCDir, "rundir2342");
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_K2");
 //		File catalogDir = new File(jacquiCSDir, "modLoad_testB");
-		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
+//		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
+		File catalogDir = new File(myHPCDir, "rundir2495");
+		
+		boolean standardSites = true;
+		boolean griddedSites = false;
+		double griddedSpacing = 1d;
 		
 		double minMag = 6;
 //		double minMag = 7;
@@ -43,7 +48,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 		int skipYears = 5000;
 		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 18;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 60*1024;
@@ -58,6 +63,11 @@ class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-noHF";
 		if (numRG > 0)
 			jobName += "-rg"+numRG;
+		if (standardSites)
+			jobName += "-standardSites";
+		if (griddedSites)
+			jobName += "-griddedSites";
+		Preconditions.checkState(standardSites || griddedSites);
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -65,8 +75,13 @@ class MPJ_BBP_CatalogSimScriptGen {
 		File remoteJobDir = new File(remoteDir, jobName);
 		
 		// copy sites file
-		List<BBP_Site> sites = RSQSimBBP_Config.getStandardSites();
+		List<BBP_Site> sites = new ArrayList<>();
+		if (standardSites)
+			sites.addAll(RSQSimBBP_Config.getStandardSites());
+		if (griddedSites)
+			sites.addAll(RSQSimBBP_Config.getCAGriddedSites(griddedSpacing));
 		File sitesFile = new File(localJobDir, "sites.stl");
+		System.out.println("Writing "+sites.size()+" sites to "+sitesFile.getAbsolutePath());
 		BBP_Site.writeToFile(sitesFile, sites);
 		File remoteSitesFile = new File(remoteJobDir, sitesFile.getName());
 		

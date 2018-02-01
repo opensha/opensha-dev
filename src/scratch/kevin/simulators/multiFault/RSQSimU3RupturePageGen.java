@@ -6,7 +6,9 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -17,15 +19,25 @@ import org.jfree.chart.annotations.XYBoxAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
 import org.jfree.ui.TextAnchor;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
+import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.exceptions.GMT_MapException;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -40,9 +52,12 @@ import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.SectionClusterList;
@@ -56,44 +71,73 @@ import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.IDPairing;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
+import scratch.kevin.simulators.RSQSimCatalog;
+import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+import scratch.kevin.simulators.RSQSimCatalog.Loader;
+import scratch.kevin.util.MarkdownUtils;
+import scratch.kevin.util.MarkdownUtils.TableBuilder;
 
-public class RSQSimU3RuptureCompare {
+public class RSQSimU3RupturePageGen {
 
-	public static void main(String[] args) throws IOException, DocumentException {
-		File catalogDir = new File("/data/kevin/simulators/catalogs/rundir2194_long");
-		File geomFile = new File(catalogDir, "zfault_Deepen.in");
+	public static void main(String[] args) throws IOException, DocumentException, GMT_MapException, RuntimeException {
+		File catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
+		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
-//		File catalogDir = new File("/data/kevin/simulators/catalogs/jacqui_12km_K");
-//		File geomFile = new File(catalogDir, "UCERF3wFixed12kmDepth.flt");
+		RSQSimCatalog catalog = Catalogs.BRUCE_2142.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2194.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2349.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2343.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2326.instance(catalogsBaseDir);
 		
-		File outputDir = new File(catalogDir, "laugh_test");
-		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		File catalogDir = catalog.getCatalogDir();
+		
+		File catalogOutputDir = new File(mainOutputDir, catalogDir.getName());
+		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
+		
+		File multiFaultDir = new File(catalogOutputDir, "multi_fault");
+		Preconditions.checkState(multiFaultDir.exists() || multiFaultDir.mkdir());
+		
+		File resourcesDir = new File(multiFaultDir, "resources");
+		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
+		
+		File fssDir = new File(catalogDir, "fss");
+		Preconditions.checkState(fssDir.exists() || fssDir.mkdir());
+		
+		String catalogName = catalog.getName();
+		String catalogType = "RSQSim";
+		String catalogTypeFileName = "rsqsim";
 		
 		double minMag = 6.5;
 		int skipYears = 5000;
 		double minFractForInclusion = 0.2;
+		boolean includeNumSects = false;
 		
-		FaultModels fm = FaultModels.FM3_1;
-		DeformationModels dm = DeformationModels.GEOLOGIC;
+		List<String> lines = new ArrayList<>();
+		
+		// header
+		lines.add("# Multi Fault Rupture Comparisons");
+		lines.add("");
+		lines.add("*Subsections participates in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
+		lines.add("");
+		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
+		lines.add("");
+		
+		int tocIndex = lines.size();
+		String topLink = "*[(top)](#table-of-contents)*";
+		
+		FaultModels fm = catalog.getFaultModel();
+		DeformationModels dm = catalog.getDeformationModel();
 		
 		String catParams = "m"+(float)minMag+"_skip"+skipYears+"_sectArea"+(float)minFractForInclusion;
-		File solFile = new File(outputDir, "rsqsim_sol_"+catParams+".zip");
+		File solFile = new File(fssDir, "rsqsim_sol_"+catParams+".zip");
 		FaultSystemSolution sol;
 		if (solFile.exists()) {
 			System.out.println("Loading solution from: "+solFile.getAbsolutePath());
 			sol = FaultSystemIO.loadSol(solFile);
 		} else {
 			System.out.println("Loading events from: "+catalogDir.getAbsolutePath());
-			List<SimulatorElement> geom = RSQSimFileReader.readGeometryFile(geomFile, 11, 's');
-			RuptureIdentifier loadIden = new LogicalAndRupIden(new MagRangeRuptureIdentifier(minMag, 10),
-					new SkipYearsLoadIden(skipYears));
-			List<RuptureIdentifier> loadIdens = new ArrayList<>();
-			loadIdens.add(loadIden);
-			List<RSQSimEvent> events = RSQSimFileReader.readEventsFile(catalogDir, geom, loadIdens);
-			System.out.println(SimulatorUtils.getSimulationDurationYears(events)+" years, "+events.size()+" rups");
-			List<FaultSectionPrefData> subSects = RSQSimUtils.getUCERF3SubSectsForComparison(fm, dm);
-			System.out.println("Building solution");
-			sol = RSQSimUtils.buildFaultSystemSolution(subSects, geom, events, minMag, minFractForInclusion);
+			Loader loader = catalog.loader().minMag(minMag).skipYears(skipYears);
+			sol = catalog.buildSolution(loader, minMag, minFractForInclusion);
 			System.out.println("Writing solution to: "+solFile.getAbsolutePath());
 			FaultSystemIO.writeSol(sol, solFile);
 		}
@@ -102,9 +146,12 @@ public class RSQSimU3RuptureCompare {
 		System.out.println(rupSet.getNumRuptures()+" unique ruptures");
 		
 		LaughTestFilter filter = LaughTestFilter.getDefault();
+		if (!includeNumSects)
+			filter.setMinNumSectInRup(0);
 		
 		File scratchDir = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/");
 		DeformationModelFetcher fetch = new DeformationModelFetcher(fm, dm, scratchDir, 0.1);
+		
 		List<FaultSectionPrefData> datas = fetch.getSubSectionList();
 		
 		Map<IDPairing, Double> distances = fetch.getSubSectionDistanceMap(1000d);
@@ -136,9 +183,11 @@ public class RSQSimU3RuptureCompare {
 		// doesn't come with jump dist filter by default (it is included explicitly in generation for UCERF3)
 		tests.add(0, new JumpDistFilter(distances, 5d));
 		
-		// replace the separate min sects per parent filters with a single one
-		tests.add(1, new CombinedMinSectsFilter(removeByClass(tests, ContinualFilter.class),
+		if (includeNumSects) {
+			// replace the separate min sects per parent filters with a single one
+			tests.add(1, new CombinedMinSectsFilter(removeByClass(tests, ContinualFilter.class),
 				removeByClass(tests, CleanupFilter.class)));
+		}
 		
 		Color[] colors = { Color.DARK_GRAY, Color.RED, Color.BLUE, Color.GREEN.darker(), Color.CYAN, Color.ORANGE };
 		
@@ -267,7 +316,7 @@ public class RSQSimU3RuptureCompare {
 		gp.setAxisLabelFontSize(20);
 		gp.setPlotLabelFontSize(21);
 		
-		String prefix = new File(outputDir, "filters_"+catParams).getAbsolutePath();
+		String prefix = new File(resourcesDir, "filters_"+catParams).getAbsolutePath();
 		
 		gp.drawGraphPanel(spec, false, false, new Range(0, tests.size()*dx), new Range(0, maxY));
 		gp.getXAxis().setTickLabelsVisible(false);
@@ -275,6 +324,73 @@ public class RSQSimU3RuptureCompare {
 		gp.getChartPanel().setSize(1000, 500);
 		gp.saveAsPNG(prefix+".png");
 		gp.saveAsPDF(prefix+".pdf");
+		
+		lines.add("## Plausibility Filter Comparisons");
+//		lines.add(topLink); lines.add("");
+		lines.add("");
+		
+		lines.add("### Rupture Failure Percentages");
+		lines.add(topLink); lines.add("");
+		lines.add("");
+		lines.add("![Plausibility Filter]("+resourcesDir.getName()+"/filters_"+catParams+".png)");
+		
+		// now jumps
+		lines.add("## 1km Jump Count");
+		lines.add(topLink); lines.add("");
+		lines.add("");
+		System.out.println("Plotting num jumps");
+		RSQSimRupJumpCompare.plotFixedJumpDist(catalog.getU3CompareSol(), distances, sol, catalogName, minMag, 1d, resourcesDir);
+		lines.add("![Plausibility Filter]("+resourcesDir.getName()+"/jumps_1.0km.png)");
+		lines.add("");
+		
+		// cumulant mag
+		System.out.println("Plotting cumulant mag");
+		calcCumulantMedianMag(catalog.getU3CompareSol(), sol, catalogType, resourcesDir);
+		
+		lines.add("## Cumulant Magnitude");
+		lines.add(topLink); lines.add("");
+		lines.add("");
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		table.addLine(catalogName, "UCERF3", "Difference");
+		File rsPlot = new File(resourcesDir, "mag_cumulant_medians_"+catalogType.toLowerCase()+".png");
+		Preconditions.checkState(rsPlot.exists());
+		File u3Plot = new File(resourcesDir, "mag_cumulant_medians_ucerf3.png");
+		Preconditions.checkState(u3Plot.exists());
+		File diffPlot = new File(resourcesDir, "mag_cumulant_medians_diff.png");
+		Preconditions.checkState(diffPlot.exists());
+		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
+				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")",
+				"![Difference]("+resourcesDir.getName()+"/"+diffPlot.getName()+")");
+		lines.addAll(table.build());
+		lines.add("");
+		
+		System.out.println("Plotting connectivity clusters");
+		plotConnectivity(catalog.getU3CompareSol().getRupSet(), resourcesDir, "connectivity_ucerf3", "UCERF3 Connectivity");
+		plotConnectivity(sol.getRupSet(), resourcesDir, "connectivity_"+catalogTypeFileName, catalogName+" Connectivity");
+		
+		lines.add("## Fault Connectivity");
+		lines.add(topLink); lines.add("");
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine(catalogName, "UCERF3");
+		rsPlot = new File(resourcesDir, "connectivity_"+catalogTypeFileName+".png");
+		Preconditions.checkState(rsPlot.exists());
+		u3Plot = new File(resourcesDir, "connectivity_ucerf3.png");
+		Preconditions.checkState(u3Plot.exists());
+		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
+				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")");
+		lines.addAll(table.build());
+		lines.add("");
+		
+		// add TOC
+		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));
+		lines.add(tocIndex, "## Table Of Contents");
+		
+		// write markdown
+		MarkdownUtils.writeReadmeAndHTML(lines, multiFaultDir);
+		
+		catalog.writeMarkdownSummary(catalogOutputDir, true, false);
+		RSQSimCatalog.writeCatalogsIndex(mainOutputDir);
 	}
 	
 	private static Color darker(Color c) {
@@ -400,6 +516,137 @@ public class RSQSimU3RuptureCompare {
 				return (E)tests.remove(i);
 		}
 		throw new IllegalStateException();
+	}
+	
+	static void calcCumulantMedianMag(FaultSystemSolution u3Sol, FaultSystemSolution rsSol,
+			String catalogName, File outputDir) throws IOException, GMT_MapException, RuntimeException {
+		CSVFile<String> csv = new CSVFile<>(true);
+		csv.addLine("Sect Index", "Sect Name", catalogName, "UCERF3");
+		
+		FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
+		FaultSystemRupSet rsRupSet = rsSol.getRupSet();
+		
+		Preconditions.checkState(u3RupSet.getNumSections() == rsRupSet.getNumSections());
+		
+		List<Double> rsVals = new ArrayList<>();
+		List<Double> u3Vals = new ArrayList<>();
+		
+		for (int s=0; s<u3RupSet.getNumSections(); s++) {
+			List<String> line = new ArrayList<>();
+			line.add(s+"");
+			line.add(u3RupSet.getFaultSectionData(s).getName());
+			double rsVal = calcCumulantMedianMag(rsSol, s);
+			rsVals.add(rsVal);
+			line.add(rsVal+"");
+			double u3Val = calcCumulantMedianMag(u3Sol, s);
+			u3Vals.add(u3Val);
+			line.add(u3Val+"");
+			csv.addLine(line);
+		}
+		
+		csv.writeToFile(new File(outputDir, "mag_cumulant_medians.csv"));
+		
+		List<LocationList> faults = new ArrayList<>();
+		for (FaultSectionPrefData fault : u3RupSet.getFaultSectionDataList())
+			faults.add(fault.getFaultTrace());
+		
+		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(6d,  8.5d);
+		Region reg = new CaliforniaRegions.RELM_TESTING();
+		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(u3Vals), reg, outputDir,
+				"mag_cumulant_medians_ucerf3", false, false, "UCERF3 Mag Cumulant Median");
+		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(rsVals), reg, outputDir,
+				"mag_cumulant_medians_"+catalogName.toLowerCase(), false, false, catalogName+" Mag Cumulant Median");
+		
+		CPT diffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
+		double[] diffVals = new double[faults.size()];
+		
+		for (int i=0; i<diffVals.length; i++)
+			diffVals[i] = rsVals.get(i) - u3Vals.get(i);
+		
+		FaultBasedMapGen.makeFaultPlot(diffCPT, faults, diffVals, reg, outputDir,
+				"mag_cumulant_medians_diff", false, false, catalogName+"-U3 Mag Cumulant Median");
+	}
+	
+	private static double calcCumulantMedianMag(FaultSystemSolution sol, int s) {
+		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(5d, 9d, (int)((9d-5d)/0.01) + 1);
+		for (int r : sol.getRupSet().getRupturesForSection(s)) {
+			double mag = sol.getRupSet().getMagForRup(r);
+			int i = func.getClosestXIndex(mag);
+			for (int x=i; x<func.size(); x++)
+				func.add(x, MagUtils.magToMoment(mag));
+		}
+		if (func.calcSumOfY_Vals() == 0)
+			return Double.NaN;
+		func.scale(1d/func.getMaxY());
+		return func.getFirstInterpolatedX(0.5);
+	}
+	
+	static void plotConnectivity(FaultSystemRupSet rupSet, File outputDir, String prefix, String title)
+			throws IOException, GMT_MapException, RuntimeException {
+		List<HashSet<Integer>> clusters = new ArrayList<>();
+		Map<Integer, Integer> sectIndexToClusterIndexMap = new HashMap<>();
+		
+		for (int s=0; s<rupSet.getNumSections(); s++)
+			processClusterRecursive(rupSet, s, clusters.size(), clusters, sectIndexToClusterIndexMap);
+		
+		System.out.println("Detected "+clusters.size()+" clusters for "+prefix);
+		
+		CPT refCPT = GMT_CPT_Files.MAX_SPECTRUM.instance();
+		refCPT = refCPT.rescale(0d, 1d);
+		// list of values for each discrete color, initially sorted from first color to last
+		List<Double> colorValues = Lists.newArrayList();
+//		for (CPTVal cptVal : refCPT)
+//			colorValues.add((double)cptVal.start);
+//		colorValues.add((double)refCPT.get(refCPT.size()-1).end);
+		for (double v=0; v<=1d; v+=0.1)
+			colorValues.add(v);
+		// now sorted from last color to first
+		Collections.reverse(colorValues);
+		refCPT.setNanColor(Color.GRAY);
+		
+		// sort from smallest to largest
+		List<Integer> sizes = Lists.newArrayList();
+		for (HashSet<Integer> cluster : clusters)
+			sizes.add(cluster.size());
+		clusters = ComparablePairing.getSortedData(sizes, clusters);
+		// now reverse, largest to smallest
+		Collections.reverse(clusters);
+		
+		if (clusters.size() > colorValues.size())
+			clusters = clusters.subList(0, colorValues.size());
+		
+		List<LocationList> faults = new ArrayList<>();
+		List<Double> values = new ArrayList<>();
+		
+		for (int s=0; s<rupSet.getNumSections(); s++) {
+			faults.add(rupSet.getFaultSectionData(s).getFaultTrace());
+			double val = Double.NaN;
+			for (int i=0; i<clusters.size(); i++) {
+				if (clusters.get(i).contains(s))
+					val = colorValues.get(i);
+			}
+			values.add(val);
+		}
+		
+		Region reg = new CaliforniaRegions.RELM_TESTING();
+		FaultBasedMapGen.makeFaultPlot(refCPT, faults, Doubles.toArray(values), reg, outputDir,
+				prefix, false, false, title+" ("+colorValues.size()+" largest)");
+	}
+	
+	private static void processClusterRecursive(FaultSystemRupSet rupSet, int sect, int clusterIndex, List<HashSet<Integer>> clusters,
+			Map<Integer, Integer> sectIndexToClusterIndexMap) {
+		if (sectIndexToClusterIndexMap.containsKey(sect))
+			// we've already done this one
+			return;
+		if (clusters.size() == clusterIndex)
+			clusters.add(new HashSet<>());
+		clusters.get(clusterIndex).add(sect);
+		sectIndexToClusterIndexMap.put(sect, clusterIndex);
+		for (int r : rupSet.getRupturesForSection(sect)) {
+			for (int sect2 : rupSet.getSectionsIndicesForRup(r)) {
+				processClusterRecursive(rupSet, sect2, clusterIndex, clusters, sectIndexToClusterIndexMap);
+			}
+		}
 	}
 
 }

@@ -6,17 +6,25 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.commons.collections4.map.HashedMap;
 import org.dom4j.DocumentException;
+import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.GMT_MapException;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.FileNameComparator;
+import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
@@ -24,14 +32,13 @@ import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.analysis.FaultBasedMapGen;
-import scratch.kevin.MarkdownUtils;
-import scratch.kevin.MarkdownUtils.TableBuilder;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_SimZipLoader;
 import scratch.kevin.bbp.BBP_SimZipLoader.BBP_RupGenSimZipLoader;
@@ -44,6 +51,8 @@ import scratch.kevin.bbp.SpectraPlotter;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
+import scratch.kevin.util.MarkdownUtils;
+import scratch.kevin.util.MarkdownUtils.TableBuilder;
 
 class RupSpectraPageGen {
 	
@@ -98,6 +107,8 @@ class RupSpectraPageGen {
 		lines.add("");
 		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 		lines.add("");
+		lines.add("");
+		lines.add("");
 		BBP_RupGenSimZipLoader refLoader = null;
 		if (refBBPDir != null) {
 			File zipFile = new File(refBBPDir, "results.zip");
@@ -109,6 +120,62 @@ class RupSpectraPageGen {
 		
 		int tocIndex = lines.size();
 		String topLink = "*[(top)](#table-of-contents)*";
+		
+		lines.add("## Fault List");
+		lines.add(topLink); lines.add("");
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		table.addLine("Section Name", "Area Ruptured", "Patches Ruptured", "Moment", "Equiv. Mag", "Max Slip");
+		Map<String, Double> sectAreas = new HashedMap<>();
+		Map<String, Integer> sectPatchCounts = new HashMap<>();
+		Map<String, Double> sectMoments = new HashMap<>();
+		Map<String, Double> sectMaxSlips = new HashMap<>();
+		List<SimulatorElement> elems = event.getAllElements();
+		double[] elemSlips = event.getAllElementSlips();
+		List<FaultSectionPrefData> u3SubSects = catalog.getU3SubSects();
+		int subSectOffset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), u3SubSects);
+		for (int i=0; i<elems.size(); i++) {
+			SimulatorElement elem = elems.get(i);
+			String fault = u3SubSects.get(elem.getSectionID()-subSectOffset).getParentSectionName();
+			Double totArea, totMoment, maxSlip;
+			Integer patchCount;
+			if (sectAreas.containsKey(fault)) {
+				totArea = sectAreas.get(fault);
+				totMoment = sectMoments.get(fault);
+				patchCount = sectPatchCounts.get(fault);
+				maxSlip = sectMaxSlips.get(fault);
+			} else {
+				totArea = 0d;
+				totMoment = 0d;
+				patchCount = 0;
+				maxSlip = 0d;
+			}
+			sectAreas.put(fault, totArea + elem.getArea());
+			sectMoments.put(fault, totMoment + FaultMomentCalc.getMoment(elem.getArea(), elemSlips[i]));
+			sectPatchCounts.put(fault, patchCount + 1);
+			sectMaxSlips.put(fault, Math.max(maxSlip, elemSlips[i]));
+		}
+		List<String> faultNames = new ArrayList<>();
+		List<Double> faultMoments = new ArrayList<>();
+		for (String fault : sectMoments.keySet()) {
+			faultNames.add(fault);
+			faultMoments.add(sectMoments.get(fault));
+		}
+		faultNames = ComparablePairing.getSortedData(faultMoments, faultNames);
+		Collections.reverse(faultNames);
+		DecimalFormat momentDF = new DecimalFormat("0.00E0");
+		for (String fault : faultNames) {
+			table.initNewLine().addColumn(fault);
+			table.addColumn(twoDigitsDF.format(sectAreas.get(fault)*1e-6)+" km^2"); // to km^2
+			table.addColumn(sectPatchCounts.get(fault).toString());
+			double moment = sectMoments.get(fault);
+			table.addColumn(momentDF.format(moment).replace("E", "e")+" N-m");
+			double mag = MagUtils.momentToMag(moment);
+			table.addColumn("M"+twoDigitsDF.format(mag));
+			table.addColumn(twoDigitsDF.format(sectMaxSlips.get(fault))+" m");
+			table.finalizeLine();
+		}
+		lines.addAll(table.build());
+		lines.add("");
 		
 		lines.add("## Rupture Plots");
 		lines.add(topLink); lines.add("");
@@ -143,8 +210,12 @@ class RupSpectraPageGen {
 		
 		// animation
 		File rupAnim = new File(resourcesDir, rupPlotPrefix+".gif");
-		if (rebuildGIF || !rupAnim.exists())
-			RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 5, bbpSourceRect[0], bbpSourceRect[1]);
+		if (rebuildGIF || !rupAnim.exists()) {
+			if (bbpSourceRect == null)
+				RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 5);
+			else
+				RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 5, bbpSourceRect[0], bbpSourceRect[1]);
+		}
 		Preconditions.checkState(rupAnim.exists());
 		lines.add("### Slip/Vel Animation");
 		lines.add(topLink); lines.add("");
@@ -182,7 +253,7 @@ class RupSpectraPageGen {
 			lines.add("*Location: "+(float)loc.getLatitude()+", "+(float)loc.getLongitude()+"*");
 			
 			// calculate distances
-			TableBuilder table = MarkdownUtils.tableBuilder();
+			table = MarkdownUtils.tableBuilder();
 			List<String> distHeader = new ArrayList<>();
 			distHeader.add("Distance");
 			distHeader.add("Actual RSQSim Surface");
@@ -252,7 +323,7 @@ class RupSpectraPageGen {
 				hasRD100 = false;
 			}
 			UncertainArbDiscDataset[] gmpeSpectra = null;
-			if (spectraGMPEs != null && spectraGMPEs.length > 0) {
+			if (spectraGMPEs != null && spectraGMPEs.length > 0 && gmpeRup != null) {
 				System.out.print("Calculating GMPEs...");
 				gmpeSpectra = new UncertainArbDiscDataset[spectraGMPEs.length];
 				for (int i=0; i<gmpeSpectra.length; i++)
@@ -395,7 +466,7 @@ class RupSpectraPageGen {
 				System.out.println("Skipping all maps!");
 			}
 			
-			TableBuilder table = MarkdownUtils.tableBuilder();
+			table = MarkdownUtils.tableBuilder();
 			table.initNewLine().addColumn("SA Period").addColumn("RSQSim");
 			if (shakemapGMPE != null)
 				table.addColumn(shakemapGMPE.getShortName()).addColumn("Ratio");
@@ -500,8 +571,11 @@ class RupSpectraPageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2337.instance(baseDir);
 //		int eventID = 203769;
 		
-		RSQSimCatalog catalog = Catalogs.JG_2194_K2.instance(baseDir);
-		int eventID = 18840012;
+//		RSQSimCatalog catalog = Catalogs.JG_2194_K2.instance(baseDir);
+//		int eventID = 18840012;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
+		int eventID = 526885;
 		
 		File eventBBPDir = new File(new File(catalog.getCatalogDir(), RSQSimBBP_Config.EVENT_SRF_DIR_NAME),
 				"event_"+eventID+"_"+RSQSimBBP_Config.SRF_DT+"s_"+RSQSimBBP_Config.SRF_INTERP_MODE.name()+"_bbp");
@@ -582,12 +656,14 @@ class RupSpectraPageGen {
 		
 		EqkRupture gmpeRup = null;
 		
-		if ((refBBPDir != null && gmpes != null && gmpes.length > 0)
-				|| (refShakeMapZip != null && shakemapGMPE != null))
+//		if ((refBBPDir != null && gmpes != null && gmpes.length > 0)
+//				|| (refShakeMapZip != null && shakemapGMPE != null))
 			gmpeRup = catalog.getGMPE_Rupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT);
 		
 		if (refBBPDir != null)
 			gen.setRefBBP(refBBPDir, refName, gmpes, gmpeRup);
+		else
+			gen.setRefBBP(null, null, gmpes, gmpeRup);
 		
 		if (refShakeMapZip != null) {
 			List<BBP_Site> shakemapSites = BBP_Site.readFile(refShakeMapZip.getParentFile());

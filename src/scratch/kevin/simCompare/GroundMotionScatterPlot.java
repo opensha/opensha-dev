@@ -29,7 +29,9 @@ import com.google.common.collect.Lists;
 public class GroundMotionScatterPlot {
 	
 	public static int PLOT_WIDTH = 900;
-	public static boolean WRITE_PDF = true;;
+	public static boolean WRITE_PDF = true;
+	public static String SCATTER_QUANTITY_NAME = "Ruptures";
+	public static boolean YELLOW_REGION = true;
 	
 	public static void plot(XY_DataSet xy, String xAxisLabel, String yAxisLabel, List<String> binDescriptions,
 			String title, File outputDir, String prefix) throws IOException {
@@ -57,17 +59,19 @@ public class GroundMotionScatterPlot {
 			lower.set(pt.getX(), pt.getY()/2);
 		UncertainArbDiscDataset shaded = new UncertainArbDiscDataset(oneToOne, lower, upper);
 		
-		funcs.add(shaded);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, Color.YELLOW));
-		
-		funcs.add(upper);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+		if (YELLOW_REGION) {
+			funcs.add(shaded);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, Color.YELLOW));
+			
+			funcs.add(upper);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+			
+			funcs.add(lower);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+		}
 		
 		funcs.add(oneToOne);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GRAY));
-		
-		funcs.add(lower);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
 		
 		funcs.add(xy);
 		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.RED));
@@ -96,7 +100,7 @@ public class GroundMotionScatterPlot {
 		// bottom up
 		List<String> annLines = new ArrayList<>(binDescriptions);
 		Collections.reverse(annLines);
-		annLines.add(0, xy.size()+" Ruptures");
+		annLines.add(0, xy.size()+" "+SCATTER_QUANTITY_NAME);
 //		annLines.add(str(distRange.getLowerBound())+" km < Dist < "+str(distRange.getUpperBound())+" km");
 //		annLines.add(str(magRange.getLowerBound())+" < Mw < "+str(magRange.getUpperBound()));
 		

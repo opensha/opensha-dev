@@ -97,6 +97,8 @@ public interface SimulationRotDProvider<E> extends Named {
 	
 	public double getAnnualRate(E rupture);
 	
+	public double getMinimumCurvePlotRate();
+	
 	public double getMagnitude(E rupture);
 
 }

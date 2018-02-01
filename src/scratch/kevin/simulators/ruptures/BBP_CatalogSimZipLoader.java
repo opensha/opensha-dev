@@ -215,4 +215,9 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 		return 1;
 	}
 
+	@Override
+	public double getMinimumCurvePlotRate() {
+		return getAnnualRate(null);
+	}
+
 }

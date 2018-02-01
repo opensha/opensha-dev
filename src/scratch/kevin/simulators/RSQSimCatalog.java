@@ -10,6 +10,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -22,19 +23,25 @@ import java.util.Map;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.metadata.XMLSaveable;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
+import org.opensha.sha.simulators.iden.CatalogLengthLoadIden;
 import org.opensha.sha.simulators.iden.EventIDsRupIden;
 import org.opensha.sha.simulators.iden.LogicalAndRupIden;
+import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
+import org.opensha.sha.simulators.iden.RegionIden;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.iden.SkipYearsLoadIden;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
@@ -44,26 +51,38 @@ import org.opensha.sha.simulators.srf.RSQSimTransValidIden;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Table;
 import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.FaultSystemRupSet;
+import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.IDPairing;
-import scratch.kevin.MarkdownUtils;
-import scratch.kevin.MarkdownUtils.TableBuilder;
+import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.kevin.simulators.plots.AbstractPlot;
 import scratch.kevin.simulators.plots.MFDPlot;
 import scratch.kevin.simulators.plots.MagAreaScalingPlot;
 import scratch.kevin.simulators.plots.RecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
+import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
 import scratch.kevin.simulators.plots.StationarityPlot;
+import scratch.kevin.util.MarkdownUtils;
+import scratch.kevin.util.MarkdownUtils.TableBuilder;
 
 public class RSQSimCatalog implements XMLSaveable {
 	
 	public enum Catalogs {
+		BRUCE_2142("bruce/rundir2142", "Bruce 2142", "Bruce Shaw", cal(2017, 6, 16),
+				"Old projection; slip weakening; stress loaded; no creep correction",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2194("bruce/rundir2194", "Bruce 2194", "Bruce Shaw", cal(2017, 7, 5),
+				"Catalog with decent large event scaling and distribution of sizes while not using"
+				+ " any of the enhanced frictional weakening terms.", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		JG_UCERF3_millionElement("JG_UCERF3_millionElement", "U3 1mil Element Test", "Jacqui Gilchrist", cal(2017, 9, 27),
 				"Test 1 million element catalog on UCERF3 fault system, ~0.25 km^2 trianglar elements",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
@@ -120,7 +139,23 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		JG_tunedBase1m_ddotEQmod("tunedBase1m_ddotEQmod", "JG Tune Base Mod Vel", "Jacqui Gilchrist", cal(2017, 11, 26),
 				"New version of tuneBase1m, with patch-specific slip velocities.",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2381("bruce/rundir2381", "Bruce 2381", "Bruce Shaw", cal(2017, 12, 22),
+				"fracCreep=0.5", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2388("bruce/rundir2388", "Bruce 2388", "Bruce Shaw", cal(2017, 12, 22),
+				"fracCreep=0.25", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2410("bruce/rundir2410", "Bruce 2410", "Bruce Shaw", cal(2017, 12, 22),
+				"factorNormal=2.0;  50ky reference time; 212ky spinup", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2411("bruce/rundir2411", "Bruce 2411", "Bruce Shaw", cal(2017, 12, 22),
+				"factorNormal=2.0;  50ky reference time; 85ky spinup", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2412("bruce/rundir2412", "Bruce 2412", "Bruce Shaw", cal(2017, 12, 22),
+				"factorNormal=2.0;  50ky reference time; 85ky spinup; srt(slipRate)", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2413("bruce/rundir2413", "Bruce 2413", "Bruce Shaw", cal(2017, 12, 22),
+				"factorNormal=2.0;  100ky reference time; 85ky spinup; sqrt(slipRate)", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2457("bruce/rundir2457", "Bruce 2457", "Bruce Shaw", cal(2018, 1, 14),
+				"new loading;  fCreep=0.25", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2495("bruce/rundir2495", "Bruce 2495", "Bruce Shaw", cal(2018, 1, 29),
+				"flat loaded.  fracCreep=0.5.  maxDepth=14.4", FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -159,6 +194,8 @@ public class RSQSimCatalog implements XMLSaveable {
 	private List<FaultSectionPrefData> subSects;
 	private Map<Integer, Double> subSectAreas;
 	private Map<IDPairing, Double> subSectDistsCache;
+	
+	private static Table<FaultModels, DeformationModels, FaultSystemSolution> compSolsTable = HashBasedTable.create();
 	
 	public static final String XML_METADATA_NAME = "RSQSimCatalog";
 	
@@ -403,7 +440,14 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<String> gmpeRGLinks = new ArrayList<>();
 		List<String> gmpeRGNames = new ArrayList<>();
 		
+		List<String> hazardLinks = new ArrayList<>();
+		List<String> hazardNames = new ArrayList<>();
+		
+		List<String> hazardClusterLinks = new ArrayList<>();
+		List<String> hazardClusterNames = new ArrayList<>();
+		
 		String rotDDLink = null;
+		String multiFaultLink = null;
 		
 		for (File subDir : dir.listFiles()) {
 			if (!subDir.isDirectory())
@@ -424,6 +468,44 @@ public class RSQSimCatalog implements XMLSaveable {
 			} else if (name.equals("catalog_rotd_ratio_comparisons")) {
 				Preconditions.checkState(rotDDLink == null, "Duplicate RotDD dirs! %s and %s", name, rotDDLink);
 				rotDDLink = name;
+			} else if (name.startsWith("hazard_")) {
+				String hazName;
+				if (name.contains("_pga")) {
+					hazName = "PGA";
+				} else if (name.contains("t_dependence")) {
+					hazName = "T Dependence";
+				} else {
+					Preconditions.checkState(name.contains("_sa"));
+					String periodStr = name.substring(name.indexOf("_sa_")+4);
+					periodStr = periodStr.substring(0, periodStr.indexOf("s"));
+					double period = Double.parseDouble(periodStr);
+					hazName = (float)period+"s SA";
+				}
+				
+				if (name.contains("_sigma")) {
+					String sigmaStr = name.substring(name.indexOf("_sigma")+6);
+					if (sigmaStr.contains("_"))
+						sigmaStr = sigmaStr.substring(0, sigmaStr.indexOf("_"));
+					hazName += ", Fixed σ="+sigmaStr;
+				}
+				
+				if (name.contains("_gmpe")) {
+					String gmpeStr = name.substring(name.indexOf("_gmpe")+5);
+					if (gmpeStr.contains("_"))
+						gmpeStr = gmpeStr.substring(0, gmpeStr.indexOf("_"));
+					hazName += ", "+gmpeStr;
+				}
+				
+				if (name.contains("_cluster")) {
+					hazardClusterLinks.add(name);
+					hazardClusterNames.add(hazName);
+				} else {
+					hazardLinks.add(name);
+					hazardNames.add(hazName);
+				}
+			} else if (name.equals("multi_fault")) {
+				Preconditions.checkState(multiFaultLink == null, "Duplicate Multi Fault dirs! %s and %s", name, multiFaultLink);
+				multiFaultLink = name;
 			}
 		}
 		
@@ -457,6 +539,29 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add(topLink);
 			lines.add("");
 			lines.add("[Full Catalog RotD100/RotD50 Ratios Plotted Here]("+rotDDLink+"/)");
+		}
+		if (!hazardLinks.isEmpty()) {
+			lines.add("");
+			lines.add("## Hazard Comparisons");
+			lines.add(topLink);
+			lines.add("");
+			for (int i=0; i<hazardNames.size(); i++)
+				lines.add("* ["+hazardNames.get(i)+"]("+hazardLinks.get(i)+"/)");
+		}
+		if (!hazardClusterLinks.isEmpty()) {
+			lines.add("");
+			lines.add("## Hazard Clustering Comparisons");
+			lines.add(topLink);
+			lines.add("");
+			for (int i=0; i<hazardClusterNames.size(); i++)
+				lines.add("* ["+hazardClusterNames.get(i)+"]("+hazardClusterLinks.get(i)+"/)");
+		}
+		if (multiFaultLink != null) {
+			lines.add("");
+			lines.add("## Multi-Fault Rupture Comparisons");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[Multi-Fault Rupture Comparisons here]("+multiFaultLink+"/)");
 		}
 		
 		if (plots) {
@@ -515,7 +620,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			if (name.startsWith("trans.") && name.endsWith(".out"))
 				return file;
 		}
-		throw new FileNotFoundException("No geometry file found in "+dir.getAbsolutePath());
+		throw new FileNotFoundException("No transitions file found in "+dir.getAbsolutePath());
 	}
 	
 	public synchronized RSQSimStateTransitionFileReader getTransitions() throws IOException {
@@ -538,6 +643,57 @@ public class RSQSimCatalog implements XMLSaveable {
 		if (subSects == null)
 			subSects = RSQSimUtils.getUCERF3SubSectsForComparison(getFaultModel(), getDeformationModel());
 		return subSects;
+	}
+	
+	private File getSolCacheDir() {
+		File scratchDir = UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR;
+		if (scratchDir.exists()) {
+			// eclipse project
+			File dir = new File(scratchDir, "ucerf3_fm_dm_sols");
+			if (!dir.exists())
+				Preconditions.checkState(dir.mkdir());
+			return dir;
+		} else {
+			// use home dir
+			String path = System.getProperty("user.home");
+			File homeDir = new File(path);
+			Preconditions.checkState(homeDir.exists(), "user.home dir doesn't exist: "+path);
+			File openSHADir = new File(homeDir, ".opensha");
+			if (!openSHADir.exists())
+				Preconditions.checkState(openSHADir.mkdir(),
+						"Couldn't create OpenSHA store location: "+openSHADir.getAbsolutePath());
+			File uc3Dir = new File(openSHADir, "ucerf3_fm_dm_sols");
+			if (!uc3Dir.exists())
+				Preconditions.checkState(uc3Dir.mkdir(),
+						"Couldn't create UCERF3 ERF store location: "+uc3Dir.getAbsolutePath());
+			return uc3Dir;
+		}
+	}
+	
+	public FaultSystemSolution getU3CompareSol() throws IOException {
+		synchronized (compSolsTable) {
+			FaultSystemSolution sol = compSolsTable.get(fm, dm);
+			
+			if (sol == null) {
+				File solDir = getSolCacheDir();
+				File solFile = new File(solDir, fm.encodeChoiceString()+"_"+dm.encodeChoiceString()+"_MEAN_BRANCH_AVG_SOL.zip");
+				if (!solFile.exists()) {
+					// download it
+					String addr = "http://opensha.usc.edu/ftp/kmilner/ucerf3/2013_05_10-ucerf3p3-production-10runs_fm_dm_sub_plots/"
+							+ fm.encodeChoiceString()+"_"+dm.encodeChoiceString()+"/"+solFile.getName();
+					FileUtils.downloadURL(addr, solFile);
+				}
+				
+				try {
+					sol = FaultSystemIO.loadSol(solFile);
+				} catch (DocumentException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+				compSolsTable.put(fm, dm, sol);
+			}
+			
+			return sol;
+		}
 	}
 	
 	private synchronized Map<Integer, Double> getSubSectAreas() throws IOException {
@@ -617,9 +773,25 @@ public class RSQSimCatalog implements XMLSaveable {
 			return this;
 		}
 		
+		public Loader maxDuration(double years) {
+			loadIdens.add(new CatalogLengthLoadIden(years));
+			return this;
+		}
+		
 		public Loader matches(RuptureIdentifier iden) {
 			loadIdens.add(iden);
 			return this;
+		}
+		
+		public Loader withinCutoffDist(double maxDist, Collection<Location> locs) {
+			return withinCutoffDist(maxDist, locs.toArray(new Location[0]));
+		}
+		
+		public Loader withinCutoffDist(double maxDist, Location... locs) {
+			List<RegionIden> regIdens = new ArrayList<>();
+			for (Location loc : locs)
+				regIdens.add(new RegionIden(new Region(loc, maxDist)));
+			return matches(new LogicalOrRupIden(regIdens));
 		}
 		
 		public Loader hasTransitions() throws IOException {
@@ -651,6 +823,14 @@ public class RSQSimCatalog implements XMLSaveable {
 			rupIdens.add(loadIden);
 			return RSQSimFileReader.getEventsIterable(catalogDir, elements, rupIdens);
 		}
+	}
+	
+	public FaultSystemSolution buildSolution(Loader loader, double minMag, double minFractForInclusion) throws IOException {
+		return buildSolution(loader.load(), minMag, minFractForInclusion);
+	}
+	
+	public FaultSystemSolution buildSolution(List<RSQSimEvent> events, double minMag, double minFractForInclusion) throws IOException {
+		return RSQSimUtils.buildFaultSystemSolution(getU3SubSects(), getElements(), events, minMag, minFractForInclusion);
 	}
 	
 	public List<String> writeStandardDiagnosticPlots(File outputDir, int skipYears, double minMag, boolean replot, String topLink)
@@ -711,7 +891,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			riPlot.initialize(getName(), outputDir, "interevent_times");
 			plots.add(riPlot);
 		}
-		lines.add("### Interevent-Time Distributions");
+		lines.add("### Global Interevent-Time Distributions");
 		lines.add(topLink);
 		lines.add("");
 		table = MarkdownUtils.tableBuilder();
@@ -739,6 +919,67 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add(topLink);
 		lines.add("");
 		lines.add("![Stationarity]("+outputDir.getName()+"/stationarity.png)");
+		
+		double minFractForInclusion = 0.2;
+		String testMagStr;
+		if (riMinMags[0] == Math.floor(riMinMags[0]))
+			testMagStr = (int)riMinMags[0]+"";
+		else
+			testMagStr = (float)riMinMags[0]+"";
+		if (replot || !new File(outputDir, "interevent_elements_m"+testMagStr+"_scatter.png").exists()) {
+			SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
+					SectionRecurrenceComparePlot.SectType.ELEMENT, 0, riMinMags);
+			elemCompare.initialize(getName(), outputDir, "interevent_elements");
+			plots.add(elemCompare);
+			
+			SectionRecurrenceComparePlot subSectCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
+					SectionRecurrenceComparePlot.SectType.SUBSECTION, minFractForInclusion, riMinMags);
+			subSectCompare.initialize(getName(), outputDir, "interevent_sub_sects");
+			plots.add(subSectCompare);
+		}
+		lines.add("### Element/Subsection Interevent Time Comparisons");
+		lines.add("");
+		lines.add("#### Element Interevent Time Comparisons");
+		lines.add(topLink);
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("Min Mag", "Scatter", "2-D Hist");
+		for (double riMinMag : riMinMags) {
+			String prefix = "interevent_elements_m";
+			if (riMinMag == Math.floor(riMinMag))
+				prefix += (int)riMinMag;
+			else
+				prefix += (float)riMinMag;
+			table.initNewLine();
+			table.addColumn("**M≥"+(float)riMinMag+"**");
+			table.addColumn("![Element Scatter]("+outputDir.getName()+"/"+prefix+"_scatter.png)");
+			table.addColumn("![Element 2-D Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
+			table.finalizeLine();
+		}
+		lines.addAll(table.build());
+		lines.add("");
+		lines.add("#### Subsection Interevent Time Comparisons");
+		lines.add(topLink);
+		lines.add("");
+		if (minFractForInclusion > 0) {
+			lines.add("*Subsections participates in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
+			lines.add("");
+		}
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("Min Mag", "Scatter", "2-D Hist");
+		for (double riMinMag : riMinMags) {
+			String prefix = "interevent_sub_sects_m";
+			if (riMinMag == Math.floor(riMinMag))
+				prefix += (int)riMinMag;
+			else
+				prefix += (float)riMinMag;
+			table.initNewLine();
+			table.addColumn("**M≥"+(float)riMinMag+"**");
+			table.addColumn("![Subsection Scatter]("+outputDir.getName()+"/"+prefix+"_scatter.png)");
+			table.addColumn("![Subsection 2-D Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
+			table.finalizeLine();
+		}
+		lines.addAll(table.build());
 		
 		if (plots.isEmpty())
 			return lines;
@@ -888,7 +1129,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		MarkdownUtils.writeReadmeAndHTML(lines, dir);
 	}
 	
-	private static class CatEnumDateComparator implements Comparator<Catalogs> {
+	static class CatEnumDateComparator implements Comparator<Catalogs> {
 
 		@Override
 		public int compare(Catalogs o1, Catalogs o2) {

@@ -37,6 +37,7 @@ import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 
 /**
  * TODO:
@@ -55,6 +56,7 @@ public class RSQSimBatchPlotGen {
 	private static final int u3NumMag = (int)((u3MaxMag - u3MinMag)/u3Delta + 0.5);
 	
 	private static final String ri_mags_default = "6,7,7.5,8";
+	private static final double fract_inclusion_default = 0.2;
 	
 	public enum PlotConfig {
 		TOTAL_MFD("mfd", "total-mfd", false, "Plot total regional MFD", null) {
@@ -150,19 +152,55 @@ public class RSQSimBatchPlotGen {
 				return riPlots;
 			}
 		},
-		SUB_SECT_RI_SUMMARY("ssri", "sub-sect-ris", true, "Sub section RI CSV file and scatter (if U3 values supplied)", ri_mags_default) {
+//		SUB_SECT_RI_SUMMARY("ssricsv", "sub-sect-ri-csv", true, "Sub section RI CSV file and scatter (if U3 values supplied)", ri_mags_default) {
+//			@Override
+//			protected List<? extends AbstractPlot> buildPlots(String catalogName, File outputDir, Double minMag,
+//					FaultSystemSolution u3Sol, String arg, ElementBundles elemBundle) {
+//				double[] minMags = commaDoubleSplit(arg);
+//				SubSectRecurrenceSummary riPlot = new SubSectRecurrenceSummary(elemBundle.getElements(), minMags);
+//				if (u3Sol != null) {
+//					List<EvenlyDiscretizedFunc> sectCumMFDs = Lists.newArrayList();
+//					for (int i=0; i<u3Sol.getRupSet().getNumSections(); i++)
+//						sectCumMFDs.add(u3Sol.calcParticipationMFD_forSect(i, u3MinMag, u3MaxMag, u3NumMag).getCumRateDistWithOffset());
+//					riPlot.setComparison(sectCumMFDs, "UCERF3 On-Fault");
+//				}
+//				riPlot.initialize(catalogName, outputDir, "interevent_sub_sects");
+//				return Lists.newArrayList(riPlot);
+//			}
+//		},
+		ELEM_RI_SCATTER("elemris", "elem-ri-scatter", true, "Element RI scatter", ri_mags_default) {
 			@Override
 			protected List<? extends AbstractPlot> buildPlots(String catalogName, File outputDir, Double minMag,
 					FaultSystemSolution u3Sol, String arg, ElementBundles elemBundle) {
+				Preconditions.checkArgument(u3Sol != null, "Must supply comparison solution");
 				double[] minMags = commaDoubleSplit(arg);
-				SubSectRecurrenceSummary riPlot = new SubSectRecurrenceSummary(elemBundle.getElements(), minMags);
-				if (u3Sol != null) {
-					List<EvenlyDiscretizedFunc> sectCumMFDs = Lists.newArrayList();
-					for (int i=0; i<u3Sol.getRupSet().getNumSections(); i++)
-						sectCumMFDs.add(u3Sol.calcParticipationMFD_forSect(i, u3MinMag, u3MaxMag, u3NumMag).getCumRateDistWithOffset());
-					riPlot.setComparison(sectCumMFDs, "UCERF3 On-Fault");
-				}
+				SectionRecurrenceComparePlot riPlot = new SectionRecurrenceComparePlot(elemBundle.getElements(),
+						u3Sol, "UCERF3 On-Fault", SectType.ELEMENT, fract_inclusion_default, minMags);
+				riPlot.initialize(catalogName, outputDir, "interevent_elements");
+				return Lists.newArrayList(riPlot);
+			}
+		},
+		SUB_SECT_RI_SCATTER("ssris", "sub-ri-scatter", true, "Sub section RI scatter", ri_mags_default) {
+			@Override
+			protected List<? extends AbstractPlot> buildPlots(String catalogName, File outputDir, Double minMag,
+					FaultSystemSolution u3Sol, String arg, ElementBundles elemBundle) {
+				Preconditions.checkArgument(u3Sol != null, "Must supply comparison solution");
+				double[] minMags = commaDoubleSplit(arg);
+				SectionRecurrenceComparePlot riPlot = new SectionRecurrenceComparePlot(elemBundle.getElements(),
+						u3Sol, "UCERF3 On-Fault", SectType.SUBSECTION, fract_inclusion_default, minMags);
 				riPlot.initialize(catalogName, outputDir, "interevent_sub_sects");
+				return Lists.newArrayList(riPlot);
+			}
+		},
+		PARENT_SECT_RI_SCATTER("parentris", "parent-ri-scatter", true, "Parent section RI scatter", ri_mags_default) {
+			@Override
+			protected List<? extends AbstractPlot> buildPlots(String catalogName, File outputDir, Double minMag,
+					FaultSystemSolution u3Sol, String arg, ElementBundles elemBundle) {
+				Preconditions.checkArgument(u3Sol != null, "Must supply comparison solution");
+				double[] minMags = commaDoubleSplit(arg);
+				SectionRecurrenceComparePlot riPlot = new SectionRecurrenceComparePlot(elemBundle.getElements(),
+						u3Sol, "UCERF3 On-Fault", SectType.PARENT, fract_inclusion_default, minMags);
+				riPlot.initialize(catalogName, outputDir, "interevent_parents");
 				return Lists.newArrayList(riPlot);
 			}
 		},
@@ -287,9 +325,13 @@ public class RSQSimBatchPlotGen {
 					+" --output-dir "+outputDir.getAbsolutePath()+" --name r2326"
 					+" --ucerf-sol "+solFile.getAbsolutePath();
 //			argStr += " --plot-all --min-mag 4";
+			argStr += " --min-mag 6.5";
 //			argStr += " --mag-area-scaling --min-mag 4";
 			argStr += " --skip-years 5000";
-			argStr += " --rupture-velocity --min-mag 6 --parent-sect-mfds";
+//			argStr += " --rupture-velocity --min-mag 6 --parent-sect-mfds";
+			argStr += " --sub-ri-scatter 6.5,7";
+			argStr += " --parent-ri-scatter 6.5,7";
+			argStr += " --elem-ri-scatter 6.5,7";
 			args = Splitter.on(" ").splitToList(argStr).toArray(new String[0]);
 		}
 		

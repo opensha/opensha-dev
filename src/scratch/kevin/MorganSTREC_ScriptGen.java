@@ -13,41 +13,68 @@ public class MorganSTREC_ScriptGen {
 	public static void main(String[] args) throws IOException {
 		File strecBin = new File("/home/scec-00/kmilner/anaconda2/bin/getstrec_bulk.py");
 		
-		File inputDir = new File("/home/scec-00/kmilner/strec/morgan_map");
+		File inputDir = new File("/home/scec-00/kmilner/strec/morgan_map_2");
 		File outputDir = new File(inputDir, "output");
 		File writeDir = new File("/tmp/morgan_strec/pbs");
 		
-		int num = 143;
+		int num = 109;
 		int digits = ((num-1)+"").length();
 		
-		int mins = 48*60;
+		int mins = 96*60;
 		int nodes = 1;
-		int ppn = 8;
-		String queue = "nbns";
+		int ppn = 20;
+		String queue = "scec";
+		
+		int threadsPerJob = 10;
 		
 		USC_HPCC_ScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
 		
-		for (int i=0; i<num; i++) {
-			File inputFile = new File(inputDir, "catalog"+i+".in");
-			File outputFile = new File(outputDir, "catalog"+i+".out");
-			
+		int jobCount = 0;
+		int catCount = 0;
+		
+		while (catCount < num) {
 			List<String> script = Lists.newArrayList();
 			script.add("#!/bin/bash");
 			script.add("");
-			script.add("echo \"input file: "+inputFile.getAbsolutePath()+"\"");
-			script.add("echo \"output file: "+outputFile.getAbsolutePath()+"\"");
-			script.add("");
 			script.add("mkdir -p "+outputDir.getAbsolutePath());
 			script.add("");
-			script.add(strecBin.getAbsolutePath()+"  --batch-input "+inputFile.getAbsolutePath()
-				+" --csv-out > "+outputFile.getAbsolutePath());
+			for (int i=0; i<threadsPerJob; i++) {
+				if (catCount < num) {
+					File inputFile = new File(inputDir, "catalog"+catCount+".in");
+					File outputFile = new File(outputDir, "catalog"+catCount+".out");
+					
+					script.add("echo \"input file: "+inputFile.getAbsolutePath()+"\"");
+					script.add("echo \"output file: "+outputFile.getAbsolutePath()+"\"");
+					script.add("");
+					String command = strecBin.getAbsolutePath()+"  --batch-input "+inputFile.getAbsolutePath()
+							+" --csv-out > "+outputFile.getAbsolutePath();
+					if (threadsPerJob > 1)
+						command += " &";
+					script.add(command);
+					script.add("");
+					script.add("");
+				}
+				
+				catCount++;
+			}
 			
-			String runNum = i+"";
+			if (threadsPerJob > 1) {
+				script.add("echo \"waiting\"");
+				script.add("wait");
+				script.add("echo \"DONE!\"");
+			}
+			
+			String runNum = (jobCount++)+"";
 			while (runNum.length() < digits)
 				runNum = "0"+runNum;
 			
 			File opbsFile = new File(writeDir, "job"+runNum+".pbs");
 			pbsWrite.writeScript(opbsFile, script, mins, nodes, ppn, queue);
+		}
+		for (int i=0; i<num; i++) {
+			
+			
+			
 		}
 	}
 

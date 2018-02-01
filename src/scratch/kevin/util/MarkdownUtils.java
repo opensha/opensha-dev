@@ -1,4 +1,4 @@
-package scratch.kevin;
+package scratch.kevin.util;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -131,7 +131,8 @@ public class MarkdownUtils {
 		for (int i=0; i<vals.length; i++) {
 			if (i > 0)
 				line.append(" | ");
-			line.append(vals[i]);
+			if (vals[i] != null)
+				line.append(vals[i]);
 		}
 		line.append(" |");
 		return line.toString();
