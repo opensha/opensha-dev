@@ -52,8 +52,8 @@ task appOAFJar(type: Jar) {
     with jar
 }
 
-task oefJar(type: Jar) {
-    baseName = project.name + '-oef'
+task oafJar(type: Jar) {
+    baseName = project.name + '-oaf'
     from { configurations.compileAndResource.collect {
         it.isDirectory() ? it : zipTree(it)
     }}
