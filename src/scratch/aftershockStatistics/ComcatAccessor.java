@@ -56,10 +56,10 @@ public class ComcatAccessor {
 		List<JsonEvent> events;
 		try {
 			events = service.getEvents(query);
-        } catch (FileNotFoundException e) {
+		} catch (FileNotFoundException e) {
 			// If ComCat does not recognize the eventID, ComCat returns HTTP error 404, which appears here as FileNotFoundException.
 			return null;
-        } catch (IOException e) {
+		} catch (IOException e) {
 			// If the eventID has been deleted from ComCat, ComCat returns HTTP error 409, which appears here as IOException.
 			return null;
 		} catch (Exception e) {
