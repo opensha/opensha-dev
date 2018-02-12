@@ -28,6 +28,9 @@ import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 
 import com.google.common.base.Preconditions;
 
+import java.io.IOException;
+import java.io.FileNotFoundException;
+
 public class ComcatAccessor {
 	
 	private static final boolean D = true;
@@ -53,6 +56,12 @@ public class ComcatAccessor {
 		List<JsonEvent> events;
 		try {
 			events = service.getEvents(query);
+		} catch (FileNotFoundException e) {
+			// If ComCat does not recognize the eventID, ComCat returns HTTP error 404, which appears here as FileNotFoundException.
+			return null;
+		} catch (IOException e) {
+			// If the eventID has been deleted from ComCat, ComCat returns HTTP error 409, which appears here as IOException.
+			return null;
 		} catch (Exception e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
@@ -152,17 +161,25 @@ public class ComcatAccessor {
 			try {
 				events = service.getEvents(query);
 				count = events.size();
-				System.out.println(count);
+			} catch (FileNotFoundException e) {
+				events = null;
+				count = 0;
+			} catch (IOException e) {
+				events = null;
+				count = 0;
 			} catch (Exception e) {
 				throw ExceptionUtils.asRuntimeException(e);
 			}
 
+			System.out.println(count);
 
-			for (JsonEvent event : events) {
-				boolean wrap = mainshockLonWrapped && event.getLongitude().doubleValue() < 0;
-				ObsEqkRupture rup = eventToObsRup(event, wrap);
-				if (rup !=null)
-					rups.add(rup);
+			if (count > 0) {
+				for (JsonEvent event : events) {
+					boolean wrap = mainshockLonWrapped && event.getLongitude().doubleValue() < 0;
+					ObsEqkRupture rup = eventToObsRup(event, wrap);
+					if (rup !=null)
+						rups.add(rup);
+				}
 			}
 			rups.sortByOriginTime();
 			if(count==0)
