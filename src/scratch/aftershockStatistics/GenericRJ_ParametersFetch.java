@@ -314,6 +314,10 @@ public class GenericRJ_ParametersFetch {
 				wk_region_list.add (region);
 			}
 
+			// Close the file
+
+			sc.close();
+
 		} catch (Exception e) {
 			throw new RuntimeException("GenericRJ_ParametersFetch: Unable to load data file GenericRJ_ParametersFetch.txt", e);
 		}
