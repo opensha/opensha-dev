@@ -4,7 +4,7 @@ import org.bson.types.ObjectId;
 import org.json.simple.JSONObject;
 import org.mongodb.morphia.annotations.Entity;
 import org.mongodb.morphia.annotations.Id;
-import org.opensha.commons.data.siteData.impl.TectonicRegime;
+import scratch.aftershockStatistics.OAFTectonicRegime;
 import scratch.aftershockStatistics.*;
 
 
@@ -24,7 +24,7 @@ import scratch.aftershockStatistics.*;
  */
 public class ModelResults_RJ implements java.io.Serializable{
 
-    private TectonicRegime regime;
+    private String regime;
     private GenericRJ_Parameters genericParams;
     private ModelResult_RJGeneric genericModel;
     private ModelResult_RJSpecific specificModel;
@@ -60,12 +60,12 @@ public class ModelResults_RJ implements java.io.Serializable{
     public ModelResults_RJ(){}
 
 
-    public TectonicRegime getRegime() {
-        return regime;
+    public OAFTectonicRegime getRegime() {
+        return OAFTectonicRegime.forName (regime);
     }
 
-    public void setRegime(TectonicRegime regime) {
-        this.regime = regime;
+    public void setRegime(OAFTectonicRegime regime) {
+        this.regime = regime.toString();
     }
 
     public GenericRJ_Parameters getGenericParams() {

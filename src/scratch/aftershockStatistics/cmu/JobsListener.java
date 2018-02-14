@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.query.Query;
-import org.opensha.commons.data.siteData.impl.TectonicRegime;
+import scratch.aftershockStatistics.OAFTectonicRegime;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.aftershockStatistics.*;
 
@@ -81,7 +81,7 @@ public class JobsListener implements MessageListener {
              * Fetch generic aftershock parameters
              */
             GenericRJ_ParametersFetch genericFetch = new GenericRJ_ParametersFetch();
-            TectonicRegime regime = genericFetch.getRegion(shockSeq.getMainShock().getHypocenterLocation());
+            OAFTectonicRegime regime = genericFetch.getRegion(shockSeq.getMainShock().getHypocenterLocation());
             GenericRJ_Parameters genericParams = genericFetch.get(regime);
 
             model.setRegime(regime);

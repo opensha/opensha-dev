@@ -120,8 +120,8 @@ public class ComcatAccessor {
 		EventQuery query = new EventQuery();
 		
 		Preconditions.checkState(minDepth < maxDepth, "Min depth must be less than max depth");
-		query.setMinDepth(new BigDecimal(minDepth));
-		query.setMaxDepth(new BigDecimal(maxDepth));
+		query.setMinDepth(new BigDecimal(String.format("%.3f", minDepth)));
+		query.setMaxDepth(new BigDecimal(String.format("%.3f", maxDepth)));
 		
 		Preconditions.checkState(minDays < maxDays, "Min days must be less than max days");
 		// time zones shouldn't be an issue since we're just adding to the original catalog time, whatever
@@ -138,10 +138,10 @@ public class ComcatAccessor {
 		
 		boolean mainshockLonWrapped = mainshock.getHypocenterLocation().getLongitude() > 180;
 		
-		query.setMinLatitude(new BigDecimal(region.getMinLat()));
-		query.setMaxLatitude(new BigDecimal(region.getMaxLat()));
-		query.setMinLongitude(new BigDecimal(region.getMinLon()));
-		query.setMaxLongitude(new BigDecimal(region.getMaxLon()));
+		query.setMinLatitude(new BigDecimal(String.format("%.5f", region.getMinLat())));
+		query.setMaxLatitude(new BigDecimal(String.format("%.5f", region.getMaxLat())));
+		query.setMinLongitude(new BigDecimal(String.format("%.5f", region.getMinLon())));
+		query.setMaxLongitude(new BigDecimal(String.format("%.5f", region.getMaxLon())));
 		query.setLimit(20000);
 		List<JsonEvent> events;
 		int count=20000;
