@@ -416,8 +416,40 @@ public class GenericRJ_ParametersFetch {
 
 		// Location allows longitude -180 to 360, so bring it in range
 
-		while (loc.getLongitude() > 180) {
-			loc = new Location(loc.getLatitude(), loc.getLongitude()-360, loc.getDepth());
+		double lat = loc.getLatitude();
+		double lon = loc.getLongitude();
+		boolean f_changed = false;
+
+		while (lon > 180.0) {
+			lon -= 360.0;
+			f_changed = true;
+		}
+
+		// For locations very close to the date line or pole, nudge them so that
+		// they compare as expected to regions that end right at the date line or pole
+
+		if (lon < -179.995) {
+			lon = -179.995;
+			f_changed = true;
+		}
+
+		if (lon > 179.995) {
+			lon = 179.995;
+			f_changed = true;
+		}
+
+		if (lat < -89.995) {
+			lat = -89.995;
+			f_changed = true;
+		}
+
+		if (lat > 89.995) {
+			lat = 89.995;
+			f_changed = true;
+		}
+
+		if (f_changed) {
+			loc = new Location(lat, lon, loc.getDepth());
 		}
 
 		// I don't know if Region.contains is thread-safe, so synchronize this
@@ -462,13 +494,13 @@ public class GenericRJ_ParametersFetch {
 //			locs.add(new Location(lat, lon, depth));
 //		}
 
-		locs.add(new Location(38.0, 80.0, 15.00000));	// ANSR_DEEPCON
-		locs.add(new Location(-15.0, 175.0, 15.00000));	// ANSR_HOTSPOT
-		locs.add(new Location(60.0, -175.0, 15.00000));	// ANSR_OCEANBD
-		locs.add(new Location(32.0, 100.0, 15.00000));	// ANSR_SHALCON
-		locs.add(new Location(-45.0, 70.0, 15.00000));	// ANSR_ABSLDEC
-		locs.add(new Location(-65.0, 175.0, 15.00000));	// ANSR_ABSLOCB
-		locs.add(new Location(68.0, -175.0, 15.00000));	// ANSR_ABSLSHC
+		locs.add(new Location(38.0, 80.0, 15.00000));	// ANSR_ABSLDEC
+		locs.add(new Location(-15.0, 175.0, 15.00000));	// ANSR_ABSLOCB
+		locs.add(new Location(60.0, -175.0, 15.00000));	// ANSR_ABSLSHC
+		locs.add(new Location(32.0, 100.0, 15.00000));	// ANSR_DEEPCON
+		locs.add(new Location(-45.0, 70.0, 15.00000));	// ANSR_HOTSPOT
+		locs.add(new Location(-65.0, 175.0, 15.00000));	// ANSR_OCEANBD
+		locs.add(new Location(68.0, -175.0, 15.00000));	// ANSR_SHALCON
 		locs.add(new Location(0.0, -70.0, 15.00000));	// SCR_ABVSLAB
 		locs.add(new Location(40.0, -90.0, 15.00000));	// SCR_GENERIC
 		locs.add(new Location(-2.0, 158.0, 15.00000));	// SOR_ABVSLAB
