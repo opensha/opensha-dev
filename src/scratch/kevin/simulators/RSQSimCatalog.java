@@ -29,6 +29,7 @@ import org.opensha.commons.metadata.XMLSaveable;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
@@ -155,7 +156,16 @@ public class RSQSimCatalog implements XMLSaveable {
 		BRUCE_2457("bruce/rundir2457", "Bruce 2457", "Bruce Shaw", cal(2018, 1, 14),
 				"new loading;  fCreep=0.25", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2495("bruce/rundir2495", "Bruce 2495", "Bruce Shaw", cal(2018, 1, 29),
-				"flat loaded.  fracCreep=0.5.  maxDepth=14.4", FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+				"flat loaded.  fracCreep=0.5.  maxDepth=14.4", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2579("bruce/rundir2579", "Bruce 2579", "Bruce Shaw", cal(2018, 2, 07),
+				"straight loaded;  fracCreep=0.5;  H=18 (2,12,4);  stressMult=1.2;  neighbors",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2585("bruce/rundir2585", "Bruce 2585", "Bruce Shaw", cal(2018, 2, 10),
+				"Longer run; else same as r2579. straight loaded;  fracCreep=0.5; H=18 (2,12,4); stressMult=1.2; neighbors",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2592("bruce/rundir2592", "Bruce 2592", "Bruce Shaw", cal(2018, 2, 11),
+				"straight loaded;  fracCreep=0.5;  H=16 (2,11,3); stressMult=1.2; neighbors",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -437,6 +447,9 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<String> gmpeLinks = new ArrayList<>();
 		List<String> gmpeNames = new ArrayList<>();
 		
+		List<String> gmpeGriddedLinks = new ArrayList<>();
+		List<String> gmpeGriddedNames = new ArrayList<>();
+		
 		List<String> gmpeRGLinks = new ArrayList<>();
 		List<String> gmpeRGNames = new ArrayList<>();
 		
@@ -448,8 +461,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		String rotDDLink = null;
 		String multiFaultLink = null;
+		String extremeEventLink = null;
 		
-		for (File subDir : dir.listFiles()) {
+		File[] dirList = dir.listFiles();
+		Arrays.sort(dirList, new FileNameComparator());
+		for (File subDir : dirList) {
 			if (!subDir.isDirectory())
 				continue;
 			File mdFile = new File(subDir, "README.md");
@@ -460,8 +476,15 @@ public class RSQSimCatalog implements XMLSaveable {
 				eventNames.add(MarkdownUtils.getTitle(mdFile));
 				eventLinks.add(name);
 			} else if (name.startsWith("gmpe_bbp_comparisons_")) {
-				gmpeNames.add(name.substring("gmpe_bbp_comparisons_".length()));
-				gmpeLinks.add(name);
+				String subName = name.substring("gmpe_bbp_comparisons_".length());
+				if (name.endsWith("_GriddedSites")) {
+					subName = subName.substring(0, subName.indexOf("_GriddedSites"));
+					gmpeGriddedNames.add(subName);
+					gmpeGriddedLinks.add(name);
+				} else {
+					gmpeNames.add(subName);
+					gmpeLinks.add(name);
+				}
 			} else if (name.startsWith("gmpe_bbp_rg_comparisons_")) {
 				gmpeRGNames.add(name.substring("gmpe_bbp_rg_comparisons_".length()));
 				gmpeRGLinks.add(name);
@@ -506,6 +529,9 @@ public class RSQSimCatalog implements XMLSaveable {
 			} else if (name.equals("multi_fault")) {
 				Preconditions.checkState(multiFaultLink == null, "Duplicate Multi Fault dirs! %s and %s", name, multiFaultLink);
 				multiFaultLink = name;
+			} else if (name.equals("extreme_events")) {
+				Preconditions.checkState(extremeEventLink == null, "Duplicate Extreme Event dirs! %s and %s", name, multiFaultLink);
+				extremeEventLink = name;
 			}
 		}
 		
@@ -517,13 +543,29 @@ public class RSQSimCatalog implements XMLSaveable {
 			for (int i=0; i<eventNames.size(); i++)
 				lines.add("* ["+eventNames.get(i)+"]("+eventLinks.get(i)+"/)");
 		}
-		if (!gmpeNames.isEmpty()) {
+		if (!gmpeNames.isEmpty() || !gmpeGriddedNames.isEmpty()) {
 			lines.add("");
 			lines.add("## Full Catalog GMPE Comparisons");
 			lines.add(topLink);
 			lines.add("");
-			for (int i=0; i<gmpeNames.size(); i++)
-				lines.add("* ["+gmpeNames.get(i)+"]("+gmpeLinks.get(i)+"/)");
+//			System.out.print("Have "+gmpeNames.size()+" regulars and "+gmpeGriddedNames.size()+" gridded");
+			boolean both = !gmpeNames.isEmpty() && !gmpeGriddedNames.isEmpty();
+			if (both) {
+				lines.add("### Points Of Interest");
+				lines.add("");
+				for (int i=0; i<gmpeNames.size(); i++)
+					lines.add("* ["+gmpeNames.get(i)+"]("+gmpeLinks.get(i)+"/)");
+				lines.add("");
+				lines.add("### Gridded Sites");
+				lines.add("");
+				for (int i=0; i<gmpeGriddedNames.size(); i++)
+					lines.add("* ["+gmpeGriddedNames.get(i)+"]("+gmpeGriddedLinks.get(i)+"/)");
+			} else {
+				for (int i=0; i<gmpeNames.size(); i++)
+					lines.add("* ["+gmpeNames.get(i)+"]("+gmpeLinks.get(i)+"/)");
+				for (int i=0; i<gmpeGriddedNames.size(); i++)
+					lines.add("* ["+gmpeGriddedNames.get(i)+"]("+gmpeGriddedLinks.get(i)+"/)");
+			}
 		}
 		if (!gmpeRGNames.isEmpty()) {
 			lines.add("");
@@ -563,6 +605,13 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add("");
 			lines.add("[Multi-Fault Rupture Comparisons here]("+multiFaultLink+"/)");
 		}
+		if (extremeEventLink != null) {
+			lines.add("");
+			lines.add("## Extreme Event Examples");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[Extreme Event Examples Here]("+extremeEventLink+"/)");
+		}
 		
 		if (plots) {
 			File resourcesDir = new File(dir, "resources");
@@ -591,7 +640,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		XMLUtils.writeObjectToXMLAsRoot(this, new File(dir, "catalog.xml"));
 	}
 
-	private static File getGeomFile(File dir) throws FileNotFoundException {
+	public File getGeomFile() throws FileNotFoundException {
 		for (File file : dir.listFiles()) {
 			String name = file.getName().toLowerCase();
 			if (name.endsWith(".flt"))
@@ -604,7 +653,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	
 	public synchronized List<SimulatorElement> getElements() throws IOException {
 		if (elements == null) {
-			File geomFile = getGeomFile(dir);
+			File geomFile = getGeomFile();
 			elements = RSQSimFileReader.readGeometryFile(geomFile, 11, 'N');
 		}
 		return elements;
@@ -698,11 +747,11 @@ public class RSQSimCatalog implements XMLSaveable {
 	
 	private synchronized Map<Integer, Double> getSubSectAreas() throws IOException {
 		if (subSectAreas == null)
-			subSectAreas = RSQSimUtils.calcSubSectAreas(getElements());
+			subSectAreas = RSQSimUtils.calcSubSectAreas(getElements(), getU3SubSects());
 		return subSectAreas;
 	}
 	
-	private synchronized Map<IDPairing, Double> getSubSectDistsCache() {
+	public synchronized Map<IDPairing, Double> getSubSectDistsCache() {
 		if (subSectDistsCache == null)
 			subSectDistsCache = new HashMap<>();
 		return subSectDistsCache;
@@ -962,7 +1011,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add(topLink);
 		lines.add("");
 		if (minFractForInclusion > 0) {
-			lines.add("*Subsections participates in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
+			lines.add("*Subsections participate in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
 			lines.add("");
 		}
 		table = MarkdownUtils.tableBuilder();
@@ -1150,9 +1199,10 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		GregorianCalendar minDate = cal(2000, 1, 1);
+//		GregorianCalendar minDate = cal(2018, 2, 1);
 		
-		for (Catalogs cat : cats) {
-//		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2310 }) {
+//		for (Catalogs cat : cats) {
+		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2457 }) {
 			if (cat.catalog.getDate().before(minDate))
 				continue;
 			RSQSimCatalog catalog = cat.instance(baseDir);

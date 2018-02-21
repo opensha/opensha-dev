@@ -68,11 +68,11 @@ public class HazardMapCompareScriptGen {
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
 //		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-		String bruceDate = "2018_01_29";
+		String bruceDate = "2018_02_16";
 //		String bruceDirNum = "2349";
 //		String bruceDirNum = "2326";
 //		String bruceDirNum = "2142";
-		String bruceDirNum = "2495";
+		String bruceDirNum = "2585";
 		String runPrefix = bruceDate+"-bruce"+bruceDirNum;
 		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
 		File geomFile = new File(catalogDir, "zfault_Deepen.in");
@@ -89,10 +89,10 @@ public class HazardMapCompareScriptGen {
 		
 //		String imt = null; // all
 //		double[] periods = null;
-		String imt = PGA_Param.NAME;
-		double[] periods =  { 0d };
-//		String imt = SA_Param.NAME;
-//		double[] periods = { 0.2, 1, 5, 10 };
+//		String imt = PGA_Param.NAME;
+//		double[] periods =  { 0d };
+		String imt = SA_Param.NAME;
+		double[] periods = { 0.2, 1, 2, 5, 10 };
 		
 		if (imt == null)
 			numPointsMultiplier = 1;
@@ -102,7 +102,9 @@ public class HazardMapCompareScriptGen {
 		
 		double skipYears = 5000;
 		
-		boolean doUCERF3 = false;
+		double maxSourceDistance = 1000;
+		
+		boolean doUCERF3 = true;
 		boolean doUCERF2 = false;
 		boolean isUCERF2Full = false;
 		boolean u3SupraMinMag = false;
@@ -205,7 +207,6 @@ public class HazardMapCompareScriptGen {
 			System.out.println("New func:\n"+newXValues);
 			xValues = newXValues;
 		}
-		double maxSourceDistance = 200;
 		
 		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
 		
@@ -241,6 +242,8 @@ public class HazardMapCompareScriptGen {
 				runName += "-stdDev"+(float)fixedStdDev;
 			if (numPointsMultiplier > 1)
 				runName += "-"+numPointsMultiplier+"xPoints";
+			if (maxSourceDistance > 200)
+				runName += "-maxDist"+(int)maxSourceDistance;
 			if (!imr.getName().toLowerCase().contains("ngawest2"))
 				runName += "-gmpe"+imr.getShortName();
 			
@@ -314,6 +317,8 @@ public class HazardMapCompareScriptGen {
 						u3Name += "-stdDev"+(float)fixedStdDev;
 					if (numPointsMultiplier > 1)
 						u3Name += "-"+numPointsMultiplier+"xPoints";
+					if (maxSourceDistance > 200)
+						u3Name += "-maxDist"+(int)maxSourceDistance;
 					localJobDir = new File(localComareDir, u3Name);
 					remoteJobDir = new File(remoteComareDir, u3Name);
 				}

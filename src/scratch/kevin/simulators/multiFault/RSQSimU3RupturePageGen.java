@@ -83,11 +83,7 @@ public class RSQSimU3RupturePageGen {
 		File catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
 		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2142.instance(catalogsBaseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2194.instance(catalogsBaseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2349.instance(catalogsBaseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2343.instance(catalogsBaseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2326.instance(catalogsBaseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
 		
 		File catalogDir = catalog.getCatalogDir();
 		
@@ -117,7 +113,7 @@ public class RSQSimU3RupturePageGen {
 		// header
 		lines.add("# Multi Fault Rupture Comparisons");
 		lines.add("");
-		lines.add("*Subsections participates in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
+		lines.add("*Subsections participate in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
 		lines.add("");
 		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 		lines.add("");

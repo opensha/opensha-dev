@@ -68,10 +68,20 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int hours = 24;
 //		int nodes = 50;
 		
-		double duration = 1000;
-		int numSims = 500;
+//		double duration = 1000;
+//		int numSims = 500;
+//		int hours = 24;
+//		int nodes = 34;
+		
+		double duration = 100;
+		int numSims = 1000;
 		int hours = 24;
-		int nodes = 34;
+		int nodes = 18;
+		
+//		double duration = 5000;
+//		int numSims = 10;
+//		int hours = 48;
+//		int nodes = 2;
 		
 //		double duration = 30;
 //		int numSims = 5000;
@@ -135,13 +145,19 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //				TestScenario.MOJAVE_M6pt3_FSS, TestScenario.MOJAVE_M7};
 //		boolean includeSpontaneous = true;
 //		TestScenario[] scenarios = {TestScenario.HAYWIRED_M7};
-		TestScenario[] scenarios = { null };
-		boolean includeSpontaneous = true;
-		String customCatalog = null;
-		long customOT = Long.MIN_VALUE;
+//		TestScenario[] scenarios = { null };
+//		boolean includeSpontaneous = true;
+//		String customCatalog = null;
+//		long customOT = Long.MIN_VALUE;
 		String resetSectsArg = null;
 		boolean griddedOnly = false;
 		boolean customCatIncludeHistSurfaces = false;
+		
+		TestScenario[] scenarios = { null };
+		String customCatalog = null;
+		boolean includeSpontaneous = true;
+		long customOT = -1631410050000l; // right after 1918 SJ
+//		long customOT = -1893456000000l; // right after 1910
 		
 //		TestScenario[] scenarios = { null };
 ////		boolean includeSpontaneous = false;
@@ -189,7 +205,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 		if (griddedOnly)
 			totRateScaleFactor = 1d;
 		
-		String nameAdd = null;
+		String nameAdd = "start1918";
 //		String nameAdd = "sect-reset-1pm";
 //		String nameAdd = "small-speed-test";
 //		String nameAdd = "100krun1";
@@ -199,7 +215,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		String nameAdd = "4000more";
 //		String nameAdd = "mc10-applyGrGridded";
 //		String nameAdd = "FelzerParams-mc20";
-		boolean nameAddAtEnd = true;
+		boolean nameAddAtEnd = false;
 		
 		boolean histCatalog = true;
 		if (!includeSpontaneous)

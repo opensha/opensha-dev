@@ -128,57 +128,6 @@ public class HazardMapComparePlotter {
 		String catalogName = "RSQSim";
 		String catalogFileName = "rsqsim";
 		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2142.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_08_24-bruce2142-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2142-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-gmpeBSSA2014"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2194.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_07-bruce2194-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2349.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2017_12_05-bruce2349-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2349-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2349-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2349-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2349-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2343.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2017_12_05-bruce2343-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2343-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2343-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2343-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2343-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2326.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2017_12_05-bruce2326-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2326-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2326-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2326-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2017_12_06-bruce2326-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2381.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2381-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2388.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2457.instance(catalogsBaseDir);
 //		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
 //		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
@@ -186,12 +135,33 @@ public class HazardMapComparePlotter {
 //		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
 //		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2495.instance(catalogsBaseDir);
-		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2495.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2579.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2592.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
+//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
+		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
+//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
 		
 		File catOutDir = new File(mainOutputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catOutDir.exists() || catOutDir.mkdir());
@@ -315,7 +285,7 @@ public class HazardMapComparePlotter {
 				str = str.substring(str.indexOf("sectArea")+"sectArea".length());
 				str = str.substring(0, str.indexOf("-"));
 				double minFractForInclusion = Double.parseDouble(str);
-				lines.add("*Subsections participates in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
+				lines.add("*Subsections participate in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
 				lines.add("");
 			}
 			lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
@@ -340,6 +310,13 @@ public class HazardMapComparePlotter {
 					jobName = jobName.substring(0, jobName.indexOf("xPoints"));
 					jobName = jobName.substring(jobName.lastIndexOf("-")+1);
 					myU3Dir = new File(myU3Dir.getAbsolutePath()+"-"+jobName+"xPoints");
+				}
+				if (jobDir.getName().contains("-maxDist")) {
+					String jobName = jobDir.getName();
+					jobName = jobName.substring(jobName.indexOf("-maxDist")+1);
+					if (jobName.contains("-"))
+						jobName = jobName.substring(0, jobName.indexOf("-"));
+					myU3Dir = new File(myU3Dir.getAbsolutePath()+"-"+jobName);
 				}
 				File u3File = new File(myU3Dir, HazardMapCompareScriptGen.getCurveDirName(imt, period)+"/imrs1.bin");
 				System.out.print("Loading UCERF3 from: "+u3File.getAbsolutePath()+" ...");
@@ -913,14 +890,20 @@ public class HazardMapComparePlotter {
 		EvenlyDiscretizedFunc medianFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
 		EvenlyDiscretizedFunc meanAbsDiffFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
 		
-		double[] pga_thresholds = {0.0, 0.1, 0.2, 0.4, 0.8, 1.2};
-		CPT pgaWeightCPT = new CPT(pga_thresholds[0], pga_thresholds[pga_thresholds.length-1], Color.GRAY, Color.BLACK);
-		EvenlyDiscretizedFunc[] pgaWeightFuncs = new EvenlyDiscretizedFunc[pga_thresholds.length];
-		for (int p=0; p<pga_thresholds.length; p++)
-			pgaWeightFuncs[p] = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
-		EvenlyDiscretizedFunc[] pgaWeightStdDevFuncs = new EvenlyDiscretizedFunc[pga_thresholds.length];
-		for (int p=0; p<pga_thresholds.length; p++)
-			pgaWeightStdDevFuncs[p] = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
+//		double[] pga_thresholds = {0.0, 0.1, 0.2, 0.4, 0.8, 1.2};
+		double[] pga_thresholds = null;
+		CPT pgaWeightCPT = null;
+		EvenlyDiscretizedFunc[] pgaWeightFuncs = null;
+		EvenlyDiscretizedFunc[] pgaWeightStdDevFuncs = null;
+		if (pga_thresholds != null && pga_thresholds.length > 0) {
+			pgaWeightCPT = new CPT(pga_thresholds[0], pga_thresholds[pga_thresholds.length-1], Color.GRAY, Color.BLACK);
+			pgaWeightFuncs = new EvenlyDiscretizedFunc[pga_thresholds.length];
+			for (int p=0; p<pga_thresholds.length; p++)
+				pgaWeightFuncs[p] = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
+			pgaWeightStdDevFuncs = new EvenlyDiscretizedFunc[pga_thresholds.length];
+			for (int p=0; p<pga_thresholds.length; p++)
+				pgaWeightStdDevFuncs[p] = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
+		}
 		
 		EvenlyDiscretizedFunc nehrpMeanFunc = new EvenlyDiscretizedFunc(logMinProb, logMaxProb, numProbs);
 		
@@ -937,9 +920,12 @@ public class HazardMapComparePlotter {
 			
 			List<Double> ratioVals = new ArrayList<>();
 			
-			List<List<Double>> pgaWeights = new ArrayList<>();
-			for (int p=0; p<pga_thresholds.length; p++)
-				pgaWeights.add(new ArrayList<>());
+			List<List<Double>> pgaWeights = null;
+			if (pga_thresholds != null && pga_thresholds.length > 0) {
+				pgaWeights = new ArrayList<>();
+				for (int p=0; p<pga_thresholds.length; p++)
+					pgaWeights.add(new ArrayList<>());
+			}
 			
 			List<Double> nehrpRatios = new ArrayList<>();
 			
@@ -956,11 +942,13 @@ public class HazardMapComparePlotter {
 					nehrpRatios.add(ratio);
 				
 				ratioVals.add(Math.log(rs/u3));
-				for (int p=0; p<pga_thresholds.length; p++) {
-					double weight = u3 - pga_thresholds[p];
-					if (weight < 0)
-						weight = 0;
-					pgaWeights.get(p).add(weight);
+				if (pga_thresholds != null && pga_thresholds.length > 0) {
+					for (int p=0; p<pga_thresholds.length; p++) {
+						double weight = u3 - pga_thresholds[p];
+						if (weight < 0)
+							weight = 0;
+						pgaWeights.get(p).add(weight);
+					}
 				}
 			}
 			
@@ -998,12 +986,14 @@ public class HazardMapComparePlotter {
 			double nehrpMean = StatUtils.mean(Doubles.toArray(nehrpRatios));
 			nehrpMeanFunc.set(i, nehrpMean);
 			
-			for (int p=0; p<pga_thresholds.length; p++) {
-				ArbDiscrEmpiricalDistFunc func = new ArbDiscrEmpiricalDistFunc();
-				for (int j=0; j<ratioVals.size(); j++)
-					func.set(ratioVals.get(j), pgaWeights.get(p).get(j));
-				pgaWeightFuncs[p].set(i, func.getMean());
-				pgaWeightStdDevFuncs[p].set(i, func.getStdDev());
+			if (pga_thresholds != null && pga_thresholds.length > 0) {
+				for (int p=0; p<pga_thresholds.length; p++) {
+					ArbDiscrEmpiricalDistFunc func = new ArbDiscrEmpiricalDistFunc();
+					for (int j=0; j<ratioVals.size(); j++)
+						func.set(ratioVals.get(j), pgaWeights.get(p).get(j));
+					pgaWeightFuncs[p].set(i, func.getMean());
+					pgaWeightStdDevFuncs[p].set(i, func.getStdDev());
+				}
 			}
 			
 //			System.out.println(rp+" "+mean+" "+stdDev+" "+ratioVals.size());
@@ -1012,22 +1002,24 @@ public class HazardMapComparePlotter {
 		List<DiscretizedFunc> logFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		for (int p=0; p<pga_thresholds.length; p++) {
-			logFuncs.add(pgaWeightFuncs[p]);
-			String name;
-			if (p == 0 || p == pga_thresholds.length-1)
-				name = "PSA_0="+(float)pga_thresholds[p];
-			else
-				name = (float)pga_thresholds[p]+"";
-			pgaWeightFuncs[p].setName(name);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f+2f*(float)pga_thresholds[p],
-					pgaWeightCPT.getColor((float)pga_thresholds[p])));
-		}
-		
-		for (int p=0; p<pga_thresholds.length; p++) {
-			logFuncs.add(pgaWeightStdDevFuncs[p]);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f+2f*(float)pga_thresholds[p],
-					pgaWeightCPT.getColor((float)pga_thresholds[p])));
+		if (pga_thresholds != null && pga_thresholds.length > 0) {
+			for (int p=0; p<pga_thresholds.length; p++) {
+				logFuncs.add(pgaWeightFuncs[p]);
+				String name;
+				if (p == 0 || p == pga_thresholds.length-1)
+					name = "PSA_0="+(float)pga_thresholds[p];
+				else
+					name = (float)pga_thresholds[p]+"";
+				pgaWeightFuncs[p].setName(name);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f+2f*(float)pga_thresholds[p],
+						pgaWeightCPT.getColor((float)pga_thresholds[p])));
+			}
+			
+			for (int p=0; p<pga_thresholds.length; p++) {
+				logFuncs.add(pgaWeightStdDevFuncs[p]);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f+2f*(float)pga_thresholds[p],
+						pgaWeightCPT.getColor((float)pga_thresholds[p])));
+			}
 		}
 		
 		logFuncs.add(nehrpMeanFunc);

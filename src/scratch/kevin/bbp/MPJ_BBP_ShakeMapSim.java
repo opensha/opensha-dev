@@ -72,6 +72,8 @@ public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 		doHF = !cmd.hasOption("no-hf");
 		if (cmd.hasOption("bbp-data-dir")) {
 			bbpDataDir = new File(cmd.getOptionValue("bbp-data-dir"));
+			if (!bbpDataDir.exists())
+				bbpDataDir.mkdir();
 			if (rank == 0)
 				debug("BBP data dir: "+bbpDataDir.getAbsolutePath());
 		}

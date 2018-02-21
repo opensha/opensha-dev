@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.jfree.chart.annotations.XYTextAnnotation;
@@ -32,6 +33,7 @@ public class GroundMotionScatterPlot {
 	public static boolean WRITE_PDF = true;
 	public static String SCATTER_QUANTITY_NAME = "Ruptures";
 	public static boolean YELLOW_REGION = true;
+	public static int MAX_SCATTER_POINTS = 100000;
 	
 	public static void plot(XY_DataSet xy, String xAxisLabel, String yAxisLabel, List<String> binDescriptions,
 			String title, File outputDir, String prefix) throws IOException {
@@ -73,12 +75,26 @@ public class GroundMotionScatterPlot {
 		funcs.add(oneToOne);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GRAY));
 		
+		XY_DataSet origXY = xy;
+		if (xy.size() > MAX_SCATTER_POINTS) {
+			System.out.println("Filtering scatter points from "+xy.size()+" to ~"+MAX_SCATTER_POINTS);
+			// use fixed seed for reproducibility of downsampled plots
+			Random r = new Random(xy.size());
+			double rand = (double)MAX_SCATTER_POINTS/(double)xy.size();
+			XY_DataSet filtered = new DefaultXY_DataSet();
+			for (Point2D pt : xy)
+				if (r.nextDouble() < rand)
+					filtered.set(pt);
+			System.out.println("\tNew size: "+filtered.size());
+			xy = filtered;
+		}
+		
 		funcs.add(xy);
 		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.RED));
 		
 		// regression in log space
 		SimpleRegression regression = new SimpleRegression();
-		for (Point2D pt : xy)
+		for (Point2D pt : origXY)
 			regression.addData(Math.log(pt.getX()), Math.log(pt.getY()));
 		double b = regression.getIntercept();
 		double m = regression.getSlope();

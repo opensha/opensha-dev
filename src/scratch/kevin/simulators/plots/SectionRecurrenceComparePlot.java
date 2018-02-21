@@ -88,8 +88,8 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 		
 		sectCounts = HashBasedTable.create();
 		subSectDistsCache = new HashMap<>();
-		subSectAreas = RSQSimUtils.calcSubSectAreas(elems);
 		compSects = compSol.getRupSet().getFaultSectionDataList();
+		subSectAreas = RSQSimUtils.calcSubSectAreas(elems, compSects);
 		minElemSectID = RSQSimUtils.getSubSectIndexOffset(elems, compSects);
 	}
 

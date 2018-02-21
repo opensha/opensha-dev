@@ -1,11 +1,8 @@
 package scratch.kevin.simulators.ruptures;
 
 import java.awt.Color;
-import java.awt.Font;
-import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -16,39 +13,22 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
-import org.apache.commons.math3.stat.StatUtils;
-import org.jfree.chart.annotations.XYAnnotation;
-import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
-import org.jfree.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
-import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
-import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-import org.opensha.commons.data.function.HistogramFunction;
-import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
-import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
-import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
-import org.opensha.commons.gui.plot.PlotPreferences;
-import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
@@ -56,48 +36,30 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.EqkRupture;
-import org.opensha.sha.earthquake.ProbEqkRupture;
-import org.opensha.sha.earthquake.ProbEqkSource;
-import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
-import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
-import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
-import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.RegionIden;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
-import org.opensha.sha.simulators.utils.SimulatorUtils;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Ints;
 
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
-import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
-import scratch.kevin.simCompare.GroundMotionScatterPlot;
-import scratch.kevin.simCompare.MultiRupGMPE_ComparePageGen;
-import scratch.kevin.simCompare.RuptureComparison;
-import scratch.kevin.simCompare.RuptureComparisonFilter;
-import scratch.kevin.bbp.SpectraPlotter;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
+import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
+import scratch.kevin.simCompare.MultiRupGMPE_ComparePageGen;
+import scratch.kevin.simCompare.RuptureComparison;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
-import scratch.kevin.simulators.hazard.HazardMapComparePlotter;
 import scratch.kevin.util.MarkdownUtils;
-import scratch.kevin.util.MarkdownUtils.TableBuilder;
 
 class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	
@@ -182,6 +144,11 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	}
 	
 	public void setHighlightSites(String... highlightNames) {
+		if (highlightNames == null || highlightNames.length == 0) {
+			// no highlights. null would plot all sites, empty list is no highlights
+			this.highlightSites = new ArrayList<>();
+			return;
+		}
 		List<Site> highlightSites = new ArrayList<>();
 		for (String name : highlightNames) {
 			for (BBP_Site site : sites) {
@@ -552,13 +519,17 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2495.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2579.instance(baseDir);
 		
 		boolean doGMPE = true;
-		boolean doRotD = true;
+		boolean doRotD = false;
 		
-		String[] highlightNames = { "USC", "SBSM" };
-//		String[] highlightNames = null;
+		boolean doGridded = false;
+		String[] highlightNames;
+		if (doGridded)
+			highlightNames = new String[0];
+		else
+			highlightNames = new String[] { "USC", "SBSM" };
 		
 		VelocityModel vm = VelocityModel.LA_BASIN;
 		double minFractForInclusion = 0.2;
@@ -568,9 +539,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		double[] periods = { 1, 2, 3, 5, 10 };
 		double[] periods = { 1, 2, 5 };
 		double[] rotDPeriods = { 1, 2, 5, 7.5, 10 };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
-//				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.BSSA_2014 };
+		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
+				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.BSSA_2014 };
 		AttenRelRef rotDGMPE = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
 		
 		// find BBP parallel dir
@@ -586,6 +557,10 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-all")) {
 				if (skipRGdirs && name.contains("-rg"))
+					continue;
+				if (doGridded && !name.contains("-gridded"))
+					continue;
+				if (!doGridded && name.contains("-gridded"))
 					continue;
 				File zipFile = new File(dir, "results.zip");
 				if (!zipFile.exists())
@@ -633,8 +608,6 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 				vm, minFractForInclusion, gmpeCacheDir);
 		System.out.println("Has RotD100? "+comp.bbpZipFile.hasRotD100());
 		doRotD = doRotD && comp.bbpZipFile.hasRotD100();
-		if (highlightNames != null)
-			comp.setHighlightSites(highlightNames);
 //		comp.testPlotRupAzDiffs();
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
@@ -645,8 +618,17 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			if (doGMPE) {
 				if (!hasRG || !rgOnlyIfPossible) {
 					for (AttenRelRef gmpeRef : gmpeRefs) {
+						if (highlightNames != null) {
+							if (gmpeRef == rotDGMPE)
+								comp.setHighlightSites(highlightNames);
+							else
+								comp.setHighlightSites();
+						}
 						List<EventComparison> comps = comp.loadCalcComps(gmpeRef, periods);
-						File catalogGMPEDir = new File(catalogOutputDir, "gmpe_bbp_comparisons_"+gmpeRef.getShortName());
+						String dirname = "gmpe_bbp_comparisons_"+gmpeRef.getShortName();
+						if (doGridded)
+							dirname += "_GriddedSites";
+						File catalogGMPEDir = new File(catalogOutputDir, dirname);
 						Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
 						comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, periods, comps);
 						if (gmpeRef == rotDGMPE)

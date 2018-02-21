@@ -95,6 +95,8 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 		
 		if (cmd.hasOption("bbp-data-dir")) {
 			bbpDataDir = new File(cmd.getOptionValue("bbp-data-dir"));
+			if (!bbpDataDir.exists())
+				bbpDataDir.mkdir();
 			if (rank == 0)
 				debug("BBP data dir: "+bbpDataDir.getAbsolutePath());
 		}

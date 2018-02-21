@@ -210,7 +210,7 @@ public class BBP_SimZipLoader {
 	
 	protected BBP_Site forEntry(String entryName, List<BBP_Site> sites) {
 		for (BBP_Site site : sites)
-			if (entryName.contains(site.getName()))
+			if (entryName.contains("."+site.getName()+"."))
 				return site;
 		return null;
 	}

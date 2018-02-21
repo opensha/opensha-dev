@@ -166,13 +166,17 @@ public class MarkdownUtils {
 			  .or(CharMatcher.inRange('0', '9')).or(CharMatcher.is('-'));
 	
 	public static List<String> buildTOC(List<String> lines, int minLevel) {
+		return buildTOC(lines, minLevel, 0);
+	}
+	
+	public static List<String> buildTOC(List<String> lines, int minLevel, int maxLevel) {
 		LinkedList<String> toc = new LinkedList<>();
 		
 		for (String line : lines) {
 			if (line.startsWith("#")) {
 				String headerPart = line.substring(0, line.lastIndexOf('#')+1);
 				int level = headerPart.length();
-				if (level >= minLevel) {
+				if (level >= minLevel && (maxLevel <=0 || level <= maxLevel)) {
 					String tocLine = "";
 					while ((level > minLevel)) {
 						tocLine += "  ";

@@ -48,6 +48,7 @@ import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.Vertex;
+import org.opensha.sha.simulators.parsers.RSQSimFileReader;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
@@ -55,6 +56,7 @@ import org.opensha.sha.simulators.srf.SRF_PointData;
 import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.SimulatorUtils;
+import org.opensha.sha.simulators.utils.SimulatorUtils.SimulatorElementIDComparator;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -69,9 +71,13 @@ import scratch.kevin.simulators.RSQSimCatalog.Loader;
 
 public class RSQSimSectBundledERF extends AbstractERF {
 	
+	private static final int GEOM_LONG_ZONE = 11;
+	private static final char GEOM_LAT_ZONE = 'N';
+	
 	// inputs
 	private List<FaultSectionPrefData> subSects;
 	private double catDurationYears;
+	private List<SimulatorElement> elements;
 	
 	// either generated on load or loaded from mappings file
 	private List<RSQSimSectBundledSource> sourceList;
@@ -80,6 +86,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	// params
 	private static final String MAPPING_FILE_PARAM_NAME = "Mapping File";
 	private FileParameter mappingFileParam;
+	
+	private static final String GEOM_FILE_PARAM_NAME = "Geometry File";
+	private FileParameter geomFileParam;
 	
 	private static final String FAULT_MODEL_PARAM_NAME = "Fault Model";
 	private static final FaultModels FAULT_MODEL_DEFAULT = FaultModels.FM3_1;
@@ -96,10 +105,14 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	private Map<IDPairing, Double> subSectDistsCache = new HashMap<>();
 	private double parentRegBuffer = Double.NaN;
 	private Map<Integer, Region> parentBufferedRegionCache = new HashMap<>();
+	private Location prevElemDistLoc = null;
+	private Map<SimulatorElement, Double> elemSiteDistances = null;
 
 	public RSQSimSectBundledERF(List<SimulatorElement> elements, List<RSQSimEvent> events, FaultModels fm, DeformationModels dm,
 			List<FaultSectionPrefData> subSects, double minMag, double minFractForInclusion, double sourceBuffer) {
-		init(null, fm, dm, subSects);
+		init(null, null, fm, dm, subSects, elements);
+		adjustableParams.removeParameter(mappingFileParam);
+		adjustableParams.removeParameter(geomFileParam);
 		
 		if (minMag > 0) {
 			events = new ArrayList<>(events);
@@ -112,27 +125,40 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		buildSources(allRuptures, sourceBuffer);
 	}
 
-	public RSQSimSectBundledERF(File mappingFile, FaultModels fm, DeformationModels dm, List<FaultSectionPrefData> subSects)
-			throws IOException {
-		init(mappingFile, fm, dm, subSects);
+	public RSQSimSectBundledERF(File mappingFile, File geometryFile, FaultModels fm, DeformationModels dm,
+			List<FaultSectionPrefData> subSects, List<SimulatorElement> elements) throws IOException {
+		Preconditions.checkNotNull(mappingFile);
+		Preconditions.checkState(geometryFile != null || elements != null);
+		init(mappingFile, geometryFile, fm, dm, subSects, elements);
+		adjustableParams.removeParameter(mappingFileParam);
+		adjustableParams.removeParameter(geomFileParam);
 	}
 
 	private RSQSimSectBundledERF() {
-		init(null, null, null, null);
+		init(null, null, null, null, null, null);
 	}
 	
-	private void init(File mappingFile, FaultModels fm, DeformationModels dm, List<FaultSectionPrefData> subSects) {
+	private void init(File mappingFile, File geometryFile, FaultModels fm, DeformationModels dm,
+			List<FaultSectionPrefData> subSects, List<SimulatorElement> elements) {
 		mappingFileParam = new FileParameter(MAPPING_FILE_PARAM_NAME, mappingFile);
 		mappingFileParam.addParameterChangeListener(this);
 		adjustableParams.addParameter(mappingFileParam);
 		
+		geomFileParam = new FileParameter(GEOM_FILE_PARAM_NAME, geometryFile);
+		geomFileParam.addParameterChangeListener(this);
+		adjustableParams.addParameter(geomFileParam);
+		
+		if (fm == null)
+			fm = FAULT_MODEL_DEFAULT;
 		faultModelParam = new EnumParameter<FaultModels>(FAULT_MODEL_PARAM_NAME,
-				EnumSet.allOf(FaultModels.class), FAULT_MODEL_DEFAULT, null);
+				EnumSet.allOf(FaultModels.class), fm, null);
 		faultModelParam.addParameterChangeListener(this);
 		adjustableParams.addParameter(faultModelParam);
 		
+		if (dm == null)
+			dm = DEF_MODEL_DEFAULT;
 		defModelParam = new EnumParameter<DeformationModels>(DEF_MODEL_PARAM_NAME,
-				EnumSet.allOf(DeformationModels.class), DEF_MODEL_DEFAULT, null);
+				EnumSet.allOf(DeformationModels.class), dm, null);
 		defModelParam.addParameterChangeListener(this);
 		adjustableParams.addParameter(defModelParam);
 		
@@ -140,6 +166,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			loadSubSects();
 		else
 			setSubSects(subSects);
+		
+		// can be null
+		this.elements = elements;
 		
 		this.timeSpan = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
 		this.timeSpan.setDuration(1d);
@@ -150,6 +179,17 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		DeformationModels dm = defModelParam.getValue();
 		System.out.println("Loading subsections for "+fm+" "+dm);
 		setSubSects(RSQSimUtils.getUCERF3SubSectsForComparison(fm, dm));
+	}
+	
+	private void loadElements() {
+		File geomFile = geomFileParam.getValue();
+		Preconditions.checkNotNull(geomFile, "No geometry file given!");
+		Preconditions.checkState(geomFile.exists(), "Geometry file doesn't exist: %s", geomFile.getAbsolutePath());
+		try {
+			elements = RSQSimFileReader.readGeometryFile(geomFile, GEOM_LONG_ZONE, GEOM_LAT_ZONE);
+		} catch (IOException e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
 	}
 	
 	private void setSubSects(List<FaultSectionPrefData> subSects) {
@@ -178,6 +218,10 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			sourceList = null;
 			eventIDtoRupMap = null;
 			subSects = null;
+		} else if (event.getParameter() == geomFileParam) {
+			sourceList = null;
+			eventIDtoRupMap = null;
+			elements = null;
 		}
 	}
 
@@ -187,7 +231,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		
 		Map<Integer, Double> subSectAreas = null;
 		if (minFractForInclusion > 0)
-			subSectAreas = RSQSimUtils.calcSubSectAreas(elements);
+			subSectAreas = RSQSimUtils.calcSubSectAreas(elements, subSects);
 		
 		System.out.print("Building subsection-based ruptures...");
 		for (RSQSimEvent event : events) {
@@ -431,16 +475,13 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		
 	}
 	
-	private class RSQSimProbEqkRup extends ProbEqkRupture {
+	public class RSQSimProbEqkRup extends ProbEqkRupture {
 
 		private int eventID;
 		private List<FaultSectionPrefData> subSects;
 		
 		// this can be filtered to remove elements far from the mapped surface
-		private transient List<SimulatorElement> rupElems;
-		
-		private double prevBuffer;
-		private Region prevBufferedRegion;
+		private List<SimulatorElement> rupElems;
 		
 		private Range<Double> elemLatRange;
 		private Range<Double> elemLonRange;
@@ -449,6 +490,20 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		public RSQSimProbEqkRup(RSQSimSubSectEqkRupture rup, double probability, List<SimulatorElement> rupElems) {
 			super(rup.getMag(), rup.getAveRake(), probability, rup.getRuptureSurface(), rup.getHypocenterLocation());
 			
+			init(rup.getEventID(), rup.getSubSections(), rupElems);
+			
+		}
+
+		public RSQSimProbEqkRup(double mag, double rake, double probability, Location hypo, int eventID,
+				List<FaultSectionPrefData> subSects, List<SimulatorElement> rupElems) {
+			super(mag, rake, probability, buildSubSectSurface(subSects), hypo);
+			init(eventID, subSects, rupElems);
+		}
+		
+		private void init(int eventID, List<FaultSectionPrefData> subSects, List<SimulatorElement> rupElems) {
+			this.eventID = eventID;
+			Preconditions.checkState(eventID >= 0);
+			this.subSects = subSects;
 			MinMaxAveTracker latTrack = new MinMaxAveTracker();
 			MinMaxAveTracker lonTrack = new MinMaxAveTracker();
 			MinMaxAveTracker depthTrack = new MinMaxAveTracker();
@@ -463,23 +518,6 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			Range<Double> elemLonRange = Range.closed(lonTrack.getMin(), lonTrack.getMax());
 			Range<Double> elemDepthRange = Range.closed(depthTrack.getMin(), depthTrack.getMax());
 			this.rupElems = rupElems;
-			
-			init(rup.getEventID(), rup.getSubSections(), elemLatRange, elemLonRange, elemDepthRange);
-			
-		}
-
-		public RSQSimProbEqkRup(double mag, double rake, double probability, Location hypo, int eventID,
-				List<FaultSectionPrefData> subSects, Range<Double> elemLatRange, Range<Double> elemLonRange,
-				Range<Double> elemDepthRange) {
-			super(mag, rake, probability, buildSubSectSurface(subSects), hypo);
-			init(eventID, subSects, elemLatRange, elemLonRange, elemDepthRange);
-		}
-		
-		private void init(int eventID, List<FaultSectionPrefData> subSects, Range<Double> elemLatRange,
-				Range<Double> elemLonRange, Range<Double> elemDepthRange) {
-			this.eventID = eventID;
-			Preconditions.checkState(eventID >= 0);
-			this.subSects = subSects;
 			this.elemLatRange = elemLatRange;
 			this.elemLonRange = elemLonRange;
 			this.elemDepthRange = elemDepthRange;
@@ -491,6 +529,10 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		
 		public List<FaultSectionPrefData> getSortedSubSects() {
 			return subSects;
+		}
+		
+		public List<SimulatorElement> getElements() {
+			return rupElems;
 		}
 
 		public Range<Double> getElemLatRange() {
@@ -507,12 +549,26 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		
 	}
 	
-	private class RSQSimSectBundledSource extends ProbEqkSource {
+	public synchronized double getElementDistance(Location loc, SimulatorElement elem) {
+		if (loc != prevElemDistLoc) {
+			prevElemDistLoc = loc;
+			elemSiteDistances = new HashMap<>();
+		}
+		Double dist = elemSiteDistances.get(elem);
+		if (dist == null) {
+			dist = LocationUtils.horzDistanceFast(elem.getCenterLocation(), loc);
+			elemSiteDistances.put(elem, dist);
+		}
+		return dist;
+	}
+	
+	public class RSQSimSectBundledSource extends ProbEqkSource {
 		
 		private RuptureSurface sourceSurf;
 		private List<FaultSectionPrefData> sortedSourceSects;
 		private List<RSQSimProbEqkRup> ruptures;
 		private Set<Integer> parentIDs;
+		private HashSet<SimulatorElement> sourceElementsSet;
 
 		public RSQSimSectBundledSource(List<FaultSectionPrefData> sortedSourceSects, List<RSQSimProbEqkRup> ruptures) {
 			HashSet<String> parentNames = new HashSet<>();
@@ -524,6 +580,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			this.name = buildSourceName(parentNames);
 			this.sortedSourceSects = sortedSourceSects;
 			this.ruptures = ruptures;
+			sourceElementsSet = new HashSet<>();
+			for (RSQSimProbEqkRup rup : ruptures)
+				sourceElementsSet.addAll(rup.getElements());
 		}
 
 		@Override
@@ -540,7 +599,11 @@ public class RSQSimSectBundledERF extends AbstractERF {
 
 		@Override
 		public double getMinDistance(Site site) {
-			return getSourceSurface().getDistanceRup(site.getLocation());
+			double minDist = Double.POSITIVE_INFINITY;
+			Location loc = site.getLocation();
+			for (SimulatorElement elem : sourceElementsSet)
+				minDist = Math.min(minDist, getElementDistance(loc, elem));
+			return minDist;
 		}
 
 		@Override
@@ -703,11 +766,19 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		
 	}
 	
+	private static int sequential_flag = -999;
+	
 	public void writeMappingBinaryFile(File mappingFile) throws IOException {
 		DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(mappingFile)));
 		
 		out.writeInt(getNumSources()); // write number of sources
 		out.writeDouble(catDurationYears); // write catalog duration in years
+		
+		SimulatorElementIDComparator elemComp = new SimulatorElementIDComparator();
+		
+		long sequentialIDsSkipped = 0;
+		long numElemIDs = 0;
+		
 		for (int sourceID=0; sourceID<getNumSources(); sourceID++) {
 			RSQSimSectBundledSource source = getSource(sourceID);
 			List<FaultSectionPrefData> sectsList = source.getSortedSourceSects();
@@ -729,13 +800,37 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				out.writeDouble(hypo.getLatitude()); // hypo lat
 				out.writeDouble(hypo.getLongitude()); // hypo lon
 				out.writeDouble(hypo.getDepth()); // hypo depth
-				// element ranges
-				out.writeDouble(rup.getElemLatRange().lowerEndpoint());
-				out.writeDouble(rup.getElemLatRange().upperEndpoint());
-				out.writeDouble(rup.getElemLonRange().lowerEndpoint());
-				out.writeDouble(rup.getElemLonRange().upperEndpoint());
-				out.writeDouble(rup.getElemDepthRange().lowerEndpoint());
-				out.writeDouble(rup.getElemDepthRange().upperEndpoint());
+				// elements
+				List<SimulatorElement> rupElems = new ArrayList<>(rup.getElements());
+				rupElems.sort(elemComp);
+				int numElems = rupElems.size();
+				out.writeInt(numElems); // number of elements
+				int curIndex = 0;
+				while (curIndex < numElems) {
+					int curID = rupElems.get(curIndex).getID();
+					out.writeInt(curID);
+					
+					// now see if there is group of sequential IDs which we can compact
+					int numSequential = 0; // number of sequential IDs following this one
+					for (int i=curIndex+1; i<numElems; i++) {
+						int testID = rupElems.get(i).getID();
+						if ((testID - curID) == (i - curIndex))
+							numSequential++;
+						else
+							break;
+					}
+					if (numSequential > 2) {
+						// worth it to compact. if 2 or fewer, then writing [id0] [id1] [id2] is no more efficient than
+						// writing [id0] [sequential_flag] [id2]
+						out.writeInt(sequential_flag);
+						sequentialIDsSkipped += numSequential - 2;
+						curIndex += numSequential;
+						curID = rupElems.get(curIndex).getID();
+						out.writeInt(curID);
+					}
+					curIndex++;
+				}
+				numElemIDs += rupElems.size();
 				List<FaultSectionPrefData> rupSects = rup.getSortedSubSects();
 				out.writeInt(rupSects.size()); // number of sections
 				for (FaultSectionPrefData sect : rupSects)
@@ -743,7 +838,16 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			}
 		}
 		
+		double percent = 100d*sequentialIDsSkipped/numElemIDs;
+		System.out.println("Saved "+sequentialIDsSkipped+"/"+numElemIDs+" elem ID writes ("+(float)percent+" %)");
+		
 		out.close();
+	}
+	
+	private SimulatorElement getElement(int id, int elementOffset) {
+		SimulatorElement elem = elements.get(id - elementOffset);
+		Preconditions.checkState(elem.getID() == id);
+		return elem;
 	}
 	
 	private void buildSourcesFromMappingFile(File mappingFile) throws IOException {
@@ -757,6 +861,10 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		catDurationYears = in.readDouble();
 		System.out.println("Have "+catDurationYears+" years");
 		double rupProb = calcEventProbability();
+		
+		int elementOffset = elements.get(0).getID();
+		int lastID = elements.get(elements.size()-1).getID();
+		Preconditions.checkState(lastID == elementOffset + elements.size() - 1, "Element list not sequential");
 		
 		for (int sourceID=0; sourceID<numSources; sourceID++) {
 //			System.out.println("Source "+sourceID);
@@ -784,22 +892,28 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				double depth = in.readDouble();
 				Location hypo = new Location(lat, lon, depth);
 				
-				double minLat = in.readDouble();
-				double maxLat = in.readDouble();
-				Range<Double> elemLatRange = Range.closed(minLat, maxLat);
-				double minLon = in.readDouble();
-				double maxLon = in.readDouble();
-				Range<Double> elemLonRange = Range.closed(minLon, maxLon);
-				double minDepth = in.readDouble();
-				double maxDepth = in.readDouble();
-				Range<Double> elemDepthRange = Range.closed(minDepth, maxDepth);
+				int numElems = in.readInt();
+				List<SimulatorElement> rupElems = new ArrayList<>(numElems);
+				
+				while (rupElems.size() < numElems) {
+					int id = in.readInt();
+					if (id == sequential_flag) {
+						int prevID = rupElems.get(rupElems.size()-1).getID();
+						int endID = in.readInt();
+						Preconditions.checkState(endID > prevID && endID <= lastID);
+						for (int i=prevID+1; i<=endID; i++)
+							rupElems.add(getElement(i, elementOffset));
+					} else {
+						Preconditions.checkState(id >= elementOffset && id <= lastID);
+						rupElems.add(getElement(id, elementOffset));
+					}
+				}
 				
 				int numRupSects = in.readInt();
 				List<FaultSectionPrefData> rupSects = new ArrayList<>();
 				for (int s=0; s<numRupSects; s++)
 					rupSects.add(subSects.get(in.readInt()));
-				sourceRups.add(new RSQSimProbEqkRup(mag, rake, rupProb, hypo, eventID, rupSects,
-						elemLatRange, elemLonRange, elemDepthRange));
+				sourceRups.add(new RSQSimProbEqkRup(mag, rake, rupProb, hypo, eventID, rupSects, rupElems));
 			}
 			
 			RSQSimSectBundledSource source = new RSQSimSectBundledSource(sourceSects, sourceRups);
@@ -823,6 +937,8 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	public void updateForecast() {
 		if (subSects == null)
 			loadSubSects();
+		if (elements == null)
+			loadElements();
 		if (sourceList == null) {
 			File mappingFile = mappingFileParam.getValue();
 			Preconditions.checkNotNull(mappingFile, "Sources not loaded and mapping file null");
@@ -884,10 +1000,14 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			maxDuration = 10000;
 		}
 		
+		FaultModels fm = catalog.getFaultModel();
+		DeformationModels dm = catalog.getDeformationModel();
+		List<FaultSectionPrefData> subSects = catalog.getU3SubSects();
+		List<SimulatorElement> elements = catalog.getElements();
+		
 		if (testReadOnly) {
 			File mappingFile = new File(catalog.getCatalogDir(), "erf_mappings.bin");
-			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(
-					mappingFile, catalog.getFaultModel(), catalog.getDeformationModel(), catalog.getU3SubSects());
+			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(mappingFile, null, fm, dm , subSects, elements);
 			erf.updateForecast();
 		} else {
 			double skipYears = 5000;
@@ -903,8 +1023,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			double srfPointCullDist = 100;
 			
 			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(catalog.getElements(), events,
-					catalog.getFaultModel(), catalog.getDeformationModel(), catalog.getU3SubSects(),
-					minMag, minFractForInclusion, srfPointCullDist);
+					fm, dm , subSects, minMag, minFractForInclusion, srfPointCullDist);
 			erf.updateForecast();
 			
 			File catalogDir = catalog.getCatalogDir();
@@ -925,18 +1044,25 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				erf.writeMappingBinaryFile(mappingFile);
 				
 				File xmlFile = new File(catalogDir, "erf_params.xml");
+				File geomFile = catalog.getGeomFile();
+				RSQSimSectBundledERF metadataERF = new RSQSimSectBundledERF();
+				metadataERF.setParameter(MAPPING_FILE_PARAM_NAME, mappingFile);
+				metadataERF.setParameter(GEOM_FILE_PARAM_NAME, geomFile);
+				metadataERF.setParameter(FAULT_MODEL_PARAM_NAME, fm);
+				metadataERF.setParameter(DEF_MODEL_PARAM_NAME, dm);
 				Document doc = XMLUtils.createDocumentWithRoot();
 				Element root = doc.getRootElement();
-				erf.toXMLMetadata(root);
+				metadataERF.toXMLMetadata(root);
 				XMLUtils.writeDocumentToFile(xmlFile, doc);
 				
 				// now test reading it in
 				System.out.println("Building from mappings");
-				RSQSimSectBundledERF erf2 = new RSQSimSectBundledERF(
-						mappingFile, catalog.getFaultModel(), catalog.getDeformationModel(), catalog.getU3SubSects());
+				RSQSimSectBundledERF erf2 = new RSQSimSectBundledERF(mappingFile, null, fm, dm , subSects, elements);
 				erf2.updateForecast();
 				System.out.println("Validating mappings");
 				Preconditions.checkState(erf.getNumSources() == erf2.getNumSources());
+				
+				SimulatorElementIDComparator elemComp = new SimulatorElementIDComparator();
 				for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
 					RSQSimSectBundledSource source1 = erf.getSource(sourceID);
 					RSQSimSectBundledSource source2 = erf2.getSource(sourceID);
@@ -953,6 +1079,14 @@ public class RSQSimSectBundledERF extends AbstractERF {
 						Preconditions.checkState(rup1.elemLatRange.equals(rup2.elemLatRange));
 						Preconditions.checkState(rup1.elemLonRange.equals(rup2.elemLonRange));
 						Preconditions.checkState(rup1.elemDepthRange.equals(rup2.elemDepthRange));
+						
+						List<SimulatorElement> elems1 = rup1.getElements();
+						elems1.sort(elemComp);
+						List<SimulatorElement> elems2 = rup1.getElements();
+						elems2.sort(elemComp);
+						Preconditions.checkState(elems1.size() == elems2.size());
+						for (int i=0; i<elems1.size(); i++)
+							Preconditions.checkState(elems1.get(i).getID() == elems2.get(i).getID());
 					}
 				}
 			}

@@ -33,7 +33,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_K2");
 //		File catalogDir = new File(jacquiCSDir, "modLoad_testB");
 //		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
-		File catalogDir = new File(myHPCDir, "rundir2495");
+		File catalogDir = new File(myHPCDir, "rundir2592");
 		
 		boolean standardSites = true;
 		boolean griddedSites = false;
@@ -48,10 +48,10 @@ class MPJ_BBP_CatalogSimScriptGen {
 		int skipYears = 5000;
 		
 		int threads = 20;
-		int nodes = 18;
+		int nodes = 36;
 		String queue = "scec";
 		int mins = 24*60;
-		int heapSizeMB = 60*1024;
+		int heapSizeMB = 45*1024;
 		String bbpDataDir = "${TMPDIR}";
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
