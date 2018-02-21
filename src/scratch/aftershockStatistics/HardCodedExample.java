@@ -2,7 +2,7 @@ package scratch.aftershockStatistics;
 
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-import org.opensha.commons.data.siteData.impl.TectonicRegime;
+import scratch.aftershockStatistics.OAFTectonicRegime;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
@@ -67,7 +67,7 @@ public class HardCodedExample {
 		 * Fetch generic aftershock parameters
 		 */
 		GenericRJ_ParametersFetch genericFetch = new GenericRJ_ParametersFetch();
-		TectonicRegime regime = genericFetch.getRegion(mainshock.getHypocenterLocation());
+		OAFTectonicRegime regime = genericFetch.getRegion(mainshock.getHypocenterLocation());
 		GenericRJ_Parameters genericParams = genericFetch.get(regime);
 		System.out.println("Generic params for "+regime+": "+genericParams);
 		

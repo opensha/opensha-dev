@@ -42,7 +42,7 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.function.XY_DatasetBinner;
-import org.opensha.commons.data.siteData.impl.TectonicRegime;
+import scratch.aftershockStatistics.OAFTectonicRegime;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
@@ -597,7 +597,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 				genericFetch = new GenericRJ_ParametersFetch();
 			
 			System.out.println("Determining tectonic regime for generic parameters");
-			TectonicRegime regime = genericFetch.getRegion(mainshock.getHypocenterLocation());
+			OAFTectonicRegime regime = genericFetch.getRegion(mainshock.getHypocenterLocation());
 			Preconditions.checkNotNull(regime, "Regime not found or server error");
 			genericParams = genericFetch.get(regime);
 			Preconditions.checkNotNull(genericParams, "Generic params not found or server error");

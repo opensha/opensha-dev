@@ -135,7 +135,7 @@ public class ComcatListener implements MessageListener {
 		ObsEqkRupture eqk = accessor.fetchEvent(eventId);
 		if(eqk==null)
 		{
-			System.out.println("Event does not exist in Comcat");
+			System.out.println("WARNING at ComcatListener.eventExists: Event does not exist in Comcat : " + eventId);
 			return true;
 		}
 	    /* If event does not exist check if it comes under any actively processed regions*/
@@ -195,8 +195,11 @@ public class ComcatListener implements MessageListener {
 		 */
 		ComcatAccessor accessor = new ComcatAccessor();
 		ObsEqkRupture initialMainShock = accessor.fetchEvent(eventID);
-		if(initialMainShock==null)
+		if(initialMainShock==null) {
 			System.out.println("Mainshock is null");
+			System.out.println("WARNING at ComcatListener.processEvent: Mainshock not found in Comcat : " + eventID);
+			return;
+		}
 		Preconditions.checkNotNull(initialMainShock, "Error fetching mainshock '%s'", eventID);
 		long now = Instant.now().toEpochMilli();
 	    /*if dataMaxDays is 0 get all aftershocks until now*/
