@@ -15,6 +15,7 @@ import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 
@@ -70,7 +71,7 @@ public class MPJ_BBP_RupGenSimScriptGen {
 		Files.copy(srcFile, new File(localJobDir, srcFile.getName()));
 		File remoteSrcFile = new File(remoteJobDir, srcFile.getName());
 		
-		String argz = "--exact-dispatch "+threads+" --threads "+threads;
+		String argz = MPJTaskCalculator.argumentBuilder().exactDispatch(threads).threads(threads).endTimeSlurm().build();
 		argz += " --vm "+vm.name()+" --method "+method.name();
 		argz += " --sites-file "+remoteSitesFile.getAbsolutePath();
 		argz += " --src-file "+remoteSrcFile.getAbsolutePath();

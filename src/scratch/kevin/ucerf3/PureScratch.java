@@ -5,6 +5,12 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAccessor;
+import java.time.temporal.TemporalField;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1199,25 +1205,40 @@ public class PureScratch {
 	}
 	
 	private static void test45() {
-		List<Integer> list1 = new ArrayList<>();
-		List<Integer> list2 = new ArrayList<>();
+//		System.out.println(Double.parseDouble("NaN"));
+//		Map<String, String> env = System.getenv();
+//		for (String key : env.keySet())
+//			System.out.println(key+": "+env.get(key));
 		
-		list1.add(0);
-		list1.add(1);
-		list1.add(4);
-		list1.add(5);
-		list1.add(8);
-		
-		list2.add(0);
-		list2.add(1);
-		list2.add(4);
-		list2.add(5);
-		list2.add(8);
-		
-		System.out.println("Hash1: "+list1.hashCode());
-		System.out.println("Hash2: "+list2.hashCode());
-		
-		System.out.println("Equals? "+list1.equals(list2));
+//		TemporalAccessor date = DateTimeFormatter.ISO_LOCAL_DATE_TIME.parse("2018-02-22T15:04:59");
+		LocalDateTime future = LocalDateTime.parse("2018-02-23T15:22:59", DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+		LocalDateTime now = LocalDateTime.now();
+		Duration duration = Duration.between(now, future);
+		long secs = duration.get(ChronoUnit.SECONDS);
+		System.out.println("Duration: "+secs+" s");
+//		date.
+//		date.to
+//		date.get(TemporalField)
+//		System.out.println(date);
+//		List<Integer> list1 = new ArrayList<>();
+//		List<Integer> list2 = new ArrayList<>();
+//		
+//		list1.add(0);
+//		list1.add(1);
+//		list1.add(4);
+//		list1.add(5);
+//		list1.add(8);
+//		
+//		list2.add(0);
+//		list2.add(1);
+//		list2.add(4);
+//		list2.add(5);
+//		list2.add(8);
+//		
+//		System.out.println("Hash1: "+list1.hashCode());
+//		System.out.println("Hash2: "+list2.hashCode());
+//		
+//		System.out.println("Equals? "+list1.equals(list2));
 	}
 
 	/**

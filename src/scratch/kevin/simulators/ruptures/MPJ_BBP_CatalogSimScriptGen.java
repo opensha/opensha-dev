@@ -15,6 +15,7 @@ import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
@@ -33,10 +34,10 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_K2");
 //		File catalogDir = new File(jacquiCSDir, "modLoad_testB");
 //		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
-		File catalogDir = new File(myHPCDir, "rundir2592");
+		File catalogDir = new File(myHPCDir, "rundir2585");
 		
-		boolean standardSites = true;
-		boolean griddedSites = false;
+		boolean standardSites = false;
+		boolean griddedSites = true;
 		double griddedSpacing = 1d;
 		
 		double minMag = 6;
@@ -85,7 +86,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 		BBP_Site.writeToFile(sitesFile, sites);
 		File remoteSitesFile = new File(remoteJobDir, sitesFile.getName());
 		
-		String argz = "--min-dispatch "+threads+" --max-dispatch 500 --threads "+threads;
+		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
 		argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();
 		argz += " --sites-file "+remoteSitesFile.getAbsolutePath();
 		argz += " --catalog-dir "+catalogDir.getAbsolutePath();

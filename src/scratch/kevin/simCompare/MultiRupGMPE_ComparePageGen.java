@@ -24,6 +24,7 @@ import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
+import org.opensha.commons.data.function.PrimitiveArrayXY_Dataset;
 import org.opensha.commons.exceptions.ParameterException;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
@@ -86,6 +87,11 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	
 	private Map<AttenRelRef, LinkedList<ScalarIMR>> gmpesInstancesCache;
 	
+	private boolean replotScatters = true;
+	private boolean replotZScores = true;
+	private boolean replotCurves = true;
+	private boolean replotResiduals = true;
+	
 	protected void init(SimulationRotDProvider<E> simProv, List<Site> sites, boolean distJB, double cutoffDist,
 			double minMag, double maxMag) {
 		this.simProv = simProv;
@@ -104,6 +110,22 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 	}
 	
+	public void setReplotScatters(boolean replotScatters) {
+		this.replotScatters = replotScatters;
+	}
+
+	public void setReplotZScores(boolean replotZScores) {
+		this.replotZScores = replotZScores;
+	}
+
+	public void setReplotCurves(boolean replotCurves) {
+		this.replotCurves = replotCurves;
+	}
+
+	public void setReplotResiduals(boolean replotResiduals) {
+		this.replotResiduals = replotResiduals;
+	}
+
 	static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
 	
 	protected String getDistDescription() {
@@ -307,6 +329,13 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	@SuppressWarnings("unchecked")
 	public File plotHazardCurve(List<? extends RuptureComparison<E>> comps, Site site, double period, AttenRelRef gmpeRef, File outputDir)
 			throws IOException {
+		String siteName = site.getName();
+		String prefix = siteName.replaceAll(" ", "_")+"_curves_"+(float)period+"s_"+gmpeRef.getShortName();
+		File pngFile = new File(outputDir, prefix+".png");
+		
+		if (pngFile.exists() && !replotCurves)
+			return pngFile;
+		
 		String xAxisLabel = (float)period+"s SA (g)";
 		String yAxisLabel = "Annual Probability";
 		double curveDuration = 1d;
@@ -414,8 +443,6 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, color));
 			}
 		}
-		
-		String siteName = site.getName();
 
 		PlotSpec spec = new PlotSpec(funcs, chars, siteName+" Hazard Curves", xAxisLabel, yAxisLabel);
 		spec.setLegendVisible(true);
@@ -428,10 +455,8 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 		
-		String prefix = siteName.replaceAll(" ", "_")+"_curves_"+(float)period+"s_"+gmpeRef.getShortName();
 		gp.drawGraphPanel(spec, true, true, xRange, yRange);
 		gp.getChartPanel().setSize(800, 600);
-		File pngFile = new File(outputDir, prefix+".png");
 		gp.saveAsPNG(pngFile.getAbsolutePath());
 		System.out.println("DONE "+gmpeRef.getShortName()+", "+site.getName()+", "+xAxisLabel);
 		return pngFile;
@@ -551,10 +576,14 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 						
 						List<String> binDescriptions = Lists.newArrayList(distLabels.get(d),
 								magLabels.get(m), optionalDigitDF.format(period)+"s SA, "+gmpeRef.getShortName());
-						boolean success = plotScatter(magEventComps, scatterSites, period, gmpeRef, filter,
+						File scatterPlot = new File(resourcesDir, prefix+".png");
+						boolean success;
+						if (scatterPlot.exists() && !replotScatters)
+							success = true;
+						else
+							success = plotScatter(magEventComps, scatterSites, period, gmpeRef, filter,
 								binDescriptions, resourcesDir, prefix);
 						if (success) {
-							File scatterPlot = new File(resourcesDir, prefix+".png");
 							Preconditions.checkState(scatterPlot.exists());
 							table.addColumn("![Scatter Plot]("+resourcesDir.getName()
 								+"/"+scatterPlot.getName()+")");
@@ -597,10 +626,14 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 					System.out.println("Plotting Standard Normal: "+prefix);
 					
 					List<String> binDescriptions = Lists.newArrayList(distLabels.get(d), magLabels.get(m));
-					boolean success = ZScoreHistPlot.plotStandardNormal(simProv, magEventComps, scatterSites, periods,
+					File plotFile = new File(resourcesDir, prefix+".png");
+					boolean success;
+					if (plotFile.exists() && !replotZScores)
+						success = true;
+					else
+						success = ZScoreHistPlot.plotStandardNormal(simProv, magEventComps, scatterSites, periods,
 							gmpeRef, filter, binDescriptions, resourcesDir, prefix);
 					if (success) {
-						File plotFile = new File(resourcesDir, prefix+".png");
 						Preconditions.checkState(plotFile.exists());
 						table.addColumn("![Standard Normal Plot]("+resourcesDir.getName()
 							+"/"+plotFile.getName()+")");
@@ -613,7 +646,12 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				lines.addAll(table.wrap(max_table_fig_columns, 0).build());
 			}
 			String prefix = siteName.replaceAll(" ", "_")+"_all_mags_all_dists_"+gmpeRef.getShortName()+"_std_norm";
-			boolean success = ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, periods,
+			File plotFile = new File(resourcesDir, prefix+".png");
+			boolean success;
+			if (plotFile.exists() && !replotZScores)
+				success = true;
+			else
+				success = ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, periods,
 					gmpeRef, null, new ArrayList<>(), resourcesDir, prefix);
 			if (success) {
 				lines.add("#### "+siteName+", All Ruptures, Z-Score Histograms");
@@ -629,7 +667,6 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				lines.add("* Blue Dashed Line: "+simName+" Mean");
 				
 				lines.add("");
-				File plotFile = new File(resourcesDir, prefix+".png");
 				Preconditions.checkState(plotFile.exists());
 				lines.add("![Standard Normal Plot]("+resourcesDir.getName()
 					+"/"+plotFile.getName()+")");
@@ -643,7 +680,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			curveSites = highlightSites;
 		else
 			curveSites = this.sites;
-		System.out.println("Have "+curveSites.size()+" curve sites (from "+sites.size()+" total sites");
+		System.out.println("Have "+curveSites.size()+" curve sites (from "+sites.size()+" total sites)");
 		
 		if (curveSites != null && !curveSites.isEmpty()) {
 			for (double period : periods)
@@ -681,6 +718,8 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				table.finalizeLine();
 			}
 			lines.addAll(table.build());
+			
+			System.out.println("Done with curves");
 		}
 		
 		// now GMPE residuals
@@ -716,9 +755,11 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		lines.add("");
 		TableBuilder table = MarkdownUtils.tableBuilder().addLine("Name", "Average Value");
 		Map<ResidualType, Double> residualDefaults = new HashMap<>();
+		Map<ResidualType, Integer> regressValCounts = new HashMap<>();
 		for (ResidualType type : ResidualType.values()) {
 			Double meanVal = 0d;
 			double sumWeights = 0d;
+			int numVals = 0;
 			for (RuptureComparison<E> comp : comps) {
 				for (Site site : comp.getApplicableSites()) {
 					Double x = type.getValue(comp, site);
@@ -729,9 +770,11 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 							continue;
 						meanVal += x*comp.getAnnualRate();
 						sumWeights += comp.getAnnualRate();
+						numVals += simProv.getNumSimulations(site, comp.getRupture());
 					}
 				}
 			}
+			regressValCounts.put(type, numVals);
 			if (meanVal == null) {
 				table.addLine(type.name, "(null)");
 			} else {
@@ -743,6 +786,21 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		lines.addAll(table.build());
 		lines.add("");
 		
+		// can be faster to loop over site in outer loop, rupture in inner loop
+		Map<Site, List<RuptureComparison<E>>> siteCompsMap = new HashMap<>();
+		for (RuptureComparison<E> comp : comps) {
+			for (Site site : comp.getApplicableSites()) {
+				List<RuptureComparison<E>> mySiteComps = siteCompsMap.get(site);
+				if (mySiteComps == null) {
+					mySiteComps = new ArrayList<>();
+					siteCompsMap.put(site, mySiteComps);
+				}
+				mySiteComps.add(comp);
+			}
+		}
+		
+		// for consistent iteration order
+		List<Site> compSitesList = new ArrayList<>(siteCompsMap.keySet());
 		for (ResidualType type : residualTypes) {
 			lines.add("### GMPE "+type.name+" Residuals");
 			lines.add(topLink); lines.add("");
@@ -753,61 +811,83 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				table.addColumn("**"+optionalDigitDF.format(period)+" s**");
 			table.finalizeLine();
 			
-			ResidualScatterPlot[] residualPlots = new ResidualScatterPlot[periods.length];
+			String[] residualPrefixes = new String[periods.length];
+			boolean hasAllPlots = true;
 			for (int i=0; i<periods.length; i++) {
 				double period = periods[i];
-				DefaultXY_DataSet scatter = new DefaultXY_DataSet();
-				for (RuptureComparison<E> comp : comps) {
-					for (Site site : comp.getApplicableSites()) {
-						double x = type.getValue(comp, site);
-						if (!Double.isNaN(type.minX) && x < type.minX)
-							continue;
-						if (type.log)
-							Preconditions.checkState(x >= 0d);
-						
-						double gmpeVal = comp.getLogMean(site, period);
-						for (DiscretizedFunc spectra : simProv.getRotD50s(site, comp.getRupture())) {
-							// in log space
-							double simVal = Math.log(spectra.getY(period));
+				residualPrefixes[i] = "gmpe_residuals_"+type.name()+"_"+optionalDigitDF.format(period)+"s";
+				hasAllPlots = hasAllPlots && new File(resourcesDir, residualPrefixes[i]+"_scatter.png").exists()
+						&& new File(resourcesDir, residualPrefixes[i]+"_hist2d.png").exists();
+			}
+			
+			ResidualScatterPlot[] residualPlots;
+			if (!hasAllPlots || replotResiduals) {
+				residualPlots = new ResidualScatterPlot[periods.length];
+				PrimitiveArrayXY_Dataset prevScatter = null;
+				for (int i=0; i<periods.length; i++) {
+					double period = periods[i];
+					PrimitiveArrayXY_Dataset scatter;
+					if (prevScatter == null)
+						scatter = new PrimitiveArrayXY_Dataset(regressValCounts.get(type));
+					else
+						// avoids storing x array in memory twice, as it is identical
+						scatter = new PrimitiveArrayXY_Dataset(prevScatter.getXArray());
+					for (Site site : compSitesList) {
+						for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
+							double x = type.getValue(comp, site);
+							if (!Double.isNaN(type.minX) && x < type.minX)
+								continue;
+							if (type.log)
+								Preconditions.checkState(x >= 0d);
+							
+							double gmpeVal = comp.getLogMean(site, period);
+							for (DiscretizedFunc spectra : simProv.getRotD50s(site, comp.getRupture())) {
+								// in log space
+								double simVal = Math.log(spectra.getY(period));
 
-//							double val = (simVal - gmpeVal)/comp.getStdDev(site, period);
-							double val = (simVal - gmpeVal);
-							scatter.set(x, val);
+								double val = (simVal - gmpeVal);
+								scatter.set(x, val);
+							}
 						}
 					}
-				}
-				String xAxisLabel = type.name;
-				if (type.units != null)
-					xAxisLabel += " ("+type.units+")";
-				ScalarIMR gmpe = checkOutGMPE(gmpeRef);
-				gmpe.setParamDefaults();
-				for (ResidualType t2 : residualTypes) {
-					if (t2 == type)
-						continue;
-					double meanVal = residualDefaults.get(t2);
-					if (gmpe instanceof MultiIMR_Averaged_AttenRel) {
-						((MultiIMR_Averaged_AttenRel)gmpe).setParameterInIMRs(t2.parameterName, meanVal);
-					} else {
-						Parameter<Double> gmpeParameter = gmpe.getParameter(t2.parameterName);
-						if (gmpeParameter instanceof WarningDoubleParameter)
-							((WarningDoubleParameter)gmpeParameter).setValueIgnoreWarning(meanVal);
-						else
-							gmpeParameter.setValue(meanVal);
+					prevScatter = scatter;
+					String xAxisLabel = type.name;
+					if (type.units != null)
+						xAxisLabel += " ("+type.units+")";
+					ScalarIMR gmpe = checkOutGMPE(gmpeRef);
+					gmpe.setParamDefaults();
+					for (ResidualType t2 : residualTypes) {
+						if (t2 == type)
+							continue;
+						double meanVal = residualDefaults.get(t2);
+						if (gmpe instanceof MultiIMR_Averaged_AttenRel) {
+							((MultiIMR_Averaged_AttenRel)gmpe).setParameterInIMRs(t2.parameterName, meanVal);
+						} else {
+							Parameter<Double> gmpeParameter = gmpe.getParameter(t2.parameterName);
+							if (gmpeParameter instanceof WarningDoubleParameter)
+								((WarningDoubleParameter)gmpeParameter).setValueIgnoreWarning(meanVal);
+							else
+								gmpeParameter.setValue(meanVal);
+						}
 					}
+					residualPlots[i] = new ResidualScatterPlot(scatter, xAxisLabel, type.log, type.deltaX, residualLabel,
+							optionalDigitDF.format(period)+"s "+type.name+" Residuals", gmpe, type.parameterName);
+					if (gmpe != null)
+						checkInGMPE(gmpeRef, gmpe);
+					residualPlots[i].setWritePDF(false);
 				}
-				residualPlots[i] = new ResidualScatterPlot(scatter, xAxisLabel, type.log, residualLabel, type.name+" Residuals",
-						gmpe, type.parameterName);
-				if (gmpe != null)
-					checkInGMPE(gmpeRef, gmpe);
-				residualPlots[i].setWritePDF(false);
+			} else {
+				residualPlots = null;
 			}
+			
 			table.initNewLine();
 			for (int i=0; i<periods.length; i++) {
-				double period = periods[i];
-				String prefix = "gmpe_residuals_"+type.name()+"_"+optionalDigitDF.format(period)+"s_scatter";
+				String prefix = residualPrefixes[i]+"_scatter";
 				
-				System.out.println("Plotting GMPE residual: "+prefix);
-				residualPlots[i].plotScatter(resourcesDir, prefix);
+				if (residualPlots != null) {
+					System.out.println("Plotting GMPE residual: "+prefix);
+					residualPlots[i].plotScatter(resourcesDir, prefix);
+				}
 				
 				File plotFile = new File(resourcesDir, prefix+".png");
 				Preconditions.checkState(plotFile.exists());
@@ -817,11 +897,12 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			table.finalizeLine();
 			table.initNewLine();
 			for (int i=0; i<periods.length; i++) {
-				double period = periods[i];
-				String prefix = "gmpe_residuals_"+type.name()+"_"+optionalDigitDF.format(period)+"s_hist2d";
+				String prefix = residualPrefixes[i]+"_hist2d";
 				
-				System.out.println("Plotting GMPE 2-D residual: "+prefix);
-				residualPlots[i].plot2DHist(resourcesDir, prefix, type.deltaX);
+				if (residualPlots != null) {
+					System.out.println("Plotting GMPE 2-D residual: "+prefix);
+					residualPlots[i].plot2DHist(resourcesDir, prefix);
+				}
 				
 				File plotFile = new File(resourcesDir, prefix+".png");
 				Preconditions.checkState(plotFile.exists());

@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -63,6 +64,18 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 			this.compType = compType;
 			this.prefix = prefix;
 		}
+
+		public String getSimType() {
+			return simType;
+		}
+
+		public String getCompType() {
+			return compType;
+		}
+
+		public String getPrefix() {
+			return prefix;
+		}
 	}
 	
 	private Table<Integer, Double, Integer> sectCounts;
@@ -81,6 +94,7 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 		if (minMags == null || minMags.length == 0)
 			minMags = new double[] { 0d };
 		this.minMags = minMags;
+		this.overallMinMag = StatUtils.min(minMags);
 
 		elemsMap = new HashMap<>();
 		for (SimulatorElement e : elems)

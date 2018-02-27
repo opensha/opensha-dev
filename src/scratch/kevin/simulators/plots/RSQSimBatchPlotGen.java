@@ -221,6 +221,24 @@ public class RSQSimBatchPlotGen {
 				plot.initialize(catalogName, outputDir, "rupture_velocity");
 				return Lists.newArrayList(plot);
 			}
+		},
+		NORM_RECURR("nr", "norm-ri", true, "Normalized recurrence", ri_mags_default) {
+			@Override
+			protected List<? extends AbstractPlot> buildPlots(String catalogName, File outputDir, Double minMag,
+					FaultSystemSolution u3Sol, String arg, ElementBundles elemBundle) {
+				double[] minMags = commaDoubleSplit(arg);
+				List<NormalizedFaultRecurrenceIntervalPlot> plots = new ArrayList<>();
+				List<SimulatorElement> elems = elemBundle.getElements();
+				plots.add(new NormalizedFaultRecurrenceIntervalPlot(elems, minMags));
+				plots.add(new NormalizedFaultRecurrenceIntervalPlot(elems, SectType.SUBSECTION,
+						u3Sol.getRupSet().getFaultSectionDataList(), fract_inclusion_default, minMags));
+				plots.add(new NormalizedFaultRecurrenceIntervalPlot(elems, SectType.PARENT,
+						u3Sol.getRupSet().getFaultSectionDataList(), fract_inclusion_default, minMags));
+				for (NormalizedFaultRecurrenceIntervalPlot plot : plots) {
+					plot.initialize(catalogName, outputDir, "norm_ri_"+plot.getSectType().getPrefix());
+				}
+				return plots;
+			}
 		};
 		
 		private Option op;
@@ -316,7 +334,7 @@ public class RSQSimBatchPlotGen {
 			System.out.println("Hardcoded test!");
 //			File dir = new File("/home/kevin/Simulators/UCERF3_JG_supraSeisGeo2");
 //			File geomFile = new File(dir, "UCERF3.D3.1.1km.tri.2.flt");
-			File dir = new File("/data/kevin/simulators/catalogs/bruce/rundir2326");
+			File dir = new File("/data/kevin/simulators/catalogs/bruce/rundir2585");
 			File geomFile = new File(dir, "zfault_Deepen.in");
 			File outputDir = new File("/tmp/rsqsim_plots");
 			File solFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
@@ -329,9 +347,10 @@ public class RSQSimBatchPlotGen {
 //			argStr += " --mag-area-scaling --min-mag 4";
 			argStr += " --skip-years 5000";
 //			argStr += " --rupture-velocity --min-mag 6 --parent-sect-mfds";
-			argStr += " --sub-ri-scatter 6.5,7";
-			argStr += " --parent-ri-scatter 6.5,7";
-			argStr += " --elem-ri-scatter 6.5,7";
+//			argStr += " --sub-ri-scatter 6.5,7";
+//			argStr += " --parent-ri-scatter 6.5,7";
+//			argStr += " --elem-ri-scatter 6.5,7";
+			argStr += " --norm-ri 6.5,7";
 			args = Splitter.on(" ").splitToList(argStr).toArray(new String[0]);
 		}
 		

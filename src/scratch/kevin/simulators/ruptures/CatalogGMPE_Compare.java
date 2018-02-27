@@ -519,17 +519,22 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2579.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
 		
 		boolean doGMPE = true;
-		boolean doRotD = false;
+		boolean doRotD = true;
 		
-		boolean doGridded = false;
+		boolean doGridded = true;
 		String[] highlightNames;
 		if (doGridded)
 			highlightNames = new String[0];
 		else
 			highlightNames = new String[] { "USC", "SBSM" };
+		
+		boolean replotScatters = false;
+		boolean replotZScores = false;
+		boolean replotCurves = false;
+		boolean replotResiduals = true;
 		
 		VelocityModel vm = VelocityModel.LA_BASIN;
 		double minFractForInclusion = 0.2;
@@ -606,6 +611,10 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 		CatalogGMPE_Compare comp = new CatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
 				vm, minFractForInclusion, gmpeCacheDir);
+		comp.setReplotCurves(replotCurves);
+		comp.setReplotResiduals(replotResiduals);
+		comp.setReplotScatters(replotScatters);
+		comp.setReplotZScores(replotZScores);
 		System.out.println("Has RotD100? "+comp.bbpZipFile.hasRotD100());
 		doRotD = doRotD && comp.bbpZipFile.hasRotD100();
 //		comp.testPlotRupAzDiffs();

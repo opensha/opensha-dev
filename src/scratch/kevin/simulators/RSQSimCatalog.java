@@ -68,9 +68,11 @@ import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.kevin.simulators.plots.AbstractPlot;
 import scratch.kevin.simulators.plots.MFDPlot;
 import scratch.kevin.simulators.plots.MagAreaScalingPlot;
+import scratch.kevin.simulators.plots.NormalizedFaultRecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.RecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
+import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 import scratch.kevin.simulators.plots.StationarityPlot;
 import scratch.kevin.util.MarkdownUtils;
 import scratch.kevin.util.MarkdownUtils.TableBuilder;
@@ -959,6 +961,42 @@ public class RSQSimCatalog implements XMLSaveable {
 		table.finalizeLine();
 		lines.addAll(table.build());
 		
+		double minFractForInclusion = 0.2;
+		if (replot || !new File(outputDir, "norm_ri_elem_m7.5.png").exists()) {
+			List<NormalizedFaultRecurrenceIntervalPlot> myPlots = new ArrayList<>();
+			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), riMinMags));
+			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.SUBSECTION,
+					getU3SubSects(), minFractForInclusion, riMinMags));
+			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.PARENT,
+					getU3SubSects(), minFractForInclusion, riMinMags));
+			for (NormalizedFaultRecurrenceIntervalPlot plot : myPlots)
+				plot.initialize(getName(), outputDir, "norm_ri_"+plot.getSectType().getPrefix());
+			plots.addAll(myPlots);
+		}
+		lines.add("### Normalized Fault Interevent-Time Distributions");
+		lines.add(topLink);
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.initNewLine();
+		table.addColumn("");
+		for (double riMinMag : riMinMags)
+			if (riMinMag == Math.round(riMinMag))
+				table.addColumn("**M≥"+(int)riMinMag+"**");
+			else
+				table.addColumn("**M≥"+(float)riMinMag+"**");
+		table.finalizeLine();
+		for (SectType type : new SectType[] {SectType.ELEMENT, SectType.SUBSECTION, SectType.PARENT }) {
+			table.initNewLine();
+			table.addColumn("**"+type.getSimType()+"s**");
+			for (double riMinMag : riMinMags)
+				if (riMinMag == Math.round(riMinMag))
+					table.addColumn("![Norm RIs]("+outputDir.getName()+"/norm_ri_"+type.getPrefix()+"_m"+(int)riMinMag+".png)");
+				else
+					table.addColumn("![Norm RIs]("+outputDir.getName()+"/norm_ri_"+type.getPrefix()+"_m"+(float)riMinMag+".png)");
+			table.finalizeLine();
+		}
+		lines.addAll(table.build());
+		
 		if (replot || !new File(outputDir, "stationarity.png").exists()) {
 			StationarityPlot stationarityPlot = new StationarityPlot(minMag, 7d);
 			stationarityPlot.initialize(getName(), outputDir, "stationarity");
@@ -969,7 +1007,6 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add("");
 		lines.add("![Stationarity]("+outputDir.getName()+"/stationarity.png)");
 		
-		double minFractForInclusion = 0.2;
 		String testMagStr;
 		if (riMinMags[0] == Math.floor(riMinMags[0]))
 			testMagStr = (int)riMinMags[0]+"";
@@ -1201,8 +1238,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		GregorianCalendar minDate = cal(2000, 1, 1);
 //		GregorianCalendar minDate = cal(2018, 2, 1);
 		
-//		for (Catalogs cat : cats) {
-		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2457 }) {
+		for (Catalogs cat : cats) {
+//		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585 }) {
 			if (cat.catalog.getDate().before(minDate))
 				continue;
 			RSQSimCatalog catalog = cat.instance(baseDir);

@@ -26,6 +26,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator.ArgumentBuilder;
+
 public class MPJ_ETAS_SimulatorScriptGen {
 	
 	private static final String args_continue_newline = " \\\n\t";
@@ -394,19 +397,20 @@ public class MPJ_ETAS_SimulatorScriptGen {
 					pbsName += ".pbs";
 					File pbsFile = new File(localJobDir, pbsName);
 					
-					String argz;
 					String sep;
 					if (mpjWrite instanceof MPJExpressShellScriptWriter)
 						sep = " ";
 					else
 						sep = args_continue_newline;
 					
+					ArgumentBuilder argBuild = MPJTaskCalculator.argumentBuilder();
+					
 					if (exactDispatch) {
-						argz = sep+"--min-dispatch "+threads
-								+" --max-dispatch "+threads+" --exact-dispatch "+threads;
+						argBuild.minDispatch(threads).maxDispatch(threads).exactDispatch(threads);
 					} else {
-						argz = sep+"--min-dispatch 1 --max-dispatch "+threads*40;
+						argBuild.minDispatch(1).maxDispatch(threads*40);
 					}
+					String argz = argBuild.threads(threads).build(sep);
 					
 					argz += sep+"--threads "+threads
 							+sep+"--num "+numSims

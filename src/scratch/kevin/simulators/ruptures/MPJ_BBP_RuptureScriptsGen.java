@@ -21,6 +21,7 @@ import org.opensha.sha.simulators.srf.SRF_PointData;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
@@ -162,7 +163,7 @@ class MPJ_BBP_RuptureScriptsGen {
 			Files.copy(srcFile, new File(localJobDir, srcFile.getName()));
 			File remoteSrcFile = new File(remoteJobDir, srcFile.getName());
 			
-			String argz = "--exact-dispatch "+threads+" --threads "+threads;
+			String argz = MPJTaskCalculator.argumentBuilder().exactDispatch(threads).threads(threads).endTimeSlurm().build();
 			argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();
 			argz += " --sites-file "+remoteSitesFile.getAbsolutePath();
 			argz += " --src-file "+remoteSrcFile.getAbsolutePath();
@@ -205,8 +206,7 @@ class MPJ_BBP_RuptureScriptsGen {
 			// copy srf file
 			Files.copy(srfFile, new File(localJobDir, srfFile.getName()));
 			File remoteSrfFile = new File(remoteJobDir, srfFile.getName());
-			
-			String argz = "--min-dispatch "+threads+" --threads "+threads;
+			String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).threads(threads).endTimeSlurm().build();
 			argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();
 			argz += " --src-file "+remoteSrcFile.getAbsolutePath();
 			argz += " --srf-file "+remoteSrfFile.getAbsolutePath();

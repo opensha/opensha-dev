@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.axis.NumberTickUnit;
@@ -34,7 +34,7 @@ import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
-import org.opensha.commons.param.impl.WarningDoubleParameter;
+import org.opensha.commons.param.WarningParameter;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.MultiIMR_Averaged_AttenRel;
@@ -58,6 +58,7 @@ public class ResidualScatterPlot {
 	
 	private Range xRange;
 	private Range yRange;
+	private EvenlyDiscretizedFunc xHistBins;
 	
 	double residualMean;
 	double regressionLinearSlope;
@@ -69,11 +70,11 @@ public class ResidualScatterPlot {
 	
 	private EvenlyDiscretizedFunc gmpeSigma;
 	
-	public ResidualScatterPlot(XY_DataSet xy, String xAxisLabel, boolean logX, String residualLabel, String title) {
-		this(xy, xAxisLabel, logX, residualLabel, title, null, null);
+	public ResidualScatterPlot(XY_DataSet xy, String xAxisLabel, boolean logX, double gridSpacingX, String residualLabel, String title) {
+		this(xy, xAxisLabel, logX, gridSpacingX, residualLabel, title, null, null);
 	}
 	
-	public ResidualScatterPlot(XY_DataSet xy, String xAxisLabel, boolean logX, String residualLabel, String title,
+	public ResidualScatterPlot(XY_DataSet xy, String xAxisLabel, boolean logX, double gridSpacingX, String residualLabel, String title,
 			ScalarIMR gmpeForSigma, String gmpeParameterName) {
 		this.xy = xy;
 		this.xAxisLabel = xAxisLabel;
@@ -86,22 +87,59 @@ public class ResidualScatterPlot {
 			residualMean += pt.getY();
 		residualMean /= xy.size();
 		
-		xRange = new Range(xy.getMinX(), xy.getMaxX());
 		yRange = getYRange(xy);
+		
+		double minX, maxX;
+		if (logX) {
+			minX = Math.log10(xy.getMinX());
+			maxX = Math.log10(xy.getMaxX());
+		} else {
+			minX = xy.getMinX();
+			maxX = xy.getMaxX();
+		}
+		int nx;
+		if (Double.isNaN(gridSpacingX) || gridSpacingX <= 0) {
+			nx = 51;
+			gridSpacingX = (maxX - minX)/(nx-1);
+		} else {
+			double halfDelta = 0.5*gridSpacingX;
+			double numBinsAwayFromZero = Math.floor(minX / gridSpacingX);
+			double myMinX = numBinsAwayFromZero * gridSpacingX;
+			// handle edge cases
+			if (minX < myMinX-halfDelta)
+				myMinX -= gridSpacingX;
+			else if (minX > myMinX+halfDelta)
+				myMinX += gridSpacingX;
+//			Preconditions.checkState(minX <= myMinX + halfDelta && minX >= myMinX - halfDelta);
+			nx = (int)Math.ceil((maxX - myMinX)/gridSpacingX + 1);
+			minX = myMinX;
+			System.out.println("Minimum bin edge adjusted to: "+minX);
+		}
+		
+		while (xHistBins == null || xHistBins.getX(xHistBins.size()-1) - 0.5*gridSpacingX > maxX) {
+			if (xHistBins == null) {
+				if (nx > 1)
+					nx--;
+				else
+					break;
+			}
+			xHistBins = new EvenlyDiscretizedFunc(minX + 0.5*gridSpacingX, nx, gridSpacingX);
+		}
+		maxX = xHistBins.getMaxX() + 0.5*gridSpacingX;
+		
+		if (logX)
+			// xRange always in linear space
+			xRange = new Range(Math.pow(10, minX), Math.pow(10, maxX));
+		else
+			xRange = new Range(minX, maxX);
 		
 		SimpleRegression linearRegression = getRegression(xy, logX, xRange);
 		regressionLinearSlope = linearRegression.getSlope();
-		regressionLinear = getRegressionFit(linearRegression, logX, xRange);
+		regressionLinear = getRegressionFit(linearRegression, xy, logX, xRange);
 		dataSigma = calcSigma(regressionLinear, xy);
 		
 		regressionBinned = new ArbitrarilyDiscretizedFunc[numRegressionBins];
 		dataSigmaBinned = new double[numRegressionBins];
-		double minX = xRange.getLowerBound();
-		double maxX = xRange.getUpperBound();
-		if (logX) {
-			minX = Math.log10(minX);
-			maxX = Math.log10(maxX);
-		}
 		double deltaX = (maxX - minX) / (numRegressionBins - 1);
 		EvenlyDiscretizedFunc regressionBins = new EvenlyDiscretizedFunc(minX+0.5*deltaX, numRegressionBins, deltaX);
 		System.out.println("Regression bins:\n"+regressionBins);
@@ -125,8 +163,8 @@ public class ResidualScatterPlot {
 					((MultiIMR_Averaged_AttenRel)gmpeForSigma).setParameterInIMRs(gmpeParameterName, x);
 				} else {
 					Parameter<Double> gmpeParameter = gmpeForSigma.getParameter(gmpeParameterName);
-					if (gmpeParameter instanceof WarningDoubleParameter)
-						((WarningDoubleParameter)gmpeParameter).setValueIgnoreWarning(x);
+					if (gmpeParameter instanceof WarningParameter)
+						((WarningParameter<Double>)gmpeParameter).setValueIgnoreWarning(x);
 					else
 						gmpeParameter.setValue(x);
 				}
@@ -141,7 +179,9 @@ public class ResidualScatterPlot {
 		List<PlotCurveCharacterstics> chars = Lists.newArrayList();
 		
 		XY_DataSet xy = this.xy;
+		boolean isFiltered = false;
 		if (xy.size() > maxScatterPoints) {
+			isFiltered = true;
 			System.out.println("Filtering scatter points from "+xy.size()+" to ~"+maxScatterPoints);
 			// use fixed seed for reproducibility of downsampled plots
 			Random r = new Random(xy.size());
@@ -160,7 +200,21 @@ public class ResidualScatterPlot {
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, residualLabel);
 		spec.setLegendVisible(true);
-		spec.setPlotAnnotations(buildAnnotations(false));
+		List<XYTextAnnotation> anns = buildAnnotations(false);
+		if (isFiltered) {
+			// add filtered note
+			Font font = new Font(Font.SANS_SERIF, Font.BOLD, 20);
+			
+			double percent = 100d*xy.size()/this.xy.size();
+			
+			XYTextAnnotation ann = new XYTextAnnotation(
+					" ("+maxScatterPoints+"/"+this.xy.size()+" points shown, "+annDF.format(percent)+" %)",
+					xRange.getLowerBound(), 0.95*yRange.getLowerBound());
+			ann.setTextAnchor(TextAnchor.BOTTOM_LEFT);
+			ann.setFont(font);
+			anns.add(ann);
+		}
+		spec.setPlotAnnotations(anns);
 		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel();
 		gp.setTickLabelFontSize(18);
@@ -178,35 +232,19 @@ public class ResidualScatterPlot {
 	}
 	
 	public void plot2DHist(File outputDir, String prefix) throws IOException {
-		plot2DHist(outputDir, prefix, Double.NaN);
-	}
-	
-	public void plot2DHist(File outputDir, String prefix, double gridSpacingX) throws IOException {
-		double minX, maxX;
-		if (logX) {
-			minX = Math.log10(xRange.getLowerBound());
-			maxX = Math.log10(xRange.getUpperBound());
-		} else {
-			minX = xRange.getLowerBound();
-			maxX = xRange.getUpperBound();
-		}
-		int nx;
-		if (Double.isNaN(gridSpacingX) || gridSpacingX <= 0) {
-			nx = 51;
-			gridSpacingX = (maxX - minX)/(nx-1);
-		} else {
-			nx = (int)Math.ceil((maxX - minX)/gridSpacingX + 1);
-		}
-		
+		int nx = xHistBins.size();
+		double gridSpacingX = xHistBins.getDelta();
 		int ny = nx;
 		double minY = yRange.getLowerBound();
 		double maxY = yRange.getUpperBound();
 		double gridSpacingY = (maxY - minY)/(ny-1);
 		
 		// XYZ plot (2D hist)
-		EvenlyDiscrXYZ_DataSet xyz = new EvenlyDiscrXYZ_DataSet(nx, ny, minX+0.5*gridSpacingX, minY+0.5*gridSpacingY, gridSpacingX, gridSpacingY);
+		EvenlyDiscrXYZ_DataSet xyz = new EvenlyDiscrXYZ_DataSet(nx, ny, xHistBins.getMinX(), minY+0.5*gridSpacingY, gridSpacingX, gridSpacingY);
 		
 		for (Point2D pt : xy) {
+			if (!xRange.contains(pt.getX()) || !yRange.contains(pt.getY()))
+				continue;
 			int index;
 			if (logX)
 				index = xyz.indexOf(Math.log10(pt.getX()), pt.getY());
@@ -370,19 +408,28 @@ public class ResidualScatterPlot {
 		if (gmpeSigma != null) {
 			boolean first = true;
 			// linear first
+			
+			double x0 = regressionLinear.getX(0);
+			double y0 = regressionLinear.getY(0);
+			
+			if (logX)
+				x0 = Math.log10(x0);
+			
 			for (int i=0; i<gmpeSigma.size(); i++) {
 				double x = gmpeSigma.getX(i);
 				double start = x - 0.5*gmpeSigma.getDelta();
 				double end = x + 0.5*gmpeSigma.getDelta();
+				double regressionLinearSlope = this.regressionLinearSlope;
+				double startY;
+				double endY;
+				startY = (start - x0)*regressionLinearSlope + y0;
+				endY = (end - x0)*regressionLinearSlope + y0;
+				DiscretizedFunc tempRegression = new ArbitrarilyDiscretizedFunc();
 				if (logX) {
+					// gmpe sigma func is in log space, back to linear
 					start = Math.pow(10, start);
 					end = Math.pow(10, end);
 				}
-				if ((float)end >= (float)regressionLinear.getMaxX())
-					continue;
-				double startY = regressionLinear.getInterpolatedY(start);
-				double endY = regressionLinear.getInterpolatedY(end);
-				DiscretizedFunc tempRegression = new ArbitrarilyDiscretizedFunc();
 				tempRegression.set(start, startY);
 				tempRegression.set(end, endY);
 				double sigma = gmpeSigma.getY(i);
@@ -495,34 +542,56 @@ public class ResidualScatterPlot {
 		SimpleRegression regression = getRegression(xy, logX, xRange);
 		if (regression == null)
 			return null;
-		return getRegressionFit(regression, logX, xRange);
+		return getRegressionFit(regression, xy, logX, xRange);
 	}
 	
-	private static ArbitrarilyDiscretizedFunc getRegressionFit(SimpleRegression regression, boolean logX, Range xRange) {
+	private static ArbitrarilyDiscretizedFunc getRegressionFit(SimpleRegression regression, XY_DataSet xy, boolean logX, Range xRange) {
 		double b = regression.getIntercept();
 		double m = regression.getSlope();
+		
 		ArbitrarilyDiscretizedFunc fit = new ArbitrarilyDiscretizedFunc();
 		// use one to one for x values
 		double[] regressXVals = { xRange.getLowerBound(), xRange.getCentralValue(), xRange.getUpperBound() };
-		for (int i=0; i<regressXVals.length; i++) {
-			double origX = regressXVals[i];
-			double x;
-			if (logX)
-				x = Math.log10(origX);
-			else
-				x = origX;
-			double y = m*x + b;
-			fit.set(origX, y);
+		
+		if (Double.isNaN(b) || Double.isNaN(m)) {
+			// only 1 x value
+			double myX = Double.NaN;
+			SummaryStatistics stats = new SummaryStatistics();
+			for (Point2D pt : xy) {
+				if (xRange.contains(pt.getX())) {
+					Preconditions.checkState((float)pt.getX() == (float)myX || Double.isNaN(myX));
+					stats.addValue(pt.getY());
+					myX = pt.getX();
+				}
+			}
+			Preconditions.checkState(!Double.isNaN(myX));
+			// mean with 1 x-value minimizes mean squared error
+			double meanY = stats.getMean();
+			
+			for (double x : regressXVals)
+				fit.set(x, meanY);
+		} else {
+			for (int i=0; i<regressXVals.length; i++) {
+				double origX = regressXVals[i];
+				double x;
+				if (logX)
+					x = Math.log10(origX);
+				else
+					x = origX;
+				double y = m*x + b;
+				fit.set(origX, y);
+			}
 		}
+		
 		return fit;
 	}
 	
 	private double calcSigma(DiscretizedFunc regression, XY_DataSet xy) {
-		List<Double> values = new ArrayList<>();
 		double minX = regression.getMinX();
 		double maxX = regression.getMaxX();
 		if (logX)
 			regression = getInLogX(regression);
+		SummaryStatistics stats = new SummaryStatistics();
 		for (Point2D pt : xy) {
 			if (pt.getX() >= minX && pt.getX() <= maxX) {
 				double regressVal;
@@ -530,12 +599,10 @@ public class ResidualScatterPlot {
 					regressVal = regression.getInterpolatedY(Math.log10(pt.getX()));
 				else
 					regressVal = regression.getInterpolatedY(pt.getX());
-				values.add(pt.getY() - regressVal);
+				stats.addValue(pt.getY() - regressVal);
 			}
 		}
-		Preconditions.checkState(!values.isEmpty());
-		double var = StatUtils.variance(Doubles.toArray(values));
-		return Math.sqrt(var);
+		return stats.getStandardDeviation();
 	}
 
 	public void setPlotWidth(int plotWidth) {
