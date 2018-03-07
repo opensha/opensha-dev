@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections4.map.HashedMap;
+import org.apache.commons.math3.stat.StatUtils;
 import org.dom4j.DocumentException;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -22,8 +23,10 @@ import org.opensha.commons.exceptions.GMT_MapException;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.FileNameComparator;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -223,8 +226,10 @@ class RupSpectraPageGen {
 		
 		// map view plot
 		String mapRupPlotPrefix = "rupture_map_plot_"+eventID;
+		double[] elementSlips = event.getAllElementSlips();
+		CPT slipCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, StatUtils.max(elementSlips));
 		RupturePlotGenerator.writeMapPlot(catalog.getElements(), event, func, resourcesDir, mapRupPlotPrefix,
-				bbpSourceRect, bbpSourceHypo, gmpeSurf);
+				bbpSourceRect, bbpSourceHypo, gmpeSurf, elementSlips, slipCPT, "Slip (m)");
 		File rupMapPlot = new File(resourcesDir, mapRupPlotPrefix+".png");
 		Preconditions.checkState(rupMapPlot.exists());
 		lines.add("### Map Plot");
@@ -574,8 +579,13 @@ class RupSpectraPageGen {
 //		RSQSimCatalog catalog = Catalogs.JG_2194_K2.instance(baseDir);
 //		int eventID = 18840012;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
-		int eventID = 526885;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
+//		int eventID = 526885;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
+//		int eventID = 81854;
+//		int eventID = 1670183;
+		int eventID = 2637969;
 		
 		File eventBBPDir = new File(new File(catalog.getCatalogDir(), RSQSimBBP_Config.EVENT_SRF_DIR_NAME),
 				"event_"+eventID+"_"+RSQSimBBP_Config.SRF_DT+"s_"+RSQSimBBP_Config.SRF_INTERP_MODE.name()+"_bbp");
@@ -616,6 +626,8 @@ class RupSpectraPageGen {
 		List<BBP_Site> sites = null;
 		if (refBBPDir != null)
 			sites = BBP_Site.readFile(refBBPDir);
+		else
+			sites = RSQSimBBP_Config.getStandardSites(RSQSimBBP_Config.generateBBP_Inputs(catalog, event, false));
 		
 		boolean runBBP = true;
 		if (eventBBPDir.exists()) {

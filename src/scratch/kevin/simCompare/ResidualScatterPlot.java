@@ -318,6 +318,15 @@ public class ResidualScatterPlot {
 		if (logX)
 			xRange = new Range(Math.log10(xRange.getLowerBound()), Math.log10(xRange.getUpperBound()));
 		
+		// add custom y axis guides
+		for (int i=(int)Math.round(yRange.getLowerBound()); i<=(int)Math.round(yRange.getUpperBound()); i++) {
+			DefaultXY_DataSet line = new DefaultXY_DataSet();
+			line.set(xRange.getLowerBound(), (double)i);
+			line.set(xRange.getUpperBound(), (double)i);
+			funcs.add(0, line);
+			chars.add(0, new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.LIGHT_GRAY));
+		}
+		
 		xyzSpec.setXYElems(funcs);
 		xyzSpec.setXYChars(chars);
 		xyzSpec.setPlotAnnotations(buildAnnotations(true));

@@ -756,6 +756,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		TableBuilder table = MarkdownUtils.tableBuilder().addLine("Name", "Average Value");
 		Map<ResidualType, Double> residualDefaults = new HashMap<>();
 		Map<ResidualType, Integer> regressValCounts = new HashMap<>();
+		System.out.println("Determining GMPE default parameter values for residual analysis (averaged across all ruptures)");
 		for (ResidualType type : ResidualType.values()) {
 			Double meanVal = 0d;
 			double sumWeights = 0d;
@@ -802,6 +803,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		// for consistent iteration order
 		List<Site> compSitesList = new ArrayList<>(siteCompsMap.keySet());
 		for (ResidualType type : residualTypes) {
+			System.out.println("Calculating GMPE residuals for: "+type.name);
 			lines.add("### GMPE "+type.name+" Residuals");
 			lines.add(topLink); lines.add("");
 			
@@ -870,6 +872,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 								gmpeParameter.setValue(meanVal);
 						}
 					}
+					SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), period);
 					residualPlots[i] = new ResidualScatterPlot(scatter, xAxisLabel, type.log, type.deltaX, residualLabel,
 							optionalDigitDF.format(period)+"s "+type.name+" Residuals", gmpe, type.parameterName);
 					if (gmpe != null)

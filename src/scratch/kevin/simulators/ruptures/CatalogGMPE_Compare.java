@@ -522,9 +522,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
 		
 		boolean doGMPE = true;
-		boolean doRotD = true;
+		boolean doRotD = false;
 		
-		boolean doGridded = true;
+		boolean doGridded = false;
 		String[] highlightNames;
 		if (doGridded)
 			highlightNames = new String[0];
@@ -544,9 +544,10 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		double[] periods = { 1, 2, 3, 5, 10 };
 		double[] periods = { 1, 2, 5 };
 		double[] rotDPeriods = { 1, 2, 5, 7.5, 10 };
-		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
-				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
+//				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.BSSA_2014 };
+		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
 		AttenRelRef rotDGMPE = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
 		
 		// find BBP parallel dir

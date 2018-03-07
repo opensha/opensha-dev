@@ -26,8 +26,10 @@ import java.util.TimeZone;
 import java.util.zip.ZipException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
 import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.dom4j.DocumentException;
 import org.jfree.data.Range;
 import org.opensha.commons.data.Site;
@@ -1240,13 +1242,33 @@ public class PureScratch {
 //		
 //		System.out.println("Equals? "+list1.equals(list2));
 	}
+	
+	private static void test46() {
+		double mean = 1d;
+		double sd = 0.3;
+		LogNormalDistribution ln = new LogNormalDistribution(Math.log(mean), sd);
+		
+		SummaryStatistics stats = new SummaryStatistics();
+		SummaryStatistics logStats = new SummaryStatistics();
+		
+		for (int i=0; i<10000000; i++) {
+			double sample = ln.sample();
+			stats.addValue(sample);
+			logStats.addValue(Math.log(sample));
+		}
+		
+		System.out.println("Linear Stats");
+		System.out.println(stats);
+		System.out.println("\nLog Stats");
+		System.out.println(logStats);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test45();
+		test46();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

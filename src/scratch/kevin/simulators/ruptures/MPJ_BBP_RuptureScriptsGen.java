@@ -51,8 +51,12 @@ class MPJ_BBP_RuptureScriptsGen {
 //		int eventID = 203769;
 //		RSQSimCatalog catalog = Catalogs.JG_2194_K2.instance(baseDir);
 //		int eventID = 18840012;
-		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
-		int eventID = 526885;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
+//		int eventID = 526885;
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
+		int eventID = 81854;
+//		int eventID = 2637969;
+//		int eventID = 1670183;
 		
 		File catalogDir = catalog.getCatalogDir();
 		
@@ -61,9 +65,9 @@ class MPJ_BBP_RuptureScriptsGen {
 		boolean doGP = false;
 		boolean doShakeMap = true;
 		
-		int numGP = 200;
-		double mapSpacing = 0.05;
-//		double mapSpacing = 0.025;
+		int numGP = 400;
+//		double mapSpacing = 0.05;
+		double mapSpacing = 0.02;
 		int maxNodes = 36;
 		
 		File srcFile = RSQSimBBP_Config.getEventSrcFile(catalog, eventID);
@@ -82,7 +86,7 @@ class MPJ_BBP_RuptureScriptsGen {
 		}
 		Preconditions.checkState(srcFile.exists(), "Source file doesn't exist: %s", srcFile.getAbsolutePath());
 		
-		int gpMins = 10*60;
+		int gpMins = 14*60;
 		int mapMins = 24*60;
 		boolean gpSplitSites = true;
 		int heapSizeMB = 40*1024;

@@ -179,7 +179,7 @@ public class SeismogramPlotter {
 					y = vertMax;
 				else
 					y = horzMax;
-				XYTextAnnotation ann = new XYTextAnnotation("  "+names[i], 0, y);
+				XYTextAnnotation ann = new XYTextAnnotation("  "+names[i], xRange.getLowerBound(), y);
 				ann.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
 				ann.setTextAnchor(TextAnchor.TOP_LEFT);
 				List<XYTextAnnotation> anns = new ArrayList<>();
