@@ -201,14 +201,7 @@ public class USGS_AftershockForecast {
 
 		// MODEL
 		JSONObject modelJSON = new JSONObject();
-		String name = "Reasenberg-Jones (1989, 1994) aftershock model";
-		if (model instanceof RJ_AftershockModel_Bayesian)
-			name += " (Bayesian Combination)";
-		else if (model instanceof RJ_AftershockModel_Generic)
-			name += " (Generic)";
-		else if (model instanceof RJ_AftershockModel_SequenceSpecific)
-			name += " (Sequence Specific)";
-		modelJSON.put("name", name);
+		modelJSON.put("name", model.getModelName());
 		modelJSON.put("reference", "#url");
 		JSONObject modelParams = new JSONObject();
 		// return AftershockStatsCalc.getExpectedNumEvents(getMaxLikelihood_a(), b, magMain, magMin, getMaxLikelihood_p(), getMaxLikelihood_c(), tMinDays, tMaxDays);
