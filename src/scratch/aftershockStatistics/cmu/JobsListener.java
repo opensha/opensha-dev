@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.query.Query;
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
+
 import scratch.aftershockStatistics.OAFTectonicRegime;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.aftershockStatistics.*;
@@ -145,10 +147,12 @@ public class JobsListener implements MessageListener {
 
             double startTime = eventDate.getTime().getTime() + minDays * ProbabilityModelsCalc.MILLISEC_PER_DAY;
             startDate.setTimeInMillis((long)startTime);
+            
+            ObsEqkRupList aftershocks = shockSeq.getAfterShocks();
 
-            USGS_AftershockForecast forecast_generic = new USGS_AftershockForecast(genericModel, eventDate, startDate);
-            USGS_AftershockForecast forecast_specific = new USGS_AftershockForecast(seqSpecificModel, eventDate, startDate);
-            USGS_AftershockForecast forecast_bayesian = new USGS_AftershockForecast(bayesianModel, eventDate, startDate);
+            USGS_AftershockForecast forecast_generic = new USGS_AftershockForecast(genericModel, aftershocks, eventDate, startDate);
+            USGS_AftershockForecast forecast_specific = new USGS_AftershockForecast(seqSpecificModel, aftershocks, eventDate, startDate);
+            USGS_AftershockForecast forecast_bayesian = new USGS_AftershockForecast(bayesianModel, aftershocks, eventDate, startDate);
 
             model.setForecast_generic(forecast_generic.buildJSON());
             model.setForecast_specific(forecast_specific.buildJSON());

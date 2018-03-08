@@ -2,6 +2,7 @@ package scratch.aftershockStatistics;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.GregorianCalendar;
 
 import javax.swing.table.AbstractTableModel;
@@ -10,6 +11,8 @@ import javax.swing.table.TableModel;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -23,7 +26,7 @@ public class USGS_AftershockForecast {
 	private static final double fractile_lower = 0.025;
 	private static final double fractile_upper = 0.975;
 	
-	private enum Duration {
+	public enum Duration {
 		ONE_DAY("1 Day", GregorianCalendar.DAY_OF_MONTH, 1),
 		ONE_WEEK("1 Week", GregorianCalendar.WEEK_OF_MONTH, 1),
 		ONE_MONTH("1 Month", GregorianCalendar.MONTH, 1),
@@ -44,49 +47,91 @@ public class USGS_AftershockForecast {
 			endDate.add(calendarField, calendarAmount);
 			return endDate;
 		}
+		
+		@Override
+		public String toString() {
+			return label;
+		}
+	}
+	
+	public enum Template {
+		MAINSOCK("Mainshock"),
+		EQ_OF_INTEREST("Earthquake of Interest"),
+		SWARM("Swarm");
+		
+		private String title;
+
+		private Template(String title) {
+			this.title = title;
+		}
+		
+		@Override
+		public String toString() {
+			return title;
+		}
 	}
 	
 	private RJ_AftershockModel model;
+	
+	private ObsEqkRupList aftershocks;
 	
 	private GregorianCalendar eventDate;
 	private GregorianCalendar startDate;
 	private GregorianCalendar[] endDates;
 	
 	private Duration[] durations;
+	private Duration advisoryDuration; // duration for the advisory paragraph
 	private double[] minMags;
 	private Table<Duration, Double, Double> numEventsLower;
 	private Table<Duration, Double, Double> numEventsUpper;
 	private Table<Duration, Double, Double> probs;
 	
-	public USGS_AftershockForecast(RJ_AftershockModel model,
+	private boolean includeProbAboveMainshock;
+	
+	// custom text which can be added
+	private String injectableText;
+	
+	private Template template = Template.MAINSOCK;
+	
+	public USGS_AftershockForecast(RJ_AftershockModel model, ObsEqkRupList aftershocks,
 			GregorianCalendar eventDate, GregorianCalendar startDate) {
-		this(model, min_mags_default, eventDate, startDate);
+		this(model, aftershocks, min_mags_default, eventDate, startDate, true);
 	}
 	
-	public USGS_AftershockForecast(RJ_AftershockModel model, double[] minMags,
-			GregorianCalendar eventDate, GregorianCalendar startDate) {
-		compute(model, minMags, eventDate, startDate);
+	public USGS_AftershockForecast(RJ_AftershockModel model, ObsEqkRupList aftershocks, double[] minMags,
+			GregorianCalendar eventDate, GregorianCalendar startDate, boolean includeProbAboveMainshock) {
+		compute(model, aftershocks, minMags, eventDate, startDate, includeProbAboveMainshock);
 	}
 	
 	private static final DateFormat df = new SimpleDateFormat();
 	
-	private void compute(RJ_AftershockModel model, double[] minMags,
-			GregorianCalendar eventDate, GregorianCalendar startDate) {
+	private void compute(RJ_AftershockModel model, ObsEqkRupList aftershocks, double[] minMags,
+			GregorianCalendar eventDate, GregorianCalendar startDate, boolean includeProbAboveMainshock) {
 		Preconditions.checkArgument(minMags.length > 0);
 		
 		this.model = model;
+		this.aftershocks = aftershocks;
 		this.minMags = minMags;
 		this.eventDate = eventDate;
 		this.startDate = startDate;
+		this.includeProbAboveMainshock = includeProbAboveMainshock;
 		
 		numEventsLower = HashBasedTable.create();
 		numEventsUpper = HashBasedTable.create();
 		probs = HashBasedTable.create();
 		
 		durations = Duration.values();
+		advisoryDuration = Duration.ONE_WEEK;
 		endDates = new GregorianCalendar[durations.length];
 		
 		double[] calcFractiles = {fractile_lower, fractile_upper};
+		
+		double[] calcMags = minMags;
+		if (includeProbAboveMainshock) {
+			// also calculate for mainshock mag
+			calcMags = Arrays.copyOf(minMags, minMags.length+1);
+			calcMags[calcMags.length-1] = model.getMainShockMag();
+		}
 		
 		System.out.println("Start date: "+df.format(startDate.getTime()));
 		for (int i=0; i<durations.length; i++) {
@@ -102,8 +147,8 @@ public class USGS_AftershockForecast {
 			
 			endDates[i] = endDate;
 			
-			for (int m=0; m<minMags.length; m++) {
-				double minMag = minMags[m];
+			for (int m=0; m<calcMags.length; m++) {
+				double minMag = calcMags[m];
 				
 				double[] fractiles = model.getCumNumFractileWithAleatory(calcFractiles, minMag, tMinDays, tMaxDays);
 				
@@ -122,6 +167,38 @@ public class USGS_AftershockForecast {
 		return (double)diff/(double)ProbabilityModelsCalc.MILLISEC_PER_DAY;
 	}
 	
+	public void setAdvisoryDuration(Duration advisoryDuration) {
+		this.advisoryDuration = advisoryDuration;
+	}
+	
+	public void setInjectableText(String injectableText) {
+		this.injectableText = injectableText;
+	}
+	
+	public boolean isIncludeProbAboveMainshock() {
+		return includeProbAboveMainshock;
+	}
+
+	public void setIncludeProbAboveMainshock(boolean includeProbAboveMainshock) {
+		this.includeProbAboveMainshock = includeProbAboveMainshock;
+	}
+
+	public Template getTemplate() {
+		return template;
+	}
+
+	public void setTemplate(Template template) {
+		this.template = template;
+	}
+
+	public Duration getAdvisoryDuration() {
+		return advisoryDuration;
+	}
+
+	public String getInjectableText() {
+		return injectableText;
+	}
+
 	private static String[] headers = {"Time Window For Analysis", "Magnitude Range",
 			"Most Likely Number Of Aftershocks (95% confidence)", "Probability of one or more aftershocks"};
 	
@@ -198,6 +275,31 @@ public class USGS_AftershockForecast {
 			if (endDate.getTimeInMillis() > maxEndDate)
 				maxEndDate = endDate.getTimeInMillis();
 		json.put("expireTime", maxEndDate);
+		
+		json.put("advisoryTimeFrame", advisoryDuration.label);
+		
+		json.put("template", template.title);
+		
+		String injectableText = this.injectableText;
+		if (injectableText == null)
+			injectableText = "";
+		json.put("injectableText", injectableText);
+		
+		// OBSERVATIONS
+		JSONObject obsJSON = new JSONObject();
+		JSONArray obsMagBins = new JSONArray();
+		for (int m=0; m<minMags.length; m++) {
+			JSONObject magBin = new JSONObject();
+			int count = 0;
+			for (ObsEqkRupture eq : aftershocks)
+				if (eq.getMag() >= minMags[m])
+					count++;
+			magBin.put("magnitude", minMags[m]);
+			magBin.put("count", count);
+			obsMagBins.add(magBin);
+		}
+		obsJSON.put("bins", obsMagBins);
+		json.put("observations", obsMagBins);
 
 		// MODEL
 		JSONObject modelJSON = new JSONObject();
@@ -240,6 +342,14 @@ public class USGS_AftershockForecast {
 			}
 			
 			forecastJSON.put("bins", magBins);
+			
+			if (includeProbAboveMainshock) {
+				JSONObject magBin = new JSONObject();
+				double mainMag = model.getMainShockMag();
+				magBin.put("magnitude", mainMag);
+				magBin.put("probability", probs.get(durations[i], mainMag));
+				forecastJSON.put("aboveMainshockMag", magBin);
+			}
 			
 			forecastsJSON.add(forecastJSON);
 		}

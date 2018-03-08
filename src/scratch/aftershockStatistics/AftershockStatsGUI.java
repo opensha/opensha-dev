@@ -43,6 +43,9 @@ import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.function.XY_DatasetBinner;
 import scratch.aftershockStatistics.OAFTectonicRegime;
+import scratch.aftershockStatistics.USGS_AftershockForecast.Duration;
+import scratch.aftershockStatistics.USGS_AftershockForecast.Template;
+
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
@@ -1576,7 +1579,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			if (progress != null)
 				progress.updateProgress(i, models.size(), "Calculating "+name+"...");
 			
-			USGS_AftershockForecast forecast = new USGS_AftershockForecast(model, eventDate, startDate);
+			USGS_AftershockForecast forecast = new USGS_AftershockForecast(model, aftershocks, eventDate, startDate);
 			forecastTablePane.addTab(name, new ForecastTablePanel(forecast));
 			System.out.println("Took "+watch.elapsed(TimeUnit.SECONDS)+"s to compute aftershock table for "+name);
 			watch.stop();
@@ -1597,6 +1600,10 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		
 		private ButtonParameter exportButton;
 		private ButtonParameter publishButton;
+		private EnumParameter<Duration> advisoryDurationParam;
+		private EnumParameter<Template> templateParam;
+		private BooleanParameter probAboveMainParam;
+		private ButtonParameter injectableTextButton;
 		
 		private JFileChooser chooser;
 		
@@ -1611,8 +1618,22 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			publishButton = new ButtonParameter("USGS PDL", "Publish Forecast");
 			publishButton.addParameterChangeListener(this);
 			params.addParameter(publishButton);
+			advisoryDurationParam = new EnumParameter<USGS_AftershockForecast.Duration>(
+					"Advisory Duration", EnumSet.allOf(Duration.class), forecast.getAdvisoryDuration(), null);
+			advisoryDurationParam.addParameterChangeListener(this);
+			params.addParameter(advisoryDurationParam);
+			templateParam = new EnumParameter<USGS_AftershockForecast.Template>(
+					"Template", EnumSet.allOf(Template.class), forecast.getTemplate(), null);
+			templateParam.addParameterChangeListener(this);
+			params.addParameter(templateParam);
+			probAboveMainParam = new BooleanParameter("Include Prob ≥ Main", forecast.isIncludeProbAboveMainshock());
+			probAboveMainParam.addParameterChangeListener(this);
+			params.addParameter(probAboveMainParam);
+			injectableTextButton = new ButtonParameter("Injectable Text", "Set text");
+			injectableTextButton.addParameterChangeListener(this);
+			params.addParameter(injectableTextButton);
 			
-			this.add(new GriddedParameterListEditor(params, 1, params.size()), BorderLayout.NORTH);
+			this.add(new GriddedParameterListEditor(params, -1, 2), BorderLayout.NORTH);
 			JTable jTable = new JTable(forecast.getTableModel());
 			jTable.getTableHeader().setFont(jTable.getTableHeader().getFont().deriveFont(Font.BOLD));
 			this.add(jTable, BorderLayout.CENTER);
@@ -1663,6 +1684,29 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 						String message = ClassUtils.getClassNameWithoutPackage(e.getClass())+": "+e.getMessage();
 						JOptionPane.showMessageDialog(this, message, "Error sending product", JOptionPane.ERROR_MESSAGE);
 					}
+				}
+			} else if (event.getParameter() == advisoryDurationParam) {
+				forecast.setAdvisoryDuration(advisoryDurationParam.getValue());
+			} else if (event.getParameter() == templateParam) {
+				forecast.setTemplate(templateParam.getValue());
+			} else if (event.getParameter() == probAboveMainParam) {
+				forecast.setIncludeProbAboveMainshock(probAboveMainParam.getValue());
+			} else if (event.getParameter() == injectableTextButton) {
+				String prevText = forecast.getInjectableText();
+				if (prevText == null)
+					prevText = "";
+				JTextArea area = new JTextArea(prevText);
+				Dimension size = new Dimension(300, 200);
+				area.setPreferredSize(size);
+				area.setMinimumSize(size);
+				area.setLineWrap(true);
+				area.setWrapStyleWord(true);
+				int ret = JOptionPane.showConfirmDialog(this, area, "Set Injectable Text", JOptionPane.OK_CANCEL_OPTION);
+				if (ret == JOptionPane.OK_OPTION) {
+					String text = area.getText();
+					if (text.length() == 0)
+						text = null;
+					forecast.setInjectableText(text);
 				}
 			}
 		}
