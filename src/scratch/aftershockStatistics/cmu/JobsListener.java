@@ -150,9 +150,12 @@ public class JobsListener implements MessageListener {
             
             ObsEqkRupList aftershocks = shockSeq.getAfterShocks();
 
-            USGS_AftershockForecast forecast_generic = new USGS_AftershockForecast(genericModel, aftershocks, eventDate, startDate);
-            USGS_AftershockForecast forecast_specific = new USGS_AftershockForecast(seqSpecificModel, aftershocks, eventDate, startDate);
-            USGS_AftershockForecast forecast_bayesian = new USGS_AftershockForecast(bayesianModel, aftershocks, eventDate, startDate);
+            USGS_AftershockForecast forecast_generic = new USGS_AftershockForecast(
+            		genericModel, aftershocks, eventDate, startDate);
+            USGS_AftershockForecast forecast_specific = new USGS_AftershockForecast(
+            		seqSpecificModel, aftershocks, eventDate, startDate);
+            USGS_AftershockForecast forecast_bayesian = new USGS_AftershockForecast(
+            		bayesianModel, aftershocks, eventDate, startDate);
 
             model.setForecast_generic(forecast_generic.buildJSON());
             model.setForecast_specific(forecast_specific.buildJSON());

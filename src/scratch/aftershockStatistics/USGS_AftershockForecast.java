@@ -73,7 +73,7 @@ public class USGS_AftershockForecast {
 	
 	private RJ_AftershockModel model;
 	
-	private ObsEqkRupList aftershocks;
+	private int[] aftershockCounts;
 	
 	private GregorianCalendar eventDate;
 	private GregorianCalendar startDate;
@@ -110,11 +110,18 @@ public class USGS_AftershockForecast {
 		Preconditions.checkArgument(minMags.length > 0);
 		
 		this.model = model;
-		this.aftershocks = aftershocks;
 		this.minMags = minMags;
 		this.eventDate = eventDate;
 		this.startDate = startDate;
 		this.includeProbAboveMainshock = includeProbAboveMainshock;
+		
+		// calcualte number of observations for each bin
+		aftershockCounts = new int[minMags.length];
+		for (int m=0; m<minMags.length; m++) {
+			for (ObsEqkRupture eq : aftershocks)
+				if (eq.getMag() >= minMags[m])
+					aftershockCounts[m]++;
+		}
 		
 		numEventsLower = HashBasedTable.create();
 		numEventsUpper = HashBasedTable.create();
@@ -290,12 +297,8 @@ public class USGS_AftershockForecast {
 		JSONArray obsMagBins = new JSONArray();
 		for (int m=0; m<minMags.length; m++) {
 			JSONObject magBin = new JSONObject();
-			int count = 0;
-			for (ObsEqkRupture eq : aftershocks)
-				if (eq.getMag() >= minMags[m])
-					count++;
 			magBin.put("magnitude", minMags[m]);
-			magBin.put("count", count);
+			magBin.put("count", aftershockCounts[m]);
 			obsMagBins.add(magBin);
 		}
 		obsJSON.put("bins", obsMagBins);
