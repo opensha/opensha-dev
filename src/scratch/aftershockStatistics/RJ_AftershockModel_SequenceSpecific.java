@@ -2,8 +2,6 @@ package scratch.aftershockStatistics;
 
 import java.util.ArrayList;
 
-import org.apache.commons.math3.analysis.UnivariateFunction;
-import org.apache.commons.math3.analysis.integration.SimpsonIntegrator;
 import org.mongodb.morphia.annotations.Transient;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
@@ -24,39 +22,91 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
  *
  * @author field
  *
+ * Modified by Michael Barall.
+ *
+ * WARNING: This object is stored in the OAF database. Once OAF becomes operational,
+ * the set of non-Transient fields can never be changed.
+ *
+ * According to R&J, the rate of aftershocks of magnitude >= magMin is
+ *  lambda(t) = k * (t + c)^(-p)
+ * where
+ *  k = 10^(a + b*(magMain - magMin))
+ * According to Page et al. the time-dependent magnitude of completeness is
+ *  magMin(t) = Max(magMain/2 - G - H*log10(t), magCat)
+ * In these formulas, t is measured in days.
+ *
+ * Suppose that in a time interval tMinDays <= t <= tMaxDays, there is a sequence of aftershocks
+ * at times t_i with magnitudes M_i, for 1 <= i <= N.  Assume that M_i >= magMin(t_i).
+ * Then, for a parameter triple (a,p,c), the log-likelihood is defined as:
+ *  log L(a,p,c) = SUM(log(lambda(t_i)), 1 <= i <= N) - INTEGRAL(lambda(t)*dt, tMinDays <= t <= tMaxDays)
+ *
+ * This model uses the likelihood L(a,p,c) as a probability density for the parameter triple (a,p,c).
  */
-public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel implements UnivariateFunction {
+public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
+
+//	@Transient
+//	boolean D=true;	// debug flag (inherited)
+
+	// Parameters for the time-dependent magnitude of completeness.
+
+	protected double capG = 10.0;
+	protected double capH = 0.0;
+	protected double magCat = 0.0;
+
+	// The list of aftershocks used to construct the model.
 
 	@Transient
-	Boolean D=true;	// debug flag
-	double capG, capH;
-	double a, k, p, c;	// these are used in the numerical integration
-	double magComplete;
+	protected ObsEqkRupList aftershockList = null;
+
+	// The mainshock.
+
 	@Transient
-	ObsEqkRupList aftershockList;
-	@Transient
-	ObsEqkRupture mainShock;
-	double dataStartTimeDays, dataEndTimeDays;
-	double testTotalLikelihood;
+	protected ObsEqkRupture mainShock = null;
+
+	// The time interval covered by the list of aftershocks, in days since the mainshock.
+
+	protected double dataStartTimeDays = 0.0;
+	protected double dataEndTimeDays = 0.0;
+
+	// The number of aftershocks that were used to determine parameters.
+
+	protected int numAftershocks = 0;
+
+
+
+
+	/**
+	 * Return the name of this model.
+	 */
+	@Override
+	public String getModelName() {
+		return "Reasenberg-Jones (1989, 1994) aftershock model (Sequence Specific)";
+	}
+
+
 
 	
 	/**
-	 * Use this constructor to apply a time-independent magnitude of completeness.  This is faster because it
-	 * uses an analytical solution for the integral.
-	 * 
-	 * @param mainShock
-	 * @param aftershockList - events with mag below magComplete will be filtered out
+	 * Use this constructor to apply a time-independent magnitude of completeness.
+	 * @param mainShock - the mainshock
+	 * @param aftershockList - list of aftershocks; events with mag below magCat will be filtered out
 	 * @param magCat - the magnitude of completeness (time independent)
 	 * @param b - assumed b value
+	 * @param dataStartTimeDays - start time for data, in days since the mainshock
+	 * @param dataEndTimeDays - end time for data, in days since the mainshock
 	 * @param min_a \
-	 * @param max_a  | - range of a-values for grid search (set min=max and num=1 to constraint to single value)
+	 * @param max_a  | - range of a-values for grid search (set min=max and num=1 to constrain to single value)
 	 * @param num_a /
 	 * @param min_p \
-	 * @param max_p  | - range of p-values for grid search (set min=max and num=1 to constraint to single value)
+	 * @param max_p  | - range of p-values for grid search (set min=max and num=1 to constrain to single value)
 	 * @param num_p /
 	 * @param min_c \
-	 * @param max_c  | - range of c-values for grid search (set min=max and num=1 to constraint to single value)
+	 * @param max_c  | - range of c-values for grid search (set min=max and num=1 to constrain to single value)
 	 * @param num_c /
+	 * Note: In previous versions, this constructor was faster than the constructor below because it
+	 * used an analytic solution whereas the constructor below used numerical integration.  There is no
+	 * longer any performance difference between the two constructors, because the code auto-detects
+	 * when an analytic solution can be used.
 	 */
 	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, ObsEqkRupList aftershockList,
 				double magCat, double b, double dataStartTimeDays, double dataEndTimeDays,
@@ -77,23 +127,27 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel impl
 	 * model defined as Mc(t,Mm) = Max(Mm/2-G-H*log10(t); Mcat), where Mm is the main-shock magnitude, G and H 
 	 * are model parameters, and Mcat is the magnitude of completeness for the network during normal times. 
 	 * Likelihood values are normalized so they sum to 1.0 over the range of parameter-values specified.
-	 * @param mainShock
-	 * @param aftershockList - events with mag below magComplete will be filtered out
+	 * @param mainShock - the mainshock
+	 * @param aftershockList - list of aftershocks; events with mag below magCat will be filtered out
 	 * @param magCat - "Mcat" in the in the time-dependent magnitude of completeness model defined above
 	 * @param capG - the "G" parameter in the time-dependent magnitude of completeness model defined above; 
-	 * 				 set as Double.NaN to apply time independent Mc (analytical integration), or set as 
-	 * 				 10.0 to effectively make it time independent (but numerical integration still performed)
+	 *               As a special case, if capG == 10.0 then the magnitude of completeness is always magCat.
 	 * @param capH - the "H" parameter in the time-dependent magnitude of completeness model defined above
 	 * @param b - assumed b value
+	 * @param dataStartTimeDays - start time for data, in days since the mainshock
+	 * @param dataEndTimeDays - end time for data, in days since the mainshock
 	 * @param min_a \
-	 * @param max_a  | - range of a-values for grid search (set min=max and num=1 to constraint to single value)
+	 * @param max_a  | - range of a-values for grid search (set min=max and num=1 to constrain to single value)
 	 * @param num_a /
 	 * @param min_p \
-	 * @param max_p  | - range of p-values for grid search (set min=max and num=1 to constraint to single value)
+	 * @param max_p  | - range of p-values for grid search (set min=max and num=1 to constrain to single value)
 	 * @param num_p /
 	 * @param min_c \
-	 * @param max_c  | - range of c-values for grid search (set min=max and num=1 to constraint to single value)
+	 * @param max_c  | - range of c-values for grid search (set min=max and num=1 to constrain to single value)
 	 * @param num_c /
+	 * Note: For compatibility, if either capG or capH is equal to Double.NaN, then it is treated
+	 * as if capG==10.0 and capH==0.0, that is, the magnitude of completeness is always magCat.
+	 * New code should not rely on this behavior.
 	 */
 	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, ObsEqkRupList aftershockList,
 			 								double magCat, double capG, double capH,
@@ -104,22 +158,22 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel impl
 		
 		// check range values
 		if(num_a == 1 && min_a != max_a) {
-			throw new RuntimeException("Problem: num_a == 1 && min_a != max_a");
+			throw new RuntimeException("RJ_AftershockModel_SequenceSpecific: num_a == 1 && min_a != max_a");
 		}
 		if(num_p == 1 && min_p != max_p) {
-			throw new RuntimeException("Problem: num_p == 1 && min_p != max_p");
+			throw new RuntimeException("RJ_AftershockModel_SequenceSpecific: num_p == 1 && min_p != max_p");
 		}
 		if(num_c == 1 && min_c != max_c) {
-			throw new RuntimeException("Problem: num_c == 1 && min_c != max_c");
+			throw new RuntimeException("RJ_AftershockModel_SequenceSpecific: num_c == 1 && min_c != max_c");
 		}
 		if(min_a > max_a) {
-			throw new RuntimeException("Problem: min_a > max_a");
+			throw new RuntimeException("RJ_AftershockModel_SequenceSpecific: min_a > max_a");
 		}
 		if(min_p > max_p) {
-			throw new RuntimeException("Problem: min_p > max_p");
+			throw new RuntimeException("RJ_AftershockModel_SequenceSpecific: min_p > max_p");
 		}
 		if(min_c > max_c) {
-			throw new RuntimeException("Problem: min_c > max_c");
+			throw new RuntimeException("RJ_AftershockModel_SequenceSpecific: min_c > max_c");
 		}
 
 		this.min_a = min_a;
@@ -132,188 +186,253 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel impl
 		this.max_c = max_c;
 		this.num_c = num_c;
 		this.b = b;
-		this.magComplete = magCat;
+		this.magCat = magCat;
+
 		this.aftershockList=aftershockList;
 //		this.aftershockList = new ObsEqkRupList();
 		this.mainShock=mainShock;
 		this.dataStartTimeDays=dataStartTimeDays;
 		this.dataEndTimeDays=dataEndTimeDays;
-		this.capG=capG;
-		this.capH=capH;
-		
-		magMain = mainShock.getMag();
 
-		if(num_a>1) // otherwise defaults to zero
-			delta_a = (max_a-min_a)/((double)num_a - 1.);
-		if(num_p>1)
-			delta_p = (max_p-min_p)/((double)num_p - 1.);
-		if(num_c>1)
-			delta_c = (max_c-min_c)/((double)num_c - 1.);
-		
-		if(D) {
-			System.out.println("a-values range:\t"+min_a+"\t"+max_a+"\t"+num_a+"\t"+(float)delta_a);
-			System.out.println("p-values range:\t"+min_p+"\t"+max_p+"\t"+num_p+"\t"+(float)delta_p);
-			System.out.println("c-values range:\t"+min_c+"\t"+max_c+"\t"+num_c+"\t"+(float)delta_c);
-			System.out.println("capH:\t"+capH);
-			System.out.println("capG:\t"+capG);
-			System.out.println("magComplete:\t"+magComplete);
+		if(Double.isNaN(capG) || Double.isNaN(capH)) {
+			this.capG = 10.0;
+			this.capH = 0.0;
+		} else {
+			this.capG = capG;
+			this.capH = capH;
 		}
 		
-		if(Double.isNaN(capG))
-			computeSequenceSpecificParamsConstMagComplete();
-		else
-			computeSequenceSpecificParams();
-		
-		if (D) {
-			System.out.println("testTotalLikelihood="+testTotalLikelihood);
-			System.out.println("getMaxLikelihood_a()="+getMaxLikelihood_a());
-			System.out.println("getMaxLikelihood_p()="+getMaxLikelihood_p());
-			System.out.println("getMaxLikelihood_c()="+getMaxLikelihood_c());
+		this.magMain = mainShock.getMag();
+
+		if(num_a>1) {
+			this.delta_a = (max_a-min_a)/((double)num_a - 1.0);
+		} else {
+			this.delta_a = 0.0;
 		}
+		if(num_p>1) {
+			this.delta_p = (max_p-min_p)/((double)num_p - 1.0);
+		} else {
+			this.delta_p = 0.0;
+		}
+		if(num_c>1) {
+			this.delta_c = (max_c-min_c)/((double)num_c - 1.0);
+		} else {
+			this.delta_c = 0.0;
+		}
+
+		apc_build(mainShock, aftershockList, dataStartTimeDays, dataEndTimeDays);
 		
 	}
 
-    public RJ_AftershockModel_SequenceSpecific() {
 
+
+
+	/**
+	 * This default constructor creates an empty model.
+	 * This is intended for use in database retrieval.
+	 */
+    public RJ_AftershockModel_SequenceSpecific() {
+		// When retrieving from database, remain quiet by default
+		D = false;
     }
 
 
-    private void computeSequenceSpecificParams() {
-//		SimpsonIntegrator integrator = new SimpsonIntegrator();
-		array = new double[num_a][num_p][num_c];
-		double maxVal= Double.NEGATIVE_INFINITY;
+
+
+	/**
+	 * Build the apc_likelihood matrix, that gives the probability distribution of (a,p,c).
+	 * @param mainShock - the mainshock
+	 * @param aftershockList - list of aftershocks; events with mag below magCat will be filtered out
+	 * @param dataStartTimeDays - start time for data, in days since the mainshock
+	 * @param dataEndTimeDays - end time for data, in days since the mainshock
+	 */
+    public void apc_build(ObsEqkRupture mainShock, ObsEqkRupList aftershockList, double dataStartTimeDays, double dataEndTimeDays) {
+
+		// Save the parameters
+
+		this.aftershockList = aftershockList;
+		this.mainShock = mainShock;
+		this.dataStartTimeDays = dataStartTimeDays;
+		this.dataEndTimeDays = dataEndTimeDays;
+
+		this.numAftershocks = 0;
+
+		// Allocate the array
+
+		apc_likelihood = new double[num_a][num_p][num_c];
 		double ln10 = Math.log(10);
-		for(int cIndex=0;cIndex<num_c;cIndex++) {
-			c = get_c(cIndex);
 
-			// make the list of event times and Mc at those times for the given c
-			double sum1=0;
-			double sum2=0;
-			int numEvents=0;
+		// Loop over c first, so we can accumulate log(t+c)
+
+		for(int cIndex = 0; cIndex < num_c; cIndex++) {
+			double c = get_c(cIndex);
+
+			// Sum of magMain - magMin(t_i)
+
+			double sum1 = 0.0;
+
+			// Sum of log(t_i + c)
+
+			double sum2 = 0.0;
+
+			// Number of aftershocks
+
+			int numEvents = 0;
+
+			// Scan list of aftershocks
+
 			for(ObsEqkRupture rup:aftershockList) {
-				double timeSinceMainDays = (double)(rup.getOriginTime()-mainShock.getOriginTime()) / (double)AftershockStatsCalc.MILLISEC_PER_DAY;
-				if(timeSinceMainDays<dataStartTimeDays || timeSinceMainDays>dataEndTimeDays) // not necessary if list already filtered
-					continue;
-				double magCompleteAtTime = getMagCompleteAtTime(timeSinceMainDays);
-//				System.out.println("magCompleteAtTime"+magCompleteAtTime);
 
-				if(rup.getMag()>=magCompleteAtTime) {
+				// Get time since the mainshock in days, skip it if it is outside our time interval
+
+				double timeSinceMainDays = (double)(rup.getOriginTime()-mainShock.getOriginTime()) / (double)AftershockStatsCalc.MILLISEC_PER_DAY;
+				if(timeSinceMainDays < dataStartTimeDays || timeSinceMainDays > dataEndTimeDays) { // not necessary if list already filtered
+					continue;
+				}
+
+				// Get the magnitude of completeness at this time
+
+				double magMin = AftershockStatsCalc.getPageMagCompleteness(
+									magMain, magCat, capG, capH, timeSinceMainDays);
+
+				// If the aftershock magnitude is at least the magnitude of completeness, accumulate it
+
+				if(rup.getMag() >= magMin) {
 					numEvents += 1;
-					sum1 += magMain-magCompleteAtTime;
-					sum2 += Math.log(timeSinceMainDays+c);
+					sum1 += (magMain - magMin);
+					sum2 += Math.log(timeSinceMainDays + c);
+					++numAftershocks;
 				}
 			}
 
-			// now loop over p and a
-			for(int pIndex=0;pIndex<num_p;pIndex++) {
-				p = get_p(pIndex);
-				for(int aIndex=0;aIndex<num_a;aIndex++) {
-					a = get_a(aIndex);
-					double integral = AftershockStatsCalc.adaptiveQuadratureIntegration(this, dataStartTimeDays, dataEndTimeDays);
-//					double integral = integrator.integrate(100000, this, dataStartTimeDays, dataEndTimeDays);
-//double term1=numEvents*a*ln10 + b*ln10*sum1 - p*sum2;
-//System.out.println("term1="+term1);
-//System.out.println("integral="+integral);
+			// Now loop over p and a
 
+			for(int pIndex=0;pIndex<num_p;pIndex++) {
+				double p = get_p(pIndex);
+				for(int aIndex=0;aIndex<num_a;aIndex++) {
+					double a = get_a(aIndex);
+
+					// Compute the integral of the aftershock rate over the time interval
+
+					double integral = AftershockStatsCalc.getPageExpectedNumEvents(
+						a, b, magMain, magCat, capG, capH, p, c, dataStartTimeDays, dataEndTimeDays);
+
+					// Form the log likelihood
 
 					double logLike = numEvents*a*ln10 + b*ln10*sum1 - p*sum2 - integral;
-//  System.out.println((float)a+"\t"+(float)p+"\t"+(float)c+"\t"+logLike);
 
-					array[aIndex][pIndex][cIndex] = logLike;
-					if(maxVal<logLike) {
-						maxVal=logLike;
-						max_a_index=aIndex;
-						max_p_index=pIndex;
-						max_c_index=cIndex;
-					}
+					// Save it as the array element
+
+					apc_likelihood[aIndex][pIndex][cIndex] = logLike;
 				}
 			}
 		}
-		
-		// convert array from log-likelihood to likelihood
-		testTotalLikelihood = convertLogLikelihoodArrayToLikelihood(maxVal);
-		
-		
 
-	}
-	
-	
-	/**
-	 * This is faster because the integral is computed analytically;
-	 */
-	private void computeSequenceSpecificParamsConstMagComplete() {
-		double[] relativeEventTimes = AftershockStatsCalc.getDaysSinceMainShockArray(mainShock, aftershockList.getRupsAboveMag(magComplete));
-		array = new double[num_a][num_p][num_c];
-		double maxVal= Double.NEGATIVE_INFINITY;
-		long startTime = System.currentTimeMillis();
-		for(int aIndex=0;aIndex<num_a;aIndex++) {
-			a = get_a(aIndex);
-			k = AftershockStatsCalc.convertProductivityTo_k(a, b, magMain, magComplete);
-			for(int pIndex=0;pIndex<num_p;pIndex++) {
-				p = get_p(pIndex);
-				for(int cIndex=0;cIndex<num_c;cIndex++) {
-					c = get_c(cIndex);
+		// Complete the likelihood setup
 
-					double logLike = AftershockStatsCalc.getLogLikelihoodForOmoriParams(k, p, c, dataStartTimeDays, dataEndTimeDays, relativeEventTimes);
-					
-//					if(D) {
-//						// test numerical integration results
-//						double sumLn_t=0;
-//						for(double t : relativeEventTimes)
-//							sumLn_t += Math.log(t+c);
-//					//	double integral = integrator.integrate(100000, this, dataStartTimeDays, dataEndTimeDays);
-//						double integral = AftershockStatsCalc.adaptiveQuadratureIntegration(this, dataStartTimeDays, dataEndTimeDays);
-//						double logLike2 =  relativeEventTimes.length*Math.log(k) - p*sumLn_t - integral;
-//						double ratio = logLike/logLike2;
-//						if((float)ratio != 1f)
-//							throw new RuntimeException("bad ratio "+ratio);
-//						//						System.out.println("ratio:\t"+(float)ratio+"\t"+logLike+"\t"+logLike2);
-//					}
+		apcFinish (true);	// true means array contains log-likelihood
 
-// System.out.println(a+"\t"+p+"\t"+c+"\t"+logLike+"\t"+Math.exp(logLike));
-
-					array[aIndex][pIndex][cIndex] = logLike;
-					if(maxVal<logLike) {
-						maxVal=logLike;
-						max_a_index=aIndex;
-						max_p_index=pIndex;
-						max_c_index=cIndex;
-					}
-				}
-			}
+		if(D) {
+			System.out.println(String.format("G=%.4g  H=%.4g  magCat=%.4g  tStart=%.8g  tEnd=%.8g  nEvents=%d",
+				capG, capH, magCat, dataStartTimeDays, dataEndTimeDays, numAftershocks));
 		}
 		
-		// convert array from log-likelihood to likelihood
-		testTotalLikelihood = convertLogLikelihoodArrayToLikelihood(maxVal);
-		
+		return;
 	}
 
-	
 
-	public double getMagCompleteAtTime(double timeSinceMainDays) {
-		if(timeSinceMainDays==0d)
-			return 10d;	// avoid infinity
-		double magCompleteAtTime = magMain/2.0 - capG - capH*Math.log10(timeSinceMainDays);
-		if(magCompleteAtTime>magComplete)
-			return magCompleteAtTime;
-		else 
-			return magComplete;
 
-	}
-
-	public double getRateAboveMagCompleteAtTime(double timeSinceMainDays) {
-		if(timeSinceMainDays==0d)
-			return 0d;
-		return Math.pow(10d,a+b*(magMain-getMagCompleteAtTime(timeSinceMainDays)))*Math.pow(timeSinceMainDays+c, -p);
-	}
-
-	public double value(double timeSinceMainDays) {
-		return getRateAboveMagCompleteAtTime(timeSinceMainDays);
-	}
-	
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+
+		// There needs to be at least one argument, which is the subcommand
+
+		if (args.length < 1) {
+			System.err.println ("RJ_AftershockModel_SequenceSpecific : Missing subcommand");
+			return;
+		}
+
+
+		// Subcommand : Test #1
+		// Command format:
+		//  test1
+		// Generate a simulated aftershock sequence.
+		// Then, construct the model and see if it can recover the parameters a and p.
+
+		if (args[0].equalsIgnoreCase ("test1")) {
+
+			// No additional arguments
+
+			if (args.length != 1) {
+				System.err.println ("RJ_AftershockModel_SequenceSpecific : Invalid 'test1' subcommand");
+				return;
+			}
+
+			// Parameter values
+			
+			double a = -1.67;
+			double b = 0.91;
+			double c = 0.05;
+			double p = 1.08;
+			double magMain = 7.5;
+			double magCat = 2.5;
+			double capG = 1.25;
+			double capH = 0.75;
+			double dataStartTimeDays = 0.0;
+			double dataEndTimeDays = 30.0;
+		
+			double min_a = -2.0;
+			double max_a = -1.0;
+			int num_a = 101;
+
+			double min_p = 0.9; 
+			double max_p = 1.2; 
+			int num_p = 31;
+		
+			double min_c=0.05;
+			double max_c=0.05;
+			int num_c=1;
+
+			// Run the simulation
+
+			ObsEqkRupList aftershockList = AftershockStatsCalc.simAftershockSequence(a, b, magMain, magCat, capG, capH, p, c, dataStartTimeDays, dataEndTimeDays);
+
+			// Make the mainshock
+
+			ObsEqkRupture mainShock = new ObsEqkRupture("0", 0L, null, magMain);
+
+			// Make the model, it will output some information
+
+			RJ_AftershockModel_SequenceSpecific gen =
+				new RJ_AftershockModel_SequenceSpecific(mainShock, aftershockList,
+			 								magCat, capG, capH,
+											b, dataStartTimeDays, dataEndTimeDays,
+											min_a, max_a, num_a, 
+											min_p, max_p, num_p, 
+											min_c, max_c, num_c);
+
+			// A few calculations
+		
+			EvenlyDiscretizedFunc lowFract = gen.getCumNumMFD_Fractile(0.025, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5%: "+lowFract.getX(0)+"\t"+lowFract.getY(0));
+			EvenlyDiscretizedFunc hiFract = gen.getCumNumMFD_Fractile(0.975, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("97.5%: "+hiFract.getX(0)+"\t"+hiFract.getY(0));
+		
+			double[] fractArray = {0.025, 0.975};
+			EvenlyDiscretizedFunc[] fractalWithAleatoryMFDArray = gen.getCumNumMFD_FractileWithAleatoryVariability(fractArray, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5% With Aleatory: "+fractalWithAleatoryMFDArray[0].getX(0)+"\t"+fractalWithAleatoryMFDArray[0].getY(0));
+			System.out.println("97.5% With Aleatory: "+fractalWithAleatoryMFDArray[1].getX(0)+"\t"+fractalWithAleatoryMFDArray[1].getY(0));
+
+			return;
+		}
+
+
+
+
+		// Unrecognized subcommand.
+
+		System.err.println ("RJ_AftershockModel_SequenceSpecific : Unrecognized subcommand : " + args[0]);
+		return;
 
 	}
 

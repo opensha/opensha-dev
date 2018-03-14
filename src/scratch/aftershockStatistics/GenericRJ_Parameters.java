@@ -12,13 +12,13 @@ public class GenericRJ_Parameters {
 	
 	/**
 	 * This class is a container for the Generic Reasenberg-Jones parameters defined by 
-	 * Page et al. (2016, FILL IN REF AFTER PUBLICATION).  The distribution of a-values is assumed
+	 * Page et al. (2016, BSSA).  The distribution of a-values is assumed
 	 * to be Gaussian, with a mean of aValue_mean and a standard deviation of aValue_sigma.  
 	 * A magnitude-dependent sigma is an option, and can be computed as:
 	 * 
-	 * 		sigma(M) = (sigma0^2 + sigma1^2/10^M)^0.5 if M≥6
+	 * 		sigma(M) = (sigma0^2 + sigma1^2/10^M)^0.5 if M >= 6
 	 * or
-	 * 		sigma(M) = (sigma0^2 + sigma1^2/10^6)^0.5 if M<6
+	 * 		sigma(M) = (sigma0^2 + sigma1^2/10^6)^0.5 if M < 6
 	 * 
 	 * @param aValue_mean
 	 * @param aValue_sigma

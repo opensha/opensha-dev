@@ -106,11 +106,11 @@ public class JobsListener implements MessageListener {
             double h = job.h;
             //double mCat = 4.5;
             double mCat = job.magCat;
-            //double b = genericParams.get_bValue();
-            double b = job.b;
-            if (b < 0){
-                b = genericParams.get_bValue();
-            }
+            double b = genericParams.get_bValue();
+            //double b = job.b;
+            //if (b < 0){
+            //    b = genericParams.get_bValue();
+            //}
             double p = genericParams.get_pValue();
             double c = genericParams.get_cValue();
             double aMin = job.minA;
