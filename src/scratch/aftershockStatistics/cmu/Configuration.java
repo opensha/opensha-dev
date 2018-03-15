@@ -1,74 +1,106 @@
 package scratch.aftershockStatistics.cmu;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Properties;
+
+import scratch.aftershockStatistics.OAFParameterSet;
 
 /**
  * Created by clark on 12/12/2016.
+ * Modified by Michael Barall.
  */
 public class Configuration {
 
-    private String db_host = "127.0.0.1";
-    private int db_port = 27017;
-    private String db_name = "usgs";
-    private String db_user = "usgs";
-    private String db_password = "usgs";
-    private String activemq_host = "127.0.0.1";
-    private String activemq_port = "61616";
-    private String activemq_user = "admin";
-    private String activemq_password = "admin";
-    private String path = "config.properties";
+	// Our property table.
+
+	private static Properties prop_table = null;
+
+	// Values of specific properties.
+
+    private static String db_host = null;
+    private static int db_port = 0;
+    private static String db_name = null;
+    private static String db_user = null;
+    private static String db_password = null;
+    private static String activemq_host = null;
+    private static String activemq_port = null;
+    private static String activemq_user = null;
+    private static String activemq_password = null;
+
+	// List of required properties.
+
+	private static final String[] required_props = {
+		"db_host",
+		"db_port",
+		"db_name",
+		"db_user",
+		"db_password",
+		"activemq_host",
+		"activemq_port",
+		"activemq_user",
+		"activemq_password"
+	};
+
+	// Load the property table.
+
+	private static synchronized void load_prop() {
+
+		// If properties already loaded, do nothing
+
+		if (prop_table != null) {
+			return;
+		}
+
+		// Working data
+
+		Properties wk_prop_table = null;
+		int wk_db_port = 0;
+
+		// Any error reading the properties aborts the program
+
+		try {
+
+			// Read the property file
+
+			wk_prop_table = OAFParameterSet.load_properties ("config.properties", Configuration.class, null, required_props);
+
+			// Convert port number
+
+			try {
+				wk_db_port = Integer.parseInt(wk_prop_table.getProperty("db_port"));
+			} catch (NumberFormatException e) {
+				throw new RuntimeException("Configuration: Malformed port number", e);
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+            System.err.println("Configuration: Error loading property file config.properties, unable to continue");
+            System.exit(0);
+			//throw new RuntimeException("Configuration: Unable to load property file config.properties", e);
+		}
+
+		// Save the properties
+
+        db_host = wk_prop_table.getProperty("db_host");
+        db_port = wk_db_port;
+        db_name = wk_prop_table.getProperty("db_name");
+        db_user = wk_prop_table.getProperty("db_user");
+        db_password = wk_prop_table.getProperty("db_password");
+        activemq_host = wk_prop_table.getProperty("activemq_host");
+        activemq_port = wk_prop_table.getProperty("activemq_port");
+        activemq_user = wk_prop_table.getProperty("activemq_user");
+        activemq_password = wk_prop_table.getProperty("activemq_password");
+
+		prop_table = wk_prop_table;
+		return;
+	}
+
+	// Constructor loads the property table if needed.
 
     public Configuration() {
-        if (System.getProperty("path") != null) {
-            path = System.getProperty("path");
-        }
-
-        Properties prop = new Properties();
-
-        //InputStream inputStream = getClass().getClassLoader().getResourceAsStream(path);
-        InputStream inputStream = null;
-        try {
-            inputStream = new FileInputStream(path);
-        } catch (FileNotFoundException e) {
-            System.out.println("File not found at " + path);
-            System.exit(0);
-        }
-
-        if(inputStream != null){
-            try {
-                prop.load(inputStream);
-            } catch (IOException e) {
-                System.out.println("Error while reading file at " + path);
-                System.exit(0);
-            }
-        } else {
-            System.out.println("File at " + path + " not found or it can't be read");
-            System.exit(0);
-        }
-
-        try {
-            this.db_host = prop.getProperty("db_host");
-            this.db_port = Integer.parseInt(prop.getProperty("db_port"));
-            this.db_name = prop.getProperty("db_name");
-            this.db_user = prop.getProperty("db_user");
-            this.db_password = prop.getProperty("db_password");
-            this.activemq_host = prop.getProperty("activemq_host");
-            this.activemq_port = prop.getProperty("activemq_port");
-            this.activemq_user = prop.getProperty("activemq_user");
-            this.activemq_password = prop.getProperty("activemq_password");
-        } catch(Exception e) {
-            System.out.println("Error reading properties from file: " + path);
-            System.exit(0);
-        }
+		load_prop();
     }
 
-    public String getDb_password() {
-        return db_password;
-    }
+	// Property getter functions.
 
     public String getDb_host() {
         return db_host;
@@ -86,6 +118,10 @@ public class Configuration {
         return db_user;
     }
 
+    public String getDb_password() {
+        return db_password;
+    }
+
     public String getActivemq_host() {
         return activemq_host;
     }
@@ -101,4 +137,22 @@ public class Configuration {
     public String getActivemq_password() {
         return activemq_password;
     }
+
+	// Simple test loads the properties and prints them out.
+	
+	public static void main(String[] args) {
+		Configuration config = new Configuration();
+
+		System.out.println("db_host = " + config.getDb_host());
+		System.out.println("db_port = " + config.getDb_port());
+		System.out.println("db_name = " + config.getDb_name());
+		System.out.println("db_user = " + config.getDb_user());
+		System.out.println("db_password = " + config.getDb_password());
+		System.out.println("activemq_host = " + config.getActivemq_host());
+		System.out.println("activemq_port = " + config.getActivemq_port());
+		System.out.println("activemq_user = " + config.getActivemq_user());
+		System.out.println("activemq_password = " + config.getActivemq_password());
+
+		return;
+	}
 }
