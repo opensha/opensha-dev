@@ -14,24 +14,20 @@ import scratch.aftershockStatistics.OAFTectonicRegime;
 import scratch.aftershockStatistics.OAFRegion;
 import scratch.aftershockStatistics.OAFParameterSet;
 
-public class GenericRJ_ParametersFetch {
+public class MagCompPage_ParametersFetch {
 
 	// parameter_set - The parameter set.
 
-	private static OAFParameterSet<GenericRJ_Parameters> parameter_set = null;
+	private static OAFParameterSet<MagCompPage_Parameters> parameter_set = null;
 
 	// load_data - Load parameters from the data file.
 	// The data file format is:
 	//	[int]		Number of tectonic regimes
 	//	[repeated]	Repeated once for each tectonic regime:
 	//		[string]	Name of tectonic regime
-	//		[double]	p-value
-	//		[double]	a-value mean
-	//		[double]	a-value sigma
-	//		[double]	a-value sigma1
-	//		[double]	a-value sigma0
-	//		[double]	b-value
-	//		[double]	c-value
+	//		[double]	magCat
+	//		[double]	capG
+	//		[double]	capH
 	//	[int]		Number of special regions
 	//	[repeated]	Repeated once for each special region:
 	//		[string]	Name of tectonic regime to apply in this region
@@ -61,7 +57,7 @@ public class GenericRJ_ParametersFetch {
 
 		// Working data
 
-		OAFParameterSet<GenericRJ_Parameters> wk_parameter_set = new OAFParameterSet<GenericRJ_Parameters>(){
+		OAFParameterSet<MagCompPage_Parameters> wk_parameter_set = new OAFParameterSet<MagCompPage_Parameters>(){
 			
 			// load_parameter_values - Load parameter values for the tables.
 			// This function should create a new object of type T, read the
@@ -69,28 +65,23 @@ public class GenericRJ_ParametersFetch {
 			// In case of error, this function should throw RuntimeException.
 
 			@Override
-			protected GenericRJ_Parameters load_parameter_values (Scanner sc) {
+			protected MagCompPage_Parameters load_parameter_values (Scanner sc) {
 
-				// Get the R&J parameters
+				// Get the Page parameters
 				
-				double pValue = load_table_double (sc);
-				double aValue_mean = load_table_double (sc);
-				double aValue_sigma = load_table_double (sc);
-				double aValue_sigma1 = load_table_double (sc);
-				double aValue_sigma0 = load_table_double (sc);
-				double bValue = load_table_double (sc);
-				double cValue = load_table_double (sc);
+				double magCat = load_table_double (sc);
+				double capG = load_table_double (sc);
+				double capH = load_table_double (sc);
 
 				// Make the parameter object
 
-				return new GenericRJ_Parameters(
-					aValue_mean, aValue_sigma, aValue_sigma0, aValue_sigma1, bValue, pValue, cValue);
+				return new MagCompPage_Parameters(magCat, capG, capH);
 			}
 		};
 
 		// Load the data
 
-		wk_parameter_set.load_data ("GenericRJ_ParametersFetch.txt", GenericRJ_ParametersFetch.class);
+		wk_parameter_set.load_data ("MagCompPage_ParametersFetch.txt", MagCompPage_ParametersFetch.class);
 
 		// Save our working data into the static variable
 
@@ -100,29 +91,16 @@ public class GenericRJ_ParametersFetch {
 
 	// Constructor loads the data if needed.
 	
-	public GenericRJ_ParametersFetch() {
+	public MagCompPage_ParametersFetch() {
 		load_data();
 	}
-
-// Comments for California parameters, retained here for historical reasons.
-// via e-mail from Jeanne 2/8/17 and 2/9/17, subject "OAF To-Do List; Jan 31, 2017":
-/*
-	* I dug up the relevant email thread on the California regional parameters.  The summary is to use the modified
-	* R&J parameters a=-1.85, b = 0.91, p = 1.08, and c = 0.05.  R&J don't define a-sigma, but I think we were okay
-	* with using the global values of sigma0=0.49 and sigma1=750.  Use the same equation for the completeness, except with
-	* Mcat= 2.5.  The California spatial region is given in the attached files that Andy provided (the union of
-	* region.ncsn and region.scsn).
-	*/
-// aValue_sigma value of 1.76 is from the second e-mail, "Integrating equation 8 over M5 to M8, weighted by a MFD
-// with b=1, the sigma value is 1.76. I know this is kind of large, but this is the extrapolation to lower
-// magnitude of the observed relation between magnitude and sigma."
 	
 	/**
 	 * Find the tectonic regime for the given location, and return its parameters.
 	 * @param loc = Location.
 	 * @return Object of type T containing parameters.
 	 */
-	public GenericRJ_Parameters get(Location loc) {
+	public MagCompPage_Parameters get(Location loc) {
 		return parameter_set.get(loc);
 	}
 	
@@ -132,7 +110,7 @@ public class GenericRJ_ParametersFetch {
 	 * @return Object of type T containing parameters.
 	 * The function throws an exception if no parameters are defined for the region.
 	 */
-	public GenericRJ_Parameters get(OAFTectonicRegime region) {
+	public MagCompPage_Parameters get(OAFTectonicRegime region) {
 		return parameter_set.get(region);
 	}
 	
@@ -142,7 +120,7 @@ public class GenericRJ_ParametersFetch {
 	 * @return Object of type T containing parameters.
 	 * The function returns null if no parameters are defined for the region.
 	 */
-	public GenericRJ_Parameters getOrNull(OAFTectonicRegime region) {
+	public MagCompPage_Parameters getOrNull(OAFTectonicRegime region) {
 		return parameter_set.getOrNull(region);
 	}
 	
@@ -161,16 +139,16 @@ public class GenericRJ_ParametersFetch {
 	public Set<OAFTectonicRegime> getRegimeSet() {
 		return parameter_set.getRegimeSet();
 	}
+
+
+
 	
-
-
-
 	public static void main(String[] args) {
 
 		// There needs to be at least one argument, which is the subcommand
 
 		if (args.length < 1) {
-			System.err.println ("GenericRJ_ParametersFetch : Missing subcommand");
+			System.err.println ("MagCompPage_ParametersFetch : Missing subcommand");
 			return;
 		}
 
@@ -184,7 +162,7 @@ public class GenericRJ_ParametersFetch {
 			// No additional arguments
 
 			if (args.length != 1) {
-				System.err.println ("GenericRJ_ParametersFetch : Invalid 'test1' subcommand");
+				System.err.println ("MagCompPage_ParametersFetch : Invalid 'test1' subcommand");
 				return;
 			}
 
@@ -192,7 +170,7 @@ public class GenericRJ_ParametersFetch {
 
 			LocationList locs = OAFParameterSet.getTestLocations();;
 		
-			GenericRJ_ParametersFetch fetch = new GenericRJ_ParametersFetch();
+			MagCompPage_ParametersFetch fetch = new MagCompPage_ParametersFetch();
 			for (Location loc : locs) {
 				OAFTectonicRegime regime = fetch.getRegion(loc);
 				System.out.println(loc+", "+regime+": "+fetch.get(regime));
@@ -211,13 +189,13 @@ public class GenericRJ_ParametersFetch {
 			// No additional arguments
 
 			if (args.length != 1) {
-				System.err.println ("GenericRJ_ParametersFetch : Invalid 'test2' subcommand");
+				System.err.println ("MagCompPage_ParametersFetch : Invalid 'test2' subcommand");
 				return;
 			}
 
 			// Display info for each regime
 		
-			GenericRJ_ParametersFetch fetch = new GenericRJ_ParametersFetch();
+			MagCompPage_ParametersFetch fetch = new MagCompPage_ParametersFetch();
 			Set<OAFTectonicRegime> regimes = fetch.getRegimeSet();
 			for (OAFTectonicRegime regime : regimes) {
 				System.out.println(regime+": "+fetch.get(regime));
@@ -228,7 +206,7 @@ public class GenericRJ_ParametersFetch {
 
 		// Unrecognized subcommand.
 
-		System.err.println ("GenericRJ_ParametersFetch : Unrecognized subcommand : " + args[0]);
+		System.err.println ("MagCompPage_ParametersFetch : Unrecognized subcommand : " + args[0]);
 		return;
 
 	}
