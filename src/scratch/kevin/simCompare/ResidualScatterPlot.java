@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -39,6 +40,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.MultiIMR_Averaged_AttenRel;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
@@ -61,8 +63,10 @@ public class ResidualScatterPlot {
 	private EvenlyDiscretizedFunc xHistBins;
 	
 	double residualMean;
+	double regressionIntercept;
 	double regressionLinearSlope;
 	private DiscretizedFunc regressionLinear;
+	private EvenlyDiscretizedFunc regressionBins;
 	private DiscretizedFunc[] regressionBinned;
 	
 	private double dataSigma;
@@ -134,15 +138,18 @@ public class ResidualScatterPlot {
 			xRange = new Range(minX, maxX);
 		
 		SimpleRegression linearRegression = getRegression(xy, logX, xRange);
+		regressionIntercept = linearRegression.getIntercept();
 		regressionLinearSlope = linearRegression.getSlope();
+		System.out.println("Linear regression yInt: "+linearRegression.getIntercept());
+		System.out.println("Linear regression slope: "+linearRegression.getSlope());
 		regressionLinear = getRegressionFit(linearRegression, xy, logX, xRange);
 		dataSigma = calcSigma(regressionLinear, xy);
 		
 		regressionBinned = new ArbitrarilyDiscretizedFunc[numRegressionBins];
 		dataSigmaBinned = new double[numRegressionBins];
 		double deltaX = (maxX - minX) / (numRegressionBins - 1);
-		EvenlyDiscretizedFunc regressionBins = new EvenlyDiscretizedFunc(minX+0.5*deltaX, numRegressionBins, deltaX);
-		System.out.println("Regression bins:\n"+regressionBins);
+		regressionBins = new EvenlyDiscretizedFunc(minX+0.5*deltaX, numRegressionBins, deltaX);
+		System.out.println("Regression bins:\n\t"+Joiner.on("\t").join(asFloatIt(regressionBins.getXValuesIterator())));
 		for (int i=0; i<numRegressionBins; i++) {
 			double binCenter = regressionBins.getX(i);
 			Range regressRange = new Range(binCenter - 0.5*deltaX, binCenter + 0.5*deltaX);
@@ -170,8 +177,24 @@ public class ResidualScatterPlot {
 				}
 				gmpeSigma.set(i, gmpeForSigma.getStdDev());
 			}
-			System.out.println("GMPE Sigma function:\n"+gmpeSigma);
+			System.out.println(gmpeForSigma.getShortName()+" Sigma function:\n\t"
+					+Joiner.on("\t").join(asFloatIt(gmpeSigma.getYValuesIterator())));
 		}
+	}
+	
+	private Iterator<Float> asFloatIt(final Iterator<Double> it) {
+		return new Iterator<Float>() {
+
+			@Override
+			public boolean hasNext() {
+				return it.hasNext();
+			}
+
+			@Override
+			public Float next() {
+				return it.next().floatValue();
+			}
+		};
 	}
 	
 	public void plotScatter(File outputDir, String prefix) throws IOException {
@@ -195,6 +218,13 @@ public class ResidualScatterPlot {
 		}
 		funcs.add(xy);
 		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, new Color(255, 80, 80)));
+		
+		DefaultXY_DataSet zeroLine = new DefaultXY_DataSet();
+		zeroLine.set(xRange.getLowerBound(), 0d);
+		zeroLine.set(xRange.getCentralValue(), 0d);
+		zeroLine.set(xRange.getUpperBound(), 0d);
+		funcs.add(zeroLine);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.DARK_GRAY));
 		
 		addResidualFuncs(funcs, chars, true);
 		
@@ -308,18 +338,27 @@ public class ResidualScatterPlot {
 		if (logX)
 			xAxisLabel = "Log10 "+xAxisLabel;
 		XYZPlotSpec xyzSpec = new XYZPlotSpec(xyz, cpt, title, xAxisLabel, residualLabel, zAxisLabel);
-		// add W-C
 		ArrayList<XY_DataSet> funcs = new ArrayList<>();
 		ArrayList<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		addResidualFuncs(funcs, chars, false);
 		
 		Range xRange = this.xRange;
 		if (logX)
 			xRange = new Range(Math.log10(xRange.getLowerBound()), Math.log10(xRange.getUpperBound()));
 		
+		DefaultXY_DataSet zeroLine = new DefaultXY_DataSet();
+		zeroLine.set(xRange.getLowerBound(), 0d);
+		zeroLine.set(xRange.getCentralValue(), 0d);
+		zeroLine.set(xRange.getUpperBound(), 0d);
+		funcs.add(0, zeroLine);
+		chars.add(0, new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.DARK_GRAY));
+		
+		addResidualFuncs(funcs, chars, false);
+		
 		// add custom y axis guides
 		for (int i=(int)Math.round(yRange.getLowerBound()); i<=(int)Math.round(yRange.getUpperBound()); i++) {
+			if (i == 0)
+				// already have one at zero
+				continue;
 			DefaultXY_DataSet line = new DefaultXY_DataSet();
 			line.set(xRange.getLowerBound(), (double)i);
 			line.set(xRange.getUpperBound(), (double)i);
@@ -337,6 +376,7 @@ public class ResidualScatterPlot {
 		plotPrefs.setPlotLabelFontSize(21);
 		plotPrefs.setBackgroundColor(Color.WHITE);
 		XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
+		System.out.println("Plotting with xRange: "+xRange);
 		xyzGP.drawPlot(xyzSpec, false, false, xRange, yRange);
 		// write plot
 		xyzGP.getYAxis().setStandardTickUnits(getYTickUnits());
@@ -354,27 +394,26 @@ public class ResidualScatterPlot {
 		
 		double xMax = xRange.getUpperBound();
 		double xMin = xRange.getLowerBound();
-		if (logX && doLog) {
+		if (logX) {
 			xMax = Math.log10(xMax);
 			xMin = Math.log10(xMin);
 		}
 		double xPos = xMin + 0.95*(xMax - xMin);
+		if (logX && !doLog)
+			xPos = Math.pow(10, xPos);
 		
 		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 24);
+		Color backgroundPaint = new Color(255, 255, 255, 255/2);
 		
 		XYTextAnnotation ann = new XYTextAnnotation("Mean Residual: "+annDF.format(residualMean), xPos, yPos);
-		ann.setTextAnchor(TextAnchor.TOP_RIGHT);
-		ann.setFont(font);
-		anns.add(ann);
-		
-		yPos -= yDelta;
-		ann = new XYTextAnnotation("Linear SQ Fit slope: "+annDF.format(regressionLinearSlope), xPos, yPos);
+		ann.setBackgroundPaint(backgroundPaint);
 		ann.setTextAnchor(TextAnchor.TOP_RIGHT);
 		ann.setFont(font);
 		anns.add(ann);
 		
 		yPos -= yDelta;
 		ann = new XYTextAnnotation("Mean σ: "+annDF.format(dataSigma), xPos, yPos);
+		ann.setBackgroundPaint(backgroundPaint);
 		ann.setTextAnchor(TextAnchor.TOP_RIGHT);
 		ann.setFont(font);
 		anns.add(ann);
@@ -386,19 +425,47 @@ public class ResidualScatterPlot {
 			meanGMPE /= gmpeSigma.size();
 			yPos -= yDelta;
 			ann = new XYTextAnnotation("GMPE Mean σ: "+annDF.format(meanGMPE), xPos, yPos);
+			ann.setBackgroundPaint(backgroundPaint);
 			ann.setTextAnchor(TextAnchor.TOP_RIGHT);
 			ann.setFont(font);
 			anns.add(ann);
 		}
 		
+		// now regression top left
+		yPos = yRange.getUpperBound() * 0.95;
+		xPos = xMin + 0.05*(xMax - xMin);
+		if (logX && !doLog)
+			xPos = Math.pow(10, xPos);
+
+		ann = new XYTextAnnotation("Linear LSQ Fit", xPos, yPos);
+		ann.setBackgroundPaint(backgroundPaint);
+		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+		ann.setFont(font);
+		anns.add(ann);
+
+		yPos -= yDelta;
+		ann = new XYTextAnnotation("Intercept: "+regressionDF.format(regressionIntercept), xPos, yPos);
+		ann.setBackgroundPaint(backgroundPaint);
+		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+		ann.setFont(font);
+		anns.add(ann);
+		
+		yPos -= yDelta;
+		ann = new XYTextAnnotation("Slope: "+regressionDF.format(regressionLinearSlope), xPos, yPos);
+		ann.setBackgroundPaint(backgroundPaint);
+		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+		ann.setFont(font);
+		anns.add(ann);
+		
 		return anns;
 	}
 	
 	private static final DecimalFormat annDF = new DecimalFormat("0.00");
+	private static final DecimalFormat regressionDF = new DecimalFormat("0.00E0");
 	
 	private void addResidualFuncs(List<XY_DataSet> funcs, List<PlotCurveCharacterstics> chars, boolean scatter) {
 		Color linearColor = Color.BLACK;
-		Color binnedColor = linearColor;
+		Color binnedColor = Color.BLACK;
 		Color gmpeColor = new Color(35, 72, 132);
 		
 		float residualThickness = 4f;
@@ -410,101 +477,93 @@ public class ResidualScatterPlot {
 			funcs.add(getInLogX(regressionLinear));
 		else
 			funcs.add(regressionLinear);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, residualThickness, linearColor));
-		addSigmaFuncs(funcs, chars, regressionLinear, dataSigma, PlotLineType.DASHED, plusMinusThickness, linearColor, !scatter);
-		funcs.get(funcs.size()-1).setName("± σ");
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, residualThickness, linearColor));
 		
-		if (gmpeSigma != null) {
-			boolean first = true;
-			// linear first
-			
-			double x0 = regressionLinear.getX(0);
-			double y0 = regressionLinear.getY(0);
-			
-			if (logX)
-				x0 = Math.log10(x0);
-			
-			for (int i=0; i<gmpeSigma.size(); i++) {
-				double x = gmpeSigma.getX(i);
-				double start = x - 0.5*gmpeSigma.getDelta();
-				double end = x + 0.5*gmpeSigma.getDelta();
-				double regressionLinearSlope = this.regressionLinearSlope;
-				double startY;
-				double endY;
-				startY = (start - x0)*regressionLinearSlope + y0;
-				endY = (end - x0)*regressionLinearSlope + y0;
-				DiscretizedFunc tempRegression = new ArbitrarilyDiscretizedFunc();
-				if (logX) {
-					// gmpe sigma func is in log space, back to linear
-					start = Math.pow(10, start);
-					end = Math.pow(10, end);
-				}
-				tempRegression.set(start, startY);
-				tempRegression.set(end, endY);
-				double sigma = gmpeSigma.getY(i);
-				addSigmaFuncs(funcs, chars, tempRegression, sigma, PlotLineType.DASHED, plusMinusThickness, gmpeColor, !scatter);
-				if (first) {
-					funcs.get(funcs.size()-1).setName("± GMPE-σ");
-					first = false;
-				}
-			}
-		}
+		DiscretizedFunc binnedPoints = new ArbitrarilyDiscretizedFunc();
+		binnedPoints.setName("Binned LS Fits");
+		
+		funcs.add(binnedPoints);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, residualThickness*4, binnedColor));
 		
 		boolean first = true;
 		for (int i=0; i<regressionBinned.length; i++) {
 			DiscretizedFunc regression = regressionBinned[i];
 			if (regression == null)
 				continue;
+			
+			double binStart = regression.getMinX();
+			double binEnd = regression.getMaxX();
+			double binMiddle = regressionBins.getX(i);
+			if (logX)
+				binMiddle = Math.pow(10, binMiddle);
+			double binY = regressionBinned[i].getInterpolatedY(binMiddle);
+			
+			double binFractEachSide = 0.2;
+			double tickStart, tickEnd;
+			if (logX) {
+				double s = Math.log10(binStart);
+				double e = Math.log10(binEnd);
+				double m = Math.log10(binMiddle);
+				double delta = s - e;
+				tickStart = Math.pow(10, m - binFractEachSide*delta);
+				tickEnd = Math.pow(10, m + binFractEachSide*delta);
+			} else {
+				double delta = binEnd - binStart;
+				tickStart = binMiddle - binFractEachSide*delta;
+				tickEnd = binMiddle + binFractEachSide*delta;
+			}
+			
+			if (!scatter && logX) {
+				binMiddle = Math.log10(binMiddle);
+				tickStart = Math.log10(tickStart);
+				tickEnd = Math.log10(tickEnd);
+			}
+			
+			binnedPoints.set(binMiddle, binY);
+			addSigmaFuncs(funcs, chars, binMiddle, binY, tickStart, tickEnd, dataSigmaBinned[i],
+					true, PlotLineType.SOLID, plusMinusThickness, binnedColor);
 			if (first)
-				regressionBinned[i].setName("Binned LS Fits");
-			if (!scatter && logX)
-				funcs.add(getInLogX(regression));
-			else
-				funcs.add(regression);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, residualThickness, binnedColor));
-			addSigmaFuncs(funcs, chars, regression, dataSigmaBinned[i], PlotLineType.DOTTED, plusMinusThickness, binnedColor, !scatter);
-			if (first) {
 				funcs.get(funcs.size()-1).setName("± σ");
-				first = false;
-			}
-		}
-		
-		if (gmpeSigma != null) {
-			// now binned
-			first = true;
-			for (int i=0; i<regressionBinned.length; i++) {
-				if (regressionBinned[i] == null)
-					continue;
+			
+			if (gmpeSigma != null) {
 				double sigma = gmpeSigma.getY(i);
-				addSigmaFuncs(funcs, chars, regressionBinned[i], sigma, PlotLineType.DOTTED, plusMinusThickness, gmpeColor, !scatter);
-				if (first) {
+				addSigmaFuncs(funcs, chars, binMiddle, binY, tickStart, tickEnd, sigma,
+						false, PlotLineType.DOTTED, plusMinusThickness, gmpeColor);
+				if (first)
 					funcs.get(funcs.size()-1).setName("± GMPE-σ");
-					first = false;
-				}
 			}
+			first = false;
 		}
 	}
 	
 	private void addSigmaFuncs(List<XY_DataSet> funcs, List<PlotCurveCharacterstics> chars,
-			DiscretizedFunc regression, double sigma, PlotLineType lineType, float thickness, Color color, boolean leaveInLogSpace) {
-		if (logX)
-			regression = getInLogX(regression);
+			double centerX, double centerY, double startX, double endX, double sigma,
+			boolean vertLine, PlotLineType lineType, float thickness, Color color) {
 		ArbitrarilyDiscretizedFunc plusSigma = new ArbitrarilyDiscretizedFunc();
 		ArbitrarilyDiscretizedFunc minusSigma = new ArbitrarilyDiscretizedFunc();
-		for (Point2D pt : regression) {
-			double x = pt.getX();
-			if (logX && !leaveInLogSpace)
-				x = Math.pow(10, x);
-			double y = pt.getY();
-			plusSigma.set(x, y+sigma);
-			minusSigma.set(x, y-sigma);
+		
+		plusSigma.set(startX, centerY + sigma);
+		plusSigma.set(endX, centerY + sigma);
+		
+		minusSigma.set(startX, centerY - sigma);
+		minusSigma.set(endX, centerY - sigma);
+		
+		PlotCurveCharacterstics plotChar = new PlotCurveCharacterstics(lineType, thickness, color);
+		
+		if (vertLine) {
+			XY_DataSet vert = new DefaultXY_DataSet();
+			vert.set(centerX, centerY - sigma);
+			vert.set(centerX, centerY + sigma);
+			
+			funcs.add(vert);
+			chars.add(plotChar);
 		}
 		
 		funcs.add(plusSigma);
-		chars.add(new PlotCurveCharacterstics(lineType, thickness, color));
+		chars.add(plotChar);
 		
 		funcs.add(minusSigma);
-		chars.add(new PlotCurveCharacterstics(lineType, thickness, color));
+		chars.add(plotChar);
 	}
 	
 	private DiscretizedFunc getInLogX(DiscretizedFunc xy) {

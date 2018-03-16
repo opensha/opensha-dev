@@ -167,7 +167,31 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2592("bruce/rundir2592", "Bruce 2592", "Bruce Shaw", cal(2018, 2, 11),
 				"straight loaded;  fracCreep=0.5;  H=16 (2,11,3); stressMult=1.2; neighbors",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2620("bruce/rundir2620", "Bruce 2620", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   b=.006", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2621("bruce/rundir2621", "Bruce 2621", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   b=.007", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2622("bruce/rundir2622", "Bruce 2622", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   b=.009", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2623("bruce/rundir2623", "Bruce 2623", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   b=.010", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2624("bruce/rundir2624", "Bruce 2624", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   a=.0008", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2625("bruce/rundir2625", "Bruce 2625", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   a=.0009", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2626("bruce/rundir2626", "Bruce 2626", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   a=.0011", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2627("bruce/rundir2627", "Bruce 2627", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   a=.0012", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2628("bruce/rundir2628", "Bruce 2628", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   N=80", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2629("bruce/rundir2629", "Bruce 2629", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   N=90", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2630("bruce/rundir2630", "Bruce 2630", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   N=110", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2631("bruce/rundir2631", "Bruce 2631", "Bruce Shaw", cal(2018, 3, 8),
+				"sensitivity test, diff r2585   N=120", FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -440,7 +464,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add("# "+getName());
 		lines.add("## Metadata");
 		lines.addAll(getMarkdownMetadataTable());
-		lines.add("");;
+		lines.add("");
 		int tocIndex = lines.size();
 		
 		List<String> eventLinks = new ArrayList<>();

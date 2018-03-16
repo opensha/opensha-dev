@@ -1262,13 +1262,37 @@ public class PureScratch {
 		System.out.println("\nLog Stats");
 		System.out.println(logStats);
 	}
+	
+	private static void test47() throws IOException {
+		File file = new File("/tmp/catalog_000.bin");
+		List<ETAS_EqkRupture> catalog = ETAS_CatalogIO.loadCatalogBinary(file);
+		
+		System.out.println("Loaded "+catalog.size()+" events");
+		
+		int numFSS = 0;
+		int numGridded = 0;
+		
+		for (ETAS_EqkRupture rup : catalog) {
+			if (rup.getFSSIndex() >= 0)
+				numFSS++;
+			if (rup.getGridNodeIndex() >= 0)
+				numGridded++;
+			if (rup.getFSSIndex() >= 0 && rup.getGridNodeIndex() >= 0)
+				System.out.println("Uh oh, has both indexes!");
+			if (rup.getFSSIndex() < 0 && rup.getGridNodeIndex() < 0)
+				System.out.println("Uh oh, has neither indexes!");
+		}
+		
+		System.out.println(numFSS+" with FSS index");
+		System.out.println(numGridded+" with grid node index");
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test46();
+		test47();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

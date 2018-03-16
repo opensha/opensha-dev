@@ -68,11 +68,11 @@ public class HazardMapCompareScriptGen {
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
 //		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-		String bruceDate = "2018_02_16";
+		String bruceDate = "2018_03_08";
 //		String bruceDirNum = "2349";
 //		String bruceDirNum = "2326";
 //		String bruceDirNum = "2142";
-		String bruceDirNum = "2585";
+		String bruceDirNum = "2631";
 		String runPrefix = bruceDate+"-bruce"+bruceDirNum;
 		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
 		File geomFile = new File(catalogDir, "zfault_Deepen.in");
@@ -104,7 +104,7 @@ public class HazardMapCompareScriptGen {
 		
 		double maxSourceDistance = 1000;
 		
-		boolean doUCERF3 = true;
+		boolean doUCERF3 = false;
 		boolean doUCERF2 = false;
 		boolean isUCERF2Full = false;
 		boolean u3SupraMinMag = false;

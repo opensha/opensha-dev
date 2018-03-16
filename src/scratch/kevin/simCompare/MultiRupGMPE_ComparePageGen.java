@@ -729,14 +729,10 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		lines.add("Residuals of simulation data ("+simProv.getName()+") in log space relative to GMPE log-mean");
 		lines.add("");
 		lines.add("**Legend**");
-		lines.add("* Linear Least-Squares Fit to Residuals");
-		lines.add("  * Black Thick Dashed: fit line");
-		lines.add("  * Black Thin Dashed: ± data sigma");
-		lines.add("  * Blue Thin Dashed: ± GMPE sigma");
-		lines.add("* Binned Linear Least-Squares Fit to Residuals");
-		lines.add("  * Black Thick Solid: fit lines for each bin");
-		lines.add("  * Black Thin Dotted: ± data sigma");
-		lines.add("  * Blue Thin Dotted: ± GMPE sigma");
+		lines.add("* Black Thick Line: Linear Least-Squares Fit to Residuals");
+		lines.add("* Black Circles: Binned Linear Least-Squares Fit to Residuals");
+		lines.add("  * Black Thin Dashes: binned mean ± data sigma");
+		lines.add("  * Blue Thin Dotted: binned mean ± GMPE sigma");
 		lines.add("");
 		List<ResidualType> residualTypes = new ArrayList<>();
 		residualTypes.add(ResidualType.MAG);
@@ -964,7 +960,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				return comp.getDistanceJB(site);
 			}
 		},
-		VS30("Vs30", "m/s", Vs30_Param.NAME) {
+		VS30("Vs30", "m/s", Vs30_Param.NAME, true, 200d, Double.NaN) {
 			@Override
 			public Double getValue(RuptureComparison<?> comp, Site site) {
 				return site.getParameter(Double.class, Vs30_Param.NAME).getValue();

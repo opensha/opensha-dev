@@ -34,10 +34,10 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_K2");
 //		File catalogDir = new File(jacquiCSDir, "modLoad_testB");
 //		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
-		File catalogDir = new File(myHPCDir, "rundir2585");
+		File catalogDir = new File(myHPCDir, "rundir2623");
 		
-		boolean standardSites = false;
-		boolean griddedSites = true;
+		boolean standardSites = true;
+		boolean griddedSites = false;
 		double griddedSpacing = 1d;
 		
 		double minMag = 6;
@@ -49,7 +49,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 		int skipYears = 5000;
 		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 25;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
