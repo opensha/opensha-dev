@@ -18,7 +18,11 @@ public class GenericRJ_ParametersFetch {
 
 	// parameter_set - The parameter set.
 
-	private static OAFParameterSet<GenericRJ_Parameters> parameter_set = null;
+	private OAFParameterSet<GenericRJ_Parameters> parameter_set = null;
+
+	// cached_parameter_set - The cached parameter set, so parameters do not have to be reloaded from file each time.
+
+	private static OAFParameterSet<GenericRJ_Parameters> cached_parameter_set = null;
 
 	// load_data - Load parameters from the data file.
 	// The data file format is:
@@ -32,6 +36,9 @@ public class GenericRJ_ParametersFetch {
 	//		[double]	a-value sigma0
 	//		[double]	b-value
 	//		[double]	c-value
+	//		[double]	a-value minimum
+	//		[double]	a-value maximum
+	//		[double]	a-value delta
 	//	[int]		Number of special regions
 	//	[repeated]	Repeated once for each special region:
 	//		[string]	Name of tectonic regime to apply in this region
@@ -50,13 +57,16 @@ public class GenericRJ_ParametersFetch {
 	// (although, according to Region, this is not strictly necessary).
 	// A special region cannot cross the date line.  If this is needed, use two regions.
 	// If special regions overlap, the region listed first "wins".
+	// The minimum, maximum, and delta values of a determine the (discrete) range of
+	// a-values that are considered.  It is required that delta_a > 0 and max_a >= min_a.
+	// In use, max_a and min_a get rounded to the nearest multiple of delta_a.
 
-	private static synchronized void load_data () {
+	private static synchronized OAFParameterSet<GenericRJ_Parameters> load_data () {
 
 		// If data is already loaded, do nothing
 
-		if (parameter_set != null) {
-			return;
+		if (cached_parameter_set != null) {
+			return cached_parameter_set;
 		}
 
 		// Working data
@@ -80,11 +90,14 @@ public class GenericRJ_ParametersFetch {
 				double aValue_sigma0 = load_table_double (sc);
 				double bValue = load_table_double (sc);
 				double cValue = load_table_double (sc);
+				double aValue_min = load_table_double (sc);
+				double aValue_max = load_table_double (sc, aValue_min);
+				double aValue_delta = load_table_double (sc, Double.MIN_NORMAL);
 
 				// Make the parameter object
 
 				return new GenericRJ_Parameters(
-					aValue_mean, aValue_sigma, aValue_sigma0, aValue_sigma1, bValue, pValue, cValue);
+					aValue_mean, aValue_sigma, aValue_sigma0, aValue_sigma1, bValue, pValue, cValue, aValue_min, aValue_max, aValue_delta);
 			}
 		};
 
@@ -94,14 +107,24 @@ public class GenericRJ_ParametersFetch {
 
 		// Save our working data into the static variable
 
-		parameter_set = wk_parameter_set;
-		return;
+		cached_parameter_set = wk_parameter_set;
+		return cached_parameter_set;
 	}
 
 	// Constructor loads the data if needed.
 	
 	public GenericRJ_ParametersFetch() {
-		load_data();
+		parameter_set = load_data();
+	}
+
+	// unload_data - Remove the cached data from memory.
+	// The data will be reloaded the next time one of these objects is created.
+	// Any existing objects will continue to use the old data.
+	// This makes it possible to load new parameter values without restarting the program.
+
+	public static synchronized void unload_data () {
+		cached_parameter_set = null;
+		return;
 	}
 
 // Comments for California parameters, retained here for historical reasons.

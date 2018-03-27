@@ -2,13 +2,16 @@ package scratch.aftershockStatistics;
 
 public class GenericRJ_Parameters {
 	
-	double aValue_mean;
-	double aValue_sigma;	// magnitude independent sigma
-	double aValue_sigma0;	// param for mag-depednen
-	double aValue_sigma1;
-	double bValue;
-	double pValue;
-	double cValue;
+	private double aValue_mean;
+	private double aValue_sigma;	// magnitude independent sigma
+	private double aValue_sigma0;	// param for mag-depednen
+	private double aValue_sigma1;
+	private double bValue;
+	private double pValue;
+	private double cValue;
+	private double aValue_min;		// minimum a-value to consider
+	private double aValue_max;		// maximum a-value to consider
+	private double aValue_delta;	// spacing between a-values to consider
 	
 	/**
 	 * This class is a container for the Generic Reasenberg-Jones parameters defined by 
@@ -27,9 +30,12 @@ public class GenericRJ_Parameters {
 	 * @param bValue
 	 * @param pValue
 	 * @param cValue
+	 * @param aValue_min
+	 * @param aValue_max
+	 * @param aValue_delta
 	 */
 	public GenericRJ_Parameters(double aValue_mean, double aValue_sigma, double aValue_sigma0, double aValue_sigma1, 
-			double bValue, double pValue, double cValue) {
+			double bValue, double pValue, double cValue, double aValue_min, double aValue_max, double aValue_delta) {
 		this.aValue_mean = aValue_mean;
 		this.aValue_sigma = aValue_sigma;	// magnitude independent sigma
 		this.aValue_sigma0 = aValue_sigma0;	// param for mag-depednen
@@ -37,6 +43,9 @@ public class GenericRJ_Parameters {
 		this.bValue = bValue;
 		this.pValue = pValue;
 		this.cValue = cValue;
+		this.aValue_min = aValue_min;
+		this.aValue_max = aValue_max;
+		this.aValue_delta = aValue_delta;
 	}
 
 	public GenericRJ_Parameters(){}
@@ -81,11 +90,38 @@ public class GenericRJ_Parameters {
 	 * @return
 	 */
 	public double get_cValue() {return cValue;}
+	
+	/**
+	 * This returns the minimum a-value to consider (aValue_min).
+	 * @return
+	 */
+	public double get_aValue_min() {return aValue_min;}
+	
+	/**
+	 * This returns the maximum a-value to consider (aValue_max).
+	 * @return
+	 */
+	public double get_aValue_max() {return aValue_max;}
+	
+	/**
+	 * This returns the spacing between a-values to consider (aValue_delta).
+	 * @return
+	 */
+	public double get_aValue_delta() {return aValue_delta;}
 
 	@Override
 	public String toString() {
-		return "RJ_Params[a="+get_aValueMean()+", aSigma="+get_aValueSigma()+", aSigma0="+aValue_sigma0
-			+", aSigma1="+aValue_sigma1+", b="+get_bValue()+", p="+get_pValue()+", c="+get_cValue()+"]";
+		return "RJ_Params[a=" + get_aValueMean()
+				+ ", aSigma=" + get_aValueSigma()
+				+ ", aSigma0=" + aValue_sigma0
+				+ ", aSigma1=" + aValue_sigma1
+				+ ", b=" + get_bValue()
+				+ ", p=" + get_pValue()
+				+ ", c=" + get_cValue()
+				+ ", aMin=" + get_aValue_min()
+				+ ", aMax=" + get_aValue_max()
+				+ ", aDelta=" + get_aValue_delta()
+				+ "]";
 	}
 	
 }

@@ -72,15 +72,15 @@ public class RJ_AftershockModel_Generic extends RJ_AftershockModel {
 
 
 	/**
-	 * This instantiates a generic RJ model from a GenericRJ_Parameters object, where aValueMin and aValueMax
-	 * are set as -4.5 and -0.5, respectively, and the a-value sigma is magnitude dependent here.
+	 * This instantiates a generic RJ model from a GenericRJ_Parameters object.
+	 * The a-value sigma is magnitude dependent here.
 	 * @param magMain
 	 * @param params
 	 */
 	public RJ_AftershockModel_Generic(double magMain, GenericRJ_Parameters params) {
 		
-		this(magMain, params.get_aValueMean(), params.get_aValueSigma(magMain), -4.5, -0.5, 
-				params.get_bValue(), params.get_pValue(), params.get_cValue());
+		this(magMain, params.get_aValueMean(), params.get_aValueSigma(magMain), params.get_aValue_min(), params.get_aValue_max(), 
+				params.get_aValue_delta(), params.get_bValue(), params.get_pValue(), params.get_cValue());
 	}
 
 
@@ -91,14 +91,15 @@ public class RJ_AftershockModel_Generic extends RJ_AftershockModel {
 	 * @param magMain - main shock magnitude
 	 * @param mean_a - mean a-value for the Gaussian distribution
 	 * @param sigma_a - a-value standard deviation for the Gaussian distribution
-	 * @param min_a - minimum a-value for the Gaussian distribution, which gets rounded to nearest 0.01 value
-	 * @param max_a - maximum a-value for the Gaussian distribution, which gets rounded to nearest 0.01 value
+	 * @param min_a - minimum a-value for the Gaussian distribution, which gets rounded to nearest multiple of delta_a
+	 * @param max_a - maximum a-value for the Gaussian distribution, which gets rounded to nearest multiple of delta_a
+	 * @param delta_a - spacing between a-values for the Gaussian distribution
 	 * @param b - b-value
 	 * @param p - p-value
 	 * @param c - c-value
 	 */
 	public RJ_AftershockModel_Generic(double magMain, double mean_a, double sigma_a, double min_a, double max_a,
-											double b, double p, double c) {
+											double delta_a, double b, double p, double c) {
 		
 		this.magMain = magMain;
 		this.b = b;
@@ -113,10 +114,19 @@ public class RJ_AftershockModel_Generic extends RJ_AftershockModel {
 			throw new RuntimeException("RJ_AftershockModel_Generic: sigma_a must be greater than 0");
 		}
 		
-		this.delta_a=0.01;	// this is so one of the discrete values is within 0.005 of mean_a
-		this.min_a = ((double)Math.round(min_a*100))/100d;	// round to nearest 100th value
-		this.max_a = ((double)Math.round(max_a*100))/100d;	// round to nearest 100th value
+		//this.delta_a=0.01;	// this is so one of the discrete values is within 0.005 of mean_a
+		//this.min_a = ((double)Math.round(min_a*100))/100d;	// round to nearest 100th value
+		//this.max_a = ((double)Math.round(max_a*100))/100d;	// round to nearest 100th value
+		//this.num_a = (int)Math.round((max_a-min_a)/delta_a) + 1;
+
+		this.min_a = ((double)Math.round(min_a/delta_a))*delta_a;	// round to nearest multiple of delta_a
+		this.max_a = ((double)Math.round(max_a/delta_a))*delta_a;	// round to nearest multiple of delta_a
 		this.num_a = (int)Math.round((max_a-min_a)/delta_a) + 1;
+		if (this.num_a == 1) {
+			this.delta_a = 0.0;
+		} else {
+			this.delta_a = delta_a;
+		}
 
 		set_fixed_p(p);
 		set_fixed_c(c);
