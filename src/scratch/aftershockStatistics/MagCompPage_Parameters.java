@@ -2,9 +2,9 @@ package scratch.aftershockStatistics;
 
 public class MagCompPage_Parameters {
 	
-	double magCat;
-	double capG;
-	double capH;
+	private double magCat;
+	private double capG;
+	private double capH;
 	
 	/**
 	 * This class is a container for the magnitude of completeness parameters defined by 
