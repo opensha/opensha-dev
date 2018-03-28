@@ -7,18 +7,25 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.apache.commons.math3.stat.descriptive.moment.Variance;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYBoxAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.axis.TickUnit;
 import org.jfree.chart.axis.TickUnits;
 import org.jfree.data.Range;
 import org.jfree.ui.TextAnchor;
+import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -683,6 +690,166 @@ public class ResidualScatterPlot {
 
 	public void setMaxScatterPoints(int maxScatterPoints) {
 		this.maxScatterPoints = maxScatterPoints;
+	}
+	
+	public static <E> void plotPeriodDependentSigma(File outputDir, String prefix,
+			Map<Site, List<RuptureComparison<E>>> siteCompsMap, SimulationRotDProvider<E> simProv, double... periods) throws IOException {
+		List<Variance[]> siteResidualVariances = new ArrayList<>();
+		Map<RuptureComparison<E>, Variance[][]> rupResidualVariances = new HashMap<>();
+		Variance[] totalVars = new Variance[periods.length];
+		for (int p=0; p<periods.length; p++)
+			totalVars[p] = new Variance();
+		int rupSimCount = 0;
+		for (Site site : siteCompsMap.keySet()) {
+			Variance[] siteVars = new Variance[periods.length];
+			for (int p=0; p<periods.length; p++)
+				siteVars[p] = new Variance();
+			siteResidualVariances.add(siteVars);
+			for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
+				double[] gmpeVals = new double[periods.length];
+				for (int p=0; p<periods.length; p++)
+					gmpeVals[p] = comp.getLogMean(site, periods[p]);
+				E rupture = comp.getRupture();
+				int numSims = simProv.getNumSimulations(site, rupture);
+				Variance[][] rupVars = rupResidualVariances.get(comp);
+				if (rupVars == null) {
+					rupSimCount += numSims;
+					rupVars = new Variance[numSims][periods.length];
+					for (int i=0; i<numSims; i++)
+						for (int p=0; p<periods.length; p++)
+							rupVars[i][p] = new Variance();
+					rupResidualVariances.put(comp, rupVars);
+				}
+				Preconditions.checkState(numSims > 0);
+				for (int i=0; i<numSims; i++) {
+					DiscretizedFunc simRD50 = simProv.getRotD50(site, rupture, i);
+					for (int p=0; p<periods.length; p++) {
+						double simVal = Math.log(simRD50.getY(periods[p]));
+						double residual = simVal - gmpeVals[p];
+						rupVars[i][p].increment(residual);
+						siteVars[p].increment(residual);
+						totalVars[p].increment(residual);
+					}
+				}
+			}
+		}
+		
+		// mean between event variances, tau^2
+		double[] tauSq = new double[periods.length];
+		for (int p=0; p<periods.length; p++) {
+			double[] allVars = new double[siteResidualVariances.size()];
+			for (int i=0; i<allVars.length; i++)
+				allVars[i] = siteResidualVariances.get(i)[p].getResult();
+			tauSq[p] = StatUtils.mean(allVars);
+		}
+		
+		// mean within event variances, phi^2
+		double[] phiSq = new double[periods.length];
+		for (int p=0; p<periods.length; p++) {
+			double[] allVars = new double[rupSimCount];
+			int index = 0;
+			for (RuptureComparison<E> comp : rupResidualVariances.keySet()) {
+				Variance[][] rupVars = rupResidualVariances.get(comp);
+				for (int i=0; i<rupVars.length; i++)
+					allVars[index++] = rupVars[i][p].getResult();
+			}
+			Preconditions.checkState(index == allVars.length, "Bad index? %s != %s", index, allVars.length);
+			phiSq[p] = StatUtils.mean(allVars);
+		}
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		List<XYAnnotation> anns = new ArrayList<>();
+		
+		double barWidth = 0.35;
+		double centerBuffer = 0.06;
+		Color tauColor = Color.RED.darker();
+		Color phiColor = Color.BLUE.darker();
+		Font valFont = new Font(Font.SANS_SERIF, Font.BOLD, 18);
+		Color periodColor = Color.BLACK;
+		Font periodFont = new Font(Font.SANS_SERIF, Font.BOLD, 30);
+		PlotCurveCharacterstics sumSigmaChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK);
+		PlotCurveCharacterstics sigmaChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY);
+		
+		Range xRange = new Range(0d, periods.length);
+		Range yRange = new Range(0d, 1d);
+		
+		double centerHalfBuffer = 0.5*centerBuffer;
+		
+		for (int p=0; p<periods.length; p++) {
+			double tau = Math.sqrt(tauSq[p]);
+			double phi = Math.sqrt(phiSq[p]);
+			double sigma = Math.sqrt(tauSq[p] + phiSq[p]);
+			double totalSigma = Math.sqrt(totalVars[p].getResult());
+			
+			double curCenter = 0.5d + p;
+			
+			double tauX0 = curCenter - centerHalfBuffer - barWidth;
+			addBoxAnns(anns, tau, tauColor, "τ", valFont, tauX0, barWidth);
+			
+			double phiX0 = curCenter + centerHalfBuffer;
+			addBoxAnns(anns, phi, phiColor, "ϕ", valFont, phiX0, barWidth);
+			
+			DefaultXY_DataSet sumSigmaXY = new DefaultXY_DataSet();
+			sumSigmaXY.set(tauX0, sigma);
+			sumSigmaXY.set(phiX0 + barWidth, sigma);
+			funcs.add(sumSigmaXY);
+			chars.add(sumSigmaChar);
+			
+			DefaultXY_DataSet sigmaXY = new DefaultXY_DataSet();
+			sigmaXY.set(tauX0, totalSigma);
+			sigmaXY.set(phiX0 + barWidth, totalSigma);
+			funcs.add(0, sigmaXY);
+			chars.add(0, sigmaChar);
+			
+			XYTextAnnotation sigmaAnn = new XYTextAnnotation("√(τ²+ϕ²)="+annDF.format(sigma), curCenter, sigma);
+			sigmaAnn.setFont(valFont);
+			sigmaAnn.setTextAnchor(TextAnchor.BOTTOM_CENTER);
+			sigmaAnn.setPaint(sumSigmaChar.getColor());
+			anns.add(sigmaAnn);
+			
+			String periodStr;
+			if (periods[p] == Math.round(periods[p]))
+				periodStr = (int)periods[p]+"s";
+			else
+				periodStr = (float)periods[p]+"s";
+			XYTextAnnotation periodAnn = new XYTextAnnotation(periodStr, curCenter, yRange.getUpperBound()*0.95);
+			periodAnn.setFont(periodFont);
+			periodAnn.setTextAnchor(TextAnchor.TOP_CENTER);
+			periodAnn.setPaint(periodColor);
+			anns.add(periodAnn);
+			
+			System.out.println("T="+periodStr+"\tτ="+annDF.format(tau)+"\tϕ="+annDF.format(phi)
+				+"\tsqrt(τ*τ+ϕ*ϕ)="+annDF.format(sigma)+"\tσ="+annDF.format(totalSigma));
+		}
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, "Sigma Components", "Period", "Standard Deviations");
+		spec.setPlotAnnotations(anns);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		gp.setLegendFontSize(18);
+		gp.setBackgroundColor(Color.WHITE);
+		
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		gp.getXAxis().setTickLabelsVisible(false);
+		gp.getPlot().setDomainGridlinesVisible(false);
+		gp.getChartPanel().setSize(700, 550);
+		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
+		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
+	}
+	
+	private static void addBoxAnns(List<XYAnnotation> anns, double value, Color color, String symbol, Font font, double x0, double width) {
+		XYBoxAnnotation box = new XYBoxAnnotation(x0, 0, x0+width, value, null, null, color);
+		anns.add(box);
+		double boxCenter = x0 + 0.5*width;
+		XYTextAnnotation text = new XYTextAnnotation(symbol+"="+annDF.format(value), boxCenter, value);
+		text.setFont(font);
+		text.setTextAnchor(TextAnchor.BOTTOM_CENTER);
+		text.setPaint(color);
+		anns.add(text);
 	}
 
 }

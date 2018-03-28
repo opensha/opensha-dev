@@ -191,7 +191,13 @@ public class RSQSimCatalog implements XMLSaveable {
 		BRUCE_2630("bruce/rundir2630", "Bruce 2630", "Bruce Shaw", cal(2018, 3, 8),
 				"sensitivity test, diff r2585   N=110", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2631("bruce/rundir2631", "Bruce 2631", "Bruce Shaw", cal(2018, 3, 8),
-				"sensitivity test, diff r2585   N=120", FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+				"sensitivity test, diff r2585   N=120", FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2585_1MYR("rundir2585_1myr", "Bruce 2585 1myr", "Bruce Shaw/Jacqui Gilchrist", cal(2018, 3, 12),
+				"Extended version of Bruce's 2585 to 1 million years",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2616("bruce/rundir2616", "Bruce 2616", "Bruce Shaw", cal(2018, 3, 19),
+				"similar to r2585, but bigger seismogenic depth: H=18 (2,13,3)",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -543,6 +549,13 @@ public class RSQSimCatalog implements XMLSaveable {
 					if (gmpeStr.contains("_"))
 						gmpeStr = gmpeStr.substring(0, gmpeStr.indexOf("_"));
 					hazName += ", "+gmpeStr;
+				}
+				
+				if (name.contains("_sectArea")) {
+					String areaStr = name.substring(name.indexOf("_sectArea")+9);
+					if (areaStr.contains("_"))
+						areaStr = areaStr.substring(0, areaStr.indexOf("_"));
+					hazName += ", SectAreaFract="+areaStr;
 				}
 				
 				if (name.contains("_cluster")) {

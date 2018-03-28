@@ -16,7 +16,10 @@ import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
+import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
+import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter.Device;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
+import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.XMLUtils;
@@ -68,11 +71,11 @@ public class HazardMapCompareScriptGen {
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
 //		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-		String bruceDate = "2018_03_08";
+		String bruceDate = "2018_03_26";
 //		String bruceDirNum = "2349";
 //		String bruceDirNum = "2326";
 //		String bruceDirNum = "2142";
-		String bruceDirNum = "2631";
+		String bruceDirNum = "2585";
 		String runPrefix = bruceDate+"-bruce"+bruceDirNum;
 		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
 		File geomFile = new File(catalogDir, "zfault_Deepen.in");
@@ -163,7 +166,28 @@ public class HazardMapCompareScriptGen {
 				RSQSimUtils.getUCERF3SubSectsForComparison(fm, dm), geom, events, 0d, minFractForInclusion);
 		
 		File localMainDir = new File("/home/kevin/Simulators/hazard");
+		
+		int mins = 24*60;
+		int nodes = 15;
+		int ppn = 20;
+		String queue = "scec";
+		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
 		File remoteMainDir = new File("/home/scec-02/kmilner/simulators/hazard");
+		JavaShellScriptWriter mpj = new MPJExpressShellScriptWriter(javaBin, 60000, null,
+				USC_HPCC_ScriptWriter.MPJ_HOME);
+		((MPJExpressShellScriptWriter)mpj).setUseLaunchWrapper(true);
+		USC_HPCC_ScriptWriter writer = new USC_HPCC_ScriptWriter();
+		
+//		int mins = 24*60;
+//		int nodes = 10;
+//		int ppn = 48;
+//		String queue = "skx-normal";
+//		File javaBin = StampedeScriptWriter.JAVA_BIN;
+//		File remoteMainDir = new File("/work/00950/kevinm/stampede2/simulators/hazard");
+//		JavaShellScriptWriter mpj = new FastMPJShellScriptWriter(javaBin, 120000, null,
+//				StampedeScriptWriter.FMPJ_HOME, Device.NIODEV);
+//		((FastMPJShellScriptWriter)mpj).setUseLaunchWrapper(true);
+//		StampedeScriptWriter writer = new StampedeScriptWriter();
 		
 		Region region = new CaliforniaRegions.RELM_TESTING();
 		double spacing = 0.02;
@@ -173,11 +197,6 @@ public class HazardMapCompareScriptGen {
 		if (doUCERF2 || doUCERF3)
 			Preconditions.checkState(localComareDir.exists() || localComareDir.mkdir());
 		File remoteComareDir = new File(remoteMainDir, "ucerf-comparisons");
-		
-		int mins = 24*60;
-		int nodes = 18;
-		int ppn = 20;
-		String queue = "scec";
 		
 		GriddedRegion gridded = new GriddedRegion(region, spacing, null);
 		
@@ -207,8 +226,6 @@ public class HazardMapCompareScriptGen {
 			System.out.println("New func:\n"+newXValues);
 			xValues = newXValues;
 		}
-		
-		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
 		
 		List<Map<TectonicRegionType, ScalarIMR>> imrMaps = Lists.newArrayList();
 		
@@ -256,9 +273,7 @@ public class HazardMapCompareScriptGen {
 			List<File> classpath = Lists.newArrayList();
 			classpath.add(jarFile);
 			
-			MPJExpressShellScriptWriter mpj = new MPJExpressShellScriptWriter(javaBin, 60000, classpath,
-					USC_HPCC_ScriptWriter.MPJ_HOME);
-			mpj.setUseLaunchWrapper(true);
+			mpj.setClasspath(classpath);
 			
 			String curveDirName = getCurveDirName(imt, period);
 			String imtLabel = getIMTLabel(imt, period);
@@ -356,7 +371,6 @@ public class HazardMapCompareScriptGen {
 				String cliArgs = "--max-dispatch 1000 "+remoteInputsFile.getAbsolutePath();
 				
 				List<String> script = mpj.buildScript(MPJHazardCurveDriver.class.getName(), cliArgs);
-				USC_HPCC_ScriptWriter writer = new USC_HPCC_ScriptWriter();
 				
 				script = writer.buildScript(script, mins, nodes, ppn, queue);
 				
@@ -417,7 +431,6 @@ public class HazardMapCompareScriptGen {
 					String cliArgs = "--max-dispatch 1000 "+remoteInputsFile.getAbsolutePath();
 					
 					List<String> script = mpj.buildScript(MPJHazardCurveDriver.class.getName(), cliArgs);
-					USC_HPCC_ScriptWriter writer = new USC_HPCC_ScriptWriter();
 					
 					script = writer.buildScript(script, mins, nodes, ppn, queue);
 					

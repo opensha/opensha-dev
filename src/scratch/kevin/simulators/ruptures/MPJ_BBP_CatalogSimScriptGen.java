@@ -7,8 +7,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.opensha.commons.hpc.JavaShellScriptWriter;
+import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
+import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter.Device;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
+import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 
@@ -26,6 +30,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 		// REMOTE paths
 		@SuppressWarnings("unused")
 		File myHPCDir = new File("/auto/scec-02/kmilner/simulators/catalogs/");
+		File stampedeCatalogDir = new File("/work/00950/kevinm/stampede2/simulators/catalogs");
 		File jacquiCSDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/");
 //		File catalogDir = new File(jacquiCSDir, "UCERF3_millionElement");
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_long");
@@ -34,7 +39,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_K2");
 //		File catalogDir = new File(jacquiCSDir, "modLoad_testB");
 //		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
-		File catalogDir = new File(myHPCDir, "rundir2623");
+		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
 		
 		boolean standardSites = true;
 		boolean griddedSites = false;
@@ -48,15 +53,39 @@ class MPJ_BBP_CatalogSimScriptGen {
 		
 		int skipYears = 5000;
 		
-		int threads = 20;
-		int nodes = 25;
-		String queue = "scec";
-		int mins = 24*60;
-		int heapSizeMB = 45*1024;
-		String bbpDataDir = "${TMPDIR}";
-		
 		File localDir = new File("/home/kevin/bbp/parallel");
-		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
+		
+//		int threads = 20;
+//		int nodes = 25;
+//		String queue = "scec";
+//		int mins = 24*60;
+//		int heapSizeMB = 45*1024;
+//		String bbpDataDir = "${TMPDIR}";
+//		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
+//		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
+//		List<File> classpath = new ArrayList<>();
+//		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
+//		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+//				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
+//		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+//		Preconditions.checkState(catalogDir.getAbsolutePath().contains("scec-"),
+//				"You forgot the catalog dir on HPC, dummy");
+		
+		int threads = 96;
+		int nodes = 10;
+		String queue = "skx-normal";
+		int mins = 24*60;
+		int heapSizeMB = 100*1024;
+		String bbpDataDir = "/tmp";
+		File remoteDir = new File("/work/00950/kevinm/stampede2/bbp/parallel");
+		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
+		List<File> classpath = new ArrayList<>();
+		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
+		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, classpath,
+				StampedeScriptWriter.FMPJ_HOME, Device.NIODEV);
+		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+		Preconditions.checkState(catalogDir.getAbsolutePath().contains("kevinm"),
+				"You forgot the catalog dir on Stampede, dummy");
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 		jobName += "-"+catalogDir.getName()+"-all-m"+(float)minMag+"-skipYears"+skipYears;
@@ -100,13 +129,6 @@ class MPJ_BBP_CatalogSimScriptGen {
 		if (numRG > 0)
 			argz += " --rup-gen-sims "+numRG;
 		
-		List<File> classpath = new ArrayList<>();
-		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
-		
-		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
-		
-		MPJExpressShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
 		List<String> script = mpjWrite.buildScript(MPJ_BBP_CatalogSim.class.getName(), argz);
 		
 		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);

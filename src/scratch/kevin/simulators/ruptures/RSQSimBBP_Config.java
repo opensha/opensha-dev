@@ -214,7 +214,7 @@ public class RSQSimBBP_Config {
 	static final double SRF_DT = 0.05;
 	static final double SRF_VERSION = 1.0;
 	static final int DEFAULT_SEED = 12345;
-	static final double MIN_SUB_SECT_FRACT = 0.2;
+	public static final double MIN_SUB_SECT_FRACT = 0.2;
 	static final boolean ADJ_WIDTH_MATCH_AREA = true;
 	static final double MAX_ADJ_WIDTH = 30;
 	static final boolean DO_HF = false;

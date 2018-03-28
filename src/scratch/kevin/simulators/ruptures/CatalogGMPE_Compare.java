@@ -519,7 +519,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2623.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2616.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;

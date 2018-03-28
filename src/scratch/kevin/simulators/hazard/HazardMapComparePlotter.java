@@ -96,6 +96,7 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.util.MarkdownUtils;
 import scratch.kevin.util.MarkdownUtils.TableBuilder;
 
@@ -110,58 +111,42 @@ public class HazardMapComparePlotter {
 		boolean u3SupraMinMag = false;
 		double minMag = 6.5d;
 		
-		File hazardJobDir = new File("/home/kevin/Simulators/hazard/");
-		File catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
-		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File hazardJobDir, catalogsBaseDir, mainOutputDir;
+		
+		if (args.length == 0) {
+			hazardJobDir = new File("/home/kevin/Simulators/hazard/");
+			catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
+			mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		} else {
+			Preconditions.checkArgument(args.length >= 3, "USAGE: <root-haz-dir> <catalog-base-dir> <git-catalogs-dir> "
+					+ "[<catalog name> <dir-name-1> ... <dir-name-N>]");
+			hazardJobDir = new File(args[0]);
+			catalogsBaseDir = new File(args[1]);
+			mainOutputDir = new File(args[2]);
+		}
 		
 		List<File> jobDirs = Lists.newArrayList();
 		
 		String catalogName = "RSQSim";
 		String catalogFileName = "rsqsim";
+		RSQSimCatalog catalog;
 		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2457.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_16-bruce2457-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2495.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_01_29-bruce2495-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2579.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_07-bruce2579-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2592.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-pga-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_14-bruce2592-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints"));
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
-//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
-//		jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
-		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2630.instance(catalogsBaseDir);
-		jobDirs.add(new File(hazardJobDir, "2018_03_08-bruce2630-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
-		jobDirs.add(new File(hazardJobDir, "2018_03_08-bruce2630-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
-		jobDirs.add(new File(hazardJobDir, "2018_03_08-bruce2630-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
-		jobDirs.add(new File(hazardJobDir, "2018_03_08-bruce2630-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
-		jobDirs.add(new File(hazardJobDir, "2018_03_08-bruce2630-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
-		jobDirs.add(new File(hazardJobDir, "2018_03_08-bruce2630-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
+		if (args.length > 3) {
+			catalog = Catalogs.valueOf(args[3]).instance(catalogsBaseDir);
+			
+			for (int i=4; i<args.length; i++)
+				jobDirs.add(new File(hazardJobDir, args[i]));
+		} else {
+			FaultBasedMapGen.LOCAL_MAPGEN = true;
+			catalog = Catalogs.BRUCE_2616.instance(catalogsBaseDir);
+			
+//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
+//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
+//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
+//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
+//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
+		}
 		
 		File catOutDir = new File(mainOutputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catOutDir.exists() || catOutDir.mkdir());
@@ -268,11 +253,6 @@ public class HazardMapComparePlotter {
 				imtFileLabel += "_gmpe"+gmpeName;
 			}
 			
-			File catHazardOutDir = new File(catOutDir, "hazard_"+imtFileLabel);
-			Preconditions.checkState(catHazardOutDir.exists() || catHazardOutDir.mkdir());
-			File resourcesDir = new File(catHazardOutDir, "resources");
-			Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
-			
 			List<String> lines = new ArrayList<>();
 			
 			// header
@@ -280,16 +260,27 @@ public class HazardMapComparePlotter {
 			lines.add("");
 			lines.add("*IMT: "+imtLabel+"*");
 			lines.add("");
+			
+			String outputName = "hazard_"+imtFileLabel;
 			if (jobDir.getName().contains("sectArea")) {
 				String str = jobDir.getName();
 				str = str.substring(str.indexOf("sectArea")+"sectArea".length());
 				str = str.substring(0, str.indexOf("-"));
 				double minFractForInclusion = Double.parseDouble(str);
+				if ((float)minFractForInclusion != (float)RSQSimBBP_Config.MIN_SUB_SECT_FRACT)
+					outputName += "_sectArea"+str;
 				lines.add("*Subsections participate in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
 				lines.add("");
 			}
 			lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 			lines.add("");
+			
+			File catHazardOutDir = new File(catOutDir, outputName);
+			Preconditions.checkState(catHazardOutDir.exists() || catHazardOutDir.mkdir());
+			File resourcesDir = new File(catHazardOutDir, "resources");
+			Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
+			
+			
 			
 			int tocIndex = lines.size();
 			String topLink = "*[(top)](#table-of-contents)*";
@@ -324,7 +315,7 @@ public class HazardMapComparePlotter {
 				System.out.println("DONE");
 				u3Curves = asLightFixedXMap(u3Reader.getCurveMap());
 				u3FullCurves = null;
-				if (plotCurves && u3FullFiles.containsKey(period)) {
+				if (plotCurves && u3FullFiles.containsKey(period) && u3FullFiles.get(period).exists()) {
 					BinaryHazardCurveReader u3FullReader = new BinaryHazardCurveReader(u3FullFiles.get(period).getAbsolutePath());
 					u3FullCurves = asLightFixedXMap(u3FullReader.getCurveMap());
 				}
@@ -661,7 +652,6 @@ public class HazardMapComparePlotter {
 		map.setJPGFileName(null);
 		
 		System.out.println("Making map...");
-		FaultBasedMapGen.LOCAL_MAPGEN = true;
 		
 		Runnable run = new Runnable() {
 			

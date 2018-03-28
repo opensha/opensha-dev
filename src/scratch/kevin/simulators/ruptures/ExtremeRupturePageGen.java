@@ -360,7 +360,7 @@ public class ExtremeRupturePageGen {
 		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_tunedBase1m_ddotEQmod.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2592.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		

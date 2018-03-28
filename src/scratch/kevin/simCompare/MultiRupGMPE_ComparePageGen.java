@@ -796,6 +796,14 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			}
 		}
 		
+		lines.add("### Period-Dependent Residual Components");
+		lines.add(topLink); lines.add("");
+		System.out.println("Calculating residual components");
+		if (replotResiduals || !new File(resourcesDir, "period_residual_components.png").exists())
+			ResidualScatterPlot.plotPeriodDependentSigma(resourcesDir, "period_residual_components", siteCompsMap, simProv, periods);
+		lines.add("![Residual Components]("+resourcesDir.getName()+"/period_residual_components.png)");
+		lines.add("");
+		
 		// for consistent iteration order
 		List<Site> compSitesList = new ArrayList<>(siteCompsMap.keySet());
 		for (ResidualType type : residualTypes) {
