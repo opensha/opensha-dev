@@ -49,6 +49,12 @@ public class ComcatAccessor {
 	 * Fetches an event with the given ID, e.g. "ci37166079"
 	 * @param eventID
 	 * @return
+	 * Note: The longitude is coerced to lie between -90 and +270.
+	 * This is so it is possible to draw a region surrounding the mainshock,
+	 * and have the entire region lie in the valid range -180 <= lon <= +360.
+	 * Note: If in the future, the Region class is replaced by something that
+	 * does spherical geometry, then the coercion here and below could be removed,
+	 * and all longitudes could be between -180 and 180.
 	 */
 	public ObsEqkRupture fetchEvent(String eventID) {
 		EventQuery query = new EventQuery();
@@ -114,6 +120,12 @@ public class ComcatAccessor {
 	 * @param maxDepth
 	 * @param region
 	 * @return
+	 * Note: The mainshock parameter must be a return value from fetchEvent() above.
+	 * Note: If the mainshock longitude is between -90 and +90, then the aftershock
+	 * longitudes lie between -180 and +180.  If the mainshock longitude is between
+	 * +90 and +270, then the aftershock longitudes are coerced to lie between
+	 * 0 and +360.  This makes is possible to easily test if an aftershock lies
+	 * within a region surrounding the mainshock.
 	 */
 	public ObsEqkRupList fetchAftershocks(ObsEqkRupture mainshock, double minDays, double maxDays,
 			double minDepth, double maxDepth, Region region) {
@@ -136,7 +148,9 @@ public class ComcatAccessor {
 		
 		Preconditions.checkState(startTime < System.currentTimeMillis(), "Aftershock fetch start time is after now!");
 		
-		boolean mainshockLonWrapped = mainshock.getHypocenterLocation().getLongitude() > 180;
+		// need to set this threshold at 90 (not 180) so that mainshocks located just
+		// west of the date line are handled correctly
+		boolean mainshockLonWrapped = mainshock.getHypocenterLocation().getLongitude() > 90;
 		
 		query.setMinLatitude(new BigDecimal(String.format("%.5f", region.getMinLat())));
 		query.setMaxLatitude(new BigDecimal(String.format("%.5f", region.getMaxLat())));
@@ -208,6 +222,8 @@ public class ComcatAccessor {
 		return rups;
 	}
 
+	// This function should be private.  It is public only to avoid breaking class
+	// scratch.kevin.ucerf3.LaHabraProbCalc.  New code should NOT call this function.
 	public static ObsEqkRupture eventToObsRup(JsonEvent event) {
 		// default to moving anything with lon < -90 to the positive domain
 		// then we'll apply this consistently to all aftershocks

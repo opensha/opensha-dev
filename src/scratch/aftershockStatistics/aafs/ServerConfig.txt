@@ -1,0 +1,10 @@
+#AAFS Properties Template
+db_host=127.0.0.1
+db_port=27017
+db_name=usgs
+db_user=usgs
+db_password=usgs
+activemq_host=127.0.0.1
+activemq_port=61616
+activemq_user=admin
+activemq_password=admin
