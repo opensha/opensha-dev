@@ -1,6 +1,7 @@
 package scratch.aftershockStatistics;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.mongodb.morphia.annotations.Transient;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -56,7 +57,7 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 	// The list of aftershocks used to construct the model.
 
 	@Transient
-	protected ObsEqkRupList aftershockList = null;
+	protected List<ObsEqkRupture> aftershockList = null;
 
 	// The mainshock.
 
@@ -108,7 +109,7 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 	 * longer any performance difference between the two constructors, because the code auto-detects
 	 * when an analytic solution can be used.
 	 */
-	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, ObsEqkRupList aftershockList,
+	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, List<ObsEqkRupture> aftershockList,
 				double magCat, double b, double dataStartTimeDays, double dataEndTimeDays,
 				double min_a, double max_a, int num_a, 
 				double min_p, double max_p, int num_p, 
@@ -149,7 +150,7 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 	 * as if capG==10.0 and capH==0.0, that is, the magnitude of completeness is always magCat.
 	 * New code should not rely on this behavior.
 	 */
-	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, ObsEqkRupList aftershockList,
+	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, List<ObsEqkRupture> aftershockList,
 			 								double magCat, double capG, double capH,
 											double b, double dataStartTimeDays, double dataEndTimeDays,
 											double min_a, double max_a, int num_a, 
@@ -246,7 +247,7 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 	 * @param dataStartTimeDays - start time for data, in days since the mainshock
 	 * @param dataEndTimeDays - end time for data, in days since the mainshock
 	 */
-    public void apc_build(ObsEqkRupture mainShock, ObsEqkRupList aftershockList, double dataStartTimeDays, double dataEndTimeDays) {
+    public void apc_build(ObsEqkRupture mainShock, List<ObsEqkRupture> aftershockList, double dataStartTimeDays, double dataEndTimeDays) {
 
 		// Save the parameters
 
@@ -422,6 +423,107 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 			EvenlyDiscretizedFunc[] fractalWithAleatoryMFDArray = gen.getCumNumMFD_FractileWithAleatoryVariability(fractArray, 5.0, 8.0, 31, 0d, 7d);
 			System.out.println("2.5% With Aleatory: "+fractalWithAleatoryMFDArray[0].getX(0)+"\t"+fractalWithAleatoryMFDArray[0].getY(0));
 			System.out.println("97.5% With Aleatory: "+fractalWithAleatoryMFDArray[1].getX(0)+"\t"+fractalWithAleatoryMFDArray[1].getY(0));
+
+			return;
+		}
+
+
+		// Subcommand : Test #2
+		// Command format:
+		//  test2
+		// Generate a simulated aftershock sequence.
+		// Then, construct the model and see if it can recover the parameters a and p.
+		// It's done twice, once with ObsEqkRupList and again with CompactEqkRupList.
+
+		if (args[0].equalsIgnoreCase ("test2")) {
+
+			// No additional arguments
+
+			if (args.length != 1) {
+				System.err.println ("RJ_AftershockModel_SequenceSpecific : Invalid 'test2' subcommand");
+				return;
+			}
+
+			// Parameter values
+			
+			double a = -1.67;
+			double b = 0.91;
+			double c = 0.05;
+			double p = 1.08;
+			double magMain = 7.5;
+			double magCat = 2.5;
+			double capG = 1.25;
+			double capH = 0.75;
+			double dataStartTimeDays = 0.0;
+			double dataEndTimeDays = 30.0;
+		
+			double min_a = -2.0;
+			double max_a = -1.0;
+			int num_a = 101;
+
+			double min_p = 0.9; 
+			double max_p = 1.2; 
+			int num_p = 31;
+		
+			double min_c=0.05;
+			double max_c=0.05;
+			int num_c=1;
+
+			// Run the simulation
+
+			ObsEqkRupList aftershockList = AftershockStatsCalc.simAftershockSequence(a, b, magMain, magCat, capG, capH, p, c, dataStartTimeDays, dataEndTimeDays);
+
+			// Make the mainshock
+
+			ObsEqkRupture mainShock = new ObsEqkRupture("0", 0L, null, magMain);
+
+			// Make the model, it will output some information
+
+			RJ_AftershockModel_SequenceSpecific gen =
+				new RJ_AftershockModel_SequenceSpecific(mainShock, aftershockList,
+			 								magCat, capG, capH,
+											b, dataStartTimeDays, dataEndTimeDays,
+											min_a, max_a, num_a, 
+											min_p, max_p, num_p, 
+											min_c, max_c, num_c);
+
+			// A few calculations
+		
+			EvenlyDiscretizedFunc lowFract = gen.getCumNumMFD_Fractile(0.025, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5%: "+lowFract.getX(0)+"\t"+lowFract.getY(0));
+			EvenlyDiscretizedFunc hiFract = gen.getCumNumMFD_Fractile(0.975, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("97.5%: "+hiFract.getX(0)+"\t"+hiFract.getY(0));
+		
+			double[] fractArray = {0.025, 0.975};
+			EvenlyDiscretizedFunc[] fractalWithAleatoryMFDArray = gen.getCumNumMFD_FractileWithAleatoryVariability(fractArray, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5% With Aleatory: "+fractalWithAleatoryMFDArray[0].getX(0)+"\t"+fractalWithAleatoryMFDArray[0].getY(0));
+			System.out.println("97.5% With Aleatory: "+fractalWithAleatoryMFDArray[1].getX(0)+"\t"+fractalWithAleatoryMFDArray[1].getY(0));
+
+			// Compact form of list
+
+			CompactEqkRupList compactList = new CompactEqkRupList (aftershockList);
+
+			// Make the model, it will output some information
+
+			RJ_AftershockModel_SequenceSpecific compactGen =
+				new RJ_AftershockModel_SequenceSpecific(mainShock, compactList,
+			 								magCat, capG, capH,
+											b, dataStartTimeDays, dataEndTimeDays,
+											min_a, max_a, num_a, 
+											min_p, max_p, num_p, 
+											min_c, max_c, num_c);
+
+			// A few calculations
+		
+			EvenlyDiscretizedFunc lowFract2 = compactGen.getCumNumMFD_Fractile(0.025, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5%: "+lowFract2.getX(0)+"\t"+lowFract2.getY(0));
+			EvenlyDiscretizedFunc hiFract2 = compactGen.getCumNumMFD_Fractile(0.975, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("97.5%: "+hiFract2.getX(0)+"\t"+hiFract2.getY(0));
+		
+			double[] fractArray2 = {0.025, 0.975};
+			EvenlyDiscretizedFunc[] fractalWithAleatoryMFDArray2 = compactGen.getCumNumMFD_FractileWithAleatoryVariability(fractArray2, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5% With Aleatory: "+fractalWithAleatoryMFDArray2[0].getX(0)+"\t"+fractalWithAleatoryMFDArray2[0].getY(0));
+			System.out.println("97.5% With Aleatory: "+fractalWithAleatoryMFDArray2[1].getX(0)+"\t"+fractalWithAleatoryMFDArray2[1].getY(0));
 
 			return;
 		}
