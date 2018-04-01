@@ -123,5 +123,65 @@ public class GenericRJ_Parameters {
 				+ ", aDelta=" + get_aValue_delta()
 				+ "]";
 	}
+
+
+
+
+	//----- Marshaling -----
+
+	// Marshal version number.
+
+	public static final long MARSHAL_VER = 1001L;
+
+	// Marshal object.
+
+	public void marshal (MarshalWriter writer) {
+
+		// Version
+
+		writer.marshalLong (MARSHAL_VER);
+
+		// Contents
+
+		writer.marshalDouble (aValue_mean  );
+		writer.marshalDouble (aValue_sigma );
+		writer.marshalDouble (aValue_sigma0);
+		writer.marshalDouble (aValue_sigma1);
+		writer.marshalDouble (bValue       );
+		writer.marshalDouble (pValue       );
+		writer.marshalDouble (cValue       );
+		writer.marshalDouble (aValue_min   );
+		writer.marshalDouble (aValue_max   );
+		writer.marshalDouble (aValue_delta );
+	
+		return;
+	}
+
+	// Unmarshal object.
+
+	public static GenericRJ_Parameters unmarshal (MarshalReader reader) {
+	
+		// Version
+
+		long ver = reader.unmarshalLong (MARSHAL_VER, MARSHAL_VER);
+
+		return new GenericRJ_Parameters (ver, reader);
+	}
+
+	private GenericRJ_Parameters (long ver, MarshalReader reader) {
+
+		// Contents
+
+		aValue_mean   = reader.unmarshalDouble();
+		aValue_sigma  = reader.unmarshalDouble();
+		aValue_sigma0 = reader.unmarshalDouble();
+		aValue_sigma1 = reader.unmarshalDouble();
+		bValue        = reader.unmarshalDouble();
+		pValue        = reader.unmarshalDouble();
+		cValue        = reader.unmarshalDouble();
+		aValue_min    = reader.unmarshalDouble();
+		aValue_max    = reader.unmarshalDouble();
+		aValue_delta  = reader.unmarshalDouble();
+	}
 	
 }

@@ -226,7 +226,7 @@ public class GenericRJ_ParametersFetch {
 
 		// Subcommand : Test #2
 		// Command format:
-		//  test1
+		//  test2
 		// List all regimes, and the properties assigned to each.
 
 		if (args[0].equalsIgnoreCase ("test2")) {
@@ -244,6 +244,39 @@ public class GenericRJ_ParametersFetch {
 			Set<OAFTectonicRegime> regimes = fetch.getRegimeSet();
 			for (OAFTectonicRegime regime : regimes) {
 				System.out.println(regime+": "+fetch.get(regime));
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #3
+		// Command format:
+		//  test3
+		// List all regimes, and the properties assigned to each.
+		// Each is displayed twice, once fetched from parameters, once unmarshaled.
+
+		if (args[0].equalsIgnoreCase ("test3")) {
+
+			// No additional arguments
+
+			if (args.length != 1) {
+				System.err.println ("GenericRJ_ParametersFetch : Invalid 'test3' subcommand");
+				return;
+			}
+
+			// Display info for each regime, direct and unmarshaled
+		
+			GenericRJ_ParametersFetch fetch = new GenericRJ_ParametersFetch();
+			Set<OAFTectonicRegime> regimes = fetch.getRegimeSet();
+			MarshalImpArray store = new MarshalImpArray();
+
+			for (OAFTectonicRegime regime : regimes) {
+				fetch.get(regime).marshal(store);
+			}
+
+			for (OAFTectonicRegime regime : regimes) {
+				System.out.println(regime+": "+fetch.get(regime));
+				System.out.println(regime+": "+GenericRJ_Parameters.unmarshal(store));
 			}
 
 			return;

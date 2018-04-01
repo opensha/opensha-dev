@@ -49,5 +49,51 @@ public class MagCompPage_Parameters {
 	public String toString() {
 		return "Page_Params[magCat="+get_magCat()+", capG="+get_capG()+", capH="+get_capH()+"]";
 	}
+
+
+
+
+	//----- Marshaling -----
+
+	// Marshal version number.
+
+	public static final long MARSHAL_VER = 2001L;
+
+	// Marshal object.
+
+	public void marshal (MarshalWriter writer) {
+
+		// Version
+
+		writer.marshalLong (MARSHAL_VER);
+
+		// Contents
+
+		writer.marshalDouble (magCat);
+		writer.marshalDouble (capG  );
+		writer.marshalDouble (capH  );
+	
+		return;
+	}
+
+	// Unmarshal object.
+
+	public static MagCompPage_Parameters unmarshal (MarshalReader reader) {
+	
+		// Version
+
+		long ver = reader.unmarshalLong (MARSHAL_VER, MARSHAL_VER);
+
+		return new MagCompPage_Parameters (ver, reader);
+	}
+
+	private MagCompPage_Parameters (long ver, MarshalReader reader) {
+
+		// Contents
+
+		magCat = reader.unmarshalDouble();
+		capG   = reader.unmarshalDouble();
+		capH   = reader.unmarshalDouble();
+	}
 	
 }
