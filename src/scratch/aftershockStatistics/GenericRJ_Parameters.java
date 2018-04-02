@@ -131,11 +131,12 @@ public class GenericRJ_Parameters {
 
 	// Marshal version number.
 
+	public static final long MARSHAL_NULL = 1000L;
 	public static final long MARSHAL_VER = 1001L;
 
 	// Marshal object.
 
-	public void marshal (MarshalWriter writer) {
+	protected void do_marshal (MarshalWriter writer) {
 
 		// Version
 
@@ -157,13 +158,30 @@ public class GenericRJ_Parameters {
 		return;
 	}
 
+	// Marshal object.
+
+	public static void marshal (MarshalWriter writer, GenericRJ_Parameters obj) {
+
+		if (obj == null) {
+			writer.marshalLong (MARSHAL_NULL);
+		} else {
+			obj.do_marshal (writer);
+		}
+
+		return;
+	}
+
 	// Unmarshal object.
 
 	public static GenericRJ_Parameters unmarshal (MarshalReader reader) {
 	
 		// Version
 
-		long ver = reader.unmarshalLong (MARSHAL_VER, MARSHAL_VER);
+		long ver = reader.unmarshalLong (MARSHAL_NULL, MARSHAL_VER);
+
+		if (ver == MARSHAL_NULL) {
+			return null;
+		}
 
 		return new GenericRJ_Parameters (ver, reader);
 	}

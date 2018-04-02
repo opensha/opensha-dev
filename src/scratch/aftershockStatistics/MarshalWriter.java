@@ -16,4 +16,20 @@ public interface MarshalWriter {
 	 */
 	public void marshalDouble (double x);
 
+	/**
+	 * Marshal an int.
+	 */
+	public default void marshalInt (int x) {
+		marshalLong ((long)x);
+		return;
+	}
+
+	/**
+	 * Marshal a boolean.
+	 */
+	public default void marshalBoolean (boolean x) {
+		marshalLong (x ? 1L : 0L);
+		return;
+	}
+
 }

@@ -271,7 +271,7 @@ public class GenericRJ_ParametersFetch {
 			MarshalImpArray store = new MarshalImpArray();
 
 			for (OAFTectonicRegime regime : regimes) {
-				fetch.get(regime).marshal(store);
+				GenericRJ_Parameters.marshal(store, fetch.get(regime));
 			}
 
 			for (OAFTectonicRegime regime : regimes) {

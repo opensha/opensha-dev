@@ -121,7 +121,7 @@ public class RJ_AftershockModel_Generic extends RJ_AftershockModel {
 
 		this.min_a = ((double)Math.round(min_a/delta_a))*delta_a;	// round to nearest multiple of delta_a
 		this.max_a = ((double)Math.round(max_a/delta_a))*delta_a;	// round to nearest multiple of delta_a
-		this.num_a = (int)Math.round((max_a-min_a)/delta_a) + 1;
+		this.num_a = (int)Math.round((this.max_a-this.min_a)/delta_a) + 1;
 		if (this.num_a == 1) {
 			this.delta_a = 0.0;
 		} else {
