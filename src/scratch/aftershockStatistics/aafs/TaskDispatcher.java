@@ -3,6 +3,10 @@ package scratch.aftershockStatistics.aafs;
 import scratch.aftershockStatistics.aafs.entity.PendingTask;
 import scratch.aftershockStatistics.aafs.entity.LogEntry;
 
+import scratch.aftershockStatistics.MarshalImpArray;
+import scratch.aftershockStatistics.MarshalReader;
+import scratch.aftershockStatistics.MarshalWriter;
+
 /**
  * Task dispatcher for AAFS server.
  * Author: Michael Barall 03/18/2018.
@@ -123,7 +127,7 @@ public class TaskDispatcher implements Runnable {
 	 * @param submit_id = Person or entity submitting this task. Cannot be empty or null.
 	 * @param opcode = Operation code used to dispatch the task.
 	 * @param stage = Stage number, user-defined, effectively an extension of the opcode.
-	 * @param details = Further details of this task, or "" if none. Cannot be null.
+	 * @param details = Further details of this task. Can be null if there are none.
 	 * @return
 	 * Returns true if task is successfully posted, false if error.
 	 * This function connects to MongoDB, puts the task on the queue, and then
@@ -131,7 +135,7 @@ public class TaskDispatcher implements Runnable {
 	 * If already connected to MongoDB, then use PendingTask.submit_task instead.
 	 */
 	public static boolean post_task (String event_id, long sched_time, long submit_time,
-								String submit_id, int opcode, int stage, String details) {
+								String submit_id, int opcode, int stage, MarshalWriter details) {
 
 		boolean result = true;
 
@@ -175,7 +179,7 @@ public class TaskDispatcher implements Runnable {
 	public static boolean post_shutdown (String submit_id) {
 
 		boolean result = post_task ("", EXEC_TIME_SHUTDOWN, ServerClock.get_true_time(),
-								submit_id, OPCODE_SHUTDOWN, 0, "");
+								submit_id, OPCODE_SHUTDOWN, 0, null);
 
 		return result;
 	}

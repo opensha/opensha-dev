@@ -17,6 +17,11 @@ public interface MarshalWriter {
 	public void marshalDouble (double x);
 
 	/**
+	 * Marshal a string.  (Null strings are not allowed.)
+	 */
+	public void marshalString (String x);
+
+	/**
 	 * Marshal an int.
 	 */
 	public default void marshalInt (int x) {

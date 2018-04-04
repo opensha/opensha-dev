@@ -6,6 +6,19 @@ import scratch.aftershockStatistics.aafs.MongoDBUtil;
 
 import scratch.aftershockStatistics.aafs.entity.PendingTask;
 import scratch.aftershockStatistics.aafs.entity.LogEntry;
+import scratch.aftershockStatistics.aafs.entity.CatalogSnapshot;
+
+import scratch.aftershockStatistics.AftershockStatsCalc;
+import scratch.aftershockStatistics.CompactEqkRupList;
+import scratch.aftershockStatistics.RJ_AftershockModel_SequenceSpecific;
+
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
+
+import scratch.aftershockStatistics.MarshalImpArray;
+import scratch.aftershockStatistics.MarshalReader;
+import scratch.aftershockStatistics.MarshalWriter;
+
 
 /**
  * Holds a set of tests for the AAFS server code.
@@ -39,7 +52,7 @@ public class ServerTest {
 			String submit_id;
 			int opcode;
 			int stage;
-			String details;
+			MarshalWriter details;
 		
 			event_id = "Event_2";
 			sched_time = 20100L;
@@ -47,7 +60,12 @@ public class ServerTest {
 			submit_id = "Submitter_2";
 			opcode = 102;
 			stage = 2;
-			details = "Details_2";
+			details = PendingTask.begin_details();
+			details.marshalString ("Details_2");
+			details.marshalLong (21010L);
+			details.marshalLong (21020L);
+			details.marshalDouble (21030.0);
+			details.marshalDouble (21040.0);
 			PendingTask.submit_task (event_id, sched_time, submit_time,
 				submit_id, opcode, stage, details);
 		
@@ -57,7 +75,7 @@ public class ServerTest {
 			submit_id = "Submitter_4_no_details";
 			opcode = 104;
 			stage = 4;
-			details = "";
+			details = null;
 			PendingTask.submit_task (event_id, sched_time, submit_time,
 				submit_id, opcode, stage, details);
 		
@@ -67,7 +85,12 @@ public class ServerTest {
 			submit_id = "Submitter_1";
 			opcode = 101;
 			stage = 1;
-			details = "Details_1";
+			details = PendingTask.begin_details();
+			details.marshalString ("Details_1");
+			details.marshalLong (11010L);
+			details.marshalLong (11020L);
+			details.marshalDouble (11030.0);
+			details.marshalDouble (11040.0);
 			PendingTask.submit_task (event_id, sched_time, submit_time,
 				submit_id, opcode, stage, details);
 		
@@ -77,7 +100,12 @@ public class ServerTest {
 			submit_id = "Submitter_5";
 			opcode = 105;
 			stage = 5;
-			details = "Details_5";
+			details = PendingTask.begin_details();
+			details.marshalString ("Details_5");
+			details.marshalLong (51010L);
+			details.marshalLong (51020L);
+			details.marshalDouble (51030.0);
+			details.marshalDouble (51040.0);
 			PendingTask.submit_task (event_id, sched_time, submit_time,
 				submit_id, opcode, stage, details);
 		
@@ -87,7 +115,12 @@ public class ServerTest {
 			submit_id = "Submitter_3";
 			opcode = 103;
 			stage = 3;
-			details = "Details_3";
+			details = PendingTask.begin_details();
+			details.marshalString ("Details_3");
+			details.marshalLong (31010L);
+			details.marshalLong (31020L);
+			details.marshalDouble (31030.0);
+			details.marshalDouble (31040.0);
 			PendingTask.submit_task (event_id, sched_time, submit_time,
 				submit_id, opcode, stage, details);
 
@@ -612,9 +645,9 @@ public class ServerTest {
 		}
 		int opcode = Integer.parseInt(args[2]);
 		int stage = Integer.parseInt(args[3]);
-		String details = "";
+		MarshalWriter details = PendingTask.begin_details();
 		if (args.length == 5) {
-			details = args[4];
+			details.marshalString (args[4]);
 		}
 
 		// Post the task
@@ -649,6 +682,185 @@ public class ServerTest {
 		boolean f_verbose = true;
 
 		dispatcher.run_next_task (f_verbose);
+
+		return;
+	}
+
+
+
+
+	// Test #17 - Write a catalog snapshot.
+
+	public static void test17(String[] args) {
+
+		// Tthree additional arguments
+
+		if (args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test17' subcommand");
+			return;
+		}
+
+		double start_time_days = Double.parseDouble (args[1]);
+		double end_time_days   = Double.parseDouble (args[2]);
+		String event_id = args[3];
+
+		long start_time = Math.round(start_time_days * 86400000L);
+		long end_time   = Math.round(end_time_days   * 86400000L);
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Create a simulated aftershock sequence, using the method of RJ_AftershockModel_SequenceSpecific
+			// (Start and end times should be in the range of 0 to 30 days)
+			
+			double a = -1.67;
+			double b = 0.91;
+			double c = 0.05;
+			double p = 1.08;
+			double magMain = 7.5;
+			double magCat = 2.5;
+			double capG = 1.25;
+			double capH = 0.75;
+
+			ObsEqkRupList aftershockList = AftershockStatsCalc.simAftershockSequence(a, b, magMain, magCat, capG, capH, p, c, start_time_days, end_time_days);
+
+			CompactEqkRupList rupture_list = new CompactEqkRupList (aftershockList);
+
+			// Write the rupture sequence
+
+			CatalogSnapshot entry_in = CatalogSnapshot.submit_catalog_shapshot (null, event_id, start_time, end_time, rupture_list);
+
+			System.out.println (entry_in.toString());
+
+			// Search for it
+
+			CatalogSnapshot entry_out = CatalogSnapshot.get_catalog_shapshot_for_key (entry_in.get_record_key());
+
+			System.out.println (entry_out.toString());
+
+			// Use the retrieved rupture sequence to make a sequence-specific model
+		
+			double min_a = -2.0;
+			double max_a = -1.0;
+			int num_a = 101;
+
+			double min_p = 0.9; 
+			double max_p = 1.2; 
+			int num_p = 31;
+		
+			double min_c=0.05;
+			double max_c=0.05;
+			int num_c=1;
+
+			ObsEqkRupture mainShock = new ObsEqkRupture("0", 0L, null, magMain);
+
+			CompactEqkRupList rupture_list_out = entry_out.get_rupture_list();
+
+			// Make the model, it will output some information
+
+			RJ_AftershockModel_SequenceSpecific seqModel =
+				new RJ_AftershockModel_SequenceSpecific(mainShock, rupture_list_out,
+			 								magCat, capG, capH,
+											b, start_time_days, end_time_days,
+											min_a, max_a, num_a, 
+											min_p, max_p, num_p, 
+											min_c, max_c, num_c);
+
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #18 - Search the catalog snapshots for end time and/or event id.
+
+	public static void test18(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test18' subcommand");
+			return;
+		}
+
+		double end_time_lo_days = Double.parseDouble (args[1]);
+		double end_time_hi_days = Double.parseDouble (args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		long end_time_lo = Math.round(end_time_lo_days * 86400000L);
+		long end_time_hi = Math.round(end_time_hi_days * 86400000L);
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the list of matching log entries
+
+			List<CatalogSnapshot> entries = CatalogSnapshot.get_catalog_snapshot_range (end_time_lo, end_time_hi, event_id);
+
+			// Display them
+
+			for (CatalogSnapshot entry : entries) {
+				System.out.println (entry.toString());
+			}
+
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #19 - Search the catalog snapshots for end time and/or event id, and delete the matching entries.
+
+	public static void test19(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test19' subcommand");
+			return;
+		}
+
+		double end_time_lo_days = Double.parseDouble (args[1]);
+		double end_time_hi_days = Double.parseDouble (args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		long end_time_lo = Math.round(end_time_lo_days * 86400000L);
+		long end_time_hi = Math.round(end_time_hi_days * 86400000L);
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the list of matching log entries
+
+			List<CatalogSnapshot> entries = CatalogSnapshot.get_catalog_snapshot_range (end_time_lo, end_time_hi, event_id);
+
+			// Display them, and delete
+
+			for (CatalogSnapshot entry : entries) {
+				System.out.println (entry.toString());
+				CatalogSnapshot.delete_catalog_snapshot (entry);
+			}
+
+		}
 
 		return;
 	}
@@ -919,6 +1131,56 @@ public class ServerTest {
 
 			try {
 				test16(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #17
+		// Command format:
+		//  test17  start_time_days  end_time_days  event_id
+		// Write a catalog snapshot.
+
+		if (args[0].equalsIgnoreCase ("test17")) {
+
+			try {
+				test17(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #18
+		// Command format:
+		//  test18  end_time_lo_days  end_time_hi_days  [event_id]
+		// Search the catalog snapshots for end time and/or event id.
+		// Times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test18")) {
+
+			try {
+				test18(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #19
+		// Command format:
+		//  test19  end_time_lo_days  end_time_hi_days  [event_id]
+		// Search the catalog snapshots for end time and/or event id, and delete the matching entries.
+		// Times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test19")) {
+
+			try {
+				test19(args);
             } catch (Exception e) {
                 e.printStackTrace();
 			}

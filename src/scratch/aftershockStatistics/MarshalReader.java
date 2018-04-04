@@ -17,6 +17,11 @@ public interface MarshalReader {
 	public double unmarshalDouble ();
 
 	/**
+	 * Unmarshal a string.  (Null strings are not allowed.)
+	 */
+	public String unmarshalString ();
+
+	/**
 	 * Unmarshal a long, with required minimum value.
 	 */
 	public default long unmarshalLong (long minValue) {
