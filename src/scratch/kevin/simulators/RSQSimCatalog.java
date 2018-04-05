@@ -197,6 +197,12 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2616("bruce/rundir2616", "Bruce 2616", "Bruce Shaw", cal(2018, 3, 19),
 				"similar to r2585, but bigger seismogenic depth: H=18 (2,13,3)",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2636("bruce/rundir2636", "Bruce 2636", "Bruce Shaw", cal(2018, 3, 28),
+				"sensitivity test, diff r2585 a=.0013",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2637("bruce/rundir2637", "Bruce 2637", "Bruce Shaw", cal(2018, 3, 28),
+				"sensitivity test, diff r2585  N=130",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;

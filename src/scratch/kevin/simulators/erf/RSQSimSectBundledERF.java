@@ -994,10 +994,11 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			}
 			catalog = Catalogs.BRUCE_2457.instance(baseDir);
 			writePoints = true;
-			writeSRFs = false;
+			writeSRFs = true;
 			writeMappings = true;
 			testReadOnly = false;
-			maxDuration = 10000;
+//			maxDuration = 10000;
+			maxDuration = 0;
 		}
 		
 		FaultModels fm = catalog.getFaultModel();
@@ -1018,7 +1019,8 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				loader.maxDuration(maxDuration);
 			List<RSQSimEvent> events = loader.load();
 			
-			double dt = 0.05;
+//			double dt = 0.05;
+			double dt = 0.1;
 			SRFInterpolationMode interpMode = SRFInterpolationMode.ADJ_VEL;
 			double srfPointCullDist = 100;
 			

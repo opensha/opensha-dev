@@ -75,7 +75,7 @@ public class HazardMapCompareScriptGen {
 //		String bruceDirNum = "2349";
 //		String bruceDirNum = "2326";
 //		String bruceDirNum = "2142";
-		String bruceDirNum = "2585";
+		String bruceDirNum = "2637";
 		String runPrefix = bruceDate+"-bruce"+bruceDirNum;
 		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
 		File geomFile = new File(catalogDir, "zfault_Deepen.in");
