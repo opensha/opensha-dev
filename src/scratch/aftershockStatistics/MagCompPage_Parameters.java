@@ -2,9 +2,9 @@ package scratch.aftershockStatistics;
 
 public class MagCompPage_Parameters {
 	
-	double magCat;
-	double capG;
-	double capH;
+	private double magCat;
+	private double capG;
+	private double capH;
 	
 	/**
 	 * This class is a container for the magnitude of completeness parameters defined by 
@@ -48,6 +48,70 @@ public class MagCompPage_Parameters {
 	@Override
 	public String toString() {
 		return "Page_Params[magCat="+get_magCat()+", capG="+get_capG()+", capH="+get_capH()+"]";
+	}
+
+
+
+
+	//----- Marshaling -----
+
+	// Marshal version number.
+
+	public static final long MARSHAL_NULL = 2000L;
+	public static final long MARSHAL_VER = 2001L;
+
+	// Marshal object.
+
+	protected void do_marshal (MarshalWriter writer) {
+
+		// Version
+
+		writer.marshalLong (MARSHAL_VER);
+
+		// Contents
+
+		writer.marshalDouble (magCat);
+		writer.marshalDouble (capG  );
+		writer.marshalDouble (capH  );
+	
+		return;
+	}
+
+	// Marshal object.
+
+	public static void marshal (MarshalWriter writer, MagCompPage_Parameters obj) {
+
+		if (obj == null) {
+			writer.marshalLong (MARSHAL_NULL);
+		} else {
+			obj.do_marshal (writer);
+		}
+
+		return;
+	}
+
+	// Unmarshal object.
+
+	public static MagCompPage_Parameters unmarshal (MarshalReader reader) {
+	
+		// Version
+
+		long ver = reader.unmarshalLong (MARSHAL_NULL, MARSHAL_VER);
+
+		if (ver == MARSHAL_NULL) {
+			return null;
+		}
+
+		return new MagCompPage_Parameters (ver, reader);
+	}
+
+	private MagCompPage_Parameters (long ver, MarshalReader reader) {
+
+		// Contents
+
+		magCat = reader.unmarshalDouble();
+		capG   = reader.unmarshalDouble();
+		capH   = reader.unmarshalDouble();
 	}
 	
 }

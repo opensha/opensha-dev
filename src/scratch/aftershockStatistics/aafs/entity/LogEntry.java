@@ -11,6 +11,7 @@ import org.mongodb.morphia.annotations.IndexOptions;
 import org.mongodb.morphia.annotations.Indexes;
 import org.mongodb.morphia.annotations.Field;
 import org.mongodb.morphia.annotations.Transient;
+import org.mongodb.morphia.annotations.Embedded;
 
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.FindAndModifyOptions;
@@ -18,10 +19,12 @@ import org.mongodb.morphia.FindAndModifyOptions;
 import org.mongodb.morphia.query.Query;
 import org.mongodb.morphia.query.UpdateOperations;
 
-import org.json.simple.JSONObject;
-
 import scratch.aftershockStatistics.aafs.MongoDBUtil;
 import scratch.aftershockStatistics.aafs.RecordKey;
+
+import scratch.aftershockStatistics.MarshalImpArray;
+import scratch.aftershockStatistics.MarshalReader;
+import scratch.aftershockStatistics.MarshalWriter;
 
 
 
@@ -32,7 +35,7 @@ import scratch.aftershockStatistics.aafs.RecordKey;
  *
  * The collection "log" holds the log entries.
  */
-@Entity("log")
+@Entity(value = "log", noClassnameStored = true)
 @Indexes({
 	@Index(fields = {@Field("event_id")}, options = @IndexOptions(name = "logevid")),
 	@Index(fields = {@Field("log_time")}, options = @IndexOptions(name = "logtime"))
@@ -87,10 +90,15 @@ public class LogEntry implements java.io.Serializable {
 	private int stage;
 
 	// Details of this task.
-	// Any additional information neeed is stored as a string.
-	// If none, this should be an empty string (not null).
+	// Any additional information neeed is stored as marshaled data.
+	// Each array should have at least one element.
 
-	private String details;
+	@Embedded
+	private long[] details_l;
+	@Embedded
+	private double[] details_d;
+	@Embedded
+	private String[] details_s;
 
 	//----- Result information -----
 
@@ -172,14 +180,6 @@ public class LogEntry implements java.io.Serializable {
         this.stage = stage;
     }
 
-    public String get_details() {
-        return details;
-    }
-
-    private void set_details (String details) {
-        this.details = details;
-    }
-
     public int get_rescode() {
         return rescode;
     }
@@ -199,6 +199,72 @@ public class LogEntry implements java.io.Serializable {
 
 
 
+	/**
+	 * get_details - Get a reader for the details.
+	 */
+    public MarshalReader get_details() {
+        return new MarshalImpArray (details_l, details_d, details_s);
+    }
+
+
+	/**
+	 * set_details - Set details from the marshaled data, can be null for none.
+	 */
+    private void set_details (MarshalWriter writer) {
+		if (writer == null) {
+			details_l = new long[1];
+			details_l[0] = 0L;
+			details_d = new double[1];
+			details_d[0] = 0.0;
+			details_s = new String[1];
+			details_s[0] = "";
+			return;
+		}
+
+		if (!( writer instanceof MarshalImpArray )) {
+			throw new IllegalArgumentException("PendingTask.set_details: Incorrect type of marshal writer");
+		}
+
+		MarshalImpArray w = (MarshalImpArray)writer;
+		details_l = w.get_long_store();
+		details_d = w.get_double_store();
+		details_s = w.get_string_store();
+		return;
+    }
+
+
+	/**
+	 * begin_details - Get a writer to use for marhaling details.
+	 */
+    public static MarshalWriter begin_details() {
+        return new MarshalImpArray ();
+    }
+
+
+	/**
+	 * get_details_as_writer - Get a writer containing the details.
+	 */
+    MarshalWriter get_details_as_writer() {
+        return new MarshalImpArray (details_l, details_d, details_s);
+    }
+
+
+	///**
+	// * These getters are for use by other package members for direct copy of the details.
+	// */
+    //long[] get_details_l() {
+    //    return details_l;
+    //}
+    //double[] get_details_d() {
+    //    return details_d;
+    //}
+    //String[] get_details_s() {
+    //    return details_s;
+    //}
+
+
+
+
 	// toString - Convert to string.
 
 	@Override
@@ -212,7 +278,7 @@ public class LogEntry implements java.io.Serializable {
 			+ "\tsubmit_id: " + submit_id + "\n"
 			+ "\topcode: " + opcode + "\n"
 			+ "\tstage: " + stage + "\n"
-			+ "\tdetails: " + details + "\n"
+			+ "\tdetails: " + "llen = " + details_l.length + ", dlen = " + details_d.length + ", slen = " + details_s.length + "\n"
 			+ "\trescode: " + rescode + "\n"
 			+ "\tresults: " + results;
 		return str;
@@ -260,14 +326,15 @@ public class LogEntry implements java.io.Serializable {
 	 * @param submit_id = Person or entity submitting this task. Cannot be empty or null.
 	 * @param opcode = Operation code used to dispatch the task.
 	 * @param stage = Stage number, user-defined, effectively an extension of the opcode.
-	 * @param details = Further details of this task, or "" if none. Cannot be null.
+	 * @param details = Further details of this task. Can be null if there are none.
 	 * @param rescode = Result code.
 	 * @param results = Further results of this task, or "" if none. Cannot be null.
 	 * @return
+	 * Returns the new entry.
 	 */
-	public static void submit_log_entry (RecordKey key, long log_time, String event_id,
+	public static LogEntry submit_log_entry (RecordKey key, long log_time, String event_id,
 			long sched_time, long submit_time, String submit_id, int opcode, int stage,
-			String details, int rescode, String results) {
+			MarshalWriter details, int rescode, String results) {
 
 		// Check conditions
 
@@ -276,9 +343,8 @@ public class LogEntry implements java.io.Serializable {
 			&& sched_time > 0L
 			&& submit_time > 0L
 			&& submit_id != null && submit_id.length() > 0
-			&& details != null
 			&& results != null )) {
-			throw new RuntimeException("LogEntry.submit_log_entry: Invalid log parameters");
+			throw new IllegalArgumentException("LogEntry.submit_log_entry: Invalid log parameters");
 		}
 
 		// Construct the log entry object
@@ -301,7 +367,7 @@ public class LogEntry implements java.io.Serializable {
 		Datastore datastore = MongoDBUtil.getDatastore();
 		datastore.save(lentry);
 		
-		return;
+		return lentry;
 	}
 
 
@@ -316,20 +382,21 @@ public class LogEntry implements java.io.Serializable {
 	 * @param results = Further results of this task, or "" if none. Cannot be null.
 	 * @return
 	 * Other log parameters are copied from ptask.
+	 * Returns the new entry.
 	 */
-	public static void submit_log_entry (PendingTask ptask, long log_time, int rescode, String results) {
+	public static LogEntry submit_log_entry (PendingTask ptask, long log_time, int rescode, String results) {
 
 		// Check conditions
 
 		if (!( ptask != null
 			&& log_time > 0L
 			&& results != null )) {
-			throw new RuntimeException("LogEntry.submit_log_entry: Invalid log parameters");
+			throw new IllegalArgumentException("LogEntry.submit_log_entry: Invalid log parameters");
 		}
 
 		// Submit the log entry
 
-		submit_log_entry (
+		LogEntry lentry = submit_log_entry (
 			ptask.get_record_key(),
 			log_time,
 			ptask.get_event_id(),
@@ -338,11 +405,11 @@ public class LogEntry implements java.io.Serializable {
 			ptask.get_submit_id(),
 			ptask.get_opcode(),
 			ptask.get_stage(),
-			ptask.get_details(),
+			ptask.get_details_as_writer(),
 			rescode,
 			results);
 		
-		return;
+		return lentry;
 	}
 
 
@@ -356,7 +423,7 @@ public class LogEntry implements java.io.Serializable {
 	public static LogEntry get_log_entry_for_key (RecordKey key) {
 
 		if (!( key != null && key.getId() != null )) {
-			throw new RuntimeException("LogEntry.get_log_entry_for_key: Missing or empty record key");
+			throw new IllegalArgumentException("LogEntry.get_log_entry_for_key: Missing or empty record key");
 		}
 
 		// Get the MongoDB data store
@@ -438,7 +505,7 @@ public class LogEntry implements java.io.Serializable {
 		// Check conditions
 
 		if (!( entry != null && entry.get_id() != null )) {
-			throw new RuntimeException("LogEntry.delete_log_entry: Invalid parameters");
+			throw new IllegalArgumentException("LogEntry.delete_log_entry: Invalid parameters");
 		}
 
 		// Get the MongoDB data store

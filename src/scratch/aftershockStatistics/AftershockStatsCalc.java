@@ -376,7 +376,7 @@ public class AftershockStatsCalc {
 	 * @param magPrecision - the degree to which magnitude have been rounded
 	 * @return
 	 */
-	public static double getMaxLikelihood_b_value(ObsEqkRupList rups, double magComplete,
+	public static double getMaxLikelihood_b_value(List<ObsEqkRupture> rups, double magComplete,
 			double magPrecision) {
 		double magMean = 0d;
 		int num = 0;
@@ -403,7 +403,7 @@ public class AftershockStatsCalc {
 	 * whose i-th element contains the elapsed time from the mainshock to the i-th
 	 * aftershock, in days.
 	 */
-	public static double[] getDaysSinceMainShockArray(ObsEqkRupture mainShock, ObsEqkRupList aftershockList) {
+	public static double[] getDaysSinceMainShockArray(ObsEqkRupture mainShock, List<ObsEqkRupture> aftershockList) {
 		double[] relativeEventTimesDays = new double[aftershockList.size()];
 		for(int i=0; i<aftershockList.size();i++) {
 			long epochDiff = aftershockList.get(i).getOriginTime()-mainShock.getOriginTime();
@@ -1187,7 +1187,7 @@ public class AftershockStatsCalc {
 
 	
 
-    public static Location getCentroid(ObsEqkRupture mainshock, ObsEqkRupList aftershocks) {
+    public static Location getCentroid(ObsEqkRupture mainshock, List<ObsEqkRupture> aftershocks) {
 		// now works across prime meridian
 		List<Location> locs = Lists.newArrayList(mainshock.getHypocenterLocation());
 		for (ObsEqkRupture aftershock : aftershocks)
@@ -1229,6 +1229,9 @@ public class AftershockStatsCalc {
 			System.err.println ("AftershockStatsCalc : Missing subcommand");
 			return;
 		}
+
+
+
 
 		// Subcommand : Test #1
 		// Command format:
@@ -1297,6 +1300,9 @@ public class AftershockStatsCalc {
 
 			return;
 		}
+
+
+
 
 		// Subcommand : Test #2
 		// Command format:
@@ -1373,6 +1379,9 @@ public class AftershockStatsCalc {
 			return;
 		}
 
+
+
+
 		// Subcommand : Test #3
 		// Command format:
 		//  test3
@@ -1432,6 +1441,9 @@ public class AftershockStatsCalc {
 			return;
 		}
 
+
+
+
 		// Subcommand : Test #4
 		// Command format:
 		//  test4
@@ -1484,6 +1496,9 @@ public class AftershockStatsCalc {
 
 			return;
 		}
+
+
+
 
 		// Unrecognized subcommand.
 

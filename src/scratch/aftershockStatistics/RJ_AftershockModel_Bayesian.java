@@ -228,8 +228,8 @@ public class RJ_AftershockModel_Bayesian extends RJ_AftershockModel {
 
 			// Run the test
 		
-			RJ_AftershockModel_Generic gen1 = new RJ_AftershockModel_Generic(7.0, -2, 0.3, -4.5, -0.5, 1.0, 1.12, 0.018);
-			RJ_AftershockModel_Generic gen2 = new RJ_AftershockModel_Generic(7.0, -3, 0.3, -4.5, -0.5, 1.0, 1.12, 0.018);
+			RJ_AftershockModel_Generic gen1 = new RJ_AftershockModel_Generic(7.0, -2, 0.3, -4.5, -0.5, 0.01, 1.0, 1.12, 0.018);
+			RJ_AftershockModel_Generic gen2 = new RJ_AftershockModel_Generic(7.0, -3, 0.3, -4.5, -0.5, 0.01, 1.0, 1.12, 0.018);
 			RJ_AftershockModel_Bayesian bayes = new RJ_AftershockModel_Bayesian(gen1,gen2);
 		
 			ArrayList<HistogramFunction> funcList = new ArrayList<HistogramFunction>();

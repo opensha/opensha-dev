@@ -18,7 +18,11 @@ public class MagCompPage_ParametersFetch {
 
 	// parameter_set - The parameter set.
 
-	private static OAFParameterSet<MagCompPage_Parameters> parameter_set = null;
+	private OAFParameterSet<MagCompPage_Parameters> parameter_set = null;
+
+	// cached_parameter_set - The cached parameter set, so parameters do not have to be reloaded from file each time.
+
+	private static OAFParameterSet<MagCompPage_Parameters> cached_parameter_set = null;
 
 	// load_data - Load parameters from the data file.
 	// The data file format is:
@@ -47,12 +51,12 @@ public class MagCompPage_ParametersFetch {
 	// A special region cannot cross the date line.  If this is needed, use two regions.
 	// If special regions overlap, the region listed first "wins".
 
-	private static synchronized void load_data () {
+	private static synchronized OAFParameterSet<MagCompPage_Parameters> load_data () {
 
 		// If data is already loaded, do nothing
 
-		if (parameter_set != null) {
-			return;
+		if (cached_parameter_set != null) {
+			return cached_parameter_set;
 		}
 
 		// Working data
@@ -85,14 +89,24 @@ public class MagCompPage_ParametersFetch {
 
 		// Save our working data into the static variable
 
-		parameter_set = wk_parameter_set;
-		return;
+		cached_parameter_set = wk_parameter_set;
+		return cached_parameter_set;
 	}
 
 	// Constructor loads the data if needed.
 	
 	public MagCompPage_ParametersFetch() {
-		load_data();
+		parameter_set = load_data();
+	}
+
+	// unload_data - Remove the cached data from memory.
+	// The data will be reloaded the next time one of these objects is created.
+	// Any existing objects will continue to use the old data.
+	// This makes it possible to load new parameter values without restarting the program.
+
+	public static synchronized void unload_data () {
+		cached_parameter_set = null;
+		return;
 	}
 	
 	/**
@@ -181,7 +195,7 @@ public class MagCompPage_ParametersFetch {
 
 		// Subcommand : Test #2
 		// Command format:
-		//  test1
+		//  test2
 		// List all regimes, and the properties assigned to each.
 
 		if (args[0].equalsIgnoreCase ("test2")) {
@@ -199,6 +213,39 @@ public class MagCompPage_ParametersFetch {
 			Set<OAFTectonicRegime> regimes = fetch.getRegimeSet();
 			for (OAFTectonicRegime regime : regimes) {
 				System.out.println(regime+": "+fetch.get(regime));
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #3
+		// Command format:
+		//  test3
+		// List all regimes, and the properties assigned to each.
+		// Each is displayed twice, once fetched from parameters, once unmarshaled.
+
+		if (args[0].equalsIgnoreCase ("test3")) {
+
+			// No additional arguments
+
+			if (args.length != 1) {
+				System.err.println ("MagCompPage_ParametersFetch : Invalid 'test3' subcommand");
+				return;
+			}
+
+			// Display info for each regime
+		
+			MagCompPage_ParametersFetch fetch = new MagCompPage_ParametersFetch();
+			Set<OAFTectonicRegime> regimes = fetch.getRegimeSet();
+			MarshalImpArray store = new MarshalImpArray();
+
+			for (OAFTectonicRegime regime : regimes) {
+				MagCompPage_Parameters.marshal(store, fetch.get(regime));
+			}
+
+			for (OAFTectonicRegime regime : regimes) {
+				System.out.println(regime+": "+fetch.get(regime));
+				System.out.println(regime+": "+MagCompPage_Parameters.unmarshal(store));
 			}
 
 			return;

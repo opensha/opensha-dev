@@ -4,6 +4,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.GregorianCalendar;
+import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
@@ -93,19 +94,19 @@ public class USGS_AftershockForecast {
 	
 	private Template template = Template.MAINSOCK;
 	
-	public USGS_AftershockForecast(RJ_AftershockModel model, ObsEqkRupList aftershocks,
+	public USGS_AftershockForecast(RJ_AftershockModel model, List<ObsEqkRupture> aftershocks,
 			GregorianCalendar eventDate, GregorianCalendar startDate) {
 		this(model, aftershocks, min_mags_default, eventDate, startDate, true);
 	}
 	
-	public USGS_AftershockForecast(RJ_AftershockModel model, ObsEqkRupList aftershocks, double[] minMags,
+	public USGS_AftershockForecast(RJ_AftershockModel model, List<ObsEqkRupture> aftershocks, double[] minMags,
 			GregorianCalendar eventDate, GregorianCalendar startDate, boolean includeProbAboveMainshock) {
 		compute(model, aftershocks, minMags, eventDate, startDate, includeProbAboveMainshock);
 	}
 	
 	private static final DateFormat df = new SimpleDateFormat();
 	
-	private void compute(RJ_AftershockModel model, ObsEqkRupList aftershocks, double[] minMags,
+	private void compute(RJ_AftershockModel model, List<ObsEqkRupture> aftershocks, double[] minMags,
 			GregorianCalendar eventDate, GregorianCalendar startDate, boolean includeProbAboveMainshock) {
 		Preconditions.checkArgument(minMags.length > 0);
 		
