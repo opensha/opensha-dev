@@ -170,125 +170,200 @@ public class RJ_Summary {
 
 	// Marshal version number.
 
-	public static final long MARSHAL_RJBASE_NULL = 4000L;
-	public static final long MARSHAL_RJBASE_VER = 4001L;
+	private static final int MARSHAL_VER_1 = 4001;
 
-	// Marshal object.
+	private static final String M_VERSION_NAME = "RJ_Summary";
+
+	// Marshal type code.
+
+	protected static final int MARSHAL_NULL = 4000;
+	protected static final int MARSHAL_RJBASE = 4001;
+	protected static final int MARSHAL_RJGEN = 5001;
+	protected static final int MARSHAL_RJBAY = 6001;
+	protected static final int MARSHAL_RJSEQ = 7001;
+
+	protected static final String M_TYPE_NAME = "ClassType";
+
+	// Get the type code.
+
+	protected int get_marshal_type () {
+		return MARSHAL_RJBASE;
+	}
+
+	// Marshal object, internal.
 
 	protected void do_marshal (MarshalWriter writer) {
 
 		// Version
 
-		writer.marshalLong (MARSHAL_RJBASE_VER);
+		writer.marshalInt (M_VERSION_NAME, MARSHAL_VER_1);
 
 		// Contents
 
-		writer.marshalDouble (b                   );
-		writer.marshalDouble (magMain             );
-		writer.marshalDouble (min_a               );
-		writer.marshalDouble (max_a               );
-		writer.marshalDouble (delta_a             );
-		writer.marshalInt    (num_a               );
-		writer.marshalDouble (min_p               );
-		writer.marshalDouble (max_p               );
-		writer.marshalDouble (delta_p             );
-		writer.marshalInt    (num_p               );
-		writer.marshalDouble (min_c               );
-		writer.marshalDouble (max_c               );
-		writer.marshalDouble (delta_c             );
-		writer.marshalInt    (num_c               );
-		writer.marshalInt    (apc_total_size      );
-		writer.marshalInt    (apc_support_size    );
-		writer.marshalDouble (apc_support_total   );
-		writer.marshalDouble (apc_max_tail_element);
-		writer.marshalInt    (a_support_lo        );
-		writer.marshalInt    (a_support_hi        );
-		writer.marshalInt    (p_support_lo        );
-		writer.marshalInt    (p_support_hi        );
-		writer.marshalInt    (c_support_lo        );
-		writer.marshalInt    (c_support_hi        );
-		writer.marshalDouble (stat_a_mean         );
-		writer.marshalDouble (stat_a_sdev         );
-		writer.marshalDouble (stat_a_like         );
-		writer.marshalDouble (stat_p_mean         );
-		writer.marshalDouble (stat_p_sdev         );
-		writer.marshalDouble (stat_p_like         );
-		writer.marshalDouble (stat_c_mean         );
-		writer.marshalDouble (stat_c_sdev         );
-		writer.marshalDouble (stat_c_like         );
+		writer.marshalDouble ("b"                   , b                   );
+		writer.marshalDouble ("magMain"             , magMain             );
+		writer.marshalDouble ("min_a"               , min_a               );
+		writer.marshalDouble ("max_a"               , max_a               );
+		writer.marshalDouble ("delta_a"             , delta_a             );
+		writer.marshalInt    ("num_a"               , num_a               );
+		writer.marshalDouble ("min_p"               , min_p               );
+		writer.marshalDouble ("max_p"               , max_p               );
+		writer.marshalDouble ("delta_p"             , delta_p             );
+		writer.marshalInt    ("num_p"               , num_p               );
+		writer.marshalDouble ("min_c"               , min_c               );
+		writer.marshalDouble ("max_c"               , max_c               );
+		writer.marshalDouble ("delta_c"             , delta_c             );
+		writer.marshalInt    ("num_c"               , num_c               );
+		writer.marshalInt    ("apc_total_size"      , apc_total_size      );
+		writer.marshalInt    ("apc_support_size"    , apc_support_size    );
+		writer.marshalDouble ("apc_support_total"   , apc_support_total   );
+		writer.marshalDouble ("apc_max_tail_element", apc_max_tail_element);
+		writer.marshalInt    ("a_support_lo"        , a_support_lo        );
+		writer.marshalInt    ("a_support_hi"        , a_support_hi        );
+		writer.marshalInt    ("p_support_lo"        , p_support_lo        );
+		writer.marshalInt    ("p_support_hi"        , p_support_hi        );
+		writer.marshalInt    ("c_support_lo"        , c_support_lo        );
+		writer.marshalInt    ("c_support_hi"        , c_support_hi        );
+		writer.marshalDouble ("stat_a_mean"         , stat_a_mean         );
+		writer.marshalDouble ("stat_a_sdev"         , stat_a_sdev         );
+		writer.marshalDouble ("stat_a_like"         , stat_a_like         );
+		writer.marshalDouble ("stat_p_mean"         , stat_p_mean         );
+		writer.marshalDouble ("stat_p_sdev"         , stat_p_sdev         );
+		writer.marshalDouble ("stat_p_like"         , stat_p_like         );
+		writer.marshalDouble ("stat_c_mean"         , stat_c_mean         );
+		writer.marshalDouble ("stat_c_sdev"         , stat_c_sdev         );
+		writer.marshalDouble ("stat_c_like"         , stat_c_like         );
 	
+		return;
+	}
+
+	// Unmarshal object, internal.
+
+	protected void do_umarshal (MarshalReader reader) {
+	
+		// Version
+
+		int ver = reader.unmarshalInt (M_VERSION_NAME, MARSHAL_VER_1, MARSHAL_VER_1);
+
+		// Contents
+
+		b                    = reader.unmarshalDouble ("b"                   );
+		magMain              = reader.unmarshalDouble ("magMain"             );
+		min_a                = reader.unmarshalDouble ("min_a"               );
+		max_a                = reader.unmarshalDouble ("max_a"               );
+		delta_a              = reader.unmarshalDouble ("delta_a"             );
+		num_a                = reader.unmarshalInt    ("num_a"               , 1);
+		min_p                = reader.unmarshalDouble ("min_p"               );
+		max_p                = reader.unmarshalDouble ("max_p"               );
+		delta_p              = reader.unmarshalDouble ("delta_p"             );
+		num_p                = reader.unmarshalInt    ("num_p"               , 1);
+		min_c                = reader.unmarshalDouble ("min_c"               );
+		max_c                = reader.unmarshalDouble ("max_c"               );
+		delta_c              = reader.unmarshalDouble ("delta_c"             );
+		num_c                = reader.unmarshalInt    ("num_c"               , 1);
+		apc_total_size       = reader.unmarshalInt    ("apc_total_size"      , 1);
+		apc_support_size     = reader.unmarshalInt    ("apc_support_size"    , 0);
+		apc_support_total    = reader.unmarshalDouble ("apc_support_total"   );
+		apc_max_tail_element = reader.unmarshalDouble ("apc_max_tail_element");
+		a_support_lo         = reader.unmarshalInt    ("a_support_lo"        , 0);
+		a_support_hi         = reader.unmarshalInt    ("a_support_hi"        , 0);
+		p_support_lo         = reader.unmarshalInt    ("p_support_lo"        , 0);
+		p_support_hi         = reader.unmarshalInt    ("p_support_hi"        , 0);
+		c_support_lo         = reader.unmarshalInt    ("c_support_lo"        , 0);
+		c_support_hi         = reader.unmarshalInt    ("c_support_hi"        , 0);
+		stat_a_mean          = reader.unmarshalDouble ("stat_a_mean"         );
+		stat_a_sdev          = reader.unmarshalDouble ("stat_a_sdev"         );
+		stat_a_like          = reader.unmarshalDouble ("stat_a_like"         );
+		stat_p_mean          = reader.unmarshalDouble ("stat_p_mean"         );
+		stat_p_sdev          = reader.unmarshalDouble ("stat_p_sdev"         );
+		stat_p_like          = reader.unmarshalDouble ("stat_p_like"         );
+		stat_c_mean          = reader.unmarshalDouble ("stat_c_mean"         );
+		stat_c_sdev          = reader.unmarshalDouble ("stat_c_sdev"         );
+		stat_c_like          = reader.unmarshalDouble ("stat_c_like"         );
+
 		return;
 	}
 
 	// Marshal object.
 
-	public static void marshal (MarshalWriter writer, RJ_Summary obj) {
-
-		if (obj == null) {
-			writer.marshalLong (MARSHAL_RJBASE_NULL);
-		} else {
-			obj.do_marshal (writer);
-		}
-
+	public void marshal (MarshalWriter writer, String name) {
+		writer.marshalMapBegin (name);
+		do_marshal (writer);
+		writer.marshalMapEnd ();
 		return;
 	}
 
 	// Unmarshal object.
 
-	public static RJ_Summary unmarshal (MarshalReader reader) {
-	
-		// Version
+	public RJ_Summary unmarshal (MarshalReader reader, String name) {
+		reader.unmarshalMapBegin (name);
+		do_umarshal (reader);
+		reader.unmarshalMapEnd ();
+		return this;
+	}
 
-		long ver = reader.unmarshalLong (MARSHAL_RJBASE_NULL, MARSHAL_RJBASE_VER);
+	// Marshal object, polymorphic.
 
-		if (ver == MARSHAL_RJBASE_NULL) {
-			return null;
+	public static void marshal_poly (MarshalWriter writer, String name, RJ_Summary obj) {
+
+		writer.marshalMapBegin (name);
+
+		if (obj == null) {
+			writer.marshalInt (M_TYPE_NAME, MARSHAL_NULL);
+		} else {
+			writer.marshalInt (M_TYPE_NAME, obj.get_marshal_type());
+			obj.do_marshal (writer);
 		}
 
-		return new RJ_Summary (ver, reader);
+		writer.marshalMapEnd ();
+
+		return;
 	}
 
-	protected RJ_Summary (MarshalReader reader) {
-		this (reader.unmarshalLong (MARSHAL_RJBASE_VER, MARSHAL_RJBASE_VER), reader);
-	}
+	// Unmarshal object, polymorphic.
 
-	private RJ_Summary (long ver, MarshalReader reader) {
+	public static RJ_Summary unmarshal_poly (MarshalReader reader, String name) {
+		RJ_Summary result;
 
-		// Contents
+		reader.unmarshalMapBegin (name);
+	
+		// Switch according to type
 
-		b                    = reader.unmarshalDouble ();
-		magMain              = reader.unmarshalDouble ();
-		min_a                = reader.unmarshalDouble ();
-		max_a                = reader.unmarshalDouble ();
-		delta_a              = reader.unmarshalDouble ();
-		num_a                = reader.unmarshalInt    (1);
-		min_p                = reader.unmarshalDouble ();
-		max_p                = reader.unmarshalDouble ();
-		delta_p              = reader.unmarshalDouble ();
-		num_p                = reader.unmarshalInt    (1);
-		min_c                = reader.unmarshalDouble ();
-		max_c                = reader.unmarshalDouble ();
-		delta_c              = reader.unmarshalDouble ();
-		num_c                = reader.unmarshalInt    (1);
-		apc_total_size       = reader.unmarshalInt    (1);
-		apc_support_size     = reader.unmarshalInt    (0);
-		apc_support_total    = reader.unmarshalDouble ();
-		apc_max_tail_element = reader.unmarshalDouble ();
-		a_support_lo         = reader.unmarshalInt    (0);
-		a_support_hi         = reader.unmarshalInt    (0);
-		p_support_lo         = reader.unmarshalInt    (0);
-		p_support_hi         = reader.unmarshalInt    (0);
-		c_support_lo         = reader.unmarshalInt    (0);
-		c_support_hi         = reader.unmarshalInt    (0);
-		stat_a_mean          = reader.unmarshalDouble ();
-		stat_a_sdev          = reader.unmarshalDouble ();
-		stat_a_like          = reader.unmarshalDouble ();
-		stat_p_mean          = reader.unmarshalDouble ();
-		stat_p_sdev          = reader.unmarshalDouble ();
-		stat_p_like          = reader.unmarshalDouble ();
-		stat_c_mean          = reader.unmarshalDouble ();
-		stat_c_sdev          = reader.unmarshalDouble ();
-		stat_c_like          = reader.unmarshalDouble ();
+		int type = reader.unmarshalInt (M_TYPE_NAME);
+
+		switch (type) {
+
+		default:
+			throw new MarshalException ("RJ_Summary.unmarshal_poly: Unknown class type code: type = " + type);
+
+		case MARSHAL_NULL:
+			result = null;
+			break;
+
+		case MARSHAL_RJBASE:
+			result = new RJ_Summary();
+			result.do_umarshal (reader);
+			break;
+
+		case MARSHAL_RJGEN:
+			result = new RJ_Summary_Generic();
+			result.do_umarshal (reader);
+			break;
+
+		case MARSHAL_RJBAY:
+			result = new RJ_Summary_Bayesian();
+			result.do_umarshal (reader);
+			break;
+
+		case MARSHAL_RJSEQ:
+			result = new RJ_Summary_SequenceSpecific();
+			result.do_umarshal (reader);
+			break;
+		}
+
+		reader.unmarshalMapEnd ();
+
+		return result;
 	}
 	
 }

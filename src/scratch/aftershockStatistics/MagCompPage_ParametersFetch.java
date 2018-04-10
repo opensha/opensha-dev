@@ -237,16 +237,75 @@ public class MagCompPage_ParametersFetch {
 		
 			MagCompPage_ParametersFetch fetch = new MagCompPage_ParametersFetch();
 			Set<OAFTectonicRegime> regimes = fetch.getRegimeSet();
+
 			MarshalImpArray store = new MarshalImpArray();
+			store.marshalMapBegin (null);
 
 			for (OAFTectonicRegime regime : regimes) {
-				MagCompPage_Parameters.marshal(store, fetch.get(regime));
+				//MagCompPage_Parameters.marshal_poly(store, regime.toString(), fetch.get(regime));
+				fetch.get(regime).marshal(store, regime.toString());
 			}
+
+			store.marshalMapEnd ();
+			store.check_write_complete ();
+			store.unmarshalMapBegin (null);
 
 			for (OAFTectonicRegime regime : regimes) {
 				System.out.println(regime+": "+fetch.get(regime));
-				System.out.println(regime+": "+MagCompPage_Parameters.unmarshal(store));
+				//System.out.println(regime+": "+MagCompPage_Parameters.unmarshal_poly(store, regime.toString()));
+				System.out.println(regime+": "+(new MagCompPage_Parameters()).unmarshal(store, regime.toString()));
 			}
+
+			store.unmarshalMapEnd ();
+			store.check_read_complete ();
+
+			return;
+		}
+
+		// Subcommand : Test #4
+		// Command format:
+		//  test4
+		// List all regimes, and the properties assigned to each.
+		// Each is displayed twice, once fetched from parameters, once unmarshaled.
+		// This version is marshaled to JSON, and the JSON is displayed at the end.
+
+		if (args[0].equalsIgnoreCase ("test4")) {
+
+			// No additional arguments
+
+			if (args.length != 1) {
+				System.err.println ("MagCompPage_ParametersFetch : Invalid 'test4' subcommand");
+				return;
+			}
+
+			// Display info for each regime
+		
+			MagCompPage_ParametersFetch fetch = new MagCompPage_ParametersFetch();
+			Set<OAFTectonicRegime> regimes = fetch.getRegimeSet();
+
+			MarshalImpJsonWriter store = new MarshalImpJsonWriter();
+			store.marshalMapBegin (null);
+
+			for (OAFTectonicRegime regime : regimes) {
+				MagCompPage_Parameters.marshal_poly(store, regime.toString(), fetch.get(regime));
+			}
+
+			store.marshalMapEnd ();
+			store.check_write_complete ();
+			String json_string = store.get_json_string();
+
+			MarshalImpJsonReader retrieve = new MarshalImpJsonReader (json_string);
+			retrieve.unmarshalMapBegin (null);
+
+			for (OAFTectonicRegime regime : regimes) {
+				System.out.println(regime+": "+fetch.get(regime));
+				System.out.println(regime+": "+MagCompPage_Parameters.unmarshal_poly(retrieve, regime.toString()));
+			}
+
+			retrieve.unmarshalMapEnd ();
+			retrieve.check_read_complete ();
+
+			System.out.println (json_string);
 
 			return;
 		}

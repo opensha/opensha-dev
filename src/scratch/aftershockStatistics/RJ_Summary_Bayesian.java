@@ -41,17 +41,25 @@ public class RJ_Summary_Bayesian extends RJ_Summary {
 
 	// Marshal version number.
 
-	public static final long MARSHAL_RJBAY_NULL = 6000L;
-	public static final long MARSHAL_RJBAY_VER = 6001L;
+	private static final int MARSHAL_VER_1 = 6001;
 
-	// Marshal object.
+	private static final String M_VERSION_NAME = "RJ_Summary_Bayesian";
+
+	// Get the type code.
+
+	@Override
+	protected int get_marshal_type () {
+		return MARSHAL_RJBAY;
+	}
+
+	// Marshal object, internal.
 
 	@Override
 	protected void do_marshal (MarshalWriter writer) {
 
 		// Version
 
-		writer.marshalLong (MARSHAL_RJBAY_VER);
+		writer.marshalInt (M_VERSION_NAME, MARSHAL_VER_1);
 
 		// Superclass
 
@@ -63,43 +71,92 @@ public class RJ_Summary_Bayesian extends RJ_Summary {
 		return;
 	}
 
+	// Unmarshal object, internal.
+
+	@Override
+	protected void do_umarshal (MarshalReader reader) {
+	
+		// Version
+
+		int ver = reader.unmarshalInt (M_VERSION_NAME, MARSHAL_VER_1, MARSHAL_VER_1);
+
+		// Superclass
+
+		super.do_umarshal (reader);
+
+		// Contents
+
+
+		return;
+	}
+
 	// Marshal object.
 
-	public static void marshal (MarshalWriter writer, RJ_Summary_Bayesian obj) {
-
-		if (obj == null) {
-			writer.marshalLong (MARSHAL_RJBAY_NULL);
-		} else {
-			obj.do_marshal (writer);
-		}
-
+	@Override
+	public void marshal (MarshalWriter writer, String name) {
+		writer.marshalMapBegin (name);
+		do_marshal (writer);
+		writer.marshalMapEnd ();
 		return;
 	}
 
 	// Unmarshal object.
 
-	public static RJ_Summary_Bayesian unmarshal (MarshalReader reader) {
-	
-		// Version
+	@Override
+	public RJ_Summary_Bayesian unmarshal (MarshalReader reader, String name) {
+		reader.unmarshalMapBegin (name);
+		do_umarshal (reader);
+		reader.unmarshalMapEnd ();
+		return this;
+	}
 
-		long ver = reader.unmarshalLong (MARSHAL_RJBAY_NULL, MARSHAL_RJBAY_VER);
+	// Marshal object, polymorphic.
 
-		if (ver == MARSHAL_RJBAY_NULL) {
-			return null;
+	public static void marshal_poly (MarshalWriter writer, String name, RJ_Summary_Bayesian obj) {
+
+		writer.marshalMapBegin (name);
+
+		if (obj == null) {
+			writer.marshalInt (M_TYPE_NAME, MARSHAL_NULL);
+		} else {
+			writer.marshalInt (M_TYPE_NAME, obj.get_marshal_type());
+			obj.do_marshal (writer);
 		}
 
-		return new RJ_Summary_Bayesian (ver, reader);
+		writer.marshalMapEnd ();
+
+		return;
 	}
 
-	protected RJ_Summary_Bayesian (MarshalReader reader) {
-		this (reader.unmarshalLong (MARSHAL_RJBAY_VER, MARSHAL_RJBAY_VER), reader);
-	}
+	// Unmarshal object, polymorphic.
 
-	private RJ_Summary_Bayesian (long ver, MarshalReader reader) {
-		super (reader);
+	public static RJ_Summary_Bayesian unmarshal_poly (MarshalReader reader, String name) {
+		RJ_Summary_Bayesian result;
 
-		// Contents
+		reader.unmarshalMapBegin (name);
+	
+		// Switch according to type
 
+		int type = reader.unmarshalInt (M_TYPE_NAME);
+
+		switch (type) {
+
+		default:
+			throw new MarshalException ("RJ_Summary_Bayesian.unmarshal_poly: Unknown class type code: type = " + type);
+
+		case MARSHAL_NULL:
+			result = null;
+			break;
+
+		case MARSHAL_RJBAY:
+			result = new RJ_Summary_Bayesian();
+			result.do_umarshal (reader);
+			break;
+		}
+
+		reader.unmarshalMapEnd ();
+
+		return result;
 	}
 	
 }

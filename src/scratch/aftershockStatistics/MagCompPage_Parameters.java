@@ -57,61 +57,122 @@ public class MagCompPage_Parameters {
 
 	// Marshal version number.
 
-	public static final long MARSHAL_NULL = 2000L;
-	public static final long MARSHAL_VER = 2001L;
+	private static final int MARSHAL_VER_1 = 2001;
 
-	// Marshal object.
+	private static final String M_VERSION_NAME = "MagCompPage_Parameters";
+
+	// Marshal type code.
+
+	protected static final int MARSHAL_NULL = 2000;
+	protected static final int MARSHAL_MAG_COMP = 2001;
+
+	protected static final String M_TYPE_NAME = "ClassType";
+
+	// Get the type code.
+
+	protected int get_marshal_type () {
+		return MARSHAL_MAG_COMP;
+	}
+
+	// Marshal object, internal.
 
 	protected void do_marshal (MarshalWriter writer) {
 
 		// Version
 
-		writer.marshalLong (MARSHAL_VER);
+		writer.marshalInt (M_VERSION_NAME, MARSHAL_VER_1);
 
 		// Contents
 
-		writer.marshalDouble (magCat);
-		writer.marshalDouble (capG  );
-		writer.marshalDouble (capH  );
+		writer.marshalDouble ("magCat", magCat);
+		writer.marshalDouble ("capG"  , capG  );
+		writer.marshalDouble ("capH"  , capH  );
 	
+		return;
+	}
+
+	// Unmarshal object, internal.
+
+	protected void do_umarshal (MarshalReader reader) {
+	
+		// Version
+
+		int ver = reader.unmarshalInt (M_VERSION_NAME, MARSHAL_VER_1, MARSHAL_VER_1);
+
+		// Contents
+
+		magCat = reader.unmarshalDouble ("magCat");
+		capG   = reader.unmarshalDouble ("capG"  );
+		capH   = reader.unmarshalDouble ("capH"  );
+
 		return;
 	}
 
 	// Marshal object.
 
-	public static void marshal (MarshalWriter writer, MagCompPage_Parameters obj) {
-
-		if (obj == null) {
-			writer.marshalLong (MARSHAL_NULL);
-		} else {
-			obj.do_marshal (writer);
-		}
-
+	public void marshal (MarshalWriter writer, String name) {
+		writer.marshalMapBegin (name);
+		do_marshal (writer);
+		writer.marshalMapEnd ();
 		return;
 	}
 
 	// Unmarshal object.
 
-	public static MagCompPage_Parameters unmarshal (MarshalReader reader) {
-	
-		// Version
-
-		long ver = reader.unmarshalLong (MARSHAL_NULL, MARSHAL_VER);
-
-		if (ver == MARSHAL_NULL) {
-			return null;
-		}
-
-		return new MagCompPage_Parameters (ver, reader);
+	public MagCompPage_Parameters unmarshal (MarshalReader reader, String name) {
+		reader.unmarshalMapBegin (name);
+		do_umarshal (reader);
+		reader.unmarshalMapEnd ();
+		return this;
 	}
 
-	private MagCompPage_Parameters (long ver, MarshalReader reader) {
+	// Marshal object, polymorphic.
 
-		// Contents
+	public static void marshal_poly (MarshalWriter writer, String name, MagCompPage_Parameters obj) {
 
-		magCat = reader.unmarshalDouble();
-		capG   = reader.unmarshalDouble();
-		capH   = reader.unmarshalDouble();
+		writer.marshalMapBegin (name);
+
+		if (obj == null) {
+			writer.marshalInt (M_TYPE_NAME, MARSHAL_NULL);
+		} else {
+			writer.marshalInt (M_TYPE_NAME, obj.get_marshal_type());
+			obj.do_marshal (writer);
+		}
+
+		writer.marshalMapEnd ();
+
+		return;
+	}
+
+	// Unmarshal object, polymorphic.
+
+	public static MagCompPage_Parameters unmarshal_poly (MarshalReader reader, String name) {
+		MagCompPage_Parameters result;
+
+		reader.unmarshalMapBegin (name);
+	
+		// Switch according to type
+
+		int type = reader.unmarshalInt (M_TYPE_NAME);
+
+		switch (type) {
+
+		default:
+			throw new MarshalException ("MagCompPage_Parameters.unmarshal_poly: Unknown class type code: type = " + type);
+
+		case MARSHAL_NULL:
+			result = null;
+			break;
+
+		case MARSHAL_MAG_COMP:
+			result = new MagCompPage_Parameters();
+			result.do_umarshal (reader);
+			break;
+		}
+
+		reader.unmarshalMapEnd ();
+
+		return result;
 	}
 	
 }
