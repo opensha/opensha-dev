@@ -1,6 +1,7 @@
 package scratch.aftershockStatistics;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.mongodb.morphia.annotations.Transient;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -56,7 +57,7 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 	// The list of aftershocks used to construct the model.
 
 	@Transient
-	protected ObsEqkRupList aftershockList = null;
+	protected List<ObsEqkRupture> aftershockList = null;
 
 	// The mainshock.
 
@@ -87,6 +88,31 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 
 	
 	/**
+	 * Use this constructor to initialize from parameter holders.
+	 * @param mainShock - the mainshock
+	 * @param aftershockList - list of aftershocks; events with mag below magCat will be filtered out
+	 * @param dataStartTimeDays - start time for data, in days since the mainshock
+	 * @param dataEndTimeDays - end time for data, in days since the mainshock
+	 * @param mcParam - magnitude of completeness parameters
+	 * @param sqParam - sequence-specific range parameters
+	 */
+	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, List<ObsEqkRupture> aftershockList,
+				double dataStartTimeDays, double dataEndTimeDays,
+				MagCompPage_Parameters mcParam, SeqSpecRJ_Parameters sqParam) {
+		
+		this(mainShock, aftershockList,
+				mcParam.get_magCat(), mcParam.get_capG(), mcParam.get_capH(),
+				sqParam.get_b(), dataStartTimeDays, dataEndTimeDays,
+				sqParam.get_min_a(), sqParam.get_max_a(), sqParam.get_num_a(),
+				sqParam.get_min_p(), sqParam.get_max_p(), sqParam.get_num_p(),
+				sqParam.get_min_c(), sqParam.get_max_c(), sqParam.get_num_c());
+
+	}
+
+
+
+	
+	/**
 	 * Use this constructor to apply a time-independent magnitude of completeness.
 	 * @param mainShock - the mainshock
 	 * @param aftershockList - list of aftershocks; events with mag below magCat will be filtered out
@@ -108,7 +134,7 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 	 * longer any performance difference between the two constructors, because the code auto-detects
 	 * when an analytic solution can be used.
 	 */
-	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, ObsEqkRupList aftershockList,
+	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, List<ObsEqkRupture> aftershockList,
 				double magCat, double b, double dataStartTimeDays, double dataEndTimeDays,
 				double min_a, double max_a, int num_a, 
 				double min_p, double max_p, int num_p, 
@@ -120,6 +146,7 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 	}
 
 		
+
 	
 	/**
 	 * This solves for the Reasenberg-Jones parameters from the given mainShock, aftershockList,
@@ -149,7 +176,7 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 	 * as if capG==10.0 and capH==0.0, that is, the magnitude of completeness is always magCat.
 	 * New code should not rely on this behavior.
 	 */
-	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, ObsEqkRupList aftershockList,
+	public RJ_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, List<ObsEqkRupture> aftershockList,
 			 								double magCat, double capG, double capH,
 											double b, double dataStartTimeDays, double dataEndTimeDays,
 											double min_a, double max_a, int num_a, 
@@ -246,7 +273,7 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 	 * @param dataStartTimeDays - start time for data, in days since the mainshock
 	 * @param dataEndTimeDays - end time for data, in days since the mainshock
 	 */
-    public void apc_build(ObsEqkRupture mainShock, ObsEqkRupList aftershockList, double dataStartTimeDays, double dataEndTimeDays) {
+    public void apc_build(ObsEqkRupture mainShock, List<ObsEqkRupture> aftershockList, double dataStartTimeDays, double dataEndTimeDays) {
 
 		// Save the parameters
 
@@ -422,6 +449,242 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 			EvenlyDiscretizedFunc[] fractalWithAleatoryMFDArray = gen.getCumNumMFD_FractileWithAleatoryVariability(fractArray, 5.0, 8.0, 31, 0d, 7d);
 			System.out.println("2.5% With Aleatory: "+fractalWithAleatoryMFDArray[0].getX(0)+"\t"+fractalWithAleatoryMFDArray[0].getY(0));
 			System.out.println("97.5% With Aleatory: "+fractalWithAleatoryMFDArray[1].getX(0)+"\t"+fractalWithAleatoryMFDArray[1].getY(0));
+
+			return;
+		}
+
+
+		// Subcommand : Test #2
+		// Command format:
+		//  test2
+		// Generate a simulated aftershock sequence.
+		// Then, construct the model and see if it can recover the parameters a and p.
+		// It's done twice, once with ObsEqkRupList and again with CompactEqkRupList.
+		// The second time we use the new constructor that takes parameter holders.
+		// Note: Most of the time the two sets of results are the same.  Occasionally the
+		// second set has one less aftershock (because magnitude rounding causes one event just
+		// above the magnitude of completeness to fall below it), causing the results to differ.
+
+		if (args[0].equalsIgnoreCase ("test2")) {
+
+			// No additional arguments
+
+			if (args.length != 1) {
+				System.err.println ("RJ_AftershockModel_SequenceSpecific : Invalid 'test2' subcommand");
+				return;
+			}
+
+			// Parameter values
+			
+			double a = -1.67;
+			double b = 0.91;
+			double c = 0.05;
+			double p = 1.08;
+			double magMain = 7.5;
+			double magCat = 2.5;
+			double capG = 1.25;
+			double capH = 0.75;
+			double dataStartTimeDays = 0.0;
+			double dataEndTimeDays = 30.0;
+		
+			double min_a = -2.0;
+			double max_a = -1.0;
+			int num_a = 101;
+
+			double min_p = 0.9; 
+			double max_p = 1.2; 
+			int num_p = 31;
+		
+			double min_c=0.05;
+			double max_c=0.05;
+			int num_c=1;
+
+			// Run the simulation
+
+			ObsEqkRupList aftershockList = AftershockStatsCalc.simAftershockSequence(a, b, magMain, magCat, capG, capH, p, c, dataStartTimeDays, dataEndTimeDays);
+
+			// Make the mainshock
+
+			ObsEqkRupture mainShock = new ObsEqkRupture("0", 0L, null, magMain);
+
+			// Make the model, it will output some information
+
+			RJ_AftershockModel_SequenceSpecific gen =
+				new RJ_AftershockModel_SequenceSpecific(mainShock, aftershockList,
+			 								magCat, capG, capH,
+											b, dataStartTimeDays, dataEndTimeDays,
+											min_a, max_a, num_a, 
+											min_p, max_p, num_p, 
+											min_c, max_c, num_c);
+
+			// A few calculations
+		
+			EvenlyDiscretizedFunc lowFract = gen.getCumNumMFD_Fractile(0.025, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5%: "+lowFract.getX(0)+"\t"+lowFract.getY(0));
+			EvenlyDiscretizedFunc hiFract = gen.getCumNumMFD_Fractile(0.975, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("97.5%: "+hiFract.getX(0)+"\t"+hiFract.getY(0));
+		
+			double[] fractArray = {0.025, 0.975};
+			EvenlyDiscretizedFunc[] fractalWithAleatoryMFDArray = gen.getCumNumMFD_FractileWithAleatoryVariability(fractArray, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5% With Aleatory: "+fractalWithAleatoryMFDArray[0].getX(0)+"\t"+fractalWithAleatoryMFDArray[0].getY(0));
+			System.out.println("97.5% With Aleatory: "+fractalWithAleatoryMFDArray[1].getX(0)+"\t"+fractalWithAleatoryMFDArray[1].getY(0));
+
+			// Compact form of list
+
+			CompactEqkRupList compactList = new CompactEqkRupList (aftershockList);
+
+			// Make the model, it will output some information
+
+			//RJ_AftershockModel_SequenceSpecific compactGen =
+			//	new RJ_AftershockModel_SequenceSpecific(mainShock, compactList,
+			// 								magCat, capG, capH,
+			//								b, dataStartTimeDays, dataEndTimeDays,
+			//								min_a, max_a, num_a, 
+			//								min_p, max_p, num_p, 
+			//								min_c, max_c, num_c);
+
+			MagCompPage_Parameters mcParam = new MagCompPage_Parameters (magCat, capG, capH);
+			SeqSpecRJ_Parameters sqParam = new SeqSpecRJ_Parameters (b,
+				min_a, max_a, num_a, min_p, max_p, num_p, min_c, max_c, num_c);
+
+			RJ_AftershockModel_SequenceSpecific compactGen =
+				new RJ_AftershockModel_SequenceSpecific(mainShock, compactList,
+			 								dataStartTimeDays, dataEndTimeDays,
+											mcParam, sqParam);
+
+			// A few calculations
+		
+			EvenlyDiscretizedFunc lowFract2 = compactGen.getCumNumMFD_Fractile(0.025, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5%: "+lowFract2.getX(0)+"\t"+lowFract2.getY(0));
+			EvenlyDiscretizedFunc hiFract2 = compactGen.getCumNumMFD_Fractile(0.975, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("97.5%: "+hiFract2.getX(0)+"\t"+hiFract2.getY(0));
+		
+			double[] fractArray2 = {0.025, 0.975};
+			EvenlyDiscretizedFunc[] fractalWithAleatoryMFDArray2 = compactGen.getCumNumMFD_FractileWithAleatoryVariability(fractArray2, 5.0, 8.0, 31, 0d, 7d);
+			System.out.println("2.5% With Aleatory: "+fractalWithAleatoryMFDArray2[0].getX(0)+"\t"+fractalWithAleatoryMFDArray2[0].getY(0));
+			System.out.println("97.5% With Aleatory: "+fractalWithAleatoryMFDArray2[1].getX(0)+"\t"+fractalWithAleatoryMFDArray2[1].getY(0));
+
+			return;
+		}
+
+
+		// Subcommand : Test #3
+		// Command format:
+		//  test3
+		// Generate a simulated aftershock sequence.
+		// Convert to compact form.
+		// Construct the parameter holder objects.
+		// Construct generic, sequence-specific, and bayesian models.
+		// Construct summary objects for each of the three models.
+		// Marshal the summary objects.
+		// Display summaries twice: once direct, once unmarshaled.
+
+		if (args[0].equalsIgnoreCase ("test3")) {
+
+			// No additional arguments
+
+			if (args.length != 1) {
+				System.err.println ("RJ_AftershockModel_SequenceSpecific : Invalid 'test3' subcommand");
+				return;
+			}
+
+			// Parameter values
+			
+			double a = -1.67;
+			double b = 0.91;
+			double c = 0.05;
+			double p = 1.08;
+			double magMain = 7.5;
+			double magCat = 2.5;
+			double capG = 1.25;
+			double capH = 0.75;
+			double dataStartTimeDays = 0.0;
+			double dataEndTimeDays = 30.0;
+		
+			double min_a = -2.0;
+			double max_a = -1.0;
+			int num_a = 101;
+
+			double min_p = 0.9; 
+			double max_p = 1.2; 
+			int num_p = 31;
+		
+			double min_c=0.05;
+			double max_c=0.05;
+			int num_c=1;
+
+			// Run the simulation
+
+			ObsEqkRupList aftershockList = AftershockStatsCalc.simAftershockSequence(a, b, magMain, magCat, capG, capH, p, c, dataStartTimeDays, dataEndTimeDays);
+
+			// Make the mainshock
+
+			ObsEqkRupture mainShock = new ObsEqkRupture("0", 0L, null, magMain);
+
+			// Compact form of list
+
+			CompactEqkRupList compactList = new CompactEqkRupList (aftershockList);
+
+			// Parameter holders
+
+			double a_sigma = 1.76;
+			double a_sigma1 = 750;
+			double a_sigma0 = 0.49;
+			double a_delta = (max_a - min_a)/((double)(num_a - 1));
+
+			GenericRJ_Parameters rjParam = new GenericRJ_Parameters (a, a_sigma, a_sigma0, a_sigma1, 
+					b, p, c, min_a, max_a, a_delta);
+
+			MagCompPage_Parameters mcParam = new MagCompPage_Parameters (magCat, capG, capH);
+
+			SeqSpecRJ_Parameters sqParam = new SeqSpecRJ_Parameters (b,
+				min_a, max_a, num_a, min_p, max_p, num_p, min_c, max_c, num_c);
+
+			// Make the models
+
+			RJ_AftershockModel_SequenceSpecific seqModel =
+				new RJ_AftershockModel_SequenceSpecific(mainShock, compactList,
+			 								dataStartTimeDays, dataEndTimeDays,
+											mcParam, sqParam);
+
+			rjParam = new GenericRJ_Parameters (a, a_sigma, a_sigma0, a_sigma1, 
+					b, seqModel.getMaxLikelihood_p(), c, min_a, max_a, a_delta);	// same p so bayesian model can be formed
+
+			RJ_AftershockModel_Generic genModel = new RJ_AftershockModel_Generic (magMain, rjParam);
+
+			RJ_AftershockModel_Bayesian bayModel = new RJ_AftershockModel_Bayesian(genModel, seqModel);
+
+			// Make the summaries
+
+			RJ_Summary_Generic genSummary = new RJ_Summary_Generic (genModel);
+
+			RJ_Summary_SequenceSpecific seqSummary = new RJ_Summary_SequenceSpecific (seqModel);
+
+			RJ_Summary_Bayesian baySummary = new RJ_Summary_Bayesian (bayModel);
+
+			// Marshal the summaries
+
+			MarshalImpArray store = new MarshalImpArray();
+
+			RJ_Summary_Generic.marshal (store, genSummary);
+
+			RJ_Summary_SequenceSpecific.marshal (store, seqSummary);
+
+			RJ_Summary_Bayesian.marshal (store, baySummary);
+
+			// Write the summaries
+
+			System.out.println ("Generic, Direct:\n" + genSummary.toString());
+
+			System.out.println ("Generic, Marshaled:\n" + RJ_Summary_Generic.unmarshal(store).toString());
+
+			System.out.println ("Sequence-Specific, Direct:\n" + seqSummary.toString());
+
+			System.out.println ("Sequence-Specific, Marshaled:\n" + RJ_Summary_SequenceSpecific.unmarshal(store).toString());
+
+			System.out.println ("Bayesian, Direct:\n" + baySummary.toString());
+
+			System.out.println ("Bayesian, Marshaled:\n" + RJ_Summary_Bayesian.unmarshal(store).toString());
 
 			return;
 		}

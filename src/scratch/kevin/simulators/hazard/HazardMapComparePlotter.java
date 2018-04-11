@@ -138,14 +138,14 @@ public class HazardMapComparePlotter {
 				jobDirs.add(new File(hazardJobDir, args[i]));
 		} else {
 			FaultBasedMapGen.LOCAL_MAPGEN = true;
-			catalog = Catalogs.BRUCE_2616.instance(catalogsBaseDir);
+			catalog = Catalogs.BRUCE_2637.instance(catalogsBaseDir);
 			
-//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
-//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
-//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
-//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
-//			jobDirs.add(new File(hazardJobDir, "2018_03_21-bruce2616-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
 		}
 		
 		File catOutDir = new File(mainOutputDir, catalog.getCatalogDir().getName());
@@ -368,9 +368,9 @@ public class HazardMapComparePlotter {
 					csv.writeToStream(gzFileOut);
 					
 					plotMaps(resourcesDir, "map_"+durationLabel+"_"+catalogFileName, rsqsimData, region,
-							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), catalogName+", "+durationLabel, hazardCPT, false);
+							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), catalogName+", "+durationLabel+", "+imtLabel, hazardCPT, false);
 					plotMaps(resourcesDir, "map_"+durationLabel+"_u3", u3Data, region,
-							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), "UCERF3, "+durationLabel, hazardCPT, false);
+							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), "UCERF3, "+durationLabel+", "+imtLabel, hazardCPT, false);
 					
 					GriddedGeoDataSet ratioData = new GriddedGeoDataSet(gridReg, false);
 					for (int i=0; i<gridReg.getNodeCount(); i++)
@@ -381,20 +381,20 @@ public class HazardMapComparePlotter {
 					ratioCPT.setNanColor(Color.WHITE);
 					ratioCPT = ratioCPT.rescale(-0.2d, 0.2d);
 					plotMaps(resourcesDir, "map_"+durationLabel+"_ratio_log_tight", ratioData, region, (double)ratioCPT.getMinValue(),
-							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel, ratioCPT, false);
+							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtLabel, ratioCPT, false);
 					ratioCPT = ratioCPT.rescale(-0.5d, 0.5d);
 					plotMaps(resourcesDir, "map_"+durationLabel+"_ratio_log", ratioData, region, (double)ratioCPT.getMinValue(),
-							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel, ratioCPT, false);
+							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtLabel, ratioCPT, false);
 				}
 			}
 			
 			if (plotHist) {
 				System.out.println("Plotting hists");
-				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, resourcesDir, true);
-				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, resourcesDir, false);
-				plotNEHRP_Hists(u3Curves, curves, catalogName, gridReg, nehrpRPs, resourcesDir);
-//				plotMeanStdDevTrend(500, 30000, u3Curves, rsqsimCurves, gridReg, resourcesDir);
-				plotMeanStdDevTrend(1e-6, u3Curves, curves, catalogName, gridReg, resourcesDir);
+				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, resourcesDir, true, imtLabel);
+				plotHists(u3Curves, curves, catalogName, gridReg, histRPs, histHighlightIndex, resourcesDir, false, imtLabel);
+				plotNEHRP_Hists(u3Curves, curves, catalogName, gridReg, nehrpRPs, resourcesDir, imtLabel);
+//				plotMeanStdDevTrend(500, 30000, u3Curves, rsqsimCurves, gridReg, resourcesDir, imtLabel);
+				plotMeanStdDevTrend(1e-6, u3Curves, curves, catalogName, gridReg, resourcesDir, imtLabel);
 			}
 			
 			if (plotCurves) {
@@ -617,7 +617,7 @@ public class HazardMapComparePlotter {
 		return ret;
 	}
 	
-	private static GriddedGeoDataSet loadFromBinary(GriddedRegion gridReg, Map<Location, ? extends DiscretizedFunc> curves,
+	static GriddedGeoDataSet loadFromBinary(GriddedRegion gridReg, Map<Location, ? extends DiscretizedFunc> curves,
 			boolean isProbAtIML, double level) {
 		GriddedGeoDataSet data = new GriddedGeoDataSet(gridReg, false);
 		
@@ -686,7 +686,7 @@ public class HazardMapComparePlotter {
 		}
 	}
 	
-	private static void waitOnFutures(boolean shutdown) {
+	static void waitOnFutures(boolean shutdown) {
 		if (futures == null)
 			return;
 		System.out.println("Waiting on "+futures.size()+" maps...");
@@ -712,7 +712,7 @@ public class HazardMapComparePlotter {
 	
 	static void plotHists(Map<Location, ? extends DiscretizedFunc> ucerf3Curves,
 			Map<Location, ? extends DiscretizedFunc> rsqsimCurves, String catalogName, GriddedRegion gridReg,
-			int[] returnPeriods, int hightlightIndex, File outputDir, boolean log) throws IOException {
+			int[] returnPeriods, int hightlightIndex, File outputDir, boolean log, String imtLabel) throws IOException {
 		
 		PlotPreferences plotPrefs = PlotPreferences.getDefault();
 		plotPrefs.setTickLabelFontSize(18);
@@ -782,8 +782,8 @@ public class HazardMapComparePlotter {
 			cpt.setNanColor(Color.WHITE);
 			cpt.setBelowMinColor(Color.WHITE);
 			
-			String xAxisLabel = "UCERF3 1/"+rp+"yr";
-			String yAxisLabel = catalogName+" 1/"+rp+"yr";
+			String xAxisLabel = "UCERF3 1/"+rp+"yr, "+imtLabel;
+			String yAxisLabel = catalogName+" 1/"+rp+"yr, "+imtLabel;
 			if (log) {
 				xAxisLabel = "Ln "+xAxisLabel;
 				yAxisLabel = "Ln "+yAxisLabel;
@@ -877,7 +877,7 @@ public class HazardMapComparePlotter {
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 4f, Color.BLACK));
 			}
 			
-			PlotSpec spec = new PlotSpec(funcs, chars, "Hazard 1D Histogram", "Ln("+catalogName+"/UCERF3)", "Fraction");
+			PlotSpec spec = new PlotSpec(funcs, chars, "Hazard 1D Histogram", "Ln("+catalogName+"/UCERF3), "+imtLabel, "Fraction");
 			spec.setLegendVisible(true);
 			
 			HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
@@ -893,7 +893,7 @@ public class HazardMapComparePlotter {
 	
 	static void plotMeanStdDevTrend(double minProb, Map<Location, ? extends DiscretizedFunc> ucerf3Curves,
 			Map<Location, ? extends DiscretizedFunc> rsqsimCurves, String catalogName,
-			GriddedRegion gridReg, File outputDir) throws IOException {
+			GriddedRegion gridReg, File outputDir, String imtLabel) throws IOException {
 		double logMinProb = Math.log10(minProb);
 		double logMaxProb = 0;
 		int numProbs = (int)(logMaxProb - logMinProb)*5 + 1;
@@ -1066,7 +1066,7 @@ public class HazardMapComparePlotter {
 			}
 		}
 		
-		PlotSpec spec = new PlotSpec(linearFuncs, chars, "Mean/StdDev Trend", "Annual Probability", "Ln("+catalogName+"/UCERF3)");
+		PlotSpec spec = new PlotSpec(linearFuncs, chars, "Mean/StdDev Trend", "Annual Probability", "Ln("+catalogName+"/UCERF3), "+imtLabel);
 		spec.setLegendVisible(true);
 		
 		PlotPreferences plotPrefs = PlotPreferences.getDefault();
@@ -1110,7 +1110,7 @@ public class HazardMapComparePlotter {
 	
 	static void plotNEHRP_Hists(Map<Location, ? extends DiscretizedFunc> ucerf3Curves,
 			Map<Location, ? extends DiscretizedFunc> rsqsimCurves, String catalogName, GriddedRegion gridReg,
-			int[] returnPeriods, File outputDir) throws IOException {
+			int[] returnPeriods, File outputDir, String imtLabel) throws IOException {
 		HashSet<Integer> nehrpGridIndexes = new HashSet<>();
 		for (NEHRP_TestCity city : NEHRP_TestCity.getCA()) {
 			Location loc = city.getSite().getLocation();
@@ -1158,7 +1158,7 @@ public class HazardMapComparePlotter {
 			Range yRange = new Range(hist.getMinY()*0.9, hist.getMaxY()*1.1);
 			
 			PlotSpec spec = new PlotSpec(funcs, chars, "NEHRP City Residuals, "+rp+"yr",
-					"Ln("+catalogName+"/UCERF3)", "Fraction");
+					"Ln("+catalogName+"/UCERF3), "+imtLabel, "Fraction");
 			
 			double x = minX + 0.1;
 			double y1 = yRange.getUpperBound()*0.9;

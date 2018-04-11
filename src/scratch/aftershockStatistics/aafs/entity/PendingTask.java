@@ -11,6 +11,7 @@ import org.mongodb.morphia.annotations.IndexOptions;
 import org.mongodb.morphia.annotations.Indexes;
 import org.mongodb.morphia.annotations.Field;
 import org.mongodb.morphia.annotations.Transient;
+import org.mongodb.morphia.annotations.Embedded;
 
 import org.mongodb.morphia.Datastore;
 import org.mongodb.morphia.FindAndModifyOptions;
@@ -18,10 +19,12 @@ import org.mongodb.morphia.FindAndModifyOptions;
 import org.mongodb.morphia.query.Query;
 import org.mongodb.morphia.query.UpdateOperations;
 
-import org.json.simple.JSONObject;
-
 import scratch.aftershockStatistics.aafs.MongoDBUtil;
 import scratch.aftershockStatistics.aafs.RecordKey;
+
+import scratch.aftershockStatistics.MarshalImpArray;
+import scratch.aftershockStatistics.MarshalReader;
+import scratch.aftershockStatistics.MarshalWriter;
 
 
 
@@ -32,7 +35,7 @@ import scratch.aftershockStatistics.aafs.RecordKey;
  *
  * The collection "tasks" holds the queue of pending tasks.
  */
-@Entity("tasks")
+@Entity(value = "tasks", noClassnameStored = true)
 @Indexes({
 	@Index(fields = {@Field("event_id")}, options = @IndexOptions(name = "eventid")),
 	@Index(fields = {@Field("exec_time")}, options = @IndexOptions(name = "extime"))
@@ -88,10 +91,15 @@ public class PendingTask implements java.io.Serializable {
 	private int stage;
 
 	// Details of this task.
-	// Any additional information neeed is stored as a string.
-	// If none, this should be an empty string (not null).
+	// Any additional information neeed is stored as marshaled data.
+	// Each array should have at least one element.
 
-	private String details;
+	@Embedded
+	private long[] details_l;
+	@Embedded
+	private double[] details_d;
+	@Embedded
+	private String[] details_s;
 
 
 
@@ -162,13 +170,71 @@ public class PendingTask implements java.io.Serializable {
         this.stage = stage;
     }
 
-    public String get_details() {
-        return details;
+
+
+
+	/**
+	 * get_details - Get a reader for the details.
+	 */
+    public MarshalReader get_details() {
+        return new MarshalImpArray (details_l, details_d, details_s);
     }
 
-    private void set_details (String details) {
-        this.details = details;
+
+	/**
+	 * set_details - Set details from the marshaled data, can be null for none.
+	 */
+    private void set_details (MarshalWriter writer) {
+		if (writer == null) {
+			details_l = new long[1];
+			details_l[0] = 0L;
+			details_d = new double[1];
+			details_d[0] = 0.0;
+			details_s = new String[1];
+			details_s[0] = "";
+			return;
+		}
+
+		if (!( writer instanceof MarshalImpArray )) {
+			throw new IllegalArgumentException("PendingTask.set_details: Incorrect type of marshal writer");
+		}
+
+		MarshalImpArray w = (MarshalImpArray)writer;
+		details_l = w.get_long_store();
+		details_d = w.get_double_store();
+		details_s = w.get_string_store();
+		return;
     }
+
+
+	/**
+	 * begin_details - Get a writer to use for marhaling details.
+	 */
+    public static MarshalWriter begin_details() {
+        return new MarshalImpArray ();
+    }
+
+
+	/**
+	 * get_details_as_writer - Get a writer containing the details.
+	 */
+    MarshalWriter get_details_as_writer() {
+        return new MarshalImpArray (details_l, details_d, details_s);
+    }
+
+
+	///**
+	// * These getters are for use by other package members for direct copy of the details.
+	// */
+    //long[] get_details_l() {
+    //    return details_l;
+    //}
+    //double[] get_details_d() {
+    //    return details_d;
+    //}
+    //String[] get_details_s() {
+    //    return details_s;
+    //}
 
 
 
@@ -186,7 +252,7 @@ public class PendingTask implements java.io.Serializable {
 			+ "\tsubmit_id: " + submit_id + "\n"
 			+ "\topcode: " + opcode + "\n"
 			+ "\tstage: " + stage + "\n"
-			+ "\tdetails: " + details;
+			+ "\tdetails: " + "llen = " + details_l.length + ", dlen = " + details_d.length + ", slen = " + details_s.length;
 		return str;
 	}
 
@@ -238,20 +304,20 @@ public class PendingTask implements java.io.Serializable {
 	 * @param submit_id = Person or entity submitting this task. Cannot be empty or null.
 	 * @param opcode = Operation code used to dispatch the task.
 	 * @param stage = Stage number, user-defined, effectively an extension of the opcode.
-	 * @param details = Further details of this task, or "" if none. Cannot be null.
+	 * @param details = Further details of this task. Can be null if there are none.
 	 * @return
+	 * Returns the new entry.
 	 */
-	public static void submit_task (String event_id, long sched_time, long submit_time,
-								String submit_id, int opcode, int stage, String details) {
+	public static PendingTask submit_task (String event_id, long sched_time, long submit_time,
+								String submit_id, int opcode, int stage, MarshalWriter details) {
 
 		// Check conditions
 
 		if (!( event_id != null
 			&& sched_time > 0L
 			&& submit_time > 0L
-			&& submit_id != null && submit_id.length() > 0
-			&& details != null )) {
-			throw new RuntimeException("PendingTask.submit_task: Invalid task parameters");
+			&& submit_id != null && submit_id.length() > 0 )) {
+			throw new IllegalArgumentException("PendingTask.submit_task: Invalid task parameters");
 		}
 
 		// Construct the pending task object
@@ -272,7 +338,7 @@ public class PendingTask implements java.io.Serializable {
 		Datastore datastore = MongoDBUtil.getDatastore();
 		datastore.save(ptask);
 		
-		return;
+		return ptask;
 	}
 
 
@@ -435,7 +501,7 @@ public class PendingTask implements java.io.Serializable {
 
 		if (!( ptask != null && ptask.get_id() != null
 			&& exec_time > 0L )) {
-			throw new RuntimeException("PendingTask.stage_task: Invalid task parameters");
+			throw new IllegalArgumentException("PendingTask.stage_task: Invalid task parameters");
 		}
 
 		// Get the MongoDB data store
@@ -469,7 +535,7 @@ public class PendingTask implements java.io.Serializable {
 		// Check conditions
 
 		if (!( ptask != null && ptask.get_id() != null )) {
-			throw new RuntimeException("PendingTask.delete_task: Invalid task parameters");
+			throw new IllegalArgumentException("PendingTask.delete_task: Invalid task parameters");
 		}
 
 		// Get the MongoDB data store
