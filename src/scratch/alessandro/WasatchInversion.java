@@ -310,6 +310,7 @@ public class WasatchInversion {
 	    File file = new File(dirName);
 	    file.mkdirs();
 	    fltSysRupInversion.plotStuff(dirName);
+	    fltSysRupInversion.plotMagHistograms();
 	    fltSysRupInversion.writeAndPlotSegPartMFDs(dirName, true);
 	    fltSysRupInversion.writeAndPlotNonZeroRateRups(dirName, true);
 		

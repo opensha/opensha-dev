@@ -1222,33 +1222,12 @@ public class FaultSystemRuptureRateInversion {
 		EvenlyDiscretizedFunc cumAveOfSegPartMFDs = aveOfSectPartMFDs.getCumRateDistWithOffset();
 		cumAveOfSegPartMFDs.setInfo("cumulative "+aveOfSectPartMFDs.getInfo());
 		
-		//
-// the following is just a check		
-//		System.out.println("orig/smoothed MFD moRate ="+ (float)(magFreqDist.getTotalMomentRate()/smoothedMagFreqDist.getTotalMomentRate()));
-		// add a GR dist matched at M=6.5 and with a bValue=1
-//		GutenbergRichterMagFreqDist gr = getGR_Dist_fit();
-//		if(gr != null) {
-//			mfd_funcs.add(gr);
-//			EvenlyDiscretizedFunc cumGR = gr.getCumRateDistWithOffset();
-//			cumGR.setName("Cum GR Dist fit at cum M=6.5, matched moment rate, and /w b=1");
-//			mfd_funcs.add(cumGR);			
-//		}
-//		else System.out.println("WARNING - couldn't generate fitted GR dist (Mmax greater than 9?)\n");
-
-		/*
-		if(relativeGR_constraintWt > 0.0) {
-			double deltaMag = 0.1;
-			ArbitrarilyDiscretizedFunc grConstraintFunc = new ArbitrarilyDiscretizedFunc();
-			int numGR_constraints = lastRowGR_constraintData-firstRowGR_constraintData+1;
-			for(int i=0; i < numGR_constraints; i++) {
-				int row = i+firstRowGR_constraintData;
-				double mag = smallestGR_constriantMag + i*deltaMag;
-				grConstraintFunc.set(mag, d[row]);
-			}
-			grConstraintFunc.setName("GR constraint values");
-			mfd_funcs.add(grConstraintFunc);
-		}
-		*/
+		GutenbergRichterMagFreqDist grFit = getGR_Dist_fit();
+		EvenlyDiscretizedFunc cumGR_fit = grFit.getCumRateDistWithOffset();
+		cumGR_fit.setName("Cumulative GR Fit");
+		mfd_funcs.add(grFit);
+		mfd_funcs.add(cumGR_fit);
+		
 
 		GraphWindow mfd_graph = new GraphWindow(mfd_funcs, "Magnitude Frequency Distributions");   
 		mfd_graph.setYLog(true);
@@ -1262,10 +1241,8 @@ public class FaultSystemRuptureRateInversion {
 		plotMFD_Chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED));
 		plotMFD_Chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN));
 		plotMFD_Chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.MAGENTA));
-//		if(gr != null) {
-//			plotMFD_Chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
-//			plotMFD_Chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
-//		}
+		plotMFD_Chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		plotMFD_Chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.BLACK));
 		mfd_graph.setPlotChars(plotMFD_Chars);
 		mfd_graph.setTickLabelFontSize(12);
 		mfd_graph.setAxisLabelFontSize(14);
@@ -1326,7 +1303,7 @@ public class FaultSystemRuptureRateInversion {
 
 	}
 	
-	public void plotHistograms() {
+	public void plotMagHistograms() {
 		
 		ArrayList funcs = new ArrayList();
 		funcs.add(meanMagHistorgram);
@@ -1337,31 +1314,24 @@ public class FaultSystemRuptureRateInversion {
 		mHist_graph.setX_AxisRange(3.5, 9.0);
 		
 		// make a numSegInRupHistogram
-		SummedMagFreqDist numSegInRupHistogram = new SummedMagFreqDist(1.0,numSections,1.0);
-		for(int r=0;r<numSectInRup.length;r++) numSegInRupHistogram.add((double)numSectInRup[r], 1.0);
-		numSegInRupHistogram.setName("Num Segments In Rupture Histogram");
-		ArrayList funcs2 = new ArrayList();
-		funcs2.add(numSegInRupHistogram);
-		GraphWindow graph = new GraphWindow(funcs2, "Num Segments In Rupture Histogram");   
-
-		
+//		SummedMagFreqDist numSegInRupHistogram = new SummedMagFreqDist(1.0,numSections,1.0);
+//		for(int r=0;r<numSectInRup.length;r++) numSegInRupHistogram.add((double)numSectInRup[r], 1.0);
+//		numSegInRupHistogram.setName("Num Segments In Rupture Histogram");
+//		ArrayList funcs2 = new ArrayList();
+//		funcs2.add(numSegInRupHistogram);
+//		GraphWindow graph = new GraphWindow(funcs2, "Num Segments In Rupture Histogram");   
 
 	}
 	
 	
-	public GutenbergRichterMagFreqDist getGR_Dist_fit() {
-		double magMin = Double.NaN;
-		double cumRate = magFreqDist.getCumRate(6.5)*Math.pow(10, 6.5-magMin); // assumes b-value of 1
-		int num = (int)Math.round((9.0-magMin)/0.1 + 1);
-		GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(magMin,num,0.1);
+	private GutenbergRichterMagFreqDist getGR_Dist_fit() {
+		int num = (int)Math.round((maxRupMag-minRupMag)/0.1 + 1);
+		GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(minRupMag,num,0.1);
 		double moRate = totMoRate*(1-moRateReduction);
-		try {
-			gr.setAllButMagUpper(magMin, moRate, cumRate, 1.0, true);
-			gr.setName("GR Dist fit at cum M=6.5, matched moment rate, and /w b=1");
-			return gr;
-		} catch (Exception e) {
-			return null;
-		}
+		double altMoRate = magFreqDist.getTotalMomentRate();
+		gr.setAllButTotCumRate(minRupMag, maxRupMag, altMoRate, 1.0);
+		gr.setName("GR fit");
+		return gr;
 	}
 	
 	
