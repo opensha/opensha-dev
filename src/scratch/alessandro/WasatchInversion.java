@@ -273,8 +273,8 @@ public class WasatchInversion {
 		MagAreaRelationship magAreaRel = new HanksBakun2002_MagAreaRel();
 //		MagAreaRelationship magAreaRel = new Ellsworth_B_WG02_MagAreaRel();
 		double relativeSegRateWt=1;
-		double relative_aPrioriRupWt = 0;	// KKEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
-		double relative_smoothnessWt = 0;	// KKEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
+		double relative_aPrioriRupWt = 0;	// KEEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
+		double relative_smoothnessWt = 0;	// KEEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
 		boolean wtedInversion = true;
 		double minRupRate = 1e-8;
 		boolean applyProbVisible = true;
