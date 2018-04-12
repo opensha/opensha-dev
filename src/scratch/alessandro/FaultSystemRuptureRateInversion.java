@@ -45,6 +45,7 @@ import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.sha.magdist.GaussianMagFreqDist;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Preconditions;
@@ -56,11 +57,11 @@ import com.google.common.io.Files;
  * TO DO:
  * 
  * 1) Add simulated annealing inversion (and a "redoInverion() method that uses existing constraints)
- * 2) Make slip model and enum (already in U3?)
- * 3) Input a-priori rup-rate & GR/MFD constriants (as inputs rather than computed here)
- * 4) Input prob visible model rather than computing here  (already in U3?)
- * 5) sample MRIs via monte carlo simulations (same for slip rates?) for more epistemic uncertainty (or do this outside with zero errors)
- * 6) 
+ * 2) Make MFD constraint an input (rather than computed here)
+ * 3) Input a-priori rup-rate constraints
+ * 4) Make slip model and enum (already in U3?)
+ * 5) Input prob visible model rather than computing here  (already in U3?)
+ * 6) sample MRIs via monte carlo simulations (same for slip rates?) for more epistemic uncertainty (or do this outside with zero errors)
  *
  */
 public class FaultSystemRuptureRateInversion {
@@ -92,9 +93,9 @@ public class FaultSystemRuptureRateInversion {
 	private double[][] sectSlipInRup;
 	private double[] rateOfRupEndsOnSect;
 
-	
 	double totMoRate;
-
+	
+	IncrementalMagFreqDist mfdConstraint; 
 
 	private SummedMagFreqDist aveOfSectPartMFDs;
 	
@@ -299,9 +300,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param minRupRate - constrain all rupture rates to be greater than this value
 	 * @param applyProbVisible - account for likelihood that Paleoseismology will see the rupture
 	 * @param moRateReduction - fraction reduction from smaller events (and not aseismicity or coupling coefficient, which are set in fltSectionDataList)
-	 * @param relativeGR_constraintWt
-	 * @param grConstraintBvalue
-	 * @param grConstraintRateScaleFactor
+	 * @param relativeMFD_constraintWt - weight for MFD constraint
 	 */
 	public void doInversion(
 			ArrayList<FaultSectionPrefData> fltSectionDataList, 
@@ -316,9 +315,7 @@ public class FaultSystemRuptureRateInversion {
 			double minRupRate,
 			boolean applyProbVisible, 
 			double moRateReduction, 
-			double relativeGR_constraintWt,
-			double grConstraintBvalue, 
-			double grConstraintRateScaleFactor) {
+			double relativeMFD_constraintWt) {
 		
 		this.fltSectionDataList = fltSectionDataList;
 		this.sectionRateConstraints = sectionRateConstraints;
@@ -332,9 +329,8 @@ public class FaultSystemRuptureRateInversion {
 		this.minRupRate = minRupRate;
 		this.applyProbVisible = applyProbVisible;
 		this.moRateReduction = moRateReduction;
-		this.relativeGR_constraintWt = relativeGR_constraintWt;
-		this.grConstraintBvalue = grConstraintBvalue;
-		this.grConstraintRateScaleFactor = grConstraintRateScaleFactor;
+		this.relativeGR_constraintWt = relativeMFD_constraintWt;
+
 		
 		// initialize section and rupture attributes
 		initSectAndRupAttributes();
@@ -371,11 +367,6 @@ public class FaultSystemRuptureRateInversion {
 				minRupRateArray[rup] = minRupRate;			
 		}
 		
-		// set the number of GR constraints and mag range
-		if(relativeGR_constraintWt > 0)
-			if(D) System.out.println("\nGR constraint mags: "+(float)minRupMag+"\t"+(float)maxRupMag+"\n");
-		int numGR_constraints = (int) Math.round((maxRupMag - minRupMag)/0.1)+1;
-		
 		// SET NUMBER OF ROWS AND IMPORTANT INDICES	
 		// all section slip-rates used
 		firstRowSectSlipRateData = 0;
@@ -408,12 +399,14 @@ public class FaultSystemRuptureRateInversion {
 			lastRowSmoothnessData = totNumRows-1;
 		}
 		
-		// add number of GR constaints
-		if(relativeGR_constraintWt>0) {
+		// add number of MFD constaints
+		int numMFD_constraints=0;
+		if(relativeMFD_constraintWt>0) {
+			mfdConstraint = getGR_Dist_fit();
+			numMFD_constraints = mfdConstraint.size();
 			firstRowGR_constraintData = totNumRows;
-			totNumRows += numGR_constraints;
+			totNumRows += numMFD_constraints;
 			lastRowGR_constraintData = totNumRows-1;
-			
 		}
 				
 		System.out.println("\nfirstRowSegEventRateData="+firstRowSectEventRateData+
@@ -494,25 +487,14 @@ public class FaultSystemRuptureRateInversion {
 		}
 //		System.out.println("num_smooth_constrints="+num_smooth_constrints);
 		
-		// now fill in the GR constraint if needed
-		if(relativeGR_constraintWt > 0.0) {
-			double deltaMag = 0.1;
-			// create a GR dist with the target moment rate & max mag as an estimate of absolute rates
-			GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(5,41,deltaMag);
-			gr.setAllButTotCumRate(5, maxRupMag, totMoRate, grConstraintBvalue);
-			double totRate = gr.getTotCumRate();
-			gr.scaleToCumRate(0, totRate*grConstraintRateScaleFactor); // grConstraintRateScaleFactor adjusts the a-value up op down
-			System.out.println("GR Constraint's Incremental Rate At M=6.5:\t"+(float)gr.getIncrRate(6.5)+"\t");
-			for(int i=0; i < numGR_constraints; i++) {
+		// now fill in the MFD constraint if needed
+		if(relativeMFD_constraintWt > 0.0) {
+			for(int i=0; i < numMFD_constraints; i++) {
 				int row = i+firstRowGR_constraintData;
-				double mag = minRupMag + i*deltaMag;
-				d[row] = gr.getY(mag);
-//				if(wtedInversion) {
-//					data_wt[row] = Math.pow(10, grConstraintBvalue*(mag-smallestGR_constriantMag)); // give the larger events higher weight so those rates don't wander
-//System.out.println(mag+"\t"+(float)d[row]);
-//				}
+				double mag = mfdConstraint.getX(i);
+				d[row] = mfdConstraint.getY(mag);
 				for(int col=0; col<numRuptures; col++)
-					if(rupMeanMag[col] < mag+0.001 && rupMeanMag[col] > mag-0.001)
+					if(mfdConstraint.getClosestXIndex(rupMeanMag[col]) == i)
 						C[row][col]=1.0;
 			}
 		}
@@ -586,12 +568,11 @@ public class FaultSystemRuptureRateInversion {
 				}
 			}
 		}
-		// GR constraint wts
-		if(relativeGR_constraintWt > 0.0) {
-			for(int i=0; i < numGR_constraints; i++) {
+		// MFD constraint wts
+		if(relativeMFD_constraintWt > 0.0) {
+			for(int i=0; i < numMFD_constraints; i++) {
 				int row = i+firstRowGR_constraintData;
-				full_wt[row] = relativeGR_constraintWt;
-//				if(wtedInversion) full_wt[row] *= data_wt[row];
+				full_wt[row] = relativeMFD_constraintWt;
 				d_wted[row] *= full_wt[row];
 				for(int rup=0; rup < numRuptures; rup++) C_wted[row][rup] *= full_wt[row];
 			}
@@ -1328,8 +1309,8 @@ public class FaultSystemRuptureRateInversion {
 		int num = (int)Math.round((maxRupMag-minRupMag)/0.1 + 1);
 		GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(minRupMag,num,0.1);
 		double moRate = totMoRate*(1-moRateReduction);
-		double altMoRate = magFreqDist.getTotalMomentRate();
-		gr.setAllButTotCumRate(minRupMag, maxRupMag, altMoRate, 1.0);
+//		double altMoRate = magFreqDist.getTotalMomentRate();
+		gr.setAllButTotCumRate(minRupMag, maxRupMag, moRate, 1.0);
 		gr.setName("GR fit");
 		return gr;
 	}

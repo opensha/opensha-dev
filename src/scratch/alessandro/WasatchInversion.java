@@ -279,9 +279,7 @@ public class WasatchInversion {
 		double minRupRate = 1e-8;
 		boolean applyProbVisible = true;
 		double moRateReduction =0.1;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
-		double relativeGR_constraintWt = 0;
-		double grConstraintBvalue = 1;
-		double grConstraintRateScaleFactor = 1.0;  // v-value could be set as 1.0
+		double relativeGR_constraintWt = 0; //1e6;
 
 		fltSysRupInversion.doInversion(
 				fltSectDataList, 
@@ -296,9 +294,7 @@ public class WasatchInversion {
 				minRupRate, 
 				applyProbVisible, 
 				moRateReduction,
-				relativeGR_constraintWt, 
-				grConstraintBvalue, 
-				grConstraintRateScaleFactor);
+				relativeGR_constraintWt);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
