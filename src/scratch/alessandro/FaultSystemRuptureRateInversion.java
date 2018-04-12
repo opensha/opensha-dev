@@ -57,7 +57,6 @@ import com.google.common.io.Files;
  * TO DO:
  * 
  * 1) Add simulated annealing inversion (and a "redoInverion() method that uses existing constraints)
- * 2) Make MFD constraint an input (rather than computed here)
  * 3) Input a-priori rup-rate constraints
  * 4) Make slip model and enum (already in U3?)
  * 5) Input prob visible model rather than computing here  (already in U3?)
@@ -114,7 +113,7 @@ public class FaultSystemRuptureRateInversion {
 	private double minRupRate;
 	private boolean wtedInversion, applyProbVisible;	// weight the inversion according to slip rate and segment rate uncertainties
 	private double relativeSectRateWt, relative_aPrioriRupWt, relative_smoothnessWt; //, relative_aPrioriSegRateWt;
-	private double relativeGR_constraintWt, grConstraintBvalue, grConstraintRateScaleFactor;
+	private double relativeMFD_constraintWt;
 
 	private int  firstRowSectSlipRateData=-1,firstRowSectEventRateData=-1, firstRowAprioriData=-1, firstRowSmoothnessData=-1;
 	private int  lastRowSectSlipRateData=-1,lastRowSectEventRateData=-1, lastRowAprioriData=-1, lastRowSmoothnessData=-1;
@@ -315,6 +314,7 @@ public class FaultSystemRuptureRateInversion {
 			double minRupRate,
 			boolean applyProbVisible, 
 			double moRateReduction, 
+			IncrementalMagFreqDist mfdConstraint,
 			double relativeMFD_constraintWt) {
 		
 		this.fltSectionDataList = fltSectionDataList;
@@ -329,7 +329,8 @@ public class FaultSystemRuptureRateInversion {
 		this.minRupRate = minRupRate;
 		this.applyProbVisible = applyProbVisible;
 		this.moRateReduction = moRateReduction;
-		this.relativeGR_constraintWt = relativeMFD_constraintWt;
+		this.mfdConstraint = mfdConstraint;
+		this.relativeMFD_constraintWt = relativeMFD_constraintWt;
 
 		
 		// initialize section and rupture attributes
@@ -402,7 +403,6 @@ public class FaultSystemRuptureRateInversion {
 		// add number of MFD constaints
 		int numMFD_constraints=0;
 		if(relativeMFD_constraintWt>0) {
-			mfdConstraint = getGR_Dist_fit();
 			numMFD_constraints = mfdConstraint.size();
 			firstRowGR_constraintData = totNumRows;
 			totNumRows += numMFD_constraints;
@@ -1022,7 +1022,7 @@ public class FaultSystemRuptureRateInversion {
 		if(relative_smoothnessWt>0)
 			for(int row=firstRowSmoothnessData; row <= lastRowSmoothnessData; row++)
 				smoothnessErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*data_wt[row]*data_wt[row];
-		if(relativeGR_constraintWt>0)
+		if(relativeMFD_constraintWt>0)
 			for(int row=firstRowGR_constraintData; row <= lastRowGR_constraintData; row++){
 				grErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*data_wt[row]*data_wt[row];
 //double err = (d[row]-d_pred[row])*(d[row]-d_pred[row])*data_wt[row]*data_wt[row];
@@ -1045,7 +1045,7 @@ public class FaultSystemRuptureRateInversion {
 				               "\tnorm resid rms = "+(float)aveERnormResid+"\n\t"+
 				               "A Priori Err =\t\t"+(float)aPrioriErr+"\trel. wt = "+relative_aPrioriRupWt+"\n\t"+
 				               "Smoothness Err =\t"+(float)smoothnessErrAlt+"\trel. wt = "+relative_smoothnessWt+"\n\t"+
-        					   "GR Err =\t"+(float)grErr+"\trel. wt = "+relativeGR_constraintWt+"\n";
+        					   "GR Err =\t"+(float)grErr+"\trel. wt = "+relativeMFD_constraintWt+"\n";
 
 		System.out.println(resultsString);
 				
@@ -1062,7 +1062,7 @@ public class FaultSystemRuptureRateInversion {
 		if(relative_smoothnessWt>0)
 			for(int row=firstRowSmoothnessData; row <= lastRowSmoothnessData; row++)
 				smoothnessErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*full_wt[row]*full_wt[row];
-		if(relativeGR_constraintWt>0)
+		if(relativeMFD_constraintWt>0)
 			for(int row=firstRowGR_constraintData; row <= lastRowGR_constraintData; row++)
 				grErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*full_wt[row]*full_wt[row];
 
@@ -1073,7 +1073,7 @@ public class FaultSystemRuptureRateInversion {
 				"Event Rate Err =\t"+(float)eventRateErr+"\trel. wt = "+relativeSectRateWt+"\n\t"+
 				"A Priori Err =\t\t"+(float)aPrioriErr+"\trel. wt = "+relative_aPrioriRupWt+"\n\t"+
 				"Smoothness Err =\t"+(float)smoothnessErr+"\trel. wt = "+relative_smoothnessWt+"\n\t"+
-				"GR Err =\t"+(float)grErr+"\trel. wt = "+relativeGR_constraintWt+"\n");
+				"GR Err =\t"+(float)grErr+"\trel. wt = "+relativeMFD_constraintWt+"\n");
 			
 	}
 	
@@ -1203,7 +1203,7 @@ public class FaultSystemRuptureRateInversion {
 		EvenlyDiscretizedFunc cumAveOfSegPartMFDs = aveOfSectPartMFDs.getCumRateDistWithOffset();
 		cumAveOfSegPartMFDs.setInfo("cumulative "+aveOfSectPartMFDs.getInfo());
 		
-		GutenbergRichterMagFreqDist grFit = getGR_Dist_fit();
+		GutenbergRichterMagFreqDist grFit = getGR_DistFit();
 		EvenlyDiscretizedFunc cumGR_fit = grFit.getCumRateDistWithOffset();
 		cumGR_fit.setName("Cumulative GR Fit");
 		mfd_funcs.add(grFit);
@@ -1305,13 +1305,17 @@ public class FaultSystemRuptureRateInversion {
 	}
 	
 	
-	private GutenbergRichterMagFreqDist getGR_Dist_fit() {
+	private GutenbergRichterMagFreqDist getGR_DistFit() {
 		int num = (int)Math.round((maxRupMag-minRupMag)/0.1 + 1);
 		GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(minRupMag,num,0.1);
 		double moRate = totMoRate*(1-moRateReduction);
 //		double altMoRate = magFreqDist.getTotalMomentRate();
 		gr.setAllButTotCumRate(minRupMag, maxRupMag, moRate, 1.0);
 		gr.setName("GR fit");
+		if(D) {
+			System.out.println("GR MFD FIT:\n\tMmin="+minRupMag+"\n\tMmax="+maxRupMag+
+					"\n\tnum="+num+"\n\tdelta="+gr.getDelta()+"\n\tmoRate="+moRate);
+		}
 		return gr;
 	}
 	

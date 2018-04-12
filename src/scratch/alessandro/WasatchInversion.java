@@ -12,6 +12,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.SegRateConstraint;
 import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
@@ -279,8 +280,18 @@ public class WasatchInversion {
 		double minRupRate = 1e-8;
 		boolean applyProbVisible = true;
 		double moRateReduction =0.1;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
-		double relativeGR_constraintWt = 0; //1e6;
+		double relativeMFD_constraintWt = 0; // setting this to 1e6
+		
+		// GR Constraint (values obtained from first running FaultSystemRuptureRateInversion.getGR_DistFit() with relativeMFD_constraintWt=0)
+		double minMag=6.4;
+		double maxMag=8.1;
+		double delta = 0.1;
+		int num = 18;
+		double moRate=2.415E17;
+		GutenbergRichterMagFreqDist grConstraint = new GutenbergRichterMagFreqDist(minMag,num,delta);
+		grConstraint.setAllButTotCumRate(minMag, maxMag, moRate, 1.0);
 
+		// run the inversion
 		fltSysRupInversion.doInversion(
 				fltSectDataList, 
 				sectionRateConstraints, 
@@ -294,7 +305,8 @@ public class WasatchInversion {
 				minRupRate, 
 				applyProbVisible, 
 				moRateReduction,
-				relativeGR_constraintWt);
+				grConstraint,
+				relativeMFD_constraintWt);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
