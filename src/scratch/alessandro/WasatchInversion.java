@@ -19,7 +19,7 @@ import com.google.common.io.Files;
 
 /**
  * This class reads Wasatch inversion data from files and provides methods for getting the various constraints
- * @author field
+ * @author field n.
  *
  */
 public class WasatchInversion {
