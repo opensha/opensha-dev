@@ -56,6 +56,7 @@ import com.google.common.io.Files;
  * 
  * TO DO:
  * 
+ * 0) make MFDs use commone min, max, and num (and remove duplicate meanMagHist computation)
  * 1) Add simulated annealing inversion (and a "redoInverion() method that uses existing constraints)
  * 3) Input a-priori rup-rate constraints
  * 4) Make slip model and enum (already in U3?)
@@ -383,6 +384,8 @@ public class FaultSystemRuptureRateInversion {
 		
 		// add a-priori rate constrains if needed
 		if(relative_aPrioriRupWt > 0.0) {
+			setApriorRupRatesFromMFD_Constrint();
+			num_aPriori_constraints = aPriori_rupIndex.length;
 			firstRowAprioriData  = totNumRows;
 			totNumRows += num_aPriori_constraints;
 			lastRowAprioriData = totNumRows-1;
@@ -1319,6 +1322,19 @@ public class FaultSystemRuptureRateInversion {
 		return gr;
 	}
 	
+	private void setApriorRupRatesFromMFD_Constrint() {
+		aPriori_rupIndex = new int[numRuptures];
+		aPriori_rate  = new double[numRuptures];
+		aPriori_wt  = new double[numRuptures];
+		for(int r=0;r<numRuptures;r++) {
+			aPriori_rupIndex[r] = r;
+			aPriori_rate[r] = mfdConstraint.getY(rupMeanMag[r])/meanMagHistorgram.getY(rupMeanMag[r]);
+			aPriori_wt[r]=1;
+		}
+
+		
+	}
+	
 	
 	/**
 	 * This returns the probability that the given magnitude 
@@ -1434,6 +1450,14 @@ public class FaultSystemRuptureRateInversion {
 			}
 		}
 		if(D) System.out.println("maxRupMag="+maxRupMag+"\tminRupMag="+minRupMag);
+		
+		// compute meanMagHistorgram
+		int num = (int)Math.round((maxRupMag-minRupMag)/0.1 + 1);
+		meanMagHistorgram = new SummedMagFreqDist(minRupMag,num,0.1);
+		for(int rup=0; rup<numRuptures;rup++) {
+			meanMagHistorgram.add(rupMeanMag[rup], 1.0);
+		}
+		meanMagHistorgram.setInfo("Mean Mag Histogram");
 
 	}
 	
