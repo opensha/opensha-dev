@@ -55,6 +55,11 @@ public class MagAreaScalingPlot extends AbstractPlot {
 
 	@Override
 	public void finalizePlot() throws IOException {
+		writeScatterPlots(scatter, getCatalogName(), getOutputDir(), getOutputPrefix(), getPlotWidth(), getPlotHeight());
+	}
+	
+	public static void writeScatterPlots(XY_DataSet scatter, String name, File outputDir, String prefix,
+			int plotWidth, int plotHeight) throws IOException {
 		// scatter plot
 		
 		List<XY_DataSet> funcs = Lists.newArrayList();
@@ -71,7 +76,7 @@ public class MagAreaScalingPlot extends AbstractPlot {
 			System.out.println("Filter done (random mag-dependent sample): "+plotScatter.size());
 		}
 		funcs.add(plotScatter);
-		plotScatter.setName(getCatalogName());
+		plotScatter.setName(name);
 		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
 		
 		System.out.println("Scatter mag range: "+scatter.getMinY()+" "+scatter.getMaxY());
@@ -107,11 +112,9 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		Range xRange = calcEncompassingLog10Range(Math.min(scatter.getMinX(), wcFunc.getMinX()),
 				Math.max(scatter.getMaxX(), wcFunc.getMaxX()));
 		
-		HeadlessGraphPanel gp = getGraphPanel();
+		HeadlessGraphPanel gp = buildGraphPanel();
 		gp.drawGraphPanel(plot, true, false, null, yRange);
-		gp.getChartPanel().setSize(getPlotWidth(), getPlotHeight());
-		File outputDir = getOutputDir();
-		String prefix = getOutputPrefix();
+		gp.getChartPanel().setSize(plotWidth, plotHeight);
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 		
@@ -199,10 +202,10 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		xyzSpec.setXYElems(funcs);
 		xyzSpec.setXYChars(chars);
 		
-		XYZGraphPanel xyzGP = getXYZGraphPanel();
+		XYZGraphPanel xyzGP = buildXYZGraphPanel();
 		xyzGP.drawPlot(xyzSpec, false, false, new Range(logMinX, logMaxX), yRange);
 		// write plot
-		xyzGP.getChartPanel().setSize(getPlotWidth(), getPlotHeight());
+		xyzGP.getChartPanel().setSize(plotWidth, plotHeight);
 		xyzGP.saveAsPNG(new File(outputDir, prefix+"_hist2D.png").getAbsolutePath());
 		xyzGP.saveAsPDF(new File(outputDir, prefix+"_hist2D.pdf").getAbsolutePath());
 	}

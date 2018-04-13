@@ -36,8 +36,9 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 	
 	private List<BBP_Site> sites;
 	private List<File> individualSiteFiles;
-	
+
 	private File bbpDataDir = null;
+	private File bbpGFDir = null;
 	
 	private ExecutorService exec;
 	
@@ -68,6 +69,13 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 				bbpDataDir.mkdir();
 			if (rank == 0)
 				debug("BBP data dir: "+bbpDataDir.getAbsolutePath());
+		}
+		
+		if (cmd.hasOption("bbp-gf-dir")) {
+			bbpGFDir = new File(cmd.getOptionValue("bbp-gf-dir"));
+			Preconditions.checkState(bbpGFDir.exists());
+			if (rank == 0)
+				debug("BBP GF dir: "+bbpGFDir.getAbsolutePath());
 		}
 		
 		exec = Executors.newFixedThreadPool(getNumThreads());
@@ -217,6 +225,7 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 				debug("running BBP for "+index);
 				wrapper.setDoHF(doHF);
 				wrapper.setBBPDataDir(bbpDataDir);
+				wrapper.setBBPGFDir(bbpGFDir);
 				wrapper.run();
 				
 				if (!keepSRFs) {

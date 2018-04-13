@@ -81,20 +81,20 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int hours = 24;
 //		int nodes = 18;
 		
-		double duration = 10000;
-		int numSims = 10;
-		int hours = 48;
-		int nodes = 5;
+//		double duration = 10000;
+//		int numSims = 10;
+//		int hours = 48;
+//		int nodes = 5;
 		
 //		double duration = 30;
 //		int numSims = 5000;
 //		int hours = 24;
 //		int nodes = 60;
 		
-//		double duration = 10;
-//		int numSims = 25000;
-//		int hours = 24;
-//		int nodes = 60;
+		double duration = 10;
+		int numSims = 10000;
+		int hours = 24;
+		int nodes = 36;
 		
 		// CSEP benchmarks
 ////		double duration = 1d/365.25;
@@ -144,14 +144,18 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		TestScenario[] scenarios = {TestScenario.BOMBAY_BEACH_M4pt8};
 //		boolean includeSpontaneous = false;
 		
+		TestScenario[] scenarios = {TestScenario.SANTA_CRUZ_M5p3};
+		boolean includeSpontaneous = false;
+		
 //		TestScenario[] scenarios = {TestScenario.MOJAVE_M5p5, TestScenario.MOJAVE_M6pt3_ptSrc,
 //				TestScenario.MOJAVE_M6pt3_FSS, TestScenario.MOJAVE_M7};
 //		boolean includeSpontaneous = true;
 //		TestScenario[] scenarios = {TestScenario.HAYWIRED_M7};
-		TestScenario[] scenarios = { null };
-		boolean includeSpontaneous = true;
+//		TestScenario[] scenarios = { null };
+//		boolean includeSpontaneous = true;
 		String customCatalog = null;
-		long customOT = Long.MIN_VALUE;
+//		long customOT = Long.MIN_VALUE;
+		long customOT = 1522956556000l;
 		String resetSectsArg = null;
 		boolean griddedOnly = false;
 		boolean customCatIncludeHistSurfaces = false;

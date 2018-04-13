@@ -122,7 +122,7 @@ public abstract class AbstractPlot {
 		return getCurrentDuration()/General_EQSIM_Tools.SECONDS_PER_YEAR;
 	}
 	
-	protected static Range calcEncompassingLog10Range(double min, double max) {
+	public static Range calcEncompassingLog10Range(double min, double max) {
 		Preconditions.checkState(min > 0, "Min must be positive for log plot! %s", min);
 		Preconditions.checkState(min < max, "Min must be < max: %s >= %s", min, max);
 		double logMin = Math.floor(Math.log10(min));
@@ -131,7 +131,7 @@ public abstract class AbstractPlot {
 		return new Range(Math.pow(10, logMin), Math.pow(10, logMax));
 	}
 	
-	protected static double minNonZero(XY_DataSet func) {
+	public static double minNonZero(XY_DataSet func) {
 		return minNonZero(func, false);
 	}
 	
@@ -193,23 +193,31 @@ public abstract class AbstractPlot {
 		return Color.RED;
 	}
 	
+	protected static HeadlessGraphPanel buildGraphPanel() {
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(20);
+		plotPrefs.setAxisLabelFontSize(22);
+		plotPrefs.setPlotLabelFontSize(24);
+		plotPrefs.setLegendFontSize(22);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+		return new HeadlessGraphPanel(plotPrefs);
+	}
+	
 	protected synchronized HeadlessGraphPanel getGraphPanel() {
 		if (gp == null) {
-			PlotPreferences plotPrefs = PlotPreferences.getDefault();
-			plotPrefs.setTickLabelFontSize(20);
-			plotPrefs.setAxisLabelFontSize(22);
-			plotPrefs.setPlotLabelFontSize(24);
-			plotPrefs.setLegendFontSize(22);
-			plotPrefs.setBackgroundColor(Color.WHITE);
-			gp = new HeadlessGraphPanel(plotPrefs);
+			gp = buildGraphPanel();
 		}
 		
 		return gp;
 	}
 	
+	protected static XYZGraphPanel buildXYZGraphPanel() {
+		return new XYZGraphPanel(buildGraphPanel().getPlotPrefs());
+	}
+	
 	protected synchronized XYZGraphPanel getXYZGraphPanel() {
 		if (xyzGP == null)
-			xyzGP = new XYZGraphPanel(getGraphPanel().getPlotPrefs());
+			xyzGP = buildXYZGraphPanel();
 		return xyzGP;
 	}
 	

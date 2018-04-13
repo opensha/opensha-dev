@@ -23,7 +23,7 @@ import com.google.common.collect.Table;
 
 public class BBP_SimZipLoader {
 	
-	private enum FileType {
+	protected enum FileType {
 		RotD50(".rd50"),
 		RotD100(".rd100"),
 		VEL_SEIS(".vel.bbp"),
@@ -246,17 +246,32 @@ public class BBP_SimZipLoader {
 			// RotD50 also stored in RotD100 files
 			entry = locate(site, dirName, FileType.RotD100);
 		}
-		return SpectraPlotter.loadRotD50(loadFileLines(entry));
+		try {
+			return SpectraPlotter.loadRotD50(loadFileLines(entry));
+		} catch (RuntimeException e) {
+			System.err.println("Exception loading from "+entry.getName());
+			throw e;
+		}
 	}
 	
 	public DiscretizedFunc readRotD100(BBP_Site site, String dirName) throws IOException {
 		ZipEntry entry = locate(site, dirName, FileType.RotD100);
-		return SpectraPlotter.loadRotD100(loadFileLines(entry));
+		try {
+			return SpectraPlotter.loadRotD100(loadFileLines(entry));
+		} catch (RuntimeException e) {
+			System.err.println("Exception loading from "+entry.getName());
+			throw e;
+		}
 	}
 	
 	public DiscretizedFunc[] readRotD(BBP_Site site, String dirName) throws IOException {
 		ZipEntry entry = locate(site, dirName, FileType.RotD100);
-		return SpectraPlotter.loadRotD(loadFileLines(entry));
+		try {
+			return SpectraPlotter.loadRotD(loadFileLines(entry));
+		} catch (RuntimeException e) {
+			System.err.println("Exception loading from "+entry.getName());
+			throw e;
+		}
 	}
 	
 	public boolean hasRotD50() {
