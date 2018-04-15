@@ -12,6 +12,13 @@ import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.magdist.ArbIncrementalMagFreqDist;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalException;
+import scratch.aftershockStatistics.util.MarshalImpArray;
+import scratch.aftershockStatistics.util.MarshalImpJsonReader;
+import scratch.aftershockStatistics.util.MarshalImpJsonWriter;
+
 
 /**
  * This computes a Reasenberg-Jones (1989, 1994) aftershock model from aftershock data and with an assumed time-dependent 

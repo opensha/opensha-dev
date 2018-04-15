@@ -1,5 +1,9 @@
 package scratch.aftershockStatistics;
 
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalException;
+
 public class RJ_Summary {
 
 	// Summary values, see RJ_AftershockModel for description.

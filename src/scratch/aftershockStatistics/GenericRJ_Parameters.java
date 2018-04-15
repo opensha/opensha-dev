@@ -1,5 +1,9 @@
 package scratch.aftershockStatistics;
 
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalException;
+
 public class GenericRJ_Parameters {
 	
 	private double aValue_mean;

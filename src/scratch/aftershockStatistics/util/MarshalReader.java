@@ -1,4 +1,4 @@
-package scratch.aftershockStatistics;
+package scratch.aftershockStatistics.util;
 
 /**
  * Interface for unmarshaling parameters/data from the OAF database.

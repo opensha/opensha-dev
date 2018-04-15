@@ -14,6 +14,13 @@ import scratch.aftershockStatistics.OAFTectonicRegime;
 import scratch.aftershockStatistics.OAFRegion;
 import scratch.aftershockStatistics.OAFParameterSet;
 
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalException;
+import scratch.aftershockStatistics.util.MarshalImpArray;
+import scratch.aftershockStatistics.util.MarshalImpJsonReader;
+import scratch.aftershockStatistics.util.MarshalImpJsonWriter;
+
 public class MagCompPage_ParametersFetch {
 
 	// parameter_set - The parameter set.

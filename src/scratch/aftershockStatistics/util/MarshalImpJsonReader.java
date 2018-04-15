@@ -1,4 +1,4 @@
-package scratch.aftershockStatistics;
+package scratch.aftershockStatistics.util;
 
 import java.util.Arrays;
 import java.util.Set;

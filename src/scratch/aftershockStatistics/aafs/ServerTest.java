@@ -16,9 +16,9 @@ import scratch.aftershockStatistics.RJ_AftershockModel_SequenceSpecific;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 
-import scratch.aftershockStatistics.MarshalImpArray;
-import scratch.aftershockStatistics.MarshalReader;
-import scratch.aftershockStatistics.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalImpArray;
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
 
 
 /**

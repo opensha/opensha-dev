@@ -1,6 +1,6 @@
 package scratch.aftershockStatistics.aafs;
 
-import scratch.aftershockStatistics.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalWriter;
 
 import org.bson.types.ObjectId;
 

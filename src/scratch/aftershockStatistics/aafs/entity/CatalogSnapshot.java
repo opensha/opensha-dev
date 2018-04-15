@@ -28,11 +28,12 @@ import scratch.aftershockStatistics.aafs.RecordKey;
 import scratch.aftershockStatistics.aafs.RecordPayload;
 import scratch.aftershockStatistics.aafs.RecordIterator;
 
-import scratch.aftershockStatistics.MarshalImpArray;
-import scratch.aftershockStatistics.MarshalImpJsonReader;
-import scratch.aftershockStatistics.MarshalImpJsonWriter;
-import scratch.aftershockStatistics.MarshalReader;
-import scratch.aftershockStatistics.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalImpArray;
+import scratch.aftershockStatistics.util.MarshalImpJsonReader;
+import scratch.aftershockStatistics.util.MarshalImpJsonWriter;
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalException;
 
 import scratch.aftershockStatistics.CompactEqkRupList;
 
