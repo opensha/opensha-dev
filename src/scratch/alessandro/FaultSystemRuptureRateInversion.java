@@ -70,6 +70,8 @@ public class FaultSystemRuptureRateInversion {
 
 	public final static double GAUSS_MFD_SIGMA = 0.12;
 	public final static double GAUSS_MFD_TRUNCATION = 2;
+	public final static double MAG_DELTA = 0.1;
+	
 	
 	// input data
 	private ArrayList<FaultSectionPrefData> fltSectionDataList;
@@ -84,7 +86,7 @@ public class FaultSystemRuptureRateInversion {
 	int numRuptures;
 	private String[] rupNameShort;
 	private double[] rupLength, rupArea, rupMeanMag, rupMeanMo, rupMoRate, totRupRate,rupAveSlip;
-	private double minRupMag, maxRupMag;
+	private double minRupMag, maxRupMag,minRupMagWithAleatory, maxRupMagWithAleatory;
 	double[] rupRateSolution; // these are the rates from the inversion (not total rate of MFD)
 
 	// section-rupture attributes
@@ -130,8 +132,8 @@ public class FaultSystemRuptureRateInversion {
 	
 	private static EvenlyDiscretizedFunc taperedSlipPDF, taperedSlipCDF;
 	
+	// MFDs
 	SummedMagFreqDist magFreqDist, meanMagHistorgram, magHistorgram;
-	
 	ArrayList<SummedMagFreqDist> sectNucleationMFDs;
 	ArrayList<SummedMagFreqDist> sectParticipationMFDs;
 	
@@ -855,24 +857,15 @@ public class FaultSystemRuptureRateInversion {
 		}
 		
 		// Compute the total Mag Freq Dist
-		magFreqDist = new SummedMagFreqDist(5,41,0.1);
-		meanMagHistorgram = new SummedMagFreqDist(4,51,0.1);
-		magHistorgram = new SummedMagFreqDist(4,51,0.1);
+		int num = (int)Math.round((maxRupMagWithAleatory-minRupMagWithAleatory)/MAG_DELTA + 1);
+		magFreqDist = new SummedMagFreqDist(minRupMagWithAleatory,num,MAG_DELTA);
 		for(int rup=0; rup<numRuptures;rup++) {
 			// add MFD of this rupture
-			GaussianMagFreqDist gDist = new GaussianMagFreqDist(5.0,9.0,41,rupMeanMag[rup],GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+			GaussianMagFreqDist gDist = new GaussianMagFreqDist(minRupMagWithAleatory,num,MAG_DELTA,rupMeanMag[rup],GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
 			gDist.scaleToCumRate(0, rupRateSolution[rup]);
 			magFreqDist.addIncrementalMagFreqDist(gDist);
-
-			// add to mag historgrams
-			meanMagHistorgram.add(rupMeanMag[rup], 1.0);
-			gDist = new GaussianMagFreqDist(4.0,9.0,51,rupMeanMag[rup],GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2);
-			gDist.scaleToCumRate(0, 1.0); // this makes it a PDF
-			magHistorgram.addIncrementalMagFreqDist(gDist);
 		}
 		magFreqDist.setInfo("Incremental Mag Freq Dist");
-		meanMagHistorgram.setInfo("Mean Mag Histogram");
-		magHistorgram.setInfo("Mag Historgram (including aleatory variability)");
 		
 		
 		// check moment rate
@@ -898,20 +891,21 @@ public class FaultSystemRuptureRateInversion {
 	 * This computes both participation and nucleation MFDs for each sub-section
 	 */
 	private void computeSegMFDs() {
+		int num = (int)Math.round((maxRupMagWithAleatory-minRupMagWithAleatory)/MAG_DELTA + 1);
 		sectNucleationMFDs = new ArrayList<SummedMagFreqDist>();
 		sectParticipationMFDs = new ArrayList<SummedMagFreqDist>();
-		SummedMagFreqDist sumOfSegPartMFDs = new SummedMagFreqDist(5,41,0.1);
-		aveOfSectPartMFDs = new SummedMagFreqDist(5,41,0.1);
+		SummedMagFreqDist sumOfSegPartMFDs = new SummedMagFreqDist(minRupMagWithAleatory,num,MAG_DELTA);
+		aveOfSectPartMFDs = new SummedMagFreqDist(minRupMagWithAleatory,num,MAG_DELTA);
 		
 		SummedMagFreqDist segPartMFD, segNuclMFD;
 //		double mag, rate;
 		for(int seg=0; seg < numSections; seg++) {
-			segPartMFD = new SummedMagFreqDist(5,41,0.1);
-			segNuclMFD = new SummedMagFreqDist(5,41,0.1);
+			segPartMFD = new SummedMagFreqDist(minRupMagWithAleatory,num,MAG_DELTA);
+			segNuclMFD = new SummedMagFreqDist(minRupMagWithAleatory,num,MAG_DELTA);
 			for(int rup=0; rup < numRuptures; rup++) {
 				if(this.rupSectionMatrix[seg][rup] == 1) {
 					if(rupRateSolution[rup] > 0) {
-						GaussianMagFreqDist mfd = new GaussianMagFreqDist(5.0,9.0,41,rupMeanMag[rup],GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+						GaussianMagFreqDist mfd = new GaussianMagFreqDist(minRupMagWithAleatory,num,MAG_DELTA,rupMeanMag[rup],GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
 						mfd.scaleToCumRate(0, rupRateSolution[rup]);
 						segPartMFD.addIncrementalMagFreqDist(mfd);
 						mfd.scaleToCumRate(0, rupRateSolution[rup]/numSectInRup[rup]); // assume uniform distribution of nucleations
@@ -1215,8 +1209,8 @@ public class FaultSystemRuptureRateInversion {
 
 		GraphWindow mfd_graph = new GraphWindow(mfd_funcs, "Magnitude Frequency Distributions");   
 		mfd_graph.setYLog(true);
-		mfd_graph.setY_AxisRange(1e-5, 0.2);
-		mfd_graph.setX_AxisRange(5.6, 8.7);
+		mfd_graph.setY_AxisRange(1e-7, 0.2);
+		mfd_graph.setX_AxisRange(minRupMagWithAleatory, maxRupMagWithAleatory);
 		mfd_graph.setX_AxisLabel("Magnitude");
 		mfd_graph.setY_AxisLabel("Rate (per yr)");
 
@@ -1295,7 +1289,7 @@ public class FaultSystemRuptureRateInversion {
 		GraphWindow mHist_graph = new GraphWindow(funcs, "Mag Histograms");   
 //		mfd_graph.setYLog(true);
 //		mfd_graph.setY_AxisRange(1e-5, 1);
-		mHist_graph.setX_AxisRange(3.5, 9.0);
+		mHist_graph.setX_AxisRange(minRupMagWithAleatory,maxRupMagWithAleatory);
 		
 		// make a numSegInRupHistogram
 //		SummedMagFreqDist numSegInRupHistogram = new SummedMagFreqDist(1.0,numSections,1.0);
@@ -1449,16 +1443,35 @@ public class FaultSystemRuptureRateInversion {
 
 			}
 		}
-		if(D) System.out.println("maxRupMag="+maxRupMag+"\tminRupMag="+minRupMag);
+		double tempMag = minRupMag-GAUSS_MFD_SIGMA*GAUSS_MFD_TRUNCATION;
+		minRupMagWithAleatory = ((double)Math.round(10*tempMag))/10.0;
+		tempMag = maxRupMag+GAUSS_MFD_SIGMA*GAUSS_MFD_TRUNCATION;
+		maxRupMagWithAleatory = ((double)Math.round(10*tempMag))/10.0;
+		if(D) System.out.println("maxRupMag="+maxRupMag+"\tminRupMag="+minRupMag+
+				"\tminRupMagWithAleatory="+minRupMagWithAleatory+
+				"\tmaxRupMagWithAleatory="+maxRupMagWithAleatory);
 		
 		// compute meanMagHistorgram
-		int num = (int)Math.round((maxRupMag-minRupMag)/0.1 + 1);
-		meanMagHistorgram = new SummedMagFreqDist(minRupMag,num,0.1);
+		int num = (int)Math.round((maxRupMag-minRupMag)/MAG_DELTA + 1);
+		meanMagHistorgram = new SummedMagFreqDist(minRupMag,num,MAG_DELTA);
 		for(int rup=0; rup<numRuptures;rup++) {
 			meanMagHistorgram.add(rupMeanMag[rup], 1.0);
 		}
 		meanMagHistorgram.setInfo("Mean Mag Histogram");
+		
+		// compute mag historgram with aleatory variability
+		num = (int)Math.round((maxRupMagWithAleatory-minRupMagWithAleatory)/MAG_DELTA + 1);
+		magHistorgram = new SummedMagFreqDist(minRupMagWithAleatory,num,MAG_DELTA);
+		for(int rup=0; rup<numRuptures;rup++) {
+			// add to mag historgrams
+			GaussianMagFreqDist gDist = new GaussianMagFreqDist(minRupMagWithAleatory,num,MAG_DELTA,rupMeanMag[rup],GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2);
+			gDist.scaleToCumRate(0, 1.0); // this makes it a PDF
+			magHistorgram.addIncrementalMagFreqDist(gDist);
+		}
+		magHistorgram.setInfo("Mag Historgram (including aleatory variability)");
 
+		
+		
 	}
 	
 	public static void make2D_plot(EvenlyDiscrXYZ_DataSet xyzData, String title,
