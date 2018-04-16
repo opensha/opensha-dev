@@ -96,8 +96,13 @@ public class SpectraPlotter {
 				Preconditions.checkState(ret.length == split.length-1);
 			}
 			double x = Double.parseDouble(split[0]);
-			for (int i=0; i<ret.length; i++)
-				ret[i].set(x, Double.parseDouble(split[i+1]));
+			for (int i=0; i<ret.length; i++) {
+				// *'s mean zero seimograms, which should never happen
+//				if (split[i+1].startsWith("***"))
+//					ret[i].set(x, 0d);
+//				else
+					ret[i].set(x, Double.parseDouble(split[i+1]));
+			}
 		}
 		return ret;
 	}

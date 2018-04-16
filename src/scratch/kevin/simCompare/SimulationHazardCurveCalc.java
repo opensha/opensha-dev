@@ -73,13 +73,16 @@ public class SimulationHazardCurveCalc<E> {
 		
 		double minRate = simProv.getMinimumCurvePlotRate();
 		if (minRate > 0) {
+			double minProb = 1d - Math.exp(-minRate*curveDuration);
 			// truncate curve to remove x values never seen in finite catalog
 			ArbitrarilyDiscretizedFunc truncatedCurve = new ArbitrarilyDiscretizedFunc();
 			for (Point2D pt : curve)
-				if (pt.getY() >= minRate)
+				if (pt.getY() >= minProb)
 					truncatedCurve.set(pt);
 			curve = truncatedCurve;
 		}
+		
+		curve.setName(simProv.getName());
 		
 		return curve;
 	}

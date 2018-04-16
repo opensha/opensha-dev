@@ -26,17 +26,18 @@ import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 import org.opensha.sha.simulators.srf.SRF_PointData;
 
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
-import scratch.kevin.bbp.BBP_Module.Method;
-import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import mpi.MPI;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.kevin.bbp.BBP_Module.Method;
+import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.bbp.BBP_Wrapper;
-import scratch.kevin.bbp.MPJ_BBP_RupGenSim;
 import scratch.kevin.bbp.MPJ_BBP_Utils;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
@@ -60,9 +61,11 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 	private List<RegionIden> siteRegIdens;
 	
 	private File resultsDir;
+	private File resultsScratchDir;
 	private boolean doHF = true;
 	private boolean keepSRFs = false;
 	private File bbpDataDir = null;
+	private File bbpGFDir = null;
 	private int bundleSize;
 	private int numRG = 0;
 	
@@ -85,6 +88,36 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 			Preconditions.checkState((mainOutputDir.exists() && mainOutputDir.isDirectory()) || mainOutputDir.mkdir());
 			Preconditions.checkState((resultsDir.exists() && resultsDir.isDirectory()) || resultsDir.mkdir());
 		}
+		
+		File sharedScratch = null;
+		if (cmd.hasOption("shared-scratch-dir")) {
+			sharedScratch = new File(cmd.getOptionValue("shared-scratch-dir"));
+			if (rank == 0)
+				Preconditions.checkState(sharedScratch.exists() || sharedScratch.mkdir());
+		}
+		
+		File nodeScratch = null;
+		if (cmd.hasOption("node-scratch-dir")) {
+			nodeScratch = new File(cmd.getOptionValue("node-scratch-dir"));
+			Preconditions.checkState(nodeScratch.exists() || nodeScratch.mkdir());
+		}
+		
+		if (nodeScratch != null) {
+			// copy catalog data over to node scratch
+			catalogDir = copyCatalogDir(catalogDir, nodeScratch);
+			resultsScratchDir = new File(nodeScratch, "results_tmp");
+			Preconditions.checkState(resultsScratchDir.exists() || resultsScratchDir.mkdir());
+		} else if (sharedScratch != null) {
+			// copy catalog data over to shared scratch
+			if (rank == 0)
+				copyCatalogDir(catalogDir, sharedScratch);
+			resultsScratchDir = new File(sharedScratch, "results_tmp");
+			if (rank == 0)
+				MPJ_BBP_Utils.waitOnDir(resultsScratchDir, 10, 2000);
+			MPI.COMM_WORLD.Barrier();
+			catalogDir = new File(sharedScratch, catalogDir.getName());
+		}
+		
 		if (resultsDir.exists()) {
 			try {
 				// for restarts
@@ -99,6 +132,13 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				bbpDataDir.mkdir();
 			if (rank == 0)
 				debug("BBP data dir: "+bbpDataDir.getAbsolutePath());
+		}
+		
+		if (cmd.hasOption("bbp-gf-dir")) {
+			bbpGFDir = new File(cmd.getOptionValue("bbp-gf-dir"));
+			Preconditions.checkState(bbpGFDir.exists());
+			if (rank == 0)
+				debug("BBP GF dir: "+bbpGFDir.getAbsolutePath());
 		}
 		
 		sites = BBP_Site.readFile(sitesFile);
@@ -151,6 +191,43 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 			postBatchHook = new MasterZipHook();
 		
 		exec = Executors.newFixedThreadPool(getNumThreads());
+	}
+	
+	private File copyCatalogDir(File catDir, File scratchDir) throws IOException {
+		File destDir = new File(scratchDir, catDir.getName());
+		if (!destDir.exists()) {
+			destDir.mkdir();
+			MPJ_BBP_Utils.waitOnDir(destDir, 10, 2000);
+		}
+		List<File> filesToCopy = new ArrayList<>();
+		for (File f : catDir.listFiles()) {
+			String name = f.getName().toLowerCase();
+			if (name.endsWith("list"))
+				filesToCopy.add(f);
+			else if (name.startsWith("trans.") && name.endsWith(".out"))
+				filesToCopy.add(f);
+			else if (name.endsWith(".in"))
+				filesToCopy.add(f);
+			else if (name.endsWith(".flt"))
+				filesToCopy.add(f);
+		}
+		if (filesToCopy.size() < 7) {
+			String error = "Need at least 7 files: 4 list, trans, input, geom. Have "+filesToCopy.size()+":";
+			for (File f : filesToCopy)
+				error += "\n\t"+f.getAbsolutePath();
+			throw new IllegalStateException(error);
+		}
+		
+		debug("copying "+filesToCopy.size()+" catalog files to "+destDir.getAbsolutePath());
+		for (File f : filesToCopy) {
+			File destFile = new File(destDir, f.getName());
+			if (destFile.exists() && destFile.length() == f.length())
+				// skip copy, already exists
+				continue;
+			Files.copy(f, destFile);
+		}
+		
+		return destDir;
 	}
 	
 	private File getZipFile(int eventID) {
@@ -253,7 +330,13 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 					debug(eventID+" is already done, skipping");
 					return;
 				}
-				File runDir = getRunDir(eventID);
+				File runDir;
+				if (resultsScratchDir == null) {
+					runDir = getRunDir(eventID);
+				} else {
+					runDir = new File(resultsScratchDir, "event_"+eventID);
+					MPJ_BBP_Utils.waitOnDir(runDir, 10, 2000);
+				}
 				RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
 				
 				// write SRF
@@ -291,6 +374,7 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				wrapper.setDoRotD100(true);
 				wrapper.setDoRotD50(false);
 				wrapper.setBBPDataDir(bbpDataDir);
+				wrapper.setBBPGFDir(bbpGFDir);
 				wrapper.run();
 				
 				if (!keepSRFs)
@@ -359,6 +443,17 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				+ "generator for each rupture. Only RotD50 will be archived.");
 		gp.setRequired(false);
 		ops.addOption(gp);
+		
+		Option nodeScratchDir = new Option("nsdir", "node-scratch-dir", true,
+				"Node-local scratch directory to reduce I/O on network disks. Transition file will be copied here.");
+		nodeScratchDir.setRequired(false);
+		ops.addOption(nodeScratchDir);
+		
+		Option sharedScratchDir = new Option("ssdir", "shared-scratch-dir", true,
+				"Shared scratch directory to reduce I/O on network disks. "
+				+ "Transition file will be copied here if no node-local scratch. Unzipped results will be stored here.");
+		sharedScratchDir.setRequired(false);
+		ops.addOption(sharedScratchDir);
 		
 		return ops;
 	}

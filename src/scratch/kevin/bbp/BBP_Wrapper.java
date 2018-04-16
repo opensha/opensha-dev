@@ -38,6 +38,7 @@ public class BBP_Wrapper implements Runnable {
 	private File sitesFile;
 	private File outputDir;
 	
+	private File bbpGFDir = null;
 	private File bbpDataDir = null;
 	
 	private int maxRetries = 5;
@@ -71,6 +72,13 @@ public class BBP_Wrapper implements Runnable {
 			int retries = 0;
 			boolean success = false;
 			while (retries < maxRetries) {
+				if (retries > 0) {
+					try {
+						Thread.sleep(10*retries*1000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
 				success = doRun(simID);
 				if (success)
 					break;
@@ -143,6 +151,10 @@ public class BBP_Wrapper implements Runnable {
 		this.bbpDataDir = bbpDataDir;
 	}
 
+	public void setBBPGFDir(File bbpGFDir) {
+		this.bbpGFDir = bbpGFDir;
+	}
+
 	private boolean doRun(long simID) throws IOException {
 		Preconditions.checkState(srcFile.exists(), "Source file doesn't exist: %s", srcFile.getAbsolutePath());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -150,7 +162,7 @@ public class BBP_Wrapper implements Runnable {
 			srcFile = writeSrcFileNewSeed(srcFile, seedOverride, outputDir);
 		
 		File bbpRunDir = doRun(outputDir, scriptFileName, xmlFileName, simID,
-				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doRotD100, doFAS, dataOnly, bbpDataDir);
+				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doRotD100, doFAS, dataOnly, bbpDataDir, bbpGFDir);
 		if (bbpRunDir == null)
 			return false;
 		
@@ -172,7 +184,7 @@ public class BBP_Wrapper implements Runnable {
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
 			File srcFile, File srfFile, File siteFile, VelocityModel vm, Method method,
-			boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS, boolean dataOnly, File bbpDataDir)
+			boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS, boolean dataOnly, File bbpDataDir, File bbpGFDir)
 					throws IOException {
 		Preconditions.checkState(method == Method.GP, "Only GP supported currently");
 		List<BBP_Module> modules = new ArrayList<>();
@@ -185,7 +197,7 @@ public class BBP_Wrapper implements Runnable {
 		} else {
 			String preScriptName = "lf_only_"+scriptFileName;
 			String preXMLFileName = "lf_only_"+xmlFileName;
-			File dir = doRun(outputDir, preScriptName, preXMLFileName, simID, modules, siteFile, bbpDataDir);
+			File dir = doRun(outputDir, preScriptName, preXMLFileName, simID, modules, siteFile, bbpDataDir, bbpGFDir);
 			if (dir == null)
 				return null;
 			File tempDir = new File(new File(dir.getParentFile().getParentFile(), "tmpdata"), dir.getName());
@@ -228,21 +240,21 @@ public class BBP_Wrapper implements Runnable {
 		if (!dataOnly)
 			modules.add(BBP_Module.buildGenHTML(vm, method, siteFile, srcFile));
 		
-		return doRun(outputDir, scriptFileName, xmlFileName, simID, modules, siteFile, bbpDataDir);
+		return doRun(outputDir, scriptFileName, xmlFileName, simID, modules, siteFile, bbpDataDir, bbpGFDir);
 	}
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
-			List<BBP_Module> modules, File siteFile, File bbpDataDir) throws IOException {
+			List<BBP_Module> modules, File siteFile, File bbpDataDir, File bbpGFDir) throws IOException {
 		File scriptFile = new File(outputDir, scriptFileName);
 		File xmlFile = new File(outputDir, xmlFileName);
 		writeBBP_XML_File(xmlFile, siteFile, modules);
-		writeBBP_Script(scriptFile, xmlFile, simID, bbpDataDir);
+		writeBBP_Script(scriptFile, xmlFile, simID, bbpDataDir, bbpGFDir);
 		
 		System.out.println("Running BBP with simulation ID "+simID);
 		return runBBP_Script(scriptFile);
 	}
 	
-	private static void writeBBP_Script(File scriptFile, File xmlFile, long simID, File bbpDataDir) throws IOException {
+	private static void writeBBP_Script(File scriptFile, File xmlFile, long simID, File bbpDataDir, File bbpGFDir) throws IOException {
 		FileWriter fw = new FileWriter(scriptFile);
 		fw.write("#!/bin/bash"+"\n");
 		fw.write("\n");
@@ -258,6 +270,14 @@ public class BBP_Wrapper implements Runnable {
 			fw.write("    exit 2\n");
 			fw.write("fi\n");
 		}
+		if (bbpGFDir != null) {
+			fw.write("export BBP_GF_DIR="+bbpGFDir+"\n");
+		} else {
+			fw.write("if [ -z ${BBP_GF_DIR+x} ];then\n");
+			fw.write("    echo \"BBP_GF_DIR is undefined\"\n");
+			fw.write("    exit 2\n");
+			fw.write("fi\n");
+		}
 		fw.write("if [ ! -e $BBP_DATA_DIR ];then\n");
 		fw.write("    echo \"BBP_DATA_DIR doesn't exist\"\n");
 		fw.write("    exit 2\n");
@@ -268,6 +288,19 @@ public class BBP_Wrapper implements Runnable {
 		fw.write("    mkdir $BBP_DATA_DIR\n");
 		fw.write("fi\n");
 		fw.write("\n");
+//		fw.write("module rm xalt\n");
+//		fw.write("export FILE_SYS_TAG_0=\"/scratch\"\n");
+//		fw.write("export T_THRESHOLD_OPEN_0=467.97\n");
+//		fw.write("export MAX_OPEN_FREQ_0=1000\n");
+//		fw.write("export T_THRESHOLD_LXSTAT_0=247.37\n");
+//		fw.write("export MAX_STAT_FREQ_0=2000\n");
+//		fw.write("export FILE_SYS_TAG_1=\"/work\"\n");
+//		fw.write("export T_THRESHOLD_OPEN_1=907.14\n");
+//		fw.write("export MAX_OPEN_FREQ_1=500\n");
+//		fw.write("export T_THRESHOLD_LXSTAT_1=481.52\n");
+//		fw.write("export MAX_STAT_FREQ_1=1000\n");
+//		fw.write("export LD_PRELOAD=/scratch/01255/siliu/wrapper.so\n");
+//		fw.write("\n");
 		String command = "run_bbp.py --sim-id "+simID+" --xml-file="+xmlFile.getAbsolutePath();
 //		if (endModule != null)
 //			command += " --end "+endModule;

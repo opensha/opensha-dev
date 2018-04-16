@@ -225,6 +225,7 @@ public class RSQSimBBP_Config {
 	static final double HI_PASS_FREQ = 100;
 	
 	private static final List<BBP_Site> allSites;
+	private static final List<BBP_Site> csLAInitialSites;
 	static {
 		List<BBP_Site> sites = new ArrayList<>();
 		
@@ -239,10 +240,25 @@ public class RSQSimBBP_Config {
 		}
 		
 		allSites = Collections.unmodifiableList(sites);
+		
+		sites = new ArrayList<>();
+		
+		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		sites.add(new BBP_Site("PAS", new Location(34.148426, -118.17119), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		sites.add(new BBP_Site("SBSM", new Location(34.064986, -117.29201), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		sites.add(new BBP_Site("WNGC", new Location(34.041824, -118.0653), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		sites.add(new BBP_Site("STNI", new Location(33.93088, -118.17881), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		sites.add(new BBP_Site("LAPD", new Location(34.557, -118.125), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		
+		csLAInitialSites = Collections.unmodifiableList(sites);
 	}
 	
 	public static List<BBP_Site> getStandardSites() {
 		return allSites;
+	}
+	
+	public static List<BBP_Site> getCyberShakeInitialLASites() {
+		return csLAInitialSites;
 	}
 	
 	public static List<BBP_Site> getCAGriddedSites(double spacing) {

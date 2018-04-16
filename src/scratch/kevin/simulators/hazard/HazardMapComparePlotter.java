@@ -138,14 +138,14 @@ public class HazardMapComparePlotter {
 				jobDirs.add(new File(hazardJobDir, args[i]));
 		} else {
 			FaultBasedMapGen.LOCAL_MAPGEN = true;
-			catalog = Catalogs.BRUCE_2637.instance(catalogsBaseDir);
+			catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
 			
-			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_03_26-bruce2637-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
+//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
+//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
+//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
+//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
+//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
 		}
 		
 		File catOutDir = new File(mainOutputDir, catalog.getCatalogDir().getName());
@@ -648,7 +648,7 @@ public class HazardMapComparePlotter {
 		map.setCustomScaleMax(customMax);
 		map.setRescaleCPT(rescaleCPT);
 		map.setBlackBackground(false);
-		map.setPDFFileName(null);
+//		map.setPDFFileName(null);
 		map.setJPGFileName(null);
 		
 		System.out.println("Making map...");

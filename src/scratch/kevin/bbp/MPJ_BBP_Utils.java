@@ -177,6 +177,10 @@ public class MPJ_BBP_Utils {
 		dataDir.setRequired(false);
 		ops.addOption(dataDir);
 		
+		Option gfDir = new Option("gf", "bbp-gf-dir", true, "Path to bbp_gf dir");
+		gfDir.setRequired(false);
+		ops.addOption(gfDir);
+		
 		return ops;
 	}
 	

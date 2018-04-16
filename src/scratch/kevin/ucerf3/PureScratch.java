@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -103,6 +104,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -1286,13 +1288,41 @@ public class PureScratch {
 		System.out.println(numFSS+" with FSS index");
 		System.out.println(numGridded+" with grid node index");
 	}
+	
+	private static void test48() throws IOException {
+		Location laHabra = new Location(33.9225, -117.9352);
+		Location eq = new Location(33.844, -119.716);
+		
+		System.out.println("Distance: "+LocationUtils.horzDistance(laHabra, eq));
+	}
+	
+	private static void test49() throws IOException {
+		int num2 = 0;
+		int num3plus = 0;
+		int max = 0;
+		
+		List<FaultSectionPrefData> sects = RSQSimUtils.getUCERF3SubSectsForComparison(FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+		
+		for (FaultSectionPrefData sect : sects) {
+			int num = sect.getFaultTrace().size();
+			if (num == 2)
+				num2++;
+			else
+				num3plus++;
+			if (num > max)
+				max = num;
+		}
+		
+		System.out.println(num3plus+"/"+(num2+num3plus)+" have 3 or more points");
+		System.out.println("Most points in a sub sect: "+max);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test47();
+		test49();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

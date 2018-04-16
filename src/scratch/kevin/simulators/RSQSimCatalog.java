@@ -956,8 +956,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		table = MarkdownUtils.tableBuilder();
 		table.addLine("Scatter", "2-D Hist");
 		table.initNewLine();
-		table.addColumn("![MFD Scatter]("+outputDir.getName()+"/mag_area.png)");
-		table.addColumn("![MFD Hist]("+outputDir.getName()+"/mag_area_hist2D.png)");
+		table.addColumn("![MA Scatter]("+outputDir.getName()+"/mag_area.png)");
+		table.addColumn("![MA Hist]("+outputDir.getName()+"/mag_area_hist2D.png)");
 		table.finalizeLine();
 		lines.addAll(table.build());
 		

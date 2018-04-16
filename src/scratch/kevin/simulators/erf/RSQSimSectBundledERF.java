@@ -993,9 +993,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				System.exit(2);
 			}
 			catalog = Catalogs.BRUCE_2457.instance(baseDir);
-			writePoints = true;
-			writeSRFs = true;
-			writeMappings = true;
+			writePoints = false;
+			writeSRFs = false;
+			writeMappings = false;
 			testReadOnly = false;
 //			maxDuration = 10000;
 			maxDuration = 0;
@@ -1010,6 +1010,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			File mappingFile = new File(catalog.getCatalogDir(), "erf_mappings.bin");
 			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(mappingFile, null, fm, dm , subSects, elements);
 			erf.updateForecast();
+			System.out.println("Source 0 has "+erf.getNumRuptures(0)+" ruptures");
 		} else {
 			double skipYears = 5000;
 			double minMag = 6.5;
@@ -1027,6 +1028,8 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(catalog.getElements(), events,
 					fm, dm , subSects, minMag, minFractForInclusion, srfPointCullDist);
 			erf.updateForecast();
+			
+			System.out.println("Source 0 has "+erf.getNumRuptures(0)+" ruptures");
 			
 			File catalogDir = catalog.getCatalogDir();
 			File csDataDir = new File(catalogDir, "cybershake_inputs");

@@ -39,13 +39,16 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(jacquiCSDir, "rundir2194_K2");
 //		File catalogDir = new File(jacquiCSDir, "modLoad_testB");
 //		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
-		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
+//		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
+		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
+//		File catalogDir = new File(stampedeCatalogDir, "rundir2585_1myrs");
 		
-		boolean standardSites = true;
+		boolean standardSites = false;
+		boolean csInitialLASites = true;
 		boolean griddedSites = false;
 		double griddedSpacing = 1d;
 		
-		double minMag = 6;
+		double minMag = 6.5;
 //		double minMag = 7;
 		int numRG = 0;
 //		double minMag = 7;
@@ -55,37 +58,40 @@ class MPJ_BBP_CatalogSimScriptGen {
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
-//		int threads = 20;
-//		int nodes = 25;
-//		String queue = "scec";
-//		int mins = 24*60;
-//		int heapSizeMB = 45*1024;
-//		String bbpDataDir = "${TMPDIR}";
-//		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
-//		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
-//		List<File> classpath = new ArrayList<>();
-//		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
-//		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-//				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
-//		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-//		Preconditions.checkState(catalogDir.getAbsolutePath().contains("scec-"),
-//				"You forgot the catalog dir on HPC, dummy");
-		
-		int threads = 96;
-		int nodes = 10;
-		String queue = "skx-normal";
+		int threads = 20;
+		int nodes = 36;
+		String queue = "scec";
 		int mins = 24*60;
-		int heapSizeMB = 100*1024;
-		String bbpDataDir = "/tmp";
-		File remoteDir = new File("/work/00950/kevinm/stampede2/bbp/parallel");
-		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
+		int heapSizeMB = 45*1024;
+		String bbpDataDir = "${TMPDIR}";
+		String nodeScratchDir = null;
+		String gfCopyParentDir = "/staging/pjm/kmilner";
+		String sharedScratchDir = "${SCRATCHDIR}";
+		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
+		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
-		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, classpath,
-				StampedeScriptWriter.FMPJ_HOME, Device.NIODEV);
-		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-		Preconditions.checkState(catalogDir.getAbsolutePath().contains("kevinm"),
-				"You forgot the catalog dir on Stampede, dummy");
+		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
+		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+		Preconditions.checkState(catalogDir.getAbsolutePath().contains("scec-"),
+				"You forgot the catalog dir on HPC, dummy");
+		
+//		int threads = 96;
+//		int nodes = 10;
+//		String queue = "skx-normal";
+//		int mins = 24*60;
+//		int heapSizeMB = 100*1024;
+//		String bbpDataDir = "/tmp";
+//		File remoteDir = new File("/work/00950/kevinm/stampede2/bbp/parallel");
+//		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
+//		List<File> classpath = new ArrayList<>();
+//		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
+//		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, classpath,
+//				StampedeScriptWriter.FMPJ_HOME, Device.NIODEV);
+//		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+//		Preconditions.checkState(catalogDir.getAbsolutePath().contains("kevinm"),
+//				"You forgot the catalog dir on Stampede, dummy");
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 		jobName += "-"+catalogDir.getName()+"-all-m"+(float)minMag+"-skipYears"+skipYears;
@@ -95,9 +101,11 @@ class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-rg"+numRG;
 		if (standardSites)
 			jobName += "-standardSites";
+		if (csInitialLASites)
+			jobName += "-csLASites";
 		if (griddedSites)
 			jobName += "-griddedSites";
-		Preconditions.checkState(standardSites || griddedSites);
+		Preconditions.checkState(standardSites || griddedSites || csInitialLASites);
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -108,6 +116,8 @@ class MPJ_BBP_CatalogSimScriptGen {
 		List<BBP_Site> sites = new ArrayList<>();
 		if (standardSites)
 			sites.addAll(RSQSimBBP_Config.getStandardSites());
+		if (csInitialLASites)
+			sites.addAll(RSQSimBBP_Config.getCyberShakeInitialLASites());
 		if (griddedSites)
 			sites.addAll(RSQSimBBP_Config.getCAGriddedSites(griddedSpacing));
 		File sitesFile = new File(localJobDir, "sites.stl");
@@ -128,8 +138,33 @@ class MPJ_BBP_CatalogSimScriptGen {
 			argz += " --bbp-data-dir "+bbpDataDir;
 		if (numRG > 0)
 			argz += " --rup-gen-sims "+numRG;
+		if (nodeScratchDir != null && !nodeScratchDir.isEmpty())
+			argz += " --node-scratch-dir "+nodeScratchDir;
+		if (sharedScratchDir != null && !sharedScratchDir.isEmpty())
+			argz += " --shared-scratch-dir "+sharedScratchDir;
+		String gfDir = null;
+		if (gfCopyParentDir != null && !gfCopyParentDir.isEmpty()) {
+			gfDir = gfCopyParentDir;
+			if (!gfDir.endsWith("/"))
+				gfDir += "/";
+			gfDir += "bbp_gf";
+			argz += " --bbp-gf-dir "+gfDir;
+		}
 		
 		List<String> script = mpjWrite.buildScript(MPJ_BBP_CatalogSim.class.getName(), argz);
+		
+		if (gfCopyParentDir != null && !gfCopyParentDir.isEmpty()) {
+			List<String> addLines = new ArrayList<>();
+			addLines.add("echo \"rsyncing $BBP_GF_DIR to "+gfCopyParentDir+"\"");
+			addLines.add("rsync -a --quiet $BBP_GF_DIR "+gfCopyParentDir);
+			addLines.add("echo \"done rsyncing BBP_GF_DIR\"");
+			addLines.add("if [ ! -e "+gfDir+" ];then");
+			addLines.add("    echo \""+gfDir+" doesn't exist, rsync failed?\"");
+			addLines.add("    exit 2");
+			addLines.add("fi");
+			addLines.add("");
+			script.addAll(2, addLines);
+		}
 		
 		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
 		pbsWrite.writeScript(new File(localJobDir, "cat_bbp_parallel.pbs"), script);
