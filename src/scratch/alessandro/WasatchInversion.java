@@ -259,10 +259,6 @@ public class WasatchInversion {
 
 //		System.exit(0);
 		
-		// create instance of FaultSystemRupturesInversion:
-		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion();
-//		System.exit(0);
-
 		// this will be used to keep track of runtimes
 		long startTimeMillis = System.currentTimeMillis();
 		if(D)
@@ -274,7 +270,8 @@ public class WasatchInversion {
 		MagAreaRelationship magAreaRel = new HanksBakun2002_MagAreaRel();
 //		MagAreaRelationship magAreaRel = new Ellsworth_B_WG02_MagAreaRel();
 		double relativeSegRateWt=1;
-		double relative_aPrioriRupWt = 0;	// KEEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
+		double relative_aPrioriRupWt = 0;	// 
+		String aPrioriRupRatesFilename = ROOT_PATH+"data/aPrioriRupRatesFromGR_MFD.txt";
 		double relative_smoothnessWt = 0;	// KEEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
 		boolean wtedInversion = true;
 		double minRupRate = 1e-8;
@@ -292,7 +289,7 @@ public class WasatchInversion {
 		grConstraint.setAllButTotCumRate(minMag, maxMag, moRate, 1.0);
 
 		// run the inversion
-		fltSysRupInversion.doInversion(
+		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion(
 				fltSectDataList, 
 				sectionRateConstraints, 
 				rupSectionMatrix, 
@@ -300,6 +297,7 @@ public class WasatchInversion {
 				magAreaRel, 
 				relativeSegRateWt, 
 				relative_aPrioriRupWt, 
+				aPrioriRupRatesFilename,
 				relative_smoothnessWt, 
 				wtedInversion, 
 				minRupRate, 
@@ -307,9 +305,21 @@ public class WasatchInversion {
 				moRateReduction,
 				grConstraint,
 				relativeMFD_constraintWt);
+		
+		// Non-negative least squares
+//		fltSysRupInversion.doInversionNNLS();
+		
+		// Simulated annealing
+		long numIterations = (long) 1e5;
+		boolean initStateFromAprioriRupRates = false;
+		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
+
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
+		
+		// do this once to write out a priori rupture rates from MFD constraint
+//		fltSysRupInversion.writeApriorRupRatesFromMFD_Constrint(ROOT_PATH+"data/aPrioriRupRatesFromGR_MFD.txt");
 		
 		// these write to system out, not to a file
 		fltSysRupInversion.writeFinalStuff();

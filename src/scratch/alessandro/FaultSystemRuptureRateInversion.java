@@ -108,8 +108,11 @@ public class FaultSystemRuptureRateInversion {
 	private double gaussMFD_slipCorr;
 	
 	// a-priori rate constraints
+	int num_aPriori_constraints;
 	int[] aPriori_rupIndex;
 	double[] aPriori_rate, aPriori_wt;
+	String aPrioriRupRatesFilename;
+
 	
 	private static boolean MATLAB_TEST = false;
 	double[][] C_wted, C;	// inversion matrices
@@ -153,18 +156,6 @@ public class FaultSystemRuptureRateInversion {
 	
 	// NNLS inversion solver - static to save time and memory
 	private static NNLSWrapper nnls = new NNLSWrapper();
-
-	public FaultSystemRuptureRateInversion() {
-		
-		// compute slip correction for Gaussian MFD
-		GaussianMagFreqDist gDist1 = new GaussianMagFreqDist(5.0,9.0,41,7,this.GAUSS_MFD_SIGMA,1.0,this.GAUSS_MFD_TRUNCATION,2);
-		GaussianMagFreqDist gDist2 = new GaussianMagFreqDist(5.0,9.0,41,7,0.01,1.0,0.01,2);
-		gDist1.scaleToCumRate(0, 1.0);
-		gDist2.scaleToCumRate(0, 1.0);
-		gaussMFD_slipCorr = gDist1.getTotalMomentRate()/gDist2.getTotalMomentRate();
-//		System.out.println("gaussMFD_slipCorr="+(float)gaussMFD_slipCorr+"\n");
-
-	}
 
 	
 	
@@ -307,7 +298,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param moRateReduction - fraction reduction from smaller events (and not aseismicity or coupling coefficient, which are set in fltSectionDataList)
 	 * @param relativeMFD_constraintWt - weight for MFD constraint
 	 */
-	public void doInversion(
+	public FaultSystemRuptureRateInversion(
 			ArrayList<FaultSectionPrefData> fltSectionDataList, 
 			ArrayList<SegRateConstraint> sectionRateConstraints,
 			int[][] rupSectionMatrix, 
@@ -315,6 +306,7 @@ public class FaultSystemRuptureRateInversion {
 			MagAreaRelationship magAreaRel, 
 			double relativeSectRateWt, 
 			double relative_aPrioriRupWt, 
+			String aPrioriRupRatesFilename,
 			double relative_smoothnessWt, 
 			boolean wtedInversion, 
 			double minRupRate,
@@ -330,6 +322,7 @@ public class FaultSystemRuptureRateInversion {
 		this.magAreaRel = magAreaRel;
 		this.relativeSectRateWt = relativeSectRateWt;
 		this.relative_aPrioriRupWt = relative_aPrioriRupWt;
+		this.aPrioriRupRatesFilename = aPrioriRupRatesFilename;
 		this.relative_smoothnessWt = relative_smoothnessWt;
 		this.wtedInversion = wtedInversion;
 		this.minRupRate = minRupRate;
@@ -337,18 +330,28 @@ public class FaultSystemRuptureRateInversion {
 		this.moRateReduction = moRateReduction;
 		this.mfdConstraint = mfdConstraint;
 		this.relativeMFD_constraintWt = relativeMFD_constraintWt;
-
+		
+		// compute slip correction for Gaussian MFD
+		GaussianMagFreqDist gDist1 = new GaussianMagFreqDist(5.0,9.0,41,7,this.GAUSS_MFD_SIGMA,1.0,this.GAUSS_MFD_TRUNCATION,2);
+		GaussianMagFreqDist gDist2 = new GaussianMagFreqDist(5.0,9.0,41,7,0.01,1.0,0.01,2);
+		gDist1.scaleToCumRate(0, 1.0);
+		gDist2.scaleToCumRate(0, 1.0);
+		gaussMFD_slipCorr = gDist1.getTotalMomentRate()/gDist2.getTotalMomentRate();
+//		System.out.println("gaussMFD_slipCorr="+(float)gaussMFD_slipCorr+"\n");
 		
 		// initialize section and rupture attributes
 		initSectAndRupAttributes();
 		
-		// set the a-priori rup rates & wts now that mags are set THESE NEED TO BE INPUT
-		aPriori_rupIndex = new int[0];
-		aPriori_rate = new double[0];
 		
-
 		// compute matrix of Dsr (slip on each segment in each rupture)
 		computeSectSlipInRupMatrix();
+		
+		// read the a-priori rup rates & wts
+		num_aPriori_constraints = 0;
+		if(aPrioriRupRatesFilename != null) {
+			readApriorRupRateConstraintsFromFile(aPrioriRupRatesFilename);
+			num_aPriori_constraints = aPriori_rupIndex.length;
+		}
 		
 		// write out rupture attributes
 		if(D) {
@@ -363,9 +366,6 @@ public class FaultSystemRuptureRateInversion {
 					
 		// get the number of section rate constraints
 		int numSectRateConstraints = sectionRateConstraints.size();
-		
-		// get the number of a-priori rate constraints
-		int num_aPriori_constraints = aPriori_rupIndex.length;
 		
 		// set the minimum rupture rate constraints
 		if(minRupRate >0.0) {
@@ -389,8 +389,6 @@ public class FaultSystemRuptureRateInversion {
 		
 		// add a-priori rate constrains if needed
 		if(relative_aPrioriRupWt > 0.0) {
-			setApriorRupRatesFromMFD_Constrint();
-			num_aPriori_constraints = aPriori_rupIndex.length;
 			firstRowAprioriData  = totNumRows;
 			totNumRows += num_aPriori_constraints;
 			lastRowAprioriData = totNumRows-1;
@@ -586,11 +584,13 @@ public class FaultSystemRuptureRateInversion {
 			}
 		}
 		
-
+	}
+	
+	/**
+	 * This deos the inversion using non-negative least squares
+	 */
+	public void doInversionNNLS() {
 		
-//		for(int row=0;row<totNumRows; row++)
-//			System.out.println(row+"\t"+(float)d[row]);
-
 /*
 		// manual check of matrices
 			int nRow = C.length;
@@ -609,14 +609,13 @@ public class FaultSystemRuptureRateInversion {
 */
 
 		// SOLVE THE INVERSE PROBLEM
-//		rupRateSolution = getNNLS_solution(C_wted, d_wted);
+		rupRateSolution = getNNLS_solution(C_wted, d_wted);
 
-		// set initial state from MFD constraint
-		setApriorRupRatesFromMFD_Constrint();
-		double[] initialState = aPriori_rate;
-		// or set initial state to zero
+//		// set initial state from MFD constraint
+////		double[] initialState = aPriori_rate;
+//		// or set initial state to zero
 //		double[] initialState = new double[numRuptures];
-		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState);
+//		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState);
 
 		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 		if(minRupRate >0.0)
@@ -635,7 +634,46 @@ public class FaultSystemRuptureRateInversion {
 	}
 	
 		
-	
+	/**
+	 * This does the inversion using simulated annealing
+	 */
+	public void doInversionSA(long numIterations, boolean initStateFromAprioriRupRates) {
+		
+		// set the intial state
+		double[] initialState;
+		if(initStateFromAprioriRupRates) {
+			// check that there is a rate for each rupture
+			if(aPriori_rate.length != numRuptures)
+				throw new RuntimeException("Can't use a priori rupture rates as initialState because sizes are different");
+			for(int r=0;r<numRuptures;r++) {
+				if(this.aPriori_rupIndex[r] != r)
+					throw new RuntimeException("Can't use a priori rupture rates as initialState because there is an index problem");
+			}
+			initialState = aPriori_rate;
+		}
+		else { // inital state is all zeros
+			initialState = new double[numRuptures];	
+		}
+		
+		// SOLVE THE INVERSE PROBLEM
+		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState, numIterations);
+
+		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
+		if(minRupRate >0.0)
+			for(int rup=0; rup<numRuptures;rup++) rupRateSolution[rup] += minRupRateArray[rup];
+
+		// compute predicted data
+		for(int row=0;row<totNumRows; row++)
+			for(int col=0; col <numRuptures; col++)
+				d_pred[row] += rupRateSolution[col]*C[row][col];
+				
+		// Compute final segment slip rates and event rates
+		computeFinalStuff();
+		
+		computeSegMFDs();
+		
+	}
+
 	
 
 	
@@ -786,10 +824,9 @@ public class FaultSystemRuptureRateInversion {
 	}
 
 	
-private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState) {
+private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState, long numIterations) {
 	SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
 	SerialSimulatedAnnealing simulatedAnnealing =new SerialSimulatedAnnealing(matrixC, d, initialState);
-	long numIterations = (long)1000000;
 	simulatedAnnealing.iterate(numIterations);
 	return simulatedAnnealing.getBestSolution();
 }
@@ -1005,7 +1042,7 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 		if(this.relative_aPrioriRupWt >0.0)
 			aveRatio = 0;
 //		System.out.println("\nA Priori Rates: index, final, orig, and final/orig");
-		for(int i=0; i<this.aPriori_rate.length;i++) {
+		for(int i=0; i<num_aPriori_constraints;i++) {
 			double ratio;
 			if(rupRateSolution[aPriori_rupIndex[i]] > 1e-14 && aPriori_rate[i] > 1e-14)  // if both are not essentially zero
 				ratio = (rupRateSolution[aPriori_rupIndex[i]]/aPriori_rate[i]);
@@ -1014,7 +1051,7 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 			aveRatio += ratio;
 //			System.out.println(aPriori_rupIndex[i]+"\t"+(float)rupRateSolution[aPriori_rupIndex[i]]+"\t"+aPriori_rate[i]+"\t"+(float)ratio);				
 		}
-		aveRatio /= aPriori_rate.length;
+		aveRatio /= num_aPriori_constraints;
 		System.out.println("Ave final/orig a-priori rate = "+(float)aveRatio);
 
 	}
@@ -1325,22 +1362,67 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 //		double altMoRate = magFreqDist.getTotalMomentRate();
 		gr.setAllButTotCumRate(minRupMag, maxRupMag, moRate, 1.0);
 		gr.setName("GR fit");
-		if(D) {
-			System.out.println("GR MFD FIT:\n\tMmin="+minRupMag+"\n\tMmax="+maxRupMag+
-					"\n\tnum="+num+"\n\tdelta="+gr.getDelta()+"\n\tmoRate="+moRate);
-		}
+//		if(D) {
+//			System.out.println("GR MFD FIT:\n\tMmin="+minRupMag+"\n\tMmax="+maxRupMag+
+//					"\n\tnum="+num+"\n\tdelta="+gr.getDelta()+"\n\tmoRate="+moRate);
+//		}
 		return gr;
 	}
 	
-	private void setApriorRupRatesFromMFD_Constrint() {
-		aPriori_rupIndex = new int[numRuptures];
-		aPriori_rate  = new double[numRuptures];
-		aPriori_wt  = new double[numRuptures];
-		for(int r=0;r<numRuptures;r++) {
-			aPriori_rupIndex[r] = r;
-			aPriori_rate[r] = mfdConstraint.getY(rupMeanMag[r])/meanMagHistorgram.getY(rupMeanMag[r]);
-			aPriori_wt[r]=1;
+	
+	/**
+	 * This writes a-priori rupture rates computed from the MFD constraint to the
+	 * specified file.
+	 * @param fileName
+	 */
+	public void writeApriorRupRatesFromMFD_Constrint(String fileName) {
+		try{
+			double aPriori_rate, aPriori_wt;
+			FileWriter fw = new FileWriter(fileName);
+			for(int r=0;r<numRuptures;r++) {
+				aPriori_rate = mfdConstraint.getY(rupMeanMag[r])/meanMagHistorgram.getY(rupMeanMag[r]);
+				aPriori_wt = 1;
+				fw.write(r+"\t"+aPriori_rate+"\t"+aPriori_wt+"\n");
+			}
+			fw.close();
+		}catch(Exception e) {
+			e.printStackTrace();
+		}			
+	}
+	
+	
+	/**
+	 * This reads the a-priori rupture rates from a file, where the first column is
+	 * rupture index, the second column is rate, and third is weight
+	 * @param fileName
+	 */
+	private void readApriorRupRateConstraintsFromFile(String fileName) {
+		try {
+			File file = new File(fileName);
+			List<String> fileLines;
+			fileLines = Files.readLines(file, Charset.defaultCharset());
+			int numLines = fileLines.size();
+			aPriori_rupIndex = new int[numLines];
+			aPriori_rate  = new double[numLines];
+			aPriori_wt  = new double[numLines];
+			int index=0;
+			for (String line : fileLines) {
+				line = line.trim();
+				String[] split = line.split("\t");	// tab delimited
+				Preconditions.checkState(split.length == 3, "Expected 3 items, got %s", split.length);
+				int rupIndex = Integer.valueOf(split[0]);
+				aPriori_rupIndex[index] = rupIndex;
+				aPriori_rate[index] = Double.valueOf(split[1]);	
+				aPriori_wt[index] = Double.valueOf(split[2]);
+				index+=1;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+
+
+	
 	}
 	
 	
