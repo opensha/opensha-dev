@@ -274,7 +274,7 @@ public class WasatchInversion {
 		MagAreaRelationship magAreaRel = new HanksBakun2002_MagAreaRel();
 //		MagAreaRelationship magAreaRel = new Ellsworth_B_WG02_MagAreaRel();
 		double relativeSegRateWt=1;
-		double relative_aPrioriRupWt = 100;	// KEEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
+		double relative_aPrioriRupWt = 0;	// KEEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
 		double relative_smoothnessWt = 0;	// KEEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
 		boolean wtedInversion = true;
 		double minRupRate = 1e-8;
@@ -311,6 +311,7 @@ public class WasatchInversion {
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
 		
+		// these write to system out, not to a file
 		fltSysRupInversion.writeFinalStuff();
 		fltSysRupInversion.writePredErrorInfo();
 

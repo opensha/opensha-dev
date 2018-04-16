@@ -51,13 +51,16 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
+import cern.colt.matrix.tdouble.DoubleMatrix2D;
+import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
+import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
+
 /**
  * This class does an inversion for the rate of events in an unsegmented fault model:
  * 
  * TO DO:
  * 
- * 0) make MFDs use commone min, max, and num (and remove duplicate meanMagHist computation)
- * 1) Add simulated annealing inversion (and a "redoInverion() method that uses existing constraints)
+ * 1) Add a "redoInverion() method that uses existing constraints?
  * 3) Input a-priori rup-rate constraints
  * 4) Make slip model and enum (already in U3?)
  * 5) Input prob visible model rather than computing here  (already in U3?)
@@ -347,7 +350,7 @@ public class FaultSystemRuptureRateInversion {
 		// compute matrix of Dsr (slip on each segment in each rupture)
 		computeSectSlipInRupMatrix();
 		
-		// write our rupture attributes
+		// write out rupture attributes
 		if(D) {
 			System.out.println("Rupture attributes:");
 			System.out.println("index\tmeanMag\tlength\tarea\taveSlip\tname");
@@ -606,7 +609,14 @@ public class FaultSystemRuptureRateInversion {
 */
 
 		// SOLVE THE INVERSE PROBLEM
-		rupRateSolution = getNNLS_solution(C_wted, d_wted);
+//		rupRateSolution = getNNLS_solution(C_wted, d_wted);
+
+		// set initial state from MFD constraint
+		setApriorRupRatesFromMFD_Constrint();
+		double[] initialState = aPriori_rate;
+		// or set initial state to zero
+//		double[] initialState = new double[numRuptures];
+		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState);
 
 		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 		if(minRupRate >0.0)
@@ -776,7 +786,13 @@ public class FaultSystemRuptureRateInversion {
 	}
 
 	
-
+private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState) {
+	SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
+	SerialSimulatedAnnealing simulatedAnnealing =new SerialSimulatedAnnealing(matrixC, d, initialState);
+	long numIterations = (long)1000000;
+	simulatedAnnealing.iterate(numIterations);
+	return simulatedAnnealing.getBestSolution();
+}
 	
 	
 	
@@ -1325,8 +1341,6 @@ public class FaultSystemRuptureRateInversion {
 			aPriori_rate[r] = mfdConstraint.getY(rupMeanMag[r])/meanMagHistorgram.getY(rupMeanMag[r]);
 			aPriori_wt[r]=1;
 		}
-
-		
 	}
 	
 	
