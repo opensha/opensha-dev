@@ -1,6 +1,5 @@
 package scratch.kevin.simCompare;
 
-import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -12,11 +11,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.commons.compress.utils.Lists;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
-import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -31,7 +27,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	private String simName;
 	
 	private static double[] gmpe_truncs = { 3d, 2d, 1d };
-	private static double[] gmpe_fixed_sigmas = { 0.3, 0d };
+	private static double[] gmpe_fixed_sigmas = { 0.5, 0.3, 0d };
 	
 	private static ExecutorService exec;
 	

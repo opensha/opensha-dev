@@ -481,7 +481,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				gmpe_truncs, gmpe_fixed_sigmas, outputDir, prefix);
 	}
 	
-	static File plotHazardCurve(List<DiscretizedFunc> simCurves, List<? extends RuptureComparison<?>> comps, DiscretizedFunc xVals,
+	static <E> File plotHazardCurve(List<DiscretizedFunc> simCurves, List<? extends RuptureComparison<E>> comps, DiscretizedFunc xVals,
 			Site site, double period, double curveDuration, AttenRelRef gmpeRef, double[] gmpeTruncs, double[] gmpeFixedSigmas,
 			File outputDir, String prefix) throws IOException {
 		// calculate GMPE curves

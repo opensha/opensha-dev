@@ -72,6 +72,13 @@ public class BBP_Wrapper implements Runnable {
 			int retries = 0;
 			boolean success = false;
 			while (retries < maxRetries) {
+				if (retries > 0) {
+					try {
+						Thread.sleep(10*retries*1000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
 				success = doRun(simID);
 				if (success)
 					break;
