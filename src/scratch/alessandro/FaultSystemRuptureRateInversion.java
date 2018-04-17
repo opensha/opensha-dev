@@ -60,9 +60,7 @@ import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
  * 
  * TO DO:
  * 
- * 1) Add a "redoInverion() method that uses existing constraints?
- * 3) Input a-priori rup-rate constraints
- * 4) Make slip model and enum (already in U3?)
+  * 4) Make slip model and enum (already in U3?)
  * 5) Input prob visible model rather than computing here  (already in U3?)
  * 6) sample MRIs via monte carlo simulations (same for slip rates?) for more epistemic uncertainty (or do this outside with zero errors)
  *

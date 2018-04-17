@@ -18,7 +18,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
 /**
- * This class reads Wasatch inversion data from files and provides methods for getting the various constraints
+ * This class reads Wasatch inversion data from files, provides methods for getting the various constraints, and runs the inversion
  * @author field n.
  *
  */
@@ -27,6 +27,8 @@ public class WasatchInversion {
 	final static boolean D = false;	// debugging flag
 	
 	public final static String ROOT_PATH = "src/scratch/alessandro/";
+	final static String ROOT_DATA_DIR = "src/scratch/alessandro/data/"; // where to find the data
+
 	
 	// These values are the same for all fault sections
 	final static double UPPER_SEIS_DEPTH = 0;
@@ -38,8 +40,6 @@ public class WasatchInversion {
 	ArrayList<FaultSectionPrefData> faultSectionDataList;
 	ArrayList<SegRateConstraint> sectionRateConstraints;
 	int[][] rupSectionMatrix;
-
-	final static String ROOT_DIR = "src/scratch/alessandro/data/"; // where to find the data
 	
 	final static String SLIP_RATE_FILENAME = "sliprate_wasatch_mod.txt";
 	final static String PALEO_RATE_FILENAME = "paleorate_wasatch_and_95p.txt";
@@ -60,11 +60,11 @@ public class WasatchInversion {
 		// Read Data:
 
 		try {
-			File file = new File(ROOT_DIR+SLIP_RATE_FILENAME);
+			File file = new File(ROOT_DATA_DIR+SLIP_RATE_FILENAME);
 			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
 			numSections = fileLines.size();
 			if(D) System.out.println("numSections="+numSections);
-			int segIndex = 0;
+			int sectIndex = 0;
 			sectSlipRate = new double[numSections];
 			sectSlipRateStdDev = new double[numSections];
 			for (String line : fileLines) {
@@ -74,31 +74,31 @@ public class WasatchInversion {
 				Preconditions.checkState(split.length == 3, "Expected 3 items, got %s", split.length);
 				//			System.out.println(split[0]+"\t"+split[1]+"\t"+split[2]);
 				int testIndex = Integer.valueOf(split[0]);
-				if(segIndex != testIndex)
-					throw new RuntimeException("Bad section index; "+segIndex+" != "+testIndex);
-				sectSlipRate[segIndex] = Double.valueOf(split[1]);	
-				sectSlipRateStdDev[segIndex] = Double.valueOf(split[2]);	
-				if(D) System.out.println(segIndex+"\t"+sectSlipRate[segIndex]+"\t"+sectSlipRateStdDev[segIndex]);
-				segIndex+=1;
+				if(sectIndex != testIndex)
+					throw new RuntimeException("Bad section index; "+sectIndex+" != "+testIndex);
+				sectSlipRate[sectIndex] = Double.valueOf(split[1]);	
+				sectSlipRateStdDev[sectIndex] = Double.valueOf(split[2]);	
+				if(D) System.out.println(sectIndex+"\t"+sectSlipRate[sectIndex]+"\t"+sectSlipRateStdDev[sectIndex]);
+				sectIndex+=1;
 			}
 
 
 			// Now read section rate constraints
 			sectionRateConstraints   = new ArrayList<SegRateConstraint>();
-			file = new File(ROOT_DIR+PALEO_RATE_FILENAME);
+			file = new File(ROOT_DATA_DIR+PALEO_RATE_FILENAME);
 			for (String line : Files.readLines(file, Charset.defaultCharset())) {
 				//			System.out.println(line);
 				line = line.trim();
 				String[] split = line.split("\t");	// tab delimited
 				Preconditions.checkState(split.length == 5, "Expected 3 items, got %s", split.length);
 				//			System.out.println(split[0]+"\t"+split[1]+"\t"+split[2]);
-				segIndex = Integer.valueOf(split[0]);
+				sectIndex = Integer.valueOf(split[0]);
 				double meanRate = Double.valueOf(split[1]);
 				double stdDev = Double.valueOf(split[2]);
 				double upp95 = Double.valueOf(split[3]);
 				double low95 = Double.valueOf(split[4]);
 				SegRateConstraint sectionRateConstraint = new SegRateConstraint("Section "+split[0]); // Names are not unique!
-				sectionRateConstraint.setSegRate(segIndex, meanRate, stdDev, low95, upp95);
+				sectionRateConstraint.setSegRate(sectIndex, meanRate, stdDev, low95, upp95);
 				sectionRateConstraints.add(sectionRateConstraint);
 				if (D) System.out.println(sectionRateConstraint.getFaultName()+"\t"+
 						sectionRateConstraint.getSegIndex()+"\t"+
@@ -155,7 +155,7 @@ public class WasatchInversion {
 				traceFileName = s+".txt";
 				
 				// read fault trace from file
-				file = new File(ROOT_DIR+FAULT_TRACE_DIR_NAME+traceFileName);
+				file = new File(ROOT_DATA_DIR+FAULT_TRACE_DIR_NAME+traceFileName);
 				for (String line : Files.readLines(file, Charset.defaultCharset())) {
 					//			System.out.println(line);
 					line = line.trim();
@@ -265,18 +265,18 @@ public class WasatchInversion {
 			System.out.println("Starting Inversion");
 
 		// set inversion attributes
-//		String slipModelType = FaultSystemRuptureRateInversion.UNIFORM_SLIP_MODEL;
-		String slipModelType = FaultSystemRuptureRateInversion.TAPERED_SLIP_MODEL;
+		String slipModelType = FaultSystemRuptureRateInversion.UNIFORM_SLIP_MODEL;
+//		String slipModelType = FaultSystemRuptureRateInversion.TAPERED_SLIP_MODEL;
 		MagAreaRelationship magAreaRel = new HanksBakun2002_MagAreaRel();
 //		MagAreaRelationship magAreaRel = new Ellsworth_B_WG02_MagAreaRel();
-		double relativeSegRateWt=1;
+		double relativeSectRateWt=1;
 		double relative_aPrioriRupWt = 0;	// 
 		String aPrioriRupRatesFilename = ROOT_PATH+"data/aPrioriRupRatesFromGR_MFD.txt";
 		double relative_smoothnessWt = 0;	// KEEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
 		boolean wtedInversion = true;
 		double minRupRate = 1e-8;
 		boolean applyProbVisible = true;
-		double moRateReduction =0.1;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
+		double moRateReduction = 0.1;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
 		double relativeMFD_constraintWt = 0; // setting this to 1e6
 		
 		// GR Constraint (values obtained from first running FaultSystemRuptureRateInversion.getGR_DistFit() with relativeMFD_constraintWt=0)
@@ -295,7 +295,7 @@ public class WasatchInversion {
 				rupSectionMatrix, 
 				slipModelType, 
 				magAreaRel, 
-				relativeSegRateWt, 
+				relativeSectRateWt, 
 				relative_aPrioriRupWt, 
 				aPrioriRupRatesFilename,
 				relative_smoothnessWt, 
@@ -309,9 +309,9 @@ public class WasatchInversion {
 		// Non-negative least squares
 //		fltSysRupInversion.doInversionNNLS();
 		
-		// Simulated annealing
-		long numIterations = (long) 1e5;
-		boolean initStateFromAprioriRupRates = false;
+//		// Simulated annealing
+		long numIterations = (long) 1e6;
+		boolean initStateFromAprioriRupRates = true;
 		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
 
 
