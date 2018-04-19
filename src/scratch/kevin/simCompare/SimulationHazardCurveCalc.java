@@ -8,8 +8,11 @@ import java.util.List;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+
+import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 
 public class SimulationHazardCurveCalc<E> {
 	
@@ -52,15 +55,48 @@ public class SimulationHazardCurveCalc<E> {
 		DiscretizedFunc curve = xVals.deepClone();
 		for (int i=0; i<curve.size(); i++)
 			curve.set(i, 0d);
+		int[] numExceed = new int[xVals.size()];
+		int numRuptures = 0;
+		double firstRate = -1;
+		boolean allRatesSame = true;
 		for (E rupture : simProv.getRupturesForSite(site)) {
 			double rupRate = simProv.getAnnualRate(rupture);
+			if (rupRate == 0)
+				continue;
+			if (firstRate == -1)
+				firstRate = rupRate;
+			else
+				allRatesSame = allRatesSame && firstRate == rupRate;
 			List<DiscretizedFunc> spectras = simProv.getRotD50s(site, rupture);
 			rupRate /= spectras.size();
 			for (DiscretizedFunc spectra : spectras) {
 				double rd50 = spectra.getInterpolatedY(period);
-				for (int i=0; i<curve.size(); i++)
-					if (curve.getX(i) <= rd50)
+				for (int i=0; i<curve.size(); i++) {
+					if (curve.getX(i) <= rd50) {
+						numExceed[i]++;
 						curve.set(i, curve.getY(i)+rupRate);
+					}
+				}
+				numRuptures++;
+			}
+		}
+		
+		DiscretizedFunc lowerCurve = null;
+		DiscretizedFunc upperCurve = null;
+		if (allRatesSame) {
+			lowerCurve = xVals.deepClone();
+			upperCurve = xVals.deepClone();
+			
+			double scale = firstRate*numRuptures;
+			
+			for (int i=0; i<xVals.size(); i++) {
+				double[] conf = ETAS_Utils.getBinomialProportion95confidenceInterval(
+						(double)numExceed[i]/(double)numRuptures, numRuptures);
+				lowerCurve.set(i, 1d - Math.exp(-conf[0]*scale*curveDuration));
+				upperCurve.set(i, 1d - Math.exp(-conf[1]*scale*curveDuration));
+//				System.out.println("x="+(float)xVals.getX(i)+"\ty="+(float)curve.getY(i)
+//					+"\tc[0]="+(float)conf[0]+"\tc[0]*s="+(float)(conf[0]*scale)
+//					+"\tc[1]="+(float)conf[1]+"\tc[1]*s="+(float)(conf[1]*scale));
 			}
 		}
 		
@@ -76,11 +112,29 @@ public class SimulationHazardCurveCalc<E> {
 			double minProb = 1d - Math.exp(-minRate*curveDuration);
 			// truncate curve to remove x values never seen in finite catalog
 			ArbitrarilyDiscretizedFunc truncatedCurve = new ArbitrarilyDiscretizedFunc();
-			for (Point2D pt : curve)
-				if (pt.getY() >= minProb)
+			ArbitrarilyDiscretizedFunc truncatedLowerCurve = null;
+			ArbitrarilyDiscretizedFunc truncatedUpperCurve = null;
+			if (lowerCurve != null) {
+				truncatedLowerCurve = new ArbitrarilyDiscretizedFunc();
+				truncatedUpperCurve = new ArbitrarilyDiscretizedFunc();
+			}
+			for (int i=0; i<curve.size(); i++) {
+				Point2D pt = curve.get(i);
+				if (pt.getY() >= minProb) {
 					truncatedCurve.set(pt);
+					if (truncatedLowerCurve != null) {
+						truncatedLowerCurve.set(lowerCurve.get(i));
+						truncatedUpperCurve.set(upperCurve.get(i));
+					}
+				}
+			}
 			curve = truncatedCurve;
+			lowerCurve = truncatedLowerCurve;
+			upperCurve = truncatedUpperCurve;
 		}
+		
+		if (lowerCurve != null)
+			curve = new UncertainArbDiscDataset(curve, lowerCurve, upperCurve);
 		
 		curve.setName(simProv.getName());
 		

@@ -265,6 +265,10 @@ public class RSQSimBBP_Config {
 		return getGriddedSites(new CaliforniaRegions.RELM_TESTING(), spacing);
 	}
 	
+	public static List<BBP_Site> getSoCalGriddedSites(double spacing) {
+		return getGriddedSites(new CaliforniaRegions.RELM_SOCAL(), spacing);
+	}
+	
 	public static List<BBP_Site> getGriddedSites(Region region, double spacing) {
 		GriddedRegion gridReg = new GriddedRegion(region, spacing, null);
 		System.out.println("Creating "+gridReg.getNodeCount()+" gridded BBP sites");

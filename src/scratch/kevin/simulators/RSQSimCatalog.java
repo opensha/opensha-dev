@@ -203,6 +203,12 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2637("bruce/rundir2637", "Bruce 2637", "Bruce Shaw", cal(2018, 3, 28),
 				"sensitivity test, diff r2585  N=130",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2665("bruce/rundir2665", "Bruce 2665", "Bruce Shaw", cal(2018, 4, 16),
+				"dx/2, LatCut=37, rateCut=0.2mm/yr, interpolated nearest",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2666("bruce/rundir2666", "Bruce 2666", "Bruce Shaw", cal(2018, 4, 17),
+				"dx/4, LatCut=37, rateCut=2.0mm/yr, interpolated nearest",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -662,7 +668,17 @@ public class RSQSimCatalog implements XMLSaveable {
 			File resourcesDir = new File(dir, "resources");
 			Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 			lines.add("");
-			lines.addAll(writeStandardDiagnosticPlots(resourcesDir, 5000, 6d, replot, topLink));
+			int skipYears;
+			double duration = getDurationYears();
+			if (duration > 20000)
+				skipYears = 5000;
+			else if (duration > 10000)
+				skipYears = 3000;
+			else if (duration > 1000)
+				skipYears = 1000;
+			else
+				skipYears = 0;
+			lines.addAll(writeStandardDiagnosticPlots(resourcesDir, skipYears, 6d, replot, topLink));
 		}
 		
 		File inputFile = findParamFile();
@@ -863,7 +879,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		
 		public Loader skipYears(double years) {
-			loadIdens.add(new SkipYearsLoadIden(years));
+			if (years > 0)
+				loadIdens.add(new SkipYearsLoadIden(years));
 			return this;
 		}
 		

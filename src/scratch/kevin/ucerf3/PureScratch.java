@@ -1297,6 +1297,9 @@ public class PureScratch {
 	}
 	
 	private static void test49() throws IOException {
+		File profileFile = new File(System.getProperty("user.home")+"/.bash_profile");
+		System.out.println("exists? "+profileFile.exists());
+		System.exit(0);
 		int num2 = 0;
 		int num3plus = 0;
 		int max = 0;

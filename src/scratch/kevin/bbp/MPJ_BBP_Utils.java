@@ -173,6 +173,10 @@ public class MPJ_BBP_Utils {
 		noHF.setRequired(false);
 		ops.addOption(noHF);
 		
+		Option envFile = new Option("env", "bbp-env", true, "Path to BBP environmental variables file");
+		envFile.setRequired(false);
+		ops.addOption(envFile);
+		
 		Option dataDir = new Option("data", "bbp-data-dir", true, "Path to bbp_data dir");
 		dataDir.setRequired(false);
 		ops.addOption(dataDir);

@@ -13,6 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -279,6 +280,11 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			try {
 				future.get();
 			} catch (Exception e) {
+				if (e instanceof ExecutionException) {
+					e.getCause().printStackTrace();
+					System.err.flush();
+					throw ExceptionUtils.asRuntimeException(e.getCause());
+				}
 				throw ExceptionUtils.asRuntimeException(e);
 			}
 		}
@@ -519,12 +525,13 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2457.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2666.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
 		
-		boolean doGridded = false;
+		boolean doGridded = true;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
