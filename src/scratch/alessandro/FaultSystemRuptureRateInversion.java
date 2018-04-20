@@ -22,7 +22,9 @@ import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.HanksBakun2002_MagAreaRel;
 import org.opensha.commons.calc.nnls.NNLSWrapper;
+import org.opensha.commons.data.function.AbstractXY_DataSet;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.eq.MagUtils;
@@ -60,7 +62,7 @@ import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
  * 
  * TO DO:
  * 
-  * 4) Make slip model and enum (already in U3?)
+ * 4) Make slip model and enum (already in U3?)
  * 5) Input prob visible model rather than computing here  (already in U3?)
  * 6) sample MRIs via monte carlo simulations (same for slip rates?) for more epistemic uncertainty (or do this outside with zero errors)
  *
@@ -1131,30 +1133,37 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 		// plot orig and final slip rates	
 		double min = 0, max = numSections-1;
 		EvenlyDiscretizedFunc origSlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
-		EvenlyDiscretizedFunc origUpper95_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
-		EvenlyDiscretizedFunc origLower95_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
+//		EvenlyDiscretizedFunc origUpper95_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
+//		EvenlyDiscretizedFunc origLower95_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
 		EvenlyDiscretizedFunc finalSlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
+		ArrayList<DefaultXY_DataSet> slipRate95confFuncsList = new ArrayList<DefaultXY_DataSet>();
+		DefaultXY_DataSet slipRate95confFunc;
 		for(int s=0; s<numSections;s++) {
 			origSlipRateFunc.set(s,sectSlipRate[s]*(1-moRateReduction));
-			origUpper95_SlipRateFunc.set(s,(sectSlipRate[s]+1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
-			origLower95_SlipRateFunc.set(s,(sectSlipRate[s]-1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
+			slipRate95confFunc = new DefaultXY_DataSet();
+			slipRate95confFunc.set((double)s,(sectSlipRate[s]-1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
+			slipRate95confFunc.set((double)s,(sectSlipRate[s]+1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
+			slipRate95confFunc.setName("95% conf for orig slip rate on section "+s);
+			slipRate95confFuncsList.add(slipRate95confFunc);
+//			origUpper95_SlipRateFunc.set(s,(sectSlipRate[s]+1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
+//			origLower95_SlipRateFunc.set(s,(sectSlipRate[s]-1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
 			finalSlipRateFunc.set(s,finalSectSlipRate[s]);
 		}
 		ArrayList sr_funcs = new ArrayList();
 		origSlipRateFunc.setName("Orig Slip Rates");
-		origUpper95_SlipRateFunc.setName("Orig Upper 95% Confidence for Slip Rates");
-		origLower95_SlipRateFunc.setName("Orig Lower 95% Confidence for Slip Rates");
+//		origUpper95_SlipRateFunc.setName("Orig Upper 95% Confidence for Slip Rates");
+//		origLower95_SlipRateFunc.setName("Orig Lower 95% Confidence for Slip Rates");
 		finalSlipRateFunc.setName("Final Slip Rates");
 		sr_funcs.add(finalSlipRateFunc);
 		sr_funcs.add(origSlipRateFunc);
-		sr_funcs.add(origUpper95_SlipRateFunc);
-		sr_funcs.add(origLower95_SlipRateFunc);
+		sr_funcs.addAll(slipRate95confFuncsList);
 		GraphWindow sr_graph = new GraphWindow(sr_funcs, "");  
 		ArrayList<PlotCurveCharacterstics> sr_plotChars = new ArrayList<PlotCurveCharacterstics>();
-		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.BLACK));
-		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
 		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
-		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.BLUE));
+		for(int i=0;i<slipRate95confFuncsList.size();i++) {
+			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 4f, Color.BLUE));
+		}
 		sr_graph.setPlotChars(sr_plotChars);
 		sr_graph.setX_AxisLabel("Section");
 		sr_graph.setY_AxisLabel("Slip Rate (m/sec)");
@@ -1175,7 +1184,7 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 		
 
 		// plot orig and final section event rates	
-		ArrayList er_funcs = new ArrayList();
+		ArrayList<AbstractXY_DataSet> er_funcs = new ArrayList<AbstractXY_DataSet>();
 		// now fill in final event rates
 		EvenlyDiscretizedFunc finalEventRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
 		EvenlyDiscretizedFunc finalPaleoVisibleEventRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
@@ -1188,16 +1197,19 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 		er_funcs.add(finalPaleoVisibleEventRateFunc);
 		er_funcs.add(finalEventRateFunc);
 		int num = sectionRateConstraints.size();
-		ArbitrarilyDiscretizedFunc func;
-		ArrayList obs_er_funcs = new ArrayList();
+		DefaultXY_DataSet func;
+		ArbitrarilyDiscretizedFunc meanER_Func = new ArbitrarilyDiscretizedFunc();
+		er_funcs.add(meanER_Func);
+		ArrayList<AbstractXY_DataSet> obs_er_funcs = new ArrayList<AbstractXY_DataSet>();
+		obs_er_funcs.add(meanER_Func);
 		SegRateConstraint constraint;
 		for(int c=0;c<num;c++) {
-			func = new ArbitrarilyDiscretizedFunc();
+			func = new DefaultXY_DataSet();
 			constraint = sectionRateConstraints.get(c);
-			int seg = constraint.getSegIndex();
-			func.set((double)seg-0.0001, constraint.getLower95Conf());
-			func.set((double)seg, constraint.getMean());
-			func.set((double)seg+0.0001, constraint.getUpper95Conf());
+			int s = constraint.getSegIndex();
+			meanER_Func.set((double)s, constraint.getMean());
+			func.set((double)s, constraint.getLower95Conf());
+			func.set((double)s, constraint.getUpper95Conf());
 			func.setName(constraint.getFaultName());
 			obs_er_funcs.add(func);
 			er_funcs.add(func);
@@ -1207,9 +1219,10 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.RED));
 		for(int c=0;c<num;c++)
 			plotChars.add(new PlotCurveCharacterstics(
-					PlotLineType.SOLID, 1f, PlotSymbol.FILLED_CIRCLE, 4f, Color.RED));
+					PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 4f, Color.RED));
 		er_graph.setPlotChars(plotChars);
 		er_graph.setX_AxisLabel("Section");
 		er_graph.setY_AxisLabel("Event Rate (per yr)");
@@ -1308,9 +1321,10 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.RED));
 		for(int c=0;c<num;c++)
 			plotChars2.add(new PlotCurveCharacterstics(
-					PlotLineType.SOLID, 1f, PlotSymbol.FILLED_CIRCLE, 4f, Color.RED));
+					PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 4f, Color.RED));
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 		seg_graph.setPlotChars(plotChars2);
 		seg_graph.setX_AxisLabel("Subsection");
@@ -1434,11 +1448,11 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 	 * probabilities:
 	 * 
 	 * mag	prob
-	 * 5	0.10
-	 * 6	0.45
-	 * 7	0.87
-	 * 8	0.98
-	 * 9	1.00
+	 * 5		0.10
+	 * 6		0.45
+	 * 7		0.87
+	 * 8		0.98
+	 * 9		1.00
 	 * 
 	 * @return
 	 */

@@ -97,6 +97,7 @@ public class WasatchInversion {
 				double stdDev = Double.valueOf(split[2]);
 				double upp95 = Double.valueOf(split[3]);
 				double low95 = Double.valueOf(split[4]);
+				stdDev = (upp95-low95)/4.0;  // temporary fix until the stdDev values are fixed
 				SegRateConstraint sectionRateConstraint = new SegRateConstraint("Section "+split[0]); // Names are not unique!
 				sectionRateConstraint.setSegRate(sectIndex, meanRate, stdDev, low95, upp95);
 				sectionRateConstraints.add(sectionRateConstraint);
@@ -265,8 +266,8 @@ public class WasatchInversion {
 			System.out.println("Starting Inversion");
 
 		// set inversion attributes
-		String slipModelType = FaultSystemRuptureRateInversion.UNIFORM_SLIP_MODEL;
-//		String slipModelType = FaultSystemRuptureRateInversion.TAPERED_SLIP_MODEL;
+//		String slipModelType = FaultSystemRuptureRateInversion.UNIFORM_SLIP_MODEL;
+		String slipModelType = FaultSystemRuptureRateInversion.TAPERED_SLIP_MODEL;
 		MagAreaRelationship magAreaRel = new HanksBakun2002_MagAreaRel();
 //		MagAreaRelationship magAreaRel = new Ellsworth_B_WG02_MagAreaRel();
 		double relativeSectRateWt=1;
@@ -309,9 +310,9 @@ public class WasatchInversion {
 		// Non-negative least squares
 //		fltSysRupInversion.doInversionNNLS();
 		
-//		// Simulated annealing
-		long numIterations = (long) 1e6;
-		boolean initStateFromAprioriRupRates = true;
+		// Simulated annealing
+		long numIterations = (long) 1e5;
+		boolean initStateFromAprioriRupRates = false;
 		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
 
 
