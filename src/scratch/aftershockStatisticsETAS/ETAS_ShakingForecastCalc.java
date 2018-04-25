@@ -15,8 +15,6 @@ import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.siteData.SiteData;
-import org.opensha.commons.data.siteData.SiteDataValue;
-import org.opensha.commons.data.siteData.SiteDataValueList;
 import org.opensha.commons.data.siteData.impl.WaldAllenGlobalVs30;
 import org.opensha.commons.data.xyz.ArbDiscrGeoDataSet;
 import org.opensha.commons.data.xyz.GeoDataSet;
@@ -28,11 +26,9 @@ import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
-import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.nshmp2.erf.source.PointSource13b;
 import org.opensha.nshmp2.util.FocalMech;
-import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -42,7 +38,6 @@ import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
-import org.opensha.sha.util.SiteTranslator;
 
 import com.google.common.base.Preconditions;
 
@@ -55,7 +50,7 @@ public class ETAS_ShakingForecastCalc {
 	private static double magDelta = 0.1;
 	private static double[] depths = { 7, 2 }; // depth of <6.5 and >=6.5, respectively
 	
-	public static DiscretizedFunc[] calcForecast(GeoDataSet rateModel, GriddedRegion calcRegion, double refMag, double maxMag, double b, ScalarIMR gmpe,
+	public static DiscretizedFunc[] calcForecast(GriddedRegion calcRegion, GeoDataSet rateModel, double refMag, double maxMag, double b, ScalarIMR gmpe,
 			Map<FocalMech, Double> mechWts, double durationYears, double maxSourceDist, SiteData<Double> vs30Provider) throws IOException {
 		GriddedForecast erf = new GriddedForecast(rateModel, refMag, maxMag, b, mechWts, depths, durationYears);
 		erf.updateForecast();
@@ -235,7 +230,7 @@ public class ETAS_ShakingForecastCalc {
 		
 		double maxSourceDist = 200d;
 		
-		DiscretizedFunc[] curves = calcForecast(rateModel, calcRegion, refMag, maxMag, b, gmpe, mechWts,
+		DiscretizedFunc[] curves = calcForecast(calcRegion, rateModel, refMag, maxMag, b, gmpe, mechWts,
 				durationYears, maxSourceDist, vs30Provider);
 		
 		GeoDataSet map = extractMap(calcRegion.getNodeList(), curves, false, 0.1); // IML with 10% prob
