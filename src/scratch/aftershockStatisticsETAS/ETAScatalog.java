@@ -2,11 +2,15 @@ package scratch.aftershockStatisticsETAS;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
+
+import com.google.common.base.Stopwatch;
 
 /**
  * This class is a stochastic ETAS catalog that represents an extension of the observed catalog,
@@ -28,8 +32,10 @@ import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 
 public class ETAScatalog {
 
-	double[] a_vec, p_vec, c_vec;
-	double[][][] likelihood;
+	private final static boolean D = true; //debug
+	
+	double[] ams_vec, a_vec, p_vec, c_vec;
+	double[][][][] likelihood;
 	double alpha;
 	double b;
 	double refMag;
@@ -42,21 +48,16 @@ public class ETAScatalog {
 	private double[] maxMags;	
 	private long[] numEventsFinal;
 	private int[] numGenerations;
-	private boolean D = false;	//debug flag
+	
 	private List<List<double[]>> catalogList;	//list of catalogs
 	
-	public ETAScatalog(double[] a_vec, double[] p_vec, double[] c_vec, double[][][] likelihood, double alpha, double b, double refMag,
-			ObsEqkRupture mainshock, ObsEqkRupList aftershocks,
-			double dataStart, double dataEnd, double forecastStart, double forecastEnd, double Mc, double maxMag, int maxGenerations, int nSims ){
-
-		this(Double.NaN, a_vec, p_vec, c_vec, likelihood, alpha, b, refMag, 
-				mainshock, aftershocks, dataStart, dataEnd, forecastStart, forecastEnd, Mc, 9.5, 100, nSims);
-	}
 	
-	public ETAScatalog(double a_base, double[] a_vec, double[] p_vec, double[] c_vec, double[][][] likelihood, double alpha, double b, double refMag,
+	public ETAScatalog(double[] ams_vec, double[] a_vec, double[] p_vec, double[] c_vec, double[][][][] likelihood, double alpha, double b, double refMag,
 			ObsEqkRupture mainshock, ObsEqkRupList aftershocks,
-			double dataStart, double dataEnd, double forecastStart, double forecastEnd, double Mc, double maxMag, int maxGenerations, int nSims) {
+			double dataStart, double dataEnd, double forecastStart, double forecastEnd, double Mc, double maxMag, int maxGenerations, int nSims)
+					throws InterruptedException {
 	
+		this.ams_vec = ams_vec;
 		this.a_vec = a_vec;
 		this.p_vec = p_vec;
 		this.c_vec = c_vec;
@@ -71,6 +72,9 @@ public class ETAScatalog {
 		this.maxGenerations = maxGenerations;
 		this.nSims = nSims;
 		
+		if(D) System.out.println("ETAS simulation params: alpha=" + alpha + " b=" + b + " Mref=" + refMag + " Mc=" + Mc + " Mmax=" + maxMag + " nSims=" + nSims); 
+				
+		
 		List<double[]> newEqList = new ArrayList<double[]>();	//catalog containing list of {time, mag, gen}
 		List<List<double[]>> catalogList = new ArrayList<List<double[]>>(); //list of catalogs
 		
@@ -78,94 +82,53 @@ public class ETAScatalog {
 		long[] nEvents = new long[nSims];
 		int[] nGens = new int[nSims];
 		
-		double p_base;
-		if(p_vec.length % 2 == 1)
-			p_base = p_vec[(int)(p_vec.length - 1)/2];
-		else{
-			p_base = 0.5 * (p_vec[(int)(p_vec.length/2)] + p_vec[(int)(p_vec.length/2)]);
-		}
+		if(D) System.out.println("Calculating " + nSims + " " + (int)(forecastEnd - forecastStart) + "-day ETAS catalogs...");
 		
-		double c_base;
-		if(c_vec.length % 2 == 1)
-			c_base = c_vec[(int)(c_vec.length - 1)/2];
-		else{
-			c_base = 0.5 * (c_vec[(int)(c_vec.length/2)] + c_vec[(int)(c_vec.length/2)]);
-		}
-		
-		
-		long tic = System.currentTimeMillis();
-		long toc;
-		boolean timeWarning = false;
-		System.out.println("Calculating " + nSims + " " + (int)(forecastEnd - forecastStart) + "-day ETAS catalogs...");
-		for(int i = 0; i < nSims ; i++){
-			toc = System.currentTimeMillis();
-			if (timeWarning == false && toc - tic > 3000){
-				System.out.println("This might take a while. Probably around " + (int)((double)(toc-tic)/i * nSims/1000) + " seconds.");
-				timeWarning = true;
-			}
+		double[][] paramList;
+		if(nSims>0){
+			//get the list of parameters to supply to each simulation
+			System.out.println("Generating parameter set. This can take a while...");
+			paramList = sampleParams(nSims, maxMag);
 			
-			int count = 0;
-			double n = 2;
-			double[] params = new double[3];
-			double prodCorr;
-			if(Mc != refMag)
-				prodCorr = Math.log10((maxMag - refMag)/(maxMag - Mc));
-			else
-				prodCorr = 0;
+			Stopwatch watch = Stopwatch.createStarted();
+			int warnTime = 3;
+			long toc;
+			double timeEstimate;
 			
-			while(n > 1){
-				//sample parameter values from parameter/likelihood grids
-				params = sampleParams();
-				params[0] += prodCorr;
-				
-				//check for supercritical parameters
-				n = b * Math.log(10) * (maxMag - Mc) * Math.pow(10, params[0])/(1-params[1]) * ( Math.pow(forecastEnd + params[2], 1-params[1]) - Math.pow(params[2], 1-params[1]) );
-				if(++count > 100){
-					System.out.println("Found 100 combinations of supercritical params in a row. There's a problem with the generic model.");
+			for(int i = 0; i < nSims ; i++){
+				toc = watch.elapsed(TimeUnit.SECONDS);
+				if (toc > warnTime){
+					warnTime += 3;
+					timeEstimate = (double)toc * (double)(nSims)/(double)i;
+					System.out.format("This might take a while. Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+					
 				}
+
+				double[] params = paramList[i];
+				double ams_sample, a_sample, p_sample, c_sample;
+				ams_sample = params[0];
+				a_sample = params[1];
+				p_sample = params[2];
+				c_sample = params[3];
 				
+				if (D && Math.floorMod(i, nSims/10) == 0) System.out.println("Parameter set " + i + ": " + ams_sample + " " + a_sample + " " + p_sample + " " + c_sample);
+
+				// Currently sets the first event as mainshock and adjusts magnitude
+				// todo step1: change magnitude of LARGEST earthquake
+				// todo step2: depending on the total number of vents, adjust N-largest magnitudes
+				ObsEqkRupture simulationMainshock = (ObsEqkRupture) mainshock.clone();
+				simulationMainshock.setMag(mainshock.getMag() + (ams_sample - a_sample));
+
+				newEqList = getNewETAScatalog(simulationMainshock, aftershocks, a_sample, p_sample, c_sample, i);
+				maxMags[i] = get_maxMag(newEqList);
+				nEvents[i] = get_nEvents(newEqList);
+				nGens[i] = get_nGenerations(newEqList);
+				catalogList.add(i, newEqList);
 			}
-			
-			double a_sample, p_sample, c_sample;
-			ObsEqkRupture simulationMainshock = (ObsEqkRupture) mainshock.clone();
-			
-			if(Double.isNaN(a_base) || Math.abs(a_base - 0) < 1E-6) {
-				//not a generic model, use a randomly sampled a for mainshock and aftershock productivity
-				a_sample = params[0];
-				p_sample = params[1];
-				c_sample = params[2];
-				
-			} else {
-				// generic forecast is generating a random mainshock magnitude but leaving all parameters constant...
-				// a_base has been supplied. probably a generic model, use a_base for a_sample, and adjust mainshock magnitude. leave p and c alone. Too easy to get supercritical sequence.
-				a_sample = a_base + prodCorr;
-				p_sample = p_base;
-				c_sample = c_base;
-				
-				simulationMainshock.setMag(mainshock.getMag() + (params[0] - (a_base + prodCorr)));
-			}
-			//check for supercritical parameters
-			n = Math.log(10) * (maxMag - Mc) * Math.pow(10, a_sample)/(1-p_sample) * ( Math.pow(forecastEnd + c_sample, 1-p_sample) - Math.pow(c_sample, 1-p_sample) );
-			
-			// when running the generic model, we want to get variability in mainshock productivity, without transmitting that 
-			// value to the offspring. How do we do this for the two model types?
-			
-			
-			// if the magnitude of completeness (min simulated mag) is not the same as magref, the statistics will be wrong. Make an approximate correction
-			// by adjusting k, a by the difference in magnitude range
-			
-//			System.out.println(params[0] +" "+ a_sample + " " + p_sample + " " + c_sample + " "+ n);
-				
-			
-			
-			newEqList = getNewETAScatalog(simulationMainshock, aftershocks, a_sample, p_sample, c_sample);
-			maxMags[i] = get_maxMag(newEqList);
-			nEvents[i] = get_nEvents(newEqList);
-			nGens[i] = get_nGenerations(newEqList);
-			catalogList.add(i, newEqList);
+			toc = watch.elapsed(TimeUnit.SECONDS);
+			if(D) System.out.println("It took " + toc + " seconds to generate stochastic catalogs.");
+			watch.stop();
 		}
-		toc = System.currentTimeMillis();
-		System.out.println("Finished. It took " + (toc-tic)/1000 + " seconds.");
 		
 		//this.eqList = getLastETAScatalog();
 		this.catalogList = catalogList;
@@ -174,7 +137,7 @@ public class ETAScatalog {
 		this.numGenerations = nGens;
 	}
 		
-	public List<double[]> getNewETAScatalog(ObsEqkRupture mainshock, ObsEqkRupList aftershocks, double a_sample, double p_sample, double c_sample){
+	public List<double[]> getNewETAScatalog(ObsEqkRupture mainshock, ObsEqkRupList aftershocks, double a_sample, double p_sample, double c_sample, int simNumber){
 		
 		//extract magnitudes and times from supplied Eqk rupture objects to make catalog (combine MS and AS's)
 		List<double[]> newEqList = new ArrayList<double[]>();
@@ -204,8 +167,8 @@ public class ETAScatalog {
 				//newEqList.add(event); 
 
 				//add children
-				newEqList = getChildren(newEqList, event[0], event[1], (int)event[2], a_sample, p_sample, c_sample);
-						//forecastStart, forecastEnd, a, b, p, c, alpha, refMag, maxMagLimit, maxGenerations);
+				newEqList = getChildren(newEqList, event[0], event[1], (int)event[2], a_sample, p_sample, c_sample, simNumber);
+						
 			}else{
 				//System.out.println("Skipping Seed "+counter++);
 			}
@@ -230,7 +193,7 @@ public class ETAScatalog {
 	}
 	
 	private List<double[]> getChildren(List<double[]> newEqList, double t, double mag, int ngen, 
-			double a_sample, double p_sample, double c_sample){//, double forecastStart, double forecastEnd,
+			double a_sample, double p_sample, double c_sample, int simNumber){//, double forecastStart, double forecastEnd,
 			//double a, double b, double p, double c, double alpha, double refMag, double maxMag, int maxGen){
 		
 		double newMag;
@@ -241,7 +204,7 @@ public class ETAScatalog {
 		double prod = calculateProductivity(t, mag, forecastStart, forecastEnd, a_sample, b, p_sample, c_sample, alpha, Mc);
 		long numNew = assignNumberOfOffspring(prod); 
 		
-		if(D) System.out.format("Parent Mag: %.2f Time: %5.2f Generation: %d Number of offspring: %d %n", mag, t, (int)ngen, (int)numNew);
+//		if(D) System.out.format("Parent Mag: %.2f Time: %5.2f Generation: %d Number of offspring: %d %n", mag, t, (int)ngen, (int)numNew);
 		if(numNew > 0 && ngen < maxGenerations){
 			//for each new child, assign a magnitude and time
 			for(long i=0; i<numNew; i++){
@@ -260,14 +223,13 @@ public class ETAScatalog {
 				newEqList.add(event);	
 			
 				// recursively get children of new child
-//				newEqList.addAll(getChildren(newTime, newMag, ngen + 1, forecastStart, forecastEnd, a, b, p, c, alpha, refMag, maxMag, maxGen));
-				newEqList = getChildren(newEqList, newTime, newMag, ngen + 1, a_sample, p_sample, c_sample);//, forecastStart, forecastEnd, a, b, p, c, alpha, refMag, maxMag, maxGen);
+				newEqList = getChildren(newEqList, newTime, newMag, ngen + 1, a_sample, p_sample, c_sample, simNumber);//, forecastStart, forecastEnd, a, b, p, c, alpha, refMag, maxMag, maxGen);
 				
 			}
 		} else if(ngen == maxGenerations) {
-			
-			System.out.println("Simulation has reached " + maxGenerations + " generations. Cutting it short.");
-			
+			System.out.println("Sim=" + simNumber + " t=" + t + " has reached " + maxGenerations + " generations. Cutting it short.");
+			System.out.println("n = " + ETAS_StatsCalc.calculateBranchingRatio(a_sample, p_sample, c_sample, alpha, b, forecastEnd, Mc, maxMagLimit)
+					+ " a=" + a_sample + " p=" + p_sample + " c=" + c_sample + " al=" + alpha + " b=" + b + " T=" + forecastEnd + " Mc=" + Mc + " Mmax=" + maxMagLimit);
 		}
 		return newEqList;
 		
@@ -290,17 +252,6 @@ public class ETAScatalog {
 	}
 	
 	
-//	private double sampleA_value(double a,double a_sigma){
-//		double a_sample;
-//		
-//		if(a_sigma > 0)
-//			a_sample = cern.jet.random.tdouble.Normal.staticNextDouble(a, a_sigma);
-//		else
-//			a_sample = a;
-//		
-//		return a_sample;
-//	}
-	
 	/*
 	 * Returns a sample of a,p,c using the likelihood array provided. This method inverts the cumulative likelihood function, 
 	 * so the sum of the likelihood array needs to be normalized to 1, which it should be if using the likelihood calculator 
@@ -308,53 +259,75 @@ public class ETAScatalog {
 	 * 
 	 * @author Nicholas van der Elst
 	 */
-	private double[] sampleParams(){
+	private double[][] sampleParams(int nsamples, double maxMag){
 			
-		//double a_sample = cern.jet.random.tdouble.Normal.staticNextDouble(a, a_sigma);
-		double cumSum;
-		int i = 0, j = 0, k = 0;
+		int h = 0, i = 0, j = 0, k = 0;
+		int num_ams = ams_vec.length, num_a = a_vec.length, num_p = p_vec.length, num_c = c_vec.length;
 		
-		double uRand = Math.random();
+		double[][] params = new double[nsamples][4];
 		
-		if(uRand < 0.5){
-			cumSum = 0;
-			//get cumulative likelihood array
-			outerloop:
+		// generate vector of random numbers
+		double[] uRand = new double[nsamples];
+		for(int n = 0; n<nsamples; n++){
+			uRand[n] = Math.random();
+		}
+		// sort vector
+		Arrays.sort(uRand);
+		
+		double nbranch;
+		double [][][][] likelihoodTrunc = likelihood.clone();
+		
+		// set up timer/time estimator
+		long toc, timeEstimate;
+		Stopwatch watch = Stopwatch.createStarted();
+		int warnTime = 3;
+		
+		//truncate likelihood based on criticality
+		double cumSum = 0;
+		for(h = 0; h < num_ams; h++ ){
+			for(i = 0; i < num_a; i++ ){
+				for(j = 0; j < num_p; j++ ){
+					for(k = 0; k < num_c; k++ ){
+						nbranch = ETAS_StatsCalc.calculateBranchingRatio(a_vec[i], p_vec[j], c_vec[k], alpha, b, forecastEnd, Mc, maxMag);
+						if(nbranch < 1)
+							cumSum += likelihoodTrunc[h][i][j][k];
+						else
+							likelihoodTrunc[h][i][j][k] = 0;
+
+						// run the timer to see how long this is going to take
+						toc = watch.elapsed(TimeUnit.SECONDS);
+						if(toc > warnTime){
+							warnTime += 3;
+
+							timeEstimate = toc * (num_p*num_c*num_ams*num_a)/((h)*(num_p*num_c*num_a) + (i)*(num_c*num_p) + (j)*(num_c) + k);
+							System.out.format("This might take a while. Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+						}
+
+					}
+				}
+			}
+		}	// else {
+		watch.stop();
+		//renormalize the random vector to match the likelihood sum
+		for(int n = 0; n < nsamples; n++) uRand[n] /= cumSum;
+		
+		//get cumulative likelihood array
+		int n = 0;
+		cumSum = 0;
+		for(h = 0; h < ams_vec.length; h++ ){
 			for(i = 0; i < a_vec.length; i++ ){
 				for(j = 0; j < p_vec.length; j++ ){
 					for(k = 0; k < c_vec.length; k++ ){
-						cumSum += likelihood[i][j][k];
-						if(cumSum > uRand){
-//							System.out.println(i +" "+ j +" "+ k +" "+ uRand +" "+ cumSum);
-							break outerloop;
+						cumSum += likelihoodTrunc[h][i][j][k];
+						while(n < nsamples && cumSum > uRand[n]){
+							//found a hit
+							params[n] = new double[]{ams_vec[h],a_vec[i], p_vec[j], c_vec[k]};
+							n++;
 						}
 					}
 				}
 			}
-		} else {
-			cumSum = 1;
-			//get cumulative likelihood array
-			outerloop:
-			for(i = a_vec.length-1; i >= 0; i-- ){
-				for(j = p_vec.length-1; j >= 0; j-- ){
-					for(k = c_vec.length-1; k >= 0; k-- ){
-						cumSum -= likelihood[i][j][k];
-						if(cumSum <= uRand){
-//							System.out.println(i +" "+ j +" "+ k +" "+ uRand +" "+ cumSum);
-							break outerloop;
-						}
-					}
-				}
-			}
-		}
-		
-//		double a_sample = a_vec[(int) a_vec.length/2];
-//		double p_sample = p_vec[(int) p_vec.length/2];
-//		double c_sample = c_vec[(int) c_vec.length/2];;
-//		double[] params = new double[]{a_sample, p_sample, c_sample};
-		
-//		System.out.println(i + " "+ j +" "+ k +" "+ cumSum);
-		double[] params = new double[]{a_vec[i], p_vec[j], c_vec[k]};
+		}	
 		
 		return params;
 	}
@@ -366,8 +339,8 @@ public class ETAScatalog {
 	}
 	
 	private double assignMagnitude(double b, double minMag, double Mmax){
-		double u=Math.random();
-		double mag = 1/b*(minMag-Math.log10(1-u*(1-Math.pow(10, -b*(Mmax-minMag)))));
+		double u = Math.random();
+		double mag = minMag - Math.log10(1.0 - u*(1.0 - Math.pow(10, -b*(Mmax-minMag))))/b;
 		return mag;
 	}
 	
@@ -378,18 +351,18 @@ public class ETAScatalog {
 		 double t;
 		 
 		 if(t0 < tmin){
-			 a1= Math.pow(tmax - t0 + c, 1-p);
-			 a2= Math.pow(tmin - t0 + c, 1-p);
+			 a1= Math.pow(tmax - t0 + c, 1d-p);
+			 a2= Math.pow(tmin - t0 + c, 1d-p);
 		 } else if(t0 < tmax) {
-			 a1= Math.pow(tmax - t0 + c, 1-p);
-			 a2= Math.pow(c, 1-p);
+			 a1= Math.pow(tmax - t0 + c, 1d-p);
+			 a2= Math.pow(c, 1d-p);
 		 } else {
 			 a1= Double.NaN;
 			 a2= Double.NaN;
 		 }
 			 
-		 a3 = u*a1 + (1-u)*a2;
-		 t = Math.pow(a3, 1./(1-p)) - c + t0;
+		 a3 = u*a1 + (1d-u)*a2;
+		 t = Math.pow(a3, 1d/(1d-p)) - c + t0;
 
 		 return t;
 	}
@@ -439,7 +412,7 @@ public class ETAScatalog {
 		return (int)maxGen; 
 	}
 	
-	public double[][][] getLikelihood(){
+	public double[][][][] getLikelihood(){
 		return likelihood;
 	}
 	
