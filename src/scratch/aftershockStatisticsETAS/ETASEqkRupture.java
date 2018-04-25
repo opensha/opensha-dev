@@ -13,7 +13,7 @@ import org.opensha.sha.faultSurface.FaultTrace;
  *
  * <p>Company: </p>
  *
- * @author rewritten by Ned Field
+ * @author rewritten by Ned Field and Nicholas vdE
  * @version 1.0
  */
 public class ETASEqkRupture extends ObsEqkRupture implements java.io.Serializable{

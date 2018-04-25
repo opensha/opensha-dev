@@ -104,6 +104,10 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
 
+import scratch.aftershockStatistics.OAFTectonicRegime;
+import scratch.aftershockStatistics.TectonicRegimeTable;
+import scratch.aftershockStatistics.util.SphLatLon;
+import scratch.aftershockStatistics.util.SphRegion;
 import wContour.Contour;
 import wContour.Global.PointD;
 import wContour.Global.PolyLine;
@@ -344,10 +348,10 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private ParameterListEditor mapPlotEditor;
 	private ParameterListEditor publishAdvisoryEditor;
 	
-	private ComcatAccessor accessor;
+	private ETAS_ComcatAccessor accessor;
 	private WC1994_MagLengthRelationship wcMagLen;
 	
-	private Region region;
+	private SphRegion region;
 	private ObsEqkRupture mainshock;
 	private FaultTrace faultTrace;
 	private ObsEqkRupList aftershocks;
@@ -865,7 +869,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		setLocationRelativeTo(null);
 		
 		workingDir = new File(System.getenv("HOME"));
-		accessor = new ComcatAccessor();
+		accessor = new ETAS_ComcatAccessor();
 
 		updateRegionParamList(regionTypeParam.getValue(), regionCenterTypeParam.getValue());
 		
@@ -1240,7 +1244,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 					// get initial region
 					region = buildRegion(mainshock, mainshock.getHypocenterLocation());
-					aftershocks = accessor.fetchAftershocks(mainshock, dataMinDays, dataMaxDays, minDepth, maxDepth, region);
+					aftershocks = accessor.fetchAftershocks(mainshock, dataMinDays, dataMaxDays, minDepth, maxDepth, region, region.getPlotWrap());
 
 					ObsEqkRupList bigAftershocks = aftershocks.getRupsAboveMag(mainshock.getMag());
 					largestShock = mainshock;
@@ -1259,7 +1263,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 						// update region around largest shock
 						region = buildRegion(largestShock, largestShock.getHypocenterLocation());
-						aftershocks = accessor.fetchAftershocks(mainshock, dataMinDays, dataMaxDays, minDepth, maxDepth, region);
+						aftershocks = accessor.fetchAftershocks(mainshock, dataMinDays, dataMaxDays, minDepth, maxDepth, region, region.getPlotWrap());
 
 						// look again for even larger shocks
 						bigAftershocks = aftershocks.getRupsAboveMag(largestShock.getMag() + 0.1);
@@ -1270,12 +1274,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						if(verbose) System.out.println("No aftershocks found, skipping centroid...");
 					} else {
 						region = buildRegion(largestShock, getCentroid());
-						aftershocks = accessor.fetchAftershocks(mainshock, dataMinDays, dataMaxDays, minDepth, maxDepth, region);
+						aftershocks = accessor.fetchAftershocks(mainshock, dataMinDays, dataMaxDays, minDepth, maxDepth, region, region.getPlotWrap());
 					}
 
 				} else {
 					region = buildRegion(mainshock, null);
-					aftershocks = accessor.fetchAftershocks(mainshock, dataMinDays, dataMaxDays, minDepth, maxDepth, region);
+					aftershocks = accessor.fetchAftershocks(mainshock, dataMinDays, dataMaxDays, minDepth, maxDepth, region, region.getPlotWrap());
 				}
 				
 				// limit the catalog to MAX_EARTHQUAKE_NUMBER by changing the mc
@@ -1313,7 +1317,49 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		}
 	}
 	
-	private Region buildRegion(ObsEqkRupture event, Location centroid) {
+//	non-spherical 
+//	private Region buildRegion(ObsEqkRupture event, Location centroid) {
+//		RegionType type = regionTypeParam.getValue();
+//		
+//		if (type == RegionType.CIRCULAR || type == RegionType.CIRCULAR_WC94) {
+//			double radius;
+//			if (type == RegionType.CIRCULAR) {
+//				radius = radiusParam.getValue();
+//			} else {
+//				if (wcMagLen == null)
+//					wcMagLen = new WC1994_MagLengthRelationship();
+//				radius = 10d + 1.5*wcMagLen.getMedianLength(event.getMag()); //multiplied by 1.5 because length is already 2x radius
+//				if(verbose) System.out.println("Collecting Aftershocks within 10 km + 3 WC94 Radii: "+ (float)radius + " km");
+//			}
+//			
+//			RegionCenterType centerType = regionCenterTypeParam.getValue();
+//			Location loc;
+//			if (centerType == RegionCenterType.EPICENTER)
+//				loc = event.getHypocenterLocation();
+//			else if (centerType == RegionCenterType.CENTROID)
+//				loc = centroid;
+//			else if (centerType == RegionCenterType.SPECIFIED)
+//				loc = new Location(regionCenterLatParam.getValue(), regionCenterLonParam.getValue());
+//			else
+//				throw new IllegalStateException("Unknown Region Center Type: "+centerType);
+//			
+//			return new Region(loc, radius);
+//		} else  if (type == RegionType.RECTANGULAR) {
+//			Location lower = new Location(minLatParam.getValue(), minLonParam.getValue());
+//			Location upper = new Location(maxLatParam.getValue(), maxLonParam.getValue());
+//			try{
+//				return new Region(lower, upper);
+//			} catch (Exception e) {
+//				System.err.println(e.getMessage());
+//				return null;
+//			}
+//		} else {
+//			throw new IllegalStateException("Unknown region type: "+type);
+//		}
+//	}
+
+	private SphRegion buildRegion(ObsEqkRupture event, Location centroid) {
+		SphRegion result;
 		RegionType type = regionTypeParam.getValue();
 		
 		if (type == RegionType.CIRCULAR || type == RegionType.CIRCULAR_WC94) {
@@ -1338,21 +1384,36 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			else
 				throw new IllegalStateException("Unknown Region Center Type: "+centerType);
 			
-			return new Region(loc, radius);
+			//return new Region(loc, radius);
+			result = SphRegion.makeCircle (new SphLatLon(loc), radius);
 		} else  if (type == RegionType.RECTANGULAR) {
 			Location lower = new Location(minLatParam.getValue(), minLonParam.getValue());
 			Location upper = new Location(maxLatParam.getValue(), maxLonParam.getValue());
-			try{
-				return new Region(lower, upper);
-			} catch (Exception e) {
-				System.err.println(e.getMessage());
-				return null;
-			}
+			//return new Region(lower, upper);
+			result = SphRegion.makeMercRectangle (new SphLatLon(lower), new SphLatLon(upper));
 		} else {
 			throw new IllegalStateException("Unknown region type: "+type);
 		}
-	}
 
+		// If the event (i.e. mainshock) is outside the plotting domain, change its
+		// hypocenter so it is inside the plotting domain
+
+		Location hypo = event.getHypocenterLocation();
+		if (result.getPlotWrap()) {
+			if (hypo.getLongitude() < 0.0) {
+				event.setHypocenterLocation (new Location (
+					hypo.getLatitude(), hypo.getLongitude() + 360.0, hypo.getDepth() ));
+			}
+		} else {
+			if (hypo.getLongitude() > 180.0) {
+				event.setHypocenterLocation (new Location (
+					hypo.getLatitude(), hypo.getLongitude() - 360.0, hypo.getDepth() ));
+			}
+		}
+
+		return result;
+	}
+	
 	private void updateForecastTimes(){
 		double elapsedDays = (double) (System.currentTimeMillis() - mainshock.getOriginTime())/ETAS_StatsCalc.MILLISEC_PER_DAY;
 
@@ -1448,37 +1509,33 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if (mainshock == null){
 			return;
 		}
-					
 		this.mainshock = mainshock;
 		
 		// if the mainshock has a longitude > 180, change the longitude parameters to match the wrapping
 		wrapLongitudes(mainshock.getHypocenterLocation().getLongitude() > 180);
 		
 		genericParams = null;
-
-		// Boolean "changeListenerEnabled" allows the code to suppress paramChangeListener while it builds the model.
-//		changeListenerEnabled = false;
 		tectonicRegimeParam.setValueAsDefault();
-//		changeListenerEnabled = true;
 		
 		TectonicRegime regime;
-		regime = TectonicRegime.GLOBAL_AVERAGE;	//this line is in here just to run faster when debugging (comment out the try/catch if you uncomment this)
-		genericFetch = new GenericETAS_ParametersFetch();
 		
-//		try {
-//			if (genericFetch == null)
-//				genericFetch = new GenericETAS_ParametersFetch();
-//			
-//			if(verbose) System.out.println("Determining tectonic regime...");
-//			consoleScroll.repaint();
-//			regime = genericFetch.getRegion(mainshock.getHypocenterLocation());
-//					
-//		} catch (RuntimeException e) {
-//			System.out.println("Error fetching generic params. Assigning global average values");
-//			regime = TectonicRegime.GLOBAL_AVERAGE;	
-//						
-////			e.printStackTrace();
-//		}
+		try {
+			if (genericFetch == null)
+				genericFetch = new GenericETAS_ParametersFetch();
+			
+			if(verbose) System.out.println("Determining tectonic regime...");
+			consoleScroll.repaint();
+
+			TectonicRegimeTable regime_table = new TectonicRegimeTable();
+			String regimeName = regime_table.get_strec_name(mainshock.getHypocenterLocation().getLatitude(), mainshock.getHypocenterLocation().getLongitude());
+			regime = TectonicRegime.forName(regimeName);
+					
+		} catch (RuntimeException e) {
+			System.out.println("Error fetching generic params. Assigning global average values");
+			regime = TectonicRegime.GLOBAL_AVERAGE;	
+						
+//			e.printStackTrace();
+		}
 		
 		if (regime == null){
 			System.out.println("Error fetching generic params. Assigning global average values");
@@ -4544,7 +4601,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	
 	private void doPostFetchCalculations() {
 		// update the grid spacing based on the region size
-		gridSpacingParam.setValue(round(Math.sqrt(region.getExtent())/20,1));
+		gridSpacingParam.setValue(round((region.getMaxLat() - region.getMinLat())*111.111/40,1) );
 		gridSpacingParam.getEditor().refreshParamEditor();
 		
 		// reset the fit constraint sub menu with range around new generic values

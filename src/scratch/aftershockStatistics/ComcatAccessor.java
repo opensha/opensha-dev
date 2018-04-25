@@ -22,6 +22,7 @@ import org.json.simple.parser.ParseException;
 import org.opensha.commons.geo.GeoTools;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.param.impl.StringParameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
@@ -38,7 +39,7 @@ public class ComcatAccessor {
 	
 	private static final boolean D = true;
 	
-	private EventWebService service;
+	protected EventWebService service;
 	
 	public ComcatAccessor() {
 		try {
@@ -449,6 +450,9 @@ public class ComcatAccessor {
 		}
 		ObsEqkRupture rup = new ObsEqkRupture(event.getEventId().toString(),
 				event.getTime().getTime(), hypo, mag);
+		
+		// adds the place description ("10km from wherever"). Needed for ETAS_AftershockStatistics forecast document -NVDE 
+		rup.addParameter(new StringParameter("description", event.getPlace()));
 		
 		return rup;
 	}
