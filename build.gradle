@@ -24,6 +24,7 @@ dependencies {
     /* no remote repo */
     compileOnly files('lib/EventWebService.jar')
     compileOnly files('lib/ProductClient.jar')
+    compileOnly files('lib/wContour-1.6.1.jar')
 
     compileOnly project(path: ':opensha-apps', configuration: 'compileOnly')
     compileAndResource project(path: ':opensha-apps')

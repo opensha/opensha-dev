@@ -20,10 +20,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.dom4j.Document;
 import org.dom4j.Element;
+import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
+import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.InvalidRangeException;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -34,6 +37,7 @@ import org.opensha.commons.param.event.ParameterChangeEvent;
 import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.param.impl.EnumParameter;
 import org.opensha.commons.param.impl.FileParameter;
+import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -45,6 +49,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.Vertex;
@@ -729,7 +734,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	}
 	
 	public void writeRuptureSRFs(File mainDir, RSQSimCatalog catalog, List<RSQSimEvent> events,
-			double dt, SRFInterpolationMode interpMode) throws IOException {
+			double dt, SRFInterpolationMode interpMode, double momentPDiffThreshold) throws IOException {
 		// most efficient to do it in event ID order (more cache hits on transitions file)
 		
 		Map<Integer, IDPairing> eventToSourceRupMap = new HashMap<>();
@@ -741,6 +746,11 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			}
 		}
 		
+		Map<Integer, Double> patchAreas = new HashMap<>();
+		for (SimulatorElement elem : catalog.getElements())
+			patchAreas.put(elem.getID(), elem.getArea());
+		
+		SummaryStatistics momentStats = new SummaryStatistics();
 		for (RSQSimEvent event : events) {
 			IDPairing ids = eventToSourceRupMap.get(event.getID());
 			Preconditions.checkNotNull(ids, "No rupture found for event %s with M=%s. %s ruptures, %s mappings",
@@ -756,6 +766,8 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			
 			RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
 			
+			validateTransitions(event, func, patchAreas, momentPDiffThreshold, momentStats);
+			
 			RSQSimProbEqkRup rup = sourceList.get(sourceID).getRupture(rupID);
 			List<SimulatorElement> eventElems = rup.rupElems;
 			List<SRF_PointData> srf = RSQSimSRFGenerator.buildSRF(func, eventElems, dt, interpMode);
@@ -764,6 +776,44 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			SRF_PointData.writeSRF(srfFile, srf, 1d);
 		}
 		
+		System.out.println("Transition file event moment % differences:");
+		System.out.println("\tMean: "+(float)momentStats.getMean());
+		System.out.println("\tMin: "+(float)momentStats.getMin());
+		System.out.println("\tMax: "+(float)momentStats.getMax());
+	}
+	
+	private void validateTransitions(RSQSimEvent event, RSQSimEventSlipTimeFunc slipTimeFunc,
+			Map<Integer, Double> patchAreas, double pDiffThreshold, SummaryStatistics momentStats) {
+		double listMoment = 0d;
+		for (EventRecord rec : event)
+			listMoment += rec.getMoment();
+		
+		double transMoment = 0d;
+		
+		int[] elems = event.getAllElementIDs();
+		double[] slips = event.getAllElementSlips();
+		
+		double time = slipTimeFunc.getEndTime();
+		for (int i=0; i<elems.length; i++) {
+			double transSlip = slipTimeFunc.getCumulativeEventSlip(elems[i], time);
+			Preconditions.checkState(Double.isFinite(transSlip), "Bad slip=%s for patch %s in event %s. Expected %s.",
+					transSlip, elems[i], event.getID(), slips[i]);
+			transMoment += FaultMomentCalc.getMoment(patchAreas.get(elems[i]), transSlip);
+		}
+		double pDiff = DataUtils.getPercentDiff(transMoment, listMoment);
+		double absDiff = Math.abs(transMoment - listMoment);
+		if (pDiff > pDiffThreshold) {
+			System.out.println("WARNING: moment mismatch for event "+event.getID()+" (M="+(float)event.getMagnitude()+") at t="
+					+event.getTime()+" ("+(float)event.getTimeInYears()+" yrs)");
+			double listMag = MagUtils.momentToMag(listMoment);
+			double transMag = MagUtils.momentToMag(transMoment);
+			System.out.println("\tList File Moment:  "+(float)listMoment+", M="+(float)listMag);
+			System.out.println("\tTrans File Moment:  "+(float)transMoment+", M="+(float)transMag);
+			System.out.println("\tMag diff: "+(float)(transMag - listMag));
+			System.out.println("\t% Diff: "+(float)pDiff);
+			System.out.println("\tAbs Diff: "+(float)absDiff+", M="+(float)MagUtils.momentToMag(absDiff));
+		}
+		momentStats.addValue(pDiff);
 	}
 	
 	private static int sequential_flag = -999;
@@ -1024,6 +1074,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			double dt = 0.1;
 			SRFInterpolationMode interpMode = SRFInterpolationMode.ADJ_VEL;
 			double srfPointCullDist = 100;
+			double momentPDiffThreshold = 2;
 			
 			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(catalog.getElements(), events,
 					fm, dm , subSects, minMag, minFractForInclusion, srfPointCullDist);
@@ -1041,7 +1092,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			}
 			if (writeSRFs) {
 				System.out.println("Writing SRFs");
-				erf.writeRuptureSRFs(csDataDir, catalog, events, dt, interpMode);
+				erf.writeRuptureSRFs(csDataDir, catalog, events, dt, interpMode, momentPDiffThreshold);
 			}
 			if (writeMappings) {
 				File mappingFile = new File(catalogDir, "erf_mappings.bin");

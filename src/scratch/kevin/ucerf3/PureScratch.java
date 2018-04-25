@@ -28,9 +28,11 @@ import java.util.zip.ZipException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.LogNormalDistribution;
+import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.apache.commons.math3.stat.descriptive.moment.Variance;
 import org.dom4j.DocumentException;
 import org.jfree.data.Range;
 import org.opensha.commons.data.Site;
@@ -1319,13 +1321,36 @@ public class PureScratch {
 		System.out.println(num3plus+"/"+(num2+num3plus)+" have 3 or more points");
 		System.out.println("Most points in a sub sect: "+max);
 	}
+	
+	private static void test50() {
+		int n = 1000000;
+		NormalDistribution stdNorm = new NormalDistribution(0d, 1d);
+		double[] offsets = { 0d, 0.5, -0.5, 1d, 2d };
+		
+		for (double offset : offsets) {
+			Variance var = new Variance(true);
+			for (int i=0; i<n; i++) {
+				double val = stdNorm.sample()+offset;
+				var.increment(val);
+			}
+			
+			System.out.println("Offset: "+(float)offset);
+			double variance = var.getResult();
+			System.out.println("\tVariance: "+(float)variance);
+			System.out.println("\tStd. Dev.: "+(float)Math.sqrt(variance));
+		}
+	}
+	
+	public static void test51() {
+		System.out.println(MagUtils.momentToMag(6.528036E20));
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test49();
+		test51();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

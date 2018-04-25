@@ -39,6 +39,7 @@ import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.CatalogLengthLoadIden;
 import org.opensha.sha.simulators.iden.EventIDsRupIden;
+import org.opensha.sha.simulators.iden.EventTimeIdentifier;
 import org.opensha.sha.simulators.iden.LogicalAndRupIden;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
@@ -209,6 +210,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2666("bruce/rundir2666", "Bruce 2666", "Bruce Shaw", cal(2018, 4, 17),
 				"dx/4, LatCut=37, rateCut=2.0mm/yr, interpolated nearest",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2667("bruce/rundir2667", "Bruce 2667", "Bruce Shaw", cal(2018, 4, 23),
+				"dx/4, LatCut=37, rateCut=2.0mm/yr, interpolated nearest, like r2666 but larger b=.015",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -881,6 +885,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		public Loader skipYears(double years) {
 			if (years > 0)
 				loadIdens.add(new SkipYearsLoadIden(years));
+			return this;
+		}
+		
+		public Loader withinTimeRange(double tStartSecs, double tEndSecs) {
+			loadIdens.add(new EventTimeIdentifier(tStartSecs, tEndSecs, false));
 			return this;
 		}
 		

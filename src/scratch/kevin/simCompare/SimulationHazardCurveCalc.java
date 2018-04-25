@@ -3,7 +3,9 @@ package scratch.kevin.simCompare;
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -11,6 +13,8 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+
+import com.google.common.collect.Table;
 
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 
@@ -51,6 +55,21 @@ public class SimulationHazardCurveCalc<E> {
 	}
 	
 	public DiscretizedFunc calc(Site site, double period, double curveDuration) throws IOException {
+		return calc(site, period, curveDuration, null);
+	}
+	
+	public Map<String, DiscretizedFunc> calcSourceContributionCurves(Site site, double period, double curveDuration,
+			Table<String, E, Double> sourceRupContribFracts) throws IOException {
+		Map<String, DiscretizedFunc> ret = new HashMap<>();
+		
+		for (String sourceName : sourceRupContribFracts.rowKeySet())
+			ret.put(sourceName, calc(site, period, curveDuration, sourceRupContribFracts.row(sourceName)));
+		
+		return ret;
+	}
+	
+	private DiscretizedFunc calc(Site site, double period, double curveDuration, Map<E, Double> rupRateScalars)
+			throws IOException {
 		// annual rate curve
 		DiscretizedFunc curve = xVals.deepClone();
 		for (int i=0; i<curve.size(); i++)
@@ -58,15 +77,23 @@ public class SimulationHazardCurveCalc<E> {
 		int[] numExceed = new int[xVals.size()];
 		int numRuptures = 0;
 		double firstRate = -1;
+		double minRate = Double.POSITIVE_INFINITY;
 		boolean allRatesSame = true;
 		for (E rupture : simProv.getRupturesForSite(site)) {
 			double rupRate = simProv.getAnnualRate(rupture);
+			if (rupRateScalars != null) {
+				Double scale = rupRateScalars.get(rupture);
+				if (scale == null)
+					continue;
+				rupRate *= scale;
+			}
 			if (rupRate == 0)
 				continue;
 			if (firstRate == -1)
 				firstRate = rupRate;
 			else
 				allRatesSame = allRatesSame && firstRate == rupRate;
+			minRate = Math.min(rupRate, minRate);
 			List<DiscretizedFunc> spectras = simProv.getRotD50s(site, rupture);
 			rupRate /= spectras.size();
 			for (DiscretizedFunc spectra : spectras) {
@@ -80,10 +107,12 @@ public class SimulationHazardCurveCalc<E> {
 				numRuptures++;
 			}
 		}
+		if (firstRate < 0)
+			return null;
 		
 		DiscretizedFunc lowerCurve = null;
 		DiscretizedFunc upperCurve = null;
-		if (allRatesSame) {
+		if (allRatesSame && rupRateScalars == null) {
 			lowerCurve = xVals.deepClone();
 			upperCurve = xVals.deepClone();
 			
@@ -107,7 +136,7 @@ public class SimulationHazardCurveCalc<E> {
 			curve.set(i, prob);
 		}
 		
-		double minRate = simProv.getMinimumCurvePlotRate();
+		minRate = Math.min(minRate, simProv.getMinimumCurvePlotRate());
 		if (minRate > 0) {
 			double minProb = 1d - Math.exp(-minRate*curveDuration);
 			// truncate curve to remove x values never seen in finite catalog

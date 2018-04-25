@@ -42,7 +42,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
 //		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2585_1myrs");
-		File catalogDir = new File(myHPCDir, "rundir2666");
+		File catalogDir = new File(myHPCDir, "rundir2667");
 		
 		boolean standardSites = false;
 		boolean csInitialLASites = false;
@@ -57,7 +57,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		double minMag = 7;
 //		int numRG = 20;
 		
-		int skipYears = 5000;
+		int skipYears = 1000;
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
 		

@@ -35,6 +35,7 @@ import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Table;
 
 import scratch.kevin.simCompare.SimulationDisaggAttenuationRelationshipWrapper.Source;
 import scratch.kevin.util.MarkdownUtils;
@@ -61,6 +62,10 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	
 	private boolean replotCurves = true;
 	private boolean replotDisaggs = true;
+	
+	private double sourceRupContributionSortProb;
+	private int sourceRupContributionNum;
+	private Table<String, E, Double> sourceRupContributionFracts;
 
 	public SiteHazardCurveComarePageGen(SimulationRotDProvider<E> simProv, String simName) {
 		this(simProv, simName, new ArrayList<>());
@@ -93,6 +98,13 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 
 	public void setReplotDisaggs(boolean replotDisaggs) {
 		this.replotDisaggs = replotDisaggs;
+	}
+	
+	public void setSourceRupContributionFractions(Table<String, E, Double> sourceRupContribFracts,
+			double sortProb, int numSourcesToPlot) {
+		this.sourceRupContributionFracts = sourceRupContribFracts;
+		this.sourceRupContributionSortProb = sortProb;
+		this.sourceRupContributionNum = numSourcesToPlot;
 	}
 
 	private static List<SimulationRotDProvider<?>> toList(SimulationRotDProvider<?>... compSimProvs) {
@@ -154,7 +166,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			
 			if (replotCurves || !new File(resourcesDir, prefix+".png").exists())
 				MultiRupGMPE_ComparePageGen.plotHazardCurve(simCurves, comps, simCalc.getXVals(), site, period,
-					curveDuration, gmpeRef, gmpe_truncs, gmpe_fixed_sigmas, null, 0, resourcesDir, prefix);
+					curveDuration, gmpeRef, gmpe_truncs, gmpe_fixed_sigmas, null, 0, null, null, 0d, 0, false, resourcesDir, prefix);
 			
 			lines.add("### "+optionalDigitDF.format(period)+"s Hazard Curves");
 			lines.add(topLink); lines.add("");
@@ -166,14 +178,52 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			lines.addAll(MultiRupGMPE_ComparePageGen.getCurveLegend(curveNames, gmpeRef.getShortName(), null, null, 100));
 			lines.add("");
 			
-			prefix += "_gmpe_sims";
+			String gmpeSimPrefix = prefix+"_gmpe_sims";
 			
-			if (replotCurves || !new File(resourcesDir, prefix+".png").exists())
+			if (replotCurves || !new File(resourcesDir, gmpeSimPrefix+".png").exists())
 				MultiRupGMPE_ComparePageGen.plotHazardCurve(simCurves.subList(0, 1), comps, simCalc.getXVals(), site, period,
-					curveDuration, gmpeRef, null, null, gmpeSimProv, 100, resourcesDir, prefix);
+					curveDuration, gmpeRef, null, null, gmpeSimProv, 100, null, null, 0d, 0, false, resourcesDir, gmpeSimPrefix);
 			
-			lines.add("![Hazard Curve]("+resourcesDir.getName()+"/"+prefix+".png)");
+			lines.add("![Hazard Curve]("+resourcesDir.getName()+"/"+gmpeSimPrefix+".png)");
 			lines.add("");
+			
+			if (sourceRupContributionFracts != null) {
+				String sourceContribPrefix = prefix+"_source_contrib";
+				
+				File simFile, gmpeFile;
+				
+				if (replotCurves || !new File(resourcesDir, sourceContribPrefix+"_gmpe.png").exists()) {
+					System.out.println("Calculating simulation source curves");
+					Map<String, DiscretizedFunc> simSourceCurves = simCalc.calcSourceContributionCurves(
+							site, period, curveDuration, sourceRupContributionFracts);
+					System.out.println("Plotting simulation source curves");
+					simFile = MultiRupGMPE_ComparePageGen.plotHazardCurve(simCurves.subList(0, 1), comps, simCalc.getXVals(), site, period,
+						curveDuration, gmpeRef, null, null, null, 0,sourceRupContributionFracts, simSourceCurves,
+						sourceRupContributionSortProb, sourceRupContributionNum, false, resourcesDir, sourceContribPrefix+"_sim");
+					System.out.println("Calculating/plotting GMPE source curves");
+					gmpeFile = MultiRupGMPE_ComparePageGen.plotHazardCurve(simCurves.subList(0, 1), comps, simCalc.getXVals(), site, period,
+							curveDuration, gmpeRef, null, null, null, 0,sourceRupContributionFracts, simSourceCurves,
+							sourceRupContributionSortProb, sourceRupContributionNum, true, resourcesDir, sourceContribPrefix+"_gmpe");
+				} else {
+					simFile = new File(resourcesDir, sourceContribPrefix+"_sim.png");
+					gmpeFile = new File(resourcesDir, sourceContribPrefix+"_gmpe.png");
+				}
+				
+				if (simFile != null && simFile.exists() && gmpeFile != null && gmpeFile.exists()) {
+					lines.add("#### "+optionalDigitDF.format(period)+"s Source Contributions");
+					lines.add(topLink); lines.add("");
+//					lines.addAll(MultiRupGMPE_ComparePageGen.getCurveLegend(curveNames, gmpeRef.getShortName(), null, null, 100));
+//					lines.add("");
+					
+					TableBuilder table = MarkdownUtils.tableBuilder();
+					
+					table.addLine("**Simulation Source Contributions**", "**GMPE Source Contributions**");
+					table.addLine("![Hazard Curve]("+resourcesDir.getName()+"/"+simFile.getName()+")",
+							"![Hazard Curve]("+resourcesDir.getName()+"/"+gmpeFile.getName()+")");
+					lines.addAll(table.build());
+					lines.add("");
+				}
+			}
 		}
 		
 		lines.add("## Disaggregations");
