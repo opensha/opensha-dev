@@ -35,7 +35,10 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.calc.Wald_MMI_Calc;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 
@@ -50,6 +53,21 @@ public class ETAS_ShakingForecastCalc {
 	private static double magDelta = 0.1;
 	private static double[] depths = { 7, 2 }; // depth of <6.5 and >=6.5, respectively
 	
+	/**
+	 * 
+	 * @param calcRegion gridded region for which the the hazard curves will be calculated (one at every grid node)
+	 * @param rateModel rate of M>=refMag for the input region
+	 * @param refMag reference magnitude for the rate model
+	 * @param maxMag Mmax at each grid node
+	 * @param b G-R b-balue at each grid node
+	 * @param gmpe GMPE, should be initialized by calling setParamDefaults() and have site data set to desired default values
+	 * @param mechWts focal mechanism distribution at each grid node
+	 * @param durationYears reference duration for the rate model, which is also the forecast duration
+	 * @param maxSourceDist maximum source distance to consider in km. must be finite, as interpolater uses this. typical value is 200 km
+	 * @param vs30Provider source of Vs30 data, or null for constant Vs30 (in which case it will use the Vs30 value set in the GMPE)
+	 * @return array of hazard curves where the ith element of the array is the curve for the ith node in calcRegion
+	 * @throws IOException
+	 */
 	public static DiscretizedFunc[] calcForecast(GriddedRegion calcRegion, GeoDataSet rateModel, double refMag, double maxMag, double b, ScalarIMR gmpe,
 			Map<FocalMech, Double> mechWts, double durationYears, double maxSourceDist, SiteData<Double> vs30Provider) throws IOException {
 		GriddedForecast erf = new GriddedForecast(rateModel, refMag, maxMag, b, mechWts, depths, durationYears);
@@ -211,11 +229,22 @@ public class ETAS_ShakingForecastCalc {
 		
 		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null);
 		gmpe.setParamDefaults();
+		// for PGA
 		gmpe.setIntensityMeasure(PGA_Param.NAME);
+		// for SA
+//		gmpe.setIntensityMeasure(SA_Param.NAME);
+//		SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), 1d);
+		// for PGV
+//		gmpe.setIntensityMeasure(PGV_Param.NAME);
 		System.out.println(gmpe.getIntensityMeasure().getName());
 		
+		// Vs30 provider, or null for no Vs30
+//		WaldAllenGlobalVs30 vs30Provider = null;
 		WaldAllenGlobalVs30 vs30Provider = new WaldAllenGlobalVs30();
+		// active tectonic coefficients
 		vs30Provider.setActiveCoefficients();
+		// stable coefficients
+//		vs30Provider.setStableCoefficients();
 		
 		double durationYears = 30d/365d;
 		
@@ -224,7 +253,8 @@ public class ETAS_ShakingForecastCalc {
 		mechWts.put(FocalMech.NORMAL, 0.25);
 		mechWts.put(FocalMech.REVERSE, 0.25);
 		
-		double calcSpacing = 0.05;
+		// use the rate map region/spacing
+		double calcSpacing = 0.01;
 		GriddedRegion calcRegion = new GriddedRegion(new Region(new Location(rateModel.getMaxLat(), rateModel.getMaxLon()),
 				new Location(rateModel.getMinLat(), rateModel.getMinLon())), calcSpacing, null);
 		
