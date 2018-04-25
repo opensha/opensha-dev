@@ -1,4 +1,4 @@
-package scratch.kevin.griddedInterpGMPE;
+package scratch.aftershockStatisticsETAS.griddedInterpGMPE;
 
 import java.util.Set;
 
@@ -9,7 +9,7 @@ import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.imr.ScalarIMR;
 
-import scratch.kevin.griddedInterpGMPE.AbstractGMPEInterpolation.EvenlySpacedDouble;
+import scratch.aftershockStatisticsETAS.griddedInterpGMPE.AbstractGMPEInterpolation.EvenlySpacedDouble;
 
 public class DoubleParameterInterpolator extends EvenlySpacedDouble {
 

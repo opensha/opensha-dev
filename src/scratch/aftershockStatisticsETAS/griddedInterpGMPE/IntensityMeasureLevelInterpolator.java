@@ -1,4 +1,4 @@
-package scratch.kevin.griddedInterpGMPE;
+package scratch.aftershockStatisticsETAS.griddedInterpGMPE;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;

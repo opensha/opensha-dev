@@ -1,4 +1,4 @@
-package scratch.kevin.griddedInterpGMPE;
+package scratch.aftershockStatisticsETAS.griddedInterpGMPE;
 
 import com.google.common.base.Preconditions;
 

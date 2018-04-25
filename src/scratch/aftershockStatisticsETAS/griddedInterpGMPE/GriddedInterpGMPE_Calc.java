@@ -1,4 +1,4 @@
-package scratch.kevin.griddedInterpGMPE;
+package scratch.aftershockStatisticsETAS.griddedInterpGMPE;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
@@ -104,7 +104,8 @@ public class GriddedInterpGMPE_Calc {
 		allInterps = new ArrayList<>();
 		allInterps.add(distInterp);
 		for (AbstractGMPEInterpolation<?> o : otherInterps)
-			allInterps.add(o);
+			if (o != null)
+				allInterps.add(o);
 		allInterps.add(imlInterp);
 		
 		this.inputMFD = inputMFD;

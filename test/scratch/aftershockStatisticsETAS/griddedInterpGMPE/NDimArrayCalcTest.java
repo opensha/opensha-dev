@@ -1,4 +1,4 @@
-package scratch.kevin.griddedInterpGMPE;
+package scratch.aftershockStatisticsETAS.griddedInterpGMPE;
 
 import static org.junit.Assert.*;
 
@@ -11,6 +11,8 @@ import org.junit.Test;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+
+import scratch.aftershockStatisticsETAS.griddedInterpGMPE.NDimArrayCalc;
 
 public class NDimArrayCalcTest {
 	
