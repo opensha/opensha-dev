@@ -53,6 +53,27 @@ task appOAFJar(type: Jar) {
     with jar
 }
 
+task appOAF_ETAS_Jar(type: Jar) {
+    baseName = 'AftershockGUI_ETAS-current-'+getDate()
+    from { configurations.compileAndResource.collect {
+        it.isDirectory() ? it : zipTree(it).matching {
+            exclude { it.path.contains('META-INF') }
+        }
+    }}
+    from { configurations.compileOnly.collect {
+        it.isDirectory() ? it : zipTree(it).matching {
+            exclude { it.path.contains('META-INF') }
+        }
+    }}
+	manifest {
+    	attributes(
+			'Class-Path': configurations.compileAndResource.collect { it.getName() }.join(' '),
+			'Main-Class': 'scratch.aftershockStatisticsETAS.AftershockStatsGUI_ETAS'
+		)
+	}
+    with jar
+}
+
 task oafJar(type: Jar) {
     baseName = project.name + '-oaf'
     from { configurations.compileAndResource.collect {
