@@ -1,5 +1,9 @@
 package scratch.aftershockStatistics;
 
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalException;
+
 public class GenericRJ_Parameters {
 	
 	private double aValue_mean;
@@ -131,75 +135,136 @@ public class GenericRJ_Parameters {
 
 	// Marshal version number.
 
-	public static final long MARSHAL_NULL = 1000L;
-	public static final long MARSHAL_VER = 1001L;
+	private static final int MARSHAL_VER_1 = 1001;
 
-	// Marshal object.
+	private static final String M_VERSION_NAME = "GenericRJ_Parameters";
+
+	// Marshal type code.
+
+	protected static final int MARSHAL_NULL = 1000;
+	protected static final int MARSHAL_GENERIC_RJ = 1001;
+
+	protected static final String M_TYPE_NAME = "ClassType";
+
+	// Get the type code.
+
+	protected int get_marshal_type () {
+		return MARSHAL_GENERIC_RJ;
+	}
+
+	// Marshal object, internal.
 
 	protected void do_marshal (MarshalWriter writer) {
 
 		// Version
 
-		writer.marshalLong (MARSHAL_VER);
+		writer.marshalInt (M_VERSION_NAME, MARSHAL_VER_1);
 
 		// Contents
 
-		writer.marshalDouble (aValue_mean  );
-		writer.marshalDouble (aValue_sigma );
-		writer.marshalDouble (aValue_sigma0);
-		writer.marshalDouble (aValue_sigma1);
-		writer.marshalDouble (bValue       );
-		writer.marshalDouble (pValue       );
-		writer.marshalDouble (cValue       );
-		writer.marshalDouble (aValue_min   );
-		writer.marshalDouble (aValue_max   );
-		writer.marshalDouble (aValue_delta );
+		writer.marshalDouble ("aValue_mean"  , aValue_mean  );
+		writer.marshalDouble ("aValue_sigma" , aValue_sigma );
+		writer.marshalDouble ("aValue_sigma0", aValue_sigma0);
+		writer.marshalDouble ("aValue_sigma1", aValue_sigma1);
+		writer.marshalDouble ("bValue"       , bValue       );
+		writer.marshalDouble ("pValue"       , pValue       );
+		writer.marshalDouble ("cValue"       , cValue       );
+		writer.marshalDouble ("aValue_min"   , aValue_min   );
+		writer.marshalDouble ("aValue_max"   , aValue_max   );
+		writer.marshalDouble ("aValue_delta" , aValue_delta );
 	
+		return;
+	}
+
+	// Unmarshal object, internal.
+
+	protected void do_umarshal (MarshalReader reader) {
+	
+		// Version
+
+		int ver = reader.unmarshalInt (M_VERSION_NAME, MARSHAL_VER_1, MARSHAL_VER_1);
+
+		// Contents
+
+		aValue_mean   = reader.unmarshalDouble ("aValue_mean"  );
+		aValue_sigma  = reader.unmarshalDouble ("aValue_sigma" );
+		aValue_sigma0 = reader.unmarshalDouble ("aValue_sigma0");
+		aValue_sigma1 = reader.unmarshalDouble ("aValue_sigma1");
+		bValue        = reader.unmarshalDouble ("bValue"       );
+		pValue        = reader.unmarshalDouble ("pValue"       );
+		cValue        = reader.unmarshalDouble ("cValue"       );
+		aValue_min    = reader.unmarshalDouble ("aValue_min"   );
+		aValue_max    = reader.unmarshalDouble ("aValue_max"   );
+		aValue_delta  = reader.unmarshalDouble ("aValue_delta" );
+
 		return;
 	}
 
 	// Marshal object.
 
-	public static void marshal (MarshalWriter writer, GenericRJ_Parameters obj) {
-
-		if (obj == null) {
-			writer.marshalLong (MARSHAL_NULL);
-		} else {
-			obj.do_marshal (writer);
-		}
-
+	public void marshal (MarshalWriter writer, String name) {
+		writer.marshalMapBegin (name);
+		do_marshal (writer);
+		writer.marshalMapEnd ();
 		return;
 	}
 
 	// Unmarshal object.
 
-	public static GenericRJ_Parameters unmarshal (MarshalReader reader) {
-	
-		// Version
-
-		long ver = reader.unmarshalLong (MARSHAL_NULL, MARSHAL_VER);
-
-		if (ver == MARSHAL_NULL) {
-			return null;
-		}
-
-		return new GenericRJ_Parameters (ver, reader);
+	public GenericRJ_Parameters unmarshal (MarshalReader reader, String name) {
+		reader.unmarshalMapBegin (name);
+		do_umarshal (reader);
+		reader.unmarshalMapEnd ();
+		return this;
 	}
 
-	private GenericRJ_Parameters (long ver, MarshalReader reader) {
+	// Marshal object, polymorphic.
 
-		// Contents
+	public static void marshal_poly (MarshalWriter writer, String name, GenericRJ_Parameters obj) {
 
-		aValue_mean   = reader.unmarshalDouble();
-		aValue_sigma  = reader.unmarshalDouble();
-		aValue_sigma0 = reader.unmarshalDouble();
-		aValue_sigma1 = reader.unmarshalDouble();
-		bValue        = reader.unmarshalDouble();
-		pValue        = reader.unmarshalDouble();
-		cValue        = reader.unmarshalDouble();
-		aValue_min    = reader.unmarshalDouble();
-		aValue_max    = reader.unmarshalDouble();
-		aValue_delta  = reader.unmarshalDouble();
+		writer.marshalMapBegin (name);
+
+		if (obj == null) {
+			writer.marshalInt (M_TYPE_NAME, MARSHAL_NULL);
+		} else {
+			writer.marshalInt (M_TYPE_NAME, obj.get_marshal_type());
+			obj.do_marshal (writer);
+		}
+
+		writer.marshalMapEnd ();
+
+		return;
+	}
+
+	// Unmarshal object, polymorphic.
+
+	public static GenericRJ_Parameters unmarshal_poly (MarshalReader reader, String name) {
+		GenericRJ_Parameters result;
+
+		reader.unmarshalMapBegin (name);
+	
+		// Switch according to type
+
+		int type = reader.unmarshalInt (M_TYPE_NAME);
+
+		switch (type) {
+
+		default:
+			throw new MarshalException ("GenericRJ_Parameters.unmarshal_poly: Unknown class type code: type = " + type);
+
+		case MARSHAL_NULL:
+			result = null;
+			break;
+
+		case MARSHAL_GENERIC_RJ:
+			result = new GenericRJ_Parameters();
+			result.do_umarshal (reader);
+			break;
+		}
+
+		reader.unmarshalMapEnd ();
+
+		return result;
 	}
 	
 }

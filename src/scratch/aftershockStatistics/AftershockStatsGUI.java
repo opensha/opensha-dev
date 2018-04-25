@@ -49,7 +49,7 @@ import scratch.aftershockStatistics.USGS_AftershockForecast.Template;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
-import org.opensha.commons.geo.Region;
+//import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.ConsoleWindow;
 import org.opensha.commons.gui.plot.GraphWidget;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -98,6 +98,9 @@ import com.lowagie.text.Font;
 import gov.usgs.earthquake.product.Product;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.aftershockStatistics.pdl.OAF_Publisher;
+
+import scratch.aftershockStatistics.util.SphLatLon;
+import scratch.aftershockStatistics.util.SphRegion;
 
 public class AftershockStatsGUI extends JFrame implements ParameterChangeListener {
 	
@@ -229,7 +232,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 	private ComcatAccessor accessor;
 	private WC1994_MagLengthRelationship wcMagLen;
 	
-	private Region region;
+	private SphRegion region;
 	private ObsEqkRupture mainshock;
 	private ObsEqkRupList aftershocks;
 	
@@ -494,7 +497,8 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		regionEditParam.getEditor().refreshParamEditor();
 	}
 	
-	private Region buildRegion(ObsEqkRupture event, Location centroid) {
+	private SphRegion buildRegion(ObsEqkRupture event, Location centroid) {
+		SphRegion result;
 		RegionType type = regionTypeParam.getValue();
 		
 		if (type == RegionType.CIRCULAR || type == RegionType.CIRCULAR_WC94) {
@@ -519,14 +523,34 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			else
 				throw new IllegalStateException("Unknown Region Center Type: "+centerType);
 			
-			return new Region(loc, radius);
+			//return new Region(loc, radius);
+			result = SphRegion.makeCircle (new SphLatLon(loc), radius);
 		} else  if (type == RegionType.RECTANGULAR) {
 			Location lower = new Location(minLatParam.getValue(), minLonParam.getValue());
 			Location upper = new Location(maxLatParam.getValue(), maxLonParam.getValue());
-			return new Region(lower, upper);
+			//return new Region(lower, upper);
+			result = SphRegion.makeMercRectangle (new SphLatLon(lower), new SphLatLon(upper));
 		} else {
 			throw new IllegalStateException("Unknown region type: "+type);
 		}
+
+		// If the event (i.e. mainshock) is outside the plotting domain, change its
+		// hypocenter so it is inside the plotting domain
+
+		Location hypo = event.getHypocenterLocation();
+		if (result.getPlotWrap()) {
+			if (hypo.getLongitude() < 0.0) {
+				event.setHypocenterLocation (new Location (
+					hypo.getLatitude(), hypo.getLongitude() + 360.0, hypo.getDepth() ));
+			}
+		} else {
+			if (hypo.getLongitude() > 180.0) {
+				event.setHypocenterLocation (new Location (
+					hypo.getLatitude(), hypo.getLongitude() - 360.0, hypo.getDepth() ));
+			}
+		}
+
+		return result;
 	}
 	
 	private void fetchEvents() {
@@ -536,7 +560,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		Preconditions.checkState(eventID != null && !eventID.isEmpty(), "Must supply event ID!");
 		
 		mainshock = null;
-		ObsEqkRupture mainshock = accessor.fetchEvent(eventID);
+		ObsEqkRupture mainshock = accessor.fetchEvent(eventID, false);
 		Preconditions.checkState(mainshock != null, "Event not found: %s", eventID);
 		System.out.println("Mainshock Location: "+mainshock.getHypocenterLocation());
 		
@@ -574,7 +598,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			// first with hypocenter
 			region = buildRegion(mainshock, mainshock.getHypocenterLocation());
 			
-			aftershocks = accessor.fetchAftershocks(mainshock, minDays, maxDays, minDepth, maxDepth, region);
+			aftershocks = accessor.fetchAftershocks(mainshock, minDays, maxDays, minDepth, maxDepth, region, region.getPlotWrap());
 			
 			// now find centroid
 			if (aftershocks.isEmpty()) {
@@ -582,12 +606,12 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			} else {
 				region = buildRegion(mainshock, getCentroid());
 				
-				aftershocks = accessor.fetchAftershocks(mainshock, minDays, maxDays, minDepth, maxDepth, region);
+				aftershocks = accessor.fetchAftershocks(mainshock, minDays, maxDays, minDepth, maxDepth, region, region.getPlotWrap());
 			}
 		} else {
 			region = buildRegion(mainshock, null);
 			
-			aftershocks = accessor.fetchAftershocks(mainshock, minDays, maxDays, minDepth, maxDepth, region);
+			aftershocks = accessor.fetchAftershocks(mainshock, minDays, maxDays, minDepth, maxDepth, region, region.getPlotWrap());
 		}
 	}
 	
@@ -621,7 +645,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 	}
 	
 	private Location getCentroid() {
-		return AftershockStatsCalc.getCentroid(mainshock, aftershocks);
+		return AftershockStatsCalc.getSphCentroid(mainshock, aftershocks);
 	}
 	
 	private EvenlyDiscretizedFunc magSizeFunc;

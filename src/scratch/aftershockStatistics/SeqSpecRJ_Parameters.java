@@ -1,5 +1,9 @@
 package scratch.aftershockStatistics;
 
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalException;
+
 public class SeqSpecRJ_Parameters {
 
 	// Parameter values, see RJ_AftershockModel_SequenceSpecific for description.
@@ -110,75 +114,136 @@ public class SeqSpecRJ_Parameters {
 
 	// Marshal version number.
 
-	public static final long MARSHAL_NULL = 3000L;
-	public static final long MARSHAL_VER = 3001L;
+	public static final int MARSHAL_VER_1 = 3001;
 
-	// Marshal object.
+	private static final String M_VERSION_NAME = "SeqSpecRJ_Parameters";
+
+	// Marshal type code.
+
+	protected static final int MARSHAL_NULL = 3000;
+	protected static final int MARSHAL_SEQ_SPEC_RJ = 3001;
+
+	protected static final String M_TYPE_NAME = "ClassType";
+
+	// Get the type code.
+
+	protected int get_marshal_type () {
+		return MARSHAL_SEQ_SPEC_RJ;
+	}
+
+	// Marshal object, internal.
 
 	protected void do_marshal (MarshalWriter writer) {
 
 		// Version
 
-		writer.marshalLong (MARSHAL_VER);
+		writer.marshalInt (M_VERSION_NAME, MARSHAL_VER_1);
 
 		// Contents
 
-		writer.marshalDouble (b    );
-		writer.marshalDouble (min_a);
-		writer.marshalDouble (max_a);
-		writer.marshalInt    (num_a);
-		writer.marshalDouble (min_p);
-		writer.marshalDouble (max_p);
-		writer.marshalInt    (num_p);
-		writer.marshalDouble (min_c);
-		writer.marshalDouble (max_c);
-		writer.marshalInt    (num_c);
+		writer.marshalDouble ("b"    , b    );
+		writer.marshalDouble ("min_a", min_a);
+		writer.marshalDouble ("max_a", max_a);
+		writer.marshalInt    ("num_a", num_a);
+		writer.marshalDouble ("min_p", min_p);
+		writer.marshalDouble ("max_p", max_p);
+		writer.marshalInt    ("num_p", num_p);
+		writer.marshalDouble ("min_c", min_c);
+		writer.marshalDouble ("max_c", max_c);
+		writer.marshalInt    ("num_c", num_c);
 	
+		return;
+	}
+
+	// Unmarshal object, internal.
+
+	protected void do_umarshal (MarshalReader reader) {
+	
+		// Version
+
+		int ver = reader.unmarshalInt (M_VERSION_NAME, MARSHAL_VER_1, MARSHAL_VER_1);
+
+		// Contents
+
+		b     = reader.unmarshalDouble ("b"    );
+		min_a = reader.unmarshalDouble ("min_a");
+		max_a = reader.unmarshalDouble ("max_a");
+		num_a = reader.unmarshalInt    ("num_a", 1);
+		min_p = reader.unmarshalDouble ("min_p");
+		max_p = reader.unmarshalDouble ("max_p");
+		num_p = reader.unmarshalInt    ("num_p", 1);
+		min_c = reader.unmarshalDouble ("min_c");
+		max_c = reader.unmarshalDouble ("max_c");
+		num_c = reader.unmarshalInt    ("num_c", 1);
+
 		return;
 	}
 
 	// Marshal object.
 
-	public static void marshal (MarshalWriter writer, SeqSpecRJ_Parameters obj) {
-
-		if (obj == null) {
-			writer.marshalLong (MARSHAL_NULL);
-		} else {
-			obj.do_marshal (writer);
-		}
-
+	public void marshal (MarshalWriter writer, String name) {
+		writer.marshalMapBegin (name);
+		do_marshal (writer);
+		writer.marshalMapEnd ();
 		return;
 	}
 
 	// Unmarshal object.
 
-	public static SeqSpecRJ_Parameters unmarshal (MarshalReader reader) {
-	
-		// Version
-
-		long ver = reader.unmarshalLong (MARSHAL_NULL, MARSHAL_VER);
-
-		if (ver == MARSHAL_NULL) {
-			return null;
-		}
-
-		return new SeqSpecRJ_Parameters (ver, reader);
+	public SeqSpecRJ_Parameters unmarshal (MarshalReader reader, String name) {
+		reader.unmarshalMapBegin (name);
+		do_umarshal (reader);
+		reader.unmarshalMapEnd ();
+		return this;
 	}
 
-	private SeqSpecRJ_Parameters (long ver, MarshalReader reader) {
+	// Marshal object, polymorphic.
 
-		// Contents
+	public static void marshal_poly (MarshalWriter writer, String name, SeqSpecRJ_Parameters obj) {
 
-		b     = reader.unmarshalDouble();
-		min_a = reader.unmarshalDouble();
-		max_a = reader.unmarshalDouble();
-		num_a = reader.unmarshalInt(1);
-		min_p = reader.unmarshalDouble();
-		max_p = reader.unmarshalDouble();
-		num_p = reader.unmarshalInt(1);
-		min_c = reader.unmarshalDouble();
-		max_c = reader.unmarshalDouble();
-		num_c = reader.unmarshalInt(1);
+		writer.marshalMapBegin (name);
+
+		if (obj == null) {
+			writer.marshalInt (M_TYPE_NAME, MARSHAL_NULL);
+		} else {
+			writer.marshalInt (M_TYPE_NAME, obj.get_marshal_type());
+			obj.do_marshal (writer);
+		}
+
+		writer.marshalMapEnd ();
+
+		return;
+	}
+
+	// Unmarshal object, polymorphic.
+
+	public static SeqSpecRJ_Parameters unmarshal_poly (MarshalReader reader, String name) {
+		SeqSpecRJ_Parameters result;
+
+		reader.unmarshalMapBegin (name);
+	
+		// Switch according to type
+
+		int type = reader.unmarshalInt (M_TYPE_NAME);
+
+		switch (type) {
+
+		default:
+			throw new MarshalException ("SeqSpecRJ_Parameters.unmarshal_poly: Unknown class type code: type = " + type);
+
+		case MARSHAL_NULL:
+			result = null;
+			break;
+
+		case MARSHAL_SEQ_SPEC_RJ:
+			result = new SeqSpecRJ_Parameters();
+			result.do_umarshal (reader);
+			break;
+		}
+
+		reader.unmarshalMapEnd ();
+
+		return result;
 	}
 	
 }

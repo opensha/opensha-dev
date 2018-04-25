@@ -1,5 +1,9 @@
 package scratch.aftershockStatistics;
 
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalException;
+
 public class RJ_Summary_SequenceSpecific extends RJ_Summary {
 
 	// Summary values, see RJ_AftershockModel_SequenceSpecific for description.
@@ -65,17 +69,25 @@ public class RJ_Summary_SequenceSpecific extends RJ_Summary {
 
 	// Marshal version number.
 
-	public static final long MARSHAL_RJSEQ_NULL = 7000L;
-	public static final long MARSHAL_RJSEQ_VER = 7001L;
+	private static final int MARSHAL_VER_1 = 7001;
 
-	// Marshal object.
+	private static final String M_VERSION_NAME = "RJ_Summary_SequenceSpecific";
+
+	// Get the type code.
+
+	@Override
+	protected int get_marshal_type () {
+		return MARSHAL_RJSEQ;
+	}
+
+	// Marshal object. internal.
 
 	@Override
 	protected void do_marshal (MarshalWriter writer) {
 
 		// Version
 
-		writer.marshalLong (MARSHAL_RJSEQ_VER);
+		writer.marshalInt (M_VERSION_NAME, MARSHAL_VER_1);
 
 		// Superclass
 
@@ -83,59 +95,108 @@ public class RJ_Summary_SequenceSpecific extends RJ_Summary {
 
 		// Contents
 
-		writer.marshalDouble (capG                );
-		writer.marshalDouble (capH                );
-		writer.marshalDouble (magCat              );
-		writer.marshalDouble (dataStartTimeDays   );
-		writer.marshalDouble (dataEndTimeDays     );
-		writer.marshalInt    (numAftershocks      );
+		writer.marshalDouble ("capG"                , capG                );
+		writer.marshalDouble ("capH"                , capH                );
+		writer.marshalDouble ("magCat"              , magCat              );
+		writer.marshalDouble ("dataStartTimeDays"   , dataStartTimeDays   );
+		writer.marshalDouble ("dataEndTimeDays"     , dataEndTimeDays     );
+		writer.marshalInt    ("numAftershocks"      , numAftershocks      );
 	
+		return;
+	}
+
+	// Unmarshal object, internal.
+
+	@Override
+	protected void do_umarshal (MarshalReader reader) {
+	
+		// Version
+
+		int ver = reader.unmarshalInt (M_VERSION_NAME, MARSHAL_VER_1, MARSHAL_VER_1);
+
+		// Superclass
+
+		super.do_umarshal (reader);
+
+		// Contents
+
+		capG                 = reader.unmarshalDouble ("capG"                );
+		capH                 = reader.unmarshalDouble ("capH"                );
+		magCat               = reader.unmarshalDouble ("magCat"              );
+		dataStartTimeDays    = reader.unmarshalDouble ("dataStartTimeDays"   );
+		dataEndTimeDays      = reader.unmarshalDouble ("dataEndTimeDays"     );
+		numAftershocks       = reader.unmarshalInt    ("numAftershocks"      , 0);
+
 		return;
 	}
 
 	// Marshal object.
 
-	public static void marshal (MarshalWriter writer, RJ_Summary_SequenceSpecific obj) {
-
-		if (obj == null) {
-			writer.marshalLong (MARSHAL_RJSEQ_NULL);
-		} else {
-			obj.do_marshal (writer);
-		}
-
+	@Override
+	public void marshal (MarshalWriter writer, String name) {
+		writer.marshalMapBegin (name);
+		do_marshal (writer);
+		writer.marshalMapEnd ();
 		return;
 	}
 
 	// Unmarshal object.
 
-	public static RJ_Summary_SequenceSpecific unmarshal (MarshalReader reader) {
-	
-		// Version
+	@Override
+	public RJ_Summary_SequenceSpecific unmarshal (MarshalReader reader, String name) {
+		reader.unmarshalMapBegin (name);
+		do_umarshal (reader);
+		reader.unmarshalMapEnd ();
+		return this;
+	}
 
-		long ver = reader.unmarshalLong (MARSHAL_RJSEQ_NULL, MARSHAL_RJSEQ_VER);
+	// Marshal object, polymorphic.
 
-		if (ver == MARSHAL_RJSEQ_NULL) {
-			return null;
+	public static void marshal_poly (MarshalWriter writer, String name, RJ_Summary_SequenceSpecific obj) {
+
+		writer.marshalMapBegin (name);
+
+		if (obj == null) {
+			writer.marshalInt (M_TYPE_NAME, MARSHAL_NULL);
+		} else {
+			writer.marshalInt (M_TYPE_NAME, obj.get_marshal_type());
+			obj.do_marshal (writer);
 		}
 
-		return new RJ_Summary_SequenceSpecific (ver, reader);
+		writer.marshalMapEnd ();
+
+		return;
 	}
 
-	protected RJ_Summary_SequenceSpecific (MarshalReader reader) {
-		this (reader.unmarshalLong (MARSHAL_RJSEQ_VER, MARSHAL_RJSEQ_VER), reader);
-	}
+	// Unmarshal object, polymorphic.
 
-	private RJ_Summary_SequenceSpecific (long ver, MarshalReader reader) {
-		super (reader);
+	public static RJ_Summary_SequenceSpecific unmarshal_poly (MarshalReader reader, String name) {
+		RJ_Summary_SequenceSpecific result;
 
-		// Contents
+		reader.unmarshalMapBegin (name);
+	
+		// Switch according to type
 
-		capG                 = reader.unmarshalDouble ();
-		capH                 = reader.unmarshalDouble ();
-		magCat               = reader.unmarshalDouble ();
-		dataStartTimeDays    = reader.unmarshalDouble ();
-		dataEndTimeDays      = reader.unmarshalDouble ();
-		numAftershocks       = reader.unmarshalInt    (0);
+		int type = reader.unmarshalInt (M_TYPE_NAME);
+
+		switch (type) {
+
+		default:
+			throw new MarshalException ("RJ_Summary_SequenceSpecific.unmarshal_poly: Unknown class type code: type = " + type);
+
+		case MARSHAL_NULL:
+			result = null;
+			break;
+
+		case MARSHAL_RJSEQ:
+			result = new RJ_Summary_SequenceSpecific();
+			result.do_umarshal (reader);
+			break;
+		}
+
+		reader.unmarshalMapEnd ();
+
+		return result;
 	}
 	
 }

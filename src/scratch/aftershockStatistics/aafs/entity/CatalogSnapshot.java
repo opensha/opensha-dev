@@ -20,10 +20,20 @@ import org.mongodb.morphia.FindAndModifyOptions;
 
 import org.mongodb.morphia.query.Query;
 import org.mongodb.morphia.query.UpdateOperations;
+import org.mongodb.morphia.query.MorphiaIterator;
 
 import scratch.aftershockStatistics.aafs.DBCorruptException;
 import scratch.aftershockStatistics.aafs.MongoDBUtil;
 import scratch.aftershockStatistics.aafs.RecordKey;
+import scratch.aftershockStatistics.aafs.RecordPayload;
+import scratch.aftershockStatistics.aafs.RecordIterator;
+
+import scratch.aftershockStatistics.util.MarshalImpArray;
+import scratch.aftershockStatistics.util.MarshalImpJsonReader;
+import scratch.aftershockStatistics.util.MarshalImpJsonWriter;
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalException;
 
 import scratch.aftershockStatistics.CompactEqkRupList;
 
@@ -289,6 +299,23 @@ public class CatalogSnapshot implements java.io.Serializable {
 
 
 	/**
+	 * store_catalog_shapshot - Store a catalog snapshot into the database.
+	 * This is primarily for restoring from backup.
+	 */
+	public static CatalogSnapshot store_catalog_shapshot (CatalogSnapshot catsnap) {
+
+		// Call MongoDB to store into database
+
+		Datastore datastore = MongoDBUtil.getDatastore();
+		datastore.save(catsnap);
+		
+		return catsnap;
+	}
+
+
+
+
+	/**
 	 * get_catalog_shapshot_for_key - Get the catalog snapshot with the given key.
 	 * @param key = Record key. Cannot be null or empty.
 	 * Returns the catalog snapshot, or null if not found.
@@ -369,6 +396,56 @@ public class CatalogSnapshot implements java.io.Serializable {
 
 
 	/**
+	 * fetch_catalog_snapshot_range - Iterate a range of catalog snapshots, reverse-sorted by end time.
+	 * @param end_time_lo = Minimum end time, in milliseconds since the epoch.
+	 *                      Can be 0L for no minimum.
+	 * @param end_time_hi = Maximum end time, in milliseconds since the epoch.
+	 *                      Can be 0L for no maximum.
+	 * @param event_id = Event id. Can be null to return entries for all events.
+	 */
+	public static RecordIterator<CatalogSnapshot> fetch_catalog_snapshot_range (long end_time_lo, long end_time_hi, String event_id) {
+
+		// Get the MongoDB data store
+
+		Datastore datastore = MongoDBUtil.getDatastore();
+
+		// Construct the query
+
+		Query<CatalogSnapshot> query = datastore.createQuery(CatalogSnapshot.class);
+
+		// Select by event_id
+
+		if (event_id != null) {
+			query = query.filter("event_id ==", event_id);
+		}
+
+		// Select entries with end_time >= end_time_lo
+
+		if (end_time_lo > 0L) {
+			query = query.filter("end_time >=", new Long(end_time_lo));
+		}
+
+		// Select entries with end_time <= end_time_hi
+
+		if (end_time_hi > 0L) {
+			query = query.filter("end_time <=", new Long(end_time_hi));
+		}
+
+		// Sort by end_time in descending order (most recent first)
+
+		query = query.order("-end_time");
+
+		// Run the query
+
+		MorphiaIterator<CatalogSnapshot, CatalogSnapshot> morphia_iterator = query.fetch();
+
+		return new RecordIterator<CatalogSnapshot>(morphia_iterator);
+	}
+
+
+
+
+	/**
 	 * delete_catalog_snapshot - Delete a catalog snapshot.
 	 * @param entry = Existing catalog snapshot to delete.
 	 * @return
@@ -393,6 +470,78 @@ public class CatalogSnapshot implements java.io.Serializable {
 	}
 
 
+
+
+	//----- Marshaling -----
+
+	// Marshal version number.
+
+	private static final int MARSHAL_VER_1 = 10001;
+
+	private static final String M_VERSION_NAME = "CatalogSnapshot";
+
+	// Marshal object, internal.
+
+	protected void do_marshal (MarshalWriter writer) {
+
+		// Version
+
+		writer.marshalInt (M_VERSION_NAME, MARSHAL_VER_1);
+
+		// Contents
+
+		String sid = id.toHexString();
+		writer.marshalString      ("id"                , sid               );
+		writer.marshalString      ("event_id"          , event_id          );
+		writer.marshalLong        ("start_time"        , start_time        );
+		writer.marshalLong        ("end_time"          , end_time          );
+		writer.marshalInt         ("eqk_count"         , eqk_count         );
+		writer.marshalLongArray   ("lat_lon_depth_list", lat_lon_depth_list);
+		writer.marshalLongArray   ("mag_time_list"     , mag_time_list     );
+	
+		return;
+	}
+
+	// Unmarshal object, internal.
+
+	protected void do_umarshal (MarshalReader reader) {
+	
+		// Version
+
+		int ver = reader.unmarshalInt (M_VERSION_NAME, MARSHAL_VER_1, MARSHAL_VER_1);
+
+		// Contents
+
+		String sid;
+		sid                = reader.unmarshalString      ("id"                );
+		event_id           = reader.unmarshalString      ("event_id"          );
+		start_time         = reader.unmarshalLong        ("start_time"        );
+		end_time           = reader.unmarshalLong        ("end_time"          );
+		eqk_count          = reader.unmarshalInt         ("eqk_count"         );
+		lat_lon_depth_list = reader.unmarshalLongArray   ("lat_lon_depth_list");
+		mag_time_list      = reader.unmarshalLongArray   ("mag_time_list"     );
+		id = new ObjectId(sid);
+
+		return;
+	}
+
+	// Marshal object.
+
+	public void marshal (MarshalWriter writer, String name) {
+		writer.marshalMapBegin (name);
+		do_marshal (writer);
+		writer.marshalMapEnd ();
+		return;
+	}
+
+	// Unmarshal object.
+
+	public CatalogSnapshot unmarshal (MarshalReader reader, String name) {
+		reader.unmarshalMapBegin (name);
+		do_umarshal (reader);
+		reader.unmarshalMapEnd ();
+		return this;
+	}
 
 
 }

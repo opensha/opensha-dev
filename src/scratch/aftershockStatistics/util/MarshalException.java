@@ -1,4 +1,4 @@
-package scratch.aftershockStatistics;
+package scratch.aftershockStatistics.util;
 
 /**
  * Exception class for parameter/data marshaling/unmarshaling.
