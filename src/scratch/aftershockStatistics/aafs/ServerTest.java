@@ -7,6 +7,7 @@ import scratch.aftershockStatistics.aafs.MongoDBUtil;
 import scratch.aftershockStatistics.aafs.entity.PendingTask;
 import scratch.aftershockStatistics.aafs.entity.LogEntry;
 import scratch.aftershockStatistics.aafs.entity.CatalogSnapshot;
+import scratch.aftershockStatistics.aafs.entity.TimelineEntry;
 
 import scratch.aftershockStatistics.AftershockStatsCalc;
 import scratch.aftershockStatistics.CompactEqkRupList;
@@ -15,9 +16,9 @@ import scratch.aftershockStatistics.RJ_AftershockModel_SequenceSpecific;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 
-import scratch.aftershockStatistics.MarshalImpArray;
-import scratch.aftershockStatistics.MarshalReader;
-import scratch.aftershockStatistics.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalImpArray;
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
 
 
 /**
@@ -61,11 +62,13 @@ public class ServerTest {
 			opcode = 102;
 			stage = 2;
 			details = PendingTask.begin_details();
-			details.marshalString ("Details_2");
-			details.marshalLong (21010L);
-			details.marshalLong (21020L);
-			details.marshalDouble (21030.0);
-			details.marshalDouble (21040.0);
+			details.marshalArrayBegin (null, 5);
+			details.marshalString (null, "Details_2");
+			details.marshalLong (null, 21010L);
+			details.marshalLong (null, 21020L);
+			details.marshalDouble (null, 21030.0);
+			details.marshalDouble (null, 21040.0);
+			details.marshalArrayEnd ();
 			PendingTask.submit_task (event_id, sched_time, submit_time,
 				submit_id, opcode, stage, details);
 		
@@ -86,11 +89,13 @@ public class ServerTest {
 			opcode = 101;
 			stage = 1;
 			details = PendingTask.begin_details();
-			details.marshalString ("Details_1");
-			details.marshalLong (11010L);
-			details.marshalLong (11020L);
-			details.marshalDouble (11030.0);
-			details.marshalDouble (11040.0);
+			details.marshalArrayBegin (null, 5);
+			details.marshalString (null, "Details_1");
+			details.marshalLong (null, 11010L);
+			details.marshalLong (null, 11020L);
+			details.marshalDouble (null, 11030.0);
+			details.marshalDouble (null, 11040.0);
+			details.marshalArrayEnd ();
 			PendingTask.submit_task (event_id, sched_time, submit_time,
 				submit_id, opcode, stage, details);
 		
@@ -101,11 +106,13 @@ public class ServerTest {
 			opcode = 105;
 			stage = 5;
 			details = PendingTask.begin_details();
-			details.marshalString ("Details_5");
-			details.marshalLong (51010L);
-			details.marshalLong (51020L);
-			details.marshalDouble (51030.0);
-			details.marshalDouble (51040.0);
+			details.marshalArrayBegin (null, 5);
+			details.marshalString (null, "Details_5");
+			details.marshalLong (null, 51010L);
+			details.marshalLong (null, 51020L);
+			details.marshalDouble (null, 51030.0);
+			details.marshalDouble (null, 51040.0);
+			details.marshalArrayEnd ();
 			PendingTask.submit_task (event_id, sched_time, submit_time,
 				submit_id, opcode, stage, details);
 		
@@ -116,11 +123,13 @@ public class ServerTest {
 			opcode = 103;
 			stage = 3;
 			details = PendingTask.begin_details();
-			details.marshalString ("Details_3");
-			details.marshalLong (31010L);
-			details.marshalLong (31020L);
-			details.marshalDouble (31030.0);
-			details.marshalDouble (31040.0);
+			details.marshalArrayBegin (null, 5);
+			details.marshalString (null, "Details_3");
+			details.marshalLong (null, 31010L);
+			details.marshalLong (null, 31020L);
+			details.marshalDouble (null, 31030.0);
+			details.marshalDouble (null, 31040.0);
+			details.marshalArrayEnd ();
 			PendingTask.submit_task (event_id, sched_time, submit_time,
 				submit_id, opcode, stage, details);
 
@@ -647,7 +656,9 @@ public class ServerTest {
 		int stage = Integer.parseInt(args[3]);
 		MarshalWriter details = PendingTask.begin_details();
 		if (args.length == 5) {
-			details.marshalString (args[4]);
+			details.marshalMapBegin (null);
+			details.marshalString ("value", args[4]);
+			details.marshalMapEnd ();
 		}
 
 		// Post the task
@@ -804,7 +815,7 @@ public class ServerTest {
 			MongoDBUtil mongo_instance = new MongoDBUtil();
 		){
 
-			// Get the list of matching log entries
+			// Get the list of matching catalog snapshots
 
 			List<CatalogSnapshot> entries = CatalogSnapshot.get_catalog_snapshot_range (end_time_lo, end_time_hi, event_id);
 
@@ -849,7 +860,7 @@ public class ServerTest {
 			MongoDBUtil mongo_instance = new MongoDBUtil();
 		){
 
-			// Get the list of matching log entries
+			// Get the list of matching catalog snapshots
 
 			List<CatalogSnapshot> entries = CatalogSnapshot.get_catalog_snapshot_range (end_time_lo, end_time_hi, event_id);
 
@@ -860,6 +871,398 @@ public class ServerTest {
 				CatalogSnapshot.delete_catalog_snapshot (entry);
 			}
 
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #20 - Add a few elements to the timeline.
+
+	public static void test20(String[] args) {
+
+		// No additional arguments
+
+		if (args.length != 1) {
+			System.err.println ("ServerTest : Invalid 'test20' subcommand");
+			return;
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+		
+			String event_id;
+			long action_time;
+			int actcode;
+			MarshalWriter details;
+		
+			event_id = "Event_2";
+			action_time = 20100L;
+			actcode = 102;
+			details = TimelineEntry.begin_details();
+			details.marshalArrayBegin (null, 5);
+			details.marshalString (null, "Details_2");
+			details.marshalLong (null, 21010L);
+			details.marshalLong (null, 21020L);
+			details.marshalDouble (null, 21030.0);
+			details.marshalDouble (null, 21040.0);
+			details.marshalArrayEnd ();
+			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
+				actcode, details);
+		
+			event_id = "Event_4";
+			action_time = 40100L;
+			actcode = 104;
+			details = null;
+			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
+				actcode, details);
+		
+			event_id = "Event_1";
+			action_time = 10100L;
+			actcode = 101;
+			details = TimelineEntry.begin_details();
+			details.marshalArrayBegin (null, 5);
+			details.marshalString (null, "Details_1");
+			details.marshalLong (null, 11010L);
+			details.marshalLong (null, 11020L);
+			details.marshalDouble (null, 11030.0);
+			details.marshalDouble (null, 11040.0);
+			details.marshalArrayEnd ();
+			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
+				actcode, details);
+		
+			event_id = "Event_5";
+			action_time = 50100L;
+			actcode = 105;
+			details = TimelineEntry.begin_details();
+			details.marshalArrayBegin (null, 5);
+			details.marshalString (null, "Details_5");
+			details.marshalLong (null, 51010L);
+			details.marshalLong (null, 51020L);
+			details.marshalDouble (null, 51030.0);
+			details.marshalDouble (null, 51040.0);
+			details.marshalArrayEnd ();
+			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
+				actcode, details);
+		
+			event_id = "Event_3";
+			action_time = 30100L;
+			actcode = 103;
+			details = TimelineEntry.begin_details();
+			details.marshalArrayBegin (null, 5);
+			details.marshalString (null, "Details_3");
+			details.marshalLong (null, 31010L);
+			details.marshalLong (null, 31020L);
+			details.marshalDouble (null, 31030.0);
+			details.marshalDouble (null, 31040.0);
+			details.marshalArrayEnd ();
+			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
+				actcode, details);
+
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #21 - Search the timeline for action time and/or event id; using list.
+
+	public static void test21(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test21' subcommand");
+			return;
+		}
+
+		long action_time_lo = Long.parseLong(args[1]);
+		long action_time_hi = Long.parseLong(args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the list of matching timeline entries
+
+			List<TimelineEntry> entries = TimelineEntry.get_timeline_entry_range (action_time_lo, action_time_hi, event_id);
+
+			// Display them
+
+			for (TimelineEntry entry : entries) {
+				System.out.println (entry.toString());
+			}
+
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #22 - Search the timeline for action time and/or event id; using iterator.
+
+	public static void test22(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test22' subcommand");
+			return;
+		}
+
+		long action_time_lo = Long.parseLong(args[1]);
+		long action_time_hi = Long.parseLong(args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+			try (
+
+				// Get an iterator over matching timeline entries
+
+				RecordIterator<TimelineEntry> entries = TimelineEntry.fetch_timeline_entry_range (action_time_lo, action_time_hi, event_id);
+			){
+
+				// Display them
+
+				for (TimelineEntry entry : entries) {
+					System.out.println (entry.toString());
+				}
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #23 - Search the timeline for action time and/or event id; and re-fetch the entries.
+
+	public static void test23(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test23' subcommand");
+			return;
+		}
+
+		long action_time_lo = Long.parseLong(args[1]);
+		long action_time_hi = Long.parseLong(args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the list of matching timeline entries
+
+			List<TimelineEntry> entries = TimelineEntry.get_timeline_entry_range (action_time_lo, action_time_hi, event_id);
+
+			// Display them, and re-fetch
+
+			for (TimelineEntry entry : entries) {
+				System.out.println (entry.toString());
+				TimelineEntry refetch = TimelineEntry.get_timeline_entry_for_key (entry.get_record_key());
+				System.out.println (refetch.toString());
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #24 - Search the timeline for action time and/or event id; and delete the entries.
+
+	public static void test24(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test24' subcommand");
+			return;
+		}
+
+		long action_time_lo = Long.parseLong(args[1]);
+		long action_time_hi = Long.parseLong(args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the list of matching timeline entries
+
+			List<TimelineEntry> entries = TimelineEntry.get_timeline_entry_range (action_time_lo, action_time_hi, event_id);
+
+			// Display them, and delete
+
+			for (TimelineEntry entry : entries) {
+				System.out.println (entry.toString());
+				TimelineEntry.delete_timeline_entry (entry);
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #25 - Display the pending task queue, sorted by execution time, using iterator.
+
+	public static void test25(String[] args) {
+
+		// No additional arguments
+
+		if (args.length != 1) {
+			System.err.println ("ServerTest : Invalid 'test25' subcommand");
+			return;
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+			try (
+
+				// Get an iterator over pending tasks
+
+				RecordIterator<PendingTask> tasks = PendingTask.fetch_all_tasks();
+			){
+
+				// Display them
+
+				for (PendingTask task : tasks) {
+					System.out.println (task.toString());
+				}
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #26 - Search the log for log time and/or event id, using iterator.
+
+	public static void test26(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test26' subcommand");
+			return;
+		}
+
+		long log_time_lo = Long.parseLong(args[1]);
+		long log_time_hi = Long.parseLong(args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+			try (
+
+				// Get an iterator over matching log entries
+
+				RecordIterator<LogEntry> entries = LogEntry.fetch_log_entry_range (log_time_lo, log_time_hi, event_id);
+			){
+
+				// Display them
+
+				for (LogEntry entry : entries) {
+					System.out.println (entry.toString());
+				}
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #27 - Search the catalog snapshots for end time and/or event id, using iterator.
+
+	public static void test27(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test27' subcommand");
+			return;
+		}
+
+		double end_time_lo_days = Double.parseDouble (args[1]);
+		double end_time_hi_days = Double.parseDouble (args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		long end_time_lo = Math.round(end_time_lo_days * 86400000L);
+		long end_time_hi = Math.round(end_time_hi_days * 86400000L);
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+			try (
+
+				// Get an iterator over matching catalog snapshots
+
+				RecordIterator<CatalogSnapshot> entries = CatalogSnapshot.fetch_catalog_snapshot_range (end_time_lo, end_time_hi, event_id);
+			){
+
+				// Display them
+
+				for (CatalogSnapshot entry : entries) {
+					System.out.println (entry.toString());
+				}
+			}
 		}
 
 		return;
@@ -1181,6 +1584,140 @@ public class ServerTest {
 
 			try {
 				test19(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #20
+		// Command format:
+		//  test20
+		// Add a few elements to the timeline.
+
+		if (args[0].equalsIgnoreCase ("test20")) {
+
+			try {
+				test20(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #21
+		// Command format:
+		//  test21  action_time_lo  action_time_hi  [event_id]
+		// Search the timeline for action time and/or event id; using list.
+		// Times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test21")) {
+
+			try {
+				test21(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #22
+		// Command format:
+		//  test22  action_time_lo  action_time_hi  [event_id]
+		// Search the timeline for action time and/or event id; using iterator.
+		// Times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test22")) {
+
+			try {
+				test22(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #23
+		// Command format:
+		//  test23  action_time_lo  action_time_hi  [event_id]
+		// Search  the timeline for action time and/or event id; and re-fetch the entries.
+		// Times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test23")) {
+
+			try {
+				test23(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #24
+		// Command format:
+		//  test24  action_time_lo  action_time_hi  [event_id]
+		// Search  the timeline for action time and/or event id; and delete the entries.
+		// Times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test24")) {
+
+			try {
+				test24(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #25
+		// Command format:
+		//  test25
+		// Display the pending task queue, sorted by execution time, using iterator.
+
+		if (args[0].equalsIgnoreCase ("test25")) {
+
+			try {
+				test25(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #26
+		// Command format:
+		//  test26  log_time_lo  log_time_hi  [event_id]
+		// Search the log for log time and/or event id, using iterator.
+		// Log times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test26")) {
+
+			try {
+				test26(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #27
+		// Command format:
+		//  test27  end_time_lo_days  end_time_hi_days  [event_id]
+		// Search the catalog snapshots for end time and/or event id, using iterator.
+		// Times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test27")) {
+
+			try {
+				test27(args);
             } catch (Exception e) {
                 e.printStackTrace();
 			}

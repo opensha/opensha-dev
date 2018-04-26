@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.geo.GriddedRegion;
@@ -26,6 +27,8 @@ import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
+import org.opensha.sha.simulators.srf.RSQSimStateTime;
+import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
 import org.opensha.sha.simulators.srf.SRF_PointData;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
@@ -265,6 +268,10 @@ public class RSQSimBBP_Config {
 		return getGriddedSites(new CaliforniaRegions.RELM_TESTING(), spacing);
 	}
 	
+	public static List<BBP_Site> getSoCalGriddedSites(double spacing) {
+		return getGriddedSites(new CaliforniaRegions.RELM_SOCAL(), spacing);
+	}
+	
 	public static List<BBP_Site> getGriddedSites(Region region, double spacing) {
 		GriddedRegion gridReg = new GriddedRegion(region, spacing, null);
 		System.out.println("Creating "+gridReg.getNodeCount()+" gridded BBP sites");
@@ -360,6 +367,68 @@ public class RSQSimBBP_Config {
 				getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT), sitesFile, bbpOutputDir);
 		bbpWrap.setDoHF(DO_HF);
 		bbpWrap.run();
+	}
+	
+	public static void main(String[] args) throws IOException {
+		File baseDir = new File("/data/kevin/simulators/catalogs");
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		int targetID = 9474557;
+		int buffer = 5;
+		int[] ids = new int[2*buffer+1];
+		for (int i=0; i<ids.length; i++)
+			ids[i] = i + targetID - buffer;
+//		int[] ids = { targetID-2, targetID-1, targetID, targetID+1, targetID+2 };
+		List<RSQSimEvent> events = catalog.loader().byIDs(ids);
+		RSQSimStateTransitionFileReader trans = catalog.getTransitions();
+		RSQSimEvent targetEvent = null;
+		for (RSQSimEvent event : events) {
+			if (event.getID() == targetID)
+				targetEvent = event;
+			System.out.println("ID: "+event.getID());
+			System.out.println("Time: "+event.getTime()+" ("+event.getTimeInYears()+" yrs)");
+			System.out.println("Mag: "+event.getMagnitude());
+			Map<Integer, List<RSQSimStateTime>> eventTrans = trans.getTransitions(event);
+			int patches = eventTrans.size();
+			int stateTimes = 0;
+			for (List<RSQSimStateTime> list : eventTrans.values())
+				stateTimes += list.size();
+			System.out.println("Have "+stateTimes+" transitions on "+patches+" patches");
+		}
+		if (targetEvent != null) {
+			System.out.println("Running for "+targetID);
+			RSQSimStateTransitionFileReader.printTransitions(targetEvent, trans.getTransitions(targetEvent));
+			List<BBP_Site> sites = BBP_Site.readFile(new File("/data/kevin/bbp/parallel/"
+					+ "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites/sites.stl"));
+			runBBP(catalog, targetEvent, sites);
+		}
+		System.exit(0);
+		events = catalog.loader().minMag(6.5).load();
+		int firstZero = -1;
+		double firstTime = 0d;
+		int lastZero = -1;
+		double lastTime = 0d;
+		int numZero = 0;
+		for (RSQSimEvent event : events) {
+			Map<Integer, List<RSQSimStateTime>> eventTrans = trans.getTransitions(event);
+			int patches = eventTrans.size();
+			int stateTimes = 0;
+			for (List<RSQSimStateTime> list : eventTrans.values())
+				stateTimes += list.size();
+			if (stateTimes == 0) {
+				if (firstZero < 0) {
+					firstZero = event.getID();
+					firstTime = event.getTime();
+				}
+				lastZero = event.getID();
+				lastTime = event.getTime();
+				numZero++;
+				System.out.println("Event "+event.getID()+" (M="+event.getMagnitude()+") at t="+event.getTime()
+					+" has "+stateTimes+" transitions on "+patches+" patches");
+			}
+		}
+		System.out.println("First zero: event "+firstZero+", t="+firstTime);
+		System.out.println("Last zero: event "+lastZero+", t="+lastTime);
+		System.out.println("Num zero: "+numZero);
 	}
 
 }

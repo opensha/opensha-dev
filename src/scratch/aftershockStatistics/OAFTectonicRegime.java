@@ -1,6 +1,9 @@
 package scratch.aftershockStatistics;
 
 import java.util.Map;
+
+import org.opensha.commons.data.siteData.impl.TectonicRegime;
+
 import java.util.HashMap;
 
 // OAFTectonicRegime is intended to be a drop-in replacement for TectonicRegime
@@ -41,15 +44,18 @@ public final class OAFTectonicRegime {
 	private OAFTectonicRegime (String name) {
 		regime_name = name;
 	}
+	
+	private static void add_garcia_region (TectonicRegime regime) {
+		add_garcia_region(regime.getNames());
+	}
 
 	// add_garcia_region - Add a Garcia region to the table.
 	// It is assumed that a caller has synchronized.
 
-	private static void add_garcia_region (String name1, String name2, String name3) {
-		OAFTectonicRegime regime = new OAFTectonicRegime (name1);
-		mappings.put (name1, regime);
-		mappings.put (name2, regime);
-		mappings.put (name3, regime);
+	private static void add_garcia_region (String... names) {
+		OAFTectonicRegime regime = new OAFTectonicRegime (names[0]);
+		for (String name : names)
+			mappings.put (name, regime);
 		return;
 	}
 
@@ -64,21 +70,21 @@ public final class OAFTectonicRegime {
 
 		// Add the Garcia regions
 
-		add_garcia_region ("ANSR_DEEPCON", "ACR (deep)", "ANSR-DEEPCON");
-		add_garcia_region ("ANSR_HOTSPOT", "ACR (hot spot)", "ANSR-HOTSPOT");
-		add_garcia_region ("ANSR_OCEANBD", "ACR (oceanic boundary)", "ANSR-OCEANBD");
-		add_garcia_region ("ANSR_SHALCON", "ACR (shallow)", "ANSR-SHALCON");
-		add_garcia_region ("ANSR_ABSLDEC", "ACR deep (above slab)", "ANSR-ABSLDEC");
-		add_garcia_region ("ANSR_ABSLOCB", "ACR oceanic boundary (above slab)", "ANSR-ABSLOCB");
-		add_garcia_region ("ANSR_ABSLSHC", "ACR shallow (above slab)", "ANSR-ABSLSHC");
-		add_garcia_region ("SCR_ABVSLAB", "SCR (above slab)", "SCR-ABVSLAB");
-		add_garcia_region ("SCR_GENERIC", "SCR (generic)", "SCR-GENERIC");
-		add_garcia_region ("SOR_ABVSLAB", "SOR (above slab)", "SOR-ABVSLAB");
-		add_garcia_region ("SOR_GENERIC", "SOR (generic)", "SOR-GENERIC");
-		add_garcia_region ("SZ_GENERIC", "SZ (generic)", "SZ-GENERIC");
-		add_garcia_region ("SZ_INLBACK", "SZ (inland/back-arc)", "SZ-INLBACK");
-		add_garcia_region ("SZ_ONSHORE", "SZ (on-shore)", "SZ-ONSHORE");
-		add_garcia_region ("SZ_OUTERTR", "SZ (outer-trench)", "SZ-OUTERTR");
+		add_garcia_region (TectonicRegime.ANSR_DEEPCON);
+		add_garcia_region (TectonicRegime.ANSR_HOTSPOT);
+		add_garcia_region (TectonicRegime.ANSR_OCEANBD);
+		add_garcia_region (TectonicRegime.ANSR_SHALCON);
+		add_garcia_region (TectonicRegime.ANSR_ABSLDEC);
+		add_garcia_region (TectonicRegime.ANSR_ABSLOCB);
+		add_garcia_region (TectonicRegime.ANSR_ABSLSHC);
+		add_garcia_region (TectonicRegime.SCR_ABVSLAB);
+		add_garcia_region (TectonicRegime.SCR_GENERIC);
+		add_garcia_region (TectonicRegime.SOR_ABVSLAB);
+		add_garcia_region (TectonicRegime.SOR_GENERIC);
+		add_garcia_region (TectonicRegime.SZ_GENERIC);
+		add_garcia_region (TectonicRegime.SZ_INLBACK);
+		add_garcia_region (TectonicRegime.SZ_ONSHORE);
+		add_garcia_region (TectonicRegime.SZ_OUTERTR);
 
 		return;
 	}

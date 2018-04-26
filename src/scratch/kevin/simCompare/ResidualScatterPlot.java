@@ -693,7 +693,75 @@ public class ResidualScatterPlot {
 	}
 	
 	public static <E> void plotPeriodDependentSigma(File outputDir, String prefix,
-			Map<Site, List<RuptureComparison<E>>> siteCompsMap, SimulationRotDProvider<E> simProv, double... periods) throws IOException {
+			Map<Site, List<RuptureComparison<E>>> siteCompsMap, SimulationRotDProvider<E> simProv,
+			boolean detrend, double... periods) throws IOException {
+		// for detrending
+		EvenlyDiscrXYZ_DataSet detrendXYZ[] = null;
+		double minMag = Double.POSITIVE_INFINITY;
+		double maxMag = 0d;
+		double minDist = 1;
+		double maxDist = 200;
+		if (detrend) {
+			for (Site site : siteCompsMap.keySet()) {
+				for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
+					minMag = Math.min(minMag, comp.getMagnitude());
+					maxMag = Math.max(maxMag, comp.getMagnitude());
+				}
+			}
+			minMag = Math.floor(minMag*10d)/10d;
+			maxMag = Math.ceil(maxMag*10d)/10d;
+			int numDist = 20;
+			int numMag = 15;
+			double distSpacing = (Math.log10(maxDist) - Math.log10(minDist)) / (double)numDist;
+			double magSpacing = (maxMag - minMag) / (double)numMag;
+			detrendXYZ = new EvenlyDiscrXYZ_DataSet[periods.length];
+			for (int p=0; p<periods.length; p++)
+				detrendXYZ[p] = new EvenlyDiscrXYZ_DataSet(numDist, numMag, Math.log10(minDist)+0.5*distSpacing,
+						minMag+0.5*magSpacing, distSpacing, magSpacing);
+			System.out.println("Detrend distance range: "+(float)Math.pow(10, detrendXYZ[0].getX(0)-0.5*distSpacing)
+				+" => "+(float)Math.pow(10, detrendXYZ[0].getX(numDist-1)+0.5*distSpacing)+". Log10 Spacing: "+(float)distSpacing);
+			System.out.println("Detrend mag range: "+(float)(detrendXYZ[0].getY(0)-0.5*magSpacing)
+				+" => "+(float)(detrendXYZ[0].getY(numMag-1)+0.5*magSpacing)+". Spacing: "+(float)magSpacing);
+			int[][] detrendCounts = new int[numDist][numMag];
+			for (Site site : siteCompsMap.keySet()) {
+				for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
+					double[] gmpeVals = new double[periods.length];
+					for (int p=0; p<periods.length; p++)
+						gmpeVals[p] = comp.getLogMean(site, periods[p]);
+					E rupture = comp.getRupture();
+					int numSims = simProv.getNumSimulations(site, rupture);
+					double dist = comp.getDistanceRup(site);
+					int xInd;
+					if (dist < minDist)
+						xInd = 0;
+					else if (dist > maxDist)
+						xInd = numDist-1;
+					else
+						xInd = detrendXYZ[0].getXIndex(Math.log10(dist));
+					Preconditions.checkState(xInd >= 0 && xInd < numDist,
+							"Bad dist index %s for dist=%s, nDist=%s", xInd, dist, numDist);
+					int yInd = detrendXYZ[0].getYIndex(comp.getMagnitude());
+					Preconditions.checkState(yInd >= 0 && yInd < numMag,
+							"Bad mag index %s for mag=%s, nMag=%s", yInd, comp.getMagnitude(), numMag);
+					for (int i=0; i<numSims; i++) {
+						DiscretizedFunc simRD50 = simProv.getRotD50(site, rupture, i);
+						detrendCounts[xInd][yInd]++;
+						for (int p=0; p<periods.length; p++) {
+							double simVal = Math.log(simRD50.getY(periods[p]));
+							double residual = simVal - gmpeVals[p];
+							detrendXYZ[p].set(xInd, yInd, detrendXYZ[p].get(xInd, yInd)+residual);
+						}
+					}
+				}
+			}
+			// now convert to average residual
+			for (int x=0; x<numDist; x++)
+				for (int y=0; y<numMag; y++)
+					for (int p=0; p<periods.length; p++)
+						if (detrendCounts[x][y] > 0)
+							detrendXYZ[p].set(x, y, detrendXYZ[p].get(x, y)/(double)detrendCounts[x][y]);
+		}
+		
 		List<Variance[]> siteResidualVariances = new ArrayList<>();
 		Map<RuptureComparison<E>, Variance[][]> rupResidualVariances = new HashMap<>();
 		Variance[] totalVars = new Variance[periods.length];
@@ -721,11 +789,18 @@ public class ResidualScatterPlot {
 					rupResidualVariances.put(comp, rupVars);
 				}
 				Preconditions.checkState(numSims > 0);
+				double detrendDist = 0, detrendMag = 0;
+				if (detrend) {
+					detrendDist = Math.min(Math.max(Math.log10(comp.getDistanceRup(site)), detrendXYZ[0].getMinX()), detrendXYZ[0].getMaxX());
+					detrendMag = Math.min(Math.max(comp.getMagnitude(), detrendXYZ[0].getMinY()), detrendXYZ[0].getMaxY());
+				}
 				for (int i=0; i<numSims; i++) {
 					DiscretizedFunc simRD50 = simProv.getRotD50(site, rupture, i);
 					for (int p=0; p<periods.length; p++) {
 						double simVal = Math.log(simRD50.getY(periods[p]));
 						double residual = simVal - gmpeVals[p];
+						if (detrend)
+							residual -= detrendXYZ[p].bilinearInterpolation(detrendDist, detrendMag);
 						rupVars[i][p].increment(residual);
 						siteVars[p].increment(residual);
 						totalVars[p].increment(residual);
@@ -839,6 +914,29 @@ public class ResidualScatterPlot {
 		gp.getChartPanel().setSize(700, 550);
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
+		
+		if (detrend) {
+			double maxDetrend = 0d;
+			for (EvenlyDiscrXYZ_DataSet xyz : detrendXYZ)
+				maxDetrend = Math.max(maxDetrend, Math.max(Math.abs(xyz.getMinZ()), Math.abs(xyz.getMaxZ())));
+//			CPT detrendCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(-maxDetrend, maxDetrend);
+			CPT detrendCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-maxDetrend, maxDetrend);
+			for (int p=0; p<periods.length; p++) {
+				String periodStr;
+				if (periods[p] == Math.round(periods[p]))
+					periodStr = (int)periods[p]+"s";
+				else
+					periodStr = (float)periods[p]+"s";
+				String title = periodStr+" Mean Residuals";
+				String detrendPrefix = "detrend_residuals_"+periodStr;
+				XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendXYZ[p], detrendCPT, title, "Log10 Distance Rup", "Magnitude", "Mean Residual");
+				XYZGraphPanel xyzGP = new XYZGraphPanel(gp.getPlotPrefs());
+				xyzGP.drawPlot(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
+				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
+				xyzGP.getChartPanel().setSize(700, 550);
+				xyzGP.saveAsPNG(new File(outputDir, detrendPrefix+".png").getAbsolutePath());
+			}
+		}
 	}
 	
 	private static void addBoxAnns(List<XYAnnotation> anns, double value, Color color, String symbol, Font font, double x0, double width) {

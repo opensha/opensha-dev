@@ -40,6 +40,7 @@ public class BBP_Wrapper implements Runnable {
 	
 	private File bbpGFDir = null;
 	private File bbpDataDir = null;
+	private File bbpEnvFile = null;
 	
 	private int maxRetries = 5;
 	private boolean doHF = true;
@@ -147,6 +148,10 @@ public class BBP_Wrapper implements Runnable {
 		this.xmlFileName = xmlFileName;
 	}
 
+	public void setBBPEnvFile(File bbpEnvFile) {
+		this.bbpEnvFile = bbpEnvFile;
+	}
+
 	public void setBBPDataDir(File bbpDataDir) {
 		this.bbpDataDir = bbpDataDir;
 	}
@@ -162,7 +167,7 @@ public class BBP_Wrapper implements Runnable {
 			srcFile = writeSrcFileNewSeed(srcFile, seedOverride, outputDir);
 		
 		File bbpRunDir = doRun(outputDir, scriptFileName, xmlFileName, simID,
-				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doRotD100, doFAS, dataOnly, bbpDataDir, bbpGFDir);
+				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doRotD100, doFAS, dataOnly, bbpEnvFile, bbpDataDir, bbpGFDir);
 		if (bbpRunDir == null)
 			return false;
 		
@@ -184,8 +189,8 @@ public class BBP_Wrapper implements Runnable {
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
 			File srcFile, File srfFile, File siteFile, VelocityModel vm, Method method,
-			boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS, boolean dataOnly, File bbpDataDir, File bbpGFDir)
-					throws IOException {
+			boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS, boolean dataOnly,
+			File bbpEnvFile, File bbpDataDir, File bbpGFDir) throws IOException {
 		Preconditions.checkState(method == Method.GP, "Only GP supported currently");
 		List<BBP_Module> modules = new ArrayList<>();
 		if (srfFile == null)
@@ -197,7 +202,7 @@ public class BBP_Wrapper implements Runnable {
 		} else {
 			String preScriptName = "lf_only_"+scriptFileName;
 			String preXMLFileName = "lf_only_"+xmlFileName;
-			File dir = doRun(outputDir, preScriptName, preXMLFileName, simID, modules, siteFile, bbpDataDir, bbpGFDir);
+			File dir = doRun(outputDir, preScriptName, preXMLFileName, simID, modules, siteFile, bbpEnvFile, bbpDataDir, bbpGFDir);
 			if (dir == null)
 				return null;
 			File tempDir = new File(new File(dir.getParentFile().getParentFile(), "tmpdata"), dir.getName());
@@ -240,27 +245,32 @@ public class BBP_Wrapper implements Runnable {
 		if (!dataOnly)
 			modules.add(BBP_Module.buildGenHTML(vm, method, siteFile, srcFile));
 		
-		return doRun(outputDir, scriptFileName, xmlFileName, simID, modules, siteFile, bbpDataDir, bbpGFDir);
+		return doRun(outputDir, scriptFileName, xmlFileName, simID, modules, siteFile, bbpEnvFile, bbpDataDir, bbpGFDir);
 	}
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
-			List<BBP_Module> modules, File siteFile, File bbpDataDir, File bbpGFDir) throws IOException {
+			List<BBP_Module> modules, File siteFile, File bbpEnvFile, File bbpDataDir, File bbpGFDir) throws IOException {
 		File scriptFile = new File(outputDir, scriptFileName);
 		File xmlFile = new File(outputDir, xmlFileName);
 		writeBBP_XML_File(xmlFile, siteFile, modules);
-		writeBBP_Script(scriptFile, xmlFile, simID, bbpDataDir, bbpGFDir);
+		writeBBP_Script(scriptFile, xmlFile, simID, bbpEnvFile, bbpDataDir, bbpGFDir);
 		
 		System.out.println("Running BBP with simulation ID "+simID);
 		return runBBP_Script(scriptFile);
 	}
 	
-	private static void writeBBP_Script(File scriptFile, File xmlFile, long simID, File bbpDataDir, File bbpGFDir) throws IOException {
+	private static void writeBBP_Script(File scriptFile, File xmlFile, long simID,
+			File bbpEnvFile, File bbpDataDir, File bbpGFDir) throws IOException {
 		FileWriter fw = new FileWriter(scriptFile);
 		fw.write("#!/bin/bash"+"\n");
 		fw.write("\n");
-		fw.write("if [ -f ~/.bash_profile ]; then\n");
-		fw.write("    . ~/.bash_profile\n");
-		fw.write("fi\n");
+		if (bbpEnvFile != null) {
+			fw.write(". "+bbpEnvFile.getAbsolutePath()+"\n");
+		} else {
+			fw.write("if [ -f ~/.bash_profile ]; then\n");
+			fw.write("    . ~/.bash_profile\n");
+			fw.write("fi\n");
+		}
 		fw.write("\n");
 		if (bbpDataDir != null) {
 			fw.write("export BBP_DATA_DIR="+bbpDataDir+"\n");

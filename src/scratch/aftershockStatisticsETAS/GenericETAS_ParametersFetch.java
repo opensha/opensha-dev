@@ -1,8 +1,6 @@
 package scratch.aftershockStatisticsETAS;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Map;
@@ -11,20 +9,19 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
 import org.opensha.commons.data.siteData.SiteData;
 import org.opensha.commons.data.siteData.SiteDataValue;
-import org.opensha.commons.data.siteData.impl.GarciaRegionPerlWrapper;
 import org.opensha.commons.data.siteData.impl.STREC_DataWrapper;
 import org.opensha.commons.data.siteData.impl.TectonicRegime;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.util.ExceptionUtils;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Doubles;
 
 public class GenericETAS_ParametersFetch {
+	
+	private final static boolean D = false; //debug
 	
 	private OrderedSiteDataProviderList regimeProviders;
 	
@@ -35,25 +32,20 @@ public class GenericETAS_ParametersFetch {
 		providers.add(new STREC_DataWrapper());
 		regimeProviders = new OrderedSiteDataProviderList(providers);
 		
-		// from Morgan via e-mail 10/6/2015
 		dataMap = Maps.newHashMap();
+
+		URL paramsURL = GenericETAS_ParametersFetch.class.getResource("resources/vdEGenericETASParams_010418.csv"); //updated CALIFORNIA added Mref column
 		
-		// array contents: [ a, p, c ];
+		if(D) System.out.println(paramsURL);
 		
-		//double c = 0.042711;
-		
-//		URL paramsURL = GenericETAS_ParametersFetch.class.getResource("vdEGenericETASParams_070716.csv");
-		URL paramsURL = GenericETAS_ParametersFetch.class.getResource("vdEGenericETASParams_051117.csv");
-		System.out.println(paramsURL);
 		try {
 			CSVFile<String> csv = CSVFile.readURL(paramsURL, true);
-//			Preconditions.checkState(csv.getNumCols() == 9, "unexpected number of columns: %s", csv.getNumCols());
-			Preconditions.checkState(csv.getNumCols() == 14, "unexpected number of columns: %s", csv.getNumCols());
+			Preconditions.checkState(csv.getNumCols() == 15, "unexpected number of columns: %s", csv.getNumCols());
 			
 			for (int row=1; row<csv.getNumRows(); row++) {
 				String regimeName = csv.get(row, 0).trim();
 				TectonicRegime regime = TectonicRegime.forName(regimeName);
-				Preconditions.checkNotNull(regime, "Unknown regime: %s", regimeName);
+				
 				
 				// columns: regionName,aValue_MaxLike,pValue_MaxLike,aValue_Mean,aValue_Sigma,
 				//						aValue_Sigma1,aValue_Sigma0,bValue,cValue
@@ -71,14 +63,18 @@ public class GenericETAS_ParametersFetch {
 				int numSequences = Integer.parseInt(csv.get(row, 11));
 				double alpha = Double.parseDouble(csv.get(row, 12));
 				double bValue = Double.parseDouble(csv.get(row, 13));
-				
-				//force these values for now
-				double refMag = 4.5;
-				
+				double refMag = Double.parseDouble(csv.get(row, 14));
+
 				double cValue = Math.pow(10, log_cValue);
 				
+				double pValue_sigma = Math.sqrt(covpp*numSequences);	//this needs to be replaced with a real estimate
+				double logcValue_sigma = Math.sqrt(covcc*numSequences);		//this needs to be replaced with a real estimate
+				double bValue_sigma = 0.1;//this needs to be replaced with a real estimate
+				double maxMag = 9.5;//this needs to be replaced with a real estimate
+				
 				dataMap.put(regime, new GenericETAS_Parameters(
-						aValue_mean, aValue_sigma, pValue, cValue, covaa, covpp, covcc, covap, covac, covcp, numSequences, alpha,  bValue,  refMag));
+						aValue_mean, aValue_sigma, pValue, pValue_sigma, cValue, logcValue_sigma, covaa, covpp, covcc, covap, covac, covcp, numSequences, alpha,  bValue, bValue_sigma, refMag, maxMag));
+				
 			}
 		} catch (IOException e) {
 			ExceptionUtils.throwAsRuntimeException(e);
@@ -105,11 +101,16 @@ public class GenericETAS_ParametersFetch {
 	}
 	
 	public TectonicRegime getRegion(Location loc) {
-		ArrayList<SiteDataValue<?>> datas = regimeProviders.getBestAvailableData(loc);
-		if (datas.isEmpty())
-			return null;
-		
-		return (TectonicRegime)datas.get(0).getValue();
+		try {
+			ArrayList<SiteDataValue<?>> datas = regimeProviders.getBestAvailableData(loc);
+			if (datas.isEmpty())
+				return null;
+			return (TectonicRegime)datas.get(0).getValue();
+			
+		} catch (Exception e){
+			System.out.println("Couldn't retrieve tectonic regime for location " + loc + ". Using global average.");
+			return TectonicRegime.GLOBAL_AVERAGE;
+		}
 	}
 	
 	public static void main(String[] args) {

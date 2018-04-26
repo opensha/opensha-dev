@@ -40,21 +40,24 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(jacquiCSDir, "modLoad_testB");
 //		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
-		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
+//		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2585_1myrs");
+		File catalogDir = new File(myHPCDir, "rundir2667");
 		
 		boolean standardSites = false;
-		boolean csInitialLASites = true;
-		boolean griddedSites = false;
+		boolean csInitialLASites = false;
+		boolean griddedCASites = false;
+		boolean griddedSoCalSites = true;
 		double griddedSpacing = 1d;
 		
-		double minMag = 6.5;
+		double minMag = 6;
+//		double minMag = 6.5;
 //		double minMag = 7;
 		int numRG = 0;
 //		double minMag = 7;
 //		int numRG = 20;
 		
-		int skipYears = 5000;
+		int skipYears = 1000;
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
@@ -65,7 +68,8 @@ class MPJ_BBP_CatalogSimScriptGen {
 		int heapSizeMB = 45*1024;
 		String bbpDataDir = "${TMPDIR}";
 		String nodeScratchDir = null;
-		String gfCopyParentDir = "/staging/pjm/kmilner";
+		String bbpCopyParentDir = "/staging/pjm/kmilner";
+		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
 		String sharedScratchDir = "${SCRATCHDIR}";
 		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
 		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
@@ -103,9 +107,10 @@ class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-standardSites";
 		if (csInitialLASites)
 			jobName += "-csLASites";
-		if (griddedSites)
+		if (griddedCASites || griddedSoCalSites)
 			jobName += "-griddedSites";
-		Preconditions.checkState(standardSites || griddedSites || csInitialLASites);
+		Preconditions.checkArgument(!(griddedSoCalSites && griddedCASites));
+		Preconditions.checkState(standardSites || griddedCASites || griddedSoCalSites || csInitialLASites);
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -118,8 +123,10 @@ class MPJ_BBP_CatalogSimScriptGen {
 			sites.addAll(RSQSimBBP_Config.getStandardSites());
 		if (csInitialLASites)
 			sites.addAll(RSQSimBBP_Config.getCyberShakeInitialLASites());
-		if (griddedSites)
+		if (griddedCASites)
 			sites.addAll(RSQSimBBP_Config.getCAGriddedSites(griddedSpacing));
+		if (griddedSoCalSites)
+			sites.addAll(RSQSimBBP_Config.getSoCalGriddedSites(griddedSpacing));
 		File sitesFile = new File(localJobDir, "sites.stl");
 		System.out.println("Writing "+sites.size()+" sites to "+sitesFile.getAbsolutePath());
 		BBP_Site.writeToFile(sitesFile, sites);
@@ -142,29 +149,61 @@ class MPJ_BBP_CatalogSimScriptGen {
 			argz += " --node-scratch-dir "+nodeScratchDir;
 		if (sharedScratchDir != null && !sharedScratchDir.isEmpty())
 			argz += " --shared-scratch-dir "+sharedScratchDir;
+		boolean copy = bbpCopyParentDir != null && !bbpCopyParentDir.isEmpty();
+		boolean customEnv = bbpEnvFile != null;
+		List<String> addLines = new ArrayList<>();
 		String gfDir = null;
-		if (gfCopyParentDir != null && !gfCopyParentDir.isEmpty()) {
-			gfDir = gfCopyParentDir;
+		if (copy) {
+			gfDir = bbpCopyParentDir;
 			if (!gfDir.endsWith("/"))
 				gfDir += "/";
 			gfDir += "bbp_gf";
-			argz += " --bbp-gf-dir "+gfDir;
-		}
-		
-		List<String> script = mpjWrite.buildScript(MPJ_BBP_CatalogSim.class.getName(), argz);
-		
-		if (gfCopyParentDir != null && !gfCopyParentDir.isEmpty()) {
-			List<String> addLines = new ArrayList<>();
-			addLines.add("echo \"rsyncing $BBP_GF_DIR to "+gfCopyParentDir+"\"");
-			addLines.add("rsync -a --quiet $BBP_GF_DIR "+gfCopyParentDir);
+			
+			if (customEnv) {
+				addLines.add("# source BBP env file");
+				addLines.add(". "+bbpEnvFile.getAbsolutePath());
+				addLines.add("");
+			}
+			addLines.add("echo \"rsyncing $BBP_GF_DIR to "+bbpCopyParentDir+"\"");
+			addLines.add("rsync -a --quiet $BBP_GF_DIR "+bbpCopyParentDir);
 			addLines.add("echo \"done rsyncing BBP_GF_DIR\"");
 			addLines.add("if [ ! -e "+gfDir+" ];then");
 			addLines.add("    echo \""+gfDir+" doesn't exist, rsync failed?\"");
 			addLines.add("    exit 2");
 			addLines.add("fi");
 			addLines.add("");
-			script.addAll(2, addLines);
+			if (customEnv) {
+				// we can copy the bbp dir as well
+				String bbpDir = bbpCopyParentDir;
+				if (!bbpDir.endsWith("/"))
+					bbpDir += "/";
+				bbpDir += "bbp";
+				addLines.add("echo \"rsyncing $BBP_DIR to "+bbpCopyParentDir+"\"");
+				addLines.add("rsync -a --quiet $BBP_DIR "+bbpCopyParentDir);
+				addLines.add("echo \"done rsyncing BBP_DIR\"");
+				addLines.add("if [ ! -e "+bbpDir+" ];then");
+				addLines.add("    echo \""+bbpDir+" doesn't exist, rsync failed?\"");
+				addLines.add("    exit 2");
+				addLines.add("fi");
+				addLines.add("");
+				File newEnv = new File(remoteJobDir, "bbp_env.sh");
+				addLines.add("echo \"writing new env file: "+newEnv.getAbsolutePath()+"\"");
+				addLines.add("cat "+bbpEnvFile.getAbsolutePath()+" > "+newEnv.getAbsolutePath());
+				addLines.add("echo \"export BBP_DIR="+bbpDir+"\" >> "+newEnv.getAbsolutePath());
+				addLines.add("echo \"export BBP_GF_DIR="+gfDir+"\" >> "+newEnv.getAbsolutePath());
+				addLines.add("");
+				bbpEnvFile = newEnv;
+			}
 		}
+		if (customEnv)
+			argz += " --bbp-env "+bbpEnvFile.getAbsolutePath();
+		if (copy && !customEnv)
+			argz += " --bbp-gf-dir "+gfDir;
+		
+		List<String> script = mpjWrite.buildScript(MPJ_BBP_CatalogSim.class.getName(), argz);
+		
+		if (!addLines.isEmpty())
+			script.addAll(2, addLines);
 		
 		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
 		pbsWrite.writeScript(new File(localJobDir, "cat_bbp_parallel.pbs"), script);

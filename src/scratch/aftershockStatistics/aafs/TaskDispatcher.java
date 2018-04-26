@@ -3,9 +3,9 @@ package scratch.aftershockStatistics.aafs;
 import scratch.aftershockStatistics.aafs.entity.PendingTask;
 import scratch.aftershockStatistics.aafs.entity.LogEntry;
 
-import scratch.aftershockStatistics.MarshalImpArray;
-import scratch.aftershockStatistics.MarshalReader;
-import scratch.aftershockStatistics.MarshalWriter;
+import scratch.aftershockStatistics.util.MarshalImpArray;
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalWriter;
 
 /**
  * Task dispatcher for AAFS server.

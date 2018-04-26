@@ -37,6 +37,9 @@ import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
+import static org.opensha.commons.geo.GeoTools.TO_DEG;
+import static org.opensha.commons.geo.GeoTools.TO_RAD;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -1187,6 +1190,7 @@ public class AftershockStatsCalc {
 
 	
 
+	// [DEPRECATED]
     public static Location getCentroid(ObsEqkRupture mainshock, List<ObsEqkRupture> aftershocks) {
 		// now works across prime meridian
 		List<Location> locs = Lists.newArrayList(mainshock.getHypocenterLocation());
@@ -1212,6 +1216,63 @@ public class AftershockStatsCalc {
 		Location centroid = new Location(lat, lon);
 		double dist = LocationUtils.horzDistanceFast(mainshock.getHypocenterLocation(), centroid);
 		System.out.println("Centroid: "+(float)lat+", "+(float)lon+" ("+(float)dist+" km from epicenter)");
+		return centroid;
+	}
+
+
+	
+
+	// Calculate the centroid of an aftershock sequence, using spherical geometry.
+
+    public static Location getSphCentroid(ObsEqkRupture mainshock, List<ObsEqkRupture> aftershocks) {
+		
+		// Convert spherical to rectangular coordinates, and sum the unit vectors
+
+		double x = 0.0;
+		double y = 0.0;
+		double z = 0.0;
+
+		double lat;
+		double lon;
+
+		for (ObsEqkRupture aftershock : aftershocks) {
+			lat = aftershock.getHypocenterLocation().getLatRad();
+			lon = aftershock.getHypocenterLocation().getLonRad();
+
+			x += (Math.cos(lat) * Math.cos(lon));
+			y += (Math.cos(lat) * Math.sin(lon));
+			z += Math.sin(lat);
+		}
+
+		// If the resulting vector is very small, just return the mainshock location
+
+		if (x*x + y*y + z*z < 1.0e-4) {
+			lat = mainshock.getHypocenterLocation().getLatitude();
+			lon = mainshock.getHypocenterLocation().getLongitude();
+			if (lon > 180.0) {
+				lon -= 360.0;
+			}
+		}
+
+		// Otherwise, convert rectangular to spherical coordinates
+
+		else {
+			lat = Math.atan2 (z, Math.hypot(x, y)) * TO_DEG;
+			lon = Math.atan2 (y, x) * TO_DEG;
+		}
+
+		// Make sure the angles are in range, since they were converted from radians
+
+		if (lat > 90.0) {lat = 90.0;}
+		if (lat < -90.0) {lat = -90.0;}
+		if (lon > 180.0) {lon = 180.0;}
+		if (lon < -180.0) {lon = -180.0;}
+
+		// Centroid
+
+		Location centroid = new Location (lat, lon);
+		double dist = LocationUtils.horzDistance (mainshock.getHypocenterLocation(), centroid);
+		System.out.println (String.format ("Centroid: %.5f, %.5f (%.3f km from epicenter)", lat, lon, dist));
 		return centroid;
 	}
 

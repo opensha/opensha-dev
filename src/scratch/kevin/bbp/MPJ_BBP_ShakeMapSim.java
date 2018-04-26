@@ -40,6 +40,7 @@ public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 	
 	private List<BBP_Site> sites;
 
+	private File bbpEnvFile = null;
 	private File bbpDataDir = null;
 	private File bbpGFDir = null;
 	
@@ -77,6 +78,14 @@ public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 				bbpDataDir.mkdir();
 			if (rank == 0)
 				debug("BBP data dir: "+bbpDataDir.getAbsolutePath());
+		}
+		
+		if (cmd.hasOption("bbp-env")) {
+			bbpEnvFile = new File(cmd.getOptionValue("bbp-env"));
+			if (rank == 0) {
+				debug("BBP env file: "+bbpEnvFile.getAbsolutePath());
+				Preconditions.checkState(bbpEnvFile.exists(), "Env file doesn't exist: %s", bbpEnvFile.getAbsolutePath());
+			}
 		}
 		
 		if (cmd.hasOption("bbp-gf-dir")) {
@@ -236,6 +245,7 @@ public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 				wrapper.setDoFAS(false);
 				wrapper.setDoRotD100(true);
 				wrapper.setDoRotD50(false);
+				wrapper.setBBPEnvFile(bbpEnvFile);
 				wrapper.setBBPDataDir(bbpDataDir);
 				wrapper.setBBPGFDir(bbpGFDir);
 				wrapper.run();

@@ -37,6 +37,7 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 	private List<BBP_Site> sites;
 	private List<File> individualSiteFiles;
 
+	private File bbpEnvFile = null;
 	private File bbpDataDir = null;
 	private File bbpGFDir = null;
 	
@@ -63,6 +64,15 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 		numSims = Integer.parseInt(cmd.getOptionValue("num-sims"));
 		int numSeeds = numSims;
 		doHF = !cmd.hasOption("no-hf");
+		
+		if (cmd.hasOption("bbp-env")) {
+			bbpEnvFile = new File(cmd.getOptionValue("bbp-env"));
+			if (rank == 0) {
+				debug("BBP env file: "+bbpEnvFile.getAbsolutePath());
+				Preconditions.checkState(bbpEnvFile.exists(), "Env file doesn't exist: %s", bbpEnvFile.getAbsolutePath());
+			}
+		}
+		
 		if (cmd.hasOption("bbp-data-dir")) {
 			bbpDataDir = new File(cmd.getOptionValue("bbp-data-dir"));
 			if (!bbpDataDir.exists())
@@ -224,6 +234,7 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 				// run BBP
 				debug("running BBP for "+index);
 				wrapper.setDoHF(doHF);
+				wrapper.setBBPEnvFile(bbpEnvFile);
 				wrapper.setBBPDataDir(bbpDataDir);
 				wrapper.setBBPGFDir(bbpGFDir);
 				wrapper.run();

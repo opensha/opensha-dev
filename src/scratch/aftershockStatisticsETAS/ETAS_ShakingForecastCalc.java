@@ -9,111 +9,105 @@ import java.util.Map;
 
 import javax.swing.JFrame;
 
+import org.jfree.data.Range;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.siteData.SiteData;
-import org.opensha.commons.data.siteData.SiteDataValue;
-import org.opensha.commons.data.siteData.SiteDataValueList;
 import org.opensha.commons.data.siteData.impl.WaldAllenGlobalVs30;
 import org.opensha.commons.data.xyz.ArbDiscrGeoDataSet;
 import org.opensha.commons.data.xyz.GeoDataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
-import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.nshmp2.erf.source.PointSource13b;
 import org.opensha.nshmp2.util.FocalMech;
-import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.calc.Wald_MMI_Calc;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
-import org.opensha.sha.util.SiteTranslator;
 
 import com.google.common.base.Preconditions;
+
+import scratch.aftershockStatisticsETAS.griddedInterpGMPE.DistanceInterpolator;
+import scratch.aftershockStatisticsETAS.griddedInterpGMPE.DoubleParameterInterpolator;
+import scratch.aftershockStatisticsETAS.griddedInterpGMPE.GriddedInterpGMPE_Calc;
 
 public class ETAS_ShakingForecastCalc {
 	
 	private static double magDelta = 0.1;
 	private static double[] depths = { 7, 2 }; // depth of <6.5 and >=6.5, respectively
 	
-	public static DiscretizedFunc[] calcForecast(GeoDataSet rateModel, double refMag, double maxMag, double b, ScalarIMR gmpe,
-			Map<FocalMech, Double> mechWts, double durationYears, SiteData<Double> vs30Provider) {
-		// uniform focal mechanism distribution
-		List<Map<FocalMech, Double>> mechWtsList = new ArrayList<>();
-		mechWtsList.add(mechWts);
-		return calcForecast(rateModel, refMag, maxMag, b, gmpe, mechWtsList, durationYears, vs30Provider);
-	}
-	
-	public static DiscretizedFunc[] calcForecast(GeoDataSet rateModel, double refMag, double maxMag, double b, ScalarIMR gmpe,
-			List<Map<FocalMech, Double>> mechWts, double durationYears, SiteData<Double> vs30Provider) {
-		Preconditions.checkArgument(mechWts.size() == 1 || mechWts.size() == rateModel.size(),
-				"Must either have a single forcal mechanism weight set, or one for each node. Expected %s (or 1), got %s",
-				rateModel.size(), mechWts.size());
-		
+	/**
+	 * 
+	 * @param calcRegion gridded region for which the the hazard curves will be calculated (one at every grid node)
+	 * @param rateModel rate of M>=refMag for the input region
+	 * @param refMag reference magnitude for the rate model
+	 * @param maxMag Mmax at each grid node
+	 * @param b G-R b-balue at each grid node
+	 * @param gmpe GMPE, should be initialized by calling setParamDefaults() and have site data set to desired default values
+	 * @param mechWts focal mechanism distribution at each grid node
+	 * @param durationYears reference duration for the rate model, which is also the forecast duration
+	 * @param maxSourceDist maximum source distance to consider in km. must be finite, as interpolater uses this. typical value is 200 km
+	 * @param vs30Provider source of Vs30 data, or null for constant Vs30 (in which case it will use the Vs30 value set in the GMPE)
+	 * @return array of hazard curves where the ith element of the array is the curve for the ith node in calcRegion
+	 * @throws IOException
+	 */
+	public static DiscretizedFunc[] calcForecast(GriddedRegion calcRegion, GeoDataSet rateModel, double refMag, double maxMag, double b, ScalarIMR gmpe,
+			Map<FocalMech, Double> mechWts, double durationYears, double maxSourceDist, SiteData<Double> vs30Provider) throws IOException {
 		GriddedForecast erf = new GriddedForecast(rateModel, refMag, maxMag, b, mechWts, depths, durationYears);
 		erf.updateForecast();
 		
-		DiscretizedFunc[] curves = new DiscretizedFunc[rateModel.size()];
-		
-		HazardCurveCalculator calc = new HazardCurveCalculator();
 		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(gmpe.getIntensityMeasure());
 		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
 		for (Point2D pt : xVals)
 			logXVals.set(Math.log(pt.getX()), 1);
 		
-		SiteDataValueList<Double> vs30Vals = null;
-		SiteTranslator siteTrans = null;
-		if (vs30Provider != null) {
-			siteTrans = new SiteTranslator();
-			try {
-				vs30Vals = vs30Provider.getAnnotatedValues(rateModel.getLocationList());
-			} catch (IOException e) {
-				ExceptionUtils.throwAsRuntimeException(e);
-			}
+		int numMag = (int)((maxMag - refMag)/magDelta + 0.5) + 1;
+		
+		DistanceInterpolator distInterp = new DistanceInterpolator(0d, maxSourceDist, 100);
+		
+		DoubleParameterInterpolator vs30Interp = null;
+		if (vs30Provider != null)
+			vs30Interp = new DoubleParameterInterpolator(
+				Vs30_Param.NAME, 180, 760, 20, false, false); // matches Wald Allen range
+		
+		GriddedInterpGMPE_Calc calc = new GriddedInterpGMPE_Calc(gmpe, xVals, b, refMag, maxMag, numMag, distInterp, vs30Interp);
+		
+		// this precalculates to set up the interpolators
+		calc.precalc(durationYears, depths, mechWts);
+		
+		// build sites list
+		List<Site> sites = new ArrayList<>();
+		List<Double> vs30s = null;
+		if (vs30Provider != null)
+			vs30s = vs30Provider.getValues(calcRegion.getNodeList());
+		for (int i=0; i<calcRegion.getNodeCount(); i++) {
+			Site site = new Site(calcRegion.locationForIndex(i));
+			for (Parameter<?> param : gmpe.getSiteParams())
+				site.addParameter((Parameter<?>) param.clone());
+			if (vs30s != null)
+				site.getParameter(Double.class, Vs30_Param.NAME).setValue(vs30s.get(i));
+			sites.add(site);
 		}
 		
-		for (int i=0; i<rateModel.size(); i++) {
-			if (i % 100 == 0)
-				System.out.println("Calculating curve for site "+i+"/"+rateModel.size());
-			
-			Location loc = rateModel.getLocation(i);
-			
-			Site site = new Site(loc);
-			if (vs30Vals != null) {
-				// default site params from GMPE
-				for (Parameter<?> param : gmpe.getSiteParams())
-					site.addParameter((Parameter<?>)param.clone());
-				// set Vs30
-				SiteDataValue<Double> vs30 = vs30Vals.getValue(i);
-				if (vs30Provider.isValueValid(vs30.getValue())) {
-					for (Parameter<?> param : site)
-						siteTrans.setParameterValue(param, vs30);
-				}
-			} else {
-				// default site params from GMPE
-				site.addParameterList(gmpe.getSiteParams());
-			}
-			
-			DiscretizedFunc logCurve = logXVals.deepClone();
-			calc.getHazardCurve(logCurve, site, gmpe, erf);
-			
-			// convert back to linear
-			curves[i] = new ArbitrarilyDiscretizedFunc();
-			for (int j=0; j<xVals.size(); j++)
-				curves[i].set(xVals.getX(j), logCurve.getY(j));
-		}
+		// do interpolated calculation
+		DiscretizedFunc[] curves = calc.calc(rateModel, sites);
 		
 		return curves;
 	}
@@ -131,6 +125,17 @@ public class ETAS_ShakingForecastCalc {
 		private int mfdNum;
 		
 		private List<ProbEqkSource> sources;
+		
+		private static <E> List<E> wrapInList(E val) {
+			List<E> list = new ArrayList<>();
+			list.add(val);
+			return list;
+		}
+
+		public GriddedForecast(GeoDataSet rateModel, double refMag, double maxMag, double b,
+				Map<FocalMech, Double> mechWts, double[] depths, double durationYears) {
+			this(rateModel, refMag, maxMag, b, wrapInList(mechWts), depths, durationYears);
+		}
 
 		public GriddedForecast(GeoDataSet rateModel, double refMag, double maxMag, double b,
 				List<Map<FocalMech, Double>> mechWts, double[] depths, double durationYears) {
@@ -222,13 +227,24 @@ public class ETAS_ShakingForecastCalc {
 		double maxMag = 8.5d;
 		double b = 1;
 		
-		ScalarIMR gmpe = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null);
 		gmpe.setParamDefaults();
+		// for PGA
 		gmpe.setIntensityMeasure(PGA_Param.NAME);
+		// for SA
+//		gmpe.setIntensityMeasure(SA_Param.NAME);
+//		SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), 1d);
+		// for PGV
+//		gmpe.setIntensityMeasure(PGV_Param.NAME);
 		System.out.println(gmpe.getIntensityMeasure().getName());
 		
+		// Vs30 provider, or null for no Vs30
+//		WaldAllenGlobalVs30 vs30Provider = null;
 		WaldAllenGlobalVs30 vs30Provider = new WaldAllenGlobalVs30();
+		// active tectonic coefficients
 		vs30Provider.setActiveCoefficients();
+		// stable coefficients
+//		vs30Provider.setStableCoefficients();
 		
 		double durationYears = 30d/365d;
 		
@@ -237,21 +253,36 @@ public class ETAS_ShakingForecastCalc {
 		mechWts.put(FocalMech.NORMAL, 0.25);
 		mechWts.put(FocalMech.REVERSE, 0.25);
 		
-		DiscretizedFunc[] curves = calcForecast(rateModel, refMag, maxMag, b, gmpe, mechWts, durationYears, vs30Provider);
+		// use the rate map region/spacing
+		double calcSpacing = 0.01;
+		GriddedRegion calcRegion = new GriddedRegion(new Region(new Location(rateModel.getMaxLat(), rateModel.getMaxLon()),
+				new Location(rateModel.getMinLat(), rateModel.getMinLon())), calcSpacing, null);
 		
-		GeoDataSet map = extractMap(rateModel.getLocationList(), curves, false, 0.5); // IML with 50% prob
+		double maxSourceDist = 200d;
+		
+		DiscretizedFunc[] curves = calcForecast(calcRegion, rateModel, refMag, maxMag, b, gmpe, mechWts,
+				durationYears, maxSourceDist, vs30Provider);
+		
+		GeoDataSet map = extractMap(calcRegion.getNodeList(), curves, false, 0.1); // IML with 10% prob
 		
 		XYZGraphPanel xyzGP = new XYZGraphPanel();
 		
-		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, 1d);
+		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, map.getMaxZ());
 		
 		XYZPlotSpec spec = new XYZPlotSpec(map, cpt, "Spatial Forecast", "Longitude", "Latitude", gmpe.getIntensityMeasure().getName());
 		
-		xyzGP.drawPlot(spec, false, false, null, null);
+		Range xRange = new Range(calcRegion.getMinGridLon()-0.5*calcRegion.getLonSpacing(),
+				calcRegion.getMaxGridLon()+0.5*calcRegion.getLonSpacing());
+		Range yRange = new Range(calcRegion.getMinGridLat()-0.5*calcRegion.getLatSpacing(),
+				calcRegion.getMaxGridLat()+0.5*calcRegion.getLatSpacing());
+		
+		xyzGP.drawPlot(spec, false, false, xRange, yRange);
 		
 		JFrame frame = new JFrame("");
 		frame.setContentPane(xyzGP);
+		frame.pack();
 		frame.setVisible(true);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
 
 }

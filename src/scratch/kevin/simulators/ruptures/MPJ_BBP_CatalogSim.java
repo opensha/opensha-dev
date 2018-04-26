@@ -64,8 +64,11 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 	private File resultsScratchDir;
 	private boolean doHF = true;
 	private boolean keepSRFs = false;
+	
+	private File bbpEnvFile = null;
 	private File bbpDataDir = null;
 	private File bbpGFDir = null;
+	
 	private int bundleSize;
 	private int numRG = 0;
 	
@@ -125,6 +128,14 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 			} catch (FileNotFoundException e) {}
 		}
 		doHF = !cmd.hasOption("no-hf");
+		
+		if (cmd.hasOption("bbp-env")) {
+			bbpEnvFile = new File(cmd.getOptionValue("bbp-env"));
+			if (rank == 0) {
+				debug("BBP env file: "+bbpEnvFile.getAbsolutePath());
+				Preconditions.checkState(bbpEnvFile.exists(), "Env file doesn't exist: %s", bbpEnvFile.getAbsolutePath());
+			}
+		}
 		
 		if (cmd.hasOption("bbp-data-dir")) {
 			bbpDataDir = new File(cmd.getOptionValue("bbp-data-dir"));
@@ -373,9 +384,11 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				wrapper.setDoFAS(false);
 				wrapper.setDoRotD100(true);
 				wrapper.setDoRotD50(false);
+				wrapper.setBBPEnvFile(bbpEnvFile);
 				wrapper.setBBPDataDir(bbpDataDir);
 				wrapper.setBBPGFDir(bbpGFDir);
 				wrapper.run();
+				debug("DONE running BBP for "+eventID);
 				
 				if (!keepSRFs)
 					srfFile.delete();
@@ -392,7 +405,9 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 						wrapper.setDoFAS(false);
 						wrapper.setDoRotD100(true);
 						wrapper.setDoRotD50(false);
+						wrapper.setBBPEnvFile(bbpEnvFile);
 						wrapper.setBBPDataDir(bbpDataDir);
+						wrapper.setBBPGFDir(bbpGFDir);
 						wrapper.run();
 					}
 				}
@@ -400,6 +415,7 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				// zip it
 				FileUtils.createZipFile(zipFile, runDir, true);
 				FileUtils.deleteRecursive(runDir);
+				debug("DONE cleanup for "+eventID);
 			} catch (IOException e) {
 				ExceptionUtils.throwAsRuntimeException(e);
 			}
