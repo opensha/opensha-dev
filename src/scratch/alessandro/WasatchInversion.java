@@ -24,7 +24,7 @@ import com.google.common.io.Files;
  */
 public class WasatchInversion {
 
-	final static boolean D = false;	// debugging flag
+	final static boolean D = true;	// debugging flag
 	
 	public final static String ROOT_PATH = "src/scratch/alessandro/";
 	final static String ROOT_DATA_DIR = "src/scratch/alessandro/data/"; // where to find the data
@@ -315,28 +315,27 @@ public class WasatchInversion {
 	    file.mkdirs();
 	    
 	    // write the setup info to a file
-	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
+//	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
 		
 		// Non-negative least squares
-//		fltSysRupInversion.doInversionNNLS();
+		fltSysRupInversion.doInversionNNLS();
 		
 		// Simulated annealing
 		long numIterations = (long) 1e5;
 		boolean initStateFromAprioriRupRates = false;
-		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
+//		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
 				
 		// write results to file
-		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
+//		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
 		
 		// Now make plots if desired
 		boolean popUpPlots = true;	// this tells whether to show plots in a window (turn off for HPC)
 //		dirName = null;	// set as null if you don't want to save to file
-		fltSysRupInversion.writeAndOrPlotDataFits(null, popUpPlots);
-		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
-		// these two can only be saved if they are also popped up (can't save on HPC)
+//		fltSysRupInversion.writeAndOrPlotDataFits(null, popUpPlots);
+//		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 	    fltSysRupInversion.writeAndOrPlotSegPartMFDs(dirName, popUpPlots);
 		

@@ -79,7 +79,7 @@ import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
  */
 public class FaultSystemRuptureRateInversion {
 	
-	final static boolean D = false;	// debugging flag
+	final static boolean D = true;	// debugging flag
 
 	public final static double GAUSS_MFD_SIGMA = 0.12;
 	public final static double GAUSS_MFD_TRUNCATION = 2;
@@ -177,15 +177,12 @@ public class FaultSystemRuptureRateInversion {
 	
 
 	/**
-	 * This writes the segPartMFDs to a file and, optionally, makes a plot of the
-	 * result.  Note that the plots can only be saved if they are also popped up
-	 * (doon't use with HPC), but the txt file can still be saved.
+	 * This writes the segPartMFDs to a file and/or makes a plot of the
+	 * results. 
 	 * @param dirName - set as null if no files are to be saved
-	 * @param gmt_plot - this tells whether to make a pop-up plot and save it
-	 * @param dirName
-	 * @param gmt_plot
+	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
 	 */
-	public void writeAndOrPlotSegPartMFDs(String dirName, boolean makePlot) {
+	public void writeAndOrPlotSegPartMFDs(String dirName, boolean popUpWindow) {
 		
 		// this writes out 
 		try{
@@ -230,17 +227,8 @@ public class FaultSystemRuptureRateInversion {
 			fw.close();
 			cfw.close();
 			
-			if(makePlot) {
-				XYZGraphPanel panel = make2D_plot(xyzDataSectPart, "Incr. Participation", "Section", "Magnitude", "Rate");
-				XYZGraphPanel panelCum = make2D_plot(xyzDataSectPartCum, "Cum. Participation", "Section", "Magnitude", "CumRate");		
-				if(dirName != null) {
-					panel.saveAsPDF(fileName+".pdf");
-					panel.saveAsPNG(fileName+".png");
-					panelCum.saveAsPDF(fileNameCum+".pdf");
-					panelCum.saveAsPNG(fileNameCum+".png");
-				}
-
-			}
+			make2D_plot(xyzDataSectPart, "Incr. Participation", "Section", "Magnitude", "Rate", fileName, popUpWindow);
+			make2D_plot(xyzDataSectPartCum, "Cum. Participation", "Section", "Magnitude", "CumRate", fileNameCum, popUpWindow);		
 
 		}catch(Exception e) {
 			e.printStackTrace();
@@ -253,13 +241,12 @@ public class FaultSystemRuptureRateInversion {
 	
 	
 	/**
-	 * This writes and optionally plots the rates and slip-rate contribution of each rupture that has a 
-	 * final rate above the minimum.  Note that the plots can only be saved if they are also popped up
-	 * (doon't use for HPC), but the txt file can still be saved.
+	 * This writes and/or plots the rates and slip-rate contribution of each rupture that has a 
+	 * final rate above the minimum.  
 	 * @param dirName - set as null if no files are to be saved
-	 * @param gmt_plot - this tells whether to make a pop-up plot and save it
+	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
 	 */
-	public void writeAndOrPlotNonZeroRateRups(String dirName, boolean makePlot) {
+	public void writeAndOrPlotNonZeroRateRups(String dirName, boolean popUpWindow) {
 		
 		// get number of ruptures above minRupRate
 		int numAboveMinRate = 0;
@@ -307,17 +294,9 @@ public class FaultSystemRuptureRateInversion {
 
 			fw.close();
 			fw2.close();
+			make2D_plot(xyzDataRupSlipRate, "Slip Rate from Ruptures", "Section", "Rupture", "Log10 Slip Rate", fileName_sr, popUpWindow);
+			make2D_plot(xyzDataRupRate, "Rate of Ruptures", "Section", "Rupture", "Log10 Rate", fileName_rr, popUpWindow);
 
-			if(makePlot) {
-				XYZGraphPanel panel_sr = make2D_plot(xyzDataRupSlipRate, "Slip Rate from Ruptures", "Section", "Rupture", "Log10 Slip Rate");
-				XYZGraphPanel panel_rr = make2D_plot(xyzDataRupRate, "Rate of Ruptures", "Section", "Rupture", "Log10 Rate");	
-				if(dirName != null) {
-					panel_sr.saveAsPDF(fileName_sr+".pdf");
-					panel_sr.saveAsPNG(fileName_sr+".png");
-					panel_rr.saveAsPDF(fileName_rr+".pdf");
-					panel_rr.saveAsPNG(fileName_rr+".png");
-				}
-			}
 
 		}catch(Exception e) {
 			e.printStackTrace();
@@ -1181,7 +1160,7 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 	}
 	
 	/**
-	 * 
+	 * This writes and/or plot various data fits.
 	 * @param dirName - set as null if you don't want to save results
 	 * @param popupWindow - set as true if you want plot windows to pop up
 	 */
@@ -1475,8 +1454,8 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 	 * @param yAxisRange
 	 * @param logX
 	 * @param logY
-	 * @param fileNamePrefix
-	 * @param popupWindow
+	 * @param fileNamePrefix - set a null if you don't want to save to files
+	 * @param popupWindow - set as false if you don't want a pop-up windows with the plots
 	 */
 	protected void writeAndOrPlotFuncs(
 			ArrayList<XY_DataSet> funcs, 
@@ -1760,17 +1739,47 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 		
 	}
 	
-	protected static XYZGraphPanel make2D_plot(EvenlyDiscrXYZ_DataSet xyzData, String title,
-			String xAxisLabel, String yAxisLabel, String zAxisLabel) {
+	/**
+	 * This is the general 2D plotting method.
+	 * @param xyzData
+	 * @param title
+	 * @param xAxisLabel
+	 * @param yAxisLabel
+	 * @param zAxisLabel
+	 * @param fileNamePrefix - set as null if no files are to be saved
+	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
+
+	 */
+	protected static void make2D_plot(EvenlyDiscrXYZ_DataSet xyzData, String title,
+			String xAxisLabel, String yAxisLabel, String zAxisLabel, String fileNamePrefix, boolean popupWindow) {
 		CPT cpt=null;
 		try {
 			cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(xyzData.getMinZ(), xyzData.getMaxZ());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
 		XYZPlotSpec spec = new XYZPlotSpec(xyzData, cpt, title, xAxisLabel, yAxisLabel, zAxisLabel);
-		XYZPlotWindow window = new XYZPlotWindow(spec, new Range(xyzData.getMinX(),xyzData.getMaxX()), new Range(xyzData.getMinY(),xyzData.getMaxY()));
-		return window.getXYZPanel();
+		
+		try {
+			if(popupWindow) {
+				XYZPlotWindow window = new XYZPlotWindow(spec, new Range(xyzData.getMinX(),xyzData.getMaxX()), new Range(xyzData.getMinY(),xyzData.getMaxY()));
+				XYZGraphPanel panel = window.getXYZPanel();
+				if(fileNamePrefix != null) {
+					panel.saveAsPDF(fileNamePrefix+".pdf");
+					panel.saveAsPNG(fileNamePrefix+".png");
+				}
+			}
+			else if (fileNamePrefix != null) {
+				XYZGraphPanel xyzGP = new XYZGraphPanel();
+				xyzGP.drawPlot(spec, false, false, new Range(xyzData.getMinX(),xyzData.getMaxX()), new Range(xyzData.getMinY(),xyzData.getMaxY()));
+				xyzGP.getChartPanel().setSize(700, 800);
+				xyzGP.saveAsPNG(fileNamePrefix+".png");
+				xyzGP.saveAsPDF(fileNamePrefix+".pdf");
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 
