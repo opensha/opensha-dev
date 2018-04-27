@@ -24,7 +24,7 @@ import com.google.common.io.Files;
  */
 public class WasatchInversion {
 
-	final static boolean D = false;	// debugging flag
+	final static boolean D = true;	// debugging flag
 	
 	public final static String ROOT_PATH = "src/scratch/alessandro/";
 	final static String ROOT_DATA_DIR = "src/scratch/alessandro/data/"; // where to find the data
@@ -97,6 +97,7 @@ public class WasatchInversion {
 				double stdDev = Double.valueOf(split[2]);
 				double upp95 = Double.valueOf(split[3]);
 				double low95 = Double.valueOf(split[4]);
+				stdDev = (upp95-low95)/4.0;  // temporary fix until the stdDev values are fixed
 				SegRateConstraint sectionRateConstraint = new SegRateConstraint("Section "+split[0]); // Names are not unique!
 				sectionRateConstraint.setSegRate(sectIndex, meanRate, stdDev, low95, upp95);
 				sectionRateConstraints.add(sectionRateConstraint);
@@ -241,21 +242,23 @@ public class WasatchInversion {
 		int[][] rupSectionMatrix = wasatchInversion.getRupSectionMatrix();
 
 		//Write section data (e.g., so it can be checked)
-		String str = "sectID\tslipRate\tslipRateStd\tlength\tdip\trake\tupDepth\tlowDepth\tDDW+\n";
-		for(int s=0;s<fltSectDataList.size();s++) {
-			FaultSectionPrefData fltSectData = fltSectDataList.get(s);
-			str += fltSectData.getSectionId()+"\t";
-			str += fltSectData.getOrigAveSlipRate()+"\t";
-			str += fltSectData.getOrigSlipRateStdDev()+"\t";
-			str += (float)fltSectData.getTraceLength()+"\t";
-			str += fltSectData.getAveDip()+"\t";
-			str += fltSectData.getAveRake()+"\t";
-			str += fltSectData.getOrigAveUpperDepth()+"\t";
-			str += fltSectData.getAveLowerDepth()+"\t";
-			str += fltSectData.getOrigDownDipWidth()+"\t";
-			str += (float)fltSectData.getStirlingGriddedSurface(1.0).getArea()+"\n";
+		if(D) {
+			String str = "sectID\tslipRate\tslipRateStd\tlength\tdip\trake\tupDepth\tlowDepth\tDDW+\n";
+			for(int s=0;s<fltSectDataList.size();s++) {
+				FaultSectionPrefData fltSectData = fltSectDataList.get(s);
+				str += fltSectData.getSectionId()+"\t";
+				str += fltSectData.getOrigAveSlipRate()+"\t";
+				str += fltSectData.getOrigSlipRateStdDev()+"\t";
+				str += (float)fltSectData.getTraceLength()+"\t";
+				str += fltSectData.getAveDip()+"\t";
+				str += fltSectData.getAveRake()+"\t";
+				str += fltSectData.getOrigAveUpperDepth()+"\t";
+				str += fltSectData.getAveLowerDepth()+"\t";
+				str += fltSectData.getOrigDownDipWidth()+"\t";
+				str += (float)fltSectData.getStirlingGriddedSurface(1.0).getArea()+"\n";
+			}
+			System.out.println(str);			
 		}
-		System.out.println(str);
 
 //		System.exit(0);
 		
@@ -265,14 +268,14 @@ public class WasatchInversion {
 			System.out.println("Starting Inversion");
 
 		// set inversion attributes
-		String slipModelType = FaultSystemRuptureRateInversion.UNIFORM_SLIP_MODEL;
-//		String slipModelType = FaultSystemRuptureRateInversion.TAPERED_SLIP_MODEL;
+		String name = "Wasatch Inversion";
+//		String slipModelType = FaultSystemRuptureRateInversion.UNIFORM_SLIP_MODEL;
+		String slipModelType = FaultSystemRuptureRateInversion.TAPERED_SLIP_MODEL;
 		MagAreaRelationship magAreaRel = new HanksBakun2002_MagAreaRel();
 //		MagAreaRelationship magAreaRel = new Ellsworth_B_WG02_MagAreaRel();
 		double relativeSectRateWt=1;
 		double relative_aPrioriRupWt = 0;	// 
 		String aPrioriRupRatesFilename = ROOT_PATH+"data/aPrioriRupRatesFromGR_MFD.txt";
-		double relative_smoothnessWt = 0;	// KEEP ZERO UNTIL THIS IS PROPERLY IMPLEMENTED
 		boolean wtedInversion = true;
 		double minRupRate = 1e-8;
 		boolean applyProbVisible = true;
@@ -288,8 +291,9 @@ public class WasatchInversion {
 		GutenbergRichterMagFreqDist grConstraint = new GutenbergRichterMagFreqDist(minMag,num,delta);
 		grConstraint.setAllButTotCumRate(minMag, maxMag, moRate, 1.0);
 
-		// run the inversion
+		// create an instance of the inversion class with the above settings
 		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion(
+				name,
 				fltSectDataList, 
 				sectionRateConstraints, 
 				rupSectionMatrix, 
@@ -298,7 +302,6 @@ public class WasatchInversion {
 				relativeSectRateWt, 
 				relative_aPrioriRupWt, 
 				aPrioriRupRatesFilename,
-				relative_smoothnessWt, 
 				wtedInversion, 
 				minRupRate, 
 				applyProbVisible, 
@@ -306,32 +309,39 @@ public class WasatchInversion {
 				grConstraint,
 				relativeMFD_constraintWt);
 		
-		// Non-negative least squares
-//		fltSysRupInversion.doInversionNNLS();
-		
-//		// Simulated annealing
-		long numIterations = (long) 1e6;
-		boolean initStateFromAprioriRupRates = true;
-		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
-
-
-		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
-		System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
-		
-		// do this once to write out a priori rupture rates from MFD constraint
-//		fltSysRupInversion.writeApriorRupRatesFromMFD_Constrint(ROOT_PATH+"data/aPrioriRupRatesFromGR_MFD.txt");
-		
-		// these write to system out, not to a file
-		fltSysRupInversion.writeFinalStuff();
-		fltSysRupInversion.writePredErrorInfo();
-
+		// make the directory for storing results (set as null if you don't want to save anything)
 		String dirName = ROOT_PATH+"OutputFigsAndData";
 	    File file = new File(dirName);
 	    file.mkdirs();
-	    fltSysRupInversion.plotStuff(dirName);
-	    fltSysRupInversion.plotMagHistograms();
-	    fltSysRupInversion.writeAndPlotSegPartMFDs(dirName, true);
-	    fltSysRupInversion.writeAndPlotNonZeroRateRups(dirName, true);
+	    
+	    // write the setup info to a file
+//	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
+		
+		// Non-negative least squares
+		fltSysRupInversion.doInversionNNLS();
+		
+		// Simulated annealing
+		long numIterations = (long) 1e5;
+		boolean initStateFromAprioriRupRates = false;
+//		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
+
+		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
+		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
+				
+		// write results to file
+//		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
+		
+		// Now make plots if desired
+		boolean popUpPlots = true;	// this tells whether to show plots in a window (turn off for HPC)
+//		dirName = null;	// set as null if you don't want to save to file
+//		fltSysRupInversion.writeAndOrPlotDataFits(null, popUpPlots);
+//		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
+		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
+	    fltSysRupInversion.writeAndOrPlotSegPartMFDs(dirName, popUpPlots);
+		
+		// do this once to write out a priori rupture rates from MFD constraint
+//		fltSysRupInversion.writeApriorRupRatesFromMFD_Constrint(ROOT_PATH+"data/aPrioriRupRatesFromGR_MFD.txt");
+
 		
 	}
 
