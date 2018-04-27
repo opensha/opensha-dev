@@ -62,14 +62,16 @@ public class ETAS_ShakingForecastCalc {
 	 * @param b G-R b-balue at each grid node
 	 * @param gmpe GMPE, should be initialized by calling setParamDefaults() and have site data set to desired default values
 	 * @param mechWts focal mechanism distribution at each grid node
-	 * @param durationYears reference duration for the rate model, which is also the forecast duration
 	 * @param maxSourceDist maximum source distance to consider in km. must be finite, as interpolater uses this. typical value is 200 km
 	 * @param vs30Provider source of Vs30 data, or null for constant Vs30 (in which case it will use the Vs30 value set in the GMPE)
 	 * @return array of hazard curves where the ith element of the array is the curve for the ith node in calcRegion
 	 * @throws IOException
 	 */
 	public static DiscretizedFunc[] calcForecast(GriddedRegion calcRegion, GeoDataSet rateModel, double refMag, double maxMag, double b, ScalarIMR gmpe,
-			Map<FocalMech, Double> mechWts, double durationYears, double maxSourceDist, SiteData<Double> vs30Provider) throws IOException {
+			Map<FocalMech, Double> mechWts, double maxSourceDist, SiteData<Double> vs30Provider) throws IOException {
+		
+		double durationYears = 1d; // this must be set to one, because the PSHA codes assume rateModel is annual, but we must give it the total number expected.
+		
 		GriddedForecast erf = new GriddedForecast(rateModel, refMag, maxMag, b, mechWts, depths, durationYears);
 		erf.updateForecast();
 		
@@ -246,7 +248,7 @@ public class ETAS_ShakingForecastCalc {
 		// stable coefficients
 //		vs30Provider.setStableCoefficients();
 		
-		double durationYears = 30d/365d;
+//		double durationYears = 30d/365d;
 		
 		Map<FocalMech, Double> mechWts = new HashMap<>();
 		mechWts.put(FocalMech.STRIKE_SLIP, 0.5);
@@ -254,16 +256,16 @@ public class ETAS_ShakingForecastCalc {
 		mechWts.put(FocalMech.REVERSE, 0.25);
 		
 		// use the rate map region/spacing
-		double calcSpacing = 0.01;
+		double calcSpacing = 0.05;
 		GriddedRegion calcRegion = new GriddedRegion(new Region(new Location(rateModel.getMaxLat(), rateModel.getMaxLon()),
 				new Location(rateModel.getMinLat(), rateModel.getMinLon())), calcSpacing, null);
 		
 		double maxSourceDist = 200d;
 		
 		DiscretizedFunc[] curves = calcForecast(calcRegion, rateModel, refMag, maxMag, b, gmpe, mechWts,
-				durationYears, maxSourceDist, vs30Provider);
+				 maxSourceDist, vs30Provider);
 		
-		GeoDataSet map = extractMap(calcRegion.getNodeList(), curves, false, 0.1); // IML with 10% prob
+		GeoDataSet map = extractMap(calcRegion.getNodeList(), curves, false, 0.1); // IML with 10% prob. change false--> true and 0.1-->desired IML level for prob exceed IML
 		
 		XYZGraphPanel xyzGP = new XYZGraphPanel();
 		
