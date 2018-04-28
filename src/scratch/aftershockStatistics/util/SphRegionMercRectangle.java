@@ -186,6 +186,18 @@ public class SphRegionMercRectangle extends SphRegion {
 		return;
 	}
 
+	// Display our contents
+
+	@Override
+	public String toString() {
+		return "SphRegionMercRectangle:" + "\n"
+		+ "plot_wrap = " + plot_wrap + "\n"
+		+ "min_lat = " + min_lat + "\n"
+		+ "max_lat = " + max_lat + "\n"
+		+ "min_lon = " + min_lon + "\n"
+		+ "max_lon = " + max_lon;
+	}
+
 
 
 

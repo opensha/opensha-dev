@@ -163,8 +163,11 @@ public class USGS_AftershockForecast {
 				numEventsLower.put(duration, minMag, fractiles[0]);
 				numEventsUpper.put(duration, minMag, fractiles[1]);
 //				double rate = model.getModalNumEvents(minMag, tMinDays, tMaxDays);
-				double expectedVal = model.getModalNumEvents(minMag, tMinDays, tMaxDays);
-				double poissonProb = 1 - Math.exp(-expectedVal);
+
+//				double expectedVal = model.getModalNumEvents(minMag, tMinDays, tMaxDays);
+//				double poissonProb = 1 - Math.exp(-expectedVal);
+				double poissonProb = model.getProbOneOrMoreEvents(minMag, tMinDays, tMaxDays);
+
 				probs.put(duration, minMag, poissonProb);
 			}
 		}

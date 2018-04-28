@@ -360,7 +360,6 @@ public class SphLatLon {
 	public static ArrayList<SphLatLon> unmarshal_list (MarshalReader reader, String name) {
 		ArrayList<SphLatLon> obj_list = new ArrayList<SphLatLon>();
 		int n = reader.unmarshalArrayBegin (name);
-		obj_list = new ArrayList<SphLatLon>();
 		for (int i = 0; i < n; ++i) {
 			obj_list.add ((new SphLatLon()).unmarshal (reader, null));
 		}
