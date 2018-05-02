@@ -157,8 +157,8 @@ public class ETAS_USGS_AftershockForecast {
 		return (double)diff/(double)ProbabilityModelsCalc.MILLISEC_PER_DAY;
 	}
 	
-	private static String[] headers = {"Time Window For Analysis", "Magnitude Range",
-			"Median Number", "95% confidence range", "Probability of one or more aftershocks"};
+	private static String[] headers = {"Forecast Interval", "Magnitude Range",
+			"Median Number", "95% confidence range", "Chance of at least one"};
 	
 	public TableModel getTableModel() {
 		final int numEach = minMags.length+1;

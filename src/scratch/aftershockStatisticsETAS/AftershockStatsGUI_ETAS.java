@@ -39,6 +39,7 @@ import org.dom4j.Element;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYDrawableAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.data.Range;
@@ -46,6 +47,7 @@ import org.jfree.data.xy.AbstractXYDataset;
 import org.jfree.data.xy.DefaultXYDataset;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.ui.RectangleEdge;
+import org.jfree.ui.TextAnchor;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.function.AbstractXY_DataSet;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -77,9 +79,14 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.param.AbstractParameter;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
+import org.opensha.commons.param.constraint.ParameterConstraint;
 import org.opensha.commons.param.constraint.impl.DoubleConstraint;
+import org.opensha.commons.param.editor.AbstractParameterEditor;
+import org.opensha.commons.param.editor.impl.NumericTextField;
 import org.opensha.commons.param.editor.impl.ParameterListEditor;
 import org.opensha.commons.param.event.ParameterChangeEvent;
 import org.opensha.commons.param.event.ParameterChangeListener;
@@ -105,6 +112,8 @@ import org.opensha.sha.gui.infoTools.CalcProgressBar;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
@@ -292,9 +301,9 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private DoubleParameter bParam;
 	private DoubleParameter alphaParam;
 	
-	private IntegerParameter plotMMIParam;
-	private DoubleParameter gridSpacingParam;
-	private DoubleParameter plotPOEParam;
+	private DoubleParameter mapLevelParam;
+	private DoubleParameter mapGridSpacingParam;
+	private DoubleParameter mapPOEParam;
 	
 	private DoubleParameter forecastStartTimeParam;
 	private DoubleParameter forecastEndTimeParam;
@@ -308,20 +317,26 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private BooleanParameter vs30Param;
 	
 	private enum IntensityType {
-		PGA("Peak acceleration (%g)"),
-		PGV("Peak velocity (cm/s)"),
-		MMI("MMI (Modified Mercali Intensity)"),
-		SA("Spectral Acceleration (1s)");
+		PGA("Peak acceleration (%g)", "PGA"),
+		PGV("Peak velocity (cm/s)", "PGV"),
+		MMI("MMI (Modified Mercali Intensity)", "MMI"),
+		PSA("Peak Spectral Acceleration 1Hz (%g)", "PSA");
 		
 		private String name;
+		private String abbreviation;
 		
-		private IntensityType(String name) {
+		private IntensityType(String name, String abbreviation) {
 			this.name = name;
+			this.abbreviation = abbreviation;
 		}
 		
 		@Override
 		public String toString() {
 			return name;
+		}
+		
+		public String getAbbreviation() {
+			return this.abbreviation;
 		}
 	}
 	private EnumParameter<IntensityType> intensityTypeParam;	
@@ -477,7 +492,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		nowBoolean.addParameterChangeListener(this);
 		forecastParams.addParameter(nowBoolean);
 		
-		forecastStartTimeParam = new DoubleParameter("Forecast Start Time", 0d, 3660);
+		forecastStartTimeParam = new DoubleParameter("Forecast Start Time", 0d, Double.POSITIVE_INFINITY);
 		forecastStartTimeParam.setUnits("Days");
 		forecastStartTimeParam.addParameterChangeListener(this);
 		forecastParams.addParameter(forecastStartTimeParam);
@@ -504,13 +519,13 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		dataStartTimeParam.addParameterChangeListener(this);
 		timeWindow.addParameter(dataStartTimeParam);
 		
-		dataEndTimeParam = new DoubleParameter("Data End Time", 0d, 3660);
+		dataEndTimeParam = new DoubleParameter("Data End Time", 0d, Double.POSITIVE_INFINITY);
 		dataEndTimeParam.setUnits("Days");
 		dataEndTimeParam.setInfo("Relative to main shock origin time");
 		dataEndTimeParam.addParameterChangeListener(this);
 		timeWindow.addParameter(dataEndTimeParam);
 				
-		forecastEndTimeParam = new DoubleParameter("Forecast End Time", 0d, 3660+366);
+		forecastEndTimeParam = new DoubleParameter("Forecast End Time", 0d, Double.POSITIVE_INFINITY);
 		forecastEndTimeParam.setUnits("Days");
 //		forecastEndTimeParam.addParameterChangeListener(this);
 //		timeWindow.addParameter(forecastEndTimeParam);
@@ -534,7 +549,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				DECIMAL_DEGREES, null);
 		regionCenterLonParam.getConstraint().setNullAllowed(true);
 		
-		radiusParam = new DoubleParameter("Radius", 0d, 1000, new Double(20));
+		radiusParam = new DoubleParameter("Radius", 0d, 10000d, new Double(20));
 		radiusParam.setUnits("km");
 		minLatParam = new DoubleParameter("Min Lat", -90d, 90d, new Double(0));
 		maxLatParam = new DoubleParameter("Max Lat", -90d, 90d, new Double(0));
@@ -614,15 +629,20 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		magPrecisionParam.getEditor().getComponent().setMinimumSize(null);
 		magPrecisionParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
 		
+		
+		
 		if (!expertMode){
 			bParam.getEditor().setEnabled(expertMode);
-//			mcParam.getEditor().setEnabled(expertMode);
+			setEnabledStyle(bParam, false);
+		
+//			mcParam.getEditor().setEnabled(expertMode); // leave this one editable
 			magPrecisionParam.getEditor().setEnabled(expertMode);
 		}
 		
-		outputParams.addParameter(bParam);
 		outputParams.addParameter(mcParam);
-		outputParams.addParameter(magPrecisionParam);
+		outputParams.addParameter(bParam);
+		
+//		outputParams.addParameter(magPrecisionParam);
 		
 		
 		
@@ -714,6 +734,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		amsValParam.addParameterChangeListener(this);
 		amsValParam.getEditor().getComponent().setMinimumSize(null);
 		amsValParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
+		setEnabledStyle(amsValParam, false);
 		outputParams.addParameter(amsValParam);
 		
 		aValParam = new DoubleParameter("a", new Double(0d));
@@ -721,6 +742,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		aValParam.addParameterChangeListener(this);
 		aValParam.getEditor().getComponent().setMinimumSize(null);
 		aValParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
+		setEnabledStyle(aValParam, false);
 		outputParams.addParameter(aValParam);
 		
 		pValParam = new DoubleParameter("p", new Double(0d));
@@ -729,6 +751,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		pValParam.addParameterChangeListener(this);
 		pValParam.getEditor().getComponent().setMinimumSize(null);
 		pValParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
+		setEnabledStyle(pValParam, false);
 		outputParams.addParameter(pValParam);
 		
 		cValParam = new DoubleParameter("c", new Double(0d));
@@ -737,6 +760,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		cValParam.addParameterChangeListener(this);
 		cValParam.getEditor().getComponent().setMinimumSize(null);
 		cValParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
+		setEnabledStyle(cValParam, false);
 		outputParams.addParameter(cValParam);
 			
 		computeAftershockForecastButton = new ButtonParameter("Aftershock Forecast", "Run Generic Forecast");
@@ -750,7 +774,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		 */
 		intensityTypeParam = new EnumParameter<IntensityType>("Intensity Measure",
 				EnumSet.allOf(IntensityType.class), IntensityType.PGA, null);
-//		intensityTypeParam.addParameterChangeListener(this);
+		intensityTypeParam.addParameterChangeListener(this);
 		mapParams.addParameter(intensityTypeParam);
 		
 		mapTypeParam =  new EnumParameter<MapType>("Map Type",
@@ -772,31 +796,23 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		mapParams.addParameter(generateMapButton);
 	
 	
-//		fitShakeMapSourceParam = new BooleanParameter("Fetch Finite Source", true);
-//		fitShakeMapSourceParam.addParameterChangeListener(this);
-//		mapParams.addParameter(fitShakeMapSourceParam);
-//		
-//		fitMainshockSourceParam = new BooleanParameter("Fit Early Aftershocks", false);
-//		fitMainshockSourceParam.addParameterChangeListener(this);
-//		mapParams.addParameter(fitMainshockSourceParam);
+		mapLevelParam = new DoubleParameter("Level", 0d, 1000d, new Double(10) );
+		mapLevelParam.setInfo("Intensity metric level for map");
+		mapLevelParam.addParameterChangeListener(this);
+		mapLevelParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
+		mapPlotParams.addParameter(mapLevelParam);
 		
-		plotMMIParam = new IntegerParameter("MMI", 2, 10, new Integer(6) );
-		plotMMIParam.setInfo("MMI level for map");
-		plotMMIParam.addParameterChangeListener(this);
-		plotMMIParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
-		mapPlotParams.addParameter(plotMMIParam);
-		
-		plotPOEParam = new DoubleParameter("POE", 0, 1, new Double(0.5));
-		plotPOEParam.setInfo("Probability of exceedence level for map");
-		plotPOEParam.addParameterChangeListener(this);
-		plotPOEParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
-		mapPlotParams.addParameter(plotPOEParam);
+		mapPOEParam = new DoubleParameter("POE (%)", 0, 99.9, new Double(50));
+		mapPOEParam.setInfo("Probability of exceedence level for map");
+		mapPOEParam.addParameterChangeListener(this);
+		mapPOEParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
+		mapPlotParams.addParameter(mapPOEParam);
 				
-		gridSpacingParam = new DoubleParameter("\u0394 (km)", 1, 100, new Double(10));
-		gridSpacingParam.setInfo("Cell size for map (km)");
-		gridSpacingParam.addParameterChangeListener(this);
-		gridSpacingParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
-		mapPlotParams.addParameter(gridSpacingParam);
+		mapGridSpacingParam = new DoubleParameter("\u0394 (km)", 0.01, 100, new Double(10d));
+		mapGridSpacingParam.setInfo("Cell size for map (km)");
+		mapGridSpacingParam.addParameterChangeListener(this);
+		mapGridSpacingParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
+		mapPlotParams.addParameter(mapGridSpacingParam);
 		
 		
 		publishAdvisoryButton = new ButtonParameter("Publish Advisory", "Publish");
@@ -964,14 +980,97 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		accessor = new ETAS_ComcatAccessor();
 
 		updateRegionParamList(regionTypeParam.getValue(), regionCenterTypeParam.getValue());
+		updateMapPanel();
 		
 		setEnableParameterEditing(expertMode);
 		refreshTimeWindowEditor();
 		setEnableParamsPostFetch(false);
 		setEnableParamsPostForecast(false);
-			
+		 
 		printTip(0);
 	} //end createAndShowGUI()
+	
+	/*
+	 * Sets the style of the parameter to reflect non-editable (output) style
+	 */
+	private void setEnabledStyle(AbstractParameter<?> param, boolean enabled) {
+		if (enabled) {
+			if (param.getEditor() instanceof AbstractParameterEditor) {
+				Font font = param.getEditor().getComponent().getFont();
+				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) param.getEditor();
+				// update title font
+				editor.setTitleFont(new Font(font.getFamily(), Font.BOLD, font.getSize()));
+				if (editor.getWidget() instanceof NumericTextField) {
+					NumericTextField textField = (NumericTextField)editor.getWidget();
+					textField.setFont(new Font(font.getFamily(), Font.PLAIN, font.getSize()));
+					textField.setBackground(new Color(255,255,255));
+					textField.setForeground(Color.BLACK);
+			 	}
+				editor.repaint();
+				
+			}
+		} else {
+			if (param.getEditor() instanceof AbstractParameterEditor) {
+				Font font = param.getEditor().getComponent().getFont();
+				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) param.getEditor();
+				// update title font
+				editor.setTitleFont(new Font(font.getFamily(), Font.ITALIC, font.getSize()));
+				if (editor.getWidget() instanceof NumericTextField) {
+					NumericTextField textField = (NumericTextField)editor.getWidget();
+					textField.setFont(new Font(font.getFamily(), Font.ITALIC, font.getSize()));
+					textField.setBackground(new Color(237,237,237));
+					textField.setForeground(Color.DARK_GRAY);
+				}
+				editor.repaint();
+			}	
+		}
+	}
+	
+	
+	/* 
+	 * Update the map parameter panel to reflect current map options
+	 */
+	private void updateMapPanel() {
+		if (mapTypeParam.getValue() == MapType.PROBABILITIES) {
+			setEnabledStyle(mapPOEParam, false);
+			setEnabledStyle(mapLevelParam, true);
+		
+			if (intensityTypeParam.getValue() == IntensityType.PGA) {
+				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
+				editor.setTitle("%g");
+				editor.repaint();
+				editor.refreshParamEditor();
+				if(D) System.out.println("PGA");
+			} else if (intensityTypeParam.getValue() == IntensityType.PGV) {
+				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
+				editor.setTitle("cm/s");
+				editor.repaint();
+				editor.refreshParamEditor();
+				if(D) System.out.println("PGV");
+			} else if (intensityTypeParam.getValue() == IntensityType.PSA) {
+				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
+				editor.setTitle("%g");
+				editor.repaint();
+				editor.refreshParamEditor();
+				if(D) System.out.println("PSA");
+			} else if (intensityTypeParam.getValue() == IntensityType.MMI) {
+				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
+				editor.setTitle("MMI");
+				editor.repaint();
+				editor.refreshParamEditor();
+				if(D) System.out.println("MMI");
+			}
+			
+			mapLevelParam.getEditor().refreshParamEditor();
+			mapPOEParam.getEditor().refreshParamEditor();
+			
+			
+		} else if (mapTypeParam.getValue() == MapType.LEVEL) {
+			setEnabledStyle(mapPOEParam, true);
+			setEnabledStyle(mapLevelParam, false);
+		}
+	}
+	
 	
 	/* 
 	 * Utility functions for updating dynamic elements of the GUI, plot specifications, etc.
@@ -1131,31 +1230,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	// for plotting: how to color events by probability
 	private CPT getProbCPT() {
 		CPT probCPT;
-
-		// These don't display nicely on a terrain map
-//		int[][] colorMapValues = new int[][]{
-//			{255, 245, 230},
-//			{246, 242, 212},
-//			{231, 237, 194},
-//			{208, 228, 178},
-//			{181, 219, 162},
-//			{150, 210, 147},
-//			{133, 201, 148},
-//			{119, 193, 155},
-//			{106, 184, 165},
-//			{94, 172, 175},
-//			{83, 141, 166},
-//			{72, 109, 157},
-//			{62, 76, 148},
-//			{62, 53, 139},
-//			{77, 44, 130},
-//			{91, 36, 121},
-//			{106, 29, 112},
-//			{103, 23, 88},
-//			{94, 17, 59},
-//			{85, 12, 32},
-//			{77, 8, 8},
-//		};
+		
+//			try {
+//				probCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0,1);
+//			} catch (IOException e) {
+//				throw ExceptionUtils.asRuntimeException(e);
+//			}
 		
 		// try these:
 		int[][] colorMapValues = new int[][]{
@@ -1190,7 +1270,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		}
 		
 		probCPT = new CPT(0, 1, colorMap);
-		
+			
 		probCPT.setBlender(new Blender(){
 			public Color blend(Color minColor, Color maxColor, float bias){
 				return minColor;
@@ -1409,47 +1489,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		}
 	}
 	
-//	non-spherical 
-//	private Region buildRegion(ObsEqkRupture event, Location centroid) {
-//		RegionType type = regionTypeParam.getValue();
-//		
-//		if (type == RegionType.CIRCULAR || type == RegionType.CIRCULAR_WC94) {
-//			double radius;
-//			if (type == RegionType.CIRCULAR) {
-//				radius = radiusParam.getValue();
-//			} else {
-//				if (wcMagLen == null)
-//					wcMagLen = new WC1994_MagLengthRelationship();
-//				radius = 10d + 1.5*wcMagLen.getMedianLength(event.getMag()); //multiplied by 1.5 because length is already 2x radius
-//				if(verbose) System.out.println("Collecting Aftershocks within 10 km + 3 WC94 Radii: "+ (float)radius + " km");
-//			}
-//			
-//			RegionCenterType centerType = regionCenterTypeParam.getValue();
-//			Location loc;
-//			if (centerType == RegionCenterType.EPICENTER)
-//				loc = event.getHypocenterLocation();
-//			else if (centerType == RegionCenterType.CENTROID)
-//				loc = centroid;
-//			else if (centerType == RegionCenterType.SPECIFIED)
-//				loc = new Location(regionCenterLatParam.getValue(), regionCenterLonParam.getValue());
-//			else
-//				throw new IllegalStateException("Unknown Region Center Type: "+centerType);
-//			
-//			return new Region(loc, radius);
-//		} else  if (type == RegionType.RECTANGULAR) {
-//			Location lower = new Location(minLatParam.getValue(), minLonParam.getValue());
-//			Location upper = new Location(maxLatParam.getValue(), maxLonParam.getValue());
-//			try{
-//				return new Region(lower, upper);
-//			} catch (Exception e) {
-//				System.err.println(e.getMessage());
-//				return null;
-//			}
-//		} else {
-//			throw new IllegalStateException("Unknown region type: "+type);
-//		}
-//	}
-
 	private SphRegion buildRegion(ObsEqkRupture event, Location centroid) {
 		SphRegion result;
 		RegionType type = regionTypeParam.getValue();
@@ -1683,6 +1722,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		bParam.getEditor().refreshParamEditor();
 
 		link_alpha(); //reset alpha based on b
+		
+		printTip(2);
 
 	}
 	
@@ -1726,11 +1767,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 		link_alpha(); //reset alpha based on b
 		
-		// this is done in parameter change listener.
-//		autoMcParam.setValue(true);
-//		computeBButton.setButtonText("Compute b");
-//		computeBButton.setInfo("Simultaneously estimate b and Mc.");
-//		computeBButton.getEditor().refreshParamEditor();
+		printTip(2);
 	}
 	
 	private void plotAftershockHypocs() {
@@ -2266,7 +2303,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				if (line.startsWith("#")) {
 					if (line.toLowerCase().startsWith("# main")
 							&& i < lines.size()-1 && lines.get(i+1).startsWith("#")) {
-						
+					
 						// main shock on next line, starting with a #
 						String mainshockLine = lines.get(i+1).substring(1).trim();
 						if(verbose) System.out.println("Detected mainshock in file: "+mainshockLine);
@@ -2783,6 +2820,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					}
 				}
 				
+				
 				curTitle = step.title;
 				if (step.runInEDT) {
 					
@@ -2791,11 +2829,14 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 							@Override
 							public void run() {
-								try {
-									step.run.run();
-								} catch (Throwable e) {
-									exception = e;
-								}
+								
+									try {
+										step.run.run();
+										pauseRequested = false;
+									} catch (Throwable e) {
+										exception = e;
+									}
+								
 							}
 						});
 					} catch (Exception e) {
@@ -2803,6 +2844,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					}
 					if (exception != null)
 						break;
+					
 //					pauseRequested = true;
 //					SwingUtilities.invokeLater(new Runnable() {
 //
@@ -3080,7 +3122,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				cValParam.setValue(round(bayesianModel.getMaxLikelihood_c(),6));
 				cValParam.getEditor().refreshParamEditor();
 			}
-		}, false);
+		}, true);
 		
 		CalcStep postParamPlotStep = new CalcStep("Plotting", "Building ETAS summary plots...", new Runnable() {
 			
@@ -3886,6 +3928,10 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					run = new CalcRunnable(progress, pubStep, autoSaveStep);
 				
 				new Thread(run).start();
+			} else if (param == intensityTypeParam || param == mapTypeParam) {
+				if(verbose) System.out.println("updating map panel");
+				updateMapPanel();
+				
 			} else {
 				if(verbose) System.out.println("No action associated with this event.");
 			}
@@ -4223,7 +4269,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				while (forecastMapPane.getTabCount() > 0)
 					forecastMapPane.removeTabAt(0);
 	
-			double spacing = gridSpacingParam.getValue()/111.111; 	// grid spacing in degrees
+			double spacing = mapGridSpacingParam.getValue()/111.111; 	// grid spacing in degrees
 			double stressDrop = 3.0; 	//MPa
 			double mainshockFitDuration = dataEndTimeParam.getValue(); //days
 			Double minDays = forecastStartTimeParam.getValue();
@@ -4249,16 +4295,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			} else {
 				rateModel2D = new ETAS_RateModel2D(genericModel);
 			}
-			forecastRateModel = rateModel2D.calculateRateModel(forecastDurationParam.getValue(), spacing, stressDrop, mainshockFitDuration, fitType, faultTrace);
-			
-			// generate MMI rate model
-//			GriddedGeoDataSet mmiRateModel;
-//			int mmiRef = plotMMIParam.getValue();
-//			System.out.println("MMI level for map: " + mmiRef);
-//			mmiRateModel = rateModel2D.calculateMMIRateModel(mmiRef);
 
-			// generate PGA model (commented out because we'll redo it for each duration)
-//			GeoDataSet pgaProbModel = getPGAProbModel(forecastRateModel, plotPOEParam.getValue(), mcParam.getValue(), forecastDurationParam.getValue());
+			// calculate for one day -- the minimum, so that we can scale up probabilities from small to large
+			forecastRateModel = rateModel2D.calculateRateModel(ForecastDuration.DAY.duration, spacing, stressDrop, mainshockFitDuration, fitType, faultTrace);
+			GriddedGeoDataSet gmpeProbModel = getIntensityModel(forecastRateModel);
+					
 			
 			//compute rate sum for checking
 			double rateSum = 0;
@@ -4267,22 +4308,54 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			}
 			if(verbose) System.out.println("rateModel sum: " + rateSum);
 
+			if(D) {
+				//compute rate sum for checking
+				double probSum = 0;
+				if (gmpeProbModel != null) {
+					for (int j = 0; j < gmpeProbModel.size(); j++){
+						if (gmpeProbModel.get(j) != Double.NaN)
+							probSum += gmpeProbModel.get(j);
+					}
+					System.out.println("gmpeProbModel sum: " + probSum);
+				}
+			}
+			
+			List<PlotElement> oldFuncs = new ArrayList<PlotElement>(); 
+			List<PlotCurveCharacterstics> oldChars = new ArrayList<PlotCurveCharacterstics>();
+			
+			// map city locations for the mapping --TODO where is the labeled XYDataset in OpenSHA?
+			GeoFeatureList cities = loadCities(forecastRateModel.getRegion(), 20);
+			if(D) System.out.println( cities.size() + " cities returned.");
+			DefaultXY_DataSet cityPlot = new DefaultXY_DataSet();
+			cityPlot.setName("");
+
+			Font font = new Font(Font.SANS_SERIF, Font.PLAIN, 14);
+			List<XYTextAnnotation> cityLabels = new ArrayList<>();
+			for (GeoFeature city : cities){
+				cityPlot.set(city.loc.getLongitude(), city.loc.getLatitude());
+				
+				XYTextAnnotation ann = new XYTextAnnotation(city.name, city.loc.getLongitude(), city.loc.getLatitude());
+				ann.setTextAnchor(TextAnchor.BOTTOM_LEFT);
+		        ann.setFont(font);
+		        cityLabels.add(ann);
+			}
+			if(D) System.out.println( cities.size() + " cities added to plot list.");
+			
+//			if (cityPlot.size() > 0) {
+//				oldFuncs.add(cityPlot);
+//				oldChars.add(new PlotCurveCharacterstics(PlotSymbol.SQUARE, 2, Color.BLACK));
+//			}
+
+			// add old hypocetnere
 			// scoop up the aftershock locations
 			PlotSpec oldSpec = epicenterGraph.getPlotSpec();
-			List<PlotElement> oldFuncs = (List<PlotElement>) oldSpec.getPlotElems();
-			List<PlotCurveCharacterstics> oldChars = oldSpec.getChars();
+			oldFuncs.addAll((List<PlotElement>) oldSpec.getPlotElems());
+			oldChars.addAll(oldSpec.getChars());
 
-//			// map city locations for the mapping --TODO where is the labeled XYDataset in OpenSHA?
-//			GeoFeatureList cities = loadCities(forecastRateModel.getRegion(), 1000);
-//			XY_DataSet cityPlot = new DefaultXY_DataSet();
-//			for (GeoFeature city : cities){
-//				cityPlot.set(city.loc.getLongitude(), city.loc.getLatitude());
-//			}
-//			oldFuncs.add(cityPlot);
-//			oldChars.add(new PlotCurveCharacterstics(PlotSymbol.SQUARE, 2, Color.BLACK));
 			
 			// for each duration (day/week/month/year or just what's specified) 
 			boolean rateModelPlotted = false;
+			double maxContourLevel = 0;
 			for (int i = 0; i < ForecastDuration.values().length; i++){
 				// gridded rate model
 				GriddedGeoDataSet newForecastRateModel = new GriddedGeoDataSet(forecastRateModel.getRegion(), false);
@@ -4290,12 +4363,25 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					newForecastRateModel.set(j, forecastRateModel.get(j));
 				}
 				
-//				// griddMMImodel
-//				GriddedGeoDataSet newMMIRateModel = new GriddedGeoDataSet(mmiRateModel.getRegion(), false);
-//				for( int j = 0; j < mmiRateModel.size(); j++){
-//					newMMIRateModel.set(j, mmiRateModel.get(j));
-//				}
-			
+				GriddedGeoDataSet gmpeRateModel;
+				if (gmpeProbModel != null) {
+					// scalled gridded probability model
+					gmpeRateModel = new GriddedGeoDataSet(gmpeProbModel.getRegion(), false);
+					for( int j = 0; j < gmpeProbModel.size(); j++){
+						gmpeRateModel.set(j, gmpeProbModel.get(j));
+					}
+					poissProb2Rate(gmpeRateModel); //convert the day probabilities to a day rate, for scaling.
+
+					//compute rate sum for checking
+					double gmpeRateSum = 0;
+					for (int j = 0; j < gmpeRateModel.size(); j++){
+						if (gmpeRateModel.get(j) != Double.NaN)
+							gmpeRateSum += gmpeRateModel.get(j);
+					}
+					if(D) System.out.println("gmpeRateModel sum: " + gmpeRateSum);
+				} else {
+					gmpeRateModel = null;
+				}
 				
 				// this logic tree decides whether to plot day.week.month.year plots or just a single plot with full duration 
 				ForecastDuration foreDur;
@@ -4315,6 +4401,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					break;
 				}
 				
+				
 				if (maxDays <= forecastEndTimeParam.getValue()){
 					//rescale the ratemodel (for speed)
 					double targetRate;
@@ -4325,9 +4412,19 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					}
 					if(verbose) System.out.println("rateModel & targetRate (" + i + "): " + rateSum + " " + targetRate);
 					newForecastRateModel.scale(targetRate/rateSum);
-//					newMMIRateModel.scale(targetRate/rateSum);
-
-					GriddedGeoDataSet new_pgaProbModel = getPGAProbModel(newForecastRateModel, plotPOEParam.getValue(), mcParam.getValue(), plotDur/365);
+					
+					
+					GriddedGeoDataSet new_gmpeProbModel;
+					if (mapTypeParam.getValue() == MapType.LEVEL) //if we're plotting levels with a given prob, start from scratch
+						new_gmpeProbModel = getIntensityModel(newForecastRateModel);
+					else { //if we're plotting probs at a given level, just scale it up
+						if (gmpeRateModel != null) {
+							gmpeRateModel.scale(targetRate/rateSum);
+							new_gmpeProbModel = rate2PoissProb(gmpeRateModel);
+						} else {
+							new_gmpeProbModel = null;
+						}
+					}
 					
 					// plot the rate only the first time around (should be the longest duration, and all the others are identical except for scaling)
 					if (!rateModelPlotted) {
@@ -4340,10 +4437,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						
 						List<PlotElement> funcs = Lists.newArrayList();
 						List<PlotCurveCharacterstics> chars = Lists.newArrayList();
-						for (int j = 1; j < oldFuncs.size() - 1; j++ ){
+						
+						for (int j = 0; j < oldFuncs.size(); j++ ){
 							if (oldChars.get(j).getSymbol() == PlotSymbol.CIRCLE){
 								funcs.add(oldFuncs.get(j));
-								chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, (float) (oldChars.get(j).getSymbolWidth()/10), Color.BLACK));
+								chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, (float) (oldChars.get(j).getSymbolWidth()/10), Color.GRAY));
 							}
 						}
 						
@@ -4355,10 +4453,14 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 							funcs.add(contour);
 							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, cpt.getColor((float) rateContours.get(n).Value)));
 						}
-						Collections.reverse(funcs);
-						Collections.reverse(chars);
+//						Collections.reverse(funcs);
+//						Collections.reverse(chars);
 
+						funcs.add(cityPlot);
+						chars.add(new PlotCurveCharacterstics(PlotSymbol.SQUARE, 2, Color.BLACK));
+						
 						PlotSpec spec = new PlotSpec(funcs, chars, "Number of aftershocks larger than M" + String.format("%2.1f", mcParam.getValue())  + " per grid cell in the next " + durString, "Longitude", "Latitude");
+						spec.setPlotAnnotations(cityLabels);
 						
 						GraphWidget forecastMapGraph = new GraphWidget(spec);
 						((NumberAxis) forecastMapGraph.getGraphPanel().getXAxis()).setAutoRangeIncludesZero(false);;
@@ -4386,84 +4488,139 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						forecastMapPane.addTab("Rate (" + durString + ")", null, forecastMapGraph);
 					}
 					
-				
-//					// draw probGraph
-//					GriddedGeoDataSet smoothProbModel = rate2PoissProb(newMMIRateModel);
-					GriddedGeoDataSet smoothProbModel = new_pgaProbModel;
-					smoothProbModel.scale(100d);
+					if (new_gmpeProbModel != null) {
+						//					// draw probGraph
+						if (mapTypeParam.getValue() == MapType.PROBABILITIES || intensityTypeParam.getValue() == IntensityType.PGA || 
+								intensityTypeParam.getValue() == IntensityType.PSA)
+							new_gmpeProbModel.scale(100d);
 
-					CPT cpt2 = getProbCPT().rescale(0, Math.max(smoothProbModel.getMaxZ(),1));
+						if (new_gmpeProbModel.getMaxZ() > maxContourLevel) maxContourLevel = new_gmpeProbModel.getMaxZ();
 
-//					double[] contourLevels = ETAS_StatsCalc.linspace(0,100,21);	//specify contourLevels directly
-					double[] contourLevels = ETAS_StatsCalc.linspace(0,Math.max(smoothProbModel.getMaxZ(),1),21);	//specify contourLevels directly
-//					contourLevels[0] = 0;	// no zeros
-//					contourLevels[contourLevels.length - 1] = 99; 	//no certainty
-					
-					List<PolyLine> mmiContours = ETAS_RateModel2D.getContours(smoothProbModel, contourLevels);
-					
-					if(D){
-						StringBuilder outString = new StringBuilder();
-						for (PolyLine line : mmiContours)
-							outString.append(String.format("%2.2f ", line.Value));
-						
-						System.out.println(outString);
-					}
-			
-//					// write to file? I'd like to put this elsewhere, but need to save all the contours, then...
-//					File outFile = new File(workingDir.getAbsolutePath() + "/Contours-"+ durString +".kml");
-//					ETAS_RateModel2D.writeContoursAsKML(
-//							mmiContours,"Chance of MMI VI (" +durString+")", outFile, cpt2);
+						CPT cpt2;
+						double[] contourLevels;
+						if (mapTypeParam.getValue()==MapType.PROBABILITIES) {
+							double cptMax;
+							if (maxContourLevel > 10)
+								cptMax = 100;
+							else if (maxContourLevel > 1)
+								cptMax = 10;
+							else
+								cptMax = 1;
 
-					//add contours to the list for later output in publishGraphicalForecast
-//					contourList.add(new ContourModel(mmiContours,"Chance of exceeding MMI " + decToRoman(mmiRef) + " in the next " +durString, cpt2));
-
-					contourList.add(new ContourModel(mmiContours,"PGA with " + String.format("%.0f", plotPOEParam.getValue()*100) + "% chance of being exceeded in the next " +durString, cpt2));
-					
-					//copy epicenter graph
-					List<PlotElement> funcs = Lists.newArrayList();
-					List<PlotCurveCharacterstics> chars = Lists.newArrayList();
-					for (int j = 1; j < oldFuncs.size() - 1; j++ ){
-						if (oldChars.get(j).getSymbol() == PlotSymbol.CIRCLE){
-							funcs.add(oldFuncs.get(j));
-							chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE,  (float) (oldChars.get(j).getSymbolWidth()/10), Color.BLACK));
+							cpt2 = getProbCPT().rescale(0, cptMax);
+							contourLevels = ETAS_StatsCalc.linspace(0,Math.max(new_gmpeProbModel.getMaxZ(),cptMax),21);	//specify contourLevels directly
+						} else {
+							cpt2 = getProbCPT().rescale(0, Math.max(new_gmpeProbModel.getMaxZ(),maxContourLevel));
+							contourLevels = ETAS_StatsCalc.linspace(0,Math.max(new_gmpeProbModel.getMaxZ(),maxContourLevel),21);	//specify contourLevels directly
 						}
-					}
-										
-					for (int n = 0; n < mmiContours.size(); n++){
-						XY_DataSet contour = new DefaultXY_DataSet();
-						for (PointD pt : mmiContours.get(n).PointList)
-							contour.set(pt.X,pt.Y);
-						
-						funcs.add(contour);
-						chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, cpt2.getColor((float) mmiContours.get(n).Value)));
-					}
-					Collections.reverse(funcs);
-					Collections.reverse(chars);
 
-//					PlotSpec spec = new PlotSpec(funcs, chars, "Chance of exceeding MMI " + decToRoman(mmiRef) + " in the next " + durString, "Longitude", "Latitude");
-					PlotSpec spec = new PlotSpec(funcs, chars, "PGA with " + String.format("%.0f", plotPOEParam.getValue()*100) + "% chance of being exceeded in the next " +durString, "Longitude", "Latitude");
-					
-					GraphWidget forecastGraph = new GraphWidget(spec);
-					Component buttonPanel = forecastGraph.getButtonControlPanel();
-					buttonPanel.setVisible(false);
-					GraphPanel graphPanel = forecastGraph.getGraphPanel();
-					graphPanel.getComponent(2).setVisible(false);
-					
-					double regBuff = 0.05;
-					Region region = smoothProbModel.getRegion();
-					forecastGraph.setAxisRange(region.getMinLon()-regBuff, region.getMaxLon()+regBuff,
-							region.getMinLat()-regBuff, region.getMaxLat()+regBuff);
-					
-					setupGP(forecastGraph);
-					
-					PaintScaleLegend subtitle = XYZGraphPanel.getLegendForCPT(cpt2, "PGA (%g)", axisLabelFontSize, tickLabelFontSize,
-				             0, RectangleEdge.RIGHT);
-					if (subtitle != null)
-						forecastGraph.getGraphPanel().addSubtitle(subtitle);
+						//					contourLevels[0] = 0;	// no zeros
+						//					contourLevels[contourLevels.length - 1] = 99; 	//no certainty
 
-					forecastGraph.setName("Probability (" + durString + ")");
-					forecastMapPane.addTab("Probability (" + durString + ")", null, forecastGraph);
-					
+						List<PolyLine> contours = ETAS_RateModel2D.getContours(new_gmpeProbModel, contourLevels);
+
+						if(D){
+							StringBuilder outString = new StringBuilder();
+							for (PolyLine line : contours)
+								outString.append(String.format("%2.2f ", line.Value));
+
+							System.out.println(outString);
+						}
+
+						// set up the title
+						String title = "";
+						if (mapTypeParam.getValue() == MapType.LEVEL) { 
+							String intensityType = intensityTypeParam.getValue().getAbbreviation();
+							String probability = String.format("%.0f", mapPOEParam.getValue());
+							title = intensityType + " with " + probability + "% chance of being exceeded in the next " + durString;
+						} else if (mapTypeParam.getValue() == MapType.PROBABILITIES) {
+							String intensityType = intensityTypeParam.getValue().getAbbreviation();
+							String level;
+							if (intensityTypeParam.getValue() == IntensityType.MMI)
+								level = decToRoman((int) (Math.floor(mapLevelParam.getValue() + 0.01)));
+							else
+								level = String.format("%.0f", mapLevelParam.getValue());
+							String units;
+							if (intensityTypeParam.getValue() == IntensityType.PGA ||
+									intensityTypeParam.getValue() == IntensityType.PSA) 
+								units = "%g";
+							else if (intensityTypeParam.getValue() == IntensityType.PGV)
+								units = "cm/s";
+							else
+								units = "";
+							title = "Probability of exceeding " + intensityType + " level " + level + " " + units + " in the next " + durString;
+						}
+						contourList.add(new ContourModel(contours, title, cpt2));
+
+						//copy epicenter graph
+						List<PlotElement> funcs = Lists.newArrayList();
+						List<PlotCurveCharacterstics> chars = Lists.newArrayList();
+						for (int j = 0; j < oldFuncs.size(); j++ ){
+							if (oldChars.get(j).getSymbol() == PlotSymbol.CIRCLE){
+								funcs.add(oldFuncs.get(j));
+								chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE,  (float) (oldChars.get(j).getSymbolWidth()/10), Color.GRAY));
+							}
+						}
+
+						for (int n = 0; n < contours.size(); n++){
+							XY_DataSet contour = new DefaultXY_DataSet();
+							for (PointD pt : contours.get(n).PointList)
+								contour.set(pt.X,pt.Y);
+
+							funcs.add(contour);
+							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, cpt2.getColor((float) contours.get(n).Value)));
+						}
+						//					Collections.reverse(funcs);
+						//					Collections.reverse(chars);
+
+						funcs.add(cityPlot);
+						chars.add(new PlotCurveCharacterstics(PlotSymbol.SQUARE, 2, Color.BLACK));
+
+						//					PlotSpec spec = new PlotSpec(funcs, chars, "Chance of exceeding MMI " + decToRoman(mmiRef) + " in the next " + durString, "Longitude", "Latitude");
+						PlotSpec spec = new PlotSpec(funcs, chars, title, "Longitude", "Latitude");
+						spec.setPlotAnnotations(cityLabels);
+
+						GraphWidget forecastGraph = new GraphWidget(spec);
+						((NumberAxis) forecastGraph.getGraphPanel().getXAxis()).setAutoRangeIncludesZero(false);;
+						((NumberAxis) forecastGraph.getGraphPanel().getYAxis()).setAutoRangeIncludesZero(false);;
+
+						Component buttonPanel = forecastGraph.getButtonControlPanel();
+						buttonPanel.setVisible(false); // get rid of the button panel
+						GraphPanel graphPanel = forecastGraph.getGraphPanel();
+						graphPanel.getComponent(2).setVisible(false);	//get rid of the other stuff too
+
+						double regBuff = 0.05;
+						Region region = new_gmpeProbModel.getRegion();
+						forecastGraph.setAxisRange(region.getMinLon()-regBuff, region.getMaxLon()+regBuff,
+								region.getMinLat()-regBuff, region.getMaxLat()+regBuff);
+
+						setupGP(forecastGraph);
+
+						String cptAxisLabel = "";
+						if (mapTypeParam.getValue() == MapType.LEVEL) {
+							String units;
+							if (intensityTypeParam.getValue() == IntensityType.PGA ||
+									intensityTypeParam.getValue() == IntensityType.PSA) 
+								units = "Peak Acceleration (%g)";
+							else if (intensityTypeParam.getValue() == IntensityType.PGV)
+								units = "Peak Velocity (cm/s)";
+							else
+								units = "MMI";
+
+							cptAxisLabel = units;
+						} else if (mapTypeParam.getValue() == MapType.PROBABILITIES) {
+							String units = "Probability (%)";
+							cptAxisLabel = units;
+						}
+
+						PaintScaleLegend subtitle = XYZGraphPanel.getLegendForCPT(cpt2, cptAxisLabel, axisLabelFontSize, tickLabelFontSize,
+								0, RectangleEdge.RIGHT);
+						if (subtitle != null)
+							forecastGraph.getGraphPanel().addSubtitle(subtitle);
+
+						forecastGraph.setName("Probability (" + durString + ")");
+						forecastMapPane.addTab("Probability (" + durString + ")", null, forecastGraph);
+					}
 						
 					if (tabbedPane.getTabCount() >= forecast_map_tab_index && !tabbedPane.isEnabledAt(forecast_map_tab_index)){
 
@@ -4477,47 +4634,79 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			}
 	}
 
-	GriddedGeoDataSet getPGAProbModel(GriddedGeoDataSet rateModel, double poe, double mc, double durationYears) {
+	GriddedGeoDataSet getIntensityModel(GriddedGeoDataSet rateModel) {
 		
-		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null); //consider which attenuation relationship to use...
-		gmpe.setParamDefaults();
-
-		// for PGA
-		gmpe.setIntensityMeasure(PGA_Param.NAME);
-		// for SA
-		//	gmpe.setIntensityMeasure(SA_Param.NAME);
-		//	SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), 1d);
-		// for PGV
-		//	gmpe.setIntensityMeasure(PGV_Param.NAME);
-		System.out.println(gmpe.getIntensityMeasure().getName());
-
+		double mc = mcParam.getValue();
+		double value;
+		boolean isReturnProbs;
 		
-		// Vs30 provider, or null for no Vs30
-//		WaldAllenGlobalVs30 vs30Provider = null;
-		WaldAllenGlobalVs30 vs30Provider;
-		try {
-			vs30Provider = new WaldAllenGlobalVs30();
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+		//MMI is not currently supported
+		if (intensityTypeParam.getValue() == IntensityType.MMI) {
+			System.out.println("Sorry MMI is not currently supported. Check back soon...");
 			return null;
 		}
 		
-		// active tectonic coefficients
-		vs30Provider.setActiveCoefficients();
+		if (mapTypeParam.getValue() == MapType.LEVEL) {
+			value = mapPOEParam.getValue()/100;
+			isReturnProbs = false;
+		} else {
+			if (intensityTypeParam.getValue() == IntensityType.PGA ||
+					intensityTypeParam.getValue() == IntensityType.PSA)
+				value = mapLevelParam.getValue()/100;
+			else
+				value = mapLevelParam.getValue();
+			
+			isReturnProbs = true;
+		}
+				
 		
-		// stable coefficients
-		//	vs30Provider.setStableCoefficients();
+		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null); //consider which attenuation relationship to use...
+//		ScalarIMR gmpe = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null); //consider which attenuation relationship to use...
+		gmpe.setParamDefaults();
 
-//		double durationYears = 30d/365d;
+		if (intensityTypeParam.getValue().equals(IntensityType.PGA)) {
+			gmpe.setIntensityMeasure(PGA_Param.NAME);
+		} else if (intensityTypeParam.getValue().equals(IntensityType.PGV)) { 
+			gmpe.setIntensityMeasure(PGV_Param.NAME);
+		} else if (intensityTypeParam.getValue().equals(IntensityType.PSA)) {
+			gmpe.setIntensityMeasure(SA_Param.NAME);
+			SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), 1d);
+		}
 		
+		if(verbose) System.out.println("Computing map for intensity type: " + gmpe.getIntensityMeasure().getName());
 
+		
+		// Vs30 provider, or null for no Vs30
+		WaldAllenGlobalVs30 vs30Provider;
+		if (!vs30Param.getValue()) {
+			vs30Provider = null;
+		} else {
+			try {
+				vs30Provider = new WaldAllenGlobalVs30();
+				TectonicRegime regime = tectonicRegimeParam.getValue();
+				if (regime == TectonicRegime.SCR_ABVSLAB ||
+						regime == TectonicRegime.SCR_GENERIC ||
+						regime == TectonicRegime.SOR_ABVSLAB ||
+						regime == TectonicRegime.SOR_GENERIC) {
+					vs30Provider.setStableCoefficients();
+				} else {
+					vs30Provider.setActiveCoefficients();
+				}
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				System.err.println("Could not retrieve global DEM for estimating site effects. Proceeding without site effects.");
+				e1.printStackTrace();
+				return null;
+			}
+		}
+
+		// this is where you can code the tectonic style/dominant focal mechanism -- hardcoded for now.
 		Map<FocalMech, Double> mechWts = new HashMap<>();
 		mechWts.put(FocalMech.STRIKE_SLIP, 0.5);
 		mechWts.put(FocalMech.NORMAL, 0.25);
 		mechWts.put(FocalMech.REVERSE, 0.25);
 
-		// use the rate map region/spacing
+		// use the rate map region/spacing x 2
 		double calcSpacing = rateModel.getRegion().getSpacing()*2;
 		GriddedRegion calcRegion = new GriddedRegion(new Region(new Location(rateModel.getMaxLat(), rateModel.getMaxLon()),
 				new Location(rateModel.getMinLat(), rateModel.getMinLon())), calcSpacing, null);
@@ -4526,16 +4715,39 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 		DiscretizedFunc[] curves;
 		GriddedGeoDataSet map;
+		
+		double minMag = Math.max(mc, 4);
+		double maxMag = Math.min(genericParams.get_maxMag(), 9.0);
+		
 		try {
-			curves = ETAS_ShakingForecastCalc.calcForecast(calcRegion, rateModel, mc, Math.min(genericParams.maxMag,9), bParam.getValue(), gmpe, mechWts,
+			System.out.println("Calculating hazard curves at each grid point");
+			curves = ETAS_ShakingForecastCalc.calcForecast(calcRegion, rateModel, minMag, maxMag, bParam.getValue(), gmpe, mechWts,
 					maxSourceDist, vs30Provider);
-			map = ETAS_ShakingForecastCalc.extractMap(calcRegion, curves, false, poe); // IML with 10% prob
-
+			
+//			if(D) for(double val : curves[0].xValues()) System.out.println(val + " " + curves[0].getY(val));
+			if (curves == null) {
+				if(D) System.out.println("Cancelling map generation...");
+					return null;
+			} else {
+				System.out.println("Computing map for value: " + value + ". plotting levels at fixed probability? " + isReturnProbs);
+				map = ETAS_ShakingForecastCalc.extractMap(calcRegion, curves, isReturnProbs, value); // The boolean plotLeveles determines whether value is an intensity level (plot probabilities of exceedence) or a probability (plot levels with specified Poe)
+			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return null;
 		}
+		
+		// filter the map for NaN values
+		int nanSum = 0;
+		for (int i =0; i < map.size(); i++) {
+			if(map.get(i) == Double.NaN) {
+				map.set(i, 0d);
+				nanSum++;
+			}
+		}
+		
+		if(D) System.out.println(nanSum + " NaN values found in probability model");
 		return map;
 
 	}
@@ -4549,7 +4761,15 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 		return rateModel;
 	}
-	
+	private GriddedGeoDataSet poissProb2Rate(GriddedGeoDataSet probModel){
+		double rate;
+		for (int i = 0; i < probModel.size(); i++){
+			rate = -Math.log(1-probModel.get(i));
+			probModel.set(i, rate);
+		}
+		
+		return probModel;
+	}	
 	private String decToRoman(int mmi){
 		String str = "";
 		switch(mmi) {
@@ -4764,8 +4984,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	
 	private void doPostFetchCalculations() {
 		// update the grid spacing based on the region size
-		gridSpacingParam.setValue(round((region.getMaxLat() - region.getMinLat())*111.111/40,1) );
-		gridSpacingParam.getEditor().refreshParamEditor();
+		mapGridSpacingParam.setValue(round((region.getMaxLat() - region.getMinLat())*111.111/20,1) );
+		mapGridSpacingParam.getEditor().refreshParamEditor();
 		
 		// reset the fit constraint sub menu with range around new generic values
 		resetFitConstraints(genericParams);
@@ -5107,6 +5327,13 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		aValParam.getEditor().setEnabled(enabled); // no capability to set directly yet
 		pValParam.getEditor().setEnabled(enabled); // no capability to set directly yet
 		cValParam.getEditor().setEnabled(enabled); // no capability to set directly yet
+//		if (!enabled) {
+//			amsValParam.getEditor().getComponent().setForeground(Color.gray);
+//			aValParam.getEditor().getComponent().setForeground(Color.lightGray);
+//			pValParam.getEditor().getComponent().setForeground(Color.lightGray);
+//			cValParam.getEditor().getComponent().setForeground(Color.lightGray);
+//		}
+			
 	}
 
 	private void setEnableParamsPostAftershockParams(boolean enabled) {
@@ -5210,7 +5437,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		return Math.round(val*Math.pow(10, sigDigits))/Math.pow(10, sigDigits);
 	}
 
-	private GeoFeatureList loadCities(Region region, int minLevel){
+	private GeoFeatureList loadCities(Region region, int number){
 		GeoFeatureList cities = new GeoFeatureList();
 		System.out.println("Loading Geographic information...");
 
@@ -5235,11 +5462,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if(D) System.out.println(cities.size() + " cities added to list.");
 		
 		cities.getFeaturesInRegion(region);
-		cities.getFeaturesAboveLevel(minLevel);
-		cities.thinFeatures(Math.sqrt(region.getExtent())/10);
+//		cities.getFeaturesAboveLevel(minLevel);
 		cities.sortByMapLevel(false); //false --> descending order
-		if (cities.size() > 10)
-			cities.getFeaturesAboveLevel(cities.get(10).mapLevel);
+		cities.thinFeatures(Math.sqrt(region.getExtent())/10);
+
+		if (cities.size() > number)
+			cities.getFeaturesAboveLevel(cities.get(number).mapLevel);
 		
 
 		if(verbose && D)
