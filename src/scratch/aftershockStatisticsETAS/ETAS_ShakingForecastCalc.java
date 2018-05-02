@@ -50,6 +50,7 @@ import scratch.aftershockStatisticsETAS.griddedInterpGMPE.GriddedInterpGMPE_Calc
 
 public class ETAS_ShakingForecastCalc {
 	
+	private static boolean D = true;
 	private static double magDelta = 0.1;
 	private static double[] depths = { 7, 2 }; // depth of <6.5 and >=6.5, respectively
 	
@@ -76,6 +77,8 @@ public class ETAS_ShakingForecastCalc {
 		erf.updateForecast();
 		
 		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(gmpe.getIntensityMeasure());
+		
+		
 		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
 		for (Point2D pt : xVals)
 			logXVals.set(Math.log(pt.getX()), 1);
@@ -92,7 +95,9 @@ public class ETAS_ShakingForecastCalc {
 		GriddedInterpGMPE_Calc calc = new GriddedInterpGMPE_Calc(gmpe, xVals, b, refMag, maxMag, numMag, distInterp, vs30Interp);
 		
 		// this precalculates to set up the interpolators
+		if(D) System.out.println("Setting up interpolators...");
 		calc.precalc(durationYears, depths, mechWts);
+		
 		
 		// build sites list
 		List<Site> sites = new ArrayList<>();
@@ -109,6 +114,7 @@ public class ETAS_ShakingForecastCalc {
 		}
 		
 		// do interpolated calculation
+		if(D) System.out.println("Interpolating...");
 		DiscretizedFunc[] curves = calc.calc(rateModel, sites);
 		
 		return curves;

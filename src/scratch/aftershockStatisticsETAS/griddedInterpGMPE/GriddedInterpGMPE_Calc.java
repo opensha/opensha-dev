@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 import org.jfree.data.Range;
 import org.opensha.commons.data.Site;
@@ -25,6 +27,7 @@ import org.opensha.commons.data.siteData.impl.WaldAllenGlobalVs30;
 import org.opensha.commons.data.xyz.ArbDiscrGeoDataSet;
 import org.opensha.commons.data.xyz.GeoDataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
+import org.opensha.commons.exceptions.WarningException;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
@@ -54,6 +57,7 @@ import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.EqkRuptureParams.MagParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -111,9 +115,9 @@ public class GriddedInterpGMPE_Calc {
 		this.inputMFD = inputMFD;
 		
 		inputMFD.scaleToCumRate(0, 1d);
-		System.out.print("Input MFD");
-		for (int i=0; i<inputMFD.size(); i++)
-			System.out.println("\t"+(float)+inputMFD.getX(i)+"\t"+(float)inputMFD.getY(i));
+//		System.out.print("Input MFD");
+//		for (int i=0; i<inputMFD.size(); i++)
+//			System.out.println("\t"+(float)+inputMFD.getX(i)+"\t"+(float)inputMFD.getY(i));
 		
 		int[] dimensions = new int[allInterps.size()];
 		for (int i=0; i<dimensions.length; i++)
@@ -144,7 +148,12 @@ public class GriddedInterpGMPE_Calc {
 		Site site = new Site(loc);
 		site.addParameterList(gmpe.getSiteParams());
 		gmpe.setSite(site);
-		gmpe.setEqkRupture(ruptures.iterator().next());
+		
+		try {
+			gmpe.setEqkRupture(ruptures.iterator().next());
+		} catch (WarningException e) {
+			//do nothing
+		}
 		
 		precalcRecursive(new int[0], source);
 		
@@ -188,7 +197,12 @@ public class GriddedInterpGMPE_Calc {
 			double[] sourceExceedRates = new double[logXVals.size()];
 			
 			for (ProbEqkRupture rup : source) {
-				gmpe.setEqkRupture(rup);
+				try {
+					gmpe.setEqkRupture(rup);
+				} catch (WarningException e) {
+					// do nothing
+				}
+				
 				gmpe.getExceedProbabilities(logXVals);
 				
 				double rupProb = rup.getProbability();
@@ -224,6 +238,7 @@ public class GriddedInterpGMPE_Calc {
 		}
 	}
 	
+	private volatile boolean stopRequested = false;
 	public DiscretizedFunc[] calc(GeoDataSet griddedTotCumRates, List<Site> sites) {
 		DiscretizedFunc[] curves = new DiscretizedFunc[sites.size()];
 		
@@ -237,6 +252,14 @@ public class GriddedInterpGMPE_Calc {
 		double[] indexes = new double[allInterps.size()];
 		
 		double inputMFD_totCumRate = inputMFD.getCumRate(0);
+		
+		// set up timer/time estimator
+		double toc, timeEstimate, n;
+		Stopwatch watch = Stopwatch.createStarted();
+		int warnTime = 3;
+		boolean userWarned = false;
+		double deltaT = 0; //this will record the time spent waiting for the dialog box.
+
 		
 		for (int g=0; g<griddedTotCumRates.size(); g++) {
 			Location sourceLoc = griddedTotCumRates.getLocation(g);
@@ -264,9 +287,46 @@ public class GriddedInterpGMPE_Calc {
 					
 					curves[s].set(i, curves[s].getY(i)*sourceNonExceedProb);
 				}
+		
+				// run the timer to see how long this is going to take
+				toc = watch.elapsed(TimeUnit.SECONDS) - deltaT;
+				if(toc - deltaT > warnTime){
+					long count = (g)*(sites.size()) + s;
+					long total = (sites.size() * griddedTotCumRates.size());
+					timeEstimate = toc * total/count;
+					System.out.format("This might take a while. Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+					
+					// if the time estimate is more than 20 seconds, ask if user wants to quit
+					if (!userWarned && timeEstimate > 30) { // only the first time around and if it'll take more than a minute
+						userWarned = true;
+						// launch a dialog as a new thread
+						String message = "It will take approximately " + (int) timeEstimate + " seconds to complete each map at this resolution.\n"
+								+ "Are you sure you wish to continue with the current \u0394 (km)?";
+						
+						String title = "Warning";
+						
+						double t1 = watch.elapsed(TimeUnit.SECONDS); 
+						try {
+							int ret = JOptionPane.showConfirmDialog(null, message, title, JOptionPane.OK_CANCEL_OPTION);
+							if (ret == JOptionPane.CANCEL_OPTION)
+								stopRequested = true;
+						} catch (Exception e) {
+							System.err.println("Error displaying error message!");
+							e.printStackTrace();
+						}
+						deltaT = watch.elapsed(TimeUnit.SECONDS) - t1;
+					}
+					warnTime += 3;
+				}	
+				
+				if (stopRequested) {
+					System.out.println("Map calculation terminated prematurely");
+					return null;
+				}
 			}
 		}
 		
+//	
 //		for (ProbEqkSource source : sources) {
 //			// calculate distances
 //			Preconditions.checkState(source.getSourceSurface() instanceof PointSurface, "Only point sources supported");
@@ -355,7 +415,8 @@ public class GriddedInterpGMPE_Calc {
 //		ScalarIMR gmpe = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
 		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null);
 		gmpe.setParamDefaults();
-		gmpe.setIntensityMeasure(PGA_Param.NAME);
+//		gmpe.setIntensityMeasure(PGA_Param.NAME);
+		gmpe.setIntensityMeasure(PGV_Param.NAME);
 
 		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(gmpe.getIntensityMeasure());
 //		IntensityMeasureLevelInterpolator imlInterp =
