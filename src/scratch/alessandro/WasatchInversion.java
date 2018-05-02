@@ -18,8 +18,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
 /**
- * This class reads Wasatch inversion data from files, provides methods for getting the various constraints, and runs the inversion
- * @author field n.
+ * This class reads Wasatch inversion data from files, provides methods for getting the various constraints, and runs the inversion.
+ * 
+ * Slip rate and event rate standard deviations are computed as the difference of the 95% confidence bounds divided by 4.
+ * @author 
  *
  */
 public class WasatchInversion {
@@ -33,7 +35,7 @@ public class WasatchInversion {
 	// These values are the same for all fault sections
 	final static double UPPER_SEIS_DEPTH = 0;
 	final static double LOWER_SEIS_DEPTH = 15;
-	final static double FAULT_DIP = 45;
+	final static double FAULT_DIP = 50;
 	final static double FAULT_RAKE = -90;
 	
 	
@@ -41,7 +43,7 @@ public class WasatchInversion {
 	ArrayList<SegRateConstraint> sectionRateConstraints;
 	int[][] rupSectionMatrix;
 	
-	final static String SLIP_RATE_FILENAME = "sliprate_wasatch_mod.txt";
+	final static String SLIP_RATE_FILENAME = "sliprate_wasatch_final.txt";
 	final static String PALEO_RATE_FILENAME = "paleorate_wasatch_and_95p.txt";
 	final static String FAULT_TRACE_DIR_NAME = "subsections_traces/";
 
@@ -71,13 +73,15 @@ public class WasatchInversion {
 				//			System.out.println(line);
 				line = line.trim();
 				String[] split = line.split("\t");	// tab delimited
-				Preconditions.checkState(split.length == 3, "Expected 3 items, got %s", split.length);
+				Preconditions.checkState(split.length == 4, "Expected 4 items, got %s", split.length);
 				//			System.out.println(split[0]+"\t"+split[1]+"\t"+split[2]);
 				int testIndex = Integer.valueOf(split[0]);
 				if(sectIndex != testIndex)
 					throw new RuntimeException("Bad section index; "+sectIndex+" != "+testIndex);
-				sectSlipRate[sectIndex] = Double.valueOf(split[1]);	
-				sectSlipRateStdDev[sectIndex] = Double.valueOf(split[2]);	
+				sectSlipRate[sectIndex] = Double.valueOf(split[1]);
+				double low95 = Double.valueOf(split[2]);
+				double upp95 = Double.valueOf(split[3]);
+				sectSlipRateStdDev[sectIndex] = (upp95-low95)/4.0;	
 				if(D) System.out.println(sectIndex+"\t"+sectSlipRate[sectIndex]+"\t"+sectSlipRateStdDev[sectIndex]);
 				sectIndex+=1;
 			}
@@ -97,7 +101,7 @@ public class WasatchInversion {
 				double stdDev = Double.valueOf(split[2]);
 				double upp95 = Double.valueOf(split[3]);
 				double low95 = Double.valueOf(split[4]);
-				stdDev = (upp95-low95)/4.0;  // temporary fix until the stdDev values are fixed
+				stdDev = (upp95-low95)/4.0; 
 				SegRateConstraint sectionRateConstraint = new SegRateConstraint("Section "+split[0]); // Names are not unique!
 				sectionRateConstraint.setSegRate(sectIndex, meanRate, stdDev, low95, upp95);
 				sectionRateConstraints.add(sectionRateConstraint);
@@ -315,7 +319,7 @@ public class WasatchInversion {
 	    file.mkdirs();
 	    
 	    // write the setup info to a file
-//	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
+	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
 		
 		// Non-negative least squares
 		fltSysRupInversion.doInversionNNLS();
@@ -323,19 +327,19 @@ public class WasatchInversion {
 		// Simulated annealing
 		long numIterations = (long) 1e5;
 		boolean initStateFromAprioriRupRates = false;
-//		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
+		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
 				
 		// write results to file
-//		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
+		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
 		
 		// Now make plots if desired
 		boolean popUpPlots = true;	// this tells whether to show plots in a window (turn off for HPC)
 //		dirName = null;	// set as null if you don't want to save to file
-//		fltSysRupInversion.writeAndOrPlotDataFits(null, popUpPlots);
-//		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
+		fltSysRupInversion.writeAndOrPlotDataFits(null, popUpPlots);
+		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 	    fltSysRupInversion.writeAndOrPlotSegPartMFDs(dirName, popUpPlots);
 		
