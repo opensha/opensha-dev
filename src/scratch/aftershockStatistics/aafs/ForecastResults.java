@@ -82,6 +82,14 @@ public class ForecastResults {
 
 	public int catalog_eqk_count = 0;
 
+	// Maximum magnitude of any aftershock (0.0 if there are no aftershocks).
+
+	public double catalog_max_mag = 0.0;
+
+	// Event id of the aftershock with maximum magnitude ("" if there are no aftershocks).
+
+	public String catalog_max_event_id = "";
+
 	// catalog_aftershocks - List of aftershocks.
 	// Note: This field is not marshaled, because aftershock lists are stored in separate database records.
 
@@ -93,6 +101,8 @@ public class ForecastResults {
 		catalog_start_time = 0L;
 		catalog_end_time = 0L;
 		catalog_eqk_count = 0;
+		catalog_max_mag = 0.0;
+		catalog_max_event_id = "";
 		catalog_aftershocks = null;
 		return;
 	}
@@ -130,6 +140,20 @@ public class ForecastResults {
 
 		catalog_eqk_count = aftershocks.size();
 		catalog_aftershocks = new CompactEqkRupList (aftershocks);
+
+		if (catalog_eqk_count == 0) {
+			catalog_max_mag = 0.0;
+			catalog_max_event_id = "";
+		} else {
+			catalog_max_mag = -Double.MAX_VALUE;
+			for (ObsEqkRupture rup : aftershocks) {
+				double mag = rup.getMag();
+				if (mag > catalog_max_mag) {
+					catalog_max_mag = mag;
+					catalog_max_event_id = rup.getEventId();
+				}
+			}
+		}
 
 		catalog_result_avail = true;
 		return;
@@ -578,12 +602,14 @@ public class ForecastResults {
 			"catalog_start_time = " + catalog_start_time + "\n"
 			+ "catalog_end_time = " + catalog_end_time + "\n"
 			+ "catalog_eqk_count = " + catalog_eqk_count + "\n"
+			+ "catalog_max_mag = " + catalog_max_mag + "\n"
+			+ "catalog_max_event_id = " + catalog_max_event_id + "\n"
 			+ "catalog_aftershocks = " + ((catalog_aftershocks == null) ? "null" : "available") + "\n"
 		))
 
 		+ "generic_result_avail = " + generic_result_avail + "\n"
 		+ ((!generic_result_avail) ? "" : (
-			"generic_summary = " + generic_summary.toString() + "\n"
+			"generic_summary:\n" + generic_summary.toString() + "\n"
 			+ "generic_json = " + generic_json + "\n"
 			+ "generic_pdl = " + generic_pdl + "\n"
 			+ "generic_model = " + ((generic_model == null) ? "null" : "available") + "\n"
@@ -591,7 +617,7 @@ public class ForecastResults {
 
 		+ "seq_spec_result_avail = " + seq_spec_result_avail + "\n"
 		+ ((!seq_spec_result_avail) ? "" : (
-			"seq_spec_summary = " + seq_spec_summary.toString() + "\n"
+			"seq_spec_summary:\n" + seq_spec_summary.toString() + "\n"
 			+ "seq_spec_json = " + seq_spec_json + "\n"
 			+ "seq_spec_pdl = " + seq_spec_pdl + "\n"
 			+ "seq_spec_model = " + ((seq_spec_model == null) ? "null" : "available") + "\n"
@@ -599,7 +625,7 @@ public class ForecastResults {
 
 		+ "bayesian_result_avail = " + bayesian_result_avail + "\n"
 		+ ((!bayesian_result_avail) ? "" : (
-			"bayesian_summary = " + bayesian_summary.toString() + "\n"
+			"bayesian_summary:\n" + bayesian_summary.toString() + "\n"
 			+ "bayesian_json = " + bayesian_json + "\n"
 			+ "bayesian_pdl = " + bayesian_pdl + "\n"
 			+ "bayesian_model = " + ((bayesian_model == null) ? "null" : "available") + "\n"
@@ -644,9 +670,11 @@ public class ForecastResults {
 
 		writer.marshalBoolean ("catalog_result_avail", catalog_result_avail);
 		if (catalog_result_avail) {
-			writer.marshalLong ("catalog_start_time", catalog_start_time);
-			writer.marshalLong ("catalog_end_time"  , catalog_end_time  );
-			writer.marshalInt  ("catalog_eqk_count" , catalog_eqk_count );
+			writer.marshalLong   ("catalog_start_time"  , catalog_start_time  );
+			writer.marshalLong   ("catalog_end_time"    , catalog_end_time    );
+			writer.marshalInt    ("catalog_eqk_count"   , catalog_eqk_count   );
+			writer.marshalDouble ("catalog_max_mag"     , catalog_max_mag     );
+			writer.marshalString ("catalog_max_event_id", catalog_max_event_id);
 		}
 
 		writer.marshalBoolean ("generic_result_avail", generic_result_avail);
@@ -687,9 +715,11 @@ public class ForecastResults {
 
 		catalog_result_avail = reader.unmarshalBoolean ("catalog_result_avail");
 		if (catalog_result_avail) {
-			catalog_start_time  = reader.unmarshalLong ("catalog_start_time");
-			catalog_end_time    = reader.unmarshalLong ("catalog_end_time"  );
-			catalog_eqk_count   = reader.unmarshalInt  ("catalog_eqk_count" );
+			catalog_start_time   = reader.unmarshalLong   ("catalog_start_time"  );
+			catalog_end_time     = reader.unmarshalLong   ("catalog_end_time"    );
+			catalog_eqk_count    = reader.unmarshalInt    ("catalog_eqk_count"   );
+			catalog_max_mag      = reader.unmarshalDouble ("catalog_max_mag"     );
+			catalog_max_event_id = reader.unmarshalString ("catalog_max_event_id");
 			catalog_aftershocks = null;
 		} else {
 			set_default_catalog_results();
@@ -829,17 +859,19 @@ public class ForecastResults {
 			// Fetch just the mainshock info
 
 			ForecastParameters params = new ForecastParameters();
-			params.event_id = the_event_id;
-			params.fetch_mainshock_params(null);
+			params.setup_mainshock_only (the_event_id);
+
+			System.out.println ("");
+			System.out.println (params.toString());
 
 			// Set the forecast time to be 7 days after the mainshock
 
-			long the_forecast_time = params.mainshock_time + Math.round(ComcatAccessor.day_millis * 7.0);
+			long the_forecast_lag = Math.round(ComcatAccessor.day_millis * 7.0);
 
 			// Get parameters
 
 			params = new ForecastParameters();
-			params.fetch_all (the_event_id, the_forecast_time, null);
+			params.fetch_all (the_event_id, the_forecast_lag, null);
 
 			// Display them
 
@@ -849,7 +881,7 @@ public class ForecastResults {
 			// Get results
 
 			ForecastResults results = new ForecastResults();
-			results.calc_all (the_forecast_time, params);
+			results.calc_all (params.mainshock_time + the_forecast_lag, params);
 
 			// Display them
 
@@ -882,17 +914,19 @@ public class ForecastResults {
 			// Fetch just the mainshock info
 
 			ForecastParameters params = new ForecastParameters();
-			params.event_id = the_event_id;
-			params.fetch_mainshock_params(null);
+			params.setup_mainshock_only (the_event_id);
+
+			System.out.println ("");
+			System.out.println (params.toString());
 
 			// Set the forecast time to be 7 days after the mainshock
 
-			long the_forecast_time = params.mainshock_time + Math.round(ComcatAccessor.day_millis * 7.0);
+			long the_forecast_lag = Math.round(ComcatAccessor.day_millis * 7.0);
 
 			// Get parameters
 
 			params = new ForecastParameters();
-			params.fetch_all (the_event_id, the_forecast_time, null);
+			params.fetch_all (the_event_id, the_forecast_lag, null);
 
 			// Display them
 
@@ -902,7 +936,7 @@ public class ForecastResults {
 			// Get results
 
 			ForecastResults results = new ForecastResults();
-			results.calc_all (the_forecast_time, params);
+			results.calc_all (params.mainshock_time + the_forecast_lag, params);
 
 			// Display them
 

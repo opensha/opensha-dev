@@ -13,6 +13,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.FileInputStream;
+import java.io.Reader;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 import java.util.InputMismatchException;
 import java.util.NoSuchElementException;
@@ -26,6 +29,12 @@ import org.opensha.commons.geo.Region;
 import scratch.aftershockStatistics.OAFTectonicRegime;
 import scratch.aftershockStatistics.OAFRegion;
 
+import scratch.aftershockStatistics.util.MarshalReader;
+import scratch.aftershockStatistics.util.MarshalImpJsonReader;
+
+// Class for region-dependent parameters.
+// Author: Michael Barall
+//
 // This class holds a set of parameters, which is determined by region.
 // Type T is the class that holds parameter values.
 //
@@ -536,6 +545,108 @@ public abstract class OAFParameterSet<T> {
 		}
 
 		return prop;
+	}
+
+	// load_file_as_string - Load a data file into a string.
+	// Parameters:
+	//  filename = Name of file (not including a path).
+	//  requester = Class that is requesting the file.
+	// This function first calls open_param_file to open the file,
+	// then reads the entire contents of the file into a string.
+	// In case of error, this function throws RuntimeException (or another unchecked exception).
+
+	public static String load_file_as_string (String filename, Class<?> requester) {
+
+		String result;
+
+		// Any exception means load has failed
+
+		try (
+
+			// Open the data file, it will be auto-closed on exit from the try block
+
+			InputStream stream = open_param_file (filename, requester);
+		){
+
+			// Convert the InputStream to a Reader
+			// (Could specify a charset in the InputStreamReader constructor)
+			// (Don't need to close these because they are just wrappers around the InputStream)
+
+			Reader reader = new BufferedReader (new InputStreamReader (stream));
+
+			// Buffer to build string
+
+			StringBuilder builder = new StringBuilder();
+
+			// Buffer to read file
+
+			char[] buffer = new char[16384];
+
+			// Loop to read file
+
+			for (;;) {
+				int amount = reader.read (buffer, 0, buffer.length);
+				if (amount <= 0) {
+					break;
+				}
+				builder.append (buffer, 0, amount);
+			}
+
+			// Get the string
+
+			result = builder.toString();
+
+		} catch (IOException e) {
+			throw new RuntimeException("OAFParameterSet: Error reading from data file: " + filename, e);
+		} catch (Exception e) {
+			throw new RuntimeException("OAFParameterSet: Unable to load data file: " + filename, e);
+		}
+
+		// Done
+
+		return result;
+	}
+
+	// load_file_as_json - Load a data file as JSON.
+	// Parameters:
+	//  filename = Name of file (not including a path).
+	//  requester = Class that is requesting the file.
+	// This function first calls open_param_file to open the file,
+	// then reads the entire contents of the file into a MarshalReader.
+	// In case of error, this function throws RuntimeException (or another unchecked exception).
+
+	public static MarshalReader load_file_as_json (String filename, Class<?> requester) {
+
+		MarshalImpJsonReader result;
+
+		// Any exception means load has failed
+
+		try (
+
+			// Open the data file, it will be auto-closed on exit from the try block
+
+			InputStream stream = open_param_file (filename, requester);
+		){
+
+			// Convert the InputStream to a Reader
+			// (Could specify a charset in the InputStreamReader constructor)
+			// (Don't need to close these because they are just wrappers around the InputStream)
+
+			Reader reader = new BufferedReader (new InputStreamReader (stream));
+
+			// Read the file as JSON
+
+			result = new MarshalImpJsonReader (reader);
+
+		} catch (IOException e) {
+			throw new RuntimeException("OAFParameterSet: Error reading from data file: " + filename, e);
+		} catch (Exception e) {
+			throw new RuntimeException("OAFParameterSet: Unable to load data file: " + filename, e);
+		}
+
+		// Done
+
+		return result;
 	}
 
 //	// Build the region that describes California.

@@ -56,10 +56,10 @@ public class ForecastParameters {
 
 	public String event_id = "";
 
-	// Time of forecast, in milliseconds since the epoch.
+	// Lag time of forecast, in milliseconds since the mainshock.
 	// Restriction: Must be greater than the value in the previous forecast.
 
-	public long forecast_time = 0L;
+	public long forecast_lag = 0L;
 
 
 	//----- Control parameters -----
@@ -552,15 +552,9 @@ public class ForecastParameters {
 			min_depth = prior_params.min_depth;
 			max_depth = prior_params.max_depth;
 
-			// Special handling for max_days, try to make it match forecast_time if available
+			// Special handling for max_days, try to make it match forecast_lag if available
 
-			if (aftershock_search_avail) {
-				if (mainshock_avail) {
-					max_days = (forecast_time - mainshock_time)/ComcatAccessor.day_millis;
-				} else if (prior_params.mainshock_avail) {
-					max_days = (forecast_time - prior_params.mainshock_time)/ComcatAccessor.day_millis;
-				}
-			}
+			max_days = ((double)forecast_lag)/ComcatAccessor.day_millis;
 
 			return;
 
@@ -593,8 +587,8 @@ public class ForecastParameters {
 
 		min_days = 0.0;
 
-		//max_days = (System.currentTimeMillis() - mainshock_time)/ComcatAccessor.day_millis;
-		max_days = (forecast_time - mainshock_time)/ComcatAccessor.day_millis;
+		//max_days = ((double)System.currentTimeMillis())/ComcatAccessor.day_millis;
+		max_days = ((double)forecast_lag)/ComcatAccessor.day_millis;
 
 		// Depth range used for sampling aftershocks, in kilometers
 
@@ -645,9 +639,9 @@ public class ForecastParameters {
 
 	// Fetch all parameters.
 
-	public void fetch_all (String the_event_id, long the_forecast_time, ForecastParameters prior_params) {
+	public void fetch_all (String the_event_id, long the_forecast_lag, ForecastParameters prior_params) {
 		event_id = the_event_id;
-		forecast_time = the_forecast_time;
+		forecast_lag = the_forecast_lag;
 		fetch_control_params (prior_params);
 		fetch_mainshock_params (prior_params);
 		fetch_generic_params (prior_params);
@@ -657,13 +651,40 @@ public class ForecastParameters {
 		return;
 	}
 
+	// Set up the mainshock parameters, setting everything else to default.
+
+	public void setup_mainshock_only (String the_event_id) {
+		event_id = the_event_id;
+		forecast_lag = 0L;
+		set_default_control_params();
+		fetch_mainshock_params (null);
+
+		generic_fetch_meth = FETCH_METH_AUTO;
+		generic_avail = false;
+		set_default_generic_params();
+
+		mag_comp_fetch_meth = FETCH_METH_AUTO;
+		mag_comp_avail = false;
+		set_default_mag_comp_params();
+
+		seq_spec_fetch_meth = FETCH_METH_AUTO;
+		seq_spec_avail = false;
+		set_default_seq_spec_params();
+
+		aftershock_search_fetch_meth = FETCH_METH_AUTO;
+		aftershock_search_avail = false;
+		set_default_aftershock_search_params();
+	
+		return;
+	}
+
 	// Display our contents
 
 	@Override
 	public String toString() {
 		return "ForecastParameters:" + "\n"
 		+ "event_id = " + event_id + "\n"
-		+ "forecast_time = " + forecast_time + "\n"
+		+ "forecast_lag = " + forecast_lag + "\n"
 
 		+ "generic_calc_meth = " + generic_calc_meth + "\n"
 		+ "seq_spec_calc_meth = " + seq_spec_calc_meth + "\n"
@@ -745,7 +766,7 @@ public class ForecastParameters {
 		// Contents
 
 		writer.marshalString ("event_id"       , event_id       );
-		writer.marshalLong   ("forecast_time"  , forecast_time  );
+		writer.marshalLong   ("forecast_lag"   , forecast_lag   );
 
 		writer.marshalInt ("generic_calc_meth" , generic_calc_meth );
 		writer.marshalInt ("seq_spec_calc_meth", seq_spec_calc_meth);
@@ -805,7 +826,7 @@ public class ForecastParameters {
 		// Contents
 
 		event_id        = reader.unmarshalString ("event_id"       );
-		forecast_time   = reader.unmarshalLong   ("forecast_time"  );
+		forecast_lag    = reader.unmarshalLong   ("forecast_lag"   );
 
 		generic_calc_meth  = reader.unmarshalInt ("generic_calc_meth" , CALC_METH_MIN, CALC_METH_MAX);
 		seq_spec_calc_meth = reader.unmarshalInt ("seq_spec_calc_meth", CALC_METH_MIN, CALC_METH_MAX);
@@ -967,17 +988,19 @@ public class ForecastParameters {
 			// Fetch just the mainshock info
 
 			ForecastParameters params = new ForecastParameters();
-			params.event_id = the_event_id;
-			params.fetch_mainshock_params(null);
+			params.setup_mainshock_only (the_event_id);
+
+			System.out.println ("");
+			System.out.println (params.toString());
 
 			// Set the forecast time to be 7 days after the mainshock
 
-			long the_forecast_time = params.mainshock_time + Math.round(ComcatAccessor.day_millis * 7.0);
+			long the_forecast_lag = Math.round(ComcatAccessor.day_millis * 7.0);
 
 			// Get parameters
 
 			params = new ForecastParameters();
-			params.fetch_all (the_event_id, the_forecast_time, null);
+			params.fetch_all (the_event_id, the_forecast_lag, null);
 
 			// Display them
 
@@ -1008,17 +1031,19 @@ public class ForecastParameters {
 			// Fetch just the mainshock info
 
 			ForecastParameters params = new ForecastParameters();
-			params.event_id = the_event_id;
-			params.fetch_mainshock_params(null);
+			params.setup_mainshock_only (the_event_id);
+
+			System.out.println ("");
+			System.out.println (params.toString());
 
 			// Set the forecast time to be 7 days after the mainshock
 
-			long the_forecast_time = params.mainshock_time + Math.round(ComcatAccessor.day_millis * 7.0);
+			long the_forecast_lag = Math.round(ComcatAccessor.day_millis * 7.0);
 
 			// Get parameters
 
 			params = new ForecastParameters();
-			params.fetch_all (the_event_id, the_forecast_time, null);
+			params.fetch_all (the_event_id, the_forecast_lag, null);
 
 			// Display them
 
