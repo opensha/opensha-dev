@@ -73,6 +73,7 @@ import scratch.aftershockStatisticsETAS.ETAS_ShakingForecastCalc;
 public class GriddedInterpGMPE_Calc {
 	
 	private ScalarIMR gmpe;
+	private Boolean promptForLongCalc = false;
 	
 	private DistanceInterpolator distInterp; // index 0
 	private IntensityMeasureLevelInterpolator imlInterp; // index N-1
@@ -290,14 +291,14 @@ public class GriddedInterpGMPE_Calc {
 		
 				// run the timer to see how long this is going to take
 				toc = watch.elapsed(TimeUnit.SECONDS) - deltaT;
-				if(toc - deltaT > warnTime){
+				if(toc > warnTime){
 					long count = (g)*(sites.size()) + s;
 					long total = (sites.size() * griddedTotCumRates.size());
 					timeEstimate = toc * total/count;
 					System.out.format("This might take a while. Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
 					
 					// if the time estimate is more than 20 seconds, ask if user wants to quit
-					if (!userWarned && timeEstimate > 30) { // only the first time around and if it'll take more than a minute
+					if (!userWarned && timeEstimate > 30 && promptForLongCalc) { // only the first time around and if it'll take more than a minute
 						userWarned = true;
 						// launch a dialog as a new thread
 						String message = "It will take approximately " + (int) timeEstimate + " seconds to complete each map at this resolution.\n"
@@ -387,6 +388,16 @@ public class GriddedInterpGMPE_Calc {
 		
 		return curves;
 	}
+	
+	public void setPromptForLongCalc(boolean prompt) {
+		this.promptForLongCalc = prompt;
+	}
+	
+	public boolean getPromptForLongCalc() {
+		return promptForLongCalc;
+	}
+	
+	
 	
 //	private DefaultXY_DataSet debugMeanScatter = new DefaultXY_DataSet();
 //	private DefaultXY_DataSet debugStdDevScatter = new DefaultXY_DataSet();

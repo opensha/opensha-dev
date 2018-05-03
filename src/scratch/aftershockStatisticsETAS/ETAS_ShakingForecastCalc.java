@@ -70,6 +70,12 @@ public class ETAS_ShakingForecastCalc {
 	 */
 	public static DiscretizedFunc[] calcForecast(GriddedRegion calcRegion, GeoDataSet rateModel, double refMag, double maxMag, double b, ScalarIMR gmpe,
 			Map<FocalMech, Double> mechWts, double maxSourceDist, SiteData<Double> vs30Provider) throws IOException {
+		return calcForecast( calcRegion,  rateModel,  refMag,  maxMag,  b,  gmpe,
+				 mechWts,  maxSourceDist, vs30Provider,  false); 
+	}
+	
+	public static DiscretizedFunc[] calcForecast(GriddedRegion calcRegion, GeoDataSet rateModel, double refMag, double maxMag, double b, ScalarIMR gmpe,
+			Map<FocalMech, Double> mechWts, double maxSourceDist, SiteData<Double> vs30Provider, boolean prompt) throws IOException {
 		
 		double durationYears = 1d; // this must be set to one, because the PSHA codes assume rateModel is annual, but we must give it the total number expected.
 		
@@ -93,6 +99,7 @@ public class ETAS_ShakingForecastCalc {
 				Vs30_Param.NAME, 180, 760, 20, false, false); // matches Wald Allen range
 		
 		GriddedInterpGMPE_Calc calc = new GriddedInterpGMPE_Calc(gmpe, xVals, b, refMag, maxMag, numMag, distInterp, vs30Interp);
+		calc.setPromptForLongCalc(prompt);
 		
 		// this precalculates to set up the interpolators
 		if(D) System.out.println("Setting up interpolators...");

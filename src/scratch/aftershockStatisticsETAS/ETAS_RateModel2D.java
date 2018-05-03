@@ -518,22 +518,26 @@ public class ETAS_RateModel2D {
 	/* Write a contour as KML document 
 	 * 
 	 */
-	public static void writeContoursAsKML(List<PolyLine> contours, String name, File outputFile, CPT cpt){
+	public static void writeContoursAsKML(List<PolyLine> contours, String name, String units, File outputFile, CPT cpt){
 		double labelSize = 0.8;
 		boolean D = true; //debug
 		Color color = new Color(0,0,0);
 		
+		
 		int width = 2;
 		int labelCount = 3;
-		int labelLimit = 1;
-		int labelSpaceMin = 2;
+		int labelLimit = 8;
+		int labelSpaceMin = 4;
 		
 		StringBuilder outputString = new StringBuilder();
 		
 		// start building the file
 		// insert header
 		outputString.append(header(name, labelSize, color, width));
-		if(D) System.out.println("Printing " + contours.size() + " contours to file.");	
+		if(D) System.out.println("Printing " + contours.size() + " contours to file.");
+	
+		double prevLevel = 0.0;
+		boolean isNewLevel = true;
 		for (int i = 0; i < contours.size(); i++){
 			PolyLine contour = contours.get(i);
 			int contourLength = contour.PointList.size();
@@ -541,6 +545,13 @@ public class ETAS_RateModel2D {
 			int startPt = (int) (Math.random()*labelSpace);
 			
 			double level = contours.get(i).Value;
+			if (Math.abs(level - prevLevel) < 0.001) {
+				isNewLevel = false;
+			} else {
+				isNewLevel = true;
+			}
+			prevLevel = level;
+				
 			double lat, lon, depth;
 			color = cpt.getColor((float) level);
 			
@@ -556,10 +567,12 @@ public class ETAS_RateModel2D {
 				contourString.append(lon + "," + lat + "," + depth + " ");
 				
 				// add another label if enough points have been passed
-				if (contourLength > labelLimit && Math.floorMod(j, labelSpace) == startPt
-						&& j <= contour.PointList.size() - labelSpace){
-					labelString.append(label(level, lon, lat, depth));
+				if ( (contourLength > labelLimit && Math.floorMod(j, labelSpace) == startPt
+						&& j <= contour.PointList.size() - labelSpace) 
+							|| isNewLevel){
+					labelString.append(label(level, lon, lat, depth, units));
 				};
+				isNewLevel = false;
 			}
 			// end the contour line
 			contourString.append(endLine());
@@ -636,7 +649,7 @@ public class ETAS_RateModel2D {
 	private static String beginLine(double level, Color color){
 		return ""
 				+"	<Placemark>\n"
-				+"		<name>" + String.format("%2.2f", level) + "</name>\n"
+				+"		<name>" + String.format("%.2f", level) + "</name>\n"
 				+"		<styleUrl>#linestyle</styleUrl>\n"
 				+"		<Style>\n"
 				+" 			<LineStyle>\n"
@@ -657,10 +670,17 @@ public class ETAS_RateModel2D {
 		    +"	</Placemark>\n";
 	}		
 
-	private static String label(double level, double lon, double lat, double depth){
-		String levelStr = String.format("%.0f%%", Math.floor(level/5)*5); //rounds by fives
-		if (level < 1.001) levelStr = "1%";
-		if (level > 98.99) levelStr = "99%";
+	private static String label(double level, double lon, double lat, double depth, String units){
+		
+		String levelStr;
+		if (level < 10)
+			levelStr = String.format("%.1f", Math.floor(level/0.1)*0.1) + units; //rounds by ones
+		else
+			levelStr = String.format("%.0f", Math.floor(level/1)*1) + units; //rounds by ones
+		
+		
+//		if (level < 1.001) levelStr = "<1" + units;
+//		if (level > 98.99) levelStr = ">99" + units;
 		
 		return ""
 				+"	<Placemark>\n"

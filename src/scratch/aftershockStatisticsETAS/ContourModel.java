@@ -10,11 +10,13 @@ public class ContourModel {
 	private List<PolyLine> contours;
 	private String name;
 	private CPT cpt;
+	private String units;
 
-	public ContourModel(List<PolyLine> contours, String name, CPT cpt){
+	public ContourModel(List<PolyLine> contours, String name, String units, CPT cpt){
 		this.contours = contours;
 		this.name = name;
 		this.cpt = cpt;
+		this.units = units;
 	}
 	
 	public List<PolyLine> getContours(){
@@ -23,6 +25,14 @@ public class ContourModel {
 	
 	public String getName(){
 		return name;
+	}
+	
+	public void setUnits(String units){
+		this.units = units;
+	}
+	
+	public String getUnits(){
+		return units;
 	}
 	
 	public CPT getCPT(){

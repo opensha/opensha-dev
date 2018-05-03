@@ -32,9 +32,12 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.poi.ss.usermodel.FontFamily;
 import org.dom4j.Element;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.annotations.XYAnnotation;
@@ -802,7 +805,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		mapLevelParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
 		mapPlotParams.addParameter(mapLevelParam);
 		
-		mapPOEParam = new DoubleParameter("POE (%)", 0, 99.9, new Double(50));
+		mapPOEParam = new DoubleParameter("POE (%)", 0, 99.9, new Double(10));
 		mapPOEParam.setInfo("Probability of exceedence level for map");
 		mapPOEParam.addParameterChangeListener(this);
 		mapPOEParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
@@ -973,7 +976,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 //		setVisible(true);
 		
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
-		setTitle("Aftershock Statistics GUI");
+		setTitle("Aftershock Forecaster (Beta)");
 		setLocationRelativeTo(null);
 		
 		workingDir = new File(System.getenv("HOME"));
@@ -1349,9 +1352,9 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		}
 	}
 
-	private static final int tickLabelFontSize = 12;
-	private static final int axisLabelFontSize = 14;
-	private static final int plotLabelFontSize = 14;
+	private static final int tickLabelFontSize = 14;
+	private static final int axisLabelFontSize = 16;
+	private static final int plotLabelFontSize = 16;
 
 	private static Color[] extra_colors = {Color.GRAY, Color.BLUE, Color.ORANGE, Color.GREEN};
 
@@ -1362,6 +1365,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 
 	private static void setupGP(GraphWidget widget) {
+		widget.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, tickLabelFontSize));
 		widget.setPlotLabelFontSize(plotLabelFontSize);
 		widget.setAxisLabelFontSize(axisLabelFontSize);
 		widget.setTickLabelFontSize(tickLabelFontSize);
@@ -3216,6 +3220,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					@Override
 					
 					public void run(){
+						
 						System.out.println("Fetching finite source from ShakeMap...");
 //						if (!fitMainshockSourceParam.getValue() && faultTrace == null){
 						final FitSourceType fitType = fitSourceTypeParam.getValue();
@@ -3902,7 +3907,13 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					plotAllDurationsParam.setValue(true);
 					plotAllDurationsParam.getEditor().refreshParamEditor();
 
-					run = new CalcRunnable(progress, postForecastPlotStep, plotMapStep, pubStep, autoSaveStep);	
+					run = new CalcRunnable(progress, 
+							postForecastPlotStep, 
+							fetchSourceStep,
+							plotMapStep,
+							pubStep, 
+							autoSaveStep);	
+					
 				} else if (forecastDurationParam.getValue() < 366d) {
 					plotAllDurationsParam.setValue(true);
 					plotAllDurationsParam.getEditor().refreshParamEditor();
@@ -3925,7 +3936,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 							pubStep,
 							autoSaveStep);
 				} else
-					run = new CalcRunnable(progress, pubStep, autoSaveStep);
+					run = new CalcRunnable(progress, fetchSourceStep, pubStep, autoSaveStep);
 				
 				new Thread(run).start();
 			} else if (param == intensityTypeParam || param == mapTypeParam) {
@@ -4245,6 +4256,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				ETAS_USGS_AftershockForecast forecast = new ETAS_USGS_AftershockForecast(model, minMags, eventDate, startDate, forecastEndTimeParam.getValue());
 				JTable jTable = new JTable(forecast.getTableModel());
 				jTable.getTableHeader().setFont(jTable.getTableHeader().getFont().deriveFont(Font.BOLD));
+				
 				forecastTablePane.addTab(name, jTable);
 				
 				if(verbose) System.out.println("Took "+watch.elapsed(TimeUnit.SECONDS)+"s to compute aftershock table for "+name);
@@ -4298,7 +4310,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 			// calculate for one day -- the minimum, so that we can scale up probabilities from small to large
 			forecastRateModel = rateModel2D.calculateRateModel(ForecastDuration.DAY.duration, spacing, stressDrop, mainshockFitDuration, fitType, faultTrace);
-			GriddedGeoDataSet gmpeProbModel = getIntensityModel(forecastRateModel);
+			GriddedGeoDataSet gmpeProbModel = getIntensityModel(forecastRateModel, true);
 					
 			
 			//compute rate sum for checking
@@ -4349,6 +4361,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			// add old hypocetnere
 			// scoop up the aftershock locations
 			PlotSpec oldSpec = epicenterGraph.getPlotSpec();
+			
 			oldFuncs.addAll((List<PlotElement>) oldSpec.getPlotElems());
 			oldChars.addAll(oldSpec.getChars());
 
@@ -4529,10 +4542,14 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 						// set up the title
 						String title = "";
+						String units = "";
+						String contourUnits = "";
+						
 						if (mapTypeParam.getValue() == MapType.LEVEL) { 
 							String intensityType = intensityTypeParam.getValue().getAbbreviation();
 							String probability = String.format("%.0f", mapPOEParam.getValue());
-							title = intensityType + " with " + probability + "% chance of being exceeded in the next " + durString;
+							title = intensityType + "(" + units + ") with " + probability + "% chance of being exceeded in the next " + durString;
+							units = "%";
 						} else if (mapTypeParam.getValue() == MapType.PROBABILITIES) {
 							String intensityType = intensityTypeParam.getValue().getAbbreviation();
 							String level;
@@ -4540,7 +4557,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 								level = decToRoman((int) (Math.floor(mapLevelParam.getValue() + 0.01)));
 							else
 								level = String.format("%.0f", mapLevelParam.getValue());
-							String units;
+							
 							if (intensityTypeParam.getValue() == IntensityType.PGA ||
 									intensityTypeParam.getValue() == IntensityType.PSA) 
 								units = "%g";
@@ -4549,8 +4566,9 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 							else
 								units = "";
 							title = "Probability of exceeding " + intensityType + " level " + level + " " + units + " in the next " + durString;
+							contourUnits = "%";
 						}
-						contourList.add(new ContourModel(contours, title, cpt2));
+						contourList.add(new ContourModel(contours, title, contourUnits, cpt2));
 
 						//copy epicenter graph
 						List<PlotElement> funcs = Lists.newArrayList();
@@ -4597,20 +4615,21 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						setupGP(forecastGraph);
 
 						String cptAxisLabel = "";
+						
 						if (mapTypeParam.getValue() == MapType.LEVEL) {
-							String units;
+							String cptUnits;
 							if (intensityTypeParam.getValue() == IntensityType.PGA ||
 									intensityTypeParam.getValue() == IntensityType.PSA) 
-								units = "Peak Acceleration (%g)";
+								cptUnits = "Peak Acceleration (%g)";
 							else if (intensityTypeParam.getValue() == IntensityType.PGV)
-								units = "Peak Velocity (cm/s)";
+								cptUnits = "Peak Velocity (cm/s)";
 							else
-								units = "MMI";
+								cptUnits = "MMI";
 
-							cptAxisLabel = units;
+							cptAxisLabel = cptUnits;
 						} else if (mapTypeParam.getValue() == MapType.PROBABILITIES) {
-							String units = "Probability (%)";
-							cptAxisLabel = units;
+							String cptUnits = "Probability (%)";
+							cptAxisLabel = cptUnits;
 						}
 
 						PaintScaleLegend subtitle = XYZGraphPanel.getLegendForCPT(cpt2, cptAxisLabel, axisLabelFontSize, tickLabelFontSize,
@@ -4635,6 +4654,10 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 
 	GriddedGeoDataSet getIntensityModel(GriddedGeoDataSet rateModel) {
+		return getIntensityModel(rateModel, false);
+	}
+	
+	GriddedGeoDataSet getIntensityModel(GriddedGeoDataSet rateModel, boolean prompt) {
 		
 		double mc = mcParam.getValue();
 		double value;
@@ -4722,7 +4745,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		try {
 			System.out.println("Calculating hazard curves at each grid point");
 			curves = ETAS_ShakingForecastCalc.calcForecast(calcRegion, rateModel, minMag, maxMag, bParam.getValue(), gmpe, mechWts,
-					maxSourceDist, vs30Provider);
+					maxSourceDist, vs30Provider, prompt);
 			
 //			if(D) for(double val : curves[0].xValues()) System.out.println(val + " " + curves[0].getY(val));
 			if (curves == null) {
@@ -4820,7 +4843,10 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				
 		// write HTML document summary 
 		File outFile;
-		workingDirChooser = new JFileChooser(workingDir.getPath() + "/forecast.html");
+		workingDirChooser = new JFileChooser(workingDir.getPath());
+		workingDirChooser.setSelectedFile(new File("Advisory.html"));
+		FileNameExtensionFilter htmlFilter = new FileNameExtensionFilter("html files (*.html)", "html");
+		workingDirChooser.setFileFilter(htmlFilter);
 		
 		int ret = workingDirChooser.showSaveDialog(this);
 		
@@ -4862,45 +4888,54 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			}
 	
 			// probability of exceeding MMI
-			for (int i = 0; i < forecastMapPane.getTabCount(); i++){
-				GraphWidget graph = (GraphWidget) forecastMapPane.getComponentAt(i);
-				
-				String file = graph.getName().replaceAll("[^a-zA-Z]",  "").toLowerCase();
-				if (file.contains("probability")){
-					file = outFile.getParent() + "/" + file + ".png";
-					try {
-						System.out.println("Saving forecastProbabilityMap to: " + file);
-						graph.saveAsPNG(file);
-					} catch (Exception e) {
-						System.err.println("Couldn't save forecastProbabilityMap to: " + file);
+			if (forecastMapPane != null) {
+				for (int i = 0; i < forecastMapPane.getTabCount(); i++){
+					GraphWidget graph = (GraphWidget) forecastMapPane.getComponentAt(i);
+
+					String file = graph.getName().replaceAll("[^a-zA-Z]",  "").toLowerCase();
+					if (file.contains("probability")){
+						file = outFile.getParent() + "/" + file + ".png";
+						try {
+							System.out.println("Saving forecastProbabilityMap to: " + file);
+							graph.saveAsPNG(file);
+						} catch (Exception e) {
+							System.err.println("Couldn't save forecastProbabilityMap to: " + file);
+						}
+					} else {
+						System.out.println("Skipping " + file);
 					}
-				} else {
-					System.out.println("Skipping " + file);
 				}
+			} else {
+				System.out.println("No forecast maps computed.");
 			}
 
 			// Write Contours to file
 			for(ForecastDuration foreDur : ForecastDuration.values()){
 				// find the matching contour set
 				int nmatch = 0;
+				if(contourList != null) {
 				for (ContourModel contours : contourList){
 					if (contours.getName().contains(foreDur.toString())){
 						nmatch++;
 						String name = "contour-" + foreDur.toString();
 						File file = new File(outFile.getParent() + "/" + name + ".kml");
 						System.out.println("Saving probability contours to: " + file);
-						ETAS_RateModel2D.writeContoursAsKML(contours.getContours(), contours.getName(), file, contours.getCPT());
+						ETAS_RateModel2D.writeContoursAsKML(contours.getContours(), contours.getName(), contours.getUnits(), file, contours.getCPT());
 					}
 				}
 				if (nmatch > 1) System.out.println("More than one set of contours found for duration: " + foreDur);
 				else if (nmatch == 0) System.out.println("No contours found for duration: " + foreDur);
+				} else {
+					System.out.println("No forecast contours computed.");
+				}
+				
 			}
 			
 			
 			//write the OFDA logo to the output directory
 			// load the data
-			String pngFile = "resources/USAID-Logo.png";
-			InputStream logoIS = GraphicalForecast.class.getResourceAsStream(pngFile);
+			String pngFile = "USAID-Logo.png";
+			InputStream logoIS = GraphicalForecast.class.getResourceAsStream("resources/" + pngFile);
 			if (logoIS != null){
 			
 				File destination = new File(outFile.getParent() + "/" + pngFile);
