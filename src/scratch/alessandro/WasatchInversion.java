@@ -21,6 +21,7 @@ import com.google.common.io.Files;
  * This class reads Wasatch inversion data from files, provides methods for getting the various constraints, and runs the inversion.
  * 
  * Slip rate and event rate standard deviations are computed as the difference of the 95% confidence bounds divided by 4.
+ * 
  * @author 
  *
  */
