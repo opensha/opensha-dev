@@ -66,4 +66,9 @@ public class ModRateRuptureComparison<E> extends RuptureComparison<E> {
 		return rate;
 	}
 
+	@Override
+	public double getRuptureTimeYears() {
+		return comp.getRuptureTimeYears();
+	}
+
 }

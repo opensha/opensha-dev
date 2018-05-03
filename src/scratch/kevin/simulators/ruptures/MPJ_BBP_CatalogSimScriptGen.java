@@ -42,27 +42,30 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
 //		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2585_1myrs");
-		File catalogDir = new File(myHPCDir, "rundir2667");
+		File catalogDir = new File(myHPCDir, "rundir2585");
 		
 		boolean standardSites = false;
-		boolean csInitialLASites = false;
+		boolean csInitialLASites = true;
 		boolean griddedCASites = false;
-		boolean griddedSoCalSites = true;
+		boolean griddedSoCalSites = false;
 		double griddedSpacing = 1d;
 		
-		double minMag = 6;
-//		double minMag = 6.5;
+//		double minMag = 6;
+		double minMag = 6.5;
 //		double minMag = 7;
 		int numRG = 0;
 //		double minMag = 7;
 //		int numRG = 20;
 		
-		int skipYears = 1000;
+		int skipYears = 5000;
+		
+		double timeScalar = 1d;
+		boolean scaleVelocities = false;
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 18;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
@@ -103,6 +106,11 @@ class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-noHF";
 		if (numRG > 0)
 			jobName += "-rg"+numRG;
+		if (timeScalar != 1d) {
+			jobName += "-timeScale"+(float)timeScalar;
+			if (scaleVelocities)
+				jobName += "-velScale";
+		}
 		if (standardSites)
 			jobName += "-standardSites";
 		if (csInitialLASites)
@@ -149,6 +157,11 @@ class MPJ_BBP_CatalogSimScriptGen {
 			argz += " --node-scratch-dir "+nodeScratchDir;
 		if (sharedScratchDir != null && !sharedScratchDir.isEmpty())
 			argz += " --shared-scratch-dir "+sharedScratchDir;
+		if (timeScalar != 1d) {
+			argz += " --time-scalar "+(float)timeScalar;
+			if (scaleVelocities)
+				argz += " --velocity-scale";
+		}
 		boolean copy = bbpCopyParentDir != null && !bbpCopyParentDir.isEmpty();
 		boolean customEnv = bbpEnvFile != null;
 		List<String> addLines = new ArrayList<>();

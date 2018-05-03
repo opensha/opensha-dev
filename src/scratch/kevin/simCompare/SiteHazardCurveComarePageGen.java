@@ -3,6 +3,7 @@ package scratch.kevin.simCompare;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,7 +11,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -18,7 +18,11 @@ import java.util.concurrent.Future;
 import org.jfree.data.Range;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
+import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
@@ -53,6 +57,8 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	
 	private static ExecutorService exec;
 	
+	private Map<SimulationHazardCurveCalc<?>, PlotCurveCharacterstics> customPlotChars = new HashMap<>();
+	
 	private List<SimulationRotDProvider<?>> compSimProvs;
 	private List<SimulationHazardCurveCalc<?>> compCurveCals;
 	
@@ -66,6 +72,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	private double sourceRupContributionSortProb;
 	private int sourceRupContributionNum;
 	private Table<String, E, Double> sourceRupContributionFracts;
+	private boolean sourceRupContributionsMutuallyExclusive;
 
 	public SiteHazardCurveComarePageGen(SimulationRotDProvider<E> simProv, String simName) {
 		this(simProv, simName, new ArrayList<>());
@@ -105,6 +112,32 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		this.sourceRupContributionFracts = sourceRupContribFracts;
 		this.sourceRupContributionSortProb = sortProb;
 		this.sourceRupContributionNum = numSourcesToPlot;
+		if (sourceRupContribFracts != null) {
+			sourceRupContributionsMutuallyExclusive = true;
+			for (E rup : sourceRupContribFracts.columnKeySet()) {
+				Map<String, Double> col = sourceRupContribFracts.column(rup);
+				if (col.size() > 1) {
+					int numNonzero = 0;
+					for (Double val : col.values())
+						if (val > 0)
+							numNonzero++;
+					if (numNonzero > 1) {
+						sourceRupContributionsMutuallyExclusive = false;
+					}
+				}
+			}
+			System.out.println("source contributions mutually exclusive ? "+sourceRupContributionsMutuallyExclusive);
+		}
+	}
+	
+	public void setCustomPlotColors(SimulationRotDProvider<?> simProv, PlotCurveCharacterstics plotChar) {
+		for (int i=0; i<compSimProvs.size(); i++) {
+			if (simProv == compSimProvs.get(i)) {
+				customPlotChars.put(compCurveCals.get(i), plotChar);
+				return;
+			}
+		}
+		throw new IllegalStateException("No comparison calc found for "+simProv.getName());
 	}
 
 	private static List<SimulationRotDProvider<?>> toList(SimulationRotDProvider<?>... compSimProvs) {
@@ -127,46 +160,128 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 				lines.add("");
 		}
 		
+		lines.add("## Site Information");
+		lines.add("");
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		table.addLine("**Name**", site.getName());
+		table.addLine("**Latitude**", (float)site.getLocation().getLatitude()+"");
+		table.addLine("**Longitude**", (float)site.getLocation().getLongitude()+"");
+		table.addLine("**GMPE Parameters**", "");
+		for (Parameter<?> param : site) {
+			String name = "**"+param.getName()+"**";
+			String units = param.getUnits();
+			if (units != null && !units.isEmpty())
+				name += " (*"+units+"*)";
+			if (param instanceof DoubleParameter)
+				table.addLine(name, ((Double)param.getValue()).floatValue()+"");
+			else
+				table.addLine(name, param.getValue().toString());
+		}
+		lines.addAll(table.build());
+		lines.add("");
+		lines.add("### Site Map");
+		lines.add("");
+		File mapFile = new File(resourcesDir, "site_location_map.png");
+		if (!mapFile.exists())
+			FileUtils.downloadURL(new URL(getMiniMap(site.getLocation())), mapFile);
+		lines.add("![Site Map]("+resourcesDir.getName()+"/"+mapFile.getName()+")");
+		lines.add("");
+		
 		int tocIndex = lines.size();
 		String topLink = "*[(top)](#table-of-contents)*";
+		
+		double curveDuration = 1d;
+		
+		SimulationHazardPlotter<E> curvePlotter = new SimulationHazardPlotter<>(simCalc, compCurveCals, comps, site, curveDuration, gmpeRef);
+		curvePlotter.setGMPE_FixedSigmas(gmpe_fixed_sigmas);
+		curvePlotter.setGMPE_TruncationLevels(gmpe_truncs);
+		curvePlotter.setSourceContributionFractions(sourceRupContributionFracts, sourceRupContributionsMutuallyExclusive);
+		for (SimulationHazardCurveCalc<?> key : customPlotChars.keySet())
+			curvePlotter.setCustomPlotColors(key, customPlotChars.get(key));
+		
+		lines.add("## Hazard Spectra");
+		lines.add(topLink); lines.add("");
+		lines.addAll(curvePlotter.getCurveLegend(true, true, true, 0));
+		lines.add("");
+		
+		table = MarkdownUtils.tableBuilder();
+		String spectraPrefix = site.getName().replaceAll(" ", "_")+"_spectra_"+gmpeRef.getShortName();
+		int[] rps = MultiRupGMPE_ComparePageGen.hazard_curve_rps;
+		for (int rp : rps) {
+			String rpPrefix = spectraPrefix+"_"+rp+"yr";
+			double probLevel = 1d/(double)rp;
+			if (replotCurves || !new File(resourcesDir, rpPrefix+".png").exists())
+				curvePlotter.plotHazardSpectra(resourcesDir, rpPrefix, probLevel, rp+"yr RotD50 (g)", periods);
+			
+			table.addLine("**"+rp+"yr**", "![Hazard Spectra]("+resourcesDir.getName()+"/"+rpPrefix+".png)");
+		}
+		lines.addAll(table.build());
+		
+		if (sourceRupContributionFracts != null) {
+			String sourceContribPrefix = spectraPrefix+"_source_contrib";
+			
+			File[] simFiles = new File[rps.length];
+			File[] gmpeFiles = new File[rps.length];
+			
+			for (int i=0; i<rps.length; i++) {
+				int rp = rps[i];
+				double probLevel = 1d/(double)rp;
+				String yAxisLabel = rp+"yr RotD50 (g)";
+				String rpPrefix = sourceContribPrefix+"_"+rp+"yr";
+				if (replotCurves || !new File(resourcesDir, rpPrefix+"_gmpe.png").exists()) {
+					System.out.println("Plotting simulation source curves");
+					simFiles[i] = curvePlotter.plotSourceContributionHazardSpectra(resourcesDir, rpPrefix+"_sim",
+							periods, probLevel, yAxisLabel, sourceRupContributionNum, false);
+					System.out.println("Calculating/plotting GMPE source curves");
+					gmpeFiles[i] = curvePlotter.plotSourceContributionHazardSpectra(resourcesDir, rpPrefix+"_gmpe",
+							periods, probLevel, yAxisLabel, sourceRupContributionNum, true);
+				} else {
+					simFiles[i] = new File(resourcesDir, rpPrefix+"_sim.png");
+					gmpeFiles[i] = new File(resourcesDir, rpPrefix+"_gmpe.png");
+				}
+			}
+			
+			
+			lines.add("### Source Contribution Spectra");
+			lines.add(topLink); lines.add("");
+			lines.add("");
+			lines.add("These plots show the contribution of each fault source to the hazard spectra. The same set of "
+					+ "sources are plotted for both simulation values (left) and GMPE values (right). Sources are sorted in the legend "
+					+ "(and colored by) their average contrubution in the simulation results at the given return period, "
+					+ "and only the top "+sourceRupContributionNum+" sources are plotted.");
+			lines.add("");
+			if (!sourceRupContributionsMutuallyExclusive) {
+				lines.add("*NOTE: Source curves are not mututally exclusive. For the case of multi fault ruptures, "
+						+ "a single rupture can be included in the curve for multiple sources*");
+				lines.add("");
+			}
+			
+			table = MarkdownUtils.tableBuilder();
+			
+			table.addLine("**Return Period**", "**Simulation Source Contributions**", "**GMPE Source Contributions**");
+			for (int i=0; i<rps.length; i++)
+				table.addLine(rps[i]+"yr", "![Hazard Spectra]("+resourcesDir.getName()+"/"+simFiles[i].getName()+")",
+						"![Hazard Spectra]("+resourcesDir.getName()+"/"+gmpeFiles[i].getName()+")");
+			lines.addAll(table.build());
+			lines.add("");
+		}
 		
 		lines.add("## Hazard Curves");
 		lines.add(topLink); lines.add("");
 		
-		double curveDuration = 1d;
-		
-		List<String> curveNames = new ArrayList<>();
-		curveNames.add(simName);
-		for (SimulationRotDProvider<?> compProv : compSimProvs)
-			curveNames.add(compProv.getName());
-		
-		lines.addAll(MultiRupGMPE_ComparePageGen.getCurveLegend(curveNames, gmpeRef.getShortName(), gmpe_truncs, gmpe_fixed_sigmas, 0));
+		lines.addAll(curvePlotter.getCurveLegend(false, true, true, 0));
 		lines.add("");
-		
-		List<DiscretizedFunc> mainSimCurves = new ArrayList<>();
 		
 		GMPESimulationBasedProvider<E> gmpeSimProv = new GMPESimulationBasedProvider<>(
 				simProv, comps, gmpeRef.getShortName()+" Simulatios", periods);
 		
 		for (double period : periods) {
 			System.out.println("Calculating primary hazard curve");
-			List<DiscretizedFunc> simCurves = new ArrayList<>();
-			
-			DiscretizedFunc simCurve = simCalc.calc(site, period, curveDuration);
-			mainSimCurves.add(simCurve);
-			simCurves.add(simCurve);
-			
-			for (int i=0; i<compCurveCals.size(); i++) {
-				SimulationHazardCurveCalc<?> calc = compCurveCals.get(i);
-				System.out.println("Calculating for "+compSimProvs.get(i).getName());
-				simCurves.add(calc.calc(site, period, curveDuration));
-			}
 			
 			String prefix = site.getName().replaceAll(" ", "_")+"_curves_"+(float)period+"s_"+gmpeRef.getShortName();
 			
 			if (replotCurves || !new File(resourcesDir, prefix+".png").exists())
-				MultiRupGMPE_ComparePageGen.plotHazardCurve(simCurves, comps, simCalc.getXVals(), site, period,
-					curveDuration, gmpeRef, gmpe_truncs, gmpe_fixed_sigmas, null, 0, null, null, 0d, 0, false, resourcesDir, prefix);
+				curvePlotter.plotHazardCurves(resourcesDir, prefix, period);
 			
 			lines.add("### "+optionalDigitDF.format(period)+"s Hazard Curves");
 			lines.add(topLink); lines.add("");
@@ -175,14 +290,14 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			
 			lines.add("#### "+optionalDigitDF.format(period)+"s GMPE-Sim Comparison");
 			lines.add(topLink); lines.add("");
-			lines.addAll(MultiRupGMPE_ComparePageGen.getCurveLegend(curveNames, gmpeRef.getShortName(), null, null, 100));
+			int numGMPESims = 100;
+			lines.addAll(curvePlotter.getCurveLegend(false, false, false, numGMPESims));
 			lines.add("");
 			
 			String gmpeSimPrefix = prefix+"_gmpe_sims";
 			
 			if (replotCurves || !new File(resourcesDir, gmpeSimPrefix+".png").exists())
-				MultiRupGMPE_ComparePageGen.plotHazardCurve(simCurves.subList(0, 1), comps, simCalc.getXVals(), site, period,
-					curveDuration, gmpeRef, null, null, gmpeSimProv, 100, null, null, 0d, 0, false, resourcesDir, gmpeSimPrefix);
+				curvePlotter.plotGMPE_SimHazardCurves(resourcesDir, gmpeSimPrefix, period, gmpeSimProv, numGMPESims);
 			
 			lines.add("![Hazard Curve]("+resourcesDir.getName()+"/"+gmpeSimPrefix+".png)");
 			lines.add("");
@@ -193,17 +308,12 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 				File simFile, gmpeFile;
 				
 				if (replotCurves || !new File(resourcesDir, sourceContribPrefix+"_gmpe.png").exists()) {
-					System.out.println("Calculating simulation source curves");
-					Map<String, DiscretizedFunc> simSourceCurves = simCalc.calcSourceContributionCurves(
-							site, period, curveDuration, sourceRupContributionFracts);
 					System.out.println("Plotting simulation source curves");
-					simFile = MultiRupGMPE_ComparePageGen.plotHazardCurve(simCurves.subList(0, 1), comps, simCalc.getXVals(), site, period,
-						curveDuration, gmpeRef, null, null, null, 0,sourceRupContributionFracts, simSourceCurves,
-						sourceRupContributionSortProb, sourceRupContributionNum, false, resourcesDir, sourceContribPrefix+"_sim");
+					simFile = curvePlotter.plotSourceContributionHazardCurves(resourcesDir, sourceContribPrefix+"_sim", period,
+							sourceRupContributionSortProb, sourceRupContributionNum, false);
 					System.out.println("Calculating/plotting GMPE source curves");
-					gmpeFile = MultiRupGMPE_ComparePageGen.plotHazardCurve(simCurves.subList(0, 1), comps, simCalc.getXVals(), site, period,
-							curveDuration, gmpeRef, null, null, null, 0,sourceRupContributionFracts, simSourceCurves,
-							sourceRupContributionSortProb, sourceRupContributionNum, true, resourcesDir, sourceContribPrefix+"_gmpe");
+					gmpeFile = curvePlotter.plotSourceContributionHazardCurves(resourcesDir, sourceContribPrefix+"_gmpe", period,
+							sourceRupContributionSortProb, sourceRupContributionNum, true);
 				} else {
 					simFile = new File(resourcesDir, sourceContribPrefix+"_sim.png");
 					gmpeFile = new File(resourcesDir, sourceContribPrefix+"_gmpe.png");
@@ -212,15 +322,65 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 				if (simFile != null && simFile.exists() && gmpeFile != null && gmpeFile.exists()) {
 					lines.add("#### "+optionalDigitDF.format(period)+"s Source Contributions");
 					lines.add(topLink); lines.add("");
-//					lines.addAll(MultiRupGMPE_ComparePageGen.getCurveLegend(curveNames, gmpeRef.getShortName(), null, null, 100));
-//					lines.add("");
+					lines.add("");
+					lines.add("These plots show the contribution of each fault source to the hazard curves. The same set of "
+							+ "sources are plotted for both simulation values (left) and GMPE values (right). Sources are sorted in the legend "
+							+ "(and colored by) their contrubution in the simulation results at the **POE="+(float)+sourceRupContributionSortProb
+							+ "** level, and only the top "+sourceRupContributionNum+" sources are plotted.");
+					lines.add("");
+					if (!sourceRupContributionsMutuallyExclusive) {
+						lines.add("*NOTE: Source curves are not mututally exclusive. For the case of multi fault ruptures, "
+								+ "a single rupture can be included in the curve for multiple sources*");
+						lines.add("");
+					}
 					
-					TableBuilder table = MarkdownUtils.tableBuilder();
+					table = MarkdownUtils.tableBuilder();
 					
 					table.addLine("**Simulation Source Contributions**", "**GMPE Source Contributions**");
 					table.addLine("![Hazard Curve]("+resourcesDir.getName()+"/"+simFile.getName()+")",
 							"![Hazard Curve]("+resourcesDir.getName()+"/"+gmpeFile.getName()+")");
 					lines.addAll(table.build());
+					lines.add("");
+				}
+			}
+			
+			double[] timeRange = RuptureComparison.getRuptureTimeRange(comps);
+			if (timeRange != null && timeRange[1] > timeRange[0]) {
+				// we have time based ruptures, generate an animation
+				double duration = timeRange[1] - timeRange[0];
+				double delta;
+				if (duration > 5000000)
+					delta = 500000;
+				else if (duration > 2500000)
+					delta = 250000;
+				else if (duration > 1000000)
+					delta = 100000;
+				else if (duration > 500000)
+					delta = 50000;
+				else if (duration > 250000)
+					delta = 25000;
+				else if (duration > 100000)
+					delta = 10000;
+				else if (duration > 100000)
+					delta = 10000;
+				else if (duration > 50000)
+					delta = 5000;
+				else
+					delta = 0d;
+				if (delta > 0) {
+					lines.add("#### "+optionalDigitDF.format(period)+"s Simulation Curve Animation");
+					lines.add(topLink); lines.add("");
+					lines.add("This animation shows the affect of input simulation catalog length on the simulation hazard curve. "
+							+ "Each frame adds an additional "+optionalDigitDF.format(delta)+" years of the catalog to the simulation "
+									+ "(in both the simulation and GMPE curves). Previous results (for shorter sub-catalogs) are faded out.");
+					lines.add("");
+					
+					File animFile = new File(resourcesDir, prefix+"_animation.gif");
+					
+					if (replotCurves || !animFile.exists())
+						curvePlotter.plotCurveAnimation(animFile, timeRange, delta, period);
+					
+					lines.add("![Hazard Curve Animation]("+resourcesDir.getName()+"/"+animFile.getName()+")");
 					lines.add("");
 				}
 			}
@@ -237,15 +397,33 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		}
 		minMag = Math.floor(minMag*10d)/10d;
 		
+		lines.add("**Note on Epsilons:** Epsilon values are not straightforward for simulations. For a GMPE (in natural log space):");
+		lines.add("");
+		lines.add("**GMPE Epsilon:** *epsilon = (gmpe_IML - gmpe_mean)/gmpe_sigma*");
+		lines.add("");
+		if (hasSimDist) {
+			lines.add("This simulation has at least 2 simulations per rupture, so we can calculate a 'simulation' "
+					+ "mean/sigma for using in epsilon calculations. These disaggregations are labeled 'w/ sim dist for Epsilon':");
+			lines.add("");
+			lines.add("**Simulation Distribution Epsilon:** *epsilon = (sim_IML - sim_mean)/sim_sigma*");
+			lines.add("");
+			lines.add("We also include plots which use the GMPE mean and sigma when computing sigma:");
+		} else {
+			lines.add("This simulation does not have distributions for each rupture, so in order to compute an epsilon, "
+					+ "we must use the GMPE mean and sigma values:");
+		}
+		lines.add("");
+		lines.add("**Simulation w/ GMPE Distribution Epsilon:** *epsilon = (sim_IML - gmpe_mean)/gmpe_sigma*");
+		lines.add("");
+		
 		RuptureComparisonERF<E> disaggERF = new RuptureComparisonERF<>(comps);
 		disaggERF.updateForecast();
 		
 		List<Future<File>> disaggFutures = new ArrayList<>();
 		for (int p=0; p<periods.length; p++) {
 			double period = periods[p];
-			DiscretizedFunc simCurve = mainSimCurves.get(p);
-			DiscretizedFunc gmpeCurve = MultiRupGMPE_ComparePageGen.calcGMPEHazardCurves(
-					comps, simCalc.getXVals(), site, period, curveDuration, gmpeRef, null, null, null, null, null, null);
+			DiscretizedFunc simCurve = curvePlotter.getCalcSimCurve(simCalc, period);
+			DiscretizedFunc gmpeCurve = curvePlotter.getCalcGMPECurve(period);
 			
 			lines.add("### "+optionalDigitDF.format(period)+"s Disaggregations");
 			lines.add(topLink); lines.add("");
@@ -331,7 +509,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 				lines.add("#### "+optionalDigitDF.format(period)+"s Disaggregations at "+disaggHeaders.get(i));
 				lines.add(topLink); lines.add("");
 				
-				TableBuilder table = MarkdownUtils.tableBuilder();
+				table = MarkdownUtils.tableBuilder();
 				
 				table.initNewLine();
 				
@@ -617,4 +795,12 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	}
 	
 	static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
+	
+	private static final String GMAPS_API_KEY = "AIzaSyCOfe8NIHLR0Z6l4KzajcDAwxOjlhLlEb4";
+	
+	private static String getMiniMap(Location loc) {
+		String locStr = loc.getLatitude()+","+loc.getLongitude();
+		return "https://maps.googleapis.com/maps/api/staticmap?center="+locStr+"&zoom=9"
+				+ "&size=400x300&maptype=roadmap&markers="+locStr+"&key="+GMAPS_API_KEY;
+	}
 }

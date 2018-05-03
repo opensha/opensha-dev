@@ -12,6 +12,7 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
@@ -53,6 +54,7 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 			return cache.get(site, rupture)[index];
 		DiscretizedFunc[] funcs = new DiscretizedFunc[getNumSimulations(site, rupture)];
 		RuptureComparison<E> comp = compsMap.get(rupture);
+		Preconditions.checkNotNull(comp, "Comp not found for rupture: %s", rupture);
 		for (int i=0; i<funcs.length; i++) {
 			double[] vals = new double[periods.length];
 			for (int p=0; p<periods.length; p++) {

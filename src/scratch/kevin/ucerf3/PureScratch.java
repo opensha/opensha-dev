@@ -1,6 +1,7 @@
 package scratch.kevin.ucerf3;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -25,6 +26,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.zip.ZipException;
+
+import javax.swing.JComponent;
+import javax.swing.JTextArea;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.LogNormalDistribution;
@@ -63,6 +67,10 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
+import org.opensha.commons.param.editor.AbstractParameterEditor;
+import org.opensha.commons.param.editor.ParameterEditor;
+import org.opensha.commons.param.editor.impl.NumericTextField;
+import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FileUtils;
@@ -1341,8 +1349,21 @@ public class PureScratch {
 		}
 	}
 	
-	public static void test51() {
+	private static void test51() {
 		System.out.println(MagUtils.momentToMag(6.528036E20));
+	}
+	
+	private static void test52() {
+		DoubleParameter param = new DoubleParameter("");
+		if (param.getEditor() instanceof AbstractParameterEditor) {
+			AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>)param.getEditor();
+			// update title font
+			editor.setTitleFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+			if (editor.getWidget() instanceof NumericTextField) {
+				NumericTextField textField = (NumericTextField)editor.getWidget();
+				textField.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
+			}
+		}
 	}
 
 	/**

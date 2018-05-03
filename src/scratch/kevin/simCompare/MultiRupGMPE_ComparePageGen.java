@@ -1,14 +1,12 @@
 package scratch.kevin.simCompare;
 
 import java.awt.Color;
-import java.awt.Font;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,32 +17,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
-import org.jfree.ui.TextAnchor;
-import org.opensha.commons.calc.GaussianDistCalc;
 import org.opensha.commons.data.Site;
-import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.PrimitiveArrayXY_Dataset;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
-import org.opensha.commons.data.function.UnmodifiableDiscrFunc;
-import org.opensha.commons.exceptions.ParameterException;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
-import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
-import org.opensha.commons.gui.plot.PlotPreferences;
-import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.impl.WarningDoubleParameter;
-import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.ExceptionUtils;
-import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.MultiIMR_Averaged_AttenRel;
@@ -56,15 +40,12 @@ import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
-import com.google.common.primitives.Ints;
 
 import scratch.kevin.bbp.SpectraPlotter;
-import scratch.kevin.simulators.hazard.HazardMapComparePlotter;
 import scratch.kevin.util.MarkdownUtils;
 import scratch.kevin.util.MarkdownUtils.TableBuilder;
 
@@ -86,8 +67,6 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	private List<RuptureComparisonFilter<E>> distFilters;
 	private List<String> distLabels;
 	private List<String> distFileLabels;
-	
-	private SimulationHazardCurveCalc<E> simCurveCalc;
 	
 	private Table<E, Site, Map<Integer, Double>> rupSiteAzMap;
 	
@@ -283,12 +262,11 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 2f, Color.DARK_GRAY)
 	};
 	
-	public List<File> plotHazardCurves(List<? extends RuptureComparison<E>> comps, List<Site> sites, double period,
-			AttenRelRef gmpeRef, File outputDir) throws IOException {
+	public List<File> plotHazardCurves(List<SimulationHazardPlotter<E>> curvePlotters, double period, File outputDir) throws IOException {
 		List<Future<File>> futures = new ArrayList<>();
 		
-		for (Site site : sites)
-			futures.add(exec.submit(new CurveCalcCallable(comps, site, period, gmpeRef, outputDir)));
+		for (SimulationHazardPlotter<E> curvePlotter : curvePlotters)
+			futures.add(exec.submit(new CurveCalcCallable(curvePlotter, period, outputDir)));
 		
 		List<File> files = new ArrayList<>();
 		
@@ -304,24 +282,27 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	}
 	
 	private class CurveCalcCallable implements Callable<File> {
-		private List<? extends RuptureComparison<E>> comps;
-		private Site site;
+		private SimulationHazardPlotter<E> curvePlotter;
 		private double period;
-		private AttenRelRef gmpeRef;
 		private File outputDir;
 
-		public CurveCalcCallable(List<? extends RuptureComparison<E>> comps, Site site, double period,
-				AttenRelRef gmpeRef, File outputDir) {
-			this.comps = comps;
-			this.site = site;
+		public CurveCalcCallable(SimulationHazardPlotter<E> curvePlotter, double period, File outputDir) {
+			this.curvePlotter = curvePlotter;
 			this.period = period;
-			this.gmpeRef = gmpeRef;
 			this.outputDir = outputDir;
 		}
 
 		@Override
 		public File call() throws Exception {
-			return plotHazardCurve(comps, site, period, gmpeRef, outputDir);
+			String siteName = curvePlotter.getSite().getName();
+			String prefix = siteName.replaceAll(" ", "_")+"_curves_"+(float)period+"s_"+curvePlotter.getGMPE().getShortName();
+			File pngFile = new File(outputDir, prefix+".png");
+			
+			if (pngFile.exists() && !replotCurves)
+				return pngFile;
+			
+			System.out.println("Calculating simulation curve for "+curvePlotter.getSite().getName()+", t="+(float)period);
+			return curvePlotter.plotHazardCurves(outputDir, prefix, period);
 		}
 		
 	}
@@ -348,131 +329,8 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		}
 	}
 	
-	static <E> DiscretizedFunc calcGMPEHazardCurves(List<? extends RuptureComparison<E>> comps, DiscretizedFunc xVals,
-			Site site, double period, double curveDuration, AttenRelRef gmpeRef,
-			double[] gmpeTruncs, DiscretizedFunc[] gmpeTruncCurves,
-			double[] gmpeFixedSigmas, DiscretizedFunc[] gmpeFixedSigmaCurves,
-			GMPESimulationBasedProvider<E> gmpeSimProv, DiscretizedFunc[] gmpeSimCurves) throws IOException {
-		DiscretizedFunc gmpeCurve = xVals.deepClone();
-		// init to 1, non-exceedance curves
-		for (int i=0; i<gmpeCurve.size(); i++)
-			gmpeCurve.set(i, 1d);
-		
-		if (gmpeTruncs != null) {
-			Preconditions.checkNotNull(gmpeTruncCurves);
-			Preconditions.checkState(gmpeTruncs.length == gmpeTruncCurves.length);
-			for (int t=0; t<gmpeTruncCurves.length; t++) {
-				gmpeTruncCurves[t] = xVals.deepClone();
-				Preconditions.checkState(gmpeTruncs[t] > 0, "Truncation level not positive: %s", gmpeTruncs[t]);
-				// init to 1, non-exceedance curves
-				for (int i=0; i<gmpeTruncCurves[t].size(); i++)
-					gmpeTruncCurves[t].set(i, 1d);
-			}
-		}
-		if (gmpeFixedSigmas != null) {
-			Preconditions.checkNotNull(gmpeFixedSigmaCurves);
-			Preconditions.checkState(gmpeFixedSigmas.length == gmpeFixedSigmaCurves.length);
-			for (int t=0; t<gmpeFixedSigmaCurves.length; t++) {
-				gmpeFixedSigmaCurves[t] = xVals.deepClone();
-				Preconditions.checkState(gmpeFixedSigmas[t] >= 0, "Fixed sigma level is negative: %s", gmpeFixedSigmas[t]);
-				if (gmpeFixedSigmas[t] > 0) {
-					// init to 1, non-exceedance curves
-					for (int i=0; i<gmpeFixedSigmaCurves[t].size(); i++)
-						gmpeFixedSigmaCurves[t].set(i, 1d);
-				} else {
-					// init to 0
-					for (int i=0; i<gmpeFixedSigmaCurves[t].size(); i++)
-						gmpeFixedSigmaCurves[t].set(i, 0);
-				}
-			}
-		}
-		
-		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
-		for (Point2D pt : gmpeCurve)
-			logXVals.set(Math.log(pt.getX()), 1d);
-		logXVals = new LightFixedXFunc(logXVals);
-		
-		for (RuptureComparison<E> comp : new RuptureComparisonFilter.SiteFilter<E>().getMatches(comps, site)) {
-			double rupRate = comp.getAnnualRate();
-			if (rupRate == 0)
-				continue;
-			double rupProb = 1d - Math.exp(-rupRate*curveDuration);
-			
-			double mean = comp.getLogMean(site, period);
-			double stdDev = comp.getStdDev(site, period);
-			
-			// regular curve
-			for(int k=0; k<logXVals.size(); k++) {
-				double stRndVar = (logXVals.getX(k) - mean) / stdDev;
-				double exceedProb = GaussianDistCalc.getExceedProb(stRndVar);
-				gmpeCurve.set(k, gmpeCurve.getY(k)*Math.pow(1d-rupProb, exceedProb));
-			}
-			
-			// truncated curves
-			for (int i=0; gmpeTruncs != null && i<gmpeTruncCurves.length; i++) {
-				double trunc = gmpeTruncs[i];
-				for(int k=0; k<logXVals.size(); k++) {
-					double stRndVar = (logXVals.getX(k) - mean) / stdDev;
-					double exceedProb = GaussianDistCalc.getExceedProb(stRndVar, 1, trunc);
-					gmpeTruncCurves[i].set(k, gmpeTruncCurves[i].getY(k)*Math.pow(1d-rupProb, exceedProb));
-				}
-			}
-			
-			// fixed sigma curves
-			for (int i=0; gmpeFixedSigmas != null && i<gmpeFixedSigmaCurves.length; i++) {
-				double fixedSigma = gmpeFixedSigmas[i];
-				if (fixedSigma > 0) {
-					for(int k=0; k<logXVals.size(); k++) {
-						double stRndVar = (logXVals.getX(k) - mean) / fixedSigma;
-						double exceedProb = GaussianDistCalc.getExceedProb(stRndVar);
-						gmpeFixedSigmaCurves[i].set(k, gmpeFixedSigmaCurves[i].getY(k)*Math.pow(1d-rupProb, exceedProb));
-					}
-				} else {
-					Preconditions.checkState(Double.isFinite(mean));
-					Preconditions.checkState(fixedSigma == 0d);
-					for(int k=0; k<logXVals.size(); k++)
-						if (mean >= logXVals.getX(k))
-							gmpeFixedSigmaCurves[i].set(k, gmpeFixedSigmaCurves[i].getY(k) + rupRate);
-				}
-			}
-		}
-		// convert to exceedance probabilities
-		for (int i=0; i<gmpeCurve.size(); i++)
-			gmpeCurve.set(i, 1d-gmpeCurve.getY(i));
-		if (gmpeTruncs != null) {
-			for (DiscretizedFunc gmpeTruncCurve : gmpeTruncCurves)
-				for (int i=0; i<gmpeTruncCurve.size(); i++)
-					gmpeTruncCurve.set(i, 1d-gmpeTruncCurve.getY(i));
-		}
-		if (gmpeFixedSigmas != null) {
-			for (int t=0; t< gmpeFixedSigmaCurves.length; t++) {
-				if (gmpeFixedSigmas[t] > 0) {
-					for (int i=0; i<gmpeFixedSigmaCurves[t].size(); i++)
-						gmpeFixedSigmaCurves[t].set(i, 1d-gmpeFixedSigmaCurves[t].getY(i));
-				} else {
-					// now mean only curve -> probabilities
-					for (int i=0; i<gmpeFixedSigmaCurves[t].size(); i++) {
-						double rate = gmpeFixedSigmaCurves[t].getY(i);
-						double prob = 1d - Math.exp(-rate*curveDuration);
-						gmpeFixedSigmaCurves[t].set(i, prob);
-					}
-				}
-			}
-		}
-		
-		if (gmpeSimProv != null) {
-			SimulationHazardCurveCalc<E> simCalc = new SimulationHazardCurveCalc<>(gmpeSimProv, xVals);
-			for (int i=0; i<gmpeSimCurves.length; i++) {
-				gmpeSimProv.clearCache();
-				gmpeSimCurves[i] = simCalc.calc(site, period, curveDuration);
-			}
-		}
-		
-		return gmpeCurve;
-	}
-	
 	@SuppressWarnings("unchecked")
-	public File plotHazardCurve(List<? extends RuptureComparison<E>> comps, Site site, double period, AttenRelRef gmpeRef, File outputDir)
+	public File plotHazardCurve(SimulationHazardPlotter<E> simCurvePlot, Site site, double period, AttenRelRef gmpeRef, File outputDir)
 			throws IOException {
 		String siteName = site.getName();
 		String prefix = siteName.replaceAll(" ", "_")+"_curves_"+(float)period+"s_"+gmpeRef.getShortName();
@@ -481,312 +339,8 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		if (pngFile.exists() && !replotCurves)
 			return pngFile;
 		
-		double curveDuration = 1d;
-		
-		if (simCurveCalc == null)
-			simCurveCalc = new SimulationHazardCurveCalc<>(simProv);
-		
 		System.out.println("Calculating simulation curve for "+site.getName()+", t="+(float)period);
-		DiscretizedFunc simCurve = simCurveCalc.calc(site, period, curveDuration);
-		simCurve.setName(simName);
-		
-		List<DiscretizedFunc> simCurves = new ArrayList<>();
-		simCurves.add(simCurve);
-		
-		return plotHazardCurve(simCurves, comps, simCurveCalc.getXVals(), site, period, curveDuration, gmpeRef,
-				gmpe_truncs, gmpe_fixed_sigmas, null, 0, null, null, 0d, 0, false, outputDir, prefix);
-	}
-	
-	static <E> File plotHazardCurve(List<DiscretizedFunc> simCurves, List<? extends RuptureComparison<E>> comps, DiscretizedFunc xVals,
-			Site site, double period, double curveDuration, AttenRelRef gmpeRef, double[] gmpeTruncs, double[] gmpeFixedSigmas,
-			GMPESimulationBasedProvider<E> gmpeSimProv, int numGMPESims, Table<String, E, Double> sourceRupContribFracts,
-			Map<String, DiscretizedFunc> simSourceCurves, double sourceContribSortProb, int numSourceCurves, boolean gmpeSources,
-			File outputDir, String prefix) throws IOException {
-		// calculate GMPE curves
-		DiscretizedFunc[] gmpeTruncCurves = gmpeTruncs == null ? new DiscretizedFunc[0] : new DiscretizedFunc[gmpeTruncs.length];
-		DiscretizedFunc[] gmpeFixedSigmaCurves = gmpeFixedSigmas == null ? new DiscretizedFunc[0] : new DiscretizedFunc[gmpeFixedSigmas.length];
-		DiscretizedFunc[] gmpeSimCurves = numGMPESims > 0 ? new DiscretizedFunc[numGMPESims] : null;
-		DiscretizedFunc gmpeCurve = calcGMPEHazardCurves(comps, xVals, site, period, curveDuration, gmpeRef,
-				gmpeTruncs, gmpeTruncCurves, gmpeFixedSigmas, gmpeFixedSigmaCurves, gmpeSimProv, gmpeSimCurves);
-		
-		// now plot
-		String xAxisLabel = (float)period+"s SA (g)";
-		String yAxisLabel;
-		if (curveDuration == 1d)
-			yAxisLabel = "Annual Probability";
-		else
-			yAxisLabel = optionalDigitDF.format(curveDuration)+"yr Probability";
-		
-		List<DiscretizedFunc> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		Range xRange = new Range(1e-3, 1e1);
-		Range yRange = new Range(1e-8, 1e0);
-		
-		if (gmpeSimCurves != null && gmpeSimCurves.length > 0) {
-			DiscretizedFunc meanCurve = xVals.deepClone();
-			for (int i=0; i<meanCurve.size(); i++)
-				meanCurve.set(i, 0);
-			meanCurve.setName(gmpeRef.getShortName()+" mean, N="+gmpeSimCurves.length);
-			Color singleSimColor = new Color(255, 120, 120);
-			Color meanSimColor = Color.RED;
-			
-			for (int n=0; n<gmpeSimCurves.length; n++) {
-				DiscretizedFunc simCurve = gmpeSimCurves[n];
-				Preconditions.checkState(simCurve.size() > 0, "Empty sim curve?");
-				if (n == 0) {
-					if (gmpeSimCurves.length == 0)
-						simCurve.setName(gmpeRef.getShortName()+" Simulated");
-					else
-						simCurve.setName(gmpeRef.getShortName()+" Simulations");
-				} else 
-					simCurve.setName(null);
-				Preconditions.checkState(meanCurve.size() >= simCurve.size(),
-						"Size mismatch for n=%s, sim=%s, mean=%s", n, simCurve.size(), meanCurve.size());
-				for (int i=0; i<simCurve.size(); i++)
-					meanCurve.set(i, meanCurve.getY(i)+simCurve.getY(i));
-				funcs.add(simCurve);
-				if (gmpeSimCurves.length == 0)
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, meanSimColor));
-				else
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, singleSimColor));
-			}
-			if (gmpeSimCurves.length > 1) {
-				meanCurve.scale(1d/gmpeSimCurves.length);
-				ArbitrarilyDiscretizedFunc trimmedMeanCurve = new ArbitrarilyDiscretizedFunc();
-				for (Point2D pt : meanCurve)
-					if (pt.getY() > 0)
-						trimmedMeanCurve.set(pt);
-				Preconditions.checkState(trimmedMeanCurve.size() > 0, "Empty trimmed mean curve? Orig was %s", meanCurve);
-				trimmedMeanCurve.setName(meanCurve.getName());
-				funcs.add(trimmedMeanCurve);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, meanSimColor));
-			}
-		}
-		
-		if (sourceRupContribFracts != null && !sourceRupContribFracts.isEmpty() && sourceContribSortProb > 0 && numSourceCurves > 0) {
-			Map<String, DiscretizedFunc> gmpeSourceCurves = new HashMap<>();
-			Map<String, Double> simSourceSortVals = new HashMap<>();
-			
-			DiscretizedFunc refCurve = simCurves.get(0);
-			if (sourceContribSortProb < refCurve.getMinY() || sourceContribSortProb > refCurve.getMaxY()) {
-				System.out.println("Source contribution sort probability ("+(float)sourceContribSortProb
-						+") is not contained in simulation curve, can't determine ground motion");
-				return null;
-			}
-			double contribIML = refCurve.getFirstInterpolatedX_inLogXLogYDomain(sourceContribSortProb);
-			System.out.println("Sorting source contirubtions for IML="+(float)+contribIML
-					+" at p="+(float)sourceContribSortProb);
-			
-			for (String sourceName : sourceRupContribFracts.rowKeySet()) {
-				Map<E, Double> rupContribFracts = sourceRupContribFracts.row(sourceName);
-				DiscretizedFunc simSourceCurve = simSourceCurves.get(sourceName);
-				if (simSourceCurve == null || simSourceCurve.size() == 0 || simSourceCurve.getMaxX() < contribIML)
-					continue;
-				double simSourceVal = simSourceCurve.getInterpolatedY_inLogXLogYDomain(contribIML);
-				simSourceSortVals.put(sourceName, simSourceVal);
-				if (gmpeSources && simSourceVal > 0) {
-					// calculate GMPE
-					List<RuptureComparison<E>> modComps = new ArrayList<>();
-					for (RuptureComparison<E> comp : comps) {
-						Double fract = rupContribFracts.get(comp.getRupture());
-						if (fract != null && fract > 0)
-							modComps.add(new ModRateRuptureComparison<E>(comp, comp.getAnnualRate()*fract));
-					}
-					DiscretizedFunc gmpeSourceCurve = calcGMPEHazardCurves(modComps, xVals, site, period, curveDuration,
-							gmpeRef, null, null, null, null, null, null);
-					gmpeSourceCurves.put(sourceName, gmpeSourceCurve);
-				}
-			}
-			
-			List<String> sortedSourceNames = ComparablePairing.getSortedData(simSourceSortVals);
-			Collections.reverse(sortedSourceNames);
-			List<DiscretizedFunc> otherCurves = new ArrayList<>();
-			
-			int numSoFar = 0;
-			List<DiscretizedFunc> curvesToAdd = new ArrayList<>();
-			for (String sourceName : sortedSourceNames) {
-				numSoFar++;
-				DiscretizedFunc curve;
-				if (gmpeSources)
-					curve = gmpeSourceCurves.get(sourceName);
-				else
-					curve = simSourceCurves.get(sourceName);
-				curve.setName(sourceName);
-				double val = simSourceSortVals.get(sourceName);
-				if (numSoFar >= numSourceCurves || val == 0)
-					otherCurves.add(curve);
-				else
-					curvesToAdd.add(curve);
-			}
-			Preconditions.checkState(curvesToAdd.size() > 1);
-			CPT colorCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0, curvesToAdd.size()-1);
-			colorCPT = colorCPT.reverse();
-			colorCPT.setBelowMinColor(colorCPT.getMinColor());
-			colorCPT.setAboveMaxColor(colorCPT.getMaxColor());
-			for (int i=0; i <curvesToAdd.size(); i++) {
-				funcs.add(curvesToAdd.get(i));
-				Color color = colorCPT.getColor((float)i).darker();
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, color));
-			}
-			
-//			// now build other sources curves
-//			if (!otherCurves.isEmpty()) {
-//				DiscretizedFunc otherCurve = xVals.deepClone();
-//				// init to 1, do in non-exceed space
-//				for (int i=0; i<otherCurve.size(); i++)
-//					otherCurve.set(i, 1d);
-//				for (DiscretizedFunc curve : otherCurves) {
-//					for (int i=0; i<curve.size(); i++)
-//						otherCurve.set(i, otherCurve.getY(i)*(1d-curve.getY(i)));
-//				}
-//				// convert to exceed probs
-//				for (int i=0; i<otherCurve.size(); i++)
-//					otherCurve.set(i, 1d-otherCurve.getY(i));
-//				otherCurve.setName(otherCurves.size()+" Other Sources");
-//				funcs.add(otherCurve);
-//				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GRAY));
-//			}
-		}
-		
-		gmpeCurve.setName(gmpeRef.getShortName());
-		funcs.add(gmpeCurve);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE));
-		
-		for (int i=0; i<gmpeTruncCurves.length; i++) {
-			DiscretizedFunc gmpeTruncCurve = gmpeTruncCurves[i];
-			String name = optionalDigitDF.format(gmpeTruncs[i])+" σₜ";
-			float thickness = 2f;
-			gmpeTruncCurve.setName(name);
-			funcs.add(gmpeTruncCurve);
-			chars.add(new PlotCurveCharacterstics(gmpe_alt_line_types[i % gmpe_alt_line_types.length], thickness, Color.BLUE));
-		}
-		
-		for (int i=0; i<gmpeFixedSigmaCurves.length; i++) {
-			DiscretizedFunc gmpeFixedSigmaCurve = gmpeFixedSigmaCurves[i];
-			String name = "σ="+optionalDigitDF.format(gmpeFixedSigmas[i]);
-			if (i == 0)
-				name = "Fixed "+name;
-			float thickness = 2f;
-			gmpeFixedSigmaCurve.setName(name);
-			funcs.add(gmpeFixedSigmaCurve);
-			chars.add(new PlotCurveCharacterstics(gmpe_alt_line_types[i % gmpe_alt_line_types.length],
-					thickness, Color.GREEN.darker()));
-		}
-		
-		for (int i=0; i<simCurves.size(); i++) {
-			DiscretizedFunc curve = simCurves.get(i);
-			if (i == 0) {
-				if (curve instanceof UncertainArbDiscDataset) {
-					// this is so that it is first in the legend
-					funcs.add(curve);
-					chars.add(simCurveChar);
-					// now clone so that we can change the name
-					UncertainArbDiscDataset uncertain = (UncertainArbDiscDataset)curve;
-					uncertain = new UncertainArbDiscDataset(curve, uncertain.getLower(), uncertain.getUpper());
-					uncertain.setName("95% conf");
-					funcs.add(uncertain);
-					chars.add(simUncertainChar);
-					// this will put it on top of the uncertainty bounds when plotted
-					DiscretizedFunc curveNoLegend = curve.deepClone();
-					curveNoLegend.setName(null);
-					funcs.add(curveNoLegend);
-					chars.add(simCurveChar);
-				} else {
-					funcs.add(curve);
-					chars.add(simCurveChar);
-				}
-			} else {
-				funcs.add(curve);
-				chars.add(simCompCurveChars[i-1 % simCompCurveChars.length]);
-			}
-		}
-		
-		List<XYTextAnnotation> anns = null;
-		
-		if (hazard_curve_rps != null && hazard_curve_rps.length > 0) {
-			anns = new ArrayList<>();
-			CPT rpCPT = HazardMapComparePlotter.getRPlogCPT(hazard_curve_rps);
-			Font font = new Font(Font.SANS_SERIF, Font.BOLD, 16);
-			for (int rp : hazard_curve_rps) {
-				Color color = rpCPT.getColor((float)Math.log10(rp));
-				double probLevel = curveDuration/(double)rp;
-				DiscretizedFunc probLine = new ArbitrarilyDiscretizedFunc();
-				probLine.set(xRange.getLowerBound(), probLevel);
-				probLine.set(xRange.getUpperBound(), probLevel);
-				funcs.add(probLine);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, color));
-				
-				XYTextAnnotation ann = new XYTextAnnotation(" "+rp+"yr", xRange.getLowerBound(), probLevel);
-				ann.setTextAnchor(TextAnchor.BOTTOM_LEFT);
-				ann.setFont(font);
-				ann.setPaint(Color.DARK_GRAY);
-				anns.add(ann);
-			}
-		}
-
-		PlotSpec spec = new PlotSpec(funcs, chars, site.getName()+" Hazard Curves", xAxisLabel, yAxisLabel);
-		spec.setLegendVisible(true);
-		spec.setPlotAnnotations(anns);
-		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
-		plotPrefs.setTickLabelFontSize(18);
-		plotPrefs.setAxisLabelFontSize(20);
-		plotPrefs.setPlotLabelFontSize(21);
-		plotPrefs.setBackgroundColor(Color.WHITE);
-		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
-		
-		gp.drawGraphPanel(spec, true, true, xRange, yRange);
-		gp.getChartPanel().setSize(800, 600);
-		File pngFile = new File(outputDir, prefix+".png");
-		gp.saveAsPNG(pngFile.getAbsolutePath());
-		System.out.println("DONE "+gmpeRef.getShortName()+", "+site.getName()+", "+xAxisLabel);
-		return pngFile;
-	}
-	
-	static List<String> getCurveLegend(String simName, String gmpeName, double[] gmpeTruncs, double[] gmpeFixedSigmas, int numSims) {
-		return getCurveLegend(Lists.newArrayList(simName), gmpeName, gmpeTruncs, gmpeFixedSigmas, numSims);
-	}
-	
-	static List<String> getCurveLegend(List<String> simNames, String gmpeName, double[] gmpeTruncs, double[] gmpeFixedSigmas, int numSims) {
-		List<String> lines = new ArrayList<>();
-		lines.add("**Legend**:");
-		lines.add("* **Simulations Curves** *(truncated below lowest possible y-value)*");
-		lines.add("  * Black Solid Line: "+simNames.get(0));
-		
-		for (int i=1; i<simNames.size(); i++) {
-			PlotLineType type = simCompCurveChars[i-1 % simCompCurveChars.length].getLineType();
-			String lineType = type.name().replaceAll("_", " ");
-			lineType = lineType.substring(0, 1).toUpperCase()+lineType.substring(1).toLowerCase();
-			lines.add("  * Gray "+lineType+" Line: "+simNames.get(i));
-		}
-		lines.add("* **GMPE Curves**");
-		if (numSims > 0) {
-			if (numSims == 1) {
-				lines.add("  * Red Solid Line: "+gmpeName+", simulated (with samples from GMPE log-normal distribution)");
-			} else {
-				lines.add("  * Light Red Thin Solid Lines: "+gmpeName+" simulations (with samples from GMPE log-normal distribution)");
-				lines.add("  * Red Solid Line: "+gmpeName+", mean of "+numSims+" simulations");
-			}
-		}
-		lines.add("  * Blue Solid Line: "+gmpeName+" full curve");
-		for (int i=0; gmpeTruncs != null && i<gmpeTruncs.length; i++) {
-			String truncAdd = optionalDigitDF.format(gmpeTruncs[i])+"-sigma truncation";
-			PlotLineType type = gmpe_alt_line_types[i % gmpe_alt_line_types.length];
-			String lineType = type.name().replaceAll("_", " ");
-			lineType = lineType.substring(0, 1).toUpperCase()+lineType.substring(1).toLowerCase();
-			lines.add("  * Blue "+lineType+" Line: "+gmpeName+", "+truncAdd);
-		}
-		for (int i=0; gmpeFixedSigmas != null && i<gmpeFixedSigmas.length; i++) {
-			String sigmaAdd = "Fixed sigma="+optionalDigitDF.format(gmpeFixedSigmas[i]);
-			PlotLineType type = gmpe_alt_line_types[i % gmpe_alt_line_types.length];
-			String lineType = type.name().replaceAll("_", " ");
-			lineType = lineType.substring(0, 1).toUpperCase()+lineType.substring(1).toLowerCase();
-			lines.add("  * Green "+lineType+" Line: "+gmpeName+", "+sigmaAdd);
-		}
-		lines.add("* Gray Dashed Lines: "+Joiner.on(" yr, ").join(Ints.asList(hazard_curve_rps))+" yr return periods");
-		return lines;
+		return simCurvePlot.plotHazardCurves(outputDir, prefix, period);
 	}
 	
 	public void generateGMPE_Page(File outputDir, List<String> headerLines, AttenRelRef gmpeRef, double[] periods,
@@ -1010,12 +564,21 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		System.out.println("Have "+curveSites.size()+" curve sites (from "+sites.size()+" total sites)");
 		
 		if (curveSites != null && !curveSites.isEmpty()) {
+			SimulationHazardCurveCalc<E> simCurveCalc = new SimulationHazardCurveCalc<>(simProv);
+			List<SimulationHazardPlotter<E>> curvePlotters = new ArrayList<>();
+			for (Site site : sites) {
+				SimulationHazardPlotter<E> curvePlotter = new SimulationHazardPlotter<>(simCurveCalc, comps, site, 1d, gmpeRef);
+				curvePlotter.setGMPE_FixedSigmas(gmpe_fixed_sigmas);
+				curvePlotter.setGMPE_TruncationLevels(gmpe_truncs);
+				curvePlotters.add(curvePlotter);
+			}
 			for (double period : periods)
-				curveFiles.add(plotHazardCurves(comps, curveSites, period, gmpeRef, resourcesDir));
+				curveFiles.add(plotHazardCurves(curvePlotters, period, resourcesDir));
 			
 			lines.add("## Hazard Curves");
 			lines.add(topLink); lines.add("");
-			lines.addAll(getCurveLegend(simName, gmpeRef.getShortName(), gmpe_truncs, gmpe_fixed_sigmas, 0));
+//			lines.addAll(getCurveLegend(simName, gmpeRef.getShortName(), gmpe_truncs, gmpe_fixed_sigmas, 0));
+			lines.addAll(curvePlotters.get(0).getCurveLegend(false, true, true, 0));
 			lines.add("");
 			TableBuilder table = MarkdownUtils.tableBuilder();
 			table.initNewLine().addColumn("Site");
@@ -1060,6 +623,8 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			residualTypes.add(ResidualType.Z10);
 		if (sites.get(0).containsParameter(DepthTo2pt5kmPerSecParam.NAME) && doesParameterVary(DepthTo2pt5kmPerSecParam.NAME, sites))
 			residualTypes.add(ResidualType.Z25);
+		if (RuptureComparison.getRuptureTimeRange(comps) != null)
+			residualTypes.add(ResidualType.OCCUR_TIME);
 		
 		lines.add("GMPE Residuals use the following values, averaged among all ruptures, for all paremeters which are not varied. "
 				+ "All other parameters set to GMPE defaults");
@@ -1203,7 +768,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 					ScalarIMR gmpe = checkOutGMPE(gmpeRef);
 					gmpe.setParamDefaults();
 					for (ResidualType t2 : residualTypes) {
-						if (t2 == type)
+						if (t2 == type || t2.parameterName == null)
 							continue;
 						double meanVal = residualDefaults.get(t2);
 						if (gmpe instanceof MultiIMR_Averaged_AttenRel) {
@@ -1324,6 +889,12 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			@Override
 			public Double getValue(RuptureComparison<?> comp, Site site) {
 				return site.getParameter(Double.class, DepthTo2pt5kmPerSecParam.NAME).getValue();
+			}
+		},
+		OCCUR_TIME("Occurrence Time", "yrs", null) {
+			@Override
+			public Double getValue(RuptureComparison<?> comp, Site site) {
+				return comp.getRuptureTimeYears();
 			}
 		};
 
