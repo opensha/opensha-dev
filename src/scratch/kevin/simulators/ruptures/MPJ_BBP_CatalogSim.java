@@ -50,6 +50,9 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 	private double dt;
 	private SRFInterpolationMode interp;
 	
+	private double timeScalarFactor = 1d;
+	private boolean velocityScale = false;
+	
 	private RSQSimCatalog catalog;
 	private List<RSQSimEvent> events;
 	
@@ -197,6 +200,11 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 			if (rank == 0)
 				debug("also doing "+numRG+" rupture generation simulations each");
 		}
+		
+		if (cmd.hasOption("time-scalar"))
+			timeScalarFactor = Double.parseDouble(cmd.getOptionValue("time-scalar"));
+		if (cmd.hasOption("velocity-scale"))
+			velocityScale = true;
 		
 		if (rank == 0)
 			postBatchHook = new MasterZipHook();
@@ -350,6 +358,9 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				}
 				RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
 				
+				if (timeScalarFactor != 1d)
+					func = func.getTimeScaledFunc(timeScalarFactor, velocityScale);
+				
 				// write SRF
 				debug("bulding/writing SRF for "+eventID);
 				List<SRF_PointData> srfPoints = RSQSimSRFGenerator.buildSRF(func, event.getAllElements(), dt, interp);
@@ -470,6 +481,17 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				+ "Transition file will be copied here if no node-local scratch. Unzipped results will be stored here.");
 		sharedScratchDir.setRequired(false);
 		ops.addOption(sharedScratchDir);
+		
+		Option timeScalar = new Option("ts", "time-scalar", true,
+				"Time scalar for slip/time functions. 1.5 will increase rupture propagation velocities by 50%");
+		timeScalar.setRequired(false);
+		ops.addOption(timeScalar);
+		
+		Option velScale = new Option("vs", "velocity-scale", false,
+				"Works with time scalar. If supplied, velocities will also be scaled (each slip event is faster and shorter). "
+				+ "Otherwise slip events are sooner, but the same speed/duration.");
+		velScale.setRequired(false);
+		ops.addOption(velScale);
 		
 		return ops;
 	}

@@ -48,6 +48,29 @@ public abstract class RuptureComparison<E> {
 	
 	public abstract double getAnnualRate();
 	
+	/**
+	 * Occurrence time in years for this rupture, or NaN if not time based
+	 * @return
+	 */
+	public abstract double getRuptureTimeYears();
+	
+	/**
+	 * @param comps
+	 * @return array containing minTime, maxTime, or null if times are NaN
+	 */
+	public static double[] getRuptureTimeRange(Iterable<? extends RuptureComparison<?>> comps) {
+		double min = Double.POSITIVE_INFINITY;
+		double max = Double.NEGATIVE_INFINITY;
+		for (RuptureComparison<?> comp : comps) {
+			double time = comp.getRuptureTimeYears();
+			if (!Double.isFinite(time))
+				return null;
+			min = Math.min(time, min);
+			max = Math.max(time, max);
+		}
+		return new double[] { min, max };
+	}
+	
 	public static abstract class Cached<Y> extends RuptureComparison<Y> {
 		
 		private Table<Site, Double, Double> logMeans;

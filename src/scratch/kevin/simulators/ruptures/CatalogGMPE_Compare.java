@@ -361,6 +361,11 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		public double getAnnualRate() {
 			return 1d/catDurationYears;
 		}
+
+		@Override
+		public double getRuptureTimeYears() {
+			return getRupture().getTimeInYears();
+		}
 	}
 	
 	public List<EventComparison> loadCalcComps(AttenRelRef gmpeRef, double[] periods) {

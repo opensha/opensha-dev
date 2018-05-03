@@ -69,6 +69,7 @@ import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
  * This class does an inversion for the rate of events in an unsegmented fault model:
  * 
  * TO DO:
+ * 
  * 1) Make it so multiple SA runs can be done saving only the rup rates after each
  * 2) Add the segmentation constraint
  * 4) Make slip model and enum (already in U3?)

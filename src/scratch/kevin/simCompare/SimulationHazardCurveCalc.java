@@ -50,6 +50,10 @@ public class SimulationHazardCurveCalc<E> {
 		this.xVals = xVals;
 	}
 	
+	public SimulationRotDProvider<E> getSimProv() {
+		return simProv;
+	}
+	
 	public DiscretizedFunc getXVals() {
 		return xVals;
 	}

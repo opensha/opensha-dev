@@ -483,6 +483,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	public class RSQSimProbEqkRup extends ProbEqkRupture {
 
 		private int eventID;
+		private double timeSeconds;
 		private List<FaultSectionPrefData> subSects;
 		
 		// this can be filtered to remove elements far from the mapped surface
@@ -495,19 +496,20 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		public RSQSimProbEqkRup(RSQSimSubSectEqkRupture rup, double probability, List<SimulatorElement> rupElems) {
 			super(rup.getMag(), rup.getAveRake(), probability, rup.getRuptureSurface(), rup.getHypocenterLocation());
 			
-			init(rup.getEventID(), rup.getSubSections(), rupElems);
+			init(rup.getEventID(), rup.getTime(), rup.getSubSections(), rupElems);
 			
 		}
 
-		public RSQSimProbEqkRup(double mag, double rake, double probability, Location hypo, int eventID,
+		public RSQSimProbEqkRup(double mag, double rake, double probability, Location hypo, int eventID, double timeSeconds,
 				List<FaultSectionPrefData> subSects, List<SimulatorElement> rupElems) {
 			super(mag, rake, probability, buildSubSectSurface(subSects), hypo);
-			init(eventID, subSects, rupElems);
+			init(eventID, timeSeconds, subSects, rupElems);
 		}
 		
-		private void init(int eventID, List<FaultSectionPrefData> subSects, List<SimulatorElement> rupElems) {
+		private void init(int eventID, double timeSeconds, List<FaultSectionPrefData> subSects, List<SimulatorElement> rupElems) {
 			this.eventID = eventID;
 			Preconditions.checkState(eventID >= 0);
+			this.timeSeconds = timeSeconds;
 			this.subSects = subSects;
 			MinMaxAveTracker latTrack = new MinMaxAveTracker();
 			MinMaxAveTracker lonTrack = new MinMaxAveTracker();
@@ -530,6 +532,14 @@ public class RSQSimSectBundledERF extends AbstractERF {
 
 		public int getEventID() {
 			return eventID;
+		}
+		
+		public double getTime() {
+			return timeSeconds;
+		}
+		
+		public double getTimeYears() {
+			return timeSeconds / SimulatorUtils.SECONDS_PER_YEAR;
 		}
 		
 		public List<FaultSectionPrefData> getSortedSubSects() {
@@ -844,6 +854,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				RSQSimProbEqkRup rup = source.getRupture(rupID);
 				out.writeInt(rupID); // rup ID
 				out.writeInt(rup.getEventID()); // event ID
+				out.writeDouble(rup.getTime()); // event time (s)
 				out.writeDouble(rup.getMag()); // mag
 				out.writeDouble(rup.getAveRake()); // rake
 				Location hypo = rup.getHypocenterLocation();
@@ -935,6 +946,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				Preconditions.checkState(rupID == testRupID, "Expected rupID=%s, have %s (sourceID=%s)",
 						rupID, testRupID, sourceID);
 				int eventID = in.readInt();
+				double time = in.readDouble();
 				double mag = in.readDouble();
 				double rake = in.readDouble();
 				double lat = in.readDouble();
@@ -963,7 +975,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				List<FaultSectionPrefData> rupSects = new ArrayList<>();
 				for (int s=0; s<numRupSects; s++)
 					rupSects.add(subSects.get(in.readInt()));
-				sourceRups.add(new RSQSimProbEqkRup(mag, rake, rupProb, hypo, eventID, rupSects, rupElems));
+				sourceRups.add(new RSQSimProbEqkRup(mag, rake, rupProb, hypo, eventID, time, rupSects, rupElems));
 			}
 			
 			RSQSimSectBundledSource source = new RSQSimSectBundledSource(sourceSects, sourceRups);
@@ -1042,10 +1054,10 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				System.err.println("hardcoded dir doesn't exist: "+baseDir.getAbsolutePath());
 				System.exit(2);
 			}
-			catalog = Catalogs.BRUCE_2457.instance(baseDir);
+			catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 			writePoints = false;
 			writeSRFs = false;
-			writeMappings = false;
+			writeMappings = true;
 			testReadOnly = false;
 //			maxDuration = 10000;
 			maxDuration = 0;
@@ -1127,6 +1139,8 @@ public class RSQSimSectBundledERF extends AbstractERF {
 					for (int rupID=0; rupID<source1.getNumRuptures(); rupID++) {
 						RSQSimProbEqkRup rup1 = source1.getRupture(rupID);
 						RSQSimProbEqkRup rup2 = source2.getRupture(rupID);
+						Preconditions.checkState(rup1.getEventID() == rup2.getEventID());
+						Preconditions.checkState(rup1.getTime() == rup2.getTime());
 						Preconditions.checkState(rup1.getMag() == rup2.getMag());
 						Preconditions.checkState(rup1.getAveRake() == rup2.getAveRake());
 						Preconditions.checkState(rup1.getProbability() == rup2.getProbability());
