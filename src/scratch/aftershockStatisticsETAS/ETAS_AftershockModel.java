@@ -310,64 +310,6 @@ public abstract class ETAS_AftershockModel {
 		this.nSims = nSims;
 	}
 
-//	public void computeFit(double dataMinDays, double dataMaxDays, int nSims){
-//		double forecastMinDays = dataMinDays;
-//		double forecastMaxDays = dataMaxDays;
-//		if(D){
-//			System.out.println("Computing Forecast with " + nSims + " simulations (Data window: " + dataMinDays +" "+ dataMaxDays + ", Forecast window: "+ forecastMinDays +" "+ forecastMaxDays + ")");
-//			System.out.println("SeqSpec Params: "+ getMaxLikelihood_ams() +" "+ getMaxLikelihood_a() +" "+ getMaxLikelihood_p() +" "+ getMaxLikelihood_c() +" "+ alpha +" "+ b +" "+ magComplete);
-//		}
-//
-//		ETAScatalog simulatedCatalog;
-//		try{
-//			simulatedCatalog = new ETAScatalog(ams_vec, a_vec, p_vec, c_vec, epiLikelihood, alpha, b, refMag, 
-//					mainShock, aftershockList, dataMinDays, dataMaxDays, forecastMinDays, forecastMaxDays, magComplete, maxMag, maxGenerations, nSims); //maxMag = 9.5, maxGeneratons = 100;
-//		} catch(InterruptedException e) {
-//			simulatedCatalog = null;
-//		}
-//
-//		this.forecastMinDays = forecastMinDays;
-//		this.forecastMaxDays = forecastMaxDays;
-//		this.simulatedCatalog = simulatedCatalog;
-//		this.nSims = nSims;
-//	}
-
-	/**
-	 * This gives the number of aftershocks as a function of time for the maximum likelihood a/p/c parameters 
-	 * (which represents the mode in the number of events space) above the given minimum magnitude and over 
-	 * the specified time span.  A GR distribution with no upper bound is assumed.
-	 * @param magMin
-	 * @param tMinDays - left edge of first time interval
-	 * @param tMaxDays - right edge of last time interval
-	 * @param tDelta
-	 * @return
-	 */
-	//	public EvenlyDiscretizedFunc getModalCumNumEventsWithTime(double magMin, double tMinDays, double tMaxDays, double tDelta) {
-	//		
-	//		
-	//				
-	////		EvenlyDiscretizedFunc cumFunc = new EvenlyDiscretizedFunc(tMinDays+tDelta/2, tMaxDays-tDelta/2, (int)Math.round((tMaxDays-tMinDays)/tDelta));
-	//		EvenlyDiscretizedFunc cumFunc = new EvenlyDiscretizedFunc(tMinDays, tMaxDays, (int)Math.round((tMaxDays-tMinDays)/tDelta )+1);
-	//		double count = 0, obsCount = 0;
-	//		
-	//		int i = 0;
-	//		for(double t = tMinDays; t <= tMaxDays; t += tDelta){
-	//			if(t <= this.dataEndTimeDays){
-	//				//compute expected number for comparison with known quakes (plot fit)
-	//				obsCount = getExpectedNumEvents(magMin, tMinDays, t);
-	//				
-	//				cumFunc.set(i++, obsCount);
-	//			}
-	//			else{
-	//				//report simulated number of events
-	//				count = getModalNumEvents( magMin,  tMinDays,  t);
-	//				cumFunc.set(i++, count + obsCount);
-	//			}
-	//			
-	//			
-	//		}
-	//		return cumFunc;
-	//	}
 
 	public ArbitrarilyDiscretizedFunc getModalCumNumEventsWithLogTime(double magMin, double tMinDays, double tMaxDays, int numPts) {
 		return getFractileCumNumEventsWithLogTime(magMin,tMinDays,tMaxDays,numPts,0.5);

@@ -40,7 +40,7 @@ import com.google.common.base.Preconditions;
 
 public class ETAS_ComcatAccessor {
 	
-		private static final boolean D = true;
+		private static final boolean D = false;
 		
 		protected EventWebService service;
 		

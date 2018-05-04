@@ -50,7 +50,7 @@ import scratch.aftershockStatisticsETAS.griddedInterpGMPE.GriddedInterpGMPE_Calc
 
 public class ETAS_ShakingForecastCalc {
 	
-	private static boolean D = true;
+	private static boolean D = false;
 	private static double magDelta = 0.1;
 	private static double[] depths = { 7, 2 }; // depth of <6.5 and >=6.5, respectively
 	

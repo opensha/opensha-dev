@@ -520,7 +520,7 @@ public class ETAS_RateModel2D {
 	 */
 	public static void writeContoursAsKML(List<PolyLine> contours, String name, String units, File outputFile, CPT cpt){
 		double labelSize = 0.8;
-		boolean D = true; //debug
+		boolean D = false; //debug
 		Color color = new Color(0,0,0);
 		
 		

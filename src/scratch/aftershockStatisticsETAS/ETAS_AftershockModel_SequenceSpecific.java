@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
-//import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-//import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.gui.infoTools.CalcProgressBar;
@@ -22,14 +20,13 @@ import com.google.common.primitives.Doubles;
  */
 public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel {
 	
-	Boolean D = true;	// debug flag
+	Boolean D = false;	// debug flag
 	private double rmax;
 	private boolean fitMSProductivity;
 	private boolean timeDependentMc;
 	private volatile boolean stopRequested;
 	private volatile boolean pauseRequested;
 	private ETAS_AftershockModel_Generic priorModel;
-//	private final CalcProgressBar subProgress;
 
 	public ETAS_AftershockModel_SequenceSpecific(ObsEqkRupture mainshock, ObsEqkRupList aftershocks,
 			double rmax, double[] amsVec, double amsSigma, double[] aVec, double[] pVec, double[] cVec, double alpha, double b, double refMag, 	
@@ -71,29 +68,6 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 			 								ETAS_AftershockModel_Generic priorModel,
 			 								CalcProgressBar progress) {
 		
-//		// check range values
-//		if(num_ams == 1 && min_ams != max_ams) {
-//			throw new RuntimeException("Problem: num_ams == 1 && min_ams != max_ams");
-//		}
-//		if(num_a == 1 && min_a != max_a) {
-//			throw new RuntimeException("Problem: num_a == 1 && min_a != max_a");
-//		}
-//		if(num_p == 1 && min_p != max_p) {
-//			throw new RuntimeException("Problem: num_p == 1 && min_p != max_p");
-//		}
-//		if(num_c == 1 && min_c != max_c) {
-//			throw new RuntimeException("Problem: num_c == 1 && min_c != max_c");
-//		}
-//		if(min_a > max_a) {
-//			throw new RuntimeException("Problem: min_a > max_a");
-//		}
-//		if(min_p > max_p) {
-//			throw new RuntimeException("Problem: min_p > max_p");
-//		}
-//		if(min_c > max_c) {
-//			throw new RuntimeException("Problem: min_c > max_c");
-//		}
-
 		if(fitMSProductivity){
 			this.min_ams = amsVec[0];
 			this.max_ams = amsVec[amsVec.length-1];
@@ -120,7 +94,6 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 		this.num_c = cVec.length;
 		
 		this.a_vec = aVec;
-//		this.ams_vec = amsVec;
 		this.p_vec = pVec;
 		this.c_vec = cVec;
 		
@@ -129,7 +102,6 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 		this.refMag = refMag;
 		this.magComplete = magComplete;
 		this.rmax = rmax;
-//		this.magComplete = magCat;
 		this.aftershockList=aftershockList;
 		this.mainShock=mainShock;
 		this.magMain = mainShock.getMag();
@@ -137,8 +109,6 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 		this.dataEndTimeDays=dataEndTimeDays;
 		this.forecastMinDays = forecastMinDays;
 		this.forecastMaxDays = forecastMaxDays;
-//		this.capG=capG;
-//		this.capH=capH;
 		this.nSims = nSims;
 		this.maxMag = maxMag;
 		this.maxGenerations = maxGenerations;
@@ -155,60 +125,12 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 			System.out.println("Mc(t):\t" + timeDependentMc + "\trmax:\t" + rmax + " Mc = " + magComplete);
 		}
 		
-//		if(Double.isNaN(capG))
-		
 		// Find the max like parameters by grid search
 		if(D) System.out.println("finding maximum likelihood parameters...");
-		
-//		// set up the new progress window
-//		subProgress = new CalcProgressBar(progress.getOwner(), "Progress", "Calculating maximum likelihood parameters...", false);
-////		SwingUtilities.invokeLater(new Runnable() {
-////
-////			@Override
-////			public void run() {
-//				subProgress.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-////				subProgress.setModalityType(ModalityType.APPLICATION_MODAL);
-//				subProgress.updateProgress(0,1);
-//				subProgress.pack();
-//				WindowAdapter wl = new WindowAdapter() {
-//					@Override
-//					public void windowClosing(WindowEvent e){
-//						System.out.println("Calculation interrupted");
-//						stopRequested = true;
-//					}
-//				};
-//				subProgress.addWindowListener(wl);
-//				subProgress.setVisible(true);
-////			};
-////		});
-
-//		pauseRequested = true;
-//		SwingUtilities.invokeLater(new Runnable() {
-//
-//				@Override
-//				public void run() {
-//					System.out.println("Doing it");
-					
-					if (timeDependentMc && (dataEndTimeDays > dataStartTimeDays))
-						getLikelihoodMatrixGridFast();
-					else 
-						getLikelihoodMatrixGridFast();
-					
-//					subProgress.setVisible(false);
-//					pauseRequested = false;
-//				};
-//			});
-		
-//		while (pauseRequested) {
-//			try {
-//				Thread.sleep(1000);
-//				System.out.println("zzz...");
-//			} catch (InterruptedException e1) {
-//				// TODO Auto-generated catch block
-//				System.err.println("Calculation was interrupted");
-//			}
-//		}
-		
+		if (timeDependentMc && (dataEndTimeDays > dataStartTimeDays))
+			getLikelihoodMatrixGridFast();
+		else 
+			getLikelihoodMatrixGridFast();
 		
 		if (D) {
 			System.out.println("getMaxLikelihood_ams()="+getMaxLikelihood_ams());
@@ -253,29 +175,7 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 		computeNewForecast(dataStartTimeDays, dataEndTimeDays, forecastMinDays, forecastMaxDays, nSims);
 		
 	}		
-//
-//	public void computeNewForecast(double dataMinDays, double dataMaxDays, double forecastMinDays, double forecastMaxDays, int nSims){
-//		if(D){
-//			System.out.println("Computing Forecast with " + nSims + " simulations (Data window: " + dataMinDays +" "+ dataMaxDays + ", Forecast window: "+ forecastMinDays +" "+ forecastMaxDays + ")");
-//			System.out.println("SeqSpec Params: "+ getMaxLikelihood_ams() +" "+ getMaxLikelihood_a() +" "+ getMaxLikelihood_p() +" "+ getMaxLikelihood_c() +" "+ alpha +" "+ b +" "+ magComplete);
-//		}
-//		
-//		ETAScatalog simulatedCatalog;
-//		try{
-//			simulatedCatalog = new ETAScatalog(ams_vec, a_vec, p_vec, c_vec, epiLikelihood, alpha, b, refMag, 
-//				mainShock, aftershockList, dataMinDays, dataMaxDays, forecastMinDays, forecastMaxDays, magComplete, maxMag, maxGenerations, nSims); //maxMag = 9.5, maxGeneratons = 100;
-//		} catch(InterruptedException e) {
-//			simulatedCatalog = null;
-//		}
-//		
-//		this.forecastMinDays = forecastMinDays;
-//		this.forecastMaxDays = forecastMaxDays;
-//		this.simulatedCatalog = simulatedCatalog;
-//		this.nSims = nSims;
-//	}
-//
-//	
-//		
+	
 	/**
 	 * Get likelihood matrix with no time dependent Mc. Checks for supercriticality 
 	 * and gives a warning if too many supercritical parameter sets are found;
@@ -319,8 +219,6 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 					for(int pIndex=0;pIndex<num_p;pIndex++)
 						for(int cIndex=0;cIndex<num_c;cIndex++){
 							priorLikelihood[amsIndex][aIndex][pIndex][cIndex] = 1;
-							//			double amsLike = Math.exp(-Math.pow(ams_vec[amsIndex]- mean_a,2)/2/Math.pow(sigma_a, 2));
-							//			priorLikelihood[amsIndex][aIndex][pIndex][cIndex] = amsLike;
 						}
 		}
 		

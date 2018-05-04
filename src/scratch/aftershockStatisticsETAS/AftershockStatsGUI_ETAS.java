@@ -10,7 +10,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
@@ -18,41 +17,28 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.SimpleTimeZone;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.poi.ss.usermodel.FontFamily;
-import org.dom4j.Element;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.annotations.XYAnnotation;
-import org.jfree.chart.annotations.XYDrawableAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
-import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.data.Range;
-import org.jfree.data.xy.AbstractXYDataset;
-import org.jfree.data.xy.DefaultXYDataset;
-import org.jfree.data.xy.XYDataset;
 import org.jfree.ui.RectangleEdge;
 import org.jfree.ui.TextAnchor;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
-import org.opensha.commons.data.function.AbstractXY_DataSet;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -64,7 +50,6 @@ import org.opensha.commons.data.function.XY_DatasetBinner;
 import org.opensha.commons.data.siteData.impl.TectonicRegime;
 import org.opensha.commons.data.siteData.impl.WaldAllenGlobalVs30;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
-import org.opensha.commons.data.xyz.GeoDataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GeoTools;
 import org.opensha.commons.geo.GriddedRegion;
@@ -82,11 +67,9 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.AbstractParameter;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
-import org.opensha.commons.param.constraint.ParameterConstraint;
 import org.opensha.commons.param.constraint.impl.DoubleConstraint;
 import org.opensha.commons.param.editor.AbstractParameterEditor;
 import org.opensha.commons.param.editor.impl.NumericTextField;
@@ -125,16 +108,13 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
 
-import scratch.aftershockStatistics.OAFTectonicRegime;
 import scratch.aftershockStatistics.TectonicRegimeTable;
 import scratch.aftershockStatistics.util.SphLatLon;
 import scratch.aftershockStatistics.util.SphRegion;
-import wContour.Contour;
 import wContour.Global.PointD;
 import wContour.Global.PolyLine;
 
 import java.awt.Font;
-import java.awt.Image;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -148,7 +128,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		createAndShowGUI();
 	}
     
-	private boolean D = true; //debug
+	private boolean D = false; //debug
 	private boolean expertMode;
 	private boolean verbose;
 	private volatile boolean changeListenerEnabled = true;
@@ -316,7 +296,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	
 	private ButtonParameter generateMapButton;
 	
-	private ParameterListParameter mapOptionsList;
 	private BooleanParameter vs30Param;
 	
 	private enum IntensityType {
@@ -379,9 +358,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 	private EnumParameter<FitSourceType> fitSourceTypeParam;	
 	
-//	private BooleanParameter fitMainshockSourceParam;
-//	private BooleanParameter fitShakeMapSourceParam;
-	
 	private ButtonParameter publishAdvisoryButton;
 	
 	private JTabbedPane tabbedPane;
@@ -405,8 +381,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private JScrollPane catalogPane;
 	private JTextArea catalogText;
 	private JTabbedPane pdfGraphsPane;
-//	private GraphWidget aftershockExpectedNumGraph;
-//	private GraphWidget aftershockProbabilityGraph;
 	
 	private List<GraphWidget> aftershockExpectedNumGraph;
 	private List<GraphWidget> aftershockProbabilityGraph;
@@ -465,7 +439,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private int outputWidth = 65;
 	private int chartWidth = 750;
 	private int chartHeight = height;
-//	private int consoleHeight = (int) (80); 
 	private int sigDigits = 4;
 	
 	/* Initialize the GUI
@@ -833,16 +806,13 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 		tabbedPane = new JTabbedPane();
 		tabbedPane.setTabLayoutPolicy(JTabbedPane.WRAP_TAB_LAYOUT);
-//		tabbedPane.addTab("Console", null, consoleScroll, "View Console"); //moved this to it's own readout panel
 
 		JPanel mainPanel = new JPanel(new BorderLayout());
 		JPanel displayPanel = new JPanel(new BorderLayout());
 		JPanel paramsPanel = new JPanel(new BorderLayout());
 		JPanel dataParamsPanel = new JPanel(new BorderLayout());
 		JPanel fitParamsPanel = new JPanel(new BorderLayout());
-		JPanel fitParamsSubPanel = new JPanel(new BorderLayout());
 		JPanel outputPanel = new JPanel(new BorderLayout());
-//		JPanel mapPlotPanel = new JPanel(new BorderLayout());
 		
 		forecastEditor = new ParameterListEditor(forecastParams);
 		dataEditor = new ParameterListEditor(dataParams);
@@ -856,9 +826,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		forecastEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(5 + 0.0))));
 		dataEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(5 + 0.0))));
 		
-//		fitParamsSubPanel.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(5 + 0.0))));
-			mfdEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(1 + 0.0))));
-			fitEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(4 + 0.0))));
+		mfdEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(1 + 0.0))));
+		fitEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(4 + 0.0))));
 		mapEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(5 + 0.0))));
 		publishAdvisoryEditor.setPreferredSize(new Dimension(paramWidth, (int)(height/10d*(1 + 0.0))));
 		
@@ -867,12 +836,10 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 		displayPanel.setPreferredSize(new Dimension(chartWidth, height));
 		consoleScroll.setPreferredSize(new Dimension(chartWidth, height));
-//		tabbedPane.setPreferredSize(new Dimension(chartWidth, chartHeight));
 		paramsPanel.setPreferredSize(new Dimension(2*paramWidth+outputWidth+25, height));
 		dataParamsPanel.setPreferredSize(new Dimension(paramWidth, height));
 		fitParamsPanel.setPreferredSize(new Dimension(paramWidth, height));
 		outputPanel.setPreferredSize(new Dimension(outputWidth+25, height));
-//		mapPlotPanel.setPreferredSize(new Dimension(outputWidth+25, height));
 		
 		forecastEditor.setTitle("Forecast parameters");
 		publishAdvisoryEditor.setTitle("Publish Advisory");
@@ -887,9 +854,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		dataParamsPanel.add(dataEditor, BorderLayout.CENTER);
 		dataParamsPanel.add(mfdEditor, BorderLayout.SOUTH);		
 		
-//		fitParamsSubPanel.add(fitEditor, BorderLayout.CENTER);
-		
-//		fitParamsPanel.add(dataEditor, BorderLayout.NORTH);
 		fitParamsPanel.add(fitEditor, BorderLayout.NORTH);
 		fitParamsPanel.add(mapEditor, BorderLayout.CENTER);
 		fitParamsPanel.add(publishAdvisoryEditor, BorderLayout.SOUTH);
@@ -948,32 +912,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		setContentPane(mainPanel);
 		setSize(paramWidth*2 + outputWidth + 25 + chartWidth, height);
 		setVisible(true);
-		
-		// resize the window based on how it's fitting on the screen right now.
-//		height = mainPanel.getHeight();
-//		chartHeight = (int) (0.8*height-30);
-//		chartWidth = chartHeight+100;
-//		consoleHeight = (int) (0.2*height);
-
-//		setVisible(false);
-//		forecastEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/15*5 + 30)));
-//		dataEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/15*6 + 30)));
-//		mfdEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/15*1 + 30)));
-//		fitEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/15*3 + 30)));
-//		mapEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/15*2 + 30)));
-//		outputEditor.setPreferredSize(new Dimension((int) (paramWidth/4), (int) (height/2)));
-//		publishAdvisoryEditor.setPreferredSize(new Dimension(paramWidth, (int)(height/15*1 + 30)));
-//		
-//		displayPanel.setPreferredSize(new Dimension(chartWidth, height));
-//		consoleScroll.setPreferredSize(new Dimension(chartWidth, consoleHeight));
-////		tabbedPane.setPreferredSize(new Dimension(chartWidth, chartHeight));
-//		paramsPanel.setPreferredSize(new Dimension(2*paramWidth+outputWidth+25, height));
-//		dataParamsPanel.setPreferredSize(new Dimension(paramWidth, height));
-//		fitParamsPanel.setPreferredSize(new Dimension(paramWidth, height));
-//		outputPanel.setPreferredSize(new Dimension(outputWidth+25, height));
-		
-//		setSize(paramWidth*2 + outputWidth + 25 + chartWidth, height);
-//		setVisible(true);
 		
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setTitle("Aftershock Forecaster (Beta)");
@@ -1043,25 +981,21 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				editor.setTitle("%g");
 				editor.repaint();
 				editor.refreshParamEditor();
-				if(D) System.out.println("PGA");
 			} else if (intensityTypeParam.getValue() == IntensityType.PGV) {
 				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
 				editor.setTitle("cm/s");
 				editor.repaint();
 				editor.refreshParamEditor();
-				if(D) System.out.println("PGV");
 			} else if (intensityTypeParam.getValue() == IntensityType.PSA) {
 				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
 				editor.setTitle("%g");
 				editor.repaint();
 				editor.refreshParamEditor();
-				if(D) System.out.println("PSA");
 			} else if (intensityTypeParam.getValue() == IntensityType.MMI) {
 				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
 				editor.setTitle("MMI");
 				editor.repaint();
 				editor.refreshParamEditor();
-				if(D) System.out.println("MMI");
 			}
 			
 			mapLevelParam.getEditor().refreshParamEditor();
@@ -1106,8 +1040,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			if (centerType == RegionCenterType.SPECIFIED){
 				regionList.addParameter(regionCenterLatParam);
 				regionList.addParameter(regionCenterLonParam);
-//				regionList.addParameter(regionCenterLocParam);
-
 			}
 		}
 		
@@ -1148,21 +1080,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		return getDistCPT();
 	}
 	
-//	private CPT magCPT;
-//	private CPT getMagCPT() {
-//		if (magCPT != null)
-//			return magCPT;
-//		EvenlyDiscretizedFunc magSizeFunc = getMagSizeFunc();
-//		try {
-//			magCPT = GMT_CPT_Files.GMT_WYSIWYG.instance().rescale(
-//					magSizeFunc.getMinX(), magSizeFunc.getMaxX());
-//		} catch (IOException e) {
-//			throw ExceptionUtils.asRuntimeException(e);
-//		}
-//		return magCPT;
-//	}
-//	
-
 	// for plotting: how to color the events by distance
 	private EvenlyDiscretizedFunc distFunc;
 
@@ -1234,12 +1151,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private CPT getProbCPT() {
 		CPT probCPT;
 		
-//			try {
-//				probCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0,1);
-//			} catch (IOException e) {
-//				throw ExceptionUtils.asRuntimeException(e);
-//			}
-		
 		// try these:
 		int[][] colorMapValues = new int[][]{
 			{115, 210, 230},
@@ -1283,21 +1194,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		return probCPT;
 	}
 	
-//	private CPT getDistCPT() {
-//		if (distCPT != null)
-//			return distCPT;
-//		EvenlyDiscretizedFunc distFunc = getDistFunc();
-//		double halfDelta = 0.5*distFunc.getDelta();
-//		try {
-//			distCPT = new CPT(distFunc.getMinX()-halfDelta, distFunc.getMaxX()+halfDelta, colorMap);
-////			distCPT = GMT_CPT_Files.GMT_WYSIWYG.instance().rescale(
-////					distFunc.getMinX()-halfDelta, distFunc.getMaxX()+halfDelta);
-//		} catch (IOException e) {
-//			throw ExceptionUtils.asRuntimeException(e);
-//		}
-//		return distCPT;
-//	}
-
 	private void buildFuncsCharsForBinned(XY_DataSet[] binnedFuncs,
 			List<PlotElement> funcs, List<PlotCurveCharacterstics> chars, PlotSymbol sym) {
 		EvenlyDiscretizedFunc magSizeFunc = getMagSizeFunc();
@@ -1352,7 +1248,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		}
 	}
 
-	private static final int tickLabelFontSize = 14;
+	private static final int tickLabelFontSize = 16;
 	private static final int axisLabelFontSize = 16;
 	private static final int plotLabelFontSize = 16;
 
@@ -1380,14 +1276,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	
 		
 		String eventID = eventIDParam.getValue();
-		//		Preconditions.checkState(eventID != null && !eventID.isEmpty(), "Must supply event ID!");
-//		ObsEqkRupture mainshock = null;
 
 		if (eventID == null || eventID.isEmpty())
 			System.err.println("Must supply event ID");
 		else {
 			mainshock = accessor.fetchEvent(eventID);
-//			this.mainshock = mainshock;
 			if (mainshock == null){
 				System.err.println("Event not found: " + eventID);
 				setEnableParamsPostFetch(false);
@@ -1402,7 +1295,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				}
 					
 				System.out.println("Mainshock Mag/Lat/Lon/Depth: " + mainshock.getMag() + " " + mainshock.getHypocenterLocation());
-//				this.mainshock = mainshock;
 
 				Double minDepth = minDepthParam.getValue();
 				validateParameter(minDepth, "min depth");
@@ -1686,7 +1578,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		aValRangeParam.setValue(new Range(round(genericParams.get_a()-3*genericParams.get_aSigma(),2), round(genericParams.get_a()+3*genericParams.get_aSigma(),2)));
 		pValRangeParam.setValue(new Range(round(genericParams.get_p()-3*genericParams.get_pSigma(),2), round(genericParams.get_p()+3*genericParams.get_pSigma(),2)));
 		cValRangeParam.setValue(new Range(round(genericParams.get_c()/Math.pow(10, 3*genericParams.get_logcSigma()),sigDigits), Math.min(1, round(genericParams.get_c()*Math.pow(10, 3*genericParams.get_logcSigma()),sigDigits))));
-//		cValRangeParam.setValue(new Range(round(genericParams.get_c(),sigDigits), round(genericParams.get_c(),sigDigits))); //c-parameter fixed by default
 		
 		bParam.setValue(round(genericParams.get_b(),2));
 		bParam.getEditor().refreshParamEditor();
@@ -1710,7 +1601,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(), mcParam.getValue(),
 				9.5, 100, 0, fitMSProductivityParam.getValue());
 
-//		changeListenerEnabled = true;
 	} //end setupGUI
 	
 	private void setMagComplete(double mc){
@@ -1747,18 +1637,9 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			}
 			ogataMND = new OgataMagFreqDist(aftershocks, b_value, b_sigma); //compute entire-magnitude-range Mc with b fixed 
 			
-			//			mc = ogataMND.get_Mc();
 			// iterate to a stable estimate solution
 			mc = ogataMND.calculateMcWithFixedB(b_value);
 			if(verbose) System.out.println("mc: " + mc + " b: " + b_value);
-			
-//			int repeat = 0;
-//			while(repeat++ < 0){
-//				b_value = ogataMND.calculateBWithFixedMc(mc);
-//				mc = ogataMND.calculateMcWithFixedB(b_value);
-//
-//				if(verbose) System.out.println("mc: " + mc + " b: " + b_value);
-//			}
 
 		} else {
 		 	mc = genericParams.get_refMag() + 0.5;
@@ -1785,11 +1666,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 		if (colorByTime) {
 			timeCPT = getDistCPT().rescale(0d, dataEndTimeParam.getValue() + 1e-6);
-//			try {
-//				timeCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, dataEndTimeParam.getValue() + 1e-6); //includ fudge for 0-day forecast
-//			} catch (IOException e) {
-//				throw ExceptionUtils.asRuntimeException(e);
-//			}
 		}
 		PaintScaleLegend subtitle = null;
 		
@@ -1871,7 +1747,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			((NumberAxis) epicenterGraph.getGraphPanel().getYAxis()).setAutoRangeIncludesZero(false);;
 			
 			Component buttonPanel = epicenterGraph.getButtonControlPanel();
-			buttonPanel.setVisible(false);
+			buttonPanel.setVisible(true);
 			GraphPanel graphPanel = epicenterGraph.getGraphPanel();
 			graphPanel.getComponent(2).setVisible(false);
 		} else
@@ -1906,21 +1782,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		List<XY_DataSet> funcs = Lists.newArrayList();
 		List<PlotCurveCharacterstics> chars = Lists.newArrayList();
 		 
-//		
-//		mfd.setName("Incremental");
-//		funcs.add(mfd);
-//		chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, 6f, Color.BLUE));
-//		
-		
-		
-//		//Plot the cumulative density function for Mc (debug)
-//		EvenlyDiscretizedFunc mcFunc = ogataMND.getMcCumulativeDensity();
-//		if (mcFunc != null){
-//			mcFunc.setName("Mc Probability Density");
-//			funcs.add(mcFunc);
-//			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
-//		}
-		
 		double plotMinMag = Double.POSITIVE_INFINITY;
 		double plotMaxMag = mainshock.getMag();
 		for (int i=0; i<mfd.size(); i++) {
@@ -2005,7 +1866,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if (magNumGraph == null){
 			magNumGraph = new GraphWidget(spec);
 			Component buttonPanel = magNumGraph.getButtonControlPanel();
-			buttonPanel.setVisible(false);
+			buttonPanel.setVisible(true);
 			GraphPanel graphPanel = magNumGraph.getGraphPanel();
 			graphPanel.getComponent(2).setVisible(false);
 			
@@ -2096,7 +1957,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if (subtitle != null)
 			magTimeGraph.getGraphPanel().addSubtitle(subtitle);
 		
-		// the color bar disappears if graph is changed with button panel... add some kind of change listener?
+		// the color bar disappears if graph is changed with button panel...
 	}
 	
 	private void plotCumulativeNum() {
@@ -2120,7 +1981,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			countFunc.set(time, count);
 		}
 		countFunc.set(dataEndTimeParam.getValue(), count);
-		countFunc.setName("Data: "+(int)countFunc.getMaxY());
+		countFunc.setName("Data");
 		
 		double maxY = count + 1;
 		
@@ -2130,7 +1991,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		funcs.add(countFunc);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		
-//		if (seqSpecModel != null && seqSpecModel.nSims != 0 && expertMode ) {
 		if (seqSpecModel != null) {
 			if (seqSpecModel.get_nSims() != 0 && expertMode) {
 				ArbitrarilyDiscretizedFunc expected = getModelCumNumWithLogTimePlot(seqSpecModel, magMin);
@@ -2139,7 +1999,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 				funcs.add(expected);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, sequence_specific_color));
-//				expected.setName("Seq Specific: "+new DecimalFormat("0.#").format(expected.getMaxY()));
 				expected.setName("Seq. specific");
 				
 				ArbitrarilyDiscretizedFunc lower = getFractileCumNumWithLogTimePlot(seqSpecModel, magMin, 0.025);
@@ -2158,8 +2017,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				UncertainArbDiscDataset uncertainFunc = new UncertainArbDiscDataset(expected, lower, upper);
 				funcs.add(uncertainFunc);
 				uncertainFunc.setName("Seq. specific range");
-				PlotLineType plt = PlotLineType.SHADED_UNCERTAIN_TRANS;
-//				plt.setAlpha(0.3);
+				PlotLineType plt = PlotLineType.SHADED_UNCERTAIN;
 				Color seq_spec_trans_color = new Color(sequence_specific_color.getRed(), sequence_specific_color.getGreen(),sequence_specific_color.getBlue(), (int) (0.3*255) );
 				chars.add(new PlotCurveCharacterstics(plt, 1f, seq_spec_trans_color));
 			}
@@ -2183,7 +2041,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				if (bayesianModel == null || expertMode){
 					funcs.add(expected);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, generic_color));
-					//				expected.setName("Generic: "+new DecimalFormat("0.#").format(expected.getMaxY()));
 					expected.setName("Typical sequence");
 				}
 
@@ -2203,8 +2060,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				UncertainArbDiscDataset uncertainFunc = new UncertainArbDiscDataset(expected, lower, upper);
 				funcs.add(uncertainFunc);
 				uncertainFunc.setName("Typical range");
-				PlotLineType plt = PlotLineType.SHADED_UNCERTAIN_TRANS;
-//				plt.setAlpha(0.3);
+				PlotLineType plt = PlotLineType.SHADED_UNCERTAIN;
 				Color generic_color_trans = new Color(generic_color.getRed(), generic_color.getGreen(),generic_color.getBlue(), (int) (0.3*255) );
 				chars.add(new PlotCurveCharacterstics(plt, 1f, generic_color_trans));
 			}
@@ -2223,7 +2079,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 				funcs.add(expected);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, bayesian_color));
-//				expected.setName("Bayesian: "+new DecimalFormat("0.#").format(expected.getMaxY()));
 				expected.setName("This sequence");
 				
 				ArbitrarilyDiscretizedFunc lower = getFractileCumNumWithLogTimePlot(bayesianModel, magMin, 0.025);
@@ -2242,8 +2097,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				UncertainArbDiscDataset uncertainFunc = new UncertainArbDiscDataset(expected, lower, upper);
 				funcs.add(uncertainFunc);
 				uncertainFunc.setName("Range for this sequence");
-				PlotLineType plt = PlotLineType.SHADED_UNCERTAIN_TRANS;
-//				plt.setAlpha(0.3);
+				PlotLineType plt = PlotLineType.SHADED_UNCERTAIN;
 				Color bayesian_color_trans = new Color(bayesian_color.getRed(), bayesian_color.getGreen(),bayesian_color.getBlue(), (int) (0.3*255) );
 				chars.add(new PlotCurveCharacterstics(plt, 1f, bayesian_color_trans));
 			}
@@ -2371,10 +2225,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			
 			System.out.println("Mainshock Mag/Lat/Lon/Depth: " + myMainshock.getMag() + " " + myMainshock.getHypocenterLocation());
 			
-//			eventIDParam.setName("<custom>");
-//			eventIDParam.setValue("Custom");
-//			eventIDParam.getEditor().refreshParamEditor();
-	
 			if (catalogMaxDays == null){
 				if (verbose) System.out.println("No catalog time found in header. Using time of last aftershock.");
 				if (myAftershocks.size() > 0)
@@ -2606,7 +2456,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if (pdf == null)
 			return;
 		
-//		Preconditions.checkState(Doubles.isFinite(pdf.getMaxY()), "NaN found in "+pdf.getName());
 		Preconditions.checkState(!Double.isNaN(pdf.getMaxY()), "NaN found in "+pdf.getName());
 		
 		List<DiscretizedFunc> funcs = Lists.newArrayList();
@@ -2652,11 +2501,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		Preconditions.checkState(Doubles.isFinite(pdf.getMaxZ()), "NaN found in "+title);
 		
 		CPT cpt = getDistCPT().rescale(pdf.getMinZ(), pdf.getMaxZ());
-//		try {
-//			cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(pdf.getMinZ(), pdf.getMaxZ());
-//		} catch (IOException e) {
-//			throw ExceptionUtils.asRuntimeException(e);
-//		}
 		
 		XYZPlotSpec spec = new XYZPlotSpec(pdf, cpt, title, name1, name2, "Density");
 		PlotPreferences prefs = XYZGraphPanel.getDefaultPrefs();
@@ -2711,15 +2555,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 		@Override
 		public void run() {
-//			WindowListener wl = new WindowAdapter() {
-//				
-//				@Override
-//				public void windowClosing(WindowEvent e){
-//					stopRequested = true;
-//					System.out.println("Calculation interrupted");
-//				}
-//			};
-//			progress.addWindowListener(wl);
 			
 			pauseRequested = true;
 			SwingUtilities.invokeLater(new Runnable() {
@@ -2730,12 +2565,10 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						progress.setVisible(false);
 					
 					progress.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-//					progress.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 					progress.setModalityType(ModalityType.APPLICATION_MODAL);
 					
 					
 					if(steps.length > 1){
-//						progress.setIndeterminate(true);
 						progress.updateProgress(0, steps.length);
 					}else
 						progress.setIndeterminate(true);
@@ -2804,8 +2637,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						progress.setTitle(step.title);
 						progress.updateProgress(innerStepCount+1, steps.length, step.progressMessage);
 						progress.setProgressMessage(step.progressMessage);
-													progress.pack();
-//						progress.repaint();
+						progress.pack();
 						pauseRequested = false;
 					}
 				});
@@ -2921,7 +2753,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		Parameter<?> param = event.getParameter();
 		
 		final CalcProgressBar progress = new CalcProgressBar(this, "Progress", "Intializing...", false);
-//		progress.setIndeterminate(true);
 		
 		// define common steps
 		CalcStep fetchCatalogStep = new CalcStep("Fetching Events",
@@ -2931,14 +2762,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			@Override
 			public void run() {
 				// set the data window to 0 - now, forecast time to now - one month
-//				changeListenerEnabled = false;
 				dataStartTimeParam.setValue(0);
 				if (dataEndTimeParam.getValue() == null)
 					dataEndTimeParam.setValue(dataEndTimeParam.getMax());
 				
 				fetchEvents();
 				if (mainshock == null) stopRequested=true;
-//				changeListenerEnabled = true;
 			}
 			
 		}, true);
@@ -2965,7 +2794,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			
 			@Override
 			public void run() {
-//				changeListenerEnabled = false;
 
 				if (aftershocks.size() > 0){
 					ogataMND = new OgataMagFreqDist(aftershocks, genericModel.get_b(), genericModel.get_bSigma());
@@ -3002,7 +2830,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				
 				setEnableParamsPostComputeB(true);
 				
-//				changeListenerEnabled = true;
 			}
 			
 		}, true);
@@ -3312,7 +3139,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if (!changeListenerEnabled || param.getValue() == null) {
 			if(D)	System.out.println("Suppressing refresh for " + param.getName());
 		} else {
-//			setChangeListenerEnabled(false); //no cascading updates. All routines must be initiated from EDT, not the changeListener
 
 			if (param == quickForecastButton) {
 				System.out.println("Computing quick forecast with defafult settings...");
@@ -4081,7 +3907,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						uncertainFunc.setName(name + " range");
 						funcs.add(uncertainFunc);
 
-						PlotLineType plt = PlotLineType.SHADED_UNCERTAIN_TRANS;
+						PlotLineType plt = PlotLineType.SHADED_UNCERTAIN;
 						Color c_trans = new Color(c.getRed(), c.getGreen(),c.getBlue(), (int) (0.3*255) );
 						PlotCurveCharacterstics uncertainChars = new PlotCurveCharacterstics(plt, 1f, c_trans);
 						chars.add(uncertainChars);
@@ -4149,7 +3975,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					final PlotSpec specNum = new PlotSpec(funcs, chars, "Likely number of aftershocks in the next " + durString, "Magnitude", "Number of aftershocks exceeding magnitude M");
 					specNum.setLegendVisible(true);
 
-					final PlotSpec specProb = new PlotSpec(funcsProb, charsProb, "Chance of an aftershock larger than mganitude M in the next " + durString, "Magnitude", "Probability (%)");
+					final PlotSpec specProb = new PlotSpec(funcsProb, charsProb, "Chance of an aftershock larger than magnitude M in the next " + durString, "Magnitude", "Probability (%)");
 					specProb.setLegendVisible(true);
 
 
@@ -4353,10 +4179,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			}
 			if(D) System.out.println( cities.size() + " cities added to plot list.");
 			
-//			if (cityPlot.size() > 0) {
-//				oldFuncs.add(cityPlot);
-//				oldChars.add(new PlotCurveCharacterstics(PlotSymbol.SQUARE, 2, Color.BLACK));
-//			}
 
 			// add old hypocetnere
 			// scoop up the aftershock locations
@@ -4480,12 +4302,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						((NumberAxis) forecastMapGraph.getGraphPanel().getYAxis()).setAutoRangeIncludesZero(false);;
 						
 						Component buttonPanel = forecastMapGraph.getButtonControlPanel();
-						buttonPanel.setVisible(false);
+						buttonPanel.setVisible(true);
 						GraphPanel graphPanel = forecastMapGraph.getGraphPanel();
 						graphPanel.getComponent(2).setVisible(false);
 						
 						setupGP(forecastMapGraph);
-//						forecastGraph.setBackgroundColor(Color.LIGHT_GRAY);
 						
 						double regBuff = 0.05;
 						Region region = newForecastRateModel.getRegion();
@@ -4526,9 +4347,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 							cpt2 = getProbCPT().rescale(0, Math.max(new_gmpeProbModel.getMaxZ(),maxContourLevel));
 							contourLevels = ETAS_StatsCalc.linspace(0,Math.max(new_gmpeProbModel.getMaxZ(),maxContourLevel),21);	//specify contourLevels directly
 						}
-
-						//					contourLevels[0] = 0;	// no zeros
-						//					contourLevels[contourLevels.length - 1] = 99; 	//no certainty
 
 						List<PolyLine> contours = ETAS_RateModel2D.getContours(new_gmpeProbModel, contourLevels);
 
@@ -4594,7 +4412,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						funcs.add(cityPlot);
 						chars.add(new PlotCurveCharacterstics(PlotSymbol.SQUARE, 2, Color.BLACK));
 
-						//					PlotSpec spec = new PlotSpec(funcs, chars, "Chance of exceeding MMI " + decToRoman(mmiRef) + " in the next " + durString, "Longitude", "Latitude");
 						PlotSpec spec = new PlotSpec(funcs, chars, title, "Longitude", "Latitude");
 						spec.setPlotAnnotations(cityLabels);
 
@@ -4603,7 +4420,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						((NumberAxis) forecastGraph.getGraphPanel().getYAxis()).setAutoRangeIncludesZero(false);;
 
 						Component buttonPanel = forecastGraph.getButtonControlPanel();
-						buttonPanel.setVisible(false); // get rid of the button panel
+						buttonPanel.setVisible(true); // get rid of the button panel
 						GraphPanel graphPanel = forecastGraph.getGraphPanel();
 						graphPanel.getComponent(2).setVisible(false);	//get rid of the other stuff too
 
@@ -4747,7 +4564,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			curves = ETAS_ShakingForecastCalc.calcForecast(calcRegion, rateModel, minMag, maxMag, bParam.getValue(), gmpe, mechWts,
 					maxSourceDist, vs30Provider, prompt);
 			
-//			if(D) for(double val : curves[0].xValues()) System.out.println(val + " " + curves[0].getY(val));
 			if (curves == null) {
 				if(D) System.out.println("Cancelling map generation...");
 					return null;
@@ -4987,34 +4803,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		faultTrace = null;
 		contourList = null;
 		
-//		if(catalogPane != null)
-//			catalogPane.setEnabled(false);
-//		if(epicenterGraph != null)
-//			epicenterGraph.setEnabled(false);
-//		if(magTimeGraph != null)
-//			magTimeGraph.setEnabled(false);
-//		if(magNumGraph != null)
-//			magNumGraph.setEnabled(false);
-//		if(cmlNumGraph != null)
-//			cmlNumGraph.setEnabled(false);
-		
-//		if(pdfGraphsPane != null)
-//			while (pdfGraphsPane.getTabCount() > 0)
-//				pdfGraphsPane.removeTabAt(0);
-//		if(forecastMFDPane != null)
-//			while (forecastMFDPane.getTabCount() > 0)
-//				forecastMFDPane.removeTabAt(0);
-//		if(forecastTablePane != null)
-//			while (forecastTablePane.getTabCount() > 0)
-//				forecastTablePane.removeTabAt(0);
-//		if(forecastMapPane != null)
-//			while (forecastMapPane.getTabCount() > 0)
-//				forecastMapPane.removeTabAt(0);
-		
-//		for(int i = 0; i < tabbedPane.getTabCount(); i++){
-//			tabbedPane.setEnabledAt(i, false);
-//		}
-		
 	}
 	
 	private void doPostFetchCalculations() {
@@ -5131,19 +4919,15 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			quickForecastButton.getEditor().refreshParamEditor();
 		}
 		
-//		changeListenerEnabled = false;
-		
 		dataStartTimeParam.getEditor().setEnabled(!now);
 		dataEndTimeParam.getEditor().setEnabled(!now);
 		forecastStartTimeParam.getEditor().setEnabled(!now);
-		
-//		changeListenerEnabled = true;
 	}
 		
 	
 	private void resetFitConstraints(GenericETAS_Parameters params){
 		if(verbose)System.out.println("Updating fit constraints based on new generic params");
-//		changeListenerEnabled = false;
+
 		boolean restrictParameters = false; 
 		
 		double new_ams = params.get_ams();
@@ -5272,9 +5056,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 //		tabbedPane.setSelectedIndex(mag_num_tab_index); //make sure to look away first!
 		
 		// need to remove forecast from cumulativeNumber plot
-		
-//		changeListenerEnabled = true;
-		
 	}
 	
 	private void updateRangeParams(RangeParameter rangeParam, IntegerParameter numParam, int defaultNum) {
@@ -5294,9 +5075,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	 * disables/enables all parameters that are dependent on the fetch step and beyond
 	 */
 	private void setEnableParamsPostFetch(boolean enabled) {
-		
-//		changeListenerEnabled = false;
-		
+	
 		saveCatalogButton.getEditor().setEnabled(enabled);
 		computeBButton.getEditor().setEnabled(enabled);
 		tectonicRegimeParam.getEditor().setEnabled(enabled);
@@ -5308,9 +5087,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			bParam.getEditor().setEnabled(enabled);
 			magPrecisionParam.getEditor().setEnabled(enabled);
 		}
-		
-		
-		
 		
 		amsValRangeParam.getEditor().setEnabled(enabled);
 		amsValNumParam.getEditor().setEnabled(enabled);
@@ -5325,9 +5101,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		generateMapButton.getEditor().setEnabled(enabled);
 		
 		rmaxParam.getEditor().setEnabled(enabled && timeDepMcParam.getValue());
-
-//		changeListenerEnabled = true;
-		
 	}
 	
 	/**
@@ -5372,7 +5145,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 
 	private void setEnableParamsPostAftershockParams(boolean enabled) {
-//		changeListenerEnabled = false;
 		
 		if (enabled)
 			computeAftershockForecastButton.setButtonText("Run Specific Forecast");
@@ -5390,7 +5162,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if (!enabled){
 			seqSpecModel = null;
 		}
-//		changeListenerEnabled = true;
 	}
 	
 	private void setEnableParamsPostForecast(boolean enabled) {
@@ -5477,13 +5248,9 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		System.out.println("Loading Geographic information...");
 
 		// load the data
-//		URL citiesURL = GeoFeatureList.class.getResource("resources/worldcities1000.txt"); //world cities with pop >= 1000
-//		File cityFile = new File(citiesURL.getFile());
-
 		InputStream citiesIS = GeoFeatureList.class.getResourceAsStream("resources/worldcities1000.txt");
 		List<String> lines = new ArrayList<String>();
 		try{
-//			lines = FileUtils..readLines(cityFile, Charset.defaultCharset());
 			lines = IOUtils.readLines(citiesIS, StandardCharsets.UTF_8);
 		} catch (IOException e) {
 			System.out.println("Couldn't load city information");

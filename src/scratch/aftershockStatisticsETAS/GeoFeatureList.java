@@ -2,7 +2,6 @@ package scratch.aftershockStatisticsETAS;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -10,7 +9,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
-import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 
@@ -22,7 +20,7 @@ public class GeoFeatureList extends ArrayList<GeoFeature> {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private static boolean D = true; //debug
+	private static boolean D = false; //debug
 	
 	public GeoFeatureList(){
 		super();

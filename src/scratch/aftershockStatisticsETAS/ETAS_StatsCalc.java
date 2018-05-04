@@ -28,73 +28,6 @@ public class ETAS_StatsCalc {
 	
 	private static final boolean D = false;
 
-//	/**
-//	 * This returns the maximum-likelihood b-value defined by Aki (1965, Bull. Earthq. Res. Inst., 43, 237-239)
-//	 * @param rups - obs eqk rupture list
-//	 * @param magComplete - the magnitude above which no events have gone undetected
-//	 * @param magPrecision - the degree to which magnitude have been rounded
-//	 * @return
-//	 */
-//	public static double getMaxLikelihood_b_value(ObsEqkRupList rups, double magComplete,
-//			double magPrecision) {
-//		double magMean = 0d;
-//		int num = 0;
-//		for (ObsEqkRupture rup : rups) {
-//			if (rup.getMag() >= magComplete) {
-//				num++;
-//				magMean += rup.getMag();
-//			}
-//		}
-////		Preconditions.checkState(num > 0, "No ruptures above mc="+magComplete);
-//		if(num == 0){
-//			System.out.println("No ruptures above mc="+magComplete);
-//			return 1d;
-//		} else {
-//			magMean /= (double)num;
-//			return getMaxLikelihood_b_value(magMean, magComplete, magPrecision);
-//		}
-//		
-//		
-//	}
-//	
-//	/**
-//	 * This returns the maximum-likelihood b-value conditioned with a Gaussian prior
-//	 * @param rups - obs eqk rupture list
-//	 * @param magComplete - the magnitude above which no events have gone undetected
-//	 * @param magPrecision - the degree to which magnitude have been rounded
-//	 * @param bMean - mean of Gaussian prior (1.0)
-//	 * @param bSigma - standard deviation of prior.
-//	 * @return
-//	 * @todo  
-//	 */
-//	public static double getMaxLikelihood_b_value(ObsEqkRupList rups, double magComplete,
-//			double magPrecision, double bMean, double bSigma) {
-//		double magMean = 0d;
-//		int num = 0;
-//		for (ObsEqkRupture rup : rups) {
-//			if (rup.getMag() >= magComplete) {
-//				num++;
-//				magMean += rup.getMag();
-//			}
-//		}
-////		Preconditions.checkState(num > 0, "No ruptures above mc="+magComplete);
-//		if(num == 0){
-//			System.out.println("No ruptures above mc="+magComplete);
-//			return 1d;
-//		} else {
-//			magMean /= (double)num;
-//
-//			double betaMean = bMean*Math.log(10);
-//			double betaSigma = bSigma*Math.log(10); 
-//
-//			double a = 1d/num/betaSigma/betaSigma;
-//			double b = -magComplete + 0.5*magPrecision + magMean - betaMean/num/betaSigma/betaSigma;
-//			double c = -1d;
-//
-//			double beta = (-b + Math.sqrt(b*b - 4d*a*c))/(2d*a);
-//			return beta/Math.log(10d);
-//		}
-//	}
 	
 	/**
 	 * This does not check for negative values
@@ -111,57 +44,6 @@ public class ETAS_StatsCalc {
 		return relativeEventTimesDays;
 	}
 	
-//	/**
-//	 * This returns the maximum-likelihood b-value defined by Aki (1965, Bull. Earthq. Res. Inst., 43, 237-239)
-//	 * @param magMean - mean magnitude above magComplete
-//	 * @param magComplete - the magnitude above which no events have gone undetected
-//	 * @param magPrecision - the degree to which magnitude have been rounded
-//	 * @return
-//	 */
-//	public static double getMaxLikelihood_b_value(double magMean, double magComplete, double magPrecision) {
-//		return Math.log10(Math.E) /(magMean - (magComplete-0.5*magPrecision));
-//	}
-	
-	
-//	public static double[] readAndysFile() {
-//		
-//		try {
-//			BufferedReader buffRead = new BufferedReader(new InputStreamReader(
-//					ETAS_StatsCalc.class.getResourceAsStream("AndysSimulationData.txt")));
-//			ArrayList<Double> eventTimeList = new ArrayList<Double>();
-//			String line = buffRead.readLine();
-//			while (line != null) {
-//				StringTokenizer tok = new StringTokenizer(line);
-//				while(tok.hasMoreTokens()) {
-//					eventTimeList.add(Double.parseDouble(tok.nextToken()));
-//				}
-//				line = buffRead.readLine();
-//			}
-//			double[] eventTimeArray = new double[eventTimeList.size()];
-//			for(int i=0;i<eventTimeList.size();i++) {
-//				eventTimeArray[i] = eventTimeList.get(i);
-////				System.out.println(eventTimeArray[i]);
-//			}
-//			buffRead.close();
-//			return eventTimeArray;
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			return null;
-//		}
-//	}
-	
-		
-//	public static void plot2D_PDF(EvenlyDiscrXYZ_DataSet pdf2D, String title,
-//			String xAxisLabel, String yAxisLabel, String zAxisLabel) {
-//		CPT cpt=null;
-//		try {
-//			cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(pdf2D.getMinZ(), pdf2D.getMaxZ());
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-////		XYZPlotSpec logLikeSpec = new XYZPlotSpec(pdf2D, cpt, title, xAxisLabel, yAxisLabel, zAxisLabel);
-////		XYZPlotWindow window_logLikeSpec = new XYZPlotWindow(logLikeSpec, new Range(pdf2D.getMinX(),pdf2D.getMaxX()), new Range(pdf2D.getMinY(),pdf2D.getMaxY()));
-//	}
 
 	
 	public static double[] linspace(double min, double max, int npts){
