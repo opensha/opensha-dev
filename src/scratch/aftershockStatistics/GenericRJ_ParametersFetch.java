@@ -32,7 +32,8 @@ public class GenericRJ_ParametersFetch {
 	private static OAFParameterSet<GenericRJ_Parameters> cached_parameter_set = null;
 
 	// load_data - Load parameters from the data file.
-	// The data file format is:
+	//
+	// The text data file format is:
 	//	[int]		Number of tectonic regimes
 	//	[repeated]	Repeated once for each tectonic regime:
 	//		[string]	Name of tectonic regime
@@ -56,17 +57,45 @@ public class GenericRJ_ParametersFetch {
 	//		[repeated]	Repeated once for each polygon vertex:
 	//			[double]	Latitude in degrees, between -90 and 90
 	//			[double]	Longitude in degrees, between -180 and 180
+	//
+	// The JSON data file format is:
+	//	{
+	//	"version" = Integer version number, should be 1.
+	//	"regimes" = [ Array containing parameter values for each tectonic regime.
+	//		element = { Structure containing regime and parameter values.
+	//			"regime" = Name of tectonic regime.
+	//			"params" = { Structure containing marshaled GenericRJ_Parameters.
+	//				"GenericRJ_Parameters" = Integer version number, should be 1001.
+	//				. . .
+	//			}
+	//		. . .
+	//	]
+	//	"regions" = [ Array containing special regions.
+	//		element = { Structure containing regime and region.
+	//			"regime" = Name of tectonic regime.
+	//			"min_depth" = Minimum depth in km, positive down; use -1.0e10 if no bound.
+	//			"max_depth" = Maximum depth in km, positive down; use 1.0e10 if no bound.
+	//			"region" = { Structure containing marshaled SphRegion
+	//				"ClassType" = Integer code to select region type (see SphRegion.java).
+	//				. . .
+	//			}
+	//		. . .
+	//	]
+	//	}
+	//
 	// Notes:
 	// The list of tectonic regimes must include, at a minimum, either the 15 Garcia
 	// regions or a world region (but not both).
 	// A tectonic regime may appear in more than one special region.
-	// In each special region, the first and last polygon vertices should be the same
-	// (although, according to Region, this is not strictly necessary).
-	// A special region cannot cross the date line.  If this is needed, use two regions.
 	// If special regions overlap, the region listed first "wins".
 	// The minimum, maximum, and delta values of a determine the (discrete) range of
 	// a-values that are considered.  It is required that delta_a > 0 and max_a >= min_a.
 	// In use, max_a and min_a get rounded to the nearest multiple of delta_a.
+	//
+	// For the text format only:
+	// In each special region, the first and last polygon vertices should be the same
+	// (although, according to Region, this is not strictly necessary).
+	// A special region cannot cross the date line.  If this is needed, use two regions.
 
 	private static synchronized OAFParameterSet<GenericRJ_Parameters> load_data () {
 
@@ -106,11 +135,22 @@ public class GenericRJ_ParametersFetch {
 				return new GenericRJ_Parameters(
 					aValue_mean, aValue_sigma, aValue_sigma0, aValue_sigma1, bValue, pValue, cValue, aValue_min, aValue_max, aValue_delta);
 			}
+
+			// load_parameter_values - Load parameter values for the tables.
+			// This function should create a new object of type T, read the
+			// parameter values from the MarshalReader, and return the object.
+			// In case of error, this function should throw RuntimeException (or a subclass).
+
+			@Override
+			protected GenericRJ_Parameters load_parameter_values (MarshalReader reader, String name) {
+				return (new GenericRJ_Parameters()).unmarshal (reader, name);
+			}
 		};
 
 		// Load the data
 
-		wk_parameter_set.load_data ("GenericRJ_ParametersFetch.txt", GenericRJ_ParametersFetch.class);
+		//wk_parameter_set.load_data ("GenericRJ_ParametersFetch.txt", GenericRJ_ParametersFetch.class);
+		wk_parameter_set.load_json_data ("GenericRJ_ParametersFetch.json", GenericRJ_ParametersFetch.class);
 
 		// Save our working data into the static variable
 

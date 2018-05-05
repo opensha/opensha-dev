@@ -31,6 +31,11 @@ import scratch.aftershockStatistics.OAFRegion;
 
 import scratch.aftershockStatistics.util.MarshalReader;
 import scratch.aftershockStatistics.util.MarshalImpJsonReader;
+import scratch.aftershockStatistics.util.SphLatLon;
+import scratch.aftershockStatistics.util.SphRegion;
+import scratch.aftershockStatistics.util.SphRegionMercPolygon;
+
+import org.apache.commons.math3.distribution.UniformRealDistribution;
 
 // Class for region-dependent parameters.
 // Author: Michael Barall
@@ -383,12 +388,196 @@ public abstract class OAFParameterSet<T> {
 
 			// Form the region
 
-			OAFRegion region = new OAFRegion (regime, new Region(locs, border_type), min_depth, max_depth);
+			OAFRegion region = new OAFMercRegion (regime, new Region(locs, border_type), min_depth, max_depth);
 				
 			// Add the region to the list
 
 			wk_region_list.add (region);
 		}
+
+		// Save our working data into the variables
+
+		dataMap = wk_dataMap;
+		region_list = wk_region_list;
+
+		return;
+	}
+
+	// load_data - Load parameters from the data file.
+	// The JSON file format is:
+	//
+	//	{
+	//	"version" = Integer version number, should be 1.
+	//	"regimes" = [ Array containing parameter values for each tectonic regime.
+	//		element = { Structure containing regime and parameter values.
+	//			"regime" = Name of tectonic regime.
+	//			"params" = { Structure containing parameter values.
+	//				. . .
+	//			}
+	//		. . .
+	//	]
+	//	"regions" = [ Array containing special regions.
+	//		element = { Structure containing regime and region.
+	//			"regime" = Name of tectonic regime.
+	//			"min_depth" = Minimum depth in km, positive down; use -1.0e10 if no bound.
+	//			"max_depth" = Maximum depth in km, positive down; use 1.0e10 if no bound.
+	//			"region" = { Structure containing marshaled SphRegion
+	//				"ClassType" = Integer code to select region type (see SphRegion.java).
+	//				. . .
+	//			}
+	//		. . .
+	//	]
+	//	}
+	//
+	// Notes:
+	// The list of tectonic regimes must include, at a minimum, either the 15 Garcia
+	// regions or a world region (but not both).
+	// A tectonic regime may appear in more than one special region.
+	// If special regions overlap, the region listed first "wins".
+	//
+	// The caller must supply the MarshalReader from which parameters can be read.
+	// In case of error, this function throws RuntimeException (or another unchecked exception).
+
+	public void load_data (MarshalReader reader) {
+
+		// Nothing loaded
+
+		dataMap = null;
+		region_list = null;
+
+		// Make working data
+
+		Map<OAFTectonicRegime, T> wk_dataMap = new HashMap<OAFTectonicRegime, T>();
+		List<OAFRegion> wk_region_list = new ArrayList<OAFRegion>();
+
+		// Begin the JSON object
+
+		reader.unmarshalMapBegin (null);
+
+		// Get the version number
+
+		int version = reader.unmarshalInt ("version", 1, 1);
+
+		// Number of tectonic regimes, must be at least 1
+
+		int regime_count = reader.unmarshalArrayBegin ("regimes");
+
+		if (regime_count < 1) {
+			throw new RuntimeException("OAFParameterSet: No parameter sets found in file");
+		}
+
+		// For each tectonic regime ...
+
+		for (int regime_i = 0; regime_i < regime_count; ++regime_i) {
+
+			// Begin the JSON object
+
+			reader.unmarshalMapBegin (null);
+
+			// Get the tectonic regime
+
+			String regime_name = reader.unmarshalString ("regime");
+			OAFTectonicRegime regime = OAFTectonicRegime.forName (regime_name);
+
+			// Get the parameter values and add to our table
+				
+			wk_dataMap.put(regime, load_parameter_values (reader, "params"));
+
+			// End the JSON object
+
+			reader.unmarshalMapEnd ();
+		}
+
+		// End array of tectonic regimes
+
+		reader.unmarshalArrayEnd ();
+
+		// Check if we have a world region
+
+		f_world = wk_dataMap.containsKey (OAFTectonicRegime.forName (world_region));
+
+		if (f_world) {
+
+			// If we have a world region, then there should be no Garcia regions
+
+			for (String garcia_region : garcia_regions) {
+				if ( wk_dataMap.containsKey (OAFTectonicRegime.forName (garcia_region)) )
+				{
+					throw new RuntimeException("OAFParameterSet: Parameters defined for both World and Garcia region : " + garcia_region);
+				}
+			}
+
+		} else {
+
+			// Check that we have all the Garcia regions
+
+			for (String garcia_region : garcia_regions) {
+				if (!( wk_dataMap.containsKey (OAFTectonicRegime.forName (garcia_region)) ))
+				{
+					throw new RuntimeException("OAFParameterSet: No parameters defined for Garcia region : " + garcia_region);
+				}
+			}
+		}
+
+		// Number of special regions
+
+		int region_count = reader.unmarshalArrayBegin ("regions");
+
+		// For each special region ...
+
+		for (int region_i = 0; region_i < region_count; ++region_i) {
+
+			// Begin the JSON object
+
+			reader.unmarshalMapBegin (null);
+
+			// Get the tectonic regime
+
+			String regime_name = reader.unmarshalString ("regime");
+			OAFTectonicRegime regime = OAFTectonicRegime.forName (regime_name);
+
+			if (!( wk_dataMap.containsKey (regime) ))
+			{
+				throw new RuntimeException("OAFParameterSet: No parameters defined for special region : " + regime);
+			}
+
+			// Get the depth range
+				
+			double min_depth = reader.unmarshalDouble ("min_depth");
+			double max_depth = reader.unmarshalDouble ("max_depth");
+
+			if (min_depth >= max_depth) {
+				throw new RuntimeException("OAFParameterSet: Minimum and maximum depths are reversed");
+			}
+
+			// Get the spherical region
+
+			SphRegion sph_region = SphRegion.unmarshal_poly (reader, "region") ;
+
+			if (sph_region == null) {
+				throw new RuntimeException("OAFParameterSet: No spherical region specified");
+			}
+
+			// Form the region
+
+			OAFRegion region = new OAFSphRegion (regime, sph_region, min_depth, max_depth);
+				
+			// Add the region to the list
+
+			wk_region_list.add (region);
+
+			// End the JSON object
+
+			reader.unmarshalMapEnd ();
+		}
+
+		// End array of special regions
+
+		reader.unmarshalArrayEnd ();
+
+		// End the JSON object
+
+		reader.unmarshalMapEnd ();
 
 		// Save our working data into the variables
 
@@ -404,6 +593,13 @@ public abstract class OAFParameterSet<T> {
 	// In case of error, this function should throw RuntimeException.
 
 	protected abstract T load_parameter_values (Scanner sc);
+
+	// load_parameter_values - Load parameter values for the tables.
+	// This function should create a new object of type T, read the
+	// parameter values from the MarshalReader, and return the object.
+	// In case of error, this function should throw RuntimeException (or a subclass).
+
+	protected abstract T load_parameter_values (MarshalReader reader, String name);
 
 	// Open a parameter data file.
 	// Parameters:
@@ -462,7 +658,7 @@ public abstract class OAFParameterSet<T> {
 	//  filename = Name of file (not including a path).
 	//  requester = Class that is requesting the file.
 	// This function first calls open_param_file to open the file,
-	// then calls load_data above to read the date.
+	// then calls load_data above to read the data.
 	// In case of error, this function throws RuntimeException (or another unchecked exception).
 
 	public void load_data (String filename, Class<?> requester) {
@@ -649,6 +845,35 @@ public abstract class OAFParameterSet<T> {
 		return result;
 	}
 
+	// load_json_data - Load parameters from the JSON file.
+	// Parameters:
+	//  filename = Name of file (not including a path).
+	//  requester = Class that is requesting the file.
+	// This function first calls load_file_as_json to read the file,
+	// then calls load_data above to read the data.
+	// In case of error, this function throws RuntimeException (or another unchecked exception).
+
+	public void load_json_data (String filename, Class<?> requester) {
+
+		// Open the reader
+
+		MarshalReader reader = load_file_as_json (filename, requester);
+
+		// Any exception means load has failed
+
+		try {
+
+			// Load the data
+
+			load_data (reader);
+
+		} catch (Exception e) {
+			throw new RuntimeException("OAFParameterSet: Unable to load data file: " + filename, e);
+		}
+
+		return;
+	}
+
 //	// Build the region that describes California.
 //	
 //	private static Region buildANSS_CA_Region() {
@@ -788,6 +1013,11 @@ public abstract class OAFParameterSet<T> {
 	public Set<OAFTectonicRegime> getRegimeSet() {
 		return dataMap.keySet();
 	}
+
+
+
+
+	//----- Testing functions -----
 	
 	/**
 	 * Return a list of locations that can be used for testing.
@@ -833,6 +1063,217 @@ public abstract class OAFParameterSet<T> {
 		locs.add(new Location(50.0, -150.0, 15.00000));	// SZ_OUTERTR
 
 		return locs;
+	}
+
+	// Build the California polygon as a LocationList.
+	
+	public static LocationList getCaliforniaLocationList() {
+		LocationList locs = new LocationList();
+
+		locs.add(new Location(36.6847, -117.793));
+		locs.add(new Location(35.8000, -116.400));
+		locs.add(new Location(34.0815, -114.472));
+		locs.add(new Location(32.0000, -114.333));
+		locs.add(new Location(32.0000, -120.500));
+		locs.add(new Location(34.6945, -121.380));
+		locs.add(new Location(40.0000, -125.500));
+		locs.add(new Location(43.0200, -125.000));
+		locs.add(new Location(42.0000, -122.700));
+		locs.add(new Location(42.0000, -121.417));
+		locs.add(new Location(39.5000, -120.750));
+		locs.add(new Location(37.7500, -119.500));
+		locs.add(new Location(37.7500, -118.250));
+
+		return locs;
+	}
+
+	// Build the California polygon as a Region.
+	
+	public static Region getCaliforniaRegion() {
+		return new Region (getCaliforniaLocationList(), BorderType.MERCATOR_LINEAR);
+	}
+
+	// Build the California polygon as a List<SphLatLon>.
+	
+	public static List<SphLatLon> getCaliforniaSphLatLonList() {
+		List<SphLatLon> locs = new ArrayList<SphLatLon>();
+
+		locs.add(new SphLatLon(36.6847, -117.793));
+		locs.add(new SphLatLon(35.8000, -116.400));
+		locs.add(new SphLatLon(34.0815, -114.472));
+		locs.add(new SphLatLon(32.0000, -114.333));
+		locs.add(new SphLatLon(32.0000, -120.500));
+		locs.add(new SphLatLon(34.6945, -121.380));
+		locs.add(new SphLatLon(40.0000, -125.500));
+		locs.add(new SphLatLon(43.0200, -125.000));
+		locs.add(new SphLatLon(42.0000, -122.700));
+		locs.add(new SphLatLon(42.0000, -121.417));
+		locs.add(new SphLatLon(39.5000, -120.750));
+		locs.add(new SphLatLon(37.7500, -119.500));
+		locs.add(new SphLatLon(37.7500, -118.250));
+
+		return locs;
+	}
+
+	// Build the California polygon as a SphRegion.
+	
+	public static SphRegion getCaliforniaSphRegion() {
+		return new SphRegionMercPolygon (getCaliforniaSphLatLonList());
+	}
+
+	// Test agreement between a Region and a SphRegion.
+	// 
+	
+	/**
+	 * Test agreement between a Region and a SphRegion.
+	 * @param region = Region to test.
+	 * @param sph_region = SphRegion to test.
+	 * @param n_points = Number of randomly generated points.
+	 * @param f_whole_earth = True to generate test points over the whole earth.
+	 * @return Prints the test results.
+	 * Note: Test points have longitude in the range -180 to +180.
+	 */
+	public static void testRegionAgreement(Region region, SphRegion sph_region, int n_points, boolean f_whole_earth) {
+
+		// Get range of latitudes and longitudes to test
+
+		double min_lat =  -89.9999;
+		double max_lat =   89.9999;
+		double min_lon = -179.9999;
+		double max_lon =  179.9999;
+
+		if (!( f_whole_earth )) {
+			min_lat = Math.min (region.getMinLat(), sph_region.getMinLat());
+			max_lat = Math.max (region.getMaxLat(), sph_region.getMaxLat());
+			min_lon = Math.min (region.getMinLon(), sph_region.getMinLon());
+			max_lon = Math.max (region.getMaxLon(), sph_region.getMaxLon());
+
+			double delta_lat = max_lat - min_lat;
+			double delta_lon = max_lon - min_lon;
+
+			min_lat = Math.max ( -89.9999, min_lat - 0.1*delta_lat);
+			max_lat = Math.min (  89.9999, max_lat + 0.1*delta_lat);
+			min_lon = Math.max (-179.9999, min_lon - 0.1*delta_lon);
+			max_lon = Math.min ( 179.9999, max_lon + 0.1*delta_lon);
+		}
+
+		// Counters
+
+		int n_in_in = 0;
+		int n_in_out = 0;
+		int n_out_in = 0;
+		int n_out_out = 0;
+
+		// Announce the test
+
+		System.out.println ("min_lat = " + min_lat);
+		System.out.println ("max_lat = " + max_lat);
+		System.out.println ("min_lon = " + min_lon);
+		System.out.println ("max_lon = " + max_lon);
+		System.out.println ("n_points = " + n_points);
+
+		// Make random number generator
+
+		UniformRealDistribution rangen = new UniformRealDistribution();
+
+		// Run the tests
+
+		for (int i = 0; i < n_points; ++i) {
+			
+			// Make the random point
+
+			double lat = min_lat + (max_lat - min_lat)*rangen.sample();
+			double lon = min_lon + (max_lon - min_lon)*rangen.sample();
+
+			// Check if point is within each region
+
+			boolean f_region = region.contains (new Location (lat, lon));
+			boolean f_sph_region = sph_region.contains (new SphLatLon (lat, lon));
+
+			// Accumulate comparison
+
+			if (f_region) {
+				if (f_sph_region) {
+					++n_in_in;
+				} else {
+					++n_in_out;
+					if (n_in_out <= 10) {
+						System.out.println ("in/out mismatch: lat = " + lat + ", lon = " + lon);
+					}
+				}
+			} else {
+				if (f_sph_region) {
+					++n_out_in;
+					if (n_out_in <= 10) {
+						System.out.println ("out/in mismatch: lat = " + lat + ", lon = " + lon);
+					}
+				} else {
+					++n_out_out;
+				}
+			}
+		}
+
+		// Display results
+
+		int n_mismatch = n_in_out + n_out_in;
+
+		System.out.println ("n_in_in = " + n_in_in);
+		System.out.println ("n_in_out = " + n_in_out);
+		System.out.println ("n_out_in = " + n_out_in);
+		System.out.println ("n_out_out = " + n_out_out);
+		System.out.println ("n_mismatch = " + n_mismatch);
+
+		return;
+	}
+
+
+
+
+    public static void main(String[] args) {
+
+		// There needs to be at least one argument, which is the subcommand
+
+		if (args.length < 1) {
+			System.err.println ("OAFParameterSet : Missing subcommand");
+			return;
+		}
+
+
+
+
+		// Subcommand : Test #1
+		// Command format:
+		//  test1  n_points  f_whole_earth
+		// Compare the California regions.
+
+		if (args[0].equalsIgnoreCase ("test1")) {
+
+			// Two additional arguments
+
+			if (args.length != 3) {
+				System.err.println ("OAFParameterSet : Invalid 'test1' subcommand");
+				return;
+			}
+			int n_points = Integer.parseInt(args[1]);
+			boolean f_whole_earth = Boolean.parseBoolean(args[2]);
+
+			// Run the test
+
+			Region region = getCaliforniaRegion();
+			SphRegion sph_region = getCaliforniaSphRegion();
+
+			testRegionAgreement(region, sph_region, n_points, f_whole_earth);
+		
+			return;
+		}
+
+
+
+
+		// Unrecognized subcommand.
+
+		System.err.println ("OAFParameterSet : Unrecognized subcommand : " + args[0]);
+		return;
 	}
 
 }
