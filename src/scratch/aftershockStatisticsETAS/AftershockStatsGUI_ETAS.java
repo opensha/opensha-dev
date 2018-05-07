@@ -1589,6 +1589,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		tectonicRegimeParam.getEditor().refreshParamEditor();
 		
 		setMagComplete();
+		resetFitConstraints(genericParams);
 		updateForecastTimes();
 		
 		// as a courtesy, spit out the decimal days remaining in the origin day
@@ -4137,7 +4138,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			// calculate for one day -- the minimum, so that we can scale up probabilities from small to large
 			forecastRateModel = rateModel2D.calculateRateModel(ForecastDuration.DAY.duration, spacing, stressDrop, mainshockFitDuration, fitType, faultTrace);
 			GriddedGeoDataSet gmpeProbModel = getIntensityModel(forecastRateModel, true);
-					
 			
 			//compute rate sum for checking
 			double rateSum = 0;
@@ -5281,6 +5281,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		return cities;
 				
 	}
+	
+
 	
 	
 	private List<String> tipText;

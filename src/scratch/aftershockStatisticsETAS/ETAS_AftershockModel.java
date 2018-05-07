@@ -37,7 +37,7 @@ import org.opensha.sha.gui.infoTools.CalcProgressBar;
  */
 public abstract class ETAS_AftershockModel {
 
-	private Boolean D=false;	// debug flag
+	private Boolean D=true;	// debug flag
 
 	protected ArbDiscrEmpiricalDistFunc num_DistributionFunc = null;
 	protected CalcProgressBar progress;

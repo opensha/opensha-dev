@@ -26,7 +26,7 @@ public class ETAS_RateModel2D {
 
 	private ETAS_AftershockModel forecastModel;
 	private GriddedGeoDataSet rateModel;
-	private Boolean D = false;
+	private Boolean D = true;
 	
 	public ETAS_RateModel2D(ETAS_AftershockModel forecastModel){
 		this.forecastModel = forecastModel;
@@ -53,17 +53,28 @@ public class ETAS_RateModel2D {
 		ObsEqkRupList aftershockPlotList = new ObsEqkRupList();
 		ObsEqkRupList aftershockFitList = new ObsEqkRupList();
 		ETASEqkRupture equivalentMainshock = new ETASEqkRupture(forecastModel.mainShock, stressDrop);
-
+		
 		aftershockPlotList = forecastModel.aftershockList.getRupsBefore((long) (forecastModel.mainShock.getOriginTime() + forecastModel.getForecastMinDays()* 24*60*60*1000));
 		aftershockFitList = forecastModel.aftershockList.getRupsBefore((long) (forecastModel.mainShock.getOriginTime() + mainshockFitDuration*24*60*60*1000));
 
 		// set up grid centered on mainshock
+		
 		Location centerLocation = ETAS_StatsCalc.getCentroid(forecastModel.mainShock, aftershockPlotList);
 		double lat0 = centerLocation.getLatitude();
 		double lon0 = centerLocation.getLongitude();
 		double geomFactor = Math.cos(Math.toRadians(lat0)); //we use a single central estimate of degLon-->km mapping
 
-		double mainshockRadius = ETAS_StatsCalc.magnitude2radius(forecastModel.mainShock.getMag(), stressDrop);	//in km
+		// make the readius set to the largest earthquake in the catalog
+		double maxMag = forecastModel.mainShock.getMag();
+		ObsEqkRupList largeAftershocks = forecastModel.aftershockList.getRupsAboveMag(maxMag);
+		if (!largeAftershocks.isEmpty()) {
+			for (ObsEqkRupture rup : aftershockPlotList) {
+				if (rup.getMag() > maxMag)
+					maxMag = rup.getMag();
+			}
+		}
+		
+		double mainshockRadius = ETAS_StatsCalc.magnitude2radius(maxMag, stressDrop);	//in km
 
 		// make grid extend to n times source radius or at least 1 degree 
 		double latmin, latmax, lonmin, lonmax;
