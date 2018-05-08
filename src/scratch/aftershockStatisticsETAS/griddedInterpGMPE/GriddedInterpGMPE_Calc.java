@@ -302,6 +302,7 @@ public class GriddedInterpGMPE_Calc {
 						userWarned = true;
 						// launch a dialog as a new thread
 						String message = "It will take approximately " + (int) timeEstimate + " seconds to complete each map at this resolution.\n"
+								+ "If plotting MMI multiply by a factor of 2. If Plot Week/Month/Day is enabled, multiply by another factor of 4. "
 								+ "Are you sure you wish to continue with the current \u0394 (km)?";
 						
 						String title = "Warning";
