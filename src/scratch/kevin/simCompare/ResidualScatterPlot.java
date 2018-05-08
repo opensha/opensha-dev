@@ -69,9 +69,10 @@ public class ResidualScatterPlot {
 	private Range yRange;
 	private EvenlyDiscretizedFunc xHistBins;
 	
-	double residualMean;
-	double regressionIntercept;
-	double regressionLinearSlope;
+	private boolean plotLinearResidual = true;
+	private double residualMean;
+	private double regressionIntercept;
+	private double regressionLinearSlope;
 	private DiscretizedFunc regressionLinear;
 	private EvenlyDiscretizedFunc regressionBins;
 	private DiscretizedFunc[] regressionBinned;
@@ -439,30 +440,32 @@ public class ResidualScatterPlot {
 		}
 		
 		// now regression top left
-		yPos = yRange.getUpperBound() * 0.95;
-		xPos = xMin + 0.05*(xMax - xMin);
-		if (logX && !doLog)
-			xPos = Math.pow(10, xPos);
+		if (plotLinearResidual) {
+			yPos = yRange.getUpperBound() * 0.95;
+			xPos = xMin + 0.05*(xMax - xMin);
+			if (logX && !doLog)
+				xPos = Math.pow(10, xPos);
 
-		ann = new XYTextAnnotation("Linear LSQ Fit", xPos, yPos);
-		ann.setBackgroundPaint(backgroundPaint);
-		ann.setTextAnchor(TextAnchor.TOP_LEFT);
-		ann.setFont(font);
-		anns.add(ann);
+			ann = new XYTextAnnotation("Linear LSQ Fit", xPos, yPos);
+			ann.setBackgroundPaint(backgroundPaint);
+			ann.setTextAnchor(TextAnchor.TOP_LEFT);
+			ann.setFont(font);
+			anns.add(ann);
 
-		yPos -= yDelta;
-		ann = new XYTextAnnotation("Intercept: "+regressionDF.format(regressionIntercept), xPos, yPos);
-		ann.setBackgroundPaint(backgroundPaint);
-		ann.setTextAnchor(TextAnchor.TOP_LEFT);
-		ann.setFont(font);
-		anns.add(ann);
-		
-		yPos -= yDelta;
-		ann = new XYTextAnnotation("Slope: "+regressionDF.format(regressionLinearSlope), xPos, yPos);
-		ann.setBackgroundPaint(backgroundPaint);
-		ann.setTextAnchor(TextAnchor.TOP_LEFT);
-		ann.setFont(font);
-		anns.add(ann);
+			yPos -= yDelta;
+			ann = new XYTextAnnotation("Intercept: "+regressionDF.format(regressionIntercept), xPos, yPos);
+			ann.setBackgroundPaint(backgroundPaint);
+			ann.setTextAnchor(TextAnchor.TOP_LEFT);
+			ann.setFont(font);
+			anns.add(ann);
+			
+			yPos -= yDelta;
+			ann = new XYTextAnnotation("Slope: "+regressionDF.format(regressionLinearSlope), xPos, yPos);
+			ann.setBackgroundPaint(backgroundPaint);
+			ann.setTextAnchor(TextAnchor.TOP_LEFT);
+			ann.setFont(font);
+			anns.add(ann);
+		}
 		
 		return anns;
 	}
@@ -478,13 +481,15 @@ public class ResidualScatterPlot {
 		float residualThickness = 4f;
 		float plusMinusThickness = 2f;
 		
-		// linear scatter
-		regressionLinear.setName("Linear LS Fit");
-		if (!scatter && logX)
-			funcs.add(getInLogX(regressionLinear));
-		else
-			funcs.add(regressionLinear);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, residualThickness, linearColor));
+		// linear fit
+		if (plotLinearResidual) {
+			regressionLinear.setName("Linear LS Fit");
+			if (!scatter && logX)
+				funcs.add(getInLogX(regressionLinear));
+			else
+				funcs.add(regressionLinear);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, residualThickness, linearColor));
+		}
 		
 		DiscretizedFunc binnedPoints = new ArbitrarilyDiscretizedFunc();
 		binnedPoints.setName("Binned LS Fits");
@@ -690,6 +695,10 @@ public class ResidualScatterPlot {
 
 	public void setMaxScatterPoints(int maxScatterPoints) {
 		this.maxScatterPoints = maxScatterPoints;
+	}
+	
+	public void setPlotLinearFit(boolean plotLinearResidual) {
+		this.plotLinearResidual = plotLinearResidual;
 	}
 	
 	public static <E> void plotPeriodDependentSigma(File outputDir, String prefix,

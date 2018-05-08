@@ -298,19 +298,8 @@ public class BBP_Wrapper implements Runnable {
 		fw.write("    mkdir $BBP_DATA_DIR\n");
 		fw.write("fi\n");
 		fw.write("\n");
-//		fw.write("module rm xalt\n");
-//		fw.write("export FILE_SYS_TAG_0=\"/scratch\"\n");
-//		fw.write("export T_THRESHOLD_OPEN_0=467.97\n");
-//		fw.write("export MAX_OPEN_FREQ_0=1000\n");
-//		fw.write("export T_THRESHOLD_LXSTAT_0=247.37\n");
-//		fw.write("export MAX_STAT_FREQ_0=2000\n");
-//		fw.write("export FILE_SYS_TAG_1=\"/work\"\n");
-//		fw.write("export T_THRESHOLD_OPEN_1=907.14\n");
-//		fw.write("export MAX_OPEN_FREQ_1=500\n");
-//		fw.write("export T_THRESHOLD_LXSTAT_1=481.52\n");
-//		fw.write("export MAX_STAT_FREQ_1=1000\n");
-//		fw.write("export LD_PRELOAD=/scratch/01255/siliu/wrapper.so\n");
-//		fw.write("\n");
+		fw.write("export PATH=$BBP_DIR/comps:$BBP_DIR/utils/batch:$PATH\n");
+		fw.write("\n");
 		String command = "run_bbp.py --sim-id "+simID+" --xml-file="+xmlFile.getAbsolutePath();
 //		if (endModule != null)
 //			command += " --end "+endModule;

@@ -199,15 +199,37 @@ public class RSQSimBBP_Config {
 	}
 	
 	static File getEventSRFFile(RSQSimCatalog catalog, int eventID, SRFInterpolationMode interp, double dt) {
+		return getEventSRFFile(catalog, eventID, interp, dt, 1d, false);
+	}
+	
+	static File getEventSRFFile(RSQSimCatalog catalog, int eventID, SRFInterpolationMode interp, double dt,
+			double timeScale, boolean scaleVelocities) {
 		File srfDir = new File(catalog.getCatalogDir(), EVENT_SRF_DIR_NAME);
 		Preconditions.checkState(srfDir.exists() || srfDir.mkdir());
-		return new File(srfDir, "event_"+eventID+"_"+(float)dt+"s_"+interp.name()+".srf");
+		String prefix = "event_"+eventID+"_"+(float)dt+"s_"+interp.name();
+		if (timeScale != 1d) {
+			prefix += "_timeScale"+(float)timeScale;
+			if (scaleVelocities)
+				prefix += "_velScale";
+		}
+		return new File(srfDir, prefix+".srf");
 	}
 	
 	static File getEventBBPDir(RSQSimCatalog catalog, int eventID, SRFInterpolationMode interp, double dt) {
+		return getEventBBPDir(catalog, eventID, interp, dt, 1d, false);
+	}
+	
+	static File getEventBBPDir(RSQSimCatalog catalog, int eventID, SRFInterpolationMode interp, double dt,
+			double timeScale, boolean scaleVelocities) {
 		File srfDir = new File(catalog.getCatalogDir(), EVENT_SRF_DIR_NAME);
 		Preconditions.checkState(srfDir.exists() || srfDir.mkdir());
-		return new File(srfDir, "event_"+eventID+"_"+(float)dt+"s_"+interp.name()+"_bbp");
+		String prefix = "event_"+eventID+"_"+(float)dt+"s_"+interp.name();
+		if (timeScale != 1d) {
+			prefix += "_timeScale"+(float)timeScale;
+			if (scaleVelocities)
+				prefix += "_velScale";
+		}
+		return new File(srfDir, prefix+"_bbp");
 	}
 	
 	static final boolean U3_SURFACES = true;
@@ -323,6 +345,11 @@ public class RSQSimBBP_Config {
 	
 	public static BBP_SourceFile generateBBP_Inputs(RSQSimCatalog catalog, RSQSimEvent event, boolean overwrite)
 			throws IOException {
+		return generateBBP_Inputs(catalog, event, overwrite, 1d, false);
+	}
+	
+	public static BBP_SourceFile generateBBP_Inputs(RSQSimCatalog catalog, RSQSimEvent event, boolean overwrite,
+			double timeScale, boolean scaleVelocities) throws IOException {
 		File srcFile = getEventSrcFile(catalog, event.getID());
 		
 		BBP_SourceFile bbpSource;
@@ -338,9 +365,11 @@ public class RSQSimBBP_Config {
 			bbpSource = BBP_SourceFile.readFile(srcFile);
 		}
 		
-		File srfFile = getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT);
+		File srfFile = getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT, timeScale, scaleVelocities);
 		if (!srfFile.exists() || overwrite) {
 			RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
+			if (timeScale != 1d)
+				func = func.getTimeScaledFunc(timeScale, scaleVelocities);
 			System.out.println("Generating SRF for dt="+(float)SRF_DT+", "+SRF_INTERP_MODE);
 			List<SRF_PointData> srf = RSQSimSRFGenerator.buildSRF(func, event.getAllElements(), SRF_DT, SRF_INTERP_MODE);
 			SRF_PointData.writeSRF(srfFile, srf, SRF_VERSION);
@@ -354,52 +383,41 @@ public class RSQSimBBP_Config {
 	}
 	
 	public static void runBBP(RSQSimCatalog catalog, RSQSimEvent event, List<BBP_Site> sites) throws IOException {
-		BBP_SourceFile source = generateBBP_Inputs(catalog, event, false);
+		runBBP(catalog, event, sites, 1d, false);
+	}
+	
+	public static void runBBP(RSQSimCatalog catalog, RSQSimEvent event, List<BBP_Site> sites,
+			double timeScale, boolean scaleVelocities) throws IOException {
+		BBP_SourceFile source = generateBBP_Inputs(catalog, event, false, timeScale, scaleVelocities);
 		if (sites == null)
 			sites = getStandardSites(source);
-		File bbpOutputDir = getEventBBPDir(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT);
+		File bbpOutputDir = getEventBBPDir(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT, timeScale, scaleVelocities);
 		Preconditions.checkState(bbpOutputDir.exists() || bbpOutputDir.mkdir());
 		
 		File sitesFile = new File(bbpOutputDir, "sites.stl");
 		BBP_Site.writeToFile(sitesFile, sites);
 		
 		BBP_Wrapper bbpWrap = new BBP_Wrapper(VM, METHOD, getEventSrcFile(catalog, event.getID()), null,
-				getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT), sitesFile, bbpOutputDir);
+				getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT, timeScale, scaleVelocities), sitesFile, bbpOutputDir);
 		bbpWrap.setDoHF(DO_HF);
 		bbpWrap.run();
 	}
 	
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		int targetID = 9474557;
-		int buffer = 5;
-		int[] ids = new int[2*buffer+1];
-		for (int i=0; i<ids.length; i++)
-			ids[i] = i + targetID - buffer;
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
+		int[] ids = { 1670183 };
 //		int[] ids = { targetID-2, targetID-1, targetID, targetID+1, targetID+2 };
+		double timeScale = 2d;
+		boolean scaleVelocities = false;
 		List<RSQSimEvent> events = catalog.loader().byIDs(ids);
 		RSQSimStateTransitionFileReader trans = catalog.getTransitions();
-		RSQSimEvent targetEvent = null;
 		for (RSQSimEvent event : events) {
-			if (event.getID() == targetID)
-				targetEvent = event;
-			System.out.println("ID: "+event.getID());
-			System.out.println("Time: "+event.getTime()+" ("+event.getTimeInYears()+" yrs)");
-			System.out.println("Mag: "+event.getMagnitude());
-			Map<Integer, List<RSQSimStateTime>> eventTrans = trans.getTransitions(event);
-			int patches = eventTrans.size();
-			int stateTimes = 0;
-			for (List<RSQSimStateTime> list : eventTrans.values())
-				stateTimes += list.size();
-			System.out.println("Have "+stateTimes+" transitions on "+patches+" patches");
-		}
-		if (targetEvent != null) {
-			System.out.println("Running for "+targetID);
-			RSQSimStateTransitionFileReader.printTransitions(targetEvent, trans.getTransitions(targetEvent));
+			System.out.println("Running for "+event.getID());
+			RSQSimStateTransitionFileReader.printTransitions(event, trans.getTransitions(event));
 			List<BBP_Site> sites = BBP_Site.readFile(new File("/data/kevin/bbp/parallel/"
 					+ "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites/sites.stl"));
-			runBBP(catalog, targetEvent, sites);
+			runBBP(catalog, event, sites, timeScale, scaleVelocities);
 		}
 		System.exit(0);
 		events = catalog.loader().minMag(6.5).load();

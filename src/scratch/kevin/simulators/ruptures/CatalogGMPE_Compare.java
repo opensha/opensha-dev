@@ -530,13 +530,16 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2667.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
 		
 		boolean doGridded = false;
+		
+		double timeScale = 2d;
+		boolean scaleVelocities = false;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
@@ -553,7 +556,10 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		boolean replotScatters = false;
 		boolean replotZScores = false;
 		boolean replotCurves = false;
-		boolean replotResiduals = true;
+		boolean replotResiduals = false;
+		
+		if (timeScale != 1d)
+			doRotD = false;
 		
 		VelocityModel vm = VelocityModel.LA_BASIN;
 		double minFractForInclusion = 0.2;
@@ -561,7 +567,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		boolean rgOnlyIfPossible = true;
 		
 //		double[] periods = { 1, 2, 3, 5, 10 };
-		double[] periods = { 1, 2, 5 };
+//		double[] periods = { 1, 2, 5 };
+		double[] periods = { 1, 5, 10 };
 		double[] rotDPeriods = { 1, 2, 5, 7.5, 10 };
 		
 		// find BBP parallel dir
@@ -582,6 +589,16 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 					continue;
 				if (!doGridded && name.contains("-gridded"))
 					continue;
+				if (timeScale == 1d && name.contains("-timeScale"))
+					continue;
+				if (timeScale != 1d) {
+					if (!name.contains("-timeScale"+(float)timeScale))
+						continue;
+					if (scaleVelocities && !name.contains("-velScale"))
+						continue;
+					if (!scaleVelocities && name.contains("-velScale"))
+						continue;
+				}
 				File zipFile = new File(dir, "results.zip");
 				if (!zipFile.exists())
 					zipFile = new File(dir, "results_rotD.zip");
@@ -652,6 +669,11 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 						String dirname = "gmpe_bbp_comparisons_"+gmpeRef.getShortName();
 						if (doGridded)
 							dirname += "_GriddedSites";
+						if (timeScale != 1d) {
+							dirname += "_timeScale"+(float)timeScale;
+							if (scaleVelocities)
+								dirname += "_velScale";
+						}
 						File catalogGMPEDir = new File(catalogOutputDir, dirname);
 						Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
 						comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, periods, comps);

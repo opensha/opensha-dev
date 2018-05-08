@@ -621,7 +621,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		return intersections;
 	}
 	
-	protected synchronized static ExecutorService getExec() {
+	public synchronized static ExecutorService getExec() {
 		if (exec == null)
 			exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 		return exec;

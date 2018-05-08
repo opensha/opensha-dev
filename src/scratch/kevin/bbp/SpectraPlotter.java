@@ -58,6 +58,9 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class SpectraPlotter {
 	
+	private static PlotLineType[] oLineTypes = { PlotLineType.SOLID,
+			PlotLineType.DASHED, PlotLineType.DOTTED, PlotLineType.DOTTED_AND_DASHED };
+	
 	private static DiscretizedFunc[] loadAll(File file) throws IOException {
 		return loadAll(Files.readLines(file, Charset.defaultCharset()));
 	}
@@ -335,8 +338,8 @@ public class SpectraPlotter {
 	}
 	
 	public static void plotMultiRotD50(List<DiscretizedFunc> refFiles, String refName, DiscretizedFunc dataSpectra, String dataName,
-			String title, File outputDir, String prefix, UncertainArbDiscDataset[] gmpes) throws IOException {
-		plotMultiSpectra(refFiles, refName, dataSpectra, dataName, title, outputDir, prefix, true, gmpes);
+			String title, File outputDir, String prefix, UncertainArbDiscDataset[] gmpes, DiscretizedFunc... otherSpectra) throws IOException {
+		plotMultiSpectra(refFiles, refName, dataSpectra, dataName, title, outputDir, prefix, true, gmpes, otherSpectra);
 	}
 	
 	public static void plotMultiFAS(List<File> refFiles, String refName, File dataFile, String dataName, String title,
@@ -349,13 +352,13 @@ public class SpectraPlotter {
 	}
 	
 	public static void plotMultiFAS(List<DiscretizedFunc> refFiles, String refName, DiscretizedFunc dataSpectra,
-			String dataName, String title, File outputDir, String prefix) throws IOException {
-		plotMultiSpectra(refFiles, refName, dataSpectra, dataName, title, outputDir, prefix, false, null);
+			String dataName, String title, File outputDir, String prefix, DiscretizedFunc... otherSpectra) throws IOException {
+		plotMultiSpectra(refFiles, refName, dataSpectra, dataName, title, outputDir, prefix, false, null, otherSpectra);
 	}
 	
 	private static void plotMultiSpectra(List<DiscretizedFunc> refSpectra, String refName, DiscretizedFunc dataSpectra,
-			String dataName, String title, File outputDir, String prefix, boolean rotD50, UncertainArbDiscDataset[] gmpes)
-					throws IOException {
+			String dataName, String title, File outputDir, String prefix, boolean rotD50, UncertainArbDiscDataset[] gmpes,
+			DiscretizedFunc... otherSpectra) throws IOException {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
@@ -376,6 +379,11 @@ public class SpectraPlotter {
 				funcs.add(gmpes[i].getLower());
 				chars.add(outsideChar);
 			}
+		}
+		
+		for (int i=0; i <otherSpectra.length; i++) {
+			funcs.add(otherSpectra[i]);
+			chars.add(new PlotCurveCharacterstics(oLineTypes[i % oLineTypes.length], 2f, Color.BLUE.darker()));
 		}
 		
 		dataSpectra.setName(dataName);

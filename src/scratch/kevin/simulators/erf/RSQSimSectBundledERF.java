@@ -996,6 +996,11 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	}
 
 	@Override
+	public RSQSimProbEqkRup getRupture(int iSource, int nRupture) {
+		return getSource(iSource).getRupture(nRupture);
+	}
+
+	@Override
 	public void updateForecast() {
 		if (subSects == null)
 			loadSubSects();
