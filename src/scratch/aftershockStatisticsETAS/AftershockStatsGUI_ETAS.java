@@ -3207,7 +3207,10 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if (!changeListenerEnabled || param.getValue() == null) {
 			if(D)	System.out.println("Suppressing refresh for " + param.getName());
 		} else {
-
+			if(verbose) System.out.println("Updating " + param);
+			// putting this in as a safegaurd
+			setChangeListenerEnabled(false);
+			try {
 			if (param == quickForecastButton) {
 				System.out.println("Computing quick forecast with defafult settings...");
 
@@ -3280,9 +3283,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				if(param == eventIDParam) printTip(1);
 
 			} else if (param == nowBoolean){
+				if(verbose) System.out.println("Updating start now flag");
 				refreshTimeWindowEditor();
 
 			} else if (param == forecastDurationParam) {
+				if(verbose) System.out.println("Updating forecast duration");
 				try{
 					if (forecastStartTimeParam.getValue() != null){
 						forecastEndTimeParam.setValue(round(forecastStartTimeParam.getValue() + forecastDurationParam.getValue()));
@@ -3293,6 +3298,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				}
 			
 			} else if (param == forecastStartTimeParam) {
+				if(verbose) System.out.println("Updating forecast start time");
 				setEnableParamsPostFetch(false);
 
 				try{
@@ -3529,61 +3535,14 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				}
 				
 				new Thread(run).start();
-
-//			} else if (param == autoMcParam) {
-//				mcParam.getEditor().setEnabled(!autoMcParam.getValue());
-//				mcParam.getEditor().refreshParamEditor();
-//			
-//				CalcStep setMcStep = new CalcStep("Updating model", "Re-estimating magnitude of completeness...", new Runnable() {
-//					@Override
-//					public void run() {
-//							setMagComplete();
-//					}
-//				}, true);
-//				
-//				tabSelectStep = new CalcStep("Plotting","Updating plots...", new Runnable() {
-//
-//					@Override
-//					public void run() {
-//						tabbedPane.setSelectedIndex(mag_num_tab_index);
-//					}
-//
-//				}, true);
-//				
-//				CalcRunnable run;
-//				if (autoMcParam.getValue()){
-//					run = new CalcRunnable(progress, setMcStep, plotMFDStep, tabSelectStep);
-//					new Thread(run).start();
-//				} else {
-//					boolean prompt;
-//				// ask the user if they really want to specify a custom Mc
-//					int ret = JOptionPane.showConfirmDialog(this, "Setting the Mc manually may lead to an erroneous forecast,\n" +
-//							"and should be done only when the automatic method fails. "
-//						+ "\nAre you sure you wish to override the Mc calculation?",
-//						"Specify Custom Mc?", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-//					prompt = ret == JOptionPane.YES_OPTION;
-//					
-//					if (!prompt)
-//						if (ogataMND != null)
-//							mcParam.setValue(ogataMND.get_bValue());
-//				}
-//					//
-////				
-////				
-//					
+	
 			} else if (param == bParam) {
-				if(verbose) System.out.println("Updating b-value");
-
-				link_alpha();
-//				if (bParam.getValue() != null && bParam.getValue() < 1d)
-//					alphaParam.setValue(bParam.getValue()); //link alpha to b if b<1.
-//				else
-//					alphaParam.setValue(1d);
-//
-//				if(seqSpecModel != null)
-//					seqSpecModel.set_alpha(alphaParam.getValue());
-//				if(bayesianModel != null)
-//					bayesianModel.set_alpha(alphaParam.getValue());
+				CalcStep linkAlphaStep = new CalcStep("Updating", "Updating Parameters...", new Runnable() {
+					@Override
+					public void run() {
+						link_alpha();
+					}
+				}, true);
 
 				CalcStep plotStep = new CalcStep("Plotting", "Building magnitude-frequency distribution plot...", new Runnable() {
 
@@ -3594,44 +3553,40 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					}
 				}, true);
 
-				CalcRunnable run = new CalcRunnable(progress, plotStep);
+				CalcRunnable run = new CalcRunnable(progress, linkAlphaStep, plotStep);
 				new Thread(run).start();
 
 			} else if (param == fitMSProductivityParam) {
-				//grey out the values
-				if(fitMSProductivityParam.getValue() != null){
-					amsValRangeParam.getEditor().setEnabled(fitMSProductivityParam.getValue());
-					amsValNumParam.getEditor().setEnabled(fitMSProductivityParam.getValue());
-				}
 
-				setEnableParamsPostAftershockParams(false);
-
+				CalcStep updateParamsStep = new CalcStep("Updating", "Updating Parameters...", new Runnable() {
+					@Override
+					public void run() {
+						//grey out the values
+						if(fitMSProductivityParam.getValue() != null){
+							amsValRangeParam.getEditor().setEnabled(fitMSProductivityParam.getValue());
+							amsValNumParam.getEditor().setEnabled(fitMSProductivityParam.getValue());
+						}
+						setEnableParamsPostAftershockParams(false);
+					}
+				}, true);
+				
+				CalcRunnable run = new CalcRunnable(progress, updateParamsStep);
+				new Thread(run).start();
+				
 			} else if (param == tectonicRegimeParam) {
-
-				if(verbose) System.out.println("Setting tectonic regime and fetching parameters");
-				setEnableParamsPostAftershockParams(false);
-				setEnableParamsPostComputeB(false);
 
 				CalcStep updateTectonicRegimeStep = new CalcStep("Updating Model", "Updating generic parameters to " + tectonicRegimeParam.getValue() + "...", new Runnable() {
 
 					@Override
 					public void run() {
+						setEnableParamsPostAftershockParams(false);
+						setEnableParamsPostComputeB(false);
+
 						genericParams = genericFetch.get(tectonicRegimeParam.getValue());
 						Preconditions.checkNotNull(genericParams, "Generic params not found or server error");
 						if(verbose) System.out.println("Updating Generic model params to " + tectonicRegimeParam.getValue() + ": "+genericParams);
 
-//						resetFitConstraints(genericParams); //update the constraint editor with the new generic parameters (shift values)
-						// update Mc and b
-//						double mc = genericParams.get_refMag() + 0.5;
-//						mcParam.setValue(mc);
-//						mcParam.getEditor().refreshParamEditor();
-//						
 						setMagComplete();
-						
-//						genericModel = new ETAS_AftershockModel_Generic(mainshock, aftershocks, genericParams, 
-//								dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
-//								forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(), mcParam.getValue(),
-//								9.5, 100, 0, fitMSProductivityParam.getValue());
 					}
 				}, true);
 
@@ -3639,25 +3594,25 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				new Thread(run).start();
 
 			} else if (param == amsValRangeParam || param == amsValNumParam) {
-				if(verbose) System.out.println("Updating ams-value Range");
+				
 				updateRangeParams(amsValRangeParam, amsValNumParam, 51);
 				setEnableParamsPostAftershockParams(false);
 				setEnableParamsPostComputeB(false);
 
 			} else if (param == aValRangeParam || param == aValNumParam) {
-				if(verbose) System.out.println("Updating a-value Range");
+				
 				updateRangeParams(aValRangeParam, aValNumParam, 51);
 				setEnableParamsPostAftershockParams(false);
 				setEnableParamsPostComputeB(false);
 
 			} else if (param == pValRangeParam || param == pValNumParam) {
-				if(verbose) System.out.println("Updating p-value Range");
+				
 				updateRangeParams(pValRangeParam, pValNumParam, 51);
 				setEnableParamsPostAftershockParams(false);
 				setEnableParamsPostComputeB(false);
 
 			} else if (param == cValRangeParam || param == cValNumParam) {
-				if(verbose) System.out.println("Updating c-value Range");
+				
 				updateRangeParams(cValRangeParam, cValNumParam, 51);
 				setEnableParamsPostAftershockParams(false);
 				setEnableParamsPostComputeB(false);
@@ -3668,7 +3623,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				setEnableParamsPostComputeB(false);
 
 			} else if (param == rmaxParam){
-				if(verbose) System.out.println("Updating rmax-value");
+				
 				setEnableParamsPostAftershockParams(false);
 				setEnableParamsPostComputeB(false);
 
@@ -3815,10 +3770,16 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 				CalcRunnable run = new CalcRunnable(progress);
 				if (!plotAllDurationsParam.getValue() && forecastDurationParam.getValue() >= 366d){
-					plotAllDurationsParam.setValue(true);
-					plotAllDurationsParam.getEditor().refreshParamEditor();
-
-					run = new CalcRunnable(progress, 
+					CalcStep updateForecastWindowStep = new CalcStep( "Updating", "Updating foreacst duration", new Runnable() {
+						@Override
+						public void run() {
+							plotAllDurationsParam.setValue(true);
+							plotAllDurationsParam.getEditor().refreshParamEditor();
+						}
+					}, true);
+					
+					run = new CalcRunnable(progress,
+							updateForecastWindowStep,
 							postForecastPlotStep, 
 							fetchSourceStep,
 							plotMapStep,
@@ -3826,18 +3787,26 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 							autoSaveStep);	
 					
 				} else if (forecastDurationParam.getValue() < 366d) {
-					plotAllDurationsParam.setValue(true);
-					plotAllDurationsParam.getEditor().refreshParamEditor();
-					forecastDurationParam.setValue(366d);
-					forecastDurationParam.getEditor().refreshParamEditor();
-					updateForecastTimes();
+					
+					CalcStep updateForecastWindowStep = new CalcStep( "Updating", "Updating foreacst duration", new Runnable() {
+						@Override
+						public void run() {
+
+							plotAllDurationsParam.setValue(true);
+							plotAllDurationsParam.getEditor().refreshParamEditor();
+							forecastDurationParam.setValue(366d);
+							forecastDurationParam.getEditor().refreshParamEditor();
+							updateForecastTimes();
+						}
+					}, true);
 					
 					run = new CalcRunnable(progress, 
+							updateForecastWindowStep,
 							computeAftershockParamStep,
 							computeBayesStep,
 							postParamPlotStep,
 							genericForecastStep,
-							seqSpecForecastStep,
+//							seqSpecForecastStep,
 							bayesianForecastStep,
 							postForecastPlotStep,
 							plotTableStep,
@@ -3851,11 +3820,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				
 				new Thread(run).start();
 			} else if (param == intensityTypeParam || param == mapTypeParam) {
-				if(verbose) System.out.println("updating map panel");
+//				if(verbose) System.out.println("updating map panel");
 				updateMapPanel();
 				
 			} else if (param == mapLevelParam){
-				if(verbose) System.out.println("validating intensity value");
+//				if(verbose) System.out.println("validating intensity value");
+				
 				if (intensityTypeParam.getValue() == IntensityType.MMI) {
 					if (mapLevelParam.getValue() < 1)
 						mapLevelParam.setValue(1d);
@@ -3865,8 +3835,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			} else {
 				if(verbose) System.out.println("No action associated with this event.");
 			}
-			
-			setChangeListenerEnabled(true);
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				setChangeListenerEnabled(true);
+			}
 		}
 	}
 
@@ -4982,6 +4955,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 
 	private void resetWorkspace() {
+		System.out.println("Resetting workspace...");
 		setEnableParamsPostFetch(false);
 		setEnableParamsPostForecast(false);
 		setEnableParamsPostComputeB(false);
