@@ -1032,7 +1032,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				editor.refreshParamEditor();
 			} else if (intensityTypeParam.getValue() == IntensityType.MMI) {
 				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
-				mapLevelParam.setConstraint(new DoubleConstraint(2d,10d));
 				mapLevelParam.setValue(6);
 				editor.setTitle("MMI");
 				editor.repaint();
@@ -3855,6 +3854,14 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				if(verbose) System.out.println("updating map panel");
 				updateMapPanel();
 				
+			} else if (param == mapLevelParam){
+				if(verbose) System.out.println("validating intensity value");
+				if (intensityTypeParam.getValue() == IntensityType.MMI) {
+					if (mapLevelParam.getValue() < 1)
+						mapLevelParam.setValue(1d);
+					else if (mapLevelParam.getValue() > 10)
+						mapLevelParam.setValue(10);
+				}
 			} else {
 				if(verbose) System.out.println("No action associated with this event.");
 			}
