@@ -153,7 +153,8 @@ public class GriddedInterpGMPE_Calc {
 		try {
 			gmpe.setEqkRupture(ruptures.iterator().next());
 		} catch (WarningException e) {
-			//do nothing
+			System.err.println(e.getMessage());
+			//do nothing then
 		}
 		
 		precalcRecursive(new int[0], source);
@@ -201,7 +202,8 @@ public class GriddedInterpGMPE_Calc {
 				try {
 					gmpe.setEqkRupture(rup);
 				} catch (WarningException e) {
-					// do nothing
+					System.err.println(e.getMessage());
+					// do nothing then
 				}
 				
 				gmpe.getExceedProbabilities(logXVals);
@@ -302,8 +304,9 @@ public class GriddedInterpGMPE_Calc {
 						userWarned = true;
 						// launch a dialog as a new thread
 						String message = "It will take approximately " + (int) timeEstimate + " seconds to complete each map at this resolution.\n"
-								+ "If plotting MMI multiply by a factor of 2. If Plot Week/Month/Day is enabled, multiply by another factor of 4. "
-								+ "Are you sure you wish to continue with the current \u0394 (km)?";
+								+ "If plotting MMI multiply this estimate by a factor of 2.\n"
+								+ "If plotting Levels with Week/Month/Day enabled, multiply by another factor of 4\n\n";
+						message += "Are you sure you wish to continue with the current grid spacing of \u0394 (km)?";
 						
 						String title = "Warning";
 						

@@ -248,7 +248,7 @@ public abstract class ETAS_AftershockModel {
 
 		int[] numM = new int[simulatedCatalog.nSims];
 
-		List<double[]> eqCat = new ArrayList<double[]>();
+		List<float[]> eqCat = new ArrayList<float[]>();
 
 		Point2D pt = new Point2D.Double();
 
@@ -257,7 +257,7 @@ public abstract class ETAS_AftershockModel {
 			eqCat = simulatedCatalog.getETAScatalog(i); 	//double[] eqCat = {relativeTime, magnitude, generationNumber}
 			numM[i] = 0;
 			//count all events in time window and magnitude range in this catalog
-			for(double[] eq : eqCat){
+			for(float[] eq : eqCat){
 				if(eq[0] > tMinDays && eq[0] <= tMaxDays && eq[1] >= forecastMag)
 					numM[i] ++;
 			}
@@ -300,7 +300,10 @@ public abstract class ETAS_AftershockModel {
 		try{
 			simulatedCatalog = new ETAScatalog(ams_vec, a_vec, p_vec, c_vec, epiLikelihood, alpha, b, refMag, 
 					mainShock, aftershockList, dataMinDays, dataMaxDays, forecastMinDays, forecastMaxDays, magComplete, maxMag, maxGenerations, nSims); //maxMag = 9.5, maxGeneratons = 100;
-		} catch(InterruptedException e) {
+		} catch(Exception e) {
+			e.printStackTrace();
+			System.err.println("The Java Virtual Machine may have run out of memory.\n"
+			+" Increase Mc by one unit and try calculating the forecast again.");
 			simulatedCatalog = null;
 		}
 
@@ -309,7 +312,6 @@ public abstract class ETAS_AftershockModel {
 		this.simulatedCatalog = simulatedCatalog;
 		this.nSims = nSims;
 	}
-
 
 	public ArbitrarilyDiscretizedFunc getModalCumNumEventsWithLogTime(double magMin, double tMinDays, double tMaxDays, int numPts) {
 		return getFractileCumNumEventsWithLogTime(magMin,tMinDays,tMaxDays,numPts,0.5);
@@ -345,6 +347,9 @@ public abstract class ETAS_AftershockModel {
 		return cumFunc;
 	}
 
+	
+	
+	
 	// get expected number (straight from the ETAS model)
 	public ArbitrarilyDiscretizedFunc getExpectedNumEventsWithLogTime(double magMin, double tMinDays, double tMaxDays, int numPts) {
 

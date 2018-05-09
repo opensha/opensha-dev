@@ -34,13 +34,13 @@ public class GenericETAS_ParametersFetch {
 		
 		dataMap = Maps.newHashMap();
 
-		URL paramsURL = GenericETAS_ParametersFetch.class.getResource("resources/vdEGenericETASParams_010418.csv"); //updated CALIFORNIA added Mref column
+		URL paramsURL = GenericETAS_ParametersFetch.class.getResource("resources/vdEGenericETASParams_080518.csv"); //updated CALIFORNIA added Mref, Mmax, columns 
 		
 		if(D) System.out.println(paramsURL);
 		
 		try {
 			CSVFile<String> csv = CSVFile.readURL(paramsURL, true);
-			Preconditions.checkState(csv.getNumCols() == 15, "unexpected number of columns: %s", csv.getNumCols());
+			Preconditions.checkState(csv.getNumCols() == 16, "unexpected number of columns: %s", csv.getNumCols());
 			
 			for (int row=1; row<csv.getNumRows(); row++) {
 				String regimeName = csv.get(row, 0).trim();
@@ -52,7 +52,7 @@ public class GenericETAS_ParametersFetch {
 				
 				double aValue_mean = Double.parseDouble(csv.get(row, 1));
 				double aValue_sigma = Double.parseDouble(csv.get(row, 2));
-				double log_cValue = Double.parseDouble(csv.get(row, 3));			
+//				double log_cValue = Double.parseDouble(csv.get(row, 3));			
 				double pValue = Double.parseDouble(csv.get(row, 4));
 				double covaa = Double.parseDouble(csv.get(row, 5));
 				double covpp = Double.parseDouble(csv.get(row, 6));
@@ -64,13 +64,19 @@ public class GenericETAS_ParametersFetch {
 				double alpha = Double.parseDouble(csv.get(row, 12));
 				double bValue = Double.parseDouble(csv.get(row, 13));
 				double refMag = Double.parseDouble(csv.get(row, 14));
+				double maxMag = Double.parseDouble(csv.get(row, 15));
 
-				double cValue = Math.pow(10, log_cValue);
+//				double cValue = Math.pow(10, log_cValue);
+				// due to memory concerns, we're replacing the generic c-value with the global average c-value
+				double cValue = Math.pow(10, -2.5);
 				
 				double pValue_sigma = Math.sqrt(covpp*numSequences);	//this needs to be replaced with a real estimate
-				double logcValue_sigma = Math.sqrt(covcc*numSequences);		//this needs to be replaced with a real estimate
+				// due to memory concerns, we're replacing logcValue_sigma with a value that makes 3*sigma value equal to -5, 0
+//				double logcValue_sigma = Math.sqrt(covcc*numSequences);		//this needs to be replaced with a real estimate
+				double logcValue_sigma = 0.8333;		//this needs to be replaced with a real estimate
+				
 				double bValue_sigma = 0.1;//this needs to be replaced with a real estimate
-				double maxMag = 9.5;//this needs to be replaced with a real estimate
+//				double maxMag = 9.5;//this needs to be replaced with a real estimate
 				
 				dataMap.put(regime, new GenericETAS_Parameters(
 						aValue_mean, aValue_sigma, pValue, pValue_sigma, cValue, logcValue_sigma, covaa, covpp, covcc, covap, covac, covcp, numSequences, alpha,  bValue, bValue_sigma, refMag, maxMag));

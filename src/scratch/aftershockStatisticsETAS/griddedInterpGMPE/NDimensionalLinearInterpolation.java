@@ -30,7 +30,7 @@ public class NDimensionalLinearInterpolation {
 				subInterpIndexes.add(null);
 			} else {
 				subInterpIndexes.add(getSubInterpIndexes(numDimensions-(i), 2));
-				System.out.println("Sub interp index count for "+i+": "+subInterpIndexes.get(i).size());
+//				System.out.println("Sub interp index count for "+i+": "+subInterpIndexes.get(i).size());
 			}
 		}
 	}

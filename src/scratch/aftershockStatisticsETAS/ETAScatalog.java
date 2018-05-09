@@ -46,16 +46,15 @@ public class ETAScatalog {
 	int nSims;
 	int maxGenerations; //simulation depth
 	private double[] maxMags;	
-	private long[] numEventsFinal;
+	private int[] numEventsFinal;
 	private int[] numGenerations;
 	
-	private List<List<double[]>> catalogList;	//list of catalogs
+	private List<List<float[]>> catalogList;	//list of catalogs
 	
 	
 	public ETAScatalog(double[] ams_vec, double[] a_vec, double[] p_vec, double[] c_vec, double[][][][] likelihood, double alpha, double b, double refMag,
 			ObsEqkRupture mainshock, ObsEqkRupList aftershocks,
-			double dataStart, double dataEnd, double forecastStart, double forecastEnd, double Mc, double maxMag, int maxGenerations, int nSims)
-					throws InterruptedException {
+			double dataStart, double dataEnd, double forecastStart, double forecastEnd, double Mc, double maxMag, int maxGenerations, int nSims){
 	
 		this.ams_vec = ams_vec;
 		this.a_vec = a_vec;
@@ -75,11 +74,11 @@ public class ETAScatalog {
 		if(D) System.out.println("ETAS simulation params: alpha=" + alpha + " b=" + b + " Mref=" + refMag + " Mc=" + Mc + " Mmax=" + maxMag + " nSims=" + nSims); 
 				
 		
-		List<double[]> newEqList = new ArrayList<double[]>();	//catalog containing list of {time, mag, gen}
-		List<List<double[]>> catalogList = new ArrayList<List<double[]>>(); //list of catalogs
+		List<float[]> newEqList = new ArrayList<float[]>();	//catalog containing list of {time, mag, gen}
+		List<List<float[]>> catalogList = new ArrayList<List<float[]>>(); //list of catalogs
 		
 		double[] maxMags = new double[nSims];
-		long[] nEvents = new long[nSims];
+		int[] nEvents = new int[nSims];
 		int[] nGens = new int[nSims];
 		
 		if(D) System.out.println("Calculating " + nSims + " " + (int)(forecastEnd - forecastStart) + "-day ETAS catalogs...");
@@ -137,11 +136,11 @@ public class ETAScatalog {
 		this.numGenerations = nGens;
 	}
 		
-	public List<double[]> getNewETAScatalog(ObsEqkRupture mainshock, ObsEqkRupList aftershocks, double a_sample, double p_sample, double c_sample, int simNumber){
+	public List<float[]> getNewETAScatalog(ObsEqkRupture mainshock, ObsEqkRupList aftershocks, double a_sample, double p_sample, double c_sample, int simNumber){
 		
 		//extract magnitudes and times from supplied Eqk rupture objects to make catalog (combine MS and AS's)
-		List<double[]> newEqList = new ArrayList<double[]>();
-		List<double[]> finalEqList = new ArrayList<double[]>();
+		List<float[]> newEqList = new ArrayList<float[]>();
+		List<float[]> finalEqList = new ArrayList<float[]>();
 		
 		//double[] event = {0, mainshock.getMag(), 0};	//utility variable : {relative time, magnitude, generation number}
 
@@ -156,9 +155,9 @@ public class ETAScatalog {
 		//int counter = 0;
 		//go through seed (observed) earthquake list, add each event to a pared-down eventList and add simulated children
 		for(ObsEqkRupture rup : seedQuakes){
-			double[] event = new double[3];
-			event[0] = (rup.getOriginTime() - t0)/ETAS_StatsCalc.MILLISEC_PER_DAY;	//elapsed time in days
-			event[1] = rup.getMag();	
+			float[] event = new float[3];
+			event[0] = (float) ((rup.getOriginTime() - t0)/ETAS_StatsCalc.MILLISEC_PER_DAY);	//elapsed time in days
+			event[1] = (float) rup.getMag();	
 			event[2] = 0;	//generation number
 			
 			//check whether event is prior to forecast start, and larger than Mc
@@ -176,14 +175,14 @@ public class ETAScatalog {
 		}
 		
 		// sort catalog
-		Collections.sort(newEqList, new java.util.Comparator<double[]>() {
-		    public int compare(double[] a, double[] b) {
+		Collections.sort(newEqList, new java.util.Comparator<float[]>() {
+		    public int compare(float[] a, float[] b) {
 		        return Double.compare(a[0], b[0]);
 		    }
 		});
 		
 		// remove events under mc
-		for(double[] eq : newEqList){
+		for(float[] eq : newEqList){
 			if(eq[1] >= Mc);
 				finalEqList.add(eq);
 		}
@@ -192,14 +191,13 @@ public class ETAScatalog {
 		return finalEqList;
 	}
 	
-	private List<double[]> getChildren(List<double[]> newEqList, double t, double mag, int ngen, 
+	private List<float[]> getChildren(List<float[]> newEqList, float t, float mag, int ngen, 
 			double a_sample, double p_sample, double c_sample, int simNumber){//, double forecastStart, double forecastEnd,
 			//double a, double b, double p, double c, double alpha, double refMag, double maxMag, int maxGen){
 		
-		double newMag;
-		double newTime;
-		
-		
+		float newMag;
+		float newTime;
+			
 		//calculate productivity of this quake
 		double prod = calculateProductivity(t, mag, forecastStart, forecastEnd, a_sample, b, p_sample, c_sample, alpha, Mc);
 		long numNew = assignNumberOfOffspring(prod); 
@@ -208,12 +206,12 @@ public class ETAScatalog {
 		if(numNew > 0 && ngen < maxGenerations){
 			//for each new child, assign a magnitude and time
 			for(long i=0; i<numNew; i++){
-				double[] event = new double[3];		//this SOB must be declared within for block, in order to generate a new address
+				float[] event = new float[3];		//this must be declared within for block, in order to generate a new address
 				
 				// assign a magnitude
-				newMag = assignMagnitude(b, Mc, maxMagLimit);
+				newMag = (float) assignMagnitude(b, Mc, maxMagLimit);
 				// assign a time
-				newTime = assignTime(t, forecastStart, forecastEnd, p_sample, c_sample);
+				newTime = (float) assignTime(t, forecastStart, forecastEnd, p_sample, c_sample);
 
 				// add new child to the list
 				event[0] = newTime;
@@ -235,7 +233,7 @@ public class ETAScatalog {
 		
 	}
 	
-	private double calculateProductivity(double t, double mag, double forecastStart, double forecastEnd,
+	private double calculateProductivity(float t, float mag, double forecastStart, double forecastEnd,
 			double a_sample, double b, double p, double c, double alpha, double refMag){
 		
 		double unscaledProductivity;
@@ -329,6 +327,8 @@ public class ETAScatalog {
 			}
 		}	
 		
+		//shuffle those parameters for a more accurate duration estimate
+		java.util.Collections.shuffle(Arrays.asList(params));
 		return params;
 	}
 	
@@ -367,16 +367,16 @@ public class ETAScatalog {
 		 return t;
 	}
 	
-	public List<double[]> getETAScatalog(int index){
+	public List<float[]> getETAScatalog(int index){
 		return catalogList.get(index); 
 		// return eqList;
 	}
 	
-	public long[] get_nEvents(){
+	public int[] get_nEvents(){
 		return this.numEventsFinal;
 	}
 	
-	public long get_nEvents(List<double[]> eqList){
+	public int get_nEvents(List<float[]> eqList){
 		return eqList.size();
 	}
 	
@@ -384,11 +384,11 @@ public class ETAScatalog {
 		return this.maxMags;
 	}
 	
-	public double get_maxMag(List<double[]> eqList){ 
+	public double get_maxMag(List<float[]> eqList){ 
 		double maxMag = Double.NEGATIVE_INFINITY;
 		double mag;
 
-		for(double[] ev : eqList){
+		for(float[] ev : eqList){
 			mag = ev[1];
 			if( mag > maxMag )
 				maxMag = mag;
@@ -400,11 +400,11 @@ public class ETAScatalog {
 		return this.numGenerations;
 	}
 	
-	public int get_nGenerations(List<double[]> eqList){
+	public int get_nGenerations(List<float[]> eqList){
 		double maxGen = 0;
 		double ngen;
 
-		for(double[] ev : eqList){
+		for(float[] ev : eqList){
 			ngen = ev[2];
 			if( ngen > maxGen )
 				maxGen = ngen;
@@ -418,10 +418,10 @@ public class ETAScatalog {
 	
 	
 	public String printCatalog(int index){
-		List<double[]> eqList = getETAScatalog(index);
+		List<float[]> eqList = getETAScatalog(index);
 		
 		StringBuffer paragraph = new StringBuffer("Time Mag Gen\n");
-		for(double[] eq: eqList){
+		for(float[] eq: eqList){
 			 paragraph.append(String.format("%5.2f %5.2f %d %n", eq[0], eq[1], (int)eq[2]));
 		}
 		return paragraph.toString();

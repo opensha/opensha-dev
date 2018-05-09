@@ -157,7 +157,7 @@ public class ETAS_RateModel2D {
 		}
 
 		//normalize the gridData rate map to give the correct total forecast number
-		if(D) System.out.println(forecastModel.magComplete);
+		if(D) System.out.println("Mc: " + forecastModel.magComplete);
 		double gridSum = 0; 
 
 		//		double rateTotal = this.getModalNumEvents(this.magComplete, forecastMinDays, forecastMaxDays);
