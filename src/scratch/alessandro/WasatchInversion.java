@@ -105,7 +105,7 @@ public class WasatchInversion {
 				double stdDev = Double.valueOf(split[2]);
 				double upp95 = Double.valueOf(split[3]);
 				double low95 = Double.valueOf(split[4]);
-				stdDev = (upp95-low95)/4.0; 
+//				stdDev = (upp95-low95)/4.0; 
 				SegRateConstraint sectionRateConstraint = new SegRateConstraint("Section "+split[0]); // Names are not unique!
 				sectionRateConstraint.setSegRate(sectIndex, meanRate, stdDev, low95, upp95);
 				sectionRateConstraints.add(sectionRateConstraint);
@@ -324,12 +324,12 @@ public class WasatchInversion {
 	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
 		
 		// Non-negative least squares
-		fltSysRupInversion.doInversionNNLS();
+//		fltSysRupInversion.doInversionNNLS();
 		
 		// Simulated annealing
-//		long numIterations = (long) 1e5;
-//		boolean initStateFromAprioriRupRates = false;
-//		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
+		long numIterations = (long) 1e4;
+		boolean initStateFromAprioriRupRates = false;
+		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
@@ -340,7 +340,7 @@ public class WasatchInversion {
 		// Now make plots if desired
 		boolean popUpPlots = true;	// this tells whether to show plots in a window (turn off for HPC)
 //		dirName = null;	// set as null if you don't want to save to file
-		fltSysRupInversion.writeAndOrPlotDataFits(null, popUpPlots);
+		fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
 		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 	    fltSysRupInversion.writeAndOrPlotSegPartMFDs(dirName, popUpPlots);
