@@ -17,6 +17,9 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
+import scratch.alessandro.logicTreeEnums.ScalingRelationshipEnum;
+import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
+
 /**
  * This class reads Wasatch inversion data from files, provides methods for getting the various constraints, and runs the inversion.
  * 
@@ -274,10 +277,8 @@ public class WasatchInversion {
 
 		// set inversion attributes
 		String name = "Wasatch Inversion";
-//		String slipModelType = FaultSystemRuptureRateInversion.UNIFORM_SLIP_MODEL;
-		String slipModelType = FaultSystemRuptureRateInversion.TAPERED_SLIP_MODEL;
-		MagAreaRelationship magAreaRel = new HanksBakun2002_MagAreaRel();
-//		MagAreaRelationship magAreaRel = new Ellsworth_B_WG02_MagAreaRel();
+		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.TAPERED;
+		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.THINGBAIJAM_17_SRL_N;
 		double relativeSectRateWt=1;
 		double relative_aPrioriRupWt = 0;	// 
 		String aPrioriRupRatesFilename = ROOT_PATH+"data/aPrioriRupRatesFromGR_MFD.txt";
@@ -303,7 +304,7 @@ public class WasatchInversion {
 				sectionRateConstraints, 
 				rupSectionMatrix, 
 				slipModelType, 
-				magAreaRel, 
+				scalingRel, 
 				relativeSectRateWt, 
 				relative_aPrioriRupWt, 
 				aPrioriRupRatesFilename,
@@ -326,9 +327,9 @@ public class WasatchInversion {
 		fltSysRupInversion.doInversionNNLS();
 		
 		// Simulated annealing
-		long numIterations = (long) 1e5;
-		boolean initStateFromAprioriRupRates = false;
-		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
+//		long numIterations = (long) 1e5;
+//		boolean initStateFromAprioriRupRates = false;
+//		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");

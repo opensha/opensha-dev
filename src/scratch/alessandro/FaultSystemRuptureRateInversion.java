@@ -64,6 +64,8 @@ import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
+import scratch.alessandro.logicTreeEnums.ScalingRelationshipEnum;
+import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
 
 /**
  * This class does an inversion for the rate of events in an unsegmented fault model:
@@ -145,12 +147,8 @@ public class FaultSystemRuptureRateInversion {
 	private int totNumRows;
 	
 	// slip model:  CHANGE TO ENUM
-	private String slipModelType;
-	public final static String CHAR_SLIP_MODEL = "Characteristic (Dsr=Ds)";
-	public final static String UNIFORM_SLIP_MODEL = "Uniform/Boxcar (Dsr=Dr)";
-	public final static String WG02_SLIP_MODEL = "WGCEP-2002 model (Dsr prop to Vs)";
-	public final static String TAPERED_SLIP_MODEL = "Tapered Ends ([Sin(x)]^0.5)";
-	
+	private SlipAlongRuptureModelEnum slipModelType;
+
 	private static EvenlyDiscretizedFunc taperedSlipPDF, taperedSlipCDF;
 	
 	// MFDs
@@ -166,7 +164,7 @@ public class FaultSystemRuptureRateInversion {
 	// background, afterslip, events smaller than the min mag here, and aftershocks and foreshocks.
 	private double moRateReduction;  
 	
-	private MagAreaRelationship magAreaRel;
+	private ScalingRelationshipEnum magAreaRel;
 	
 	// NNLS inversion solver - static to save time and memory
 	private static NNLSWrapper nnls = new NNLSWrapper();
@@ -359,8 +357,8 @@ public class FaultSystemRuptureRateInversion {
 			ArrayList<FaultSectionPrefData> fltSectionDataList, 
 			ArrayList<SegRateConstraint> sectionRateConstraints,
 			int[][] rupSectionMatrix, 
-			String slipModelType, 
-			MagAreaRelationship magAreaRel, 
+			SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, 
 			double relativeSectRateWt, 
 			double relative_aPrioriRupWt, 
 			String aPrioriRupRatesFilename,
@@ -376,7 +374,7 @@ public class FaultSystemRuptureRateInversion {
 		this.sectionRateConstraints = sectionRateConstraints;
 		this.rupSectionMatrix = rupSectionMatrix;
 		this.slipModelType = slipModelType;
-		this.magAreaRel = magAreaRel;
+		this.magAreaRel = scalingRel;
 		this.relativeSectRateWt = relativeSectRateWt;
 		this.relative_aPrioriRupWt = relative_aPrioriRupWt;
 		this.aPrioriRupRatesFilename = aPrioriRupRatesFilename;
@@ -729,43 +727,16 @@ public class FaultSystemRuptureRateInversion {
 	private void computeSectSlipInRupMatrix() {
 		sectSlipInRup = new double[numSections][numRuptures];
 		FaultSectionPrefData segData;
-		
-		// for case segment slip is independent of rupture (constant), and equal to slip-rate * MRI
-		if(slipModelType.equals(CHAR_SLIP_MODEL)) {
-			throw new RuntimeException(CHAR_SLIP_MODEL+ " not yet supported");
-		}
-		
-		// the rest get average slip from mag-area relationship
-		rupAveSlip = new double[numRuptures];
-		for(int rup=0; rup<numRuptures; ++rup)
-			rupAveSlip[rup] = rupMeanMo[rup]/(rupArea[rup]*FaultMomentCalc.SHEAR_MODULUS);  // inlcudes aveSlipCor
-		
+				
 		// for case where ave slip computed from mag & area, and is same on all segments 
-		if (slipModelType.equals(UNIFORM_SLIP_MODEL)) {
+		if (slipModelType == SlipAlongRuptureModelEnum.UNIFORM) {
 			for(int rup=0; rup<numRuptures; ++rup) {
 				for(int seg=0; seg<numSections; seg++) {
 					sectSlipInRup[seg][rup] = rupSectionMatrix[seg][rup]*rupAveSlip[rup];
 				}
 			}
 		}
-		// this is the model where seg slip is proportional to segment slip rate 
-		// (bumped up or down based on ratio of seg slip rate over wt-ave slip rate (where wts are seg areas)
-		else if (slipModelType.equals(WG02_SLIP_MODEL)) {
-			for(int rup=0; rup<numRuptures; ++rup) {
-				double totMoRate = 0;	// a proxi for slip-rate times area
-				double totArea = 0;
-				for(int seg=0; seg<numSections; seg++) {
-					if(rupSectionMatrix[seg][rup]==1) {
-						totMoRate += sectMoRate[seg]; // a proxi for Vs*As
-						totArea += sectArea[seg];
-					}
-				}
-				for(int seg=0; seg<numSections; seg++) {
-					sectSlipInRup[seg][rup] = rupAveSlip[rup]*rupSectionMatrix[seg][rup]*sectMoRate[seg]*totArea/(totMoRate*sectArea[seg]);
-				}
-			}
-		}
-		else if (slipModelType.equals(TAPERED_SLIP_MODEL)) {
+		else if (slipModelType == SlipAlongRuptureModelEnum.TAPERED) {
 			// note that the ave slip is partitioned by area, not length; this is so the final model is moment balanced.
 			mkTaperedSlipFuncs();
 			for(int rup=0; rup<numRuptures; ++rup) {
@@ -1682,29 +1653,28 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 		if(D) System.out.println("minNumSectInRup="+minNumSectInRup);
 		modelSetUpInfoString += "\nminNumSectInRup = "+minNumSectInRup+"\n";
 
-
+		
 		// compute rupture mean mags etc
 		rupMeanMag = new double[numRuptures];
+		rupAveSlip = new double[numRuptures];
 		rupMeanMo = new double[numRuptures];
 		minRupMag = Double.MAX_VALUE;
 		maxRupMag = 0;
-		if(slipModelType.equals(CHAR_SLIP_MODEL))
-			// getRupMeanMagsAssumingCharSlip();
-			throw new RuntimeException(CHAR_SLIP_MODEL+" is not yet supported");
-		else {
-			// compute from mag-area relationship
-			for(int r=0; r <numRuptures; r++) {
-				double mag = magAreaRel.getMedianMag(rupArea[r]*1e-6);
-				//round this to nearst 10th unit
-				rupMeanMag[r] = ((double)Math.round(10*mag))/10.0;
-				rupMeanMo[r] = MagUtils.magToMoment(rupMeanMag[r])*gaussMFD_slipCorr;   // increased if magSigma >0
-				if(minRupMag>rupMeanMag[r])
-					minRupMag=rupMeanMag[r];
-				if(maxRupMag<rupMeanMag[r])
-					maxRupMag=rupMeanMag[r];
+		
+		for(int r=0; r <numRuptures; r++) {
+			double mag = magAreaRel.getMag(rupArea[r], rupLength[r], Double.NaN);	// orig down dip with set to NaN because scaling relationships used here don't depende on this
+			//round this to nearest 10th unit
+			rupMeanMag[r] = ((double)Math.round(10*mag))/10.0;
+			rupMeanMo[r] = MagUtils.magToMoment(rupMeanMag[r])*gaussMFD_slipCorr;   // increased if magSigma >0
+//			rupAveSlip[r] = rupMeanMo[r]/(rupArea[r]*FaultMomentCalc.SHEAR_MODULUS);  // inlcudes aveSlipCor in rupMeanMo
+			rupAveSlip[r] = magAreaRel.getAveSlip(rupArea[r], rupLength[r], Double.NaN)*gaussMFD_slipCorr;
 
-			}
+			if(minRupMag>rupMeanMag[r])
+				minRupMag=rupMeanMag[r];
+			if(maxRupMag<rupMeanMag[r])
+				maxRupMag=rupMeanMag[r];
 		}
+
 		double tempMag = minRupMag-GAUSS_MFD_SIGMA*GAUSS_MFD_TRUNCATION;
 		minRupMagWithAleatory = ((double)Math.round(10*tempMag))/10.0;
 		tempMag = maxRupMag+GAUSS_MFD_SIGMA*GAUSS_MFD_TRUNCATION;
