@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -673,11 +674,12 @@ public class FaultSystemRuptureRateInversion {
 	/**
 	 * This does the inversion using simulated annealing
 	 */
-	public void doInversionSA(long numIterations, boolean initStateFromAprioriRupRates) {
+	public void doInversionSA(long numIterations, boolean initStateFromAprioriRupRates, long randomSeed) {
 		
 		
 		modelRunInfoString = "\nInversion Type = Simulated Annearling with\n\n\tnumIterations = "+
-				numIterations+"\n\tinitStateFromAprioriRupRates = "+initStateFromAprioriRupRates+"\n";
+				numIterations+"\n\tinitStateFromAprioriRupRates = "+initStateFromAprioriRupRates+
+				"\n\trandomSeed = "+randomSeed+"\n";
 
 		// set the intial state
 		double[] initialState;
@@ -696,7 +698,7 @@ public class FaultSystemRuptureRateInversion {
 		}
 		
 		// SOLVE THE INVERSE PROBLEM
-		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState, numIterations);
+		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState, numIterations, randomSeed);
 
 		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 		if(minRupRate >0.0)
@@ -825,9 +827,10 @@ public class FaultSystemRuptureRateInversion {
 	
 
 	
-private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState, long numIterations) {
+private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState, long numIterations,  long randomSeed) {
 	SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
 	SerialSimulatedAnnealing simulatedAnnealing =new SerialSimulatedAnnealing(matrixC, d, initialState);
+	simulatedAnnealing.setRandom(new Random(randomSeed));
 	simulatedAnnealing.iterate(numIterations);
 	return simulatedAnnealing.getBestSolution();
 }
@@ -906,7 +909,10 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 				if(rupSectionMatrix[seg][rup]==1) {
 					finalSectSlipRate[seg] += rupRateSolution[rup]*sectSlipInRup[seg][rup];
 					finalSectEventRate[seg]+=rupRateSolution[rup];
-					finalPaleoVisibleSectEventRate[seg]+=rupRateSolution[rup]*getProbVisible(rupMeanMag[rup]);
+					if(applyProbVisible)
+						finalPaleoVisibleSectEventRate[seg]+=rupRateSolution[rup]*getProbVisible(rupMeanMag[rup]);
+					else
+						finalPaleoVisibleSectEventRate[seg]+=rupRateSolution[rup];
 				}
 		}
 		
