@@ -328,7 +328,7 @@ public class WasatchInversion {
 //		fltSysRupInversion.doInversionNNLS();
 		
 		// Simulated annealing
-		long numIterations = (long) 1e4;
+		long numIterations = (long) 1e5;
 		boolean initStateFromAprioriRupRates = false;
 		long randomSeed = System.currentTimeMillis();
 //		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
