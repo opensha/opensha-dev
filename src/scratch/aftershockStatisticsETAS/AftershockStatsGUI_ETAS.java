@@ -4272,7 +4272,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			boolean rateModelPlotted = false;
 			double maxContourLevel = 1;
 			double minContourLevel = 0;
-			if (intensityTypeParam.getValue()==IntensityType.MMI) {
+			if (intensityTypeParam.getValue()==IntensityType.MMI && mapTypeParam.getValue()==MapType.LEVEL) {
 				minContourLevel = 1;
 				maxContourLevel = 2;
 			}
