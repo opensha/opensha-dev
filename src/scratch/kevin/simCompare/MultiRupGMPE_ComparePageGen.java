@@ -566,7 +566,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		if (curveSites != null && !curveSites.isEmpty()) {
 			SimulationHazardCurveCalc<E> simCurveCalc = new SimulationHazardCurveCalc<>(simProv);
 			List<SimulationHazardPlotter<E>> curvePlotters = new ArrayList<>();
-			for (Site site : sites) {
+			for (Site site : curveSites) {
 				SimulationHazardPlotter<E> curvePlotter = new SimulationHazardPlotter<>(simCurveCalc, comps, site, 1d, gmpeRef);
 				curvePlotter.setGMPE_FixedSigmas(gmpe_fixed_sigmas);
 				curvePlotter.setGMPE_TruncationLevels(gmpe_truncs);
@@ -787,6 +787,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 					if (gmpe != null)
 						checkInGMPE(gmpeRef, gmpe);
 					residualPlots[i].setWritePDF(false);
+//					residualPlots[i].setPlotLinearFit(false);
 				}
 			} else {
 				residualPlots = null;

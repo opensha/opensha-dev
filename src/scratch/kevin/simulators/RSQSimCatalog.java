@@ -525,8 +525,18 @@ public class RSQSimCatalog implements XMLSaveable {
 				eventLinks.add(name);
 			} else if (name.startsWith("gmpe_bbp_comparisons_")) {
 				String subName = name.substring("gmpe_bbp_comparisons_".length());
-				if (name.endsWith("_GriddedSites")) {
-					subName = subName.substring(0, subName.indexOf("_GriddedSites"));
+				
+				boolean gridded = name.contains("_GriddedSites");
+				if (gridded)
+					subName = subName.replaceAll("_GriddedSites", "");
+				
+				if (subName.contains("_timeScale")) {
+					subName = subName.replaceAll("_timeScale", ", Time Scale Factor: ");
+					if (subName.contains("_velScale"))
+						subName = subName.replaceAll("_velScale", ", Velocities Scaled");
+				}
+				
+				if (gridded) {
 					gmpeGriddedNames.add(subName);
 					gmpeGriddedLinks.add(name);
 				} else {
@@ -1307,8 +1317,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		GregorianCalendar minDate = cal(2000, 1, 1);
 //		GregorianCalendar minDate = cal(2018, 2, 1);
 		
-		for (Catalogs cat : cats) {
-//		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585 }) {
+//		for (Catalogs cat : cats) {
+		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585 }) {
 			if (cat.catalog.getDate().before(minDate))
 				continue;
 			RSQSimCatalog catalog = cat.instance(baseDir);

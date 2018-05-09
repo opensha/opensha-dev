@@ -54,21 +54,24 @@ class MPJ_BBP_RuptureScriptsGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
 //		int eventID = 526885;
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
-		int eventID = 81854;
+//		int eventID = 81854;
 //		int eventID = 2637969;
-//		int eventID = 1670183;
+		int eventID = 1670183;
 		
 		File catalogDir = catalog.getCatalogDir();
 		
-		boolean stampede = false;
+		boolean stampede = true;
 		
-		boolean doGP = false;
-		boolean doShakeMap = true;
+		boolean doGP = true;
+		boolean doShakeMap = false;
+		
+		boolean csSites = true;
 		
 		int numGP = 400;
 //		double mapSpacing = 0.05;
 		double mapSpacing = 0.02;
-		int maxNodes = 36;
+//		int maxNodes = 36;
+		int maxNodes = 10;
 		
 		File srcFile = RSQSimBBP_Config.getEventSrcFile(catalog, eventID);
 		File srfFile = RSQSimBBP_Config.getEventSRFFile(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE, RSQSimBBP_Config.SRF_DT);
@@ -97,14 +100,23 @@ class MPJ_BBP_RuptureScriptsGen {
 		String queue;
 		File remoteDir;
 		String bbpDataDir;
-		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
+		String nodeScratchDir;
+		String bbpCopyParentDir;
+		File bbpEnvFile;
+		String sharedScratchDir;
+		BatchScriptWriter pbsWrite;
 		
 		JavaShellScriptWriter mpjWrite;
 		if (stampede) {
-			threads = 68;
-			queue = "normal";
+			threads = 96;
+			queue = "skx-normal";
 			remoteDir = new File("/work/00950/kevinm/stampede2/bbp/parallel");
 			bbpDataDir = "/tmp";
+			nodeScratchDir = null;
+			bbpCopyParentDir = "/scratch/00950/kevinm/bbp";
+			bbpEnvFile = new File("/work/00950/kevinm/stampede2/bbp/bbp_env.sh");
+//			sharedScratchDir = "/scratch/00950/kevinm/";
+			sharedScratchDir = null;
 			pbsWrite = new StampedeScriptWriter(true);
 			mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, null, StampedeScriptWriter.FMPJ_HOME);
 			((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
@@ -113,6 +125,11 @@ class MPJ_BBP_RuptureScriptsGen {
 			queue = "scec";
 			remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
 			bbpDataDir = "${TMPDIR}";
+			nodeScratchDir = null;
+			bbpCopyParentDir = "/staging/pjm/kmilner";
+			bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
+//			sharedScratchDir = "${SCRATCHDIR}";
+			sharedScratchDir = null;
 			pbsWrite = new USC_HPCC_ScriptWriter();
 			mpjWrite = new MPJExpressShellScriptWriter(
 					USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, null, USC_HPCC_ScriptWriter.MPJ_HOME);
@@ -137,10 +154,17 @@ class MPJ_BBP_RuptureScriptsGen {
 				jobName += "-noHF";
 			if (stampede)
 				jobName += "-stampede";
+			if (csSites)
+				jobName += "-csLASites";
 			
 			System.out.println("Writing GP sim to "+jobName);
 			
-			List<BBP_Site> sites = RSQSimBBP_Config.getStandardSites(src);
+			List<BBP_Site> sites;
+			if (csSites)
+				sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
+			else
+				sites = RSQSimBBP_Config.getStandardSites(src);
+			
 			Preconditions.checkState(!sites.isEmpty(), "No sites!");
 			int totalSims;
 			if (gpSplitSites)
@@ -180,7 +204,15 @@ class MPJ_BBP_RuptureScriptsGen {
 			if (bbpDataDir != null && !bbpDataDir.isEmpty())
 				argz += " --bbp-data-dir "+bbpDataDir;
 			
+
+			List<String> addLines = new ArrayList<>();
+			argz = MPJ_BBP_CatalogSimScriptGen.addBBP_EnvArgs(argz, addLines, remoteJobDir, nodeScratchDir,
+					sharedScratchDir, bbpCopyParentDir, bbpEnvFile);
+			
 			List<String> script = mpjWrite.buildScript(MPJ_BBP_RupGenSim.class.getName(), argz);
+			
+			if (!addLines.isEmpty())
+				script.addAll(2, addLines);
 			
 			script = pbsWrite.buildScript(script, gpMins, nodes, threads, queue);
 			pbsWrite.writeScript(new File(localJobDir, "gp_bbp_parallel.pbs"), script);
@@ -221,7 +253,14 @@ class MPJ_BBP_RuptureScriptsGen {
 			if (bbpDataDir != null && !bbpDataDir.isEmpty())
 				argz += " --bbp-data-dir "+bbpDataDir;
 			
+			List<String> addLines = new ArrayList<>();
+			argz = MPJ_BBP_CatalogSimScriptGen.addBBP_EnvArgs(argz, addLines, remoteJobDir, nodeScratchDir,
+					sharedScratchDir, bbpCopyParentDir, bbpEnvFile);
+			
 			List<String> script = mpjWrite.buildScript(MPJ_BBP_ShakeMapSim.class.getName(), argz);
+			
+			if (!addLines.isEmpty())
+				script.addAll(2, addLines);
 			
 			script = pbsWrite.buildScript(script, mapMins, nodes, threads, queue);
 			pbsWrite.writeScript(new File(localJobDir, "map_bbp_parallel.pbs"), script);

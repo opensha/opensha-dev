@@ -9,6 +9,8 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.zip.ZipException;
+import java.util.zip.ZipFile;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -331,6 +333,12 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 			f.get();
 	}
 	
+	private static void validateZip(File zipFile) throws Exception {
+		ZipFile zip = new ZipFile(zipFile);
+		Preconditions.checkState(zip.entries().hasMoreElements(), "No entries!");
+		zip.close();
+	}
+	
 	private class Task implements Runnable {
 		
 		private int index;
@@ -346,8 +354,14 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				int eventID = event.getID();
 				File zipFile = getZipFile(eventID);
 				if (zipFile.exists()) {
-					debug(eventID+" is already done, skipping");
-					return;
+					try {
+						validateZip(zipFile);
+						debug(eventID+" is already done, skipping");
+						return;
+					} catch (Exception e) {
+						e.printStackTrace();
+						debug(eventID+" zip file exists, but won't open or is empty. Re-running. "+zipFile.getAbsolutePath());
+					}
 				}
 				File runDir;
 				if (resultsScratchDir == null) {
@@ -425,6 +439,22 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				
 				// zip it
 				FileUtils.createZipFile(zipFile, runDir, true);
+				try {
+					validateZip(zipFile);
+				} catch (Exception e) {
+					e.printStackTrace();
+					debug(eventID+" zip file didn't validate, trying again");
+					try {
+						Thread.sleep(5000);
+					} catch (InterruptedException e1) {}
+					FileUtils.createZipFile(zipFile, runDir, true);
+					try {
+						validateZip(zipFile);
+					} catch (Exception e1) {
+						debug(eventID+" zip failed again after rety, bailing");
+						throw ExceptionUtils.asRuntimeException(e1);
+					}
+				}
 				FileUtils.deleteRecursive(runDir);
 				debug("DONE cleanup for "+eventID);
 			} catch (IOException e) {

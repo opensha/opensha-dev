@@ -32,6 +32,7 @@ import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
@@ -62,6 +63,8 @@ class RupSpectraPageGen {
 	private RSQSimCatalog catalog;
 	private File outputDir;
 	private VelocityModel vm;
+	private double timeScale;
+	private boolean scaleVelocities;
 	
 	private ScalarIMR[] spectraGMPEs;
 	private File refBBPDir;
@@ -73,10 +76,12 @@ class RupSpectraPageGen {
 	private List<BBP_Site> shakemapSites;
 	private ScalarIMR shakemapGMPE;
 
-	public RupSpectraPageGen(RSQSimCatalog catalog, File outputDir, VelocityModel vm) {
+	public RupSpectraPageGen(RSQSimCatalog catalog, File outputDir, VelocityModel vm, double timeScale, boolean scaleVelocities) {
 		this.catalog = catalog;
 		this.outputDir = outputDir;
 		this.vm = vm;
+		this.timeScale = timeScale;
+		this.scaleVelocities = scaleVelocities;
 	}
 	
 	public void setRefBBP(File refBBPDir, String refName, ScalarIMR[] spectraGMPEs, EqkRupture gmpeRup) {
@@ -99,14 +104,41 @@ class RupSpectraPageGen {
 	public void generatePage(RSQSimEvent event, File eventBBPDir, List<BBP_Site> sites,
 			boolean rebuildGIF, boolean rebuildMaps) throws IOException, GMT_MapException {
 		int eventID = event.getID();
-		File eventDir = new File(outputDir, "event_"+eventID);
+		String eventDirName = "event_"+eventID;
+		if (timeScale != 1d) {
+			eventDirName += "_timeScale"+(float)timeScale;
+			if (scaleVelocities)
+				eventDirName += "_velScale";
+		}
+		File eventDir = new File(outputDir, eventDirName);
 		Preconditions.checkState(eventDir.exists() || eventDir.mkdir());
 		File resourcesDir = new File(eventDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		LinkedList<String> lines = new LinkedList<>();
 		
 		// header
-		lines.add("# Event "+eventID+", M"+twoDigitsDF.format(event.getMagnitude()));
+		if (timeScale != 1d) {
+			String title = "Event "+eventID+", M"+twoDigitsDF.format(event.getMagnitude())+", Time Scale Factor: "+(float)+timeScale;
+			if (scaleVelocities)
+				title += ", Velocities Scaled";
+			lines.add("# "+title);
+			lines.add("");
+			String str = "**NOTE: RSQSim Slip/Time function has been MODIFIED on this page. "
+					+ "Slip initiation for each patch are modified to be "+(float)timeScale+" times sooner.";
+			if (scaleVelocities)
+				str += " Slip velocities are also scaled by "+(float)+timeScale+"x, resulting in faster (but shorter lasting) slip.";
+			else
+				str += " Velocities remain the same, the slip time function is just shifted in time.";
+			str += "**";
+			lines.add(str);
+			
+			// also scale event first slip times
+			for (EventRecord rec : event)
+				rec.scaleElementTimeFirstSlips(timeScale, event.getTime());
+		} else {
+			lines.add("# Event "+eventID+", M"+twoDigitsDF.format(event.getMagnitude()));
+			lines.add("");
+		}
 		lines.add("");
 		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 		lines.add("");
@@ -159,13 +191,31 @@ class RupSpectraPageGen {
 		}
 		List<String> faultNames = new ArrayList<>();
 		List<Double> faultMoments = new ArrayList<>();
+		double totalMoment = 0d;
+		double totalArea = 0d;
+		int totalPatches = 0;
+		double maxSlips = 0d;
 		for (String fault : sectMoments.keySet()) {
 			faultNames.add(fault);
-			faultMoments.add(sectMoments.get(fault));
+			double moment = sectMoments.get(fault);
+			faultMoments.add(moment);
+			totalMoment += moment;
+			totalArea += sectAreas.get(fault);
+			totalPatches += sectPatchCounts.get(fault);
+			maxSlips = Math.max(maxSlips, sectMaxSlips.get(fault));
 		}
 		faultNames = ComparablePairing.getSortedData(faultMoments, faultNames);
 		Collections.reverse(faultNames);
 		DecimalFormat momentDF = new DecimalFormat("0.00E0");
+		if (faultNames.size() > 1) {
+			// add total
+			String totalName = "*(Total)*";
+			faultNames.add(0, totalName);
+			sectAreas.put(totalName, totalArea);
+			sectPatchCounts.put(totalName, totalPatches);
+			sectMoments.put(totalName, totalMoment);
+			sectMaxSlips.put(totalName, maxSlips);
+		}
 		for (String fault : faultNames) {
 			table.initNewLine().addColumn(fault);
 			table.addColumn(twoDigitsDF.format(sectAreas.get(fault)*1e-6)+" km^2"); // to km^2
@@ -202,6 +252,8 @@ class RupSpectraPageGen {
 		}
 		lines.add("");
 		RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
+		if (timeScale != 1d)
+			func = func.getTimeScaledFunc(timeScale, scaleVelocities);
 		// slip time plot
 		String rupPlotPrefix = "rupture_plot_"+eventID;
 		RupturePlotGenerator.writeSlipPlot(event, func, resourcesDir, rupPlotPrefix, bbpSourceRect, bbpSourceHypo, gmpeSurf);
@@ -248,6 +300,16 @@ class RupSpectraPageGen {
 		lines.add("");
 		lines.add("## Spectra Plots");
 		lines.add(topLink); lines.add("");
+		
+		File noScaleBBPDir = null;
+		if (timeScale != 1d) {
+			noScaleBBPDir = RSQSimBBP_Config.getEventBBPDir(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
+					RSQSimBBP_Config.SRF_DT, 1d, false);
+			if (!noScaleBBPDir.exists())
+				noScaleBBPDir = null;
+			else
+				System.out.println("Found unscaled reference BBP dir: "+noScaleBBPDir.getAbsolutePath());
+		}
 		
 		for (BBP_Site site : sites) {
 			String siteName = RSQSimBBP_Config.siteCleanName(site);
@@ -310,7 +372,18 @@ class RupSpectraPageGen {
 					for (int i=0; i<numSims; i++)
 						refSpectra.add(refLoader.readFAS(site, i));
 					DiscretizedFunc dataSpectra = SpectraPlotter.loadFAS(fasFile);
-					SpectraPlotter.plotMultiFAS(refSpectra, refName, dataSpectra, "RSQSim", title, resourcesDir, prefix);
+					
+					DiscretizedFunc[] otherSpectra = new DiscretizedFunc[0];
+					if (noScaleBBPDir != null) {
+						try {
+							File noScaleFASFile = SpectraPlotter.findFASFile(noScaleBBPDir, site.getName());
+							otherSpectra = new DiscretizedFunc[] { SpectraPlotter.loadFAS(noScaleFASFile) };
+							otherSpectra[0].setName("RSQSim (unscaled)");
+						} catch (Exception e) {
+						}
+					}
+					
+					SpectraPlotter.plotMultiFAS(refSpectra, refName, dataSpectra, "RSQSim", title, resourcesDir, prefix, otherSpectra);
 				} else {
 					SpectraPlotter.plotFAS(fasFile, resourcesDir, prefix);
 				}
@@ -346,8 +419,23 @@ class RupSpectraPageGen {
 				for (int i=0; i<numSims; i++)
 					refSpectra.add(refLoader.readRotD50(site, i));
 				DiscretizedFunc dataSpectra = SpectraPlotter.loadRotD50(rotDFile);
+				
+				DiscretizedFunc[] otherSpectra = new DiscretizedFunc[0];
+				if (noScaleBBPDir != null) {
+					try {
+						File noScaleRotDFile;
+						if (hasRD100)
+							noScaleRotDFile = SpectraPlotter.findRotD100File(noScaleBBPDir, site.getName());
+						else
+							noScaleRotDFile = SpectraPlotter.findRotD50File(noScaleBBPDir, site.getName());
+						otherSpectra = new DiscretizedFunc[] { SpectraPlotter.loadRotD50(noScaleRotDFile) };
+						otherSpectra[0].setName("RSQSim (unscaled)");
+					} catch (Exception e) {
+					}
+				}
+				
 				SpectraPlotter.plotMultiRotD50(refSpectra, refName, dataSpectra, "RSQSim", title,
-						resourcesDir, prefix, gmpeSpectra);
+						resourcesDir, prefix, gmpeSpectra, otherSpectra);
 			} else {
 				SpectraPlotter.plotRotD(rotDFile, resourcesDir, prefix, true, hasRD100, gmpeSpectra);
 			}
@@ -584,11 +672,15 @@ class RupSpectraPageGen {
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
 //		int eventID = 81854;
-//		int eventID = 1670183;
-		int eventID = 2637969;
+		int eventID = 1670183;
+//		int eventID = 2637969;
 		
-		File eventBBPDir = new File(new File(catalog.getCatalogDir(), RSQSimBBP_Config.EVENT_SRF_DIR_NAME),
-				"event_"+eventID+"_"+RSQSimBBP_Config.SRF_DT+"s_"+RSQSimBBP_Config.SRF_INTERP_MODE.name()+"_bbp");
+		double timeScale = 2d;
+		boolean scaleVelocities = true;
+		
+		File eventBBPDir = RSQSimBBP_Config.getEventBBPDir(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
+				RSQSimBBP_Config.SRF_DT, timeScale, scaleVelocities);
+		System.out.println("Event BBP dir: "+eventBBPDir.getAbsolutePath()+" exists ? "+eventBBPDir.exists());
 		
 		// find BBP parallel dir
 		File refBBPDir = null;
@@ -611,6 +703,8 @@ class RupSpectraPageGen {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalog.getCatalogDir().getName()) && name.contains(eventID+"")
 					&& name.contains("shakemap")) {
+				if (timeScale != 1d && !name.contains("-timeScale"+(float)timeScale) && (!scaleVelocities || !name.contains("-velScale")))
+					continue;
 				File shakemapFile = new File(dir, "results_rotD.zip");
 				if (!shakemapFile.exists())
 					shakemapFile = new File(dir, "results.zip");
@@ -627,7 +721,7 @@ class RupSpectraPageGen {
 		if (refBBPDir != null)
 			sites = BBP_Site.readFile(refBBPDir);
 		else
-			sites = RSQSimBBP_Config.getStandardSites(RSQSimBBP_Config.generateBBP_Inputs(catalog, event, false));
+			sites = RSQSimBBP_Config.getStandardSites(RSQSimBBP_Config.generateBBP_Inputs(catalog, event, false, timeScale, scaleVelocities));
 		
 		boolean runBBP = true;
 		if (eventBBPDir.exists()) {
@@ -650,7 +744,7 @@ class RupSpectraPageGen {
 		}
 		if (runBBP) {
 			System.out.println("Need to run the BBP...");
-			RSQSimBBP_Config.runBBP(catalog, event, sites);
+			RSQSimBBP_Config.runBBP(catalog, event, sites, timeScale, scaleVelocities);
 		}
 		
 		ScalarIMR[] gmpes = { AttenRelRef.ASK_2014.instance(null), AttenRelRef.BSSA_2014.instance(null),
@@ -664,7 +758,7 @@ class RupSpectraPageGen {
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		RupSpectraPageGen gen = new RupSpectraPageGen(catalog, catalogOutputDir, vm);
+		RupSpectraPageGen gen = new RupSpectraPageGen(catalog, catalogOutputDir, vm, timeScale, scaleVelocities);
 		
 		EqkRupture gmpeRup = null;
 		
