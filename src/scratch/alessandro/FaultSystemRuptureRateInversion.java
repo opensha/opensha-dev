@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -64,6 +65,9 @@ import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
+import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;
+import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
+import scratch.UCERF3.simulatedAnnealing.completion.TimeCompletionCriteria;
 import scratch.alessandro.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
 
@@ -673,11 +677,12 @@ public class FaultSystemRuptureRateInversion {
 	/**
 	 * This does the inversion using simulated annealing
 	 */
-	public void doInversionSA(long numIterations, boolean initStateFromAprioriRupRates) {
+	public void doInversionSA(long numIterations, boolean initStateFromAprioriRupRates, long randomSeed) {
 		
 		
 		modelRunInfoString = "\nInversion Type = Simulated Annearling with\n\n\tnumIterations = "+
-				numIterations+"\n\tinitStateFromAprioriRupRates = "+initStateFromAprioriRupRates+"\n";
+				numIterations+"\n\tinitStateFromAprioriRupRates = "+initStateFromAprioriRupRates+
+				"\n\trandomSeed = "+randomSeed+"\n";
 
 		// set the intial state
 		double[] initialState;
@@ -696,7 +701,10 @@ public class FaultSystemRuptureRateInversion {
 		}
 		
 		// SOLVE THE INVERSE PROBLEM
-		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState, numIterations);
+		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState, numIterations, randomSeed);
+		
+		// Not sure how the following works (not faster but lower prediction error); and doesn't appear to take a seed
+//		rupRateSolution = getSimulatedAnnealingThreadedSolution(C_wted, d_wted, initialState, numIterations, randomSeed);
 
 		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 		if(minRupRate >0.0)
@@ -825,13 +833,31 @@ public class FaultSystemRuptureRateInversion {
 	
 
 	
-private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState, long numIterations) {
-	SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
-	SerialSimulatedAnnealing simulatedAnnealing =new SerialSimulatedAnnealing(matrixC, d, initialState);
-	simulatedAnnealing.iterate(numIterations);
-	return simulatedAnnealing.getBestSolution();
-}
-	
+	private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState, long numIterations,  long randomSeed) {
+		SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
+		SerialSimulatedAnnealing simulatedAnnealing =new SerialSimulatedAnnealing(matrixC, d, initialState);
+		simulatedAnnealing.setRandom(new Random(randomSeed));
+		simulatedAnnealing.iterate(numIterations);
+		return simulatedAnnealing.getBestSolution();
+	}
+
+
+
+	private static double[] getSimulatedAnnealingThreadedSolution(double[][] C, double[] d, double[] initialState, long numIterations,  long randomSeed) {
+		SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
+		//this is the "sub completion criteria" - the amount of time (or iterations) between synchronization
+		CompletionCriteria subCompetionCriteria = TimeCompletionCriteria.getInSeconds(1); // 1 second;
+		// this will use all available processors
+		int numThreads = Runtime.getRuntime().availableProcessors();
+
+		ThreadedSimulatedAnnealing simulatedAnnealing = new ThreadedSimulatedAnnealing(
+				matrixC, d, initialState, numThreads, subCompetionCriteria);
+//		simulatedAnnealing.setRandom(new Random(randomSeed));
+		simulatedAnnealing.iterate(numIterations);
+		return simulatedAnnealing.getBestSolution();
+	}
+
+
 	
 	
 	/**
@@ -906,7 +932,10 @@ private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, 
 				if(rupSectionMatrix[seg][rup]==1) {
 					finalSectSlipRate[seg] += rupRateSolution[rup]*sectSlipInRup[seg][rup];
 					finalSectEventRate[seg]+=rupRateSolution[rup];
-					finalPaleoVisibleSectEventRate[seg]+=rupRateSolution[rup]*getProbVisible(rupMeanMag[rup]);
+					if(applyProbVisible)
+						finalPaleoVisibleSectEventRate[seg]+=rupRateSolution[rup]*getProbVisible(rupMeanMag[rup]);
+					else
+						finalPaleoVisibleSectEventRate[seg]+=rupRateSolution[rup];
 				}
 		}
 		

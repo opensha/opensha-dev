@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.HanksBakun2002_MagAreaRel;
@@ -327,9 +328,11 @@ public class WasatchInversion {
 //		fltSysRupInversion.doInversionNNLS();
 		
 		// Simulated annealing
-		long numIterations = (long) 1e4;
+		long numIterations = (long) 1e5;
 		boolean initStateFromAprioriRupRates = false;
-		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates);
+		long randomSeed = System.currentTimeMillis();
+//		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
+		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
