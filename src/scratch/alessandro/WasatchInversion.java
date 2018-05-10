@@ -286,7 +286,7 @@ public class WasatchInversion {
 
 
 		try{
-			FileWriter fw = new FileWriter(APRIORI_RUP_RATE_FROM_SECT_CONSTR_FILENAME);
+			FileWriter fw = new FileWriter(ROOT_DATA_DIR+APRIORI_RUP_RATE_FROM_SECT_CONSTR_FILENAME);
 			int numRuptures = rupSectionMatrix[0].length;
 			int numSections = rupSectionMatrix.length;
 			System.out.println(numRuptures+"\t"+numSections);
