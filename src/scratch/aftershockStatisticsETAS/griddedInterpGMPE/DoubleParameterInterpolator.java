@@ -13,9 +13,8 @@ import scratch.aftershockStatisticsETAS.griddedInterpGMPE.AbstractGMPEInterpolat
 
 public class DoubleParameterInterpolator extends EvenlySpacedDouble {
 
-	public DoubleParameterInterpolator(String paramName, double min, double max, int numBins,
-			boolean logXInterp, boolean logGridding) {
-		super(paramName, min, max, numBins, logXInterp, logGridding);
+	public DoubleParameterInterpolator(String paramName, double min, double max, int numBins) {
+		super(paramName, min, max, numBins);
 	}
 
 	@Override

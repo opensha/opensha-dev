@@ -91,12 +91,12 @@ public class ETAS_ShakingForecastCalc {
 		
 		int numMag = (int)((maxMag - refMag)/magDelta + 0.5) + 1;
 		
-		DistanceInterpolator distInterp = new DistanceInterpolator(0d, maxSourceDist, 100);
+		DistanceInterpolator distInterp = new DistanceInterpolator(true, calcRegion.getSpacing()/2, maxSourceDist, 100);
 		
 		DoubleParameterInterpolator vs30Interp = null;
 		if (vs30Provider != null)
 			vs30Interp = new DoubleParameterInterpolator(
-				Vs30_Param.NAME, 180, 760, 20, false, false); // matches Wald Allen range
+				Vs30_Param.NAME, 180, 760, 20); // matches Wald Allen range
 		
 		GriddedInterpGMPE_Calc calc = new GriddedInterpGMPE_Calc(gmpe, xVals, b, refMag, maxMag, numMag, distInterp, vs30Interp);
 		calc.setPromptForLongCalc(prompt);

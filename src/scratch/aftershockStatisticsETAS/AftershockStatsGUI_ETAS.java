@@ -4850,6 +4850,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 		
 		double maxSourceDist = 200d;
+		
+		for (Location calcLoc : calcRegion.getBorder())
+			for (Location rateLoc : rateModel.getRegion().getBorder())
+				maxSourceDist = Math.max(maxSourceDist, LocationUtils.horzDistanceFast(calcLoc, rateLoc));
+		System.out.println("Maximum source distance: "+(float)maxSourceDist);
 
 		DiscretizedFunc[] curves; //defining this globally
 		GriddedGeoDataSet map;

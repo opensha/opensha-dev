@@ -12,10 +12,10 @@ import org.opensha.sha.imr.ScalarIMR;
 
 import com.google.common.base.Preconditions;
 
-public class DistanceInterpolator extends AbstractGMPEInterpolation.EvenlySpacedDouble {
+public class DistanceInterpolator extends AbstractGMPEInterpolation.LogSpacedDouble {
 
-	public DistanceInterpolator(double minDist, double maxDist, int numBins) {
-		super("Horizontal Distance", minDist, maxDist, numBins, false, false);
+	public DistanceInterpolator(boolean includeZero, double minNonZeroDist, double maxDist, int numBins) {
+		super("Horizontal Distance", minNonZeroDist, maxDist, numBins, includeZero);
 	}
 
 	@Override

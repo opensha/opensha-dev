@@ -436,7 +436,8 @@ public class GriddedInterpGMPE_Calc {
 //		IntensityMeasureLevelInterpolator imlInterp =
 //				new IntensityMeasureLevelInterpolator(gmpe.getIntensityMeasure().getName(), xVals, true);
 		
-		DistanceInterpolator distInterp = new DistanceInterpolator(0d, 200d, 100);
+		double calcSpacing = 0.1;
+		DistanceInterpolator distInterp = new DistanceInterpolator(true, calcSpacing, 500d, 100);
 		
 		double refMag = 5d;
 		double maxMag = 8.5d;
@@ -454,7 +455,7 @@ public class GriddedInterpGMPE_Calc {
 		DoubleParameterInterpolator vs30Interp = null;
 		if (vs30Provider != null)
 			vs30Interp = new DoubleParameterInterpolator(
-				Vs30_Param.NAME, 180, 760, 20, false, false); // matches Wald Allen range
+				Vs30_Param.NAME, 180, 760, 20); // matches Wald Allen range
 		
 		double b = 1;
 		
@@ -487,7 +488,6 @@ public class GriddedInterpGMPE_Calc {
 		erf.updateForecast();
 		Preconditions.checkState(erf.getTimeSpan().getDuration() == durationYears);
 		
-		double calcSpacing = 0.1;
 		GriddedRegion calcRegion = new GriddedRegion(new Region(new Location(griddedTotCumRates.getMaxLat(), griddedTotCumRates.getMaxLon()),
 						new Location(griddedTotCumRates.getMinLat(), griddedTotCumRates.getMinLon())), calcSpacing, null);
 		List<Site> sites = new ArrayList<>();

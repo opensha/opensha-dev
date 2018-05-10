@@ -24,19 +24,11 @@ public abstract class AbstractGMPEInterpolation<E> implements Iterable<E> {
 		
 		private final double min, max, delta;
 		private final int numBins;
-		private final boolean logGridding;
-		private final boolean logXInterp;
 
-		EvenlySpacedDouble(String name, double min, double max, int numBins,
-				boolean logXInterp, boolean logGridding) {
+		EvenlySpacedDouble(String name, double min, double max, int numBins) {
 			super(name);
-			if (logGridding) {
-				this.min = Math.log(min);
-				this.max = Math.log(max);
-			} else {
-				this.min = min;
-				this.max = max;
-			}
+			this.min = min;
+			this.max = max;
 			this.numBins = numBins;
 			Preconditions.checkArgument(min <= max, "Min must be <= max");
 			if (min < max) {
@@ -46,8 +38,6 @@ public abstract class AbstractGMPEInterpolation<E> implements Iterable<E> {
 				Preconditions.checkArgument(numBins == 1, "Num bins must be 1 if min == max");
 				this.delta = 0;
 			}
-			this.logGridding = logGridding;
-			this.logXInterp = logXInterp;
 		}
 
 		@Override
@@ -59,14 +49,10 @@ public abstract class AbstractGMPEInterpolation<E> implements Iterable<E> {
 		public Double getValue(int index) {
 			if (index < 0 || index > ( numBins -1 ))
 				throw new IndexOutOfBoundsException("no point at index "+index);
-			if (logGridding)
-				return Math.exp((min + delta*index));
 			return min + delta*index;
 		}
 		
 		private int getClosestIndex(double value) {
-			if (logGridding)
-				value = Math.log(value);
 			double iVal = PRECISION_SCALE * (value - min) / delta;
 			int i = (delta == 0) ? 0 : (int) Math.round(iVal);
 			return (i<0) ? 0 : (i>=numBins) ? numBins-1 : i;
@@ -91,19 +77,12 @@ public abstract class AbstractGMPEInterpolation<E> implements Iterable<E> {
 				return binBefore;
 			double valueAfter = getValue(binBefore+1);
 			// actual interp
-			double beforeDelta;
-			double afterDelta;
-			if (logXInterp) {
-				beforeDelta = Math.log(value) - Math.log(valueBefore);
-				afterDelta = Math.log(valueAfter) - Math.log(value);
-			} else {
-				beforeDelta = value - valueBefore;
-				afterDelta = valueAfter - value;
-			}
-			Preconditions.checkState(beforeDelta >= 0, "Bad beforeDelta=%s for %s with range [%s %s], log=%s, binBefore=%s",
-					beforeDelta, value, min, max, logXInterp, binBefore);
-			Preconditions.checkState(afterDelta >= 0, "Bad afterDelta=%s for %s with range [%s %s], log=%s, binBefore=%s",
-					afterDelta, value, min, max, logXInterp, binBefore);
+			double beforeDelta = value - valueBefore;
+			double afterDelta = valueAfter - value;
+			Preconditions.checkState(beforeDelta >= 0, "Bad beforeDelta=%s for %s with range [%s %s], binBefore=%s",
+					beforeDelta, value, min, max, binBefore);
+			Preconditions.checkState(afterDelta >= 0, "Bad afterDelta=%s for %s with range [%s %s], binBefore=%s",
+					afterDelta, value, min, max, binBefore);
 //			System.out.println(value+": "+binBefore+" "+beforeDelta+" "+afterDelta);
 			double index = binBefore + beforeDelta/(beforeDelta + afterDelta);
 			Preconditions.checkState(index >= 0 && index <= numBins-1, "Index outside bounds. value=%s, binBefore=%s, beforeDelta=%s",
@@ -121,6 +100,73 @@ public abstract class AbstractGMPEInterpolation<E> implements Iterable<E> {
 		public double getMax() {
 			return max;
 		}
+	}
+	
+	public static abstract class LogSpacedDouble extends AbstractGMPEInterpolation<Double> {
+		
+		private boolean includeZero;
+		
+		private EvenlySpacedDouble interp;
+
+		LogSpacedDouble(String name, double minNonZero, double max, int numBins, boolean includeZero) {
+			super(name);
+			Preconditions.checkState(minNonZero > 0);
+			Preconditions.checkState(max > minNonZero);
+			this.includeZero = includeZero;
+			
+			interp = new EvenlySpacedDouble(name, Math.log(minNonZero), Math.log(max), numBins) {
+				
+				@Override
+				public void setGMPE_Params(ScalarIMR gmpe, ProbEqkSource source, int index) {
+					LogSpacedDouble.this.setGMPE_Params(gmpe, source, index);
+				}
+				
+				@Override
+				public Double detectCurrentVal(ScalarIMR gmpe, Site site) {
+					return LogSpacedDouble.this.detectCurrentVal(gmpe, site);
+				}
+			};
+		}
+
+		@Override
+		public int getNumBins() {
+			int bins = interp.getNumBins();
+			if (includeZero)
+				bins++;
+			return bins;
+		}
+
+		@Override
+		public Double getValue(int index) {
+			if (includeZero) {
+				if (index == 0)
+					return 0d;
+				return Math.exp(interp.getValue(index-1));
+			}
+			return Math.exp(interp.getValue(index));
+		}
+
+		@Override
+		public double getInterpolatedBinIndex(Double value) {
+			if (includeZero) {
+				Preconditions.checkState(value >= 0d);
+				if (value == 0d)
+					return 0d;
+				double logValue = Math.log(value);
+				if (logValue < interp.getMin()) {
+					// we're between zero and the minimum value of the log interpolator
+					// do a linear interpolation between zero and the minimum value
+					double index = value/Math.exp(interp.getMin());
+					Preconditions.checkState(index >= 0 && index <= 1);
+					return index;
+				} else {
+					return 1d + interp.getInterpolatedBinIndex(logValue);
+				}
+			}
+			Preconditions.checkState(value > 0d);
+			return interp.getInterpolatedBinIndex(Math.log(value));
+		}
+		
 	}
 	
 	public static abstract class Discrete<E> extends AbstractGMPEInterpolation<E> {
