@@ -304,8 +304,7 @@ public class GriddedInterpGMPE_Calc {
 						userWarned = true;
 						// launch a dialog as a new thread
 						String message = "It will take approximately " + (int) timeEstimate + " seconds to complete each map at this resolution.\n"
-								+ "If plotting MMI multiply this estimate by a factor of 2.\n"
-								+ "If plotting Levels with Week/Month/Day enabled, multiply by another factor of 4\n\n";
+								+ "If plotting MMI multiply this estimate by a factor of 2.\n";
 						message += "Are you sure you wish to continue with the current grid spacing of \u0394 (km)?";
 						
 						String title = "Warning";
