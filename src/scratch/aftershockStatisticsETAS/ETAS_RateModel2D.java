@@ -34,7 +34,7 @@ public class ETAS_RateModel2D {
 	
 	public ETAS_RateModel2D(ETAS_AftershockModel forecastModel, double plotDuration, double spacing, double stressDrop, double mainshockFitDuration, String fitType, FaultTrace faultTrace){
 		this.forecastModel = forecastModel;
-		this.rateModel = calculateRateModel( plotDuration,  spacing,  stressDrop,  mainshockFitDuration,  fitType,  faultTrace);
+		this.rateModel = calculateRateModel( plotDuration, spacing, stressDrop,  mainshockFitDuration,  fitType,  faultTrace);
 	}
 	
 	/**
@@ -89,6 +89,7 @@ public class ETAS_RateModel2D {
 			lonmin = lon0 - mainshockRadius*mapSizeInRuptureLengths/geomFactor/111.111;
 			lonmax = lon0 + mainshockRadius*mapSizeInRuptureLengths/geomFactor/111.111;
 		}
+		
 		GriddedRegion griddedRegion = new GriddedRegion(new Location(latmin, lonmin),
 				new Location(latmax, lonmax), spacing, null);
 		GriddedGeoDataSet gridData = new GriddedGeoDataSet(griddedRegion, false);

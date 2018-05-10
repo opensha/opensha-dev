@@ -3,8 +3,10 @@ package scratch.aftershockStatisticsETAS;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.optim.MaxEval;
 import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
@@ -14,12 +16,14 @@ import org.apache.commons.math3.optim.univariate.UnivariateObjectiveFunction;
 import org.apache.commons.math3.optim.univariate.UnivariateOptimizer;
 import org.apache.commons.math3.optim.univariate.UnivariatePointValuePair;
 import org.apache.commons.math3.special.Gamma;
+import org.apache.commons.math3.util.DoubleArray;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.siteData.impl.TectonicRegime;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
+import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.gui.infoTools.CalcProgressBar;
@@ -355,21 +359,58 @@ public abstract class ETAS_AftershockModel {
 
 		ArbitrarilyDiscretizedFunc cumFunc = new ArbitrarilyDiscretizedFunc();
 
-		double baseCount = 0, expCount = 0;
-
-		double[] tvec;
-		if (tMinDays > 1e-3){
-			tvec = ETAS_StatsCalc.logspace(tMinDays, tMaxDays, numPts);
-		} else if (tMaxDays > 1e-3){
-			tvec = ETAS_StatsCalc.logspace(1e-3, tMaxDays, numPts);
-		} else {
-			tvec = ETAS_StatsCalc.linspace(tMinDays, tMaxDays, numPts);
-		}
+		double expCount = 0;
 
 		// get number of events observed prior to forecastWindow
 		ObsEqkRupList subList = aftershockList.getRupsAboveMag(magMin)
 				.getRupsBefore((long)(mainShock.getOriginTime() + tMinDays*ETAS_StatsCalc.MILLISEC_PER_DAY));
-		baseCount = subList.size();
+		int baseCount = subList.size();
+		
+		// get number of aftershocks in forecastWindow
+		subList = aftershockList.getRupsAboveMag(magMin)
+				.getRupsBetween((long)(tMinDays*ETAS_StatsCalc.MILLISEC_PER_DAY), (long)(tMaxDays*ETAS_StatsCalc.MILLISEC_PER_DAY));
+		
+		double[] tvec, tas, tvecLog, tvecLin;
+		
+		tas = ETAS_StatsCalc.getDaysSinceMainShockArray(mainShock, subList);
+		int totalCount = tas.length;
+		
+		// use a minimum of numPts pts, but start with the times of the actual aftershocks
+		if (totalCount < numPts) {
+			// pad it with log and lin-spaced points
+			if(D) System.out.println("padding time vector");
+			int remainingCount = numPts - totalCount;
+			int logCount = remainingCount/2;
+			int linCount = remainingCount - logCount;
+			
+			if (tMinDays > 1e-3){
+				tvecLog = ETAS_StatsCalc.logspace(tMinDays, tMaxDays, logCount);
+			} else if (tMaxDays > 1e-3){
+				tvecLog = ETAS_StatsCalc.logspace(1e-3, tMaxDays, logCount);
+			} else {
+				tvecLog = new double[0];
+				linCount = remainingCount;
+			}
+			
+			tvecLin = ETAS_StatsCalc.linspace(tMinDays, tMaxDays, linCount);
+			
+			tvec = ArrayUtils.addAll(ArrayUtils.addAll(tas, tvecLin), tvecLog);
+			Arrays.sort(tvec);
+		} else {
+			//randomly thin the aftershock list
+			if(D) System.out.println("thinning time vector");
+			Collections.shuffle(Arrays.asList(tas));
+			tvec = ArrayUtils.subarray(tas, 0, numPts);
+		}
+
+//		
+//		if (tMinDays > 1e-3){
+//			tvec = ETAS_StatsCalc.logspace(tMinDays, tMaxDays, numPts);
+//		} else if (tMaxDays > 1e-3){
+//			tvec = ETAS_StatsCalc.logspace(1e-3, tMaxDays, numPts);
+//		} else {
+//			tvec = ETAS_StatsCalc.linspace(tMinDays, tMaxDays, numPts);
+//		}
 
 		for(double t : tvec){
 			//compute expected number for comparison with known quakes (plot fit)

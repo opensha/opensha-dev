@@ -1028,24 +1028,28 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			setEnabledStyle(mapLevelParam, true);
 		
 			if (intensityTypeParam.getValue() == IntensityType.PGA) {
+				mapLevelParam.setConstraint(new DoubleConstraint(3,100));
 				mapLevelParam.setValue(10);
 				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
 				editor.setTitle("%g");
 				editor.repaint();
 				editor.refreshParamEditor();
 			} else if (intensityTypeParam.getValue() == IntensityType.PGV) {
+				mapLevelParam.setConstraint(new DoubleConstraint(2,100));
 				mapLevelParam.setValue(10);
 				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
 				editor.setTitle("cm/s");
 				editor.repaint();
 				editor.refreshParamEditor();
 			} else if (intensityTypeParam.getValue() == IntensityType.PSA) {
+				mapLevelParam.setConstraint(new DoubleConstraint(3,100));
 				mapLevelParam.setValue(10);
 				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
 				editor.setTitle("%g");
 				editor.repaint();
 				editor.refreshParamEditor();
 			} else if (intensityTypeParam.getValue() == IntensityType.MMI) {
+				mapLevelParam.setConstraint(new DoubleConstraint(4,10)); 
 				AbstractParameterEditor<?> editor = (AbstractParameterEditor<?>) mapLevelParam.getEditor();
 				mapLevelParam.setValue(6);
 				editor.setTitle("MMI");
@@ -2215,7 +2219,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private ArbitrarilyDiscretizedFunc getModelFit(ETAS_AftershockModel model, double magMin){
 		double tMin = dataStartTimeParam.getValue();
 		double tMax = dataEndTimeParam.getValue();
-		if (tMax > tMin+1e-9) tMax += -1e-9;
+		if (tMax > tMin+1e-9) tMax += -1e-9;	//this is related to preventing log of zero
 		
 		if(verbose) System.out.println("Plotting fit for "+ tMin +" - "+ tMax + " days");
 		int numPts = 100;
@@ -4264,6 +4268,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 			// calculate gmpe probabilities for one day
 			GriddedGeoDataSet gmpeProbModel = getIntensityModel(forecastRateModel, value, isMapOfProbabilities, true);
+			if (gmpeProbModel == null) return; //something went wrong. cancel the computation
 
 			if(D) {
 			//compute rate sum for checking
@@ -4314,8 +4319,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			double minColorLevel = 0;
 			if (mapTypeParam.getValue()==MapType.PROBABILITIES) {
 				minColorLevel = 0;
-				minContourLevel = 1;
-				maxContourLevel = 3;
+				minContourLevel = 5;
+				maxContourLevel = 6;
 			} else if (mapTypeParam.getValue()==MapType.LEVEL) {
 				switch (intensityTypeParam.getValue()) {
 					case MMI:
@@ -4459,7 +4464,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						
 						// clean up the graph panel
 						Component buttonPanel = forecastMapGraph.getButtonControlPanel();
-						buttonPanel.setVisible(true);
+						buttonPanel.setVisible(false);
 						GraphPanel graphPanel = forecastMapGraph.getGraphPanel();
 						graphPanel.getComponent(2).setVisible(false);
 						setupGP(forecastMapGraph);
@@ -4639,7 +4644,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						
 						// clean up the graph panel
 						Component buttonPanel = forecastGraph.getButtonControlPanel();
-						buttonPanel.setVisible(true); // get rid of the button panel
+						buttonPanel.setVisible(false); // get rid of the button panel
 						GraphPanel graphPanel = forecastGraph.getGraphPanel();
 						graphPanel.getComponent(2).setVisible(false);	//get rid of the other stuff too
 
@@ -4680,11 +4685,15 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			// first get the PGA model
 			intensityTypeParam.setValue(IntensityType.PGA);
 			GriddedGeoDataSet pgaMap = getIntensityModel(rateModel, pga, isMapOfProbabilities, prompt);
-
+			if (pgaMap == null)
+				return null;
+			
 			// then get the PGV model
 			intensityTypeParam.setValue(IntensityType.PGV);
 			GriddedGeoDataSet pgvMap = getIntensityModel(rateModel, pgv, isMapOfProbabilities, false);
-
+			if (pgvMap == null)
+				return null;
+			
 			// put things back the way they were
 //			mapLevelParam.setValue(level);
 			intensityTypeParam.setValue(IntensityType.MMI);
@@ -4726,9 +4735,9 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				if(!Doubles.isFinite(mmi))
 					System.err.println(String.format("Bad MMI=%s for PGA=%s, PGV=%s. MMI map may have errors", mmi, pga, pgv));
 				
-//				if (mmi == 1d)
-//					// will speed things up
-//					mmi = Double.NaN;
+				if (mmi == 1d)
+					// will speed things up
+					mmi = Double.NaN;
 
 				mmiMap.set(index, mmi);
 			}
@@ -4754,9 +4763,9 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				System.err.println(String.format("Bad MMI probability (%s) for pgaProb= %s and pgvProb=%s",
 				mmiProb, pgaProb, pgvProb));
 		
-//		if (mmiProb == 0d)
-//			// will speed things up
-//			mmiProb = Double.NaN;
+		if (mmiProb == 0d)
+			// will speed things up
+			mmiProb = Double.NaN;
 		
 		return mmiProb;
 	}
@@ -4869,7 +4878,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				if (pgvCurves == null) {
 					curves = ETAS_ShakingForecastCalc.calcForecast(calcRegion, newRateModel, minMag, maxMag, bParam.getValue(), gmpe, mechWts,
 							maxSourceDist, vs30Provider, prompt);
-					pgvCurves = curves.clone();
+					if (curves != null) pgvCurves = curves.clone();
 				} else {
 					curves = pgvCurves;
 				}
@@ -4877,7 +4886,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				if (pgaCurves == null) {
 					curves = ETAS_ShakingForecastCalc.calcForecast(calcRegion, newRateModel, minMag, maxMag, bParam.getValue(), gmpe, mechWts,
 							maxSourceDist, vs30Provider, prompt);
-					pgaCurves = curves.clone();
+					if (curves != null) pgaCurves = curves.clone();
 				} else {
 					curves = pgaCurves;
 				}
@@ -4885,7 +4894,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				if (psaCurves == null) {
 					curves = ETAS_ShakingForecastCalc.calcForecast(calcRegion, newRateModel, minMag, maxMag, bParam.getValue(), gmpe, mechWts,
 							maxSourceDist, vs30Provider, prompt);
-					psaCurves = curves.clone();
+					if (curves != null) psaCurves = curves.clone();
 				} else {
 					curves = psaCurves;
 				}
