@@ -272,6 +272,8 @@ public class GriddedInterpGMPE_Calc {
 			for (int s=0; s<sites.size(); s++) {
 				Site site = sites.get(s);
 				double dist = LocationUtils.horzDistanceFast(sourceLoc, site.getLocation());
+				if (dist > distInterp.getMax())
+					continue;
 				indexes[0] = distInterp.getInterpolatedBinIndex(dist);
 				
 				for (int j=1; j<allInterps.size()-1; j++)
