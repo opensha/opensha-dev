@@ -167,6 +167,16 @@ public abstract class AbstractGMPEInterpolation<E> implements Iterable<E> {
 			return interp.getInterpolatedBinIndex(Math.log(value));
 		}
 		
+		public double getMin() {
+			if (includeZero)
+				return 0d;
+			return Math.exp(interp.getMin());
+		}
+		
+		public double getMax() {
+			return Math.exp(interp.getMax());
+		}
+		
 	}
 	
 	public static abstract class Discrete<E> extends AbstractGMPEInterpolation<E> {
