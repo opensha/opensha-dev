@@ -350,7 +350,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param magAreaRel
 	 * @param relativeSectRateWt - weight on segment rate equations (relative to slip rate)
 	 * @param relative_aPrioriRupWt - weight on a-priori rates (relative to slip rate)
-	 * @param relative_smoothnessWt - weight on smoothness equations (relative to slip rate)
+	 * @param aPrioriRupRatesFilename - filename for aPriori rupture rates
 	 * @param wtedInversion - apply data uncertainties?
 	 * @param minRupRate - constrain all rupture rates to be greater than this value
 	 * @param applyProbVisible - account for likelihood that Paleoseismology will see the rupture

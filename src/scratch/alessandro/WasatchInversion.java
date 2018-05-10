@@ -1,6 +1,7 @@
 package scratch.alessandro;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -50,6 +51,9 @@ public class WasatchInversion {
 	
 	final static String SLIP_RATE_FILENAME = "sliprate_wasatch_final.txt";
 	final static String PALEO_RATE_FILENAME = "paleorate_wasatch_and_95p.txt";
+	final static String SEGMENT_BOUNDARY_DATA_FILE = "segmentBoundaryData.txt";
+	final static String APRIORI_RUP_RATE_FROM_SECT_CONSTR_FILENAME = "aPrioriRupRatesFromSegmentationConstraints.txt";
+
 	final static String FAULT_TRACE_DIR_NAME = "subsections_traces/";
 
 	public WasatchInversion() {
@@ -240,12 +244,77 @@ public class WasatchInversion {
 		return rupSectionMatrix;
 	}
 	
+	
+	/**
+	 * This writes a-priori rupture rate constraints from "segmentation" boundaries to the
+	 * specified file.
+	 * @param fileName
+	 */
+	private void writeApriorRupRatesForSegmentationConstrints() {	
+		
+		if(rupSectionMatrix == null)
+			throw new RuntimeException("must create the rupSectionMatrix before running this method");
+		
+		// Read Segment Boundary Data:
+
+		int numBoundaries=0;
+		int sect1_array[]=null;
+		int sect2_array[]=null;
+		double wt_array[]=null;
+
+		try {
+			File file = new File(ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE);
+			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
+			numBoundaries = fileLines.size();
+			sect1_array = new int[numBoundaries];
+			sect2_array = new int[numBoundaries];
+			wt_array = new double[numBoundaries];
+			if(D) System.out.println("numBoundaries="+numBoundaries);
+			for (int i=0; i<numBoundaries; i++) {
+				//			System.out.println(line);
+				String line = fileLines.get(i).trim();
+				String[] split = line.split("\t");	// tab delimited
+				Preconditions.checkState(split.length == 3, "Expected 3 items, got %s", split.length);
+				//			System.out.println(split[0]+"\t"+split[1]+"\t"+split[2]);
+				sect1_array[i] = Integer.valueOf(split[0]);
+				sect2_array[i] = Integer.valueOf(split[1]);
+				wt_array[i] = Double.valueOf(split[2]);
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+		}			
+
+
+		try{
+			FileWriter fw = new FileWriter(APRIORI_RUP_RATE_FROM_SECT_CONSTR_FILENAME);
+			int numRuptures = rupSectionMatrix[0].length;
+			int numSections = rupSectionMatrix.length;
+			System.out.println(numRuptures+"\t"+numSections);
+
+			for(int i=0;i<numBoundaries; i++) {				
+				for(int rup=0; rup<numRuptures; ++rup) {
+					if(rupSectionMatrix[sect1_array[i]][rup]==1 && rupSectionMatrix[sect2_array[i]][rup]==1) {
+						fw.write(rup+"\t0.0\t"+wt_array[i]+"\n");
+					}
+				}
+			}
+			fw.close();
+		}catch(Exception e) {
+			e.printStackTrace();
+		}			
+	}
+
+	
+	
 	/**
 	 * @param args
 	 */
 	public static void main(String []args) {
 		
 		WasatchInversion wasatchInversion = new WasatchInversion();
+		// ONLY NEED TO DO ThE FOLLOWING ONCE:
+//		wasatchInversion.writeApriorRupRatesForSegmentationConstrints();
+//		System.exit(-1);
 		ArrayList<FaultSectionPrefData> fltSectDataList = wasatchInversion.getFaultSectionDataList();
 		ArrayList<SegRateConstraint> sectionRateConstraints = wasatchInversion.getSectionRateConstraints();
 		int[][] rupSectionMatrix = wasatchInversion.getRupSectionMatrix();
@@ -281,10 +350,16 @@ public class WasatchInversion {
 		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.TAPERED;
 		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.THINGBAIJAM_17_SRL_N;
 		double relativeSectRateWt=1;
-		double relative_aPrioriRupWt = 0;	// 
-		String aPrioriRupRatesFilename = ROOT_PATH+"data/aPrioriRupRatesFromGR_MFD.txt";
+		
+		double relative_aPrioriRupWt = 1e9;	//
+		// for GR constraint or initial 
+//		String aPrioriRupRatesFilename = ROOT_DATA_DIR+"aPrioriRupRatesFromGR_MFD.txt";
+		// for segmentation constraint:
+		String aPrioriRupRatesFilename = ROOT_DATA_DIR+APRIORI_RUP_RATE_FROM_SECT_CONSTR_FILENAME;
+
 		boolean wtedInversion = true;
 		double minRupRate = 1e-8;
+//		double minRupRate = 0.0;
 		boolean applyProbVisible = true;
 		double moRateReduction = 0.1;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
 		double relativeMFD_constraintWt = 0; // setting this to 1e6
@@ -325,14 +400,14 @@ public class WasatchInversion {
 	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
 		
 		// Non-negative least squares
-//		fltSysRupInversion.doInversionNNLS();
+		fltSysRupInversion.doInversionNNLS();
 		
 		// Simulated annealing
 		long numIterations = (long) 1e5;
 		boolean initStateFromAprioriRupRates = false;
 		long randomSeed = System.currentTimeMillis();
 //		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
-		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
+//		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
