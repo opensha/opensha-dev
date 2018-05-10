@@ -76,11 +76,9 @@ import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
  * 
  * TO DO:
  * 
- * 1) Make it so multiple SA runs can be done saving only the rup rates after each
- * 2) Add the segmentation constraint
- * 4) Make slip model and enum (already in U3?)
- * 5) Input prob visible model rather than computing here  (already in U3?)
- * 6) sample MRIs via monte carlo simulations (same for slip rates?) for more epistemic 
+ * 1) Improve the segmentation constraint implementation?
+ * 2) Input prob visible model rather than computing here  (already in U3?)
+ * 3) sample MRIs via monte carlo simulations (same for slip rates?) for more epistemic 
  *    uncertainty (or do this outside with zero errors); or just use SA with fewer iterations?
  *
  */
