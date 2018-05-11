@@ -480,7 +480,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 		forecastStartTimeParam = new DoubleParameter("Forecast Start Time", 0d, Double.POSITIVE_INFINITY);
 		forecastStartTimeParam.setUnits("Days");
-		forecastStartTimeParam.setInfo("Time to begin forecast, relative to main shock origin time");
+		forecastStartTimeParam.setInfo("Time at which to begin forecast, relative to main shock origin time");
 		forecastStartTimeParam.addParameterChangeListener(this);
 		forecastParams.addParameter(forecastStartTimeParam);
 
@@ -836,7 +836,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		mapGridSpacingParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
 		mapPlotParams.addParameter(mapGridSpacingParam);
 		
-		mapScaleParam  = new DoubleParameter("Scale", 1d, 10d, new Double(1));
+		mapScaleParam  = new DoubleParameter("Scale", 0.5d, 10d, new Double(1));
 		mapScaleParam.setInfo("Factor by which to extend the map region beyond the aftershock zone");
 		mapScaleParam.addParameterChangeListener(this);
 		mapScaleParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
@@ -968,7 +968,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		setTitle("Aftershock Forecaster (Beta)");
 		setLocationRelativeTo(null);
 		
-		workingDir = new File(System.getenv("HOME"));
+		workingDir = new File(System.getProperty("user.home"));
 		accessor = new ETAS_ComcatAccessor();
 
 		updateRegionParamList(regionTypeParam.getValue(), regionCenterTypeParam.getValue());
