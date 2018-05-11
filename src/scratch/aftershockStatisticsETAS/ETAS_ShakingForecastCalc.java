@@ -92,7 +92,6 @@ public class ETAS_ShakingForecastCalc {
 		
 		int numMag = (int)((maxMag - refMag)/magDelta + 0.5) + 1;
 		
-
 		// I think this is giving too high of values by assuming everything in-grid is at zero distance. better to assume it is at min distance
 //		DistanceInterpolator distInterp = new DistanceInterpolator(true, calcRegion.getSpacing()/2, maxSourceDist, 100);
 		DistanceInterpolator distInterp = new DistanceInterpolator(false, calcRegion.getSpacing()/2, maxSourceDist, 100);
