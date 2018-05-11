@@ -274,6 +274,9 @@ public class GriddedInterpGMPE_Calc {
 				double dist = LocationUtils.horzDistanceFast(sourceLoc, site.getLocation());
 				if (dist > distInterp.getMax())
 					continue;
+				if (dist == 0 )
+					dist = distInterp.getMin();
+
 				indexes[0] = distInterp.getInterpolatedBinIndex(dist);
 				
 				for (int j=1; j<allInterps.size()-1; j++)
@@ -617,6 +620,7 @@ public class GriddedInterpGMPE_Calc {
 //			gw.setX_AxisRange(range);
 //			gw.setY_AxisRange(range);
 //		}
+
 	}
 
 }

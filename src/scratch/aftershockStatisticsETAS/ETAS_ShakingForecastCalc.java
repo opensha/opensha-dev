@@ -1,6 +1,7 @@
 package scratch.aftershockStatisticsETAS;
 
 import java.awt.geom.Point2D;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -91,7 +92,10 @@ public class ETAS_ShakingForecastCalc {
 		
 		int numMag = (int)((maxMag - refMag)/magDelta + 0.5) + 1;
 		
-		DistanceInterpolator distInterp = new DistanceInterpolator(true, calcRegion.getSpacing()/2, maxSourceDist, 100);
+
+		// I think this is giving too high of values by assuming everything in-grid is at zero distance. better to assume it is at min distance
+//		DistanceInterpolator distInterp = new DistanceInterpolator(true, calcRegion.getSpacing()/2, maxSourceDist, 100);
+		DistanceInterpolator distInterp = new DistanceInterpolator(false, calcRegion.getSpacing()/2, maxSourceDist, 100);
 		
 		DoubleParameterInterpolator vs30Interp = null;
 		if (vs30Provider != null)
@@ -236,68 +240,68 @@ public class ETAS_ShakingForecastCalc {
 			geo.set(i, HazardDataSetLoader.getCurveVal(curves[i], isProbAt_IML, level));
 	}
 	
-	public static void main(String[] args) throws IOException {
-		GeoDataSet rateModel = ArbDiscrGeoDataSet.loadXYZFile("/tmp/rateMap.txt", true);
-		double refMag = 5d;
-		double maxMag = 8.5d;
-		double b = 1;
-		
-		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null);
-		gmpe.setParamDefaults();
-		// for PGA
-		gmpe.setIntensityMeasure(PGA_Param.NAME);
-		// for SA
-//		gmpe.setIntensityMeasure(SA_Param.NAME);
-//		SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), 1d);
-		// for PGV
-//		gmpe.setIntensityMeasure(PGV_Param.NAME);
-		System.out.println(gmpe.getIntensityMeasure().getName());
-		
-		// Vs30 provider, or null for no Vs30
-//		WaldAllenGlobalVs30 vs30Provider = null;
-		WaldAllenGlobalVs30 vs30Provider = new WaldAllenGlobalVs30();
-		// active tectonic coefficients
-		vs30Provider.setActiveCoefficients();
-		// stable coefficients
-//		vs30Provider.setStableCoefficients();
-		
-//		double durationYears = 30d/365d;
-		
-		Map<FocalMech, Double> mechWts = new HashMap<>();
-		mechWts.put(FocalMech.STRIKE_SLIP, 0.5);
-		mechWts.put(FocalMech.NORMAL, 0.25);
-		mechWts.put(FocalMech.REVERSE, 0.25);
-		
-		// use the rate map region/spacing
-		double calcSpacing = 0.05;
-		GriddedRegion calcRegion = new GriddedRegion(new Region(new Location(rateModel.getMaxLat(), rateModel.getMaxLon()),
-				new Location(rateModel.getMinLat(), rateModel.getMinLon())), calcSpacing, null);
-		
-		double maxSourceDist = 200d;
-		
-		DiscretizedFunc[] curves = calcForecast(calcRegion, rateModel, refMag, maxMag, b, gmpe, mechWts,
-				 maxSourceDist, vs30Provider);
-		
-		GeoDataSet map = extractMap(calcRegion.getNodeList(), curves, false, 0.1); // IML with 10% prob. change false--> true and 0.1-->desired IML level for prob exceed IML
-		
-		XYZGraphPanel xyzGP = new XYZGraphPanel();
-		
-		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, map.getMaxZ());
-		
-		XYZPlotSpec spec = new XYZPlotSpec(map, cpt, "Spatial Forecast", "Longitude", "Latitude", gmpe.getIntensityMeasure().getName());
-		
-		Range xRange = new Range(calcRegion.getMinGridLon()-0.5*calcRegion.getLonSpacing(),
-				calcRegion.getMaxGridLon()+0.5*calcRegion.getLonSpacing());
-		Range yRange = new Range(calcRegion.getMinGridLat()-0.5*calcRegion.getLatSpacing(),
-				calcRegion.getMaxGridLat()+0.5*calcRegion.getLatSpacing());
-		
-		xyzGP.drawPlot(spec, false, false, xRange, yRange);
-		
-		JFrame frame = new JFrame("");
-		frame.setContentPane(xyzGP);
-		frame.pack();
-		frame.setVisible(true);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-	}
+//	public static void main(String[] args) throws IOException {
+//		GeoDataSet rateModel = GriddedGeoDataSet.loadXYZFile(new File("/tmp/rateMap.txt"), true);
+//		double refMag = 5d;
+//		double maxMag = 8.5d;
+//		double b = 1;
+//		
+//		ScalarIMR gmpe = AttenRelRef.BSSA_2014.instance(null);
+//		gmpe.setParamDefaults();
+//		// for PGA
+//		gmpe.setIntensityMeasure(PGA_Param.NAME);
+//		// for SA
+////		gmpe.setIntensityMeasure(SA_Param.NAME);
+////		SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), 1d);
+//		// for PGV
+////		gmpe.setIntensityMeasure(PGV_Param.NAME);
+//		System.out.println(gmpe.getIntensityMeasure().getName());
+//		
+//		// Vs30 provider, or null for no Vs30
+////		WaldAllenGlobalVs30 vs30Provider = null;
+//		WaldAllenGlobalVs30 vs30Provider = new WaldAllenGlobalVs30();
+//		// active tectonic coefficients
+//		vs30Provider.setActiveCoefficients();
+//		// stable coefficients
+////		vs30Provider.setStableCoefficients();
+//		
+////		double durationYears = 30d/365d;
+//		
+//		Map<FocalMech, Double> mechWts = new HashMap<>();
+//		mechWts.put(FocalMech.STRIKE_SLIP, 0.5);
+//		mechWts.put(FocalMech.NORMAL, 0.25);
+//		mechWts.put(FocalMech.REVERSE, 0.25);
+//		
+//		// use the rate map region/spacing
+//		double calcSpacing = 0.05;
+//		GriddedRegion calcRegion = new GriddedRegion(new Region(new Location(rateModel.getMaxLat(), rateModel.getMaxLon()),
+//				new Location(rateModel.getMinLat(), rateModel.getMinLon())), calcSpacing, null);
+//		
+//		double maxSourceDist = 200d;
+//		
+//		DiscretizedFunc[] curves = calcForecast(calcRegion, rateModel, refMag, maxMag, b, gmpe, mechWts,
+//				 maxSourceDist, vs30Provider);
+//		
+//		GeoDataSet map = extractMap(calcRegion.getNodeList(), curves, false, 0.1); // IML with 10% prob. change false--> true and 0.1-->desired IML level for prob exceed IML
+//		
+//		XYZGraphPanel xyzGP = new XYZGraphPanel();
+//		
+//		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, map.getMaxZ());
+//		
+//		XYZPlotSpec spec = new XYZPlotSpec(map, cpt, "Spatial Forecast", "Longitude", "Latitude", gmpe.getIntensityMeasure().getName());
+//		
+//		Range xRange = new Range(calcRegion.getMinGridLon()-0.5*calcRegion.getLonSpacing(),
+//				calcRegion.getMaxGridLon()+0.5*calcRegion.getLonSpacing());
+//		Range yRange = new Range(calcRegion.getMinGridLat()-0.5*calcRegion.getLatSpacing(),
+//				calcRegion.getMaxGridLat()+0.5*calcRegion.getLatSpacing());
+//		
+//		xyzGP.drawPlot(spec, false, false, xRange, yRange);
+//		
+//		JFrame frame = new JFrame("");
+//		frame.setContentPane(xyzGP);
+//		frame.pack();
+//		frame.setVisible(true);
+//		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//	}
 
 }
