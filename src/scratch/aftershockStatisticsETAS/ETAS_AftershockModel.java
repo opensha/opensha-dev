@@ -41,7 +41,7 @@ import org.opensha.sha.gui.infoTools.CalcProgressBar;
  */
 public abstract class ETAS_AftershockModel {
 
-	private Boolean D=true;	// debug flag
+	private Boolean D=false;	// debug flag
 
 	protected ArbDiscrEmpiricalDistFunc num_DistributionFunc = null;
 	protected CalcProgressBar progress;
@@ -54,6 +54,7 @@ public abstract class ETAS_AftershockModel {
 	protected double mean_c, sigma_logc;
 	protected double b, bSigma;
 	protected double alpha, refMag, mu;
+	protected double ac; // this is the productivity parameter used for time-dependentMc calculations
 	
 	// forecast parameters
 	protected double dataStartTimeDays, dataEndTimeDays;
@@ -82,7 +83,7 @@ public abstract class ETAS_AftershockModel {
 	protected int maxGenerations;
 	protected int nSims;
 	protected ETAScatalog simulatedCatalog;	//results of the stochastic simulations
-
+	protected Boolean timeDependentMc = false;
 
 	/**
 	 * This converts the likelihood from log-likelihood to likelihood values, making sure NaNs do not occur 
@@ -411,7 +412,7 @@ public abstract class ETAS_AftershockModel {
 //		} else {
 //			tvec = ETAS_StatsCalc.linspace(tMinDays, tMaxDays, numPts);
 //		}
-
+		
 		for(double t : tvec){
 			//compute expected number for comparison with known quakes (plot fit)
 			expCount = getExpectedNumEvents(magMin, tMinDays, t);
@@ -444,19 +445,32 @@ public abstract class ETAS_AftershockModel {
 		double c = getMaxLikelihood_c();
 //		double k = Math.pow(10, ams + alpha*(mainShock.getMag() - refMag) + b*(refMag - magComplete));
 		double k = Math.pow(10, ams + alpha*(mainShock.getMag() - magComplete)); //update 4/2/18
+		double kc, cms;
 		
 		double timeIntegral;
 
 		//compute total number at end of window due to mainshock
 		double Ntot;
-		if (p == 1)
-			timeIntegral = Math.log(tMaxDays + c) - Math.log(tMinDays + c);
-		else
-			timeIntegral = (Math.pow(tMaxDays + c, 1-p) - Math.pow(tMinDays + c, 1-p)) / (1-p);
+		if (timeDependentMc) {
+			kc = Math.pow(10, ac-ams);
+			cms = c*Math.pow(k*kc,1d/p);
+			if (p == 1) {
+				timeIntegral = Math.log(tMaxDays + cms) - Math.log(tMinDays + cms);
+			} else {
+				timeIntegral = (Math.pow(tMaxDays + cms, 1d-p) - Math.pow(tMinDays + cms, 1d-p)) / (1d-p);
+			}
+		} else {
+			if (p == 1) 
+				timeIntegral = Math.log(tMaxDays + c) - Math.log(tMinDays + c);
+			else
+				timeIntegral = (Math.pow(tMaxDays + c, 1d-p) - Math.pow(tMinDays + c, 1d-p)) / (1d-p);
+		}
 		Ntot = k*timeIntegral;		//mainshock contribution
-
+		
+		
 		double[] productivity = new double[Nas];
 
+		kc = Math.pow(10, ac-a);
 		for(int i=0; i<Nas; i++){
 			//compute productivity for this aftershock
 //			productivity[i] = Math.pow(10, a + alpha*(magAftershocks[i] - refMag) + b*(refMag - magComplete));
@@ -464,12 +478,23 @@ public abstract class ETAS_AftershockModel {
 
 			//compute number at end of window due to this aftershock
 			if(relativeTimeAftershocks[i] <= tMaxDays){
-				if(p == 1)
-					timeIntegral = Math.log(tMaxDays - relativeTimeAftershocks[i] + c) - Math.log(c); 
-				else
-					timeIntegral = (Math.pow(tMaxDays - relativeTimeAftershocks[i] + c, 1-p) - Math.pow(c, 1-p)) / (1-p);
+				if (timeDependentMc) {
+					cms = c*Math.pow(kc*productivity[i],1d/p);
+					if(p == 1) {
+						timeIntegral = Math.log(tMaxDays - relativeTimeAftershocks[i] + cms) - Math.log(cms); 
+					} else {
+						timeIntegral = (Math.pow(tMaxDays - relativeTimeAftershocks[i] + cms, 1d-p) - Math.pow(cms, 1d-p)) / (1d-p);
+					}
+					Ntot += productivity[i]*timeIntegral;	//aftershock Contributions
+				} else {
+					if(p == 1)
+						timeIntegral = Math.log(tMaxDays - relativeTimeAftershocks[i] + c) - Math.log(c); 
+					else
+						timeIntegral = (Math.pow(tMaxDays - relativeTimeAftershocks[i] + c, 1d-p) - Math.pow(c, 1d-p)) / (1d-p);
 
-				Ntot += productivity[i]*timeIntegral;	//aftershock Contributions
+					Ntot += productivity[i]*timeIntegral;	//aftershock Contributions
+				}
+
 			}
 		}
 

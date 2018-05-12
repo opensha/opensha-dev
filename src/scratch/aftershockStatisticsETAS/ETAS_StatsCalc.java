@@ -124,7 +124,7 @@ public class ETAS_StatsCalc {
     	//make a dummy Eqk Rupture List
     	ObsEqkRupList aftershockFitList = new ObsEqkRupList();
     	for (Location loc : faultTrace){
-    		System.out.println(loc);
+    		if(D) System.out.println(loc);
     		aftershockFitList.add(new ObsEqkRupture("dummy", mainshock.getOriginTime(), loc, 0.0));
     	}
     	

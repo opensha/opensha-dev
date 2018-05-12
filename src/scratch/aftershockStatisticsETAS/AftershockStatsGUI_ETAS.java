@@ -129,11 +129,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 	public AftershockStatsGUI_ETAS(String... args) {
 		checkArguments(args);
-		if (D) System.out.println("verbose = " + verbose + ", development mode = " + devMode);
+		if (D) System.out.println("verbose = " + verbose + ", development mode = " + devMode + ", debug = " + D);
 		createAndShowGUI();
 	}
     
-	private boolean D = true; //debug
+	private boolean D; //debug
 	private boolean devMode;
 	private boolean verbose;
 	private volatile boolean changeListenerEnabled = true;
@@ -649,13 +649,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 //		mfdParams.addParameter(mcParam);
 //		mfdParams.addParameter(magPrecisionParam);
 		
-		timeDepMcParam = new BooleanParameter("Apply time dep. Mc", false);
-		timeDepMcParam.setInfo("Apply time dependent magnitude of completeness");
-		if (devMode){
-			timeDepMcParam.addParameterChangeListener(this);
-			fitParams.addParameter(timeDepMcParam);
-		}
-		
 		alphaParam = new DoubleParameter("alpha-value", 1d);
 		alphaParam.setInfo("Linked to b-value");
 		alphaParam.addParameterChangeListener(this);
@@ -711,8 +704,13 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 		magRefParam = new DoubleParameter("Reference Magnitude", new Double(0d));
 		
+		timeDepMcParam = new BooleanParameter("Apply time dep. Mc", true);
+		timeDepMcParam.setInfo("Apply time dependent magnitude of completeness");
+		timeDepMcParam.addParameterChangeListener(this);
+
 		constraintList = new ParameterList();
 		if(devMode) constraintList.addParameter(fitMSProductivityParam);
+		constraintList.addParameter(timeDepMcParam);
 		constraintList.addParameter(amsValRangeParam);
 		constraintList.addParameter(amsValNumParam);
 		constraintList.addParameter(aValRangeParam);
@@ -1676,14 +1674,14 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		updateForecastTimes();
 		
 		// as a courtesy, spit out the decimal days remaining in the origin day
-		System.out.println("The mainshock occurred " + String.format("%.4f", getTimeRemainingInUTCDay()) + " days before midnight (UTC)");
+		System.out.println("The mainshock occurred " + String.format("%.4f", getTimeRemainingInUTCDay()) + " days before midnight (UTC)\n");
 		
 		if(verbose) System.out.println("Building generic model...");
 		// initialize the generic model using an assumed global Mmax of 9.5, max generation depth 100, number of simulations 0
 		genericModel = new ETAS_AftershockModel_Generic(mainshock, aftershocks, genericParams, 
 				dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
 				forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(), mcParam.getValue(),
-				9.5, 100, 0, fitMSProductivityParam.getValue());
+				9.5, 100, 0, fitMSProductivityParam.getValue(), timeDepMcParam.getValue());
 
 	} //end setupGUI
 	
@@ -1691,7 +1689,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		double b_value = 1; 
 		if (ogataMND != null){
 			 b_value = ogataMND.calculateBWithFixedMc(mc);
-			 if(verbose) System.out.println("mc: " + mc + " b: " + b_value);
+			 if(D) System.out.println("mc: " + mc + " b: " + b_value);
 		}
 
 		mcParam.setValue(round(mc,2));
@@ -1701,7 +1699,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 		link_alpha(); //reset alpha based on b
 		
-		printTip(2);
+//		printTip(2);
 
 	}
 	
@@ -1723,7 +1721,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			
 			// iterate to a stable estimate solution
 			mc = ogataMND.calculateMcWithFixedB(b_value);
-			if(verbose) System.out.println("mc: " + mc + " b: " + b_value);
+			if(D) System.out.println("mc: " + mc + " b: " + b_value);
 
 		} else {
 		 	mc = genericParams.get_refMag() + 0.5;
@@ -1736,7 +1734,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 		link_alpha(); //reset alpha based on b
 		
-		printTip(2);
+//		printTip(2);
 	}
 	
 	private void plotAftershockHypocs() {
@@ -1949,7 +1947,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		PlotSpec spec = new PlotSpec(funcs, chars, "Magnitude Distribution", "Magnitude", "Count");
 		spec.setLegendVisible(true);
 		
-		if(verbose) System.out.println("plot MFD: " + spec.getTitle());
+		if(D) System.out.println("plot MFD: " + spec.getTitle());
 		
 		
 		if (magNumGraph == null){
@@ -2049,7 +2047,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 	
 	private void plotCumulativeNum() {
-		if(D) System.out.println("start plotCumulativeNum...");
+		if(verbose) System.out.println("Plotting cumulative number with time...");
 		double magMin;
 		
 		if (seqSpecModel != null && timeDepMcParam.getValue() == true)
@@ -2221,7 +2219,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		double tMax = dataEndTimeParam.getValue();
 		if (tMax > tMin+1e-9) tMax += -1e-9;	//this is related to preventing log of zero
 		
-		if(verbose) System.out.println("Plotting fit for "+ tMin +" - "+ tMax + " days");
+		if(D) System.out.println("Plotting fit for "+ tMin +" - "+ tMax + " days");
 		int numPts = 100;
 		return model.getExpectedNumEventsWithLogTime(magMin, tMin, tMax, numPts);
 	}
@@ -2464,7 +2462,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		HistogramFunction[] logcValExtras = null;
 		
 		if (genericModel != null) {
-			if(verbose) System.out.println("getting generic pdfs");
+			if(D) System.out.println("getting generic pdfs");
 			HistogramFunction genericAms = genericModel.getPriorPDF_ams(); 
 			HistogramFunction genericA = genericModel.getPriorPDF_a();
 			HistogramFunction genericP = genericModel.getPriorPDF_p();
@@ -2481,7 +2479,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			HistogramFunction bayesianLogC;
 			if (bayesianModel != null) {
 				
-				if(verbose) System.out.println("getting bayesian pdfs");
+				if(D) System.out.println("getting bayesian pdfs");
 				bayesianAms = bayesianModel.getPDF_ams(); 
 				bayesianA = bayesianModel.getPDF_a();
 				bayesianP = bayesianModel.getPDF_p();
@@ -2508,7 +2506,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			}
 		}
 		
-		if(verbose) System.out.println("getting sequence specific pdfs");
+		if(D) System.out.println("getting sequence specific pdfs");
 		add1D_PDF(seqSpecModel.getPDF_ams(), "ams-value", amsValExtras);	
 		add1D_PDF(seqSpecModel.getPDF_a(), "a-value", aValExtras);
 		add1D_PDF(seqSpecModel.getPDF_p(), "p-value", pValExtras);
@@ -2946,7 +2944,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					genericModel = new ETAS_AftershockModel_Generic(mainshock, aftershocks, genericParams, 
 							dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
 							forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(), mcParam.getValue(),
-							genericParams.get_maxMag(), 100, 0, fitMSProductivityParam.getValue());
+							genericParams.get_maxMag(), 100, 0, fitMSProductivityParam.getValue(), timeDepMcParam.getValue());
 
 					resetFitConstraints(genericParams);
 					setEnableParamsPostAftershockParams(false);
@@ -3016,7 +3014,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 							null, progress);
 							
 				}
-				System.out.format("Mainshock productivity magnitude: %2.2f\n" , seqSpecModel.getProductivityMag());
+				if(verbose) System.out.format("Mainshock productivity magnitude: %2.2f\n" , seqSpecModel.getProductivityMag());
 			}
 			
 		}, true);
@@ -3065,7 +3063,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 					@Override
 					public void run() {
-						if(verbose) System.out.println("Computing generic model");
+						if(verbose) System.out.println("Computing Generic forecast");
 						genericModel.setMagComplete(mcParam.getValue());
 						genericModel.computeNewForecast(dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
 								forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(), 10000);
@@ -3080,7 +3078,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 						if (seqSpecModel != null){
 							seqSpecModel.setMagComplete(mcParam.getValue());
-							if(verbose)System.out.println("Sequence Specific model");
+							if(verbose)System.out.println("Computing sequence-only forecast");
 							seqSpecModel.computeNewForecast(dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
 									forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(), 10000);
 						}
@@ -3095,7 +3093,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						
 						if (bayesianModel != null){
 							bayesianModel.setMagComplete(mcParam.getValue());
-							if(verbose)System.out.println("Bayesian model");
+							if(verbose)System.out.println("Computing Bayesian forecast");
 							bayesianModel.computeNewForecast(dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
 									forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(), 10000);
 						}
@@ -3140,7 +3138,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					
 					public void run(){
 						
-						System.out.println("Fetching finite source from ShakeMap...");
+						if(verbose) System.out.println("Fetching ShakeMap finite source from ComCat...");
 //						if (!fitMainshockSourceParam.getValue() && faultTrace == null){
 						final FitSourceType fitType = fitSourceTypeParam.getValue();
 						
@@ -3164,12 +3162,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 										}
 									}
 								}
-								if(verbose) System.out.println(faultTrace);
+								if(D) System.out.println(faultTrace);
 						}
 						
-						System.out.println("Fetching ShakeMap URL...");
+						if(verbose) System.out.println("Fetching ShakeMap URL from ComCat servers...");
 						shakeMapURL = accessor.fetchShakemapURL(eventIDParam.getValue());
-						if(D) System.out.println(shakeMapURL);
+						if(verbose) System.out.println(shakeMapURL);
 							
 						
 					}
@@ -3234,7 +3232,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if (!changeListenerEnabled || param.getValue() == null) {
 			if(D)	System.out.println("Suppressing refresh for " + param.getName());
 		} else {
-			if(verbose) System.out.println("Updating " + param);
+			if(verbose) System.out.println("Updating " + param.getName());
 			// putting this in as a safegaurd
 			setChangeListenerEnabled(false);
 			try {
@@ -3312,7 +3310,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 			} else if (param == eventIDParam || param == dataStartTimeParam || param == dataEndTimeParam
 					|| param == regionEditParam) {
-				if(verbose) System.out.println("Updating " + param.getName()); 
+//				if(verbose) System.out.println("Updating " + param.getName()); 
 
 				if (param == regionEditParam){
 					// check for international dateline crossing
@@ -3330,11 +3328,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				if(param == eventIDParam) printTip(1);
 
 			} else if (param == nowBoolean){
-				if(verbose) System.out.println("Updating start now flag");
+//				if(verbose) System.out.println("Updating start now flag");
 				refreshTimeWindowEditor();
 
 			} else if (param == forecastDurationParam) {
-				if(verbose) System.out.println("Updating forecast duration");
+//				if(verbose) System.out.println("Updating forecast duration");
 				try{
 					if (forecastStartTimeParam.getValue() != null){
 						forecastEndTimeParam.setValue(round(forecastStartTimeParam.getValue() + forecastDurationParam.getValue()));
@@ -3345,7 +3343,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				}
 			
 			} else if (param == forecastStartTimeParam) {
-				if(verbose) System.out.println("Updating forecast start time");
+//				if(verbose) System.out.println("Updating forecast start time");
 				setEnableParamsPostFetch(false);
 
 				try{
@@ -3358,7 +3356,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				refreshTimeWindowEditor();
 
 			} else if (param == regionTypeParam || param == regionCenterTypeParam) {
-				if(verbose) System.out.println("Updating regionType");
+//				if(verbose) System.out.println("Updating regionType");
 				updateRegionParamList(regionTypeParam.getValue(), regionCenterTypeParam.getValue());
 		
 			} else if (param == fetchButton) {
@@ -3490,7 +3488,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				}
 				
 			} else if (param == mcParam){ // || param == magPrecisionParam) {
-				if(verbose) System.out.println("Updating Mc");
+//				if(verbose) System.out.println("Updating Mc");
 				
 				changeListenerEnabled = false;
 				
@@ -3675,7 +3673,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				setEnableParamsPostComputeB(false);
 
 			} else if (param == computeAftershockParamsButton) {
-				System.out.println("Computing sequence specific fit");
+				System.out.println("Estimating aftershock model parameters...");
 
 				tabRefreshStep = new CalcStep("Plotting", "Updating plots...", new Runnable() {
 
@@ -3971,7 +3969,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						 
 						String name = names.get(j);
 
-						if(verbose) System.out.println(name + " " + durString);
+						if(verbose) System.out.println("Plotting forecast mfd for " + name + " - " + durString + "...");
+						else System.out.format(".");
 
 						ETAS_AftershockModel model = models.get(j);
 						Color c = colors.get(j);
@@ -4021,6 +4020,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 						PlotCurveCharacterstics uncertainChars = new PlotCurveCharacterstics(plt, 1f, c_trans);
 						chars.add(uncertainChars);
 					}
+					if(!verbose)System.out.format("\n");
 
 					// mainshock mag and Bath's law, use evenly discr functions so that it shows up well at all zoom levels
 					double mainshockMag = mainshock.getMag();
@@ -4047,19 +4047,19 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					}
 
 					if (Double.isFinite(yTrack.getMin()) && Double.isFinite(yTrack.getMax()) ){
-						if(verbose) System.out.println(yTrack);
+						if(D) System.out.println(yTrack);
 					} else {
 						yTrack.addValue(0d);
 						yTrack.addValue(1d);
-						if(verbose) System.out.println(yTrack);
+						if(D) System.out.println(yTrack);
 					}
 
 					yTrackProb.addValue(100d);
 					if (Double.isFinite(yTrackProb.getMin()) && Double.isFinite(yTrackProb.getMax()) ){
-						if(verbose) System.out.println(yTrackProb);
+						if(D) System.out.println(yTrackProb);
 					} else {
 						yTrackProb.addValue(0d);
-						if(verbose) System.out.println(yTrackProb);
+						if(D) System.out.println(yTrackProb);
 					}
 
 
@@ -4142,6 +4142,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 
 	private void plotForecastTable(CalcProgressBar progress) {
+			if(verbose) System.out.println("Building forecast tables...");
+		
 			if (forecastTablePane == null)
 				forecastTablePane = new JTabbedPane();
 			else
@@ -4194,7 +4196,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				
 				forecastTablePane.addTab(name, jTable);
 				
-				if(verbose) System.out.println("Took "+watch.elapsed(TimeUnit.SECONDS)+"s to compute aftershock table for "+name);
+				if(D) System.out.println("Took "+watch.elapsed(TimeUnit.SECONDS)+"s to compute aftershock table for "+name);
 				watch.stop();
 			}
 			
@@ -4250,7 +4252,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			for (int j = 0; j < forecastRateModel.size(); j++){
 				referenceRate += forecastRateModel.get(j);
 			}
-			if(verbose) System.out.println("rateModel sum: " + referenceRate);
+			if(D) System.out.println("rateModel sum: " + referenceRate);
 			
 			double value;
 			boolean isMapOfProbabilities;
@@ -4301,7 +4303,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		        ann.setFont(font);
 		        cityLabels.add(ann);
 			}
-			if(D) System.out.println( cities.size() + " cities added to plot list.");
+			if(verbose) System.out.println( cities.size() + " cities added to plot list.");
 			
 			// add old hypocenter
 			// scoop up the aftershock locations
@@ -4376,8 +4378,9 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					break;
 				}
 				
-				
+
 				if (maxDays <= forecastEndTimeParam.getValue()){
+					if(verbose) System.out.println("Computing map for " + durString);
 					
 					//rescale the rate model (for speed) to get a new probability model
 					double targetRate;
@@ -4386,7 +4389,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					} else {
 						targetRate =  bayesianModel.getCumNumFractileWithAleatory(new double[]{0.5}, bayesianModel.magComplete, minDays, maxDays)[0];
 					}
-					if(verbose) System.out.println("rateModel & targetRate (" + i + "): " + referenceRate + " " + targetRate);
+					if(D) System.out.println("rateModel & targetRate (" + i + "): " + referenceRate + " " + targetRate);
 					newForecastRateModel.scale(targetRate/referenceRate);
 					if(D) System.out.println("newForecastRateModel sum: " + newForecastRateModel.getSumZ());
 					
@@ -4534,7 +4537,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 								outString.append(String.format("%2.2f ", line.Value));
 								if (line.Value > maxPlottedContour) maxPlottedContour = line.Value;
 							}
-							if(D){ System.out.println(outString);
+							if(verbose){ System.out.println("contour levels: " + outString);
 						}
 
 						// set up the map title
@@ -4707,7 +4710,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			double pgv = Wald_MMI_Calc.getPGV(value);
 			double weightPGV = Wald_MMI_Calc.getWeightVMMI(value);
 			
-			if (verbose) System.out.println("MMI level: " + value + " PGA level: " + pga + " PGV level: " + pgv + " PGV weight: " + weightPGV);
+			if (D) System.out.println("MMI level: " + value + " PGA level: " + pga + " PGV level: " + pgv + " PGV weight: " + weightPGV);
 			// first get the PGA model
 			intensityTypeParam.setValue(IntensityType.PGA);
 			GriddedGeoDataSet pgaMap = getIntensityModel(rateModel, pga, isMapOfProbabilities, prompt);
@@ -4736,12 +4739,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			// 	plotting levels. Value is POE just compute the PGV level and PGA level independently, and combine
 			
  			// first get the PGA model
-			if(verbose) System.out.println("Calculating PGA map with " + value + " probability of being exceeded");
+			if(D) System.out.println("Calculating PGA map with " + value + " probability of being exceeded...");
 			intensityTypeParam.setValue(IntensityType.PGA);
 			GriddedGeoDataSet pgaMap = getIntensityModel(rateModel, value, isMapOfProbabilities, prompt);
 
 			// then get the PGV model
-			if(verbose) System.out.println("Calculating PGV map with " + value + " probability of being exceeded");
+			if(D) System.out.println("Calculating PGV map with " + value + " probability of being exceeded...");
 			intensityTypeParam.setValue(IntensityType.PGV);
 			GriddedGeoDataSet pgvMap = getIntensityModel(rateModel, value, isMapOfProbabilities, false);
 			
@@ -4749,7 +4752,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			intensityTypeParam.setValue(IntensityType.MMI);
 
 			GriddedGeoDataSet mmiMap = new GriddedGeoDataSet(pgaMap.getRegion(), pgaMap.isLatitudeX());
-			if(verbose) System.out.println("Combining PGA and PGV to get MMI");
+			if(D) System.out.println("Combining PGA and PGV to get MMI...");
 			for (int index=0; index<mmiMap.size(); index++) {
 				double pga = pgaMap.get(index);
 				if (!Doubles.isFinite(pga))
@@ -4759,7 +4762,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					pgv = 0;
 				double mmi = Wald_MMI_Calc.getMMI(pga, pgv);
 				if(!Doubles.isFinite(mmi))
-					System.err.println(String.format("Bad MMI=%s for PGA=%s, PGV=%s. MMI map may have errors", mmi, pga, pgv));
+					if(D) System.err.println(String.format("Bad MMI=%s for PGA=%s, PGV=%s. MMI map may have errors", mmi, pga, pgv));
 				
 				if (mmi == 1d)
 					// will speed things up
@@ -4777,16 +4780,16 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if (!Doubles.isFinite(pgaProb))
 			pgaProb = 0;
 		if(! ((float)pgaProb <= 1f))
-			System.err.println(String.format("Bad PGA prob: %s", pgaProb));
+			if(D) System.err.println(String.format("Bad PGA prob: %s", pgaProb));
 		
 		if (!Doubles.isFinite(pgvProb))
 			pgvProb = 0;
 		if(! ((float)pgvProb <= 1f))
-			System.err.println(String.format("Bad PGV prob: %s", pgvProb));
+			if(D) System.err.println(String.format("Bad PGV prob: %s", pgvProb));
 		
 		double mmiProb = weightPGV*pgvProb + (1d-weightPGV)*pgaProb;
 		if(!(mmiProb >= 0d && mmiProb <= 1d) ) 
-				System.err.println(String.format("Bad MMI probability (%s) for pgaProb= %s and pgvProb=%s",
+			if(D) System.err.println(String.format("Bad MMI probability (%s) for pgaProb= %s and pgvProb=%s",
 				mmiProb, pgaProb, pgvProb));
 		
 		if (mmiProb == 0d)
@@ -4803,7 +4806,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 	
 	GriddedGeoDataSet getIntensityModel(GriddedGeoDataSet rateModel, double value, boolean isMapOfProbabilities, boolean prompt) {
-
+		if(verbose) System.out.println("Computing " + (isMapOfProbabilities?"probability":"level") + " map for type: " +
+					intensityTypeParam.getValue().getAbbreviation() + " at level: " + value);
 		
 		//MMI is sort of implemented, by running PGA and PGV both
 		if (intensityTypeParam.getValue() == IntensityType.MMI) {
@@ -4859,7 +4863,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			return new GriddedGeoDataSet(calcRegion, false);
 		}
 		
-		if(verbose) System.out.println("Computing " + (isMapOfProbabilities?"probability":"level") + " map for: " + gmpe.getIntensityMeasure().getName() + " at level: " + value);
 		
 		// Vs30 provider, or null for no Vs30
 		WaldAllenGlobalVs30 vs30Provider;
@@ -4903,7 +4906,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		for (Location calcLoc : calcRegion.getBorder())
 			for (Location rateLoc : rateModel.getRegion().getBorder())
 				maxSourceDist = Math.max(maxSourceDist, LocationUtils.horzDistanceFast(calcLoc, rateLoc));
-		System.out.println("Maximum source distance: "+(float)maxSourceDist);
+		if(D) System.out.println("Maximum source distance: "+(float)maxSourceDist);
 
 		DiscretizedFunc[] curves;
 		GriddedGeoDataSet map;
@@ -4947,7 +4950,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			}
 			
 			if (curves == null) {
-				if(D) System.out.println("Cancelling map generation...");
+				if(verbose) System.out.println("Cancelling map generation...");
 					return null;
 			} else {
 				if(D) System.out.println("Extracting map for value: " + value + ". Plotting probabilities? " + isMapOfProbabilities);
@@ -4977,12 +4980,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		// 	plotting levels. Value is POE just compute the PGV level and PGA level independently, and combine
 		
 		// first get the PGA model
-		if(verbose) System.out.println("Calculating PGA map with " + value + " probability of being exceeded");
+		if(D) System.out.println("Calculating PGA map with " + value + " probability of being exceeded");
 		intensityTypeParam.setValue(IntensityType.PGA);
 		GriddedGeoDataSet pgaMap = scaleLevelModel(region, referenceRate, targetRate, value);
 
 		// then get the PGV model
-		if(verbose) System.out.println("Calculating PGV map with " + value + " probability of being exceeded");
+		if(D) System.out.println("Calculating PGV map with " + value + " probability of being exceeded");
 		intensityTypeParam.setValue(IntensityType.PGV);
 		GriddedGeoDataSet pgvMap = scaleLevelModel(region, referenceRate, targetRate, value);
 		
@@ -4990,7 +4993,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		intensityTypeParam.setValue(IntensityType.MMI);
 
 		GriddedGeoDataSet mmiMap = new GriddedGeoDataSet(pgaMap.getRegion(), pgaMap.isLatitudeX());
-		if(verbose) System.out.println("Combining PGA and PGV to get MMI");
+		if(D) System.out.println("Combining PGA and PGV to get MMI");
 		for (int index=0; index<mmiMap.size(); index++) {
 			double pga = pgaMap.get(index);
 			if (!Doubles.isFinite(pga))
@@ -5000,7 +5003,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				pgv = 0;
 			double mmi = Wald_MMI_Calc.getMMI(pga, pgv);
 			if(!Doubles.isFinite(mmi))
-				System.err.println(String.format("Bad MMI=%s for PGA=%s, PGV=%s. MMI map may have errors", mmi, pga, pgv));
+				if(D) System.err.println(String.format("Bad MMI=%s for PGA=%s, PGV=%s. MMI map may have errors", mmi, pga, pgv));
 			
 			if (mmi == 1d)
 				// will speed things up
@@ -5184,7 +5187,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			else 
 				model = genericModel;
 			
-			if(verbose) System.out.println("Publishing forecast using " + model + "...");
+			if(verbose) System.out.println("Publishing forecast...");
 			
 			GraphicalForecast graphForecast = new GraphicalForecast(outFile, model, eventDate, startDate);
 			graphForecast.setShakeMapURL(shakeMapURL);
@@ -5314,7 +5317,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 
 	private void resetWorkspace() {
-		System.out.println("Resetting workspace...");
+		if(verbose) System.out.println("Resetting workspace...");
 		setEnableParamsPostFetch(false);
 		setEnableParamsPostForecast(false);
 		setEnableParamsPostComputeB(false);
@@ -5456,7 +5459,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		
 	
 	private void resetFitConstraints(GenericETAS_Parameters params){
-		if(verbose)System.out.println("Updating fit constraints based on new generic params");
+		if(verbose)System.out.println("Updating fit constraints based on new generic params...");
 
 		boolean restrictParameters = false; 
 		
@@ -5739,12 +5742,14 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		//set defaults
 		verbose = false;
 		devMode = false;
+		D = false;
 			
 		//check for arguments
 		for (String argument : args){
-			System.out.println(argument);
 			if (argument.contains("verbose")) verbose = true;
 			if (argument.contains("expert")) devMode = true;
+			if (argument.contains("debug")) D = true;
+			if(verbose) System.out.println(argument);
 		}
 	}
 	
@@ -5771,8 +5776,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				origin.get(GregorianCalendar.YEAR), origin.get(GregorianCalendar.MONTH), origin.get(GregorianCalendar.DAY_OF_MONTH));
 //		daybreak.setTimeZone(origin.getTimeZone());
 		
-		System.out.println(formatter.format(origin.getTime()));
-		System.out.println(formatter.format(daybreak.getTime()));
+		if(D) System.out.println(formatter.format(origin.getTime()));
+		if(D) System.out.println(formatter.format(daybreak.getTime()));
 		
 		daysLeftInDay = 1 - (double) (origin.getTimeInMillis() - daybreak.getTimeInMillis())/ETAS_StatsCalc.MILLISEC_PER_DAY;
 		return daysLeftInDay;
@@ -5792,7 +5797,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		Boolean D = false;
 		
 		GeoFeatureList cities = new GeoFeatureList();
-		System.out.println("Loading Geographic information...");
+		if(D) System.out.println("Loading Geographic information...");
 
 		// load the data
 		InputStream citiesIS = GeoFeatureList.class.getResourceAsStream("resources/worldcities1000.txt");
@@ -5819,17 +5824,17 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			cities.getFeaturesAboveLevel(cities.get(number).mapLevel);
 		
 
-		if(verbose && D)
+		if(D)
 			for(GeoFeature city : cities)
 				System.out.println(city);
 		
-		if(verbose) System.out.println(cities.size() + " cities in mapped region.");
+		if(D) System.out.println(cities.size() + " cities in mapped region.");
 		
 		return cities;
 	}
 	
 	private ArrayList<XY_DataSet> loadCountries(Region region){
-		System.out.println("Loading country borders...");
+		if(verbose) System.out.println("Loading country borders...");
 		
 		// Load country border lat/long points
 		InputStream bordersIS = GeoFeatureList.class.getResourceAsStream("resources/CountryBorders.txt");
@@ -5891,7 +5896,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		tipText.add(">> Click \"Compute Model Fit\" to compute sequence-specific model\n  ...or go straight to \"Run Generic Forecast\" to get a generic forecast for this region.");
 		tipText.add(">> Click \"Compute Model Fit\" to compute sequence-specific model\n  ...or click \"Render\" to get a generic aftershock rate map.");
 		tipText.add(">> Click \"Run Specific Forecast\" to get a sequence-specific forecast.");
-		tipText.add(">> Click \"Render\" to generate a sequence-specific aftershock rate map for this forecast.");
+		tipText.add(">> Choose the map settings and click \"Render\" to generate forecast maps.");
 		tipText.add(">> Go back and edit the forecast or click \"Publish\" to generate a printable forecast document.");
 		
 		if (tipsOn) System.out.println(tipText.get(step));

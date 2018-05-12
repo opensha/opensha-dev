@@ -146,7 +146,7 @@ public class ETAS_USGS_AftershockForecast {
 				}
 			} else {
 				System.out.println("Skipping " + durations[i] + " forecast.");
-				System.out.println("Forecast end date is " + df.format(endDate.getTime())
+				if(D) System.out.println("Forecast end date is " + df.format(endDate.getTime())
 						+" but computation end date is "+ df.format(forecastEndDate.getTime()));
 			}
 		}

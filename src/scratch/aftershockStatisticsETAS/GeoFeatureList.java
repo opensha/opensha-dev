@@ -90,8 +90,8 @@ public class GeoFeatureList extends ArrayList<GeoFeature> {
 			this.add(new GeoFeature("city", elem[0], new Location(lat, lon), mapLevel));
 		
 		} catch (Exception e){
-			System.out.println("Unexpected line for GeoFeature string:");
 			if(D){
+				System.out.println("Unexpected line for GeoFeature string:");
 				System.out.println(line);
 				StringBuilder outline = new StringBuilder();
 				for (String el : elem){
@@ -124,7 +124,7 @@ public class GeoFeatureList extends ArrayList<GeoFeature> {
 			cities.addFeatureFromLine(line);
 		}
 		
-		if(D) System.out.println(cities.size() + " cities added to list.");
+		System.out.println(cities.size() + " cities added to list.");
 		
 		Region region = new Region(new Location(24,81), new Location(31,90));
 		int minLevel = 1000;
@@ -137,6 +137,6 @@ public class GeoFeatureList extends ArrayList<GeoFeature> {
 		for(GeoFeature city : cities)
 			System.out.println(city);
 		
-		if(D) System.out.println(cities.size() + " cities in mapped region.");
+		System.out.println(cities.size() + " cities in mapped region.");
 	}
 }

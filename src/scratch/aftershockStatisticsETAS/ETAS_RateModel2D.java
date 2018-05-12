@@ -26,7 +26,7 @@ public class ETAS_RateModel2D {
 
 	private ETAS_AftershockModel forecastModel;
 	private GriddedGeoDataSet rateModel;
-	private Boolean D = true;
+	private Boolean D = false;
 	
 	public ETAS_RateModel2D(ETAS_AftershockModel forecastModel){
 		this.forecastModel = forecastModel;
@@ -111,7 +111,7 @@ public class ETAS_RateModel2D {
 			for (int i = 0; i < trace.size(); i++){
 				Location loc = trace.get(i);
 				System.out.println(loc);
-			};
+			}
 		}
 
 		// compute rates at each point in the rate map for the mainshock source
@@ -192,8 +192,8 @@ public class ETAS_RateModel2D {
 		double toc, timeEstimate;
 		Stopwatch watch = Stopwatch.createStarted();
 		int warnTime = 3;
-
-		System.out.println("Computing smoothed rate map...");
+		String initialMessageString = "Computing smoothed rate map. ";
+		
 		for (int i=0 ; i < smoothGridData.size(); i++){
 			pt1 = smoothGridData.getLocation(i);
 			lon0 = pt1.getLongitude();
@@ -219,12 +219,14 @@ public class ETAS_RateModel2D {
 			// run the timer to see how long this is going to take
 			toc = watch.elapsed(TimeUnit.SECONDS);
 			if(toc > warnTime){
-				warnTime += 3;
+				warnTime += 10;
 
 				long count = i;
 				long total = smoothGridData.size();
 				timeEstimate = toc * (double)total/ (double)count;
-				System.out.format("This might take a while. Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+				System.out.format(initialMessageString + "Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+				initialMessageString = "...";
+				
 				if (forecastModel.progress != null){
 					//									progress.updateProgress(count, total, String.format("%d%% complete. %d seconds remaining", (int) (((double) count)/((double) total) * 100), (int) ((timeEstimate - toc)/1000)));
 					forecastModel.progress.setProgressMessage(String.format("%d%% complete. %d seconds remaining", (int) (((double) count)/((double) total) * 100),(int) ((timeEstimate - toc))));
@@ -259,8 +261,7 @@ public class ETAS_RateModel2D {
 		double toc, timeEstimate;
 		Stopwatch watch = Stopwatch.createStarted();
 		int warnTime = 3;
-
-		System.out.println("Computing smoothed rate map...");
+		String initialMessageString = "Computing smoothed rate map. ";
 		
 		mmiModel = null; //reset the mmi-magnitude interpolation forecastModel
 		
@@ -291,12 +292,14 @@ public class ETAS_RateModel2D {
 			// run the timer to see how long this is going to take
 			toc = watch.elapsed(TimeUnit.SECONDS);
 			if(toc > warnTime){
-				warnTime += 3;
+				warnTime += 10;
 
 				long count = i;
 				long total = smoothGridData.size();
 				timeEstimate = toc * (double)total/ (double)count;
-				System.out.format("This might take a while. Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+				System.out.format(initialMessageString + "Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+				initialMessageString = "...";
+				
 				if (forecastModel.progress != null){
 					//									progress.updateProgress(count, total, String.format("%d%% complete. %d seconds remaining", (int) (((double) count)/((double) total) * 100), (int) ((timeEstimate - toc)/1000)));
 					forecastModel.progress.setProgressMessage(String.format("%d%% complete. %d seconds remaining", (int) (((double) count)/((double) total) * 100),(int) ((timeEstimate - toc))));

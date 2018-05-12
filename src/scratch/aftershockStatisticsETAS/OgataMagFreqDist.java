@@ -196,7 +196,8 @@ public class OgataMagFreqDist{
 		double toc, timeEstimate;
 		int warnTime = 3; //ms
 		Stopwatch watch = Stopwatch.createStarted();
-
+		String initialMessageString = "Calculating MFD model. ";
+		
 		// 3D grid search for maximum likelihood b, mu, sig
 		for(int j = 0; j < mu_span.length; j++){
 			mu = mu_span[j];
@@ -243,10 +244,11 @@ public class OgataMagFreqDist{
 					toc = watch.elapsed(TimeUnit.SECONDS);
 					if(toc > warnTime){
 						// 							longRunFlag = true;	//mark as done. don't do it again
-						warnTime += 3;
+						warnTime += 10;
 
 						timeEstimate = toc * (npts*npts*b_span.length)/((j)*(npts*b_span.length) + (k)*(b_span.length) + i);
-						System.out.format("This might take a while. Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+						System.out.format(initialMessageString + "Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+						initialMessageString = "...";
 					}
 				}
 			}
@@ -462,16 +464,16 @@ public class OgataMagFreqDist{
 			muIndex++;
 		}
 		
-		System.out.println(this);
+		if(D) System.out.println(this);
 		EvenlyDiscretizedFunc Nexp = getCumulativeMND(mu_span[0], mu_span[mu_span.length-1], mu_span[1]-mu_span[0]);
-		System.out.println(Nexp);
+		if(D) System.out.println(Nexp);
 		
 		double gofNum = 0;
 		double gofDen = 1;
 		for (int i = 0; i < b.length; i++){
 			if (mu_span[i] >= get_Mc()){
 				
-				System.out.println(mu_span[i] + ": " + b[i] + " " + Nexp.getY(i));				
+				if(D) System.out.println(mu_span[i] + ": " + b[i] + " " + Nexp.getY(i));				
 				
 				gofNum += Math.abs(b[i] - Nexp.getY(i));
 				gofDen += b[i];

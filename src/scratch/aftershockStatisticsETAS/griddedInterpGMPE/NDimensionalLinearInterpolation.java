@@ -183,86 +183,86 @@ public class NDimensionalLinearInterpolation {
 		return indexes;
 	}
 	
-	public static void main(String[] args) {
-		// 1d case
-		int[] dimensions = { 2 };
-		double[] data = { 0d, 10d };
-		double[] deltas = { 0.5 };
-		NDimensionalLinearInterpolation interp = new NDimensionalLinearInterpolation( dimensions.length);
-		System.out.println(interp.interpolateTrimmed(data, deltas));
-		
-		// 2d case
-		dimensions = new int[] { 2, 2 };
-		NDimArrayCalc arrayCalc = new NDimArrayCalc(dimensions);
-		data = new double[arrayCalc.rawArraySize()];
-		for (int x=0; x<2; x++)
-			for (int y=0; y<2; y++)
-				data[arrayCalc.getIndex(x,y)] = x*y;
-//		deltas = new double[] { 0.0, 0.0 };
-		deltas = new double[] { 1.0, 1.0 };
-		interp = new NDimensionalLinearInterpolation(dimensions.length);
-		System.out.println(interp.interpolateTrimmed(data, deltas));
-		
-		// speed tests
-		int numPerDim = 20;
-		// 2D
-		arrayCalc = new NDimArrayCalc(new int[] {numPerDim, numPerDim});
-		data = new double[arrayCalc.rawArraySize()];
-		for (int x=0; x<numPerDim; x++)
-			for (int y=0; y<numPerDim; y++)
-				data[arrayCalc.getIndex(x, y)] = Math.random();
-		speedTest(data, arrayCalc, (int)4e7, numPerDim);
-		// 3D
-		arrayCalc = new NDimArrayCalc(new int[] {numPerDim, numPerDim, numPerDim});
-		data = new double[arrayCalc.rawArraySize()];
-		for (int x=0; x<numPerDim; x++)
-			for (int y=0; y<numPerDim; y++)
-				for (int z=0; z<numPerDim; z++)
-					data[arrayCalc.getIndex(x, y, z)] = Math.random();
-		speedTest(data, arrayCalc, (int)1e7, numPerDim);
-		// 4D
-		arrayCalc = new NDimArrayCalc(new int[] {numPerDim, numPerDim, numPerDim, numPerDim});
-		data = new double[arrayCalc.rawArraySize()];
-		for (int x=0; x<numPerDim; x++)
-			for (int y=0; y<numPerDim; y++)
-				for (int z=0; z<numPerDim; z++)
-					for (int t=0; t<numPerDim; t++)
-						data[arrayCalc.getIndex(x, y, z, t)] = Math.random();
-		speedTest(data, arrayCalc, (int)1e6, numPerDim);
-		// 5D
-		arrayCalc = new NDimArrayCalc(new int[] {numPerDim, numPerDim, numPerDim, numPerDim, numPerDim});
-		data = new double[arrayCalc.rawArraySize()];
-		for (int x=0; x<numPerDim; x++)
-			for (int y=0; y<numPerDim; y++)
-				for (int z=0; z<numPerDim; z++)
-					for (int t=0; t<numPerDim; t++)
-						for (int p=0; p<numPerDim; p++)
-							data[arrayCalc.getIndex(x, y, z, t, p)] = Math.random();
-		speedTest(data, arrayCalc, (int)1e5, numPerDim);
-	}
-	
-	private static void speedTest(double[] flatData, NDimArrayCalc arrayCalc, int numTests, int numPerDim) {
-		// prepare search indexes first
-		System.out.println("Preparing for "+arrayCalc.getNumDimensions()+"-D test");
-		List<double[]> searchIndexes = new ArrayList<>();
-		for (int i=0; i<numTests; i++) {
-			double[] indexes = new double[arrayCalc.getNumDimensions()];
-			for (int j=0; j<indexes.length; j++)
-				indexes[j] = Math.random()*(numPerDim - 1);
-			searchIndexes.add(indexes);
-		}
-		NDimensionalLinearInterpolation interp = new NDimensionalLinearInterpolation(arrayCalc.getNumDimensions());
-		
-		System.out.println("Doing "+arrayCalc.getNumDimensions()+"-D test");
-		Stopwatch watch = Stopwatch.createStarted();
-		for (double[] indexes : searchIndexes)
-			interp.interpolate(flatData, arrayCalc, indexes);
-		watch.stop();
-		long millis = watch.elapsed(TimeUnit.MILLISECONDS);
-		double secs = millis/1000d;
-		System.out.println("\tTime to "+numTests+": "+(float)secs+"s");
-		double calcsPerSec = numTests/secs;
-		System.out.println("\tInterp/s: "+(float)calcsPerSec+"s");
-	}
+//	public static void main(String[] args) {
+//		// 1d case
+//		int[] dimensions = { 2 };
+//		double[] data = { 0d, 10d };
+//		double[] deltas = { 0.5 };
+//		NDimensionalLinearInterpolation interp = new NDimensionalLinearInterpolation( dimensions.length);
+//		System.out.println(interp.interpolateTrimmed(data, deltas));
+//		
+//		// 2d case
+//		dimensions = new int[] { 2, 2 };
+//		NDimArrayCalc arrayCalc = new NDimArrayCalc(dimensions);
+//		data = new double[arrayCalc.rawArraySize()];
+//		for (int x=0; x<2; x++)
+//			for (int y=0; y<2; y++)
+//				data[arrayCalc.getIndex(x,y)] = x*y;
+////		deltas = new double[] { 0.0, 0.0 };
+//		deltas = new double[] { 1.0, 1.0 };
+//		interp = new NDimensionalLinearInterpolation(dimensions.length);
+//		System.out.println(interp.interpolateTrimmed(data, deltas));
+//		
+//		// speed tests
+//		int numPerDim = 20;
+//		// 2D
+//		arrayCalc = new NDimArrayCalc(new int[] {numPerDim, numPerDim});
+//		data = new double[arrayCalc.rawArraySize()];
+//		for (int x=0; x<numPerDim; x++)
+//			for (int y=0; y<numPerDim; y++)
+//				data[arrayCalc.getIndex(x, y)] = Math.random();
+//		speedTest(data, arrayCalc, (int)4e7, numPerDim);
+//		// 3D
+//		arrayCalc = new NDimArrayCalc(new int[] {numPerDim, numPerDim, numPerDim});
+//		data = new double[arrayCalc.rawArraySize()];
+//		for (int x=0; x<numPerDim; x++)
+//			for (int y=0; y<numPerDim; y++)
+//				for (int z=0; z<numPerDim; z++)
+//					data[arrayCalc.getIndex(x, y, z)] = Math.random();
+//		speedTest(data, arrayCalc, (int)1e7, numPerDim);
+//		// 4D
+//		arrayCalc = new NDimArrayCalc(new int[] {numPerDim, numPerDim, numPerDim, numPerDim});
+//		data = new double[arrayCalc.rawArraySize()];
+//		for (int x=0; x<numPerDim; x++)
+//			for (int y=0; y<numPerDim; y++)
+//				for (int z=0; z<numPerDim; z++)
+//					for (int t=0; t<numPerDim; t++)
+//						data[arrayCalc.getIndex(x, y, z, t)] = Math.random();
+//		speedTest(data, arrayCalc, (int)1e6, numPerDim);
+//		// 5D
+//		arrayCalc = new NDimArrayCalc(new int[] {numPerDim, numPerDim, numPerDim, numPerDim, numPerDim});
+//		data = new double[arrayCalc.rawArraySize()];
+//		for (int x=0; x<numPerDim; x++)
+//			for (int y=0; y<numPerDim; y++)
+//				for (int z=0; z<numPerDim; z++)
+//					for (int t=0; t<numPerDim; t++)
+//						for (int p=0; p<numPerDim; p++)
+//							data[arrayCalc.getIndex(x, y, z, t, p)] = Math.random();
+//		speedTest(data, arrayCalc, (int)1e5, numPerDim);
+//	}
+//	
+//	private static void speedTest(double[] flatData, NDimArrayCalc arrayCalc, int numTests, int numPerDim) {
+//		// prepare search indexes first
+//		System.out.println("Preparing for "+arrayCalc.getNumDimensions()+"-D test");
+//		List<double[]> searchIndexes = new ArrayList<>();
+//		for (int i=0; i<numTests; i++) {
+//			double[] indexes = new double[arrayCalc.getNumDimensions()];
+//			for (int j=0; j<indexes.length; j++)
+//				indexes[j] = Math.random()*(numPerDim - 1);
+//			searchIndexes.add(indexes);
+//		}
+//		NDimensionalLinearInterpolation interp = new NDimensionalLinearInterpolation(arrayCalc.getNumDimensions());
+//		
+//		System.out.println("Doing "+arrayCalc.getNumDimensions()+"-D test");
+//		Stopwatch watch = Stopwatch.createStarted();
+//		for (double[] indexes : searchIndexes)
+//			interp.interpolate(flatData, arrayCalc, indexes);
+//		watch.stop();
+//		long millis = watch.elapsed(TimeUnit.MILLISECONDS);
+//		double secs = millis/1000d;
+//		System.out.println("\tTime to "+numTests+": "+(float)secs+"s");
+//		double calcsPerSec = numTests/secs;
+//		System.out.println("\tInterp/s: "+(float)calcsPerSec+"s");
+//	}
 
 }

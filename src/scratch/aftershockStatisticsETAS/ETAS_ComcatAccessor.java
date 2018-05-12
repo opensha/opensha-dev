@@ -242,7 +242,7 @@ public class ETAS_ComcatAccessor {
 					throw ExceptionUtils.asRuntimeException(e);
 				}
 
-				System.out.println(count);
+				if(D) System.out.println(count);
 
 				if (count > 0) {
 					for (JsonEvent event : events) {
@@ -363,7 +363,7 @@ public class ETAS_ComcatAccessor {
 					throw ExceptionUtils.asRuntimeException(e);
 				}
 
-				System.out.println(count);
+				if(D) System.out.println(count);
 
 				if (count > 0) {
 					for (JsonEvent event : events) {
@@ -448,7 +448,7 @@ public class ETAS_ComcatAccessor {
 			try{
 				mag = event.getMag().doubleValue();
 			}catch(Exception e){
-				System.out.println(event.toString());
+				System.err.println(event.toString());
 				return null;
 			}
 			ObsEqkRupture rup = new ObsEqkRupture(event.getEventId().toString(),

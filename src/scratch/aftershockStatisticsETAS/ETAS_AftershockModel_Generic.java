@@ -53,16 +53,17 @@ public class ETAS_AftershockModel_Generic extends ETAS_AftershockModel {
 		this.mean_p = genericParams.get_p();
 		this.alpha = genericParams.get_alpha();
 		this.b = genericParams.get_b();
+		this.ac = genericParams.get_a();
 	};
 	
 	public ETAS_AftershockModel_Generic(
 			ObsEqkRupture mainShock, ObsEqkRupList aftershockList, GenericETAS_Parameters genericETAS_Parameters,
 			double dataMinDays, double dataMaxDays, double forecastMinDays, double forecastMaxDays, double Mc, 
-			double maxSimMag, int maxNumGenerations, int nSims, boolean fitMSProductivity) {
+			double maxSimMag, int maxNumGenerations, int nSims, boolean fitMSProductivity, boolean timeDependentMc) {
 
 		this(mainShock,  aftershockList,  genericETAS_Parameters,
 				dataMinDays,  dataMaxDays,  forecastMinDays,  forecastMaxDays,  Mc, 
-				maxSimMag,  maxNumGenerations,  nSims,  fitMSProductivity,  null); 
+				maxSimMag,  maxNumGenerations,  nSims,  fitMSProductivity, timeDependentMc, null); 
 	}
 
 	
@@ -76,7 +77,7 @@ public class ETAS_AftershockModel_Generic extends ETAS_AftershockModel {
 	public ETAS_AftershockModel_Generic(
 			ObsEqkRupture mainShock, ObsEqkRupList aftershockList, GenericETAS_Parameters genericETAS_Parameters,
 			double dataMinDays, double dataMaxDays, double forecastMinDays, double forecastMaxDays, double Mc, 
-			double maxSimMag, int maxNumGenerations, int nSims, boolean fitMSProductivity, CalcProgressBar progress) {
+			double maxSimMag, int maxNumGenerations, int nSims, boolean fitMSProductivity, boolean timeDependentMc, CalcProgressBar progress) {
 		
 		this(mainShock, aftershockList,
 				genericETAS_Parameters.get_a(), genericETAS_Parameters.get_aSigma(), 
@@ -85,7 +86,7 @@ public class ETAS_AftershockModel_Generic extends ETAS_AftershockModel {
 				genericETAS_Parameters.get_covariance(), genericETAS_Parameters.get_priorCovariance(),
 				genericETAS_Parameters.get_alpha(), genericETAS_Parameters.get_b(), genericETAS_Parameters.get_refMag(),
 				dataMinDays, dataMaxDays, forecastMinDays, forecastMaxDays, Mc,
-				maxSimMag, maxNumGenerations, nSims, fitMSProductivity, progress); 
+				maxSimMag, maxNumGenerations, nSims, fitMSProductivity, timeDependentMc, progress); 
 	}
 	
 	
@@ -108,6 +109,7 @@ public class ETAS_AftershockModel_Generic extends ETAS_AftershockModel {
 			double Mc, double maxMag,
 			int maxGenerations, int nSims,
 			boolean fitMSProductivity,
+			boolean timeDependentMc,
 			CalcProgressBar progress) {
 
 		//		this.simulatedCatalog = simulatedCatalog;
@@ -123,10 +125,12 @@ public class ETAS_AftershockModel_Generic extends ETAS_AftershockModel {
 		this.magAftershocks = ETAS_StatsCalc.getAftershockMags(aftershocks);
 		this.b=b;
 		this.bSigma = bSigma;
+		this.timeDependentMc = timeDependentMc;
 
 		//correct the a-value if Mc is not the same as refMag
 		mean_a += Math.log10((maxMag - refMag)/(maxMag - Mc));
 
+		this.ac = mean_a;
 		this.mean_ams=mean_a;
 		this.sigma_ams=sigma_a;
 		this.mean_a=mean_a;
@@ -479,9 +483,8 @@ public class ETAS_AftershockModel_Generic extends ETAS_AftershockModel {
 		}
 		
 		hist.setName(name);
-		if(D) {
-			System.out.println("PDF of ams-value: totalTest = "+hist.calcSumOfY_Vals());
-		}
+		if(D) System.out.println("PDF of ams-value: totalTest = "+hist.calcSumOfY_Vals());
+		
 		hist.scale(1d/hist.getDelta());
 		return hist;
 	}
@@ -509,9 +512,8 @@ public class ETAS_AftershockModel_Generic extends ETAS_AftershockModel {
 		}
 		
 		hist.setName(name);
-		if(D) {
-			System.out.println("PDF of a-value: totalTest = "+hist.calcSumOfY_Vals());
-		}
+		if(D) System.out.println("PDF of a-value: totalTest = "+hist.calcSumOfY_Vals());
+		
 		hist.scale(1d/hist.getDelta());
 		return hist;
 	}
@@ -540,9 +542,8 @@ public class ETAS_AftershockModel_Generic extends ETAS_AftershockModel {
 		}
 		
 		hist.setName(name);
-		if(D) {
-			System.out.println("PDF of p-value: totalTest = "+hist.calcSumOfY_Vals());
-		}
+		if(D) System.out.println("PDF of p-value: totalTest = "+hist.calcSumOfY_Vals());
+		
 		hist.scale(1d/hist.getDelta());
 		return hist;
 	}
@@ -572,9 +573,8 @@ public class ETAS_AftershockModel_Generic extends ETAS_AftershockModel {
 		}
 		
 		hist.setName(name);
-		if(D) {
-			System.out.println("PDF of logc-value: totalTest = "+hist.calcSumOfY_Vals());
-		}
+		if(D) System.out.println("PDF of logc-value: totalTest = "+hist.calcSumOfY_Vals());
+		
 		hist.scale(1d/hist.getDelta());
 		return hist;
 	}

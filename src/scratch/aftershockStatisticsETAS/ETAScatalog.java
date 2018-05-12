@@ -86,21 +86,21 @@ public class ETAScatalog {
 		double[][] paramList;
 		if(nSims>0){
 			//get the list of parameters to supply to each simulation
-			System.out.println("Generating parameter set. This can take a while...");
 			paramList = sampleParams(nSims, maxMag);
 			
 			Stopwatch watch = Stopwatch.createStarted();
 			int warnTime = 3;
 			long toc;
 			double timeEstimate;
+			String initialMessageString = "Calculating " + nSims + " " + (int)(forecastEnd - forecastStart) + "-day ETAS catalogs. ";
 			
 			for(int i = 0; i < nSims ; i++){
 				toc = watch.elapsed(TimeUnit.SECONDS);
 				if (toc > warnTime){
-					warnTime += 3;
+					warnTime += 10;
 					timeEstimate = (double)toc * (double)(nSims)/(double)i;
-					System.out.format("This might take a while. Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
-					
+					System.out.format(initialMessageString + "Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+					initialMessageString = "...";
 				}
 
 				double[] params = paramList[i];
@@ -225,8 +225,8 @@ public class ETAScatalog {
 				
 			}
 		} else if(ngen == maxGenerations) {
-			System.out.println("Sim=" + simNumber + " t=" + t + " has reached " + maxGenerations + " generations. Cutting it short.");
-			System.out.println("n = " + ETAS_StatsCalc.calculateBranchingRatio(a_sample, p_sample, c_sample, alpha, b, forecastEnd, Mc, maxMagLimit)
+			if(D) System.out.println("Sim=" + simNumber + " t=" + t + " has reached " + maxGenerations + " generations. Cutting it short.");
+			if(D) System.out.println("n = " + ETAS_StatsCalc.calculateBranchingRatio(a_sample, p_sample, c_sample, alpha, b, forecastEnd, Mc, maxMagLimit)
 					+ " a=" + a_sample + " p=" + p_sample + " c=" + c_sample + " al=" + alpha + " b=" + b + " T=" + forecastEnd + " Mc=" + Mc + " Mmax=" + maxMagLimit);
 		}
 		return newEqList;
@@ -279,7 +279,7 @@ public class ETAScatalog {
 		long toc, timeEstimate;
 		Stopwatch watch = Stopwatch.createStarted();
 		int warnTime = 3;
-		
+		String initialMessageString = "Generating parameter sets. ";
 		//truncate likelihood based on criticality
 		double cumSum = 0;
 		for(h = 0; h < num_ams; h++ ){
@@ -295,10 +295,11 @@ public class ETAScatalog {
 						// run the timer to see how long this is going to take
 						toc = watch.elapsed(TimeUnit.SECONDS);
 						if(toc > warnTime){
-							warnTime += 3;
+							warnTime += 10;
 
 							timeEstimate = toc * (num_p*num_c*num_ams*num_a)/((h)*(num_p*num_c*num_a) + (i)*(num_c*num_p) + (j)*(num_c) + k);
-							System.out.format("This might take a while. Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+							System.out.format(initialMessageString + "Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+							initialMessageString = "...";
 						}
 
 					}
