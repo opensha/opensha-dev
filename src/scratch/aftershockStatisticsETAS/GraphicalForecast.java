@@ -1,5 +1,6 @@
 package scratch.aftershockStatisticsETAS;
 
+import java.awt.Font;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -9,6 +10,8 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.ListIterator;
 import java.util.TimeZone;
+
+import javax.swing.JTable;
 
 import org.apache.commons.io.FileUtils;
 import org.opensha.commons.param.Parameter;
@@ -48,13 +51,15 @@ public class GraphicalForecast{
 		
 		double[] fractiles = new double[3];
 		
+		double baseRate = 1000;
 		for (int i = 0; i < predictionMagnitudes.length; i++){
 			for (int j = 0; j < predictionIntervals.length; j++){
-				probability[i][j] = (1d - i/6.08)*0.9999;
+				double rate = baseRate*(j+1d)/Math.pow(10d, i) ;
+				probability[i][j] = 1 - Math.exp( -rate );
 				
-				fractiles[0] = -Math.log(1d - probability[i][j]);
-				fractiles[1] = -1d/2d*Math.log(1d - probability[i][j]);
-				fractiles[2] = -10d*Math.log(1d - probability[i][j]);
+				fractiles[0] = rate;
+				fractiles[1] = rate - Math.sqrt(rate);
+				fractiles[2] = rate*10d;
 				
 				number[i][j][0] = fractiles[0];
 				number[i][j][1] = fractiles[1];
@@ -63,12 +68,16 @@ public class GraphicalForecast{
 		}
 		
 		// do weekly probabilities of felt and damaging quakes
-		pDamage_wk = probability[3][1];
-		fractiles[0] = -Math.log(1 - Math.pow(1 - 0.1*0 - 0.0001, 1/(0+1)));
-		fractiles[1] = -1/2*Math.log(1 - Math.pow(1 - 0.1*0 - 0.0001, 1/(0+1)));
-		fractiles[2] = -10*Math.log(1 - Math.pow(1 - 0.1*0 - 0.0001, 1/(0+1)));
-		nfelt_wk[0] = Math.max(fractiles[0],1);
-		nfelt_wk[1] = Math.max(fractiles[1],1);
+		double rate = baseRate*(1+1d)/Math.pow(10d, 3);
+		pDamage_wk = 1 - Math.exp( -rate );
+		
+		rate = baseRate*(1+1d)/Math.pow(10d, 0);
+		fractiles[0] = rate;
+		fractiles[1] = rate - Math.sqrt(rate);
+		fractiles[2] = rate*10d;
+		
+		nfelt_wk[0] = Math.max(fractiles[0],0);
+		nfelt_wk[1] = Math.max(fractiles[1],0);
 		nfelt_wk[2] = Math.max(fractiles[2],1);
 	}
 	
@@ -112,7 +121,7 @@ public class GraphicalForecast{
 	
 	//	parameters for word wrap algorithm and text summary
 	private boolean smartRoundPercentages = true;   //give rounded range of probabilities?
-	private double feltMag = 3.5;  //% magnitude to use for calculating number of 'felt' earthquakes
+	private double feltMag = 3;  //% magnitude to use for calculating number of 'felt' earthquakes
 	private double damageMag = 6.0;   // magnitude to use for damaging earthquake
 	private double pDamage_wk = 0;
 	private double[] nfelt_wk = new double[3];
@@ -167,7 +176,7 @@ public class GraphicalForecast{
 		
 		assignForecastStrings();
 		
-		writeHTML(outFile);
+//		writeHTML(outFile); //call it explicitly
 	}
 	
 	private void processForecastStrings(){
@@ -362,7 +371,8 @@ public class GraphicalForecast{
 		    "More earthquakes than usual will continue to occur in the area, decreasing " +
 		    "in frequency over the following " + F_HORIZON + " or longer. During the next week " +
 		    "there are likely to be " + tags.get("NFELT_WK") + " aftershocks large enough to be felt locally, " +
-		    "and there is a " + tags.get("PDAMAGE_WK") + "% chance of at least one damaging M" + DAMAGE_MAG + " (or larger) aftershock.";
+		    "and there is a " + tags.get("PDAMAGE_WK") + "% chance of at least one damaging M" + DAMAGE_MAG + " (or larger) aftershock." +
+		    " The earthquake rate may be re-invigorated in response to large aftershocks, should they occur. ";
 		
 		tags.put("DESCRIPTIVE_TEXT", DESCRIPTIVE_TEXT);
 	}
@@ -390,8 +400,11 @@ public class GraphicalForecast{
 
 	//	returns a string token of form "N1 - N2" where N1 and N2 represent a range of values
 	private String numberRange(double number1, double number2){
-		String output = smartRound(number1) + " - " + smartRound(number2);
-		return output;
+		if (smartRound(number2) == 0)
+			return "0*";
+		else
+			return smartRound(number1) + " - " + smartRound(number2);
+		
 	}
 	
 	// rounds the number to an conversational level of accuracy
@@ -418,6 +431,95 @@ public class GraphicalForecast{
 		return (double)diff/(double)ProbabilityModelsCalc.MILLISEC_PER_DAY;
 	}
 	
+	public void writeHTMLTable(File outputFile){
+		StringBuilder tableString = new StringBuilder();
+
+		//header
+		tableString.append(""
+				+"<html>\n"
+				+"	<head>\n"
+				+"		<style>\n"
+		        +"			body {font-family:helvetica; background-color: white; page-break-inside:avoid}\n"
+		        +"	        .tableForecast {font-size:14px; border:0px solid gray; border-collapse:collapse; margin:0px; text-align:center}\n"
+		        +"			.tfElem2 {font-size:14px; border:0px solid gray; border-collapse:collapse; padding:1px; margin:0; text-align:center}\n"
+		        +"			.tfElem1 {font-size:14px; background-color:#eeeeee; border-collapse:collapse; padding:1px; margin:0; text-align:center}\n"
+		        +" 			.tableFootnote {font-size:12px;text-align:right;}\n"
+		        +"		</style>\n"
+		        +"	</head>\n"
+		        +"	<body>\n");
+
+		//generate forecast table
+		tableString.append(""
+				+" 	<table class=\"tableForecast\" style=\"width:525px\">\n"
+				+"		<tr class=\"forecastHeader\"><th style=\"font-weight:bold; padding:4px\">Forecast Interval</th><th style=\"font-weight:bold\">Magnitude</th><th style=\"font-weight:bold\">Number</th><th style=\"font-weight:bold\">Number Range</th><th style=\"font-weight:bold\">Probability</th></tr>\n"
+				+"		<tr><td colspan=\"5\"></td></tr>\n");
+			
+		String DATE_START = tags.get("F_START_ABS");
+		String DATE_END;
+		SimpleDateFormat formatter=new SimpleDateFormat("d MMM yyyy, HH:mm:ss");  
+		formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+		GregorianCalendar forecastEndDate = new GregorianCalendar();
+
+		String[] durString = new String[]{"Day","Week","Month","Year"};
+		for (int j = 0; j<4; j++){
+			forecastEndDate.setTimeInMillis(forecastStartDate.getTimeInMillis() + (long) (predictionIntervals[j]*ETAS_StatsCalc.MILLISEC_PER_DAY));
+			DATE_END = formatter.format(forecastEndDate.getTime());
+			tableString.append(""
+					+"		<tr class=\"tfElem2\"><td rowspan=\"5\"><div style=\"font-weight:bold;display:inline\">1 " + durString[j]
+			 		+"		</div><br>"+ DATE_START +"<br>through<br>"+ DATE_END +"</td>\n");
+			 		
+			int n = 0;
+			for (int i = 0; i < predictionMagnitudes.length; i++) {
+				String classStr = (Math.floorMod(n, 2) == 0)?"tfElem1":"tfElem2";
+				int mag = (int) predictionMagnitudes[i];
+				if( mag == 3 || i >= predictionMagnitudes.length-4) {//always plot the M3s and then the last four
+					tableString.append(""
+							+" 		<td class=\""+ classStr +"\">"
+							+ "M ≥ " + mag + "</td><td class=\""+ classStr +"\">"
+							+ Math.round(number[i][j][0]) + "</td><td class=\""+ classStr +"\">"
+							+ numberRange(number[i][j][1], number[i][j][2]) +"</td><td class=\""+ classStr +"\">"
+							+ ((probability[i][j] >= 0.001)?probString[i][j]:"<0.1%") +"</td></tr>\n");
+					
+					n++;
+				}
+			}
+			while(n++ <= 5)
+				if (n == 6 && j == 3)
+					tableString.append("<tr><td colspan=\"5\" class=\"tableFootnote\">*Earthquake possible but with low probability</td><tr>\n");
+				else
+					tableString.append("	<tr><td colspan=\"5\"><br></td></tr>\n");
+		}
+		tableString.append(""
+	            +"		</table>\n"
+	            +" 	</body>\n"
+	            +"</html>\n");
+		
+		//write to a file
+		FileWriter fw;
+		try {
+			fw = new FileWriter(outputFile, false);
+		} catch (IOException e1) {
+			//				e1.printStackTrace();
+			System.err.println("Couldn't save to file " + outputFile.getAbsolutePath());
+			return;
+		}
+
+		try {
+			fw.append(tableString);
+		} catch (IOException e) {
+			//					e.printStackTrace();
+			System.err.println("Couldn't save to file " + outputFile.getAbsolutePath());
+		}
+
+		try {
+			fw.close();
+		} catch (IOException e) {
+			//				e.printStackTrace();
+			System.err.println("Problem closing file.");
+		}
+	}
+
+	
 	// Build an html document for displaying the advisory
 	public void writeHTML(File outputFile){
 	
@@ -425,7 +527,7 @@ public class GraphicalForecast{
 	
 		StringBuilder headString = new StringBuilder();
 		StringBuilder infoString = new StringBuilder();
-		StringBuilder probString = new StringBuilder();
+		StringBuilder probTableString = new StringBuilder();
 		StringBuilder keyString = new StringBuilder();
 		StringBuilder imgString = new StringBuilder(); 
 		
@@ -514,7 +616,7 @@ public class GraphicalForecast{
 				+"            <table>\n"
 				+"                <tr>\n"
 				+"					  <!-- Mainshock and forecast information -->\n"	
-				+"                    <td style=\"width:400px\"><h2 style=\"text-align:left\">" + tags.get("MS_MAG") + " " + tags.get("MS_NAME") + "</h2></td>\n"
+				+"                    <td style=\"width:400px\"><h2 style=\"text-align:left\">" + tags.get("MS_MAG") + " eventID:" + tags.get("MS_NAME") + "</h2></td>\n"
 				+"                    <td style=\"width:400px\"><h3 style=\"text-align:right\">Forecast Generated: " + tags.get("V_DATE") + " UTC</h3></td>\n"
 				+"                </tr>\n"
 				+"            </table>\n"
@@ -532,7 +634,7 @@ public class GraphicalForecast{
 				+"            <p style=\"text-align:justify\">" + tags.get("DESCRIPTIVE_TEXT") + "</p>\n"
 				+"        </div>\n\n");
 
-		probString.append("        <div style=\"width:800px;text-align:center;\">\n"
+		probTableString.append("        <div style=\"width:800px;text-align:center;\">\n"
 				+"            <p><h2>Anticipated aftershock activity</h2>\n"
 				+"            <p style=\"margin-top:0px\">Forecast start date: " + tags.get("F_START_ABS") + " UTC</p>\n"
 				+"        </div>\n"
@@ -568,9 +670,11 @@ public class GraphicalForecast{
 				+"                                    </tr>\n"
 				+"                                    \n");
 
+		
+		
 		//generate forecast table
 		for (int j = 0; j<3; j++){
-			probString.append(""
+			probTableString.append(""
 					+"                                    <tr class = \"forecastRow\">\n");
 
 			for (int i = 0; i<colors.length; i++){
@@ -581,7 +685,7 @@ public class GraphicalForecast{
 				if (probVal > 0.50) yVal = 11 + barHeight*(1 - probVal);
 				else yVal = barHeight*(1 - probVal) - 3;
 
-				probString.append(""
+				probTableString.append(""
 						+"                                        <td class=\"forecastValue\">\n"
 						+"												<svg class=\"forecastBar\">\n"
 						+"													<rect class = \"forecastBox\" y=\"" + (int) (barHeight - (int) height) + "px\" height=\"" + ((int) height) + "px\" width=\"" + barWidth + "px\" fill=\""+colors[i]+"\" />\n"
@@ -590,11 +694,11 @@ public class GraphicalForecast{
 						+"                                        </td>\n"
 						);
 			}
-			probString.append(""
+			probTableString.append(""
 					+"                                    </tr>\n");
 		}
 		
-		probString.append(""
+		probTableString.append(""
 				+"                                </table>\n"
 				+"                            </td>\n"
 				+"                        </tr>\n"
@@ -679,7 +783,7 @@ public class GraphicalForecast{
 		        +" 						</a>\n"
 		        +" 					</div>\n"
 		        +"		 	   </td>\n"
-		        +"			    <td style=\"width:550px\">\n"
+		        +"			    <td style=\"width:550px\" id=\"imageBox\">\n"
 		        +"	 				<!-- To manually specifiy the image you want to see displayed, replace src=\"...\" with the desired filename. -->\n"
 		        +"	          	<img style=\"margin:auto;width:550px;max-height:480px\" src=\"ratemap.png\" alt=\"Graphical Forecast\" id=\"theimage\">\n"
 		        +"	      	</td>\n"
@@ -708,6 +812,7 @@ public class GraphicalForecast{
 				+"\n"
 				+"  <div style=\"margin-left:0px;width:800px;text-align:center\">\n"
 				+"		<!-- Set up buttons for changing which image type is displayed -->\n"
+				+" 		<input type=\"button\" class=\"imageButton\" value=\"Table only\" id=\"imageButton0\" onClick=\"showTable();\">\n"
 				+"		<input type=\"button\" class=\"imageButton\" value=\"Magnitude Distribution\" id=\"imageButton1\" onClick=\"changeImage('1');\">\n"
 				+"		<input type=\"button\" class=\"imageButton\" value=\"Number with time\" id=\"imageButton2\" onClick=\"changeImage('2');\">\n"
 				+"		<input type=\"button\" class=\"activeImageButton\" value=\"Rate map\" id=\"imageButton3\" onClick=\"changeImage('3');\">\n"
@@ -723,8 +828,27 @@ public class GraphicalForecast{
 				+"  </div>\n"
 				+"\n"
 				+"	<script>\n"
+				+"		function showTable(){\n"
+				+"			document.getElementById('imageBox').innerHTML = '<iframe style=\"width:550px;height:480px;border:none\" src=\"Table.html\"></iframe>';\n"
+				+"			for (i = 1; i < 5; i++){\n"
+				+"				document.getElementById('imageButton' + i).className = 'imageButton';\n"
+				+"			}\n"
+				+"			document.getElementById('imageButton0').className = 'activeImageButton';\n"
+				+"\n"
+				+"			for (i = 1; i < 5; i++){\n"
+                +"			    if (document.getElementById('durationButton' + i).className == 'durButton')\n"
+                +"			        document.getElementById('durationButton' + i).className = 'durButtonDisabled';\n"
+                +"			    if (document.getElementById('durationButton' + i).className == 'activeDurButton')\n"
+                +"			        document.getElementById('durationButton' + i).className = 'activeDurButtonDisabled';\n"
+                +"				}\n"
+				+"		}\n"
+				+"\n"
 				+" 		// Script for changing the image in response to button click\n"
 				+"		function changeImage(buttonNumber){\n"
+				+" 		// first make sure we've got an image\n"
+		        +"    	document.getElementById('imageBox').innerHTML = '<img style=\"margin:auto;width:550px;max-height:480px\" src=\"ratemap.png\" alt=\"Graphical Forecast\" id=\"theimage\">';\n"		            
+		        +"\n"
+		        +" 		// now decide which image\n"
 				+"			durationIndex = 1;\n"
 				+"			for (i = 1; i < 5; i++){\n"
 				+"				if (document.getElementById('durationButton' + i).className.includes('active')){\n"
@@ -778,7 +902,7 @@ public class GraphicalForecast{
 				+"			var image = document.getElementById('theimage');\n"
 				+"			image.src = imgName + '.png';\n"
 				+"\n"
-				+"			for (i = 1; i < 5; i++){\n"
+				+"			for (i = 0; i < 5; i++){\n"
 				+"				document.getElementById('imageButton' + i).className = 'imageButton';\n"
 				+"			}\n"
 				+"			document.getElementById('imageButton' + buttonNumber).className = 'activeImageButton';\n"
@@ -863,7 +987,7 @@ public class GraphicalForecast{
 
 		outputString.append(headString);
 		outputString.append(infoString);
-		outputString.append(probString);
+		outputString.append(probTableString);
 		outputString.append(keyString);
 		outputString.append(imgString);
 		
@@ -909,6 +1033,7 @@ public class GraphicalForecast{
 		gf.setShakeMapURL("https://earthquake.usgs.gov/archive/product/shakemap/atlas20100404224043/atlas/1520888708106/download/intensity.jpg");
 		try{
 			gf.writeHTML(new File(System.getenv("HOME") + "/example_forecast.html"));
+			gf.writeHTMLTable(new File(System.getenv("HOME") + "/Table.html"));
 		}catch(Exception e){
 			e.printStackTrace();
 		}

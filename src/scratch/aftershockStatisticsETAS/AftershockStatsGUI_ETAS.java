@@ -299,17 +299,17 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private DoubleParameter forecastDurationParam;
 	
 	private ButtonParameter computeAftershockForecastButton;
-	
+	private BooleanParameter plotSpecificOnlyParam;
 	private ButtonParameter generateMapButton;
 	
 	private BooleanParameter vs30Param;
 	
 	private enum IntensityType {
+		MMI("MMI (Modified Mercali Intensity)", "MMI"),
 		PGA("Peak acceleration (%g)", "PGA"),
 		PGV("Peak velocity (cm/s)", "PGV"),
-		MMI("MMI (Modified Mercali Intensity)", "MMI"),
 		PSA("Peak Spectral Acceleration 1Hz (%g)", "PSA"),
-		NONE("None", "NONE");
+		NONE("Aftershock Rate Only", "NONE");
 		
 		private String name;
 		private String abbreviation;
@@ -435,7 +435,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private GenericETAS_ParametersFetch genericFetch = null;
 	private GenericETAS_Parameters genericParams = null;
 	private ETAS_AftershockModel_Generic genericModel = null;
-	private ETAS_AftershockModel_SequenceSpecific seqSpecModel = null;
+//	private ETAS_AftershockModel_SequenceSpecific seqSpecModel = null;
 //	private ETAS_AftershockModel_Bayesian bayesianModel = null; // the bayesian model is now just a sequence specific model
 	private ETAS_AftershockModel_SequenceSpecific bayesianModel = null;
 	
@@ -764,27 +764,33 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		setEnabledStyle(pValParam, false);
 		outputParams.addParameter(pValParam);
 		
-		cValParam = new DoubleParameter("c", new Double(0d));
+		cValParam = new DoubleParameter("log-c", new Double(0d));
 		cValParam.setValue(null);
-		cValParam.setInfo("Omori c-parameter");
+		cValParam.setInfo("log10 of Omori c-parameter");
 		cValParam.addParameterChangeListener(this);
 		cValParam.getEditor().getComponent().setMinimumSize(null);
 		cValParam.getEditor().getComponent().setPreferredSize(new Dimension(outputWidth, 50));
 		setEnabledStyle(cValParam, false);
 		outputParams.addParameter(cValParam);
-			
+
 		computeAftershockForecastButton = new ButtonParameter("Aftershock Forecast", "Run Generic Forecast");
 		computeAftershockForecastButton.setInfo("Compute aftershock forecast using typical parameters");
 		computeAftershockForecastButton.addParameterChangeListener(this);
 		computeAftershockForecastButton.getEditor().setEditorBorder(BorderFactory.createLineBorder(Color.black, 1));
 		fitParams.addParameter(computeAftershockForecastButton);
 		
-
+		plotSpecificOnlyParam = new BooleanParameter("Specific Forecast Only", false);
+		plotSpecificOnlyParam.setInfo("Check to plot only the sequence-specific forecast in summary figures.");
+		plotSpecificOnlyParam.addParameterChangeListener(this);
+		plotSpecificOnlyParam.getEditor().setEnabled(false);
+		plotSpecificOnlyParam.getEditor().refreshParamEditor();
+		fitParams.addParameter(plotSpecificOnlyParam);
+		
 		/*
 		 * map params
 		 */
 		intensityTypeParam = new EnumParameter<IntensityType>("Intensity Measure",
-				EnumSet.allOf(IntensityType.class), IntensityType.PGA, null);
+				EnumSet.allOf(IntensityType.class), IntensityType.MMI, null);
 		intensityTypeParam.setInfo("Specify shaking intensity metric for map");
 		intensityTypeParam.addParameterChangeListener(this);
 		mapParams.addParameter(intensityTypeParam);
@@ -876,8 +882,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		dataEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(5 + 0.0))));
 		
 		mfdEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(1 + 0.0))));
-		fitEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(4 + 0.0))));
-		mapEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(5 + 0.0))));
+		fitEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(4.3 + 0.0))));
+		mapEditor.setPreferredSize(new Dimension(paramWidth, (int) (height/10d*(4.7 + 0.0))));
 		publishAdvisoryEditor.setPreferredSize(new Dimension(paramWidth, (int)(height/10d*(1 + 0.0))));
 		
 		outputEditor.setPreferredSize(new Dimension((int) (paramWidth/4d), (int) (height/11d * 7)));
@@ -2050,10 +2056,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		if(verbose) System.out.println("Plotting cumulative number with time...");
 		double magMin;
 		
-		if (seqSpecModel != null && timeDepMcParam.getValue() == true)
-			magMin = mcParam.getValue();
-		else
-			magMin = mcParam.getValue();
+		magMin = mcParam.getValue();
 		
 		ArbitrarilyDiscretizedFunc countFunc = new ArbitrarilyDiscretizedFunc();
 		double count = 0;
@@ -2078,49 +2081,49 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		funcs.add(countFunc);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		
-		if (seqSpecModel != null) {
-			if (seqSpecModel.get_nSims() != 0 && devMode) {
-				ArbitrarilyDiscretizedFunc expected = getModelCumNumWithLogTimePlot(seqSpecModel, magMin);
-
-				maxY = Math.max(count, expected.getMaxY());
-
-				funcs.add(expected);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, sequence_specific_color));
-				expected.setName("Seq. specific");
-				
-				ArbitrarilyDiscretizedFunc lower = getFractileCumNumWithLogTimePlot(seqSpecModel, magMin, 0.025);
-
-				funcs.add(lower);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, sequence_specific_color));
-				lower.setName("");
-
-				ArbitrarilyDiscretizedFunc upper = getFractileCumNumWithLogTimePlot(seqSpecModel, magMin, 0.975);
-				maxY = Math.max(maxY, upper.getMaxY());
-
-				funcs.add(upper);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, sequence_specific_color));
-				upper.setName("");
-
-				UncertainArbDiscDataset uncertainFunc = new UncertainArbDiscDataset(expected, lower, upper);
-				funcs.add(uncertainFunc);
-				uncertainFunc.setName("Seq. specific range");
-				PlotLineType plt = PlotLineType.SHADED_UNCERTAIN;
-				Color seq_spec_trans_color = new Color(sequence_specific_color.getRed(), sequence_specific_color.getGreen(),sequence_specific_color.getBlue(), (int) (0.3*255) );
-				chars.add(new PlotCurveCharacterstics(plt, 1f, seq_spec_trans_color));
-			}
-
-			ArbitrarilyDiscretizedFunc fit = getModelFit(seqSpecModel, magMin);
-			funcs.add(fit);
-			if(devMode){
-				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, sequence_specific_color));
-				fit.setName("Seq. specific Fit");
-			} else {
-				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, bayesian_color));
-				fit.setName("");
-			}
-		} 
+//		if (seqSpecModel != null) {
+//			if (seqSpecModel.get_nSims() != 0 && devMode) {
+//				ArbitrarilyDiscretizedFunc expected = getModelCumNumWithLogTimePlot(seqSpecModel, magMin);
+//
+//				maxY = Math.max(count, expected.getMaxY());
+//
+//				funcs.add(expected);
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, sequence_specific_color));
+//				expected.setName("Seq. specific");
+//				
+//				ArbitrarilyDiscretizedFunc lower = getFractileCumNumWithLogTimePlot(seqSpecModel, magMin, 0.025);
+//
+//				funcs.add(lower);
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, sequence_specific_color));
+//				lower.setName("");
+//
+//				ArbitrarilyDiscretizedFunc upper = getFractileCumNumWithLogTimePlot(seqSpecModel, magMin, 0.975);
+//				maxY = Math.max(maxY, upper.getMaxY());
+//
+//				funcs.add(upper);
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, sequence_specific_color));
+//				upper.setName("");
+//
+//				UncertainArbDiscDataset uncertainFunc = new UncertainArbDiscDataset(expected, lower, upper);
+//				funcs.add(uncertainFunc);
+//				uncertainFunc.setName("Seq. specific range");
+//				PlotLineType plt = PlotLineType.SHADED_UNCERTAIN;
+//				Color seq_spec_trans_color = new Color(sequence_specific_color.getRed(), sequence_specific_color.getGreen(),sequence_specific_color.getBlue(), (int) (0.3*255) );
+//				chars.add(new PlotCurveCharacterstics(plt, 1f, seq_spec_trans_color));
+//			}
+//
+//			ArbitrarilyDiscretizedFunc fit = getModelFit(seqSpecModel, magMin);
+//			funcs.add(fit);
+//			if(devMode){
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, sequence_specific_color));
+//				fit.setName("Seq. specific Fit");
+//			} else {
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, bayesian_color));
+//				fit.setName("");
+//			}
+//		} 
 		
-		if (genericModel != null) {
+		if (genericModel != null && !plotSpecificOnlyParam.getValue()) {
 			if (genericModel.nSims != 0) {
 				ArbitrarilyDiscretizedFunc expected = getFractileCumNumWithLogTimePlot(genericModel, magMin, 0.5);
 				maxY = Math.max(maxY, expected.getMaxY());
@@ -2151,12 +2154,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				Color generic_color_trans = new Color(generic_color.getRed(), generic_color.getGreen(),generic_color.getBlue(), (int) (0.3*255) );
 				chars.add(new PlotCurveCharacterstics(plt, 1f, generic_color_trans));
 			}
-			if(devMode){
-				ArbitrarilyDiscretizedFunc fit = getModelFit(genericModel, magMin);
-				funcs.add(fit);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, generic_color));
-				fit.setName("Typical sequence");
-			}
+//			if(devMode){
+//				ArbitrarilyDiscretizedFunc fit = getModelFit(genericModel, magMin);
+//				funcs.add(fit);
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, generic_color));
+//				fit.setName("Typical sequence");
+//			}
 		}
 		
 		if (bayesianModel != null) {
@@ -2188,12 +2191,10 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				Color bayesian_color_trans = new Color(bayesian_color.getRed(), bayesian_color.getGreen(),bayesian_color.getBlue(), (int) (0.3*255) );
 				chars.add(new PlotCurveCharacterstics(plt, 1f, bayesian_color_trans));
 			}
-			if (devMode) {
-				ArbitrarilyDiscretizedFunc fit = getModelFit(bayesianModel, magMin);
-				funcs.add(fit);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, bayesian_color));
-				fit.setName("");
-			}
+			ArbitrarilyDiscretizedFunc fit = getModelFit(bayesianModel, magMin);
+			funcs.add(fit);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, bayesian_color));
+			fit.setName("");
 		}
 
 		PlotSpec spec = new PlotSpec(funcs, chars, "Cumulative number of aftershocks above M"+String.format("%2.1f", magMin), "Days Since Mainshock",
@@ -2507,13 +2508,13 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		}
 		
 		if(D) System.out.println("getting sequence specific pdfs");
-		add1D_PDF(seqSpecModel.getPDF_ams(), "ams-value", amsValExtras);	
-		add1D_PDF(seqSpecModel.getPDF_a(), "a-value", aValExtras);
-		add1D_PDF(seqSpecModel.getPDF_p(), "p-value", pValExtras);
-		add1D_PDF(seqSpecModel.getPDF_logc(), "logc-value", logcValExtras);
-		add2D_PDF(seqSpecModel.get2D_PDF_for_a_and_logc(), "a-value", "logc-value");
-		add2D_PDF(seqSpecModel.get2D_PDF_for_a_and_p(), "a-value", "p-value");
-		add2D_PDF(seqSpecModel.get2D_PDF_for_logc_and_p(), "logc-value", "p-value");
+		add1D_PDF(bayesianModel.getPDF_ams(), "ams-value", amsValExtras);	
+		add1D_PDF(bayesianModel.getPDF_a(), "a-value", aValExtras);
+		add1D_PDF(bayesianModel.getPDF_p(), "p-value", pValExtras);
+		add1D_PDF(bayesianModel.getPDF_logc(), "logc-value", logcValExtras);
+		add2D_PDF(bayesianModel.get2D_PDF_for_a_and_logc(), "a-value", "logc-value");
+		add2D_PDF(bayesianModel.get2D_PDF_for_a_and_p(), "a-value", "p-value");
+		add2D_PDF(bayesianModel.get2D_PDF_for_logc_and_p(), "logc-value", "p-value");
 		
 		Runnable displayRun = new Runnable() {
 			
@@ -2905,8 +2906,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					computeBButton.setInfo("Estimate Mc from b-value stability");
 					computeBButton.getEditor().refreshParamEditor();
 					
-					if(seqSpecModel != null)
-						seqSpecModel.set_b(b);
+//					if(seqSpecModel != null)
+//						seqSpecModel.set_b(b);
 					if(bayesianModel != null)
 						bayesianModel.set_b(b);
 					
@@ -2955,10 +2956,82 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		}, true);
 		
 //		computeAftershockParamsButton
-		CalcStep computeAftershockParamStep = new CalcStep("Estimating ETAS parameters", "Computing sequence-specific model. This may take some time...", new Runnable() {
+//		CalcStep computeAftershockParamStep = new CalcStep("Estimating ETAS parameters", "Computing sequence-specific model. This may take some time...", new Runnable() {
+//
+//			@Override
+//			public void run() {
+//				Range amsRange = amsValRangeParam.getValue();
+//				int amsNum = amsValNumParam.getValue();
+//				validateRange(amsRange, amsNum, "ams-value");
+//				
+//				Range aRange = aValRangeParam.getValue();
+//				int aNum = aValNumParam.getValue();
+//				validateRange(aRange, aNum, "a-value");
+//				
+//				Range pRange = pValRangeParam.getValue();
+//				int pNum = pValNumParam.getValue();
+//				validateRange(pRange, pNum, "p-value");
+//				
+//				Range cRange = cValRangeParam.getValue();
+//				int cNum = cValNumParam.getValue();
+//				validateRange(cRange, cNum, "c-value");
+//				
+//				Double mc = mcParam.getValue();
+//				validateParameter(mc, "Mc");
+//								
+//				Double b = bParam.getValue();
+//				validateParameter(b, "b-value");
+//				
+//				Double alpha = alphaParam.getValue();
+//								
+//				if (timeDepMcParam.getValue()) {
+//					
+//					//to do: replace with rmax routine from desktop version of the code
+//					seqSpecModel = new ETAS_AftershockModel_SequenceSpecific(mainshock, aftershocks,
+//							ETAS_StatsCalc.linspace(amsRange.getLowerBound(), amsRange.getUpperBound(), amsNum), 
+//							genericParams.get_aSigma(),
+//							ETAS_StatsCalc.linspace(aRange.getLowerBound(), aRange.getUpperBound(), aNum),
+//							ETAS_StatsCalc.linspace(pRange.getLowerBound(), pRange.getUpperBound(), pNum),
+//							ETAS_StatsCalc.logspace(cRange.getLowerBound(), cRange.getUpperBound(), cNum),
+//							alpha, b, magRefParam.getValue(),	dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
+//							forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(),	// forecast start time, forecast end time 
+//							mcParam.getValue(), genericParams.get_maxMag(), 100, 0, fitMSProductivityParam.getValue(), timeDepMcParam.getValue(),
+////							new ETAS_AftershockModel_Generic(genericParams), progress);	//max sim mag, max number of generations, number of simulations
+//							genericModel, progress);	//max sim mag, max number of generations, number of simulations
+//					
+//					
+//				} else {
+//					seqSpecModel = new ETAS_AftershockModel_SequenceSpecific(mainshock, aftershocks, 
+//							ETAS_StatsCalc.linspace(amsRange.getLowerBound(), amsRange.getUpperBound(), amsNum), 
+//							genericParams.get_aSigma(),
+//							ETAS_StatsCalc.linspace(aRange.getLowerBound(), aRange.getUpperBound(), aNum),
+//							ETAS_StatsCalc.linspace(pRange.getLowerBound(), pRange.getUpperBound(), pNum),
+//							ETAS_StatsCalc.logspace(cRange.getLowerBound(), cRange.getUpperBound(), cNum),
+//							alpha, b, magRefParam.getValue(), dataStartTimeParam.getValue(), dataEndTimeParam.getValue(), 
+//							forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(),
+//							mcParam.getValue(), genericParams.get_maxMag(), 100, 0, fitMSProductivityParam.getValue(), timeDepMcParam.getValue(),
+//							null, progress);
+//							
+//				}
+//				if(verbose) System.out.format("Mainshock productivity magnitude: %2.2f\n" , seqSpecModel.getProductivityMag());
+//			}
+//			
+//		}, true);
+		
+		CalcStep computeBayesStep = new CalcStep("Estimating ETAS parameters", "Computing Bayesian model. This may take some time...", new Runnable() {
 
 			@Override
 			public void run() {
+
+//				bayesianModel = null;
+//				if (genericModel != null) {
+//					bayesianModel = new ETAS_AftershockModel_SequenceSpecific(mainshock, aftershocks, rmaxParam.getValue(),
+//							seqSpecModel.ams_vec, genericParams.get_aSigma(), seqSpecModel.a_vec, seqSpecModel.p_vec,	seqSpecModel.c_vec,
+//							seqSpecModel.alpha, seqSpecModel.b, magRefParam.getValue(), dataStartTimeParam.getValue(), dataEndTimeParam.getValue(), 
+//							forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(),
+//							mcParam.getValue(), genericParams.get_maxMag(), 100, 0, fitMSProductivityParam.getValue(), timeDepMcParam.getValue(),
+//							genericModel, progress);
+//				}
 				Range amsRange = amsValRangeParam.getValue();
 				int amsNum = amsValNumParam.getValue();
 				validateRange(amsRange, amsNum, "ams-value");
@@ -2982,57 +3055,20 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				validateParameter(b, "b-value");
 				
 				Double alpha = alphaParam.getValue();
-								
-				if (timeDepMcParam.getValue()) {
-					Double rmax = rmaxParam.getValue();
-					validateParameter(rmax, "rmax");
-				
-					//to do: replace with rmax routine from desktop version of the code
-					seqSpecModel = new ETAS_AftershockModel_SequenceSpecific(mainshock, aftershocks, rmaxParam.getValue(),
+				bayesianModel = null;
+				if (genericModel != null) {
+					bayesianModel = new ETAS_AftershockModel_SequenceSpecific(mainshock, aftershocks, 
 							ETAS_StatsCalc.linspace(amsRange.getLowerBound(), amsRange.getUpperBound(), amsNum), 
 							genericParams.get_aSigma(),
 							ETAS_StatsCalc.linspace(aRange.getLowerBound(), aRange.getUpperBound(), aNum),
 							ETAS_StatsCalc.linspace(pRange.getLowerBound(), pRange.getUpperBound(), pNum),
 							ETAS_StatsCalc.logspace(cRange.getLowerBound(), cRange.getUpperBound(), cNum),
 							alpha, b, magRefParam.getValue(),	dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
-							forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(),	// forecast start time, forecast end time 
-							mcParam.getValue(), genericParams.get_maxMag(), 100, 0, fitMSProductivityParam.getValue(), timeDepMcParam.getValue(),
-//							new ETAS_AftershockModel_Generic(genericParams), progress);	//max sim mag, max number of generations, number of simulations
-							genericModel, progress);	//max sim mag, max number of generations, number of simulations
-					
-					
-				} else {
-					seqSpecModel = new ETAS_AftershockModel_SequenceSpecific(mainshock, aftershocks, rmaxParam.getValue(),
-							ETAS_StatsCalc.linspace(amsRange.getLowerBound(), amsRange.getUpperBound(), amsNum), 
-							genericParams.get_aSigma(),
-							ETAS_StatsCalc.linspace(aRange.getLowerBound(), aRange.getUpperBound(), aNum),
-							ETAS_StatsCalc.linspace(pRange.getLowerBound(), pRange.getUpperBound(), pNum),
-							ETAS_StatsCalc.logspace(cRange.getLowerBound(), cRange.getUpperBound(), cNum),
-							alpha, b, magRefParam.getValue(), dataStartTimeParam.getValue(), dataEndTimeParam.getValue(), 
-							forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(),
-							mcParam.getValue(), genericParams.get_maxMag(), 100, 0, fitMSProductivityParam.getValue(), timeDepMcParam.getValue(),
-							null, progress);
-							
-				}
-				if(verbose) System.out.format("Mainshock productivity magnitude: %2.2f\n" , seqSpecModel.getProductivityMag());
-			}
-			
-		}, true);
-		
-		CalcStep computeBayesStep = new CalcStep("Estimating ETAS parameters", "Computing Bayesian model. This may take some time...", new Runnable() {
-
-			@Override
-			public void run() {
-
-				bayesianModel = null;
-				if (genericModel != null) {
-					bayesianModel = new ETAS_AftershockModel_SequenceSpecific(mainshock, aftershocks, rmaxParam.getValue(),
-							seqSpecModel.ams_vec, genericParams.get_aSigma(), seqSpecModel.a_vec, seqSpecModel.p_vec,	seqSpecModel.c_vec,
-							seqSpecModel.alpha, seqSpecModel.b, magRefParam.getValue(), dataStartTimeParam.getValue(), dataEndTimeParam.getValue(), 
 							forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(),
 							mcParam.getValue(), genericParams.get_maxMag(), 100, 0, fitMSProductivityParam.getValue(), timeDepMcParam.getValue(),
 							genericModel, progress);
 				}
+
 
 				amsValParam.setValue(round(bayesianModel.getMaxLikelihood_ams(),2));
 				amsValParam.getEditor().refreshParamEditor();
@@ -3040,7 +3076,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				aValParam.getEditor().refreshParamEditor();
 				pValParam.setValue(round(bayesianModel.getMaxLikelihood_p(),2));
 				pValParam.getEditor().refreshParamEditor();
-				cValParam.setValue(round(bayesianModel.getMaxLikelihood_c(),6));
+//				cValParam.setValue(round(bayesianModel.getMaxLikelihood_c(),6));
+				cValParam.setValue(round(Math.log10(bayesianModel.getMaxLikelihood_c()),2));
 				cValParam.getEditor().refreshParamEditor();
 			}
 		}, true);
@@ -3070,20 +3107,20 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					}
 		}, true);
 		
-		CalcStep seqSpecForecastStep = new CalcStep("Computing aftershock forecast", "Generating Sequence-Specific forecast. This can take some time...",
-				new Runnable() {
-
-					@Override
-					public void run() {
-
-						if (seqSpecModel != null){
-							seqSpecModel.setMagComplete(mcParam.getValue());
-							if(verbose)System.out.println("Computing sequence-only forecast");
-							seqSpecModel.computeNewForecast(dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
-									forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(), 10000);
-						}
-					}
-		}, true);
+//		CalcStep seqSpecForecastStep = new CalcStep("Computing aftershock forecast", "Generating Sequence-Specific forecast. This can take some time...",
+//				new Runnable() {
+//
+//					@Override
+//					public void run() {
+//
+//						if (seqSpecModel != null){
+//							seqSpecModel.setMagComplete(mcParam.getValue());
+//							if(verbose)System.out.println("Computing sequence-only forecast");
+//							seqSpecModel.computeNewForecast(dataStartTimeParam.getValue(), dataEndTimeParam.getValue(),
+//									forecastStartTimeParam.getValue(), forecastEndTimeParam.getValue(), 10000);
+//						}
+//					}
+//		}, true);
 		
 		CalcStep bayesianForecastStep = new CalcStep("Computing aftershock forecast", "Generating Bayesian forecast. This can take some time...",
 				new Runnable() {
@@ -3291,7 +3328,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 //						computeBStep, //not stable enough...
 						plotMFDStep,
 						quickTabRefreshStep1,
-						computeAftershockParamStep,
+//						computeAftershockParamStep,
 						computeBayesStep,
 						postParamPlotStep,
 						quickTabRefreshStep2,
@@ -3692,7 +3729,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				}, true);
 
 				
-				CalcRunnable run = new CalcRunnable(progress, computeAftershockParamStep, computeBayesStep, postParamPlotStep, tabRefreshStep, tipStep);
+//				CalcRunnable run = new CalcRunnable(progress, computeAftershockParamStep, computeBayesStep, postParamPlotStep, tabRefreshStep, tipStep);
+				CalcRunnable run = new CalcRunnable(progress, computeBayesStep, postParamPlotStep, tabRefreshStep, tipStep);
 				new Thread(run).start();
 			
 
@@ -3724,9 +3762,6 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 					@Override
 					public void run() {
-						if (seqSpecModel == null)
-							printTip(3);
-						else
 							printTip(5);
 					}
 
@@ -3746,7 +3781,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 //
 			} else if (param == fitSourceTypeParam || param == vs30Param || param == mapGridSpacingParam || param == mapScaleParam) {
 				// these parameter changes are going to change the plot. Erase the old ones
-				setEnableParamsPostRender(false);
+				pgvCurves = null;
+				pgaCurves = null;
+				psaCurves = null;
+				
+				printTip(8);
 				
 			} else if (param == generateMapButton) {
 				System.out.println("Computing spatial forecast map...");
@@ -3786,7 +3825,9 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 				CalcRunnable run = new CalcRunnable(progress, checkValuesStep, fetchSourceStep, fetchCitiesStep, plotMapStep, tipStep);
 				new Thread(run).start();
-
+			} else if (param == plotSpecificOnlyParam) {
+				printTip(7);
+				
 			} else if (param == publishAdvisoryButton) {
 				System.out.println("Generating advisory document...");
 
@@ -3843,7 +3884,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					
 					run = new CalcRunnable(progress, 
 							updateForecastWindowStep,
-							computeAftershockParamStep,
+//							computeAftershockParamStep,
 							computeBayesStep,
 							postParamPlotStep,
 							genericForecastStep,
@@ -3916,12 +3957,13 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			List<String> names = Lists.newArrayList();
 			List<Color> colors = Lists.newArrayList();
 			
-			if (seqSpecModel != null && devMode) {
-				models.add(seqSpecModel);
-				names.add("Sequence only");
-				colors.add(sequence_specific_color);
-			}
-			if (genericModel != null) {
+//			if (seqSpecModel != null && devMode) {
+//				models.add(seqSpecModel);
+//				names.add("Sequence only");
+//				colors.add(sequence_specific_color);
+//			}
+			
+			if (genericModel != null && !plotSpecificOnlyParam.getValue()) {
 				models.add(genericModel);
 				names.add("Typical sequence");
 				colors.add(generic_color);
@@ -4012,7 +4054,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, c));
 						}
 
-						uncertainFunc.setName(name + " range");
+						uncertainFunc.setName("Range for " + name);
 						funcs.add(uncertainFunc);
 
 						PlotLineType plt = PlotLineType.SHADED_UNCERTAIN;
@@ -4081,7 +4123,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					funcsProb.add(mainshockProbFunc);
 					charsProb.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK));
 
-					final PlotSpec specNum = new PlotSpec(funcs, chars, "Likely number of aftershocks in the next " + durString, "Magnitude", "Number of aftershocks exceeding magnitude M");
+					final PlotSpec specNum = new PlotSpec(funcs, chars, "Likely range of aftershock counts in the next " + durString, "Magnitude", "Number of aftershocks exceeding magnitude M");
 					specNum.setLegendVisible(true);
 
 					final PlotSpec specProb = new PlotSpec(funcsProb, charsProb, "Chance of an aftershock larger than magnitude M in the next " + durString, "Magnitude", "Probability (%)");
@@ -4158,10 +4200,10 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				names.add("This sequence");
 			}
 	
-			if (seqSpecModel != null && devMode){
-				models.add(seqSpecModel);
-				names.add("Seq. specific");
-			}
+//			if (seqSpecModel != null && devMode){
+//				models.add(seqSpecModel);
+//				names.add("Seq. specific");
+//			}
 			
 			if (genericModel != null) {
 				models.add(genericModel);
@@ -4212,21 +4254,13 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		}
 
 	private void plotRateModel2D(CalcProgressBar progress){
-			if (forecastMapPane == null)
-				forecastMapPane = new JTabbedPane();
-			else
-				while (forecastMapPane.getTabCount() > 0)
-					forecastMapPane.removeTabAt(0);
-	
+			
 			double spacing = mapGridSpacingParam.getValue()/111.111; 	// grid spacing in degrees
 			double stressDrop = 3.0; 	//MPa
 			double mainshockFitDuration = dataEndTimeParam.getValue(); //days
 			Double minDays = forecastStartTimeParam.getValue();
 			double maxZ = 0;
 
-			// clear out (or initialize) the contourModel
-			contourList = new ArrayList<ContourModel>();
-			
 			// do the full duration models
 			String fitType = new String();
 //			if (fitMainshockSourceParam.getValue())
@@ -4270,8 +4304,13 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 
 			// calculate gmpe probabilities for one day
 			GriddedGeoDataSet gmpeProbModel = getIntensityModel(forecastRateModel, value, isMapOfProbabilities, true);
-			if (gmpeProbModel == null) return; //something went wrong. cancel the computation
-
+			
+			/*
+			 * If something goews from with the intensity calculation, or if the calculation is cancelled, this is the exit point
+			 */
+			if (gmpeProbModel == null) return; //EXIT THE MAP COMPUTATION		
+			
+			
 			if(D) {
 			//compute rate sum for checking
 				double probSum = 0;
@@ -4353,7 +4392,17 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					}
 			}
 				
+			// moved here so that canceling map generation will still leave you with the previous maps.
+			if (forecastMapPane == null)
+				forecastMapPane = new JTabbedPane();
+			else
+				while (forecastMapPane.getTabCount() > 0)
+					forecastMapPane.removeTabAt(0);
+	
+			// clear out (or initialize) the contourModel
+			contourList = new ArrayList<ContourModel>();
 			
+
 			// for each duration (day/week/month/year or just what's specified) 
 			for (int i = 0; i < ForecastDuration.values().length; i++){
 				// clone the gridded rate model
@@ -4465,7 +4514,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 							chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1, Color.GRAY));
 						}
 						
-						PlotSpec spec = new PlotSpec(funcs, chars, "Number of M≥" + String.format("%2.1f", magRef)  + " aftershocks per square km in the next day", "Longitude", "Latitude");
+						PlotSpec spec = new PlotSpec(funcs, chars, "Past Aftershocks (dots) and expected number of M≥" + String.format("%2.1f", magRef)  + " aftershocks\n per square km in the next day (contours)", "Longitude", "Latitude");
 //						PlotSpec spec = new PlotSpec(funcs, chars, "Probable location of the next aftershock", "Longitude", "Latitude");
 						
 						spec.setPlotAnnotations(cityLabels);
@@ -4586,7 +4635,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 								units = "cm/s";
 							else
 								units = "";
-							title = "Probability of exceeding " + intensityType + " level " + level + units + " in the next " + durString + " (max: " + String.format("%.0f", maxPlottedContour) + " " +"%)";
+							title = "Probability of exceeding " + intensityType + " level " + level + units + " in the next " + durString + " (max: " + ((maxPlottedContour < 1)?"<1":String.format("%.0f", maxPlottedContour)) + " " +"%)";
 							contourUnits = "%";
 						}
 						contourList.add(new ContourModel(contours, title, contourUnits, cpt2));
@@ -5192,11 +5241,22 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			GraphicalForecast graphForecast = new GraphicalForecast(outFile, model, eventDate, startDate);
 			graphForecast.setShakeMapURL(shakeMapURL);
 			graphForecast.constructForecast();
-	
+			graphForecast.writeHTML(outFile);
+			
+			//print the classic forecast Table
+			String tableFile = outFile.getParent() + "/" + "Table.html"; //file must be named Table.html
+			try {
+				System.out.println("Saving forecast Table to: " + tableFile);
+				graphForecast.writeHTMLTable(new File(tableFile));
+			} catch (Exception e) {
+				System.err.println("Couldn't save forecast Table to: " + tableFile);
+			}
+			
+			
 			// print selected figures: Expected number distributions
 			for (int i = 0; i < aftershockExpectedNumGraph.size(); i++){
 				String file = aftershockExpectedNumGraph.get(i).getName().replaceAll("[^a-zA-Z]",  "").toLowerCase();
-				file = outFile.getParent() + "/" + file + ".png"; 
+				file = outFile.getParent() + "/" + file + ".png"; //file must have this name
 				try {
 					System.out.println("Saving forecastMFD to: " + file);
 					aftershockExpectedNumGraph.get(i).saveAsPNG(file);
@@ -5310,8 +5370,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		else
 			alphaParam.setValue(1d);
 
-		if(seqSpecModel != null)
-			seqSpecModel.set_alpha(alphaParam.getValue());
+//		if(seqSpecModel != null)
+//			seqSpecModel.set_alpha(alphaParam.getValue());
 		if(bayesianModel != null)
 			bayesianModel.set_alpha(alphaParam.getValue());
 	}
@@ -5331,7 +5391,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		ogataMND = null;
 		genericModel = null;
 		bayesianModel = null;
-		seqSpecModel = null;
+//		seqSpecModel = null;
 		faultTrace = null;
 		contourList = null;
 		
@@ -5558,8 +5618,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		updateRangeParams(cValRangeParam, cValNumParam, 51);
 		
 		//clear the sequence specific and Bayesian fits
-		if (seqSpecModel != null)
-			seqSpecModel = null;
+//		if (seqSpecModel != null)
+//			seqSpecModel = null;
 		if (bayesianModel != null)
 			bayesianModel = null;
 		
@@ -5693,10 +5753,15 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			tabbedPane.setEnabledAt(i, false);
 		}
 		
+		plotSpecificOnlyParam.getEditor().setEnabled(enabled);
+		if (!enabled)
+			plotSpecificOnlyParam.setValue(false);
+		plotSpecificOnlyParam.getEditor().refreshParamEditor();
+		
 		setEnableParamsPostForecast(false);
-		if (!enabled){
-			seqSpecModel = null;
-		}
+//		if (!enabled){
+//			seqSpecModel = null;
+//		}
 	}
 	
 	private void setEnableParamsPostForecast(boolean enabled) {
@@ -5898,7 +5963,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		tipText.add(">> Click \"Run Specific Forecast\" to get a sequence-specific forecast.");
 		tipText.add(">> Choose the map settings and click \"Render\" to generate forecast maps.");
 		tipText.add(">> Go back and edit the forecast or click \"Publish\" to generate a printable forecast document.");
-		
+		tipText.add(">> Click \"Run Specific Forecast\" to (re)generate forecast plots.");
+		tipText.add(">> Click \"Render\" to (re)generate the spatial forecast plots.");
 		if (tipsOn) System.out.println(tipText.get(step));
 	}
 	

@@ -21,29 +21,27 @@ import com.google.common.primitives.Doubles;
 public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel {
 	
 	Boolean D = false;	// debug flag
-	private double rmax;
 	private boolean fitMSProductivity;
 	private volatile boolean stopRequested;
 	private volatile boolean pauseRequested;
 	private ETAS_AftershockModel_Generic priorModel;
 
 	public ETAS_AftershockModel_SequenceSpecific(ObsEqkRupture mainshock, ObsEqkRupList aftershocks,
-			double rmax, double[] amsVec, double amsSigma, double[] aVec, double[] pVec, double[] cVec, double alpha, double b, double refMag, 	
+			double[] amsVec, double amsSigma, double[] aVec, double[] pVec, double[] cVec, double alpha, double b, double refMag, 	
 			double dataStartTimeDays, double dataEndTimeDays, double forecastMinDays, double forecastMaxDays, 
 			double minMag, double maxMag, int maxGenerations, int nSims, boolean fitMSProductivity) {
 
-		this(mainshock, aftershocks, Double.NaN, amsVec, amsSigma, aVec, pVec, cVec, alpha, b, refMag,
+		this(mainshock, aftershocks, amsVec, amsSigma, aVec, pVec, cVec, alpha, b, refMag,
 				dataStartTimeDays, dataEndTimeDays, forecastMinDays, forecastMaxDays, 
 				minMag, maxMag, maxGenerations, nSims, fitMSProductivity, false, null, null);
 	}
 
 	public ETAS_AftershockModel_SequenceSpecific(ObsEqkRupture mainshock, ObsEqkRupList aftershocks,
-			double rmax, double[] amsVec, double amsSigma, double[] aVec, double[] pVec, double[] cVec, double alpha, double b, double refMag, 	
+			double[] amsVec, double amsSigma, double[] aVec, double[] pVec, double[] cVec, double alpha, double b, double refMag, 	
 			double dataStartTimeDays, double dataEndTimeDays, double forecastMinDays, double forecastMaxDays, 
 			double minMag, double maxMag, int maxGenerations, int nSims, boolean fitMSProductivity, boolean timeDependentMc, ETAS_AftershockModel_Generic priorModel){
 
 		this(mainshock, aftershocks,
-				Double.NaN,
 				amsVec, amsSigma, aVec, pVec, cVec, alpha, b, refMag,
 				dataStartTimeDays, dataEndTimeDays, forecastMinDays, forecastMaxDays, 
 				minMag, maxMag, maxGenerations, nSims, fitMSProductivity, timeDependentMc,
@@ -60,7 +58,6 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 	 * @param aVec: values of ams to use in grid search
 	**/
 	public ETAS_AftershockModel_SequenceSpecific(ObsEqkRupture mainShock, ObsEqkRupList aftershockList,
-			 								double rmax,
 			 								double[] amsVec, double amsSigma, double[] aVec, double[] pVec, double[] cVec, double alpha, double b, double refMag, 	
 			 								double dataStartTimeDays, double dataEndTimeDays, double forecastMinDays, double forecastMaxDays, 
 			 								double magComplete, double maxMag, int maxGenerations, int nSims, boolean fitMSProductivity, boolean timeDependentMc,
@@ -100,7 +97,6 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 		this.alpha = alpha;
 		this.refMag = refMag;
 		this.magComplete = magComplete;
-		this.rmax = rmax;
 		this.aftershockList=aftershockList;
 		this.mainShock=mainShock;
 		this.magMain = mainShock.getMag();
@@ -121,7 +117,7 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 			System.out.println("a-values range:\t"+min_a+"\t"+max_a+"\t"+num_a);
 			System.out.println("p-values range:\t"+min_p+"\t"+max_p+"\t"+num_p+"\t");
 			System.out.println("c-values range:\t"+min_c+"\t"+max_c+"\t"+num_c+"\t");
-			System.out.println("Mc(t):\t" + timeDependentMc + "\trmax:\t" + rmax + " Mc = " + magComplete);
+			System.out.println("Mc(t):\t" + timeDependentMc + " Mc = " + magComplete);
 		}
 		
 		// Find the max like parameters by grid search
@@ -672,272 +668,246 @@ public class ETAS_AftershockModel_SequenceSpecific extends ETAS_AftershockModel 
 	}
 	
 	
-	/**
-	 * Get likelihood matrix with no shortcuts (computing p and c terms inside a and ams loops) SLOOOOOOW!
-	 */
-	private void getLikelihoodMatrixGridSlow() {
-		double[] relativeEventTimes = ETAS_StatsCalc.getDaysSinceMainShockArray(mainShock, aftershockList.getRupsAboveMag(magComplete));
-		double[] magAftershocks = ETAS_StatsCalc.getAftershockMags(aftershockList.getRupsAboveMag(magComplete));
-
-		List<double[]> sortedEQlist = new ArrayList<double[]>();
-
-		for(int i = 0; i < relativeEventTimes.length; i++){
-			double[] temp = new double[]{relativeEventTimes[i], magAftershocks[i]};
-			sortedEQlist.add(temp);
-		}
-
-		//sort times and magnitudes
-		Collections.sort(sortedEQlist, new java.util.Comparator<double[]>() {
-			public int compare(double[] a, double[] b) {
-				return Double.compare(a[0], b[0]);
-			}
-		});
-
-		for(int i = 0; i < relativeEventTimes.length; i++){
-			double[] temp = sortedEQlist.get(i);
-			relativeEventTimes[i] = temp[0];
-			magAftershocks[i] = temp[1];
-			sortedEQlist.add(temp);
-		}
-
-		// instantiate two likelihood matrices -- one to hold subcritical likelihoods, one to hold supercritical likelihoods (for bookkeeping).
-		likelihood = new double[num_ams][num_a][num_p][num_c];
-		double[][][][] superCriticalLikelihood = new double[num_ams][num_a][num_p][num_c];
-		double[][][][] subCriticalLikelihood = new double[num_ams][num_a][num_p][num_c];
-		double[][][][] priorLikelihood = new double[num_ams][num_a][num_p][num_c];
-
-		if (priorModel != null && priorModel.likelihood != null){
-			priorLikelihood = priorModel.get_priorLikelihoodMatrix(ams_vec, a_vec, p_vec, c_vec, false);
-		}else{
-			for(int amsIndex=0;amsIndex<num_ams;amsIndex++)
-				for(int aIndex=0;aIndex<num_a;aIndex++)
-					for(int pIndex=0;pIndex<num_p;pIndex++)
-						for(int cIndex=0;cIndex<num_c;cIndex++)
-							priorLikelihood[amsIndex][aIndex][pIndex][cIndex] = 1;
-		}
-
-		double maxVal= Double.NEGATIVE_INFINITY;
-		double logLike;
-		boolean subCritFlag;
-
-		double ams, a, k, kms, p, c;
-		//	double kDefault = Math.pow(10, mean_a);
-		int amsIndex, aIndex, pIndex, cIndex;
-		double timeIntegral, Ntot;
-
-		int Nas = relativeEventTimes.length;	//the number of aftershocks, not counting the mainshock
-		double productivityMS;
-		double[] productivityAS = new double[Nas];
-		double[] lambda = new double[Nas];
-		double rateAS;
-
-
-		//do productivities
-		productivityMS = Math.pow(10, alpha*(mainShock.getMag()-magComplete) );
-		for(int i=0; i<Nas; i++) //compute productivity for this aftershock
-			productivityAS[i] = Math.pow(10, alpha*(magAftershocks[i] - magComplete));	//productivity of this aftershock
-
-		// set up timer/time estimator
-		double toc, timeEstimate, n;
-		Stopwatch watch = Stopwatch.createStarted();
-		int warnTime = 3;
-		String initialMessageString = "Computing aftershock model parameters. ";
-		// simpson integrator
-		//	SimpsonIntegrator integral = new SimpsonIntegrator();
-		//	RateIntegrand integrand = new RateIntegrand();
-
-		double timeCompleteMS;
-		if (timeDependentMc && priorModel != null) {
-			// time-dependent integrator
-			timeCompleteMS = Math.pow(Math.pow(10d, priorModel.mean_ams)*productivityMS/(double)rmax, 1d/priorModel.mean_p) - priorModel.mean_c;
-			
-			
-			if (timeCompleteMS < 0) timeCompleteMS = 0;
-			if (timeCompleteMS > dataEndTimeDays) timeCompleteMS = dataEndTimeDays;
-		} else
-			timeCompleteMS = 0;
-
-		if(D) System.out.println("Mc(t) = " + timeDependentMc +" Data Start: " + dataStartTimeDays + " Data End: " + dataEndTimeDays + " Mc = " + magComplete);
-		if(D) System.out.println("rmax = " + rmax + " tc = " + timeCompleteMS);
-		
-		double tStartIntegration;
-		// loop over productivities
-		for(amsIndex=0;amsIndex<num_ams;amsIndex++) {
-			ams = ams_vec[amsIndex];
-
-			for(aIndex=0;aIndex<num_a;aIndex++) {
-				a = a_vec[aIndex];
-
-				// productivity scaling
-				kms = Math.pow(10,ams);
-				k = Math.pow(10, a);
-
-				for(pIndex=0;pIndex<num_p;pIndex++) {
-					p = p_vec[pIndex];
-
-					for(cIndex=0;cIndex<num_c;cIndex++) {
-						c = c_vec[cIndex];
-
-						logLike = 0;
-
-						tStartIntegration = timeCompleteMS;
-
-						//compute total number at end of fit window for mainshock 
-						if (p == 1)
-							timeIntegral = kms*productivityMS * (Math.log(dataEndTimeDays + c) - Math.log(tStartIntegration + c));
-						else
-							timeIntegral = kms*productivityMS * (Math.pow(dataEndTimeDays + c, 1d-p) - Math.pow(tStartIntegration + c, 1d-p)) / (1d-p);
-						Ntot = timeIntegral;
-
-						//compute instantaneous intensities and total numbers for aftershocks 
-						for(int i=0; i<Nas; i++){
-							// compute total number for this aftershock 
-
-							// start either at event time or complete time
-							tStartIntegration = Math.max(timeCompleteMS, relativeEventTimes[i]);
-
-							if (p == 1)
-								timeIntegral = k*productivityAS[i] * (Math.log(dataEndTimeDays - relativeEventTimes[i] + c) - Math.log(tStartIntegration - relativeEventTimes[i] + c));
-							else
-								timeIntegral = k*productivityAS[i] * (Math.pow(dataEndTimeDays - relativeEventTimes[i] + c, 1d-p) - Math.pow(tStartIntegration  - relativeEventTimes[i] + c, 1d-p)) / (1d-p);
-
-							Ntot += timeIntegral;
-
-							//compute intensity at this moment due to mainshock (scaled by ams)
-
-							if (relativeEventTimes[i] > timeCompleteMS){
-								rateAS = kms*productivityMS/Math.pow(relativeEventTimes[i] + c, p); //from the mainshock
-								lambda[i] = rateAS;
-
-								//compute intensity at this moment due to previous aftershocks (unscaled by a)
-								for(int j = 0; j < i; j++){
-									if(relativeEventTimes[j] < relativeEventTimes[i]){
-										rateAS = k*productivityAS[j]/Math.pow(relativeEventTimes[i] - relativeEventTimes[j] + c, p); //from the aftershocks
-										lambda[i] += rateAS;
-									}
-								}
-							}
-						}
-
-						logLike -= Ntot;
-						for(int i=0; i<Nas; i++){
-							//compute intensity at this moment due to previous earthquakes
-							if (relativeEventTimes[i] > timeCompleteMS)
-								logLike += Math.log(lambda[i]);
-						}
-
-						//add prior regularization
-						logLike += Math.log(priorLikelihood[amsIndex][aIndex][pIndex][cIndex]);
-
-						//check for supercritical parameters over the forecast time window
-						n = ETAS_StatsCalc.calculateBranchingRatio(a, p, c, alpha, b, forecastMaxDays, magComplete, maxMag);
-
-						subCritFlag = ( n<1 );
-
-						// fill out the likelihood matrices with the joint likelihood
-						if(Doubles.isFinite(logLike)){
-							if (subCritFlag){
-								likelihood[amsIndex][aIndex][pIndex][cIndex] = logLike;
-								subCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = logLike;
-								superCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
-
-								if(maxVal<logLike ) {
-									maxVal=logLike;
-									max_ams_index=amsIndex;
-									max_a_index=aIndex;
-									max_p_index=pIndex;
-									max_c_index=cIndex;
-								}
-							} else {
-								likelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
-								subCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
-								superCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = logLike;
-							}
-						}else{
-							likelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
-							subCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
-							superCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
-						}
-
-						// run the timer to see how long this is going to take
-						toc = watch.elapsed(TimeUnit.SECONDS);
-						if(toc > warnTime){
-							warnTime += 10;
-
-							long count = ((amsIndex)*(num_c*num_p*num_a) + (aIndex)*(num_p*num_c) + (pIndex)*(num_c) + cIndex);
-							long total = (num_p*num_c*num_ams*num_a);
-							timeEstimate = toc * total/count;
-							System.out.format(initialMessageString + "Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
-							initialMessageString = "...";
-							
-							if (progress != null){
-								//									progress.updateProgress(count, total, String.format("%d%% complete. %d seconds remaining", (int) (((double) count)/((double) total) * 100),(int) ((timeEstimate - toc)/1000)));
-								progress.setProgressMessage(String.format("%d%% complete. %d seconds remaining", (int) (((double) count)/((double) total) * 100),(int) ((timeEstimate - toc))));
-								progress.pack();
-							}
-						}
-
-					}
-				}
-			}
-		}
-
-
-		// if not fitting MS productivity, make sure the ams_vector reflects this constraint
-		if(!fitMSProductivity){
-			this.min_ams = getMaxLikelihood_a();
-			this.max_ams = getMaxLikelihood_a();
-			this.num_ams = 1;
-			this.ams_vec = ETAS_StatsCalc.linspace(min_ams, max_ams, num_ams);
-		};
-
-		//measure the proportion of supercritical combinations
-		double totalSubCriticalLikelihood = convertLogLikelihoodArrayToLikelihood_nonNormalized(subCriticalLikelihood, maxVal);
-		double totalSuperCriticalLikelihood = convertLogLikelihoodArrayToLikelihood_nonNormalized(superCriticalLikelihood, maxVal);
-		double fractionSubCritical = totalSubCriticalLikelihood/(totalSubCriticalLikelihood + totalSuperCriticalLikelihood);
-
-		toc = watch.elapsed(TimeUnit.SECONDS);
-
-		if(D) System.out.format("Sequence Specific Model: %3.2f%% subcritical.\n", fractionSubCritical*100);
-
-
-		// convert array from log-likelihood to likelihood
-		double testTotalLikelihood = convertLogLikelihoodArrayToLikelihood(maxVal); // this converts likelihood from log to linear
-		toc = watch.elapsed(TimeUnit.SECONDS);
-
-		if(D) System.out.format("Grid search took %d seconds.\n", (int)toc);
-		if(D) System.out.println("Total likelihood  = " + testTotalLikelihood); //debug
-
-		//	//measure the proportion of supercritical combinations
-		//	double totalSubCriticalLikelihood = convertLogLikelihoodArrayToLikelihood_nonNormalized(subCriticalLikelihood, maxVal);
-		//	double totalSuperCriticalLikelihood = convertLogLikelihoodArrayToLikelihood_nonNormalized(superCriticalLikelihood, maxVal);
-		//	double fractionSubCritical = totalSubCriticalLikelihood/(totalSubCriticalLikelihood + totalSuperCriticalLikelihood);
-		//	
-		//	toc = watch.elapsed(timeUnit.SECONDS);
-		//	
-		//	System.out.format("Sequence Specific Model: %3.2f%% subcritical.\n", fractionSubCritical*100);
-		if(D) System.out.format("Mainshock productivity magnitude: %2.2f\n" , getProductivityMag());
-
-		watch.stop();
-		this.epiLikelihood = likelihood;
-	}
-
-//	// for time-dependent Mc calculations
-//	private class RateIntegrand implements UnivariateFunction{
-//		private double prod, c, p;
-//		
-//		public double value(double t) {
-//			double r = prod / Math.pow(t + c, p);
-//			double y = rmax * (1d - Math.exp(-r/rmax));
-//			return y;
+//	/**
+//	 * Get likelihood matrix with no shortcuts (computing p and c terms inside a and ams loops) SLOOOOOOW!
+//	 */
+//	private void getLikelihoodMatrixGridSlow() {
+//		double[] relativeEventTimes = ETAS_StatsCalc.getDaysSinceMainShockArray(mainShock, aftershockList.getRupsAboveMag(magComplete));
+//		double[] magAftershocks = ETAS_StatsCalc.getAftershockMags(aftershockList.getRupsAboveMag(magComplete));
+//
+//		List<double[]> sortedEQlist = new ArrayList<double[]>();
+//
+//		for(int i = 0; i < relativeEventTimes.length; i++){
+//			double[] temp = new double[]{relativeEventTimes[i], magAftershocks[i]};
+//			sortedEQlist.add(temp);
 //		}
-//		
-//		public void setParams(double prod, double p, double c){
-//			this.prod = prod;
-//			this.c = c;
-//			this.p = p;
+//
+//		//sort times and magnitudes
+//		Collections.sort(sortedEQlist, new java.util.Comparator<double[]>() {
+//			public int compare(double[] a, double[] b) {
+//				return Double.compare(a[0], b[0]);
+//			}
+//		});
+//
+//		for(int i = 0; i < relativeEventTimes.length; i++){
+//			double[] temp = sortedEQlist.get(i);
+//			relativeEventTimes[i] = temp[0];
+//			magAftershocks[i] = temp[1];
+//			sortedEQlist.add(temp);
 //		}
+//
+//		// instantiate two likelihood matrices -- one to hold subcritical likelihoods, one to hold supercritical likelihoods (for bookkeeping).
+//		likelihood = new double[num_ams][num_a][num_p][num_c];
+//		double[][][][] superCriticalLikelihood = new double[num_ams][num_a][num_p][num_c];
+//		double[][][][] subCriticalLikelihood = new double[num_ams][num_a][num_p][num_c];
+//		double[][][][] priorLikelihood = new double[num_ams][num_a][num_p][num_c];
+//
+//		if (priorModel != null && priorModel.likelihood != null){
+//			priorLikelihood = priorModel.get_priorLikelihoodMatrix(ams_vec, a_vec, p_vec, c_vec, false);
+//		}else{
+//			for(int amsIndex=0;amsIndex<num_ams;amsIndex++)
+//				for(int aIndex=0;aIndex<num_a;aIndex++)
+//					for(int pIndex=0;pIndex<num_p;pIndex++)
+//						for(int cIndex=0;cIndex<num_c;cIndex++)
+//							priorLikelihood[amsIndex][aIndex][pIndex][cIndex] = 1;
+//		}
+//
+//		double maxVal= Double.NEGATIVE_INFINITY;
+//		double logLike;
+//		boolean subCritFlag;
+//
+//		double ams, a, k, kms, p, c;
+//		//	double kDefault = Math.pow(10, mean_a);
+//		int amsIndex, aIndex, pIndex, cIndex;
+//		double timeIntegral, Ntot;
+//
+//		int Nas = relativeEventTimes.length;	//the number of aftershocks, not counting the mainshock
+//		double productivityMS;
+//		double[] productivityAS = new double[Nas];
+//		double[] lambda = new double[Nas];
+//		double rateAS;
+//
+//
+//		//do productivities
+//		productivityMS = Math.pow(10, alpha*(mainShock.getMag()-magComplete) );
+//		for(int i=0; i<Nas; i++) //compute productivity for this aftershock
+//			productivityAS[i] = Math.pow(10, alpha*(magAftershocks[i] - magComplete));	//productivity of this aftershock
+//
+//		// set up timer/time estimator
+//		double toc, timeEstimate, n;
+//		Stopwatch watch = Stopwatch.createStarted();
+//		int warnTime = 3;
+//		String initialMessageString = "Computing aftershock model parameters. ";
+//		// simpson integrator
+//		//	SimpsonIntegrator integral = new SimpsonIntegrator();
+//		//	RateIntegrand integrand = new RateIntegrand();
+//
+//		double timeCompleteMS = 0;
+//
+//		if(D) System.out.println("Mc(t) = " + timeDependentMc +" Data Start: " + dataStartTimeDays + " Data End: " + dataEndTimeDays + " Mc = " + magComplete);
+//		
+//		double tStartIntegration;
+//		// loop over productivities
+//		for(amsIndex=0;amsIndex<num_ams;amsIndex++) {
+//			ams = ams_vec[amsIndex];
+//
+//			for(aIndex=0;aIndex<num_a;aIndex++) {
+//				a = a_vec[aIndex];
+//
+//				// productivity scaling
+//				kms = Math.pow(10,ams);
+//				k = Math.pow(10, a);
+//
+//				for(pIndex=0;pIndex<num_p;pIndex++) {
+//					p = p_vec[pIndex];
+//
+//					for(cIndex=0;cIndex<num_c;cIndex++) {
+//						c = c_vec[cIndex];
+//
+//						logLike = 0;
+//
+//						tStartIntegration = timeCompleteMS;
+//
+//						//compute total number at end of fit window for mainshock 
+//						if (p == 1)
+//							timeIntegral = kms*productivityMS * (Math.log(dataEndTimeDays + c) - Math.log(tStartIntegration + c));
+//						else
+//							timeIntegral = kms*productivityMS * (Math.pow(dataEndTimeDays + c, 1d-p) - Math.pow(tStartIntegration + c, 1d-p)) / (1d-p);
+//						Ntot = timeIntegral;
+//
+//						//compute instantaneous intensities and total numbers for aftershocks 
+//						for(int i=0; i<Nas; i++){
+//							// compute total number for this aftershock 
+//
+//							// start either at event time or complete time
+//							tStartIntegration = Math.max(timeCompleteMS, relativeEventTimes[i]);
+//
+//							if (p == 1)
+//								timeIntegral = k*productivityAS[i] * (Math.log(dataEndTimeDays - relativeEventTimes[i] + c) - Math.log(tStartIntegration - relativeEventTimes[i] + c));
+//							else
+//								timeIntegral = k*productivityAS[i] * (Math.pow(dataEndTimeDays - relativeEventTimes[i] + c, 1d-p) - Math.pow(tStartIntegration  - relativeEventTimes[i] + c, 1d-p)) / (1d-p);
+//
+//							Ntot += timeIntegral;
+//
+//							//compute intensity at this moment due to mainshock (scaled by ams)
+//
+//							if (relativeEventTimes[i] > timeCompleteMS){
+//								rateAS = kms*productivityMS/Math.pow(relativeEventTimes[i] + c, p); //from the mainshock
+//								lambda[i] = rateAS;
+//
+//								//compute intensity at this moment due to previous aftershocks (unscaled by a)
+//								for(int j = 0; j < i; j++){
+//									if(relativeEventTimes[j] < relativeEventTimes[i]){
+//										rateAS = k*productivityAS[j]/Math.pow(relativeEventTimes[i] - relativeEventTimes[j] + c, p); //from the aftershocks
+//										lambda[i] += rateAS;
+//									}
+//								}
+//							}
+//						}
+//
+//						logLike -= Ntot;
+//						for(int i=0; i<Nas; i++){
+//							//compute intensity at this moment due to previous earthquakes
+//							if (relativeEventTimes[i] > timeCompleteMS)
+//								logLike += Math.log(lambda[i]);
+//						}
+//
+//						//add prior regularization
+//						logLike += Math.log(priorLikelihood[amsIndex][aIndex][pIndex][cIndex]);
+//
+//						//check for supercritical parameters over the forecast time window
+//						n = ETAS_StatsCalc.calculateBranchingRatio(a, p, c, alpha, b, forecastMaxDays, magComplete, maxMag);
+//
+//						subCritFlag = ( n<1 );
+//
+//						// fill out the likelihood matrices with the joint likelihood
+//						if(Doubles.isFinite(logLike)){
+//							if (subCritFlag){
+//								likelihood[amsIndex][aIndex][pIndex][cIndex] = logLike;
+//								subCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = logLike;
+//								superCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
+//
+//								if(maxVal<logLike ) {
+//									maxVal=logLike;
+//									max_ams_index=amsIndex;
+//									max_a_index=aIndex;
+//									max_p_index=pIndex;
+//									max_c_index=cIndex;
+//								}
+//							} else {
+//								likelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
+//								subCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
+//								superCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = logLike;
+//							}
+//						}else{
+//							likelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
+//							subCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
+//							superCriticalLikelihood[amsIndex][aIndex][pIndex][cIndex] = Double.NEGATIVE_INFINITY;
+//						}
+//
+//						// run the timer to see how long this is going to take
+//						toc = watch.elapsed(TimeUnit.SECONDS);
+//						if(toc > warnTime){
+//							warnTime += 10;
+//
+//							long count = ((amsIndex)*(num_c*num_p*num_a) + (aIndex)*(num_p*num_c) + (pIndex)*(num_c) + cIndex);
+//							long total = (num_p*num_c*num_ams*num_a);
+//							timeEstimate = toc * total/count;
+//							System.out.format(initialMessageString + "Approximately %d seconds remaining...\n", (int) ((timeEstimate - toc)));
+//							initialMessageString = "...";
+//							
+//							if (progress != null){
+//								//									progress.updateProgress(count, total, String.format("%d%% complete. %d seconds remaining", (int) (((double) count)/((double) total) * 100),(int) ((timeEstimate - toc)/1000)));
+//								progress.setProgressMessage(String.format("%d%% complete. %d seconds remaining", (int) (((double) count)/((double) total) * 100),(int) ((timeEstimate - toc))));
+//								progress.pack();
+//							}
+//						}
+//
+//					}
+//				}
+//			}
+//		}
+//
+//
+//		// if not fitting MS productivity, make sure the ams_vector reflects this constraint
+//		if(!fitMSProductivity){
+//			this.min_ams = getMaxLikelihood_a();
+//			this.max_ams = getMaxLikelihood_a();
+//			this.num_ams = 1;
+//			this.ams_vec = ETAS_StatsCalc.linspace(min_ams, max_ams, num_ams);
+//		};
+//
+//		//measure the proportion of supercritical combinations
+//		double totalSubCriticalLikelihood = convertLogLikelihoodArrayToLikelihood_nonNormalized(subCriticalLikelihood, maxVal);
+//		double totalSuperCriticalLikelihood = convertLogLikelihoodArrayToLikelihood_nonNormalized(superCriticalLikelihood, maxVal);
+//		double fractionSubCritical = totalSubCriticalLikelihood/(totalSubCriticalLikelihood + totalSuperCriticalLikelihood);
+//
+//		toc = watch.elapsed(TimeUnit.SECONDS);
+//
+//		if(D) System.out.format("Sequence Specific Model: %3.2f%% subcritical.\n", fractionSubCritical*100);
+//
+//
+//		// convert array from log-likelihood to likelihood
+//		double testTotalLikelihood = convertLogLikelihoodArrayToLikelihood(maxVal); // this converts likelihood from log to linear
+//		toc = watch.elapsed(TimeUnit.SECONDS);
+//
+//		if(D) System.out.format("Grid search took %d seconds.\n", (int)toc);
+//		if(D) System.out.println("Total likelihood  = " + testTotalLikelihood); //debug
+//
+//		//	//measure the proportion of supercritical combinations
+//		//	double totalSubCriticalLikelihood = convertLogLikelihoodArrayToLikelihood_nonNormalized(subCriticalLikelihood, maxVal);
+//		//	double totalSuperCriticalLikelihood = convertLogLikelihoodArrayToLikelihood_nonNormalized(superCriticalLikelihood, maxVal);
+//		//	double fractionSubCritical = totalSubCriticalLikelihood/(totalSubCriticalLikelihood + totalSuperCriticalLikelihood);
+//		//	
+//		//	toc = watch.elapsed(timeUnit.SECONDS);
+//		//	
+//		//	System.out.format("Sequence Specific Model: %3.2f%% subcritical.\n", fractionSubCritical*100);
+//		if(D) System.out.format("Mainshock productivity magnitude: %2.2f\n" , getProductivityMag());
+//
+//		watch.stop();
+//		this.epiLikelihood = likelihood;
 //	}
+
 	
 	
 	public static void main(String[] args) {
