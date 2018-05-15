@@ -127,9 +127,31 @@ import java.awt.event.WindowListener;
 
 public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeListener {
 		
+	private GregorianCalendar expirationDate = new GregorianCalendar(2018, 05, 18);
+	
 	public AftershockStatsGUI_ETAS(String... args) {
 		checkArguments(args);
-		if (D) System.out.println("verbose = " + verbose + ", development mode = " + devMode + ", debug = " + D);
+		if (D) System.out.println("verbose = " + verbose + ", debug = " + D);
+		if (devMode) System.out.println("Warning: Running in development mode."
+				+ "This mode is untested and will probably give a bad forecast if not crash outright.");
+		
+		if (!devMode) {
+			//check for expired software
+			SimpleDateFormat formatter=new SimpleDateFormat("d MMM yyyy");
+			formatter.setTimeZone(utc); //utc=TimeZone.getTimeZone("UTC"));
+			double elapsedDays = (double) (System.currentTimeMillis() - expirationDate.getTimeInMillis())/ETAS_StatsCalc.MILLISEC_PER_DAY;
+			
+			System.out.println("This a Beta version of the Aftershock Forecaster software. Get the latest version from www.opensha.org/apps."); 
+			if (elapsedDays > 0) {
+				String message = "The Beta version expired on " + formatter.format(expirationDate.getTime()) + ".\n Go get the latest version from www.opensha.org/apps.";
+				System.out.println(message);
+				JOptionPane.showMessageDialog(null, message, "Beta version expired", JOptionPane.ERROR_MESSAGE);
+				return;
+			} else {
+				System.out.println("The Beta version will expire " + formatter.format(expirationDate.getTime()) + String.format(" (%d days remaining).", (int) -elapsedDays));
+			}
+		}
+		
 		createAndShowGUI();
 	}
     
@@ -467,7 +489,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		mapPlotParams = new ParameterList();
 		publishAdvisoryParams = new ParameterList();
 		
-		eventIDParam = new StringParameter("USGS Event ID");
+		eventIDParam = new StringParameter("USGS Event ID", "");
 //		eventIDParam.setValue(null);
 		eventIDParam.setInfo("the event ID can be found in the event page URL for specific earthquakes at https://earthquake.usgs.gov/earthquakes/");
 		eventIDParam.addParameterChangeListener(this);
@@ -1027,6 +1049,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	 * Update the map parameter panel to reflect current map options
 	 */
 	private void updateMapPanel() {
+		setChangeListenerEnabled(false);
 		if (mapTypeParam.getValue() == MapType.PROBABILITIES) {
 			setEnabledStyle(mapPOEParam, false);
 			setEnabledStyle(mapLevelParam, true);
@@ -1069,6 +1092,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			setEnabledStyle(mapPOEParam, true);
 			setEnabledStyle(mapLevelParam, false);
 		}
+		setChangeListenerEnabled(true);
 	}
 	
 	
@@ -5956,7 +5980,14 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			tipText = new ArrayList<String>();
 		}
 		
-		tipText.add(">> Welcome to the aftershock forecaster. Enter a USGS event ID to get started. (e.g: us2000ahv0)");
+		SimpleDateFormat formatter=new SimpleDateFormat("d MMM yyyy");
+		formatter.setTimeZone(utc); //utc=TimeZone.getTimeZone("UTC"));
+		double elapsedDays = (double) (System.currentTimeMillis() - expirationDate.getTimeInMillis())/ETAS_StatsCalc.MILLISEC_PER_DAY;
+		
+		String welcomeMessage = "This a Beta version of the Aftershock Forecaster software. Get the latest version from www.opensha.org/apps.\n"
+				+ "The Beta version will expire " + formatter.format(expirationDate.getTime()) + String.format(" (%d days remaining).", (int) -elapsedDays);
+
+		tipText.add(welcomeMessage + "\n\n>> Welcome to the aftershock forecaster. Enter a USGS event ID to get started. (e.g: ci14607652)");
 		tipText.add(">> Specify a forecast start time and duration. Then click \"Fetch Data\" to retrieve the catalog\n  ...or click \"Quick Forecast\" to run the entire forecast automatically with default settings.");
 		tipText.add(">> Click \"Compute Model Fit\" to compute sequence-specific model\n  ...or go straight to \"Run Generic Forecast\" to get a generic forecast for this region.");
 		tipText.add(">> Click \"Compute Model Fit\" to compute sequence-specific model\n  ...or click \"Render\" to get a generic aftershock rate map.");
