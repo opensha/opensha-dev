@@ -468,7 +468,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		publishAdvisoryParams = new ParameterList();
 		
 		eventIDParam = new StringParameter("USGS Event ID");
-		eventIDParam.setValue("us20002926");
+//		eventIDParam.setValue(null);
 		eventIDParam.setInfo("the event ID can be found in the event page URL for specific earthquakes at https://earthquake.usgs.gov/earthquakes/");
 		eventIDParam.addParameterChangeListener(this);
 		forecastParams.addParameter(eventIDParam);
@@ -4123,7 +4123,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 					funcsProb.add(mainshockProbFunc);
 					charsProb.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK));
 
-					final PlotSpec specNum = new PlotSpec(funcs, chars, "Likely range of aftershock counts in the next " + durString, "Magnitude", "Number of aftershocks exceeding magnitude M");
+					final PlotSpec specNum = new PlotSpec(funcs, chars, "Likely range of aftershock numbers in the next " + durString, "Magnitude", "Number of aftershocks exceeding magnitude M");
 					specNum.setLegendVisible(true);
 
 					final PlotSpec specProb = new PlotSpec(funcsProb, charsProb, "Chance of an aftershock larger than magnitude M in the next " + durString, "Magnitude", "Probability (%)");
@@ -5956,7 +5956,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			tipText = new ArrayList<String>();
 		}
 		
-		tipText.add(">> Welcome to the aftershock forecaster. Enter a USGS event ID to get started.");
+		tipText.add(">> Welcome to the aftershock forecaster. Enter a USGS event ID to get started. (e.g: us2000ahv0)");
 		tipText.add(">> Specify a forecast start time and duration. Then click \"Fetch Data\" to retrieve the catalog\n  ...or click \"Quick Forecast\" to run the entire forecast automatically with default settings.");
 		tipText.add(">> Click \"Compute Model Fit\" to compute sequence-specific model\n  ...or go straight to \"Run Generic Forecast\" to get a generic forecast for this region.");
 		tipText.add(">> Click \"Compute Model Fit\" to compute sequence-specific model\n  ...or click \"Render\" to get a generic aftershock rate map.");
