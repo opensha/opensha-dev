@@ -141,14 +141,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 			formatter.setTimeZone(utc); //utc=TimeZone.getTimeZone("UTC"));
 			double elapsedDays = (double) (System.currentTimeMillis() - expirationDate.getTimeInMillis())/ETAS_StatsCalc.MILLISEC_PER_DAY;
 			
-			System.out.println("This a Beta version of the Aftershock Forecaster software. Get the latest version from www.opensha.org/apps."); 
 			if (elapsedDays > 0) {
 				String message = "The Beta version expired on " + formatter.format(expirationDate.getTime()) + ".\n Go get the latest version from www.opensha.org/apps.";
 				System.out.println(message);
 				JOptionPane.showMessageDialog(null, message, "Beta version expired", JOptionPane.ERROR_MESSAGE);
 				return;
-			} else {
-				System.out.println("The Beta version will expire " + formatter.format(expirationDate.getTime()) + String.format(" (%d days remaining).", (int) -elapsedDays));
 			}
 		}
 		
