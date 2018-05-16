@@ -310,6 +310,19 @@ public class SphRegionMercPolygon extends SphRegion {
 		return;
 	}
 
+	// Display our contents
+
+	@Override
+	public String toString() {
+		return "SphRegionMercPolygon:" + "\n"
+		+ "plot_wrap = " + plot_wrap + "\n"
+		+ "min_lat = " + min_lat + "\n"
+		+ "max_lat = " + max_lat + "\n"
+		+ "min_lon = " + min_lon + "\n"
+		+ "max_lon = " + max_lon + "\n"
+		+ "vertex_list size = " + vertex_list.size();
+	}
+
 
 
 
@@ -318,7 +331,7 @@ public class SphRegionMercPolygon extends SphRegion {
 	// Marshal version number.
 
 	private static final int MARSHAL_HWV_1 = 1;		// human-writeable version
-	private static final int MARSHAL_VER_1 = 20001;
+	private static final int MARSHAL_VER_1 = 14001;
 
 	private static final String M_VERSION_NAME = "SphRegionMercPolygon";
 

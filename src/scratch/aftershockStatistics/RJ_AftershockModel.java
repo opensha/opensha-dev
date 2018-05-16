@@ -673,6 +673,51 @@ public abstract class RJ_AftershockModel {
 
 	
 	/**
+	 * This gives the probability of one or more aftershocks above the given minimum magnitude
+	 * and over the specified time span.  A GR distribution with no upper bound is assumed.
+	 * Epistemic uncertainty is included.
+	 * @param magMin = Minimum magnitude of aftershocks to consider.
+	 * @param tMinDays = Start of time range, in days after the mainshock.
+	 * @param tMaxDays = End of time range, in days after the mainshock.
+	 * @return
+	 * According to R&J, the rate of aftershocks of magnitude >= magMin is
+	 *  lambda(t) = k * (t + c)^(-p)
+	 * where
+	 *  k = 10^(a + b*(magMain - magMin))
+	 *  Parmeters a, p, and c vary over their support.
+	 *  Parameter b is set to the fixed value in this model.
+	 * For given a/p/c, the number of aftershocks is assumed to be a Poisson distribution with
+	 * expected value N(a,p,c) equal to the integral of lambda(t) from t=tMin to t=tMax.
+	 * Then the probability P(a,p,c) of one or more aftershocks is 1 - exp(-N(a,p,c)).
+	 * This function returns the weighted average of P(a,p,c) over all a/p/c triples,
+	 * which represents the epistemic uncertainty.
+	 */
+	public double getProbOneOrMoreEvents(double magMin, double tMinDays, double tMaxDays) {
+		double result = 0.0;
+
+		for (int aIndex = a_support_lo; aIndex < a_support_hi; aIndex++) {
+			for (int pIndex = p_support_lo; pIndex < p_support_hi; pIndex++) {
+				for (int cIndex = c_support_lo; cIndex < c_support_hi; cIndex++) {
+					if (apc_likelihood[aIndex][pIndex][cIndex] > apc_max_tail_element) {
+						double expectedVal = AftershockStatsCalc.getExpectedNumEvents(get_a(aIndex), b, magMain, magMin, get_p(pIndex), get_c(cIndex), tMinDays, tMaxDays);
+						double poissonProb = 1.0 - Math.exp(-expectedVal);
+						result += (poissonProb * apc_likelihood[aIndex][pIndex][cIndex] / apc_support_total);
+					}
+				}
+			}
+		}
+
+		if (result > 1.0) {
+			result = 1.0;		// in case rounding produces a result a little larger than 1.0
+		}
+
+		return result;
+	}
+	
+
+
+	
+	/**
 	 * This gives the expected cumulative number of aftershocks as a function of time for the maximum likelihood a/p/c parameters 
 	 * (which represents the mode in the number of events space) above the given minimum magnitude and over 
 	 * the specified time span.  A GR distribution with no upper bound is assumed.

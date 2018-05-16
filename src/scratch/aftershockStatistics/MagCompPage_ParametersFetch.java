@@ -32,7 +32,8 @@ public class MagCompPage_ParametersFetch {
 	private static OAFParameterSet<MagCompPage_Parameters> cached_parameter_set = null;
 
 	// load_data - Load parameters from the data file.
-	// The data file format is:
+	//
+	// The text data file format is:
 	//	[int]		Number of tectonic regimes
 	//	[repeated]	Repeated once for each tectonic regime:
 	//		[string]	Name of tectonic regime
@@ -49,14 +50,42 @@ public class MagCompPage_ParametersFetch {
 	//		[repeated]	Repeated once for each polygon vertex:
 	//			[double]	Latitude in degrees, between -90 and 90
 	//			[double]	Longitude in degrees, between -180 and 180
+	//
+	// The JSON data file format is:
+	//	{
+	//	"version" = Integer version number, should be 1.
+	//	"regimes" = [ Array containing parameter values for each tectonic regime.
+	//		element = { Structure containing regime and parameter values.
+	//			"regime" = Name of tectonic regime.
+	//			"params" = { Structure containing marshaled MagCompPage_Parameters.
+	//				"MagCompPage_Parameters" = Integer version number, should be 2001.
+	//				. . .
+	//			}
+	//		. . .
+	//	]
+	//	"regions" = [ Array containing special regions.
+	//		element = { Structure containing regime and region.
+	//			"regime" = Name of tectonic regime.
+	//			"min_depth" = Minimum depth in km, positive down; use -1.0e10 if no bound.
+	//			"max_depth" = Maximum depth in km, positive down; use 1.0e10 if no bound.
+	//			"region" = { Structure containing marshaled SphRegion
+	//				"ClassType" = Integer code to select region type (see SphRegion.java).
+	//				. . .
+	//			}
+	//		. . .
+	//	]
+	//	}
+	//
 	// Notes:
 	// The list of tectonic regimes must include, at a minimum, either the 15 Garcia
 	// regions or a world region (but not both).
 	// A tectonic regime may appear in more than one special region.
+	// If special regions overlap, the region listed first "wins".
+	//
+	// For the text format only:
 	// In each special region, the first and last polygon vertices should be the same
 	// (although, according to Region, this is not strictly necessary).
 	// A special region cannot cross the date line.  If this is needed, use two regions.
-	// If special regions overlap, the region listed first "wins".
 
 	private static synchronized OAFParameterSet<MagCompPage_Parameters> load_data () {
 
@@ -88,11 +117,22 @@ public class MagCompPage_ParametersFetch {
 
 				return new MagCompPage_Parameters(magCat, capG, capH);
 			}
+
+			// load_parameter_values - Load parameter values for the tables.
+			// This function should create a new object of type T, read the
+			// parameter values from the MarshalReader, and return the object.
+			// In case of error, this function should throw RuntimeException (or a subclass).
+
+			@Override
+			protected MagCompPage_Parameters load_parameter_values (MarshalReader reader, String name) {
+				return (new MagCompPage_Parameters()).unmarshal (reader, name);
+			}
 		};
 
 		// Load the data
 
-		wk_parameter_set.load_data ("MagCompPage_ParametersFetch.txt", MagCompPage_ParametersFetch.class);
+		//wk_parameter_set.load_data ("MagCompPage_ParametersFetch.txt", MagCompPage_ParametersFetch.class);
+		wk_parameter_set.load_json_data ("MagCompPage_ParametersFetch.json", MagCompPage_ParametersFetch.class);
 
 		// Save our working data into the static variable
 

@@ -225,6 +225,18 @@ public abstract class SphRegion {
 	 */
 	public SphRegion () {}
 
+	// Display our contents
+
+	@Override
+	public String toString() {
+		return "SphRegion:" + "\n"
+		+ "plot_wrap = " + plot_wrap + "\n"
+		+ "min_lat = " + min_lat + "\n"
+		+ "max_lat = " + max_lat + "\n"
+		+ "min_lon = " + min_lon + "\n"
+		+ "max_lon = " + max_lon;
+	}
+
 
 
 
@@ -276,6 +288,7 @@ public abstract class SphRegion {
 	protected static final int MARSHAL_CIRCLE = 13001;
 	protected static final int MARSHAL_MERC_POLYGON = 14001;
 	protected static final int MARSHAL_MERC_RECTANGLE = 20001;
+	protected static final int MARSHAL_GC_POLYGON = 21001;
 
 	protected static final String M_TYPE_NAME = "ClassType";
 

@@ -254,6 +254,21 @@ public class SphRegionCircle extends SphRegion {
 		return;
 	}
 
+	// Display our contents
+
+	@Override
+	public String toString() {
+		return "SphRegionCircle:" + "\n"
+		+ "plot_wrap = " + plot_wrap + "\n"
+		+ "min_lat = " + min_lat + "\n"
+		+ "max_lat = " + max_lat + "\n"
+		+ "min_lon = " + min_lon + "\n"
+		+ "max_lon = " + max_lon + "\n"
+		+ "center_lat = " + center.get_lat() + "\n"
+		+ "center_lon = " + center.get_lon() + "\n"
+		+ "radius = " + radius;
+	}
+
 
 
 

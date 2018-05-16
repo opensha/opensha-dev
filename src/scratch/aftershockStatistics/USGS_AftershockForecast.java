@@ -163,8 +163,17 @@ public class USGS_AftershockForecast {
 				numEventsLower.put(duration, minMag, fractiles[0]);
 				numEventsUpper.put(duration, minMag, fractiles[1]);
 //				double rate = model.getModalNumEvents(minMag, tMinDays, tMaxDays);
-				double expectedVal = model.getModalNumEvents(minMag, tMinDays, tMaxDays);
-				double poissonProb = 1 - Math.exp(-expectedVal);
+
+//				double expectedVal = model.getModalNumEvents(minMag, tMinDays, tMaxDays);
+//				double poissonProb = 1 - Math.exp(-expectedVal);
+				double poissonProb = model.getProbOneOrMoreEvents(minMag, tMinDays, tMaxDays);
+
+				if (poissonProb < 1.0e-12) {
+					poissonProb = 0.0;	// fewer than 4 significant digits available
+				} else {
+					poissonProb = Double.parseDouble (String.format ("%.3e", poissonProb));	// limit to 4 significant digits
+				}
+
 				probs.put(duration, minMag, poissonProb);
 			}
 		}
@@ -332,8 +341,8 @@ public class USGS_AftershockForecast {
 			for (int m=0; m<minMags.length; m++) {
 				JSONObject magBin = new JSONObject();
 				magBin.put("magnitude", minMags[m]);
-				magBin.put("p95minimum", numEventsLower.get(durations[i], minMags[m]));
-				magBin.put("p95maximum", numEventsUpper.get(durations[i], minMags[m]));
+				magBin.put("p95minimum", Math.round(numEventsLower.get(durations[i], minMags[m])));
+				magBin.put("p95maximum", Math.round(numEventsUpper.get(durations[i], minMags[m])));
 				magBin.put("probability", probs.get(durations[i], minMags[m]));
 				magBins.add(magBin);
 			}

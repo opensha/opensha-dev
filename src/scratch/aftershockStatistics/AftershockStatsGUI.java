@@ -560,7 +560,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		Preconditions.checkState(eventID != null && !eventID.isEmpty(), "Must supply event ID!");
 		
 		mainshock = null;
-		ObsEqkRupture mainshock = accessor.fetchEvent(eventID, false);
+		ObsEqkRupture mainshock = accessor.fetchEvent(eventID, false, false);
 		Preconditions.checkState(mainshock != null, "Event not found: %s", eventID);
 		System.out.println("Mainshock Location: "+mainshock.getHypocenterLocation());
 		

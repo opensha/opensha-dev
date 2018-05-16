@@ -1,0 +1,33 @@
+{
+  "version":1,
+  "regimes":[
+    {"regime":"WORLD"     , "params":{"MagCompPage_Parameters":2001, "magCat":4.50, "capG":0.25, "capH":1.00}},
+    {"regime":"CALIFORNIA", "params":{"MagCompPage_Parameters":2001, "magCat":4.50, "capG":0.25, "capH":1.00}}
+  ],
+  "regions":[
+    {
+      "regime":"CALIFORNIA",
+      "min_depth":-1.0e10,
+      "max_depth":1.0e10,
+      "region":{
+        "ClassType":14001,
+        "SphRegionMercPolygon":1,
+        "vertex_list":[
+          {"lat":36.6847, "lon":-117.793},
+          {"lat":35.8000, "lon":-116.400},
+          {"lat":34.0815, "lon":-114.472},
+          {"lat":32.0000, "lon":-114.333},
+          {"lat":32.0000, "lon":-120.500},
+          {"lat":34.6945, "lon":-121.380},
+          {"lat":40.0000, "lon":-125.500},
+          {"lat":43.0200, "lon":-125.000},
+          {"lat":42.0000, "lon":-122.700},
+          {"lat":42.0000, "lon":-121.417},
+          {"lat":39.5000, "lon":-120.750},
+          {"lat":37.7500, "lon":-119.500},
+          {"lat":37.7500, "lon":-118.250}
+        ]
+      }
+    }
+  ]
+}

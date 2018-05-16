@@ -1,0 +1,47 @@
+{
+  "version":1,
+  "regimes":[
+    {"regime":"ANSR-ABSLDEC", "params":{"GenericRJ_Parameters":1001, "pValue":1.01, "aValue_mean":-2.29, "aValue_sigma":0.63, "aValue_sigma1":560, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"ANSR-ABSLOCB", "params":{"GenericRJ_Parameters":1001, "pValue":0.64, "aValue_mean":-2.82, "aValue_sigma":0.80, "aValue_sigma1":890, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"ANSR-ABSLSHC", "params":{"GenericRJ_Parameters":1001, "pValue":1.06, "aValue_mean":-2.85, "aValue_sigma":0.75, "aValue_sigma1":800, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"ANSR-DEEPCON", "params":{"GenericRJ_Parameters":1001, "pValue":0.98, "aValue_mean":-2.13, "aValue_sigma":0.52, "aValue_sigma1":250, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"ANSR-HOTSPOT", "params":{"GenericRJ_Parameters":1001, "pValue":1.12, "aValue_mean":-3.00, "aValue_sigma":0.68, "aValue_sigma1":680, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"ANSR-OCEANBD", "params":{"GenericRJ_Parameters":1001, "pValue":1.08, "aValue_mean":-3.19, "aValue_sigma":0.60, "aValue_sigma1":500, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"ANSR-SHALCON", "params":{"GenericRJ_Parameters":1001, "pValue":0.98, "aValue_mean":-2.42, "aValue_sigma":0.63, "aValue_sigma1":570, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"SCR-GENERIC" , "params":{"GenericRJ_Parameters":1001, "pValue":0.73, "aValue_mean":-2.85, "aValue_sigma":0.78, "aValue_sigma1":870, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"SOR-GENERIC" , "params":{"GenericRJ_Parameters":1001, "pValue":0.97, "aValue_mean":-3.04, "aValue_sigma":0.67, "aValue_sigma1":650, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"SZ-GENERIC"  , "params":{"GenericRJ_Parameters":1001, "pValue":0.88, "aValue_mean":-2.47, "aValue_sigma":0.63, "aValue_sigma1":570, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"SZ-INLBACK"  , "params":{"GenericRJ_Parameters":1001, "pValue":0.86, "aValue_mean":-2.43, "aValue_sigma":0.66, "aValue_sigma1":640, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"SZ-ONSHORE"  , "params":{"GenericRJ_Parameters":1001, "pValue":0.81, "aValue_mean":-2.34, "aValue_sigma":0.60, "aValue_sigma1":500, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"SZ-OUTERTR"  , "params":{"GenericRJ_Parameters":1001, "pValue":0.92, "aValue_mean":-2.42, "aValue_sigma":0.64, "aValue_sigma1":540, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"SCR-ABVSLAB" , "params":{"GenericRJ_Parameters":1001, "pValue":0.73, "aValue_mean":-2.85, "aValue_sigma":0.78, "aValue_sigma1":870, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"SOR-ABVSLAB" , "params":{"GenericRJ_Parameters":1001, "pValue":0.97, "aValue_mean":-3.04, "aValue_sigma":0.67, "aValue_sigma1":650, "aValue_sigma0":0.49, "bValue":1.00, "cValue":0.018, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}},
+    {"regime":"CALIFORNIA"  , "params":{"GenericRJ_Parameters":1001, "pValue":1.08, "aValue_mean":-1.85, "aValue_sigma":1.76, "aValue_sigma1":750, "aValue_sigma0":0.49, "bValue":0.91, "cValue":0.050, "aValue_min":-4.5, "aValue_max":-0.5, "aValue_delta":0.01}}
+  ],
+  "regions":[
+    {
+      "regime":"CALIFORNIA",
+      "min_depth":-1.0e10,
+      "max_depth":1.0e10,
+      "region":{
+        "ClassType":14001,
+        "SphRegionMercPolygon":1,
+        "vertex_list":[
+          {"lat":36.6847, "lon":-117.793},
+          {"lat":35.8000, "lon":-116.400},
+          {"lat":34.0815, "lon":-114.472},
+          {"lat":32.0000, "lon":-114.333},
+          {"lat":32.0000, "lon":-120.500},
+          {"lat":34.6945, "lon":-121.380},
+          {"lat":40.0000, "lon":-125.500},
+          {"lat":43.0200, "lon":-125.000},
+          {"lat":42.0000, "lon":-122.700},
+          {"lat":42.0000, "lon":-121.417},
+          {"lat":39.5000, "lon":-120.750},
+          {"lat":37.7500, "lon":-119.500},
+          {"lat":37.7500, "lon":-118.250}
+        ]
+      }
+    }
+  ]
+}

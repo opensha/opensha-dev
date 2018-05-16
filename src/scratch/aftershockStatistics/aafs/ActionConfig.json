@@ -1,0 +1,24 @@
+{
+  "ActionConfigFile": 24001,
+  "forecast_min_gap": "PT20M",
+  "forecast_lags": [
+    "P0DT0H20M0S",
+    "P0DT4H0M0S",
+    "P1DT0H0M0S",
+    "P7DT0H0M0S",
+    "P30DT0H0M0S",
+    "P365DT0H0M0S"
+  ],
+  "forecast_max_delay": "P7D",
+  "comcat_clock_skew": "PT2M0S",
+  "comcat_retry_min_gap": "PT30S",
+  "comcat_retry_lags": [
+    "P0DT0H0M30S",
+    "P0DT0H5M0S",
+    "P0DT0H30M0S",
+    "P0DT2H0M0S",
+    "P0DT8H0M0S",
+    "P1DT0H0M0S"
+  ]
+}
+

@@ -95,13 +95,31 @@ public class ComcatAccessor {
 	/**
 	 * Fetches an event with the given ID, e.g. "ci37166079"
 	 * @param eventID = Earthquake event id.
-	 * @param wrapLon = Desired longitude range: false = -180.0 to 180.0; true = 0 to 360.
+	 * @param wrapLon = Desired longitude range: false = -180 to 180; true = 0 to 360.
+	 * @return
+	 * The return value can be null if the event could not be obtained.
+	 * A null return may indicate a temporary condition (e.g., Comcat not responding) or a
+	 * permanent condition (e.g., event id not recognized).
+	 * Note: This entry point always returns extended information.
+	 */
+	public ObsEqkRupture fetchEvent(String eventID, boolean wrapLon) {
+		return fetchEvent(eventID, wrapLon, true);
+	}
+	
+
+
+
+	/**
+	 * Fetches an event with the given ID, e.g. "ci37166079"
+	 * @param eventID = Earthquake event id.
+	 * @param wrapLon = Desired longitude range: false = -180 to 180; true = 0 to 360.
+	 * @param extendedInfo = True to return extended information, see eventToObsRup below.
 	 * @return
 	 * The return value can be null if the event could not be obtained.
 	 * A null return may indicate a temporary condition (e.g., Comcat not responding) or a
 	 * permanent condition (e.g., event id not recognized).
 	 */
-	public ObsEqkRupture fetchEvent(String eventID, boolean wrapLon) {
+	public ObsEqkRupture fetchEvent(String eventID, boolean wrapLon, boolean extendedInfo) {
 		EventQuery query = new EventQuery();
 		query.setEventId(eventID);
 		List<JsonEvent> events;
@@ -123,7 +141,7 @@ public class ComcatAccessor {
 		JsonEvent event = events.get(0);
 //		printJSON(event);
 		
-		return eventToObsRup(event, wrapLon);
+		return eventToObsRup(event, wrapLon, extendedInfo);
 	}
 	
 
@@ -158,7 +176,7 @@ public class ComcatAccessor {
 		}
 	}
 	
-	static final double day_millis = 24d*60d*60d*1000d;
+	public static final double day_millis = 24d*60d*60d*1000d;
 
 
 
@@ -244,7 +262,7 @@ public class ComcatAccessor {
 			if (count > 0) {
 				for (JsonEvent event : events) {
 					boolean wrap = mainshockLonWrapped && event.getLongitude().doubleValue() < 0;
-					ObsEqkRupture rup = eventToObsRup(event, wrap);
+					ObsEqkRupture rup = eventToObsRup(event, wrap, false);
 					if (rup !=null)
 						rups.add(rup);
 				}
@@ -288,7 +306,7 @@ public class ComcatAccessor {
 	 * @param minDepth = Minimum depth, in km.  Comcat requires a value from -100 to +1000.
 	 * @param maxDepth = Minimum depth, in km.  Comcat requires a value from -100 to +1000.
 	 * @param region = Region to search.  Events not in this region are filtered out.
-	 * @param wrapLon = Desired longitude range: false = -180.0 to 180.0; true = 0 to 360.
+	 * @param wrapLon = Desired longitude range: false = -180 to 180; true = 0 to 360.
 	 * @return
 	 * Note: The mainshock parameter must be a return value from fetchEvent() above.
 	 * Note: As a special case, if maxDays == minDays, then the end time is the current time.
@@ -301,7 +319,7 @@ public class ComcatAccessor {
 		query.setMinDepth(new BigDecimal(String.format("%.3f", minDepth)));
 		query.setMaxDepth(new BigDecimal(String.format("%.3f", maxDepth)));
 		
-		Preconditions.checkState(minDays < maxDays, "Min days must be less than max days");
+		Preconditions.checkState(minDays <= maxDays, "Min days must be less than max days");
 		// time zones shouldn't be an issue since we're just adding to the original catalog time, whatever
 		// time zone that is in.
 		long eventTime = mainshock.getOriginTime();
@@ -364,7 +382,7 @@ public class ComcatAccessor {
 
 			if (count > 0) {
 				for (JsonEvent event : events) {
-					ObsEqkRupture rup = eventToObsRup(event, wrapLon);
+					ObsEqkRupture rup = eventToObsRup(event, wrapLon, false);
 					if (rup !=null)
 						rups.add(rup);
 				}
@@ -413,7 +431,7 @@ public class ComcatAccessor {
 		// default to moving anything with lon < -90 to the positive domain
 		// then we'll apply this consistently to all aftershocks
 		// without this fix (and corresponding check in fetchEvent), events such as usp000fuse will fail
-		return eventToObsRup(event, event.getLongitude().doubleValue() < -90);
+		return eventToObsRup(event, event.getLongitude().doubleValue() < -90, true);
 	}
 
 
@@ -422,9 +440,11 @@ public class ComcatAccessor {
 	// Convert a JsonEvent into an ObsEqkRupture.
 	// If wrapLon is false, longitudes range from -180 to +180.
 	// If wrapLon is true, longitudes range from 0 to +360.
+	// If extendedInfo is true, extended information is added to the ObsEqkRupture,
+	//  which presently is the place description.
 	// The return value can be null if the conversion could not be performed.
 	
-	private static ObsEqkRupture eventToObsRup(JsonEvent event, boolean wrapLon) {
+	private static ObsEqkRupture eventToObsRup(JsonEvent event, boolean wrapLon, boolean extendedInfo) {
 		double lat = event.getLatitude().doubleValue();
 		double lon = event.getLongitude().doubleValue();
 		GeoTools.validateLon(lon);
@@ -451,8 +471,10 @@ public class ComcatAccessor {
 		ObsEqkRupture rup = new ObsEqkRupture(event.getEventId().toString(),
 				event.getTime().getTime(), hypo, mag);
 		
-		// adds the place description ("10km from wherever"). Needed for ETAS_AftershockStatistics forecast document -NVDE 
-		rup.addParameter(new StringParameter("description", event.getPlace()));
+		if (extendedInfo) {
+			// adds the place description ("10km from wherever"). Needed for ETAS_AftershockStatistics forecast document -NVDE 
+			rup.addParameter(new StringParameter("description", event.getPlace()));
+		}
 		
 		return rup;
 	}
