@@ -90,7 +90,7 @@ public class WasatchInversion {
 				sectSlipRate[sectIndex] = Double.valueOf(split[1]);
 				double low95 = Double.valueOf(split[2]);
 				double upp95 = Double.valueOf(split[3]);
-				sectSlipRateStdDev[sectIndex] = (upp95-low95)/4.0;	
+				sectSlipRateStdDev[sectIndex] = (upp95-low95)/(2*1.96);	
 				if(D) System.out.println(sectIndex+"\t"+sectSlipRate[sectIndex]+"\t"+sectSlipRateStdDev[sectIndex]);
 				sectIndex+=1;
 			}

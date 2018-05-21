@@ -1369,7 +1369,7 @@ public class FaultSystemRuptureRateInversion {
 		
 		fileNamePrefix = null;
 		if(dirName != null)
-			fileNamePrefix = dirName+"/MFDs";
+			fileNamePrefix = dirName+"/sectionBoundaryRates";
 		plotName =  "Section Boundary Rates";
 		xAxisLabel = "Section Boundary";
 		yAxisLabel = "Rate (per yr)";
