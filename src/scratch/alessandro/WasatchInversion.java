@@ -351,11 +351,7 @@ public class WasatchInversion {
 		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.THINGBAIJAM_17_SRL_N;
 		double relativeSectRateWt=1;
 		
-		double relative_aPrioriRupWt = 1e9;	//
-		// for GR constraint or initial 
-//		String aPrioriRupRatesFilename = ROOT_DATA_DIR+"aPrioriRupRatesFromGR_MFD.txt";
-		// for segmentation constraint:
-		String aPrioriRupRatesFilename = ROOT_DATA_DIR+APRIORI_RUP_RATE_FROM_SECT_CONSTR_FILENAME;
+		double relative_aPrioriRupWt = 0;	//
 
 		boolean wtedInversion = true;
 		double minRupRate = 1e-8;
@@ -364,15 +360,10 @@ public class WasatchInversion {
 		double moRateReduction = 0.1;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
 		double relativeMFD_constraintWt = 0; // setting this to 1e6
 		
-		// GR Constraint (values obtained from first running FaultSystemRuptureRateInversion.getGR_DistFit() with relativeMFD_constraintWt=0)
-		double minMag=6.4;
-		double maxMag=8.1;
-		double delta = 0.1;
-		int num = 18;
-		double moRate=2.415E17;
-		GutenbergRichterMagFreqDist grConstraint = new GutenbergRichterMagFreqDist(minMag,num,delta);
-		grConstraint.setAllButTotCumRate(minMag, maxMag, moRate, 1.0);
-
+		// Segmentation constraint:
+		String segmentationConstrFilename = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
+		double relative_segmentationConstrWt = 0;
+		
 		// create an instance of the inversion class with the above settings
 		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion(
 				name,
@@ -383,13 +374,13 @@ public class WasatchInversion {
 				scalingRel, 
 				relativeSectRateWt, 
 				relative_aPrioriRupWt, 
-				aPrioriRupRatesFilename,
 				wtedInversion, 
 				minRupRate, 
 				applyProbVisible, 
 				moRateReduction,
-				grConstraint,
-				relativeMFD_constraintWt);
+				relativeMFD_constraintWt,
+				segmentationConstrFilename,
+				relative_segmentationConstrWt);
 		
 		// make the directory for storing results (set as null if you don't want to save anything)
 		String dirName = ROOT_PATH+"OutputFigsAndData";
@@ -400,14 +391,14 @@ public class WasatchInversion {
 	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
 		
 		// Non-negative least squares
-		fltSysRupInversion.doInversionNNLS();
+//		fltSysRupInversion.doInversionNNLS();
 		
 		// Simulated annealing
-		long numIterations = (long) 1e5;
+		long numIterations = (long) 1e4;
 		boolean initStateFromAprioriRupRates = false;
-		long randomSeed = System.currentTimeMillis();
-//		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
-//		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
+//		long randomSeed = System.currentTimeMillis();
+		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
+		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
@@ -422,9 +413,6 @@ public class WasatchInversion {
 		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 	    fltSysRupInversion.writeAndOrPlotSegPartMFDs(dirName, popUpPlots);
-		
-		// do this once to write out a priori rupture rates from MFD constraint
-//		fltSysRupInversion.writeApriorRupRatesFromMFD_Constrint(ROOT_PATH+"data/aPrioriRupRatesFromGR_MFD.txt");
 
 		
 	}

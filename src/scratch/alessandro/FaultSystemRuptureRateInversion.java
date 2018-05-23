@@ -84,7 +84,7 @@ import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
  */
 public class FaultSystemRuptureRateInversion {
 	
-	final static boolean D = true;	// debugging flag
+	final static boolean D = false;	// debugging flag
 
 	public final static double GAUSS_MFD_SIGMA = 0.12;
 	public final static double GAUSS_MFD_TRUNCATION = 2;
@@ -131,6 +131,13 @@ public class FaultSystemRuptureRateInversion {
 	int[] aPriori_rupIndex;
 	double[] aPriori_rate, aPriori_wt;
 	String aPrioriRupRatesFilename;
+	
+	// segmentation (rup rate = 0) constraints
+	int num_segConstraints;
+	int[] segConstraint_rupIndex;
+	double[] segConstraint_rupRate, segConstraint_RupWt;
+	String segConstraintFilename;
+
 
 	
 	private static boolean MATLAB_TEST = false;
@@ -140,12 +147,12 @@ public class FaultSystemRuptureRateInversion {
 	private double minRupRateArray[]; // the minimum rate constraint for each rupture
 	private double minRupRate;
 	private boolean wtedInversion, applyProbVisible;	// weight the inversion according to slip rate and segment rate uncertainties
-	private double relativeSectRateWt, relative_aPrioriRupWt; //, relative_aPrioriSegRateWt;
+	private double relativeSectRateWt, relative_aPrioriRupWt, relative_segConstraintWt; 
 	private double relativeMFD_constraintWt;
 
-	private int  firstRowSectSlipRateData=-1,firstRowSectEventRateData=-1, firstRowAprioriData=-1;
-	private int  lastRowSectSlipRateData=-1,lastRowSectEventRateData=-1, lastRowAprioriData=-1;
-	private int firstRowGR_constraintData=-1, lastRowGR_constraintData=-1; //, firstRowParkSegConstraint=-1, lastRowParkSegConstraint=-1;
+	private int  firstRowSectSlipRateData=-1,firstRowSectEventRateData=-1, firstRowAprioriData=-1, firstRowSegConstraint=-1;
+	private int  lastRowSectSlipRateData=-1,lastRowSectEventRateData=-1, lastRowAprioriData=-1, lastRowSegConstraint=-1;
+	private int firstRowMFD_constraintData=-1, lastRowMFD_constraintData=-1;
 	private int totNumRows;
 	
 	// slip model:  CHANGE TO ENUM
@@ -336,16 +343,114 @@ public class FaultSystemRuptureRateInversion {
 		}
 	}
 
-	
-
 	/**
-	 *
-	 * @param fltSectionDataList - any name the user wants to give the inversion model
+	 *  This constructor assigns aPriori rupture rates and the MFD constraint from a computed 
+	 *  best-fitting Gutenberg-Richter distribution (but these are only assigned if associated 
+	 *  weights are non-zero).  These a-priori rupture rates are also used as the simulated 
+	 *  annealing initial solution if specified in the getSimulatedAnnealing(*) method.
+	 *  
+	 * @param modelName - any name the user wants to give the inversion model
 	 * @param fltSectionDataList
 	 * @param sectionRateConstraints
 	 * @param rupSectionMatrix
-	 * @param slipModelType - TAPERED_SLIP_MODEL, UNIFORM_SLIP_MODEL, or WG02_SLIP_MODEL
-	 * @param magAreaRel
+	 * @param slipModelType
+	 * @param scalingRel
+	 * @param relativeSectRateWt - weight on segment rate equations (relative to slip rate)
+	 * @param relative_aPrioriGR_RupWt - weight on GR a-priori rupturerates (relative to slip rate)
+	 * @param aPrioriRupRatesFilename - filename for aPriori rupture rates
+	 * @param wtedInversion - apply data uncertainties?
+	 * @param minRupRate - constrain all rupture rates to be greater than this value
+	 * @param applyProbVisible - account for likelihood that Paleoseismology will see the rupture
+	 * @param moRateReduction - fraction reduction from smaller events (and not aseismicity or coupling coefficient, which are set in fltSectionDataList)
+	 * @param mfdConstraint - an IncrementalMagFreqDist constraint
+	 * @param relativeMFD_constraintWt - weight for MFD constraint
+	 */
+	public FaultSystemRuptureRateInversion( String modelName,
+			ArrayList<FaultSectionPrefData> fltSectionDataList, 
+			ArrayList<SegRateConstraint> sectionRateConstraints,
+			int[][] rupSectionMatrix, 
+			SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, 
+			double relativeSectRateWt, 
+			double relative_aPrioriGR_RupWt, 
+			boolean wtedInversion, 
+			double minRupRate,
+			boolean applyProbVisible, 
+			double moRateReduction, 
+			double relativeGR_MFD_constraintWt,
+			String segConstraintFilename,
+			double relative_segConstraintWt) {
+		
+		this.modelName = modelName;
+		this.fltSectionDataList = fltSectionDataList;
+		this.sectionRateConstraints = sectionRateConstraints;
+		this.rupSectionMatrix = rupSectionMatrix;
+		this.slipModelType = slipModelType;
+		this.magAreaRel = scalingRel;
+		this.relativeSectRateWt = relativeSectRateWt;
+		this.relative_aPrioriRupWt = relative_aPrioriGR_RupWt;
+		this.wtedInversion = wtedInversion;
+		this.minRupRate = minRupRate;
+		this.applyProbVisible = applyProbVisible;
+		this.moRateReduction = moRateReduction;
+		this.relativeMFD_constraintWt = relativeGR_MFD_constraintWt;
+		this.segConstraintFilename = segConstraintFilename;
+		this.relative_segConstraintWt = relative_segConstraintWt;
+		
+		if(modelName == null) {
+			modelName = this.getClass().toString();
+		}
+
+		// set info string
+		modelSetUpInfoString = modelName+" with:\n\n";
+		modelSetUpInfoString += "\tslipModelType = "+slipModelType+"\n";
+		modelSetUpInfoString += "\tmagAreaRel = "+magAreaRel+"\n";
+		modelSetUpInfoString += "\trelativeSectRateWt = "+relativeSectRateWt+"\n";
+		modelSetUpInfoString += "\trelative_aPrioriGR_RupWt = "+relative_aPrioriGR_RupWt+"\n";
+		modelSetUpInfoString += "\twtedInversion = "+wtedInversion+"\n";
+		modelSetUpInfoString += "\tminRupRate = "+minRupRate+"\n";
+		modelSetUpInfoString += "\tapplyProbVisible = "+applyProbVisible+"\n";
+		modelSetUpInfoString += "\tmoRateReduction = "+moRateReduction+"\n";
+		modelSetUpInfoString += "\trelativeGR_MFD_constraintWt = "+relativeGR_MFD_constraintWt+"\n";
+		modelSetUpInfoString += "\tsegConstraintFilename = "+segConstraintFilename+"\n";
+		modelSetUpInfoString += "\trelative_segConstraintWt = "+relative_segConstraintWt+"\n";
+		modelSetUpInfoString += "\tGAUSS_MFD_SIGMA = "+GAUSS_MFD_SIGMA+"\n";
+		modelSetUpInfoString += "\tGAUSS_MFD_TRUNCATION = "+GAUSS_MFD_TRUNCATION+"\n";
+
+		// initialize section and rupture attributes
+		initSectAndRupAttributes();
+		
+		// compute matrix of Dsr (slip on each segment in each rupture)
+		computeSectSlipInRupMatrix();
+		
+		mfdConstraint = getGR_DistFit();
+		
+		num_aPriori_constraints = 0;
+		if(relative_aPrioriRupWt>0) {
+			setAprioriRupRatesFromMFD_Constrint();
+			num_aPriori_constraints = aPriori_rupIndex.length;
+		}
+		
+		num_segConstraints = 0;
+		if(relative_segConstraintWt>0 ) {
+			setSegmentationConstrints();
+		}
+		
+		initMatricesEtc();
+		
+	}
+
+
+	
+	/**
+	 *  This constructor has the option to give arbitrary aPriori rupture rates (read from a file) and an 
+	 *  arbitrary MFD constraint (whereas the other constructor will compute these from a GR MFD).
+	 * @param modelName - any name the user wants to give the inversion model
+	 * @param fltSectionDataList
+	 * @param sectionRateConstraints
+	 * @param rupSectionMatrix
+	 * @param slipModelType
+	 * @param scalingRel
 	 * @param relativeSectRateWt - weight on segment rate equations (relative to slip rate)
 	 * @param relative_aPrioriRupWt - weight on a-priori rates (relative to slip rate)
 	 * @param aPrioriRupRatesFilename - filename for aPriori rupture rates
@@ -353,6 +458,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param minRupRate - constrain all rupture rates to be greater than this value
 	 * @param applyProbVisible - account for likelihood that Paleoseismology will see the rupture
 	 * @param moRateReduction - fraction reduction from smaller events (and not aseismicity or coupling coefficient, which are set in fltSectionDataList)
+	 * @param mfdConstraint - an IncrementalMagFreqDist constraint
 	 * @param relativeMFD_constraintWt - weight for MFD constraint
 	 */
 	public FaultSystemRuptureRateInversion( String modelName,
@@ -369,7 +475,9 @@ public class FaultSystemRuptureRateInversion {
 			boolean applyProbVisible, 
 			double moRateReduction, 
 			IncrementalMagFreqDist mfdConstraint,
-			double relativeMFD_constraintWt) {
+			double relativeMFD_constraintWt,
+			String segConstraintFilename,
+			double relative_segConstraintWt) {
 		
 		this.modelName = modelName;
 		this.fltSectionDataList = fltSectionDataList;
@@ -386,6 +494,9 @@ public class FaultSystemRuptureRateInversion {
 		this.moRateReduction = moRateReduction;
 		this.mfdConstraint = mfdConstraint;
 		this.relativeMFD_constraintWt = relativeMFD_constraintWt;
+		this.segConstraintFilename = segConstraintFilename;
+		this.relative_segConstraintWt = relative_segConstraintWt;
+
 		
 		if(modelName == null) {
 			modelName = this.getClass().toString();
@@ -403,17 +514,11 @@ public class FaultSystemRuptureRateInversion {
 		modelSetUpInfoString += "\tapplyProbVisible = "+applyProbVisible+"\n";
 		modelSetUpInfoString += "\tmoRateReduction = "+moRateReduction+"\n";
 		modelSetUpInfoString += "\trelativeMFD_constraintWt = "+relativeMFD_constraintWt+"\n";
+		modelSetUpInfoString += "\tsegConstraintFilename = "+segConstraintFilename+"\n";
+		modelSetUpInfoString += "\trelative_segConstraintWt = "+relative_segConstraintWt+"\n";
 		modelSetUpInfoString += "\tGAUSS_MFD_SIGMA = "+GAUSS_MFD_SIGMA+"\n";
 		modelSetUpInfoString += "\tGAUSS_MFD_TRUNCATION = "+GAUSS_MFD_TRUNCATION+"\n";
 
-		
-		// compute slip correction for Gaussian MFD
-		GaussianMagFreqDist gDist1 = new GaussianMagFreqDist(5.0,9.0,41,7,this.GAUSS_MFD_SIGMA,1.0,this.GAUSS_MFD_TRUNCATION,2);
-		GaussianMagFreqDist gDist2 = new GaussianMagFreqDist(5.0,9.0,41,7,0.01,1.0,0.01,2);
-		gDist1.scaleToCumRate(0, 1.0);
-		gDist2.scaleToCumRate(0, 1.0);
-		gaussMFD_slipCorr = gDist1.getTotalMomentRate()/gDist2.getTotalMomentRate();
-//		System.out.println("gaussMFD_slipCorr="+(float)gaussMFD_slipCorr+"\n");
 		
 		// initialize section and rupture attributes
 		initSectAndRupAttributes();
@@ -428,6 +533,21 @@ public class FaultSystemRuptureRateInversion {
 			readApriorRupRateConstraintsFromFile(aPrioriRupRatesFilename);
 			num_aPriori_constraints = aPriori_rupIndex.length;
 		}
+		
+		num_segConstraints = 0;
+		if(relative_segConstraintWt>0 ) {
+			setSegmentationConstrints();
+		}
+
+		
+		initMatricesEtc();
+		
+	}
+	
+	
+	
+	
+	private void initMatricesEtc() {
 		
 		// write out rupture attributes
 		if(D) {
@@ -470,19 +590,27 @@ public class FaultSystemRuptureRateInversion {
 			lastRowAprioriData = totNumRows-1;
 		}
 		
+		// add segmentation constrains if needed
+		if(relative_segConstraintWt > 0.0) {
+			firstRowSegConstraint  = totNumRows;
+			totNumRows += num_segConstraints;
+			lastRowSegConstraint = totNumRows-1;
+		}
+
 		
 		// add number of MFD constaints
 		int numMFD_constraints=0;
 		if(relativeMFD_constraintWt>0) {
 			numMFD_constraints = mfdConstraint.size();
-			firstRowGR_constraintData = totNumRows;
+			firstRowMFD_constraintData = totNumRows;
 			totNumRows += numMFD_constraints;
-			lastRowGR_constraintData = totNumRows-1;
+			lastRowMFD_constraintData = totNumRows-1;
 		}
 				
 		String tempString = "firstRowSegEventRateData = "+firstRowSectEventRateData+
 				"; firstRowAprioriData = "+firstRowAprioriData+
-				"; firstRowGR_constraintData = "+firstRowGR_constraintData+
+				"; firstRowSegConstraint = "+firstRowSegConstraint+
+				"; firstRowGR_constraintData = "+firstRowMFD_constraintData+
 				"; totNumRows = "+totNumRows;
 		if(D) System.out.println("\n"+tempString+"\n");
 		modelSetUpInfoString += "\n"+tempString+"\n";
@@ -510,7 +638,7 @@ public class FaultSystemRuptureRateInversion {
 				C[row][col] = sectSlipInRup[row][col];
 		}
 		
-		// now fill in the segment event rate constraints if requested
+		// now fill in the section event rate constraints if requested
 		if(relativeSectRateWt > 0.0) {
 			SegRateConstraint constraint;
 			for(int i = 0; i < numSectRateConstraints; i ++) {
@@ -541,10 +669,23 @@ public class FaultSystemRuptureRateInversion {
 		}
 		
 		
+		// now fill in the segmentation constraint if needed
+		if(relative_segConstraintWt > 0.0) {
+			for(int i=0; i < num_segConstraints; i++) {
+				int row = i+firstRowSegConstraint;
+				int col = segConstraint_rupIndex[i];
+				d[row] = segConstraint_rupRate[i];
+				if(wtedInversion)
+					data_wt[row] = segConstraint_RupWt[i];
+				C[row][col]=1.0;
+// System.out.println("HERE: "+segConstraint_rupIndex[i]+"\t\t"+ segConstraint_rupRate[i] +"\t\t"+segConstraint_RupWt[i]);
+			}
+		}
+		
 		// now fill in the MFD constraint if needed
 		if(relativeMFD_constraintWt > 0.0) {
 			for(int i=0; i < numMFD_constraints; i++) {
-				int row = i+firstRowGR_constraintData;
+				int row = i+firstRowMFD_constraintData;
 				double mag = mfdConstraint.getX(i);
 				d[row] = mfdConstraint.getY(mag);
 				for(int col=0; col<numRuptures; col++)
@@ -607,11 +748,22 @@ public class FaultSystemRuptureRateInversion {
 				C_wted[row][col]=full_wt[row];
 			}
 		}
+		// a-priori rate wts
+		if(relative_segConstraintWt > 0.0) {
+			for(int i=0; i < num_segConstraints; i++) {
+				int row = i+firstRowSegConstraint;
+				int col = segConstraint_rupIndex[i];
+				full_wt[row] = relative_segConstraintWt;
+				if(wtedInversion) full_wt[row] *= data_wt[row];
+				d_wted[row] *= full_wt[row];
+				C_wted[row][col]=full_wt[row];
+			}
+		}
 
 		// MFD constraint wts
 		if(relativeMFD_constraintWt > 0.0) {
 			for(int i=0; i < numMFD_constraints; i++) {
-				int row = i+firstRowGR_constraintData;
+				int row = i+firstRowMFD_constraintData;
 				full_wt[row] = relativeMFD_constraintWt;
 				d_wted[row] *= full_wt[row];
 				for(int rup=0; rup < numRuptures; rup++) C_wted[row][rup] *= full_wt[row];
@@ -620,8 +772,9 @@ public class FaultSystemRuptureRateInversion {
 		
 	}
 	
+	
 	/**
-	 * This deos the inversion using non-negative least squares
+	 * This does the inversion using non-negative least squares
 	 */
 	public void doInversionNNLS() {
 		
@@ -1107,7 +1260,7 @@ public class FaultSystemRuptureRateInversion {
 			for(int row=firstRowAprioriData; row <= lastRowAprioriData; row++)
 				aPrioriErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*data_wt[row]*data_wt[row];
 		if(relativeMFD_constraintWt>0)
-			for(int row=firstRowGR_constraintData; row <= lastRowGR_constraintData; row++){
+			for(int row=firstRowMFD_constraintData; row <= lastRowMFD_constraintData; row++){
 				grErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*data_wt[row]*data_wt[row];
 			}
 
@@ -1141,7 +1294,7 @@ public class FaultSystemRuptureRateInversion {
 			for(int row=firstRowAprioriData; row <= lastRowAprioriData; row++)
 				aPrioriErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*full_wt[row]*full_wt[row];
 		if(relativeMFD_constraintWt>0)
-			for(int row=firstRowGR_constraintData; row <= lastRowGR_constraintData; row++)
+			for(int row=firstRowMFD_constraintData; row <= lastRowMFD_constraintData; row++)
 				grErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*full_wt[row]*full_wt[row];
 
 		totPredErr = slipRateErr+eventRateErr+aPrioriErr+grErr;
@@ -1535,7 +1688,7 @@ public class FaultSystemRuptureRateInversion {
 	 * specified file.
 	 * @param fileName
 	 */
-	public void writeApriorRupRatesFromMFD_Constrint(String fileName) {
+	public void writeAprioriRupRatesFromMFD_Constrint(String fileName) {
 		try{
 			double aPriori_rate, aPriori_wt;
 			FileWriter fw = new FileWriter(fileName);
@@ -1550,6 +1703,20 @@ public class FaultSystemRuptureRateInversion {
 		}			
 	}
 	
+	/**
+	 * This sets a-priori rupture rates from the MFD constraint.
+	 */
+	private void setAprioriRupRatesFromMFD_Constrint() {
+		aPriori_rupIndex = new int[numRuptures];
+		aPriori_rate  = new double[numRuptures];
+		aPriori_wt  = new double[numRuptures];
+		for(int r=0;r<numRuptures;r++) {
+			aPriori_rupIndex[r] = r;
+			aPriori_rate[r] = mfdConstraint.getY(rupMeanMag[r])/meanMagHistorgram.getY(rupMeanMag[r]);
+			aPriori_wt[r] = 1;
+		}
+	}
+
 	
 	/**
 	 * This reads the a-priori rupture rates from a file, where the first column is
@@ -1620,6 +1787,14 @@ public class FaultSystemRuptureRateInversion {
 	 * This initializes the section and rupture attributes
 	 */
 	private void initSectAndRupAttributes() {
+		
+		// compute slip correction for Gaussian MFD
+		GaussianMagFreqDist gDist1 = new GaussianMagFreqDist(5.0,9.0,41,7,this.GAUSS_MFD_SIGMA,1.0,this.GAUSS_MFD_TRUNCATION,2);
+		GaussianMagFreqDist gDist2 = new GaussianMagFreqDist(5.0,9.0,41,7,0.01,1.0,0.01,2);
+		gDist1.scaleToCumRate(0, 1.0);
+		gDist2.scaleToCumRate(0, 1.0);
+		gaussMFD_slipCorr = gDist1.getTotalMomentRate()/gDist2.getTotalMomentRate();
+//		System.out.println("gaussMFD_slipCorr="+(float)gaussMFD_slipCorr+"\n");
 
 		// set section data values
 		numSections = fltSectionDataList.size();
@@ -1778,6 +1953,76 @@ public class FaultSystemRuptureRateInversion {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	
+	
+	/**
+	 * This applies the segmentation constraints by setting the rate of ruptures that 
+	 * cross the boundaries to zero.
+	 */
+	private void setSegmentationConstrints() {	
+		
+		// Read Segment Boundary Data:
+		int numBoundaries=0;
+		int sect1_array[]=null;
+		int sect2_array[]=null;
+		double wt_array[]=null;
+
+		try {
+			File file = new File(segConstraintFilename);
+			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
+			numBoundaries = fileLines.size();
+			sect1_array = new int[numBoundaries];
+			sect2_array = new int[numBoundaries];
+			wt_array = new double[numBoundaries];
+			if(D) System.out.println("numBoundaries="+numBoundaries);
+			for (int i=0; i<numBoundaries; i++) {
+				//			System.out.println(line);
+				String line = fileLines.get(i).trim();
+				String[] split = line.split("\t");	// tab delimited
+				Preconditions.checkState(split.length == 3, "Expected 3 items, got %s", split.length);
+				//			System.out.println(split[0]+"\t"+split[1]+"\t"+split[2]);
+				sect1_array[i] = Integer.valueOf(split[0]);
+				sect2_array[i] = Integer.valueOf(split[1]);
+				wt_array[i] = Double.valueOf(split[2]);
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+		}			
+		int numRuptures = rupSectionMatrix[0].length;
+		int numSections = rupSectionMatrix.length;
+
+		// get the number of constraints
+		num_segConstraints = 0;
+		for(int i=0;i<numBoundaries; i++) {				
+			for(int rup=0; rup<numRuptures; ++rup) {
+				if(rupSectionMatrix[sect1_array[i]][rup]==1 && rupSectionMatrix[sect2_array[i]][rup]==1) {
+					num_segConstraints+=1;
+				}
+			}
+		}
+		
+		if(D) System.out.println("num_segConstraints = "+num_segConstraints);
+		
+		segConstraint_rupIndex = new int[num_segConstraints];
+		segConstraint_rupRate = new double[num_segConstraints];
+		segConstraint_RupWt = new double[num_segConstraints];
+		
+		// now fill them in
+		int index = 0;
+		for(int i=0;i<numBoundaries; i++) {				
+			for(int rup=0; rup<numRuptures; ++rup) {
+				if(rupSectionMatrix[sect1_array[i]][rup]==1 && rupSectionMatrix[sect2_array[i]][rup]==1) {
+					segConstraint_rupIndex[index]=rup;
+					segConstraint_rupRate[index]=0.0;
+//					double wt = wt_array[i]*Math.pow(10, (rupMeanMag[rup]-minRupMag));
+					double wt = wt_array[i];
+					segConstraint_RupWt[index]=wt;
+					index += 1;
+				}
+			}
+		}	
 	}
 
 
