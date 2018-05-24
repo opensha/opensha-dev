@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
-import org.mongodb.morphia.annotations.Transient;
+//import org.mongodb.morphia.annotations.Transient;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
@@ -26,9 +26,6 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
  * @author field
  *
  * Modified by Michael Barall.
- *
- * WARNING: This object is stored in the OAF database. Once OAF becomes operational,
- * the set of non-Transient fields can never be changed.
  *
  * This model includes both aleatory uncertainty (uncertainty due to randomness in nature)
  * and epistemic uncertainty (uncertainty due to our lack of knowledge of the correct
@@ -81,7 +78,7 @@ public abstract class RJ_AftershockModel {
 	// Debug flag.
 	// When set to true, some values are written to System.out, which are logged in the OAF server.
 
-	@Transient
+	//@Transient
 	protected boolean D = true;	// debug flag
 
 	// The Gutenberg-Richter b-value
@@ -121,7 +118,7 @@ public abstract class RJ_AftershockModel {
 	// Note: A subclass or user of this class must supply the likelihood values.
 	// They are not computed in this class.
 
-	@Transient
+	//@Transient
 	protected double[][][] apc_likelihood = null;
 
 	// The fraction of the (a,p,c) probability distribution that can be ignored as negligably small.
@@ -214,7 +211,7 @@ public abstract class RJ_AftershockModel {
 	// to get the mean, standard deviation, and fractile of the R&J expected number of
 	// aftershocks.  But, for example, a naive computation of the mode would be wrong.
 
-	@Transient
+	//@Transient
 	protected ArbDiscrEmpiricalDistFunc numMag5_DistributionFunc = null;
 
 	// The time interval used to calculate numMag5_DistributionFunc,
@@ -223,9 +220,9 @@ public abstract class RJ_AftershockModel {
 	// every time it is needed.  The values of tMinDaysCurrent and tMaxDaysCurrent are
 	// used to check whether recomputation is needed.
 
-	@Transient
+	//@Transient
 	protected double tMinDaysCurrent = -1.0;
-	@Transient
+	//@Transient
 	protected double tMaxDaysCurrent = -1.0;
 
 

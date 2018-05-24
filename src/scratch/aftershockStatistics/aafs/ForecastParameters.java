@@ -200,6 +200,22 @@ public class ForecastParameters {
 
 		if (prior_params != null) {
 			mainshock_fetch_meth = prior_params.mainshock_fetch_meth;
+
+			// Force mainshock parameters to always be available
+
+			switch (mainshock_fetch_meth) {
+
+			case FETCH_METH_ANALYST:
+				if (!( prior_params.mainshock_avail )) {
+					mainshock_fetch_meth = FETCH_METH_AUTO;
+				}
+				break;
+
+			case FETCH_METH_SUPPRESS:
+				mainshock_fetch_meth = FETCH_METH_AUTO;
+				break;
+			}
+
 		} else {
 			mainshock_fetch_meth = FETCH_METH_AUTO;
 		}
@@ -637,13 +653,22 @@ public class ForecastParameters {
 
 	public ForecastParameters () {}
 
-	// Fetch all parameters.
+	// Fetch all parameters, part 1.
+	// This fetches just the control and mainshock parameters.
+	// It gives the caller the opportunity to examine the mainshock parameters before proceeding.
 
-	public void fetch_all (String the_event_id, long the_forecast_lag, ForecastParameters prior_params) {
+	public void fetch_all_1 (String the_event_id, ForecastParameters prior_params) {
 		event_id = the_event_id;
-		forecast_lag = the_forecast_lag;
 		fetch_control_params (prior_params);
 		fetch_mainshock_params (prior_params);
+		return;
+	}
+
+	// Fetch all parameters, part 2.
+	// This fetches all the remaining parameters.
+
+	public void fetch_all_2 (long the_forecast_lag, ForecastParameters prior_params) {
+		forecast_lag = the_forecast_lag;
 		fetch_generic_params (prior_params);
 		fetch_mag_comp_params (prior_params);
 		fetch_seq_spec_params (prior_params);
@@ -658,6 +683,38 @@ public class ForecastParameters {
 		forecast_lag = 0L;
 		set_default_control_params();
 		fetch_mainshock_params (null);
+
+		generic_fetch_meth = FETCH_METH_AUTO;
+		generic_avail = false;
+		set_default_generic_params();
+
+		mag_comp_fetch_meth = FETCH_METH_AUTO;
+		mag_comp_avail = false;
+		set_default_mag_comp_params();
+
+		seq_spec_fetch_meth = FETCH_METH_AUTO;
+		seq_spec_avail = false;
+		set_default_seq_spec_params();
+
+		aftershock_search_fetch_meth = FETCH_METH_AUTO;
+		aftershock_search_avail = false;
+		set_default_aftershock_search_params();
+	
+		return;
+	}
+
+	// Set everything to default.
+	// This is a useful starting point for setting up analyst parameters.
+
+	public void setup_all_default (String the_event_id) {
+		event_id = the_event_id;
+		forecast_lag = 0L;
+
+		set_default_control_params();
+
+		mainshock_fetch_meth = FETCH_METH_AUTO;
+		mainshock_avail = false;
+		set_default_mainshock_params();
 
 		generic_fetch_meth = FETCH_METH_AUTO;
 		generic_avail = false;
@@ -1000,7 +1057,8 @@ public class ForecastParameters {
 			// Get parameters
 
 			params = new ForecastParameters();
-			params.fetch_all (the_event_id, the_forecast_lag, null);
+			params.fetch_all_1 (the_event_id, null);
+			params.fetch_all_2 (the_forecast_lag, null);
 
 			// Display them
 
@@ -1043,7 +1101,8 @@ public class ForecastParameters {
 			// Get parameters
 
 			params = new ForecastParameters();
-			params.fetch_all (the_event_id, the_forecast_lag, null);
+			params.fetch_all_1 (the_event_id, null);
+			params.fetch_all_2 (the_forecast_lag, null);
 
 			// Display them
 

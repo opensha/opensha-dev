@@ -12,6 +12,8 @@ import scratch.aftershockStatistics.util.MarshalException;
 import scratch.aftershockStatistics.util.MarshalImpArray;
 import scratch.aftershockStatistics.util.MarshalImpJsonReader;
 import scratch.aftershockStatistics.util.MarshalImpJsonWriter;
+import scratch.aftershockStatistics.util.SphLatLon;
+import scratch.aftershockStatistics.util.SphRegion;
 
 import scratch.aftershockStatistics.OAFParameterSet;
 
@@ -25,23 +27,80 @@ import scratch.aftershockStatistics.OAFParameterSet;
  *
  *	"ActionConfigFile" = Integer giving file version number, currently 24001.
  *	"forecast_min_gap" = String giving minimum allowed gap between forcasts, in java.time.Duration format.
+ *	"forecast_max_delay" = String giving maximum allowed delay in reporting a forecast to PDL, in java.time.Duration format.
+ *	"comcat_clock_skew" = Assumed maximum difference between our clock and ComCat clock, in java.time.Duration format.
+ *	"comcat_origin_skew" = Assumed maximum change in mainshock origin time, in java.time.Duration format.
+ *	"comcat_retry_min_gap" = String giving minimum allowed gap between ComCat retries, in java.time.Duration format.
+ *  "seq_spec_min_lag" = String giving minimum time lag at which sequence-specific forecasts can be generated, in java.time.Duration format.
+ *  "advisory_dur_week" = String giving minimum time lag at which one-week advisories can be generated, in java.time.Duration format.
+ *  "advisory_dur_month" = String giving minimum time lag at which one-month advisories can be generated, in java.time.Duration format.
+ *  "advisory_dur_year" = String giving minimum time lag at which one-year advisories can be generated, in java.time.Duration format.
  *	"forecast_lags" = [ Array giving a list of time lags at which forecasts are generated, in increasing order.
  *		element = String giving time lag since mainshock, in java.time.Duration format.
  *	]
- *	"forecast_max_delay" = String giving maximum allowed delay for the last forcast, in java.time.Duration format.
- *	"comcat_clock_skew" = Assumed maximum difference between our clock and ComCat clock, in java.time.Duration format.
- *	"comcat_retry_min_gap" = String giving minimum allowed gap between ComCat retries, in java.time.Duration format.
- *	"comcat_retry_lags" = [ Array giving a list of time lags at which ComCat operations are retried, in increasing order.
+ *	"comcat_retry_lags" = [ Array giving a list of time lags at which ComCat forecast operations are retried, in increasing order.
  *		element = String giving time lag since first attempt, in java.time.Duration format.
+ *	]
+ *	"comcat_intake_lags" = [ Array giving a list of time lags at which ComCat intake operations are retried, in increasing order.
+ *		element = String giving time lag since first attempt, in java.time.Duration format.
+ *	]
+ *	"pdl_report_retry_lags" = [ Array giving a list of time lags at which PDL report attempts are retried, in increasing order.
+ *		element = String giving time lag since first attempt, in java.time.Duration format.
+ *	]
+ *	"pdl_intake_regions" = [ Array giving a list of intake regions, in the order they are checked.
+ *		element = IntakeSphRegion JSON representation, giving region and magnitude thresholds.
  *	]
  */
 public class ActionConfigFile {
 
 	//----- Parameter values -----
 
-	// Minimum gap between forecasts, in milliseconds.  Must be positive.
+	// Minimum gap between forecasts, in milliseconds.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
 
 	public long forecast_min_gap;
+
+	// Maximum delay in reporting a forecast to PDL, in milliseconds.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long forecast_max_delay;
+
+	// Assumed maximum difference between our clock and ComCat's clock, in milliseconds.
+	// (Specifically, if an earthquake occurs at time T then it should be visible in
+	// ComCat by the time our clock reads T + comcat_clock_skew.)
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long comcat_clock_skew;
+
+	// Assumed maximum change in mainshock origin time, in milliseconds.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long comcat_origin_skew;
+
+	// Minimum gap between ComCat retries, in milliseconds.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long comcat_retry_min_gap;
+
+	// Minimum time after an earthquake at which sequence-specific forecasts can be generated, in milliseconds.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long seq_spec_min_lag;
+
+	// Minimum time after an earthquake at which one-week advisories can be generated, in milliseconds.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long advisory_dur_week;
+
+	// Minimum time after an earthquake at which one-month advisories can be generated, in milliseconds.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long advisory_dur_month;
+
+	// Minimum time after an earthquake at which one-year advisories can be generated, in milliseconds.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long advisory_dur_year;
 
 	// Time lags at which forecasts are generated, in milliseconds.  Must be in increasing order.
 	// This is time lag since the mainshock.  Must have at least 1 element.
@@ -50,24 +109,30 @@ public class ActionConfigFile {
 
 	public ArrayList<Long> forecast_lags;
 
-	// Maximum delay in issuing the final forecast, in milliseconds.  Must be positive.
-
-	public long forecast_max_delay;
-
-	// Assumed maximum difference between our clock and ComCat's clock, in milliseconds.
-
-	public long comcat_clock_skew;
-
-	// Minimum gap between ComCat retries, in milliseconds.  Must be positive.
-
-	public long comcat_retry_min_gap;
-
-	// Time lags at which ComCat retries are generated, in milliseconds.  Must be in increasing order.
+	// Time lags at which ComCat forecast retries are generated, in milliseconds.  Must be in increasing order.
 	// This is time lag since the initial attempt.
 	// The difference between successive elements must be at least the minimum gap.
 	// Each element must be a whole number of seconds, between 1 and 10^9 seconds.
 
 	public ArrayList<Long> comcat_retry_lags;
+
+	// Time lags at which ComCat intake retries are generated, in milliseconds.  Must be in increasing order.
+	// This is time lag since the initial attempt.
+	// This is used when looking for initial appearance in ComCat of an event reported by PDL.
+	// The difference between successive elements must be at least the minimum gap.
+	// Each element must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public ArrayList<Long> comcat_intake_lags;
+
+	// Time lags at which PDL report retries are generated, in milliseconds.  Must be in increasing order.
+	// This is time lag since the initial attempt.
+	// Each element must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public ArrayList<Long> pdl_report_retry_lags;
+
+	// Regions for filtering events received from PDL.
+
+	public ArrayList<IntakeSphRegion> pdl_intake_regions;
 
 
 	//----- Construction -----
@@ -82,61 +147,124 @@ public class ActionConfigFile {
 
 	public void clear () {
 		forecast_min_gap = 0L;
-		forecast_lags = new ArrayList<Long>();
 		forecast_max_delay = 0L;
 		comcat_clock_skew = 0L;
+		comcat_origin_skew = 0L;
 		comcat_retry_min_gap = 0L;
+		seq_spec_min_lag = 0L;
+		advisory_dur_week = 0L;
+		advisory_dur_month = 0L;
+		advisory_dur_year = 0L;
+		forecast_lags = new ArrayList<Long>();
 		comcat_retry_lags = new ArrayList<Long>();
+		comcat_intake_lags = new ArrayList<Long>();
+		pdl_report_retry_lags = new ArrayList<Long>();
+		pdl_intake_regions = new ArrayList<IntakeSphRegion>();
 		return;
+	}
+
+	// Check that a lag time is valid: a whole number of seconds, between 1 and 10^9 seconds.
+
+	private static final long MIN_LAG = 1000L;
+	private static final long MAX_LAG = 1000000000000L;
+	private static final long UNIT_LAG = 1000L;
+
+	private boolean is_valid_lag (long lag) {
+		return (lag >= MIN_LAG && lag <= MAX_LAG && lag % UNIT_LAG == 0L);
+	}
+
+	private boolean is_valid_lag (long lag, long min_lag) {
+		return (lag >= min_lag && lag <= MAX_LAG && lag % UNIT_LAG == 0L);
 	}
 
 	// Check that values are valid, throw an exception if not.
 
 	public void check_invariant () {
 
-		if (!( forecast_min_gap > 0L )) {
+		if (!( is_valid_lag(forecast_min_gap) )) {
 				throw new RuntimeException("ActionConfigFile: Invalid forecast_min_gap: " + forecast_min_gap);
 		}
 
+		if (!( is_valid_lag(forecast_max_delay) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid forecast_max_delay: " + forecast_max_delay);
+		}
+
+		if (!( is_valid_lag(comcat_clock_skew) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid comcat_clock_skew: " + comcat_clock_skew);
+		}
+
+		if (!( is_valid_lag(comcat_origin_skew) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid comcat_origin_skew: " + comcat_origin_skew);
+		}
+
+		if (!( is_valid_lag(comcat_retry_min_gap) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid comcat_retry_min_gap: " + comcat_retry_min_gap);
+		}
+
+		if (!( is_valid_lag(seq_spec_min_lag) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid seq_spec_min_lag: " + seq_spec_min_lag);
+		}
+
+		if (!( is_valid_lag(advisory_dur_week) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid advisory_dur_week: " + advisory_dur_week);
+		}
+
+		if (!( is_valid_lag(advisory_dur_month) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid advisory_dur_month: " + advisory_dur_month);
+		}
+
+		if (!( is_valid_lag(advisory_dur_year) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid advisory_dur_year: " + advisory_dur_year);
+		}
+
 		int n = forecast_lags.size();
+		long min_lag = MIN_LAG;
 		
 		if (!( n > 0 )) {
 				throw new RuntimeException("ActionConfigFile: Empty forecast_lags list");
 		}
 
-		long min_lag = 1000L;
-
 		for (int i = 0; i < n; ++i) {
 			long forecast_lag = forecast_lags.get(i);
-			if (!( forecast_lag >= min_lag && forecast_lag % 1000L == 0L && forecast_lag <= 1000000000000L )) {
+			if (!( is_valid_lag(forecast_lag, min_lag) )) {
 				throw new RuntimeException("ActionConfigFile: Invalid forecast_lag: " + forecast_lag + ", index = " + i);
 			}
 			min_lag = forecast_lag + forecast_min_gap;
 		}
 
-		if (!( forecast_max_delay > 0L )) {
-				throw new RuntimeException("ActionConfigFile: Invalid forecast_max_delay: " + forecast_max_delay);
-		}
-
-		if (!( comcat_clock_skew >= 0L )) {
-				throw new RuntimeException("ActionConfigFile: Invalid comcat_clock_skew: " + comcat_clock_skew);
-		}
-
-		if (!( comcat_retry_min_gap > 0L )) {
-				throw new RuntimeException("ActionConfigFile: Invalid comcat_retry_min_gap: " + comcat_retry_min_gap);
-		}
-
 		n = comcat_retry_lags.size();
-		min_lag = 1000L;
+		min_lag = MIN_LAG;
 
 		for (int i = 0; i < n; ++i) {
 			long comcat_retry_lag = comcat_retry_lags.get(i);
-			if (!( comcat_retry_lag >= min_lag && comcat_retry_lag % 1000L == 0L && comcat_retry_lag <= 1000000000000L )) {
+			if (!( is_valid_lag(comcat_retry_lag, min_lag) )) {
 				throw new RuntimeException("ActionConfigFile: Invalid comcat_retry_lag: " + comcat_retry_lag + ", index = " + i);
 			}
 			min_lag = comcat_retry_lag + comcat_retry_min_gap;
 		}
-	
+
+		n = comcat_intake_lags.size();
+		min_lag = MIN_LAG;
+
+		for (int i = 0; i < n; ++i) {
+			long comcat_intake_lag = comcat_intake_lags.get(i);
+			if (!( is_valid_lag(comcat_intake_lag, min_lag) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid comcat_intake_lag: " + comcat_intake_lag + ", index = " + i);
+			}
+			min_lag = comcat_intake_lag + comcat_retry_min_gap;
+		}
+
+		n = pdl_report_retry_lags.size();
+		min_lag = MIN_LAG;
+
+		for (int i = 0; i < n; ++i) {
+			long pdl_report_retry_lag = pdl_report_retry_lags.get(i);
+			if (!( is_valid_lag(pdl_report_retry_lag, min_lag) )) {
+				throw new RuntimeException("ActionConfigFile: Invalid pdl_report_retry_lag: " + pdl_report_retry_lag + ", index = " + i);
+			}
+			min_lag = pdl_report_retry_lag + comcat_retry_min_gap;
+		}
+
 		return;
 	}
 
@@ -146,22 +274,51 @@ public class ActionConfigFile {
 	public String toString() {
 		StringBuilder result = new StringBuilder();
 		result.append ("ActionConfigFile:" + "\n");
+
 		result.append ("forecast_min_gap = " + Duration.ofMillis(forecast_min_gap).toString() + "\n");
+		result.append ("forecast_max_delay = " + Duration.ofMillis(forecast_max_delay).toString() + "\n");
+		result.append ("comcat_clock_skew = " + Duration.ofMillis(comcat_clock_skew).toString() + "\n");
+		result.append ("comcat_origin_skew = " + Duration.ofMillis(comcat_origin_skew).toString() + "\n");
+		result.append ("comcat_retry_min_gap = " + Duration.ofMillis(comcat_retry_min_gap).toString() + "\n");
+		result.append ("seq_spec_min_lag = " + Duration.ofMillis(seq_spec_min_lag).toString() + "\n");
+		result.append ("advisory_dur_week = " + Duration.ofMillis(advisory_dur_week).toString() + "\n");
+		result.append ("advisory_dur_month = " + Duration.ofMillis(advisory_dur_month).toString() + "\n");
+		result.append ("advisory_dur_year = " + Duration.ofMillis(advisory_dur_year).toString() + "\n");
+
 		result.append ("forecast_lags = [" + "\n");
 		for (int i = 0; i < forecast_lags.size(); ++i) {
 			long forecast_lag = forecast_lags.get(i);
 			result.append ("  " + i + ":  " + Duration.ofMillis(forecast_lag).toString() + "\n");
 		}
 		result.append ("]" + "\n");
-		result.append ("forecast_max_delay = " + Duration.ofMillis(forecast_max_delay).toString() + "\n");
-		result.append ("comcat_clock_skew = " + Duration.ofMillis(comcat_clock_skew).toString() + "\n");
-		result.append ("comcat_retry_min_gap = " + Duration.ofMillis(comcat_retry_min_gap).toString() + "\n");
+
 		result.append ("comcat_retry_lags = [" + "\n");
 		for (int i = 0; i < comcat_retry_lags.size(); ++i) {
 			long comcat_retry_lag = comcat_retry_lags.get(i);
 			result.append ("  " + i + ":  " + Duration.ofMillis(comcat_retry_lag).toString() + "\n");
 		}
 		result.append ("]" + "\n");
+
+		result.append ("comcat_intake_lags = [" + "\n");
+		for (int i = 0; i < comcat_intake_lags.size(); ++i) {
+			long comcat_intake_lag = comcat_intake_lags.get(i);
+			result.append ("  " + i + ":  " + Duration.ofMillis(comcat_intake_lag).toString() + "\n");
+		}
+		result.append ("]" + "\n");
+
+		result.append ("pdl_report_retry_lags = [" + "\n");
+		for (int i = 0; i < pdl_report_retry_lags.size(); ++i) {
+			long pdl_report_retry_lag = pdl_report_retry_lags.get(i);
+			result.append ("  " + i + ":  " + Duration.ofMillis(pdl_report_retry_lag).toString() + "\n");
+		}
+		result.append ("]" + "\n");
+
+		result.append ("pdl_intake_regions = [" + "\n");
+		for (int i = 0; i < pdl_intake_regions.size(); ++i) {
+			result.append (pdl_intake_regions.get(i).toString() + "\n");
+		}
+		result.append ("]" + "\n");
+
 		return result.toString();
 	}
 
@@ -221,6 +378,114 @@ public class ActionConfigFile {
 
 		return comcat_retry_lags.get(index).longValue();
 	}
+
+	// Get the first element of comcat_intake_lags that is >= the supplied min_lag.
+	// The return is -1 if the supplied min_lag is greater than all elements.
+	// If a value is found, it is guaranteed to be a whole number of seconds, from 1 to 10^9 seconds.
+
+	public long get_next_comcat_intake_lag (long min_lag) {
+
+		// Binary search
+
+		int index = Collections.binarySearch (comcat_intake_lags, new Long(min_lag));
+
+		// If not found, convert to index of next larger element
+
+		if (index < 0) {
+			index = -(index + 1);
+		}
+
+		// If past end of list, then return -1
+
+		if (index >= comcat_intake_lags.size()) {
+			return -1L;
+		}
+
+		// Return the lag value from the list
+
+		return comcat_intake_lags.get(index).longValue();
+	}
+
+	// Get the first element of pdl_report_retry_lags that is >= the supplied min_lag.
+	// The return is -1 if the supplied min_lag is greater than all elements.
+	// If a value is found, it is guaranteed to be a whole number of seconds, from 1 to 10^9 seconds.
+
+	public long get_next_pdl_report_retry_lag (long min_lag) {
+
+		// Binary search
+
+		int index = Collections.binarySearch (pdl_report_retry_lags, new Long(min_lag));
+
+		// If not found, convert to index of next larger element
+
+		if (index < 0) {
+			index = -(index + 1);
+		}
+
+		// If past end of list, then return -1
+
+		if (index >= pdl_report_retry_lags.size()) {
+			return -1L;
+		}
+
+		// Return the lag value from the list
+
+		return pdl_report_retry_lags.get(index).longValue();
+	}
+
+	// Get the pdl intake region that satisfies the min_mag criterion.
+	// If found, the region is returned.
+	// If not found, null is returned.
+
+	public IntakeSphRegion get_pdl_intake_region_for_min_mag (double lat, double lon, double mag) {
+
+		// Construct the SphLatLon object
+
+		double the_lon = lon;
+		while (the_lon < -180.0) {
+			the_lon += 360.0; 
+		}
+		while (the_lon > 180.0) {
+			the_lon -= 360.0; 
+		}
+		SphLatLon loc = new SphLatLon (lat, the_lon);
+
+		// Search the list of regions
+
+		for (IntakeSphRegion intake_region : pdl_intake_regions) {
+			if (intake_region.contains (loc, mag)) {
+				return intake_region;
+			}
+		}
+		return null;
+	} 
+
+	// Get the pdl intake region that satisfies the intake_mag criterion.
+	// If found, the region is returned.
+	// If not found, null is returned.
+
+	public IntakeSphRegion get_pdl_intake_region_for_intake_mag (double lat, double lon, double mag) {
+
+		// Construct the SphLatLon object
+
+		double the_lon = lon;
+		while (the_lon < -180.0) {
+			the_lon += 360.0; 
+		}
+		while (the_lon > 180.0) {
+			the_lon -= 360.0; 
+		}
+		SphLatLon loc = new SphLatLon (lat, the_lon);
+
+		// Search the list of regions
+
+		for (IntakeSphRegion intake_region : pdl_intake_regions) {
+			if (intake_region.contains_intake (loc, mag)) {
+				return intake_region;
+			}
+		}
+		return null;
+	} 
 
 
 
@@ -283,6 +548,91 @@ public class ActionConfigFile {
 		return duration_list;
 	}
 
+	// Marshal an intake region.
+
+	public static void marshal_intake_region (MarshalWriter writer, String name, IntakeSphRegion intake_region) {
+
+		// Begin the JSON object
+
+		writer.marshalMapBegin (name);
+
+		// Write the name
+
+		writer.marshalString ("name", intake_region.get_name());
+
+		// Write the magnitudes
+				
+		writer.marshalDouble ("min_mag", intake_region.get_min_mag());
+		writer.marshalDouble ("intake_mag", intake_region.get_intake_mag());
+
+		// Write the spherical region
+
+		SphRegion.marshal_poly (writer, "region", intake_region.get_region()) ;
+
+		// End the JSON object
+
+		writer.marshalMapEnd ();
+		return;
+	}
+
+	// Unmarshal an intake region.
+
+	public static IntakeSphRegion unmarshal_intake_region (MarshalReader reader, String name) {
+
+		// Begin the JSON object
+
+		reader.unmarshalMapBegin (name);
+
+		// Get the name
+
+		String region_name = reader.unmarshalString ("name");
+
+		// Get the magnitudes
+				
+		double min_mag = reader.unmarshalDouble ("min_mag");
+		double intake_mag = reader.unmarshalDouble ("intake_mag");
+
+		// Get the spherical region
+
+		SphRegion sph_region = SphRegion.unmarshal_poly (reader, "region") ;
+
+		if (sph_region == null) {
+			throw new RuntimeException("ActionConfigFile: No spherical region specified");
+		}
+
+		// End the JSON object
+
+		reader.unmarshalMapEnd ();
+
+		// Form the region
+
+		return new IntakeSphRegion (region_name, sph_region, min_mag, intake_mag);
+	}
+
+	// Marshal an intake region list.
+
+	public static void marshal_intake_region_list (MarshalWriter writer, String name, List<IntakeSphRegion> intake_regions) {
+		int n = intake_regions.size();
+		writer.marshalArrayBegin (name, n);
+		for (IntakeSphRegion intake_region : intake_regions) {
+			marshal_intake_region (writer, null, intake_region);
+		}
+		writer.marshalArrayEnd ();
+		return;
+	}
+
+	// Unmarshal an intake region list.
+
+	public static ArrayList<IntakeSphRegion> unmarshal_intake_region_list (MarshalReader reader, String name) {
+		ArrayList<IntakeSphRegion> intake_region_list = new ArrayList<IntakeSphRegion>();
+		int n = reader.unmarshalArrayBegin (name);
+		for (int i = 0; i < n; ++i) {
+			intake_region_list.add (unmarshal_intake_region (reader, null));
+		}
+		reader.unmarshalArrayEnd ();
+		return intake_region_list;
+	}
+
 	// Marshal object, internal.
 
 	protected void do_marshal (MarshalWriter writer) {
@@ -297,12 +647,20 @@ public class ActionConfigFile {
 
 		// Contents
 
-		marshal_duration      (writer, "forecast_min_gap"    , forecast_min_gap    );
-		marshal_duration_list (writer, "forecast_lags"       , forecast_lags       );
-		marshal_duration      (writer, "forecast_max_delay"  , forecast_max_delay  );
-		marshal_duration      (writer, "comcat_clock_skew"   , comcat_clock_skew   );
-		marshal_duration      (writer, "comcat_retry_min_gap", comcat_retry_min_gap);
-		marshal_duration_list (writer, "comcat_retry_lags"   , comcat_retry_lags   );
+		marshal_duration           (writer, "forecast_min_gap"     , forecast_min_gap     );
+		marshal_duration           (writer, "forecast_max_delay"   , forecast_max_delay   );
+		marshal_duration           (writer, "comcat_clock_skew"    , comcat_clock_skew    );
+		marshal_duration           (writer, "comcat_origin_skew"   , comcat_origin_skew   );
+		marshal_duration           (writer, "comcat_retry_min_gap" , comcat_retry_min_gap );
+		marshal_duration           (writer, "seq_spec_min_lag"     , seq_spec_min_lag     );
+		marshal_duration           (writer, "advisory_dur_week"    , advisory_dur_week    );
+		marshal_duration           (writer, "advisory_dur_month"   , advisory_dur_month   );
+		marshal_duration           (writer, "advisory_dur_year"    , advisory_dur_year    );
+		marshal_duration_list      (writer, "forecast_lags"        , forecast_lags        );
+		marshal_duration_list      (writer, "comcat_retry_lags"    , comcat_retry_lags    );
+		marshal_duration_list      (writer, "comcat_intake_lags"   , comcat_intake_lags   );
+		marshal_duration_list      (writer, "pdl_report_retry_lags", pdl_report_retry_lags);
+		marshal_intake_region_list (writer, "pdl_intake_regions"   , pdl_intake_regions   );
 	
 		return;
 	}
@@ -317,12 +675,20 @@ public class ActionConfigFile {
 
 		// Contents
 
-		forecast_min_gap     = unmarshal_duration      (reader, "forecast_min_gap"    );
-		forecast_lags        = unmarshal_duration_list (reader, "forecast_lags"       );
-		forecast_max_delay   = unmarshal_duration      (reader, "forecast_max_delay"  );
-		comcat_clock_skew    = unmarshal_duration      (reader, "comcat_clock_skew"   );
-		comcat_retry_min_gap = unmarshal_duration      (reader, "comcat_retry_min_gap");
-		comcat_retry_lags    = unmarshal_duration_list (reader, "comcat_retry_lags"   );
+		forecast_min_gap      = unmarshal_duration           (reader, "forecast_min_gap"     );
+		forecast_max_delay    = unmarshal_duration           (reader, "forecast_max_delay"   );
+		comcat_clock_skew     = unmarshal_duration           (reader, "comcat_clock_skew"    );
+		comcat_origin_skew    = unmarshal_duration           (reader, "comcat_origin_skew"   );
+		comcat_retry_min_gap  = unmarshal_duration           (reader, "comcat_retry_min_gap" );
+		seq_spec_min_lag      = unmarshal_duration           (reader, "seq_spec_min_lag"     );
+		advisory_dur_week     = unmarshal_duration           (reader, "advisory_dur_week"    );
+		advisory_dur_month    = unmarshal_duration           (reader, "advisory_dur_month"   );
+		advisory_dur_year     = unmarshal_duration           (reader, "advisory_dur_year"    );
+		forecast_lags         = unmarshal_duration_list      (reader, "forecast_lags"        );
+		comcat_retry_lags     = unmarshal_duration_list      (reader, "comcat_retry_lags"    );
+		comcat_intake_lags    = unmarshal_duration_list      (reader, "comcat_intake_lags"   );
+		pdl_report_retry_lags = unmarshal_duration_list      (reader, "pdl_report_retry_lags");
+		pdl_intake_regions    = unmarshal_intake_region_list (reader, "pdl_intake_regions"   );
 
 		// Error check
 

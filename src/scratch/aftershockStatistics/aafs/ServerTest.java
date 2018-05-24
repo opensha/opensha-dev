@@ -1271,6 +1271,283 @@ public class ServerTest {
 
 
 
+	// Test #28 - Post a console message task with given stage and message.
+
+	public static void test28(String[] args) {
+
+		// Two additional arguments
+
+		if (args.length != 3) {
+			System.err.println ("ServerTest : Invalid 'test28' subcommand");
+			return;
+		}
+
+		int stage = Integer.parseInt(args[1]);
+
+		OpConsoleMessage payload = new OpConsoleMessage();
+		payload.message = args[2];
+
+		String event_id = "";
+		int opcode = TaskDispatcher.OPCODE_CON_MESSAGE;
+
+		// Post the task
+
+		long the_time = ServerClock.get_time();
+
+		TaskDispatcher.post_task (event_id, the_time, the_time, "ServerTest", opcode, stage, payload.marshal_task());
+
+		return;
+	}
+
+
+
+
+	// Test #29 - Search the task queue for execution time and/or event id.
+
+	public static void test29(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test29' subcommand");
+			return;
+		}
+
+		long exec_time_lo = Long.parseLong(args[1]);
+		long exec_time_hi = Long.parseLong(args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the list of matching tasks
+
+			List<PendingTask> tasks = PendingTask.get_task_entry_range (exec_time_lo, exec_time_hi, event_id);
+
+			// Display them
+
+			for (PendingTask task : tasks) {
+				System.out.println (task.toString());
+			}
+
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #30 - Search the task queue for execution time and/or event id, using iterator.
+
+	public static void test30(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test30' subcommand");
+			return;
+		}
+
+		long exec_time_lo = Long.parseLong(args[1]);
+		long exec_time_hi = Long.parseLong(args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+			try (
+
+				// Get an iterator over matching tasks
+
+				RecordIterator<PendingTask> tasks = PendingTask.fetch_task_entry_range (exec_time_lo, exec_time_hi, event_id);
+			){
+
+				// Display them
+
+				for (PendingTask task : tasks) {
+					System.out.println (task.toString());
+				}
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #31 - Search the timeline for action time and/or event id; get most recent.
+
+	public static void test31(String[] args) {
+
+		// Two or three additional arguments
+
+		if (args.length != 3 && args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test31' subcommand");
+			return;
+		}
+
+		long action_time_lo = Long.parseLong(args[1]);
+		long action_time_hi = Long.parseLong(args[2]);
+		String event_id = null;
+		if (args.length == 4) {
+			event_id = args[3];
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the most recent matching timeline entry
+
+			TimelineEntry entry = TimelineEntry.get_recent_timeline_entry (action_time_lo, action_time_hi, event_id);
+
+			// Display it
+
+			if (entry == null) {
+				System.out.println ("null");
+			} else {
+				System.out.println (entry.toString());
+			}
+
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #32 - Post a sync intake command for the given event.
+
+	public static void test32(String[] args) {
+
+		// One additional argument
+
+		if (args.length != 2) {
+			System.err.println ("ServerTest : Invalid 'test32' subcommand");
+			return;
+		}
+
+		String event_id = args[1];
+
+		OpIntakeSync payload = new OpIntakeSync();
+		payload.setup ();
+
+		int opcode = TaskDispatcher.OPCODE_INTAKE_SYNC;
+		int stage = 0;
+
+		// Post the task
+
+		long the_time = ServerClock.get_time();
+
+		TaskDispatcher.post_task (event_id, the_time, the_time, "ServerTest", opcode, stage, payload.marshal_task());
+
+		return;
+	}
+
+
+
+
+	// Test #33 - Parse a PDL intake command for the given command line.
+
+	public static void test33(String[] args) {
+
+		// At least one additional argument
+
+		if (args.length < 2) {
+			System.err.println ("ServerTest : Invalid 'test33' subcommand");
+			return;
+		}
+
+		OpIntakePDL payload = new OpIntakePDL();
+
+		payload.setup (args, 1, args.length);
+
+		System.out.println ("PDL arguments:");
+		for (String s : payload.pdl_args) {
+			System.out.println (s);
+		}
+
+		System.out.println ("Parsed values:");
+		System.out.println ("pdl_status = " + payload.pdl_status);
+		System.out.println ("pdl_action = " + payload.pdl_action);
+		System.out.println ("pdl_type = " + payload.pdl_type);
+		System.out.println ("event_id = " + payload.event_id);
+		System.out.println ("mainshock_time = " + payload.mainshock_time);
+		System.out.println ("mainshock_mag = " + payload.mainshock_mag);
+		System.out.println ("mainshock_lat = " + payload.mainshock_lat);
+		System.out.println ("mainshock_lon = " + payload.mainshock_lon);
+		System.out.println ("mainshock_depth = " + payload.mainshock_depth);
+
+		return;
+	}
+
+
+
+
+	// Test #34 - Post a PDL intake command for the given command line.
+
+	public static void test34(String[] args) {
+
+		// At least one additional argument
+
+		if (args.length < 2) {
+			System.err.println ("ServerTest : Invalid 'test34' subcommand");
+			return;
+		}
+
+		OpIntakePDL payload = new OpIntakePDL();
+
+		payload.setup (args, 1, args.length);
+
+		System.out.println ("PDL arguments:");
+		for (String s : payload.pdl_args) {
+			System.out.println (s);
+		}
+
+		System.out.println ("Parsed values:");
+		System.out.println ("pdl_status = " + payload.pdl_status);
+		System.out.println ("pdl_action = " + payload.pdl_action);
+		System.out.println ("pdl_type = " + payload.pdl_type);
+		System.out.println ("event_id = " + payload.event_id);
+		System.out.println ("mainshock_time = " + payload.mainshock_time);
+		System.out.println ("mainshock_mag = " + payload.mainshock_mag);
+		System.out.println ("mainshock_lat = " + payload.mainshock_lat);
+		System.out.println ("mainshock_lon = " + payload.mainshock_lon);
+		System.out.println ("mainshock_depth = " + payload.mainshock_depth);
+
+		String event_id = payload.event_id;
+
+		int opcode = TaskDispatcher.OPCODE_INTAKE_PDL;
+		int stage = 0;
+
+		// Post the task
+
+		long the_time = ServerClock.get_time();
+
+		TaskDispatcher.post_task (event_id, the_time, the_time, "ServerTest", opcode, stage, payload.marshal_task());
+
+		return;
+	}
+
+
+
+
 	// Test dispatcher.
 	
 	public static void main(String[] args) {
@@ -1718,6 +1995,121 @@ public class ServerTest {
 
 			try {
 				test27(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #28
+		// Command format:
+		//  test28  stage  message
+		// Post a console message task with given stage and message.
+
+		if (args[0].equalsIgnoreCase ("test28")) {
+
+			try {
+				test28(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #29
+		// Command format:
+		//  test29  exec_time_lo  exec_time_hi  [event_id]
+		// Search the task queue for execution time and/or event id.
+		// Execution times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test29")) {
+
+			try {
+				test29(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #30
+		// Command format:
+		//  test30  exec_time_lo  exec_time_hi  [event_id]
+		// Search the task queue for execution time and/or event id, using iterator.
+		// Execution times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test30")) {
+
+			try {
+				test30(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #31
+		// Command format:
+		//  test31  action_time_lo  action_time_hi  [event_id]
+		// Search the timeline for action time and/or event id; get most recent.
+		// Times can be 0 for no bound, event id can be omitted for no restriction.
+
+		if (args[0].equalsIgnoreCase ("test31")) {
+
+			try {
+				test31(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #32
+		// Command format:
+		//  test32  event_id
+		// Post a sync intake command for the given event.
+
+		if (args[0].equalsIgnoreCase ("test32")) {
+
+			try {
+				test32(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #33
+		// Command format:
+		//  test33  arg...
+		// Parse a PDL intake command for the given command line.
+
+		if (args[0].equalsIgnoreCase ("test33")) {
+
+			try {
+				test33(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #34
+		// Command format:
+		//  test34  arg...
+		// Post a PDL intake command for the given command line.
+
+		if (args[0].equalsIgnoreCase ("test34")) {
+
+			try {
+				test34(args);
             } catch (Exception e) {
                 e.printStackTrace();
 			}

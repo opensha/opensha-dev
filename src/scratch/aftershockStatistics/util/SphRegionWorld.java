@@ -20,18 +20,12 @@ import scratch.aftershockStatistics.util.MarshalException;
 
 
 /**
- * Region for locating aftershocks -- Mercator Rectangle.
- * Author: Michael Barall 04/10/2018.
+ * Region for locating aftershocks -- Entire world.
+ * Author: Michael Barall 05/23/2018.
  *
- * The AAFS server locates aftershocks by drawing a region surrounding the
- * mainshock.  Earthquakes within that region are considered to be aftershocks.
- * This class represents a rectangle on a Mercator map.
- * The rectangle is specified by giving two diagonally opposite corners.
- * A rectangle is limited to 180 degrees of longitude.
- * Attempting to make a rectangle spanning more than 180 degrees of longitude
- * will make a rectangle that goes around the Earth the "other way".
+ * This class represents a region that includes the entire world.
  */
-public class SphRegionMercRectangle extends SphRegion {
+public class SphRegionWorld extends SphRegion {
 
 	//----- Querying -----
 
@@ -45,7 +39,7 @@ public class SphRegionMercRectangle extends SphRegion {
 	 */
 	@Override
 	public boolean contains (SphLatLon loc) {
-		return contains (loc.get_lat(), loc.get_lon());
+		return true;
 	}
 
 	/**
@@ -58,37 +52,7 @@ public class SphRegionMercRectangle extends SphRegion {
 	 */
 	@Override
 	public boolean contains (Location loc) {
-		return contains (loc.getLatitude(), loc.getLongitude());
-	}
-
-	/**
-	 * contains - Test if the region contains the given location.
-	 * @param lat = Latitude to check.
-	 * @param lon = Longitude to check, can be -180 to +360.
-	 * @return
-	 * Returns true if loc is inside the region, false if loc is outside the region.
-	 * Note: Due to rounding errors, it may be indeterminate whether points exactly on,
-	 * or very close to, the boundary of the region are considered inside or outside.
-	 * Implementation note: The function uses plane geometry, in the domain selected
-	 * by plot_wrap.
-	 */
-	private boolean contains (double lat, double lon) {
-
-		// Coerce longitude according to our wrapping domain.
-
-		if (plot_wrap) {
-			if (lon < 0.0) {
-				lon += 360.0;
-			}
-		} else {
-			if (lon > 180.0) {
-				lon -= 360.0;
-			}
-		}
-
-		// Now just compare to box limits
-
-		return lon >= min_lon && lon <= max_lon && lat >= min_lat && lat <= max_lat;
+		return true;
 	}
 
 
@@ -136,50 +100,31 @@ public class SphRegionMercRectangle extends SphRegion {
 	/**
 	 * Default constructor does nothing.
 	 */
-	public SphRegionMercRectangle () {}
+	//public SphRegionWorld () {}
 
 
 	/**
-	 * Construct from given corners.
-	 * @param corner_1 = Rectangle corner #1.
-	 * @param corner_2 = Rectangle corner #2, must be diagonally opposite to corner #1.
+	 * Construct.
 	 */
-	public SphRegionMercRectangle (SphLatLon corner_1, SphLatLon corner_2) {
-		setup (corner_1, corner_2);
+	public SphRegionWorld () {
+		setup ();
 	}
 
 
 	/**
 	 * Set up the region.
 	 */
-	private void setup (SphLatLon corner_1, SphLatLon corner_2) {
-
-		// Get the latitudes and longitudes
-
-		double lat_1 = corner_1.get_lat();
-		double lon_1 = corner_1.get_lon();
-
-		double lat_2 = corner_2.get_lat();
-		double lon_2 = corner_2.get_lon();
+	private void setup () {
 
 		// Set up a box in the -180 to +180 domain
 
 		plot_wrap = false;
 
-		min_lat = Math.min (lat_1, lat_2);
-		max_lat = Math.max (lat_1, lat_2);
+		min_lat = -90.0;
+		max_lat = 90.0;
 
-		min_lon = Math.min (lon_1, lon_2);
-		max_lon = Math.max (lon_1, lon_2);
-
-		// If it spans more than 180 degrees, use the 0 to 360 domain to go around the other way
-
-		if (max_lon - min_lon > 180.0) {
-			plot_wrap = true;
-		
-			min_lon = Math.max (lon_1, lon_2);
-			max_lon = Math.min (lon_1, lon_2) + 360.0;
-		}
+		min_lon = -180.0;
+		max_lon = 180.0;
 
 		plot_border = null;
 
@@ -190,7 +135,7 @@ public class SphRegionMercRectangle extends SphRegion {
 
 	@Override
 	public String toString() {
-		return "SphRegionMercRectangle:" + "\n"
+		return "SphRegionWorld:" + "\n"
 		+ "plot_wrap = " + plot_wrap + "\n"
 		+ "min_lat = " + min_lat + "\n"
 		+ "max_lat = " + max_lat + "\n"
@@ -206,15 +151,15 @@ public class SphRegionMercRectangle extends SphRegion {
 	// Marshal version number.
 
 	private static final int MARSHAL_HWV_1 = 1;		// human-writeable version
-	private static final int MARSHAL_VER_1 = 20001;
+	private static final int MARSHAL_VER_1 = 33001;
 
-	private static final String M_VERSION_NAME = "SphRegionMercRectangle";
+	private static final String M_VERSION_NAME = "SphRegionWorld";
 
 	// Get the type code.
 
 	@Override
 	protected int get_marshal_type () {
-		return MARSHAL_MERC_RECTANGLE;
+		return MARSHAL_WORLD;
 	}
 
 	// Marshal object, internal.
@@ -248,24 +193,19 @@ public class SphRegionMercRectangle extends SphRegion {
 		switch (ver) {
 
 		default:
-			throw new MarshalException ("SphRegionMercRectangle.do_umarshal: Unknown version code: version = " + ver);
+			throw new MarshalException ("SphRegionWorld.do_umarshal: Unknown version code: version = " + ver);
 		
 		// Human-writeable version
 
 		case MARSHAL_HWV_1: {
 
-			// Get corners
-
-			SphLatLon corner_1 = (new SphLatLon()).unmarshal (reader, "corner_1");;
-			SphLatLon corner_2 = (new SphLatLon()).unmarshal (reader, "corner_2");;
-
 			// Set up region
 
 			try {
-				setup (corner_1, corner_2);
+				setup ();
 			}
 			catch (Exception e) {
-				throw new MarshalException ("SphRegionMercRectangle.do_umarshal: Failed to set up region", e);
+				throw new MarshalException ("SphRegionWorld.do_umarshal: Failed to set up region", e);
 			}
 		}
 		break;
@@ -301,7 +241,7 @@ public class SphRegionMercRectangle extends SphRegion {
 	// Unmarshal object.
 
 	@Override
-	public SphRegionMercRectangle unmarshal (MarshalReader reader, String name) {
+	public SphRegionWorld unmarshal (MarshalReader reader, String name) {
 		reader.unmarshalMapBegin (name);
 		do_umarshal (reader);
 		reader.unmarshalMapEnd ();
@@ -310,7 +250,7 @@ public class SphRegionMercRectangle extends SphRegion {
 
 	// Marshal object, polymorphic.
 
-	public static void marshal_poly (MarshalWriter writer, String name, SphRegionMercRectangle obj) {
+	public static void marshal_poly (MarshalWriter writer, String name, SphRegionWorld obj) {
 
 		writer.marshalMapBegin (name);
 
@@ -328,8 +268,8 @@ public class SphRegionMercRectangle extends SphRegion {
 
 	// Unmarshal object, polymorphic.
 
-	public static SphRegionMercRectangle unmarshal_poly (MarshalReader reader, String name) {
-		SphRegionMercRectangle result;
+	public static SphRegionWorld unmarshal_poly (MarshalReader reader, String name) {
+		SphRegionWorld result;
 
 		reader.unmarshalMapBegin (name);
 	
@@ -340,14 +280,14 @@ public class SphRegionMercRectangle extends SphRegion {
 		switch (type) {
 
 		default:
-			throw new MarshalException ("SphRegionMercRectangle.unmarshal_poly: Unknown class type code: type = " + type);
+			throw new MarshalException ("SphRegionWorld.unmarshal_poly: Unknown class type code: type = " + type);
 
 		case MARSHAL_NULL:
 			result = null;
 			break;
 
-		case MARSHAL_MERC_RECTANGLE:
-			result = new SphRegionMercRectangle();
+		case MARSHAL_WORLD:
+			result = new SphRegionWorld();
 			result.do_umarshal (reader);
 			break;
 		}

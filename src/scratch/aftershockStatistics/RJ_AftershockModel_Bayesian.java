@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.jfree.data.Range;
-import org.mongodb.morphia.annotations.Transient;
+//import org.mongodb.morphia.annotations.Transient;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
@@ -45,13 +45,10 @@ import com.google.common.base.Preconditions;
  *
  * Modified by Michael Barall.
  *
- * WARNING: This object is stored in the OAF database. Once OAF becomes operational,
- * the set of non-Transient fields can never be changed.
- *
  */
 public class RJ_AftershockModel_Bayesian extends RJ_AftershockModel {
 
-//	@Transient
+//	//@Transient
 //	protected boolean D=true;	// debug flag (inherited)
 
 

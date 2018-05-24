@@ -283,6 +283,14 @@ public class LogEntry implements java.io.Serializable {
 	}
 
 
+	/**
+	 * dump_details - Dump details into a string, for trouble-shooting.
+	 */
+	public String dump_details () {
+		return ((details == null) ? "null" : details);
+	}
+
+
 
 
 //	/**

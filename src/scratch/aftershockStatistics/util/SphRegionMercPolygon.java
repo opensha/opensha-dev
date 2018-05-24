@@ -339,7 +339,7 @@ public class SphRegionMercPolygon extends SphRegion {
 
 	@Override
 	protected int get_marshal_type () {
-		return MARSHAL_CIRCLE;
+		return MARSHAL_MERC_POLYGON;
 	}
 
 	// Marshal object, internal.
