@@ -1,5 +1,6 @@
 package scratch.alessandro;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -8,17 +9,34 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.jfree.data.Range;
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.HanksBakun2002_MagAreaRel;
+import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.param.Parameter;
+import org.opensha.commons.param.ParameterList;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.SegRateConstraint;
 import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.gcim.ui.infoTools.IMT_Info;
+import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
+import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.alessandro.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
 
@@ -32,7 +50,7 @@ import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
  */
 public class WasatchInversion {
 
-	final static boolean D = true;	// debugging flag
+	final static boolean D = false;	// debugging flag
 	
 	public final static String ROOT_PATH = "src/scratch/alessandro/";
 	final static String ROOT_DATA_DIR = "src/scratch/alessandro/data/"; // where to find the data
@@ -306,6 +324,87 @@ public class WasatchInversion {
 
 	
 	
+	
+	/**
+	 * This computes and optionally saves and/or plots a hazard curve
+	 * @param dirName - set as null if you don't want to save results
+	 * @param popupWindow - set as true if you want plot windows to pop up
+	 */
+	public void writeAndOrPlotHazardCurve(FaultSystemRuptureRateInversion fltSysRupInversion, String dirName, boolean popupWindow) {
+		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fltSysRupInversion.getFaultSystemSolution());
+		erf.setName("WasatchERF");
+		
+		// set the forecast duration
+		double duration = 1;
+		erf.getTimeSpan().setDuration(duration);
+		
+		// write out parameter values
+		if(D) {
+			ParameterList paramList = erf.getAdjustableParameterList();
+			for(int i=0;i<paramList.size(); i++) {
+				Parameter<?> param = paramList.getByIndex(i);
+				System.out.println(param.getName()+"\t"+param.getValue());
+			}			
+		}
+		
+		// update forecast
+		erf.updateForecast();
+		
+		if(D) System.out.println("NumFaultSystemSources = "+erf.getNumFaultSystemSources());
+		
+//		for(int r=0;r<erf.getNumFaultSystemSources();r++) {
+//			System.out.println(r+"\t"+erf.getNthRupture(r).getProbability());
+//		}
+		
+		// compute hazard curve
+		// chose attenuation relationship (GMPE)
+		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+		imr.setParamDefaults();
+		imr.setIntensityMeasure(PGA_Param.NAME);
+		// make the site object and set values
+		Site site = new Site(new Location(40.75, -111.90));
+		for (Parameter<?> param : imr.getSiteParams()) {
+			site.addParameter(param);
+			System.out.println(param.getName()+"\t"+param.getValue());
+		}
+					
+		ArbitrarilyDiscretizedFunc curveLinearXvalues = IMT_Info.getUSGS_PGA_Function();
+//		System.out.println("curveLinearXvalues:\n "+curveLinearXvalues);
+		ArbitrarilyDiscretizedFunc curveLogXvalues = HazardCurveSetCalculator.getLogFunction(curveLinearXvalues);
+//		System.out.println("curveLogXvalues:\n "+curveLogXvalues);
+	
+		HazardCurveCalculator calc = new HazardCurveCalculator();
+		calc.getHazardCurve(curveLogXvalues, site, imr, erf); // result is put into curveLogXvalues
+		
+		curveLinearXvalues = HazardCurveSetCalculator.unLogFunction(curveLinearXvalues, curveLogXvalues);
+		
+		// make the plot
+		ArrayList<XY_DataSet> funcs1 = new ArrayList<XY_DataSet>();
+		funcs1.add(curveLinearXvalues);
+		
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		
+		String fileNamePrefix = null;
+		if(dirName != null)
+			fileNamePrefix = dirName+"/hazardCurve";
+		String plotName ="Salt Lake City Hazard Curve";
+		String xAxisLabel = "PGA";
+		String yAxisLabel = "Probability ("+duration+" yr)";
+		Range xAxisRange = null;
+		Range yAxisRange = null;
+		boolean logX = true;
+		boolean logY = true;
+
+		fltSysRupInversion.writeAndOrPlotFuncs(funcs1, plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		
+
+	}
+
+	
+	
 	/**
 	 * @param args
 	 */
@@ -396,8 +495,8 @@ public class WasatchInversion {
 		// Simulated annealing
 		long numIterations = (long) 1e4;
 		boolean initStateFromAprioriRupRates = false;
-//		long randomSeed = System.currentTimeMillis();
-		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
+		long randomSeed = System.currentTimeMillis();
+//		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
 		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
@@ -413,6 +512,9 @@ public class WasatchInversion {
 		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 	    fltSysRupInversion.writeAndOrPlotSegPartMFDs(dirName, popUpPlots);
+	    
+	    // hazard curve:
+	    wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, dirName, popUpPlots);
 
 		
 	}

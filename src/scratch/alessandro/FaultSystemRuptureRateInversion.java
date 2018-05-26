@@ -58,10 +58,13 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
+import scratch.UCERF3.FaultSystemRupSet;
+import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
@@ -102,12 +105,12 @@ public class FaultSystemRuptureRateInversion {
 	
 	// section attributes
 	private int numSections;
-	private double[] sectArea, sectLength, sectSlipRate, sectSlipRateStdDev, sectMoRate;
+	private double[] sectArea, sectLength, sectSlipRate, sectSlipRateStdDev, sectMoRate, sectRake;
 
 	// rupture attributes
 	int numRuptures;
 	private String[] rupNameShort;
-	private double[] rupLength, rupArea, rupMeanMag, rupMeanMo, rupMoRate, totRupRate,rupAveSlip;
+	private double[] rupLength, rupArea, rupMeanMag, rupMeanMo, rupMoRate, totRupRate,rupAveSlip, rupAveRake;
 	private double minRupMag, maxRupMag,minRupMagWithAleatory, maxRupMagWithAleatory;
 	double[] rupRateSolution; // these are the rates from the inversion (not total rate of MFD)
 
@@ -347,7 +350,7 @@ public class FaultSystemRuptureRateInversion {
 	 *  This constructor assigns aPriori rupture rates and the MFD constraint from a computed 
 	 *  best-fitting Gutenberg-Richter distribution (but these are only assigned if associated 
 	 *  weights are non-zero).  These a-priori rupture rates are also used as the simulated 
-	 *  annealing initial solution if specified in the getSimulatedAnnealing(*) method.
+	 *  annealing initial state if specified in the getSimulatedAnnealing(*) method.
 	 *  
 	 * @param modelName - any name the user wants to give the inversion model
 	 * @param fltSectionDataList
@@ -426,8 +429,8 @@ public class FaultSystemRuptureRateInversion {
 		mfdConstraint = getGR_DistFit();
 		
 		num_aPriori_constraints = 0;
+		setAprioriRupRatesFromMFD_Constrint(); // do this regardless of wt because it could be used as initial state in SA
 		if(relative_aPrioriRupWt>0) {
-			setAprioriRupRatesFromMFD_Constrint();
 			num_aPriori_constraints = aPriori_rupIndex.length;
 		}
 		
@@ -824,7 +827,31 @@ public class FaultSystemRuptureRateInversion {
 		
 	}
 	
+	/**
+	 * This allows one to set the solution by hand, such as the average of a bunch of SA solutions (minRupRate is ignored and potentially violated)
+	 * @param rupRatesArray
+	 */
+	public void setSolution(double[] rupRatesArray) {
+		Preconditions.checkState(rupRatesArray.length == numRuptures, "rupRatesArray does not have the correct number of rupture (%s vs %s", rupRatesArray.length, numRuptures);
 		
+		rupRateSolution = rupRatesArray;
+		
+		// compute predicted data
+		for(int row=0;row<totNumRows; row++)
+			for(int col=0; col <numRuptures; col++)
+				d_pred[row] += rupRateSolution[col]*C[row][col];
+				
+		// Compute final segment slip rates and event rates
+		computeFinalStuff();
+		
+		computeSegMFDs();
+		
+		setMiscRunInfo();
+
+	}
+		
+	
+	
 	/**
 	 * This does the inversion using simulated annealing
 	 */
@@ -1806,6 +1833,7 @@ public class FaultSystemRuptureRateInversion {
 		sectLength = new double[numSections];
 		sectArea = new double[numSections];
 		sectMoRate = new double[numSections];
+		sectRake = new double[numSections];
 		totMoRate=0;
 		for(int s=0;s<numSections;s++) {
 			FaultSectionPrefData fltSectData = fltSectionDataList.get(s);
@@ -1815,6 +1843,7 @@ public class FaultSystemRuptureRateInversion {
 			sectLength[s] = fltSectData.getTraceLength()*1e3; // convert to meters
 			sectArea[s] = sectLength[s] * fltSectData.getReducedDownDipWidth()*1e3; // convert latter to meters
 			sectMoRate[s] = fltSectData.calcMomentRate(true);
+			sectRake[s] = fltSectData.getAveRake();
 			totMoRate += sectMoRate[s];
 		}
 
@@ -1827,6 +1856,7 @@ public class FaultSystemRuptureRateInversion {
 		rupNameShort = new String[numRuptures];
 		rupLength = new double[numRuptures];
 		rupArea = new double[numRuptures];
+		rupAveRake = new double[numRuptures];
 		numSectInRup = new int[numRuptures];
 		firstSectOfRup = new int[numRuptures];
 		minNumSectInRup = Integer.MAX_VALUE;
@@ -1837,6 +1867,7 @@ public class FaultSystemRuptureRateInversion {
 				if(rupSectionMatrix[s][r] == 1) {
 					rupLength[r] += sectLength[s];
 					rupArea[r] += sectArea[s];
+					rupAveRake[r] += sectRake[s];
 					numSectInRup[r] += 1;
 					if(!foundFirstSect) {
 						firstSectOfRup[r] = s;
@@ -1850,6 +1881,7 @@ public class FaultSystemRuptureRateInversion {
 				if(minNumSectInRup>numSectInRup[r])
 					minNumSectInRup=numSectInRup[r];
 			}
+			rupAveRake[r] /= rupArea[r];
 		}
 
 		if(D) System.out.println("minNumSectInRup="+minNumSectInRup);
@@ -2026,6 +2058,34 @@ public class FaultSystemRuptureRateInversion {
 	}
 
 
+	public FaultSystemSolution getFaultSystemSolution() {
+		
+		List<List<Integer>> sectionsForRups = Lists.newArrayList();;
+		for(int r=0;r<numRuptures;r++) {
+			ArrayList<Integer> sectList = new ArrayList<Integer>();
+			for(int s=0;s<numSections;s++) {
+				if(rupSectionMatrix[s][r] == 1)
+					sectList.add(s);
+			}
+			sectionsForRups.add(sectList);
+		}
+		
+		FaultSystemRupSet rupSet = new FaultSystemRupSet(
+				fltSectionDataList,
+				sectSlipRate,
+				sectSlipRateStdDev,
+				sectArea,
+				sectionsForRups,
+				rupMeanMag,
+				rupAveRake,
+				rupArea,
+				rupLength,
+				modelName);
+		
+		return new FaultSystemSolution(rupSet, rupRateSolution);
+		
+	}
+	
 
 	
 	/**
