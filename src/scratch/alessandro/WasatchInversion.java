@@ -80,6 +80,50 @@ public class WasatchInversion {
 		
 	}
 		
+	/**
+	 * This read rupture rates from a file
+	 * @param fileName - the full path
+	 * @return
+	 */
+	private double[] readRuptureRatesFromFile(String fileName) {
+		double rates[] = null;
+		int numPts=-1;
+		int startLineNum=-1;
+		int counter = -1;
+		File file = new File(fileName);
+		List<String> fileLines;
+		try {
+			fileLines = Files.readLines(file, Charset.defaultCharset());
+			for(String str:fileLines) {
+				counter += 1;
+				if(str.contains("Points")) {
+					String[] split = str.split(": ");
+					numPts = Integer.valueOf(split[1]);
+				}
+				if(str.contains("Data[x,y]"))
+						startLineNum = counter +1;
+			}
+			rates = new double[numPts];
+			counter =0;
+			for(int i=startLineNum; i<startLineNum+numPts;i++ ) {
+				String str = fileLines.get(i);
+				String[] split = str.split("\t");
+				rates[counter] = Double.parseDouble(split[1]);
+//				System.out.println(rates[counter]+"\t"+split[0]);
+				counter+=1;
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+//		System.out.println("numPts="+numPts);
+//		System.out.println("startLineNum="+startLineNum);
+//		System.exit(0);;
+		
+		return rates;
+	}
+	
+	
 		
 	private void readData() {
 	
@@ -410,6 +454,7 @@ public class WasatchInversion {
 	 */
 	public static void main(String []args) {
 		
+		
 		WasatchInversion wasatchInversion = new WasatchInversion();
 		// ONLY NEED TO DO ThE FOLLOWING ONCE:
 //		wasatchInversion.writeApriorRupRatesForSegmentationConstrints();
@@ -446,8 +491,8 @@ public class WasatchInversion {
 
 		// set inversion attributes
 		String name = "Wasatch Inversion";
-		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.TAPERED;
-		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.THINGBAIJAM_17_SRL_N;
+		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.UNIFORM;
+		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.WC94_SRL_ALL;
 		double relativeSectRateWt=1;
 		
 		double relative_aPrioriRupWt = 0;	//
@@ -489,15 +534,24 @@ public class WasatchInversion {
 	    // write the setup info to a file
 	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
 		
-		// Non-negative least squares
+	    
+		// NON_NEGATIVE LEAST SQUARES:
 //		fltSysRupInversion.doInversionNNLS();
 		
-		// Simulated annealing
-		long numIterations = (long) 1e4;
-		boolean initStateFromAprioriRupRates = false;
-		long randomSeed = System.currentTimeMillis();
-//		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
-		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
+//		// SIMULATED ANNEALING
+//		long numIterations = (long) 1e4;
+//		boolean initStateFromAprioriRupRates = false;
+//		long randomSeed = System.currentTimeMillis();
+////		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
+//		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
+		
+		
+		// SOLUTION FROM FILE:
+		String ratesFileName = ROOT_PATH+"OutputFigsAndData/ruptureRates.txt"; // assumed consistent with values above
+		double[] rupRatesArray = wasatchInversion.readRuptureRatesFromFile(ratesFileName);
+		fltSysRupInversion.setSolution(rupRatesArray);
+
+		
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
