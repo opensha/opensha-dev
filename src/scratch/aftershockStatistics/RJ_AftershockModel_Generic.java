@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.jfree.data.Range;
-import org.mongodb.morphia.annotations.Transient;
+//import org.mongodb.morphia.annotations.Transient;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -43,13 +43,10 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
  *
  * Modified by Michael Barall.
  *
- * WARNING: This object is stored in the OAF database. Once OAF becomes operational,
- * the set of non-Transient fields can never be changed.
- *
  */
 public class RJ_AftershockModel_Generic extends RJ_AftershockModel {
 
-//	@Transient
+//	//@Transient
 //	protected boolean D=true;	// debug flag (inherited)
 
 	// Mean and standard deviation of the Gaussian distribution of a-values.

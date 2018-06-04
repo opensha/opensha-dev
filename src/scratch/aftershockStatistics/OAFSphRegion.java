@@ -8,7 +8,7 @@ import scratch.aftershockStatistics.OAFTectonicRegime;
 import scratch.aftershockStatistics.util.SphLatLon;
 import scratch.aftershockStatistics.util.SphRegion;
 
-// OAFRegion is a region for defining a tectonic regime.
+// OAFSphRegion is a region for defining a tectonic regime.
 // It includes a SphRegion which defines a region of the earth's surface,
 // and minimum and maximum depths which define a depth range.
 // It also includes the tectonic regime.
@@ -53,6 +53,7 @@ public class OAFSphRegion extends OAFRegion {
 
 	// contains - Determine whether the given location is inside the region.
 
+	@Override
 	public boolean contains (Location loc) {
 		return loc.getDepth() >= min_depth
 			&& loc.getDepth() <= max_depth

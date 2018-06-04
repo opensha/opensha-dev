@@ -5,7 +5,7 @@ import org.opensha.commons.geo.Region;
 
 import scratch.aftershockStatistics.OAFTectonicRegime;
 
-// OAFRegion is a region for defining a tectonic regime.
+// OAFMercRegion is a region for defining a tectonic regime.
 // It includes a Region which defines a polygonal area on a Mercator
 // projection (actually equirectangular projection) of the earth's surface,
 // and minimum and maximum depths which define a depth range.
@@ -52,6 +52,7 @@ public class OAFMercRegion extends OAFRegion {
 	// contains - Determine whether the given location is inside the region.
 	// See notes for Region.contains.
 
+	@Override
 	public boolean contains (Location loc) {
 		return loc.getDepth() >= min_depth
 			&& loc.getDepth() <= max_depth

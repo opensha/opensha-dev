@@ -289,6 +289,7 @@ public abstract class SphRegion {
 	protected static final int MARSHAL_MERC_POLYGON = 14001;
 	protected static final int MARSHAL_MERC_RECTANGLE = 20001;
 	protected static final int MARSHAL_GC_POLYGON = 21001;
+	protected static final int MARSHAL_WORLD = 33001;
 
 	protected static final String M_TYPE_NAME = "ClassType";
 
@@ -404,6 +405,11 @@ public abstract class SphRegion {
 
 		case MARSHAL_MERC_RECTANGLE:
 			result = new SphRegionMercRectangle();
+			result.do_umarshal (reader);
+			break;
+
+		case MARSHAL_WORLD:
+			result = new SphRegionWorld();
 			result.do_umarshal (reader);
 			break;
 		}

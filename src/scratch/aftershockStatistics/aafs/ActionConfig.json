@@ -1,6 +1,14 @@
 {
   "ActionConfigFile": 24001,
   "forecast_min_gap": "PT20M",
+  "forecast_max_delay": "P2D",
+  "comcat_clock_skew": "PT3M0S",
+  "comcat_origin_skew": "PT2M0S",
+  "comcat_retry_min_gap": "PT30S",
+  "seq_spec_min_lag": "PT3H",
+  "advisory_dur_week": "PT1S",
+  "advisory_dur_month": "P25D",
+  "advisory_dur_year": "P90D",
   "forecast_lags": [
     "P0DT0H20M0S",
     "P0DT4H0M0S",
@@ -9,9 +17,6 @@
     "P30DT0H0M0S",
     "P365DT0H0M0S"
   ],
-  "forecast_max_delay": "P7D",
-  "comcat_clock_skew": "PT2M0S",
-  "comcat_retry_min_gap": "PT30S",
   "comcat_retry_lags": [
     "P0DT0H0M30S",
     "P0DT0H5M0S",
@@ -19,6 +24,54 @@
     "P0DT2H0M0S",
     "P0DT8H0M0S",
     "P1DT0H0M0S"
+  ],
+  "comcat_intake_lags": [
+    "P0DT0H2M0S",
+    "P0DT0H5M0S",
+    "P0DT0H10M0S",
+    "P0DT0H20M0S",
+    "P0DT1H0M0S",
+    "P0DT2H0M0S"
+  ],
+  "pdl_report_retry_lags": [
+    "P0DT0H2M0S",
+    "P0DT0H5M0S",
+    "P0DT0H10M0S",
+    "P0DT0H30M0S",
+    "P0DT1H0M0S",
+    "P0DT3H0M0S"
+  ],
+  "pdl_intake_regions": [
+    {
+      "name": "northern_cal",
+      "min_mag": 2.0,
+      "intake_mag": 2.0,
+      "region": {
+        "ClassType": 14001,
+        "SphRegionMercPolygon": 1,
+        "vertex_list":[
+          {"lat": 33.0, "lon": -124.0},
+          {"lat": 33.0, "lon": -120.0},
+          {"lat": 42.0, "lon": -124.0},
+          {"lat": 42.0, "lon": -120.0}
+        ]
+      }
+    },
+    {
+      "name": "usa",
+      "min_mag": 2.0,
+      "intake_mag": 2.0,
+      "region": {
+        "ClassType": 14001,
+        "SphRegionMercPolygon": 1,
+        "vertex_list":[
+          {"lat": 29.16, "lon": -127.82},
+          {"lat": 29.16, "lon": -65.75},
+          {"lat": 48.63, "lon": -127.82},
+          {"lat": 48.63, "lon": -65.75}
+        ]
+      }
+    }
   ]
 }
 

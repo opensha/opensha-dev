@@ -283,10 +283,15 @@ public class USGS_AftershockForecast {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public JSONObject buildJSON() {
+	public JSONObject buildJSON () {
+		return buildJSON (System.currentTimeMillis());
+	}
+	
+	@SuppressWarnings("unchecked")
+	public JSONObject buildJSON (long creation_time) {
 		JSONObject json = new JSONObject();
 		
-		json.put("creationTime", System.currentTimeMillis()); // TODO is this what we want here?
+		json.put("creationTime", creation_time);
 		long maxEndDate = 0l;
 		for (GregorianCalendar endDate : endDates)
 			if (endDate.getTimeInMillis() > maxEndDate)
