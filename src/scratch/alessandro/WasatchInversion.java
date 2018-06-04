@@ -15,11 +15,20 @@ import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.HanksBakun
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.xyz.GriddedGeoDataSet;
+import org.opensha.commons.exceptions.GMT_MapException;
+import org.opensha.commons.geo.BorderType;
+import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.mapping.gmt.GMT_Map;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
@@ -29,6 +38,7 @@ import org.opensha.sha.gcim.ui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
@@ -36,6 +46,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
 import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.alessandro.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
@@ -50,7 +61,7 @@ import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
  */
 public class WasatchInversion {
 
-	final static boolean D = false;	// debugging flag
+	final static boolean D = true;	// debugging flag
 	
 	public final static String ROOT_PATH = "src/scratch/alessandro/";
 	final static String ROOT_DATA_DIR = "src/scratch/alessandro/data/"; // where to find the data
@@ -61,6 +72,9 @@ public class WasatchInversion {
 	final static double LOWER_SEIS_DEPTH = 15;
 	final static double FAULT_DIP = 50;
 	final static double FAULT_RAKE = -90;
+	
+	final static double hazGridSpacing = 0.05;
+
 	
 	
 	ArrayList<FaultSectionPrefData> faultSectionDataList;
@@ -121,6 +135,28 @@ public class WasatchInversion {
 //		System.exit(0);;
 		
 		return rates;
+	}
+	
+	/**
+	 * 
+	 */
+	private GriddedGeoDataSet readHazardDataFromFile(String fileName) {
+		GriddedGeoDataSet griddedDataSet = new GriddedGeoDataSet(getGriddedRegion(), true);
+		try {
+			File file = new File(fileName);
+			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
+			Preconditions.checkState(fileLines.size()-1 == griddedDataSet.size(), "File and gridded region have different numbers of points (%s vs %s, respectively)", fileLines.size(), griddedDataSet.size());
+			for(int i=0;i<griddedDataSet.size();i++) {
+				String str = fileLines.get(i+1);	 // skip header
+				String[] split = str.split("\t");
+				int index = Integer.parseInt(split[0]);
+				Preconditions.checkState(index == i, "Incompatible indices (%s vs %s, respectively)", index, i);
+				griddedDataSet.set(i, Double.parseDouble(split[1]));
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return griddedDataSet;	
 	}
 	
 	
@@ -374,13 +410,19 @@ public class WasatchInversion {
 	 * @param dirName - set as null if you don't want to save results
 	 * @param popupWindow - set as true if you want plot windows to pop up
 	 */
-	public void writeAndOrPlotHazardCurve(FaultSystemRuptureRateInversion fltSysRupInversion, String dirName, boolean popupWindow) {
+	public void writeAndOrPlotHazardCurve(FaultSystemRuptureRateInversion fltSysRupInversion, Location location, 
+			double saPeriod, String dirName, boolean popupWindow, String plotTitle) {
+		
+		String imtString = "PGA";
+		if(saPeriod != 0)
+			imtString = saPeriod+"secSA";
+
 		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fltSysRupInversion.getFaultSystemSolution());
 		erf.setName("WasatchERF");
 		
 		// set the forecast duration
-		double duration = 1;
+		double duration = 50;
 		erf.getTimeSpan().setDuration(duration);
 		
 		// write out parameter values
@@ -397,31 +439,46 @@ public class WasatchInversion {
 		
 		if(D) System.out.println("NumFaultSystemSources = "+erf.getNumFaultSystemSources());
 		
-//		for(int r=0;r<erf.getNumFaultSystemSources();r++) {
-//			System.out.println(r+"\t"+erf.getNthRupture(r).getProbability());
-//		}
-		
 		// compute hazard curve
 		// chose attenuation relationship (GMPE)
 		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
 		imr.setParamDefaults();
-		imr.setIntensityMeasure(PGA_Param.NAME);
+		
+		// set the IMT & curve x-axis values
+		ArbitrarilyDiscretizedFunc curveLinearXvalues;
+		if(saPeriod == 0) {
+			imr.setIntensityMeasure(PGA_Param.NAME);
+			curveLinearXvalues = IMT_Info.getUSGS_PGA_Function();
+		}
+		else {
+			SA_Param saParam = (SA_Param)imr.getParameter(SA_Param.NAME);
+			saParam.getPeriodParam().setValue(saPeriod);
+			imr.setIntensityMeasure(saParam);
+			curveLinearXvalues = IMT_Info.getUSGS_SA_01_AND_02_Function();
+		}
+		
 		// make the site object and set values
-		Site site = new Site(new Location(40.75, -111.90));
+		Site site = new Site(location);
 		for (Parameter<?> param : imr.getSiteParams()) {
 			site.addParameter(param);
 			System.out.println(param.getName()+"\t"+param.getValue());
 		}
 					
-		ArbitrarilyDiscretizedFunc curveLinearXvalues = IMT_Info.getUSGS_PGA_Function();
 //		System.out.println("curveLinearXvalues:\n "+curveLinearXvalues);
 		ArbitrarilyDiscretizedFunc curveLogXvalues = HazardCurveSetCalculator.getLogFunction(curveLinearXvalues);
 //		System.out.println("curveLogXvalues:\n "+curveLogXvalues);
 	
 		HazardCurveCalculator calc = new HazardCurveCalculator();
+		
 		calc.getHazardCurve(curveLogXvalues, site, imr, erf); // result is put into curveLogXvalues
 		
 		curveLinearXvalues = HazardCurveSetCalculator.unLogFunction(curveLinearXvalues, curveLogXvalues);
+		
+		double twoIn50value = Math.exp(curveLogXvalues.getFirstInterpolatedX(0.02));
+		double tenIn50value = Math.exp(curveLogXvalues.getFirstInterpolatedX(0.1));
+		curveLinearXvalues.setInfo("2in50 value: "+twoIn50value+"\n"+"10in50 value: "+tenIn50value+
+				"\nLocation: "+location.getLatitude()+", "+location.getLongitude());
+		
 		
 		// make the plot
 		ArrayList<XY_DataSet> funcs1 = new ArrayList<XY_DataSet>();
@@ -433,21 +490,200 @@ public class WasatchInversion {
 		String fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/hazardCurve";
-		String plotName ="Salt Lake City Hazard Curve";
-		String xAxisLabel = "PGA";
-		String yAxisLabel = "Probability ("+duration+" yr)";
+		String xAxisLabel = imtString;
+		String yAxisLabel = "Probability (in "+duration+" yr)";
 		Range xAxisRange = null;
 		Range yAxisRange = null;
 		boolean logX = true;
 		boolean logY = true;
 
-		fltSysRupInversion.writeAndOrPlotFuncs(funcs1, plotChars, plotName, xAxisLabel, yAxisLabel, 
+		fltSysRupInversion.writeAndOrPlotFuncs(funcs1, plotChars, plotTitle, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
-		
 
 	}
-
 	
+	
+	/**
+	 * This is makes to hazard maps, one for 10% in 50-year and one for 2% in 50-year ground motions
+	 * @param fltSysRupInversion
+	 * @param saPeriod - set as 0 for PGA; this will crash if SA period is not supported
+	 * @param dirName
+	 * @param popupWindow
+	 */
+	public void makeHazardMaps(FaultSystemRuptureRateInversion fltSysRupInversion, double saPeriod, String dirName, boolean popupWindow) {
+		
+		File subDirFile = null;
+		if(dirName != null) {
+		    subDirFile = new File(dirName+"/hazardMaps");
+		    subDirFile.mkdirs();
+		}
+
+		double duration = 50;
+		double[] probabilityArray = {0.02, 0.10};
+		String[] probabilityNameArray = {"2in50", "10in50"};
+		
+		String imtString = "PGA";
+		if(saPeriod != 0)
+			imtString = saPeriod+"secSA";
+		
+		//map region
+		GriddedRegion region = getGriddedRegion();
+		
+		// make gridded data sets
+		GriddedGeoDataSet[] griddedDataSetArray = new GriddedGeoDataSet[probabilityArray.length];
+		for(int i=0;i<probabilityArray.length;i++) {
+			griddedDataSetArray[i] = new GriddedGeoDataSet(region, true);
+		}
+		
+		// Create the ERF
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fltSysRupInversion.getFaultSystemSolution());
+		erf.setName("WasatchERF");
+		
+		// set the forecast duration
+		erf.getTimeSpan().setDuration(duration);
+		
+		// update forecast
+		erf.updateForecast();
+		
+		// set the attenuation relationship (GMPE)
+		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+		imr.setParamDefaults();
+		
+		// set the IMT & curve x-axis values
+		ArbitrarilyDiscretizedFunc curveLinearXvalues;
+		if(saPeriod == 0) {
+			imr.setIntensityMeasure(PGA_Param.NAME);
+			curveLinearXvalues = IMT_Info.getUSGS_PGA_Function();
+		}
+		else {
+			SA_Param saParam = (SA_Param)imr.getParameter(SA_Param.NAME);
+			saParam.getPeriodParam().setValue(saPeriod);
+			imr.setIntensityMeasure(saParam);
+			curveLinearXvalues = IMT_Info.getUSGS_SA_01_AND_02_Function();
+		}
+		
+		// make the site object and set values
+		Site site = new Site(new Location(40.75, -111.90));	// Location will get over written
+		for (Parameter<?> param : imr.getSiteParams()) {
+			site.addParameter(param);
+			System.out.println(param.getName()+"\t"+param.getValue());
+		}
+		
+		ArbitrarilyDiscretizedFunc curveLogXvalues = HazardCurveSetCalculator.getLogFunction(curveLinearXvalues); // this is what the calculator expects
+		HazardCurveCalculator calc = new HazardCurveCalculator();
+		
+		// loop over sites
+		for(int i=0;i<griddedDataSetArray[0].size();i++) {
+			System.out.println(i+" of "+griddedDataSetArray[0].size());
+			site.setLocation(griddedDataSetArray[0].getLocation(i));
+			calc.getHazardCurve(curveLogXvalues, site, imr, erf); // result is put into curveLogXvalues
+			// get the points on the hazard curve
+			for(int p=0;p<probabilityArray.length;p++) {
+				double logVal = curveLogXvalues.getFirstInterpolatedX(probabilityArray[p]);
+				griddedDataSetArray[p].set(i, Math.exp(logVal));
+			}
+		}
+		
+		try {
+			for(int p=0;p<probabilityArray.length;p++) {
+				CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(griddedDataSetArray[p].getMinZ(), griddedDataSetArray[p].getMaxZ());
+//				CPT cpt = GMT_CPT_Files.UCERF3_ETAS_GAIN.instance().rescale(gridData.getMinZ(), gridData.getMaxZ());
+				ArrayList<LocationList> faults = FaultBasedMapGen.getTraces(faultSectionDataList);
+				double[] values = new double[faults.size()];
+				for(int i=0;i<values.length;i++)
+					values[i] = FaultBasedMapGen.FAULT_HIGHLIGHT_VALUE;
+				
+				String label = imtString+"_"+probabilityNameArray[p];
+				
+				GMT_Map map = FaultBasedMapGen.buildMap(cpt, faults, values, griddedDataSetArray[p], hazGridSpacing, region, true, label);
+//				map.setGenerateKML(true); // this tells it to generate a KML file that can be loaded into Google Earthe
+				
+				try {
+					FaultBasedMapGen.SAVE_ZIPS=true;
+					FaultBasedMapGen.plotMap(subDirFile, label, popupWindow, map);	
+				} catch (GMT_MapException e) {
+					e.printStackTrace();
+				}
+				
+				// write out values to a text file
+				FileWriter fw = new FileWriter(dirName+"/hazardMaps/"+label+".txt");
+				fw.write("index\tvalue\tlatitude\tlongitude\n");
+				for(int i=0;i<griddedDataSetArray[p].size(); i++)	 {
+					Location loc = griddedDataSetArray[p].getLocation(i);
+					fw.write(i+"\t"+griddedDataSetArray[p].get(i)+"\t"+loc.getLatitude()+"\t"+loc.getLongitude()+"\n");
+				}
+				fw.close();
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		
+	}
+	
+	
+	/**
+	 * 
+	 * @param fileName1 - numerator data
+	 * @param fileName2 - denominator data
+	 * @param label - label for the plot and file name prefix
+	 * @param dirName - directory (full path); this cannot be null
+	 * @param popupWindow - whether to show results in a pop up window
+	 */
+	public void makeHazardMapRatio(String fileName1, String fileName2, String label, String dirName, boolean popupWindow) {
+		
+		GriddedGeoDataSet data1 = readHazardDataFromFile(fileName1);
+		GriddedGeoDataSet data2 = readHazardDataFromFile(fileName2);
+		
+		// put log10 ratio in first data set:
+		for(int i=0;i<data1.size();i++)
+			data1.set(i, Math.log10(data1.get(i)/data2.get(i)));
+				
+		try {
+			CPT cpt = GMT_CPT_Files.UCERF3_ETAS_GAIN.instance().rescale(-1.0, 1.0);
+			ArrayList<LocationList> faults = FaultBasedMapGen.getTraces(faultSectionDataList);
+			double[] values = new double[faults.size()];
+			for(int i=0;i<values.length;i++)
+				values[i] = FaultBasedMapGen.FAULT_HIGHLIGHT_VALUE;
+
+			GMT_Map map = FaultBasedMapGen.buildMap(cpt, faults, values, data1, hazGridSpacing, getGriddedRegion(), true, "Log10 "+label);
+
+			try {
+				FaultBasedMapGen.SAVE_ZIPS=true;
+				FaultBasedMapGen.plotMap(new File(dirName), label, popupWindow, map);	
+			} catch (GMT_MapException e) {
+				e.printStackTrace();
+			}
+
+			// write out values to a text file
+			FileWriter fw = new FileWriter(dirName+"/"+label+".txt");
+			fw.write("index\tvalue\tlatitude\tlongitude\n");
+			for(int i=0;i<data1.size(); i++)	 {
+				Location loc = data1.getLocation(i);
+				fw.write(i+"\t"+data1.get(i)+"\t"+loc.getLatitude()+"\t"+loc.getLongitude()+"\n");
+			}
+			fw.close();
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		
+	}
+
+
+	private GriddedRegion getGriddedRegion() {
+		double minLat = 39.5;
+		double maxLat = 41.8;
+		double minLon = -113.1;
+		double maxLon = -110.6;
+		Location regionCorner1 = new Location(maxLat, minLon);
+		Location regionCorner2 = new Location(minLat, maxLon);
+		GriddedRegion region = new GriddedRegion(regionCorner1, regionCorner2, hazGridSpacing, hazGridSpacing, null);
+		if(D) System.out.println("num points in gridded region: "+region.getNumLocations());
+		return region;
+	}
 	
 	/**
 	 * @param args
@@ -456,6 +692,7 @@ public class WasatchInversion {
 		
 		
 		WasatchInversion wasatchInversion = new WasatchInversion();
+				
 		// ONLY NEED TO DO ThE FOLLOWING ONCE:
 //		wasatchInversion.writeApriorRupRatesForSegmentationConstrints();
 //		System.exit(-1);
@@ -539,8 +776,8 @@ public class WasatchInversion {
 //		fltSysRupInversion.doInversionNNLS();
 		
 //		// SIMULATED ANNEALING
-//		long numIterations = (long) 1e4;
-//		boolean initStateFromAprioriRupRates = false;
+//		long numIterations = (long) 1e6;
+//		boolean initStateFromAprioriRupRates = true;
 //		long randomSeed = System.currentTimeMillis();
 ////		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
 //		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
@@ -552,7 +789,6 @@ public class WasatchInversion {
 		fltSysRupInversion.setSolution(rupRatesArray);
 
 		
-
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
 				
@@ -562,14 +798,31 @@ public class WasatchInversion {
 		// Now make plots if desired
 		boolean popUpPlots = true;	// this tells whether to show plots in a window (turn off for HPC)
 //		dirName = null;	// set as null if you don't want to save to file
-		fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
-		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
-		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
-	    fltSysRupInversion.writeAndOrPlotSegPartMFDs(dirName, popUpPlots);
+//		fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
+//		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
+//		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
+//	    fltSysRupInversion.writeAndOrPlotSegPartMFDs(dirName, popUpPlots);
 	    
 	    // hazard curve:
-	    wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, dirName, popUpPlots);
+//		Location loc = new Location(40.75, -111.90);	// Salt Lake City
+//	    wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, loc, 1.0, dirName, popUpPlots, "Salt Lake City Hazard Curve");
 
+//		Location testLoc1 = new Location(41.5, -112.05);
+//	    wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, testLoc1, 1.0, dirName, popUpPlots, "testLoc1");
+
+//		Location testLoc2 = new Location(40.15, -111.6);
+//	    wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, testLoc2, 1.0, dirName, popUpPlots, "testLoc2");
+
+	    
+	    // second parameter here is SA period; set as 0.0 for PGA:
+	    wasatchInversion.makeHazardMaps(fltSysRupInversion, 1.0, dirName, popUpPlots);
+	    
+	    
+	    // Make hazard map ratio
+	    String fileName1 = dirName+"/hazardMaps/1.0secSA_10in50.txt";
+	    String fileName2 = dirName+"/hazardMaps/1.0secSA_2in50.txt";
+	    String label = "1.0secSA_10in50_2in50_ratio";
+	    wasatchInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName+"/hazardMaps", true);
 		
 	}
 

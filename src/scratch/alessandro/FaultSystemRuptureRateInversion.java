@@ -71,6 +71,7 @@ import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
 import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;
 import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
 import scratch.UCERF3.simulatedAnnealing.completion.TimeCompletionCriteria;
+import scratch.UCERF3.simulatedAnnealing.params.CoolingScheduleType;
 import scratch.alessandro.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
 
@@ -87,7 +88,7 @@ import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
  */
 public class FaultSystemRuptureRateInversion {
 	
-	final static boolean D = false;	// debugging flag
+	final static boolean D = true;	// debugging flag
 
 	public final static double GAUSS_MFD_SIGMA = 0.12;
 	public final static double GAUSS_MFD_TRUNCATION = 2;
@@ -1014,6 +1015,7 @@ public class FaultSystemRuptureRateInversion {
 	private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState, long numIterations,  long randomSeed) {
 		SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
 		SerialSimulatedAnnealing simulatedAnnealing =new SerialSimulatedAnnealing(matrixC, d, initialState);
+		simulatedAnnealing.setCoolingFunc(CoolingScheduleType.VERYFAST_SA);
 		simulatedAnnealing.setRandom(new Random(randomSeed));
 		simulatedAnnealing.iterate(numIterations);
 		return simulatedAnnealing.getBestSolution();
