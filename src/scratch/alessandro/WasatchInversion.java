@@ -815,7 +815,7 @@ public class WasatchInversion {
 
 	    
 	    // second parameter here is SA period; set as 0.0 for PGA:
-	    wasatchInversion.makeHazardMaps(fltSysRupInversion, 1.0, dirName, popUpPlots);
+//	    wasatchInversion.makeHazardMaps(fltSysRupInversion, 1.0, dirName, popUpPlots);
 	    
 	    
 	    // Make hazard map ratio
