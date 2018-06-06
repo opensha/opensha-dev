@@ -126,7 +126,7 @@ public class PendingTask implements java.io.Serializable {
         this.id = id;
     }
 
-    private long get_exec_time() {
+    public long get_exec_time() {
         return exec_time;
     }
 
@@ -254,6 +254,14 @@ public class PendingTask implements java.io.Serializable {
 	 */
 	private String get_details_description () {
 		return ((details == null) ? "null" : ("len = " + details.length()));
+	}
+
+
+	/**
+	 * dump_details - Dump details into a string, for trouble-shooting.
+	 */
+	public String dump_details () {
+		return ((details == null) ? "null" : details);
 	}
 
 
@@ -542,6 +550,158 @@ public class PendingTask implements java.io.Serializable {
 		MorphiaIterator<PendingTask, PendingTask> morphia_iterator = query.fetch();
 
 		return new RecordIterator<PendingTask>(morphia_iterator);
+	}
+
+
+
+
+	/**
+	 * get_task_entry_range - Get a range of task entries, sorted by execution time.
+	 * @param exec_time_lo = Minimum execution time, in milliseconds since the epoch.
+	 *                       Can be 0L for no minimum.
+	 * @param exec_time_hi = Maximum execution time, in milliseconds since the epoch.
+	 *                       Can be 0L for no maximum.
+	 * @param event_id = Event id. Can be null to return entries for all events.
+	 */
+	public static List<PendingTask> get_task_entry_range (long exec_time_lo, long exec_time_hi, String event_id) {
+
+		// Get the MongoDB data store
+
+		Datastore datastore = MongoDBUtil.getDatastore();
+
+		// Construct the query
+
+		Query<PendingTask> query = datastore.createQuery(PendingTask.class);
+
+		// Select by event_id
+
+		if (event_id != null) {
+			query = query.filter("event_id ==", event_id);
+		}
+
+		// Select entries with exec_time >= exec_time_lo
+
+		if (exec_time_lo > 0L) {
+			query = query.filter("exec_time >=", new Long(exec_time_lo));
+		}
+
+		// Select entries with exec_time <= exec_time_hi
+
+		if (exec_time_hi > 0L) {
+			query = query.filter("exec_time <=", new Long(exec_time_hi));
+		}
+
+		// Sort by exec_time in ascending order (in order of execution)
+
+		query = query.order("exec_time");
+
+		// Run the query
+
+		List<PendingTask> entries = query.asList();
+
+		return entries;
+	}
+
+
+
+
+	/**
+	 * fetch_task_entry_range - Iterate a range of task entries, sorted by execution time.
+	 * @param exec_time_lo = Minimum execution time, in milliseconds since the epoch.
+	 *                       Can be 0L for no minimum.
+	 * @param exec_time_hi = Maximum execution time, in milliseconds since the epoch.
+	 *                       Can be 0L for no maximum.
+	 * @param event_id = Event id. Can be null to return entries for all events.
+	 */
+	public static RecordIterator<PendingTask> fetch_task_entry_range (long exec_time_lo, long exec_time_hi, String event_id) {
+
+		// Get the MongoDB data store
+
+		Datastore datastore = MongoDBUtil.getDatastore();
+
+		// Construct the query
+
+		Query<PendingTask> query = datastore.createQuery(PendingTask.class);
+
+		// Select by event_id
+
+		if (event_id != null) {
+			query = query.filter("event_id ==", event_id);
+		}
+
+		// Select entries with exec_time >= exec_time_lo
+
+		if (exec_time_lo > 0L) {
+			query = query.filter("exec_time >=", new Long(exec_time_lo));
+		}
+
+		// Select entries with exec_time <= exec_time_hi
+
+		if (exec_time_hi > 0L) {
+			query = query.filter("exec_time <=", new Long(exec_time_hi));
+		}
+
+		// Sort by exec_time in ascending order (in order of execution)
+
+		query = query.order("exec_time");
+
+		// Run the query
+
+		MorphiaIterator<PendingTask, PendingTask> morphia_iterator = query.fetch();
+
+		return new RecordIterator<PendingTask>(morphia_iterator);
+	}
+
+
+
+
+	/**
+	 * get_first_task_entry - Get the first in a range of task entries.
+	 * @param exec_time_lo = Minimum execution time, in milliseconds since the epoch.
+	 *                       Can be 0L for no minimum.
+	 * @param exec_time_hi = Maximum execution time, in milliseconds since the epoch.
+	 *                       Can be 0L for no maximum.
+	 * @param event_id = Event id. Can be null to return entries for all events.
+	 * Returns the matching task entry with the smallest exec_time (first to execute),
+	 * or null if there is no matching task entry.
+	 */
+	public static PendingTask get_first_task_entry (long exec_time_lo, long exec_time_hi, String event_id) {
+
+		// Get the MongoDB data store
+
+		Datastore datastore = MongoDBUtil.getDatastore();
+
+		// Construct the query
+
+		Query<PendingTask> query = datastore.createQuery(PendingTask.class);
+
+		// Select by event_id
+
+		if (event_id != null) {
+			query = query.filter("event_id ==", event_id);
+		}
+
+		// Select entries with exec_time >= exec_time_lo
+
+		if (exec_time_lo > 0L) {
+			query = query.filter("exec_time >=", new Long(exec_time_lo));
+		}
+
+		// Select entries with exec_time <= exec_time_hi
+
+		if (exec_time_hi > 0L) {
+			query = query.filter("exec_time <=", new Long(exec_time_hi));
+		}
+
+		// Sort by exec_time in ascending order (in order of execution)
+
+		query = query.order("exec_time");
+
+		// Run the query
+
+		PendingTask task = query.get();
+
+		return task;
 	}
 
 

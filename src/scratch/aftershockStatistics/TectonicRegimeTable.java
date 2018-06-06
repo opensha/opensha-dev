@@ -8,8 +8,6 @@ import java.util.InputMismatchException;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
-import org.opensha.commons.data.siteData.impl.TectonicRegime;
-
 
 // TectonicRegimeTable is used to obtain the tectonic domain (also known as
 // the Garcia region) for any point on the earth.
@@ -71,21 +69,21 @@ public class TectonicRegimeTable {
 	// The number of elements in this array equals domain_count.
 
 	private static final String[] strec_name = {
-		TectonicRegime.ANSR_DEEPCON.getPreferredName(),
-		TectonicRegime.ANSR_HOTSPOT.getPreferredName(),
-		TectonicRegime.ANSR_OCEANBD.getPreferredName(),
-		TectonicRegime.ANSR_SHALCON.getPreferredName(),
-		TectonicRegime.ANSR_ABSLDEC.getPreferredName(),
-		TectonicRegime.ANSR_ABSLOCB.getPreferredName(),
-		TectonicRegime.ANSR_ABSLSHC.getPreferredName(),
-		TectonicRegime.SCR_ABVSLAB.getPreferredName(),
-		TectonicRegime.SCR_GENERIC.getPreferredName(),
-		TectonicRegime.SOR_ABVSLAB.getPreferredName(),
-		TectonicRegime.SOR_GENERIC.getPreferredName(),
-		TectonicRegime.SZ_GENERIC.getPreferredName(),
-		TectonicRegime.SZ_INLBACK.getPreferredName(),
-		TectonicRegime.SZ_ONSHORE.getPreferredName(),
-		TectonicRegime.SZ_OUTERTR.getPreferredName()
+		"ACR (deep)",
+		"ACR (hot spot)",
+		"ACR (oceanic boundary)",
+		"ACR (shallow)",
+		"ACR deep (above slab)",
+		"ACR oceanic boundary (above slab)",
+		"ACR shallow (above slab)",
+		"SCR (above slab)",
+		"SCR (generic)",
+		"SOR (above slab)",
+		"SOR (generic)",
+		"SZ (generic)",
+		"SZ (inland/back-arc)",
+		"SZ (on-shore)",
+		"SZ (outer-trench)"
 	};
 
 	// point_count - The number of grid points in each tectonic domain.

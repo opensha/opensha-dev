@@ -207,6 +207,14 @@ public class TimelineEntry implements java.io.Serializable {
 	}
 
 
+	/**
+	 * dump_details - Dump details into a string, for trouble-shooting.
+	 */
+	public String dump_details () {
+		return ((details == null) ? "null" : details);
+	}
+
+
 
 
 //	/**
@@ -526,6 +534,58 @@ public class TimelineEntry implements java.io.Serializable {
 		MorphiaIterator<TimelineEntry, TimelineEntry> morphia_iterator = query.fetch();
 
 		return new RecordIterator<TimelineEntry>(morphia_iterator);
+	}
+
+
+
+
+	/**
+	 * get_recent_timeline_entry - Get the most recent in a range of timeline entries.
+	 * @param action_time_lo = Minimum action time, in milliseconds since the epoch.
+	 *                         Can be 0L for no minimum.
+	 * @param action_time_hi = Maximum action time, in milliseconds since the epoch.
+	 *                         Can be 0L for no maximum.
+	 * @param event_id = Event id. Can be null to return entries for all events.
+	 * Returns the matching timeline entry with the greatest action_time (most recent),
+	 * or null if there is no matching timeline entry.
+	 */
+	public static TimelineEntry get_recent_timeline_entry (long action_time_lo, long action_time_hi, String event_id) {
+
+		// Get the MongoDB data store
+
+		Datastore datastore = MongoDBUtil.getDatastore();
+
+		// Construct the query
+
+		Query<TimelineEntry> query = datastore.createQuery(TimelineEntry.class);
+
+		// Select by event_id
+
+		if (event_id != null) {
+			query = query.filter("event_id ==", event_id);
+		}
+
+		// Select entries with action_time >= action_time_lo
+
+		if (action_time_lo > 0L) {
+			query = query.filter("action_time >=", new Long(action_time_lo));
+		}
+
+		// Select entries with action_time <= action_time_hi
+
+		if (action_time_hi > 0L) {
+			query = query.filter("action_time <=", new Long(action_time_hi));
+		}
+
+		// Sort by action_time in descending order (most recent first)
+
+		query = query.order("-action_time");
+
+		// Run the query
+
+		TimelineEntry tentry = query.get();
+
+		return tentry;
 	}
 
 

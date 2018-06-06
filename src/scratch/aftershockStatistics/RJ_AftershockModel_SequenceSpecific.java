@@ -3,7 +3,7 @@ package scratch.aftershockStatistics;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.mongodb.morphia.annotations.Transient;
+//import org.mongodb.morphia.annotations.Transient;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
@@ -32,9 +32,6 @@ import scratch.aftershockStatistics.util.MarshalImpJsonWriter;
  *
  * Modified by Michael Barall.
  *
- * WARNING: This object is stored in the OAF database. Once OAF becomes operational,
- * the set of non-Transient fields can never be changed.
- *
  * According to R&J, the rate of aftershocks of magnitude >= magMin is
  *  lambda(t) = k * (t + c)^(-p)
  * where
@@ -52,7 +49,7 @@ import scratch.aftershockStatistics.util.MarshalImpJsonWriter;
  */
 public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 
-//	@Transient
+//	//@Transient
 //	boolean D=true;	// debug flag (inherited)
 
 	// Parameters for the time-dependent magnitude of completeness.
@@ -63,12 +60,12 @@ public class RJ_AftershockModel_SequenceSpecific extends RJ_AftershockModel {
 
 	// The list of aftershocks used to construct the model.
 
-	@Transient
+	//@Transient
 	protected List<ObsEqkRupture> aftershockList = null;
 
 	// The mainshock.
 
-	@Transient
+	//@Transient
 	protected ObsEqkRupture mainShock = null;
 
 	// The time interval covered by the list of aftershocks, in days since the mainshock.
