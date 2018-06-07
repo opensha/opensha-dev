@@ -269,7 +269,6 @@ public class FaultSystemRuptureRateInversion {
 		EvenlyDiscrXYZ_DataSet xyzDataRupSlipRate = new EvenlyDiscrXYZ_DataSet(numSections,numAboveMinRate, 0, 0, 1, 1);
 		EvenlyDiscrXYZ_DataSet xyzDataRupRate = new EvenlyDiscrXYZ_DataSet(numSections,numAboveMinRate, 0, 0, 1, 1);
 		
-
 		int index = 0;
 		try{
 			FileWriter fw=null,fw2=null;
