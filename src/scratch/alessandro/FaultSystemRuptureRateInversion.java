@@ -89,6 +89,8 @@ import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
 public class FaultSystemRuptureRateInversion {
 	
 	final static boolean D = true;	// debugging flag
+	
+	public static CoolingScheduleType sa_coolingSchedule = CoolingScheduleType.VERYFAST_SA;
 
 	public final static double GAUSS_MFD_SIGMA = 0.12;
 	public final static double GAUSS_MFD_TRUNCATION = 2;
@@ -1014,7 +1016,7 @@ public class FaultSystemRuptureRateInversion {
 	private static double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState, long numIterations,  long randomSeed) {
 		SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
 		SerialSimulatedAnnealing simulatedAnnealing =new SerialSimulatedAnnealing(matrixC, d, initialState);
-		simulatedAnnealing.setCoolingFunc(CoolingScheduleType.VERYFAST_SA);
+		simulatedAnnealing.setCoolingFunc(sa_coolingSchedule);
 		simulatedAnnealing.setRandom(new Random(randomSeed));
 		simulatedAnnealing.iterate(numIterations);
 		return simulatedAnnealing.getBestSolution();
