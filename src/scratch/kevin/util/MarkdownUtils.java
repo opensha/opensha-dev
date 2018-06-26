@@ -118,7 +118,7 @@ public class MarkdownUtils {
 	}
 	
 	private static String generateTableDashLine(int numVals) {
-		Preconditions.checkState(numVals > 1);
+		Preconditions.checkState(numVals >= 1);
 		String[] vals = new String[numVals];
 		for (int i=0; i<vals.length; i++)
 			vals[i] = "-----";
@@ -126,7 +126,7 @@ public class MarkdownUtils {
 	}
 	
 	private static String tableLine(String[] vals) {
-		Preconditions.checkState(vals.length > 1);
+		Preconditions.checkState(vals.length >= 1);
 		StringBuilder line = new StringBuilder().append("| ");
 		for (int i=0; i<vals.length; i++) {
 			if (i > 0)

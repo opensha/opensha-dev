@@ -34,7 +34,8 @@ public class RupLengthHistogramGenerator {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException, DocumentException {
-		File dir = new File(UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, "InversionSolutions");
+//		File dir = new File(UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, "InversionSolutions");
+		File dir = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions");
 		File solFile = new File(dir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
 		
 		// fraction of earthquakes

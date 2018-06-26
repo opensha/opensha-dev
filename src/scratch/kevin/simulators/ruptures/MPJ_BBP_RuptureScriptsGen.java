@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Somerville_2006_MagAreaRel;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
@@ -60,7 +61,7 @@ class MPJ_BBP_RuptureScriptsGen {
 		
 		File catalogDir = catalog.getCatalogDir();
 		
-		boolean stampede = true;
+		boolean stampede = false;
 		
 		boolean doGP = true;
 		boolean doShakeMap = false;
@@ -72,10 +73,10 @@ class MPJ_BBP_RuptureScriptsGen {
 		double mapSpacing = 0.02;
 //		int maxNodes = 36;
 		int maxNodes = 10;
+		boolean gpAdjustDDW = false;
 		
 		File srcFile = RSQSimBBP_Config.getEventSrcFile(catalog, eventID);
 		File srfFile = RSQSimBBP_Config.getEventSRFFile(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE, RSQSimBBP_Config.SRF_DT);
-		BBP_SourceFile src = null;
 		if (!srcFile.exists() || (doShakeMap && !srfFile.exists())) {
 			System.out.println("need to load event "+eventID);
 			RSQSimEvent event = catalog.loader().byID(eventID);
@@ -145,9 +146,8 @@ class MPJ_BBP_RuptureScriptsGen {
 			String jobName = dateStr;
 			jobName += "-"+catalogDir.getName()+"-event"+eventID+"-gp";
 			
-			if (src == null)
-				src = BBP_SourceFile.readFile(srcFile);
-			String len = src.getdLen()+"";
+			BBP_SourceFile gpSRC = BBP_SourceFile.readFile(srcFile);
+			String len = gpSRC.getdLen()+"";
 			if (len != null)
 				jobName += "-dx"+len;
 			if (!RSQSimBBP_Config.DO_HF)
@@ -156,6 +156,17 @@ class MPJ_BBP_RuptureScriptsGen {
 				jobName += "-stampede";
 			if (csSites)
 				jobName += "-csLASites";
+			if (gpAdjustDDW) {
+				jobName += "-adjustDDW";
+				Somerville_2006_MagAreaRel ma = new Somerville_2006_MagAreaRel();
+				double newArea = ma.getMedianArea(gpSRC.getMag());
+				BBP_PlanarSurface origSurf = gpSRC.getSurface();
+				double newWidth = newArea/origSurf.getLength();
+				BBP_PlanarSurface newSurf = new BBP_PlanarSurface(origSurf.getTopCenter(), origSurf.getLength(),
+						newWidth, origSurf.getFocalMechanism());
+				gpSRC = new BBP_SourceFile(newSurf, gpSRC.getMag(), gpSRC.getHypoAlongStrike(), gpSRC.getHypoDownDip(),
+						gpSRC.getdWid(), gpSRC.getdLen(), gpSRC.getCornerFreq(), gpSRC.getSeed());
+			}
 			
 			System.out.println("Writing GP sim to "+jobName);
 			
@@ -163,7 +174,7 @@ class MPJ_BBP_RuptureScriptsGen {
 			if (csSites)
 				sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
 			else
-				sites = RSQSimBBP_Config.getStandardSites(src);
+				sites = RSQSimBBP_Config.getStandardSites(gpSRC);
 			
 			Preconditions.checkState(!sites.isEmpty(), "No sites!");
 			int totalSims;
@@ -187,9 +198,12 @@ class MPJ_BBP_RuptureScriptsGen {
 			BBP_Site.writeToFile(sitesFile, sites);
 			File remoteSitesFile = new File(remoteJobDir, sitesFile.getName());
 			
-			// copy src file
-			Files.copy(srcFile, new File(localJobDir, srcFile.getName()));
-			File remoteSrcFile = new File(remoteJobDir, srcFile.getName());
+			// write src file
+			String srcName = srcFile.getName();
+			if (gpAdjustDDW)
+				srcName = srcName.substring(0, srcName.indexOf(".src"))+"_adjust_ddw.src";
+			gpSRC.writeToFile(new File(localJobDir, srcName));
+			File remoteSrcFile = new File(remoteJobDir, srcName);
 			
 			String argz = MPJTaskCalculator.argumentBuilder().exactDispatch(threads).threads(threads).endTimeSlurm().build();
 			argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();

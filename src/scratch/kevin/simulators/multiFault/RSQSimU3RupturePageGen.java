@@ -22,12 +22,10 @@ import org.jfree.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.GMT_MapException;
 import org.opensha.commons.geo.LocationList;
-import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -39,17 +37,6 @@ import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
-import org.opensha.sha.simulators.RSQSimEvent;
-import org.opensha.sha.simulators.SimulatorElement;
-import org.opensha.sha.simulators.SimulatorEvent;
-import org.opensha.sha.simulators.Vertex;
-import org.opensha.sha.simulators.iden.LogicalAndRupIden;
-import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
-import org.opensha.sha.simulators.iden.RuptureIdentifier;
-import org.opensha.sha.simulators.iden.SkipYearsLoadIden;
-import org.opensha.sha.simulators.parsers.RSQSimFileReader;
-import org.opensha.sha.simulators.utils.RSQSimUtils;
-import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -70,7 +57,6 @@ import scratch.UCERF3.inversion.laughTest.MinSectsPerParentFilter.ContinualFilte
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.IDPairing;
-import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
@@ -109,6 +95,11 @@ public class RSQSimU3RupturePageGen {
 		boolean includeNumSects = false;
 		
 		List<String> lines = new ArrayList<>();
+		
+		FaultBasedMapGen.MAP_LABEL_SIZE = 24;
+		FaultBasedMapGen.MAP_LABEL_TICK_SIZE = 20;
+		FaultBasedMapGen.LOCAL_MAPGEN = true;
+		FaultBasedMapGen.FAULT_THICKNESS = 4d;
 		
 		// header
 		lines.add("# Multi Fault Rupture Comparisons");
@@ -553,14 +544,20 @@ public class RSQSimU3RupturePageGen {
 		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(rsVals), reg, outputDir,
 				"mag_cumulant_medians_"+catalogName.toLowerCase(), false, false, catalogName+" Mag Cumulant Median");
 		
-		CPT diffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
+//		CPT diffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
+		CPT diffCPT = new CPT(-1, 1d,
+				new Color(0, 0, 140), new Color(0, 60, 200 ), new Color(0, 120, 255),
+				Color.WHITE,
+				new Color(255, 120, 0), new Color(200, 60, 0), new Color(140, 0, 0));
+		diffCPT.setBelowMinColor(diffCPT.getMinColor());
+		diffCPT.setAboveMaxColor(diffCPT.getMaxColor());
 		double[] diffVals = new double[faults.size()];
 		
 		for (int i=0; i<diffVals.length; i++)
 			diffVals[i] = rsVals.get(i) - u3Vals.get(i);
 		
 		FaultBasedMapGen.makeFaultPlot(diffCPT, faults, diffVals, reg, outputDir,
-				"mag_cumulant_medians_diff", false, false, catalogName+"-U3 Mag Cumulant Median");
+				"mag_cumulant_medians_diff", false, true, catalogName+"-U3 Mag Cumulant Median");
 	}
 	
 	private static double calcCumulantMedianMag(FaultSystemSolution sol, int s) {

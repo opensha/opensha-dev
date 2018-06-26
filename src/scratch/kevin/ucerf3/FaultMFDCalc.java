@@ -45,6 +45,8 @@ public class FaultMFDCalc {
 		
 		Map<String, int[]> parentIDsMap = new HashMap<>();
 		
+		boolean participation = true;
+		
 		parentIDsMap.put("San Andreas", new int[] {287, 300, 285, 295, 658, 301, 654, 653, 32, 655, 282, 283, 284, 657});
 		parentIDsMap.put("Hayward Calaveras Rogers Creek", new int[] {639, 638, 637, 602, 601, 621, 603, 651});
 		parentIDsMap.put("Garlock", new int[] {641, 48, 49});
@@ -66,8 +68,23 @@ public class FaultMFDCalc {
 				rups.addAll(rupSet.getRupturesForSection(s));
 			
 			IncrementalMagFreqDist faultMFD = new IncrementalMagFreqDist(5.05, 41, 0.1);
-			for (int r : rups)
-				faultMFD.add(faultMFD.getClosestXIndex(rupSet.getMagForRup(r)), sol.getRateForRup(r));
+			for (int r : rups) {
+				double rate = sol.getRateForRup(r);
+				if (!participation) {
+					// convert to fault nucleation rate
+					double areaOn = 0;
+					double areaOff = 0;
+					for (Integer s : rupSet.getSectionsIndicesForRup(r)) {
+						double area = rupSet.getAreaForSection(s);
+						if (subSects.contains(s))
+							areaOn += area;
+						else
+							areaOff += area;
+					}
+					rate *= areaOn / (areaOn + areaOff);
+				}
+				faultMFD.add(faultMFD.getClosestXIndex(rupSet.getMagForRup(r)), rate);
+			}
 			faultMFD.setName("Supra-Seimogenic");
 			
 			IncrementalMagFreqDist offMFD = new IncrementalMagFreqDist(5.05, 41, 0.1);
@@ -103,7 +120,12 @@ public class FaultMFDCalc {
 				List<DiscretizedFunc> funcs = new ArrayList<>();
 				List<PlotCurveCharacterstics> chars = new ArrayList<>();
 				
-				String yAxisLabel = "Participation Rate (1/yr)";
+				String yAxisLabel;
+				if (participation)
+					yAxisLabel = "Participation Rate (1/yr)";
+				else
+					yAxisLabel = "Nucleation Rate (1/yr)";
+				
 				if (cumulative) {
 					funcs.add(offMFD.getCumRateDistWithOffset());
 					funcs.add(faultMFD.getCumRateDistWithOffset());
@@ -130,6 +152,10 @@ public class FaultMFDCalc {
 				gp.setPlotLabelFontSize(21);
 				
 				String prefix = new File(outputDir, faultName.replaceAll(" ", "_")).getAbsolutePath();
+				if (participation)
+					prefix += "_participation";
+				else
+					prefix += "_nucleation";
 				if (cumulative)
 					prefix += "_cumulative";
 				else

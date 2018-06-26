@@ -11,18 +11,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
-import javax.imageio.ImageTypeSpecifier;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.metadata.IIOMetadata;
-import javax.imageio.metadata.IIOMetadataNode;
-import javax.imageio.stream.FileImageOutputStream;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYAnnotation;
@@ -35,6 +27,7 @@ import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.gui.plot.AnimatedGIFRenderer;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -50,7 +43,6 @@ import org.opensha.sha.imr.AttenRelRef;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
@@ -609,7 +601,7 @@ public class SimulationHazardPlotter<E> {
 		chars.add(simCurveChar);
 	}
 	
-	public File plotCurveAnimation(File outputFile, double[] timeRange, double delta, double period) throws IOException {
+	public void plotCurveAnimation(File outputFile, double[] timeRange, double delta, double period) throws IOException {
 		Preconditions.checkState(delta > 0);
 		
 		List<DiscretizedFunc> prevSimCurves = new ArrayList<>();
@@ -697,88 +689,17 @@ public class SimulationHazardPlotter<E> {
 			imageFiles.add(plotHazardCurves(tempDir, "frame_"+frameIndex, site, period, curveDuration, funcs, chars, anns));
 		}
 		
-		Iterator<ImageWriter> iter = ImageIO.getImageWritersBySuffix("gif");
-		Preconditions.checkArgument(iter.hasNext(), "No GIF image writers available!");
-		ImageWriter writer = iter.next();
-		
-		ImageWriteParam imageWriteParam = writer.getDefaultWriteParam();
-		ImageTypeSpecifier imageTypeSpecifier = ImageTypeSpecifier.createFromBufferedImageType(BufferedImage.TYPE_INT_RGB);
-
-		IIOMetadata imageMetaData = writer.getDefaultImageMetadata(imageTypeSpecifier, imageWriteParam);
-
-		String metaFormatName = imageMetaData.getNativeMetadataFormatName();
-
-		IIOMetadataNode root = (IIOMetadataNode)imageMetaData.getAsTree(metaFormatName);
-
-		IIOMetadataNode graphicsControlExtensionNode = getNode(root, "GraphicControlExtension");
-		
-		// in hundreths of a second
-		int delayTime = (int)(100d/fps);
-
-		graphicsControlExtensionNode.setAttribute("disposalMethod", "none");
-		graphicsControlExtensionNode.setAttribute("userInputFlag", "FALSE");
-		graphicsControlExtensionNode.setAttribute("transparentColorFlag", "FALSE");
-		graphicsControlExtensionNode.setAttribute("delayTime", delayTime+"");
-		graphicsControlExtensionNode.setAttribute("transparentColorIndex", "0");
-
-		IIOMetadataNode commentsNode = getNode(root, "CommentExtensions");
-		commentsNode.setAttribute("CommentExtension", "Created by SCEC-VDO");
-
-		IIOMetadataNode appEntensionsNode = getNode(root, "ApplicationExtensions");
-
-		IIOMetadataNode child = new IIOMetadataNode("ApplicationExtension");
-
-		child.setAttribute("applicationID", "NETSCAPE");
-		child.setAttribute("authenticationCode", "2.0");
-
-		int loop = 0;
-
-		child.setUserObject(new byte[]{ 0x1, (byte) (loop & 0xFF), (byte)((loop >> 8) & 0xFF)});
-		appEntensionsNode.appendChild(child);
-
-		imageMetaData.setFromTree(metaFormatName, root);
-
-		if (outputFile.exists())
-			Preconditions.checkState(outputFile.delete());
-		FileImageOutputStream output = new FileImageOutputStream(outputFile);
-		writer.setOutput(output);
-		writer.prepareWriteSequence(imageMetaData);
+		AnimatedGIFRenderer gifRender = new AnimatedGIFRenderer(outputFile, fps, true);
 		
 		for (File imageFile : imageFiles) {
 			BufferedImage img = ImageIO.read(imageFile);
 			
-			writer.writeToSequence(new IIOImage(img, null, imageMetaData), imageWriteParam);
+			gifRender.writeFrame(img);
 		}
 		
-		writer.endWriteSequence();
-		output.close();
+		gifRender.finalizeAnimation();
 		
 		FileUtils.deleteRecursive(tempDir);
-		return null;
-	}
-	
-	/**
-	 * Returns an existing child node, or creates and returns a new child node (if 
-	 * the requested node does not exist).
-	 * 
-	 * @param rootNode the <tt>IIOMetadataNode</tt> to search for the child node.
-	 * @param nodeName the name of the child node.
-	 * 
-	 * @return the child node, if found or a new node created with the given name.
-	 */
-	private static IIOMetadataNode getNode(
-			IIOMetadataNode rootNode,
-			String nodeName) {
-		int nNodes = rootNode.getLength();
-		for (int i = 0; i < nNodes; i++) {
-			if (rootNode.item(i).getNodeName().compareToIgnoreCase(nodeName)
-					== 0) {
-				return((IIOMetadataNode) rootNode.item(i));
-			}
-		}
-		IIOMetadataNode node = new IIOMetadataNode(nodeName);
-		rootNode.appendChild(node);
-		return(node);
 	}
 	
 	File plotHazardCurves(File outputDir, String prefix, Site site, double period, double curveDuration,

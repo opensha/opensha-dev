@@ -25,6 +25,8 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 
 import com.google.common.base.Preconditions;
 
+import scratch.UCERF3.analysis.FaultBasedMapGen;
+
 public class U3_U2_Compare {
 
 	public static void main(String[] args) throws Exception {
@@ -34,7 +36,10 @@ public class U3_U2_Compare {
 		File u3CurveFile = new File("/home/kevin/Simulators/hazard/ucerf-comparisons/ucerf3-m6.5-8xPoints/curves_pga/imrs1.bin");
 		File u2CurveFile = new File("/home/kevin/Simulators/hazard/ucerf-comparisons/ucerf2-faults/curves_pga/imrs1.bin");
 		
+		FaultBasedMapGen.LOCAL_MAPGEN = true;
+		
 		String imtLabel = "PGA (g)";
+		String imtRatioLabel = "PGA";
 		
 		File outputDir = new File("/home/kevin/Simulators/hazard/u3_vs_u2");
 		
@@ -98,10 +103,10 @@ public class U3_U2_Compare {
 			ratioCPT.setNanColor(Color.WHITE);
 			ratioCPT = ratioCPT.rescale(-0.2d, 0.2d);
 			HazardMapComparePlotter.plotMaps(outputDir, "map_"+durationLabel+"_ratio_log_tight", ratioData, region, (double)ratioCPT.getMinValue(),
-					(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtLabel, ratioCPT, false);
+					(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtRatioLabel, ratioCPT, false);
 			ratioCPT = ratioCPT.rescale(-0.5d, 0.5d);
 			HazardMapComparePlotter.plotMaps(outputDir, "map_"+durationLabel+"_ratio_log", ratioData, region, (double)ratioCPT.getMinValue(),
-					(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtLabel, ratioCPT, false);
+					(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtRatioLabel, ratioCPT, false);
 		}
 		HazardMapComparePlotter.waitOnFutures(true);
 		

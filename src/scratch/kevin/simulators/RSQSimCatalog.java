@@ -45,11 +45,13 @@ import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
 import org.opensha.sha.simulators.iden.RegionIden;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
+import org.opensha.sha.simulators.iden.SectionIDIden;
 import org.opensha.sha.simulators.iden.SkipYearsLoadIden;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
 import org.opensha.sha.simulators.srf.RSQSimTransValidIden;
+import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
@@ -58,6 +60,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
@@ -213,6 +216,12 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2667("bruce/rundir2667", "Bruce 2667", "Bruce Shaw", cal(2018, 4, 23),
 				"dx/4, LatCut=37, rateCut=2.0mm/yr, interpolated nearest, like r2666 but larger b=.015",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2734("bruce/rundir2734", "Bruce 2734", "Bruce Shaw", cal(2018, 6, 5),
+				"Finite receiver patch fracArea=0.8, all else same as r2585",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2737("bruce/rundir2737", "Bruce 2737", "Bruce Shaw", cal(2018, 6, 5),
+				"Finite receiver patch fracArea=0.9, all else same as r2585",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -507,9 +516,13 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<String> hazardClusterLinks = new ArrayList<>();
 		List<String> hazardClusterNames = new ArrayList<>();
 		
+		List<String> occCopulaLinks = new ArrayList<>();
+		List<String> occCopulaNames = new ArrayList<>();
+		
 		String rotDDLink = null;
 		String multiFaultLink = null;
 		String extremeEventLink = null;
+		String sourceSiteLink = null;
 		
 		File[] dirList = dir.listFiles();
 		Arrays.sort(dirList, new FileNameComparator());
@@ -594,9 +607,16 @@ public class RSQSimCatalog implements XMLSaveable {
 			} else if (name.equals("multi_fault")) {
 				Preconditions.checkState(multiFaultLink == null, "Duplicate Multi Fault dirs! %s and %s", name, multiFaultLink);
 				multiFaultLink = name;
+			} else if (name.equals("source_site_comparisons")) {
+				Preconditions.checkState(sourceSiteLink == null, "Duplicate Source/Site dirs! %s and %s", name, sourceSiteLink);
+				sourceSiteLink = name;
 			} else if (name.equals("extreme_events")) {
 				Preconditions.checkState(extremeEventLink == null, "Duplicate Extreme Event dirs! %s and %s", name, multiFaultLink);
 				extremeEventLink = name;
+			} else if (name.startsWith("occupancy_copula_m")) {
+				String title = MarkdownUtils.getTitle(mdFile);
+				occCopulaLinks.add(name);
+				occCopulaNames.add(title);
 			}
 		}
 		
@@ -663,6 +683,13 @@ public class RSQSimCatalog implements XMLSaveable {
 			for (int i=0; i<hazardClusterNames.size(); i++)
 				lines.add("* ["+hazardClusterNames.get(i)+"]("+hazardClusterLinks.get(i)+"/)");
 		}
+		if (sourceSiteLink != null) {
+			lines.add("");
+			lines.add("## Source/Site Ground Motion Comparisons");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[Source/Site Ground Motion Comparisons here]("+sourceSiteLink+"/)");
+		}
 		if (multiFaultLink != null) {
 			lines.add("");
 			lines.add("## Multi-Fault Rupture Comparisons");
@@ -676,6 +703,14 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add(topLink);
 			lines.add("");
 			lines.add("[Extreme Event Examples Here]("+extremeEventLink+"/)");
+		}
+		if (!occCopulaLinks.isEmpty()) {
+			lines.add("");
+			lines.add("## Occupancy Copulas");
+			lines.add(topLink);
+			lines.add("");
+			for (int i=0; i<occCopulaLinks.size(); i++)
+				lines.add("* ["+occCopulaNames.get(i)+"]("+occCopulaLinks.get(i)+"/)");
 		}
 		
 		if (plots) {
@@ -832,7 +867,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		return subSectDistsCache;
 	}
 	
-	public EqkRupture getGMPE_Rupture(RSQSimEvent event, double minFractForInclusion) {
+	public RSQSimSubSectEqkRupture getGMPE_Rupture(RSQSimEvent event, double minFractForInclusion) {
 		List<SimulatorElement> elements;
 		Map<Integer, Double> subSectAreas = null;
 		try {
@@ -926,6 +961,26 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		public Loader hasTransitions() throws IOException {
 			loadIdens.add(new RSQSimTransValidIden(getTransitions(), getSlipVelocities()));
+			return this;
+		}
+		
+		public Loader forPerentSections(boolean calcU3Offset, int... parentIDs) throws IOException {
+			List<Integer> sectionIDs = new ArrayList<>();
+			for (FaultSectionPrefData sect : getU3SubSects())
+				if (Ints.contains(parentIDs, sect.getParentSectionId()))
+					sectionIDs.add(sect.getSectionId());
+			return forSections(calcU3Offset, Ints.toArray(sectionIDs));
+		}
+		
+		public Loader forSections(boolean calcU3Offset, int... sectionIDs) throws IOException {
+			if (calcU3Offset) {
+				int offset = RSQSimUtils.getSubSectIndexOffset(getElements(), getU3SubSects());
+				if (offset != 0) {
+					for (int i=0; i<sectionIDs.length; i++)
+						sectionIDs[i] -= offset;
+				}
+			}
+			loadIdens.add(new SectionIDIden(XML_METADATA_NAME, getElements(), sectionIDs));
 			return this;
 		}
 		
@@ -1314,11 +1369,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
-		GregorianCalendar minDate = cal(2000, 1, 1);
-//		GregorianCalendar minDate = cal(2018, 2, 1);
+//		GregorianCalendar minDate = cal(2000, 1, 1);
+		GregorianCalendar minDate = cal(2018, 5, 1);
 		
-//		for (Catalogs cat : cats) {
-		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585 }) {
+		for (Catalogs cat : cats) {
+//		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
 			if (cat.catalog.getDate().before(minDate))
 				continue;
 			RSQSimCatalog catalog = cat.instance(baseDir);

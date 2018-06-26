@@ -14,6 +14,8 @@ import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.dom4j.Document;
 import org.dom4j.Element;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.XMLUtils;
 
@@ -22,6 +24,7 @@ import com.google.common.io.Files;
 
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import uk.me.berndporr.iirj.Butterworth;
 
 public class BBP_Wrapper implements Runnable {
 	
@@ -49,6 +52,8 @@ public class BBP_Wrapper implements Runnable {
 	private boolean doFAS = true;
 	private boolean dataOnly = false;
 	
+	private double lowpassFreq;
+	
 	private String xmlFileName = "inputs.xml";
 	private String scriptFileName = "run.sh";
 
@@ -62,6 +67,7 @@ public class BBP_Wrapper implements Runnable {
 		this.srfFile = srfFile;
 		this.sitesFile = sitesFile;
 		this.outputDir = outputDir;
+		this.lowpassFreq = method.getDetermLowpassFreq();
 	}
 	
 	public void run() {
@@ -143,6 +149,10 @@ public class BBP_Wrapper implements Runnable {
 	public void setDataOnly(boolean dataOnly) {
 		this.dataOnly = dataOnly;
 	}
+	
+	public void setLowpassFreq(double lowpassFreq) {
+		this.lowpassFreq = lowpassFreq;
+	}
 
 	public void setXMLFileName(String xmlFileName) {
 		this.xmlFileName = xmlFileName;
@@ -167,7 +177,8 @@ public class BBP_Wrapper implements Runnable {
 			srcFile = writeSrcFileNewSeed(srcFile, seedOverride, outputDir);
 		
 		File bbpRunDir = doRun(outputDir, scriptFileName, xmlFileName, simID,
-				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doRotD100, doFAS, dataOnly, bbpEnvFile, bbpDataDir, bbpGFDir);
+				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doRotD100, doFAS, dataOnly, lowpassFreq,
+				bbpEnvFile, bbpDataDir, bbpGFDir);
 		if (bbpRunDir == null)
 			return false;
 		
@@ -189,7 +200,7 @@ public class BBP_Wrapper implements Runnable {
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
 			File srcFile, File srfFile, File siteFile, VelocityModel vm, Method method,
-			boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS, boolean dataOnly,
+			boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS, boolean dataOnly, double lowpassFreq,
 			File bbpEnvFile, File bbpDataDir, File bbpGFDir) throws IOException {
 		Preconditions.checkState(method == Method.GP, "Only GP supported currently");
 		List<BBP_Module> modules = new ArrayList<>();
@@ -216,15 +227,28 @@ public class BBP_Wrapper implements Runnable {
 					Preconditions.checkState(!name.contains("acc"));
 					String prefix = name.substring(0, name.indexOf("-lf.bbp"));
 					
-					// first copy it
+					DiscretizedFunc[] velSeis = loadBBPSeis(file);
+					
 					File velDest = new File(dir, prefix+".vel.bbp");
+					if (lowpassFreq > 0) {
+						if (D) System.out.println("Lowpassing velocities to f<="+lowpassFreq);
+						for (int i=0; i<velSeis.length; i++)
+							velSeis[i] = lowpassSeismogram(velSeis[i], lowpassFreq);
+						if (D) System.out.println("Writing lowpassed velocities to "+velDest.getAbsolutePath());
+						writeBBPSeis(file, velSeis, false);
+					}
+					
+					// first copy it
 					if (D) System.out.println("Copying "+file.getAbsolutePath()+" to "+velDest.getAbsolutePath());
 					Files.copy(file, velDest);
 					
-					// now create acceleration file
+					// convert to accelerations
+					DiscretizedFunc[] accelSeis = velToAccel(velSeis);
+					
+					// write accelerations
 					File accelDest = new File(dir, prefix+".acc.bbp");
 					if (D) System.out.println("Creating acceleration file: "+accelDest.getAbsolutePath());
-					velToAccel(file, accelDest);
+					writeBBPSeis(accelDest, accelSeis, true);
 				}
 			}
 			if (D) System.out.println("DONE processing velocity seismograms");
@@ -405,49 +429,89 @@ public class BBP_Wrapper implements Runnable {
 	
 	private static final DecimalFormat expDF = new DecimalFormat("0.000000E00");
 	
-	private static void velToAccel(File bbpVelFile, File bbpAccelFile) throws IOException {
-		List<Double> times = new ArrayList<>();
-		List<double[]> velocities = new ArrayList<>();
-		
-		for (String line : Files.readLines(bbpVelFile, Charset.defaultCharset())) {
+	private static DiscretizedFunc[] loadBBPSeis(File bbpFile) throws NumberFormatException, IOException {
+		DiscretizedFunc[] seis = null;
+		for (String line : Files.readLines(bbpFile, Charset.defaultCharset())) {
 			if (line.startsWith("#") || line.isEmpty())
 				continue;
 			String[] split = line.split("\\s+");
 			double t = Double.parseDouble(split[0]);
-			double[] vals = new double[split.length-1];
-			for (int i=0; i<vals.length; i++)
-				vals[i] = Double.parseDouble(split[i+1]);
-			if (!times.isEmpty())
-				Preconditions.checkState(t > times.get(times.size()-1), "times not in order");
-			times.add(t);
-			if (!velocities.isEmpty())
-				Preconditions.checkState(velocities.get(0).length == vals.length, "Lengths inconsistent");
-			velocities.add(vals);
+			if (seis == null) {
+				seis = new DiscretizedFunc[split.length - 1];
+				for (int i=0; i<seis.length; i++)
+					seis[i] = new ArbitrarilyDiscretizedFunc();
+			} else {
+				Preconditions.checkState(seis.length == split.length - 1);
+			}
+			for (int i=0; i<seis.length; i++)
+				seis[i].set(t, Double.parseDouble(split[i+1]));
 		}
+		return seis;
+	}
+	
+	private static DiscretizedFunc lowpassSeismogram(DiscretizedFunc unfiltered, double lowpassFreq) {
+		double dt = 0;
+		for (int i=0; i<unfiltered.size(); i++) {
+			if (i > 0) {
+				double myDT = unfiltered.getX(i) - unfiltered.getX(i-1);
+				if (i == 1)
+					dt = myDT;
+				else
+					Preconditions.checkState((float)dt == (float)myDT);
+			}
+		}
+		Butterworth filter = new Butterworth();
+		filter.lowPass(2, 1d/dt, lowpassFreq);
+		DiscretizedFunc filtered = new ArbitrarilyDiscretizedFunc();
+		for (int i=0; i<unfiltered.size(); i++)
+			filtered.set(unfiltered.getX(i), filter.filter(unfiltered.getY(i)));
+		return filtered;
+	}
+	
+	private static DiscretizedFunc[] velToAccel(DiscretizedFunc[] velSeis) {
+		int numPoints = velSeis[0].size();
+		Preconditions.checkState(numPoints > 1, "Only one time?");
 		
-		Preconditions.checkState(times.size() > 1, "Only one time?");
+		DiscretizedFunc[] accelSeis = new DiscretizedFunc[velSeis.length];
+		for (int i=0; i<velSeis.length; i++)
+			accelSeis[i] = new ArbitrarilyDiscretizedFunc();
 		
-		FileWriter fw = new FileWriter(bbpAccelFile);
-		fw.write("#    time(sec)      N-S(cm/s/s)      E-W(cm/s/s)      U-D(cm/s/s)\n");
-		
-		for (int i=0; i<velocities.size(); i++) {
-			double t = times.get(i);
-			double[] vels = velocities.get(i);
+		for (int i=0; i<numPoints; i++) {
+			double t =  velSeis[0].getX(i);
 			
 			double dt;
-			double[] prevVels;
-			if (i == 0) {
-				dt = times.get(i+1) - t;
-				prevVels = new double[vels.length];
-			} else {
-				dt = t - times.get(i-1);
-				prevVels = velocities.get(i-1);
+			if (i == 0)
+				dt = velSeis[0].getX(i+1) - t;
+			else
+				dt = t - velSeis[0].getX(i-1);
+			for (int j=0; j<velSeis.length; j++) {
+				double acc;
+				if (i > 0)
+					acc = (velSeis[j].getY(i) - velSeis[j].getY(i-1))/dt;
+				else
+					acc = velSeis[j].getY(i)/dt;
+				accelSeis[j].set(t, acc);
 			}
+		}
+		
+		return accelSeis;
+	}
+	
+	private static void writeBBPSeis(File file, DiscretizedFunc[] seis, boolean accel) throws IOException {
+		int numPoints = seis[0].size();
+		
+		FileWriter fw = new FileWriter(file);
+		if (accel)
+			fw.write("#    time(sec)      N-S(cm/s/s)      E-W(cm/s/s)      U-D(cm/s/s)\n");
+		else
+			fw.write("#    time(sec)      N-S(cm/s)      E-W(cm/s)      U-D(cm/s)\n");
+		
+		for (int i=0; i<numPoints; i++) {
+			double t =  seis[0].getX(i);
+			
 			String line = bbpNumFormat(t);
-			for (int j=0; j<vels.length; j++) {
-				double acc = (vels[j] - prevVels[j])/dt;
-				line += "\t"+bbpNumFormat(acc);
-			}
+			for (int j=0; j<seis.length; j++)
+				line += "\t"+bbpNumFormat(seis[j].getY(i));
 			fw.write(line.replaceAll("E", "e")+"\n");
 		}
 		

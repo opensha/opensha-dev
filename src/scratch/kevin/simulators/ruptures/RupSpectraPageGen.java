@@ -49,6 +49,7 @@ import scratch.kevin.bbp.BBP_SimZipLoader.BBP_RupGenSimZipLoader;
 import scratch.kevin.bbp.BBP_SimZipLoader.BBP_ShakeMapSimZipLoader;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
+import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.bbp.SeismogramPlotter;
 import scratch.kevin.bbp.ShakemapPlotter;
 import scratch.kevin.bbp.SpectraPlotter;
@@ -110,6 +111,9 @@ class RupSpectraPageGen {
 			if (scaleVelocities)
 				eventDirName += "_velScale";
 		}
+		boolean refAdjustDDW = refBBPDir != null && refBBPDir.getName().contains("adjustDDW");
+		if (refAdjustDDW)
+			eventDirName += "_adjustDDW";
 		File eventDir = new File(outputDir, eventDirName);
 		Preconditions.checkState(eventDir.exists() || eventDir.mkdir());
 		File resourcesDir = new File(eventDir, "resources");
@@ -121,6 +125,8 @@ class RupSpectraPageGen {
 			String title = "Event "+eventID+", M"+twoDigitsDF.format(event.getMagnitude())+", Time Scale Factor: "+(float)+timeScale;
 			if (scaleVelocities)
 				title += ", Velocities Scaled";
+			if (refAdjustDDW)
+				title += ", GP DDW Extension";
 			lines.add("# "+title);
 			lines.add("");
 			String str = "**NOTE: RSQSim Slip/Time function has been MODIFIED on this page. "
@@ -136,8 +142,33 @@ class RupSpectraPageGen {
 			for (EventRecord rec : event)
 				rec.scaleElementTimeFirstSlips(timeScale, event.getTime());
 		} else {
-			lines.add("# Event "+eventID+", M"+twoDigitsDF.format(event.getMagnitude()));
+			String title = "Event "+eventID+", M"+twoDigitsDF.format(event.getMagnitude());
+			if (refAdjustDDW)
+				title += ", GP DDW Extension";
+			lines.add("# "+title);
 			lines.add("");
+		}
+		BBP_SourceFile bbpSource = null;
+		Location[] bbpSourceRect = null;
+		Location bbpSourceHypo = null;
+		if (refBBPDir != null) {
+			bbpSource = loadSourceFile(refBBPDir);
+			bbpSourceRect = bbpSource.getSurface().getRectangle();
+			bbpSourceHypo = bbpSource.getHypoLoc();
+			if (refAdjustDDW) {
+				lines.add("**NOTE: "+refName+" DDW with has been modified for the area to match the Somerville (2006) relationship.**");
+				lines.add("");
+				BBP_PlanarSurface bbpSurface = bbpSource.getSurface();
+				double origLen = bbpSurface.getLength();
+				double eventArea = event.getArea()*1e-6;
+				double origDDW = eventArea/origLen;
+				double newArea = origLen * bbpSurface.getWidth();
+				lines.add("* Original surface: "+twoDigitsDF.format(origLen)+" km x "+twoDigitsDF.format(origDDW)
+					+" km  = "+twoDigitsDF.format(eventArea)+" km^2");
+				lines.add("* Modified surface: "+twoDigitsDF.format(origLen)+" km x "+twoDigitsDF.format(bbpSurface.getWidth())
+					+" km = "+twoDigitsDF.format(newArea)+" km^2");
+				lines.add("");
+			}
 		}
 		lines.add("");
 		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
@@ -232,18 +263,12 @@ class RupSpectraPageGen {
 		
 		lines.add("## Rupture Plots");
 		lines.add(topLink); lines.add("");
-		BBP_SourceFile bbpSource = null;
-		Location[] bbpSourceRect = null;
-		Location bbpSourceHypo = null;
 		lines.add("**Legend**");
 		lines.add("* Colored, Filled Triangles: RSQSim Elements");
 		lines.add("* Red Star: RSQSim Hypocenter");
 		if (refBBPDir != null) {
 			lines.add("* Dark Green Solid Outline: BBP Equivalent Planar Surface");
 			lines.add("* Green Star: BBP Equivalent Hypocenter");
-			bbpSource = loadSourceFile(refBBPDir);
-			bbpSourceRect = bbpSource.getSurface().getRectangle();
-			bbpSourceHypo = bbpSource.getHypoLoc();
 		}
 		RuptureSurface gmpeSurf = null;
 		if (gmpeRup != null) {
@@ -264,17 +289,19 @@ class RupSpectraPageGen {
 		lines.add("![Slip/Time Plot]("+resourcesDir.getName()+"/"+rupPlot.getName()+")");
 		
 		// animation
-		File rupAnim = new File(resourcesDir, rupPlotPrefix+".gif");
-		if (rebuildGIF || !rupAnim.exists()) {
-			if (bbpSourceRect == null)
-				RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 5);
-			else
-				RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 5, bbpSourceRect[0], bbpSourceRect[1]);
+		if (!refAdjustDDW) {
+			File rupAnim = new File(resourcesDir, rupPlotPrefix+".gif");
+			if (rebuildGIF || !rupAnim.exists()) {
+				if (bbpSourceRect == null)
+					RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 5);
+				else
+					RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 5, bbpSourceRect[0], bbpSourceRect[1]);
+			}
+			Preconditions.checkState(rupAnim.exists());
+			lines.add("### Slip/Vel Animation");
+			lines.add(topLink); lines.add("");
+			lines.add("[Click here to view Slip/Velocity Animation]("+resourcesDir.getName()+"/"+rupAnim.getName()+")");
 		}
-		Preconditions.checkState(rupAnim.exists());
-		lines.add("### Slip/Vel Animation");
-		lines.add(topLink); lines.add("");
-		lines.add("[Click here to view Slip/Velocity Animation]("+resourcesDir.getName()+"/"+rupAnim.getName()+")");
 		
 		// map view plot
 		String mapRupPlotPrefix = "rupture_map_plot_"+eventID;
@@ -495,7 +522,7 @@ class RupSpectraPageGen {
 			lines.add("!["+siteName+" Velocity Seismograms]("+resourcesDir.getName()+"/"+velPrefix+".png)");
 		}
 		
-		if (shakemap != null) {
+		if (shakemap != null && !refAdjustDDW) {
 			lines.add("");
 			lines.add("## ShakeMaps");
 			lines.add(topLink); lines.add("");
@@ -675,8 +702,9 @@ class RupSpectraPageGen {
 		int eventID = 1670183;
 //		int eventID = 2637969;
 		
-		double timeScale = 2d;
+		double timeScale = 1d;
 		boolean scaleVelocities = true;
+		boolean gpAdjustDDW = true;
 		
 		File eventBBPDir = RSQSimBBP_Config.getEventBBPDir(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
 				RSQSimBBP_Config.SRF_DT, timeScale, scaleVelocities);
@@ -690,6 +718,8 @@ class RupSpectraPageGen {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalog.getCatalogDir().getName()) && name.contains(eventID+"")
 					&& name.contains("-gp-") && !name.contains("shakemap")) {
+				if ((gpAdjustDDW && !name.contains("adjustDDW")) || (!gpAdjustDDW && name.contains("adjustDDW")))
+					continue;
 				File zipFile = new File(dir, "results.zip");
 				if (zipFile.exists())
 					refBBPDir = dir;

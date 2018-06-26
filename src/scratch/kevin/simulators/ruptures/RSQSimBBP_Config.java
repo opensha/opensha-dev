@@ -246,34 +246,34 @@ public class RSQSimBBP_Config {
 	
 	static final double MAX_DIST = 200d;
 	
-	static final double LO_PASS_FREQ = 0.15;
-	static final double HI_PASS_FREQ = 100;
+	static final double SITE_LO_PASS_FREQ = 0.15;
+	static final double SITE_HI_PASS_FREQ = 100;
 	
 	private static final List<BBP_Site> allSites;
 	private static final List<BBP_Site> csLAInitialSites;
 	static {
 		List<BBP_Site> sites = new ArrayList<>();
 		
-		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
-		sites.add(new BBP_Site("SBSM", new Location(34.064986, -117.29201), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("SBSM", new Location(34.064986, -117.29201), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		
 		for (NEHRP_TestCity site : NEHRP_TestCity.getShortListCA()) {
 			String name = site.name();
 			if (name.length() > 10)
 				name = name.substring(0, 10);
-			sites.add(new BBP_Site(name, site.location(), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+			sites.add(new BBP_Site(name, site.location(), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		}
 		
 		allSites = Collections.unmodifiableList(sites);
 		
 		sites = new ArrayList<>();
 		
-		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
-		sites.add(new BBP_Site("PAS", new Location(34.148426, -118.17119), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
-		sites.add(new BBP_Site("SBSM", new Location(34.064986, -117.29201), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
-		sites.add(new BBP_Site("WNGC", new Location(34.041824, -118.0653), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
-		sites.add(new BBP_Site("STNI", new Location(33.93088, -118.17881), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
-		sites.add(new BBP_Site("LAPD", new Location(34.557, -118.125), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("PAS", new Location(34.148426, -118.17119), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("SBSM", new Location(34.064986, -117.29201), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("WNGC", new Location(34.041824, -118.0653), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("STNI", new Location(33.93088, -118.17881), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("LAPD", new Location(34.557, -118.125), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		
 		csLAInitialSites = Collections.unmodifiableList(sites);
 	}
@@ -303,7 +303,7 @@ public class RSQSimBBP_Config {
 		for (int i=0; i<gridReg.getNodeCount(); i++) {
 			String name = "grid"+i;
 			Preconditions.checkState(name.length() <= 10);
-			sites.add(new BBP_Site(name, gridReg.getLocation(i), VM.getVs30(), LO_PASS_FREQ, HI_PASS_FREQ));
+			sites.add(new BBP_Site(name, gridReg.getLocation(i), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		}
 		
 		return sites;
@@ -408,7 +408,7 @@ public class RSQSimBBP_Config {
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
 		int[] ids = { 1670183 };
 //		int[] ids = { targetID-2, targetID-1, targetID, targetID+1, targetID+2 };
-		double timeScale = 2d;
+		double timeScale = 1d;
 		boolean scaleVelocities = false;
 		List<RSQSimEvent> events = catalog.loader().byIDs(ids);
 		RSQSimStateTransitionFileReader trans = catalog.getTransitions();

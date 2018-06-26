@@ -530,21 +530,22 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2667.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2737.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
 		
 		boolean doGridded = false;
 		
-		double timeScale = 2d;
+		double timeScale = 1d;
 		boolean scaleVelocities = false;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
 		AttenRelRef rotDGMPE = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
 		
 		String[] highlightNames;
@@ -568,7 +569,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 //		double[] periods = { 1, 2, 3, 5, 10 };
 //		double[] periods = { 1, 2, 5 };
-		double[] periods = { 1, 5, 10 };
+//		double[] periods = { 1, 5, 10 };
+		double[] periods = { 3, 5, 10 };
 		double[] rotDPeriods = { 1, 2, 5, 7.5, 10 };
 		
 		// find BBP parallel dir

@@ -49,7 +49,7 @@ public class SourceSiteDistPageGen<E> {
 		this.sites = sites;
 	}
 	
-	public void generatePage(Table<AttenRelRef, String, List<? extends RuptureComparison<E>>> sourceComps,
+	public void generatePage(Table<AttenRelRef, String, List<RuptureComparison<E>>> sourceComps,
 			File outputDir, List<String> headerLines, double[] periods) throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
@@ -86,7 +86,7 @@ public class SourceSiteDistPageGen<E> {
 		}
 		
 		for (String sourceName : sourceNames) {
-			Map<AttenRelRef, List<? extends RuptureComparison<E>>> comps = sourceComps.column(sourceName);
+			Map<AttenRelRef, List<RuptureComparison<E>>> comps = sourceComps.column(sourceName);
 			
 			lines.add("## "+sourceName);
 			lines.add(topLink); lines.add("");
@@ -174,7 +174,7 @@ public class SourceSiteDistPageGen<E> {
 	}
 	
 	private static <E> Map<AttenRelRef, List<RuptureComparison<E>>> filterByMag(
-			Map<AttenRelRef, List<? extends RuptureComparison<E>>> sourceComps, Range magRange) {
+			Map<AttenRelRef, List<RuptureComparison<E>>> sourceComps, Range magRange) {
 		Map<AttenRelRef, List<RuptureComparison<E>>> map = new HashMap<>();
 		for (AttenRelRef gmpeRef : sourceComps.keySet()) {
 			List<RuptureComparison<E>> ret = new ArrayList<>(sourceComps.get(gmpeRef));
@@ -184,8 +184,10 @@ public class SourceSiteDistPageGen<E> {
 		return map;
 	}
 	
-	private static final Color[] gmpeColors = { Color.BLUE.darker(), Color.RED.darker(),
-			Color.GREEN.darker(), Color.ORANGE.darker() };
+//	private static final Color[] gmpeColors = { Color.BLUE.darker(), Color.RED.darker(),
+//			Color.GREEN.darker(), Color.ORANGE.darker() };
+	private static final Color[] gmpeColors = { Color.RED.brighter(), Color.YELLOW.brighter(),
+			Color.CYAN.brighter(), Color.MAGENTA.brighter() };
 	
 	private static final Comparator<AttenRelRef> gmpeRefComparator = new Comparator<AttenRelRef>() {
 

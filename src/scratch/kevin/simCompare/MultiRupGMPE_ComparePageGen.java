@@ -551,6 +551,14 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				Preconditions.checkState(plotFile.exists());
 				lines.add("![Standard Normal Plot]("+resourcesDir.getName()
 					+"/"+plotFile.getName()+")");
+				
+				for (double period : periods) {
+					String periodPrefix = prefix+"_"+optionalDigitDF.format(period)+"s";
+					File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
+					if (!periodPlotFile.exists() || replotZScores)
+						ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new double[] {period},
+							gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+				}
 			}
 		}
 		

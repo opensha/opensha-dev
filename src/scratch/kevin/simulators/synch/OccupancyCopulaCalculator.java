@@ -66,9 +66,9 @@ public class OccupancyCopulaCalculator {
 	private RuptureIdentifier iden2;
 	private List<? extends SimulatorEvent> events2;
 	
-	private double highResTimeDelta = 0.02; // ~7 day time discretization
+	static double highResTimeDelta = 0.02; // ~7 day time discretization
 //	private double highResTimeDelta = 0.1; // coarse day time discretization
-	private double lowResTimeDelta = 5; // 10 years for plotting occupancy
+	static double lowResTimeDelta = 5; // 10 years for plotting occupancy
 	
 	private List<int[]> highResStatesPath;
 	private List<double[]> highResYearsPath;
@@ -190,7 +190,10 @@ public class OccupancyCopulaCalculator {
 		double x = startX;
 		double y = startY;
 		
-		while (x < lowResOccupancy.getMaxX() && y < lowResOccupancy.getMaxY()) {
+		float maxX = (float)(lowResOccupancy.getMaxX() + 0.5*lowResOccupancy.getGridSpacingX());
+		float maxY = (float)(lowResOccupancy.getMaxY() + 0.5*lowResOccupancy.getGridSpacingY());
+		
+		while ((float)x <= maxX && (float)y <= maxY) {
 			diag.set(x, y);
 			
 			x += delta;
@@ -261,13 +264,13 @@ public class OccupancyCopulaCalculator {
 		if (diags_to_plot != null && diags_to_plot.length > 0) {
 			CPT diagCPT = new CPT(0d, StatUtils.max(diags_to_plot), Color.BLACK, Color.GRAY);
 			for (double diag : diags_to_plot) {
-				copulaDiags.add(getCopulaDiagonal(0d, diag, 10d));
-				occDiags.add(getOccDiagonal(0d, diag, 10d));
+				copulaDiags.add(getCopulaDiagonal(0d, diag, lowResTimeDelta));
+				occDiags.add(getOccDiagonal(0d, diag, lowResTimeDelta));
 				Color c = diagCPT.getColor((float)diag);
 				diagChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, c));
 				if (diag != 0d) {
-					copulaDiags.add(getCopulaDiagonal(diag, 0d, 10d));
-					occDiags.add(getOccDiagonal(diag, 0d, 10d));
+					copulaDiags.add(getCopulaDiagonal(diag, 0d, lowResTimeDelta));
+					occDiags.add(getOccDiagonal(diag, 0d, lowResTimeDelta));
 					diagChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, c));
 				}
 			}
@@ -453,8 +456,6 @@ public class OccupancyCopulaCalculator {
 		List<? extends SimulatorEvent> events = new SimAnalysisCatLoader(true, idens, true).getEvents();
 		
 		int numCopulaBins = 50;
-		
-		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
 		
 		for (int i=0; i<idens.size(); i++) {
 			RuptureIdentifier iden1 = idens.get(i);

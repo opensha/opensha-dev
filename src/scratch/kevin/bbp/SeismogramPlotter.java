@@ -259,13 +259,12 @@ public class SeismogramPlotter {
 	}
 
 	public static void main(String[] args) throws IOException {
-		File rsDir = new File("/data/kevin/simulators/catalogs/rundir2194_long/event_srfs/"
-				+ "event_136704_0.05s_ADJ_VEL_bbp");
-		String siteName = "SBSM";
+		File rsDir = new File("/data/kevin/simulators/catalogs/bruce/rundir2585/event_srfs/event_1670183_0.05s_ADJ_VEL_bbp/");
+		String siteName = "USC";
 		
 		boolean accel = false;
-//		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(rsDir, siteName, accel));
-//		List<DiscretizedFunc[]> comps = null;
+		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(rsDir, siteName, accel));
+		List<DiscretizedFunc[]> comps = null;
 //		
 //		File compDir = new File("/home/kevin/bbp/parallel/2017_10_04-rundir2194_long-event136704-dx1.16-noHF/results");
 //		comps = new ArrayList<>();
@@ -274,11 +273,16 @@ public class SeismogramPlotter {
 //		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(compDir, "run_2"), siteName, accel)));
 //		
 //		plotSeismograms(seis, "Event 136704, SBSM", accel, new File("/tmp"), "test_seis", true, comps);
-//		plotSeismograms(seis, "Event 136704, SBSM", accel, new File("/tmp"), "test_seis", false, comps);
+		String prefix;
+		if (accel)
+			prefix = siteName+"_acceleration_seismograms";
+		else
+			prefix = siteName+"_velocity_seismograms";
+		plotSeismograms(seis, "Event 1670183, "+siteName, accel, rsDir, prefix, false, comps);
 		
 		
-		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(new File("/home/kevin/bbp/bbp_data/outdata/8174257"), "TEST", accel));
-		plotSeismograms(seis, "Event 136704, TEST", accel, new File("/tmp"), "test_seis", false, null);
+//		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(new File("/home/kevin/bbp/bbp_data/outdata/8174257"), "TEST", accel));
+//		plotSeismograms(seis, "Event 136704, TEST", accel, new File("/tmp"), "test_seis", false, null);
 	}
 
 }

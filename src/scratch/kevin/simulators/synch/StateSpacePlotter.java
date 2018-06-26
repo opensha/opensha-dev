@@ -53,7 +53,7 @@ public class StateSpacePlotter {
 	
 	private int nDims;
 	
-	private double fractToInclude = 0.99;
+	private double fractToInclude = 0.999;
 	
 	private List<Integer> minBinsList;
 	

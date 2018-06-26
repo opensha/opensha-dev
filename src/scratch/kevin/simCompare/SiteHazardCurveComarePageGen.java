@@ -50,8 +50,10 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	SimulationHazardCurveCalc<E> simCalc;
 	private String simName;
 	
-	private static double[] gmpe_truncs = { 3d, 2d, 1d };
-	private static double[] gmpe_fixed_sigmas = { 0.5, 0.3, 0d };
+//	private static double[] gmpe_truncs = { 3d, 2d, 1d };
+//	private static double[] gmpe_fixed_sigmas = { 0.5, 0.3, 0d };
+	private static double[] gmpe_truncs = {  };
+	private static double[] gmpe_fixed_sigmas = {  };
 	
 	private static double[] disagg_fixed_vals = { 0.1, 0.5, 1.0 };
 	

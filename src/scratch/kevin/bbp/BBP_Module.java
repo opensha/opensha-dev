@@ -33,12 +33,18 @@ public class BBP_Module implements XMLSaveable {
 	}
 	
 	public static enum Method {
-		GP("GP");
+		GP("GP", 2d);
 		
 		private String xmlName;
+		private double determLowpassFreq;
 
-		private Method(String xmlName) {
+		private Method(String xmlName, double determLowpassFreq) {
 			this.xmlName = xmlName;
+			this.determLowpassFreq = determLowpassFreq;
+		}
+		
+		public double getDetermLowpassFreq() {
+			return determLowpassFreq;
 		}
 	}
 	

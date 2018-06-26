@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_A_WG02_MagAreaRel;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Somerville_2006_MagAreaRel;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
@@ -33,9 +36,12 @@ public class RuptureSearch {
 		
 		int parentID = 301; // Mojave S
 		double minMag = 7.3;
+		double maxMagDiff = 0.15;
+//		MagAreaRelationship magAreaRel = new Somerville_2006_MagAreaRel();
+		MagAreaRelationship magAreaRel = new Ellsworth_A_WG02_MagAreaRel();
 		Region hypocenterReg = new Region(new Location(34.25, -117.5), 20d);
 		
-		int numToPlot = 5;
+		int numToPlot = 10;
 		File outputDir = new File(catalog.getCatalogDir(), "search_events");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		double aveElemArea = catalog.getAveArea();
@@ -48,7 +54,7 @@ public class RuptureSearch {
 			}
 		}
 		aveSectArea /= numSects;
-		double elementOffPenalty = 20d * aveElemArea / aveSectArea;
+		double elementOffPenalty = 50d * aveElemArea / aveSectArea;
 		System.out.println("Stray penalty (each): "+elementOffPenalty);
 		
 		List<RSQSimEvent> events = catalog.loader().minMag(minMag).matches(
@@ -73,6 +79,13 @@ public class RuptureSearch {
 					}
 				}
 				if (!hypocenterReg.contains(hypoLoc))
+					continue;
+			}
+			if (maxMagDiff > 0) {
+				double calcMag = magAreaRel.getMedianMag(event.getArea() * 1e-6);
+				double magDiff = Math.abs(calcMag - event.getMagnitude());
+				System.out.println("M"+(float)event.getMagnitude()+" vs M/A M"+(float)calcMag+", diff="+(float)magDiff);
+				if (magDiff > maxMagDiff)
 					continue;
 			}
 			List<FaultSectionPrefData> sects = catalog.getSubSectsForRupture(
@@ -101,13 +114,15 @@ public class RuptureSearch {
 		for (int i=0; i<numToPlot && i<scores.size(); i++) {
 			EventScore score = scores.get(i);
 			RSQSimEvent event = score.event;
-			System.out.print(i+". Event "+event.getID()+", M="+(float)event.getMagnitude());
+			double calcMag = magAreaRel.getMedianMag(event.getArea() * 1e-6);
+			System.out.print(i+". Event "+event.getID()+", M="+(float)event.getMagnitude()+", M/A calc M="+(float)calcMag);
 			System.out.println("\tscore = "+score.score()+" = "+score.numOn+" on - "+score.numOff+" off - "
 					+(float)score.strayElemPenalty+" stray penalty ("+score.numStrays+" strays)");
 			
 			RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
 			
-			String prefix = "search_"+parentID+"_num"+i+"_score"+(float)score.score()+"_event_"+event.getID();
+			String prefix = "search_"+parentID+"_num"+i+"_score"+(float)score.score()+"_event_"+event.getID()
+				+"_m"+(float)event.getMagnitude()+"_calc_mag_m"+(float)calcMag;
 			RupturePlotGenerator.writeSlipPlot(event, func, outputDir, prefix);
 			RupturePlotGenerator.writeMapPlot(catalog.getElements(), event, func, outputDir, prefix+"_map");
 		}

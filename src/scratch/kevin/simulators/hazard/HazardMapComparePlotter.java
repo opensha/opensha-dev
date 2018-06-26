@@ -27,6 +27,10 @@ import javax.imageio.ImageIO;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.axis.NumberTickUnit;
+import org.jfree.chart.axis.TickUnit;
+import org.jfree.chart.axis.TickUnitSource;
+import org.jfree.chart.axis.TickUnits;
 import org.jfree.data.Range;
 import org.jfree.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
@@ -141,11 +145,11 @@ public class HazardMapComparePlotter {
 			catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
 			
 			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
-//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
-//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
-//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
-//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
-//			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
 		}
 		
 		File catOutDir = new File(mainOutputDir, catalog.getCatalogDir().getName());
@@ -212,6 +216,7 @@ public class HazardMapComparePlotter {
 			System.out.println("Processing "+(d+1)+"/"+jobDirs.size()+": "+jobDir);
 			
 			String imtLabel = "PGA (g)";
+			String imtRatioLabel = "PGA";
 			String imt = PGA_Param.NAME;
 			String imtFileLabel;
 			double period = Double.NaN;
@@ -223,6 +228,7 @@ public class HazardMapComparePlotter {
 				periodStr = periodStr.substring(0, periodStr.indexOf("s"));
 				period = Double.parseDouble(periodStr);
 				imtLabel = (float)period+"s SA (g)";
+				imtRatioLabel = (float)period+"s SA";
 				System.out.println("Detected IMT: "+imtLabel);
 				imtFileLabel = "sa_"+(float)period+"s";
 			} else {
@@ -381,10 +387,10 @@ public class HazardMapComparePlotter {
 					ratioCPT.setNanColor(Color.WHITE);
 					ratioCPT = ratioCPT.rescale(-0.2d, 0.2d);
 					plotMaps(resourcesDir, "map_"+durationLabel+"_ratio_log_tight", ratioData, region, (double)ratioCPT.getMinValue(),
-							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtLabel, ratioCPT, false);
+							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtRatioLabel, ratioCPT, false);
 					ratioCPT = ratioCPT.rescale(-0.5d, 0.5d);
 					plotMaps(resourcesDir, "map_"+durationLabel+"_ratio_log", ratioData, region, (double)ratioCPT.getMinValue(),
-							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtLabel, ratioCPT, false);
+							(double)ratioCPT.getMaxValue(), "Ln("+catalogName+" / UCERF3), "+durationLabel+", "+imtRatioLabel, ratioCPT, false);
 				}
 			}
 			
@@ -638,6 +644,8 @@ public class HazardMapComparePlotter {
 		GMT_Map map = new GMT_Map(region, data, data.getRegion().getLatSpacing(), cpt);
 		
 		map.setCustomLabel(label);
+		map.setLabelTickSize(20);
+		map.setLabelSize(24);
 //		map.setTopoResolution(TopographicSlopeFile.US_SIX);
 		map.setTopoResolution(null);
 		map.setUseGMTSmoothing(false);
@@ -714,11 +722,7 @@ public class HazardMapComparePlotter {
 			Map<Location, ? extends DiscretizedFunc> rsqsimCurves, String catalogName, GriddedRegion gridReg,
 			int[] returnPeriods, int hightlightIndex, File outputDir, boolean log, String imtLabel) throws IOException {
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
-		plotPrefs.setTickLabelFontSize(18);
-		plotPrefs.setAxisLabelFontSize(20);
-		plotPrefs.setPlotLabelFontSize(21);
-		plotPrefs.setBackgroundColor(Color.WHITE);
+		PlotPreferences plotPrefs = buildPlotPrefs();
 		
 		List<List<Double>> logRatioValsList = new ArrayList<>();
 		
@@ -789,7 +793,7 @@ public class HazardMapComparePlotter {
 				yAxisLabel = "Ln "+yAxisLabel;
 			}
 			
-			XYZPlotSpec xyzSpec = new XYZPlotSpec(xyz, cpt, "Hazard Histogram", xAxisLabel, yAxisLabel, "Log10(Num)");
+			XYZPlotSpec xyzSpec = new XYZPlotSpec(xyz, cpt, "Hazard Histogram", xAxisLabel, yAxisLabel, "Log10(Number)");
 			
 			Range plotRange = new Range(minZ - 0.5*delta, maxZ + 0.5*delta);
 			
@@ -805,8 +809,15 @@ public class HazardMapComparePlotter {
 			
 			XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
 			xyzGP.drawPlot(xyzSpec, false, false, plotRange, plotRange);
+			if (!log) {
+				TickUnits tus = new TickUnits();
+				TickUnit tu = new NumberTickUnit(0.25);
+				tus.add(tu);
+				xyzGP.getXAxis().setStandardTickUnits(tus);
+				xyzGP.getYAxis().setStandardTickUnits(tus);
+			}
 			// write plot
-			xyzGP.getChartPanel().setSize(1000, 800);
+			xyzGP.getChartPanel().setSize(850, 900);
 			String prefix = "hist_2d_"+rp+"yr";
 			xyzGP.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
 			xyzGP.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
@@ -1069,11 +1080,7 @@ public class HazardMapComparePlotter {
 		PlotSpec spec = new PlotSpec(linearFuncs, chars, "Mean/StdDev Trend", "Annual Probability", "Ln("+catalogName+"/UCERF3), "+imtLabel);
 		spec.setLegendVisible(true);
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
-		plotPrefs.setTickLabelFontSize(18);
-		plotPrefs.setAxisLabelFontSize(20);
-		plotPrefs.setPlotLabelFontSize(21);
-		plotPrefs.setBackgroundColor(Color.WHITE);
+		PlotPreferences plotPrefs = buildPlotPrefs();
 		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 		
@@ -1174,11 +1181,7 @@ public class HazardMapComparePlotter {
 			anns.add(stdDevAnn);
 			spec.setPlotAnnotations(anns);
 			
-			PlotPreferences plotPrefs = PlotPreferences.getDefault();
-			plotPrefs.setTickLabelFontSize(18);
-			plotPrefs.setAxisLabelFontSize(20);
-			plotPrefs.setPlotLabelFontSize(21);
-			plotPrefs.setBackgroundColor(Color.WHITE);
+			PlotPreferences plotPrefs = buildPlotPrefs();
 			
 			HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 			
@@ -1203,16 +1206,16 @@ public class HazardMapComparePlotter {
 		if (ucerf3Full != null) {
 			ucerf3Full.setName("UCERF3 Full");
 			funcs.add(ucerf3Full);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		}
 		
 		ucerf3Compare.setName("UCERF3");
 		funcs.add(ucerf3Compare);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLUE));
 		
 		rsqsim.setName(catalogName);
 		funcs.add(rsqsim);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.RED));
 		
 		if (rps != null && rps.length > 0) {
 			CPT rpCPT = getRPlogCPT(rps);
@@ -1224,18 +1227,14 @@ public class HazardMapComparePlotter {
 				probLine.set(xRange.getUpperBound(), probLevel);
 				probLine.setName(rp+"yr");
 				funcs.add(probLine);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, color));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, color));
 			}
 		}
 
 		PlotSpec spec = new PlotSpec(funcs, chars, siteName+" Hazard Curves", imt, "Annual Probabilitiy");
 		spec.setLegendVisible(true);
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
-		plotPrefs.setTickLabelFontSize(18);
-		plotPrefs.setAxisLabelFontSize(20);
-		plotPrefs.setPlotLabelFontSize(21);
-		plotPrefs.setBackgroundColor(Color.WHITE);
+		PlotPreferences plotPrefs = buildPlotPrefs();
 		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 		
@@ -1479,11 +1478,7 @@ public class HazardMapComparePlotter {
 				"Annual Probabilitiy");
 //		spec.setLegendVisible(true);
 		
-		PlotPreferences plotPrefs = PlotPreferences.getDefault();
-		plotPrefs.setTickLabelFontSize(18);
-		plotPrefs.setAxisLabelFontSize(20);
-		plotPrefs.setPlotLabelFontSize(21);
-		plotPrefs.setBackgroundColor(Color.WHITE);
+		PlotPreferences plotPrefs = buildPlotPrefs();
 		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 		
@@ -1494,6 +1489,16 @@ public class HazardMapComparePlotter {
 		gp.saveAsPNG(new File(outputDir, prefix).getAbsolutePath()+".png");
 		gp.saveAsPDF(new File(outputDir, prefix).getAbsolutePath()+".pdf");
 		gp.saveAsTXT(new File(outputDir, prefix).getAbsolutePath()+".txt");
+	}
+	
+	private static PlotPreferences buildPlotPrefs() {
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(24);
+		plotPrefs.setAxisLabelFontSize(26);
+		plotPrefs.setPlotLabelFontSize(28);
+		plotPrefs.setLegendFontSize(22);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+		return plotPrefs;
 	}
 
 }
