@@ -17,6 +17,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -97,10 +98,15 @@ import com.lowagie.text.Font;
 
 import gov.usgs.earthquake.product.Product;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
-import scratch.aftershockStatistics.pdl.OAF_Publisher;
+//import scratch.aftershockStatistics.pdl.OAF_Publisher;
+import scratch.aftershockStatistics.pdl.PDLProductBuilderOaf;
+import scratch.aftershockStatistics.pdl.PDLSender;
 
 import scratch.aftershockStatistics.util.SphLatLon;
 import scratch.aftershockStatistics.util.SphRegion;
+
+import scratch.aftershockStatistics.aafs.ServerConfig;
+import scratch.aftershockStatistics.aafs.ServerConfigFile;
 
 public class AftershockStatsGUI extends JFrame implements ParameterChangeListener {
 	
@@ -288,9 +294,9 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		maxLatParam = new DoubleParameter("Max Lat", -90d, 90d, new Double(36d));
 		minLonParam = new DoubleParameter("Min Lon", -180d, 180d, new Double(32d));
 		maxLonParam = new DoubleParameter("Max Lon", -180d, 180d, new Double(36d));
-		minDepthParam = new DoubleParameter("Min Depth", 0d, 1000d, new Double(0));
+		minDepthParam = new DoubleParameter("Min Depth", 0d, 700d, new Double(0));
 		minDepthParam.setUnits("km");
-		maxDepthParam = new DoubleParameter("Max Depth", 0d, 1000d, new Double(1000d));
+		maxDepthParam = new DoubleParameter("Max Depth", 0d, 700d, new Double(700d));
 		maxDepthParam.setUnits("km");
 		regionCenterTypeParam = new EnumParameter<AftershockStatsGUI.RegionCenterType>(
 				"Region Center", EnumSet.allOf(RegionCenterType.class), RegionCenterType.CENTROID, null);
@@ -560,7 +566,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		Preconditions.checkState(eventID != null && !eventID.isEmpty(), "Must supply event ID!");
 		
 		mainshock = null;
-		ObsEqkRupture mainshock = accessor.fetchEvent(eventID, false, false);
+		ObsEqkRupture mainshock = accessor.fetchEvent(eventID, false, true);	// need extended info for sending to PDL
 		Preconditions.checkState(mainshock != null, "Event not found: %s", eventID);
 		System.out.println("Mainshock Location: "+mainshock.getHypocenterLocation());
 		
@@ -1639,7 +1645,17 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			exportButton = new ButtonParameter("JSON", "Export JSON");
 			exportButton.addParameterChangeListener(this);
 			params.addParameter(exportButton);
-			publishButton = new ButtonParameter("USGS PDL", "Publish Forecast");
+			String publish_forecast = "Publish Forecast (Dry Run)";
+			switch ((new ServerConfig()).get_pdl_enable()) {
+			case ServerConfigFile.PDLOPT_DEV:
+				publish_forecast = "Publish Forecast to PDL-Development";
+				break;
+			case ServerConfigFile.PDLOPT_PROD:
+				publish_forecast = "Publish Forecast to PDL-PRODUCTION";
+				break;
+			}
+			//publishButton = new ButtonParameter("USGS PDL", "Publish Forecast");
+			publishButton = new ButtonParameter("USGS PDL", publish_forecast);
 			publishButton.addParameterChangeListener(this);
 			params.addParameter(publishButton);
 			advisoryDurationParam = new EnumParameter<USGS_AftershockForecast.Duration>(
@@ -1692,21 +1708,42 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 					}
 				}
 			} else if (event.getParameter() == publishButton) {
-				Product product = null;
-				try {
-					product = OAF_Publisher.createProduct(mainshock.getEventId(), forecast);
-				} catch (Exception e) {
-					e.printStackTrace();
-					String message = ClassUtils.getClassNameWithoutPackage(e.getClass())+": "+e.getMessage();
-					JOptionPane.showMessageDialog(this, message, "Error building product", JOptionPane.ERROR_MESSAGE);
-				}
-				if (product != null) {
+				String userInput = JOptionPane.showInputDialog(this, "Type \"PDL\" and press OK to publish forecast", "Confirm publication", JOptionPane.PLAIN_MESSAGE);
+				if (userInput == null || !(userInput.equals("PDL"))) {
+					JOptionPane.showMessageDialog(this, "Canceled: Forecast has NOT been sent to PDL", "Publication canceled", JOptionPane.INFORMATION_MESSAGE);
+				} else {
+					Product product = null;
 					try {
-						OAF_Publisher.sendProduct(product);
+						//product = OAF_Publisher.createProduct(mainshock.getEventId(), forecast);
+						JSONObject json = forecast.buildJSON();
+						String jsonText = json.toJSONString();
+						Map<String, String> eimap = ComcatAccessor.extendedInfoToMap (mainshock, ComcatAccessor.EITMOPT_OMIT_NULL_EMPTY);
+						String eventNetwork = eimap.get (ComcatAccessor.PARAM_NAME_NETWORK);
+						String eventCode = eimap.get (ComcatAccessor.PARAM_NAME_CODE);
+						String eventID = mainshock.getEventId();
+						long modifiedTime = 0L;
+						boolean isReviewed = true;
+						product = PDLProductBuilderOaf.createProduct (eventID, eventNetwork, eventCode, isReviewed, jsonText, modifiedTime);
 					} catch (Exception e) {
 						e.printStackTrace();
 						String message = ClassUtils.getClassNameWithoutPackage(e.getClass())+": "+e.getMessage();
-						JOptionPane.showMessageDialog(this, message, "Error sending product", JOptionPane.ERROR_MESSAGE);
+						JOptionPane.showMessageDialog(this, message, "Error building product", JOptionPane.ERROR_MESSAGE);
+					}
+					if (product != null) {
+						boolean isSent = false;
+						try {
+							//OAF_Publisher.sendProduct(product);
+							PDLSender.signProduct(product);
+							PDLSender.sendProduct(product, true);
+							isSent = true;
+						} catch (Exception e) {
+							e.printStackTrace();
+							String message = ClassUtils.getClassNameWithoutPackage(e.getClass())+": "+e.getMessage();
+							JOptionPane.showMessageDialog(this, message, "Error sending product", JOptionPane.ERROR_MESSAGE);
+						}
+						if (isSent) {
+							JOptionPane.showMessageDialog(this, "Success: Forecast has been successfully sent to PDL", "Publication succeeded", JOptionPane.INFORMATION_MESSAGE);
+						}
 					}
 				}
 			} else if (event.getParameter() == advisoryDurationParam) {
@@ -2196,6 +2233,73 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 	}
 	
 	public static void main(String[] args) {
+
+		// ServerConfig manages security-sensitive parameters.
+		// There needs to be some discussion about how these will be handled in the GUI.
+		// For now, we do the following:
+		//
+		// If there are no command-line arguments, then enable sending to PDL development.
+		//
+		// If there is one command-line argument, it is an integer giving the desired PDL access:
+		// 0 = No PDL access.
+		// 1 = Enable sending to PDL-Development.
+		// 2 = Enable sending to PDL-Production.
+		//
+		// If there are two command-line arguments, then the first is an integer giving the
+		// desired PDL access, and the second is the name of the PDL key file.
+
+		ServerConfig server_config = new ServerConfig();
+
+		// No-argument case
+
+		if (args.length == 0) {
+			server_config.get_server_config_file().pdl_enable = ServerConfigFile.PDLOPT_DEV;
+		}
+
+		// One-argument case
+
+		else if (args.length == 1) {
+			int pdl_enable;
+			try {
+				pdl_enable = Integer.parseInt(args[0]);
+			} catch (NumberFormatException e) {
+				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
+				return;
+			}
+			if (pdl_enable < ServerConfigFile.PDLOPT_MIN || pdl_enable > ServerConfigFile.PDLOPT_MAX) {
+				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
+				return;
+			}
+			server_config.get_server_config_file().pdl_enable = pdl_enable;
+		}
+
+		// Two-argument case
+
+		else if (args.length == 2) {
+			int pdl_enable;
+			try {
+				pdl_enable = Integer.parseInt(args[0]);
+			} catch (NumberFormatException e) {
+				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
+				return;
+			}
+			if (pdl_enable < ServerConfigFile.PDLOPT_MIN || pdl_enable > ServerConfigFile.PDLOPT_MAX) {
+				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
+				return;
+			}
+			server_config.get_server_config_file().pdl_enable = pdl_enable;
+			server_config.get_server_config_file().pdl_key_filename = args[1];
+		}
+
+		// Unknown case
+
+		else {
+			System.out.println ("Too many command-line arguments");
+			return;
+		}
+
+		// Run the GUI
+
 		new AftershockStatsGUI();
 	}
 
