@@ -292,25 +292,19 @@ public enum ScalingRelationshipEnum {
 	public static void makeSlipLengthPlot(double downDipWidth, int maxLength, boolean saveFiles) {
 		
 		ArbitrarilyDiscretizedFunc u2_func = new ArbitrarilyDiscretizedFunc();
-		u2_func.setName("AVE_UCERF2");
+		u2_func.setName("WESNOUSKY_08_SRL_ALL");
 		ArbitrarilyDiscretizedFunc sh09_funcMod = new ArbitrarilyDiscretizedFunc();
-		sh09_funcMod.setName("SHAW_2009_MOD");
+		sh09_funcMod.setName("WC94_RA_ALL");
 		ArbitrarilyDiscretizedFunc ellB_func = new ArbitrarilyDiscretizedFunc();
-		ellB_func.setName("ELLSWORTH_B");
+		ellB_func.setName("WC94_SRL_ALL");
 		ArbitrarilyDiscretizedFunc hb_func = new ArbitrarilyDiscretizedFunc();
-		hb_func.setName("HANKS_BAKUN_08");
-		ArbitrarilyDiscretizedFunc sh12_sqrtL_func = new ArbitrarilyDiscretizedFunc();
-		sh12_sqrtL_func.setName("ELLB_SQRT_LENGTH");
-		ArbitrarilyDiscretizedFunc sh12_csd_func = new ArbitrarilyDiscretizedFunc();
-		sh12_csd_func.setName("SHAW_CONST_STRESS_DROP");
+		hb_func.setName("THINGBAIJAM_17_SRL_N");
 		
 		
-		ScalingRelationshipEnum u2 = ScalingRelationshipEnum.AVE_UCERF2;
-		ScalingRelationshipEnum sh09_Mod = ScalingRelationshipEnum.SHAW_2009_MOD;
-		ScalingRelationshipEnum ellB = ScalingRelationshipEnum.ELLSWORTH_B;
-		ScalingRelationshipEnum hb = ScalingRelationshipEnum.HANKS_BAKUN_08;
-		ScalingRelationshipEnum sh12_sqrtL = ScalingRelationshipEnum.ELLB_SQRT_LENGTH;
-		ScalingRelationshipEnum sh12_csd = ScalingRelationshipEnum.SHAW_CONST_STRESS_DROP;
+		ScalingRelationshipEnum u2 = ScalingRelationshipEnum.WESNOUSKY_08_SRL_ALL;
+		ScalingRelationshipEnum sh09_Mod = ScalingRelationshipEnum.WC94_RA_ALL;
+		ScalingRelationshipEnum ellB = ScalingRelationshipEnum.WC94_SRL_ALL;
+		ScalingRelationshipEnum hb = ScalingRelationshipEnum.THINGBAIJAM_17_SRL_N;
 		
 		
 		// log10 area from 1 to 5
@@ -322,16 +316,13 @@ public enum ScalingRelationshipEnum {
     		sh09_funcMod.set(lengthKm,sh09_Mod.getAveSlip(area, length, downDipWidth*1e3));
     		ellB_func.set(lengthKm,ellB.getAveSlip(area, length, downDipWidth*1e3));
     		hb_func.set(lengthKm,hb.getAveSlip(area, length, downDipWidth*1e3));
-    		sh12_sqrtL_func.set(lengthKm,sh12_sqrtL.getAveSlip(area, length, downDipWidth*1e3));
-    		sh12_csd_func.set(lengthKm,sh12_csd.getAveSlip(area, length, downDipWidth*1e3));
     	}
     	
     	ArrayList<ArbitrarilyDiscretizedFunc> funcs = new ArrayList<ArbitrarilyDiscretizedFunc>();
+    	funcs.add(u2_func);
     	funcs.add(sh09_funcMod);
     	funcs.add(ellB_func);
     	funcs.add(hb_func);
-    	funcs.add(sh12_sqrtL_func);
-    	funcs.add(sh12_csd_func);
     	
     	ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.BLUE));
@@ -550,7 +541,7 @@ public enum ScalingRelationshipEnum {
 	//public 
 	public static void main(String[] args) throws IOException {
 		
-		 makeSlipLengthPlot(11, 1000, true);
+		 makeSlipLengthPlot(19.58, 300, true);
 		 makeMagAreaPlot(true);
 
 	}

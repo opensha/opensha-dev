@@ -50,6 +50,7 @@ import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.alessandro.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
+import scratch.alessandro.logicTreeEnums.WasatchSlipRatesEnum;
 
 /**
  * This class reads Wasatch inversion data from files, provides methods for getting the various constraints, and runs the inversion.
@@ -74,6 +75,8 @@ public class WasatchInversion {
 	final static double FAULT_RAKE = -90;
 	
 	final static double hazGridSpacing = 0.05;
+	
+	WasatchSlipRatesEnum wasatchSlipRatesEnum;
 
 	
 	
@@ -88,8 +91,8 @@ public class WasatchInversion {
 
 	final static String FAULT_TRACE_DIR_NAME = "subsections_traces/";
 
-	public WasatchInversion() {
-		
+	public WasatchInversion(WasatchSlipRatesEnum wasatchSlipRatesEnum) {
+		this.wasatchSlipRatesEnum = wasatchSlipRatesEnum;
 		readData();
 		
 	}
@@ -101,39 +104,21 @@ public class WasatchInversion {
 	 */
 	private double[] readRuptureRatesFromFile(String fileName) {
 		double rates[] = null;
-		int numPts=-1;
-		int startLineNum=-1;
-		int counter = -1;
 		File file = new File(fileName);
 		List<String> fileLines;
 		try {
 			fileLines = Files.readLines(file, Charset.defaultCharset());
-			for(String str:fileLines) {
-				counter += 1;
-				if(str.contains("Points")) {
-					String[] split = str.split(": ");
-					numPts = Integer.valueOf(split[1]);
-				}
-				if(str.contains("Data[x,y]"))
-						startLineNum = counter +1;
-			}
-			rates = new double[numPts];
-			counter =0;
-			for(int i=startLineNum; i<startLineNum+numPts;i++ ) {
+			rates = new double[fileLines.size()];
+			for(int i=0; i<fileLines.size();i++ ) {
 				String str = fileLines.get(i);
 				String[] split = str.split("\t");
-				rates[counter] = Double.parseDouble(split[1]);
-//				System.out.println(rates[counter]+"\t"+split[0]);
-				counter+=1;
+				rates[i] = Double.parseDouble(split[1]);
+//				System.out.println(i+"\t"+split[0]+"\t"+rates[i]);
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-//		System.out.println("numPts="+numPts);
-//		System.out.println("startLineNum="+startLineNum);
-//		System.exit(0);;
-		
 		return rates;
 	}
 	
@@ -164,46 +149,55 @@ public class WasatchInversion {
 	private void readData() {
 	
 		int numSections, numRuptures;
-		double[] sectSlipRate, sectSlipRateStdDev;
+		
+		
+		
+		double[] sectSlipRate = wasatchSlipRatesEnum.getSlipRateArray();
+		double[] sectSlipRateStdDev = wasatchSlipRatesEnum.getSlipRateStdomArray();
+		numSections = sectSlipRate.length;
+		
 
 		// Read Data:
 
+// NO LONGER NEEDED:
+//		double[] sectSlipRate, sectSlipRateStdDev;
+//		try {
+//			File file = new File(ROOT_DATA_DIR+SLIP_RATE_FILENAME);
+//			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
+//			numSections = fileLines.size();
+//			if(D) System.out.println("numSections="+numSections);
+//			int sectIndex = 0;
+//			sectSlipRate = new double[numSections];
+//			sectSlipRateStdDev = new double[numSections];
+//			for (String line : fileLines) {
+//				//			System.out.println(line);
+//				line = line.trim();
+//				String[] split = line.split("\t");	// tab delimited
+//				Preconditions.checkState(split.length == 4, "Expected 4 items, got %s", split.length);
+//				//			System.out.println(split[0]+"\t"+split[1]+"\t"+split[2]);
+//				int testIndex = Integer.valueOf(split[0]);
+//				if(sectIndex != testIndex)
+//					throw new RuntimeException("Bad section index; "+sectIndex+" != "+testIndex);
+//				sectSlipRate[sectIndex] = Double.valueOf(split[1]);
+//				double low95 = Double.valueOf(split[2]);
+//				double upp95 = Double.valueOf(split[3]);
+//				sectSlipRateStdDev[sectIndex] = (upp95-low95)/(2*1.96);	
+//				if(D) System.out.println(sectIndex+"\t"+sectSlipRate[sectIndex]+"\t"+sectSlipRateStdDev[sectIndex]);
+//				sectIndex+=1;
+//			}
+
 		try {
-			File file = new File(ROOT_DATA_DIR+SLIP_RATE_FILENAME);
-			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
-			numSections = fileLines.size();
-			if(D) System.out.println("numSections="+numSections);
-			int sectIndex = 0;
-			sectSlipRate = new double[numSections];
-			sectSlipRateStdDev = new double[numSections];
-			for (String line : fileLines) {
-				//			System.out.println(line);
-				line = line.trim();
-				String[] split = line.split("\t");	// tab delimited
-				Preconditions.checkState(split.length == 4, "Expected 4 items, got %s", split.length);
-				//			System.out.println(split[0]+"\t"+split[1]+"\t"+split[2]);
-				int testIndex = Integer.valueOf(split[0]);
-				if(sectIndex != testIndex)
-					throw new RuntimeException("Bad section index; "+sectIndex+" != "+testIndex);
-				sectSlipRate[sectIndex] = Double.valueOf(split[1]);
-				double low95 = Double.valueOf(split[2]);
-				double upp95 = Double.valueOf(split[3]);
-				sectSlipRateStdDev[sectIndex] = (upp95-low95)/(2*1.96);	
-				if(D) System.out.println(sectIndex+"\t"+sectSlipRate[sectIndex]+"\t"+sectSlipRateStdDev[sectIndex]);
-				sectIndex+=1;
-			}
-
-
-			// Now read section rate constraints
+			
+			// Read section rate constraints
 			sectionRateConstraints   = new ArrayList<SegRateConstraint>();
-			file = new File(ROOT_DATA_DIR+PALEO_RATE_FILENAME);
+			File file = new File(ROOT_DATA_DIR+PALEO_RATE_FILENAME);
 			for (String line : Files.readLines(file, Charset.defaultCharset())) {
 				//			System.out.println(line);
 				line = line.trim();
 				String[] split = line.split("\t");	// tab delimited
 				Preconditions.checkState(split.length == 5, "Expected 3 items, got %s", split.length);
 				//			System.out.println(split[0]+"\t"+split[1]+"\t"+split[2]);
-				sectIndex = Integer.valueOf(split[0]);
+				int sectIndex = Integer.valueOf(split[0]);
 				double meanRate = Double.valueOf(split[1]);
 				double stdDev = Double.valueOf(split[2]);
 				double upp95 = Double.valueOf(split[3]);
@@ -223,7 +217,7 @@ public class WasatchInversion {
 
 			// Now read section rupture matrix
 			file = new File("src/scratch/alessandro/data/Gsr_matrix_new.txt");
-			fileLines = Files.readLines(file, Charset.defaultCharset());
+			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
 			numRuptures = fileLines.size()-1;
 			rupSectionMatrix = new int[numSections][numRuptures];
 			int rupIndex=-1;
@@ -690,8 +684,8 @@ public class WasatchInversion {
 	 */
 	public static void main(String []args) {
 		
-		
-		WasatchInversion wasatchInversion = new WasatchInversion();
+		WasatchSlipRatesEnum slipRates = WasatchSlipRatesEnum.NON_UNIFORM_MEAN;
+		WasatchInversion wasatchInversion = new WasatchInversion(slipRates);
 				
 		// ONLY NEED TO DO ThE FOLLOWING ONCE:
 //		wasatchInversion.writeApriorRupRatesForSegmentationConstrints();
@@ -728,15 +722,15 @@ public class WasatchInversion {
 
 		// set inversion attributes
 		String name = "Wasatch Inversion";
-		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.UNIFORM;
+		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.TAPERED;
 		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.WC94_SRL_ALL;
 		double relativeSectRateWt=1;
 		
 		double relative_aPrioriRupWt = 0;	//
 
 		boolean wtedInversion = true;
-		double minRupRate = 1e-8;
-//		double minRupRate = 0.0;
+//		double minRupRate = 1e-8;
+		double minRupRate = 0.0;
 		boolean applyProbVisible = true;
 		double moRateReduction = 0.1;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
 		double relativeMFD_constraintWt = 0; // setting this to 1e6
@@ -748,6 +742,7 @@ public class WasatchInversion {
 		// create an instance of the inversion class with the above settings
 		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion(
 				name,
+				slipRates.getName(),
 				fltSectDataList, 
 				sectionRateConstraints, 
 				rupSectionMatrix, 
@@ -776,7 +771,7 @@ public class WasatchInversion {
 //		fltSysRupInversion.doInversionNNLS();
 		
 //		// SIMULATED ANNEALING
-//		long numIterations = (long) 1e6;
+//		long numIterations = (long) 1e5;
 //		boolean initStateFromAprioriRupRates = true;
 //		long randomSeed = System.currentTimeMillis();
 ////		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
@@ -798,10 +793,10 @@ public class WasatchInversion {
 		// Now make plots if desired
 		boolean popUpPlots = true;	// this tells whether to show plots in a window (turn off for HPC)
 //		dirName = null;	// set as null if you don't want to save to file
-//		fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
-//		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
-//		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
-//	    fltSysRupInversion.writeAndOrPlotSegPartMFDs(dirName, popUpPlots);
+		fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
+		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
+		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
+	    fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
 	    
 	    // hazard curve:
 //		Location loc = new Location(40.75, -111.90);	// Salt Lake City
@@ -820,6 +815,7 @@ public class WasatchInversion {
 	    
 	    // Make hazard map ratio
 //	    String fileName1 = dirName+"/hazardMaps/1.0secSA_10in50.txt";
+//	    String fileName2 = dirName+"/hazardMaps/1.0secSA_10in50.txt";
 //	    String fileName2 = dirName+"/hazardMaps/1.0secSA_2in50.txt";
 //	    String label = "1.0secSA_10in50_2in50_ratio";
 //	    wasatchInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName+"/hazardMaps", true);

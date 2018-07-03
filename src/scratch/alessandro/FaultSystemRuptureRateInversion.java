@@ -161,7 +161,7 @@ public class FaultSystemRuptureRateInversion {
 	private int firstRowMFD_constraintData=-1, lastRowMFD_constraintData=-1;
 	private int totNumRows;
 	
-	// slip model:  CHANGE TO ENUM
+	// average slip along rupture model
 	private SlipAlongRuptureModelEnum slipModelType;
 
 	private static EvenlyDiscretizedFunc taperedSlipPDF, taperedSlipCDF;
@@ -191,12 +191,12 @@ public class FaultSystemRuptureRateInversion {
 	
 
 	/**
-	 * This writes the segPartMFDs to a file and/or makes a plot of the
+	 * This writes the 2D segPartMFDs to a file and/or makes a plot of the
 	 * results. 
 	 * @param dirName - set as null if no files are to be saved
 	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
 	 */
-	public void writeAndOrPlotSegPartMFDs(String dirName, boolean popUpWindow) {
+	public void writeAndOrPlotSectPartMFDs(String dirName, boolean popUpWindow) {
 		
 		// this writes out 
 		try{
@@ -276,12 +276,12 @@ public class FaultSystemRuptureRateInversion {
 			FileWriter fw=null,fw2=null;
 			String fileName_sr=null, fileName_rr=null;
 			if(dirName != null) {
-				fileName_sr = dirName+"/rupSlipRateData";
-				fileName_rr = dirName+"/rupRateData";
+				fileName_sr = dirName+"/rupSlipRateOnSectData";
+				fileName_rr = dirName+"/rupRateOnSectData";
 				fw = new FileWriter(fileName_sr+".txt");
 				fw2 = new FileWriter(fileName_rr+".txt");
-				fw.write("index\tseg_index\tslip_rate\n");
-				fw2.write("index\tseg_index\trate\n");				
+				fw.write("rup_index\tseg_index\tslip_rate\n");
+				fw2.write("rup_index\tseg_index\trate\n");				
 			}
 			for(int rup=0; rup<numRuptures;rup++) {
 				if(rupRateSolution[rup]>minRupRate) {
@@ -355,6 +355,7 @@ public class FaultSystemRuptureRateInversion {
 	 *  annealing initial state if specified in the getSimulatedAnnealing(*) method.
 	 *  
 	 * @param modelName - any name the user wants to give the inversion model
+	 * @param slipRateModelName - the name of the slip rate model (only used for metadata)
 	 * @param fltSectionDataList
 	 * @param sectionRateConstraints
 	 * @param rupSectionMatrix
@@ -371,6 +372,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param relativeMFD_constraintWt - weight for MFD constraint
 	 */
 	public FaultSystemRuptureRateInversion( String modelName,
+			String slipRateModelName,
 			ArrayList<FaultSectionPrefData> fltSectionDataList, 
 			ArrayList<SegRateConstraint> sectionRateConstraints,
 			int[][] rupSectionMatrix, 
@@ -408,6 +410,7 @@ public class FaultSystemRuptureRateInversion {
 
 		// set info string
 		modelSetUpInfoString = modelName+" with:\n\n";
+		modelSetUpInfoString += "\tslipRateModelName = "+slipRateModelName+"\n";
 		modelSetUpInfoString += "\tslipModelType = "+slipModelType+"\n";
 		modelSetUpInfoString += "\tmagAreaRel = "+magAreaRel+"\n";
 		modelSetUpInfoString += "\trelativeSectRateWt = "+relativeSectRateWt+"\n";
@@ -451,6 +454,7 @@ public class FaultSystemRuptureRateInversion {
 	 *  This constructor has the option to give arbitrary aPriori rupture rates (read from a file) and an 
 	 *  arbitrary MFD constraint (whereas the other constructor will compute these from a GR MFD).
 	 * @param modelName - any name the user wants to give the inversion model
+	 * @param slipRateModelName - the name of the slip rate model (only used for metadata)
 	 * @param fltSectionDataList
 	 * @param sectionRateConstraints
 	 * @param rupSectionMatrix
@@ -467,6 +471,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param relativeMFD_constraintWt - weight for MFD constraint
 	 */
 	public FaultSystemRuptureRateInversion( String modelName,
+			String slipRateModelName,
 			ArrayList<FaultSectionPrefData> fltSectionDataList, 
 			ArrayList<SegRateConstraint> sectionRateConstraints,
 			int[][] rupSectionMatrix, 
@@ -509,6 +514,7 @@ public class FaultSystemRuptureRateInversion {
 
 		// set info string
 		modelSetUpInfoString = modelName+" with:\n\n";
+		modelSetUpInfoString += "\tslipRateModelName = "+slipRateModelName+"\n";
 		modelSetUpInfoString += "\tslipModelType = "+slipModelType+"\n";
 		modelSetUpInfoString += "\tmagAreaRel = "+magAreaRel+"\n";
 		modelSetUpInfoString += "\trelativeSectRateWt = "+relativeSectRateWt+"\n";
@@ -804,12 +810,6 @@ public class FaultSystemRuptureRateInversion {
 
 		// SOLVE THE INVERSE PROBLEM
 		rupRateSolution = getNNLS_solution(C_wted, d_wted);
-
-//		// set initial state from MFD constraint
-////		double[] initialState = aPriori_rate;
-//		// or set initial state to zero
-//		double[] initialState = new double[numRuptures];
-//		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState);
 
 		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 		if(minRupRate >0.0)
@@ -1385,7 +1385,7 @@ public class FaultSystemRuptureRateInversion {
 		
 		String fileNamePrefix = null;
 		if(dirName != null)
-			fileNamePrefix = dirName+"/slipRates";
+			fileNamePrefix = dirName+"/sectionSlipRates";
 
 		String plotName = "";
 		String xAxisLabel = "Section";
@@ -1442,7 +1442,7 @@ public class FaultSystemRuptureRateInversion {
 
 		fileNamePrefix = null;
 		if(dirName != null)
-			fileNamePrefix = dirName+"/eventRates";
+			fileNamePrefix = dirName+"/sectionEventRates";
 		plotName = "";
 		xAxisLabel = "Section";
 		yAxisLabel = "Event Rate (per yr)";
@@ -1476,12 +1476,23 @@ public class FaultSystemRuptureRateInversion {
 		xAxisLabel = "Rupture Index";
 		yAxisLabel = "Rate (per yr)";
 		xAxisRange = new Range(0, numRuptures);
-		yAxisRange = new Range(minRupRate/2.0, rupRateFunc.getMaxY());
+		yAxisRange = new Range(1e-10, rupRateFunc.getMaxY());
 		logX = false;
 		logY = true;
 
 		writeAndOrPlotFuncs(rup_funcs, rup_plotChars, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+
+		// rewrite rupture rates file to get rid of big header
+		try{
+			FileWriter fw = new FileWriter(fileNamePrefix+".txt");
+			for(int i=0;i<numRuptures; i++) {				
+				fw.write(i+"\t"+rupRateSolution[i]+"\n");
+			}
+			fw.close();
+		}catch(Exception e) {
+			e.printStackTrace();
+		}			
 
 		
 
@@ -1535,6 +1546,7 @@ public class FaultSystemRuptureRateInversion {
 		}
 		ArrayList<XY_DataSet> sect_funcs = new ArrayList<XY_DataSet>();
 		rateOfThroughgoingRupsFunc.setName("Rate of throughgoing ruptures at each section boundary");
+		sect_funcs.add(origSlipRateFunc);
 		sect_funcs.add(finalSlipRateFunc);
 		sect_funcs.add(finalPaleoVisibleEventRateFunc);
 		// add paleoseismic obs
@@ -1542,6 +1554,7 @@ public class FaultSystemRuptureRateInversion {
 		sect_funcs.add(rateOfThroughgoingRupsFunc);
 		
 		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();
+		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 2f, Color.BLUE));
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
 		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.RED));
