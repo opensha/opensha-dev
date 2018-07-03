@@ -24,10 +24,14 @@ import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.HanksBakun2002_MagAreaRel;
 import org.opensha.commons.calc.nnls.NNLSWrapper;
 import org.opensha.commons.data.function.AbstractXY_DataSet;
+import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
+import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.function.XY_DataSetList;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.Location;
@@ -185,9 +189,13 @@ public class FaultSystemRuptureRateInversion {
 	private static NNLSWrapper nnls = new NNLSWrapper();
 
 	
-	
-	
-	
+	// These contain data from multiple SA runs:
+	ArbDiscrEmpiricalDistFunc_3D rupRatesFromMultRuns;
+	ArbDiscrEmpiricalDistFunc_3D mfdsFromMultRuns;
+	ArbDiscrEmpiricalDistFunc_3D cumMfdsFromMultRuns;
+	ArbDiscrEmpiricalDistFunc_3D finalSectSlipRateFromMultRuns;
+	ArbDiscrEmpiricalDistFunc_3D finalPaleoVisibleSectEventRateFromMultRuns;
+	ArbDiscrEmpiricalDistFunc_3D rateOfThroughGoingRupsAtSectBoudaryFromMultRuns;
 	
 
 	/**
@@ -905,7 +913,118 @@ public class FaultSystemRuptureRateInversion {
 	}
 
 	
+	
+	/**
+	 * This does the inversion using simulated annealing
+	 */
+	public void doInversionSA_MultTimes(long numIterations, boolean initStateFromAprioriRupRates, long randomSeed, int numInversions, String dirName) {
+		
+		// set thee to null in case this method was already called
+		rupRatesFromMultRuns = null;
+		mfdsFromMultRuns = null; 
+		cumMfdsFromMultRuns = null; 
+		finalSectSlipRateFromMultRuns = null;
+		finalPaleoVisibleSectEventRateFromMultRuns = null;
+		rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = null;
 
+				
+		modelRunInfoString = "\nInversion Type = Simulated Annearling with\n\n\tnumIterations = "+
+				numIterations+"\n\tinitStateFromAprioriRupRates = "+initStateFromAprioriRupRates+
+				"\n\trandomSeed = "+randomSeed+"\n";
+
+		// set the intial state
+		double[] initialState;
+		if(initStateFromAprioriRupRates) {
+			// check that there is a rate for each rupture
+			if(aPriori_rate.length != numRuptures)
+				throw new RuntimeException("Can't use a priori rupture rates as initialState because sizes are different");
+			for(int r=0;r<numRuptures;r++) {
+				if(this.aPriori_rupIndex[r] != r)
+					throw new RuntimeException("Can't use a priori rupture rates as initialState because there is an index problem");
+			}
+			initialState = aPriori_rate;
+		}
+		else { // inital state is all zeros
+			initialState = new double[numRuptures];	
+		}
+		
+		for(int invNum=0; invNum<numInversions;invNum++) {
+			
+			randomSeed += invNum;
+			
+			// SOLVE THE INVERSE PROBLEM
+			rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState, numIterations, randomSeed);
+
+			// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
+			if(minRupRate >0.0)
+				for(int rup=0; rup<numRuptures;rup++) rupRateSolution[rup] += minRupRateArray[rup];
+
+			// compute predicted data
+			for(int row=0;row<totNumRows; row++)
+				for(int col=0; col <numRuptures; col++)
+					d_pred[row] += rupRateSolution[col]*C[row][col];
+					
+			String invNumString = "\nFOR INVERSION NUMBER "+invNum+":\n----------------------------\n";
+			modelRunInfoString += invNumString;
+			if(D) System.out.println(invNumString);
+			
+			// Compute stuff
+			computeFinalStuff();
+			computeSegMFDs();
+			setMiscRunInfo();
+						
+			String fileNamePrefix = null;
+			if(dirName != null) {
+				fileNamePrefix = dirName+"/ruptureRates_"+invNum;
+				try{
+					FileWriter fw = new FileWriter(fileNamePrefix+".txt");
+					for(int i=0;i<numRuptures; i++) {				
+						fw.write(i+"\t"+rupRateSolution[i]+"\n");
+					}
+					fw.close();
+				}catch(Exception e) {
+					e.printStackTrace();
+				}		
+			}
+			
+			// create mult run data objects if currently null
+			if(rupRatesFromMultRuns==null) {
+				rupRatesFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numRuptures, 1.0);
+				mfdsFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(magFreqDist.getMinX(), magFreqDist.size(), magFreqDist.getDelta()); 
+				EvenlyDiscretizedFunc cumTemp = magFreqDist.getCumRateDistWithOffset();
+				cumMfdsFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(cumTemp.getMinX(), cumTemp.size(), cumTemp.getDelta()); 
+				finalSectSlipRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
+				finalPaleoVisibleSectEventRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
+				rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, rateOfThroughGoingRupsAtSectBoudary.length, 1.0);
+			}
+			for(int i=0;i<numRuptures;i++)
+				rupRatesFromMultRuns.set(i, rupRateSolution[i], 1.0);
+
+			mfdsFromMultRuns.set(magFreqDist, 1.0);
+			cumMfdsFromMultRuns.set(magFreqDist.getCumRateDistWithOffset(), 1.0);
+			
+			for(int s=0;s<numSections;s++) {
+				finalSectSlipRateFromMultRuns.set(s, finalSectSlipRate[s], 1.0);
+				finalPaleoVisibleSectEventRateFromMultRuns.set(s, finalPaleoVisibleSectEventRate[s], 1.0);
+			}
+			
+			for(int s=0;s<rateOfThroughGoingRupsAtSectBoudary.length;s++) {
+				rateOfThroughGoingRupsAtSectBoudaryFromMultRuns.set(s, rateOfThroughGoingRupsAtSectBoudary[s], 1.0);
+			}
+
+		}
+		
+		modelRunInfoString += "\nFOR MEAN INVERSION:\n---------------------------------\n";
+		EvenlyDiscretizedFunc meanRupRateFunc = rupRatesFromMultRuns.getMeanCurve();
+		double[] rupRatesArray = new double[numRuptures];
+		for(int i=0;i<numRuptures;i++)
+			rupRatesArray[i] = meanRupRateFunc.getY(i);
+		
+		setSolution(rupRatesArray);
+
+	}
+
+	
 	
 	/**
 	 * This creates the segSlipInRup (Dsr) matrix based on the value of slipModelType.
@@ -1348,7 +1467,7 @@ public class FaultSystemRuptureRateInversion {
 	 */
 	public void writeAndOrPlotDataFits(String dirName, boolean popupWindow) {
 		
-		// SLIP RATES:
+		// SECTION SLIP RATES:
 		double min = 0, max = numSections-1;
 		EvenlyDiscretizedFunc origSlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
 //		EvenlyDiscretizedFunc origUpper95_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
@@ -1367,16 +1486,30 @@ public class FaultSystemRuptureRateInversion {
 //			origLower95_SlipRateFunc.set(s,(sectSlipRate[s]-1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
 			finalSlipRateFunc.set(s,finalSectSlipRate[s]);
 		}
-		ArrayList<XY_DataSet> sr_funcs = new ArrayList<XY_DataSet>();
 		origSlipRateFunc.setName("Orig Slip Rates");
-//		origUpper95_SlipRateFunc.setName("Orig Upper 95% Confidence for Slip Rates");
-//		origLower95_SlipRateFunc.setName("Orig Lower 95% Confidence for Slip Rates");
 		finalSlipRateFunc.setName("Final Slip Rates");
+
+		ArrayList<XY_DataSet> sr_funcs = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> sr_plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
+		if(finalSectSlipRateFromMultRuns != null) {
+			UncertainArbDiscDataset slipRatesMinMaxRange = new UncertainArbDiscDataset(finalSectSlipRateFromMultRuns.getMeanCurve(), 
+					finalSectSlipRateFromMultRuns.getMinCurve(), finalSectSlipRateFromMultRuns.getMaxCurve());
+			slipRatesMinMaxRange.setName("slipRatesMinMaxRange");
+			sr_funcs.add(slipRatesMinMaxRange);
+			
+			UncertainArbDiscDataset slipRatesMean95conf = get95perConfForMultRuns(finalSectSlipRateFromMultRuns);
+			slipRatesMean95conf.setName("slipRatesMean95conf");
+			sr_funcs.add(slipRatesMean95conf);
+			
+			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
+			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
+		}
+
 		sr_funcs.add(finalSlipRateFunc);
 		sr_funcs.add(origSlipRateFunc);
 		sr_funcs.addAll(slipRate95confFuncsList);
 		
-		ArrayList<PlotCurveCharacterstics> sr_plotChars = new ArrayList<PlotCurveCharacterstics>();
 		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
 		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.BLUE));
 		for(int i=0;i<slipRate95confFuncsList.size();i++) {
@@ -1400,9 +1533,10 @@ public class FaultSystemRuptureRateInversion {
 		
 		
 		
-		
-		// EVENT RATES:
+		// SECTION EVENT RATES:
 		ArrayList<XY_DataSet> er_funcs = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> er_plotChars = new ArrayList<PlotCurveCharacterstics>();
+
 		// now fill in final event rates
 		EvenlyDiscretizedFunc finalEventRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
 		EvenlyDiscretizedFunc finalPaleoVisibleEventRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
@@ -1412,6 +1546,23 @@ public class FaultSystemRuptureRateInversion {
 		}
 		finalPaleoVisibleEventRateFunc.setName("Final Paleoseismically Visible Event Rates");
 		finalEventRateFunc.setName("Final Event Rates (dashed)");
+		
+		if(finalPaleoVisibleSectEventRateFromMultRuns != null) {
+			UncertainArbDiscDataset paleoVisSlipRatesMinMaxRange = new UncertainArbDiscDataset(finalPaleoVisibleSectEventRateFromMultRuns.getMeanCurve(), 
+					finalPaleoVisibleSectEventRateFromMultRuns.getMinCurve(), finalPaleoVisibleSectEventRateFromMultRuns.getMaxCurve());
+			paleoVisSlipRatesMinMaxRange.setName("paleoVisSlipRatesMinMaxRange");
+			er_funcs.add(paleoVisSlipRatesMinMaxRange);
+			
+			UncertainArbDiscDataset paleoVisEventRatesMean95conf = get95perConfForMultRuns(finalPaleoVisibleSectEventRateFromMultRuns);
+			paleoVisEventRatesMean95conf.setName("paleoVisEventRatesMean95conf");
+			er_funcs.add(paleoVisEventRatesMean95conf);
+			
+			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,200,200)));
+			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,120,120)));
+		}
+
+		
+		
 		er_funcs.add(finalPaleoVisibleEventRateFunc);
 		er_funcs.add(finalEventRateFunc);
 		int num = sectionRateConstraints.size();
@@ -1432,7 +1583,6 @@ public class FaultSystemRuptureRateInversion {
 			obs_er_funcs.add(func);
 			er_funcs.add(func);
 		}
-		ArrayList<PlotCurveCharacterstics> er_plotChars = new ArrayList<PlotCurveCharacterstics>();
 		er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
 		er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
 		er_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.RED));
@@ -1465,9 +1615,24 @@ public class FaultSystemRuptureRateInversion {
 		}
 		rupRateFunc.setName("Rupture Rates");
 		ArrayList<XY_DataSet> rup_funcs = new ArrayList<XY_DataSet>();
-		rup_funcs.add(rupRateFunc);
 		ArrayList<PlotCurveCharacterstics> rup_plotChars = new ArrayList<PlotCurveCharacterstics>();
-		rup_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
+
+		if(rupRatesFromMultRuns != null) {
+			UncertainArbDiscDataset rupRatesMinMaxRange = new UncertainArbDiscDataset(rupRatesFromMultRuns.getMeanCurve(), 
+					rupRatesFromMultRuns.getMinCurve(), rupRatesFromMultRuns.getMaxCurve());
+			rupRatesMinMaxRange.setName("rupRatesMinMaxRange");
+			rup_funcs.add(rupRatesMinMaxRange);
+			
+			UncertainArbDiscDataset rupRatesMean95conf = get95perConfForMultRuns(rupRatesFromMultRuns);
+			rupRatesMean95conf.setName("rupRatesMean95conf");
+			rup_funcs.add(rupRatesMean95conf);
+			
+			rup_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,200)));
+			rup_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,120)));
+
+		}
+		rup_funcs.add(rupRateFunc);
+		rup_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 		
 		fileNamePrefix = null;
 		if(dirName != null)
@@ -1483,9 +1648,9 @@ public class FaultSystemRuptureRateInversion {
 		writeAndOrPlotFuncs(rup_funcs, rup_plotChars, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
 
-		// rewrite rupture rates file to get rid of big header
+		// write alternative rupture rates file to get rid of big header
 		try{
-			FileWriter fw = new FileWriter(fileNamePrefix+".txt");
+			FileWriter fw = new FileWriter(fileNamePrefix+"Alt.txt");
 			for(int i=0;i<numRuptures; i++) {				
 				fw.write(i+"\t"+rupRateSolution[i]+"\n");
 			}
@@ -1498,9 +1663,37 @@ public class FaultSystemRuptureRateInversion {
 
 		// PLOT MFDs
 		ArrayList<XY_DataSet> mfd_funcs = new ArrayList<XY_DataSet>();
-		mfd_funcs.add(magFreqDist);
+		ArrayList<PlotCurveCharacterstics> mfd_plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
 		EvenlyDiscretizedFunc cumMagFreqDist = magFreqDist.getCumRateDistWithOffset();
 		cumMagFreqDist.setInfo("Cumulative Mag Freq Dist");
+
+		// If multiple SA runs have been generated
+		if(mfdsFromMultRuns != null) {
+			UncertainArbDiscDataset mfdMinMaxRange = new UncertainArbDiscDataset(mfdsFromMultRuns.getMeanCurve(), 
+					mfdsFromMultRuns.getMinCurve(), mfdsFromMultRuns.getMaxCurve());
+			mfdMinMaxRange.setName("mfdMinMaxRange");
+			mfd_funcs.add(mfdMinMaxRange);
+			UncertainArbDiscDataset mfdMean95conf = get95perConfForMultRuns(mfdsFromMultRuns);
+			mfdMean95conf.setName("mfdMean95conf");
+			mfd_funcs.add(mfdMean95conf);
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
+			
+			
+			UncertainArbDiscDataset cumMfdMinMaxRange = new UncertainArbDiscDataset(cumMfdsFromMultRuns.getMeanCurve(), 
+					cumMfdsFromMultRuns.getMinCurve(), cumMfdsFromMultRuns.getMaxCurve());
+			cumMfdMinMaxRange.setName("cumMfdMinMaxRange");
+			mfd_funcs.add(cumMfdMinMaxRange);
+			UncertainArbDiscDataset cumMfdMean95conf = get95perConfForMultRuns(cumMfdsFromMultRuns);
+			cumMfdMean95conf.setName("cumMfdMean95conf");
+			mfd_funcs.add(cumMfdMean95conf);
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,200,200)));
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,120,120)));
+
+		}
+		
+		mfd_funcs.add(magFreqDist);
 		mfd_funcs.add(cumMagFreqDist);
 		// add average seg participation MFD
 		mfd_funcs.add(aveOfSectPartMFDs);
@@ -1513,13 +1706,12 @@ public class FaultSystemRuptureRateInversion {
 		mfd_funcs.add(grFit);
 		mfd_funcs.add(cumGR_fit);
 		
-		ArrayList<PlotCurveCharacterstics> mfd_plotChars = new ArrayList<PlotCurveCharacterstics>();
 		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE));
 		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED));
 		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN));
 		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.MAGENTA));
 		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
-		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.BLACK));
+		
 		
 		fileNamePrefix = null;
 		if(dirName != null)
@@ -1544,8 +1736,25 @@ public class FaultSystemRuptureRateInversion {
 		for(int s=0; s<numSections+1;s++) {
 			rateOfThroughgoingRupsFunc.set(s,rateOfThroughGoingRupsAtSectBoudary[s]);
 		}
-		ArrayList<XY_DataSet> sect_funcs = new ArrayList<XY_DataSet>();
 		rateOfThroughgoingRupsFunc.setName("Rate of throughgoing ruptures at each section boundary");
+
+		ArrayList<XY_DataSet> sect_funcs = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();
+		
+		if(rateOfThroughGoingRupsAtSectBoudaryFromMultRuns != null) {
+			UncertainArbDiscDataset rateOfThroughGoingRupsMinMaxRange = new UncertainArbDiscDataset(rateOfThroughGoingRupsAtSectBoudaryFromMultRuns.getMeanCurve(), 
+					rateOfThroughGoingRupsAtSectBoudaryFromMultRuns.getMinCurve(), rateOfThroughGoingRupsAtSectBoudaryFromMultRuns.getMaxCurve());
+			rateOfThroughGoingRupsMinMaxRange.setName("rateOfThroughGoingRupsMinMaxRange");
+			sect_funcs.add(rateOfThroughGoingRupsMinMaxRange);
+
+			UncertainArbDiscDataset rateOfThroughGoingRupsMean95conf = get95perConfForMultRuns(rateOfThroughGoingRupsAtSectBoudaryFromMultRuns);
+			rateOfThroughGoingRupsMean95conf.setName("rateOfThroughGoingRupsMean95conf");
+			sect_funcs.add(rateOfThroughGoingRupsMean95conf);
+
+			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,200)));
+			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,120)));
+		}
+		
 		sect_funcs.add(origSlipRateFunc);
 		sect_funcs.add(finalSlipRateFunc);
 		sect_funcs.add(finalPaleoVisibleEventRateFunc);
@@ -1553,7 +1762,6 @@ public class FaultSystemRuptureRateInversion {
 		for(int i=0; i<obs_er_funcs.size();i++) sect_funcs.add(obs_er_funcs.get(i));
 		sect_funcs.add(rateOfThroughgoingRupsFunc);
 		
-		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();
 		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 2f, Color.BLUE));
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
@@ -1581,6 +1789,31 @@ public class FaultSystemRuptureRateInversion {
 	}
 
 	
+	private 	UncertainArbDiscDataset get95perConfForMultRuns(ArbDiscrEmpiricalDistFunc_3D arbDiscrEmpiricalDistFunc_3D) {
+		EvenlyDiscretizedFunc meanCurve = arbDiscrEmpiricalDistFunc_3D.getMeanCurve();
+		EvenlyDiscretizedFunc stdevCurve = arbDiscrEmpiricalDistFunc_3D.getStdDevCurve();
+		EvenlyDiscretizedFunc upper95 = stdevCurve.deepClone();
+		EvenlyDiscretizedFunc lower95 = stdevCurve.deepClone();
+		double numRuns = arbDiscrEmpiricalDistFunc_3D.getArbDiscrEmpDistFuncArray()[0].calcSumOfY_Vals();
+		
+//		ArbDiscrEmpiricalDistFunc[] funcArray = arbDiscrEmpiricalDistFunc_3D.getArbDiscrEmpDistFuncArray();
+//		for(int i=0;i<funcArray.length;i++) {
+//			ArbDiscrEmpiricalDistFunc func = funcArray[i];
+//			System.out.println("HERE: "+func.size()+"\t"+func.calcSumOfY_Vals());
+//		}
+		
+		double sqrtNum = Math.sqrt(numRuns);
+		for(int i=0;i<meanCurve.size();i++) {
+			double mean = meanCurve.getY(i);
+			double stdom = stdevCurve.getY(i)/sqrtNum;
+			upper95.set(i,mean+1.96*stdom);
+			lower95.set(i,mean-1.96*stdom);
+		}
+		return new UncertainArbDiscDataset(meanCurve,lower95,upper95);
+	}
+	
+	
+
 	
 
 	/**

@@ -778,11 +778,18 @@ public class WasatchInversion {
 //		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
 		
 		
-		// SOLUTION FROM FILE:
-		String ratesFileName = ROOT_PATH+"OutputFigsAndData/ruptureRates.txt"; // assumed consistent with values above
-		double[] rupRatesArray = wasatchInversion.readRuptureRatesFromFile(ratesFileName);
-		fltSysRupInversion.setSolution(rupRatesArray);
+//		// SOLUTION FROM FILE:
+//		String ratesFileName = ROOT_PATH+"OutputFigsAndData/ruptureRates.txt"; // assumed consistent with values above
+//		double[] rupRatesArray = wasatchInversion.readRuptureRatesFromFile(ratesFileName);
+//		fltSysRupInversion.setSolution(rupRatesArray);
 
+		// MULTIPLE SIMULATED ANNEALING RUNS
+		long numIterations = (long) 1e5;
+		boolean initStateFromAprioriRupRates = true;
+		long randomSeed = System.currentTimeMillis();
+//		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
+		int numRuns=10;
+		fltSysRupInversion.doInversionSA_MultTimes(numIterations, initStateFromAprioriRupRates, randomSeed, numRuns, dirName);
 		
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
