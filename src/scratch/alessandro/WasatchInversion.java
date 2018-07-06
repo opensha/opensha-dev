@@ -13,7 +13,10 @@ import org.jfree.data.Range;
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.HanksBakun2002_MagAreaRel;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.exceptions.GMT_MapException;
@@ -48,6 +51,7 @@ import com.google.common.io.Files;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
+import scratch.UCERF3.simulatedAnnealing.params.CoolingScheduleType;
 import scratch.alessandro.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
 import scratch.alessandro.logicTreeEnums.WasatchSlipRatesEnum;
@@ -85,12 +89,24 @@ public class WasatchInversion {
 	int[][] rupSectionMatrix;
 	
 	final static String SLIP_RATE_FILENAME = "sliprate_wasatch_final.txt";
-	final static String PALEO_RATE_FILENAME = "paleorate_wasatch_and_95p.txt";
+	final static String PALEO_RATE_FILENAME = "paleorate_wasatch_and_95p_updated.txt";
 	final static String SEGMENT_BOUNDARY_DATA_FILE = "segmentBoundaryData.txt";
 	final static String APRIORI_RUP_RATE_FROM_SECT_CONSTR_FILENAME = "aPrioriRupRatesFromSegmentationConstraints.txt";
 
 	final static String FAULT_TRACE_DIR_NAME = "subsections_traces/";
+	
+	public enum InversionSolutionType {
+		NON_NEGATIVE_LEAST_SQUARES,
+		SIMULATED_ANNEALING,
+		FROM_FILE;
+	}
+	
+	double hazCurveLnMin = Math.log(0.001);
+	double hazCurveLnMax = Math.log(10);
+	int hazCurveNum = 20;
+	double hazCurveDelta = (hazCurveLnMax-hazCurveLnMin)/(double)(hazCurveNum-1);
 
+	
 	public WasatchInversion(WasatchSlipRatesEnum wasatchSlipRatesEnum) {
 		this.wasatchSlipRatesEnum = wasatchSlipRatesEnum;
 		readData();
@@ -399,6 +415,9 @@ public class WasatchInversion {
 	
 	
 	
+
+	
+	
 	/**
 	 * This computes and optionally saves and/or plots a hazard curve
 	 * @param dirName - set as null if you don't want to save results
@@ -407,18 +426,103 @@ public class WasatchInversion {
 	public void writeAndOrPlotHazardCurve(FaultSystemRuptureRateInversion fltSysRupInversion, Location location, 
 			double saPeriod, String dirName, boolean popupWindow, String plotTitle) {
 		
+		// set the forecast duration
+		double duration = 50;
+
 		String imtString = "PGA";
 		if(saPeriod != 0)
 			imtString = saPeriod+"secSA";
+		
+		ArrayList<XY_DataSet> plottingFuncsArray = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
+		int numSol = fltSysRupInversion.getNumSolutions();
+		if(numSol>1) {
+			ArbDiscrEmpiricalDistFunc_3D curvesFromMultRunsFunc_3D = new ArbDiscrEmpiricalDistFunc_3D(hazCurveLnMin,hazCurveNum,hazCurveDelta);
+			for(int i=0;i<numSol;i++) {
+				EvenlyDiscretizedFunc func = computeHazardCurveLnX(fltSysRupInversion.getFaultSystemSolution(i), location, saPeriod, duration);
+				curvesFromMultRunsFunc_3D.set(func, 1.0);
+			}
+			
+			EvenlyDiscretizedFunc hazCurveMeanLnX = curvesFromMultRunsFunc_3D.getMeanCurve();
+			EvenlyDiscretizedFunc hazCurveMinLnX = curvesFromMultRunsFunc_3D.getMinCurve();
+			EvenlyDiscretizedFunc hazCurveMaxLnX = curvesFromMultRunsFunc_3D.getMaxCurve();
+			UncertainArbDiscDataset hazCurveMean95confLnX = fltSysRupInversion.get95perConfForMultRuns(curvesFromMultRunsFunc_3D);
+
+			ArbitrarilyDiscretizedFunc hazCurveMean = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc hazCurveMin = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc hazCurveMax = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc hazCurveMeanLower95 = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc hazCurveMeanUpper95 = new ArbitrarilyDiscretizedFunc();
+			for(int i=0;i<hazCurveNum;i++) {
+				hazCurveMean.set(Math.exp(hazCurveMeanLnX.getX(i)), hazCurveMeanLnX.getY(i));
+				hazCurveMax.set(Math.exp(hazCurveMaxLnX.getX(i)), hazCurveMaxLnX.getY(i));
+				hazCurveMin.set(Math.exp(hazCurveMinLnX.getX(i)), hazCurveMinLnX.getY(i));
+				hazCurveMeanLower95.set(Math.exp(hazCurveMean95confLnX.getX(i)), hazCurveMean95confLnX.getLowerY(i));
+				hazCurveMeanUpper95.set(Math.exp(hazCurveMean95confLnX.getX(i)), hazCurveMean95confLnX.getUpperY(i));
+			}
+
+			hazCurveMean.setName("hazCurveMean");
+			UncertainArbDiscDataset hazCurveMinMaxRange = new UncertainArbDiscDataset(hazCurveMean, hazCurveMin, hazCurveMax);
+			hazCurveMinMaxRange.setName("hazCurveMinMaxRange");
+			UncertainArbDiscDataset hazCurveMean95conf = new UncertainArbDiscDataset(hazCurveMean, hazCurveMeanLower95, hazCurveMeanUpper95);
+			hazCurveMean95conf.setName("hazCurveMean95conf");
+
+			plottingFuncsArray.add(hazCurveMinMaxRange);
+			plottingFuncsArray.add(hazCurveMean95conf);
+			plottingFuncsArray.add(hazCurveMean);
+
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLUE));
+		}
+
+		// now get the result for the mean solution
+		EvenlyDiscretizedFunc curveLogXvalues = computeHazardCurveLnX(fltSysRupInversion.getFaultSystemSolution(), location, saPeriod, duration);
+		// convert to linear x valules
+		ArbitrarilyDiscretizedFunc curveLinearXvalues = new ArbitrarilyDiscretizedFunc();
+			for (int i = 0; i < curveLogXvalues.size(); ++i)
+				curveLinearXvalues.set(Math.exp(curveLogXvalues.getX(i)), curveLogXvalues.getY(i));
 
 		
-		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fltSysRupInversion.getFaultSystemSolution());
+		double twoIn50value = Math.exp(curveLogXvalues.getFirstInterpolatedX(0.02));
+		double tenIn50value = Math.exp(curveLogXvalues.getFirstInterpolatedX(0.1));
+		curveLinearXvalues.setInfo("2in50 value: "+twoIn50value+"\n"+"10in50 value: "+tenIn50value+
+				"\nLocation: "+location.getLatitude()+", "+location.getLongitude());
+		
+		
+		// make the plot
+		plottingFuncsArray.add(curveLinearXvalues);
+		
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		
+		String fileNamePrefix = null;
+		if(dirName != null)
+			fileNamePrefix = dirName+"/hazardCurve";
+		String xAxisLabel = imtString;
+		String yAxisLabel = "Probability (in "+duration+" yr)";
+		Range xAxisRange = null;
+		Range yAxisRange = null;
+		boolean logX = true;
+		boolean logY = true;
+
+		fltSysRupInversion.writeAndOrPlotFuncs(plottingFuncsArray, plotChars, plotTitle, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+
+	}
+
+	
+	
+	/**
+	 */
+	private ArbitrarilyDiscretizedFunc old_computeHazardCurve(FaultSystemSolution faultSystemSolution, Location location, 
+			double saPeriod, double forecastDuration) {
+		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(faultSystemSolution);
 		erf.setName("WasatchERF");
-		
-		// set the forecast duration
-		double duration = 50;
-		erf.getTimeSpan().setDuration(duration);
-		
+		erf.getTimeSpan().setDuration(forecastDuration);
+		erf.updateForecast();		// update forecast
+
 		// write out parameter values
 		if(D) {
 			ParameterList paramList = erf.getAdjustableParameterList();
@@ -427,13 +531,9 @@ public class WasatchInversion {
 				System.out.println(param.getName()+"\t"+param.getValue());
 			}			
 		}
-		
-		// update forecast
-		erf.updateForecast();
-		
 		if(D) System.out.println("NumFaultSystemSources = "+erf.getNumFaultSystemSources());
+
 		
-		// compute hazard curve
 		// chose attenuation relationship (GMPE)
 		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
 		imr.setParamDefaults();
@@ -458,44 +558,58 @@ public class WasatchInversion {
 			System.out.println(param.getName()+"\t"+param.getValue());
 		}
 					
-//		System.out.println("curveLinearXvalues:\n "+curveLinearXvalues);
 		ArbitrarilyDiscretizedFunc curveLogXvalues = HazardCurveSetCalculator.getLogFunction(curveLinearXvalues);
-//		System.out.println("curveLogXvalues:\n "+curveLogXvalues);
 	
 		HazardCurveCalculator calc = new HazardCurveCalculator();
 		
 		calc.getHazardCurve(curveLogXvalues, site, imr, erf); // result is put into curveLogXvalues
 		
-		curveLinearXvalues = HazardCurveSetCalculator.unLogFunction(curveLinearXvalues, curveLogXvalues);
-		
-		double twoIn50value = Math.exp(curveLogXvalues.getFirstInterpolatedX(0.02));
-		double tenIn50value = Math.exp(curveLogXvalues.getFirstInterpolatedX(0.1));
-		curveLinearXvalues.setInfo("2in50 value: "+twoIn50value+"\n"+"10in50 value: "+tenIn50value+
-				"\nLocation: "+location.getLatitude()+", "+location.getLongitude());
-		
-		
-		// make the plot
-		ArrayList<XY_DataSet> funcs1 = new ArrayList<XY_DataSet>();
-		funcs1.add(curveLinearXvalues);
-		
-		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
-		
-		String fileNamePrefix = null;
-		if(dirName != null)
-			fileNamePrefix = dirName+"/hazardCurve";
-		String xAxisLabel = imtString;
-		String yAxisLabel = "Probability (in "+duration+" yr)";
-		Range xAxisRange = null;
-		Range yAxisRange = null;
-		boolean logX = true;
-		boolean logY = true;
-
-		fltSysRupInversion.writeAndOrPlotFuncs(funcs1, plotChars, plotTitle, xAxisLabel, yAxisLabel, 
-				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
-
+		return curveLogXvalues;
 	}
 	
+	
+	/**
+	 */
+	private EvenlyDiscretizedFunc computeHazardCurveLnX(FaultSystemSolution faultSystemSolution, Location location, 
+			double saPeriod, double forecastDuration) {
+		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(faultSystemSolution);
+		erf.setName("WasatchERF");
+		erf.getTimeSpan().setDuration(forecastDuration);
+		erf.updateForecast();		// update forecast
+
+		// write out parameter values
+		if(D) {
+			ParameterList paramList = erf.getAdjustableParameterList();
+			for(int i=0;i<paramList.size(); i++) {
+				Parameter<?> param = paramList.getByIndex(i);
+				System.out.println(param.getName()+"\t"+param.getValue());
+			}			
+		}
+		if(D) System.out.println("NumFaultSystemSources = "+erf.getNumFaultSystemSources());
+
+		
+		// chose attenuation relationship (GMPE)
+		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+		imr.setParamDefaults();
+		
+		EvenlyDiscretizedFunc curveLogXvalues = new EvenlyDiscretizedFunc(hazCurveLnMin,hazCurveNum,hazCurveDelta);
+		
+		// make the site object and set values
+		Site site = new Site(location);
+		for (Parameter<?> param : imr.getSiteParams()) {
+			site.addParameter(param);
+//			System.out.println(param.getName()+"\t"+param.getValue());
+		}
+	
+		HazardCurveCalculator calc = new HazardCurveCalculator();
+		
+		calc.getHazardCurve(curveLogXvalues, site, imr, erf); // result is put into curveLogXvalues
+		
+		return curveLogXvalues;
+	}
+
+
 	
 	/**
 	 * This is makes to hazard maps, one for 10% in 50-year and one for 2% in 50-year ground motions
@@ -680,16 +794,94 @@ public class WasatchInversion {
 	}
 	
 	/**
+	 * As written, the FaultSystemRuptureRateInversion constructor used here always sets the a-priori rupture rates and MFD constraint
+	 * from a best-fitting GR distribution (whether these are applied depends on the weights given and the Simulated Annealing initial 
+	 * solution)
 	 * @param args
 	 */
 	public static void main(String []args) {
 		
+		// The directory for storing results (set as null if you don't want to save anything)
+		String dirName = ROOT_PATH+"OutputDataAndFigs";
+	
+	    // THE FOLLOWING IS TO MAKE HAZARD MAP RATIOS FOR DATA IN FILES
+//	    String fileName1 = dirName+"/hazardMaps/1.0secSA_10in50.txt";
+//	    String fileName2 = dirName+"/hazardMaps/1.0secSA_2in50.txt";
+//	    String label = "1.0secSA_10in50_2in50_ratio";
+//	    wasatchInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName+"/hazardMaps", true);
+//		System.exit(-1);;
+		
+		// THE FOLLOWING SETS ALL THE INVERSION ATTRIBUTES (BESIDES THE DIR ABOVE):
+		//------------------------------------------------------------------------
+		
+		// Inversion name
+		String name = "Wasatch Inversion";
+		
+		// Slip Rate
 		WasatchSlipRatesEnum slipRates = WasatchSlipRatesEnum.NON_UNIFORM_MEAN;
-		WasatchInversion wasatchInversion = new WasatchInversion(slipRates);
-				
-		// ONLY NEED TO DO ThE FOLLOWING ONCE:
+		
+		// Average slip along rupture model
+		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.TAPERED;
+//		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.UNIFORM;
+		
+		// Scaling Relationship
+		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.WC94_SRL_ALL;
+		double relativeSectRateWt=1;
+		
+		// Segmentation constraint filename and weight (file created by running the following method once):
 //		wasatchInversion.writeApriorRupRatesForSegmentationConstrints();
 //		System.exit(-1);
+		String segmentationConstrFilename = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
+		double relative_segmentationConstrWt = 0;
+		
+		// Misc settings
+		double relative_aPrioriRupWt = 0;	//
+		boolean wtedInversion = true;
+//		double minRupRate = 1e-8;
+		double minRupRate = 0.0;
+		boolean applyProbVisible = true;
+		double moRateReduction = 0.1;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
+		double relativeMFD_constraintWt = 0; // 
+		
+		// Inversion Solution Type:
+		InversionSolutionType solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+
+//		InversionSolutionType solutionType = InversionSolutionType.FROM_FILE;
+		// the following is the directory where to find this file - CANNOT COMMENT THIS OUT
+		String rupRatesFileDirName = ROOT_PATH+"OutputDataAndFigs/";	// this is only used if solutionType = InversionSolutionType.FROM_FILE
+
+//		InversionSolutionType solutionType = InversionSolutionType.NON_NEGATIVE_LEAST_SQUARES;
+
+		int numSolutions = 10; // this is ignored for NON_NEGATIVE_LEAST_SQUARES which only has one possible solution
+		
+		// Simulated Annealing Parameters (ignored for NON_NEGATIVE_LEAST_SQUARES)
+		CoolingScheduleType saCooling = CoolingScheduleType.VERYFAST_SA;
+		long numIterations = (long) 1e5;
+		boolean initStateFromAprioriRupRates = true;
+		long randomSeed = System.currentTimeMillis();
+//		long randomSeed = 1525892588112l; // for reproducibility; note that the last character here is the letter "l" to indicated a long value
+		
+		// Data to plot and/or save:
+		boolean popUpPlots = true;	// this tells whether to show plots in a window (set null to turn off; e.g., for HPC)
+		boolean doDataFits=true;
+		boolean doMagHistograms=true;
+		boolean doNonZeroRateRups=true;
+	    boolean doSectPartMFDs=true;
+	    
+	    // to make hazard curve (set loc=null to ignore)
+		Location hazCurveLoc = new Location(40.75, -111.90);	// Salt Lake City
+	    String hazCurveLocName = "Salt Lake City Hazard Curve";
+	    
+	    // to make hazard maps
+	    boolean makeHazardMaps = true;
+		double saPeriodForHazMap = 1.0;	// set as 0.0 for PGA
+
+		// THIS IS THE END OF THE INVERSION SETTINGS
+
+		// Create an instance of this inversion class
+		WasatchInversion wasatchInversion = new WasatchInversion(slipRates);
+				
+
 		ArrayList<FaultSectionPrefData> fltSectDataList = wasatchInversion.getFaultSectionDataList();
 		ArrayList<SegRateConstraint> sectionRateConstraints = wasatchInversion.getSectionRateConstraints();
 		int[][] rupSectionMatrix = wasatchInversion.getRupSectionMatrix();
@@ -719,25 +911,6 @@ public class WasatchInversion {
 		long startTimeMillis = System.currentTimeMillis();
 		if(D)
 			System.out.println("Starting Inversion");
-
-		// set inversion attributes
-		String name = "Wasatch Inversion";
-		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.TAPERED;
-		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.WC94_SRL_ALL;
-		double relativeSectRateWt=1;
-		
-		double relative_aPrioriRupWt = 0;	//
-
-		boolean wtedInversion = true;
-//		double minRupRate = 1e-8;
-		double minRupRate = 0.0;
-		boolean applyProbVisible = true;
-		double moRateReduction = 0.1;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
-		double relativeMFD_constraintWt = 0; // setting this to 1e6
-		
-		// Segmentation constraint:
-		String segmentationConstrFilename = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
-		double relative_segmentationConstrWt = 0;
 		
 		// create an instance of the inversion class with the above settings
 		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion(
@@ -758,77 +931,71 @@ public class WasatchInversion {
 				segmentationConstrFilename,
 				relative_segmentationConstrWt);
 		
-		// make the directory for storing results (set as null if you don't want to save anything)
-		String dirName = ROOT_PATH+"OutputFigsAndData";
+		// make the directory for storing results
 	    File file = new File(dirName);
 	    file.mkdirs();
 	    
 	    // write the setup info to a file
 	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
-		
 	    
-		// NON_NEGATIVE LEAST SQUARES:
-//		fltSysRupInversion.doInversionNNLS();
-		
-//		// SIMULATED ANNEALING
-//		long numIterations = (long) 1e5;
-//		boolean initStateFromAprioriRupRates = true;
-//		long randomSeed = System.currentTimeMillis();
-////		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
-//		fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed);
-		
-		
-//		// SOLUTION FROM FILE:
-//		String ratesFileName = ROOT_PATH+"OutputFigsAndData/ruptureRates.txt"; // assumed consistent with values above
-//		double[] rupRatesArray = wasatchInversion.readRuptureRatesFromFile(ratesFileName);
-//		fltSysRupInversion.setSolution(rupRatesArray);
+	    switch (solutionType) {
+	    		case NON_NEGATIVE_LEAST_SQUARES:
+	    			if(D) System.out.println("NON_NEGATIVE_LEAST_SQUARES");
+	    			fltSysRupInversion.doInversionNNLS();
+	    			break;
+	    		case SIMULATED_ANNEALING:
+	    			if(numSolutions==1) {
+		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions=1");
+	    				fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed, saCooling);
+	    			}
+	    			else if(numSolutions>1) {
+		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions="+numSolutions);
+	    				fltSysRupInversion.doInversionSA_MultTimes(numIterations, initStateFromAprioriRupRates, randomSeed, numSolutions, dirName, saCooling);
+	    			}
+	    			else {
+	    				throw new RuntimeException("bad numIterations");
+	    			}
+	    			break;
+	    		case FROM_FILE:
+			    	if(numSolutions==1) {
+		    			if(D) System.out.println("FROM_FILE; numSolutions=1");
+		    			String rupRatesFileName = rupRatesFileDirName+ "ruptureRatesAlt.txt";
+			    		double[] rupRatesArray = wasatchInversion.readRuptureRatesFromFile(rupRatesFileName);
+			    		fltSysRupInversion.setSolution(rupRatesArray, "Solution from file: "+rupRatesFileName);
+			    	}
+			    	else if(numSolutions>1) {
+		    			if(D) System.out.println("FROM_FILE; numSolutions="+numSolutions);
+		    			ArrayList<double[]> rupRatesArrayList = new ArrayList<double[]>();
+		    			for(int i=0;i<numSolutions;i++) {
+			    			String rupRatesFileName = rupRatesFileDirName+ "ruptureRates_"+i+".txt";
+			    			rupRatesArrayList.add(wasatchInversion.readRuptureRatesFromFile(rupRatesFileName));
+			    			fltSysRupInversion.setMultipleSolutions(rupRatesArrayList, "Multiple solutions read from files with prefix "+rupRatesFileName, dirName);
+		    			}
+			    	}
+			    	else {
+			    		throw new RuntimeException("bad numIterations");
+			    	}
+			    	break;
+	    }
 
-		// MULTIPLE SIMULATED ANNEALING RUNS
-		long numIterations = (long) 1e5;
-		boolean initStateFromAprioriRupRates = true;
-		long randomSeed = System.currentTimeMillis();
-//		long randomSeed = 1525892588112l; // not that the last character here is the letter "l" to indicated a long value
-		int numRuns=10;
-		fltSysRupInversion.doInversionSA_MultTimes(numIterations, initStateFromAprioriRupRates, randomSeed, numRuns, dirName);
-		
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
 		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
 				
 		// write results to file
 		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
-		
-		// Now make plots if desired
-		boolean popUpPlots = true;	// this tells whether to show plots in a window (turn off for HPC)
-//		dirName = null;	// set as null if you don't want to save to file
-		fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
-		fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
-		fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
-	    fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
+			
+		if(doDataFits) fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
+		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
+		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
+		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
 	    
 	    // hazard curve:
-//		Location loc = new Location(40.75, -111.90);	// Salt Lake City
-//	    wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, loc, 1.0, dirName, popUpPlots, "Salt Lake City Hazard Curve");
-
-//		Location testLoc1 = new Location(41.5, -112.05);
-//	    wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, testLoc1, 1.0, dirName, popUpPlots, "testLoc1");
-
-//		Location testLoc2 = new Location(40.15, -111.6);
-//	    wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, testLoc2, 1.0, dirName, popUpPlots, "testLoc2");
-
+		if(hazCurveLoc != null) {
+				wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, hazCurveLoc, 1.0, dirName, popUpPlots, hazCurveLocName);
+		}
 	    
 	    // second parameter here is SA period; set as 0.0 for PGA:
-	    wasatchInversion.makeHazardMaps(fltSysRupInversion, 1.0, dirName, popUpPlots);
-	    
-	    
-	    // Make hazard map ratio
-//	    String fileName1 = dirName+"/hazardMaps/1.0secSA_10in50.txt";
-//	    String fileName2 = dirName+"/hazardMaps/1.0secSA_10in50.txt";
-//	    String fileName2 = dirName+"/hazardMaps/1.0secSA_2in50.txt";
-//	    String label = "1.0secSA_10in50_2in50_ratio";
-//	    wasatchInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName+"/hazardMaps", true);
-		
+		if(makeHazardMaps)
+			wasatchInversion.makeHazardMaps(fltSysRupInversion, saPeriodForHazMap, dirName, popUpPlots);
 	}
-
-
-
 }
