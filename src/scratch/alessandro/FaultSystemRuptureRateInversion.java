@@ -100,6 +100,8 @@ public class FaultSystemRuptureRateInversion {
 	public final static double GAUSS_MFD_TRUNCATION = 2;
 	public final static double MAG_DELTA = 0.1;
 	
+	public final static double MIN_RUP_RATE = 1e-9;
+	
 	String modelName;
 	
 	// Strings to keep track of results
@@ -464,6 +466,14 @@ public class FaultSystemRuptureRateInversion {
 		num_segConstraints = 0;
 		if(relative_segConstraintWt>0 ) {
 			setSegmentationConstrints();
+			
+			// set the associated aPriori rates to zero (moment rate will be off)
+			for(int i=0;i<segConstraint_rupIndex.length;i++) {
+				int rupIndex = segConstraint_rupIndex[i];
+				if(aPriori_rupIndex[rupIndex] != rupIndex)
+					throw new RuntimeException("Problem");
+				aPriori_rate[rupIndex] = 0;
+			}
 		}
 		
 		initMatricesEtc();
@@ -836,6 +846,9 @@ public class FaultSystemRuptureRateInversion {
 		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 		if(minRupRate >0.0)
 			for(int rup=0; rup<numRuptures;rup++) rupRateSolution[rup] += minRupRateArray[rup];
+		
+		// set rates below the minimum to zero
+		setRupRatesBelowMinToZero();
 
 		// compute predicted data
 		for(int row=0;row<totNumRows; row++)
@@ -937,7 +950,7 @@ public class FaultSystemRuptureRateInversion {
 				cumMfdsFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(cumTemp.getMinX(), cumTemp.size(), cumTemp.getDelta()); 
 				finalSectSlipRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
 				finalPaleoVisibleSectEventRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
-				rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, rateOfThroughGoingRupsAtSectBoudary.length, 1.0);
+				rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(-0.5, rateOfThroughGoingRupsAtSectBoudary.length, 1.0);
 			}
 			for(int i=0;i<numRuptures;i++)
 				rupRatesFromMultRuns.set(i, rupRateSolution[i], 1.0);
@@ -1002,6 +1015,9 @@ public class FaultSystemRuptureRateInversion {
 		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 		if(minRupRate >0.0)
 			for(int rup=0; rup<numRuptures;rup++) rupRateSolution[rup] += minRupRateArray[rup];
+		
+		// set rates below the minimum to zero
+		setRupRatesBelowMinToZero();
 
 		// compute predicted data
 		for(int row=0;row<totNumRows; row++)
@@ -1018,7 +1034,11 @@ public class FaultSystemRuptureRateInversion {
 	}
 
 	
-	
+	private void setRupRatesBelowMinToZero() {
+		for(int r=0;r<numRuptures;r++)
+			if(rupRateSolution[r]<MIN_RUP_RATE)
+				rupRateSolution[r]=0;
+	}
 
 	
 	/**
@@ -1070,6 +1090,9 @@ public class FaultSystemRuptureRateInversion {
 			// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 			if(minRupRate >0.0)
 				for(int rup=0; rup<numRuptures;rup++) rupRateSolution[rup] += minRupRateArray[rup];
+			
+			// set rates below the minimum to zero
+			setRupRatesBelowMinToZero();
 
 			// compute predicted data
 			for(int row=0;row<totNumRows; row++)
@@ -1858,8 +1881,7 @@ public class FaultSystemRuptureRateInversion {
 
 
 		// PLOT RATE AT WHICH RUPTURES PASS THROUGH EACH SECTION BOUNDARY
-		min = 0; max = numSections;
-		EvenlyDiscretizedFunc rateOfThroughgoingRupsFunc = new EvenlyDiscretizedFunc(min, max, numSections+1);
+		EvenlyDiscretizedFunc rateOfThroughgoingRupsFunc = new EvenlyDiscretizedFunc(-0.5, numSections+1, 1.0);
 		for(int s=0; s<numSections+1;s++) {
 			rateOfThroughgoingRupsFunc.set(s,rateOfThroughGoingRupsAtSectBoudary[s]);
 		}
@@ -2438,6 +2460,7 @@ public class FaultSystemRuptureRateInversion {
 			}
 		}	
 	}
+	
 
 
 	// The returns the fault system solution for current solution (or the mean from multiple solutions)

@@ -801,24 +801,16 @@ public class WasatchInversion {
 	 */
 	public static void main(String []args) {
 		
-		// The directory for storing results (set as null if you don't want to save anything)
-		String dirName = ROOT_PATH+"OutputDataAndFigs";
+		// THE FOLLOWING SETS ALL THE INVERSION ATTRIBUTES:
+		//------------------------------------------------
+		
+		String dirName = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform";
 	
-	    // THE FOLLOWING IS TO MAKE HAZARD MAP RATIOS FOR DATA IN FILES
-//	    String fileName1 = dirName+"/hazardMaps/1.0secSA_10in50.txt";
-//	    String fileName2 = dirName+"/hazardMaps/1.0secSA_2in50.txt";
-//	    String label = "1.0secSA_10in50_2in50_ratio";
-//	    wasatchInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName+"/hazardMaps", true);
-//		System.exit(-1);;
-		
-		// THE FOLLOWING SETS ALL THE INVERSION ATTRIBUTES (BESIDES THE DIR ABOVE):
-		//------------------------------------------------------------------------
-		
 		// Inversion name
 		String name = "Wasatch Inversion";
 		
 		// Slip Rate
-		WasatchSlipRatesEnum slipRates = WasatchSlipRatesEnum.NON_UNIFORM_MEAN;
+		WasatchSlipRatesEnum slipRates = WasatchSlipRatesEnum.UNIFORM_MEAN;
 		
 		// Average slip along rupture model
 		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.TAPERED;
@@ -832,7 +824,7 @@ public class WasatchInversion {
 //		wasatchInversion.writeApriorRupRatesForSegmentationConstrints();
 //		System.exit(-1);
 		String segmentationConstrFilename = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
-		double relative_segmentationConstrWt = 0;
+		double relative_segmentationConstrWt = 1e8;
 		
 		// Misc settings
 		double relative_aPrioriRupWt = 0;	//
@@ -856,7 +848,7 @@ public class WasatchInversion {
 		
 		// Simulated Annealing Parameters (ignored for NON_NEGATIVE_LEAST_SQUARES)
 		CoolingScheduleType saCooling = CoolingScheduleType.VERYFAST_SA;
-		long numIterations = (long) 1e5;
+		long numIterations = (long) 1e6;
 		boolean initStateFromAprioriRupRates = true;
 		long randomSeed = System.currentTimeMillis();
 //		long randomSeed = 1525892588112l; // for reproducibility; note that the last character here is the letter "l" to indicated a long value
@@ -904,6 +896,15 @@ public class WasatchInversion {
 			}
 			System.out.println(str);			
 		}
+		
+//	    // THE FOLLOWING IS TO MAKE HAZARD MAP RATIOS FOR DATA IN FILES
+//	    String fileName1 = ROOT_PATH+"OutputDataAndFigs_SA10_Unsegmented_Uniform"+"/hazardMaps/1.0secSA_2in50.txt";
+//	    String fileName2 = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform"+"/hazardMaps/1.0secSA_2in50.txt";
+//	    String label = "1.0secSA_2in50_2in50_ratio";
+//	    wasatchInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName+"/hazardMaps", true);
+//		System.exit(-1);
+//		
+
 
 //		System.exit(0);
 		
