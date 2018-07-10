@@ -804,7 +804,7 @@ public class WasatchInversion {
 		// THE FOLLOWING SETS ALL THE INVERSION ATTRIBUTES:
 		//------------------------------------------------
 		
-		String dirName = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform";
+		String dirName = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform_5";
 	
 		// Inversion name
 		String name = "Wasatch Inversion";
@@ -836,11 +836,11 @@ public class WasatchInversion {
 		double relativeMFD_constraintWt = 0; // 
 		
 		// Inversion Solution Type:
-		InversionSolutionType solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+//		InversionSolutionType solutionType = InversionSolutionType.SIMULATED_ANNEALING;
 
-//		InversionSolutionType solutionType = InversionSolutionType.FROM_FILE;
+		InversionSolutionType solutionType = InversionSolutionType.FROM_FILE;
 		// the following is the directory where to find this file - CANNOT COMMENT THIS OUT
-		String rupRatesFileDirName = ROOT_PATH+"OutputDataAndFigs/";	// this is only used if solutionType = InversionSolutionType.FROM_FILE
+		String rupRatesFileDirName = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform_4/";	// this is only used if solutionType = InversionSolutionType.FROM_FILE
 
 //		InversionSolutionType solutionType = InversionSolutionType.NON_NEGATIVE_LEAST_SQUARES;
 

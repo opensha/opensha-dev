@@ -851,6 +851,7 @@ public class FaultSystemRuptureRateInversion {
 		setRupRatesBelowMinToZero();
 
 		// compute predicted data
+		d_pred = new double[totNumRows];  // predicted data vector
 		for(int row=0;row<totNumRows; row++)
 			for(int col=0; col <numRuptures; col++)
 				d_pred[row] += rupRateSolution[col]*C[row][col];
@@ -877,6 +878,7 @@ public class FaultSystemRuptureRateInversion {
 		rupRateSolution = rupRatesArray;
 		
 		// compute predicted data
+		d_pred = new double[totNumRows];  // predicted data vector
 		for(int row=0;row<totNumRows; row++)
 			for(int col=0; col <numRuptures; col++)
 				d_pred[row] += rupRateSolution[col]*C[row][col];
@@ -914,6 +916,7 @@ public class FaultSystemRuptureRateInversion {
 			Preconditions.checkState(rupRateSolution.length == numRuptures, "input rupture rates does not have the correct number of ruptures (%s vs %s", rupRateSolution.length, numRuptures);
 
 			// compute predicted data
+			d_pred = new double[totNumRows];  // predicted data vector
 			for(int row=0;row<totNumRows; row++)
 				for(int col=0; col <numRuptures; col++)
 					d_pred[row] += rupRateSolution[col]*C[row][col];
@@ -1020,6 +1023,7 @@ public class FaultSystemRuptureRateInversion {
 		setRupRatesBelowMinToZero();
 
 		// compute predicted data
+		d_pred = new double[totNumRows];  // predicted data vector
 		for(int row=0;row<totNumRows; row++)
 			for(int col=0; col <numRuptures; col++)
 				d_pred[row] += rupRateSolution[col]*C[row][col];
@@ -1095,6 +1099,7 @@ public class FaultSystemRuptureRateInversion {
 			setRupRatesBelowMinToZero();
 
 			// compute predicted data
+			d_pred = new double[totNumRows];  // predicted data vector
 			for(int row=0;row<totNumRows; row++)
 				for(int col=0; col <numRuptures; col++)
 					d_pred[row] += rupRateSolution[col]*C[row][col];
@@ -1131,7 +1136,7 @@ public class FaultSystemRuptureRateInversion {
 				cumMfdsFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(cumTemp.getMinX(), cumTemp.size(), cumTemp.getDelta()); 
 				finalSectSlipRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
 				finalPaleoVisibleSectEventRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
-				rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, rateOfThroughGoingRupsAtSectBoudary.length, 1.0);
+				rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(-0.5, rateOfThroughGoingRupsAtSectBoudary.length, 1.0);
 			}
 			rupRatesFromMultRunsArrayList.add(rupRateSolution);
 			for(int i=0;i<numRuptures;i++)
