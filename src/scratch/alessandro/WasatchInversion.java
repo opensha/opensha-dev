@@ -601,6 +601,18 @@ public class WasatchInversion {
 			site.addParameter(param);
 //			System.out.println(param.getName()+"\t"+param.getValue());
 		}
+		
+		// set the IMT
+		ArbitrarilyDiscretizedFunc curveLinearXvalues;
+		if(saPeriod == 0) {
+			imr.setIntensityMeasure(PGA_Param.NAME);
+		}
+		else {
+			SA_Param saParam = (SA_Param)imr.getParameter(SA_Param.NAME);
+			saParam.getPeriodParam().setValue(saPeriod);
+			imr.setIntensityMeasure(saParam);
+		}
+
 	
 		HazardCurveCalculator calc = new HazardCurveCalculator();
 		
@@ -818,13 +830,13 @@ public class WasatchInversion {
 		
 		// Scaling Relationship
 		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.WC94_SRL_ALL;
-		double relativeSectRateWt=0;
+		double relativeSectRateWt=1;
 		
 		// Segmentation constraint filename and weight (file created by running the following method once):
 //		wasatchInversion.writeApriorRupRatesForSegmentationConstrints();
 //		System.exit(-1);
 		String segmentationConstrFilename = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
-		double relative_segmentationConstrWt = 1e8;
+		double relative_segmentationConstrWt = 0;
 		
 		// Misc settings
 		double relative_aPrioriRupWt = 0;	//
@@ -836,13 +848,13 @@ public class WasatchInversion {
 		double relativeMFD_constraintWt = 0; // 
 		
 		// Inversion Solution Type:
-		InversionSolutionType solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+//		InversionSolutionType solutionType = InversionSolutionType.SIMULATED_ANNEALING;
 
 //		InversionSolutionType solutionType = InversionSolutionType.FROM_FILE;
 		// the following is the directory where to find this file - CANNOT COMMENT THIS OUT
 		String rupRatesFileDirName = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform_4/";	// this is only used if solutionType = InversionSolutionType.FROM_FILE
 
-//		InversionSolutionType solutionType = InversionSolutionType.NON_NEGATIVE_LEAST_SQUARES;
+		InversionSolutionType solutionType = InversionSolutionType.NON_NEGATIVE_LEAST_SQUARES;
 
 		int numSolutions = 10; // this is ignored for NON_NEGATIVE_LEAST_SQUARES which only has one possible solution
 		
@@ -866,7 +878,7 @@ public class WasatchInversion {
 	    
 	    // to make hazard maps
 	    boolean makeHazardMaps = true;
-		double saPeriodForHazMap = 1.0;	// set as 0.0 for PGA
+		double saPeriodForHaz = 1.0;	// set as 0.0 for PGA
 
 		// THIS IS THE END OF THE INVERSION SETTINGS
 
@@ -992,11 +1004,11 @@ public class WasatchInversion {
 	    
 	    // hazard curve:
 		if(hazCurveLoc != null) {
-				wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, hazCurveLoc, 1.0, dirName, popUpPlots, hazCurveLocName);
+				wasatchInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, hazCurveLoc, saPeriodForHaz, dirName, popUpPlots, hazCurveLocName);
 		}
 	    
 	    // second parameter here is SA period; set as 0.0 for PGA:
 		if(makeHazardMaps)
-			wasatchInversion.makeHazardMaps(fltSysRupInversion, saPeriodForHazMap, dirName, popUpPlots);
+			wasatchInversion.makeHazardMaps(fltSysRupInversion, saPeriodForHaz, dirName, popUpPlots);
 	}
 }
