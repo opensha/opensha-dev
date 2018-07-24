@@ -40,6 +40,10 @@ public class MagCompPage_ParametersFetch {
 	//		[double]	magCat
 	//		[double]	capG
 	//		[double]	capH
+	//		[double]	magSample
+	//		[double]	radiusSample
+	//		[double]	magCentroid
+	//		[double]	radiusCentroid
 	//	[int]		Number of special regions
 	//	[repeated]	Repeated once for each special region:
 	//		[string]	Name of tectonic regime to apply in this region
@@ -112,10 +116,14 @@ public class MagCompPage_ParametersFetch {
 				double magCat = load_table_double (sc);
 				double capG = load_table_double (sc);
 				double capH = load_table_double (sc);
+				double magSample = load_table_double (sc);
+				double radiusSample = load_table_double (sc);
+				double magCentroid = load_table_double (sc);
+				double radiusCentroid = load_table_double (sc);
 
 				// Make the parameter object
 
-				return new MagCompPage_Parameters(magCat, capG, capH);
+				return new MagCompPage_Parameters(magCat, capG, capH, magSample, radiusSample, magCentroid, radiusCentroid);
 			}
 
 			// load_parameter_values - Load parameter values for the tables.

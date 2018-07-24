@@ -105,6 +105,8 @@ public class ServerConfigFile {
 	public static final int PDLOPT_PROD = 2;		// PDL production server
 	public static final int PDLOPT_MAX = 2;
 
+	public static final int PDLOPT_UNSPECIFIED = -1;	// PDL access is unspecified
+
 	public int pdl_enable;
 
 	// PDL signing key filename, can be empty string for none.  Cannot be null.

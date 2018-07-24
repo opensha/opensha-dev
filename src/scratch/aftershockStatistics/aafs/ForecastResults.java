@@ -139,7 +139,7 @@ public class ForecastResults {
 		try {
 			ComcatAccessor accessor = new ComcatAccessor();
 			catalog_comcat_aftershocks = accessor.fetchAftershocks(mainshock, params.min_days, params.max_days,
-				params.min_depth, params.max_depth, params.aftershock_search_region, false);
+				params.min_depth, params.max_depth, params.aftershock_search_region, false, params.min_mag);
 		} catch (Exception e) {
 			throw new RuntimeException("ForecastResults.calc_catalog_results: Comcat exception", e);
 		}
@@ -690,44 +690,49 @@ public class ForecastResults {
 
 	@Override
 	public String toString() {
-		return "ForecastResults:" + "\n"
-		+ "result_time = " + result_time + "\n"
-		+ "advisory_lag = " + advisory_lag + "\n"
+		StringBuilder result = new StringBuilder();
 
-		+ "catalog_result_avail = " + catalog_result_avail + "\n"
-		+ ((!catalog_result_avail) ? "" : (
-			"catalog_start_time = " + catalog_start_time + "\n"
-			+ "catalog_end_time = " + catalog_end_time + "\n"
-			+ "catalog_eqk_count = " + catalog_eqk_count + "\n"
-			+ "catalog_max_mag = " + catalog_max_mag + "\n"
-			+ "catalog_max_event_id = " + catalog_max_event_id + "\n"
-			+ "catalog_aftershocks = " + ((catalog_aftershocks == null) ? "null" : "available") + "\n"
-			+ "catalog_comcat_aftershocks = " + ((catalog_comcat_aftershocks == null) ? "null" : "available") + "\n"
-		))
+		result.append ("ForecastResults:" + "\n");
 
-		+ "generic_result_avail = " + generic_result_avail + "\n"
-		+ ((!generic_result_avail) ? "" : (
-			"generic_summary:\n" + generic_summary.toString() + "\n"
-			+ "generic_json = " + generic_json + "\n"
-			+ "generic_pdl = " + generic_pdl + "\n"
-			+ "generic_model = " + ((generic_model == null) ? "null" : "available") + "\n"
-		))
+		result.append ("result_time = " + result_time + "\n");
+		result.append ("advisory_lag = " + advisory_lag + "\n");
 
-		+ "seq_spec_result_avail = " + seq_spec_result_avail + "\n"
-		+ ((!seq_spec_result_avail) ? "" : (
-			"seq_spec_summary:\n" + seq_spec_summary.toString() + "\n"
-			+ "seq_spec_json = " + seq_spec_json + "\n"
-			+ "seq_spec_pdl = " + seq_spec_pdl + "\n"
-			+ "seq_spec_model = " + ((seq_spec_model == null) ? "null" : "available") + "\n"
-		))
+		result.append ("catalog_result_avail = " + catalog_result_avail + "\n");
+		if (catalog_result_avail) {
+			result.append ("catalog_start_time = " + catalog_start_time + "\n");
+			result.append ("catalog_end_time = " + catalog_end_time + "\n");
+			result.append ("catalog_eqk_count = " + catalog_eqk_count + "\n");
+			result.append ("catalog_max_mag = " + catalog_max_mag + "\n");
+			result.append ("catalog_max_event_id = " + catalog_max_event_id + "\n");
+			result.append ("catalog_aftershocks = " + ((catalog_aftershocks == null) ? "null" : "available") + "\n");
+			result.append ("catalog_comcat_aftershocks = " + ((catalog_comcat_aftershocks == null) ? "null" : "available") + "\n");
+		}
 
-		+ "bayesian_result_avail = " + bayesian_result_avail + "\n"
-		+ ((!bayesian_result_avail) ? "" : (
-			"bayesian_summary:\n" + bayesian_summary.toString() + "\n"
-			+ "bayesian_json = " + bayesian_json + "\n"
-			+ "bayesian_pdl = " + bayesian_pdl + "\n"
-			+ "bayesian_model = " + ((bayesian_model == null) ? "null" : "available") + "\n"
-		));
+		result.append ("generic_result_avail = " + generic_result_avail + "\n");
+		if (generic_result_avail) {
+			result.append ("generic_summary:\n" + generic_summary.toString() + "\n");
+			result.append ("generic_json = " + generic_json + "\n");
+			result.append ("generic_pdl = " + generic_pdl + "\n");
+			result.append ("generic_model = " + ((generic_model == null) ? "null" : "available") + "\n");
+		}
+
+		result.append ("seq_spec_result_avail = " + seq_spec_result_avail + "\n");
+		if (seq_spec_result_avail) {
+			result.append ("seq_spec_summary:\n" + seq_spec_summary.toString() + "\n");
+			result.append ("seq_spec_json = " + seq_spec_json + "\n");
+			result.append ("seq_spec_pdl = " + seq_spec_pdl + "\n");
+			result.append ("seq_spec_model = " + ((seq_spec_model == null) ? "null" : "available") + "\n");
+		}
+
+		result.append ("bayesian_result_avail = " + bayesian_result_avail + "\n");
+		if (bayesian_result_avail) {
+			result.append ("bayesian_summary:\n" + bayesian_summary.toString() + "\n");
+			result.append ("bayesian_json = " + bayesian_json + "\n");
+			result.append ("bayesian_pdl = " + bayesian_pdl + "\n");
+			result.append ("bayesian_model = " + ((bayesian_model == null) ? "null" : "available") + "\n");
+		}
+
+		return result.toString();
 	}
 
 

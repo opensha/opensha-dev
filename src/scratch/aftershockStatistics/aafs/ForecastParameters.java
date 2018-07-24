@@ -1,5 +1,10 @@
 package scratch.aftershockStatistics.aafs;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import scratch.aftershockStatistics.util.EventNotFoundException;
 import scratch.aftershockStatistics.util.MarshalReader;
 import scratch.aftershockStatistics.util.MarshalWriter;
 import scratch.aftershockStatistics.util.MarshalException;
@@ -52,9 +57,9 @@ public class ForecastParameters {
 
 	//----- Root parameters -----
 
-	// Mainshock event id.
+	// Mainshock event id, used for sending query to Comcat.
 
-	public String event_id = "";
+	public String query_event_id = "";
 
 	// Lag time of forecast, in milliseconds since the mainshock.
 	// Restriction: Must be greater than the value in the previous forecast.
@@ -115,6 +120,22 @@ public class ForecastParameters {
 
 	public boolean mainshock_avail = false;
 
+	// Mainshock event id, as received from Comcat.
+
+	public String mainshock_event_id = null;
+
+	// Mainshock network.
+
+	public String mainshock_network = null;
+
+	// Mainshock code.
+
+	public String mainshock_code = null;
+
+	// Mainshock id list;
+
+	public String[] mainshock_id_list = null;
+
 	// Mainshock time, in milliseconds since the epoch.
 
 	public long mainshock_time = 0L;
@@ -138,6 +159,10 @@ public class ForecastParameters {
 	// Set mainshock parameters to default.
 
 	public void set_default_mainshock_params () {
+		mainshock_event_id = null;
+		mainshock_network = null;
+		mainshock_code = null;
+		mainshock_id_list = null;
 		mainshock_time = 0L;
 		mainshock_mag = 0.0;
 		mainshock_lat = 0.0;
@@ -149,6 +174,32 @@ public class ForecastParameters {
 	// Set mainshock parameters from rupture information.
 
 	public void set_eqk_rupture (ObsEqkRupture rup) {
+
+		mainshock_event_id = rup.getEventId();
+		if (mainshock_event_id == null || mainshock_event_id.isEmpty()) {
+			throw new EventNotFoundException ("ForecastParameters.set_eqk_rupture: Comcat did not return event id: query_event_id = " + ((query_event_id == null) ? "null" : query_event_id));
+		}
+
+		Map<String, String> eimap = ComcatAccessor.extendedInfoToMap (rup, ComcatAccessor.EITMOPT_NULL_TO_EMPTY);
+		mainshock_network = eimap.get (ComcatAccessor.PARAM_NAME_NETWORK);
+		if (mainshock_network == null || mainshock_network.isEmpty()) {
+			throw new EventNotFoundException ("ForecastParameters.set_eqk_rupture: Comcat did not return event network: query_event_id = " + ((query_event_id == null) ? "null" : query_event_id));
+		}
+		mainshock_code = eimap.get (ComcatAccessor.PARAM_NAME_CODE);
+		if (mainshock_code == null || mainshock_code.isEmpty()) {
+			throw new EventNotFoundException ("ForecastParameters.set_eqk_rupture: Comcat did not return event code: query_event_id = " + ((query_event_id == null) ? "null" : query_event_id));
+		}
+
+		String comcat_idlist = eimap.get (ComcatAccessor.PARAM_NAME_IDLIST);
+		//if (comcat_idlist == null || comcat_idlist.isEmpty()) {
+		//	throw new EventNotFoundException ("ForecastParameters.set_eqk_rupture: Comcat did not return event id list: query_event_id = " + ((query_event_id == null) ? "null" : query_event_id));
+		//}
+		List<String> idlist = ComcatAccessor.idsToList (comcat_idlist, mainshock_event_id);
+		if (idlist.isEmpty()) {
+			throw new EventNotFoundException ("ForecastParameters.set_eqk_rupture: Unable to construct event id list: query_event_id = " + ((query_event_id == null) ? "null" : query_event_id));
+		}
+		mainshock_id_list = idlist.toArray (new String[0]);
+
 		mainshock_time = rup.getOriginTime();
 		mainshock_mag = rup.getMag();
 		Location hypo = rup.getHypocenterLocation();
@@ -188,11 +239,11 @@ public class ForecastParameters {
 	// Get rupture information from mainshock parameters.
 
 	public ObsEqkRupture get_eqk_rupture () {
-		return new ObsEqkRupture (event_id, mainshock_time, get_eqk_location(), mainshock_mag);
+		return new ObsEqkRupture (mainshock_event_id, mainshock_time, get_eqk_location(), mainshock_mag);
 	}
 
 	// Fetch mainshock parameters.
-	// Note: Must set event_id first.
+	// Note: Must set query_event_id first.
 
 	public void fetch_mainshock_params (ForecastParameters prior_params) {
 
@@ -228,6 +279,10 @@ public class ForecastParameters {
 
 		case FETCH_METH_ANALYST:
 			mainshock_avail = prior_params.mainshock_avail;
+			mainshock_event_id = prior_params.mainshock_event_id;
+			mainshock_network = prior_params.mainshock_network;
+			mainshock_code = prior_params.mainshock_code;
+			mainshock_id_list = ((prior_params.mainshock_id_list == null) ? prior_params.mainshock_id_list : prior_params.mainshock_id_list.clone());
 			mainshock_time = prior_params.mainshock_time;
 			mainshock_mag = prior_params.mainshock_mag;
 			mainshock_lat = prior_params.mainshock_lat;
@@ -249,17 +304,17 @@ public class ForecastParameters {
 
 		try {
 			ComcatAccessor accessor = new ComcatAccessor();
-			rup = accessor.fetchEvent(event_id, false, false);
+			rup = accessor.fetchEvent(query_event_id, false, true);		// request extended info
 		} catch (Exception e) {
-			throw new RuntimeException("ForecastParameters.fetch_mainshock_params: Comcat exception", e);
+			throw new RuntimeException ("ForecastParameters.fetch_mainshock_params: Comcat exceptiont: query_event_id = " + ((query_event_id == null) ? "null" : query_event_id), e);
 		}
 
 		if (rup == null) {
-			throw new RuntimeException("ForecastParameters.fetch_mainshock_params: Comcat returned nothing");
+			throw new EventNotFoundException ("ForecastParameters.fetch_mainshock_params: Comcat did not find event: query_event_id = " + ((query_event_id == null) ? "null" : query_event_id));
 		}
 
-		mainshock_avail = true;
 		set_eqk_rupture (rup);
+		mainshock_avail = true;
 		return;
 	}
 
@@ -530,6 +585,10 @@ public class ForecastParameters {
 
 	public double max_depth = 700.0;
 
+	// Minimum magnitude to consider in search, or -10.0 if none.
+
+	public double min_mag = -10.0;
+
 	// Set aftershock search parameters to default.
 
 	public void set_default_aftershock_search_params () {
@@ -538,6 +597,7 @@ public class ForecastParameters {
 		max_days = 0.0;
 		min_depth = 0.0;
 		max_depth = 700.0;
+		min_mag = -10.0;
 		return;
 	}
 
@@ -567,6 +627,7 @@ public class ForecastParameters {
 			max_days = prior_params.max_days;
 			min_depth = prior_params.min_depth;
 			max_depth = prior_params.max_depth;
+			min_mag = prior_params.min_mag;
 
 			// Special handling for max_days, try to make it match forecast_lag if available
 
@@ -582,13 +643,21 @@ public class ForecastParameters {
 			return;
 		}
 
-		// If we don't have mainshock parameters, then we can't fetch aftershock search parameters
+		// If we don't have mainshock and magnitude of completeness parameters, then we can't fetch aftershock search parameters
 
-		if (!( mainshock_avail )) {
+		if (!( mainshock_avail && mag_comp_avail )) {
 			aftershock_search_avail = false;
 			set_default_aftershock_search_params();
 			return;
 		}
+
+		// Get minimum magnitude and radius multiplier parameters
+
+		double sample_min_mag = mag_comp_params.get_magSample();
+		double sample_radius_mult = mag_comp_params.get_radiusSample();
+
+		double centroid_min_mag = mag_comp_params.get_magCentroid();
+		double centroid_radius_mult = mag_comp_params.get_radiusCentroid();
 
 		// Get initial search radius from Wells and Coppersmith
 
@@ -597,7 +666,7 @@ public class ForecastParameters {
 
 		// The initial region is a circle centered at the epicenter
 
-		SphRegion initial_region = SphRegion.makeCircle (get_sph_eqk_location(), radius);
+		SphRegion initial_region = SphRegion.makeCircle (get_sph_eqk_location(), radius * centroid_radius_mult);
 
 		// Time range used for sampling aftershocks, in days since the mainshock
 
@@ -611,13 +680,17 @@ public class ForecastParameters {
 		min_depth = 0.0;
 		max_depth = 700.0;
 
+		// Minimum magnitude used for sampling aftershocks
+
+		min_mag = sample_min_mag;
+
 		// Retrieve list of aftershocks in the initial region
 
 		ObsEqkRupList aftershocks;
 
 		try {
 			ComcatAccessor accessor = new ComcatAccessor();
-			aftershocks = accessor.fetchAftershocks(get_eqk_rupture(), min_days, max_days, min_depth, max_depth, initial_region, initial_region.getPlotWrap());
+			aftershocks = accessor.fetchAftershocks(get_eqk_rupture(), min_days, max_days, min_depth, max_depth, initial_region, initial_region.getPlotWrap(), centroid_min_mag);
 		} catch (Exception e) {
 			throw new RuntimeException("ForecastParameters.fetch_aftershock_search_region: Comcat exception", e);
 		}
@@ -640,9 +713,24 @@ public class ForecastParameters {
 
 		// Search region is a circle centered at the centroid (or hypocenter if no aftershocks)
 			
-		aftershock_search_region = SphRegion.makeCircle (new SphLatLon(centroid), radius);
+		aftershock_search_region = SphRegion.makeCircle (new SphLatLon(centroid), radius * sample_radius_mult);
 
 		aftershock_search_avail = true;
+		return;
+	}
+
+
+	//----- Transient parameters -----
+
+	// The timeline ID associated with this query, or null if none.
+	// Note: This parameter is not marshaled/unmarshaled.
+
+	public String timeline_id = null;
+
+	// Set transient parameters to default.
+
+	public void set_default_transient_params () {
+		timeline_id = null;
 		return;
 	}
 
@@ -654,12 +742,16 @@ public class ForecastParameters {
 	public ForecastParameters () {}
 
 	// Fetch all parameters, part 1.
-	// This fetches just the control and mainshock parameters.
+	// This fetches just the mainshock parameters.
 	// It gives the caller the opportunity to examine the mainshock parameters before proceeding.
+	// Note: It is acceptable to call fetch_all_1 with prior_params == null, and then call
+	// fetch_all_2 with prior_params != null.  The effect is that mainshock parameters are
+	// obtained from Comcat without regard to what's in prior_params.
+	// Note: It is acceptable to call setup_mainshock_only or setup_mainshock_poll in place
+	// of calling fetch_all_1.  This is useful when re-using a ForecastParameters object.
 
-	public void fetch_all_1 (String the_event_id, ForecastParameters prior_params) {
-		event_id = the_event_id;
-		fetch_control_params (prior_params);
+	public void fetch_all_1 (String the_query_event_id, ForecastParameters prior_params) {
+		query_event_id = the_query_event_id;
 		fetch_mainshock_params (prior_params);
 		return;
 	}
@@ -669,6 +761,7 @@ public class ForecastParameters {
 
 	public void fetch_all_2 (long the_forecast_lag, ForecastParameters prior_params) {
 		forecast_lag = the_forecast_lag;
+		fetch_control_params (prior_params);
 		fetch_generic_params (prior_params);
 		fetch_mag_comp_params (prior_params);
 		fetch_seq_spec_params (prior_params);
@@ -676,45 +769,46 @@ public class ForecastParameters {
 		return;
 	}
 
-	// Set up the mainshock parameters, setting everything else to default.
+	// Set up the mainshock parameters, after setting everything else to default.
+	// This version always throws an exception if the event is not successfully fetched.
 
-	public void setup_mainshock_only (String the_event_id) {
-		event_id = the_event_id;
-		forecast_lag = 0L;
-		set_default_control_params();
+	public void setup_mainshock_only (String the_query_event_id) {
+		setup_all_default (the_query_event_id);
+
 		fetch_mainshock_params (null);
-
-		generic_fetch_meth = FETCH_METH_AUTO;
-		generic_avail = false;
-		set_default_generic_params();
-
-		mag_comp_fetch_meth = FETCH_METH_AUTO;
-		mag_comp_avail = false;
-		set_default_mag_comp_params();
-
-		seq_spec_fetch_meth = FETCH_METH_AUTO;
-		seq_spec_avail = false;
-		set_default_seq_spec_params();
-
-		aftershock_search_fetch_meth = FETCH_METH_AUTO;
-		aftershock_search_avail = false;
-		set_default_aftershock_search_params();
 	
 		return;
+	}
+
+	// Set up the mainshock parameters, after setting everything else to default.
+	// This version does not throw EventNotFoundException.
+	// If the event is not found, the function returns with mainshock_avail set to false.
+	// The return value is mainshock_avail.
+
+	public boolean setup_mainshock_poll (String the_query_event_id) {
+		setup_all_default (the_query_event_id);
+
+		try {
+			fetch_mainshock_params (null);
+		} catch (EventNotFoundException e) {
+			mainshock_avail = false;
+		}
+	
+		return mainshock_avail;
 	}
 
 	// Set everything to default.
 	// This is a useful starting point for setting up analyst parameters.
 
-	public void setup_all_default (String the_event_id) {
-		event_id = the_event_id;
+	public void setup_all_default (String the_query_event_id) {
+		query_event_id = the_query_event_id;
 		forecast_lag = 0L;
-
-		set_default_control_params();
 
 		mainshock_fetch_meth = FETCH_METH_AUTO;
 		mainshock_avail = false;
 		set_default_mainshock_params();
+
+		set_default_control_params();
 
 		generic_fetch_meth = FETCH_METH_AUTO;
 		generic_avail = false;
@@ -731,6 +825,8 @@ public class ForecastParameters {
 		aftershock_search_fetch_meth = FETCH_METH_AUTO;
 		aftershock_search_avail = false;
 		set_default_aftershock_search_params();
+
+		set_default_transient_params();
 	
 		return;
 	}
@@ -739,53 +835,67 @@ public class ForecastParameters {
 
 	@Override
 	public String toString() {
-		return "ForecastParameters:" + "\n"
-		+ "event_id = " + event_id + "\n"
-		+ "forecast_lag = " + forecast_lag + "\n"
+		StringBuilder result = new StringBuilder();
 
-		+ "generic_calc_meth = " + generic_calc_meth + "\n"
-		+ "seq_spec_calc_meth = " + seq_spec_calc_meth + "\n"
-		+ "bayesian_calc_meth = " + bayesian_calc_meth + "\n"
+		result.append ("ForecastParameters:" + "\n");
 
-		+ "mainshock_fetch_meth = " + mainshock_fetch_meth + "\n"
-		+ "mainshock_avail = " + mainshock_avail + "\n"
-		+ ((!mainshock_avail) ? "" : (
-			"mainshock_time = " + mainshock_time + "\n"
-			+ "mainshock_mag = " + mainshock_mag + "\n"
-			+ "mainshock_lat = " + mainshock_lat + "\n"
-			+ "mainshock_lon = " + mainshock_lon + "\n"
-			+ "mainshock_depth = " + mainshock_depth + "\n"
-		))
+		result.append ("query_event_id = " + query_event_id + "\n");
+		result.append ("forecast_lag = " + forecast_lag + "\n");
 
-		+ "generic_fetch_meth = " + generic_fetch_meth + "\n"
-		+ "generic_avail = " + generic_avail + "\n"
-		+ ((!generic_avail) ? "" : (
-			"generic_regime = " + generic_regime + "\n"
-			+ "generic_params = " + generic_params.toString() + "\n"
-		))
+		result.append ("generic_calc_meth = " + generic_calc_meth + "\n");
+		result.append ("seq_spec_calc_meth = " + seq_spec_calc_meth + "\n");
+		result.append ("bayesian_calc_meth = " + bayesian_calc_meth + "\n");
 
-		+ "mag_comp_fetch_meth = " + mag_comp_fetch_meth + "\n"
-		+ "mag_comp_avail = " + mag_comp_avail + "\n"
-		+ ((!mag_comp_avail) ? "" : (
-			"mag_comp_regime = " + mag_comp_regime + "\n"
-			+ "mag_comp_params = " + mag_comp_params.toString() + "\n"
-		))
+		result.append ("mainshock_fetch_meth = " + mainshock_fetch_meth + "\n");
+		result.append ("mainshock_avail = " + mainshock_avail + "\n");
+		if (mainshock_avail) {
+			result.append ("mainshock_event_id = " + mainshock_event_id + "\n");
+			result.append ("mainshock_network = " + mainshock_network + "\n");
+			result.append ("mainshock_code = " + mainshock_code + "\n");
+			result.append ("mainshock_id_list = " + Arrays.toString (mainshock_id_list) + "\n");
+			result.append ("mainshock_time = " + mainshock_time + "\n");
+			result.append ("mainshock_mag = " + mainshock_mag + "\n");
+			result.append ("mainshock_lat = " + mainshock_lat + "\n");
+			result.append ("mainshock_lon = " + mainshock_lon + "\n");
+			result.append ("mainshock_depth = " + mainshock_depth + "\n");
+		}
 
-		+ "seq_spec_fetch_meth = " + seq_spec_fetch_meth + "\n"
-		+ "seq_spec_avail = " + seq_spec_avail + "\n"
-		+ ((!seq_spec_avail) ? "" : (
-			"seq_spec_params = " + seq_spec_params.toString() + "\n"
-		))
+		result.append ("generic_fetch_meth = " + generic_fetch_meth + "\n");
+		result.append ("generic_avail = " + generic_avail + "\n");
+		if (generic_avail) {
+			result.append ("generic_regime = " + generic_regime + "\n");
+			result.append ("generic_params = " + generic_params.toString() + "\n");
+		}
 
-		+ "aftershock_search_fetch_meth = " + aftershock_search_fetch_meth + "\n"
-		+ "aftershock_search_avail = " + aftershock_search_avail + "\n"
-		+ ((!aftershock_search_avail) ? "" : (
-			"aftershock_search_region = " + aftershock_search_region.toString() + "\n"
-			+ "min_days = " + min_days + "\n"
-			+ "max_days = " + max_days + "\n"
-			+ "min_depth = " + min_depth + "\n"
-			+ "max_depth = " + max_depth + "\n"
-		));
+		result.append ("mag_comp_fetch_meth = " + mag_comp_fetch_meth + "\n");
+		result.append ("mag_comp_avail = " + mag_comp_avail + "\n");
+		if (mag_comp_avail) {
+			result.append ("mag_comp_regime = " + mag_comp_regime + "\n");
+			result.append ("mag_comp_params = " + mag_comp_params.toString() + "\n");
+		}
+
+		result.append ("seq_spec_fetch_meth = " + seq_spec_fetch_meth + "\n");
+		result.append ("seq_spec_avail = " + seq_spec_avail + "\n");
+		if (seq_spec_avail) {
+			result.append ("seq_spec_params = " + seq_spec_params.toString() + "\n");
+		}
+
+		result.append ("aftershock_search_fetch_meth = " + aftershock_search_fetch_meth + "\n");
+		result.append ("aftershock_search_avail = " + aftershock_search_avail + "\n");
+		if (aftershock_search_avail) {
+			result.append ("aftershock_search_region = " + aftershock_search_region.toString() + "\n");
+			result.append ("min_days = " + min_days + "\n");
+			result.append ("max_days = " + max_days + "\n");
+			result.append ("min_depth = " + min_depth + "\n");
+			result.append ("max_depth = " + max_depth + "\n");
+			result.append ("min_mag = " + min_mag + "\n");
+		}
+
+		if (timeline_id != null) {
+			result.append ("timeline_id = " + timeline_id + "\n");
+		}
+
+		return result.toString();
 	}
 
 
@@ -822,7 +932,7 @@ public class ForecastParameters {
 
 		// Contents
 
-		writer.marshalString ("event_id"       , event_id       );
+		writer.marshalString ("query_event_id" , query_event_id );
 		writer.marshalLong   ("forecast_lag"   , forecast_lag   );
 
 		writer.marshalInt ("generic_calc_meth" , generic_calc_meth );
@@ -832,11 +942,15 @@ public class ForecastParameters {
 		writer.marshalInt     ("mainshock_fetch_meth", mainshock_fetch_meth);
 		writer.marshalBoolean ("mainshock_avail"     , mainshock_avail     );
 		if (mainshock_avail) {
-			writer.marshalLong   ("mainshock_time" , mainshock_time );
-			writer.marshalDouble ("mainshock_mag"  , mainshock_mag  );
-			writer.marshalDouble ("mainshock_lat"  , mainshock_lat  );
-			writer.marshalDouble ("mainshock_lon"  , mainshock_lon  );
-			writer.marshalDouble ("mainshock_depth", mainshock_depth);
+			writer.marshalString      ("mainshock_event_id", mainshock_event_id);
+			writer.marshalString      ("mainshock_network" , mainshock_network );
+			writer.marshalString      ("mainshock_code"    , mainshock_code    );
+			writer.marshalStringArray ("mainshock_id_list" , mainshock_id_list );
+			writer.marshalLong        ("mainshock_time"    , mainshock_time    );
+			writer.marshalDouble      ("mainshock_mag"     , mainshock_mag     );
+			writer.marshalDouble      ("mainshock_lat"     , mainshock_lat     );
+			writer.marshalDouble      ("mainshock_lon"     , mainshock_lon     );
+			writer.marshalDouble      ("mainshock_depth"   , mainshock_depth   );
 		}
 
 		writer.marshalInt     ("generic_fetch_meth", generic_fetch_meth);
@@ -867,6 +981,7 @@ public class ForecastParameters {
 			writer.marshalDouble ("max_days" , max_days );
 			writer.marshalDouble ("min_depth", min_depth);
 			writer.marshalDouble ("max_depth", max_depth);
+			writer.marshalDouble ("min_mag"  , min_mag  );
 		}
 	
 		return;
@@ -882,7 +997,7 @@ public class ForecastParameters {
 
 		// Contents
 
-		event_id        = reader.unmarshalString ("event_id"       );
+		query_event_id  = reader.unmarshalString ("query_event_id" );
 		forecast_lag    = reader.unmarshalLong   ("forecast_lag"   );
 
 		generic_calc_meth  = reader.unmarshalInt ("generic_calc_meth" , CALC_METH_MIN, CALC_METH_MAX);
@@ -892,11 +1007,15 @@ public class ForecastParameters {
 		mainshock_fetch_meth = reader.unmarshalInt     ("mainshock_fetch_meth", FETCH_METH_MIN, FETCH_METH_MAX);
 		mainshock_avail      = reader.unmarshalBoolean ("mainshock_avail");
 		if (mainshock_avail) {
-			mainshock_time  = reader.unmarshalLong   ("mainshock_time" );
-			mainshock_mag   = reader.unmarshalDouble ("mainshock_mag"  );
-			mainshock_lat   = reader.unmarshalDouble ("mainshock_lat"  );
-			mainshock_lon   = reader.unmarshalDouble ("mainshock_lon"  );
-			mainshock_depth = reader.unmarshalDouble ("mainshock_depth");
+			mainshock_event_id = reader.unmarshalString      ("mainshock_event_id");
+			mainshock_network  = reader.unmarshalString      ("mainshock_network" );
+			mainshock_code     = reader.unmarshalString      ("mainshock_code"    );
+			mainshock_id_list  = reader.unmarshalStringArray ("mainshock_id_list" );
+			mainshock_time     = reader.unmarshalLong        ("mainshock_time"    );
+			mainshock_mag      = reader.unmarshalDouble      ("mainshock_mag"     );
+			mainshock_lat      = reader.unmarshalDouble      ("mainshock_lat"     );
+			mainshock_lon      = reader.unmarshalDouble      ("mainshock_lon"     );
+			mainshock_depth    = reader.unmarshalDouble      ("mainshock_depth"   );
 		} else {
 			set_default_mainshock_params();
 		}
@@ -938,9 +1057,12 @@ public class ForecastParameters {
 			max_days  = reader.unmarshalDouble ("max_days" );
 			min_depth = reader.unmarshalDouble ("min_depth");
 			max_depth = reader.unmarshalDouble ("max_depth");
+			min_mag   = reader.unmarshalDouble ("min_mag"  );
 		} else {
 			set_default_aftershock_search_params();
 		}
+
+		set_default_transient_params();
 
 		return;
 	}
@@ -1028,7 +1150,7 @@ public class ForecastParameters {
 
 		// Subcommand : Test #1
 		// Command format:
-		//  test1  event_id
+		//  test1  query_event_id
 		// Get parameters for the event, and display them.
 
 		if (args[0].equalsIgnoreCase ("test1")) {
@@ -1040,12 +1162,12 @@ public class ForecastParameters {
 				return;
 			}
 
-			String the_event_id = args[1];
+			String the_query_event_id = args[1];
 
 			// Fetch just the mainshock info
 
 			ForecastParameters params = new ForecastParameters();
-			params.setup_mainshock_only (the_event_id);
+			params.setup_mainshock_only (the_query_event_id);
 
 			System.out.println ("");
 			System.out.println (params.toString());
@@ -1057,7 +1179,7 @@ public class ForecastParameters {
 			// Get parameters
 
 			params = new ForecastParameters();
-			params.fetch_all_1 (the_event_id, null);
+			params.fetch_all_1 (the_query_event_id, null);
 			params.fetch_all_2 (the_forecast_lag, null);
 
 			// Display them
@@ -1070,7 +1192,7 @@ public class ForecastParameters {
 
 		// Subcommand : Test #2
 		// Command format:
-		//  test1  event_id
+		//  test1  query_event_id
 		// Get parameters for the event, and display them.
 		// Then marshal to JSON, and display the JSON.
 		// Then unmarshal, and display the unmarshaled parameters.
@@ -1084,12 +1206,12 @@ public class ForecastParameters {
 				return;
 			}
 
-			String the_event_id = args[1];
+			String the_query_event_id = args[1];
 
 			// Fetch just the mainshock info
 
 			ForecastParameters params = new ForecastParameters();
-			params.setup_mainshock_only (the_event_id);
+			params.setup_mainshock_only (the_query_event_id);
 
 			System.out.println ("");
 			System.out.println (params.toString());
@@ -1101,7 +1223,7 @@ public class ForecastParameters {
 			// Get parameters
 
 			params = new ForecastParameters();
-			params.fetch_all_1 (the_event_id, null);
+			params.fetch_all_1 (the_query_event_id, null);
 			params.fetch_all_2 (the_forecast_lag, null);
 
 			// Display them

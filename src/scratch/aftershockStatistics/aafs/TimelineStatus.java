@@ -8,7 +8,9 @@ import scratch.aftershockStatistics.aafs.entity.PendingTask;
 import scratch.aftershockStatistics.aafs.entity.LogEntry;
 import scratch.aftershockStatistics.aafs.entity.CatalogSnapshot;
 import scratch.aftershockStatistics.aafs.entity.TimelineEntry;
+import scratch.aftershockStatistics.aafs.entity.AliasFamily;
 
+import scratch.aftershockStatistics.ComcatException;
 import scratch.aftershockStatistics.CompactEqkRupList;
 
 
@@ -22,20 +24,18 @@ import scratch.aftershockStatistics.CompactEqkRupList;
  * into TimelineEntry.  In principle, actcode could select amont different
  * classes, but currently TimelineStatus is used for all timeline entries.
  *
- * The action_time that appears in TimelineEntry is in all cases equal to the
- * mainshock_time plus forecast_lag (in forecast_parameters).  It is necessary
+ * The action_time that appears in a TimelineEntry containing a forecast is equal to
+ * the mainshock_time plus forecast_lag (in forecast_parameters).  It is necessary
  * that the action_time be strictly increasing so that timeline entries are
  * properly ordered in the database.  The first timeline entry has forecast_lag
  * equal to zero.  The action_time should always be less than the current time.
+ * For non-forecast TimelineEntry object, the action_time is not necessarily
+ * related to the current time, but is just set to maintain monotonicity.  These
+ * rules may be bent if needed to maintain monotonicity.
  *
- * The event_id that appears in TimelineEntry is copied from forecast_parameters.
- *
- * ACTCODE_TRACK:  The system has just begun to track the event.  This may be
- * because the event has just been introduced (through PDL, analyst, or sync),
- * or because an analyst has re-started tracking for an event previously untracked.
- * The forecast_parameters must contain event_id, forecast_lag, and mainshock
- * parameters; they can optionally contain analyst-supplied parameters.
- * There are no forecast_results.
+ * The event_id that appears in TimelineEntry is a string that uniquely identifies
+ * an earthquake throughout its history, even if the Comcat IDs change.  All
+ * entries in a timeline have the same event_id.
  * 
  */
 public class TimelineStatus extends DBPayload {
@@ -46,6 +46,7 @@ public class TimelineStatus extends DBPayload {
 	// so they are exposed to database code.
 
 	// Event ID for this timeline.
+	// Despite the name, this holds a timeline ID.
 
 	public String event_id;
 
@@ -107,10 +108,18 @@ public class TimelineStatus extends DBPayload {
 
 	// Time stamp for this timeline entry, in milliseconds since the epoch.
 	// This must be strictly monotone increasing within the timeline.
-	// For forecasts, this is generally the nominal forecast time (mainshock_time + forecast_lag).
-	// For other entries, this may be the creation time, or may be manipulated to preserve ordering.
+	// For forecasts (ACTCODE_FORECAST), this is the nominal forecast time (mainshock_time + forecast_lag),
+	//  rounded down to a whole number of seconds; but increased if necessary to preserve monotonicity.
+	// For the initial timeline entry (ACTCODE_TRACK), this is the mainshock time (mainshock_time),
+	//  rounded down to a whole number of seconds.
+	// For other entries, this is one more than in the prior entry.
 
 	public long action_time;
+
+	// List of Comcat IDs associated with this timeline.
+	// The list is updated when the timeline is created, and at each forecast.
+
+	public String[] comcat_ids;
 
 
 	//----- Status variables -----
@@ -137,7 +146,13 @@ public class TimelineStatus extends DBPayload {
 	public static final int FCORIG_UNKNOWN           = 4;
 		// Timeline created for unknown reason.  This should only be the case when
 		// the timeline is in an error state.
-	public static final int FCORIG_MAX               = 4;
+	public static final int FCORIG_POLL              = 5;
+		// Timeline created in response to Comcat poll.
+	public static final int FCORIG_SPLIT             = 6;
+		// Timeline created in response to alias timeline split.
+	public static final int FCORIG_RECOVERY          = 7;
+		// Timeline created during a recovery operation.
+	public static final int FCORIG_MAX               = 7;
 
 	// Return a string describing the fc_origin.
 
@@ -147,6 +162,9 @@ public class TimelineStatus extends DBPayload {
 		case FCORIG_ANALYST: return "FCORIG_ANALYST";
 		case FCORIG_SYNC: return "FCORIG_SYNC";
 		case FCORIG_UNKNOWN: return "FCORIG_UNKNOWN";
+		case FCORIG_POLL: return "FCORIG_POLL";
+		case FCORIG_SPLIT: return "FCORIG_SPLIT";
+		case FCORIG_RECOVERY: return "FCORIG_RECOVERY";
 		}
 		return "FCORIG_INVALID(" + fc_origin + ")";
 	}
@@ -318,6 +336,7 @@ public class TimelineStatus extends DBPayload {
 		event_id            = other.event_id;
 		actcode             = other.actcode;
 		action_time         = other.action_time;
+		comcat_ids          = other.comcat_ids;
 
 		entry_time          = other.entry_time;
 		fc_origin           = other.fc_origin;
@@ -374,6 +393,16 @@ public class TimelineStatus extends DBPayload {
 		case FCSTAT_ACTIVE_INTAKE:
 		case FCSTAT_STOP_EXPIRED:
 			if (pdl_status == PDLSTAT_PENDING) {
+
+				// It is an error to be in this state if there is no PDL report available
+
+				if (!( forecast_params != null
+					&& forecast_params.mainshock_avail
+					&& forecast_results != null
+					&& forecast_results.get_pdl_model() != null )) {
+					throw new IllegalStateException ("TimelineStatus.is_pdl_retry_state: In PDLSTAT_PENDING state but no PDL report is available");
+				}
+
 				return true;
 			}
 			break;
@@ -524,6 +553,8 @@ public class TimelineStatus extends DBPayload {
 		event_id            = the_event_id;
 		actcode             = ACTCODE_ERROR;
 		action_time         = the_action_time;
+		comcat_ids          = new String[1];
+		comcat_ids[0]       = ServerComponent.EVID_ERROR;
 
 		entry_time          = the_entry_time;
 		fc_origin           = FCORIG_UNKNOWN;
@@ -552,6 +583,7 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_COMCAT_FAIL;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
@@ -580,6 +612,7 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_FORESHOCK;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
@@ -608,6 +641,7 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_WITHDRAWN;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
@@ -652,6 +686,7 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_FORECAST;
 		action_time         = action_config.floor_unit_lag (forecast_time, action_time);
+		comcat_ids          = the_forecast_params.mainshock_id_list;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
@@ -684,6 +719,7 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_PDL_UPDATE;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
@@ -712,6 +748,7 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_EXPIRED;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
@@ -746,6 +783,7 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_STATUS_UPDATE;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
@@ -779,6 +817,7 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_ANALYST;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
@@ -808,11 +847,12 @@ public class TimelineStatus extends DBPayload {
 	// to make changes to forecast status, PDL status, and analyst data.
 
 	public void set_state_track (long the_entry_time, ActionConfig action_config,
-			String the_event_id, long the_last_mainshock_time, int the_fc_origin, int the_fc_status) {
+			String the_event_id, ForecastParameters the_forecast_params, int the_fc_origin, int the_fc_status) {
 
 		event_id            = the_event_id;
 		actcode             = ACTCODE_TRACK;
-		action_time         = action_config.floor_unit_lag (the_last_mainshock_time);
+		action_time         = action_config.floor_unit_lag (the_forecast_params.mainshock_time);
+		comcat_ids          = the_forecast_params.mainshock_id_list;
 
 		entry_time          = the_entry_time;
 		fc_origin           = the_fc_origin;
@@ -828,7 +868,7 @@ public class TimelineStatus extends DBPayload {
 		forecast_params     = null;
 		forecast_results    = null;
 
-		last_mainshock_time = the_last_mainshock_time;
+		last_mainshock_time = the_forecast_params.mainshock_time;
 		last_forecast_lag   = -1L;
 		extra_forecast_lag  = -1L;
 		return;
@@ -951,6 +991,7 @@ public class TimelineStatus extends DBPayload {
 			event_id = tentry.get_event_id();
 			actcode = tentry.get_actcode();
 			action_time = tentry.get_action_time();
+			comcat_ids = tentry.get_comcat_ids();		// clones the array
 
 			if (actcode < ACTCODE_MIN || actcode > ACTCODE_MAX) {
 				throw new MarshalException("Timeline entry contains invalid action code, event_id = " + tentry.get_event_id() + ", actcode = " + actcode);

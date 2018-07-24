@@ -806,10 +806,11 @@ public class PendingTask implements java.io.Serializable {
 	 * @param ptask = Existing pending task to stage.
 	 * @param exec_time = Time at which task should execute, in milliseconds
 	 *                    since the epoch. Must be positive.
+	 * @param event_id = New event ID, or null to leave it unchanged.
 	 * @param stage = Stage number, user-defined, effectively an extension of the opcode.
 	 * @return
 	 */
-	public static void stage_task (PendingTask ptask, long exec_time, int stage) {
+	public static void stage_task (PendingTask ptask, long exec_time, int stage, String event_id) {
 
 		// Check conditions
 
@@ -828,6 +829,12 @@ public class PendingTask implements java.io.Serializable {
 				= datastore.createUpdateOperations(PendingTask.class)
 							.set("exec_time", new Long(exec_time))
 							.set("stage", new Integer(stage));
+
+		// Update event ID if desired
+
+		if (event_id != null) {
+			update_op = update_op.set("event_id", event_id);
+		}
 
 		// Run the update
 

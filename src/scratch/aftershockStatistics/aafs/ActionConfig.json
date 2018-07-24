@@ -1,7 +1,7 @@
 {
   "ActionConfigFile": 24001,
   "forecast_min_gap": "PT20M",
-  "forecast_max_delay": "P2D",
+  "forecast_max_delay": "P7D",
   "comcat_clock_skew": "PT3M0S",
   "comcat_origin_skew": "PT2M0S",
   "comcat_retry_min_gap": "PT30S",
@@ -11,65 +11,151 @@
   "advisory_dur_year": "P90D",
   "forecast_lags": [
     "P0DT0H20M0S",
-    "P0DT4H0M0S",
+    "P0DT6H0M0S",
+    "P0DT12H0M0S",
+    "P0DT18H0M0S",
     "P1DT0H0M0S",
+    "P2DT0H0M0S",
+    "P3DT0H0M0S",
+    "P4DT0H0M0S",
+    "P5DT0H0M0S",
+    "P6DT0H0M0S",
     "P7DT0H0M0S",
-    "P30DT0H0M0S",
+    "P14DT0H0M0S",
+    "P21DT0H0M0S",
+    "P28DT0H0M0S",
+    "P58DT0H0M0S",
+    "P89DT0H0M0S",
+    "P120DT0H0M0S",
+    "P150DT0H0M0S",
+    "P181DT0H0M0S",
+    "P212DT0H0M0S",
+    "P242DT0H0M0S",
+    "P273DT0H0M0S",
+    "P304DT0H0M0S",
+    "P334DT0H0M0S",
     "P365DT0H0M0S"
   ],
   "comcat_retry_lags": [
     "P0DT0H0M30S",
+    "P0DT0H2M0S",
     "P0DT0H5M0S",
+    "P0DT0H10M0S",
+    "P0DT0H20M0S",
     "P0DT0H30M0S",
+    "P0DT0H40M0S",
+    "P0DT0H50M0S",
+    "P0DT1H0M0S",
     "P0DT2H0M0S",
+    "P0DT4H0M0S",
     "P0DT8H0M0S",
-    "P1DT0H0M0S"
+    "P0DT12H0M0S",
+    "P0DT16H0M0S",
+    "P0DT20H0M0S",
+    "P1DT0H0M0S",
+    "P2DT0H0M0S",
+    "P3DT0H0M0S",
+    "P4DT0H0M0S",
+    "P5DT0H0M0S"
   ],
   "comcat_intake_lags": [
     "P0DT0H2M0S",
     "P0DT0H5M0S",
     "P0DT0H10M0S",
     "P0DT0H20M0S",
+    "P0DT0H30M0S",
+    "P0DT0H40M0S",
+    "P0DT0H50M0S",
     "P0DT1H0M0S",
-    "P0DT2H0M0S"
+    "P0DT2H0M0S",
+    "P0DT4H0M0S",
+    "P0DT8H0M0S",
+    "P0DT12H0M0S",
+    "P0DT16H0M0S",
+    "P0DT20H0M0S",
+    "P1DT0H0M0S"
   ],
   "pdl_report_retry_lags": [
     "P0DT0H2M0S",
     "P0DT0H5M0S",
     "P0DT0H10M0S",
+    "P0DT0H20M0S",
     "P0DT0H30M0S",
+    "P0DT0H40M0S",
+    "P0DT0H50M0S",
     "P0DT1H0M0S",
-    "P0DT3H0M0S"
+    "P0DT2H0M0S",
+    "P0DT4H0M0S",
+    "P0DT8H0M0S",
+    "P0DT12H0M0S",
+    "P0DT16H0M0S",
+    "P0DT20H0M0S",
+    "P1DT0H0M0S",
+    "P2DT0H0M0S",
+    "P3DT0H0M0S"
   ],
   "pdl_intake_regions": [
     {
-      "name": "northern_cal",
-      "min_mag": 2.0,
-      "intake_mag": 2.0,
+      "name": "CALIFORNIA",
+      "min_mag": 5.0,
+      "intake_mag": 4.0,
       "region": {
         "ClassType": 14001,
         "SphRegionMercPolygon": 1,
         "vertex_list":[
-          {"lat": 33.0, "lon": -124.0},
-          {"lat": 33.0, "lon": -120.0},
-          {"lat": 42.0, "lon": -124.0},
-          {"lat": 42.0, "lon": -120.0}
+          {"lat":36.6847, "lon":-117.7930},
+          {"lat":35.8000, "lon":-116.4000},
+          {"lat":34.0815, "lon":-114.4720},
+          {"lat":32.0000, "lon":-114.3330},
+          {"lat":32.0000, "lon":-120.5000},
+          {"lat":34.6945, "lon":-121.3800},
+          {"lat":40.0000, "lon":-125.5000},
+          {"lat":43.0200, "lon":-125.0000},
+          {"lat":42.0000, "lon":-122.7000},
+          {"lat":42.0000, "lon":-121.4170},
+          {"lat":39.5000, "lon":-120.7500},
+          {"lat":37.7500, "lon":-119.5000},
+          {"lat":37.7500, "lon":-118.2500}
         ]
       }
     },
     {
-      "name": "usa",
-      "min_mag": 2.0,
-      "intake_mag": 2.0,
+      "name": "ALASKA",
+      "min_mag": 5.0,
+      "intake_mag": 4.0,
       "region": {
         "ClassType": 14001,
         "SphRegionMercPolygon": 1,
         "vertex_list":[
-          {"lat": 29.16, "lon": -127.82},
-          {"lat": 29.16, "lon": -65.75},
-          {"lat": 48.63, "lon": -127.82},
-          {"lat": 48.63, "lon": -65.75}
+          {"lat":71.4000, "lon":172.4000},
+          {"lat":51.8000, "lon":172.4000},
+          {"lat":51.8000, "lon":-130.0000},
+          {"lat":71.4000, "lon":-130.0000}
         ]
+      }
+    },
+    {
+      "name": "USA",
+      "min_mag": 5.0,
+      "intake_mag": 4.0,
+      "region": {
+        "ClassType": 14001,
+        "SphRegionMercPolygon": 1,
+        "vertex_list":[
+          {"lat":49.4000, "lon":-124.8000},
+          {"lat":24.5000, "lon":-124.8000},
+          {"lat":24.5000, "lon":-66.9000},
+          {"lat":49.4000, "lon":-66.9000}
+        ]
+      }
+    },
+    {
+      "name": "WORLD",
+      "min_mag": 5.0,
+      "intake_mag": 4.0,
+      "region": {
+        "ClassType": 33001,
+        "SphRegionWorld": 1
       }
     }
   ]

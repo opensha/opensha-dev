@@ -107,6 +107,7 @@ import scratch.aftershockStatistics.util.SphRegion;
 
 import scratch.aftershockStatistics.aafs.ServerConfig;
 import scratch.aftershockStatistics.aafs.ServerConfigFile;
+import scratch.aftershockStatistics.aafs.PDLCmd;
 
 public class AftershockStatsGUI extends JFrame implements ParameterChangeListener {
 	
@@ -2234,73 +2235,55 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 	
 	public static void main(String[] args) {
 
-		// ServerConfig manages security-sensitive parameters.
-		// There needs to be some discussion about how these will be handled in the GUI.
-		// For now, we do the following:
+		// The GUI accepts command-line arguments for configuring PDL access.
+		// Complete details are in PDLCmd.java.
 		//
-		// If there are no command-line arguments, then enable sending to PDL development.
+		// To select the PDL destination, use one of these:
+		// --pdl=dryrun
+		// --pdl=dev
+		// --pdl=prod
+		// If the --pdl option is not specified, the default is --pdl=dev.
 		//
-		// If there is one command-line argument, it is an integer giving the desired PDL access:
-		// 0 = No PDL access.
-		// 1 = Enable sending to PDL-Development.
-		// 2 = Enable sending to PDL-Production.
+		// To specify a PDL key file, use:
+		// --privateKey=PRIVATEKEYFILE
+		// If the --privateKey option is not specified, then products are sent unsigned.
 		//
-		// If there are two command-line arguments, then the first is an integer giving the
-		// desired PDL access, and the second is the name of the PDL key file.
+		// If you want to delete a product, then in addition to the above you should also include all of these:
+		// --delete
+		// --code=PRODUCTCODE
+		// --eventsource=EVENTNETWORK
+		// --eventsourcecode=EVENTCODE
+		// The value of --code identifies the product that is to be deleted.  The value of --code is typically an event ID.
+		// The values of --eventsource and --eventsourcecode identify the event with which the product is associated;
+		// these determine which event page displays the product.
+		// When deleting a product, the delete is sent to PDL and the program exits without launching the GUI.
+		//
+		// If you have a JSON file, then you can send it as a product by including:
+		// --update=JSONFILENAME
+		// --code=PRODUCTCODE
+		// --eventsource=EVENTNETWORK
+		// --eventsourcecode=EVENTCODE
+		// The value of --code identifies the product that is to be sent.  The value of --code is typically an event ID.
+		// The product replaces any prior product that was sent with the same --code.
+		// The values of --eventsource and --eventsourcecode identify the event with which the product is associated;
+		// these determine which event page displays the product.
+		// When sending a product, the product is sent to PDL and the program exits without launching the GUI.
 
-		ServerConfig server_config = new ServerConfig();
+		int lo = 0;
+		boolean f_config = true;
+		boolean f_send = true;
+		int pdl_default = ServerConfigFile.PDLOPT_DEV;
 
-		// No-argument case
+		boolean consumed = PDLCmd.exec_pdl_cmd (args, lo, f_config, f_send, pdl_default);
 
-		if (args.length == 0) {
-			server_config.get_server_config_file().pdl_enable = ServerConfigFile.PDLOPT_DEV;
-		}
-
-		// One-argument case
-
-		else if (args.length == 1) {
-			int pdl_enable;
-			try {
-				pdl_enable = Integer.parseInt(args[0]);
-			} catch (NumberFormatException e) {
-				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
-				return;
-			}
-			if (pdl_enable < ServerConfigFile.PDLOPT_MIN || pdl_enable > ServerConfigFile.PDLOPT_MAX) {
-				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
-				return;
-			}
-			server_config.get_server_config_file().pdl_enable = pdl_enable;
-		}
-
-		// Two-argument case
-
-		else if (args.length == 2) {
-			int pdl_enable;
-			try {
-				pdl_enable = Integer.parseInt(args[0]);
-			} catch (NumberFormatException e) {
-				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
-				return;
-			}
-			if (pdl_enable < ServerConfigFile.PDLOPT_MIN || pdl_enable > ServerConfigFile.PDLOPT_MAX) {
-				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
-				return;
-			}
-			server_config.get_server_config_file().pdl_enable = pdl_enable;
-			server_config.get_server_config_file().pdl_key_filename = args[1];
-		}
-
-		// Unknown case
-
-		else {
-			System.out.println ("Too many command-line arguments");
+		if (consumed) {
 			return;
 		}
 
 		// Run the GUI
 
 		new AftershockStatsGUI();
+		return;
 	}
 
 }

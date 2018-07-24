@@ -16,9 +16,9 @@ import scratch.aftershockStatistics.RJ_AftershockModel_SequenceSpecific;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 
-import scratch.aftershockStatistics.util.MarshalImpArray;
 import scratch.aftershockStatistics.util.MarshalReader;
 import scratch.aftershockStatistics.util.MarshalWriter;
+import scratch.aftershockStatistics.util.SimpleUtils;
 
 
 /**
@@ -83,13 +83,9 @@ public class ServerCmd {
 			
 		System.out.println ("Sending shutdown command to AAFS server.");
 
-		// Get a task dispatcher
-
-		TaskDispatcher dispatcher = new TaskDispatcher();
-
 		// Post the shutdown task
 
-		boolean result = dispatcher.post_shutdown ("ServerCmd");
+		boolean result = TaskDispatcher.post_shutdown ("ServerCmd");
 
 		// Display result
 
@@ -129,7 +125,7 @@ public class ServerCmd {
 
 		// Say hello
 
-		System.out.println ("PDL intake at " + TaskDispatcher.time_to_string (ServerClock.get_true_time()));
+		System.out.println ("PDL intake at " + SimpleUtils.time_to_string (ServerClock.get_true_time()));
 		System.out.println ("event_id = " + payload.event_id);
 
 		// If we don't have location, magnitude, and time, drop it
@@ -141,22 +137,42 @@ public class ServerCmd {
 
 		// Show event info
 
-		System.out.println ("event_time = " + TaskDispatcher.time_to_string (payload.mainshock_time));
+		System.out.println ("event_time = " + SimpleUtils.time_to_string (payload.mainshock_time));
 		System.out.println ("event_mag = " + payload.mainshock_mag);
 		System.out.println ("event_lat = " + payload.mainshock_lat);
 		System.out.println ("event_lon = " + payload.mainshock_lon);
 		System.out.println ("event_depth = " + payload.mainshock_depth);
 
-		// Test if event passes intake filter
+		// Test if event passes the intake filter, using the minimum magnitude criterion
 
 		ActionConfig action_config = new ActionConfig();
 
-		IntakeSphRegion intake_region = action_config.get_pdl_intake_region_for_intake_mag (
+		long the_time = ServerClock.get_time();
+
+		long sched_time = the_time;
+
+		IntakeSphRegion intake_region = action_config.get_pdl_intake_region_for_min_mag (
 				payload.mainshock_lat, payload.mainshock_lon, payload.mainshock_mag);
 
 		if (intake_region == null) {
-			System.out.println ("Dropping event because it did not pass the intake filter");
-			return;
+
+			// Didn't pass, check using the intake magnitude criterion
+
+			intake_region = action_config.get_pdl_intake_region_for_intake_mag (
+					payload.mainshock_lat, payload.mainshock_lon, payload.mainshock_mag);
+
+			// Schedule task for projected time of first forecast, ignoring origin skew
+
+			sched_time = payload.mainshock_time
+							+ action_config.get_next_forecast_lag(0L)
+							+ action_config.get_comcat_clock_skew();
+
+			// If we didn't pass, or if the scheduled time has already passed, then drop event
+
+			if (intake_region == null || sched_time < the_time) {
+				System.out.println ("Dropping event because it did not pass the intake filter");
+				return;
+			}
 		}
 
 		// Post the task
@@ -166,9 +182,7 @@ public class ServerCmd {
 		int opcode = TaskDispatcher.OPCODE_INTAKE_PDL;
 		int stage = 0;
 
-		long the_time = ServerClock.get_time();
-
-		boolean result = TaskDispatcher.post_task (event_id, the_time, the_time, "ServerCmd", opcode, stage, payload.marshal_task());
+		boolean result = TaskDispatcher.post_task (event_id, sched_time, the_time, "ServerCmd", opcode, stage, payload.marshal_task());
 
 		// Display result
 

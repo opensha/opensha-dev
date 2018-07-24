@@ -1,8 +1,10 @@
 {
   "version":1,
   "regimes":[
-    {"regime":"WORLD"     , "params":{"MagCompPage_Parameters":2001, "magCat":4.50, "capG":0.25, "capH":1.00}},
-    {"regime":"CALIFORNIA", "params":{"MagCompPage_Parameters":2001, "magCat":4.50, "capG":0.25, "capH":1.00}}
+    {"regime":"WORLD"     , "params":{"MagCompPage_Parameters":2001, "magCat":4.50, "capG":0.25, "capH":1.00, "magSample":3.00, "radiusSample":1.00, "magCentroid":3.50, "radiusCentroid":1.00}},
+    {"regime":"CALIFORNIA", "params":{"MagCompPage_Parameters":2001, "magCat":2.50, "capG":0.25, "capH":1.00, "magSample":2.00, "radiusSample":1.00, "magCentroid":2.50, "radiusCentroid":1.00}},
+    {"regime":"ALASKA"    , "params":{"MagCompPage_Parameters":2001, "magCat":3.00, "capG":0.25, "capH":1.00, "magSample":2.50, "radiusSample":1.00, "magCentroid":3.00, "radiusCentroid":1.00}},
+    {"regime":"USA"       , "params":{"MagCompPage_Parameters":2001, "magCat":3.00, "capG":0.25, "capH":1.00, "magSample":2.50, "radiusSample":1.00, "magCentroid":3.00, "radiusCentroid":1.00}}
   ],
   "regions":[
     {
@@ -13,21 +15,52 @@
         "ClassType":14001,
         "SphRegionMercPolygon":1,
         "vertex_list":[
-          {"lat":36.6847, "lon":-117.793},
-          {"lat":35.8000, "lon":-116.400},
-          {"lat":34.0815, "lon":-114.472},
-          {"lat":32.0000, "lon":-114.333},
-          {"lat":32.0000, "lon":-120.500},
-          {"lat":34.6945, "lon":-121.380},
-          {"lat":40.0000, "lon":-125.500},
-          {"lat":43.0200, "lon":-125.000},
-          {"lat":42.0000, "lon":-122.700},
-          {"lat":42.0000, "lon":-121.417},
-          {"lat":39.5000, "lon":-120.750},
-          {"lat":37.7500, "lon":-119.500},
-          {"lat":37.7500, "lon":-118.250}
+          {"lat":36.6847, "lon":-117.7930},
+          {"lat":35.8000, "lon":-116.4000},
+          {"lat":34.0815, "lon":-114.4720},
+          {"lat":32.0000, "lon":-114.3330},
+          {"lat":32.0000, "lon":-120.5000},
+          {"lat":34.6945, "lon":-121.3800},
+          {"lat":40.0000, "lon":-125.5000},
+          {"lat":43.0200, "lon":-125.0000},
+          {"lat":42.0000, "lon":-122.7000},
+          {"lat":42.0000, "lon":-121.4170},
+          {"lat":39.5000, "lon":-120.7500},
+          {"lat":37.7500, "lon":-119.5000},
+          {"lat":37.7500, "lon":-118.2500}
+        ]
+      }
+    },
+    {
+      "regime":"ALASKA",
+      "min_depth":-1.0e10,
+      "max_depth":1.0e10,
+      "region":{
+        "ClassType":14001,
+        "SphRegionMercPolygon":1,
+        "vertex_list":[
+          {"lat":71.4000, "lon":172.4000},
+          {"lat":51.8000, "lon":172.4000},
+          {"lat":51.8000, "lon":-130.0000},
+          {"lat":71.4000, "lon":-130.0000}
+        ]
+      }
+    },
+    {
+      "regime":"USA",
+      "min_depth":-1.0e10,
+      "max_depth":1.0e10,
+      "region":{
+        "ClassType":14001,
+        "SphRegionMercPolygon":1,
+        "vertex_list":[
+          {"lat":49.4000, "lon":-124.8000},
+          {"lat":24.5000, "lon":-124.8000},
+          {"lat":24.5000, "lon":-66.9000},
+          {"lat":49.4000, "lon":-66.9000}
         ]
       }
     }
   ]
 }
+

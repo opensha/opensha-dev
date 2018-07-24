@@ -14,7 +14,12 @@
   "pdl_key_filename": "",
   "pdl_dev_senders": [
     {
-      "host": "pdldevel.cr.usgs.gov",
+      "host": "dev01-pdl01.cr.usgs.gov",
+      "port": 11235,
+      "connectTimeout": 15000
+    },
+    {
+      "host": "dev02-pdl01.cr.usgs.gov",
       "port": 11235,
       "connectTimeout": 15000
     }

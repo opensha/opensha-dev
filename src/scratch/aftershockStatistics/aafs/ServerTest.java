@@ -1,6 +1,11 @@
 package scratch.aftershockStatistics.aafs;
 
 import java.util.List;
+import java.util.Arrays;
+
+import java.io.Reader;
+import java.io.FileReader;
+import java.io.BufferedReader;
 
 import scratch.aftershockStatistics.aafs.MongoDBUtil;
 
@@ -8,6 +13,7 @@ import scratch.aftershockStatistics.aafs.entity.PendingTask;
 import scratch.aftershockStatistics.aafs.entity.LogEntry;
 import scratch.aftershockStatistics.aafs.entity.CatalogSnapshot;
 import scratch.aftershockStatistics.aafs.entity.TimelineEntry;
+import scratch.aftershockStatistics.aafs.entity.AliasFamily;
 
 import scratch.aftershockStatistics.AftershockStatsCalc;
 import scratch.aftershockStatistics.CompactEqkRupList;
@@ -17,8 +23,14 @@ import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 
 import scratch.aftershockStatistics.util.MarshalImpArray;
+import scratch.aftershockStatistics.util.MarshalImpJsonReader;
+import scratch.aftershockStatistics.util.MarshalImpJsonWriter;
 import scratch.aftershockStatistics.util.MarshalReader;
 import scratch.aftershockStatistics.util.MarshalWriter;
+
+import gov.usgs.earthquake.product.Product;
+import scratch.aftershockStatistics.pdl.PDLProductBuilderOaf;
+import scratch.aftershockStatistics.pdl.PDLSender;
 
 
 /**
@@ -330,9 +342,9 @@ public class ServerTest {
 
 	public static void test7(String[] args) {
 
-		// Three additional arguments
+		// Three or four additional arguments
 
-		if (args.length != 4) {
+		if (args.length != 4 && args.length != 5) {
 			System.err.println ("ServerTest : Invalid 'test7' subcommand");
 			return;
 		}
@@ -340,6 +352,10 @@ public class ServerTest {
 		long cutoff_time = Long.parseLong(args[1]);
 		long exec_time = Long.parseLong(args[2]);
 		int stage = Integer.parseInt(args[3]);
+		String event_id = null;
+		if (args.length >= 5) {
+			event_id = args[4];
+		}
 
 		// Connect to MongoDB
 
@@ -354,7 +370,7 @@ public class ServerTest {
 			// Stage it
 
 			if (task != null) {
-				PendingTask.stage_task (task, exec_time, stage);
+				PendingTask.stage_task (task, exec_time, stage, event_id);
 			}
 
 			// Display it
@@ -897,12 +913,14 @@ public class ServerTest {
 		){
 		
 			String event_id;
+			String[] comcat_ids;
 			long action_time;
 			int actcode;
 			MarshalWriter details;
 		
 			event_id = "Event_2";
-			action_time = 20100L;
+			comcat_ids = new String[]{"ccid_21", "ccid_22", "ccid_23"};
+			action_time = 20102L;
 			actcode = 102;
 			details = TimelineEntry.begin_details();
 			details.marshalArrayBegin (null, 5);
@@ -913,17 +931,19 @@ public class ServerTest {
 			details.marshalDouble (null, 21040.0);
 			details.marshalArrayEnd ();
 			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
-				actcode, details);
+				comcat_ids, actcode, details);
 		
 			event_id = "Event_4";
-			action_time = 40100L;
+			comcat_ids = new String[]{"ccid_41", "ccid_42", "ccid_43", "ccid_23"};
+			action_time = 40104L;
 			actcode = 104;
 			details = null;
 			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
-				actcode, details);
+				comcat_ids, actcode, details);
 		
 			event_id = "Event_1";
-			action_time = 10100L;
+			comcat_ids = new String[]{"ccid_11", "ccid_12", "ccid_13"};
+			action_time = 10101L;
 			actcode = 101;
 			details = TimelineEntry.begin_details();
 			details.marshalArrayBegin (null, 5);
@@ -934,10 +954,11 @@ public class ServerTest {
 			details.marshalDouble (null, 11040.0);
 			details.marshalArrayEnd ();
 			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
-				actcode, details);
+				comcat_ids, actcode, details);
 		
 			event_id = "Event_5";
-			action_time = 50100L;
+			comcat_ids = new String[]{"ccid_51", "ccid_52", "ccid_53", "ccid_23", "ccid_13"};
+			action_time = 50105L;
 			actcode = 105;
 			details = TimelineEntry.begin_details();
 			details.marshalArrayBegin (null, 5);
@@ -948,10 +969,11 @@ public class ServerTest {
 			details.marshalDouble (null, 51040.0);
 			details.marshalArrayEnd ();
 			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
-				actcode, details);
+				comcat_ids, actcode, details);
 		
 			event_id = "Event_3";
-			action_time = 30100L;
+			comcat_ids = new String[]{"ccid_31", "ccid_32"};
+			action_time = 30103L;
 			actcode = 103;
 			details = TimelineEntry.begin_details();
 			details.marshalArrayBegin (null, 5);
@@ -962,7 +984,7 @@ public class ServerTest {
 			details.marshalDouble (null, 31040.0);
 			details.marshalArrayEnd ();
 			TimelineEntry.submit_timeline_entry (null, action_time, event_id,
-				actcode, details);
+				comcat_ids, actcode, details);
 
 		}
 
@@ -976,18 +998,31 @@ public class ServerTest {
 
 	public static void test21(String[] args) {
 
-		// Two or three additional arguments
+		// Three or more additional arguments
 
-		if (args.length != 3 && args.length != 4) {
+		if (args.length < 4) {
 			System.err.println ("ServerTest : Invalid 'test21' subcommand");
 			return;
 		}
 
 		long action_time_lo = Long.parseLong(args[1]);
 		long action_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] action_time_div_rem = null;
+		if (div_rem > 0L) {
+			action_time_div_rem = new long[2];
+			action_time_div_rem[0] = div_rem / 1000L;
+			action_time_div_rem[1] = div_rem % 1000L;
+		}
 		String event_id = null;
-		if (args.length == 4) {
-			event_id = args[3];
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
 		}
 
 		// Connect to MongoDB
@@ -998,7 +1033,7 @@ public class ServerTest {
 
 			// Get the list of matching timeline entries
 
-			List<TimelineEntry> entries = TimelineEntry.get_timeline_entry_range (action_time_lo, action_time_hi, event_id);
+			List<TimelineEntry> entries = TimelineEntry.get_timeline_entry_range (action_time_lo, action_time_hi, event_id, comcat_ids, action_time_div_rem);
 
 			// Display them
 
@@ -1018,18 +1053,31 @@ public class ServerTest {
 
 	public static void test22(String[] args) {
 
-		// Two or three additional arguments
+		// Three or more additional arguments
 
-		if (args.length != 3 && args.length != 4) {
+		if (args.length < 4) {
 			System.err.println ("ServerTest : Invalid 'test22' subcommand");
 			return;
 		}
 
 		long action_time_lo = Long.parseLong(args[1]);
 		long action_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] action_time_div_rem = null;
+		if (div_rem > 0L) {
+			action_time_div_rem = new long[2];
+			action_time_div_rem[0] = div_rem / 1000L;
+			action_time_div_rem[1] = div_rem % 1000L;
+		}
 		String event_id = null;
-		if (args.length == 4) {
-			event_id = args[3];
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
 		}
 
 		// Connect to MongoDB
@@ -1041,7 +1089,7 @@ public class ServerTest {
 
 				// Get an iterator over matching timeline entries
 
-				RecordIterator<TimelineEntry> entries = TimelineEntry.fetch_timeline_entry_range (action_time_lo, action_time_hi, event_id);
+				RecordIterator<TimelineEntry> entries = TimelineEntry.fetch_timeline_entry_range (action_time_lo, action_time_hi, event_id, comcat_ids, action_time_div_rem);
 			){
 
 				// Display them
@@ -1062,18 +1110,31 @@ public class ServerTest {
 
 	public static void test23(String[] args) {
 
-		// Two or three additional arguments
+		// Three or more additional arguments
 
-		if (args.length != 3 && args.length != 4) {
+		if (args.length < 4) {
 			System.err.println ("ServerTest : Invalid 'test23' subcommand");
 			return;
 		}
 
 		long action_time_lo = Long.parseLong(args[1]);
 		long action_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] action_time_div_rem = null;
+		if (div_rem > 0L) {
+			action_time_div_rem = new long[2];
+			action_time_div_rem[0] = div_rem / 1000L;
+			action_time_div_rem[1] = div_rem % 1000L;
+		}
 		String event_id = null;
-		if (args.length == 4) {
-			event_id = args[3];
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
 		}
 
 		// Connect to MongoDB
@@ -1084,7 +1145,7 @@ public class ServerTest {
 
 			// Get the list of matching timeline entries
 
-			List<TimelineEntry> entries = TimelineEntry.get_timeline_entry_range (action_time_lo, action_time_hi, event_id);
+			List<TimelineEntry> entries = TimelineEntry.get_timeline_entry_range (action_time_lo, action_time_hi, event_id, comcat_ids, action_time_div_rem);
 
 			// Display them, and re-fetch
 
@@ -1105,18 +1166,31 @@ public class ServerTest {
 
 	public static void test24(String[] args) {
 
-		// Two or three additional arguments
+		// Three or more additional arguments
 
-		if (args.length != 3 && args.length != 4) {
+		if (args.length < 4) {
 			System.err.println ("ServerTest : Invalid 'test24' subcommand");
 			return;
 		}
 
 		long action_time_lo = Long.parseLong(args[1]);
 		long action_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] action_time_div_rem = null;
+		if (div_rem > 0L) {
+			action_time_div_rem = new long[2];
+			action_time_div_rem[0] = div_rem / 1000L;
+			action_time_div_rem[1] = div_rem % 1000L;
+		}
 		String event_id = null;
-		if (args.length == 4) {
-			event_id = args[3];
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
 		}
 
 		// Connect to MongoDB
@@ -1127,7 +1201,7 @@ public class ServerTest {
 
 			// Get the list of matching timeline entries
 
-			List<TimelineEntry> entries = TimelineEntry.get_timeline_entry_range (action_time_lo, action_time_hi, event_id);
+			List<TimelineEntry> entries = TimelineEntry.get_timeline_entry_range (action_time_lo, action_time_hi, event_id, comcat_ids, action_time_div_rem);
 
 			// Display them, and delete
 
@@ -1392,18 +1466,31 @@ public class ServerTest {
 
 	public static void test31(String[] args) {
 
-		// Two or three additional arguments
+		// Three or more additional arguments
 
-		if (args.length != 3 && args.length != 4) {
+		if (args.length < 4) {
 			System.err.println ("ServerTest : Invalid 'test31' subcommand");
 			return;
 		}
 
 		long action_time_lo = Long.parseLong(args[1]);
 		long action_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] action_time_div_rem = null;
+		if (div_rem > 0L) {
+			action_time_div_rem = new long[2];
+			action_time_div_rem[0] = div_rem / 1000L;
+			action_time_div_rem[1] = div_rem % 1000L;
+		}
 		String event_id = null;
-		if (args.length == 4) {
-			event_id = args[3];
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
 		}
 
 		// Connect to MongoDB
@@ -1414,7 +1501,7 @@ public class ServerTest {
 
 			// Get the most recent matching timeline entry
 
-			TimelineEntry entry = TimelineEntry.get_recent_timeline_entry (action_time_lo, action_time_hi, event_id);
+			TimelineEntry entry = TimelineEntry.get_recent_timeline_entry (action_time_lo, action_time_hi, event_id, comcat_ids, action_time_div_rem);
 
 			// Display it
 
@@ -1548,6 +1635,670 @@ public class ServerTest {
 
 
 
+	// Test #35 - Add a few elements to the alias families.
+
+	public static void test35(String[] args) {
+
+		// No additional arguments
+
+		if (args.length != 1) {
+			System.err.println ("ServerTest : Invalid 'test35' subcommand");
+			return;
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+		
+			String timeline_id;
+			String[] comcat_ids;
+			String[] removed_ids;
+			long family_time;
+			AliasAssignment assignment;
+			AliasAssignmentList assignments;
+		
+
+			timeline_id = "event_1";
+			comcat_ids = new String[]{"ccid_11", "ccid_12", "ccid_13"};
+			removed_ids = new String[0];
+			family_time = 10101L;
+			assignment = new AliasAssignment();
+			assignments = new AliasAssignmentList();
+			assignment.set_timeline_id (timeline_id);
+			assignment.set_comcat_ids_from_array (comcat_ids);
+			for (String id : removed_ids) {
+				assignment.add_removed_id (id);
+			}
+			assignments.add_assignment (assignment);
+			AliasFamily.submit_alias_family (null, family_time, assignments);
+		
+
+			timeline_id = "event_2";
+			comcat_ids = new String[]{"ccid_21", "ccid_22", "ccid_23"};
+			removed_ids = new String[]{"rmid_21", "rmid_22"};
+			family_time = 20102L;
+			assignment = new AliasAssignment();
+			assignments = new AliasAssignmentList();
+			assignment.set_timeline_id (timeline_id);
+			assignment.set_comcat_ids_from_array (comcat_ids);
+			for (String id : removed_ids) {
+				assignment.add_removed_id (id);
+			}
+			assignments.add_assignment (assignment);
+			AliasFamily.submit_alias_family (null, family_time, assignments);
+		
+
+			timeline_id = "event_3";
+			comcat_ids = new String[]{"ccid_31"};
+			removed_ids = new String[]{"rmid_31"};
+			family_time = 30103L;
+			assignment = new AliasAssignment();
+			assignments = new AliasAssignmentList();
+			assignment.set_timeline_id (timeline_id);
+			assignment.set_comcat_ids_from_array (comcat_ids);
+			for (String id : removed_ids) {
+				assignment.add_removed_id (id);
+			}
+			assignments.add_assignment (assignment);
+			AliasFamily.submit_alias_family (null, family_time, assignments);
+		
+
+			timeline_id = "event_1";
+			comcat_ids = new String[]{"ccid_42", "ccid_11"};
+			removed_ids = new String[]{"ccid_12", "ccid_13"};
+			family_time = 40104L;
+			assignment = new AliasAssignment();
+			assignments = new AliasAssignmentList();
+			assignment.set_timeline_id (timeline_id);
+			assignment.set_comcat_ids_from_array (comcat_ids);
+			for (String id : removed_ids) {
+				assignment.add_removed_id (id);
+			}
+			assignments.add_assignment (assignment);
+			timeline_id = "event_4";
+			comcat_ids = new String[]{"ccid_41", "ccid_12"};
+			removed_ids = new String[]{"ccid_13"};
+			assignment = new AliasAssignment();
+			assignment.set_timeline_id (timeline_id);
+			assignment.set_comcat_ids_from_array (comcat_ids);
+			for (String id : removed_ids) {
+				assignment.add_removed_id (id);
+			}
+			assignments.add_assignment (assignment);
+			AliasFamily.submit_alias_family (null, family_time, assignments);
+		
+
+			timeline_id = "event_2";
+			comcat_ids = new String[]{"ccid_21"};
+			removed_ids = new String[]{"rmid_21", "rmid_22", "ccid_23", "ccid_22"};
+			family_time = 50105L;
+			assignment = new AliasAssignment();
+			assignments = new AliasAssignmentList();
+			assignment.set_timeline_id (timeline_id);
+			assignment.set_comcat_ids_from_array (comcat_ids);
+			for (String id : removed_ids) {
+				assignment.add_removed_id (id);
+			}
+			assignments.add_assignment (assignment);
+			timeline_id = "event_3";
+			comcat_ids = new String[]{"ccid_31", "ccid_23"};
+			removed_ids = new String[]{"rmid_31"};
+			assignment = new AliasAssignment();
+			assignment.set_timeline_id (timeline_id);
+			assignment.set_comcat_ids_from_array (comcat_ids);
+			for (String id : removed_ids) {
+				assignment.add_removed_id (id);
+			}
+			assignments.add_assignment (assignment);
+			timeline_id = "event_5";
+			comcat_ids = new String[]{"ccid_22"};
+			removed_ids = new String[0];
+			assignment = new AliasAssignment();
+			assignment.set_timeline_id (timeline_id);
+			assignment.set_comcat_ids_from_array (comcat_ids);
+			for (String id : removed_ids) {
+				assignment.add_removed_id (id);
+			}
+			assignments.add_assignment (assignment);
+			AliasFamily.submit_alias_family (null, family_time, assignments);
+
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #36 - Search the alias families for family time and/or event id; using list.
+
+	public static void test36(String[] args) {
+
+		// Three or more additional arguments
+
+		if (args.length < 4) {
+			System.err.println ("ServerTest : Invalid 'test36' subcommand");
+			return;
+		}
+
+		long family_time_lo = Long.parseLong(args[1]);
+		long family_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] family_time_div_rem = null;
+		if (div_rem > 0L) {
+			family_time_div_rem = new long[2];
+			family_time_div_rem[0] = div_rem / 1000L;
+			family_time_div_rem[1] = div_rem % 1000L;
+		}
+		String event_id = null;
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the list of matching timeline entries
+
+			List<AliasFamily> entries = AliasFamily.get_alias_family_range (family_time_lo, family_time_hi, event_id, comcat_ids, family_time_div_rem);
+
+			// Display them
+
+			for (AliasFamily entry : entries) {
+				System.out.println (entry.toString());
+				System.out.println (entry.get_assignments().toString());
+			}
+
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #37 - Search the alias families for family time and/or event id; using iterator.
+
+	public static void test37(String[] args) {
+
+		// Three or more additional arguments
+
+		if (args.length < 4) {
+			System.err.println ("ServerTest : Invalid 'test37' subcommand");
+			return;
+		}
+
+		long family_time_lo = Long.parseLong(args[1]);
+		long family_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] family_time_div_rem = null;
+		if (div_rem > 0L) {
+			family_time_div_rem = new long[2];
+			family_time_div_rem[0] = div_rem / 1000L;
+			family_time_div_rem[1] = div_rem % 1000L;
+		}
+		String event_id = null;
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+			try (
+
+				// Get an iterator over matching timeline entries
+
+				RecordIterator<AliasFamily> entries = AliasFamily.fetch_alias_family_range (family_time_lo, family_time_hi, event_id, comcat_ids, family_time_div_rem);
+			){
+
+				// Display them
+
+				for (AliasFamily entry : entries) {
+					System.out.println (entry.toString());
+					System.out.println (entry.get_assignments().toString());
+				}
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #38 - Search the alias families for family time and/or event id; and re-fetch the entries.
+
+	public static void test38(String[] args) {
+
+		// Three or more additional arguments
+
+		if (args.length < 4) {
+			System.err.println ("ServerTest : Invalid 'test38' subcommand");
+			return;
+		}
+
+		long family_time_lo = Long.parseLong(args[1]);
+		long family_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] family_time_div_rem = null;
+		if (div_rem > 0L) {
+			family_time_div_rem = new long[2];
+			family_time_div_rem[0] = div_rem / 1000L;
+			family_time_div_rem[1] = div_rem % 1000L;
+		}
+		String event_id = null;
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the list of matching timeline entries
+
+			List<AliasFamily> entries = AliasFamily.get_alias_family_range (family_time_lo, family_time_hi, event_id, comcat_ids, family_time_div_rem);
+
+			// Display them, and re-fetch
+
+			for (AliasFamily entry : entries) {
+				System.out.println (entry.toString());
+				System.out.println (entry.get_assignments().toString());
+				AliasFamily refetch = AliasFamily.get_alias_family_for_key (entry.get_record_key());
+				System.out.println (refetch.toString());
+				System.out.println (refetch.get_assignments().toString());
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #39 - Search the alias families for family time and/or event id; and delete the entries.
+
+	public static void test39(String[] args) {
+
+		// Three or more additional arguments
+
+		if (args.length < 4) {
+			System.err.println ("ServerTest : Invalid 'test39' subcommand");
+			return;
+		}
+
+		long family_time_lo = Long.parseLong(args[1]);
+		long family_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] family_time_div_rem = null;
+		if (div_rem > 0L) {
+			family_time_div_rem = new long[2];
+			family_time_div_rem[0] = div_rem / 1000L;
+			family_time_div_rem[1] = div_rem % 1000L;
+		}
+		String event_id = null;
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the list of matching timeline entries
+
+			List<AliasFamily> entries = AliasFamily.get_alias_family_range (family_time_lo, family_time_hi, event_id, comcat_ids, family_time_div_rem);
+
+			// Display them, and delete
+
+			for (AliasFamily entry : entries) {
+				System.out.println (entry.toString());
+				System.out.println (entry.get_assignments().toString());
+				AliasFamily.delete_alias_family (entry);
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #40 - Search the alias families for family time and/or event id; get most recent.
+
+	public static void test40(String[] args) {
+
+		// Three or more additional arguments
+
+		if (args.length < 4) {
+			System.err.println ("ServerTest : Invalid 'test40' subcommand");
+			return;
+		}
+
+		long family_time_lo = Long.parseLong(args[1]);
+		long family_time_hi = Long.parseLong(args[2]);
+		long div_rem = Long.parseLong(args[3]);
+		long[] family_time_div_rem = null;
+		if (div_rem > 0L) {
+			family_time_div_rem = new long[2];
+			family_time_div_rem[0] = div_rem / 1000L;
+			family_time_div_rem[1] = div_rem % 1000L;
+		}
+		String event_id = null;
+		if (args.length >= 5) {
+			if (!( args[4].equalsIgnoreCase("-") )) {
+				event_id = args[4];
+			}
+		}
+		String[] comcat_ids = null;
+		if (args.length >= 6) {
+			comcat_ids = Arrays.copyOfRange (args, 5, args.length);
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get the most recent matching timeline entry
+
+			AliasFamily entry = AliasFamily.get_recent_alias_family (family_time_lo, family_time_hi, event_id, comcat_ids, family_time_div_rem);
+
+			// Display it
+
+			if (entry == null) {
+				System.out.println ("null");
+			} else {
+				System.out.println (entry.toString());
+				System.out.println (entry.get_assignments().toString());
+			}
+
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #41 - Delete a product from PDL-Development.
+
+	public static void test41(String[] args) throws Exception {
+
+		// Three additional arguments
+
+		if (args.length != 4) {
+			System.err.println ("ServerTest : Invalid 'test41' subcommand");
+			return;
+		}
+
+		String eventID = args[1];
+		String eventNetwork = args[2];
+		String eventCode = args[3];
+
+		// Direct operation to PDL-Development
+
+		ServerConfig server_config = new ServerConfig();
+		server_config.get_server_config_file().pdl_enable = ServerConfigFile.PDLOPT_DEV;
+
+		// Construct the deletion product
+
+		boolean isReviewed = false;
+		long modifiedTime = 0L;
+		Product product = PDLProductBuilderOaf.createDeletionProduct (eventID, eventNetwork, eventCode, isReviewed, modifiedTime);
+
+		// Send to PDL
+
+		PDLSender.signProduct(product);
+		PDLSender.sendProduct(product, true);
+
+		return;
+	}
+
+
+
+
+	// Test #42 - Read an alias list from a file, and store it in the database.
+
+	public static void test42(String[] args) throws Exception {
+
+		// One additional argument
+
+		if (args.length != 2) {
+			System.err.println ("ServerTest : Invalid 'test42' subcommand");
+			return;
+		}
+
+		String filename = args[1];
+
+		// Read the alias list
+
+		AliasAssignmentList assignments;
+		long family_time;
+
+		try (
+			BufferedReader file_reader = new BufferedReader (new FileReader (filename));
+		){
+			MarshalImpJsonReader reader = new MarshalImpJsonReader (file_reader);
+			
+			assignments = (new AliasAssignmentList()).unmarshal (reader, null);
+
+			family_time = assignments.get_family_time();
+		}
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Write the database entry
+		
+			AliasFamily.submit_alias_family (null, family_time, assignments);
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #43 - Get current alias information for a timeline.
+
+	public static void test43(String[] args) throws Exception {
+
+		// One additional argument
+
+		if (args.length != 2) {
+			System.err.println ("ServerTest : Invalid 'test43' subcommand");
+			return;
+		}
+
+		String timeline_id = args[1];
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get a task dispatcher and server group
+
+			TaskDispatcher dispatcher = new TaskDispatcher();
+			ServerGroup sg = dispatcher.get_server_group();
+
+			// Set up task context
+
+			dispatcher.setup_task_context();
+
+			// Get timeline alias information
+
+			ForecastParameters fparam = new ForecastParameters();
+
+			int rescode = sg.alias_sup.get_mainshock_for_timeline_id (timeline_id, fparam);
+
+			// Write the result code
+
+			System.out.println ("result code = " + sg.get_rescode_as_string (rescode));
+
+			// Display mainshock info if we got it
+
+			if (rescode == ServerComponent.RESCODE_SUCCESS) {
+				System.out.println (fparam.toString());
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #44 - Get current alias information for an event.
+
+	public static void test44(String[] args) throws Exception {
+
+		// One additional argument
+
+		if (args.length != 2) {
+			System.err.println ("ServerTest : Invalid 'test44' subcommand");
+			return;
+		}
+
+		String event_id = args[1];
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get a task dispatcher and server group
+
+			TaskDispatcher dispatcher = new TaskDispatcher();
+			ServerGroup sg = dispatcher.get_server_group();
+
+			// Set up task context
+
+			dispatcher.setup_task_context();
+
+			// Get timeline alias information
+
+			ForecastParameters fparam = new ForecastParameters();
+
+			int rescode = sg.alias_sup.get_mainshock_for_event_id (event_id, fparam);
+
+			// Write the result code
+
+			System.out.println ("result code = " + sg.get_rescode_as_string (rescode));
+
+			// Display mainshock info if we got it
+
+			if (rescode == ServerComponent.RESCODE_SUCCESS || rescode == ServerComponent.RESCODE_ALIAS_NEW_EVENT) {
+				System.out.println (fparam.toString());
+			}
+		}
+
+		return;
+	}
+
+
+
+
+	// Test #45 - Get current alias information for an event, create timeline if new event.
+
+	public static void test45(String[] args) throws Exception {
+
+		// One additional argument
+
+		if (args.length != 2) {
+			System.err.println ("ServerTest : Invalid 'test45' subcommand");
+			return;
+		}
+
+		String event_id = args[1];
+
+		// Connect to MongoDB
+
+		try (
+			MongoDBUtil mongo_instance = new MongoDBUtil();
+		){
+
+			// Get a task dispatcher and server group
+
+			TaskDispatcher dispatcher = new TaskDispatcher();
+			ServerGroup sg = dispatcher.get_server_group();
+
+			// Set up task context
+
+			dispatcher.setup_task_context();
+
+			// Get timeline alias information
+
+			ForecastParameters fparam = new ForecastParameters();
+
+			int rescode = sg.alias_sup.get_mainshock_for_event_id (event_id, fparam);
+
+			// Write the result code
+
+			System.out.println ("result code = " + sg.get_rescode_as_string (rescode));
+
+			// If it's a new event, create the timeline
+
+			if (rescode == ServerComponent.RESCODE_ALIAS_NEW_EVENT) {
+				sg.alias_sup.write_mainshock_to_new_timeline (fparam);
+			}
+
+			// Display mainshock info if we got it
+
+			if (rescode == ServerComponent.RESCODE_SUCCESS || rescode == ServerComponent.RESCODE_ALIAS_NEW_EVENT) {
+				System.out.println (fparam.toString());
+			}
+		}
+
+		return;
+	}
+
+
+
+
 	// Test dispatcher.
 	
 	public static void main(String[] args) {
@@ -1657,7 +2408,7 @@ public class ServerTest {
 
 		// Subcommand : Test #7
 		// Command format:
-		//  test7  cutoff_time  exec_time  stage
+		//  test7  cutoff_time  exec_time  stage  [event_id]
 		// Activate the first document before the cutoff time, and stage it.
 
 		if (args[0].equalsIgnoreCase ("test7")) {
@@ -1886,9 +2637,11 @@ public class ServerTest {
 
 		// Subcommand : Test #21
 		// Command format:
-		//  test21  action_time_lo  action_time_hi  [event_id]
-		// Search the timeline for action time and/or event id; using list.
-		// Times can be 0 for no bound, event id can be omitted for no restriction.
+		//  test21  action_time_lo  action_time_hi  action_time_div_rem  [event_id]  [comcat_id]...
+		// Search the timeline for action time and/or event id and/or comcat id; using list.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The action_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
 
 		if (args[0].equalsIgnoreCase ("test21")) {
 
@@ -1903,9 +2656,11 @@ public class ServerTest {
 
 		// Subcommand : Test #22
 		// Command format:
-		//  test22  action_time_lo  action_time_hi  [event_id]
-		// Search the timeline for action time and/or event id; using iterator.
-		// Times can be 0 for no bound, event id can be omitted for no restriction.
+		//  test22  action_time_lo  action_time_hi  action_time_div_rem  [event_id]  [comcat_id]...
+		// Search the timeline for action time and/or event id and/or comcat id; using iterator.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The action_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
 
 		if (args[0].equalsIgnoreCase ("test22")) {
 
@@ -1920,9 +2675,11 @@ public class ServerTest {
 
 		// Subcommand : Test #23
 		// Command format:
-		//  test23  action_time_lo  action_time_hi  [event_id]
-		// Search  the timeline for action time and/or event id; and re-fetch the entries.
-		// Times can be 0 for no bound, event id can be omitted for no restriction.
+		//  test23  action_time_lo  action_time_hi  action_time_div_rem  [event_id]  [comcat_id]...
+		// Search the timeline for action time and/or event id and/or comcat id; and re-fetch the entries.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The action_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
 
 		if (args[0].equalsIgnoreCase ("test23")) {
 
@@ -1937,9 +2694,11 @@ public class ServerTest {
 
 		// Subcommand : Test #24
 		// Command format:
-		//  test24  action_time_lo  action_time_hi  [event_id]
-		// Search  the timeline for action time and/or event id; and delete the entries.
-		// Times can be 0 for no bound, event id can be omitted for no restriction.
+		//  test24  action_time_lo  action_time_hi  action_time_div_rem  [event_id]  [comcat_id]...
+		// Search the timeline for action time and/or event id and/or comcat id; and delete the entries.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The action_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
 
 		if (args[0].equalsIgnoreCase ("test24")) {
 
@@ -2054,9 +2813,11 @@ public class ServerTest {
 
 		// Subcommand : Test #31
 		// Command format:
-		//  test31  action_time_lo  action_time_hi  [event_id]
-		// Search the timeline for action time and/or event id; get most recent.
-		// Times can be 0 for no bound, event id can be omitted for no restriction.
+		//  test31  action_time_lo  action_time_hi  action_time_div_rem  [event_id]  [comcat_id]...
+		// Search the timeline for action time and/or event id and/or comcat id; get most recent.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The action_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
 
 		if (args[0].equalsIgnoreCase ("test31")) {
 
@@ -2110,6 +2871,198 @@ public class ServerTest {
 
 			try {
 				test34(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #35
+		// Command format:
+		//  test35
+		// Add a few elements to the alias families.
+
+		if (args[0].equalsIgnoreCase ("test35")) {
+
+			try {
+				test35(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #36
+		// Command format:
+		//  test36  family_time_lo  family_time_hi  family_time_div_rem  [event_id]  [comcat_id]...
+		// Search the alias families for family time and/or event id and/or comcat id; using list.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The family_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
+
+		if (args[0].equalsIgnoreCase ("test36")) {
+
+			try {
+				test36(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #37
+		// Command format:
+		//  test37  family_time_lo  family_time_hi  family_time_div_rem  [event_id]  [comcat_id]...
+		// Search the alias families for family time and/or event id and/or comcat id; using iterator.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The family_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
+
+		if (args[0].equalsIgnoreCase ("test37")) {
+
+			try {
+				test37(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #38
+		// Command format:
+		//  test38  family_time_lo  family_time_hi  family_time_div_rem  [event_id]  [comcat_id]...
+		// Search the alias families for family time and/or event id and/or comcat id; and re-fetch the entries.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The family_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
+
+		if (args[0].equalsIgnoreCase ("test38")) {
+
+			try {
+				test38(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #39
+		// Command format:
+		//  test39  family_time_lo  family_time_hi  family_time_div_rem  [event_id]  [comcat_id]...
+		// Search the alias families for family time and/or event id and/or comcat id; and delete the entries.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The family_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
+
+		if (args[0].equalsIgnoreCase ("test39")) {
+
+			try {
+				test39(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #40
+		// Command format:
+		//  test40  family_time_lo  family_time_hi  family_time_div_rem  [event_id]  [comcat_id]...
+		// Search the timeline for action time and/or event id and/or comcat id; get most recent.
+		// Times can be 0 for no bound, event id can be omitted or equal to "-" for no restriction.
+		// If any comcat_id are given, the entry must match at least one of them.
+		// The family_time_div_rem can be 0 for no modulus test, otherwise it is divisor * 1000 + remainder.
+
+		if (args[0].equalsIgnoreCase ("test40")) {
+
+			try {
+				test40(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #41
+		// Command format:
+		//  test41  eventID  eventNetwork  eventCode
+		// Delete a product from PDL-Development.
+		// Note this always uses PDL-Development regardless of the ServerConfig setting.
+
+		if (args[0].equalsIgnoreCase ("test41")) {
+
+			try {
+				test41(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #42
+		// Command format:
+		//  test42  filename
+		// Read an alias list from a file, and store it in the database.
+
+		if (args[0].equalsIgnoreCase ("test42")) {
+
+			try {
+				test42(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #43
+		// Command format:
+		//  test43  timeline_id
+		// Get current alias information for a timeline.
+
+		if (args[0].equalsIgnoreCase ("test43")) {
+
+			try {
+				test43(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #44
+		// Command format:
+		//  test44  event_id
+		// Get current alias information for an event.
+
+		if (args[0].equalsIgnoreCase ("test44")) {
+
+			try {
+				test44(args);
+            } catch (Exception e) {
+                e.printStackTrace();
+			}
+
+			return;
+		}
+
+		// Subcommand : Test #45
+		// Command format:
+		//  test45  event_id
+		// Get current alias information for an event, create timeline if new event.
+
+		if (args[0].equalsIgnoreCase ("test45")) {
+
+			try {
+				test45(args);
             } catch (Exception e) {
                 e.printStackTrace();
 			}
