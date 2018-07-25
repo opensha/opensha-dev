@@ -46,13 +46,13 @@ public class UCERF3ComparisonCalc {
 		erf.getTimeSpan().setStartTime(2014);
 		System.out.println("startYear: "+erf.getTimeSpan().getStartTimeYear());
 		erf.eraseDatesOfLastEventAfterStartTime();
-		erf.getTimeSpan().setDuration((double)duration);
+		erf.getTimeSpan().setDuration(10d); // this is the duration used for calculating TD probabilities
 
 		erf.updateForecast();
 		
 		ProbabilityModelsCalc calc = new ProbabilityModelsCalc(erf);
 		
-		calc.testER_NextXyrSimulation(outputDir, null, 1, false, null);
+		calc.testER_NextXyrSimulation(outputDir, null, 1, false, null, (double)duration);
 	}
 	
 	private static class CalcThread extends Thread {

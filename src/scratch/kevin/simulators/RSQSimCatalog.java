@@ -222,6 +222,18 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2737("bruce/rundir2737", "Bruce 2737", "Bruce Shaw", cal(2018, 6, 5),
 				"Finite receiver patch fracArea=0.9, all else same as r2585",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2740("bruce/rundir2740", "Bruce 2740", "Bruce Shaw", cal(2018, 6, 27),
+				"FinitePatch fracArea=0.8, 48Hr, all else same as r2585",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2742("bruce/rundir2742", "Bruce 2742", "Bruce Shaw", cal(2018, 6, 27),
+				"FinitePatch fracArea=0.85,  all else same as r2585",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2743("bruce/rundir2743", "Bruce 2743", "Bruce Shaw", cal(2018, 6, 27),
+				"FinitePatch fracArea=0.8,  b=.007",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2744("bruce/rundir2744", "Bruce 2744", "Bruce Shaw", cal(2018, 6, 27),
+				"FinitePatch fracArea=0.8,  b=.009",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -270,7 +282,29 @@ public class RSQSimCatalog implements XMLSaveable {
 			FaultModels fm, DeformationModels dm) {
 		this(null, name, author, date, metadata, fm, dm);
 	}
+	
+	/**
+	 * Creates a new RSQSimCatalog instance without any the metadata
+	 * @param dir directory containing the list/geometry files
+	 * @param name name of this catalog
+	 * @param fm UCERF3 fault model for comparisons
+	 * @param dm UCERF3 defomration model for comparisons
+	 */
+	public RSQSimCatalog(File dir, String name, FaultModels fm, DeformationModels dm) {
+		this(dir, name, null, null, null, fm, dm);
+	}
 
+	/**
+	 * Creates a new RSQSimCatalog instance with all metadata
+	 * 
+	 * @param dir directory containing the list/geometry files
+	 * @param name name of this catalog
+	 * @param author author of this catalog
+	 * @param date creation date for this catalog
+	 * @param metadata description of this catalog
+	 * @param fm UCERF3 fault model for comparisons
+	 * @param dm UCERF3 defomration model for comparisons
+	 */
 	public RSQSimCatalog(File dir, String name, String author, GregorianCalendar date, String metadata,
 			FaultModels fm, DeformationModels dm) {
 		this.dir = dir;

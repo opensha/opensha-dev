@@ -697,14 +697,17 @@ class RupSpectraPageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
 //		int eventID = 526885;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
-//		int eventID = 81854;
-		int eventID = 1670183;
-//		int eventID = 2637969;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
+////		int eventID = 81854;
+//		int eventID = 1670183;
+////		int eventID = 2637969;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		int eventID = 385955;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = true;
-		boolean gpAdjustDDW = true;
+		boolean gpAdjustDDW = false;
 		
 		File eventBBPDir = RSQSimBBP_Config.getEventBBPDir(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
 				RSQSimBBP_Config.SRF_DT, timeScale, scaleVelocities);

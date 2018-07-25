@@ -16,6 +16,7 @@ import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
@@ -30,6 +31,7 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.simulators.EventRecord;
+import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
 
@@ -39,6 +41,8 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
 import scratch.UCERF3.utils.IDPairing;
+import scratch.kevin.simulators.RSQSimCatalog;
+import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class RuptureVelocityPlot extends AbstractPlot {
 	
@@ -271,15 +275,8 @@ public class RuptureVelocityPlot extends AbstractPlot {
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 	}
 	
-	private void plotDistScaling() throws IOException {
-		double totalMean = 0d;
-//		ArbitrarilyDiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
-//		ArbitrarilyDiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
-//		ArbitrarilyDiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();
-		ArbitrarilyDiscretizedFunc minusSigmaFunc = new ArbitrarilyDiscretizedFunc();
-		ArbitrarilyDiscretizedFunc plusSigmaFunc = new ArbitrarilyDiscretizedFunc();
-		
-		List<ArbitrarilyDiscretizedFunc> subMagFuncs = new ArrayList<>();
+	private List<DiscretizedFunc> calcDistScalingFuncs(ArbitrarilyDiscretizedFunc minusSigmaFunc, ArbitrarilyDiscretizedFunc plusSigmaFunc) {
+		List<DiscretizedFunc> subMagFuncs = new ArrayList<>();
 		for (int m=0; m<subMagRanges.size(); m++) {
 			ArbitrarilyDiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
 			subMagFuncs.add(meanFunc);
@@ -289,12 +286,11 @@ public class RuptureVelocityPlot extends AbstractPlot {
 //						+subMagRanges.get(m).getUpperBound()+"), dist "+i+" has "+numInBin);
 				if (numInBin == 0)
 					continue;
-				totalMean += binnedAverages[m][i]/numInBin;
 				binnedAverages[m][i]/=numInBin;
 				
 				double x = distFunc.getX(i);
 				meanFunc.set(x, binnedAverages[m][i]);
-				if (m == 0) {
+				if (m == 0 && minusSigmaFunc != null && plusSigmaFunc != null) {
 					double stdDev = 0;
 					stdDev = distBins[m][i].computeStdDev();
 					minusSigmaFunc.set(x, binnedAverages[m][i] - stdDev);
@@ -304,6 +300,14 @@ public class RuptureVelocityPlot extends AbstractPlot {
 //				System.out.println(x+" "+binnedAverages[i]+" "+stdDev);
 			}
 		}
+		return subMagFuncs;
+	}
+	
+	private void plotDistScaling() throws IOException {
+		ArbitrarilyDiscretizedFunc minusSigmaFunc = new ArbitrarilyDiscretizedFunc();
+		ArbitrarilyDiscretizedFunc plusSigmaFunc = new ArbitrarilyDiscretizedFunc();
+		
+		List<DiscretizedFunc> subMagFuncs = calcDistScalingFuncs(minusSigmaFunc, plusSigmaFunc);
 		
 		double maxY = Math.min(plot_max_vel, plusSigmaFunc.getMaxY()*1.4);
 //		double maxY = Math.min(plot_max_vel, maxFunc.getMaxY()*1.2);
@@ -332,7 +336,7 @@ public class RuptureVelocityPlot extends AbstractPlot {
 		for (int m=1; m<subMagRanges.size() && distVelFunc == null; m++) {
 			Range range = subMagRanges.get(m);
 			Color c = subCPT.getColor((float)range.getLowerBound());
-			ArbitrarilyDiscretizedFunc func = subMagFuncs.get(m);
+			DiscretizedFunc func = subMagFuncs.get(m);
 			if (func.calcSumOfY_Vals() == 0d)
 				continue;
 			if (range.getUpperBound() > 9)
@@ -374,6 +378,65 @@ public class RuptureVelocityPlot extends AbstractPlot {
 			return LocationUtils.linearDistanceFast(p1, p2);
 		}
 		
+	}
+	
+	public static void plotDistanceScalingComparison(RuptureVelocityPlot plot1, String name1, RuptureVelocityPlot plot2, String name2,
+			File outputDir, String prefix) throws IOException {
+		// first mag range func is all mags
+		DiscretizedFunc distFunc1 = plot1.calcDistScalingFuncs(null, null).get(0);
+		DiscretizedFunc distFunc2 = plot2.calcDistScalingFuncs(null, null).get(0);
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		distFunc1.setName(name1);
+		funcs.add(distFunc1);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GRAY));
+		
+		distFunc2.setName(name2);
+		funcs.add(distFunc2);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		
+		String title = "Rupture Velocity vs Distance";
+		String xAxisLabel = "Hypocentral Distance (km)";
+		String yAxisLabel = "Mean Rupture Velocity (km/s)";
+		
+		PlotSpec plot = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
+		plot.setLegendVisible(true);
+		
+		double maxY = Math.min(plot_max_vel, Math.max(distFunc1.getMaxY(), distFunc2.getMaxY())*1.2);
+		
+		HeadlessGraphPanel gp = plot1.getGraphPanel();
+		gp.setLegendFontSize(20);
+		gp.drawGraphPanel(plot, false, false, null, new Range(0, maxY));
+		gp.getChartPanel().setSize(plot1.getPlotWidth(), (int)(plot1.getPlotHeight()*0.6));
+		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
+		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
+	}
+	
+	public static void main(String[] args) throws IOException {
+		File baseDir = new File("/home/kevin/Simulators/catalogs");
+		
+		double minMag = 6.5;
+		double skipYears = 5000;
+		
+		RSQSimCatalog catalog1 = Catalogs.BRUCE_2585.instance(baseDir);
+		String name1 = "Original";
+		RSQSimCatalog catalog2 = Catalogs.BRUCE_2740.instance(baseDir);
+		String name2 = "Finite Receiver Modifications";
+		
+		File outputDir = new File("/tmp");
+		String prefix = "rupture_velocity_comparison";
+		
+		RuptureVelocityPlot plot1 = new RuptureVelocityPlot(catalog1.getElements(), minMag);
+		RuptureVelocityPlot plot2 = new RuptureVelocityPlot(catalog2.getElements(), minMag);
+
+		for (RSQSimEvent e : catalog1.loader().minMag(minMag).skipYears(skipYears).load())
+			plot1.processEvent(e);
+		for (RSQSimEvent e : catalog2.loader().minMag(minMag).skipYears(skipYears).load())
+			plot2.processEvent(e);
+		
+		plotDistanceScalingComparison(plot1, name1, plot2, name2, outputDir, prefix);
 	}
 
 }

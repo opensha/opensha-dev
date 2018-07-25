@@ -54,25 +54,27 @@ class MPJ_BBP_RuptureScriptsGen {
 //		int eventID = 18840012;
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
 //		int eventID = 526885;
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
 //		int eventID = 81854;
 //		int eventID = 2637969;
-		int eventID = 1670183;
+//		int eventID = 1670183;
+		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		int eventID = 385955;
 		
 		File catalogDir = catalog.getCatalogDir();
 		
 		boolean stampede = false;
 		
 		boolean doGP = true;
-		boolean doShakeMap = false;
+		boolean doShakeMap = true;
 		
 		boolean csSites = true;
 		
 		int numGP = 400;
 //		double mapSpacing = 0.05;
 		double mapSpacing = 0.02;
-//		int maxNodes = 36;
-		int maxNodes = 10;
+		int maxNodes = 36;
+//		int maxNodes = 10;
 		boolean gpAdjustDDW = false;
 		
 		File srcFile = RSQSimBBP_Config.getEventSrcFile(catalog, eventID);

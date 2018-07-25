@@ -39,11 +39,12 @@ public class RSQSimOccupancyCopulaCalculator {
 		double minMag = 7d;
 		OccupancyCopulaCalculator.lowResTimeDelta = 5d; // years
 		double skipYears = 5000;
-		boolean middleSubSect = true; // else any
+		boolean middleSubSect = false; // else any
+		double minAreaFract = 0.2;
 		
 		int numCopulaBins = 50;
 		
-		List<RuptureIdentifier> faultIdens = RSQSimMarkovChainBuilder.getParentFaultIdens(catalog, middleSubSect, parentNames);
+		List<RuptureIdentifier> faultIdens = RSQSimMarkovChainBuilder.getU3_SectionIdentifiers(catalog, minAreaFract, middleSubSect, parentNames);
 		List<RSQSimEvent> events = catalog.loader().minMag(minMag).skipYears(skipYears).matches(new LogicalOrRupIden(faultIdens)).load();
 		
 		File catOutDir = new File(mainOutputDir, catalog.getCatalogDir().getName());

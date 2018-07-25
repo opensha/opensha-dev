@@ -534,7 +534,7 @@ public class SpectraPlotter {
 		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 	}
 	
-	private static Range populateRefRangeFuncs(List<DiscretizedFunc> refSpectra, String refName,
+	public static Range populateRefRangeFuncs(List<DiscretizedFunc> refSpectra, String refName,
 			List<XY_DataSet> funcs, List<PlotCurveCharacterstics> chars) {
 		XY_DataSetList refFuncs = new XY_DataSetList();
 		List<Double> relativeWts = new ArrayList<>();
