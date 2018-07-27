@@ -61,6 +61,8 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 			matchingRupsList.add(matchingRups);
 			
 			for (int r=0; r<rupSet.getNumRuptures(); r++) {
+				if (rupSet.getMagForRup(r) < minMag)
+					continue;
 				double areaOnParentsRuptured = 0d;
 				for (int s : rupSet.getSectionsIndicesForRup(r)) {
 					if (subSectIDs.contains(s))
@@ -179,6 +181,12 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 		double minAreaFract = 0.2;
 		boolean middleSubSect = false; // else any
 		List<String[]> parentSectNames = CatalogEventCalc.getParentSectsSetOf9();
+		
+//		double[] minMags = { 6d, 7d };
+//		double[] timeDiscretizationsYears =  { 10d };
+//		double minAreaFract = 0.2;
+//		boolean middleSubSect = false; // else any
+//		List<String[]> parentSectNames = CatalogEventCalc.getParentSectsSetOf4_SAF();
 		
 		for (File u3SimDir : u3SimDirs) {
 			File u3SimFile = new File(u3SimDir, "sampledEventsData.txt");

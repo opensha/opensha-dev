@@ -19,6 +19,7 @@ import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.utils.FaultSystemIO;
 
 public class BulkMagNumPlotGen {
@@ -67,7 +68,7 @@ public class BulkMagNumPlotGen {
 			for (File subdir : dir.listFiles()) {
 				if (!subdir.getName().startsWith("sim_") || !subdir.isDirectory())
 					continue;
-				if (!MPJ_ETAS_Simulator.isAlreadyDone(subdir))
+				if (!ETAS_Launcher.isAlreadyDone(subdir))
 					continue;
 				File catalogFile = new File(subdir, "simulatedEvents.txt");
 				catalogs.add(ETAS_CatalogIO.loadCatalog(catalogFile));

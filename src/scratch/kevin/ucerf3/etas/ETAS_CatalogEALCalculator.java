@@ -60,6 +60,7 @@ import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
@@ -146,7 +147,7 @@ public class ETAS_CatalogEALCalculator {
 		System.out.println("Loading ERF");
 		double origMinMag = AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF;
 		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
-		erf = MPJ_ETAS_Simulator.buildERF(meanSol, false, 1d);
+		erf = ETAS_Launcher.buildERF(meanSol, false, 1d, 2014);
 		erf.updateForecast();
 		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = origMinMag;
 		System.out.println("Done loading ERF");

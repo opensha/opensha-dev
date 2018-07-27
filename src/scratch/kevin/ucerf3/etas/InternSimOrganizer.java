@@ -11,6 +11,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
+
 public class InternSimOrganizer {
 	
 	public static void main(String[] args) throws IOException {
@@ -50,12 +52,7 @@ public class InternSimOrganizer {
 				for (File simDir : simDirs) {
 					if (!simDir.getName().startsWith("sim_"))
 						continue;
-					try {
-						if (!MPJ_ETAS_Simulator.isAlreadyDone(simDir)) {
-							System.out.println(simDir.getName()+" for "+simName+" isn't completed, skipping");
-							continue;
-						}
-					} catch (IOException e) {
+					if (!ETAS_Launcher.isAlreadyDone(simDir)) {
 						System.out.println(simDir.getName()+" for "+simName+" isn't completed, skipping");
 						continue;
 					}

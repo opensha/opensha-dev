@@ -16,6 +16,7 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.utils.FaultSystemIO;
 
 public class StandaloneSectProbOneOrMoreCalc {
@@ -44,7 +45,7 @@ public class StandaloneSectProbOneOrMoreCalc {
 //			erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
 //			erf.getTimeSpan().setDuration(1d);
 //			erf.updateForecast();
-			FaultSystemSolutionERF erf = MPJ_ETAS_Simulator.buildERF(fss, false, durationForProb, startYear);
+			FaultSystemSolutionERF erf = ETAS_Launcher.buildERF(fss, false, durationForProb, startYear);
 			erf.updateForecast();
 			
 			Iterable<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.getBinaryCatalogsIterable(catalogsFile, 0d);

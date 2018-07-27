@@ -7,6 +7,7 @@ import java.util.Arrays;
 import org.opensha.commons.util.FileNameComparator;
 
 import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 
 public class ETAS_CatalogVerify {
 	
@@ -19,14 +20,10 @@ public class ETAS_CatalogVerify {
 			if (file.isDirectory())
 				good += verify(file);
 			if (file.getName().equals("simulatedEvents.txt")) {
-				try {
-					if (MPJ_ETAS_Simulator.isAlreadyDone(dir))
-						good++;
-					else
-						bad++;
-				} catch (IOException e1) {
+				if (ETAS_Launcher.isAlreadyDone(dir))
+					good++;
+				else
 					bad++;
-				}
 //				try {
 //					ETAS_SimAnalysisTools.loadCatalog(file);
 //					good++;

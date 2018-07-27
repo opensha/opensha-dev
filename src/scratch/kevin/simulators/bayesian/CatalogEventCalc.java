@@ -192,6 +192,17 @@ public class CatalogEventCalc extends FaultStateEventCalc {
 		return parentSectBundles;
 	}
 	
+	static List<String[]> getParentSectsSetOf4_SAF() {
+		List<String[]> parentSectBundles = new ArrayList<>();
+		
+		parentSectBundles.add(new String[] {"San Andreas (Cholame) rev"});
+		parentSectBundles.add(new String[] {"San Andreas (Carrizo) rev"});
+		parentSectBundles.add(new String[] {"San Andreas (Mojave S)"});
+		parentSectBundles.add(new String[] {"San Andreas (San Bernardino N)"});
+		
+		return parentSectBundles;
+	}
+	
 	public static void main(String[] args) throws IOException {
 		File catalogsDir = new File("/data/kevin/simulators/catalogs");
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(catalogsDir);

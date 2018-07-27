@@ -7,6 +7,7 @@ import java.util.Arrays;
 import org.opensha.commons.util.FileNameComparator;
 
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 
 import com.google.common.base.Preconditions;
 
@@ -34,7 +35,7 @@ public class FindIncomplete {
 			
 			tot++;
 			
-			if (!MPJ_ETAS_Simulator.isAlreadyDone(subDir)) {
+			if (!ETAS_Launcher.isAlreadyDone(subDir)) {
 				failed++;
 				
 				// try loading
