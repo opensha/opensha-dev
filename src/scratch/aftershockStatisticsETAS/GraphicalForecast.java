@@ -94,7 +94,7 @@ public class GraphicalForecast{
 		this.msName = aftershockModel.mainShock.getEventId(); //get USGS name
 		this.eventURL = "https://earthquake.usgs.gov/earthquakes/eventpage/" + msName + "#executive";
 		versionDate.setTimeInMillis(System.currentTimeMillis());
-		this.location = getParameter(aftershockModel.mainShock, "description").getValue().toString();
+		this.location = getStringParameter(aftershockModel.mainShock, "description");
 		this.lat0 = aftershockModel.mainShock.getHypocenterLocation().getLatitude();
 		this.lon0 = aftershockModel.mainShock.getHypocenterLocation().getLongitude();
 		this.mag0 = aftershockModel.mainShock.getMag();
@@ -103,14 +103,16 @@ public class GraphicalForecast{
 		this.b = aftershockModel.get_b();
 	}
 
-	private Parameter<?> getParameter(ObsEqkRupture rup, String paramName){
+	private String getStringParameter(ObsEqkRupture rup, String paramName){
 		ListIterator<?> iter = rup.getAddedParametersIterator();
-		while (iter.hasNext()){
-			Parameter<?> param = (Parameter<?>) iter.next();
-			if (param.getName().equals(paramName));
-				return param;
-		}
-		return null;
+		if (iter != null) {
+			while (iter.hasNext()){
+				Parameter<?> param = (Parameter<?>) iter.next();
+				if (param.getName().equals(paramName));
+				return param.getValue().toString();
+			}
+		} 
+		return "";
 	}
 	
 	private final static int DAY = 1;
@@ -768,36 +770,37 @@ public class GraphicalForecast{
 				+"		<div style=\"width:800px;height:500px;margin-left:0px;\">\n"
 		);
 		
-		if (shakeMapURL != null)
-			imgString.append(" "
+		
+		imgString.append(" "
 				+"  	<!-- Mainshock shakemap -->\n"
 				+"		<table style=\"width:800px;vertical-align:top;text-align:center;\">\n"
 				+"	    	<tr>\n"
-		        +"	        	<td style=\"width:250px;display:inline\">\n"
-		        +"			    	<br>\n"
-		        +" 					<p class=\"forecast\" style=\"white-space:pre\">Mainshock ShakeMap\n(previous shaking)</p>\n"
-		        +" 					<div style=\"height:230px;overflow:hidden;margin: 0 -275px 0px -275px;\" id=\"shakemapCrop\">\n"
-		        +" 						<!-- Change the link URL to point to your local event summary if preferred. Default is to go to USGS summary -->\n"
-		        +" 						<a href=\"" + eventURL + "\">\n"	
-		        +"	        			<img style=\"width:250px\" src=\"" + shakeMapURL + "\" alt=\"Mainshock shakemap\" id=\"shakemap\" onload=\"cropShakemap()\">\n"
-		        +" 						</a>\n"
-		        +" 					</div>\n"
-		        +"		 	   </td>\n"
-		        +"			    <td style=\"width:550px\" id=\"imageBox\">\n"
-		        +"	 				<!-- To manually specifiy the image you want to see displayed, replace src=\"...\" with the desired filename. -->\n"
-		        +"	          	<img style=\"margin:auto;width:550px;max-height:480px\" src=\"ratemap.png\" alt=\"Graphical Forecast\" id=\"theimage\">\n"
-		        +"	      	</td>\n"
-		        +"		    </tr>\n"
-		        +"		</table>\n"
-			);
-		
-		
+				+"	        	<td style=\"width:250px;display:inline\">\n"
+				+"			    	<br>\n"
+				+" 					<p class=\"forecast\" style=\"white-space:pre\">Mainshock ShakeMap\n(previous shaking)</p>\n"
+				+" 					<div style=\"height:230px;overflow:hidden;margin: 0 -275px 0px -275px;\" id=\"shakemapCrop\">\n"
+				+" 						<!-- Change the link URL to point to your local event summary if preferred. Default is to go to USGS summary -->\n"
+				+" 						<a href=\"" + eventURL + "\">\n");
+		if (shakeMapURL != null)
+			imgString.append(" "
+					+"	        			<img style=\"width:250px\" src=\"" + shakeMapURL + "\" alt=\"Mainshock shakemap\" id=\"shakemap\" onload=\"cropShakemap()\">\n"
+					+" 						</a>\n");
 		else 	
-			imgString.append(""
-				+" 		<!-- To manually specifiy the image you want to see displayed, replace src=\"...\" with the desired filename. -->\n"
-				+" 		<img style=\"margin-right:0px;width:550px\" src=\"ratemap.png\" alt=\"Graphical Forecast\" id=\"theimage\">\n"
-			);
-					
+			imgString.append(" "
+					+"	        			<p>EventPage"
+					+" 						</a>\n");
+		imgString.append(" "
+				+" 					</div>\n"
+				+"		 	   </td>\n"
+				+"			    <td style=\"width:550px\" id=\"imageBox\">\n"
+				+"	 				<!-- To manually specifiy the image you want to see displayed, replace src=\"...\" with the desired filename. -->\n"
+				+"	          	<img style=\"margin:auto;width:550px;max-height:480px\" src=\"ratemap.png\" alt=\"Graphical Forecast\" id=\"theimage\">\n"
+				+"	      	</td>\n"
+				+"		    </tr>\n"
+				+"		</table>\n"
+				);
+
+
 		imgString.append(""
 			
 		);
