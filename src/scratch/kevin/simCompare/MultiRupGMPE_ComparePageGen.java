@@ -46,8 +46,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 
 import scratch.kevin.bbp.SpectraPlotter;
-import scratch.kevin.util.MarkdownUtils;
-import scratch.kevin.util.MarkdownUtils.TableBuilder;
+import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
 public abstract class MultiRupGMPE_ComparePageGen<E> {
 	

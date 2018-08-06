@@ -35,7 +35,7 @@ import com.google.common.primitives.Doubles;
 
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
-import scratch.kevin.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils;
 
 public class HazardPeriodDependenceCalc {
 

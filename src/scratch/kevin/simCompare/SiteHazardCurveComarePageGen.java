@@ -42,8 +42,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Table;
 
 import scratch.kevin.simCompare.SimulationDisaggAttenuationRelationshipWrapper.Source;
-import scratch.kevin.util.MarkdownUtils;
-import scratch.kevin.util.MarkdownUtils.TableBuilder;
+import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
 public abstract class SiteHazardCurveComarePageGen<E> {
 	private SimulationRotDProvider<E> simProv;

@@ -61,8 +61,8 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.kevin.simCompare.GroundMotionScatterPlot;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
-import scratch.kevin.util.MarkdownUtils;
-import scratch.kevin.util.MarkdownUtils.TableBuilder;
+import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import scratch.kevin.util.ReturnPeriodUtils;
 
 public class HazardClusteringGMPECalc {

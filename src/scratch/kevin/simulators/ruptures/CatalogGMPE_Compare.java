@@ -60,7 +60,7 @@ import scratch.kevin.simCompare.RuptureComparison;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
-import scratch.kevin.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils;
 
 class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	

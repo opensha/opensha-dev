@@ -78,8 +78,8 @@ import scratch.kevin.simulators.plots.RuptureVelocityPlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 import scratch.kevin.simulators.plots.StationarityPlot;
-import scratch.kevin.util.MarkdownUtils;
-import scratch.kevin.util.MarkdownUtils.TableBuilder;
+import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
 public class RSQSimCatalog implements XMLSaveable {
 	

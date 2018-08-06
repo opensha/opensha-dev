@@ -16,8 +16,8 @@ public class U3SolCSVWriter {
 
 	public static void main(String[] args) throws IOException, DocumentException {
 		File solFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
-				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
-		File outputFile = new File("/tmp/fss.csv");
+				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip");
+		File outputFile = new File("/tmp/fss_fm3p2.csv");
 		FaultSystemSolution sol = FaultSystemIO.loadSol(solFile);
 		CSVFile<String> csv = new CSVFile<>(false);
 		

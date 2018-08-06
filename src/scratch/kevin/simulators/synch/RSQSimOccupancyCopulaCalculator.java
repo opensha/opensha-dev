@@ -17,7 +17,7 @@ import com.google.common.base.Preconditions;
 import scratch.kevin.simulators.PeriodicityPlotter;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimMarkovChainBuilder;
-import scratch.kevin.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class RSQSimOccupancyCopulaCalculator {
