@@ -1397,10 +1397,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 //				//fetch details
 				ListIterator<?> iter = mainshock.getAddedParametersIterator();
 				if(verbose){
-					while (iter.hasNext()){
-						Parameter<?> param = (Parameter<?>) iter.next();
-						System.out.println(param.getName() +":"+ param.getValue());
-					}
+					if (iter != null)
+						while (iter.hasNext()){
+							Parameter<?> param = (Parameter<?>) iter.next();
+							System.out.println(param.getName() +":"+ param.getValue());
+						}
 				}
 					
 				System.out.println("Mainshock Mag/Lat/Lon/Depth: " + mainshock.getMag() + " " + mainshock.getHypocenterLocation());
