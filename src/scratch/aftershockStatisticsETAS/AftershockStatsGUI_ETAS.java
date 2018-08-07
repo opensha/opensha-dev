@@ -4262,7 +4262,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	//				progress.updateProgress(i, models.size(), "Calculating "+name+"...");
 				
 				int minMag = 3;
-				int maxMag = Math.max(minMag + 3, Math.min(9, (int) Math.ceil(largestShock.getMag()) + 1));
+				int maxMag = Math.max(minMag + 3, Math.min(9, (int) Math.ceil(largestShock.getMag() + 0.5)));
 				int nMags = maxMag - minMag + 1;
 				if(D) System.out.println("maxMag: " + maxMag + " largestShockMag: " + largestShock.getMag());
 				double[] minMags = ETAS_StatsCalc.linspace(minMag, maxMag, nMags);

@@ -6,6 +6,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.ListIterator;
@@ -101,6 +104,7 @@ public class GraphicalForecast{
 		this.depth0 = aftershockModel.mainShock.getHypocenterLocation().getDepth();
 		this.tPredStart = getDateDelta(eventDate, forecastStartDate);
 		this.b = aftershockModel.get_b();
+		
 	}
 
 	private String getStringParameter(ObsEqkRupture rup, String paramName){
@@ -129,7 +133,6 @@ public class GraphicalForecast{
 	private double[] nfelt_wk = new double[3];
 	
 	
-	// assign variables
 	private double[] predictionMagnitudes = new double[]{3,4,5,6,7,8,9};
 	private double[] predictionIntervals = new double[]{DAY,WEEK,MONTH,YEAR}; //day,week,month,year
 //	private String[] predictionIntervalStrings = new String[]{"day","week","month","year"}; //day,week,month,year
@@ -461,6 +464,19 @@ public class GraphicalForecast{
 		SimpleDateFormat formatter=new SimpleDateFormat("d MMM yyyy, HH:mm:ss");  
 		formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
 		GregorianCalendar forecastEndDate = new GregorianCalendar();
+		
+		
+		// find the largest magnitude to plot
+		// assign variables
+		int minMag = 3;
+		double maxObsMag = minMag;
+		for (int i = 0; i < aftershockModel.magAftershocks.length; i++) {
+			if (aftershockModel.magAftershocks[i] > maxObsMag)
+				maxObsMag = aftershockModel.magAftershocks[i];
+		}
+		int maxMag = Math.max(minMag + 3, Math.min(9, (int) Math.ceil(maxObsMag + 0.5)));
+		if(D) System.out.println("maxMag: " + maxMag + " largestShockMag: " + maxObsMag);
+		
 
 		String[] durString = new String[]{"Day","Week","Month","Year"};
 		for (int j = 0; j<4; j++){
@@ -474,7 +490,8 @@ public class GraphicalForecast{
 			for (int i = 0; i < predictionMagnitudes.length; i++) {
 				String classStr = (Math.floorMod(n, 2) == 0)?"tfElem1":"tfElem2";
 				int mag = (int) predictionMagnitudes[i];
-				if( mag == 3 || i >= predictionMagnitudes.length-4) {//always plot the M3s and then the last four
+//				if( mag == 3 || i >= predictionMagnitudes.length-4) {//always plot the M3s and then the last four
+				if (mag == 3 || (mag > 3 && mag > maxMag - 4 && mag <= maxMag)) {
 					tableString.append(""
 							+" 		<td class=\""+ classStr +"\">"
 							+ "M ≥ " + mag + "</td><td class=\""+ classStr +"\">"
