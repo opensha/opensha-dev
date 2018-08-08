@@ -469,7 +469,7 @@ public class GraphicalForecast{
 		// find the largest magnitude to plot
 		// assign variables
 		int minMag = 3;
-		double maxObsMag = minMag;
+		double maxObsMag = mag0;
 		for (int i = 0; i < aftershockModel.magAftershocks.length; i++) {
 			if (aftershockModel.magAftershocks[i] > maxObsMag)
 				maxObsMag = aftershockModel.magAftershocks[i];
