@@ -104,7 +104,10 @@ public class ETAS_RateModel2D {
 		} else if (fitType.equals("shakemap") && faultTrace != null && faultTrace.size() > 1){
 			// fit finite mainshock source to shakemap source (fits line to rupture geometry...)
 			equivalentMainshock = ETAS_StatsCalc.fitMainshockLineSource(forecastModel.mainShock, faultTrace, stressDrop);
-		} //else {equivalentMainshock was already constructed with a faultTrace made up of the mainshock hypocenter}
+		} else if (fitType.equals("custom") && faultTrace != null && faultTrace.size() > 1) {
+			equivalentMainshock = ETAS_StatsCalc.fitMainshockLineSource(forecastModel.mainShock, faultTrace, stressDrop);
+		}
+		//else {equivalentMainshock was already constructed with a faultTrace made up of the mainshock hypocenter}
 
 		if(D){
 			FaultTrace trace = equivalentMainshock.getFaultTrace();

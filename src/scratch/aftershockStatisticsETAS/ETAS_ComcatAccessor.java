@@ -52,9 +52,6 @@ public class ETAS_ComcatAccessor {
 			}
 		}
 		
-
-
-
 		/**
 		 * [DEPRECATED]
 		 * Fetches an event with the given ID, e.g. "ci37166079"
@@ -456,6 +453,7 @@ public class ETAS_ComcatAccessor {
 			
 			// adds the place description ("10km from wherever"). Needed for ETAS_AftershockStatistics forecast document -NVDE 
 			rup.addParameter(new StringParameter("description", event.getPlace()));
+			
 			
 			return rup;
 		}

@@ -6,6 +6,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.ListIterator;
@@ -94,23 +97,26 @@ public class GraphicalForecast{
 		this.msName = aftershockModel.mainShock.getEventId(); //get USGS name
 		this.eventURL = "https://earthquake.usgs.gov/earthquakes/eventpage/" + msName + "#executive";
 		versionDate.setTimeInMillis(System.currentTimeMillis());
-		this.location = getParameter(aftershockModel.mainShock, "description").getValue().toString();
+		this.location = getStringParameter(aftershockModel.mainShock, "description");
 		this.lat0 = aftershockModel.mainShock.getHypocenterLocation().getLatitude();
 		this.lon0 = aftershockModel.mainShock.getHypocenterLocation().getLongitude();
 		this.mag0 = aftershockModel.mainShock.getMag();
 		this.depth0 = aftershockModel.mainShock.getHypocenterLocation().getDepth();
 		this.tPredStart = getDateDelta(eventDate, forecastStartDate);
 		this.b = aftershockModel.get_b();
+		
 	}
 
-	private Parameter<?> getParameter(ObsEqkRupture rup, String paramName){
+	private String getStringParameter(ObsEqkRupture rup, String paramName){
 		ListIterator<?> iter = rup.getAddedParametersIterator();
-		while (iter.hasNext()){
-			Parameter<?> param = (Parameter<?>) iter.next();
-			if (param.getName().equals(paramName));
-				return param;
-		}
-		return null;
+		if (iter != null) {
+			while (iter.hasNext()){
+				Parameter<?> param = (Parameter<?>) iter.next();
+				if (param.getName().equals(paramName));
+				return param.getValue().toString();
+			}
+		} 
+		return "";
 	}
 	
 	private final static int DAY = 1;
@@ -127,7 +133,6 @@ public class GraphicalForecast{
 	private double[] nfelt_wk = new double[3];
 	
 	
-	// assign variables
 	private double[] predictionMagnitudes = new double[]{3,4,5,6,7,8,9};
 	private double[] predictionIntervals = new double[]{DAY,WEEK,MONTH,YEAR}; //day,week,month,year
 //	private String[] predictionIntervalStrings = new String[]{"day","week","month","year"}; //day,week,month,year
@@ -459,6 +464,19 @@ public class GraphicalForecast{
 		SimpleDateFormat formatter=new SimpleDateFormat("d MMM yyyy, HH:mm:ss");  
 		formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
 		GregorianCalendar forecastEndDate = new GregorianCalendar();
+		
+		
+		// find the largest magnitude to plot
+		// assign variables
+		int minMag = 3;
+		double maxObsMag = mag0;
+		for (int i = 0; i < aftershockModel.magAftershocks.length; i++) {
+			if (aftershockModel.magAftershocks[i] > maxObsMag)
+				maxObsMag = aftershockModel.magAftershocks[i];
+		}
+		int maxMag = Math.max(minMag + 3, Math.min(9, (int) Math.ceil(maxObsMag + 0.5)));
+		if(D) System.out.println("maxMag: " + maxMag + " largestShockMag: " + maxObsMag);
+		
 
 		String[] durString = new String[]{"Day","Week","Month","Year"};
 		for (int j = 0; j<4; j++){
@@ -472,7 +490,8 @@ public class GraphicalForecast{
 			for (int i = 0; i < predictionMagnitudes.length; i++) {
 				String classStr = (Math.floorMod(n, 2) == 0)?"tfElem1":"tfElem2";
 				int mag = (int) predictionMagnitudes[i];
-				if( mag == 3 || i >= predictionMagnitudes.length-4) {//always plot the M3s and then the last four
+//				if( mag == 3 || i >= predictionMagnitudes.length-4) {//always plot the M3s and then the last four
+				if (mag == 3 || (mag > 3 && mag > maxMag - 4 && mag <= maxMag)) {
 					tableString.append(""
 							+" 		<td class=\""+ classStr +"\">"
 							+ "M ≥ " + mag + "</td><td class=\""+ classStr +"\">"
@@ -768,36 +787,37 @@ public class GraphicalForecast{
 				+"		<div style=\"width:800px;height:500px;margin-left:0px;\">\n"
 		);
 		
-		if (shakeMapURL != null)
-			imgString.append(" "
+		
+		imgString.append(" "
 				+"  	<!-- Mainshock shakemap -->\n"
 				+"		<table style=\"width:800px;vertical-align:top;text-align:center;\">\n"
 				+"	    	<tr>\n"
-		        +"	        	<td style=\"width:250px;display:inline\">\n"
-		        +"			    	<br>\n"
-		        +" 					<p class=\"forecast\" style=\"white-space:pre\">Mainshock ShakeMap\n(previous shaking)</p>\n"
-		        +" 					<div style=\"height:230px;overflow:hidden;margin: 0 -275px 0px -275px;\" id=\"shakemapCrop\">\n"
-		        +" 						<!-- Change the link URL to point to your local event summary if preferred. Default is to go to USGS summary -->\n"
-		        +" 						<a href=\"" + eventURL + "\">\n"	
-		        +"	        			<img style=\"width:250px\" src=\"" + shakeMapURL + "\" alt=\"Mainshock shakemap\" id=\"shakemap\" onload=\"cropShakemap()\">\n"
-		        +" 						</a>\n"
-		        +" 					</div>\n"
-		        +"		 	   </td>\n"
-		        +"			    <td style=\"width:550px\" id=\"imageBox\">\n"
-		        +"	 				<!-- To manually specifiy the image you want to see displayed, replace src=\"...\" with the desired filename. -->\n"
-		        +"	          	<img style=\"margin:auto;width:550px;max-height:480px\" src=\"ratemap.png\" alt=\"Graphical Forecast\" id=\"theimage\">\n"
-		        +"	      	</td>\n"
-		        +"		    </tr>\n"
-		        +"		</table>\n"
-			);
-		
-		
+				+"	        	<td style=\"width:250px;display:inline\">\n"
+				+"			    	<br>\n"
+				+" 					<p class=\"forecast\" style=\"white-space:pre\">Mainshock ShakeMap\n(previous shaking)</p>\n"
+				+" 					<div style=\"height:230px;overflow:hidden;margin: 0 -275px 0px -275px;\" id=\"shakemapCrop\">\n"
+				+" 						<!-- Change the link URL to point to your local event summary if preferred. Default is to go to USGS summary -->\n"
+				+" 						<a href=\"" + eventURL + "\">\n");
+		if (shakeMapURL != null)
+			imgString.append(" "
+					+"	        			<img style=\"width:250px\" src=\"" + shakeMapURL + "\" alt=\"Mainshock shakemap\" id=\"shakemap\" onload=\"cropShakemap()\">\n"
+					+" 						</a>\n");
 		else 	
-			imgString.append(""
-				+" 		<!-- To manually specifiy the image you want to see displayed, replace src=\"...\" with the desired filename. -->\n"
-				+" 		<img style=\"margin-right:0px;width:550px\" src=\"ratemap.png\" alt=\"Graphical Forecast\" id=\"theimage\">\n"
-			);
-					
+			imgString.append(" "
+					+"	        			<p>EventPage"
+					+" 						</a>\n");
+		imgString.append(" "
+				+" 					</div>\n"
+				+"		 	   </td>\n"
+				+"			    <td style=\"width:550px\" id=\"imageBox\">\n"
+				+"	 				<!-- To manually specifiy the image you want to see displayed, replace src=\"...\" with the desired filename. -->\n"
+				+"	          	<img style=\"margin:auto;width:550px;max-height:480px\" src=\"ratemap.png\" alt=\"Graphical Forecast\" id=\"theimage\">\n"
+				+"	      	</td>\n"
+				+"		    </tr>\n"
+				+"		</table>\n"
+				);
+
+
 		imgString.append(""
 			
 		);

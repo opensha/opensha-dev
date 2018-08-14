@@ -127,7 +127,7 @@ import java.awt.event.WindowListener;
 
 public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeListener {
 		
-	private GregorianCalendar expirationDate = new GregorianCalendar(2018, 05, 18);
+	private GregorianCalendar expirationDate = new GregorianCalendar(2018, 12, 31);
 	
 	public AftershockStatsGUI_ETAS(String... args) {
 		checkArguments(args);
@@ -369,7 +369,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private enum FitSourceType {
 		SHAKEMAP("Shakemap finite source"),
 		AFTERSHOCKS("Early aftershocks"),
-		POINT_SOURCE("Point source");
+		POINT_SOURCE("Point source"),
+		CUSTOM("Load from file");
 		
 		private String name;
 		
@@ -1396,10 +1397,11 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 //				//fetch details
 				ListIterator<?> iter = mainshock.getAddedParametersIterator();
 				if(verbose){
-					while (iter.hasNext()){
-						Parameter<?> param = (Parameter<?>) iter.next();
-						System.out.println(param.getName() +":"+ param.getValue());
-					}
+					if (iter != null)
+						while (iter.hasNext()){
+							Parameter<?> param = (Parameter<?>) iter.next();
+							System.out.println(param.getName() +":"+ param.getValue());
+						}
 				}
 					
 				System.out.println("Mainshock Mag/Lat/Lon/Depth: " + mainshock.getMag() + " " + mainshock.getHypocenterLocation());
@@ -3800,7 +3802,18 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 //					fitShakeMapSourceParam.getEditor().refreshParamEditor();
 //				}
 //
-			} else if (param == fitSourceTypeParam || param == vs30Param || param == mapGridSpacingParam || param == mapScaleParam) {
+			} else if (param == fitSourceTypeParam) { 
+				if (fitSourceTypeParam.getValue() == FitSourceType.CUSTOM) {
+					loadSourceFromFile();
+				}
+				
+				pgvCurves = null;
+				pgaCurves = null;
+				psaCurves = null;
+				
+				printTip(8);
+				
+			} else if (param == vs30Param || param == mapGridSpacingParam || param == mapScaleParam) {
 				// these parameter changes are going to change the plot. Erase the old ones
 				pgvCurves = null;
 				pgaCurves = null;
@@ -3946,6 +3959,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		}
 	}
 
+	
 	private void plotExpectedAfershockMFDs() {
 			if (forecastMFDPane == null)
 				forecastMFDPane = new JTabbedPane();
@@ -4248,7 +4262,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	//				progress.updateProgress(i, models.size(), "Calculating "+name+"...");
 				
 				int minMag = 3;
-				int maxMag = Math.max(minMag + 3, Math.min(9, (int) Math.ceil(largestShock.getMag()) + 1));
+				int maxMag = Math.max(minMag + 3, Math.min(9, (int) Math.ceil(largestShock.getMag() + 0.5)));
 				int nMags = maxMag - minMag + 1;
 				if(D) System.out.println("maxMag: " + maxMag + " largestShockMag: " + largestShock.getMag());
 				double[] minMags = ETAS_StatsCalc.linspace(minMag, maxMag, nMags);
@@ -4277,7 +4291,7 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	private void plotRateModel2D(CalcProgressBar progress){
 			
 			double spacing = mapGridSpacingParam.getValue()/111.111; 	// grid spacing in degrees
-			double stressDrop = 3.0; 	//MPa
+			double stressDrop = 2.0; 	//MPa
 			double mainshockFitDuration = dataEndTimeParam.getValue(); //days
 			Double minDays = forecastStartTimeParam.getValue();
 			double maxZ = 0;
@@ -4289,6 +4303,8 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 				fitType = "aftershocks";
 			else if (fitSourceTypeParam.getValue() == FitSourceType.SHAKEMAP)
 				fitType = "shakemap";
+			else if (fitSourceTypeParam.getValue() == FitSourceType.CUSTOM)
+				fitType = "custom";
 			else
 				fitType = "none";
 			
@@ -5564,7 +5580,12 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 		double max_a = aValRangeParam.getValue().getUpperBound();
 		
 		double min_p = pValRangeParam.getValue().getLowerBound();
+		if (min_p < 0.25)
+			min_p = 0.25;
+				
 		double max_p = pValRangeParam.getValue().getUpperBound();
+		if (max_p > 2)
+			max_p = 2;
 		
 		double min_c = cValRangeParam.getValue().getLowerBound();
 		if (min_c <= 1e-5)
@@ -5877,6 +5898,61 @@ public class AftershockStatsGUI_ETAS extends JFrame implements ParameterChangeLi
 	}
 	private double round(double val, int sigDigits){
 		return Math.round(val*Math.pow(10, sigDigits))/Math.pow(10, sigDigits);
+	}
+
+	private void loadSourceFromFile() {
+//		File finiteSourceFile = new File();
+
+		String source = " 34.6985 -118.5089\n"
+				+"34.5478 -118.1039\n"
+				+"34.4029 -117.7536\n"
+				+"34.3163 -117.5490\n"
+				+"34.3163 -117.5490\n"
+				+"34.2709 -117.4510\n"
+				+"34.2328 -117.3887\n"
+				+"34.1731 -117.2742\n"
+				+"34.1500 -117.2220\n"
+				+"34.1500 -117.2220\n"
+				+"34.0928 -117.0677\n"
+				+"34.0738 -117.0139\n"
+				+"34.0338 -116.9023\n"
+				+"34.0113 -116.8735\n"
+				+"33.9591 -116.8198\n"
+				+"33.9532 -116.8014\n"
+				+"33.9374 -116.7786\n"
+				+"33.9442 -116.6858\n"
+				+"33.9176 -116.6239\n"
+				+"33.9070 -116.5849\n"
+				+"33.8847 -116.5169\n"
+				+"33.8481 -116.4265\n"
+				+"33.8485 -116.3830\n"
+				+"33.7882 -116.2463\n"
+				+"33.7882 -116.2463\n"
+				+"33.3501 -115.7119";
+		
+//		List<String> lines = source.split("\\n");
+		String[] lines = source.split("\\n");
+		
+		if (faultTrace == null)
+			faultTrace = new FaultTrace("custom");
+	
+		for (int i=0; i<lines.length; i++) {
+			String line = lines[i];
+			if (line.startsWith("#")) {
+				//header
+			} else {
+				if (!line.isEmpty()) {
+					String[] pts = line.trim().split(" ");
+					if(D) System.out.println(i + ": " + line +  " " + pts[0] + " " + pts[1]);
+					double lat = Double.parseDouble(pts[0]);
+					double lon = Double.parseDouble(pts[1]);
+
+					
+					faultTrace.add(new Location(lat, lon));
+				}
+			}
+		}
+		System.out.println("Loaded "+faultTrace.size()+" points from finite source file.");
 	}
 
 	private GeoFeatureList loadCities(Region region, int number){
