@@ -104,7 +104,7 @@ import scratch.aftershockStatistics.pdl.PDLSender;
 
 import scratch.aftershockStatistics.util.SphLatLon;
 import scratch.aftershockStatistics.util.SphRegion;
-
+import scratch.aftershockStatisticsETAS.ETAS_StatsCalc;
 import scratch.aftershockStatistics.aafs.ServerConfig;
 import scratch.aftershockStatistics.aafs.ServerConfigFile;
 
@@ -265,17 +265,17 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		
 		eventIDParam = new StringParameter("USGS Event ID");
 		eventIDParam.setValue("us20002926");
-		eventIDParam.setInfo("Get IDs from http://earthquake.usgs.gov/earthquakes/");
+		eventIDParam.setInfo("Get IDs from https://earthquake.usgs.gov/earthquakes/");
 		eventIDParam.addParameterChangeListener(this);
 		dataParams.addParameter(eventIDParam);
 		
-		dataStartTimeParam = new DoubleParameter("Data Start Time", 0d, 3650, new Double(0d));
+		dataStartTimeParam = new DoubleParameter("Data Start Time", 0d, Double.POSITIVE_INFINITY, new Double(0d));
 		dataStartTimeParam.setUnits("Days");
 		dataStartTimeParam.setInfo("Relative to main shock origin time");
 		dataStartTimeParam.addParameterChangeListener(this);
 		dataParams.addParameter(dataStartTimeParam);
 		
-		dataEndTimeParam = new DoubleParameter("Data End Time", 0d, 3650, new Double(7d));
+		dataEndTimeParam = new DoubleParameter("Data End Time", 0d, Double.POSITIVE_INFINITY, new Double(7d));
 		dataEndTimeParam.setUnits("Days");
 		dataEndTimeParam.setInfo("Relative to main shock origin time");
 		dataEndTimeParam.addParameterChangeListener(this);
@@ -288,15 +288,15 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		dataParams.addParameter(regionTypeParam);
 		
 		// these are inside region editor
-		radiusParam = new DoubleParameter("Radius", 0d, 1000, new Double(20));
+		radiusParam = new DoubleParameter("Radius", 0d, 20000, new Double(20));
 		radiusParam.setUnits("km");
 		minLatParam = new DoubleParameter("Min Lat", -90d, 90d, new Double(32d));
 		maxLatParam = new DoubleParameter("Max Lat", -90d, 90d, new Double(36d));
 		minLonParam = new DoubleParameter("Min Lon", -180d, 180d, new Double(32d));
 		maxLonParam = new DoubleParameter("Max Lon", -180d, 180d, new Double(36d));
-		minDepthParam = new DoubleParameter("Min Depth", 0d, 700d, new Double(0));
+		minDepthParam = new DoubleParameter("Min Depth", 0d, 1000d, new Double(0));
 		minDepthParam.setUnits("km");
-		maxDepthParam = new DoubleParameter("Max Depth", 0d, 700d, new Double(700d));
+		maxDepthParam = new DoubleParameter("Max Depth", 0d, 1000d, new Double(700d));
 		maxDepthParam.setUnits("km");
 		regionCenterTypeParam = new EnumParameter<AftershockStatsGUI.RegionCenterType>(
 				"Region Center", EnumSet.allOf(RegionCenterType.class), RegionCenterType.CENTROID, null);
@@ -415,12 +415,12 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		forecastStartTimeNowParam.addParameterChangeListener(this);
 		fitParams.addParameter(forecastStartTimeNowParam);
 		
-		forecastStartTimeParam = new DoubleParameter("Forecast Start Time", 0d, 3650, new Double(0d));
+		forecastStartTimeParam = new DoubleParameter("Forecast Start Time", 0d, Double.POSITIVE_INFINITY, new Double(0d));
 		forecastStartTimeParam.setUnits("Days");
 		forecastStartTimeParam.addParameterChangeListener(this);
 		fitParams.addParameter(forecastStartTimeParam);
 		
-		forecastEndTimeParam = new DoubleParameter("Forecast End Time", 0d, 3650, new Double(7d));
+		forecastEndTimeParam = new DoubleParameter("Forecast End Time", 0d, Double.POSITIVE_INFINITY, new Double(7d));
 		forecastEndTimeParam.setUnits("Days");
 		forecastEndTimeParam.addParameterChangeListener(this);
 		fitParams.addParameter(forecastEndTimeParam);
@@ -648,6 +648,10 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			e.printStackTrace();
 			genericParams = null;
 		}
+		
+		// as a courtesy, spit out the decimal days remaining in the origin day
+		System.out.println("The mainshock occurred " + String.format("%.4f", getTimeRemainingInUTCDay()) + " days before midnight (UTC)\n");
+				
 	}
 	
 	private Location getCentroid() {
@@ -1793,6 +1797,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		
 	}
 	
+	private volatile boolean pauseRequested = false; //this is a quick and dirty synchronization tool
 	private class CalcRunnable implements Runnable {
 		private CalcProgressBar progress;
 		private CalcStep[] steps;
@@ -1807,6 +1812,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 
 		@Override
 		public void run() {
+			pauseRequested = true;
 			SwingUtilities.invokeLater(new Runnable() {
 				
 				@Override
@@ -1814,10 +1820,19 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 					if (progress.isVisible())
 						progress.setVisible(false);
 					progress.setModalityType(ModalityType.APPLICATION_MODAL);
+					
+					try {
 					progress.setVisible(true);
+					} catch(Exception e) {
+						System.err.println("Program has encountered an error and needs to close.\n"
+								+ "Please restart the aftershock forecasting software. Unpredictable behavior may occur without restart.\n");
+					} finally {
+						pauseRequested = false;
+					}
 				}
 			});
 			for (final CalcStep step : steps) {
+				pauseRequested = true;
 				SwingUtilities.invokeLater(new Runnable() {
 					
 					@Override
@@ -1825,8 +1840,23 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 						progress.setTitle(step.title);
 						progress.setProgressMessage(step.progressMessage);
 						progress.pack();
+						pauseRequested = false;
 					}
 				});
+				
+				// timeout block
+				long timeout = 1000;
+				long timesofar = 0;
+				while (pauseRequested && timesofar < timeout) {
+					try {
+						timesofar += 100;
+						Thread.sleep(100);
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						System.err.println("Calculation \"" + step.title + "\" was interrupted");
+					}
+				}
+				
 				curTitle = step.title;
 				if (step.runInEDT) {
 					try {
@@ -1836,6 +1866,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 							public void run() {
 								try {
 									step.run.run();
+									pauseRequested = false;
 								} catch (Throwable e) {
 									exception = e;
 								}
@@ -1849,12 +1880,24 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 				} else {
 					try {
 						step.run.run();
+						pauseRequested = false;
 					} catch (Throwable e) {
 						exception = e;
 						break;
 					}
 				}
 			}
+			
+			// wait for process to complete
+			while (pauseRequested){
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+			
 			SwingUtilities.invokeLater(new Runnable() {
 				
 				@Override
@@ -2139,6 +2182,25 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			CalcRunnable run = new CalcRunnable(progress, plotStep, tableStep);
 			new Thread(run).start();
 		}
+	}
+	
+	private double getTimeRemainingInUTCDay(){
+		double daysLeftInDay;
+		TimeZone.setDefault(utc);
+		GregorianCalendar origin = mainshock.getOriginTimeCal();
+		
+		SimpleDateFormat formatter=new SimpleDateFormat("d MMM yyyy, HH:mm:ss");
+		formatter.setTimeZone(utc); //utc=TimeZone.getTimeZone("UTC"));
+		
+		GregorianCalendar daybreak = new GregorianCalendar(
+				origin.get(GregorianCalendar.YEAR), origin.get(GregorianCalendar.MONTH), origin.get(GregorianCalendar.DAY_OF_MONTH));
+//		daybreak.setTimeZone(origin.getTimeZone());
+		
+//		System.out.println(formatter.format(origin.getTime()));
+//		System.out.println(formatter.format(daybreak.getTime()));
+//		
+		daysLeftInDay = 1 - (double) (origin.getTimeInMillis() - daybreak.getTimeInMillis())/ETAS_StatsCalc.MILLISEC_PER_DAY;
+		return daysLeftInDay;
 	}
 	
 	private void doPostFetchPlots() {

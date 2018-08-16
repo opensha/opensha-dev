@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.TimeZone;
 
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
@@ -105,6 +106,7 @@ public class USGS_AftershockForecast {
 	}
 	
 	private static final DateFormat df = new SimpleDateFormat();
+	private static final TimeZone utc = TimeZone.getTimeZone("UTC");
 	
 	private void compute(RJ_AftershockModel model, List<ObsEqkRupture> aftershocks, double[] minMags,
 			GregorianCalendar eventDate, GregorianCalendar startDate, boolean includeProbAboveMainshock) {
@@ -141,6 +143,7 @@ public class USGS_AftershockForecast {
 			calcMags[calcMags.length-1] = model.getMainShockMag();
 		}
 		
+		df.setTimeZone(utc);
 		System.out.println("Start date: "+df.format(startDate.getTime()));
 		for (int i=0; i<durations.length; i++) {
 			Duration duration = durations[i];
