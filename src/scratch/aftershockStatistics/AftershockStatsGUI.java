@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+import java.util.ArrayDeque;
 
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -51,7 +52,7 @@ import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 //import org.opensha.commons.geo.Region;
-import org.opensha.commons.gui.ConsoleWindow;
+//import org.opensha.commons.gui.ConsoleWindow;
 import org.opensha.commons.gui.plot.GraphWidget;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotElement;
@@ -85,7 +86,7 @@ import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupListCalc;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
-import org.opensha.sha.gui.infoTools.CalcProgressBar;
+//import org.opensha.sha.gui.infoTools.CalcProgressBar;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
@@ -104,11 +105,26 @@ import scratch.aftershockStatistics.pdl.PDLSender;
 
 import scratch.aftershockStatistics.util.SphLatLon;
 import scratch.aftershockStatistics.util.SphRegion;
-import scratch.aftershockStatisticsETAS.ETAS_StatsCalc;
+import scratch.aftershockStatistics.util.GUIConsoleWindow;
+import scratch.aftershockStatistics.util.GUICalcStep;
+import scratch.aftershockStatistics.util.GUICalcRunnable;
+import scratch.aftershockStatistics.util.GUICalcProgressBar;
+
 import scratch.aftershockStatistics.aafs.ServerConfig;
 import scratch.aftershockStatistics.aafs.ServerConfigFile;
+import scratch.aftershockStatistics.aafs.PDLCmd;
 
 public class AftershockStatsGUI extends JFrame implements ParameterChangeListener {
+
+	// Setting this flag true forces all worker threads to run on the event dispatch thread.
+
+	private boolean forceWorkerEDT = false;
+
+	// Setting this flag true enables the patch for calculation steps that should be on
+	// a worker thread, but currently must be on the EDT because they write to the screen.
+	// Eventually these calculation steps should be split up.
+
+	private boolean patchWorkerEDT = true;
 	
 	/*
 	 * Data parameters
@@ -269,13 +285,13 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		eventIDParam.addParameterChangeListener(this);
 		dataParams.addParameter(eventIDParam);
 		
-		dataStartTimeParam = new DoubleParameter("Data Start Time", 0d, Double.POSITIVE_INFINITY, new Double(0d));
+		dataStartTimeParam = new DoubleParameter("Data Start Time", 0d, 36500d, new Double(0d));
 		dataStartTimeParam.setUnits("Days");
 		dataStartTimeParam.setInfo("Relative to main shock origin time");
 		dataStartTimeParam.addParameterChangeListener(this);
 		dataParams.addParameter(dataStartTimeParam);
 		
-		dataEndTimeParam = new DoubleParameter("Data End Time", 0d, Double.POSITIVE_INFINITY, new Double(7d));
+		dataEndTimeParam = new DoubleParameter("Data End Time", 0d, 36500d, new Double(7d));
 		dataEndTimeParam.setUnits("Days");
 		dataEndTimeParam.setInfo("Relative to main shock origin time");
 		dataEndTimeParam.addParameterChangeListener(this);
@@ -288,15 +304,15 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		dataParams.addParameter(regionTypeParam);
 		
 		// these are inside region editor
-		radiusParam = new DoubleParameter("Radius", 0d, 20000, new Double(20));
+		radiusParam = new DoubleParameter("Radius", 0d, 20000d, new Double(20d));
 		radiusParam.setUnits("km");
 		minLatParam = new DoubleParameter("Min Lat", -90d, 90d, new Double(32d));
 		maxLatParam = new DoubleParameter("Max Lat", -90d, 90d, new Double(36d));
 		minLonParam = new DoubleParameter("Min Lon", -180d, 180d, new Double(32d));
 		maxLonParam = new DoubleParameter("Max Lon", -180d, 180d, new Double(36d));
-		minDepthParam = new DoubleParameter("Min Depth", 0d, 1000d, new Double(0));
+		minDepthParam = new DoubleParameter("Min Depth", ComcatAccessor.DEFAULT_MIN_DEPTH, ComcatAccessor.DEFAULT_MAX_DEPTH, new Double(ComcatAccessor.DEFAULT_MIN_DEPTH));
 		minDepthParam.setUnits("km");
-		maxDepthParam = new DoubleParameter("Max Depth", 0d, 1000d, new Double(700d));
+		maxDepthParam = new DoubleParameter("Max Depth", ComcatAccessor.DEFAULT_MIN_DEPTH, ComcatAccessor.DEFAULT_MAX_DEPTH, new Double(ComcatAccessor.DEFAULT_MAX_DEPTH));
 		maxDepthParam.setUnits("km");
 		regionCenterTypeParam = new EnumParameter<AftershockStatsGUI.RegionCenterType>(
 				"Region Center", EnumSet.allOf(RegionCenterType.class), RegionCenterType.CENTROID, null);
@@ -415,12 +431,12 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		forecastStartTimeNowParam.addParameterChangeListener(this);
 		fitParams.addParameter(forecastStartTimeNowParam);
 		
-		forecastStartTimeParam = new DoubleParameter("Forecast Start Time", 0d, Double.POSITIVE_INFINITY, new Double(0d));
+		forecastStartTimeParam = new DoubleParameter("Forecast Start Time", 0d, 36500d, new Double(0d));
 		forecastStartTimeParam.setUnits("Days");
 		forecastStartTimeParam.addParameterChangeListener(this);
 		fitParams.addParameter(forecastStartTimeParam);
 		
-		forecastEndTimeParam = new DoubleParameter("Forecast End Time", 0d, Double.POSITIVE_INFINITY, new Double(7d));
+		forecastEndTimeParam = new DoubleParameter("Forecast End Time", 0d, 36500d, new Double(7d));
 		forecastEndTimeParam.setUnits("Days");
 		forecastEndTimeParam.addParameterChangeListener(this);
 		fitParams.addParameter(forecastEndTimeParam);
@@ -437,7 +453,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		ParameterListEditor fitEditor = new ParameterListEditor(fitParams);
 		fitEditor.setTitle("Aftershock Parameters");
 		
-		ConsoleWindow console = new ConsoleWindow(true);
+		GUIConsoleWindow console = new GUIConsoleWindow(true);
 		consoleScroll = console.getScrollPane();
 		consoleScroll.setSize(600, 600);
 		JTextArea text = console.getTextArea();
@@ -465,7 +481,6 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setTitle("Aftershock Statistics GUI");
 		setLocationRelativeTo(null);
-		setVisible(true);
 		
 		accessor = new ComcatAccessor();
 	}
@@ -624,7 +639,11 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 	private void setMainshock(ObsEqkRupture mainshock) {
 		this.mainshock = mainshock;
 		genericParams = null;
-		bParam.setValue(null);
+		try (
+			ChangeBlock change_block = new ChangeBlock();
+		){
+			bParam.setValue(null);
+		}
 		try {
 			if (genericFetch == null)
 				genericFetch = new GenericRJ_ParametersFetch();
@@ -641,17 +660,19 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			pValRangeParam.getEditor().refreshParamEditor();
 			cValRangeParam.setValue(new Range(genericParams.get_cValue(), genericParams.get_cValue()));
 			cValRangeParam.getEditor().refreshParamEditor();
-			bParam.setValue(genericModel.get_b());
+			try (
+				ChangeBlock change_block = new ChangeBlock();
+			){
+				bParam.setValue(genericModel.get_b());
+			}
 			bParam.getEditor().refreshParamEditor();
 		} catch (RuntimeException e) {
 			System.err.println("Error fetching generic params");
 			e.printStackTrace();
 			genericParams = null;
 		}
-		
 		// as a courtesy, spit out the decimal days remaining in the origin day
 		System.out.println("The mainshock occurred " + String.format("%.4f", getTimeRemainingInUTCDay()) + " days before midnight (UTC)\n");
-				
 	}
 	
 	private Location getCentroid() {
@@ -1435,7 +1456,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 				new Range(pdf.getMinY()-0.5*yDelta, pdf.getMaxY()+0.5*yDelta));
 	}
 	
-	private void plotExpectedAfershockMFDs(CalcProgressBar progress) {
+	private void plotExpectedAfershockMFDs(GUICalcProgressBar progress) {
 		Double minDays = forecastStartTimeParam.getValue();
 		validateParameter(minDays, "start time");
 		Double maxDays = forecastEndTimeParam.getValue();
@@ -1507,8 +1528,9 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		}
 		
 		if (progress != null) {
-			progress.setIndeterminate(true);
-			progress.setProgressMessage("Plotting...");
+			//progress.setIndeterminate(true);
+			//progress.setProgressMessage("Plotting...");
+			progress.setIndeterminate(true, "Plotting...");
 		}
 		
 		// mainshock mag and Bath's law, use evenly discr functions so that it shows up well at all zoom levels
@@ -1574,7 +1596,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		}
 	}
 	
-	private void plotForecastTable(CalcProgressBar progress) {
+	private void plotForecastTable(GUICalcProgressBar progress) {
 		if (forecastTablePane == null)
 			forecastTablePane = new JTabbedPane();
 		else
@@ -1640,6 +1662,9 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 		private ButtonParameter injectableTextButton;
 		
 		private JFileChooser chooser;
+
+		private Product pdl_product;
+		private Exception pdl_exception;
 		
 		public ForecastTablePanel(USGS_AftershockForecast forecast) {
 			this.forecast = forecast;
@@ -1685,6 +1710,12 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 
 		@Override
 		public void parameterChange(ParameterChangeEvent event) {
+
+			// Ensure we are on the event dispatch thread
+			if (!( SwingUtilities.isEventDispatchThread() )) {
+				throw new IllegalStateException("AftershockStatsGUI.ForecastTablePanel.parameterChange called while not on the event dispatch thread!");
+			}
+
 			if (event.getParameter() == exportButton) {
 				if (chooser == null)
 					chooser = new JFileChooser();
@@ -1734,20 +1765,51 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 						JOptionPane.showMessageDialog(this, message, "Error building product", JOptionPane.ERROR_MESSAGE);
 					}
 					if (product != null) {
-						boolean isSent = false;
-						try {
-							//OAF_Publisher.sendProduct(product);
-							PDLSender.signProduct(product);
-							PDLSender.sendProduct(product, true);
-							isSent = true;
-						} catch (Exception e) {
-							e.printStackTrace();
-							String message = ClassUtils.getClassNameWithoutPackage(e.getClass())+": "+e.getMessage();
-							JOptionPane.showMessageDialog(this, message, "Error sending product", JOptionPane.ERROR_MESSAGE);
-						}
-						if (isSent) {
-							JOptionPane.showMessageDialog(this, "Success: Forecast has been successfully sent to PDL", "Publication succeeded", JOptionPane.INFORMATION_MESSAGE);
-						}
+
+						//  boolean isSent = false;
+						//  try {
+						//  	//OAF_Publisher.sendProduct(product);
+						//  	PDLSender.signProduct(product);
+						//  	PDLSender.sendProduct(product, true);
+						//  	isSent = true;
+						//  } catch (Exception e) {
+						//  	e.printStackTrace();
+						//  	String message = ClassUtils.getClassNameWithoutPackage(e.getClass())+": "+e.getMessage();
+						//  	JOptionPane.showMessageDialog(this, message, "Error sending product", JOptionPane.ERROR_MESSAGE);
+						//  }
+						//  if (isSent) {
+						//  	JOptionPane.showMessageDialog(this, "Success: Forecast has been successfully sent to PDL", "Publication succeeded", JOptionPane.INFORMATION_MESSAGE);
+						//  }
+
+						pdl_product = product;
+						pdl_exception = null;
+						GUICalcStep pdlSendStep = new GUICalcStep("Sending product to PDL", "...", new Runnable() {
+							@Override
+							public void run() {
+								try {
+									//OAF_Publisher.sendProduct(product);
+									PDLSender.signProduct(pdl_product);
+									PDLSender.sendProduct(pdl_product, true);
+								} catch (Exception e) {
+									pdl_exception = e;
+								}
+								SwingUtilities.invokeLater(new Runnable() {
+									@Override
+									public void run() {
+										if (pdl_exception == null) {
+										  	JOptionPane.showMessageDialog(ForecastTablePanel.this, "Success: Forecast has been successfully sent to PDL", "Publication succeeded", JOptionPane.INFORMATION_MESSAGE);
+										} else {
+											pdl_exception.printStackTrace();
+											String message = ClassUtils.getClassNameWithoutPackage(pdl_exception.getClass())+": "+pdl_exception.getMessage();
+											JOptionPane.showMessageDialog(ForecastTablePanel.this, message, "Error sending product", JOptionPane.ERROR_MESSAGE);
+										}
+									}
+								});
+							}
+						}, forceWorkerEDT);
+						GUICalcRunnable run = new GUICalcRunnable(AftershockStatsGUI.this, pdlSendStep);
+						new Thread(run).start();
+
 					}
 				}
 			} else if (event.getParameter() == advisoryDurationParam) {
@@ -1776,163 +1838,55 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			}
 		}
 	}
-	
-	private class CalcStep {
-		
-		private String title;
-		private String progressMessage;
-		private Runnable run;
-		boolean runInEDT;
-		
-		public CalcStep(String title, String progressMessage, Runnable run) {
-			this(title, progressMessage, run, false);
-		}
-		
-		public CalcStep(String title, String progressMessage, Runnable run, boolean runInEDT) {
-			this.title = title;
-			this.progressMessage = progressMessage;
-			this.run = run;
-			this.runInEDT = runInEDT;
-		}
-		
-	}
-	
-	private volatile boolean pauseRequested = false; //this is a quick and dirty synchronization tool
-	private class CalcRunnable implements Runnable {
-		private CalcProgressBar progress;
-		private CalcStep[] steps;
-		
-		private String curTitle;
-		private Throwable exception;
-		
-		public CalcRunnable(CalcProgressBar progress, CalcStep... calcSteps) {
-			this.progress = progress;
-			this.steps = calcSteps;
+
+
+
+
+	// Mechanism for blocking calls to parameterChange.
+
+	private int change_block_count = 0;
+
+	private class ChangeBlock implements AutoCloseable {
+
+		ChangeBlock () {
+			if (!( SwingUtilities.isEventDispatchThread() )) {
+				throw new IllegalStateException("AftershockStatsGUI.ChangeBlock called while not on the event dispatch thread!");
+			}
+			synchronized (AftershockStatsGUI.this) {
+				++change_block_count;
+			}
 		}
 
 		@Override
-		public void run() {
-			pauseRequested = true;
-			SwingUtilities.invokeLater(new Runnable() {
-				
-				@Override
-				public void run() {
-					if (progress.isVisible())
-						progress.setVisible(false);
-					progress.setModalityType(ModalityType.APPLICATION_MODAL);
-					
-					try {
-					progress.setVisible(true);
-					} catch(Exception e) {
-						System.err.println("Program has encountered an error and needs to close.\n"
-								+ "Please restart the aftershock forecasting software. Unpredictable behavior may occur without restart.\n");
-					} finally {
-						pauseRequested = false;
-					}
-				}
-			});
-			for (final CalcStep step : steps) {
-				pauseRequested = true;
-				SwingUtilities.invokeLater(new Runnable() {
-					
-					@Override
-					public void run() {
-						progress.setTitle(step.title);
-						progress.setProgressMessage(step.progressMessage);
-						progress.pack();
-						pauseRequested = false;
-					}
-				});
-				
-				// timeout block
-				long timeout = 1000;
-				long timesofar = 0;
-				while (pauseRequested && timesofar < timeout) {
-					try {
-						timesofar += 100;
-						Thread.sleep(100);
-					} catch (InterruptedException e1) {
-						// TODO Auto-generated catch block
-						System.err.println("Calculation \"" + step.title + "\" was interrupted");
-					}
-				}
-				
-				curTitle = step.title;
-				if (step.runInEDT) {
-					try {
-						SwingUtilities.invokeAndWait(new Runnable() {
-							
-							@Override
-							public void run() {
-								try {
-									step.run.run();
-									pauseRequested = false;
-								} catch (Throwable e) {
-									exception = e;
-								}
-							}
-						});
-					} catch (Exception e) {
-						exception = e;
-					}
-					if (exception != null)
-						break;
-				} else {
-					try {
-						step.run.run();
-						pauseRequested = false;
-					} catch (Throwable e) {
-						exception = e;
-						break;
-					}
-				}
+		public void close() {
+			synchronized (AftershockStatsGUI.this) {
+				--change_block_count;
 			}
-			
-			// wait for process to complete
-			while (pauseRequested){
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			}
-			
-			SwingUtilities.invokeLater(new Runnable() {
-				
-				@Override
-				public void run() {
-					progress.setVisible(false);
-					progress.dispose();
-				}
-			});
-			if (exception != null) {
-				final String title = "Error "+curTitle;
-				exception.printStackTrace();
-				final String message = exception.getMessage();
-				try {
-					SwingUtilities.invokeAndWait(new Runnable() {
-						
-						@Override
-						public void run() {
-							JOptionPane.showMessageDialog(null, message, title, JOptionPane.ERROR_MESSAGE);
-						}
-					});
-				} catch (Exception e) {
-					System.err.println("Error displaying error message!");
-					e.printStackTrace();
-				}
-				
-			}
+			return;
 		}
 	}
 
+
+
+
 	@Override
 	public void parameterChange(ParameterChangeEvent event) {
+
+		// Ensure we are on the event dispatch thread
+		if (!( SwingUtilities.isEventDispatchThread() )) {
+			throw new IllegalStateException("AftershockStatsGUI.parameterChange called while not on the event dispatch thread!");
+		}
+
+		synchronized (this) {
+			if (change_block_count != 0) {
+				return;
+			}
+		}
+
 		Parameter<?> param = event.getParameter();
 		
-		final CalcProgressBar progress = new CalcProgressBar(this, "", "", false);
-		progress.setIndeterminate(true);
+		final GUICalcProgressBar progress = new GUICalcProgressBar(this, "", "", false);
+		//progress.setIndeterminate(true);
 		
 		if (param == eventIDParam || param == dataStartTimeParam || param == dataEndTimeParam
 				|| param == regionEditParam) {
@@ -1942,7 +1896,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			setEnableParamsPostFetch(false);
 		} else if (param == fetchButton) {
 			setEnableParamsPostFetch(false);
-			CalcStep fetchStep = new CalcStep("Fetching Events",
+			GUICalcStep fetchStep = new GUICalcStep("Fetching Events",
 					"Contacting USGS ComCat Webservice. This is occasionally slow. "
 					+ "If it fails, trying again often works.", new Runnable() {
 						
@@ -1950,15 +1904,15 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 						public void run() {
 							fetchEvents();
 						}
-					});
-			CalcStep postFetchPlotStep = new CalcStep("Plotting Events/Data", "...", new Runnable() {
+					}, patchWorkerEDT);
+			GUICalcStep postFetchPlotStep = new GUICalcStep("Plotting Events/Data", "...", new Runnable() {
 						
 						@Override
 						public void run() {
 							doPostFetchPlots();
 						}
-					});
-			CalcRunnable run = new CalcRunnable(progress, fetchStep, postFetchPlotStep);
+					}, patchWorkerEDT);
+			GUICalcRunnable run = new GUICalcRunnable(progress, fetchStep, postFetchPlotStep);
 			new Thread(run).start();
 		} else if (param == loadCatalogButton) {
 			if (loadCatalogChooser == null)
@@ -1966,7 +1920,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			int ret = loadCatalogChooser.showOpenDialog(this);
 			if (ret == JFileChooser.APPROVE_OPTION) {
 				final File file = loadCatalogChooser.getSelectedFile();
-				CalcStep loadStep = new CalcStep("Loading events", "...", new Runnable() {
+				GUICalcStep loadStep = new GUICalcStep("Loading events", "...", new Runnable() {
 					
 					@Override
 					public void run() {
@@ -1976,15 +1930,15 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 							ExceptionUtils.throwAsRuntimeException(e);
 						}
 					}
-				});
-				CalcStep postFetchPlotStep = new CalcStep("Plotting Events/Data", "...", new Runnable() {
+				}, patchWorkerEDT);
+				GUICalcStep postFetchPlotStep = new GUICalcStep("Plotting Events/Data", "...", new Runnable() {
 					
 					@Override
 					public void run() {
 						doPostFetchPlots();
 					}
-				});
-				CalcRunnable run = new CalcRunnable(progress, loadStep, postFetchPlotStep);
+				}, patchWorkerEDT);
+				GUICalcRunnable run = new GUICalcRunnable(progress, loadStep, postFetchPlotStep);
 				new Thread(run).start();
 			}
 		} else if (param == saveCatalogButton) {
@@ -2020,7 +1974,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			bParam.getEditor().refreshParamEditor();
 		} else if (param == computeBButton) {
 			setEnableParamsPostComputeB(false);
-			CalcStep bStep = new CalcStep("Computing b", "...", new Runnable() {
+			GUICalcStep bStep = new GUICalcStep("Computing b", "...", new Runnable() {
 				
 				@Override
 				public void run() {
@@ -2039,8 +1993,8 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 					setEnableParamsPostComputeB(true);
 					tabbedPane.setSelectedIndex(mag_num_tab_index);
 				}
-			});
-			CalcRunnable run = new CalcRunnable(progress, bStep);
+			}, patchWorkerEDT);
+			GUICalcRunnable run = new GUICalcRunnable(progress, bStep);
 			new Thread(run).start();
 		} else if (param == bParam) {
 			setEnableParamsPostAfershockParams(false);
@@ -2064,7 +2018,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			setEnableParamsPostAfershockParams(false);
 		} else if (param == computeAftershockParamsButton) {
 			setEnableParamsPostAfershockParams(false);
-			CalcStep computeStep = new CalcStep("Computing Aftershock Params", "...", new Runnable() {
+			GUICalcStep computeStep = new GUICalcStep("Computing Aftershock Params", "...", new Runnable() {
 
 				@Override
 				public void run() {
@@ -2108,8 +2062,8 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 					}
 				}
 				
-			});
-			CalcStep plotStep = new CalcStep("Plotting Model PDFs", "...", new Runnable() {
+			}, patchWorkerEDT);
+			GUICalcStep plotStep = new GUICalcStep("Plotting Model PDFs", "...", new Runnable() {
 				
 				@Override
 				public void run() {
@@ -2135,7 +2089,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 					tabbedPane.setSelectedIndex(pdf_tab_index);
 				}
 			}, true);
-			CalcRunnable run = new CalcRunnable(progress, computeStep, plotStep);
+			GUICalcRunnable run = new GUICalcRunnable(progress, computeStep, plotStep);
 			new Thread(run).start();
 		} else if (param == forecastStartTimeNowParam) {
 			SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss z");
@@ -2152,7 +2106,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 			forecastStartTimeParam.getEditor().refreshParamEditor();
 			forecastEndTimeParam.getEditor().refreshParamEditor();
 		} else if (param == computeAftershockForecastButton) {
-			CalcStep plotStep = new CalcStep("Computing/Plotting Forecast MFDs", "This can take some time...",
+			GUICalcStep plotStep = new GUICalcStep("Computing/Plotting Forecast MFDs", "This can take some time...",
 					new Runnable() {
 
 						@Override
@@ -2164,8 +2118,8 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 									"Took "+watch.elapsed(TimeUnit.SECONDS)+"s to compute/plot aftershock MFDs");
 						}
 				
-			});
-			CalcStep tableStep = new CalcStep("Computing Forecast Table", "This can take some time...",
+			}, patchWorkerEDT);
+			GUICalcStep tableStep = new GUICalcStep("Computing Forecast Table", "This can take some time...",
 					new Runnable() {
 
 						@Override
@@ -2178,12 +2132,12 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 							tabbedPane.setSelectedIndex(aftershock_expected_index);
 						}
 				
-			});
-			CalcRunnable run = new CalcRunnable(progress, plotStep, tableStep);
+			}, patchWorkerEDT);
+			GUICalcRunnable run = new GUICalcRunnable(progress, plotStep, tableStep);
 			new Thread(run).start();
 		}
 	}
-	
+
 	private double getTimeRemainingInUTCDay(){
 		double daysLeftInDay;
 		TimeZone.setDefault(utc);
@@ -2199,7 +2153,7 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 //		System.out.println(formatter.format(origin.getTime()));
 //		System.out.println(formatter.format(daybreak.getTime()));
 //		
-		daysLeftInDay = 1 - (double) (origin.getTimeInMillis() - daybreak.getTimeInMillis())/ETAS_StatsCalc.MILLISEC_PER_DAY;
+		daysLeftInDay = 1.0 - ((double)(origin.getTimeInMillis() - daybreak.getTimeInMillis()))/ComcatAccessor.day_millis;
 		return daysLeftInDay;
 	}
 	
@@ -2296,73 +2250,61 @@ public class AftershockStatsGUI extends JFrame implements ParameterChangeListene
 	
 	public static void main(String[] args) {
 
-		// ServerConfig manages security-sensitive parameters.
-		// There needs to be some discussion about how these will be handled in the GUI.
-		// For now, we do the following:
+		// The GUI accepts command-line arguments for configuring PDL access.
+		// Complete details are in PDLCmd.java.
 		//
-		// If there are no command-line arguments, then enable sending to PDL development.
+		// To select the PDL destination, use one of these:
+		// --pdl=dryrun
+		// --pdl=dev
+		// --pdl=prod
+		// If the --pdl option is not specified, the default is --pdl=dev.
 		//
-		// If there is one command-line argument, it is an integer giving the desired PDL access:
-		// 0 = No PDL access.
-		// 1 = Enable sending to PDL-Development.
-		// 2 = Enable sending to PDL-Production.
+		// To specify a PDL key file, use:
+		// --privateKey=PRIVATEKEYFILE
+		// If the --privateKey option is not specified, then products are sent unsigned.
 		//
-		// If there are two command-line arguments, then the first is an integer giving the
-		// desired PDL access, and the second is the name of the PDL key file.
+		// If you want to delete a product, then in addition to the above you should also include all of these:
+		// --delete
+		// --code=PRODUCTCODE
+		// --eventsource=EVENTNETWORK
+		// --eventsourcecode=EVENTCODE
+		// The value of --code identifies the product that is to be deleted.  The value of --code is typically an event ID.
+		// The values of --eventsource and --eventsourcecode identify the event with which the product is associated;
+		// these determine which event page displays the product.
+		// When deleting a product, the delete is sent to PDL and the program exits without launching the GUI.
+		//
+		// If you have a JSON file, then you can send it as a product by including:
+		// --update=JSONFILENAME
+		// --code=PRODUCTCODE
+		// --eventsource=EVENTNETWORK
+		// --eventsourcecode=EVENTCODE
+		// The value of --code identifies the product that is to be sent.  The value of --code is typically an event ID.
+		// The product replaces any prior product that was sent with the same --code.
+		// The values of --eventsource and --eventsourcecode identify the event with which the product is associated;
+		// these determine which event page displays the product.
+		// When sending a product, the product is sent to PDL and the program exits without launching the GUI.
 
-		ServerConfig server_config = new ServerConfig();
+		int lo = 0;
+		boolean f_config = true;
+		boolean f_send = true;
+		int pdl_default = ServerConfigFile.PDLOPT_DEV;
 
-		// No-argument case
+		boolean consumed = PDLCmd.exec_pdl_cmd (args, lo, f_config, f_send, pdl_default);
 
-		if (args.length == 0) {
-			server_config.get_server_config_file().pdl_enable = ServerConfigFile.PDLOPT_DEV;
-		}
-
-		// One-argument case
-
-		else if (args.length == 1) {
-			int pdl_enable;
-			try {
-				pdl_enable = Integer.parseInt(args[0]);
-			} catch (NumberFormatException e) {
-				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
-				return;
-			}
-			if (pdl_enable < ServerConfigFile.PDLOPT_MIN || pdl_enable > ServerConfigFile.PDLOPT_MAX) {
-				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
-				return;
-			}
-			server_config.get_server_config_file().pdl_enable = pdl_enable;
-		}
-
-		// Two-argument case
-
-		else if (args.length == 2) {
-			int pdl_enable;
-			try {
-				pdl_enable = Integer.parseInt(args[0]);
-			} catch (NumberFormatException e) {
-				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
-				return;
-			}
-			if (pdl_enable < ServerConfigFile.PDLOPT_MIN || pdl_enable > ServerConfigFile.PDLOPT_MAX) {
-				System.out.println ("First command-line argument must be an integer between " + ServerConfigFile.PDLOPT_MIN + " and " + ServerConfigFile.PDLOPT_MAX);
-				return;
-			}
-			server_config.get_server_config_file().pdl_enable = pdl_enable;
-			server_config.get_server_config_file().pdl_key_filename = args[1];
-		}
-
-		// Unknown case
-
-		else {
-			System.out.println ("Too many command-line arguments");
+		if (consumed) {
 			return;
 		}
 
-		// Run the GUI
+		// Run the GUI (Must run on the event dispatch thread!)
 
-		new AftershockStatsGUI();
+		SwingUtilities.invokeLater(new Runnable() {
+			@Override
+			public void run() {
+				new AftershockStatsGUI().setVisible(true);
+			}
+		});
+
+		return;
 	}
 
 }

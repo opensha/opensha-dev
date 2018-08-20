@@ -92,6 +92,17 @@ public class SphRegionWorld extends SphRegion {
 		return true;
 	}
 
+	/**
+	 * Return true if this region is the entire world.
+	 * If this function returns true, then the region is exactly the box
+	 * given by min_lat, etc., and that box has latitude -90 to +90
+	 * and longitude -180 to +180.
+	 */
+	@Override
+	public boolean isWorld() {
+		return true;
+	}
+
 
 
 

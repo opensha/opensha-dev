@@ -12,6 +12,7 @@ import scratch.aftershockStatistics.util.MarshalImpJsonReader;
 import scratch.aftershockStatistics.util.MarshalImpJsonWriter;
 import scratch.aftershockStatistics.util.SphLatLon;
 import scratch.aftershockStatistics.util.SphRegion;
+import scratch.aftershockStatistics.util.TimeSplitOutputStream;
 
 import scratch.aftershockStatistics.OAFParameterSet;
 
@@ -35,6 +36,10 @@ import scratch.aftershockStatistics.pdl.PDLSenderConfig;
  *	"activemq_port" = Integer giving ActiveMQ port number.
  *	"activemq_user" = String giving ActiveMQ user name.
  *	"activemq_password" = String giving ActiveMQ password.
+ *	"log_con_aafs" = String giving pattern for AAFS console log filenames, in the format of SimpleDateFormat, or "" if none.
+ *	"log_con_intake" = String giving pattern for intake console log filenames, in the format of SimpleDateFormat, or "" if none.
+ *	"log_con_control" = String giving pattern for control console log filenames, in the format of SimpleDateFormat, or "" if none.
+ *	"log_summary" = String giving pattern for summary log filenames, in the format of SimpleDateFormat, or "" if none.
  *	"comcat_url" = String giving Comcat URL.
  *	"pdl_enable" = Integer giving PDL enable option: 0 = none, 1 = development, 2 = production.
  *	"pdl_key_filename" = String giving PDL signing key filename, can be empty string for none.
@@ -93,6 +98,22 @@ public class ServerConfigFile {
 
 	public String activemq_password;
 
+	// Pattern for AAFS console log filenames, in the format of SimpleDateFormat, or "" if none.
+
+	public String log_con_aafs;
+
+	// Pattern for intake console log filenames, in the format of SimpleDateFormat, or "" if none.
+
+	public String log_con_intake;
+
+	// Pattern for control console log filenames, in the format of SimpleDateFormat, or "" if none.
+
+	public String log_con_control;
+
+	// Pattern for summary log filenames, in the format of SimpleDateFormat, or "" if none.
+
+	public String log_summary;
+
 	// Comcat URL.
 
 	public String comcat_url;
@@ -104,6 +125,8 @@ public class ServerConfigFile {
 	public static final int PDLOPT_DEV = 1;			// PDL development server
 	public static final int PDLOPT_PROD = 2;		// PDL production server
 	public static final int PDLOPT_MAX = 2;
+
+	public static final int PDLOPT_UNSPECIFIED = -1;	// PDL access is unspecified
 
 	public int pdl_enable;
 
@@ -140,6 +163,10 @@ public class ServerConfigFile {
 		activemq_port = 0;
 		activemq_user = "";
 		activemq_password = "";
+		log_con_aafs = "";
+		log_con_intake = "";
+		log_con_control = "";
+		log_summary = "";
 		comcat_url = "";
 		pdl_enable = PDLOPT_NONE;
 		pdl_key_filename = "";
@@ -186,6 +213,22 @@ public class ServerConfigFile {
 
 		if (!( activemq_password != null && activemq_password.trim().length() > 0 )) {
 			throw new RuntimeException("ServerConfigFile: Invalid activemq_password: " + ((activemq_password == null) ? "<null>" : activemq_password));
+		}
+
+		if (!( log_con_aafs != null && (log_con_aafs.isEmpty() || TimeSplitOutputStream.is_valid_pattern(log_con_aafs)) )) {
+			throw new RuntimeException("ServerConfigFile: Invalid log_con_aafs: " + ((log_con_aafs == null) ? "<null>" : log_con_aafs));
+		}
+
+		if (!( log_con_intake != null && (log_con_intake.isEmpty() || TimeSplitOutputStream.is_valid_pattern(log_con_intake)) )) {
+			throw new RuntimeException("ServerConfigFile: Invalid log_con_intake: " + ((log_con_intake == null) ? "<null>" : log_con_intake));
+		}
+
+		if (!( log_con_control != null && (log_con_control.isEmpty() || TimeSplitOutputStream.is_valid_pattern(log_con_control)) )) {
+			throw new RuntimeException("ServerConfigFile: Invalid log_con_control: " + ((log_con_control == null) ? "<null>" : log_con_control));
+		}
+
+		if (!( log_summary != null && (log_summary.isEmpty() || TimeSplitOutputStream.is_valid_pattern(log_summary)) )) {
+			throw new RuntimeException("ServerConfigFile: Invalid log_summary: " + ((log_summary == null) ? "<null>" : log_summary));
 		}
 
 		if (!( comcat_url != null && comcat_url.trim().length() > 0 )) {
@@ -235,6 +278,10 @@ public class ServerConfigFile {
 		result.append ("activemq_port = " + activemq_port + "\n");
 		result.append ("activemq_user = " + ((activemq_user == null) ? "<null>" : activemq_user) + "\n");
 		result.append ("activemq_password = " + ((activemq_password == null) ? "<null>" : activemq_password) + "\n");
+		result.append ("log_con_aafs = " + ((log_con_aafs == null) ? "<null>" : log_con_aafs) + "\n");
+		result.append ("log_con_intake = " + ((log_con_intake == null) ? "<null>" : log_con_intake) + "\n");
+		result.append ("log_con_control = " + ((log_con_control == null) ? "<null>" : log_con_control) + "\n");
+		result.append ("log_summary = " + ((log_summary == null) ? "<null>" : log_summary) + "\n");
 		result.append ("comcat_url = " + ((comcat_url == null) ? "<null>" : comcat_url) + "\n");
 		result.append ("pdl_enable = " + pdl_enable + "\n");
 		result.append ("pdl_key_filename = " + ((pdl_key_filename == null) ? "<null>" : pdl_key_filename) + "\n");
@@ -384,6 +431,10 @@ public class ServerConfigFile {
 		writer.marshalInt       (        "activemq_port"    , activemq_port    );
 		writer.marshalString    (        "activemq_user"    , activemq_user    );
 		writer.marshalString    (        "activemq_password", activemq_password);
+		writer.marshalString    (        "log_con_aafs"     , log_con_aafs     );
+		writer.marshalString    (        "log_con_intake"   , log_con_intake   );
+		writer.marshalString    (        "log_con_control"  , log_con_control  );
+		writer.marshalString    (        "log_summary"      , log_summary      );
 		writer.marshalString    (        "comcat_url"       , comcat_url       );
 		writer.marshalInt       (        "pdl_enable"       , pdl_enable       );
 		writer.marshalString    (        "pdl_key_filename" , pdl_key_filename );
@@ -412,6 +463,10 @@ public class ServerConfigFile {
 		activemq_port     = reader.unmarshalInt       (        "activemq_port"    );
 		activemq_user     = reader.unmarshalString    (        "activemq_user"    );
 		activemq_password = reader.unmarshalString    (        "activemq_password");
+		log_con_aafs      = reader.unmarshalString    (        "log_con_aafs"     );
+		log_con_intake    = reader.unmarshalString    (        "log_con_intake"   );
+		log_con_control   = reader.unmarshalString    (        "log_con_control"  );
+		log_summary       = reader.unmarshalString    (        "log_summary"      );
 		comcat_url        = reader.unmarshalString    (        "comcat_url"       );
 		pdl_enable        = reader.unmarshalInt       (        "pdl_enable"       );
 		pdl_key_filename  = reader.unmarshalString    (        "pdl_key_filename" );

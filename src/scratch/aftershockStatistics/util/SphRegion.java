@@ -215,6 +215,16 @@ public abstract class SphRegion {
 		throw new UnsupportedOperationException ("The region is not a circle");
 	}
 
+	/**
+	 * Return true if this region is the entire world.
+	 * If this function returns true, then the region is exactly the box
+	 * given by min_lat, etc., and that box has latitude -90 to +90
+	 * and longitude -180 to +180.
+	 */
+	public boolean isWorld() {
+		return false;
+	}
+
 
 
 
@@ -269,6 +279,14 @@ public abstract class SphRegion {
 	 */
 	public static SphRegion makeMercPolygon (List<SphLatLon> vertex_list) {
 		return new SphRegionMercPolygon (vertex_list);
+	}
+
+
+	/**
+	 * Construct a region that is the entire world.
+	 */
+	public static SphRegion makeWorld () {
+		return new SphRegionWorld ();
 	}
 
 

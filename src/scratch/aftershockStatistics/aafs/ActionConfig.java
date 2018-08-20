@@ -135,6 +135,13 @@ public class ActionConfig {
 		return param_set.comcat_retry_min_gap;
 	}
 
+	// Get minimum ComCat retry lag for missing events, in milliseconds.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_comcat_retry_missing () {
+		return param_set.comcat_retry_missing;
+	}
+
 	// Get minimum time after an earthquake at which sequence-specific forecasts can be generated, in milliseconds.
 	// Must be a whole number of seconds, between 1 and 10^9 seconds.
 
@@ -163,12 +170,141 @@ public class ActionConfig {
 		return param_set.advisory_dur_year;
 	}
 
+	// Get default value of the maximum forecast lag.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_def_max_forecast_lag () {
+		return param_set.def_max_forecast_lag;
+	}
+
+	// Get forecast lag at which a timeline not passing the intake filter can be withdrawn.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_withdraw_forecast_lag () {
+		return param_set.withdraw_forecast_lag;
+	}
+
+	// Get option selecting how to handle stale forecasts.
+	// (A forecast is stale if another forecast could be issued immediately.)
+
+	public int get_stale_forecast_option () {
+		return param_set.stale_forecast_option;
+	}
+
+	// Get flag, indicating if stale forecasts should be skipped.
+
+	public boolean get_skip_stale_forecasts () {
+		return param_set.stale_forecast_option == ActionConfigFile.SFOPT_SKIP;
+	}
+
+	// Get flag, indicating if stale forecasts should be omitted.
+
+	public boolean get_omit_stale_forecasts () {
+		return param_set.stale_forecast_option == ActionConfigFile.SFOPT_OMIT;
+	}
+
+	// Get search radius to search for shadowing events, in km.
+
+	public double get_shadow_search_radius () {
+		return param_set.shadow_search_radius;
+	}
+
+	// Get amount of time to look back from the mainshock, to search for shadowing events.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_shadow_lookback_time () {
+		return param_set.shadow_lookback_time;
+	}
+
+	// Get minimum magnitude to use for computing centroids, when searching for shadowing events.
+
+	public double get_shadow_centroid_mag () {
+		return param_set.shadow_centroid_mag;
+	}
+
+	// Get minimum magnitude for a candidate shadowing event to be considered large.
+
+	public double get_shadow_large_mag () {
+		return param_set.shadow_large_mag;
+	}
+
+	// Get period for the short polling cycle.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_poll_short_period () {
+		return param_set.poll_short_period;
+	}
+
+	// Get lookback time for the short polling cycle.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_poll_short_lookback () {
+		return param_set.poll_short_lookback;
+	}
+
+	// Get time gap between intake actions for the short polling cycle.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_poll_short_intake_gap () {
+		return param_set.poll_short_intake_gap;
+	}
+
+	// Get period for the long polling cycle.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_poll_long_period () {
+		return param_set.poll_long_period;
+	}
+
+	// Get lookback time for the long polling cycle.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_poll_long_lookback () {
+		return param_set.poll_long_lookback;
+	}
+
+	// Get time gap between intake actions for the long polling cycle.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_poll_long_intake_gap () {
+		return param_set.poll_long_intake_gap;
+	}
+
+	// Get maximum allowed age for PDL intake.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_pdl_intake_max_age () {
+		return param_set.pdl_intake_max_age;
+	}
+
+	// Get maximum allowed time in future for PDL intake.
+	// Must be a whole number of seconds, between 1 and 10^9 seconds.
+
+	public long get_pdl_intake_max_future () {
+		return param_set.pdl_intake_max_future;
+	}
+
+	// Get default value of injectable text for PDL JSON files, or "" for none.
+
+	public String get_def_injectable_text () {
+		return param_set.def_injectable_text;
+	}
+
 	// Get the first element of forecast_lags that is >= the supplied min_lag.
 	// The return is -1 if the supplied min_lag is greater than all elements.
 	// If a value is found, it is guaranteed to be a whole number of seconds, from 1 to 10^9 seconds.
 
 	public long get_next_forecast_lag (long min_lag) {
 		return param_set.get_next_forecast_lag (min_lag);
+	}
+
+	// Get the first element of forecast_lags that is >= the supplied min_lag and <= the supplied max_lag.
+	// The return is -1 if there is no element in the given range.
+	// If max_lag <= 0, then def_max_forecast_lag is used as the upper bound.
+	// If a value is found, it is guaranteed to be a whole number of seconds, from 1 to 10^9 seconds.
+
+	public long get_next_forecast_lag (long min_lag, long max_lag) {
+		return param_set.get_next_forecast_lag (min_lag, max_lag);
 	}
 
 	// Get the first element of comcat_retry_lags that is >= the supplied min_lag.
@@ -209,6 +345,20 @@ public class ActionConfig {
 
 	public IntakeSphRegion get_pdl_intake_region_for_intake_mag (double lat, double lon, double mag) {
 		return param_set.get_pdl_intake_region_for_intake_mag (lat, lon, mag);
+	}
+
+	// Get the minimum magnitude for the min_mag criterion in any intake region.
+	// The result is 10.0 if there are no intake regions.
+
+	public double get_pdl_intake_region_min_min_mag () {
+		return param_set.get_pdl_intake_region_min_min_mag ();
+	}
+
+	// Get the minimum magnitude for the intake_mag criterion in any intake region.
+	// The result is 10.0 if there are no intake regions.
+
+	public double get_pdl_intake_region_min_intake_mag () {
+		return param_set.get_pdl_intake_region_min_intake_mag ();
 	}
 
 
@@ -282,6 +432,14 @@ public class ActionConfig {
 
 			System.out.println (action_config.toString());
 
+			// Display some calculated values
+
+			System.out.println ("");
+			System.out.println ("skip_stale_forecasts = " + action_config.get_skip_stale_forecasts());
+			System.out.println ("omit_stale_forecasts = " + action_config.get_omit_stale_forecasts());
+			System.out.println ("pdl_intake_region_min_min_mag = " + action_config.get_pdl_intake_region_min_min_mag());
+			System.out.println ("pdl_intake_region_min_intake_mag = " + action_config.get_pdl_intake_region_min_intake_mag());
+
 			// Display list of forecast time lags
 
 			System.out.println ("");
@@ -289,6 +447,20 @@ public class ActionConfig {
 			long min_lag = 0L;
 			for (;;) {
 				long forecast_lag = action_config.get_next_forecast_lag (min_lag);
+				if (forecast_lag < 0L) {
+					break;
+				}
+				System.out.println (Duration.ofMillis(forecast_lag).toString() + "  " + forecast_lag);
+				min_lag = forecast_lag + action_config.get_forecast_min_gap ();
+			}
+
+			// Display list of forecast time lags, to default limit only
+
+			System.out.println ("");
+
+			min_lag = 0L;
+			for (;;) {
+				long forecast_lag = action_config.get_next_forecast_lag (min_lag, 0L);
 				if (forecast_lag < 0L) {
 					break;
 				}

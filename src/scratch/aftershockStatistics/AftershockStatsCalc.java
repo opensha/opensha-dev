@@ -1223,6 +1223,7 @@ public class AftershockStatsCalc {
 	
 
 	// Calculate the centroid of an aftershock sequence, using spherical geometry.
+	// Note: This routine implicitly assumes that the mainshock itself is not in the list of aftershocks.
 
     public static Location getSphCentroid(ObsEqkRupture mainshock, List<ObsEqkRupture> aftershocks) {
 		
@@ -1234,6 +1235,13 @@ public class AftershockStatsCalc {
 
 		double lat;
 		double lon;
+
+		lat = mainshock.getHypocenterLocation().getLatRad();
+		lon = mainshock.getHypocenterLocation().getLonRad();
+
+		x += (Math.cos(lat) * Math.cos(lon));
+		y += (Math.cos(lat) * Math.sin(lon));
+		z += Math.sin(lat);
 
 		for (ObsEqkRupture aftershock : aftershocks) {
 			lat = aftershock.getHypocenterLocation().getLatRad();

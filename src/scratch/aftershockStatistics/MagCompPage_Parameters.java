@@ -9,6 +9,11 @@ public class MagCompPage_Parameters {
 	private double magCat;
 	private double capG;
 	private double capH;
+
+	private double magSample;
+	private double radiusSample;
+	private double magCentroid;
+	private double radiusCentroid;
 	
 	/**
 	 * This class is a container for the magnitude of completeness parameters defined by 
@@ -18,19 +23,47 @@ public class MagCompPage_Parameters {
 	 * where t is measured in days.
 	 * As a special case, if capG == 10.0 then the magnitude of completeness is always magCat
 	 * (in which case it is recommended that capH == 0.0).
+	 *
+	 * This class also holds the magnitude and radius of the areas used to sample aftershocks
+	 * (magSample and radiusSample) and to find the centroid of aftershock activity (magCentroid
+	 * and radiusCentroid).  Magnitude is the minimum magnitude considered, and raidus is the
+	 * multiple of the Wells and Coppersmith radius.  Magnitude can be -10.0 for no limit.
 	 * 
 	 * @param magCat
 	 * @param capG
 	 * @param capH
+	 * @param magSample
+	 * @param radiusSample
+	 * @param magCentroid
+	 * @param radiusCentroid
 	 */
-	public MagCompPage_Parameters(double magCat, double capG, double capH) {
+	public MagCompPage_Parameters(double magCat, double capG, double capH,
+				double magSample, double radiusSample, double magCentroid, double radiusCentroid) {
 		this.magCat = magCat;
 		this.capG = capG;
 		this.capH = capH;
+		this.magSample = magSample;
+		this.radiusSample = radiusSample;
+		this.magCentroid = magCentroid;
+		this.radiusCentroid = radiusCentroid;
 	}
 
+	
+	/**
+	 * This version defaults the magnitudes to -10.0 (no minimum) and the
+	 * radii to 1.0 (Wells and Coppersmith value).
+	 */
+	public MagCompPage_Parameters(double magCat, double capG, double capH) {
+		this (magCat, capG, capH, -10.0, 1.0, -10.0, 1.0);
+	}
+
+	
+	/**
+	 * Default constructor.
+	 */
 	public MagCompPage_Parameters(){}
 	
+
 	/**
 	 * This returns the catalog magnitude of completeness (magCat).
 	 * @return
@@ -48,10 +81,41 @@ public class MagCompPage_Parameters {
 	 * @return
 	 */
 	public double get_capH() {return capH;}
+	
+	/**
+	 * Return the minimum magnitude to use when sampling aftershocks, or -10.0 if none.
+	 * @return
+	 */
+	public double get_magSample() {return magSample;}
+	
+	/**
+	 * Return the radius to use when sampling aftershocks, as a multiple of the Wells and Coppersmith radius.
+	 * @return
+	 */
+	public double get_radiusSample() {return radiusSample;}
+	
+	/**
+	 * Return the minimum magnitude to use when finding the centroid of aftershock activity, or -10.0 if none.
+	 * @return
+	 */
+	public double get_magCentroid() {return magCentroid;}
+	
+	/**
+	 * Return the radius to use when finding the centroid of aftershock activity, as a multiple of the Wells and Coppersmith radius.
+	 * @return
+	 */
+	public double get_radiusCentroid() {return radiusCentroid;}
 
 	@Override
 	public String toString() {
-		return "Page_Params[magCat="+get_magCat()+", capG="+get_capG()+", capH="+get_capH()+"]";
+		return "Page_Params[magCat=" + get_magCat()
+			+ ", capG=" + get_capG()
+			+ ", capH=" + get_capH()
+			+ ", magSample=" + get_magSample()
+			+ ", radiusSample=" + get_radiusSample()
+			+ ", magCentroid=" + get_magCentroid()
+			+ ", radiusCentroid=" + get_radiusCentroid()
+			+ "]";
 	}
 
 
@@ -88,9 +152,13 @@ public class MagCompPage_Parameters {
 
 		// Contents
 
-		writer.marshalDouble ("magCat", magCat);
-		writer.marshalDouble ("capG"  , capG  );
-		writer.marshalDouble ("capH"  , capH  );
+		writer.marshalDouble ("magCat"        , magCat        );
+		writer.marshalDouble ("capG"          , capG          );
+		writer.marshalDouble ("capH"          , capH          );
+		writer.marshalDouble ("magSample"     , magSample     );
+		writer.marshalDouble ("radiusSample"  , radiusSample  );
+		writer.marshalDouble ("magCentroid"   , magCentroid   );
+		writer.marshalDouble ("radiusCentroid", radiusCentroid);
 	
 		return;
 	}
@@ -105,9 +173,13 @@ public class MagCompPage_Parameters {
 
 		// Contents
 
-		magCat = reader.unmarshalDouble ("magCat");
-		capG   = reader.unmarshalDouble ("capG"  );
-		capH   = reader.unmarshalDouble ("capH"  );
+		magCat         = reader.unmarshalDouble ("magCat"        );
+		capG           = reader.unmarshalDouble ("capG"          );
+		capH           = reader.unmarshalDouble ("capH"          );
+		magSample      = reader.unmarshalDouble ("magSample"     );
+		radiusSample   = reader.unmarshalDouble ("radiusSample"  );
+		magCentroid    = reader.unmarshalDouble ("magCentroid"   );
+		radiusCentroid = reader.unmarshalDouble ("radiusCentroid");
 
 		return;
 	}
