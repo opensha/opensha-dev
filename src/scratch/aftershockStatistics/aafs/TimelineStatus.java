@@ -8,7 +8,9 @@ import scratch.aftershockStatistics.aafs.entity.PendingTask;
 import scratch.aftershockStatistics.aafs.entity.LogEntry;
 import scratch.aftershockStatistics.aafs.entity.CatalogSnapshot;
 import scratch.aftershockStatistics.aafs.entity.TimelineEntry;
+import scratch.aftershockStatistics.aafs.entity.AliasFamily;
 
+import scratch.aftershockStatistics.ComcatException;
 import scratch.aftershockStatistics.CompactEqkRupList;
 
 
@@ -22,20 +24,18 @@ import scratch.aftershockStatistics.CompactEqkRupList;
  * into TimelineEntry.  In principle, actcode could select amont different
  * classes, but currently TimelineStatus is used for all timeline entries.
  *
- * The action_time that appears in TimelineEntry is in all cases equal to the
- * mainshock_time plus forecast_lag (in forecast_parameters).  It is necessary
+ * The action_time that appears in a TimelineEntry containing a forecast is equal to
+ * the mainshock_time plus forecast_lag (in forecast_parameters).  It is necessary
  * that the action_time be strictly increasing so that timeline entries are
  * properly ordered in the database.  The first timeline entry has forecast_lag
  * equal to zero.  The action_time should always be less than the current time.
+ * For non-forecast TimelineEntry object, the action_time is not necessarily
+ * related to the current time, but is just set to maintain monotonicity.  These
+ * rules may be bent if needed to maintain monotonicity.
  *
- * The event_id that appears in TimelineEntry is copied from forecast_parameters.
- *
- * ACTCODE_TRACK:  The system has just begun to track the event.  This may be
- * because the event has just been introduced (through PDL, analyst, or sync),
- * or because an analyst has re-started tracking for an event previously untracked.
- * The forecast_parameters must contain event_id, forecast_lag, and mainshock
- * parameters; they can optionally contain analyst-supplied parameters.
- * There are no forecast_results.
+ * The event_id that appears in TimelineEntry is a string that uniquely identifies
+ * an earthquake throughout its history, even if the Comcat IDs change.  All
+ * entries in a timeline have the same event_id.
  * 
  */
 public class TimelineStatus extends DBPayload {
@@ -46,6 +46,7 @@ public class TimelineStatus extends DBPayload {
 	// so they are exposed to database code.
 
 	// Event ID for this timeline.
+	// Despite the name, this holds a timeline ID.
 
 	public String event_id;
 
@@ -75,9 +76,9 @@ public class TimelineStatus extends DBPayload {
 	public static final int ACTCODE_COMCAT_FAIL         = 7;
 		// The entry is the last timeline entry due to inability to retrieve
 		// necessary data from ComCat.
-	public static final int ACTCODE_FORESHOCK           = 8;
+	public static final int ACTCODE_SHADOWED            = 8;
 		// The entry is the last timeline entry because the automatic system
-		// has determined it is a foreshock.
+		// has determined it is shadowed.
 	public static final int ACTCODE_EXPIRED             = 9;
 		// The entry is the last timeline entry because the automatic system
 		// has determined it is expired. Note that an expired action may not
@@ -85,7 +86,10 @@ public class TimelineStatus extends DBPayload {
 	public static final int ACTCODE_STATUS_UPDATE       = 10;
 		// The entry contains an update to forecast status.  This is recorded
 		// in fc_status below.  There may also be a change to pdl_status.
-	public static final int ACTCODE_MAX                 = 10;
+	public static final int ACTCODE_SKIPPED             = 11;
+		// The entry represents a forecast that was skipped, typically because
+		// the earthquake is shadowed or does not pass the intake filter.
+	public static final int ACTCODE_MAX                 = 11;
 
 	// Return a string describing the actcode.
 
@@ -98,19 +102,28 @@ public class TimelineStatus extends DBPayload {
 		case ACTCODE_ERROR: return "ACTCODE_ERROR";
 		case ACTCODE_WITHDRAWN: return "ACTCODE_WITHDRAWN";
 		case ACTCODE_COMCAT_FAIL: return "ACTCODE_COMCAT_FAIL";
-		case ACTCODE_FORESHOCK: return "ACTCODE_FORESHOCK";
+		case ACTCODE_SHADOWED: return "ACTCODE_SHADOWED";
 		case ACTCODE_EXPIRED: return "ACTCODE_EXPIRED";
 		case ACTCODE_STATUS_UPDATE: return "ACTCODE_STATUS_UPDATE";
+		case ACTCODE_SKIPPED: return "ACTCODE_SKIPPED";
 		}
 		return "ACTCODE_INVALID(" + actcode + ")";
 	}
 
 	// Time stamp for this timeline entry, in milliseconds since the epoch.
 	// This must be strictly monotone increasing within the timeline.
-	// For forecasts, this is generally the nominal forecast time (mainshock_time + forecast_lag).
-	// For other entries, this may be the creation time, or may be manipulated to preserve ordering.
+	// For forecasts (ACTCODE_FORECAST), this is the nominal forecast time (mainshock_time + forecast_lag),
+	//  rounded down to a whole number of seconds; but increased if necessary to preserve monotonicity.
+	// For the initial timeline entry (ACTCODE_TRACK), this is the mainshock time (mainshock_time),
+	//  rounded down to a whole number of seconds.
+	// For other entries, this is one more than in the prior entry.
 
 	public long action_time;
+
+	// List of Comcat IDs associated with this timeline.
+	// The list is updated when the timeline is created, and at each forecast.
+
+	public String[] comcat_ids;
 
 
 	//----- Status variables -----
@@ -137,7 +150,13 @@ public class TimelineStatus extends DBPayload {
 	public static final int FCORIG_UNKNOWN           = 4;
 		// Timeline created for unknown reason.  This should only be the case when
 		// the timeline is in an error state.
-	public static final int FCORIG_MAX               = 4;
+	public static final int FCORIG_POLL              = 5;
+		// Timeline created in response to Comcat poll.
+	public static final int FCORIG_SPLIT             = 6;
+		// Timeline created in response to alias timeline split.
+	public static final int FCORIG_RECOVERY          = 7;
+		// Timeline created during a recovery operation.
+	public static final int FCORIG_MAX               = 7;
 
 	// Return a string describing the fc_origin.
 
@@ -147,6 +166,9 @@ public class TimelineStatus extends DBPayload {
 		case FCORIG_ANALYST: return "FCORIG_ANALYST";
 		case FCORIG_SYNC: return "FCORIG_SYNC";
 		case FCORIG_UNKNOWN: return "FCORIG_UNKNOWN";
+		case FCORIG_POLL: return "FCORIG_POLL";
+		case FCORIG_SPLIT: return "FCORIG_SPLIT";
+		case FCORIG_RECOVERY: return "FCORIG_RECOVERY";
 		}
 		return "FCORIG_INVALID(" + fc_origin + ")";
 	}
@@ -160,16 +182,16 @@ public class TimelineStatus extends DBPayload {
 		// Normal active state.  Forecasts are being generated automatically,
 		// according to the configured schedule.
 	public static final int FCSTAT_ACTIVE_INTAKE     = 2;
-		// Active state, with tentative invocation.  At the time of the next forecast,
-		// a decision must be made on whether to continue the active state or stop.
+		// Active state, for an event that has never passed the intake filter.
+		// This timeline can be withdrawn after sufficient time.
 	public static final int FCSTAT_STOP_EXPIRED      = 3;
 		// Stopped state.  All forecasts have been completed.
 	public static final int FCSTAT_STOP_ANALYST      = 4;
 		// Stopped state.  An analyst intervention requested that no more forecasts
 		// be generated.
-	public static final int FCSTAT_STOP_FORESHOCK    = 5;
-		// Stopped state.  An aftershock was found with greater magnitude than the
-		// mainshock, and so this timeline is now considered to be a foreshock.
+	public static final int FCSTAT_STOP_SHADOWED     = 5;
+		// Stopped state.  An close-by earthquake was found with greater magnitude than the
+		// mainshock, and so this timeline is now considered to be shadowed.
 	public static final int FCSTAT_STOP_ERROR        = 6;
 		// Stopped state.  An error was encountered that makes further use of this
 		// timeline impossible.
@@ -188,7 +210,7 @@ public class TimelineStatus extends DBPayload {
 		case FCSTAT_ACTIVE_INTAKE: return "FCSTAT_ACTIVE_INTAKE";
 		case FCSTAT_STOP_EXPIRED: return "FCSTAT_STOP_EXPIRED";
 		case FCSTAT_STOP_ANALYST: return "FCSTAT_STOP_ANALYST";
-		case FCSTAT_STOP_FORESHOCK: return "FCSTAT_STOP_FORESHOCK";
+		case FCSTAT_STOP_SHADOWED: return "FCSTAT_STOP_SHADOWED";
 		case FCSTAT_STOP_ERROR: return "FCSTAT_STOP_ERROR";
 		case FCSTAT_STOP_WITHDRAWN: return "FCSTAT_STOP_WITHDRAWN";
 		case FCSTAT_STOP_COMCAT_FAIL: return "FCSTAT_STOP_COMCAT_FAIL";
@@ -237,11 +259,54 @@ public class TimelineStatus extends DBPayload {
 		return "PDLSTAT_INVALID(" + pdl_status + ")";
 	}
 
-	// If this event is a foreshock, this is the event_id of the mainshock.
-	// Otherwise, this is an empty string "".
-	// This field should contain "" unless fc_status == FCSTAT_STOP_FORESHOCK.
+	// Result code, for the current or most recent forecast.
 
-	public String foreshock_event_id;
+	public int fc_result;
+
+	public static final int FCRES_MIN                = 1;
+	public static final int FCRES_NONE               = 1;
+		// No forecast or skip has occurred yet.
+	public static final int FCRES_FORECAST_PDL       = 2;
+		// Forecast was successfully generated, and produced results elibible for PDL.
+		// Note: Examine pdl_status to determine if results were actually sent to PDL.
+	public static final int FCRES_FORECAST_NO_PDL    = 3;
+		// Forecast was successfully generated, and did not produce results elibible for PDL.
+	public static final int FCRES_SKIPPED_STALE      = 4;
+		// Forecast was skipped because it would be stale.
+	public static final int FCRES_SKIPPED_ANALYST    = 5;
+		// Forecast was skipped at analyst request.
+	public static final int FCRES_SKIPPED_INTAKE     = 6;
+		// Forecast was skipped because the mainshock did not pass the intake filter.
+	public static final int FCRES_SKIPPED_SHADOWED   = 7;
+		// Forecast was skipped because the mainshock is shadowed (i.e., is an
+		// aftershock of a larger earthquake).
+	public static final int FCRES_SKIPPED_FORESHOCK  = 8;
+		// Forecast was skipped because the mainshock has an aftershock of
+		// larger magnitude.
+	public static final int FCRES_MAX                = 8;
+
+	// Return a string describing the fc_result.
+
+	public String get_fc_result_as_string () {
+		switch (fc_result) {
+		case FCRES_NONE: return "FCRES_NONE";
+		case FCRES_FORECAST_PDL: return "FCRES_FORECAST_PDL";
+		case FCRES_FORECAST_NO_PDL: return "FCRES_FORECAST_NO_PDL";
+		case FCRES_SKIPPED_STALE: return "FCRES_SKIPPED_STALE";
+		case FCRES_SKIPPED_ANALYST: return "FCRES_SKIPPED_ANALYST";
+		case FCRES_SKIPPED_INTAKE: return "FCRES_SKIPPED_INTAKE";
+		case FCRES_SKIPPED_SHADOWED: return "FCRES_SKIPPED_SHADOWED";
+		case FCRES_SKIPPED_FORESHOCK: return "FCRES_SKIPPED_FORESHOCK";
+		}
+		return "FCRES_INVALID(" + fc_result + ")";
+	}
+
+	// If this earthquake is shadowed, this is the event_id of the shadowing event.
+	// If this earthquake is a foreshock, this is the event_id of the larger aftershock.
+	// Otherwise, this is an empty string "".  This should be an empty string unless
+	// the result is FCRES_SKIPPED_SHADOWED or FCRES_SKIPPED_FORESHOCK.
+
+	public String shadowing_event_id;
 
 
 	//----- Analyst data -----
@@ -250,56 +315,43 @@ public class TimelineStatus extends DBPayload {
 	// These are copied from one timeline entry to the next, to preserve the
 	// analyst selections, unless the analyst intervenes again.
 
-	// Analyst that most recently reviewed this event, or "" if none.
-
-	public String analyst_id;
-
-	// Analyst remark for this event, or "" if none.
-
-	public String analyst_remark;
-
-	// Time at which analyst reviewed this event, in milliseconds since the epoch, or 0L if none.
-
-	public long analyst_time;
-
 	// Parameters supplied by the analyst.
-	// This can be null, if the analyst has not supplied any parameters,
-	// or if the analyst has intervened a second time to "unsupply" parameters.
+	// This must always be non-null, except in an error state.  It is set to defaults
+	// when the timeline is created, and is updated whenever the analyst supplies new data.
 
-	public ForecastParameters analyst_params;
+	public AnalystOptions analyst_options;
 
 
 	//----- Forecast data -----
 
+	// Most recently obtained information for the mainshock.
+	// This must always be non-null, except in an error state.  It is set when the
+	// timeline is created and updated at the time of each forecast.  It may also be
+	// updated at other times, if mainshock info is available.
+
+	public ForecastMainshock forecast_mainshock;
+
 	// Parameters for the current forecast.
-	// This must be non-null if the timeline entry contains a forecast, or null otherwise.
+	// This must be non-null if the timeline entry contains a forecast.  It is null
+	// in the first timeline entry.  It may be null in other entries, unless it
+	// needs to be carried forward.
 
 	public ForecastParameters forecast_params;
 
 	// Results for the current forecast.
-	// This must be non-null if the timeline entry contains a forecast, or null otherwise.
+	// This must be non-null if the timeline entry contains a forecast.  It is null
+	// in the first timeline entry.  It may be null in other entries, unless it
+	// needs to be carried forward.
 
 	public ForecastResults forecast_results;
 
 
 	//----- Scheduling data -----
 
-	// Last-obtained mainshock time, in milliseconds since the epoch.
-	// The value is 0L if the mainshock time is unknown.
-
-	public long last_mainshock_time;
-
 	// Time lag at which the last forecast occured, in milliseconds since the mainshock.
 	// The value is -1L if there have been no prior forecasts.
 
 	public long last_forecast_lag;
-
-	// Time lag at which an extra forecast is requested, in milliseconds since the mainshock.
-	// The value is -1L if there has been no extra forecast requested.
-	// This is set to -1L when any forecast is issued, meaning that the request is considered
-	// to be granted when any forecast is issued.
-
-	public long extra_forecast_lag;
 
 
 
@@ -318,24 +370,22 @@ public class TimelineStatus extends DBPayload {
 		event_id            = other.event_id;
 		actcode             = other.actcode;
 		action_time         = other.action_time;
+		comcat_ids          = other.comcat_ids;
 
 		entry_time          = other.entry_time;
 		fc_origin           = other.fc_origin;
 		fc_status           = other.fc_status;
 		pdl_status          = other.pdl_status;
-		foreshock_event_id  = other.foreshock_event_id;
+		fc_result           = other.fc_result;
+		shadowing_event_id  = other.shadowing_event_id;
 
-		analyst_id          = other.analyst_id;
-		analyst_remark      = other.analyst_remark;
-		analyst_time        = other.analyst_time;
-		analyst_params      = other.analyst_params;
+		analyst_options     = other.analyst_options;
 
+		forecast_mainshock  = other.forecast_mainshock;
 		forecast_params     = other.forecast_params;
 		forecast_results    = other.forecast_results;
 
-		last_mainshock_time = other.last_mainshock_time;
 		last_forecast_lag   = other.last_forecast_lag;
-		extra_forecast_lag  = other.extra_forecast_lag;
 		return;
 	}
 
@@ -374,6 +424,17 @@ public class TimelineStatus extends DBPayload {
 		case FCSTAT_ACTIVE_INTAKE:
 		case FCSTAT_STOP_EXPIRED:
 			if (pdl_status == PDLSTAT_PENDING) {
+
+				// It is an error to be in this state if there is no PDL report available
+
+				if (!( forecast_mainshock != null
+					&& forecast_mainshock.mainshock_avail
+					&& forecast_params != null
+					&& forecast_results != null
+					&& forecast_results.get_pdl_model() != null )) {
+					throw new IllegalStateException ("TimelineStatus.is_pdl_retry_state: In PDLSTAT_PENDING state but no PDL report is available");
+				}
+
 				return true;
 			}
 			break;
@@ -458,7 +519,22 @@ public class TimelineStatus extends DBPayload {
 	}
 
 	// Return true if this timeline is in a state that an analyst can
-	// update (withough changing fc_status).
+	// withdraw by changing fc_status (with or without updating analyst data).
+	// Note: Upon changing fc_status to FCSTAT_STOP_WITHDRAWN, it is recommended
+	// to also set analyst_options.extra_forecast_lag = -1L.
+
+	public boolean can_analyst_withdraw () {
+		switch (fc_status) {
+		case FCSTAT_ACTIVE_NORMAL:
+		case FCSTAT_ACTIVE_INTAKE:
+		case FCSTAT_STOP_ANALYST:
+			return true;
+		}
+		return false;
+	}
+
+	// Return true if this timeline is in a state that an analyst can
+	// update (without changing fc_status).
 
 	public boolean can_analyst_update () {
 		switch (fc_status) {
@@ -466,6 +542,52 @@ public class TimelineStatus extends DBPayload {
 		case FCSTAT_ACTIVE_INTAKE:
 		case FCSTAT_STOP_ANALYST:
 		case FCSTAT_STOP_WITHDRAWN:
+			return true;
+		}
+		return false;
+	}
+
+	// Return true if this timeline is in a state that intake polling can
+	// start by changing fc_status (with or without updating analyst data).
+
+	public boolean can_intake_poll_start () {
+		switch (fc_status) {
+		case FCSTAT_STOP_WITHDRAWN:
+			return true;
+		}
+		return false;
+	}
+
+	// Return true if the supplied actcode is one that could be in a
+	// state that where can_intake_poll_start would return true.
+	// This static function can be used for a quick check to avoid
+	// unmarshaling the entire state.
+
+	public static boolean can_actcode_intake_poll_start (int the_actcode) {
+		switch (the_actcode) {
+		case ACTCODE_WITHDRAWN:
+		case ACTCODE_ANALYST:
+			return true;
+		}
+		return false;
+	}
+
+	// Return true if this timeline has a result that includes a shadowing event.
+
+	public boolean result_has_shadowing () {
+		switch (fc_result) {
+		case FCRES_SKIPPED_SHADOWED:
+		case FCRES_SKIPPED_FORESHOCK:
+			return true;
+		}
+		return false;
+	}
+
+	// Return true if this timeline has a PDL status that includes a successful send.
+
+	public boolean is_pdl_send_successful () {
+		switch (pdl_status) {
+		case PDLSTAT_SUCCESS:
 			return true;
 		}
 		return false;
@@ -491,24 +613,9 @@ public class TimelineStatus extends DBPayload {
 	}
 
 	// Set the analyst data variables.
-	// If the analyst data contains a mainshock time, save it too.
 
-	public void set_analyst_data (String the_analyst_id, String the_analyst_remark,
-		long the_analyst_time, ForecastParameters the_analyst_params, long the_extra_forecast_lag) {
-		
-		analyst_id = the_analyst_id;
-		analyst_remark = the_analyst_remark;
-		analyst_time = the_analyst_time;
-		analyst_params = the_analyst_params;
-		extra_forecast_lag = the_extra_forecast_lag;
-
-		if (the_analyst_params != null) {
-			if (the_analyst_params.mainshock_fetch_meth == ForecastParameters.FETCH_METH_ANALYST
-					&& the_analyst_params.mainshock_avail) {
-				last_mainshock_time = the_analyst_params.mainshock_time;
-			}
-		}
-
+	public void set_analyst_data (AnalystOptions the_analyst_options) {
+		analyst_options = the_analyst_options;
 		return;
 	}
 
@@ -524,24 +631,23 @@ public class TimelineStatus extends DBPayload {
 		event_id            = the_event_id;
 		actcode             = ACTCODE_ERROR;
 		action_time         = the_action_time;
+		comcat_ids          = new String[1];
+		comcat_ids[0]       = ServerComponent.EVID_ERROR;
 
 		entry_time          = the_entry_time;
 		fc_origin           = FCORIG_UNKNOWN;
 		fc_status           = FCSTAT_STOP_ERROR;
 		pdl_status          = PDLSTAT_NONE;
-		foreshock_event_id  = "";
+		fc_result           = FCRES_NONE;
+		shadowing_event_id  = "";
 
-		analyst_id          = "";
-		analyst_remark      = "";
-		analyst_time        = 0L;
-		analyst_params      = null;
+		analyst_options     = null;
 
+		forecast_mainshock  = null;
 		forecast_params     = null;
 		forecast_results    = null;
 
-		last_mainshock_time = 0L;
 		last_forecast_lag   = -1L;
-		extra_forecast_lag  = -1L;
 		return;
 	}
 
@@ -552,80 +658,84 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_COMCAT_FAIL;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
 		fc_status           = FCSTAT_STOP_COMCAT_FAIL;
 		pdl_status          = PDLSTAT_NONE;
-		//foreshock_event_id  = kept;
+		//fc_result           = kept;
+		//shadowing_event_id  = kept;
 
-		//analyst_id          = kept;
-		//analyst_remark      = kept;
-		//analyst_time        = kept;
-		//analyst_params      = kept;
+		//analyst_options     = kept;
 
+		//forecast_mainshock  = kept;
 		forecast_params     = null;
 		forecast_results    = null;
 
-		//last_mainshock_time = kept;
 		//last_forecast_lag   = kept;
-		//extra_forecast_lag  = kept;
 		return;
 	}
 
-	// Set the state to foreshock.
+	// Set the state to shadowed.
 
-	public void set_state_foreshock (long the_entry_time, String the_foreshock_event_id) {
+	public void set_state_shadowed (long the_entry_time, int the_fc_result, String the_shadowing_event_id) {
 
 		//event_id            = kept;
-		actcode             = ACTCODE_FORESHOCK;
+		actcode             = ACTCODE_SHADOWED;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
-		fc_status           = FCSTAT_STOP_FORESHOCK;
+		fc_status           = FCSTAT_STOP_SHADOWED;
 		pdl_status          = PDLSTAT_NONE;
-		foreshock_event_id  = the_foreshock_event_id;
+		fc_result           = the_fc_result;
+		shadowing_event_id  = the_shadowing_event_id;
 
-		//analyst_id          = kept;
-		//analyst_remark      = kept;
-		//analyst_time        = kept;
-		//analyst_params      = kept;
+		//analyst_options     = kept;
 
+		//forecast_mainshock  = kept;
 		forecast_params     = null;
 		forecast_results    = null;
 
-		//last_mainshock_time = kept;
 		//last_forecast_lag   = kept;
-		//extra_forecast_lag  = kept;
 		return;
 	}
 
 	// Set the state to withdrawn.
+	//
+	// Note: analyst_options.extra_forecast_lag is set to -1L, consuming any analyst forecast request.
+	//
+	// Note: the_forecast_mainshock can be null, in which case the previous values are kept.
 
-	public void set_state_withdrawn (long the_entry_time, long the_last_mainshock_time) {
+	public void set_state_withdrawn (long the_entry_time, ForecastMainshock the_forecast_mainshock) {
 
 		//event_id            = kept;
 		actcode             = ACTCODE_WITHDRAWN;
 		action_time         = action_time + 1L;
+		if (the_forecast_mainshock != null) {
+			comcat_ids          = the_forecast_mainshock.mainshock_id_list;
+		}
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
 		fc_status           = FCSTAT_STOP_WITHDRAWN;
 		pdl_status          = PDLSTAT_NONE;
-		//foreshock_event_id  = kept;
+		//fc_result           = kept;
+		//shadowing_event_id  = kept;
 
-		//analyst_id          = kept;
-		//analyst_remark      = kept;
-		//analyst_time        = kept;
-		//analyst_params      = kept;
+		//analyst_options     = kept;
 
+		if (the_forecast_mainshock != null) {
+			forecast_mainshock  = the_forecast_mainshock;
+		}
 		forecast_params     = null;
 		forecast_results    = null;
 
-		last_mainshock_time = the_last_mainshock_time;
 		//last_forecast_lag   = kept;
-		extra_forecast_lag  = -1L;
+
+		analyst_options.extra_forecast_lag = -1L;
 		return;
 	}
 
@@ -640,37 +750,88 @@ public class TimelineStatus extends DBPayload {
 	// before calling this function.  If PDLSTAT_PENDING results, the caller will likely
 	// want to take further action (such as an immediate attempt to send a report to PDL)
 	// and make a futher update to pdl_status.
+	//
+	// Note: shadowing_event_id is set to "".
+	//
+	// Note: analyst_options.extra_forecast_lag is set to -1L, consuming any analyst forecast request.
 
 	public void set_state_forecast (long the_entry_time, ActionConfig action_config,
-			ForecastParameters the_forecast_params, ForecastResults the_forecast_results) {
+			ForecastMainshock the_forecast_mainshock, ForecastParameters the_forecast_params, ForecastResults the_forecast_results) {
 
 		//long min_lag = the_forecast_params.forecast_lag + action_config.get_forecast_min_gap();
-		//long next_forecast_lag = action_config.get_next_forecast_lag (min_lag);
-		long forecast_time = the_forecast_params.forecast_lag + the_forecast_params.mainshock_time;
+		//long next_forecast_lag = action_config.get_next_forecast_lag (min_lag, analyst_options.max_forecast_lag);
+		long forecast_time = the_forecast_params.forecast_lag + the_forecast_mainshock.mainshock_time;
 		String pdl_json = the_forecast_results.get_pdl_model();
 
 		//event_id            = kept;
 		actcode             = ACTCODE_FORECAST;
 		action_time         = action_config.floor_unit_lag (forecast_time, action_time);
+		comcat_ids          = the_forecast_mainshock.mainshock_id_list;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
 		//fc_status           = ((next_forecast_lag >= 0L) ? FCSTAT_ACTIVE_NORMAL : FCSTAT_STOP_EXPIRED);
 		fc_status           = FCSTAT_ACTIVE_NORMAL;
 		pdl_status          = ((pdl_json == null) ? PDLSTAT_NONE : PDLSTAT_PENDING);
-		//foreshock_event_id  = kept;
+		fc_result           = ((pdl_json == null) ? FCRES_FORECAST_NO_PDL : FCRES_FORECAST_PDL);
+		shadowing_event_id  = "";
 
-		//analyst_id          = kept;
-		//analyst_remark      = kept;
-		//analyst_time        = kept;
-		//analyst_params      = kept;
+		//analyst_options     = kept;
 
+		forecast_mainshock  = the_forecast_mainshock;
 		forecast_params     = the_forecast_params;
 		forecast_results    = the_forecast_results;
 
-		last_mainshock_time = the_forecast_params.mainshock_time;
 		last_forecast_lag   = the_forecast_params.forecast_lag;
-		extra_forecast_lag  = -1L;
+
+		analyst_options.extra_forecast_lag = -1L;
+		return;
+	}
+
+	// Set the state to skipped.
+	//
+	// Note: If the event is shadowed then the_shadowing_event_id is the ID of the shadowing
+	// event.  Otherwise the event fails the intake filter and the_shadowing_event_id is null.
+	//
+	// Note: fc_status is set to FCSTAT_ACTIVE_NORMAL.  Exception: fc_status is left unchanged
+	// if fc_status is FCSTAT_ACTIVE_INTAKE and the_fc_result is FCRES_SKIPPED_INTAKE or
+	// FCRES_SKIPPED_STALE.  In either case, the caller can change fc_status to FCSTAT_STOP_EXPIRED
+	// if there are no further forecasts scheduled.
+	//
+	// Note: pdl_status is set to PDLSTAT_NONE.
+	//
+	// Note: shadowing_event_id is set to "" if the event is not shadowed.
+	//
+	// Note: analyst_options.extra_forecast_lag is set to -1L, consuming any analyst forecast request.
+
+	public void set_state_skipped (long the_entry_time, ActionConfig action_config,
+			ForecastMainshock the_forecast_mainshock, long the_forecast_lag, int the_fc_result, String the_shadowing_event_id) {
+
+		long forecast_time = the_forecast_lag + the_forecast_mainshock.mainshock_time;
+
+		//event_id            = kept;
+		actcode             = ACTCODE_SKIPPED;
+		action_time         = action_config.floor_unit_lag (forecast_time, action_time);
+		comcat_ids          = the_forecast_mainshock.mainshock_id_list;
+
+		entry_time          = the_entry_time;
+		//fc_origin           = kept;
+		if (!( fc_status == FCSTAT_ACTIVE_INTAKE && (the_fc_result == FCRES_SKIPPED_INTAKE || the_fc_result == FCRES_SKIPPED_STALE) )) {
+			fc_status           = FCSTAT_ACTIVE_NORMAL;
+		}
+		pdl_status          = PDLSTAT_NONE;
+		fc_result           = the_fc_result;
+		shadowing_event_id  = ((the_shadowing_event_id == null) ? "" : the_shadowing_event_id);
+
+		//analyst_options     = kept;
+
+		forecast_mainshock  = the_forecast_mainshock;
+		forecast_params     = null;
+		forecast_results    = null;
+
+		last_forecast_lag   = the_forecast_lag;
+
+		analyst_options.extra_forecast_lag = -1L;
 		return;
 	}
 
@@ -684,24 +845,22 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_PDL_UPDATE;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
 		//fc_status           = kpet;
 		pdl_status          = the_pdl_status;
-		//foreshock_event_id  = kept;
+		//fc_result           = kept;
+		//shadowing_event_id  = kept;
 
-		//analyst_id          = kept;
-		//analyst_remark      = kept;
-		//analyst_time        = kept;
-		//analyst_params      = kept;
+		//analyst_options     = kept;
 
+		//forecast_mainshock  = kept;
 		//forecast_params     = kept;
 		//forecast_results    = kept;
 
-		//last_mainshock_time = kept;
 		//last_forecast_lag   = kept;
-		//extra_forecast_lag  = kept;
 		return;
 	}
 
@@ -712,6 +871,7 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_EXPIRED;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
@@ -721,19 +881,16 @@ public class TimelineStatus extends DBPayload {
 		if (pdl_status == PDLSTAT_PENDING) {
 			pdl_status          = PDLSTAT_NONE;
 		}
-		//foreshock_event_id  = kept;
+		//fc_result           = kept;
+		//shadowing_event_id  = kept;
 
-		//analyst_id          = kept;
-		//analyst_remark      = kept;
-		//analyst_time        = kept;
-		//analyst_params      = kept;
+		//analyst_options     = kept;
 
+		//forecast_mainshock  = kept;
 		forecast_params     = null;
 		forecast_results    = null;
 
-		//last_mainshock_time = kept;
 		//last_forecast_lag   = kept;
-		//extra_forecast_lag  = kept;
 		return;
 	}
 
@@ -746,24 +903,22 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_STATUS_UPDATE;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
 		fc_status           = the_fc_status;
 		pdl_status          = PDLSTAT_NONE;
-		//foreshock_event_id  = kept;
+		//fc_result           = kept;
+		//shadowing_event_id  = kept;
 
-		//analyst_id          = kept;
-		//analyst_remark      = kept;
-		//analyst_time        = kept;
-		//analyst_params      = kept;
+		//analyst_options     = kept;
 
+		//forecast_mainshock  = kept;
 		forecast_params     = null;
 		forecast_results    = null;
 
-		//last_mainshock_time = kept;
 		//last_forecast_lag   = kept;
-		//extra_forecast_lag  = kept;
 		return;
 	}
 
@@ -779,24 +934,22 @@ public class TimelineStatus extends DBPayload {
 		//event_id            = kept;
 		actcode             = ACTCODE_ANALYST;
 		action_time         = action_time + 1L;
+		//comcat_ids          = kept;
 
 		entry_time          = the_entry_time;
 		//fc_origin           = kept;
 		//fc_status           = kept;
 		pdl_status          = PDLSTAT_NONE;
-		//foreshock_event_id  = kept;
+		//fc_result           = kept;
+		//shadowing_event_id  = kept;
 
-		//analyst_id          = kept;
-		//analyst_remark      = kept;
-		//analyst_time        = kept;
-		//analyst_params      = kept;
+		//analyst_options     = kept;
 
+		//forecast_mainshock  = kept;
 		forecast_params     = null;
 		forecast_results    = null;
 
-		//last_mainshock_time = kept;
 		//last_forecast_lag   = kept;
-		//extra_forecast_lag  = kept;
 		return;
 	}
 
@@ -808,29 +961,27 @@ public class TimelineStatus extends DBPayload {
 	// to make changes to forecast status, PDL status, and analyst data.
 
 	public void set_state_track (long the_entry_time, ActionConfig action_config,
-			String the_event_id, long the_last_mainshock_time, int the_fc_origin, int the_fc_status) {
+			String the_event_id, ForecastMainshock the_forecast_mainshock, int the_fc_origin, int the_fc_status) {
 
 		event_id            = the_event_id;
 		actcode             = ACTCODE_TRACK;
-		action_time         = action_config.floor_unit_lag (the_last_mainshock_time);
+		action_time         = action_config.floor_unit_lag (the_forecast_mainshock.mainshock_time);
+		comcat_ids          = the_forecast_mainshock.mainshock_id_list;
 
 		entry_time          = the_entry_time;
 		fc_origin           = the_fc_origin;
 		fc_status           = the_fc_status;
 		pdl_status          = PDLSTAT_NONE;
-		foreshock_event_id  = "";
+		fc_result           = FCRES_NONE;
+		shadowing_event_id  = "";
 
-		analyst_id          = "";
-		analyst_remark      = "";
-		analyst_time        = 0L;
-		analyst_params      = null;
+		analyst_options     = new AnalystOptions();
 
+		forecast_mainshock  = the_forecast_mainshock;
 		forecast_params     = null;
 		forecast_results    = null;
 
-		last_mainshock_time = the_last_mainshock_time;
 		last_forecast_lag   = -1L;
-		extra_forecast_lag  = -1L;
 		return;
 	}
 
@@ -864,19 +1015,16 @@ public class TimelineStatus extends DBPayload {
 		writer.marshalInt                       ("fc_origin"          , fc_origin          );
 		writer.marshalInt                       ("fc_status"          , fc_status          );
 		writer.marshalInt                       ("pdl_status"         , pdl_status         );
-		writer.marshalString                    ("foreshock_event_id" , foreshock_event_id );
+		writer.marshalInt                       ("fc_result"          , fc_result          );
+		writer.marshalString                    ("shadowing_event_id" , shadowing_event_id );
 
-		writer.marshalString                    ("analyst_id"         , analyst_id         );
-		writer.marshalString                    ("analyst_remark"     , analyst_remark     );
-		writer.marshalLong                      ("analyst_time"       , analyst_time       );
-		ForecastParameters.marshal_poly (writer, "analyst_params"     , analyst_params     );
+		AnalystOptions.marshal_poly     (writer, "analyst_options"    , analyst_options    );
 
+		ForecastMainshock.marshal_poly  (writer, "forecast_mainshock" , forecast_mainshock );
 		ForecastParameters.marshal_poly (writer, "forecast_params"    , forecast_params    );
 		ForecastResults.marshal_poly    (writer, "forecast_results"   , forecast_results   );
 
-		writer.marshalLong                      ("last_mainshock_time", last_mainshock_time);
 		writer.marshalLong                      ("last_forecast_lag"  , last_forecast_lag  );
-		writer.marshalLong                      ("extra_forecast_lag" , extra_forecast_lag );
 	
 		return;
 	}
@@ -900,19 +1048,16 @@ public class TimelineStatus extends DBPayload {
 		fc_origin           = reader.unmarshalInt                       ("fc_origin"          , FCORIG_MIN, FCORIG_MAX);
 		fc_status           = reader.unmarshalInt                       ("fc_status"          , FCSTAT_MIN, FCSTAT_MAX);
 		pdl_status          = reader.unmarshalInt                       ("pdl_status"         , PDLSTAT_MIN, PDLSTAT_MAX);
-		foreshock_event_id  = reader.unmarshalString                    ("foreshock_event_id" );
+		fc_result           = reader.unmarshalInt                       ("fc_result"          , FCRES_MIN, FCRES_MAX);
+		shadowing_event_id  = reader.unmarshalString                    ("shadowing_event_id" );
 
-		analyst_id          = reader.unmarshalString                    ("analyst_id"         );
-		analyst_remark      = reader.unmarshalString                    ("analyst_remark"     );
-		analyst_time        = reader.unmarshalLong                      ("analyst_time"       );
-		analyst_params      = ForecastParameters.unmarshal_poly (reader, "analyst_params"     );
+		analyst_options     = AnalystOptions.unmarshal_poly     (reader, "analyst_options"    );
 
+		forecast_mainshock  = ForecastMainshock.unmarshal_poly  (reader, "forecast_mainshock" );
 		forecast_params     = ForecastParameters.unmarshal_poly (reader, "forecast_params"    );
 		forecast_results    = ForecastResults.unmarshal_poly    (reader, "forecast_results"   );
 
-		last_mainshock_time = reader.unmarshalLong                      ("last_mainshock_time");
 		last_forecast_lag   = reader.unmarshalLong                      ("last_forecast_lag"  );
-		extra_forecast_lag  = reader.unmarshalLong                      ("extra_forecast_lag" );
 
 		return;
 	}
@@ -951,6 +1096,7 @@ public class TimelineStatus extends DBPayload {
 			event_id = tentry.get_event_id();
 			actcode = tentry.get_actcode();
 			action_time = tentry.get_action_time();
+			comcat_ids = tentry.get_comcat_ids();		// clones the array
 
 			if (actcode < ACTCODE_MIN || actcode > ACTCODE_MAX) {
 				throw new MarshalException("Timeline entry contains invalid action code, event_id = " + tentry.get_event_id() + ", actcode = " + actcode);

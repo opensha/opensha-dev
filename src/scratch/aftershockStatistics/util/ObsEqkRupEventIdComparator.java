@@ -5,26 +5,28 @@ import java.util.Comparator;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 
 /**
- * <p>Title: ObsEqkRupEventIdComparator</p>
+ * Comparator to sort ruptures in increasing order by event ID.
+ * Author: Michael Barall 07/29/2018.
  *
- * <p>Description: This compares 2 observed ObsEqkRupture objects
- * based on their eventIds.
- * </p>
+ * Null event IDs are sorted before non-null event IDs.
  *
- *
- * @author Nitin Gupta, rewritten by Ned Field
- * @version 1.0
+ * Authors of prior versions: Nitin Gupta, Ned Field
  */
-public class ObsEqkRupEventIdComparator
-        implements Comparator<ObsEqkRupture>, java.io.Serializable {
+public class ObsEqkRupEventIdComparator implements Comparator<ObsEqkRupture> {
+	
+	// Compares its two arguments for order. Returns a negative integer, zero, or a positive
+	// integer as the first argument is less than, equal to, or greater than the second.
 
-    /**
-     * Compares the event ids of the two arguments. Returns a negative integer, zero, or
-     * a positive integer depending on whether the first event id is less than,
-     * equal to, or greater than the second, respectively.
-     */
-    public int compare(ObsEqkRupture rupEvent1, ObsEqkRupture rupEvent2) {
-        return rupEvent1.getEventId().compareTo(rupEvent2.getEventId());
+	@Override
+    public int compare (ObsEqkRupture rupEvent1, ObsEqkRupture rupEvent2) {
+
+		// Order by event ID, lexicographically
+
+		String eid1 = rupEvent1.getEventId();
+		String eid2 = rupEvent2.getEventId();
+		return (eid1 == null)
+				? ((eid2 == null) ? 0 : -1)
+				: ((eid2 == null) ? 1 : (eid1.compareTo(eid2)));
     }
 
 }

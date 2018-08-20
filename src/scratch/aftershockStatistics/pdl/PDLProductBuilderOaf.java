@@ -101,7 +101,7 @@ public class PDLProductBuilderOaf {
 
 		// Our PDL source, type, and code
 
-		String source = "usgs-aafs";
+		String source = "us";
 		String type = "oaf";
 		String code = eventID;
 
@@ -133,6 +133,112 @@ public class PDLProductBuilderOaf {
 		// Attach content
 
 		attachByteContentToProduct (product, jsonText, modifiedTime);
+
+		// Return the constructed product
+
+		return product;
+	}
+
+
+
+
+	/**
+	 * Create a PDL deletion product.
+	 * @param eventID = Event ID, used as the "code" for the product (for example, "us10006jv5").
+	 * @param eventNetwork = Network identifier for the event (for example, "us").
+	 * @param eventCode = Network code for the event (for example, "10006jv5").
+	 * @param isReviewed = True if this product has been reviewed.
+	 * @param modifiedTime = Modification time, in milliseconds since the epoch, or 0L if none.
+	 * Note: At present, modifiedTime is ignored, and the time is always set to "now".
+	 * @return
+	 *     The product that was created
+	 */
+	public static Product createDeletionProduct (String eventID, String eventNetwork, String eventCode, boolean isReviewed, long modifiedTime) throws Exception {
+		Product product;
+		ProductId productId;
+
+//		// Need an ID for the product. The ID is for the product only and does
+//		// not necessarily reflect "event" properties, however, in practice
+//		// they are typically quite similar
+//
+//		// A product ID uniquely identifies a product based on "source", "type",
+//		// and "code" properties. An "updateTime" property indicates a specific
+//		// version of a product based on when the product was created. By default,
+//		// newer versions of the same product (source/type/code) will replace
+//		// older versions.
+//
+//		// Read more about source, type, code here:
+//		// http://ehppdl1.cr.usgs.gov/userguide/products/index.html
+//		productId = new ProductId(
+//				"some-source",   // source
+//				"some-type",     // type
+//				"some-code"      // code
+//				// updateTime - Defaults to NOW if not specificied, typically, do not
+//				//              specify this as a best practice
+//				);
+//
+//		// Use Product.STATUS_UPDATE to create or update a product.
+//		// Use Product.STATUS_DELETE to remove this product.
+//		product = new Product(
+//				productId,
+//				Product.STATUS_UPDATE
+//				);
+//
+//		// This is a legacy vestige that does not get used anymore, but we need
+//		// to add it otherwise sending will fail. Anything will do ...
+//		product.setTrackerURL(new URL("http://www.google.com/"));
+//
+//
+//		attachPropertiesToProduct(product); // simply key-value properties
+//		attachContentToProduct(product);    // file- or byte-based content
+
+
+		// Check arguments
+
+		if (eventID == null || eventID.isEmpty()) {
+			throw new IllegalArgumentException ("PDLProductBuilderOaf: Event ID is not specified");
+		}
+		if (eventNetwork == null || eventNetwork.isEmpty()) {
+			throw new IllegalArgumentException ("PDLProductBuilderOaf: Event network identifier is not specified");
+		}
+		if (eventCode == null || eventCode.isEmpty()) {
+			throw new IllegalArgumentException ("PDLProductBuilderOaf: Event network code is not specified");
+		}
+
+		// Announce it
+
+		System.out.println ("Constructing PDL deletion oaf product: event ID = " + eventID + ", network = " + eventNetwork + ", code = " + eventCode);
+
+		// Our PDL source, type, and code
+
+		String source = "us";
+		String type = "oaf";
+		String code = eventID;
+
+		// Construct the product ID
+
+		productId = new ProductId(
+				source,   // source
+				type,     // type
+				code      // code
+				// updateTime - Defaults to NOW if not specificied, typically, do not
+				//              specify this as a best practice
+				);
+
+		// Construct the product
+
+		product = new Product(
+				productId,
+				Product.STATUS_DELETE
+				);
+
+		// Legacy requirement
+
+		product.setTrackerURL(new URL("http://www.google.com/"));
+
+		// Attach properties
+
+		attachPropertiesToProduct (product, eventNetwork, eventCode, isReviewed);
 
 		// Return the constructed product
 

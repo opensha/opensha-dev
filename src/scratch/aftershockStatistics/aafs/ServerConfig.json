@@ -9,12 +9,21 @@
   "activemq_port": 61616,
   "activemq_user": "admin",
   "activemq_password": "admin",
+  "log_con_aafs": "'/opt/aafs/logs/'yyyy-MM-dd'-aafs.log'",
+  "log_con_intake": "'/opt/aafs/logs/'yyyy-MM-dd'-intake.log'",
+  "log_con_control": "'/opt/aafs/logs/'yyyy-MM-dd'-control.log'",
+  "log_summary": "'/opt/aafs/logs/'yyyy-MM-dd'-summary.log'",
   "comcat_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
   "pdl_enable": 0,
   "pdl_key_filename": "",
   "pdl_dev_senders": [
     {
-      "host": "pdldevel.cr.usgs.gov",
+      "host": "dev01-pdl01.cr.usgs.gov",
+      "port": 11235,
+      "connectTimeout": 15000
+    },
+    {
+      "host": "dev02-pdl01.cr.usgs.gov",
       "port": 11235,
       "connectTimeout": 15000
     }

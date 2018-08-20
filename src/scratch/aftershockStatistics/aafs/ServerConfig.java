@@ -144,6 +144,30 @@ public class ServerConfig {
         return param_set.activemq_password;
     }
 
+	// Pattern for AAFS console log filenames, in the format of SimpleDateFormat, or "" if none.
+
+	public String get_log_con_aafs() {
+        return param_set.log_con_aafs;
+    }
+
+	// Pattern for intake console log filenames, in the format of SimpleDateFormat, or "" if none.
+
+	public String get_log_con_intake() {
+        return param_set.log_con_intake;
+    }
+
+	// Pattern for control console log filenames, in the format of SimpleDateFormat, or "" if none.
+
+	public String get_log_con_control() {
+        return param_set.log_con_control;
+    }
+
+	// Pattern for summary log filenames, in the format of SimpleDateFormat, or "" if none.
+
+	public String get_log_summary() {
+        return param_set.log_summary;
+    }
+
 	// Comcat URL.
 
     public String get_comcat_url() {
@@ -256,6 +280,10 @@ public class ServerConfig {
 			System.out.println("activemq_port = " + server_config.getActivemq_port());
 			System.out.println("activemq_user = " + server_config.getActivemq_user());
 			System.out.println("activemq_password = " + server_config.getActivemq_password());
+			System.out.println("log_con_aafs = " + server_config.get_log_con_aafs());
+			System.out.println("log_con_intake = " + server_config.get_log_con_intake());
+			System.out.println("log_con_control = " + server_config.get_log_con_control());
+			System.out.println("log_summary = " + server_config.get_log_summary());
 			System.out.println("comcat_url = " + server_config.get_comcat_url());
 			System.out.println("pdl_enable = " + server_config.get_pdl_enable());
 			System.out.println("pdl_key_filename = " + server_config.get_pdl_key_filename());

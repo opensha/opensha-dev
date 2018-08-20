@@ -106,32 +106,9 @@ public class OpIntakePDL extends DBPayload {
 
 	public double mainshock_depth;
 
-	// Flag, true if this contains analyst data
+	// Parameters supplied by the analyst, or null if none.
 
-	public boolean f_has_analyst;
-
-	// Analyst that most recently reviewed this event, or "" if none.
-
-	public String analyst_id;
-
-	// Analyst remark for this event, or "" if none.
-
-	public String analyst_remark;
-
-	// Time at which analyst reviewed this event, in milliseconds since the epoch, or 0L if none.
-
-	public long analyst_time;
-
-	// Parameters supplied by the analyst.
-	// This can be null, if the analyst has not supplied any parameters,
-	// or if the analyst has intervened a second time to "unsupply" parameters.
-
-	public ForecastParameters analyst_params;
-
-	// Time lag at which an extra forecast is requested, in milliseconds since the mainshock.
-	// The value is -1L if there has been no extra forecast requested.
-
-	public long extra_forecast_lag;
+	public AnalystOptions analyst_options;
 
 
 
@@ -148,12 +125,7 @@ public class OpIntakePDL extends DBPayload {
 
 	public void setup (String[] args, int argix_lo, int argix_hi) {
 		parse_pdl_command_line (args, argix_lo, argix_hi);
-		f_has_analyst = false;
-		analyst_id = "";
-		analyst_remark = "";
-		analyst_time = 0L;
-		analyst_params = null;
-		extra_forecast_lag = -1L;
+		analyst_options = null;
 		return;
 	}
 
@@ -161,15 +133,9 @@ public class OpIntakePDL extends DBPayload {
 	// Set up the contents, with analyst data
 
 	public void setup (String[] args, int argix_lo, int argix_hi, 
-						String the_analyst_id, String the_analyst_remark, long the_analyst_time,
-						ForecastParameters the_analyst_params, long the_extra_forecast_lag) {
+						AnalystOptions the_analyst_options) {
 		parse_pdl_command_line (args, argix_lo, argix_hi);
-		f_has_analyst = true;
-		analyst_id = the_analyst_id;
-		analyst_remark = the_analyst_remark;
-		analyst_time = the_analyst_time;
-		analyst_params = the_analyst_params;
-		extra_forecast_lag = the_extra_forecast_lag;
+		analyst_options = the_analyst_options;
 		return;
 	}
 
@@ -318,8 +284,8 @@ public class OpIntakePDL extends DBPayload {
 	// Return the effective analyst parameters, or null if none.
 
 	public ForecastParameters get_eff_analyst_params () {
-		if (f_has_analyst) {
-			return analyst_params;
+		if (analyst_options != null) {
+			return analyst_options.analyst_params;
 		}
 		return null;
 	}
@@ -385,12 +351,7 @@ public class OpIntakePDL extends DBPayload {
 		writer.marshalDouble                    ("mainshock_lon"      , mainshock_lon      );
 		writer.marshalDouble                    ("mainshock_depth"    , mainshock_depth    );
 
-		writer.marshalBoolean                   ("f_has_analyst"      , f_has_analyst      );
-		writer.marshalString                    ("analyst_id"         , analyst_id         );
-		writer.marshalString                    ("analyst_remark"     , analyst_remark     );
-		writer.marshalLong                      ("analyst_time"       , analyst_time       );
-		ForecastParameters.marshal_poly (writer, "analyst_params"     , analyst_params     );
-		writer.marshalLong                      ("extra_forecast_lag" , extra_forecast_lag );
+		AnalystOptions.marshal_poly     (writer, "analyst_options"    , analyst_options    );
 
 		return;
 	}
@@ -421,12 +382,7 @@ public class OpIntakePDL extends DBPayload {
 		mainshock_lon       = reader.unmarshalDouble                    ("mainshock_lon"      );
 		mainshock_depth     = reader.unmarshalDouble                    ("mainshock_depth"    );
 
-		f_has_analyst       = reader.unmarshalBoolean                   ("f_has_analyst"      );
-		analyst_id          = reader.unmarshalString                    ("analyst_id"         );
-		analyst_remark      = reader.unmarshalString                    ("analyst_remark"     );
-		analyst_time        = reader.unmarshalLong                      ("analyst_time"       );
-		analyst_params      = ForecastParameters.unmarshal_poly (reader, "analyst_params"     );
-		extra_forecast_lag  = reader.unmarshalLong                      ("extra_forecast_lag" );
+		analyst_options     = AnalystOptions.unmarshal_poly     (reader, "analyst_options"    );
 
 		return;
 	}

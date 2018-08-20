@@ -91,7 +91,7 @@ public class USGS_AftershockForecast {
 	private boolean includeProbAboveMainshock;
 	
 	// custom text which can be added
-	private String injectableText;
+	private String injectableText = null;
 	
 	private Template template = Template.MAINSOCK;
 	

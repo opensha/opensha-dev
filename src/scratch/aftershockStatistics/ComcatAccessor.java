@@ -127,6 +127,16 @@ public class ComcatAccessor {
 	// Value to use for no minimum magnitude in Comcat searches.
 
 	public static final double COMCAT_NO_MIN_MAG = -10.0;
+
+	// Default maximum depth for Comcat searches, in kilometers.
+	// This is chosen to respect the limits for both Comcat (1000.0 km) and OpenSHA (700.0).
+
+	public static final double DEFAULT_MAX_DEPTH = 700.0;
+
+	// Default minimum depth for Comcat searches, in kilometers.
+	// This is chosen to respect the limits for both Comcat (-100.0 km) and OpenSHA (-5.0).
+
+	public static final double DEFAULT_MIN_DEPTH = 0.0;
 	
 
 
@@ -718,11 +728,13 @@ public class ComcatAccessor {
 	private static ObsEqkRupture eventToObsRup(JsonEvent event, boolean wrapLon, boolean extendedInfo) {
 		double lat = event.getLatitude().doubleValue();
 		double lon = event.getLongitude().doubleValue();
+
 		GeoTools.validateLon(lon);
 		if (wrapLon && lon < 0.0) {
 			lon += 360.0;
 			GeoTools.validateLon(lon);
 		}
+
 		double dep = event.getDepth().doubleValue();
 		if (dep < 0.0) {
 			// some regional networks can report negative depths, but the definition of what they're relative to can vary between
@@ -732,6 +744,7 @@ public class ComcatAccessor {
 			dep = 0.0;
 		}
 		Location hypo = new Location(lat, lon, dep);
+
 		double mag=0.0;
 		try{
 			mag = event.getMag().doubleValue();
@@ -739,8 +752,13 @@ public class ComcatAccessor {
 			//System.out.println(event.toString());
 			return null;
 		}
-		ObsEqkRupture rup = new ObsEqkRupture(event.getEventId().toString(),
-				event.getTime().getTime(), hypo, mag);
+
+		String event_id = event.getEventId().toString();
+		if (event_id == null || event_id.isEmpty()) {
+			return null;	// this ensures returned events always have an event ID
+		}
+
+		ObsEqkRupture rup = new ObsEqkRupture(event_id, event.getTime().getTime(), hypo, mag);
 		
 		if (extendedInfo) {
 			// adds the place description ("10km from wherever"). Needed for ETAS_AftershockStatistics forecast document -NVDE 
@@ -963,14 +981,18 @@ public class ComcatAccessor {
 	 * If preferred_id is non-null and non-empty, then preferred_id appears as the first
 	 * item in the list (whether or not it also appears in ids).
 	 * Except for preferred_id, the event ids are listed in the same order they appear in ids.
+	 * It is guaranteed that the returned list contains no duplicates, even in the unlikely
+	 * (maybe impossible) event that Comcat returns a list containing a duplicate.
 	 */
 	public static List<String> idsToList (String ids, String preferred_id) {
 		ArrayList<String> idlist = new ArrayList<String>();
+		HashSet<String> idset = new HashSet<String>();
 
 		// If there is a preferred id, make it the first element in the list
 
 		if (preferred_id != null) {
 			if (!( preferred_id.isEmpty() )) {
+				idset.add (preferred_id);
 				idlist.add (preferred_id);
 			}
 		}
@@ -1001,10 +1023,9 @@ public class ComcatAccessor {
 
 				if (!( id.isEmpty() )) {
 				
-					// If it doesn't match the preferred id ...
-					// (Note that equalsIgnoreCase returns false if the argument is null)
+					// If it has not been seen before ...
 
-					if (!( id.equalsIgnoreCase (preferred_id) )) {
+					if (idset.add(id)) {
 					
 						// Add it to the list of ids
 
@@ -1217,8 +1238,8 @@ public class ComcatAccessor {
 
 				// Call Comcat
 
-				double minDepth = 0.0;
-				double maxDepth = 700.0;
+				double minDepth = DEFAULT_MIN_DEPTH;
+				double maxDepth = DEFAULT_MAX_DEPTH;
 				boolean wrapLon = false;
 				int max_calls = 0;
 
