@@ -234,6 +234,18 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2744("bruce/rundir2744", "Bruce 2744", "Bruce Shaw", cal(2018, 6, 27),
 				"FinitePatch fracArea=0.8,  b=.009",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2768("bruce/rundir2768", "Bruce 2768", "Bruce Shaw", cal(2018, 8, 14),
+				"FinitePatch fracArea=0.90, 48Hr, all else same as r2585",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_2769("bruce/rundir2769", "Bruce 2769", "Bruce Shaw", cal(2018, 8, 14),
+				"FinitePatch fracArea=0.95, 48Hr, all else same as r2585",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_SWEEPTEST_2763V2("test25a589d_2763V2", "JG Test Rerun 2763", "Jacqui Gilchrist", cal(2018, 8, 21),
+				"Rerun test of Bruce's rundir2763, reading new stiffness matrices",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_SWEEPTEST_J("test25a589d_J", "JG Test Calc Siffness", "Jacqui Gilchrist", cal(2018, 8, 21),
+				"Test of calculating and writing new stiffness matrices",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -353,6 +365,7 @@ public class RSQSimCatalog implements XMLSaveable {
 					slipVels.put(elems.get(i).getID(), constSlipVel);
 			} else {
 				Map<String, String> params = getParams();
+				Preconditions.checkNotNull(params, "Params not found");
 				String ddotEQFname = params.get("ddotEQFname");
 				if (ddotEQFname != null && !ddotEQFname.trim().isEmpty()) {
 					File ddotEQFile = new File(getCatalogDir(), ddotEQFname);
@@ -1404,7 +1417,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 //		GregorianCalendar minDate = cal(2000, 1, 1);
-		GregorianCalendar minDate = cal(2018, 5, 1);
+		GregorianCalendar minDate = cal(2018, 8, 20);
 		
 		for (Catalogs cat : cats) {
 //		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
