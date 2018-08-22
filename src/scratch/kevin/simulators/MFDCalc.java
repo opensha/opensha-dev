@@ -35,7 +35,6 @@ import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.utils.FaultSystemIO;
-import scratch.aftershockStatistics.AftershockStatsCalc;
 
 import org.opensha.sha.simulators.EQSIM_Event;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -335,7 +334,18 @@ public class MFDCalc {
 		double magPrecision = 0d;
 		
 		// estimate b
-		return AftershockStatsCalc.getMaxLikelihood_b_value(magMean, magComplete, magPrecision);
+		return getMaxLikelihood_b_value(magMean, magComplete, magPrecision);
+	}
+	
+	/**
+	 * This returns the maximum-likelihood b-value defined by Aki (1965, Bull. Earthq. Res. Inst., 43, 237-239)
+	 * @param magMean - mean magnitude above magComplete
+	 * @param magComplete - the magnitude above which no events have gone undetected
+	 * @param magPrecision - the degree to which magnitude have been rounded
+	 * @return
+	 */
+	public static double getMaxLikelihood_b_value(double magMean, double magComplete, double magPrecision) {
+		return Math.log10(Math.E) /(magMean - (magComplete-0.5*magPrecision));
 	}
 
 	/**

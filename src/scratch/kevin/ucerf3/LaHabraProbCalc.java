@@ -1,9 +1,9 @@
 package scratch.kevin.ucerf3;
 
-import gov.usgs.earthquake.event.EventQuery;
-import gov.usgs.earthquake.event.EventWebService;
-import gov.usgs.earthquake.event.Format;
-import gov.usgs.earthquake.event.JsonEvent;
+//import gov.usgs.earthquake.event.EventQuery;
+//import gov.usgs.earthquake.event.EventWebService;
+//import gov.usgs.earthquake.event.Format;
+//import gov.usgs.earthquake.event.JsonEvent;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,69 +38,70 @@ import scratch.UCERF3.analysis.CompoundFSSPlots.RupInRegionsCache;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.utils.FaultSystemIO;
-import scratch.aftershockStatistics.ComcatAccessor;
+//import scratch.aftershockStatistics.ComcatAccessor;
 
 public class LaHabraProbCalc {
 	
-	private static ObsEqkRupList fetchComcat(Region reg) {
-		EventWebService service;
-		try {
-			service = new EventWebService(new URL("https://earthquake.usgs.gov/fdsnws/event/1/"));
-		} catch (MalformedURLException e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-		EventQuery query = new EventQuery();
-		
-		query.setMinDepth(new BigDecimal(0d));
-		query.setMaxDepth(new BigDecimal(100d));
-		
-		query.setStartTime(new GregorianCalendar(1900, 0, 1).getTime());
-//		query.setEndTime(new GregorianCalendar(2015, 10, 1).getTime());
-		query.setEndTime(new GregorianCalendar(2018, 10, 1).getTime());
-		
-		query.setMinLatitude(new BigDecimal(reg.getMinLat()));
-		query.setMaxLatitude(new BigDecimal(reg.getMaxLat()));
-		query.setMinLongitude(new BigDecimal(reg.getMinLon()));
-		query.setMaxLongitude(new BigDecimal(reg.getMaxLon()));
-		
-		query.setMinMagnitude(new BigDecimal(5d));
-		query.setMaxMagnitude(new BigDecimal(9d));
-		
-		try {
-			System.out.println(service.getUrl(query, Format.GEOJSON));
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}
-		List<JsonEvent> events;
-		try {
-			events = service.getEvents(query);
-		} catch (Exception e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-		
-		ObsEqkRupList rups = new ObsEqkRupList();
-		for (JsonEvent event : events) {
-			ObsEqkRupture rup = ComcatAccessor.eventToObsRup(event);
-			rups.add(rup);
-		}
-		
-		if (!reg.isRectangular()) {
-			System.out.println("Fetched "+rups.size()+" events before region filtering");
-			for (int i=rups.size(); --i>=0;)
-				if (!reg.contains(rups.get(i).getHypocenterLocation()))
-					rups.remove(i);
-		}
-		
-		System.out.println("Returning "+rups.size()+" eqs");
-		
-		return rups;
-	}
+//	private static ObsEqkRupList fetchComcat(Region reg) {
+//		EventWebService service;
+//		try {
+//			service = new EventWebService(new URL("https://earthquake.usgs.gov/fdsnws/event/1/"));
+//		} catch (MalformedURLException e) {
+//			throw ExceptionUtils.asRuntimeException(e);
+//		}
+//		EventQuery query = new EventQuery();
+//		
+//		query.setMinDepth(new BigDecimal(0d));
+//		query.setMaxDepth(new BigDecimal(100d));
+//		
+//		query.setStartTime(new GregorianCalendar(1900, 0, 1).getTime());
+////		query.setEndTime(new GregorianCalendar(2015, 10, 1).getTime());
+//		query.setEndTime(new GregorianCalendar(2018, 10, 1).getTime());
+//		
+//		query.setMinLatitude(new BigDecimal(reg.getMinLat()));
+//		query.setMaxLatitude(new BigDecimal(reg.getMaxLat()));
+//		query.setMinLongitude(new BigDecimal(reg.getMinLon()));
+//		query.setMaxLongitude(new BigDecimal(reg.getMaxLon()));
+//		
+//		query.setMinMagnitude(new BigDecimal(5d));
+//		query.setMaxMagnitude(new BigDecimal(9d));
+//		
+//		try {
+//			System.out.println(service.getUrl(query, Format.GEOJSON));
+//		} catch (MalformedURLException e) {
+//			e.printStackTrace();
+//		}
+//		List<JsonEvent> events;
+//		try {
+//			events = service.getEvents(query);
+//		} catch (Exception e) {
+//			throw ExceptionUtils.asRuntimeException(e);
+//		}
+//		
+//		ObsEqkRupList rups = new ObsEqkRupList();
+//		for (JsonEvent event : events) {
+//			ObsEqkRupture rup = ComcatAccessor.eventToObsRup(event);
+//			rups.add(rup);
+//		}
+//		
+//		if (!reg.isRectangular()) {
+//			System.out.println("Fetched "+rups.size()+" events before region filtering");
+//			for (int i=rups.size(); --i>=0;)
+//				if (!reg.contains(rups.get(i).getHypocenterLocation()))
+//					rups.remove(i);
+//		}
+//		
+//		System.out.println("Returning "+rups.size()+" eqs");
+//		
+//		return rups;
+//	}
 	
 	private static void checkCatalog(Region reg, boolean comcat) throws IOException {
 		ObsEqkRupList histQkList;
 		if (comcat) {
 			System.out.println("Fetching from ComCat");
-			histQkList = fetchComcat(reg);
+//			histQkList = fetchComcat(reg);
+			throw new IllegalStateException("Promote comcat to core");
 		} else {
 			System.out.println("Loading UCERF3 file");
 			File file = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/EarthquakeCatalog/ofr2013-1165_EarthquakeCat.txt");

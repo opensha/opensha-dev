@@ -26,8 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.aftershockStatistics.AftershockStatsCalc;
-
 public class RSQSimPatchBvalCalc {
 
 	public static void main(String[] args) throws IOException {
@@ -168,7 +166,7 @@ public class RSQSimPatchBvalCalc {
 		for (int i=0; i<mfd.size(); i++)
 			magMean += mfd.getX(i)*mfd.getY(i);
 		magMean /= mfd.calcSumOfY_Vals();
-		return AftershockStatsCalc.getMaxLikelihood_b_value(magMean, magComplete, magPrecision);
+		return MFDCalc.getMaxLikelihood_b_value(magMean, magComplete, magPrecision);
 	}
 
 }
