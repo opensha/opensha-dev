@@ -32,7 +32,6 @@ import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.function.XY_DataSetList;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.DataUtils;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.nshmp2.imr.NSHMP08_WUS;
 import org.opensha.nshmp2.util.Period;
 import org.opensha.sha.earthquake.ProbEqkRupture;
@@ -41,6 +40,7 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.SimpleFaultData;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
+import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sra.rtgm.RTGM;
 import org.opensha.sra.rtgm.RTGM.Frequency;
 

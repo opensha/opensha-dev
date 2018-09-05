@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.nshmp2.tmp.TestGrid;
+import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sra.rtgm.RTGM.Frequency;
 
 import scratch.peter.nshmp.CurveContainer.CurveFileProcessor_SHA;

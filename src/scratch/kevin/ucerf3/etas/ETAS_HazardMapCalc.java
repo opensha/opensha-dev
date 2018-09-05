@@ -59,7 +59,6 @@ import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.BinaryHazardCurveReader;
@@ -86,6 +85,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.MMI_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sha.util.SiteTranslator;
 
 import com.google.common.base.Joiner;

@@ -8,12 +8,12 @@ import java.util.concurrent.TimeUnit;
 
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.nshmp2.calc.ERF_ID;
 import org.opensha.nshmp2.calc.HazardCalc;
 import org.opensha.nshmp2.util.Period;
 import org.opensha.sha.earthquake.EpistemicListERF;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.util.NEHRP_TestCity;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.peter.ucerf3.calc.UC3_CalcUtils;
