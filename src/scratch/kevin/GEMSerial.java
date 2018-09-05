@@ -3,13 +3,13 @@ package scratch.kevin;
 import java.io.IOException;
 
 import org.opensha.commons.util.FileUtils;
-import org.opensha.gem.GEM1.calc.gemModelData.nshmp.south_america.NshmpSouthAmericaData;
-import org.opensha.gem.GEM1.commons.CalculationSettings;
+//import org.opensha.gem.GEM1.calc.gemModelData.nshmp.south_america.NshmpSouthAmericaData;
+//import org.opensha.gem.GEM1.commons.CalculationSettings;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ERF;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1SouthAmericaERF;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1_CEUS_ERF;
+//import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
+//import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1SouthAmericaERF;
+//import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1_CEUS_ERF;
 
 public class GEMSerial {
 	
@@ -25,33 +25,33 @@ public class GEMSerial {
 	 * @param args
 	 * @throws IOException 
 	 */
-	public static void main(String[] args) throws IOException {
-//		double latmin = -55;
-//		double latmax = 15;
-//		double lonmin = -85;
-//		double lonmax = -30;
-		double latmin = 24.6;
-	    double latmax = 50.0;
-	    double lonmin = -100.0;
-	    double lonmax = -65.0;
-//		NshmpSouthAmericaData model = new NshmpSouthAmericaData(latmin,latmax,lonmin,lonmax);
-//		GEM1ERF modelERF = new GEM1SouthAmericaERF();
-	    CalculationSettings calcSet = new CalculationSettings();
-	    calcSet.setSourceCache(true);
-		GEM1ERF modelERF = new GEM1_CEUS_ERF(calcSet);
-		modelERF.updateForecast();
-		for (int i=0; i<modelERF.getNumSources(); i++)
-			modelERF.getSource(i);
-		String fname = "/tmp/gemerf.obj";
-		System.out.println("*********** SAVING ************");
-		FileUtils.saveObjectInFile(fname, modelERF);
-		System.out.println("*********** LOADING ************");
-		AbstractERF fileERF = (AbstractERF)FileUtils.loadObject(fname);
-//		System.out.println("Before serialization");
-		printERF(modelERF);
-		System.out.println("Loaded from file");
-		printERF(fileERF);
-		System.exit(0);
-	}
+//	public static void main(String[] args) throws IOException {
+////		double latmin = -55;
+////		double latmax = 15;
+////		double lonmin = -85;
+////		double lonmax = -30;
+//		double latmin = 24.6;
+//	    double latmax = 50.0;
+//	    double lonmin = -100.0;
+//	    double lonmax = -65.0;
+////		NshmpSouthAmericaData model = new NshmpSouthAmericaData(latmin,latmax,lonmin,lonmax);
+////		GEM1ERF modelERF = new GEM1SouthAmericaERF();
+//	    CalculationSettings calcSet = new CalculationSettings();
+//	    calcSet.setSourceCache(true);
+//		GEM1ERF modelERF = new GEM1_CEUS_ERF(calcSet);
+//		modelERF.updateForecast();
+//		for (int i=0; i<modelERF.getNumSources(); i++)
+//			modelERF.getSource(i);
+//		String fname = "/tmp/gemerf.obj";
+//		System.out.println("*********** SAVING ************");
+//		FileUtils.saveObjectInFile(fname, modelERF);
+//		System.out.println("*********** LOADING ************");
+//		AbstractERF fileERF = (AbstractERF)FileUtils.loadObject(fname);
+////		System.out.println("Before serialization");
+//		printERF(modelERF);
+//		System.out.println("Loaded from file");
+//		printERF(fileERF);
+//		System.exit(0);
+//	}
 
 }
