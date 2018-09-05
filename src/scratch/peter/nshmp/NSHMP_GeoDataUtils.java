@@ -19,9 +19,9 @@ import org.opensha.commons.data.xyz.GeoDataSetMath;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.nshmp2.tmp.TestGrid;
 import org.opensha.nshmp2.util.Period;
+import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sra.rtgm.RTGM.Frequency;
 
 import scratch.peter.curves.ProbOfExceed;
