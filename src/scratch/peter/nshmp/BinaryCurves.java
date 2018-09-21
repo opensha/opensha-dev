@@ -14,9 +14,9 @@ import org.apache.commons.math3.util.Precision;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.Interpolate;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.nshmp2.tmp.TestGrid;
 import org.opensha.nshmp2.util.Period;
+import org.opensha.sha.util.NEHRP_TestCity;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;

@@ -1,11 +1,11 @@
 package scratch.peter.ucerf3.calc;
 
 import static com.google.common.base.Charsets.US_ASCII;
-import static org.opensha.nshmp.NEHRP_TestCity.SANTA_ROSA;
 import static org.opensha.nshmp2.util.Period.GM0P00;
 import static org.opensha.nshmp2.util.Period.GM0P20;
 import static org.opensha.nshmp2.util.Period.GM1P00;
 import static org.opensha.sha.earthquake.param.IncludeBackgroundOption.EXCLUDE;
+import static org.opensha.sha.util.NEHRP_TestCity.SANTA_ROSA;
 import static scratch.peter.curves.ProbOfExceed.PE10IN50;
 import static scratch.peter.curves.ProbOfExceed.PE2IN50;
 
@@ -25,7 +25,6 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.util.DataUtils;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.nshmp2.calc.ERF_ID;
 import org.opensha.nshmp2.calc.HazardCalc;
 import org.opensha.nshmp2.calc.HazardResult;
@@ -38,6 +37,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.util.NEHRP_TestCity;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.peter.curves.CurveUtilsUC33;

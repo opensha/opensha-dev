@@ -11,7 +11,7 @@ import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
 import org.opensha.sha.calc.HazardCurveCalculator;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM.TestGEM_ERF;
+//import org.opensha.sha.earthquake.rupForecastImpl.GEM.TestGEM_ERF;
 import org.opensha.sha.imr.attenRelImpl.AS_1997_AttenRel;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 
@@ -172,7 +172,7 @@ public class computeHazard implements Runnable {
 		double prob_level = 0.1;
 
 		// ERF
-		TestGEM_ERF sszERF = new TestGEM_ERF();
+//		TestGEM_ERF sszERF = new TestGEM_ERF();
 
 		/*		
 		// ERF 
@@ -250,7 +250,7 @@ public class computeHazard implements Runnable {
 			// define hazard calculator
 			hcc = new HazardCurveCalculator();
 			// compute hazard curve
-			hcc.getHazardCurve(hc,siteList.get(i),as_1997,sszERF);
+//			hcc.getHazardCurve(hc,siteList.get(i),as_1997,sszERF);
 			// store pga value corresponding to the chosen probability
 			if(hc.getY(0)<prob_level){
 				pga[i] = 0;

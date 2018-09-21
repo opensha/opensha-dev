@@ -3,7 +3,7 @@ package scratch.peter.curves;
 import static org.opensha.nshmp2.util.Period.GM0P00;
 import static org.opensha.nshmp2.util.Period.GM0P20;
 import static org.opensha.nshmp2.util.Period.GM1P00;
-import static org.opensha.nshmp.NEHRP_TestCity.*;
+import static org.opensha.sha.util.NEHRP_TestCity.*;
 
 import java.util.Collection;
 import java.util.EnumSet;
@@ -12,7 +12,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.opensha.commons.exceptions.ConstraintException;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.nshmp2.imr.NSHMP08_WUS;
 import org.opensha.nshmp2.util.Period;
 import org.opensha.sha.earthquake.ERF;
@@ -22,6 +21,7 @@ import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.util.NEHRP_TestCity;
 
 import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
 import scratch.UCERF3.utils.ModUCERF2.ModMeanUCERF2;
