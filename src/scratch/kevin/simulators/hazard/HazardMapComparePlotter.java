@@ -67,7 +67,6 @@ import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
 import org.opensha.sha.calc.hazardMap.BinaryHazardCurveReader;
@@ -89,6 +88,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.util.NEHRP_TestCity;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -718,7 +718,7 @@ public class HazardMapComparePlotter {
 	private static ExecutorService exec;
 	private static LinkedList<Future<?>> futures;
 	
-	static void plotHists(Map<Location, ? extends DiscretizedFunc> ucerf3Curves,
+	public static void plotHists(Map<Location, ? extends DiscretizedFunc> ucerf3Curves,
 			Map<Location, ? extends DiscretizedFunc> rsqsimCurves, String catalogName, GriddedRegion gridReg,
 			int[] returnPeriods, int hightlightIndex, File outputDir, boolean log, String imtLabel) throws IOException {
 		

@@ -14,7 +14,6 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.FaultUtils;
-import org.opensha.nshmp.NEHRP_TestCity;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.FocalMechanism;
@@ -33,6 +32,7 @@ import org.opensha.sha.simulators.srf.SRF_PointData;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 import org.opensha.sha.simulators.utils.SimulatorUtils;
+import org.opensha.sha.util.NEHRP_TestCity;
 
 import com.google.common.base.Preconditions;
 
@@ -274,6 +274,9 @@ public class RSQSimBBP_Config {
 		sites.add(new BBP_Site("WNGC", new Location(34.041824, -118.0653), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("STNI", new Location(33.93088, -118.17881), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("LAPD", new Location(34.557, -118.125), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("s119", new Location(34.55314, -118.72826), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("s279", new Location(34.37809, -118.34757), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("s480", new Location(34.15755, -117.87389), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		
 		csLAInitialSites = Collections.unmodifiableList(sites);
 	}
