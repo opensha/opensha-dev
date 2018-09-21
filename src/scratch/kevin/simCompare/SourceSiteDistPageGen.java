@@ -132,7 +132,7 @@ public class SourceSiteDistPageGen<E> {
 						Map<AttenRelRef, HistogramFunction> gmpePeriodHists = new HashMap<>();
 						for (AttenRelRef gmpeRef : gmpeHists.keySet())
 							gmpePeriodHists.put(gmpeRef, gmpeHists.get(gmpeRef)[p]);
-						plotSourceSiteHist(file, simHists[p], gmpePeriodHists, title, periods[p], numSims, numRups);
+						plotSourceSiteHist(resourcesDir, prefix, simHists[p], gmpePeriodHists, title, periods[p], numSims, numRups);
 						plotsTable.put(magRange, periods[p], file);
 					}
 				}
@@ -197,8 +197,9 @@ public class SourceSiteDistPageGen<E> {
 		}
 	};
 	
-	private void plotSourceSiteHist(File pngFile, HistogramFunction simHist, Map<AttenRelRef, HistogramFunction> gmpeHists,
-			String title, double period, int numSims, int numRups) throws IOException {
+	private void plotSourceSiteHist(File outputDir, String prefix, HistogramFunction simHist,
+			Map<AttenRelRef, HistogramFunction> gmpeHists, String title, double period, int numSims, int numRups)
+					throws IOException {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
@@ -258,7 +259,8 @@ public class SourceSiteDistPageGen<E> {
 		
 		gp.drawGraphPanel(spec, false, false, xRange, yRange);
 		gp.getChartPanel().setSize(600, 450);
-		gp.saveAsPNG(pngFile.getAbsolutePath());
+		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
+		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 	}
 	
 	private static <E> HistogramFunction[] calcSimHist(SimulationRotDProvider<E> simProv, Site site, double[] periods,

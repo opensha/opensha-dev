@@ -181,13 +181,18 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		}
 		lines.addAll(table.build());
 		lines.add("");
-		lines.add("### Site Map");
-		lines.add("");
-		File mapFile = new File(resourcesDir, "site_location_map.png");
-		if (!mapFile.exists())
-			FileUtils.downloadURL(new URL(getMiniMap(site.getLocation())), mapFile);
-		lines.add("![Site Map]("+resourcesDir.getName()+"/"+mapFile.getName()+")");
-		lines.add("");
+		try {
+			File mapFile = new File(resourcesDir, "site_location_map.png");
+			if (!mapFile.exists())
+				FileUtils.downloadURL(new URL(getMiniMap(site.getLocation())), mapFile);
+			lines.add("### Site Map");
+			lines.add("");
+			lines.add("![Site Map]("+resourcesDir.getName()+"/"+mapFile.getName()+")");
+			lines.add("");
+		} catch (IOException e1) {
+			System.out.println("Error fetching map! Skipping");
+			e1.printStackTrace();
+		}
 		
 		int tocIndex = lines.size();
 		String topLink = "*[(top)](#table-of-contents)*";

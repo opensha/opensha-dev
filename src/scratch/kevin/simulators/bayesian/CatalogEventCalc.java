@@ -203,6 +203,39 @@ public class CatalogEventCalc extends FaultStateEventCalc {
 		return parentSectBundles;
 	}
 	
+	static List<String[]> getParentSectsSetOf12() {
+		List<String[]> parentSectBundles = new ArrayList<>();
+		
+		parentSectBundles.add(new String[] {"San Andreas (Carrizo) rev"});
+		parentSectBundles.add(new String[] {"San Andreas (Cholame) rev"});
+		parentSectBundles.add(new String[] {"San Andreas (Big Bend)"});
+		parentSectBundles.add(new String[] {"San Andreas (Mojave N)"});
+		parentSectBundles.add(new String[] {"San Andreas (Mojave S)"});
+		parentSectBundles.add(new String[] {"San Andreas (San Bernardino N)"});
+		parentSectBundles.add(new String[] {"San Andreas (San Bernardino S)"});
+		parentSectBundles.add(new String[] {"San Andreas (San Gorgonio Pass-Garnet HIll)"});
+		parentSectBundles.add(new String[] {"San Andreas (Coachella) rev"});
+		parentSectBundles.add(new String[] {"Garlock (West)"});
+		parentSectBundles.add(new String[] {"San Jacinto (San Bernardino)", "San Jacinto (San Jacinto Valley) rev"});
+		parentSectBundles.add(new String[] {"San Jacinto (Stepovers Combined)", "San Jacinto (Anza) rev"});
+		
+		return parentSectBundles;
+	}
+	
+	static List<String[]> getParentSectsCajonPass() {
+		List<String[]> parentSectBundles = new ArrayList<>();
+		
+		parentSectBundles.add(new String[] {"San Andreas (Mojave N)"});
+		parentSectBundles.add(new String[] {"San Andreas (Mojave S)"});
+		parentSectBundles.add(new String[] {"San Andreas (San Bernardino N)"});
+		parentSectBundles.add(new String[] {"San Andreas (San Bernardino S)"});
+		parentSectBundles.add(new String[] {"San Jacinto (San Bernardino)"});
+		parentSectBundles.add(new String[] {"Cucamonga"});
+		parentSectBundles.add(new String[] {"San Jacinto (Lytle Creek connector)"});	
+		
+		return parentSectBundles;
+	}
+	
 	public static void main(String[] args) throws IOException {
 		File catalogsDir = new File("/data/kevin/simulators/catalogs");
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(catalogsDir);

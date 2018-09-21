@@ -42,7 +42,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
 //		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2585_1myrs");
-		File catalogDir = new File(myHPCDir, "rundir2769");
+		File catalogDir = new File(myHPCDir, "rundir2740");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2734");
 		
 		boolean standardSites = false;

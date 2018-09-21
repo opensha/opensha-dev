@@ -246,6 +246,15 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		JG_SWEEPTEST_J("test25a589d_J", "JG Test Calc Siffness", "Jacqui Gilchrist", cal(2018, 8, 21),
 				"Test of calculating and writing new stiffness matrices",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_SWEEPTEST_J2("test25a589d_J2", "JG Test Calc Siffness 2", "Jacqui Gilchrist", cal(2018, 8, 22),
+				"Test of reading in the stiffness files written by previous run test25a589d_J using my executable",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_SWEEPTEST_2763V3("test25a589d_flt2763V3", "JG Test Rerun 2763 V3", "Jacqui Gilchrist", cal(2018, 8, 22),
+				"Test of reading in the stiffness files written by previous run test25a589d_J using Bruce's executable",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		JG_SWEEPTEST_MASTER_EXEC("defaultModel_JfM", "JG Test Master Exec", "Jacqui Gilchrist", cal(2018, 8, 23),
+				"Calculating stiffness files using the executable from the master branch",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;

@@ -69,11 +69,11 @@ public class GriddedSeisImportanceHazardMapCalc {
 		
 //		String dirName = "2017_07_14-ucerf3-gridded-tests";
 //		String dirName = "2017_08_07-ucerf3-full-ba-gridded-tests";
-		String dirName = "2017_09_06-ucerf3-geol-gridded-tests-sa-1.0s";
+		String dirName = "2018_08_30-ucerf3-geol-gridded-tests";
 		
 		File localU3File = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
-//				+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
-				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
+				+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
+//				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
 		FaultSystemSolution u3Sol = FaultSystemIO.loadSol(localU3File);
 		
 		Region region = new CaliforniaRegions.RELM_TESTING();
@@ -81,9 +81,16 @@ public class GriddedSeisImportanceHazardMapCalc {
 //		String imt = PGA_Param.NAME;
 //		double period = 0d;
 		String imt = SA_Param.NAME;
-		double period = 1d;
+		double period = 0.5d;
 		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
 		double duration = 1d;
+		
+		dirName += "-"+imt.toLowerCase();
+		if (period > 0)
+			dirName += "-"+(float)period+"s";
+		
+//		CalcType[] types = CalcType.values();
+		CalcType[] types = { CalcType.FULL, CalcType.SUPRA_PLUS_SUB_ONLY, CalcType.SUPRA_ONLY };
 		
 		File localDir = new File(localBaseDir, dirName);
 		File remoteDir = new File(remoteBaseDir, dirName);
@@ -91,7 +98,7 @@ public class GriddedSeisImportanceHazardMapCalc {
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
 		
 		int mins = 24*60;
-		int nodes = 4;
+		int nodes = 8;
 		int ppn = 20;
 		String queue = "scec";
 		
@@ -150,13 +157,14 @@ public class GriddedSeisImportanceHazardMapCalc {
 		CalculationSettings calcSettings = new CalculationSettings(xValues, maxSourceDistance);
 		
 		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
-		File jarFile = new File(remoteDir, "OpenSHA_complete.jar");
+		File jarFile = new File(remoteBaseDir, "opensha-dev-all.jar");
 		
 		List<File> classpath = Lists.newArrayList();
 		classpath.add(jarFile);
 		
 		MPJExpressShellScriptWriter mpj = new MPJExpressShellScriptWriter(javaBin, 60000, classpath,
 				USC_HPCC_ScriptWriter.MPJ_HOME);
+		mpj.setUseLaunchWrapper(true);
 		
 		List<Map<TectonicRegionType, ScalarIMR>> imrMaps = Lists.newArrayList();
 		
@@ -165,7 +173,7 @@ public class GriddedSeisImportanceHazardMapCalc {
 		imrMaps.add(map);
 		
 		// write jobs
-		for (CalcType type : CalcType.values()) {
+		for (CalcType type : types) {
 			String subDirName = type.name().toLowerCase();
 			System.out.println("Processing "+type);
 			File localSubDir = new File(localDir, subDirName);
@@ -219,7 +227,7 @@ public class GriddedSeisImportanceHazardMapCalc {
 			
 			script = writer.buildScript(script, mins, nodes, ppn, queue);
 			
-			File pbsFile = new File(localSubDir, subDirName+".pbs");
+			File pbsFile = new File(localSubDir, subDirName+".slurm");
 			JavaShellScriptWriter.writeScript(pbsFile, script);
 		}
 	}

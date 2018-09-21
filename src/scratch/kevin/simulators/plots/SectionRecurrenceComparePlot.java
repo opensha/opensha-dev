@@ -194,6 +194,15 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 			
 			if (scatter.size() == 0)
 				continue;
+			boolean hasFinite = false;
+			for (int i=0; i<scatter.size(); i++) {
+				if (Double.isFinite(scatter.getY(i))) {
+					hasFinite = true;
+					break;
+				}
+			}
+			if (!hasFinite)
+				continue;
 			
 			// Scatter plot
 			System.out.println("Plotting scatter with "+scatter.size()+" values");

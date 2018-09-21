@@ -750,6 +750,8 @@ public class SimulationHazardPlotter<E> {
 		gp.getChartPanel().setSize(800, 600);
 		File pngFile = new File(outputDir, prefix+".png");
 		gp.saveAsPNG(pngFile.getAbsolutePath());
+		File pdfFile = new File(outputDir, prefix+".pdf");
+		gp.saveAsPDF(pdfFile.getAbsolutePath());
 		System.out.println("DONE "+prefix+", "+site.getName()+", "+xAxisLabel);
 		return pngFile;
 	}

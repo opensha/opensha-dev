@@ -378,6 +378,89 @@ public class SpectraPlotter {
 		gifRender.finalizeAnimation();
 	}
 	
+	private static void plotSpectraDistribution(List<DiscretizedFunc> spectra, String spectraName, UncertainArbDiscDataset[] gmpeSpectras, String title,
+			String xAxisLabel, String yAxisLabel, boolean xLog, boolean yLog, Range xRange, Range yRange, File outputDir, String prefix)
+					throws IOException {
+		HeadlessGraphPanel gp = buildGP();
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		List<List<Double>> spectraValues = null;
+		
+		for (int i=0; i<spectra.size(); i++) {
+			DiscretizedFunc spectrum = spectra.get(i);
+			funcs.add(spectrum);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(200, 200, 200, 200)));
+			
+			if (i == 0) {
+//				spectrum.setName(spectraName);
+				spectrum.setName(null);
+				spectraValues = new ArrayList<>();
+				for (int j=0; j<spectrum.size(); j++)
+					spectraValues.add(new ArrayList<>());
+			} else {
+				spectrum.setName(null);
+			}
+			
+			Preconditions.checkState(spectraValues.size() == spectrum.size());
+			for (int j=0; j<spectrum.size(); j++)
+				spectraValues.get(j).add(Math.log(spectrum.getY(j)));
+		}
+		
+		if (gmpeSpectras != null) {
+			for (int j=0; j<gmpeSpectras.length; j++) {
+				Color color = GMPE_COLORS[j % GMPE_COLORS.length];
+				PlotCurveCharacterstics outsideChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 1.5f, color);
+				PlotCurveCharacterstics meanChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, color);
+				
+				funcs.add(gmpeSpectras[j]);
+				chars.add(meanChar);
+				
+				funcs.add(gmpeSpectras[j].getUpper());
+				chars.add(outsideChar);
+				
+				funcs.add(gmpeSpectras[j].getLower());
+				chars.add(outsideChar);
+			}
+		}
+		
+		DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc upperFunc = new ArbitrarilyDiscretizedFunc();
+		
+		for (int i=0; i<spectraValues.size(); i++) {
+			double[] vals = Doubles.toArray(spectraValues.get(i));
+			double logMean = StatUtils.mean(vals);
+			double logSD = Math.sqrt(StatUtils.variance(vals));
+			
+			double x = spectra.get(0).getX(i);
+			
+			meanFunc.set(x, Math.exp(logMean));
+			lowerFunc.set(x, Math.exp(logMean-logSD));
+			upperFunc.set(x, Math.exp(logMean+logSD));
+		}
+		
+		meanFunc.setName(spectraName+"±σ");
+		funcs.add(meanFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		
+		funcs.add(lowerFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1.5f, Color.BLACK));
+		
+		funcs.add(upperFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1.5f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
+		spec.setLegendVisible(spectraName != null);
+		
+		gp.drawGraphPanel(spec, xLog, yLog, xRange, yRange);
+		
+		gp.getChartPanel().setSize(800, 800);
+		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
+		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
+	}
+	
 	private static DiscretizedFunc getAveraged(DiscretizedFunc prevFunc, DiscretizedFunc newFunc, int count) {
 		if (prevFunc == null) {
 			Preconditions.checkState(count == 1);
@@ -1087,6 +1170,7 @@ public class SpectraPlotter {
 		
 //		Map<RSQSimEvent, EqkRupture> compEvents = null;
 		RSQSimCatalog compCatalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		String simName = "RSQSim/BBP";
 		String animTitle = "San Andreas (Mojave) Spectra, M7-7.5";
 		double animTime = 20; // seconds
 		double animFPS = 10;
@@ -1110,7 +1194,7 @@ public class SpectraPlotter {
 			String siteName = site.getName();
 			File rsRD100File = findRotD100File(rsDir, siteName);
 			DiscretizedFunc rd50 = loadRotD50(rsRD100File);
-			rd50.setName("RSQSim/BBP");
+			rd50.setName(simName);
 			UncertainArbDiscDataset[] gmpeSpectra = null;
 			if (gmpes != null) {
 				gmpeSpectra = new UncertainArbDiscDataset[gmpes.length];
@@ -1136,6 +1220,15 @@ public class SpectraPlotter {
 					gmpeSpectras = null;
 				}
 				
+				DiscretizedFunc[] gmpeMeans = null;
+				DiscretizedFunc[] gmpeLowers = null;
+				DiscretizedFunc[] gmpeUppers = null;
+				if (gmpes != null) {
+					gmpeMeans = new DiscretizedFunc[gmpes.length];
+					gmpeLowers = new DiscretizedFunc[gmpes.length];
+					gmpeUppers = new DiscretizedFunc[gmpes.length];
+				}
+				int count = 1;
 				for (RSQSimEvent event : compEvents.keySet()) {
 					try {
 						spectra.add(compLoader.readRotD50(site, "event_"+event.getID()));
@@ -1146,11 +1239,28 @@ public class SpectraPlotter {
 					
 					if (gmpes != null) {
 						UncertainArbDiscDataset[] myGMPEs = new UncertainArbDiscDataset[gmpes.length];
-						for (int i=0; i<gmpes.length; i++)
+						for (int i=0; i<gmpes.length; i++) {
 							myGMPEs[i] = calcGMPE_RotD50(compEvents.get(event), site, vm, gmpes[i]);
+							gmpeMeans[i] = getAveraged(gmpeMeans[i], myGMPEs[i], count);
+							gmpeLowers[i] = getAveraged(gmpeLowers[i], myGMPEs[i].getLower(), count);
+							gmpeUppers[i] = getAveraged(gmpeUppers[i], myGMPEs[i].getUpper(), count);
+						}
+						count++;
 						gmpeSpectras.add(myGMPEs);
 					}
 				}
+				
+				UncertainArbDiscDataset[] gmpeMeanSpectra = null;
+				if (gmpes != null) {
+					gmpeMeanSpectra = new UncertainArbDiscDataset[gmpes.length];
+					for (int i=0; i<gmpeMeanSpectra.length; i++) {
+						gmpeMeanSpectra[i] = new UncertainArbDiscDataset(gmpeMeans[i], gmpeLowers[i], gmpeUppers[i]);
+					}
+				}
+				
+				System.out.println("Building combined simulation spectra plot");
+				plotSpectraDistribution(spectra, simName, gmpeMeanSpectra, title, "Period (s)", "RotD50 (g)", true, true, new Range(1d, 10d),
+						new Range(1e-3, 1e0), rsDir, siteName+"_spectra_distribution");
 				
 				System.out.println("Building animation for "+spectra.size()+" spectra!");
 				File outputFile = new File(rsDir, siteName+"_spectra_animation.gif");

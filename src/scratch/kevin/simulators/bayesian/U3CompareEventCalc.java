@@ -180,7 +180,7 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 		double[] timeDiscretizationsYears =  { 10d, 5d, 1d };
 		double minAreaFract = 0.2;
 		boolean middleSubSect = false; // else any
-		List<String[]> parentSectNames = CatalogEventCalc.getParentSectsSetOf9();
+		List<String[]> parentSectNames = CatalogEventCalc.getParentSectsCajonPass();
 		
 //		double[] minMags = { 6d, 7d };
 //		double[] timeDiscretizationsYears =  { 10d };
