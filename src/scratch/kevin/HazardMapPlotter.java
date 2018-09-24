@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,12 +11,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.dom4j.Document;
-import org.dom4j.DocumentException;
 import org.jfree.data.Range;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.siteData.SiteData;
 import org.opensha.commons.data.siteData.SiteDataValue;
 import org.opensha.commons.data.siteData.impl.CVM4i26BasinDepth;
@@ -46,12 +43,6 @@ import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
 import org.opensha.sha.calc.hazardMap.BinaryHazardCurveReader;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.calc.hazardMap.components.CalculationInputsXMLFile;
-import org.opensha.sha.calc.params.IncludeMagDistFilterParam;
-import org.opensha.sha.calc.params.MagDistCutoffParam;
-import org.opensha.sha.calc.params.MaxDistanceParam;
-import org.opensha.sha.calc.params.NonSupportedTRT_OptionsParam;
-import org.opensha.sha.calc.params.PtSrcDistanceCorrectionParam;
-import org.opensha.sha.calc.params.SetTRTinIMR_FromSourceParam;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.gui.infoTools.DisaggregationPlotViewerWindow;
@@ -297,13 +288,7 @@ public class HazardMapPlotter {
 					
 					double maxZAxis = Double.NaN;
 					
-					ParameterList disaggParams = new ParameterList();
-					disaggParams.addParameter(new MaxDistanceParam());
-					disaggParams.addParameter(new IncludeMagDistFilterParam());
-					disaggParams.addParameter(new MagDistCutoffParam());
-					disaggParams.addParameter(new SetTRTinIMR_FromSourceParam());
-					disaggParams.addParameter(new NonSupportedTRT_OptionsParam());
-					disaggParams.addParameter(new PtSrcDistanceCorrectionParam());
+					ParameterList disaggParams = DisaggregationCalculator.getDefaultParams();
 					
 					for (int i=0; i<calcProbs.length; i++) {
 						double prob = calcProbs[i];

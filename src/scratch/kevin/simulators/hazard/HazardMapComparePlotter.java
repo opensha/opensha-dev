@@ -29,7 +29,6 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.axis.TickUnit;
-import org.jfree.chart.axis.TickUnitSource;
 import org.jfree.chart.axis.TickUnits;
 import org.jfree.data.Range;
 import org.jfree.ui.TextAnchor;
@@ -66,17 +65,13 @@ import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
+import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
 import org.opensha.sha.calc.hazardMap.BinaryHazardCurveReader;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
-import org.opensha.sha.calc.params.IncludeMagDistFilterParam;
-import org.opensha.sha.calc.params.MagDistCutoffParam;
-import org.opensha.sha.calc.params.MaxDistanceParam;
-import org.opensha.sha.calc.params.NonSupportedTRT_OptionsParam;
-import org.opensha.sha.calc.params.PtSrcDistanceCorrectionParam;
-import org.opensha.sha.calc.params.SetTRTinIMR_FromSourceParam;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
@@ -101,8 +96,6 @@ import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
-import org.opensha.commons.util.MarkdownUtils;
-import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
 public class HazardMapComparePlotter {
 	
@@ -1302,13 +1295,7 @@ public class HazardMapComparePlotter {
 				logXVals.set(Math.log(pt.getX()), 1d);
 			
 //			DisaggregationCalculator disaggCalc = new DisaggregationCalculator();
-			disaggParams = new ParameterList();
-			disaggParams.addParameter(new MaxDistanceParam());
-			disaggParams.addParameter(new IncludeMagDistFilterParam());
-			disaggParams.addParameter(new MagDistCutoffParam());
-			disaggParams.addParameter(new SetTRTinIMR_FromSourceParam());
-			disaggParams.addParameter(new NonSupportedTRT_OptionsParam());
-			disaggParams.addParameter(new PtSrcDistanceCorrectionParam());
+			disaggParams = DisaggregationCalculator.getDefaultParams();
 		}
 		
 		public void calcForSite(String siteName, Location loc) {

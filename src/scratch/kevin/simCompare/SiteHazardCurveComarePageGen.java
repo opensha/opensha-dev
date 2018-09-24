@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,12 +28,6 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
-import org.opensha.sha.calc.params.IncludeMagDistFilterParam;
-import org.opensha.sha.calc.params.MagDistCutoffParam;
-import org.opensha.sha.calc.params.MaxDistanceParam;
-import org.opensha.sha.calc.params.NonSupportedTRT_OptionsParam;
-import org.opensha.sha.calc.params.PtSrcDistanceCorrectionParam;
-import org.opensha.sha.calc.params.SetTRTinIMR_FromSourceParam;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -50,9 +45,9 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	SimulationHazardCurveCalc<E> simCalc;
 	private String simName;
 	
-//	private static double[] gmpe_truncs = { 3d, 2d, 1d };
+	private static double[] gmpe_truncs = { 3d, 2d, 1d };
 //	private static double[] gmpe_fixed_sigmas = { 0.5, 0.3, 0d };
-	private static double[] gmpe_truncs = {  };
+//	private static double[] gmpe_truncs = {  };
 	private static double[] gmpe_fixed_sigmas = {  };
 	
 	private static double[] disagg_fixed_vals = { 0.1, 0.5, 1.0 };
@@ -410,7 +405,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		lines.add("");
 		if (hasSimDist) {
 			lines.add("This simulation has at least 2 simulations per rupture, so we can calculate a 'simulation' "
-					+ "mean/sigma for using in epsilon calculations. These disaggregations are labeled 'w/ sim dist for Epsilon':");
+					+ "mean/sigma for use in epsilon calculations. These disaggregations are labeled 'w/ sim dist for Epsilon':");
 			lines.add("");
 			lines.add("**Simulation Distribution Epsilon:** *epsilon = (sim_IML - sim_mean)/sim_sigma*");
 			lines.add("");
@@ -753,13 +748,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			this.deltaMag = 0.2;
 			this.numMags = (int)((8.6d - minMag)/deltaMag + 0.5);
 			
-			disaggParams = new ParameterList();
-			disaggParams.addParameter(new MaxDistanceParam());
-			disaggParams.addParameter(new IncludeMagDistFilterParam());
-			disaggParams.addParameter(new MagDistCutoffParam());
-			disaggParams.addParameter(new SetTRTinIMR_FromSourceParam());
-			disaggParams.addParameter(new NonSupportedTRT_OptionsParam());
-			disaggParams.addParameter(new PtSrcDistanceCorrectionParam());
+			disaggParams = DisaggregationCalculator.getDefaultParams();
 			
 			disaggCalc = new DisaggregationCalculator();
 			disaggCalc.setMagRange(minMag, numMags, deltaMag);
@@ -803,7 +792,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	
 	static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
 	
-	private static final String GMAPS_API_KEY = "AIzaSyCOfe8NIHLR0Z6l4KzajcDAwxOjlhLlEb4";
+	private static final String GMAPS_API_KEY = new String(Base64.getDecoder().decode("QUl6YVN5Q09mZThOSUhMUjBaNmw0S3phamNEQXd4T2psaExsRWI0"));
 	
 	private static String getMiniMap(Location loc) {
 		String locStr = loc.getLatitude()+","+loc.getLongitude();
