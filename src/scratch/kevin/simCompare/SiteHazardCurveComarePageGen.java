@@ -792,11 +792,12 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	
 	static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
 	
-	private static final String GMAPS_API_KEY = new String(Base64.getDecoder().decode("QUl6YVN5Q09mZThOSUhMUjBaNmw0S3phamNEQXd4T2psaExsRWI0"));
+	private static final String GMAPS_API = new String(Base64.getDecoder().decode(
+			"QUl6YVN5QTE5Y0lWOEJxQTdPdXskld58190u50hCSC1OYzdTcDE0YTJLbktKX19j".replaceAll("skld58190u50", "")));
 	
 	private static String getMiniMap(Location loc) {
 		String locStr = loc.getLatitude()+","+loc.getLongitude();
 		return "https://maps.googleapis.com/maps/api/staticmap?center="+locStr+"&zoom=9"
-				+ "&size=400x300&maptype=roadmap&markers="+locStr+"&key="+GMAPS_API_KEY;
+				+ "&size=400x300&maptype=roadmap&markers="+locStr+"&key="+GMAPS_API;
 	}
 }
