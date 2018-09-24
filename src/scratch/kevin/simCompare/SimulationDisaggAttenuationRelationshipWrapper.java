@@ -167,7 +167,7 @@ public class SimulationDisaggAttenuationRelationshipWrapper<E> extends Attenuati
 					numAbove++;
 			return (double)numAbove/(double)simVals.length;
 		case GMPE:
-			double gmpeMean = comp.getStdDev(site, period);
+			double gmpeMean = comp.getLogMean(site, period);
 			double gmpeStdDev = comp.getStdDev(site, period);
 			return AttenuationRelationship.getExceedProbability(gmpeMean, gmpeStdDev, iml, null, null);
 
