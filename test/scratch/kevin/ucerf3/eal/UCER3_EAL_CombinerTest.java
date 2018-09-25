@@ -21,6 +21,7 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.DataUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.nshmp2.util.FocalMech;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
@@ -58,7 +59,6 @@ import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.utils.DeformationModelFetcher;
-import scratch.UCERF3.utils.IDPairing;
 
 public class UCER3_EAL_CombinerTest {
 	

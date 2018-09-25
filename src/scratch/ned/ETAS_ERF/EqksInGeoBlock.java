@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.ListIterator;
 
+import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -19,7 +20,6 @@ import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.ArbIncrementalMagFreqDist;
 
 import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
-import scratch.UCERF3.erf.ETAS.IntegerPDF_FunctionSampler;
 
 /**
  * This class store information about all ruptures that nucleate inside this geographic block.

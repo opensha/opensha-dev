@@ -29,6 +29,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -40,7 +41,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
-import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 

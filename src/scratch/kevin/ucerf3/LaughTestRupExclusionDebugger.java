@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 
 import com.google.common.base.Joiner;
@@ -22,7 +23,6 @@ import scratch.UCERF3.inversion.laughTest.BuggyCoulombFilter;
 import scratch.UCERF3.inversion.laughTest.CoulombFilter;
 import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
 import scratch.UCERF3.utils.DeformationModelFetcher;
-import scratch.UCERF3.utils.IDPairing;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
 public class LaughTestRupExclusionDebugger {

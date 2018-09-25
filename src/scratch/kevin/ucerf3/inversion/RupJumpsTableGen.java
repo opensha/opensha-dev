@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.util.IDPairing;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
@@ -18,7 +19,6 @@ import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.inversion.InversionInputGenerator;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSystemIO;
-import scratch.UCERF3.utils.IDPairing;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoProbabilityModel;
 

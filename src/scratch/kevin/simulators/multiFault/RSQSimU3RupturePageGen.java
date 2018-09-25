@@ -35,6 +35,7 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 
@@ -56,7 +57,6 @@ import scratch.UCERF3.inversion.laughTest.MinSectsPerParentFilter.CleanupFilter;
 import scratch.UCERF3.inversion.laughTest.MinSectsPerParentFilter.ContinualFilter;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSystemIO;
-import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;

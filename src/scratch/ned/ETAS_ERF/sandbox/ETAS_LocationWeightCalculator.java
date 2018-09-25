@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -12,7 +13,6 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.GraphWindow;
 
-import scratch.UCERF3.erf.ETAS.IntegerPDF_FunctionSampler;
 import scratch.ned.ETAS_ERF.EqksInGeoBlock;
 
 public class ETAS_LocationWeightCalculator {

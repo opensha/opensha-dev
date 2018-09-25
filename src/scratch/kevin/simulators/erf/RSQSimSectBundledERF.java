@@ -39,6 +39,7 @@ import org.opensha.commons.param.impl.EnumParameter;
 import org.opensha.commons.param.impl.FileParameter;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
@@ -69,7 +70,6 @@ import com.google.common.collect.Range;
 
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;

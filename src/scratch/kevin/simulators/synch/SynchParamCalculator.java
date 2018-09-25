@@ -37,6 +37,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.threads.Task;
 import org.opensha.commons.util.threads.ThreadedTaskComputer;
@@ -44,7 +45,6 @@ import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.iden.ElementMagRangeDescription;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 
-import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.DistSpeedTest;
 import scratch.kevin.markov.EmpiricalMarkovChain;
 import scratch.kevin.markov.IndicesKey;

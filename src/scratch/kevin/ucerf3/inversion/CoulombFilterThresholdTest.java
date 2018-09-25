@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 
 import scratch.UCERF3.FaultSystemRupSet;
@@ -17,7 +18,6 @@ import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester.TestType;
 import scratch.UCERF3.inversion.laughTest.CoulombFilter;
 import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
-import scratch.UCERF3.utils.IDPairing;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;

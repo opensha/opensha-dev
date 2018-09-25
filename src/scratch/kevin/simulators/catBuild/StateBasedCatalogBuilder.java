@@ -20,13 +20,13 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.iden.ElementMagRangeDescription;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
 
-import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.markov.EmpiricalMarkovChain;
 import scratch.kevin.markov.IndicesKey;
 import scratch.kevin.markov.PossibleStates;

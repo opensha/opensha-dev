@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.exceptions.GMT_MapException;
@@ -22,7 +23,6 @@ import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
-import scratch.UCERF3.erf.ETAS.IntegerPDF_FunctionSampler;
 import scratch.UCERF3.erf.UCERF2_Mapped.UCERF2_FM2pt1_FaultSysSolTimeDepERF;
 
 public class ERF_RatesAtPointsInSpace {

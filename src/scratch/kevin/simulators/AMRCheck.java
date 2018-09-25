@@ -17,6 +17,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -27,7 +28,6 @@ import org.opensha.sha.simulators.iden.QuietPeriodIdenMatcher;
 import org.opensha.sha.simulators.parsers.EQSIMv06FileReader;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
 
-import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.simulators.erf.SubSectionBiulder;
 
 import com.google.common.base.Preconditions;

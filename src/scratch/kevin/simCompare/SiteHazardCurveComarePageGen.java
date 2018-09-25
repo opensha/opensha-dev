@@ -715,9 +715,9 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	private synchronized static void checkSleepDisagg() {
 		long curTime = System.currentTimeMillis();
 		long diff = curTime - prevDisaggMillis;
-		if (diff < 1000) {
+		if (diff < 100) {
 			try {
-				long sleepTime = 1000 - diff;
+				long sleepTime = 100 - diff;
 				System.out.println("Sleeping for "+sleepTime+" milliseconds");
 				Thread.sleep(sleepTime);
 			} catch (InterruptedException e) {

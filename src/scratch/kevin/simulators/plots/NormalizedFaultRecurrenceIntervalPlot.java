@@ -24,6 +24,7 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.calc.recurInterval.BPT_DistCalc;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -35,7 +36,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
 
-import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 
 public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {

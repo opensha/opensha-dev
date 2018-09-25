@@ -38,9 +38,10 @@ import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import com.google.common.base.Preconditions;
 
-import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 

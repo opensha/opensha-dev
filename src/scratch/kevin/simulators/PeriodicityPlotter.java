@@ -34,6 +34,7 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -45,7 +46,6 @@ import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
 import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import scratch.UCERF3.enumTreeBranches.MaxMagOffFault;
-import scratch.UCERF3.utils.IDPairing;
 import scratch.kevin.simulators.catBuild.RandomCatalogBuilder;
 import scratch.kevin.simulators.dists.RandomDistType;
 

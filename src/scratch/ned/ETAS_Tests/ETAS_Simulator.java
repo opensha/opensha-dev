@@ -15,6 +15,7 @@ import org.opensha.commons.data.function.AbstractXY_DataSet;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
@@ -51,7 +52,6 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
-import scratch.UCERF3.erf.ETAS.IntegerPDF_FunctionSampler;
 import scratch.UCERF3.utils.ModUCERF2.ModMeanUCERF2;
 
 public class ETAS_Simulator {

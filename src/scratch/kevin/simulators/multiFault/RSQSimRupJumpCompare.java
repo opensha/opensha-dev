@@ -27,6 +27,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -48,7 +49,6 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSystemIO;
-import scratch.UCERF3.utils.IDPairing;
 
 public class RSQSimRupJumpCompare {
 	

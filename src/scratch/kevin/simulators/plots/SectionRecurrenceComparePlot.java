@@ -24,6 +24,7 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -38,7 +39,6 @@ import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
-import scratch.UCERF3.utils.IDPairing;
 
 public class SectionRecurrenceComparePlot extends AbstractPlot {
 	

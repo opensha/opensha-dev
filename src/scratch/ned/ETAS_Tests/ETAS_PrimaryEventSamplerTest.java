@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.xyz.ArbDiscrGeoDataSet;
 import org.opensha.commons.data.xyz.GeoDataSet;
@@ -30,8 +31,6 @@ import org.opensha.sha.faultSurface.AbstractEvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.sha.magdist.ArbIncrementalMagFreqDist;
-
-import scratch.UCERF3.erf.ETAS.IntegerPDF_FunctionSampler;
 
 /**
  * This class allows one to randomly sample which block a primary aftershock nucleates in 
