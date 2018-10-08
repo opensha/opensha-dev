@@ -1,12 +1,15 @@
 package scratch.kevin.simulators.plots;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
+import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -62,6 +65,12 @@ public class MFDPlot extends AbstractPlot {
 		if (minMag == null)
 			minMag = min_mag_default;
 		return (int)((max_mag_default - minMag)/delta_default);
+	}
+	
+	static IncrementalMagFreqDist buildIncrementalFunc(double minMag, double delta) {
+		minMag = Math.floor(minMag/delta)*delta;
+		int num = calcNum(minMag);
+		return new IncrementalMagFreqDist(minMag+0.5*delta, num, delta);
 	}
 	
 	public MFDPlot(Double minMag, int num, double delta, Collection<SimulatorElement> elementsToInclude) {
@@ -253,6 +262,59 @@ public class MFDPlot extends AbstractPlot {
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 		gp.saveAsTXT(new File(outputDir, prefix+".txt").getAbsolutePath());
+	}
+	
+	public static void plotMultiMFDs(Collection<DiscretizedFunc> mfds, DiscretizedFunc baselineMFD, File outputDir, String prefix)
+			throws IOException {
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		if (baselineMFD != null) {
+			funcs.add(baselineMFD);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		}
+		
+		for (DiscretizedFunc mfd : mfds) {
+			if (mfd == baselineMFD)
+				continue;
+			funcs.add(mfd);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+		}
+		
+		if (baselineMFD != null && baselineMFD.getName() != null)
+			funcs.get(funcs.size()-1).setName((funcs.size()-1)+" variations");
+		
+		String xAxisLabel = "Magnitude";
+		String yAxisLabel = "Cumulative Rate (1/yr)";
+		
+		PlotSpec plot = new PlotSpec(funcs, chars, "MFD Comparison", xAxisLabel, yAxisLabel);
+		plot.setLegendVisible(baselineMFD != null && baselineMFD.getName() != null);
+		
+		double minY = Double.POSITIVE_INFINITY;
+		double maxY = 0d;
+		double minX = Double.POSITIVE_INFINITY;
+		double maxX = 0d;
+		for (DiscretizedFunc func : funcs) {
+			minY = Math.min(minY, AbstractPlot.minNonZero(func));
+			maxY = Math.max(maxY, func.getMaxY());
+			minX = Math.min(minX, func.getMinX());
+			for (Point2D pt : func)
+				if (pt.getY() > 0)
+					maxX = Math.max(maxX, pt.getX());
+		}
+		Range yRange;
+		if (!Doubles.isFinite(minY))
+			yRange = new Range(1d, 10d);
+		else
+			yRange = AbstractPlot.calcEncompassingLog10Range(minY, maxY);
+		Range xRange = new Range(minX, maxX+0.1);
+		
+		HeadlessGraphPanel gp = buildGraphPanel();
+		gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
+		gp.drawGraphPanel(plot, false, true, xRange, yRange);
+		gp.getChartPanel().setSize(650, 600);
+		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
+		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 	}
 
 }

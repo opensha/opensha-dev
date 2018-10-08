@@ -17,6 +17,7 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
 import org.jfree.ui.TextAnchor;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
@@ -51,7 +52,7 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 	private Map<Integer, Double> subSectAreas;
 	private int minElemSectID;
 	
-	private Table<Integer, Double, List<Double>> idToTimesTable;;
+	private Table<Integer, Double, List<Double>> idToTimesTable;
 	
 	public NormalizedFaultRecurrenceIntervalPlot(List<SimulatorElement> elems, double... minMags) {
 		this(elems, SectType.ELEMENT, null, 0d, minMags);
@@ -132,6 +133,14 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 		
 		String prefix = getOutputPrefix();
 		
+		CSVFile<String> csv = new CSVFile<>(true);
+		List<String> header = new ArrayList<>();
+		header.add("Min Mag");
+		header.add("Mean");
+		header.add("Standard Deviation");
+		header.add("COV");
+		csv.addLine(header);
+		
 		for (double minMag : minMags) {
 			
 			HistogramFunction hist = HistogramFunction.getEncompassingHistogram(0d, 4d, 0.1);
@@ -174,6 +183,12 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 //			NormalDistribution logNormal = new NormalDistribution(logMean, logSD);
 //			double cov = logSD / logMean;
 			double cov = sd / mean;
+			List<String> line = new ArrayList<>();
+			line.add((float)minMag+"");
+			line.add((float)mean+"");
+			line.add((float)sd+"");
+			line.add((float)cov+"");
+			csv.addLine(line);
 			LogNormalDistribution logNormal = new LogNormalDistribution(Math.log(mean), cov);
 			
 			System.out.println("COV: "+cov);
@@ -239,6 +254,7 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 			gp.saveAsPNG(new File(getOutputDir(), myPrefix+".png").getAbsolutePath());
 			gp.saveAsPDF(new File(getOutputDir(), myPrefix+".pdf").getAbsolutePath());
 		}
+		csv.writeToFile(new File(getOutputDir(), prefix+".csv"));
 	}
 
 	@Override

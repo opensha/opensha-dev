@@ -1,5 +1,7 @@
 package scratch.kevin.simulators;
 
+import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -23,8 +25,18 @@ import java.util.Map;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
+import org.jfree.chart.plot.DatasetRenderingOrder;
+import org.jfree.data.Range;
+import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotPreferences;
+import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.metadata.XMLSaveable;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -546,6 +558,10 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public void writeMarkdownSummary(File dir, boolean plots, boolean replot) throws IOException {
+		writeMarkdownSummary(dir, plots, replot, 6d);
+	}
+	
+	public void writeMarkdownSummary(File dir, boolean plots, boolean replot, double plotMinMag) throws IOException {
 		List<String> lines = new LinkedList<>();
 		String topLink = "*[(top)](#"+MarkdownUtils.getAnchorName(getName())+")*";
 		lines.add("# "+getName());
@@ -783,7 +799,7 @@ public class RSQSimCatalog implements XMLSaveable {
 				skipYears = 1000;
 			else
 				skipYears = 0;
-			lines.addAll(writeStandardDiagnosticPlots(resourcesDir, skipYears, 6d, replot, topLink));
+			lines.addAll(writeStandardDiagnosticPlots(resourcesDir, skipYears, plotMinMag, replot, topLink));
 		}
 		
 		File inputFile = findParamFile();
@@ -850,7 +866,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event), getSlipVelocities());
 	}
 
-	private static GregorianCalendar cal(int year, int month, int day) {
+	static GregorianCalendar cal(int year, int month, int day) {
 		return new GregorianCalendar(year, month-1, day);
 	}
 	
@@ -1093,7 +1109,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add("![MFD]("+outputDir.getName()+"/mfd.png)");
 		
 		if (replot || !new File(outputDir, "mag_area_hist2D.png").exists()) {
-			MagAreaScalingPlot magAreaPlot = new MagAreaScalingPlot();
+			MagAreaScalingPlot magAreaPlot = new MagAreaScalingPlot(false);
 			magAreaPlot.initialize(getName(), outputDir, "mag_area");
 			plots.add(magAreaPlot);
 		}
@@ -1105,6 +1121,22 @@ public class RSQSimCatalog implements XMLSaveable {
 		table.initNewLine();
 		table.addColumn("![MA Scatter]("+outputDir.getName()+"/mag_area.png)");
 		table.addColumn("![MA Hist]("+outputDir.getName()+"/mag_area_hist2D.png)");
+		table.finalizeLine();
+		lines.addAll(table.build());
+		
+		if (replot || !new File(outputDir, "slip_area_hist2D.png").exists()) {
+			MagAreaScalingPlot magAreaPlot = new MagAreaScalingPlot(true);
+			magAreaPlot.initialize(getName(), outputDir, "slip_area");
+			plots.add(magAreaPlot);
+		}
+		lines.add("### Slip-Area Plots");
+		lines.add(topLink);
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("Scatter", "2-D Hist");
+		table.initNewLine();
+		table.addColumn("![Slip Area Scatter]("+outputDir.getName()+"/slip_area.png)");
+		table.addColumn("![Slip Area Hist]("+outputDir.getName()+"/slip_area_hist2D.png)");
 		table.finalizeLine();
 		lines.addAll(table.build());
 		
@@ -1265,14 +1297,17 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		Loader l = loader().minMag(minMag).skipYears(skipYears);
 		
+		System.out.println("Iterating through catalog and generating "+plots.size()+" plots");
 		Iterable<RSQSimEvent> iterable = l.iterable();
 		
 		for (RSQSimEvent e : iterable)
 			for (AbstractPlot p : plots)
 				p.processEvent(e);
 		
+		System.out.println("Finalizing plots");
 		for (AbstractPlot p : plots)
 			p.finalizePlot();
+		System.out.println("Done with plots");
 		
 		return lines;
 	}
@@ -1355,6 +1390,11 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public static void writeCatalogsIndex(File dir) throws IOException, DocumentException {
+		writeCatalogsIndex(dir, false, null);
+	}
+	
+	public static void writeCatalogsIndex(File dir, boolean plotMulti, String baselineModelDirName)
+			throws IOException, DocumentException {
 		// sort by date, newest first
 		List<Long> times = new ArrayList<>();
 		List<RSQSimCatalog> catalogs = new ArrayList<>();
@@ -1398,11 +1438,171 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		
 		List<String> lines = new LinkedList<>();
-		lines.add("# RSQSim Catalog Analysis");
+		lines.add("# RSQSim Catalogs Analysis");
 		lines.add("");
 		lines.addAll(table.build());
 		
+		if (plotMulti && catalogs.size() > 1)
+			lines.addAll(writeMultiCatalogPlots(dir, catalogs, baselineModelDirName));
+		
 		MarkdownUtils.writeReadmeAndHTML(lines, dir);
+	}
+	
+	private static List<String> writeMultiCatalogPlots(File dir, List<RSQSimCatalog> catalogs, String baselineModelDirName)
+			throws IOException {
+		RSQSimCatalog baselineCatalog = null;
+		if (baselineModelDirName != null) {
+			for (RSQSimCatalog catalog : catalogs) {
+				if (catalog.getCatalogDir().getName().equals(baselineModelDirName))
+					baselineCatalog = catalog;
+			}
+		}
+		
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(20);
+		plotPrefs.setAxisLabelFontSize(22);
+		plotPrefs.setPlotLabelFontSize(24);
+		plotPrefs.setLegendFontSize(22);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+		
+		File resourcesDir = new File(dir, "resources");
+		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
+		
+		System.out.println("Writing multi-catalog plots...");
+		ArrayList<String> lines = new ArrayList<>();
+		lines.add("## Multi-Catalog Plots");
+		lines.add("");
+		if (baselineCatalog != null) {
+			lines.add("Baseline catalog: ["+baselineCatalog.getName()+"]("+baselineCatalog.dir.getName()
+				+"#"+MarkdownUtils.getAnchorName(baselineCatalog.getName())+")");
+			lines.add("");
+		}
+		
+		// MFD plot
+		Map<RSQSimCatalog, DiscretizedFunc> mfdMap = new HashMap<>();
+		
+		for (RSQSimCatalog catalog : catalogs) {
+			File catalogDir = catalog.getCatalogDir();
+			File csvFile = new File(catalogDir, "resources/mfd.csv");
+			if (csvFile.exists()) {
+				CSVFile<String> csv = CSVFile.readFile(csvFile, true);
+				DiscretizedFunc mfd = new ArbitrarilyDiscretizedFunc();
+				for (int row=1; row<csv.getNumRows(); row++) {
+					double mag = Double.parseDouble(csv.get(row, 0));
+					double cumRate = Double.parseDouble(csv.get(row, 2));
+					mfd.set(mag, cumRate);
+				}
+				mfdMap.put(catalog, mfd);
+			}
+		}
+		
+		if (mfdMap.size() > 1) {
+			boolean hasBaseline = baselineCatalog != null && mfdMap.get(baselineCatalog) != null;
+			
+			DiscretizedFunc baselineFunc = null;
+			if (hasBaseline) {
+				baselineFunc = mfdMap.get(baselineCatalog);
+				baselineFunc.setName(baselineCatalog.getName());
+			}
+			
+			MFDPlot.plotMultiMFDs(mfdMap.values(), baselineFunc, resourcesDir, "mfds");
+			
+			lines.add("### MFDs");
+			lines.add("");
+			lines.add("![MFDs]("+resourcesDir.getName()+"/mfds.png)");
+		}
+		
+		// Mag-Area
+		Map<RSQSimCatalog, CSVFile<String>> maMap = new HashMap<>();
+
+		for (RSQSimCatalog catalog : catalogs) {
+			File catalogDir = catalog.getCatalogDir();
+			File csvFile = new File(catalogDir, "resources/mag_area.csv");
+			if (csvFile.exists()) {
+				CSVFile<String> csv = CSVFile.readFile(csvFile, true);
+				maMap.put(catalog, csv);
+			}
+		}
+
+		if (maMap.size() > 1) {
+			boolean hasBaseline = baselineCatalog != null && maMap.get(baselineCatalog) != null;
+
+			CSVFile<String> baselineCSV = null;
+			String baselineName = null;
+			if (hasBaseline) {
+				baselineCSV = maMap.get(baselineCatalog);
+				baselineName = baselineCatalog.getName();
+			}
+			
+			MagAreaScalingPlot.plotMultiMagArea(maMap.values(), baselineCSV, baselineName, false, true,
+					new double[] {0.025, 0.975}, resourcesDir, "mag_areas");
+
+			lines.add("### Magnitude-Area Plots");
+			lines.add("");
+			lines.add("![Mag Areas]("+resourcesDir.getName()+"/mag_areas.png)");
+		}
+		
+		// Rupture Velocity
+		Map<RSQSimCatalog, CSVFile<String>> magVelMap = new HashMap<>();
+
+		for (RSQSimCatalog catalog : catalogs) {
+			File catalogDir = catalog.getCatalogDir();
+			File csvFile = new File(catalogDir, "resources/rupture_velocity_scatter_fractiles.csv");
+			if (csvFile.exists()) {
+				CSVFile<String> csv = CSVFile.readFile(csvFile, true);
+				magVelMap.put(catalog, csv);
+			}
+		}
+
+		if (magVelMap.size() > 1) {
+			boolean hasBaseline = baselineCatalog != null && magVelMap.get(baselineCatalog) != null;
+
+			CSVFile<String> baselineCSV = null;
+			String baselineName = null;
+			if (hasBaseline) {
+				baselineCSV = magVelMap.get(baselineCatalog);
+				baselineName = baselineCatalog.getName();
+			}
+
+			RuptureVelocityPlot.plotMultiMagVels(magVelMap.values(), baselineCSV, baselineName, false, false,
+					new double[] {0.025, 0.975}, resourcesDir, "mag_velocities");
+
+			lines.add("### Rupture Velocity vs Magnitude");
+			lines.add("");
+			lines.add("![Velocities]("+resourcesDir.getName()+"/mag_velocities.png)");
+		}
+		
+		Map<RSQSimCatalog, CSVFile<String>> distVelMap = new HashMap<>();
+
+		for (RSQSimCatalog catalog : catalogs) {
+			File catalogDir = catalog.getCatalogDir();
+			File csvFile = new File(catalogDir, "resources/rupture_velocity_vs_dist.csv");
+			if (csvFile.exists()) {
+				CSVFile<String> csv = CSVFile.readFile(csvFile, true);
+				distVelMap.put(catalog, csv);
+			}
+		}
+
+		if (distVelMap.size() > 1) {
+			boolean hasBaseline = baselineCatalog != null && distVelMap.get(baselineCatalog) != null;
+
+			CSVFile<String> baselineCSV = null;
+			String baselineName = null;
+			if (hasBaseline) {
+				baselineCSV = distVelMap.get(baselineCatalog);
+				baselineName = baselineCatalog.getName();
+			}
+
+			RuptureVelocityPlot.plotMultiDistVels(distVelMap.values(), baselineCSV, baselineName, resourcesDir, "dist_velocities");
+
+			lines.add("### Rupture Velocity vs Distance");
+			lines.add("");
+			lines.add("![Velocities]("+resourcesDir.getName()+"/dist_velocities.png)");
+		}
+		
+		System.out.println("DONE");
+		
+		return lines;
 	}
 	
 	static class CatEnumDateComparator implements Comparator<Catalogs> {
@@ -1416,6 +1616,10 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public static void main(String args[]) throws IOException, DocumentException {
+		System.out.println("Plotting param sweep...");
+		writeCatalogsIndex(new File("/home/kevin/git/rsqsim-analysis/2018_param_sweep"), true, "defaultModel");
+		System.exit(0);
+		
 		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
 		boolean overwriteIndividual = true;
@@ -1425,8 +1629,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
-//		GregorianCalendar minDate = cal(2000, 1, 1);
-		GregorianCalendar minDate = cal(2018, 8, 20);
+		GregorianCalendar minDate = cal(2000, 1, 1);
+//		GregorianCalendar minDate = cal(2018, 8, 23);
 		
 		for (Catalogs cat : cats) {
 //		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {

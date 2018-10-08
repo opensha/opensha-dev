@@ -208,7 +208,7 @@ public class RSQSimBatchPlotGen {
 			@Override
 			protected List<? extends AbstractPlot> buildPlots(String catalogName, File outputDir, Double minMag,
 					FaultSystemSolution u3Sol, String arg, ElementBundles elemBundle) {
-				MagAreaScalingPlot plot = new MagAreaScalingPlot();
+				MagAreaScalingPlot plot = new MagAreaScalingPlot(false);
 				plot.initialize(catalogName, outputDir, "mag_area_scaling");
 				return Lists.newArrayList(plot);
 			}
