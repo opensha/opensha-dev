@@ -16,8 +16,9 @@ public class ReturnPeriodUtils {
 		Preconditions.checkArgument(duration1 >= 0 && Double.isFinite(duration1));
 		Preconditions.checkArgument(duration2 >= 0 && Double.isFinite(duration2));
 		double p1star = calcProbStar(prob1);
-		
+//		System.out.println("p1star="+(float)p1star);
 		double p2star = p1star*duration2/duration1;
+//		System.out.println("p2star="+(float)p2star);
 		return calcProbFromPorbStar(p2star);
 	}
 	
@@ -49,8 +50,8 @@ public class ReturnPeriodUtils {
 	}
 	
 	public static void main(String[] args) {
-		System.out.println(calcExceedanceProb(0.02, 50, 1d));
-		System.exit(0);
+//		System.out.println(calcExceedanceProb(0.02, 50, 1d));
+//		System.exit(0);
 //		double r1 = 0.02;
 //		double t1 = 50;
 //		
@@ -64,12 +65,12 @@ public class ReturnPeriodUtils {
 //		}
 		
 		System.out.println("Return periods for probability levels");
-		System.out.println("\t2% in 50:\t"+(float)calcReturnPeriod(0.02, 50d));
-		System.out.println("\t\tVerificiation: "
-				+(float)calcExceedanceProb(0.5, calcDurationWithExceedanceProb(0.5, calcReturnPeriod(0.02, 50d)), 50d));
-		System.out.println("\t10% in 50:\t"+(float)calcReturnPeriod(0.1, 50d));
-		System.out.println("\t\tVerificiation: "
-				+(float)calcExceedanceProb(0.5, calcDurationWithExceedanceProb(0.5, calcReturnPeriod(0.1, 50d)), 50d));
+		for (double p : new double[] {0.2, 0.1, 0.05, 0.02, 0.01}) {
+			System.out.println("\t"+(float)(p*100d)+"% in 50:\t"+(float)calcReturnPeriod(p, 50d));
+			System.out.println("\t\tVerificiation: "
+					+(float)calcExceedanceProb(0.5, calcDurationWithExceedanceProb(0.5, calcReturnPeriod(p, 50d)), 50d));
+			System.out.println("\t\tProb for 1yr curves: "+(float)calcExceedanceProb(p, 50d, 1d));
+		}
 		System.out.println();
 		System.out.println("duration with p=0.5 for 2% in 50");
 		System.out.println(calcDurationWithExceedanceProb(0.5, 0.02, 50));

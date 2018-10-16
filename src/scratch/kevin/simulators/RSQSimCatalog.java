@@ -300,6 +300,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	private int numEvents = -1;
 	private double durationYears = Double.NaN;
 	private Map<String, String> params;
+	private Boolean variableSlipSpeed = null;
 	
 	private List<SimulatorElement> elements;
 	private RSQSimStateTransitionFileReader transReader;
@@ -377,6 +378,22 @@ public class RSQSimCatalog implements XMLSaveable {
 		return dm;
 	}
 	
+	public synchronized boolean isVariableSlipSpeed() throws IOException {
+		if (variableSlipSpeed != null)
+			return variableSlipSpeed;
+		Map<String, String> params = getParams();
+		
+		String variableSlipSpeedStr = params.get("variableSlipSpeed");
+		if (variableSlipSpeedStr  == null) {
+			variableSlipSpeed = false;
+		} else {
+			int variableSlipSpeedInt = Integer.parseInt(variableSlipSpeedStr);
+			variableSlipSpeed = variableSlipSpeedInt > 0;
+		}
+		
+		return variableSlipSpeed;
+	}
+	
 	public synchronized Map<Integer, Double> getSlipVelocities() throws IOException {
 		if (slipVels == null) {
 			if (Doubles.isFinite(constSlipVel) && constSlipVel > 0) {
@@ -441,13 +458,15 @@ public class RSQSimCatalog implements XMLSaveable {
 		try {
 			Map<Integer, Double> slipVels = getSlipVelocities();
 			String velStr;
-			if (Double.isFinite(constSlipVel)) {
+			if (isVariableSlipSpeed()) {
+				velStr = "Fully Variable";
+			} else if (Double.isFinite(constSlipVel)) {
 				velStr = (float)constSlipVel+" m/s";
 			} else {
 				MinMaxAveTracker velTrack = new MinMaxAveTracker();
 				for (Double vel : slipVels.values())
 					velTrack.addValue(vel);
-				velStr = "Variable, range=["+(float)velTrack.getMin()+" "+(float)velTrack.getMax()+"], mean="+(float)velTrack.getAverage();
+				velStr = "Patch Variable, range=["+(float)velTrack.getMin()+" "+(float)velTrack.getMax()+"], mean="+(float)velTrack.getAverage();
 			}
 			builder.addLine("**Slip Velocity**", velStr);
 		} catch (IOException e) {
@@ -845,10 +864,10 @@ public class RSQSimCatalog implements XMLSaveable {
 		return new Loader(getElements(), getCatalogDir());
 	}
 	
-	private static File getTransFile(File dir) throws FileNotFoundException {
+	private static File getTransFile(File dir, boolean transV) throws FileNotFoundException {
 		for (File file : dir.listFiles()) {
 			String name = file.getName().toLowerCase();
-			if (name.startsWith("trans.") && name.endsWith(".out"))
+			if ((transV && name.startsWith("transv.") || !transV && name.startsWith("trans.")) && name.endsWith(".out"))
 				return file;
 		}
 		throw new FileNotFoundException("No transitions file found in "+dir.getAbsolutePath());
@@ -856,14 +875,14 @@ public class RSQSimCatalog implements XMLSaveable {
 	
 	public synchronized RSQSimStateTransitionFileReader getTransitions() throws IOException {
 		if (transReader == null) {
-			File transFile = getTransFile(getCatalogDir());
-			transReader = new RSQSimStateTransitionFileReader(transFile, getElements());
+			File transFile = getTransFile(getCatalogDir(), isVariableSlipSpeed());
+			transReader = new RSQSimStateTransitionFileReader(transFile, getElements(), isVariableSlipSpeed());
 		}
 		return transReader;
 	}
 	
 	public synchronized RSQSimEventSlipTimeFunc getSlipTimeFunc(RSQSimEvent event) throws IOException {
-		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event), getSlipVelocities());
+		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event), getSlipVelocities(), isVariableSlipSpeed());
 	}
 
 	static GregorianCalendar cal(int year, int month, int day) {
