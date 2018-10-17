@@ -59,7 +59,7 @@ import com.google.common.io.Files;
  * @version $Id:$
  */
 public class UC33_NicoUtils {
-	private static Splitter SPLIT = Splitter.on(CharMatcher.WHITESPACE).omitEmptyStrings();
+	private static Splitter SPLIT = Splitter.on(CharMatcher.whitespace()).omitEmptyStrings();
 	private static Joiner JOIN = Joiner.on(',');
 	private static final String LF = IOUtils.LINE_SEPARATOR;
 	private static Set<NEHRP_TestCity> cities = NEHRP_TestCity.getCA();

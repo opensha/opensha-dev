@@ -120,7 +120,7 @@ public class RTGM_Container implements Iterable<Location> {
 			private RTGM_Container rc;
 			
 			RTGM_FileProcessor(GriddedRegion region) {
-				split = Splitter.on(CharMatcher.WHITESPACE).omitEmptyStrings();
+				split = Splitter.on(CharMatcher.whitespace()).omitEmptyStrings();
 				rc = new RTGM_Container();
 				rc.region = region;
 				rc.rtgm1hz = Maps.newHashMapWithExpectedSize(region.getNodeCount());

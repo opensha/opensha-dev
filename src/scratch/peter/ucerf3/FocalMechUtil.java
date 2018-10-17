@@ -29,7 +29,7 @@ public class FocalMechUtil {
 	// static String fileOut = "FocalMechs_SDR_DJ_2-14-2012";
 
 	static Joiner join = Joiner.on(" ");
-	static Splitter split = Splitter.on(CharMatcher.WHITESPACE).omitEmptyStrings();
+	static Splitter split = Splitter.on(CharMatcher.whitespace()).omitEmptyStrings();
 
 	public static void main(String[] args) {
 		List<String> lines = null;
