@@ -1409,11 +1409,11 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public static void writeCatalogsIndex(File dir) throws IOException, DocumentException {
-		writeCatalogsIndex(dir, false, null);
+		writeCatalogsIndex(dir, false, null, null);
 	}
 	
-	public static void writeCatalogsIndex(File dir, boolean plotMulti, String baselineModelDirName)
-			throws IOException, DocumentException {
+	public static void writeCatalogsIndex(File dir, boolean plotMulti, String baselineModelDirName,
+			Map<String, List<String>> variationGroupings) throws IOException, DocumentException {
 		// sort by date, newest first
 		List<Long> times = new ArrayList<>();
 		List<RSQSimCatalog> catalogs = new ArrayList<>();
@@ -1462,18 +1462,29 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.addAll(table.build());
 		
 		if (plotMulti && catalogs.size() > 1)
-			lines.addAll(writeMultiCatalogPlots(dir, catalogs, baselineModelDirName));
+			lines.addAll(writeMultiCatalogPlots(dir, catalogs, baselineModelDirName, variationGroupings));
 		
 		MarkdownUtils.writeReadmeAndHTML(lines, dir);
 	}
 	
-	private static List<String> writeMultiCatalogPlots(File dir, List<RSQSimCatalog> catalogs, String baselineModelDirName)
-			throws IOException {
+	private static List<String> writeMultiCatalogPlots(File dir, List<RSQSimCatalog> catalogs, String baselineModelDirName,
+			Map<String, List<String>> variationGroupings) throws IOException {
+		Map<String, RSQSimCatalog> nameToCatMap = new HashMap<>();
+		for (RSQSimCatalog catalog : catalogs)
+			nameToCatMap.put(catalog.getName(), catalog);
+		
 		RSQSimCatalog baselineCatalog = null;
-		if (baselineModelDirName != null) {
-			for (RSQSimCatalog catalog : catalogs) {
-				if (catalog.getCatalogDir().getName().equals(baselineModelDirName))
-					baselineCatalog = catalog;
+		if (baselineModelDirName != null)
+			baselineCatalog = nameToCatMap.get(baselineModelDirName);
+		
+		Map<String, List<RSQSimCatalog>> variationCatalogGroupoings = null;
+		if (variationGroupings != null) {
+			variationCatalogGroupoings = new HashMap<>();
+			for (String cat : variationGroupings.keySet()) {
+				List<RSQSimCatalog> catalogsGroup = new ArrayList<>();
+				for (String dirName : variationGroupings.get(cat))
+					catalogsGroup.add(nameToCatMap.get(dirName));
+				variationCatalogGroupoings.put(cat, catalogsGroup);
 			}
 		}
 		
@@ -1491,13 +1502,16 @@ public class RSQSimCatalog implements XMLSaveable {
 		ArrayList<String> lines = new ArrayList<>();
 		lines.add("## Multi-Catalog Plots");
 		lines.add("");
+		int tocIndex = lines.size();
+		lines.add("");
+		String topLink = "*[(top)](#"+MarkdownUtils.getAnchorName("Multi-Catalog Plots")+")*";
 		if (baselineCatalog != null) {
 			lines.add("Baseline catalog: ["+baselineCatalog.getName()+"]("+baselineCatalog.dir.getName()
 				+"#"+MarkdownUtils.getAnchorName(baselineCatalog.getName())+")");
 			lines.add("");
 		}
 		
-		// MFD plot
+		// MFD plots
 		Map<RSQSimCatalog, DiscretizedFunc> mfdMap = new HashMap<>();
 		
 		for (RSQSimCatalog catalog : catalogs) {
@@ -1527,8 +1541,21 @@ public class RSQSimCatalog implements XMLSaveable {
 			MFDPlot.plotMultiMFDs(mfdMap.values(), baselineFunc, resourcesDir, "mfds");
 			
 			lines.add("### MFDs");
-			lines.add("");
+			lines.add(topLink); lines.add("");
 			lines.add("![MFDs]("+resourcesDir.getName()+"/mfds.png)");
+		}
+		
+		if (variationGroupings != null) {
+			if (mfdMap.isEmpty()) {
+				lines.add("### MFDs");
+				lines.add(topLink); lines.add("");
+			} else {
+				lines.add("");
+				lines.add("#### MFD Variations Table");
+				lines.add("");
+			}
+			
+			lines.addAll(buildVariationTable(dir, variationCatalogGroupoings, "mfd.png", 4));
 		}
 		
 		// Mag-Area
@@ -1557,8 +1584,21 @@ public class RSQSimCatalog implements XMLSaveable {
 					new double[] {0.025, 0.975}, resourcesDir, "mag_areas");
 
 			lines.add("### Magnitude-Area Plots");
-			lines.add("");
+			lines.add(topLink); lines.add("");
 			lines.add("![Mag Areas]("+resourcesDir.getName()+"/mag_areas.png)");
+		}
+		
+		if (variationGroupings != null) {
+			if (maMap.isEmpty()) {
+				lines.add("### Magnitude-Area Plots");
+				lines.add(topLink); lines.add("");
+			} else {
+				lines.add("");
+				lines.add("#### M-A Variations Table");
+				lines.add("");
+			}
+			
+			lines.addAll(buildVariationTable(dir, variationCatalogGroupoings, "mag_area_hist2D.png", 4));
 		}
 		
 		// Rupture Velocity
@@ -1587,8 +1627,21 @@ public class RSQSimCatalog implements XMLSaveable {
 					new double[] {0.025, 0.975}, resourcesDir, "mag_velocities");
 
 			lines.add("### Rupture Velocity vs Magnitude");
-			lines.add("");
+			lines.add(topLink); lines.add("");
 			lines.add("![Velocities]("+resourcesDir.getName()+"/mag_velocities.png)");
+		}
+		
+		if (variationGroupings != null) {
+			if (magVelMap.isEmpty()) {
+				lines.add("### Rupture Velocity vs Magnitude");
+				lines.add(topLink); lines.add("");
+			} else {
+				lines.add("");
+				lines.add("#### Rupture Velocity vs Magnitude Variations Table");
+				lines.add("");
+			}
+			
+			lines.addAll(buildVariationTable(dir, variationCatalogGroupoings, "rupture_velocity_scatter.png", 4));
 		}
 		
 		Map<RSQSimCatalog, CSVFile<String>> distVelMap = new HashMap<>();
@@ -1615,11 +1668,79 @@ public class RSQSimCatalog implements XMLSaveable {
 			RuptureVelocityPlot.plotMultiDistVels(distVelMap.values(), baselineCSV, baselineName, resourcesDir, "dist_velocities");
 
 			lines.add("### Rupture Velocity vs Distance");
-			lines.add("");
+			lines.add(topLink); lines.add("");
 			lines.add("![Velocities]("+resourcesDir.getName()+"/dist_velocities.png)");
 		}
 		
+		if (variationGroupings != null) {
+			if (distVelMap.isEmpty()) {
+				lines.add("### Rupture Velocity vs Distance");
+				lines.add(topLink); lines.add("");
+			} else {
+				lines.add("");
+				lines.add("#### Rupture Velocity vs Distance Variations Table");
+				lines.add("");
+			}
+			
+			lines.addAll(buildVariationTable(dir, variationCatalogGroupoings, "rupture_velocity_vs_dist.png", 4));
+		}
+		
+		if (variationGroupings != null) {
+			for (double intereventMags : new double[] { 7 }) {
+				lines.add("### M"+optionalDigitDF.format(intereventMags)+" Element Interevent Time Comparisons");
+				lines.add(topLink); lines.add("");
+				lines.addAll(buildVariationTable(dir, variationCatalogGroupoings,
+						"interevent_elements_m"+optionalDigitDF.format(intereventMags)+"_hist2D.png", 4));
+				lines.add("");
+				lines.add("### M"+optionalDigitDF.format(intereventMags)+" Subsection Interevent Time Comparisons");
+				lines.add(topLink); lines.add("");
+				lines.addAll(buildVariationTable(dir, variationCatalogGroupoings,
+						"interevent_sub_sects_m"+optionalDigitDF.format(intereventMags)+"_hist2D.png", 4));
+			}
+		}
+		
+		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));
+		
 		System.out.println("DONE");
+		
+		return lines;
+	}
+	
+	private static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
+	
+	private static List<String> buildVariationTable(File dir, Map<String, List<RSQSimCatalog>> variationGroupings,
+			String fileName, int wrapCols) {
+		List<String> lines = new ArrayList<>();
+		for (String groupName : variationGroupings.keySet()) {
+			TableBuilder table = MarkdownUtils.tableBuilder();
+			List<String> images = new ArrayList<>();
+			
+			table.initNewLine();
+			for (RSQSimCatalog catalog : variationGroupings.get(groupName)) {
+				File catDir = catalog.getCatalogDir();
+				File resourcesDir = new File(catDir, "resources");
+				File imageFile = new File(resourcesDir, fileName);
+				if (!imageFile.exists())
+					continue;
+				table.addColumn("<p align=\"center\">**"+catalog.getMetadata()+"**</p>");
+				images.add(catDir.getName()+"/resources/"+fileName);
+			}
+			table.finalizeLine();
+			
+			if (images.isEmpty())
+				continue;
+			
+			table.initNewLine();
+			for (String image : images)
+				table.addColumn("![plot]("+image+")");
+			table.finalizeLine();
+			
+			table.wrap(wrapCols, 0);
+			lines.add("**"+groupName+"**");
+			lines.add("");
+			lines.addAll(table.build());
+			lines.add("");
+		}
 		
 		return lines;
 	}
@@ -1635,10 +1756,6 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public static void main(String args[]) throws IOException, DocumentException {
-		System.out.println("Plotting param sweep...");
-		writeCatalogsIndex(new File("/home/kevin/git/rsqsim-analysis/2018_param_sweep"), true, "defaultModel");
-		System.exit(0);
-		
 		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
 		boolean overwriteIndividual = true;
