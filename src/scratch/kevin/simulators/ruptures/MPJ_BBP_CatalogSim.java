@@ -227,6 +227,8 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				filesToCopy.add(f);
 			else if (name.startsWith("trans.") && name.endsWith(".out"))
 				filesToCopy.add(f);
+			else if (name.startsWith("transv.") && name.endsWith(".out"))
+				filesToCopy.add(f);
 			else if (name.endsWith(".in"))
 				filesToCopy.add(f);
 			else if (name.endsWith(".flt"))
@@ -349,8 +351,9 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 
 		@Override
 		public void run() {
+			RSQSimEvent event = null;
 			try {
-				RSQSimEvent event = events.get(index);
+				event = events.get(index);
 				int eventID = event.getID();
 				File zipFile = getZipFile(eventID);
 				if (zipFile.exists()) {
@@ -457,8 +460,12 @@ public class MPJ_BBP_CatalogSim extends MPJTaskCalculator {
 				}
 				FileUtils.deleteRecursive(runDir);
 				debug("DONE cleanup for "+eventID);
-			} catch (IOException e) {
-				ExceptionUtils.throwAsRuntimeException(e);
+			} catch (Exception e) {
+				String message = "Exception for index "+index;
+				if (event != null)
+					message += ", event "+event.getID();
+				message += ": "+e.getMessage();
+				throw new RuntimeException(message, e);
 			}
 		}
 	}

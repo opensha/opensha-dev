@@ -702,11 +702,15 @@ class RupSpectraPageGen {
 //		int eventID = 1670183;
 ////		int eventID = 2637969;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
-		int eventID = 385955;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+//		int eventID = 385955;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
+//		int eventID = 5304;
+		int eventID = 31324;
 		
 		double timeScale = 1d;
-		boolean scaleVelocities = true;
+		boolean scaleVelocities = false;
 		boolean gpAdjustDDW = false;
 		
 		File eventBBPDir = RSQSimBBP_Config.getEventBBPDir(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
@@ -754,7 +758,7 @@ class RupSpectraPageGen {
 		if (refBBPDir != null)
 			sites = BBP_Site.readFile(refBBPDir);
 		else
-			sites = RSQSimBBP_Config.getStandardSites(RSQSimBBP_Config.generateBBP_Inputs(catalog, event, false, timeScale, scaleVelocities));
+			sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
 		
 		boolean runBBP = true;
 		if (eventBBPDir.exists()) {
