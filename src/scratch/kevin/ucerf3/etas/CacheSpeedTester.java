@@ -2,6 +2,7 @@ package scratch.kevin.ucerf3.etas;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.dom4j.DocumentException;
@@ -47,7 +48,7 @@ public class CacheSpeedTester {
 //		FaultSystemSolution fss = FaultSystemIO.loadSol(solFile);
 //		FaultSystemSolutionERF_ETAS erf = MPJ_ETAS_Simulator.buildERF(fss, false, 1d);
 //		FaultSystemSolutionERF_ETAS erf = ETAS_Simulator.getU3_ETAS_ERF(fss);
-		FaultSystemSolutionERF_ETAS erf = ETAS_Simulator.getU3_ETAS_ERF(2014d,1d);
+		FaultSystemSolutionERF_ETAS erf = ETAS_Simulator.getU3_ETAS_ERF(2014d,1d,false);
 		erf.updateForecast();
 		
 		int numRuns = 5;
@@ -71,7 +72,7 @@ public class CacheSpeedTester {
 		ETAS_Simulator.D = false;
 		
 //		ETAS_EqkRupture mainshockRup = null;
-		ETAS_EqkRupture mainshockRup = ETAS_Simulator.buildScenarioRup(TestScenario.MOJAVE_M7, erf);
+		ETAS_EqkRupture mainshockRup = ETAS_Simulator.buildScenarioRup(TestScenario.MOJAVE_M7, erf, ETAS_Simulator.getStartTimeMillisFromYear(2014d));
 //		ETAS_EqkRupture mainshockRup = new ETAS_EqkRupture();
 //		long ot = Math.round((2014.0-1970.0)*ProbabilityModelsCalc.MILLISEC_PER_YEAR); // occurs at 2014
 //		mainshockRup.setOriginTime(ot);
@@ -106,9 +107,9 @@ public class CacheSpeedTester {
 			if (!subdir.exists())
 				subdir.mkdir();
 			System.gc();
-			ETAS_Simulator.testETAS_Simulation(subdir, erf, reg, mainshockRup, histQkList, includeSpontEvents,
+			ETAS_Simulator.runETAS_Simulation(subdir, erf, reg, mainshockRup, histQkList, includeSpontEvents,
 					includeIndirectTriggering, gridSeisDiscr, null, randSeed, fractionSrcAtPointList, srcAtPointList,
-					isCubeInsideFaultPolygon, new ETAS_ParameterList());
+					isCubeInsideFaultPolygon, new ETAS_ParameterList(),null);
 		}
 		
 //		ETAS_Simulator.testETAS_Simulation(resultsDir, erf, reg, mainshockRup, histQkList, includeSpontEvents,
