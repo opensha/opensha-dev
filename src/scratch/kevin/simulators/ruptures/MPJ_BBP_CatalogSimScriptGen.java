@@ -172,7 +172,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 			script.addAll(2, addLines);
 		
 		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
-		pbsWrite.writeScript(new File(localJobDir, "cat_bbp_parallel.pbs"), script);
+		pbsWrite.writeScript(new File(localJobDir, "cat_bbp_parallel.slurm"), script);
 	}
 	
 	static String addBBP_EnvArgs(String argz, List<String> addLines, File remoteJobDir,
