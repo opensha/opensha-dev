@@ -72,7 +72,7 @@ public class CacheSpeedTester {
 		ETAS_Simulator.D = false;
 		
 //		ETAS_EqkRupture mainshockRup = null;
-		ETAS_EqkRupture mainshockRup = ETAS_Simulator.buildScenarioRup(TestScenario.MOJAVE_M7, erf, ETAS_Simulator.getStartTimeMillisFromYear(2014d));
+		ETAS_EqkRupture mainshockRup = ETAS_Simulator.buildScenarioRup(TestScenario.MOJAVE_M7, erf, ETAS_Simulator.getTimeInMillisFromYear(2014d));
 //		ETAS_EqkRupture mainshockRup = new ETAS_EqkRupture();
 //		long ot = Math.round((2014.0-1970.0)*ProbabilityModelsCalc.MILLISEC_PER_YEAR); // occurs at 2014
 //		mainshockRup.setOriginTime(ot);
