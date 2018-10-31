@@ -202,15 +202,11 @@ abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
 	}
 	
 	private File getZipFile(int index) {
-		File runDir = getRunDir(resultsDir, index, false);
+		File runDir = getRunDir(index, false);
 		return new File(runDir.getParentFile(), runDir.getName()+".zip");
 	}
 	
-	private File getRunDir(int index) {
-		return getRunDir(resultsDir, index, true);
-	}
-	
-	private File getRunDir(File resultsDir, int index, boolean create) {
+	private File getRunDir(int index, boolean create) {
 		File runDir = runDirForIndex(index);
 		if (create)
 			MPJ_BBP_Utils.waitOnDir(runDir, 10, 2000);
@@ -287,11 +283,18 @@ abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
 						debug(eventID+" zip file exists, but won't open or is empty. Re-running. "+zipFile.getAbsolutePath());
 					}
 				}
-				File runDir;
-				if (resultsScratchDir == null) {
-					runDir = getRunDir(index);
-				} else {
-					runDir = new File(resultsScratchDir, "event_"+eventID);
+				File runDir = getRunDir(index, resultsScratchDir == null);
+				if (resultsScratchDir != null) {
+					// create a unique directory on scratch
+					
+					// need to include any parent directory names
+					String dirName = runDir.getName();
+					File parentFile = runDir.getParentFile();
+					while (parentFile != null && !parentFile.equals(resultsDir) && !parentFile.getName().isEmpty()) {
+						dirName = parentFile.getName()+"_"+dirName;
+						parentFile = parentFile.getParentFile();
+					}
+					runDir = new File(resultsScratchDir, dirName);
 					MPJ_BBP_Utils.waitOnDir(runDir, 10, 2000);
 				}
 				RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);

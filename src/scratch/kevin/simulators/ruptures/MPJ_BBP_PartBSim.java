@@ -14,17 +14,25 @@ import org.opensha.commons.geo.Location;
 import org.opensha.sha.simulators.RSQSimEvent;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
+import oracle.net.aso.i;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.MPJ_BBP_Utils;
 import scratch.kevin.simulators.ruptures.BBP_CatalogPartBValidationConfig.Scenario;
 
 public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 	
+	private final int numSites;
+	private final boolean randomAz;
+	
 	private List<File> runDirs;
 	private List<RSQSimEvent> events;
-	private List<List<BBP_Site>> sites;
+	private List<List<Integer>> siteIndexes;
+	private List<Double> siteDists;
+	private Table<RSQSimEvent, Double, List<BBP_Site>> siteListCache;
 	
 	private static final int MAX_SITES_PER_SIM = 10;
 
@@ -35,23 +43,20 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		if (cmd.hasOption("skip-years"))
 			skipYears = Integer.parseInt(cmd.getOptionValue("skip-years"));
 		
-		int numSites = Integer.parseInt(cmd.getOptionValue("num-sites"));
+		numSites = Integer.parseInt(cmd.getOptionValue("num-sites"));
 		Preconditions.checkState(numSites > 0);
 		
-		boolean randomAz = cmd.hasOption("random-azimuth");
+		randomAz = cmd.hasOption("random-azimuth");
 		
 		runDirs = new ArrayList<>();
 		events = new ArrayList<>();
-		sites = new ArrayList<>();
+		siteIndexes = new ArrayList<>();
+		siteDists = new ArrayList<>();
+		siteListCache = HashBasedTable.create();
 		
 		double[] distances = BBP_CatalogPartBValidationConfig.DISTANCES;
 		
 		for (Scenario scenario : Scenario.values()) {
-			File scenarioDir = new File(resultsDir, scenario.getPrefix());
-			
-			if (rank == 0)
-				MPJ_BBP_Utils.waitOnDir(scenarioDir, 10, 2000);
-			
 			if (rank == 0)
 				debug("Loading matches for scenario: "+scenario);
 			
@@ -60,6 +65,17 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 			if (rank == 0)
 				debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);
 			
+			if (eventMatches.isEmpty()) {
+				if (rank == 0)
+					debug("skipping...");
+				continue;
+			}
+			
+			File scenarioDir = new File(resultsDir, scenario.getPrefix());
+			
+			if (rank == 0)
+				MPJ_BBP_Utils.waitOnDir(scenarioDir, 10, 2000);
+			
 			if (rank == 0)
 				debug("Creating site lists with "+numSites+" sites per event, "+distances.length+" distances");
 			for (RSQSimEvent event : eventMatches) {
@@ -67,10 +83,8 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 				if (rank == 0)
 					MPJ_BBP_Utils.waitOnDir(eventDir, 10, 2000);
 				for (double distance : distances) {
-					Location[] siteLocs = BBP_CatalogPartBValidationConfig.selectSitesSites(
-							numSites, distance, randomAz, catalog, event);
-					List<List<BBP_Site>> siteBundles = new ArrayList<>();
-					List<BBP_Site> curSites = null;
+					List<List<Integer>> siteBundles = new ArrayList<>();
+					List<Integer> curSites = null;
 					for (int i=0; i<numSites; i++) {
 						if (curSites == null) {
 							curSites = new ArrayList<>();
@@ -78,20 +92,21 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 							siteBundles.add(curSites);
 							curSites = new ArrayList<>();
 						}
-						BBP_Site site = new BBP_Site("s"+i, siteLocs[i], vm.getVs30(),
-								RSQSimBBP_Config.SITE_LO_PASS_FREQ, RSQSimBBP_Config.SITE_HI_PASS_FREQ);
-						curSites.add(site);
+						curSites.add(i);
 					}
 					if (curSites != null)
 						siteBundles.add(curSites);
-					for (List<BBP_Site> siteBundle : siteBundles) {
-						String dirName = "dist_"+(float)distance+"_"+siteBundle.get(0).getName()
-								+"_"+siteBundle.get(siteBundle.size()-1).getName();
-						File runDir = new File(eventDir, dirName);
+					for (List<Integer> siteBundle : siteBundles) {
+						File bundleDir = new File(eventDir, "bundle_s"+siteBundle.get(0)+"_s"+siteBundle.get(siteBundle.size()-1));
+						if (rank == 0)
+							MPJ_BBP_Utils.waitOnDir(bundleDir, 10, 2000);
+						String dirName = getDirName(scenario, event.getID(), distance);
+						File runDir = new File(bundleDir, dirName);
 						
 						runDirs.add(runDir);
 						events.add(event);
-						sites.add(siteBundle);
+						siteIndexes.add(siteBundle);
+						siteDists.add(distance);
 					}
 				}
 			}
@@ -100,6 +115,10 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 			}
 		}
 	}
+	
+	static String getDirName(Scenario scenario, int eventID, double distance) {
+		return scenario.getPrefix()+"_event_"+eventID+"_dist_"+(float)distance;
+	}
 
 	@Override
 	RSQSimEvent eventForIndex(int index) {
@@ -107,9 +126,24 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 	}
 
 	@Override
-	List<BBP_Site> sitesForIndex(int index) {
-		// already written to sites file
-		return null;
+	synchronized List<BBP_Site> sitesForIndex(int index) {
+		RSQSimEvent event = eventForIndex(index);
+		double dist = siteDists.get(index);
+		List<BBP_Site> sites = siteListCache.get(event, dist);
+		if (sites == null) {
+			// need to build site list
+			Location[] siteLocs = BBP_CatalogPartBValidationConfig.selectSitesSites(
+					numSites, dist, randomAz, catalog, event);
+			sites = new ArrayList<>();
+			for (int i=0; i<numSites; i++)
+				sites.add(new BBP_Site("s"+i, siteLocs[i], vm.getVs30(),
+						RSQSimBBP_Config.SITE_LO_PASS_FREQ, RSQSimBBP_Config.SITE_HI_PASS_FREQ));
+			siteListCache.put(event, dist, sites);
+		}
+		List<BBP_Site> ret = new ArrayList<>();
+		for (Integer siteIndex : siteIndexes.get(index))
+			ret.add(sites.get(siteIndex));
+		return ret;
 	}
 
 	@Override

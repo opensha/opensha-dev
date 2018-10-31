@@ -32,7 +32,7 @@ class MPJ_BBP_PartBSimScriptGen {
 		File myHPCDir = new File("/auto/scec-02/kmilner/simulators/catalogs/");
 		File stampedeCatalogDir = new File("/work/00950/kevinm/stampede2/simulators/catalogs");
 		File jacquiCSDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/");
-		File catalogDir = new File(myHPCDir, "rundir2829");
+		File catalogDir = new File(myHPCDir, "rundir2740");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2829");
 		
 		int numSites = 100;
