@@ -21,7 +21,7 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import oracle.net.aso.i;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.MPJ_BBP_Utils;
-import scratch.kevin.simulators.ruptures.BBP_CatalogPartBValidationConfig.Scenario;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 
 public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 	
@@ -54,7 +54,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		siteDists = new ArrayList<>();
 		siteListCache = HashBasedTable.create();
 		
-		double[] distances = BBP_CatalogPartBValidationConfig.DISTANCES;
+		double[] distances = BBP_PartBValidationConfig.DISTANCES;
 		
 		for (Scenario scenario : Scenario.values()) {
 			if (rank == 0)
@@ -132,7 +132,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		List<BBP_Site> sites = siteListCache.get(event, dist);
 		if (sites == null) {
 			// need to build site list
-			Location[] siteLocs = BBP_CatalogPartBValidationConfig.selectSitesSites(
+			Location[] siteLocs = BBP_PartBValidationConfig.selectSitesSites(
 					numSites, dist, randomAz, catalog, event);
 			sites = new ArrayList<>();
 			for (int i=0; i<numSites; i++)

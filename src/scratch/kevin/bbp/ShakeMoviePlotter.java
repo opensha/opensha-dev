@@ -34,6 +34,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
+import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.cpt.CPT;
@@ -247,15 +248,15 @@ public class ShakeMoviePlotter {
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
 			
 			if (CA_OUTLINE_COLOR != null) {
-				DefaultXY_DataSet[] outlines;
+				XY_DataSet[] outlines;
 				try {
-					outlines = RupturePlotGenerator.loadCAOutlines();
+					outlines = PoliticalBoundariesData.loadCAOutlines();
 				} catch (IOException e) {
 					throw ExceptionUtils.asRuntimeException(e);
 				}
 				PlotCurveCharacterstics outlineChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, CA_OUTLINE_COLOR);
 				
-				for (DefaultXY_DataSet outline : outlines) {
+				for (XY_DataSet outline : outlines) {
 					funcs.add(outline);
 					chars.add(outlineChar);
 				}

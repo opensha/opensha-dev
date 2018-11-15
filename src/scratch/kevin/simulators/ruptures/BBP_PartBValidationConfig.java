@@ -4,7 +4,9 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
@@ -29,16 +31,17 @@ import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
 
-public class BBP_CatalogPartBValidationConfig {
+public class BBP_PartBValidationConfig {
 	
 	// these and values in the get*NGA2 functions before from 
 	// https://github.com/SCECcode/bbp/blob/dev/bbp/utils/batch/gmpe_boxplot_gen.py
-	private static double[] bbp_periods = { 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25,
+	private static double[] BBP_PERIODS = { 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25,
 	                                       0.3, 0.4, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 7.5, 10 };
-	private static double bbp_max_acceptance_period = 3d;
+	public static double BBP_MAX_ACCEPTANCE_PERIOD = 3d;
+	public static double BBP_MIN_ACCEPTANCE_PERIOD = 1d;
 	
 	public enum Scenario {
-		M6p6_VERT_SS_SURFACE("M6.6, vertical strike slip with surface rupture", "m6p6_vert_ss_surface",
+		M6p6_VERT_SS_SURFACE("M6.6, Vertical Strike-Slip with Surface Rupture", "M6.6 SS", "m6p6_vert_ss_surface",
 				new String[] { "M=[6.55,6.65]", "Ztor=[0,1]", "Rake=[-180,-170] or [-10,10] or [170,180]",
 						"Dip=90", "Linear rupture (max 0.5km deviation from ideal)"}) {
 			@Override
@@ -48,6 +51,11 @@ public class BBP_CatalogPartBValidationConfig {
 				loader.matches(new DepthIden(Range.closed(0d, 1d), null));
 				loader.matches(FocalMechIden.builder().strikeSlip(10).forDip(90).build());
 				loader.matches(new LinearRuptureIden(0.5d));
+				try {
+					loader.hasTransitions();
+				} catch (Exception e) {
+					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
+				}
 				return loader.load();
 			}
 
@@ -109,8 +117,25 @@ public class BBP_CatalogPartBValidationConfig {
 		                     0.000466798 };
 				throw new IllegalStateException("Unsupported distance: "+distance);
 			}
+
+			@Override
+			public Map<String, String> getPublishedComparisonURLs(double distance) {
+				Map<String, String> figs = new HashMap<>();
+				if (distance == 20d) {
+					figs.put("UCSB", getFigureURL(16));
+					figs.put("ExSIM", getFigureURL(17));
+					figs.put("G&P", getFigureURL(18));
+					figs.put("SDSU", getFigureURL(19));
+				} else if (distance == 50d) {
+					figs.put("UCSB", getFigureURL(20));
+					figs.put("ExSIM", getFigureURL(21));
+					figs.put("G&P", getFigureURL(22));
+					figs.put("SDSU", getFigureURL(23));
+				} else throw new IllegalStateException("Unsupported distance: "+distance);
+				return figs;
+			}
 		},
-		M6p6_REVERSE("M6.6, Reverse, Dip=45, Ztor=3", "m6p6_reverse",
+		M6p6_REVERSE("M6.6, Reverse, Dip=45, Ztor=3", "M6.6 Reverse", "m6p6_reverse",
 				new String[] { "M=[6.55,6.65]", "Ztor=[2,4]", "Rake=[80,100]", "Dip=[40,50]"}) {
 			@Override
 			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
@@ -118,6 +143,11 @@ public class BBP_CatalogPartBValidationConfig {
 				loader.minMag(6.55).maxMag(6.65);
 				loader.matches(new DepthIden(Range.closed(1d, 5d), null));
 				loader.matches(FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build());
+				try {
+					loader.hasTransitions();
+				} catch (Exception e) {
+					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
+				}
 				return loader.load();
 			}
 
@@ -179,14 +209,33 @@ public class BBP_CatalogPartBValidationConfig {
 		                     0.000471632 };
 				throw new IllegalStateException("Unsupported distance: "+distance);
 			}
+
+			@Override
+			public Map<String, String> getPublishedComparisonURLs(double distance) {
+				Map<String, String> figs = new HashMap<>();
+				if (distance == 20d) {
+					figs.put("UCSB", getFigureURL(24));
+					figs.put("ExSIM", getFigureURL(25));
+					figs.put("G&P", getFigureURL(26));
+					figs.put("SDSU", getFigureURL(27));
+				} else if (distance == 50d) {
+					figs.put("UCSB", getFigureURL(28));
+					figs.put("ExSIM", getFigureURL(29));
+					figs.put("G&P", getFigureURL(30));
+					figs.put("SDSU", getFigureURL(31));
+				} else throw new IllegalStateException("Unsupported distance: "+distance);
+				return figs;
+			}
 		};
 		
 		private String name;
+		private String shortName;
 		private String prefix;
 		private String[] matchCriteria;
 
-		private Scenario(String name, String prefix, String[] matchCriteria) {
+		private Scenario(String name, String shortName, String prefix, String[] matchCriteria) {
 			this.name = name;
+			this.shortName = shortName;
 			this.prefix = prefix;
 			this.matchCriteria = matchCriteria;
 		}
@@ -197,21 +246,27 @@ public class BBP_CatalogPartBValidationConfig {
 		abstract double[] getUpperNGA2(double distance);
 		abstract double[] getLowerNGA2(double distance);
 		
+		public abstract Map<String, String> getPublishedComparisonURLs(double distance);
+		
+		private static String getFigureURL(int figNum) {
+			return "http://www.seismosoc.org/Publications/SRL/SRL_86/srl_86-1_dreger_et_al-esupp/SRL_2014118_esupp_Figure_S"+figNum+".png";
+		}
+		
 		public UncertainArbDiscDataset getAcceptanceCriteria(double distance) {
 			double[] avgVals = getMeanNGA2(distance);
 			double[] lowerVals = getLowerNGA2(distance);
 			double[] upperVals = getUpperNGA2(distance);
-			Preconditions.checkState(bbp_periods.length == avgVals.length);
-			Preconditions.checkState(bbp_periods.length >= lowerVals.length);
-			Preconditions.checkState(bbp_periods.length >= upperVals.length);
+			Preconditions.checkState(BBP_PERIODS.length == avgVals.length);
+			Preconditions.checkState(BBP_PERIODS.length >= lowerVals.length);
+			Preconditions.checkState(BBP_PERIODS.length >= upperVals.length);
 			
 			DiscretizedFunc avgFunc = new ArbitrarilyDiscretizedFunc();
 			DiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
 			DiscretizedFunc upperFunc = new ArbitrarilyDiscretizedFunc();
-			for (int p=0; p<avgVals.length && bbp_periods[p] <= bbp_max_acceptance_period; p++) {
-				avgFunc.set(bbp_periods[p], avgVals[p]);
-				lowerFunc.set(bbp_periods[p], lowerVals[p]);
-				upperFunc.set(bbp_periods[p], upperVals[p]);
+			for (int p=0; p<avgVals.length && BBP_PERIODS[p] <= BBP_MAX_ACCEPTANCE_PERIOD; p++) {
+				avgFunc.set(BBP_PERIODS[p], avgVals[p]);
+				lowerFunc.set(BBP_PERIODS[p], lowerVals[p]);
+				upperFunc.set(BBP_PERIODS[p], upperVals[p]);
 			}
 			UncertainArbDiscDataset func = new UncertainArbDiscDataset(avgFunc, lowerFunc, upperFunc);
 			func.setName("NGA-W2 Acceptance Criteria");
@@ -220,16 +275,20 @@ public class BBP_CatalogPartBValidationConfig {
 		
 		public DiscretizedFunc getMeanPrediction(double distance) {
 			double[] avgVals = getMeanNGA2(distance);
-			Preconditions.checkState(bbp_periods.length == avgVals.length);
+			Preconditions.checkState(BBP_PERIODS.length == avgVals.length);
 			DiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
 			func.setName("NGA-W2 Mean Prediction");
 			for (int p=0; p<avgVals.length; p++)
-				func.set(bbp_periods[p], avgVals[p]);
+				func.set(BBP_PERIODS[p], avgVals[p]);
 			return func;
 		}
 
 		public String getName() {
 			return name;
+		}
+
+		public String getShortName() {
+			return shortName;
 		}
 
 		public String getPrefix() {
@@ -357,7 +416,6 @@ public class BBP_CatalogPartBValidationConfig {
 		int skipYears = 2000;
 		
 		int numToPlot = 20;
-		double locRectWidth = 0.01;
 		Color[] distColors = {Color.BLUE.darker(), Color.GREEN.darker()};
 		int numSites = 100;
 		boolean randomAz = false;
@@ -381,39 +439,47 @@ public class BBP_CatalogPartBValidationConfig {
 				
 				RSQSimEvent event = events.get(i);
 				
-				List<XYAnnotation> anns = new ArrayList<>();
-				for (int d=0; d<DISTANCES.length; d++) {
-					double distance = DISTANCES[d];
-					Color c = distColors[d];
-					
-					for (Location loc : selectSitesSites(numSites, distance, randomAz, catalog, event)) {
-						double[] poly = new double[10];
-						double lat = loc.getLatitude();
-						double lon = loc.getLongitude();
-						double ux = lon+0.5*locRectWidth;
-						double lx = lon-0.5*locRectWidth;
-						double uy = lat+0.5*locRectWidth;
-						double ly = lat-0.5*locRectWidth;
-						poly[0] = ux;
-						poly[1] = uy;
-						poly[2] = lx;
-						poly[3] = uy;
-						poly[4] = lx;
-						poly[5] = ly;
-						poly[6] = ux;
-						poly[7] = ly;
-						poly[8] = ux;
-						poly[9] = uy;
-						XYPolygonAnnotation ann = new XYPolygonAnnotation(poly, null, null, c);
-						anns.add(ann);
-					}
-				}
-				
 				String prefix = "match_"+idStr+"_event_"+event.getID()+"_m"+(float)event.getMagnitude();
-				RupturePlotGenerator.writeMapPlot(catalog.getElements(), event, null, scenarioDir, prefix,
-						null, null, null, null, null, null, anns);
+				
+				plotEventAndSites(catalog, event, distColors, numSites, randomAz, scenarioDir, prefix);
 			}
 		}
+	}
+
+	static void plotEventAndSites(RSQSimCatalog catalog, RSQSimEvent event, Color[] distColors, int numSites,
+			boolean randomAz, File outputDir, String prefix) throws IOException {
+		double locRectWidth = 0.01;
+		
+		List<XYAnnotation> anns = new ArrayList<>();
+		for (int d=0; d<DISTANCES.length; d++) {
+			double distance = DISTANCES[d];
+			Color c = distColors[d];
+			
+			for (Location loc : selectSitesSites(numSites, distance, randomAz, catalog, event)) {
+				double[] poly = new double[10];
+				double lat = loc.getLatitude();
+				double lon = loc.getLongitude();
+				double ux = lon+0.5*locRectWidth;
+				double lx = lon-0.5*locRectWidth;
+				double uy = lat+0.5*locRectWidth;
+				double ly = lat-0.5*locRectWidth;
+				poly[0] = ux;
+				poly[1] = uy;
+				poly[2] = lx;
+				poly[3] = uy;
+				poly[4] = lx;
+				poly[5] = ly;
+				poly[6] = ux;
+				poly[7] = ly;
+				poly[8] = ux;
+				poly[9] = uy;
+				XYPolygonAnnotation ann = new XYPolygonAnnotation(poly, null, null, c);
+				anns.add(ann);
+			}
+		}
+		
+		RupturePlotGenerator.writeMapPlot(catalog.getElements(), event, null, outputDir, prefix,
+				null, null, null, null, null, null, anns);
 	}
 
 }

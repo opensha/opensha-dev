@@ -6,23 +6,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import org.opensha.commons.data.function.DiscretizedFunc;
 
+import com.google.common.collect.Table;
+
 import scratch.kevin.bbp.BBP_SimZipLoader;
 import scratch.kevin.bbp.BBP_Site;
-import scratch.kevin.simulators.ruptures.BBP_CatalogPartBValidationConfig.Scenario;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 
 public class BBP_PartBSimZipLoader extends BBP_SimZipLoader {
 	
-	private List<BBP_Site> sites;
-	
 	private Map<String, DiscretizedFunc[]> rdMap;
 
-	public BBP_PartBSimZipLoader(File file, Scenario[] scenarios, int numSites) throws ZipException, IOException {
-		this(new ZipFile(file), scenarios, numSites);
+	public BBP_PartBSimZipLoader(File file, int numSites) throws ZipException, IOException {
+		this(new ZipFile(file), numSites);
 	}
 	
 	private static List<BBP_Site> buildSites(int numSites) {
@@ -35,10 +36,18 @@ public class BBP_PartBSimZipLoader extends BBP_SimZipLoader {
 		return sites;
 	}
 
-	public BBP_PartBSimZipLoader(ZipFile zip, Scenario[] scenarios, int numSites) {
+	public BBP_PartBSimZipLoader(ZipFile zip, int numSites) {
 		super(zip, buildSites(numSites));
-		sites = buildSites(numSites);
 		rdMap = new HashMap<>();
+	}
+	
+	public boolean hasScenario(Scenario scenario) {
+		String prefix = scenario.getPrefix();
+		Table<BBP_Site, String, Map<FileType, ZipEntry>> table = getEntriesTable();
+		for (String dirName : table.columnKeySet())
+			if (dirName.contains(prefix))
+				return true;
+		return false;
 	}
 	
 	public DiscretizedFunc[] getRotD50(Integer eventID, Scenario scenario, double distance) throws IOException {

@@ -617,6 +617,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		String multiFaultLink = null;
 		String extremeEventLink = null;
 		String sourceSiteLink = null;
+		String bbpPartBLink = null;
 		
 		File[] dirList = dir.listFiles();
 		Arrays.sort(dirList, new FileNameComparator());
@@ -699,18 +700,17 @@ public class RSQSimCatalog implements XMLSaveable {
 					hazardNames.add(hazName);
 				}
 			} else if (name.equals("multi_fault")) {
-				Preconditions.checkState(multiFaultLink == null, "Duplicate Multi Fault dirs! %s and %s", name, multiFaultLink);
 				multiFaultLink = name;
 			} else if (name.equals("source_site_comparisons")) {
-				Preconditions.checkState(sourceSiteLink == null, "Duplicate Source/Site dirs! %s and %s", name, sourceSiteLink);
 				sourceSiteLink = name;
 			} else if (name.equals("extreme_events")) {
-				Preconditions.checkState(extremeEventLink == null, "Duplicate Extreme Event dirs! %s and %s", name, multiFaultLink);
 				extremeEventLink = name;
 			} else if (name.startsWith("occupancy_copula_m")) {
 				String title = MarkdownUtils.getTitle(mdFile);
 				occCopulaLinks.add(name);
 				occCopulaNames.add(title);
+			} else if (name.equals("bbp_part_b")) {
+				bbpPartBLink = name;
 			}
 		}
 		
@@ -777,12 +777,19 @@ public class RSQSimCatalog implements XMLSaveable {
 			for (int i=0; i<hazardClusterNames.size(); i++)
 				lines.add("* ["+hazardClusterNames.get(i)+"]("+hazardClusterLinks.get(i)+"/)");
 		}
+		if (bbpPartBLink != null) {
+			lines.add("");
+			lines.add("## BBP Part B Validation Exercise");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[BBP Part B Validation Exercise Results Here]("+bbpPartBLink+"/)");
+		}
 		if (sourceSiteLink != null) {
 			lines.add("");
 			lines.add("## Source/Site Ground Motion Comparisons");
 			lines.add(topLink);
 			lines.add("");
-			lines.add("[Source/Site Ground Motion Comparisons here]("+sourceSiteLink+"/)");
+			lines.add("[Source/Site Ground Motion Comparisons Here]("+sourceSiteLink+"/)");
 		}
 		if (multiFaultLink != null) {
 			lines.add("");
@@ -1769,7 +1776,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		GregorianCalendar minDate = cal(2000, 1, 1);
-//		GregorianCalendar minDate = cal(2018, 8, 23);
+//		GregorianCalendar minDate = cal(2018, 10, 18);
 		
 		for (Catalogs cat : cats) {
 //		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
