@@ -176,8 +176,11 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		File bbpDir = new File(bbpParallelDir, "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites");
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		File bbpDir = new File(bbpParallelDir, "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites");
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		File bbpDir = new File(bbpParallelDir, "2018_09_10-rundir2740-all-m6.5-skipYears5000-noHF-csLASites");
 		
 		List<String> sourceNames = new ArrayList<>();
 		List<int[]> parentIDs = new ArrayList<>();

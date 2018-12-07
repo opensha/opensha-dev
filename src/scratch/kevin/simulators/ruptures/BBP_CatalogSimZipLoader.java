@@ -212,7 +212,9 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 
 	@Override
 	public int getNumSimulations(Site site, RSQSimEvent rupture) {
-		return 1;
+		if (contains(gmpeToBBP.get(site), rupture.getID()))
+			return 1;
+		return 0;
 	}
 
 	@Override
