@@ -110,9 +110,10 @@ public class UCERF3_EAL_Combiner {
 		griddedEALs = new double[branches.size()];
 		totalEALs = new double[branches.size()];
 		
-		System.out.println("calculating branch eals");
+		if (branches.size() > 1)
+			System.out.println("calculating branch eals");
 		for (int i=0; i<branches.size(); i++) {
-			if (i % 100 == 0)
+			if (i % 100 == 0 && branches.size() > 1)
 				System.out.println("Branch "+i);
 			LogicTreeBranch branch = branches.get(i);
 			double[] rates = fetcher.getRates(branch);
@@ -202,10 +203,13 @@ public class UCERF3_EAL_Combiner {
 					debugGridScatter = new DefaultXY_DataSet();
 				}
 				
-				GridSourceProvider gridProv;
-				if (fetcher instanceof CompoundFaultSystemSolution)
-					gridProv = ((CompoundFaultSystemSolution)fetcher).loadGridSourceProviderFile(branch);
-				else
+				GridSourceProvider gridProv = null;
+				if (fetcher instanceof CompoundFaultSystemSolution) {
+					try {
+						gridProv = ((CompoundFaultSystemSolution)fetcher).loadGridSourceProviderFile(branch);
+					} catch (Exception e) {}
+				}
+				if (gridProv == null)
 					gridProv = fetcher.getSolution(branch).getGridSourceProvider();
 				for (int n=0; n<gridProv.getGriddedRegion().getNodeCount(); n++) {
 					DiscretizedFunc lossDist = griddedLosses[n];
