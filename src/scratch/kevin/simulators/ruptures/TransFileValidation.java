@@ -37,7 +37,7 @@ public class TransFileValidation {
 			File dir = new File(args[0]);
 			catalog = new RSQSimCatalog(dir, "Temp", "None", null, "Metadata", null, null);
 		} else {
-			catalog = Catalogs.BRUCE_2829.instance(new File("/home/kevin/Simulators/catalogs"));
+			catalog = Catalogs.BRUCE_2585_1MYR.instance(new File("/home/kevin/Simulators/catalogs"));
 		}
 		
 		DefaultXY_DataSet momPDiffScatter = new DefaultXY_DataSet();
@@ -64,43 +64,40 @@ public class TransFileValidation {
 		SummaryStatistics momentStats = new SummaryStatistics();
 		SummaryStatistics momentAbsDiffStats = new SummaryStatistics();
 		
-		int errCount = 0;
-		
 		Iterable<RSQSimEvent> eventsIt = catalog.loader().minMag(minMag).iterable();
 		int count = 0;
 		for (RSQSimEvent event : eventsIt) {
-			try {
-				if (count % 1000 == 0)
-					System.out.println("Processing event: "+count+" (ID="+event.getID()+")");
-				count++;
-				RSQSimEventSlipTimeFunc slipTimeFunc = catalog.getSlipTimeFunc(event);
-				int[] elems = event.getAllElementIDs();
-				double[] slips = event.getAllElementSlips();
-				
-				double listMoment = 0d;
-				for (EventRecord rec : event)
-					listMoment += rec.getMoment();
-				
-				double transMoment = 0d;
-				
-				double time = slipTimeFunc.getEndTime();
-				for (int i=0; i<elems.length; i++) {
-					testCount++;
-					double transSlip = slipTimeFunc.getCumulativeEventSlip(elems[i], time);
-					transMoment += FaultMomentCalc.getMoment(patchAreas.get(elems[i]), transSlip);
-					if (transSlip == 0 && slips[i] > 0) {
-						numZeroInTrans++;
-					} else if (transSlip > 0 && slips[i] == 0) {
-						numZeroInList++;
-					} else {
-						double pDiff = DataUtils.getPercentDiff(transSlip, slips[i]);
-						stats.addValue(pDiff);
-						double diff = Math.abs(transSlip - slips[i]);
-						absDiffStats.addValue(diff);
-						if (pDiff >= 1d)
-							numAbove1++;
-						if (pDiff >= 0.1d)
-							numAbove0p1++;
+			if (count % 1000 == 0)
+				System.out.println("Processing event: "+count+" (ID="+event.getID()+")");
+			count++;
+			RSQSimEventSlipTimeFunc slipTimeFunc = catalog.getSlipTimeFunc(event);
+			int[] elems = event.getAllElementIDs();
+			double[] slips = event.getAllElementSlips();
+			
+			double listMoment = 0d;
+			for (EventRecord rec : event)
+				listMoment += rec.getMoment();
+			
+			double transMoment = 0d;
+			
+			double time = slipTimeFunc.getEndTime();
+			for (int i=0; i<elems.length; i++) {
+				testCount++;
+				double transSlip = slipTimeFunc.getCumulativeEventSlip(elems[i], time);
+				transMoment += FaultMomentCalc.getMoment(patchAreas.get(elems[i]), transSlip);
+				if (transSlip == 0 && slips[i] > 0) {
+					numZeroInTrans++;
+				} else if (transSlip > 0 && slips[i] == 0) {
+					numZeroInList++;
+				} else {
+					double pDiff = DataUtils.getPercentDiff(transSlip, slips[i]);
+					stats.addValue(pDiff);
+					double diff = Math.abs(transSlip - slips[i]);
+					absDiffStats.addValue(diff);
+					if (pDiff >= 1d)
+						numAbove1++;
+					if (pDiff >= 0.1d)
+						numAbove0p1++;
 //					if (pDiff > printThreshold) {
 //						System.out.println("Bad slip for event "+event.getID()+" (M="+(float)event.getMagnitude()+") at t="
 //								+event.getTime()+" ("+(float)event.getTimeInYears()+" yrs)");
@@ -109,66 +106,58 @@ public class TransFileValidation {
 //						System.out.println("\t% Diff: "+(float)pDiff);
 //						System.out.println("\tAbs Diff: "+(float)diff);
 //					}
-					}
 				}
-				double pDiff = DataUtils.getPercentDiff(transMoment, listMoment);
-				momentStats.addValue(pDiff);
-				double absDiff = Math.abs(transMoment - listMoment);
-				momentAbsDiffStats.addValue(absDiff);
-				
-				double timeYears = event.getTimeInYears();
-				if (transMoment > listMoment)
-					momPDiffScatter.set(timeYears, pDiff);
-				else
-					momPDiffScatter.set(timeYears, -pDiff);
-				double transMag = MagUtils.momentToMag(transMoment);
-				double magDiff = transMag - event.getMagnitude();
-				double magPDiff = DataUtils.getPercentDiff(transMag, event.getMagnitude());
-				magDiffScatter.set(timeYears, magDiff);
-				if (magDiff > 0)
-					magPDiffScatter.set(timeYears, magPDiff);
-				else
-					magPDiffScatter.set(timeYears, -magPDiff);
-				
-				if (pDiff > printThreshold) {
-					List<String> lines = new ArrayList<>();
-					
-					lines.add("Bad moment for event "+event.getID()+" (M="+(float)event.getMagnitude()+") at t="
-							+event.getTime()+" ("+(float)event.getTimeInYears()+" yrs)");
-					lines.add("\tList File Moment:  "+(float)listMoment+", M="+(float)MagUtils.momentToMag(listMoment));
-					lines.add("\tTrans File Moment:  "+(float)transMoment+", M="+(float)MagUtils.momentToMag(transMoment));
-					lines.add("\t% Diff: "+(float)pDiff);
-					lines.add("\tAbs Diff: "+(float)absDiff+", M="+(float)MagUtils.momentToMag(absDiff));
-					lines.add("");
-					for (String line : lines) {
-						System.out.println(line);
-						debugFW.write(line+"\n");
-					}
-					debugFW.flush();
-				}
-				
-				if (count % 10000 == 0) {
-					System.out.println("=== SLIP STATS ===");
-					System.out.println("Average % diff: "+(float)stats.getMean());
-					System.out.println("Max % diff: "+(float)stats.getMax());
-					System.out.println("Average diff: "+(float)absDiffStats.getMean());
-					System.out.println("Max diff: "+(float)absDiffStats.getMax());
-					System.out.println("=== MOMENT STATS ===");
-					System.out.println("Average % diff: "+(float)momentStats.getMean());
-					System.out.println("Max % diff: "+(float)momentStats.getMax());
-					System.out.println("Average diff: "+(float)momentAbsDiffStats.getMean());
-					System.out.println("Max diff: "+(float)momentAbsDiffStats.getMax()
-						+", M="+((float)MagUtils.momentToMag(momentAbsDiffStats.getMax())));
-					System.out.println("====================");
-				}
-			} catch (Exception e) {
-				System.err.println("Errr with event!");
-				errCount++;
-				e.printStackTrace();
 			}
-		}
-		if (errCount > 0) {
-			System.out.println("WARNING!!!! "+errCount+" events errored!");
+			double pDiff = DataUtils.getPercentDiff(transMoment, listMoment);
+			momentStats.addValue(pDiff);
+			double absDiff = Math.abs(transMoment - listMoment);
+			momentAbsDiffStats.addValue(absDiff);
+			
+			double timeYears = event.getTimeInYears();
+			if (transMoment > listMoment)
+				momPDiffScatter.set(timeYears, pDiff);
+			else
+				momPDiffScatter.set(timeYears, -pDiff);
+			double transMag = MagUtils.momentToMag(transMoment);
+			double magDiff = transMag - event.getMagnitude();
+			double magPDiff = DataUtils.getPercentDiff(transMag, event.getMagnitude());
+			magDiffScatter.set(timeYears, magDiff);
+			if (magDiff > 0)
+				magPDiffScatter.set(timeYears, magPDiff);
+			else
+				magPDiffScatter.set(timeYears, -magPDiff);
+			
+			if (pDiff > printThreshold) {
+				List<String> lines = new ArrayList<>();
+				
+				lines.add("Bad moment for event "+event.getID()+" (M="+(float)event.getMagnitude()+") at t="
+						+event.getTime()+" ("+(float)event.getTimeInYears()+" yrs)");
+				lines.add("\tList File Moment:  "+(float)listMoment+", M="+(float)MagUtils.momentToMag(listMoment));
+				lines.add("\tTrans File Moment:  "+(float)transMoment+", M="+(float)MagUtils.momentToMag(transMoment));
+				lines.add("\t% Diff: "+(float)pDiff);
+				lines.add("\tAbs Diff: "+(float)absDiff+", M="+(float)MagUtils.momentToMag(absDiff));
+				lines.add("");
+				for (String line : lines) {
+					System.out.println(line);
+					debugFW.write(line+"\n");
+				}
+				debugFW.flush();
+			}
+			
+			if (count % 10000 == 0) {
+				System.out.println("=== SLIP STATS ===");
+				System.out.println("Average % diff: "+(float)stats.getMean());
+				System.out.println("Max % diff: "+(float)stats.getMax());
+				System.out.println("Average diff: "+(float)absDiffStats.getMean());
+				System.out.println("Max diff: "+(float)absDiffStats.getMax());
+				System.out.println("=== MOMENT STATS ===");
+				System.out.println("Average % diff: "+(float)momentStats.getMean());
+				System.out.println("Max % diff: "+(float)momentStats.getMax());
+				System.out.println("Average diff: "+(float)momentAbsDiffStats.getMean());
+				System.out.println("Max diff: "+(float)momentAbsDiffStats.getMax()
+					+", M="+((float)MagUtils.momentToMag(momentAbsDiffStats.getMax())));
+				System.out.println("====================");
+			}
 		}
 		List<String> lines = new ArrayList<>();
 		lines.add("");

@@ -277,7 +277,6 @@ public class RSQSimBBP_Config {
 		sites.add(new BBP_Site("s119", new Location(34.55314, -118.72826), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("s279", new Location(34.37809, -118.34757), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("s480", new Location(34.15755, -117.87389), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
-		sites.add(new BBP_Site("SMCA", new Location(34.00909, -118.48939), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		
 		csLAInitialSites = Collections.unmodifiableList(sites);
 	}

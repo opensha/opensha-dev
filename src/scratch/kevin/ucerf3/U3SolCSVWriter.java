@@ -10,17 +10,14 @@ import org.opensha.commons.data.CSVFile;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
-import scratch.UCERF3.utils.FaultSectionDataWriter;
 import scratch.UCERF3.utils.FaultSystemIO;
 
 public class U3SolCSVWriter {
 
 	public static void main(String[] args) throws IOException, DocumentException {
 		File dataDir = new File("/home/kevin/OpenSHA/UCERF3/fss_csvs");
-//		File solFile = new File(dataDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip");
-		File solFile = new File(dataDir, "cached_dep100.0_depMean_rakeMean.zip");
+		File solFile = new File(dataDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip");
 		File outputFile = new File(dataDir, solFile.getName().replaceAll(".zip", "")+".csv");
-		File textFile = new File(dataDir, solFile.getName().replaceAll(".zip", "")+".txt");
 		FaultSystemSolution sol = FaultSystemIO.loadSol(solFile);
 		CSVFile<String> csv = new CSVFile<>(false);
 		
@@ -33,10 +30,7 @@ public class U3SolCSVWriter {
 			line.add((float)sol.getRateForRup(r)+"");
 			line.add((float)rupSet.getAveRakeForRup(r)+"");
 			line.add((float)rupSet.getAreaForRup(r)+"");
-			if (rupSet.getLengthForAllRups() == null)
-				line.add("NaN");
-			else
-				line.add((float)rupSet.getLengthForRup(r)+"");
+			line.add((float)rupSet.getLengthForRup(r)+"");
 			List<Integer> sects = rupSet.getSectionsIndicesForRup(r);
 			line.add(sects.size()+"");
 			for (int s : sects)
@@ -45,8 +39,6 @@ public class U3SolCSVWriter {
 		}
 		
 		csv.writeToFile(outputFile);
-		
-		FaultSectionDataWriter.writeRupsToFiles(textFile.getAbsolutePath(), rupSet);
 	}
 
 }

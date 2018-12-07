@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -161,7 +160,6 @@ public class BBP_SimZipLoader {
 	private Table<BBP_Site, String, Map<FileType, ZipEntry>> entriesTable;
 	private HashSet<FileType> allTypes;
 	private ZipFile zip;
-	protected List<BBP_Site> sites;
 	
 	public BBP_SimZipLoader(File file, List<BBP_Site> sites) throws ZipException, IOException {
 		this(new ZipFile(file), sites);
@@ -169,7 +167,6 @@ public class BBP_SimZipLoader {
 	
 	public BBP_SimZipLoader(ZipFile zip, List<BBP_Site> sites) {
 		this.zip = zip;
-		this.sites = Collections.unmodifiableList(sites);
 		entriesTable = HashBasedTable.create();
 		allTypes = new HashSet<>();
 		
@@ -224,16 +221,6 @@ public class BBP_SimZipLoader {
 	
 	private ZipEntry locate(BBP_Site site, String dirName, FileType type) {
 		Map<FileType, ZipEntry> fileMap = entriesTable.get(site, dirName);
-//		if (fileMap == null) {
-//			System.out.println("Debug!");
-//			Map<BBP_Site, Map<FileType, ZipEntry>> col = entriesTable.column(dirName);
-//			System.out.println("Col null? "+(col == null));
-//			System.out.println("Col empty? "+col.isEmpty());
-//			if (col != null) {
-//				for (BBP_Site key : col.keySet())
-//					System.out.println("\t"+key.getName());
-//			}
-//		}
 		Preconditions.checkNotNull(fileMap, "No files for dir %s, site %s", dirName, site.getName());
 		ZipEntry entry = fileMap.get(type);
 		Preconditions.checkNotNull(entry, "No file of type %s for dir %s, site %s", type.name(), dirName, site.getName());

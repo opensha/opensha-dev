@@ -137,7 +137,6 @@ import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
-import scratch.UCERF3.erf.ETAS.association.FiniteFaultMappingData;
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
@@ -151,6 +150,7 @@ import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.MatrixIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
+import scratch.UCERF3.utils.finiteFaultMap.FiniteFaultMappingData;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
 
 public class PureScratch {

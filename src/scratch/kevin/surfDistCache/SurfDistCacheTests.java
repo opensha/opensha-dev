@@ -17,7 +17,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.FaultRuptureSource;
 import org.opensha.sha.faultSurface.RuptureSurface;
-//import org.opensha.sha.faultSurface.cache.MultiDistanceCache;
+import org.opensha.sha.faultSurface.cache.MultiDistanceCache;
 import org.opensha.sha.faultSurface.cache.SurfaceCachingPolicy;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
@@ -129,7 +129,7 @@ public class SurfDistCacheTests {
 		
 		System.out.println("mem t/u/f: "+totalMB+"/"+usedMB+"/"+freeMB);
 		
-//		MultiDistanceCache.printDebugStats();
+		MultiDistanceCache.printDebugStats();
 	}
 
 }
