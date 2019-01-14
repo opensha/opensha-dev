@@ -9,6 +9,7 @@ import org.opensha.commons.data.Named;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.geo.Location;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
@@ -57,6 +58,8 @@ public interface SimulationRotDProvider<E> extends Named {
 	}
 	
 	public int getNumSimulations(Site site, E rupture);
+	
+	public Location getHypocenter(E rupture, int index);
 	
 	public Collection<E> getRupturesForSite(Site site);
 	

@@ -11,7 +11,9 @@ import java.util.zip.ZipFile;
 
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.geo.Location;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
@@ -220,6 +222,11 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 	@Override
 	public double getMinimumCurvePlotRate() {
 		return getAnnualRate(null);
+	}
+
+	@Override
+	public Location getHypocenter(RSQSimEvent rupture, int index) {
+		return RSQSimUtils.getHypocenter(rupture);
 	}
 
 }

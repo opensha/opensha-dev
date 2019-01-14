@@ -461,7 +461,7 @@ public class BBP_Wrapper implements Runnable {
 			}
 		}
 		Butterworth filter = new Butterworth();
-		filter.lowPass(2, 1d/dt, lowpassFreq);
+		filter.lowPass(4, 1d/dt, lowpassFreq);
 		DiscretizedFunc filtered = new ArbitrarilyDiscretizedFunc();
 		for (int i=0; i<unfiltered.size(); i++)
 			filtered.set(unfiltered.getX(i), filter.filter(unfiltered.getY(i)));

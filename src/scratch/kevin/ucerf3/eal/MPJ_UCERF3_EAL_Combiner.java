@@ -341,6 +341,19 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 					Preconditions.checkState(allLines.get(index) == null, "Duplicate found for index "+index+" in rank "+r);
 					allLines.set(index, csv.getLine(row));
 					U3_EAL_LogicTreeBranch branch = branches.get(index);
+					for (int i=0; i<branch.size(); i++) {
+//						getBranchLevelName()
+						String choice = branch.getValue(i).getShortName();
+						String testChoice = csv.get(row, i+5);
+						if (!choice.equals(testChoice)) {
+							System.err.println("Branch mismatch for rank "+r+", index "+index);
+							System.err.println("\tOriginal Branch: "+branch);
+							List<String> line = csv.getLine(row);
+							System.err.println("\tCSV Branch: "+Joiner.on(", ").join(line.subList(5, line.size())));
+							System.err.flush();
+							throw new IllegalStateException("Branch mismatch for rank "+r+", index "+index);
+						}
+					}
 					double weight = branch.getAprioriBranchWt();
 					double totEAL = Double.parseDouble(csv.get(row, 2));
 					double faultEAL = Double.parseDouble(csv.get(row, 3));
@@ -441,7 +454,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		options.addOption(compoundSol);
 		
 		Option consolidateOnly = new Option("co", "consolidate-only", false, "Flag to consolidate only");
-		consolidateOnly.setRequired(true);
+		consolidateOnly.setRequired(false);
 		options.addOption(consolidateOnly);
 		
 		return options;

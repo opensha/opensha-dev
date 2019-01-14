@@ -42,7 +42,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
 //		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2585_1myrs");
-		File catalogDir = new File(myHPCDir, "rundir2740");
+		File catalogDir = new File(myHPCDir, "rundir3013");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2734");
 		
 		boolean standardSites = false;
@@ -172,7 +172,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 			script.addAll(2, addLines);
 		
 		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
-		pbsWrite.writeScript(new File(localJobDir, "cat_bbp_parallel.pbs"), script);
+		pbsWrite.writeScript(new File(localJobDir, "cat_bbp_parallel.slurm"), script);
 	}
 	
 	static String addBBP_EnvArgs(String argz, List<String> addLines, File remoteJobDir,

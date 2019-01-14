@@ -11,6 +11,7 @@ import org.apache.commons.math3.random.Well19937c;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
+import org.opensha.commons.geo.Location;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -117,6 +118,11 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 	@Override
 	public double getMagnitude(E rupture) {
 		return simProv.getMagnitude(rupture);
+	}
+
+	@Override
+	public Location getHypocenter(E rupture, int index) {
+		return simProv.getHypocenter(rupture, index);
 	}
 
 }

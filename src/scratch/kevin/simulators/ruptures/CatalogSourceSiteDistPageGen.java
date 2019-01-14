@@ -176,11 +176,11 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-//		File bbpDir = new File(bbpParallelDir, "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites");
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		File bbpDir = new File(bbpParallelDir, "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
-		File bbpDir = new File(bbpParallelDir, "2018_09_10-rundir2740-all-m6.5-skipYears5000-noHF-csLASites");
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+//		File bbpDir = new File(bbpParallelDir, "2018_09_10-rundir2740-all-m6.5-skipYears5000-noHF-csLASites");
 		
 		List<String> sourceNames = new ArrayList<>();
 		List<int[]> parentIDs = new ArrayList<>();
@@ -195,6 +195,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		
 		double minMag = 6.5d;
 		int skipYears = 5000;
+		boolean hypoSort = true;
 		
 		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014, AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 		double[] periods = { 3, 5, 10 };
@@ -294,7 +295,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		for (AttenRelRef gmpe : gmpeRefs)
 			headerLines.add("* "+gmpe.getName());
 		
-		pageGen.generatePage(sourceComps, sourceOutputDir, headerLines, periods);
+		pageGen.generatePage(sourceComps, sourceOutputDir, headerLines, periods, hypoSort);
 	}
 
 }

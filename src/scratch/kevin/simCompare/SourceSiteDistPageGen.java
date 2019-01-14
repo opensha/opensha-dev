@@ -21,6 +21,8 @@ import org.jfree.ui.TextAnchor;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -50,7 +52,8 @@ public class SourceSiteDistPageGen<E> {
 	}
 	
 	public void generatePage(Table<AttenRelRef, String, List<RuptureComparison<E>>> sourceComps,
-			File outputDir, List<String> headerLines, double[] periods) throws IOException {
+			File outputDir, List<String> headerLines, double[] periods, boolean hypoFilter)
+					throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		List<String> lines = new LinkedList<>();
@@ -117,7 +120,7 @@ public class SourceSiteDistPageGen<E> {
 					
 					System.out.println("Calculating for "+sourceName+", "+site.getName()+", "+magStr);
 					
-					HistogramFunction[] simHists = calcSimHist(simProv, site, periods, magComps.get(gmpeRefs.get(0)));
+					HistogramFunction[][] simHists = calcSimHist(simProv, site, periods, magComps.get(gmpeRefs.get(0)), hypoFilter);
 					if (simHists == null)
 						// nothing for this site/mag range
 						continue;
@@ -197,7 +200,7 @@ public class SourceSiteDistPageGen<E> {
 		}
 	};
 	
-	private void plotSourceSiteHist(File outputDir, String prefix, HistogramFunction simHist,
+	private void plotSourceSiteHist(File outputDir, String prefix, HistogramFunction[] simHists,
 			Map<AttenRelRef, HistogramFunction> gmpeHists, String title, double period, int numSims, int numRups)
 					throws IOException {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
@@ -206,9 +209,20 @@ public class SourceSiteDistPageGen<E> {
 		List<AttenRelRef> gmpes = new ArrayList<>(gmpeHists.keySet());
 		gmpes.sort(gmpeRefComparator);
 		
+		HistogramFunction simHist = simHists[0];
+		
 		simHist.setName(simProv.getName());
 		funcs.add(simHist);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
+		
+		if (simHists.length == 3) {
+			HistogramFunction nearHist = simHists[1];
+			HistogramFunction farHist = simHists[2];
+			funcs.add(nearHist);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, new Color(0, 160, 0, 140)));
+			funcs.add(farHist);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, new Color(160, 0, 0, 140)));
+		}
 		
 		for (int i=0; i<gmpes.size(); i++) {
 			AttenRelRef gmpeRef = gmpes.get(i);
@@ -263,8 +277,26 @@ public class SourceSiteDistPageGen<E> {
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 	}
 	
-	private static <E> HistogramFunction[] calcSimHist(SimulationRotDProvider<E> simProv, Site site, double[] periods,
-			List<? extends RuptureComparison<E>> sourceComps) throws IOException {
+	private static class HypoDistResult implements Comparable<HypoDistResult> {
+		final Location hypo;
+		final double[] vals;
+		
+		boolean sortLat = true;
+		
+		public HypoDistResult(Location hypo, double[] vals) {
+			super();
+			this.hypo = hypo;
+			this.vals = vals;
+		}
+		@Override
+		public int compareTo(HypoDistResult o) {
+			return sortLat ? Double.compare(hypo.getLatitude(), o.hypo.getLatitude())
+					: Double.compare(hypo.getLongitude(), o.hypo.getLongitude());
+		}
+	}
+	
+	private static <E> HistogramFunction[][] calcSimHist(SimulationRotDProvider<E> simProv, Site site, double[] periods,
+			List<? extends RuptureComparison<E>> sourceComps, boolean hypoFilter) throws IOException {
 		List<List<Double>> vals = new ArrayList<>();
 		SummaryStatistics[] stats = new SummaryStatistics[periods.length];
 		for (int p=0; p<periods.length; p++) {
@@ -272,6 +304,9 @@ public class SourceSiteDistPageGen<E> {
 			stats[p] = new SummaryStatistics();
 		}
 		
+		List<HypoDistResult> hypoDistList = null;
+		if (hypoFilter)
+			hypoDistList = new ArrayList<>();
 		for (RuptureComparison<E> comp : sourceComps) {
 			if (!comp.isComputed(site, periods[0]))
 				continue;
@@ -279,10 +314,17 @@ public class SourceSiteDistPageGen<E> {
 			int num = simProv.getNumSimulations(site, rup);
 			for (int i=0; i<num; i++) {
 				DiscretizedFunc func = simProv.getRotD50(site, rup, i);
+				double[] myVals = new double[periods.length];
+				for (int p=0; p<periods.length; p++)
+					myVals[p] = Math.log10(func.getInterpolatedY(periods[p]));
 				for (int p=0; p<periods.length; p++) {
-					double val = Math.log10(func.getInterpolatedY(periods[p]));
-					vals.get(p).add(val);
-					stats[p].addValue(val);
+					vals.get(p).add(myVals[p]);
+					stats[p].addValue(myVals[p]);
+				}
+				if (hypoFilter) {
+					Location hypo = simProv.getHypocenter(rup, i);
+					Preconditions.checkNotNull(hypo);
+					hypoDistList.add(new HypoDistResult(hypo, myVals));
 				}
 			}
 		}
@@ -290,14 +332,65 @@ public class SourceSiteDistPageGen<E> {
 		if (vals.isEmpty())
 			return null;
 		
-		HistogramFunction[] ret = new HistogramFunction[periods.length];
+		hypoFilter = hypoFilter && hypoDistList.size() > 2;
+		
+		HistogramFunction[][] ret = hypoFilter ? new HistogramFunction[periods.length][3]
+				: new HistogramFunction[periods.length][1];
+		
+		List<double[]> nearHypoVals = null;
+		List<double[]> farHypoVals = null;
+		if (hypoFilter) {
+			double maxLat = Double.NEGATIVE_INFINITY;
+			double minLat = Double.POSITIVE_INFINITY;
+			double maxLon = Double.NEGATIVE_INFINITY;
+			double minLon = Double.POSITIVE_INFINITY;
+			
+			for (HypoDistResult result : hypoDistList) {
+				double lat = result.hypo.getLatitude();
+				double lon = result.hypo.getLongitude();
+				maxLat = Double.max(maxLat, lat);
+				minLat = Double.min(minLat, lat);
+				maxLon = Double.max(maxLon, lon);
+				minLon = Double.min(minLon, lon);
+			}
+			double latSpan = maxLat - minLat;
+			double lonSpan = maxLon - minLon;
+			boolean sortLat = latSpan > lonSpan;
+			for (HypoDistResult result : hypoDistList)
+				result.sortLat = sortLat;
+			
+			Collections.sort(hypoDistList);
+			int maxNearIndex = hypoDistList.size()/3;
+			int minFarIndex = 2*hypoDistList.size()/3;
+			nearHypoVals = new ArrayList<>();
+			for (int i=0; i<=maxNearIndex; i++)
+				nearHypoVals.add(hypoDistList.get(i).vals);
+			farHypoVals = new ArrayList<>();
+			for (int i=minFarIndex; i<hypoDistList.size(); i++)
+				farHypoVals.add(hypoDistList.get(i).vals);
+		}
 		
 		for (int p=0; p<periods.length; p++) {
 			double max = stats[p].getMax();
 			double min = stats[p].getMin();
-			ret[p] = HistogramFunction.getEncompassingHistogram(min, max, simLogHistDelta);
+			ret[p][0] = HistogramFunction.getEncompassingHistogram(min, max, simLogHistDelta);
 			for (double val : vals.get(p))
-				ret[p].add(ret[p].getClosestXIndex(val), 1d);
+				ret[p][0].add(ret[p][0].getClosestXIndex(val), 1d);
+			if (hypoFilter) {
+				ret[p][1] = HistogramFunction.getEncompassingHistogram(min, max, simLogHistDelta);
+				for (double[] val : nearHypoVals)
+					ret[p][1].add(ret[p][1].getClosestXIndex(val[p]), 1d);
+				ret[p][2] = HistogramFunction.getEncompassingHistogram(min, max, simLogHistDelta);
+				for (double[] val : farHypoVals)
+					ret[p][2].add(ret[p][2].getClosestXIndex(val[p]), 1d);
+				if (hypoDistList.get(0).sortLat) {
+					ret[p][1].setName("South Hypos");
+					ret[p][2].setName("North Hypos");
+				} else {
+					ret[p][1].setName("West Hypos");
+					ret[p][2].setName("East Hypos");
+				}
+			}
 		}
 		
 		return ret;
