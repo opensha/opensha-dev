@@ -46,7 +46,8 @@ public class RuptureRotationUtils {
 			boolean transFirst, List<SimulatorElement> elemsList) {
 		List<RSQSimEventRecord> newRecords = new ArrayList<>();
 		
-		Preconditions.checkArgument(rotOrigin != null || transVector != null, "Must do translation or rotation (or both)");
+		Preconditions.checkArgument((rotOrigin != null && rotationAz != 0) || transVector != null,
+				"Must do translation or rotation (or both)");
 		
 		for (EventRecord record : event) {
 			List<SimulatorElement> elems = record.getElements();
@@ -63,7 +64,7 @@ public class RuptureRotationUtils {
 				if (transFirst && transVector != null)
 					newElem = translate(elem, transVector, id);
 				
-				if (rotOrigin != null)
+				if (rotOrigin != null && rotationAz != 0d)
 					newElem = rotate(newElem == null ? elem : newElem, rotOrigin, rotationAz, id);
 				
 				if (!transFirst && transVector != null)
@@ -175,7 +176,7 @@ public class RuptureRotationUtils {
 		throw new IllegalStateException("Only supports triangular and rectangular elements");
 	}
 	
-	private static Location getRuptureCentroid(RSQSimEvent event) {
+	static Location calcRuptureCentroid(RSQSimEvent event) {
 		List<SimulatorElement> elems = event.getAllElements();
 		Preconditions.checkState(!elems.isEmpty());
 		
@@ -262,7 +263,7 @@ public class RuptureRotationUtils {
 		for (int i=0; i<events.size(); i++) {
 			System.out.println("Centroid rotation "+i);
 			RSQSimEvent event = events.get(i);
-			Location centroid = getRuptureCentroid(event);
+			Location centroid = calcRuptureCentroid(event);
 			
 			// centroid annotation
 			List<XYAnnotation> anns = new ArrayList<>();
@@ -338,7 +339,7 @@ public class RuptureRotationUtils {
 		}
 	}
 	
-	private static double calcMinDist(Location loc, RSQSimEvent event) {
+	static double calcMinDist(Location loc, RSQSimEvent event) {
 		double minDist = Double.POSITIVE_INFINITY;
 		for (SimulatorElement elem : event.getAllElements()) {
 			for (Vertex v : elem.getVertices()) {
