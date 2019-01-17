@@ -584,9 +584,11 @@ public class SpectraPlotter {
 			chars.add(new PlotCurveCharacterstics(oLineTypes[i % oLineTypes.length], 2f, Color.BLUE.darker()));
 		}
 		
-		dataSpectra.setName(dataName);
-		funcs.add(dataSpectra);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		if (dataSpectra != null) {
+			dataSpectra.setName(dataName);
+			funcs.add(dataSpectra);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		}
 		
 		String xAxisLabel, yAxisLabel;
 		if (rotD50) {
@@ -1120,8 +1122,27 @@ public class SpectraPlotter {
 		}
 		return ret;
 	}
+	
+	private static void multiRDCompare(File outputDir, String prefix, String siteName, File... dirs) throws IOException {
+		List<DiscretizedFunc> refSpectra = new ArrayList<>();
+		for (File dir : dirs)
+			refSpectra.add(loadRotD50(findRotD100File(dir, siteName)));
+		plotMultiRotD50(refSpectra, siteName, null, null, "Spectra Comparison", outputDir, prefix, null);
+	}
 
 	public static void main(String[] args) throws IOException {
+//		multiRDCompare(new File("/tmp/event_46817/"), "USC_srcAz200_spectra", "USC",
+//		new File("/tmp/event_46817/i362_USC_event46817_dist50.0_srcAz200.0_siteSrcAz40.0"),
+//		new File("/tmp/event_46817/i364_USC_event46817_dist50.0_srcAz200.0_siteSrcAz80.0"),
+//		new File("/tmp/event_46817/i369_USC_event46817_dist50.0_srcAz200.0_siteSrcAz180.0"),
+//		new File("/tmp/event_46817/i370_USC_event46817_dist50.0_srcAz200.0_siteSrcAz200.0"));
+		multiRDCompare(new File("/tmp/event_46817/"), "USC_siteSrcAz0_spectra", "USC",
+				new File("/tmp/event_46817/i18_USC_event46817_dist50.0_srcAz10.0_siteSrcAz0.0"),
+				new File("/tmp/event_46817/i270_USC_event46817_dist50.0_srcAz150.0_siteSrcAz0.0"),
+				new File("/tmp/event_46817/i306_USC_event46817_dist50.0_srcAz170.0_siteSrcAz0.0"),
+				new File("/tmp/event_46817/i324_USC_event46817_dist50.0_srcAz180.0_siteSrcAz0.0"),
+				new File("/tmp/event_46817/i486_USC_event46817_dist50.0_srcAz270.0_siteSrcAz0.0"));
+		System.exit(0);
 //		File inputDir = new File("/data/kevin/simulators/catalogs/bruce/rundir2585/event_srfs/event_1670183_0.05s_ADJ_VEL_bbp");
 //		DiscretizedFunc unfiltered = loadRotD50(new File(inputDir, "704409874083920.USC.rd100"));
 //		unfiltered.setName("Unfiltered");

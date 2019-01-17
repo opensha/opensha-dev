@@ -6,91 +6,172 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
+import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.util.DataUtils;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.Vertex;
-import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
-import org.opensha.sha.simulators.srf.RSQSimStateTime;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 import scratch.kevin.bbp.BBP_Site;
+import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class RotatedRupVariabilityConfig {
 
-	private List<Location> siteLocs;
-	private List<RSQSimEvent> ruptures;
-	private List<SimulatorElement> elements;
 	private Map<Integer, RSQSimEvent> idToOrigMap;
 	private List<RotationSpec> rotations;
 	
 	// caches
-	private Map<RotationSpec, RSQSimEvent> rotationCache;
+	private static final int max_cache_size = 5000;
+	private LoadingCache<RotationSpec, RSQSimEvent> rotationCache;
 	private Map<RSQSimEvent, Location> centroidCache;
-	private Table<RSQSimEvent, Double, RSQSimEvent> centroidRotationCache;
-	private Table<Location, Double, Map<RSQSimEvent, RSQSimEvent>> siteDistTranslationCache;
 	
-	public RotatedRupVariabilityConfig(List<Location> siteLocs, List<RSQSimEvent> ruptures, List<SimulatorElement> elements,
-			double[] distances, int numSourceToSiteAz, int numSiteToSourceAz) {
-		init(siteLocs, ruptures, elements, buildRotations(siteLocs, ruptures, distances, numSourceToSiteAz, numSiteToSourceAz));
+	public RotatedRupVariabilityConfig(List<Site> sites, List<RSQSimEvent> ruptures,
+			double[] distances, int numSourceAz, int numSiteToSourceAz) {
+		this(ruptures, buildRotations(sites, ruptures, distances, numSourceAz, numSiteToSourceAz));
 	}
 	
-	private void init(List<Location> siteLocs, List<RSQSimEvent> ruptures, List<SimulatorElement> elements, List<RotationSpec> rotations) {
-		this.siteLocs = siteLocs;
-		this.ruptures = ruptures;
-		// copy to new list so that we can add to it
-		this.elements = new ArrayList<>(elements);
+	public RotatedRupVariabilityConfig(List<RSQSimEvent> ruptures, List<RotationSpec> rotations) {
 		if (ruptures != null) {
 			idToOrigMap = new HashMap<>();
 			for (RSQSimEvent rupture : ruptures)
 				idToOrigMap.put(rupture.getID(), rupture);
+			
+			rotationCache = CacheBuilder.newBuilder().maximumSize(max_cache_size).build(
+					new CacheLoader<RotationSpec, RSQSimEvent>() {
+
+						@Override
+						public RSQSimEvent load(RotationSpec key) throws Exception {
+							// TODO Auto-generated method stub
+							return RotatedRupVariabilityConfig.this.loadRupture(key);
+						}
+				
+			});
+			centroidCache = new HashMap<>();
 		}
 		this.rotations = rotations;
 	}
 	
-	public class RotationSpec {
+	public static class RotationSpec {
 		public final int index;
-		public final Location siteLoc;
+		public final Site site;
 		public final int eventID;
-		public final double distance;
-		public final double sourceToSiteAz;
-		public final double siteToSourceAz;
+		public final Double distance;
+		public final Double sourceAz;
+		public final Double siteToSourceAz;
 		
-		public RotationSpec(int index, Location siteLoc, int eventID, double distance, double sourceToSiteAz,
-				double siteToSourceAz) {
+		public RotationSpec(int index, Site site, int eventID, Double distance, Double sourceAz, Double siteToSourceAz) {
 			this.index = index;
-			this.siteLoc = siteLoc;
+			this.site = site;
 			this.eventID = eventID;
 			this.distance = distance;
-			this.sourceToSiteAz = sourceToSiteAz;
+			if (sourceAz != null && sourceAz == 0d)
+				sourceAz = null;
+			this.sourceAz = sourceAz;
+			if (siteToSourceAz != null && siteToSourceAz == 0d)
+				siteToSourceAz = null;
 			this.siteToSourceAz = siteToSourceAz;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((distance == null) ? 0 : distance.hashCode());
+			result = prime * result + eventID;
+			result = prime * result + ((site == null) ? 0 : site.hashCode());
+			result = prime * result + ((siteToSourceAz == null) ? 0 : siteToSourceAz.hashCode());
+			result = prime * result + ((sourceAz == null) ? 0 : sourceAz.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			RotationSpec other = (RotationSpec) obj;
+			if (distance == null) {
+				if (other.distance != null)
+					return false;
+			} else if (!distance.equals(other.distance))
+				return false;
+			if (eventID != other.eventID)
+				return false;
+			if (site == null) {
+				if (other.site != null)
+					return false;
+			} else if (!site.equals(other.site))
+				return false;
+			if (siteToSourceAz == null) {
+				if (other.siteToSourceAz != null)
+					return false;
+			} else if (!siteToSourceAz.equals(other.siteToSourceAz))
+				return false;
+			if (sourceAz == null) {
+				if (other.sourceAz != null)
+					return false;
+			} else if (!sourceAz.equals(other.sourceAz))
+				return false;
+			return true;
+		}
+
+		@Override
+		public String toString() {
+			return "RotationSpec [index="+index+"\tsiteLoc="+site+"\teventID="+eventID+"\tdistance="
+					+distance+"\tsourceAz="+sourceAz+"\tsiteToSourceAz="+siteToSourceAz+"]";
+		}
+		
+		private String doubleStr(Double d) {
+			if (d == null)
+				return "0.0";
+			return d.floatValue()+"";
+		}
+		
+		private String siteName() {
+			if (site == null)
+				return "null";
+			else if (site.getName() != null)
+				return site.getName();
+			return (float)site.getLocation().getLatitude()+"_"+(float)site.getLocation().getLongitude();
+		}
+		
+		public String getPrefix() {
+			return "i"+index+"_"+siteName()+"_event"+eventID+"_dist"+doubleStr(distance)
+				+"_srcAz"+doubleStr(sourceAz)+"_siteSrcAz"+doubleStr(siteToSourceAz);
 		}
 	}
 	
-	private List<RotationSpec> buildRotations(List<Location> siteLocs, List<RSQSimEvent> ruptures, double[] distances,
-			int numSourceToSiteAz, int numSiteToSourceAz) {
+	private static List<RotationSpec> buildRotations(List<Site> sites, List<RSQSimEvent> ruptures, double[] distances,
+			int numSourceAz, int numSiteToSourceAz) {
 		List<RotationSpec> rotations = new ArrayList<>();
 		int index = 0;
-		double sourceToSiteDeltaAz = 360/(double)numSourceToSiteAz;
+		double sourceDeltaAz = 360/(double)numSourceAz;
 		double siteToSourceDeltaAz = 360/(double)numSiteToSourceAz;
-		for (Location siteLoc : siteLocs) {
+		for (Site site : sites) {
 			for (double distance : distances) {
 				for (RSQSimEvent rupture : ruptures) {
 					int eventID = rupture.getID();
-					for (int nSrc=0; nSrc<numSourceToSiteAz; nSrc++) {
-						double sourceToSiteAz = nSrc*sourceToSiteDeltaAz;
+					for (int nSrc=0; nSrc<numSourceAz; nSrc++) {
+						double sourceAz = nSrc*sourceDeltaAz;
 						for (int nSite=0; nSite<numSiteToSourceAz; nSite++) {
 							double siteToSourceAz = nSite*siteToSourceDeltaAz;
-							rotations.add(new RotationSpec(index++, siteLoc, eventID, distance, sourceToSiteAz, siteToSourceAz));;
+							rotations.add(new RotationSpec(index++, site, eventID, distance, sourceAz, siteToSourceAz));;
 						}
 					}
 				}
@@ -103,29 +184,14 @@ public class RotatedRupVariabilityConfig {
 		return rotations;
 	}
 	
-	public synchronized RSQSimEvent getRotatedRupture(RotationSpec rotation) {
-		if (rotationCache == null)
-			rotationCache = new HashMap<>();
-		if (rotationCache.containsKey(rotation))
-			return rotationCache.get(rotation);
-		Preconditions.checkNotNull(ruptures);
-		if (centroidCache == null)
-			centroidCache = new HashMap<>();
-		if (centroidRotationCache == null)
-			centroidRotationCache = HashBasedTable.create();
-		if (siteDistTranslationCache == null)
-			siteDistTranslationCache = HashBasedTable.create();
-		Map<RSQSimEvent, RSQSimEvent> translationCache = siteDistTranslationCache.get(rotation.siteLoc, rotation.distance);
-		if (translationCache == null) {
-			translationCache = new HashMap<>();
-			siteDistTranslationCache.put(rotation.siteLoc, rotation.distance, translationCache);
-		}
-		
+	private RSQSimEvent loadRupture(RotationSpec rotation) {
 		RSQSimEvent rupture = idToOrigMap.get(rotation.eventID);
 		Preconditions.checkNotNull(rupture);
-		if (rotation.sourceToSiteAz != 0d) {
+		
+		if (rotation.sourceAz != null) {
 			// first rotate the rupture around it's centroid
-			RSQSimEvent rotated = centroidRotationCache.get(rupture, rotation.sourceToSiteAz);
+			RotationSpec centroidRotSpec = new RotationSpec(-1, null, rotation.eventID, null, rotation.sourceAz, null);
+			RSQSimEvent rotated = rotationCache.getIfPresent(centroidRotSpec);
 			if (rotated == null) {
 				// not yet cached
 				Location centroid = centroidCache.get(rupture);
@@ -133,127 +199,120 @@ public class RotatedRupVariabilityConfig {
 					centroid = RuptureRotationUtils.calcRuptureCentroid(rupture);
 					centroidCache.put(rupture, centroid);
 				}
-				rotated = RuptureRotationUtils.getRotated(rupture, centroid, rotation.sourceToSiteAz, elements);
-				centroidRotationCache.put(rupture, rotation.sourceToSiteAz, rotated);
+				rotated = RuptureRotationUtils.getRotated(rupture, centroid, rotation.sourceAz);
+				rotationCache.put(centroidRotSpec, rotated);
 			}
 			rupture = rotated;
 		}
 		Preconditions.checkNotNull(rupture);
 		
-		// now translate it to the supplied distance
-		RSQSimEvent translated = translationCache.get(rupture);
-		if (translated == null) {
-			// not yet cached, have to do it
-			translated = rupture;
-			
-			double origDist = -1;
-			
-			int numTrans = 0;
-			double minDist = Double.NaN, pDiff = Double.NaN, absDiff = Double.NaN;
-			while (numTrans < 5) { // max 5 translations
-				Location closest = null;
-				minDist = Double.POSITIVE_INFINITY;
-				for (SimulatorElement elem : translated.getAllElements()) {
-					for (Vertex v : elem.getVertices()) {
-						double elemDist = LocationUtils.horzDistanceFast(rotation.siteLoc, v);
-						if (elemDist < minDist) {
-							minDist = elemDist;
-							closest = v;
+		if (rotation.distance != null) {
+			// now translate it to the supplied distance
+			RotationSpec transSpec = new RotationSpec(-1, rotation.site, rotation.eventID, rotation.distance, rotation.sourceAz, null);
+			RSQSimEvent translated = rotationCache.getIfPresent(transSpec);
+			if (translated == null) {
+				// not yet cached, have to do it
+				translated = rupture;
+				
+				double origDist = -1;
+				
+				int numTrans = 0;
+				double minDist = Double.NaN, pDiff = Double.NaN, absDiff = Double.NaN;
+				while (numTrans < 5) { // max 5 translations
+					Location closest = null;
+					minDist = Double.POSITIVE_INFINITY;
+					for (SimulatorElement elem : translated.getAllElements()) {
+						for (Vertex v : elem.getVertices()) {
+							double elemDist = LocationUtils.horzDistanceFast(rotation.site.getLocation(), v);
+							if (elemDist < minDist) {
+								minDist = elemDist;
+								closest = v;
+							}
 						}
 					}
+					if (origDist < 0)
+						origDist = minDist;
+					
+					pDiff = DataUtils.getPercentDiff(minDist, rotation.distance);
+					absDiff = Math.abs(minDist - rotation.distance);
+					if (pDiff < 0.5 || absDiff < 0.5)
+						break;
+					
+					LocationVector rupToOrigin = LocationUtils.vector(closest, rotation.site.getLocation());
+					LocationVector transVector = new LocationVector(rupToOrigin.getAzimuth(),
+							rupToOrigin.getHorzDistance()-rotation.distance, 0d);
+					translated = RuptureRotationUtils.getTranslated(translated, transVector);
+					numTrans++;
 				}
-				if (origDist < 0)
-					origDist = minDist;
 				
-				pDiff = DataUtils.getPercentDiff(minDist, rotation.distance);
-				absDiff = Math.abs(minDist - rotation.distance);
-				if (pDiff < 0.5 || absDiff < 0.5)
-					break;
-				
-				LocationVector rupToOrigin = LocationUtils.vector(closest, rotation.siteLoc);
-				LocationVector transVector = new LocationVector(rupToOrigin.getAzimuth(),
-						rupToOrigin.getHorzDistance()-rotation.distance, 0d);
-				translated = RuptureRotationUtils.getTranslated(translated, transVector, elements);
-				numTrans++;
+				Preconditions.checkState(pDiff < 0.5 || absDiff < 0.5,
+						"Translation didn't work after %s rounds! target: %s, actual: %s, orig: %s",
+						numTrans, rotation.distance, minDist, origDist);
+				rotationCache.put(transSpec, translated);
+				rupture = translated;
 			}
-			
-			Preconditions.checkState(pDiff < 0.5 || absDiff < 0.5,
-					"Translation didn't work after %s rounds! target: %s, actual: %s, orig: %s",
-					numTrans, rotation.distance, minDist, origDist);
-			translationCache.put(rupture, translated);
-			rupture = translated;
 		}
 		
-		if (rotation.siteToSourceAz != 0d)
+		if (rotation.siteToSourceAz != null)
 			// rotate it around the site
-			rupture = RuptureRotationUtils.getRotated(rupture, rotation.siteLoc, rotation.siteToSourceAz, elements);
+			rupture = RuptureRotationUtils.getRotated(rupture, rotation.site.getLocation(), rotation.siteToSourceAz);
 		rotationCache.put(rotation, rupture);
 		
 		return rupture;
 	}
 	
-	public List<SimulatorElement> getElements() {
-		return elements;
-	}
-	
-	public synchronized RSQSimEventSlipTimeFunc getRotatedSlipTimeFunc(RSQSimCatalog catalog, RSQSimEvent event) throws IOException {
-		RSQSimEvent origEvent = idToOrigMap.get(event.getID());
-		Map<Integer, List<RSQSimStateTime>> origTransMap = catalog.getTransitions().getTransitions(event);
-		Map<Integer, Double> origSlipVels = catalog.getSlipVelocities();
-		
-		Map<Integer, List<RSQSimStateTime>> patchTransitionsMap = new HashMap<>();
-		Map<Integer, Double> slipVels = new HashMap<>();
-		boolean variableSlipSpeed = catalog.isVariableSlipSpeed();
-		
-		int[] origPatchIDs = origEvent.getAllElementIDs();
-		int[] rotPatchIDs = origEvent.getAllElementIDs();
-		Preconditions.checkState(origPatchIDs.length == rotPatchIDs.length, "Length mistmatch! %s != %s",
-				origPatchIDs.length, rotPatchIDs.length);
-		Preconditions.checkState(origPatchIDs.length > 0, "No patch IDs?");
-		for (int i=0; i<origPatchIDs.length; i++) {
-			int origID = origPatchIDs[i];
-			int rotID = rotPatchIDs[i];
-			List<RSQSimStateTime> origTrans = origTransMap.get(origID);
-			List<RSQSimStateTime> rotTrans = new ArrayList<>();
-			for (RSQSimStateTime trans : origTrans)
-				rotTrans.add(new RSQSimStateTime(rotID, trans.getStartTime(), trans.getEndTime(), trans.getState(), trans.getVelocity()));
-			patchTransitionsMap.put(rotID, rotTrans);
-			slipVels.put(rotID, origSlipVels.get(origID));
+	public synchronized RSQSimEvent getRotatedRupture(RotationSpec rotation) {
+		Preconditions.checkNotNull(idToOrigMap);
+		try {
+			return rotationCache.get(rotation);
+		} catch (ExecutionException e) {
+			throw ExceptionUtils.asRuntimeException(e);
 		}
-		
-		return new RSQSimEventSlipTimeFunc(patchTransitionsMap, slipVels, variableSlipSpeed);
 	}
 	
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
-		int skipYears = 2000;
+		int skipYears = 5000;
 		
 		List<BBP_Site> bbpSites = RSQSimBBP_Config.getCyberShakeInitialLASites();
 		
 		double[] distances = BBP_PartBValidationConfig.DISTANCES;
-		int numSourceToSiteAz = 10;
-		int numSiteToSourceAz = 5;
+		int numSourceAz = 36;
+		int numSiteToSourceAz = 36;
+		int maxRuptures = 100;
 		
-		List<Location> siteLocs = new ArrayList<>();
+		List<Site> sites = new ArrayList<>();
 		for (BBP_Site bbpSite : bbpSites)
-			siteLocs.add(bbpSite.getLoc());
+			sites.add(bbpSite.buildGMPE_Site(VelocityModel.LA_BASIN));
 		
 		System.out.println("Loading ruptures for scenario");
 		List<RSQSimEvent> ruptures = BBP_PartBValidationConfig.Scenario.M6p6_VERT_SS_SURFACE.getMatches(catalog, skipYears);
 		System.out.println("Loaded "+ruptures.size()+" ruptures");
+		if (ruptures.size() > maxRuptures) {
+			ruptures = ruptures.subList(0, maxRuptures);
+			System.out.println("Trimmed to "+ruptures.size()+" ruptures");
+		}
 		
 		RotatedRupVariabilityConfig config = new RotatedRupVariabilityConfig(
-				siteLocs, ruptures, catalog.getElements(), distances, numSourceToSiteAz, numSiteToSourceAz);
+				sites, ruptures, distances, numSourceAz, numSiteToSourceAz);
 		
-		System.out.println("Generated "+config.getRotations().size()+" rotations");
+		List<RotationSpec> rotations = config.getRotations();
 		
-		System.out.println("Rotating ruptures. Starting element count: "+catalog.getElements().size());
-		for (RotationSpec rotation : config.getRotations()) {
-			config.getRotatedRupture(rotation);
+		System.out.println("Generated "+rotations.size()+" rotations");
+		System.out.println("First 100:");
+		for (int i=0; i<100 && i<rotations.size(); i++)
+			System.out.println("\t"+rotations.get(i));
+		
+		System.out.println("Rotating ruptures");
+		for (int i=0; i<rotations.size(); i++) {
+			if (i % 1000 == 0) System.out.println("\tBuilding Rotated Rupture "+i+"/"+rotations.size()
+				+"\t(cache size: "+config.rotationCache.size()+")");
+			
+			config.getRotatedRupture(rotations.get(i));
 		}
-		System.out.println("Done rotating ruptures. Final element count: "+config.elements.size());
+		System.out.println("Done rotating ruptures");
 	}
 
 }

@@ -54,9 +54,10 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		siteDists = new ArrayList<>();
 		siteListCache = HashBasedTable.create();
 		
-		double[] distances = BBP_PartBValidationConfig.DISTANCES;
+		double[] distances = getDistances(cmd);
+		Scenario[] scenarios = getScenarios(cmd);
 		
-		for (Scenario scenario : Scenario.values()) {
+		for (Scenario scenario : scenarios) {
 			if (rank == 0)
 				debug("Loading matches for scenario: "+scenario);
 			
@@ -156,14 +157,50 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		return events.size();
 	}
 	
+	static void addPartB_ScenarioOptions(Options ops) {
+		Option scenarios = new Option("scen", "scenarios", true, "BBP Part B Scenario names (comma separated). Default is all");
+		scenarios.setRequired(false);
+		ops.addOption(scenarios);
+		
+		Option distances = new Option("d", "distances", true, "Distances to consider");
+		distances.setRequired(false);
+		ops.addOption(distances);
+	}
+	
+	static Scenario[] getScenarios(CommandLine cmd) {
+		if (cmd.hasOption("scenarios")) {
+			String str = cmd.getOptionValue("scenarios");
+			String[] strs = str.split(",");
+			Scenario[] scenarios = new Scenario[strs.length];
+			for (int i=0; i<strs.length; i++)
+				scenarios[i] = Scenario.valueOf(strs[i]);
+			return scenarios;
+		}
+		return Scenario.values();
+	}
+	
+	static double[] getDistances(CommandLine cmd) {
+		if (cmd.hasOption("distances")) {
+			String str = cmd.getOptionValue("distances");
+			String[] strs = str.split(",");
+			double[] dists = new double[strs.length];
+			for (int i=0; i<strs.length; i++)
+				dists[i] = Double.parseDouble(strs[i]);
+			return dists;
+		}
+		return BBP_PartBValidationConfig.DISTANCES;
+	}
+	
 	public static Options createOptions() {
 		Options ops = MPJTaskCalculator.createOptions();
 		MPJ_BBP_Utils.addCommonOptions(ops, false, false, false, false);
 		addCommonOptions(ops);
 		
-		Option numSites = new Option("ns", "num-sites", true, "Minimum magnitude");
+		Option numSites = new Option("ns", "num-sites", true, "Number of sites");
 		numSites.setRequired(true);
 		ops.addOption(numSites);
+		
+		addPartB_ScenarioOptions(ops);
 		
 		Option skipYears = new Option("skip", "skip-years", true, "Skip the given number of years at the start");
 		skipYears.setRequired(false);

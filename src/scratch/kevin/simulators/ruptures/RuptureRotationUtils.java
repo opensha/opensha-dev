@@ -34,16 +34,16 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class RuptureRotationUtils {
 	
-	public static RSQSimEvent getRotated(RSQSimEvent event, Location origin, double rotationAz, List<SimulatorElement> elemsList) {
-		return getTransRotated(event, origin, rotationAz, null, false, elemsList);
+	public static RSQSimEvent getRotated(RSQSimEvent event, Location origin, double rotationAz) {
+		return getTransRotated(event, origin, rotationAz, null, false);
 	}
 	
-	public static RSQSimEvent getTranslated(RSQSimEvent event, LocationVector vector, List<SimulatorElement> elemsList) {
-		return getTransRotated(event, null, 0d, vector, true, elemsList);
+	public static RSQSimEvent getTranslated(RSQSimEvent event, LocationVector vector) {
+		return getTransRotated(event, null, 0d, vector, true);
 	}
 	
-	public static RSQSimEvent getTransRotated(RSQSimEvent event, Location rotOrigin, double rotationAz, LocationVector transVector,
-			boolean transFirst, List<SimulatorElement> elemsList) {
+	public static RSQSimEvent getTransRotated(RSQSimEvent event, Location rotOrigin, double rotationAz,
+			LocationVector transVector, boolean transFirst) {
 		List<RSQSimEventRecord> newRecords = new ArrayList<>();
 		
 		Preconditions.checkArgument((rotOrigin != null && rotationAz != 0) || transVector != null,
@@ -53,78 +53,76 @@ public class RuptureRotationUtils {
 			List<SimulatorElement> elems = record.getElements();
 			List<SimulatorElement> newElems = new ArrayList<>();
 			
-			int[] newIDs = new int[elems.size()];
-			
 			for (int i=0; i<elems.size(); i++) {
 				SimulatorElement elem = elems.get(i);
-				int id = elemsList.size()+1; // ID is index +1
-				newIDs[i] = id;
 				
 				SimulatorElement newElem = null;
 				if (transFirst && transVector != null)
-					newElem = translate(elem, transVector, id);
+					newElem = translate(elem, transVector);
 				
 				if (rotOrigin != null && rotationAz != 0d)
-					newElem = rotate(newElem == null ? elem : newElem, rotOrigin, rotationAz, id);
+					newElem = rotate(newElem == null ? elem : newElem, rotOrigin, rotationAz);
 				
 				if (!transFirst && transVector != null)
-					newElem = translate(newElem == null ? elem : newElem, transVector, id);
-				elemsList.add(newElem);
+					newElem = translate(newElem == null ? elem : newElem, transVector);
 				newElems.add(newElem);
 			}
 			
-			newRecords.add(getRelocatedRecord(record, elemsList, newIDs));
+			newRecords.add(new RelocatedRecord((RSQSimEventRecord)record, newElems));
 		}
 		
 		return new RSQSimEvent(newRecords);
 	}
 	
-	private static RSQSimEventRecord getRelocatedRecord(EventRecord rec, List<SimulatorElement> allElems, int[] ids) {
-		Preconditions.checkState(rec instanceof RSQSimEventRecord);
-		RSQSimEventRecord origRec = (RSQSimEventRecord)rec;
-		RSQSimEventRecord newRecord = new RSQSimEventRecord(allElems);
-		
-		int[] origElemIDs = rec.getElementIDs();
-		Preconditions.checkState(ids.length == origElemIDs.length);
-		double[] origElemSlips = rec.getElementSlips();
-		Preconditions.checkState(ids.length == origElemSlips.length);
-		double[] times = rec.getElementTimeFirstSlips();
-		for (int i=0; i<ids.length; i++) {
-			if (times == null)
-				newRecord.addSlip(ids[i], origElemSlips[i]);
-			else
-				newRecord.addSlip(ids[i], origElemSlips[i], times[i]);
+	private static class RelocatedRecord extends RSQSimEventRecord {
+
+		private List<SimulatorElement> newElements;
+
+		public RelocatedRecord(RSQSimEventRecord origRec, List<SimulatorElement> newElements) {
+			super(null);
+			this.newElements = newElements;
+			
+			int[] origElemIDs = origRec.getElementIDs();
+			Preconditions.checkState(newElements.size() == origElemIDs.length);
+			double[] origElemSlips = origRec.getElementSlips();
+			Preconditions.checkState(origElemIDs.length == origElemSlips.length);
+			double[] times = origRec.getElementTimeFirstSlips();
+			for (int i=0; i<origElemIDs.length; i++) {
+				if (times == null)
+					addSlip(origElemIDs[i], origElemSlips[i]);
+				else
+					addSlip(origElemIDs[i], origElemSlips[i], times[i]);
+			}
+			
+			Preconditions.checkState(origRec.hasElementSlipsAndIDs());
+			Preconditions.checkState(origElemIDs.length == origRec.getElementSlips().length, "Bad array lengths. orig ID len=%s, orig slip len=%s",
+					origElemIDs.length, origRec.getElementSlips().length);
+			
+			setArea(origRec.getArea());
+			setDuration(origRec.getDuration());
+			Preconditions.checkState(hasElementSlipsAndIDs());
+			if (origRec.getFirstPatchToSlip() >= 0)
+				setFirstPatchToSlip(origRec.getFirstPatchToSlip());
+			setID(origRec.getID());
+			setLength(origRec.getLength());
+			setMagnitude(origRec.getMagnitude());
+			setMoment(origRec.getMoment());
+			setNextSlipTimes(origRec.getNextSlipTimes());
+			setSectionID(origRec.getSectionID());
+			setTime(origRec.getTime());
+		}
+
+		@Override
+		public List<SimulatorElement> getElements() {
+			return newElements;
 		}
 		
-		
-		Map<Integer, Integer> origToNewIDs = new HashMap<>();
-		for (int i=0; i<origElemIDs.length; i++) {
-			origToNewIDs.put(origElemIDs[i], ids[i]);
-		}
-		Preconditions.checkState(origRec.hasElementSlipsAndIDs());
-		Preconditions.checkState(origElemIDs.length == origRec.getElementSlips().length, "Bad array lengths. orig ID len=%s, orig slip len=%s",
-				origElemIDs.length, origRec.getElementSlips().length);
-		
-		newRecord.setArea(origRec.getArea());
-		newRecord.setDuration(origRec.getDuration());
-		Preconditions.checkState(newRecord.hasElementSlipsAndIDs());
-		if (origRec.getFirstPatchToSlip() >= 0)
-			newRecord.setFirstPatchToSlip(origToNewIDs.get(origRec.getFirstPatchToSlip()));
-		newRecord.setID(origRec.getID());
-		newRecord.setLength(origRec.getLength());
-		newRecord.setMagnitude(origRec.getMagnitude());
-		newRecord.setMoment(origRec.getMoment());
-		newRecord.setNextSlipTimes(origRec.getNextSlipTimes());
-		newRecord.setSectionID(origRec.getSectionID());
-		newRecord.setTime(origRec.getTime());
-		
-		return newRecord;
 	}
 	
 	/*
-	 * returns cloned rotated element around given origin with the given ID. azimuth in decimal degrees
+	 * returns cloned rotated element around given origin. azimuth in decimal degrees
 	 */
-	private static SimulatorElement rotate(SimulatorElement elem, Location origin, double azimuth, int id) {
+	private static SimulatorElement rotate(SimulatorElement elem, Location origin, double azimuth) {
 		Vertex[] verts = elem.getVertices();
 		Vertex[] rotVerts = new Vertex[verts.length];
 		
@@ -147,18 +145,18 @@ public class RuptureRotationUtils {
 		}
 		
 		if (elem instanceof TriangularElement)
-			return new TriangularElement(id, rotVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(),
+			return new TriangularElement(elem.getID(), rotVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(),
 					elem.getNumAlongStrike(), elem.getNumDownDip(), elem.getSlipRate(), elem.getAseisFactor(), rotMech);
 		else if (elem instanceof RectangularElement)
-			return new RectangularElement(id, rotVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(), elem.getNumAlongStrike(),
+			return new RectangularElement(elem.getID(), rotVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(), elem.getNumAlongStrike(),
 					elem.getNumDownDip(), elem.getSlipRate(), elem.getAseisFactor(), rotMech, ((RectangularElement)elem).isPerfect());
 		throw new IllegalStateException("Only supports triangular and rectangular elements");
 	}
 	
 	/*
-	 * returns cloned rotated element around given origin with the given ID. azimuth in decimal degrees
+	 * returns cloned translated element.
 	 */
-	private static SimulatorElement translate(SimulatorElement elem, LocationVector vector, int id) {
+	private static SimulatorElement translate(SimulatorElement elem, LocationVector vector) {
 		Vertex[] verts = elem.getVertices();
 		Vertex[] transVerts = new Vertex[verts.length];
 		
@@ -168,10 +166,10 @@ public class RuptureRotationUtils {
 		}
 		
 		if (elem instanceof TriangularElement)
-			return new TriangularElement(id, transVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(),
+			return new TriangularElement(elem.getID(), transVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(),
 					elem.getNumAlongStrike(), elem.getNumDownDip(), elem.getSlipRate(), elem.getAseisFactor(), elem.getFocalMechanism());
 		else if (elem instanceof RectangularElement)
-			return new RectangularElement(id, transVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(), elem.getNumAlongStrike(),
+			return new RectangularElement(elem.getID(), transVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(), elem.getNumAlongStrike(),
 					elem.getNumDownDip(), elem.getSlipRate(), elem.getAseisFactor(), elem.getFocalMechanism(), ((RectangularElement)elem).isPerfect());
 		throw new IllegalStateException("Only supports triangular and rectangular elements");
 	}
@@ -257,8 +255,6 @@ public class RuptureRotationUtils {
 		Location origin = new Location(34, -118);
 		double targetDist = 100d;
 		
-		List<SimulatorElement> allElems = new ArrayList<>(catalog.getElements());
-		
 		// centroid rotations
 		for (int i=0; i<events.size(); i++) {
 			System.out.println("Centroid rotation "+i);
@@ -273,7 +269,7 @@ public class RuptureRotationUtils {
 			double rotAngle = 360d/(double)numRots;
 			for (int j=0; j<numRots; j++) {
 				double angle = rotAngle * (j+1);
-				RSQSimEvent rotEvent = getRotated(event, centroid, angle, allElems);
+				RSQSimEvent rotEvent = getRotated(event, centroid, angle);
 				plotElems.addAll(rotEvent.getAllElements());
 			}
 			RupturePlotGenerator.writeMapPlot(plotElems, event, null, outputDir, "rot_centroid_test_"+i, null, null, null, null, null, null, anns);
@@ -301,7 +297,7 @@ public class RuptureRotationUtils {
 			System.out.println("\tOrig min dist: "+minDist);
 			LocationVector rupToOrigin = LocationUtils.vector(closest, origin);
 			LocationVector transVector = new LocationVector(rupToOrigin.getAzimuth(), rupToOrigin.getHorzDistance()-targetDist, 0d);
-			event = getTranslated(event, transVector, allElems);
+			event = getTranslated(event, transVector);
 			System.out.println("\tTrans min dist: "+calcMinDist(origin, event));
 			
 			// origin annotation
@@ -313,7 +309,7 @@ public class RuptureRotationUtils {
 			double rotAngle = 360d/(double)numRots;
 			for (int j=0; j<numRots; j++) {
 				double angle = rotAngle * (j+1);
-				RSQSimEvent rotEvent = getRotated(event, origin, angle, allElems);
+				RSQSimEvent rotEvent = getRotated(event, origin, angle);
 				System.out.println("\trot "+j+" min dist: "+calcMinDist(origin, rotEvent));
 				plotElems.addAll(rotEvent.getAllElements());
 			}
