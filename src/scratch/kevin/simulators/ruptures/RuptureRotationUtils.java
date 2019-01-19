@@ -348,7 +348,7 @@ public class RuptureRotationUtils {
 		return minDist;
 	}
 	
-	private static XYPolygonAnnotation getLocationAnn(double locRectWidth, Location loc, Color c) {
+	static XYPolygonAnnotation getLocationAnn(double locRectWidth, Location loc, Color c) {
 		double[] poly = new double[10];
 		double lat = loc.getLatitude();
 		double lon = loc.getLongitude();

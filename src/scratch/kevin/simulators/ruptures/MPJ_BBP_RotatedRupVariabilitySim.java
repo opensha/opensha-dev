@@ -33,6 +33,7 @@ public class MPJ_BBP_RotatedRupVariabilitySim extends AbstractMPJ_BBP_MultiRupSi
 	
 	private MPJ_BBP_RotatedRupVariabilitySim(CommandLine cmd) throws IOException {
 		super(cmd);
+		this.shuffle = false; // do them in order for better caching
 		
 		int skipYears = -1;
 		if (cmd.hasOption("skip-years"))
@@ -93,18 +94,20 @@ public class MPJ_BBP_RotatedRupVariabilitySim extends AbstractMPJ_BBP_MultiRupSi
 				debug("Creating rotations for "+numSourceAz+" source azimuths, "+numSiteToSourceAz+" site-source azimuths, "
 						+distances.length+" distances, and "+eventMatches.size()+" events");
 			RotatedRupVariabilityConfig config = new RotatedRupVariabilityConfig(
-					gmpeSites, eventMatches, distances, numSourceAz, numSiteToSourceAz);
+					catalog, gmpeSites, eventMatches, distances, numSourceAz, numSiteToSourceAz);
 			List<RotationSpec> rotations = config.getRotations();
 			if (rank == 0)
 				debug("Created "+rotations.size()+" rotations");
-			Table<Site, Double, File> siteDistDirTable = HashBasedTable.create();
+			if (rank == 0)
+				config.writeCSV(new File(mainOutputDir, "rotation_config_"+scenario.getPrefix()+".csv"));
+			Table<Site, Float, File> siteDistDirTable = HashBasedTable.create();
 			Table<File, Integer, File> eventDirTable = HashBasedTable.create();
 			for (Site site : gmpeSites) {
 				for (double distance : distances) {
 					File siteDistDir = new File (scenarioDir, "site_"+site.getName()+"_dist_"+(float)distance);
 					if (rank == 0)
 						MPJ_BBP_Utils.waitOnDir(siteDistDir, 10, 2000);
-					siteDistDirTable.put(site, distance, siteDistDir);
+					siteDistDirTable.put(site, (float)distance, siteDistDir);
 					for (RSQSimEvent event : eventMatches) {
 						File eventDir = new File (siteDistDir, "event_"+event.getID());
 						eventDirTable.put(siteDistDir, event.getID(), eventDir);
@@ -116,17 +119,20 @@ public class MPJ_BBP_RotatedRupVariabilitySim extends AbstractMPJ_BBP_MultiRupSi
 			for (RotationSpec rotation : config.getRotations()) {
 				File siteDistDir = siteDistDirTable.get(rotation.site, rotation.distance);
 				File eventDir = eventDirTable.get(siteDistDir, rotation.eventID);
-				configs.add(new Config(config, rotation, eventDir));
+				Preconditions.checkNotNull(eventDir);
+				configs.add(new Config(scenario, config, rotation, eventDir));
 			}
 		}
 	}
 	
 	private class Config {
+		private final Scenario scenario;
 		private final RotatedRupVariabilityConfig config;
 		private final RotationSpec rotation;
 		private final File eventDir;
 		
-		public Config(RotatedRupVariabilityConfig config, RotationSpec rotation, File eventDir) {
+		public Config(Scenario scenario, RotatedRupVariabilityConfig config, RotationSpec rotation, File eventDir) {
+			this.scenario = scenario;
 			this.config = config;
 			this.rotation = rotation;
 			this.eventDir = eventDir;
@@ -150,7 +156,7 @@ public class MPJ_BBP_RotatedRupVariabilitySim extends AbstractMPJ_BBP_MultiRupSi
 	@Override
 	File runDirForIndex(int index) {
 		Config config = configs.get(index);
-		return new File(config.eventDir, config.rotation.getPrefix());
+		return new File(config.eventDir, config.scenario.getPrefix()+"_"+config.rotation.getPrefix());
 	}
 
 	@Override
