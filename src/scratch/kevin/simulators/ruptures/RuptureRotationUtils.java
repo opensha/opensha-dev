@@ -74,6 +74,26 @@ public class RuptureRotationUtils {
 		return new RSQSimEvent(newRecords);
 	}
 	
+	public static RSQSimEvent getMirroredNS(RSQSimEvent event, double latitude) {
+		List<RSQSimEventRecord> newRecords = new ArrayList<>();
+		
+		for (EventRecord record : event) {
+			List<SimulatorElement> elems = record.getElements();
+			List<SimulatorElement> newElems = new ArrayList<>();
+			
+			for (int i=0; i<elems.size(); i++) {
+				SimulatorElement elem = elems.get(i);
+				
+				SimulatorElement newElem = mirrorNS(elem, latitude);
+				newElems.add(newElem);
+			}
+			
+			newRecords.add(new RelocatedRecord((RSQSimEventRecord)record, newElems));
+		}
+		
+		return new RSQSimEvent(newRecords);
+	}
+	
 	private static class RelocatedRecord extends RSQSimEventRecord {
 
 		private List<SimulatorElement> newElements;
@@ -137,6 +157,41 @@ public class RuptureRotationUtils {
 		FocalMechanism rotMech = null;
 		if (mech != null) {
 			double newStrike = mech.getStrike() + azimuth;
+			while (newStrike >= 360)
+				newStrike -= 360;
+			while (newStrike < 0)
+				newStrike += 360;
+			rotMech = new FocalMechanism(newStrike, mech.getDip(), mech.getRake());
+		}
+		
+		if (elem instanceof TriangularElement)
+			return new TriangularElement(elem.getID(), rotVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(),
+					elem.getNumAlongStrike(), elem.getNumDownDip(), elem.getSlipRate(), elem.getAseisFactor(), rotMech);
+		else if (elem instanceof RectangularElement)
+			return new RectangularElement(elem.getID(), rotVerts, elem.getSectionName(), elem.getFaultID(), elem.getSectionID(), elem.getNumAlongStrike(),
+					elem.getNumDownDip(), elem.getSlipRate(), elem.getAseisFactor(), rotMech, ((RectangularElement)elem).isPerfect());
+		throw new IllegalStateException("Only supports triangular and rectangular elements");
+	}
+	
+	/*
+	 * returns cloned mirrored element around given origin
+	 */
+	private static SimulatorElement mirrorNS(SimulatorElement elem, double latitude) {
+		Vertex[] verts = elem.getVertices();
+		Vertex[] rotVerts = new Vertex[verts.length];
+		
+		for (int i=0; i<verts.length; i++) {
+			Location ptAtMirror = new Location(latitude, verts[i].getLongitude(), verts[i].getDepth());
+			LocationVector vector = LocationUtils.vector(verts[i], ptAtMirror);
+			Location rotLoc = LocationUtils.location(ptAtMirror, vector);
+			rotVerts[i] = new Vertex(rotLoc, verts[i].getID(), verts[i].getDAS(), verts[i].getTraceFlag());
+		}
+		
+		FocalMechanism mech = elem.getFocalMechanism();
+		FocalMechanism rotMech = null;
+		if (mech != null) {
+			// mirror the strike around 0
+			double newStrike = -mech.getStrike();
 			while (newStrike >= 360)
 				newStrike -= 360;
 			while (newStrike < 0)

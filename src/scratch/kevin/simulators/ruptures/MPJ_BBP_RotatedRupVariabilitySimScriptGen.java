@@ -39,10 +39,11 @@ class MPJ_BBP_RotatedRupVariabilitySimScriptGen {
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2829");
 		
 		int skipYears = 5000;
-		
-		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE};
-//		double[] distances = BBP_PartBValidationConfig.DISTANCES;
-		double[] distances = { 50d };
+
+		Scenario[] scenarios = Scenario.values();
+//		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE};
+		double[] distances = BBP_PartBValidationConfig.DISTANCES;
+//		double[] distances = { 50d };
 		int numSourceAz = 36;
 //		int numSiteToSourceAz = 36;
 		int numSiteToSourceAz = 4;
@@ -59,9 +60,9 @@ class MPJ_BBP_RotatedRupVariabilitySimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 18;
 		String queue = "scec";
-		int mins = 24*60;
+		int mins = 48*60;
 		int heapSizeMB = 45*1024;
 		String bbpDataDir = "${TMPDIR}";
 		String nodeScratchDir = null;

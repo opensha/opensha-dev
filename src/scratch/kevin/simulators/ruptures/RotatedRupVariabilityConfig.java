@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -28,6 +29,7 @@ import org.opensha.sha.simulators.Vertex;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator;
 import org.opensha.sha.simulators.srf.SRF_PointData;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 
 import com.google.common.base.Preconditions;
@@ -52,13 +54,46 @@ public class RotatedRupVariabilityConfig {
 	private RSQSimCatalog catalog;
 	private Map<Integer, RSQSimEvent> idToOrigMap;
 	private List<RotationSpec> rotations;
-	private Map<Site, Table<Integer, Float, List<RotationSpec>>> siteRotations;
+	private Map<Quantity, Object> constantsMap;
+	private Table<Quantity, Object, List<RotationSpec>> quantityRotationsCache;
 	
 	// caches
 	private static final int max_cache_size = 5000;
 	private LoadingCache<RotationSpec, RSQSimEvent> rotationCache;
 	private LoadingCache<Integer, RSQSimEvent> initialOrientationCache;
 	private Map<RSQSimEvent, Location> centroidCache;
+	
+	enum Quantity {
+		SITE("Site", "Unique site locations. If 3-d, each will have unique velocity profiles."),
+		EVENT_ID("Rupture", "Unique (but similar in faulting style and magnitude) ruptures which match the "
+				+ "given scenario."),
+		DISTANCE("Joyner-Boore Distance", "Shortest horizontal distance between the site and the surface projection of "
+				+ "the rupture."),
+		SOURCE_AZIMUTH("Rupture Strike", "Rupture strike conforming to the Aki & Richards (1980) convention, where dipping "
+				+ "faults dip to the right of the rupture. If also rotated about a site, this azimuth is relative to the path."),
+		SITE_TO_SOURTH_AZIMUTH("Path", "Path from the site to the centroid of the rupture, in azimuthal degrees (0 is North)");
+		
+		private String name;
+		private String description;
+		
+		private Quantity(String name, String description) {
+			this.name = name;
+			this.description = description;
+		}
+		
+		@Override
+		public String toString() {
+			return name;
+		}
+		
+		public String getName() {
+			return name;
+		}
+		
+		public String getDescription() {
+			return description;
+		}
+	}
 	
 	public RotatedRupVariabilityConfig(RSQSimCatalog catalog, List<Site> sites, List<RSQSimEvent> ruptures,
 			double[] distances, int numSourceAz, int numSiteToSourceAz) {
@@ -94,20 +129,40 @@ public class RotatedRupVariabilityConfig {
 			centroidCache = new HashMap<>();
 		}
 		this.rotations = rotations;
-		siteRotations = new HashMap<>();
+		// look for constants to make caching better
 		for (RotationSpec rotation : rotations) {
-			Table<Integer, Float, List<RotationSpec>> rotationsTable = siteRotations.get(rotation.site);
-			if (rotationsTable == null) {
-				rotationsTable = HashBasedTable.create();
-				siteRotations.put(rotation.site, rotationsTable);
+			if (constantsMap == null) {
+				constantsMap = new HashMap<>();
+				for (Quantity quantity : Quantity.values())
+					constantsMap.put(quantity, rotation.getValue(quantity));
 			}
-			List<RotationSpec> subRots = rotationsTable.get(rotation.eventID, rotation.distance);
-			if (subRots == null) {
-				subRots = new ArrayList<>();
-				rotationsTable.put(rotation.eventID, rotation.distance, subRots);
+			for (Quantity quantity : Quantity.values()) {
+				if (constantsMap.containsKey(quantity) && !Objects.equals(constantsMap.get(quantity), rotation.getValue(quantity)))
+					constantsMap.remove(quantity);
 			}
-			subRots.add(rotation);
+			if (constantsMap.isEmpty())
+				break;
 		}
+		if (!constantsMap.isEmpty()) {
+			System.out.println("Found "+constantsMap.size()+" constant(s) across all rotations:");
+			for (Quantity quantity : constantsMap.keySet())
+				System.out.println("\t"+quantity.name()+": "+constantsMap.get(quantity));
+		}
+//		siteRotations = new HashMap<>();
+//		for (RotationSpec rotation : rotations) {
+//			Table<Integer, Float, List<RotationSpec>> rotationsTable = siteRotations.get(rotation.site);
+//			if (rotationsTable == null) {
+//				rotationsTable = HashBasedTable.create();
+//				siteRotations.put(rotation.site, rotationsTable);
+//			}
+//			List<RotationSpec> subRots = rotationsTable.get(rotation.eventID, rotation.distance);
+//			if (subRots == null) {
+//				subRots = new ArrayList<>();
+//				rotationsTable.put(rotation.eventID, rotation.distance, subRots);
+//			}
+//			subRots.add(rotation);
+//		}
+		quantityRotationsCache = HashBasedTable.create();
 	}
 	
 	public static class RotationSpec {
@@ -117,6 +172,7 @@ public class RotatedRupVariabilityConfig {
 		public final Float distance;
 		public final Float sourceAz;
 		public final Float siteToSourceAz;
+		private final Map<Quantity, Object> quantities;
 		
 		public RotationSpec(int index, Site site, int eventID, Float distance, Float sourceAz, Float siteToSourceAz) {
 			this.index = index;
@@ -129,6 +185,28 @@ public class RotatedRupVariabilityConfig {
 			if (siteToSourceAz != null && siteToSourceAz == 0f)
 				siteToSourceAz = null;
 			this.siteToSourceAz = siteToSourceAz;
+			
+			quantities = new HashMap<>();
+			if (site != null)
+				quantities.put(Quantity.SITE, site);
+			if (eventID >= 0)
+				quantities.put(Quantity.EVENT_ID, eventID);
+			if (distance != null)
+				quantities.put(Quantity.DISTANCE, distance);
+			if (sourceAz != null)
+				quantities.put(Quantity.SOURCE_AZIMUTH, sourceAz);
+			if (siteToSourceAz != null)
+				quantities.put(Quantity.SITE_TO_SOURTH_AZIMUTH, siteToSourceAz);
+		}
+		
+		public boolean hasQuantity(Quantity quantity, Object value) {
+			if ((quantity == Quantity.SOURCE_AZIMUTH || quantity == Quantity.SITE_TO_SOURTH_AZIMUTH) && Objects.equals(value, 0f))
+				value = null;
+			return Objects.equals(value, quantities.get(quantity));
+		}
+		
+		public Object getValue(Quantity quantity) {
+			return quantities.get(quantity);
 		}
 
 		@Override
@@ -236,41 +314,122 @@ public class RotatedRupVariabilityConfig {
 		return rotations;
 	}
 	
-	public List<RotationSpec> getRotationsForEvent(Site site, int eventID, float distance) {
-		Table<Integer, Float, List<RotationSpec>> rotationsTable = siteRotations.get(site);
-		Preconditions.checkState(rotationsTable != null, "No rotations for site %s", site.getName());
-		return rotationsTable.get(eventID, distance);
-	}
-	
-	public List<RotationSpec> getSiteToSourceRotations(Site site, int eventID, float distance, Float sourceAzimuth) {
-		List<RotationSpec> eventRots = getRotationsForEvent(site, eventID, distance);
-		if (eventRots == null)
-			return null;
-		List<RotationSpec> ret = new ArrayList<>();
-		if (sourceAzimuth == 0f)
-			sourceAzimuth = null;
-		
-		for (RotationSpec rotation : eventRots) {
-			if (Objects.equals(sourceAzimuth, rotation.sourceAz))
-				ret.add(rotation);
+	private List<RotationSpec> getCachedRotations(Quantity quantity, Object value) {
+		List<RotationSpec> ret = quantityRotationsCache.get(quantity, value);
+		if (ret == null) {
+			ret = new ArrayList<>();
+			for (RotationSpec rotation : getRotations()) {
+				if (rotation.hasQuantity(quantity, value))
+					ret.add(rotation);
+			}
+			quantityRotationsCache.put(quantity, value, ret);
 		}
 		return ret;
 	}
 	
-	public List<RotationSpec> getSourceRotations(Site site, int eventID, float distance, Float siteToSourceAzimuth) {
-		List<RotationSpec> eventRots = getRotationsForEvent(site, eventID, distance);
-		if (eventRots == null)
-			return null;
-		List<RotationSpec> ret = new ArrayList<>();
-		if (siteToSourceAzimuth == 0f)
-			siteToSourceAzimuth = null;
+	public List<RotationSpec> getRotationsForQuantities(Quantity q1, Object v1) {
+		return getRotationsForQuantities(new Quantity[] {q1}, new Object[] {v1});
+	}
+	
+	public List<RotationSpec> getRotationsForQuantities(Quantity q1, Object v1, Quantity q2, Object v2) {
+		return getRotationsForQuantities(new Quantity[] {q1, q2}, new Object[] {v1, v2});
+	}
+	
+	public List<RotationSpec> getRotationsForQuantities(Quantity q1, Object v1, Quantity q2, Object v2, Quantity q3, Object v3) {
+		return getRotationsForQuantities(new Quantity[] {q1, q2, q3}, new Object[] {v1, v2, v3});
+	}
+	
+	public List<RotationSpec> getRotationsForQuantities(Quantity q1, Object v1, Quantity q2, Object v2, Quantity q3, Object v3,
+			Quantity q4, Object v4) {
+		return getRotationsForQuantities(new Quantity[] {q1, q2, q3, q4}, new Object[] {v1, v2, v3, v4});
+	}
+	
+	public List<RotationSpec> getRotationsForQuantities(Quantity[] quantities, Object[] values) {
+		Preconditions.checkArgument(quantities.length == values.length);
+		if (quantities.length == 0)
+			return getRotations();
 		
-		for (RotationSpec rotation : eventRots) {
-			if (Objects.equals(siteToSourceAzimuth, rotation.siteToSourceAz))
-				ret.add(rotation);
+		List<RotationSpec> rotations = getCachedRotations(quantities[0], values[0]);
+		if (quantities.length == 1)
+			return rotations;
+		
+		return getRotationsForQuantities(rotations, Arrays.copyOfRange(quantities, 1, quantities.length),
+				Arrays.copyOfRange(values, 1, values.length));
+	}
+	
+	public static List<RotationSpec> getRotationsForQuantities(List<RotationSpec> rotations, Quantity[] quantities, Object[] values) {
+		Preconditions.checkArgument(quantities.length == values.length);
+		if (quantities.length == 0)
+			return rotations;
+		
+		List<RotationSpec> ret = new ArrayList<>();
+		rotationLoop:
+		for (RotationSpec rotation : rotations) {
+			for (int i=0; i<quantities.length; i++)
+				if (!rotation.hasQuantity(quantities[i], values[i]))
+					continue rotationLoop;
+			ret.add(rotation);
 		}
 		return ret;
 	}
+	
+//	public List<RotationSpec> getRotationsForEvent(Site site, int eventID, float distance) {
+//		Table<Integer, Float, List<RotationSpec>> rotationsTable = siteRotations.get(site);
+//		Preconditions.checkState(rotationsTable != null, "No rotations for site %s", site.getName());
+//		return rotationsTable.get(eventID, distance);
+//	}
+//	
+//	public List<RotationSpec> getSiteToSourceRotations(Site site, int eventID, float distance, Float sourceAzimuth) {
+//		List<RotationSpec> eventRots = getRotationsForEvent(site, eventID, distance);
+//		if (eventRots == null)
+//			return null;
+//		List<RotationSpec> ret = new ArrayList<>();
+//		if (sourceAzimuth == 0f)
+//			sourceAzimuth = null;
+//		
+//		for (RotationSpec rotation : eventRots) {
+//			if (Objects.equals(sourceAzimuth, rotation.sourceAz))
+//				ret.add(rotation);
+//		}
+//		return ret;
+//	}
+//	
+//	public List<RotationSpec> getSourceRotations(Site site, int eventID, float distance, Float siteToSourceAzimuth) {
+//		List<RotationSpec> eventRots = getRotationsForEvent(site, eventID, distance);
+//		if (eventRots == null)
+//			return null;
+//		List<RotationSpec> ret = new ArrayList<>();
+//		if (siteToSourceAzimuth == 0f)
+//			siteToSourceAzimuth = null;
+//		
+//		for (RotationSpec rotation : eventRots) {
+//			if (Objects.equals(siteToSourceAzimuth, rotation.siteToSourceAz))
+//				ret.add(rotation);
+//		}
+//		return ret;
+//	}
+//	
+//	public List<RotationSpec> getSourcesForRotation(Site site, float distance, Float sourceAzimuth, Float siteToSourceAzimuth) {
+//		Map<Integer, List<RotationSpec>> siteDistRots = siteRotations.get(site).column(distance);
+//		if (siteDistRots == null || siteDistRots.isEmpty())
+//			return null;
+//		List<RotationSpec> ret = new ArrayList<>();
+//		if (sourceAzimuth == 0f)
+//			sourceAzimuth = null;
+//		if (siteToSourceAzimuth == 0f)
+//			siteToSourceAzimuth = null;
+//		
+//		for (List<RotationSpec> eventRots : siteDistRots.values()) {
+//			for (RotationSpec rotation : eventRots) {
+//				if (Objects.equals(siteToSourceAzimuth, rotation.siteToSourceAz)
+//						&& Objects.equals(sourceAzimuth, rotation.sourceAz))
+//					ret.add(rotation);
+//			}
+//		}
+//		return ret;
+//	}
+	
+	private static final boolean HYPO_NORTH = false;
 	
 	private RSQSimEvent getInitialOrientation(RSQSimEvent rupture) {
 		Location centroid = centroidCache.get(rupture);
@@ -288,7 +447,19 @@ public class RotatedRupVariabilityConfig {
 		for (FaultSectionPrefData sect : sects)
 			strikes.add(sect.getFaultTrace().getAveStrike());
 		double aveStrike = FaultUtils.getAngleAverage(strikes);
-		return RuptureRotationUtils.getRotated(rupture, centroid, -aveStrike);
+		RSQSimEvent rotated = RuptureRotationUtils.getRotated(rupture, centroid, -aveStrike);
+		
+		if (HYPO_NORTH) {
+			// now make sure the hypocenter is on the North side of the centroid
+			Location hypocenter = RSQSimUtils.getHypocenter(rotated);
+			if (hypocenter.getLatitude() < centroid.getLatitude()) {
+				// flip the rupture horizontally. don't spin it, as that would mess up
+				// Aki & Richards convention, mirror it
+				rotated = RuptureRotationUtils.getMirroredNS(rotated, centroid.getLatitude());
+			}
+		}
+		
+		return rotated;
 	}
 	
 	private RSQSimEvent loadRupture(RotationSpec rotation) {
@@ -503,10 +674,10 @@ public class RotatedRupVariabilityConfig {
 //		int[] debugIDs = {14400, 14401, 14402, 14401};
 		int[] debugIDs = null;
 		
-		Scenario scenario = Scenario.M6p6_VERT_SS_SURFACE;
+		Scenario scenario = Scenario.M6p6_REVERSE;
 		
 		System.out.println("Loading ruptures for scenario");
-		List<RSQSimEvent> ruptures = BBP_PartBValidationConfig.Scenario.M6p6_VERT_SS_SURFACE.getMatches(catalog, skipYears);
+		List<RSQSimEvent> ruptures = scenario.getMatches(catalog, skipYears);
 		System.out.println("Loaded "+ruptures.size()+" ruptures");
 		if (ruptures.size() > maxRuptures) {
 			ruptures = ruptures.subList(0, maxRuptures);
@@ -563,8 +734,10 @@ public class RotatedRupVariabilityConfig {
 			int index = 0;
 			for (RSQSimEvent rupture : ruptures) {
 				System.out.println("Plotting "+index+" for event "+rupture.getID());
-				config.plotRotations(plotDir, "path_rotation_"+index, config.getSiteToSourceRotations(site, rupture.getID(), distance, 0f));
-				config.plotRotations(plotDir, "centroid_rotation_"+index, config.getSourceRotations(site, rupture.getID(), distance, 0f));
+				config.plotRotations(plotDir, "path_rotation_"+index, config.getRotationsForQuantities(
+						Quantity.SITE, site, Quantity.EVENT_ID, rupture.getID(), Quantity.DISTANCE, distance, Quantity.SOURCE_AZIMUTH, 0f));
+				config.plotRotations(plotDir, "centroid_rotation_"+index, config.getRotationsForQuantities(
+						Quantity.SITE, site, Quantity.EVENT_ID, rupture.getID(), Quantity.DISTANCE, distance, Quantity.SITE_TO_SOURTH_AZIMUTH, 0f));
 				index++;
 			}
 		}

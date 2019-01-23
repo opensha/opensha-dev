@@ -90,6 +90,8 @@ import scratch.kevin.simulators.plots.RuptureVelocityPlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 import scratch.kevin.simulators.plots.StationarityPlot;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
+
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
@@ -276,6 +278,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_3014("bruce/rundir3014", "Bruce 3014", "Bruce Shaw", cal(2019, 1, 13),
 				"New const dip fault smoothing.  smoothF=1e6.  V=1.  fracArea=0.99.  b=.013",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_3032("bruce/rundir3032", "Bruce 3032", "Bruce Shaw", cal(2019, 1, 19),
+				"SmoothF=1e5.   Unconnected discontinuities. V=1.  fracArea=0.99. b=.011",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -619,10 +624,14 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<String> occCopulaLinks = new ArrayList<>();
 		List<String> occCopulaNames = new ArrayList<>();
 		
+		List<String> rotatedRupLinks = new ArrayList<>();
+		List<String> rotatedRupNames = new ArrayList<>();
+		
 		String rotDDLink = null;
 		String multiFaultLink = null;
 		String extremeEventLink = null;
 		String sourceSiteLink = null;
+		String partBLink = null;
 		
 		File[] dirList = dir.listFiles();
 		Arrays.sort(dirList, new FileNameComparator());
@@ -717,6 +726,15 @@ public class RSQSimCatalog implements XMLSaveable {
 				String title = MarkdownUtils.getTitle(mdFile);
 				occCopulaLinks.add(name);
 				occCopulaNames.add(title);
+			} else if (name.equals("bbp_part_b")) {
+				partBLink = name;
+			} else if (name.startsWith("rotated_ruptures_")) {
+				for (Scenario scenario : Scenario.values()) {
+					if (name.equals("rotated_ruptures_"+scenario.getPrefix())) {
+						rotatedRupLinks.add(name);
+						rotatedRupNames.add(scenario.getName());
+					}
+				}
 			}
 		}
 		
@@ -811,6 +829,21 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add("");
 			for (int i=0; i<occCopulaLinks.size(); i++)
 				lines.add("* ["+occCopulaNames.get(i)+"]("+occCopulaLinks.get(i)+"/)");
+		}
+		if (partBLink != null) {
+			lines.add("");
+			lines.add("## BBP Part B Analysis");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[BBP Part B Analysis Here]("+partBLink+"/)");
+		}
+		if (!rotatedRupLinks.isEmpty()) {
+			lines.add("");
+			lines.add("## Rotated Rupture Variability Comparisons");
+			lines.add(topLink);
+			lines.add("");
+			for (int i=0; i<rotatedRupLinks.size(); i++)
+				lines.add("* ["+rotatedRupNames.get(i)+"]("+rotatedRupLinks.get(i)+"/)");
 		}
 		
 		if (plots) {
