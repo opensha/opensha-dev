@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 import org.jfree.chart.annotations.XYAnnotation;
+import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
@@ -70,7 +71,7 @@ public class RotatedRupVariabilityConfig {
 		DISTANCE("Joyner-Boore Distance", "Shortest horizontal distance between the site and the surface projection of "
 				+ "the rupture."),
 		SOURCE_AZIMUTH("Rupture Strike", "Rupture strike conforming to the Aki & Richards (1980) convention, where dipping "
-				+ "faults dip to the right of the rupture. If also rotated about a site, this azimuth is relative to the path."),
+				+ "faults dip to the right of the rupture. If path rotation is also performed, this azimuth is relative to the path."),
 		SITE_TO_SOURTH_AZIMUTH("Path", "Path from the site to the centroid of the rupture, in azimuthal degrees (0 is North)");
 		
 		private String name;
@@ -431,6 +432,13 @@ public class RotatedRupVariabilityConfig {
 	
 	private static final boolean HYPO_NORTH = false;
 	
+	private static double angleDiff(double angle1, double angle2) {
+		double angleDiff = Math.abs(angle1 - angle2);
+		while (angleDiff > 270)
+			angleDiff -= 360;
+		return Math.abs(angleDiff);
+	}
+	
 	private RSQSimEvent getInitialOrientation(RSQSimEvent rupture) {
 		Location centroid = centroidCache.get(rupture);
 		if (centroid == null) {
@@ -438,15 +446,35 @@ public class RotatedRupVariabilityConfig {
 			centroidCache.put(rupture, centroid);
 		}
 		
-		List<FaultSectionPrefData> sects = catalog.getSubSectsForRupture(rupture, 0.2);
+		List<FaultSectionPrefData> allSubSects = catalog.getU3SubSects();
+		int offset;
+		try {
+			offset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), catalog.getU3SubSects());
+		} catch (IOException e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
 		
 		// rotate it such that average strike is 0
 		List<Double> strikes = new ArrayList<>();
-//		for (SimulatorElement elem : rupture.getAllElements())
-//			strikes.add(elem.getFocalMechanism().getStrike());
-		for (FaultSectionPrefData sect : sects)
-			strikes.add(sect.getFaultTrace().getAveStrike());
-		double aveStrike = FaultUtils.getAngleAverage(strikes);
+		List<Double> weights = new ArrayList<>();
+		ArrayList<SimulatorElement> rupElems = rupture.getAllElements();
+		double[] elemSlips = rupture.getAllElementSlips();
+		for (int i=0; i<rupElems.size(); i++) {
+			SimulatorElement elem = rupElems.get(i);
+			FaultSectionPrefData sect = allSubSects.get(elem.getSectionID()-offset);
+			double elemStrike = elem.getFocalMechanism().getStrike();
+			
+			// check to see if it's flipped ~180 from the section strike (happens often for SS faults)
+			// and correct if necessary
+			double sectStrike = sect.getFaultTrace().getAveStrike();
+			double strikeDiff = angleDiff(sectStrike, elemStrike);
+			if (strikeDiff > 120)
+				elemStrike += 180;
+			
+			strikes.add(elemStrike);
+			weights.add(FaultMomentCalc.getMoment(elem.getArea(), elemSlips[i]));
+		}
+		double aveStrike = FaultUtils.getScaledAngleAverage(weights, strikes);
 		RSQSimEvent rotated = RuptureRotationUtils.getRotated(rupture, centroid, -aveStrike);
 		
 		if (HYPO_NORTH) {
@@ -497,14 +525,45 @@ public class RotatedRupVariabilityConfig {
 			if (translated == null) {
 				// not yet cached, have to do it
 				
-				// first move the centroid to the desired position, then adjust as needed
-				Location targetLoc = LocationUtils.location(rotation.site.getLocation(), 0d, rotation.distance);
-				LocationVector initialVector = LocationUtils.vector(centroid, targetLoc);
+				// first move the centroid to the desired position
+				Location targetCentroidLoc = LocationUtils.location(rotation.site.getLocation(), 0d, rotation.distance);
+				LocationVector initialVector = LocationUtils.vector(centroid, targetCentroidLoc);
 				translated = RuptureRotationUtils.getTranslated(rupture, initialVector);
+				
+				centroid = targetCentroidLoc;
+				// now the centroid is the rJB away from the site, but we want the actual rupture to be that distance away
+				
+				// locate the point that is at the southernmost rupture latitude
+				double minLat = Double.POSITIVE_INFINITY;
+				for (SimulatorElement elem : translated.getAllElements())
+					for (Vertex v : elem.getVertices())
+						minLat = Double.min(minLat, v.getLatitude());
+				Location southOfCentroidLoc = new Location(minLat, centroid.getLongitude());
+				double distSouthCentroid = LocationUtils.horzDistanceFast(centroid, southOfCentroidLoc);
+				
+				// move the rupture North that amount. now the southernmost point will be on the the line of latitude
+				// that is rJB away from the site (may form a triangle though with that line and the site)
+				translated = RuptureRotationUtils.getTranslated(translated, new LocationVector(0d, distSouthCentroid, 0d));
+				
+//				if (rupture.getID() == 86330 && rotation.sourceAz == null && rotation.siteToSourceAz == null) {
+//					System.out.println("=====DEBUG=====");
+//					System.out.println("Site: "+rotation.site.getLocation());
+//					System.out.println("Target location: "+targetCentroidLoc);
+//					System.out.println("Original vector: "+initialVector.getAzimuth()+", "+initialVector.getHorzDistance());
+//					Location newCentroid = RuptureRotationUtils.calcRuptureCentroid(translated);
+//					System.out.println("New centroid: "+newCentroid);
+////					initialVector = LocationUtils.vector(newCentroid, targetLoc);
+////					System.out.println("New vector: "+initialVector.getAzimuth()+", "+initialVector.getHorzDistance());
+//					LocationVector siteToCentroid = LocationUtils.vector(rotation.site.getLocation(), newCentroid);
+//					System.out.println("Site to centroid: "+siteToCentroid.getAzimuth()+", "+siteToCentroid.getHorzDistance());
+//					System.out.println("Min dist: "+RuptureRotationUtils.calcMinDist(rotation.site.getLocation(), translated));
+//				}
+				
+				// now adjust as necessary to account for nonplanar ruptures
 				
 				int numTrans = 0;
 				double minDist = Double.NaN, pDiff = Double.NaN, absDiff = Double.NaN;
-				while (numTrans < 5) { // max 5 translations
+				while (numTrans < 10) { // max 10 translations
 					Location closest = null;
 					minDist = Double.POSITIVE_INFINITY;
 					for (SimulatorElement elem : translated.getAllElements()) {
@@ -519,12 +578,16 @@ public class RotatedRupVariabilityConfig {
 					
 					pDiff = DataUtils.getPercentDiff(minDist, rotation.distance);
 					absDiff = Math.abs(minDist - rotation.distance);
-					if (numTrans > 0 && pDiff < 0.5 || absDiff < 0.5)
+					if (numTrans > 0 && pDiff < 0.5 || absDiff < 0.2)
 						break;
 					
-					LocationVector rupToOrigin = LocationUtils.vector(closest, rotation.site.getLocation());
-					LocationVector transVector = new LocationVector(rupToOrigin.getAzimuth(),
-							rupToOrigin.getHorzDistance()-rotation.distance, 0d);
+					LocationVector rupToClosest = LocationUtils.vector(closest, rotation.site.getLocation());
+					double transDist = rupToClosest.getHorzDistance()-rotation.distance;
+					// only move north
+					double rupAngle = rupToClosest.getAzimuth();
+					double angleDiff = angleDiff(rupAngle, 0d);
+					transDist *= Math.cos(Math.toRadians(angleDiff));
+					LocationVector transVector = new LocationVector(0d, transDist, 0d);
 					translated = RuptureRotationUtils.getTranslated(translated, transVector);
 					numTrans++;
 				}
@@ -614,7 +677,8 @@ public class RotatedRupVariabilityConfig {
 		return new RotatedRupVariabilityConfig(catalog, events, rotations);
 	}
 	
-	public void plotRotations(File outputDir, String prefix, List<RotationSpec> rotations) throws IOException {
+	public void plotRotations(File outputDir, String prefix, List<RotationSpec> rotations, boolean highlightCentroid)
+			throws IOException {
 		// origin annotation
 		List<XYAnnotation> anns = new ArrayList<>();
 		HashSet<Site> sites = new HashSet<>();
@@ -634,6 +698,10 @@ public class RotatedRupVariabilityConfig {
 			if (first == null)
 				first = rotated;
 			plotElems.addAll(rotated.getAllElements());
+		}
+		
+		if (highlightCentroid) {
+			anns.add(RuptureRotationUtils.getLocationAnn(0.01, RuptureRotationUtils.calcRuptureCentroid(first), Color.GREEN));
 		}
 
 		// add tiny annotations at the extremes to force it to plot everything
@@ -674,6 +742,7 @@ public class RotatedRupVariabilityConfig {
 //		int[] debugIDs = {14400, 14401, 14402, 14401};
 		int[] debugIDs = null;
 		
+//		Scenario scenario = Scenario.M6p6_VERT_SS_SURFACE;
 		Scenario scenario = Scenario.M6p6_REVERSE;
 		
 		System.out.println("Loading ruptures for scenario");
@@ -735,9 +804,9 @@ public class RotatedRupVariabilityConfig {
 			for (RSQSimEvent rupture : ruptures) {
 				System.out.println("Plotting "+index+" for event "+rupture.getID());
 				config.plotRotations(plotDir, "path_rotation_"+index, config.getRotationsForQuantities(
-						Quantity.SITE, site, Quantity.EVENT_ID, rupture.getID(), Quantity.DISTANCE, distance, Quantity.SOURCE_AZIMUTH, 0f));
+						Quantity.SITE, site, Quantity.EVENT_ID, rupture.getID(), Quantity.DISTANCE, distance, Quantity.SOURCE_AZIMUTH, 0f), true);
 				config.plotRotations(plotDir, "centroid_rotation_"+index, config.getRotationsForQuantities(
-						Quantity.SITE, site, Quantity.EVENT_ID, rupture.getID(), Quantity.DISTANCE, distance, Quantity.SITE_TO_SOURTH_AZIMUTH, 0f));
+						Quantity.SITE, site, Quantity.EVENT_ID, rupture.getID(), Quantity.DISTANCE, distance, Quantity.SITE_TO_SOURTH_AZIMUTH, 0f), true);
 				index++;
 			}
 		}

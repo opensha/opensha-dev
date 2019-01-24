@@ -12,9 +12,12 @@ import java.util.Random;
 
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
+import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
+import org.opensha.commons.geo.utm.UTM;
+import org.opensha.commons.geo.utm.WGS84;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.sha.earthquake.FocalMechanism;
@@ -229,65 +232,67 @@ public class RuptureRotationUtils {
 		throw new IllegalStateException("Only supports triangular and rectangular elements");
 	}
 	
+	private static final boolean centroid_utm = true; 
 	static Location calcRuptureCentroid(RSQSimEvent event) {
 		List<SimulatorElement> elems = event.getAllElements();
+		double[] slips = event.getAllElementSlips();
 		Preconditions.checkState(!elems.isEmpty());
 		
-		List<Double> lats = new ArrayList<>();
-		List<Double> lons = new ArrayList<>();
-		List<Double> weights = new ArrayList<>();
-		for (SimulatorElement elem : elems) {
-			weights.add(elem.getArea());
-			Location loc = elem.getCenterLocation();
-			lats.add(loc.getLatitude());
-			lons.add(loc.getLongitude());
+		double lat, lon;
+		
+		if (centroid_utm) {
+			double totWeight = 0d;
+			double northing = 0d;
+			double easting = 0d;
+			
+			int zone = -1;
+			char letter = 'Z';
+			for (int i=0; i<elems.size(); i++) {
+				SimulatorElement elem = elems.get(i);
+				double weight = FaultMomentCalc.getMoment(elem.getArea(), slips[i]);
+				totWeight += weight;
+				Location loc = elem.getCenterLocation();
+				WGS84 wgs = new WGS84(loc.getLatitude(), loc.getLongitude());
+				UTM utm;
+				if (i == 0) {
+					utm = new UTM(wgs);
+					zone = utm.getZone();
+					letter = utm.getLetter();
+				} else {
+					utm = new UTM(wgs, zone, letter);
+				}
+				northing += weight*utm.getNorthing();
+				easting += weight*utm.getEasting();
+			}
+			northing /= totWeight;
+			easting /= totWeight;
+			
+			UTM utm = new UTM(zone, letter, easting, northing);
+			WGS84 wgs = new WGS84(utm);
+			lat = wgs.getLatitude();
+			lon = wgs.getLongitude();
+		} else {
+			List<Double> weights = new ArrayList<>();
+			List<Double> lats = new ArrayList<>();
+			List<Double> lons = new ArrayList<>();
+			
+			for (int i=0; i<elems.size(); i++) {
+				SimulatorElement elem = elems.get(i);
+				weights.add(FaultMomentCalc.getMoment(elem.getArea(), slips[i]));
+				Location loc = elem.getCenterLocation();
+				lats.add(loc.getLatitude());
+				lons.add(loc.getLongitude());
+			}
+			lat = FaultUtils.getScaledAngleAverage(weights, lats);
+			lon = FaultUtils.getScaledAngleAverage(weights, lons);
 		}
 		
-		double lat = FaultUtils.getScaledAngleAverage(weights, lats);
-		if (lat > 90)
-			lat -= 360;
-		double lon = FaultUtils.getScaledAngleAverage(weights, lons);
-		if (lon > 180)
+		while (lon > 180)
 			lon -= 360;
-		return new Location(lat, lon);
+		while (lat > 90)
+			lat -= 360;
 		
-		// TODO the below isn't working right
-//		List<LocationVector> vectors = new ArrayList<>();
-//		List<Double> weights = new ArrayList<>();
-//		double totWeight = 0d;
-//		
-//		vectors.add(new LocationVector(0d, 0d, 0d));
-//		double weight0 = elems.get(0).getArea();
-//		weights.add(weight0);
-//		totWeight += weight0;
-//		
-//		Location loc0 = elems.get(0).getCenterLocation();
-//		loc0 = new Location(loc0.getLatitude(), loc0.getLongitude()); // strip depth
-//		for (int i=1; i<elems.size(); i++) {
-//			SimulatorElement elem = elems.get(i);
-//			Location loc1 = elem.getCenterLocation();
-//			loc1 = new Location(loc1.getLatitude(), loc1.getLongitude()); // strip depth
-//			LocationVector vector = LocationUtils.vector(loc0, loc1);
-//			vectors.add(vector);
-//			double weight = elem.getArea();
-//			weights.add(weight);
-//			totWeight += weight;
-//		}
-//		
-//		List<Double> angles = new ArrayList<>();
-//		double hDistSum = 0d;
-//		for (int i=0; i<vectors.size(); i++) {
-//			LocationVector vector = vectors.get(i);
-//			angles.add(vector.getAzimuth());
-//			hDistSum += vector.getHorzDistance()*weights.get(i);
-//		}
-//		hDistSum /= totWeight;
-//		for (int i=0; i<weights.size(); i++)
-//			weights.set(i, weights.get(0)/totWeight);
-//		double az = FaultUtils.getScaledAngleAverage(weights, angles);
-//		
-//		LocationVector centroidVector = new LocationVector(az, hDistSum, 0d);
-//		return LocationUtils.location(loc0, centroidVector);
+		return new Location(lat, lon);
 	}
 
 	public static void main(String[] args) throws IOException {

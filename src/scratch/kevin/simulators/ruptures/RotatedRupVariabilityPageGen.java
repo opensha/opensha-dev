@@ -238,7 +238,9 @@ public class RotatedRupVariabilityPageGen {
 					for (Quantity quantity : groupQuantities)
 						repeats.add(quantity.getName());
 					lines.add("Here is an exmample with "+pageGen.numExampleRotations+" rotations, which would be repeated for "
-							+ "each combination of ["+Joiner.on(", ").join(repeats)+"]:");
+							+ "each combination of ["+Joiner.on(", ").join(repeats)+"]. The site is shown with a blue square, and initially "
+							+ "oriented rupture in bold with its hypocenter as a red star and centroid a green circle. Rotations of that "
+							+ "rupture are in gray:");
 					lines.add("");
 					pageGen.plotExample(resourcesDir, "example_"+this.prefix, pageGen.distances.get(0), variedList);
 					lines.add("![Example](resources/example_"+this.prefix+".png)");
@@ -279,8 +281,8 @@ public class RotatedRupVariabilityPageGen {
 				+ "sources. We begin by selecting a subset of similar ruptures which match a set of criteria (in this case, "
 				+ scenario.getName()+"). Each rupture is then reoriented such that its strike (following the Aki & Richards "
 				+ "1980 convention) is 0 degrees (due North, dipping to the right for normal or reverse ruptures). For each site, "
-				+ "ruptures are translated such that their centroid is directly North of the site, and their Joyner-Boore distance "
-				+" (rJB) is as specified (we consider "+distances.size()+" distance[s] here).");
+				+ "ruptures are translated such that their scalar seismic moment centroid is directly North of the site, and their "
+				+ "Joyner-Boore distance (rJB) is as specified (we consider "+distances.size()+" distance[s] here).");
 		lines.add("");
 		lines.add("We then  perform various rotations. We rotate the rupture in place around its centroid, holding the site-to-source "
 				+ "centroid path and rJB constant (henceforth '"+Quantity.SOURCE_AZIMUTH.getName()+"'). We also rotate ruptures around the site, "
@@ -388,7 +390,7 @@ public class RotatedRupVariabilityPageGen {
 		table.addColumn("Notation");
 		table.addColumn("Distance");
 		for (double period : periods)
-			table.addColumn(optionalDigitDF.format(period)+"s Calc. Std. Dev.");
+			table.addColumn(optionalDigitDF.format(period)+"s Std. Dev.");
 		table.finalizeLine();
 		for (VariabilityType type : VariabilityType.values()) {
 			if (!resultsTable.containsRow(type))
@@ -903,7 +905,7 @@ public class RotatedRupVariabilityPageGen {
 		RotatedRupVariabilityConfig config = new RotatedRupVariabilityConfig(catalog, sites, ruptures, new double[] {distance},
 				numSourceAz, numSiteToSourceAz);
 		
-		config.plotRotations(resourcesDir, prefix, config.getRotations());
+		config.plotRotations(resourcesDir, prefix, config.getRotations(), true);
 	}
 
 	public static void main(String[] args) throws IOException, DocumentException {
