@@ -91,6 +91,7 @@ import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 import scratch.kevin.simulators.plots.StationarityPlot;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
+import scratch.kevin.simulators.ruptures.RotatedRupVariabilityMagDistPageGen.RuptureType;
 
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
@@ -733,6 +734,12 @@ public class RSQSimCatalog implements XMLSaveable {
 					if (name.equals("rotated_ruptures_"+scenario.getPrefix())) {
 						rotatedRupLinks.add(name);
 						rotatedRupNames.add(scenario.getName());
+					}
+				}
+				for (RuptureType rupType : RuptureType.values()) {
+					if (name.equals("rotated_ruptures_mag_dist_"+rupType.getPrefix())) {
+						rotatedRupLinks.add(name);
+						rotatedRupNames.add(rupType.getName()+", Mag-Dist Bins");
 					}
 				}
 			}

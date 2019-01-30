@@ -215,6 +215,7 @@ public class RuptureRotationUtils {
 	 * returns cloned translated element.
 	 */
 	private static SimulatorElement translate(SimulatorElement elem, LocationVector vector) {
+		Preconditions.checkState(vector.getVertDistance() == 0d, "Vertical should always be zero: %s", vector);
 		Vertex[] verts = elem.getVertices();
 		Vertex[] transVerts = new Vertex[verts.length];
 		

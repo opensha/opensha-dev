@@ -23,23 +23,23 @@ public class BBP_RotatedRupSimLoader extends BBP_SimZipLoader implements Simulat
 	
 	private Map<String, DiscretizedFunc> rdMap;
 	private Map<String, BBP_Site> bbpSiteMap;
-	private Scenario scenario;
+	private String scenarioPrefix;
 
-	public BBP_RotatedRupSimLoader(File file, List<BBP_Site> sites, Scenario scenario) throws ZipException, IOException {
-		this(new ZipFile(file), sites, scenario);
+	public BBP_RotatedRupSimLoader(File file, List<BBP_Site> sites, String scenarioPrefix) throws ZipException, IOException {
+		this(new ZipFile(file), sites, scenarioPrefix);
 	}
 
-	public BBP_RotatedRupSimLoader(ZipFile zip, List<BBP_Site> sites, Scenario scenario) {
+	public BBP_RotatedRupSimLoader(ZipFile zip, List<BBP_Site> sites, String scenarioPrefix) {
 		super(zip, sites);
 		rdMap = new HashMap<>();
-		this.scenario = scenario;
+		this.scenarioPrefix = scenarioPrefix;
 		bbpSiteMap = new HashMap<>();
 		for (BBP_Site site : sites)
 			bbpSiteMap.put(site.getName(), site);
 	}
 	
 	public DiscretizedFunc getRotD50(RotationSpec rotation) throws IOException {
-		String dirName = scenario.getPrefix()+"_"+rotation.getPrefix();
+		String dirName = scenarioPrefix+"_"+rotation.getPrefix();
 		if (rdMap.containsKey(dirName))
 			return rdMap.get(dirName);
 		DiscretizedFunc rd = readRotD50(bbpSiteMap.get(rotation.site.getName()), dirName);

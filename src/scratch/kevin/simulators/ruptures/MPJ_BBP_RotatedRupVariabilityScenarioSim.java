@@ -24,14 +24,14 @@ import scratch.kevin.bbp.MPJ_BBP_Utils;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpec;
 
-public class MPJ_BBP_RotatedRupVariabilitySim extends AbstractMPJ_BBP_MultiRupSim {
+public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_MultiRupSim {
 
 	private List<BBP_Site> sites;
 	private Map<Site, BBP_Site> siteToBBPSites;
 	
 	private List<Config> configs;
 	
-	private MPJ_BBP_RotatedRupVariabilitySim(CommandLine cmd) throws IOException {
+	private MPJ_BBP_RotatedRupVariabilityScenarioSim(CommandLine cmd) throws IOException {
 		super(cmd);
 		this.shuffle = false; // do them in order for better caching
 		
@@ -165,13 +165,7 @@ public class MPJ_BBP_RotatedRupVariabilitySim extends AbstractMPJ_BBP_MultiRupSi
 		return configs.size();
 	}
 	
-	public static Options createOptions() {
-		Options ops = MPJTaskCalculator.createOptions();
-		MPJ_BBP_Utils.addCommonOptions(ops, true, false, false, false);
-		addCommonOptions(ops);
-		
-		MPJ_BBP_PartBSim.addPartB_ScenarioOptions(ops);
-		
+	static void addRotatedRupOptions(Options ops) {
 		Option numSites = new Option("mr", "max-ruptures", true, "Maximum number of ruptures per scenario");
 		numSites.setRequired(false);
 		ops.addOption(numSites);
@@ -187,6 +181,16 @@ public class MPJ_BBP_RotatedRupVariabilitySim extends AbstractMPJ_BBP_MultiRupSi
 		Option nSiteSourceAz = new Option("nsitesrc", "num-site-source-az", true, "Num site to source source rotation azimuths");
 		nSiteSourceAz.setRequired(true);
 		ops.addOption(nSiteSourceAz);
+	}
+	
+	public static Options createOptions() {
+		Options ops = MPJTaskCalculator.createOptions();
+		MPJ_BBP_Utils.addCommonOptions(ops, true, false, false, false);
+		addCommonOptions(ops);
+		
+		MPJ_BBP_PartBSim.addPartB_ScenarioOptions(ops);
+		
+		addRotatedRupOptions(ops);
 		
 		return ops;
 	}
@@ -199,7 +203,7 @@ public class MPJ_BBP_RotatedRupVariabilitySim extends AbstractMPJ_BBP_MultiRupSi
 			
 			CommandLine cmd = parse(options, args, MPJ_BBP_PartBSim.class);
 			
-			MPJ_BBP_RotatedRupVariabilitySim driver = new MPJ_BBP_RotatedRupVariabilitySim(cmd);
+			MPJ_BBP_RotatedRupVariabilityScenarioSim driver = new MPJ_BBP_RotatedRupVariabilityScenarioSim(cmd);
 			driver.run();
 			
 			finalizeMPJ();

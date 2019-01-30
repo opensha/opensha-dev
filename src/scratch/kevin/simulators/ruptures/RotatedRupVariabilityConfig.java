@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -15,6 +17,7 @@ import java.util.concurrent.ExecutionException;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.NamedComparator;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
@@ -48,6 +51,7 @@ import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
+import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpec;
 
 public class RotatedRupVariabilityConfig {
@@ -55,7 +59,7 @@ public class RotatedRupVariabilityConfig {
 	private RSQSimCatalog catalog;
 	private Map<Integer, RSQSimEvent> idToOrigMap;
 	private List<RotationSpec> rotations;
-	private Map<Quantity, Object> constantsMap;
+	private Map<Quantity, List<?>> quantitiesMap;
 	private Table<Quantity, Object, List<RotationSpec>> quantityRotationsCache;
 	
 	// caches
@@ -64,8 +68,8 @@ public class RotatedRupVariabilityConfig {
 	private LoadingCache<Integer, RSQSimEvent> initialOrientationCache;
 	private Map<RSQSimEvent, Location> centroidCache;
 	
-	enum Quantity {
-		SITE("Site", "Unique site locations. If 3-d, each will have unique velocity profiles."),
+	public enum Quantity {
+		SITE("Site", "Unique site locations. If 3-d, each will have unique velocity profiles.", new NamedComparator()),
 		EVENT_ID("Rupture", "Unique (but similar in faulting style and magnitude) ruptures which match the "
 				+ "given scenario."),
 		DISTANCE("Joyner-Boore Distance", "Shortest horizontal distance between the site and the surface projection of "
@@ -76,10 +80,16 @@ public class RotatedRupVariabilityConfig {
 		
 		private String name;
 		private String description;
+		private Comparator<?> comparator;
 		
 		private Quantity(String name, String description) {
+			this(name, description, null);
+		}
+		
+		private Quantity(String name, String description, Comparator<?> comparator) {
 			this.name = name;
 			this.description = description;
+			this.comparator = comparator;
 		}
 		
 		@Override
@@ -94,6 +104,10 @@ public class RotatedRupVariabilityConfig {
 		public String getDescription() {
 			return description;
 		}
+		
+		boolean zeroStoredAsNull() {
+			return this == SOURCE_AZIMUTH || this == SITE_TO_SOURTH_AZIMUTH;
+		}
 	}
 	
 	public RotatedRupVariabilityConfig(RSQSimCatalog catalog, List<Site> sites, List<RSQSimEvent> ruptures,
@@ -101,6 +115,7 @@ public class RotatedRupVariabilityConfig {
 		this(catalog, ruptures, buildRotations(sites, ruptures, distances, numSourceAz, numSiteToSourceAz));
 	}
 	
+	@SuppressWarnings("unchecked")
 	public RotatedRupVariabilityConfig(RSQSimCatalog catalog, List<RSQSimEvent> ruptures, List<RotationSpec> rotations) {
 		this.catalog = catalog;
 		if (ruptures != null) {
@@ -130,40 +145,47 @@ public class RotatedRupVariabilityConfig {
 			centroidCache = new HashMap<>();
 		}
 		this.rotations = rotations;
-		// look for constants to make caching better
+		// build quantity lists
+		Map<Quantity, HashSet<Object>> quantitySetMap = new HashMap<>();
+		for (Quantity quantity : Quantity.values())
+			quantitySetMap.put(quantity, new HashSet<>());
 		for (RotationSpec rotation : rotations) {
-			if (constantsMap == null) {
-				constantsMap = new HashMap<>();
-				for (Quantity quantity : Quantity.values())
-					constantsMap.put(quantity, rotation.getValue(quantity));
-			}
 			for (Quantity quantity : Quantity.values()) {
-				if (constantsMap.containsKey(quantity) && !Objects.equals(constantsMap.get(quantity), rotation.getValue(quantity)))
-					constantsMap.remove(quantity);
+				Object value = rotation.getValue(quantity);
+				Preconditions.checkNotNull(value, "Null quantity");
+				quantitySetMap.get(quantity).add(value);
 			}
-			if (constantsMap.isEmpty())
-				break;
 		}
-		if (!constantsMap.isEmpty()) {
-			System.out.println("Found "+constantsMap.size()+" constant(s) across all rotations:");
-			for (Quantity quantity : constantsMap.keySet())
-				System.out.println("\t"+quantity.name()+": "+constantsMap.get(quantity));
+		
+		quantitiesMap = new HashMap<>();
+		for (Quantity quantity : Quantity.values()) {
+			HashSet<Object> values = quantitySetMap.get(quantity);
+//			System.out.println(quantity.name+": "+values.size()+" unique values");
+			List<?> list = new ArrayList<>(values);
+			if (quantity.comparator == null) {
+				List<Comparable<? super Object>> compList = new ArrayList<>();
+				for (Object val : list) {
+					Preconditions.checkState(val instanceof Comparable<?>);
+					compList.add((Comparable<? super Object>) val);
+				}
+				Collections.sort(compList);
+				list = compList;
+			} else {
+				list.sort((Comparator<? super Object>) quantity.comparator);
+			}
+			quantitiesMap.put(quantity, list);
 		}
-//		siteRotations = new HashMap<>();
-//		for (RotationSpec rotation : rotations) {
-//			Table<Integer, Float, List<RotationSpec>> rotationsTable = siteRotations.get(rotation.site);
-//			if (rotationsTable == null) {
-//				rotationsTable = HashBasedTable.create();
-//				siteRotations.put(rotation.site, rotationsTable);
-//			}
-//			List<RotationSpec> subRots = rotationsTable.get(rotation.eventID, rotation.distance);
-//			if (subRots == null) {
-//				subRots = new ArrayList<>();
-//				rotationsTable.put(rotation.eventID, rotation.distance, subRots);
-//			}
-//			subRots.add(rotation);
-//		}
+
 		quantityRotationsCache = HashBasedTable.create();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public <T> List<T> getValues(Class<T> type, Quantity quantity) {
+		return (List<T>) quantitiesMap.get(quantity);
+	}
+	
+	public Map<Quantity, List<?>> getQuantitiesMap() {
+		return quantitiesMap;
 	}
 	
 	public static class RotationSpec {
@@ -201,13 +223,16 @@ public class RotatedRupVariabilityConfig {
 		}
 		
 		public boolean hasQuantity(Quantity quantity, Object value) {
-			if ((quantity == Quantity.SOURCE_AZIMUTH || quantity == Quantity.SITE_TO_SOURTH_AZIMUTH) && Objects.equals(value, 0f))
+			if (quantity.zeroStoredAsNull() && Objects.equals(value, 0f))
 				value = null;
 			return Objects.equals(value, quantities.get(quantity));
 		}
 		
 		public Object getValue(Quantity quantity) {
-			return quantities.get(quantity);
+			Object value = quantities.get(quantity);
+			if (value == null && quantity.zeroStoredAsNull())
+				return 0f;
+			return value;
 		}
 
 		@Override
@@ -374,62 +399,6 @@ public class RotatedRupVariabilityConfig {
 		return ret;
 	}
 	
-//	public List<RotationSpec> getRotationsForEvent(Site site, int eventID, float distance) {
-//		Table<Integer, Float, List<RotationSpec>> rotationsTable = siteRotations.get(site);
-//		Preconditions.checkState(rotationsTable != null, "No rotations for site %s", site.getName());
-//		return rotationsTable.get(eventID, distance);
-//	}
-//	
-//	public List<RotationSpec> getSiteToSourceRotations(Site site, int eventID, float distance, Float sourceAzimuth) {
-//		List<RotationSpec> eventRots = getRotationsForEvent(site, eventID, distance);
-//		if (eventRots == null)
-//			return null;
-//		List<RotationSpec> ret = new ArrayList<>();
-//		if (sourceAzimuth == 0f)
-//			sourceAzimuth = null;
-//		
-//		for (RotationSpec rotation : eventRots) {
-//			if (Objects.equals(sourceAzimuth, rotation.sourceAz))
-//				ret.add(rotation);
-//		}
-//		return ret;
-//	}
-//	
-//	public List<RotationSpec> getSourceRotations(Site site, int eventID, float distance, Float siteToSourceAzimuth) {
-//		List<RotationSpec> eventRots = getRotationsForEvent(site, eventID, distance);
-//		if (eventRots == null)
-//			return null;
-//		List<RotationSpec> ret = new ArrayList<>();
-//		if (siteToSourceAzimuth == 0f)
-//			siteToSourceAzimuth = null;
-//		
-//		for (RotationSpec rotation : eventRots) {
-//			if (Objects.equals(siteToSourceAzimuth, rotation.siteToSourceAz))
-//				ret.add(rotation);
-//		}
-//		return ret;
-//	}
-//	
-//	public List<RotationSpec> getSourcesForRotation(Site site, float distance, Float sourceAzimuth, Float siteToSourceAzimuth) {
-//		Map<Integer, List<RotationSpec>> siteDistRots = siteRotations.get(site).column(distance);
-//		if (siteDistRots == null || siteDistRots.isEmpty())
-//			return null;
-//		List<RotationSpec> ret = new ArrayList<>();
-//		if (sourceAzimuth == 0f)
-//			sourceAzimuth = null;
-//		if (siteToSourceAzimuth == 0f)
-//			siteToSourceAzimuth = null;
-//		
-//		for (List<RotationSpec> eventRots : siteDistRots.values()) {
-//			for (RotationSpec rotation : eventRots) {
-//				if (Objects.equals(siteToSourceAzimuth, rotation.siteToSourceAz)
-//						&& Objects.equals(sourceAzimuth, rotation.sourceAz))
-//					ret.add(rotation);
-//			}
-//		}
-//		return ret;
-//	}
-	
 	private static final boolean HYPO_NORTH = false;
 	
 	private static double angleDiff(double angle1, double angle2) {
@@ -439,12 +408,16 @@ public class RotatedRupVariabilityConfig {
 		return Math.abs(angleDiff);
 	}
 	
+	private static final boolean D = false;
+	
 	private RSQSimEvent getInitialOrientation(RSQSimEvent rupture) {
+		if (D) System.out.println("Initial orientation for "+rupture.getID());
 		Location centroid = centroidCache.get(rupture);
 		if (centroid == null) {
 			centroid = RuptureRotationUtils.calcRuptureCentroid(rupture);
-			centroidCache.put(rupture, centroid);
+			centroidCache.putIfAbsent(rupture, centroid);
 		}
+		if (D) System.out.println("Initial centroid: "+centroid);
 		
 		List<FaultSectionPrefData> allSubSects = catalog.getU3SubSects();
 		int offset;
@@ -475,12 +448,14 @@ public class RotatedRupVariabilityConfig {
 			weights.add(FaultMomentCalc.getMoment(elem.getArea(), elemSlips[i]));
 		}
 		double aveStrike = FaultUtils.getScaledAngleAverage(weights, strikes);
+		if (D) System.out.println("Average strike: "+aveStrike);
 		RSQSimEvent rotated = RuptureRotationUtils.getRotated(rupture, centroid, -aveStrike);
 		
 		if (HYPO_NORTH) {
 			// now make sure the hypocenter is on the North side of the centroid
 			Location hypocenter = RSQSimUtils.getHypocenter(rotated);
 			if (hypocenter.getLatitude() < centroid.getLatitude()) {
+				if (D) System.out.println("Mirroring");
 				// flip the rupture horizontally. don't spin it, as that would mess up
 				// Aki & Richards convention, mirror it
 				rotated = RuptureRotationUtils.getMirroredNS(rotated, centroid.getLatitude());
@@ -489,6 +464,10 @@ public class RotatedRupVariabilityConfig {
 		
 		return rotated;
 	}
+	
+	private static final double trans_p_diff_thresh = 0.5;
+	private static final double trans_abs_diff_thresh = 0.2;
+	private static final int max_translations = 100;
 	
 	private RSQSimEvent loadRupture(RotationSpec rotation) {
 		RSQSimEvent rupture;
@@ -502,8 +481,9 @@ public class RotatedRupVariabilityConfig {
 		Location centroid = centroidCache.get(rupture);
 		if (centroid == null) {
 			centroid = RuptureRotationUtils.calcRuptureCentroid(rupture);
-			centroidCache.put(rupture, centroid);
+			centroidCache.putIfAbsent(rupture, centroid);
 		}
+		if (D) System.out.println("Rotating for "+rupture.getID()+" with centroid "+centroid);
 		
 		if (rotation.sourceAz != null) {
 			// first rotate the rupture around its centroid
@@ -511,6 +491,7 @@ public class RotatedRupVariabilityConfig {
 			RSQSimEvent rotated = rotationCache.getIfPresent(centroidRotSpec);
 			if (rotated == null) {
 				// not yet cached
+				if (D) System.out.println("Rotating about centroid to az="+rotation.sourceAz);
 				rotated = RuptureRotationUtils.getRotated(rupture, centroid, rotation.sourceAz);
 				rotationCache.put(centroidRotSpec, rotated);
 			}
@@ -524,10 +505,14 @@ public class RotatedRupVariabilityConfig {
 			RSQSimEvent translated = rotationCache.getIfPresent(transSpec);
 			if (translated == null) {
 				// not yet cached, have to do it
+				if (D) System.out.println("Translating to distance: "+rotation.distance);
 				
 				// first move the centroid to the desired position
+				if (D) System.out.println("Centroid: "+centroid);
 				Location targetCentroidLoc = LocationUtils.location(rotation.site.getLocation(), 0d, rotation.distance);
+				if (D) System.out.println("Target centroid: "+targetCentroidLoc);
 				LocationVector initialVector = LocationUtils.vector(centroid, targetCentroidLoc);
+				if (D) System.out.println("Initial translation: "+initialVector);
 				translated = RuptureRotationUtils.getTranslated(rupture, initialVector);
 				
 				centroid = targetCentroidLoc;
@@ -541,9 +526,13 @@ public class RotatedRupVariabilityConfig {
 				Location southOfCentroidLoc = new Location(minLat, centroid.getLongitude());
 				double distSouthCentroid = LocationUtils.horzDistanceFast(centroid, southOfCentroidLoc);
 				
+				if (D) System.out.println("Current south-of-centroid is "+distSouthCentroid+" km south at: "+southOfCentroidLoc);
+				
 				// move the rupture North that amount. now the southernmost point will be on the the line of latitude
 				// that is rJB away from the site (may form a triangle though with that line and the site)
-				translated = RuptureRotationUtils.getTranslated(translated, new LocationVector(0d, distSouthCentroid, 0d));
+				if (D) System.out.println("Translating north "+distSouthCentroid+" km");
+				LocationVector southCentroidVector = new LocationVector(0d, distSouthCentroid, 0d);
+				translated = RuptureRotationUtils.getTranslated(translated, southCentroidVector);
 				
 //				if (rupture.getID() == 86330 && rotation.sourceAz == null && rotation.siteToSourceAz == null) {
 //					System.out.println("=====DEBUG=====");
@@ -563,8 +552,16 @@ public class RotatedRupVariabilityConfig {
 				
 				int numTrans = 0;
 				double minDist = Double.NaN, pDiff = Double.NaN, absDiff = Double.NaN;
-				while (numTrans < 10) { // max 10 translations
-					Location closest = null;
+				double angleDiff = Double.NaN;
+				double rupAngle = Double.NaN;
+				double transDist = Double.NaN;
+				double origTransDist = Double.NaN;
+				LocationVector siteToRup = null;
+				LocationVector transVector = null;
+				Location closest = null;
+				while (true) {
+					if (D) System.out.println("Translate loop "+numTrans);
+					closest = null;
 					minDist = Double.POSITIVE_INFINITY;
 					for (SimulatorElement elem : translated.getAllElements()) {
 						for (Vertex v : elem.getVertices()) {
@@ -578,29 +575,54 @@ public class RotatedRupVariabilityConfig {
 					
 					pDiff = DataUtils.getPercentDiff(minDist, rotation.distance);
 					absDiff = Math.abs(minDist - rotation.distance);
-					if (numTrans > 0 && pDiff < 0.5 || absDiff < 0.2)
+					if (D) System.out.println("Closest is "+minDist+" away: "+closest);
+					if (numTrans > 0 && (pDiff < trans_p_diff_thresh || absDiff < trans_abs_diff_thresh)
+							|| numTrans == max_translations)
 						break;
 					
-					LocationVector rupToClosest = LocationUtils.vector(closest, rotation.site.getLocation());
-					double transDist = rupToClosest.getHorzDistance()-rotation.distance;
-					// only move north
-					double rupAngle = rupToClosest.getAzimuth();
-					double angleDiff = angleDiff(rupAngle, 0d);
-					transDist *= Math.cos(Math.toRadians(angleDiff));
-					LocationVector transVector = new LocationVector(0d, transDist, 0d);
+					siteToRup = LocationUtils.vector(rotation.site.getLocation(), closest);
+					if (D) System.out.println("Vector from site to rupture: "+siteToRup);
+					origTransDist = siteToRup.getHorzDistance()-rotation.distance;
+					if (D) System.out.println("Orig trans dist: "+origTransDist);
+					// only move north/south
+					rupAngle = siteToRup.getAzimuth();
+					angleDiff = angleDiff(rupAngle, 0d);
+					if (D) System.out.println("Angle diff: "+angleDiff);
+					// cap it at 45 degrees as we can get stuck in a loop otherwise
+					transDist = origTransDist*Math.cos(Math.toRadians(Math.min(angleDiff, 45)));
+					if (D) System.out.println("Trans dist: "+transDist);
+					// positive transDist means we are too far North, so we move south
+					transVector = new LocationVector(180d, transDist, 0d);
 					translated = RuptureRotationUtils.getTranslated(translated, transVector);
 					numTrans++;
 				}
 				
-				Preconditions.checkState(pDiff < 0.5 || absDiff < 0.5,
-						"Translation didn't work after %s rounds! target: %s, actual: %s, orig: %s",
-						numTrans, rotation.distance, minDist);
+				if (D) System.out.println("Done with loop with dist: "+minDist);
+				
+				if (numTrans == 20) {
+					System.out.println("DEBUGGIN A FAIL!");
+					Location newCentroid = RuptureRotationUtils.calcRuptureCentroid(translated);
+					System.out.println("\tCentroid should be: "+LocationUtils.location(centroid, southCentroidVector));
+					System.out.println("\tCentroid is: "+newCentroid);
+					System.out.println("\tVector to centroid: "+LocationUtils.vector(rotation.site.getLocation(), newCentroid));
+					System.out.println("\tClosest: "+closest);
+					System.out.println("\tVector to closest: "+LocationUtils.vector(rotation.site.getLocation(), closest));
+				}
+				
+				Preconditions.checkState(pDiff < trans_p_diff_thresh || absDiff < trans_abs_diff_thresh,
+						"Translation didn't work after %s rounds for event %s! target: %s, actual: %s"
+						+ "\n\tangle: %s, angleDiff: %s, origTransDist: %s, transDist: %s"
+						+ "\n\tBefore last translation, siteToRup: %s"
+						+ "\n\tLast translation: %s"
+						+ "\n\tClosest: %s",
+						numTrans, rupture.getID(), rotation.distance, minDist, rupAngle, angleDiff, origTransDist, transDist,
+						siteToRup, transVector, closest);
 				rotationCache.put(transSpec, translated);
 			} else {
 				double minDist = RuptureRotationUtils.calcMinDist(rotation.site.getLocation(), translated);
 				double pDiff = DataUtils.getPercentDiff(minDist, rotation.distance);
 				double absDiff = Math.abs(minDist - rotation.distance);
-				Preconditions.checkState(pDiff < 0.5 || absDiff < 0.5,
+				Preconditions.checkState(pDiff < trans_p_diff_thresh || absDiff < trans_abs_diff_thresh,
 						"Cached translation is wrong! target: %s, actual: %s",
 						rotation.distance, minDist);
 			}
@@ -729,11 +751,30 @@ public class RotatedRupVariabilityConfig {
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 		int skipYears = 5000;
 		int maxRuptures = 100;
 		boolean buildAllRuptures = false;
 		boolean plotExamples = true;
+		
+		// to debug an event
+//		RSQSimEvent debugEvent = catalog.loader().byID(970307);
+//		RSQSimEvent debugEvent = catalog.loader().byID(1992428);
+//		RSQSimEvent debugEvent = catalog.loader().byID(7122655);
+		RSQSimEvent debugEvent = catalog.loader().byID(5802150);
+		List<RSQSimEvent> debugEvents = new ArrayList<>();
+		debugEvents.add(debugEvent);
+		Site debugSite = new Site(new Location(34.0192, -118.286));
+		List<Site> debugSites = new ArrayList<>();
+		debugSites.add(debugSite);
+		RotatedRupVariabilityConfig debugConfig = new RotatedRupVariabilityConfig(catalog, debugSites, debugEvents,
+				new double[] {20}, 36, 1);
+		for (RotationSpec rotation : debugConfig.getRotations())
+			debugConfig.getRotatedRupture(rotation);
+		File debugOut = new File("/tmp/event_"+debugEvent.getID());
+		Preconditions.checkState(debugOut.exists() || debugOut.mkdir());
+		debugConfig.plotRotations(debugOut, "rotation_test", debugConfig.getRotations(), true);
+		System.exit(0);
 		
 //		File bbpDir = new File("/data/kevin/bbp/parallel/2019_01_17-rundir2585-rotatedRups-m6p6_vert_ss_surface-50.0km"
 //				+ "-36srcAz-4siteSrcAz-100rups-skipYears5000-noHF-csLASites");

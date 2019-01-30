@@ -13,6 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
@@ -26,6 +27,8 @@ import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.xyz.ArbDiscrXYZ_DataSet;
+import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -33,6 +36,8 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
+import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.DataUtils;
@@ -51,9 +56,13 @@ import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 
 import scratch.kevin.bbp.BBP_Site;
@@ -64,71 +73,98 @@ import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpec;
 
-public class RotatedRupVariabilityPageGen {
+public abstract class RotatedRupVariabilityPageGen {
 
 	private RSQSimCatalog catalog;
-	private Scenario scenario;
-	private RotatedRupVariabilityConfig config;
-	private SimulationRotDProvider<RotationSpec> prov;
+	private Map<Double, RotatedRupVariabilityConfig> magConfigs;
+	private Map<Double, SimulationRotDProvider<RotationSpec>> magProvs;
 	
 	private List<Site> sites;
 	private List<Float> sourceAzimuths;
 	private List<Float> siteSourceAzimuths;
 	private List<Float> distances;
-	private List<Integer> eventIDs;
-	private Map<Quantity, List<?>> quantitiesMap;
+	private Map<Double, List<Integer>> magEventIDs;
+	private int maxNumEvents = 0;
+	private int minNumEvents = Integer.MAX_VALUE;
+	private Table<Double, Quantity, List<?>> magQuantitiesTable;
 	
 	private RSQSimEvent exampleRupture;
 	private Site exampleSite;
 	private int numExampleRotations;
 	
 	private List<Color> siteColors;
+	
+	private LoadingCache<StdDevSetKey, StdDevSet[]> stdDevCache;
 
-	public RotatedRupVariabilityPageGen(RSQSimCatalog catalog, Scenario scenario, RotatedRupVariabilityConfig config,
+	public RotatedRupVariabilityPageGen(RSQSimCatalog catalog, RotatedRupVariabilityConfig config,
 			SimulationRotDProvider<RotationSpec> prov) {
+		this(catalog, emptyMagMap(config), emptyMagMap(prov));
+	}
+	
+	private static <T> HashMap<Double, T> emptyMagMap(T value) {
+		HashMap<Double, T> map = new HashMap<>();
+		map.put(null, value);
+		return map;
+	}
+
+	public RotatedRupVariabilityPageGen(RSQSimCatalog catalog, Map<Double, RotatedRupVariabilityConfig> magConfigs,
+			Map<Double, SimulationRotDProvider<RotationSpec>> magProvs) {
 		this.catalog = catalog;
-		this.scenario = scenario;
-		this.config = config;
-		this.prov = prov;
+		this.magConfigs = magConfigs;
+		this.magProvs = magProvs;
 		
-		HashSet<Site> sitesSet = new HashSet<>();
-		HashSet<Float> sourceAzSet = new HashSet<>();
-		HashSet<Float> siteSourceAzSet = new HashSet<>();
-		HashSet<Float> distancesSet = new HashSet<>();
-		HashSet<Integer> eventIDsSet = new HashSet<>();
-		for (RotationSpec rotation : config.getRotations()) {
-			sitesSet.add(rotation.site);
-			sourceAzSet.add(nullAsZero(rotation.sourceAz));
-			siteSourceAzSet.add(nullAsZero(rotation.siteToSourceAz));
-			distancesSet.add(nullAsZero(rotation.distance));
-			eventIDsSet.add(rotation.eventID);
-		}
-		sites = new ArrayList<>(sitesSet);
-		sourceAzimuths = new ArrayList<>(sourceAzSet);
-		siteSourceAzimuths = new ArrayList<>(siteSourceAzSet);
-		distances = new ArrayList<>(distancesSet);
-		eventIDs = new ArrayList<>(eventIDsSet);
-		Collections.sort(sites, new NamedComparator());
-		Collections.sort(sourceAzimuths);
-		Collections.sort(siteSourceAzimuths);
-		Collections.sort(distances);
-		Collections.sort(eventIDs);
-		quantitiesMap = new HashMap<>();
-		quantitiesMap.put(Quantity.SITE, sites);
-		quantitiesMap.put(Quantity.EVENT_ID, eventIDs);
-		quantitiesMap.put(Quantity.DISTANCE, distances);
-		quantitiesMap.put(Quantity.SOURCE_AZIMUTH, sourceAzimuths);
-		quantitiesMap.put(Quantity.SITE_TO_SOURTH_AZIMUTH, siteSourceAzimuths);
+		RotatedRupVariabilityConfig config0 = magConfigs.values().iterator().next();
 		
-		CPT siteCPT;
-		try {
-			siteCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0, sites.size()-1);
-		} catch (IOException e) {
-			throw ExceptionUtils.asRuntimeException(e);
+		sites = config0.getValues(Site.class, Quantity.SITE);
+		sourceAzimuths = config0.getValues(Float.class, Quantity.SOURCE_AZIMUTH);
+		siteSourceAzimuths = config0.getValues(Float.class, Quantity.SITE_TO_SOURTH_AZIMUTH);
+		distances = config0.getValues(Float.class, Quantity.DISTANCE);
+		magQuantitiesTable = HashBasedTable.create();
+		
+		magEventIDs = new HashMap<>();
+		if (magConfigs.size() == 1) {
+			List<Integer> eventIDs = config0.getValues(Integer.class, Quantity.EVENT_ID);
+			magEventIDs.put(null, eventIDs);
+			maxNumEvents = eventIDs.size();
+			minNumEvents = eventIDs.size();
+			for (Quantity quantity : Quantity.values())
+				magQuantitiesTable.put(null, quantity, config0.getQuantitiesMap().get(quantity));
+		} else {
+			for (Double mag : magConfigs.keySet()) {
+				RotatedRupVariabilityConfig config = magConfigs.get(mag);
+				List<Integer> eventIDs = config.getValues(Integer.class, Quantity.EVENT_ID);
+				magEventIDs.put(mag, eventIDs);
+				maxNumEvents = Integer.max(maxNumEvents, eventIDs.size());
+				minNumEvents = Integer.min(minNumEvents, eventIDs.size());
+				Preconditions.checkState(sites.size() == config.getValues(Site.class, Quantity.SITE).size());
+				Preconditions.checkState(sourceAzimuths.size() == config.getValues(Float.class, Quantity.SOURCE_AZIMUTH).size());
+				Preconditions.checkState(siteSourceAzimuths.size() == config.getValues(Float.class, Quantity.SITE_TO_SOURTH_AZIMUTH).size());
+				Preconditions.checkState(distances.size() == config.getValues(Float.class, Quantity.DISTANCE).size());
+				for (Quantity quantity : Quantity.values())
+					magQuantitiesTable.put(mag, quantity, config.getQuantitiesMap().get(quantity));
+			}
 		}
-		siteColors = new ArrayList<>();
-		for (int i=0; i<sites.size(); i++)
-			siteColors.add(siteCPT.getColor((float)i).darker());
+		
+		CPT siteCPT = null;
+		if (sites.size() > 1) {
+			try {
+				siteCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0, sites.size()-1);
+			} catch (IOException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			siteColors = new ArrayList<>();
+			for (int i=0; i<sites.size(); i++)
+				siteColors.add(siteCPT.getColor((float)i).darker());
+		}
+		
+		stdDevCache = CacheBuilder.newBuilder().build(new CacheLoader<StdDevSetKey, StdDevSet[]>() {
+
+			@Override
+			public StdDevSet[] load(StdDevSetKey key) throws Exception {
+				return calcStdDevSet(key);
+			}
+			
+		});
 	}
 	
 	public void setExampleRupture(RSQSimEvent exampleRupture, Site exampleSite, int numRotations) {
@@ -214,14 +250,14 @@ public class RotatedRupVariabilityPageGen {
 			lines.add("");
 			
 			for (Quantity quantity : groupedList) {
-				int num = pageGen.quantitiesMap.get(quantity).size();
+				int num = pageGen.magQuantitiesTable.rowMap().values().iterator().next().get(quantity).size();
 				lines.add("* "+quantity+" *["+num+" unique]*");
 			}
 			lines.add("");
 			lines.add("and the following quantities vary:");
 			lines.add("");
 			for (Quantity quantity : variedList) {
-				int num = pageGen.quantitiesMap.get(quantity).size();
+				int num = pageGen.magQuantitiesTable.rowMap().values().iterator().next().get(quantity).size();
 				lines.add("* "+quantity+" *["+num+" unique]*");
 			}
 			lines.add("");
@@ -251,8 +287,6 @@ public class RotatedRupVariabilityPageGen {
 				}
 			}
 			
-//			lines.add("Individual standard deviations are computed for each unique combination of") // TODO
-			
 			if (separateSites || separateDists) {
 				line = "Standard deviation is computed and tabulated separately for each ";
 				line += separateSites && separateDists ? "site and distance" : separateSites ? "site" : "distance";
@@ -269,17 +303,34 @@ public class RotatedRupVariabilityPageGen {
 		}
 	}
 	
+	protected abstract String getScenarioName();
+	protected abstract String getScenarioShortName();
+	protected abstract String[] getScenarioMatchCriteria();
+	
+	protected List<Site> getSites() {
+		return sites;
+	}
+	
+	protected List<Integer> getEventIDs(Double mag) {
+		return magEventIDs.get(mag);
+	}
+	
 	public void generatePage(File outputDir, double[] periods, List<String> methodSpecificLines) throws IOException {
+		generatePage(outputDir, periods, methodSpecificLines, null, null);
+	}
+	
+	public void generatePage(File outputDir, double[] periods, List<String> methodSpecificLines,
+			double[] highlightMags, float[] highlightDists) throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
 		List<String> lines = new LinkedList<>();
 		
-		lines.add("# "+catalog.getName()+" Rotated Rupture Variability, "+scenario.getShortName());
+		lines.add("# "+catalog.getName()+" Rotated Rupture Variability, "+getScenarioShortName());
 		lines.add("");
 		lines.add("This exercise uses translations and rotations to estimate ground motion variability from different "
 				+ "sources. We begin by selecting a subset of similar ruptures which match a set of criteria (in this case, "
-				+ scenario.getName()+"). Each rupture is then reoriented such that its strike (following the Aki & Richards "
+				+ getScenarioName()+"). Each rupture is then reoriented such that its strike (following the Aki & Richards "
 				+ "1980 convention) is 0 degrees (due North, dipping to the right for normal or reverse ruptures). For each site, "
 				+ "ruptures are translated such that their scalar seismic moment centroid is directly North of the site, and their "
 				+ "Joyner-Boore distance (rJB) is as specified (we consider "+distances.size()+" distance[s] here).");
@@ -305,18 +356,22 @@ public class RotatedRupVariabilityPageGen {
 		lines.add("");
 		TableBuilder table = MarkdownUtils.tableBuilder();
 		table.addLine("Quantity", "Variations", "Description");
-		table.addLine(Quantity.EVENT_ID.getName(), eventIDs.size(), Quantity.EVENT_ID.getDescription());
+		if (maxNumEvents == minNumEvents)
+			table.addLine(Quantity.EVENT_ID.getName(), maxNumEvents, Quantity.EVENT_ID.getDescription());
+		else
+			table.addLine(Quantity.EVENT_ID.getName(), minNumEvents+" - "+maxNumEvents, Quantity.EVENT_ID.getDescription());
 		table.addLine(Quantity.SITE.getName(), sites.size(), Quantity.SITE.getDescription());
 		table.addLine(Quantity.SOURCE_AZIMUTH.getName(), sourceAzimuths.size(), Quantity.SOURCE_AZIMUTH.getDescription());
 		table.addLine(Quantity.SITE_TO_SOURTH_AZIMUTH.getName(), siteSourceAzimuths.size(), Quantity.SITE_TO_SOURTH_AZIMUTH.getDescription());
 		table.addLine(Quantity.DISTANCE.getName(), Joiner.on(", ").join(distances)+" km", Quantity.DISTANCE.getDescription());
-		table.addLine("**Total # Simulations**", "**"+config.getRotations().size()+"**", "Total number of combinations of the above.");
+		table.addLine("**Total # Simulations**", "**"+magConfigs.values().iterator().next().getRotations().size()+"**",
+				"Total number of combinations of the above.");
 		lines.addAll(table.build());
 		lines.add("");
-		lines.add("## "+scenario.getShortName()+" RSQSim Rupture Match Criteria");
+		lines.add("## "+getScenarioShortName()+" RSQSim Rupture Match Criteria");
 		lines.add(topLink); lines.add("");
-		String[] criteria = scenario.getMatchCriteria();
-		lines.add("We condisder "+eventIDs.size()+" events in the catalog match the following criteria:");
+		String[] criteria = getScenarioMatchCriteria();
+		lines.add("We condisder "+maxNumEvents+" events in the catalog which match the following criteria:");
 		lines.add("");
 		for (String criterion : criteria)
 			lines.add("* "+criterion);
@@ -352,11 +407,38 @@ public class RotatedRupVariabilityPageGen {
 		int summaryTableIndex = lines.size();
 		lines.add("");
 		
-		Table<VariabilityType, Float, List<StdDevSet>> resultsTable = HashBasedTable.create();
+		List<Double> plotMags = new ArrayList<>();
+		if (magConfigs.size() == 1) {
+			plotMags.add(null);
+		} else {
+			if (highlightMags != null) {
+				for (double mag : highlightMags)
+					if (magConfigs.containsKey(mag))
+						plotMags.add(mag);
+			} else {
+				plotMags.addAll(magConfigs.keySet());
+			}
+			Collections.sort(plotMags);
+		}
+		List<Float> plotDists;
+		if (highlightDists == null) {
+			plotDists = distances;
+		} else {
+			for (float dist : highlightDists)
+				Preconditions.checkState(distances.contains(dist), "Highlight distance not in dataset: %s", dist);
+			plotDists = Floats.asList(highlightDists);
+		}
+		
+		boolean hasMagDist = magConfigs.size() > 3 && distances.size() > 3;
+		Map<VariabilityType, File[]> magDistPlots = new HashMap<>();
+		
+		HashSet<VariabilityType> computedTypes = new HashSet<>();
 		
 		for (VariabilityType type : VariabilityType.values()) {
-			if (type.getVariedCount(quantitiesMap) == 1)
+			if (type.getVariedCount(magQuantitiesTable.rowMap().values().iterator().next()) == 1)
 				continue;
+			computedTypes.add(type);
+			
 			System.out.println("Processing variability type: "+type.name);
 			lines.add("## "+type.name+" Variability");
 			lines.add(topLink); lines.add("");
@@ -367,58 +449,142 @@ public class RotatedRupVariabilityPageGen {
 			lines.addAll(type.buildMethodologyLines(this, resourcesDir));
 			lines.add("");
 			
-			if (!type.separateDists || distances.size() == 1) {
-				lines.add("### "+type.name+" Variability Results");
+			if (hasMagDist) {
+				lines.add("### "+type.name+" Variability Mag-Distance Plots");
 				lines.add(topLink); lines.add("");
+				table = MarkdownUtils.tableBuilder();
+				table.initNewLine();
+				if (sites.size() > 1 && type.separateSites)
+					table.addColumn("Site");
+				for (double period : periods)
+					table.addColumn(period == (int)period ? (int)period+"s" : (float)period+"s");
+				table.finalizeLine();
+				if (sites.size() > 1 && type.separateSites) {
+					for (Site site : sites) {
+						table.initNewLine();
+						table.addColumn("**"+site.getName()+"**");
+						String prefix = type.prefix+"mag_dist_std_dev";
+						File[] files = plotMagDistCheckerboard(resourcesDir, prefix, type, site, periods);
+						for (File file : files)
+							table.addColumn("![Mag-Dist Plot](resources/"+file.getName()+")");
+						table.finalizeLine();
+					}
+					table.initNewLine();
+					table.addColumn("**ALL SITES***");
+				} else {
+					table.initNewLine();
+				}
+				String prefix = type.prefix+"_mag_dist_std_dev";
+				File[] files = plotMagDistCheckerboard(resourcesDir, prefix, type, null, periods);
+				for (File file : files)
+					table.addColumn("![Mag-Dist Plot](resources/"+file.getName()+")");
+				magDistPlots.put(type, files);
+				table.finalizeLine();
+				lines.addAll(table.build());
+				lines.add("");
 			}
 			
-			if (type.separateDists) {
-				for (float distance : distances) {
-					lines.addAll(generateVariabilityLines(type, distance, periods, topLink, resourcesDir, resultsTable));
+			for (Double mag : plotMags) {
+				RotatedRupVariabilityConfig config = magConfigs.get(mag);
+				if (!type.separateDists || distances.size() == 1) {
+					if (mag == null)
+						lines.add("### "+type.name+" Variability Results");
+					else
+						lines.add("### M"+optionalDigitDF.format(mag)+" "+type.name+" Results");
+					lines.add(topLink); lines.add("");
+				}
+				
+				if (type.separateDists) {
+					for (float distance : plotDists) {
+						lines.addAll(generateVariabilityLines(config, type, mag, distance, periods, topLink, resourcesDir));
+						lines.add("");
+					}
+				} else {
+					lines.addAll(generateVariabilityLines(config, type, mag, null, periods, topLink, resourcesDir));
 					lines.add("");
 				}
-			} else {
-				lines.addAll(generateVariabilityLines(type, null, periods, topLink, resourcesDir, resultsTable));
-				lines.add("");
 			}
 		}
 		
-		// build summary table
-		table = MarkdownUtils.tableBuilder();
-		table.initNewLine();
-		table.addColumn("Type");
-		table.addColumn("Notation");
-		table.addColumn("Distance");
-		for (double period : periods)
-			table.addColumn(optionalDigitDF.format(period)+"s Std. Dev.");
-		table.finalizeLine();
-		for (VariabilityType type : VariabilityType.values()) {
-			if (!resultsTable.containsRow(type))
-				continue;
-			List<Float> myDists;
-			if (type.separateDists) {
-				myDists = this.distances;
-			} else {
-				myDists = new ArrayList<>();
-				myDists.add(null);
-			}
-			for (Float distance : myDists) {
+		// build summary table(s)
+		List<String> summaryLines = new ArrayList<>();
+		if (hasMagDist) {
+			summaryLines.add("### Mag-Dist Plots");
+			summaryLines.add(topLink); summaryLines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			table.addColumn("Type");
+			table.addColumn("Notation");
+			for (double period : periods)
+				table.addColumn(optionalDigitDF.format(period)+"s Std. Dev.");
+			table.finalizeLine();
+			for (VariabilityType type : VariabilityType.values()) {
+				if (!computedTypes.contains(type))
+					continue;
 				table.initNewLine();
-				List<StdDevSet> stdDevs = resultsTable.get(type, distance);
 				table.addColumn(type.name);
 				table.addColumn(type.htmlSymbol);
-				if (distance == null && distances.size() == 1)
-					table.addColumn(optionalDigitDF.format(distances.get(0))+" km");
-				else if (distance == null && distances.size() > 1)
-					table.addColumn("(all)");
-				else
-					table.addColumn(optionalDigitDF.format(distance)+" km");
-				for (StdDevSet stdDev : stdDevs)
-					table.addColumn(optionalDigitDF.format(stdDev.total));
+				File[] plots = magDistPlots.get(type);
+				for (File plot : plots)
+					table.addColumn("![Mag-Dist Plot](resources/"+plot.getName()+")");
 				table.finalizeLine();
 			}
+			summaryLines.addAll(table.build());
 		}
-		lines.addAll(summaryTableIndex, table.build());
+		for (Double mag : plotMags) {
+			if (mag != null) {
+				if (!summaryLines.isEmpty())
+					summaryLines.add("");
+				summaryLines.add("### M"+optionalDigitDF.format(mag)+" Result Summary Table");
+				summaryLines.add(topLink); summaryLines.add("");
+			}
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			table.addColumn("Type");
+			table.addColumn("Notation");
+			table.addColumn("Distance");
+			for (double period : periods)
+				table.addColumn(optionalDigitDF.format(period)+"s Std. Dev.");
+			table.finalizeLine();
+			for (VariabilityType type : VariabilityType.values()) {
+				if (!computedTypes.contains(type))
+					continue;
+				List<Float> myDists;
+				if (type.separateDists) {
+					myDists = this.distances;
+				} else {
+					myDists = new ArrayList<>();
+					myDists.add(null);
+				}
+				for (Float distance : myDists) {
+					table.initNewLine();
+					StdDevSetKey key = new StdDevSetKey(type, mag, distance, null, periods);
+					StdDevSet[] stdDevs;
+					try {
+						stdDevs = stdDevCache.get(key);
+					} catch (ExecutionException e) {
+						if (e.getCause() instanceof IOException)
+							throw (IOException)e.getCause();
+						if (e.getCause() instanceof RuntimeException)
+							throw (RuntimeException)e.getCause();
+						throw ExceptionUtils.asRuntimeException(e);
+					}
+					table.addColumn(type.name);
+					table.addColumn(type.htmlSymbol);
+					if (distance == null && distances.size() == 1)
+						table.addColumn(optionalDigitDF.format(distances.get(0))+" km");
+					else if (distance == null && distances.size() > 1)
+						table.addColumn("(all)");
+					else
+						table.addColumn(optionalDigitDF.format(distance)+" km");
+					for (StdDevSet stdDev : stdDevs)
+						table.addColumn(optionalDigitDF.format(stdDev.total));
+					table.finalizeLine();
+				}
+			}
+			summaryLines.addAll(table.build());
+		}
+		lines.addAll(summaryTableIndex, summaryLines);
 		
 		// add TOC
 		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2, 4));
@@ -428,65 +594,20 @@ public class RotatedRupVariabilityPageGen {
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
 	}
 	
-	private List<String> generateVariabilityLines(VariabilityType type, Float distance, double[] periods, String topLink, File resourcesDir,
-			Table<VariabilityType, Float, List<StdDevSet>> resultsTable) throws IOException {
+	private List<String> generateVariabilityLines(RotatedRupVariabilityConfig config, VariabilityType type, Double mag, Float distance,
+			double[] periods, String topLink, File resourcesDir) throws IOException {
 		List<String> lines = new ArrayList<>();
 		if (type.separateDists && distances.size() > 1) {
-			lines.add("### "+distance+" km "+type.name+" Results");
-			lines.add(topLink); lines.add("");
-		}
-		
-//		lines.add("Standard deviations are computed from ");
-		
-		List<Site> mySites = new ArrayList<>();
-		List<List<List<ResidualSet>>> myResiduals = new ArrayList<>();
-		List<DiscretizedFunc> stdDevFuncs = null;
-		
-		if (type.separateSites) {
-			Quantity[] constQuantities;
-			
-			if (type.separateDists)
-				constQuantities = new Quantity[] { Quantity.DISTANCE, Quantity.SITE };
+			if (mag == null)
+				lines.add("### "+distance+" km "+type.name+" Results");
 			else
-				constQuantities = new Quantity[] { Quantity.SITE };
-			
-			stdDevFuncs = new ArrayList<>();
-			
-			List<List<ResidualSet>> totalPeriodResiduals = new ArrayList<>();
-			for (int p=0; p<periods.length; p++)
-				totalPeriodResiduals.add(new ArrayList<>());
-			
-			for (Site site : sites) {
-				Object[] constValues;
-				if (type.separateDists)
-					constValues = new Object[] { distance, site };
-				else
-					constValues = new Object[] { site };
-				
-				List<List<ResidualSet>> residuals = calcResiduals(periods, constQuantities, constValues, type.groupQuantities);
-				mySites.add(site);
-				myResiduals.add(residuals);
-				for (int i=0; i<periods.length; i++)
-					totalPeriodResiduals.get(i).addAll(residuals.get(i));
-			}
-			mySites.add(null);
-			myResiduals.add(totalPeriodResiduals);
-		} else {
-			Quantity[] constQuantities = null;
-			Object[] constValues = null;
-			
-			if (type.separateDists) {
-				constQuantities = new Quantity[] { Quantity.DISTANCE };
-				constValues = new Object[] { distance };
-			}
-			List<List<ResidualSet>> residuals = calcResiduals(periods, constQuantities, constValues, type.groupQuantities);
-			mySites.add(null);
-			myResiduals.add(residuals);
+				lines.add("### "+distance+" km M"+optionalDigitDF.format(mag)+" "+type.name+" Results");
+			lines.add(topLink); lines.add("");
 		}
 		
 		TableBuilder table = MarkdownUtils.tableBuilder();
 		table.initNewLine();
-		if (type.separateSites)
+		if (type.separateSites && sites.size() > 1)
 			table.addColumn("Site");
 		for (double period : periods) {
 			String periodStr = optionalDigitDF.format(period)+"s";
@@ -498,19 +619,27 @@ public class RotatedRupVariabilityPageGen {
 		}
 		table.finalizeLine();
 		DiscretizedFunc totStdDevFunc = null;
-		List<StdDevSet> totStdDevs = new ArrayList<>();
+		StdDevSet[] totStdDevs = null;
 		List<List<StdDevSet>> siteTotStdDevs = null;
-		if (type.separateSites) {
+		if (type.separateSites && sites.size() > 1) {
 			siteTotStdDevs = new ArrayList<>();
 			for (int i=0; i<periods.length; i++)
 				siteTotStdDevs.add(new ArrayList<>());
 		}
 		
+		List<Site> mySites = new ArrayList<>();
+		List<DiscretizedFunc> stdDevFuncs = null;
+		if (type.separateSites && sites.size() > 1) {
+			mySites.addAll(sites);
+			stdDevFuncs = new ArrayList<>();
+		}
+		mySites.add(null);
+		
 		for (int i=0; i<mySites.size(); i++) {
 			Site site = mySites.get(i);
 			table.initNewLine();
 			String emphasis = "";
-			if (type.separateSites) {
+			if (type.separateSites && sites.size() > 1) {
 				if (site == null) {
 					table.addColumn("**ALL SITES**");
 					emphasis = "**";
@@ -518,7 +647,6 @@ public class RotatedRupVariabilityPageGen {
 					table.addColumn(site.getName());
 				}
 			}
-			List<List<ResidualSet>> residuals = myResiduals.get(i);
 			DiscretizedFunc stdDevFunc = new ArbitrarilyDiscretizedFunc();
 			if (site == null) {
 				stdDevFunc.setName("Total");
@@ -527,30 +655,33 @@ public class RotatedRupVariabilityPageGen {
 				stdDevFunc.setName(site.getName());
 				stdDevFuncs.add(stdDevFunc);
 			}
-			List<StdDevSet> myStdDevs = new ArrayList<>();
+			StdDevSet[] myStdDevs;
+			try {
+				myStdDevs = stdDevCache.get(new StdDevSetKey(type, mag, distance, site, periods));
+			} catch (ExecutionException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
 			for (int p=0; p<periods.length; p++) {
-				List<ResidualSet> periodResiduals = residuals.get(p);
-				StdDevSet stat = new StdDevSet(periodResiduals);
-				myStdDevs.add(stat);
 				table.addColumn(""); // empty for period
-				table.addColumn(emphasis+optionalDigitDF.format(stat.total)+emphasis);
-				table.addColumn(emphasis+optionalDigitDF.format(stat.mean)+emphasis);
-				table.addColumn(emphasis+optionalDigitDF.format(stat.median)+emphasis);
-				table.addColumn(emphasis+"["+optionalDigitDF.format(stat.min)+" "+optionalDigitDF.format(stat.max)+"]"+emphasis);
-				stdDevFunc.set(periods[p], stat.total);
+				table.addColumn(emphasis+optionalDigitDF.format(myStdDevs[p].total)+emphasis);
+				table.addColumn(emphasis+optionalDigitDF.format(myStdDevs[p].mean)+emphasis);
+				table.addColumn(emphasis+optionalDigitDF.format(myStdDevs[p].median)+emphasis);
+				table.addColumn(emphasis+"["+optionalDigitDF.format(myStdDevs[p].min)+" "+optionalDigitDF.format(myStdDevs[p].max)+"]"+emphasis);
+				stdDevFunc.set(periods[p], myStdDevs[p].total);
 			}
 			if (site == null)
 				totStdDevs = myStdDevs;
 			else
 				for (int p=0; p<periods.length; p++)
-					siteTotStdDevs.get(p).add(myStdDevs.get(p));
+					siteTotStdDevs.get(p).add(myStdDevs[p]);
 			table.finalizeLine();
 		}
-		
+
 		String distPrefix = distance == null ? "" : "_"+optionalDigitDF.format(distance)+"km";
+		String magPrefix = mag == null ? "" : "_m"+optionalDigitDF.format(mag);
 		
 		// plot it
-		String prefix = type.prefix+distPrefix+"_std_dev";
+		String prefix = type.prefix+magPrefix+distPrefix+"_std_dev";
 		plotPeriodDependentStdDevs(resourcesDir, prefix, type.name+" ("+type.symbol+")", periods, stdDevFuncs, totStdDevFunc);
 		lines.add("!["+type.name+" Variability](resources/"+prefix+".png)");
 		lines.add("");
@@ -563,12 +694,11 @@ public class RotatedRupVariabilityPageGen {
 		table.finalizeLine();
 		table.initNewLine();
 		for (int p=0; p<periods.length; p++) {
-			prefix = type.prefix+distPrefix+"_"+optionalDigitDF.format(periods[p])+"s_hist";
+			prefix = type.prefix+magPrefix+distPrefix+"_"+optionalDigitDF.format(periods[p])+"s_hist";
 			plotStdDevsHistogram(resourcesDir, prefix, optionalDigitDF.format(periods[p])+"s "+type.name+" ("+type.symbol+")",
-					periods[p], myResiduals.get(myResiduals.size()-1).get(p), totStdDevs.get(p), type.separateSites ? siteTotStdDevs.get(p): null);
+					periods[p], totStdDevs[p], type.separateSites && sites.size() > 1 ? siteTotStdDevs.get(p): null);
 			table.addColumn("!["+optionalDigitDF.format(periods[p])+"s](resources/"+prefix+".png)");
 		}
-		resultsTable.put(type, distance, totStdDevs);
 		table.finalizeLine();
 		table.wrap(periods.length > 4 ? 3 : 2, 0);
 		lines.addAll(table.build());
@@ -629,15 +759,151 @@ public class RotatedRupVariabilityPageGen {
 		}
 	}
 	
+	private List<List<ResidualSet>> loadResiduals(StdDevSetKey key) throws IOException {
+		Quantity[] constQuantities = null;
+		Object[] constValues = null;
+		if (key.type.separateSites) {
+			if (key.type.separateDists) {
+				constQuantities = new Quantity[] { Quantity.DISTANCE, Quantity.SITE };
+				if (sites.size() == 1 && key.site == null)
+					constValues = new Object[] { key.distance, sites.get(0) };
+				else
+					constValues = new Object[] { key.distance, key.site };
+			} else {
+				constQuantities = new Quantity[] { Quantity.SITE };
+				if (sites.size() == 1 && key.site == null)
+					constValues = new Object[] { sites.get(0) };
+				else
+					constValues = new Object[] { key.site };
+			}
+		} else {
+			if (key.type.separateDists) {
+				constQuantities = new Quantity[] { Quantity.DISTANCE };
+				constValues = new Object[] { key.distance };
+			}
+		}
+		
+		return calcResiduals(key.magnitude, key.periods, constQuantities, constValues, key.type.groupQuantities);
+	}
+		
+	
+	private StdDevSet[] calcStdDevSet(StdDevSetKey key) throws IOException {
+		if (key.type.separateSites && sites.size() > 1) {
+			// do all sites at once
+			List<List<ResidualSet>> totalPeriodResiduals = new ArrayList<>();
+			for (int p=0; p<key.periods.length; p++)
+				totalPeriodResiduals.add(new ArrayList<>());
+			
+			for (Site site : sites) {
+				StdDevSetKey siteKey = new StdDevSetKey(key.type, key.magnitude, key.distance, site, key.periods);
+				
+				List<List<ResidualSet>> residuals = loadResiduals(siteKey);
+				
+				StdDevSet[] stdDevs = new StdDevSet[key.periods.length];
+				for (int p=0; p<key.periods.length; p++) {
+					stdDevs[p] = new StdDevSet(residuals.get(p));
+					totalPeriodResiduals.get(p).addAll(residuals.get(p));
+				}
+				
+				stdDevCache.put(siteKey, stdDevs);
+			}
+			
+			StdDevSet[] totStdDevs = new StdDevSet[key.periods.length];
+			for (int p=0; p<key.periods.length; p++)
+				totStdDevs[p] = new StdDevSet(totalPeriodResiduals.get(p));
+			StdDevSetKey noSiteKey = new StdDevSetKey(key.type, key.magnitude, key.distance, null, key.periods);
+			stdDevCache.put(noSiteKey, totStdDevs);
+			
+			StdDevSet[] ret = stdDevCache.getIfPresent(key);
+			Preconditions.checkState(ret != null, "Should have just been cached?");
+			return ret;
+		}
+		// do for all sites
+		List<List<ResidualSet>> residuals = loadResiduals(key);
+		
+		StdDevSet[] stdDevs = new StdDevSet[key.periods.length];
+		for (int p=0; p<key.periods.length; p++)
+			stdDevs[p] = new StdDevSet(residuals.get(p));
+		return stdDevs;
+	}
+	
+	private class StdDevSetKey {
+		private final VariabilityType type;
+		private final Double magnitude;
+		private final Float distance;
+		private final Site site;
+		private final double[] periods;
+		
+		public StdDevSetKey(VariabilityType type, Double magnitude, Float distance, Site site, double[] periods) {
+			this.type = type;
+			this.magnitude = magnitude;
+			this.distance = distance;
+			this.site = site;
+			this.periods = periods;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((distance == null) ? 0 : distance.hashCode());
+			result = prime * result + ((magnitude == null) ? 0 : magnitude.hashCode());
+			result = prime * result + Arrays.hashCode(periods);
+			result = prime * result + ((site == null) ? 0 : site.getLocation().hashCode());
+			result = prime * result + ((type == null) ? 0 : type.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			StdDevSetKey other = (StdDevSetKey) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (distance == null) {
+				if (other.distance != null)
+					return false;
+			} else if (!distance.equals(other.distance))
+				return false;
+			if (magnitude == null) {
+				if (other.magnitude != null)
+					return false;
+			} else if (!magnitude.equals(other.magnitude))
+				return false;
+			if (!Arrays.equals(periods, other.periods))
+				return false;
+			if (site == null) {
+				if (other.site != null)
+					return false;
+			} else if (!site.equals(other.site))
+				return false;
+			if (type != other.type)
+				return false;
+			return true;
+		}
+
+		private RotatedRupVariabilityPageGen getOuterType() {
+			return RotatedRupVariabilityPageGen.this;
+		}
+
+	}
+	
 	private class StdDevSet {
 		private final double total;
 		private final double mean;
 		private final double median;
 		private final double min;
 		private final double max;
+		private final double[] stdDevs;
 		
 		public StdDevSet(List<ResidualSet> residuals) {
-			double[] stdDevs = new double[residuals.size()];
+			stdDevs = new double[residuals.size()];
 			StandardDeviation totalCalc = new StandardDeviation();
 			for (int i=0; i<stdDevs.length; i++) {
 				ResidualSet set = residuals.get(i);
@@ -652,10 +918,14 @@ public class RotatedRupVariabilityPageGen {
 		}
 	}
 	
-	private List<List<ResidualSet>> calcResiduals(double[] periods, Quantity[] constQuantities, Object[] constValues, Quantity[] groupQuantities)
-			throws IOException {
+	private List<List<ResidualSet>> calcResiduals(Double magnitude, double[] periods,
+			Quantity[] constQuantities, Object[] constValues, Quantity[] groupQuantities) throws IOException {
+//		System.out.println("Rotations for mag: "+magnitude);
+		RotatedRupVariabilityConfig config = magConfigs.get(magnitude);
 		List<RotationSpec> totalRotations;
 		if (constQuantities != null && constQuantities.length > 0) {
+//			for (int i=0; i<constQuantities.length; i++)
+//				System.out.println("Constant: "+constQuantities[i]+": "+constValues[i]);
 			totalRotations = config.getRotationsForQuantities(constQuantities, constValues);
 			// remove any constants from the group quantities list
 			List<Quantity> groupList = Lists.newArrayList(groupQuantities);
@@ -676,7 +946,7 @@ public class RotatedRupVariabilityPageGen {
 		
 //		System.out.println("Computing resduals from "+num+" simulations");
 		
-		calcGroupedResiduals(totalRotations, periods, ret, groupQuantities);
+		calcGroupedResiduals(magnitude, totalRotations, periods, ret, groupQuantities);
 		int count = 0;
 		for (ResidualSet set : ret.get(new Random().nextInt(periods.length)))
 			count += set.size();
@@ -686,13 +956,14 @@ public class RotatedRupVariabilityPageGen {
 		return ret;
 	}
 	
-	private void calcGroupedResiduals(List<RotationSpec> rotations, double[] periods, List<List<ResidualSet>> ret,
+	private void calcGroupedResiduals(double magnitude, List<RotationSpec> rotations, double[] periods, List<List<ResidualSet>> ret,
 			Quantity[] groupQuantities) throws IOException {
 		Preconditions.checkState(!rotations.isEmpty());
 		if (groupQuantities.length == 0) {
 //			System.out.println("Computing with index="+index);
 			// we're at a set for which to calculate residuals, do it
 			List<DiscretizedFunc> spectra = new ArrayList<>();
+			SimulationRotDProvider<RotationSpec> prov = magProvs.get(magnitude);
 			for (RotationSpec rotation : rotations)
 				spectra.add(prov.getRotD50(rotation.site, rotation, 0));
 			for (int p=0; p<periods.length; p++) {
@@ -702,14 +973,14 @@ public class RotatedRupVariabilityPageGen {
 				ret.get(p).add(new ResidualSet(values));
 			}
 		} else {
-//			System.out.println("have "+rotations.size()+" rotations before "+groupQuantities[0]+", index="+index);
+//			System.out.println("have "+rotations.size()+" rotations before "+groupQuantities[0]);
 			Quantity[] current = {groupQuantities[0]};
 			Quantity[] downstream = Arrays.copyOfRange(groupQuantities, 1, groupQuantities.length);
-			for (Object value : quantitiesMap.get(groupQuantities[0])) {
+			for (Object value : magQuantitiesTable.get(magnitude, groupQuantities[0])) {
 				List<RotationSpec> myRotations = RotatedRupVariabilityConfig.getRotationsForQuantities(
 						rotations, current, new Object[] {value});
 //				System.out.println("\t"+value+": "+myRotations.size());
-				calcGroupedResiduals(myRotations, periods, ret, downstream);
+				calcGroupedResiduals(magnitude, myRotations, periods, ret, downstream);
 			}
 		}
 	}
@@ -838,7 +1109,7 @@ public class RotatedRupVariabilityPageGen {
 	}
 	
 	private void plotStdDevsHistogram(File resourcesDir, String prefix, String title, double period,
-			List<ResidualSet> residuals, StdDevSet totalStdDev, List<StdDevSet> siteStdDevs) throws IOException {
+			StdDevSet totalStdDev, List<StdDevSet> siteStdDevs) throws IOException {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
@@ -848,8 +1119,10 @@ public class RotatedRupVariabilityPageGen {
 		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(0d, 1d, delta);
 		hist.setName("Total Histogram");
 		
-		for (ResidualSet set : residuals)
-			hist.add(hist.getClosestXIndex(set.residualStdDev), 1d);
+//		for (ResidualSet set : residuals)
+//			hist.add(hist.getClosestXIndex(set.residualStdDev), 1d);
+		for (double stdDev : totalStdDev.stdDevs)
+			hist.add(hist.getClosestXIndex(stdDev), 1d);
 		hist.normalizeBySumOfY_Vals();
 		
 		funcs.add(hist);
@@ -894,6 +1167,77 @@ public class RotatedRupVariabilityPageGen {
 		return line;
 	}
 	
+	private File[] plotMagDistCheckerboard(File resourcesDir, String prefix, VariabilityType type, Site site, double[] periods)
+			throws IOException {
+		List<Double> magnitudes = new ArrayList<>(magConfigs.keySet());
+		Collections.sort(magnitudes);
+		
+		double deltaMag = magnitudes.get(1) - magnitudes.get(0);
+		double minMag = magnitudes.get(0);
+		
+		double deltaDist = distances.get(1) - distances.get(0);
+		double minDist = distances.get(0);
+		
+		EvenlyDiscrXYZ_DataSet[] xyzs = new EvenlyDiscrXYZ_DataSet[periods.length];
+		for (int p=0; p<periods.length; p++)
+			xyzs[p] = new EvenlyDiscrXYZ_DataSet(distances.size(), magnitudes.size(), minDist, minMag, deltaDist, deltaMag);
+		
+		for (int xInd=0; xInd<distances.size(); xInd++) {
+			float distance = distances.get(xInd);
+			double x = xyzs[0].getX(xInd);
+			Preconditions.checkState(distance == (float)x, "Expected distance bin %s to be %s, have %s", xInd, distance, x);
+			for (int yInd=0; yInd<magnitudes.size(); yInd++) {
+				double magnitude = magnitudes.get(yInd);
+				double y = xyzs[0].getY(yInd);
+				Preconditions.checkState((float)magnitude == (float)y, "Expected mag bin %s to be %s, have %s", yInd, magnitude, y);
+				StdDevSetKey key = new StdDevSetKey(type, magnitude, distance, site, periods);
+				StdDevSet[] stdDevs;
+				try {
+					stdDevs = stdDevCache.get(key);
+				} catch (ExecutionException e) {
+					if (e.getCause() instanceof IOException)
+						throw (IOException)e.getCause();
+					if (e.getCause() instanceof RuntimeException)
+						throw (RuntimeException)e.getCause();
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+				for (int p=0; p<periods.length; p++) {
+					xyzs[p].set(xInd, yInd, stdDevs[p].total);
+				}
+			}
+		}
+		
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+		
+		File[] ret = new File[periods.length];
+		
+		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, 1d);
+		
+		for (int p=0; p<periods.length; p++) {
+			String periodStr;
+			if (periods[p] == Math.round(periods[p]))
+				periodStr = (int)periods[p]+"s";
+			else
+				periodStr = (float)periods[p]+"s";
+			String title = periodStr+" "+type.name+" ("+type.symbol+")";
+			String myPrefix = prefix+"_"+periodStr;
+			XYZPlotSpec xyzSpec = new XYZPlotSpec(xyzs[p], cpt, title, "DistanceJB", "Magnitude", type.symbol);
+			XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
+			xyzGP.drawPlot(xyzSpec, false, false, new Range(minDist-0.5*deltaDist, distances.get(distances.size()-1)+0.5*deltaDist),
+					new Range(minMag-0.5*deltaMag, magnitudes.get(magnitudes.size()-1)+0.5*deltaMag));
+			xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
+			xyzGP.getChartPanel().setSize(700, 550);
+			File file = new File(resourcesDir, myPrefix+".png");
+			xyzGP.saveAsPNG(file.getAbsolutePath());
+			ret[p] = file;
+		}
+		return ret;
+	}
+	
 	private void plotExample(File resourcesDir, String prefix, double distance, List<Quantity> variedQuantities)
 			throws IOException {
 		List<Site> sites = new ArrayList<>();
@@ -906,107 +1250,5 @@ public class RotatedRupVariabilityPageGen {
 				numSourceAz, numSiteToSourceAz);
 		
 		config.plotRotations(resourcesDir, prefix, config.getRotations(), true);
-	}
-
-	public static void main(String[] args) throws IOException, DocumentException {
-		File baseDir = new File("/data/kevin/simulators/catalogs");
-		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
-		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
-
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
-		
-		double[] periods = {3d, 5d, 7.5, 10d};
-		boolean doExample = true;
-		
-		System.out.println("Catalog: "+catalog.getName());
-		// find BBP parallel dir
-		String catalogDirName = catalog.getCatalogDir().getName();
-		if (catalogDirName.startsWith("JG_"))
-			// I sometimes modify Jacqui's directory names
-			catalogDirName = catalogDirName.substring(3);
-		File bbpDir = null;
-		File bbpZipFile = null;
-		File[] allBBPDirs = bbpParallelDir.listFiles();
-		Arrays.sort(allBBPDirs, new FileNameComparator());
-		for (File dir : allBBPDirs) {
-			String name = dir.getName();
-			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-rotatedRups-")) {
-				File zipFile = new File(dir, "results.zip");
-				if (!zipFile.exists())
-					zipFile = new File(dir, "results_rotD.zip");
-				if (zipFile.exists()) {
-					bbpDir = dir;
-					bbpZipFile = zipFile;
-				}
-			}
-		}
-		Preconditions.checkNotNull(bbpDir);
-		System.out.println("Located ref BBP dir: "+bbpDir.getAbsolutePath());
-		System.out.println("\tInput file: "+bbpZipFile.getName());
-		
-		List<BBP_Site> bbpSites = BBP_Site.readFile(bbpDir);
-		
-		List<Site> sites = new ArrayList<>();
-		for (BBP_Site site : bbpSites)
-			sites.add(site.buildGMPE_Site(RSQSimBBP_Config.VM));
-		
-		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
-		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
-		
-		Map<Scenario, RotatedRupVariabilityPageGen> pageGensMap = new HashMap<>();
-		for (Scenario scenario : Scenario.values()) {
-			File rotConfFile = new File(bbpDir, "rotation_config_"+scenario.getPrefix()+".csv");
-			if (rotConfFile.exists()) {
-				RotatedRupVariabilityConfig config = RotatedRupVariabilityConfig.loadCSV(catalog, rotConfFile, null, sites);
-				
-				BBP_RotatedRupSimLoader bbpLoader = new BBP_RotatedRupSimLoader(bbpZipFile, bbpSites, scenario);
-				
-				RotatedRupVariabilityPageGen pageGen = new RotatedRupVariabilityPageGen(catalog, scenario, config, bbpLoader);
-				
-				pageGensMap.put(scenario, pageGen);
-			}
-		}
-		
-		Map<Scenario, RSQSimEvent> exampleEventsMap = null;
-		if (doExample) {
-			Map<Scenario, Integer> exampleIDs = new HashMap<>();
-			for (RotatedRupVariabilityPageGen pageGen : pageGensMap.values())
-				exampleIDs.put(pageGen.scenario, pageGen.eventIDs.get(0));
-			System.out.println("Loading "+exampleIDs.size()+" example ruptures");
-			List<RSQSimEvent> events = catalog.loader().byIDs(Ints.toArray(exampleIDs.values()));
-			exampleEventsMap = new HashMap<>();
-			for (Scenario scenario : exampleIDs.keySet()) {
-				int exampleID = exampleIDs.get(scenario);
-				for (RSQSimEvent event : events)
-					if (event.getID() == exampleID)
-						exampleEventsMap.put(scenario, event);
-			}
-		}
-		
-		for (Scenario scenario : pageGensMap.keySet()) {
-			System.out.println("Doing scenario: "+scenario);
-			
-			RotatedRupVariabilityPageGen pageGen = pageGensMap.get(scenario);
-			
-			if (doExample) {
-				RSQSimEvent exampleRup = exampleEventsMap.get(scenario);
-				pageGen.setExampleRupture(exampleRup, pageGen.sites.get(0), 5);
-			}
-			
-			File rotDir = new File(catalogOutputDir, "rotated_ruptures_"+scenario.getPrefix());
-			Preconditions.checkState(rotDir.exists() || rotDir.mkdir());
-			
-			List<String> methodSpecificLines = new ArrayList<>();
-			
-			methodSpecificLines.add("*NOTE: This page uses the SCEC BBP to simulate a 1-dimensional velocity structure. Thus we "
-					+ "expect no path variability, and plots of path variabilitiy are included only as verification of the method.*");
-			methodSpecificLines.add("");
-			methodSpecificLines.add("[RSQSim Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
-			
-			pageGen.generatePage(rotDir, periods, methodSpecificLines);
-		}
-		
-		catalog.writeMarkdownSummary(catalogOutputDir, true, false);
-		RSQSimCatalog.writeCatalogsIndex(outputDir);
 	}
 }

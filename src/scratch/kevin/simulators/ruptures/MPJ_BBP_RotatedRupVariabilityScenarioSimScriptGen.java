@@ -27,7 +27,7 @@ import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 
-class MPJ_BBP_RotatedRupVariabilitySimScriptGen {
+class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
@@ -35,7 +35,8 @@ class MPJ_BBP_RotatedRupVariabilitySimScriptGen {
 		File myHPCDir = new File("/auto/scec-02/kmilner/simulators/catalogs/");
 		File stampedeCatalogDir = new File("/work/00950/kevinm/stampede2/simulators/catalogs");
 		File jacquiCSDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/");
-		File catalogDir = new File(myHPCDir, "rundir2585");
+//		File catalogDir = new File(myHPCDir, "rundir2585");
+		File catalogDir = new File(myHPCDir, "rundir2740");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2829");
 		
 		int skipYears = 5000;
@@ -104,11 +105,11 @@ class MPJ_BBP_RotatedRupVariabilitySimScriptGen {
 		if (scenarios.length == 1)
 			jobName += "-"+scenarios[0].getPrefix();
 		else
-			jobName += "-"+scenarios.length+"Scenarios";
+			jobName += "-"+scenarios.length+"scenarios";
 		if (distances.length == 1)
 			jobName += "-"+(float)distances[0]+"km";
 		else
-			jobName += "-"+distances.length+"Dists";
+			jobName += "-"+distances.length+"dists";
 		jobName += "-"+numSourceAz+"srcAz-"+numSiteToSourceAz+"siteSrcAz";
 		if (maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE)
 			jobName += "-"+maxRuptures+"rups";
@@ -160,7 +161,7 @@ class MPJ_BBP_RotatedRupVariabilitySimScriptGen {
 		argz = MPJ_BBP_CatalogSimScriptGen.addBBP_EnvArgs(argz, addLines, remoteJobDir, nodeScratchDir,
 				sharedScratchDir, bbpCopyParentDir, bbpEnvFile);
 		
-		List<String> script = mpjWrite.buildScript(MPJ_BBP_RotatedRupVariabilitySim.class.getName(), argz);
+		List<String> script = mpjWrite.buildScript(MPJ_BBP_RotatedRupVariabilityScenarioSim.class.getName(), argz);
 		
 		if (!addLines.isEmpty())
 			script.addAll(2, addLines);

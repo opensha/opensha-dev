@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -136,7 +138,7 @@ public class BBP_PartBValidationConfig {
 			}
 		},
 		M6p6_REVERSE("M6.6, Reverse, Dip=45, Ztor=3", "M6.6 Reverse", "m6p6_reverse",
-				new String[] { "M=[6.55,6.65]", "Ztor=[2,4]", "Rake=[80,100]", "Dip=[40,50]"}) {
+				new String[] { "M=[6.55,6.65]", "Ztor=[1,5]", "Rake=[75,105]", "Dip=[35,55]"}) {
 			@Override
 			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
 				Loader loader = catalog.loader().skipYears(skipYears);
@@ -301,6 +303,33 @@ public class BBP_PartBValidationConfig {
 	}
 	
 	public static double[] DISTANCES = { 20d, 50d };
+	
+	public static List<RSQSimEvent> getBestMatches(double targetMag, List<RSQSimEvent> matches, int maxNum) {
+		if (matches.size() <= maxNum)
+			return matches;
+		matches = new ArrayList<>(matches);
+		Collections.sort(matches, new MagDiffEventComparator(targetMag));
+		matches = matches.subList(0, maxNum);
+		Collections.sort(matches);
+		return matches;
+	}
+	
+	private static class MagDiffEventComparator implements Comparator<RSQSimEvent> {
+		
+		private double targetMag;
+
+		public MagDiffEventComparator(double targetMag) {
+			this.targetMag = targetMag;
+		}
+
+		@Override
+		public int compare(RSQSimEvent e0, RSQSimEvent e1) {
+			double diff1 = Math.abs(e0.getMagnitude() - targetMag);
+			double diff2 = Math.abs(e1.getMagnitude() - targetMag);
+			return Double.compare(diff1, diff2);
+		}
+		
+	}
 	
 	public static Location[] selectSitesSites(int num, double distance, boolean randomAz, RSQSimCatalog catalog, RSQSimEvent event) {
 		// start with GMPE surface in order to determine footwall
