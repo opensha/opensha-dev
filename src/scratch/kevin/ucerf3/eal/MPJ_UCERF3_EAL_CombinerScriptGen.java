@@ -7,10 +7,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.opensha.commons.geo.Location;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
+import org.opensha.sha.earthquake.param.BackgroundRupType;
 
 import com.google.common.base.Preconditions;
 
@@ -31,12 +33,26 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		
 		File willsDir = new File(remoteDir, "2017_05_24-ucerf3-ngaw2-cea-proxy-wills2015");
 		File waldDir = new File(remoteDir, "2017_05_26-ucerf3-ngaw2-cea-proxy-wald");
+		BackgroundRupType bgType = BackgroundRupType.CROSSHAIR;
+		// only used for tracts, can be from either directory
+		File portfolioFile = new File(remoteDir, "Porter-24May2017-CA-RES1-2017-Wills2015.csv");
 		
 		File erfProbsDir = new File("/home/scec-02/kmilner/ucerf3/erf_probs/2014_10_07-ucerf3-erf-probs");
 		double erfProbsDuration = 1d;
 		
+//		Location tractLoc = null;
+//		String cityPrefix = null;
+//		double tractRadius = 0;
+		
+		Location tractLoc = new Location(34.108300, -117.289646);
+		String cityPrefix = "san-bernardino";
+		double tractRadius = 5;
+		
+		if (tractLoc != null)
+			jobName += "-"+cityPrefix;
+		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 18;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
@@ -59,6 +75,13 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		argz += " --erf-probs-duration "+(float)erfProbsDuration;
 		argz += " --true-mean-sol "+trueMeanFile.getAbsolutePath();
 		argz += " --compound-sol "+cfssFile.getAbsolutePath();
+		if (tractLoc != null) {
+			argz += " --tract-location "+tractLoc.getLatitude()+","+tractLoc.getLongitude();
+			if (tractRadius > 0)
+				argz += " --tract-radius "+tractRadius;
+			argz += " --background-type "+bgType.name();
+			argz += " --portfolio "+portfolioFile.getAbsolutePath();
+		}
 		argz += " "+remoteJobDir.getAbsolutePath();
 		
 		List<String> script = mpjWrite.buildScript(MPJ_UCERF3_EAL_Combiner.class.getName(), argz);

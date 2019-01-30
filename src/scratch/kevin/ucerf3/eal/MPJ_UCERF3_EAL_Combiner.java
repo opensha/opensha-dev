@@ -23,8 +23,16 @@ import org.apache.commons.cli.Options;
 import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.sha.earthquake.param.BackgroundRupParam;
+import org.opensha.sha.earthquake.param.BackgroundRupType;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
+import org.opensha.sra.gui.portfolioeal.Asset;
+import org.opensha.sra.gui.portfolioeal.Portfolio;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -33,6 +41,7 @@ import com.google.common.collect.Lists;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
@@ -46,6 +55,7 @@ import scratch.kevin.ucerf3.eal.branches.U3_EAL_Vs30Model;
 public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	
 	private FaultSystemSolution trueMeanSol;
+	private FaultSystemSolutionERF erf;
 	private Map<LogicTreeBranch, List<Integer>> mappings;
 	private CompoundFaultSystemSolution cfss;
 	
@@ -58,6 +68,8 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	private File resultsFile;
 	
 	private List<U3_EAL_LogicTreeBranch> branches = new ArrayList<>();
+	
+	private String[] tractNames;
 	
 	private Map<File, double[][]> rupLossesMap;
 	private Map<File, DiscretizedFunc[]> griddedLossesMap;
@@ -132,7 +144,63 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			vs30Dirs.put(U3_EAL_Vs30Model.WALD_ALLEN, waldDir);
 		}
 		Preconditions.checkArgument(!vs30Dirs.isEmpty(), "No Vs30 model directories supplied!");
-		// TODO tracts
+		tractNames = null;
+		if (cmd.hasOption("tract")) {
+			String tractStr = cmd.getOptionValue("tract");
+			tractNames = tractStr.split(",");
+			if (rank == 0)
+				debug("Calculating for "+tractNames.length+" tracts");
+			Preconditions.checkState(!cmd.hasOption("tract-location") && !cmd.hasOption("tract-radius"),
+					"Tract location and radius not supported when --tract option used");
+		}
+		if (cmd.hasOption("tract-location")) {
+			Preconditions.checkArgument(cmd.hasOption("portfolio"), "Must supply --portfolio option with --tract-location");
+			String locStr = cmd.getOptionValue("tract-location");
+			Preconditions.checkState(locStr.contains(","), "--tract-location format should be lat,lon");
+			String[] locSplit = locStr.split(",");
+			Preconditions.checkState(locSplit.length == 2, "--tract-location format should be lat,lon");
+			double lat = Double.parseDouble(locSplit[0]);
+			double lon = Double.parseDouble(locSplit[1]);
+			Location tractLoc = new Location(lat, lon);
+			
+			File portfolioFile = new File(cmd.getOptionValue("portfolio"));
+			Portfolio portfolio = Portfolio.createPortfolio(portfolioFile);
+			
+			HashSet<String> assetNames = new HashSet<>();
+			if (cmd.hasOption("tract-radius")) {
+				double radius = Double.parseDouble(cmd.getOptionValue("tract-radius"));
+				for (Asset asset : portfolio.getAssetList()) {
+					double dist = LocationUtils.horzDistanceFast(tractLoc, asset.getLocation());
+					if (dist <= radius)
+						assetNames.add(MPJ_CondLossCalc.getTractName(asset));
+				}
+				if (rank == 0)
+					debug("found "+assetNames.size()+" tracts within "+(float)radius+" km of "+locStr);
+			} else {
+				double minDist = Double.POSITIVE_INFINITY;
+				Asset closest = null;
+				for (Asset asset : portfolio.getAssetList()) {
+					double dist = LocationUtils.horzDistanceFast(tractLoc, asset.getLocation());
+					if (dist <= minDist) {
+						minDist = dist;
+						closest = asset;
+					}
+				}
+				assetNames.add(MPJ_CondLossCalc.getTractName(closest));
+				if (rank == 0)
+					debug("closest tract to "+locStr+" is "+(float)minDist+" km away: "+MPJ_CondLossCalc.getTractName(closest));
+			}
+			tractNames = assetNames.toArray(new String[0]);
+		}
+		
+		if (tractNames != null) {
+			Preconditions.checkArgument(cmd.hasOption("background-type"), "Must supply --background-type with census tracts");
+			BackgroundRupType rupType = BackgroundRupType.valueOf(cmd.getOptionValue("background-type"));
+			erf = new FaultSystemSolutionERF(trueMeanSol);
+			erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
+			erf.setParameter(BackgroundRupParam.NAME, rupType);
+			erf.updateForecast();
+		}
 		
 		if (rank == 0)
 			debug("Building EAL branches");
@@ -242,6 +310,16 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		resultsCSV.writeToFile(resultsFile);
 	}
 	
+	private synchronized void cacheTractLosses(File tractFile) throws IOException {
+		if (rupLossesMap.containsKey(tractFile))
+			return;
+		double[][] tractLosses = MPJ_CondLossCalc.loadResults(tractFile);
+		double[][] rupLosses = MPJ_CondLossCalc.mapResultsToFSS(erf, tractLosses);
+		rupLossesMap.put(tractFile, rupLosses);
+		DiscretizedFunc[] griddedLosses = MPJ_CondLossCalc.mapResultsToGridded(erf, tractLosses);
+		griddedLossesMap.put(tractFile, griddedLosses);
+	}
+	
 	private synchronized double[][] getLossesFSS(File fssLossFile) throws IOException {
 		double[][] expectedLosses = rupLossesMap.get(fssLossFile);
 		if (expectedLosses != null)
@@ -282,8 +360,55 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			Map<LogicTreeBranch, List<Integer>> taskMappings = new HashMap<>();
 			taskMappings.put(branch.getTIBranch(), mappings.get(branch.getTIBranch()));
 			
-			double[][] fssLosses = getLossesFSS(branch.getFSSIndexedBinFile());
-			DiscretizedFunc[] griddedLosses = getLossesGridded(branch.getGriddedBinFile());
+			double[][] fssLosses = null;
+			DiscretizedFunc[] griddedLosses = null;
+			if (tractNames == null) {
+				fssLosses = getLossesFSS(branch.getFSSIndexedBinFile());
+				griddedLosses = getLossesGridded(branch.getGriddedBinFile());
+			} else {
+				File tractDir = branch.getTractDir();
+				for (String tractName : tractNames) {
+					File tractFile = new File(tractDir, tractName+".bin");
+					if (!tractFile.exists())
+						tractFile = new File(tractDir, tractName+".bin.gz");
+					Preconditions.checkState(tractFile.exists(), "Tract file doesn't exist: %s", tractFile.getAbsolutePath());
+					cacheTractLosses(tractFile);
+					double[][] tractFSS = getLossesFSS(tractFile);
+					DiscretizedFunc[] tractGridded = getLossesGridded(tractFile);
+					if (fssLosses == null) {
+						fssLosses = new double[tractFSS.length][];
+						griddedLosses = new DiscretizedFunc[tractGridded.length];
+					} else {
+						Preconditions.checkState(fssLosses.length == tractFSS.length);
+						Preconditions.checkState(griddedLosses.length == tractGridded.length);
+					}
+					for (int i=0; i<fssLosses.length; i++) {
+						if (tractFSS[i] != null) {
+							if (fssLosses[i] == null)
+								fssLosses[i] = new double[tractFSS[i].length];
+							else
+								Preconditions.checkState(fssLosses[i].length == tractFSS[i].length);
+							for (int j=0; j<fssLosses[i].length; j++)
+								fssLosses[i][j] += tractFSS[i][j];
+						}
+					}
+					for (int i=0; i<griddedLosses.length; i++) {
+						if (tractGridded[i] != null) {
+							if (griddedLosses[i] == null) {
+								griddedLosses[i] = tractGridded[i].deepClone();
+							} else {
+								Preconditions.checkState(tractGridded[i].size() == griddedLosses[i].size());
+								for (int j=0; j<tractGridded[i].size(); j++) {
+									double mag = tractGridded[i].getX(j);
+									Preconditions.checkState((float)griddedLosses[i].getX(j) == (float)mag);
+									griddedLosses[i].set(j, griddedLosses[i].getY(j)+tractGridded[i].getY(j));
+								}
+							}
+						}
+					}
+				}
+			}
+			
 			ZipFile erfProbsZipFile = probsZipFiles.get(branch.getValue(U3_EAL_ProbModels.class));
 			
 			UCERF3_EAL_Combiner calc = new UCERF3_EAL_Combiner(cfss, taskMappings, trueMeanSol, fssLosses, griddedLosses,
@@ -383,7 +508,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			CSVFile<String> csv = new CSVFile<>(true);
 			csv.addLine(resultsCSV.getLine(0)); // header
 			csv.addAll(allLines);
-			csv.writeToFile(new File("all_branch_results.csv"));
+			csv.writeToFile(new File(resultsDir, "all_branch_results.csv"));
 			debug("Writing branch levels CSV");
 			csv = new CSVFile<>(true);
 			csv.addLine("Branch Level", "Branch Choice", "Total Weight", "Weighted Total Mean EAL",
@@ -422,7 +547,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			faultMean /= totalWeight;
 			griddedMean /= totalWeight;
 			csv.addLine("COMPLETE MODEL", "MEAN", "1.0", totalMean+"", faultMean+"", griddedMean+"");
-			csv.writeToFile(new File("branch_level_summary.csv"));
+			csv.writeToFile(new File(resultsDir, "branch_level_summary.csv"));
 		}
 	}
 	
@@ -456,6 +581,30 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		Option consolidateOnly = new Option("co", "consolidate-only", false, "Flag to consolidate only");
 		consolidateOnly.setRequired(false);
 		options.addOption(consolidateOnly);
+		
+		Option tract = new Option("tr", "tract", true, "Census tract by name (or comma separated tracts)");
+		tract.setRequired(false);
+		options.addOption(tract);
+		
+		Option tractLoc = new Option("trl", "tract-location", true, "Census tract location (lat,lon). "
+				+ "Must be used with --portfolio. If --trace-radius supplied, then all tracts within the given "
+				+ "radius will be included. Otherwise only the closest");
+		tractLoc.setRequired(false);
+		options.addOption(tractLoc);
+		
+		Option tractRadius = new Option("trr", "tract-radius", true, "Census tract radius (km) from tract location");
+		tractRadius.setRequired(false);
+		options.addOption(tractRadius);
+		
+		Option portfolio = new Option("p", "portfolio", true,
+				"Portfolio file, used when searching for census tracts with --tract-location");
+		portfolio.setRequired(false);
+		options.addOption(portfolio);
+		
+		Option backType = new Option("bgt", "background-type", true,
+				"Background rup type, required with --tract or --tract-location to parse tract files");
+		backType.setRequired(false);
+		options.addOption(backType);
 		
 		return options;
 	}
