@@ -16,6 +16,7 @@ import org.apache.commons.cli.ParseException;
 import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.exceptions.ParameterException;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.param.Parameter;
@@ -28,6 +29,9 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
@@ -135,7 +139,40 @@ public class UCERF3_IM_Calculator {
 		CSVFile<String> csv = new CSVFile<>(true);
 		
 		List<String> header = Lists.newArrayList("FSS Index", "Grid Node Index", "Mag", "Rake", "U3 Annual Rate",
-				gmpe.getShortName()+" Log Mean", gmpe.getShortName()+" Std Dev");
+				gmpe.getShortName()+" Log Mean", gmpe.getShortName()+" Total Std Dev");
+		
+		boolean hasInterStdDev;
+		boolean hasIntraStdDev;
+		try {
+			StdDevTypeParam stdDevtypeParam = (StdDevTypeParam)gmpe.getParameter(StdDevTypeParam.NAME);
+			hasInterStdDev = stdDevtypeParam.isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTER);
+			hasIntraStdDev = stdDevtypeParam.isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTRA);
+		} catch (ParameterException e) {
+			hasInterStdDev = false;
+			hasIntraStdDev = false;
+		}
+		if (hasInterStdDev)
+			header.add("Iter-Event Std Dev");
+		if (hasIntraStdDev)
+			header.add("Itra-Event Std Dev");
+		boolean hasRrup;
+		boolean hasRJB;
+		try {
+			gmpe.getParameter(DistanceRupParameter.NAME);
+			hasRrup = true;
+		} catch (ParameterException e) {
+			hasRrup = false;
+		}
+		try {
+			gmpe.getParameter(DistanceJBParameter.NAME);
+			hasRJB = true;
+		} catch (ParameterException e) {
+			hasRJB = false;
+		}
+		if (hasRrup)
+			header.add("Distance Rup (km)");
+		if (hasRJB)
+			header.add("Distance J-B (km)");
 		if (etasCatalog != null)
 			header.add(0, "ETAS ID");
 		csv.addLine(header);
@@ -154,7 +191,7 @@ public class UCERF3_IM_Calculator {
 					gridNodeIndex = sourceID - numSourcesFSS;
 				for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
 					ProbEqkRupture rup = source.getRupture(rupID);
-					csv.addLine(processRupture(rup, site, gmpe, null, fssIndex, gridNodeIndex));
+					csv.addLine(processRupture(rup, site, gmpe, null, fssIndex, gridNodeIndex, hasInterStdDev, hasIntraStdDev, hasRrup, hasRJB));
 				}
 			}
 		} else {
@@ -167,7 +204,7 @@ public class UCERF3_IM_Calculator {
 					Preconditions.checkState(sourceID >= 0 && sourceID < numSourcesFSS);
 					for (ProbEqkRupture rup : erf.getSource(sourceID))
 						csv.addLine(processRupture(rup, site, gmpe, etasRup,
-								fssIndex, gridNodeIndex));
+								fssIndex, gridNodeIndex, hasInterStdDev, hasIntraStdDev, hasRrup, hasRJB));
 				} else if (doGridded) {
 					if (etasRup.getMag() < AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF)
 						continue;
@@ -184,7 +221,7 @@ public class UCERF3_IM_Calculator {
 						if ((float)magDiff > 0.06)
 							continue;
 						csv.addLine(processRupture(rup, site, gmpe, etasRup,
-								fssIndex, gridNodeIndex));
+								fssIndex, gridNodeIndex, hasInterStdDev, hasIntraStdDev, hasRrup, hasRJB));
 					}
 				}
 			}
@@ -193,8 +230,10 @@ public class UCERF3_IM_Calculator {
 		csv.writeToFile(outputFile);
 	}
 	
-	private List<String> processRupture(ProbEqkRupture rup, Site site,
-			ScalarIMR gmpe, ETAS_EqkRupture etasRup, int fssIndex, int gridNodeIndex) {
+	private static double max_val = Double.NEGATIVE_INFINITY;
+	
+	private List<String> processRupture(ProbEqkRupture rup, Site site, ScalarIMR gmpe, ETAS_EqkRupture etasRup, int fssIndex, int gridNodeIndex,
+			boolean hasInterStdDev, boolean hasIntraStdDev, boolean hasRrup, boolean hasRJB) {
 		List<String> line = new ArrayList<>();
 		if (etasRup != null)
 			line.add(etasRup.getID()+"");
@@ -205,7 +244,22 @@ public class UCERF3_IM_Calculator {
 		line.add((float)rup.getMeanAnnualRate(ERF_DURATION)+"");
 		gmpe.setAll(rup, site, gmpe.getIntensityMeasure());
 		line.add((float)gmpe.getMean()+"");
+		max_val = Math.max(max_val, gmpe.getMean());
 		line.add((float)gmpe.getStdDev()+"");
+		if (hasInterStdDev) {
+			gmpe.getParameter(StdDevTypeParam.NAME).setValue(StdDevTypeParam.STD_DEV_TYPE_INTER);
+			line.add((float)gmpe.getStdDev()+"");
+		}
+		if (hasIntraStdDev) {
+			gmpe.getParameter(StdDevTypeParam.NAME).setValue(StdDevTypeParam.STD_DEV_TYPE_INTRA);
+			line.add((float)gmpe.getStdDev()+"");
+		}
+		if (hasInterStdDev || hasIntraStdDev)
+			gmpe.getParameter(StdDevTypeParam.NAME).setValue(StdDevTypeParam.STD_DEV_TYPE_TOTAL);
+		if (hasRrup)
+			line.add(((Double)gmpe.getParameter(DistanceRupParameter.NAME).getValue()).floatValue()+"");
+		if (hasRJB)
+			line.add(((Double)gmpe.getParameter(DistanceJBParameter.NAME).getValue()).floatValue()+"");
 		
 		return line;
 	}
@@ -284,13 +338,14 @@ public class UCERF3_IM_Calculator {
 		if (args.length == 1 && args[0].equals("--hardcoded")) {
 			String argStr = "--sol-file /home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip";
-			argStr += " --latitude 34 --longitude -118";
+			argStr += " --latitude 34.038165 --longitude -118.266111";
 			// Vs30 in m/s, Z1.0 in m, Z2.5 in km (I know, it's weird that they're different units)
 			// Z1.0 and Z2.5 are optional
-			argStr += " --vs30 760 --z10 100 --z25 1.5";
+			argStr += " --vs30 225.6";
+//			argStr += " --vs30 760 --z10 100 --z25 1.5";
 			argStr += " --gmpe ASK_2014";
-			argStr += " --imt SA";
-			argStr += " --period 1";
+			argStr += " --imt PGA";
+			argStr += " --period 0";
 			// optional argument to specify an etas catalog
 //			argStr += " --etas-catalog /path/to/catalog"
 			// flag to enable gridded seismicity
@@ -314,6 +369,7 @@ public class UCERF3_IM_Calculator {
 		
 		UCERF3_IM_Calculator calc = new UCERF3_IM_Calculator(cmd);
 		calc.calculate();
+//		System.out.println("Max value: "+max_val);
 	}
 
 }
