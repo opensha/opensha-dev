@@ -83,8 +83,8 @@ public class SubSetSimulationRotDProvider<E> implements SimulationRotDProvider<E
 	}
 
 	@Override
-	public double getMinimumCurvePlotRate() {
-		return simProv.getMinimumCurvePlotRate()*rateScalar;
+	public double getMinimumCurvePlotRate(Site site) {
+		return simProv.getMinimumCurvePlotRate(site)*rateScalar;
 	}
 
 	@Override

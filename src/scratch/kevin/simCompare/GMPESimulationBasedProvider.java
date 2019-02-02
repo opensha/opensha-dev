@@ -111,8 +111,8 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 	}
 
 	@Override
-	public double getMinimumCurvePlotRate() {
-		return simProv.getMinimumCurvePlotRate();
+	public double getMinimumCurvePlotRate(Site site) {
+		return simProv.getMinimumCurvePlotRate(site);
 	}
 
 	@Override

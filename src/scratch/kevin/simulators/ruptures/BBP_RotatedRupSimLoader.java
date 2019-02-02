@@ -93,7 +93,7 @@ public class BBP_RotatedRupSimLoader extends BBP_SimZipLoader implements Simulat
 	}
 
 	@Override
-	public double getMinimumCurvePlotRate() {
+	public double getMinimumCurvePlotRate(Site site) {
 		throw new UnsupportedOperationException("not implemented");
 	}
 

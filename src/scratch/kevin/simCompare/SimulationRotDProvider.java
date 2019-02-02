@@ -14,10 +14,32 @@ import org.opensha.commons.geo.Location;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
+/**
+ * Interface for providing RotD50 results from simulation for analysis and hazard calculation. The rupture type is generic
+ * to account for multiple sources (could be a BBP source, RSQSim rupture, CyberShake rupture, etc). Each rupture can have
+ * multiple simulations (e.g. a CyberShake rupture variation), which default to equal weight (unless you override 
+ * getIndividualSimulationRate(E, double, int, int)).
+ * @author kevin
+ *
+ * @param <E>
+ */
 public interface SimulationRotDProvider<E> extends Named {
 	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @param index
+	 * @return RotD50 spectrum for the index-th simulation of rupture E at the given site
+	 * @throws IOException
+	 */
 	public DiscretizedFunc getRotD50(Site site, E rupture, int index) throws IOException;
 	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @return RotD50 spectra for each simulation of rupture E at the given site
+	 * @throws IOException
+	 */
 	public default List<DiscretizedFunc> getRotD50s(Site site, E rupture) throws IOException {
 		ArrayList<DiscretizedFunc> list = new ArrayList<>();
 		for (int i=0; i<getNumSimulations(site, rupture); i++)
@@ -25,8 +47,21 @@ public interface SimulationRotDProvider<E> extends Named {
 		return list;
 	}
 	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @param index
+	 * @return RotD100 spectrum for the index-th simulation of rupture E at the given site
+	 * @throws IOException
+	 */
 	public DiscretizedFunc getRotD100(Site site, E rupture, int index) throws IOException;
 	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @return RotD100 spectra for each simulation of rupture E at the given site
+	 * @throws IOException
+	 */
 	public default List<DiscretizedFunc> getRotD100s(Site site, E rupture) throws IOException {
 		ArrayList<DiscretizedFunc> list = new ArrayList<>();
 		for (int i=0; i<getNumSimulations(site, rupture); i++)
@@ -37,10 +72,16 @@ public interface SimulationRotDProvider<E> extends Named {
 	/**
 	 * @param site
 	 * @param rupture
-	 * @return array of [RotD50, RotD100]
+	 * @return array of [RotD50, RotD100] for the index-th simulation of rupture E at the given site
 	 */
 	public DiscretizedFunc[] getRotD(Site site, E rupture, int index) throws IOException;
-	
+
+	/**
+	 * @param site
+	 * @param rupture
+	 * @return array of [RotD50, RotD100] for each simulation of rupture E at the given site
+	 * @throws IOException
+	 */
 	public default List<DiscretizedFunc[]> getRotDs(Site site, E rupture) throws IOException {
 		ArrayList<DiscretizedFunc[]> list = new ArrayList<>();
 		for (int i=0; i<getNumSimulations(site, rupture); i++)
@@ -48,8 +89,18 @@ public interface SimulationRotDProvider<E> extends Named {
 		return list;
 	}
 	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @return ratio of RotD100 to RotD50 for the index-th simulation of rupture E at the given site
+	 */
 	public DiscretizedFunc getRotDRatio(Site site, E rupture, int index) throws IOException;
 	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @return ratio of RotD100 to RotD50 for each simulation of rupture E at the given site
+	 */
 	public default List<DiscretizedFunc> getRotDRatios(Site site, E rupture) throws IOException {
 		ArrayList<DiscretizedFunc> list = new ArrayList<>();
 		for (int i=0; i<getNumSimulations(site, rupture); i++)
@@ -57,12 +108,30 @@ public interface SimulationRotDProvider<E> extends Named {
 		return list;
 	}
 	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @return the number of simulations available of rupture E at the given site
+	 */
 	public int getNumSimulations(Site site, E rupture);
 	
+	/**
+	 * @param rupture
+	 * @param index
+	 * @return the hypocenter of the index-th simulation of rupture E
+	 */
 	public Location getHypocenter(E rupture, int index);
 	
+	/**
+	 * @param site
+	 * @return all ruptures which were simulated at the given site
+	 */
 	public Collection<E> getRupturesForSite(Site site);
 	
+	/**
+	 * @param site
+	 * @return total number of simulations for the given site
+	 */
 	public default int getNumSimlationsForSite(Site site) {
 		int count = 0;
 		for (E rupture : getRupturesForSite(site))
@@ -70,10 +139,21 @@ public interface SimulationRotDProvider<E> extends Named {
 		return count;
 	}
 	
+	/**
+	 * @return true if RotD50 is available from this source
+	 */
 	public boolean hasRotD50();
 	
+	/**
+	 * @return true if RotD100 is available from this source
+	 */
 	public boolean hasRotD100();
 	
+	/**
+	 * Utility method to compute RotD100/RotD50 ratio for an array of [RotD50, RotD100] 
+	 * @param spectra
+	 * @return
+	 */
 	public static DiscretizedFunc calcRotDRatio(DiscretizedFunc[] spectra) {
 		if (spectra.length == 1)
 			// already reducded to a ratio
@@ -98,10 +178,35 @@ public interface SimulationRotDProvider<E> extends Named {
 		return ret;
 	}
 	
+	/**
+	 * @param rupture
+	 * @return total annualized rate of the given rupture
+	 */
 	public double getAnnualRate(E rupture);
 	
-	public double getMinimumCurvePlotRate();
+	/**
+	 * Default implementation weights all simulations evenly and returns rupAnnualRate/numSimulations. Can be ovirredden for unequal
+	 * simulation weighting.
+	 * @param rupture
+	 * @param rupAnnualRate
+	 * @param simulationIndex
+	 * @param numSimulations
+	 * @return individual simulation rate of the simulationIndex-th simulation of rupture E
+	 */
+	public default double getIndividualSimulationRate(E rupture, double rupAnnualRate, int simulationIndex, int numSimulations) {
+		return rupAnnualRate/(double)numSimulations;
+	}
 	
+	/**
+	 * @param site
+	 * @return minimum rate below which curves should be truncated
+	 */
+	public double getMinimumCurvePlotRate(Site site);
+	
+	/**
+	 * @param rupture
+	 * @return magnitude of rupture E
+	 */
 	public double getMagnitude(E rupture);
 
 }

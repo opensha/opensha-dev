@@ -146,7 +146,7 @@ public class LightweightBBP_CatalogSimZipLoader extends BBP_SimZipLoader impleme
 	}
 
 	@Override
-	public double getMinimumCurvePlotRate() {
+	public double getMinimumCurvePlotRate(Site site) {
 		return getAnnualRate(null);
 	}
 
