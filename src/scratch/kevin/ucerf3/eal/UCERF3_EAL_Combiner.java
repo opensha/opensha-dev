@@ -155,7 +155,7 @@ public class UCERF3_EAL_Combiner {
 				// now find the correct index in the rup mfd
 				// this is also the rup index in the source
 				int rupMFDIndex;
-				if (faultLosses[meanRupIndex].length == 0)
+				if (faultLosses[meanRupIndex] == null || faultLosses[meanRupIndex].length == 0)
 					continue;
 				
 				DiscretizedFunc mfd = rupMFDs[meanRupIndex];

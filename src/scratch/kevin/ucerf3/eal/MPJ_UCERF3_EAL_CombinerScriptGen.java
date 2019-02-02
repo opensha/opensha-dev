@@ -68,7 +68,7 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		Preconditions.checkState(localJobDir.exists() || localJobDir.mkdir());
 		File remoteJobDir = new File(remoteDir, jobName);
 		
-		String argz = MPJTaskCalculator.argumentBuilder().threads(threads).endTimeSlurm().minDispatch(threads).maxDispatch(threads*50).build();
+		String argz = MPJTaskCalculator.argumentBuilder().threads(threads).endTimeSlurm().minDispatch(threads).maxDispatch(threads*10).build();
 		argz += " --wills-dir "+willsDir.getAbsolutePath();
 		argz += " --wald-dir "+waldDir.getAbsolutePath();
 		argz += " --erf-probs-dir "+erfProbsDir.getAbsolutePath();

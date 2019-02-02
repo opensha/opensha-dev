@@ -1,10 +1,9 @@
 package scratch.kevin.ucerf3.eal;
 
-import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -26,6 +26,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.param.BackgroundRupParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
@@ -36,6 +37,9 @@ import org.opensha.sra.gui.portfolioeal.Portfolio;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
@@ -43,6 +47,7 @@ import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
+import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.utils.FaultSystemIO;
@@ -71,8 +76,9 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	
 	private String[] tractNames;
 	
-	private Map<File, double[][]> rupLossesMap;
-	private Map<File, DiscretizedFunc[]> griddedLossesMap;
+	private LoadingCache<File, double[][]> rupLossesCache;
+	private LoadingCache<File, DiscretizedFunc[]> griddedLossesCache;
+	private LoadingCache<File, TractLoader> tractCache;
 	
 	private ExecutorService exec;
 	
@@ -81,6 +87,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 
 	public MPJ_UCERF3_EAL_Combiner(CommandLine cmd, File outputDir) throws IOException, DocumentException {
 		super(cmd);
+		this.shuffle = false;
 		
 		File trueMeanSolFile = new File(cmd.getOptionValue("true-mean-sol"));
 		File compoundSolFile = new File(cmd.getOptionValue("compound-sol"));
@@ -110,7 +117,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		mappings = TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile);
 		if (rank == 0)
 			debug("Loading CFSS: "+compoundSolFile.getAbsolutePath());
-		cfss = CompoundFaultSystemSolution.fromZipFile(compoundSolFile);
+		cfss = new CachedGridSourceCFSS(new ZipFile(compoundSolFile));
 		
 		if (rank == 0)
 			Preconditions.checkState(resultsDir.exists() || resultsDir.mkdir(),
@@ -197,6 +204,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			Preconditions.checkArgument(cmd.hasOption("background-type"), "Must supply --background-type with census tracts");
 			BackgroundRupType rupType = BackgroundRupType.valueOf(cmd.getOptionValue("background-type"));
 			erf = new FaultSystemSolutionERF(trueMeanSol);
+			erf.setCacheGridSources(true); // otherwise crazy slow
 			erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
 			erf.setParameter(BackgroundRupParam.NAME, rupType);
 			erf.updateForecast();
@@ -254,12 +262,38 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			int calcNum = numTI*probModels.size()*gmms.size()*gmmEpis.size()*vs30s.size();
 			debug("Calculated number if fully specified: "+calcNum+" (fully specified ? "+(calcNum == branches.size())+")");
 		}
-		Collections.sort(branches);
+		Collections.sort(branches, new ReadOptimizedBranchComparator());
 		debug("Built "+branches.size()+" branches");
 		Preconditions.checkState(!branches.isEmpty(), "No branches found!");
 		
-		rupLossesMap = new HashMap<>();
-		griddedLossesMap = new HashMap<>();
+		int maxCacheSize = 200;
+		if (tractNames != null)
+			maxCacheSize = Integer.min(maxCacheSize, tractNames.length);
+		rupLossesCache = CacheBuilder.newBuilder().maximumSize(maxCacheSize).build(new CacheLoader<File, double[][]>() {
+
+			@Override
+			public double[][] load(File key) throws Exception {
+				return MPJ_CondLossCalc.loadResults(key);
+			}
+			
+		});
+		griddedLossesCache = CacheBuilder.newBuilder().maximumSize(maxCacheSize).build(new CacheLoader<File, DiscretizedFunc[]>() {
+
+			@Override
+			public DiscretizedFunc[] load(File key) throws Exception {
+				return MPJ_CondLossCalc.loadGridSourcesFile(key,
+						trueMeanSol.getGridSourceProvider().getGriddedRegion());
+			}
+			
+		});
+		tractCache = CacheBuilder.newBuilder().maximumSize(10).build(new CacheLoader<File, TractLoader>() {
+
+			@Override
+			public TractLoader load(File key) throws Exception {
+				return new TractLoader(key);
+			}
+			
+		});
 		
 		exec = Executors.newFixedThreadPool(getNumThreads());
 		
@@ -270,6 +304,71 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			header.add(branch0.getValue(i).getBranchLevelName());
 		resultsCSV.addLine(header);
 		resultsFile = new File(resultsDir, "results_"+rank+".csv");
+	}
+	
+	private class ReadOptimizedBranchComparator implements Comparator<U3_EAL_LogicTreeBranch> {
+		
+		List<Class<? extends LogicTreeBranchNode<?>>> sortOrderClasses;
+		
+		public ReadOptimizedBranchComparator() {
+			sortOrderClasses = new ArrayList<>();
+			
+			// sort by vs30/gmm/gmm epi first, as files are stored based on that. this will dispatch jobs for the same
+			// binary files together, meaning more cache hits
+			sortOrderClasses.add(U3_EAL_Vs30Model.class);
+			sortOrderClasses.add(U3_EAL_GMMs.class);
+			sortOrderClasses.add(U3_EAL_GMM_Epistemic.class);
+			sortOrderClasses.add(U3_EAL_ProbModels.class);
+			sortOrderClasses.addAll(LogicTreeBranch.getLogicTreeNodeClasses());
+		}
+
+		@Override
+		public int compare(U3_EAL_LogicTreeBranch b1, U3_EAL_LogicTreeBranch b2) {
+			Preconditions.checkState(b1.size() == sortOrderClasses.size());
+			Preconditions.checkState(b2.size() == sortOrderClasses.size());
+			for (Class<? extends LogicTreeBranchNode<?>> clazz : sortOrderClasses) {
+				LogicTreeBranchNode<?> val = b1.getValueUnchecked(clazz);
+				LogicTreeBranchNode<?> oval = b2.getValueUnchecked(clazz);
+				int cmp = val.getShortName().compareTo(oval.getShortName());
+				if (cmp != 0)
+					return cmp;
+			}
+			return 0;
+		}
+		
+	}
+	
+	private class CachedGridSourceCFSS extends CompoundFaultSystemSolution {
+		
+		private LoadingCache<LogicTreeBranch, GridSourceProvider> gridProvCache;
+
+		public CachedGridSourceCFSS(ZipFile zip) {
+			super(zip);
+			
+			gridProvCache = CacheBuilder.newBuilder().maximumSize(10).build(new CacheLoader<LogicTreeBranch, GridSourceProvider>() {
+
+				@Override
+				public GridSourceProvider load(LogicTreeBranch branch) throws Exception {
+					try {
+						return CachedGridSourceCFSS.super.loadGridSourceProviderFile(branch);
+					} catch (Exception e) {}
+					System.out.println("Building gridProv for "+branch.buildFileName());
+					return CachedGridSourceCFSS.this.getSolution(branch).getGridSourceProvider();
+				}
+				
+			});
+		}
+
+		@Override
+		public GridSourceProvider loadGridSourceProviderFile(LogicTreeBranch branch)
+				throws DocumentException, IOException {
+			try {
+				return gridProvCache.get(branch);
+			} catch (ExecutionException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+		}
+		
 	}
 
 	@Override
@@ -310,35 +409,49 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		resultsCSV.writeToFile(resultsFile);
 	}
 	
-	private synchronized void cacheTractLosses(File tractFile) throws IOException {
-		if (rupLossesMap.containsKey(tractFile))
-			return;
-		double[][] tractLosses = MPJ_CondLossCalc.loadResults(tractFile);
-		double[][] rupLosses = MPJ_CondLossCalc.mapResultsToFSS(erf, tractLosses);
-		rupLossesMap.put(tractFile, rupLosses);
-		DiscretizedFunc[] griddedLosses = MPJ_CondLossCalc.mapResultsToGridded(erf, tractLosses);
-		griddedLossesMap.put(tractFile, griddedLosses);
-	}
-	
-	private synchronized double[][] getLossesFSS(File fssLossFile) throws IOException {
-		double[][] expectedLosses = rupLossesMap.get(fssLossFile);
-		if (expectedLosses != null)
-			return expectedLosses;
-		expectedLosses = MPJ_CondLossCalc.loadResults(fssLossFile);
-		rupLossesMap.put(fssLossFile, expectedLosses);
-		return expectedLosses;
-	}
-	
-	private synchronized DiscretizedFunc[] getLossesGridded(File griddedLossFile) throws IOException {
-		if (griddedLossFile == null)
-			return null;
-		DiscretizedFunc[] griddedFuncs = griddedLossesMap.get(griddedLossFile);
-		if (griddedFuncs != null)
-			return griddedFuncs;
-		griddedFuncs = MPJ_CondLossCalc.loadGridSourcesFile(griddedLossFile,
-				trueMeanSol.getGridSourceProvider().getGriddedRegion());
-		griddedLossesMap.put(griddedLossFile, griddedFuncs);
-		return griddedFuncs;
+	private class TractLoader {
+		double[][] fssLosses;
+		DiscretizedFunc[] griddedLosses;
+
+		public TractLoader(File tractDir) throws ExecutionException, IOException {
+			// frist sum all tract losses, erf indexed
+			double[][] totTractLosses = null;
+			for (String tractName : tractNames) {
+				File tractFile = new File(tractDir, tractName+".bin");
+				if (!tractFile.exists())
+					tractFile = new File(tractDir, tractName+".bin.gz");
+				Preconditions.checkState(tractFile.exists(), "Tract file doesn't exist: %s", tractFile.getAbsolutePath());
+				
+				double[][] tractLosses = rupLossesCache.get(tractFile);
+				if (totTractLosses == null) {
+					totTractLosses = new double[tractLosses.length][];
+					for (int i=0; i<tractLosses.length; i++) {
+						if (tractLosses[i] == null)
+							totTractLosses[i] = null;
+						else
+							totTractLosses[i] = Arrays.copyOf(tractLosses[i], tractLosses[i].length);
+					}
+				} else {
+					// add them
+					Preconditions.checkState(totTractLosses.length == tractLosses.length);
+					for (int i=0; i<tractLosses.length; i++) {
+						if (tractLosses[i] != null) {
+							if (totTractLosses[i] == null) {
+								totTractLosses[i] = Arrays.copyOf(tractLosses[i], tractLosses[i].length);
+							} else {
+								Preconditions.checkState(tractLosses[i].length == totTractLosses[i].length);
+								for (int j=0; j<tractLosses[i].length; j++)
+									totTractLosses[i][j] += tractLosses[i][j];
+							}
+						}
+					}
+				}
+			}
+			
+			// then convert the summed to FSS and gridded
+			fssLosses = MPJ_CondLossCalc.mapResultsToFSS(erf, totTractLosses);
+			griddedLosses = MPJ_CondLossCalc.mapResultsToGridded(erf, totTractLosses);
+		}
 	}
 	
 	private class CalcTask implements Callable<CalcTask> {
@@ -363,50 +476,12 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			double[][] fssLosses = null;
 			DiscretizedFunc[] griddedLosses = null;
 			if (tractNames == null) {
-				fssLosses = getLossesFSS(branch.getFSSIndexedBinFile());
-				griddedLosses = getLossesGridded(branch.getGriddedBinFile());
+				fssLosses = rupLossesCache.get(branch.getFSSIndexedBinFile());
+				griddedLosses = griddedLossesCache.get(branch.getGriddedBinFile());
 			} else {
-				File tractDir = branch.getTractDir();
-				for (String tractName : tractNames) {
-					File tractFile = new File(tractDir, tractName+".bin");
-					if (!tractFile.exists())
-						tractFile = new File(tractDir, tractName+".bin.gz");
-					Preconditions.checkState(tractFile.exists(), "Tract file doesn't exist: %s", tractFile.getAbsolutePath());
-					cacheTractLosses(tractFile);
-					double[][] tractFSS = getLossesFSS(tractFile);
-					DiscretizedFunc[] tractGridded = getLossesGridded(tractFile);
-					if (fssLosses == null) {
-						fssLosses = new double[tractFSS.length][];
-						griddedLosses = new DiscretizedFunc[tractGridded.length];
-					} else {
-						Preconditions.checkState(fssLosses.length == tractFSS.length);
-						Preconditions.checkState(griddedLosses.length == tractGridded.length);
-					}
-					for (int i=0; i<fssLosses.length; i++) {
-						if (tractFSS[i] != null) {
-							if (fssLosses[i] == null)
-								fssLosses[i] = new double[tractFSS[i].length];
-							else
-								Preconditions.checkState(fssLosses[i].length == tractFSS[i].length);
-							for (int j=0; j<fssLosses[i].length; j++)
-								fssLosses[i][j] += tractFSS[i][j];
-						}
-					}
-					for (int i=0; i<griddedLosses.length; i++) {
-						if (tractGridded[i] != null) {
-							if (griddedLosses[i] == null) {
-								griddedLosses[i] = tractGridded[i].deepClone();
-							} else {
-								Preconditions.checkState(tractGridded[i].size() == griddedLosses[i].size());
-								for (int j=0; j<tractGridded[i].size(); j++) {
-									double mag = tractGridded[i].getX(j);
-									Preconditions.checkState((float)griddedLosses[i].getX(j) == (float)mag);
-									griddedLosses[i].set(j, griddedLosses[i].getY(j)+tractGridded[i].getY(j));
-								}
-							}
-						}
-					}
-				}
+				TractLoader tractLoader = tractCache.get(branch.getTractDir());
+				fssLosses = tractLoader.fssLosses;
+				griddedLosses = tractLoader.griddedLosses;
 			}
 			
 			ZipFile erfProbsZipFile = probsZipFiles.get(branch.getValue(U3_EAL_ProbModels.class));
@@ -433,8 +508,8 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	@Override
 	protected void doFinalAssembly() throws Exception {
 		exec.shutdown();
-		rupLossesMap.clear();
-		griddedLossesMap.clear();
+		rupLossesCache.invalidateAll();
+		griddedLossesCache.invalidateAll();
 		if (rank == 0) {
 			debug("Consolidating CSVs");
 			List<List<String>> allLines = new ArrayList<>();
