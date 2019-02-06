@@ -68,7 +68,8 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	private Map<U3_EAL_ProbModels, ZipFile> probsZipFiles;
 	
 	private Map<U3_EAL_Vs30Model, File> vs30Dirs;
-	
+
+	private File outputDir;
 	private File resultsDir;
 	private File resultsFile;
 	
@@ -88,6 +89,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	public MPJ_UCERF3_EAL_Combiner(CommandLine cmd, File outputDir) throws IOException, DocumentException {
 		super(cmd);
 		this.shuffle = false;
+		this.outputDir = outputDir;
 		
 		File trueMeanSolFile = new File(cmd.getOptionValue("true-mean-sol"));
 		File compoundSolFile = new File(cmd.getOptionValue("compound-sol"));
@@ -583,7 +585,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			CSVFile<String> csv = new CSVFile<>(true);
 			csv.addLine(resultsCSV.getLine(0)); // header
 			csv.addAll(allLines);
-			csv.writeToFile(new File(resultsDir, "all_branch_results.csv"));
+			csv.writeToFile(new File(outputDir, "all_branch_results.csv"));
 			debug("Writing branch levels CSV");
 			csv = new CSVFile<>(true);
 			csv.addLine("Branch Level", "Branch Choice", "Total Weight", "Weighted Total Mean EAL",
@@ -622,7 +624,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			faultMean /= totalWeight;
 			griddedMean /= totalWeight;
 			csv.addLine("COMPLETE MODEL", "MEAN", "1.0", totalMean+"", faultMean+"", griddedMean+"");
-			csv.writeToFile(new File(resultsDir, "branch_level_summary.csv"));
+			csv.writeToFile(new File(outputDir, "branch_level_summary.csv"));
 		}
 	}
 	
