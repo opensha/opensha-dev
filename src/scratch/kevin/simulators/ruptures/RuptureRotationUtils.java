@@ -338,6 +338,8 @@ public class RuptureRotationUtils {
 		
 		// rotate about origin at fixed distance
 		
+		boolean rJB = false;
+		
 		for (int i=0; i<events.size(); i++) {
 			System.out.println("Origin rotation "+i);
 			RSQSimEvent event = events.get(i);
@@ -359,7 +361,7 @@ public class RuptureRotationUtils {
 			LocationVector rupToOrigin = LocationUtils.vector(closest, origin);
 			LocationVector transVector = new LocationVector(rupToOrigin.getAzimuth(), rupToOrigin.getHorzDistance()-targetDist, 0d);
 			event = getTranslated(event, transVector);
-			System.out.println("\tTrans min dist: "+calcMinDist(origin, event));
+			System.out.println("\tTrans min dist: "+calcMinDist(origin, event, rJB));
 			
 			// origin annotation
 			List<XYAnnotation> anns = new ArrayList<>();
@@ -371,7 +373,7 @@ public class RuptureRotationUtils {
 			for (int j=0; j<numRots; j++) {
 				double angle = rotAngle * (j+1);
 				RSQSimEvent rotEvent = getRotated(event, origin, angle);
-				System.out.println("\trot "+j+" min dist: "+calcMinDist(origin, rotEvent));
+				System.out.println("\trot "+j+" min dist: "+calcMinDist(origin, rotEvent, rJB));
 				plotElems.addAll(rotEvent.getAllElements());
 			}
 			
@@ -396,11 +398,15 @@ public class RuptureRotationUtils {
 		}
 	}
 	
-	static double calcMinDist(Location loc, RSQSimEvent event) {
+	static double calcMinDist(Location loc, RSQSimEvent event, boolean rJB) {
 		double minDist = Double.POSITIVE_INFINITY;
 		for (SimulatorElement elem : event.getAllElements()) {
 			for (Vertex v : elem.getVertices()) {
-				double elemDist = LocationUtils.horzDistanceFast(loc, v);
+				double elemDist;
+				if (rJB)
+					elemDist = LocationUtils.horzDistanceFast(loc, v);
+				else
+					elemDist = LocationUtils.linearDistanceFast(loc, v);
 				if (elemDist < minDist) {
 					minDist = elemDist;
 				}

@@ -36,6 +36,7 @@ import org.opensha.sha.simulators.RSQSimEvent;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
+import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
@@ -47,13 +48,16 @@ public class BBP_PartBValidationPageGen {
 	private int skipYears;
 	private int numSites;
 	private boolean randomAz;
+	private double vs30;
 
-	public BBP_PartBValidationPageGen(RSQSimCatalog catalog, BBP_PartBSimZipLoader loader, int skipYears, int numSites, boolean randomAz) {
+	public BBP_PartBValidationPageGen(RSQSimCatalog catalog, BBP_PartBSimZipLoader loader, int skipYears, int numSites,
+			boolean randomAz, double vs30) {
 		this.catalog = catalog;
 		this.loader = loader;
 		this.skipYears = skipYears;
 		this.numSites = numSites;
 		this.randomAz = randomAz;
+		this.vs30 = vs30;
 	}
 	
 	public void generatePage(File outputDir) throws IOException {
@@ -111,7 +115,7 @@ public class BBP_PartBValidationPageGen {
 		
 		Color[] distColors = {Color.BLUE.darker(), Color.GREEN.darker()};
 		String[] colorNames = {"Blue", "Geen"};
-		double[] distances = BBP_PartBValidationConfig.DISTANCES;
+		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
 		Preconditions.checkState(distColors.length == distances.length);
 		
 		lines.add("");
@@ -317,8 +321,8 @@ public class BBP_PartBValidationPageGen {
 			}
 		}
 		
-		DiscretizedFunc gmpeMean = scenario.getMeanPrediction(distance);
-		UncertainArbDiscDataset gmpeBounds = scenario.getAcceptanceCriteria(distance);
+		DiscretizedFunc gmpeMean = scenario.getMeanPrediction(vs30, distance);
+		UncertainArbDiscDataset gmpeBounds = scenario.getAcceptanceCriteria(vs30, distance);
 		DiscretizedFunc gmpeUpper = gmpeBounds.getUpper();
 		DiscretizedFunc gmpeLower = gmpeBounds.getLower();
 		
@@ -506,10 +510,12 @@ public class BBP_PartBValidationPageGen {
 		int numSites = -1;
 		int skipYears = 0;
 		boolean randomAz = false;
+		VelocityModel vm = null;
 		Arrays.sort(allBBPDirs, new FileNameComparator());
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
-			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-partB") && name.contains("sites")) {
+			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-partB")
+					&& name.contains("sites") && name.contains("-vm")) {
 				File zipFile = new File(dir, "results.zip");
 				if (!zipFile.exists())
 					zipFile = new File(dir, "results_rotD.zip");
@@ -526,6 +532,10 @@ public class BBP_PartBValidationPageGen {
 						skipYears = Integer.parseInt(yearsStr);
 					}
 					randomAz = name.contains("randomAz");
+					String vmStr = name.substring(name.indexOf("-vm")+3);
+					if (vmStr.contains("-"))
+						vmStr = vmStr.substring(0, vmStr.indexOf("-"));
+					vm = VelocityModel.valueOf(vmStr);
 				}
 			}
 		}
@@ -542,7 +552,8 @@ public class BBP_PartBValidationPageGen {
 		File partBDir = new File(catalogOutputDir, "bbp_part_b");
 		Preconditions.checkState(partBDir.exists() || partBDir.mkdir());
 		
-		BBP_PartBValidationPageGen pageGen = new BBP_PartBValidationPageGen(catalog, bbpLoader, skipYears, numSites, randomAz);
+		BBP_PartBValidationPageGen pageGen = new BBP_PartBValidationPageGen(
+				catalog, bbpLoader, skipYears, numSites, randomAz, vm.getVs30());
 		
 		pageGen.generatePage(partBDir);
 		

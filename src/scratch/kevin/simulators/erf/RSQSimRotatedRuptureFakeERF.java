@@ -26,6 +26,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.erf.RSQSimSectBundledERF.RSQSimProbEqkRup;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.Quantity;
@@ -207,8 +208,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			throws IOException {
 		List<RSQSimEvent> ruptures = scenario.getMatches(catalog, skipYears);
 		if (maxRuptures > 0 && ruptures.size() > maxRuptures)
-			// use the last events to avoid spin up time
-			ruptures = ruptures.subList(ruptures.size()-maxRuptures, ruptures.size());
+			ruptures = BBP_PartBValidationConfig.getBestMatches(scenario.getMagnitude(), ruptures, maxRuptures);
 		return ruptures;
 	}
 	
@@ -246,7 +246,8 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 				System.err.println("hardcoded dir doesn't exist: "+baseDir.getAbsolutePath());
 				System.exit(2);
 			}
-			catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//			catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+			catalog = Catalogs.BRUCE_2740.instance(baseDir);
 			writePoints = false;
 			writeSRFs = false;
 			buildConfigs = true;
@@ -279,10 +280,10 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			
 			Scenario[] scenarios = Scenario.values();
 			
-			double[] distances = { 20d, 50d };
+			double[] distances = { 20d, 50d, 100d };
 			
-			int numSourceAz = 36;
-			int numSiteToSourceAz = 36;
+			int numSourceAz = 18;
+			int numSiteToSourceAz = 18;
 			int maxRuptures = 100;
 			
 			int numRotations = 0;

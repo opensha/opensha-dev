@@ -43,12 +43,14 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 
 		Scenario[] scenarios = Scenario.values();
 //		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE};
-		double[] distances = BBP_PartBValidationConfig.DISTANCES;
+		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
 //		double[] distances = { 50d };
 		int numSourceAz = 36;
 //		int numSiteToSourceAz = 36;
 		int numSiteToSourceAz = 4;
 		int maxRuptures = 100;
+		
+		VelocityModel vm = RSQSimBBP_Config.VM;
 		
 		List<BBP_Site> sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
 		String stitesStr = "csLASites";
@@ -114,6 +116,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		if (maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE)
 			jobName += "-"+maxRuptures+"rups";
 		jobName += "-skipYears"+skipYears;
+		jobName += "-vm"+vm.name();
 		if (!RSQSimBBP_Config.DO_HF)
 			jobName += "-noHF";
 		if (timeScalar != 1d) {
@@ -134,7 +137,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		File remoteSitesFile = new File(remoteJobDir, sitesFile.getName());
 		
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
-		argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();
+		argz += " --vm "+vm+" --method "+RSQSimBBP_Config.METHOD.name();
 		argz += " --catalog-dir "+catalogDir.getAbsolutePath();
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();

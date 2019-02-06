@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 
 import scratch.kevin.bbp.BBP_Site;
+import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -68,6 +70,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		File bbpDir = null;
 		File bbpZipFile = null;
 		File[] allBBPDirs = bbpParallelDir.listFiles();
+		VelocityModel vm = VelocityModel.LA_BASIN;
 		Arrays.sort(allBBPDirs, new FileNameComparator());
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
@@ -78,6 +81,12 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 				if (zipFile.exists()) {
 					bbpDir = dir;
 					bbpZipFile = zipFile;
+					if (name.contains("-vm")) {
+						String vmStr = name.substring(name.indexOf("-vm")+3);
+						if (vmStr.contains("-"))
+							vmStr = vmStr.substring(0, vmStr.indexOf("-"));
+						vm = VelocityModel.valueOf(vmStr);
+					}
 				}
 			}
 		}
@@ -89,12 +98,13 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		
 		List<Site> sites = new ArrayList<>();
 		for (BBP_Site site : bbpSites)
-			sites.add(site.buildGMPE_Site(RSQSimBBP_Config.VM));
+			sites.add(site.buildGMPE_Site(vm));
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
 		Map<Scenario, RotatedRupVariabilityScenarioPageGen> pageGensMap = new HashMap<>();
+		HashSet<Integer> eventIDsSet = new HashSet<>();
 		for (Scenario scenario : Scenario.values()) {
 			File rotConfFile = new File(bbpDir, "rotation_config_"+scenario.getPrefix()+".csv");
 			if (rotConfFile.exists()) {
@@ -105,35 +115,20 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 				RotatedRupVariabilityScenarioPageGen pageGen =
 						new RotatedRupVariabilityScenarioPageGen(catalog, scenario, config, bbpLoader);
 				
+				eventIDsSet.addAll(pageGen.getAllEventIDs());
+				
 				pageGensMap.put(scenario, pageGen);
 			}
 		}
 		
-		Map<Scenario, RSQSimEvent> exampleEventsMap = null;
-		if (doExample) {
-			Map<Scenario, Integer> exampleIDs = new HashMap<>();
-			for (RotatedRupVariabilityScenarioPageGen pageGen : pageGensMap.values())
-				exampleIDs.put(pageGen.scenario, pageGen.getEventIDs(null).get(0));
-			System.out.println("Loading "+exampleIDs.size()+" example ruptures");
-			List<RSQSimEvent> events = catalog.loader().byIDs(Ints.toArray(exampleIDs.values()));
-			exampleEventsMap = new HashMap<>();
-			for (Scenario scenario : exampleIDs.keySet()) {
-				int exampleID = exampleIDs.get(scenario);
-				for (RSQSimEvent event : events)
-					if (event.getID() == exampleID)
-						exampleEventsMap.put(scenario, event);
-			}
-		}
+		Map<Integer, RSQSimEvent> eventsMap = loadEvents(catalog, eventIDsSet);
 		
 		for (Scenario scenario : pageGensMap.keySet()) {
 			System.out.println("Doing scenario: "+scenario);
 			
 			RotatedRupVariabilityPageGen pageGen = pageGensMap.get(scenario);
 			
-			if (doExample) {
-				RSQSimEvent exampleRup = exampleEventsMap.get(scenario);
-				pageGen.setExampleRupture(exampleRup, pageGen.getSites().get(0), 5);
-			}
+			pageGen.setEventsMap(eventsMap);
 			
 			File rotDir = new File(catalogOutputDir, "rotated_ruptures_"+scenario.getPrefix());
 			Preconditions.checkState(rotDir.exists() || rotDir.mkdir());

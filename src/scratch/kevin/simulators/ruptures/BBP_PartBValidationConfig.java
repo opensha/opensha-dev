@@ -1,15 +1,20 @@
 package scratch.kevin.simulators.ruptures;
 
+import static org.opensha.commons.geo.GeoTools.TO_RAD;
+
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -18,7 +23,19 @@ import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
+import org.opensha.commons.util.ClassUtils;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.ASK_2014;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.BSSA_2014;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.CB_2014;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.CY_2014;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.IMT;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.Idriss_2014;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_GMM;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.ScalarGroundMotion;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.DepthIden;
@@ -27,7 +44,9 @@ import org.opensha.sha.simulators.iden.LinearRuptureIden;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Range;
+import com.google.common.collect.Table;
 
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -37,15 +56,21 @@ public class BBP_PartBValidationConfig {
 	
 	// these and values in the get*NGA2 functions before from 
 	// https://github.com/SCECcode/bbp/blob/dev/bbp/utils/batch/gmpe_boxplot_gen.py
-	private static double[] BBP_PERIODS = { 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25,
-	                                       0.3, 0.4, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 7.5, 10 };
+//	private static double[] BBP_PERIODS = { 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25,
+//	                                       0.3, 0.4, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 7.5, 10 };
 	public static double BBP_MAX_ACCEPTANCE_PERIOD = 3d;
 	public static double BBP_MIN_ACCEPTANCE_PERIOD = 1d;
+	
+	/**
+	 * If true then the sites should be rJB away from the rupture, otherwise rRup
+	 */
+	public static final boolean DIST_JB = false;
 	
 	public enum Scenario {
 		M6p6_VERT_SS_SURFACE("M6.6, Vertical Strike-Slip with Surface Rupture", "M6.6 SS", "m6p6_vert_ss_surface",
 				new String[] { "M=[6.55,6.65]", "Ztor=[0,1]", "Rake=[-180,-170] or [-10,10] or [170,180]",
-						"Dip=90", "Linear rupture (max 0.5km deviation from ideal)"}) {
+						"Dip=90", "Linear rupture (max 0.5km deviation from ideal)"},
+				6.6, FaultStyle.STRIKE_SLIP, 90, 0, 5.62, false, true) {
 			@Override
 			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
 				Loader loader = catalog.loader().skipYears(skipYears);
@@ -62,65 +87,6 @@ public class BBP_PartBValidationConfig {
 			}
 
 			@Override
-			double[] getMeanNGA2(double distance) {
-				if (distance == 20d)
-					return new double[] { 0.123231246, 0.125469445, 0.136076373,
-                            0.175016514, 0.222432391, 0.248653998,
-                            0.271641827, 0.25852406, 0.232697091,
-                            0.207732879, 0.169808845, 0.140483291,
-                            0.092461139, 0.06701949, 0.04059643,
-                            0.02825896, 0.017440236, 0.012132,
-                            0.00921392, 0.005018336, 0.003001676 };
-				if (distance == 50d)
-					return new double[] { 0.044451045, 0.045187755, 0.049722252,
-                            0.063144032, 0.079112127, 0.088121596,
-                            0.096865495, 0.093803595, 0.086597108,
-                            0.079054594, 0.06593417, 0.055200516,
-                            0.037401207, 0.027011192, 0.016746435,
-                            0.011705015, 0.007208154, 0.00512826,
-                            0.003914806, 0.002287936, 0.001397211 };
-				throw new IllegalStateException("Unsupported distance: "+distance);
-			}
-
-			@Override
-			double[] getUpperNGA2(double distance) {
-				if (distance == 20d)
-					return new double[] { 0.179247367, 0.18480203, 0.215915347, 0.292453367,
-		                     0.356440194, 0.375056915, 0.391896317, 0.372971379,
-		                     0.335710939, 0.299695194, 0.244982378, 0.202674547,
-		                     0.133393226, 0.096688686, 0.058568268, 0.040769061,
-		                     0.025160942, 0.01757914, 0.014688678, 0.008873136,
-		                     0.005018356 };
-				if (distance == 50d)
-					return new double[] { 0.06661183, 0.068101077, 0.078444572, 0.103073492,
-		                     0.122849466, 0.129733734, 0.13974737, 0.135329981,
-		                     0.124933219, 0.11405167, 0.0951229, 0.079637511,
-		                     0.053958536, 0.038968912, 0.024159999, 0.016886766,
-		                     0.010399168, 0.007978404, 0.006734335, 0.004488779,
-		                     0.002598649 };
-				throw new IllegalStateException("Unsupported distance: "+distance);
-			}
-
-			@Override
-			double[] getLowerNGA2(double distance) {
-				if (distance == 20d)
-					return new double[] { 0.085417391, 0.086968792, 0.094320954, 0.117282459,
-		                     0.152663489, 0.172353817, 0.188287767, 0.179195223,
-		                     0.161293332, 0.143989459, 0.117702522, 0.097375597,
-		                     0.064089178, 0.046454371, 0.028139301, 0.019587618,
-		                     0.011989636, 0.007364112, 0.004795379, 0.002143994,
-		                     0.001177935 };
-				if (distance == 50d)
-					return new double[] { 0.030572971, 0.031321765, 0.034464839, 0.043768108,
-		                     0.054836348, 0.061081236, 0.067142045, 0.065019697,
-		                     0.060024542, 0.054796469, 0.045702084, 0.038262082,
-		                     0.025924541, 0.018722731, 0.011607744, 0.008113298,
-		                     0.004697369, 0.002904508, 0.001895507, 0.000848924,
-		                     0.000466798 };
-				throw new IllegalStateException("Unsupported distance: "+distance);
-			}
-
-			@Override
 			public Map<String, String> getPublishedComparisonURLs(double distance) {
 				Map<String, String> figs = new HashMap<>();
 				if (distance == 20d) {
@@ -133,12 +99,15 @@ public class BBP_PartBValidationConfig {
 					figs.put("ExSIM", getFigureURL(21));
 					figs.put("G&P", getFigureURL(22));
 					figs.put("SDSU", getFigureURL(23));
-				} else throw new IllegalStateException("Unsupported distance: "+distance);
+				} else {
+					return null;
+				}
 				return figs;
 			}
 		},
 		M6p6_REVERSE("M6.6, Reverse, Dip=45, Ztor=3", "M6.6 Reverse", "m6p6_reverse",
-				new String[] { "M=[6.55,6.65]", "Ztor=[1,5]", "Rake=[75,105]", "Dip=[35,55]"}) {
+				new String[] { "M=[6.55,6.65]", "Ztor=[1,5]", "Rake=[75,105]", "Dip=[35,55]"},
+				6.6, FaultStyle.REVERSE, 45, 3, 15, false, true) {
 			@Override
 			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
 				Loader loader = catalog.loader().skipYears(skipYears);
@@ -154,65 +123,6 @@ public class BBP_PartBValidationConfig {
 			}
 
 			@Override
-			double[] getMeanNGA2(double distance) {
-				if (distance == 20d)
-					return new double[] { 0.132602154, 0.135177304, 0.149903826,
-                            0.191287243, 0.244288563, 0.275286188,
-                            0.302126379, 0.28824219, 0.260950763,
-                            0.234128463, 0.190300147, 0.156459605,
-                            0.102110994, 0.073483962, 0.0439006,
-                            0.029943494, 0.017940568, 0.01204706,
-                            0.008983379, 0.004841892, 0.002874356 };
-				if (distance == 50d)
-					return new double[] { 0.048775377, 0.049552538, 0.054407432,
-                            0.06857154, 0.086312568, 0.096842118,
-                            0.106774396, 0.103615204, 0.096257186,
-                            0.088352351, 0.073281556, 0.060968573,
-                            0.040944855, 0.029355217, 0.017953993,
-                            0.012300317, 0.007364016, 0.005059772,
-                            0.003793167, 0.002196334, 0.001331835 };
-				throw new IllegalStateException("Unsupported distance: "+distance);
-			}
-
-			@Override
-			double[] getUpperNGA2(double distance) {
-				if (distance == 20d)
-					return new double[] { 0.194889368, 0.200576566, 0.234480754, 0.312298198,
-		                     0.382137301, 0.406009288, 0.435876229, 0.415845578,
-		                     0.376472372, 0.337775973, 0.274545078, 0.225723496,
-		                     0.147315025, 0.106014948, 0.063335178, 0.04319933,
-		                     0.025882768, 0.01757914, 0.014688678, 0.008873136,
-		                     0.005018356 };
-				if (distance == 50d)
-					return new double[] { 0.072425493, 0.073914951, 0.085211981, 0.110196595,
-		                     0.131902644, 0.140616093, 0.154042892, 0.149485142,
-		                     0.138869765, 0.127465499, 0.105722937, 0.087959058,
-		                     0.059070939, 0.042350627, 0.025902137, 0.017745606,
-		                     0.010624029, 0.007978404, 0.006734335, 0.004488779,
-		                     0.002598649 };
-				throw new IllegalStateException("Unsupported distance: "+distance);
-			}
-
-			@Override
-			double[] getLowerNGA2(double distance) {
-				if (distance == 20d)
-					return new double[] { 0.091912809, 0.093697767, 0.103905415, 0.132085813,
-		                     0.169327928, 0.190813845, 0.209418048, 0.199794261,
-		                     0.180877286, 0.162285484, 0.13190601, 0.108449534,
-		                     0.070777948, 0.050935201, 0.030429577, 0.020755248,
-		                     0.012435454, 0.007913061, 0.005022391, 0.002186587,
-		                     0.001190133 };
-				if (distance == 50d)
-					return new double[] { 0.033119304, 0.034025707, 0.037341911, 0.047530169,
-		                     0.059827313, 0.067125841, 0.074010372, 0.071772064,
-		                     0.066391977, 0.061241183, 0.050794904, 0.042260195,
-		                     0.028380811, 0.020347486, 0.01244476, 0.00852593,
-		                     0.005104347, 0.003121034, 0.00198524, 0.000865789,
-		                     0.000471632 };
-				throw new IllegalStateException("Unsupported distance: "+distance);
-			}
-
-			@Override
 			public Map<String, String> getPublishedComparisonURLs(double distance) {
 				Map<String, String> figs = new HashMap<>();
 				if (distance == 20d) {
@@ -225,8 +135,34 @@ public class BBP_PartBValidationConfig {
 					figs.put("ExSIM", getFigureURL(29));
 					figs.put("G&P", getFigureURL(30));
 					figs.put("SDSU", getFigureURL(31));
-				} else throw new IllegalStateException("Unsupported distance: "+distance);
+				} else {
+					return null;
+				}
 				return figs;
+			}
+		},
+		M7p2_VERT_SS_SURFACE("M7.2, Vertical Strike-Slip with Surface Rupture", "M7.2 SS", "m7p2_vert_ss_surface",
+				new String[] { "M=[7.15,7.25]", "Ztor=[0,1]", "Rake=[-180,-170] or [-10,10] or [170,180]",
+						"Dip=90", "Linear rupture (max 0.5km deviation from ideal)"},
+				7.2, FaultStyle.STRIKE_SLIP, 90, 0, 12, false, false) {
+			@Override
+			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
+				Loader loader = catalog.loader().skipYears(skipYears);
+				loader.minMag(7.15).maxMag(7.25);
+				loader.matches(new DepthIden(Range.closed(0d, 1d), null));
+				loader.matches(FocalMechIden.builder().strikeSlip(10).forDip(90).build());
+				loader.matches(new LinearRuptureIden(0.5d));
+				try {
+					loader.hasTransitions();
+				} catch (Exception e) {
+					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
+				}
+				return loader.load();
+			}
+
+			@Override
+			public Map<String, String> getPublishedComparisonURLs(double distance) {
+				return null;
 			}
 		};
 		
@@ -235,18 +171,42 @@ public class BBP_PartBValidationConfig {
 		private String prefix;
 		private String[] matchCriteria;
 
-		private Scenario(String name, String shortName, String prefix, String[] matchCriteria) {
+		private Table<Double, Double, UncertainArbDiscDataset> rawCriteriaCache;
+		private Table<Double, Double, UncertainArbDiscDataset> trimmedCriteriaCache;
+		
+		private double mag;
+		private FaultStyle style;
+		private double dip;
+		private double zTor;
+		private double width;
+		private boolean rXpositive;
+		
+		private boolean officialCriteria;
+
+		private Scenario(String name, String shortName, String prefix, String[] matchCriteria, double mag, FaultStyle style,
+				double dip, double zTor, double width, boolean rXpositive, boolean officialCriteria) {
 			this.name = name;
 			this.shortName = shortName;
 			this.prefix = prefix;
 			this.matchCriteria = matchCriteria;
+			this.mag = mag;
+			this.style = style;
+			this.dip = dip;
+			this.zTor = zTor;
+			this.width = width;
+			this.rXpositive = rXpositive;
+			this.officialCriteria = officialCriteria;
+		}
+		
+		public double getMagnitude() {
+			return mag;
+		}
+		
+		public boolean isOfficialCriteria() {
+			return officialCriteria;
 		}
 		
 		public abstract List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException;
-		
-		abstract double[] getMeanNGA2(double distance);
-		abstract double[] getUpperNGA2(double distance);
-		abstract double[] getLowerNGA2(double distance);
 		
 		public abstract Map<String, String> getPublishedComparisonURLs(double distance);
 		
@@ -254,35 +214,54 @@ public class BBP_PartBValidationConfig {
 			return "http://www.seismosoc.org/Publications/SRL/SRL_86/srl_86-1_dreger_et_al-esupp/SRL_2014118_esupp_Figure_S"+figNum+".png";
 		}
 		
-		public UncertainArbDiscDataset getAcceptanceCriteria(double distance) {
-			double[] avgVals = getMeanNGA2(distance);
-			double[] lowerVals = getLowerNGA2(distance);
-			double[] upperVals = getUpperNGA2(distance);
-			Preconditions.checkState(BBP_PERIODS.length == avgVals.length);
-			Preconditions.checkState(BBP_PERIODS.length >= lowerVals.length);
-			Preconditions.checkState(BBP_PERIODS.length >= upperVals.length);
-			
-			DiscretizedFunc avgFunc = new ArbitrarilyDiscretizedFunc();
-			DiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
-			DiscretizedFunc upperFunc = new ArbitrarilyDiscretizedFunc();
-			for (int p=0; p<avgVals.length && BBP_PERIODS[p] <= BBP_MAX_ACCEPTANCE_PERIOD; p++) {
-				avgFunc.set(BBP_PERIODS[p], avgVals[p]);
-				lowerFunc.set(BBP_PERIODS[p], lowerVals[p]);
-				upperFunc.set(BBP_PERIODS[p], upperVals[p]);
+		private synchronized UncertainArbDiscDataset calcLoacRawCriterion(double vs30, double distance) {
+			if (rawCriteriaCache == null)
+				rawCriteriaCache = HashBasedTable.create();
+			UncertainArbDiscDataset criterion = rawCriteriaCache.get(vs30, distance);
+			if (criterion == null) {
+				double rRup, rJB;
+				if (DIST_JB) {
+					rJB = distance;
+					rRup = Math.sqrt(zTor*zTor + rJB*rJB);
+				} else {
+					rRup = distance;
+					rJB = Math.sqrt(rRup*rRup - zTor*zTor);
+				}
+				double rX = rXpositive ? rJB : -rJB;
+				criterion = calcNGA2_Criterion(mag, rRup, rJB, rX, style, dip, zTor, width, vs30);
+				criterion.setName("NGA-W2 Mean Prediction");
+				rawCriteriaCache.put(vs30, distance, criterion);
 			}
-			UncertainArbDiscDataset func = new UncertainArbDiscDataset(avgFunc, lowerFunc, upperFunc);
-			func.setName("NGA-W2 Acceptance Criteria");
-			return func;
+			return criterion;
 		}
 		
-		public DiscretizedFunc getMeanPrediction(double distance) {
-			double[] avgVals = getMeanNGA2(distance);
-			Preconditions.checkState(BBP_PERIODS.length == avgVals.length);
-			DiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
-			func.setName("NGA-W2 Mean Prediction");
-			for (int p=0; p<avgVals.length; p++)
-				func.set(BBP_PERIODS[p], avgVals[p]);
-			return func;
+		public synchronized UncertainArbDiscDataset getAcceptanceCriteria(double vs30, double distance) {
+			UncertainArbDiscDataset criterion = trimmedCriteriaCache.get(vs30, distance);
+			if (criterion == null) {
+				UncertainArbDiscDataset rawCriterion = calcLoacRawCriterion(vs30, distance);
+				
+				DiscretizedFunc avgFunc = new ArbitrarilyDiscretizedFunc();
+				DiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
+				DiscretizedFunc upperFunc = new ArbitrarilyDiscretizedFunc();
+				
+				for (int p=0; p<rawCriterion.size(); p++) {
+					double period = rawCriterion.getX(p);
+					if ((float)p > (float)BBP_MAX_ACCEPTANCE_PERIOD)
+						break;
+					avgFunc.set(period, rawCriterion.getY(p));
+					lowerFunc.set(period, rawCriterion.getLowerY(p));
+					upperFunc.set(period, rawCriterion.getUpperY(p));
+				}
+				criterion = new UncertainArbDiscDataset(avgFunc, lowerFunc, upperFunc);
+				criterion.setName("NGA-W2 Acceptance Criteria");
+				trimmedCriteriaCache.put(vs30, distance, criterion);
+			}
+			
+			return criterion;
+		}
+		
+		public DiscretizedFunc getMeanPrediction(double vs30, double distance) {
+			return calcLoacRawCriterion(vs30, distance);
 		}
 
 		public String getName() {
@@ -302,7 +281,8 @@ public class BBP_PartBValidationConfig {
 		}
 	}
 	
-	public static double[] DISTANCES = { 20d, 50d };
+	public static double[] OFFICIAL_DISTANCES = { 20d, 50d };
+	public static Scenario[] OFFICIAL_SCENARIOS = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE};
 	
 	public static List<RSQSimEvent> getBestMatches(double targetMag, List<RSQSimEvent> matches, int maxNum) {
 		if (matches.size() <= maxNum)
@@ -329,6 +309,75 @@ public class BBP_PartBValidationConfig {
 			return Double.compare(diff1, diff2);
 		}
 		
+	}
+	
+	private static UncertainArbDiscDataset calcNGA2_Criterion(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
+			double zTor, double width, double vs30) {
+		NGAW2_GMM[] gmms = { new ASK_2014(), new BSSA_2014(), new CB_2014(), new CY_2014(), new Idriss_2014() };
+		
+//		double zHyp = zTor + Math.sin(dip * TO_RAD) * width / 2.0;
+		double zHyp = 9.498;
+//		System.out.println("zHyp: "+zHyp);
+		
+		HashSet<IMT> imtSet = null;
+		
+		for (NGAW2_GMM gmm : gmms) {
+			gmm.set_dip(dip);
+			gmm.set_fault(style);
+			gmm.set_Mw(mag);
+			gmm.set_rJB(rJB);
+			gmm.set_rRup(rRup);
+			gmm.set_rX(rX);
+			gmm.set_vs30(vs30);
+			gmm.set_vsInf(false);
+			gmm.set_width(width);
+			gmm.set_z1p0(Double.NaN);
+			gmm.set_z2p5(Double.NaN);
+			gmm.set_zHyp(zHyp);
+			gmm.set_zTop(zTor);
+			
+			Collection<IMT> myIMTs = gmm.getSupportedIMTs();
+			if (imtSet == null)
+				imtSet = new HashSet<>(myIMTs);
+			else
+				imtSet.retainAll(myIMTs);
+		}
+		
+		DiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();
+		
+		for (IMT imt : imtSet) {
+			Double period = imt.getPeriod();
+			if (period == null)
+				continue;
+			double[] means = new double[gmms.length];
+			for (int i=0; i<gmms.length; i++) {
+				gmms[i].set_IMT(imt);
+				ScalarGroundMotion gm = gmms[i].calc();
+				means[i] = Math.exp(gm.mean());
+//				if (period == 3d)
+//					System.out.println(ClassUtils.getClassNameWithoutPackage(gmms[i].getClass())+": "+means[i]);
+				Preconditions.checkState(Double.isFinite(means[i]), "Bad value for imt %s, gmm %s: %s", imt, gmms[i], means[i]);
+			}
+//			if (period == 3d)
+//				System.exit(0);
+			
+			double mean = StatUtils.mean(means);
+			
+			double min1 = StatUtils.min(means)*0.85;
+			double max1 = StatUtils.max(means)*1.15;
+			double min2 = mean*Math.log(2);
+			double max2 = mean/Math.log(2);
+			
+			double min = Math.min(min1, min2);
+			double max = Math.max(max1, max2);
+			
+			minFunc.set(period, min);
+			meanFunc.set(period, mean);
+			maxFunc.set(period, max);
+		}
+		return new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
 	}
 	
 	public static Location[] selectSitesSites(int num, double distance, boolean randomAz, RSQSimCatalog catalog, RSQSimEvent event) {
@@ -408,7 +457,11 @@ public class BBP_PartBValidationConfig {
 			
 			for (SimulatorElement elem : elems) {
 				for (Location loc : elem.getVertices()) {
-					double dist = LocationUtils.linearDistanceFast(loc, startLoc);
+					double dist;
+					if (DIST_JB)
+						dist = LocationUtils.horzDistanceFast(loc, startLoc);
+					else
+						dist = LocationUtils.linearDistanceFast(loc, startLoc);
 					if (dist < minDist) {
 						minDist = dist;
 						closestLoc = loc;
@@ -417,10 +470,14 @@ public class BBP_PartBValidationConfig {
 			}
 			
 			LocationVector vector = LocationUtils.vector(closestLoc, startLoc);
-			double vertDist = vector.getVertDistance();
-			// change horzonatal distance such that 3-D dist matches target
-			double horzDist = Math.sqrt(distance*distance - vertDist*vertDist);
-			vector.setHorzDistance(horzDist);
+			if (DIST_JB) {
+				vector.setHorzDistance(distance);
+			} else {
+				double vertDist = vector.getVertDistance();
+				// change horzonatal distance such that 3-D dist matches target
+				double horzDist = Math.sqrt(distance*distance - vertDist*vertDist);
+				vector.setHorzDistance(horzDist);
+			}
 			
 			Location loc = LocationUtils.location(closestLoc, vector);
 			if (loc.getDepth() != 0d) {
@@ -439,6 +496,10 @@ public class BBP_PartBValidationConfig {
 	}
 	
 	public static void main(String[] args) throws IOException {
+		System.out.println(calcNGA2_Criterion(6.6, 20, 20, -20, FaultStyle.STRIKE_SLIP, 90, 0, 5.62, 500));
+//		System.out.println(getNGA2(6.6, 20, FaultStyle.STRIKE_SLIP, 90, 0, 863));
+		System.exit(0);
+		
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
@@ -480,8 +541,8 @@ public class BBP_PartBValidationConfig {
 		double locRectWidth = 0.01;
 		
 		List<XYAnnotation> anns = new ArrayList<>();
-		for (int d=0; d<DISTANCES.length; d++) {
-			double distance = DISTANCES[d];
+		for (int d=0; d<OFFICIAL_DISTANCES.length; d++) {
+			double distance = OFFICIAL_DISTANCES[d];
 			Color c = distColors[d];
 			
 			for (Location loc : selectSitesSites(numSites, distance, randomAz, catalog, event)) {

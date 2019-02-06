@@ -30,6 +30,8 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 	private List<BBP_Site> sites;
 	private Map<Site, BBP_Site> siteToBBPSites;
 	
+	private Map<RotatedRupVariabilityConfig, File> csvsToWrite;
+	
 	private List<Config> configs;
 	
 	private MPJ_BBP_RotatedRupVariabilityMagDistSim(CommandLine cmd) throws IOException {
@@ -72,6 +74,9 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 		List<RSQSimEvent> allEvents = catalog.loader().skipYears(skipYears).minMag(mags[0]-deltaMag).load();
 		if (rank == 0)
 			debug("Loaded a total of "+allEvents.size()+" events");
+		
+		if (rank == 0)
+			csvsToWrite = new HashMap<>();
 		
 		for (int r=0; r<rupTypes.length; r++) {
 			RuptureType rupType = rupTypes[r];
@@ -135,7 +140,7 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 					if (rank == 0)
 						debug("Created "+rotations.size()+" rotations");
 					if (rank == 0)
-						config.writeCSV(new File(mainOutputDir, "rotation_config_"+rupType.getMagPrefix(mag)+".csv"));
+						csvsToWrite.put(config, new File(mainOutputDir, "rotation_config_"+rupType.getMagPrefix(mag)+".csv"));
 				}
 				
 				File scenarioDir = new File(resultsDir, rupType.getMagPrefix(mag));
@@ -171,6 +176,18 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 		}
 	}
 	
+	@Override
+	protected void calculateBatch(int[] batch) throws Exception {
+		if (rank == 0 && csvsToWrite != null) {
+			debug("flushing CSVs to disk...");
+			for (RotatedRupVariabilityConfig config : csvsToWrite.keySet())
+				config.writeCSV(csvsToWrite.get(config));
+			debug("done flushing CSVs to disk.");
+			csvsToWrite = null;
+		}
+		super.calculateBatch(batch);
+	}
+
 	private static double[] loadRange(CommandLine cmd, String minArg, String numArg, String deltaArg) {
 		double min = Double.parseDouble(cmd.getOptionValue(minArg));
 		int num = Integer.parseInt(cmd.getOptionValue(numArg));

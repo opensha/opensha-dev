@@ -15,6 +15,7 @@ import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import com.google.common.base.Preconditions;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
+import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityMagDistPageGen.RuptureType;
 
 class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
@@ -31,8 +32,11 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		
 		int skipYears = 5000;
 
-		RuptureType[] rupTypes = RuptureType.values();
+//		RuptureType[] rupTypes = RuptureType.values();
+		RuptureType[] rupTypes = { RuptureType.NORMAL };
 		boolean writeIndividual = true;
+		
+		VelocityModel vm = RSQSimBBP_Config.VM;
 		
 		double minDist = 20d;
 		int numDist = 8;
@@ -109,6 +113,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		if (maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE)
 			jobName += "-"+maxRuptures+"rups";
 		jobName += "-skipYears"+skipYears;
+		jobName += "-vm"+vm.name();
 		if (!RSQSimBBP_Config.DO_HF)
 			jobName += "-noHF";
 		if (timeScalar != 1d) {
@@ -125,7 +130,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		writeScript(catalogDir, skipYears, rupTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
 				numSiteToSourceAz, minRuptures, maxRuptures, timeScalar, scaleVelocities, threads, nodes, queue, mins,
 				bbpDataDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
-				localJobDir, remoteJobDir, "cat_bbp_rotated.slurm");
+				localJobDir, remoteJobDir, "cat_bbp_rotated.slurm", vm);
 		if (writeIndividual && rupTypes.length > 1) {
 			for (RuptureType rupType : rupTypes) {
 				RuptureType[] myTypes = { rupType };
@@ -134,7 +139,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 				writeScript(catalogDir, skipYears, myTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
 						numSiteToSourceAz, minRuptures, maxRuptures, timeScalar, scaleVelocities, threads, nodes, queue, mins,
 						bbpDataDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
-						localJobDir, myRemoteDir, rupType.getPrefix()+".slurm");
+						localJobDir, myRemoteDir, rupType.getPrefix()+".slurm", vm);
 			}
 		}
 	}
@@ -144,9 +149,9 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 			int minRuptures, int maxRuptures, double timeScalar, boolean scaleVelocities, int threads, int nodes,
 			String queue, int mins, String bbpDataDir, String nodeScratchDir, String bbpCopyParentDir, File bbpEnvFile,
 			String sharedScratchDir, BatchScriptWriter pbsWrite, JavaShellScriptWriter mpjWrite, File localJobDir,
-			File remoteJobDir, String scriptFileName) throws IOException {
+			File remoteJobDir, String scriptFileName, VelocityModel vm) throws IOException {
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
-		argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();
+		argz += " --vm "+vm+" --method "+RSQSimBBP_Config.METHOD.name();
 		argz += " --catalog-dir "+catalogDir.getAbsolutePath();
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();

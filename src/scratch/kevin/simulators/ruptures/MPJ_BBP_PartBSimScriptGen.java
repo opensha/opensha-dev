@@ -42,6 +42,8 @@ class MPJ_BBP_PartBSimScriptGen {
 		double timeScalar = 1d;
 		boolean scaleVelocities = true;
 		
+		VelocityModel vm = RSQSimBBP_Config.VM;
+		
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
@@ -85,7 +87,7 @@ class MPJ_BBP_PartBSimScriptGen {
 //				"You forgot the catalog dir on Stampede, dummy");
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		jobName += "-"+catalogDir.getName()+"-partB-skipYears"+skipYears+"-"+numSites+"sites";
+		jobName += "-"+catalogDir.getName()+"-partB-skipYears"+skipYears+"-"+numSites+"sites-vm"+vm.name();
 		if (randomAz)
 			jobName += "-randomAz";
 		if (!RSQSimBBP_Config.DO_HF)
@@ -102,7 +104,7 @@ class MPJ_BBP_PartBSimScriptGen {
 		File remoteJobDir = new File(remoteDir, jobName);
 		
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
-		argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();
+		argz += " --vm "+vm.name()+" --method "+RSQSimBBP_Config.METHOD.name();
 		argz += " --catalog-dir "+catalogDir.getAbsolutePath();
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();

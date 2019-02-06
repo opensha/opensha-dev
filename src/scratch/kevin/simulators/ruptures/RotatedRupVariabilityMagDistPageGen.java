@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +14,10 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_WrapperFullParam;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.iden.DepthIden;
 import org.opensha.sha.simulators.iden.FocalMechIden;
@@ -27,6 +32,7 @@ import com.google.common.collect.Range;
 import com.google.common.primitives.Ints;
 
 import scratch.kevin.bbp.BBP_Site;
+import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -75,6 +81,22 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 				idens.add(new MagRangeRuptureIdentifier(centerMag-0.5*deltaMag, centerMag+0.5*deltaMag));
 				idens.add(new DepthIden(Range.closed(0d, 5d), null));
 				idens.add(FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build());
+				try {
+					idens.add(new RSQSimTransValidIden(catalog.getTransitions(), catalog.getSlipVelocities()));
+				} catch (Exception e) {
+					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
+				}
+				return new LogicalAndRupIden(idens);
+			}
+		},
+		NORMAL("Normal, Dip=45", "Normal", "normal",
+				new String[] { "Ztor=[0,5]", "Rake=[-105,-75]", "Dip=[35,55]"}) {
+			@Override
+			public RuptureIdentifier getCriteria(RSQSimCatalog catalog, double centerMag, double deltaMag) {
+				List<RuptureIdentifier> idens = new ArrayList<>();
+				idens.add(new MagRangeRuptureIdentifier(centerMag-0.5*deltaMag, centerMag+0.5*deltaMag));
+				idens.add(new DepthIden(Range.closed(0d, 5d), null));
+				idens.add(FocalMechIden.builder().forRake(-105, -75).forDip(35, 55).build());
 				try {
 					idens.add(new RSQSimTransValidIden(catalog.getTransitions(), catalog.getSlipVelocities()));
 				} catch (Exception e) {
@@ -163,7 +185,12 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		
+		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.ASK_2014_Wrapper(), new NGAW2_Wrappers.BSSA_2014_Wrapper(),
+				new NGAW2_Wrappers.CB_2014_Wrapper(), new NGAW2_Wrappers.CY_2014_Wrapper()};
+//		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.BSSA_2014_Wrapper() };
 		
 		double[] periods = {3d, 5d, 7.5, 10d};
 		boolean doExample = true;
@@ -179,6 +206,7 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 			catalogDirName = catalogDirName.substring(3);
 		File bbpDir = null;
 		File bbpZipFile = null;
+		VelocityModel vm = VelocityModel.LA_BASIN;
 		File[] allBBPDirs = bbpParallelDir.listFiles();
 		Arrays.sort(allBBPDirs, new FileNameComparator());
 		for (File dir : allBBPDirs) {
@@ -190,6 +218,12 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 				if (zipFile.exists()) {
 					bbpDir = dir;
 					bbpZipFile = zipFile;
+					if (name.contains("-vm")) {
+						String vmStr = name.substring(name.indexOf("-vm")+3);
+						if (vmStr.contains("-"))
+							vmStr = vmStr.substring(0, vmStr.indexOf("-"));
+						vm = VelocityModel.valueOf(vmStr);
+					}
 				}
 			}
 		}
@@ -201,12 +235,13 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		
 		List<Site> sites = new ArrayList<>();
 		for (BBP_Site site : bbpSites)
-			sites.add(site.buildGMPE_Site(RSQSimBBP_Config.VM));
+			sites.add(site.buildGMPE_Site(vm));
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
 		Map<RuptureType, RotatedRupVariabilityMagDistPageGen> pageGensMap = new HashMap<>();
+		HashSet<Integer> eventIDsSet = new HashSet<>();
 		for (RuptureType rupType : RuptureType.values()) {
 			Map<Double, RotatedRupVariabilityConfig> configsMap = new HashMap<>();
 			Map<Double, SimulationRotDProvider<RotationSpec>> loadersMap = new HashMap<>();
@@ -231,34 +266,21 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 			RotatedRupVariabilityMagDistPageGen pageGen =
 					new RotatedRupVariabilityMagDistPageGen(catalog, configsMap, loadersMap, rupType);
 			
+			pageGen.setGMPEs(refGMPEs);
+			
+			eventIDsSet.addAll(pageGen.getAllEventIDs());
+			
 			pageGensMap.put(rupType, pageGen);
 		}
 		
-		Map<RuptureType, RSQSimEvent> exampleEventsMap = null;
-		if (doExample) {
-			Map<RuptureType, Integer> exampleIDs = new HashMap<>();
-			for (RotatedRupVariabilityMagDistPageGen pageGen : pageGensMap.values())
-				exampleIDs.put(pageGen.ruptureType, pageGen.getEventIDs(pageGen.minMag).get(0));
-			System.out.println("Loading "+exampleIDs.size()+" example ruptures");
-			List<RSQSimEvent> events = catalog.loader().byIDs(Ints.toArray(exampleIDs.values()));
-			exampleEventsMap = new HashMap<>();
-			for (RuptureType rupType : exampleIDs.keySet()) {
-				int exampleID = exampleIDs.get(rupType);
-				for (RSQSimEvent event : events)
-					if (event.getID() == exampleID)
-						exampleEventsMap.put(rupType, event);
-			}
-		}
+		Map<Integer, RSQSimEvent> eventsMap = loadEvents(catalog, eventIDsSet);
 		
 		for (RuptureType rupType : pageGensMap.keySet()) {
 			System.out.println("Doing scenario: "+rupType);
 			
 			RotatedRupVariabilityPageGen pageGen = pageGensMap.get(rupType);
 			
-			if (doExample) {
-				RSQSimEvent exampleRup = exampleEventsMap.get(rupType);
-				pageGen.setExampleRupture(exampleRup, pageGen.getSites().get(0), 5);
-			}
+			pageGen.setEventsMap(eventsMap);
 			
 			File rotDir = new File(catalogOutputDir, "rotated_ruptures_mag_dist_"+rupType.getPrefix());
 			Preconditions.checkState(rotDir.exists() || rotDir.mkdir());

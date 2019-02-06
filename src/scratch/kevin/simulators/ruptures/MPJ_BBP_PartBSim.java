@@ -188,7 +188,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 				dists[i] = Double.parseDouble(strs[i]);
 			return dists;
 		}
-		return BBP_PartBValidationConfig.DISTANCES;
+		return BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
 	}
 	
 	public static Options createOptions() {

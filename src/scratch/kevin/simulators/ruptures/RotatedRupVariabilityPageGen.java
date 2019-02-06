@@ -6,30 +6,31 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
-import org.dom4j.DocumentException;
-import org.jfree.chart.annotations.XYAnnotation;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jfree.data.Range;
-import org.opensha.commons.data.NamedComparator;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
-import org.opensha.commons.data.xyz.ArbDiscrXYZ_DataSet;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
+import org.opensha.commons.exceptions.ParameterException;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -39,20 +40,29 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
-import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
-import org.opensha.commons.util.FileNameComparator;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_WrapperFullParam;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.ScalarGroundMotion;
+import org.opensha.sha.imr.param.EqkRuptureParams.MagParam;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceX_Parameter;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
-import org.opensha.sha.simulators.Vertex;
-import org.opensha.sha.simulators.utils.RupturePlotGenerator;
+import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -62,14 +72,12 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 
-import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
-import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
-import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpec;
 
@@ -88,13 +96,17 @@ public abstract class RotatedRupVariabilityPageGen {
 	private int minNumEvents = Integer.MAX_VALUE;
 	private Table<Double, Quantity, List<?>> magQuantitiesTable;
 	
-	private RSQSimEvent exampleRupture;
-	private Site exampleSite;
-	private int numExampleRotations;
+	private Map<Integer, RSQSimEvent> eventsMap;
+	private LoadingCache<RSQSimEvent, EqkRupture> gmpeEventCache;
+	
+	private NGAW2_WrapperFullParam[] gmpes;
+	
+	private int numExampleRotations = 5;
 	
 	private List<Color> siteColors;
 	
-	private LoadingCache<StdDevSetKey, StdDevSet[]> stdDevCache;
+	private LoadingCache<VarGroupingKey, VariabilityResult> varResultCache;
+	private LoadingCache<GMPE_GroupingKey, GMPE_Result> gmpeResultCache;
 
 	public RotatedRupVariabilityPageGen(RSQSimCatalog catalog, RotatedRupVariabilityConfig config,
 			SimulationRotDProvider<RotationSpec> prov) {
@@ -157,38 +169,105 @@ public abstract class RotatedRupVariabilityPageGen {
 				siteColors.add(siteCPT.getColor((float)i).darker());
 		}
 		
-		stdDevCache = CacheBuilder.newBuilder().build(new CacheLoader<StdDevSetKey, StdDevSet[]>() {
+		varResultCache = CacheBuilder.newBuilder().build(new CacheLoader<VarGroupingKey, VariabilityResult>() {
 
 			@Override
-			public StdDevSet[] load(StdDevSetKey key) throws Exception {
-				return calcStdDevSet(key);
+			public VariabilityResult load(VarGroupingKey key) throws Exception {
+				return calcVarResult(key);
+			}
+			
+		});
+		
+		gmpeResultCache = CacheBuilder.newBuilder().build(new CacheLoader<GMPE_GroupingKey, GMPE_Result>() {
+
+			@Override
+			public GMPE_Result load(GMPE_GroupingKey key) throws Exception {
+				return calcGMPE(key);
+			}
+			
+		});
+		
+		gmpeEventCache = CacheBuilder.newBuilder().build(new CacheLoader<RSQSimEvent, EqkRupture>() {
+
+			@Override
+			public EqkRupture load(RSQSimEvent key) throws Exception {
+				return buildGMPE_Rupture(key);
 			}
 			
 		});
 	}
 	
-	public void setExampleRupture(RSQSimEvent exampleRupture, Site exampleSite, int numRotations) {
-		this.exampleRupture = exampleRupture;
-		this.exampleSite = exampleSite;
-		this.numExampleRotations = numRotations;
+	static Map<Integer, RSQSimEvent> loadEvents(RSQSimCatalog catalog, Collection<Integer> ids) throws IOException {
+		System.out.println("Loading "+ids.size()+" events...");
+		Map<Integer, RSQSimEvent> eventsMap = new HashMap<>();
+		List<RSQSimEvent> events = catalog.loader().byIDs(Ints.toArray(ids));
+		Preconditions.checkState(events.size() == ids.size(), "Loaded %s events, expected %s", events.size(), ids.size());
+		for (RSQSimEvent event : events)
+			eventsMap.put(event.getID(), event);
+		return eventsMap;
+	}
+	
+	protected void setEventsMap(Map<Integer, RSQSimEvent> eventsMap) {
+		this.eventsMap = eventsMap;
+	}
+	
+	protected Collection<Integer> getAllEventIDs() {
+		HashSet<Integer> idSet = new HashSet<>();
+		for (List<Integer> ids : magEventIDs.values())
+			idSet.addAll(ids);
+		return idSet;
+	}
+	
+	private synchronized RSQSimEvent getEvent(int eventID) {
+		if (eventsMap == null) {
+			try {
+				eventsMap = loadEvents(catalog, getAllEventIDs());
+			} catch (IOException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+		}
+		return eventsMap.get(eventID);
+	}
+	
+	private EqkRupture buildGMPE_Rupture(RSQSimEvent event) {
+		return catalog.getGMPE_Rupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT);
+	}
+	
+	/**
+	 * Set a GMPE for comparison.
+	 * @param gmpe
+	 */
+	public void setGMPEs(NGAW2_WrapperFullParam... gmpes) {
+		this.gmpes = gmpes;
 	}
 	
 	private static final String al_atik = "Al Atik (2010)";
 	private static final String aki_richards = "Aki & Richards (1980)";
 	
+	private enum GMPE_Var {
+		TOTAL,
+		PHI,
+		TAU;
+	}
+	
 	private enum VariabilityType {
 		PATH("Path-to-path", "path", "φ_p2p", "&phi;<sub>P2P</sub>", al_atik,
-				true, true, Quantity.SITE, Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SOURCE_AZIMUTH),
+				true, true, null, null,
+				Quantity.SITE, Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SOURCE_AZIMUTH),
 		SOUCE_STRIKE("Source-strike", "source_strike", "φ_s", "&phi;<sub>s</sub>", aki_richards,
-				true, true, Quantity.SITE, Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SITE_TO_SOURTH_AZIMUTH),
+				true, true, GMPE_Var.PHI, new ScatterDisaggQuantity[] {ScatterDisaggQuantity.V_PROP},
+				Quantity.SITE, Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SITE_TO_SOURTH_AZIMUTH),
 		WITHIN_EVENTS("Within-event", "within_event", "φ", "&phi;", al_atik,
-				true, true, Quantity.SITE, Quantity.DISTANCE, Quantity.EVENT_ID),
-		BETWEEN_EVENTS_SINGLE_PATH("Between-events, single-path", "between_events_single_path", "τ_0", "&tau;<sub>0</sub>", al_atik,
-				true, true, Quantity.SITE, Quantity.DISTANCE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH),
+				true, true, GMPE_Var.PHI, new ScatterDisaggQuantity[] {ScatterDisaggQuantity.V_PROP},
+				Quantity.SITE, Quantity.DISTANCE, Quantity.EVENT_ID),
+//		BETWEEN_EVENTS_SINGLE_PATH("Between-events, single-path", "between_events_single_path", "τ_0", "&tau;<sub>0</sub>", al_atik,
+//				true, true, Quantity.SITE, Quantity.DISTANCE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH),
 		BETWEEN_EVENTS("Between-events", "between_events", "τ", "&tau;", al_atik,
-				true, true, Quantity.SITE, Quantity.DISTANCE),
+				true, true, GMPE_Var.TAU, null,
+				Quantity.SITE, Quantity.DISTANCE),
 		SITE_TO_SITE("Site-to-site", "site_to_site", "φ_s2s", "&phi;<sub>S2S</sub>", al_atik,
-				false, true, Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH);
+				false, true, null, null,
+				Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH);
 		
 		private String name;
 		private String prefix;
@@ -197,13 +276,15 @@ public abstract class RotatedRupVariabilityPageGen {
 		private String reference;
 		private boolean separateSites;
 		private boolean separateDists;
+		private GMPE_Var gmpeStdDevType;
+		private ScatterDisaggQuantity[] disaggScatters;
 		private Quantity[] groupQuantities;
 		
 		private List<Quantity> groupedList;
 		private List<Quantity> variedList;
 
 		private VariabilityType(String name, String prefix, String symbol, String htmlSymbol, String reference, boolean separateSites,
-				boolean separateDists, Quantity... groupQuantities) {
+				boolean separateDists, GMPE_Var gmpeStdDevType, ScatterDisaggQuantity[] disaggScatters, Quantity... groupQuantities) {
 			this.name = name;
 			this.prefix = prefix;
 			this.symbol = symbol;
@@ -211,6 +292,8 @@ public abstract class RotatedRupVariabilityPageGen {
 			this.reference = reference;
 			this.separateSites = separateSites;
 			this.separateDists = separateDists;
+			this.gmpeStdDevType = gmpeStdDevType;
+			this.disaggScatters = disaggScatters;
 			this.groupQuantities = groupQuantities;
 			
 			groupedList = new ArrayList<>();
@@ -262,7 +345,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 			lines.add("");
 //					+ "orientation constant. Here is an exmample with "+pageGen.numExampleRotations+" rotations:");
-			if (pageGen.exampleRupture != null) {
+			if (pageGen.numExampleRotations > 0) {
 				boolean hasEvent = false;
 				for (Quantity quantity : groupQuantities)
 					if (quantity == Quantity.EVENT_ID)
@@ -301,6 +384,84 @@ public abstract class RotatedRupVariabilityPageGen {
 			
 			return lines;
 		}
+	}
+	
+	private Map<IDPairing, Double> elemDistCache = new HashMap<>();
+	private double calcVprop(RSQSimEvent event) {
+		double minTime = Double.POSITIVE_INFINITY;
+		SimulatorElement hypo = null;
+		for (EventRecord rec : event) {
+			double[] times = rec.getElementTimeFirstSlips();
+			Preconditions.checkNotNull(times, "Event doesn't have timing information");
+			List<SimulatorElement> elems = rec.getElements();
+			
+			for (int i=0; i<elems.size(); i++) {
+				if (times[i] < minTime) {
+					minTime = times[i];
+					hypo = elems.get(i);
+				}
+			}
+		}
+
+		int hypoID = hypo.getID();
+		List<Double> vels = new ArrayList<>();
+		for (EventRecord rec : event) {
+			double[] times = rec.getElementTimeFirstSlips();
+			Preconditions.checkNotNull(times, "Event doesn't have timing information");
+			List<SimulatorElement> elems = rec.getElements();
+			
+			for (int i=0; i<elems.size(); i++) {
+				SimulatorElement elem = elems.get(i);
+				if (elem.getID() == hypoID)
+					continue;
+				int elemID = elem.getID();
+				IDPairing pair = hypoID > elemID ? new IDPairing(elemID, hypoID) : new IDPairing(hypoID, elemID);
+				Double dist = elemDistCache.get(pair);
+				if (dist == null) {
+					dist = LocationUtils.linearDistanceFast(hypo.getCenterLocation(), elem.getCenterLocation());
+					elemDistCache.put(pair, dist);
+				}
+				double tDelta = times[i] - minTime;
+				if (tDelta == 0)
+					continue;
+				double vel = dist/(tDelta);
+				vels.add(vel);
+			}
+			
+		}
+		
+		return DataUtils.median(Doubles.toArray(vels));
+	}
+	
+	private enum ScatterDisaggQuantity {
+		V_PROP("Vprop", "v_prop") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+				return pageGen.calcVprop(pageGen.getEvent(rotation.eventID));
+			}
+		},
+		SOURCE_AZ("Source Azimuth", "src_az") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+				return rotation.sourceAz == null ? 0d : rotation.sourceAz;
+			}
+		},
+		SITE_TO_SOURCE_AZ("Site-to-Source Az", "site_source_az") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+				return rotation.siteToSourceAz == null ? 0d : rotation.siteToSourceAz;
+			}
+		};
+		
+		private String name;
+		private String prefix;
+		
+		private ScatterDisaggQuantity(String name, String prefix) {
+			this.name = name;
+			this.prefix = prefix;
+		}
+		
+		public abstract double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation);
 	}
 	
 	protected abstract String getScenarioName();
@@ -452,34 +613,49 @@ public abstract class RotatedRupVariabilityPageGen {
 			if (hasMagDist) {
 				lines.add("### "+type.name+" Variability Mag-Distance Plots");
 				lines.add(topLink); lines.add("");
-				table = MarkdownUtils.tableBuilder();
-				table.initNewLine();
-				if (sites.size() > 1 && type.separateSites)
-					table.addColumn("Site");
-				for (double period : periods)
-					table.addColumn(period == (int)period ? (int)period+"s" : (float)period+"s");
-				table.finalizeLine();
 				if (sites.size() > 1 && type.separateSites) {
+					lines.add("#### "+type.name+" Site-Specific Variability Mag-Distance Plots");
+					lines.add(topLink); lines.add("");
+					table = MarkdownUtils.tableBuilder();
+					table.initNewLine();
+					table.addColumn("Site");
+					for (double period : periods)
+						table.addColumn(period == (int)period ? (int)period+"s" : (float)period+"s");
+					table.finalizeLine();
 					for (Site site : sites) {
 						table.initNewLine();
 						table.addColumn("**"+site.getName()+"**");
-						String prefix = type.prefix+"mag_dist_std_dev";
-						File[] files = plotMagDistCheckerboard(resourcesDir, prefix, type, site, periods);
+						String prefix = type.prefix+"_"+site.getName()+"mag_dist_std_dev";
+						File[] files = plotMagDistCheckerboard(resourcesDir, prefix, type, site, periods).get(MagDistPlotType.SIM_STD_DEV);
 						for (File file : files)
 							table.addColumn("![Mag-Dist Plot](resources/"+file.getName()+")");
 						table.finalizeLine();
 					}
-					table.initNewLine();
-					table.addColumn("**ALL SITES***");
-				} else {
-					table.initNewLine();
+					lines.addAll(table.build());
+					lines.add("");
+					lines.add("#### "+type.name+" Total Variability Mag-Distance Plots");
+					lines.add(topLink); lines.add("");
 				}
 				String prefix = type.prefix+"_mag_dist_std_dev";
-				File[] files = plotMagDistCheckerboard(resourcesDir, prefix, type, null, periods);
-				for (File file : files)
-					table.addColumn("![Mag-Dist Plot](resources/"+file.getName()+")");
-				magDistPlots.put(type, files);
+				Map<MagDistPlotType, File[]> filesMap = plotMagDistCheckerboard(resourcesDir, prefix, type, null, periods);
+				table = MarkdownUtils.tableBuilder();
+				table.initNewLine();
+				if (filesMap.keySet().size() > 1)
+					table.addColumn("Plot Type");
+				for (double period : periods)
+					table.addColumn(period == (int)period ? (int)period+"s" : (float)period+"s");
 				table.finalizeLine();
+				for (MagDistPlotType plotType : MagDistPlotType.values()) {
+					if (!filesMap.containsKey(plotType))
+						continue;
+					table.initNewLine();
+					if (filesMap.keySet().size() > 1)
+						table.addColumn("**"+plotType.getName()+"**");
+					for (File file : filesMap.get(plotType))
+						table.addColumn("![Mag-Dist Plot](resources/"+file.getName()+")");
+					table.finalizeLine();
+				}
+				magDistPlots.put(type, filesMap.get(MagDistPlotType.SIM_STD_DEV));
 				lines.addAll(table.build());
 				lines.add("");
 			}
@@ -558,10 +734,10 @@ public abstract class RotatedRupVariabilityPageGen {
 				}
 				for (Float distance : myDists) {
 					table.initNewLine();
-					StdDevSetKey key = new StdDevSetKey(type, mag, distance, null, periods);
+					VarGroupingKey key = new VarGroupingKey(type, mag, distance, null, periods);
 					StdDevSet[] stdDevs;
 					try {
-						stdDevs = stdDevCache.get(key);
+						stdDevs = varResultCache.get(key).stdDevs;
 					} catch (ExecutionException e) {
 						if (e.getCause() instanceof IOException)
 							throw (IOException)e.getCause();
@@ -657,7 +833,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 			StdDevSet[] myStdDevs;
 			try {
-				myStdDevs = stdDevCache.get(new StdDevSetKey(type, mag, distance, site, periods));
+				myStdDevs = varResultCache.get(new VarGroupingKey(type, mag, distance, site, periods)).stdDevs;
 			} catch (ExecutionException e) {
 				throw ExceptionUtils.asRuntimeException(e);
 			}
@@ -703,6 +879,31 @@ public abstract class RotatedRupVariabilityPageGen {
 		table.wrap(periods.length > 4 ? 3 : 2, 0);
 		lines.addAll(table.build());
 		lines.add("");
+		if (type.disaggScatters != null && type.disaggScatters.length > 0) {
+			Site site = sites.size() > 1 ? null : sites.get(0);
+			VariabilityResult result;
+			try {
+				result = varResultCache.get(new VarGroupingKey(type, mag, distance, site, periods));
+			} catch (ExecutionException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			for (ScatterDisaggQuantity scatterQuantity : type.disaggScatters) {
+				File[][] plots = plotScatter(resourcesDir, type.prefix+"_scatter_", periods, result, scatterQuantity);
+				table = MarkdownUtils.tableBuilder();
+				table.initNewLine();
+				for (double period : periods)
+					table.addColumn(optionalDigitDF.format(period)+"s");
+				table.finalizeLine();
+				for (File[] periodPlots : plots) {
+					table.initNewLine();
+					for (File plot : periodPlots)
+						table.addColumn("![Scatter](resources/"+plot.getName()+")");
+					table.finalizeLine();
+				}
+				lines.addAll(table.build());
+				lines.add("");
+			}
+		}
 		return lines;
 	}
 	
@@ -719,7 +920,9 @@ public abstract class RotatedRupVariabilityPageGen {
 		double meanValue;
 		double residualStdDev;
 		
-		public ResidualSet(double[] values) {
+		private RotationSpec commonRotSpec;
+		
+		public ResidualSet(List<RotationSpec> rotations, double[] values) {
 			this.zeroCenteredValues = values;
 			this.meanValue = StatUtils.mean(values);
 			Preconditions.checkState(Double.isFinite(meanValue), "Non-finite mean: %s", meanValue);
@@ -733,6 +936,29 @@ public abstract class RotatedRupVariabilityPageGen {
 			this.residualStdDev = Math.sqrt(variance);
 			Preconditions.checkState(Double.isFinite(residualStdDev),
 					"Non-finite std dev: %s, var=%s, mean=%s, size=%s", residualStdDev, variance, meanValue, values.length);
+			
+			for (RotationSpec rotation : rotations) {
+				if (commonRotSpec == null) {
+					commonRotSpec = new RotationSpec(-1, rotation.site, rotation.eventID, rotation.distance,
+							rotation.sourceAz, rotation.siteToSourceAz);
+				} else {
+					if (!Objects.equals(commonRotSpec.site, rotation.site))
+						commonRotSpec = new RotationSpec(-1, null, commonRotSpec.eventID, commonRotSpec.distance,
+								commonRotSpec.sourceAz, commonRotSpec.siteToSourceAz);
+					if (commonRotSpec.eventID != rotation.eventID)
+						commonRotSpec = new RotationSpec(-1, commonRotSpec.site, -1, commonRotSpec.distance,
+								commonRotSpec.sourceAz, commonRotSpec.siteToSourceAz);
+					if (!Objects.equals(commonRotSpec.distance, rotation.distance))
+						commonRotSpec = new RotationSpec(-1, commonRotSpec.site, commonRotSpec.eventID, null,
+								commonRotSpec.sourceAz, commonRotSpec.siteToSourceAz);
+					if (!Objects.equals(commonRotSpec.sourceAz, rotation.sourceAz))
+						commonRotSpec = new RotationSpec(-1, commonRotSpec.site, commonRotSpec.eventID, commonRotSpec.distance,
+								null, commonRotSpec.siteToSourceAz);
+					if (!Objects.equals(commonRotSpec.siteToSourceAz, rotation.siteToSourceAz))
+						commonRotSpec = new RotationSpec(-1, commonRotSpec.site, commonRotSpec.eventID, commonRotSpec.distance,
+								commonRotSpec.sourceAz, null);
+				}
+			}
 		}
 		
 		public int size() {
@@ -759,7 +985,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 	}
 	
-	private List<List<ResidualSet>> loadResiduals(StdDevSetKey key) throws IOException {
+	private List<List<ResidualSet>> loadResiduals(VarGroupingKey key) throws IOException {
 		Quantity[] constQuantities = null;
 		Object[] constValues = null;
 		if (key.type.separateSites) {
@@ -787,7 +1013,7 @@ public abstract class RotatedRupVariabilityPageGen {
 	}
 		
 	
-	private StdDevSet[] calcStdDevSet(StdDevSetKey key) throws IOException {
+	private VariabilityResult calcVarResult(VarGroupingKey key) throws IOException {
 		if (key.type.separateSites && sites.size() > 1) {
 			// do all sites at once
 			List<List<ResidualSet>> totalPeriodResiduals = new ArrayList<>();
@@ -795,46 +1021,75 @@ public abstract class RotatedRupVariabilityPageGen {
 				totalPeriodResiduals.add(new ArrayList<>());
 			
 			for (Site site : sites) {
-				StdDevSetKey siteKey = new StdDevSetKey(key.type, key.magnitude, key.distance, site, key.periods);
+				VarGroupingKey siteKey = new VarGroupingKey(key.type, key.magnitude, key.distance, site, key.periods);
 				
 				List<List<ResidualSet>> residuals = loadResiduals(siteKey);
-				
+
+				LogValueSet[] logVals = new LogValueSet[key.periods.length];
 				StdDevSet[] stdDevs = new StdDevSet[key.periods.length];
+				RotationSpec[] commonRotSpecs = null;
 				for (int p=0; p<key.periods.length; p++) {
-					stdDevs[p] = new StdDevSet(residuals.get(p));
+					List<ResidualSet> periodResiduals = residuals.get(p);
+					logVals[p] = new LogValueSet(periodResiduals);
+					stdDevs[p] = new StdDevSet(periodResiduals);
+					if (p == 0) {
+						commonRotSpecs = new RotationSpec[periodResiduals.size()];
+						for (int i=0; i<periodResiduals.size(); i++)
+							commonRotSpecs[i] = periodResiduals.get(i).commonRotSpec;
+					}
 					totalPeriodResiduals.get(p).addAll(residuals.get(p));
 				}
 				
-				stdDevCache.put(siteKey, stdDevs);
+				varResultCache.put(siteKey, new VariabilityResult(commonRotSpecs, logVals, stdDevs));
 			}
-			
+
+			LogValueSet[] totLogVals = new LogValueSet[key.periods.length];
 			StdDevSet[] totStdDevs = new StdDevSet[key.periods.length];
-			for (int p=0; p<key.periods.length; p++)
-				totStdDevs[p] = new StdDevSet(totalPeriodResiduals.get(p));
-			StdDevSetKey noSiteKey = new StdDevSetKey(key.type, key.magnitude, key.distance, null, key.periods);
-			stdDevCache.put(noSiteKey, totStdDevs);
+			RotationSpec[] commonRotSpecs = null;
+			for (int p=0; p<key.periods.length; p++) {
+				List<ResidualSet> periodResiduals = totalPeriodResiduals.get(p);
+				totLogVals[p] = new LogValueSet(periodResiduals);
+				totStdDevs[p] = new StdDevSet(periodResiduals);
+				if (p == 0) {
+					commonRotSpecs = new RotationSpec[periodResiduals.size()];
+					for (int i=0; i<periodResiduals.size(); i++)
+						commonRotSpecs[i] = periodResiduals.get(i).commonRotSpec;
+				}
+			}
+			VarGroupingKey noSiteKey = new VarGroupingKey(key.type, key.magnitude, key.distance, null, key.periods);
+			varResultCache.put(noSiteKey, new VariabilityResult(commonRotSpecs, totLogVals, totStdDevs));
 			
-			StdDevSet[] ret = stdDevCache.getIfPresent(key);
+			VariabilityResult ret = varResultCache.getIfPresent(key);
 			Preconditions.checkState(ret != null, "Should have just been cached?");
 			return ret;
 		}
 		// do for all sites
 		List<List<ResidualSet>> residuals = loadResiduals(key);
-		
+
+		LogValueSet[] logVals = new LogValueSet[key.periods.length];
 		StdDevSet[] stdDevs = new StdDevSet[key.periods.length];
-		for (int p=0; p<key.periods.length; p++)
-			stdDevs[p] = new StdDevSet(residuals.get(p));
-		return stdDevs;
+		RotationSpec[] commonRotSpecs = null;
+		for (int p=0; p<key.periods.length; p++) {
+			List<ResidualSet> periodResiduals = residuals.get(p);
+			logVals[p] = new LogValueSet(periodResiduals);
+			stdDevs[p] = new StdDevSet(periodResiduals);
+			if (p == 0) {
+				commonRotSpecs = new RotationSpec[periodResiduals.size()];
+				for (int i=0; i<periodResiduals.size(); i++)
+					commonRotSpecs[i] = periodResiduals.get(i).commonRotSpec;
+			}
+		}
+		return new VariabilityResult(commonRotSpecs, logVals, stdDevs);
 	}
 	
-	private class StdDevSetKey {
+	private class VarGroupingKey {
 		private final VariabilityType type;
 		private final Double magnitude;
 		private final Float distance;
 		private final Site site;
 		private final double[] periods;
 		
-		public StdDevSetKey(VariabilityType type, Double magnitude, Float distance, Site site, double[] periods) {
+		public VarGroupingKey(VariabilityType type, Double magnitude, Float distance, Site site, double[] periods) {
 			this.type = type;
 			this.magnitude = magnitude;
 			this.distance = distance;
@@ -863,7 +1118,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
-			StdDevSetKey other = (StdDevSetKey) obj;
+			VarGroupingKey other = (VarGroupingKey) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
 			if (distance == null) {
@@ -892,6 +1147,47 @@ public abstract class RotatedRupVariabilityPageGen {
 			return RotatedRupVariabilityPageGen.this;
 		}
 
+	}
+	
+	private class VariabilityResult {
+		private final RotationSpec[] commonRotationSpecs;
+		private final LogValueSet[] logVals;
+		private final StdDevSet[] stdDevs;
+		
+		public VariabilityResult(RotationSpec[] commonRotationSpecs, LogValueSet[] logVals, StdDevSet[] stdDevs) {
+			this.commonRotationSpecs = commonRotationSpecs;
+			this.logVals = logVals;
+			this.stdDevs = stdDevs;
+		}
+	}
+	
+	private class LogValueSet {
+		private final double mean;
+		private final double median;
+		private final double min;
+		private final double max;
+		private final double[] residuals;
+		private final double[] rawVals;
+		
+		public LogValueSet(List<ResidualSet> residuals) {
+			int totSize = 0;
+			for (ResidualSet set : residuals)
+				totSize += set.size();
+			this.residuals = new double[totSize];
+			rawVals = new double[totSize];
+			int index = 0;
+			for (ResidualSet set : residuals) {
+				double[] myRawVals = set.getRawValues();
+				System.arraycopy(myRawVals, 0, rawVals, index, myRawVals.length);
+				System.arraycopy(set.getZeroCentered(), 0, this.residuals, index, myRawVals.length);
+				index += myRawVals.length;
+			}
+			Preconditions.checkState(index == totSize);
+			mean = StatUtils.mean(rawVals);
+			median = DataUtils.median(rawVals);
+			min = StatUtils.min(rawVals);
+			max = StatUtils.max(rawVals);
+		}
 	}
 	
 	private class StdDevSet {
@@ -970,7 +1266,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				double[] values = new double[spectra.size()];
 				for (int i=0; i<values.length; i++)
 					values[i] = Math.log(spectra.get(i).getInterpolatedY(periods[p]));
-				ret.get(p).add(new ResidualSet(values));
+				ret.get(p).add(new ResidualSet(rotations, values));
 			}
 		} else {
 //			System.out.println("have "+rotations.size()+" rotations before "+groupQuantities[0]);
@@ -985,93 +1281,183 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 	}
 	
-//	private List<double[]> calcSourceAzResiduals(double[] periods, Site site, float distance) throws IOException {
-//		int num = sourceAzimuths.size()*siteSourceAzimuths.size()*eventIDs.size();
-//		List<double[]> ret = new ArrayList<>();
-//		for (int i=0; i<periods.length; i++)
-//			ret.add(new double[num]);
-//		
-//		int index = 0;
-//		double[] workingArray = new double[sourceAzimuths.size()];
-//		System.out.println("Calculating path residuals with "+workingArray.length+" azimuths per site");
-//		int numThatVary = 0;
-//		int totNum = 0;
-//		for (int eventID : eventIDs) {
-//			for (float siteSourceAzimuth : siteSourceAzimuths) {
-//				List<RotationSpec> rotations = config.getSourceRotations(site, eventID, distance, siteSourceAzimuth);
-//				Preconditions.checkState(rotations.size() == workingArray.length,
-//						"Unexpected number of configurations for event %s, site %s, distance %s, az %s. Expected %s, have %s",
-//						eventID, site.getName(), distance, siteSourceAzimuth, workingArray.length, rotations.size());
-//				List<DiscretizedFunc> spectra = new ArrayList<>();
-//				for (RotationSpec rotation : rotations)
-//					spectra.add(prov.getRotD50(site, rotation, 0));
-//				boolean varies = false;
-//				for (int p=0; p<periods.length; p++) {
-//					for (int i=0; i<workingArray.length; i++)
-//						workingArray[i] = Math.log(spectra.get(i).getInterpolatedY(periods[p]));
-//					// now detrend to remove any source effects
-//					double mean = StatUtils.mean(workingArray);
-//					for (int i=0; i<workingArray.length; i++) {
-//						ret.get(p)[index+i] = workingArray[i]-mean;
-//						if (Math.abs(ret.get(p)[index+i]) > 1e-2)
-//							varies = true;
-//					}
-//				}
-//				index += workingArray.length;
-//				totNum++;
-//				if (varies)
-//					numThatVary++;
-//			}
-//		}
-//		Preconditions.checkState(index == num, "Bad end index. Expected %s, have %s", num, index);
-//		System.out.println(numThatVary+"/"+totNum+" have source az variability ("+optionalDigitDF.format(100d*numThatVary/totNum)+" %)");
-//		
-//		return ret;
-//	}
-//	
-//	private List<double[]> calcEventResiduals(double[] periods, Site site, float distance) throws IOException {
-//		int num = sourceAzimuths.size()*siteSourceAzimuths.size()*eventIDs.size();
-//		List<double[]> ret = new ArrayList<>();
-//		for (int i=0; i<periods.length; i++)
-//			ret.add(new double[num]);
-//		
-//		int index = 0;
-//		double[] workingArray = new double[eventIDs.size()];
-//		System.out.println("Calculating path residuals with "+workingArray.length+" azimuths per site");
-//		int numThatVary = 0;
-//		int totNum = 0;
-//		for (float sourceAzimuth : sourceAzimuths) {
-//			for (float siteSourceAzimuth : siteSourceAzimuths) {
-//				List<RotationSpec> rotations = config.getSourcesForRotation(site, distance, sourceAzimuth, siteSourceAzimuth);
-//				Preconditions.checkState(rotations.size() == workingArray.length,
-//						"Unexpected number of configurations for site %s, distance %s, sourceAz %s, siteSourceAz %s. Expected %s, have %s",
-//						site.getName(), distance, sourceAzimuth, siteSourceAzimuth, workingArray.length, rotations.size());
-//				List<DiscretizedFunc> spectra = new ArrayList<>();
-//				for (RotationSpec rotation : rotations)
-//					spectra.add(prov.getRotD50(site, rotation, 0));
-//				boolean varies = false;
-//				for (int p=0; p<periods.length; p++) {
-//					for (int i=0; i<workingArray.length; i++)
-//						workingArray[i] = Math.log(spectra.get(i).getInterpolatedY(periods[p]));
-//					// now detrend to remove any source effects
-//					double mean = StatUtils.mean(workingArray);
-//					for (int i=0; i<workingArray.length; i++) {
-//						ret.get(p)[index+i] = workingArray[i]-mean;
-//						if (Math.abs(ret.get(p)[index+i]) > 1e-2)
-//							varies = true;
-//					}
-//				}
-//				index += workingArray.length;
-//				totNum++;
-//				if (varies)
-//					numThatVary++;
-//			}
-//		}
-//		Preconditions.checkState(index == num, "Bad end index. Expected %s, have %s", num, index);
-//		System.out.println(numThatVary+"/"+totNum+" have event variability ("+optionalDigitDF.format(100d*numThatVary/totNum)+" %)");
-//		
-//		return ret;
-//	}
+	private class GMPE_GroupingKey {
+		private final NGAW2_WrapperFullParam gmpe;
+		private final Site site;
+		private final double magnitude;
+		private final double distance;
+		private final double[] periods;
+		
+		public GMPE_GroupingKey(NGAW2_WrapperFullParam gmpe, Site site, double magnitude, double distance, double[] periods) {
+			this.gmpe = gmpe;
+			this.site = site;
+			this.magnitude = magnitude;
+			this.distance = distance;
+			this.periods = periods;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			long temp;
+			temp = Double.doubleToLongBits(distance);
+			result = prime * result + (int) (temp ^ (temp >>> 32));
+			result = prime * result + ((gmpe == null) ? 0 : gmpe.hashCode());
+			temp = Double.doubleToLongBits(magnitude);
+			result = prime * result + (int) (temp ^ (temp >>> 32));
+			result = prime * result + Arrays.hashCode(periods);
+			result = prime * result + ((site == null) ? 0 : site.getLocation().hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			GMPE_GroupingKey other = (GMPE_GroupingKey) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (Double.doubleToLongBits(distance) != Double.doubleToLongBits(other.distance))
+				return false;
+			if (gmpe == null) {
+				if (other.gmpe != null)
+					return false;
+			} else if (!gmpe.equals(other.gmpe))
+				return false;
+			if (Double.doubleToLongBits(magnitude) != Double.doubleToLongBits(other.magnitude))
+				return false;
+			if (!Arrays.equals(periods, other.periods))
+				return false;
+			if (site == null) {
+				if (other.site != null)
+					return false;
+			} else if (!site.equals(other.site))
+				return false;
+			return true;
+		}
+
+		private RotatedRupVariabilityPageGen getOuterType() {
+			return RotatedRupVariabilityPageGen.this;
+		}
+	}
+	
+	private static GMPE_Result packGMs(GMPE_Result... results) {
+		if (results.length == 1)
+			return results[0];
+		int lenEach = -1;
+		for (GMPE_Result result : results) {
+			if (lenEach < 0)
+				lenEach = result.gms[0].length;
+			else
+				Preconditions.checkState(lenEach == result.gms[0].length);
+		}
+		ScalarGroundMotion[][] gms = new ScalarGroundMotion[results[0].gms.length][lenEach*results.length];
+		for (int i=0; i<results.length; i++)
+			for (int p=0; p<gms.length; p++)
+				System.arraycopy(results[i].gms[p], 0, gms[p], i*lenEach, lenEach);
+		return new GMPE_Result(gms);
+	}
+	
+	private static class GMPE_Result {
+		final ScalarGroundMotion[][] gms;
+		final double[] logMedian;
+		final double[] medianPhi;
+		final double[] medianTau;
+		final double[] medianTotal;
+		
+		public GMPE_Result(ScalarGroundMotion[][] gms) {
+			this.gms = gms;
+			logMedian = new double[gms.length];
+			medianPhi = new double[gms.length];
+			medianTau = new double[gms.length];
+			medianTotal = new double[gms.length];
+			for (int p=0; p<gms.length; p++) {
+				double[] medians = new double[gms[p].length];
+				double[] phis = new double[gms[p].length];
+				double[] taus = new double[gms[p].length];
+				double[] totals = new double[gms[p].length];
+				for (int i=0; i<gms[p].length; i++) {
+					ScalarGroundMotion gm = gms[p][i];
+					medians[i] = gm.mean();
+					phis[i] = gm.phi();
+					taus[i] = gm.tau();
+					totals[i] = gm.stdDev();
+				}
+				logMedian[p] = DataUtils.median(medians);
+				medianPhi[p] = DataUtils.median(phis);
+				medianTau[p] = DataUtils.median(taus);
+				medianTotal[p] = DataUtils.median(totals);
+			}
+		}
+	}
+	
+	private GMPE_Result calcGMPE(GMPE_GroupingKey key) throws ExecutionException {
+		List<Integer> eventIDs = magEventIDs.size() == 1 ?
+				magEventIDs.values().iterator().next() : magEventIDs.get(key.magnitude);
+		int numSourceAz = sourceAzimuths.size();
+		if (sites.size() > 1 && key.site == null) {
+			// do for all sites
+			GMPE_Result[] results = new GMPE_Result[sites.size()];
+			for (int i=0; i<sites.size(); i++) {
+				Site site = sites.get(i);
+				GMPE_GroupingKey newKey = new GMPE_GroupingKey(key.gmpe, site, key.magnitude, key.distance, key.periods);
+				results[i] = gmpeResultCache.get(newKey);
+			}
+			return packGMs(results);
+		}
+		Site site = key.site;
+		if (site == null) {
+			Preconditions.checkState(sites.size() == 1);
+			site = sites.get(0);
+		}
+		NGAW2_WrapperFullParam gmpe = key.gmpe;
+		gmpe.setSite(site);
+		
+		DistanceJBParameter rJBParam = (DistanceJBParameter) gmpe.getParameter(DistanceJBParameter.NAME);
+		DistanceRupParameter rRupParam = (DistanceRupParameter) gmpe.getParameter(DistanceRupParameter.NAME);
+		DistanceX_Parameter rXParam = (DistanceX_Parameter) gmpe.getParameter(DistanceX_Parameter.NAME);
+		
+		ScalarGroundMotion[][] result = new ScalarGroundMotion[key.periods.length][eventIDs.size()*numSourceAz];
+		
+		gmpe.setIntensityMeasure(SA_Param.NAME);
+		SA_Param saParam = (SA_Param) gmpe.getIntensityMeasure();
+		int ind = 0;
+		
+		for (int eventID : eventIDs) {
+			RSQSimEvent event = getEvent(eventID);
+			EqkRupture rup = gmpeEventCache.get(event);
+			gmpe.setEqkRupture(rup);
+			
+			double rJB = key.distance;
+			double zTOR = rup.getRuptureSurface().getAveRupTopDepth();
+			double rRup = zTOR == 0d ? rJB : Math.sqrt(zTOR*zTOR + rJB*rJB);
+			
+			// override distances
+			rJBParam.setValueIgnoreWarning(rJB);
+			rRupParam.setValueIgnoreWarning(rRup);
+			
+			for (int i=0; i<numSourceAz; i++) {
+				double sourceAz = sourceAzimuths.get(i).doubleValue();
+				double rX = rJB * Math.sin(Math.toRadians(sourceAz));
+				if (sourceAz > 180)
+					rX = -rX;
+				rXParam.setValueIgnoreWarning(rX);
+				
+				for (int p=0; p<key.periods.length; p++) {
+					SA_Param.setPeriodInSA_Param(saParam, key.periods[p]);
+					result[p][ind] = gmpe.getGroundMotion();
+				}
+				ind++;
+			}
+		}
+		return new GMPE_Result(result);
+	}
 	
 	private void plotPeriodDependentStdDevs(File resourcesDir, String prefix, String title, double[] periods,
 			List<DiscretizedFunc> siteStdDevFuncs, DiscretizedFunc totalStdDevFunc) throws IOException {
@@ -1167,7 +1553,104 @@ public abstract class RotatedRupVariabilityPageGen {
 		return line;
 	}
 	
-	private File[] plotMagDistCheckerboard(File resourcesDir, String prefix, VariabilityType type, Site site, double[] periods)
+	private File[][] plotScatter(File resourcesDir, String prefix, double[] periods, VariabilityResult result,
+			ScatterDisaggQuantity scatterQuantity) throws IOException {
+		File[][] ret = new File[3][periods.length];
+		
+		double[] xs = new double[result.commonRotationSpecs.length];
+		for (int i=0; i<xs.length; i++)
+			xs[i] = scatterQuantity.getValue(this, result.commonRotationSpecs[i]);
+
+		String[] yLabels = { "Standard Deviation", "Residual", "Median SA" };
+		String[] yPrefixes = { "std_dev", "residual", "median" };
+		
+		for (int yI=0; yI<yLabels.length; yI++) {
+			for (int p=0; p<periods.length; p++) {
+				DefaultXY_DataSet xy = new DefaultXY_DataSet();
+				
+				for (int i=0; i<xs.length; i++) {
+					if (yI == 0)
+						xy.set(xs[i], result.stdDevs[p].stdDevs[i]);
+					else if (yI == 1)
+						xy.set(xs[i], result.logVals[p].residuals[i]);
+					else
+						xy.set(xs[i], Math.exp(result.logVals[p].rawVals[i]));
+				}
+				
+				List<XY_DataSet> funcs = new ArrayList<>();
+				List<PlotCurveCharacterstics> chars = new ArrayList<>();
+				
+				funcs.add(xy);
+				chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
+				
+				String periodStr = optionalDigitDF.format(periods[p])+"s";
+				
+				PlotSpec spec = new PlotSpec(funcs, chars, periodStr+" "+scatterQuantity.name+" Scatter", scatterQuantity.name, yLabels[yI]);
+				spec.setLegendVisible(false);
+
+				PlotPreferences plotPrefs = PlotPreferences.getDefault();
+				plotPrefs.setTickLabelFontSize(18);
+				plotPrefs.setAxisLabelFontSize(20);
+				plotPrefs.setPlotLabelFontSize(21);
+				plotPrefs.setBackgroundColor(Color.WHITE);
+
+				HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+				
+				Range xRange = null;
+				Range yRange = null;
+
+				gp.drawGraphPanel(spec, false, yI == 2, xRange, yRange);
+				gp.getChartPanel().setSize(800, 450);
+				String myPrefix = prefix+"_"+scatterQuantity.prefix+"_"+periodStr+"_"+yPrefixes[yI];
+				ret[yI][p] = new File(resourcesDir, myPrefix+".png");
+				gp.saveAsPNG(ret[yI][p].getAbsolutePath());
+			}
+		}
+		
+		return ret;
+	}
+	
+	private enum MagDistPlotType {
+		SIM_STD_DEV("Simulated", "sim"),
+		GMPE_STD_DEV("GMPE", "gmpe"),
+		SIM_GMPE_STD_DEV_DIFF("Simulated - GMPE", "sim_gmpe_diff"),
+		SIM_MEDIAN("Sim Median SA", "sim_median");
+		
+		private String name;
+		private String prefix;
+
+		private MagDistPlotType(String name, String prefix) {
+			this.name = name;
+			this.prefix = prefix;
+		}
+		
+		public String getName() {
+			return name;
+		}
+		
+		public String getPrefix() {
+			return prefix;
+		}
+		
+		private boolean hasGMPE() {
+			return this == MagDistPlotType.GMPE_STD_DEV || this == MagDistPlotType.SIM_GMPE_STD_DEV_DIFF;
+		}
+		
+		private boolean hasMedian() {
+			return this == MagDistPlotType.SIM_MEDIAN;
+		}
+		
+		private boolean hasStdDev() {
+			return this == MagDistPlotType.SIM_STD_DEV || this == MagDistPlotType.GMPE_STD_DEV
+					|| this == MagDistPlotType.SIM_GMPE_STD_DEV_DIFF;
+		}
+		
+		private boolean isDiff() {
+			return this == MagDistPlotType.SIM_GMPE_STD_DEV_DIFF;
+		}
+	}
+	
+	private Map<MagDistPlotType, File[]> plotMagDistCheckerboard(File resourcesDir, String prefix, VariabilityType type, Site site, double[] periods)
 			throws IOException {
 		List<Double> magnitudes = new ArrayList<>(magConfigs.keySet());
 		Collections.sort(magnitudes);
@@ -1178,22 +1661,42 @@ public abstract class RotatedRupVariabilityPageGen {
 		double deltaDist = distances.get(1) - distances.get(0);
 		double minDist = distances.get(0);
 		
-		EvenlyDiscrXYZ_DataSet[] xyzs = new EvenlyDiscrXYZ_DataSet[periods.length];
-		for (int p=0; p<periods.length; p++)
-			xyzs[p] = new EvenlyDiscrXYZ_DataSet(distances.size(), magnitudes.size(), minDist, minMag, deltaDist, deltaMag);
+		Map<MagDistPlotType, EvenlyDiscrXYZ_DataSet[]> xyzsMap = new HashMap<>();
+		EvenlyDiscrXYZ_DataSet refXYZ = null;
+		
+		MagDistPlotType[] allTypes;
+		if (site == null)
+			allTypes = MagDistPlotType.values();
+		else
+			allTypes = new MagDistPlotType[] { MagDistPlotType.SIM_STD_DEV };
+		
+		for (MagDistPlotType plotType : allTypes) {
+			if (plotType.hasGMPE()) {
+				if (gmpes == null)
+					continue;
+				if (plotType.hasStdDev() && type.gmpeStdDevType == null)
+					continue;
+			}
+			EvenlyDiscrXYZ_DataSet[] xyzs = new EvenlyDiscrXYZ_DataSet[periods.length];
+			for (int p=0; p<periods.length; p++)
+				xyzs[p] = new EvenlyDiscrXYZ_DataSet(distances.size(), magnitudes.size(), minDist, minMag, deltaDist, deltaMag);
+			xyzsMap.put(plotType, xyzs);
+			if (refXYZ == null)
+				refXYZ = xyzs[0];
+		}
 		
 		for (int xInd=0; xInd<distances.size(); xInd++) {
 			float distance = distances.get(xInd);
-			double x = xyzs[0].getX(xInd);
+			double x = refXYZ.getX(xInd);
 			Preconditions.checkState(distance == (float)x, "Expected distance bin %s to be %s, have %s", xInd, distance, x);
 			for (int yInd=0; yInd<magnitudes.size(); yInd++) {
 				double magnitude = magnitudes.get(yInd);
-				double y = xyzs[0].getY(yInd);
+				double y = refXYZ.getY(yInd);
 				Preconditions.checkState((float)magnitude == (float)y, "Expected mag bin %s to be %s, have %s", yInd, magnitude, y);
-				StdDevSetKey key = new StdDevSetKey(type, magnitude, distance, site, periods);
-				StdDevSet[] stdDevs;
+				VarGroupingKey key = new VarGroupingKey(type, magnitude, distance, site, periods);
+				VariabilityResult varResult;
 				try {
-					stdDevs = stdDevCache.get(key);
+					varResult = varResultCache.get(key);
 				} catch (ExecutionException e) {
 					if (e.getCause() instanceof IOException)
 						throw (IOException)e.getCause();
@@ -1201,8 +1704,53 @@ public abstract class RotatedRupVariabilityPageGen {
 						throw (RuntimeException)e.getCause();
 					throw ExceptionUtils.asRuntimeException(e);
 				}
-				for (int p=0; p<periods.length; p++) {
-					xyzs[p].set(xInd, yInd, stdDevs[p].total);
+				LogValueSet[] logVals = varResult.logVals;
+				StdDevSet[] stdDevs = varResult.stdDevs;
+				GMPE_Result gmpeResult = null;
+				if (gmpes != null) {
+					GMPE_Result[] gmpeResults = new GMPE_Result[gmpes.length];
+					for (int g=0; g<gmpes.length; g++) {
+						try {
+							gmpeResults[g] = gmpeResultCache.get(
+									new GMPE_GroupingKey(gmpes[g], site, magnitude, distance, periods));
+						} catch (ExecutionException e) {
+							throw ExceptionUtils.asRuntimeException(e);
+						}
+					}
+					gmpeResult = packGMs(gmpeResults);
+				}
+				for (MagDistPlotType plotType : xyzsMap.keySet()) {
+					EvenlyDiscrXYZ_DataSet[] xyzs = xyzsMap.get(plotType);
+					for (int p=0; p<periods.length; p++) {
+						double gmpeSD = -1;
+						if (gmpeResult != null && type.gmpeStdDevType != null) {
+							if (type.gmpeStdDevType == GMPE_Var.PHI)
+								gmpeSD = gmpeResult.medianPhi[p];
+							else if (type.gmpeStdDevType == GMPE_Var.TAU)
+								gmpeSD = gmpeResult.medianTau[p];
+							else
+								gmpeSD = gmpeResult.medianTotal[p];
+						}
+						double val;
+						switch (plotType) {
+						case SIM_STD_DEV:
+							val = stdDevs[p].total;
+							break;
+						case GMPE_STD_DEV:
+							val = gmpeSD;
+							break;
+						case SIM_GMPE_STD_DEV_DIFF:
+							val = stdDevs[p].total - gmpeSD;
+							break;
+						case SIM_MEDIAN:
+							val = Math.log10(Math.exp(logVals[p].median));
+							break;
+
+						default:
+							throw new IllegalStateException("unknown: "+plotType);
+						}
+						xyzs[p].set(xInd, yInd, val);
+					}
 				}
 			}
 		}
@@ -1213,35 +1761,72 @@ public abstract class RotatedRupVariabilityPageGen {
 		plotPrefs.setPlotLabelFontSize(21);
 		plotPrefs.setBackgroundColor(Color.WHITE);
 		
-		File[] ret = new File[periods.length];
+		Map<MagDistPlotType, File[]> retMap = new HashMap<>();
 		
-		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, 1d);
-		
-		for (int p=0; p<periods.length; p++) {
-			String periodStr;
-			if (periods[p] == Math.round(periods[p]))
-				periodStr = (int)periods[p]+"s";
-			else
-				periodStr = (float)periods[p]+"s";
-			String title = periodStr+" "+type.name+" ("+type.symbol+")";
-			String myPrefix = prefix+"_"+periodStr;
-			XYZPlotSpec xyzSpec = new XYZPlotSpec(xyzs[p], cpt, title, "DistanceJB", "Magnitude", type.symbol);
-			XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
-			xyzGP.drawPlot(xyzSpec, false, false, new Range(minDist-0.5*deltaDist, distances.get(distances.size()-1)+0.5*deltaDist),
-					new Range(minMag-0.5*deltaMag, magnitudes.get(magnitudes.size()-1)+0.5*deltaMag));
-			xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
-			xyzGP.getChartPanel().setSize(700, 550);
-			File file = new File(resourcesDir, myPrefix+".png");
-			xyzGP.saveAsPNG(file.getAbsolutePath());
-			ret[p] = file;
+		for (MagDistPlotType plotType : xyzsMap.keySet()) {
+			File[] ret = new File[periods.length];
+			retMap.put(plotType, ret);
+			
+			CPT cpt;
+			switch (plotType) {
+			case SIM_STD_DEV:
+				cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, 1d);
+				break;
+			case GMPE_STD_DEV:
+				cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, 1d);
+				break;
+			case SIM_GMPE_STD_DEV_DIFF:
+				cpt = GMT_CPT_Files.GMT_POLAR.instance().rescale(-0.5, 0.5);
+				break;
+			case SIM_MEDIAN:
+				cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(-4, 0d);
+				break;
+
+			default:
+				throw new IllegalStateException("unknown: "+plotType);
+			}
+			
+			EvenlyDiscrXYZ_DataSet[] xyzs = xyzsMap.get(plotType);
+			
+			for (int p=0; p<periods.length; p++) {
+				String periodStr;
+				if (periods[p] == Math.round(periods[p]))
+					periodStr = (int)periods[p]+"s";
+				else
+					periodStr = (float)periods[p]+"s";
+				String title = periodStr+" "+type.name+" ("+type.symbol+"), "+plotType.getName();
+				String myPrefix = prefix+"_"+periodStr+"_"+plotType.getPrefix();
+				String zLabel;
+				if (plotType.hasMedian())
+					zLabel = "Log10 "+plotType.getName();
+				else
+					zLabel = plotType.getName()+" "+type.symbol;
+				XYZPlotSpec xyzSpec = new XYZPlotSpec(xyzs[p], cpt, title, "DistanceJB", "Magnitude", zLabel);
+				XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
+				xyzGP.drawPlot(xyzSpec, false, false, new Range(minDist-0.5*deltaDist, distances.get(distances.size()-1)+0.5*deltaDist),
+						new Range(minMag-0.5*deltaMag, magnitudes.get(magnitudes.size()-1)+0.5*deltaMag));
+				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
+				xyzGP.getChartPanel().setSize(700, 550);
+				File file = new File(resourcesDir, myPrefix+".png");
+				xyzGP.saveAsPNG(file.getAbsolutePath());
+				ret[p] = file;
+			}
 		}
-		return ret;
+		return retMap;
 	}
 	
 	private void plotExample(File resourcesDir, String prefix, double distance, List<Quantity> variedQuantities)
 			throws IOException {
 		List<Site> sites = new ArrayList<>();
-		sites.add(exampleSite);
+		
+		Double minMag = null;
+		if (magEventIDs.size() > 1) {
+			minMag = Double.POSITIVE_INFINITY;
+			for (Double mag : magEventIDs.keySet())
+				minMag = Double.min(minMag, mag);
+		}
+		RSQSimEvent exampleRupture = getEvent(magEventIDs.get(minMag).get(0));
+		sites.add(this.sites.get(0));
 		List<RSQSimEvent> ruptures = new ArrayList<>();
 		ruptures.add(exampleRupture);
 		int numSourceAz = variedQuantities.contains(Quantity.SOURCE_AZIMUTH) ? numExampleRotations : 1;

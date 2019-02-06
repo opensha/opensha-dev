@@ -467,6 +467,7 @@ public class RotatedRupVariabilityConfig {
 	
 	private static final double trans_p_diff_thresh = 0.5;
 	private static final double trans_abs_diff_thresh = 0.2;
+	private static final int min_translations = 2;
 	private static final int max_translations = 100;
 	
 	private RSQSimEvent loadRupture(RotationSpec rotation) {
@@ -548,7 +549,7 @@ public class RotatedRupVariabilityConfig {
 //					System.out.println("Min dist: "+RuptureRotationUtils.calcMinDist(rotation.site.getLocation(), translated));
 //				}
 				
-				// now adjust as necessary to account for nonplanar ruptures
+				// now adjust as necessary to account for nonplanar and buried ruptures
 				
 				int numTrans = 0;
 				double minDist = Double.NaN, pDiff = Double.NaN, absDiff = Double.NaN;
@@ -565,7 +566,11 @@ public class RotatedRupVariabilityConfig {
 					minDist = Double.POSITIVE_INFINITY;
 					for (SimulatorElement elem : translated.getAllElements()) {
 						for (Vertex v : elem.getVertices()) {
-							double elemDist = LocationUtils.horzDistanceFast(rotation.site.getLocation(), v);
+							double elemDist;
+							if (BBP_PartBValidationConfig.DIST_JB)
+								elemDist = LocationUtils.horzDistanceFast(rotation.site.getLocation(), v);
+							else
+								elemDist = LocationUtils.linearDistanceFast(rotation.site.getLocation(), v);
 							if (elemDist < minDist) {
 								minDist = elemDist;
 								closest = v;
@@ -576,13 +581,21 @@ public class RotatedRupVariabilityConfig {
 					pDiff = DataUtils.getPercentDiff(minDist, rotation.distance);
 					absDiff = Math.abs(minDist - rotation.distance);
 					if (D) System.out.println("Closest is "+minDist+" away: "+closest);
-					if (numTrans > 0 && (pDiff < trans_p_diff_thresh || absDiff < trans_abs_diff_thresh)
+					if (numTrans >= min_translations && (pDiff < trans_p_diff_thresh || absDiff < trans_abs_diff_thresh)
 							|| numTrans == max_translations)
 						break;
 					
 					siteToRup = LocationUtils.vector(rotation.site.getLocation(), closest);
 					if (D) System.out.println("Vector from site to rupture: "+siteToRup);
-					origTransDist = siteToRup.getHorzDistance()-rotation.distance;
+					if (BBP_PartBValidationConfig.DIST_JB) {
+						origTransDist = siteToRup.getHorzDistance()-rotation.distance;
+					} else {
+						// find rJB for the desired rRup
+						double zClose = closest.getDepth();
+						double targetRjb = Math.sqrt(rotation.distance*rotation.distance - zClose*zClose);
+						if (D) System.out.println("Target rJB: "+targetRjb+" for clozest with z="+zClose);
+						origTransDist = siteToRup.getHorzDistance()-targetRjb;
+					}
 					if (D) System.out.println("Orig trans dist: "+origTransDist);
 					// only move north/south
 					rupAngle = siteToRup.getAzimuth();
@@ -619,7 +632,8 @@ public class RotatedRupVariabilityConfig {
 						siteToRup, transVector, closest);
 				rotationCache.put(transSpec, translated);
 			} else {
-				double minDist = RuptureRotationUtils.calcMinDist(rotation.site.getLocation(), translated);
+				double minDist = RuptureRotationUtils.calcMinDist(rotation.site.getLocation(), translated,
+						BBP_PartBValidationConfig.DIST_JB);
 				double pDiff = DataUtils.getPercentDiff(minDist, rotation.distance);
 				double absDiff = Math.abs(minDist - rotation.distance);
 				Preconditions.checkState(pDiff < trans_p_diff_thresh || absDiff < trans_abs_diff_thresh,
@@ -751,30 +765,30 @@ public class RotatedRupVariabilityConfig {
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 		int skipYears = 5000;
-		int maxRuptures = 100;
+		int maxRuptures = 10;
 		boolean buildAllRuptures = false;
 		boolean plotExamples = true;
 		
 		// to debug an event
-//		RSQSimEvent debugEvent = catalog.loader().byID(970307);
-//		RSQSimEvent debugEvent = catalog.loader().byID(1992428);
-//		RSQSimEvent debugEvent = catalog.loader().byID(7122655);
-		RSQSimEvent debugEvent = catalog.loader().byID(5802150);
-		List<RSQSimEvent> debugEvents = new ArrayList<>();
-		debugEvents.add(debugEvent);
-		Site debugSite = new Site(new Location(34.0192, -118.286));
-		List<Site> debugSites = new ArrayList<>();
-		debugSites.add(debugSite);
-		RotatedRupVariabilityConfig debugConfig = new RotatedRupVariabilityConfig(catalog, debugSites, debugEvents,
-				new double[] {20}, 36, 1);
-		for (RotationSpec rotation : debugConfig.getRotations())
-			debugConfig.getRotatedRupture(rotation);
-		File debugOut = new File("/tmp/event_"+debugEvent.getID());
-		Preconditions.checkState(debugOut.exists() || debugOut.mkdir());
-		debugConfig.plotRotations(debugOut, "rotation_test", debugConfig.getRotations(), true);
-		System.exit(0);
+////		RSQSimEvent debugEvent = catalog.loader().byID(970307);
+////		RSQSimEvent debugEvent = catalog.loader().byID(1992428);
+////		RSQSimEvent debugEvent = catalog.loader().byID(7122655);
+//		RSQSimEvent debugEvent = catalog.loader().byID(5802150);
+//		List<RSQSimEvent> debugEvents = new ArrayList<>();
+//		debugEvents.add(debugEvent);
+//		Site debugSite = new Site(new Location(34.0192, -118.286));
+//		List<Site> debugSites = new ArrayList<>();
+//		debugSites.add(debugSite);
+//		RotatedRupVariabilityConfig debugConfig = new RotatedRupVariabilityConfig(catalog, debugSites, debugEvents,
+//				new double[] {20}, 36, 1);
+//		for (RotationSpec rotation : debugConfig.getRotations())
+//			debugConfig.getRotatedRupture(rotation);
+//		File debugOut = new File("/tmp/event_"+debugEvent.getID());
+//		Preconditions.checkState(debugOut.exists() || debugOut.mkdir());
+//		debugConfig.plotRotations(debugOut, "rotation_test", debugConfig.getRotations(), true);
+//		System.exit(0);
 		
 //		File bbpDir = new File("/data/kevin/bbp/parallel/2019_01_17-rundir2585-rotatedRups-m6p6_vert_ss_surface-50.0km"
 //				+ "-36srcAz-4siteSrcAz-100rups-skipYears5000-noHF-csLASites");
@@ -799,7 +813,7 @@ public class RotatedRupVariabilityConfig {
 		if (bbpDir == null) {
 			List<BBP_Site> bbpSites = RSQSimBBP_Config.getCyberShakeInitialLASites();
 			
-			double[] distances = BBP_PartBValidationConfig.DISTANCES;
+			double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
 			int numSourceAz = 10;
 			int numSiteToSourceAz = 10;
 			
@@ -866,7 +880,7 @@ public class RotatedRupVariabilityConfig {
 				sites.add(new BBP_Site(site.getName(), site.getLocation(), RSQSimBBP_Config.VM.getVs30(),
 						RSQSimBBP_Config.SITE_LO_PASS_FREQ, RSQSimBBP_Config.SITE_HI_PASS_FREQ));
 				
-				double dist = RuptureRotationUtils.calcMinDist(site.getLocation(), rupture);
+				double dist = RuptureRotationUtils.calcMinDist(site.getLocation(), rupture, BBP_PartBValidationConfig.DIST_JB);
 				System.out.println("Distance: "+dist);
 				
 				File outputDir = new File(debugDir, rotation.getPrefix());
