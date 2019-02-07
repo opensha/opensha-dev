@@ -24,7 +24,7 @@ public class SimulationHazardCurveCalc<E> {
 	
 	private DiscretizedFunc xVals;
 	
-	private static DiscretizedFunc getDefaultHazardCurve(int xValMult) {
+	public static DiscretizedFunc getDefaultHazardCurve(int xValMult) {
 		ArbitrarilyDiscretizedFunc xValues = new IMT_Info().getDefaultHazardCurve(SA_Param.NAME);
 		if (xValMult > 0) {
 			ArbitrarilyDiscretizedFunc newXValues = new ArbitrarilyDiscretizedFunc();
