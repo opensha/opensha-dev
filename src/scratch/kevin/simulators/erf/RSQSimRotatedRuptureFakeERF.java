@@ -13,6 +13,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -162,8 +163,52 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		@Override
 		public RSQSimProbEqkRup getRupture(int nRupture) {
 			RSQSimEvent rotated = getEvent(nRupture);
-			return new RSQSimProbEqkRup(rotated.getMagnitude(), Double.NaN, Double.NaN, RSQSimUtils.getHypocenter(rotated),
+			Location hypo = RSQSimUtils.getHypocenter(rotated);
+			RSQSimProbEqkRup rupture = new RSQSimProbEqkRup(rotated.getMagnitude(), Double.NaN, Double.NaN, hypo,
 					eventID, rotated.getTime(), null, rotated.getAllElements());
+			rupture.setRuptureSurface(new FakeModDistanceSurface(hypo, site, distance));
+			return rupture;
+		}
+		
+	}
+	
+	/**
+	 * Simple surface implementation hardcoded to return the given rRup distance for the given site,
+	 * and positive infinity otherwise. Extends PointSurface for brevity.
+	 * @author kevin
+	 *
+	 */
+	private class FakeModDistanceSurface extends PointSurface {
+		
+		private Site site;
+		private double distance;
+
+		public FakeModDistanceSurface(Location hypocenter, Site site, double distance) {
+			super(hypocenter);
+			this.site = site;
+			this.distance = distance;
+		}
+
+		@Override
+		public double getDistanceRup(Location siteLoc) {
+			if (siteLoc.equals(site.getLocation()))
+				return distance;
+			return Double.POSITIVE_INFINITY;
+		}
+
+		@Override
+		public double getDistanceJB(Location siteLoc) {
+			throw new UnsupportedOperationException("Not applicable");
+		}
+
+		@Override
+		public double getDistanceSeis(Location siteLoc) {
+			throw new UnsupportedOperationException("Not applicable");
+		}
+
+		@Override
+		public double getDistanceX(Location siteLoc) {
+			throw new UnsupportedOperationException("Not applicable");
 		}
 		
 	}

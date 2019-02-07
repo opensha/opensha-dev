@@ -264,7 +264,7 @@ public abstract class RotatedRupVariabilityPageGen {
 //				true, true, Quantity.SITE, Quantity.DISTANCE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH),
 		BETWEEN_EVENTS("Between-events", "between_events", "τ", "&tau;", al_atik,
 				true, true, GMPE_Var.TAU, null,
-				Quantity.SITE, Quantity.DISTANCE),
+				Quantity.SITE, Quantity.DISTANCE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH),
 		SITE_TO_SITE("Site-to-site", "site_to_site", "φ_s2s", "&phi;<sub>S2S</sub>", al_atik,
 				false, true, null, null,
 				Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH);
@@ -487,6 +487,9 @@ public abstract class RotatedRupVariabilityPageGen {
 		
 		List<String> lines = new LinkedList<>();
 		
+		String distName = BBP_PartBValidationConfig.DIST_JB ? "Joyner-Boore distance" : "3-dimensional distance";
+		String distSymbol = BBP_PartBValidationConfig.DIST_JB ? "Rjb" : "Rrup";
+		
 		lines.add("# "+catalog.getName()+" Rotated Rupture Variability, "+getScenarioShortName());
 		lines.add("");
 		lines.add("This exercise uses translations and rotations to estimate ground motion variability from different "
@@ -494,11 +497,11 @@ public abstract class RotatedRupVariabilityPageGen {
 				+ getScenarioName()+"). Each rupture is then reoriented such that its strike (following the Aki & Richards "
 				+ "1980 convention) is 0 degrees (due North, dipping to the right for normal or reverse ruptures). For each site, "
 				+ "ruptures are translated such that their scalar seismic moment centroid is directly North of the site, and their "
-				+ "Joyner-Boore distance (rJB) is as specified (we consider "+distances.size()+" distance[s] here).");
+				+ distName+" ("+distSymbol+") is as specified (we consider "+distances.size()+" distance[s] here).");
 		lines.add("");
 		lines.add("We then  perform various rotations. We rotate the rupture in place around its centroid, holding the site-to-source "
-				+ "centroid path and rJB constant (henceforth '"+Quantity.SOURCE_AZIMUTH.getName()+"'). We also rotate ruptures around the site, "
-				+ "holding rJB and source orientation relative to the site constant but sampling different various paths (henceforth "
+				+ "centroid path and "+distSymbol+" constant (henceforth '"+Quantity.SOURCE_AZIMUTH.getName()+"'). We also rotate ruptures around the site, "
+				+ "holding "+distSymbol+" and source orientation relative to the site constant but sampling different various paths (henceforth "
 				+ "'"+Quantity.SITE_TO_SOURTH_AZIMUTH.getName()+"'). We do this for each unique combination of "+Quantity.SOURCE_AZIMUTH+", "
 				+ Quantity.SITE_TO_SOURTH_AZIMUTH.getName()+", "+Quantity.DISTANCE.getName()+", "+Quantity.SITE.getName()+", and "
 				+ Quantity.EVENT_ID.getName()+".");
@@ -1434,9 +1437,15 @@ public abstract class RotatedRupVariabilityPageGen {
 			EqkRupture rup = gmpeEventCache.get(event);
 			gmpe.setEqkRupture(rup);
 			
-			double rJB = key.distance;
 			double zTOR = rup.getRuptureSurface().getAveRupTopDepth();
-			double rRup = zTOR == 0d ? rJB : Math.sqrt(zTOR*zTOR + rJB*rJB);
+			double rRup, rJB;
+			if (BBP_PartBValidationConfig.DIST_JB) {
+				rJB = key.distance;
+				rRup = zTOR == 0d ? rJB : Math.sqrt(zTOR*zTOR + rJB*rJB);
+			} else {
+				rRup = key.distance;
+				rJB = zTOR == 0d ? rRup : Math.sqrt(rRup*rRup - zTOR*zTOR);
+			}
 			
 			// override distances
 			rJBParam.setValueIgnoreWarning(rJB);
@@ -1801,7 +1810,8 @@ public abstract class RotatedRupVariabilityPageGen {
 					zLabel = "Log10 "+plotType.getName();
 				else
 					zLabel = plotType.getName()+" "+type.symbol;
-				XYZPlotSpec xyzSpec = new XYZPlotSpec(xyzs[p], cpt, title, "DistanceJB", "Magnitude", zLabel);
+				String xAxisLabel = BBP_PartBValidationConfig.DIST_JB ? "DistanceJB" : "Distance";
+				XYZPlotSpec xyzSpec = new XYZPlotSpec(xyzs[p], cpt, title, xAxisLabel, "Magnitude", zLabel);
 				XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
 				xyzGP.drawPlot(xyzSpec, false, false, new Range(minDist-0.5*deltaDist, distances.get(distances.size()-1)+0.5*deltaDist),
 						new Range(minMag-0.5*deltaMag, magnitudes.get(magnitudes.size()-1)+0.5*deltaMag));

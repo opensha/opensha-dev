@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -204,11 +205,10 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		if (catalogDirName.startsWith("JG_"))
 			// I sometimes modify Jacqui's directory names
 			catalogDirName = catalogDirName.substring(3);
-		File bbpDir = null;
-		File bbpZipFile = null;
 		VelocityModel vm = VelocityModel.LA_BASIN;
 		File[] allBBPDirs = bbpParallelDir.listFiles();
 		Arrays.sort(allBBPDirs, new FileNameComparator());
+		List<File> matchingZipFiles = new ArrayList<>();
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-rotatedRupsMagDist-")) {
@@ -216,20 +216,26 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 				if (!zipFile.exists())
 					zipFile = new File(dir, "results_rotD.zip");
 				if (zipFile.exists()) {
-					bbpDir = dir;
-					bbpZipFile = zipFile;
 					if (name.contains("-vm")) {
 						String vmStr = name.substring(name.indexOf("-vm")+3);
 						if (vmStr.contains("-"))
 							vmStr = vmStr.substring(0, vmStr.indexOf("-"));
+						VelocityModel newVM = VelocityModel.valueOf(vmStr);
+						if (newVM != vm && !matchingZipFiles.isEmpty()) {
+							System.out.println("We switched VMs, only using most recent");
+							matchingZipFiles.clear();
+						}
 						vm = VelocityModel.valueOf(vmStr);
 					}
+					matchingZipFiles.add(zipFile);
 				}
 			}
 		}
-		Preconditions.checkNotNull(bbpDir);
-		System.out.println("Located ref BBP dir: "+bbpDir.getAbsolutePath());
-		System.out.println("\tInput file: "+bbpZipFile.getName());
+		Preconditions.checkState(!matchingZipFiles.isEmpty());
+		for (File zipFile : matchingZipFiles) {
+			System.out.println("Located ref BBP dir: "+zipFile.getParentFile().getAbsolutePath());
+			System.out.println("\tInput file: "+zipFile.getName());
+		}
 		
 		List<BBP_Site> bbpSites = RSQSimBBP_Config.getStandardSites().subList(0, 1);
 		
@@ -242,35 +248,43 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		
 		Map<RuptureType, RotatedRupVariabilityMagDistPageGen> pageGensMap = new HashMap<>();
 		HashSet<Integer> eventIDsSet = new HashSet<>();
-		for (RuptureType rupType : RuptureType.values()) {
-			Map<Double, RotatedRupVariabilityConfig> configsMap = new HashMap<>();
-			Map<Double, SimulationRotDProvider<RotationSpec>> loadersMap = new HashMap<>();
-			
-			for (File file : bbpDir.listFiles()) {
-				String name = file.getName();
-				if (!name.startsWith("rotation_config") || !name.contains(rupType.getPrefix()) || !name.endsWith(".csv") || !name.contains("_m"))
+		// reverse, latest first
+		Collections.reverse(matchingZipFiles);
+		for (File bbpZipFile : matchingZipFiles) {
+			File bbpDir = bbpZipFile.getParentFile();
+			System.out.println("Loading from: "+bbpDir.getName());
+			for (RuptureType rupType : RuptureType.values()) {
+				if (pageGensMap.containsKey(rupType))
 					continue;
-				String magStr = name.substring(name.indexOf("_m")+2);
-				magStr = magStr.replace('p', '.');
-				magStr = magStr.substring(0, magStr.indexOf("_"));
-				double mag = Double.parseDouble(magStr);
-				System.out.println("Located CSV for "+rupType.getName()+", M"+(float)mag+": "+name);
+				Map<Double, RotatedRupVariabilityConfig> configsMap = new HashMap<>();
+				Map<Double, SimulationRotDProvider<RotationSpec>> loadersMap = new HashMap<>();
+				
+				for (File file : bbpDir.listFiles()) {
+					String name = file.getName();
+					if (!name.startsWith("rotation_config") || !name.contains(rupType.getPrefix()) || !name.endsWith(".csv") || !name.contains("_m"))
+						continue;
+					String magStr = name.substring(name.indexOf("_m")+2);
+					magStr = magStr.replace('p', '.');
+					magStr = magStr.substring(0, magStr.indexOf("_"));
+					double mag = Double.parseDouble(magStr);
+					System.out.println("Located CSV for "+rupType.getName()+", M"+(float)mag+": "+name);
 
-				configsMap.put(mag, RotatedRupVariabilityConfig.loadCSV(catalog, file, null, sites));;
-				loadersMap.put(mag, new BBP_RotatedRupSimLoader(bbpZipFile, bbpSites, rupType.getMagPrefix(mag)));
+					configsMap.put(mag, RotatedRupVariabilityConfig.loadCSV(catalog, file, null, sites));;
+					loadersMap.put(mag, new BBP_RotatedRupSimLoader(bbpZipFile, bbpSites, rupType.getMagPrefix(mag)));
+				}
+				
+				if (configsMap.isEmpty())
+					continue;
+				
+				RotatedRupVariabilityMagDistPageGen pageGen =
+						new RotatedRupVariabilityMagDistPageGen(catalog, configsMap, loadersMap, rupType);
+				
+				pageGen.setGMPEs(refGMPEs);
+				
+				eventIDsSet.addAll(pageGen.getAllEventIDs());
+				
+				pageGensMap.put(rupType, pageGen);
 			}
-			
-			if (configsMap.isEmpty())
-				continue;
-			
-			RotatedRupVariabilityMagDistPageGen pageGen =
-					new RotatedRupVariabilityMagDistPageGen(catalog, configsMap, loadersMap, rupType);
-			
-			pageGen.setGMPEs(refGMPEs);
-			
-			eventIDsSet.addAll(pageGen.getAllEventIDs());
-			
-			pageGensMap.put(rupType, pageGen);
 		}
 		
 		Map<Integer, RSQSimEvent> eventsMap = loadEvents(catalog, eventIDsSet);
