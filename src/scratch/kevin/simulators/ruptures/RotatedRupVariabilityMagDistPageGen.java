@@ -186,18 +186,17 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 		
 		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.ASK_2014_Wrapper(), new NGAW2_Wrappers.BSSA_2014_Wrapper(),
 				new NGAW2_Wrappers.CB_2014_Wrapper(), new NGAW2_Wrappers.CY_2014_Wrapper()};
 //		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.BSSA_2014_Wrapper() };
 		
 		double[] periods = {3d, 5d, 7.5, 10d};
-		boolean doExample = true;
 		
 		double[] highlightMags = {6.5, 7d, 7.5};
-		float[] highlightDists = {20f, 40f, 80f, 160f};
+		float[] highlightDists = {20f, 60f, 120f};
 		
 		System.out.println("Catalog: "+catalog.getName());
 		// find BBP parallel dir

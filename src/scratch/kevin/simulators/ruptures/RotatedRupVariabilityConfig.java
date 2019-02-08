@@ -72,8 +72,9 @@ public class RotatedRupVariabilityConfig {
 		SITE("Site", "Unique site locations. If 3-d, each will have unique velocity profiles.", new NamedComparator()),
 		EVENT_ID("Rupture", "Unique (but similar in faulting style and magnitude) ruptures which match the "
 				+ "given scenario."),
-		DISTANCE("Joyner-Boore Distance", "Shortest horizontal distance between the site and the surface projection of "
-				+ "the rupture."),
+		DISTANCE(BBP_PartBValidationConfig.DIST_JB ? "Joyner-Boore Distance" : "Distance",
+				BBP_PartBValidationConfig.DIST_JB ? "Shortest horizontal distance between the site and the surface projection of the rupture."
+						: "3-dimensional distance between the site and the rupture surface."),
 		SOURCE_AZIMUTH("Rupture Strike", "Rupture strike conforming to the Aki & Richards (1980) convention, where dipping "
 				+ "faults dip to the right of the rupture. If path rotation is also performed, this azimuth is relative to the path."),
 		SITE_TO_SOURTH_AZIMUTH("Path", "Path from the site to the centroid of the rupture, in azimuthal degrees (0 is North)");

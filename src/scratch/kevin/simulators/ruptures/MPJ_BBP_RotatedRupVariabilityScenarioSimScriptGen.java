@@ -43,17 +43,20 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 
 		Scenario[] scenarios = Scenario.values();
 //		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE};
-		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
-//		double[] distances = { 50d };
-		int numSourceAz = 36;
+//		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
+		double[] distances = { 20d, 50d, 100d };
+		int numSourceAz = 18;
 //		int numSiteToSourceAz = 36;
-		int numSiteToSourceAz = 4;
+		int numSiteToSourceAz = 1;
 		int maxRuptures = 100;
 		
 		VelocityModel vm = RSQSimBBP_Config.VM;
 		
-		List<BBP_Site> sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
-		String stitesStr = "csLASites";
+//		List<BBP_Site> sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
+//		String stitesStr = "csLASites";
+		
+		List<BBP_Site> sites = RSQSimBBP_Config.getCyberShakeInitialLASites().subList(0, 1);
+		String stitesStr = "1site";
 		
 		System.out.println("Expected num: "+(numSourceAz*numSiteToSourceAz*distances.length*scenarios.length*maxRuptures*sites.size()));
 		
@@ -63,7 +66,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 18;
+		int nodes = 36;
 		String queue = "scec";
 		int mins = 48*60;
 		int heapSizeMB = 45*1024;
