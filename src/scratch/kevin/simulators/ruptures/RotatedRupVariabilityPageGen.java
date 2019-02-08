@@ -103,13 +103,13 @@ public abstract class RotatedRupVariabilityPageGen {
 	private LoadingCache<GMPE_GroupingKey, GMPE_Result> gmpeResultCache;
 
 	public RotatedRupVariabilityPageGen(RSQSimCatalog catalog, RotatedRupVariabilityConfig config,
-			SimulationRotDProvider<RotationSpec> prov) {
-		this(catalog, emptyMagMap(config), emptyMagMap(prov));
+			double mag, SimulationRotDProvider<RotationSpec> prov) {
+		this(catalog, emptyMagMap(mag, config), emptyMagMap(mag, prov));
 	}
 	
-	private static <T> HashMap<Double, T> emptyMagMap(T value) {
+	private static <T> HashMap<Double, T> emptyMagMap(double mag, T value) {
 		HashMap<Double, T> map = new HashMap<>();
-		map.put(null, value);
+		map.put(mag, value);
 		return map;
 	}
 
@@ -128,27 +128,18 @@ public abstract class RotatedRupVariabilityPageGen {
 		magQuantitiesTable = HashBasedTable.create();
 		
 		magEventIDs = new HashMap<>();
-		if (magConfigs.size() == 1) {
-			List<Integer> eventIDs = config0.getValues(Integer.class, Quantity.EVENT_ID);
-			magEventIDs.put(null, eventIDs);
-			maxNumEvents = eventIDs.size();
-			minNumEvents = eventIDs.size();
+		for (Double mag : magConfigs.keySet()) {
+			RotatedRupVariabilityConfig config = magConfigs.get(mag);
+			List<Integer> eventIDs = config.getValues(Integer.class, Quantity.EVENT_ID);
+			magEventIDs.put(mag, eventIDs);
+			maxNumEvents = Integer.max(maxNumEvents, eventIDs.size());
+			minNumEvents = Integer.min(minNumEvents, eventIDs.size());
+			Preconditions.checkState(sites.size() == config.getValues(Site.class, Quantity.SITE).size());
+			Preconditions.checkState(sourceAzimuths.size() == config.getValues(Float.class, Quantity.SOURCE_AZIMUTH).size());
+			Preconditions.checkState(siteSourceAzimuths.size() == config.getValues(Float.class, Quantity.SITE_TO_SOURTH_AZIMUTH).size());
+			Preconditions.checkState(distances.size() == config.getValues(Float.class, Quantity.DISTANCE).size());
 			for (Quantity quantity : Quantity.values())
-				magQuantitiesTable.put(null, quantity, config0.getQuantitiesMap().get(quantity));
-		} else {
-			for (Double mag : magConfigs.keySet()) {
-				RotatedRupVariabilityConfig config = magConfigs.get(mag);
-				List<Integer> eventIDs = config.getValues(Integer.class, Quantity.EVENT_ID);
-				magEventIDs.put(mag, eventIDs);
-				maxNumEvents = Integer.max(maxNumEvents, eventIDs.size());
-				minNumEvents = Integer.min(minNumEvents, eventIDs.size());
-				Preconditions.checkState(sites.size() == config.getValues(Site.class, Quantity.SITE).size());
-				Preconditions.checkState(sourceAzimuths.size() == config.getValues(Float.class, Quantity.SOURCE_AZIMUTH).size());
-				Preconditions.checkState(siteSourceAzimuths.size() == config.getValues(Float.class, Quantity.SITE_TO_SOURTH_AZIMUTH).size());
-				Preconditions.checkState(distances.size() == config.getValues(Float.class, Quantity.DISTANCE).size());
-				for (Quantity quantity : Quantity.values())
-					magQuantitiesTable.put(mag, quantity, config.getQuantitiesMap().get(quantity));
-			}
+				magQuantitiesTable.put(mag, quantity, config.getQuantitiesMap().get(quantity));
 		}
 		
 		CPT siteCPT = null;
@@ -641,18 +632,14 @@ public abstract class RotatedRupVariabilityPageGen {
 		lines.add("");
 		
 		List<Double> plotMags = new ArrayList<>();
-		if (magConfigs.size() == 1) {
-			plotMags.add(null);
+		if (highlightMags != null) {
+			for (double mag : highlightMags)
+				if (magConfigs.containsKey(mag))
+					plotMags.add(mag);
 		} else {
-			if (highlightMags != null) {
-				for (double mag : highlightMags)
-					if (magConfigs.containsKey(mag))
-						plotMags.add(mag);
-			} else {
-				plotMags.addAll(magConfigs.keySet());
-			}
-			Collections.sort(plotMags);
+			plotMags.addAll(magConfigs.keySet());
 		}
+		Collections.sort(plotMags);
 		List<Float> plotDists;
 		if (highlightDists == null) {
 			plotDists = distances;
@@ -775,7 +762,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				if (!computedTypes.contains(type))
 					continue;
 				table.initNewLine();
-				table.addColumn(type.name);
+				table.addColumn("["+type.name+"](#"+MarkdownUtils.getAnchorName(type.name+" Variability")+")");
 				table.addColumn(type.htmlSymbol);
 				File[] plots = magDistPlots.get(type);
 				for (File plot : plots)
@@ -898,7 +885,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			siteTotMedianStdDevs = new ArrayList<>();
 			for (int i=0; i<periods.length; i++) {
 				siteTotResidualStdDevs.add(new ArrayList<>());
-				siteTotMedianStdDevs = new ArrayList<>();
+				siteTotMedianStdDevs.add(new ArrayList<>());
 			}
 		}
 		
@@ -2025,12 +2012,9 @@ public abstract class RotatedRupVariabilityPageGen {
 			throws IOException {
 		List<Site> sites = new ArrayList<>();
 		
-		Double minMag = null;
-		if (magEventIDs.size() > 1) {
-			minMag = Double.POSITIVE_INFINITY;
-			for (Double mag : magEventIDs.keySet())
-				minMag = Double.min(minMag, mag);
-		}
+		Double minMag = Double.POSITIVE_INFINITY;
+		for (Double mag : magEventIDs.keySet())
+			minMag = Double.min(minMag, mag);
 		RSQSimEvent exampleRupture = getEvent(magEventIDs.get(minMag).get(0));
 		sites.add(this.sites.get(0));
 		List<RSQSimEvent> ruptures = new ArrayList<>();

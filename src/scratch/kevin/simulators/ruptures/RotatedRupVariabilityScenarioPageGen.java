@@ -32,7 +32,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 
 	public RotatedRupVariabilityScenarioPageGen(RSQSimCatalog catalog, Scenario scenario,
 			RotatedRupVariabilityConfig config, SimulationRotDProvider<RotationSpec> prov) {
-		super(catalog, config, prov);
+		super(catalog, config, scenario.getMagnitude(), prov);
 		this.scenario = scenario;
 	}
 
@@ -59,7 +59,6 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
 		
 		double[] periods = {3d, 5d, 7.5, 10d};
-		boolean doExample = true;
 		
 		System.out.println("Catalog: "+catalog.getName());
 		// find BBP parallel dir

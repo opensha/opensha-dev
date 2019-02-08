@@ -33,7 +33,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		int skipYears = 5000;
 
 //		RuptureType[] rupTypes = RuptureType.values();
-		RuptureType[] rupTypes = { RuptureType.NORMAL };
+		RuptureType[] rupTypes = { RuptureType.REVERSE };
 		boolean writeIndividual = true;
 		
 		VelocityModel vm = RSQSimBBP_Config.VM;
@@ -62,7 +62,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 18;
+		int nodes = 36;
 		String queue = "scec";
 		int mins = 7*24*60;
 		int heapSizeMB = 45*1024;
