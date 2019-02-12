@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.geo.Location;
 
 import com.google.common.base.Preconditions;
 
@@ -82,14 +83,19 @@ public class SubSetSimulationRotDProvider<E> implements SimulationRotDProvider<E
 	}
 
 	@Override
-	public double getMinimumCurvePlotRate() {
-		return simProv.getMinimumCurvePlotRate()*rateScalar;
+	public double getMinimumCurvePlotRate(Site site) {
+		return simProv.getMinimumCurvePlotRate(site)*rateScalar;
 	}
 
 	@Override
 	public double getMagnitude(E rupture) {
 		Preconditions.checkState(ruptures.contains(rupture));
 		return simProv.getMagnitude(rupture);
+	}
+
+	@Override
+	public Location getHypocenter(E rupture, int index) {
+		return simProv.getHypocenter(rupture, index);
 	}
 
 }

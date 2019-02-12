@@ -259,12 +259,21 @@ public class SeismogramPlotter {
 	}
 
 	public static void main(String[] args) throws IOException {
-		File rsDir = new File("/data/kevin/simulators/catalogs/bruce/rundir2585/event_srfs/event_1670183_0.05s_ADJ_VEL_bbp/");
+		File rsDir = new File("/tmp/event_46817");
 		String siteName = "USC";
 		
 		boolean accel = false;
-		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(rsDir, siteName, accel));
-		List<DiscretizedFunc[]> comps = null;
+//		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(new File(rsDir, "i18_USC_event46817_dist50.0_srcAz10.0_siteSrcAz0.0"), siteName, accel));	
+//		List<DiscretizedFunc[]> comps = new ArrayList<>();
+//		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(rsDir, "i270_USC_event46817_dist50.0_srcAz150.0_siteSrcAz0.0"), siteName, accel)));
+//		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(rsDir, "i306_USC_event46817_dist50.0_srcAz170.0_siteSrcAz0.0"), siteName, accel)));
+//		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(rsDir, "i324_USC_event46817_dist50.0_srcAz180.0_siteSrcAz0.0"), siteName, accel)));
+//		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(rsDir, "i486_USC_event46817_dist50.0_srcAz270.0_siteSrcAz0.0"), siteName, accel)));
+		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(new File(rsDir, "i362_USC_event46817_dist50.0_srcAz200.0_siteSrcAz40.0"), siteName, accel));	
+		List<DiscretizedFunc[]> comps = new ArrayList<>();
+		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(rsDir, "i364_USC_event46817_dist50.0_srcAz200.0_siteSrcAz80.0"), siteName, accel)));
+		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(rsDir, "i369_USC_event46817_dist50.0_srcAz200.0_siteSrcAz180.0"), siteName, accel)));
+		comps.add(loadBBP_Seis(findBBP_SeisFile(new File(rsDir, "i370_USC_event46817_dist50.0_srcAz200.0_siteSrcAz200.0"), siteName, accel)));
 //		
 //		File compDir = new File("/home/kevin/bbp/parallel/2017_10_04-rundir2194_long-event136704-dx1.16-noHF/results");
 //		comps = new ArrayList<>();
@@ -278,7 +287,7 @@ public class SeismogramPlotter {
 			prefix = siteName+"_acceleration_seismograms";
 		else
 			prefix = siteName+"_velocity_seismograms";
-		plotSeismograms(seis, "Event 1670183, "+siteName, accel, rsDir, prefix, false, comps);
+		plotSeismograms(seis, "Event 46817, "+siteName, accel, rsDir, prefix, false, comps);
 		
 		
 //		DiscretizedFunc[] seis = loadBBP_Seis(findBBP_SeisFile(new File("/home/kevin/bbp/bbp_data/outdata/8174257"), "TEST", accel));

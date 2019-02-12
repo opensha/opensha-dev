@@ -11,6 +11,7 @@ import java.util.zip.ZipFile;
 
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.geo.Location;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
@@ -145,13 +146,18 @@ public class LightweightBBP_CatalogSimZipLoader extends BBP_SimZipLoader impleme
 	}
 
 	@Override
-	public double getMinimumCurvePlotRate() {
+	public double getMinimumCurvePlotRate(Site site) {
 		return getAnnualRate(null);
 	}
 
 	@Override
 	public double getMagnitude(Integer rupture) {
 		return Double.NaN;
+	}
+
+	@Override
+	public Location getHypocenter(Integer rupture, int index) {
+		return null;
 	}
 
 }

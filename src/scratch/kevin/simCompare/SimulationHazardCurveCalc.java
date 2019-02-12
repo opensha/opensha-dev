@@ -24,7 +24,7 @@ public class SimulationHazardCurveCalc<E> {
 	
 	private DiscretizedFunc xVals;
 	
-	private static DiscretizedFunc getDefaultHazardCurve(int xValMult) {
+	public static DiscretizedFunc getDefaultHazardCurve(int xValMult) {
 		ArbitrarilyDiscretizedFunc xValues = new IMT_Info().getDefaultHazardCurve(SA_Param.NAME);
 		if (xValMult > 0) {
 			ArbitrarilyDiscretizedFunc newXValues = new ArbitrarilyDiscretizedFunc();
@@ -99,13 +99,14 @@ public class SimulationHazardCurveCalc<E> {
 				allRatesSame = allRatesSame && firstRate == rupRate;
 			minRate = Math.min(rupRate, minRate);
 			List<DiscretizedFunc> spectras = simProv.getRotD50s(site, rupture);
-			rupRate /= spectras.size();
-			for (DiscretizedFunc spectra : spectras) {
+			for (int j=0; j<spectras.size(); j++) {
+				DiscretizedFunc spectra = spectras.get(j);
+				double simRate = simProv.getIndividualSimulationRate(rupture, rupRate, j, spectras.size());
 				double rd50 = spectra.getInterpolatedY(period);
 				for (int i=0; i<curve.size(); i++) {
 					if (curve.getX(i) <= rd50) {
 						numExceed[i]++;
-						curve.set(i, curve.getY(i)+rupRate);
+						curve.set(i, curve.getY(i)+simRate);
 					}
 				}
 				numRuptures++;
@@ -140,7 +141,7 @@ public class SimulationHazardCurveCalc<E> {
 			curve.set(i, prob);
 		}
 		
-		minRate = Math.min(minRate, simProv.getMinimumCurvePlotRate());
+		minRate = Math.min(minRate, simProv.getMinimumCurvePlotRate(site));
 		if (minRate > 0) {
 			double minProb = 1d - Math.exp(-minRate*curveDuration);
 			// truncate curve to remove x values never seen in finite catalog

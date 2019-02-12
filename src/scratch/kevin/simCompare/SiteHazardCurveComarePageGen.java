@@ -794,10 +794,14 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	
 	private static final String GMAPS_API = new String(Base64.getDecoder().decode(
 			"QUl6YVN5QTE5Y0lWOEJxQTdPdXskld58190u50hCSC1OYzdTcDE0YTJLbktKX19j".replaceAll("skld58190u50", "")));
+	private static final String MAPQUEST_API = new String(Base64.getDecoder().decode(
+			"NTNBMDVBskld58190u50eThZT2t5eTdJYkV4TFVRWHNtMVskld58190u50VWTVVxdmo=".replaceAll("skld58190u50", "")));
 	
-	private static String getMiniMap(Location loc) {
+	public static String getMiniMap(Location loc) {
 		String locStr = loc.getLatitude()+","+loc.getLongitude();
-		return "https://maps.googleapis.com/maps/api/staticmap?center="+locStr+"&zoom=9"
-				+ "&size=400x300&maptype=roadmap&markers="+locStr+"&key="+GMAPS_API;
+//		return "https://maps.googleapis.com/maps/api/staticmap?center="+locStr+"&zoom=9"
+//				+ "&size=400x300&maptype=roadmap&markers="+locStr+"&key="+GMAPS_API;
+		return "https://open.mapquestapi.com/staticmap/v4/getmap?key="+MAPQUEST_API
+				+"&size=400,300&zoom=9&center="+locStr+"&pois=red_1,"+locStr+"&imagetype=png";
 	}
 }
