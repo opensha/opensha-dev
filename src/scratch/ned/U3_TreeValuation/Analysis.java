@@ -135,9 +135,11 @@ public class Analysis {
 //		readBranchLevelSummaryDataFromFile();
 		readAllBranchDataFromFile();
 		
-		for(String toRemove:branchesToRemove) {
-			String[] nameValArray = toRemove.split(" = ");
-			removeBranchFromData(nameValArray[0],nameValArray[1]);
+		if(branchesToRemove != null) {
+			for(String toRemove:branchesToRemove) {
+				String[] nameValArray = toRemove.split(" = ");
+				removeBranchFromData(nameValArray[0],nameValArray[1]);
+			}			
 		}
 		
 		makeEAL_Historgram(popupWindows, savePlots);
@@ -154,24 +156,24 @@ public class Analysis {
 		//		makeLog10_EAL_Historgram();
 
 		
-		// hard coded assignment of branch type:
-		erf_branches = new ArrayList<String>();
-		gmm_branches = new ArrayList<String>();
-
-		erf_branches.add("Fault Model");
-		erf_branches.add("Deformation Model");
-		erf_branches.add("Scaling Relationship");
-		erf_branches.add("Slip Along Rupture Model (Dsr)");
-//		erf_branches.add("Inversion Model");
-		erf_branches.add("Total Mag 5 Rate");
-		erf_branches.add("MMax Off Fault");
-//		erf_branches.add("Moment Rate Fixes");
-		erf_branches.add("Spatial Seismicity PDF");
-		erf_branches.add("ERF Probability Model");
-
-		gmm_branches.add("Ground Motion Model");
-		gmm_branches.add("GMM Additional Epistemic Uncertainty");
-		gmm_branches.add("Vs30 Model");
+//		// hard coded assignment of branch type:
+//		erf_branches = new ArrayList<String>();
+//		gmm_branches = new ArrayList<String>();
+//
+//		erf_branches.add("Fault Model");
+//		erf_branches.add("Deformation Model");
+//		erf_branches.add("Scaling Relationship");
+//		erf_branches.add("Slip Along Rupture Model (Dsr)");
+////		erf_branches.add("Inversion Model");
+//		erf_branches.add("Total Mag 5 Rate");
+//		erf_branches.add("MMax Off Fault");
+////		erf_branches.add("Moment Rate Fixes");
+//		erf_branches.add("Spatial Seismicity PDF");
+//		erf_branches.add("ERF Probability Model");
+//
+//		gmm_branches.add("Ground Motion Model");
+//		gmm_branches.add("GMM Additional Epistemic Uncertainty");
+//		gmm_branches.add("Vs30 Model");
 
 //		make_ERF_vs_GMM_UncertHists(true, true);
 		
@@ -960,7 +962,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 
 		for(String branchOption: meanHashMap.keySet()) {
 			plotCharsHists.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, colorMap.get(branchOption)));
-			plotCharsLines.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, colorMap.get(branchOption)));
+			plotCharsLines.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, colorMap.get(branchOption)));
 			plotCharsValuePDFs.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, colorMap.get(branchOption)));
 		}
 
@@ -999,7 +1001,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		
 		DefaultXY_DataSet totMeanLine = new DefaultXY_DataSet();
 		totMeanLine.set(totMeanEAL_here,0.0);
-		totMeanLine.set(totMeanEAL_here,1.0);
+		totMeanLine.set(totMeanEAL_here,yPlotMax);
 		totMeanLine.setName("Mean");
 		totMeanLine.setInfo("totMean="+(float)totMeanEAL_here);
 		
@@ -1100,11 +1102,15 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		funcs2.addAll(histArrayList);
 		funcs2.add(totMeanLine);
 		funcs2.addAll(meanLinesList);
+		funcs2.add(stackedHistograms.get(0));
+
 
 		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();
 		plotChars2.addAll(plotCharsLines);
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.5f, Color.BLACK));
 		plotChars2.addAll(plotCharsLines);
+		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+
 
 		PlotSpec specCombined2 = new PlotSpec(funcs2, plotChars2, branchName, "Normalized Loss", "Density");
 		specCombined2.setLegendVisible(false);
@@ -1126,9 +1132,12 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 			fname += "_PDFs";
 			HeadlessGraphPanel gp = new HeadlessGraphPanel();
 			gp.setUserBounds(xMinPlot, xMaxPlot, 0d, yPlotMax);
-			gp.setTickLabelFontSize(23);
-			gp.setAxisLabelFontSize(24);
-			gp.setPlotLabelFontSize(26);
+//			gp.setTickLabelFontSize(23);
+//			gp.setAxisLabelFontSize(24);
+//			gp.setPlotLabelFontSize(26);
+			gp.setTickLabelFontSize(9);
+			gp.setAxisLabelFontSize(10);
+			gp.setPlotLabelFontSize(10);
 			gp.setBackgroundColor(Color.WHITE);
 			gp.drawGraphPanel(specCombined2);
 			try {
@@ -1139,6 +1148,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //				gp.saveAsTXT(file.getAbsolutePath() + ".txt");
 				File file = new File(stackedHistDir, fname);
 				gp.getChartPanel().setSize(400, 300);
+				gp.getChartPanel().setSize(180, 155);
 				gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 //				gp.saveAsPNG(file.getAbsolutePath()+".png");				
 
@@ -1600,7 +1610,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.RED));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
 		
-		PlotSpec spec = new PlotSpec(funcsArray, plotChars, "Normalized EAL Distribution", "EAL (Billion $)", "Density");
+		PlotSpec spec = new PlotSpec(funcsArray, plotChars, null, "Mean-Normalized AAL", "Density");
 //		specCombinedLegend.setLegendVisible(false);
 //		specCombinedLegend.setLegendLocation(RectangleEdge.RIGHT);
 		
@@ -1646,7 +1656,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED));
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
 
-		PlotSpec specCum = new PlotSpec(funcsArray2, plotChars2, "Normalized Cumulative EAL Distribution", "EAL (Billion $)", "Density");
+		PlotSpec specCum = new PlotSpec(funcsArray2, plotChars2, null, "Mean-Normalized AAL", "Cumulative Density");
 //		specCombinedLegend.setLegendVisible(false);
 //		specCombinedLegend.setLegendLocation(RectangleEdge.RIGHT);
 
@@ -2207,18 +2217,25 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		System.out.println(outputString);
 	}
 
-
+	
 	public static void main(String[] args) {
 	
+//		// for Figure 1 data:
+//		Analysis analysisFig1 = new Analysis("all_branch_results.csv", "junk", null, false);
+//		analysisFig1.writeFigure1_Data();
+		
+		// for Figure 2-4 data:
+		Analysis analysisFig2to4 = new Analysis("all_branch_results.csv", "Figure2to4_Data", null, false);
+		
 		
 //		computeFact95_fract10_vsLogNormCOV();
 		
 //		doCOV_ReductionAnalysis();
 		
-		ArrayList<String> branchesToRemove = new ArrayList<String>();
-		Analysis analysis = new Analysis("all_branch_results.csv", "test", branchesToRemove, false);
-//		analysis.doCOV_ReductionAnalysisComplete(true, true);
-		analysis.writeFigure1_Data();
+//		ArrayList<String> branchesToRemove = new ArrayList<String>();
+//		Analysis analysis = new Analysis("all_branch_results.csv", "test", branchesToRemove, false);
+////		analysis.doCOV_ReductionAnalysisComplete(true, true);
+//		analysis.writeFigure1_Data();
 		
 
 
