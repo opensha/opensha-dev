@@ -83,6 +83,7 @@ public class Analysis {
 	HashMap<String, Double> factor95percIfBrRemovedMap;
 	HashMap<String, Double> mfactor95percRatioDiffIfBrRemovedMap;
 
+	HashMap<String, String> nameChangeMap=null;
 
 	ArrayList<String> erf_branches;
 	ArrayList<String> gmm_branches;
@@ -115,7 +116,7 @@ public class Analysis {
 	}
 
 	
-	public Analysis(String fileInputName, String outDirName, ArrayList<String> branchesToRemove, boolean popupWindows) {
+	public Analysis(String fileInputName, String outDirName, ArrayList<String> branchesToRemove, boolean popupWindows, boolean mkDiffForEachBranchPlots) {
 		
 		boolean savePlots = true;
 		
@@ -145,11 +146,45 @@ public class Analysis {
 		makeEAL_Historgram(popupWindows, savePlots);
 	
 		generateBranchValueResults(popupWindows, outDirName != null);
-//	
-//		makeFractionChangePlot(popupWindows, outDirName != null, meanDiffForBrValMap, "meanDiffForBrValMap");
-//		makeFractionChangePlot(popupWindows, outDirName != null, meanDiffWtedForBrValMap, "meanDiffWtedForBrValMap");
-//		makeFractionChangePlot(popupWindows, outDirName != null, meanIfBrRemovedMap, "meanIfBrRemovedMap");
-//		makeFractionChangePlot(popupWindows, outDirName != null, meanDiffIfBrRemovedMap, "meanDiffIfBrRemovedMap");
+		
+		if(mkDiffForEachBranchPlots) {
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, meanDiffForBrValMap, "meanDiffForBrValMap", "Mean Fractional Change", 0d, -1d, 1d);
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, meanDiffWtedForBrValMap, "meanDiffWtedForBrValMap", "Mean Fractional Change", 0d, -0.2, 0.2);
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, meanDiffIfBrRemovedMap, "meanDiffIfBrRemovedMap", "Mean Fractional Change", 0d, -0.2, 0.2);
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, covForBrValMap, "covForBrValMap", "COV Change", totCOV_EAL, 0.1, 0.601);
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, covIfBrRemovedMap, "covIfBrRemovedMap", "COV Change", totCOV_EAL, 0.1, 0.601);
+			
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, fracWithIn10percForBrValMap, "fracWithIn10percForBrValMap", "Fraction Within 10%", totWithin10perc, 0d, 0.4);
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, fracWithIn10percIfBrRemovedMap, "fracWithIn10percIfBrRemovedMap", "Fraction Within 10%", totWithin10perc, 0d, 0.4);
+
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, factor95percForBrValMap, "factor95percForBrValMap", "95% Conf Factor", totFactor95perc, 1d, 3d);
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, factor95percIfBrRemovedMap, "factor95percIfBrRemovedMap", "95% Conf Factor", totFactor95perc, 1d, 3d);
+			
+//			//  the following tests factor95 and fract10 are close to that for lognormal distribution with associated COV
+//			HashMap<String, Double> test_fracWithIn10percForBrValMap = new HashMap<String, Double>();
+//			HashMap<String, Double> test_factor95percForBrValMap = new HashMap<String, Double>();
+//			for(String key:fracWithIn10percForBrValMap.keySet()) {
+//				double cov = new Double(covForBrValMap.get(key));
+//				double[] valArray = computeFact95_fract10_fromLogNorm_COV(cov);
+//				test_factor95percForBrValMap.put(key, valArray[0]);
+//				test_fracWithIn10percForBrValMap.put(key, valArray[1]);
+//			}
+//			makeDiffForEachBranchPlot(popupWindows, outDirName != null, test_fracWithIn10percForBrValMap, "test_fracWithIn10percForBrValMap", "Fraction Within 10%", totWithin10perc, 0d, 0.4);
+//			makeDiffForEachBranchPlot(popupWindows, outDirName != null, test_factor95percForBrValMap, "test_factor95percForBrValMap", "95% Conf Factor", totFactor95perc, 1d, 3d);
+	//
+//			HashMap<String, Double> test_fracWithIn10percIfBrRemovedMap = new HashMap<String, Double>();
+//			HashMap<String, Double> test_factor95percIfBrRemovedMap = new HashMap<String, Double>();
+//			for(String key:fracWithIn10percIfBrRemovedMap.keySet()) {
+//				double cov = new Double(covIfBrRemovedMap.get(key));
+//				double[] valArray = computeFact95_fract10_fromLogNorm_COV(cov);
+//				test_factor95percIfBrRemovedMap.put(key, valArray[0]);
+//				test_fracWithIn10percIfBrRemovedMap.put(key, valArray[1]);
+//			}
+//			makeDiffForEachBranchPlot(popupWindows, outDirName != null, test_fracWithIn10percIfBrRemovedMap, "test_fracWithIn10percIfBrRemovedMap", "Fraction Within 10%", totWithin10perc, 0d, 0.4);
+//			makeDiffForEachBranchPlot(popupWindows, outDirName != null, test_factor95percIfBrRemovedMap, "test_factor95percIfBrRemovedMap", "95% Conf Factor", totFactor95perc, 1d, 3d);
+		}
+	
+
 
 //		System.out.println(infoString);
 		
@@ -163,16 +198,16 @@ public class Analysis {
 //		erf_branches.add("Fault Model");
 //		erf_branches.add("Deformation Model");
 //		erf_branches.add("Scaling Relationship");
-//		erf_branches.add("Slip Along Rupture Model (Dsr)");
+//		erf_branches.add("Slip Along Rupture (Dsr)");
 ////		erf_branches.add("Inversion Model");
-//		erf_branches.add("Total Mag 5 Rate");
-//		erf_branches.add("MMax Off Fault");
+//		erf_branches.add("Total Mag>5 Rate");
+//		erf_branches.add("Mmax Off Fault");
 ////		erf_branches.add("Moment Rate Fixes");
 //		erf_branches.add("Spatial Seismicity PDF");
-//		erf_branches.add("ERF Probability Model");
+//		erf_branches.add("Probability Model");
 //
 //		gmm_branches.add("Ground Motion Model");
-//		gmm_branches.add("GMM Additional Epistemic Uncertainty");
+//		gmm_branches.add("GMM Added Uncertainty");
 //		gmm_branches.add("Vs30 Model");
 
 //		make_ERF_vs_GMM_UncertHists(true, true);
@@ -322,6 +357,9 @@ public class Analysis {
 			String[] colNamesArray = str.split(",");
 			for(int c=5;c<18; c++) {
 				String keyName = colNamesArray[c];
+				// change name if needed
+				keyName = getNameChange(keyName);
+				colNamesArray[c] = keyName;
 				String[] strArray = new String[numData];
 				allBranchValuesMap.put(keyName, strArray);
 //				infoString += "\t"+keyName+"\n";
@@ -353,7 +391,10 @@ public class Analysis {
 				for(int c=5;c<18; c++) {
 					String keyName = colNamesArray[c];
 					String[] valArray = allBranchValuesMap.get(keyName);
-					valArray[arrayIndex] = split[c];
+					String value = split[c];
+					// Change name if needed
+					value = getNameChange(value);
+					valArray[arrayIndex] = value;
 				}
 				arrayIndex +=1;
 			}
@@ -524,16 +565,16 @@ public class Analysis {
 	public void doCOV_ReductionAnalysisComplete(boolean popUpWindows, boolean saveResults) {
 
 		String[] branchesToRemoveNamesArray = {
-				"GMM Additional Epistemic Uncertainty",
-				"Total Mag 5 Rate",
-				"ERF Probability Model",
+				"GMM Added Uncertainty",
+				"Total Mag>5 Rate",
+				"Probability Model",
 				"Scaling Relationship",
 				"Ground Motion Model",
 				"Spatial Seismicity PDF",
 				"Deformation Model",
-				"MMax Off Fault",
+				"Mmax Off Fault",
 				"Vs30 Model",
-				"Slip Along Rupture Model (Dsr)" //,
+				"Slip Along Rupture (Dsr)" //,
 //				"Fault Model"
 		};
 		
@@ -546,10 +587,7 @@ public class Analysis {
 
 //		ArrayUtils.reverse(branchesToRemoveNamesArray);
 		
-
-		
 		int numToInclude = branchesToRemoveNamesArray.length;
-//		int numToInclude = 7;
 		
 		for(int j=1;j<=numToInclude;j++) {
 			System.out.println("****** Working on "+j+" (of "+numToInclude+") ******");
@@ -655,17 +693,88 @@ public class Analysis {
 			gp.setBackgroundColor(Color.WHITE);
 			gp.drawGraphPanel(spec);
 			try {
-				File file = new File(ROOT_DIR, fname);
+				File file = new File(ROOT_DIR+outDirName, fname);
 				gp.getChartPanel().setSize(500, 400);
 				gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 //				gp.saveAsPNG(file.getAbsolutePath()+".png");	
 				gp.saveAsTXT(file.getAbsolutePath() + ".txt");
-
+				
+				FileWriter fw = new FileWriter(ROOT_DIR+outDirName+"/"+"COV_ReductionData.txt");
+				for(int i=0;i<meanCovValues.size();i++)
+					fw.write(meanCovValues.getX(i)+"\t"+meanCovValues.getY(i)+"\n");
+				fw.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 
+	}
+	
+	
+	
+	public void makeCOV_ReductionAnalysisCompletePlotsAgain() {
+		DefaultXY_DataSet meanCovValues = new DefaultXY_DataSet();
+		DefaultXY_DataSet factor95conf_Values = new DefaultXY_DataSet();
+		DefaultXY_DataSet fract10perc_Values = new DefaultXY_DataSet();
+		
+		try {
+			File file = new File(ROOT_DIR+outDirName+"/"+"COV_ReductionData.txt");
+			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
+			for(String line:fileLines) {
+//				System.out.println(line);
+				String[] split = line.split("\t");
+				double xVal = Double.parseDouble(split[0]);
+				double yVal = Double.parseDouble(split[1]);
+				meanCovValues.set(xVal,yVal);
+				double[] valArray = computeFact95_fract10_fromLogNorm_COV(yVal);
+				factor95conf_Values.set(xVal,valArray[0]);
+				fract10perc_Values.set(xVal,valArray[1]);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		String[] fileNamesArray = {"COV_ReductionAnalysisCompleteAlt", "fact95_ReductionAnalysisCompleteAlt", "fract10_ReductionAnalysisCompleteAlt"};
+		String[] yAxisNamesArray = {"COV", "95% Conf Factor", "Fraction Within 10%"};
+		DefaultXY_DataSet[] functionsArray = {meanCovValues, factor95conf_Values, fract10perc_Values};
+		double[] ymaxArray = {0.45,2.2,1.01};
+		double[] yminArray = {0.0,1.0,0.0};
+		
+		for(int j=0;j<3;j++) {
+			ArrayList<XY_DataSet> funcsArray = new ArrayList<XY_DataSet>();
+			ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+			
+			// convert to sticks
+			for(int i=0;i<functionsArray[j].size();i++) {
+				DefaultXY_DataSet xyData = new DefaultXY_DataSet();
+				xyData.set(functionsArray[j].getX(i), 0.0);
+				xyData.set(functionsArray[j].getX(i), functionsArray[j].getY(i));
+				funcsArray.add(xyData);
+				plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.RED));
+			}
+					
+			PlotSpec spec = new PlotSpec(funcsArray, plotChars, "", "After Branch Removed", yAxisNamesArray[j]);
+			
+			double xMax = functionsArray[j].getMaxX()+0.5;
+
+			String fname = fileNamesArray[j];
+			HeadlessGraphPanel gp = new HeadlessGraphPanel();
+			gp.setUserBounds(-0.5, xMax, yminArray[j], ymaxArray[j]);
+			gp.setTickLabelFontSize(23);
+			gp.setAxisLabelFontSize(24);
+			gp.setPlotLabelFontSize(26);
+			gp.setBackgroundColor(Color.WHITE);
+			gp.drawGraphPanel(spec);
+			try {
+				File file = new File(ROOT_DIR+outDirName, fname);
+				gp.getChartPanel().setSize(500, 400);
+				gp.saveAsPDF(file.getAbsolutePath()+".pdf");
+				gp.saveAsTXT(file.getAbsolutePath() + ".txt");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
 	}
 
 	
@@ -676,10 +785,9 @@ public class Analysis {
 		double max = 6;
 		int num = 120;
 
-		ArrayList<String> tableLinesList = new ArrayList<String>();
-		String tableHeaderLine = "branchName\tbranchValue\tweight\tmean\tmeanDiff\twtedMeanDiff\tcov\tfactor95perc\twithin10perc\tmeanIfRemoved\t"+
-				"meanIfRemovedDiff\tcovIfRemoved\tfactor95percIfRemoved\twithin10percIfRemoved";	
-		tableLinesList.add(tableHeaderLine);
+		String tableHeaderLine = "Branch Name\tBranch Value\tWeight\tMean (fractional change)\tCOV\t95% Conf Factor\tFract Within 10%\t"+
+				"Mean (fractional change) if removed\tCOV if removed\t95% Conf Factor if removed\tFract Within 10% if removed";	
+		HashMap<String, String> tableLinesMap = new HashMap<String, String>();
 
 		// for branch-value averages
 		weightForBrValMap = new HashMap<String, Double>();
@@ -800,21 +908,24 @@ public class Analysis {
 				String tableLine = branchName + "\t" +
 						brOpt + "\t"+
 						(float)wtForBr + "\t" +
-						(float)meanForBr + "\t" +
+//						(float)meanForBr + "\t" +
 						(float)(meanForBr-1.0) + "\t" +
-						(float)((meanForBr-1.0)*wtForBr) + "\t"+
+//						(float)((meanForBr-1.0)*wtForBr) + "\t"+
 						(float)covForBr + "\t" +
 						(float)factor95percForBr + "\t" +
 						(float)within10percForBr + "\t" +
 
-						(float)meanForOtherBrs + "\t" +
+//						(float)meanForOtherBrs + "\t" +
 						(float)(meanForOtherBrs-1.0) + "\t" +
 						(float)covForOtherBrs + "\t" +
 						(float)factor95percForOtherBrs + "\t" +
 						(float)within10percForOtherBrs + "\t";
-				tableLinesList.add(tableLine);
+//				tableLinesList.add(tableLine);
 
 				String combinedName = branchName+" = "+brOpt;
+				
+				tableLinesMap.put(combinedName, tableLine);
+				
 				weightForBrValMap.put(combinedName, wtForBr);
 				meanForBrValMap.put(combinedName, meanForBr);
 				meanDiffForBrValMap.put(combinedName, meanForBr-1.0);
@@ -822,7 +933,11 @@ public class Analysis {
 				meanIfBrRemovedMap.put(combinedName, meanForOtherBrs);
 				meanDiffIfBrRemovedMap.put(combinedName, (meanForOtherBrs-1.0));
 				covForBrValMap.put(combinedName, covForBr);
-
+				covIfBrRemovedMap.put(combinedName, covForOtherBrs);
+				fracWithIn10percForBrValMap.put(combinedName, within10percForBr);
+				fracWithIn10percIfBrRemovedMap.put(combinedName, within10percForOtherBrs);
+				factor95percForBrValMap.put(combinedName, factor95percForBr);
+				factor95percIfBrRemovedMap.put(combinedName, factor95percForOtherBrs);
 
 			}
 			
@@ -883,13 +998,15 @@ public class Analysis {
 ////System.out.println("nextBranchesToRemoveToMinimizeCOV_List:\n"+nextBranchesToRemoveToMinimizeCOV_List);
 ////System.exit(0);
 		
-		
+		ArrayList<String> combineNameList = getLogicTreeBranchValueOrder();
 
 		if(saveResults) {
 			try{
 				FileWriter fw = new FileWriter(ROOT_DIR+outDirName+"/"+outDirName+"_BrValStats.txt");
-				for(String line:	 tableLinesList)		
-					fw.write(line+"\n");
+				fw.write(tableHeaderLine+"\n");
+
+				for(String combinedName:	 combineNameList)		
+					fw.write(tableLinesMap.get(combinedName)+"\n");
 				fw.close();
 			}catch(Exception e) {
 				e.printStackTrace();
@@ -899,6 +1016,12 @@ public class Analysis {
 	}
 
 	
+	/**
+	 * This makes a list of branch options minus the one that has a COV that is closest 
+	 * to the wt-average COV (the one to keep)
+	 * @param branchName
+	 * @return
+	 */
 	private ArrayList<String> getBranchesToRemoveForCOV_List(String branchName) {
 		
 		ArrayList<String> nextBranchesToRemoveToMinimizeCOV_List = new ArrayList<String>();
@@ -1112,7 +1235,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
 
 
-		PlotSpec specCombined2 = new PlotSpec(funcs2, plotChars2, branchName, "Normalized Loss", "Density");
+		PlotSpec specCombined2 = new PlotSpec(funcs2, plotChars2, branchName, "Normalized AAL", "Density");
 		specCombined2.setLegendVisible(false);
 		specCombined2.setLegendLocation(RectangleEdge.RIGHT);
 		
@@ -1300,61 +1423,63 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 	 * logic-tree figure
 	 * @return
 	 */
-	public ArrayList<String> getLogicTreeBranchValueOrder() {
+	private ArrayList<String> getLogicTreeBranchValueOrder() {
 		ArrayList<String> list = new ArrayList<String>();
-		list.add("Fault Model = FM3_1");
-		list.add("Fault Model = FM3_2");
+		list.add("Fault Model = FM3.1");
+		list.add("Fault Model = FM3.2");
 		list.add("Deformation Model = GEOL");
 		list.add("Deformation Model = ABM");
 		list.add("Deformation Model = NEOK");
-		list.add("Deformation Model = ZENGBB");
+		list.add("Deformation Model = ZENG");
 		list.add("Scaling Relationship = Shaw09Mod");
 		list.add("Scaling Relationship = EllB");
 		list.add("Scaling Relationship = HB08");
 		list.add("Scaling Relationship = EllBsqrtLen");
 		list.add("Scaling Relationship = ShConStrDrp");
-		list.add("Slip Along Rupture Model (Dsr) = Tap");
-		list.add("Slip Along Rupture Model (Dsr) = Uni");
-		list.add("Total Mag 5 Rate = 6.5");
-		list.add("Total Mag 5 Rate = 7.9");
-		list.add("Total Mag 5 Rate = 9.6");
-		list.add("MMax Off Fault = 7.3");
-		list.add("MMax Off Fault = 7.6");
-		list.add("MMax Off Fault = 7.9");
+		list.add("Slip Along Rupture (Dsr) = Tapered");
+		list.add("Slip Along Rupture (Dsr) = Uniform");
+		list.add("Total Mag>5 Rate = 6.5");
+		list.add("Total Mag>5 Rate = 7.9");
+		list.add("Total Mag>5 Rate = 9.6");
+		list.add("Mmax Off Fault = 7.3");
+		list.add("Mmax Off Fault = 7.6");
+		list.add("Mmax Off Fault = 7.9");
 		list.add("Spatial Seismicity PDF = U2");
 		list.add("Spatial Seismicity PDF = U3");
-		list.add("ERF Probability Model = LOW_VALUES");
-		list.add("ERF Probability Model = MID_VALUES");
-		list.add("ERF Probability Model = HIGH_VALUES");
-		list.add("ERF Probability Model = POISSON");
-		list.add("Vs30 Model = Wills2015");
+		list.add("Probability Model = LOW_VALUES");
+		list.add("Probability Model = MID_VALUES");
+		list.add("Probability Model = HIGH_VALUES");
+		list.add("Probability Model = POISSON");
+		list.add("Vs30 Model = WillsEtAl");
 		list.add("Vs30 Model = WaldAllen");
 		list.add("Ground Motion Model = ASK_2014");
 		list.add("Ground Motion Model = BSSA_2014");
 		list.add("Ground Motion Model = CB_2014");
 		list.add("Ground Motion Model = CY_2014");
 		list.add("Ground Motion Model = IDRISS_2014");
-		list.add("GMM Additional Epistemic Uncertainty = LOWER");
-		list.add("GMM Additional Epistemic Uncertainty = NONE");
-		list.add("GMM Additional Epistemic Uncertainty = UPPER");
+		list.add("GMM Added Uncertainty = LOWER");
+		list.add("GMM Added Uncertainty = NONE");
+		list.add("GMM Added Uncertainty = UPPER");
 		return list;
 	}
 	
-	public void makeFractionChangePlot(boolean popUpWindows, boolean savePlots, HashMap<String, Double> fractChangeMap, String fileName) {
+	
+	
+	public void makeDiffForEachBranchPlot(boolean popUpWindows, boolean savePlots, HashMap<String, Double> fractChangeMap, String fileName, 
+			String xAxisName, double anchorX, double minX, double maxX) {
 		
 		HashMap<String, Color> colorMap = new HashMap<String, Color>();
 		colorMap.put("Fault Model", Color.BLACK);
 		colorMap.put("Deformation Model", new Color(0, 160, 0));
 		colorMap.put("Scaling Relationship", new Color(0, 0, 255));
-		colorMap.put("Slip Along Rupture Model (Dsr)", new Color(100, 100, 255));
-		colorMap.put("Total Mag 5 Rate", new Color(0, 0, 200));
-		colorMap.put("MMax Off Fault", new Color(128, 0, 255));
+		colorMap.put("Slip Along Rupture (Dsr)", new Color(100, 100, 255));
+		colorMap.put("Total Mag>5 Rate", new Color(0, 0, 200));
+		colorMap.put("Mmax Off Fault", new Color(128, 0, 255));
 		colorMap.put("Spatial Seismicity PDF", new Color(0, 128, 255));
-		colorMap.put("ERF Probability Model", new Color(255, 0, 0));
-		colorMap.put("Ground Motion Model", new Color(200, 150, 0));
-		colorMap.put("GMM Additional Epistemic Uncertainty", new Color(220, 0, 220));
-		colorMap.put("Vs30 Model", new Color(255, 147, 0));
-
+		colorMap.put("Probability Model", new Color(255, 0, 0));
+		colorMap.put("Vs30 Model", new Color(200, 150, 0));
+		colorMap.put("Ground Motion Model", new Color(220, 0, 220));
+		colorMap.put("GMM Added Uncertainty", new Color(255, 147, 0));
 		
 //		System.out.println("Unsorted list:\n");
 //		for(String name:fractChangeMap.keySet())
@@ -1381,17 +1506,15 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //			System.out.println("\t"+entry.getValue().floatValue()+"\t"+entry.getKey());
 		}
 		
-		double maxDiff = Math.max(-sortedVauesList.get(0), sortedVauesList.get(sortedVauesList.size()-1));
-		double xMax = Math.ceil(maxDiff*10.0)/10.0;
+//		double maxDiff = Math.max(-sortedVauesList.get(0), sortedVauesList.get(sortedVauesList.size()-1));
+//		double xMax = Math.ceil(maxDiff*10.0)/10.0;
 		
-//		// OVERRIDE TO ORDER IN LOGIC_TREE FIGURE
-//		sortedNamesList = getLogicTreeBranchValueOrder();
-//		Collections.reverse(sortedNamesList);
-//		sortedVauesList = new ArrayList<Double>();
-//		for(String nameVal:sortedNamesList)
-//			sortedVauesList.add(fractChangeMap.get(nameVal));
-		
-		
+		// OVERRIDE TO ORDER IN LOGIC_TREE FIGURE
+		sortedNamesList = getLogicTreeBranchValueOrder();
+		Collections.reverse(sortedNamesList);
+		sortedVauesList = new ArrayList<Double>();
+		for(String nameVal:sortedNamesList)
+			sortedVauesList.add(fractChangeMap.get(nameVal));
 		
 //		// OVERRIDE TO TORNADO TYPE PLOT:
 //		int lowIndex = 0;
@@ -1414,7 +1537,6 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //		Collections.reverse(sortedNamesList);
 //		Collections.reverse(sortedVauesList);
 		
-
 		ArrayList<DefaultXY_DataSet> funcList = new ArrayList<DefaultXY_DataSet>();
 		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
 		
@@ -1422,7 +1544,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 			DefaultXY_DataSet xyFunc = new DefaultXY_DataSet();
 			double yVal = i+0.5;
 			xyFunc.set(sortedVauesList.get(i), yVal);
-			xyFunc.set(0.0, yVal);
+			xyFunc.set(anchorX, yVal);
 			xyFunc.setName(sortedNamesList.get(i));
 			funcList.add(xyFunc);
 			String[] branchName = sortedNamesList.get(i).split(" = ");
@@ -1433,33 +1555,41 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		for(int i=sortedNamesList.size()-1;i>=0;i--) {
 			stringForInfo += sortedNamesList.get(i)+"\n";
 		}
-		funcList.get(0).setInfo(stringForInfo);
+		funcList.get(0).setInfo("PLOT ORDER:\n"+stringForInfo);
 
 		
-		double xMinPlot = -xMax;
-		double xMaxPlot = xMax;
+		double xMinPlot = minX;
+		double xMaxPlot = maxX;
 		double yMinPlot = 0;
 		double yMaxPlot = sortedNamesList.size();
 
-		//add 10% change lines
-		DefaultXY_DataSet tenPercLowFunc = new DefaultXY_DataSet();
-		tenPercLowFunc.set(-0.1, 0.0);
-		tenPercLowFunc.set(-0.1, yMaxPlot);
-		DefaultXY_DataSet tenPercHighFunc = new DefaultXY_DataSet();
-		tenPercHighFunc.set(0.1, 0.0);
-		tenPercHighFunc.set(0.1, yMaxPlot);
-		funcList.add(tenPercLowFunc);
-		funcList.add(tenPercHighFunc);
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+		//add 10% change lines if anchor is 0.0 (fractional change plot)
+		if(anchorX == 0.0) {
+			DefaultXY_DataSet tenPercLowFunc = new DefaultXY_DataSet();
+			tenPercLowFunc.set(-0.1, 0.0);
+			tenPercLowFunc.set(-0.1, yMaxPlot);
+			DefaultXY_DataSet tenPercHighFunc = new DefaultXY_DataSet();
+			tenPercHighFunc.set(0.1, 0.0);
+			tenPercHighFunc.set(0.1, yMaxPlot);
+			funcList.add(tenPercLowFunc);
+			funcList.add(tenPercHighFunc);
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));			
+		}
+		else {	// add anchor line
+			DefaultXY_DataSet anchorFunc = new DefaultXY_DataSet();
+			anchorFunc.set(anchorX, 0.0);
+			anchorFunc.set(anchorX, yMaxPlot);
+			anchorFunc.setName("anchorFunc");
+			funcList.add(anchorFunc);
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
 
-		
+		}
 
-		PlotSpec specCombined = new PlotSpec(funcList, plotChars, fileName, "Fractional Change", "Branch");
+		PlotSpec specCombined = new PlotSpec(funcList, plotChars, null, xAxisName, null);
 		specCombined.setLegendVisible(false);
 		specCombined.setLegendLocation(RectangleEdge.RIGHT);
 		
-				
 		if(savePlots) {
 			String fname = fileName;
 			HeadlessGraphPanel gp = new HeadlessGraphPanel();
@@ -1470,29 +1600,17 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 			gp.setBackgroundColor(Color.WHITE);
 			gp.drawGraphPanel(specCombined);
 			try {
-//				File file = new File(dirName, fname);
-//				gp.getChartPanel().setSize(1000, 800);
-//				gp.saveAsPDF(file.getAbsolutePath() + ".pdf");
-//				gp.saveAsPNG(file.getAbsolutePath() + ".png");
-//				gp.saveAsTXT(file.getAbsolutePath() + ".txt");
 				File file = new File(ROOT_DIR+outDirName, fname);
 				gp.getChartPanel().setSize(400, 500);
 				gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 //				gp.saveAsPNG(file.getAbsolutePath()+".png");				
-
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
 		}
 		
-		// now with legend
-		PlotSpec specCombinedLegend = new PlotSpec(funcList, plotChars, fileName, "Fractional Change", "Branch");
-		specCombinedLegend.setLegendVisible(true);
-		specCombinedLegend.setLegendLocation(RectangleEdge.RIGHT);
-
 		if(popUpWindows) {
-			GraphWindow gw = new GraphWindow(specCombinedLegend);
+			GraphWindow gw = new GraphWindow(specCombined);
 //			gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 			gw.setAxisRange(xMinPlot, xMaxPlot, yMinPlot, yMaxPlot);
 			gw.setTickLabelFontSize(19);
@@ -1501,32 +1619,41 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //			gw.setBackgroundColor(Color.WHITE);	
 		}
 
-		if(savePlots) {
-			String fname = fileName+"_wLegend";
-			HeadlessGraphPanel gp = new HeadlessGraphPanel();
-			gp.setUserBounds(xMinPlot, xMaxPlot, yMinPlot, yMaxPlot);
-			gp.setTickLabelFontSize(23);
-			gp.setAxisLabelFontSize(24);
-			gp.setPlotLabelFontSize(22);
-			gp.setBackgroundColor(Color.WHITE);
-			gp.drawGraphPanel(specCombinedLegend);
-			try {
-//				File file = new File(dirName, fname);
-//				gp.getChartPanel().setSize(1000, 800);
-//				gp.saveAsPDF(file.getAbsolutePath() + ".pdf");
-//				gp.saveAsPNG(file.getAbsolutePath() + ".png");
-//				gp.saveAsTXT(file.getAbsolutePath() + ".txt");
-				File file = new File(ROOT_DIR+outDirName, fname);
-				gp.getChartPanel().setSize(800, 500);
-				gp.saveAsPDF(file.getAbsolutePath()+".pdf");
-//				gp.saveAsPNG(file.getAbsolutePath()+".png");				
-
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
 		
+//		// now with legend
+//		PlotSpec specCombinedLegend = new PlotSpec(funcList, plotChars, null, "Fractional Change", "Branch");
+//		specCombinedLegend.setLegendVisible(true);
+//		specCombinedLegend.setLegendLocation(RectangleEdge.RIGHT);
+//
+//		if(popUpWindows) {
+//			GraphWindow gw = new GraphWindow(specCombinedLegend);
+////			gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+//			gw.setAxisRange(xMinPlot, xMaxPlot, yMinPlot, yMaxPlot);
+//			gw.setTickLabelFontSize(19);
+//			gw.setAxisLabelFontSize(20);
+//			gw.setPlotLabelFontSize(21);
+////			gw.setBackgroundColor(Color.WHITE);	
+//		}
+//
+//		if(savePlots) {
+//			String fname = fileName+"_wLegend";
+//			HeadlessGraphPanel gp = new HeadlessGraphPanel();
+//			gp.setUserBounds(xMinPlot, xMaxPlot, yMinPlot, yMaxPlot);
+//			gp.setTickLabelFontSize(23);
+//			gp.setAxisLabelFontSize(24);
+//			gp.setPlotLabelFontSize(22);
+//			gp.setBackgroundColor(Color.WHITE);
+//			gp.drawGraphPanel(specCombinedLegend);
+//			try {
+//				File file = new File(ROOT_DIR+outDirName, fname);
+//				gp.getChartPanel().setSize(800, 500);
+//				gp.saveAsPDF(file.getAbsolutePath()+".pdf");
+////				gp.saveAsPNG(file.getAbsolutePath()+".png");				
+//
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		}
 	}
 	
 	
@@ -1610,7 +1737,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.RED));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
 		
-		PlotSpec spec = new PlotSpec(funcsArray, plotChars, null, "Mean-Normalized AAL", "Density");
+		PlotSpec spec = new PlotSpec(funcsArray, plotChars, null, "Normalized AAL", "Density");
 //		specCombinedLegend.setLegendVisible(false);
 //		specCombinedLegend.setLegendLocation(RectangleEdge.RIGHT);
 		
@@ -1656,7 +1783,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED));
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
 
-		PlotSpec specCum = new PlotSpec(funcsArray2, plotChars2, null, "Mean-Normalized AAL", "Cumulative Density");
+		PlotSpec specCum = new PlotSpec(funcsArray2, plotChars2, null, "Normalized AAL", "Cumulative Density");
 //		specCombinedLegend.setLegendVisible(false);
 //		specCombinedLegend.setLegendLocation(RectangleEdge.RIGHT);
 
@@ -1923,25 +2050,25 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		
 //		branchesToRemove.add("Ground Motion Model"+" = "+"IDRISS_2014");
 		
-		Analysis analysis0 = new Analysis("all_branch_results.csv", "analysis1_fullReg_allBranches", branchesToRemove, false);
+		Analysis analysis0 = new Analysis("all_branch_results.csv", "analysis1_fullReg_allBranches", branchesToRemove, false, false);
 		covValues.set(0.0,analysis0.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis0.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis0.getTotWithin10perc());
 		
 		// keep top weighted branch
-		branchesToRemove.add("GMM Additional Epistemic Uncertainty"+" = "+"LOWER");
-		branchesToRemove.add("GMM Additional Epistemic Uncertainty"+" = "+"UPPER");
+		branchesToRemove.add("GMM Added Uncertainty"+" = "+"LOWER");
+		branchesToRemove.add("GMM Added Uncertainty"+" = "+"UPPER");
 		
-		Analysis analysis1 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_01", branchesToRemove, false);
+		Analysis analysis1 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_01", branchesToRemove, false, false);
 		covValues.set(1.0,analysis1.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis1.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis1.getTotWithin10perc());
 
 		// keep top weighted branch
-		branchesToRemove.add("Total Mag 5 Rate"+" = "+"6.5");
-		branchesToRemove.add("Total Mag 5 Rate"+" = "+"9.6");
+		branchesToRemove.add("Total Mag>5 Rate"+" = "+"6.5");
+		branchesToRemove.add("Total Mag>5 Rate"+" = "+"9.6");
 		
-		Analysis analysis2 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_02", branchesToRemove, false);
+		Analysis analysis2 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_02", branchesToRemove, false, false);
 		covValues.set(2.0,analysis2.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis2.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis2.getTotWithin10perc());
@@ -1952,7 +2079,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		branchesToRemove.add("Scaling Relationship"+" = "+"ShConStrDrp");
 		branchesToRemove.add("Scaling Relationship"+" = "+"Shaw09Mod");
 		
-		Analysis analysis3 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_03", branchesToRemove, false);
+		Analysis analysis3 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_03", branchesToRemove, false, false);
 		covValues.set(3.0,analysis3.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis3.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis3.getTotWithin10perc());
@@ -1964,7 +2091,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		branchesToRemove.add("Ground Motion Model"+" = "+"CY_2014");
 		branchesToRemove.add("Ground Motion Model"+" = "+"IDRISS_2014");
 		
-		Analysis analysis4 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_04", branchesToRemove, false);
+		Analysis analysis4 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_04", branchesToRemove, false, false);
 		covValues.set(4.0,analysis4.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis4.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis4.getTotWithin10perc());
@@ -1973,17 +2100,17 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		// the branch kept has lowest resultant COV
 		branchesToRemove.add("Spatial Seismicity PDF"+" = "+"U2");
 		
-		Analysis analysis5 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_05", branchesToRemove, false);
+		Analysis analysis5 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_05", branchesToRemove, false, false);
 		covValues.set(5.0,analysis5.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis5.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis5.getTotWithin10perc());
 
 		// keep top weighted branch
-		branchesToRemove.add("ERF Probability Model"+" = "+"POISSON");
-		branchesToRemove.add("ERF Probability Model"+" = "+"LOW_VALUES");
-		branchesToRemove.add("ERF Probability Model"+" = "+"HIGH_VALUES");
+		branchesToRemove.add("Probability Model"+" = "+"POISSON");
+		branchesToRemove.add("Probability Model"+" = "+"LOW_VALUES");
+		branchesToRemove.add("Probability Model"+" = "+"HIGH_VALUES");
 		
-		Analysis analysis6 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_06", branchesToRemove, false);
+		Analysis analysis6 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_06", branchesToRemove, false, false);
 		covValues.set(6.0,analysis6.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis6.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis6.getTotWithin10perc());
@@ -1993,33 +2120,33 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		branchesToRemove.add("Deformation Model"+" = "+"NEOK");
 		branchesToRemove.add("Deformation Model"+" = "+"GEOL");
 		
-		Analysis analysis7 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_07", branchesToRemove, false);
+		Analysis analysis7 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_07", branchesToRemove, false, false);
 		covValues.set(7.0,analysis7.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis7.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis7.getTotWithin10perc());
 
 		
 		// the branch kept has lowest resultant COV
-		branchesToRemove.add("Vs30 Model"+" = "+"Wills2015");
+		branchesToRemove.add("Vs30 Model"+" = "+"WillsEtAl");
 		
-		Analysis analysis8 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_08", branchesToRemove, false);
+		Analysis analysis8 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_08", branchesToRemove, false, false);
 		covValues.set(8.0,analysis8.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis8.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis8.getTotWithin10perc());
 
 		// keep top weighted branch
-		branchesToRemove.add("MMax Off Fault"+" = "+"7.9");
-		branchesToRemove.add("MMax Off Fault"+" = "+"7.3");
+		branchesToRemove.add("Mmax Off Fault"+" = "+"7.9");
+		branchesToRemove.add("Mmax Off Fault"+" = "+"7.3");
 		
-		Analysis analysis9 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_09", branchesToRemove, false);
+		Analysis analysis9 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_09", branchesToRemove, false, false);
 		covValues.set(9.0,analysis9.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis9.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis9.getTotWithin10perc());
 
 		// the branch kept has lowest resultant COV
-		branchesToRemove.add("Slip Along Rupture Model (Dsr)"+" = "+"Uni");
+		branchesToRemove.add("Slip Along Rupture (Dsr)"+" = "+"Uniform");
 		
-		Analysis analysis10 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_10", branchesToRemove, false);
+		Analysis analysis10 = new Analysis("all_branch_results.csv", "analysis1_fullReg_BrRemoval_10", branchesToRemove, false, false);
 		covValues.set(10.0,analysis10.getTotCOV_EAL());
 		fact95Values.set(0.0,analysis10.getTotFactor95perc());
 		fractWithin10percValues.set(0.0,analysis10.getTotWithin10perc());
@@ -2091,11 +2218,11 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 	
 
 	/**
-	 * This looks at reduction in COV and 95% bounds, and increase in fraction within 10% of mean, as branches are elliminated, 
-	 * where the next branches to removed is based on the first complete run.
+	 * This looks at reduction in COV and 95% bounds, and increase in fraction within 10% of mean, as branches are eliminated, 
+	 * where the next branch to removed is based on wt-average COV reduction implied by the run with all branches (hard coded here).
+	 * The option that is kept for each branch is that with a COV closest to the weight average.
 	 * 
 	 */
-
 	public static void doCOV_ReductionAnalysis() {
 		
 		DefaultXY_DataSet covValues = new DefaultXY_DataSet();
@@ -2103,16 +2230,16 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		DefaultXY_DataSet fractWithin10percValues = new DefaultXY_DataSet();
 		
 		String[] branchesToRemoveNamesArray = {
-				"GMM Additional Epistemic Uncertainty",
-				"Total Mag 5 Rate",
-				"ERF Probability Model",
+				"GMM Added Uncertainty",
+				"Total Mag>5 Rate",
+				"Probability Model",
 				"Scaling Relationship",
 				"Ground Motion Model",
 				"Spatial Seismicity PDF",
 				"Deformation Model",
-				"MMax Off Fault",
+				"Mmax Off Fault",
 				"Vs30 Model",
-				"Slip Along Rupture Model (Dsr)",
+				"Slip Along Rupture (Dsr)",
 				"Fault Model"
 		};
 		
@@ -2137,7 +2264,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 			else
 				fileSuffix = ""+index;
 			String name = "COV_ReductionAnalysisBrRemoval_"+fileSuffix;
-			Analysis analysis = new Analysis("all_branch_results.csv", name, branchesToRemoveNameValue, false);
+			Analysis analysis = new Analysis("all_branch_results.csv", name, branchesToRemoveNameValue, false, false);
 			covValues.set((double)index, analysis.getTotCOV_EAL());
 			fact95Values.set((double)index, analysis.getTotFactor95perc());
 			fractWithin10percValues.set((double)index, analysis.getTotWithin10perc());
@@ -2218,34 +2345,57 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 	}
 
 	
+	public String getNameChange(String name) {
+		if(nameChangeMap == null) {			
+			nameChangeMap = new HashMap<String, String>();
+			nameChangeMap.put("Slip Along Rupture Model (Dsr)", "Slip Along Rupture (Dsr)");
+			nameChangeMap.put("MMax Off Fault", "Mmax Off Fault");
+			nameChangeMap.put("GMM Additional Epistemic Uncertainty", "GMM Added Uncertainty");
+			nameChangeMap.put("ERF Probability Model", "Probability Model");
+			nameChangeMap.put("Total Mag 5 Rate", "Total Mag>5 Rate");
+			nameChangeMap.put("ZENGBB", "ZENG");
+			nameChangeMap.put("Tap", "Tapered");
+			nameChangeMap.put("Uni", "Uniform");
+			nameChangeMap.put("FM3_1", "FM3.1");
+			nameChangeMap.put("FM3_2", "FM3.2");
+			nameChangeMap.put("Wills2015", "WillsEtAl");
+		}
+		
+		if(nameChangeMap.keySet().contains(name))
+			return nameChangeMap.get(name);
+		else
+			return name;
+	}
+	
+	
 	public static void main(String[] args) {
 	
 //		// for Figure 1 data:
 //		Analysis analysisFig1 = new Analysis("all_branch_results.csv", "junk", null, false);
 //		analysisFig1.writeFigure1_Data();
 		
-		// for Figure 2-4 data:
-		Analysis analysisFig2to4 = new Analysis("all_branch_results.csv", "Figure2to4_Data", null, false);
+//		// for Figure 2-4 data:
+//		Analysis analysisFig2to4 = new Analysis("all_branch_results.csv", "Figure2to5_Data", null, false, true);
 		
 		
 //		computeFact95_fract10_vsLogNormCOV();
 		
 //		doCOV_ReductionAnalysis();
 		
-//		ArrayList<String> branchesToRemove = new ArrayList<String>();
-//		Analysis analysis = new Analysis("all_branch_results.csv", "test", branchesToRemove, false);
-////		analysis.doCOV_ReductionAnalysisComplete(true, true);
-//		analysis.writeFigure1_Data();
+		ArrayList<String> branchesToRemove = new ArrayList<String>();
+		Analysis analysisFig6 = new Analysis("all_branch_results.csv", "Figure6_Data", branchesToRemove, false, false);
+		// This takes a very long time:
+//		analysisFig6.doCOV_ReductionAnalysisComplete(true, true);
+		// this recreates the plot from saved data
+		analysisFig6.makeCOV_ReductionAnalysisCompletePlotsAgain();
 		
 
 
 //		
-//		branchesToRemove.add("Ground Motion Model"+" = "+"IDRISS_2014");
-//		
 //		Analysis analysis0 = new Analysis("all_branch_results.csv", "fullReg_allBranches", branchesToRemove, false);
 //
-//		branchesToRemove.add("GMM Additional Epistemic Uncertainty"+" = "+"LOWER");
-//		branchesToRemove.add("GMM Additional Epistemic Uncertainty"+" = "+"UPPER");
+//		branchesToRemove.add("GMM Added Uncertainty"+" = "+"LOWER");
+//		branchesToRemove.add("GMM Added Uncertainty"+" = "+"UPPER");
 //		
 //		Analysis analysis1 = new Analysis("all_branch_results.csv", "fullReg_BrRemoval_1", branchesToRemove, false);
 		
