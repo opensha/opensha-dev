@@ -713,38 +713,42 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	
 	static void writeRupturePointFiles(AbstractERF erf, File mainDir) throws IOException {
 		for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
-			File sourceDir = new File(mainDir, sourceID+"");
-			Preconditions.checkState(sourceDir.exists() || sourceDir.mkdir());
-			ProbEqkSource source = erf.getSource(sourceID);
-			for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
-				File rupDir = new File(sourceDir, rupID+"");
-				Preconditions.checkState(rupDir.exists() || rupDir.mkdir());
-				RSQSimProbEqkRup rup = (RSQSimProbEqkRup)source.getRupture(rupID);
-				List<SimulatorElement> eventElems = rup.rupElems;
-				
-				FileWriter fw = new FileWriter(new File(rupDir, sourceID+"_"+rupID+".txt"));
-				fw.write("Probability = "+(float)rup.getProbability()+"\n");
-				fw.write("Magnitude = "+(float)rup.getMag()+"\n");
-				
-				double aveArea = 0d;
-				for (SimulatorElement e : eventElems)
-					aveArea += e.getArea()*1e-6;
-				aveArea /= eventElems.size();
-				
-				fw.write("AveArea = "+(float)aveArea+"\n");
-				fw.write("NumPoints = "+eventElems.size()+"\n");
-				
-				fw.write("#   Lat         Lon         Depth      Rake    Dip     Strike"+"\n");
-				for (SimulatorElement e : eventElems) {
-					Location loc = e.getCenterLocation();
-					FocalMechanism mech = e.getFocalMechanism();
-					fw.write((float)loc.getLatitude()+"    "+(float)loc.getLongitude()+"    "
-							+(float)loc.getDepth()+"    "+(float)mech.getRake()+"    "+(float)mech.getDip()
-							+"    "+(float)mech.getStrike()+"\n");
-				}
-				
-				fw.close();
+			writeRupturePointFiles(erf, mainDir, sourceID);
+		}
+	}
+
+	static void writeRupturePointFiles(AbstractERF erf, File mainDir, int sourceID) throws IOException {
+		File sourceDir = new File(mainDir, sourceID+"");
+		Preconditions.checkState(sourceDir.exists() || sourceDir.mkdir());
+		ProbEqkSource source = erf.getSource(sourceID);
+		for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
+			File rupDir = new File(sourceDir, rupID+"");
+			Preconditions.checkState(rupDir.exists() || rupDir.mkdir());
+			RSQSimProbEqkRup rup = (RSQSimProbEqkRup)source.getRupture(rupID);
+			List<SimulatorElement> eventElems = rup.rupElems;
+			
+			FileWriter fw = new FileWriter(new File(rupDir, sourceID+"_"+rupID+".txt"));
+			fw.write("Probability = "+(float)rup.getProbability()+"\n");
+			fw.write("Magnitude = "+(float)rup.getMag()+"\n");
+			
+			double aveArea = 0d;
+			for (SimulatorElement e : eventElems)
+				aveArea += e.getArea()*1e-6;
+			aveArea /= eventElems.size();
+			
+			fw.write("AveArea = "+(float)aveArea+"\n");
+			fw.write("NumPoints = "+eventElems.size()+"\n");
+			
+			fw.write("#   Lat         Lon         Depth      Rake    Dip     Strike"+"\n");
+			for (SimulatorElement e : eventElems) {
+				Location loc = e.getCenterLocation();
+				FocalMechanism mech = e.getFocalMechanism();
+				fw.write((float)loc.getLatitude()+"    "+(float)loc.getLongitude()+"    "
+						+(float)loc.getDepth()+"    "+(float)mech.getRake()+"    "+(float)mech.getDip()
+						+"    "+(float)mech.getStrike()+"\n");
 			}
+			
+			fw.close();
 		}
 	}
 	
@@ -834,7 +838,8 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			System.out.println("\t% Diff: "+(float)pDiff);
 			System.out.println("\tAbs Diff: "+(float)absDiff+", M="+(float)MagUtils.momentToMag(absDiff));
 		}
-		momentStats.addValue(pDiff);
+		if (momentStats != null)
+			momentStats.addValue(pDiff);
 	}
 	
 	private static int sequential_flag = -999;

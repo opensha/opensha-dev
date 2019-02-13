@@ -572,6 +572,12 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		System.out.println("Have "+curveSites.size()+" curve sites (from "+sites.size()+" total sites)");
 		
 		if (curveSites != null && !curveSites.isEmpty()) {
+			for (int s=curveSites.size(); --s>=0;) {
+				if (simProv.getRupturesForSite(curveSites.get(s)).isEmpty()) {
+					System.out.println("Skipping curves for site "+curveSites.get(s).getName()+", no ruptures");
+					curveSites.remove(s);
+				}
+			}
 			SimulationHazardCurveCalc<E> simCurveCalc = new SimulationHazardCurveCalc<>(simProv);
 			List<SimulationHazardPlotter<E>> curvePlotters = new ArrayList<>();
 			for (Site site : curveSites) {

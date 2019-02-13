@@ -282,6 +282,15 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_3032("bruce/rundir3032", "Bruce 3032", "Bruce Shaw", cal(2019, 1, 19),
 				"SmoothF=1e5.   Unconnected discontinuities. V=1.  fracArea=0.99. b=.011",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_3062("bruce/rundir3062", "Bruce 3062", "Bruce Shaw", cal(2019, 2, 8),
+				"SmoothF=1e5. Connected discontinuities. V=1. fracArea=0.99. b=.011",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_3065("bruce/rundir3065", "Bruce 3065", "Bruce Shaw", cal(2019, 2, 8),
+				"Variable normal stress dsigdsA =0.6.  Rest same as r3062",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_3067("bruce/rundir3067", "Bruce 3067", "Bruce Shaw", cal(2019, 2, 10),
+				"Variable normal stress dsigdsA =0.666.  Rest same as r3062",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -657,6 +666,14 @@ public class RSQSimCatalog implements XMLSaveable {
 					subName = subName.replaceAll("_timeScale", ", Time Scale Factor: ");
 					if (subName.contains("_velScale"))
 						subName = subName.replaceAll("_velScale", ", Velocities Scaled");
+				}
+				
+				if (subName.contains("_mech_")) {
+					subName = subName.replaceAll("_mech_", ", Focal Mechanism: ");
+					subName = subName.replaceAll("vert_ss", "Vertical Strike-Slip");
+					subName = subName.replaceAll("ss", "Strike-Slip");
+					subName = subName.replaceAll("reverse", "Reverse");
+					subName = subName.replaceAll("normal", "Normal");
 				}
 				
 				if (gridded) {

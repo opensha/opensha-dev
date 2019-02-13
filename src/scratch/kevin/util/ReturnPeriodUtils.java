@@ -50,8 +50,10 @@ public class ReturnPeriodUtils {
 	}
 	
 	public static void main(String[] args) {
+		System.out.println(calcReturnPeriod(0.5, 30));
+		System.out.println(calcExceedanceProb(0.5, 30, 1d));
 //		System.out.println(calcExceedanceProb(0.02, 50, 1d));
-//		System.exit(0);
+		System.exit(0);
 //		double r1 = 0.02;
 //		double t1 = 50;
 //		

@@ -774,7 +774,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 		System.out.println("*** Building summary table ***");
 		for (Double mag : plotMags) {
-			if (mag != null) {
+			if (mag != null && plotMags.size() > 1) {
 				if (!summaryLines.isEmpty())
 					summaryLines.add("");
 				summaryLines.add("### M"+optionalDigitDF.format(mag)+" Result Summary Table");
@@ -830,6 +830,26 @@ public abstract class RotatedRupVariabilityPageGen {
 				}
 			}
 			summaryLines.addAll(table.build());
+			if (plotDists.size() > 1) {
+				summaryLines.add("");
+				if (mag != null && plotMags.size() > 1) {
+					summaryLines.add("#### M"+optionalDigitDF.format(mag)+" Dist-Dependent Plot Table");
+					summaryLines.add(topLink); summaryLines.add("");
+				} else {
+					summaryLines.add("### Dist-Dependent Plot Table");
+					summaryLines.add(topLink); summaryLines.add("");
+				}
+				table = MarkdownUtils.tableBuilder();
+				for (VariabilityType type : VariabilityType.values()) {
+					if (!computedTypes.contains(type) || !type.separateDists)
+						continue;
+					String prefix = type.prefix+(mag == null ? "" : "_m"+optionalDigitDF.format(mag))+"_dist_periods";
+					File plot = plotMultiDistPeriodDependentStdDevs(resourcesDir, prefix, periods, type, mag, plotDists);
+					table.addLine("**"+type.htmlSymbol+"**", "!["+type.htmlSymbol+"](resources/"+plot.getName()+")");
+				}
+				summaryLines.addAll(table.build());
+				summaryLines.add("");
+			}
 		}
 		System.out.println("*** DONE summary table ***");
 		lines.addAll(summaryTableIndex, summaryLines);
@@ -1678,6 +1698,60 @@ public abstract class RotatedRupVariabilityPageGen {
 		gp.getChartPanel().setSize(800, 600);
 		File pngFile = new File(resourcesDir, prefix+".png");
 		gp.saveAsPNG(pngFile.getAbsolutePath());
+	}
+	
+	private File plotMultiDistPeriodDependentStdDevs(File resourcesDir, String prefix, double[] periods,
+			VariabilityType type, Double mag, List<Float> dists) throws IOException {
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		double[] distArray = Doubles.toArray(dists);
+		CPT distCPT = new CPT(StatUtils.min(distArray), StatUtils.max(distArray), Color.GRAY, Color.BLACK);
+		
+		for (Float dist : dists) {
+			VarGroupingKey key = new VarGroupingKey(type, mag, dist, sites.size() == 1 ? sites.get(0) : null, periods);
+			VariabilityResult result;
+			try {
+				result = varResultCache.get(key);
+			} catch (ExecutionException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			
+			DiscretizedFunc spectrum = new ArbitrarilyDiscretizedFunc(optionalDigitDF.format(dist)+" km");
+			for (int p=0; p<periods.length; p++) {
+				if (type.stdDevOfMedians)
+					spectrum.set(periods[p], result.medianStdDevs[p].stdDev);
+				else
+					spectrum.set(periods[p], result.residualStdDevs[p].total);
+			}
+			
+			funcs.add(spectrum);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, distCPT.getColor(dist)));
+		}
+		
+		String title = mag == null ? "" : "M"+optionalDigitDF.format(mag)+" ";
+		title += type.name+", "+type.symbol;
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, "Period (s)", type.symbol);
+		spec.setLegendVisible(true);
+
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setLegendFontSize(24);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+
+		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+		
+		Range xRange = new Range(StatUtils.min(periods), StatUtils.max(periods));
+		Range yRange = new Range(0d, 1d);
+
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		gp.getChartPanel().setSize(800, 600);
+		File pngFile = new File(resourcesDir, prefix+".png");
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+		return pngFile;
 	}
 	
 	private void plotStdDevsHistogram(File resourcesDir, String prefix, String title, double period,

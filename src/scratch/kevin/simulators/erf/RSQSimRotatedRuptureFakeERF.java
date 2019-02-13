@@ -7,10 +7,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.param.impl.IntegerParameter;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.faultSurface.PointSurface;
@@ -22,6 +27,7 @@ import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
 
+import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.kevin.simulators.RSQSimCatalog;
@@ -66,7 +72,16 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			scenarios.add(scenario);
 			RotatedRupVariabilityConfig config = configMap.get(scenario);
 			if (this.sites == null) {
-				this.sites = config.getValues(Site.class, Quantity.SITE);
+				// need to do it this way in order to get sites in rotation order
+				sites = new ArrayList<>();
+				Site prevSite = null;
+				for (RotationSpec rotation : config.getRotations()) {
+					if (prevSite == null || !prevSite.getName().equals(rotation.site.getName())) {
+						sites.add(rotation.site);
+						prevSite = rotation.site;
+					}
+				}
+				System.out.println("Loaded "+sites.size()+" sites");
 			} else {
 				// verify that they're the same sites
 				List<Site> mySites = config.getValues(Site.class, Quantity.SITE);
@@ -104,6 +119,40 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 				}
 			}
 		}
+		
+		initParams();
+	}
+	
+	private void initParams() {
+		int numScenarios = configMap.size();
+		int numSourceAz = -1;
+		int numSiteToSourceAz = -1;
+		int numDistances = -1;
+		
+		for (RotatedRupVariabilityConfig config : configMap.values()) {
+			numSourceAz = config.getValues(Float.class, Quantity.SOURCE_AZIMUTH).size();
+			numSiteToSourceAz = config.getValues(Float.class, Quantity.SITE_TO_SOURTH_AZIMUTH).size();
+			numDistances = config.getValues(Float.class, Quantity.DISTANCE).size();
+		}
+		
+		IntegerParameter scenariosParam = new IntegerParameter("Num Scenarios", numScenarios, numScenarios);
+		scenariosParam.setValue(numScenarios);
+		adjustableParams.addParameter(scenariosParam);
+		
+		IntegerParameter sourceAzParam = new IntegerParameter("Num Source Azimuths", numSourceAz, numSourceAz);
+		sourceAzParam.setValue(numSourceAz);
+		adjustableParams.addParameter(sourceAzParam);
+		
+		IntegerParameter siteToSourceAzParam = new IntegerParameter("Num Site-To-Source Azimuths", numSiteToSourceAz, numSiteToSourceAz);
+		siteToSourceAzParam.setValue(numSiteToSourceAz);
+		adjustableParams.addParameter(siteToSourceAzParam);
+		
+		IntegerParameter distsParam = new IntegerParameter("Num Distances", numDistances, numDistances);
+		distsParam.setValue(numDistances);
+		adjustableParams.addParameter(distsParam);
+		
+		this.timeSpan = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
+		this.timeSpan.setDuration(1d);
 	}
 
 	@Override
@@ -146,7 +195,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 
 		@Override
 		public double getMinDistance(Site site) {
-			if (site.equals(this.site))
+			if (LocationUtils.areSimilar(this.site.getLocation(), site.getLocation()))
 				return distance;
 			return Double.POSITIVE_INFINITY;
 		}
@@ -164,7 +213,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		public RSQSimProbEqkRup getRupture(int nRupture) {
 			RSQSimEvent rotated = getEvent(nRupture);
 			Location hypo = RSQSimUtils.getHypocenter(rotated);
-			RSQSimProbEqkRup rupture = new RSQSimProbEqkRup(rotated.getMagnitude(), Double.NaN, Double.NaN, hypo,
+			RSQSimProbEqkRup rupture = new RSQSimProbEqkRup(rotated.getMagnitude(), Double.NaN, 1d, hypo,
 					eventID, rotated.getTime(), null, rotated.getAllElements());
 			rupture.setRuptureSurface(new FakeModDistanceSurface(hypo, site, distance));
 			return rupture;
@@ -191,7 +240,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 
 		@Override
 		public double getDistanceRup(Location siteLoc) {
-			if (siteLoc.equals(site.getLocation()))
+			if (LocationUtils.areSimilar(siteLoc, site.getLocation()))
 				return distance;
 			return Double.POSITIVE_INFINITY;
 		}
@@ -261,8 +310,131 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		return new File(outputDir, "rotation_config_"+scenario.getPrefix()+".csv");
 	}
 	
+	public static Map<Scenario, RotatedRupVariabilityConfig> loadRotationConfigs(RSQSimCatalog catalog, File dir, boolean loadRuptures)
+			throws IOException {
+		Map<Scenario, RotatedRupVariabilityConfig> configsMap = new HashMap<>();
+		List<Site> sites = null;
+		for (Scenario scenario : Scenario.values()) {
+			File csvFile = getCSVFile(dir, scenario);
+			if (csvFile.exists()) {
+				System.out.println("Located CSV for "+scenario+": "+csvFile.getAbsolutePath());
+				List<RSQSimEvent> ruptures = null;
+				if (loadRuptures) {
+					System.out.println("Loading ruptures...");
+					ruptures = getScenarioEvents(catalog, scenario, 0, -1);
+					System.out.println("Loaded "+ruptures.size()+" ruptures");
+				}
+				
+				System.out.println("Loading CSV...");
+				RotatedRupVariabilityConfig config = RotatedRupVariabilityConfig.loadCSV(catalog, csvFile, ruptures, sites);
+				if (sites == null)
+					sites = config.getValues(Site.class, Quantity.SITE);
+				System.out.println("Loaded "+config.getRotations().size()+" rotations");
+				configsMap.put(scenario, config);
+			}
+		}
+		return configsMap;
+	}
+	
+	private static class MPJ_PointsAndSRFsWriter extends MPJTaskCalculator {
+		
+		private RSQSimRotatedRuptureFakeERF erf;
+		private File csSourcesDir;
+		private boolean writePoints;
+		private boolean writeSRFs;
+		private double dt;
+		private SRFInterpolationMode interpMode;
+		private double momentPDiffThreshold;
+		
+		private Map<Integer, Double> patchAreas;
+
+		public MPJ_PointsAndSRFsWriter(CommandLine cmd, RSQSimRotatedRuptureFakeERF erf, File csSourcesDir,
+				boolean writePoints, boolean writeSRFs, double dt, SRFInterpolationMode interpMode, double momentPDiffThreshold)
+						throws IOException {
+			super(cmd);
+			this.shuffle = false;
+			
+			this.erf = erf;
+			this.csSourcesDir = csSourcesDir;
+			this.writePoints = writePoints;
+			this.writeSRFs = writeSRFs;
+			this.dt = dt;
+			this.interpMode = interpMode;
+			this.momentPDiffThreshold = momentPDiffThreshold;
+			
+			if (rank == 0)
+				Preconditions.checkState(csSourcesDir.exists() || csSourcesDir.mkdir());
+			
+			patchAreas = new HashMap<>();
+			for (SimulatorElement elem : erf.catalog.getElements())
+				patchAreas.put(elem.getID(), elem.getArea());
+		}
+
+		@Override
+		protected int getNumTasks() {
+			return erf.getNumSources();
+		}
+
+		@Override
+		protected void calculateBatch(int[] batch) throws Exception {
+			for (int sourceID : batch) {
+				if (writePoints) {
+					debug("Writing point files for "+sourceID);
+					RSQSimSectBundledERF.writeRupturePointFiles(erf, csSourcesDir, sourceID);
+					debug("DONE writing point files for "+sourceID);
+				}
+				if (writeSRFs) {
+					debug("Writing SRFs  for "+sourceID);
+					RSQSimRotatedRuptureSource source = erf.getSource(sourceID);
+					for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
+						RSQSimEvent event = source.getEvent(rupID);
+						RSQSimSectBundledERF.writeRuptureSRF(csSourcesDir, erf.catalog, sourceID, rupID, event, dt, interpMode,
+								momentPDiffThreshold, patchAreas, null);
+					}
+					debug("DONE writing SRFs  for "+sourceID);
+				}
+			}
+		}
+
+		@Override
+		protected void doFinalAssembly() throws Exception {}
+		
+		protected static String[] initMPJ(String[] args) {
+			return MPJTaskCalculator.initMPJ(args);
+		}
+		
+		protected static Options createOptions() {
+			return MPJTaskCalculator.createOptions();
+		}
+		
+		protected static CommandLine parse(Options options, String args[], Class<?> clazz) {
+			return MPJTaskCalculator.parse(options, args, clazz);
+		}
+		
+		protected static void finalizeMPJ() {
+			MPJTaskCalculator.finalizeMPJ();
+		}
+		
+	}
+	
 	public static void main(String[] args) throws IOException {
 		RSQSimCatalog catalog;
+		
+		boolean mpj = false;
+		for (String arg : args)
+			if (arg.startsWith("-") && arg.contains("dispatch"))
+				mpj = true;
+		
+		CommandLine cmd = null;
+		if (mpj) {
+			System.out.println("MPJ!");
+			args = MPJ_PointsAndSRFsWriter.initMPJ(args);
+			
+			Options options = MPJ_PointsAndSRFsWriter.createOptions();
+			
+			cmd = MPJ_PointsAndSRFsWriter.parse(options, args, MPJ_PointsAndSRFsWriter.class);
+			args = cmd.getArgs();
+		}
 		
 		boolean writePoints, writeSRFs, buildConfigs;
 		
@@ -314,21 +486,21 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			
 			sites.add(new Site(new Location(34.0192, -118.286), "USC"));
 			sites.add(new Site(new Location(34.148426, -118.17119), "PAS"));
-			sites.add(new Site(new Location(34.064986, -117.29201), "SBSM"));
-			sites.add(new Site(new Location(34.041824, -118.0653), "WNGC"));
-			sites.add(new Site(new Location(33.93088, -118.17881), "STNI"));
-			sites.add(new Site(new Location(34.557, -118.125), "LAPD"));
-			sites.add(new Site(new Location(34.55314, -118.72826), "s119"));
-			sites.add(new Site(new Location(34.37809, -118.34757), "s279"));
-			sites.add(new Site(new Location(34.15755, -117.87389), "s480"));
-			sites.add(new Site(new Location(34.00909, -118.48939), "SMCA"));
+//			sites.add(new Site(new Location(34.55314, -118.72826), "s119"));
+//			sites.add(new Site(new Location(34.37809, -118.34757), "s279"));
+//			sites.add(new Site(new Location(34.15755, -117.87389), "s480"));
+//			sites.add(new Site(new Location(33.93088, -118.17881), "STNI"));
+//			sites.add(new Site(new Location(34.064986, -117.29201), "SBSM"));
+//			sites.add(new Site(new Location(34.041824, -118.0653), "WNGC"));
+//			sites.add(new Site(new Location(34.557, -118.125), "LAPD"));
+//			sites.add(new Site(new Location(34.00909, -118.48939), "SMCA"));
 			
 			Scenario[] scenarios = Scenario.values();
 			
 			double[] distances = { 20d, 50d, 100d };
 			
 			int numSourceAz = 18;
-			int numSiteToSourceAz = 18;
+			int numSiteToSourceAz = 36;
 			int maxRuptures = 100;
 			
 			int numRotations = 0;
@@ -353,26 +525,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			int numRotationsPerSite = numRotations/sites.size();
 			System.out.println("Created "+numRotations+", "+numRotationsPerSite+" per site");
 		} else {
-			List<Site> sites = null;
-			for (Scenario scenario : Scenario.values()) {
-				File csvFile = getCSVFile(outputDir, scenario);
-				if (csvFile.exists()) {
-					System.out.println("Located CSV for "+scenario+": "+csvFile.getAbsolutePath());
-					List<RSQSimEvent> ruptures = null;
-					if (writePoints || writeSRFs) {
-						System.out.println("Loading ruptures...");
-						ruptures = getScenarioEvents(catalog, scenario, skipYears, -1);
-						System.out.println("Loaded "+ruptures.size()+" ruptures");
-					}
-					
-					System.out.println("Loading CSV...");
-					RotatedRupVariabilityConfig config = RotatedRupVariabilityConfig.loadCSV(catalog, csvFile, ruptures, sites);
-					if (sites == null)
-						sites = config.getValues(Site.class, Quantity.SITE);
-					System.out.println("Loaded "+config.getRotations().size()+" rotations");
-					configsMap.put(scenario, config);
-				}
-			}
+			configsMap = loadRotationConfigs(catalog, outputDir, writePoints || writeSRFs);
 			Preconditions.checkState(!configsMap.isEmpty(), "No configuration CSV files found in %s", outputDir.getAbsolutePath());
 		}
 		
@@ -384,15 +537,29 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		
 		File csSourcesDir = new File(outputDir, "cs_source_rup_files");
 		
-		if (writePoints) {
-			System.out.println("Writing rupture points to: "+csSourcesDir.getAbsolutePath());
-			Preconditions.checkState(csSourcesDir.exists() || csSourcesDir.mkdir());
-			erf.writeRupturePointFiles(outputDir);
-		}
-		if (writeSRFs) {
-			System.out.println("Writing SRFs to: "+csSourcesDir.getAbsolutePath());
-			Preconditions.checkState(csSourcesDir.exists() || csSourcesDir.mkdir());
-			erf.writeRuptureSRFs(outputDir, catalog, dt, interpMode, momentPDiffThreshold);
+		if (mpj) {
+			try {
+				MPJ_PointsAndSRFsWriter mpjWrite = new MPJ_PointsAndSRFsWriter(cmd, erf, csSourcesDir, writePoints, writeSRFs,
+						dt, interpMode, momentPDiffThreshold);
+				mpjWrite.run();
+				
+				MPJ_PointsAndSRFsWriter.finalizeMPJ();
+				
+				System.exit(0);
+			} catch (Throwable t) {
+				MPJTaskCalculator.abortAndExit(t);
+			}
+		} else {
+			if (writePoints) {
+				System.out.println("Writing rupture points to: "+csSourcesDir.getAbsolutePath());
+				Preconditions.checkState(csSourcesDir.exists() || csSourcesDir.mkdir());
+				erf.writeRupturePointFiles(csSourcesDir);
+			}
+			if (writeSRFs) {
+				System.out.println("Writing SRFs to: "+csSourcesDir.getAbsolutePath());
+				Preconditions.checkState(csSourcesDir.exists() || csSourcesDir.mkdir());
+				erf.writeRuptureSRFs(csSourcesDir, catalog, dt, interpMode, momentPDiffThreshold);
+			}
 		}
 	}
 

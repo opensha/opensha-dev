@@ -42,8 +42,10 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
+import org.opensha.sha.simulators.iden.FocalMechIden;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.RegionIden;
+import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 
 import com.google.common.base.Preconditions;
@@ -83,7 +85,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	private File gmpeCacheDir;
 
 	public CatalogGMPE_Compare(RSQSimCatalog catalog, ZipFile bbpZipFile, List<BBP_Site> sites, double minMag, int skipYears,
-			VelocityModel vm, double minFractForInclusion, File gmpeCacheDir) throws IOException {
+			VelocityModel vm, double minFractForInclusion, File gmpeCacheDir, RuptureIdentifier loadCriteria) throws IOException {
 		this.catalog = catalog;
 		this.sites = sites;
 		this.minMag = minMag;
@@ -107,6 +109,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			loader.minMag(minMag);
 		if (skipYears > 0)
 			loader.skipYears(skipYears);
+		if (loadCriteria != null)
+			loader.matches(loadCriteria);
 		loader.matches(new LogicalOrRupIden(siteRegIdens));
 		System.out.println("Loading events...");
 		events = loader.minMag(minMag).load();
@@ -531,7 +535,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_3032.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -543,9 +547,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
+		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
 		AttenRelRef rotDGMPE = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
 		
 		String[] highlightNames;
@@ -553,6 +557,16 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			highlightNames = new String[0];
 		else
 			highlightNames = new String[] { "USC", "SBSM" };
+		
+//		RuptureIdentifier loadIden = null;
+//		String loadIdenPrefix = null;
+		
+//		RuptureIdentifier loadIden = FocalMechIden.builder().strikeSlip(10d).forDip(90).build();
+//		String loadIdenPrefix = "mech_vert_ss";
+//		RuptureIdentifier loadIden = FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build();
+//		String loadIdenPrefix = "mech_reverse";
+		RuptureIdentifier loadIden = FocalMechIden.builder().forRake(-105, -75).forDip(35, 55).build();
+		String loadIdenPrefix = "mech_normal";
 		
 		boolean replotScatters = false;
 		boolean replotZScores = false;
@@ -644,7 +658,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		ZipFile zipFile = new ZipFile(bbpZipFile);
 		
 		CatalogGMPE_Compare comp = new CatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
-				vm, minFractForInclusion, gmpeCacheDir);
+				vm, minFractForInclusion, gmpeCacheDir, loadIden);
 		comp.setReplotCurves(replotCurves);
 		comp.setReplotResiduals(replotResiduals);
 		comp.setReplotScatters(replotScatters);
@@ -676,6 +690,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 							if (scaleVelocities)
 								dirname += "_velScale";
 						}
+						if (loadIden != null && loadIdenPrefix.length() > 0)
+							dirname += "_"+loadIdenPrefix;
 						File catalogGMPEDir = new File(catalogOutputDir, dirname);
 						Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
 						comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, periods, comps);

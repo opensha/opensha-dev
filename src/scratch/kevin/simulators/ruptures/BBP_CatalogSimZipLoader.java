@@ -117,9 +117,13 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 	public Collection<Integer> getEventIDs(BBP_Site site) {
 		Collection<String> dirNames = super.getDirNames(site);
 		List<Integer> ids = new ArrayList<>(dirNames.size());
-		for (String dirName : dirNames)
-			if (!dirName.contains("rup_gen"))
-				ids.add(getEventID(dirName));
+		for (String dirName : dirNames) {
+			if (!dirName.contains("rup_gen")) {
+				int eventID = getEventID(dirName);
+				if (eventsMap.containsKey(eventID))
+					ids.add(eventID);
+			}
+		}
 		return ids;
 	}
 	
@@ -193,7 +197,8 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 	public Collection<RSQSimEvent> getRupturesForSite(Site site) {
 		List<RSQSimEvent> events = new ArrayList<>();
 		for (Integer id : getEventIDs(gmpeToBBP.get(site)))
-			events.add(eventsMap.get(id));
+			if (eventsMap.containsKey(id))
+				events.add(eventsMap.get(id));
 		return events;
 	}
 

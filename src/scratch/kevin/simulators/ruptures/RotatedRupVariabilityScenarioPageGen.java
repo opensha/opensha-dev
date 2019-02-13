@@ -56,7 +56,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_3067.instance(baseDir);
 		
 		double[] periods = {3d, 5d, 7.5, 10d};
 		
