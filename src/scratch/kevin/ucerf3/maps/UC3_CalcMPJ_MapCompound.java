@@ -1,4 +1,4 @@
-package scratch.peter.ucerf3.calc;
+package scratch.kevin.ucerf3.maps;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -33,7 +33,7 @@ import com.google.common.io.Flushables;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 
-public class UC3_CalcMPJ_MapAverage extends MPJTaskCalculator {
+public class UC3_CalcMPJ_MapCompound extends MPJTaskCalculator {
 	
 	private static final String S = File.separator;
 	private ThreadedHazardCalc calc;
@@ -44,13 +44,13 @@ public class UC3_CalcMPJ_MapAverage extends MPJTaskCalculator {
 	private File outDir;
 	private Period period;
 	
-	public UC3_CalcMPJ_MapAverage(CommandLine cmd, String[] args)
+	public UC3_CalcMPJ_MapCompound(CommandLine cmd, String[] args)
 			throws IOException, InvocationTargetException, FileNotFoundException {
 		
 		super(cmd);
 		if (args.length != 6) {
-			System.err.println("USAGE: UC3_CalcMPJ_MapAverage [<options>] " +
-					"<solPath> <index> <grid> <spacing> <period> <outPath>");
+			System.err.println("USAGE: UC3_CalcMPJ_MapCompound [<options>] " +
+					"<solPath> <branchID> <grid> <spacing> <period> <outPath>");
 			abortAndExit(2);
 		}
 
@@ -59,19 +59,18 @@ public class UC3_CalcMPJ_MapAverage extends MPJTaskCalculator {
 		debug(rank, null, "setup for "+getNumThreads()+" threads");
 		
 		String solPath = args[0];
-		int idx = Integer.parseInt(args[1]);
+		String branchID = args[1];
 		TestGrid grid = TestGrid.valueOf(args[2]);
 		double spacing = Double.parseDouble(args[3]);
 		locs = grid.grid(spacing).getNodeList();
 		period = Period.valueOf(args[4]);
 		String outPath = args[5];
 
-		String erfID = nameFromPath(solPath) + "_" + idx;
-		outDir = new File(outPath + S + erfID + S + grid + S + period);
+		outDir = new File(outPath + S + branchID + S + grid + S + period);
 		
 		// mpj flag ignored in this case
 		HazardResultWriter writer = new HazardResultWriterMPJ(outDir);
-		calc = new ThreadedHazardCalc(solPath, idx, locs, period, false, writer);
+		calc = new ThreadedHazardCalc(solPath, branchID, locs, period, false, writer);
 	}
 	
 	@Override
@@ -81,7 +80,7 @@ public class UC3_CalcMPJ_MapAverage extends MPJTaskCalculator {
 	
 	@Override
 	public void calculateBatch(int[] batch) throws Exception, InterruptedException {
-		calc.calculate(batch);
+		calc.calculate(batch, getNumThreads());
 		System.out.println("Batch complete");
 	}
 	
@@ -107,9 +106,9 @@ public class UC3_CalcMPJ_MapAverage extends MPJTaskCalculator {
 		
 		try {
 			Options options = createOptions();
-			CommandLine cmd = parse(options, args, UC3_CalcMPJ_MapAverage.class);
+			CommandLine cmd = parse(options, args, UC3_CalcMPJ_MapCompound.class);
 			args = cmd.getArgs();
-			UC3_CalcMPJ_MapAverage driver = new UC3_CalcMPJ_MapAverage(cmd, args);
+			UC3_CalcMPJ_MapCompound driver = new UC3_CalcMPJ_MapCompound(cmd, args);
 			driver.run();
 			finalizeMPJ();
 			System.exit(0);
@@ -149,11 +148,5 @@ public class UC3_CalcMPJ_MapAverage extends MPJTaskCalculator {
 		}
 	}
 	
-	private static String nameFromPath(String solPath) {
-		int ssIdx1 = StringUtils.lastIndexOf(solPath, "/");
-		int ssIdx2 = StringUtils.lastIndexOf(solPath, ".");
-		return solPath.substring(ssIdx1, ssIdx2);
-	}
-
 
 }

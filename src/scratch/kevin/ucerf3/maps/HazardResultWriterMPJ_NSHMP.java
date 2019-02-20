@@ -1,4 +1,4 @@
-package scratch.peter.nshmp;
+package scratch.kevin.ucerf3.maps;
 
 import java.awt.geom.Point2D;
 import java.io.File;
@@ -17,6 +17,8 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.io.Flushables;
+
+import scratch.peter.nshmp.DeterministicResult;
 
 /**
  * Add comments here

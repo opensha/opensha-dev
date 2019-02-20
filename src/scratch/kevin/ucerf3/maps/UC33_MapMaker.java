@@ -1,4 +1,4 @@
-package scratch.peter.ucerf3.calc;
+package scratch.kevin.ucerf3.maps;
 
 import static com.google.common.base.Charsets.US_ASCII;
 import static org.opensha.commons.mapping.gmt.GMT_MapGenerator.COLOR_SCALE_MAX_PARAM_NAME;
@@ -54,10 +54,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.utils.ProbOfExceed;
-import scratch.peter.nshmp.BinaryCurves;
 import scratch.peter.nshmp.CurveContainer;
-import scratch.peter.nshmp.NSHMP_DataUtils;
-import scratch.peter.nshmp.NSHMP_PlotUtils;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;

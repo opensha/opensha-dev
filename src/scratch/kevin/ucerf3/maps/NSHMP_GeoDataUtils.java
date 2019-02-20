@@ -1,7 +1,7 @@
 /**
  * 
  */
-package scratch.peter.nshmp;
+package scratch.kevin.ucerf3.maps;
 
 import static org.opensha.nshmp2.util.Period.*;
 import static scratch.UCERF3.utils.ProbOfExceed.*;
@@ -25,6 +25,7 @@ import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sra.rtgm.RTGM.Frequency;
 
 import scratch.UCERF3.utils.ProbOfExceed;
+import scratch.peter.nshmp.CurveContainer;
 
 /**
  * Utility class with static methods to generate GeoDataSets.

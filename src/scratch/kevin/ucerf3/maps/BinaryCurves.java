@@ -1,4 +1,4 @@
-package scratch.peter.nshmp;
+package scratch.kevin.ucerf3.maps;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -27,6 +27,8 @@ import com.google.common.io.LittleEndianDataInputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Doubles;
+
+import scratch.peter.nshmp.CurveContainer;
 
 /**
  * Add comments here

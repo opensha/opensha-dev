@@ -1,4 +1,4 @@
-package scratch.peter.nshmp;
+package scratch.kevin.ucerf3.maps;
 
 import static scratch.peter.nshmp.NSHMP_UtilsDev.toNum;
 
@@ -14,8 +14,6 @@ import org.opensha.nshmp2.tmp.TestGrid;
 import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sra.rtgm.RTGM.Frequency;
 
-import scratch.peter.nshmp.CurveContainer.CurveFileProcessor_SHA;
-
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
@@ -24,6 +22,10 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.io.LineProcessor;
+
+import scratch.peter.nshmp.CurveContainer;
+import scratch.peter.nshmp.CurveContainer.CurveFileProcessor_SHA;
+import scratch.peter.nshmp.NSHMP_UtilsDev;
 
 /**
  * Class for storint ghrids of RTGM values.

@@ -23,7 +23,6 @@ import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter.RunSites;
-import scratch.peter.ucerf3.calc.UC3_CalcMPJ_MapCompound;
 
 public class MapScriptWriter {
 

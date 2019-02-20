@@ -1,4 +1,4 @@
-package scratch.peter.ucerf3.calc;
+package scratch.kevin.ucerf3.maps;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -22,8 +22,6 @@ import org.opensha.nshmp2.tmp.TestGrid;
 import org.opensha.nshmp2.util.Period;
 import org.opensha.nshmp2.util.SourceIMR;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
-
-import scratch.peter.nshmp.HazardResultWriterMPJ_NSHMP;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;

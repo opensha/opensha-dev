@@ -1,7 +1,7 @@
 /**
  * 
  */
-package scratch.peter.nshmp;
+package scratch.kevin.ucerf3.maps;
 
 import static org.opensha.commons.mapping.gmt.GMT_MapGenerator.*;
 import static org.opensha.nshmp2.tmp.TestGrid.*;
@@ -32,6 +32,7 @@ import org.opensha.sra.rtgm.RTGM.Frequency;
 import com.google.common.io.Files;
 
 import scratch.UCERF3.utils.ProbOfExceed;
+import scratch.peter.nshmp.NSHMP_UtilsDev;
 
 /**
  *  Class of static methods for plotting USGS NSHMP and OpenSHA hazard data.
