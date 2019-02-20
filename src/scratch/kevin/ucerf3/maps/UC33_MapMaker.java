@@ -46,7 +46,6 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.mapping.gmt.elements.PSXYPolygon;
 import org.opensha.commons.param.impl.CPTParameter;
 import org.opensha.commons.util.DataUtils;
-import org.opensha.nshmp2.calc.HazardResultWriterLocal;
 import org.opensha.nshmp2.tmp.TestGrid;
 import org.opensha.nshmp2.util.Period;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
