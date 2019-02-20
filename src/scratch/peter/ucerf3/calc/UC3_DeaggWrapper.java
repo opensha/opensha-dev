@@ -46,7 +46,7 @@ import org.opensha.sha.imr.attenRelImpl.ngaw2.NSHMP14_WUS;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.peter.curves.ProbOfExceed;
+import scratch.UCERF3.utils.ProbOfExceed;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;

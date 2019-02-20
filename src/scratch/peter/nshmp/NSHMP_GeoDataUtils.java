@@ -4,7 +4,7 @@
 package scratch.peter.nshmp;
 
 import static org.opensha.nshmp2.util.Period.*;
-import static scratch.peter.curves.ProbOfExceed.*;
+import static scratch.UCERF3.utils.ProbOfExceed.*;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -24,7 +24,7 @@ import org.opensha.nshmp2.util.Period;
 import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sra.rtgm.RTGM.Frequency;
 
-import scratch.peter.curves.ProbOfExceed;
+import scratch.UCERF3.utils.ProbOfExceed;
 
 /**
  * Utility class with static methods to generate GeoDataSets.

@@ -14,9 +14,9 @@ import org.opensha.commons.util.Interpolate;
 import org.opensha.nshmp2.tmp.TestGrid;
 import org.opensha.nshmp2.util.Period;
 
-import scratch.peter.curves.ProbOfExceed;
-
 import com.google.common.io.Files;
+
+import scratch.UCERF3.utils.ProbOfExceed;
 
 /**
  * Add comments here

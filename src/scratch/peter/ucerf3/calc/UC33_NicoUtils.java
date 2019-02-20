@@ -6,8 +6,8 @@ import static org.opensha.nshmp2.util.Period.GM0P20;
 import static org.opensha.nshmp2.util.Period.GM1P00;
 import static org.opensha.sha.earthquake.param.IncludeBackgroundOption.EXCLUDE;
 import static org.opensha.sha.util.NEHRP_TestCity.SANTA_ROSA;
-import static scratch.peter.curves.ProbOfExceed.PE10IN50;
-import static scratch.peter.curves.ProbOfExceed.PE2IN50;
+import static scratch.UCERF3.utils.ProbOfExceed.PE10IN50;
+import static scratch.UCERF3.utils.ProbOfExceed.PE2IN50;
 
 import java.io.File;
 import java.io.IOException;

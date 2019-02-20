@@ -5,8 +5,8 @@ import static org.opensha.nshmp2.util.Period.GM0P00;
 import static org.opensha.nshmp2.util.Period.GM0P20;
 import static org.opensha.nshmp2.util.Period.GM1P00;
 import static org.opensha.nshmp2.util.Period.GM4P00;
-import static scratch.peter.curves.ProbOfExceed.PE10IN50;
-import static scratch.peter.curves.ProbOfExceed.PE2IN50;
+import static scratch.UCERF3.utils.ProbOfExceed.PE10IN50;
+import static scratch.UCERF3.utils.ProbOfExceed.PE2IN50;
 
 import java.awt.geom.Point2D;
 import java.io.File;
@@ -29,6 +29,7 @@ import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.Interpolate;
 import org.opensha.nshmp2.util.Period;
 
+import scratch.UCERF3.utils.ProbOfExceed;
 import scratch.peter.ucerf3.calc.UC3_CalcUtils;
 
 import com.google.common.base.Function;

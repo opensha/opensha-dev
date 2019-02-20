@@ -14,7 +14,7 @@ import org.opensha.nshmp2.util.Period;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import scratch.peter.curves.ProbOfExceed;
+import scratch.UCERF3.utils.ProbOfExceed;
 import scratch.peter.nshmp.CurveContainer;
 import scratch.peter.nshmp.NSHMP_DataUtils;
 import scratch.peter.ucerf3.calc.UC33_MapMaker;

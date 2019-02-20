@@ -2,8 +2,8 @@ package scratch.peter.curves;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.opensha.nshmp2.util.Period.*;
-import static scratch.peter.curves.ProbOfExceed.*;
 import static org.opensha.sra.rtgm.RTGM.Frequency.*;
+import static scratch.UCERF3.utils.ProbOfExceed.*;
 
 import java.awt.geom.Point2D;
 import java.io.File;
@@ -31,6 +31,8 @@ import org.opensha.sra.rtgm.RTGM.Frequency;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+
+import scratch.UCERF3.utils.ProbOfExceed;
 
 class CityProcessorNSHMP implements Runnable {
 

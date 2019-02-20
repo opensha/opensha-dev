@@ -17,7 +17,7 @@ import static scratch.UCERF3.enumTreeBranches.ScalingRelationships.*;
 import static scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels.*;
 import static scratch.UCERF3.enumTreeBranches.SpatialSeisPDF.*;
 import static scratch.UCERF3.enumTreeBranches.TotalMag5Rate.*;
-import static scratch.peter.curves.ProbOfExceed.*;
+import static scratch.UCERF3.utils.ProbOfExceed.*;
 
 import java.awt.Color;
 import java.io.File;
@@ -57,7 +57,7 @@ import scratch.UCERF3.enumTreeBranches.SpatialSeisPDF;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
-import scratch.peter.curves.ProbOfExceed;
+import scratch.UCERF3.utils.ProbOfExceed;
 import scratch.peter.nshmp.CurveContainer;
 import scratch.peter.nshmp.NSHMP_DataUtils;
 import scratch.peter.nshmp.NSHMP_PlotUtils;
