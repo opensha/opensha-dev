@@ -1,4 +1,4 @@
-package org.opensha.nshmp2.calc;
+package scratch.kevin.ucerf3.maps;
 
 import java.awt.geom.Point2D;
 import java.io.BufferedWriter;
@@ -8,6 +8,8 @@ import java.io.Writer;
 import java.util.List;
 
 import org.opensha.commons.geo.Location;
+import org.opensha.nshmp2.calc.HazardResult;
+import org.opensha.nshmp2.calc.HazardResultWriter;
 import org.opensha.nshmp2.util.Period;
 
 import com.google.common.base.Charsets;
