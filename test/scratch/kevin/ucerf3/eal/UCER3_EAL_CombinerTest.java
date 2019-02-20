@@ -23,7 +23,6 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
-import org.opensha.nshmp2.util.FocalMech;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -33,6 +32,7 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
+import org.opensha.sha.util.FocalMech;
 import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
 
 import com.google.common.base.Preconditions;

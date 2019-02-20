@@ -37,7 +37,7 @@ import org.opensha.sra.rtgm.RTGM.Frequency;
 
 import com.google.common.collect.Maps;
 
-import scratch.peter.curves.ProbOfExceed;
+import scratch.UCERF3.utils.ProbOfExceed;
 
 /**
  * Class of static methods for managing, cleaning, and creating USGS NSHMP

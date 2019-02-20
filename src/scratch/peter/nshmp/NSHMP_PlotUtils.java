@@ -6,7 +6,7 @@ package scratch.peter.nshmp;
 import static org.opensha.commons.mapping.gmt.GMT_MapGenerator.*;
 import static org.opensha.nshmp2.tmp.TestGrid.*;
 import static org.opensha.nshmp2.util.Period.*;
-import static scratch.peter.curves.ProbOfExceed.*;
+import static scratch.UCERF3.utils.ProbOfExceed.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,9 +29,9 @@ import org.opensha.nshmp2.util.Period;
 import org.opensha.sra.rtgm.RTGM;
 import org.opensha.sra.rtgm.RTGM.Frequency;
 
-import scratch.peter.curves.ProbOfExceed;
-
 import com.google.common.io.Files;
+
+import scratch.UCERF3.utils.ProbOfExceed;
 
 /**
  *  Class of static methods for plotting USGS NSHMP and OpenSHA hazard data.

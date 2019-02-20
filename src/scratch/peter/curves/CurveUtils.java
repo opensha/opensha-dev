@@ -7,8 +7,8 @@ import static org.opensha.nshmp2.util.Period.GM0P20;
 import static org.opensha.nshmp2.util.Period.GM1P00;
 import static org.opensha.sra.rtgm.RTGM.Frequency.SA_0P20;
 import static org.opensha.sra.rtgm.RTGM.Frequency.SA_1P00;
-import static scratch.peter.curves.ProbOfExceed.PE10IN50;
-import static scratch.peter.curves.ProbOfExceed.PE2IN50;
+import static scratch.UCERF3.utils.ProbOfExceed.PE10IN50;
+import static scratch.UCERF3.utils.ProbOfExceed.PE2IN50;
 
 import java.awt.geom.Point2D;
 import java.io.File;
@@ -51,6 +51,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.utils.ProbOfExceed;
 import scratch.peter.nshmp.CurveContainer;
 import scratch.peter.ucerf3.calc.UC3_CalcUtils;
 

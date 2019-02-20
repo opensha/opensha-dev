@@ -15,8 +15,8 @@ import static org.opensha.nshmp2.util.Period.GM0P20;
 import static org.opensha.nshmp2.util.Period.GM1P00;
 import static org.opensha.nshmp2.util.Period.GM2P00;
 import static org.opensha.nshmp2.util.Period.GM3P00;
-import static scratch.peter.curves.ProbOfExceed.PE10IN50;
-import static scratch.peter.curves.ProbOfExceed.PE2IN50;
+import static scratch.UCERF3.utils.ProbOfExceed.PE10IN50;
+import static scratch.UCERF3.utils.ProbOfExceed.PE2IN50;
 
 import java.awt.Color;
 import java.io.BufferedWriter;
@@ -53,7 +53,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
-import scratch.peter.curves.ProbOfExceed;
+import scratch.UCERF3.utils.ProbOfExceed;
 import scratch.peter.nshmp.BinaryCurves;
 import scratch.peter.nshmp.CurveContainer;
 import scratch.peter.nshmp.NSHMP_DataUtils;
