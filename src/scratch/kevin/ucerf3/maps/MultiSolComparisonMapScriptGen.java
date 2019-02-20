@@ -18,8 +18,6 @@ import com.google.common.io.Files;
 
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter.RunSites;
-import scratch.peter.ucerf3.calc.UC3_CalcMPJ_Map;
-import scratch.peter.ucerf3.calc.UC3_CalcMPJ_MapCompound;
 
 public class MultiSolComparisonMapScriptGen {
 
