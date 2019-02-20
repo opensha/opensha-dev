@@ -12,10 +12,10 @@ import org.opensha.nshmp2.erf.NSHMP2008;
 import org.opensha.nshmp2.erf.source.FixedStrikeSource;
 import org.opensha.nshmp2.erf.source.GridERF;
 import org.opensha.nshmp2.erf.source.NSHMP_ERF;
-import org.opensha.nshmp2.erf.source.PointSource13b;
 import org.opensha.nshmp2.tmp.TestGrid;
 import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
