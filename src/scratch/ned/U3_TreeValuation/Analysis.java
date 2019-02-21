@@ -62,6 +62,11 @@ public class Analysis {
 	double totOrigWeight;
 	HashMap<String, String> closestValuesForBranchMap; // this stores the branch value that has a mean closest to the totalMeanEAL
 	
+	// for branch name only
+	HashMap<String, Double> covForBrMap;
+	HashMap<String, Double> wtAbsValMeanForBrMap;
+
+	
 	// for branch name/value
 	HashMap<String, Double> weightForBrValMap;
 	HashMap<String, Double> meanForBrValMap;
@@ -76,6 +81,7 @@ public class Analysis {
 	
 	HashMap<String, Double> meanIfBrRemovedMap;
 	HashMap<String, Double> meanDiffIfBrRemovedMap;
+	HashMap<String, Double> meanDiffWtedIfBrRemovedMap;
 	HashMap<String, Double> covIfBrRemovedMap;
 	HashMap<String, Double> covDiffIfBrRemovedMap;
 	HashMap<String, Double> fracWithIn10percIfBrRemovedMap;
@@ -148,17 +154,22 @@ public class Analysis {
 		generateBranchValueResults(popupWindows, outDirName != null);
 		
 		if(mkDiffForEachBranchPlots) {
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, meanDiffForBrValMap, "meanDiffForBrValMap", "Mean Fractional Change", 0d, -1d, 1d);
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, meanDiffWtedForBrValMap, "meanDiffWtedForBrValMap", "Mean Fractional Change", 0d, -0.2, 0.2);
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, meanDiffIfBrRemovedMap, "meanDiffIfBrRemovedMap", "Mean Fractional Change", 0d, -0.2, 0.2);
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, covForBrValMap, "covForBrValMap", "COV Change", totCOV_EAL, 0.1, 0.601);
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, covIfBrRemovedMap, "covIfBrRemovedMap", "COV Change", totCOV_EAL, 0.1, 0.601);
 			
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, fracWithIn10percForBrValMap, "fracWithIn10percForBrValMap", "Fraction Within 10%", totWithin10perc, 0d, 0.4);
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, fracWithIn10percIfBrRemovedMap, "fracWithIn10percIfBrRemovedMap", "Fraction Within 10%", totWithin10perc, 0d, 0.4);
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, wtAbsValMeanForBrMap, "wtAbsValMeanForBrMap", "Expected Fractional Mean Change", 0d, -0.3, 0.3);
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, covForBrMap, "covForBrMap", "Expected COV Change", totCOV_EAL, 0.1, 0.42);
+			
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, meanDiffForBrValMap, "meanDiffForBrValMap", "Mean Fractional Change", 0d, -1d, 1d);
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, meanDiffWtedForBrValMap, "meanDiffWtedForBrValMap", "Mean Fractional Change", 0d, -0.2, 0.2);
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, meanDiffIfBrRemovedMap, "meanDiffIfBrRemovedMap", "Mean Fractional Change", 0d, -0.2, 0.2);
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, meanDiffWtedIfBrRemovedMap, "meanDiffWtedIfBrRemovedMap", "Mean Fractional Change", 0d, -0.2, 0.2);
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, covForBrValMap, "covForBrValMap", "COV Change", totCOV_EAL, 0.1, 0.601);
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, covIfBrRemovedMap, "covIfBrRemovedMap", "COV Change", totCOV_EAL, 0.1, 0.601);
+			
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, fracWithIn10percForBrValMap, "fracWithIn10percForBrValMap", "Fraction Within 10%", totWithin10perc, 0d, 0.4);
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, fracWithIn10percIfBrRemovedMap, "fracWithIn10percIfBrRemovedMap", "Fraction Within 10%", totWithin10perc, 0d, 0.4);
 
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, factor95percForBrValMap, "factor95percForBrValMap", "95% Conf Factor", totFactor95perc, 1d, 3d);
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, factor95percIfBrRemovedMap, "factor95percIfBrRemovedMap", "95% Conf Factor", totFactor95perc, 1d, 3d);
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, factor95percForBrValMap, "factor95percForBrValMap", "95% Conf Factor", totFactor95perc, 1d, 3d);
+			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, factor95percIfBrRemovedMap, "factor95percIfBrRemovedMap", "95% Conf Factor", totFactor95perc, 1d, 3d);
 			
 //			//  the following tests factor95 and fract10 are close to that for lognormal distribution with associated COV
 //			HashMap<String, Double> test_fracWithIn10percForBrValMap = new HashMap<String, Double>();
@@ -735,7 +746,7 @@ public class Analysis {
 		}
 		
 		String[] fileNamesArray = {"COV_ReductionAnalysisCompleteAlt", "fact95_ReductionAnalysisCompleteAlt", "fract10_ReductionAnalysisCompleteAlt"};
-		String[] yAxisNamesArray = {"COV", "95% Conf Factor", "Fraction Within 10%"};
+		String[] yAxisNamesArray = {"COV", "95% Conf Factor", "Fraction Within 10% of Mean"};
 		DefaultXY_DataSet[] functionsArray = {meanCovValues, factor95conf_Values, fract10perc_Values};
 		double[] ymaxArray = {0.45,2.2,1.01};
 		double[] yminArray = {0.0,1.0,0.0};
@@ -767,7 +778,7 @@ public class Analysis {
 			gp.drawGraphPanel(spec);
 			try {
 				File file = new File(ROOT_DIR+outDirName, fname);
-				gp.getChartPanel().setSize(500, 400);
+				gp.getChartPanel().setSize(468, 192);
 				gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 				gp.saveAsTXT(file.getAbsolutePath() + ".txt");
 			} catch (IOException e) {
@@ -788,6 +799,10 @@ public class Analysis {
 		String tableHeaderLine = "Branch Name\tBranch Value\tWeight\tMean (fractional change)\tCOV\t95% Conf Factor\tFract Within 10%\t"+
 				"Mean (fractional change) if removed\tCOV if removed\t95% Conf Factor if removed\tFract Within 10% if removed";	
 		HashMap<String, String> tableLinesMap = new HashMap<String, String>();
+		
+		covForBrMap = new HashMap<String, Double> ();
+		wtAbsValMeanForBrMap = new HashMap<String, Double> ();
+
 
 		// for branch-value averages
 		weightForBrValMap = new HashMap<String, Double>();
@@ -803,6 +818,7 @@ public class Analysis {
 
 		meanIfBrRemovedMap = new HashMap<String, Double>();
 		meanDiffIfBrRemovedMap = new HashMap<String, Double>();
+		meanDiffWtedIfBrRemovedMap = new HashMap<String, Double>();
 		covIfBrRemovedMap = new HashMap<String, Double>();
 		covDiffIfBrRemovedMap = new HashMap<String, Double>();
 		fracWithIn10percIfBrRemovedMap = new HashMap<String, Double>();
@@ -811,7 +827,7 @@ public class Analysis {
 		mfactor95percRatioDiffIfBrRemovedMap = new HashMap<String, Double>();
 
 		infoString += "\n\nExpected COV etc if Branches Removed:\n\n" ;
-		infoString += "name\tcov\tcovRatio\tfact95perc\twithin10perc\n";
+		infoString += "name\tcov\tcovRatio\tfact95perc\twithin10perc\twtAveAbsValMeanDiff\n";
 
 		HashMap<String, Double> infoLinesMap = new HashMap<String, Double>();
 		
@@ -830,6 +846,7 @@ public class Analysis {
 			HashMap<String, Double> meanHashMap = new HashMap<String, Double>();		
 			HashMap<String, Double> wtHashMap = new HashMap<String, Double>();	
 
+			double wtedAbsValOfMeanDiffs = 0;
 			double expCOV_ifBranchesRemoved = 0;
 			double expFactor95percIfBranchesRemoved = 0;
 			double expwithin10percIfBranchesRemoved = 0;
@@ -876,6 +893,7 @@ public class Analysis {
 				double factor95percForBr = get95percConfFactorForValue(meanForBr, histForBrCumulative);
 				double within10percForBr = histForBrCumulative.getInterpolatedY(meanForBr*1.1) - histForBrCumulative.getInterpolatedY(meanForBr*0.9);
 
+				wtedAbsValOfMeanDiffs += Math.abs(meanForBr-1.0)*wtForBr;
 				expCOV_ifBranchesRemoved += covForBr*wtForBr;
 				expFactor95percIfBranchesRemoved += factor95percForBr*wtForBr;
 				expwithin10percIfBranchesRemoved += within10percForBr*wtForBr;
@@ -932,6 +950,7 @@ public class Analysis {
 				meanDiffWtedForBrValMap.put(combinedName, (meanForBr-1.0)*wtForBr);
 				meanIfBrRemovedMap.put(combinedName, meanForOtherBrs);
 				meanDiffIfBrRemovedMap.put(combinedName, (meanForOtherBrs-1.0));
+				meanDiffWtedIfBrRemovedMap.put(combinedName, ((1.0-wtForBr)*(meanForOtherBrs-1.0)));
 				covForBrValMap.put(combinedName, covForBr);
 				covIfBrRemovedMap.put(combinedName, covForOtherBrs);
 				fracWithIn10percForBrValMap.put(combinedName, within10percForBr);
@@ -942,8 +961,12 @@ public class Analysis {
 			}
 			
 			String lineSting = branchName+"\t"+(float)expCOV_ifBranchesRemoved+"\t"+(float)(expCOV_ifBranchesRemoved/totCOV_EAL)+
-					"\t"+(float)expFactor95percIfBranchesRemoved+"\t"+(float)expwithin10percIfBranchesRemoved+"\n";
+					"\t"+(float)expFactor95percIfBranchesRemoved+"\t"+(float)expwithin10percIfBranchesRemoved+"\t"+(float)wtedAbsValOfMeanDiffs+"\n";
 			infoLinesMap.put(lineSting, expCOV_ifBranchesRemoved);
+			
+			covForBrMap.put(branchName, expCOV_ifBranchesRemoved);
+			wtAbsValMeanForBrMap.put(branchName, wtedAbsValOfMeanDiffs);
+
 
 //			infoString += branchName+"\t"+(float)expCOV_ifBranchesRemoved+"\t"+(float)(expCOV_ifBranchesRemoved/totCOV_EAL)+
 //					"\t"+(float)expFactor95percIfBranchesRemoved+"\t"+(float)expwithin10percIfBranchesRemoved+"\n";
@@ -1463,11 +1486,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		return list;
 	}
 	
-	
-	
-	public void makeDiffForEachBranchPlot(boolean popUpWindows, boolean savePlots, HashMap<String, Double> fractChangeMap, String fileName, 
-			String xAxisName, double anchorX, double minX, double maxX) {
-		
+	private static HashMap<String, Color> getColorForBranchNameMap() {
 		HashMap<String, Color> colorMap = new HashMap<String, Color>();
 		colorMap.put("Fault Model", Color.BLACK);
 		colorMap.put("Deformation Model", new Color(0, 160, 0));
@@ -1480,6 +1499,15 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		colorMap.put("Vs30 Model", new Color(200, 150, 0));
 		colorMap.put("Ground Motion Model", new Color(220, 0, 220));
 		colorMap.put("GMM Added Uncertainty", new Color(255, 147, 0));
+		return colorMap;
+	}
+	
+	
+	
+	public void makeDiffForEachBranchOptionPlot(boolean popUpWindows, boolean savePlots, HashMap<String, Double> fractChangeMap, String fileName, 
+			String xAxisName, double anchorX, double minX, double maxX) {
+		
+		HashMap<String, Color> colorMap = getColorForBranchNameMap();
 		
 //		System.out.println("Unsorted list:\n");
 //		for(String name:fractChangeMap.keySet())
@@ -1548,7 +1576,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 			xyFunc.setName(sortedNamesList.get(i));
 			funcList.add(xyFunc);
 			String[] branchName = sortedNamesList.get(i).split(" = ");
-			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 10f, colorMap.get(branchName[0])));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, colorMap.get(branchName[0])));
 		}
 		
 		String stringForInfo="";
@@ -1657,6 +1685,124 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 	}
 	
 	
+	
+	public void makeDiffForEachBranchPlot(boolean popUpWindows, boolean savePlots, HashMap<String, Double> fractChangeMap, String fileName, 
+			String xAxisName, double anchorX, double minX, double maxX) {
+		
+		HashMap<String, Color> colorMap = getColorForBranchNameMap();
+		
+		//convert map to a List
+		List<Entry<String, Double>> list = new LinkedList<Map.Entry<String, Double>>(fractChangeMap.entrySet());
+
+		//sorting the list with a comparator
+		Collections.sort(list, new Comparator<Entry<String, Double>>() {
+			public int compare(Map.Entry<String, Double> o1, Map.Entry<String, Double> o2) {
+				return (o1.getValue()).compareTo(o2.getValue());
+			}
+		});		
+
+
+		//convert sorted list ArrayLists
+		ArrayList<String> sortedNamesList = new ArrayList<String>();
+		ArrayList<Double> sortedVauesList = new ArrayList<Double>();
+//		System.out.println("\nSorted list:\n");
+		for (Entry<String, Double> entry : list) {
+			sortedNamesList.add(entry.getKey());
+			sortedVauesList.add(entry.getValue());
+//			System.out.println("\t"+entry.getValue().floatValue()+"\t"+entry.getKey());
+		}
+		
+		// reverse order is it's the COV
+		if(anchorX != 0.0) {
+			Collections.reverse(sortedNamesList);
+			Collections.reverse(sortedVauesList);
+		}
+
+		
+		
+		ArrayList<DefaultXY_DataSet> funcList = new ArrayList<DefaultXY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
+		for(int i=0;i<sortedNamesList.size();i++) {
+			DefaultXY_DataSet xyFunc = new DefaultXY_DataSet();
+			double yVal = i+0.5;
+			double xVal = sortedVauesList.get(i);
+			xyFunc.set(xVal, yVal);
+			xyFunc.set(anchorX, yVal);
+			xyFunc.setName(sortedNamesList.get(i));
+			xyFunc.setInfo("anchorX, yVal: "+(float)anchorX+", "+(float)xVal);
+			funcList.add(xyFunc);
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, colorMap.get(sortedNamesList.get(i))));
+		}
+		
+		String stringForInfo="";
+		for(int i=sortedNamesList.size()-1;i>=0;i--) {
+			stringForInfo += sortedNamesList.get(i)+"\n";
+		}
+		funcList.get(0).setInfo(funcList.get(0).getInfo()+"\n\nPLOT ORDER:\n"+stringForInfo);
+
+		double xMinPlot = minX;
+		double xMaxPlot = maxX;
+		double yMinPlot = 0;
+		double yMaxPlot = sortedNamesList.size();
+
+		//add 10% change lines if anchor is 0.0 (fractional change plot)
+		if(anchorX == 0.0) {
+			DefaultXY_DataSet tenPercLowFunc = new DefaultXY_DataSet();
+			tenPercLowFunc.set(-0.1, 0.0);
+			tenPercLowFunc.set(-0.1, yMaxPlot);
+			DefaultXY_DataSet tenPercHighFunc = new DefaultXY_DataSet();
+			tenPercHighFunc.set(0.1, 0.0);
+			tenPercHighFunc.set(0.1, yMaxPlot);
+			funcList.add(tenPercLowFunc);
+			funcList.add(tenPercHighFunc);
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));			
+		}
+		else {	// add anchor line
+			DefaultXY_DataSet anchorFunc = new DefaultXY_DataSet();
+			anchorFunc.set(anchorX, 0.0);
+			anchorFunc.set(anchorX, yMaxPlot);
+			anchorFunc.setName("anchorFunc");
+			funcList.add(anchorFunc);
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+
+		}
+
+		PlotSpec specCombined = new PlotSpec(funcList, plotChars, null, xAxisName, null);
+		specCombined.setLegendVisible(false);
+		specCombined.setLegendLocation(RectangleEdge.RIGHT);
+		
+		if(savePlots) {
+			String fname = fileName;
+			HeadlessGraphPanel gp = new HeadlessGraphPanel();
+			gp.setUserBounds(xMinPlot, xMaxPlot, yMinPlot, yMaxPlot);
+			gp.setTickLabelFontSize(22);
+			gp.setAxisLabelFontSize(22);
+			gp.setPlotLabelFontSize(22);
+			gp.setBackgroundColor(Color.WHITE);
+			gp.drawGraphPanel(specCombined);
+			try {
+				File file = new File(ROOT_DIR+outDirName, fname);
+				gp.getChartPanel().setSize(400, 500);
+				gp.saveAsPDF(file.getAbsolutePath()+".pdf");
+//				gp.saveAsPNG(file.getAbsolutePath()+".png");				
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		if(popUpWindows) {
+			GraphWindow gw = new GraphWindow(specCombined);
+//			gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+			gw.setAxisRange(xMinPlot, xMaxPlot, yMinPlot, yMaxPlot);
+			gw.setTickLabelFontSize(19);
+			gw.setAxisLabelFontSize(20);
+			gw.setPlotLabelFontSize(21);
+//			gw.setBackgroundColor(Color.WHITE);	
+		}
+	}
+
 
 	public void makeEAL_Historgram(boolean popUpWindows, boolean savePlots) {
 		double min = 0;
@@ -1768,7 +1914,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //				gp.saveAsTXT(file.getAbsolutePath() + ".txt");
 				gp.getChartPanel().setSize(500, 400);
 				gp.saveAsPDF(file.getAbsolutePath()+".pdf");
-//				gp.saveAsPNG(file.getAbsolutePath()+".png");				
+				gp.saveAsTXT(file.getAbsolutePath() + ".txt");
 
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -1809,10 +1955,9 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //				gp2.getChartPanel().setSize(1000, 800);
 //				gp2.saveAsPDF(file.getAbsolutePath() + ".pdf");
 //				gp2.saveAsPNG(file.getAbsolutePath() + ".png");
-//				gp2.saveAsTXT(file.getAbsolutePath() + ".txt");
 				gp2.getChartPanel().setSize(500, 400);
 				gp2.saveAsPDF(file.getAbsolutePath()+".pdf");
-//				gp2.saveAsPNG(file.getAbsolutePath()+".png");				
+				gp2.saveAsTXT(file.getAbsolutePath() + ".txt");
 
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -2374,8 +2519,8 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //		Analysis analysisFig1 = new Analysis("all_branch_results.csv", "junk", null, false);
 //		analysisFig1.writeFigure1_Data();
 		
-//		// for Figure 2-4 data:
-//		Analysis analysisFig2to4 = new Analysis("all_branch_results.csv", "Figure2to5_Data", null, false, true);
+//		// for Figure 2-7 data:
+//		Analysis analysisFig2to7 = new Analysis("all_branch_results.csv", "Figure2to7_Data", null, false, true);
 		
 		
 //		computeFact95_fract10_vsLogNormCOV();
@@ -2383,15 +2528,18 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //		doCOV_ReductionAnalysis();
 		
 		ArrayList<String> branchesToRemove = new ArrayList<String>();
-		Analysis analysisFig6 = new Analysis("all_branch_results.csv", "Figure6_Data", branchesToRemove, false, false);
+		Analysis analysisFig8 = new Analysis("all_branch_results.csv", "Figure8_Data", branchesToRemove, false, false);
 		// This takes a very long time:
-//		analysisFig6.doCOV_ReductionAnalysisComplete(true, true);
+//		analysisFig8.doCOV_ReductionAnalysisComplete(true, true);
 		// this recreates the plot from saved data
-		analysisFig6.makeCOV_ReductionAnalysisCompletePlotsAgain();
+		analysisFig8.makeCOV_ReductionAnalysisCompletePlotsAgain();
 		
+//		// Fairfield census tracts
+//		// from: http://opensha.usc.edu/ftp/kmilner/ucerf3/eal_calcs/2019_02_13-ucerf3-ngaw2-cea-consolidate-fairfield/
+//		// for Figure 2-4 data:
+//		Analysis fairfieldAnalysis = new Analysis("fairfield_all_branch_results.csv", "FairfieldResults", null, false, true);
 
-
-//		
+// OLD:		
 //		Analysis analysis0 = new Analysis("all_branch_results.csv", "fullReg_allBranches", branchesToRemove, false);
 //
 //		branchesToRemove.add("GMM Added Uncertainty"+" = "+"LOWER");
