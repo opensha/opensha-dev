@@ -35,8 +35,8 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		File myHPCDir = new File("/auto/scec-02/kmilner/simulators/catalogs/");
 		File stampedeCatalogDir = new File("/work/00950/kevinm/stampede2/simulators/catalogs");
 		File jacquiCSDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/");
-//		File catalogDir = new File(myHPCDir, "rundir2585");
-		File catalogDir = new File(myHPCDir, "rundir3067");
+//		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
+		File catalogDir = new File(myHPCDir, "rundir2740");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2829");
 		
 		int skipYears = 5000;
@@ -48,7 +48,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		int numSourceAz = 18;
 //		int numSiteToSourceAz = 36;
 		int numSiteToSourceAz = 1;
-		int maxRuptures = 100;
+		int maxRuptures = 400;
 		
 		VelocityModel vm = RSQSimBBP_Config.VM;
 		
@@ -66,7 +66,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 18;
+		int nodes = 36;
 		String queue = "scec";
 		int mins = 48*60;
 		int heapSizeMB = 45*1024;

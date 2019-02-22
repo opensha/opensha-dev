@@ -13,6 +13,8 @@ import org.dom4j.DocumentException;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_WrapperFullParam;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers;
 import org.opensha.sha.simulators.RSQSimEvent;
 
 import com.google.common.base.Preconditions;
@@ -56,9 +58,14 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_3067.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 		
 		double[] periods = {3d, 5d, 7.5, 10d};
+		
+		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.ASK_2014_Wrapper(), new NGAW2_Wrappers.BSSA_2014_Wrapper(),
+				new NGAW2_Wrappers.CB_2014_Wrapper(), new NGAW2_Wrappers.CY_2014_Wrapper()};
+//		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.BSSA_2014_Wrapper() };
 		
 		System.out.println("Catalog: "+catalog.getName());
 		// find BBP parallel dir
@@ -113,6 +120,8 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 				
 				RotatedRupVariabilityScenarioPageGen pageGen =
 						new RotatedRupVariabilityScenarioPageGen(catalog, scenario, config, bbpLoader);
+				
+				pageGen.setGMPEs(refGMPEs);
 				
 				eventIDsSet.addAll(pageGen.getAllEventIDs());
 				

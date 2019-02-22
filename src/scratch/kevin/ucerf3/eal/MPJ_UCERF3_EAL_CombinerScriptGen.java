@@ -44,15 +44,19 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 //		String cityPrefix = null;
 //		double tractRadius = 0;
 		
-		Location tractLoc = new Location(34.108300, -117.289646);
-		String cityPrefix = "san-bernardino";
-		double tractRadius = 5;
+//		Location tractLoc = new Location(34.108300, -117.289646);
+//		String cityPrefix = "san-bernardino";
+//		double tractRadius = 5;
+		
+		Location tractLoc = new Location(38.2494, -122.0400);
+		String cityPrefix = "fairfield";
+		double tractRadius = 15;
 		
 		if (tractLoc != null)
 			jobName += "-"+cityPrefix;
 		
 		int threads = 20;
-		int nodes = 18;
+		int nodes = 36;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;

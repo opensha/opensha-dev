@@ -103,6 +103,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	private static final DeformationModels DEF_MODEL_DEFAULT = DeformationModels.GEOLOGIC;
 	private EnumParameter<DeformationModels> defModelParam;
 	
+	static final String RUP_SURF_RESOLUTION_PARAM_NAME = "Rupture Surface Resolution";
+	private DoubleParameter rupSurfResParam;
+	
 	// misc
 	private Map<Integer, List<FaultSectionPrefData>> parentSectMappings;
 	
@@ -167,6 +170,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		defModelParam.addParameterChangeListener(this);
 		adjustableParams.addParameter(defModelParam);
 		
+		rupSurfResParam = new DoubleParameter(RUP_SURF_RESOLUTION_PARAM_NAME, 0d, 100d);
+		adjustableParams.addParameter(rupSurfResParam);
+		
 		if (subSects == null)
 			loadSubSects();
 		else
@@ -174,6 +180,13 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		
 		// can be null
 		this.elements = elements;
+		if (elements != null) {
+			double aveArea = 0d;
+			for (SimulatorElement e : elements)
+				aveArea += e.getArea()*1e-6;
+			aveArea /= elements.size();
+			rupSurfResParam.setValue(aveArea);
+		}
 		
 		this.timeSpan = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
 		this.timeSpan.setDuration(1d);
@@ -192,6 +205,12 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		Preconditions.checkState(geomFile.exists(), "Geometry file doesn't exist: %s", geomFile.getAbsolutePath());
 		try {
 			elements = RSQSimFileReader.readGeometryFile(geomFile, GEOM_LONG_ZONE, GEOM_LAT_ZONE);
+			
+			double aveArea = 0d;
+			for (SimulatorElement e : elements)
+				aveArea += e.getArea()*1e-6;
+			aveArea /= elements.size();
+			rupSurfResParam.setValue(aveArea);
 		} catch (IOException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}

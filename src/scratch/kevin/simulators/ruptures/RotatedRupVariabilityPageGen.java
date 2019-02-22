@@ -2,6 +2,7 @@ package scratch.kevin.simulators.ruptures;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -16,10 +17,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.jfree.data.Range;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -854,6 +857,134 @@ public abstract class RotatedRupVariabilityPageGen {
 		System.out.println("*** DONE summary table ***");
 		lines.addAll(summaryTableIndex, summaryLines);
 		
+		if (sourceAzimuths.size() > 1 || siteSourceAzimuths.size() > 1 && !plotMags.isEmpty()) {
+			lines.add("## Azumth Dependence");
+			lines.add(topLink); lines.add("");
+			
+			List<Site> mySites = new ArrayList<>(sites);
+			if (sites.size() > 1)
+				mySites.add(null);
+			
+			for (Site site : mySites) {
+				String sitePrefix = sites.size() > 1 && site != null ? site.getName()+"_" : "";
+				if (sites.size() > 1) {
+					if (site == null)
+						lines.add("### All Sites Azumth Dependence");
+					else
+						lines.add("### "+site.getName()+" Azumth Dependence");
+					lines.add(topLink); lines.add("");
+				}
+				for (Quantity quantity : new Quantity[] { Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH }) {
+					if (magQuantitiesTable.get(plotMags.get(0), quantity).size() < 2)
+						continue;
+					
+					Map<Quantity, List<?>> myQuantitiesMap = new HashMap<>();
+					for (Quantity q2 : Quantity.values()) {
+						if (q2 == quantity) {
+							List<Object> list = new ArrayList<>();
+							list.add(null); // single item;
+							myQuantitiesMap.put(q2, list);
+						} else {
+							myQuantitiesMap.put(q2, magQuantitiesTable.get(plotMags.get(0), q2));
+						}
+					}
+					List<VariabilityType> myTypes = new ArrayList<>();
+					for (VariabilityType type : computedTypes) {
+						if (type.getRotationsPerStdDev(myQuantitiesMap) > 1)
+							myTypes.add(type);
+						else
+							System.out.println("Skipping type "+type.name+" for quantity "+quantity.getName());
+					}
+					myTypes.add(null);
+					
+					System.out.println("*** Doing "+quantity.getName()+" vs Dist ***");
+					
+					if (sites.size() > 1) {
+						if (site == null)
+							lines.add("#### All Sites "+quantity.getName()+" Dependence");
+						else
+							lines.add("#### "+site.getName()+" "+quantity.getName()+" Dependence");
+						lines.add(topLink); lines.add("");
+					} else {
+						lines.add("### "+quantity.getName()+" Dependence");
+						lines.add(topLink); lines.add("");
+					}
+					
+					table = MarkdownUtils.tableBuilder();
+					table.initNewLine();
+					if (plotMags.size() > 1)
+						table.addColumn("Mag");
+					table.addColumn("Type");
+					
+					for (double period : periods)
+						table.addColumn(optionalDigitDF.format(period)+"s");
+					table.finalizeLine();
+					
+					Map<Double, Map<VariabilityType, File[]>> plotMaps2D = new HashMap<>();
+					Map<Double, Map<VariabilityType, File[]>> plotMaps = new HashMap<>();
+					
+					for (double magnitude : plotMags) {
+						String prefix = sitePrefix+"m"+optionalDigitDF.format(magnitude)+"_dist_"+quantity.name();
+						if (hasMagDist) {
+							Map<VariabilityType, File[]> plotsMap = plotQuantityDistCheckerboards(
+									resourcesDir, prefix+"_2d", quantity, computedTypes, site, magnitude, periods);
+							plotMaps2D.put(magnitude, plotsMap);
+						}
+						
+						Map<VariabilityType, File[]> plotsMap = plotQuantityDistFuncs(
+									resourcesDir, prefix, quantity, computedTypes, site, magnitude, periods, plotDists);
+						plotMaps.put(magnitude, plotsMap);
+					}
+					
+					boolean[] plot2Ds;
+					if (hasMagDist)
+						plot2Ds = new boolean[] { true, false };
+					else
+						plot2Ds = new boolean[] { false };
+					
+					for (VariabilityType type : myTypes) {
+						for (double magnitude : plotMags) {
+							for (boolean plot2D : plot2Ds) {
+								table.initNewLine();
+								if (plotMags.size() > 1)
+									table.addColumn("**M"+optionalDigitDF.format(magnitude)+"**");
+								if (type == null)
+									table.addColumn("**Median SA**");
+								else
+									table.addColumn("**"+type.htmlSymbol+"**");
+								File[] files = plot2D ? plotMaps2D.get(magnitude).get(type) : plotMaps.get(magnitude).get(type);
+								for (File file : files)
+									table.addColumn("!["+quantity.getName()+"](resources/"+file.getName()+")");
+								table.finalizeLine();
+							}
+						}
+					}
+					
+					lines.addAll(table.build());
+					lines.add("");
+					
+					System.out.println("*** DONE Doing "+quantity.getName()+" vs Dist ***");
+				}
+			}
+		}
+		
+		System.out.println("*** Writing CSVs ***");
+		lines.add("## CSV Files");
+		lines.add(topLink); lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("Magnitude", "Distance", "Site", "CSV File");
+		for (double mag : plotMags) {
+			for (Float dist : plotDists) {
+				for (Site site : sites) {
+					File file = writeCSV(resourcesDir, site, mag, dist, periods);
+					table.addLine("M"+optionalDigitDF.format(mag), dist+" km", site.getName(),
+							"["+file.getName()+"](resources/"+file.getName()+")");
+				}
+			}
+		}
+		lines.addAll(table.build());
+		lines.add("");
+		
 		// add TOC
 		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2, 4));
 		lines.add(tocIndex, "## Table Of Contents");
@@ -1126,6 +1257,19 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 		}
 		
+		if (key.restrictTo != null && !key.restrictTo.isEmpty()) {
+			int prevNum = constQuantities.length;
+			constQuantities = Arrays.copyOf(constQuantities, prevNum+key.restrictTo.size());
+			constValues = Arrays.copyOf(constValues, prevNum+key.restrictTo.size());
+			int index = prevNum;
+			for (Quantity q : key.restrictTo.keySet()) {
+				Object v = key.restrictTo.get(q);
+				constQuantities[index] = q;
+				constValues[index] = v;
+				index++;
+			}
+		}
+		
 		return calcResiduals(key.magnitude, key.periods, constQuantities, constValues, key.groupQuantities);
 	}
 	
@@ -1144,6 +1288,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				Site site = sites.get(s);
 				VarGroupingKey siteKey = new VarGroupingKey(
 						key.separateQuantities, key.groupQuantities, key.magnitude, key.distance, site, key.periods);
+				siteKey.restrictTo = key.restrictTo;
 				
 				System.out.println("Loading residuals for site "+site.getName()+", dist="+key.distance);
 				List<List<ResidualSet>> residuals = loadResiduals(siteKey);
@@ -1188,6 +1333,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 			VarGroupingKey noSiteKey = new VarGroupingKey(
 					key.separateQuantities, key.groupQuantities, key.magnitude, key.distance, null, key.periods);
+			noSiteKey.restrictTo = key.restrictTo;
 			varResultCache.put(noSiteKey, new VariabilityResult(commonRotSpecs, totLogVals, totResidualStdDevs, totMedianStdDevs));
 			
 			VariabilityResult ret = varResultCache.getIfPresent(key);
@@ -1225,6 +1371,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		private final Float distance;
 		private final Site site;
 		private final double[] periods;
+		private Map<Quantity, Object> restrictTo;
 		
 		// derrivative quantities
 		private boolean separateSites;
@@ -1260,6 +1407,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			result = prime * result + Arrays.hashCode(periods);
 			result = prime * result + Arrays.hashCode(separateQuantities);
 			result = prime * result + ((site == null) ? 0 : site.getLocation().hashCode());
+			result = prime * result + ((restrictTo == null) ? 0 : restrictTo.hashCode());
 			return result;
 		}
 
@@ -1294,6 +1442,11 @@ public abstract class RotatedRupVariabilityPageGen {
 				if (other.site != null)
 					return false;
 			} else if (!site.equals(other.site))
+				return false;
+			if (restrictTo == null) {
+				if (other.restrictTo != null)
+					return false;
+			} else if (!restrictTo.equals(other.restrictTo))
 				return false;
 			return true;
 		}
@@ -1487,6 +1640,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		private final double magnitude;
 		private final double distance;
 		private final double[] periods;
+		private Map<Quantity, Object> restrictTo;
 		
 		public GMPE_GroupingKey(NGAW2_WrapperFullParam gmpe, Site site, double magnitude, double distance, double[] periods) {
 			this.gmpe = gmpe;
@@ -1509,6 +1663,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			result = prime * result + (int) (temp ^ (temp >>> 32));
 			result = prime * result + Arrays.hashCode(periods);
 			result = prime * result + ((site == null) ? 0 : site.getLocation().hashCode());
+			result = prime * result + ((restrictTo == null) ? 0 : restrictTo.hashCode());
 			return result;
 		}
 
@@ -1538,6 +1693,11 @@ public abstract class RotatedRupVariabilityPageGen {
 				if (other.site != null)
 					return false;
 			} else if (!site.equals(other.site))
+				return false;
+			if (restrictTo == null) {
+				if (other.restrictTo != null)
+					return false;
+			} else if (!restrictTo.equals(other.restrictTo))
 				return false;
 			return true;
 		}
@@ -1600,13 +1760,13 @@ public abstract class RotatedRupVariabilityPageGen {
 	private GMPE_Result calcGMPE(GMPE_GroupingKey key) throws ExecutionException {
 		List<Integer> eventIDs = magEventIDs.size() == 1 ?
 				magEventIDs.values().iterator().next() : magEventIDs.get(key.magnitude);
-		int numSourceAz = sourceAzimuths.size();
 		if (sites.size() > 1 && key.site == null) {
 			// do for all sites
 			GMPE_Result[] results = new GMPE_Result[sites.size()];
 			for (int i=0; i<sites.size(); i++) {
 				Site site = sites.get(i);
 				GMPE_GroupingKey newKey = new GMPE_GroupingKey(key.gmpe, site, key.magnitude, key.distance, key.periods);
+				newKey.restrictTo = key.restrictTo;
 				results[i] = gmpeResultCache.get(newKey);
 			}
 			return packGMs(results);
@@ -1623,6 +1783,8 @@ public abstract class RotatedRupVariabilityPageGen {
 		DistanceRupParameter rRupParam = (DistanceRupParameter) gmpe.getParameter(DistanceRupParameter.NAME);
 		DistanceX_Parameter rXParam = (DistanceX_Parameter) gmpe.getParameter(DistanceX_Parameter.NAME);
 		
+		Float restrictSourceAz = key.restrictTo == null ? null : (Float)key.restrictTo.get(Quantity.SOURCE_AZIMUTH);
+		int numSourceAz = restrictSourceAz == null ? sourceAzimuths.size() : 1;
 		ScalarGroundMotion[][] result = new ScalarGroundMotion[key.periods.length][eventIDs.size()*numSourceAz];
 		
 		gmpe.setIntensityMeasure(SA_Param.NAME);
@@ -1649,15 +1811,17 @@ public abstract class RotatedRupVariabilityPageGen {
 			rRupParam.setValueIgnoreWarning(rRup);
 			
 			for (int i=0; i<numSourceAz; i++) {
-				double sourceAz = sourceAzimuths.get(i).doubleValue();
+				double sourceAz = restrictSourceAz == null ? sourceAzimuths.get(i).doubleValue() : restrictSourceAz.doubleValue();
 				double rX = rJB * Math.sin(Math.toRadians(sourceAz));
-				if (sourceAz > 180)
-					rX = -rX;
+				
 				rXParam.setValueIgnoreWarning(rX);
 				
 				for (int p=0; p<key.periods.length; p++) {
 					SA_Param.setPeriodInSA_Param(saParam, key.periods[p]);
 					result[p][ind] = gmpe.getGroundMotion();
+					if (eventID == 165223 && p == 0)
+						System.out.println("GMPE\t"+eventID+"\tsAz="+(float)sourceAz+"\trstAz="+restrictSourceAz
+								+"\t\trRup="+(float)rRup+"\trJB="+(float)rJB+"\trX="+(float)rX+"\tgm="+gmpe.getGroundMotion().mean());
 				}
 				ind++;
 			}
@@ -2082,6 +2246,342 @@ public abstract class RotatedRupVariabilityPageGen {
 		return retMap;
 	}
 	
+	private Map<VariabilityType, File[]> plotQuantityDistCheckerboards(File resourcesDir, String prefix, Quantity quantity,
+			Collection<VariabilityType> types, Site site, Double magnitude, double[] periods) throws IOException {
+		RotatedRupVariabilityConfig config = magConfigs.get(magnitude);
+		List<Float> values = config.getValues(Float.class, quantity);
+		// will already be sorted
+		
+		Preconditions.checkState(values.size() > 1, "%s doesn't vary!", quantity);
+		
+		double deltaValue = values.get(1) - values.get(0);
+		double minValue = values.get(0);
+		
+		double deltaDist = distances.get(1) - distances.get(0);
+		double minDist = distances.get(0);
+		
+		Map<VariabilityType, EvenlyDiscrXYZ_DataSet[]> xyzsMap = new HashMap<>();
+		EvenlyDiscrXYZ_DataSet refXYZ = null;
+		
+		for (VariabilityType type : types) {
+			EvenlyDiscrXYZ_DataSet[] xyzs = new EvenlyDiscrXYZ_DataSet[periods.length];
+			for (int p=0; p<periods.length; p++)
+				xyzs[p] = new EvenlyDiscrXYZ_DataSet(values.size(), distances.size(), minValue, minDist, deltaValue, deltaDist);
+			xyzsMap.put(type, xyzs);
+			if (refXYZ == null)
+				refXYZ = xyzs[0];
+		}
+		EvenlyDiscrXYZ_DataSet[] medianXYZs = new EvenlyDiscrXYZ_DataSet[periods.length];
+		for (int p=0; p<periods.length; p++)
+			medianXYZs[p] = new EvenlyDiscrXYZ_DataSet(values.size(), distances.size(), minValue, minDist, deltaValue, deltaDist);
+		xyzsMap.put(null, medianXYZs);
+		
+		for (int yInd=0; yInd<distances.size(); yInd++) {
+			float distance = distances.get(yInd);
+			double y = refXYZ.getY(yInd);
+			Preconditions.checkState(distance == (float)y, "Expected distance bin %s to be %s, have %s", yInd, distance, y);
+			for (int xInd=0; xInd<values.size(); xInd++) {
+				Float value = values.get(xInd);
+				double x = refXYZ.getX(xInd);
+				Preconditions.checkState((float)value == (float)x, "Expected value bin %s to be %s, have %s", xInd, value, x);
+				double[] medians = null;
+				Map<Quantity, Object> restrictMap = new HashMap<>();
+				restrictMap.put(quantity, value);
+				for (VariabilityType type : types) {
+					VarGroupingKey key = new VarGroupingKey(type, magnitude, distance, site, periods);
+					key.restrictTo = restrictMap;
+					VariabilityResult varResult;
+					try {
+						varResult = varResultCache.get(key);
+					} catch (ExecutionException e) {
+						if (e.getCause() instanceof IOException)
+							throw (IOException)e.getCause();
+						if (e.getCause() instanceof RuntimeException)
+							throw (RuntimeException)e.getCause();
+						throw ExceptionUtils.asRuntimeException(e);
+					}
+					if (medians == null) {
+						LogValueSet[] logVals = varResult.logVals;
+						medians = new double[periods.length];
+						for (int p=0; p<periods.length; p++)
+							medians[p] = Math.log10(Math.exp(logVals[p].median));
+					}
+					double[] stdDevs = new double[periods.length];
+					for (int p=0; p<periods.length; p++) {
+						if (type.stdDevOfMedians)
+							stdDevs[p] = varResult.medianStdDevs[p].stdDev;
+						else
+							stdDevs[p] = varResult.residualStdDevs[p].total;
+					}
+					EvenlyDiscrXYZ_DataSet[] xyzs = xyzsMap.get(type);
+					for (int p=0; p<periods.length; p++)
+						xyzs[p].set(xInd, yInd, stdDevs[p]);
+				}
+				// now do median
+				EvenlyDiscrXYZ_DataSet[] xyzs = xyzsMap.get(null);
+				for (int p=0; p<periods.length; p++)
+					xyzs[p].set(xInd, yInd, medians[p]);
+			}
+		}
+		
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+		
+		Map<VariabilityType, File[]> retMap = new HashMap<>();
+		
+		Range xRange = new Range(minValue-0.5*deltaValue, values.get(values.size()-1)+0.5*deltaValue);
+		Range yRange = new Range(minDist-0.5*deltaDist, distances.get(distances.size()-1)+0.5*deltaDist);
+		
+		for (VariabilityType type : xyzsMap.keySet()) {
+			File[] ret = new File[periods.length];
+			retMap.put(type, ret);
+			
+			CPT cpt;
+			String zLabel;
+			if (type == null) {
+				cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(-4, 0d);
+				zLabel = "Log10 Median SA";
+			} else {
+				cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, 1d);
+				zLabel = type.symbol;
+			}
+			
+			EvenlyDiscrXYZ_DataSet[] xyzs = xyzsMap.get(type);
+			
+			for (int p=0; p<periods.length; p++) {
+				String periodStr;
+				if (periods[p] == Math.round(periods[p]))
+					periodStr = (int)periods[p]+"s";
+				else
+					periodStr = (float)periods[p]+"s";
+				String myPrefix, title;
+				if (type == null) {
+					title = periodStr+" "+quantity.getName()+", Median SA";
+					myPrefix = prefix+"_"+periodStr+"_median_sa";
+				} else {
+					title = periodStr+" "+quantity.getName()+", "+type.name+" ("+type.symbol+")";
+					myPrefix = prefix+"_"+periodStr+"_"+type.prefix;
+				}
+				
+				String xAxisLabel = quantity.getName();
+				String yAxisLabel = BBP_PartBValidationConfig.DIST_JB ? "DistanceJB" : "Distance";
+				
+				XYZPlotSpec xyzSpec = new XYZPlotSpec(xyzs[p], cpt, title, xAxisLabel, yAxisLabel, zLabel);
+				XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
+				xyzGP.drawPlot(xyzSpec, false, false, xRange, yRange);
+				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
+				xyzGP.getChartPanel().setSize(700, 550);
+				File file = new File(resourcesDir, myPrefix+".png");
+				xyzGP.saveAsPNG(file.getAbsolutePath());
+				ret[p] = file;
+			}
+		}
+		return retMap;
+	}
+	
+	private Map<VariabilityType, File[]> plotQuantityDistFuncs(File resourcesDir, String prefix, Quantity quantity,
+			Collection<VariabilityType> types, Site site, Double magnitude, double[] periods, List<Float> distances) throws IOException {
+		RotatedRupVariabilityConfig config = magConfigs.get(magnitude);
+		List<Float> values = config.getValues(Float.class, quantity);
+		// will already be sorted
+		
+		Preconditions.checkState(values.size() > 1, "%s doesn't vary!", quantity);
+
+		Map<VariabilityType, DiscretizedFunc[][]> xysMap = new HashMap<>();
+		Map<VariabilityType, DiscretizedFunc[][]> gmpeXYsMap = new HashMap<>();
+		
+		for (boolean gmpe : new boolean[] { false, true }) {
+			if (gmpe && this.gmpes == null)
+				continue;
+			for (VariabilityType type : types) {
+				if (gmpe && type.gmpeStdDevType == null)
+					continue;
+				DiscretizedFunc[][] xys = new DiscretizedFunc[distances.size()][periods.length];
+				for (int d=0; d<distances.size(); d++)
+					for (int p=0; p<periods.length; p++)
+						xys[d][p] = new ArbitrarilyDiscretizedFunc();
+				if (gmpe)
+					gmpeXYsMap.put(type, xys);
+				else
+					xysMap.put(type, xys);
+			}
+			DiscretizedFunc[][] medianXYs = new DiscretizedFunc[distances.size()][periods.length];
+			for (int d=0; d<distances.size(); d++)
+				for (int p=0; p<periods.length; p++)
+					medianXYs[d][p] = new ArbitrarilyDiscretizedFunc();
+			if (gmpe)
+				gmpeXYsMap.put(null, medianXYs);
+			else
+				xysMap.put(null, medianXYs);
+		}
+		
+		for (int d=0; d<distances.size(); d++) {
+			Float distance = distances.get(d);
+			for (int yInd=0; yInd<values.size(); yInd++) {
+				Float value = values.get(yInd);
+				double[] medians = null;
+				Map<Quantity, Object> restrictMap = new HashMap<>();
+				restrictMap.put(quantity, value);
+				GMPE_Result gmpeResult = null;
+				if (gmpes != null) {
+					GMPE_Result[] gmpeResults = new GMPE_Result[gmpes.length];
+					for (int g=0; g<gmpes.length; g++) {
+						try {
+							GMPE_GroupingKey gmpeKey = new GMPE_GroupingKey(gmpes[g], site, magnitude, distance, periods);
+							gmpeKey.restrictTo = restrictMap;
+							gmpeResults[g] = gmpeResultCache.get(gmpeKey);
+						} catch (ExecutionException e) {
+							throw ExceptionUtils.asRuntimeException(e);
+						}
+					}
+					gmpeResult = packGMs(gmpeResults);
+				}
+				for (VariabilityType type : types) {
+					VarGroupingKey key = new VarGroupingKey(type, magnitude, distance, site, periods);
+					key.restrictTo = restrictMap;
+					VariabilityResult varResult;
+					try {
+						varResult = varResultCache.get(key);
+					} catch (ExecutionException e) {
+						if (e.getCause() instanceof IOException)
+							throw (IOException)e.getCause();
+						if (e.getCause() instanceof RuntimeException)
+							throw (RuntimeException)e.getCause();
+						throw ExceptionUtils.asRuntimeException(e);
+					}
+					if (medians == null) {
+						LogValueSet[] logVals = varResult.logVals;
+						medians = new double[periods.length];
+						for (int p=0; p<periods.length; p++)
+							medians[p] = Math.exp(logVals[p].median);
+					}
+					double[] stdDevs = new double[periods.length];
+					for (int p=0; p<periods.length; p++) {
+						if (type.stdDevOfMedians)
+							stdDevs[p] = varResult.medianStdDevs[p].stdDev;
+						else
+							stdDevs[p] = varResult.residualStdDevs[p].total;
+					}
+					DiscretizedFunc[][] xys = xysMap.get(type);
+					for (int p=0; p<periods.length; p++)
+						xys[d][p].set(value, stdDevs[p]);
+					if (type.gmpeStdDevType != null && gmpeResult != null) {
+						DiscretizedFunc[][] gmpeXYs = gmpeXYsMap.get(type);
+						for (int p=0; p<periods.length; p++) {
+							double gmpeSD;
+							if (type.gmpeStdDevType == GMPE_Var.PHI)
+								gmpeSD = gmpeResult.medianPhi[p];
+							else if (type.gmpeStdDevType == GMPE_Var.TAU)
+								gmpeSD = gmpeResult.medianTau[p];
+							else
+								gmpeSD = gmpeResult.medianTotal[p];
+							gmpeXYs[d][p].set(value, gmpeSD);
+						}
+					}
+				}
+				// now do median
+				DiscretizedFunc[][] xys = xysMap.get(null);
+				for (int p=0; p<periods.length; p++)
+					xys[d][p].set(value, medians[p]);
+				if (gmpeResult != null) {
+					DiscretizedFunc[][] gmpeXYs = gmpeXYsMap.get(null);
+					for (int p=0; p<periods.length; p++)
+						gmpeXYs[d][p].set(value, Math.exp(gmpeResult.logMedian[p]));
+				}
+			}
+		}
+		
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+		
+		Map<VariabilityType, File[]> retMap = new HashMap<>();
+		
+		double[] distArray = Doubles.toArray(distances);
+		CPT distCPT = new CPT(StatUtils.min(distArray), StatUtils.max(distArray), Color.GRAY, Color.BLACK);
+		
+		for (VariabilityType type : xysMap.keySet()) {
+			File[] ret = new File[periods.length];
+			retMap.put(type, ret);
+			
+			String xAxisLabel = quantity.getName();
+			String yAxisLabel;
+			if (type == null)
+				yAxisLabel = "Log10 Median SA";
+			else
+				yAxisLabel = type.symbol;
+			
+			DiscretizedFunc[][] xys = xysMap.get(type);
+			DiscretizedFunc[][] gmpeXYs = gmpeXYsMap.get(type);
+			
+			for (int p=0; p<periods.length; p++) {
+				String periodStr;
+				if (periods[p] == Math.round(periods[p]))
+					periodStr = (int)periods[p]+"s";
+				else
+					periodStr = (float)periods[p]+"s";
+				String myPrefix, title;
+				if (type == null) {
+					title = periodStr+" "+quantity.getName()+", Median SA";
+					myPrefix = prefix+"_"+periodStr+"_median_sa";
+				} else {
+					title = periodStr+" "+quantity.getName()+", "+type.name+" ("+type.symbol+")";
+					myPrefix = prefix+"_"+periodStr+"_"+type.prefix;
+				}
+				
+				List<DiscretizedFunc> funcs = new ArrayList<>();
+				List<PlotCurveCharacterstics> chars = new ArrayList<>();
+				
+				for (int d=0; d<distances.size(); d++) {
+					xys[d][p].setName(optionalDigitDF.format(distances.get(d))+" km");
+					Color color = distCPT.getColor(distances.get(d));
+					
+					funcs.add(xys[d][p]);
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
+					
+					if (gmpeXYs != null) {
+						if (type == null)
+							gmpeXYs[d][p].setName("GMPE");
+						else
+							gmpeXYs[d][p].setName("GMPE "+type.gmpeStdDevType.symbol);
+						
+						funcs.add(gmpeXYs[d][p]);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1.5f, color));
+					}
+				}
+				
+				PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
+				spec.setLegendVisible(distances.size() > 1);
+				
+				HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+				
+				Range xRange = quantity == Quantity.SOURCE_AZIMUTH || quantity == Quantity.SITE_TO_SOURTH_AZIMUTH ?
+						new Range(0, 360) : null;
+				Range yRange;
+				boolean yLog;
+				if (type == null) {
+					yRange = new Range(1e-4, 1e0);
+					yLog = true;
+				} else {
+					yRange = new Range(0d, 1d);
+					yLog = false;
+				}
+
+				gp.drawGraphPanel(spec, false, yLog, xRange, yRange);
+				gp.getChartPanel().setSize(800, 600);
+				File pngFile = new File(resourcesDir, myPrefix+".png");
+				gp.saveAsPNG(pngFile.getAbsolutePath());
+				ret[p] = pngFile;
+			}
+		}
+		return retMap;
+	}
+	
 	private void plotExample(File resourcesDir, String prefix, double distance, List<Quantity> variedQuantities)
 			throws IOException {
 		List<Site> sites = new ArrayList<>();
@@ -2099,5 +2599,35 @@ public abstract class RotatedRupVariabilityPageGen {
 				numSourceAz, numSiteToSourceAz);
 		
 		config.plotRotations(resourcesDir, prefix, config.getRotations(), true);
+	}
+	
+	private File writeCSV(File resourcesDir, Site site, Double magnitude, Float distance, double[] periods) throws IOException {
+		CSVFile<String> csv = new CSVFile<>(true);
+		
+		List<String> header = Lists.newArrayList(Quantity.EVENT_ID.getName(), Quantity.SOURCE_AZIMUTH.getName(),
+				Quantity.SITE_TO_SOURTH_AZIMUTH.getName());
+		for (double period : periods)
+			header.add(optionalDigitDF.format(period)+"s SA");
+		
+		csv.addLine(header);
+		
+		SimulationRotDProvider<RotationSpec> prov = magProvs.get(magnitude);
+		RotatedRupVariabilityConfig config = magConfigs.get(magnitude);
+		
+		for (RotationSpec rotation : config.getRotationsForQuantities(Quantity.SITE, site, Quantity.DISTANCE, distance)) {
+			DiscretizedFunc spectrum = prov.getRotD50(site, rotation, 0);
+			List<String> line = new ArrayList<>();
+			line.add(rotation.eventID+"");
+			line.add(rotation.sourceAz == null ? "0.0" : rotation.sourceAz.toString());
+			line.add(rotation.siteToSourceAz == null ? "0.0" : rotation.siteToSourceAz.toString());
+			for (double period : periods)
+				line.add((float)spectrum.getInterpolatedY(period)+"");
+			csv.addLine(line);
+		}
+		
+		File outFile = new File(resourcesDir, "sa_"+site.getName()+"_m"+magnitude.floatValue()+"_"+distance+"km.csv.gz");
+		csv.writeToStream(new GZIPOutputStream(new FileOutputStream(outFile)));
+		
+		return outFile;
 	}
 }

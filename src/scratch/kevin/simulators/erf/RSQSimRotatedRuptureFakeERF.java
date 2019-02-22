@@ -12,9 +12,12 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
+import org.opensha.commons.exceptions.ConstraintException;
+import org.opensha.commons.exceptions.ParameterException;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.param.impl.IntegerParameter;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -150,6 +153,14 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		IntegerParameter distsParam = new IntegerParameter("Num Distances", numDistances, numDistances);
 		distsParam.setValue(numDistances);
 		adjustableParams.addParameter(distsParam);
+		
+		DoubleParameter rupSurfResParam = new DoubleParameter(RSQSimSectBundledERF.RUP_SURF_RESOLUTION_PARAM_NAME, 0d, 100d);
+		try {
+			rupSurfResParam.setValue(catalog.getAveArea());
+		} catch (ConstraintException | ParameterException | IOException e) {
+			e.printStackTrace();
+		}
+		adjustableParams.addParameter(rupSurfResParam);
 		
 		this.timeSpan = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
 		this.timeSpan.setDuration(1d);
@@ -505,6 +516,8 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			
 			int numRotations = 0;
 			
+			long pointCount = 0;
+			
 			for (Scenario scenario : scenarios) {
 				System.out.println("Loading ruptures for "+scenario);
 				List<RSQSimEvent> ruptures = getScenarioEvents(catalog, scenario, skipYears, maxRuptures);
@@ -520,10 +533,19 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 				System.out.println("Writing config to: "+csvFile.getAbsolutePath());
 				config.writeCSV(csvFile);
 				configsMap.put(scenario, config);
+				
+				Map<Integer, RSQSimEvent> eventIDMap = new HashMap<>();
+				for (RSQSimEvent event : ruptures)
+					eventIDMap.put(event.getID(), event);
+				for (RotationSpec rotation : config.getRotations())
+					pointCount += eventIDMap.get(rotation.eventID).getNumElements();
 			}
 			
 			int numRotationsPerSite = numRotations/sites.size();
 			System.out.println("Created "+numRotations+", "+numRotationsPerSite+" per site");
+			
+			long pointsPerSite = pointCount/sites.size();
+			System.out.println("Will have "+pointsPerSite+" points per site");
 		} else {
 			configsMap = loadRotationConfigs(catalog, outputDir, writePoints || writeSRFs);
 			Preconditions.checkState(!configsMap.isEmpty(), "No configuration CSV files found in %s", outputDir.getAbsolutePath());

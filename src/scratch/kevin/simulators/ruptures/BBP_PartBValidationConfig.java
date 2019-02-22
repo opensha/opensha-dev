@@ -143,7 +143,7 @@ public class BBP_PartBValidationConfig {
 		},
 		M7p2_VERT_SS_SURFACE("M7.2, Vertical Strike-Slip with Surface Rupture", "M7.2 SS", "m7p2_vert_ss_surface",
 				new String[] { "M=[7.15,7.25]", "Ztor=[0,1]", "Rake=[-180,-170] or [-10,10] or [170,180]",
-						"Dip=90", "Linear rupture (max 0.5km deviation from ideal)"},
+						"Dip=90", "Linear rupture (max 5% deviation from ideal)"},
 				7.2, FaultStyle.STRIKE_SLIP, 90, 0, 12, false, false) {
 			@Override
 			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
@@ -151,7 +151,75 @@ public class BBP_PartBValidationConfig {
 				loader.minMag(7.15).maxMag(7.25);
 				loader.matches(new DepthIden(Range.closed(0d, 1d), null));
 				loader.matches(FocalMechIden.builder().strikeSlip(10).forDip(90).build());
-				loader.matches(new LinearRuptureIden(0.5d));
+				loader.matches(new LinearRuptureIden(0.05d, true));
+				try {
+					loader.hasTransitions();
+				} catch (Exception e) {
+					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
+				}
+				return loader.load();
+			}
+
+			@Override
+			public Map<String, String> getPublishedComparisonURLs(double distance) {
+				return null;
+			}
+		},
+		M7p2_REVERSE("M7.2, Reverse, Dip=45", "M7.2 Reverse", "m7p2_reverse",
+				new String[] { "M=[7.15,7.25]", "Ztor=[0,5]", "Rake=[75,105]", "Dip=[35,55]"},
+				7.2, FaultStyle.REVERSE, 45, 0, 15, false, false) {
+			@Override
+			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
+				Loader loader = catalog.loader().skipYears(skipYears);
+				loader.minMag(7.15).maxMag(7.25);
+				loader.matches(new DepthIden(Range.closed(0d, 5d), null));
+				loader.matches(FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build());
+				try {
+					loader.hasTransitions();
+				} catch (Exception e) {
+					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
+				}
+				return loader.load();
+			}
+
+			@Override
+			public Map<String, String> getPublishedComparisonURLs(double distance) {
+				return null;
+			}
+		},
+		M7p6_VERT_SS_SURFACE("M7.6, Vertical Strike-Slip with Surface Rupture", "M7.6 SS", "m7p6_vert_ss_surface",
+				new String[] { "M=[7.55,7.65]", "Ztor=[0,1]", "Rake=[-180,-170] or [-10,10] or [170,180]",
+						"Dip=90", "Linear rupture (max 5% deviation from ideal)"},
+				7.6, FaultStyle.STRIKE_SLIP, 90, 0, 12, false, false) {
+			@Override
+			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
+				Loader loader = catalog.loader().skipYears(skipYears);
+				loader.minMag(7.55).maxMag(7.65);
+				loader.matches(new DepthIden(Range.closed(0d, 1d), null));
+				loader.matches(FocalMechIden.builder().strikeSlip(10).forDip(90).build());
+				loader.matches(new LinearRuptureIden(0.05d, true));
+				try {
+					loader.hasTransitions();
+				} catch (Exception e) {
+					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
+				}
+				return loader.load();
+			}
+
+			@Override
+			public Map<String, String> getPublishedComparisonURLs(double distance) {
+				return null;
+			}
+		},
+		M7p6_REVERSE("M7.6, Reverse, Dip=45", "M7.6 Reverse", "m7p6_reverse",
+				new String[] { "M=[7.55,7.65]", "Ztor=[0,5]", "Rake=[75,105]", "Dip=[35,55]"},
+				7.6, FaultStyle.REVERSE, 45, 0, 15, false, false) {
+			@Override
+			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
+				Loader loader = catalog.loader().skipYears(skipYears);
+				loader.minMag(7.55).maxMag(7.65);
+				loader.matches(new DepthIden(Range.closed(0d, 5d), null));
+				loader.matches(FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build());
 				try {
 					loader.hasTransitions();
 				} catch (Exception e) {
