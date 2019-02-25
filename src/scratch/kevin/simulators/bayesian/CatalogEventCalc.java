@@ -241,6 +241,7 @@ public class CatalogEventCalc extends FaultStateEventCalc {
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(catalogsDir);
 		
 		double minMag = 7d;
+		double maxMag = Double.POSITIVE_INFINITY;
 		double distSpacing = 1d; // years
 		double skipYears = 5000;
 		boolean middleSubSect = false; // else any
@@ -261,13 +262,16 @@ public class CatalogEventCalc extends FaultStateEventCalc {
 		System.out.println();
 		
 		System.out.println("Loading catalog...");
-		List<RSQSimEvent> events = catalog.loader().minMag(minMag).skipYears(skipYears).load();
+		List<RSQSimEvent> events = catalog.loader().magRange(minMag, maxMag).skipYears(skipYears).load();
 		System.out.println("Loaded "+events.size()+" events");
 		
 		CatalogEventCalc calc = new CatalogEventCalc(events, distSpacing, faultIdens);
 		
 		String csvPrefix = "catalog_event_probs_"+faultIdens.size()+"faults_m"
-				+optionalDigitDF.format(minMag)+"_"+optionalDigitDF.format(distSpacing)+"yr";
+				+optionalDigitDF.format(minMag);
+		if (Double.isFinite(maxMag))
+			csvPrefix += "_"+optionalDigitDF.format(maxMag);
+		csvPrefix += "_"+optionalDigitDF.format(distSpacing)+"yr";
 		
 		calc.writeStatesCSV(new File(catalog.getCatalogDir(), csvPrefix+".csv"));
 		

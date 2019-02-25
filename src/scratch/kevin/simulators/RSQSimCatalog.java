@@ -1074,14 +1074,17 @@ public class RSQSimCatalog implements XMLSaveable {
 			loadIdens = new ArrayList<>();
 		}
 		
-		public Loader minMag(double minMag) {
-			loadIdens.add(new MagRangeRuptureIdentifier(minMag, Double.POSITIVE_INFINITY));
+		public Loader magRange(double minMag, double maxMag) {
+			loadIdens.add(new MagRangeRuptureIdentifier(minMag, maxMag));
 			return this;
 		}
 		
+		public Loader minMag(double minMag) {
+			return magRange(minMag, Double.POSITIVE_INFINITY);
+		}
+		
 		public Loader maxMag(double maxMag) {
-			loadIdens.add(new MagRangeRuptureIdentifier(Double.NEGATIVE_INFINITY, maxMag));
-			return this;
+			return magRange(Double.NEGATIVE_INFINITY, maxMag);
 		}
 		
 		public Loader skipYears(double years) {

@@ -11,9 +11,9 @@ import java.util.Map;
 
 import org.dom4j.DocumentException;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
-import org.opensha.sha.simulators.SimulatorEvent;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Range;
 import com.google.common.io.Files;
 
 import scratch.UCERF3.FaultSystemRupSet;
@@ -26,7 +26,7 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 	private List<String> faultNames;
 	
 	public U3CompareEventCalc(File u3SimFile, FaultSystemSolution sol, List<String[]> parentSectNames,
-			double minMag, double timeDiscretizationYears, double minAreaFract, boolean middleSubSect)
+			Range<Double> magRange, double timeDiscretizationYears, double minAreaFract, boolean middleSubSect)
 					throws IOException {
 		Preconditions.checkState(!middleSubSect, "middle sub sect not yet implemented");
 		List<HashSet<Integer>> matchingRupsList = new ArrayList<>();
@@ -61,7 +61,7 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 			matchingRupsList.add(matchingRups);
 			
 			for (int r=0; r<rupSet.getNumRuptures(); r++) {
-				if (rupSet.getMagForRup(r) < minMag)
+				if (!magRange.contains(rupSet.getMagForRup(r)))
 					continue;
 				double areaOnParentsRuptured = 0d;
 				for (int s : rupSet.getSectionsIndicesForRup(r)) {
@@ -176,7 +176,8 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 		File solFile = new File("/home/kevin/OpenSHA/UCERF3/FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
 		FaultSystemSolution sol = FaultSystemIO.loadSol(solFile);
 		
-		double[] minMags = { 7d };
+		List<Range<Double>> magRanges = new ArrayList<>();
+		magRanges.add(Range.closed(7d, Double.POSITIVE_INFINITY));
 		double[] timeDiscretizationsYears =  { 10d, 5d, 1d };
 		double minAreaFract = 0.2;
 		boolean middleSubSect = false; // else any
@@ -193,13 +194,16 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 			
 			System.out.println("Loading: "+u3SimFile.getAbsolutePath());
 			
-			for (double minMag : minMags) {
+			for (Range<Double> magRange : magRanges) {
 				for (double timeDiscretizationYears : timeDiscretizationsYears) {
-					U3CompareEventCalc calc = new U3CompareEventCalc(u3SimFile, sol, parentSectNames, minMag,
+					U3CompareEventCalc calc = new U3CompareEventCalc(u3SimFile, sol, parentSectNames, magRange,
 							timeDiscretizationYears, minAreaFract, middleSubSect);
 					
 					String csvPrefix = "u3_event_probs_"+parentSectNames.size()+"faults_m"
-							+optionalDigitDF.format(minMag)+"_"+optionalDigitDF.format(timeDiscretizationYears)+"yr";
+							+optionalDigitDF.format(magRange.lowerEndpoint());
+					if (Double.isFinite(magRange.upperEndpoint()))
+						csvPrefix += "_"+optionalDigitDF.format(magRange.upperEndpoint());
+					csvPrefix += "_"+optionalDigitDF.format(timeDiscretizationYears)+"yr";
 					
 					System.out.println("Writing "+csvPrefix+".csv");
 					calc.writeStatesCSV(new File(u3SimDir, csvPrefix+".csv"));
