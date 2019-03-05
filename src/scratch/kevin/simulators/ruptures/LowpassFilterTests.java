@@ -29,7 +29,9 @@ public class LowpassFilterTests {
 		
 		List<BBP_Site> sites = new ArrayList<>();
 		
-		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), VelocityModel.LA_BASIN.getVs30(),
+		VelocityModel vm = VelocityModel.LA_BASIN_863;
+		
+		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), vm.getVs30(),
 				RSQSimBBP_Config.SITE_LO_PASS_FREQ, RSQSimBBP_Config.SITE_HI_PASS_FREQ));
 		
 		File sitesFile = new File(outputDir, "sites.stl");
@@ -44,7 +46,7 @@ public class LowpassFilterTests {
 			else
 				freqDir = new File(outputDir, (float)lowpassFreq+"hz");
 			Preconditions.checkState(freqDir.exists() || freqDir.mkdir());
-			BBP_Wrapper wrapper = new BBP_Wrapper(VelocityModel.LA_BASIN, Method.GP, srcFile, null, srfFile, sitesFile, freqDir);
+			BBP_Wrapper wrapper = new BBP_Wrapper(vm, Method.GP, srcFile, null, srfFile, sitesFile, freqDir);
 			wrapper.setLowpassFreq(lowpassFreq);
 			wrapper.setDoHF(false);
 			wrapper.setDoFAS(true);

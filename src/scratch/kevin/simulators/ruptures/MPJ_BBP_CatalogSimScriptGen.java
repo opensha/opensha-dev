@@ -42,7 +42,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
 //		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2585_1myrs");
-		File catalogDir = new File(myHPCDir, "rundir3067");
+		File catalogDir = new File(myHPCDir, "rundir2740");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2734");
 		
 		boolean standardSites = false;
@@ -66,7 +66,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 18;
+		int nodes = 36;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
@@ -116,6 +116,8 @@ class MPJ_BBP_CatalogSimScriptGen {
 			if (scaleVelocities)
 				jobName += "-velScale";
 		}
+		VelocityModel vm = RSQSimBBP_Config.VM;
+		jobName += "-vm"+vm.name();
 		if (standardSites)
 			jobName += "-standardSites";
 		if (csInitialLASites)
@@ -146,7 +148,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 		File remoteSitesFile = new File(remoteJobDir, sitesFile.getName());
 		
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
-		argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();
+		argz += " --vm "+vm.name()+" --method "+RSQSimBBP_Config.METHOD.name();
 		argz += " --sites-file "+remoteSitesFile.getAbsolutePath();
 		argz += " --catalog-dir "+catalogDir.getAbsolutePath();
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();

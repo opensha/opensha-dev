@@ -820,7 +820,7 @@ public class RotatedRupVariabilityConfig {
 			
 			List<Site> sites = new ArrayList<>();
 			for (BBP_Site bbpSite : bbpSites)
-				sites.add(bbpSite.buildGMPE_Site(VelocityModel.LA_BASIN));
+				sites.add(bbpSite.buildGMPE_Site());
 			
 			config = new RotatedRupVariabilityConfig(catalog,
 					sites, ruptures, distances, numSourceAz, numSiteToSourceAz);

@@ -3,6 +3,7 @@ package scratch.kevin.bbp;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
 
 import org.dom4j.Element;
 import org.opensha.commons.metadata.XMLSaveable;
@@ -15,7 +16,8 @@ public class BBP_Module implements XMLSaveable {
 	public static final String VERSION = "17.3.0";
 	
 	public static enum VelocityModel {
-		LA_BASIN("LABasin", "$BBP_INSTALL_GF/LABasin/gp/genslip_nr_generic1d-gp01.vmod", 863);
+		LA_BASIN_863("LABasin863", "$BBP_INSTALL_GF/LABasin863/gp/genslip_nr_generic1d-gp01.vmod", 863),
+		LA_BASIN_500("LABasin500", "$BBP_INSTALL_GF/LABasin500/gp/nr02-vs500.fk1d", 500);
 		
 		private String xmlName;
 		private String filePath;
@@ -29,6 +31,10 @@ public class BBP_Module implements XMLSaveable {
 		
 		public double getVs30() {
 			return vs30;
+		}
+		
+		public File getFilePath(String gfDir) {
+			return new File(filePath.replaceAll(Matcher.quoteReplacement("$BBP_INSTALL_GF"), gfDir));
 		}
 	}
 	

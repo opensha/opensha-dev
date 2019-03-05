@@ -51,12 +51,17 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 			minRups = Integer.parseInt(cmd.getOptionValue("min-ruptures"));
 		
 		// only 1 site, doesn't matter where
-		sites = RSQSimBBP_Config.getStandardSites().subList(0, 1);
+		BBP_Site singleSite = RSQSimBBP_Config.getStandardSites().get(0);
+		// fix the Vs30 value, probably not important but why not
+		singleSite = new BBP_Site(singleSite.getName(), singleSite.getLoc(), vm.getVs30(),
+				singleSite.getLoPassFreq(), singleSite.getHiPassFreq());
+		sites = new ArrayList<>();
+		sites.add(singleSite);
 		siteToBBPSites = new HashMap<>();
 		
 		List<Site> gmpeSites = new ArrayList<>();
 		for (BBP_Site bbpSite : sites) {
-			Site site = bbpSite.buildGMPE_Site(vm);
+			Site site = bbpSite.buildGMPE_Site();
 			siteToBBPSites.put(site, bbpSite);
 			gmpeSites.add(site);
 		}

@@ -40,6 +40,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.FocalMechIden;
@@ -85,7 +86,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	private File gmpeCacheDir;
 
 	public CatalogGMPE_Compare(RSQSimCatalog catalog, ZipFile bbpZipFile, List<BBP_Site> sites, double minMag, int skipYears,
-			VelocityModel vm, double minFractForInclusion, File gmpeCacheDir, RuptureIdentifier loadCriteria) throws IOException {
+			double minFractForInclusion, File gmpeCacheDir, RuptureIdentifier loadCriteria) throws IOException {
 		this.catalog = catalog;
 		this.sites = sites;
 		this.minMag = minMag;
@@ -97,7 +98,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		List<Site> gmpeSites = new ArrayList<>();
 		for (BBP_Site site : sites) {
 			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), MPJ_BBP_CatalogSim.CUTOFF_DIST)));
-			Site gmpeSite = site.buildGMPE_Site(vm);
+			Site gmpeSite = site.buildGMPE_Site();
 			gmpeSite.setName(RSQSimBBP_Config.siteCleanName(site));
 			gmpeSites.add(gmpeSite);
 			sitesBBPtoGMPE.put(site, gmpeSite);
@@ -245,6 +246,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		if (gmpeCacheDir != null) {
 			String siteName = sitesGMPEtoBBP.get(site).getName();
 			gmpeCacheFile = new File(gmpeCacheDir, siteName+"_"+gmpeRef.getShortName()+".csv");
+			System.out.println(gmpeCacheFile.getAbsolutePath()+" exits ? "+gmpeCacheFile.exists());
 			if (gmpeCacheFile.exists()) {
 				try {
 					System.out.println("Loading cache from "+gmpeCacheFile.getAbsolutePath());
@@ -278,7 +280,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 				futures.add(exec.submit(new EventComparisonCalc(comp, gmpeRef, site, myPeriods)));
 		}
 		
-		System.out.println("Calculating for "+futures.size()+" events");
+		System.out.println("Calculating for "+futures.size()+" events, site "+site.getName());
 		
 		for (Future<?> future : futures) {
 			try {
@@ -534,8 +536,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -544,6 +546,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = false;
+		
+		VelocityModel forceVM = null;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
@@ -558,15 +562,15 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		else
 			highlightNames = new String[] { "USC", "SBSM" };
 		
-//		RuptureIdentifier loadIden = null;
-//		String loadIdenPrefix = null;
+		RuptureIdentifier loadIden = null;
+		String loadIdenPrefix = null;
 		
 //		RuptureIdentifier loadIden = FocalMechIden.builder().strikeSlip(10d).forDip(90).build();
 //		String loadIdenPrefix = "mech_vert_ss";
 //		RuptureIdentifier loadIden = FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build();
 //		String loadIdenPrefix = "mech_reverse";
-		RuptureIdentifier loadIden = FocalMechIden.builder().forRake(-105, -75).forDip(35, 55).build();
-		String loadIdenPrefix = "mech_normal";
+//		RuptureIdentifier loadIden = FocalMechIden.builder().forRake(-105, -75).forDip(35, 55).build();
+//		String loadIdenPrefix = "mech_normal";
 		
 		boolean replotScatters = false;
 		boolean replotZScores = false;
@@ -576,7 +580,6 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		if (timeScale != 1d)
 			doRotD = false;
 		
-		VelocityModel vm = VelocityModel.LA_BASIN;
 		double minFractForInclusion = 0.2;
 		boolean skipRGdirs = true;
 		boolean rgOnlyIfPossible = true;
@@ -596,6 +599,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File bbpZipFile = null;
 		File[] allBBPDirs = bbpParallelDir.listFiles();
 		Arrays.sort(allBBPDirs, new FileNameComparator());
+		VelocityModel bbpVM = null;
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-all")) {
@@ -619,13 +623,34 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 				if (!zipFile.exists())
 					zipFile = new File(dir, "results_rotD.zip");
 				if (zipFile.exists()) {
+					System.out.println("Found candidate zip file: "+zipFile.getAbsolutePath());
+					VelocityModel myVM = null;
+					List<BBP_Site> sites = BBP_Site.readFile(dir);
+					for (VelocityModel v : VelocityModel.values()) {
+						if (name.contains(v.name())) {
+							myVM = v;
+							System.out.println("\tdectected VM: "+myVM);
+							break;
+						}
+						if ((float)sites.get(0).getVs30() == v.getVs30()) {
+							myVM = v;
+							System.out.println("\tassuming VM from Vs30: "+myVM);
+						}
+					}
+					if (forceVM != null && myVM != forceVM) {
+						System.out.println("Skipping dir, wrong VM");
+						continue;
+					}
+					
 					bbpDir = dir;
 					bbpZipFile = zipFile;
+					bbpVM = myVM;
 				}
 			}
 		}
 		Preconditions.checkNotNull(bbpDir);
 		System.out.println("Located ref BBP dir: "+bbpDir.getAbsolutePath());
+		System.out.println("Velocity Model: "+bbpVM);
 		
 		File gmpeCacheDir = new File(bbpDir, "gmpe_cache");
 		Preconditions.checkState(gmpeCacheDir.exists() || gmpeCacheDir.mkdir());
@@ -658,7 +683,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		ZipFile zipFile = new ZipFile(bbpZipFile);
 		
 		CatalogGMPE_Compare comp = new CatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
-				vm, minFractForInclusion, gmpeCacheDir, loadIden);
+				minFractForInclusion, gmpeCacheDir, loadIden);
 		comp.setReplotCurves(replotCurves);
 		comp.setReplotResiduals(replotResiduals);
 		comp.setReplotScatters(replotScatters);
@@ -690,6 +715,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 							if (scaleVelocities)
 								dirname += "_velScale";
 						}
+						dirname += "_vm"+bbpVM.name();
 						if (loadIden != null && loadIdenPrefix.length() > 0)
 							dirname += "_"+loadIdenPrefix;
 						File catalogGMPEDir = new File(catalogOutputDir, dirname);

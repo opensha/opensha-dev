@@ -204,7 +204,6 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		
 		List<BBP_Site> sites = BBP_Site.readFile(bbpDir);
 		
-		VelocityModel vm = VelocityModel.LA_BASIN;
 		ArrayList<RegionIden> siteRegIdens = new ArrayList<>();
 		HashBiMap<BBP_Site, Site> sitesBBPtoGMPE = HashBiMap.create();
 		List<Site> gmpeSites = new ArrayList<>();
@@ -221,7 +220,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 					continue;
 			}
 			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), MPJ_BBP_CatalogSim.CUTOFF_DIST)));
-			Site gmpeSite = site.buildGMPE_Site(vm);
+			Site gmpeSite = site.buildGMPE_Site();
 			gmpeSite.setName(RSQSimBBP_Config.siteCleanName(site));
 			gmpeSites.add(gmpeSite);
 			sitesBBPtoGMPE.put(site, gmpeSite);

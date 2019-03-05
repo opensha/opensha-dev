@@ -23,7 +23,7 @@ public class BBP_ThreadedRunner {
 		File eventDir = new File("/data/kevin/simulators/catalogs/rundir2194_long/event_srfs");
 		File srcFile = new File(eventDir, "event_136704.src");
 		File sitesFile = new File("/home/kevin/bbp/bbp_data/run/stations_cs_sites.stl");
-		VelocityModel vm = VelocityModel.LA_BASIN;
+		VelocityModel vm = VelocityModel.LA_BASIN_863;
 		Method method = Method.GP;
 		
 		int numRealizations = 100;

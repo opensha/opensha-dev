@@ -233,7 +233,7 @@ public class RSQSimBBP_Config {
 	}
 	
 	static final boolean U3_SURFACES = true;
-	static final VelocityModel VM = VelocityModel.LA_BASIN;
+	static final VelocityModel VM = VelocityModel.LA_BASIN_500;
 	static final Method METHOD = Method.GP;
 	static final SRFInterpolationMode SRF_INTERP_MODE = SRFInterpolationMode.ADJ_VEL;
 	static final double SRF_DT = 0.05;

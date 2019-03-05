@@ -63,7 +63,6 @@ class RupSpectraPageGen {
 	
 	private RSQSimCatalog catalog;
 	private File outputDir;
-	private VelocityModel vm;
 	private double timeScale;
 	private boolean scaleVelocities;
 	
@@ -77,10 +76,9 @@ class RupSpectraPageGen {
 	private List<BBP_Site> shakemapSites;
 	private ScalarIMR shakemapGMPE;
 
-	public RupSpectraPageGen(RSQSimCatalog catalog, File outputDir, VelocityModel vm, double timeScale, boolean scaleVelocities) {
+	public RupSpectraPageGen(RSQSimCatalog catalog, File outputDir, double timeScale, boolean scaleVelocities) {
 		this.catalog = catalog;
 		this.outputDir = outputDir;
-		this.vm = vm;
 		this.timeScale = timeScale;
 		this.scaleVelocities = scaleVelocities;
 	}
@@ -432,7 +430,7 @@ class RupSpectraPageGen {
 				System.out.print("Calculating GMPEs...");
 				gmpeSpectra = new UncertainArbDiscDataset[spectraGMPEs.length];
 				for (int i=0; i<gmpeSpectra.length; i++)
-					gmpeSpectra[i] = SpectraPlotter.calcGMPE_RotD50(gmpeRup, site, vm, spectraGMPEs[i]);
+					gmpeSpectra[i] = SpectraPlotter.calcGMPE_RotD50(gmpeRup, site, spectraGMPEs[i]);
 				System.out.println("DONE.");
 			}
 			
@@ -581,7 +579,7 @@ class RupSpectraPageGen {
 			if (periods.length > 0) {
 				String label = "Event "+eventID;
 				ShakemapPlotter.plotShakemaps(shakemap, shakemapRegion, shakemapSites, label, resourcesDir,
-						prefix, true, shakemapGMPE, gmpeRup, vm, plotPeriods);
+						prefix, true, shakemapGMPE, gmpeRup, plotPeriods);
 			} else {
 				System.out.println("Skipping all maps!");
 			}
@@ -790,12 +788,11 @@ class RupSpectraPageGen {
 			gmpe.setParamDefaults();
 		ScalarIMR shakemapGMPE = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
 		shakemapGMPE.setParamDefaults();
-		VelocityModel vm = VelocityModel.LA_BASIN;
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		RupSpectraPageGen gen = new RupSpectraPageGen(catalog, catalogOutputDir, vm, timeScale, scaleVelocities);
+		RupSpectraPageGen gen = new RupSpectraPageGen(catalog, catalogOutputDir, timeScale, scaleVelocities);
 		
 		EqkRupture gmpeRup = null;
 		

@@ -35,11 +35,11 @@ public class ShakemapPlotter {
 	public static void plotShakemaps(BBP_ShakeMapSimZipLoader loader, GriddedRegion gridReg, List<BBP_Site> sites,
 			String label, File outputDir, String prefix, boolean log, double... periods)
 					throws IOException, GMT_MapException {
-		plotShakemaps(loader, gridReg, sites, label, outputDir, prefix, log,  null, null, null, periods);
+		plotShakemaps(loader, gridReg, sites, label, outputDir, prefix, log, null, null, periods);
 	}
 	
 	public static void plotShakemaps(BBP_ShakeMapSimZipLoader loader, GriddedRegion gridReg, List<BBP_Site> sites,
-			String label, File outputDir, String prefix, boolean log, ScalarIMR gmpe, EqkRupture rup, VelocityModel vm,
+			String label, File outputDir, String prefix, boolean log, ScalarIMR gmpe, EqkRupture rup,
 			double... periods) throws IOException, GMT_MapException {
 		GriddedGeoDataSet[] xyzs = load(loader, gridReg, sites, periods, false);
 		GriddedGeoDataSet[] rd100xyzs = null;
@@ -48,7 +48,7 @@ public class ShakemapPlotter {
 		
 		GriddedGeoDataSet[] gmpes = null;
 		if (gmpe != null)
-			gmpes = calcGMPE(gmpe, rup, vm, gridReg, sites, periods);
+			gmpes = calcGMPE(gmpe, rup, gridReg, sites, periods);
 		
 		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
 		
@@ -187,7 +187,7 @@ public class ShakemapPlotter {
 		return ret;
 	}
 	
-	private static GriddedGeoDataSet[] calcGMPE(ScalarIMR gmpe, EqkRupture rup, VelocityModel vm,
+	private static GriddedGeoDataSet[] calcGMPE(ScalarIMR gmpe, EqkRupture rup,
 			GriddedRegion gridReg, List<BBP_Site> sites, double[] periods) {
 		gmpe.setParamDefaults();
 		
@@ -201,7 +201,7 @@ public class ShakemapPlotter {
 		
 		System.out.println("Calculating GMPE shakemaps for "+periods.length+" periods...");
 		for (int i=0; i<sites.size(); i++) {
-			Site site = sites.get(i).buildGMPE_Site(vm);
+			Site site = sites.get(i).buildGMPE_Site();
 			gmpe.setSite(site);
 			
 			for (int p=0; p<periods.length; p++) {

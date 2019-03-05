@@ -81,6 +81,7 @@ import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
+import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.plots.AbstractPlot;
 import scratch.kevin.simulators.plots.MFDPlot;
 import scratch.kevin.simulators.plots.MagAreaScalingPlot;
@@ -604,6 +605,15 @@ public class RSQSimCatalog implements XMLSaveable {
 		writeMarkdownSummary(dir, plots, replot, 6d);
 	}
 	
+	private static <K,E> List<E> getCreateList(Map<K, List<E>> map, K key) {
+		List<E> ret = map.get(key);
+		if (ret == null) {
+			ret = new ArrayList<>();
+			map.put(key, ret);
+		}
+		return ret;
+	}
+	
 	public void writeMarkdownSummary(File dir, boolean plots, boolean replot, double plotMinMag) throws IOException {
 		List<String> lines = new LinkedList<>();
 		String topLink = "*[(top)](#"+MarkdownUtils.getAnchorName(getName())+")*";
@@ -616,11 +626,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<String> eventLinks = new ArrayList<>();
 		List<String> eventNames = new ArrayList<>();
 		
-		List<String> gmpeLinks = new ArrayList<>();
-		List<String> gmpeNames = new ArrayList<>();
+		Map<VelocityModel, List<String>> gmpeLinks = new HashMap<>();
+		Map<VelocityModel, List<String>> gmpeNames = new HashMap<>();
 		
-		List<String> gmpeGriddedLinks = new ArrayList<>();
-		List<String> gmpeGriddedNames = new ArrayList<>();
+		Map<VelocityModel, List<String>> gmpeGriddedLinks = new HashMap<>();
+		Map<VelocityModel, List<String>> gmpeGriddedNames = new HashMap<>();
 		
 		List<String> gmpeRGLinks = new ArrayList<>();
 		List<String> gmpeRGNames = new ArrayList<>();
@@ -637,11 +647,13 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<String> rotatedRupLinks = new ArrayList<>();
 		List<String> rotatedRupNames = new ArrayList<>();
 		
+		Map<VelocityModel, String> partBLinks = new HashMap<>();
+
+		String vmCompareRotRupLink = null;
 		String rotDDLink = null;
 		String multiFaultLink = null;
 		String extremeEventLink = null;
 		String sourceSiteLink = null;
-		String partBLink = null;
 		
 		File[] dirList = dir.listFiles();
 		Arrays.sort(dirList, new FileNameComparator());
@@ -655,8 +667,17 @@ public class RSQSimCatalog implements XMLSaveable {
 			if (name.startsWith("event_")) {
 				eventNames.add(MarkdownUtils.getTitle(mdFile));
 				eventLinks.add(name);
-			} else if (name.startsWith("gmpe_bbp_comparisons_")) {
+			} else if (name.startsWith("gmpe_bbp_comparisons_") && name.contains("_vm")) {
 				String subName = name.substring("gmpe_bbp_comparisons_".length());
+				
+				VelocityModel vm = null;
+				for (VelocityModel testVM : VelocityModel.values()) {
+					if (subName.contains("_vm"+testVM.name())) {
+						vm = testVM;
+						subName = subName.replaceAll("_vm"+testVM.name(), "");
+						break;
+					}
+				}
 				
 				boolean gridded = name.contains("_GriddedSites");
 				if (gridded)
@@ -677,11 +698,11 @@ public class RSQSimCatalog implements XMLSaveable {
 				}
 				
 				if (gridded) {
-					gmpeGriddedNames.add(subName);
-					gmpeGriddedLinks.add(name);
+					getCreateList(gmpeGriddedNames, vm).add(subName);
+					getCreateList(gmpeGriddedLinks, vm).add(name);
 				} else {
-					gmpeNames.add(subName);
-					gmpeLinks.add(name);
+					getCreateList(gmpeNames, vm).add(subName);
+					getCreateList(gmpeLinks, vm).add(name);
 				}
 			} else if (name.startsWith("gmpe_bbp_rg_comparisons_")) {
 				gmpeRGNames.add(name.substring("gmpe_bbp_rg_comparisons_".length()));
@@ -744,8 +765,10 @@ public class RSQSimCatalog implements XMLSaveable {
 				String title = MarkdownUtils.getTitle(mdFile);
 				occCopulaLinks.add(name);
 				occCopulaNames.add(title);
-			} else if (name.equals("bbp_part_b")) {
-				partBLink = name;
+			} else if (name.startsWith("bbp_part_b")) {
+				for (VelocityModel vm : VelocityModel.values())
+					if (name.contains(vm.name()))
+						partBLinks.put(vm, name);
 			} else if (name.startsWith("rotated_ruptures_")) {
 				for (Scenario scenario : Scenario.values()) {
 					if (name.equals("rotated_ruptures_"+scenario.getPrefix())) {
@@ -759,6 +782,8 @@ public class RSQSimCatalog implements XMLSaveable {
 						rotatedRupNames.add(rupType.getName()+", Mag-Dist Bins");
 					}
 				}
+			} else if (name.equals("bbp_vm_rot_rup_compare")) {
+				vmCompareRotRupLink = name;
 			}
 		}
 		
@@ -775,24 +800,40 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add("## Full Catalog GMPE Comparisons");
 			lines.add(topLink);
 			lines.add("");
-//			System.out.print("Have "+gmpeNames.size()+" regulars and "+gmpeGriddedNames.size()+" gridded");
-			boolean both = !gmpeNames.isEmpty() && !gmpeGriddedNames.isEmpty();
-			if (both) {
-				lines.add("### Points Of Interest");
-				lines.add("");
-				for (int i=0; i<gmpeNames.size(); i++)
-					lines.add("* ["+gmpeNames.get(i)+"]("+gmpeLinks.get(i)+"/)");
-				lines.add("");
-				lines.add("### Gridded Sites");
-				lines.add("");
-				for (int i=0; i<gmpeGriddedNames.size(); i++)
-					lines.add("* ["+gmpeGriddedNames.get(i)+"]("+gmpeGriddedLinks.get(i)+"/)");
-			} else {
-				for (int i=0; i<gmpeNames.size(); i++)
-					lines.add("* ["+gmpeNames.get(i)+"]("+gmpeLinks.get(i)+"/)");
-				for (int i=0; i<gmpeGriddedNames.size(); i++)
-					lines.add("* ["+gmpeGriddedNames.get(i)+"]("+gmpeGriddedLinks.get(i)+"/)");
+			
+			boolean multiVM = gmpeNames.keySet().size() > 1;
+			for (VelocityModel vm : VelocityModel.values()) {
+				boolean either = gmpeNames.containsKey(vm) || gmpeGriddedNames.containsKey(vm);
+				if (!either)
+					continue;
+				boolean both = gmpeNames.containsKey(vm) && gmpeGriddedNames.containsKey(vm);
+				
+				String curHeading = "##";
+				if (multiVM) {
+					curHeading += "#";
+					lines.add(curHeading+" Full Catalog GMPE Comparisons, "+vm);
+					lines.add("");
+				}
+				
+				if (both) {
+					curHeading += "#";
+					lines.add(curHeading+" Points Of Interest");
+					lines.add("");
+					for (int i=0; i<gmpeNames.get(vm).size(); i++)
+						lines.add("* ["+gmpeNames.get(vm).get(i)+"]("+gmpeLinks.get(vm).get(i)+"/)");
+					lines.add("");
+					lines.add(curHeading+" Gridded Sites");
+					lines.add("");
+					for (int i=0; i<gmpeGriddedNames.get(vm).size(); i++)
+						lines.add("* ["+gmpeGriddedNames.get(vm).get(i)+"]("+gmpeGriddedLinks.get(vm).get(i)+"/)");
+				} else {
+					for (int i=0; gmpeNames.containsKey(vm) && i<gmpeNames.get(vm).size(); i++)
+						lines.add("* ["+gmpeNames.get(vm).get(i)+"]("+gmpeLinks.get(vm).get(i)+"/)");
+					for (int i=0; gmpeGriddedNames.containsKey(vm) && i<gmpeGriddedNames.get(vm).size(); i++)
+						lines.add("* ["+gmpeGriddedNames.get(vm).get(i)+"]("+gmpeGriddedLinks.get(vm).get(i)+"/)");
+				}
 			}
+			
 		}
 		if (!gmpeRGNames.isEmpty()) {
 			lines.add("");
@@ -854,12 +895,20 @@ public class RSQSimCatalog implements XMLSaveable {
 			for (int i=0; i<occCopulaLinks.size(); i++)
 				lines.add("* ["+occCopulaNames.get(i)+"]("+occCopulaLinks.get(i)+"/)");
 		}
-		if (partBLink != null) {
+		if (!partBLinks.isEmpty()) {
 			lines.add("");
 			lines.add("## BBP Part B Analysis");
 			lines.add(topLink);
 			lines.add("");
-			lines.add("[BBP Part B Analysis Here]("+partBLink+"/)");
+			boolean multi = partBLinks.size() > 1;
+			for (VelocityModel vm : VelocityModel.values()) {
+				if (!partBLinks.containsKey(vm))
+					continue;
+				if (multi)
+					lines.add("* ["+vm+"]("+partBLinks.get(vm)+")");
+				else
+					lines.add("[BBP Part B Analysis Here]("+partBLinks.get(vm)+")");
+			}
 		}
 		if (!rotatedRupLinks.isEmpty()) {
 			lines.add("");
@@ -868,6 +917,13 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add("");
 			for (int i=0; i<rotatedRupLinks.size(); i++)
 				lines.add("* ["+rotatedRupNames.get(i)+"]("+rotatedRupLinks.get(i)+"/)");
+		}
+		if (vmCompareRotRupLink != null) {
+			lines.add("");
+			lines.add("## BBP Velocity Model Comparisons");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[BBP Velocity Model Comparisons Here]("+vmCompareRotRupLink+"/)");
 		}
 		
 		if (plots) {

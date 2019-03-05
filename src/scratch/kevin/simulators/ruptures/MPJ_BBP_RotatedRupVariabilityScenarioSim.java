@@ -50,7 +50,7 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 		
 		List<Site> gmpeSites = new ArrayList<>();
 		for (BBP_Site bbpSite : sites) {
-			Site site = bbpSite.buildGMPE_Site(vm);
+			Site site = bbpSite.buildGMPE_Site();
 			siteToBBPSites.put(site, bbpSite);
 			gmpeSites.add(site);
 		}

@@ -12,6 +12,10 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.iden.LogicalAndRupIden;
+import org.opensha.sha.simulators.iden.LogicalOrRupIden;
+import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
+import org.opensha.sha.simulators.iden.RuptureIdentifier;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -53,15 +57,36 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		siteIndexes = new ArrayList<>();
 		siteDists = new ArrayList<>();
 		siteListCache = HashBasedTable.create();
+		int maxRuptures = 0;
+		if (cmd.hasOption("max-ruptures"))
+			maxRuptures = Integer.parseInt(cmd.getOptionValue("max-ruptures"));
 		
 		double[] distances = getDistances(cmd);
 		Scenario[] scenarios = getScenarios(cmd);
 		
+		List<List<RuptureIdentifier>> scenarioIdens = new ArrayList<>();
+		List<RuptureIdentifier> magIdens = new ArrayList<>();
 		for (Scenario scenario : scenarios) {
+			List<RuptureIdentifier> idens = scenario.getIdentifiers(catalog);
+			scenarioIdens.add(idens);
+			for (RuptureIdentifier iden : idens)
+				if (iden instanceof MagRangeRuptureIdentifier)
+					magIdens.add(iden);
+		}
+		
+		if (rank == 0)
+			debug("Loading events for "+scenarios.length+" scenarios");
+		List<RSQSimEvent> allEvents = catalog.loader().skipYears(skipYears).matches(new LogicalOrRupIden(magIdens)).load();
+		debug("Loaded "+allEvents.size()+" potential matches");
+		
+		for (int s=0; s<scenarios.length; s++) {
+			Scenario scenario = scenarios[s];
 			if (rank == 0)
 				debug("Loading matches for scenario: "+scenario);
 			
-			List<RSQSimEvent> eventMatches = scenario.getMatches(catalog, skipYears);
+			List<RSQSimEvent> eventMatches = new LogicalAndRupIden(scenarioIdens.get(s)).getMatches(allEvents);
+			if (maxRuptures > 0)
+				eventMatches = BBP_PartBValidationConfig.getBestMatches(scenario.getMagnitude(), eventMatches, maxRuptures);
 			
 			if (rank == 0)
 				debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);
@@ -83,6 +108,8 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 				File eventDir = new File (scenarioDir, "event_"+event.getID());
 				if (rank == 0)
 					MPJ_BBP_Utils.waitOnDir(eventDir, 10, 2000);
+//				if (rank == 0)
+//					debug("Building for event "+event.getID());
 				for (double distance : distances) {
 					List<List<Integer>> siteBundles = new ArrayList<>();
 					List<Integer> curSites = null;
@@ -209,6 +236,10 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		Option randomAz = new Option("rand", "random-azimuth", false, "Flag for random azimuth");
 		randomAz.setRequired(false);
 		ops.addOption(randomAz);
+		
+		Option maxRuptures = new Option("mr", "max-ruptures", true, "Maximum ruptures for each scenario");
+		maxRuptures.setRequired(false);
+		ops.addOption(maxRuptures);
 		
 		return ops;
 	}

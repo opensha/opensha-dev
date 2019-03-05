@@ -33,8 +33,8 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 	private Scenario scenario;
 
 	public RotatedRupVariabilityScenarioPageGen(RSQSimCatalog catalog, Scenario scenario,
-			RotatedRupVariabilityConfig config, SimulationRotDProvider<RotationSpec> prov) {
-		super(catalog, config, scenario.getMagnitude(), prov);
+			RotatedRupVariabilityConfig config, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
+		super(catalog, config, scenario.getMagnitude(), prov, calcPeriods);
 		this.scenario = scenario;
 	}
 
@@ -53,14 +53,20 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		return scenario.getMatchCriteria();
 	}
 
+	@Override
+	protected Scenario getBBP_PartB_Scenario(RotatedRupVariabilityConfig config) {
+		return scenario;
+	}
+
 	public static void main(String[] args) throws IOException, DocumentException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 		
+		double[] calcPeriods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};
 		double[] periods = {3d, 5d, 7.5, 10d};
 		
 		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.ASK_2014_Wrapper(), new NGAW2_Wrappers.BSSA_2014_Wrapper(),
@@ -76,7 +82,6 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		File bbpDir = null;
 		File bbpZipFile = null;
 		File[] allBBPDirs = bbpParallelDir.listFiles();
-		VelocityModel vm = VelocityModel.LA_BASIN;
 		Arrays.sort(allBBPDirs, new FileNameComparator());
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
@@ -87,12 +92,6 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 				if (zipFile.exists()) {
 					bbpDir = dir;
 					bbpZipFile = zipFile;
-					if (name.contains("-vm")) {
-						String vmStr = name.substring(name.indexOf("-vm")+3);
-						if (vmStr.contains("-"))
-							vmStr = vmStr.substring(0, vmStr.indexOf("-"));
-						vm = VelocityModel.valueOf(vmStr);
-					}
 				}
 			}
 		}
@@ -104,7 +103,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		
 		List<Site> sites = new ArrayList<>();
 		for (BBP_Site site : bbpSites)
-			sites.add(site.buildGMPE_Site(vm));
+			sites.add(site.buildGMPE_Site());
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
@@ -119,7 +118,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 				BBP_RotatedRupSimLoader bbpLoader = new BBP_RotatedRupSimLoader(bbpZipFile, bbpSites, scenario.getPrefix());
 				
 				RotatedRupVariabilityScenarioPageGen pageGen =
-						new RotatedRupVariabilityScenarioPageGen(catalog, scenario, config, bbpLoader);
+						new RotatedRupVariabilityScenarioPageGen(catalog, scenario, config, bbpLoader, calcPeriods);
 				
 				pageGen.setGMPEs(refGMPEs);
 				

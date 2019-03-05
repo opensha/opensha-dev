@@ -100,10 +100,10 @@ public class BBP_Site {
 		return hiPassFreq;
 	}
 	
-	public Site buildGMPE_Site(VelocityModel vm) {
+	public Site buildGMPE_Site() {
 		Site gmpeSite = new Site(getLoc(), getName());
 		
-		Vs30_Param vs30Param = new Vs30_Param(vm.getVs30());
+		Vs30_Param vs30Param = new Vs30_Param(vs30);
 		vs30Param.setValueAsDefault();
 		gmpeSite.addParameter(vs30Param);
 		

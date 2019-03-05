@@ -22,7 +22,7 @@ import scratch.kevin.bbp.BBP_Module.VelocityModel;
 public class MPJ_BBP_RupGenSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
-		VelocityModel vm = VelocityModel.LA_BASIN; // 1 on HPC
+		VelocityModel vm = VelocityModel.LA_BASIN_863; // 1 on HPC
 		Method method = Method.GP;
 		boolean noHF = true;
 //		File catalogDir = new File("/data/kevin/simulators/catalogs/JG_UCERF3_millionElement");

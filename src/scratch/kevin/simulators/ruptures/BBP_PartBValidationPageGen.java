@@ -261,7 +261,7 @@ public class BBP_PartBValidationPageGen {
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
 	}
 	
-	private class ValidationResult {
+	static class ValidationResult {
 		private double period, lowerBound, upperBound, dataMedian, simMedian, simSD;
 
 		public ValidationResult(double period, double lowerBound, double upperBound, double dataMedian,
@@ -295,29 +295,37 @@ public class BBP_PartBValidationPageGen {
 	
 	private List<ValidationResult> calcPlotScenarioResults(Scenario scenario, double distance,
 			List<RSQSimEvent> events, File resourcesDir, String prefix) throws IOException {
+		List<DiscretizedFunc> allRD50s = new ArrayList<>();
+		for (RSQSimEvent event : events) {
+			DiscretizedFunc[] rd50s = loader.getRotD50(event.getID(), scenario, distance);
+			for (DiscretizedFunc rd50 : rd50s)
+				allRD50s.add(rd50);
+		}
+		return calcPlotScenarioResults(scenario, distance, vs30, events.size(), allRD50s, resourcesDir, prefix);
+	}
+	
+	static List<ValidationResult> calcPlotScenarioResults(Scenario scenario, double distance, double vs30, int numEvents,
+			List<DiscretizedFunc> rd50s, File resourcesDir, String prefix) throws IOException {
 		SummaryStatistics[] lnPeriodStats = null;
 		List<List<Double>> lnVals = new ArrayList<>();
 		double[] periods = null;
-		for (RSQSimEvent event : events) {
-			DiscretizedFunc[] rd50s = loader.getRotD50(event.getID(), scenario, distance);
-			for (DiscretizedFunc rd50 : rd50s) {
-				if (lnPeriodStats == null) {
-					lnPeriodStats = new SummaryStatistics[rd50.size()];
-					lnVals = new ArrayList<>();
-					periods = new double[rd50.size()];
-					for (int p=0; p<periods.length; p++) {
-						lnPeriodStats[p] = new SummaryStatistics();
-						lnVals.add(new ArrayList<>());
-						periods[p] = rd50.getX(p);
-					}
-				} else {
-					Preconditions.checkState(lnPeriodStats.length == rd50.size());
+		for (DiscretizedFunc rd50 : rd50s) {
+			if (lnPeriodStats == null) {
+				lnPeriodStats = new SummaryStatistics[rd50.size()];
+				lnVals = new ArrayList<>();
+				periods = new double[rd50.size()];
+				for (int p=0; p<periods.length; p++) {
+					lnPeriodStats[p] = new SummaryStatistics();
+					lnVals.add(new ArrayList<>());
+					periods[p] = rd50.getX(p);
 				}
-				for (int p=0; p<rd50.size(); p++) {
-					double lnVal = Math.log(rd50.getY(p));
-					lnPeriodStats[p].addValue(lnVal);
-					lnVals.get(p).add(lnVal);
-				}
+			} else {
+				Preconditions.checkState(lnPeriodStats.length == rd50.size());
+			}
+			for (int p=0; p<rd50.size(); p++) {
+				double lnVal = Math.log(rd50.getY(p));
+				lnPeriodStats[p].addValue(lnVal);
+				lnVals.get(p).add(lnVal);
 			}
 		}
 		
@@ -445,7 +453,7 @@ public class BBP_PartBValidationPageGen {
 		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 26);
 
 		double logRangeY = Math.log10(yRange.getUpperBound()) - Math.log10(yRange.getLowerBound());
-		XYTextAnnotation eventCountAnn = new XYTextAnnotation(events.size()+" Events  ",
+		XYTextAnnotation eventCountAnn = new XYTextAnnotation(numEvents+" Events  ",
 				xRange.getUpperBound(), Math.pow(10, Math.log10(yRange.getLowerBound()) + 0.95*logRangeY));
 		eventCountAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 		eventCountAnn.setFont(font);
@@ -549,7 +557,7 @@ public class BBP_PartBValidationPageGen {
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		File partBDir = new File(catalogOutputDir, "bbp_part_b");
+		File partBDir = new File(catalogOutputDir, "bbp_part_b_vm"+vm.name());
 		Preconditions.checkState(partBDir.exists() || partBDir.mkdir());
 		
 		BBP_PartBValidationPageGen pageGen = new BBP_PartBValidationPageGen(

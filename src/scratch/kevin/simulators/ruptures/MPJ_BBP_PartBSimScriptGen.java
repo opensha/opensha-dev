@@ -16,8 +16,11 @@ import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
+import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Floats;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
@@ -32,17 +35,19 @@ class MPJ_BBP_PartBSimScriptGen {
 		File myHPCDir = new File("/auto/scec-02/kmilner/simulators/catalogs/");
 		File stampedeCatalogDir = new File("/work/00950/kevinm/stampede2/simulators/catalogs");
 		File jacquiCSDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/");
-		File catalogDir = new File(myHPCDir, "rundir2310");
+		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
 //		File catalogDir = new File(stampedeCatalogDir, "rundir2829");
 		
 		int numSites = 100;
 		boolean randomAz = false;
 		int skipYears = 5000;
+		int maxRuptures = 500;
 		
 		double timeScalar = 1d;
 		boolean scaleVelocities = true;
 		
 		VelocityModel vm = RSQSimBBP_Config.VM;
+		float[] distances = { 20, 50, 100 };
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
@@ -87,7 +92,7 @@ class MPJ_BBP_PartBSimScriptGen {
 //				"You forgot the catalog dir on Stampede, dummy");
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		jobName += "-"+catalogDir.getName()+"-partB-skipYears"+skipYears+"-"+numSites+"sites-vm"+vm.name();
+		jobName += "-"+catalogDir.getName()+"-partB-skipYears"+skipYears+"-"+numSites+"sites-vm"+vm.name()+"-"+distances.length+"dists";
 		if (randomAz)
 			jobName += "-randomAz";
 		if (!RSQSimBBP_Config.DO_HF)
@@ -110,6 +115,9 @@ class MPJ_BBP_PartBSimScriptGen {
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
 		argz += " --skip-years "+skipYears;
 		argz += " --num-sites "+numSites;
+		argz += " --distances "+Joiner.on(",").join(Floats.asList(distances));
+		if (maxRuptures > 0)
+			argz += " --max-ruptures "+maxRuptures;
 		if (randomAz)
 			argz += " --random-azimuth";
 		if (!RSQSimBBP_Config.DO_HF)

@@ -24,6 +24,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -40,7 +41,11 @@ import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.DepthIden;
 import org.opensha.sha.simulators.iden.FocalMechIden;
+import org.opensha.sha.simulators.iden.FocalMechIden.Builder;
 import org.opensha.sha.simulators.iden.LinearRuptureIden;
+import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
+import org.opensha.sha.simulators.iden.RuptureIdentifier;
+import org.opensha.sha.simulators.srf.RSQSimTransValidIden;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 
 import com.google.common.base.Preconditions;
@@ -66,26 +71,22 @@ public class BBP_PartBValidationConfig {
 	 */
 	public static final boolean DIST_JB = false;
 	
+	private static RSQSimCatalog prevCatalog;
+	private static Map<IDPairing, Double> horzDistanceCache;
+	
+//	private Scenario(String name, String shortName, String prefix, double mag, double magTolerance,
+//			FaultStyle style, int rakeTolerance, double dip, int dipTolerance, double zTor, Range<Double> zTorRange,
+//			Double linearFract, boolean linearRelative, double width, boolean rXpositive, boolean officialCriteria) {
 	public enum Scenario {
 		M6p6_VERT_SS_SURFACE("M6.6, Vertical Strike-Slip with Surface Rupture", "M6.6 SS", "m6p6_vert_ss_surface",
-				new String[] { "M=[6.55,6.65]", "Ztor=[0,1]", "Rake=[-180,-170] or [-10,10] or [170,180]",
-						"Dip=90", "Linear rupture (max 0.5km deviation from ideal)"},
-				6.6, FaultStyle.STRIKE_SLIP, 90, 0, 5.62, false, true) {
-			@Override
-			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
-				Loader loader = catalog.loader().skipYears(skipYears);
-				loader.minMag(6.55).maxMag(6.65);
-				loader.matches(new DepthIden(Range.closed(0d, 1d), null));
-				loader.matches(FocalMechIden.builder().strikeSlip(10).forDip(90).build());
-				loader.matches(new LinearRuptureIden(0.5d));
-				try {
-					loader.hasTransitions();
-				} catch (Exception e) {
-					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
-				}
-				return loader.load();
-			}
-
+				6.6, 0.05, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.5, false, // linearFrace, linearRelative
+				5.62, // width
+				false, true) // rXpositive, official
+		{
 			@Override
 			public Map<String, String> getPublishedComparisonURLs(double distance) {
 				Map<String, String> figs = new HashMap<>();
@@ -106,22 +107,14 @@ public class BBP_PartBValidationConfig {
 			}
 		},
 		M6p6_REVERSE("M6.6, Reverse, Dip=45, Ztor=3", "M6.6 Reverse", "m6p6_reverse",
-				new String[] { "M=[6.55,6.65]", "Ztor=[1,5]", "Rake=[75,105]", "Dip=[35,55]"},
-				6.6, FaultStyle.REVERSE, 45, 3, 15, false, true) {
-			@Override
-			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
-				Loader loader = catalog.loader().skipYears(skipYears);
-				loader.minMag(6.55).maxMag(6.65);
-				loader.matches(new DepthIden(Range.closed(1d, 5d), null));
-				loader.matches(FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build());
-				try {
-					loader.hasTransitions();
-				} catch (Exception e) {
-					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
-				}
-				return loader.load();
-			}
-
+				6.6, 0.05, // mag, tol
+				FaultStyle.REVERSE, 10, // type, rakeTol
+				45, 10, // dip, dipTol
+				3, Range.closed(1d, 5d), // Ztor, range
+				null, false, // linearFrace, linearRelative
+				15, // width
+				false, true) // rXpositive, official
+		{
 			@Override
 			public Map<String, String> getPublishedComparisonURLs(double distance) {
 				Map<String, String> figs = new HashMap<>();
@@ -142,97 +135,37 @@ public class BBP_PartBValidationConfig {
 			}
 		},
 		M7p2_VERT_SS_SURFACE("M7.2, Vertical Strike-Slip with Surface Rupture", "M7.2 SS", "m7p2_vert_ss_surface",
-				new String[] { "M=[7.15,7.25]", "Ztor=[0,1]", "Rake=[-180,-170] or [-10,10] or [170,180]",
-						"Dip=90", "Linear rupture (max 5% deviation from ideal)"},
-				7.2, FaultStyle.STRIKE_SLIP, 90, 0, 12, false, false) {
-			@Override
-			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
-				Loader loader = catalog.loader().skipYears(skipYears);
-				loader.minMag(7.15).maxMag(7.25);
-				loader.matches(new DepthIden(Range.closed(0d, 1d), null));
-				loader.matches(FocalMechIden.builder().strikeSlip(10).forDip(90).build());
-				loader.matches(new LinearRuptureIden(0.05d, true));
-				try {
-					loader.hasTransitions();
-				} catch (Exception e) {
-					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
-				}
-				return loader.load();
-			}
-
-			@Override
-			public Map<String, String> getPublishedComparisonURLs(double distance) {
-				return null;
-			}
-		},
+				7.2, 0.05, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.05, true, // linearFrace, linearRelative
+				12, // width
+				false, false), // rXpositive, official
 		M7p2_REVERSE("M7.2, Reverse, Dip=45", "M7.2 Reverse", "m7p2_reverse",
-				new String[] { "M=[7.15,7.25]", "Ztor=[0,5]", "Rake=[75,105]", "Dip=[35,55]"},
-				7.2, FaultStyle.REVERSE, 45, 0, 15, false, false) {
-			@Override
-			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
-				Loader loader = catalog.loader().skipYears(skipYears);
-				loader.minMag(7.15).maxMag(7.25);
-				loader.matches(new DepthIden(Range.closed(0d, 5d), null));
-				loader.matches(FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build());
-				try {
-					loader.hasTransitions();
-				} catch (Exception e) {
-					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
-				}
-				return loader.load();
-			}
-
-			@Override
-			public Map<String, String> getPublishedComparisonURLs(double distance) {
-				return null;
-			}
-		},
+				7.2, 0.05, // mag, tol
+				FaultStyle.REVERSE, 10, // type, rakeTol
+				45, 10, // dip, dipTol
+				0, Range.closed(0d, 5d), // Ztor, range
+				null, false, // linearFrace, linearRelative
+				15, // width
+				false, false), // rXpositive, official
 		M7p6_VERT_SS_SURFACE("M7.6, Vertical Strike-Slip with Surface Rupture", "M7.6 SS", "m7p6_vert_ss_surface",
-				new String[] { "M=[7.55,7.65]", "Ztor=[0,1]", "Rake=[-180,-170] or [-10,10] or [170,180]",
-						"Dip=90", "Linear rupture (max 5% deviation from ideal)"},
-				7.6, FaultStyle.STRIKE_SLIP, 90, 0, 12, false, false) {
-			@Override
-			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
-				Loader loader = catalog.loader().skipYears(skipYears);
-				loader.minMag(7.55).maxMag(7.65);
-				loader.matches(new DepthIden(Range.closed(0d, 1d), null));
-				loader.matches(FocalMechIden.builder().strikeSlip(10).forDip(90).build());
-				loader.matches(new LinearRuptureIden(0.05d, true));
-				try {
-					loader.hasTransitions();
-				} catch (Exception e) {
-					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
-				}
-				return loader.load();
-			}
-
-			@Override
-			public Map<String, String> getPublishedComparisonURLs(double distance) {
-				return null;
-			}
-		},
+				7.6, 0.05, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.05, true, // linearFrace, linearRelative
+				12, // width
+				false, false), // rXpositive, official
 		M7p6_REVERSE("M7.6, Reverse, Dip=45", "M7.6 Reverse", "m7p6_reverse",
-				new String[] { "M=[7.55,7.65]", "Ztor=[0,5]", "Rake=[75,105]", "Dip=[35,55]"},
-				7.6, FaultStyle.REVERSE, 45, 0, 15, false, false) {
-			@Override
-			public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
-				Loader loader = catalog.loader().skipYears(skipYears);
-				loader.minMag(7.55).maxMag(7.65);
-				loader.matches(new DepthIden(Range.closed(0d, 5d), null));
-				loader.matches(FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build());
-				try {
-					loader.hasTransitions();
-				} catch (Exception e) {
-					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
-				}
-				return loader.load();
-			}
-
-			@Override
-			public Map<String, String> getPublishedComparisonURLs(double distance) {
-				return null;
-			}
-		};
+				7.6, 0.05, // mag, tol
+				FaultStyle.REVERSE, 10, // type, rakeTol
+				45, 10, // dip, dipTol
+				0, Range.closed(0d, 5d), // Ztor, range
+				null, false, // linearFrace, linearRelative
+				15, // width
+				false, false); // rXpositive, official
 		
 		private String name;
 		private String shortName;
@@ -248,22 +181,39 @@ public class BBP_PartBValidationConfig {
 		private double zTor;
 		private double width;
 		private boolean rXpositive;
+
+		private double magTolerance;
+		private int rakeTolerance;
+		private int dipTolerance;
+		private Range<Double> zTorRange;
+		private Double linearFract;
+		private boolean linearRelative;
 		
 		private boolean officialCriteria;
 
-		private Scenario(String name, String shortName, String prefix, String[] matchCriteria, double mag, FaultStyle style,
-				double dip, double zTor, double width, boolean rXpositive, boolean officialCriteria) {
+		private Scenario(String name, String shortName, String prefix, double mag, double magTolerance,
+				FaultStyle style, int rakeTolerance, double dip, int dipTolerance, double zTor, Range<Double> zTorRange,
+				Double linearFract, boolean linearRelative, double width, boolean rXpositive, boolean officialCriteria) {
 			this.name = name;
 			this.shortName = shortName;
 			this.prefix = prefix;
-			this.matchCriteria = matchCriteria;
 			this.mag = mag;
+			this.magTolerance = magTolerance;
 			this.style = style;
+			this.rakeTolerance = rakeTolerance;
 			this.dip = dip;
+			this.dipTolerance = dipTolerance;
 			this.zTor = zTor;
+			this.zTorRange = zTorRange;
 			this.width = width;
 			this.rXpositive = rXpositive;
 			this.officialCriteria = officialCriteria;
+			
+			this.linearFract = linearFract;
+			this.linearRelative = linearRelative;
+			
+			this.matchCriteria = buildMatchCriteria(mag, magTolerance, zTorRange, style, rakeTolerance, dip, dipTolerance,
+					linearFract, linearRelative);
 		}
 		
 		public double getMagnitude() {
@@ -274,12 +224,35 @@ public class BBP_PartBValidationConfig {
 			return officialCriteria;
 		}
 		
-		public abstract List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException;
+		public boolean isFootwallOnly() {
+			return style == FaultStyle.REVERSE || style == FaultStyle.NORMAL;
+		}
 		
-		public abstract Map<String, String> getPublishedComparisonURLs(double distance);
+		public List<RuptureIdentifier> getIdentifiers(RSQSimCatalog catalog) {
+			return BBP_PartBValidationConfig.getIdentifiers(catalog, mag, magTolerance, zTorRange, style, rakeTolerance,
+					dip, dipTolerance, linearFract, linearRelative);
+		}
+		
+		public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, int skipYears) throws IOException {
+			List<RuptureIdentifier> idens = getIdentifiers(catalog);
+			
+			Loader loader = catalog.loader().skipYears(skipYears);
+			for (RuptureIdentifier iden : idens)
+				loader.matches(iden);
+			
+			return loader.load();
+		}
+		
+		public Map<String, String> getPublishedComparisonURLs(double distance) {
+			return null;
+		}
 		
 		private static String getFigureURL(int figNum) {
 			return "http://www.seismosoc.org/Publications/SRL/SRL_86/srl_86-1_dreger_et_al-esupp/SRL_2014118_esupp_Figure_S"+figNum+".png";
+		}
+		
+		public FaultStyle getFaultStyle() {
+			return style;
 		}
 		
 		private synchronized UncertainArbDiscDataset calcLoacRawCriterion(double vs30, double distance) {
@@ -304,6 +277,8 @@ public class BBP_PartBValidationConfig {
 		}
 		
 		public synchronized UncertainArbDiscDataset getAcceptanceCriteria(double vs30, double distance) {
+			if (trimmedCriteriaCache == null)
+				trimmedCriteriaCache = HashBasedTable.create();
 			UncertainArbDiscDataset criterion = trimmedCriteriaCache.get(vs30, distance);
 			if (criterion == null) {
 				UncertainArbDiscDataset rawCriterion = calcLoacRawCriterion(vs30, distance);
@@ -314,7 +289,7 @@ public class BBP_PartBValidationConfig {
 				
 				for (int p=0; p<rawCriterion.size(); p++) {
 					double period = rawCriterion.getX(p);
-					if ((float)p > (float)BBP_MAX_ACCEPTANCE_PERIOD)
+					if ((float)period > (float)BBP_MAX_ACCEPTANCE_PERIOD)
 						break;
 					avgFunc.set(period, rawCriterion.getY(p));
 					lowerFunc.set(period, rawCriterion.getLowerY(p));
@@ -347,6 +322,79 @@ public class BBP_PartBValidationConfig {
 		public String[] getMatchCriteria() {
 			return matchCriteria;
 		}
+	}
+	
+	static String[] buildMatchCriteria(double mag, double magTolerance, Range<Double> zTorRange, FaultStyle style, int rakeTolerance,
+			double dip, int dipTolerance, Double linearFract, boolean linearRelative) {
+		List<String> criteriaStr = new ArrayList<>();
+		if (!Double.isNaN(mag))
+			criteriaStr.add("M=["+(float)(mag-magTolerance)+","+(float)(mag+magTolerance)+"]");
+		criteriaStr.add("Ztor=["+zTorRange.lowerEndpoint().floatValue()+","+zTorRange.upperEndpoint().floatValue()+"]");
+		switch (style) {
+		case STRIKE_SLIP:
+			criteriaStr.add("Rake=[-180,"+(-180+rakeTolerance)+"] or [-"+rakeTolerance+","+rakeTolerance+"] or ["+(180-rakeTolerance)+",180]");
+			break;
+		case REVERSE:
+			criteriaStr.add("Rake=["+(90-rakeTolerance)+","+(90+rakeTolerance)+"]");
+			break;
+		case NORMAL:
+			criteriaStr.add("Rake=["+(-90-rakeTolerance)+","+(-90+rakeTolerance)+"]");
+			break;
+		default:
+			break;
+		}
+		if (dipTolerance > 0)
+			criteriaStr.add("Dip=["+(dip-dipTolerance)+","+(dip+dipTolerance)+"]");
+		else
+			criteriaStr.add("Dip="+dip);
+		if (linearFract != null) {
+			if (linearRelative)
+				criteriaStr.add("Linear rupture (max "+(float)(100d*linearFract)+"% deviation from ideal)");
+			else
+				criteriaStr.add("Linear rupture (max "+linearFract.floatValue()+"km deviation from ideal)");
+		}
+		return criteriaStr.toArray(new String[0]);
+	}
+	
+	static List<RuptureIdentifier> getIdentifiers(RSQSimCatalog catalog, double mag, double magTolerance,
+			Range<Double> zTorRange, FaultStyle style, int rakeTolerance, double dip, int dipTolerance,
+			Double linearFract, boolean linearRelative) {
+		List<RuptureIdentifier> idens = new ArrayList<>();
+		idens.add(new MagRangeRuptureIdentifier(mag-magTolerance, mag+magTolerance));
+		idens.add(new DepthIden(zTorRange, null));
+		Builder mechBuild = FocalMechIden.builder();
+		switch (style) {
+		case STRIKE_SLIP:
+			mechBuild.strikeSlip(rakeTolerance);
+			break;
+		case REVERSE:
+			mechBuild.forRake(90-rakeTolerance, 90+rakeTolerance);
+			break;
+		case NORMAL:
+			mechBuild.forRake(-90-rakeTolerance, -90+rakeTolerance);
+			break;
+
+		default:
+			break;
+		}
+		if (dipTolerance > 0)
+			mechBuild.forDip(dip-dipTolerance, dip+dipTolerance);
+		else
+			mechBuild.forDip(dip);
+		idens.add(mechBuild.build());
+		synchronized (Scenario.class) {
+			if (prevCatalog != catalog || horzDistanceCache == null)
+				horzDistanceCache = new HashMap<>();
+			prevCatalog = catalog;
+		}
+		if (linearFract != null)
+			idens.add(new LinearRuptureIden(linearFract, linearRelative, horzDistanceCache));
+		try {
+			idens.add(new RSQSimTransValidIden(catalog.getTransitions(), catalog.getSlipVelocities()));
+		} catch (Exception e) {
+			System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
+		}
+		return idens;
 	}
 	
 	public static double[] OFFICIAL_DISTANCES = { 20d, 50d };
@@ -564,8 +612,10 @@ public class BBP_PartBValidationConfig {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		System.out.println(calcNGA2_Criterion(6.6, 20, 20, -20, FaultStyle.STRIKE_SLIP, 90, 0, 5.62, 500));
+//		System.out.println(calcNGA2_Criterion(6.6, 20, 20, -20, FaultStyle.STRIKE_SLIP, 90, 0, 5.62, 500));
 //		System.out.println(getNGA2(6.6, 20, FaultStyle.STRIKE_SLIP, 90, 0, 863));
+		System.out.println(Scenario.M6p6_VERT_SS_SURFACE.getMeanPrediction(500, 20));
+		System.out.println(Scenario.M6p6_VERT_SS_SURFACE.getAcceptanceCriteria(500, 20));
 		System.exit(0);
 		
 		File baseDir = new File("/data/kevin/simulators/catalogs");

@@ -17,6 +17,7 @@ import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_WrapperFullParam;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -43,83 +44,56 @@ import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpe
 
 public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPageGen {
 	
-	
-	
 	public enum RuptureType {
 		VERT_STIKE_SLIP("Vertical Strike-Slip with Surface Rupture", "SS", "vert_ss_surface",
-				new String[] { "Ztor=[0,1]", "Rake=[-180,-170] or [-10,10] or [170,180]",
-						"Dip=90", "Linear rupture (max 5% deviation from ideal)"}) {
-			
-			private RSQSimCatalog prevCatalog;
-			private Map<IDPairing, Double> horzDistanceCache;
-			
-			@Override
-			public synchronized RuptureIdentifier getCriteria(RSQSimCatalog catalog, double centerMag, double deltaMag) {
-				List<RuptureIdentifier> idens = new ArrayList<>();
-				idens.add(new MagRangeRuptureIdentifier(centerMag-0.5*deltaMag, centerMag+0.5*deltaMag));
-				idens.add(new DepthIden(Range.closed(0d, 1d), null));
-				idens.add(FocalMechIden.builder().strikeSlip(10).forDip(90).build());
-				if (catalog != prevCatalog)
-					horzDistanceCache = null;
-				if (horzDistanceCache == null) {
-					horzDistanceCache = new HashMap<>();
-					prevCatalog = catalog;
-				}
-				idens.add(new LinearRuptureIden(0.05d, true, horzDistanceCache));
-				try {
-					idens.add(new RSQSimTransValidIden(catalog.getTransitions(), catalog.getSlipVelocities()));
-				} catch (Exception e) {
-					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
-				}
-				return new LogicalAndRupIden(idens);
-			}
-		},
+				Range.closed(0d, 1d), // Ztor range
+				FaultStyle.STRIKE_SLIP, 10, // style, rakeTolerance
+				90, 0, // dip, dipTolerance
+				0.05, true), // linearFract, linearRelative,
 		REVERSE("Reverse, Dip=45", "Reverse", "reverse",
-				new String[] { "Ztor=[0,5]", "Rake=[75,105]", "Dip=[35,55]"}) {
-			@Override
-			public RuptureIdentifier getCriteria(RSQSimCatalog catalog, double centerMag, double deltaMag) {
-				List<RuptureIdentifier> idens = new ArrayList<>();
-				idens.add(new MagRangeRuptureIdentifier(centerMag-0.5*deltaMag, centerMag+0.5*deltaMag));
-				idens.add(new DepthIden(Range.closed(0d, 5d), null));
-				idens.add(FocalMechIden.builder().forRake(75, 105).forDip(35, 55).build());
-				try {
-					idens.add(new RSQSimTransValidIden(catalog.getTransitions(), catalog.getSlipVelocities()));
-				} catch (Exception e) {
-					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
-				}
-				return new LogicalAndRupIden(idens);
-			}
-		},
+				Range.closed(0d, 5d), // Ztor range
+				FaultStyle.REVERSE, 15, // style, rakeTolerance
+				45, 10, // dip, dipTolerance
+				null, false), // linearFract, linearRelative,
 		NORMAL("Normal, Dip=45", "Normal", "normal",
-				new String[] { "Ztor=[0,5]", "Rake=[-105,-75]", "Dip=[35,55]"}) {
-			@Override
-			public RuptureIdentifier getCriteria(RSQSimCatalog catalog, double centerMag, double deltaMag) {
-				List<RuptureIdentifier> idens = new ArrayList<>();
-				idens.add(new MagRangeRuptureIdentifier(centerMag-0.5*deltaMag, centerMag+0.5*deltaMag));
-				idens.add(new DepthIden(Range.closed(0d, 5d), null));
-				idens.add(FocalMechIden.builder().forRake(-105, -75).forDip(35, 55).build());
-				try {
-					idens.add(new RSQSimTransValidIden(catalog.getTransitions(), catalog.getSlipVelocities()));
-				} catch (Exception e) {
-					System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
-				}
-				return new LogicalAndRupIden(idens);
-			}
-		};
+				Range.closed(0d, 5d), // Ztor range
+				FaultStyle.NORMAL, 15, // style, rakeTolerance
+				45, 10, // dip, dipTolerance
+				null, false); // linearFract, linearRelative
 		
 		private String name;
 		private String shortName;
 		private String prefix;
 		private String[] matchCriteria;
+		private Range<Double> zTorRange;
+		private FaultStyle style;
+		private int rakeTolerance;
+		private double dip;
+		private int dipTolerance;
+		private Double linearFract;
+		private boolean linearRelative;
 
-		private RuptureType(String name, String shortName, String prefix, String[] matchCriteria) {
+		private RuptureType(String name, String shortName, String prefix,
+				Range<Double> zTorRange, FaultStyle style, int rakeTolerance, double dip, int dipTolerance,
+				Double linearFract, boolean linearRelative) {
 			this.name = name;
 			this.shortName = shortName;
 			this.prefix = prefix;
-			this.matchCriteria = matchCriteria;
+			this.zTorRange = zTorRange;
+			this.style = style;
+			this.rakeTolerance = rakeTolerance;
+			this.dip = dip;
+			this.dipTolerance = dipTolerance;
+			this.linearFract = linearFract;
+			this.linearRelative = linearRelative;
+			this.matchCriteria = BBP_PartBValidationConfig.buildMatchCriteria(Double.NaN, Double.NaN, zTorRange, style,
+					rakeTolerance, dip, dipTolerance, linearFract, linearRelative);
 		}
 		
-		public abstract RuptureIdentifier getCriteria(RSQSimCatalog catalog, double centerMag, double deltaMag);
+		public RuptureIdentifier getCriteria(RSQSimCatalog catalog, double centerMag, double deltaMag) {
+			return new LogicalAndRupIden(BBP_PartBValidationConfig.getIdentifiers(
+					catalog, centerMag, deltaMag*0.5, zTorRange, style, rakeTolerance, dip, dipTolerance, linearFract, linearRelative));
+		}
 		
 		public List<RSQSimEvent> getMatches(RSQSimCatalog catalog, List<RSQSimEvent> events, double centerMag, double deltaMag)
 				throws IOException {
@@ -156,10 +130,12 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 	
 	private RuptureType ruptureType;
 	private double minMag;
+	private Map<Double, RotatedRupVariabilityConfig> magConfigs;
 
 	public RotatedRupVariabilityMagDistPageGen(RSQSimCatalog catalog, Map<Double, RotatedRupVariabilityConfig> magConfigs,
-			Map<Double, SimulationRotDProvider<RotationSpec>> magProvs, RuptureType ruptureType) {
-		super(catalog, magConfigs, magProvs);
+			Map<Double, SimulationRotDProvider<RotationSpec>> magProvs, RuptureType ruptureType, double[] calcPeriods) {
+		super(catalog, magConfigs, magProvs, calcPeriods);
+		this.magConfigs = magConfigs;
 		minMag = Double.POSITIVE_INFINITY;
 		for (Double mag : magConfigs.keySet())
 			minMag = Double.min(minMag, mag);
@@ -181,18 +157,35 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		return ruptureType.getMatchCriteria();
 	}
 
+	@Override
+	protected Scenario getBBP_PartB_Scenario(RotatedRupVariabilityConfig config) {
+		Double mag = null;
+		for (Double m : magConfigs.keySet()) {
+			if (config == magConfigs.get(m)) {
+				mag = m;
+				break;
+			}
+		}
+		Preconditions.checkState(mag != null);
+		for (Scenario scenario : Scenario.values())
+			if (ruptureType.style == scenario.getFaultStyle() && mag.floatValue() == (float)scenario.getMagnitude())
+				return scenario;
+		return null;
+	}
+
 	public static void main(String[] args) throws IOException, DocumentException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 		
 		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.ASK_2014_Wrapper(), new NGAW2_Wrappers.BSSA_2014_Wrapper(),
 				new NGAW2_Wrappers.CB_2014_Wrapper(), new NGAW2_Wrappers.CY_2014_Wrapper()};
 //		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.BSSA_2014_Wrapper() };
-		
+
+		double[] calcPeriods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};
 		double[] periods = {3d, 5d, 7.5, 10d};
 		
 		double[] highlightMags = {6.5, 7d, 7.5};
@@ -204,7 +197,7 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		if (catalogDirName.startsWith("JG_"))
 			// I sometimes modify Jacqui's directory names
 			catalogDirName = catalogDirName.substring(3);
-		VelocityModel vm = VelocityModel.LA_BASIN;
+		VelocityModel vm = RSQSimBBP_Config.VM;
 		File[] allBBPDirs = bbpParallelDir.listFiles();
 		Arrays.sort(allBBPDirs, new FileNameComparator());
 		List<File> matchingZipFiles = new ArrayList<>();
@@ -236,11 +229,16 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 			System.out.println("\tInput file: "+zipFile.getName());
 		}
 		
-		List<BBP_Site> bbpSites = RSQSimBBP_Config.getStandardSites().subList(0, 1);
+		BBP_Site singleSite = RSQSimBBP_Config.getStandardSites().get(0);
+		// fix the Vs30 value
+		singleSite = new BBP_Site(singleSite.getName(), singleSite.getLoc(), vm.getVs30(),
+				singleSite.getLoPassFreq(), singleSite.getHiPassFreq());
+		List<BBP_Site> bbpSites = new ArrayList<>();
+		bbpSites.add(singleSite);
 		
 		List<Site> sites = new ArrayList<>();
 		for (BBP_Site site : bbpSites)
-			sites.add(site.buildGMPE_Site(vm));
+			sites.add(site.buildGMPE_Site());
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
@@ -276,7 +274,7 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 					continue;
 				
 				RotatedRupVariabilityMagDistPageGen pageGen =
-						new RotatedRupVariabilityMagDistPageGen(catalog, configsMap, loadersMap, rupType);
+						new RotatedRupVariabilityMagDistPageGen(catalog, configsMap, loadersMap, rupType, calcPeriods);
 				
 				pageGen.setGMPEs(refGMPEs);
 				

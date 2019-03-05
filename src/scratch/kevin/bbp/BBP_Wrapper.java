@@ -564,7 +564,7 @@ public class BBP_Wrapper implements Runnable {
 //		removeSRF_PlaneHeader(new File("/tmp/test.srf"));
 		
 //		BBP_Wrapper wrapper = new BBP_Wrapper(2, 1, srcFile, null, null, sitesFile, outputDir);
-		BBP_Wrapper wrapper = new BBP_Wrapper(VelocityModel.LA_BASIN, Method.GP, srcFile, null, srfFile, sitesFile, outputDir);
+		BBP_Wrapper wrapper = new BBP_Wrapper(VelocityModel.LA_BASIN_863, Method.GP, srcFile, null, srfFile, sitesFile, outputDir);
 		wrapper.maxRetries = 1;
 		wrapper.doHF = false;
 		wrapper.dataOnly = true;

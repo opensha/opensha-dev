@@ -104,6 +104,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2
 import org.opensha.sha.faultSurface.EvenlyGridCenteredSurface;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.commons.gui.plot.GraphWindow;
@@ -139,6 +140,8 @@ import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 import scratch.UCERF3.erf.ETAS.association.FiniteFaultMappingData;
+import scratch.UCERF3.erf.mean.MeanUCERF3;
+import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.UCERF3_GridSourceGenerator;
@@ -1365,13 +1368,47 @@ public class PureScratch {
 			}
 		}
 	}
+	
+	private static void test53() throws IOException, DocumentException {
+//		FaultSystemSolution sol = FaultSystemIO.loadSol(
+//				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
+//						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
+		MeanUCERF3 erf = new MeanUCERF3();
+		erf.setPreset(Presets.FM3_1_BRANCH_AVG);
+		erf.updateForecast();
+		FaultSystemSolution sol = erf.getSolution();
+		int index = 44602;
+		for (FaultSectionPrefData sect : sol.getRupSet().getFaultSectionDataForRupture(index)) {
+			System.out.println("Section: "+sect.getName());
+		}
+		RuptureSurface surf = sol.getRupSet().getSurfaceForRupupture(index, 1d, false);
+		System.out.println("Ztor: "+surf.getAveRupTopDepth());
+		Location loc = new Location(37.78849, -122.26912);
+		System.out.println("Rjb: "+surf.getDistanceJB(loc));
+		System.out.println("Rrup: "+surf.getDistanceRup(loc));
+		System.out.println("Rx: "+surf.getDistanceX(loc));
+		double minDist = Double.POSITIVE_INFINITY;
+		double minSurfDist = Double.POSITIVE_INFINITY;
+		Location closestLoc = null;
+		for (Location pt : surf.getEvenlyDiscritizedListOfLocsOnSurface()) {
+			double dist = LocationUtils.linearDistance(pt, loc);
+			if (dist < minDist) {
+				closestLoc = pt;
+				minDist = dist;
+			}
+			minSurfDist = Double.min(minSurfDist, LocationUtils.horzDistance(loc, pt));
+		}
+		System.out.println("3-D min dist: "+minDist);
+		System.out.println("Closest: "+closestLoc);
+		System.out.println("2-D min dist: "+minSurfDist);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test51();
+		test53();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

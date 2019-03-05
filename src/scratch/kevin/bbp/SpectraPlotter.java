@@ -1068,8 +1068,8 @@ public class SpectraPlotter {
 		return files;
 	}
 	
-	public static UncertainArbDiscDataset calcGMPE_RotD50(EqkRupture rupture, BBP_Site bbpSite, VelocityModel vm, ScalarIMR gmpe) {
-		Site site = bbpSite.buildGMPE_Site(vm);
+	public static UncertainArbDiscDataset calcGMPE_RotD50(EqkRupture rupture, BBP_Site bbpSite, ScalarIMR gmpe) {
+		Site site = bbpSite.buildGMPE_Site();
 		
 		gmpe.setSite(site);
 		gmpe.setEqkRupture(rupture);
@@ -1173,7 +1173,6 @@ public class SpectraPlotter {
 		File refDir = null;
 		int eventID = 1670183;
 		
-		VelocityModel vm = VelocityModel.LA_BASIN;
 		double minFractForInclusion = RSQSimBBP_Config.MIN_SUB_SECT_FRACT;
 		
 //		RSQSimCatalog catalog = Catalogs.JG_UCERF3_millionElement.instance(baseDir);
@@ -1221,7 +1220,7 @@ public class SpectraPlotter {
 				gmpeSpectra = new UncertainArbDiscDataset[gmpes.length];
 				for (int i=0; i<gmpes.length; i++) {
 					System.out.println("Calculating spectra for "+gmpes[i].getShortName());
-					gmpeSpectra[i] = calcGMPE_RotD50(gmpeRup, site, vm, gmpes[i]);
+					gmpeSpectra[i] = calcGMPE_RotD50(gmpeRup, site, gmpes[i]);
 				}
 				System.out.println("DONE spectra");
 			}
@@ -1261,7 +1260,7 @@ public class SpectraPlotter {
 					if (gmpes != null) {
 						UncertainArbDiscDataset[] myGMPEs = new UncertainArbDiscDataset[gmpes.length];
 						for (int i=0; i<gmpes.length; i++) {
-							myGMPEs[i] = calcGMPE_RotD50(compEvents.get(event), site, vm, gmpes[i]);
+							myGMPEs[i] = calcGMPE_RotD50(compEvents.get(event), site, gmpes[i]);
 							gmpeMeans[i] = getAveraged(gmpeMeans[i], myGMPEs[i], count);
 							gmpeLowers[i] = getAveraged(gmpeLowers[i], myGMPEs[i].getLower(), count);
 							gmpeUppers[i] = getAveraged(gmpeUppers[i], myGMPEs[i].getUpper(), count);
