@@ -1054,7 +1054,8 @@ public abstract class RotatedRupVariabilityPageGen {
 						
 						List<DiscretizedFunc> rd50s = new ArrayList<>();
 						for (RotationSpec rotation : config.getRotationsForQuantities(Quantity.SITE, site, Quantity.DISTANCE, distance)) {
-							if (footwall && (Float)rotation.getValue(Quantity.SOURCE_AZIMUTH) < 180f)
+							Float sourceAz = (Float)rotation.getValue(Quantity.SOURCE_AZIMUTH);
+							if (footwall && sourceAz < 180f)
 								// only footwall
 								continue;
 							rd50s.addAll(simProv.getRotD50s(site, rotation));

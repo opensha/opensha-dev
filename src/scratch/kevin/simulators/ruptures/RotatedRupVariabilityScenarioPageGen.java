@@ -63,8 +63,10 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		
+		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 		
 		double[] calcPeriods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};
 		double[] periods = {3d, 5d, 7.5, 10d};
@@ -90,6 +92,8 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 				if (!zipFile.exists())
 					zipFile = new File(dir, "results_rotD.zip");
 				if (zipFile.exists()) {
+					if (forceVM != null && RSQSimBBP_Config.detectVM(dir) != forceVM)
+						continue;
 					bbpDir = dir;
 					bbpZipFile = zipFile;
 				}
@@ -107,6 +111,10 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
+		
+		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
+		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
+		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
 		
 		Map<Scenario, RotatedRupVariabilityScenarioPageGen> pageGensMap = new HashMap<>();
 		HashSet<Integer> eventIDsSet = new HashSet<>();
@@ -137,7 +145,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 			
 			pageGen.setEventsMap(eventsMap);
 			
-			File rotDir = new File(catalogOutputDir, "rotated_ruptures_"+scenario.getPrefix());
+			File rotDir = new File(vmDir, "rotated_ruptures_"+scenario.getPrefix());
 			Preconditions.checkState(rotDir.exists() || rotDir.mkdir());
 			
 			List<String> methodSpecificLines = new ArrayList<>();

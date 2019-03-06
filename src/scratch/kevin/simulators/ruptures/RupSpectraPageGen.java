@@ -730,8 +730,13 @@ class RupSpectraPageGen {
 					refBBPDir = dir;
 			}
 		}
-		if (refBBPDir != null)
+		VelocityModel vm;
+		if (refBBPDir != null) {
 			System.out.println("Located ref BBP dir: "+refBBPDir.getAbsolutePath());
+			vm = RSQSimBBP_Config.detectVM(refBBPDir);
+		} else {
+			vm = RSQSimBBP_Config.VM;
+		}
 		
 		File refShakeMapZip = null;
 		for (File dir : refDirs) {
@@ -792,7 +797,10 @@ class RupSpectraPageGen {
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		RupSpectraPageGen gen = new RupSpectraPageGen(catalog, catalogOutputDir, timeScale, scaleVelocities);
+		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
+		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
+		
+		RupSpectraPageGen gen = new RupSpectraPageGen(catalog, vmDir, timeScale, scaleVelocities);
 		
 		EqkRupture gmpeRup = null;
 		

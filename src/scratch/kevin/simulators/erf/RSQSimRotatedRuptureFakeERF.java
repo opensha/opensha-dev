@@ -474,8 +474,8 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 				System.err.println("hardcoded dir doesn't exist: "+baseDir.getAbsolutePath());
 				System.exit(2);
 			}
-//			catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-			catalog = Catalogs.BRUCE_2740.instance(baseDir);
+			catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//			catalog = Catalogs.BRUCE_2740.instance(baseDir);
 			writePoints = false;
 			writeSRFs = false;
 			buildConfigs = true;
@@ -500,13 +500,13 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 //			sites.add(new Site(new Location(34.55314, -118.72826), "s119"));
 //			sites.add(new Site(new Location(34.37809, -118.34757), "s279"));
 //			sites.add(new Site(new Location(34.15755, -117.87389), "s480"));
-//			sites.add(new Site(new Location(33.93088, -118.17881), "STNI"));
-//			sites.add(new Site(new Location(34.064986, -117.29201), "SBSM"));
-//			sites.add(new Site(new Location(34.041824, -118.0653), "WNGC"));
+			sites.add(new Site(new Location(33.93088, -118.17881), "STNI"));
+			sites.add(new Site(new Location(34.064986, -117.29201), "SBSM"));
+			sites.add(new Site(new Location(34.041824, -118.0653), "WNGC"));
 //			sites.add(new Site(new Location(34.557, -118.125), "LAPD"));
-//			sites.add(new Site(new Location(34.00909, -118.48939), "SMCA"));
+			sites.add(new Site(new Location(34.00909, -118.48939), "SMCA"));
 			
-			Scenario[] scenarios = Scenario.values();
+			Scenario[] scenarios = { Scenario.M6p6_REVERSE, Scenario.M6p6_VERT_SS_SURFACE, Scenario.M7p2_VERT_SS_SURFACE };
 			
 			double[] distances = { 20d, 50d, 100d };
 			

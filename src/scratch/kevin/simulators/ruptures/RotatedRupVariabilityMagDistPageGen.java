@@ -181,6 +181,8 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 		
+		VelocityModel forceVM = null;
+		
 		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.ASK_2014_Wrapper(), new NGAW2_Wrappers.BSSA_2014_Wrapper(),
 				new NGAW2_Wrappers.CB_2014_Wrapper(), new NGAW2_Wrappers.CY_2014_Wrapper()};
 //		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.BSSA_2014_Wrapper() };
@@ -197,7 +199,7 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		if (catalogDirName.startsWith("JG_"))
 			// I sometimes modify Jacqui's directory names
 			catalogDirName = catalogDirName.substring(3);
-		VelocityModel vm = RSQSimBBP_Config.VM;
+		VelocityModel vm = null;
 		File[] allBBPDirs = bbpParallelDir.listFiles();
 		Arrays.sort(allBBPDirs, new FileNameComparator());
 		List<File> matchingZipFiles = new ArrayList<>();
@@ -208,16 +210,13 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 				if (!zipFile.exists())
 					zipFile = new File(dir, "results_rotD.zip");
 				if (zipFile.exists()) {
-					if (name.contains("-vm")) {
-						String vmStr = name.substring(name.indexOf("-vm")+3);
-						if (vmStr.contains("-"))
-							vmStr = vmStr.substring(0, vmStr.indexOf("-"));
-						VelocityModel newVM = VelocityModel.valueOf(vmStr);
-						if (newVM != vm && !matchingZipFiles.isEmpty()) {
-							System.out.println("We switched VMs, only using most recent");
-							matchingZipFiles.clear();
-						}
-						vm = VelocityModel.valueOf(vmStr);
+					VelocityModel newVM = RSQSimBBP_Config.detectVM(dir);
+					if (forceVM != null && forceVM != newVM)
+						continue;
+					if (newVM != vm && !matchingZipFiles.isEmpty()) {
+						System.out.println("We switched VMs, only using most recent");
+						matchingZipFiles.clear();
+						vm = newVM;
 					}
 					matchingZipFiles.add(zipFile);
 				}
@@ -242,6 +241,9 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
+
+		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
+		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
 		
 		Map<RuptureType, RotatedRupVariabilityMagDistPageGen> pageGensMap = new HashMap<>();
 		HashSet<Integer> eventIDsSet = new HashSet<>();
@@ -293,7 +295,7 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 			
 			pageGen.setEventsMap(eventsMap);
 			
-			File rotDir = new File(catalogOutputDir, "rotated_ruptures_mag_dist_"+rupType.getPrefix());
+			File rotDir = new File(vmDir, "rotated_ruptures_mag_dist_"+rupType.getPrefix());
 			Preconditions.checkState(rotDir.exists() || rotDir.mkdir());
 			
 			List<String> methodSpecificLines = new ArrayList<>();

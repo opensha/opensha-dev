@@ -407,6 +407,19 @@ public class RSQSimBBP_Config {
 		bbpWrap.run();
 	}
 	
+	static VelocityModel detectVM(File bbpDir) throws IOException {
+		for (VelocityModel vm : VelocityModel.values())
+			if (bbpDir.getName().contains(vm.name()))
+				return vm;
+		// now try sites
+		System.out.println("Fallback to VM detetion from sties...");
+		BBP_Site site = BBP_Site.readFile(bbpDir).get(0);
+		for (VelocityModel vm : VelocityModel.values())
+			if ((float)vm.getVs30() == (float)site.getVs30())
+				return vm;
+		throw new IllegalStateException("Couldn't detect VM for dir "+bbpDir.getAbsolutePath());
+	}
+	
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);

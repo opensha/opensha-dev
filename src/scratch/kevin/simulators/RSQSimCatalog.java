@@ -605,15 +605,6 @@ public class RSQSimCatalog implements XMLSaveable {
 		writeMarkdownSummary(dir, plots, replot, 6d);
 	}
 	
-	private static <K,E> List<E> getCreateList(Map<K, List<E>> map, K key) {
-		List<E> ret = map.get(key);
-		if (ret == null) {
-			ret = new ArrayList<>();
-			map.put(key, ret);
-		}
-		return ret;
-	}
-	
 	public void writeMarkdownSummary(File dir, boolean plots, boolean replot, double plotMinMag) throws IOException {
 		List<String> lines = new LinkedList<>();
 		String topLink = "*[(top)](#"+MarkdownUtils.getAnchorName(getName())+")*";
@@ -623,18 +614,6 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add("");
 		int tocIndex = lines.size();
 		
-		List<String> eventLinks = new ArrayList<>();
-		List<String> eventNames = new ArrayList<>();
-		
-		Map<VelocityModel, List<String>> gmpeLinks = new HashMap<>();
-		Map<VelocityModel, List<String>> gmpeNames = new HashMap<>();
-		
-		Map<VelocityModel, List<String>> gmpeGriddedLinks = new HashMap<>();
-		Map<VelocityModel, List<String>> gmpeGriddedNames = new HashMap<>();
-		
-		List<String> gmpeRGLinks = new ArrayList<>();
-		List<String> gmpeRGNames = new ArrayList<>();
-		
 		List<String> hazardLinks = new ArrayList<>();
 		List<String> hazardNames = new ArrayList<>();
 		
@@ -643,17 +622,10 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		List<String> occCopulaLinks = new ArrayList<>();
 		List<String> occCopulaNames = new ArrayList<>();
-		
-		List<String> rotatedRupLinks = new ArrayList<>();
-		List<String> rotatedRupNames = new ArrayList<>();
-		
-		Map<VelocityModel, String> partBLinks = new HashMap<>();
 
 		String vmCompareRotRupLink = null;
-		String rotDDLink = null;
 		String multiFaultLink = null;
 		String extremeEventLink = null;
-		String sourceSiteLink = null;
 		
 		File[] dirList = dir.listFiles();
 		Arrays.sort(dirList, new FileNameComparator());
@@ -664,53 +636,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			if (!mdFile.exists())
 				continue;
 			String name = subDir.getName();
-			if (name.startsWith("event_")) {
-				eventNames.add(MarkdownUtils.getTitle(mdFile));
-				eventLinks.add(name);
-			} else if (name.startsWith("gmpe_bbp_comparisons_") && name.contains("_vm")) {
-				String subName = name.substring("gmpe_bbp_comparisons_".length());
-				
-				VelocityModel vm = null;
-				for (VelocityModel testVM : VelocityModel.values()) {
-					if (subName.contains("_vm"+testVM.name())) {
-						vm = testVM;
-						subName = subName.replaceAll("_vm"+testVM.name(), "");
-						break;
-					}
-				}
-				
-				boolean gridded = name.contains("_GriddedSites");
-				if (gridded)
-					subName = subName.replaceAll("_GriddedSites", "");
-				
-				if (subName.contains("_timeScale")) {
-					subName = subName.replaceAll("_timeScale", ", Time Scale Factor: ");
-					if (subName.contains("_velScale"))
-						subName = subName.replaceAll("_velScale", ", Velocities Scaled");
-				}
-				
-				if (subName.contains("_mech_")) {
-					subName = subName.replaceAll("_mech_", ", Focal Mechanism: ");
-					subName = subName.replaceAll("vert_ss", "Vertical Strike-Slip");
-					subName = subName.replaceAll("ss", "Strike-Slip");
-					subName = subName.replaceAll("reverse", "Reverse");
-					subName = subName.replaceAll("normal", "Normal");
-				}
-				
-				if (gridded) {
-					getCreateList(gmpeGriddedNames, vm).add(subName);
-					getCreateList(gmpeGriddedLinks, vm).add(name);
-				} else {
-					getCreateList(gmpeNames, vm).add(subName);
-					getCreateList(gmpeLinks, vm).add(name);
-				}
-			} else if (name.startsWith("gmpe_bbp_rg_comparisons_")) {
-				gmpeRGNames.add(name.substring("gmpe_bbp_rg_comparisons_".length()));
-				gmpeRGLinks.add(name);
-			} else if (name.equals("catalog_rotd_ratio_comparisons")) {
-				Preconditions.checkState(rotDDLink == null, "Duplicate RotDD dirs! %s and %s", name, rotDDLink);
-				rotDDLink = name;
-			} else if (name.startsWith("hazard_")) {
+			if (name.startsWith("hazard_")) {
 				String hazName;
 				if (name.contains("_pga")) {
 					hazName = "PGA";
@@ -755,9 +681,6 @@ public class RSQSimCatalog implements XMLSaveable {
 			} else if (name.equals("multi_fault")) {
 				Preconditions.checkState(multiFaultLink == null, "Duplicate Multi Fault dirs! %s and %s", name, multiFaultLink);
 				multiFaultLink = name;
-			} else if (name.equals("source_site_comparisons")) {
-				Preconditions.checkState(sourceSiteLink == null, "Duplicate Source/Site dirs! %s and %s", name, sourceSiteLink);
-				sourceSiteLink = name;
 			} else if (name.equals("extreme_events")) {
 				Preconditions.checkState(extremeEventLink == null, "Duplicate Extreme Event dirs! %s and %s", name, multiFaultLink);
 				extremeEventLink = name;
@@ -765,91 +688,11 @@ public class RSQSimCatalog implements XMLSaveable {
 				String title = MarkdownUtils.getTitle(mdFile);
 				occCopulaLinks.add(name);
 				occCopulaNames.add(title);
-			} else if (name.startsWith("bbp_part_b")) {
-				for (VelocityModel vm : VelocityModel.values())
-					if (name.contains(vm.name()))
-						partBLinks.put(vm, name);
-			} else if (name.startsWith("rotated_ruptures_")) {
-				for (Scenario scenario : Scenario.values()) {
-					if (name.equals("rotated_ruptures_"+scenario.getPrefix())) {
-						rotatedRupLinks.add(name);
-						rotatedRupNames.add(scenario.getName());
-					}
-				}
-				for (RuptureType rupType : RuptureType.values()) {
-					if (name.equals("rotated_ruptures_mag_dist_"+rupType.getPrefix())) {
-						rotatedRupLinks.add(name);
-						rotatedRupNames.add(rupType.getName()+", Mag-Dist Bins");
-					}
-				}
 			} else if (name.equals("bbp_vm_rot_rup_compare")) {
 				vmCompareRotRupLink = name;
 			}
 		}
 		
-		if (!eventNames.isEmpty()) {
-			lines.add("");
-			lines.add("## Single Event Comparisons");
-			lines.add(topLink);
-			lines.add("");
-			for (int i=0; i<eventNames.size(); i++)
-				lines.add("* ["+eventNames.get(i)+"]("+eventLinks.get(i)+"/)");
-		}
-		if (!gmpeNames.isEmpty() || !gmpeGriddedNames.isEmpty()) {
-			lines.add("");
-			lines.add("## Full Catalog GMPE Comparisons");
-			lines.add(topLink);
-			lines.add("");
-			
-			boolean multiVM = gmpeNames.keySet().size() > 1;
-			for (VelocityModel vm : VelocityModel.values()) {
-				boolean either = gmpeNames.containsKey(vm) || gmpeGriddedNames.containsKey(vm);
-				if (!either)
-					continue;
-				boolean both = gmpeNames.containsKey(vm) && gmpeGriddedNames.containsKey(vm);
-				
-				String curHeading = "##";
-				if (multiVM) {
-					curHeading += "#";
-					lines.add(curHeading+" Full Catalog GMPE Comparisons, "+vm);
-					lines.add("");
-				}
-				
-				if (both) {
-					curHeading += "#";
-					lines.add(curHeading+" Points Of Interest");
-					lines.add("");
-					for (int i=0; i<gmpeNames.get(vm).size(); i++)
-						lines.add("* ["+gmpeNames.get(vm).get(i)+"]("+gmpeLinks.get(vm).get(i)+"/)");
-					lines.add("");
-					lines.add(curHeading+" Gridded Sites");
-					lines.add("");
-					for (int i=0; i<gmpeGriddedNames.get(vm).size(); i++)
-						lines.add("* ["+gmpeGriddedNames.get(vm).get(i)+"]("+gmpeGriddedLinks.get(vm).get(i)+"/)");
-				} else {
-					for (int i=0; gmpeNames.containsKey(vm) && i<gmpeNames.get(vm).size(); i++)
-						lines.add("* ["+gmpeNames.get(vm).get(i)+"]("+gmpeLinks.get(vm).get(i)+"/)");
-					for (int i=0; gmpeGriddedNames.containsKey(vm) && i<gmpeGriddedNames.get(vm).size(); i++)
-						lines.add("* ["+gmpeGriddedNames.get(vm).get(i)+"]("+gmpeGriddedLinks.get(vm).get(i)+"/)");
-				}
-			}
-			
-		}
-		if (!gmpeRGNames.isEmpty()) {
-			lines.add("");
-			lines.add("## Full Catalog GMPE Comparisons with BBP Rupture Generator");
-			lines.add(topLink);
-			lines.add("");
-			for (int i=0; i<gmpeRGNames.size(); i++)
-				lines.add("* ["+gmpeRGNames.get(i)+"]("+gmpeRGLinks.get(i)+"/)");
-		}
-		if (rotDDLink != null) {
-			lines.add("");
-			lines.add("## Full Catalog RotD100/RotD50 Ratios");
-			lines.add(topLink);
-			lines.add("");
-			lines.add("[Full Catalog RotD100/RotD50 Ratios Plotted Here]("+rotDDLink+"/)");
-		}
 		if (!hazardLinks.isEmpty()) {
 			lines.add("");
 			lines.add("## Hazard Comparisons");
@@ -865,13 +708,6 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add("");
 			for (int i=0; i<hazardClusterNames.size(); i++)
 				lines.add("* ["+hazardClusterNames.get(i)+"]("+hazardClusterLinks.get(i)+"/)");
-		}
-		if (sourceSiteLink != null) {
-			lines.add("");
-			lines.add("## Source/Site Ground Motion Comparisons");
-			lines.add(topLink);
-			lines.add("");
-			lines.add("[Source/Site Ground Motion Comparisons here]("+sourceSiteLink+"/)");
 		}
 		if (multiFaultLink != null) {
 			lines.add("");
@@ -895,29 +731,174 @@ public class RSQSimCatalog implements XMLSaveable {
 			for (int i=0; i<occCopulaLinks.size(); i++)
 				lines.add("* ["+occCopulaNames.get(i)+"]("+occCopulaLinks.get(i)+"/)");
 		}
-		if (!partBLinks.isEmpty()) {
+		
+		// BBP Pages
+		for (VelocityModel vm : VelocityModel.values()) {
+			File bbpDir = new File(dir, "bbp_"+vm.name());
+			if (!bbpDir.exists())
+				continue;
+			
 			lines.add("");
-			lines.add("## BBP Part B Analysis");
-			lines.add(topLink);
-			lines.add("");
-			boolean multi = partBLinks.size() > 1;
-			for (VelocityModel vm : VelocityModel.values()) {
-				if (!partBLinks.containsKey(vm))
+			lines.add("## BBP Calculations, "+vm+" Velocity Model");
+			lines.add(topLink); lines.add("");
+			
+			List<String> eventLinks = new ArrayList<>();
+			List<String> eventNames = new ArrayList<>();
+			
+			List<String> gmpeLinks = new ArrayList<>();
+			List<String> gmpeNames = new ArrayList<>();
+			
+			List<String> gmpeGriddedLinks = new ArrayList<>();
+			List<String> gmpeGriddedNames = new ArrayList<>();
+			
+			List<String> gmpeRGLinks = new ArrayList<>();
+			List<String> gmpeRGNames = new ArrayList<>();
+			
+			List<String> rotatedRupLinks = new ArrayList<>();
+			List<String> rotatedRupNames = new ArrayList<>();
+			
+			String partBLink = null;
+			String rotDDLink = null;
+			String sourceSiteLink = null;
+			
+			dirList = bbpDir.listFiles();
+			Arrays.sort(dirList, new FileNameComparator());
+			for (File subDir : dirList) {
+				if (!subDir.isDirectory())
 					continue;
-				if (multi)
-					lines.add("* ["+vm+"]("+partBLinks.get(vm)+")");
-				else
-					lines.add("[BBP Part B Analysis Here]("+partBLinks.get(vm)+")");
+				File mdFile = new File(subDir, "README.md");
+				if (!mdFile.exists())
+					continue;
+				String name = subDir.getName();
+				if (name.startsWith("event_")) {
+					eventNames.add(MarkdownUtils.getTitle(mdFile));
+					eventLinks.add(name);
+				} else if (name.startsWith("gmpe_bbp_comparisons_")) {
+					String subName = name.substring("gmpe_bbp_comparisons_".length());
+					
+					boolean gridded = name.contains("_GriddedSites");
+					if (gridded)
+						subName = subName.replaceAll("_GriddedSites", "");
+					
+					if (subName.contains("_timeScale")) {
+						subName = subName.replaceAll("_timeScale", ", Time Scale Factor: ");
+						if (subName.contains("_velScale"))
+							subName = subName.replaceAll("_velScale", ", Velocities Scaled");
+					}
+					
+					if (subName.contains("_mech_")) {
+						subName = subName.replaceAll("_mech_", ", Focal Mechanism: ");
+						subName = subName.replaceAll("vert_ss", "Vertical Strike-Slip");
+						subName = subName.replaceAll("ss", "Strike-Slip");
+						subName = subName.replaceAll("reverse", "Reverse");
+						subName = subName.replaceAll("normal", "Normal");
+					}
+					
+					if (gridded) {
+						gmpeGriddedNames.add(subName);
+						gmpeGriddedLinks.add(name);
+					} else {
+						gmpeNames.add(subName);
+						gmpeLinks.add(name);
+					}
+				} else if (name.startsWith("gmpe_bbp_rg_comparisons_")) {
+					gmpeRGNames.add(name.substring("gmpe_bbp_rg_comparisons_".length()));
+					gmpeRGLinks.add(name);
+				} else if (name.equals("catalog_rotd_ratio_comparisons")) {
+					Preconditions.checkState(rotDDLink == null, "Duplicate RotDD dirs! %s and %s", name, rotDDLink);
+					rotDDLink = name;
+				} else if (name.equals("source_site_comparisons")) {
+					Preconditions.checkState(sourceSiteLink == null, "Duplicate Source/Site dirs! %s and %s", name, sourceSiteLink);
+					sourceSiteLink = name;
+				} else if (name.equals("bbp_part_b")) {
+					partBLink = name;
+				} else if (name.startsWith("rotated_ruptures_")) {
+					for (Scenario scenario : Scenario.values()) {
+						if (name.equals("rotated_ruptures_"+scenario.getPrefix())) {
+							rotatedRupLinks.add(name);
+							rotatedRupNames.add(scenario.getName());
+						}
+					}
+					for (RuptureType rupType : RuptureType.values()) {
+						if (name.equals("rotated_ruptures_mag_dist_"+rupType.getPrefix())) {
+							rotatedRupLinks.add(name);
+							rotatedRupNames.add(rupType.getName()+", Mag-Dist Bins");
+						}
+					}
+				}
+			}
+			
+			if (!eventNames.isEmpty()) {
+				lines.add("");
+				lines.add("### Single Event Comparisons, "+vm);
+				lines.add(topLink);
+				lines.add("");
+				for (int i=0; i<eventNames.size(); i++)
+					lines.add("* ["+eventNames.get(i)+"]("+bbpDir.getName()+"/"+eventLinks.get(i)+"/)");
+			}
+			if (!gmpeNames.isEmpty() || !gmpeGriddedNames.isEmpty()) {
+				lines.add("");
+				lines.add("### Full Catalog GMPE Comparisons, "+vm);
+				lines.add(topLink);
+				lines.add("");
+//				System.out.print("Have "+gmpeNames.size()+" regulars and "+gmpeGriddedNames.size()+" gridded");
+				boolean both = !gmpeNames.isEmpty() && !gmpeGriddedNames.isEmpty();
+				if (both) {
+					lines.add("#### Points Of Interest, "+vm);
+					lines.add("");
+					for (int i=0; i<gmpeNames.size(); i++)
+						lines.add("* ["+gmpeNames.get(i)+"]("+bbpDir.getName()+"/"+gmpeLinks.get(i)+"/)");
+					lines.add("");
+					lines.add("#### Gridded Sites, "+vm);
+					lines.add("");
+					for (int i=0; i<gmpeGriddedNames.size(); i++)
+						lines.add("* ["+gmpeGriddedNames.get(i)+"]("+bbpDir.getName()+"/"+gmpeGriddedLinks.get(i)+"/)");
+				} else {
+					for (int i=0; i<gmpeNames.size(); i++)
+						lines.add("* ["+gmpeNames.get(i)+"]("+bbpDir.getName()+"/"+gmpeLinks.get(i)+"/)");
+					for (int i=0; i<gmpeGriddedNames.size(); i++)
+						lines.add("* ["+gmpeGriddedNames.get(i)+"]("+bbpDir.getName()+"/"+gmpeGriddedLinks.get(i)+"/)");
+				}
+			}
+			if (!gmpeRGNames.isEmpty()) {
+				lines.add("");
+				lines.add("### Full Catalog GMPE Comparisons with BBP Rupture Generator, "+vm);
+				lines.add(topLink);
+				lines.add("");
+				for (int i=0; i<gmpeRGNames.size(); i++)
+					lines.add("* ["+gmpeRGNames.get(i)+"]("+bbpDir.getName()+"/"+gmpeRGLinks.get(i)+"/)");
+			}
+			if (rotDDLink != null) {
+				lines.add("");
+				lines.add("### Full Catalog RotD100/RotD50 Ratios, "+vm);
+				lines.add(topLink);
+				lines.add("");
+				lines.add("[Full Catalog RotD100/RotD50 Ratios Plotted Here]("+bbpDir.getName()+"/"+rotDDLink+"/)");
+			}
+			if (sourceSiteLink != null) {
+				lines.add("");
+				lines.add("### Source/Site Ground Motion Comparisons, "+vm);
+				lines.add(topLink);
+				lines.add("");
+				lines.add("[Source/Site Ground Motion Comparisons here]("+bbpDir.getName()+"/"+sourceSiteLink+"/)");
+			}
+			if (partBLink != null) {
+				lines.add("");
+				lines.add("### BBP Part B Analysis, "+vm);
+				lines.add(topLink);
+				lines.add("");
+				lines.add("[BBP Part B Analysis Here]("+bbpDir.getName()+"/"+partBLink+")");
+			}
+			if (!rotatedRupLinks.isEmpty()) {
+				lines.add("");
+				lines.add("### Rotated Rupture Variability Comparisons, "+vm);
+				lines.add(topLink);
+				lines.add("");
+				for (int i=0; i<rotatedRupLinks.size(); i++)
+					lines.add("* ["+rotatedRupNames.get(i)+"]("+bbpDir.getName()+"/"+rotatedRupLinks.get(i)+"/)");
 			}
 		}
-		if (!rotatedRupLinks.isEmpty()) {
-			lines.add("");
-			lines.add("## Rotated Rupture Variability Comparisons");
-			lines.add(topLink);
-			lines.add("");
-			for (int i=0; i<rotatedRupLinks.size(); i++)
-				lines.add("* ["+rotatedRupNames.get(i)+"]("+rotatedRupLinks.get(i)+"/)");
-		}
+		
 		if (vmCompareRotRupLink != null) {
 			lines.add("");
 			lines.add("## BBP Velocity Model Comparisons");

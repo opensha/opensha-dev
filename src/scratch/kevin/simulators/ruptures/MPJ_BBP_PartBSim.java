@@ -160,7 +160,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		List<BBP_Site> sites = siteListCache.get(event, dist);
 		if (sites == null) {
 			// need to build site list
-			Location[] siteLocs = BBP_PartBValidationConfig.selectSitesSites(
+			Location[] siteLocs = BBP_PartBValidationConfig.selectSites(
 					numSites, dist, randomAz, catalog, event);
 			sites = new ArrayList<>();
 			for (int i=0; i<numSites; i++)

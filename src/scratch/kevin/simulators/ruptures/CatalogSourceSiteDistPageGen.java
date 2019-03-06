@@ -16,6 +16,7 @@ import java.util.concurrent.Future;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
+import org.dom4j.DocumentException;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
@@ -171,7 +172,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		
 	}
 	
-	public static void main(String[] args) throws ZipException, IOException {
+	public static void main(String[] args) throws ZipException, IOException, DocumentException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
@@ -282,7 +283,11 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		File sourceOutputDir = new File(catalogOutputDir, "source_site_comparisons");
+		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
+		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
+		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
+		
+		File sourceOutputDir = new File(vmDir, "source_site_comparisons");
 		Preconditions.checkState(sourceOutputDir.exists() || sourceOutputDir.mkdir());
 		
 		CatalogSourceSiteDistPageGen pageGen = new CatalogSourceSiteDistPageGen(bbpZipFile, gmpeSites);
@@ -295,6 +300,9 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 			headerLines.add("* "+gmpe.getName());
 		
 		pageGen.generatePage(sourceComps, sourceOutputDir, headerLines, periods, hypoSort);
+		
+		catalog.writeMarkdownSummary(catalogOutputDir, true, false);
+		RSQSimCatalog.writeCatalogsIndex(outputDir);
 	}
 
 }

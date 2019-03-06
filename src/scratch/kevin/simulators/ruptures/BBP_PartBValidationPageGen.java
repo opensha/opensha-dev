@@ -518,7 +518,6 @@ public class BBP_PartBValidationPageGen {
 		int numSites = -1;
 		int skipYears = 0;
 		boolean randomAz = false;
-		VelocityModel vm = null;
 		Arrays.sort(allBBPDirs, new FileNameComparator());
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
@@ -540,10 +539,6 @@ public class BBP_PartBValidationPageGen {
 						skipYears = Integer.parseInt(yearsStr);
 					}
 					randomAz = name.contains("randomAz");
-					String vmStr = name.substring(name.indexOf("-vm")+3);
-					if (vmStr.contains("-"))
-						vmStr = vmStr.substring(0, vmStr.indexOf("-"));
-					vm = VelocityModel.valueOf(vmStr);
 				}
 			}
 		}
@@ -557,7 +552,11 @@ public class BBP_PartBValidationPageGen {
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		File partBDir = new File(catalogOutputDir, "bbp_part_b_vm"+vm.name());
+		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
+		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
+		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
+		
+		File partBDir = new File(vmDir, "bbp_part_b");
 		Preconditions.checkState(partBDir.exists() || partBDir.mkdir());
 		
 		BBP_PartBValidationPageGen pageGen = new BBP_PartBValidationPageGen(

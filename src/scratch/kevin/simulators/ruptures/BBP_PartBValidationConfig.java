@@ -496,7 +496,7 @@ public class BBP_PartBValidationConfig {
 		return new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
 	}
 	
-	public static Location[] selectSitesSites(int num, double distance, boolean randomAz, RSQSimCatalog catalog, RSQSimEvent event) {
+	public static Location[] selectSites(int num, double distance, boolean randomAz, RSQSimCatalog catalog, RSQSimEvent event) {
 		// start with GMPE surface in order to determine footwall
 		RuptureSurface rupSurf = catalog.getGMPE_Rupture(
 				event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT).getRuptureSurface();
@@ -663,7 +663,7 @@ public class BBP_PartBValidationConfig {
 			double distance = OFFICIAL_DISTANCES[d];
 			Color c = distColors[d];
 			
-			for (Location loc : selectSitesSites(numSites, distance, randomAz, catalog, event)) {
+			for (Location loc : selectSites(numSites, distance, randomAz, catalog, event)) {
 				double[] poly = new double[10];
 				double lat = loc.getLatitude();
 				double lon = loc.getLongitude();
