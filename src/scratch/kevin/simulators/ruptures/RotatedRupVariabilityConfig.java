@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -117,7 +118,7 @@ public class RotatedRupVariabilityConfig {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public RotatedRupVariabilityConfig(RSQSimCatalog catalog, List<RSQSimEvent> ruptures, List<RotationSpec> rotations) {
+	public RotatedRupVariabilityConfig(RSQSimCatalog catalog, Collection<RSQSimEvent> ruptures, List<RotationSpec> rotations) {
 		this.catalog = catalog;
 		if (ruptures != null) {
 			idToOrigMap = new HashMap<>();
@@ -226,6 +227,14 @@ public class RotatedRupVariabilityConfig {
 		public boolean hasQuantity(Quantity quantity, Object value) {
 			if (quantity.zeroStoredAsNull() && Objects.equals(value, 0f))
 				value = null;
+			if (quantity == Quantity.SITE) {
+				Site mySite = (Site)quantities.get(quantity);
+				if (value == null)
+					return mySite == null;
+				else if (mySite == null)
+					return false;
+				return LocationUtils.areSimilar(mySite.getLocation(), ((Site)value).getLocation());
+			}
 			return Objects.equals(value, quantities.get(quantity));
 		}
 		
@@ -242,7 +251,7 @@ public class RotatedRupVariabilityConfig {
 			int result = 1;
 			result = prime * result + ((distance == null) ? 0 : distance.hashCode());
 			result = prime * result + eventID;
-			result = prime * result + ((site == null) ? 0 : site.hashCode());
+			result = prime * result + ((site == null) ? 0 : site.getLocation().hashCode());
 			result = prime * result + ((siteToSourceAz == null) ? 0 : siteToSourceAz.hashCode());
 			result = prime * result + ((sourceAz == null) ? 0 : sourceAz.hashCode());
 			return result;
@@ -267,7 +276,7 @@ public class RotatedRupVariabilityConfig {
 			if (site == null) {
 				if (other.site != null)
 					return false;
-			} else if (!site.equals(other.site))
+			} else if (!LocationUtils.areSimilar(site.getLocation(), other.site.getLocation()))
 				return false;
 			if (siteToSourceAz == null) {
 				if (other.siteToSourceAz != null)
@@ -760,6 +769,17 @@ public class RotatedRupVariabilityConfig {
 
 		RupturePlotGenerator.OTHER_ELEM_COLOR = new Color(100, 100, 100);
 		RupturePlotGenerator.writeMapPlot(plotElems, first, null, outputDir, prefix, null, null, null, null, null, null, anns);
+	}
+	
+	public RotatedRupVariabilityConfig forSites(List<Site> sites) {
+		List<RotationSpec> masterRotations = new ArrayList<>();
+		for (Site site : sites) {
+			List<RotationSpec> siteRotations = getRotationsForQuantities(Quantity.SITE, site);
+			Preconditions.checkNotNull(siteRotations);
+			Preconditions.checkState(!siteRotations.isEmpty());
+			masterRotations.addAll(siteRotations);
+		}
+		return new RotatedRupVariabilityConfig(catalog, idToOrigMap == null ? null : idToOrigMap.values(), masterRotations);
 	}
 	
 	@SuppressWarnings("unused")

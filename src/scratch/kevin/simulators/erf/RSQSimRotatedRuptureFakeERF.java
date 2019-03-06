@@ -165,6 +165,14 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		this.timeSpan = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
 		this.timeSpan.setDuration(1d);
 	}
+	
+	public Map<Scenario, RotatedRupVariabilityConfig> getConfigMap() {
+		return configMap;
+	}
+	
+	public RSQSimCatalog getCatalog() {
+		return catalog;
+	}
 
 	@Override
 	public int getNumSources() {
@@ -228,6 +236,14 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 					eventID, rotated.getTime(), null, rotated.getAllElements());
 			rupture.setRuptureSurface(new FakeModDistanceSurface(hypo, site, distance));
 			return rupture;
+		}
+		
+		public List<RotationSpec> getRotations() {
+			return rotations;
+		}
+		
+		public Site getSite() {
+			return site;
 		}
 		
 	}

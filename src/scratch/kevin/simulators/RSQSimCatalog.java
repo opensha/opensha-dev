@@ -1861,6 +1861,33 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 	}
 	
+	private static final File[] catalogLocations;
+	static {
+		catalogLocations = new File[] {
+				new File("/home/scec-00/rsqsim/catalogs/kmilner"),
+				new File("/home/scec-00/rsqsim/catalogs/shaw"),
+				new File("/home/scec-00/rsqsim/catalogs/gilchrij"),
+				new File("/home/scec-00/rsqsim/catalogs/gilchrij/cybershake"),
+				new File("/home/scec-00/rsqsim/catalogs/gilchrij/paramSweep"),
+				new File("/data/kevin/simulators/catalogs"),
+				new File("/data/kevin/simulators/catalogs/bruce")
+		};
+	}
+	
+	public static File locateCatalog(String dirName, String... requiredFiles) {
+		catalogDir:
+		for (File dir : catalogLocations) {
+			File catalogDir = new File(dir, dirName);
+			if (!catalogDir.exists())
+				continue;
+			for (String requriedFile : requiredFiles)
+				if (!new File(dir, requriedFile).exists())
+					continue catalogDir;
+			return catalogDir;
+		}
+		return null;
+	}
+	
 	public static void main(String args[]) throws IOException, DocumentException {
 		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		

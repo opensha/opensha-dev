@@ -190,7 +190,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		});
 	}
 	
-	static Map<Integer, RSQSimEvent> loadEvents(RSQSimCatalog catalog, Collection<Integer> ids) throws IOException {
+	public static Map<Integer, RSQSimEvent> loadEvents(RSQSimCatalog catalog, Collection<Integer> ids) throws IOException {
 		System.out.println("Loading "+ids.size()+" events...");
 		Map<Integer, RSQSimEvent> eventsMap = new HashMap<>();
 		List<RSQSimEvent> events = catalog.loader().byIDs(Ints.toArray(ids));
