@@ -1081,7 +1081,7 @@ public abstract class RotatedRupVariabilityPageGen {
 					plotTable.finalizeLine();
 				}
 				
-				lines.addAll(plotTable.build());
+				lines.addAll(plotTable.wrap(5, 0).build());
 				lines.add("");
 			}
 			
