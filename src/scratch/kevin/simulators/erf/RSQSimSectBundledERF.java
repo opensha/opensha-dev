@@ -732,21 +732,28 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	
 	static void writeRupturePointFiles(AbstractERF erf, File mainDir) throws IOException {
 		for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
-			writeRupturePointFiles(erf, mainDir, sourceID);
+			writeRupturePointFiles(erf, mainDir, sourceID, false);
 		}
 	}
 
-	static void writeRupturePointFiles(AbstractERF erf, File mainDir, int sourceID) throws IOException {
+	static void writeRupturePointFiles(AbstractERF erf, File mainDir, int sourceID, boolean overwrite) throws IOException {
 		File sourceDir = new File(mainDir, sourceID+"");
-		Preconditions.checkState(sourceDir.exists() || sourceDir.mkdir());
+		Preconditions.checkState(sourceDir.exists() || sourceDir.mkdir(),
+				"Couldn't build dir for source %s: %s", sourceID, sourceDir.getAbsolutePath());
 		ProbEqkSource source = erf.getSource(sourceID);
 		for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
 			File rupDir = new File(sourceDir, rupID+"");
-			Preconditions.checkState(rupDir.exists() || rupDir.mkdir());
+			Preconditions.checkState(rupDir.exists() || rupDir.mkdir(),
+					"Couldn't build dir for source %s, rup %s: %s", sourceID, rupID, rupDir.getAbsolutePath());
+			File pointFile = new File(rupDir, sourceID+"_"+rupID+".txt");
+			if (!overwrite && pointFile.exists() && pointFile.length() > 0) {
+				System.out.println("Already wrote point file for "+sourceID+", "+rupID);
+				continue;
+			}
 			RSQSimProbEqkRup rup = (RSQSimProbEqkRup)source.getRupture(rupID);
 			List<SimulatorElement> eventElems = rup.rupElems;
 			
-			FileWriter fw = new FileWriter(new File(rupDir, sourceID+"_"+rupID+".txt"));
+			FileWriter fw = new FileWriter(pointFile);
 			fw.write("Probability = "+(float)rup.getProbability()+"\n");
 			fw.write("Magnitude = "+(float)rup.getMag()+"\n");
 			
@@ -798,7 +805,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			int rupID = ids.getID2();
 			
 			writeRuptureSRF(mainDir, catalog, sourceID, rupID, event, dt, interpMode,
-					momentPDiffThreshold, patchAreas, momentStats);
+					momentPDiffThreshold, patchAreas, momentStats, false);
 		}
 		
 		System.out.println("Transition file event moment % differences:");
@@ -809,11 +816,16 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	
 	static void writeRuptureSRF(File mainDir, RSQSimCatalog catalog, int sourceID, int rupID, RSQSimEvent event,
 			double dt, SRFInterpolationMode interpMode, double momentPDiffThreshold, Map<Integer, Double> patchAreas,
-			SummaryStatistics momentStats) throws IOException {
+			SummaryStatistics momentStats, boolean overwrite) throws IOException {
 		File sourceDir = new File(mainDir, sourceID+"");
 		Preconditions.checkState(sourceDir.exists() || sourceDir.mkdir());
 		File rupDir = new File(sourceDir, rupID+"");
 		Preconditions.checkState(rupDir.exists() || rupDir.mkdir());
+		File srfFile = new File(rupDir, sourceID+"_"+rupID+"_event"+event.getID()+".srf");
+		if (!overwrite && srfFile.exists() && srfFile.length() > 0) {
+			System.out.println("Already wrote SRF for "+sourceID+", "+rupID);
+			return;
+		}
 		
 		RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
 		
@@ -822,7 +834,6 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		List<SimulatorElement> eventElems = event.getAllElements();
 		List<SRF_PointData> srf = RSQSimSRFGenerator.buildSRF(func, eventElems, dt, interpMode);
 		
-		File srfFile = new File(rupDir, sourceID+"_"+rupID+"_event"+event.getID()+".srf");
 		SRF_PointData.writeSRF(srfFile, srf, 1d);
 	}
 	

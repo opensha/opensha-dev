@@ -19,6 +19,7 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.param.impl.IntegerParameter;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.faultSurface.PointSurface;
@@ -315,7 +316,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
 				RSQSimEvent event = source.getEvent(rupID);
 				RSQSimSectBundledERF.writeRuptureSRF(mainDir, catalog, sourceID, rupID, event, dt, interpMode,
-						momentPDiffThreshold, patchAreas, momentStats);
+						momentPDiffThreshold, patchAreas, momentStats, false);
 			}
 		}
 		
@@ -405,9 +406,28 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		@Override
 		protected void calculateBatch(int[] batch) throws Exception {
 			for (int sourceID : batch) {
+				if (writePoints || writeSRFs) {
+					// build directories first
+					File sourceDir = new File(csSourcesDir, sourceID+"");
+					RSQSimRotatedRuptureSource source = erf.getSource(sourceID);
+					for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
+						int retry = 0;
+						File rupDir = new File(sourceDir, rupID+"");
+						while (!(rupDir.exists() || rupDir.mkdir())) {
+							try {
+								Thread.sleep(100);
+							} catch (InterruptedException e) {
+								throw ExceptionUtils.asRuntimeException(e);
+							}
+							if (retry++ > 5)
+								throw new IllegalStateException("Directory doesn't exist and couldn't be created after "
+										+5+" retries: "+rupDir.getAbsolutePath());
+						}
+					}
+				}
 				if (writePoints) {
 					debug("Writing point files for "+sourceID);
-					RSQSimSectBundledERF.writeRupturePointFiles(erf, csSourcesDir, sourceID);
+					RSQSimSectBundledERF.writeRupturePointFiles(erf, csSourcesDir, sourceID, false);
 					debug("DONE writing point files for "+sourceID);
 				}
 				if (writeSRFs) {
@@ -416,7 +436,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 					for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
 						RSQSimEvent event = source.getEvent(rupID);
 						RSQSimSectBundledERF.writeRuptureSRF(csSourcesDir, erf.catalog, sourceID, rupID, event, dt, interpMode,
-								momentPDiffThreshold, patchAreas, null);
+								momentPDiffThreshold, patchAreas, null, false);
 					}
 					debug("DONE writing SRFs  for "+sourceID);
 				}
