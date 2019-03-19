@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.commons.geo.Location;
@@ -17,7 +18,7 @@ public class RSQSimSubSectMappingTest {
 
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
-		RSQSimCatalog catalog = RSQSimCatalog.Catalogs.BRUCE_3014.instance(baseDir);
+		RSQSimCatalog catalog = RSQSimCatalog.Catalogs.BRUCE_3164.instance(baseDir);
 //		RSQSimCatalog catalog = RSQSimCatalog.Catalogs.BRUCE_2585.instance(baseDir);
 		
 		File catalogDir = catalog.getCatalogDir();
@@ -37,7 +38,7 @@ public class RSQSimSubSectMappingTest {
 		fw.write("\n");
 		
 		DecimalFormat df = new DecimalFormat("0.000");
-		int numMissing = 0;
+		List<FaultSectionPrefData> missingSubSects = new ArrayList<>();
 		MinMaxAveTracker totTrack = new MinMaxAveTracker();
 		for (int s=0; s<subSects.size(); s++) {
 			MinMaxAveTracker sectTrack = new MinMaxAveTracker();
@@ -55,7 +56,7 @@ public class RSQSimSubSectMappingTest {
 			System.out.println(s+". "+subSect.getName());
 			fw.write(s+". "+subSect.getName()+"\n");
 			if (sectTrack.getNum() == 0) {
-				numMissing++;
+				missingSubSects.add(subSect);
 				fw.write("\tno mapped elements\n");
 			} else {
 				fw.write("\t"+sectTrack.getNum()+" mapped elements\n");
@@ -66,7 +67,9 @@ public class RSQSimSubSectMappingTest {
 		}
 		fw.write("Total Distances:\tmin="+df.format(totTrack.getMin())+"\tmax="+df.format(totTrack.getMax())
 			+"\tmean="+df.format(totTrack.getAverage())+"\n");
-		fw.write(numMissing+" sub-sections without mappings\n");
+		fw.write(missingSubSects.size()+" sub-sections without mappings"+(missingSubSects.isEmpty() ? "" : ":")+"\n");
+		for (FaultSectionPrefData missing : missingSubSects)
+			fw.write("\t"+missing.getSectionId()+". "+missing.getName()+"\n");
 		fw.close();
 	}
 

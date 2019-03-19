@@ -1109,7 +1109,7 @@ public class SpectraPlotter {
 		List<RSQSimEvent> events = catalog.loader().skipYears(skipYears).minMag(minMag).maxMag(maxMag).forPerentSections(true, parentIDs).load();
 		Map<RSQSimEvent, EqkRupture> ret = new HashMap<>();
 		for (RSQSimEvent event : events) {
-			RSQSimSubSectEqkRupture gmpeRup = catalog.getGMPE_Rupture(event, minFractForInclusion);
+			RSQSimSubSectEqkRupture gmpeRup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
 			boolean match = false;
 			for (FaultSectionPrefData sect : gmpeRup.getSubSections()) {
 				if (Ints.contains(parentIDs, sect.getParentSectionId())) {
@@ -1206,7 +1206,7 @@ public class SpectraPlotter {
 				gmpe.setParamDefaults();
 			System.out.println("Loading event...");
 			RSQSimEvent event = catalog.loader().byID(eventID);
-			gmpeRup = catalog.getGMPE_Rupture(event, minFractForInclusion);
+			gmpeRup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
 			System.out.println("DONE");
 		}
 		

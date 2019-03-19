@@ -78,6 +78,15 @@ abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
 		vm = VelocityModel.valueOf(cmd.getOptionValue("vm"));
 		method = Method.valueOf(cmd.getOptionValue("method"));
 		File catalogDir = new File(cmd.getOptionValue("catalog-dir"));
+		if (!catalogDir.exists()) {
+			String catalogDirName = catalogDir.getName();
+			if (rank == 0)
+				debug("Catalog dir doesn't exist, searching for: "+catalogDirName);
+			catalogDir = RSQSimCatalog.locateCatalog(catalogDirName);
+			Preconditions.checkNotNull(catalogDir, "Couldn't locate catalog: "+catalogDirName);
+			if (rank == 0)
+				debug("Located catalog: "+catalogDir.getAbsolutePath());
+		}
 		Preconditions.checkState(catalogDir.exists());
 		dt = Double.parseDouble(cmd.getOptionValue("time-step"));
 		interp = SRFInterpolationMode.valueOf(cmd.getOptionValue("srf-interp"));

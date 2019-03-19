@@ -1,6 +1,7 @@
 package scratch.kevin.simulators.ruptures;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -31,6 +32,10 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.ASK_2014;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.BSSA_2014;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.CB_2014;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.CY_2014;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
@@ -104,7 +109,7 @@ public class RotatedRupVelModelScenarioComparePageGen {
 		System.out.println("Building GMPE ruptures...");
 		gmpeEventsMap = new HashMap<>();
 		for (RSQSimEvent event : eventsMap.values())
-			gmpeEventsMap.put(event.getID(), catalog.getGMPE_Rupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT));
+			gmpeEventsMap.put(event.getID(), catalog.getMappedSubSectRupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT));
 		System.out.println("DONE.");
 	}
 	
@@ -150,12 +155,14 @@ public class RotatedRupVelModelScenarioComparePageGen {
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
 			
 			Map<VelocityModel, TableBuilder> vmTables = new HashMap<>();
+			Map<VelocityModel, XY_DataSet> vmVsProfiles = new HashMap<>();
 			
 			for (VelocityModel vm : VelocityModel.values()) {
 				if (!configTable.containsRow(vm))
 					continue;
 				File vmFile = vm.getFilePath(gfDir);
 				XY_DataSet vsProfile = new DefaultXY_DataSet();
+				vmVsProfiles.put(vm, vsProfile);
 				XY_DataSet vpProfile = new DefaultXY_DataSet();
 				
 				TableBuilder table = MarkdownUtils.tableBuilder();
@@ -245,6 +252,45 @@ public class RotatedRupVelModelScenarioComparePageGen {
 				lines.addAll(vmTables.get(vm).build());
 				lines.add("");
 			}
+			
+			TableBuilder zTable = MarkdownUtils.tableBuilder();
+			
+			zTable.addLine("VM Name", "VM Z1.0 (km)", "ASK 2014 Z1.0 (km)", "BSSA 2014 Z1.0 (km)", "CY 2014 Z1.0 (km)",
+					"VM Z2.5 (km)", "CB 2014 Z2.5 (km)");
+			
+			for (VelocityModel vm : VelocityModel.values()) {
+				if (!configTable.containsRow(vm))
+					continue;
+				
+				zTable.initNewLine();
+				zTable.addColumn("**"+vm+"**");
+				
+				XY_DataSet vsProfile = vmVsProfiles.get(vm);
+				double z10 = Double.NaN;
+				double z25 = Double.NaN;
+				for (Point2D pt : vsProfile) {
+					if (Double.isNaN(z10) && pt.getX() >= 1d)
+						z10 = pt.getY();
+					if (Double.isNaN(z25) && pt.getX() >= 2.5d)
+						z25 = pt.getY();
+				}
+				
+				zTable.addColumn("**"+(float)z10+"**");
+				double vs30 = vm.getVs30();
+				zTable.addColumn((float)ASK_2014.calcZ1ref(vs30));
+				zTable.addColumn((float)BSSA_2014.calcZ1ref(vs30));
+				zTable.addColumn((float)CY_2014.calcZ1ref(vs30));
+				zTable.addColumn("**"+(float)z25+"**");
+				zTable.addColumn((float)CB_2014.calcZ25ref(vs30));
+				
+				zTable.finalizeLine();
+			}
+			
+			lines.add("### Z1.0 and Z2.5 Comparisons");
+			lines.add(topLink); lines.add("");
+			
+			lines.addAll(zTable.build());
+			lines.add("");
 		}
 		
 		for (Scenario scenario : Scenario.values()) {
@@ -461,13 +507,13 @@ public class RotatedRupVelModelScenarioComparePageGen {
 //		vmDirsMap.put(VelocityModel.LA_BASIN_500, new File(bbpParallelDir,
 //				"2019_02_27-rundir2585_1myrs-rotatedRups-6scenarios-3dists-18srcAz-1siteSrcAz-400rups-skipYears5000-vmLA_BASIN_500-noHF-1site"));
 //		vmDirsMap.put(VelocityModel.LA_BASIN_863, new File(bbpParallelDir,
-//				"2019_02_21-rundir2585_1myrs-rotatedRups-6scenarios-3dists-18srcAz-1siteSrcAz-400rups-skipYears5000-vmLA_BASIN-noHF-1site"));
+//				"2019_02_21-rundir2585_1myrs-rotatedRups-6scenarios-3dists-18srcAz-1siteSrcAz-400rups-skipYears5000-vmLA_BASIN_863-noHF-1site"));
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 		vmDirsMap.put(VelocityModel.LA_BASIN_500, new File(bbpParallelDir,
 				"2019_02_27-rundir2740-rotatedRups-6scenarios-3dists-18srcAz-1siteSrcAz-400rups-skipYears5000-vmLA_BASIN_500-noHF-1site"));
 		vmDirsMap.put(VelocityModel.LA_BASIN_863, new File(bbpParallelDir,
-				"2019_02_21-rundir2740-rotatedRups-6scenarios-3dists-18srcAz-1siteSrcAz-400rups-skipYears5000-vmLA_BASIN-noHF-1site"));
+				"2019_02_21-rundir2740-rotatedRups-6scenarios-3dists-18srcAz-1siteSrcAz-400rups-skipYears5000-vmLA_BASIN_863-noHF-1site"));
 		
 		double[] periods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};
 		

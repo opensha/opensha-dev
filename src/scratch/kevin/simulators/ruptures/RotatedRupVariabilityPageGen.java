@@ -223,7 +223,7 @@ public abstract class RotatedRupVariabilityPageGen {
 	}
 	
 	private EqkRupture buildGMPE_Rupture(RSQSimEvent event) {
-		return catalog.getGMPE_Rupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT);
+		return catalog.getMappedSubSectRupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT);
 	}
 	
 	protected Scenario getBBP_PartB_Scenario(RotatedRupVariabilityConfig config) {
@@ -1767,7 +1767,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			Quantity[] groupQuantities) throws IOException {
 		Preconditions.checkState(!rotations.isEmpty());
 		if (groupQuantities.length == 0) {
-//			System.out.println("Computing with index="+index);
+//			System.out.println("Computing");
 			// we're at a set for which to calculate residuals, do it
 			List<DiscretizedFunc> spectra = new ArrayList<>();
 			SimulationRotDProvider<RotationSpec> prov = magProvs.get(magnitude);
@@ -1779,6 +1779,7 @@ public abstract class RotatedRupVariabilityPageGen {
 					values[i] = Math.log(spectra.get(i).getInterpolatedY(periods[p]));
 				ret.get(p).add(new ResidualSet(rotations, values));
 			}
+//			System.out.println("Done computing");
 		} else {
 //			System.out.println("have "+rotations.size()+" rotations before "+groupQuantities[0]);
 			Quantity[] current = {groupQuantities[0]};
@@ -1786,7 +1787,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			for (Object value : magQuantitiesTable.get(magnitude, groupQuantities[0])) {
 				List<RotationSpec> myRotations = RotatedRupVariabilityConfig.getRotationsForQuantities(
 						rotations, current, new Object[] {value});
-//				System.out.println("\t"+value+": "+myRotations.size());
+				System.out.println("\t"+value+": "+myRotations.size());
 				calcGroupedResiduals(magnitude, myRotations, periods, ret, downstream);
 			}
 		}

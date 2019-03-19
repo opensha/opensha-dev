@@ -32,11 +32,7 @@ class MPJ_BBP_PartBSimScriptGen {
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
 		@SuppressWarnings("unused")
-		File myHPCDir = new File("/auto/scec-02/kmilner/simulators/catalogs/");
-		File stampedeCatalogDir = new File("/work/00950/kevinm/stampede2/simulators/catalogs");
-		File jacquiCSDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/");
-		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
-//		File catalogDir = new File(stampedeCatalogDir, "rundir2829");
+		String catalogDirName = "rundir2585_1myrs";
 		
 		int numSites = 100;
 		boolean randomAz = false;
@@ -68,8 +64,6 @@ class MPJ_BBP_PartBSimScriptGen {
 		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
 				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
 		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-		Preconditions.checkState(catalogDir.getAbsolutePath().contains("scec-"),
-				"You forgot the catalog dir on HPC, dummy");
 		
 //		int threads = 96;
 //		int nodes = 10;
@@ -88,11 +82,9 @@ class MPJ_BBP_PartBSimScriptGen {
 //		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, classpath,
 //				StampedeScriptWriter.FMPJ_HOME, Device.NIODEV);
 //		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-//		Preconditions.checkState(catalogDir.getAbsolutePath().contains("kevinm"),
-//				"You forgot the catalog dir on Stampede, dummy");
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		jobName += "-"+catalogDir.getName()+"-partB-skipYears"+skipYears+"-"+numSites+"sites-vm"+vm.name()+"-"+distances.length+"dists";
+		jobName += "-"+catalogDirName+"-partB-skipYears"+skipYears+"-"+numSites+"sites-vm"+vm.name()+"-"+distances.length+"dists";
 		if (randomAz)
 			jobName += "-randomAz";
 		if (!RSQSimBBP_Config.DO_HF)
@@ -110,7 +102,7 @@ class MPJ_BBP_PartBSimScriptGen {
 		
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
 		argz += " --vm "+vm.name()+" --method "+RSQSimBBP_Config.METHOD.name();
-		argz += " --catalog-dir "+catalogDir.getAbsolutePath();
+		argz += " --catalog-dir "+catalogDirName;
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
 		argz += " --skip-years "+skipYears;

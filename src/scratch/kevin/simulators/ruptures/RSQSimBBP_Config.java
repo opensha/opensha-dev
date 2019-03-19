@@ -110,7 +110,7 @@ public class RSQSimBBP_Config {
 	
 	public static BBP_PlanarSurface planarEquivalentU3Surface(RSQSimCatalog catalog, RSQSimEvent event,
 			double minFractForInclusion, boolean adjWidthMatchArea) {
-		EqkRupture rup = catalog.getGMPE_Rupture(event, minFractForInclusion);
+		EqkRupture rup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
 		RuptureSurface u3Surf = rup.getRuptureSurface();
 		
 		Location firstLoc = u3Surf.getFirstLocOnUpperEdge();
@@ -233,7 +233,7 @@ public class RSQSimBBP_Config {
 	}
 	
 	static final boolean U3_SURFACES = true;
-	static final VelocityModel VM = VelocityModel.LA_BASIN_500;
+	static VelocityModel VM = VelocityModel.LA_BASIN_500;
 	static final Method METHOD = Method.GP;
 	static final SRFInterpolationMode SRF_INTERP_MODE = SRFInterpolationMode.ADJ_VEL;
 	static final double SRF_DT = 0.05;
@@ -274,9 +274,9 @@ public class RSQSimBBP_Config {
 		sites.add(new BBP_Site("WNGC", new Location(34.041824, -118.0653), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("STNI", new Location(33.93088, -118.17881), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("LAPD", new Location(34.557, -118.125), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
-		sites.add(new BBP_Site("s119", new Location(34.55314, -118.72826), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
-		sites.add(new BBP_Site("s279", new Location(34.37809, -118.34757), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
-		sites.add(new BBP_Site("s480", new Location(34.15755, -117.87389), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+//		sites.add(new BBP_Site("s119", new Location(34.55314, -118.72826), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+//		sites.add(new BBP_Site("s279", new Location(34.37809, -118.34757), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+//		sites.add(new BBP_Site("s480", new Location(34.15755, -117.87389), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("SMCA", new Location(34.00909, -118.48939), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		
 		csLAInitialSites = Collections.unmodifiableList(sites);

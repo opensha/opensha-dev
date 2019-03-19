@@ -8,6 +8,8 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipException;
@@ -35,6 +37,7 @@ import org.opensha.sha.simulators.RSQSimEvent;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
 
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.RSQSimCatalog;
@@ -130,6 +133,19 @@ public class BBP_PartBValidationPageGen {
 		resultsTable.finalizeLine();
 		lines.add("");
 		
+		HashSet<Integer> allEventIDs = new HashSet<>();
+		for (Scenario scenario : Scenario.values()) {
+			if (!loader.hasScenario(scenario))
+				continue;
+			allEventIDs.addAll(loader.getEventsIDs(scenario));
+		}
+		System.out.println("Loading "+allEventIDs.size()+" events...");
+		List<RSQSimEvent> allMatches = catalog.loader().byIDs(Ints.toArray(allEventIDs));
+		System.out.println("Loaded "+allMatches.size()+" events");
+		Map<Integer, RSQSimEvent> allMatchesMap = new HashMap<>();
+		for (RSQSimEvent event : allMatches)
+			allMatchesMap.put(event.getID(), event);
+		
 		for (Scenario scenario : Scenario.values()) {
 			if (!loader.hasScenario(scenario))
 				continue;
@@ -140,7 +156,9 @@ public class BBP_PartBValidationPageGen {
 			lines.add(topLink); lines.add("");
 			lines.add("### "+scenario.getShortName()+" RSQSim Rupture Match Criteria");
 			lines.add(topLink); lines.add("");
-			List<RSQSimEvent> matches = scenario.getMatches(catalog, skipYears);
+			List<RSQSimEvent> matches = new ArrayList<>();
+			for (Integer id : loader.getEventsIDs(scenario))
+				matches.add(allMatchesMap.get(id));
 			String[] criteria = scenario.getMatchCriteria();
 			lines.add(matches.size()+" events in the catalog match the following criteria:");
 			lines.add("");
@@ -501,8 +519,8 @@ public class BBP_PartBValidationPageGen {
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_2310.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2310.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
 		

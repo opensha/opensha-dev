@@ -23,12 +23,8 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
 		@SuppressWarnings("unused")
-		File myHPCDir = new File("/auto/scec-02/kmilner/simulators/catalogs/");
-		File stampedeCatalogDir = new File("/work/00950/kevinm/stampede2/simulators/catalogs");
-		File jacquiCSDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/");
-//		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
-		File catalogDir = new File(myHPCDir, "rundir2740");
-//		File catalogDir = new File(stampedeCatalogDir, "rundir2829");
+//		String catalogDirName = "rundir2585_1myrs";
+		String catalogDirName = "rundir2740";
 		
 		int skipYears = 5000;
 
@@ -78,8 +74,6 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
 				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
 		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-		Preconditions.checkState(catalogDir.getAbsolutePath().contains("scec-"),
-				"You forgot the catalog dir on HPC, dummy");
 		
 //		int threads = 96;
 //		int nodes = 10;
@@ -98,11 +92,9 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 //		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, classpath,
 //				StampedeScriptWriter.FMPJ_HOME, Device.NIODEV);
 //		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-//		Preconditions.checkState(catalogDir.getAbsolutePath().contains("kevinm"),
-//				"You forgot the catalog dir on Stampede, dummy");
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		jobName += "-"+catalogDir.getName()+"-rotatedRupsMagDist";
+		jobName += "-"+catalogDirName+"-rotatedRupsMagDist";
 		if (rupTypes.length == 1)
 			jobName += "-"+rupTypes[0].getPrefix();
 		else
@@ -127,7 +119,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		Preconditions.checkState(localJobDir.exists() || localJobDir.mkdir());
 		File remoteJobDir = new File(remoteDir, jobName);
 		
-		writeScript(catalogDir, skipYears, rupTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
+		writeScript(catalogDirName, skipYears, rupTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
 				numSiteToSourceAz, minRuptures, maxRuptures, timeScalar, scaleVelocities, threads, nodes, queue, mins,
 				bbpDataDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
 				localJobDir, remoteJobDir, "cat_bbp_rotated.slurm", vm);
@@ -136,7 +128,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 				RuptureType[] myTypes = { rupType };
 				File myRemoteDir = new File(remoteJobDir, rupType.getPrefix());
 				new File(localJobDir, rupType.getPrefix()).mkdir();
-				writeScript(catalogDir, skipYears, myTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
+				writeScript(catalogDirName, skipYears, myTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
 						numSiteToSourceAz, minRuptures, maxRuptures, timeScalar, scaleVelocities, threads, nodes, queue, mins,
 						bbpDataDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
 						localJobDir, myRemoteDir, rupType.getPrefix()+".slurm", vm);
@@ -144,15 +136,15 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		}
 	}
 
-	private static void writeScript(File catalogDir, int skipYears, RuptureType[] rupTypes, double minDist, int numDist,
+	private static void writeScript(String catalogDirName, int skipYears, RuptureType[] rupTypes, double minDist, int numDist,
 			double deltaDist, double minMag, int numMag, double deltaMag, int numSourceAz, int numSiteToSourceAz,
 			int minRuptures, int maxRuptures, double timeScalar, boolean scaleVelocities, int threads, int nodes,
 			String queue, int mins, String bbpDataDir, String nodeScratchDir, String bbpCopyParentDir, File bbpEnvFile,
 			String sharedScratchDir, BatchScriptWriter pbsWrite, JavaShellScriptWriter mpjWrite, File localJobDir,
 			File remoteJobDir, String scriptFileName, VelocityModel vm) throws IOException {
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
-		argz += " --vm "+vm+" --method "+RSQSimBBP_Config.METHOD.name();
-		argz += " --catalog-dir "+catalogDir.getAbsolutePath();
+		argz += " --vm "+vm.name()+" --method "+RSQSimBBP_Config.METHOD.name();
+		argz += " --catalog-dir "+catalogDirName;
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
 		argz += " --skip-years "+skipYears;

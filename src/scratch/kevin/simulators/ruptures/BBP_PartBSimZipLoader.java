@@ -3,7 +3,9 @@ package scratch.kevin.simulators.ruptures;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
@@ -39,6 +41,24 @@ public class BBP_PartBSimZipLoader extends BBP_SimZipLoader {
 	public BBP_PartBSimZipLoader(ZipFile zip, int numSites) {
 		super(zip, buildSites(numSites));
 		rdMap = new HashMap<>();
+	}
+	
+	public Collection<Integer> getEventsIDs(Scenario scenario) {
+		HashSet<Integer> ids = new HashSet<>();
+
+		String prefix = scenario.getPrefix();
+		Table<BBP_Site, String, Map<FileType, ZipEntry>> table = getEntriesTable();
+		for (String dirName : table.columnKeySet()) {
+			if (dirName.contains(prefix) && dirName.contains("event_")) {
+				String eventStr = dirName.substring(dirName.indexOf("event_"));
+				eventStr = eventStr.substring(eventStr.indexOf("_")+1);
+				eventStr = eventStr.substring(0, eventStr.indexOf("_"));
+				Integer id = Integer.parseInt(eventStr);
+				ids.add(id);
+			}
+		}
+		
+		return ids;
 	}
 	
 	public boolean hasScenario(Scenario scenario) {

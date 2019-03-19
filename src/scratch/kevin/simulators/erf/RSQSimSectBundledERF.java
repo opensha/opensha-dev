@@ -531,23 +531,25 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			Preconditions.checkState(eventID >= 0);
 			this.timeSeconds = timeSeconds;
 			this.subSects = subSects;
-			MinMaxAveTracker latTrack = new MinMaxAveTracker();
-			MinMaxAveTracker lonTrack = new MinMaxAveTracker();
-			MinMaxAveTracker depthTrack = new MinMaxAveTracker();
-			for (SimulatorElement elem : rupElems) {
-				for (Vertex v : elem.getVertices()) {
-					latTrack.addValue(v.getLatitude());
-					lonTrack.addValue(v.getLongitude());
-					depthTrack.addValue(v.getDepth());
+			if (rupElems != null) {
+				MinMaxAveTracker latTrack = new MinMaxAveTracker();
+				MinMaxAveTracker lonTrack = new MinMaxAveTracker();
+				MinMaxAveTracker depthTrack = new MinMaxAveTracker();
+				for (SimulatorElement elem : rupElems) {
+					for (Vertex v : elem.getVertices()) {
+						latTrack.addValue(v.getLatitude());
+						lonTrack.addValue(v.getLongitude());
+						depthTrack.addValue(v.getDepth());
+					}
 				}
+				Range<Double> elemLatRange = Range.closed(latTrack.getMin(), latTrack.getMax());
+				Range<Double> elemLonRange = Range.closed(lonTrack.getMin(), lonTrack.getMax());
+				Range<Double> elemDepthRange = Range.closed(depthTrack.getMin(), depthTrack.getMax());
+				this.rupElems = rupElems;
+				this.elemLatRange = elemLatRange;
+				this.elemLonRange = elemLonRange;
+				this.elemDepthRange = elemDepthRange;
 			}
-			Range<Double> elemLatRange = Range.closed(latTrack.getMin(), latTrack.getMax());
-			Range<Double> elemLonRange = Range.closed(lonTrack.getMin(), lonTrack.getMax());
-			Range<Double> elemDepthRange = Range.closed(depthTrack.getMin(), depthTrack.getMax());
-			this.rupElems = rupElems;
-			this.elemLatRange = elemLatRange;
-			this.elemLonRange = elemLonRange;
-			this.elemDepthRange = elemDepthRange;
 		}
 
 		public int getEventID() {

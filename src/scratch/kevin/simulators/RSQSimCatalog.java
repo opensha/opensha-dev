@@ -292,6 +292,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_3067("bruce/rundir3067", "Bruce 3067", "Bruce Shaw", cal(2019, 2, 10),
 				"Variable normal stress dsigdsA =0.666.  Rest same as r3062",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_3164("bruce/rundir3164", "Bruce 3164", "Bruce Shaw", cal(2019, 3, 9),
+				"AReduceDelay  tCausalFactor=3.0 areaFrac=0.99  V=1  b=.027 a=.015 fA=.005 ; Smooth Model",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -945,6 +948,16 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 
 	public File getGeomFile() throws FileNotFoundException {
+		// first try from the input file
+		try {
+			File file = new File(dir, getParams().get("faultFname"));
+			if (file.exists())
+				return file;
+			System.out.println("Geometry file defined in input file (faultFname = "+file.getName()+
+					") not found, searching for alternatives");
+		} catch (Exception e) {
+			System.out.println("Error locating geometry file name from parameter file: "+e.getMessage());
+		}
 		for (File file : dir.listFiles()) {
 			String name = file.getName().toLowerCase();
 			if (name.endsWith(".flt"))
@@ -1061,7 +1074,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		return subSectDistsCache;
 	}
 	
-	public RSQSimSubSectEqkRupture getGMPE_Rupture(RSQSimEvent event, double minFractForInclusion) {
+	public RSQSimSubSectEqkRupture getMappedSubSectRupture(RSQSimEvent event, double minFractForInclusion) {
 		List<SimulatorElement> elements;
 		Map<Integer, Double> subSectAreas = null;
 		try {
@@ -1864,13 +1877,17 @@ public class RSQSimCatalog implements XMLSaveable {
 	private static final File[] catalogLocations;
 	static {
 		catalogLocations = new File[] {
+				// USC HPC
 				new File("/home/scec-00/rsqsim/catalogs/kmilner"),
 				new File("/home/scec-00/rsqsim/catalogs/shaw"),
 				new File("/home/scec-00/rsqsim/catalogs/gilchrij"),
 				new File("/home/scec-00/rsqsim/catalogs/gilchrij/cybershake"),
 				new File("/home/scec-00/rsqsim/catalogs/gilchrij/paramSweep"),
+				// Kevin's laptop
 				new File("/data/kevin/simulators/catalogs"),
-				new File("/data/kevin/simulators/catalogs/bruce")
+				new File("/data/kevin/simulators/catalogs/bruce"),
+				// TACC Stampede2
+				new File("/work/00950/kevinm/stampede2/simulators/catalogs")
 		};
 	}
 	
@@ -1881,7 +1898,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			if (!catalogDir.exists())
 				continue;
 			for (String requriedFile : requiredFiles)
-				if (!new File(dir, requriedFile).exists())
+				if (!new File(catalogDir, requriedFile).exists())
 					continue catalogDir;
 			return catalogDir;
 		}
@@ -1898,8 +1915,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
-		GregorianCalendar minDate = cal(2000, 1, 1);
-//		GregorianCalendar minDate = cal(2018, 8, 23);
+//		GregorianCalendar minDate = cal(2000, 1, 1);
+		GregorianCalendar minDate = cal(2019, 3, 1);
 		
 		for (Catalogs cat : cats) {
 //		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {

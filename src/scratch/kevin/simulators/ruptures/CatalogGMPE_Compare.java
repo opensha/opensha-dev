@@ -186,7 +186,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 							plane.getQuadSurface(), source.getHypoLoc());
 					rup.setRuptureSurface(plane.getQuadSurface());
 				} else {
-					rup = catalog.getGMPE_Rupture(event, minFractForInclusion);
+					rup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
 				}
 				gmpeRupsMap.put(event.getID(), rup);
 			}
@@ -536,8 +536,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_3164.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -546,8 +546,10 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = false;
-		
-		VelocityModel forceVM = null;
+
+		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
+//		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
+//		VelocityModel forceVM = null;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
@@ -695,6 +697,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
+		File vmDir = new File(catalogOutputDir, "bbp_"+bbpVM.name());
+		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
+		
 		try {
 			List<EventComparison> rotD_GMPEcomps = null;
 			if (doGMPE) {
@@ -715,10 +720,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 							if (scaleVelocities)
 								dirname += "_velScale";
 						}
-						dirname += "_vm"+bbpVM.name();
 						if (loadIden != null && loadIdenPrefix.length() > 0)
 							dirname += "_"+loadIdenPrefix;
-						File catalogGMPEDir = new File(catalogOutputDir, dirname);
+						File catalogGMPEDir = new File(vmDir, dirname);
 						Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
 						comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, periods, comps);
 						if (gmpeRef == rotDGMPE)
@@ -739,7 +743,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 				}
 			}
 			if (doRotD) {
-				File catalogRotDDir = new File(catalogOutputDir, "catalog_rotd_ratio_comparisons");
+				File catalogRotDDir = new File(vmDir, "catalog_rotd_ratio_comparisons");
 				Preconditions.checkState(catalogRotDDir.exists() || catalogRotDDir.mkdir());
 				comp.generateRotDRatioPage(catalogRotDDir, rotDPeriods, periods, rotDGMPE, rotD_GMPEcomps);
 			}

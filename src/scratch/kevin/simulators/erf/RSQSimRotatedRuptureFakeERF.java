@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipFile;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
@@ -20,6 +22,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.param.impl.IntegerParameter;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.faultSurface.PointSurface;
@@ -30,6 +33,7 @@ import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -62,6 +66,8 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 	private Map<Scenario, List<Integer>> eventIDs;
 	
 	private List<RSQSimRotatedRuptureSource> sources = new ArrayList<>();
+	
+	private int totNumRuptures;
 
 	public RSQSimRotatedRuptureFakeERF(RSQSimCatalog catalog, Map<Scenario, RotatedRupVariabilityConfig> configMap) {
 		this.catalog = catalog;
@@ -109,6 +115,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			eventIDs.put(scenario, config.getValues(Integer.class, Quantity.EVENT_ID));
 		}
 		
+		totNumRuptures = 0;
 		sources = new ArrayList<>();
 		
 		for (Site site : sites) {
@@ -118,6 +125,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 					for (Integer eventID : eventIDs.get(scenario)) {
 						List<RotationSpec> rotations = config.getRotationsForQuantities(Quantity.SITE, site,
 								Quantity.DISTANCE, distance, Quantity.EVENT_ID, eventID);
+						totNumRuptures += rotations.size();
 						sources.add(new RSQSimRotatedRuptureSource(site, scenario, distance, eventID, rotations));
 					}
 				}
@@ -185,6 +193,11 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		return sources.get(index);
 	}
 	
+	private boolean loadRuptures = true;
+	public void setLoadRuptures(boolean loadRuptures) {
+		this.loadRuptures = loadRuptures;
+	}
+	
 	public class RSQSimRotatedRuptureSource extends ProbEqkSource {
 		
 		private Site site;
@@ -215,7 +228,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 
 		@Override
 		public double getMinDistance(Site site) {
-			if (LocationUtils.areSimilar(this.site.getLocation(), site.getLocation()))
+			if (LocationUtils.horzDistanceFast(this.site.getLocation(), site.getLocation()) < 0.1d)
 				return distance;
 			return Double.POSITIVE_INFINITY;
 		}
@@ -226,15 +239,25 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		}
 		
 		public RSQSimEvent getEvent(int nRupture) {
+			checkLoadEvents();
 			return configMap.get(scenario).getRotatedRupture(rotations.get(nRupture));
 		}
 
 		@Override
 		public RSQSimProbEqkRup getRupture(int nRupture) {
-			RSQSimEvent rotated = getEvent(nRupture);
-			Location hypo = RSQSimUtils.getHypocenter(rotated);
-			RSQSimProbEqkRup rupture = new RSQSimProbEqkRup(rotated.getMagnitude(), Double.NaN, 1d, hypo,
-					eventID, rotated.getTime(), null, rotated.getAllElements());
+			double prob = 1d/(double)totNumRuptures;
+			RSQSimProbEqkRup rupture;
+			Location hypo;
+			if (loadRuptures) {
+				RSQSimEvent rotated = getEvent(nRupture);
+				hypo = RSQSimUtils.getHypocenter(rotated);
+				rupture = new RSQSimProbEqkRup(rotated.getMagnitude(), Double.NaN, prob, hypo,
+						eventID, rotated.getTime(), null, rotated.getAllElements());
+			} else {
+				hypo = null;
+				rupture = new RSQSimProbEqkRup(Double.NaN, Double.NaN, prob, hypo,
+						eventID, Double.NaN, null, null);
+			}
 			rupture.setRuptureSurface(new FakeModDistanceSurface(hypo, site, distance));
 			return rupture;
 		}
@@ -247,6 +270,28 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			return site;
 		}
 		
+	}
+	
+	private synchronized void checkLoadEvents() {
+		if (configMap.values().iterator().next().hasRuptures())
+			return;
+		// have to load them
+		HashSet<Integer> eventIDs = new HashSet<>();
+		for (RotatedRupVariabilityConfig config : configMap.values())
+			eventIDs.addAll(config.getValues(Integer.class, Quantity.EVENT_ID));
+		
+		System.out.println("Loading "+eventIDs.size()+" events...");
+		List<RSQSimEvent> events;
+		try {
+			events = catalog.loader().byIDs(Ints.toArray(eventIDs));
+		} catch (IOException e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
+		System.out.println("Done loading "+events.size()+" events");
+		Preconditions.checkState(events.size() == eventIDs.size(), 
+				"Loaded %s events, expected %s", events.size(), eventIDs.size());
+		for (RotatedRupVariabilityConfig config : configMap.values())
+			config.setRuptures(events);
 	}
 	
 	/**
@@ -268,7 +313,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 
 		@Override
 		public double getDistanceRup(Location siteLoc) {
-			if (LocationUtils.areSimilar(siteLoc, site.getLocation()))
+			if (LocationUtils.horzDistanceFast(siteLoc, site.getLocation()) < 0.1d)
 				return distance;
 			return Double.POSITIVE_INFINITY;
 		}
@@ -342,24 +387,26 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			throws IOException {
 		Map<Scenario, RotatedRupVariabilityConfig> configsMap = new HashMap<>();
 		List<Site> sites = null;
+		HashSet<Integer> eventIDs = new HashSet<>();
 		for (Scenario scenario : Scenario.values()) {
 			File csvFile = getCSVFile(dir, scenario);
 			if (csvFile.exists()) {
 				System.out.println("Located CSV for "+scenario+": "+csvFile.getAbsolutePath());
-				List<RSQSimEvent> ruptures = null;
-				if (loadRuptures) {
-					System.out.println("Loading ruptures...");
-					ruptures = getScenarioEvents(catalog, scenario, 0, -1);
-					System.out.println("Loaded "+ruptures.size()+" ruptures");
-				}
-				
 				System.out.println("Loading CSV...");
-				RotatedRupVariabilityConfig config = RotatedRupVariabilityConfig.loadCSV(catalog, csvFile, ruptures, sites);
+				RotatedRupVariabilityConfig config = RotatedRupVariabilityConfig.loadCSV(catalog, csvFile, null, sites);
 				if (sites == null)
 					sites = config.getValues(Site.class, Quantity.SITE);
 				System.out.println("Loaded "+config.getRotations().size()+" rotations");
 				configsMap.put(scenario, config);
+				eventIDs.addAll(config.getValues(Integer.class, Quantity.EVENT_ID));
 			}
+		}
+		if (loadRuptures) {
+			System.out.println("Loading "+eventIDs.size()+" events");
+			List<RSQSimEvent> events = catalog.loader().byIDs(Ints.toArray(eventIDs));
+			System.out.println("Loaded "+events.size()+" events");
+			for (RotatedRupVariabilityConfig config : configsMap.values())
+				config.setRuptures(events);
 		}
 		return configsMap;
 	}
@@ -402,28 +449,31 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		protected int getNumTasks() {
 			return erf.getNumSources();
 		}
+		
+		private void waitOnDir(File dir) {
+			int retry = 0;
+			while (!(dir.exists() || dir.mkdir())) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+				if (retry++ > 5)
+					throw new IllegalStateException("Directory doesn't exist and couldn't be created after "
+							+5+" retries: "+dir.getAbsolutePath());
+			}
+		}
 
 		@Override
 		protected void calculateBatch(int[] batch) throws Exception {
 			for (int sourceID : batch) {
+				File sourceDir = new File(csSourcesDir, sourceID+"");
 				if (writePoints || writeSRFs) {
 					// build directories first
-					File sourceDir = new File(csSourcesDir, sourceID+"");
+					waitOnDir(sourceDir);
 					RSQSimRotatedRuptureSource source = erf.getSource(sourceID);
-					for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
-						int retry = 0;
-						File rupDir = new File(sourceDir, rupID+"");
-						while (!(rupDir.exists() || rupDir.mkdir())) {
-							try {
-								Thread.sleep(100);
-							} catch (InterruptedException e) {
-								throw ExceptionUtils.asRuntimeException(e);
-							}
-							if (retry++ > 5)
-								throw new IllegalStateException("Directory doesn't exist and couldn't be created after "
-										+5+" retries: "+rupDir.getAbsolutePath());
-						}
-					}
+					for (int rupID=0; rupID<source.getNumRuptures(); rupID++)
+						waitOnDir(new File(sourceDir, rupID+""));
 				}
 				if (writePoints) {
 					debug("Writing point files for "+sourceID);
@@ -440,6 +490,19 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 					}
 					debug("DONE writing SRFs  for "+sourceID);
 				}
+				File zipFile = new File(sourceDir.getAbsolutePath()+".zip");
+				if (zipFile.exists()) {
+					// try opening it
+					debug("checking existing zip for "+sourceID);
+					try {
+						new ZipFile(zipFile).close();
+						// if we get here, we're good
+						continue;
+					} catch (Exception e) {
+						debug("bad zip for "+sourceID+", will rebuild");
+					}
+				}
+				FileUtils.createZipFile(zipFile, sourceDir, false);
 			}
 		}
 

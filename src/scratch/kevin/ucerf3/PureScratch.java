@@ -1402,13 +1402,34 @@ public class PureScratch {
 		System.out.println("Closest: "+closestLoc);
 		System.out.println("2-D min dist: "+minSurfDist);
 	}
+	
+	private static void test54() throws IOException, DocumentException {
+		FaultSystemSolution sol = FaultSystemIO.loadSol(
+				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
+						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
+		Location mojave = new Location(34.42295, -117.80177, 5.8);
+		Location bombay = new Location(33.3172, -115.72800000000001, 5.96);
+		double minMojave = Double.POSITIVE_INFINITY;
+		double minBombay = Double.POSITIVE_INFINITY;
+		for (FaultSectionPrefData sect : sol.getRupSet().getFaultSectionDataList()) {
+			if (!sect.getName().contains("Mojave") && !sect.getName().contains("Coachella"))
+				continue;
+			StirlingGriddedSurface surf = sect.getStirlingGriddedSurface(0.1, false, false);
+			for (Location loc : surf.getEvenlyDiscritizedListOfLocsOnSurface()) {
+				minMojave = Double.min(minMojave, LocationUtils.linearDistanceFast(mojave, loc));
+				minBombay = Double.min(minBombay, LocationUtils.linearDistanceFast(bombay, loc));
+			}
+		}
+		System.out.println("Mojave dist: "+minMojave);
+		System.out.println("Bombay dist: "+minBombay);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test53();
+		test54();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

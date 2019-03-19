@@ -223,7 +223,7 @@ public class HazardClusteringGMPECalc {
 			RSQSimEvent event = events.get(i);
 			if (event.getMagnitude() < hazMinMag)
 				continue;
-			EqkRupture rup = catalog.getGMPE_Rupture(event, minFractForInclusion);
+			EqkRupture rup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
 			gmpe.setEqkRupture(rup);
 			
 			for (String name : siteNamesSorted) {

@@ -120,32 +120,8 @@ public class RotatedRupVariabilityConfig {
 	@SuppressWarnings("unchecked")
 	public RotatedRupVariabilityConfig(RSQSimCatalog catalog, Collection<RSQSimEvent> ruptures, List<RotationSpec> rotations) {
 		this.catalog = catalog;
-		if (ruptures != null) {
-			idToOrigMap = new HashMap<>();
-			for (RSQSimEvent rupture : ruptures)
-				idToOrigMap.put(rupture.getID(), rupture);
-			
-			rotationCache = CacheBuilder.newBuilder().maximumSize(max_cache_size).build(
-					new CacheLoader<RotationSpec, RSQSimEvent>() {
-
-						@Override
-						public RSQSimEvent load(RotationSpec key) throws Exception {
-							// TODO Auto-generated method stub
-							return RotatedRupVariabilityConfig.this.loadRupture(key);
-						}
-				
-			});
-			initialOrientationCache = CacheBuilder.newBuilder().build(
-					new CacheLoader<Integer, RSQSimEvent>() {
-
-						@Override
-						public RSQSimEvent load(Integer key) throws Exception {
-							return getInitialOrientation(idToOrigMap.get(key));
-						}
-				
-			});
-			centroidCache = new HashMap<>();
-		}
+		if (ruptures != null)
+			setRuptures(ruptures);
 		this.rotations = rotations;
 		// build quantity lists
 		Map<Quantity, HashSet<Object>> quantitySetMap = new HashMap<>();
@@ -179,6 +155,37 @@ public class RotatedRupVariabilityConfig {
 		}
 
 		quantityRotationsCache = HashBasedTable.create();
+	}
+	
+	public synchronized boolean hasRuptures() {
+		return idToOrigMap != null;
+	}
+	
+	public synchronized void setRuptures(Collection<RSQSimEvent> ruptures) {
+		idToOrigMap = new HashMap<>();
+		for (RSQSimEvent rupture : ruptures)
+			idToOrigMap.put(rupture.getID(), rupture);
+		
+		rotationCache = CacheBuilder.newBuilder().maximumSize(max_cache_size).build(
+				new CacheLoader<RotationSpec, RSQSimEvent>() {
+
+					@Override
+					public RSQSimEvent load(RotationSpec key) throws Exception {
+						// TODO Auto-generated method stub
+						return RotatedRupVariabilityConfig.this.loadRupture(key);
+					}
+			
+		});
+		initialOrientationCache = CacheBuilder.newBuilder().build(
+				new CacheLoader<Integer, RSQSimEvent>() {
+
+					@Override
+					public RSQSimEvent load(Integer key) throws Exception {
+						return getInitialOrientation(idToOrigMap.get(key));
+					}
+			
+		});
+		centroidCache = new HashMap<>();
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -777,7 +784,10 @@ public class RotatedRupVariabilityConfig {
 			List<RotationSpec> siteRotations = getRotationsForQuantities(Quantity.SITE, site);
 			Preconditions.checkNotNull(siteRotations);
 			Preconditions.checkState(!siteRotations.isEmpty());
-			masterRotations.addAll(siteRotations);
+			List<RotationSpec> modRotations = new ArrayList<>();
+			for (RotationSpec rot : siteRotations)
+				modRotations.add(new RotationSpec(rot.index, site, rot.eventID, rot.distance, rot.sourceAz, rot.siteToSourceAz));
+			masterRotations.addAll(modRotations);
 		}
 		return new RotatedRupVariabilityConfig(catalog, idToOrigMap == null ? null : idToOrigMap.values(), masterRotations);
 	}

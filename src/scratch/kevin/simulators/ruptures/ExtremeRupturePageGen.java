@@ -459,7 +459,7 @@ public class ExtremeRupturePageGen {
 				File plotFile = new File(resourcesDir, plotPrefix+".png");
 				
 				if (!plotFile.exists()) {
-					RuptureSurface surf = catalog.getGMPE_Rupture(score.event, minFractForInclusion).getRuptureSurface();
+					RuptureSurface surf = catalog.getMappedSubSectRupture(score.event, minFractForInclusion).getRuptureSurface();
 //					RupturePlotGenerator.OTHER_SURF_COLOR = Color.RED;
 					RupturePlotGenerator.OTHER_SURF_COLOR = new Color(139, 69, 19).darker();
 					RupturePlotGenerator.OTHER_SURF_STROKE = PlotLineType.DOTTED;

@@ -29,21 +29,8 @@ class MPJ_BBP_CatalogSimScriptGen {
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
 		@SuppressWarnings("unused")
-		File myHPCDir = new File("/auto/scec-02/kmilner/simulators/catalogs/");
-		File stampedeCatalogDir = new File("/work/00950/kevinm/stampede2/simulators/catalogs");
-		File jacquiCSDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/");
-//		File catalogDir = new File(jacquiCSDir, "UCERF3_millionElement");
-//		File catalogDir = new File(jacquiCSDir, "rundir2194_long");
-//		File catalogDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/cybershake/rundir2194_long");
-//		File catalogDir = new File(myHPCDir, "rundir2342");
-//		File catalogDir = new File(jacquiCSDir, "rundir2194_K2");
-//		File catalogDir = new File(jacquiCSDir, "modLoad_testB");
-//		File catalogDir = new File(jacquiCSDir, "tunedBase1m_ddotEQmod");
-//		File catalogDir = new File(stampedeCatalogDir, "rundir2616");
-//		File catalogDir = new File(myHPCDir, "rundir2585_1myrs");
-//		File catalogDir = new File(stampedeCatalogDir, "rundir2585_1myrs");
-		File catalogDir = new File(myHPCDir, "rundir2740");
-//		File catalogDir = new File(stampedeCatalogDir, "rundir2734");
+//		String catalogDirName = "rundir2585_1myrs";
+		String catalogDirName = "rundir3164";
 		
 		boolean standardSites = false;
 		boolean csInitialLASites = true;
@@ -57,6 +44,9 @@ class MPJ_BBP_CatalogSimScriptGen {
 		int numRG = 0;
 //		double minMag = 7;
 //		int numRG = 20;
+		
+//		RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_863;
+		VelocityModel vm = RSQSimBBP_Config.VM;
 		
 		int skipYears = 5000;
 		
@@ -82,8 +72,6 @@ class MPJ_BBP_CatalogSimScriptGen {
 		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
 				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
 		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-		Preconditions.checkState(catalogDir.getAbsolutePath().contains("scec-"),
-				"You forgot the catalog dir on HPC, dummy");
 		
 //		int threads = 96;
 //		int nodes = 10;
@@ -102,11 +90,9 @@ class MPJ_BBP_CatalogSimScriptGen {
 //		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, classpath,
 //				StampedeScriptWriter.FMPJ_HOME, Device.NIODEV);
 //		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-//		Preconditions.checkState(catalogDir.getAbsolutePath().contains("kevinm"),
-//				"You forgot the catalog dir on Stampede, dummy");
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		jobName += "-"+catalogDir.getName()+"-all-m"+(float)minMag+"-skipYears"+skipYears;
+		jobName += "-"+catalogDirName+"-all-m"+(float)minMag+"-skipYears"+skipYears;
 		if (!RSQSimBBP_Config.DO_HF)
 			jobName += "-noHF";
 		if (numRG > 0)
@@ -116,7 +102,6 @@ class MPJ_BBP_CatalogSimScriptGen {
 			if (scaleVelocities)
 				jobName += "-velScale";
 		}
-		VelocityModel vm = RSQSimBBP_Config.VM;
 		jobName += "-vm"+vm.name();
 		if (standardSites)
 			jobName += "-standardSites";
@@ -150,7 +135,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
 		argz += " --vm "+vm.name()+" --method "+RSQSimBBP_Config.METHOD.name();
 		argz += " --sites-file "+remoteSitesFile.getAbsolutePath();
-		argz += " --catalog-dir "+catalogDir.getAbsolutePath();
+		argz += " --catalog-dir "+catalogDirName;
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
 		argz += " --min-mag "+(float)minMag+" --skip-years "+skipYears;
