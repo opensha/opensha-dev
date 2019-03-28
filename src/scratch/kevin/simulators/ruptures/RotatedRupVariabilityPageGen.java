@@ -1004,6 +1004,9 @@ public abstract class RotatedRupVariabilityPageGen {
 			int summaryIndex = lines.size();
 			lines.add("");
 			
+			Table<Scenario, Double, List<ValidationResult>> validationResultsTable = HashBasedTable.create();
+			Table<Scenario, Double, String> plotsTable = HashBasedTable.create();
+			
 			TableBuilder summaryTable = MarkdownUtils.tableBuilder();
 			
 			summaryTable.initNewLine();
@@ -1069,6 +1072,9 @@ public abstract class RotatedRupVariabilityPageGen {
 						List<ValidationResult> results = BBP_PartBValidationPageGen.calcPlotScenarioResults(
 								scenario, distance, vs30, numEvents, rd50s, resourcesDir, prefix);
 						
+						validationResultsTable.put(scenario, distance.doubleValue(), results);
+						plotsTable.put(scenario, distance.doubleValue(), prefix+".png");
+						
 						boolean passes = true;
 						for (ValidationResult result : results)
 							passes = passes && result.passes();
@@ -1086,6 +1092,8 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 			
 			lines.addAll(summaryIndex, summaryTable.build());
+			
+			BBP_PartBValidationPageGen.writeResultsCSV(new File(resourcesDir, "part_b_results.csv"), validationResultsTable, plotsTable);
 		}
 		
 		System.out.println("*** Writing CSVs ***");
@@ -1787,7 +1795,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			for (Object value : magQuantitiesTable.get(magnitude, groupQuantities[0])) {
 				List<RotationSpec> myRotations = RotatedRupVariabilityConfig.getRotationsForQuantities(
 						rotations, current, new Object[] {value});
-				System.out.println("\t"+value+": "+myRotations.size());
+//				System.out.println("\t"+value+": "+myRotations.size());
 				calcGroupedResiduals(magnitude, myRotations, periods, ret, downstream);
 			}
 		}

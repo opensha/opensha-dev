@@ -295,6 +295,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_3164("bruce/rundir3164", "Bruce 3164", "Bruce Shaw", cal(2019, 3, 9),
 				"AReduceDelay  tCausalFactor=3.0 areaFrac=0.99  V=1  b=.027 a=.015 fA=.005 ; Smooth Model",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_3165("bruce/rundir3165", "Bruce 3165", "Bruce Shaw", cal(2019, 3, 18),
+				"AReduceDelay  tCausalFactor=3.0 areaFrac=0.99  V=1  b=.017 a=.005 fA=.005 ; Smooth Model",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -304,6 +307,17 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels fm, DeformationModels dm) {
 			this.dirName = dirName;
 			catalog = new RSQSimCatalog(name, author, date, metadata, fm, dm);
+		}
+		
+		public RSQSimCatalog instance() {
+			for (File baseDir : catalogLocations) {
+				File dir = new File(baseDir, dirName);
+				if (dir.exists()) {
+					catalog.dir = dir;
+					return catalog;
+				}
+			}
+			throw new IllegalStateException("Couldn't locate catalog "+name());
 		}
 		
 		public RSQSimCatalog instance(File baseDir) {
@@ -626,6 +640,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<String> occCopulaLinks = new ArrayList<>();
 		List<String> occCopulaNames = new ArrayList<>();
 
+		String partBSummaryLink = null;
 		String vmCompareRotRupLink = null;
 		String multiFaultLink = null;
 		String extremeEventLink = null;
@@ -693,6 +708,8 @@ public class RSQSimCatalog implements XMLSaveable {
 				occCopulaNames.add(title);
 			} else if (name.equals("bbp_vm_rot_rup_compare")) {
 				vmCompareRotRupLink = name;
+			} else if (name.equals("bbp_part_b_summary")) {
+				partBSummaryLink = name;
 			}
 		}
 		
@@ -900,6 +917,14 @@ public class RSQSimCatalog implements XMLSaveable {
 				for (int i=0; i<rotatedRupLinks.size(); i++)
 					lines.add("* ["+rotatedRupNames.get(i)+"]("+bbpDir.getName()+"/"+rotatedRupLinks.get(i)+"/)");
 			}
+		}
+		
+		if (partBSummaryLink != null) {
+			lines.add("");
+			lines.add("## BBP PartB Summary");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[BBP PartB Summary Here]("+partBSummaryLink+"/)");
 		}
 		
 		if (vmCompareRotRupLink != null) {

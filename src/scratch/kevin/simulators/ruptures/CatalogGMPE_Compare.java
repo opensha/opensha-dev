@@ -537,7 +537,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 //		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_3164.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_3165.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -547,8 +547,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		double timeScale = 1d;
 		boolean scaleVelocities = false;
 
-		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
-//		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
+//		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
+		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 //		VelocityModel forceVM = null;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,

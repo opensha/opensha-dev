@@ -64,7 +64,8 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_3165.instance(baseDir);
 		
 //		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 		VelocityModel forceVM = VelocityModel.LA_BASIN_500;

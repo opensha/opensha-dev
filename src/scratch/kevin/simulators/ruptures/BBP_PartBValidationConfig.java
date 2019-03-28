@@ -174,6 +174,7 @@ public class BBP_PartBValidationConfig {
 
 		private Table<Double, Double, UncertainArbDiscDataset> rawCriteriaCache;
 		private Table<Double, Double, UncertainArbDiscDataset> trimmedCriteriaCache;
+		private Table<Double, Double, DiscretizedFunc[]> gmmMediansCache;
 		
 		private double mag;
 		private FaultStyle style;
@@ -276,6 +277,27 @@ public class BBP_PartBValidationConfig {
 			return criterion;
 		}
 		
+		public synchronized DiscretizedFunc[] getIndividualModeLMeanPredictions(double vs30, double distance) {
+			if (gmmMediansCache == null)
+				gmmMediansCache = HashBasedTable.create();
+			DiscretizedFunc[] medians = gmmMediansCache.get(vs30, distance);
+			if (medians == null) {
+				double rRup, rJB;
+				if (DIST_JB) {
+					rJB = distance;
+					rRup = Math.sqrt(zTor*zTor + rJB*rJB);
+				} else {
+					rRup = distance;
+					rJB = Math.sqrt(rRup*rRup - zTor*zTor);
+				}
+				double rX = rXpositive ? rJB : -rJB;
+				medians = calcNGA2_Medians(mag, rRup, rJB, rX, style, dip, zTor, width, vs30);
+				gmmMediansCache.put(vs30, distance, medians);
+			}
+			
+			return medians;
+		}
+		
 		public synchronized UncertainArbDiscDataset getAcceptanceCriteria(double vs30, double distance) {
 			if (trimmedCriteriaCache == null)
 				trimmedCriteriaCache = HashBasedTable.create();
@@ -296,7 +318,7 @@ public class BBP_PartBValidationConfig {
 					upperFunc.set(period, rawCriterion.getUpperY(p));
 				}
 				criterion = new UncertainArbDiscDataset(avgFunc, lowerFunc, upperFunc);
-				criterion.setName("NGA-W2 Acceptance Criteria");
+				criterion.setName("Acceptance Criteria");
 				trimmedCriteriaCache.put(vs30, distance, criterion);
 			}
 			
@@ -427,7 +449,7 @@ public class BBP_PartBValidationConfig {
 		
 	}
 	
-	private static UncertainArbDiscDataset calcNGA2_Criterion(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
+	private static DiscretizedFunc[] calcNGA2_Medians(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
 			double zTor, double width, double vs30) {
 		NGAW2_GMM[] gmms = { new ASK_2014(), new BSSA_2014(), new CB_2014(), new CY_2014(), new Idriss_2014() };
 		
@@ -437,7 +459,10 @@ public class BBP_PartBValidationConfig {
 		
 		HashSet<IMT> imtSet = null;
 		
-		for (NGAW2_GMM gmm : gmms) {
+		DiscretizedFunc[] ret = new DiscretizedFunc[gmms.length];
+		for (int i=0; i<gmms.length; i++) {
+			ret[i] = new ArbitrarilyDiscretizedFunc();
+			NGAW2_GMM gmm = gmms[i];
 			gmm.set_dip(dip);
 			gmm.set_fault(style);
 			gmm.set_Mw(mag);
@@ -459,25 +484,37 @@ public class BBP_PartBValidationConfig {
 				imtSet.retainAll(myIMTs);
 		}
 		
-		DiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
-		DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
-		DiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();
-		
 		for (IMT imt : imtSet) {
 			Double period = imt.getPeriod();
 			if (period == null)
 				continue;
-			double[] means = new double[gmms.length];
 			for (int i=0; i<gmms.length; i++) {
 				gmms[i].set_IMT(imt);
 				ScalarGroundMotion gm = gmms[i].calc();
-				means[i] = Math.exp(gm.mean());
+				double mean = Math.exp(gm.mean());
 //				if (period == 3d)
 //					System.out.println(ClassUtils.getClassNameWithoutPackage(gmms[i].getClass())+": "+means[i]);
-				Preconditions.checkState(Double.isFinite(means[i]), "Bad value for imt %s, gmm %s: %s", imt, gmms[i], means[i]);
+				Preconditions.checkState(Double.isFinite(mean), "Bad value for imt %s, gmm %s: %s", imt, gmms[i], mean);
+				ret[i].set(period, mean);;
 			}
-//			if (period == 3d)
-//				System.exit(0);
+		}
+		
+		return ret;
+	}
+	
+	private static UncertainArbDiscDataset calcNGA2_Criterion(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
+			double zTor, double width, double vs30) {
+		DiscretizedFunc[] gmmMedianFuncs = calcNGA2_Medians(mag, rRup, rJB, rX, style, dip, zTor, width, vs30);
+		
+		DiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();
+		
+		for (int p=0; p<gmmMedianFuncs[0].size(); p++) {
+			double period = gmmMedianFuncs[0].getX(p);
+			double[] means = new double[gmmMedianFuncs.length];
+			for (int i=0; i<gmmMedianFuncs.length; i++)
+				means[i] = gmmMedianFuncs[i].getY(p);
 			
 			double mean = StatUtils.mean(means);
 			
