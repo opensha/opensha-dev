@@ -23,45 +23,40 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.param.Parameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.imr.AttenRelRef;
-import org.opensha.sha.imr.mod.ModAttenRelRef;
-import org.opensha.sha.imr.mod.ModAttenuationRelationship;
-import org.opensha.sha.imr.mod.impl.FixedStdDevMod;
+import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.util.SiteTranslator;
 
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
+import scratch.kevin.util.ReturnPeriodUtils;
 
-public class HazardCurveSigmaDependence {
+public class ExampleHazardCurve {
 
 	public static void main(String[] args) throws IOException {
 		File outputDir = new File("/tmp");
-		String prefix = "sigma_comparison";
+		String prefix = "hazard_curve";
 		
 		MeanUCERF3 erf = new MeanUCERF3();
 		erf.setPreset(Presets.BOTH_FM_BRANCH_AVG);
 		erf.getTimeSpan().setDuration(1d);
 		erf.updateForecast();
-		ModAttenuationRelationship modAttenRel = new ModAttenuationRelationship(AttenRelRef.ASK_2014, ModAttenRelRef.FIXED_STD_DEV);
-		modAttenRel.setParamDefaults();
+		ScalarIMR gmpe = AttenRelRef.ASK_2014.instance(null);
+		gmpe.setParamDefaults();
 		Site site = new Site(new Location(34.0192, -118.286)); // USC
-		double period = 3d;
+		double period = 5d;
 		
-		modAttenRel.setIntensityMeasure(SA_Param.NAME);
-		SA_Param.setPeriodInSA_Param(modAttenRel.getIntensityMeasure(), period);
-		FixedStdDevMod mod = (FixedStdDevMod) modAttenRel.getCurrentMod();
+		gmpe.setIntensityMeasure(SA_Param.NAME);
+		SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), period);
 		
 		OrderedSiteDataProviderList provs = OrderedSiteDataProviderList.createSiteDataProviderDefaults();
 		SiteTranslator trans = new SiteTranslator();
 		ArrayList<SiteDataValue<?>> datas = provs.getBestAvailableData(site.getLocation());
 		
-		for (Parameter<?> param : modAttenRel.getSiteParams()) {
+		for (Parameter<?> param : gmpe.getSiteParams()) {
 			trans.setParameterValue(param, datas);
 			site.addParameter(param);
 		}
-		
-		double[] sigmas = {0.7, 0.5, 0.3};
-		Color[] colors = {Color.BLACK, Color.DARK_GRAY, Color.GRAY};
 		
 		double minX = 1e-3;
 		double maxX = 1e1;
@@ -76,21 +71,28 @@ public class HazardCurveSigmaDependence {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		for (int i=0; i<sigmas.length; i++) {
-			mod.setStdDev(sigmas[i]);
-			
-			calc.getHazardCurve(logXVals, site, modAttenRel, erf);
-			
-			DiscretizedFunc curve = xVals.deepClone();
-			for (int j=0; j<curve.size(); j++)
-				curve.set(j, logXVals.getY(j));
-			
-			curve.setName("σ="+(float)sigmas[i]);
-			funcs.add(curve);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, colors[i]));
-		}
+		calc.getHazardCurve(logXVals, site, gmpe, erf);
 		
-		PlotSpec spec = new PlotSpec(funcs, chars, "Sigma Comparison", (float)period+"s SA (g)", "Annual Probability of Exceedance");
+		DiscretizedFunc curve = xVals.deepClone();
+		for (int j=0; j<curve.size(); j++)
+			curve.set(j, logXVals.getY(j));
+		
+		double twoIn50_poe = ReturnPeriodUtils.calcExceedanceProb(0.02, 50d, 1d);
+		System.out.println("2% in 50 means "+twoIn50_poe+" annual");
+		System.out.println("2% in 50: "+curve.getFirstInterpolatedX_inLogXLogYDomain(twoIn50_poe));
+		double annualProb0p1 = curve.getInterpolatedY_inLogXLogYDomain(0.1);
+		System.out.println("0.1g: "+annualProb0p1+" annual prob");
+		double prob0p1_50yr = ReturnPeriodUtils.calcExceedanceProb(annualProb0p1, 1d, 50d);
+		System.out.println("0.1g: "+prob0p1_50yr+" 50yr prob");
+		double annualProb0p2 = curve.getInterpolatedY_inLogXLogYDomain(0.2);
+		System.out.println("0.2g: "+annualProb0p2+" annual prob");
+		double prob0p2_50yr = ReturnPeriodUtils.calcExceedanceProb(annualProb0p2, 1d, 50d);
+		System.out.println("0.2g: "+prob0p2_50yr+" 50yr prob");
+		
+		funcs.add(curve);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, "Hazard Curve", (float)period+"s SA (g)", "Annual Probability of Exceedance");
 		spec.setLegendVisible(true);
 		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel();

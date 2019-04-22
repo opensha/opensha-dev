@@ -1041,6 +1041,9 @@ public abstract class RotatedRupVariabilityPageGen {
 				
 				boolean footwall = scenario.isFootwallOnly();
 				
+				Table<Float, Double, List<DiscretizedFunc>> distVsBunleTable = HashBasedTable.create();
+				Map<Double, List<Site>> vsSiteMap = new HashMap<>();
+				
 				for (Site site : sites) {
 					summaryTable.initNewLine();
 					plotTable.initNewLine();
@@ -1051,6 +1054,12 @@ public abstract class RotatedRupVariabilityPageGen {
 					}
 					
 					double vs30 = site.getParameter(Double.class, Vs30_Param.NAME).getValue();
+					List<Site> otherSites = vsSiteMap.get(vs30);
+					if (otherSites == null) {
+						otherSites = new ArrayList<>();
+						vsSiteMap.put(vs30, otherSites);
+					}
+					otherSites.add(site);
 					
 					for (Float distance : distances) {
 						boolean official = scenario.isOfficialCriteria() && isOfficialPartB_Distance(distance);
@@ -1064,10 +1073,61 @@ public abstract class RotatedRupVariabilityPageGen {
 							rd50s.addAll(simProv.getRotD50s(site, rotation));
 						}
 						
+						List<DiscretizedFunc> prevRDs = distVsBunleTable.get(distance, vs30);
+						if (prevRDs == null) {
+							prevRDs = new ArrayList<>();
+							distVsBunleTable.put(distance, vs30, prevRDs);
+						}
+						prevRDs.addAll(rd50s);
+						
 						String distPrefix = distance == null ? "" : "_"+optionalDigitDF.format(distance)+"km";
 						
 						// plot it
 						String prefix = "bbp_partB_"+scenario.getPrefix()+distPrefix+(sites.size() > 1 ? "_"+site.getName() : "");
+//						
+						List<ValidationResult> results = BBP_PartBValidationPageGen.calcPlotScenarioResults(
+								scenario, distance, vs30, numEvents, rd50s, resourcesDir, prefix);
+						
+						validationResultsTable.put(scenario, distance.doubleValue(), results);
+						plotsTable.put(scenario, distance.doubleValue(), prefix+".png");
+						
+						boolean passes = true;
+						for (ValidationResult result : results)
+							passes = passes && result.passes();
+						
+						summaryTable.addColumn(bbpTableStr(passes, official));
+						plotTable.addColumn("![PartB Plot](resources/"+prefix+".png)");
+					}
+					
+					summaryTable.finalizeLine();
+					plotTable.finalizeLine();
+				}
+				
+				// now do any combined ones
+				for (Double vs30 : vsSiteMap.keySet()) {
+					List<Site> sites = vsSiteMap.get(vs30);
+					if (sites.size() == 1)
+						continue;
+					
+					summaryTable.initNewLine();
+					plotTable.initNewLine();
+					summaryTable.addColumn("**"+scenario.getShortName()+"**");
+					
+					String siteName = sites.size()+"sites_Vs30_"+vs30.intValue();
+					
+					if (sites.size() > 1) {
+						summaryTable.addColumn("**"+siteName+"**");
+						plotTable.addColumn("**"+siteName+"**");
+					}
+					
+					for (Float distance : distances) {
+						boolean official = scenario.isOfficialCriteria() && isOfficialPartB_Distance(distance);
+						List<DiscretizedFunc> rd50s = distVsBunleTable.get(distance, vs30);
+						
+						String distPrefix = distance == null ? "" : "_"+optionalDigitDF.format(distance)+"km";
+						
+						// plot it
+						String prefix = "bbp_partB_"+scenario.getPrefix()+distPrefix+"_"+siteName;
 //						
 						List<ValidationResult> results = BBP_PartBValidationPageGen.calcPlotScenarioResults(
 								scenario, distance, vs30, numEvents, rd50s, resourcesDir, prefix);

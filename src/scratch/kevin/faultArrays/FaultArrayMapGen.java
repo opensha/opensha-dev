@@ -32,6 +32,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 
 import scratch.UCERF3.FaultSystemSolution;
@@ -53,7 +54,8 @@ public class FaultArrayMapGen {
 		ALL_GRAY
 	}
 	
-	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
+//	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
+	private static Region region = new Region(new Location(35.5, -114), new Location(31.5, -121));
 	private static GriddedGeoDataSet topoXYZ = null;
 	
 	private static synchronized GriddedGeoDataSet fetchTopo(TopographicSlopeFile topoRes) throws IOException {
@@ -244,6 +246,7 @@ public class FaultArrayMapGen {
 		cities.put("Santa Barbara", new Location(34.45, -119.70));
 		cities.put("Victorville", new Location(34.536376, -117.292734));
 		cities.put("Palm Springs", new Location(33.830368, -116.545593));
+		cities.put("San Luis Obispo", new Location(35.282638, -120.659932));
 		
 	}
 	
@@ -267,6 +270,7 @@ public class FaultArrayMapGen {
 
 	public static void main(String[] args) throws IOException, GMT_MapException {
 		File outputDir = new File("/home/kevin/SCEC/2019_fault_array_proposal/plots");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		FaultBasedMapGen.LOCAL_MAPGEN = true;
 		
 		FaultModels fm = FaultModels.FM3_1;

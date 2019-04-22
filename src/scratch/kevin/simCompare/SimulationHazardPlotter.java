@@ -606,6 +606,7 @@ public class SimulationHazardPlotter<E> {
 		
 		List<DiscretizedFunc> prevSimCurves = new ArrayList<>();
 		List<DiscretizedFunc> prevGMPECurves = new ArrayList<>();
+		List<Double> prevRelLengths = new ArrayList<>();
 		
 		double totalRange = timeRange[1] - timeRange[0];
 		int numFrames = (int)Math.ceil(totalRange / delta);
@@ -613,8 +614,9 @@ public class SimulationHazardPlotter<E> {
 		double fps = 1;
 		
 		System.out.println("Creating animation with "+numFrames+" frames, "+optionalDigitDF.format(delta)+" years each");
-		
+
 		CPT prevSimCPT = new CPT(0, numFrames, new Color(100, 100, 100, 180), new Color(100, 100, 100, 20));
+		CPT finalSimCPT = new CPT(0, numFrames, Color.DARK_GRAY, Color.LIGHT_GRAY);
 		CPT prevGMPECPT = new CPT(0, numFrames, new Color(100, 100, 255, 180), new Color(100, 100, 255, 20));
 		
 		File tempDir = Files.createTempDir();
@@ -677,9 +679,6 @@ public class SimulationHazardPlotter<E> {
 			funcs.add(simCurve);
 			chars.add(simCurveChar);
 			
-			prevGMPECurves.add(gmpeCurve);
-			prevSimCurves.add(simCurve);
-			
 			List<XYAnnotation> anns = new ArrayList<>();
 			XYTextAnnotation durationAnn = new XYTextAnnotation(groupedIntDF.format(relativeLength)+" years", 2e-3, 3e-8);
 			durationAnn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 26));
@@ -687,6 +686,34 @@ public class SimulationHazardPlotter<E> {
 			anns.add(durationAnn);
 			
 			imageFiles.add(plotHazardCurves(tempDir, "frame_"+frameIndex, site, period, curveDuration, funcs, chars, anns));
+			
+			if (frameIndex == numFrames-1 && numFrames > 1) {
+				funcs = new ArrayList<>();
+				chars = new ArrayList<>();
+				
+				for (int i=0; i<prevSimCurves.size(); i++) {
+					int generation = prevSimCurves.size() - i;
+					
+					DiscretizedFunc prevSimCurve = prevSimCurves.get(i);
+					prevSimCurve.setName(groupedIntDF.format(prevRelLengths.get(i))+" yrs");
+					funcs.add(prevSimCurve);
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, finalSimCPT.getColor((float)generation)));
+				}
+				
+				funcs.add(gmpeCurve);
+				chars.add(gmpeCurveChar);
+				
+				simCurve.setName("Complete Model");
+				funcs.add(simCurve);
+				chars.add(simCurveChar);
+				
+				String prefix = outputFile.getName().replaceAll(".gif", "")+"_final";
+				plotHazardCurves(outputFile.getParentFile(), prefix, site, period, curveDuration, funcs, chars, null);
+			}
+			
+			prevGMPECurves.add(gmpeCurve);
+			prevSimCurves.add(simCurve);
+			prevRelLengths.add(relativeLength);
 		}
 		
 		AnimatedGIFRenderer gifRender = new AnimatedGIFRenderer(outputFile, fps, true);
