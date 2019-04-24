@@ -38,11 +38,11 @@ public enum CentralItalySlipRatesEnum {
 //	UNIFORM_UPPER("UNIFORM_UPPER", "src/scratch/alessandro/data/uniform_deformation_model_0703.txt", 1.28) {},
 	
 	// ok for the moment, but change upper and lower with the right values.
-	NON_UNIFORM_MEAN("NON_UNIFORM_MEAN", "src/scratch/alessandro/data_CentralItaly/slip_rate_CentralItaly.txt", 1.0) {},
+	NON_UNIFORM_MEAN("NON_UNIFORM_MEAN", "src/scratch/alessandro/data__CentralItaly/slip_rate_CentralItaly.txt", 1.0) {},
 	
-	NON_UNIFORM_LOWER("NON_UNIFORM_LOWER", "src/scratch/alessandro/data_CentralItaly/slip_rate_CentralItaly.txt", 0.76) {},
+	NON_UNIFORM_LOWER("NON_UNIFORM_LOWER", "src/scratch/alessandro/data__CentralItaly/slip_rate_CentralItaly.txt", 0.76) {},
 
-	NON_UNIFORM_UPPER("NON_UNIFORM_UPPER", "src/scratch/alessandro/data_CentralItaly/slip_rate_CentralItaly.txt", 1.28) {};
+	NON_UNIFORM_UPPER("NON_UNIFORM_UPPER", "src/scratch/alessandro/data__CentralItaly/slip_rate_CentralItaly.txt", 1.28) {};
 
 
 	private String name;
