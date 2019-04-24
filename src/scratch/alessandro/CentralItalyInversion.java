@@ -233,7 +233,7 @@ public class CentralItalyInversion {
 
 
 			// Now read section rupture matrix
-			file = new File("src/scratch/alessandro/data_CentralItaly/Gsr_matrix_CentralItaly.txt");
+			file = new File("src/scratch/alessandro/data__CentralItaly/Gsr_matrix_CentralItaly.txt");
 			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
 			numRuptures = fileLines.size()-1;
 			rupSectionMatrix = new int[numSections][numRuptures];
