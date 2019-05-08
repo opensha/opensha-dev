@@ -240,9 +240,17 @@ public class RotatedRupVariabilityConfig {
 					return mySite == null;
 				else if (mySite == null)
 					return false;
-				return LocationUtils.areSimilar(mySite.getLocation(), ((Site)value).getLocation());
+				return locEqual(mySite.getLocation(), ((Site)value).getLocation());
 			}
 			return Objects.equals(value, quantities.get(quantity));
+		}
+		
+		private boolean locEqual(Location loc1, Location loc2) {
+			float lat1 = (float)loc1.getLatitude();
+			float lon1 = (float)loc1.getLongitude();
+			float lat2 = (float)loc2.getLatitude();
+			float lon2 = (float)loc2.getLongitude();
+			return LocationUtils.areSimilar(loc1, loc2) || (lat1 == lat2 && lon1 == lon2);
 		}
 		
 		public Object getValue(Quantity quantity) {
@@ -258,7 +266,12 @@ public class RotatedRupVariabilityConfig {
 			int result = 1;
 			result = prime * result + ((distance == null) ? 0 : distance.hashCode());
 			result = prime * result + eventID;
-			result = prime * result + ((site == null) ? 0 : site.getLocation().hashCode());
+			if (site != null) {
+				Float lat = (float)site.getLocation().getLatitude();
+				Float lon = (float)site.getLocation().getLongitude();
+				result = prime * result + lat.hashCode();
+				result = prime * result + lon.hashCode();
+			}
 			result = prime * result + ((siteToSourceAz == null) ? 0 : siteToSourceAz.hashCode());
 			result = prime * result + ((sourceAz == null) ? 0 : sourceAz.hashCode());
 			return result;
@@ -283,7 +296,7 @@ public class RotatedRupVariabilityConfig {
 			if (site == null) {
 				if (other.site != null)
 					return false;
-			} else if (!LocationUtils.areSimilar(site.getLocation(), other.site.getLocation()))
+			} else if (!locEqual(site.getLocation(), other.site.getLocation()))
 				return false;
 			if (siteToSourceAz == null) {
 				if (other.siteToSourceAz != null)
@@ -789,7 +802,11 @@ public class RotatedRupVariabilityConfig {
 				modRotations.add(new RotationSpec(rot.index, site, rot.eventID, rot.distance, rot.sourceAz, rot.siteToSourceAz));
 			masterRotations.addAll(modRotations);
 		}
-		return new RotatedRupVariabilityConfig(catalog, idToOrigMap == null ? null : idToOrigMap.values(), masterRotations);
+		return forRotationSubset(masterRotations);
+	}
+	
+	public RotatedRupVariabilityConfig forRotationSubset(List<RotationSpec> rotations) {
+		return new RotatedRupVariabilityConfig(catalog, idToOrigMap == null ? null : idToOrigMap.values(), rotations);
 	}
 	
 	@SuppressWarnings("unused")

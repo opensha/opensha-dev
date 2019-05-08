@@ -85,7 +85,9 @@ import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.plots.AbstractPlot;
 import scratch.kevin.simulators.plots.MFDPlot;
 import scratch.kevin.simulators.plots.MagAreaScalingPlot;
+import scratch.kevin.simulators.plots.MomentRateVaribilityPlot;
 import scratch.kevin.simulators.plots.NormalizedFaultRecurrenceIntervalPlot;
+import scratch.kevin.simulators.plots.PaleoOpenIntervalPlot;
 import scratch.kevin.simulators.plots.RecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
@@ -1253,9 +1255,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		return RSQSimUtils.buildFaultSystemSolution(getU3SubSects(), getElements(), events, minMag, minFractForInclusion);
 	}
 	
-	public List<String> writeStandardDiagnosticPlots(File outputDir, int skipYears, double minMag, boolean replot, String topLink)
+	private List<AbstractPlot> buildStandardPlotLines(File outputDir, int skipYears, double minMag, boolean replot, String topLink, List<String> lines)
 			throws IOException {
-		List<String> lines = new ArrayList<>();
 		lines.add("## Plots");
 		List<AbstractPlot> plots = new ArrayList<>();
 		
@@ -1451,6 +1452,67 @@ public class RSQSimCatalog implements XMLSaveable {
 			table.finalizeLine();
 		}
 		lines.addAll(table.build());
+
+		lines.add("");
+		lines.add("### Paleo Open Interval Plots");
+		lines.add(topLink); lines.add("");
+		lines.add("#### Paleo Open Interval Plots, Biasi and Sharer 2019");
+		lines.add(topLink); lines.add("");
+		lines.add("These plots use the 5 paleoseismic sites identified in Biasi & Scharer (2019) on the Hayward, N. SAF, S. SAF, and SJC faults. "
+				+ "By default, a rupture is counted at a paleo site if the nearest element (at the surface) slips any amount. We also alternatively "
+				+ "apply a probability of detection model. Those results are marked as 'Prob. Filtered'.");
+		lines.add("");
+		lines.addAll(getPaleoPlotLines(outputDir, "paleo_open_biasi"));
+		
+		if (replot || !new File(outputDir, "paleo_open_biasi_prob.png").exists()) {
+			PaleoOpenIntervalPlot paleoPlot = new PaleoOpenIntervalPlot(getElements(), PaleoOpenIntervalPlot.getSetBiasi2019(), 100);
+			paleoPlot.initialize(getName(), outputDir, "paleo_open_biasi");
+			plots.add(paleoPlot);
+		}
+		lines.add("");
+		lines.add("#### Paleo Open Interval Plots, UCERF3");
+		lines.add(topLink); lines.add("");
+		lines.add("These plots use the full set of UCERF3 paleoseismic sites. "
+				+ "By default, a rupture is counted at a paleo site if the nearest element (at the surface) slips any amount. We also alternativesly"
+				+ "apply a probability of detection model. Those results are marked as 'Prob. Filtered'.");
+		lines.add("");
+		lines.addAll(getPaleoPlotLines(outputDir, "paleo_open_ucerf3"));
+		
+		if (replot || !new File(outputDir, "paleo_open_ucerf3_prob.png").exists()) {
+			PaleoOpenIntervalPlot paleoPlot = new PaleoOpenIntervalPlot(getElements(), PaleoOpenIntervalPlot.getSetUCERF3(), 100);
+			paleoPlot.initialize(getName(), outputDir, "paleo_open_ucerf3");
+			plots.add(paleoPlot);
+		}
+		
+		if (getDurationYears() > MomentRateVaribilityPlot.MIN_CAT_LEN_YEARS) {
+			if (replot || !new File(outputDir, "moment_variability_time_series.png").exists()) {
+				MomentRateVaribilityPlot momVarPlot = new MomentRateVaribilityPlot(25, 2000);
+				momVarPlot.initialize(getName(), outputDir, "moment_variability");
+				plots.add(momVarPlot);
+			}
+			lines.add("");
+			lines.add("### Moment Release Variability Plots");
+			lines.add(topLink); lines.add("");
+			lines.add("We first create a tapered moment release time series for the entire catalog. Each event's moment is distributed "
+					+"across a 25 year Hanning (cosine) taper. Here is a plot of a random 2,000 year section of this time series:");
+			lines.add("");
+			lines.add("![Time Series]("+outputDir.getName()+"/moment_variability_time_series.png)");
+			lines.add("");
+			lines.add("We then compute Welch's power spectral density estimate on the entire time series. Results are plotted below, "
+					+ "with a Poisson randomization of the catalog also plotted in a gray line, and the 95% confidence bounds from "
+					+ MomentRateVaribilityPlot.num_poisson+" realizations as a light gray shaded area. Significant deviations outside the "
+					+ "Poisson confidence intervals indicate synchronous behaviour.");
+			lines.add("");
+			lines.add("![Welch PSD]("+outputDir.getName()+"/moment_variability_welch.png)");
+		}
+		
+		return plots;
+	}
+	
+	public List<String> writeStandardDiagnosticPlots(File outputDir, int skipYears, double minMag, boolean replot, String topLink)
+			throws IOException {
+		List<String> lines = new ArrayList<>();
+		List<AbstractPlot> plots = buildStandardPlotLines(outputDir, skipYears, minMag, replot, topLink, lines);
 		
 		if (plots.isEmpty())
 			return lines;
@@ -1472,6 +1534,39 @@ public class RSQSimCatalog implements XMLSaveable {
 			p.finalizePlot();
 		System.out.println("Done with plots");
 		
+		// lines could have changed, regenerate
+		lines.clear();
+		buildStandardPlotLines(outputDir, skipYears, minMag, false, topLink, lines);
+		
+		return lines;
+	}
+	
+	private List<String> getPaleoPlotLines(File outputDir, String prefix) throws IOException {
+		List<String> lines = new ArrayList<>();
+		File sitesCSVFile = new File(outputDir, prefix+"_sites.csv");
+		if (sitesCSVFile.exists()) {
+			CSVFile<String> csv = CSVFile.readFile(sitesCSVFile, true);
+			lines.add("**Paleoseismic sites table:**");
+			lines.add("");
+			lines.addAll(MarkdownUtils.tableFromCSV(csv, true).build());
+			lines.add("");
+		}
+		lines.add("**Paleoseismic Plots:**");
+		lines.add("");
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		table.initNewLine();
+		table.addColumn("![Count]("+outputDir.getName()+"/"+prefix+"_count.png)");
+		table.addColumn("![Prob]("+outputDir.getName()+"/"+prefix+"_prob.png)");
+		table.finalizeLine();
+		lines.addAll(table.build());
+		File probsCSVFile = new File(outputDir, prefix+"_probs.csv");
+		if (sitesCSVFile.exists()) {
+			CSVFile<String> csv = CSVFile.readFile(probsCSVFile, true);
+			lines.add("");
+			lines.add("**Open interval probabilities table:**");
+			lines.add("");
+			lines.addAll(MarkdownUtils.tableFromCSV(csv, true).build());
+		}
 		return lines;
 	}
 
@@ -1843,6 +1938,26 @@ public class RSQSimCatalog implements XMLSaveable {
 			}
 		}
 		
+		// Palo Probs
+		if (variationGroupings != null) {
+			lines.add("### Paleo Open Interval Plots");
+			lines.add(topLink); lines.add("");
+			lines.add("#### Paleo Open Interval Plots, Biasi and Sharer 2019");
+			lines.add(topLink); lines.add("");
+			lines.addAll(buildVariationTable(dir, variationCatalogGroupoings, "paleo_open_biasi_prob.png", 4));
+			lines.add("");
+			lines.add("#### Paleo Open Interval Plots, UCERF3");
+			lines.add(topLink); lines.add("");
+			lines.addAll(buildVariationTable(dir, variationCatalogGroupoings, "paleo_open_ucerf3_prob.png", 4));
+		}
+		
+		// Welch PSD
+		if (variationGroupings != null) {
+			lines.add("### Moment Release Variability Welch PSDs");
+			lines.add(topLink); lines.add("");
+			lines.addAll(buildVariationTable(dir, variationCatalogGroupoings, "moment_variability_welch.png", 4));
+		}
+		
 		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));
 		
 		System.out.println("DONE");
@@ -1940,11 +2055,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
-//		GregorianCalendar minDate = cal(2000, 1, 1);
-		GregorianCalendar minDate = cal(2019, 3, 1);
+		GregorianCalendar minDate = cal(2000, 1, 1);
+//		GregorianCalendar minDate = cal(2019, 3, 1);
 		
-		for (Catalogs cat : cats) {
-//		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
+//		for (Catalogs cat : cats) {
+		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
 			if (cat.catalog.getDate().before(minDate))
 				continue;
 			RSQSimCatalog catalog = cat.instance(baseDir);

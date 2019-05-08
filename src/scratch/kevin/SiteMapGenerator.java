@@ -97,18 +97,31 @@ public class SiteMapGenerator {
 		int fontSize = 14;
 //		Color fontColor = Color.BLACK;
 		Color fontColor = new Color(60, 15, 15);
-		cities.put("Los Angeles", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-118.25, 34.05),
-				Symbol.CIRCLE, symbolWidth, 0d, null, Color.BLACK));
-		cities.put("Palm Springs", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-116.545593, 33.830368),
-				Symbol.CIRCLE, symbolWidth, 0d, null, Color.BLACK));
-		cities.put("STNI", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-118.17881, 33.93088),
+//		cities.put("Los Angeles", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-118.25, 34.05),
+//				Symbol.CIRCLE, symbolWidth, 0d, null, Color.BLACK));
+//		cities.put("Palm Springs", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-116.545593, 33.830368),
+//				Symbol.CIRCLE, symbolWidth, 0d, null, Color.BLACK));
+//		cities.put("STNI", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-118.17881, 33.93088),
+//				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
+//		cities.put("PDU", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-117.63808, 34.1207),
+//				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
+//		cities.put("Bombay Beach M6", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-115.728, 33.3172),
+//				Symbol.STAR, symbolWidth*1.5, 0d, null, Color.RED.darker()));
+//		cities.put("Mojave M6", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-117.80177, 34.42295),
+//				Symbol.STAR, symbolWidth*1.5, 0d, null, Color.RED.darker()));
+		
+
+		cities.put("STNI", Justify.LEFT_TOP, new PSXYSymbol(new Point2D.Double(-118.17881, 33.93088),
 				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
-		cities.put("PDU", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-117.63808, 34.1207),
+		cities.put("WNGC", Justify.LEFT_TOP, new PSXYSymbol(new Point2D.Double(-118.0653, 34.041824),
 				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
-		cities.put("Bombay Beach M6", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-115.728, 33.3172),
-				Symbol.STAR, symbolWidth*1.5, 0d, null, Color.RED.darker()));
-		cities.put("Mojave M6", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-117.80177, 34.42295),
-				Symbol.STAR, symbolWidth*1.5, 0d, null, Color.RED.darker()));
+		cities.put("USC", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-118.286, 34.0192),
+				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
+		cities.put("SBSM", Justify.LEFT_TOP, new PSXYSymbol(new Point2D.Double(-117.29201, 34.064987),
+				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
+		cities.put("SMCA", Justify.RIGHT_TOP, new PSXYSymbol(new Point2D.Double(-118.48939, 34.00909),
+				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
+		fontSize = 12;
 		
 		for (Cell<String, Justify, PSXYSymbol> cell : cities.cellSet()) {
 			String city = cell.getRowKey();

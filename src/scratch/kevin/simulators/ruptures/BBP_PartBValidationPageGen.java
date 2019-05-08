@@ -474,10 +474,13 @@ public class BBP_PartBValidationPageGen {
 		}
 		
 		DiscretizedFunc gmpeMean = scenario.getMeanPrediction(vs30, distance);
-		DiscretizedFunc[] gmpeIndvMeans = scenario.getIndividualModeLMeanPredictions(vs30, distance);
-		UncertainArbDiscDataset gmpeBounds = scenario.getAcceptanceCriteria(vs30, distance);
-		DiscretizedFunc gmpeUpper = gmpeBounds.getUpper();
-		DiscretizedFunc gmpeLower = gmpeBounds.getLower();
+		DiscretizedFunc[] gmpeIndvMeans = scenario.getIndividualModelMeanPredictions(vs30, distance);
+		UncertainArbDiscDataset gmpeTrimmedBounds = scenario.getAcceptanceCriteria(vs30, distance, true);
+		UncertainArbDiscDataset gmpeFullBounds = scenario.getAcceptanceCriteria(vs30, distance, false);
+		DiscretizedFunc gmpeTrimmedUpper = gmpeTrimmedBounds.getUpper();
+		DiscretizedFunc gmpeTrimmedLower = gmpeTrimmedBounds.getLower();
+		DiscretizedFunc gmpeFullUpper = gmpeFullBounds.getUpper();
+		DiscretizedFunc gmpeFullLower = gmpeFullBounds.getLower();
 		
 		double whiskerWidthLog10 = 0.01;
 		double boxWidthLog10 = 0.02;
@@ -497,12 +500,20 @@ public class BBP_PartBValidationPageGen {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(0, 0, 0, 127)));
 		}
 		
-		gmpeUpper.setName(gmpeBounds.getName());
-		funcs.add(gmpeBounds.getUpper());
+		gmpeFullUpper.setName(null);
+		funcs.add(gmpeFullUpper);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+		
+		gmpeFullLower.setName(null);
+		funcs.add(gmpeFullLower);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+		
+		gmpeTrimmedUpper.setName(gmpeTrimmedBounds.getName());
+		funcs.add(gmpeTrimmedUpper);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK));
 		
-		gmpeLower.setName(null);
-		funcs.add(gmpeLower);
+		gmpeTrimmedLower.setName(null);
+		funcs.add(gmpeTrimmedLower);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK));
 		
 		PlotCurveCharacterstics whiskerChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK);
@@ -529,8 +540,8 @@ public class BBP_PartBValidationPageGen {
 			
 			double median = Math.exp(logMedian);
 			if (period <= BBP_PartBValidationConfig.BBP_MAX_ACCEPTANCE_PERIOD) {
-				double acceptMin = gmpeLower.getInterpolatedY_inLogXLogYDomain(period);
-				double acceptMax = gmpeUpper.getInterpolatedY_inLogXLogYDomain(period);
+				double acceptMin = gmpeTrimmedLower.getInterpolatedY_inLogXLogYDomain(period);
+				double acceptMax = gmpeTrimmedUpper.getInterpolatedY_inLogXLogYDomain(period);
 				double dataMedian = gmpeMean.getInterpolatedY_inLogXLogYDomain(period);
 				ValidationResult result = new ValidationResult(period, acceptMin, acceptMax, dataMedian, median, logSD);
 				System.out.println(result);

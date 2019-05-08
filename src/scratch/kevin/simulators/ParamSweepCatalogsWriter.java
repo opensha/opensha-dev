@@ -26,17 +26,18 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 
 public class ParamSweepCatalogsWriter {
 
+	@SuppressWarnings("unused")
 	public static void main(String[] args) throws IOException, DocumentException {
-//		File gitDir = new File("/home/scec-02/kmilner/git/rsqsim-analysis/2018_param_sweep");
-//		File catalogsDir = new File("/home/scec-00/gilchrij/RSQSim/CISM/paramSweep/paramSweep");
-//		File csvFile = new File("/home/scec-02/kmilner/simulators/catalogs/rsqsim_param_sweep_catalogs.csv");
+		File gitDir = new File("/home/scec-02/kmilner/git/rsqsim-analysis/2018_param_sweep");
+		File catalogsDir = new File("/home/scec-00/rsqsim/catalogs/gilchrij/paramSweep");
+		File csvFile = new File("/home/scec-02/kmilner/simulators/catalogs/rsqsim_param_sweep_catalogs.csv");
 		
-		File gitDir = new File("/home/kevin/git/rsqsim-analysis/2018_param_sweep");
-		File catalogsDir = null;
-		File csvFile = new File("/home/kevin/Simulators/catalogs/rsqsim_param_sweep_catalogs.csv");
+//		File gitDir = new File("/home/kevin/git/rsqsim-analysis/2018_param_sweep");
+//		File catalogsDir = null;
+//		File csvFile = new File("/home/kevin/Simulators/catalogs/rsqsim_param_sweep_catalogs.csv");
 		
 		GregorianCalendar cal = RSQSimCatalog.cal(2018, 9, 27);
-		String author = "Jaqcui Gilchrist";;
+		String author = "Jaqcui Gilchrist";
 		FaultModels fm = FaultModels.FM3_1;
 		DeformationModels dm = DeformationModels.GEOLOGIC;
 		boolean replot = false;

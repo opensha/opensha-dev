@@ -46,12 +46,18 @@ import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 public class FaultArrayMapGen {
 	
 	private static enum ScalarType {
-		SUBSECT_PARTIC_PROB,
-		PARENT_PARTIC_PROB,
-		TIME_SINCE_LAST,
-		SUBSECT_NORM_RI,
-		SOLID,
-		ALL_GRAY
+		SUBSECT_PARTIC_PROB("Subsection M>="+(float)magForProbs+" "+(int)durationForProbs+"yr Participation Prob"),
+		PARENT_PARTIC_PROB("Section M>="+(float)magForProbs+" "+(int)durationForProbs+"yr Participation Prob"),
+		TIME_SINCE_LAST("Time Since Last Event (years)"),
+		SUBSECT_NORM_RI("Subsection Normalized Recurrence Interval"),
+		SOLID("Solid"),
+		ALL_GRAY("All Gray");
+		
+		private String label;
+
+		private ScalarType(String label) {
+			this.label = label;
+		}
 	}
 	
 //	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
@@ -118,6 +124,8 @@ public class FaultArrayMapGen {
 		
 		Map<Integer, FaultSectionPrefData> allParents = fm.fetchFaultSectionsMap();
 		
+		CPT cpt = null;
+		
 		if (scalarType != null) {
 			List<FaultSectionPrefData> sects = new ArrayList<>();
 			HashSet<Integer> parentsToPlot = new HashSet<>();
@@ -129,7 +137,7 @@ public class FaultArrayMapGen {
 					sects.add(sect);
 			
 //			CPT cpt = GMT_CPT_Files.GMT_DRYWET.instance().reverse();
-			CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
+			cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
 			cpt.setBelowMinColor(cpt.getMinColor());
 			cpt.setAboveMaxColor(cpt.getMaxColor());
 			Map<Integer, Double> parentProbs = new HashMap<>();
@@ -161,6 +169,7 @@ public class FaultArrayMapGen {
 					parentColorVals.put(parentID, 4d);
 				break;
 			case ALL_GRAY:
+				cpt = new CPT(0, 1, Color.GRAY, Color.GRAY);
 				break;
 
 			default:
@@ -235,6 +244,16 @@ public class FaultArrayMapGen {
 		}
 		
 		FaultBasedMapGen.plotMap(outputDir, prefix, false, map);
+		if (scalarType != null) {
+			map.setGriddedData(null);
+			map.setCpt(cpt);
+			map.setCustomGRDPath(null);
+			map.setCustomIntenPath(null);
+			map.setCustomScaleMin((double)cpt.getMinValue());
+			map.setCustomScaleMax((double)cpt.getMaxValue());
+			map.setCustomLabel(scalarType.label);
+			FaultBasedMapGen.plotMap(outputDir, prefix+"_cpt", false, map);
+		}
 	}
 	
 	static Map<String, Location> cities;

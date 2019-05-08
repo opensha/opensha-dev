@@ -13,6 +13,7 @@ dependencies {
     
     /* no remote repo */
     compileOnly files('lib/EventWebService.jar')
+    compileAndResource files('lib/flanagan.jar') // FFT and PSD library along with other tools
 
     compileOnly project(path: ':opensha-apps', configuration: 'compileOnly')
     compileAndResource project(path: ':opensha-apps')

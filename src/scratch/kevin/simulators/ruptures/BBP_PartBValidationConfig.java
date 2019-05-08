@@ -277,7 +277,7 @@ public class BBP_PartBValidationConfig {
 			return criterion;
 		}
 		
-		public synchronized DiscretizedFunc[] getIndividualModeLMeanPredictions(double vs30, double distance) {
+		public synchronized DiscretizedFunc[] getIndividualModelMeanPredictions(double vs30, double distance) {
 			if (gmmMediansCache == null)
 				gmmMediansCache = HashBasedTable.create();
 			DiscretizedFunc[] medians = gmmMediansCache.get(vs30, distance);
@@ -298,28 +298,33 @@ public class BBP_PartBValidationConfig {
 			return medians;
 		}
 		
-		public synchronized UncertainArbDiscDataset getAcceptanceCriteria(double vs30, double distance) {
-			if (trimmedCriteriaCache == null)
-				trimmedCriteriaCache = HashBasedTable.create();
-			UncertainArbDiscDataset criterion = trimmedCriteriaCache.get(vs30, distance);
-			if (criterion == null) {
-				UncertainArbDiscDataset rawCriterion = calcLoacRawCriterion(vs30, distance);
-				
-				DiscretizedFunc avgFunc = new ArbitrarilyDiscretizedFunc();
-				DiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
-				DiscretizedFunc upperFunc = new ArbitrarilyDiscretizedFunc();
-				
-				for (int p=0; p<rawCriterion.size(); p++) {
-					double period = rawCriterion.getX(p);
-					if ((float)period > (float)BBP_MAX_ACCEPTANCE_PERIOD)
-						break;
-					avgFunc.set(period, rawCriterion.getY(p));
-					lowerFunc.set(period, rawCriterion.getLowerY(p));
-					upperFunc.set(period, rawCriterion.getUpperY(p));
+		public synchronized UncertainArbDiscDataset getAcceptanceCriteria(double vs30, double distance, boolean trim) {
+			UncertainArbDiscDataset criterion;
+			if (trim) {
+				if (trimmedCriteriaCache == null)
+					trimmedCriteriaCache = HashBasedTable.create();
+				criterion = trimmedCriteriaCache.get(vs30, distance);
+				if (criterion == null) {
+					UncertainArbDiscDataset rawCriterion = calcLoacRawCriterion(vs30, distance);
+					
+					DiscretizedFunc avgFunc = new ArbitrarilyDiscretizedFunc();
+					DiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
+					DiscretizedFunc upperFunc = new ArbitrarilyDiscretizedFunc();
+					
+					for (int p=0; p<rawCriterion.size(); p++) {
+						double period = rawCriterion.getX(p);
+						if ((float)period > (float)BBP_MAX_ACCEPTANCE_PERIOD)
+							break;
+						avgFunc.set(period, rawCriterion.getY(p));
+						lowerFunc.set(period, rawCriterion.getLowerY(p));
+						upperFunc.set(period, rawCriterion.getUpperY(p));
+					}
+					criterion = new UncertainArbDiscDataset(avgFunc, lowerFunc, upperFunc);
+					criterion.setName("Acceptance Criteria");
+					trimmedCriteriaCache.put(vs30, distance, criterion);
 				}
-				criterion = new UncertainArbDiscDataset(avgFunc, lowerFunc, upperFunc);
-				criterion.setName("Acceptance Criteria");
-				trimmedCriteriaCache.put(vs30, distance, criterion);
+			} else {
+				criterion = calcLoacRawCriterion(vs30, distance);
 			}
 			
 			return criterion;
@@ -652,7 +657,7 @@ public class BBP_PartBValidationConfig {
 //		System.out.println(calcNGA2_Criterion(6.6, 20, 20, -20, FaultStyle.STRIKE_SLIP, 90, 0, 5.62, 500));
 //		System.out.println(getNGA2(6.6, 20, FaultStyle.STRIKE_SLIP, 90, 0, 863));
 		System.out.println(Scenario.M6p6_VERT_SS_SURFACE.getMeanPrediction(500, 20));
-		System.out.println(Scenario.M6p6_VERT_SS_SURFACE.getAcceptanceCriteria(500, 20));
+		System.out.println(Scenario.M6p6_VERT_SS_SURFACE.getAcceptanceCriteria(500, 20, false));
 		System.exit(0);
 		
 		File baseDir = new File("/data/kevin/simulators/catalogs");

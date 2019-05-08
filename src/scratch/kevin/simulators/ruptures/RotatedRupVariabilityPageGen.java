@@ -108,6 +108,9 @@ public abstract class RotatedRupVariabilityPageGen {
 	
 	private LoadingCache<VarGroupingKey, VariabilityResult> varResultCache;
 	private LoadingCache<GMPE_GroupingKey, GMPE_Result> gmpeResultCache;
+	
+	private Map<Integer, List<ASK_EventData>> realEventData;
+	private int numRealDataSamples;
 
 	public RotatedRupVariabilityPageGen(RSQSimCatalog catalog, RotatedRupVariabilityConfig config,
 			double mag, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
@@ -209,6 +212,11 @@ public abstract class RotatedRupVariabilityPageGen {
 		for (List<Integer> ids : magEventIDs.values())
 			idSet.addAll(ids);
 		return idSet;
+	}
+	
+	public void setRealEventData(Map<Integer, List<ASK_EventData>> realEventData, int numRealDataSamples) {
+		this.realEventData = realEventData;
+		this.numRealDataSamples = numRealDataSamples;
 	}
 	
 	private synchronized RSQSimEvent getEvent(int eventID) {
@@ -1070,7 +1078,8 @@ public abstract class RotatedRupVariabilityPageGen {
 							if (footwall && sourceAz < 180f)
 								// only footwall
 								continue;
-							rd50s.addAll(simProv.getRotD50s(site, rotation));
+							DiscretizedFunc spectrum = simProv.getRotD50(site, rotation, 0);
+							rd50s.add(spectrum);
 						}
 						
 						List<DiscretizedFunc> prevRDs = distVsBunleTable.get(distance, vs30);
@@ -1819,7 +1828,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				+(constQuantities == null ? "" : Joiner.on(",").join(constQuantities))
 				+"], Groups ["+Joiner.on(",").join(groupQuantities)+"]: "+num+" simulations");
 		
-//		System.out.println("Computing resduals from "+num+" simulations");
+//		System.out.println("Computing residuals from "+num+" simulations");
 		
 		calcGroupedResiduals(magnitude, totalRotations, calcPeriods, ret, groupQuantities);
 		int count = 0;
@@ -1850,7 +1859,7 @@ public abstract class RotatedRupVariabilityPageGen {
 //			System.out.println("Done computing");
 		} else {
 //			System.out.println("have "+rotations.size()+" rotations before "+groupQuantities[0]);
-			Quantity[] current = {groupQuantities[0]};
+			Quantity[] current = { groupQuantities[0] };
 			Quantity[] downstream = Arrays.copyOfRange(groupQuantities, 1, groupQuantities.length);
 			for (Object value : magQuantitiesTable.get(magnitude, groupQuantities[0])) {
 				List<RotationSpec> myRotations = RotatedRupVariabilityConfig.getRotationsForQuantities(
