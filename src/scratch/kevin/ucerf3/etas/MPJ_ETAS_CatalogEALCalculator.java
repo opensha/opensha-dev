@@ -128,7 +128,7 @@ public class MPJ_ETAS_CatalogEALCalculator extends MPJTaskCalculator {
 			File resultsFile = resultsFiles.get(index);
 			
 			ETAS_CatalogEALCalculator.calculate(resultsFile, triggeredOnly, xAxisLabel, maxX, deltaX, xAxisScale,
-					dataDirs, imrWeightsMap, fm, baSol, cfss, trueMeanSol, branchMappings, durations, allSubDurations);
+					dataDirs, imrWeightsMap, fm, baSol, cfss, trueMeanSol, branchMappings, durations, allSubDurations, false);
 		}
 	}
 
