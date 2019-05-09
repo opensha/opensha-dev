@@ -378,6 +378,8 @@ public class RotatedRupVariabilityConfig {
 				if (rotation.hasQuantity(quantity, value))
 					ret.add(rotation);
 			}
+			Preconditions.checkNotNull(quantity, "Null quantity?");
+			Preconditions.checkNotNull(value, "Null value for quantity %s", quantity);
 			quantityRotationsCache.put(quantity, value, ret);
 		}
 		return ret;

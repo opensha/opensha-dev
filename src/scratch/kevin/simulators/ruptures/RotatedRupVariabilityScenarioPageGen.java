@@ -63,16 +63,18 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_3165.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_3165.instance(baseDir);
 		
-//		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
-		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
+		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
+//		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
 //		VelocityModel forceVM = null;
 		
 		double[] calcPeriods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};
 		double[] periods = {3d, 5d, 7.5, 10d};
+		
+		Map<Integer, List<ASK_EventData>> realData = ASK_EventData.load(1d);
 		
 		NGAW2_WrapperFullParam[] refGMPEs = { new NGAW2_Wrappers.ASK_2014_Wrapper(), new NGAW2_Wrappers.BSSA_2014_Wrapper(),
 				new NGAW2_Wrappers.CB_2014_Wrapper(), new NGAW2_Wrappers.CY_2014_Wrapper()};
@@ -147,6 +149,9 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 			RotatedRupVariabilityPageGen pageGen = pageGensMap.get(scenario);
 			
 			pageGen.setEventsMap(eventsMap);
+			
+			if (realData != null)
+				pageGen.setRealEventData(ASK_EventData.getMatches(realData, null, null, scenario.getFaultStyle(), 30d), 100);
 			
 			File rotDir = new File(vmDir, "rotated_ruptures_"+scenario.getPrefix());
 			Preconditions.checkState(rotDir.exists() || rotDir.mkdir());
