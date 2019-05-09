@@ -300,7 +300,7 @@ public class UCERF3_IM_Calculator {
 		ops.addOption(imt);
 		
 		Option period = new Option("p", "period", true, "Spectral period, required if IMT is SA");
-		period.setRequired(true);
+		period.setRequired(false);
 		ops.addOption(period);
 		
 		Option gridded = new Option("grid", "do-gridded", false, "Flag to enable gridded seismicity");
