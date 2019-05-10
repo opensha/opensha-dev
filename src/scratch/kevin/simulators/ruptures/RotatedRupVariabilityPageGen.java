@@ -1345,7 +1345,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 			if (realEventData != null) {
 				VariabilityResult[] downsampledResults;
-				if (site == null && type.separateSites && sites.size() > 0) {
+				if (site == null && type.separateSites && sites.size() > 1) {
 					downsampledResults = allVarResults.toArray(new VariabilityResult[0]);
 				} else {
 					try {
@@ -1974,6 +1974,8 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 	}
 	
+	private Random repeatableRandom;
+	
 	private PeriodDepResidualsList calcResiduals(Double magnitude,
 			Quantity[] constQuantities, Object[] constValues, Quantity[] groupQuantities, List<List<ASK_EventData>> realDataList)
 					throws IOException {
@@ -1994,6 +1996,10 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 		if (realDataList != null) {
 			// now downsample randomly
+			
+			if (repeatableRandom == null)
+				repeatableRandom = new Random(eventsMap.size());
+			
 			Map<Integer, List<RotationSpec>> eventRotMap = new HashMap<>();
 			List<Integer> eventIDs = new ArrayList<>();
 			for (RotationSpec rot : totalRotations) {
@@ -2006,7 +2012,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				}
 				eventRots.add(rot);
 			}
-			Collections.shuffle(eventIDs);
+			Collections.shuffle(eventIDs, repeatableRandom);
 			List<RotationSpec> downsampledRots = new ArrayList<>();
 			int origNumRecordings = 0;
 			for (List<ASK_EventData> data : realDataList)
@@ -2015,10 +2021,31 @@ public abstract class RotatedRupVariabilityPageGen {
 //			System.out.println("Doing "+eventsToInclude+" events");
 			for (int i=0; i<eventsToInclude; i++) {
 				int eventID = eventIDs.get(i);
-				List<RotationSpec> rotations = new ArrayList<>(eventRotMap.get(eventID));
+				List<RotationSpec> allEventRotations = new ArrayList<>(eventRotMap.get(eventID));
+				List<RotationSpec> eventGroupedRotations;
+				if (groupQuantities != null && groupQuantities.length > 0) {
+					// we have grouped quantities, and need to randomly choose one group
+					Object[] randGroupValues = new Object[groupQuantities.length];
+					for (int g=0; g<groupQuantities.length; g++) {
+						if (groupQuantities[g] == Quantity.EVENT_ID) {
+							randGroupValues[g] = eventID;
+						} else {
+							List<?> allValues = config.getQuantitiesMap().get(groupQuantities[g]);
+							// randomly pick one
+							randGroupValues[g] = allValues.get(repeatableRandom.nextInt(allValues.size()));
+//							System.out.println("Random choice for group "+groupQuantities[g]+": "+randGroupValues[g]);
+						}
+					}
+					eventGroupedRotations = RotatedRupVariabilityConfig.getRotationsForQuantities(
+							allEventRotations, groupQuantities, randGroupValues);
+//					System.out.println("Have "+eventGroupedRotations.size()+" for random group");
+				} else {
+					eventGroupedRotations = allEventRotations;
+					System.out.println("Have "+eventGroupedRotations.size()+" (no groups)");
+				}
 				int rawNum = realDataList.get(i).size();
 //				System.out.println("\tEvent "+i+" has "+rawNum+" recordings");
-				int numRecordings = Integer.min(rotations.size(), rawNum);
+				int numRecordings = Integer.min(eventGroupedRotations.size(), rawNum);
 				if (numRecordings < 2) {
 //					System.out.println("\tWARNING: skipping recorded event with only 1 recording");
 					continue;
@@ -2026,16 +2053,16 @@ public abstract class RotatedRupVariabilityPageGen {
 //				if (numRecordings < realDataList.get(i).size())
 //					System.out.println("\tWARNING: only using "+numRecordings+" rotations for event, "
 //							+ "even though we have "+realDataList.get(i).size()+" recordings");
-				if (numRecordings < rotations.size()) {
-					Collections.shuffle(rotations);
+				if (numRecordings < eventGroupedRotations.size()) {
+					Collections.shuffle(eventGroupedRotations, repeatableRandom);
 					for (int j=0; j<numRecordings; j++)
-						downsampledRots.add(rotations.get(j));
+						downsampledRots.add(eventGroupedRotations.get(j));
 				} else {
-					downsampledRots.addAll(rotations);
+					downsampledRots.addAll(eventGroupedRotations);
 				}
 //				System.out.println("\tActually used "+numRecordings+" recordings. Cumulative# : "+downsampledRots.size());
 			}
-			System.out.println("Downsampled from "+totalRotations.size()+" to "+downsampledRots.size()+" rotations to match data. Have "
+			if (D) System.out.println("Downsampled from "+totalRotations.size()+" to "+downsampledRots.size()+" rotations to match data. Have "
 					+realDataList.size()+" real events, "+eventIDs.size()+" simulated events. Originally had "+origNumRecordings+" recordings.");
 			totalRotations = downsampledRots;
 		}
@@ -2297,8 +2324,8 @@ public abstract class RotatedRupVariabilityPageGen {
 			List<DiscretizedFunc> siteStdDevFuncs, List<StdDevPercentileFuncs> siteStdDevPercentiles,
 			DiscretizedFunc totalStdDevFunc, StdDevPercentileFuncs totalStdDevPercentiles) throws IOException {
 		Preconditions.checkState(siteStdDevFuncs == null || siteStdDevFuncs.size() == siteColors.size());
-		if (siteStdDevFuncs != null)
-			Preconditions.checkState(siteStdDevPercentiles == null || siteStdDevPercentiles.size() == siteStdDevFuncs.size());
+//		if (siteStdDevFuncs != null)
+//			Preconditions.checkState(siteStdDevPercentiles == null || siteStdDevPercentiles.size() == siteStdDevFuncs.size());
 		
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -2306,18 +2333,18 @@ public abstract class RotatedRupVariabilityPageGen {
 		for (int i=0; siteStdDevFuncs != null && i<siteStdDevFuncs.size(); i++) {
 			DiscretizedFunc siteFunc = siteStdDevFuncs.get(i);
 			Color color = siteColors.get(i);
-			if (siteStdDevPercentiles != null) {
-				StdDevPercentileFuncs siteStdDevPercentile = siteStdDevPercentiles.get(i);
-				siteStdDevPercentile.bounds95.setName(null);
-				funcs.add(siteStdDevPercentile.bounds95);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-						new Color(color.getRed(), color.getGreen(), color.getBlue(), 10)));
-				siteStdDevPercentile.bounds68.setName(null);
-				funcs.add(siteStdDevPercentile.bounds68);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-						new Color(color.getRed(), color.getGreen(), color.getBlue(), 30)));
-				
-			}
+//			if (siteStdDevPercentiles != null) {
+//				StdDevPercentileFuncs siteStdDevPercentile = siteStdDevPercentiles.get(i);
+//				siteStdDevPercentile.bounds95.setName(null);
+//				funcs.add(siteStdDevPercentile.bounds95);
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
+//						new Color(color.getRed(), color.getGreen(), color.getBlue(), 10)));
+//				siteStdDevPercentile.bounds68.setName(null);
+//				funcs.add(siteStdDevPercentile.bounds68);
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
+//						new Color(color.getRed(), color.getGreen(), color.getBlue(), 30)));
+//				
+//			}
 			funcs.add(siteFunc);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, color));
 		}
