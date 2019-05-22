@@ -314,7 +314,9 @@ public class FaultArrayMapGen {
 		for (ScalarType type : types) {
 			String prefix = type.name().toLowerCase();
 			plotMap(outputDir, prefix+"_20km", 20d, fm, meanU3, type, false);
+			plotMap(outputDir, prefix+"_30km", 30d, fm, meanU3, type, false);
 			plotMap(outputDir, prefix+"_40km", 40d, fm, meanU3, type, false);
+			plotMap(outputDir, prefix+"_60km", 60d, fm, meanU3, type, false);
 		}
 	}
 

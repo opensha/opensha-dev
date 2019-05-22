@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.math3.distribution.LogNormalDistribution;
-import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.jfree.chart.annotations.XYTextAnnotation;
@@ -25,12 +24,13 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.calc.recurInterval.BPT_DistCalc;
+import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
-import org.opensha.sha.simulators.utils.RSQSimUtils;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -47,10 +47,7 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 	private double[] minMags;
 	private double overallMinMag;
 	
-	private List<FaultSectionPrefData> subSects;
-	private Map<IDPairing, Double> subSectDistsCache;
-	private Map<Integer, Double> subSectAreas;
-	private int minElemSectID;
+	private RSQSimSubSectionMapper mapper;
 	
 	private Table<Integer, Double, List<Double>> idToTimesTable;
 	
@@ -58,9 +55,11 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 		this(elems, SectType.ELEMENT, null, 0d, minMags);
 	}
 	
-	public NormalizedFaultRecurrenceIntervalPlot(List<SimulatorElement> elems, SectType sectType, List<FaultSectionPrefData> subSects,
+	public NormalizedFaultRecurrenceIntervalPlot(List<SimulatorElement> elems, SectType sectType, RSQSimSubSectionMapper mapper,
 			double minFractForInclusion, double... minMags) {
 		this.sectType = sectType;
+		Preconditions.checkArgument(sectType == SectType.ELEMENT || mapper != null, "Must supply mapper if anything but element level selected");
+		this.mapper = mapper;
 		this.minFractForInclusion = minFractForInclusion;
 		if (minMags == null || minMags.length == 0)
 			minMags = new double[] { 0d };
@@ -72,13 +71,6 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 			elemsMap.put(e.getID(), e);
 		
 		idToTimesTable = HashBasedTable.create();
-		
-		if (subSects != null) {
-			subSectDistsCache = new HashMap<>();
-			this.subSects = subSects;
-			subSectAreas = RSQSimUtils.calcSubSectAreas(elems, subSects);
-			minElemSectID = RSQSimUtils.getSubSectIndexOffset(elems, subSects);
-		}
 	}
 
 	public SectType getSectType() {
@@ -97,12 +89,14 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 			for (int id : e.getAllElementIDs())
 				ids.add(id);
 		} else {
-			List<List<FaultSectionPrefData>> sects = RSQSimUtils.getSectionsForRupture(e, minElemSectID, subSects,
-					subSectDistsCache, minFractForInclusion, subSectAreas);
-			Preconditions.checkState(!sects.isEmpty());
-			for (List<FaultSectionPrefData> sectsForParent : sects) {
-				Preconditions.checkState(!sectsForParent.isEmpty());
-				for (FaultSectionPrefData sect : sectsForParent) {
+			List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings((RSQSimEvent)e, minFractForInclusion);
+			if (minFractForInclusion >= 0 && bundled.isEmpty())
+				bundled = mapper.getAllSubSectionMappings((RSQSimEvent)e);
+			Preconditions.checkState(!bundled.isEmpty());
+			for (List<SubSectionMapping> bundle : bundled) {
+				Preconditions.checkState(!bundle.isEmpty());
+				for (SubSectionMapping mapping : bundle) {
+					FaultSectionPrefData sect = mapping.getSubSect();
 					if (sectType == SectType.PARENT)
 						ids.add(sect.getParentSectionId());
 					else

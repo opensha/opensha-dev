@@ -60,6 +60,7 @@ import org.opensha.sha.simulators.srf.RSQSimSRFGenerator;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 import org.opensha.sha.simulators.srf.SRF_PointData;
 import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.SimulatorUtils;
 import org.opensha.sha.simulators.utils.SimulatorUtils.SimulatorElementIDComparator;
@@ -258,9 +259,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			subSectAreas = RSQSimUtils.calcSubSectAreas(elements, subSects);
 		
 		System.out.print("Building subsection-based ruptures...");
+		RSQSimSubSectionMapper mapper = new RSQSimSubSectionMapper(subSects, elements, subSectAreas, subSectDistsCache);
 		for (RSQSimEvent event : events) {
-			RSQSimSubSectEqkRupture rupture = RSQSimUtils.buildSubSectBasedRupture(event, subSects, elements,
-					minFractForInclusion, subSectAreas, subSectDistsCache);
+			RSQSimSubSectEqkRupture rupture = RSQSimUtils.buildSubSectBasedRupture(mapper, event, minFractForInclusion);
 			ruptures.add(rupture);
 		}
 		System.out.println("DONE");

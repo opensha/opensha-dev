@@ -65,6 +65,8 @@ import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
 import org.opensha.sha.simulators.srf.RSQSimTransValidIden;
 import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
@@ -351,6 +353,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	private List<FaultSectionPrefData> subSects;
 	private Map<Integer, Double> subSectAreas;
 	private Map<IDPairing, Double> subSectDistsCache;
+	private RSQSimSubSectionMapper subSectMapper;
 	
 	private static Table<FaultModels, DeformationModels, FaultSystemSolution> compSolsTable = HashBasedTable.create();
 	
@@ -1101,39 +1104,37 @@ public class RSQSimCatalog implements XMLSaveable {
 		return subSectDistsCache;
 	}
 	
+	public synchronized RSQSimSubSectionMapper getSubSectMapper() throws IOException {
+		if (subSectMapper == null)
+			subSectMapper = new RSQSimSubSectionMapper(getU3SubSects(), getElements(), getSubSectAreas(), getSubSectDistsCache());
+		return subSectMapper;
+	}
+	
 	public RSQSimSubSectEqkRupture getMappedSubSectRupture(RSQSimEvent event, double minFractForInclusion) {
-		List<SimulatorElement> elements;
-		Map<Integer, Double> subSectAreas = null;
+		RSQSimSubSectionMapper mapper;
 		try {
-			elements = getElements();
-			if (minFractForInclusion > 0d)
-				subSectAreas = getSubSectAreas();
+			mapper = getSubSectMapper();
 		} catch (IOException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
-		
-		return RSQSimUtils.buildSubSectBasedRupture(event, getU3SubSects(), elements,
-				minFractForInclusion, subSectAreas, getSubSectDistsCache());
+		return RSQSimUtils.buildSubSectBasedRupture(mapper, event, minFractForInclusion);
 	}
 	
 	public List<FaultSectionPrefData> getSubSectsForRupture(RSQSimEvent event, double minFractForInclusion) {
-		List<SimulatorElement> elements;
-		Map<Integer, Double> subSectAreas = null;
+		RSQSimSubSectionMapper mapper;
 		try {
-			elements = getElements();
-			if (minFractForInclusion > 0d)
-				subSectAreas = getSubSectAreas();
+			mapper = getSubSectMapper();
 		} catch (IOException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
 		
-		int minSectIndex = RSQSimUtils.getSubSectIndexOffset(elements, getU3SubSects());
-		
-		List<List<FaultSectionPrefData>> bundled =  RSQSimUtils.getSectionsForRupture(event, minSectIndex,
-				getU3SubSects(), getSubSectDistsCache(), minFractForInclusion, subSectAreas);
+		List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings(event, minFractForInclusion);
+		if (minFractForInclusion >= 0 && bundled.isEmpty())
+			bundled = mapper.getAllSubSectionMappings(event);
 		List<FaultSectionPrefData> allSects = new ArrayList<>();
-		for (List<FaultSectionPrefData> sects : bundled)
-			allSects.addAll(sects);
+		for (List<SubSectionMapping> bundle : bundled)
+			for (SubSectionMapping mapping : bundle)
+				allSects.add(mapping.getSubSect());
 		return allSects;
 	}
 	
@@ -1351,10 +1352,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		if (replot || !new File(outputDir, "norm_ri_elem_m7.5.png").exists()) {
 			List<NormalizedFaultRecurrenceIntervalPlot> myPlots = new ArrayList<>();
 			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), riMinMags));
+			RSQSimSubSectionMapper mapper = getSubSectMapper();
 			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.SUBSECTION,
-					getU3SubSects(), minFractForInclusion, riMinMags));
+					mapper, minFractForInclusion, riMinMags));
 			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.PARENT,
-					getU3SubSects(), minFractForInclusion, riMinMags));
+					mapper, minFractForInclusion, riMinMags));
 			for (NormalizedFaultRecurrenceIntervalPlot plot : myPlots)
 				plot.initialize(getName(), outputDir, "norm_ri_"+plot.getSectType().getPrefix());
 			plots.addAll(myPlots);
@@ -1399,13 +1401,14 @@ public class RSQSimCatalog implements XMLSaveable {
 		else
 			testMagStr = (float)riMinMags[0]+"";
 		if (replot || !new File(outputDir, "interevent_elements_m"+testMagStr+"_scatter.png").exists()) {
+			RSQSimSubSectionMapper mapper = getSubSectMapper();
 			SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
-					SectionRecurrenceComparePlot.SectType.ELEMENT, 0, riMinMags);
+					SectionRecurrenceComparePlot.SectType.ELEMENT, mapper, 0, riMinMags);
 			elemCompare.initialize(getName(), outputDir, "interevent_elements");
 			plots.add(elemCompare);
 			
 			SectionRecurrenceComparePlot subSectCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
-					SectionRecurrenceComparePlot.SectType.SUBSECTION, minFractForInclusion, riMinMags);
+					SectionRecurrenceComparePlot.SectType.SUBSECTION, mapper, minFractForInclusion, riMinMags);
 			subSectCompare.initialize(getName(), outputDir, "interevent_sub_sects");
 			plots.add(subSectCompare);
 		}

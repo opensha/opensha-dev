@@ -27,9 +27,12 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -39,6 +42,7 @@ import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
+import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 
 public class SectionRecurrenceComparePlot extends AbstractPlot {
 	
@@ -80,16 +84,16 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 	
 	private Table<Integer, Double, Integer> sectCounts;
 	
-	private List<FaultSectionPrefData> compSects;
-	private Map<IDPairing, Double> subSectDistsCache;
-	private Map<Integer, Double> subSectAreas;
 	private int minElemSectID;
+	private RSQSimSubSectionMapper mapper;
 	
 	public SectionRecurrenceComparePlot(List<SimulatorElement> elems, FaultSystemSolution compSol, String compName,
-			SectType sectType, double minFractForInclusion, double... minMags) {
+			SectType sectType, RSQSimSubSectionMapper mapper, double minFractForInclusion, double... minMags) {
 		this.compSol = compSol;
 		this.compName = compName;
 		this.sectType = sectType;
+		Preconditions.checkArgument(sectType == SectType.ELEMENT || mapper != null, "Must supply mapper if anything but element level selected");
+		this.mapper = mapper;
 		this.minFractForInclusion = minFractForInclusion;
 		if (minMags == null || minMags.length == 0)
 			minMags = new double[] { 0d };
@@ -101,10 +105,7 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 			elemsMap.put(e.getID(), e);
 		
 		sectCounts = HashBasedTable.create();
-		subSectDistsCache = new HashMap<>();
-		compSects = compSol.getRupSet().getFaultSectionDataList();
-		subSectAreas = RSQSimUtils.calcSubSectAreas(elems, compSects);
-		minElemSectID = RSQSimUtils.getSubSectIndexOffset(elems, compSects);
+		this.minElemSectID = RSQSimUtils.getSubSectIndexOffset(elems, mapper.getSubSections());
 	}
 
 	@Override
@@ -119,12 +120,14 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 			for (int id : e.getAllElementIDs())
 				ids.add(id);
 		} else {
-			List<List<FaultSectionPrefData>> sects = RSQSimUtils.getSectionsForRupture(e, minElemSectID, compSects,
-					subSectDistsCache, minFractForInclusion, subSectAreas);
-			Preconditions.checkState(!sects.isEmpty());
-			for (List<FaultSectionPrefData> sectsForParent : sects) {
-				Preconditions.checkState(!sectsForParent.isEmpty());
-				for (FaultSectionPrefData sect : sectsForParent) {
+			List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings((RSQSimEvent)e, minFractForInclusion);
+			if (minFractForInclusion >= 0 && bundled.isEmpty())
+				bundled = mapper.getAllSubSectionMappings((RSQSimEvent)e);
+			Preconditions.checkState(!bundled.isEmpty());
+			for (List<SubSectionMapping> bundle : bundled) {
+				Preconditions.checkState(!bundle.isEmpty());
+				for (SubSectionMapping mapping : bundle) {
+					FaultSectionPrefData sect = mapping.getSubSect();
 					if (sectType == SectType.PARENT)
 						ids.add(sect.getParentSectionId());
 					else

@@ -67,8 +67,8 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_3165.instance(baseDir);
 		
-//		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
-		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
+		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
+//		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
 //		VelocityModel forceVM = null;
 		
 		double[] calcPeriods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};
@@ -143,7 +143,9 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		
 		Map<Integer, RSQSimEvent> eventsMap = loadEvents(catalog, eventIDsSet);
 		
-		for (Scenario scenario : pageGensMap.keySet()) {
+		for (Scenario scenario : Scenario.values()) {
+			if (!pageGensMap.containsKey(scenario))
+				continue;
 			System.out.println("Doing scenario: "+scenario);
 			
 			RotatedRupVariabilityPageGen pageGen = pageGensMap.get(scenario);

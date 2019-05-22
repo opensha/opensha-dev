@@ -26,6 +26,7 @@ import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
@@ -175,7 +176,7 @@ public class RSQSimBatchPlotGen {
 				Preconditions.checkArgument(u3Sol != null, "Must supply comparison solution");
 				double[] minMags = commaDoubleSplit(arg);
 				SectionRecurrenceComparePlot riPlot = new SectionRecurrenceComparePlot(elemBundle.getElements(),
-						u3Sol, "UCERF3 On-Fault", SectType.ELEMENT, fract_inclusion_default, minMags);
+						u3Sol, "UCERF3 On-Fault", SectType.ELEMENT, elemBundle.getSubSectMapper(), fract_inclusion_default, minMags);
 				riPlot.initialize(catalogName, outputDir, "interevent_elements");
 				return Lists.newArrayList(riPlot);
 			}
@@ -187,7 +188,7 @@ public class RSQSimBatchPlotGen {
 				Preconditions.checkArgument(u3Sol != null, "Must supply comparison solution");
 				double[] minMags = commaDoubleSplit(arg);
 				SectionRecurrenceComparePlot riPlot = new SectionRecurrenceComparePlot(elemBundle.getElements(),
-						u3Sol, "UCERF3 On-Fault", SectType.SUBSECTION, fract_inclusion_default, minMags);
+						u3Sol, "UCERF3 On-Fault", SectType.SUBSECTION, elemBundle.getSubSectMapper(), fract_inclusion_default, minMags);
 				riPlot.initialize(catalogName, outputDir, "interevent_sub_sects");
 				return Lists.newArrayList(riPlot);
 			}
@@ -199,7 +200,7 @@ public class RSQSimBatchPlotGen {
 				Preconditions.checkArgument(u3Sol != null, "Must supply comparison solution");
 				double[] minMags = commaDoubleSplit(arg);
 				SectionRecurrenceComparePlot riPlot = new SectionRecurrenceComparePlot(elemBundle.getElements(),
-						u3Sol, "UCERF3 On-Fault", SectType.PARENT, fract_inclusion_default, minMags);
+						u3Sol, "UCERF3 On-Fault", SectType.PARENT, elemBundle.getSubSectMapper(), fract_inclusion_default, minMags);
 				riPlot.initialize(catalogName, outputDir, "interevent_parents");
 				return Lists.newArrayList(riPlot);
 			}
@@ -231,9 +232,9 @@ public class RSQSimBatchPlotGen {
 				List<SimulatorElement> elems = elemBundle.getElements();
 				plots.add(new NormalizedFaultRecurrenceIntervalPlot(elems, minMags));
 				plots.add(new NormalizedFaultRecurrenceIntervalPlot(elems, SectType.SUBSECTION,
-						u3Sol.getRupSet().getFaultSectionDataList(), fract_inclusion_default, minMags));
+						elemBundle.getSubSectMapper(), fract_inclusion_default, minMags));
 				plots.add(new NormalizedFaultRecurrenceIntervalPlot(elems, SectType.PARENT,
-						u3Sol.getRupSet().getFaultSectionDataList(), fract_inclusion_default, minMags));
+						elemBundle.getSubSectMapper(), fract_inclusion_default, minMags));
 				for (NormalizedFaultRecurrenceIntervalPlot plot : plots) {
 					plot.initialize(catalogName, outputDir, "norm_ri_"+plot.getSectType().getPrefix());
 				}
@@ -510,9 +511,11 @@ public class RSQSimBatchPlotGen {
 		private Map<Integer, String> faultNamesMap;
 		private Map<Integer, Integer> faultIDtoParentSectMap;
 		private Map<Integer, SimulatorElement> elementIDMap;
+		private RSQSimSubSectionMapper mapper;
 		
 		public ElementBundles(List<SimulatorElement> elements, FaultSystemRupSet rupSet) {
 			this.elements = elements;
+			this.mapper = new RSQSimSubSectionMapper(rupSet.getFaultSectionDataList(), elements);
 			
 			elementIDMap = Maps.newHashMap();
 			minSectIndex = Integer.MAX_VALUE;
@@ -599,6 +602,10 @@ public class RSQSimBatchPlotGen {
 			if (parentID == null)
 				return -1;
 			return parentID;
+		}
+
+		public RSQSimSubSectionMapper getSubSectMapper() {
+			return mapper;
 		}
 	}
 	
