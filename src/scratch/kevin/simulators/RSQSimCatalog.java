@@ -66,6 +66,7 @@ import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
 import org.opensha.sha.simulators.srf.RSQSimTransValidIden;
 import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SlipAlongSectAlgorithm;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
@@ -93,7 +94,9 @@ import scratch.kevin.simulators.plots.PaleoOpenIntervalPlot;
 import scratch.kevin.simulators.plots.RecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
+import scratch.kevin.simulators.plots.SlipLengthScalingPlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
+import scratch.kevin.simulators.plots.SlipAlongRupturePlot;
 import scratch.kevin.simulators.plots.StationarityPlot;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.RotatedRupVariabilityMagDistPageGen.RuptureType;
@@ -1303,6 +1306,134 @@ public class RSQSimCatalog implements XMLSaveable {
 		table.addColumn("![Slip Area Scatter]("+outputDir.getName()+"/slip_area.png)");
 		table.addColumn("![Slip Area Hist]("+outputDir.getName()+"/slip_area_hist2D.png)");
 		table.finalizeLine();
+		lines.addAll(table.build());
+		
+		if (replot || !new File(outputDir, "slip_len_"+SlipAlongSectAlgorithm.MID_SEIS_SURF_SLIP_LEN.name()+".png").exists()) {
+			SlipLengthScalingPlot slipLengthPlot = new SlipLengthScalingPlot(getSubSectMapper(), 6.5);
+			slipLengthPlot.initialize(getName(), outputDir, "slip_len");
+			plots.add(slipLengthPlot);
+		}
+		lines.add("### Slip-Length Plots");
+		lines.add(topLink);
+		lines.add("");
+		lines.add("These plots compute average slip-length scaling at mid-seismogenic depth. We define mid-seismogenic depth "
+				+ "to be no deeper than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_MAX_DEPTH_DEFAULT)+" km, "
+				+ "no shallower than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_MIN_DEPTH_DEFAULT)+" km, "
+				+ "and no less than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_BUFFER_DEFAULT)+" km down- or "
+				+ "up-dip from the top or bottom of the fault. Average slip is computed across all elements in this "
+				+ "mid-seismogenic region, including any which did not slip, along the full length of the rupture.");
+		lines.add("");
+		lines.add("We define the rupture length, which also determines the region at mid-seismogenic depth across which we "
+				+ "compute average slip, multiple ways in order to test sensitivity:");
+		lines.add("");
+		for (SlipAlongSectAlgorithm slipAlg : SlipAlongSectAlgorithm.values())
+			lines.add("* **"+slipAlg+":** "+slipAlg.getDescription());
+		lines.add("");
+		File examplePlot = new File(outputDir, "slip_len_example_rupture.png");
+		if (examplePlot.exists()) {
+			lines.add("These length algorithms are illustrated in the following example plot, which also has the "
+					+ "mid-seismogenic depth range outlined in a cyan dashed line:");
+			lines.add("");
+			lines.add("![Example plot]("+outputDir.getName()+"/"+examplePlot.getName()+")");
+			lines.add("");
+		}
+		lines.add("The average value is plotted in a thick gray line, and UCERF3 Scaling Relationships in colored lines "
+				+ "(assuming a down dip width of "+optionalDigitDF.format(SlipLengthScalingPlot.LEN_COMP_DDW)+" km).");
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("Lengh Algorithm", "Scatter", "2-D Hist");
+		for (SlipAlongSectAlgorithm slipAlg : SlipAlongSectAlgorithm.values()) {
+			table.initNewLine();
+			table.addColumn("**"+slipAlg+"**");
+			String prefix = "slip_len_"+slipAlg.name();
+			table.addColumn("![Slip Length Scatter]("+outputDir.getName()+"/"+prefix+".png)");
+			table.addColumn("![Slip Length Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
+			table.finalizeLine();
+		}
+		lines.addAll(table.build());
+		
+		SlipAlongSectAlgorithm dsrLenAlg = SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN;
+		List<Range> lengthBins = new ArrayList<>();
+		lengthBins.add(null);
+		lengthBins.add(new Range(0d, 25));
+		lengthBins.add(new Range(25, 50));
+		lengthBins.add(new Range(50, 100));
+		lengthBins.add(new Range(100, Double.POSITIVE_INFINITY));
+		if (replot || !new File(outputDir, "slip_along_rupture_multi_norm.png").exists()) {
+			SlipAlongRupturePlot slipAlongPlot = new SlipAlongRupturePlot(getSubSectMapper(), 6.5, dsrLenAlg, fm, lengthBins);
+			slipAlongPlot.initialize(getName(), outputDir, "slip_along_rupture");
+			plots.add(slipAlongPlot);
+		}
+		lines.add("### Slip Along Rupture (Dsr) Plots");
+		lines.add(topLink);
+		lines.add("");
+		lines.add("These plots show the slip along rupture distiribution, noted D<sub>SR</sub> in UCERF3. First we compute average "
+				+ "slip on each mapped subsection at mid-seismogenic depth (using the *"+dsrLenAlg+"* algorithm), then plot that slip along "
+				+ "strike, normalized by the maximum slip across all subsections in that rupture. We do this for single-fault events, which "
+				+ "can span multiple segments (e.g. SAF Mojave and San Bernardino), and also separately for each junction in multi-fault events. "
+				+ "We only consider ruptures where at least 2 subsections participated (2 on each side of the jump for multi-fault ruptures). "
+				+ "This is done using the UCERF3 'named faults' list to determine if multiple fault sections belong to the same master fault.");
+		lines.add("");
+		lines.add("The calculation is done independently for different length bins. Note that average slip is discretized at the subsection "
+				+ "level, so the the shortest bin (which is only a few subsections long) will show less variation by construction.");
+		lines.add("");
+		lines.add("Average values are plotted with a solid black line, and sqrt(sin(|x*&pi;|)) in a dashed gray line (normalized length "
+				+ "plots only).");
+		lines.add("");
+		lines.add("#### Single-Fault Slip Along Rupture");
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("Rupture Length", "Absolute distance from either rupture endpoint", "Normalized distance from either rupture endpoint");
+		for (Range lengthBin : lengthBins) {
+			table.initNewLine();
+			String lenStr;
+			String prefixAdd = "";
+			if (lengthBin == null) {
+				lenStr = "All Lengths";
+			} else {
+				if (Double.isInfinite(lengthBin.getUpperBound())) {
+					lenStr = "Len≥"+optionalDigitDF.format(lengthBin.getLowerBound());
+					prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"+";
+				} else {
+					lenStr = "Len=["+optionalDigitDF.format(lengthBin.getLowerBound())+" "+optionalDigitDF.format(lengthBin.getUpperBound())+"]";
+					prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"_"+optionalDigitDF.format(lengthBin.getUpperBound());
+				}
+			}
+			table.addColumn("**"+lenStr+"**");
+			table.addColumn("![Slip Alon Rupture Absolute]("+outputDir.getName()+"/slip_along_rupture_single_abs"+prefixAdd+".png)");
+			table.addColumn("![Slip Alon Rupture Normalized]("+outputDir.getName()+"/slip_along_rupture_single_norm"+prefixAdd+".png)");
+			table.finalizeLine();
+		}
+		lines.addAll(table.build());
+		lines.add("");
+		lines.add("#### Multi-Fault Slip Along Rupture");
+		lines.add("");
+		lines.add("These plots show D<sub>SR</sub> for multi-fault ruptures, on either side of a jump. The left side (negative x-values) "
+				+ "is always closer to either end of the rupture, and the right side (positive x-values) closer to the center. Ruptures are "
+				+ "binned according the length of the rupture on that fault, rather than the total length of the rupture.");
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("Rupture Length", "Absolute distance on either side of jump", "Normalized distance on either side of jump");
+		for (Range lengthBin : lengthBins) {
+			table.initNewLine();
+			String lenStr;
+			String prefixAdd = "";
+			if (lengthBin == null) {
+				lenStr = "All Lengths";
+			} else {
+				if (Double.isInfinite(lengthBin.getUpperBound())) {
+					lenStr = "Len≥"+optionalDigitDF.format(lengthBin.getLowerBound());
+					prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"+";
+				} else {
+					lenStr = "Len=["+optionalDigitDF.format(lengthBin.getLowerBound())+" "+optionalDigitDF.format(lengthBin.getUpperBound())+"]";
+					prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"_"+optionalDigitDF.format(lengthBin.getUpperBound());
+				}
+			}
+			table.addColumn("**"+lenStr+"**");
+			table.addColumn("![Slip Alon Rupture Absolute]("+outputDir.getName()+"/slip_along_rupture_multi_abs"+prefixAdd+".png)");
+			table.addColumn("![Slip Alon Rupture Normalized]("+outputDir.getName()+"/slip_along_rupture_multi_norm"+prefixAdd+".png)");
+			table.finalizeLine();
+		}
 		lines.addAll(table.build());
 		
 		if (replot || !new File(outputDir, "rupture_velocity_scatter.png").exists()) {

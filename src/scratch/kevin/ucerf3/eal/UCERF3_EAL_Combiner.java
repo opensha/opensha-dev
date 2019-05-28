@@ -18,6 +18,7 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.gui.plot.GraphWindow;
@@ -34,6 +35,7 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolutionFetcher;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
@@ -309,6 +311,48 @@ public class UCERF3_EAL_Combiner {
 		return totalEALs;
 	}
 	
+	public EvenlyDiscretizedFunc getTotalEALMagDist(double lossScale) {
+		return getTotalEALMagDist(trueMeanSol, faultLosses, griddedLosses, lossScale);
+	}
+	
+	public static EvenlyDiscretizedFunc getTotalEALMagDist(FaultSystemSolution trueMeanSol, double[][] faultLosses,
+			DiscretizedFunc[] griddedLosses, double lossScale) {
+		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(5.05, 41, 0.1);
+		
+		FaultSystemRupSet meanRupSet = trueMeanSol.getRupSet();
+		
+		// do fault based
+		Preconditions.checkState(faultLosses.length == meanRupSet.getNumRuptures());
+		DiscretizedFunc[] rupMFDs = trueMeanSol.getRupMagDists();
+		for (int r=0; r<faultLosses.length; r++) {
+			DiscretizedFunc mfd = rupMFDs[r];
+			Preconditions.checkState(mfd.size() == faultLosses[r].length);
+			for (int i=0; i<faultLosses[r].length; i++) {
+				double mag = mfd.getX(i);
+				double rate = mfd.getY(i);
+				double loss = faultLosses[r][i]*lossScale;
+				int ind = func.getClosestXIndex(mag);
+				func.add(ind, loss*rate);
+			}
+		}
+		
+		if (griddedLosses != null) {
+			// do gridded
+			GridSourceProvider gridProv = trueMeanSol.getGridSourceProvider();
+			Preconditions.checkState(gridProv.size() == griddedLosses.length,
+					"Have %s giddedLosses but grid prov has %s nodes", gridProv.size(), griddedLosses.length);
+			for (int n=0; n<griddedLosses.length; n++) {
+				DiscretizedFunc griddedLossDist = griddedLosses[n];
+				IncrementalMagFreqDist mfd = gridProv.getNodeMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF);
+				Preconditions.checkState(griddedLossDist.size() == mfd.size());
+				for (int i=0; i<griddedLossDist.size(); i++)
+					func.add(func.getClosestXIndex(griddedLossDist.getX(i)), griddedLossDist.getY(i)*lossScale*mfd.getY(i));
+			}
+		}
+		
+		return func;
+	}
+	
 	private static Map<LogicTreeBranch, Double> loadValidateRuns(File validateDir, String prefix, boolean gridded)
 			throws IOException {
 		Map<LogicTreeBranch, Double> results = Maps.newHashMap();
@@ -374,7 +418,6 @@ public class UCERF3_EAL_Combiner {
 //		BackgroundRupType gridType = BackgroundRupType.CROSSHAIR;
 		boolean isFSSMapped = true; // if false, then organized as erf source/rup. else, fss rup/mag
 		BranchWeightProvider weightProv = new APrioriBranchWeightProvider();
-		
 		
 		for (MagDependentAperiodicityOptions cov : covs) {
 			String covName;
