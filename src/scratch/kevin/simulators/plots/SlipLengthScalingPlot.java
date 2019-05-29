@@ -1,18 +1,22 @@
 package scratch.kevin.simulators.plots;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Stroke;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYLineAnnotation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
@@ -518,11 +522,16 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 		
 		double curDAS = 0;
 		Map<SlipAlongSectAlgorithm, DAS_Record> algDAS_extents = new HashMap<>();
-		List<XY_DataSet> slippedElemFuncs = new ArrayList<>();
-		List<XY_DataSet> otherElemFuncs = new ArrayList<>();
+		Stroke thickElemStroke = new BasicStroke(1.5f);
+		Color slippedElemColor = Color.BLACK;
+		Stroke regElemStroke = new BasicStroke(1f);
+		Color regElemColor = Color.GRAY;
+		double maxDepth = 0d;
+		List<XYAnnotation> slipAnns = new ArrayList<>();
 		for (int m=0; m<mappings.size(); m++) {
 			SubSectionMapping mapping = mappings.get(m);
 			double totLen = mapping.getLengthForSlip(SlipAlongSectAlgorithm.MID_SEIS_FULL_LEN);
+			HashSet<SimulatorElement> midSeisElems = mapper.getSlipSectionsForSect(mapping.getSubSect());
 			for (SimulatorElement elem : mapper.getElementsForSection(mapping.getSubSect())) {
 				SubSectDAS_Record elemDAS = mapper.getElemSubSectDAS(elem);
 				DefaultXY_DataSet elemXY = new DefaultXY_DataSet();
@@ -532,24 +541,46 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 					elemXY.set(das, verts[i].getDepth());
 				}
 				
-				if (slipsMap.containsKey(elem)) {
-					// this one slipped, add filled polygon annotation
-					Color color = slipCPT.getColor(slipsMap.get(elem).floatValue());
-					// make it transparent
-					color = new Color(color.getRed(), color.getGreen(), color.getBlue(), 80);
-					double[] polyElems = new double[verts.length*2];
-					int ind = 0;
-					for (Point2D pt : elemXY) {
-						polyElems[ind++] = pt.getX();
-						polyElems[ind++] = pt.getY();
-					}
-					anns.add(new XYPolygonAnnotation(polyElems, null, null, color));
-					slippedElemFuncs.add(elemXY);
+				boolean slipped = slipsMap.containsKey(elem);
+				boolean midSeis = midSeisElems.contains(elem);
+				
+				Color fillColor;
+				Color paint;
+				if (slipped) {
+					fillColor = slipCPT.getColor(slipsMap.get(elem).floatValue());
+					paint = slippedElemColor;
 				} else {
-					otherElemFuncs.add(elemXY);
+					fillColor = Color.WHITE;
+					paint = regElemColor;
 				}
-				// close the element XY
-				elemXY.set(elemXY.get(0));
+				Stroke stroke;
+				if (midSeis)
+					stroke = thickElemStroke;
+				else
+					stroke = regElemStroke;
+				
+				if (midSeis) {
+					// make it a little transparent
+					fillColor = new Color(fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), 160);
+				} else {
+					// make it very transparent
+					fillColor = new Color(fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), 80);
+					if (!slipped)
+						paint = new Color(paint.getRed(), paint.getGreen(), paint.getBlue(), 127);
+				}
+				
+				double[] polyElems = new double[verts.length*2];
+				int ind = 0;
+				for (Point2D pt : elemXY) {
+					polyElems[ind++] = pt.getX();
+					polyElems[ind++] = pt.getY();
+					maxDepth = Math.max(maxDepth, pt.getY());
+				}
+				XYPolygonAnnotation ann = new XYPolygonAnnotation(polyElems, stroke, paint, fillColor);
+				if (slipped)
+					slipAnns.add(ann);
+				else
+					anns.add(ann);
 			}
 			for (SlipAlongSectAlgorithm alg : SlipAlongSectAlgorithm.values()) {
 				DAS_Record algDAS = mapping.getDASforSlip(alg);
@@ -567,6 +598,7 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 			// draw the subsection now
 			double sectUpperDepth = mapping.getSubSect().getOrigAveUpperDepth();
 			double sectLowerDepth = mapping.getSubSect().getAveLowerDepth();
+			maxDepth = Math.max(maxDepth, sectLowerDepth);
 			DefaultXY_DataSet sectOutline = new DefaultXY_DataSet();
 			sectOutline.set(curDAS, sectUpperDepth);
 			sectOutline.set(curDAS+totLen, sectUpperDepth);
@@ -579,23 +611,9 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, new Color(210, 105, 30))); // brown
 			curDAS += totLen;
 		}
-		PlotCurveCharacterstics slippedChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, Color.BLACK);
-		PlotCurveCharacterstics otherChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.LIGHT_GRAY);
-		for (int i=0; i<otherElemFuncs.size(); i++) {
-			if (i ==0 )
-				otherElemFuncs.get(i).setName("All Elements");
-			funcs.add(otherElemFuncs.get(i));
-			chars.add(otherChar);
-		}
-		for (int i=0; i<slippedElemFuncs.size(); i++) {
-			if (i ==0 )
-				slippedElemFuncs.get(i).setName("Slipped Elements");
-			funcs.add(slippedElemFuncs.get(i));
-			chars.add(slippedChar);
-		}
-		double maxDepth = 0d;
-		for (XY_DataSet xy : funcs)
-			maxDepth = Math.max(maxDepth, xy.getMaxY());
+		
+		// add all slip anns on top
+		anns.addAll(slipAnns);
 		
 		// now draw mid-seismogenic depth range
 		double[] midDepthRange = mapper.getSlipOnSectionDepthConstraints(mappings.get(0).getSubSect());
@@ -609,7 +627,7 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 		funcs.add(midSeisZone);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.CYAN.darker()));
 		
-		Color[] algColors = {Color.BLACK, Color.BLUE.darker(), Color.GREEN.darker(), Color.RED.darker(), Color.MAGENTA.darker()};
+		Color[] algColors = {Color.BLACK, Color.RED.darker(), Color.GREEN.darker(), Color.BLUE.darker(), Color.RED.darker()};
 		SlipAlongSectAlgorithm[] algs = SlipAlongSectAlgorithm.values();
 		double depthDelta = maxDepth*0.07;
 		maxDepth += depthDelta;
@@ -622,28 +640,16 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 			if (das == null)
 				continue;
 			maxDepth += depthDelta;
-			DefaultXY_DataSet boundsXY = new DefaultXY_DataSet();
-			boundsXY.set(das.startDAS, midDepthRange[0]);
-			boundsXY.set(das.startDAS, maxDepth);
-			boundsXY.set(das.endDAS, maxDepth);
-			boundsXY.set(das.endDAS, midDepthRange[0]);
-			funcs.add(boundsXY);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, color));
-			DefaultXY_DataSet leftBoundsXY = new DefaultXY_DataSet();
-			leftBoundsXY.set(das.startDAS, midDepthRange[0]);
-			leftBoundsXY.set(das.startDAS, midDepthRange[1]);
-			funcs.add(leftBoundsXY);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, color));
-			DefaultXY_DataSet rightBoundsXY = new DefaultXY_DataSet();
-			rightBoundsXY.set(das.endDAS, midDepthRange[0]);
-			rightBoundsXY.set(das.endDAS, midDepthRange[1]);
-			funcs.add(rightBoundsXY);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, color));
-			DefaultXY_DataSet bottomBoundsXY = new DefaultXY_DataSet();
-			bottomBoundsXY.set(das.startDAS, maxDepth);
-			bottomBoundsXY.set(das.endDAS, maxDepth);
-			funcs.add(bottomBoundsXY);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
+			
+			Stroke dotStroke = PlotLineType.DOTTED.buildStroke(3f);
+			anns.add(new XYLineAnnotation(das.startDAS, midDepthRange[0], das.startDAS, maxDepth, dotStroke, color));
+			anns.add(new XYLineAnnotation(das.endDAS, midDepthRange[0], das.endDAS, maxDepth, dotStroke, color));
+
+			Stroke regStroke = new BasicStroke(3f);
+			anns.add(new XYLineAnnotation(das.startDAS, maxDepth, das.endDAS, maxDepth, regStroke, color));
+			Stroke thickStroke = new BasicStroke(5f);
+			anns.add(new XYLineAnnotation(das.startDAS, midDepthRange[0], das.startDAS, midDepthRange[1], thickStroke, color));
+			anns.add(new XYLineAnnotation(das.endDAS, midDepthRange[0], das.endDAS, midDepthRange[1], thickStroke, color));
 
 			double sumLength = 0d;
 			double areaWeightedSlip = 0d;
@@ -662,7 +668,7 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 			textAnn.setFont(font);
 			textAnn.setPaint(color);
 			anns.add(textAnn);
-			String slipStr = "len="+optionalDigitDF.format(sumLength)+" km, slip="+optionalDigitDF.format(aveSlip)+" m";
+			String slipStr = "len="+optionalDigitDF.format(sumLength)+" [km], ⟨slip⟩="+optionalDigitDF.format(aveSlip)+" [m]";
 			textAnn = new XYTextAnnotation(slipStr, das.midDAS, maxDepth-0.1*depthDelta);
 			textAnn.setTextAnchor(TextAnchor.BASELINE_CENTER);
 			textAnn.setFont(subFont);
@@ -679,7 +685,7 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 		String yAxisLabel = "Depth (km)";
 		
 		PlotSpec plot = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
-		plot.setLegendVisible(true);
+		plot.setLegendVisible(false);
 		plot.setPlotAnnotations(anns);
 		
 		HeadlessGraphPanel gp = buildGraphPanel();
