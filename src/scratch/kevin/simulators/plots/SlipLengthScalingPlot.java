@@ -197,6 +197,8 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 			return;
 		if (midSlippedLen == surfSlippedLen)
 			return;
+		if (totalLen < 30 || totalLen > 60)
+			return;
 		// we have a match!
 		System.out.println("Found an example event!");
 		exampleEvent = event;
@@ -615,17 +617,35 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 		// add all slip anns on top
 		anns.addAll(slipAnns);
 		
+		Range xRange = new Range(-curDAS*0.005, curDAS*1.1);
+		
 		// now draw mid-seismogenic depth range
 		double[] midDepthRange = mapper.getSlipOnSectionDepthConstraints(mappings.get(0).getSubSect());
 		DefaultXY_DataSet midSeisZone = new DefaultXY_DataSet();
-		midSeisZone.set(0d, midDepthRange[0]);
-		midSeisZone.set(curDAS, midDepthRange[0]);
-		midSeisZone.set(curDAS, midDepthRange[1]);
-		midSeisZone.set(0d, midDepthRange[1]);
-		midSeisZone.set(0d, midDepthRange[0]);
+		midSeisZone.set(xRange.getLowerBound(), midDepthRange[0]);
+		midSeisZone.set(xRange.getUpperBound(), midDepthRange[0]);
+		midSeisZone.set(xRange.getUpperBound(), midDepthRange[1]);
+		midSeisZone.set(xRange.getLowerBound(), midDepthRange[1]);
+		midSeisZone.set(xRange.getLowerBound(), midDepthRange[0]);
 		midSeisZone.setName("Mid-Seismogenic Zone");
 		funcs.add(midSeisZone);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.CYAN.darker()));
+		Color midColor = Color.CYAN.darker();
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, midColor));
+		double midAnnX = 0.5*(xRange.getUpperBound()+curDAS);
+		double midDepthSpan = midDepthRange[1]-midDepthRange[0];
+		double midAnnY1 = midDepthRange[0] + 0.47*midDepthSpan;
+		double midAnnY2 = midDepthRange[0] + 0.53*midDepthSpan;
+		Font midFont = new Font(Font.SANS_SERIF, Font.BOLD, 16);
+		XYTextAnnotation midAnn1 = new XYTextAnnotation("Mid-Seis", midAnnX, midAnnY1);
+		midAnn1.setFont(midFont);
+		midAnn1.setTextAnchor(TextAnchor.BASELINE_CENTER);
+		midAnn1.setPaint(midColor);
+		anns.add(midAnn1);
+		XYTextAnnotation midAnn2 = new XYTextAnnotation("Slip Zone", midAnnX, midAnnY2);
+		midAnn2.setFont(midFont);
+		midAnn2.setTextAnchor(TextAnchor.TOP_CENTER);
+		midAnn2.setPaint(midColor);
+		anns.add(midAnn2);
 		
 		Color[] algColors = {Color.BLACK, Color.RED.darker(), Color.GREEN.darker(), Color.BLUE.darker(), Color.RED.darker()};
 		SlipAlongSectAlgorithm[] algs = SlipAlongSectAlgorithm.values();
@@ -677,8 +697,7 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 			maxDepth += depthDelta;
 		}
 		
-		Range xRange = new Range(-1d, curDAS+1d);
-		Range yRange = new Range(-0.2, maxDepth);
+		Range yRange = new Range(maxDepth*-0.005, maxDepth);
 		
 		String title = "Slip-Length Algorithms Example";
 		String xAxisLabel = "Distance Along Strike (km)";
@@ -688,10 +707,14 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 		plot.setLegendVisible(false);
 		plot.setPlotAnnotations(anns);
 		
+		double xPerY = xRange.getLength()/yRange.getLength();
+		int ySize = 800;
+		int xSize = (int)Math.round(ySize*xPerY);
+		
 		HeadlessGraphPanel gp = buildGraphPanel();
 		gp.setyAxisInverted(true);
 		gp.drawGraphPanel(plot, false, false, xRange, yRange);
-		gp.getChartPanel().setSize(1000, 800);
+		gp.getChartPanel().setSize(xSize, ySize);
 		File outputDir = getOutputDir();
 		String prefix = getOutputPrefix()+"_example_rupture";
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
