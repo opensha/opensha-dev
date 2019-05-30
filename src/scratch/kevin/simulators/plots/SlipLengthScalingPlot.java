@@ -621,17 +621,24 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 		
 		// now draw mid-seismogenic depth range
 		double[] midDepthRange = mapper.getSlipOnSectionDepthConstraints(mappings.get(0).getSubSect());
-		DefaultXY_DataSet midSeisZone = new DefaultXY_DataSet();
-		midSeisZone.set(xRange.getLowerBound(), midDepthRange[0]);
-		midSeisZone.set(xRange.getUpperBound(), midDepthRange[0]);
-		midSeisZone.set(xRange.getUpperBound(), midDepthRange[1]);
-		midSeisZone.set(xRange.getLowerBound(), midDepthRange[1]);
-		midSeisZone.set(xRange.getLowerBound(), midDepthRange[0]);
-		midSeisZone.setName("Mid-Seismogenic Zone");
-		funcs.add(midSeisZone);
+		double midLineMaxX = xRange.getUpperBound()*0.995;
+		DefaultXY_DataSet midSeisUpperLine = new DefaultXY_DataSet();
+		midSeisUpperLine.set(0d, midDepthRange[0]);
+		midSeisUpperLine.set(midLineMaxX, midDepthRange[0]);
+		DefaultXY_DataSet midSeisLowerLine = new DefaultXY_DataSet();
+		midSeisLowerLine.set(0d, midDepthRange[1]);
+		midSeisLowerLine.set(midLineMaxX, midDepthRange[1]);
+		DefaultXY_DataSet midSeisRightLine = new DefaultXY_DataSet();
+		midSeisRightLine.set(midLineMaxX, midDepthRange[0]);
+		midSeisRightLine.set(midLineMaxX, midDepthRange[1]);
 		Color midColor = Color.CYAN.darker();
-		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, midColor));
-		double midAnnX = 0.5*(xRange.getUpperBound()+curDAS);
+		funcs.add(midSeisUpperLine);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, midColor));
+		funcs.add(midSeisLowerLine);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, midColor));
+		funcs.add(midSeisRightLine);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, midColor));
+		double midAnnX = 0.5*(midLineMaxX+curDAS);
 		double midDepthSpan = midDepthRange[1]-midDepthRange[0];
 		double midAnnY1 = midDepthRange[0] + 0.47*midDepthSpan;
 		double midAnnY2 = midDepthRange[0] + 0.53*midDepthSpan;
@@ -715,6 +722,8 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 		gp.setyAxisInverted(true);
 		gp.drawGraphPanel(plot, false, false, xRange, yRange);
 		gp.getChartPanel().setSize(xSize, ySize);
+		gp.getPlot().setDomainGridlinesVisible(false);
+		gp.getPlot().setRangeGridlinesVisible(false);
 		File outputDir = getOutputDir();
 		String prefix = getOutputPrefix()+"_example_rupture";
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());

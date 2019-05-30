@@ -1368,14 +1368,14 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add(topLink);
 		lines.add("");
 		lines.add("These plots show the slip along rupture distiribution, noted D<sub>SR</sub> in UCERF3. First we compute average "
-				+ "slip on each mapped subsection at mid-seismogenic depth (using the *"+dsrLenAlg+"* algorithm), then plot that slip along "
+				+ "slip along each mapped subsection at mid-seismogenic depth (using the *"+dsrLenAlg+"* algorithm), then plot that slip along "
 				+ "strike, normalized by the maximum slip across all subsections in that rupture. We do this for single-fault events, which "
 				+ "can span multiple segments (e.g. SAF Mojave and San Bernardino), and also separately for each junction in multi-fault events. "
 				+ "We only consider ruptures where at least 2 subsections participated (2 on each side of the jump for multi-fault ruptures). "
 				+ "This is done using the UCERF3 'named faults' list to determine if multiple fault sections belong to the same master fault.");
 		lines.add("");
-		lines.add("The calculation is done independently for different length bins. Note that average slip is discretized at the subsection "
-				+ "level, so the the shortest bin (which is only a few subsections long) will show less variation by construction.");
+		lines.add("The calculation is done independently for different length bins. Note that average slip is discretized at approximately "
+				+ "2 element widths, so the the shortest bins will show less variation by construction.");
 		lines.add("");
 		lines.add("Average values are plotted with a solid black line, and sqrt(sin(|x*&pi;|)) in a dashed gray line (normalized length "
 				+ "plots only).");

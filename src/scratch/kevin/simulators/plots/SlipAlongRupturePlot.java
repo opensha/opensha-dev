@@ -1,6 +1,7 @@
 package scratch.kevin.simulators.plots;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -10,11 +11,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
-import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
@@ -27,6 +27,7 @@ import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.Interpolate;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -113,8 +114,6 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		List<List<SubSectionMapping>> faultBundledMappings = new ArrayList<>();
 		Integer curParentID = null;
 		List<SubSectionMapping> curFaultMappings = null;
-		double maxSlip = 0d;
-		List<Double> indvMaxSlips = new ArrayList<>();
 		for (List<SubSectionMapping> parentMappings : mappings) {
 			int parentID = parentMappings.get(0).getSubSect().getParentSectionId();
 			if (curParentID == null) {
@@ -122,7 +121,6 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 				curParentID = parentID;
 				curFaultMappings = new ArrayList<>();
 				faultBundledMappings.add(curFaultMappings);
-				indvMaxSlips.add(0d);
 			} else {
 				// let's see if this parent is also part of that fault
 				boolean match = faultParentIDsMap.containsKey(parentID) && faultParentIDsMap.get(parentID).contains(curParentID);
@@ -131,21 +129,39 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 					curParentID = parentID;
 					curFaultMappings = new ArrayList<>();
 					faultBundledMappings.add(curFaultMappings);
-					indvMaxSlips.add(0d);
 				}
 			}
 			curFaultMappings.addAll(parentMappings);
-			double myMaxSlip = 0d;
-			for (SubSectionMapping mapping : parentMappings)
-				myMaxSlip = Math.max(myMaxSlip, mapping.getAverageSlip(slipAlg));
-			maxSlip = Math.max(maxSlip, myMaxSlip);
-			indvMaxSlips.set(indvMaxSlips.size()-1, Math.max(indvMaxSlips.get(indvMaxSlips.size()-1), myMaxSlip));
+		}
+		
+		// build slip function(s)
+		List<XY_DataSet> slipFuncs = new ArrayList<>();
+		double totalMaxSlip = 0d;
+		for (List<SubSectionMapping> bundle : faultBundledMappings) {
+			double bundleLength = 0d;
+			for (SubSectionMapping sect : bundle)
+				bundleLength += sect.getSubSect().getTraceLength();
+			XY_DataSet myFunc = buildFaultSlipFunc(bundle, bundleLength < 50 || bundle.size() < 3);
+			slipFuncs.add(myFunc);
+			if (myFunc != null)
+				totalMaxSlip = Math.max(totalMaxSlip, myFunc.getMaxY());
+		}
+		
+		// normalize them by maximum slip
+		for (int i=0; i<slipFuncs.size(); i++) {
+			XY_DataSet slipFunc = slipFuncs.get(i);
+			if (slipFunc != null) {
+				DefaultXY_DataSet normalized = new DefaultXY_DataSet();
+				for (Point2D pt : slipFunc)
+					normalized.set(pt.getX(), pt.getY()/totalMaxSlip);
+				slipFuncs.set(i, normalized);
+			}
 		}
 		
 		if (faultBundledMappings.size() == 1) {
 			List<SubSectionMapping> bundle = faultBundledMappings.get(0);
 			if (bundle.size() > 1)
-				processFaultBundle(bundle, false, false, maxSlip, absoluteSingleFaultXYZ, normalizedSingleFaultXYZ);
+				processFaultBundle(slipFuncs.get(0), false, false, absoluteSingleFaultXYZ, normalizedSingleFaultXYZ);
 		} else {
 			SubSectionMapping firstMapping = mappings.get(0).get(0);
 			SubSectionMapping lastMapping = mappings.get(mappings.size()-1).get(mappings.get(mappings.size()-1).size()-1);
@@ -154,6 +170,8 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 			Location firstLoc = firstMapping.isReversed() ? firstTrace.last() : firstTrace.first();
 			Location lastLoc = lastMapping.isReversed() ? lastTrace.last() : lastTrace.first();
 			for (int i=1; i<faultBundledMappings.size(); i++) {
+				XY_DataSet slipFunc0 = slipFuncs.get(i-1);
+				XY_DataSet slipFunc1 = slipFuncs.get(i);
 				List<SubSectionMapping> bundle0 = faultBundledMappings.get(i-1);
 				List<SubSectionMapping> bundle1 = faultBundledMappings.get(i);
 				if (bundle0.size() > 1 && bundle1.size() > 1) {
@@ -173,79 +191,24 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 					double distToEnd = LocationUtils.horzDistanceFast(midJumpLoc, lastLoc);
 					boolean beforeOnLeft = distToStart < distToEnd;
 					
-					double slip0 = indvMaxSlips.get(i-1);
-					double slip1 = indvMaxSlips.get(i);
-					double myMaxSlip = Math.max(slip0, slip1);
-					processFaultBundle(bundle0, true, beforeOnLeft, myMaxSlip,
+					processFaultBundle(slipFunc0, true, beforeOnLeft,
 							absoluteMultiFaultXYZ, normalizedMultiFaultXYZ);
-					processFaultBundle(bundle1, true, !beforeOnLeft, myMaxSlip,
+					processFaultBundle(slipFunc1, true, !beforeOnLeft,
 							absoluteMultiFaultXYZ, normalizedMultiFaultXYZ);
 				}
 			}
 		}
 	}
 	
-	private void processFaultBundle(List<SubSectionMapping> faultMappings, boolean multiFault, boolean leftSide, double maxSlip,
+	private void processFaultBundle(XY_DataSet slipFunc, boolean multiFault, boolean leftSide,
 			EvenlyDiscrXYZ_DataSet[] absXYZ, EvenlyDiscrXYZ_DataSet[] normXYZ) {
-		double curX = 0;
-		DefaultXY_DataSet myFunc = new DefaultXY_DataSet();
-		for (int i=0; i<faultMappings.size(); i++) {
-			SubSectionMapping mapping = faultMappings.get(i);
-			DAS_Record slipDAS = mapping.getDASforSlip(slipAlg);
-			
-			FaultTrace trace = mapping.getSubSect().getFaultTrace();
-			double len = trace.getTraceLength();
-			
-			if (slipDAS != null) {
-				double aveSlip = mapping.getAverageSlip(slipAlg);
-				double normSlip = aveSlip / maxSlip;
-				if (slipDAS.endDAS > len) {
-					double diff = slipDAS.endDAS - len;
-					Preconditions.checkState(diff < 0.01, "endDAS=% is greater than fault length=%s", slipDAS.endDAS, len);
-					slipDAS = new DAS_Record(slipDAS.startDAS, len);
-				}
-				if (mapping.isReversed())
-					slipDAS = slipDAS.getReversed(len);
-				Preconditions.checkState(slipDAS.startDAS >= 0f);
-				Preconditions.checkState(slipDAS.endDAS >= 0f);
-				if (aveSlip > 0 && slipDAS.endDAS > slipDAS.startDAS) {
-					double start, end;
-					if (i == 0) {
-						// first one, start where it starts not start of fault
-						start = 0d;
-						end = slipDAS.endDAS - slipDAS.startDAS;
-						curX = len - slipDAS.startDAS;
-					} else if (i == faultMappings.size()-1) {
-						// last one, end where it ends
-						start = curX + slipDAS.startDAS;
-						end = curX + slipDAS.endDAS;
-						curX += slipDAS.endDAS;
-					} else {
-						start = curX + slipDAS.startDAS;
-						end = curX + slipDAS.endDAS;
-						curX += len;
-					}
-	
-					myFunc.set(start, normSlip);
-					myFunc.set(end, normSlip);
-				}
-			}
-			
-			if (DD) {
-				System.out.println("i="+i+", curX="+curX+", maxX="+myFunc.getMaxX()+", reversed="+mapping.isReversed());
-				if (slipDAS != null)
-					System.out.println("\tslipDAS=["+slipDAS.startDAS+" "+slipDAS.endDAS+"]");
-			}
-		}
-		double totalLen = curX;
-		if (myFunc.size() == 0)
+		if (slipFunc == null)
 			return;
-		
-		validateFuncOrder(myFunc);
+		double totalLen = slipFunc.getMaxX();
 
-		final boolean debugPlot = DD && Math.random() < 0.0001 && numDebugPlots < 10 && multiFault;
+		final boolean debugPlot = DD && Math.random() < 0.0001 && numDebugPlots < 20 && !multiFault;
 		for (boolean normalized : new boolean[] {false, true}) {
-			XY_DataSet func = normalized ? getNormalized(myFunc) : myFunc;
+			XY_DataSet func = normalized ? getNormalized(slipFunc) : slipFunc;
 			XY_DataSet firstHalf = getFirstHalf(func);
 			if (leftSide)
 				firstHalf = getMirroredNegative(firstHalf);
@@ -267,6 +230,119 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 					debugPlot(xyz[i], firstHalf, mirrored);
 			}
 		}
+	}
+	
+	private XY_DataSet buildFaultSlipFunc(List<SubSectionMapping> faultMappings, boolean splitDAS) {
+		double curX = 0;
+		DefaultXY_DataSet myFunc = new DefaultXY_DataSet();
+		for (int i=0; i<faultMappings.size(); i++) {
+			SubSectionMapping mapping = faultMappings.get(i);
+			DAS_Record slipDAS = mapping.getDASforSlip(slipAlg);
+			
+			FaultTrace trace = mapping.getSubSect().getFaultTrace();
+			double len = trace.getTraceLength();
+			
+			if (slipDAS != null && slipDAS.endDAS > slipDAS.startDAS) {
+				Preconditions.checkState(slipDAS.startDAS >= 0f);
+				Preconditions.checkState(slipDAS.endDAS >= 0f);
+				if (slipDAS.endDAS > len) {
+					double diff = slipDAS.endDAS - len;
+					Preconditions.checkState(diff < 0.01, "endDAS=% is greater than fault length=%s", slipDAS.endDAS, len);
+					slipDAS = new DAS_Record(slipDAS.startDAS, len);
+				}
+				
+				DiscretizedFunc sectSlipFunc = null;
+				
+				if (splitDAS) {
+					double aveElemWidth = 0d;
+					int numElems = 0;
+					for (SimulatorElement elem : mapper.getElementsForSection(mapping.getSubSect())) {
+						DAS_Record das = mapper.getElemSubSectDAS(elem);
+						aveElemWidth += das.endDAS - das.startDAS;
+						numElems++;
+					}
+					aveElemWidth /= (double)numElems;
+					
+					double slipLen = slipDAS.endDAS - slipDAS.startDAS;
+					if (slipLen > 3*aveElemWidth) {
+						// we have at least 3 columns
+						// do a sliding window average with width of 2 elements
+						double slidingWindowDelta = aveElemWidth*0.5;
+						double halfWidth = aveElemWidth*0.66;
+						sectSlipFunc = new ArbitrarilyDiscretizedFunc();
+						for (double midDAS=slipDAS.startDAS+halfWidth; midDAS+halfWidth<=slipDAS.endDAS; midDAS+=slidingWindowDelta) {
+							DAS_Record subDAS = new DAS_Record(midDAS-halfWidth, midDAS+halfWidth);
+							double aveSlip = mapping.getAverageSlip(subDAS);
+							if (sectSlipFunc.size() == 0)
+								// add start
+								sectSlipFunc.set(0d, aveSlip);
+							sectSlipFunc.set(midDAS-slipDAS.startDAS, aveSlip);
+						}
+						sectSlipFunc.set(slipDAS.endDAS-slipDAS.startDAS, sectSlipFunc.getY(sectSlipFunc.size()-1));
+					}
+				}
+				
+				if (sectSlipFunc == null) {
+					// no sliding window
+					sectSlipFunc = new ArbitrarilyDiscretizedFunc();
+					double aveSlip = mapping.getAverageSlip(slipDAS);
+					sectSlipFunc.set(0d, aveSlip);
+					sectSlipFunc.set(slipDAS.endDAS-slipDAS.startDAS, aveSlip);
+				}
+				
+				if (sectSlipFunc.getMaxY() > 0) {
+					if (mapping.isReversed()) {
+						slipDAS = slipDAS.getReversed(len);
+						DiscretizedFunc revFunc = new ArbitrarilyDiscretizedFunc();
+						for (int j=sectSlipFunc.size(); --j>=0;) {
+							double x = sectSlipFunc.getX(j);
+							double y = sectSlipFunc.getY(j);
+							revFunc.set(sectSlipFunc.getMaxX()-x, y);
+						}
+						sectSlipFunc = revFunc;
+					}
+					
+					double prevX = Double.NaN;
+					if (myFunc.size() > 0) {
+						prevX = myFunc.getX(myFunc.size()-1);
+						curX = Math.max(curX, prevX);
+					}
+					double start;
+					if (i == 0) {
+						// first one, start where it starts not start of fault
+						start = 0d;
+//						end = slipDAS.endDAS - slipDAS.startDAS;
+						curX = len - slipDAS.startDAS;
+					} else if (i == faultMappings.size()-1) {
+						// last one, end where it ends
+						start = curX + slipDAS.startDAS;
+//						end = curX + slipDAS.endDAS;
+						curX += slipDAS.endDAS;
+					} else {
+						start = curX + slipDAS.startDAS;
+//						end = curX + slipDAS.endDAS;
+						curX += len;
+					}
+					
+					Preconditions.checkState(myFunc.size() == 0 || start >= prevX,
+							"Bad start=%s, curX=%s, prevMaxX=%s", start, curX, prevX);
+					for (Point2D pt : sectSlipFunc) {
+						Preconditions.checkState(pt.getX() >= 0, "Negative x=%s. DAS range=[%s %s]", pt.getX(), slipDAS.startDAS, slipDAS.endDAS);
+						myFunc.set(start+pt.getX(), pt.getY());
+					}
+				}
+			}
+			
+			if (DD) {
+				System.out.println("i="+i+", curX="+curX+", maxX="+myFunc.getMaxX()+", reversed="+mapping.isReversed());
+				if (slipDAS != null)
+					System.out.println("\tslipDAS=["+slipDAS.startDAS+" "+slipDAS.endDAS+"]");
+			}
+		}
+		if (myFunc.size() == 0 || myFunc.getMaxX() == 0d)
+			return null;
+		validateFunc(myFunc, false);
+		return myFunc;
 	}
 	
 	private static int numDebugPlots = 0;
@@ -330,32 +406,34 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		numDebugPlots++;
 	}
 	
-	private static void validateFuncOrder(XY_DataSet func) {
+	private static void validateFunc(XY_DataSet func, boolean normalizedY) {
 		for (int i=1; i<func.size(); i++) {
 			double prevX = func.getX(i-1);
 			double x = func.getX(i);
 			Preconditions.checkState(x >= prevX, "Dataset out of order? x[%s]=%s, x[%s]=%s\n%s", i-1, prevX, i, x, func);
 		}
+		if (normalizedY) {
+			for (int i=0; i<func.size(); i++) {
+				double x = func.getX(i);
+				double y = func.getY(i);
+				Preconditions.checkState(y >= 0 && y <= 1, "Bad y normalization. y[%s]=%s, x=%s", i, y, x);
+			}
+		}
 	}
 	
 	private static XY_DataSet getNormalized(XY_DataSet slipFunc) {
-		if (D) validateFuncOrder(slipFunc);
+		if (D) validateFunc(slipFunc, true);
 		double minX = slipFunc.getMinX();
 		double maxX = slipFunc.getMaxX();
 		double spanX = maxX - minX;
 		DefaultXY_DataSet ret = new DefaultXY_DataSet();
-		for (int i=0; i<slipFunc.size(); i+=2) {
-			double start = (slipFunc.getX(i)-minX)/spanX;
-			double end = (slipFunc.getX(i+1)-minX)/spanX;
-			double normSlip = slipFunc.getY(i);
-			ret.set(start, normSlip);
-			ret.set(end, normSlip);
-		}
+		for (Point2D pt : slipFunc)
+			ret.set((pt.getX()-minX)/spanX, pt.getY());
 		return ret;
 	}
 	
 	private static XY_DataSet getFirstHalf(XY_DataSet slipFunc) {
-		if (D) validateFuncOrder(slipFunc);
+		if (D) validateFunc(slipFunc, true);
 		double minX = slipFunc.getMinX();
 		double maxX = slipFunc.getMaxX();
 		Preconditions.checkState(slipFunc.size() >= 2);
@@ -364,14 +442,15 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		Preconditions.checkState(maxX >= minX);
 		double midX = 0.5*(minX + maxX);
 		DefaultXY_DataSet ret = new DefaultXY_DataSet();
-		for (int i=0; i<slipFunc.size(); i+=2) {
-			double start = slipFunc.getX(i);
-			if (start > midX)
+		for (int i=0; i<slipFunc.size(); i++) {
+			double x = slipFunc.getX(i);
+			double y = slipFunc.getY(i);
+			if (x > midX) {
+				if (i > 0)
+					ret.set(midX, Interpolate.findY(slipFunc.getX(i-1), slipFunc.getY(i-1), x, y, midX));
 				break;
-			double end = Math.min(midX, slipFunc.getX(i+1));
-			double normSlip = slipFunc.getY(i);
-			ret.set(start, normSlip);
-			ret.set(end, normSlip);
+			}
+			ret.set(x, y);
 		}
 		Preconditions.checkState(ret.size() >= 2, "Error getting first half. MinX=%s, MaxX=%s, MidX=%s, size=%s, first=%s",
 				minX, maxX, midX, ret.size(), slipFunc.getX(0));
@@ -379,67 +458,127 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 	}
 	
 	private static XY_DataSet getMirroredPositive(XY_DataSet slipFunc) {
-		if (D) validateFuncOrder(slipFunc);
+		if (D) validateFunc(slipFunc, true);
 		double maxX = slipFunc.getMaxX();
 		DefaultXY_DataSet ret = new DefaultXY_DataSet();
-		for (int i=slipFunc.size()-1; i>0; i-=2) {
-			double start = slipFunc.getX(i-1);
-			double end = slipFunc.getX(i);
-			double normSlip = slipFunc.getY(i);
-			ret.set(maxX - end, normSlip);
-			ret.set(maxX - start, normSlip);
+		for (int i=slipFunc.size(); --i>=0;) {
+			Point2D pt = slipFunc.get(i);
+			ret.set(maxX - pt.getX(), pt.getY());
 		}
 		return ret;
 	}
 	
 	private static XY_DataSet getMirroredNegative(XY_DataSet slipFunc) {
-		if (D) validateFuncOrder(slipFunc);
+		if (D) validateFunc(slipFunc, true);
 		double minX = slipFunc.getMinX();
 		Preconditions.checkState(minX >= 0d, "Mirroring to be negative, but already have a negative minX=%s", minX);
 		DefaultXY_DataSet ret = new DefaultXY_DataSet();
-		for (int i=slipFunc.size()-1; i>0; i-=2) {
-			double start = slipFunc.getX(i-1);
-			double end = slipFunc.getX(i);
-			double normSlip = slipFunc.getY(i);
-			ret.set(-end, normSlip);
-			ret.set(-start, normSlip);
+		for (int i=slipFunc.size(); --i>=0;) {
+			Point2D pt = slipFunc.get(i);
+			ret.set(-pt.getX(), pt.getY());
 		}
 		return ret;
 	}
 	
 	private static void processSlipFunc(XY_DataSet slipFunc, EvenlyDiscrXYZ_DataSet xyz) {
-		double binWidth = xyz.getGridSpacingX();
-		double halfBin = binWidth*0.5;
-		if (D) validateFuncOrder(slipFunc);
-		for (int i=0; i<slipFunc.size(); i+=2) {
-			double start = slipFunc.getX(i);
-			double end = slipFunc.getX(i+1);
-			double normSlip = slipFunc.getY(i);
-			int xInd = xyz.getXIndex(start);
-			int yInd = xyz.getYIndex(normSlip);
+		double binWidthX = xyz.getGridSpacingX();
+		double halfBinX = binWidthX*0.5;
+		double binWidthY = xyz.getGridSpacingY();
+		double halfBinY = binWidthY*0.5;
+		if (D) validateFunc(slipFunc, true);
+		for (int i=0; i<slipFunc.size()-1; i++) {
+			double startX = slipFunc.getX(i);
+			double endX = slipFunc.getX(i+1);
+			if ((float)startX == (float)endX)
+				continue;
+			double startY = slipFunc.getY(i);
+			double endY = slipFunc.getY(i+1);
+			double slope = (endY-startY)/(endX-startX);
+			int xInd = xyz.getXIndex(startX);
+			double minY = Math.min(startY, endY);
+			double maxY = Math.max(startY, endY);
 			while (xInd < xyz.getNumX()) {
 				if (xInd < 0) {
 					xInd++;
 					continue;
 				}
-				double binMiddle = xyz.getX(xInd);
-				double binStart = binMiddle - halfBin;
-				double binEnd = binMiddle + halfBin;
-				if (end < binStart)
+				double binMiddleX = xyz.getX(xInd);
+				double binStartX = binMiddleX - halfBinX;
+				double binEndX = binMiddleX + halfBinX;
+				if (endX < binStartX)
 					break;
-				if (binEnd < start) {
+				if (binEndX < startX) {
 					xInd++;
 					continue;
 				}
-				double overlapStart = Math.max(start, binStart);
-				double overlapEnd = Math.min(end, binEnd);
-				Preconditions.checkState(overlapEnd >= overlapStart);
-				double overlapSpan = overlapEnd - overlapStart;
-				Preconditions.checkState((float)overlapSpan <= (float)binWidth, "overlap span is %s (%s - %s) but width is %s for bin [%s %s]",
-						overlapSpan, overlapEnd, overlapStart, binWidth, binStart, binEnd);
-				double fract = overlapSpan / binWidth;
+				double overlapStartX = Math.max(startX, binStartX);
+				double overlapEndX = Math.min(endX, binEndX);
+				Preconditions.checkState(overlapEndX >= overlapStartX);
+				double overlapSpanX = overlapEndX - overlapStartX;
+				Preconditions.checkState((float)overlapSpanX <= (float)binWidthX,
+						"x overlap span is %s (%s - %s) but width is %s for bin [%s %s]",
+						overlapSpanX, overlapEndX, overlapStartX, binWidthX, binStartX, binEndX);
+				double fractX = overlapSpanX / binWidthX;
 				
-				xyz.set(xInd, yInd, xyz.get(xInd, yInd) + fract);
+				int yInd = xyz.getYIndex(minY);
+				if (slope > 0) {
+					// we have a y slope
+					// y = m*x + b
+					
+					// b = y - m*x
+					double intercept = startY - slope*startX;
+					
+					double sumWeight = 0d;
+					if (DD) System.out.println("Slope="+slope+" for y["+startY+" "+endY+"]");
+					if (DD) System.out.println("xOverlapRange=["+overlapStartX+" "+overlapEndX+"]");
+					while (yInd<xyz.getNumY()) {
+						if (yInd < 0) {
+							yInd++;
+							continue;
+						}
+						double binMiddleY = xyz.getY(yInd);
+						double binBottomY = binMiddleY - halfBinY;
+						double binTopY = binMiddleY + halfBinY;
+						if (DD) System.out.println("yBin["+yInd+"]=["+binBottomY+" "+binTopY+"]");
+						if (binBottomY > maxY)
+							break;
+						if (binTopY < minY) {
+							yInd++;
+							continue;
+						}
+						
+						// x = [y-b]/m
+						double xAtBottomIntercept = (binBottomY - intercept)/slope;
+						double xAtTopIntercept = (binTopY - intercept)/slope;
+						double myMaxX = Math.max(xAtBottomIntercept, xAtTopIntercept);
+						double myMinX = Math.min(xAtBottomIntercept, xAtTopIntercept);
+						if (myMinX > overlapEndX || myMaxX < overlapStartX) {
+							yInd++;
+							continue;
+						}
+						
+						if (DD) System.out.println("x at bin bottom intercept: "+xAtBottomIntercept);
+						if (DD) System.out.println("x at bin top intercept: "+xAtTopIntercept);
+						
+						double myOverlapStartX = Math.max(overlapStartX, Math.min(xAtTopIntercept, xAtBottomIntercept));
+						double myOverlapEndX = Math.min(overlapEndX, Math.max(xAtTopIntercept, xAtBottomIntercept));
+						Preconditions.checkState(myOverlapEndX >= myOverlapStartX,
+								"Bad new y overlap range: %s, %s", myOverlapStartX, myOverlapEndX);
+						double myOverlapSpanX = myOverlapEndX - myOverlapStartX;
+						if (DD) System.out.println("adjustedOverlapRange=["+myOverlapStartX+" "+myOverlapEndX+"]");
+						Preconditions.checkState((float)myOverlapSpanX <= (float)binWidthX,
+								"x overlap span is %s (%s - %s) but width is %s for bin [%s %s]",
+								myOverlapSpanX, myOverlapEndX, myOverlapStartX, binWidthX, binStartX, binEndX);
+						double myFractX = myOverlapSpanX / binWidthX;
+						sumWeight += myFractX;
+						xyz.set(xInd, yInd, xyz.get(xInd, yInd) + myFractX);
+						yInd++;
+					}
+					double weightDelta = Math.abs(sumWeight - fractX);
+					Preconditions.checkState(weightDelta < 0.0001, "Bad weight sum. xFract=%s, sum=%s", fractX, sumWeight);
+				} else {
+					xyz.set(xInd, yInd, xyz.get(xInd, yInd) + fractX);
+				}
 				xInd++;
 			}
 		}
