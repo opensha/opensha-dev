@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.Random;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
+import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYBoxAnnotation;
@@ -43,13 +45,16 @@ import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.WarningParameter;
+import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.MultiIMR_Averaged_AttenRel;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
 
 public class ResidualScatterPlot {
@@ -770,33 +775,17 @@ public class ResidualScatterPlot {
 						if (detrendCounts[x][y] > 0)
 							detrendXYZ[p].set(x, y, detrendXYZ[p].get(x, y)/(double)detrendCounts[x][y]);
 		}
-		
-		List<Variance[]> siteResidualVariances = new ArrayList<>();
-		Map<RuptureComparison<E>, Variance[][]> rupResidualVariances = new HashMap<>();
+		Table<RuptureComparison<E>, Integer, List<double[]>> rupResidualsTable = HashBasedTable.create();
 		Variance[] totalVars = new Variance[periods.length];
 		for (int p=0; p<periods.length; p++)
 			totalVars[p] = new Variance();
-		int rupSimCount = 0;
 		for (Site site : siteCompsMap.keySet()) {
-			Variance[] siteVars = new Variance[periods.length];
-			for (int p=0; p<periods.length; p++)
-				siteVars[p] = new Variance();
-			siteResidualVariances.add(siteVars);
 			for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
 				double[] gmpeVals = new double[periods.length];
 				for (int p=0; p<periods.length; p++)
 					gmpeVals[p] = comp.getLogMean(site, periods[p]);
 				E rupture = comp.getRupture();
 				int numSims = simProv.getNumSimulations(site, rupture);
-				Variance[][] rupVars = rupResidualVariances.get(comp);
-				if (rupVars == null) {
-					rupSimCount += numSims;
-					rupVars = new Variance[numSims][periods.length];
-					for (int i=0; i<numSims; i++)
-						for (int p=0; p<periods.length; p++)
-							rupVars[i][p] = new Variance();
-					rupResidualVariances.put(comp, rupVars);
-				}
 				Preconditions.checkState(numSims > 0);
 				double detrendDist = 0, detrendMag = 0;
 				if (detrend) {
@@ -805,40 +794,43 @@ public class ResidualScatterPlot {
 				}
 				for (int i=0; i<numSims; i++) {
 					DiscretizedFunc simRD50 = simProv.getRotD50(site, rupture, i);
+					List<double[]> residualsList = rupResidualsTable.get(comp, i);
+					if (residualsList == null) {
+						residualsList = new ArrayList<>();
+						rupResidualsTable.put(comp, i, residualsList);
+					}
+					double[] residuals = new double[periods.length];
 					for (int p=0; p<periods.length; p++) {
 						double simVal = Math.log(simRD50.getY(periods[p]));
-						double residual = simVal - gmpeVals[p];
+						residuals[p] = simVal - gmpeVals[p];
 						if (detrend)
-							residual -= detrendXYZ[p].bilinearInterpolation(detrendDist, detrendMag);
-						rupVars[i][p].increment(residual);
-						siteVars[p].increment(residual);
-						totalVars[p].increment(residual);
+							residuals[p] -= detrendXYZ[p].bilinearInterpolation(detrendDist, detrendMag);
+						totalVars[p].increment(residuals[p]);
 					}
+					residualsList.add(residuals);
 				}
 			}
 		}
 		
-		// mean between event variances, tau^2
+		// calculate mean within event variances, phi^2, and betweetn event variances, tau^2
+		double[] phiSq = new double[periods.length];
 		double[] tauSq = new double[periods.length];
 		for (int p=0; p<periods.length; p++) {
-			double[] allVars = new double[siteResidualVariances.size()];
-			for (int i=0; i<allVars.length; i++)
-				allVars[i] = siteResidualVariances.get(i)[p].getResult();
-			tauSq[p] = StatUtils.mean(allVars);
-		}
-		
-		// mean within event variances, phi^2
-		double[] phiSq = new double[periods.length];
-		for (int p=0; p<periods.length; p++) {
-			double[] allVars = new double[rupSimCount];
-			int index = 0;
-			for (RuptureComparison<E> comp : rupResidualVariances.keySet()) {
-				Variance[][] rupVars = rupResidualVariances.get(comp);
-				for (int i=0; i<rupVars.length; i++)
-					allVars[index++] = rupVars[i][p].getResult();
+			Collection<List<double[]>> allVals = rupResidualsTable.values();
+			List<Double> rupVariances = new ArrayList<>();
+			List<Double> rupEventTerms = new ArrayList<>();
+			for (List<double[]> residualsList : allVals) {
+				if (residualsList.size() < 2)
+					// can't establish event term or phi with only one recording
+					continue;
+				double[] myResiduals = new double[residualsList.size()];
+				for (int i=0; i<myResiduals.length; i++)
+					myResiduals[i] = residualsList.get(i)[p];
+				rupVariances.add(StatUtils.variance(myResiduals));
+				rupEventTerms.add(StatUtils.mean(myResiduals));
 			}
-			Preconditions.checkState(index == allVars.length, "Bad index? %s != %s", index, allVars.length);
-			phiSq[p] = StatUtils.mean(allVars);
+			phiSq[p] = StatUtils.mean(Doubles.toArray(rupVariances));
+			tauSq[p] = StatUtils.variance(Doubles.toArray(rupEventTerms));
 		}
 		
 		List<XY_DataSet> funcs = new ArrayList<>();

@@ -96,7 +96,7 @@ public class PaleoOpenIntervalPlot extends AbstractPlot {
 	public PaleoOpenIntervalPlot(Collection<SimulatorElement> elements, Table<String, Double, Location> paleoSites, double annotateDuration) {
 		this.annotateDuration = annotateDuration;
 		Preconditions.checkArgument(!paleoSites.isEmpty(), "Must supply at least one paleo site");
-		this.paleoSites = paleoSites;
+		this.paleoSites = HashBasedTable.create();
 		elementMappings = new HashMap<>();
 		
 		mappedElements = new HashSet<>();
@@ -116,15 +116,20 @@ public class PaleoOpenIntervalPlot extends AbstractPlot {
 					}
 				}
 			}
-			System.out.println("Closest element to "+paleoName+" is "+(float)minDist+" km away");
-			Preconditions.checkState(minDist < 5d, "No elements within 5 km of paleo site %s with location %s. closest is %s km away.",
-					paleoName, paleoLoc, minDist);
+//			System.out.println("Closest element to "+paleoName+" is "+(float)minDist+" km away");
+			if (minDist > 5d) {
+				System.out.println("WARNING: skipping paleo site "+paleoName+" due to minDistance="+minDist+" km");
+				continue;
+			}
+			this.paleoSites.put(cell.getRowKey(), cell.getColumnKey(), cell.getValue());
+//			Preconditions.checkState(minDist < 5d, "No elements within 5 km of paleo site %s with location %s. closest is %s km away.",
+//					paleoName, paleoLoc, minDist);
 			elementMappings.put(closest.getID(), paleoName);
 			mappedElements.add(closest);
 		}
 		
 		siteHistories = new HashMap<>();
-		for (String name : paleoSites.rowKeySet())
+		for (String name : this.paleoSites.rowKeySet())
 			siteHistories.put(name, new SiteHistory());
 		allHistory = new SiteHistory();
 	}
@@ -204,6 +209,8 @@ public class PaleoOpenIntervalPlot extends AbstractPlot {
 			allHistory.add(time, Doubles.toArray(matchingSlips));
 	}
 	
+	private boolean emptyWarned = false;
+	
 	private class SiteResult {
 		
 		private final ArbitrarilyDiscretizedFunc incrementalFunc;
@@ -217,7 +224,9 @@ public class PaleoOpenIntervalPlot extends AbstractPlot {
 		
 		public SiteResult(List<Double> intervals) {
 			if (intervals == null) {
-				System.out.println("WARNING: Empty interval list encountered");
+				if (!emptyWarned)
+					System.out.println("WARNING: Empty interval list encountered (future warnings surpressed)");
+				emptyWarned = true;
 				incrementalFunc = null;
 				cumulativeCountFunc = new ArbitrarilyDiscretizedFunc();
 				cumulativeProbFunc = new ArbitrarilyDiscretizedFunc();
@@ -309,6 +318,8 @@ public class PaleoOpenIntervalPlot extends AbstractPlot {
 		ArbitrarilyDiscretizedFunc ret = new ArbitrarilyDiscretizedFunc();
 		double weight = 1d/funcs.size();
 		for (ArbitrarilyDiscretizedFunc func : funcs) {
+			if (func == null)
+				continue;
 			for (Point2D pt : func) {
 				if (ret.hasX(pt.getX()))
 					ret.set(pt.getX(), ret.getY(pt.getX())+pt.getY()*weight);
@@ -316,7 +327,7 @@ public class PaleoOpenIntervalPlot extends AbstractPlot {
 					ret.set(pt.getX(), pt.getY()*weight);
 			}
 		}
-		Preconditions.checkState(ret.size() > 0);
+//		Preconditions.checkState(ret.size() > 0);
 		return ret;
 	}
 	
@@ -371,6 +382,7 @@ public class PaleoOpenIntervalPlot extends AbstractPlot {
 		for (String paleoName : siteHistories.keySet()) {
 			SiteHistory siteHistory = siteHistories.get(paleoName);
 			SiteResult result = new SiteResult(siteHistory.getIntervals());
+//			System.out.println("Doing "+paleoName);
 			SiteResult probResult = getRandomSampling(siteHistory, 100);
 			double dataRate = paleoSites.row(paleoName).keySet().iterator().next();
 			double dataMRI = 1d/dataRate;

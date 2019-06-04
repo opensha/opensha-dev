@@ -14,6 +14,7 @@ import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -48,6 +49,7 @@ public class MFDPlot extends AbstractPlot {
 	private boolean plotCombined = true;
 	
 	private boolean plotGR = true;
+	private UncertainArbDiscDataset compRange;
 	
 	public MFDPlot() {
 		this(min_mag_default);
@@ -104,6 +106,10 @@ public class MFDPlot extends AbstractPlot {
 		else
 			comparableCumulativeMFD = comparableMFD.getCumRateDistWithOffset();
 		this.comparableName = comparableName;
+	}
+	
+	public void setComparableRange(UncertainArbDiscDataset compRange) {
+		this.compRange = compRange;
 	}
 
 	public void setPlotIncremental(boolean plotIncremental) {
@@ -200,7 +206,7 @@ public class MFDPlot extends AbstractPlot {
 				// histogram, on bottom
 				funcs.add(0, mfd);
 				chars.add(0, new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, getSecondaryColor()));
-				mfd.setName(catalogName+" Incremental");
+				mfd.setName(catalogName);
 			} else {
 				// line
 				funcs.add(mfd);
@@ -230,6 +236,17 @@ public class MFDPlot extends AbstractPlot {
 			grMFD.setName("G-R B=1");
 			funcs.add(grMFD);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.GRAY));
+		}
+		
+		if (compRange != null) {
+			funcs.add(compRange);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, getComparableColor()));
+
+			funcs.add(compRange.getUpper());
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, getComparableColor()));
+
+			funcs.add(compRange.getLower());
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, getComparableColor()));
 		}
 		
 		String xAxisLabel = "Magnitude";

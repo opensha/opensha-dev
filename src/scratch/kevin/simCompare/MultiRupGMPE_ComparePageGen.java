@@ -692,9 +692,10 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		
 		lines.add("### Period-Dependent Residual Components");
 		lines.add(topLink); lines.add("");
-		lines.add("**Note: These are not yet corrected for covariance. "
+		lines.add("**Note: These are not corrected for covariance. "
 				+ "Currently only useful for comparing relative phi and tau, not absolute values**");
 		lines.add("");
+//		lines.add("Phi is calculated as square root of the mean of the standard deviation");
 		System.out.println("Calculating residual components");
 		if (replotResiduals || !new File(resourcesDir, "period_residual_components.png").exists())
 			ResidualScatterPlot.plotPeriodDependentSigma(resourcesDir, "period_residual_components", siteCompsMap, simProv, false, periods);

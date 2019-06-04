@@ -58,7 +58,8 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 	private EvenlyDiscrXYZ_DataSet[] normalizedSingleFaultXYZ;
 	private EvenlyDiscrXYZ_DataSet[] absoluteSingleFaultXYZ;
 	private EvenlyDiscrXYZ_DataSet[] normalizedMultiFaultXYZ;
-	private EvenlyDiscrXYZ_DataSet[] absoluteMultiFaultXYZ;
+	private EvenlyDiscrXYZ_DataSet[] normalizedTwoFaultXYZ;
+	private EvenlyDiscrXYZ_DataSet[] normalizedThreeFaultXYZ;
 	private List<Range> lengthBins;
 
 	public SlipAlongRupturePlot(RSQSimSubSectionMapper mapper, double minMag, SlipAlongSectAlgorithm slipAlg, FaultModels fm,
@@ -89,7 +90,8 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		normalizedSingleFaultXYZ = new EvenlyDiscrXYZ_DataSet[lengthBins.size()];
 		absoluteSingleFaultXYZ = new EvenlyDiscrXYZ_DataSet[lengthBins.size()];
 		normalizedMultiFaultXYZ = new EvenlyDiscrXYZ_DataSet[lengthBins.size()];
-		absoluteMultiFaultXYZ = new EvenlyDiscrXYZ_DataSet[lengthBins.size()];
+		normalizedTwoFaultXYZ = new EvenlyDiscrXYZ_DataSet[lengthBins.size()];
+		normalizedThreeFaultXYZ = new EvenlyDiscrXYZ_DataSet[lengthBins.size()];
 		
 		for (int i=0; i<lengthBins.size(); i++) {
 			Range lengthBin = lengthBins.get(i);
@@ -99,7 +101,8 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 			normalizedSingleFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX, numY, minNormX, minY, deltaNormX, deltaY);
 			absoluteSingleFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX, numY, minAbsX, minY, deltaAbsX, deltaY);
 			normalizedMultiFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX*2, numY, -normalizedSingleFaultXYZ[i].getMaxX(), minY, deltaNormX, deltaY);
-			absoluteMultiFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX*2, numY, -absoluteSingleFaultXYZ[i].getMaxX(), minY, deltaAbsX, deltaY);
+			normalizedTwoFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX*2, numY, minNormX*2, minY, deltaNormX*2, deltaY);
+			normalizedThreeFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX*2, numY, minNormX*3, minY, deltaNormX*3, deltaY);
 		}
 	}
 
@@ -161,7 +164,7 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		if (faultBundledMappings.size() == 1) {
 			List<SubSectionMapping> bundle = faultBundledMappings.get(0);
 			if (bundle.size() > 1)
-				processFaultBundle(slipFuncs.get(0), false, false, absoluteSingleFaultXYZ, normalizedSingleFaultXYZ);
+				processSingleFault(slipFuncs.get(0));
 		} else {
 			SubSectionMapping firstMapping = mappings.get(0).get(0);
 			SubSectionMapping lastMapping = mappings.get(mappings.size()-1).get(mappings.get(mappings.size()-1).size()-1);
@@ -191,43 +194,31 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 					double distToEnd = LocationUtils.horzDistanceFast(midJumpLoc, lastLoc);
 					boolean beforeOnLeft = distToStart < distToEnd;
 					
-					processFaultBundle(slipFunc0, true, beforeOnLeft,
-							absoluteMultiFaultXYZ, normalizedMultiFaultXYZ);
-					processFaultBundle(slipFunc1, true, !beforeOnLeft,
-							absoluteMultiFaultXYZ, normalizedMultiFaultXYZ);
+					if (beforeOnLeft)
+						processMultiFaultJunction(slipFunc0, slipFunc1);
+					else
+						processMultiFaultJunction(slipFunc1, slipFunc0);
+					
+					if (faultBundledMappings.size() == 2) {
+						// 2 faults
+						if (beforeOnLeft)
+							processTwoFault(slipFunc0, slipFunc1);
+						else
+							processTwoFault(slipFunc1, slipFunc0);
+					} else if (faultBundledMappings.size() == 3 && i == 2) {
+						// 3 faults
+						XY_DataSet s0 = slipFuncs.get(0);
+						XY_DataSet s1 = slipFuncs.get(1);
+						XY_DataSet s2 = slipFuncs.get(2);
+						
+						double len0 = s0 == null ? 0 : s0.getMaxX();
+						double len2 = s2 == null ? 0 : s2.getMaxX();
+						if (len0 < len2)
+							processThreeFault(s0, s1, s2);
+						else
+							processThreeFault(s2, s1, s0);
+					}
 				}
-			}
-		}
-	}
-	
-	private void processFaultBundle(XY_DataSet slipFunc, boolean multiFault, boolean leftSide,
-			EvenlyDiscrXYZ_DataSet[] absXYZ, EvenlyDiscrXYZ_DataSet[] normXYZ) {
-		if (slipFunc == null)
-			return;
-		double totalLen = slipFunc.getMaxX();
-
-		final boolean debugPlot = DD && Math.random() < 0.0001 && numDebugPlots < 20 && !multiFault;
-		for (boolean normalized : new boolean[] {false, true}) {
-			XY_DataSet func = normalized ? getNormalized(slipFunc) : slipFunc;
-			XY_DataSet firstHalf = getFirstHalf(func);
-			if (leftSide)
-				firstHalf = getMirroredNegative(firstHalf);
-			
-			XY_DataSet mirrored = null; 
-			if (!multiFault)
-				// use both ends of this fault
-				mirrored = getFirstHalf(getMirroredPositive(func));
-			
-			EvenlyDiscrXYZ_DataSet[] xyz = normalized ? normXYZ : absXYZ;
-			for (int i=0; i<lengthBins.size(); i++) {
-				Range lengthBin = lengthBins.get(i);
-				if (lengthBin != null && !lengthBin.contains(totalLen))
-					continue;
-				processSlipFunc(firstHalf, xyz[i]);
-				if (mirrored != null)
-					processSlipFunc(mirrored, xyz[i]);
-				if (debugPlot && lengthBin != null)
-					debugPlot(xyz[i], firstHalf, mirrored);
 			}
 		}
 	}
@@ -345,6 +336,110 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		return myFunc;
 	}
 	
+	private void processSingleFault(XY_DataSet slipFunc) {
+		if (slipFunc == null)
+			return;
+		double totalLen = slipFunc.getMaxX();
+
+		final boolean debugPlot = DD && Math.random() < 0.0001 && numDebugPlots < 20;
+		for (boolean normalized : new boolean[] {false, true}) {
+			XY_DataSet func = normalized ? getNormalized(slipFunc) : slipFunc;
+			XY_DataSet firstHalf = getFirstHalf(func);
+			
+			XY_DataSet mirrored = getFirstHalf(getMirroredPositive(func));
+			
+			EvenlyDiscrXYZ_DataSet[] xyz = normalized ? normalizedSingleFaultXYZ : absoluteSingleFaultXYZ;
+			for (int i=0; i<lengthBins.size(); i++) {
+				Range lengthBin = lengthBins.get(i);
+				if (lengthBin != null && !lengthBin.contains(totalLen))
+					continue;
+				processSlipFunc(firstHalf, xyz[i]);
+				processSlipFunc(mirrored, xyz[i]);
+				if (debugPlot && lengthBin != null)
+					debugPlot(xyz[i], firstHalf, mirrored);
+			}
+		}
+	}
+	
+	private void processMultiFaultJunction(XY_DataSet leftSlipFunc, XY_DataSet rightSlipFunc) {
+		XY_DataSet[] slipFuncs = {leftSlipFunc, rightSlipFunc};
+		boolean[] mirrorNegative = {true, false};
+		
+		double totalLen = 0d;
+		for (XY_DataSet slipFunc : slipFuncs)
+			if (slipFunc != null)
+				totalLen += slipFunc.getMaxX();
+		
+		for (int n=0; n<2; n++) {
+			XY_DataSet slipFunc = slipFuncs[n];
+			if (slipFunc == null)
+				continue;
+
+			final boolean debugPlot = DD && Math.random() < 0.0001 && numDebugPlots < 20;
+			XY_DataSet func = getNormalized(slipFunc);
+			XY_DataSet firstHalf = getFirstHalf(func);
+			if (mirrorNegative[n])
+				firstHalf = getMirroredNegative(firstHalf);
+			
+			for (int i=0; i<lengthBins.size(); i++) {
+				Range lengthBin = lengthBins.get(i);
+				if (lengthBin != null && !lengthBin.contains(totalLen))
+					continue;
+				processSlipFunc(firstHalf, normalizedMultiFaultXYZ[i]);
+				if (debugPlot && lengthBin != null)
+					debugPlot(normalizedMultiFaultXYZ[i], firstHalf, null);
+			}
+		}
+	}
+	
+	private void processTwoFault(XY_DataSet leftSlipFunc, XY_DataSet rightSlipFunc) {
+		double[] offsets = { 0d, 1d };
+		XY_DataSet[] slipFuncs = {leftSlipFunc, rightSlipFunc};
+		
+		double totalLen = 0d;
+		for (XY_DataSet slipFunc : slipFuncs)
+			if (slipFunc != null)
+				totalLen += slipFunc.getMaxX();
+		
+		for (int n=0; n<slipFuncs.length; n++) {
+			XY_DataSet slipFunc = slipFuncs[n];
+			if (slipFunc == null)
+				continue;
+			
+			slipFunc = getNormalized(slipFunc);
+			if (offsets[n] > 0)
+				slipFunc = getShifted(slipFunc, offsets[n]);
+			for (int i=0; i<lengthBins.size(); i++) {
+				Range lengthBin = lengthBins.get(i);
+				if (lengthBin != null && !lengthBin.contains(totalLen))
+					continue;
+				processSlipFunc(slipFunc, normalizedTwoFaultXYZ[i]);
+			}
+		}
+	}
+	
+	private void processThreeFault(XY_DataSet leftSlipFunc, XY_DataSet middleSlipFunc, XY_DataSet rightSlipFunc) {
+		double[] offsets = { 0d, 1d, 2d };
+		XY_DataSet[] slipFuncs = {leftSlipFunc, middleSlipFunc, rightSlipFunc};
+		
+		for (int n=0; n<slipFuncs.length; n++) {
+			XY_DataSet slipFunc = slipFuncs[n];
+			if (slipFunc == null)
+				continue;
+			
+			double totalLen = slipFunc.getMaxX();
+			slipFunc = getNormalized(slipFunc);
+			if (offsets[n] > 0)
+				slipFunc = getShifted(slipFunc, offsets[n]);
+			for (int i=0; i<lengthBins.size(); i++) {
+				Range lengthBin = lengthBins.get(i);
+				if (lengthBin != null && !lengthBin.contains(totalLen))
+					continue;
+				processSlipFunc(slipFunc, normalizedThreeFaultXYZ[i]);
+			}
+		}
+	}
+	
 	private static int numDebugPlots = 0;
 	private void debugPlot(EvenlyDiscrXYZ_DataSet refXYZ, XY_DataSet forward, XY_DataSet mirrored) {
 		// create an empty copy
@@ -429,6 +524,14 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		DefaultXY_DataSet ret = new DefaultXY_DataSet();
 		for (Point2D pt : slipFunc)
 			ret.set((pt.getX()-minX)/spanX, pt.getY());
+		return ret;
+	}
+	
+	private static XY_DataSet getShifted(XY_DataSet slipFunc, double xAdd) {
+		if (D) validateFunc(slipFunc, true);
+		DefaultXY_DataSet ret = new DefaultXY_DataSet();
+		for (Point2D pt : slipFunc)
+			ret.set(pt.getX()+xAdd, pt.getY());
 		return ret;
 	}
 	
@@ -606,49 +709,69 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 				}
 			}
 			writePlot(outputDir, prefix+"_single_abs"+prefixAdd, "Single Fault Slip Along Rupture"+lenStr, "Distance Along Strike (km)",
-					absoluteSingleFaultXYZ[i]);
+					absoluteSingleFaultXYZ[i], false);
 			writePlot(outputDir, prefix+"_single_norm"+prefixAdd, "Single Fault Slip Along Rupture"+lenStr, "Normalized Distance Along Strike",
-					normalizedSingleFaultXYZ[i]);
-			writePlot(outputDir, prefix+"_multi_abs"+prefixAdd, "Multi-Fault Slip Along Rupture"+lenStr, "Distance Along Strike (km)",
-					absoluteMultiFaultXYZ[i]);
+					normalizedSingleFaultXYZ[i], true);
 			writePlot(outputDir, prefix+"_multi_norm"+prefixAdd, "Multi-Fault Slip Along Rupture"+lenStr, "Normalized Distance Along Strike",
-					normalizedMultiFaultXYZ[i]);
+					normalizedMultiFaultXYZ[i], true);
+			writePlot(outputDir, prefix+"_two_norm"+prefixAdd, "Two-Fault Slip Along Rupture"+lenStr, "Normalized Distance Along Strike",
+					normalizedTwoFaultXYZ[i], true);
+			writePlot(outputDir, prefix+"_three_norm"+prefixAdd, "Three-Fault Slip Along Rupture"+lenStr, "Normalized Distance Along Strike",
+					normalizedThreeFaultXYZ[i], true);
 		}
 	}
 	
-	private void writePlot(File outputDir, String prefix, String title, String xAxisLabel, EvenlyDiscrXYZ_DataSet xyz) throws IOException {
+	private void writePlot(File outputDir, String prefix, String title, String xAxisLabel, EvenlyDiscrXYZ_DataSet xyz, boolean normalized)
+			throws IOException {
 		String yAxisLabel = "Normalized Slip";
 		String zAxisLabel = "Log10(Density)";
 		
-		ArbitrarilyDiscretizedFunc meanRightFunc = new ArbitrarilyDiscretizedFunc();
-		ArbitrarilyDiscretizedFunc meanLeftFunc = xyz.getMinX() < 0 ? new ArbitrarilyDiscretizedFunc() : null;
-		ArbitrarilyDiscretizedFunc sqrtSinFunc = xyz.getMaxX() > 1 ? null : new ArbitrarilyDiscretizedFunc();
+		if (xyz.getMaxZ() <= 0) {
+			System.out.println("Skipping empty plot: "+title);
+			return;
+		}
 		
-		double maxLeft = 0d;
-		double maxRight = 0d;
+		ArbitrarilyDiscretizedFunc sqrtSinFunc = normalized ? new ArbitrarilyDiscretizedFunc() : null;
+		
+		List<ArbitrarilyDiscretizedFunc> meanFuncs = new ArrayList<>();
+		ArbitrarilyDiscretizedFunc curMeanFunc = new ArbitrarilyDiscretizedFunc();
+		meanFuncs.add(curMeanFunc);
+		
+		double maxBelow0 = 0d;
+		double max0to1 = 0d;
+		double max1to2 = 0d;
+		double maxAbove2 = 0d;
 		
 //		if (sqrtSinFunc != null)
 //			System.out.println("Doing "+prefix);
 		for (int x=0; x<xyz.getNumX(); x++) {
 			double xVal = xyz.getX(x);
-			boolean left = xVal < 0;
 			double meanY = 0d;
 			double sumWeights = 0d;
 			for (int y=0; y<xyz.getNumY(); y++) {
 				double weight = xyz.get(x, y);
 				sumWeights += weight;
 				meanY += xyz.getY(y)*weight;
-				if (left)
-					maxLeft = Math.max(weight, maxLeft);
+				if (xVal < 0d)
+					maxBelow0 = Math.max(maxBelow0, weight);
+				else if (xVal < 1d)
+					max0to1 = Math.max(max0to1, weight);
+				else if (xVal < 2d)
+					max1to2 = Math.max(max1to2, weight);
 				else
-					maxRight = Math.max(weight, maxRight);
+					maxAbove2 = Math.max(maxAbove2, weight);
 			}
 			meanY /= sumWeights;
 			if (meanY > 0) {
-				if (xVal < 0)
-					meanLeftFunc.set(xVal, meanY);
-				else
-					meanRightFunc.set(xVal, meanY);
+				if (x > 0) {
+					double prevXval = xyz.getX(x-1);
+					if (prevXval < 0 && xVal > 0 || (normalized && Math.floor(prevXval) != Math.floor(xVal))) {
+						// time for a new mean func
+						curMeanFunc = new ArbitrarilyDiscretizedFunc();
+						meanFuncs.add(curMeanFunc);
+					}
+				}
+				curMeanFunc.set(xVal, meanY);
 			}
 			if (sqrtSinFunc != null) {
 //				System.out.println("\tsumY["+(float)xVal+"]: "+sumWeights);
@@ -656,9 +779,12 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 				sqrtSinFunc.set(xVal, Math.sqrt(Math.abs(Math.sin(relX))));
 			}
 		}
-		if (sqrtSinFunc != null)
-			// fill in zero val
-			sqrtSinFunc.set(0d, 0d);
+		if (sqrtSinFunc != null) {
+			// fill in zero val(s)
+			for (double x=0; x<xyz.getMaxX()+xyz.getGridSpacingX(); x++)
+				sqrtSinFunc.set(x, 0d);
+			
+		}
 		
 		xyz = xyz.copy();
 		
@@ -666,7 +792,16 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		// (can have different amounts on either side)
 		
 		for (int xInd=0; xInd<xyz.getNumX(); xInd++) {
-			double scale = xyz.getX(xInd) < 0 ? maxLeft : maxRight;
+			double x = xyz.getX(xInd);
+			double scale;
+			if (x < 0)
+				scale = maxBelow0;
+			else if (x < 1d)
+				scale = max0to1;
+			else if (x < 2d)
+				scale = max1to2;
+			else
+				scale = maxAbove2;
 			for (int yInd=0; yInd<xyz.getNumY(); yInd++)
 				xyz.set(xInd, yInd, xyz.get(xInd, yInd)/scale);
 		}
@@ -677,7 +812,19 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 			if (val > 0 && val < minNonZero)
 				minNonZero = val;
 		}
-		Range logRange = calcEncompassingLog10Range(Math.max(minNonZero, 1d/Math.max(maxLeft, maxRight)), xyz.getMaxZ());
+		double smallestPossible = minNonZero;
+		if (maxBelow0 > 0)
+			smallestPossible = Math.max(smallestPossible, 1d/maxBelow0);
+		if (max0to1 > 0)
+			smallestPossible = Math.max(smallestPossible, 1d/max0to1);
+		if (max1to2 > 0)
+			smallestPossible = Math.max(smallestPossible, 1d/max1to2);
+		if (maxAbove2 > 0)
+			smallestPossible = Math.max(smallestPossible, 1d/maxAbove2);
+		Preconditions.checkState(Double.isFinite(xyz.getMaxZ()), "Non finite maxZ=%s", xyz.getMaxZ());
+		if ((float)smallestPossible == (float)xyz.getMaxZ())
+			smallestPossible = xyz.getMaxZ()/10d;
+		Range logRange = calcEncompassingLog10Range(smallestPossible, xyz.getMaxZ());
 		xyz.log10();
 		for (int i=0; i<xyz.size(); i++)
 			if (Double.isInfinite(xyz.get(i)))
@@ -691,12 +838,12 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		meanRightFunc.setName("Mean");
-		funcs.add(meanRightFunc);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
-		
-		if (meanLeftFunc != null) {
-			funcs.add(meanLeftFunc);
+		for (ArbitrarilyDiscretizedFunc meanFunc : meanFuncs) {
+			if (meanFunc.size() == 0)
+				continue;
+			if (funcs.isEmpty())
+				meanFunc.setName("Mean");
+			funcs.add(meanFunc);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		}
 		

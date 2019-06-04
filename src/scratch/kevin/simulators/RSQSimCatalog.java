@@ -30,6 +30,7 @@ import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -305,6 +306,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_3165("bruce/rundir3165", "Bruce 3165", "Bruce Shaw", cal(2019, 3, 18),
 				"AReduceDelay  tCausalFactor=3.0 areaFrac=0.99  V=1  b=.017 a=.005 fA=.005 ; Smooth Model",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_3271("bruce/rundir3271", "Bruce 3271", "Bruce Shaw", cal(2019, 5, 29),
+				"a=.006 b=.018  more b=1 like",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -1266,8 +1270,34 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		TableBuilder table;
 		
+		FaultSystemSolution compSol = null;
+		
 		if (replot || !new File(outputDir, "mfd.png").exists()) {
 			MFDPlot mfdPlot = new MFDPlot(minMag);
+			File mfdCSV = new File(System.getProperty("user.home"), ".opensha/ucerf3_fm_dm_sols/"+getFaultModel().encodeChoiceString()
+					+"_"+getDeformationModel().encodeChoiceString()+"_supra_plus_sub_seis_cumulative.csv");
+//			System.out.println(mfdCSV.getAbsolutePath()+" ? "+mfdCSV.exists());
+			if (mfdCSV.exists()) {
+				System.out.println("Loading UCERF3 comparison MFD: "+mfdCSV.getAbsolutePath());
+				CSVFile<String> csv = CSVFile.readFile(mfdCSV, true);
+				DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+				DiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
+				DiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();
+				for (int row=1; row<csv.getNumRows(); row++) {
+					double mag = Double.parseDouble(csv.get(row, 0));
+					if (mag < minMag-0.01)
+						continue;
+					double mean = Double.parseDouble(csv.get(row, 1));
+					if (mean == 0d)
+						break;
+					meanFunc.set(mag, mean);
+					minFunc.set(mag, Double.parseDouble(csv.get(row, 2)));
+					maxFunc.set(mag, Double.parseDouble(csv.get(row, 3)));
+				}
+				UncertainArbDiscDataset compRange = new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
+				compRange.setName("U3 On Fault");
+				mfdPlot.setComparableRange(compRange);
+			}
 			mfdPlot.initialize(getName(), outputDir, "mfd");
 			plots.add(mfdPlot);
 		}
@@ -1374,16 +1404,15 @@ public class RSQSimCatalog implements XMLSaveable {
 				+ "We only consider ruptures where at least 2 subsections participated (2 on each side of the jump for multi-fault ruptures). "
 				+ "This is done using the UCERF3 'named faults' list to determine if multiple fault sections belong to the same master fault.");
 		lines.add("");
-		lines.add("The calculation is done independently for different length bins. Note that average slip is discretized at approximately "
-				+ "2 element widths, so the the shortest bins will show less variation by construction.");
+		lines.add("Ruptures are binned by their length in each row below. For multi-fault ruptures, the junction point is at x=0 with the shorter "
+				+ "side of the rupture on the left (below zero), and longer half on the right");
 		lines.add("");
 		lines.add("Average values are plotted with a solid black line, and sqrt(sin(|x*&pi;|)) in a dashed gray line (normalized length "
 				+ "plots only).");
 		lines.add("");
-		lines.add("#### Single-Fault Slip Along Rupture");
-		lines.add("");
 		table = MarkdownUtils.tableBuilder();
-		table.addLine("Rupture Length", "Absolute distance from either rupture endpoint", "Normalized distance from either rupture endpoint");
+		table.addLine("Rupture Length", "Single-fault, absolute distance from either rupture endpoint",
+				"Single-fault, normalized distance from either rupture endpoint", "Multi-fault, normalized distance on either side of jump");
 		for (Range lengthBin : lengthBins) {
 			table.initNewLine();
 			String lenStr;
@@ -1400,20 +1429,20 @@ public class RSQSimCatalog implements XMLSaveable {
 				}
 			}
 			table.addColumn("**"+lenStr+"**");
-			table.addColumn("![Slip Alon Rupture Absolute]("+outputDir.getName()+"/slip_along_rupture_single_abs"+prefixAdd+".png)");
-			table.addColumn("![Slip Alon Rupture Normalized]("+outputDir.getName()+"/slip_along_rupture_single_norm"+prefixAdd+".png)");
+			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_single_abs"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
+			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_single_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
+			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_multi_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
 			table.finalizeLine();
 		}
 		lines.addAll(table.build());
 		lines.add("");
-		lines.add("#### Multi-Fault Slip Along Rupture");
+		lines.add("#### Two- and Three-Fault Slip Along Rupture");
 		lines.add("");
-		lines.add("These plots show D<sub>SR</sub> for multi-fault ruptures, on either side of a jump. The left side (negative x-values) "
-				+ "is always closer to either end of the rupture, and the right side (positive x-values) closer to the center. Ruptures are "
-				+ "binned according the length of the rupture on that fault, rather than the total length of the rupture.");
+		lines.add("These plots show D<sub>SR</sub> for two- and three-fault ruptures. Lengths are normalized, with the first fault in x=[0 1], "
+				+ "second in x=[1 2], etc. Rupture are organized such that the leftmost side is always shorter than the rightmost side.");
 		lines.add("");
 		table = MarkdownUtils.tableBuilder();
-		table.addLine("Rupture Length", "Absolute distance on either side of jump", "Normalized distance on either side of jump");
+		table.addLine("Rupture Length", "Two-fault Ruptures", "Three-Fault Ruptures");
 		for (Range lengthBin : lengthBins) {
 			table.initNewLine();
 			String lenStr;
@@ -1430,8 +1459,8 @@ public class RSQSimCatalog implements XMLSaveable {
 				}
 			}
 			table.addColumn("**"+lenStr+"**");
-			table.addColumn("![Slip Alon Rupture Absolute]("+outputDir.getName()+"/slip_along_rupture_multi_abs"+prefixAdd+".png)");
-			table.addColumn("![Slip Alon Rupture Normalized]("+outputDir.getName()+"/slip_along_rupture_multi_norm"+prefixAdd+".png)");
+			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_two_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
+			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_three_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
 			table.finalizeLine();
 		}
 		lines.addAll(table.build());
@@ -1641,6 +1670,12 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		
 		return plots;
+	}
+	
+	private static String imageIfExists(File outputDir, String fileName, String title, String missingText) {
+		if (new File(outputDir, fileName).exists())
+			return "!["+title+"]("+outputDir.getName()+"/"+fileName+")";
+		return missingText;
 	}
 	
 	public List<String> writeStandardDiagnosticPlots(File outputDir, int skipYears, double minMag, boolean replot, String topLink)
@@ -2189,11 +2224,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
-		GregorianCalendar minDate = cal(2000, 1, 1);
-//		GregorianCalendar minDate = cal(2019, 3, 1);
+//		GregorianCalendar minDate = cal(2000, 1, 1);
+		GregorianCalendar minDate = cal(2019, 5, 1);
 		
-//		for (Catalogs cat : cats) {
-		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
+		for (Catalogs cat : cats) {
+//		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
 			if (cat.catalog.getDate().before(minDate))
 				continue;
 			RSQSimCatalog catalog = cat.instance(baseDir);
