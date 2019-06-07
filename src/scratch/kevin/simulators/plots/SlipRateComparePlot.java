@@ -34,6 +34,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -121,30 +122,39 @@ public class SlipRateComparePlot extends AbstractPlot {
 		List<LocationList> faults = new ArrayList<>();
 		for (int i=0; i<subSects.size(); i++) {
 			FaultSectionPrefData subSect = subSects.get(i);
-			double totArea = 0d;
-			double totAreaWeightedSlip = 0d;
-			double totAreaWeightedTargets = 0d;
-			for (SimulatorElement elem : mapper.getSlipSectionsForSect(subSect)) {
-				double totSlip = elemTotalSlipsMap.containsKey(elem) ? elemTotalSlipsMap.get(elem) : 0d;
-				double slipRate = totSlip/durationYears;
-				double area = elem.getArea();
-				totAreaWeightedTargets += elem.getSlipRate()*area;
-				totAreaWeightedSlip += slipRate*area;
-				totArea += area;
-			}
-			// convert these to mm/yr
-			simSlipRates[i] = 1e3 * totAreaWeightedSlip / totArea;
-			simTargetSlipRates[i] = 1e3 * totAreaWeightedTargets / totArea;
 			if (u3SolSlipRates != null) {
 				u3SolSlipRates[i] = 1e3 * compSol.calcSlipRateForSect(i);
-				ratioU3SolToTarget[i] = u3SolSlipRates[i] / u3TargetSlipRates[i];
 				u3TargetSlipRates[i] = 1e3 * compSol.getRupSet().getSlipRateForSection(i);
 			} else {
 				u3TargetSlipRates[i] = subSect.getReducedAveSlipRate();
 			}
+			
+			if (mapper.isMapped(subSect)) {
+				double totArea = 0d;
+				double totAreaWeightedSlip = 0d;
+				double totAreaWeightedTargets = 0d;
+				for (SimulatorElement elem : mapper.getSlipSectionsForSect(subSect)) {
+					double totSlip = elemTotalSlipsMap.containsKey(elem) ? elemTotalSlipsMap.get(elem) : 0d;
+					double slipRate = totSlip/durationYears;
+					double area = elem.getArea();
+					totAreaWeightedTargets += elem.getSlipRate()*area;
+					totAreaWeightedSlip += slipRate*area;
+					totArea += area;
+				}
+				// convert these to mm/yr
+				simSlipRates[i] = 1e3 * totAreaWeightedSlip / totArea;
+				simTargetSlipRates[i] = 1e3 * totAreaWeightedTargets / totArea;
+				if (u3SolSlipRates != null)
+					ratioU3SolToTarget[i] = u3SolSlipRates[i] / u3TargetSlipRates[i];
+				ratioSimToTarget[i] = simSlipRates[i] / simTargetSlipRates[i];
+				ratioSimToU3[i] = simSlipRates[i] / u3TargetSlipRates[i];
+			} else {
+				if (u3SolSlipRates != null)
+					ratioU3SolToTarget[i] = Double.NaN;
+				ratioSimToTarget[i] = Double.NaN;
+				ratioSimToU3[i] = Double.NaN;
+			}
 			faults.add(subSect.getFaultTrace());
-			ratioSimToTarget[i] = simSlipRates[i] / simTargetSlipRates[i];
-			ratioSimToU3[i] = simSlipRates[i] / u3TargetSlipRates[i];
 		}
 
 		plotMaps(simSlipRates, u3TargetSlipRates, u3SolSlipRates, ratioSimToTarget, ratioSimToU3, ratioU3SolToTarget, faults);
@@ -154,11 +164,20 @@ public class SlipRateComparePlot extends AbstractPlot {
 	private void plotMaps(double[] simSlipRates, double[] u3TargetSlipRates, double[] u3SolutionSlipRates, double[] ratioSimToTarget,
 			double[] ratioSimToU3, double[] ratioU3SolToTarget, List<LocationList> faults) throws IOException {
 		CPT slipCPT = FaultBasedMapGen.getLog10_SlipRateCPT();
-		CPT ratioCPT = FaultBasedMapGen.getLogRatioCPT();
+		slipCPT.setNanColor(Color.GRAY);
+//		CPT ratioCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-2d, 2d);
+//		CPT newRatioCPT = new CPT();
+//		for (CPTVal val : ratioCPT)
+//			newRatioCPT.add(new CPTVal(val.start, val.minColor.darker(), val.end, val.maxColor.darker()));
+//		newRatioCPT.setNanColor(Color.GRAY);
+//		ratioCPT = newRatioCPT;
+		CPT ratioCPT = new CPT(-2d, 2d, Color.BLUE.darker().darker(), Color.BLUE.brighter(), new Color(230, 230, 230),
+				Color.RED.brighter(), Color.RED.darker().darker());
+		ratioCPT.setNanColor(Color.GRAY);
 		
 		Region region = new CaliforniaRegions.RELM_TESTING();
 		
-		System.out.println("Building maps");
+//		System.out.println("Building maps");
 		GMT_Map simSlipMap = FaultBasedMapGen.buildMap(slipCPT, faults, FaultBasedMapGen.log10(simSlipRates),
 				null, 1d, region, false, "Log@-10@- Simulator Output Slip Rates (mm/yr)");
 		GMT_Map u3TargetSlipMap = FaultBasedMapGen.buildMap(slipCPT, faults, FaultBasedMapGen.log10(u3TargetSlipRates),
@@ -177,16 +196,16 @@ public class SlipRateComparePlot extends AbstractPlot {
 		
 		String prefix = getOutputPrefix();
 		
-		System.out.println("Plotting");
+//		System.out.println("Plotting");
 		try {
 			FaultBasedMapGen.plotMap(getOutputDir(), prefix+"_sim_map", false, simSlipMap);
 			FaultBasedMapGen.plotMap(getOutputDir(), prefix+"_u3_target_map", false, u3TargetSlipMap);
 			if (u3SolutionSlipMap != null)
-				FaultBasedMapGen.plotMap(getOutputDir(), prefix+"_u3_sol_map", false, u3TargetSlipMap);
+				FaultBasedMapGen.plotMap(getOutputDir(), prefix+"_u3_sol_map", false, u3SolutionSlipMap);
 			FaultBasedMapGen.plotMap(getOutputDir(), prefix+"_sim_ratio_map", false, simRatioMap);
 			FaultBasedMapGen.plotMap(getOutputDir(), prefix+"_sim_u3_ratio_map", false, simRatioU3Map);
 			if (u3RatioMap != null)
-				FaultBasedMapGen.plotMap(getOutputDir(), prefix+"_u3_ratio_map", false, simRatioU3Map);
+				FaultBasedMapGen.plotMap(getOutputDir(), prefix+"_u3_ratio_map", false, u3RatioMap);
 		} catch (GMT_MapException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
@@ -255,7 +274,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 			PlotCurveCharacterstics simTargetChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK);
 			PlotCurveCharacterstics simSolChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE);
 			PlotCurveCharacterstics u3TargetChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED.darker());
-			PlotCurveCharacterstics u3SolChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED.brighter());
+			PlotCurveCharacterstics u3SolChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GREEN.darker());
 			
 			for (List<FaultSectionPrefData> parentSections : sectionsForFault.values()) {
 				DefaultXY_DataSet simFunc = new DefaultXY_DataSet();
@@ -361,10 +380,10 @@ public class SlipRateComparePlot extends AbstractPlot {
 				
 				// note - Y location will get reset in the plotting code
 				if (!annotationName.isEmpty()) {
-					XYTextAnnotation a = new XYTextAnnotation(annotationName+" ", midX, yRange.getUpperBound());
+					XYTextAnnotation a = new XYTextAnnotation(" "+annotationName, midX, yRange.getLowerBound());
 					a.setFont(annFont);
-					a.setRotationAnchor(TextAnchor.CENTER_RIGHT);
-					a.setTextAnchor(TextAnchor.CENTER_RIGHT);
+					a.setRotationAnchor(TextAnchor.CENTER_LEFT);
+					a.setTextAnchor(TextAnchor.CENTER_LEFT);
 					a.setRotationAngle(-0.5*Math.PI);
 					anns.add(a);
 				}
@@ -378,7 +397,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 			HeadlessGraphPanel gp = getGraphPanel();
 			gp.drawGraphPanel(spec, false, true, xRange, yRange);
 			gp.getPlot().setDatasetRenderingOrder(DatasetRenderingOrder.REVERSE);
-			gp.getChartPanel().setSize(getPlotWidth()*14/10, getPlotHeight());
+			gp.getChartPanel().setSize(1200, 800);
 			gp.getPlot().getDomainAxis().setInverted(true);
 			File outputDir = getOutputDir();
 			String prefix = getOutputPrefix()+"_fault_"+fault.replaceAll("\\W+", "_");

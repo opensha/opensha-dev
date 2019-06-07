@@ -46,6 +46,7 @@ import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.XMLUtils;
+import org.opensha.refFaultParamDb.vo.Fault;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -96,6 +97,7 @@ import scratch.kevin.simulators.plots.RecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
 import scratch.kevin.simulators.plots.SlipLengthScalingPlot;
+import scratch.kevin.simulators.plots.SlipRateComparePlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 import scratch.kevin.simulators.plots.SlipAlongRupturePlot;
 import scratch.kevin.simulators.plots.StationarityPlot;
@@ -1271,10 +1273,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		TableBuilder table;
 		
 		FaultSystemSolution compSol = null;
+		File fmDmSolDir = new File(System.getProperty("user.home"), ".opensha/ucerf3_fm_dm_sols/");
 		
 		if (replot || !new File(outputDir, "mfd.png").exists()) {
 			MFDPlot mfdPlot = new MFDPlot(minMag);
-			File mfdCSV = new File(System.getProperty("user.home"), ".opensha/ucerf3_fm_dm_sols/"+getFaultModel().encodeChoiceString()
+			File mfdCSV = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
 					+"_"+getDeformationModel().encodeChoiceString()+"_supra_plus_sub_seis_cumulative.csv");
 //			System.out.println(mfdCSV.getAbsolutePath()+" ? "+mfdCSV.exists());
 			if (mfdCSV.exists()) {
@@ -1346,11 +1349,12 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add("### Slip-Length Plots");
 		lines.add(topLink);
 		lines.add("");
-		lines.add("These plots compute average slip-length scaling at mid-seismogenic depth. We define mid-seismogenic depth "
-				+ "to be no deeper than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_MAX_DEPTH_DEFAULT)+" km, "
+		String midSeisDescription = "no deeper than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_MAX_DEPTH_DEFAULT)+" km, "
 				+ "no shallower than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_MIN_DEPTH_DEFAULT)+" km, "
 				+ "and no less than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_BUFFER_DEFAULT)+" km down- or "
-				+ "up-dip from the top or bottom of the fault. Average slip is computed across all elements in this "
+				+ "up-dip from the top or bottom of the fault";
+		lines.add("These plots compute average slip-length scaling at mid-seismogenic depth. We define mid-seismogenic depth " 
+				+ "to be "+midSeisDescription+". Average slip is computed across all elements in this "
 				+ "mid-seismogenic region, including any which did not slip, along the full length of the rupture.");
 		lines.add("");
 		lines.add("We define the rupture length, which also determines the region at mid-seismogenic depth across which we "
@@ -1401,8 +1405,8 @@ public class RSQSimCatalog implements XMLSaveable {
 				+ "slip along each mapped subsection at mid-seismogenic depth (using the *"+dsrLenAlg+"* algorithm), then plot that slip along "
 				+ "strike, normalized by the maximum slip across all subsections in that rupture. We do this for single-fault events, which "
 				+ "can span multiple segments (e.g. SAF Mojave and San Bernardino), and also separately for each junction in multi-fault events. "
-				+ "We only consider ruptures where at least 2 subsections participated (2 on each side of the jump for multi-fault ruptures). "
-				+ "This is done using the UCERF3 'named faults' list to determine if multiple fault sections belong to the same master fault.");
+				+ "This is done using the UCERF3 'named faults' list to determine if multiple fault sections belong to the same master fault. "
+				+ "We only consider ruptures where at least 2 subsections participated (2 on each side of the jump for multi-fault ruptures).");
 		lines.add("");
 		lines.add("Ruptures are binned by their length in each row below. For multi-fault ruptures, the junction point is at x=0 with the shorter "
 				+ "side of the rupture on the left (below zero), and longer half on the right");
@@ -1412,7 +1416,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add("");
 		table = MarkdownUtils.tableBuilder();
 		table.addLine("Rupture Length", "Single-fault, absolute distance from either rupture endpoint",
-				"Single-fault, normalized distance from either rupture endpoint", "Multi-fault, normalized distance on either side of jump");
+				"Single-fault, normalized distance along strike", "Multi-fault, normalized distance on either side of jump");
 		for (Range lengthBin : lengthBins) {
 			table.initNewLine();
 			String lenStr;
@@ -1465,10 +1469,88 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		lines.addAll(table.build());
 		
+		if (replot || !new File(outputDir, "slip_rate_sim_map.png").exists()) {
+			if (compSol == null && fmDmSolDir.exists()) {
+				File solFile = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
+					+"_"+getDeformationModel().encodeChoiceString()+"_MEAN_BRANCH_AVG_SOL.zip");
+				if (solFile.exists()) {
+					System.out.println("Loading comparison FSS from "+solFile.getAbsolutePath());
+					try {
+						compSol = FaultSystemIO.loadSol(solFile);
+					} catch (DocumentException e) {
+						throw ExceptionUtils.asRuntimeException(e);
+					}
+				} else {
+					System.out.println("Skipping slip rate comparison solution, sol file doesn't exist: "+solFile.getAbsolutePath());;
+				}
+			}
+			SlipRateComparePlot plot = new SlipRateComparePlot(getSubSectMapper(), getFaultModel(), getDeformationModel(), compSol);
+			plot.initialize(getName(), outputDir, "slip_rate");
+			plots.add(plot);
+		}
+		
+		lines.add("### Slip Rate Plots");
+		lines.add(topLink);
+		lines.add("");
+		String slipRateDesc = "Slip rates are calculated at mid-seismogenic depth: "+midSeisDescription+". UCERF3 comparisons are included "
+				+ "with the original target slip rate for the fault and deformation model used as input to the simulator when constructing "
+				+ "the geometry, but this target is often smoothed and/or modified before use in the simlators.";
+		boolean hasSlipU3Sol = new File(outputDir, "slip_rate_u3_sol_map.png").exists();
+		if (hasSlipU3Sol)
+			slipRateDesc += " Post-UCERF3 inversion slip rates (which will not perfectly match the target) are also included and labeled as "
+				+ "'UCERF3 Solution'.";
+		lines.add(slipRateDesc);
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.initNewLine();
+		table.addColumn("<p align=\"center\">**Simulation Slip Rate**</p>");
+		table.addColumn("<p align=\"center\">**Simulation vs Target Ratio**</p>");
+		table.addColumn("<p align=\"center\">**UCERF3 Target Slip Rate**</p>");
+		table.addColumn("<p align=\"center\">**Simulation vs UCERF3 Target Ratio**</p>");
+		if (hasSlipU3Sol) {
+			table.addColumn("<p align=\"center\">**UCERF3 Solution Slip Rate**</p>");
+			table.addColumn("<p align=\"center\">**UCERF3 Solution vs Target Ratio**</p>");
+		}
+		table.finalizeLine();
+		table.initNewLine();
+		table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_sim_map.png)");
+		table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_sim_ratio_map.png)");
+		table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_u3_target_map.png)");
+		table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_sim_u3_ratio_map.png)");
+		if (hasSlipU3Sol) {
+			table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_u3_sol_map.png)");
+			table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_u3_ratio_map.png)");
+		}
+		table.finalizeLine();
+		lines.addAll(table.wrap(4, 0).build());
+		
+		Map<String, String> slipFaultPlotMap = new HashMap<>();
+		for (String fault : getFaultModel().getNamedFaultsMapAlt().keySet()) {
+			File faultPlot = new File(outputDir, "slip_rate_fault_"+fault.replaceAll("\\W+", "_")+".png");
+			if (faultPlot.exists())
+				slipFaultPlotMap.put(fault, faultPlot.getName());
+		}
+		if (slipFaultPlotMap.size() > 0) {
+			lines.add("#### Slip Rate Fault Plots");
+			lines.add(topLink);
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			List<String> sortedNames = ComparablePairing.getSortedData(slipFaultPlotMap);
+			table.initNewLine();
+			for (String faultName : sortedNames)
+				table.addColumn("<p align=\"center\">**"+faultName+"**</p>");
+			table.finalizeLine();
+			table.initNewLine();
+			for (String faultName : sortedNames)
+				table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/"+slipFaultPlotMap.get(faultName)+")");
+			table.finalizeLine();
+			lines.addAll(table.wrap(3, 0).build());
+		}
+		
 		if (replot || !new File(outputDir, "rupture_velocity_scatter.png").exists()) {
 			RuptureVelocityPlot rupVelPlot = new RuptureVelocityPlot(getElements(), minMag);
 			rupVelPlot.initialize(getName(), outputDir, "rupture_velocity");
-			plots.add(rupVelPlot);			
+			plots.add(rupVelPlot);
 		}
 		lines.add("### Rupture Velocity Plots");
 		lines.add(topLink);
@@ -2224,11 +2306,16 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
+		// new catalogs
+//		GregorianCalendar minDate = cal(2019, 5, 1);
+//		for (Catalogs cat : cats) {
+		// specific catalog
+		GregorianCalendar minDate = cal(2000, 1, 1);
+		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
+		// all catalogs
 //		GregorianCalendar minDate = cal(2000, 1, 1);
-		GregorianCalendar minDate = cal(2019, 5, 1);
-		
-		for (Catalogs cat : cats) {
-//		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
+//		for (Catalogs cat : cats) {
+			
 			if (cat.catalog.getDate().before(minDate))
 				continue;
 			RSQSimCatalog catalog = cat.instance(baseDir);

@@ -98,9 +98,9 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 			double maxAbsX = lengthBin == null || Double.isInfinite(lengthBin.getUpperBound()) ? 200 : lengthBin.getUpperBound()/2;
 			double deltaAbsX = maxAbsX/(double)numX;
 			double minAbsX = deltaAbsX*0.5;
-			normalizedSingleFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX, numY, minNormX, minY, deltaNormX, deltaY);
+			normalizedSingleFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX*2, numY, minNormX, minY, deltaNormX, deltaY);
 			absoluteSingleFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX, numY, minAbsX, minY, deltaAbsX, deltaY);
-			normalizedMultiFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX*2, numY, -normalizedSingleFaultXYZ[i].getMaxX(), minY, deltaNormX, deltaY);
+			normalizedMultiFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX*2, numY, -normalizedSingleFaultXYZ[i].getMaxX(), minY, deltaNormX*2, deltaY);
 			normalizedTwoFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX*2, numY, minNormX*2, minY, deltaNormX*2, deltaY);
 			normalizedThreeFaultXYZ[i] = new EvenlyDiscrXYZ_DataSet(numX*2, numY, minNormX*3, minY, deltaNormX*3, deltaY);
 		}
@@ -344,19 +344,23 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		final boolean debugPlot = DD && Math.random() < 0.0001 && numDebugPlots < 20;
 		for (boolean normalized : new boolean[] {false, true}) {
 			XY_DataSet func = normalized ? getNormalized(slipFunc) : slipFunc;
-			XY_DataSet firstHalf = getFirstHalf(func);
+			XY_DataSet mirrored = getMirroredPositive(func);
 			
-			XY_DataSet mirrored = getFirstHalf(getMirroredPositive(func));
+			if (!normalized) {
+				// just first half for absolute plots
+				func = getFirstHalf(func);
+				mirrored = getFirstHalf(mirrored);
+			}
 			
 			EvenlyDiscrXYZ_DataSet[] xyz = normalized ? normalizedSingleFaultXYZ : absoluteSingleFaultXYZ;
 			for (int i=0; i<lengthBins.size(); i++) {
 				Range lengthBin = lengthBins.get(i);
 				if (lengthBin != null && !lengthBin.contains(totalLen))
 					continue;
-				processSlipFunc(firstHalf, xyz[i]);
+				processSlipFunc(func, xyz[i]);
 				processSlipFunc(mirrored, xyz[i]);
 				if (debugPlot && lengthBin != null)
-					debugPlot(xyz[i], firstHalf, mirrored);
+					debugPlot(xyz[i], func, mirrored);
 			}
 		}
 	}
@@ -377,17 +381,16 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 
 			final boolean debugPlot = DD && Math.random() < 0.0001 && numDebugPlots < 20;
 			XY_DataSet func = getNormalized(slipFunc);
-			XY_DataSet firstHalf = getFirstHalf(func);
 			if (mirrorNegative[n])
-				firstHalf = getMirroredNegative(firstHalf);
+				func = getMirroredNegative(func);
 			
 			for (int i=0; i<lengthBins.size(); i++) {
 				Range lengthBin = lengthBins.get(i);
 				if (lengthBin != null && !lengthBin.contains(totalLen))
 					continue;
-				processSlipFunc(firstHalf, normalizedMultiFaultXYZ[i]);
+				processSlipFunc(func, normalizedMultiFaultXYZ[i]);
 				if (debugPlot && lengthBin != null)
-					debugPlot(normalizedMultiFaultXYZ[i], firstHalf, null);
+					debugPlot(normalizedMultiFaultXYZ[i], func, null);
 			}
 		}
 	}
