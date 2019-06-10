@@ -17,8 +17,6 @@ import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityMagDistPageGen.RuptureType;
-
 public class ASK_EventData {
 	
 	public final int recID;

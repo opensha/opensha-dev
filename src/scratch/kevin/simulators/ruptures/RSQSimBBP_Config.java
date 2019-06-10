@@ -232,22 +232,22 @@ public class RSQSimBBP_Config {
 		return new File(srfDir, prefix+"_bbp");
 	}
 	
-	static final boolean U3_SURFACES = true;
-	static VelocityModel VM = VelocityModel.LA_BASIN_500;
-	static final Method METHOD = Method.GP;
-	static final SRFInterpolationMode SRF_INTERP_MODE = SRFInterpolationMode.ADJ_VEL;
-	static final double SRF_DT = 0.05;
-	static final double SRF_VERSION = 1.0;
-	static final int DEFAULT_SEED = 12345;
+	public static final boolean U3_SURFACES = true;
+	public static VelocityModel VM = VelocityModel.LA_BASIN_500;
+	public static final Method METHOD = Method.GP;
+	public static final SRFInterpolationMode SRF_INTERP_MODE = SRFInterpolationMode.ADJ_VEL;
+	public static final double SRF_DT = 0.05;
+	public static final double SRF_VERSION = 1.0;
+	public static final int DEFAULT_SEED = 12345;
 	public static final double MIN_SUB_SECT_FRACT = 0.2;
-	static final boolean ADJ_WIDTH_MATCH_AREA = true;
-	static final double MAX_ADJ_WIDTH = 30;
-	static final boolean DO_HF = false;
+	public static final boolean ADJ_WIDTH_MATCH_AREA = true;
+	public static final double MAX_ADJ_WIDTH = 30;
+	public static final boolean DO_HF = false;
 	
-	static final double MAX_DIST = 200d;
+	public static final double MAX_DIST = 200d;
 	
-	static final double SITE_LO_PASS_FREQ = 0.15;
-	static final double SITE_HI_PASS_FREQ = 100;
+	public static final double SITE_LO_PASS_FREQ = 0.15;
+	public static final double SITE_HI_PASS_FREQ = 100;
 	
 	private static final List<BBP_Site> allSites;
 	private static final List<BBP_Site> csLAInitialSites;
@@ -407,7 +407,7 @@ public class RSQSimBBP_Config {
 		bbpWrap.run();
 	}
 	
-	static VelocityModel detectVM(File bbpDir) throws IOException {
+	public static VelocityModel detectVM(File bbpDir) throws IOException {
 		for (VelocityModel vm : VelocityModel.values())
 			if (bbpDir.getName().contains(vm.name()))
 				return vm;

@@ -1,4 +1,4 @@
-package scratch.kevin.simulators.ruptures;
+package scratch.kevin.simulators.ruptures.rotation;
 
 import java.awt.Color;
 import java.io.File;
@@ -51,9 +51,11 @@ import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.Quantity;
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpec;
+import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
 public class RotatedRupVariabilityConfig {
 

@@ -351,7 +351,7 @@ public class BBP_PartBValidationConfig {
 		}
 	}
 	
-	static String[] buildMatchCriteria(double mag, double magTolerance, Range<Double> zTorRange, FaultStyle style, int rakeTolerance,
+	public static String[] buildMatchCriteria(double mag, double magTolerance, Range<Double> zTorRange, FaultStyle style, int rakeTolerance,
 			double dip, int dipTolerance, Double linearFract, boolean linearRelative) {
 		List<String> criteriaStr = new ArrayList<>();
 		if (!Double.isNaN(mag))
@@ -383,7 +383,7 @@ public class BBP_PartBValidationConfig {
 		return criteriaStr.toArray(new String[0]);
 	}
 	
-	static List<RuptureIdentifier> getIdentifiers(RSQSimCatalog catalog, double mag, double magTolerance,
+	public static List<RuptureIdentifier> getIdentifiers(RSQSimCatalog catalog, double mag, double magTolerance,
 			Range<Double> zTorRange, FaultStyle style, int rakeTolerance, double dip, int dipTolerance,
 			Double linearFract, boolean linearRelative) {
 		List<RuptureIdentifier> idens = new ArrayList<>();

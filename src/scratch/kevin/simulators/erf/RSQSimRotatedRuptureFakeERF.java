@@ -43,9 +43,9 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.erf.RSQSimSectBundledERF.RSQSimProbEqkRup;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig;
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.Quantity;
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpec;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
 /**
  * Fake ERF for running CyberShake for RSQSim Rotated Rupture variability experiments

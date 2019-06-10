@@ -44,7 +44,7 @@ import scratch.kevin.bbp.MPJ_BBP_Utils;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
 
-abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
+public abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
 	
 	protected final VelocityModel vm;
 	protected final Method method;
@@ -246,9 +246,9 @@ abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
 		
 	}
 	
-	abstract RSQSimEvent eventForIndex(int index);
-	abstract List<BBP_Site> sitesForIndex(int index);
-	abstract File runDirForIndex(int index);
+	protected abstract RSQSimEvent eventForIndex(int index);
+	protected abstract List<BBP_Site> sitesForIndex(int index);
+	protected abstract File runDirForIndex(int index);
 
 	@Override
 	protected void calculateBatch(int[] batch) throws Exception {

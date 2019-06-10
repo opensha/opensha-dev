@@ -303,7 +303,7 @@ public class BBP_PartBValidationPageGen {
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
 	}
 	
-	static class ValidationResult {
+	public static class ValidationResult {
 		private double period, lowerBound, upperBound, dataMedian, simMedian, simSD;
 
 		public ValidationResult(double period, double lowerBound, double upperBound, double dataMedian,
@@ -358,7 +358,7 @@ public class BBP_PartBValidationPageGen {
 		return calcPlotScenarioResults(scenario, distance, vs30, events.size(), allRD50s, resourcesDir, prefix);
 	}
 	
-	static void writeResultsCSV(File csvFile, Table<Scenario, Double, List<ValidationResult>> resultsTable,
+	public static void writeResultsCSV(File csvFile, Table<Scenario, Double, List<ValidationResult>> resultsTable,
 			Table<Scenario, Double, String> plotsTable) throws IOException {
 		CSVFile<String> csv = new CSVFile<>(true);
 		
@@ -448,7 +448,7 @@ public class BBP_PartBValidationPageGen {
 		return resultsTable;
 	}
 	
-	static List<ValidationResult> calcPlotScenarioResults(Scenario scenario, double distance, double vs30, int numEvents,
+	public static List<ValidationResult> calcPlotScenarioResults(Scenario scenario, double distance, double vs30, int numEvents,
 			List<DiscretizedFunc> rd50s, File resourcesDir, String prefix) throws IOException {
 		SummaryStatistics[] lnPeriodStats = null;
 		List<List<Double>> lnVals = new ArrayList<>();

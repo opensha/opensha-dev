@@ -1,4 +1,4 @@
-package scratch.kevin.simulators.ruptures;
+package scratch.kevin.simulators.ruptures.rotation;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,8 +21,10 @@ import com.google.common.collect.Table;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.MPJ_BBP_Utils;
+import scratch.kevin.simulators.ruptures.AbstractMPJ_BBP_MultiRupSim;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpec;
+import scratch.kevin.simulators.ruptures.MPJ_BBP_PartBSim;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
 public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_MultiRupSim {
 
@@ -141,13 +143,13 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 	}
 	
 	@Override
-	RSQSimEvent eventForIndex(int index) {
+	protected RSQSimEvent eventForIndex(int index) {
 		Config config = configs.get(index);
 		return config.config.getRotatedRupture(config.rotation);
 	}
 
 	@Override
-	synchronized List<BBP_Site> sitesForIndex(int index) {
+	protected synchronized List<BBP_Site> sitesForIndex(int index) {
 		Config config = configs.get(index);
 		List<BBP_Site> sites = new ArrayList<>();
 		sites.add(siteToBBPSites.get(config.rotation.site));
@@ -155,7 +157,7 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 	}
 
 	@Override
-	File runDirForIndex(int index) {
+	protected File runDirForIndex(int index) {
 		Config config = configs.get(index);
 		return new File(config.eventDir, config.scenario.getPrefix()+"_"+config.rotation.getPrefix());
 	}

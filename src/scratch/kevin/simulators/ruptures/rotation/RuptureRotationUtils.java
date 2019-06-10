@@ -1,4 +1,4 @@
-package scratch.kevin.simulators.ruptures;
+package scratch.kevin.simulators.ruptures.rotation;
 
 import java.awt.Color;
 import java.io.File;

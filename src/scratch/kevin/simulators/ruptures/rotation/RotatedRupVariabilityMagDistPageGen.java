@@ -1,4 +1,4 @@
-package scratch.kevin.simulators.ruptures;
+package scratch.kevin.simulators.ruptures.rotation;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,8 +39,10 @@ import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpec;
+import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
 public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPageGen {
 	

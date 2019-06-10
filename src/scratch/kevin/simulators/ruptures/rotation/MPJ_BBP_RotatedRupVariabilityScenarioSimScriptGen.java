@@ -1,4 +1,4 @@
-package scratch.kevin.simulators.ruptures;
+package scratch.kevin.simulators.ruptures.rotation;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +27,8 @@ import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
+import scratch.kevin.simulators.ruptures.MPJ_BBP_CatalogSimScriptGen;
+import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 
 class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 

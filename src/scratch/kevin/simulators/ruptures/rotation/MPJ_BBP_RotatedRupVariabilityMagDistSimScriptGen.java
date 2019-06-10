@@ -1,4 +1,4 @@
-package scratch.kevin.simulators.ruptures;
+package scratch.kevin.simulators.ruptures.rotation;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,7 +16,9 @@ import com.google.common.base.Preconditions;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityMagDistPageGen.RuptureType;
+import scratch.kevin.simulators.ruptures.MPJ_BBP_CatalogSimScriptGen;
+import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityMagDistPageGen.RuptureType;
 
 class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 

@@ -1,4 +1,4 @@
-package scratch.kevin.simulators.ruptures;
+package scratch.kevin.simulators.ruptures.rotation;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,8 +16,7 @@ import org.opensha.commons.geo.Location;
 import scratch.kevin.bbp.BBP_SimZipLoader;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.simCompare.SimulationRotDProvider;
-import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
-import scratch.kevin.simulators.ruptures.RotatedRupVariabilityConfig.RotationSpec;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
 public class BBP_RotatedRupSimLoader extends BBP_SimZipLoader implements SimulationRotDProvider<RotationSpec> {
 	

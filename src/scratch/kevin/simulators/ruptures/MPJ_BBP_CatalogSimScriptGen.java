@@ -24,7 +24,7 @@ import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
 
-class MPJ_BBP_CatalogSimScriptGen {
+public class MPJ_BBP_CatalogSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
@@ -162,7 +162,7 @@ class MPJ_BBP_CatalogSimScriptGen {
 		pbsWrite.writeScript(new File(localJobDir, "cat_bbp_parallel.slurm"), script);
 	}
 	
-	static String addBBP_EnvArgs(String argz, List<String> addLines, File remoteJobDir,
+	public static String addBBP_EnvArgs(String argz, List<String> addLines, File remoteJobDir,
 			String nodeScratchDir, String sharedScratchDir, String bbpCopyParentDir, File bbpEnvFile) {
 		if (nodeScratchDir != null && !nodeScratchDir.isEmpty())
 			argz += " --node-scratch-dir "+nodeScratchDir;

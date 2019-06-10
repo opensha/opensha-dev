@@ -85,12 +85,12 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 	}
 	
 	@Override
-	RSQSimEvent eventForIndex(int index) {
+	protected RSQSimEvent eventForIndex(int index) {
 		return events.get(index);
 	}
 
 	@Override
-	List<BBP_Site> sitesForIndex(int index) {
+	protected List<BBP_Site> sitesForIndex(int index) {
 		RSQSimEvent event = eventForIndex(index);
 		List<BBP_Site> mySites = new ArrayList<>();
 		for (int i=0; i<sites.size(); i++)
@@ -100,7 +100,7 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 	}
 
 	@Override
-	File runDirForIndex(int index) {
+	protected File runDirForIndex(int index) {
 		int eventID = eventForIndex(index).getID();
 		return getRunDir(eventID);
 	}

@@ -149,12 +149,12 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 	}
 
 	@Override
-	RSQSimEvent eventForIndex(int index) {
+	protected RSQSimEvent eventForIndex(int index) {
 		return events.get(index);
 	}
 
 	@Override
-	synchronized List<BBP_Site> sitesForIndex(int index) {
+	protected synchronized List<BBP_Site> sitesForIndex(int index) {
 		RSQSimEvent event = eventForIndex(index);
 		double dist = siteDists.get(index);
 		List<BBP_Site> sites = siteListCache.get(event, dist);
@@ -175,7 +175,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 	}
 
 	@Override
-	File runDirForIndex(int index) {
+	protected File runDirForIndex(int index) {
 		return runDirs.get(index);
 	}
 
@@ -184,7 +184,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		return events.size();
 	}
 	
-	static void addPartB_ScenarioOptions(Options ops) {
+	public static void addPartB_ScenarioOptions(Options ops) {
 		Option scenarios = new Option("scen", "scenarios", true, "BBP Part B Scenario names (comma separated). Default is all");
 		scenarios.setRequired(false);
 		ops.addOption(scenarios);
@@ -194,7 +194,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		ops.addOption(distances);
 	}
 	
-	static Scenario[] getScenarios(CommandLine cmd) {
+	public static Scenario[] getScenarios(CommandLine cmd) {
 		if (cmd.hasOption("scenarios")) {
 			String str = cmd.getOptionValue("scenarios");
 			String[] strs = str.split(",");
@@ -206,7 +206,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		return Scenario.values();
 	}
 	
-	static double[] getDistances(CommandLine cmd) {
+	public static double[] getDistances(CommandLine cmd) {
 		if (cmd.hasOption("distances")) {
 			String str = cmd.getOptionValue("distances");
 			String[] strs = str.split(",");
