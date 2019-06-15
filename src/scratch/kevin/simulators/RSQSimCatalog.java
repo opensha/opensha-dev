@@ -41,6 +41,8 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.CatalogLengthLoadIden;
@@ -82,6 +84,7 @@ import scratch.kevin.simulators.plots.MagAreaScalingPlot;
 import scratch.kevin.simulators.plots.MomentRateVaribilityPlot;
 import scratch.kevin.simulators.plots.NormalizedFaultRecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.PaleoOpenIntervalPlot;
+import scratch.kevin.simulators.plots.PaleoRecurrencePlot;
 import scratch.kevin.simulators.plots.RecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
@@ -90,6 +93,8 @@ import scratch.kevin.simulators.plots.SlipAlongRupturePlot;
 import scratch.kevin.simulators.plots.SlipLengthScalingPlot;
 import scratch.kevin.simulators.plots.SlipRateComparePlot;
 import scratch.kevin.simulators.plots.StationarityPlot;
+import scratch.kevin.simulators.plots.TriggerLargerWithinPrevRupturePlot;
+import scratch.kevin.simulators.plots.U3StyleNormalizedRuptureRecurrenceIntervalPlot;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityMagDistPageGen.RuptureType;
 
@@ -349,6 +354,13 @@ public class RSQSimCatalog implements XMLSaveable {
 	private Map<Integer, Double> subSectAreas;
 	private Map<IDPairing, Double> subSectDistsCache;
 	private RSQSimSubSectionMapper subSectMapper;
+	
+	private static final File fmDmSolDir = new File(System.getProperty("user.home"), ".opensha/ucerf3_fm_dm_sols/");
+	private FaultSystemSolution compSol;
+	
+	public static final double MIN_SUB_SECT_FRACT_DEFAULT = 0.2;
+	
+	private double minFractForInclusion = MIN_SUB_SECT_FRACT_DEFAULT;
 	
 	private static Table<FaultModels, DeformationModels, FaultSystemSolution> compSolsTable = HashBasedTable.create();
 	
@@ -644,6 +656,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		String vmCompareRotRupLink = null;
 		String multiFaultLink = null;
 		String extremeEventLink = null;
+		String parentMFDLink = null;
 		
 		File[] dirList = dir.listFiles();
 		Arrays.sort(dirList, new FileNameComparator());
@@ -710,6 +723,8 @@ public class RSQSimCatalog implements XMLSaveable {
 				vmCompareRotRupLink = name;
 			} else if (name.equals("bbp_part_b_summary")) {
 				partBSummaryLink = name;
+			} else if (name.equals("parent_sect_mfds")) {
+				parentMFDLink = name;
 			}
 		}
 		
@@ -735,6 +750,13 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add(topLink);
 			lines.add("");
 			lines.add("[Multi-Fault Rupture Comparisons here]("+multiFaultLink+"/)");
+		}
+		if (parentMFDLink != null) {
+			lines.add("");
+			lines.add("## Parent Section MFDs");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[Parent Section MFDs here]("+parentMFDLink+"/)");
 		}
 		if (extremeEventLink != null) {
 			lines.add("");
@@ -1030,6 +1052,16 @@ public class RSQSimCatalog implements XMLSaveable {
 		return new GregorianCalendar(year, month-1, day);
 	}
 	
+	public double getMinSubSectFractForInclusion() {
+		return minFractForInclusion;
+	}
+	
+	public void setFractForInclusion(double minFractForInclusion) {
+		if (subSectMapper != null)
+			subSectMapper.setMinFractForInclusion(minFractForInclusion);
+		this.minFractForInclusion = minFractForInclusion;
+	}
+	
 	public synchronized List<FaultSectionPrefData> getU3SubSects() {
 		if (subSects == null)
 			subSects = RSQSimUtils.getUCERF3SubSectsForComparison(getFaultModel(), getDeformationModel());
@@ -1101,21 +1133,22 @@ public class RSQSimCatalog implements XMLSaveable {
 	
 	public synchronized RSQSimSubSectionMapper getSubSectMapper() throws IOException {
 		if (subSectMapper == null)
-			subSectMapper = new RSQSimSubSectionMapper(getU3SubSects(), getElements(), getSubSectAreas(), getSubSectDistsCache());
+			subSectMapper = new RSQSimSubSectionMapper(getU3SubSects(), getElements(), minFractForInclusion,
+					getSubSectAreas(), getSubSectDistsCache());
 		return subSectMapper;
 	}
 	
-	public RSQSimSubSectEqkRupture getMappedSubSectRupture(RSQSimEvent event, double minFractForInclusion) {
+	public RSQSimSubSectEqkRupture getMappedSubSectRupture(RSQSimEvent event) {
 		RSQSimSubSectionMapper mapper;
 		try {
 			mapper = getSubSectMapper();
 		} catch (IOException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
-		return RSQSimUtils.buildSubSectBasedRupture(mapper, event, minFractForInclusion);
+		return RSQSimUtils.buildSubSectBasedRupture(mapper, event);
 	}
 	
-	public List<FaultSectionPrefData> getSubSectsForRupture(RSQSimEvent event, double minFractForInclusion) {
+	public List<FaultSectionPrefData> getSubSectsForRupture(RSQSimEvent event) {
 		RSQSimSubSectionMapper mapper;
 		try {
 			mapper = getSubSectMapper();
@@ -1123,7 +1156,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
 		
-		List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings(event, minFractForInclusion);
+		List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings(event);
 		if (minFractForInclusion >= 0 && bundled.isEmpty())
 			bundled = mapper.getAllSubSectionMappings(event);
 		List<FaultSectionPrefData> allSects = new ArrayList<>();
@@ -1243,12 +1276,28 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 	}
 	
-	public FaultSystemSolution buildSolution(Loader loader, double minMag, double minFractForInclusion) throws IOException {
-		return buildSolution(loader.load(), minMag, minFractForInclusion);
+	public FaultSystemSolution buildSolution(Loader loader, double minMag) throws IOException {
+		return buildSolution(loader.load(), minMag);
 	}
 	
-	public FaultSystemSolution buildSolution(List<RSQSimEvent> events, double minMag, double minFractForInclusion) throws IOException {
+	public FaultSystemSolution buildSolution(List<RSQSimEvent> events, double minMag) throws IOException {
 		return RSQSimUtils.buildFaultSystemSolution(getU3SubSects(), getElements(), events, minMag, minFractForInclusion);
+	}
+	
+	public FaultSystemSolution getComparisonSolution() throws IOException {
+		File solFile = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
+				+"_"+getDeformationModel().encodeChoiceString()+"_MEAN_BRANCH_AVG_SOL.zip");
+		if (solFile.exists()) {
+			System.out.println("Loading comparison FSS from "+solFile.getAbsolutePath());
+			try {
+				compSol = FaultSystemIO.loadSol(solFile);
+			} catch (DocumentException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+		} else {
+			System.out.println("Comparison sol file doesn't exist: "+solFile.getAbsolutePath());;
+		}
+		return compSol;
 	}
 	
 	private List<AbstractPlot> buildStandardPlotLines(File outputDir, int skipYears, double minMag, boolean replot, String topLink, List<String> lines)
@@ -1257,9 +1306,6 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<AbstractPlot> plots = new ArrayList<>();
 		
 		TableBuilder table;
-		
-		FaultSystemSolution compSol = null;
-		File fmDmSolDir = new File(System.getProperty("user.home"), ".opensha/ucerf3_fm_dm_sols/");
 		
 		if (replot || !new File(outputDir, "mfd.png").exists()) {
 			MFDPlot mfdPlot = new MFDPlot(minMag);
@@ -1311,6 +1357,33 @@ public class RSQSimCatalog implements XMLSaveable {
 		table.finalizeLine();
 		lines.addAll(table.build());
 		
+		// look for fault style specific plots
+		table = null;
+		for (FaultStyle style : FaultStyle.values()) {
+			File scatterPlot = new File(outputDir, "mag_area_"+style.name()+".png");
+			if (!scatterPlot.exists())
+				continue;
+			if (table == null) {
+				table = MarkdownUtils.tableBuilder();
+				table.addLine("Fault Style", "Scatter", "2-D Hist");
+			}
+			table.initNewLine();
+			table.addColumn("**"+style+"**");
+			table.addColumn("![MA Scatter]("+outputDir.getName()+"/mag_area_"+style.name()+".png)");
+			table.addColumn("![MA Hist]("+outputDir.getName()+"/mag_area_"+style.name()+"_hist2D.png)");
+			table.finalizeLine();
+		}
+		if (table != null) {
+			lines.add("#### Mechanism-Dependent Magnitude-Area Plots");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("Here we disaggregate the magnitude-area scaling plots by focal mechanism. Multi-fault ruptures which incorporate "
+					+ "multiple faulting styles are included in plot for the dominent fault style so long as no more than 10% of the "
+					+ "participating elements are of a different style, otherwise they are listed as 'Unknown'.");
+			lines.add("");
+			lines.addAll(table.build());
+		}
+		
 		if (replot || !new File(outputDir, "slip_area_hist2D.png").exists()) {
 			MagAreaScalingPlot magAreaPlot = new MagAreaScalingPlot(true);
 			magAreaPlot.initialize(getName(), outputDir, "slip_area");
@@ -1326,9 +1399,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		table.addColumn("![Slip Area Hist]("+outputDir.getName()+"/slip_area_hist2D.png)");
 		table.finalizeLine();
 		lines.addAll(table.build());
-		
+
+		SlipAlongSectAlgorithm defaultSlipAlg = SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN;
 		if (replot || !new File(outputDir, "slip_len_"+SlipAlongSectAlgorithm.MID_SEIS_SURF_SLIP_LEN.name()+".png").exists()) {
 			SlipLengthScalingPlot slipLengthPlot = new SlipLengthScalingPlot(getSubSectMapper(), 6.5);
+			slipLengthPlot.setDisaggregateFaultStyles(defaultSlipAlg);
 			slipLengthPlot.initialize(getName(), outputDir, "slip_len");
 			plots.add(slipLengthPlot);
 		}
@@ -1372,7 +1447,34 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		lines.addAll(table.build());
 		
-		SlipAlongSectAlgorithm dsrLenAlg = SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN;
+		// look for fault style specific plots
+		table = null;
+		for (FaultStyle style : FaultStyle.values()) {
+			File scatterPlot = new File(outputDir, "mag_area_"+style.name()+".png");
+			if (!scatterPlot.exists())
+				continue;
+			if (table == null) {
+				table = MarkdownUtils.tableBuilder();
+				table.addLine("Fault Style", "Scatter", "2-D Hist");
+			}
+			table.initNewLine();
+			table.addColumn("**"+style+"**");
+			String prefix = "slip_len_"+defaultSlipAlg.name()+"_"+style.name();
+			table.addColumn("![Slip Length Scatter]("+outputDir.getName()+"/"+prefix+".png)");
+			table.addColumn("![Slip Length Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
+			table.finalizeLine();
+		}
+		if (table != null) {
+			lines.add("#### Mechanism-Dependent Slip-Length Plots");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("Here we disaggregate the slip-length scaling plots by focal mechanism. Multi-fault ruptures which incorporate "
+					+ "multiple faulting styles are included in plot for the dominent fault style so long as no more than 10% of the "
+					+ "participating elements are of a different style, otherwise they are listed as 'Unknown'.");
+			lines.add("");
+			lines.addAll(table.build());
+		}
+		
 		List<Range> lengthBins = new ArrayList<>();
 		lengthBins.add(null);
 		lengthBins.add(new Range(0d, 25));
@@ -1380,7 +1482,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		lengthBins.add(new Range(50, 100));
 		lengthBins.add(new Range(100, Double.POSITIVE_INFINITY));
 		if (replot || !new File(outputDir, "slip_along_rupture_multi_norm.png").exists()) {
-			SlipAlongRupturePlot slipAlongPlot = new SlipAlongRupturePlot(getSubSectMapper(), 6.5, dsrLenAlg, fm, lengthBins);
+			SlipAlongRupturePlot slipAlongPlot = new SlipAlongRupturePlot(getSubSectMapper(), 6.5, defaultSlipAlg, fm, lengthBins);
 			slipAlongPlot.initialize(getName(), outputDir, "slip_along_rupture");
 			plots.add(slipAlongPlot);
 		}
@@ -1388,8 +1490,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add(topLink);
 		lines.add("");
 		lines.add("These plots show the slip along rupture distiribution, noted D<sub>SR</sub> in UCERF3. First we compute average "
-				+ "slip along each mapped subsection at mid-seismogenic depth (using the *"+dsrLenAlg+"* algorithm), then plot that slip along "
-				+ "strike, normalized by the maximum slip across all subsections in that rupture. We do this for single-fault events, which "
+				+ "slip along each mapped subsection at mid-seismogenic depth (using the *"+defaultSlipAlg+"* algorithm), then plot that slip along "
+				+ "strike, normalized by the average slip across all subsections in that rupture. We do this for single-fault events, which "
 				+ "can span multiple segments (e.g. SAF Mojave and San Bernardino), and also separately for each junction in multi-fault events. "
 				+ "This is done using the UCERF3 'named faults' list to determine if multiple fault sections belong to the same master fault. "
 				+ "We only consider ruptures where at least 2 subsections participated (2 on each side of the jump for multi-fault ruptures).");
@@ -1397,8 +1499,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add("Ruptures are binned by their length in each row below. For multi-fault ruptures, the junction point is at x=0 with the shorter "
 				+ "side of the rupture on the left (below zero), and longer half on the right");
 		lines.add("");
-		lines.add("Average values are plotted with a solid black line, and sqrt(sin(|x*&pi;|)) in a dashed gray line (normalized length "
-				+ "plots only).");
+		lines.add("Average values are plotted with a solid black line, and "+(float)+SlipAlongRupturePlot.SQRT_SINE_SCALAR+"*sqrt(sin(|x*&pi;|)) "
+				+ "in a dashed gray line (normalized length plots only).");
 		lines.add("");
 		table = MarkdownUtils.tableBuilder();
 		table.addLine("Rupture Length", "Single-fault, absolute distance from either rupture endpoint",
@@ -1456,21 +1558,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.addAll(table.build());
 		
 		if (replot || !new File(outputDir, "slip_rate_sim_map.png").exists()) {
-			if (compSol == null && fmDmSolDir.exists()) {
-				File solFile = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
-					+"_"+getDeformationModel().encodeChoiceString()+"_MEAN_BRANCH_AVG_SOL.zip");
-				if (solFile.exists()) {
-					System.out.println("Loading comparison FSS from "+solFile.getAbsolutePath());
-					try {
-						compSol = FaultSystemIO.loadSol(solFile);
-					} catch (DocumentException e) {
-						throw ExceptionUtils.asRuntimeException(e);
-					}
-				} else {
-					System.out.println("Skipping slip rate comparison solution, sol file doesn't exist: "+solFile.getAbsolutePath());;
-				}
-			}
-			SlipRateComparePlot plot = new SlipRateComparePlot(getSubSectMapper(), getFaultModel(), getDeformationModel(), compSol);
+			SlipRateComparePlot plot = new SlipRateComparePlot(getSubSectMapper(), getFaultModel(), getDeformationModel(),
+					getComparisonSolution());
 			plot.initialize(getName(), outputDir, "slip_rate");
 			plots.add(plot);
 		}
@@ -1576,21 +1665,23 @@ public class RSQSimCatalog implements XMLSaveable {
 		table.finalizeLine();
 		lines.addAll(table.build());
 		
-		double minFractForInclusion = 0.2;
 		if (replot || !new File(outputDir, "norm_ri_elem_m7.5.png").exists()) {
 			List<NormalizedFaultRecurrenceIntervalPlot> myPlots = new ArrayList<>();
 			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), riMinMags));
 			RSQSimSubSectionMapper mapper = getSubSectMapper();
 			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.SUBSECTION,
-					mapper, minFractForInclusion, riMinMags));
+					mapper, riMinMags));
 			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.PARENT,
-					mapper, minFractForInclusion, riMinMags));
+					mapper, riMinMags));
 			for (NormalizedFaultRecurrenceIntervalPlot plot : myPlots)
 				plot.initialize(getName(), outputDir, "norm_ri_"+plot.getSectType().getPrefix());
 			plots.addAll(myPlots);
 		}
 		lines.add("### Normalized Fault Interevent-Time Distributions");
 		lines.add(topLink);
+		lines.add("");
+		lines.add("These plots show interevent-time distributions for a point on a fault (either an element, "
+				+ " or aggregated at the subsection or parent section level).");
 		lines.add("");
 		table = MarkdownUtils.tableBuilder();
 		table.initNewLine();
@@ -1612,6 +1703,47 @@ public class RSQSimCatalog implements XMLSaveable {
 			table.finalizeLine();
 		}
 		lines.addAll(table.build());
+
+		BPTAveragingTypeOptions aveType = BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE;
+		if (replot || !new File(outputDir, "u3_norm_ri_m7.5.png").exists()) {
+			U3StyleNormalizedRuptureRecurrenceIntervalPlot plot = new U3StyleNormalizedRuptureRecurrenceIntervalPlot(
+					getElements(), aveType, getSubSectMapper(), riMinMags);
+			plot.initialize(getName(), outputDir, "u3_norm_ri");
+			plots.add(plot);
+		}
+		lines.add("### Normalized Rupture Interevent-Time Distributions");
+		lines.add(topLink);
+		lines.add("");
+		String line = "These plots show interevent-time distributions, averaged over a rupture, similar to "
+				+ "the UCERF3 BPT calculation. For each rupture, we compute ";
+		if (aveType.isAveNTS()) {
+			line += "the average normalized open interval across all subsections which participate.";
+		} else {
+			line += "the average open interval across all subsections which participate, normalized "
+					+ "by the average recurrence interval on those sections";
+			if (aveType.isAveRI())
+				line += ".";
+			else
+				line += ", which is computed as the inverse of the average rate on each subsection";
+		}
+		lines.add(line);
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.initNewLine();
+		for (double riMinMag : riMinMags)
+			if (riMinMag == Math.round(riMinMag))
+				table.addColumn("**M≥"+(int)riMinMag+"**");
+			else
+				table.addColumn("**M≥"+(float)riMinMag+"**");
+		table.finalizeLine();
+		table.initNewLine();
+		for (double riMinMag : riMinMags)
+			if (riMinMag == Math.round(riMinMag))
+				table.addColumn("![Norm RIs]("+outputDir.getName()+"/u3_norm_ri_m"+(int)riMinMag+".png)");
+			else
+				table.addColumn("![Norm RIs]("+outputDir.getName()+"/u3_norm_ri_m"+(float)riMinMag+".png)");
+		table.finalizeLine();
+		lines.addAll(table.build());
 		
 		if (replot || !new File(outputDir, "stationarity.png").exists()) {
 			StationarityPlot stationarityPlot = new StationarityPlot(minMag, 7d);
@@ -1631,12 +1763,12 @@ public class RSQSimCatalog implements XMLSaveable {
 		if (replot || !new File(outputDir, "interevent_elements_m"+testMagStr+"_scatter.png").exists()) {
 			RSQSimSubSectionMapper mapper = getSubSectMapper();
 			SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
-					SectionRecurrenceComparePlot.SectType.ELEMENT, mapper, 0, riMinMags);
+					SectionRecurrenceComparePlot.SectType.ELEMENT, mapper, riMinMags);
 			elemCompare.initialize(getName(), outputDir, "interevent_elements");
 			plots.add(elemCompare);
 			
 			SectionRecurrenceComparePlot subSectCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
-					SectionRecurrenceComparePlot.SectType.SUBSECTION, mapper, minFractForInclusion, riMinMags);
+					SectionRecurrenceComparePlot.SectType.SUBSECTION, mapper, riMinMags);
 			subSectCompare.initialize(getName(), outputDir, "interevent_sub_sects");
 			plots.add(subSectCompare);
 		}
@@ -1683,6 +1815,27 @@ public class RSQSimCatalog implements XMLSaveable {
 			table.finalizeLine();
 		}
 		lines.addAll(table.build());
+
+		File paleoCSVFile = new File(outputDir, "paleo_recurrence.csv");
+		if (replot || !paleoCSVFile.exists()) {
+			PaleoRecurrencePlot plot = new PaleoRecurrencePlot(getElements(), getSubSectMapper());
+			plot.initialize(getName(), outputDir, "paleo_recurrence");
+			plots.add(plot);
+		}
+		lines.add("");
+		lines.add("### Paleo Recurrence Plots");
+		lines.add(topLink); lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_raw_sect_rate.png)",
+				"![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_paleo_sect_rate.png)");
+		table.addLine("![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_raw_elem_rate.png)",
+				"![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_paleo_elem_rate.png)");
+		lines.addAll(table.build());
+		lines.add("");
+		if (paleoCSVFile.exists()) {
+			CSVFile<String> csv = CSVFile.readFile(new File(outputDir, "paleo_recurrence.csv"), true);
+			lines.addAll(MarkdownUtils.tableFromCSV(csv, false).build());
+		}
 
 		lines.add("");
 		lines.add("### Paleo Open Interval Plots");
@@ -1736,6 +1889,22 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add("");
 			lines.add("![Welch PSD]("+outputDir.getName()+"/moment_variability_welch.png)");
 		}
+		
+		double[] maxTimes = { 1d, 10d, 100d }; 
+		if (replot || !new File(outputDir, "trigger_within_prev_1yr.png").exists()) {
+			TriggerLargerWithinPrevRupturePlot plot = new TriggerLargerWithinPrevRupturePlot(getSubSectMapper(), 6.5, maxTimes);
+			plot.initialize(getName(), outputDir, "trigger_within_prev");
+			plots.add(plot);
+		}
+		lines.add("");
+		lines.add("### Trigger Hypocenter Statistics Within Previous Rupture Area");
+		lines.add(topLink); lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		for (double maxTime : maxTimes) {
+			String prefix = "trigger_within_prev_"+optionalDigitDF.format(maxTime)+"yr";
+			table.addLine("![hypocenter plot]("+outputDir.getName()+"/"+prefix+".png)");
+		}
+		lines.addAll(table.build());
 		
 		return plots;
 	}
@@ -2297,7 +2466,15 @@ public class RSQSimCatalog implements XMLSaveable {
 //		for (Catalogs cat : cats) {
 		// specific catalog
 		GregorianCalendar minDate = cal(2000, 1, 1);
-		for (Catalogs cat : new Catalogs[] { Catalogs.BRUCE_2585_1MYR }) {
+		for (Catalogs cat : new Catalogs[] {
+				Catalogs.BRUCE_2585_1MYR,
+				Catalogs.BRUCE_2740,
+				Catalogs.BRUCE_2829,
+				Catalogs.BRUCE_3271,
+				Catalogs.JG_tunedBase1m_ddotEQmod,
+				Catalogs.JG_tuneBase1m,
+				}) {
+//		for (Catalogs cat : new Catalogs[] { Catalogs.JG_tunedBase1m_ddotEQmod }) {
 		// all catalogs
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : cats) {

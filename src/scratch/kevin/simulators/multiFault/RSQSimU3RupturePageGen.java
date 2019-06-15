@@ -68,8 +68,10 @@ public class RSQSimU3RupturePageGen {
 	public static void main(String[] args) throws IOException, DocumentException, GMT_MapException, RuntimeException {
 		File catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
 		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
-		
+
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_3271.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(catalogsBaseDir);
 		
 		File catalogDir = catalog.getCatalogDir();
 		
@@ -91,7 +93,6 @@ public class RSQSimU3RupturePageGen {
 		
 		double minMag = 6.5;
 		int skipYears = 5000;
-		double minFractForInclusion = 0.2;
 		boolean includeNumSects = false;
 		
 		List<String> lines = new ArrayList<>();
@@ -101,10 +102,13 @@ public class RSQSimU3RupturePageGen {
 		FaultBasedMapGen.LOCAL_MAPGEN = true;
 		FaultBasedMapGen.FAULT_THICKNESS = 4d;
 		
+		double minFractForInclusion = catalog.getMinSubSectFractForInclusion();
+		
 		// header
 		lines.add("# Multi Fault Rupture Comparisons");
 		lines.add("");
-		lines.add("*Subsections participate in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
+		lines.add("*Subsections participate in a rupture if at least "
+				+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
 		lines.add("");
 		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 		lines.add("");
@@ -124,7 +128,7 @@ public class RSQSimU3RupturePageGen {
 		} else {
 			System.out.println("Loading events from: "+catalogDir.getAbsolutePath());
 			Loader loader = catalog.loader().minMag(minMag).skipYears(skipYears);
-			sol = catalog.buildSolution(loader, minMag, minFractForInclusion);
+			sol = catalog.buildSolution(loader, minMag);
 			System.out.println("Writing solution to: "+solFile.getAbsolutePath());
 			FaultSystemIO.writeSol(sol, solFile);
 		}

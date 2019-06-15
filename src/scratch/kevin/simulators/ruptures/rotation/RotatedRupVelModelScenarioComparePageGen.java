@@ -54,7 +54,6 @@ import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
-import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
@@ -111,7 +110,7 @@ public class RotatedRupVelModelScenarioComparePageGen {
 		System.out.println("Building GMPE ruptures...");
 		gmpeEventsMap = new HashMap<>();
 		for (RSQSimEvent event : eventsMap.values())
-			gmpeEventsMap.put(event.getID(), catalog.getMappedSubSectRupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT));
+			gmpeEventsMap.put(event.getID(), catalog.getMappedSubSectRupture(event));
 		System.out.println("DONE.");
 	}
 	

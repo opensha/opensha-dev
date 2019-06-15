@@ -6,15 +6,18 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
+import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.HanksBakun2002_MagAreaRel;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Shaw_2009_ModifiedMagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagAreaRelationship;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -31,11 +34,14 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -45,15 +51,64 @@ import com.google.common.primitives.Doubles;
 public class MagAreaScalingPlot extends AbstractPlot {
 	
 	private boolean slip;
-	private DefaultXY_DataSet scatter;
+	private Map<FaultStyle, DefaultXY_DataSet> scatterMap;
+
+	private MinMaxAveTracker magTrack = new MinMaxAveTracker();
+	private MinMaxAveTracker slipTrack = new MinMaxAveTracker();
+	private MinMaxAveTracker areaTrack = new MinMaxAveTracker();
 	
 	private static final int max_scatter_points = 1000000;
 	
 	private static double[] csv_fractiles = { 0d, 0.025, 0.16, 0.5, 0.84, 0.975, 1d };
 	private static double csv_mag_delta = 0.1;
 	
+	private static Map<FaultStyle, List<MagAreaRelationship>> comparisons;
+	
+	static {
+		List<FaultStyle> styles = new ArrayList<>();
+		for (FaultStyle style : FaultStyle.values())
+			styles.add(style);
+		styles.add(null);
+		
+		comparisons = new HashMap<>();
+		
+		for (FaultStyle style : styles) {
+			List<MagAreaRelationship> rels = new ArrayList<>();
+			
+			rels.add(new WC1994_MagAreaRelationship());
+			rels.add(new Ellsworth_B_WG02_MagAreaRel());
+			rels.add(new HanksBakun2002_MagAreaRel());
+			rels.add(new Shaw_2009_ModifiedMagAreaRel());
+			
+			double rake = Double.NaN;
+			if (style != null) {
+				switch (style) {
+				case STRIKE_SLIP:
+					rake = 0d;
+					break;
+				case REVERSE:
+					rake = 90;
+					break;
+				case NORMAL:
+					rake = -90d;
+					break;
+
+				default:
+					break;
+				}
+			}
+			
+			for (MagAreaRelationship rel : rels)
+				rel.setRake(rake);
+			
+			comparisons.put(style, rels);
+		}
+	}
+	
 	public MagAreaScalingPlot(boolean slip) {
-		scatter = new DefaultXY_DataSet();
+		scatterMap = new HashMap<>();
+		for (FaultStyle style : FaultStyle.values())
+			scatterMap.put(style, new DefaultXY_DataSet());
 		this.slip = slip;
 	}
 
@@ -65,24 +120,62 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		double areaM2 = e.getArea(); // m^2
 		double areaKM2 = areaM2/1e6;
 		
+		FaultStyle style = RSQSimUtils.calcFaultStyle(e, 15, 0.1);
+		DefaultXY_DataSet scatter = scatterMap.get(style);
+		
 		if (slip) {
 			double moment = 0d;
 			for (EventRecord r : e)
 				moment += r.getMoment();
 			double meanSlip = FaultMomentCalc.getSlip(areaM2, moment);
+			slipTrack.addValue(meanSlip);
 			scatter.set(areaKM2, meanSlip);
 		} else {
 			scatter.set(areaKM2, mag);
 		}
+		
+		areaTrack.addValue(areaKM2);
+		magTrack.addValue(mag);
 	}
 
 	@Override
 	public void finalizePlot() throws IOException {
-		writeScatterPlots(scatter, slip, getCatalogName(), getOutputDir(), getOutputPrefix(), getPlotWidth(), getPlotHeight());
+		DefaultXY_DataSet masterScatter = new DefaultXY_DataSet();
+		int width = getPlotWidth();
+		int height = getPlotHeight();
+		Range xRange, yRange;
+		if (slip) {
+			xRange = new Range(0d, areaTrack.getMax()*1.1);
+			yRange = new Range(Math.floor(slipTrack.getMin()), Math.ceil(slipTrack.getMax()));
+		} else {
+			xRange = calcEncompassingLog10Range(areaTrack.getMin(), areaTrack.getMax());
+			for (List<MagAreaRelationship> comps : comparisons.values()) {
+				for (MagAreaRelationship comp : comps) {
+					magTrack.addValue(comp.getMedianMag(areaTrack.getMin()));
+					magTrack.addValue(comp.getMedianMag(areaTrack.getMax()));
+				}
+			}
+			yRange = new Range(Math.floor(magTrack.getMin()), Math.ceil(magTrack.getMax()));
+		}
+		for (FaultStyle style : scatterMap.keySet()) {
+			DefaultXY_DataSet scatter = scatterMap.get(style);
+			if (scatter.size() == 0)
+				continue;
+			for (Point2D pt : scatter)
+				masterScatter.set(pt);
+			writeScatterPlots(scatter, slip, style, getCatalogName(), getOutputDir(), getOutputPrefix()+"_"+style.name(),
+					xRange, yRange, width, height);
+		}
+		writeScatterPlots(masterScatter, slip, null, getCatalogName(), getOutputDir(), getOutputPrefix(), xRange, yRange, width, height);
 	}
 	
 	public static void writeScatterPlots(XY_DataSet scatter, boolean meanSlip, String name, File outputDir, String prefix,
 			int plotWidth, int plotHeight) throws IOException {
+		writeScatterPlots(scatter, meanSlip, null, name, outputDir, prefix, null, null, plotWidth, plotHeight);
+	}
+	
+	public static void writeScatterPlots(XY_DataSet scatter, boolean meanSlip, FaultStyle faultStyle, String name, File outputDir, String prefix,
+			Range xRange, Range yRange, int plotWidth, int plotHeight) throws IOException {
 		// scatter plot
 		
 		List<XY_DataSet> funcs = Lists.newArrayList();
@@ -104,36 +197,36 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		
 		System.out.println("Scatter y range: "+scatter.getMinY()+" "+scatter.getMaxY());
 		
-		EvenlyDiscretizedFunc wcFunc = null, elbFunc = null, hbFunc = null;
-		PlotCurveCharacterstics wcChar = null, elbChar = null, hbChar = null;
+		List<EvenlyDiscretizedFunc> compFuncs = new ArrayList<>();
+		List<PlotCurveCharacterstics> compChars = new ArrayList<>();
+		
+		Color[] compColors = { Color.RED.darker(), Color.BLUE.darker(), Color.GREEN.darker(), Color.ORANGE.darker(), Color.MAGENTA.darker() };
+		
 		if (!meanSlip) {
-			WC1994_MagAreaRelationship wc = new WC1994_MagAreaRelationship();
-			wcFunc = new EvenlyDiscretizedFunc(scatter.getMinX(), scatter.getMaxX(), 1000);
-			for (int i=0; i<wcFunc.size(); i++)
-				wcFunc.set(i, wc.getMedianMag(wcFunc.getX(i)));
-			wcFunc.setName("W-C 1994");
-			funcs.add(wcFunc);
-			wcChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED.darker());
-			chars.add(wcChar);
-			
-			Ellsworth_B_WG02_MagAreaRel elb = new Ellsworth_B_WG02_MagAreaRel();
-			elbFunc = new EvenlyDiscretizedFunc(scatter.getMinX(), scatter.getMaxX(), 1000);
-			for (int i=0; i<elbFunc.size(); i++)
-				elbFunc.set(i, elb.getMedianMag(elbFunc.getX(i)));
-			elbFunc.setName("EllsworthB");
-			funcs.add(elbFunc);
-			elbChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE.darker());
-			chars.add(elbChar);
-			
-			HanksBakun2002_MagAreaRel hb = new HanksBakun2002_MagAreaRel();
-			hbFunc = new EvenlyDiscretizedFunc(scatter.getMinX(), scatter.getMaxX(), 1000);
-			for (int i=0; i<hbFunc.size(); i++)
-				hbFunc.set(i, hb.getMedianMag(hbFunc.getX(i)));
-			hbFunc.setName("H-B 2002");
-			funcs.add(hbFunc);
-			hbChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN.darker());
-			chars.add(hbChar);
+			List<MagAreaRelationship> list = comparisons.get(faultStyle);
+			for (int m=0; m<list.size(); m++) {
+				MagAreaRelationship ma = list.get(m);
+				EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(scatter.getMinX(), scatter.getMaxX(), 1000);
+				
+				if (ma instanceof WC1994_MagAreaRelationship)
+					func.setName("W-C 1994");
+				else if (ma instanceof Ellsworth_B_WG02_MagAreaRel)
+					func.setName("EllsworthB");
+				else if (ma instanceof HanksBakun2002_MagAreaRel)
+					func.setName("H-B 2002");
+				else if (ma instanceof Shaw_2009_ModifiedMagAreaRel)
+					func.setName("Shaw 2009 (Mod)");
+				
+				for (int i=0; i<func.size(); i++)
+					func.set(i, ma.getMedianMag(func.getX(i)));
+				
+				compFuncs.add(func);
+				compChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, compColors[m % compColors.length]));
+			}
 		}
+		
+		funcs.addAll(compFuncs);
+		chars.addAll(compChars);
 		
 		String title, yAxisLabel;
 		if (meanSlip) {
@@ -149,21 +242,32 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		plot.setLegendVisible(true);
 		
 		double minY, maxY;
-		Range xRange;
 		if (meanSlip) {
 			minY = Math.floor(scatter.getMinY());
 			maxY = Math.ceil(scatter.getMaxY());
-			xRange = new Range(0d, scatter.getMaxX()*1.1);
+			if (xRange == null)
+				xRange = new Range(0d, scatter.getMaxX()*1.1);
 		} else {
-			minY = Math.floor(Math.min(scatter.getMinY(), wcFunc.getMinY()));
-			maxY = Math.ceil(Math.max(scatter.getMaxY(), wcFunc.getMaxY()));
-			xRange = calcEncompassingLog10Range(Math.min(scatter.getMinX(), wcFunc.getMinX()),
-					Math.max(scatter.getMaxX(), wcFunc.getMaxX()));
+			double minX = scatter.getMinX();
+			double maxX = scatter.getMaxX();
+			minY = scatter.getMinY();
+			maxY = scatter.getMaxY();
+			for (DiscretizedFunc func : compFuncs) {
+				minX = Math.min(minX, func.getMinX());
+				maxX = Math.max(maxX, func.getMaxX());
+				minY = Math.min(minY, func.getMinY());
+				maxY = Math.max(maxY, func.getMaxY());
+			}
+			minY = Math.floor(minY);
+			maxY = Math.ceil(maxY);
+			if (xRange == null)
+				xRange = calcEncompassingLog10Range(minX, maxX);
 		}
-		Range yRange = new Range(minY, maxY);
+		if (yRange == null)
+			yRange = new Range(minY, maxY);
 		
 		HeadlessGraphPanel gp = buildGraphPanel();
-		gp.drawGraphPanel(plot, !meanSlip, false, meanSlip ? xRange : null, yRange);
+		gp.drawGraphPanel(plot, !meanSlip, false, xRange, yRange);
 		gp.getChartPanel().setSize(plotWidth, plotHeight);
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
@@ -245,7 +349,7 @@ public class MagAreaScalingPlot extends AbstractPlot {
 			cpt = cpt.rescale(0d, 1d);
 		else
 			cpt = cpt.rescale(minZ, maxZ);
-		cpt.setNanColor(Color.WHITE);
+		cpt.setNanColor(new Color(255, 255, 255, 0));
 		
 		String zAxisLabel = "Log10(Density)";
 		
@@ -255,24 +359,15 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		if (!meanSlip) {
 			// add W-C
 			funcs = Lists.newArrayList();
-			chars = Lists.newArrayList();
-			ArbitrarilyDiscretizedFunc logWCFunc = new ArbitrarilyDiscretizedFunc();
-			for (Point2D pt : wcFunc)
-				logWCFunc.set(Math.log10(pt.getX()), pt.getY());
-			funcs.add(logWCFunc);
-			chars.add(wcChar);
-			// add EllB
-			ArbitrarilyDiscretizedFunc logEllBFunc = new ArbitrarilyDiscretizedFunc();
-			for (Point2D pt : elbFunc)
-				logEllBFunc.set(Math.log10(pt.getX()), pt.getY());
-			funcs.add(logEllBFunc);
-			chars.add(elbChar);
-			// add HB
-			ArbitrarilyDiscretizedFunc logHBFunc = new ArbitrarilyDiscretizedFunc();
-			for (Point2D pt : hbFunc)
-				logHBFunc.set(Math.log10(pt.getX()), pt.getY());
-			funcs.add(logHBFunc);
-			chars.add(hbChar);
+			chars = Lists.newArrayList(compChars);
+			
+			for (DiscretizedFunc func : compFuncs) {
+				ArbitrarilyDiscretizedFunc logFunc = new ArbitrarilyDiscretizedFunc();
+				for (Point2D pt : func)
+					logFunc.set(Math.log10(pt.getX()), pt.getY());
+				funcs.add(logFunc);
+			}
+			
 			xyzSpec.setXYElems(funcs);
 			xyzSpec.setXYChars(chars);
 		}

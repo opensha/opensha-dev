@@ -71,11 +71,11 @@ public class HazardMapCompareScriptGen {
 //		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir2142");
 //		File geomFile = new File(catalogDir, "zfault_Deepen.in");
 		
-		String bruceDate = "2018_03_26";
+		String bruceDate = "2019_06_12";
 //		String bruceDirNum = "2349";
 //		String bruceDirNum = "2326";
 //		String bruceDirNum = "2142";
-		String bruceDirNum = "2637";
+		String bruceDirNum = "2740";
 		String runPrefix = bruceDate+"-bruce"+bruceDirNum;
 		File catalogDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir"+bruceDirNum);
 		File geomFile = new File(catalogDir, "zfault_Deepen.in");
@@ -92,10 +92,10 @@ public class HazardMapCompareScriptGen {
 		
 //		String imt = null; // all
 //		double[] periods = null;
-//		String imt = PGA_Param.NAME;
-//		double[] periods =  { 0d };
-		String imt = SA_Param.NAME;
-		double[] periods = { 0.2, 1, 2, 5, 10 };
+		String imt = PGA_Param.NAME;
+		double[] periods =  { 0d };
+//		String imt = SA_Param.NAME;
+//		double[] periods = { 0.2, 1, 2, 5, 10 };
 		
 		if (imt == null)
 			numPointsMultiplier = 1;
@@ -103,7 +103,8 @@ public class HazardMapCompareScriptGen {
 //		double fixedStdDev = 0.0;
 		double fixedStdDev = -1;
 		
-		double skipYears = 5000;
+		double skipYears = catalogDir.getName().contains("2829") ? 2000 : 5000;
+		System.out.println("skipYears="+skipYears);
 		
 		double maxSourceDistance = 1000;
 		
@@ -168,12 +169,12 @@ public class HazardMapCompareScriptGen {
 		File localMainDir = new File("/home/kevin/Simulators/hazard");
 		
 		int mins = 24*60;
-		int nodes = 15;
+		int nodes = 18;
 		int ppn = 20;
-		String queue = "scec";
+		String queue = "scec_hiprio";
 		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
 		File remoteMainDir = new File("/home/scec-02/kmilner/simulators/hazard");
-		JavaShellScriptWriter mpj = new MPJExpressShellScriptWriter(javaBin, 60000, null,
+		JavaShellScriptWriter mpj = new MPJExpressShellScriptWriter(javaBin, 55*1024, null,
 				USC_HPCC_ScriptWriter.MPJ_HOME);
 		((MPJExpressShellScriptWriter)mpj).setUseLaunchWrapper(true);
 		USC_HPCC_ScriptWriter writer = new USC_HPCC_ScriptWriter();

@@ -61,6 +61,8 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 	private EvenlyDiscrXYZ_DataSet[] normalizedTwoFaultXYZ;
 	private EvenlyDiscrXYZ_DataSet[] normalizedThreeFaultXYZ;
 	private List<Range> lengthBins;
+	
+	public static final double SQRT_SINE_SCALAR = 1.311;
 
 	public SlipAlongRupturePlot(RSQSimSubSectionMapper mapper, double minMag, SlipAlongSectAlgorithm slipAlg, FaultModels fm,
 			List<Range> lengthBins) {
@@ -79,7 +81,7 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		
 		mapper.trackSlipOnSections();
 		
-		int numY = 20;
+		int numY = 40;
 		double minY = 0.025;
 		double deltaY = 0.05;
 		
@@ -139,24 +141,31 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		
 		// build slip function(s)
 		List<XY_DataSet> slipFuncs = new ArrayList<>();
-		double totalMaxSlip = 0d;
+		double totalSlipLength = 0d;
+		double lengthWeightedTotalSlip = 0d;
 		for (List<SubSectionMapping> bundle : faultBundledMappings) {
 			double bundleLength = 0d;
-			for (SubSectionMapping sect : bundle)
+			for (SubSectionMapping sect : bundle) {
 				bundleLength += sect.getSubSect().getTraceLength();
+				double myAvg = sect.getAverageSlip(slipAlg);
+				if (myAvg > 0) {
+					double myLen = sect.getLengthForSlip(slipAlg);
+					totalSlipLength += myLen;
+					lengthWeightedTotalSlip += myAvg*myLen;
+				}
+			}
 			XY_DataSet myFunc = buildFaultSlipFunc(bundle, bundleLength < 50 || bundle.size() < 3);
 			slipFuncs.add(myFunc);
-			if (myFunc != null)
-				totalMaxSlip = Math.max(totalMaxSlip, myFunc.getMaxY());
 		}
+		double aveSlip = lengthWeightedTotalSlip/totalSlipLength;
 		
-		// normalize them by maximum slip
+		// normalize them by average slip
 		for (int i=0; i<slipFuncs.size(); i++) {
 			XY_DataSet slipFunc = slipFuncs.get(i);
 			if (slipFunc != null) {
 				DefaultXY_DataSet normalized = new DefaultXY_DataSet();
 				for (Point2D pt : slipFunc)
-					normalized.set(pt.getX(), pt.getY()/totalMaxSlip);
+					normalized.set(pt.getX(), pt.getY()/aveSlip);
 				slipFuncs.set(i, normalized);
 			}
 		}
@@ -514,7 +523,7 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 			for (int i=0; i<func.size(); i++) {
 				double x = func.getX(i);
 				double y = func.getY(i);
-				Preconditions.checkState(y >= 0 && y <= 1, "Bad y normalization. y[%s]=%s, x=%s", i, y, x);
+				Preconditions.checkState(y >= 0, "Bad y normalization. y[%s]=%s, x=%s", i, y, x);
 			}
 		}
 	}
@@ -680,9 +689,10 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 						xyz.set(xInd, yInd, xyz.get(xInd, yInd) + myFractX);
 						yInd++;
 					}
-					double weightDelta = Math.abs(sumWeight - fractX);
-					Preconditions.checkState(weightDelta < 0.0001, "Bad weight sum. xFract=%s, sum=%s", fractX, sumWeight);
-				} else {
+					// this check now disabled as we're normalizing on average slip, and values can be above the plotted range
+//					double weightDelta = Math.abs(sumWeight - fractX);
+//					Preconditions.checkState(weightDelta < 0.0001, "Bad weight sum. xFract=%s, sum=%s", fractX, sumWeight);
+				} else if (yInd < xyz.getNumY()) {
 					xyz.set(xInd, yInd, xyz.get(xInd, yInd) + fractX);
 				}
 				xInd++;
@@ -779,7 +789,7 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 			if (sqrtSinFunc != null) {
 //				System.out.println("\tsumY["+(float)xVal+"]: "+sumWeights);
 				double relX = xVal * Math.PI;
-				sqrtSinFunc.set(xVal, Math.sqrt(Math.abs(Math.sin(relX))));
+				sqrtSinFunc.set(xVal, SQRT_SINE_SCALAR*Math.sqrt(Math.abs(Math.sin(relX))));
 			}
 		}
 		if (sqrtSinFunc != null) {
@@ -851,7 +861,7 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		}
 		
 		if (sqrtSinFunc != null) {
-			sqrtSinFunc.setName("sqrt(|sin(x*π)|)");
+			sqrtSinFunc.setName((float)SQRT_SINE_SCALAR+"*sqrt(|sin(x*π)|)");
 			funcs.add(sqrtSinFunc);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
 		}

@@ -55,7 +55,7 @@ public class PaleoOpenIntervalPlot extends AbstractPlot {
 	
 	private double annotateDuration;
 	
-	private static final DiscretizedFunc slipProbFunc;
+	static final DiscretizedFunc slipProbFunc;
 	
 	static {
 		// From UCERF3 Appendix I Table 1

@@ -50,7 +50,6 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 	private String compName;
 	private FaultSystemSolution compSol;
 	private SectType sectType;
-	private double minFractForInclusion;
 	private double[] minMags;
 	private double overallMinMag;
 	
@@ -88,13 +87,12 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 	private RSQSimSubSectionMapper mapper;
 	
 	public SectionRecurrenceComparePlot(List<SimulatorElement> elems, FaultSystemSolution compSol, String compName,
-			SectType sectType, RSQSimSubSectionMapper mapper, double minFractForInclusion, double... minMags) {
+			SectType sectType, RSQSimSubSectionMapper mapper, double... minMags) {
 		this.compSol = compSol;
 		this.compName = compName;
 		this.sectType = sectType;
 		Preconditions.checkArgument(sectType == SectType.ELEMENT || mapper != null, "Must supply mapper if anything but element level selected");
 		this.mapper = mapper;
-		this.minFractForInclusion = minFractForInclusion;
 		if (minMags == null || minMags.length == 0)
 			minMags = new double[] { 0d };
 		this.minMags = minMags;
@@ -120,8 +118,8 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 			for (int id : e.getAllElementIDs())
 				ids.add(id);
 		} else {
-			List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings((RSQSimEvent)e, minFractForInclusion);
-			if (minFractForInclusion >= 0 && bundled.isEmpty())
+			List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings((RSQSimEvent)e);
+			if (mapper.getMinFractForInclusion() >= 0 && bundled.isEmpty())
 				bundled = mapper.getAllSubSectionMappings((RSQSimEvent)e);
 			Preconditions.checkState(!bundled.isEmpty());
 			for (List<SubSectionMapping> bundle : bundled) {

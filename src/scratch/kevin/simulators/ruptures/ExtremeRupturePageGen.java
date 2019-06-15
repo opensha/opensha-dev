@@ -360,14 +360,13 @@ public class ExtremeRupturePageGen {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
-//		RSQSimCatalog catalog = Catalogs.JG_tunedBase1m_ddotEQmod.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		
 		double skipYears = 5000d;
 		double minMag = 7d;
-		double minFractForInclusion = RSQSimBBP_Config.MIN_SUB_SECT_FRACT;
 		
 		Metric[] metrics = Metric.values();
 		int numToPlot = 5;
@@ -395,7 +394,7 @@ public class ExtremeRupturePageGen {
 		for (RSQSimEvent event : events) {
 			Map<Metric, Double> scores = new HashMap<>();
 			
-			List<FaultSectionPrefData> subSects = catalog.getSubSectsForRupture(event, minFractForInclusion);
+			List<FaultSectionPrefData> subSects = catalog.getSubSectsForRupture(event);
 			
 			for (Metric metric : metrics)
 				scores.put(metric, metric.calculate(catalog, event, subSects, subSectIDOffset, sectDistsCache, elemDistsCache));
@@ -408,7 +407,8 @@ public class ExtremeRupturePageGen {
 		// header
 		lines.add("# "+catalog.getName()+" Extreme Events");
 		lines.add("");
-		lines.add("*Subsections participate in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
+		lines.add("*Subsections participate in a rupture if at least "
+				+(float)(catalog.getMinSubSectFractForInclusion()*100d)+" % of its area ruptures*");
 		lines.add("");
 		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 		lines.add("");
@@ -459,7 +459,7 @@ public class ExtremeRupturePageGen {
 				File plotFile = new File(resourcesDir, plotPrefix+".png");
 				
 				if (!plotFile.exists()) {
-					RuptureSurface surf = catalog.getMappedSubSectRupture(score.event, minFractForInclusion).getRuptureSurface();
+					RuptureSurface surf = catalog.getMappedSubSectRupture(score.event).getRuptureSurface();
 //					RupturePlotGenerator.OTHER_SURF_COLOR = Color.RED;
 					RupturePlotGenerator.OTHER_SURF_COLOR = new Color(139, 69, 19).darker();
 					RupturePlotGenerator.OTHER_SURF_STROKE = PlotLineType.DOTTED;

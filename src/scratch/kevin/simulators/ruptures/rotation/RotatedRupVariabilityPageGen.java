@@ -81,7 +81,6 @@ import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationPageGen;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationPageGen.ValidationResult;
-import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
@@ -252,7 +251,7 @@ public abstract class RotatedRupVariabilityPageGen {
 	}
 	
 	private EqkRupture buildGMPE_Rupture(RSQSimEvent event) {
-		return catalog.getMappedSubSectRupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT);
+		return catalog.getMappedSubSectRupture(event);
 	}
 	
 	protected Scenario getBBP_PartB_Scenario(RotatedRupVariabilityConfig config) {

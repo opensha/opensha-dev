@@ -540,8 +540,7 @@ public class BBP_PartBValidationConfig {
 	
 	public static Location[] selectSites(int num, double distance, boolean randomAz, RSQSimCatalog catalog, RSQSimEvent event) {
 		// start with GMPE surface in order to determine footwall
-		RuptureSurface rupSurf = catalog.getMappedSubSectRupture(
-				event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT).getRuptureSurface();
+		RuptureSurface rupSurf = catalog.getMappedSubSectRupture(event).getRuptureSurface();
 		Location firstLoc = rupSurf.getFirstLocOnUpperEdge();
 		Location lastLoc = rupSurf.getLastLocOnUpperEdge();
 		// footwall will be on the left of the line from first to last

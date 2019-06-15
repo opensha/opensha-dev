@@ -942,7 +942,7 @@ public class RotatedRupVariabilityConfig {
 				
 				BBP_PlanarSurface surface;
 				if (RSQSimBBP_Config.U3_SURFACES)
-					surface = RSQSimBBP_Config.planarEquivalentU3Surface(catalog, rupture, RSQSimBBP_Config.MIN_SUB_SECT_FRACT, RSQSimBBP_Config.ADJ_WIDTH_MATCH_AREA);
+					surface = RSQSimBBP_Config.planarEquivalentU3Surface(catalog, rupture, RSQSimBBP_Config.ADJ_WIDTH_MATCH_AREA);
 				else
 					surface = RSQSimBBP_Config.estimateBBP_PlanarSurface(rupture);
 				BBP_SourceFile bbpSource = RSQSimBBP_Config.buildBBP_Source(rupture, surface, RSQSimBBP_Config.DEFAULT_SEED);

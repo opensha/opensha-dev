@@ -806,7 +806,7 @@ class RupSpectraPageGen {
 		
 //		if ((refBBPDir != null && gmpes != null && gmpes.length > 0)
 //				|| (refShakeMapZip != null && shakemapGMPE != null))
-			gmpeRup = catalog.getMappedSubSectRupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT);
+			gmpeRup = catalog.getMappedSubSectRupture(event);
 		
 		if (refBBPDir != null)
 			gen.setRefBBP(refBBPDir, refName, gmpes, gmpeRup);

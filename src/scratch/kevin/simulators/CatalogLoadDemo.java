@@ -64,7 +64,7 @@ public class CatalogLoadDemo {
 		// RSQSimEvent extends SimulatorEvent, which I think you wrote, so it should be familiar
 		
 		// Here's how to get the UCERF3 mapped rupture for a given event:
-		RSQSimSubSectEqkRupture rup = catalog.getMappedSubSectRupture(events.get(0), 0.2);
+		RSQSimSubSectEqkRupture rup = catalog.getMappedSubSectRupture(events.get(0));
 		// this extends EqkRupture with some additions, including getSubSections() to get the list
 		// of mapped subsections. The '0.2' argument was the fraction of a subsection which is required
 		// to rupture (by area) before calling it a match. If no such subsections match this criterion,

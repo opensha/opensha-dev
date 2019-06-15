@@ -1,13 +1,23 @@
 package scratch.kevin.simulators.plots;
 
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
+import org.jfree.ui.TextAnchor;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -15,6 +25,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.sha.magdist.ArbIncrementalMagFreqDist;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
 
@@ -85,16 +96,23 @@ public class RecurrenceIntervalPlot extends AbstractPlot {
 	
 	private static int preferred_num_bins = 25;
 	
-	private HistogramFunction buildHist(MinMaxAveTracker tracker, List<Double> intervals) {
-		if (tracker.getNum() == 0)
+	private HistogramFunction buildLogHist(List<Double> intervals) {
+		if (intervals.isEmpty())
 			return null;
-		double min = tracker.getMin();
-		double max = tracker.getMax();
-		if (min == max) {
-			min = min*0.9;
+		double minNonZero = Double.POSITIVE_INFINITY;
+		double max = 0d;
+		for (double interval : intervals) {
+			if (interval > 0) {
+				minNonZero = Math.min(minNonZero, interval);
+				max = Math.max(max, interval);
+			}
+		}
+		if (minNonZero == max) {
+			minNonZero = minNonZero*0.9;
 			max = max*1.1;
 		}
-		double diff = max - min;
+		minNonZero = Math.max(minNonZero, 1e-4);
+		double diff = max - minNonZero;
 		Preconditions.checkState(diff >= 0);
 		
 //		double calcDelta = diff/preferred_num_bins;
@@ -117,34 +135,28 @@ public class RecurrenceIntervalPlot extends AbstractPlot {
 //			delta = 5000d;
 //		else
 //			delta = 10000d;
-		double mean = tracker.getAverage();
-		double delta;
-		if (mean < 25d)
-			delta = 1d;
-		else if (mean < 60d)
-			delta = 5d;
-		else if (mean < 250d)
-			delta = 10d;
-		else if (mean < 500d)
-			delta = 20d;
-		else if (mean < 1000d)
-			delta = 50d;
-		else if (mean < 2500d)
-			delta = 100d;
-		else if (mean < 5000d)
-			delta = 200d;
-		else if (mean < 10000d)
-			delta = 500d;
-		else
-			delta = 1000d;
-			
 		
-		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(min, max, delta);
-//		System.out.println(tracker);
-//		System.out.println("input min="+min+", max="+max+", delta="+delta);
-//		System.out.println("output min="+hist.getMinX()+", max="+hist.getMaxX());
-		for (double interval : intervals)
-			hist.add(interval, 1d);
+		
+		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(Math.log10(minNonZero), Math.log10(max), 0.1);
+		double globalMin = hist.getMinX() - 0.5*hist.getDelta();
+		for (double interval : intervals) {
+			double logInterval = Math.log10(interval);
+			if (logInterval < globalMin)
+				continue;
+			int ind = hist.getClosestXIndex(Math.log10(interval));
+			hist.add(ind, 1d);
+		}
+		
+		hist.normalizeBySumOfY_Vals();
+		
+		// now convert to density
+		for (int i=0; i<hist.size(); i++) {
+			double middle = hist.getX(i);
+			double left = middle - 0.5*hist.getDelta();
+			double right = middle + 0.5*hist.getDelta();
+			double width = Math.pow(10, right) - Math.pow(10, left);
+			hist.set(i, hist.getY(i)/width);
+		}
 		
 		return hist;
 	}
@@ -158,43 +170,103 @@ public class RecurrenceIntervalPlot extends AbstractPlot {
 			
 			MinMaxAveTracker tracker = riTrackers.get(i);
 			
-			HistogramFunction hist = buildHist(tracker, intervals.get(i));
+			HistogramFunction hist = buildLogHist(intervals.get(i));
 			if (hist == null)
 				continue;
 			double mean = tracker.getAverage();
 			
-			double minY = 0;
-			double maxY = hist.getMaxY()*1.2;
+			double minNonZeroY = Double.POSITIVE_INFINITY;
+			for (Point2D pt : hist)
+				if (pt.getY() > 0)
+					minNonZeroY = Math.min(minNonZeroY, pt.getY());
+			Range yRange = calcEncompassingLog10Range(minNonZeroY, hist.getMaxY());
+			double minY = yRange.getLowerBound();
+			double maxY = yRange.getUpperBound();
 			
 			double minX = hist.getMinX()-0.5*hist.getDelta();
 			double maxX = hist.getMaxX()+0.5*hist.getDelta();
 			
+			Range xRange = new Range(minX, maxX);
+			
 			List<XY_DataSet> funcs = Lists.newArrayList();
 			List<PlotCurveCharacterstics> chars = Lists.newArrayList();
 			
-			hist.setName(getCatalogName()+" Histogram");
+			hist.setName("Simulated");
 			funcs.add(hist);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, getSecondaryColor()));
 			
-			funcs.add(getLine(getCatalogName()+" Mean="+yearDF.format(mean), mean, minY, mean, maxY));
+			funcs.add(getLine("Mean="+yearDF.format(mean), Math.log10(mean), minY, Math.log10(mean), maxY));
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, getPrimaryColor()));
 			
 			if (compVals != null) {
-				funcs.add(getLine(compName+" Mean="+yearDF.format(compVals[i]), compVals[i], minY, compVals[i], maxY));
+				funcs.add(getLine(compName+" Mean="+yearDF.format(compVals[i]), Math.log10(compVals[i]), minY,
+						Math.log10(compVals[i]), maxY));
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, getComparableColor()));
 				
 				minX = Math.min(minX, 0.9*compVals[i]);
 				maxX = Math.max(maxX, 1.1*compVals[i]);
 			}
 			
-			PlotSpec plot = new PlotSpec(funcs, chars, myTitle, "Interevent Time (years)", "Count");
-			plot.setLegendVisible(true);
+			double poissonRate = (intervals.get(i).size()+1)/getCurrentDurationYears();
+			EvenlyDiscretizedFunc poissonFunc = new EvenlyDiscretizedFunc(hist.getMinX(), hist.getMaxX(), hist.size());
+			for (int j=0; j<poissonFunc.size(); j++) {
+				double x = poissonFunc.getX(j);
+				double binStart = Math.pow(10, x-hist.getDelta());
+				double binEnd = Math.pow(10, x+hist.getDelta());
+				double probRupBeforeEnd = 1d - Math.exp(-poissonRate*binEnd);
+				double probRupBeforeStart = 1d - Math.exp(-poissonRate*binStart);
+				double probInBin = probRupBeforeEnd - probRupBeforeStart;
+				poissonFunc.set(j, probInBin/(binEnd-binStart)); // normalized to prob density
+			}
+			poissonFunc.setName("Poisson");
+			funcs.add(poissonFunc);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
 			
-			Range xRange = new Range(minX, maxX);
-			Range yRange = new Range(minY, maxY);
+			SimpleRegression regression = new SimpleRegression();
+			double maxPoiss = poissonFunc.getMaxY();
+			for (Point2D pt : hist) {
+				if (pt.getY() < maxPoiss)
+					// only regress over power law section
+					continue;
+				regression.addData(pt.getX(), Math.log10(pt.getY()));
+			}
+			List<XYAnnotation> anns = null;
+			if (regression.getN() > 0) {
+				ArbitrarilyDiscretizedFunc fitAboveFunc = new ArbitrarilyDiscretizedFunc("Power-Law Fit");
+				ArbitrarilyDiscretizedFunc fitBelowFunc = new ArbitrarilyDiscretizedFunc();
+				double slope = regression.getSlope();
+				double intercept = regression.getIntercept();
+				for (int j=0; j<hist.size(); j++) {
+					double x = hist.getX(j);
+					double y = Math.pow(10, slope*x + intercept);
+					if (y > maxPoiss)
+						fitAboveFunc.set(x, y);
+					else
+						fitBelowFunc.set(x, y);
+				}
+				double xAtMaxPoiss = (Math.log10(maxPoiss) - intercept)/slope;
+				fitAboveFunc.set(xAtMaxPoiss, maxPoiss);
+				fitBelowFunc.set(xAtMaxPoiss, maxPoiss);
+				funcs.add(fitAboveFunc);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+				funcs.add(fitBelowFunc);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.RED));
+				
+				anns = new ArrayList<>();
+				double midAboveX = 0.5*(fitAboveFunc.getMinX()+fitAboveFunc.getMaxX());
+				double midAboveY = fitAboveFunc.getInterpolatedY(midAboveX);
+				XYTextAnnotation ann = new XYTextAnnotation(" Slope = "+optionalDigitDF.format(slope), midAboveX, midAboveY);
+				ann.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+				ann.setTextAnchor(TextAnchor.BOTTOM_LEFT);
+				anns.add(ann);
+			}
+			
+			PlotSpec plot = new PlotSpec(funcs, chars, myTitle, "Log10 Interevent Time (years)", "Probability Density (1/yr)");
+			plot.setLegendVisible(true);
+			plot.setPlotAnnotations(anns);
 			
 			HeadlessGraphPanel gp = getGraphPanel();
-			gp.drawGraphPanel(plot, false, false, xRange, yRange);
+			gp.drawGraphPanel(plot, false, true, xRange, yRange);
 			gp.getChartPanel().setSize(getPlotWidth(), getPlotHeight());
 			gp.saveAsTXT(new File(getOutputDir(), myPrefix+".txt").getAbsolutePath());
 			gp.saveAsPNG(new File(getOutputDir(), myPrefix+".png").getAbsolutePath());

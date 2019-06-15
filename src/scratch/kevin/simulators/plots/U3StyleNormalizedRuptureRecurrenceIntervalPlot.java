@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -26,38 +25,40 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.calc.recurInterval.BPT_DistCalc;
+import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
 
-import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
+import scratch.kevin.simulators.RSQSimCatalog;
+import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
-public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
+public class U3StyleNormalizedRuptureRecurrenceIntervalPlot extends AbstractPlot {
 	
 	private Map<Integer, SimulatorElement> elemsMap;
-	private SectType sectType;
+	private BPTAveragingTypeOptions aveType;
 	private double[] minMags;
 	private double overallMinMag;
 	
 	private RSQSimSubSectionMapper mapper;
+	private List<FaultSectionPrefData> subSects;
+	private double[] subSectPrevTimes;
+
+	private Map<Double, List<RuptureRecord>> magRecords;
+	private Map<Double, int[]> sectEventCounts;
 	
-	private Table<Integer, Double, List<Double>> idToTimesTable;
-	
-	public NormalizedFaultRecurrenceIntervalPlot(List<SimulatorElement> elems, double... minMags) {
-		this(elems, SectType.ELEMENT, null, minMags);
+	public U3StyleNormalizedRuptureRecurrenceIntervalPlot(List<SimulatorElement> elems, RSQSimSubSectionMapper mapper, double... minMags) {
+		this(elems, BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE, mapper, minMags);
 	}
 	
-	public NormalizedFaultRecurrenceIntervalPlot(List<SimulatorElement> elems, SectType sectType, RSQSimSubSectionMapper mapper,
-			double... minMags) {
-		this.sectType = sectType;
-		Preconditions.checkArgument(sectType == SectType.ELEMENT || mapper != null, "Must supply mapper if anything but element level selected");
+	public U3StyleNormalizedRuptureRecurrenceIntervalPlot(List<SimulatorElement> elems, BPTAveragingTypeOptions aveType,
+			RSQSimSubSectionMapper mapper, double... minMags) {
+		this.aveType = aveType;
 		this.mapper = mapper;
 		if (minMags == null || minMags.length == 0)
 			minMags = new double[] { 0d };
@@ -68,11 +69,31 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 		for (SimulatorElement e : elems)
 			elemsMap.put(e.getID(), e);
 		
-		idToTimesTable = HashBasedTable.create();
+		subSects = mapper.getSubSections();
+		subSectPrevTimes = new double[subSects.size()];
+		for (int i=0; i<subSectPrevTimes.length; i++)
+			subSectPrevTimes[i] = Double.NaN;
+		
+		magRecords = new HashMap<>();
+		sectEventCounts = new HashMap<>();
+		for (double mag : minMags) {
+			magRecords.put(mag, new ArrayList<>());
+			sectEventCounts.put(mag, new int[subSects.size()]);
+		}
+	}
+	
+	private class RuptureRecord {
+		private int[] sectIDs;
+		private double[] sectOIs;
+		
+		public RuptureRecord(int[] sectIDs, double[] sectOIs) {
+			this.sectIDs = sectIDs;
+			this.sectOIs = sectOIs;
+		}
 	}
 
-	public SectType getSectType() {
-		return sectType;
+	public BPTAveragingTypeOptions getAveType() {
+		return aveType;
 	}
 
 	@Override
@@ -81,40 +102,36 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 		if (mag < overallMinMag)
 			return;
 		
-		HashSet<Integer> ids = new HashSet<>();
+		List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings((RSQSimEvent)e);
+		if (bundled.isEmpty())
+			return;
 		
-		if (sectType == SectType.ELEMENT) {
-			for (int id : e.getAllElementIDs())
-				ids.add(id);
-		} else {
-			List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings((RSQSimEvent)e);
-			if (mapper.getMinFractForInclusion() >= 0 && bundled.isEmpty())
-				bundled = mapper.getAllSubSectionMappings((RSQSimEvent)e);
-			Preconditions.checkState(!bundled.isEmpty());
-			for (List<SubSectionMapping> bundle : bundled) {
-				Preconditions.checkState(!bundle.isEmpty());
-				for (SubSectionMapping mapping : bundle) {
-					FaultSectionPrefData sect = mapping.getSubSect();
-					if (sectType == SectType.PARENT)
-						ids.add(sect.getParentSectionId());
-					else
-						ids.add(sect.getSectionId());
-				}
+		List<Integer> sectIDs = new ArrayList<>();
+		List<Double> sectOIs = new ArrayList<>();
+		boolean preTimesKnown = true;
+		
+		double eventTime = e.getTimeInYears();
+		
+		for (List<SubSectionMapping> bundle : bundled) {
+			for (SubSectionMapping mapping : bundle) {
+				int id = mapping.getSubSect().getSectionId();
+				sectIDs.add(id);
+				double prevTime = subSectPrevTimes[id];
+				preTimesKnown = preTimesKnown && Double.isFinite(prevTime);
+				subSectPrevTimes[id] = eventTime;
+				sectOIs.add(eventTime - prevTime);
 			}
 		}
 		
-		double time = e.getTimeInYears();
+		RuptureRecord record = new RuptureRecord(Ints.toArray(sectIDs), Doubles.toArray(sectOIs));
 		
 		for (double minMag : minMags) {
 			if (mag >= minMag) {
-				for (Integer id : ids) {
-					List<Double> times = idToTimesTable.get(id, minMag);
-					if (times == null) {
-						times = new ArrayList<>();
-						idToTimesTable.put(id, minMag, times);
-					}
-					times.add(time);
-				}
+				if (preTimesKnown)
+					magRecords.get(minMag).add(record);
+				int[] sectCounts = sectEventCounts.get(minMag);
+				for (int id : sectIDs)
+					sectCounts[id]++;
 			}
 		}
 	}
@@ -134,26 +151,50 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 		csv.addLine(header);
 		
 		for (double minMag : minMags) {
+			int[] sectCounts = sectEventCounts.get(minMag);
+			double[] sectRates = new double[sectCounts.length];
+			for (int i=0; i<sectCounts.length; i++)
+				sectRates[i] = sectCounts[i]/durationYears;
 			
 			HistogramFunction hist = HistogramFunction.getEncompassingHistogram(0d, 4d, 0.1);
 			
 			SummaryStatistics stats = new SummaryStatistics();
 			SummaryStatistics logStats = new SummaryStatistics();
 			
-			for (int id : idToTimesTable.rowKeySet()) {
-				List<Double> times = idToTimesTable.get(id, minMag);
-				if (times == null || times.size() == 1)
-					continue;
-				double meanRI = durationYears/times.size();
-				for (int i=1; i<times.size(); i++) {
-					double deltaTime = times.get(i) - times.get(i-1);
-					Preconditions.checkState(Doubles.isFinite(deltaTime) && deltaTime > 0);
-					double normTime = deltaTime / meanRI;
-					Preconditions.checkState(Doubles.isFinite(normTime) && normTime > 0);
-					hist.add(hist.getClosestXIndex(normTime), 1d);
-					stats.addValue(normTime);
-					logStats.addValue(Math.log(normTime));
+			for (RuptureRecord rec : magRecords.get(minMag)) {
+				double[] rateQuantities = new double[rec.sectIDs.length];
+				double[] timeQuantities = new double[rec.sectIDs.length];
+				for (int i=0; i<rec.sectIDs.length; i++) {
+					int id = rec.sectIDs[i];
+					if (aveType.isAveRI())
+						rateQuantities[i] = 1d/sectRates[id];
+					else
+						rateQuantities[i] = sectRates[id];
+					if (aveType.isAveNTS())
+						timeQuantities[i] = rec.sectOIs[i]/(1d/sectRates[id]);
+					else
+						timeQuantities[i] = rec.sectOIs[i];
 				}
+				double aveRate, aveRI;
+				if (aveType.isAveRI()) {
+					aveRI = StatUtils.mean(rateQuantities);
+					aveRate = 1d/aveRI;
+				} else {
+					aveRate = StatUtils.mean(rateQuantities);
+					aveRI = 1d/aveRate;
+				}
+				double aveTimeSince, aveNormTimeSince;
+				if (aveType.isAveNTS()) {
+					aveNormTimeSince = StatUtils.mean(timeQuantities);
+					aveTimeSince = aveRI*aveNormTimeSince;
+				} else {
+					aveTimeSince = StatUtils.mean(timeQuantities);
+					aveNormTimeSince = aveTimeSince/aveRI;
+				}
+				int xInd = hist.getClosestXIndex(aveNormTimeSince);
+				hist.add(xInd, 1d);
+				stats.addValue(aveNormTimeSince);
+				logStats.addValue(Math.log(aveNormTimeSince));
 			}
 			
 			hist.normalizeBySumOfY_Vals();
@@ -221,8 +262,16 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 			String magLabel = getCleanMagLabel(minMag);
 			String myPrefix = prefix+"_m"+magLabel;
 			
-			String title = "M≥"+magLabel+" "+sectType.getSimType()+" Normalized Interevent Times";
-			PlotSpec plot = new PlotSpec(funcs, chars, title, "Normalized Interevent Time", "Probability");
+			String title = "M≥"+magLabel+" U3 Normalized Interevent Times";
+			String xAxisLabel;
+			if (aveType.isAveNTS()) {
+				title += ", AveNTS";
+				xAxisLabel = "Average Normalized Interevent Time";
+			} else {
+				title += ", AveTS";
+				xAxisLabel = "Normalized Average Interevent Time";
+			}
+			PlotSpec plot = new PlotSpec(funcs, chars, title, xAxisLabel, "Probability");
 			plot.setLegendVisible(true);
 			
 			Range xRange = new Range(0, hist.getMaxX() + 0.5*hist.getDelta());
@@ -252,6 +301,32 @@ public class NormalizedFaultRecurrenceIntervalPlot extends AbstractPlot {
 	@Override
 	public Collection<SimulatorElement> getApplicableElements() {
 		return null;
+	}
+	
+	public static void main(String[] args) throws IOException {
+		File baseDir = new File("/home/kevin/Simulators/catalogs");
+		
+//		D = true;
+		
+		double skipYears = 5000;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		
+		File outputDir = new File("/tmp");
+		
+		U3StyleNormalizedRuptureRecurrenceIntervalPlot plot =
+				new U3StyleNormalizedRuptureRecurrenceIntervalPlot(
+						catalog.getElements(), catalog.getSubSectMapper(), 6d, 6.5d, 7d, 7.5d);
+		plot.initialize(catalog.getName(), outputDir, "u3_norm_ts");
+		
+		for (RSQSimEvent e : catalog.loader().skipYears(skipYears).iterable())
+			plot.processEvent(e);
+		
+		System.out.println("Finalizing plot...");
+		
+		plot.finalizePlot();
+
+		System.out.println("DONE");
 	}
 
 }

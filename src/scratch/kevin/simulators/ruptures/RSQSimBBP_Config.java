@@ -105,12 +105,12 @@ public class RSQSimBBP_Config {
 	}
 	
 	public static BBP_PlanarSurface planarEquivalentU3Surface(RSQSimCatalog catalog, RSQSimEvent event) {
-		return planarEquivalentU3Surface(catalog, event, MIN_SUB_SECT_FRACT, ADJ_WIDTH_MATCH_AREA);
+		return planarEquivalentU3Surface(catalog, event, ADJ_WIDTH_MATCH_AREA);
 	}
 	
 	public static BBP_PlanarSurface planarEquivalentU3Surface(RSQSimCatalog catalog, RSQSimEvent event,
-			double minFractForInclusion, boolean adjWidthMatchArea) {
-		EqkRupture rup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
+			boolean adjWidthMatchArea) {
+		EqkRupture rup = catalog.getMappedSubSectRupture(event);
 		RuptureSurface u3Surf = rup.getRuptureSurface();
 		
 		Location firstLoc = u3Surf.getFirstLocOnUpperEdge();
@@ -239,7 +239,6 @@ public class RSQSimBBP_Config {
 	public static final double SRF_DT = 0.05;
 	public static final double SRF_VERSION = 1.0;
 	public static final int DEFAULT_SEED = 12345;
-	public static final double MIN_SUB_SECT_FRACT = 0.2;
 	public static final boolean ADJ_WIDTH_MATCH_AREA = true;
 	public static final double MAX_ADJ_WIDTH = 30;
 	public static final boolean DO_HF = false;
@@ -360,7 +359,7 @@ public class RSQSimBBP_Config {
 		if (!srcFile.exists() || overwrite) {
 			BBP_PlanarSurface surface;
 			if (U3_SURFACES)
-				surface = planarEquivalentU3Surface(catalog, event, MIN_SUB_SECT_FRACT, ADJ_WIDTH_MATCH_AREA);
+				surface = planarEquivalentU3Surface(catalog, event, ADJ_WIDTH_MATCH_AREA);
 			else
 				surface = estimateBBP_PlanarSurface(event);
 			bbpSource = buildBBP_Source(event, surface, DEFAULT_SEED);

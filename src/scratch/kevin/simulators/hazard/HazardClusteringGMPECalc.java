@@ -77,7 +77,6 @@ public class HazardClusteringGMPECalc {
 		
 		double hazMinMag = 6.5;
 		double skipYears = 5000;
-		double minFractForInclusion = 0.2;
 		double cutoffDist = 200d;
 		
 		double referenceDuration = 50;
@@ -170,7 +169,7 @@ public class HazardClusteringGMPECalc {
 		System.out.println("Loaded "+events.size()+" events ("+(float)durationYears+" years)");
 		
 		System.out.print("Building solution...");
-		FaultSystemSolution sol = catalog.buildSolution(events, hazMinMag, minFractForInclusion);
+		FaultSystemSolution sol = catalog.buildSolution(events, hazMinMag);
 		System.out.println("DONE");
 		
 		System.out.println("Calculating TI curves");
@@ -223,7 +222,7 @@ public class HazardClusteringGMPECalc {
 			RSQSimEvent event = events.get(i);
 			if (event.getMagnitude() < hazMinMag)
 				continue;
-			EqkRupture rup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
+			EqkRupture rup = catalog.getMappedSubSectRupture(event);
 			gmpe.setEqkRupture(rup);
 			
 			for (String name : siteNamesSorted) {

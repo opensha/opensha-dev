@@ -72,7 +72,6 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	private List<BBP_Site> sites;
 	private List<Site> highlightSites;
 	private double minMag;
-	private double minFractForInclusion;
 
 	private BiMap<BBP_Site, Site> sitesBBPtoGMPE;
 	private BiMap<Site, BBP_Site> sitesGMPEtoBBP;
@@ -86,11 +85,10 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	private File gmpeCacheDir;
 
 	public CatalogGMPE_Compare(RSQSimCatalog catalog, ZipFile bbpZipFile, List<BBP_Site> sites, double minMag, int skipYears,
-			double minFractForInclusion, File gmpeCacheDir, RuptureIdentifier loadCriteria) throws IOException {
+			File gmpeCacheDir, RuptureIdentifier loadCriteria) throws IOException {
 		this.catalog = catalog;
 		this.sites = sites;
 		this.minMag = minMag;
-		this.minFractForInclusion = minFractForInclusion;
 		this.gmpeCacheDir = gmpeCacheDir;
 		
 		ArrayList<RegionIden> siteRegIdens = new ArrayList<>();
@@ -186,7 +184,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 							plane.getQuadSurface(), source.getHypoLoc());
 					rup.setRuptureSurface(plane.getQuadSurface());
 				} else {
-					rup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
+					rup = catalog.getMappedSubSectRupture(event);
 				}
 				gmpeRupsMap.put(event.getID(), rup);
 			}
@@ -582,7 +580,6 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		if (timeScale != 1d)
 			doRotD = false;
 		
-		double minFractForInclusion = 0.2;
 		boolean skipRGdirs = true;
 		boolean rgOnlyIfPossible = true;
 		
@@ -685,7 +682,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		ZipFile zipFile = new ZipFile(bbpZipFile);
 		
 		CatalogGMPE_Compare comp = new CatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
-				minFractForInclusion, gmpeCacheDir, loadIden);
+				gmpeCacheDir, loadIden);
 		comp.setReplotCurves(replotCurves);
 		comp.setReplotResiduals(replotResiduals);
 		comp.setReplotScatters(replotScatters);

@@ -95,7 +95,6 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
-import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 
 public class HazardMapComparePlotter {
 	
@@ -135,14 +134,14 @@ public class HazardMapComparePlotter {
 				jobDirs.add(new File(hazardJobDir, args[i]));
 		} else {
 			FaultBasedMapGen.LOCAL_MAPGEN = true;
-			catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
+			catalog = Catalogs.BRUCE_2740.instance(catalogsBaseDir);
 			
-			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
-			jobDirs.add(new File(hazardJobDir, "2018_02_16-bruce2585-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2019_06_12-bruce2740-m6.5-sectArea0.2-skip5000yr-pga-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2019_06_12-bruce2740-m6.5-sectArea0.2-skip5000yr-sa-0.2s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2019_06_12-bruce2740-m6.5-sectArea0.2-skip5000yr-sa-1.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2019_06_12-bruce2740-m6.5-sectArea0.2-skip5000yr-sa-2.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2019_06_12-bruce2740-m6.5-sectArea0.2-skip5000yr-sa-5.0s-8xPoints-maxDist1000"));
+			jobDirs.add(new File(hazardJobDir, "2019_06_12-bruce2740-m6.5-sectArea0.2-skip5000yr-sa-10.0s-8xPoints-maxDist1000"));
 		}
 		
 		File catOutDir = new File(mainOutputDir, catalog.getCatalogDir().getName());
@@ -266,7 +265,7 @@ public class HazardMapComparePlotter {
 				str = str.substring(str.indexOf("sectArea")+"sectArea".length());
 				str = str.substring(0, str.indexOf("-"));
 				double minFractForInclusion = Double.parseDouble(str);
-				if ((float)minFractForInclusion != (float)RSQSimBBP_Config.MIN_SUB_SECT_FRACT)
+				if ((float)minFractForInclusion != (float)RSQSimCatalog.MIN_SUB_SECT_FRACT_DEFAULT)
 					outputName += "_sectArea"+str;
 				lines.add("*Subsections participate in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
 				lines.add("");

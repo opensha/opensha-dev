@@ -150,7 +150,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 
 		@Override
 		public void run() {
-			RSQSimSubSectEqkRupture gmpeRup = catalog.getMappedSubSectRupture(event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT);
+			RSQSimSubSectEqkRupture gmpeRup = catalog.getMappedSubSectRupture(event);
 			HashSet<String> rupSources = new HashSet<>();
 			for (FaultSectionPrefData sect : gmpeRup.getSubSections())
 				if (parentIDtoSourceNameMap.containsKey(sect.getParentSectionId()))

@@ -259,9 +259,10 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			subSectAreas = RSQSimUtils.calcSubSectAreas(elements, subSects);
 		
 		System.out.print("Building subsection-based ruptures...");
-		RSQSimSubSectionMapper mapper = new RSQSimSubSectionMapper(subSects, elements, subSectAreas, subSectDistsCache);
+		RSQSimSubSectionMapper mapper = new RSQSimSubSectionMapper(subSects, elements,
+				minFractForInclusion, subSectAreas, subSectDistsCache);
 		for (RSQSimEvent event : events) {
-			RSQSimSubSectEqkRupture rupture = RSQSimUtils.buildSubSectBasedRupture(mapper, event, minFractForInclusion);
+			RSQSimSubSectEqkRupture rupture = RSQSimUtils.buildSubSectBasedRupture(mapper, event);
 			ruptures.add(rupture);
 		}
 		System.out.println("DONE");

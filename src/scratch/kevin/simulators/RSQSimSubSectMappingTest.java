@@ -12,20 +12,23 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.simulators.SimulatorElement;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 public class RSQSimSubSectMappingTest {
 
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
-		RSQSimCatalog catalog = RSQSimCatalog.Catalogs.BRUCE_3164.instance(baseDir);
-//		RSQSimCatalog catalog = RSQSimCatalog.Catalogs.BRUCE_2585.instance(baseDir);
+//		RSQSimCatalog catalog = RSQSimCatalog.Catalogs.BRUCE_3164.instance(baseDir);
+		RSQSimCatalog catalog = RSQSimCatalog.Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 		
 		File catalogDir = catalog.getCatalogDir();
 		File outputFile = new File(catalogDir, "sub_sect_mappings.txt");
 		FileWriter fw = new FileWriter(outputFile);
 		
 		double spacing = 0.1d;
+		
+		RSQSimSubSectionMapper mapper = catalog.getSubSectMapper();
 		
 		List<FaultSectionPrefData> subSects = catalog.getU3SubSects();
 		List<SimulatorElement> elems = catalog.getElements();
@@ -44,10 +47,7 @@ public class RSQSimSubSectMappingTest {
 			MinMaxAveTracker sectTrack = new MinMaxAveTracker();
 			FaultSectionPrefData subSect = subSects.get(s);
 			StirlingGriddedSurface surf = subSect.getStirlingGriddedSurface(spacing, false, false);
-			for (SimulatorElement elem : elems) {
-				int mappedIndex = elem.getSectionID()+offset;
-				if (mappedIndex != s)
-					continue;
+			for (SimulatorElement elem : mapper.getElementsForSection(subSect)) {
 				Location loc = elem.getCenterLocation();
 				double dist = surf.getDistanceJB(new Location(loc.getLatitude(), loc.getLongitude()));
 				sectTrack.addValue(dist);

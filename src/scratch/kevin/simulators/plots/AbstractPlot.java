@@ -126,7 +126,11 @@ public abstract class AbstractPlot {
 		Preconditions.checkState(min > 0, "Min must be positive for log plot! %s", min);
 		Preconditions.checkState(min < max, "Min must be < max: %s >= %s", min, max);
 		double logMin = Math.floor(Math.log10(min));
+		if (Math.log10(min) - logMin > 0.8)
+			logMin += 0.8;
 		double logMax = Math.ceil(Math.log10(max));
+		if (logMax - Math.log10(max) > 0.8)
+			logMax -= 0.8;
 		
 		return new Range(Math.pow(10, logMin), Math.pow(10, logMax));
 	}

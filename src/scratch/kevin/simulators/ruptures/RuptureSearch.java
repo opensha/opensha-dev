@@ -90,8 +90,7 @@ public class RuptureSearch {
 				if (magDiff > maxMagDiff)
 					continue;
 			}
-			List<FaultSectionPrefData> sects = catalog.getSubSectsForRupture(
-					event, RSQSimBBP_Config.MIN_SUB_SECT_FRACT);
+			List<FaultSectionPrefData> sects = catalog.getSubSectsForRupture(event);
 			int numOn = 0;
 			int numOff = 0;
 			for (FaultSectionPrefData sect : sects) {

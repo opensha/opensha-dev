@@ -35,6 +35,7 @@ import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -44,6 +45,7 @@ import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.DAS_Record;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SlipAlongSectAlgorithm;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectDAS_Record;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -59,6 +61,9 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 	private double minMag;
 	private SlipAlongSectAlgorithm[] slipAlgs;
 	private Map<SlipAlongSectAlgorithm, DefaultXY_DataSet> slipAlgResultsMap;
+	
+	private SlipAlongSectAlgorithm styleDependentSlipAlg;
+	private Map<FaultStyle, DefaultXY_DataSet> faultStyleResultsMap;
 	
 	private RSQSimEvent exampleEvent;
 
@@ -77,6 +82,13 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 		slipAlgResultsMap = new HashMap<>();
 		for (SlipAlongSectAlgorithm alg : slipAlgs)
 			slipAlgResultsMap.put(alg, new DefaultXY_DataSet());
+	}
+	
+	public void setDisaggregateFaultStyles(SlipAlongSectAlgorithm slipAlg) {
+		styleDependentSlipAlg = slipAlg;
+		faultStyleResultsMap = new HashMap<>();
+		for (FaultStyle style : FaultStyle.values())
+			faultStyleResultsMap.put(style, new DefaultXY_DataSet());
 	}
 
 	@Override
@@ -103,6 +115,11 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 			}
 			double aveSlip = areaWeightedSlip == 0 ? 0 : areaWeightedSlip / sumArea;
 			slipAlgResultsMap.get(slipAlg).set(sumLength, aveSlip);
+			
+			if (styleDependentSlipAlg != null) {
+				FaultStyle style = RSQSimUtils.calcFaultStyle(e, 15d, 0.1);
+				faultStyleResultsMap.get(style).set(sumLength, aveSlip);
+			}
 		}
 	}
 	
@@ -139,7 +156,7 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 			SubSectionMapping mapping = mappings.get(i);
 			if (mapping.isReversed())
 				return;
-			double myTotLen = mapping.getLengthForSlip(SlipAlongSectAlgorithm.MID_SEIS_FULL_LEN);
+			double myTotLen = mapping.getLengthForSlip(SlipAlongSectAlgorithm.MID_SEIS_FULL_SUBSECTION_LEN);
 			double mySlippedLen = mapping.getLengthForSlip(SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN);
 			double myMidSlippedLen = mapping.getLengthForSlip(SlipAlongSectAlgorithm.MID_SEIS_MID_SLIPPED_LEN);
 			double mySurfSlippedLen = mapping.getLengthForSlip(SlipAlongSectAlgorithm.MID_SEIS_SURF_SLIP_LEN);
@@ -265,240 +282,164 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 			String prefix = getOutputPrefix()+"_"+slipAlg.name();
 			XY_DataSet scatter = slipAlgResultsMap.get(slipAlg);
 			
-			// build 2D hist
-			int nx = 51, ny = 51;
-			double gridSpacingX = maxX/(double)nx;
-			double xyzMinX = 0.5*gridSpacingX;
-			double gridSpacingY = maxY/(double)ny;
-			double xyzMinY = 0.5*gridSpacingY;
-			
-			EvenlyDiscrXYZ_DataSet xyz = new EvenlyDiscrXYZ_DataSet(nx, ny, xyzMinX, xyzMinY, gridSpacingX, gridSpacingY);
-			
-			for (Point2D pt : scatter) {
-				int index = xyz.indexOf(pt.getX(), pt.getY());
-				if (index < 0 || index >= xyz.size())
-					throw new IllegalStateException("Scatter point not in XYZ range. x: "
-								+pt.getX()+" ["+xyz.getMinX()+" "+xyz.getMaxX()
-							+"], y: "+pt.getY()+" ["+xyz.getMinY()+" "+xyz.getMaxY()+"]");
-				xyz.set(index, xyz.get(index)+1);
+			makePlot(name, outputDir, plotWidth, plotHeight, maxY, maxX, xRange, yRange, compFuncs, compChars, slipAlg,
+					prefix, scatter);
+		}
+		
+		if (styleDependentSlipAlg != null) {
+			for (FaultStyle style : faultStyleResultsMap.keySet()) {
+				String prefix = getOutputPrefix()+"_"+styleDependentSlipAlg.name()+"_"+style.name();
+				XY_DataSet scatter = faultStyleResultsMap.get(style);
+				
+				makePlot(name, outputDir, plotWidth, plotHeight, maxY, maxX, xRange, yRange, compFuncs, compChars, styleDependentSlipAlg,
+						prefix, scatter);
 			}
-			
-			// build average func
-			DiscretizedFunc averageFunc = new ArbitrarilyDiscretizedFunc();
-			for (int i=0; i<xyz.getNumX(); i++) {
-				double totNum = 0d;
-				double avgY = 0d;
-				for (int j=0; j<xyz.getNumY(); j++) {
-					double y = xyz.getY(j);
-					double num = xyz.get(i, j);
-					avgY += y*num;
-					totNum += num;
-				}
-				if (totNum < MIN_VALS_FOR_AVERAGE) {
-					if (averageFunc.size() == 0)
-						// continue until we get enough data
-						continue;
-					// wer're at the end, stop
-					break;
-				}
-				avgY /= totNum;
-				averageFunc.set(xyz.getX(i), avgY);
+		}
+		
+		plotExample();
+	}
+
+	private void makePlot(String name, File outputDir, int plotWidth, int plotHeight, double maxY, double maxX,
+			Range xRange, Range yRange, List<DiscretizedFunc> compFuncs, List<PlotCurveCharacterstics> compChars,
+			SlipAlongSectAlgorithm slipAlg, String prefix, XY_DataSet scatter) throws IOException {
+		// build 2D hist
+		int nx = 51, ny = 51;
+		double gridSpacingX = maxX/(double)nx;
+		double xyzMinX = 0.5*gridSpacingX;
+		double gridSpacingY = maxY/(double)ny;
+		double xyzMinY = 0.5*gridSpacingY;
+		
+		EvenlyDiscrXYZ_DataSet xyz = new EvenlyDiscrXYZ_DataSet(nx, ny, xyzMinX, xyzMinY, gridSpacingX, gridSpacingY);
+		
+		for (Point2D pt : scatter) {
+			int index = xyz.indexOf(pt.getX(), pt.getY());
+			if (index < 0 || index >= xyz.size())
+				throw new IllegalStateException("Scatter point not in XYZ range. x: "
+							+pt.getX()+" ["+xyz.getMinX()+" "+xyz.getMaxX()
+						+"], y: "+pt.getY()+" ["+xyz.getMinY()+" "+xyz.getMaxY()+"]");
+			xyz.set(index, xyz.get(index)+1);
+		}
+		
+		// build average func
+		DiscretizedFunc averageFunc = new ArbitrarilyDiscretizedFunc();
+		for (int i=0; i<xyz.getNumX(); i++) {
+			double totNum = 0d;
+			double avgY = 0d;
+			for (int j=0; j<xyz.getNumY(); j++) {
+				double y = xyz.getY(j);
+				double num = xyz.get(i, j);
+				avgY += y*num;
+				totNum += num;
 			}
-			averageFunc.setName("Average");
-			
-			XY_DataSet plotScatter = scatter;
-			if (scatter.size() > max_scatter_points) {
-				System.out.println("Filtering slip-length scatter from "+scatter.size()+" to ~"+max_scatter_points+" points");
+			if (totNum < MIN_VALS_FOR_AVERAGE) {
+				if (averageFunc.size() == 0)
+					// continue until we get enough data
+					continue;
+				// wer're at the end, stop
+				break;
+			}
+			avgY /= totNum;
+			averageFunc.set(xyz.getX(i), avgY);
+		}
+		averageFunc.setName("Average");
+		
+		XY_DataSet plotScatter = scatter;
+		if (scatter.size() > max_scatter_points) {
+			System.out.println("Filtering slip-length scatter from "+scatter.size()+" to ~"+max_scatter_points+" points");
 //				plotScatter = new DefaultXY_DataSet();
 //				Random r = new Random();
 //				for (int i=0; i<max_scatter_points; i++)
 //					plotScatter.set(scatter.get(r.nextInt(scatter.size())));
-				plotScatter = downsampleByMag(scatter, true, max_scatter_points);
-				System.out.println("Filter done (random mag-dependent sample): "+plotScatter.size());
-			}
-			List<XY_DataSet> funcs = Lists.newArrayList();
-			List<PlotCurveCharacterstics> chars = Lists.newArrayList();
-			
-			funcs.add(plotScatter);
-			plotScatter.setName(name);
-			chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
-			
-			if (averageFunc.size() > 0) {
-				funcs.add(averageFunc);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GRAY));
-			}
-			
-			funcs.addAll(compFuncs);
-			chars.addAll(compChars);
-			
-			System.out.println("Scatter y range: "+scatter.getMinY()+" "+scatter.getMaxY());
-			
-//			EvenlyDiscretizedFunc wcFunc = null, elbFunc = null, hbFunc = null;
-//			PlotCurveCharacterstics wcChar = null, elbChar = null, hbChar = null;
-//			if (!meanSlip) {
-//				WC1994_MagAreaRelationship wc = new WC1994_MagAreaRelationship();
-//				wcFunc = new EvenlyDiscretizedFunc(scatter.getMinX(), scatter.getMaxX(), 1000);
-//				for (int i=0; i<wcFunc.size(); i++)
-//					wcFunc.set(i, wc.getMedianMag(wcFunc.getX(i)));
-//				wcFunc.setName("W-C 1994");
-//				funcs.add(wcFunc);
-//				wcChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED.darker());
-//				chars.add(wcChar);
-//				
-//				Ellsworth_B_WG02_MagAreaRel elb = new Ellsworth_B_WG02_MagAreaRel();
-//				elbFunc = new EvenlyDiscretizedFunc(scatter.getMinX(), scatter.getMaxX(), 1000);
-//				for (int i=0; i<elbFunc.size(); i++)
-//					elbFunc.set(i, elb.getMedianMag(elbFunc.getX(i)));
-//				elbFunc.setName("EllsworthB");
-//				funcs.add(elbFunc);
-//				elbChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE.darker());
-//				chars.add(elbChar);
-//				
-//				HanksBakun2002_MagAreaRel hb = new HanksBakun2002_MagAreaRel();
-//				hbFunc = new EvenlyDiscretizedFunc(scatter.getMinX(), scatter.getMaxX(), 1000);
-//				for (int i=0; i<hbFunc.size(); i++)
-//					hbFunc.set(i, hb.getMedianMag(hbFunc.getX(i)));
-//				hbFunc.setName("H-B 2002");
-//				funcs.add(hbFunc);
-//				hbChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN.darker());
-//				chars.add(hbChar);
-//			}
-			
-			String title = "Slip-Length Scaling";
-			String xAxisLabel = slipAlg+" (km)";
-			String yAxisLabel = "Mean Mid-Seismogenic Slip (m)";
-			
-			PlotSpec plot = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
-			plot.setLegendVisible(funcs.size() > 1);
-			
-			HeadlessGraphPanel gp = buildGraphPanel();
-			gp.drawGraphPanel(plot, false, false, xRange, yRange);
-			gp.getChartPanel().setSize(plotWidth, plotHeight);
-			gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
-			gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
-			
-			// convert to density
-			for (int i=0; i<xyz.size(); i++) {
-				// convert to density
-				double binWidth = gridSpacingX;
-				double binHeight = gridSpacingY;
-				double area = binWidth * binHeight;
-				xyz.set(i, xyz.get(i)*area);
-			}
-			xyz.scale(1d/xyz.getSumZ());
-			
-			// set all zero to NaN so that it will plot white
-			for (int i=0; i<xyz.size(); i++) {
-				if (xyz.get(i) == 0)
-					xyz.set(i, Double.NaN);
-			}
-			xyz.log10();
-			
-			double minZ = Double.POSITIVE_INFINITY;
-			double maxZ = Double.NEGATIVE_INFINITY;
-			for (int i=0; i<xyz.size(); i++) {
-				double val = xyz.get(i);
-				if (!Doubles.isFinite(val))
-					continue;
-				if (val < minZ)
-					minZ = val;
-				if (val > maxZ)
-					maxZ = val;
-			}
-			
-			System.out.println("MinZ: "+minZ);
-			System.out.println("MaxZ: "+maxZ);
-			
-			CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
-			if ((float)minZ == (float)maxZ)
-				cpt = cpt.rescale(minZ, minZ*2);
-			else if (!Doubles.isFinite(minZ))
-				cpt = cpt.rescale(0d, 1d);
-			else
-				cpt = cpt.rescale(minZ, maxZ);
-			cpt.setNanColor(Color.WHITE);
-			
-			String zAxisLabel = "Log10(Density)";
-			
-			XYZPlotSpec xyzSpec = new XYZPlotSpec(xyz, cpt, title, xAxisLabel, yAxisLabel, zAxisLabel);
-			// add the mean and comparison funcs, but remove the scatter
-			funcs.remove(0);
-			chars.remove(0);
-			xyzSpec.setXYElems(funcs);
-			xyzSpec.setXYChars(chars);
-//			if (!meanSlip) {
-//				// add W-C
-//				funcs = Lists.newArrayList();
-//				chars = Lists.newArrayList();
-//				ArbitrarilyDiscretizedFunc logWCFunc = new ArbitrarilyDiscretizedFunc();
-//				for (Point2D pt : wcFunc)
-//					logWCFunc.set(Math.log10(pt.getX()), pt.getY());
-//				funcs.add(logWCFunc);
-//				chars.add(wcChar);
-//				// add EllB
-//				ArbitrarilyDiscretizedFunc logEllBFunc = new ArbitrarilyDiscretizedFunc();
-//				for (Point2D pt : elbFunc)
-//					logEllBFunc.set(Math.log10(pt.getX()), pt.getY());
-//				funcs.add(logEllBFunc);
-//				chars.add(elbChar);
-//				// add HB
-//				ArbitrarilyDiscretizedFunc logHBFunc = new ArbitrarilyDiscretizedFunc();
-//				for (Point2D pt : hbFunc)
-//					logHBFunc.set(Math.log10(pt.getX()), pt.getY());
-//				funcs.add(logHBFunc);
-//				chars.add(hbChar);
-//				xyzSpec.setXYElems(funcs);
-//				xyzSpec.setXYChars(chars);
-//			}
-			
-			XYZGraphPanel xyzGP = buildXYZGraphPanel();
-			xyzGP.drawPlot(xyzSpec, false, false, new Range(0d, maxX+0.5*gridSpacingX),
-					new Range(0d, yRange.getUpperBound()+0.5*gridSpacingY));
-			// write plot
-			xyzGP.getChartPanel().setSize(plotWidth, plotHeight);
-			xyzGP.saveAsPNG(new File(outputDir, prefix+"_hist2D.png").getAbsolutePath());
-			xyzGP.saveAsPDF(new File(outputDir, prefix+"_hist2D.pdf").getAbsolutePath());
-			
-//			// now write CSV
-//			if (!meanSlip) {
-//				IncrementalMagFreqDist magFunc = MFDPlot.buildIncrementalFunc(scatter.getMinY(), csv_mag_delta);
-//				CSVFile<String> csv = new CSVFile<>(true);
-//				List<String> header = new ArrayList<String>();
-//				header.add("Magnitude");
-//				header.add("Mean");
-//				header.add("Standard Deviation");
-//				for (double f : csv_fractiles)
-//					header.add((float)f+" fractile");
-//				csv.addLine(header);
-//				
-//				for (int i=0; i<magFunc.size(); i++) {
-//					double mag = magFunc.getX(i);
-//					double minMag = mag - 0.5*csv_mag_delta;
-//					double maxMag = mag + 0.5*csv_mag_delta;
-//					
-//					List<Double> areasForBin = new ArrayList<>();
-//					
-//					for (Point2D pt : scatter)
-//						if (pt.getY() >= minMag && pt.getY() < maxMag)
-//							areasForBin.add(pt.getX());
-//					
-//					double[] areasArray = Doubles.toArray(areasForBin);
-//					List<String> line = new ArrayList<>();
-//					line.add((float)mag+"");
-//					line.add(StatUtils.mean(areasArray)+"");
-//					line.add(Math.sqrt(StatUtils.variance(areasArray))+"");
-//					for (double f : csv_fractiles)
-//						if (f == 0d)
-//							line.add(StatUtils.min(areasArray)+"");
-//						else
-//							line.add(StatUtils.percentile(areasArray, f*100d)+"");
-//					csv.addLine(line);
-//				}
-//				
-//				csv.writeToFile(new File(outputDir, prefix+".csv"));
-//			}
+			plotScatter = downsampleByMag(scatter, true, max_scatter_points);
+			System.out.println("Filter done (random mag-dependent sample): "+plotScatter.size());
 		}
-		plotExample();
+		List<XY_DataSet> funcs = Lists.newArrayList();
+		List<PlotCurveCharacterstics> chars = Lists.newArrayList();
+		
+		funcs.add(plotScatter);
+		plotScatter.setName(name);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
+		
+		if (averageFunc.size() > 0) {
+			funcs.add(averageFunc);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, Color.GRAY));
+		}
+		
+		funcs.addAll(compFuncs);
+		chars.addAll(compChars);
+		
+		System.out.println("Scatter y range: "+scatter.getMinY()+" "+scatter.getMaxY());
+		
+		String title = "Slip-Length Scaling";
+		String xAxisLabel = slipAlg+" (km)";
+		String yAxisLabel = "Mean Mid-Seismogenic Slip (m)";
+		
+		PlotSpec plot = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
+		plot.setLegendVisible(funcs.size() > 1);
+		
+		HeadlessGraphPanel gp = buildGraphPanel();
+		gp.drawGraphPanel(plot, false, false, xRange, yRange);
+		gp.getChartPanel().setSize(plotWidth, plotHeight);
+		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
+		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
+		
+		// convert to density
+		for (int i=0; i<xyz.size(); i++) {
+			// convert to density
+			double binWidth = gridSpacingX;
+			double binHeight = gridSpacingY;
+			double area = binWidth * binHeight;
+			xyz.set(i, xyz.get(i)*area);
+		}
+		xyz.scale(1d/xyz.getSumZ());
+		
+		// set all zero to NaN so that it will plot white
+		for (int i=0; i<xyz.size(); i++) {
+			if (xyz.get(i) == 0)
+				xyz.set(i, Double.NaN);
+		}
+		xyz.log10();
+		
+		double minZ = Double.POSITIVE_INFINITY;
+		double maxZ = Double.NEGATIVE_INFINITY;
+		for (int i=0; i<xyz.size(); i++) {
+			double val = xyz.get(i);
+			if (!Doubles.isFinite(val))
+				continue;
+			if (val < minZ)
+				minZ = val;
+			if (val > maxZ)
+				maxZ = val;
+		}
+		
+		System.out.println("MinZ: "+minZ);
+		System.out.println("MaxZ: "+maxZ);
+		
+		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
+		if ((float)minZ == (float)maxZ)
+			cpt = cpt.rescale(minZ, minZ*2);
+		else if (!Doubles.isFinite(minZ))
+			cpt = cpt.rescale(0d, 1d);
+		else
+			cpt = cpt.rescale(minZ, maxZ);
+		cpt.setNanColor(Color.WHITE);
+		
+		String zAxisLabel = "Log10(Density)";
+		
+		XYZPlotSpec xyzSpec = new XYZPlotSpec(xyz, cpt, title, xAxisLabel, yAxisLabel, zAxisLabel);
+		// add the mean and comparison funcs, but remove the scatter
+		funcs.remove(0);
+		chars.remove(0);
+		xyzSpec.setXYElems(funcs);
+		xyzSpec.setXYChars(chars);
+		
+		XYZGraphPanel xyzGP = buildXYZGraphPanel();
+		xyzGP.drawPlot(xyzSpec, false, false, new Range(0d, maxX+0.5*gridSpacingX),
+				new Range(0d, yRange.getUpperBound()+0.5*gridSpacingY));
+		// write plot
+		xyzGP.getChartPanel().setSize(plotWidth, plotHeight);
+		xyzGP.saveAsPNG(new File(outputDir, prefix+"_hist2D.png").getAbsolutePath());
+		xyzGP.saveAsPDF(new File(outputDir, prefix+"_hist2D.pdf").getAbsolutePath());
 	}
 	
 	private void plotExample() throws IOException {
@@ -532,7 +473,7 @@ public class SlipLengthScalingPlot extends AbstractPlot {
 		List<XYAnnotation> slipAnns = new ArrayList<>();
 		for (int m=0; m<mappings.size(); m++) {
 			SubSectionMapping mapping = mappings.get(m);
-			double totLen = mapping.getLengthForSlip(SlipAlongSectAlgorithm.MID_SEIS_FULL_LEN);
+			double totLen = mapping.getLengthForSlip(SlipAlongSectAlgorithm.MID_SEIS_FULL_SUBSECTION_LEN);
 			HashSet<SimulatorElement> midSeisElems = mapper.getSlipSectionsForSect(mapping.getSubSect());
 			for (SimulatorElement elem : mapper.getElementsForSection(mapping.getSubSect())) {
 				SubSectDAS_Record elemDAS = mapper.getElemSubSectDAS(elem);

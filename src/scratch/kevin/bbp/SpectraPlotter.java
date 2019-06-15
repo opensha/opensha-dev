@@ -63,7 +63,6 @@ import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.BBP_CatalogSimZipLoader;
-import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 
 public class SpectraPlotter {
 	
@@ -1105,11 +1104,11 @@ public class SpectraPlotter {
 	}
 	
 	private static Map<RSQSimEvent, EqkRupture> getCompEvents(RSQSimCatalog catalog, double minMag, double maxMag, int skipYears,
-			double minFractForInclusion, int... parentIDs) throws IOException {
+			int... parentIDs) throws IOException {
 		List<RSQSimEvent> events = catalog.loader().skipYears(skipYears).minMag(minMag).maxMag(maxMag).forPerentSections(true, parentIDs).load();
 		Map<RSQSimEvent, EqkRupture> ret = new HashMap<>();
 		for (RSQSimEvent event : events) {
-			RSQSimSubSectEqkRupture gmpeRup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
+			RSQSimSubSectEqkRupture gmpeRup = catalog.getMappedSubSectRupture(event);
 			boolean match = false;
 			for (FaultSectionPrefData sect : gmpeRup.getSubSections()) {
 				if (Ints.contains(parentIDs, sect.getParentSectionId())) {
@@ -1173,8 +1172,6 @@ public class SpectraPlotter {
 		File refDir = null;
 		int eventID = 1670183;
 		
-		double minFractForInclusion = RSQSimBBP_Config.MIN_SUB_SECT_FRACT;
-		
 //		RSQSimCatalog catalog = Catalogs.JG_UCERF3_millionElement.instance(baseDir);
 //		File refDir = new File("/home/kevin/bbp/parallel/2017_10_04-JG_UCERF3_millionElement-event4099020-dx0.48-noHF/results");
 //		int eventID = 4099020;
@@ -1196,7 +1193,7 @@ public class SpectraPlotter {
 		double animFPS = 10;
 		BBP_SimZipLoader compLoader = new BBP_SimZipLoader(new File(
 				"/data/kevin/bbp/parallel/2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites/results_rotD.zip"), sites);
-		Map<RSQSimEvent, EqkRupture> compEvents = getCompEvents(compCatalog, 7d, 7.5d, 5000, minFractForInclusion, 286, 301);
+		Map<RSQSimEvent, EqkRupture> compEvents = getCompEvents(compCatalog, 7d, 7.5d, 5000, 286, 301);
 		
 		int numRefRuns = 0;
 		
@@ -1206,7 +1203,7 @@ public class SpectraPlotter {
 				gmpe.setParamDefaults();
 			System.out.println("Loading event...");
 			RSQSimEvent event = catalog.loader().byID(eventID);
-			gmpeRup = catalog.getMappedSubSectRupture(event, minFractForInclusion);
+			gmpeRup = catalog.getMappedSubSectRupture(event);
 			System.out.println("DONE");
 		}
 		
