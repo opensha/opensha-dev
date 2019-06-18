@@ -1,7 +1,9 @@
 package scratch.kevin.simulators.multiFault;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Stroke;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -69,9 +71,10 @@ public class RSQSimU3RupturePageGen {
 		File catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
 		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_3271.instance(catalogsBaseDir);
-//		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(catalogsBaseDir);
+		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(catalogsBaseDir);
 		
 		File catalogDir = catalog.getCatalogDir();
 		
@@ -207,7 +210,7 @@ public class RSQSimU3RupturePageGen {
 						e.printStackTrace();
 					}
 					erredCounts[t] += numCatalogOccurances;
-					subPass = false;
+					subPass = true; // do not fail on error
 				}
 				if (!subPass && allPass) {
 					// this is the first failure
@@ -260,21 +263,25 @@ public class RSQSimU3RupturePageGen {
 			
 //			funcs.add(vertLine(x, 0, percentFailed));
 //			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, c));
-			anns.add(box(x-deltaEachSide, 0, x+deltaEachSide, percentFailed, c));
+			anns.add(filledBox(x-deltaEachSide, 0, x+deltaEachSide, percentFailed, c));
 			
 			if (percentOnly > 0) {
 //				funcs.add(vertLine(x, 0, percentOnly));
 //				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, darker(c)));
-				anns.add(box(x-deltaEachSide, 0, x+deltaEachSide, percentOnly, darker(c)));
+				anns.add(filledBox(x-deltaEachSide, 0, x+deltaEachSide, percentOnly, darker(c)));
 			}
 			
-//			if (percentErred > 0) {
-////				funcs.add(vertLine(x, percentFailed, percentFailed + percentErred));
-////				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, Color.LIGHT_GRAY));
-//				anns.add(box(x-deltaEachSide, percentFailed, x+deltaEachSide, percentFailed + percentErred, Color.LIGHT_GRAY));
-//			}
+			String title = tests.get(i).getShortName();
 			
-			XYTextAnnotation ann = new XYTextAnnotation(tests.get(i).getShortName(), x, maxY*0.95);
+			if (percentErred > 0) {
+//				funcs.add(vertLine(x, percentFailed, percentFailed + percentErred));
+//				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, Color.LIGHT_GRAY));
+				anns.add(emptyBox(x-deltaEachSide, percentFailed, x+deltaEachSide, percentFailed + percentErred,
+						PlotLineType.DASHED, Color.LIGHT_GRAY, 2f));
+				title += "*";
+			}
+			
+			XYTextAnnotation ann = new XYTextAnnotation(title, x, maxY*0.95);
 			ann.setTextAnchor(TextAnchor.TOP_CENTER);
 			ann.setPaint(c);
 			ann.setFont(font);
@@ -404,8 +411,15 @@ public class RSQSimU3RupturePageGen {
 		return line;
 	}
 	
-	private static XYBoxAnnotation box(double x0, double y0, double x1, double y1, Color c) {
+	private static XYBoxAnnotation filledBox(double x0, double y0, double x1, double y1, Color c) {
 		XYBoxAnnotation ann = new XYBoxAnnotation(x0, y0, x1, y1, null, null, c);
+		return ann;
+	}
+	
+	private static XYBoxAnnotation emptyBox(double x0, double y0, double x1, double y1,
+			PlotLineType lineType, Color c, float thickness) {
+		Stroke stroke = lineType.buildStroke(thickness);
+		XYBoxAnnotation ann = new XYBoxAnnotation(x0, y0, x1, y1, stroke, c, null);
 		return ann;
 	}
 	
