@@ -1891,18 +1891,65 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		
 		double[] maxTimes = { 1d, 10d, 100d }; 
-		if (replot || !new File(outputDir, "trigger_within_prev_1yr.png").exists()) {
-			TriggerLargerWithinPrevRupturePlot plot = new TriggerLargerWithinPrevRupturePlot(getSubSectMapper(), 6.5, maxTimes);
-			plot.initialize(getName(), outputDir, "trigger_within_prev");
-			plots.add(plot);
+		double[] triggerMinMags = { 6d, 6.5d, 7d };
+		if (replot || !new File(outputDir, "trigger_within_prev_m7_1yr.png").exists()) {
+			for (double triggerMinMag : triggerMinMags) {
+				if (triggerMinMag < minMag)
+					continue;
+				TriggerLargerWithinPrevRupturePlot plot = new TriggerLargerWithinPrevRupturePlot(getSubSectMapper(), triggerMinMag, maxTimes);
+				plot.initialize(getName(), outputDir, "trigger_within_prev_m"+optionalDigitDF.format(triggerMinMag));
+				plots.add(plot);
+			}
 		}
 		lines.add("");
 		lines.add("### Trigger Hypocenter Statistics Within Previous Rupture Area");
 		lines.add(topLink); lines.add("");
+		
+		String[][] exampleArray = null;
+		for (int i=0; i<triggerMinMags.length; i++) {
+			double triggerMinMag = triggerMinMags[i];
+			String prefix = "trigger_within_prev_m"+optionalDigitDF.format(triggerMinMag);
+			File example1 = new File(outputDir, prefix+"_example_re_rup.png");
+			File example2 = new File(outputDir, prefix+"_example_new_hypo.png");
+			if (example1.exists() || example2.exists()) {
+				if (exampleArray == null)
+					exampleArray = new String[2][triggerMinMags.length];
+				exampleArray[0][i] = example1.exists() ? "![example]("+outputDir.getName()+"/"+example1.getName()+")" : "";
+				exampleArray[1][i] = example2.exists() ? "![example]("+outputDir.getName()+"/"+example2.getName()+")" : "";
+			}
+		}
+		if (exampleArray != null) {
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			for (double triggerMinMag : triggerMinMags)
+				if (triggerMinMag >= minMag)
+					table.addColumn("M≥"+optionalDigitDF.format(triggerMinMag));
+			table.finalizeLine();
+			for (String[] vals : exampleArray)
+				table.addLine(vals);
+			lines.add("Example rupture plots:");
+			lines.add("");
+			lines.addAll(table.build());
+			lines.add("");
+		}
+		
 		table = MarkdownUtils.tableBuilder();
+		table.initNewLine();
+		for (double triggerMinMag : triggerMinMags)
+			if (triggerMinMag >= minMag)
+				table.addColumn("M≥"+optionalDigitDF.format(triggerMinMag));
+		table.finalizeLine();
+			
 		for (double maxTime : maxTimes) {
-			String prefix = "trigger_within_prev_"+optionalDigitDF.format(maxTime)+"yr";
-			table.addLine("![hypocenter plot]("+outputDir.getName()+"/"+prefix+".png)");
+			table.initNewLine();
+			for (double triggerMinMag : triggerMinMags) {
+				if (triggerMinMag >= minMag) {
+					String prefix = "trigger_within_prev_m"+optionalDigitDF.format(triggerMinMag)
+						+"_"+optionalDigitDF.format(maxTime)+"yr";
+					table.addColumn("![hypocenter plot]("+outputDir.getName()+"/"+prefix+".png)");
+				}
+			}
+			table.finalizeLine();
 		}
 		lines.addAll(table.build());
 		
@@ -2455,7 +2502,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
 		boolean overwriteIndividual = true;
-		boolean replot = false;
+		boolean replot = true;
 		
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
@@ -2467,6 +2514,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		// specific catalog
 		GregorianCalendar minDate = cal(2000, 1, 1);
 		for (Catalogs cat : new Catalogs[] {
+				Catalogs.BRUCE_2585,
 				Catalogs.BRUCE_2585_1MYR,
 				Catalogs.BRUCE_2740,
 				Catalogs.BRUCE_2829,

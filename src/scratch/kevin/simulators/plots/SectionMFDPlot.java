@@ -249,8 +249,8 @@ public class SectionMFDPlot extends AbstractPlot {
 		
 		double skipYears = 5000;
 		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_3271.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_3271.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(baseDir);
 		
 		File catalogOutputDir = new File(gitDir, catalog.getCatalogDir().getName());
