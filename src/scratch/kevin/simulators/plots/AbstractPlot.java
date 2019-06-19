@@ -254,5 +254,73 @@ public abstract class AbstractPlot {
 	
 	protected static final DecimalFormat yearDF = new DecimalFormat("0.00");
 	protected static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
+private static final DecimalFormat optionalSingleDigitDF = new DecimalFormat("0.#");
+	
+	protected static String getTimeLabel(double years, boolean plural) {
+		double fractionalDays = years * 365.25;
+		if (fractionalDays < 0.99) {
+			double hours = fractionalDays * 24;
+			double mins = hours*60d;
+			double secs = mins*60d;
+			if (hours > 0.99) {
+				if (hours >= 1.05 && plural)
+					return optionalSingleDigitDF.format(hours) + " Hours";
+				return optionalSingleDigitDF.format(hours) + " Hour";
+			} else if (mins > 0.99) {
+				if (mins >= 1.05 && plural)
+					return optionalSingleDigitDF.format(mins) + " Minutes";
+				return optionalSingleDigitDF.format(mins) + " Minute";
+			} else {
+				if (secs >= 1.05 && plural)
+					return optionalSingleDigitDF.format(secs) + " Seconds";
+				return optionalSingleDigitDF.format(secs) + " Second";
+			}
+		} else if (years < 1d) {
+			int days = (int) (fractionalDays + 0.5);
+			
+			double months = years *12d;
+			boolean isRoundedMonth = Math.round(months) == Math.round(10d*months)/10d;
+			
+			if (days > 28 && isRoundedMonth) {
+				if (months >= 1.05 && plural)
+					return optionalSingleDigitDF.format(months)+" Months";
+				else
+					return optionalSingleDigitDF.format(months)+" Month";
+			} else if (days >= 7 && days % 7 == 0) {
+				int weeks = days / 7;
+				if (weeks > 1 && plural)
+					return weeks+" Weeks";
+				else
+					return weeks+" Week";
+			} else {
+				if (fractionalDays >= 1.05 && plural)
+					return optionalSingleDigitDF.format(fractionalDays) + " Days";
+				return optionalSingleDigitDF.format(fractionalDays) + " Day";
+			}
+		} else {
+			if (plural && years >= 1.05)
+				return optionalSingleDigitDF.format(years) + " Years";
+			return optionalSingleDigitDF.format(years) + " Year";
+		}
+	}
+	
+	public static String getTimeShortLabel(double years) {
+		String label = getTimeLabel(years, false);
+		label = label.replaceAll("Seconds", "s");
+		label = label.replaceAll("Second", "s");
+		label = label.replaceAll("Minutes", "m");
+		label = label.replaceAll("Minute", "m");
+		label = label.replaceAll("Hours", "hr");
+		label = label.replaceAll("Hour", "hr");
+		label = label.replaceAll("Days", "d");
+		label = label.replaceAll("Day", "d");
+		label = label.replaceAll("Weeks", "wk");
+		label = label.replaceAll("Week", "wk");
+		label = label.replaceAll("Months", "mo");
+		label = label.replaceAll("Month", "mo");
+		label = label.replaceAll("Years", "yr");
+		label = label.replaceAll("Year", "yr");
+		return label;
+	}
 
 }

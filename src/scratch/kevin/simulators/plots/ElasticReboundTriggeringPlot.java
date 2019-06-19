@@ -47,7 +47,7 @@ import com.google.common.base.Preconditions;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
-public class TriggerLargerWithinPrevRupturePlot extends AbstractPlot {
+public class ElasticReboundTriggeringPlot extends AbstractPlot {
 	
 	private RSQSimSubSectionMapper mapper;
 	private double minMag;
@@ -62,7 +62,7 @@ public class TriggerLargerWithinPrevRupturePlot extends AbstractPlot {
 	private RuptureMappings[] exampleHypoReRup;
 	private RuptureMappings[] exampleNewHypo;
 
-	public TriggerLargerWithinPrevRupturePlot(RSQSimSubSectionMapper mapper, double minMag, double[] maxTimes) {
+	public ElasticReboundTriggeringPlot(RSQSimSubSectionMapper mapper, double minMag, double[] maxTimes) {
 		this.mapper = mapper;
 		this.minMag = minMag;
 		this.maxTimes = maxTimes;
@@ -413,7 +413,7 @@ public class TriggerLargerWithinPrevRupturePlot extends AbstractPlot {
 		double curDAS = 0d;
 		
 		Stroke thickElemStroke = new BasicStroke(1.5f);
-		Stroke hypoElemStroke = new BasicStroke(5f);
+		Stroke hypoElemStroke = new BasicStroke(10f);
 		
 		List<XYAnnotation> hypoAnns = new ArrayList<>();
 		
@@ -473,7 +473,11 @@ public class TriggerLargerWithinPrevRupturePlot extends AbstractPlot {
 		}
 		anns.addAll(hypoAnns);
 		
-		PlotSpec spec = new PlotSpec(funcs, chars, "Encompassing Rupture Example", "Distance Along Strike (km)", "Depth (km)");
+		String title = "Encompassing Rupture Example: M"+optionalDigitDF.format(prevRup.magnitude)
+			+" followed by M"+optionalDigitDF.format(encompRup.magnitude)
+			+" ("+getTimeShortLabel(encompRup.timeYears-prevRup.timeYears)+" later)";
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, "Distance Along Strike (km)", "Depth (km)");
 		spec.setPlotAnnotations(anns);
 		
 		Range xRange = new Range(0d, curDAS);
@@ -510,7 +514,7 @@ public class TriggerLargerWithinPrevRupturePlot extends AbstractPlot {
 		
 		double[] maxTimes = { 1d, 10d, 100d };
 		
-		TriggerLargerWithinPrevRupturePlot plot = new TriggerLargerWithinPrevRupturePlot(catalog.getSubSectMapper(), minMag, maxTimes);
+		ElasticReboundTriggeringPlot plot = new ElasticReboundTriggeringPlot(catalog.getSubSectMapper(), minMag, maxTimes);
 		plot.initialize(catalog.getName(), outputDir, "trigger_within_prev");
 		
 		for (RSQSimEvent e : catalog.loader().skipYears(skipYears).iterable())

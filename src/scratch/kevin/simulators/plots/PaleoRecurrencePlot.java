@@ -267,17 +267,23 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
 		}
 		
-		scatterInside68.setName("Inside 68% Conf");
-		funcs.add(scatterInside68);
-		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 7f, Color.GREEN.darker()));
+		if (scatterInside68.size() > 0) {
+			scatterInside68.setName("Inside 68% Conf");
+			funcs.add(scatterInside68);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 7f, Color.GREEN.darker()));
+		}
 		
-		scatterInside95.setName("Inside 95% Conf");
-		funcs.add(scatterInside95);
-		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 7f, Color.BLUE.darker()));
+		if (scatterInside95.size() > 0) {
+			scatterInside95.setName("Inside 95% Conf");
+			funcs.add(scatterInside95);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 7f, Color.BLUE.darker()));
+		}
 
-		scatterOutside.setName("Outside 95% Conf");
-		funcs.add(scatterOutside);
-		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 7f, Color.BLACK));
+		if (scatterOutside.size() > 0) {
+			scatterOutside.setName("Outside 95% Conf");
+			funcs.add(scatterOutside);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 7f, Color.BLACK));
+		}
 		
 		double minVal = Double.POSITIVE_INFINITY;
 		double maxVal = Double.NEGATIVE_INFINITY;
@@ -300,14 +306,20 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 			maxVal = Math.max(maxVal, scatterOutside.getMaxY());
 		}
 		
-		Range range = calcEncompassingLog10Range(minVal, maxVal);
+		Range range = Double.isInfinite(minVal) ? new Range(1e-10, 1) :
+			calcEncompassingLog10Range(minVal, maxVal);
 		
 		DefaultXY_DataSet oneToOne = new DefaultXY_DataSet();
 		oneToOne.set(range.getLowerBound(), range.getLowerBound());
 		oneToOne.set(range.getUpperBound(), range.getUpperBound());
 		
-		funcs.set(0, oneToOne);
-		chars.set(0, new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		if (funcs.isEmpty()) {
+			funcs.add(oneToOne);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		} else {
+			funcs.set(0, oneToOne);
+			chars.set(0, new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		}
 		
 		PlotSpec plot = new PlotSpec(funcs, chars, title, "UCERF3 Paleoseismic Reucrrence Rate (1/yr)", yAxisLabel);
 		plot.setLegendVisible(true);

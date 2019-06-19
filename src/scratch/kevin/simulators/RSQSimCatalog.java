@@ -93,7 +93,7 @@ import scratch.kevin.simulators.plots.SlipAlongRupturePlot;
 import scratch.kevin.simulators.plots.SlipLengthScalingPlot;
 import scratch.kevin.simulators.plots.SlipRateComparePlot;
 import scratch.kevin.simulators.plots.StationarityPlot;
-import scratch.kevin.simulators.plots.TriggerLargerWithinPrevRupturePlot;
+import scratch.kevin.simulators.plots.ElasticReboundTriggeringPlot;
 import scratch.kevin.simulators.plots.U3StyleNormalizedRuptureRecurrenceIntervalPlot;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityMagDistPageGen.RuptureType;
@@ -1896,7 +1896,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			for (double triggerMinMag : triggerMinMags) {
 				if (triggerMinMag < minMag)
 					continue;
-				TriggerLargerWithinPrevRupturePlot plot = new TriggerLargerWithinPrevRupturePlot(getSubSectMapper(), triggerMinMag, maxTimes);
+				ElasticReboundTriggeringPlot plot = new ElasticReboundTriggeringPlot(getSubSectMapper(), triggerMinMag, maxTimes);
 				plot.initialize(getName(), outputDir, "trigger_within_prev_m"+optionalDigitDF.format(triggerMinMag));
 				plots.add(plot);
 			}
@@ -1983,8 +1983,10 @@ public class RSQSimCatalog implements XMLSaveable {
 				p.processEvent(e);
 		
 		System.out.println("Finalizing plots");
-		for (AbstractPlot p : plots)
+		for (AbstractPlot p : plots) {
+//			System.out.println("Finalizing "+p.getClass());
 			p.finalizePlot();
+		}
 		System.out.println("Done with plots");
 		
 		// lines could have changed, regenerate
@@ -2502,7 +2504,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		
 		boolean overwriteIndividual = true;
-		boolean replot = true;
+		boolean replot = false;
 		
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
@@ -2512,20 +2514,19 @@ public class RSQSimCatalog implements XMLSaveable {
 //		GregorianCalendar minDate = cal(2019, 5, 1);
 //		for (Catalogs cat : cats) {
 		// specific catalog
-		GregorianCalendar minDate = cal(2000, 1, 1);
-		for (Catalogs cat : new Catalogs[] {
-				Catalogs.BRUCE_2585,
-				Catalogs.BRUCE_2585_1MYR,
-				Catalogs.BRUCE_2740,
-				Catalogs.BRUCE_2829,
-				Catalogs.BRUCE_3271,
-				Catalogs.JG_tunedBase1m_ddotEQmod,
-				Catalogs.JG_tuneBase1m,
-				}) {
-//		for (Catalogs cat : new Catalogs[] { Catalogs.JG_tunedBase1m_ddotEQmod }) {
-		// all catalogs
 //		GregorianCalendar minDate = cal(2000, 1, 1);
-//		for (Catalogs cat : cats) {
+//		for (Catalogs cat : new Catalogs[] {
+//				Catalogs.BRUCE_2585,
+//				Catalogs.BRUCE_2585_1MYR,
+//				Catalogs.BRUCE_2740,
+//				Catalogs.BRUCE_2829,
+//				Catalogs.BRUCE_3271,
+//				Catalogs.JG_tunedBase1m_ddotEQmod,
+//				Catalogs.JG_tuneBase1m,
+//				}) {
+		// all catalogs
+		GregorianCalendar minDate = cal(2000, 1, 1);
+		for (Catalogs cat : cats) {
 			
 			if (cat.catalog.getDate().before(minDate))
 				continue;

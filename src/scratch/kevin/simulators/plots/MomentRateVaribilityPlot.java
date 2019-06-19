@@ -270,8 +270,13 @@ public class MomentRateVaribilityPlot extends AbstractPlot {
 			funcs.add(timeSeries);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 			
+			double minNonZero = Double.POSITIVE_INFINITY;
+			for (Point2D pt : timeSeries)
+				if (pt.getY() > 0)
+					minNonZero = Math.min(minNonZero, pt.getY());
+			
 			xRange = new Range(0, timeSeries.getMaxX());
-			yRange = calcEncompassingLog10Range(timeSeries.getMinY(), timeSeries.getMaxY());
+			yRange = calcEncompassingLog10Range(minNonZero, timeSeries.getMaxY());
 			
 			PlotSpec timeSpec = new PlotSpec(funcs, chars, "Moment Release Time Series", "Time (yr)", "Moment (Nm)");
 			timeSpec.setLegendVisible(true);

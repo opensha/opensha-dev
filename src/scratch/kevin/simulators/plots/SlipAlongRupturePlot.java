@@ -835,7 +835,7 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		if (maxAbove2 > 0)
 			smallestPossible = Math.max(smallestPossible, 1d/maxAbove2);
 		Preconditions.checkState(Double.isFinite(xyz.getMaxZ()), "Non finite maxZ=%s", xyz.getMaxZ());
-		if ((float)smallestPossible == (float)xyz.getMaxZ())
+		if ((float)smallestPossible >= (float)xyz.getMaxZ())
 			smallestPossible = xyz.getMaxZ()/10d;
 		Range logRange = calcEncompassingLog10Range(smallestPossible, xyz.getMaxZ());
 		xyz.log10();
