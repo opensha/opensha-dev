@@ -387,13 +387,13 @@ public class FaultSystemRuptureRateInversion {
 	 * @param scalingRel
 	 * @param relativeSectRateWt - weight on segment rate equations (relative to slip rate)
 	 * @param relative_aPrioriGR_RupWt - weight on GR a-priori rupturerates (relative to slip rate)
-	 * @param aPrioriRupRatesFilename - filename for aPriori rupture rates
 	 * @param wtedInversion - apply data uncertainties?
 	 * @param minRupRate - constrain all rupture rates to be greater than this value
 	 * @param applyProbVisible - account for likelihood that Paleoseismology will see the rupture
 	 * @param moRateReduction - fraction reduction from smaller events (and not aseismicity or coupling coefficient, which are set in fltSectionDataList)
-	 * @param mfdConstraint - an IncrementalMagFreqDist constraint
-	 * @param relativeMFD_constraintWt - weight for MFD constraint
+	 * @param relativeGR_MFD_constraintWt - weight for MFD constraint
+	 * @param segConstraintFilename
+	 * @param relative_segConstraintWt
 	 */
 	public FaultSystemRuptureRateInversion( String modelName,
 			String slipRateModelName,
@@ -501,6 +501,8 @@ public class FaultSystemRuptureRateInversion {
 	 * @param moRateReduction - fraction reduction from smaller events (and not aseismicity or coupling coefficient, which are set in fltSectionDataList)
 	 * @param mfdConstraint - an IncrementalMagFreqDist constraint
 	 * @param relativeMFD_constraintWt - weight for MFD constraint
+	 * @param segConstraintFilename - 
+	 * @param relative_segConstraintWt - 
 	 */
 	public FaultSystemRuptureRateInversion( String modelName,
 			String slipRateModelName,

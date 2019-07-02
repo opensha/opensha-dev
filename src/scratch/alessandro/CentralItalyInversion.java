@@ -575,7 +575,7 @@ public class CentralItalyInversion {
 			double saPeriod, double forecastDuration) {
 		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(faultSystemSolution);
-		erf.setName("WasatchERF");
+		erf.setName("CentralItalyERF");
 		erf.getTimeSpan().setDuration(forecastDuration);
 		erf.updateForecast();		// update forecast
 
