@@ -3,17 +3,23 @@ package scratch.ned;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 
 import org.jfree.data.Range;
+import org.opensha.commons.calc.FaultMomentCalc;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagAreaRelationship;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -25,7 +31,10 @@ import org.opensha.commons.param.ParameterList;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.calc.ERF_Calculator;
+import org.opensha.sha.earthquake.rupForecastImpl.FloatingPoissonFaultERF;
 import org.opensha.sha.earthquake.rupForecastImpl.PoissonFaultERF;
+import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.SegRateConstraint;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
@@ -33,8 +42,13 @@ import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SingleMagFreqDist;
+import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.param.SimpleFaultParameter;
+
+import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
@@ -137,12 +151,31 @@ public class HazardSensitivityTest {
 		ArbitrarilyDiscretizedFunc tenPercentLine = new ArbitrarilyDiscretizedFunc();
 		tenPercentLine.set(curveLinearXvaluesArray[0].getX(0),0.1);
 		tenPercentLine.set(curveLinearXvaluesArray[0].getX(curveLinearXvaluesArray[0].size()-1),0.1);
+		
+		double minTwoIn50 = Double.MAX_VALUE;
+		double maxTwoIn50 = 0d;
+		double minTenIn50 = Double.MAX_VALUE;
+		double maxTenIn50 = 0d;
+		for(int i=0;i<twoIn50valueArray.length;i++) {
+			if(minTwoIn50>twoIn50valueArray[i]) minTwoIn50=twoIn50valueArray[i];
+			if(maxTwoIn50<twoIn50valueArray[i]) maxTwoIn50=twoIn50valueArray[i];
+			if(minTenIn50>tenIn50valueArray[i]) minTenIn50=tenIn50valueArray[i];
+			if(maxTenIn50<tenIn50valueArray[i]) maxTenIn50=tenIn50valueArray[i];
+		}
+		
+		
 			
 		// ratio between the max and min mag
-		double twoIn50valueRatio = twoIn50valueArray[twoIn50valueArray.length-1]/twoIn50valueArray[0];
-		double tenIn50valueRatio = tenIn50valueArray[tenIn50valueArray.length-1]/tenIn50valueArray[0];
+//		double twoIn50valueRatio = twoIn50valueArray[twoIn50valueArray.length-1]/twoIn50valueArray[0];
+//		double tenIn50valueRatio = tenIn50valueArray[tenIn50valueArray.length-1]/tenIn50valueArray[0];
+		double twoIn50valueRatio = maxTwoIn50/minTwoIn50;
+		double tenIn50valueRatio = maxTenIn50/minTenIn50;
+		
+		double covTwoIn50 = ((maxTwoIn50-minTwoIn50)/Math.sqrt(12)) / (0.5*(maxTwoIn50+minTwoIn50));	//stdDev/mean
+		double covTenIn50 = ((maxTenIn50-minTenIn50)/Math.sqrt(12)) / (0.5*(maxTenIn50+minTenIn50));	//stdDev/mean
+
 	
-		String returnString = (float)twoIn50valueRatio + "\t"+(float)tenIn50valueRatio;
+		String returnString = (float)twoIn50valueRatio + "\t"+(float)tenIn50valueRatio+ "\t"+(float)covTwoIn50+ "\t"+(float)covTenIn50;
 		
 		// make the plot
 		plottingFuncsArray.add(twoPercentLine);
@@ -227,6 +260,26 @@ public class HazardSensitivityTest {
 		ArbitrarilyDiscretizedFunc tenPercentLine = new ArbitrarilyDiscretizedFunc();
 		tenPercentLine.set(curveLinearXvaluesArray[0].getX(0),0.1);
 		tenPercentLine.set(curveLinearXvaluesArray[0].getX(curveLinearXvaluesArray[0].size()-1),0.1);
+		
+		double minTwoIn50 = Double.MAX_VALUE;
+		double maxTwoIn50 = 0d;
+		double minTenIn50 = Double.MAX_VALUE;
+		double maxTenIn50 = 0d;
+		for(int i=0;i<twoIn50valueArray.length;i++) {
+			if(minTwoIn50>twoIn50valueArray[i]) minTwoIn50=twoIn50valueArray[i];
+			if(maxTwoIn50<twoIn50valueArray[i]) maxTwoIn50=twoIn50valueArray[i];
+			if(minTenIn50>tenIn50valueArray[i]) minTenIn50=tenIn50valueArray[i];
+			if(maxTenIn50<tenIn50valueArray[i]) maxTenIn50=tenIn50valueArray[i];
+		}
+		
+		
+			
+		// ratio between the max and min mag
+//		double twoIn50valueRatio = twoIn50valueArray[twoIn50valueArray.length-1]/twoIn50valueArray[0];
+//		double tenIn50valueRatio = tenIn50valueArray[tenIn50valueArray.length-1]/tenIn50valueArray[0];
+		double twoIn50valueRatio = maxTwoIn50/minTwoIn50;
+		double tenIn50valueRatio = maxTenIn50/minTenIn50;
+
 			
 		// frat diff between the max and min mag
 		double twoIn50valueMinMag = (twoIn50valueArray[0]/grTwoIn50value);
@@ -234,7 +287,9 @@ public class HazardSensitivityTest {
 		double twoIn50valueMaxMag = (twoIn50valueArray[twoIn50valueArray.length-1]/grTwoIn50value);
 		double tenIn50valueMaxMag = (tenIn50valueArray[tenIn50valueArray.length-1]/grTenIn50value);
 	
-		String returnString = (float)twoIn50valueMinMag + "\t"+(float)twoIn50valueMaxMag + "\t"+(float)tenIn50valueMinMag + "\t"+(float)tenIn50valueMaxMag;
+		String returnString = (float)twoIn50valueMinMag + "\t"+(float)twoIn50valueMaxMag + 
+				"\t"+(float)tenIn50valueMinMag + "\t"+(float)tenIn50valueMaxMag +
+				"\t"+(float)twoIn50valueRatio + "\t"+(float)tenIn50valueRatio;
 		
 		// make the plot
 		plottingFuncsArray.add(twoPercentLine);
@@ -269,6 +324,88 @@ public class HazardSensitivityTest {
 		return returnString;
 
 	}
+	
+	
+	public static String compareHazardCurves3(ERF erf1, ERF erf2, Location location, double saPeriod, String dirName, 
+			boolean popupWindow, String plotTitle, double duration) {
+		
+		String imtString = "PGA";
+		if(saPeriod != 0)
+			imtString = saPeriod+"secSA";
+		
+		ArrayList<XY_DataSet> plottingFuncsArray = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
+		EvenlyDiscretizedFunc curve1_LogXvalues = getHazardCurveLnX(erf1, location, saPeriod);
+		ArbitrarilyDiscretizedFunc curve1_LinearXvalues = new ArbitrarilyDiscretizedFunc();
+		for(int j=0;j<curve1_LogXvalues.size();j++) {
+			curve1_LinearXvalues.set(Math.exp(curve1_LogXvalues.getX(j)), curve1_LogXvalues.getY(j));
+		}
+//		double grTwoIn50value = Math.exp(curve1_LogXvalues.getFirstInterpolatedX(0.02));
+//		double grTenIn50value = Math.exp(curve1_LogXvalues.getFirstInterpolatedX(0.1));
+//		curve1_LinearXvalues.setInfo("grTwoIn50value: "+grTwoIn50value+"\n"+"grTenIn50value: "+grTenIn50value);
+		curve1_LinearXvalues.setName("erf1 curve");
+		
+		
+		EvenlyDiscretizedFunc curve2_LogXvalues = getHazardCurveLnX(erf2, location, saPeriod);
+		ArbitrarilyDiscretizedFunc curve2_LinearXvalues = new ArbitrarilyDiscretizedFunc();
+		for(int j=0;j<curve2_LogXvalues.size();j++) {
+			curve2_LinearXvalues.set(Math.exp(curve2_LogXvalues.getX(j)), curve2_LogXvalues.getY(j));
+		}
+//		double grTwoIn50value = Math.exp(curve2_LogXvalues.getFirstInterpolatedX(0.02));
+//		double grTenIn50value = Math.exp(curve2_LogXvalues.getFirstInterpolatedX(0.1));
+//		curve2_LinearXvalues.setInfo("grTwoIn50value: "+grTwoIn50value+"\n"+"grTenIn50value: "+grTenIn50value);
+		curve2_LinearXvalues.setName("erf1 curve");
+
+
+		ArbitrarilyDiscretizedFunc twoPercentLine = new ArbitrarilyDiscretizedFunc();
+		twoPercentLine.set(curve2_LinearXvalues.getX(0),0.02);
+		twoPercentLine.set(curve2_LinearXvalues.getX(curve2_LinearXvalues.size()-1),0.02);
+		ArbitrarilyDiscretizedFunc tenPercentLine = new ArbitrarilyDiscretizedFunc();
+		tenPercentLine.set(curve2_LinearXvalues.getX(0),0.1);
+		tenPercentLine.set(curve2_LinearXvalues.getX(curve2_LinearXvalues.size()-1),0.1);
+		
+		
+//		String returnString = (float)twoIn50valueMinMag + "\t"+(float)twoIn50valueMaxMag + 
+//				"\t"+(float)tenIn50valueMinMag + "\t"+(float)tenIn50valueMaxMag +
+//				"\t"+(float)twoIn50valueRatio + "\t"+(float)tenIn50valueRatio;
+		
+		String returnString = "";
+				
+		// make the plot
+		plottingFuncsArray.add(twoPercentLine);
+		plottingFuncsArray.add(tenPercentLine);
+		plottingFuncsArray.add(curve1_LinearXvalues);
+		plottingFuncsArray.add(curve2_LinearXvalues);
+		
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.ORANGE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.MAGENTA));
+
+		
+		String fileNamePrefix = null;
+		if(dirName != null)
+			fileNamePrefix = dirName+"/hazardCurve";
+		String xAxisLabel = imtString;
+		String yAxisLabel = "Probability (in "+duration+" yr)";
+		Range xAxisRange = null;
+		Range yAxisRange = null;
+		boolean logX = true;
+		boolean logY = true;
+
+		writeAndOrPlotFuncs(plottingFuncsArray, plotChars, plotTitle, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		
+		return returnString;
+
+	}
+
+
 
 	
 	/**
@@ -342,36 +479,42 @@ public class HazardSensitivityTest {
 
 	}
 	
+	
+	/**
+	 * put all moment into one magnitude comparison
+	 */
 	public static void doIt1() {
 		
 		double[] siteDistKmArray = {0, 10};
 		double[] saPeriod = {0.0, 1.0};
-//		double[] magArray = {6.3, 8.0};
-		double[] magArray = {6.3, 6.7, 7.1, 7.6, 8.0};
+		double mMax = 8.3;
+//		double[] magArray = {7.8, mMax};
+		double[] magArray = {6.3, 6.7, 7.1, 7.6, 8.0, mMax};
 
 		
 		double fltWidth = 12e3;
-		double slipRate = 30*1e-3;	// 30 mm/yr
+		double slipRate = 30*1e-3;	// 30 mm/yr = 0.03 m/yr
 		double rake = 0;
 		// set the forecast duration
 		double duration = 50;
 
 		String resultsString = "";
 		
+//		Location centerLoc = new Location(0.0-120,0.0);
 		
 		// Fault attributes
+		Location locCenter = new Location(0.0,-120.0,0.0);
 		double gridSpacing = 1.0;
-		ArrayList lats = new ArrayList();
-		ArrayList lons = new ArrayList();
-		ArrayList dips = new ArrayList();
-		ArrayList depths = new ArrayList();
-		lats.add(36.);
-		lats.add(36.);
-		lons.add(-119.);
-		lons.add(-121.);
+		ArrayList<Double> lats = new ArrayList<Double>();
+		ArrayList<Double> lons; 		// these will be solved for
+		ArrayList<Double> dips = new ArrayList<Double>();
+		ArrayList<Double> depths = new ArrayList<Double>();
+		lats.add(locCenter.getLatitude());
+		lats.add(locCenter.getLatitude());
 		dips.add(90.);
 		depths.add(0.);
 		depths.add(12.);		
+		// lons are solved for below
 		
 		String dirName = null;
 		boolean popupWindow = true;
@@ -383,51 +526,76 @@ public class HazardSensitivityTest {
 		scalingRelList.add(ScalingRelationships.ELLB_SQRT_LENGTH);
 		scalingRelList.add(ScalingRelationships.SHAW_CONST_STRESS_DROP);
 		
-//		for(int i=0;i<scalingRelList.size();i++) {
-//			System.out.println(scalingRelList.get(i).getShortName()+"\t"+scalingRelList.get(i).getMag(12*12*1e6, 12*1e3));
-//		}
-//		System.exit(-1);
 
-
+		int ithPlot = 1;
 		for(int i=0;i<scalingRelList.size();i++) {
+
+			System.out.println(scalingRelList.get(i).getName());
+			double maxLengthKm = 1e-3*scalingRelList.get(i).getArea(mMax, fltWidth)/fltWidth;	
+			
+			double moRate = FaultMomentCalc.getMoment(maxLengthKm*1e3*fltWidth, slipRate);
+			System.out.println("\n\tmoRate = "+moRate);
+			
+			double maxLengthDegrees = (maxLengthKm/111.2);	
+			lons = new ArrayList<Double>();
+			lons.add(locCenter.getLongitude()-maxLengthDegrees/2.0);
+			lons.add(locCenter.getLongitude()+maxLengthDegrees/2.0);
+
+			// test
+			Location loc1 = new Location(lats.get(0),lons.get(0),0.0);
+			Location loc2 = new Location(lats.get(1),lons.get(1),0.0);
+			double testDist = LocationUtils.horzDistance(loc1, loc2);
+			//			System.out.println(loc1);
+			//			System.out.println(loc2);
+			System.out.println("\tLenth for M="+mMax+": "+(float)maxLengthKm);
+			System.out.println("\tTestLength (ratio): "+(float)testDist+"  ("+(float)(maxLengthKm/testDist)+")");
+			//			System.exit(-1);
+
+			// make list of ERFs
+			double[] tempRate = new double[magArray.length];
+			ERF[] erfArray = new ERF[magArray.length];
+			for(int m=0;m<magArray.length;m++) {
+				double mag=magArray[m];
+				double area = scalingRelList.get(i).getArea(mag, fltWidth);
+				double length = area/fltWidth;
+				double slip = scalingRelList.get(i).getAveSlip(area, length, fltWidth);
+				length *= 1e-3; // convert to km
+				double eventRate = (slipRate/slip)*(maxLengthKm/length);
+				tempRate[m] = eventRate;
+				System.out.println("\n\tmag="+mag+"\n\t\tlength="+(float)length+
+						"\n\t\tslip="+(float)slip+"\n\t\trate="+(float)eventRate+"\n");
+
+				// create ERF
+				//						PoissonFaultERF erf = new PoissonFaultERF();
+				FloatingPoissonFaultERF erf = new FloatingPoissonFaultERF();
+				erf.getParameter(FloatingPoissonFaultERF.RAKE_PARAM_NAME).setValue(rake);
+				SingleMagFreqDist mfd = new SingleMagFreqDist(mag,2,0.1, mag,1.0);
+				mfd.scaleToIncrRate(mag, eventRate);
+				erf.getParameter(FloatingPoissonFaultERF.MAG_DIST_PARAM_NAME).setValue(mfd);
+				erf.getParameter(FloatingPoissonFaultERF.OFFSET_PARAM_NAME).setValue(5.0);
+				erf.getParameter(FloatingPoissonFaultERF.FLOATER_TYPE_PARAM_NAME).setValue(FloatingPoissonFaultERF.FLOATER_TYPE_FULL_DDW);
+				SimpleFaultParameter faultParam = (SimpleFaultParameter)erf.getParameter(PoissonFaultERF.FAULT_PARAM_NAME);
+				faultParam.setAll(gridSpacing, lats, lons, dips, depths, SimpleFaultParameter.STIRLING);
+				faultParam.setEvenlyGriddedSurfaceFromParams();
+				erf.getTimeSpan().setDuration(duration);
+				erf.updateForecast();
+				System.out.println("\t\tmoRate = "+(float)ERF_Calculator.getTotalMomentRateInRegion(erf, null));
+				erfArray[m] = erf;
+				System.out.println("\t\tnumSrc = "+erf.getNumSources()+"\n\t\tnumRupForFirstSrc = "+erf.getSource(0).getNumRuptures());
+			}
+			
 			for(int p=0;p<saPeriod.length;p++) {
 				for(int d=0;d<siteDistKmArray.length;d++) {
-					Location location = new Location(36+siteDistKmArray[d]/111, -120,0);	// 
-					System.out.println(scalingRelList.get(i).getName());
-					double[] tempRate = new double[magArray.length];
-					ERF[] erfArray = new ERF[magArray.length];
-					for(int m=0;m<magArray.length;m++) {
-						double mag=magArray[m];
-						double area = scalingRelList.get(i).getArea(mag, fltWidth);
-						double length = area/fltWidth;
-						double slip = scalingRelList.get(i).getAveSlip(area, length, fltWidth);
-						length *= 1e-3;
-						double eventRate = slipRate/slip;
-						tempRate[m] = eventRate;
-						System.out.println("\n\tmag="+mag+"\n\t\tlength="+(float)length+
-								"\n\t\tslip="+(float)slip+"\n\t\trate="+(float)eventRate+"\n");
-
-						// create ERF
-						PoissonFaultERF erf = new PoissonFaultERF();
-						erf.getParameter(PoissonFaultERF.RAKE_PARAM_NAME).setValue(rake);
-						SingleMagFreqDist mfd = new SingleMagFreqDist(mag,2,0.1, mag,1.0);
-						mfd.scaleToIncrRate(mag, eventRate);
-						erf.getParameter(PoissonFaultERF.MAG_DIST_PARAM_NAME).setValue(mfd);
-						SimpleFaultParameter faultParam = (SimpleFaultParameter)erf.getParameter(PoissonFaultERF.FAULT_PARAM_NAME);
-						faultParam.setAll(gridSpacing, lats, lons, dips, depths, SimpleFaultParameter.STIRLING);
-						faultParam.setEvenlyGriddedSurfaceFromParams();
-						erf.getTimeSpan().setDuration(duration);
-						erf.updateForecast();
-						erfArray[m] = erf;
-					}
-					String title = scalingRelList.get(i).getName();
+					Location location = new Location(siteDistKmArray[d]/111.2, -120,0);	// 
+					String title = scalingRelList.get(i).getShortName()+"; Per="+saPeriod[p]+"; Dist="+siteDistKmArray[d];
 					String ratioString = compareHazardCurves1(erfArray, location, saPeriod[p], dirName, popupWindow, title, duration);
 
 					if(magArray.length == 2) {
 						System.out.println("\tRateRatio="+(float)(tempRate[0]/tempRate[1]));
 						System.out.println("\t"+ratioString+"\n");
 					}
-					resultsString += title+"\t"+saPeriod[p]+"\t"+siteDistKmArray[d]+"\t"+ratioString+"\n";				
+					resultsString += ithPlot+"\t"+scalingRelList.get(i).getShortName()+"\t"+saPeriod[p]+"\t"+siteDistKmArray[d]+"\t"+ratioString+"\n";		
+					ithPlot += 1;
 				}
 			}
 		}
@@ -436,8 +604,240 @@ public class HazardSensitivityTest {
 	}
 
 	
+	/**
+	 * Adjust b-value of U3 on-fault MFD and preserve moment rates
+	 */
+	public static void doit2() {
+		
+		double[] siteDistKmArray = {0, 10};
+		double[] saPeriod = {0.0, 1.0};
+//		double[] bValueChangeArray = {-2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0};
+		double[] bValueChangeArray = {-2.0, -1.0, 0.0, 1.0, 2.0};
+
+		
+		double fltWidth = 12e3;
+		double rake = 0;
+		// set the forecast duration
+		double duration = 50;
+
+		String resultsString = "";
+		
+		// Fault attributes
+		Location locCenter = new Location(0.0,-120.0,0.0);
+		double gridSpacing = 1.0;
+		ArrayList<Double> lats = new ArrayList<Double>();
+		ArrayList<Double> lons; 		// these will be solved for
+		ArrayList<Double> dips = new ArrayList<Double>();
+		ArrayList<Double> depths = new ArrayList<Double>();
+		lats.add(locCenter.getLatitude());
+		lats.add(locCenter.getLatitude());
+		dips.add(90.);
+		depths.add(0.);
+		depths.add(12.);		
+		// lons are solved for below
+		
+		String dirName = null;
+		boolean popupWindow = true;
+		
+		SummedMagFreqDist origMFD = getU3_LongTermOnFaultIncrementalMFD(false);
+		double mMax = origMFD.getMaxX();
+
+		int ithPlot = 1;
+
+		WC1994_MagAreaRelationship magAreaRel = new WC1994_MagAreaRelationship();
+		double areaKm = magAreaRel.getMedianArea(mMax);
+		
+		double maxLengthKm = areaKm/(fltWidth*1e-3);	
+			
+		double moRate = origMFD.getTotalMomentRate();
+		System.out.println("\n\tmoRate = "+moRate+";\tmaxLengthKm="+maxLengthKm);
+			
+		double maxLengthDegrees = (maxLengthKm/111.2);	
+		lons = new ArrayList<Double>();
+		lons.add(locCenter.getLongitude()-maxLengthDegrees/2.0);
+		lons.add(locCenter.getLongitude()+maxLengthDegrees/2.0);
+
+		// test
+		Location loc1 = new Location(lats.get(0),lons.get(0),0.0);
+		Location loc2 = new Location(lats.get(1),lons.get(1),0.0);
+		double testDist = LocationUtils.horzDistance(loc1, loc2);
+		System.out.println("\tTestLength (ratio): "+(float)testDist+"  ("+(float)(maxLengthKm/testDist)+")");
+
+		FloatingPoissonFaultERF origERF = new FloatingPoissonFaultERF();
+		origERF.getParameter(FloatingPoissonFaultERF.RAKE_PARAM_NAME).setValue(rake);
+		origERF.getParameter(FloatingPoissonFaultERF.MAG_DIST_PARAM_NAME).setValue(origMFD);
+		origERF.getParameter(FloatingPoissonFaultERF.OFFSET_PARAM_NAME).setValue(5.0);
+		origERF.getParameter(FloatingPoissonFaultERF.FLOATER_TYPE_PARAM_NAME).setValue(FloatingPoissonFaultERF.FLOATER_TYPE_FULL_DDW);
+		SimpleFaultParameter faultParam = (SimpleFaultParameter)origERF.getParameter(PoissonFaultERF.FAULT_PARAM_NAME);
+		faultParam.setAll(gridSpacing, lats, lons, dips, depths, SimpleFaultParameter.STIRLING);
+		faultParam.setEvenlyGriddedSurfaceFromParams();
+		origERF.getTimeSpan().setDuration(duration);
+		origERF.updateForecast();
+		// make list of ERFs
+		ERF[] erfArray = new ERF[bValueChangeArray.length];
+		ArrayList<SummedMagFreqDist> mfdList = new ArrayList<SummedMagFreqDist>();
+		int erfIndex=0;
+		for(double bValChange : bValueChangeArray) {
+			SummedMagFreqDist mfd = modify_bValueOfMFD(origMFD, bValChange);
+			mfd.setInfo("bValua change ="+bValChange);
+			mfdList.add(mfd);
+			// create ERF
+			FloatingPoissonFaultERF erf = new FloatingPoissonFaultERF();
+			erf.getParameter(FloatingPoissonFaultERF.RAKE_PARAM_NAME).setValue(rake);
+			erf.getParameter(FloatingPoissonFaultERF.MAG_DIST_PARAM_NAME).setValue(mfd);
+			erf.getParameter(FloatingPoissonFaultERF.OFFSET_PARAM_NAME).setValue(5.0);
+			erf.getParameter(FloatingPoissonFaultERF.FLOATER_TYPE_PARAM_NAME).setValue(FloatingPoissonFaultERF.FLOATER_TYPE_FULL_DDW);
+			faultParam = (SimpleFaultParameter)erf.getParameter(PoissonFaultERF.FAULT_PARAM_NAME);
+			faultParam.setAll(gridSpacing, lats, lons, dips, depths, SimpleFaultParameter.STIRLING);
+			faultParam.setEvenlyGriddedSurfaceFromParams();
+			erf.getTimeSpan().setDuration(duration);
+			erf.updateForecast();
+			erfArray[erfIndex] = erf;
+			erfIndex+=1;
+//			System.out.println("\t\tnumSrc = "+erf.getNumSources()+"\n\t\tnumRupForFirstSrc = "+erf.getSource(0).getNumRuptures());
+		}
+		
+			
+			for(int p=0;p<saPeriod.length;p++) {
+				for(int d=0;d<siteDistKmArray.length;d++) {
+					Location location = new Location(siteDistKmArray[d]/111.2, -120,0);	// 
+					String title = "Per="+saPeriod[p]+"; Dist="+siteDistKmArray[d];
+			//		String ratioString = compareHazardCurves1(erfArray, location, saPeriod[p], dirName, popupWindow, title, duration);
+					String ratioString = compareHazardCurves2(erfArray, origERF, location, saPeriod[p], dirName, 
+							popupWindow, title, duration);
+					resultsString += ithPlot+"\t"+saPeriod[p]+"\t"+siteDistKmArray[d]+"\t"+ratioString+"\n";		
+					ithPlot += 1;
+				}
+			}
+			
+			GraphWindow graph = new GraphWindow(mfdList, "MFDs"); 
+			graph.setX_AxisLabel("Magnitude");
+			graph.setY_AxisLabel("Incremental Rate (per yr)");
+			graph.setYLog(true);
+
+
+		System.out.println(resultsString);
+
+	}
+
 	
-	public static void doIt2() {
+	/**
+	 * compare different MFDs (with same moment rate) for a single-fault-based ERF
+	 */
+	public static void doit3() {
+		
+		double[] siteDistKmArray = {0, 10};
+		double[] saPeriod = {0.0, 1.0};
+
+		
+		double fltWidth = 12e3;
+		double rake = 0;
+		// set the forecast duration
+		double duration = 50;
+
+		String resultsString = "";
+		
+		// Fault attributes
+		Location locCenter = new Location(0.0,-120.0,0.0);
+		double gridSpacing = 1.0;
+		ArrayList<Double> lats = new ArrayList<Double>();
+		ArrayList<Double> lons; 		// these will be solved for
+		ArrayList<Double> dips = new ArrayList<Double>();
+		ArrayList<Double> depths = new ArrayList<Double>();
+		lats.add(locCenter.getLatitude());
+		lats.add(locCenter.getLatitude());
+		dips.add(90.);
+		depths.add(0.);
+		depths.add(12.);		
+		// lons are solved for below
+		
+		String dirName = null;
+		boolean popupWindow = true;
+		
+		SummedMagFreqDist mfd1 = getU3_SanJacintoNuclIncrMFD();
+		double mMax = mfd1.getMaxX();
+		SummedMagFreqDist mfd2 = getU2_SanJacintoNuclIncrMFD();
+		
+		double moRate = mfd1.getTotalMomentRate();
+		mfd1.scaleToTotalMomentRate(moRate*10);
+		mfd2.scaleToTotalMomentRate(moRate*10);
+
+		double moRateRatio = mfd1.getTotalMomentRate()/mfd2.getTotalMomentRate();
+		System.out.println("moment rate ratio: "+(float)moRateRatio);
+		
+		ArrayList<EvenlyDiscretizedFunc> mfdList = new ArrayList<EvenlyDiscretizedFunc>();
+		mfdList.add(mfd1);
+		mfdList.add(mfd2);
+		mfdList.add(mfd1.getCumRateDistWithOffset());
+		mfdList.add(mfd2.getCumRateDistWithOffset());
+		GraphWindow graph = new GraphWindow(mfdList, "MFDs"); 
+		graph.setX_AxisLabel("Magnitude");
+		graph.setY_AxisLabel("Incremental Rate (per yr)");
+		graph.setYLog(true);
+
+
+		int ithPlot = 1;
+
+		WC1994_MagAreaRelationship magAreaRel = new WC1994_MagAreaRelationship();
+		double areaKm = magAreaRel.getMedianArea(mMax);
+		
+		double maxLengthKm = areaKm/(fltWidth*1e-3);	
+			
+		System.out.println("\n\tmoRate = "+moRate+";\tmaxLengthKm="+maxLengthKm);
+
+		double maxLengthDegrees = (maxLengthKm/111.2);	
+		lons = new ArrayList<Double>();
+		lons.add(locCenter.getLongitude()-maxLengthDegrees/2.0);
+		lons.add(locCenter.getLongitude()+maxLengthDegrees/2.0);
+
+		// test
+		Location loc1 = new Location(lats.get(0),lons.get(0),0.0);
+		Location loc2 = new Location(lats.get(1),lons.get(1),0.0);
+		double testDist = LocationUtils.horzDistance(loc1, loc2);
+		System.out.println("\tTestLength (ratio): "+(float)testDist+"  ("+(float)(maxLengthKm/testDist)+")");
+
+		PoissonFaultERF origERF = new PoissonFaultERF();
+		origERF.getParameter(PoissonFaultERF.RAKE_PARAM_NAME).setValue(rake);
+		origERF.getParameter(PoissonFaultERF.MAG_DIST_PARAM_NAME).setValue(mfd1);
+		SimpleFaultParameter faultParam = (SimpleFaultParameter)origERF.getParameter(PoissonFaultERF.FAULT_PARAM_NAME);
+		faultParam.setAll(gridSpacing, lats, lons, dips, depths, SimpleFaultParameter.STIRLING);
+		faultParam.setEvenlyGriddedSurfaceFromParams();
+		origERF.getTimeSpan().setDuration(duration);
+		origERF.updateForecast();
+		System.out.println("\t\tnumSrc = "+origERF.getNumSources()+"\n\t\tnumRupForFirstSrc = "+origERF.getSource(0).getNumRuptures());
+
+		
+		PoissonFaultERF altERF = new PoissonFaultERF();
+		altERF.getParameter(PoissonFaultERF.RAKE_PARAM_NAME).setValue(rake);
+		altERF.getParameter(PoissonFaultERF.MAG_DIST_PARAM_NAME).setValue(mfd2);
+		SimpleFaultParameter faultParam2 = (SimpleFaultParameter)altERF.getParameter(PoissonFaultERF.FAULT_PARAM_NAME);
+		faultParam2.setAll(gridSpacing, lats, lons, dips, depths, SimpleFaultParameter.STIRLING);
+		faultParam2.setEvenlyGriddedSurfaceFromParams();
+		altERF.getTimeSpan().setDuration(duration);
+		altERF.updateForecast();
+		System.out.println("\t\tnumSrc = "+altERF.getNumSources()+"\n\t\tnumRupForFirstSrc = "+altERF.getSource(0).getNumRuptures());
+
+		for(int p=0;p<saPeriod.length;p++) {
+				for(int d=0;d<siteDistKmArray.length;d++) {
+					Location location = new Location(siteDistKmArray[d]/111.2, -120,0);	// 
+					String title = "Per="+saPeriod[p]+"; Dist="+siteDistKmArray[d];
+			//		String ratioString = compareHazardCurves1(erfArray, location, saPeriod[p], dirName, popupWindow, title, duration);
+					String ratioString = compareHazardCurves3(altERF, origERF, location, saPeriod[p], dirName, 
+							popupWindow, title, duration);
+					resultsString += ithPlot+"\t"+saPeriod[p]+"\t"+siteDistKmArray[d]+"\t"+ratioString+"\n";		
+					ithPlot += 1;
+				}
+			}
+			
+
+
+		System.out.println(resultsString);
+
+	}
+
+	
+	
+	public static void old_doIt2() {
 		
 		double[] siteDistKmArray = {0, 10};
 		double[] saPeriod = {0.0, 1.0};
@@ -1277,29 +1677,453 @@ public static void epsilon_test_oneVsManySrc(String dirName, boolean popupWindow
 		}		
 
 	}
+	
+	
+	/**
+	 * The two EllB lines overlap and the two Shaw lines overlap
+	 */
+	public static void partMFD_ForGR_Fault() {
+		
+		double mMax = 8.25;
+		double mMin = 6.35;
+		double ddw = 12e3;
+		
+		String dirName = null;
+		boolean popupWindow = true;
+
+		ArrayList<ScalingRelationships> scalingRelList = new ArrayList<ScalingRelationships>();
+		scalingRelList.add(ScalingRelationships.ELLSWORTH_B);
+		scalingRelList.add(ScalingRelationships.HANKS_BAKUN_08);
+		scalingRelList.add(ScalingRelationships.SHAW_2009_MOD);
+		scalingRelList.add(ScalingRelationships.ELLB_SQRT_LENGTH);
+		scalingRelList.add(ScalingRelationships.SHAW_CONST_STRESS_DROP);
+		
+//		for(int i=0;i<scalingRelList.size();i++) {
+//			System.out.println(scalingRelList.get(i).getShortName()+"\t"+scalingRelList.get(i).getMag(12*12*1e6, 12*1e3));
+//		}
+//		System.exit(-1);
+		
+		GutenbergRichterMagFreqDist grDist = new GutenbergRichterMagFreqDist(mMin, 20, 0.1, mMin, mMax, 1.0,1.0);
+		grDist.scaleToCumRate(mMin, 1.0);
+
+		ArrayList<XY_DataSet> mfd_List = new ArrayList<XY_DataSet>();
+		grDist.setName("GR Dist");
+		mfd_List.add(grDist);
+		
+		double minY = grDist.getMinY();
+		double maxY = grDist.getMaxY();
+
+		IncrementalMagFreqDist meanPartMFD = new IncrementalMagFreqDist(mMin, 20, 0.1);
+		meanPartMFD.setName("Mean Part. MFD");
+
+		for(ScalingRelationships scaleRel:scalingRelList) {
+			double maxLength = scaleRel.getArea(mMax, ddw)/ddw;	// meters
+			IncrementalMagFreqDist partMFD = new IncrementalMagFreqDist(mMin, 20, 0.1);
+			for(int i=0;i<partMFD.size();i++) {
+				double mag = partMFD.getX(i);
+				double area = scaleRel.getArea(mag, ddw);
+				double rupLengh = area/ddw;
+				double aveSlip = scaleRel.getAveSlip(area, rupLengh, ddw);
+				if(i==0)
+					System.out.println(scaleRel.getName()+" length for M "+mMin+": "+rupLengh/1e3);
+				System.out.println((float)mag+"\t"+(float)partMFD.getY(i)+"\t"+(float)aveSlip);
+				double partRate = grDist.getY(i)*rupLengh/maxLength;
+				partMFD.set(i,partRate);
+				meanPartMFD.set(i,meanPartMFD.getY(i)+partRate/scalingRelList.size());
+			}
+			partMFD.setName(scaleRel.getName()+" Part MFD");
+			mfd_List.add(partMFD);
+			
+			if(minY>partMFD.getMinY())
+				minY = partMFD.getMinY();
+			if(maxY<partMFD.getMaxY())
+				maxY = partMFD.getMaxY();
+
+		}
+		System.out.println(grDist.toString());
+		
+		mfd_List.add(meanPartMFD);
+
+		
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.GREEN));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.ORANGE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.CYAN));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 4f, Color.BLACK));
+		
+		Range xAxisRange = new Range(6.3,8.3);
+//		Range yAxisRange = new Range(minY,maxY);
+		Range yAxisRange = new Range(1e-3,0.3);
+
+		writeAndOrPlotFuncs(mfd_List, plotChars, "Part MFDs for GR Fault","Magnitude","Rate",
+				xAxisRange,yAxisRange,false,true,dirName, popupWindow);
+		
+	}
+	
+	/**
+	 * 
+	 */
+	public static void slipPDFatPoint_ForGR_Fault() {
+		
+		double mMax = 8.25;
+		double mMin = 6.35;
+		double ddw = 12e3;
+		
+		String dirName = null;
+		boolean popupWindow = true;
+
+		ArrayList<ScalingRelationships> scalingRelList = new ArrayList<ScalingRelationships>();
+		scalingRelList.add(ScalingRelationships.ELLSWORTH_B);
+		scalingRelList.add(ScalingRelationships.HANKS_BAKUN_08);
+		scalingRelList.add(ScalingRelationships.SHAW_2009_MOD);
+		scalingRelList.add(ScalingRelationships.ELLB_SQRT_LENGTH);
+		scalingRelList.add(ScalingRelationships.SHAW_CONST_STRESS_DROP);
+		
+//		for(int i=0;i<scalingRelList.size();i++) {
+//			System.out.println(scalingRelList.get(i).getShortName()+"\t"+scalingRelList.get(i).getMag(12*12*1e6, 12*1e3));
+//		}
+//		System.exit(-1);
+		
+		GutenbergRichterMagFreqDist grDist = new GutenbergRichterMagFreqDist(mMin, 200, 0.01, mMin, mMax, 1.0,1.0);
+		grDist.scaleToCumRate(mMin, 1.0);
+
+		ArrayList<XY_DataSet> slip_pdf_List = new ArrayList<XY_DataSet>();
+		grDist.setName("GR Dist");
+		
+		
+		
+		ArrayList<DefaultXY_DataSet> slipVsMagList = new ArrayList<DefaultXY_DataSet>();
+		
+		double minY = grDist.getMinY();
+		double maxY = grDist.getMaxY();
+
+		HistogramFunction meanSlipPDF = new HistogramFunction(0.5, 14, 1.0);
+		HistogramFunction tempNumHist = new HistogramFunction(0.5, 14, 1.0);
+		meanSlipPDF.setName("meanSlipPDF");
+
+		for(ScalingRelationships scaleRel:scalingRelList) {
+			double maxLength = scaleRel.getArea(mMax, ddw)/ddw;	// meters
+			HistogramFunction pdf = new HistogramFunction(0.5, 14, 1.0);
+			DefaultXY_DataSet slipVsMag = new DefaultXY_DataSet();
+			for(int i=0;i<grDist.size();i++) {
+				double mag = grDist.getX(i);
+				double area = scaleRel.getArea(mag, ddw);
+				double rupLengh = area/ddw;
+				double partRate = grDist.getY(i)*rupLengh/maxLength;
+				double aveSlip = scaleRel.getAveSlip(area, rupLengh, ddw);
+				pdf.add(aveSlip, partRate);
+//				System.out.println((float)mag+"\t"+(float)partMFD.getY(i)+"\t"+(float)aveSlip);
+				tempNumHist.add(aveSlip, 1.0);
+				slipVsMag.set(mag,aveSlip);
+			}
+			pdf.setName(scaleRel.getName()+" slip PDF");
+			pdf.normalizeBySumOfY_Vals();
+			slip_pdf_List.add(pdf);
+			
+			slipVsMagList.add(slipVsMag);
+			
+
+		}
+		
+		for(int i=0;i<meanSlipPDF.size();i++) {
+			double num = 0;
+			double sum = 0;
+			for(XY_DataSet pdf:slip_pdf_List) {
+				if(pdf.getY(i) > 0.0) {
+					sum +=  pdf.getY(i);
+					num += 1;;
+				}
+			}
+			if(num>0)
+				meanSlipPDF.set(i,sum/num);
+		}
+		meanSlipPDF.normalizeBySumOfY_Vals();
+		
+		slip_pdf_List.add(meanSlipPDF);
+
+		
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.GREEN));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.ORANGE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.CYAN));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 4f, Color.BLACK));
+		
+		Range xAxisRange = new Range(0,12);
+		Range yAxisRange = new Range(1e-5,1.0);
+		
+		GraphWindow graph = new GraphWindow(slipVsMagList, "slip vs mag", plotChars);
+
+		writeAndOrPlotFuncs(slip_pdf_List, plotChars, "Slip PDF for GR Fault","Slip","Density",
+				xAxisRange,yAxisRange,false,true,dirName, popupWindow);
+		
+	}
+
+	
+	public static SummedMagFreqDist getU3_LongTermOnFaultIncrementalMFD(boolean mkPlot) {
+		File file = new File("src/scratch/ned/U3_LongTermOnFaultMFD_Incremental.txt");
+		
+		SummedMagFreqDist mfd  = new SummedMagFreqDist(6.35, 8.35, 21);
+		
+		boolean first = true;
+		try {
+			for (String line : Files.readLines(file, Charset.defaultCharset())) {
+				if(first) {
+					first = false;
+					continue;
+				}
+				//System.out.println(line);
+				line = line.trim();
+				String[] split = line.split("\t");	// tab delimited
+				double xVal = Double.valueOf(split[0]);
+//				System.out.println(Double.valueOf(split[0])+"\t"+Double.valueOf(split[1]));
+				if(mfd.hasX(xVal) && xVal>6.3) {
+					mfd.add(xVal,Double.valueOf(split[1]));
+				}
+			}
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+//		System.out.println(mfd);
+		
+		if(mkPlot) {
+			ArrayList<IncrementalMagFreqDist> mfdList = new ArrayList<IncrementalMagFreqDist>();
+			mfdList.add(mfd);
+			mfdList.add(modify_bValueOfMFD(mfd,-0.5));
+			mfdList.add(modify_bValueOfMFD(mfd,-1.0));
+			mfdList.add(modify_bValueOfMFD(mfd,-1.5));
+			mfdList.add(modify_bValueOfMFD(mfd,-2.0));
+			mfdList.add(modify_bValueOfMFD(mfd,+0.5));
+			mfdList.add(modify_bValueOfMFD(mfd,+1.0));
+			mfdList.add(modify_bValueOfMFD(mfd,+1.5));
+			mfdList.add(modify_bValueOfMFD(mfd,+2.0));
+			
+			GraphWindow graph = new GraphWindow(mfdList, "MFD"); 
+			graph.setX_AxisLabel("Magnitude");
+			graph.setY_AxisLabel("Incremental Rate (per yr)");
+			graph.setYLog(true);
+		}
+
+		return mfd;
+	}
+	
+	
+	public static SummedMagFreqDist getU3_SanJacintoNuclIncrMFD() {
+		File file = new File("src/scratch/ned/U3_San_Jacinto_Stepovers_Combined__nucleation.txt");
+		
+		SummedMagFreqDist mfd  = new SummedMagFreqDist(6.05, 8.55, 26);
+		
+		boolean first = true;
+		try {
+			for (String line : Files.readLines(file, Charset.defaultCharset())) {
+				if(first) {
+					first = false;
+					continue;
+				}
+				//System.out.println(line);
+				line = line.trim();
+				String[] split = line.split("\t");	// tab delimited
+				double xVal = Double.valueOf(split[0]);
+//				System.out.println(Double.valueOf(split[0])+"\t"+Double.valueOf(split[1]));
+				if(mfd.hasX(xVal) && xVal>6.3) {
+					mfd.add(xVal,Double.valueOf(split[1]));
+				}
+			}
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+//		System.out.println(mfd);
+		
+		return mfd;
+	}
+	
+	public static SummedMagFreqDist getU2_SanJacintoNuclIncrMFD() {
+		File file = new File("src/scratch/ned/U2_San_Jacinto_Stepovers_Combined__nucleation.txt");
+		
+		SummedMagFreqDist mfd  = new SummedMagFreqDist(6.05, 8.55, 26);
+		
+		boolean first = true;
+		try {
+			for (String line : Files.readLines(file, Charset.defaultCharset())) {
+				if(first) {
+					first = false;
+					continue;
+				}
+				//System.out.println(line);
+				line = line.trim();
+				String[] split = line.split("\t");	// tab delimited
+				double xVal = Double.valueOf(split[0]);
+//				System.out.println(Double.valueOf(split[0])+"\t"+Double.valueOf(split[1]));
+				if(mfd.hasX(xVal) && xVal>6.3) {
+					mfd.add(xVal,Double.valueOf(split[1]));
+				}
+			}
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+//		System.out.println(mfd);
+		
+		return mfd;
+	}
+
+
+	
+	public static SummedMagFreqDist modify_bValueOfMFD(IncrementalMagFreqDist mfd, double deltaBvalue) {
+		SummedMagFreqDist modMFD = new SummedMagFreqDist(mfd.getMinX(), mfd.getMaxX(), mfd.size());
+		double moRate = mfd.getTotalMomentRate();
+		GutenbergRichterMagFreqDist grDist = new GutenbergRichterMagFreqDist(deltaBvalue, 1.0,
+				mfd.getMinX(), mfd.getMaxX(), mfd.size());
+		for(int i=0;i<mfd.size();i++)
+			modMFD.add(i, mfd.getY(i)*grDist.getY(i));
+		modMFD.scaleToTotalMomentRate(moRate);
+		
+		return modMFD;
+	}
+	
+	
+	/**
+	 * This computes the COV of 2in50 values for the LA site from Peter's U3-TI analyses.
+	 */
+	public static void computeLA_Haz_COV() {
+		// Read section rate constraints
+		ArrayList<Double> wtList = new  ArrayList<Double>();
+		ArrayList<Double> twoIn50Val = new  ArrayList<Double>();
+		ArbDiscrEmpiricalDistFunc distFunc = new ArbDiscrEmpiricalDistFunc();
+		HistogramFunction histDist = new HistogramFunction(0.0,1.95, 200);
+//		HistogramFunction histDist = new HistogramFunction(0.45,0.95, 50);
+
+//		File file = new File("/Users/field/Desktop/U3_HazDataFromPeter/LOS_ANGELES/summary.txt");
+		File file = new File("/Users/field/Desktop/U3_HazDataFromPeter/LOS_ANGELES+GMM+EPI/distros_PE2IN50.txt");
+		
+		boolean first = true;
+		try {
+			for (String line : Files.readLines(file, Charset.defaultCharset())) {
+				if(first) {
+					first = false;
+					continue;
+				}
+				//System.out.println(line);
+				line = line.trim();
+				String[] split = line.split("\t");	// tab delimited
+				wtList.add(Double.valueOf(split[0]));
+				twoIn50Val.add(Double.valueOf(split[1]));
+			}
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println(wtList.size());
+		
+		for(int i=0;i<wtList.size();i++) {
+			distFunc.set(twoIn50Val.get(i), wtList.get(i));
+			double yVal = histDist.getY(twoIn50Val.get(i));
+			histDist.set(twoIn50Val.get(i),wtList.get(i)+yVal);
+		}
+		
+		System.out.println("SumTest="+distFunc.getSumOfAllY_Values());
+		System.out.println("Mean="+distFunc.getMean());
+		System.out.println("StdDev="+distFunc.getStdDev());
+		System.out.println("COV="+distFunc.getCOV());
+		
+		System.out.println("Mean="+histDist.computeMean());
+		System.out.println("StdDev="+histDist.computeStdDev());
+		System.out.println("COV="+histDist.computeCOV());
+//		System.out.println(histDist);
+		
+		GraphWindow graph = new GraphWindow(histDist.getCumulativeDistFunctionWithHalfBinOffset(), "Test"); 
+		graph.setX_AxisLabel("IMT");
+		graph.setY_AxisLabel("Cum Wt");
+//		graph.setX_AxisRange(0.4, 1200);
+//		graph.setY_AxisRange(1e-6, 1);
+//		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
+//		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 3f, Color.RED));
+//		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.GREEN));
+//		graph.setPlotChars(plotChars);
+//		graph.setYLog(true);
+//		graph.setXLog(true);
+
+
+	}
+	
+	
+	public static void writeAveLengthForMag(double mag, double ddwKm) {
+		
+		ArrayList<ScalingRelationships> scalingRelList = new ArrayList<ScalingRelationships>();
+		scalingRelList.add(ScalingRelationships.ELLSWORTH_B);
+		scalingRelList.add(ScalingRelationships.HANKS_BAKUN_08);
+		scalingRelList.add(ScalingRelationships.SHAW_2009_MOD);
+		scalingRelList.add(ScalingRelationships.ELLB_SQRT_LENGTH);
+		scalingRelList.add(ScalingRelationships.SHAW_CONST_STRESS_DROP);
+		
+		System.out.println("M="+mag+"; ddw="+ddwKm+":");
+		double ddwMeters = ddwKm*1e3;
+		double aveLength=0;
+		for(ScalingRelationships scRel:scalingRelList) {
+			double lengthKm = (scRel.getArea(mag, ddwMeters)/ddwMeters)*1e-3;
+			System.out.println("\t"+(float)lengthKm+" for "+scRel.getName());
+			aveLength+=lengthKm/scalingRelList.size();		
+		}
+		System.out.println("aveLength="+(float)aveLength);
+
+	}
 
 	public static void main(String[] args) {
 		
-//		doIt2();
+		doit3();
 		
-		// This is for the epsilon analysis
-
-		String dirName = "src/scratch/ned/epsilon_analysis";
-	    File file = new File(dirName);
-	    file.mkdirs();
-	    
-//	    epsilon_test_oneVsManySrc(dirName, true);
-//	    epsilon_test_mfd(dirName, true);
-
-//		double mag = 5;
-////		double rate = 1./(400.*3.125);
-//		double rate = 1e-2;
-//		epsilon_test(5,1.0,dirName,true);
-//		epsilon_test(8,1.0,dirName,true);
-//		epsilon_test(5,1e-2,dirName,true);
-//		epsilon_test(8,1e-2,dirName,true);
+//		slipPDFatPoint_ForGR_Fault();
 		
-		epsilonVersusRatePlot(dirName);
+//		writeAveLengthForMag(8.0, 11.0);
+
+		//doit2();
+		
+//		computeLA_Haz_COV();
+		
+//		partMFD_ForGR_Fault();
+		
+//		getU3_LongTermOnFaultIncrementalMFD(false);
+		
+//		doIt1();
+		
+//		// This is for the epsilon analysis
+//
+//		String dirName = "src/scratch/ned/epsilon_analysis";
+//	    File file = new File(dirName);
+//	    file.mkdirs();
+//	    
+////	    epsilon_test_oneVsManySrc(dirName, true);
+////	    epsilon_test_mfd(dirName, true);
+//
+////		double mag = 5;
+//////		double rate = 1./(400.*3.125);
+////		double rate = 1e-2;
+////		epsilon_test(5,1.0,dirName,true);
+////		epsilon_test(8,1.0,dirName,true);
+////		epsilon_test(5,1e-2,dirName,true);
+////		epsilon_test(8,1e-2,dirName,true);
+//		
+//		epsilonVersusRatePlot(dirName);
 		
 	}
 
