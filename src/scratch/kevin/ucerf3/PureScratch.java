@@ -122,6 +122,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import scratch.UCERF3.AverageFaultSystemSolution;
 import scratch.UCERF3.CompoundFaultSystemSolution;
@@ -155,6 +157,7 @@ import scratch.UCERF3.utils.MatrixIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 
 public class PureScratch {
 
@@ -1423,13 +1426,54 @@ public class PureScratch {
 		System.out.println("Mojave dist: "+minMojave);
 		System.out.println("Bombay dist: "+minBombay);
 	}
+	
+	private static void test55() throws IOException {
+		List<PaleoRateConstraint> biasiScharerSites = new ArrayList<>();
+		for (PaleoRateConstraint constraint : UCERF3_PaleoRateConstraintFetcher.getConstraints()) {
+			String name = constraint.getPaleoSiteName();
+			if (name.equals("S. San Andreas - Coachella") || name.equals("San Jacinto - Hog Lake")
+					|| name.equals("Frazier Mountian, SSAF") || name.equals("N. San Andreas - Santa Cruz Seg.")
+					|| name.equals("Hayward fault - South"))
+				biasiScharerSites.add(constraint);
+		}
+		for (PaleoRateConstraint constraint : biasiScharerSites)
+			System.out.println(constraint.getPaleoSiteName()+": "+(float)(1d/constraint.getMeanRate()));
+		Preconditions.checkState(biasiScharerSites.size() == 5);
+	}
+	
+	private static void test56() {
+		GsonBuilder builder = new GsonBuilder();
+		builder.setPrettyPrinting();
+		Gson gson = builder.create();
+		
+		Map<String, String> map1 = new HashMap<>();
+		map1.put("key1", "val1");
+		map1.put("key2", "multi\n\nline\nval2");
+		
+		String map1Str = gson.toJson(map1);
+		System.out.println(map1Str);
+		Map<String, String> map1Recreate = gson.fromJson(map1Str, Map.class);
+		for (String key : map1Recreate.keySet())
+			System.out.println(key+": "+map1Recreate.get(key));
+		
+		System.out.println();
+		Map<String, List<String>> map2 = new HashMap<>();
+		map2.put("key1", Lists.newArrayList("val1"));
+		map2.put("key2", Lists.newArrayList("multi", "", "line", "val2"));
+		
+		String map2Str = gson.toJson(map2);
+		System.out.println(map2Str);
+		Map<String, List<String>> map2Recreate = gson.fromJson(map2Str, Map.class);
+		for (String key : map2Recreate.keySet())
+			System.out.println(key+": "+map2Recreate.get(key));
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test54();
+		test56();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
