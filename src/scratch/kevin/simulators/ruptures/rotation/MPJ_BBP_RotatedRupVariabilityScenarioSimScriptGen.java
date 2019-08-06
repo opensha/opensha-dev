@@ -35,9 +35,9 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
 //		String catalogDirName = "rundir2585_1myrs";
-		String catalogDirName = "rundir3165";
+		String catalogDirName = "rundir4317";
 		
-		int skipYears = 5000;
+		int skipYears = 2000;
 
 		Scenario[] scenarios = Scenario.values();
 //		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE};
@@ -64,41 +64,41 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
-//		int threads = 20;
-//		int nodes = 36;
-//		String queue = "scec";
-//		int mins = 48*60;
-//		int heapSizeMB = 45*1024;
-//		String bbpDataDir = "${TMPDIR}";
-//		String nodeScratchDir = null;
-//		String bbpCopyParentDir = "/staging/pjm/kmilner";
-//		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
-//		String sharedScratchDir = "${SCRATCHDIR}";
-//		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
-//		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
-//		List<File> classpath = new ArrayList<>();
-//		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
-//		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-//				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
-//		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-		
-		int threads = 96;
-		int nodes = 10;
-		String queue = "skx-normal";
-		int mins = 24*60;
-		int heapSizeMB = 100*1024;
-		String bbpDataDir = "/tmp";
+		int threads = 20;
+		int nodes = 36;
+		String queue = "scec";
+		int mins = 48*60;
+		int heapSizeMB = 45*1024;
+		String bbpDataDir = "${TMPDIR}";
 		String nodeScratchDir = null;
-		String bbpCopyParentDir = "/scratch/00950/kevinm/bbp";
-		File bbpEnvFile = new File("/work/00950/kevinm/stampede2/bbp/bbp_env.sh");
-		String sharedScratchDir = "/scratch/00950/kevinm/";
-		File remoteDir = new File("/work/00950/kevinm/stampede2/bbp/parallel");
-		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
+		String bbpCopyParentDir = "/staging/pjm/kmilner";
+		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
+		String sharedScratchDir = "${SCRATCHDIR}";
+		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
+		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
-		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, classpath,
-				StampedeScriptWriter.FMPJ_HOME, Device.NIODEV);
-		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
+		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+		
+//		int threads = 96;
+//		int nodes = 10;
+//		String queue = "skx-normal";
+//		int mins = 24*60;
+//		int heapSizeMB = 100*1024;
+//		String bbpDataDir = "/tmp";
+//		String nodeScratchDir = null;
+//		String bbpCopyParentDir = "/scratch/00950/kevinm/bbp";
+//		File bbpEnvFile = new File("/work/00950/kevinm/stampede2/bbp/bbp_env.sh");
+//		String sharedScratchDir = "/scratch/00950/kevinm/";
+//		File remoteDir = new File("/work/00950/kevinm/stampede2/bbp/parallel");
+//		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
+//		List<File> classpath = new ArrayList<>();
+//		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
+//		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, classpath,
+//				StampedeScriptWriter.FMPJ_HOME, Device.NIODEV);
+//		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 		jobName += "-"+catalogDirName+"-rotatedRups";

@@ -32,11 +32,11 @@ class MPJ_BBP_PartBSimScriptGen {
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
 		@SuppressWarnings("unused")
-		String catalogDirName = "rundir2585_1myrs";
+		String catalogDirName = "rundir4314";
 		
 		int numSites = 100;
 		boolean randomAz = false;
-		int skipYears = 5000;
+		int skipYears = 2000;
 		int maxRuptures = 500;
 		
 		double timeScalar = 1d;

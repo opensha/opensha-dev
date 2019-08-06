@@ -668,12 +668,12 @@ public class BBP_PartBValidationPageGen {
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2310.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_3165.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4317.instance(baseDir);
 		
-		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
+//		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 //		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
-//		VelocityModel forceVM = null;
+		VelocityModel forceVM = null;
 		
 		System.out.println("Catalog: "+catalog.getName());
 		// find BBP parallel dir

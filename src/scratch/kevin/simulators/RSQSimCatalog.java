@@ -13,8 +13,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -302,6 +304,30 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_3271("bruce/rundir3271", "Bruce 3271", "Bruce Shaw", cal(2019, 5, 29),
 				"a=.006 b=.018  more b=1 like",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		USEIT_600K_MOD_PARAMS("useit_longA_600k", "UseIT 600k Mod Params", "UseIT FAST Interns", cal(2019, 7, 7),
+				"a=.006 b=.018, all else 2585",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4312("bruce/rundir4312", "Bruce 4312", "Bruce Shaw", cal(2019, 7, 24),
+				"same as r2585 but variable slip speed.  fracArea=0 ; variableSpeed s2ddf=.9 ddfmin=.1; b=.008 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4313("bruce/rundir4313", "Bruce 4313", "Bruce Shaw", cal(2019, 7, 25),
+				"same as r2585 but variable slip speed.  fracArea=0 ; variableSpeed s2ddf=.9 ddfmin=.1; b=.007 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4314("bruce/rundir4314", "Bruce 4314", "Bruce Shaw", cal(2019, 7, 25),
+				"same as r2585 but variable slip speed.  fracArea=0 ; variableSpeed s2ddf=.9 ddfmin=.1; b=.006 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4316("bruce/rundir4316", "Bruce 4316", "Bruce Shaw", cal(2019, 7, 26),
+				"same as r2585 but variable slip speed.  fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.006 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4317("bruce/rundir4317", "Bruce 4317", "Bruce Shaw", cal(2019, 7, 26),
+				"variable slip speed.  fracArea=0.8 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.008 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4320("bruce/rundir4320", "Bruce 4320", "Bruce Shaw", cal(2019, 7, 28),
+				"variable slip speed.  fracArea=0.8 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.010 a=.003",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4322("bruce/rundir4322", "Bruce 4322", "Bruce Shaw", cal(2019, 7, 28),
+				"variable slip speed.  fracArea=0.7 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.008 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -506,7 +532,10 @@ public class RSQSimCatalog implements XMLSaveable {
 	public List<String> getMarkdownMetadataTable() {
 		TableBuilder builder = MarkdownUtils.tableBuilder();
 		builder.addLine("**Catalog**", getName());
-		builder.addLine("**Author**", getAuthor()+", "+dateFormat.format(getDate().getTime()));
+		String authorLine = getAuthor() == null ? "(unknown)" : getAuthor();
+		if (getDate() != null)
+			authorLine += ", "+dateFormat.format(getDate().getTime());
+		builder.addLine("**Author**", authorLine);
 		builder.addLine("**Description**", getMetadata());
 		builder.addLine("**Fault/Def Model**", fm+", "+dm);
 		try {
@@ -581,7 +610,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	
 	private synchronized Map<String, String> getParams() throws IOException {
 		if (params == null) {
-			File paramFile = findParamFile();
+			File paramFile = getParamFile();
 			if (paramFile != null) {
 				System.out.println("Loading params from "+paramFile.getAbsolutePath());
 				params = new HashMap<>();
@@ -599,7 +628,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		return params;
 	}
 	
-	private File findParamFile() throws IOException {
+	public File getParamFile() throws IOException {
 		File dir = getCatalogDir();
 		File bruceInFile = new File(dir, "multiparam.in");
 		if (bruceInFile.exists())
@@ -630,11 +659,13 @@ public class RSQSimCatalog implements XMLSaveable {
 		return false;
 	}
 	
-	public void writeMarkdownSummary(File dir, boolean plots, boolean replot) throws IOException {
-		writeMarkdownSummary(dir, plots, replot, 6d);
+	public void writeMarkdownSummary(File dir, boolean plots, boolean replot,
+			StandardPlots... standardPlots) throws IOException {
+		writeMarkdownSummary(dir, plots, replot, 6d, standardPlots);
 	}
 	
-	public void writeMarkdownSummary(File dir, boolean plots, boolean replot, double plotMinMag) throws IOException {
+	public void writeMarkdownSummary(File dir, boolean plots, boolean replot, double plotMinMag,
+			StandardPlots... standardPlots) throws IOException {
 		List<String> lines = new LinkedList<>();
 		String topLink = "*[(top)](#"+MarkdownUtils.getAnchorName(getName())+")*";
 		lines.add("# "+getName());
@@ -971,10 +1002,10 @@ public class RSQSimCatalog implements XMLSaveable {
 				skipYears = 1000;
 			else
 				skipYears = 0;
-			lines.addAll(writeStandardDiagnosticPlots(resourcesDir, skipYears, plotMinMag, replot, topLink));
+			lines.addAll(writeStandardDiagnosticPlots(resourcesDir, skipYears, plotMinMag, replot, topLink, standardPlots));
 		}
 		
-		File inputFile = findParamFile();
+		File inputFile = getParamFile();
 		if (params != null) {
 			lines.add("");
 			lines.add("## Input File");
@@ -1169,6 +1200,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	public class Loader {
 		private List<SimulatorElement> elements;
 		private File catalogDir;
+		private boolean skipSlipsAndTimes = false;
 		
 		private List<RuptureIdentifier> loadIdens;
 		
@@ -1191,6 +1223,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		public Loader maxMag(double maxMag) {
 			return magRange(Double.NEGATIVE_INFINITY, maxMag);
+		}
+		
+		public Loader skipSlipsAndTimes() {
+			this.skipSlipsAndTimes = true;
+			return this;
 		}
 		
 		public Loader skipYears(double years) {
@@ -1265,14 +1302,14 @@ public class RSQSimCatalog implements XMLSaveable {
 			LogicalAndRupIden loadIden = new LogicalAndRupIden(loadIdens);
 			List<RuptureIdentifier> rupIdens = new ArrayList<>();
 			rupIdens.add(loadIden);
-			return RSQSimFileReader.readEventsFile(catalogDir, elements, rupIdens);
+			return RSQSimFileReader.readEventsFile(catalogDir, elements, rupIdens, skipSlipsAndTimes);
 		}
 		
 		public Iterable<RSQSimEvent> iterable() throws IOException {
 			LogicalAndRupIden loadIden = new LogicalAndRupIden(loadIdens);
 			List<RuptureIdentifier> rupIdens = new ArrayList<>();
 			rupIdens.add(loadIden);
-			return RSQSimFileReader.getEventsIterable(catalogDir, elements, rupIdens);
+			return RSQSimFileReader.getEventsIterable(catalogDir, elements, rupIdens, skipSlipsAndTimes);
 		}
 	}
 	
@@ -1300,179 +1337,206 @@ public class RSQSimCatalog implements XMLSaveable {
 		return compSol;
 	}
 	
-	private List<AbstractPlot> buildStandardPlotLines(File outputDir, int skipYears, double minMag, boolean replot, String topLink, List<String> lines)
-			throws IOException {
+	public enum StandardPlots {
+		MFD,
+		MAG_AREA,
+		SLIP_AREA,
+		SLIP_LEN,
+		SLIP_ALONG_RUPTURE,
+		SLIP_RATE,
+		RUP_VELOCITY,
+		GLOBAL_RECURRENCE,
+		NORM_RECURRENCE,
+		U3_NORM_RECURRENCE,
+		STATIONARITY,
+		SECTION_RECURRENCE,
+		PALEO_RECURRENCE,
+		PALEO_OPEN_INTERVAL,
+		MOMENT_RATE_VARIABILITY,
+		ELASTIC_REBOUND_TRIGGERING
+	}
+	
+	private List<AbstractPlot> buildStandardPlotLines(File outputDir, int skipYears, double minMag, boolean replot, String topLink, List<String> lines,
+			HashSet<StandardPlots> plotsSet) throws IOException {
 		lines.add("## Plots");
 		List<AbstractPlot> plots = new ArrayList<>();
 		
 		TableBuilder table;
 		
-		if (replot || !new File(outputDir, "mfd.png").exists()) {
-			MFDPlot mfdPlot = new MFDPlot(minMag);
-			File mfdCSV = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
-					+"_"+getDeformationModel().encodeChoiceString()+"_supra_plus_sub_seis_cumulative.csv");
-//			System.out.println(mfdCSV.getAbsolutePath()+" ? "+mfdCSV.exists());
-			if (mfdCSV.exists()) {
-				System.out.println("Loading UCERF3 comparison MFD: "+mfdCSV.getAbsolutePath());
-				CSVFile<String> csv = CSVFile.readFile(mfdCSV, true);
-				DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
-				DiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
-				DiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();
-				for (int row=1; row<csv.getNumRows(); row++) {
-					double mag = Double.parseDouble(csv.get(row, 0));
-					if (mag < minMag-0.01)
-						continue;
-					double mean = Double.parseDouble(csv.get(row, 1));
-					if (mean == 0d)
-						break;
-					meanFunc.set(mag, mean);
-					minFunc.set(mag, Double.parseDouble(csv.get(row, 2)));
-					maxFunc.set(mag, Double.parseDouble(csv.get(row, 3)));
+		if (plotsSet.contains(StandardPlots.MFD)) {
+			if (replot || !new File(outputDir, "mfd.png").exists()) {
+				MFDPlot mfdPlot = new MFDPlot(minMag);
+				File mfdCSV = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
+						+"_"+getDeformationModel().encodeChoiceString()+"_supra_plus_sub_seis_cumulative.csv");
+//				System.out.println(mfdCSV.getAbsolutePath()+" ? "+mfdCSV.exists());
+				if (mfdCSV.exists()) {
+					System.out.println("Loading UCERF3 comparison MFD: "+mfdCSV.getAbsolutePath());
+					CSVFile<String> csv = CSVFile.readFile(mfdCSV, true);
+					DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+					DiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
+					DiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();
+					for (int row=1; row<csv.getNumRows(); row++) {
+						double mag = Double.parseDouble(csv.get(row, 0));
+						if (mag < minMag-0.01)
+							continue;
+						double mean = Double.parseDouble(csv.get(row, 1));
+						if (mean == 0d)
+							break;
+						meanFunc.set(mag, mean);
+						minFunc.set(mag, Double.parseDouble(csv.get(row, 2)));
+						maxFunc.set(mag, Double.parseDouble(csv.get(row, 3)));
+					}
+					UncertainArbDiscDataset compRange = new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
+					compRange.setName("U3 On Fault");
+					mfdPlot.setComparableRange(compRange);
 				}
-				UncertainArbDiscDataset compRange = new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
-				compRange.setName("U3 On Fault");
-				mfdPlot.setComparableRange(compRange);
+				mfdPlot.initialize(getName(), outputDir, "mfd");
+				plots.add(mfdPlot);
 			}
-			mfdPlot.initialize(getName(), outputDir, "mfd");
-			plots.add(mfdPlot);
-		}
-		lines.add("### Magnitude-Frequency Plot");
-		lines.add(topLink);
-		lines.add("");
-		lines.add("![MFD]("+outputDir.getName()+"/mfd.png)");
-		
-		if (replot || !new File(outputDir, "mag_area_hist2D.png").exists()) {
-			MagAreaScalingPlot magAreaPlot = new MagAreaScalingPlot(false);
-			magAreaPlot.initialize(getName(), outputDir, "mag_area");
-			plots.add(magAreaPlot);
-		}
-		lines.add("### Magnitude-Area Plots");
-		lines.add(topLink);
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("Scatter", "2-D Hist");
-		table.initNewLine();
-		table.addColumn("![MA Scatter]("+outputDir.getName()+"/mag_area.png)");
-		table.addColumn("![MA Hist]("+outputDir.getName()+"/mag_area_hist2D.png)");
-		table.finalizeLine();
-		lines.addAll(table.build());
-		
-		// look for fault style specific plots
-		table = null;
-		for (FaultStyle style : FaultStyle.values()) {
-			File scatterPlot = new File(outputDir, "mag_area_"+style.name()+".png");
-			if (!scatterPlot.exists())
-				continue;
-			if (table == null) {
-				table = MarkdownUtils.tableBuilder();
-				table.addLine("Fault Style", "Scatter", "2-D Hist");
-			}
-			table.initNewLine();
-			table.addColumn("**"+style+"**");
-			table.addColumn("![MA Scatter]("+outputDir.getName()+"/mag_area_"+style.name()+".png)");
-			table.addColumn("![MA Hist]("+outputDir.getName()+"/mag_area_"+style.name()+"_hist2D.png)");
-			table.finalizeLine();
-		}
-		if (table != null) {
-			lines.add("#### Mechanism-Dependent Magnitude-Area Plots");
+			lines.add("### Magnitude-Frequency Plot");
 			lines.add(topLink);
 			lines.add("");
-			lines.add("Here we disaggregate the magnitude-area scaling plots by focal mechanism. Multi-fault ruptures which incorporate "
-					+ "multiple faulting styles are included in plot for the dominent fault style so long as no more than 10% of the "
-					+ "participating elements are of a different style, otherwise they are listed as 'Unknown'.");
-			lines.add("");
-			lines.addAll(table.build());
+			lines.add("![MFD]("+outputDir.getName()+"/mfd.png)");
 		}
 		
-		if (replot || !new File(outputDir, "slip_area_hist2D.png").exists()) {
-			MagAreaScalingPlot magAreaPlot = new MagAreaScalingPlot(true);
-			magAreaPlot.initialize(getName(), outputDir, "slip_area");
-			plots.add(magAreaPlot);
+		if (plotsSet.contains(StandardPlots.MAG_AREA)) {
+			if (replot || !new File(outputDir, "mag_area_hist2D.png").exists()) {
+				MagAreaScalingPlot magAreaPlot = new MagAreaScalingPlot(false);
+				magAreaPlot.initialize(getName(), outputDir, "mag_area");
+				plots.add(magAreaPlot);
+			}
+			lines.add("### Magnitude-Area Plots");
+			lines.add(topLink);
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("Scatter", "2-D Hist");
+			table.initNewLine();
+			table.addColumn("![MA Scatter]("+outputDir.getName()+"/mag_area.png)");
+			table.addColumn("![MA Hist]("+outputDir.getName()+"/mag_area_hist2D.png)");
+			table.finalizeLine();
+			lines.addAll(table.build());
+			
+			// look for fault style specific plots
+			table = null;
+			for (FaultStyle style : FaultStyle.values()) {
+				File scatterPlot = new File(outputDir, "mag_area_"+style.name()+".png");
+				if (!scatterPlot.exists())
+					continue;
+				if (table == null) {
+					table = MarkdownUtils.tableBuilder();
+					table.addLine("Fault Style", "Scatter", "2-D Hist");
+				}
+				table.initNewLine();
+				table.addColumn("**"+style+"**");
+				table.addColumn("![MA Scatter]("+outputDir.getName()+"/mag_area_"+style.name()+".png)");
+				table.addColumn("![MA Hist]("+outputDir.getName()+"/mag_area_"+style.name()+"_hist2D.png)");
+				table.finalizeLine();
+			}
+			if (table != null) {
+				lines.add("#### Mechanism-Dependent Magnitude-Area Plots");
+				lines.add(topLink);
+				lines.add("");
+				lines.add("Here we disaggregate the magnitude-area scaling plots by focal mechanism. Multi-fault ruptures which incorporate "
+						+ "multiple faulting styles are included in plot for the dominent fault style so long as no more than 10% of the "
+						+ "participating elements are of a different style, otherwise they are listed as 'Unknown'.");
+				lines.add("");
+				lines.addAll(table.build());
+			}
 		}
-		lines.add("### Slip-Area Plots");
-		lines.add(topLink);
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("Scatter", "2-D Hist");
-		table.initNewLine();
-		table.addColumn("![Slip Area Scatter]("+outputDir.getName()+"/slip_area.png)");
-		table.addColumn("![Slip Area Hist]("+outputDir.getName()+"/slip_area_hist2D.png)");
-		table.finalizeLine();
-		lines.addAll(table.build());
+		
+		if (plotsSet.contains(StandardPlots.SLIP_AREA)) {
+			if (replot || !new File(outputDir, "slip_area_hist2D.png").exists()) {
+				MagAreaScalingPlot magAreaPlot = new MagAreaScalingPlot(true);
+				magAreaPlot.initialize(getName(), outputDir, "slip_area");
+				plots.add(magAreaPlot);
+			}
+			lines.add("### Slip-Area Plots");
+			lines.add(topLink);
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("Scatter", "2-D Hist");
+			table.initNewLine();
+			table.addColumn("![Slip Area Scatter]("+outputDir.getName()+"/slip_area.png)");
+			table.addColumn("![Slip Area Hist]("+outputDir.getName()+"/slip_area_hist2D.png)");
+			table.finalizeLine();
+			lines.addAll(table.build());
+		}
 
 		SlipAlongSectAlgorithm defaultSlipAlg = SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN;
-		if (replot || !new File(outputDir, "slip_len_"+SlipAlongSectAlgorithm.MID_SEIS_SURF_SLIP_LEN.name()+".png").exists()) {
-			SlipLengthScalingPlot slipLengthPlot = new SlipLengthScalingPlot(getSubSectMapper(), 6.5);
-			slipLengthPlot.setDisaggregateFaultStyles(defaultSlipAlg);
-			slipLengthPlot.initialize(getName(), outputDir, "slip_len");
-			plots.add(slipLengthPlot);
-		}
-		lines.add("### Slip-Length Plots");
-		lines.add(topLink);
-		lines.add("");
 		String midSeisDescription = "no deeper than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_MAX_DEPTH_DEFAULT)+" km, "
 				+ "no shallower than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_MIN_DEPTH_DEFAULT)+" km, "
 				+ "and no less than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_BUFFER_DEFAULT)+" km down- or "
 				+ "up-dip from the top or bottom of the fault";
-		lines.add("These plots compute average slip-length scaling at mid-seismogenic depth. We define mid-seismogenic depth " 
-				+ "to be "+midSeisDescription+". Average slip is computed across all elements in this "
-				+ "mid-seismogenic region, including any which did not slip, along the full length of the rupture.");
-		lines.add("");
-		lines.add("We define the rupture length, which also determines the region at mid-seismogenic depth across which we "
-				+ "compute average slip, multiple ways in order to test sensitivity:");
-		lines.add("");
-		for (SlipAlongSectAlgorithm slipAlg : SlipAlongSectAlgorithm.values())
-			lines.add("* **"+slipAlg+":** "+slipAlg.getDescription());
-		lines.add("");
-		File examplePlot = new File(outputDir, "slip_len_example_rupture.png");
-		if (examplePlot.exists()) {
-			lines.add("These length algorithms are illustrated in the following example plot, which also has the "
-					+ "mid-seismogenic depth range outlined in a cyan dashed line:");
-			lines.add("");
-			lines.add("![Example plot]("+outputDir.getName()+"/"+examplePlot.getName()+")");
-			lines.add("");
-		}
-		lines.add("The average value is plotted in a thick gray line, and UCERF3 Scaling Relationships in colored lines "
-				+ "(assuming a down dip width of "+optionalDigitDF.format(SlipLengthScalingPlot.LEN_COMP_DDW)+" km).");
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("Lengh Algorithm", "Scatter", "2-D Hist");
-		for (SlipAlongSectAlgorithm slipAlg : SlipAlongSectAlgorithm.values()) {
-			table.initNewLine();
-			table.addColumn("**"+slipAlg+"**");
-			String prefix = "slip_len_"+slipAlg.name();
-			table.addColumn("![Slip Length Scatter]("+outputDir.getName()+"/"+prefix+".png)");
-			table.addColumn("![Slip Length Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
-			table.finalizeLine();
-		}
-		lines.addAll(table.build());
-		
-		// look for fault style specific plots
-		table = null;
-		for (FaultStyle style : FaultStyle.values()) {
-			File scatterPlot = new File(outputDir, "mag_area_"+style.name()+".png");
-			if (!scatterPlot.exists())
-				continue;
-			if (table == null) {
-				table = MarkdownUtils.tableBuilder();
-				table.addLine("Fault Style", "Scatter", "2-D Hist");
+		if (plotsSet.contains(StandardPlots.SLIP_LEN)) {
+			if (replot || !new File(outputDir, "slip_len_"+SlipAlongSectAlgorithm.MID_SEIS_SURF_SLIP_LEN.name()+".png").exists()) {
+				SlipLengthScalingPlot slipLengthPlot = new SlipLengthScalingPlot(getSubSectMapper(), 6.5);
+				slipLengthPlot.setDisaggregateFaultStyles(defaultSlipAlg);
+				slipLengthPlot.initialize(getName(), outputDir, "slip_len");
+				plots.add(slipLengthPlot);
 			}
-			table.initNewLine();
-			table.addColumn("**"+style+"**");
-			String prefix = "slip_len_"+defaultSlipAlg.name()+"_"+style.name();
-			table.addColumn("![Slip Length Scatter]("+outputDir.getName()+"/"+prefix+".png)");
-			table.addColumn("![Slip Length Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
-			table.finalizeLine();
-		}
-		if (table != null) {
-			lines.add("#### Mechanism-Dependent Slip-Length Plots");
+			lines.add("### Slip-Length Plots");
 			lines.add(topLink);
 			lines.add("");
-			lines.add("Here we disaggregate the slip-length scaling plots by focal mechanism. Multi-fault ruptures which incorporate "
-					+ "multiple faulting styles are included in plot for the dominent fault style so long as no more than 10% of the "
-					+ "participating elements are of a different style, otherwise they are listed as 'Unknown'.");
+			lines.add("These plots compute average slip-length scaling at mid-seismogenic depth. We define mid-seismogenic depth " 
+					+ "to be "+midSeisDescription+". Average slip is computed across all elements in this "
+					+ "mid-seismogenic region, including any which did not slip, along the full length of the rupture.");
 			lines.add("");
+			lines.add("We define the rupture length, which also determines the region at mid-seismogenic depth across which we "
+					+ "compute average slip, multiple ways in order to test sensitivity:");
+			lines.add("");
+			for (SlipAlongSectAlgorithm slipAlg : SlipAlongSectAlgorithm.values())
+				lines.add("* **"+slipAlg+":** "+slipAlg.getDescription());
+			lines.add("");
+			File examplePlot = new File(outputDir, "slip_len_example_rupture.png");
+			if (examplePlot.exists()) {
+				lines.add("These length algorithms are illustrated in the following example plot, which also has the "
+						+ "mid-seismogenic depth range outlined in a cyan dashed line:");
+				lines.add("");
+				lines.add("![Example plot]("+outputDir.getName()+"/"+examplePlot.getName()+")");
+				lines.add("");
+			}
+			lines.add("The average value is plotted in a thick gray line, and UCERF3 Scaling Relationships in colored lines "
+					+ "(assuming a down dip width of "+optionalDigitDF.format(SlipLengthScalingPlot.LEN_COMP_DDW)+" km).");
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("Lengh Algorithm", "Scatter", "2-D Hist");
+			for (SlipAlongSectAlgorithm slipAlg : SlipAlongSectAlgorithm.values()) {
+				table.initNewLine();
+				table.addColumn("**"+slipAlg+"**");
+				String prefix = "slip_len_"+slipAlg.name();
+				table.addColumn("![Slip Length Scatter]("+outputDir.getName()+"/"+prefix+".png)");
+				table.addColumn("![Slip Length Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
+				table.finalizeLine();
+			}
 			lines.addAll(table.build());
+			
+			// look for fault style specific plots
+			table = null;
+			for (FaultStyle style : FaultStyle.values()) {
+				File scatterPlot = new File(outputDir, "mag_area_"+style.name()+".png");
+				if (!scatterPlot.exists())
+					continue;
+				if (table == null) {
+					table = MarkdownUtils.tableBuilder();
+					table.addLine("Fault Style", "Scatter", "2-D Hist");
+				}
+				table.initNewLine();
+				table.addColumn("**"+style+"**");
+				String prefix = "slip_len_"+defaultSlipAlg.name()+"_"+style.name();
+				table.addColumn("![Slip Length Scatter]("+outputDir.getName()+"/"+prefix+".png)");
+				table.addColumn("![Slip Length Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
+				table.finalizeLine();
+			}
+			if (table != null) {
+				lines.add("#### Mechanism-Dependent Slip-Length Plots");
+				lines.add(topLink);
+				lines.add("");
+				lines.add("Here we disaggregate the slip-length scaling plots by focal mechanism. Multi-fault ruptures which incorporate "
+						+ "multiple faulting styles are included in plot for the dominent fault style so long as no more than 10% of the "
+						+ "participating elements are of a different style, otherwise they are listed as 'Unknown'.");
+				lines.add("");
+				lines.addAll(table.build());
+			}
 		}
 		
 		List<Range> lengthBins = new ArrayList<>();
@@ -1481,81 +1545,84 @@ public class RSQSimCatalog implements XMLSaveable {
 		lengthBins.add(new Range(25, 50));
 		lengthBins.add(new Range(50, 100));
 		lengthBins.add(new Range(100, Double.POSITIVE_INFINITY));
-		if (replot || !new File(outputDir, "slip_along_rupture_multi_norm.png").exists()) {
-			SlipAlongRupturePlot slipAlongPlot = new SlipAlongRupturePlot(getSubSectMapper(), 6.5, defaultSlipAlg, fm, lengthBins);
-			slipAlongPlot.initialize(getName(), outputDir, "slip_along_rupture");
-			plots.add(slipAlongPlot);
-		}
-		lines.add("### Slip Along Rupture (Dsr) Plots");
-		lines.add(topLink);
-		lines.add("");
-		lines.add("These plots show the slip along rupture distiribution, noted D<sub>SR</sub> in UCERF3. First we compute average "
-				+ "slip along each mapped subsection at mid-seismogenic depth (using the *"+defaultSlipAlg+"* algorithm), then plot that slip along "
-				+ "strike, normalized by the average slip across all subsections in that rupture. We do this for single-fault events, which "
-				+ "can span multiple segments (e.g. SAF Mojave and San Bernardino), and also separately for each junction in multi-fault events. "
-				+ "This is done using the UCERF3 'named faults' list to determine if multiple fault sections belong to the same master fault. "
-				+ "We only consider ruptures where at least 2 subsections participated (2 on each side of the jump for multi-fault ruptures).");
-		lines.add("");
-		lines.add("Ruptures are binned by their length in each row below. For multi-fault ruptures, the junction point is at x=0 with the shorter "
-				+ "side of the rupture on the left (below zero), and longer half on the right");
-		lines.add("");
-		lines.add("Average values are plotted with a solid black line, and "+(float)+SlipAlongRupturePlot.SQRT_SINE_SCALAR+"*sqrt(sin(|x*&pi;|)) "
-				+ "in a dashed gray line (normalized length plots only).");
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("Rupture Length", "Single-fault, absolute distance from either rupture endpoint",
-				"Single-fault, normalized distance along strike", "Multi-fault, normalized distance on either side of jump");
-		for (Range lengthBin : lengthBins) {
-			table.initNewLine();
-			String lenStr;
-			String prefixAdd = "";
-			if (lengthBin == null) {
-				lenStr = "All Lengths";
-			} else {
-				if (Double.isInfinite(lengthBin.getUpperBound())) {
-					lenStr = "Len≥"+optionalDigitDF.format(lengthBin.getLowerBound());
-					prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"+";
-				} else {
-					lenStr = "Len=["+optionalDigitDF.format(lengthBin.getLowerBound())+" "+optionalDigitDF.format(lengthBin.getUpperBound())+"]";
-					prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"_"+optionalDigitDF.format(lengthBin.getUpperBound());
-				}
+		if (plotsSet.contains(StandardPlots.SLIP_ALONG_RUPTURE)) {
+			if (replot || !new File(outputDir, "slip_along_rupture_multi_norm.png").exists()) {
+				SlipAlongRupturePlot slipAlongPlot = new SlipAlongRupturePlot(getSubSectMapper(), 6.5, defaultSlipAlg, fm, lengthBins);
+				slipAlongPlot.initialize(getName(), outputDir, "slip_along_rupture");
+				plots.add(slipAlongPlot);
 			}
-			table.addColumn("**"+lenStr+"**");
-			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_single_abs"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
-			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_single_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
-			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_multi_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
-			table.finalizeLine();
-		}
-		lines.addAll(table.build());
-		lines.add("");
-		lines.add("#### Two- and Three-Fault Slip Along Rupture");
-		lines.add("");
-		lines.add("These plots show D<sub>SR</sub> for two- and three-fault ruptures. Lengths are normalized, with the first fault in x=[0 1], "
-				+ "second in x=[1 2], etc. Rupture are organized such that the leftmost side is always shorter than the rightmost side.");
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("Rupture Length", "Two-fault Ruptures", "Three-Fault Ruptures");
-		for (Range lengthBin : lengthBins) {
-			table.initNewLine();
-			String lenStr;
-			String prefixAdd = "";
-			if (lengthBin == null) {
-				lenStr = "All Lengths";
-			} else {
-				if (Double.isInfinite(lengthBin.getUpperBound())) {
-					lenStr = "Len≥"+optionalDigitDF.format(lengthBin.getLowerBound());
-					prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"+";
+			lines.add("### Slip Along Rupture (Dsr) Plots");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("These plots show the slip along rupture distiribution, noted D<sub>SR</sub> in UCERF3. First we compute average "
+					+ "slip along each mapped subsection at mid-seismogenic depth (using the *"+defaultSlipAlg+"* algorithm), then plot that slip along "
+					+ "strike, normalized by the average slip across all subsections in that rupture. We do this for single-fault events, which "
+					+ "can span multiple segments (e.g. SAF Mojave and San Bernardino), and also separately for each junction in multi-fault events. "
+					+ "This is done using the UCERF3 'named faults' list to determine if multiple fault sections belong to the same master fault. "
+					+ "We only consider ruptures where at least 2 subsections participated (2 on each side of the jump for multi-fault ruptures).");
+			lines.add("");
+			lines.add("Ruptures are binned by their length in each row below. For multi-fault ruptures, the junction point is at x=0 with the shorter "
+					+ "side of the rupture on the left (below zero), and longer half on the right");
+			lines.add("");
+			lines.add("Average values are plotted with a solid black line, and "+(float)+SlipAlongRupturePlot.SQRT_SINE_SCALAR+"*sqrt(sin(|x*&pi;|)) "
+					+ "in a dashed gray line (normalized length plots only).");
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("Rupture Length", "Single-fault, absolute distance from either rupture endpoint",
+					"Single-fault, normalized distance along strike", "Multi-fault, normalized distance on either side of jump");
+			for (Range lengthBin : lengthBins) {
+				table.initNewLine();
+				String lenStr;
+				String prefixAdd = "";
+				if (lengthBin == null) {
+					lenStr = "All Lengths";
 				} else {
-					lenStr = "Len=["+optionalDigitDF.format(lengthBin.getLowerBound())+" "+optionalDigitDF.format(lengthBin.getUpperBound())+"]";
-					prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"_"+optionalDigitDF.format(lengthBin.getUpperBound());
+					if (Double.isInfinite(lengthBin.getUpperBound())) {
+						lenStr = "Len≥"+optionalDigitDF.format(lengthBin.getLowerBound());
+						prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"+";
+					} else {
+						lenStr = "Len=["+optionalDigitDF.format(lengthBin.getLowerBound())+" "+optionalDigitDF.format(lengthBin.getUpperBound())+"]";
+						prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"_"+optionalDigitDF.format(lengthBin.getUpperBound());
+					}
 				}
+				table.addColumn("**"+lenStr+"**");
+				table.addColumn(imageIfExists(outputDir, "slip_along_rupture_single_abs"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
+				table.addColumn(imageIfExists(outputDir, "slip_along_rupture_single_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
+				table.addColumn(imageIfExists(outputDir, "slip_along_rupture_multi_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
+				table.finalizeLine();
 			}
-			table.addColumn("**"+lenStr+"**");
-			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_two_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
-			table.addColumn(imageIfExists(outputDir, "slip_along_rupture_three_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
-			table.finalizeLine();
+			lines.addAll(table.build());
+			lines.add("");
+			lines.add("#### Two- and Three-Fault Slip Along Rupture");
+			lines.add("");
+			lines.add("These plots show D<sub>SR</sub> for two- and three-fault ruptures. Lengths are normalized, with the first fault in x=[0 1], "
+					+ "second in x=[1 2], etc. Rupture are organized such that the leftmost side is always shorter than the rightmost side.");
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("Rupture Length", "Two-fault Ruptures", "Three-Fault Ruptures");
+			for (Range lengthBin : lengthBins) {
+				table.initNewLine();
+				String lenStr;
+				String prefixAdd = "";
+				if (lengthBin == null) {
+					lenStr = "All Lengths";
+				} else {
+					if (Double.isInfinite(lengthBin.getUpperBound())) {
+						lenStr = "Len≥"+optionalDigitDF.format(lengthBin.getLowerBound());
+						prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"+";
+					} else {
+						lenStr = "Len=["+optionalDigitDF.format(lengthBin.getLowerBound())+" "+optionalDigitDF.format(lengthBin.getUpperBound())+"]";
+						prefixAdd = "_len_"+optionalDigitDF.format(lengthBin.getLowerBound())+"_"+optionalDigitDF.format(lengthBin.getUpperBound());
+					}
+				}
+				table.addColumn("**"+lenStr+"**");
+				table.addColumn(imageIfExists(outputDir, "slip_along_rupture_two_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
+				table.addColumn(imageIfExists(outputDir, "slip_along_rupture_three_norm"+prefixAdd+".png", "Slip Along Rupture", "N/A"));
+				table.finalizeLine();
+			}
+			lines.addAll(table.build());
 		}
-		lines.addAll(table.build());
+		
 		
 		if (replot || !new File(outputDir, "slip_rate_sim_map.png").exists()) {
 			SlipRateComparePlot plot = new SlipRateComparePlot(getSubSectMapper(), getFaultModel(), getDeformationModel(),
@@ -1564,394 +1631,416 @@ public class RSQSimCatalog implements XMLSaveable {
 			plots.add(plot);
 		}
 		
-		lines.add("### Slip Rate Plots");
-		lines.add(topLink);
-		lines.add("");
-		String slipRateDesc = "Slip rates are calculated at mid-seismogenic depth: "+midSeisDescription+". UCERF3 comparisons are included "
-				+ "with the original target slip rate for the fault and deformation model used as input to the simulator when constructing "
-				+ "the geometry, but this target is often smoothed and/or modified before use in the simlators.";
-		boolean hasSlipU3Sol = new File(outputDir, "slip_rate_u3_sol_map.png").exists();
-		if (hasSlipU3Sol)
-			slipRateDesc += " Post-UCERF3 inversion slip rates (which will not perfectly match the target) are also included and labeled as "
-				+ "'UCERF3 Solution'.";
-		lines.add(slipRateDesc);
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.initNewLine();
-		table.addColumn("<p align=\"center\">**Simulation Slip Rate**</p>");
-		table.addColumn("<p align=\"center\">**Simulation vs Target Ratio**</p>");
-		table.addColumn("<p align=\"center\">**UCERF3 Target Slip Rate**</p>");
-		table.addColumn("<p align=\"center\">**Simulation vs UCERF3 Target Ratio**</p>");
-		if (hasSlipU3Sol) {
-			table.addColumn("<p align=\"center\">**UCERF3 Solution Slip Rate**</p>");
-			table.addColumn("<p align=\"center\">**UCERF3 Solution vs Target Ratio**</p>");
+		if (plotsSet.contains(StandardPlots.SLIP_RATE)) {
+			lines.add("### Slip Rate Plots");
+			lines.add(topLink);
+			lines.add("");
+			String slipRateDesc = "Slip rates are calculated at mid-seismogenic depth: "+midSeisDescription+". UCERF3 comparisons are included "
+					+ "with the original target slip rate for the fault and deformation model used as input to the simulator when constructing "
+					+ "the geometry, but this target is often smoothed and/or modified before use in the simlators.";
+			boolean hasSlipU3Sol = new File(outputDir, "slip_rate_u3_sol_map.png").exists();
+			if (hasSlipU3Sol)
+				slipRateDesc += " Post-UCERF3 inversion slip rates (which will not perfectly match the target) are also included and labeled as "
+					+ "'UCERF3 Solution'.";
+			lines.add(slipRateDesc);
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			table.addColumn("<p align=\"center\">**Simulation Slip Rate**</p>");
+			table.addColumn("<p align=\"center\">**Simulation vs Target Ratio**</p>");
+			table.addColumn("<p align=\"center\">**UCERF3 Target Slip Rate**</p>");
+			table.addColumn("<p align=\"center\">**Simulation vs UCERF3 Target Ratio**</p>");
+			if (hasSlipU3Sol) {
+				table.addColumn("<p align=\"center\">**UCERF3 Solution Slip Rate**</p>");
+				table.addColumn("<p align=\"center\">**UCERF3 Solution vs Target Ratio**</p>");
+			}
+			table.finalizeLine();
+			table.initNewLine();
+			table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_sim_map.png)");
+			table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_sim_ratio_map.png)");
+			table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_u3_target_map.png)");
+			table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_sim_u3_ratio_map.png)");
+			if (hasSlipU3Sol) {
+				table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_u3_sol_map.png)");
+				table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_u3_ratio_map.png)");
+			}
+			table.finalizeLine();
+			lines.addAll(table.wrap(4, 0).build());
+			
+			Map<String, String> slipFaultPlotMap = new HashMap<>();
+			for (String fault : getFaultModel().getNamedFaultsMapAlt().keySet()) {
+				File faultPlot = new File(outputDir, "slip_rate_fault_"+fault.replaceAll("\\W+", "_")+".png");
+				if (faultPlot.exists())
+					slipFaultPlotMap.put(fault, faultPlot.getName());
+			}
+			if (slipFaultPlotMap.size() > 0) {
+				lines.add("#### Slip Rate Fault Plots");
+				lines.add(topLink);
+				lines.add("");
+				table = MarkdownUtils.tableBuilder();
+				List<String> sortedNames = ComparablePairing.getSortedData(slipFaultPlotMap);
+				table.initNewLine();
+				for (String faultName : sortedNames)
+					table.addColumn("<p align=\"center\">**"+faultName+"**</p>");
+				table.finalizeLine();
+				table.initNewLine();
+				for (String faultName : sortedNames)
+					table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/"+slipFaultPlotMap.get(faultName)+")");
+				table.finalizeLine();
+				lines.addAll(table.wrap(3, 0).build());
+			}
 		}
-		table.finalizeLine();
-		table.initNewLine();
-		table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_sim_map.png)");
-		table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_sim_ratio_map.png)");
-		table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_u3_target_map.png)");
-		table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_sim_u3_ratio_map.png)");
-		if (hasSlipU3Sol) {
-			table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_u3_sol_map.png)");
-			table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/slip_rate_u3_ratio_map.png)");
-		}
-		table.finalizeLine();
-		lines.addAll(table.wrap(4, 0).build());
 		
-		Map<String, String> slipFaultPlotMap = new HashMap<>();
-		for (String fault : getFaultModel().getNamedFaultsMapAlt().keySet()) {
-			File faultPlot = new File(outputDir, "slip_rate_fault_"+fault.replaceAll("\\W+", "_")+".png");
-			if (faultPlot.exists())
-				slipFaultPlotMap.put(fault, faultPlot.getName());
-		}
-		if (slipFaultPlotMap.size() > 0) {
-			lines.add("#### Slip Rate Fault Plots");
+		if (plotsSet.contains(StandardPlots.RUP_VELOCITY)) {
+			if (replot || !new File(outputDir, "rupture_velocity_scatter.png").exists()) {
+				RuptureVelocityPlot rupVelPlot = new RuptureVelocityPlot(getElements(), minMag);
+				rupVelPlot.initialize(getName(), outputDir, "rupture_velocity");
+				plots.add(rupVelPlot);
+			}
+			lines.add("### Rupture Velocity Plots");
 			lines.add(topLink);
 			lines.add("");
 			table = MarkdownUtils.tableBuilder();
-			List<String> sortedNames = ComparablePairing.getSortedData(slipFaultPlotMap);
-			table.initNewLine();
-			for (String faultName : sortedNames)
-				table.addColumn("<p align=\"center\">**"+faultName+"**</p>");
+			table.initNewLine().addColumn("**Scatter**");
+			table.addColumn("![Rupture Velocity Scatter]("+outputDir.getName()+"/rupture_velocity_scatter.png)");
+			table.finalizeLine().initNewLine().addColumn("**Distance/Velocity**");
+			table.addColumn("![Rupture Velocity vs Dist]("+outputDir.getName()+"/rupture_velocity_vs_dist.png)");
 			table.finalizeLine();
-			table.initNewLine();
-			for (String faultName : sortedNames)
-				table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/"+slipFaultPlotMap.get(faultName)+")");
-			table.finalizeLine();
-			lines.addAll(table.wrap(3, 0).build());
+			lines.addAll(table.build());
 		}
-		
-		if (replot || !new File(outputDir, "rupture_velocity_scatter.png").exists()) {
-			RuptureVelocityPlot rupVelPlot = new RuptureVelocityPlot(getElements(), minMag);
-			rupVelPlot.initialize(getName(), outputDir, "rupture_velocity");
-			plots.add(rupVelPlot);
-		}
-		lines.add("### Rupture Velocity Plots");
-		lines.add(topLink);
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.initNewLine().addColumn("**Scatter**");
-		table.addColumn("![Rupture Velocity Scatter]("+outputDir.getName()+"/rupture_velocity_scatter.png)");
-		table.finalizeLine().initNewLine().addColumn("**Distance/Velocity**");
-		table.addColumn("![Rupture Velocity vs Dist]("+outputDir.getName()+"/rupture_velocity_vs_dist.png)");
-		table.finalizeLine();
-		lines.addAll(table.build());
 		
 		double[] riMinMags = {6d, 6.5, 7d, 7.5};
 		while (minMag > riMinMags[0])
 			riMinMags = Arrays.copyOfRange(riMinMags, 1, riMinMags.length);
-		if (replot || !new File(outputDir, "interevent_times_m7.5.png").exists()) {
-			RecurrenceIntervalPlot riPlot = new RecurrenceIntervalPlot(riMinMags);
-			riPlot.initialize(getName(), outputDir, "interevent_times");
-			plots.add(riPlot);
-		}
-		lines.add("### Global Interevent-Time Distributions");
-		lines.add(topLink);
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.initNewLine();
-		for (double riMinMag : riMinMags)
-			if (riMinMag == Math.round(riMinMag))
-				table.addColumn("**M≥"+(int)riMinMag+"**");
-			else
-				table.addColumn("**M≥"+(float)riMinMag+"**");
-		table.finalizeLine().initNewLine();
-		for (double riMinMag : riMinMags)
-			if (riMinMag == Math.round(riMinMag))
-				table.addColumn("![Interevent Times]("+outputDir.getName()+"/interevent_times_m"+(int)riMinMag+".png)");
-			else
-				table.addColumn("![Interevent Times]("+outputDir.getName()+"/interevent_times_m"+(float)riMinMag+".png)");
-		table.finalizeLine();
-		lines.addAll(table.build());
-		
-		if (replot || !new File(outputDir, "norm_ri_elem_m7.5.png").exists()) {
-			List<NormalizedFaultRecurrenceIntervalPlot> myPlots = new ArrayList<>();
-			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), riMinMags));
-			RSQSimSubSectionMapper mapper = getSubSectMapper();
-			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.SUBSECTION,
-					mapper, riMinMags));
-			myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.PARENT,
-					mapper, riMinMags));
-			for (NormalizedFaultRecurrenceIntervalPlot plot : myPlots)
-				plot.initialize(getName(), outputDir, "norm_ri_"+plot.getSectType().getPrefix());
-			plots.addAll(myPlots);
-		}
-		lines.add("### Normalized Fault Interevent-Time Distributions");
-		lines.add(topLink);
-		lines.add("");
-		lines.add("These plots show interevent-time distributions for a point on a fault (either an element, "
-				+ " or aggregated at the subsection or parent section level).");
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.initNewLine();
-		table.addColumn("");
-		for (double riMinMag : riMinMags)
-			if (riMinMag == Math.round(riMinMag))
-				table.addColumn("**M≥"+(int)riMinMag+"**");
-			else
-				table.addColumn("**M≥"+(float)riMinMag+"**");
-		table.finalizeLine();
-		for (SectType type : new SectType[] {SectType.ELEMENT, SectType.SUBSECTION, SectType.PARENT }) {
+		if (plotsSet.contains(StandardPlots.GLOBAL_RECURRENCE)) {
+			if (replot || !new File(outputDir, "interevent_times_m7.5.png").exists()) {
+				RecurrenceIntervalPlot riPlot = new RecurrenceIntervalPlot(riMinMags);
+				riPlot.initialize(getName(), outputDir, "interevent_times");
+				plots.add(riPlot);
+			}
+			lines.add("### Global Interevent-Time Distributions");
+			lines.add(topLink);
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
 			table.initNewLine();
-			table.addColumn("**"+type.getSimType()+"s**");
 			for (double riMinMag : riMinMags)
 				if (riMinMag == Math.round(riMinMag))
-					table.addColumn("![Norm RIs]("+outputDir.getName()+"/norm_ri_"+type.getPrefix()+"_m"+(int)riMinMag+".png)");
+					table.addColumn("**M≥"+(int)riMinMag+"**");
 				else
-					table.addColumn("![Norm RIs]("+outputDir.getName()+"/norm_ri_"+type.getPrefix()+"_m"+(float)riMinMag+".png)");
+					table.addColumn("**M≥"+(float)riMinMag+"**");
+			table.finalizeLine().initNewLine();
+			for (double riMinMag : riMinMags)
+				if (riMinMag == Math.round(riMinMag))
+					table.addColumn("![Interevent Times]("+outputDir.getName()+"/interevent_times_m"+(int)riMinMag+".png)");
+				else
+					table.addColumn("![Interevent Times]("+outputDir.getName()+"/interevent_times_m"+(float)riMinMag+".png)");
 			table.finalizeLine();
+			lines.addAll(table.build());
 		}
-		lines.addAll(table.build());
+		
+		if (plotsSet.contains(StandardPlots.NORM_RECURRENCE)) {
+			if (replot || !new File(outputDir, "norm_ri_elem_m7.5.png").exists()) {
+				List<NormalizedFaultRecurrenceIntervalPlot> myPlots = new ArrayList<>();
+				myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), riMinMags));
+				RSQSimSubSectionMapper mapper = getSubSectMapper();
+				myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.SUBSECTION,
+						mapper, riMinMags));
+				myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.PARENT,
+						mapper, riMinMags));
+				for (NormalizedFaultRecurrenceIntervalPlot plot : myPlots)
+					plot.initialize(getName(), outputDir, "norm_ri_"+plot.getSectType().getPrefix());
+				plots.addAll(myPlots);
+			}
+			lines.add("### Normalized Fault Interevent-Time Distributions");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("These plots show interevent-time distributions for a point on a fault (either an element, "
+					+ " or aggregated at the subsection or parent section level).");
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			table.addColumn("");
+			for (double riMinMag : riMinMags)
+				if (riMinMag == Math.round(riMinMag))
+					table.addColumn("**M≥"+(int)riMinMag+"**");
+				else
+					table.addColumn("**M≥"+(float)riMinMag+"**");
+			table.finalizeLine();
+			for (SectType type : new SectType[] {SectType.ELEMENT, SectType.SUBSECTION, SectType.PARENT }) {
+				table.initNewLine();
+				table.addColumn("**"+type.getSimType()+"s**");
+				for (double riMinMag : riMinMags)
+					if (riMinMag == Math.round(riMinMag))
+						table.addColumn("![Norm RIs]("+outputDir.getName()+"/norm_ri_"+type.getPrefix()+"_m"+(int)riMinMag+".png)");
+					else
+						table.addColumn("![Norm RIs]("+outputDir.getName()+"/norm_ri_"+type.getPrefix()+"_m"+(float)riMinMag+".png)");
+				table.finalizeLine();
+			}
+			lines.addAll(table.build());
+		}
 
 		BPTAveragingTypeOptions aveType = BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE;
-		if (replot || !new File(outputDir, "u3_norm_ri_m7.5.png").exists()) {
-			U3StyleNormalizedRuptureRecurrenceIntervalPlot plot = new U3StyleNormalizedRuptureRecurrenceIntervalPlot(
-					getElements(), aveType, getSubSectMapper(), riMinMags);
-			plot.initialize(getName(), outputDir, "u3_norm_ri");
-			plots.add(plot);
+		if (plotsSet.contains(StandardPlots.U3_NORM_RECURRENCE)) {
+			if (replot || !new File(outputDir, "u3_norm_ri_m7.5.png").exists()) {
+				U3StyleNormalizedRuptureRecurrenceIntervalPlot plot = new U3StyleNormalizedRuptureRecurrenceIntervalPlot(
+						getElements(), aveType, getSubSectMapper(), riMinMags);
+				plot.initialize(getName(), outputDir, "u3_norm_ri");
+				plots.add(plot);
+			}
+			lines.add("### Normalized Rupture Interevent-Time Distributions");
+			lines.add(topLink);
+			lines.add("");
+			String line = "These plots show interevent-time distributions, averaged over a rupture, similar to "
+					+ "the UCERF3 BPT calculation. For each rupture, we compute ";
+			if (aveType.isAveNTS()) {
+				line += "the average normalized open interval across all subsections which participate.";
+			} else {
+				line += "the average open interval across all subsections which participate, normalized "
+						+ "by the average recurrence interval on those sections";
+				if (aveType.isAveRI())
+					line += ".";
+				else
+					line += ", which is computed as the inverse of the average rate on each subsection";
+			}
+			lines.add(line);
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			for (double riMinMag : riMinMags)
+				if (riMinMag == Math.round(riMinMag))
+					table.addColumn("**M≥"+(int)riMinMag+"**");
+				else
+					table.addColumn("**M≥"+(float)riMinMag+"**");
+			table.finalizeLine();
+			table.initNewLine();
+			for (double riMinMag : riMinMags)
+				if (riMinMag == Math.round(riMinMag))
+					table.addColumn("![Norm RIs]("+outputDir.getName()+"/u3_norm_ri_m"+(int)riMinMag+".png)");
+				else
+					table.addColumn("![Norm RIs]("+outputDir.getName()+"/u3_norm_ri_m"+(float)riMinMag+".png)");
+			table.finalizeLine();
+			lines.addAll(table.build());
 		}
-		lines.add("### Normalized Rupture Interevent-Time Distributions");
-		lines.add(topLink);
-		lines.add("");
-		String line = "These plots show interevent-time distributions, averaged over a rupture, similar to "
-				+ "the UCERF3 BPT calculation. For each rupture, we compute ";
-		if (aveType.isAveNTS()) {
-			line += "the average normalized open interval across all subsections which participate.";
-		} else {
-			line += "the average open interval across all subsections which participate, normalized "
-					+ "by the average recurrence interval on those sections";
-			if (aveType.isAveRI())
-				line += ".";
-			else
-				line += ", which is computed as the inverse of the average rate on each subsection";
-		}
-		lines.add(line);
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.initNewLine();
-		for (double riMinMag : riMinMags)
-			if (riMinMag == Math.round(riMinMag))
-				table.addColumn("**M≥"+(int)riMinMag+"**");
-			else
-				table.addColumn("**M≥"+(float)riMinMag+"**");
-		table.finalizeLine();
-		table.initNewLine();
-		for (double riMinMag : riMinMags)
-			if (riMinMag == Math.round(riMinMag))
-				table.addColumn("![Norm RIs]("+outputDir.getName()+"/u3_norm_ri_m"+(int)riMinMag+".png)");
-			else
-				table.addColumn("![Norm RIs]("+outputDir.getName()+"/u3_norm_ri_m"+(float)riMinMag+".png)");
-		table.finalizeLine();
-		lines.addAll(table.build());
 		
-		if (replot || !new File(outputDir, "stationarity.png").exists()) {
-			StationarityPlot stationarityPlot = new StationarityPlot(minMag, 7d);
-			stationarityPlot.initialize(getName(), outputDir, "stationarity");
-			plots.add(stationarityPlot);
+		if (plotsSet.contains(StandardPlots.STATIONARITY)) {
+			if (replot || !new File(outputDir, "stationarity.png").exists()) {
+				StationarityPlot stationarityPlot = new StationarityPlot(minMag, 7d);
+				stationarityPlot.initialize(getName(), outputDir, "stationarity");
+				plots.add(stationarityPlot);
+			}
+			lines.add("### Stationarity Plot");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("![Stationarity]("+outputDir.getName()+"/stationarity.png)");
 		}
-		lines.add("### Stationarity Plot");
-		lines.add(topLink);
-		lines.add("");
-		lines.add("![Stationarity]("+outputDir.getName()+"/stationarity.png)");
 		
 		String testMagStr;
 		if (riMinMags[0] == Math.floor(riMinMags[0]))
 			testMagStr = (int)riMinMags[0]+"";
 		else
 			testMagStr = (float)riMinMags[0]+"";
-		if (replot || !new File(outputDir, "interevent_elements_m"+testMagStr+"_scatter.png").exists()) {
-			RSQSimSubSectionMapper mapper = getSubSectMapper();
-			SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
-					SectionRecurrenceComparePlot.SectType.ELEMENT, mapper, riMinMags);
-			elemCompare.initialize(getName(), outputDir, "interevent_elements");
-			plots.add(elemCompare);
-			
-			SectionRecurrenceComparePlot subSectCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
-					SectionRecurrenceComparePlot.SectType.SUBSECTION, mapper, riMinMags);
-			subSectCompare.initialize(getName(), outputDir, "interevent_sub_sects");
-			plots.add(subSectCompare);
-		}
-		lines.add("### Element/Subsection Interevent Time Comparisons");
-		lines.add("");
-		lines.add("#### Element Interevent Time Comparisons");
-		lines.add(topLink);
-		lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("Min Mag", "Scatter", "2-D Hist");
-		for (double riMinMag : riMinMags) {
-			String prefix = "interevent_elements_m";
-			if (riMinMag == Math.floor(riMinMag))
-				prefix += (int)riMinMag;
-			else
-				prefix += (float)riMinMag;
-			table.initNewLine();
-			table.addColumn("**M≥"+(float)riMinMag+"**");
-			table.addColumn("![Element Scatter]("+outputDir.getName()+"/"+prefix+"_scatter.png)");
-			table.addColumn("![Element 2-D Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
-			table.finalizeLine();
-		}
-		lines.addAll(table.build());
-		lines.add("");
-		lines.add("#### Subsection Interevent Time Comparisons");
-		lines.add(topLink);
-		lines.add("");
-		if (minFractForInclusion > 0) {
-			lines.add("*Subsections participate in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
-			lines.add("");
-		}
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("Min Mag", "Scatter", "2-D Hist");
-		for (double riMinMag : riMinMags) {
-			String prefix = "interevent_sub_sects_m";
-			if (riMinMag == Math.floor(riMinMag))
-				prefix += (int)riMinMag;
-			else
-				prefix += (float)riMinMag;
-			table.initNewLine();
-			table.addColumn("**M≥"+(float)riMinMag+"**");
-			table.addColumn("![Subsection Scatter]("+outputDir.getName()+"/"+prefix+"_scatter.png)");
-			table.addColumn("![Subsection 2-D Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
-			table.finalizeLine();
-		}
-		lines.addAll(table.build());
-
-		File paleoCSVFile = new File(outputDir, "paleo_recurrence.csv");
-		if (replot || !paleoCSVFile.exists()) {
-			PaleoRecurrencePlot plot = new PaleoRecurrencePlot(getElements(), getSubSectMapper());
-			plot.initialize(getName(), outputDir, "paleo_recurrence");
-			plots.add(plot);
-		}
-		lines.add("");
-		lines.add("### Paleo Recurrence Plots");
-		lines.add(topLink); lines.add("");
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_raw_sect_rate.png)",
-				"![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_paleo_sect_rate.png)");
-		table.addLine("![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_raw_elem_rate.png)",
-				"![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_paleo_elem_rate.png)");
-		lines.addAll(table.build());
-		lines.add("");
-		if (paleoCSVFile.exists()) {
-			CSVFile<String> csv = CSVFile.readFile(new File(outputDir, "paleo_recurrence.csv"), true);
-			lines.addAll(MarkdownUtils.tableFromCSV(csv, false).build());
-		}
-
-		lines.add("");
-		lines.add("### Paleo Open Interval Plots");
-		lines.add(topLink); lines.add("");
-		lines.add("#### Paleo Open Interval Plots, Biasi and Sharer 2019");
-		lines.add(topLink); lines.add("");
-		lines.add("These plots use the 5 paleoseismic sites identified in Biasi & Scharer (2019) on the Hayward, N. SAF, S. SAF, and SJC faults. "
-				+ "By default, a rupture is counted at a paleo site if the nearest element (at the surface) slips any amount. We also alternatively "
-				+ "apply a probability of detection model. Those results are marked as 'Prob. Filtered'.");
-		lines.add("");
-		lines.addAll(getPaleoPlotLines(outputDir, "paleo_open_biasi"));
-		
-		if (replot || !new File(outputDir, "paleo_open_biasi_prob.png").exists()) {
-			PaleoOpenIntervalPlot paleoPlot = new PaleoOpenIntervalPlot(getElements(), PaleoOpenIntervalPlot.getSetBiasi2019(), 100);
-			paleoPlot.initialize(getName(), outputDir, "paleo_open_biasi");
-			plots.add(paleoPlot);
-		}
-		lines.add("");
-		lines.add("#### Paleo Open Interval Plots, UCERF3");
-		lines.add(topLink); lines.add("");
-		lines.add("These plots use the full set of UCERF3 paleoseismic sites. "
-				+ "By default, a rupture is counted at a paleo site if the nearest element (at the surface) slips any amount. We also alternativesly"
-				+ "apply a probability of detection model. Those results are marked as 'Prob. Filtered'.");
-		lines.add("");
-		lines.addAll(getPaleoPlotLines(outputDir, "paleo_open_ucerf3"));
-		
-		if (replot || !new File(outputDir, "paleo_open_ucerf3_prob.png").exists()) {
-			PaleoOpenIntervalPlot paleoPlot = new PaleoOpenIntervalPlot(getElements(), PaleoOpenIntervalPlot.getSetUCERF3(), 100);
-			paleoPlot.initialize(getName(), outputDir, "paleo_open_ucerf3");
-			plots.add(paleoPlot);
-		}
-		
-		if (getDurationYears() > MomentRateVaribilityPlot.MIN_CAT_LEN_YEARS) {
-			if (replot || !new File(outputDir, "moment_variability_time_series.png").exists()) {
-				MomentRateVaribilityPlot momVarPlot = new MomentRateVaribilityPlot(25, 2000);
-				momVarPlot.initialize(getName(), outputDir, "moment_variability");
-				plots.add(momVarPlot);
+		if (plotsSet.contains(StandardPlots.SECTION_RECURRENCE)) {
+			if (replot || !new File(outputDir, "interevent_elements_m"+testMagStr+"_scatter.png").exists()) {
+				RSQSimSubSectionMapper mapper = getSubSectMapper();
+				SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
+						SectionRecurrenceComparePlot.SectType.ELEMENT, mapper, riMinMags);
+				elemCompare.initialize(getName(), outputDir, "interevent_elements");
+				plots.add(elemCompare);
+				
+				SectionRecurrenceComparePlot subSectCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
+						SectionRecurrenceComparePlot.SectType.SUBSECTION, mapper, riMinMags);
+				subSectCompare.initialize(getName(), outputDir, "interevent_sub_sects");
+				plots.add(subSectCompare);
 			}
+			lines.add("### Element/Subsection Interevent Time Comparisons");
 			lines.add("");
-			lines.add("### Moment Release Variability Plots");
-			lines.add(topLink); lines.add("");
-			lines.add("We first create a tapered moment release time series for the entire catalog. Each event's moment is distributed "
-					+"across a 25 year Hanning (cosine) taper. Here is a plot of a random 2,000 year section of this time series:");
+			lines.add("#### Element Interevent Time Comparisons");
+			lines.add(topLink);
 			lines.add("");
-			lines.add("![Time Series]("+outputDir.getName()+"/moment_variability_time_series.png)");
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("Min Mag", "Scatter", "2-D Hist");
+			for (double riMinMag : riMinMags) {
+				String prefix = "interevent_elements_m";
+				if (riMinMag == Math.floor(riMinMag))
+					prefix += (int)riMinMag;
+				else
+					prefix += (float)riMinMag;
+				table.initNewLine();
+				table.addColumn("**M≥"+(float)riMinMag+"**");
+				table.addColumn("![Element Scatter]("+outputDir.getName()+"/"+prefix+"_scatter.png)");
+				table.addColumn("![Element 2-D Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
+				table.finalizeLine();
+			}
+			lines.addAll(table.build());
 			lines.add("");
-			lines.add("We then compute Welch's power spectral density estimate on the entire time series. Results are plotted below, "
-					+ "with a Poisson randomization of the catalog also plotted in a gray line, and the 95% confidence bounds from "
-					+ MomentRateVaribilityPlot.num_poisson+" realizations as a light gray shaded area. Significant deviations outside the "
-					+ "Poisson confidence intervals indicate synchronous behaviour.");
+			lines.add("#### Subsection Interevent Time Comparisons");
+			lines.add(topLink);
 			lines.add("");
-			lines.add("![Welch PSD]("+outputDir.getName()+"/moment_variability_welch.png)");
+			if (minFractForInclusion > 0) {
+				lines.add("*Subsections participate in a rupture if at least "+(float)(minFractForInclusion*100d)+" % of its area ruptures*");
+				lines.add("");
+			}
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("Min Mag", "Scatter", "2-D Hist");
+			for (double riMinMag : riMinMags) {
+				String prefix = "interevent_sub_sects_m";
+				if (riMinMag == Math.floor(riMinMag))
+					prefix += (int)riMinMag;
+				else
+					prefix += (float)riMinMag;
+				table.initNewLine();
+				table.addColumn("**M≥"+(float)riMinMag+"**");
+				table.addColumn("![Subsection Scatter]("+outputDir.getName()+"/"+prefix+"_scatter.png)");
+				table.addColumn("![Subsection 2-D Hist]("+outputDir.getName()+"/"+prefix+"_hist2D.png)");
+				table.finalizeLine();
+			}
+			lines.addAll(table.build());
 		}
-		
-		double[] maxTimes = { 1d, 10d, 100d }; 
-		double[] triggerMinMags = { 6d, 6.5d, 7d };
-		if (replot || !new File(outputDir, "trigger_within_prev_m7_1yr.png").exists()) {
-			for (double triggerMinMag : triggerMinMags) {
-				if (triggerMinMag < minMag)
-					continue;
-				ElasticReboundTriggeringPlot plot = new ElasticReboundTriggeringPlot(getSubSectMapper(), triggerMinMag, maxTimes);
-				plot.initialize(getName(), outputDir, "trigger_within_prev_m"+optionalDigitDF.format(triggerMinMag));
+
+		if (plotsSet.contains(StandardPlots.PALEO_RECURRENCE)) {
+			File paleoCSVFile = new File(outputDir, "paleo_recurrence.csv");
+			if (replot || !paleoCSVFile.exists()) {
+				PaleoRecurrencePlot plot = new PaleoRecurrencePlot(getElements(), getSubSectMapper());
+				plot.initialize(getName(), outputDir, "paleo_recurrence");
 				plots.add(plot);
 			}
-		}
-		lines.add("");
-		lines.add("### Trigger Hypocenter Statistics Within Previous Rupture Area");
-		lines.add(topLink); lines.add("");
-		
-		String[][] exampleArray = null;
-		for (int i=0; i<triggerMinMags.length; i++) {
-			double triggerMinMag = triggerMinMags[i];
-			String prefix = "trigger_within_prev_m"+optionalDigitDF.format(triggerMinMag);
-			File example1 = new File(outputDir, prefix+"_example_re_rup.png");
-			File example2 = new File(outputDir, prefix+"_example_new_hypo.png");
-			if (example1.exists() || example2.exists()) {
-				if (exampleArray == null)
-					exampleArray = new String[2][triggerMinMags.length];
-				exampleArray[0][i] = example1.exists() ? "![example]("+outputDir.getName()+"/"+example1.getName()+")" : "";
-				exampleArray[1][i] = example2.exists() ? "![example]("+outputDir.getName()+"/"+example2.getName()+")" : "";
+			lines.add("");
+			lines.add("### Paleo Recurrence Plots");
+			lines.add(topLink); lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_raw_sect_rate.png)",
+					"![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_paleo_sect_rate.png)");
+			table.addLine("![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_raw_elem_rate.png)",
+					"![Paleo Plot]("+outputDir.getName()+"/paleo_recurrence_paleo_elem_rate.png)");
+			lines.addAll(table.build());
+			lines.add("");
+			if (paleoCSVFile.exists()) {
+				CSVFile<String> csv = CSVFile.readFile(new File(outputDir, "paleo_recurrence.csv"), true);
+				lines.addAll(MarkdownUtils.tableFromCSV(csv, false).build());
 			}
 		}
-		if (exampleArray != null) {
+
+		lines.add("");
+		if (plotsSet.contains(StandardPlots.PALEO_OPEN_INTERVAL)) {
+			lines.add("### Paleo Open Interval Plots");
+			lines.add(topLink); lines.add("");
+			lines.add("#### Paleo Open Interval Plots, Biasi and Sharer 2019");
+			lines.add(topLink); lines.add("");
+			lines.add("These plots use the 5 paleoseismic sites identified in Biasi & Scharer (2019) on the Hayward, N. SAF, S. SAF, and SJC faults. "
+					+ "By default, a rupture is counted at a paleo site if the nearest element (at the surface) slips any amount. We also alternatively "
+					+ "apply a probability of detection model. Those results are marked as 'Prob. Filtered'.");
+			lines.add("");
+			lines.addAll(getPaleoPlotLines(outputDir, "paleo_open_biasi"));
+			
+			if (replot || !new File(outputDir, "paleo_open_biasi_prob.png").exists()) {
+				PaleoOpenIntervalPlot paleoPlot = new PaleoOpenIntervalPlot(getElements(), PaleoOpenIntervalPlot.getSetBiasi2019(), 100);
+				paleoPlot.initialize(getName(), outputDir, "paleo_open_biasi");
+				plots.add(paleoPlot);
+			}
+			lines.add("");
+			lines.add("#### Paleo Open Interval Plots, UCERF3");
+			lines.add(topLink); lines.add("");
+			lines.add("These plots use the full set of UCERF3 paleoseismic sites. "
+					+ "By default, a rupture is counted at a paleo site if the nearest element (at the surface) slips any amount. We also alternativesly"
+					+ "apply a probability of detection model. Those results are marked as 'Prob. Filtered'.");
+			lines.add("");
+			lines.addAll(getPaleoPlotLines(outputDir, "paleo_open_ucerf3"));
+			
+			if (replot || !new File(outputDir, "paleo_open_ucerf3_prob.png").exists()) {
+				PaleoOpenIntervalPlot paleoPlot = new PaleoOpenIntervalPlot(getElements(), PaleoOpenIntervalPlot.getSetUCERF3(), 100);
+				paleoPlot.initialize(getName(), outputDir, "paleo_open_ucerf3");
+				plots.add(paleoPlot);
+			}
+		}
+		
+		if (plotsSet.contains(StandardPlots.MOMENT_RATE_VARIABILITY)) {
+			if (getDurationYears() > MomentRateVaribilityPlot.MIN_CAT_LEN_YEARS) {
+				if (replot || !new File(outputDir, "moment_variability_time_series.png").exists()) {
+					MomentRateVaribilityPlot momVarPlot = new MomentRateVaribilityPlot(25, 2000);
+					momVarPlot.initialize(getName(), outputDir, "moment_variability");
+					plots.add(momVarPlot);
+				}
+				lines.add("");
+				lines.add("### Moment Release Variability Plots");
+				lines.add(topLink); lines.add("");
+				lines.add("We first create a tapered moment release time series for the entire catalog. Each event's moment is distributed "
+						+"across a 25 year Hanning (cosine) taper. Here is a plot of a random 2,000 year section of this time series:");
+				lines.add("");
+				lines.add("![Time Series]("+outputDir.getName()+"/moment_variability_time_series.png)");
+				lines.add("");
+				lines.add("We then compute Welch's power spectral density estimate on the entire time series. Results are plotted below, "
+						+ "with a Poisson randomization of the catalog also plotted in a gray line, and the 95% confidence bounds from "
+						+ MomentRateVaribilityPlot.num_poisson+" realizations as a light gray shaded area. Significant deviations outside the "
+						+ "Poisson confidence intervals indicate synchronous behaviour.");
+				lines.add("");
+				lines.add("![Welch PSD]("+outputDir.getName()+"/moment_variability_welch.png)");
+			}
+		}
+		
+		if (plotsSet.contains(StandardPlots.ELASTIC_REBOUND_TRIGGERING)) {
+			double[] maxTimes = { 1d, 10d, 100d }; 
+			double[] triggerMinMags = { 6d, 6.5d, 7d };
+			if (replot || !new File(outputDir, "elastic_rebound_triggering_m7_1yr.png").exists()) {
+				for (double triggerMinMag : triggerMinMags) {
+					if (triggerMinMag < minMag)
+						continue;
+					ElasticReboundTriggeringPlot plot = new ElasticReboundTriggeringPlot(getSubSectMapper(), triggerMinMag, maxTimes);
+					plot.initialize(getName(), outputDir, "elastic_rebound_triggering_m"+optionalDigitDF.format(triggerMinMag));
+					plots.add(plot);
+				}
+			}
+			lines.add("");
+			lines.add("### Trigger Hypocenter Statistics Within Previous Rupture Area");
+			lines.add(topLink); lines.add("");
+			
+			String[][] exampleArray = null;
+			for (int i=0; i<triggerMinMags.length; i++) {
+				double triggerMinMag = triggerMinMags[i];
+				String prefix = "elastic_rebound_triggering_m"+optionalDigitDF.format(triggerMinMag);
+				File example1 = new File(outputDir, prefix+"_example_re_rup.png");
+				File example2 = new File(outputDir, prefix+"_example_new_hypo.png");
+				if (example1.exists() || example2.exists()) {
+					if (exampleArray == null)
+						exampleArray = new String[2][triggerMinMags.length];
+					exampleArray[0][i] = example1.exists() ? "![example]("+outputDir.getName()+"/"+example1.getName()+")" : "";
+					exampleArray[1][i] = example2.exists() ? "![example]("+outputDir.getName()+"/"+example2.getName()+")" : "";
+				}
+			}
+			if (exampleArray != null) {
+				table = MarkdownUtils.tableBuilder();
+				table.initNewLine();
+				for (double triggerMinMag : triggerMinMags)
+					if (triggerMinMag >= minMag)
+						table.addColumn("M≥"+optionalDigitDF.format(triggerMinMag));
+				table.finalizeLine();
+				for (String[] vals : exampleArray)
+					table.addLine(vals);
+				lines.add("Example rupture plots:");
+				lines.add("");
+				lines.addAll(table.build());
+				lines.add("");
+			}
+			
 			table = MarkdownUtils.tableBuilder();
 			table.initNewLine();
 			for (double triggerMinMag : triggerMinMags)
 				if (triggerMinMag >= minMag)
 					table.addColumn("M≥"+optionalDigitDF.format(triggerMinMag));
 			table.finalizeLine();
-			for (String[] vals : exampleArray)
-				table.addLine(vals);
-			lines.add("Example rupture plots:");
-			lines.add("");
-			lines.addAll(table.build());
-			lines.add("");
-		}
-		
-		table = MarkdownUtils.tableBuilder();
-		table.initNewLine();
-		for (double triggerMinMag : triggerMinMags)
-			if (triggerMinMag >= minMag)
-				table.addColumn("M≥"+optionalDigitDF.format(triggerMinMag));
-		table.finalizeLine();
-			
-		for (double maxTime : maxTimes) {
-			table.initNewLine();
-			for (double triggerMinMag : triggerMinMags) {
-				if (triggerMinMag >= minMag) {
-					String prefix = "trigger_within_prev_m"+optionalDigitDF.format(triggerMinMag)
-						+"_"+optionalDigitDF.format(maxTime)+"yr";
-					table.addColumn("![hypocenter plot]("+outputDir.getName()+"/"+prefix+".png)");
+				
+			for (double maxTime : maxTimes) {
+				table.initNewLine();
+				for (double triggerMinMag : triggerMinMags) {
+					if (triggerMinMag >= minMag) {
+						String prefix = "elastic_rebound_triggering_m"+optionalDigitDF.format(triggerMinMag)
+							+"_"+optionalDigitDF.format(maxTime)+"yr";
+						table.addColumn("![hypocenter plot]("+outputDir.getName()+"/"+prefix+".png)");
+					}
 				}
+				table.finalizeLine();
 			}
-			table.finalizeLine();
+			lines.addAll(table.build());
 		}
-		lines.addAll(table.build());
 		
 		return plots;
 	}
@@ -1962,10 +2051,18 @@ public class RSQSimCatalog implements XMLSaveable {
 		return missingText;
 	}
 	
-	public List<String> writeStandardDiagnosticPlots(File outputDir, int skipYears, double minMag, boolean replot, String topLink)
-			throws IOException {
+	public List<String> writeStandardDiagnosticPlots(File outputDir, int skipYears, double minMag, boolean replot, String topLink,
+			StandardPlots... standardPlots) throws IOException {
 		List<String> lines = new ArrayList<>();
-		List<AbstractPlot> plots = buildStandardPlotLines(outputDir, skipYears, minMag, replot, topLink, lines);
+		HashSet<StandardPlots> plotsSet;
+		if (standardPlots == null || standardPlots.length == 0) {
+			plotsSet = new HashSet<>(EnumSet.allOf(StandardPlots.class));
+		} else {
+			plotsSet = new HashSet<>();
+			for (StandardPlots plot : standardPlots)
+				plotsSet.add(plot);
+		}
+		List<AbstractPlot> plots = buildStandardPlotLines(outputDir, skipYears, minMag, replot, topLink, lines, plotsSet);
 		
 		if (plots.isEmpty())
 			return lines;
@@ -1991,7 +2088,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		// lines could have changed, regenerate
 		lines.clear();
-		buildStandardPlotLines(outputDir, skipYears, minMag, false, topLink, lines);
+		buildStandardPlotLines(outputDir, skipYears, minMag, false, topLink, lines, plotsSet);
 		
 		return lines;
 	}
@@ -2031,7 +2128,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		el.addAttribute("name", name);
 		el.addAttribute("author", author);
-		el.addAttribute("dateMillis", date.getTimeInMillis()+"");
+		el.addAttribute("dateMillis", date == null ? "0" : date.getTimeInMillis()+"");
 		el.addAttribute("metadata", metadata);
 		if (fm != null)
 			el.addAttribute("fm", fm.name());
@@ -2511,22 +2608,22 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
-//		GregorianCalendar minDate = cal(2019, 5, 1);
-//		for (Catalogs cat : cats) {
+		GregorianCalendar minDate = cal(2019, 7, 1);
+		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : new Catalogs[] {
-//				Catalogs.BRUCE_2585,
+////				Catalogs.BRUCE_2585,
 //				Catalogs.BRUCE_2585_1MYR,
-//				Catalogs.BRUCE_2740,
-//				Catalogs.BRUCE_2829,
-//				Catalogs.BRUCE_3271,
-//				Catalogs.JG_tunedBase1m_ddotEQmod,
-//				Catalogs.JG_tuneBase1m,
+////				Catalogs.BRUCE_2740,
+////				Catalogs.BRUCE_2829,
+////				Catalogs.BRUCE_3271,
+////				Catalogs.JG_tunedBase1m_ddotEQmod,
+////				Catalogs.JG_tuneBase1m,
 //				}) {
 		// all catalogs
-		GregorianCalendar minDate = cal(2000, 1, 1);
-		for (Catalogs cat : cats) {
+//		GregorianCalendar minDate = cal(2000, 1, 1);
+//		for (Catalogs cat : cats) {
 			
 			if (cat.catalog.getDate().before(minDate))
 				continue;

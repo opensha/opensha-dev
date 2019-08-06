@@ -119,7 +119,8 @@ public class ElasticReboundTriggeringPlot extends AbstractPlot {
 			prevRups.remove(0);
 		
 		RSQSimEvent event = (RSQSimEvent)e;
-		List<List<SubSectionMapping>> bundled = mapper.getFilteredSubSectionMappings(event);
+//		List<List<SubSectionMapping>> bundled = mapper.getFilteredSubSectionMappings(event);
+		List<List<SubSectionMapping>> bundled = mapper.getAllSubSectionMappings(event);
 		if (bundled.isEmpty())
 			return;
 		List<SubSectionMapping> allMappings = new ArrayList<>();
@@ -183,16 +184,16 @@ public class ElasticReboundTriggeringPlot extends AbstractPlot {
 							double myEndDAS;
 							if (i == 0) {
 								DAS_Record myDAS = mapping.getDASforSlip(SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN);
-								if (mapping.isReversed())
+								if (mapping.isReversed() && myDAS != null)
 									myDAS = myDAS.getReversed(sectLen);
-								myStartDAS = myDAS.startDAS;
+								myStartDAS = myDAS == null ? sectLen : myDAS.startDAS;
 								myEndDAS = sectLen;
 							} else  if (i == allMappings.size()-1) {
 								DAS_Record myDAS = mapping.getDASforSlip(SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN);
-								if (mapping.isReversed())
+								if (mapping.isReversed() && myDAS != null)
 									myDAS = myDAS.getReversed(sectLen);
 								myStartDAS = 0d;
-								myEndDAS = myDAS.endDAS;
+								myEndDAS = myDAS == null ? 0d : myDAS.endDAS;
 							} else {
 								myStartDAS = 0d;
 								myEndDAS = sectLen;
@@ -200,18 +201,20 @@ public class ElasticReboundTriggeringPlot extends AbstractPlot {
 							SubSectionMapping prevSectMapping = prevMapping.idToMappings.get(sectID);
 							if (prevSectMapping != null) {
 								DAS_Record myDAS = prevSectMapping.getDASforSlip(SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN);
-								if (mapping.isReversed())
-									myDAS = myDAS.getReversed(sectLen);
-								if (prevStartDAS < 0) {
-									prevStartDAS = curDAS + myDAS.startDAS;
-									if (i == 0 && (float)prevStartDAS <= (float)myStartDAS)
+								if (myDAS != null) {
+									if (mapping.isReversed())
+										myDAS = myDAS.getReversed(sectLen);
+									if (prevStartDAS < 0) {
+										prevStartDAS = curDAS + myDAS.startDAS;
+										if (i == 0 && (float)prevStartDAS <= (float)myStartDAS)
+											// doesn't actually encompass
+											continue rupLoop;
+									}
+									prevEndDAS = curDAS + myDAS.endDAS;
+									if (i == allMappings.size()-1 && prevEndDAS >= (curDAS + myEndDAS))
 										// doesn't actually encompass
 										continue rupLoop;
 								}
-								prevEndDAS = curDAS + myDAS.endDAS;
-								if (i == allMappings.size()-1 && prevEndDAS >= (curDAS + myEndDAS))
-									// doesn't actually encompass
-									continue rupLoop;
 							}
 							if (i == 0 && myStartDAS > 0) {
 								// trim it
@@ -438,12 +441,13 @@ public class ElasticReboundTriggeringPlot extends AbstractPlot {
 					double das = curDAS + vertDAS;
 					elemXY.set(das, verts[i].getDepth());
 				}
+				elemXY.set(elemXY.getX(0), elemXY.getY(0)); // close it
 				
 				if (prev || encomp) {
 					boolean prevHypo = prevRup.hypocenter == elem;
 					boolean encompHypo = encompRup.hypocenter == elem;
 					
-					double[] polyElems = new double[verts.length*2];
+					double[] polyElems = new double[elemXY.size()*2];
 					int ind = 0;
 					for (Point2D pt : elemXY) {
 						polyElems[ind++] = pt.getX();
