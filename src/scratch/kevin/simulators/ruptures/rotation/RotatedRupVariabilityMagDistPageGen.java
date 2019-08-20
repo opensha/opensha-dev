@@ -308,6 +308,7 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 			methodSpecificLines.add("[RSQSim Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 			
 			pageGen.generatePage(rotDir, periods, methodSpecificLines, highlightMags, highlightDists);
+			pageGen.clearCaches();
 		}
 		
 		catalog.writeMarkdownSummary(catalogOutputDir, true, false);

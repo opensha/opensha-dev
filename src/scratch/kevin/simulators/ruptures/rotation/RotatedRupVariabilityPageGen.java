@@ -16,7 +16,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.math3.stat.StatUtils;
@@ -27,6 +31,7 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
@@ -221,6 +226,13 @@ public abstract class RotatedRupVariabilityPageGen {
 		for (RSQSimEvent event : events)
 			eventsMap.put(event.getID(), event);
 		return eventsMap;
+	}
+	
+	protected void clearCaches() {
+		varResultCache.invalidateAll();
+		downsampledVarResultCache.invalidateAll();
+		gmpeResultCache.invalidateAll();
+		gmpeEventCache.invalidateAll();
 	}
 	
 	protected void setEventsMap(Map<Integer, RSQSimEvent> eventsMap) {
@@ -1314,6 +1326,56 @@ public abstract class RotatedRupVariabilityPageGen {
 		PeriodDepResidualsList downsampledList = null;
 		List<List<ASK_EventData>> realDataList = null;
 		List<VariabilityResult> allVarResults = new ArrayList<>();
+		List<String> dataSizeDependenceLines = null;
+		
+		DiscretizedFunc gmpeFunc = null;
+		GMPE_Result gmpeResult = null;
+		if (gmpes != null && type.gmpeStdDevType != null) {
+//			System.out.println("Doing GMPE!");
+			List<GMPE_Result> gmpeResults = new ArrayList<>();
+			List<Double> myDists = new ArrayList<>();
+			if (distance == null)
+				for (Float dist : distances)
+					myDists.add(dist.doubleValue());
+			else
+				myDists.add(distance.doubleValue());
+			for (Site site : sites) {
+				for (Double dist : myDists) {
+					for (NGAW2_WrapperFullParam gmpe : gmpes) {
+						GMPE_GroupingKey key = new GMPE_GroupingKey(gmpe, site, mag, dist);
+						try {
+							gmpeResults.add(calcGMPE(key));
+						} catch (ExecutionException e) {
+							throw ExceptionUtils.asRuntimeException(e);
+						}
+					}
+				}
+			}
+			if (D) System.out.println("Have "+gmpeResults.size()+" gmpe results");
+			// pack to a single GMPE result
+			gmpeResult = packGMs(gmpeResults.toArray(new GMPE_Result[0]));
+			gmpeFunc = new ArbitrarilyDiscretizedFunc();
+			for (int p=0; p<calcPeriods.length; p++) {
+				switch (type.gmpeStdDevType) {
+				case PHI:
+					gmpeFunc.set(calcPeriods[p], gmpeResult.medianPhi[p]);
+					break;
+				case TAU:
+					gmpeFunc.set(calcPeriods[p], gmpeResult.medianTau[p]);
+					break;
+				case TOTAL:
+					gmpeFunc.set(calcPeriods[p], gmpeResult.medianTotal[p]);
+					break;
+
+				default:
+					throw new IllegalStateException("unsupported type: "+type.gmpeStdDevType);
+				}
+			}
+			gmpeFunc.setName("GMPE "+type.gmpeStdDevType.symbol);
+//			System.out.println(gmpeFunc);
+		} else {
+//			System.out.println("NOT doing GMPEs. Type: "+type.gmpeStdDevType+". GMPEs null? "+(gmpes == null));
+		}
 		
 		for (int i=0; i<mySites.size(); i++) {
 			Site site = mySites.get(i);
@@ -1452,6 +1514,8 @@ public abstract class RotatedRupVariabilityPageGen {
 				stdDevFunc.setName("Total");
 				totStdDevFunc = stdDevFunc;
 				totStdDevPercentiles = stdDevPercentiles;
+				// now plot downsampled as a function of # recordings
+				dataSizeDependenceLines = plotDataSizeDependence(key, resourcesDir, stdDevFunc.getY(0d), gmpeResult);
 			} else {
 				stdDevFunc.setName(site.getName());
 				stdDevFuncs.add(stdDevFunc);
@@ -1463,54 +1527,6 @@ public abstract class RotatedRupVariabilityPageGen {
 
 		String distPrefix = distance == null ? "" : "_"+optionalDigitDF.format(distance)+"km";
 		String magPrefix = mag == null ? "" : "_m"+optionalDigitDF.format(mag);
-		
-		DiscretizedFunc gmpeFunc = null;
-		if (gmpes != null && type.gmpeStdDevType != null) {
-//			System.out.println("Doing GMPE!");
-			List<GMPE_Result> gmpeResults = new ArrayList<>();
-			List<Double> myDists = new ArrayList<>();
-			if (distance == null)
-				for (Float dist : distances)
-					myDists.add(dist.doubleValue());
-			else
-				myDists.add(distance.doubleValue());
-			for (Site site : sites) {
-				for (Double dist : myDists) {
-					for (NGAW2_WrapperFullParam gmpe : gmpes) {
-						GMPE_GroupingKey key = new GMPE_GroupingKey(gmpe, site, mag, dist);
-						try {
-							gmpeResults.add(calcGMPE(key));
-						} catch (ExecutionException e) {
-							throw ExceptionUtils.asRuntimeException(e);
-						}
-					}
-				}
-			}
-			if (D) System.out.println("Have "+gmpeResults.size()+" gmpe results");
-			// pack to a single GMPE result
-			GMPE_Result result = packGMs(gmpeResults.toArray(new GMPE_Result[0]));
-			gmpeFunc = new ArbitrarilyDiscretizedFunc();
-			for (int p=0; p<calcPeriods.length; p++) {
-				switch (type.gmpeStdDevType) {
-				case PHI:
-					gmpeFunc.set(calcPeriods[p], result.medianPhi[p]);
-					break;
-				case TAU:
-					gmpeFunc.set(calcPeriods[p], result.medianTau[p]);
-					break;
-				case TOTAL:
-					gmpeFunc.set(calcPeriods[p], result.medianTotal[p]);
-					break;
-
-				default:
-					throw new IllegalStateException("unsupported type: "+type.gmpeStdDevType);
-				}
-			}
-			gmpeFunc.setName("GMPE "+type.gmpeStdDevType.symbol);
-//			System.out.println(gmpeFunc);
-		} else {
-//			System.out.println("NOT doing GMPEs. Type: "+type.gmpeStdDevType+". GMPEs null? "+(gmpes == null));
-		}
 		
 		// plot it
 		String prefix = type.prefix+magPrefix+distPrefix+"_std_dev";
@@ -1574,6 +1590,10 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 			lines.addAll(table.build());
 			lines.add("");
+			if (dataSizeDependenceLines != null) {
+				lines.addAll(dataSizeDependenceLines);
+				lines.add("");
+			}
 		}
 		if (!type.stdDevOfMedians) {
 			table = MarkdownUtils.tableBuilder();
@@ -1630,6 +1650,309 @@ public abstract class RotatedRupVariabilityPageGen {
 		return lines;
 	}
 	
+	private List<String> plotDataSizeDependence(VarGroupingKey key, File resourcesDir, double simVal, GMPE_Result gmpeVal)
+			throws IOException {
+		List<List<ASK_EventData>> realData = getRealDataListForKey(key);
+		if (realData == null || realData.isEmpty())
+			return null;
+		int numEvents = realData.size();
+		double aveNumRecordings = 0d;
+		for (List<ASK_EventData> data : realData)
+			aveNumRecordings += data.size();
+		aveNumRecordings /= (double)numEvents;
+		numEvents = Integer.max(numEvents, 2);
+		int roundedNumRecordings = Integer.max(2, (int)Math.round(aveNumRecordings));
+//		RotatedRupVariabilityConfig config = magConfigs.get(key.magnitude);
+//		int simNumEvents = config.getValues(Integer.class, Quantity.EVENT_ID).size();
+//		int simNumRecordings = 1;
+		VariabilityType type = key.type;
+		List<VarGroupingKey> keys = new ArrayList<>();
+		if (key.site == null && type.separateSites && sites.size() > 1) {
+			for (Site site : sites)
+				keys.add(new VarGroupingKey(type, key.magnitude, key.distance, site));
+		} else {
+			keys.add(new VarGroupingKey(type, key.magnitude, key.distance, key.site));
+		}
+//		for (Quantity varyQ : type.variedQuantities)
+//			simNumRecordings *= config.getQuantitiesMap().get(varyQ).size();
+//		int maxNumEvents = Integer.max(numEvents, simNumEvents);
+		int maxNumEvents = Integer.max(50, 2*numEvents);
+		
+		System.out.println("Calculating event count dependence (max="+maxNumEvents+")");
+		int numRealizations = 100;
+		ArbitrarilyDiscretizedFunc numEventsFunc = new ArbitrarilyDiscretizedFunc();
+		int num = 2;
+		while (num<=maxNumEvents) {
+			numEventsFunc.set((double)num, 0d);
+			if (num>=100)
+				num += 20;
+			else if (num > 50)
+				num += 10;
+			else if (num > 20)
+				num += 5;
+			else if (num > 10)
+				num += 2;
+			else
+				num++;
+		}
+		if (numEventsFunc.getMaxX() < maxNumEvents)
+			numEventsFunc.set((double)maxNumEvents, 0d);
+		DiscretizedFunc lower95Func = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc upper95Func = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc lower68Func = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc upper68Func = new ArbitrarilyDiscretizedFunc();
+		DiscretizedFunc sigmaFunc = new ArbitrarilyDiscretizedFunc();
+		List<Future<double[]>> futures = new ArrayList<>();
+		ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		for (int i=0; i<numEventsFunc.size(); i++) {
+			List<List<ASK_EventData>> realDataList = new ArrayList<>();
+			int myNumEvents = (int)Math.round(numEventsFunc.getX(i));
+			for (int j=0; j<myNumEvents; j++) {
+				List<ASK_EventData> dataList = new ArrayList<>();
+				for (int k=0; k<roundedNumRecordings; k++)
+					dataList.add(null); // only the side of this list is used, not the contents. null is ok
+				realDataList.add(dataList);
+			}
+			
+			futures.add(exec.submit(new DependCalcCallable(key.type, numRealizations, keys, realDataList)));
+		}
+		for (int i=0; i<numEventsFunc.size(); i++) {
+			int myNumEvents = (int)Math.round(numEventsFunc.getX(i));
+			System.out.print(myNumEvents+" ");
+			
+			double[] results;
+			try {
+				results = futures.get(i).get();
+			} catch (Exception e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			
+			double x = numEventsFunc.getX(i);
+			lower95Func.set(x, StatUtils.percentile(results, 2.5));
+			upper95Func.set(x, StatUtils.percentile(results, 97.5));
+			lower68Func.set(x, StatUtils.percentile(results, 16));
+			upper68Func.set(x, StatUtils.percentile(results, 84));
+			numEventsFunc.set(x, StatUtils.percentile(results, 50d));
+			sigmaFunc.set(x, Math.sqrt(StatUtils.variance(results)));
+		}
+		System.out.println();
+		StdDevPercentileFuncs numEventsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscDataset(numEventsFunc, lower95Func, upper95Func),
+				new UncertainArbDiscDataset(numEventsFunc, lower68Func, upper68Func), sigmaFunc);
+		String prefix = type.prefix+"_event_count_dependence";
+		if (key.distance == null)
+			prefix += "_all_dists";
+		else
+			prefix += "_"+optionalDigitDF.format(key.distance)+"km";
+		plotDataSizeDependence(numEventsFunc, numEventsPercentiles, type.name+" ("+type.symbol+") Event Count Dependence",
+				"Num Events", type.symbol, numEvents, "ASK (2014) Num Events", simVal, gmpeVal, resourcesDir, prefix, type);
+		
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		table.addLine("Event Count Dependence", "Recordings/Event Dependence");
+		table.initNewLine();
+		table.addColumn("![num events dependence]("+resourcesDir.getName()+"/"+prefix+".png)");
+		
+//		int maxNumRecordings = Integer.max(roundedNumRecordings, simNumRecordings);
+		int maxNumRecordings = Integer.max(50, 2*roundedNumRecordings);
+		System.out.println("Calculating recording count dependence (max="+maxNumRecordings+")");
+		ArbitrarilyDiscretizedFunc numRecordingsFunc = new ArbitrarilyDiscretizedFunc();
+		num = 2;
+		while (num<=maxNumRecordings) {
+			numRecordingsFunc.set((double)num, 0d);
+			if (num>=100)
+				num += 20;
+			else if (num > 50)
+				num += 10;
+			else if (num > 20)
+				num += 5;
+			else if (num > 10)
+				num += 2;
+			else
+				num++;
+		}
+		if (numRecordingsFunc.getMaxX() < maxNumRecordings)
+			numRecordingsFunc.set((double)maxNumRecordings, 0d);
+		lower95Func = new ArbitrarilyDiscretizedFunc();
+		upper95Func = new ArbitrarilyDiscretizedFunc();
+		lower68Func = new ArbitrarilyDiscretizedFunc();
+		upper68Func = new ArbitrarilyDiscretizedFunc();
+		sigmaFunc = new ArbitrarilyDiscretizedFunc();
+		futures = new ArrayList<>();
+		for (int i=0; i<numRecordingsFunc.size(); i++) {
+			List<List<ASK_EventData>> realDataList = new ArrayList<>();
+			int myNumRecordings = (int)Math.round(numRecordingsFunc.getX(i));
+			for (int j=0; j<numEvents; j++) {
+				List<ASK_EventData> dataList = new ArrayList<>();
+				for (int k=0; k<myNumRecordings; k++)
+					dataList.add(null); // only the side of this list is used, not the contents. null is ok
+				realDataList.add(dataList);
+			}
+			
+			futures.add(exec.submit(new DependCalcCallable(key.type, numRealizations, keys, realDataList)));
+		}
+		for (int i=0; i<numRecordingsFunc.size(); i++) {
+			int myNumRecordings = (int)Math.round(numRecordingsFunc.getX(i));
+			System.out.print(myNumRecordings+" ");
+			
+			double[] results;
+			try {
+				results = futures.get(i).get();
+			} catch (Exception e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			
+			double x = numRecordingsFunc.getX(i);
+			lower95Func.set(x, StatUtils.percentile(results, 2.5));
+			upper95Func.set(x, StatUtils.percentile(results, 97.5));
+			lower68Func.set(x, StatUtils.percentile(results, 16));
+			upper68Func.set(x, StatUtils.percentile(results, 84));
+			numRecordingsFunc.set(x, StatUtils.percentile(results, 50d));
+			sigmaFunc.set(x, Math.sqrt(StatUtils.variance(results)));
+		}
+		System.out.println();
+		exec.shutdown();
+		StdDevPercentileFuncs numRecordingsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscDataset(numRecordingsFunc, lower95Func, upper95Func),
+				new UncertainArbDiscDataset(numRecordingsFunc, lower68Func, upper68Func), sigmaFunc);
+		prefix = type.prefix+"_event_recordings_dependence";
+		if (key.distance == null)
+			prefix += "_all_dists";
+		else
+			prefix += "_"+optionalDigitDF.format(key.distance)+"km";
+		plotDataSizeDependence(numRecordingsFunc, numRecordingsPercentiles, type.name+" ("+type.symbol+") Event Recordings Dependence",
+				"Num Recordings Per Event", type.symbol, aveNumRecordings, "ASK (2014) Num Recordings/Event", simVal, gmpeVal, resourcesDir, prefix, type);
+		table.addColumn("![num recordings dependence]("+resourcesDir.getName()+"/"+prefix+".png)");
+		table.finalizeLine();
+		
+		List<String> lines = new ArrayList<>();
+		lines.add("These plots show the dependence of "+type.htmlSymbol+" to the number of events included and the number of recordings"
+				+ "per event. The left plot holds the number of recordings per event fixed at the average data value ("+roundedNumRecordings
+				+"), varying the number of events. The right plot holds the number of events fixed at the data value ("+numEvents+"), varying "
+				+ "the number of recordings per event. Period-independent "+type.htmlSymbol+" values are plotted.");
+		lines.add("");
+		lines.addAll(table.build());
+		
+		return lines;
+	}
+	
+	private class DependCalcCallable implements Callable<double[]> {
+		
+		private VariabilityType type;
+		private int numRealizations;
+		private List<VarGroupingKey> keys;
+		private List<List<ASK_EventData>> realDataList;
+
+		public DependCalcCallable(VariabilityType type, int numRealizations, List<VarGroupingKey> keys,
+				List<List<ASK_EventData>> realDataList) {
+					this.type = type;
+					this.numRealizations = numRealizations;
+					this.keys = keys;
+					this.realDataList = realDataList;
+			
+		}
+
+		@Override
+		public double[] call() throws Exception {
+			List<Double> resultsList = new ArrayList<>();
+			
+			for (int n=0; n<numRealizations; n++) {
+				// each call will be a new stochastic realization due to custom equals/hashCode implementation with realDataList set
+				List<VariabilityResult> results = new ArrayList<>();
+				for (VarGroupingKey myKey : keys) {
+					VarGroupingKey randKey = new VarGroupingKey(myKey.type, myKey.magnitude, myKey.distance, myKey.site);
+					randKey.realDataList = realDataList;
+					results.add(calcVarResult(randKey));
+				}
+				for (VariabilityResult result : results) {
+					if (type.stdDevOfMedians)
+						resultsList.add(result.getPeriodIndepMedianStdDevSet().stdDev);
+					else
+						resultsList.add(result.getPeriodIndepResidualStdDevSet().total);
+				}
+			}
+			return Doubles.toArray(resultsList);
+		}
+		
+	}
+	
+	private void plotDataSizeDependence(DiscretizedFunc medianFunc, StdDevPercentileFuncs percentiles,
+			String title, String xAxisLabel, String yAxisLabel, double dataX, String dataName,
+			double simVal, GMPE_Result gmpeVal, File resourcesDir, String prefix, VariabilityType type)
+					throws IOException {
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+
+//		Color color95 = new Color(20, 20, 20);
+//		Color color68 = new Color(60, 60, 60);
+		Color color95 = Color.LIGHT_GRAY;
+		Color color68 = Color.GRAY;
+		
+		percentiles.bounds95.setName("95% Range");
+		funcs.add(percentiles.bounds95);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, color95));
+		percentiles.bounds68.setName("68% Range");
+		funcs.add(percentiles.bounds68);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, color68));
+		medianFunc.setName("Median");
+		funcs.add(medianFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+		
+		XY_DataSet dataFunc = new DefaultXY_DataSet();
+		dataFunc.setName(dataName);
+		dataFunc.set(dataX, 0d);
+		dataFunc.set(dataX, 1d);
+		funcs.add(dataFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.RED));
+		
+		if (gmpeVal != null) {
+			double gmpeY;
+			switch (type.gmpeStdDevType) {
+			case PHI:
+				gmpeY = StatUtils.mean(gmpeVal.medianPhi);
+				break;
+			case TAU:
+				gmpeY = StatUtils.mean(gmpeVal.medianTau);
+				break;
+			case TOTAL:
+				gmpeY = StatUtils.mean(gmpeVal.medianTotal);
+				break;
+
+			default:
+				throw new IllegalStateException("Unknown GMPE type: "+type.gmpeStdDevType);
+			}
+			XY_DataSet gmpeFunc = new DefaultXY_DataSet();
+			gmpeFunc.setName("GMPE "+type.symbol);
+			gmpeFunc.set(0d, gmpeY);
+			gmpeFunc.set(medianFunc.getMaxX(), gmpeY);
+			funcs.add(gmpeFunc);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.BLUE));
+		}
+		
+		XY_DataSet simFunc = new DefaultXY_DataSet();
+		simFunc.setName("Simulated "+type.symbol);
+		simFunc.set(0d, simVal);
+		simFunc.set(medianFunc.getMaxX(), simVal);
+		funcs.add(simFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.GREEN.darker()));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
+		spec.setLegendVisible(true);
+
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+
+		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+		
+		Range xRange = new Range(0d, medianFunc.getMaxX());
+		Range yRange = new Range(0d, 1d);
+
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		gp.getChartPanel().setSize(800, 600);
+		File pngFile = new File(resourcesDir, prefix+".png");
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+	}
+
 	static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
 	
 	private static Float nullAsZero(Float value) {

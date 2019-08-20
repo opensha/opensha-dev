@@ -168,6 +168,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 			methodSpecificLines.add("[RSQSim Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 			
 			pageGen.generatePage(rotDir, periods, methodSpecificLines);
+			pageGen.clearCaches();
 		}
 		
 		catalog.writeMarkdownSummary(catalogOutputDir, true, false);
