@@ -72,13 +72,6 @@ public class CentralItalyInversion {
 	final static String ROOT_DATA_DIR = "src/scratch/alessandro/data__CentralItaly/"; // where to find the data
 
 	
-	// These values are the same for all fault sections
-	// I need to define these values for each subsection or rupture
-	final static double UPPER_SEIS_DEPTH = 0;
-	final static double LOWER_SEIS_DEPTH = 15;
-	final static double FAULT_DIP = 50;
-	final static double FAULT_RAKE = -90;
-	
 	final static double hazGridSpacing = 0.05;
 	
 	CentralItalySlipRatesEnum centralItalySlipRatesEnum;
@@ -94,7 +87,7 @@ public class CentralItalyInversion {
 	final static String SEGMENT_BOUNDARY_DATA_FILE = "segmentBoundaryData.txt";
 	final static String APRIORI_RUP_RATE_FROM_SECT_CONSTR_FILENAME = "aPrioriRupRatesFromSegmentationConstraints.txt";
 
-	final static String FAULT_TRACE_DIR_NAME = "subsections_traces/";
+	final static String FAULT_TRACE_DIR_NAME = "subsection_traces_withRakeDipandUppLow/";
 	
 	public enum InversionSolutionType {
 		NON_NEGATIVE_LEAST_SQUARES,
@@ -273,21 +266,34 @@ public class CentralItalyInversion {
 			
 			faultSectionDataList = new ArrayList<FaultSectionPrefData>();
 			for(int s=0; s<numSections; s++) {
+				double FAULT_RAKE=Double.NaN, FAULT_DIP=Double.NaN, UPPER_SEIS_DEPTH=Double.NaN, LOWER_SEIS_DEPTH=Double.NaN;
 				String traceFileName;
 				FaultTrace fltTrace = new FaultTrace("Trace "+s);
 				traceFileName = s+".txt";
 				
 				// read fault trace from file
 				file = new File(ROOT_DATA_DIR+FAULT_TRACE_DIR_NAME+traceFileName);
+				int lineNum = 1;
 				for (String line : Files.readLines(file, Charset.defaultCharset())) {
 					//			System.out.println(line);
 					line = line.trim();
 					String[] split = line.split("\t");	// tab delimited
 					Preconditions.checkState(split.length == 2, "Expected 2 items, got %s", split.length);
 					//			System.out.println(split[0]+"\t"+split[1]);
-					double lon = Double.valueOf(split[0]);
-					double lat = Double.valueOf(split[1]);
-					fltTrace.add(new Location(lat,lon,UPPER_SEIS_DEPTH));
+					if(lineNum==1) {
+						FAULT_RAKE = Double.valueOf(split[0]);
+						FAULT_DIP = Double.valueOf(split[1]);
+					}
+					else if (lineNum==2) {
+						UPPER_SEIS_DEPTH = Double.valueOf(split[0]);
+						LOWER_SEIS_DEPTH = Double.valueOf(split[1]);							
+					}
+					else {
+						double lon = Double.valueOf(split[0]);
+						double lat = Double.valueOf(split[1]);
+						fltTrace.add(new Location(lat,lon,UPPER_SEIS_DEPTH));						
+					}
+					lineNum += 1;
 				}
 
 				FaultSectionPrefData fltSectData = new FaultSectionPrefData();
