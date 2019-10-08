@@ -296,7 +296,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		return quantities;
 	}
 	
-	private enum VariabilityType {
+	public enum VariabilityType {
 		PATH("Path-to-path", "path", "φ_p2p", "&phi;<sub>P2P</sub>", al_atik,
 				null, null,
 				qarr(Quantity.SITE, Quantity.DISTANCE), // separate quantities
@@ -1594,6 +1594,27 @@ public abstract class RotatedRupVariabilityPageGen {
 				lines.addAll(dataSizeDependenceLines);
 				lines.add("");
 			}
+			// now plot site histograms
+			lines.add("These plots show the distribution of period-independent downsampled "+type.htmlSymbol
+					+" for each site.");
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			if (sites.size() > 1 || sites.get(0) != null) {
+				table.initNewLine();
+				for (Site site : sites)
+					table.addColumn("**"+site.getName()+"**");
+				table.finalizeLine();
+			}
+			table.initNewLine();
+			for (Site site : sites) {
+				String sitePrefix = site == null ? "" : "_"+site.getName();
+				prefix = type.prefix+magPrefix+distPrefix+sitePrefix+"_downsampled_hist";
+				plotSitePeriodIndepDownsampledHistogram(resourcesDir, prefix, type, mag, distance, site);
+				table.addColumn("![Dowmsampled Histogram](resources/"+prefix+".png)");
+			}
+			table.finalizeLine();
+			lines.addAll(table.wrap(4, 0).build());
+			lines.add("");
 		}
 		if (!type.stdDevOfMedians) {
 			table = MarkdownUtils.tableBuilder();
@@ -1650,6 +1671,8 @@ public abstract class RotatedRupVariabilityPageGen {
 		return lines;
 	}
 	
+	private boolean replotDependence = false;
+	
 	private List<String> plotDataSizeDependence(VarGroupingKey key, File resourcesDir, double simVal, GMPE_Result gmpeVal)
 			throws IOException {
 		List<List<ASK_EventData>> realData = getRealDataListForKey(key);
@@ -1702,49 +1725,51 @@ public abstract class RotatedRupVariabilityPageGen {
 		DiscretizedFunc lower68Func = new ArbitrarilyDiscretizedFunc();
 		DiscretizedFunc upper68Func = new ArbitrarilyDiscretizedFunc();
 		DiscretizedFunc sigmaFunc = new ArbitrarilyDiscretizedFunc();
-		List<Future<double[]>> futures = new ArrayList<>();
 		ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-		for (int i=0; i<numEventsFunc.size(); i++) {
-			List<List<ASK_EventData>> realDataList = new ArrayList<>();
-			int myNumEvents = (int)Math.round(numEventsFunc.getX(i));
-			for (int j=0; j<myNumEvents; j++) {
-				List<ASK_EventData> dataList = new ArrayList<>();
-				for (int k=0; k<roundedNumRecordings; k++)
-					dataList.add(null); // only the side of this list is used, not the contents. null is ok
-				realDataList.add(dataList);
-			}
-			
-			futures.add(exec.submit(new DependCalcCallable(key.type, numRealizations, keys, realDataList)));
-		}
-		for (int i=0; i<numEventsFunc.size(); i++) {
-			int myNumEvents = (int)Math.round(numEventsFunc.getX(i));
-			System.out.print(myNumEvents+" ");
-			
-			double[] results;
-			try {
-				results = futures.get(i).get();
-			} catch (Exception e) {
-				throw ExceptionUtils.asRuntimeException(e);
-			}
-			
-			double x = numEventsFunc.getX(i);
-			lower95Func.set(x, StatUtils.percentile(results, 2.5));
-			upper95Func.set(x, StatUtils.percentile(results, 97.5));
-			lower68Func.set(x, StatUtils.percentile(results, 16));
-			upper68Func.set(x, StatUtils.percentile(results, 84));
-			numEventsFunc.set(x, StatUtils.percentile(results, 50d));
-			sigmaFunc.set(x, Math.sqrt(StatUtils.variance(results)));
-		}
-		System.out.println();
-		StdDevPercentileFuncs numEventsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscDataset(numEventsFunc, lower95Func, upper95Func),
-				new UncertainArbDiscDataset(numEventsFunc, lower68Func, upper68Func), sigmaFunc);
 		String prefix = type.prefix+"_event_count_dependence";
 		if (key.distance == null)
 			prefix += "_all_dists";
 		else
 			prefix += "_"+optionalDigitDF.format(key.distance)+"km";
-		plotDataSizeDependence(numEventsFunc, numEventsPercentiles, type.name+" ("+type.symbol+") Event Count Dependence",
-				"Num Events", type.symbol, numEvents, "ASK (2014) Num Events", simVal, gmpeVal, resourcesDir, prefix, type);
+		if (replotDependence || !(new File(resourcesDir, prefix+".png").exists())) {
+			List<Future<double[]>> futures = new ArrayList<>();
+			for (int i=0; i<numEventsFunc.size(); i++) {
+				List<List<ASK_EventData>> realDataList = new ArrayList<>();
+				int myNumEvents = (int)Math.round(numEventsFunc.getX(i));
+				for (int j=0; j<myNumEvents; j++) {
+					List<ASK_EventData> dataList = new ArrayList<>();
+					for (int k=0; k<roundedNumRecordings; k++)
+						dataList.add(null); // only the side of this list is used, not the contents. null is ok
+					realDataList.add(dataList);
+				}
+				
+				futures.add(exec.submit(new DependCalcCallable(key.type, numRealizations, keys, realDataList)));
+			}
+			for (int i=0; i<numEventsFunc.size(); i++) {
+				int myNumEvents = (int)Math.round(numEventsFunc.getX(i));
+				System.out.print(myNumEvents+" ");
+				
+				double[] results;
+				try {
+					results = futures.get(i).get();
+				} catch (Exception e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+				
+				double x = numEventsFunc.getX(i);
+				lower95Func.set(x, StatUtils.percentile(results, 2.5));
+				upper95Func.set(x, StatUtils.percentile(results, 97.5));
+				lower68Func.set(x, StatUtils.percentile(results, 16));
+				upper68Func.set(x, StatUtils.percentile(results, 84));
+				numEventsFunc.set(x, StatUtils.percentile(results, 50d));
+				sigmaFunc.set(x, Math.sqrt(StatUtils.variance(results)));
+			}
+			System.out.println();
+			StdDevPercentileFuncs numEventsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscDataset(numEventsFunc, lower95Func, upper95Func),
+					new UncertainArbDiscDataset(numEventsFunc, lower68Func, upper68Func), sigmaFunc);
+			plotDataSizeDependence(numEventsFunc, numEventsPercentiles, type.name+" ("+type.symbol+") Event Count Dependence",
+					"Num Events", type.symbol, numEvents, "ASK (2014) Num Events", simVal, gmpeVal, resourcesDir, prefix, type);
+		}
 		
 		TableBuilder table = MarkdownUtils.tableBuilder();
 		table.addLine("Event Count Dependence", "Recordings/Event Dependence");
@@ -1776,54 +1801,56 @@ public abstract class RotatedRupVariabilityPageGen {
 		lower68Func = new ArbitrarilyDiscretizedFunc();
 		upper68Func = new ArbitrarilyDiscretizedFunc();
 		sigmaFunc = new ArbitrarilyDiscretizedFunc();
-		futures = new ArrayList<>();
-		for (int i=0; i<numRecordingsFunc.size(); i++) {
-			List<List<ASK_EventData>> realDataList = new ArrayList<>();
-			int myNumRecordings = (int)Math.round(numRecordingsFunc.getX(i));
-			for (int j=0; j<numEvents; j++) {
-				List<ASK_EventData> dataList = new ArrayList<>();
-				for (int k=0; k<myNumRecordings; k++)
-					dataList.add(null); // only the side of this list is used, not the contents. null is ok
-				realDataList.add(dataList);
-			}
-			
-			futures.add(exec.submit(new DependCalcCallable(key.type, numRealizations, keys, realDataList)));
-		}
-		for (int i=0; i<numRecordingsFunc.size(); i++) {
-			int myNumRecordings = (int)Math.round(numRecordingsFunc.getX(i));
-			System.out.print(myNumRecordings+" ");
-			
-			double[] results;
-			try {
-				results = futures.get(i).get();
-			} catch (Exception e) {
-				throw ExceptionUtils.asRuntimeException(e);
-			}
-			
-			double x = numRecordingsFunc.getX(i);
-			lower95Func.set(x, StatUtils.percentile(results, 2.5));
-			upper95Func.set(x, StatUtils.percentile(results, 97.5));
-			lower68Func.set(x, StatUtils.percentile(results, 16));
-			upper68Func.set(x, StatUtils.percentile(results, 84));
-			numRecordingsFunc.set(x, StatUtils.percentile(results, 50d));
-			sigmaFunc.set(x, Math.sqrt(StatUtils.variance(results)));
-		}
-		System.out.println();
-		exec.shutdown();
-		StdDevPercentileFuncs numRecordingsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscDataset(numRecordingsFunc, lower95Func, upper95Func),
-				new UncertainArbDiscDataset(numRecordingsFunc, lower68Func, upper68Func), sigmaFunc);
 		prefix = type.prefix+"_event_recordings_dependence";
 		if (key.distance == null)
 			prefix += "_all_dists";
 		else
 			prefix += "_"+optionalDigitDF.format(key.distance)+"km";
-		plotDataSizeDependence(numRecordingsFunc, numRecordingsPercentiles, type.name+" ("+type.symbol+") Event Recordings Dependence",
-				"Num Recordings Per Event", type.symbol, aveNumRecordings, "ASK (2014) Num Recordings/Event", simVal, gmpeVal, resourcesDir, prefix, type);
+		if (replotDependence || !(new File(resourcesDir, prefix+".png").exists())) {
+			List<Future<double[]>> futures = new ArrayList<>();
+			for (int i=0; i<numRecordingsFunc.size(); i++) {
+				List<List<ASK_EventData>> realDataList = new ArrayList<>();
+				int myNumRecordings = (int)Math.round(numRecordingsFunc.getX(i));
+				for (int j=0; j<numEvents; j++) {
+					List<ASK_EventData> dataList = new ArrayList<>();
+					for (int k=0; k<myNumRecordings; k++)
+						dataList.add(null); // only the side of this list is used, not the contents. null is ok
+					realDataList.add(dataList);
+				}
+
+				futures.add(exec.submit(new DependCalcCallable(key.type, numRealizations, keys, realDataList)));
+			}
+			for (int i=0; i<numRecordingsFunc.size(); i++) {
+				int myNumRecordings = (int)Math.round(numRecordingsFunc.getX(i));
+				System.out.print(myNumRecordings+" ");
+
+				double[] results;
+				try {
+					results = futures.get(i).get();
+				} catch (Exception e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+
+				double x = numRecordingsFunc.getX(i);
+				lower95Func.set(x, StatUtils.percentile(results, 2.5));
+				upper95Func.set(x, StatUtils.percentile(results, 97.5));
+				lower68Func.set(x, StatUtils.percentile(results, 16));
+				upper68Func.set(x, StatUtils.percentile(results, 84));
+				numRecordingsFunc.set(x, StatUtils.percentile(results, 50d));
+				sigmaFunc.set(x, Math.sqrt(StatUtils.variance(results)));
+			}
+			System.out.println();
+			StdDevPercentileFuncs numRecordingsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscDataset(numRecordingsFunc, lower95Func, upper95Func),
+					new UncertainArbDiscDataset(numRecordingsFunc, lower68Func, upper68Func), sigmaFunc);
+			plotDataSizeDependence(numRecordingsFunc, numRecordingsPercentiles, type.name+" ("+type.symbol+") Event Recordings Dependence",
+					"Num Recordings Per Event", type.symbol, aveNumRecordings, "ASK (2014) Num Recordings/Event", simVal, gmpeVal, resourcesDir, prefix, type);
+		}
 		table.addColumn("![num recordings dependence]("+resourcesDir.getName()+"/"+prefix+".png)");
 		table.finalizeLine();
+		exec.shutdown();
 		
 		List<String> lines = new ArrayList<>();
-		lines.add("These plots show the dependence of "+type.htmlSymbol+" to the number of events included and the number of recordings"
+		lines.add("These plots show the dependence of "+type.htmlSymbol+" to the number of events included and the number of recordings "
 				+ "per event. The left plot holds the number of recordings per event fixed at the average data value ("+roundedNumRecordings
 				+"), varying the number of events. The right plot holds the number of events fixed at the data value ("+numEvents+"), varying "
 				+ "the number of recordings per event. Period-independent "+type.htmlSymbol+" values are plotted.");
@@ -3124,6 +3151,66 @@ public abstract class RotatedRupVariabilityPageGen {
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Standard Deviation", "");
+		spec.setLegendVisible(true);
+
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+
+		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+		
+		Range xRange = new Range(0d, 1d);
+		Range yRange = new Range(0d, 1d);
+
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		gp.getChartPanel().setSize(800, 450);
+		File pngFile = new File(resourcesDir, prefix+".png");
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+	}
+	
+	private void plotSitePeriodIndepDownsampledHistogram(File resourcesDir, String prefix,
+			VariabilityType type, Double magnitude, Float distance, Site site) throws IOException {
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		VarGroupingKey key = new VarGroupingKey(type, magnitude, distance, site);
+		VariabilityResult[] dsResults;
+		VariabilityResult totResult;
+		try {
+			dsResults = downsampledVarResultCache.get(key);
+			totResult = varResultCache.get(key);
+		} catch (ExecutionException e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
+		
+		double delta = 0.05;
+		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(0d, 1d, delta);
+		hist.setName("Downsampled Realizations");
+		
+		double meanDownsampled = 0d;
+		for (VariabilityResult result : dsResults) {
+			double stdDev = type.stdDevOfMedians ? result.getPeriodIndepMedianStdDevSet().stdDev
+					: result.getPeriodIndepResidualStdDevSet().total;
+			meanDownsampled += stdDev;
+			hist.add(hist.getClosestXIndex(stdDev), 1d);
+		}
+		hist.normalizeBySumOfY_Vals();
+		meanDownsampled /= (double)dsResults.length;
+		
+		funcs.add(hist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+		
+		funcs.add(line(meanDownsampled, 0d, meanDownsampled, 1d, "Mean of Downsampled"));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 4f, Color.BLACK));
+		
+		double totStdDev = type.stdDevOfMedians ? totResult.getPeriodIndepMedianStdDevSet().stdDev
+				: totResult.getPeriodIndepResidualStdDevSet().total;
+		funcs.add(line(totStdDev, 0d, totStdDev, 1d, "Total"));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, type.symbol+" Downsampled Distribution", "Standard Deviation", "");
 		spec.setLegendVisible(true);
 
 		PlotPreferences plotPrefs = PlotPreferences.getDefault();
