@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.jfree.chart.annotations.XYAnnotation;
 import org.opensha.commons.calc.FaultMomentCalc;
@@ -234,17 +236,39 @@ public class RotatedRupVariabilityConfig {
 		}
 		
 		public boolean hasQuantity(Quantity quantity, Object value) {
-			if (quantity.zeroStoredAsNull() && Objects.equals(value, 0f))
-				value = null;
+			if (value instanceof Collection<?>) {
+				for (Object subValue : ((Collection<?>)value))
+					if (hasQuantity(quantity, subValue))
+						return true;
+				return false;
+			}
+//			if (quantity.zeroStoredAsNull() && Objects.equals(value, 0f))
+//				value = null;
+//			if (quantity == Quantity.SITE) {
+//				Site mySite = (Site)quantities.get(quantity);
+//				if (value == null)
+//					return mySite == null;
+//				else if (mySite == null)
+//					return false;
+//				return locEqual(mySite.getLocation(), ((Site)value).getLocation());
+//			}
+//			return Objects.equals(value, quantities.get(quantity));
+			Object myVal = quantities.get(quantity);
+			if (myVal == null && quantity.zeroStoredAsNull())
+				return value == null || (Float)value == 0f;
 			if (quantity == Quantity.SITE) {
-				Site mySite = (Site)quantities.get(quantity);
+				Site mySite = (Site)myVal;
 				if (value == null)
 					return mySite == null;
 				else if (mySite == null)
 					return false;
 				return locEqual(mySite.getLocation(), ((Site)value).getLocation());
 			}
-			return Objects.equals(value, quantities.get(quantity));
+			if (value instanceof Integer)
+				return ((Integer)value).intValue() == (Integer)myVal;
+			if (value instanceof Float)
+				return ((Float)value).floatValue() == (Float)myVal;
+			return Objects.equals(value, myVal);
 		}
 		
 		private boolean locEqual(Location loc1, Location loc2) {
@@ -373,6 +397,12 @@ public class RotatedRupVariabilityConfig {
 	}
 	
 	private List<RotationSpec> getCachedRotations(Quantity quantity, Object value) {
+		if (value instanceof Collection<?>) {
+			List<RotationSpec> ret = new ArrayList<>();
+			for (Object subValue : (Collection<?>)value)
+				ret.addAll(getCachedRotations(quantity, subValue));
+			return ret;
+		}
 		List<RotationSpec> ret = quantityRotationsCache.get(quantity, value);
 		if (ret == null) {
 			ret = new ArrayList<>();
@@ -421,16 +451,29 @@ public class RotatedRupVariabilityConfig {
 		Preconditions.checkArgument(quantities.length == values.length);
 		if (quantities.length == 0)
 			return rotations;
+		Predicate<RotationSpec> predicate = new Predicate<RotatedRupVariabilityConfig.RotationSpec>() {
+			
+			@Override
+			public boolean test(RotationSpec rotation) {
+				for (int i=0; i<quantities.length; i++)
+					if (!rotation.hasQuantity(quantities[i], values[i]))
+						return false;
+				return true;
+			}
+		};
 		
-		List<RotationSpec> ret = new ArrayList<>();
-		rotationLoop:
-		for (RotationSpec rotation : rotations) {
-			for (int i=0; i<quantities.length; i++)
-				if (!rotation.hasQuantity(quantities[i], values[i]))
-					continue rotationLoop;
-			ret.add(rotation);
-		}
-		return ret;
+//		return rotations.parallelStream().filter(predicate).collect(Collectors.toList());
+		return rotations.stream().filter(predicate).collect(Collectors.toList());
+		
+//		List<RotationSpec> ret = new ArrayList<>();
+//		rotationLoop:
+//		for (RotationSpec rotation : rotations) {
+//			for (int i=0; i<quantities.length; i++)
+//				if (!rotation.hasQuantity(quantities[i], values[i]))
+//					continue rotationLoop;
+//			ret.add(rotation);
+//		}
+//		return ret;
 	}
 	
 	private static final boolean HYPO_NORTH = false;

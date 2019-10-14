@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -100,6 +101,7 @@ public abstract class RotatedRupVariabilityPageGen {
 	private double[] calcPeriods;
 	
 	private List<Site> sites;
+	private Map<Float, List<Site>> vs30SiteBundles;
 	private List<Float> sourceAzimuths;
 	private List<Float> siteSourceAzimuths;
 	private List<Float> distances;
@@ -148,6 +150,22 @@ public abstract class RotatedRupVariabilityPageGen {
 		RotatedRupVariabilityConfig config0 = magConfigs.values().iterator().next();
 		
 		sites = config0.getValues(Site.class, Quantity.SITE);
+		
+		// look for bundles of 2 or more sites with the same Vs30
+		vs30SiteBundles = new HashMap<>();
+		for (Site site : sites) {
+			float vs30 = site.getParameter(Double.class, Vs30_Param.NAME).getValue().floatValue();
+			List<Site> vsSites = vs30SiteBundles.get(vs30);
+			if (vsSites == null) {
+				vsSites = new ArrayList<>();
+				vs30SiteBundles.put(vs30, vsSites);
+			}
+			vsSites.add(site);
+		}
+		for (Float vs30 : new ArrayList<Float>(vs30SiteBundles.keySet()))
+			if (vs30SiteBundles.get(vs30).size() < 2)
+				vs30SiteBundles.remove(vs30);
+		
 		sourceAzimuths = config0.getValues(Float.class, Quantity.SOURCE_AZIMUTH);
 		siteSourceAzimuths = config0.getValues(Float.class, Quantity.SITE_TO_SOURTH_AZIMUTH);
 		distances = config0.getValues(Float.class, Quantity.DISTANCE);
@@ -320,9 +338,9 @@ public abstract class RotatedRupVariabilityPageGen {
 //				true, true, Quantity.SITE, Quantity.DISTANCE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH),
 		BETWEEN_EVENTS("Between-events", "between_events", "τ", "&tau;", al_atik,
 				GMPE_Var.TAU, null,
-				qarr(Quantity.SITE, Quantity.DISTANCE), // separate quantities
+				qarr(Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID), // group quantities
-				qarr(Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
+				qarr(Quantity.SITE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
 				true, "δB_e", "&delta;B<sub>e</sub>"); // medains
 		// TODO phi_s2s is relative to the site classification, so leave it out for now
 //		SITE_TO_SITE("Site Variability", "site_var", "φ_s2s", "&phi;<sub>S2S</sub>", al_atik,
@@ -439,9 +457,15 @@ public abstract class RotatedRupVariabilityPageGen {
 					line = "We take "+htmlSymbol+" to be the standard deviation of those medians.";
 				else
 					line = "We take "+htmlSymbol+" to be the standard deviation of all "+variedSymbolHTML+".";
-				if (separateSites && pageGen.sites.size() > 1)
-					line += " Finally, we compute the mean standard deviation across all sites. This"
-							+ " total value is reported as **ALL SITES** and in summary plots/tables.";
+				if (pageGen.sites.size() > 1) {
+					if (separateSites) {
+						line += " Finally, we compute the mean standard deviation across all sites. This"
+								+ " total value is reported as **ALL SITES** and in summary plots/tables.";
+					} else {
+						line += " This is done separately for each set of sites with the same V<sub>S30</sub> value. Single-site "
+								+ "values are also reported.";
+					}
+				}
 				lines.add(line);
 				lines.add("");
 				if (separateDists && pageGen.distances.size() > 1) {
@@ -467,9 +491,13 @@ public abstract class RotatedRupVariabilityPageGen {
 				lines.add("");
 				line = "We take "+htmlSymbol+" to be the standard deviation of all residuals"+symbolAdd+" across each combination of "
 						+Joiner.on(", ").join(groupQuantities)+".";
-				if (separateSites && pageGen.sites.size() > 1)
-					line += " We also compute the total standard deviation across all residuals from all sites. This"
-							+ " total value is reported as **ALL SITES** and in summary plots/tables.";
+				if (pageGen.sites.size() > 1) {
+					if (separateSites)
+						line += " We also compute the total standard deviation across all residuals from all sites. This"
+								+ " total value is reported as **ALL SITES** and in summary plots/tables.";
+					else
+						line += " This is done separately for each set of sites with the same V<sub>S30</sub> value.";
+				}
 				lines.add(line);
 				lines.add("");
 				if (separateDists && pageGen.distances.size() > 1) {
@@ -485,7 +513,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				for (Quantity quantity : groupQuantities)
 					if (quantity == Quantity.EVENT_ID)
 						hasEvent = true;
-				if (separateSites && hasEvent) {
+				if (hasEvent) {
 					System.out.println("Plotting example!");
 					// we can plot an example as we are doing separate calcs for site/distance groups, and are grouping by event
 					List<String> repeats = new ArrayList<>();
@@ -720,6 +748,8 @@ public abstract class RotatedRupVariabilityPageGen {
 		for (VariabilityType type : VariabilityType.values()) {
 			if (type.getRotationsPerStdDev(magQuantitiesTable.rowMap().values().iterator().next()) == 1)
 				continue;
+			if (!type.separateSites && vs30SiteBundles.isEmpty() && !type.stdDevOfMedians)
+				continue;
 			computedTypes.add(type);
 			
 			System.out.println("*** Processing variability type: "+type.name+" ***");
@@ -869,7 +899,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				}
 				for (Float distance : myDists) {
 					table.initNewLine();
-					VarGroupingKey key = new VarGroupingKey(type, mag, distance, null);
+					VarGroupingKey key = new VarGroupingKey(type, mag, distance, sites);
 					VariabilityResult varResult;
 					try {
 						varResult = varResultCache.get(key);
@@ -1279,7 +1309,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		
 		TableBuilder table = MarkdownUtils.tableBuilder();
 		table.initNewLine();
-		if (type.separateSites && sites.size() > 1)
+		if (sites.size() > 1)
 			table.addColumn("Site");
 		for (double period : periods) {
 			String periodStr = optionalDigitDF.format(period)+"s";
@@ -1300,29 +1330,70 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 		}
 		table.finalizeLine();
-		DiscretizedFunc totStdDevFunc = null;
-		ResidualStdDevSet[] totResidualStdDevs = new ResidualStdDevSet[periods.length];
-		List<List<ResidualStdDevSet>> siteTotResidualStdDevs = null;
-		List<List<MedianStdDevSet>> siteTotMedianStdDevs = null;
-		if (type.separateSites && sites.size() > 1) {
-			siteTotResidualStdDevs = new ArrayList<>();
-			siteTotMedianStdDevs = new ArrayList<>();
-			for (int i=0; i<periods.length; i++) {
-				siteTotResidualStdDevs.add(new ArrayList<>());
-				siteTotMedianStdDevs.add(new ArrayList<>());
-			}
-		}
 		
-		List<Site> mySites = new ArrayList<>();
-		List<DiscretizedFunc> stdDevFuncs = null;
-		if (type.separateSites && sites.size() > 1) {
-			mySites.addAll(sites);
-			stdDevFuncs = new ArrayList<>();
-		}
-		mySites.add(null);
+		List<String> siteBundleTableNames = new ArrayList<>();
+		List<String> siteBundlePlotLables = new ArrayList<>();
+		List<List<Site>> siteBundles = new ArrayList<>();
+		List<PlotCurveCharacterstics> bundleCurveChars = new ArrayList<>();
+		if (sites.size() > 1) {
+			if (type.separateSites) {
+				siteBundleTableNames.add("**ALL SITES**");
+				siteBundlePlotLables.add("Total");
+				siteBundles.add(sites);
+				bundleCurveChars.add(new PlotCurveCharacterstics(
+						PlotLineType.SOLID, 3f, PlotSymbol.FILLED_CIRCLE, 4f, Color.BLACK));
+			} else {
+				List<Float> vs30s = new ArrayList<>(vs30SiteBundles.keySet());
+				Collections.sort(vs30s, new Comparator<Float>() {
 
-		StdDevPercentileFuncs totStdDevPercentiles = null;
-		List<StdDevPercentileFuncs> stdDevPercentilesList = null;
+					@Override
+					public int compare(Float o1, Float o2) {
+						int size1 = vs30SiteBundles.get(o1).size();
+						int size2 = vs30SiteBundles.get(o2).size();
+						if (size1 == size2)
+							return Float.compare(o1, o2);
+						return Integer.compare(size2, size1); // greatest first
+					}
+					
+				});
+				CPT grayCPT = new CPT(0, Integer.max(1, vs30s.size()-1), Color.BLACK, Color.GRAY);
+				for (int i=0; i<vs30s.size(); i++) {
+					float vs30 = vs30s.get(i);
+					String name = vs30SiteBundles.get(vs30).size()+" sites, V<sub>S30</sub>="+optionalDigitDF.format(vs30);
+					siteBundleTableNames.add("**"+name+"**");
+					siteBundlePlotLables.add("Vs30="+optionalDigitDF.format(vs30));
+					siteBundles.add(vs30SiteBundles.get(vs30));
+					bundleCurveChars.add(new PlotCurveCharacterstics(
+							PlotLineType.SOLID, 3f, PlotSymbol.FILLED_CIRCLE, 4f, grayCPT.getColor((float)i)));
+				}
+			}
+			for (int i=0; i<sites.size(); i++) {
+				Site site = sites.get(i);
+				siteBundleTableNames.add(site.name);
+				siteBundlePlotLables.add(site.name);
+				List<Site> siteList = new ArrayList<>();
+				siteList.add(site);
+				siteBundles.add(siteList);
+				bundleCurveChars.add(new PlotCurveCharacterstics(
+						PlotLineType.SOLID, 1.5f, siteColors.get(i % siteColors.size())));
+			}
+		} else {
+			siteBundleTableNames.add(null);
+			siteBundlePlotLables.add("Total");
+			siteBundles.add(sites);
+			bundleCurveChars.add(new PlotCurveCharacterstics(
+					PlotLineType.SOLID, 3f, PlotSymbol.FILLED_CIRCLE, 4f, Color.BLACK));
+		}
+
+		List<List<ResidualStdDevSet>> bundleTotResidualStdDevs = new ArrayList<>();
+		List<List<MedianStdDevSet>> bundleTotMedianStdDevs = new ArrayList<>();
+		List<DiscretizedFunc> bundleStdDevFuncs = new ArrayList<>();
+		List<StdDevPercentileFuncs> bundlePercentilesList = null;
+		for (int i=0; i<periods.length; i++) {
+			bundleTotResidualStdDevs.add(new ArrayList<>());
+			bundleTotMedianStdDevs.add(new ArrayList<>());
+		}
+
 		PeriodDepResidualsList downsampledList = null;
 		List<List<ASK_EventData>> realDataList = null;
 		List<VariabilityResult> allVarResults = new ArrayList<>();
@@ -1377,21 +1448,18 @@ public abstract class RotatedRupVariabilityPageGen {
 //			System.out.println("NOT doing GMPEs. Type: "+type.gmpeStdDevType+". GMPEs null? "+(gmpes == null));
 		}
 		
-		for (int i=0; i<mySites.size(); i++) {
-			Site site = mySites.get(i);
+		for (int i=0; i<siteBundles.size(); i++) {
+			Site[] mySites = siteBundles.get(i).toArray(new Site[0]);
 			table.initNewLine();
+			String siteTableName = siteBundleTableNames.get(i);
 			String emphasis = "";
-			if (type.separateSites && sites.size() > 1) {
-				if (site == null) {
-					table.addColumn("**ALL SITES**");
-					emphasis = "**";
-				} else {
-					table.addColumn(site.getName());
-				}
-			}
+			for (int j=0; j<siteTableName.length() && siteTableName.charAt(j) == '*'; j++)
+				emphasis += '*';
+			if (sites.size() > 1)
+				table.addColumn(siteTableName);
 			DiscretizedFunc stdDevFunc = new ArbitrarilyDiscretizedFunc();
 			StdDevPercentileFuncs stdDevPercentiles = null;
-			VarGroupingKey key = new VarGroupingKey(type, mag, distance, site);
+			VarGroupingKey key = new VarGroupingKey(type, mag, distance, mySites);
 			VariabilityResult result; 
 			try {
 				result = varResultCache.get(key);
@@ -1433,42 +1501,32 @@ public abstract class RotatedRupVariabilityPageGen {
 				ResidualStdDevSet set = result.getPeriodIndepResidualStdDevSet();
 				stdDevFunc.set(0d, set.total);
 			}
-			if (site == null) {
-				if (!type.stdDevOfMedians) {
-					for (int p=0; p<periods.length; p++)
-						totResidualStdDevs[p] = result.getResidualStdDevSet(periods[p]);
-				}
-			} else {
-				for (int p=0; p<periods.length; p++) {
-					siteTotResidualStdDevs.get(p).add(result.getResidualStdDevSet(periods[p]));
-					siteTotMedianStdDevs.get(p).add(result.getMedianStdDevSet(periods[p]));
-				}
+			for (int p=0; p<periods.length; p++) {
+				bundleTotResidualStdDevs.get(p).add(result.getResidualStdDevSet(periods[p]));
+				bundleTotMedianStdDevs.get(p).add(result.getMedianStdDevSet(periods[p]));
 			}
 			if (realEventData != null) {
 				VariabilityResult[] downsampledResults;
-				if (site == null && type.separateSites && sites.size() > 1) {
-					downsampledResults = allVarResults.toArray(new VariabilityResult[0]);
-				} else {
-					try {
-						downsampledResults = downsampledVarResultCache.get(key);
-					} catch (ExecutionException e) {
-						throw ExceptionUtils.asRuntimeException(e);
-					}
+				try {
+					downsampledResults = downsampledVarResultCache.get(key);
+				} catch (ExecutionException e) {
+					throw ExceptionUtils.asRuntimeException(e);
 				}
 				if (downsampledResults.length > 0) {
 					for (VariabilityResult v : downsampledResults)
 						allVarResults.add(v);
 					if (downsampledList == null) {
-						VarGroupingKey sampleKey = new VarGroupingKey(type, mag, distance, site);
+						VarGroupingKey sampleKey = new VarGroupingKey(type, mag, distance, mySites);
 						realDataList = getRealDataListForKey(sampleKey);
 						if (distance == null && type.separateDists)
 							// we're doing this across all distances, so get the rotations for 1.
-							// we'll scale to the number of disatnces later
-							sampleKey = new VarGroupingKey(type, mag, distances.get(0), site);
+							// we'll scale to the number of distances later
+							sampleKey = new VarGroupingKey(type, mag, distances.get(0), mySites);
+						if (type.separateSites && mySites.length > 1)
+							sampleKey = new VarGroupingKey(type, mag, sampleKey.distance, mySites[0]);
 						sampleKey.realDataList = realDataList;
 						downsampledList = loadResiduals(sampleKey);
-						if (type.separateSites && sites.size() > 1)
-							stdDevPercentilesList = new ArrayList<>();
+						bundlePercentilesList = new ArrayList<>();
 					}
 					DiscretizedFunc lower95Func = new ArbitrarilyDiscretizedFunc();
 					DiscretizedFunc upper95Func = new ArbitrarilyDiscretizedFunc();
@@ -1510,18 +1568,10 @@ public abstract class RotatedRupVariabilityPageGen {
 							new UncertainArbDiscDataset(medianFunc, lower68Func, upper68Func), sigmaFunc);
 				}
 			}
-			if (site == null) {
-				stdDevFunc.setName("Total");
-				totStdDevFunc = stdDevFunc;
-				totStdDevPercentiles = stdDevPercentiles;
-				// now plot downsampled as a function of # recordings
-				dataSizeDependenceLines = plotDataSizeDependence(key, resourcesDir, stdDevFunc.getY(0d), gmpeResult);
-			} else {
-				stdDevFunc.setName(site.getName());
-				stdDevFuncs.add(stdDevFunc);
-				if (stdDevPercentiles != null)
-					stdDevPercentilesList.add(stdDevPercentiles);
-			}
+			stdDevFunc.setName(siteBundlePlotLables.get(i));
+			bundleStdDevFuncs.add(stdDevFunc);
+			if (stdDevPercentiles != null)
+				bundlePercentilesList.add(stdDevPercentiles);
 			table.finalizeLine();
 		}
 
@@ -1531,12 +1581,14 @@ public abstract class RotatedRupVariabilityPageGen {
 		// plot it
 		String prefix = type.prefix+magPrefix+distPrefix+"_std_dev";
 		plotPeriodDependentStdDevs(resourcesDir, prefix, type.name+" ("+type.symbol+")",
-				stdDevFuncs, stdDevPercentilesList, totStdDevFunc, totStdDevPercentiles, gmpeFunc);
+				bundleStdDevFuncs, bundlePercentilesList, bundleCurveChars, gmpeFunc);
 		lines.add("!["+type.name+" Variability](resources/"+prefix+".png)");
 		lines.add("");
 		lines.addAll(table.build());
 		lines.add("");
-		if (downsampledList != null && totStdDevPercentiles != null) {
+		if (downsampledList != null && bundlePercentilesList != null && bundlePercentilesList.get(0) != null) {
+			DiscretizedFunc totStdDevFunc = bundleStdDevFuncs.get(0);
+			StdDevPercentileFuncs totStdDevPercentiles = bundlePercentilesList.get(0);
 			String distLine;
 			if (distance == null) {
 				distLine = "and all distances";
@@ -1595,26 +1647,36 @@ public abstract class RotatedRupVariabilityPageGen {
 				lines.add("");
 			}
 			// now plot site histograms
-			lines.add("These plots show the distribution of period-independent downsampled "+type.htmlSymbol
-					+" for each site.");
-			lines.add("");
-			table = MarkdownUtils.tableBuilder();
-			if (sites.size() > 1 || sites.get(0) != null) {
+			if (type.separateSites) {
+				lines.add("These plots show the distribution of period-independent downsampled "+type.htmlSymbol
+						+" for each site.");
+				lines.add("");
+				table = MarkdownUtils.tableBuilder();
+				if (sites.size() > 1 || sites.get(0) != null) {
+					table.initNewLine();
+					for (Site site : sites)
+						table.addColumn("**"+site.getName()+"**");
+					table.finalizeLine();
+				}
 				table.initNewLine();
-				for (Site site : sites)
-					table.addColumn("**"+site.getName()+"**");
+				for (Site site : sites) {
+					String sitePrefix = site == null ? "" : "_"+site.getName();
+					prefix = type.prefix+magPrefix+distPrefix+sitePrefix+"_downsampled_hist";
+					plotSitePeriodIndepDownsampledHistogram(resourcesDir, prefix, type, mag, distance, site);
+					table.addColumn("![Dowmsampled Histogram](resources/"+prefix+".png)");
+				}
 				table.finalizeLine();
+				lines.addAll(table.wrap(4, 0).build());
+				lines.add("");
+			} else {
+				lines.add("This plot shows the distribution of period-independent downsampled "+type.htmlSymbol+".");
+				lines.add("");
+				prefix = type.prefix+magPrefix+distPrefix+"_downsampled_hist";
+				plotSitePeriodIndepDownsampledHistogram(resourcesDir, prefix, type, mag, distance,
+						siteBundles.get(0).toArray(new Site[0]));
+				lines.add("![Dowmsampled Histogram](resources/"+prefix+".png)");
+				lines.add("");
 			}
-			table.initNewLine();
-			for (Site site : sites) {
-				String sitePrefix = site == null ? "" : "_"+site.getName();
-				prefix = type.prefix+magPrefix+distPrefix+sitePrefix+"_downsampled_hist";
-				plotSitePeriodIndepDownsampledHistogram(resourcesDir, prefix, type, mag, distance, site);
-				table.addColumn("![Dowmsampled Histogram](resources/"+prefix+".png)");
-			}
-			table.finalizeLine();
-			lines.addAll(table.wrap(4, 0).build());
-			lines.add("");
 		}
 		if (!type.stdDevOfMedians) {
 			table = MarkdownUtils.tableBuilder();
@@ -1626,7 +1688,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			for (int p=0; p<periods.length; p++) {
 				prefix = type.prefix+magPrefix+distPrefix+"_"+optionalDigitDF.format(periods[p])+"s_hist";
 				plotStdDevsHistogram(resourcesDir, prefix, optionalDigitDF.format(periods[p])+"s "+type.name+" ("+type.symbol+")",
-						periods[p], totResidualStdDevs[p], type.separateSites && sites.size() > 1 ? siteTotResidualStdDevs.get(p): null);
+						periods[p], bundleTotResidualStdDevs.get(p).get(0), null);
 				table.addColumn("!["+optionalDigitDF.format(periods[p])+"s](resources/"+prefix+".png)");
 			}
 			table.finalizeLine();
@@ -1639,10 +1701,9 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 		if (type.disaggScatters != null && type.disaggScatters.length > 0 && (distance != null || !type.separateDists)) {
 			System.out.println("*** Plotting disagg scatters ***");
-			Site site = sites.size() > 1 ? null : sites.get(0);
 			VariabilityResult result;
 			try {
-				result = varResultCache.get(new VarGroupingKey(type, mag, distance, site));
+				result = varResultCache.get(new VarGroupingKey(type, mag, distance, sites.toArray(new Site[0])));
 			} catch (ExecutionException e) {
 				throw ExceptionUtils.asRuntimeException(e);
 			}
@@ -1690,12 +1751,7 @@ public abstract class RotatedRupVariabilityPageGen {
 //		int simNumRecordings = 1;
 		VariabilityType type = key.type;
 		List<VarGroupingKey> keys = new ArrayList<>();
-		if (key.site == null && type.separateSites && sites.size() > 1) {
-			for (Site site : sites)
-				keys.add(new VarGroupingKey(type, key.magnitude, key.distance, site));
-		} else {
-			keys.add(new VarGroupingKey(type, key.magnitude, key.distance, key.site));
-		}
+		keys.add(new VarGroupingKey(type, key.magnitude, key.distance, key.sites));
 //		for (Quantity varyQ : type.variedQuantities)
 //			simNumRecordings *= config.getQuantitiesMap().get(varyQ).size();
 //		int maxNumEvents = Integer.max(numEvents, simNumEvents);
@@ -1884,7 +1940,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				// each call will be a new stochastic realization due to custom equals/hashCode implementation with realDataList set
 				List<VariabilityResult> results = new ArrayList<>();
 				for (VarGroupingKey myKey : keys) {
-					VarGroupingKey randKey = new VarGroupingKey(myKey.type, myKey.magnitude, myKey.distance, myKey.site);
+					VarGroupingKey randKey = new VarGroupingKey(myKey.type, myKey.magnitude, myKey.distance, myKey.sites);
 					randKey.realDataList = realDataList;
 					results.add(calcVarResult(randKey));
 				}
@@ -2072,10 +2128,12 @@ public abstract class RotatedRupVariabilityPageGen {
 		Object[] constValues = new Object[constQuantities.length];
 		for (int i=0; i<constQuantities.length; i++) {
 			if (constQuantities[i] == Quantity.SITE) {
-				if (key.site == null && sites.size() == 1)
-					constValues[i] = sites.get(0);
+//				Preconditions.checkState(key.sites.length == 1,
+//						"Holding site constant, but VarGroupingKey has %s sites!", key.sites.length);
+				if (key.sites.length == 1)
+					constValues[i] = key.sites[0];
 				else
-					constValues[i] = key.site;
+					constValues[i] = Lists.newArrayList(key.sites);
 			} else  if (constQuantities[i] == Quantity.DISTANCE) {
 				constValues[i] = key.distance;
 			} else {
@@ -2105,7 +2163,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			VariabilityResult[] allVars = new VariabilityResult[distances.size()];
 			for (int i=0; i<allVars.length; i++) {
 				VarGroupingKey distKey = new VarGroupingKey(key.type,
-						key.separateQuantities, key.groupQuantities, key.magnitude, distances.get(i), key.site);
+						key.separateQuantities, key.groupQuantities, key.magnitude, distances.get(i), key.sites);
 				distKey.restrictTo = key.restrictTo;
 				distKey.realDataList = key.realDataList;
 				try {
@@ -2131,7 +2189,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 			return new VariabilityResult(null, null, residualStdDevs, medianStdDevs);
 		}
-		if (key.separateSites && sites.size() > 1 && key.realDataList == null) {
+		if (key.separateSites && key.sites.length > 1) {
 			// do all sites at once
 			List<List<ResidualSet>> totalPeriodResiduals = new ArrayList<>();
 			for (int p=0; p<calcPeriods.length; p++)
@@ -2139,10 +2197,10 @@ public abstract class RotatedRupVariabilityPageGen {
 			
 			List<MedianStdDevSet[]> sitePeriodMediansList = new ArrayList<>();
 			for (int p=0; p<calcPeriods.length; p++)
-				sitePeriodMediansList.add(new MedianStdDevSet[sites.size()]);
+				sitePeriodMediansList.add(new MedianStdDevSet[key.sites.length]);
 			
-			for (int s=0; s<sites.size(); s++) {
-				Site site = sites.get(s);
+			for (int s=0; s<key.sites.length; s++) {
+				Site site = key.sites[s];
 				VarGroupingKey siteKey = new VarGroupingKey(key.type,
 						key.separateQuantities, key.groupQuantities, key.magnitude, key.distance, site);
 				siteKey.restrictTo = key.restrictTo;
@@ -2173,7 +2231,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 
 			// now combine sites
-			if (D) System.out.println("Combining residuals for "+sites.size()+" sites, dist="+key.distance);
+			if (D) System.out.println("Combining residuals for "+key.sites.length+" sites, dist="+key.distance);
 			LogValueSet[] totLogVals = new LogValueSet[calcPeriods.length];
 			ResidualStdDevSet[] totResidualStdDevs = new ResidualStdDevSet[calcPeriods.length];
 			MedianStdDevSet[] totMedianStdDevs = new MedianStdDevSet[calcPeriods.length];
@@ -2189,19 +2247,24 @@ public abstract class RotatedRupVariabilityPageGen {
 				}
 				totMedianStdDevs[p] = new MedianStdDevSet(sitePeriodMediansList.get(p));
 			}
-			VarGroupingKey noSiteKey = new VarGroupingKey(key.type,
-					key.separateQuantities, key.groupQuantities, key.magnitude, key.distance, null);
-			noSiteKey.restrictTo = key.restrictTo;
-			varResultCache.put(noSiteKey, new VariabilityResult(commonRotSpecs, totLogVals, totResidualStdDevs, totMedianStdDevs));
-			
-			VariabilityResult ret = varResultCache.getIfPresent(key);
-			Preconditions.checkState(ret != null, "Should have just been cached?");
-			return ret;
+			return new VariabilityResult(commonRotSpecs, totLogVals, totResidualStdDevs, totMedianStdDevs);
 		}
-		// do for all sites
+		// do for all sites in the key
+		if (!key.separateSites && (key.restrictTo == null  || !key.restrictTo.containsKey(Quantity.SITE))) {
+			// restrict it to just the specific sites
+			Quantity[] separateQuantities = new Quantity[key.separateQuantities.length+1];
+			separateQuantities[0] = Quantity.SITE;
+			System.arraycopy(key.separateQuantities, 0, separateQuantities, 1, key.separateQuantities.length);
+			VarGroupingKey newKey = new VarGroupingKey(key.type, separateQuantities, key.groupQuantities,
+					key.magnitude, key.distance, key.sites);
+			newKey.restrictTo = key.restrictTo;
+			newKey.realDataList = key.realDataList;
+			key = newKey;
+		}
 		List<List<ResidualSet>> residuals = loadResiduals(key);
 
-		if (D) System.out.print("Combining residuals for "+(key.site == null ? "all sites" : key.site.getName())
+		if (D) System.out.print("Combining residuals for "
+				+(key.sites.length == 1 ? key.sites[0].getName() : key.sites.length+" sites")
 				+", mag="+key.magnitude+", dist="+key.distance+"...");
 		LogValueSet[] logVals = new LogValueSet[calcPeriods.length];
 		ResidualStdDevSet[] residualStdDevs = new ResidualStdDevSet[calcPeriods.length];
@@ -2258,7 +2321,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		
 		VariabilityResult[] ret = new VariabilityResult[numRealizations];
 		
-		VarGroupingKey randKey = new VarGroupingKey(key.type, key.separateQuantities, key.groupQuantities, key.magnitude, key.distance, key.site);
+		VarGroupingKey randKey = new VarGroupingKey(key.type, key.separateQuantities, key.groupQuantities, key.magnitude, key.distance, key.sites);
 		randKey.realDataList = dataList;
 		
 		for (int i=0; i<numRealizations; i++)
@@ -2276,26 +2339,30 @@ public abstract class RotatedRupVariabilityPageGen {
 		private final Quantity[] groupQuantities;
 		private final Double magnitude;
 		private final Float distance;
-		private final Site site;
+		private final Site[] sites;
 		private Map<Quantity, Object> restrictTo;
 		private List<List<ASK_EventData>> realDataList;
 		
 		// derrivative quantities
 		private boolean separateSites;
 		
-		public VarGroupingKey(VariabilityType type, Double magnitude, Float distance, Site site) {
-			this(type, type.separateQuantities, type.groupQuantities, magnitude, distance, site);
+		public VarGroupingKey(VariabilityType type, Double magnitude, Float distance, List<Site> sites) {
+			this(type, magnitude, distance, sites.toArray(new Site[0]));
+		}
+		
+		public VarGroupingKey(VariabilityType type, Double magnitude, Float distance, Site... sites) {
+			this(type, type.separateQuantities, type.groupQuantities, magnitude, distance, sites);
 		}
 		public VarGroupingKey(VariabilityType type, Quantity[] separateQuantities, Quantity[] groupQuantities, Double magnitude,
-				Float distance, Site site) {
+				Float distance, Site... sites) {
 			this.type = type;
 			this.separateQuantities = separateQuantities;
 			this.groupQuantities = groupQuantities;
 			this.magnitude = magnitude;
 			this.distance = distance;
-			if (site == null && sites.size() == 1)
-				site = sites.get(0);
-			this.site = site;
+			if (sites == null || sites.length == 0)
+				sites = RotatedRupVariabilityPageGen.this.sites.toArray(new Site[0]);
+			this.sites = sites;
 			
 			separateSites = false;
 			for (Quantity quantity : separateQuantities)
@@ -2312,7 +2379,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			result = prime * result + Arrays.hashCode(groupQuantities);
 			result = prime * result + ((magnitude == null) ? 0 : magnitude.hashCode());
 			result = prime * result + Arrays.hashCode(separateQuantities);
-			result = prime * result + ((site == null) ? 0 : site.getLocation().hashCode());
+			result = prime * result + Arrays.hashCode(sites);
 			result = prime * result + ((restrictTo == null) ? 0 : restrictTo.hashCode());
 			result = prime * result + ((realDataList == null) ? 0 : r.nextInt()); // never match, always generate new set stochastically
 			return result;
@@ -2343,10 +2410,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				return false;
 			if (!Arrays.equals(separateQuantities, other.separateQuantities))
 				return false;
-			if (site == null) {
-				if (other.site != null)
-					return false;
-			} else if (!site.equals(other.site))
+			if (!Arrays.equals(sites, other.sites))
 				return false;
 			if (restrictTo == null) {
 				if (other.restrictTo != null)
@@ -2860,11 +2924,9 @@ public abstract class RotatedRupVariabilityPageGen {
 	}
 	
 	private void plotPeriodDependentStdDevs(File resourcesDir, String prefix, String title,
-			List<DiscretizedFunc> siteStdDevFuncs, List<StdDevPercentileFuncs> siteStdDevPercentiles,
-			DiscretizedFunc totalStdDevFunc, StdDevPercentileFuncs totalStdDevPercentiles, DiscretizedFunc gmpeFunc) throws IOException {
-		Preconditions.checkState(siteStdDevFuncs == null || siteStdDevFuncs.size() == siteColors.size());
-//		if (siteStdDevFuncs != null)
-//			Preconditions.checkState(siteStdDevPercentiles == null || siteStdDevPercentiles.size() == siteStdDevFuncs.size());
+			List<DiscretizedFunc> stdDevFuncs, List<StdDevPercentileFuncs> stdDevPercentiles,
+			List<PlotCurveCharacterstics> bundleChars, DiscretizedFunc gmpeFunc) throws IOException {
+		Preconditions.checkState(stdDevFuncs.size() == bundleChars.size());
 		
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -2872,7 +2934,8 @@ public abstract class RotatedRupVariabilityPageGen {
 		double minPeriod = StatUtils.min(calcPeriods);
 		double maxPeriod = StatUtils.max(calcPeriods);
 		
-		if (totalStdDevPercentiles != null) {
+		if (stdDevPercentiles != null && stdDevPercentiles.get(0) != null) {
+			// only plot the first one
 			Color color95 = new Color(0, 0, 0, 40);
 			Color color68 = new Color(0, 0, 0, 60);
 			
@@ -2903,6 +2966,8 @@ public abstract class RotatedRupVariabilityPageGen {
 			color95 = new Color(0, 0, 0, 20);
 			color68 = new Color(0, 0, 0, 40);
 			
+			StdDevPercentileFuncs totalStdDevPercentiles = stdDevPercentiles.get(0);
+			
 			totalStdDevPercentiles.bounds95.setName(null);
 			funcs.add(totalStdDevPercentiles.bounds95);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, color95));
@@ -2911,35 +2976,21 @@ public abstract class RotatedRupVariabilityPageGen {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, color68));
 		}
 		
-		for (int i=0; siteStdDevFuncs != null && i<siteStdDevFuncs.size(); i++) {
-			DiscretizedFunc siteFunc = siteStdDevFuncs.get(i);
-			Color color = siteColors.get(i);
-//			if (siteStdDevPercentiles != null) {
-//				StdDevPercentileFuncs siteStdDevPercentile = siteStdDevPercentiles.get(i);
-//				siteStdDevPercentile.bounds95.setName(null);
-//				funcs.add(siteStdDevPercentile.bounds95);
-//				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-//						new Color(color.getRed(), color.getGreen(), color.getBlue(), 10)));
-//				siteStdDevPercentile.bounds68.setName(null);
-//				funcs.add(siteStdDevPercentile.bounds68);
-//				chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f,
-//						new Color(color.getRed(), color.getGreen(), color.getBlue(), 30)));
-//				
-//			}
-			funcs.add(siteFunc);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, color));
+		for (int i=stdDevFuncs.size(); --i>=0;) {
+			DiscretizedFunc stdDevFunc = stdDevFuncs.get(i);
+			funcs.add(stdDevFunc);
+			PlotCurveCharacterstics bChar = bundleChars.get(i);
+			chars.add(bChar);
+			if (bChar.getLineWidth() >= 2f) {
+				double distPeriodIndepVal = stdDevFunc.getY(0d);
+				DiscretizedFunc periodIndepFunc = new ArbitrarilyDiscretizedFunc(stdDevFunc.getName()+" Period-Indep.");
+				periodIndepFunc.set(minPeriod, distPeriodIndepVal);
+				periodIndepFunc.set(maxPeriod, distPeriodIndepVal);
+				
+				funcs.add(periodIndepFunc);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, bChar.getColor()));
+			}
 		}
-		
-		funcs.add(totalStdDevFunc);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, PlotSymbol.FILLED_CIRCLE, 4f, Color.BLACK));
-		
-		double distPeriodIndepVal = totalStdDevFunc.getY(0d);
-		DiscretizedFunc periodIndepFunc = new ArbitrarilyDiscretizedFunc(totalStdDevFunc.getName()+" Period-Indep.");
-		periodIndepFunc.set(minPeriod, distPeriodIndepVal);
-		periodIndepFunc.set(maxPeriod, distPeriodIndepVal);
-		
-		funcs.add(periodIndepFunc);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK));
 		
 		if (gmpeFunc != null) {
 			funcs.add(gmpeFunc);
@@ -2977,10 +3028,8 @@ public abstract class RotatedRupVariabilityPageGen {
 		double[] distArray = Doubles.toArray(dists);
 		CPT distCPT = new CPT(StatUtils.min(distArray), StatUtils.max(distArray), Color.BLUE, Color.RED);
 		
-		Site site = sites.size() == 1 ? sites.get(0) : null;
-		
 		for (Float dist : dists) {
-			VarGroupingKey key = new VarGroupingKey(type, mag, dist, site);
+			VarGroupingKey key = new VarGroupingKey(type, mag, dist, sites);
 			VariabilityResult result;
 			try {
 				result = varResultCache.get(key);
@@ -3001,7 +3050,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 		
 		// now distance independent
-		VarGroupingKey key = new VarGroupingKey(type, mag, null, site);
+		VarGroupingKey key = new VarGroupingKey(type, mag, null, sites);
 		VariabilityResult result;
 		try {
 			result = varResultCache.get(key);
@@ -3032,7 +3081,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		if (realEventData != null) {
 			List<VariabilityResult> downsampledResults = new ArrayList<>();
 			try {
-				if (site == null && type.separateSites && sites.size() > 1) {
+				if (type.separateSites && sites.size() > 1) {
 					for (Site oSite : sites)
 						for (VariabilityResult r : downsampledVarResultCache.get(new VarGroupingKey(type, mag, null, oSite)))
 							downsampledResults.add(r);
@@ -3171,11 +3220,11 @@ public abstract class RotatedRupVariabilityPageGen {
 	}
 	
 	private void plotSitePeriodIndepDownsampledHistogram(File resourcesDir, String prefix,
-			VariabilityType type, Double magnitude, Float distance, Site site) throws IOException {
+			VariabilityType type, Double magnitude, Float distance, Site... sites) throws IOException {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		VarGroupingKey key = new VarGroupingKey(type, magnitude, distance, site);
+		VarGroupingKey key = new VarGroupingKey(type, magnitude, distance, sites);
 		VariabilityResult[] dsResults;
 		VariabilityResult totResult;
 		try {
