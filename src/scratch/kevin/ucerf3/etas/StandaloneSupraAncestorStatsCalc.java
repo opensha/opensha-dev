@@ -24,7 +24,7 @@ public class StandaloneSupraAncestorStatsCalc {
 			outputDir = new File(args[1]);		
 		
 		try {
-			Iterable<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.getBinaryCatalogsIterable(catalogsFile, 0d);
+			Iterable<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.getBinaryCatalogsIterable(catalogsFile, 0d);
 			
 			ETAS_MultiSimAnalysisTools.calcSupraAncestorStats(catalogs, outputDir);
 		} catch (Exception e) {

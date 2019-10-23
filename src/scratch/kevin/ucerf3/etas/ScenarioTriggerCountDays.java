@@ -36,7 +36,7 @@ public class ScenarioTriggerCountDays {
 	}
 	
 	private static void doIt(File binFile, long ot, double minMag, int maxDays) throws IOException {
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(binFile);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(binFile);
 		int triggerParentID = 0;
 		List<List<ETAS_EqkRupture>> childrenCatalogs = Lists.newArrayList();
 		for (List<ETAS_EqkRupture> catalog : catalogs)

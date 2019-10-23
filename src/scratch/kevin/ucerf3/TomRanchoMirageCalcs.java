@@ -157,7 +157,7 @@ public class TomRanchoMirageCalcs {
 		
 		if (etasFile != null) {
 			System.out.println("Loading ETAS catalogs");
-			List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(etasFile);
+			List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(etasFile);
 			long maxOT = ConditionalSectTriggerMPDCalc.calcMaxOTforDuration(catalogs, etasDuration);
 			
 			System.out.println("Calculating ETAS");

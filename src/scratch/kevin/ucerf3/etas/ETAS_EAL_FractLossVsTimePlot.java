@@ -82,7 +82,7 @@ public class ETAS_EAL_FractLossVsTimePlot {
 		imrWeightsMap.put(AttenRelRef.BSSA_2014, 0.22);
 		imrWeightsMap.put(AttenRelRef.IDRISS_2014, 0.12);
 		
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(etasCatalogsFile, 5d);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(etasCatalogsFile, 5d);
 		
 		double minTimeYears = 1d/365.25/24d/60d/60d;
 		double maxTimeYears = 10d;

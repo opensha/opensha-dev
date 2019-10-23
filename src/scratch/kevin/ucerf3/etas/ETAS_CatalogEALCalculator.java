@@ -97,7 +97,7 @@ public class ETAS_CatalogEALCalculator {
 	}
 	
 	private UCERF3_BranchAvgLossFetcher fetcher;
-	private List<List<ETAS_EqkRupture>> catalogs;
+	private List<? extends List<ETAS_EqkRupture>> catalogs;
 	private long startTime;
 	private FaultModels fm;
 	
@@ -115,7 +115,7 @@ public class ETAS_CatalogEALCalculator {
 	
 	private static int id_for_scenario = 0;
 	
-	private static List<List<ETAS_EqkRupture>> loadCatalogs(File resultsBinFile) throws IOException {
+	private static List<? extends List<ETAS_EqkRupture>> loadCatalogs(File resultsBinFile) throws IOException {
 		Preconditions.checkArgument(resultsBinFile.exists(), "catalog file doesn't exist");
 		
 		return loadCatalogs(resultsBinFile, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF-0.05);
@@ -127,7 +127,7 @@ public class ETAS_CatalogEALCalculator {
 	}
 	
 	public ETAS_CatalogEALCalculator(UCERF3_BranchAvgLossFetcher fetcher, FaultSystemSolution meanSol,
-			FaultModels fm, List<List<ETAS_EqkRupture>> catalogs) throws IOException, DocumentException {
+			FaultModels fm, List<? extends List<ETAS_EqkRupture>> catalogs) throws IOException, DocumentException {
 		this.fetcher = fetcher;
 		this.fm = fm;
 		
@@ -170,10 +170,10 @@ public class ETAS_CatalogEALCalculator {
 	 * @return
 	 * @throws IOException
 	 */
-	static List<List<ETAS_EqkRupture>> loadCatalogs(File resultsBinFile, double minGriddedMag) throws IOException {
+	static List<? extends List<ETAS_EqkRupture>> loadCatalogs(File resultsBinFile, double minGriddedMag) throws IOException {
 		int numEmpty = 0;
 		
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(resultsBinFile, minGriddedMag);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(resultsBinFile, minGriddedMag);
 		for (List<ETAS_EqkRupture> catalog : catalogs)
 			if (catalog.isEmpty())
 				numEmpty++;
@@ -304,7 +304,7 @@ public class ETAS_CatalogEALCalculator {
 			
 			List<DiscretizedFunc> catalogDists = Lists.newArrayList();
 			
-			List<List<ETAS_EqkRupture>> catalogs = this.catalogs;
+			List<? extends List<ETAS_EqkRupture>> catalogs = this.catalogs;
 			if (allSubDurations && maxCatalogDuration > durationYears*1.1) {
 				int numPer = (int)(maxCatalogDuration/durationYears);
 				System.out.println(numPer+" sub catalogs for "+durationYears+" yr");
@@ -1654,7 +1654,7 @@ public class ETAS_CatalogEALCalculator {
 		if (triggeredOnly)
 			csvPrefixAdd = "_triggered";
 		
-		List<List<ETAS_EqkRupture>> catalogs = null;
+		List<? extends List<ETAS_EqkRupture>> catalogs = null;
 		
 		ETAS_CatalogEALCalculator calc = null;
 		

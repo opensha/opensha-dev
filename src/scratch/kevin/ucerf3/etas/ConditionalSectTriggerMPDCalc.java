@@ -25,7 +25,7 @@ public class ConditionalSectTriggerMPDCalc {
 		FaultSystemSolution sol = FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile);
 		
 		long maxOT = calcMaxOTforDuration(catalogs, 7/365.25);
 		
@@ -33,7 +33,7 @@ public class ConditionalSectTriggerMPDCalc {
 		System.out.println(mpd);
 	}
 	
-	public static long calcMaxOTforDuration(Iterable<List<ETAS_EqkRupture>> catalogs, double durationYears) {
+	public static long calcMaxOTforDuration(Iterable<? extends List<ETAS_EqkRupture>> catalogs, double durationYears) {
 		long minOT = Long.MAX_VALUE;
 		
 		for (List<ETAS_EqkRupture> catalog : catalogs) {
@@ -47,7 +47,7 @@ public class ConditionalSectTriggerMPDCalc {
 		return (long)(minOT + durationYears*ProbabilityModelsCalc.MILLISEC_PER_YEAR);
 	}
 	
-	public static EvenlyDiscretizedFunc calcCumulativeMPD(Iterable<List<ETAS_EqkRupture>> catalogs, FaultSystemSolution sol,
+	public static EvenlyDiscretizedFunc calcCumulativeMPD(Iterable<? extends List<ETAS_EqkRupture>> catalogs, FaultSystemSolution sol,
 			int parentID, double minMag, double maxMag, double deltaMag, long maxOT) {
 		int numMag = (int)((maxMag - minMag)/deltaMag + 0.5) + 1;
 		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(minMag, numMag, deltaMag);

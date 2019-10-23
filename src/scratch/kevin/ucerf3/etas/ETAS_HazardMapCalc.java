@@ -122,7 +122,7 @@ public class ETAS_HazardMapCalc {
 	private boolean calcInLogSpace = true;
 	private double distCutoff = 200;
 	
-	private List<List<ETAS_EqkRupture>> catalogs;
+	private List<? extends List<ETAS_EqkRupture>> catalogs;
 	private HashSet<Integer> faultIndexesTriggered;
 	protected GriddedRegion region;
 	private DiscretizedFunc xVals;
@@ -320,7 +320,7 @@ public class ETAS_HazardMapCalc {
 	private boolean calcGridded;
 	private boolean calcLongTerm;
 	
-	public ETAS_HazardMapCalc(List<List<ETAS_EqkRupture>> catalogs, GriddedRegion region, DiscretizedFunc xVals,
+	public ETAS_HazardMapCalc(List<? extends List<ETAS_EqkRupture>> catalogs, GriddedRegion region, DiscretizedFunc xVals,
 			File precalcFile, FaultSystemSolution sol, ETAS_CatalogGridSourceProvider gridSources,
 			AttenRelRef gmpeRef, String imtName, double period, List<Site> sites, Duration[] durations) throws IOException {
 		this.catalogs = catalogs;
@@ -2178,7 +2178,7 @@ public class ETAS_HazardMapCalc {
 			}
 		} else {
 			calcGridded = calcGridded && gmpeRef != null;
-			List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(etasCatalogs, 5d);
+			List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(etasCatalogs, 5d);
 			
 			if (plotCurves)
 				calcLongTerm = true;
