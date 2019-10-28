@@ -959,7 +959,7 @@ public class RecurrencePlotGen {
 				if (i >= ucerf3Comparisons.length) {
 					// etas
 					File catFile = etasCatalogs[i-ucerf3Comparisons.length];
-					List<List<ETAS_EqkRupture>> etasCats = ETAS_CatalogIO.loadCatalogsBinary(catFile, 6d);
+					List<? extends List<ETAS_EqkRupture>> etasCats = ETAS_CatalogIO.loadCatalogsBinary(catFile, 6d);
 					List<List<SimulatorEvent>> myCatalogs = UCERF3_ETASComparisons.loadUCERF3EtasCatalogs(
 							etasCats, ucerf3Sol, null, ucerf3Elems);
 					

@@ -49,7 +49,7 @@ public class BombayBeachSwarm2016Calcs {
 		
 		long oneWeekOT = ot + 7*ProbabilityModelsCalc.MILLISEC_PER_DAY;
 		
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(binFile);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(binFile);
 		
 		File plotDir = new File(dir, "plots");
 		Preconditions.checkState(plotDir.exists() || plotDir.mkdir());

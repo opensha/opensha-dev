@@ -27,7 +27,7 @@ import scratch.kevin.simulators.momRateVariation.UCERF3ComparisonAnalysis.UCERF3
 
 public class UCERF3_ETASComparisons {
 	
-	public static List<List<SimulatorEvent>> loadUCERF3EtasCatalogs(List<List<ETAS_EqkRupture>> catalogs, FaultSystemSolution sol,
+	public static List<List<SimulatorEvent>> loadUCERF3EtasCatalogs(List<? extends List<ETAS_EqkRupture>> catalogs, FaultSystemSolution sol,
 			Region region, Map<Integer, SimulatorElement> elems)
 					throws IOException {
 		
@@ -87,7 +87,7 @@ public class UCERF3_ETASComparisons {
 		File outputDir = new File("/home/kevin/Simulators/time_series/ucerf3_etas");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile);
 		
 		Region region = new CaliforniaRegions.RELM_SOCAL();
 		

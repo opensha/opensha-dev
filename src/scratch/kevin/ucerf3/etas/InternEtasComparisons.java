@@ -19,7 +19,7 @@ public class InternEtasComparisons {
 				+ "2017_04_13-parkfield-10yr-full_td-no_ert-combined/results_descendents_m4_preserve.bin");
 		double targetMag = 7d;
 		
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogFile, targetMag);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogFile, targetMag);
 		
 		double[] times = { 1d / (365.25 * 24), 1d / 365.25, 7d / 365.25, 30 / 365.25, 1d, 10d };
 		

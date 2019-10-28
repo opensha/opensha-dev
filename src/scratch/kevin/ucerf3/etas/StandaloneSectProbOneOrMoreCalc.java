@@ -48,7 +48,7 @@ public class StandaloneSectProbOneOrMoreCalc {
 			FaultSystemSolutionERF erf = ETAS_Launcher.buildERF(fss, false, durationForProb, startYear);
 			erf.updateForecast();
 			
-			Iterable<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.getBinaryCatalogsIterable(catalogsFile, 0d);
+			Iterable<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.getBinaryCatalogsIterable(catalogsFile, 0d);
 			
 //			ETAS_MultiSimAnalysisTools.plotSectParticScatter(catalogs, duration, erf, outputDir);
 			ETAS_MultiSimAnalysisTools.plotAndWriteSectProbOneOrMoreData(catalogs, durationForProb, erf, outputDir);

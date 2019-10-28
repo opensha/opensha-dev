@@ -56,7 +56,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 	// these are indexed to the low res region
 	private double[] fracStrikeSlip,fracNormal,fracReverse;
 	
-	public ETAS_CatalogGridSourceProvider(List<List<ETAS_EqkRupture>> catalogs, double resolution,
+	public ETAS_CatalogGridSourceProvider(List<? extends List<ETAS_EqkRupture>> catalogs, double resolution,
 			boolean conditional) {
 		this.conditional = conditional;
 		Preconditions.checkState(resolution <= region.getSpacing());
@@ -71,7 +71,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 		initIndexMap();
 	}
 	
-	private void initMFDs(List<List<ETAS_EqkRupture>> catalogs) {
+	private void initMFDs(List<? extends List<ETAS_EqkRupture>> catalogs) {
 		nodeMFDs = Maps.newHashMap();
 		
 		double rateEach;
@@ -348,7 +348,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 		File etasCatalogs = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
 				+ "2016_02_19-mojave_m7-10yr-full_td-subSeisSupraNucl-gridSeisCorr-scale1.14-combined100k/"
 				+ "results_descendents_m5_preserve.bin");
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(etasCatalogs, 5d);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(etasCatalogs, 5d);
 		
 		ETAS_CatalogGridSourceProvider gridded = new ETAS_CatalogGridSourceProvider(catalogs, 0.01, false);
 		int numHighRes = gridded.highResRegion.getNodeCount();

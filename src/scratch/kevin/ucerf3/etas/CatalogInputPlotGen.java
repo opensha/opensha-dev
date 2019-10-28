@@ -66,7 +66,7 @@ public class CatalogInputPlotGen {
 		prefixes.add("10_year");
 		durations.add(10d);
 		
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(binFile);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(binFile);
 		
 		File plotDir = new File(dir, "plots");
 		Preconditions.checkState(plotDir.exists() || plotDir.mkdir());

@@ -346,7 +346,7 @@ public class PureScratch {
 	}
 
 	private static void test7() throws IOException {
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(
 				new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
 						//				+ "2016_01_05-spontaneous-10000yr-mc10-applyGrGridded-full_td-noApplyLTR/results_first50_m4.bin"));
 						+ "2016_01_05-spontaneous-10000yr-mc10-applyGrGridded-full_td-noApplyLTR/results_second50_m4.bin"));
@@ -642,7 +642,7 @@ public class PureScratch {
 //		checkCatalog(catalog, scenID);
 //		System.out.println("DONE");
 		
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(file);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(file);
 		for (int i=0; i<catalogs.size(); i++) {
 			checkCatalog(catalogs.get(0), scenID);
 		}

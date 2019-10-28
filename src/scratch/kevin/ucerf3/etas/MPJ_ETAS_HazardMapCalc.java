@@ -45,7 +45,7 @@ import scratch.kevin.ucerf3.etas.ETAS_HazardMapCalc.MapType;
 
 public class MPJ_ETAS_HazardMapCalc extends MPJTaskCalculator {
 	
-	private List<List<ETAS_EqkRupture>> catalogs;
+	private List<? extends List<ETAS_EqkRupture>> catalogs;
 	
 	// for precomputed shakemaps
 	private RandomAccessFile raFile;

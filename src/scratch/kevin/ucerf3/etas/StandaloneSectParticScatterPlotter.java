@@ -41,7 +41,7 @@ public class StandaloneSectParticScatterPlotter {
 			erf.getTimeSpan().setDuration(1d);
 			erf.updateForecast();
 			
-			Iterable<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.getBinaryCatalogsIterable(catalogsFile, 0d);
+			Iterable<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.getBinaryCatalogsIterable(catalogsFile, 0d);
 			
 			ETAS_MultiSimAnalysisTools.plotSectParticScatter(catalogs, duration, erf, outputDir);
 		} catch (Exception e) {

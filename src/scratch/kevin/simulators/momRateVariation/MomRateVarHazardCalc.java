@@ -160,7 +160,7 @@ public class MomRateVarHazardCalc {
 						+", t="+myEvents.get(maxDeltaIndex).getTimeInYears());
 				break;
 			case UCERF3_ETAS:
-				List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(u3EtasCatalogs, 5);
+				List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(u3EtasCatalogs, 5);
 				eventLists = UCERF3_ETASComparisons.loadUCERF3EtasCatalogs(catalogs, u3Sol, region, u3Elems);
 				myEvents = UCERF3ComparisonAnalysis.stitch(eventLists);
 				break;

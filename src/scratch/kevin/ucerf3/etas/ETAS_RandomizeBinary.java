@@ -32,7 +32,7 @@ public class ETAS_RandomizeBinary {
 		long ot = Math.round((startYear-1970.0)*ProbabilityModelsCalc.MILLISEC_PER_YEAR);
 		double durationMillis = duration * ProbabilityModelsCalc.MILLISEC_PER_YEAR;
 		
-		List<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(inputFile);
+		List<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.loadCatalogsBinary(inputFile);
 		
 		CatalogComparator comp = new CatalogComparator();
 		

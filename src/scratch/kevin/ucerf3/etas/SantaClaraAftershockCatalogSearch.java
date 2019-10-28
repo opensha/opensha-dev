@@ -36,7 +36,7 @@ public class SantaClaraAftershockCatalogSearch {
 				+ "2016_06_15-haywired_m7-10yr-full_td-no_ert-combined/results_descendents_m5.bin");
 		if (args.length > 0)
 			catFile = new File(args[0]);
-		Iterable<List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.getBinaryCatalogsIterable(catFile, 0d);
+		Iterable<? extends List<ETAS_EqkRupture>> catalogs = ETAS_CatalogIO.getBinaryCatalogsIterable(catFile, 0d);
 		
 		List<List<ETAS_EqkRupture>> cuppertinoCatalogs = Lists.newArrayList();
 		List<List<ETAS_EqkRupture>> paloAltoCatalogs = Lists.newArrayList();
