@@ -10,15 +10,19 @@ import java.util.List;
 import java.util.Random;
 
 import org.jfree.data.Range;
+import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.HanksBakun2002_MagAreaRel;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
+import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.GMT_MapException;
 import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.GriddedRegion;
@@ -52,7 +56,11 @@ import com.google.common.io.Files;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
+import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
+import scratch.UCERF3.simulatedAnnealing.completion.EnergyCompletionCriteria;
+import scratch.UCERF3.simulatedAnnealing.completion.IterationCompletionCriteria;
 import scratch.UCERF3.simulatedAnnealing.params.CoolingScheduleType;
+import scratch.UCERF3.simulatedAnnealing.params.GenerationFunctionType;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.SlipAlongRuptureModelEnum;
 
@@ -75,37 +83,102 @@ public class SingleFaultInversion {
 	// These values are the same for all fault sections
 	final static double UPPER_SEIS_DEPTH = 0;
 	final static double LOWER_SEIS_DEPTH = 14;
-	final static double FAULT_DIP = 90;
+	final static double FAULT_DIP = 90; // FIX MAX_SUBSECT_LENGTH_KM calc below if this is changed
 	final static double FAULT_RAKE = 0.0;
 	final static double FAULT_SLIP_RATE = 30;	// mm/yr
 	final static double FAULT_LENGTH_KM = 14*29;
 	
-	final static int NUM_SUBSECT_PER_RUP = 2;
-	final static double MAX_SUSECT_LENGTH_KM = 14/NUM_SUBSECT_PER_RUP;
+	final static int NUM_SUBSECT_PER_RUP = 4;
+	final static double MAX_SUBSECT_LENGTH_KM = (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)/NUM_SUBSECT_PER_RUP;
 	
 	final static double hazGridSpacing = 0.05;
 		
 	ArrayList<FaultSectionPrefData> faultSectionDataList;
 	ArrayList<SegRateConstraint> sectionRateConstraints;
 	int[][] rupSectionMatrix;
-	
-	final static String APRIORI_RUP_RATE_FILENAME = "aPrioriRupRates.txt";
+		
+	FaultSectionPrefData parentFaultData;
 
 	public enum InversionSolutionType {
+		RATES_FROM_MFD_SOLUTION,
 		NON_NEGATIVE_LEAST_SQUARES,
 		SIMULATED_ANNEALING,
-		FROM_FILE;
+		FROM_FILE,
+		APPLY_SOLUTION;
 	}
+	double[] solutionRatesToApplyArray;	
+
+	public enum MFD_TargetType {
+		GR_b_1pt0,
+		GR_b_0pt8,
+		GR_b_0pt0,
+		GR_b_minus1,
+		MAX_RATE,  // all in minimum magnitude bin
+		MIN_RATE,  // all in maximum magnitude bin
+		NONE;
+	}
+
+	public enum SlipRateProfileType {
+		UNIFORM,
+		TAPERED;
+	}
+	
+	public enum SA_InitialStateType {
+		ALL_ZEROS,
+		A_PRIORI_RATES,
+		FROM_MFD_CONSTRAINT;
+	}
+
 	
 	double hazCurveLnMin = Math.log(0.001);
 	double hazCurveLnMax = Math.log(10);
 	int hazCurveNum = 20;
 	double hazCurveDelta = (hazCurveLnMax-hazCurveLnMin)/(double)(hazCurveNum-1);
+	
+	// Adjustable Parameters
+	String dirName;
+	String solutionName; 						// Inversion name
+	boolean wtedInversion; 						// Whether to apply data weights
+	SlipRateProfileType slipRateProfile;
+	SlipAlongRuptureModelEnum slipModelType;	// Average slip along rupture model
+	ScalingRelationshipEnum scalingRel; 		// Scaling Relationship
+	double relativeSectRateWt; 					// Section Rate Constraints wt
+	String segmentationConstrFilename; 			// = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
+	double relative_segmentationConstrWt; 		// Segmentation Constraints wt
+	double relative_aPrioriRupWt;  				// A priori rupture rates wts
+	String aPrioriRupRateFilename;  			// A priori rupture rates file name; e.g., ROOT_DATA_DIR+"aPrioriRupRates.txt"
+	boolean setAprioriRatesFromMFD_Constraint;	// this overides the above file option if both are set
+	double minRupRate; 							// Minimum Rupture Rate; not applied for NSHMP solution
+	boolean applyProbVisible; 					// Apply prob visible
+	double moRateReduction;						// reduction due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)		
+	MFD_TargetType mfdTargetType; 				// Target MFD Constraint
+	double relativeMFD_constraintWt; 			// Target MFD Constraint Wt
+	double totalRateConstraint; 				// Total Rate Constraint
+	double relativeTotalRateConstraintWt;
+	InversionSolutionType solutionType;
+	long randomSeed;							// for SA reproducibility 
+	int numSolutions; 							// this is ignored for NON_NEGATIVE_LEAST_SQUARES which only has one possible solution
+	CoolingScheduleType saCooling;
+	GenerationFunctionType perturbationFunc;
+	CompletionCriteria completionCriteria;
+	SA_InitialStateType initialStateType;
+	String rupRatesFromFileDirName;				//if solution is from a file (previous solution); name example: ROOT_PATH+"OutDir/";
+	double magAareaAleatoryVariability;			// the gaussian sigma for the mag-area relationship
+	// Data to plot and/or save:
+	boolean popUpPlots;							// this tells whether to show plots in a window (set null to turn off; e.g., for HPC)
+	boolean doDataFits;
+	boolean doMagHistograms;
+	boolean doNonZeroRateRups;
+    boolean doSectPartMFDs;
+	Location hazCurveLoc; 						// to make hazard curve (set loc=null to ignore)
+    String hazCurveLocName;
+    boolean makeHazardMaps; 					// to make hazard maps
+	double saPeriodForHaz;						// set as 0.0 for PGA
+
 
 	
 	public SingleFaultInversion() {
-		initData();
-		
+		setDefaultParameterValuess();
 	}
 		
 	/**
@@ -156,14 +229,39 @@ public class SingleFaultInversion {
 	}
 	
 	
+	private void tempSetNSHMP_GR_Model(ScalingRelationshipEnum scalingRel) {
+		IncrementalMagFreqDist targetMFD = getTargetMFD(scalingRel, MFD_TargetType.GR_b_1pt0);	// this should be b=0.8
 		
-	private void initData() {
+		// make magLogAreaFunc to interpolate from because scalingRel doesn't (yet) give area from mag
+		double minLogArea = Math.log10(10e6); // 10 km squared)
+		double maxLogArea = Math.log10(10e3 *10e6); // 10 km by 10k km
+		EvenlyDiscretizedFunc magLogAreaFunc = new EvenlyDiscretizedFunc(minLogArea, maxLogArea, 101);
+		for(int i=0;i<magLogAreaFunc.size();i++) {
+			double mag = scalingRel.getMag(Math.pow(10, magLogAreaFunc.getX(i)), Double.NaN, Double.NaN);
+			magLogAreaFunc.set(i,mag);
+		}
+		System.out.println(magLogAreaFunc.toString());
+			
 		
+//		WC1994_MagLengthRelationship wcScRel = new WC1994_MagLengthRelationship();
+//		wcScRel.setRake(0.0);
+		for(int i=0;i<targetMFD.size();i++) {
+//			System.out.println((float)targetMFD.getX(i)+"\t"+(float)wcScRel.getMedianLength(targetMFD.getX(i)));
+			double areaKm = Math.pow(10.0, magLogAreaFunc.getFirstInterpolatedX(targetMFD.getX(i)))/1e6;
+			double lengthKm = areaKm/(LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH);
+			System.out.println((float)targetMFD.getX(i)+"\t"+(float)lengthKm+"\t"+(float)(lengthKm/3.5));
+
+		}
+		System.exit(0);
+	}
+	
+	
+	private void makeFaultSectionDataList() {
 		FaultTrace parentFaultTrace = new FaultTrace("parentFaultTrace");
 		parentFaultTrace.add(new Location(33d,-117d));
-		parentFaultTrace.add(new Location(33d+FAULT_LENGTH_KM/111d,-117));
+		parentFaultTrace.add(new Location(33d+FAULT_LENGTH_KM/111.195052,-117));
 		System.out.println("Fault trace length: "+parentFaultTrace.getTraceLength());
-		FaultSectionPrefData parentFaultData = new FaultSectionPrefData();
+		parentFaultData = new FaultSectionPrefData();
 		parentFaultData.setFaultTrace(parentFaultTrace);
 		parentFaultData.setAveDip(FAULT_DIP);
 		parentFaultData.setAveRake(FAULT_RAKE);
@@ -171,13 +269,83 @@ public class SingleFaultInversion {
 		parentFaultData.setAveLowerDepth(LOWER_SEIS_DEPTH);
 		parentFaultData.setAveSlipRate(FAULT_SLIP_RATE);
 		parentFaultData.setSlipRateStdDev(FAULT_SLIP_RATE/10d);
+		faultSectionDataList = parentFaultData.getSubSectionsList(MAX_SUBSECT_LENGTH_KM);
+		
+//		double totMoRateFromSections = faultSectionDataList.get(0).calcMomentRate(true)*faultSectionDataList.size();
+//		double totLengthFromSections = faultSectionDataList.get(0).getTraceLength()*faultSectionDataList.size();
+//		System.out.println("parentFaultData MoRate: "+parentFaultData.calcMomentRate(true)+"\t"+totMoRateFromSections);
+//		System.out.println("parentFaultData Length: "+parentFaultData.getTraceLength()+"\t"+totLengthFromSections);
+//		System.out.println("parentFaultData DDW: "+parentFaultData.getReducedDownDipWidth()+"\t"+faultSectionDataList.get(0).getReducedDownDipWidth());
+	}
+	
+		
+	private void initData() {
+		
+		if(parentFaultData == null)
+			makeFaultSectionDataList();
+//		FaultTrace parentFaultTrace = new FaultTrace("parentFaultTrace");
+//		parentFaultTrace.add(new Location(33d,-117d));
+//		parentFaultTrace.add(new Location(33d+FAULT_LENGTH_KM/111d,-117));
+//		System.out.println("Fault trace length: "+parentFaultTrace.getTraceLength());
+//		parentFaultData = new FaultSectionPrefData();
+//		parentFaultData.setFaultTrace(parentFaultTrace);
+//		parentFaultData.setAveDip(FAULT_DIP);
+//		parentFaultData.setAveRake(FAULT_RAKE);
+//		parentFaultData.setAveUpperDepth(UPPER_SEIS_DEPTH);
+//		parentFaultData.setAveLowerDepth(LOWER_SEIS_DEPTH);
+//		parentFaultData.setAveSlipRate(FAULT_SLIP_RATE);
+//		parentFaultData.setSlipRateStdDev(FAULT_SLIP_RATE/10d);
 		
 		System.out.println("parentFaultData MoRate: "+parentFaultData.calcMomentRate(true));
 		
-		faultSectionDataList = parentFaultData.getSubSectionsList(MAX_SUSECT_LENGTH_KM);
+		faultSectionDataList = parentFaultData.getSubSectionsList(MAX_SUBSECT_LENGTH_KM);
 		
 		int numSect = faultSectionDataList.size();
-//		numSect = 5;
+		
+		// Apply any taper to slip rates
+		switch (slipRateProfile) {
+		case TAPERED:
+//			// linear taper over first and last 10%
+//			int numForTaper = numSect/10;
+////System.out.println("numForTaper = "+numForTaper);
+//
+//			for(int i=0; i<numForTaper-1; i++) {
+//				double wt = ((double)i+1.0)/(double)numForTaper; // =1 is to prevent zero
+////System.out.println("wt = "+wt);
+//				FaultSectionPrefData data = faultSectionDataList.get(i);
+//				data.setAveSlipRate(wt*data.getOrigAveSlipRate());
+//				data.setSlipRateStdDev(wt*data.getOrigSlipRateStdDev());
+//				data = faultSectionDataList.get(numSect-1-i);
+//				data.setAveSlipRate(wt*data.getOrigAveSlipRate());
+//				data.setSlipRateStdDev(wt*data.getOrigSlipRateStdDev());
+//			}
+			
+			// sqrtSine Taper
+			HistogramFunction taperedSlipCDF = FaultSystemRuptureRateInversion.getTaperedSlipFunc().getCumulativeDistFunction();
+			double subSectLength = faultSectionDataList.get(0).getTraceLength();
+			double totLength = subSectLength*faultSectionDataList.size();
+			double currStartPoint = 0, totWt=0, moRate=0;
+			for(int i=0; i<faultSectionDataList.size(); i++) {
+				double x1_fract = currStartPoint/totLength;
+				double x2_fract = (currStartPoint+subSectLength)/totLength;
+				double wt = (taperedSlipCDF.getInterpolatedY(x2_fract) - taperedSlipCDF.getInterpolatedY(x1_fract))*faultSectionDataList.size();
+				FaultSectionPrefData data = faultSectionDataList.get(i);
+//				System.out.print(i+"\t"+wt+"\t"+data.getOrigAveSlipRate());
+
+				data.setAveSlipRate(wt*data.getOrigAveSlipRate());
+				data.setSlipRateStdDev(wt*data.getOrigSlipRateStdDev());
+//				System.out.println("\t"+data.getOrigAveSlipRate());
+				moRate += data.calcMomentRate(true);
+				totWt += wt;
+				currStartPoint+=subSectLength;
+
+			}
+// System.out.println("moRate = "+moRate);
+// System.exit(0);
+			break;
+		case UNIFORM:
+			break;
+		}
 		
 		int numRup =0;
 		int curNumRup = numSect - (NUM_SUBSECT_PER_RUP-1);
@@ -224,13 +392,13 @@ public class SingleFaultInversion {
 	
 	
 	
-	private void writeApriorRupRatesForMaxRateModel() {	
+	private void writeApriorRupRatesForMaxRateModel(String fileName) {	
 		
 		if(rupSectionMatrix == null)
 			throw new RuntimeException("must create the rupSectionMatrix before running this method");
 		
 		try{
-			FileWriter fw = new FileWriter(ROOT_DATA_DIR+APRIORI_RUP_RATE_FILENAME);
+			FileWriter fw = new FileWriter(ROOT_DATA_DIR+fileName);
 			int numRuptures = rupSectionMatrix[0].length;
 			int numSections = rupSectionMatrix.length;
 
@@ -637,6 +805,428 @@ public class SingleFaultInversion {
 		return region;
 	}
 	
+	
+	public double getMinPossibleRate(ScalingRelationshipEnum scalingRel) {
+		double origWidthKm = faultSectionDataList.get(0).getOrigDownDipWidth();
+		double maxRupLengthKm = parentFaultData.getTraceLength();
+		double maxRupAreaKmSq = parentFaultData.getReducedDownDipWidth()*maxRupLengthKm;
+		double mag = scalingRel.getMag(maxRupAreaKmSq*1e6, maxRupLengthKm*1e3, origWidthKm*1e3);
+		return parentFaultData.calcMomentRate(true)/MagUtils.magToMoment(mag);
+	}
+	
+	
+	public double getMaxPossibleRate(ScalingRelationshipEnum scalingRel) {
+		double origWidthKm = faultSectionDataList.get(0).getOrigDownDipWidth();
+		double minRupLengthKm = faultSectionDataList.get(0).getTraceLength();
+		double minRupAreaKmSq = faultSectionDataList.get(0).getReducedDownDipWidth()*NUM_SUBSECT_PER_RUP*minRupLengthKm;
+		double mag = scalingRel.getMag(minRupAreaKmSq*1e6, minRupLengthKm*1e3, origWidthKm*1e3);
+		return parentFaultData.calcMomentRate(true)/MagUtils.magToMoment(mag);
+	}
+	
+	
+	public IncrementalMagFreqDist getTargetMFD(ScalingRelationshipEnum scalingRel, MFD_TargetType mfdType) {
+
+		double origWidthKm = faultSectionDataList.get(0).getOrigDownDipWidth();
+		
+		double minRupLengthKm = faultSectionDataList.get(0).getTraceLength()*NUM_SUBSECT_PER_RUP;
+		double minRupAreaKmSq = faultSectionDataList.get(0).getReducedDownDipWidth()*minRupLengthKm;
+		double minMag = scalingRel.getMag(minRupAreaKmSq*1e6, minRupLengthKm*1e3, origWidthKm*1e3);
+		double minMFD_Mag = FaultSystemRuptureRateInversion.roundMagTo10thUnit(minMag);
+		
+		double maxRupLengthKm = parentFaultData.getTraceLength();
+		double maxRupAreaKmSq = parentFaultData.getReducedDownDipWidth()*maxRupLengthKm;
+		double maxMag = scalingRel.getMag(maxRupAreaKmSq*1e6, maxRupLengthKm*1e3, origWidthKm*1e3);
+		double maxMFD_Mag = FaultSystemRuptureRateInversion.roundMagTo10thUnit(maxMag);
+		
+		double toMoRate = parentFaultData.calcMomentRate(true);
+		
+		int num = (int)Math.round((maxMFD_Mag-minMFD_Mag)/FaultSystemRuptureRateInversion.MAG_DELTA + 1);
+		IncrementalMagFreqDist mfd=null;
+		switch (mfdType) {
+		case GR_b_1pt0:
+			GutenbergRichterMagFreqDist gr_b1 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_b1.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 1.0);
+			gr_b1.setName("GR, b=1");
+			mfd = gr_b1;
+			break;
+		case GR_b_0pt8:
+			GutenbergRichterMagFreqDist gr_b0p8 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_b0p8.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 0.8);
+			gr_b0p8.setName("GR, b=0.8");
+			mfd = gr_b0p8;
+			break;
+		case GR_b_0pt0:
+			GutenbergRichterMagFreqDist gr_b0 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_b0.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 0.0);
+			gr_b0.setName("GR, b=1");
+			mfd = gr_b0;
+			break;
+		case GR_b_minus1:
+			GutenbergRichterMagFreqDist gr_bMinus1 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_bMinus1.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, -1.0);
+			gr_bMinus1.setName("GR, b=1");
+			mfd = gr_bMinus1;
+			break;
+		case MAX_RATE:
+			IncrementalMagFreqDist maxMFD = new IncrementalMagFreqDist(minMFD_Mag,num,0.1);
+			maxMFD.set(0,1.0);
+			// this correct for the difference between orig and rounded mag
+			double magRoundingCorr = MagUtils.magToMoment(minMFD_Mag)/MagUtils.magToMoment(minMag);
+			maxMFD.scaleToTotalMomentRate(toMoRate*magRoundingCorr);
+			mfd = maxMFD;
+			break;
+		case MIN_RATE:
+			IncrementalMagFreqDist minMFD = new IncrementalMagFreqDist(minMFD_Mag,num,0.1);
+			minMFD.set(maxMFD_Mag,1.0);
+			// this correct for the difference between orig and rounded mag
+			double magRoundingCorr2 = MagUtils.magToMoment(maxMFD_Mag)/MagUtils.magToMoment(maxMag);
+			minMFD.scaleToTotalMomentRate(toMoRate*magRoundingCorr2);
+			mfd = minMFD;
+			break;
+		case NONE:
+			mfd = null;
+			break;
+		}
+
+		return mfd;
+	}
+	
+	
+	/**
+	 * This sets/resets default parameter values
+	 */
+	public void setDefaultParameterValuess() {
+		 dirName = ROOT_PATH+"NoNameOutput";
+		 solutionName = "No Name Solution"; // Inversion name
+		 wtedInversion = true; // Whether to apply data weights
+		 slipRateProfile = SlipRateProfileType.TAPERED;
+		 slipModelType = SlipAlongRuptureModelEnum.TAPERED; // Average slip along rupture model
+		 scalingRel = ScalingRelationshipEnum.ELLSWORTH_B; // Scaling Relationship
+		 relativeSectRateWt=0; // Section Rate Constraints wt
+		 segmentationConstrFilename = null; // = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
+		 relative_segmentationConstrWt = 0; // Segmentation Constraints wt
+		 relative_aPrioriRupWt = 0;  // A priori rupture rates wts
+		 aPrioriRupRateFilename = null; // file that has the a prior rupture rates
+		 setAprioriRatesFromMFD_Constraint = false;
+		 minRupRate = 0.0; // Minimum Rupture Rate; not applied for NSHMP solution
+		 applyProbVisible = false; // Apply prob visible
+		 moRateReduction = 0.0;	// reduction due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)		
+		 mfdTargetType = MFD_TargetType.GR_b_1pt0; // Target MFD Constraint
+		 relativeMFD_constraintWt = 0; // Target MFD Constraint Wt
+		 totalRateConstraint = 0.005328; // Total Rate Constraint
+		 relativeTotalRateConstraintWt = 0.0;
+		 solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		 randomSeed = 0;	// zero means use current time in millis as the seed
+		 numSolutions = 1; // this is ignored for NON_NEGATIVE_LEAST_SQUARES which only has one possible solution
+		 saCooling = CoolingScheduleType.FAST_SA;
+		 perturbationFunc = GenerationFunctionType.UNIFORM_NO_TEMP_DEPENDENCE;
+		 completionCriteria = new IterationCompletionCriteria((long) 1e5);
+		 initialStateType = SA_InitialStateType.ALL_ZEROS;
+		 rupRatesFromFileDirName = null;  //if solution is from a file (previous solution); name example: ROOT_PATH+"OutDir/";
+		 magAareaAleatoryVariability = 0.0;
+		// Data to plot and/or save:
+		 popUpPlots = true;	// this tells whether to show plots in a window (set null to turn off; e.g., for HPC)
+		 doDataFits=true;
+		 doMagHistograms=true;
+		 doNonZeroRateRups=true;
+	     doSectPartMFDs=true;
+		 hazCurveLoc = null; // to make hazard curve (set loc=null to ignore)
+	     hazCurveLocName = "Hazard Curve";
+	     makeHazardMaps = false; //// to make hazard maps
+		 saPeriodForHaz = 1.0;	// set as 0.0 for PGA
+	}
+	
+	
+	/**
+	 * This generates a solution and diagnostic info for the current parameter settings
+	 */
+	public void getSolution() {	
+		if(randomSeed == 0)
+			randomSeed = System.currentTimeMillis();
+		initData();
+		
+		IncrementalMagFreqDist targetMFD = getTargetMFD(scalingRel, mfdTargetType);
+		if(D) {
+			if(targetMFD != null)
+				System.out.println(mfdTargetType+" total rate "+targetMFD.getTotalIncrRate());
+		}
+		
+		ArrayList<FaultSectionPrefData> fltSectDataList = getFaultSectionDataList();
+		ArrayList<SegRateConstraint> sectionRateConstraints = getSectionRateConstraints();
+		int[][] rupSectionMatrix = getRupSectionMatrix();
+		
+		// this will be used to keep track of runtimes
+		long startTimeMillis = System.currentTimeMillis();
+		if(D)
+			System.out.println("Starting Inversion");
+		
+		// create an instance of the inversion class with the above settings
+		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion(
+				solutionName,
+				slipRateProfile.toString(),
+				fltSectDataList, 
+				sectionRateConstraints, 
+				rupSectionMatrix, 
+				slipModelType, 
+				scalingRel, 
+				relativeSectRateWt, 
+				relative_aPrioriRupWt, 
+				aPrioriRupRateFilename,
+				wtedInversion, 
+				minRupRate, 
+				applyProbVisible, 
+				moRateReduction,
+				targetMFD,
+				relativeMFD_constraintWt,
+				segmentationConstrFilename,
+				relative_segmentationConstrWt,
+				totalRateConstraint,
+				relativeTotalRateConstraintWt,
+				magAareaAleatoryVariability);
+
+		
+		// make the directory for storing results
+	    File file = new File(dirName);
+	    file.mkdirs();
+	    
+	    // set a-prior rates from MFD so these can be applied as initial model
+	    if(setAprioriRatesFromMFD_Constraint)
+	    	fltSysRupInversion.setAprioriRupRatesFromMFD_Constrint();
+	    
+	    // write the setup info to a file
+	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
+	    
+		
+		// set the intial state is SA
+	    double[] initialState = null;
+	    if(solutionType == InversionSolutionType.SIMULATED_ANNEALING) {
+	    	switch(initialStateType) {
+	    	case ALL_ZEROS:
+	    		initialState = new double[fltSysRupInversion.getNumRuptures()];
+	    		break;
+	    	case A_PRIORI_RATES:
+	    		double tempArray[] = fltSysRupInversion.getAprioriRuptureRates();
+	    		if(tempArray.length != fltSysRupInversion.getNumRuptures())
+	    			throw new RuntimeException("aPrior rates are not set for each rupture");
+	    		initialState = tempArray;
+	    		break;
+	    	case FROM_MFD_CONSTRAINT:
+	    		initialState = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD);
+	    		break;
+	    	}
+	    }
+
+
+	    switch (solutionType) {
+	    		case NON_NEGATIVE_LEAST_SQUARES:
+	    			if(D) System.out.println("NON_NEGATIVE_LEAST_SQUARES");
+	    			fltSysRupInversion.doInversionNNLS();
+	    			break;
+	    		case RATES_FROM_MFD_SOLUTION:
+	    			if(D) System.out.println("NSHMP_SOLUTION");
+	    			fltSysRupInversion.doRatesFromMFD_Solution(targetMFD);
+	    			break;
+	    		case SIMULATED_ANNEALING:
+    			if(numSolutions==1) {
+		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions=1");
+	    				fltSysRupInversion.doInversionSA(completionCriteria, initialState, randomSeed, saCooling, perturbationFunc);
+	    			}
+	    			else if(numSolutions>1) {
+		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions="+numSolutions);
+	    				fltSysRupInversion.doInversionSA_MultTimes(completionCriteria, initialState, randomSeed, numSolutions, dirName, saCooling,perturbationFunc);
+	    			}
+	    			else {
+	    				throw new RuntimeException("bad numIterations");
+	    			}
+	    			break;
+	    		case FROM_FILE:
+			    	if(numSolutions==1) {
+		    			if(D) System.out.println("FROM_FILE; numSolutions=1");
+		    			String rupRatesFileName = rupRatesFromFileDirName+ "ruptureRatesAlt.txt";
+			    		double[] rupRatesArray = readRuptureRatesFromFile(rupRatesFileName);
+			    		fltSysRupInversion.setSolution(rupRatesArray, "Solution from file: "+rupRatesFileName);
+			    	}
+			    	else if(numSolutions>1) {
+		    			if(D) System.out.println("FROM_FILE; numSolutions="+numSolutions);
+		    			ArrayList<double[]> rupRatesArrayList = new ArrayList<double[]>();
+		    			for(int i=0;i<numSolutions;i++) {
+			    			String rupRatesFileName = rupRatesFromFileDirName+ "ruptureRates_"+i+".txt";
+			    			rupRatesArrayList.add(readRuptureRatesFromFile(rupRatesFileName));
+			    			fltSysRupInversion.setMultipleSolutions(rupRatesArrayList, "Multiple solutions read from files with prefix "+rupRatesFileName, dirName);
+		    			}
+			    	}
+			    	else {
+			    		throw new RuntimeException("bad numSolutions");
+			    	}
+			    	break;
+	    		case APPLY_SOLUTION:
+			    	if(numSolutions==1) {
+		    			if(D) System.out.println("APPLY_SOLUTION used");
+			    		fltSysRupInversion.setSolution(solutionRatesToApplyArray, "Solution rates applied");
+			    	}
+			    	else {
+			    		throw new RuntimeException("bad numSolutions (can only apply one here)");
+			    	}
+			    	break;
+
+	    }
+
+		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
+		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
+				
+		// write results to file
+		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
+			
+		if(doDataFits) fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
+		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
+		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
+		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
+	    
+	    // hazard curve:
+		if(hazCurveLoc != null) {
+			writeAndOrPlotHazardCurve(fltSysRupInversion, hazCurveLoc, saPeriodForHaz, dirName, popUpPlots, hazCurveLocName);
+		}
+	    
+	    // second parameter here is SA period; set as 0.0 for PGA:
+		if(makeHazardMaps)
+			makeHazardMaps(fltSysRupInversion, saPeriodForHaz, dirName, popUpPlots);
+	}
+
+	
+	
+	public void doNSHMP_GR_Solution(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, ScalingRelationshipEnum scalingRel) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		solutionType = InversionSolutionType.RATES_FROM_MFD_SOLUTION;
+		mfdTargetType = MFD_TargetType.GR_b_0pt8; // Target MFD Constraint
+		solutionName = "NSHMP_GR_"+slipRateProfile.toString()+"_"+slipRateProfile.toString()+"_".toString()+"_"+scalingRel.toString()+"_"; // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution();
+	}
+	
+	
+	/**
+	 * 
+	 * @param slipRateProfile
+	 * @param slipModelType
+	 * @param scalingRel
+	 */
+	public void doNSHMP_Char_Solution(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, ScalingRelationshipEnum scalingRel) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		magAareaAleatoryVariability = 0.12;	// gaussian distribution sigma
+		// make the solution
+		solutionType = InversionSolutionType.APPLY_SOLUTION;
+		solutionRatesToApplyArray = new double[6555];
+		double maxRupAreaKmSq = (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)*FAULT_LENGTH_KM;
+		double mag = scalingRel.getMag(maxRupAreaKmSq*1e6, FAULT_LENGTH_KM*1e3, (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)*1e3);
+		double maxMFD_Mag = FaultSystemRuptureRateInversion.roundMagTo10thUnit(mag);
+		double toMoRate = FaultMomentCalc.getMoment(maxRupAreaKmSq*1e6, FAULT_SLIP_RATE*1e-3);
+		double magRoundingCorr = MagUtils.magToMoment(maxMFD_Mag)/MagUtils.magToMoment(mag);
+		solutionRatesToApplyArray[6554] = (toMoRate*magRoundingCorr/1.071748)/MagUtils.magToMoment(maxMFD_Mag); // 1.071748 is for aleatory variability in magnitude
+		solutionName = "NSHMP_Char_"+slipRateProfile.toString()+"_"+slipRateProfile.toString()+"_".toString()+"_"+scalingRel.toString()+"_"; // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution();
+	}
+	
+	
+	/**
+	 * 
+	 * @param slipRateProfile
+	 * @param slipModelType
+	 * @param scalingRel
+	 */
+	public void doMinRateSolution(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, ScalingRelationshipEnum scalingRel) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		// make the solution
+		solutionType = InversionSolutionType.APPLY_SOLUTION;
+		solutionRatesToApplyArray = new double[6555];
+		double maxRupAreaKmSq = (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)*FAULT_LENGTH_KM;
+		double mag = scalingRel.getMag(maxRupAreaKmSq*1e6, FAULT_LENGTH_KM*1e3, (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)*1e3);
+		double toMoRate = FaultMomentCalc.getMoment(maxRupAreaKmSq*1e6, FAULT_SLIP_RATE*1e-3);
+//		makeFaultSectionDataList();
+//		FaultSectionPrefData sectData = faultSectionDataList.get(0);
+//		double maxRulLengthKm = faultSectionDataList.size()*sectData.getTraceLength();	
+//		double maxRupAreaKmSq = maxRulLengthKm*sectData.getReducedDownDipWidth();
+//		double mag = scalingRel.getMag(maxRupAreaKmSq*1e6, maxRulLengthKm*1e3, sectData.getReducedDownDipWidth()*1e3);
+//		double toMoRate = faultSectionDataList.size()*sectData.calcMomentRate(true);	
+		
+		// round the mag
+		double maxMFD_Mag = ((double)Math.round(100*mag))/100.0; // FaultSystemRuptureRateInversion.roundMagTo10thUnit(mag);
+		double magRoundingCorr = MagUtils.magToMoment(maxMFD_Mag)/MagUtils.magToMoment(mag);
+		
+		solutionRatesToApplyArray[6554] = toMoRate*magRoundingCorr/MagUtils.magToMoment(maxMFD_Mag); 
+		solutionName = "MinRateSol_"+slipRateProfile.toString()+"_"+slipRateProfile.toString()+"_".toString()+"_"+scalingRel.toString()+"_"; // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution();
+	}
+
+	
+	/**
+	 * The remaining slip-rate discrepancy is from floater end effects, as only one rupture hits the first and last section, whereas 
+	 * most sections participate in 4 different ruptures; the average slip-rate discrepancy is zero.
+	 * @param slipRateProfile
+	 * @param slipModelType
+	 * @param scalingRel
+	 */
+	public void doMaxRateSolution(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, ScalingRelationshipEnum scalingRel) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		solutionType = InversionSolutionType.RATES_FROM_MFD_SOLUTION;
+		mfdTargetType = MFD_TargetType.MAX_RATE; // Target MFD Constraint
+		solutionName = "MaxRateSol_"+slipRateProfile.toString()+"_"+slipRateProfile.toString()+"_".toString()+"_"+scalingRel.toString()+"_"; // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution();
+	}
+	
+	/**
+	 * This one matches slip rates perfectly except at the ends
+	 * @param slipRateProfile
+	 * @param slipModelType
+	 * @param scalingRel
+	 */
+	public void doMaxRateSolutionAlt(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, ScalingRelationshipEnum scalingRel) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		// make the solution
+		solutionType = InversionSolutionType.APPLY_SOLUTION;
+		solutionRatesToApplyArray = new double[6555];
+//		double rupLengthKm = LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH;
+//		double rupAreaKmSq = (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)*FAULT_LENGTH_KM;
+//		double mag = scalingRel.getMag(maxRupAreaKmSq*1e6, FAULT_LENGTH_KM*1e3, (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)*1e3);
+//		double toMoRate = FaultMomentCalc.getMoment(maxRupAreaKmSq*1e6, FAULT_SLIP_RATE*1e-3);
+		makeFaultSectionDataList();
+		FaultSectionPrefData sectData = faultSectionDataList.get(0);
+		double rupLengthKm = NUM_SUBSECT_PER_RUP*sectData.getTraceLength();	
+		double rupAreaKmSq = rupLengthKm*sectData.getReducedDownDipWidth();
+		double mag = scalingRel.getMag(rupAreaKmSq*1e6, rupLengthKm*1e3, sectData.getReducedDownDipWidth()*1e3);
+		double slip = scalingRel.getAveSlip(rupAreaKmSq*1e6, rupLengthKm*1e3, sectData.getReducedDownDipWidth()*1e3)*1e3; // mm
+		double aveRate = FAULT_SLIP_RATE/(slip*NUM_SUBSECT_PER_RUP);
+		// round the mag
+		double magRounded = ((double)Math.round(100*mag))/100.0; // FaultSystemRuptureRateInversion.roundMagTo10thUnit(mag);
+		double magRoundingCorr = MagUtils.magToMoment(magRounded)/MagUtils.magToMoment(mag);
+		int numRup = faultSectionDataList.size()-NUM_SUBSECT_PER_RUP+1;
+		for(int i=0;i<numRup;i++)
+			solutionRatesToApplyArray[i] = aveRate*magRoundingCorr; 
+		solutionName = "MaxRateSolAlt_"+slipRateProfile.toString()+"_"+slipRateProfile.toString()+"_".toString()+"_"+scalingRel.toString()+"_"; // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution();
+	}
+
+
+
+	
 	/**
 	 * As written, the FaultSystemRuptureRateInversion constructor used here always sets the a-priori rupture rates and MFD constraint
 	 * from a best-fitting GR distribution (whether these are applied depends on the weights given and the Simulated Annealing initial 
@@ -645,80 +1235,140 @@ public class SingleFaultInversion {
 	 */
 	public static void main(String []args) {
 		
-		// THE FOLLOWING SETS ALL THE INVERSION ATTRIBUTES:
-		//------------------------------------------------
+		SingleFaultInversion singleFaultInversion = new SingleFaultInversion();
+		singleFaultInversion.doNSHMP_GR_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+		singleFaultInversion.doNSHMP_GR_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);
+		singleFaultInversion.doNSHMP_Char_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+		singleFaultInversion.doNSHMP_Char_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);
 		
-		String dirName = ROOT_PATH+"Output";
-	
-		// Inversion name
-		String name = "Single Fault Inversion";
-		
-		// Average slip along rupture model
-//		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.TAPERED;
-		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.UNIFORM;
-		
-		// Scaling Relationship
-		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.ELLSWORTH_B;
-		
-		double relativeSectRateWt=0;
-		
-//		String segmentationConstrFilename = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
-		String segmentationConstrFilename = null;
-		double relative_segmentationConstrWt = 0;
-		
-		// Misc settings
-		double relative_aPrioriRupWt = 0;
-		boolean wtedInversion = true;
-//		double minRupRate = 1e-8;
-		double minRupRate = 0.0;
-		boolean applyProbVisible = false;
-		double moRateReduction = 0.0;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
-		double relativeMFD_constraintWt = 0; // 
-		
-		// Inversion Solution Type:
-		InversionSolutionType solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		singleFaultInversion.doMinRateSolution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+		singleFaultInversion.doMaxRateSolution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+		singleFaultInversion.doMaxRateSolutionAlt(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
 
-//		InversionSolutionType solutionType = InversionSolutionType.FROM_FILE;
-		// the following is the directory where to find this file - CANNOT COMMENT THIS OUT
-		String rupRatesFileDirName = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform_4/";	// this is only used if solutionType = InversionSolutionType.FROM_FILE
+		//DELETE THE FOLLOWING EVENTULLY)
 
-//		InversionSolutionType solutionType = InversionSolutionType.NON_NEGATIVE_LEAST_SQUARES;
-
-		int numSolutions = 1; // this is ignored for NON_NEGATIVE_LEAST_SQUARES which only has one possible solution
-		
-		// Simulated Annealing Parameters (ignored for NON_NEGATIVE_LEAST_SQUARES)
-		CoolingScheduleType saCooling = CoolingScheduleType.VERYFAST_SA;
-		long numIterations = (long) 1e4;
-		boolean initStateFromAprioriRupRates = false;
-		long randomSeed = System.currentTimeMillis();
-//		long randomSeed = 1525892588112l; // for reproducibility; note that the last character here is the letter "l" to indicated a long value
-		
-		// Data to plot and/or save:
-		boolean popUpPlots = true;	// this tells whether to show plots in a window (set null to turn off; e.g., for HPC)
-		boolean doDataFits=true;
-		boolean doMagHistograms=true;
-		boolean doNonZeroRateRups=true;
-	    boolean doSectPartMFDs=true;
-	    
-	    // to make hazard curve (set loc=null to ignore)
-		Location hazCurveLoc = null; 
-	    String hazCurveLocName = "Hazard Curve";
-	    
-	    // to make hazard maps
-	    boolean makeHazardMaps = false;
-		double saPeriodForHaz = 1.0;	// set as 0.0 for PGA
+//		// THE FOLLOWING SETS ALL THE INVERSION ATTRIBUTES:
+//		//------------------------------------------------
+//		
+//		String dirName = ROOT_PATH+"Output";
+//	
+//		// Inversion name
+//		String solutionName = "Single Fault Inversion";
+//		
+//		// Weighted inversion (whether to apply data weights)
+//		boolean wtedInversion = true;
+//		
+//		// fault slip rates:
+//		SlipRateProfileType slipRateProfile = SlipRateProfileType.TAPERED;
+//		
+//		// Average slip along rupture model
+//		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.UNIFORM;
+//		
+//		// Scaling Relationship
+//		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.ELLSWORTH_B;
+//		
+//		// Section Rate Constraints
+//		double relativeSectRateWt=0;
+//		
+//		// Segmentation Constraints
+////		String segmentationConstrFilename = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
+//		String segmentationConstrFilename = null;
+//		double relative_segmentationConstrWt = 0;
+//		
+//		// A priori rupture rates
+//		double relative_aPrioriRupWt = 0;
+//		
+//		// Minimum Rupture Rate
+////		double minRupRate = 1e-8;
+//		double minRupRate = 0.0;
+//		
+//		// Apply prob visible
+//		boolean applyProbVisible = false;
+//		
+//		// Moment Rate Reduction
+//		double moRateReduction = 0.0;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
+//		
+//		// Target MFD Constraint
+//		MFD_TargetType mfdTargetType = MFD_TargetType.GR_b_1pt0;
+//		double relativeMFD_constraintWt = 0; // 
+//		
+//		// Total Rate Constraint
+//		double totalRateConstraint = 0.005328;
+//		double relativeTotalRateConstraintWt = 100/totalRateConstraint;
+//
+//		
+//		// Inversion Solution Type:
+//		
+////		InversionSolutionType solutionType = InversionSolutionType.NSHMP_SOLUTION;
+//
+////		InversionSolutionType solutionType = InversionSolutionType.FROM_FILE;
+//		String rupRatesFileDirName = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform_4/";	// don't comment out; this is only used if solutionType = InversionSolutionType.FROM_FILE
+//
+////		InversionSolutionType solutionType = InversionSolutionType.NON_NEGATIVE_LEAST_SQUARES;
+//		
+//		InversionSolutionType solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+//		int numSolutions = 1; // this is ignored for NON_NEGATIVE_LEAST_SQUARES which only has one possible solution
+//		CoolingScheduleType saCooling = CoolingScheduleType.LINEAR;
+//		GenerationFunctionType perturbationFunc = GenerationFunctionType.UNIFORM_NO_TEMP_DEPENDENCE;
+//		// set the SA completion criteria (choose one of these):
+//		long numIterations = (long) 1e5;
+//		IterationCompletionCriteria completionCriteria = new IterationCompletionCriteria(numIterations);
+////		double finalEnergy = 117d;	// this should be the number of rows to match data uncertinaties
+////		EnergyCompletionCriteria completionCriteria = new EnergyCompletionCriteria(finalEnergy);
+//		boolean initStateFromAprioriRupRates = true;
+//		long randomSeed = System.currentTimeMillis();
+////		long randomSeed = 1525892588112l; // for reproducibility; note that the last character here is the letter "l" to indicated a long value
+//		
+//		
+//		// Data to plot and/or save:
+//		boolean popUpPlots = true;	// this tells whether to show plots in a window (set null to turn off; e.g., for HPC)
+//		boolean doDataFits=true;
+//		boolean doMagHistograms=true;
+//		boolean doNonZeroRateRups=true;
+//	    boolean doSectPartMFDs=true;
+//	    
+//	    // to make hazard curve (set loc=null to ignore)
+//		Location hazCurveLoc = null; 
+//	    String hazCurveLocName = "Hazard Curve";
+//	    
+//	    // to make hazard maps
+//	    boolean makeHazardMaps = false;
+//		double saPeriodForHaz = 1.0;	// set as 0.0 for PGA
+//		
 
 		// THIS IS THE END OF THE INVERSION SETTINGS
 
 		// Create an instance of this inversion class
-		SingleFaultInversion singleFaultInversion = new SingleFaultInversion();
+//		SingleFaultInversion singleFaultInversion = new SingleFaultInversion();
 		
+//		singleFaultInversion.tempSetNSHMP_GR_Model(scalingRel);
+		
+//		// get the target MFD
+//		IncrementalMagFreqDist targetMFD = singleFaultInversion.getTargetMFD(scalingRel, mfdTargetType);
+//		if(D) System.out.println(mfdTargetType+" total rate "+targetMFD.getTotalIncrRate());
+		
+//		// This writes out a range of total rates
+//		System.out.println("Rates for "+scalingRel);
+//		double rate = singleFaultInversion.getTargetMFD(scalingRel, MFD_TargetType.GR_b_1pt0).getTotalIncrRate();
+//		System.out.printf("\tGR b=1 Rate: %f\n",rate);
+//		rate = singleFaultInversion.getTargetMFD(scalingRel, MFD_TargetType.GR_b_0pt0).getTotalIncrRate();
+//		System.out.printf("\tGR b=0 Rate: %f\n",rate);
+//		rate = singleFaultInversion.getTargetMFD(scalingRel, MFD_TargetType.BR_b_minus1).getTotalIncrRate();
+//		System.out.printf("\tGR b=-1 Rate: %f\n",rate);
+//		System.out.printf("\tMax Rate: %f\n",singleFaultInversion.getMaxPossibleRate(scalingRel));
+//		System.out.printf("\tMin Rate: %f\n",singleFaultInversion.getMinPossibleRate(scalingRel));
+//		System.exit(0);
+//		// Result:
+//		Rates for ELLSWORTH_B
+//			GR b=1 Rate: 	0.088471
+//			GR b=0 Rate: 	0.021428
+//			GR b=-1 Rate: 	0.009476
+//			Max Rate: 		0.842805
+//			Min Rate: 		0.005328
+
 		
 //		singleFaultInversion.writeApriorRupRatesForMaxRateModel();
 
-		ArrayList<FaultSectionPrefData> fltSectDataList = singleFaultInversion.getFaultSectionDataList();
-		ArrayList<SegRateConstraint> sectionRateConstraints = singleFaultInversion.getSectionRateConstraints();
-		int[][] rupSectionMatrix = singleFaultInversion.getRupSectionMatrix();
 
 //		//Write section data (e.g., so it can be checked)
 //		if(D) {
@@ -750,98 +1400,107 @@ public class SingleFaultInversion {
 
 //		System.exit(0);
 		
-		// this will be used to keep track of runtimes
-		long startTimeMillis = System.currentTimeMillis();
-		if(D)
-			System.out.println("Starting Inversion");
-		
-		// create an instance of the inversion class with the above settings
-		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion(
-				name,
-				"default",
-				fltSectDataList, 
-				sectionRateConstraints, 
-				rupSectionMatrix, 
-				slipModelType, 
-				scalingRel, 
-				relativeSectRateWt, 
-				relative_aPrioriRupWt, 
-				ROOT_DATA_DIR+APRIORI_RUP_RATE_FILENAME,
-				wtedInversion, 
-				minRupRate, 
-				applyProbVisible, 
-				moRateReduction,
-				null,
-				relativeMFD_constraintWt,
-				segmentationConstrFilename,
-				relative_segmentationConstrWt);
-
-		
-		// make the directory for storing results
-	    File file = new File(dirName);
-	    file.mkdirs();
-	    
-	    // write the setup info to a file
-	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
-	    
-	    switch (solutionType) {
-	    		case NON_NEGATIVE_LEAST_SQUARES:
-	    			if(D) System.out.println("NON_NEGATIVE_LEAST_SQUARES");
-	    			fltSysRupInversion.doInversionNNLS();
-	    			break;
-	    		case SIMULATED_ANNEALING:
-	    			if(numSolutions==1) {
-		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions=1");
-	    				fltSysRupInversion.doInversionSA(numIterations, initStateFromAprioriRupRates, randomSeed, saCooling);
-	    			}
-	    			else if(numSolutions>1) {
-		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions="+numSolutions);
-	    				fltSysRupInversion.doInversionSA_MultTimes(numIterations, initStateFromAprioriRupRates, randomSeed, numSolutions, dirName, saCooling);
-	    			}
-	    			else {
-	    				throw new RuntimeException("bad numIterations");
-	    			}
-	    			break;
-	    		case FROM_FILE:
-			    	if(numSolutions==1) {
-		    			if(D) System.out.println("FROM_FILE; numSolutions=1");
-		    			String rupRatesFileName = rupRatesFileDirName+ "ruptureRatesAlt.txt";
-			    		double[] rupRatesArray = singleFaultInversion.readRuptureRatesFromFile(rupRatesFileName);
-			    		fltSysRupInversion.setSolution(rupRatesArray, "Solution from file: "+rupRatesFileName);
-			    	}
-			    	else if(numSolutions>1) {
-		    			if(D) System.out.println("FROM_FILE; numSolutions="+numSolutions);
-		    			ArrayList<double[]> rupRatesArrayList = new ArrayList<double[]>();
-		    			for(int i=0;i<numSolutions;i++) {
-			    			String rupRatesFileName = rupRatesFileDirName+ "ruptureRates_"+i+".txt";
-			    			rupRatesArrayList.add(singleFaultInversion.readRuptureRatesFromFile(rupRatesFileName));
-			    			fltSysRupInversion.setMultipleSolutions(rupRatesArrayList, "Multiple solutions read from files with prefix "+rupRatesFileName, dirName);
-		    			}
-			    	}
-			    	else {
-			    		throw new RuntimeException("bad numIterations");
-			    	}
-			    	break;
-	    }
-
-		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
-		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
-				
-		// write results to file
-		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
-			
-		if(doDataFits) fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
-		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
-		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
-		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
-	    
-	    // hazard curve:
-		if(hazCurveLoc != null) {
-			singleFaultInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, hazCurveLoc, saPeriodForHaz, dirName, popUpPlots, hazCurveLocName);
-		}
-	    
-	    // second parameter here is SA period; set as 0.0 for PGA:
-		if(makeHazardMaps)
-			singleFaultInversion.makeHazardMaps(fltSysRupInversion, saPeriodForHaz, dirName, popUpPlots);
+//		// this will be used to keep track of runtimes
+//		long startTimeMillis = System.currentTimeMillis();
+//		if(D)
+//			System.out.println("Starting Inversion");
+//		
+//		// create an instance of the inversion class with the above settings
+//		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion(
+//				solutionName,
+//				"default",
+//				fltSectDataList, 
+//				sectionRateConstraints, 
+//				rupSectionMatrix, 
+//				slipModelType, 
+//				scalingRel, 
+//				relativeSectRateWt, 
+//				relative_aPrioriRupWt, 
+//				ROOT_DATA_DIR+APRIORI_RUP_RATE_FILENAME,
+//				wtedInversion, 
+//				minRupRate, 
+//				applyProbVisible, 
+//				moRateReduction,
+//				targetMFD,
+//				relativeMFD_constraintWt,
+//				segmentationConstrFilename,
+//				relative_segmentationConstrWt,
+//				totalRateConstraint,
+//				relativeTotalRateConstraintWt);
+//
+//		
+//		// make the directory for storing results
+//	    File file = new File(dirName);
+//	    file.mkdirs();
+//	    
+//	    // set a-prior rates from MFD so these can be applied as initial model
+//	    fltSysRupInversion.setAprioriRupRatesFromMFD_Constrint();
+//	    
+//	    // write the setup info to a file
+//	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
+//	    
+//	    switch (solutionType) {
+//	    		case NON_NEGATIVE_LEAST_SQUARES:
+//	    			if(D) System.out.println("NON_NEGATIVE_LEAST_SQUARES");
+//	    			fltSysRupInversion.doInversionNNLS();
+//	    			break;
+//	    		case NSHMP_SOLUTION:
+//	    			if(D) System.out.println("NSHMP_SOLUTION");
+//	    			fltSysRupInversion.doNSHMP_Solution(targetMFD);
+//	    			break;
+//	    		case SIMULATED_ANNEALING:
+//	    			if(numSolutions==1) {
+//		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions=1");
+//	    				fltSysRupInversion.doInversionSA(completionCriteria, initStateFromAprioriRupRates, randomSeed, saCooling, perturbationFunc);
+//	    			}
+//	    			else if(numSolutions>1) {
+//		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions="+numSolutions);
+//	    				fltSysRupInversion.doInversionSA_MultTimes(completionCriteria, initStateFromAprioriRupRates, randomSeed, numSolutions, dirName, saCooling,perturbationFunc);
+//	    			}
+//	    			else {
+//	    				throw new RuntimeException("bad numIterations");
+//	    			}
+//	    			break;
+//	    		case FROM_FILE:
+//			    	if(numSolutions==1) {
+//		    			if(D) System.out.println("FROM_FILE; numSolutions=1");
+//		    			String rupRatesFileName = rupRatesFileDirName+ "ruptureRatesAlt.txt";
+//			    		double[] rupRatesArray = singleFaultInversion.readRuptureRatesFromFile(rupRatesFileName);
+//			    		fltSysRupInversion.setSolution(rupRatesArray, "Solution from file: "+rupRatesFileName);
+//			    	}
+//			    	else if(numSolutions>1) {
+//		    			if(D) System.out.println("FROM_FILE; numSolutions="+numSolutions);
+//		    			ArrayList<double[]> rupRatesArrayList = new ArrayList<double[]>();
+//		    			for(int i=0;i<numSolutions;i++) {
+//			    			String rupRatesFileName = rupRatesFileDirName+ "ruptureRates_"+i+".txt";
+//			    			rupRatesArrayList.add(singleFaultInversion.readRuptureRatesFromFile(rupRatesFileName));
+//			    			fltSysRupInversion.setMultipleSolutions(rupRatesArrayList, "Multiple solutions read from files with prefix "+rupRatesFileName, dirName);
+//		    			}
+//			    	}
+//			    	else {
+//			    		throw new RuntimeException("bad numIterations");
+//			    	}
+//			    	break;
+//	    }
+//
+//		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
+//		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
+//				
+//		// write results to file
+//		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
+//			
+//		if(doDataFits) fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
+//		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
+//		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
+//		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
+//	    
+//	    // hazard curve:
+//		if(hazCurveLoc != null) {
+//			singleFaultInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, hazCurveLoc, saPeriodForHaz, dirName, popUpPlots, hazCurveLocName);
+//		}
+//	    
+//	    // second parameter here is SA period; set as 0.0 for PGA:
+//		if(makeHazardMaps)
+//			singleFaultInversion.makeHazardMaps(fltSysRupInversion, saPeriodForHaz, dirName, popUpPlots);
 	}
 }
