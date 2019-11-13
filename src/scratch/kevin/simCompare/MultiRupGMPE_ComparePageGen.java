@@ -79,6 +79,9 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	private boolean replotCurves = true;
 	private boolean replotResiduals = true;
 	
+	private int sourceRupContributionNum;
+	private Table<String, E, Double> sourceRupContributionFracts;
+	
 	protected void init(SimulationRotDProvider<E> simProv, List<Site> sites, boolean distJB, double cutoffDist,
 			double minMag, double maxMag) {
 		this.simProv = simProv;
@@ -111,6 +114,12 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 
 	public void setReplotResiduals(boolean replotResiduals) {
 		this.replotResiduals = replotResiduals;
+	}
+	
+	public void setSourceRupContributionFractions(Table<String, E, Double> sourceRupContribFracts,
+			int numSourcesToPlot) {
+		this.sourceRupContributionFracts = sourceRupContribFracts;
+		this.sourceRupContributionNum = numSourcesToPlot;
 	}
 
 	static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
@@ -549,16 +558,58 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				
 				lines.add("");
 				Preconditions.checkState(plotFile.exists());
-				lines.add("![Standard Normal Plot]("+resourcesDir.getName()
-					+"/"+plotFile.getName()+")");
 				
-				for (double period : periods) {
-					String periodPrefix = prefix+"_"+optionalDigitDF.format(period)+"s";
-					File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
-					if (!periodPlotFile.exists() || replotZScores)
-						ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new double[] {period},
-							gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+				String srcPrefix = prefix+"_source_contrib";
+				File srcPlotFile = new File(resourcesDir, srcPrefix+".png");
+				boolean srcSuccess = sourceRupContributionFracts != null &&
+						((srcPlotFile.exists() && !replotZScores) ||
+						ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, periods,
+						gmpeRef, null, new ArrayList<>(), resourcesDir, srcPrefix, sourceRupContributionFracts,
+						sourceRupContributionNum));
+				
+				if (srcSuccess) {
+					// plot with source contributions
+					TableBuilder table = MarkdownUtils.tableBuilder();
+					table.initNewLine();
+					table.addColumn("Total");
+					table.addColumn("Source Contributions");
+					table.finalizeLine();
+					table.initNewLine();
+					table.addColumn("![Standard Normal Plot]("+resourcesDir.getName()
+							+"/"+plotFile.getName()+")");
+					
+					table.addColumn("![Standard Normal Plot]("+resourcesDir.getName()
+							+"/"+srcPlotFile.getName()+")");
+					table.finalizeLine();
+					lines.addAll(table.build());
+
+					for (double period : periods) {
+						String periodPrefix = prefix+"_"+optionalDigitDF.format(period)+"s";
+						File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
+						if (!periodPlotFile.exists() || replotZScores)
+							ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new double[] {period},
+									gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+						String srcPeriodPrefix = periodPrefix+"_source_contrib";
+						File srcPeriodPlotFile = new File(resourcesDir, srcPeriodPrefix+".png");
+						if (!srcPeriodPlotFile.exists() || replotZScores)
+							ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new double[] {period},
+									gmpeRef, null, new ArrayList<>(), resourcesDir, srcPeriodPrefix,
+									sourceRupContributionFracts, sourceRupContributionNum);
+					}
+				} else {
+					
+					lines.add("![Standard Normal Plot]("+resourcesDir.getName()
+					+"/"+plotFile.getName()+")");
+
+					for (double period : periods) {
+						String periodPrefix = prefix+"_"+optionalDigitDF.format(period)+"s";
+						File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
+						if (!periodPlotFile.exists() || replotZScores)
+							ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new double[] {period},
+									gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+					}
 				}
+				
 			}
 		}
 		

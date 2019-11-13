@@ -90,7 +90,9 @@ public class HazardCurveSigmaDependence {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, colors[i]));
 		}
 		
-		PlotSpec spec = new PlotSpec(funcs, chars, "Sigma Comparison", (float)period+"s SA (g)", "Annual Probability of Exceedance");
+//		String title = "Sigma Comparison";
+		String title = " ";
+		PlotSpec spec = new PlotSpec(funcs, chars, title, (float)period+"s SA (g)", "Annual Probability of Exceedance");
 		spec.setLegendVisible(true);
 		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel();

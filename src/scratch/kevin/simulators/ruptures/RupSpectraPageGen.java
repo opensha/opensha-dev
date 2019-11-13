@@ -280,6 +280,9 @@ class RupSpectraPageGen {
 		// slip time plot
 		String rupPlotPrefix = "rupture_plot_"+eventID;
 		RupturePlotGenerator.writeSlipPlot(event, func, resourcesDir, rupPlotPrefix, bbpSourceRect, bbpSourceHypo, gmpeSurf);
+		// write grayscale friendly version
+		RupturePlotGenerator.writeSlipPlot(event, func, resourcesDir, rupPlotPrefix+"_gsfriendly",
+				null, null, null, true);
 		File rupPlot = new File(resourcesDir, rupPlotPrefix+".png");
 		Preconditions.checkState(rupPlot.exists());
 		lines.add("### Slip/Time Plot");
@@ -703,9 +706,13 @@ class RupSpectraPageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		int eventID = 385955;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
-//		int eventID = 5304;
-		int eventID = 31324;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
+////		int eventID = 5304;
+//		int eventID = 31324;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		int eventID = 9955310;
+		int eventID = 3817386;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = false;
@@ -761,7 +768,8 @@ class RupSpectraPageGen {
 		if (refBBPDir != null)
 			sites = BBP_Site.readFile(refBBPDir);
 		else
-			sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
+//			sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
+			sites = RSQSimBBP_Config.getCyberShakeVs500LASites();
 		
 		boolean runBBP = true;
 		if (eventBBPDir.exists()) {

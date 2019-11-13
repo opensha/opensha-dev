@@ -29,12 +29,13 @@ public class MPJ_BBP_CatalogSimScriptGen {
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
 		@SuppressWarnings("unused")
-//		String catalogDirName = "rundir2585_1myrs";
+		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir3271";
-		String catalogDirName = "rundir4576";
+//		String catalogDirName = "rundir4576";
 		
 		boolean standardSites = false;
-		boolean csInitialLASites = true;
+		boolean csInitialLASites = false;
+		boolean cs500LASites = true;
 		boolean griddedCASites = false;
 		boolean griddedSoCalSites = false;
 		double griddedSpacing = 1d;
@@ -47,6 +48,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		int numRG = 20;
 		
 //		RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_863;
+		if (cs500LASites)
+			RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_500;
 		VelocityModel vm = RSQSimBBP_Config.VM;
 		
 		int skipYears = 5000;
@@ -57,7 +60,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 18;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
@@ -108,10 +111,12 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-standardSites";
 		if (csInitialLASites)
 			jobName += "-csLASites";
+		if (cs500LASites)
+			jobName += "-cs500Sites";
 		if (griddedCASites || griddedSoCalSites)
 			jobName += "-griddedSites";
 		Preconditions.checkArgument(!(griddedSoCalSites && griddedCASites));
-		Preconditions.checkState(standardSites || griddedCASites || griddedSoCalSites || csInitialLASites);
+		Preconditions.checkState(standardSites || griddedCASites || griddedSoCalSites || csInitialLASites || cs500LASites);
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -124,6 +129,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			sites.addAll(RSQSimBBP_Config.getStandardSites());
 		if (csInitialLASites)
 			sites.addAll(RSQSimBBP_Config.getCyberShakeInitialLASites());
+		if (cs500LASites)
+			sites.addAll(RSQSimBBP_Config.getCyberShakeVs500LASites());
 		if (griddedCASites)
 			sites.addAll(RSQSimBBP_Config.getCAGriddedSites(griddedSpacing));
 		if (griddedSoCalSites)

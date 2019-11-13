@@ -165,6 +165,24 @@ public class BBP_PartBValidationConfig {
 				0, Range.closed(0d, 5d), // Ztor, range
 				null, false, // linearFrace, linearRelative
 				15, // width
+				false, false),
+		M6p6_VERT_SS_SURFACE_RELAXED("M6.6, Vertical Strike-Slip with Surface Rupture (relaxed)",
+				"M6.6 SS Rel", "m6p6_vert_ss_surface_relaxed",
+				6.6, 0.05, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.2, true, // linearFrace, linearRelative
+				5.62, // width
+				false, true),
+		M7p2_VERT_SS_SURFACE_RELAXED("M7.2, Vertical Strike-Slip with Surface Rupture (relaxed) ",
+				"M7.2 SS Rel", "m7p2_vert_ss_surface_relaxed",
+				7.2, 0.05, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.2, true, // linearFrace, linearRelative
+				12, // width
 				false, false); // rXpositive, official
 		
 		private String name;

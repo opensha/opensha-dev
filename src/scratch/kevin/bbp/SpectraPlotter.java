@@ -1135,13 +1135,15 @@ public class SpectraPlotter {
 //		new File("/tmp/event_46817/i364_USC_event46817_dist50.0_srcAz200.0_siteSrcAz80.0"),
 //		new File("/tmp/event_46817/i369_USC_event46817_dist50.0_srcAz200.0_siteSrcAz180.0"),
 //		new File("/tmp/event_46817/i370_USC_event46817_dist50.0_srcAz200.0_siteSrcAz200.0"));
-		multiRDCompare(new File("/tmp/event_46817/"), "USC_siteSrcAz0_spectra", "USC",
-				new File("/tmp/event_46817/i18_USC_event46817_dist50.0_srcAz10.0_siteSrcAz0.0"),
-				new File("/tmp/event_46817/i270_USC_event46817_dist50.0_srcAz150.0_siteSrcAz0.0"),
-				new File("/tmp/event_46817/i306_USC_event46817_dist50.0_srcAz170.0_siteSrcAz0.0"),
-				new File("/tmp/event_46817/i324_USC_event46817_dist50.0_srcAz180.0_siteSrcAz0.0"),
-				new File("/tmp/event_46817/i486_USC_event46817_dist50.0_srcAz270.0_siteSrcAz0.0"));
-		System.exit(0);
+		
+//		multiRDCompare(new File("/tmp/event_46817/"), "USC_siteSrcAz0_spectra", "USC",
+//				new File("/tmp/event_46817/i18_USC_event46817_dist50.0_srcAz10.0_siteSrcAz0.0"),
+//				new File("/tmp/event_46817/i270_USC_event46817_dist50.0_srcAz150.0_siteSrcAz0.0"),
+//				new File("/tmp/event_46817/i306_USC_event46817_dist50.0_srcAz170.0_siteSrcAz0.0"),
+//				new File("/tmp/event_46817/i324_USC_event46817_dist50.0_srcAz180.0_siteSrcAz0.0"),
+//				new File("/tmp/event_46817/i486_USC_event46817_dist50.0_srcAz270.0_siteSrcAz0.0"));
+//		System.exit(0);
+		
 //		File inputDir = new File("/data/kevin/simulators/catalogs/bruce/rundir2585/event_srfs/event_1670183_0.05s_ADJ_VEL_bbp");
 //		DiscretizedFunc unfiltered = loadRotD50(new File(inputDir, "704409874083920.USC.rd100"));
 //		unfiltered.setName("Unfiltered");
@@ -1168,9 +1170,13 @@ public class SpectraPlotter {
 		
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
+//		File refDir = null;
+//		int eventID = 1670183;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 		File refDir = null;
-		int eventID = 1670183;
+		int eventID = 9955310;
 		
 //		RSQSimCatalog catalog = Catalogs.JG_UCERF3_millionElement.instance(baseDir);
 //		File refDir = new File("/home/kevin/bbp/parallel/2017_10_04-JG_UCERF3_millionElement-event4099020-dx0.48-noHF/results");

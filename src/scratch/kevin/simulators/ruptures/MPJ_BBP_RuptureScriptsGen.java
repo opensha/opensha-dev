@@ -60,23 +60,26 @@ class MPJ_BBP_RuptureScriptsGen {
 //		int eventID = 1670183;
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		int eventID = 385955;
-		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
-//		int eventID = 5304;
-		int eventID = 31324;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
+////		int eventID = 5304;
+//		int eventID = 31324;
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		int eventID = 9955310;
 		
 		File catalogDir = catalog.getCatalogDir();
 		
 		boolean stampede = false;
 		
 		boolean doGP = true;
-		boolean doShakeMap = false;
-		
-		boolean csSites = true;
+		boolean doShakeMap = true;
+
+		boolean csSites = false;
+		boolean cs500Sites = true;
 		
 		int numGP = 400;
 //		double mapSpacing = 0.05;
 		double mapSpacing = 0.02;
-		int maxNodes = 6;
+		int maxNodes = 2;
 //		int maxNodes = 10;
 		boolean gpAdjustDDW = false;
 		
@@ -161,6 +164,8 @@ class MPJ_BBP_RuptureScriptsGen {
 				jobName += "-stampede";
 			if (csSites)
 				jobName += "-csLASites";
+			if (cs500Sites)
+				jobName += "-cs500Sites";
 			if (gpAdjustDDW) {
 				jobName += "-adjustDDW";
 				Somerville_2006_MagAreaRel ma = new Somerville_2006_MagAreaRel();
@@ -178,6 +183,8 @@ class MPJ_BBP_RuptureScriptsGen {
 			List<BBP_Site> sites;
 			if (csSites)
 				sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
+			else if (cs500Sites)
+				sites = RSQSimBBP_Config.getCyberShakeVs500LASites();
 			else
 				sites = RSQSimBBP_Config.getStandardSites(gpSRC);
 			
