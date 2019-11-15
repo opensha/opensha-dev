@@ -1467,13 +1467,19 @@ public class PureScratch {
 		for (String key : map2Recreate.keySet())
 			System.out.println(key+": "+map2Recreate.get(key));
 	}
+	
+	private static void test57() throws IOException {
+		CPT cpt = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0d, 6d);
+		cpt.setNanColor(Color.LIGHT_GRAY);
+		cpt.writeCPTFile(new File("/tmp/cpt.cpt"));
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test56();
+		test57();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

@@ -1,4 +1,4 @@
-package scratch.kevin;
+package scratch.kevin.miscFigures;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
@@ -36,7 +36,8 @@ import scratch.UCERF3.erf.mean.MeanUCERF3;
 public class SiteMapGenerator {
 
 //	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
-	private static Region region = new Region(new Location(35, -115), new Location(33, -120));
+//	private static Region region = new Region(new Location(35, -115), new Location(33, -120));
+	private static Region region = new Region(new Location(35, -116), new Location(33.25, -119.5));
 	
 	private static GriddedGeoDataSet fetchTopo(TopographicSlopeFile topoRes) throws IOException {
 		SRTM30PlusTopography topo = new SRTM30PlusTopography();
@@ -94,7 +95,7 @@ public class SiteMapGenerator {
 		// San Diego, Los Angeles, Santa Barbara, Victorville, Palm Springs
 //		cities.put("San Diego", new Location(32.70, -117.15));
 		double symbolWidth = 0.07;
-		int fontSize = 14;
+		int fontSize = 16;
 //		Color fontColor = Color.BLACK;
 		Color fontColor = new Color(60, 15, 15);
 //		cities.put("Los Angeles", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-118.25, 34.05),

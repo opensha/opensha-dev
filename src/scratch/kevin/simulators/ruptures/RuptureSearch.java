@@ -10,6 +10,7 @@ import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_A_WG02_MagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Somerville_2006_MagAreaRel;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.simulators.EventRecord;
@@ -30,14 +31,14 @@ public class RuptureSearch {
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		
 		int parentID = 301; // Mojave S
 		double minMag = 7.3;
-		double maxMag = 7.7;
-		double maxMagDiff = 0.15;
+		double maxMag = 7.5;
+		double maxMagDiff = 0.2;
 //		MagAreaRelationship magAreaRel = new Somerville_2006_MagAreaRel();
 		MagAreaRelationship magAreaRel = new Ellsworth_A_WG02_MagAreaRel();
 //		Region hypocenterReg = new Region(new Location(34.25, -117.5), 20d);
@@ -119,6 +120,7 @@ public class RuptureSearch {
 			System.out.print(i+". Event "+event.getID()+", M="+(float)event.getMagnitude()+", M/A calc M="+(float)calcMag);
 			System.out.println("\tscore = "+score.score()+" = "+score.numOn+" on - "+score.numOff+" off - "
 					+(float)score.strayElemPenalty+" stray penalty ("+score.numStrays+" strays)");
+			System.out.println("\taverage velocity: "+(float)calcAvgRupVel(event));
 			
 			RSQSimEventSlipTimeFunc func = catalog.getSlipTimeFunc(event);
 			
@@ -127,6 +129,54 @@ public class RuptureSearch {
 			RupturePlotGenerator.writeSlipPlot(event, func, outputDir, prefix);
 			RupturePlotGenerator.writeMapPlot(catalog.getElements(), event, func, outputDir, prefix+"_map");
 		}
+	}
+	
+	private static double calcAvgRupVel(RSQSimEvent event) {
+		double aveVel = 0d;
+		
+		double minTime = Double.POSITIVE_INFINITY;
+		int hypoID = -1;
+		Location hypo = null;
+		for (EventRecord rec : event) {
+			double[] times = rec.getElementTimeFirstSlips();
+			List<SimulatorElement> elems = rec.getElements();
+			Preconditions.checkNotNull(times, "Event doesn't have timing information");
+			int[] ids = rec.getElementIDs();
+			
+			for (int i=0; i<ids.length; i++) {
+				if (times[i] < minTime) {
+					minTime = times[i];
+					hypoID = ids[i];
+					hypo = elems.get(i).getCenterLocation();
+				}
+			}
+		}
+		
+		int num = 0;
+		
+		for (EventRecord rec : event) {
+			double[] times = rec.getElementTimeFirstSlips();
+			int[] ids = rec.getElementIDs();
+			List<SimulatorElement> elems = rec.getElements();
+			
+			for (int i=0; i<ids.length; i++) {
+				if (ids[i] != hypoID) {
+					double dist = LocationUtils.linearDistanceFast(hypo, elems.get(i).getCenterLocation());
+					double tDelta = times[i] - minTime;
+					if (tDelta == 0)
+						continue;
+					double vel = dist/(tDelta);
+					Preconditions.checkState(Double.isFinite(vel) && vel > 0,
+							"Bad velocity! vel = %s / %s = %s", dist, tDelta, vel);
+					aveVel += vel;
+					num++;
+				}
+			}
+		}
+		
+		if (num > 0)
+			aveVel /= num;
+		return aveVel;
 	}
 	
 	private static class EventScore implements Comparable<EventScore> {

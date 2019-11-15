@@ -249,6 +249,7 @@ public class RSQSimBBP_Config {
 	public static final double SITE_HI_PASS_FREQ = 100;
 	
 	private static final List<BBP_Site> allSites;
+	private static final List<BBP_Site> cs500InitialSites;
 	private static final List<BBP_Site> csLAInitialSites;
 	static {
 		List<BBP_Site> sites = new ArrayList<>();
@@ -279,6 +280,21 @@ public class RSQSimBBP_Config {
 		sites.add(new BBP_Site("SMCA", new Location(34.00909, -118.48939), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		
 		csLAInitialSites = Collections.unmodifiableList(sites);
+		
+		sites = new ArrayList<>();
+		
+		sites.add(new BBP_Site("USC", new Location(34.0192, -118.286), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("SBSM", new Location(34.064986, -117.29201), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("WNGC", new Location(34.041824, -118.0653), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("STNI", new Location(33.93088, -118.17881), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("SMCA", new Location(34.00909, -118.48939), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("OSI", new Location(34.6145, -118.7235), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("PDE", new Location(34.44199, -118.58215), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("WSS", new Location(34.1717, -118.64971), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("LAF", new Location(33.86889, -118.33143), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		sites.add(new BBP_Site("s022", new Location(34.24505, -119.18086), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		
+		cs500InitialSites = Collections.unmodifiableList(sites);
 	}
 	
 	public static List<BBP_Site> getStandardSites() {
@@ -287,6 +303,10 @@ public class RSQSimBBP_Config {
 	
 	public static List<BBP_Site> getCyberShakeInitialLASites() {
 		return csLAInitialSites;
+	}
+	
+	public static List<BBP_Site> getCyberShakeVs500LASites() {
+		return cs500InitialSites;
 	}
 	
 	public static List<BBP_Site> getCAGriddedSites(double spacing) {
@@ -401,8 +421,10 @@ public class RSQSimBBP_Config {
 		BBP_Site.writeToFile(sitesFile, sites);
 		
 		BBP_Wrapper bbpWrap = new BBP_Wrapper(VM, METHOD, getEventSrcFile(catalog, event.getID()), null,
-				getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT, timeScale, scaleVelocities), sitesFile, bbpOutputDir);
+				getEventSRFFile(catalog, event.getID(), SRF_INTERP_MODE, SRF_DT, timeScale, scaleVelocities),
+				sitesFile, bbpOutputDir);
 		bbpWrap.setDoHF(DO_HF);
+		bbpWrap.setDataOnly(true);
 		bbpWrap.run();
 	}
 	

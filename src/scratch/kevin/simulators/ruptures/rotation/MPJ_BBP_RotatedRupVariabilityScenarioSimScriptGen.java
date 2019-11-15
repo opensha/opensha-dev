@@ -34,12 +34,13 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
-//		String catalogDirName = "rundir2585_1myrs";
-		String catalogDirName = "rundir4317";
+		String catalogDirName = "rundir2585_1myrs";
+//		String catalogDirName = "rundir4317";
 		
-		int skipYears = 2000;
+		int skipYears = 5000;
 
-		Scenario[] scenarios = Scenario.values();
+//		Scenario[] scenarios = Scenario.values();
+		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE_RELAXED, Scenario.M7p2_VERT_SS_SURFACE_RELAXED};
 //		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE};
 //		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
 		double[] distances = { 20d, 50d, 100d };
@@ -48,7 +49,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		int numSiteToSourceAz = 1;
 		int maxRuptures = 400;
 		
-//		RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_863;
+		RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_863;
 		VelocityModel vm = RSQSimBBP_Config.VM;
 		
 //		List<BBP_Site> sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
@@ -65,7 +66,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 17;
 		String queue = "scec";
 		int mins = 48*60;
 		int heapSizeMB = 45*1024;

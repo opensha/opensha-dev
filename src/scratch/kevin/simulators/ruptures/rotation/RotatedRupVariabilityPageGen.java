@@ -1500,10 +1500,11 @@ public abstract class RotatedRupVariabilityPageGen {
 			table.initNewLine();
 			String siteTableName = siteBundleTableNames.get(i);
 			String emphasis = "";
-			for (int j=0; j<siteTableName.length() && siteTableName.charAt(j) == '*'; j++)
-				emphasis += '*';
-			if (sites.size() > 1)
+			if (sites.size() > 1) {
+				for (int j=0; j<siteTableName.length() && siteTableName.charAt(j) == '*'; j++)
+					emphasis += '*';
 				table.addColumn(siteTableName);
+			}
 			DiscretizedFunc stdDevFunc = new ArbitrarilyDiscretizedFunc();
 			StdDevPercentileFuncs stdDevPercentiles = null;
 			VarGroupingKey key = new VarGroupingKey(type, mag, distance, mySites);
