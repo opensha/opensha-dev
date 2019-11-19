@@ -695,20 +695,39 @@ public class SimulationHazardPlotter<E> {
 					int generation = prevSimCurves.size() - i;
 					
 					DiscretizedFunc prevSimCurve = prevSimCurves.get(i);
-					prevSimCurve.setName(groupedIntDF.format(prevRelLengths.get(i))+" yrs");
+//					prevSimCurve.setName(groupedIntDF.format(prevRelLengths.get(i))+" yrs");
+					if (i == 0)
+						prevSimCurve.setName("Subset Curves");
+					else
+						prevSimCurve.setName(null);
 					funcs.add(prevSimCurve);
-					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, finalSimCPT.getColor((float)generation)));
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, finalSimCPT.getColor((float)generation)));
+//					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.DARK_GRAY));
 				}
 				
-				funcs.add(gmpeCurve);
-				chars.add(gmpeCurveChar);
+//				funcs.add(gmpeCurve);
+//				chars.add(gmpeCurveChar);
 				
 				simCurve.setName("Complete Model");
 				funcs.add(simCurve);
 				chars.add(simCurveChar);
 				
+				double minY = 1d;
+				double maxX = 0d;
+				for (Point2D pt : simCurve) {
+					if (pt.getY() > 0) {
+						minY = Math.min(minY, pt.getY());
+						maxX = Math.max(maxX, pt.getX());
+					}
+				}
+				double maxY = 1e-2;
+				minY = Math.pow(10, Math.floor(Math.log10(minY)-0.2));
+				double minX = simCurve.getFirstInterpolatedX(maxY);
+				maxX = Math.pow(10, Math.ceil(Math.log10(maxX)+0.2));
+				
 				String prefix = outputFile.getName().replaceAll(".gif", "")+"_final";
-				plotHazardCurves(outputFile.getParentFile(), prefix, site, period, curveDuration, funcs, chars, null);
+				plotHazardCurves(outputFile.getParentFile(), prefix, site, period, curveDuration,
+						funcs, chars, null, new Range(minX, maxX), new Range(minY, maxY));
 			}
 			
 			prevGMPECurves.add(gmpeCurve);
@@ -731,6 +750,12 @@ public class SimulationHazardPlotter<E> {
 	
 	File plotHazardCurves(File outputDir, String prefix, Site site, double period, double curveDuration,
 			List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars, List<XYAnnotation> anns) throws IOException {
+		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, anns, curveXRange, curveYRange);
+	}
+	
+	File plotHazardCurves(File outputDir, String prefix, Site site, double period, double curveDuration,
+			List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars, List<XYAnnotation> anns,
+			Range curveXRange, Range curveYRange) throws IOException {
 		// now plot
 		String xAxisLabel = (float)period+"s SA (g)";
 		String yAxisLabel;

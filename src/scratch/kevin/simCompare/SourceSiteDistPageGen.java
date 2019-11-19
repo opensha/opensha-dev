@@ -135,7 +135,10 @@ public class SourceSiteDistPageGen<E> {
 						Map<AttenRelRef, HistogramFunction> gmpePeriodHists = new HashMap<>();
 						for (AttenRelRef gmpeRef : gmpeHists.keySet())
 							gmpePeriodHists.put(gmpeRef, gmpeHists.get(gmpeRef)[p]);
-						plotSourceSiteHist(resourcesDir, prefix, simHists[p], gmpePeriodHists, title, periods[p], numSims, numRups);
+						plotSourceSiteHist(resourcesDir, prefix, simHists[p], gmpePeriodHists, title, periods[p],
+								numSims, numRups, false);
+						plotSourceSiteHist(resourcesDir, prefix+"_pub", simHists[p], gmpePeriodHists, title, periods[p],
+								numSims, numRups, true);
 						plotsTable.put(magRange, periods[p], file);
 					}
 				}
@@ -201,8 +204,8 @@ public class SourceSiteDistPageGen<E> {
 	};
 	
 	private void plotSourceSiteHist(File outputDir, String prefix, HistogramFunction[] simHists,
-			Map<AttenRelRef, HistogramFunction> gmpeHists, String title, double period, int numSims, int numRups)
-					throws IOException {
+			Map<AttenRelRef, HistogramFunction> gmpeHists, String title, double period, int numSims, int numRups,
+			boolean publication) throws IOException {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
@@ -215,7 +218,7 @@ public class SourceSiteDistPageGen<E> {
 		funcs.add(simHist);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
 		
-		if (simHists.length == 3) {
+		if (simHists.length == 3 && !publication) {
 			HistogramFunction nearHist = simHists[1];
 			HistogramFunction farHist = simHists[2];
 			funcs.add(nearHist);
@@ -248,7 +251,8 @@ public class SourceSiteDistPageGen<E> {
 		Range xRange = new Range(minX, maxX);
 		Range yRange = new Range(0, maxY);
 		
-		PlotSpec spec = new PlotSpec(funcs, chars, title, "Log10 "+optionalDigitDF.format(period)+"s RotD50", "Count");
+		PlotSpec spec = new PlotSpec(funcs, chars, publication ? " " : title,
+				"Log10 "+optionalDigitDF.format(period)+"s RotD50", "Count");
 		spec.setLegendVisible(true);
 		
 		List<XYTextAnnotation> anns = new ArrayList<>();

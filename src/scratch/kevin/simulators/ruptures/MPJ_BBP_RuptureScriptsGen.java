@@ -71,7 +71,7 @@ class MPJ_BBP_RuptureScriptsGen {
 		boolean stampede = false;
 		
 		boolean doGP = true;
-		boolean doShakeMap = true;
+		boolean doShakeMap = false;
 
 		boolean csSites = false;
 		boolean cs500Sites = true;
@@ -79,9 +79,9 @@ class MPJ_BBP_RuptureScriptsGen {
 		int numGP = 400;
 //		double mapSpacing = 0.05;
 		double mapSpacing = 0.02;
-		int maxNodes = 2;
+		int maxNodes = 18;
 //		int maxNodes = 10;
-		boolean gpAdjustDDW = false;
+		boolean gpAdjustDDW = true;
 		
 		File srcFile = RSQSimBBP_Config.getEventSrcFile(catalog, eventID);
 		File srfFile = RSQSimBBP_Config.getEventSRFFile(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE, RSQSimBBP_Config.SRF_DT);
@@ -111,6 +111,7 @@ class MPJ_BBP_RuptureScriptsGen {
 		String bbpDataDir;
 		String nodeScratchDir;
 		String bbpCopyParentDir;
+		String nodeGFDir;
 		File bbpEnvFile;
 		String sharedScratchDir;
 		BatchScriptWriter pbsWrite;
@@ -122,6 +123,7 @@ class MPJ_BBP_RuptureScriptsGen {
 			remoteDir = new File("/work/00950/kevinm/stampede2/bbp/parallel");
 			bbpDataDir = "/tmp";
 			nodeScratchDir = null;
+			nodeGFDir = "/tmp/gfs";
 			bbpCopyParentDir = "/scratch/00950/kevinm/bbp";
 			bbpEnvFile = new File("/work/00950/kevinm/stampede2/bbp/bbp_env.sh");
 //			sharedScratchDir = "/scratch/00950/kevinm/";
@@ -135,6 +137,7 @@ class MPJ_BBP_RuptureScriptsGen {
 			remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
 			bbpDataDir = "${TMPDIR}";
 			nodeScratchDir = null;
+			nodeGFDir = "${TMPDIR}/gfs";
 			bbpCopyParentDir = "/staging/pjm/kmilner";
 			bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
 //			sharedScratchDir = "${SCRATCHDIR}";
@@ -229,7 +232,8 @@ class MPJ_BBP_RuptureScriptsGen {
 				argz += " --no-hf";
 			if (bbpDataDir != null && !bbpDataDir.isEmpty())
 				argz += " --bbp-data-dir "+bbpDataDir;
-			
+			if (nodeGFDir != null && !nodeGFDir.isEmpty())
+				argz += " --node-gf-dir "+nodeGFDir;
 
 			List<String> addLines = new ArrayList<>();
 			argz = MPJ_BBP_CatalogSimScriptGen.addBBP_EnvArgs(argz, addLines, remoteJobDir, nodeScratchDir,

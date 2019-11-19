@@ -29,8 +29,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
 		@SuppressWarnings("unused")
-		String catalogDirName = "rundir2585_1myrs";
-//		String catalogDirName = "rundir3271";
+//		String catalogDirName = "rundir2585_1myrs";
+		String catalogDirName = "rundir3271";
 //		String catalogDirName = "rundir4576";
 		
 		boolean standardSites = false;
@@ -67,6 +67,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		String bbpDataDir = "${TMPDIR}";
 		String nodeScratchDir = null;
 		String bbpCopyParentDir = "/staging/pjm/kmilner";
+		String nodeGFDir = "${TMPDIR}/gfs";
 		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
 		String sharedScratchDir = "${SCRATCHDIR}";
 		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
@@ -151,6 +152,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			argz += " --no-hf";
 		if (bbpDataDir != null && !bbpDataDir.isEmpty())
 			argz += " --bbp-data-dir "+bbpDataDir;
+		if (nodeGFDir != null && !nodeGFDir.isEmpty())
+			argz += " --node-gf-dir "+nodeGFDir;
 		if (numRG > 0)
 			argz += " --rup-gen-sims "+numRG;
 		if (timeScalar != 1d) {

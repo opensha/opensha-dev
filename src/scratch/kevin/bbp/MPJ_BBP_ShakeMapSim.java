@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import scratch.kevin.simulators.ruptures.AbstractMPJ_BBP_MultiRupSim;
 
 public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 	
@@ -93,6 +94,18 @@ public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 			Preconditions.checkState(bbpGFDir.exists());
 			if (rank == 0)
 				debug("BBP GF dir: "+bbpGFDir.getAbsolutePath());
+		}
+		
+		if (cmd.hasOption("node-gf-dir")) {
+			File localDir = new File(cmd.getOptionValue("node-gf-dir"));
+			if (size >= 5) {
+				// stagger them by 10s each
+				try {
+					Thread.sleep(10000l*rank);
+				} catch (InterruptedException e) {}
+			}
+			AbstractMPJ_BBP_MultiRupSim.rsyncGFs(localDir, bbpEnvFile, bbpGFDir, vm, rank, hostname);
+			bbpGFDir = localDir;
 		}
 		
 		// define region

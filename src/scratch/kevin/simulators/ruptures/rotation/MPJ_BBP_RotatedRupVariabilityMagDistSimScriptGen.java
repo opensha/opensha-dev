@@ -66,6 +66,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		int heapSizeMB = 45*1024;
 		String bbpDataDir = "${TMPDIR}";
 		String nodeScratchDir = null;
+		String nodeGFDir = "${TMPDIR}/gfs";
 		String bbpCopyParentDir = "/staging/pjm/kmilner";
 		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
 		String sharedScratchDir = "${SCRATCHDIR}";
@@ -123,7 +124,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		
 		writeScript(catalogDirName, skipYears, rupTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
 				numSiteToSourceAz, minRuptures, maxRuptures, timeScalar, scaleVelocities, threads, nodes, queue, mins,
-				bbpDataDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
+				bbpDataDir, nodeGFDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
 				localJobDir, remoteJobDir, "cat_bbp_rotated.slurm", vm);
 		if (writeIndividual && rupTypes.length > 1) {
 			for (RuptureType rupType : rupTypes) {
@@ -132,7 +133,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 				new File(localJobDir, rupType.getPrefix()).mkdir();
 				writeScript(catalogDirName, skipYears, myTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
 						numSiteToSourceAz, minRuptures, maxRuptures, timeScalar, scaleVelocities, threads, nodes, queue, mins,
-						bbpDataDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
+						bbpDataDir, nodeGFDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
 						localJobDir, myRemoteDir, rupType.getPrefix()+".slurm", vm);
 			}
 		}
@@ -141,9 +142,9 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 	private static void writeScript(String catalogDirName, int skipYears, RuptureType[] rupTypes, double minDist, int numDist,
 			double deltaDist, double minMag, int numMag, double deltaMag, int numSourceAz, int numSiteToSourceAz,
 			int minRuptures, int maxRuptures, double timeScalar, boolean scaleVelocities, int threads, int nodes,
-			String queue, int mins, String bbpDataDir, String nodeScratchDir, String bbpCopyParentDir, File bbpEnvFile,
-			String sharedScratchDir, BatchScriptWriter pbsWrite, JavaShellScriptWriter mpjWrite, File localJobDir,
-			File remoteJobDir, String scriptFileName, VelocityModel vm) throws IOException {
+			String queue, int mins, String bbpDataDir, String nodeGFDir, String nodeScratchDir, String bbpCopyParentDir,
+			File bbpEnvFile, String sharedScratchDir, BatchScriptWriter pbsWrite, JavaShellScriptWriter mpjWrite,
+			File localJobDir, File remoteJobDir, String scriptFileName, VelocityModel vm) throws IOException {
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
 		argz += " --vm "+vm.name()+" --method "+RSQSimBBP_Config.METHOD.name();
 		argz += " --catalog-dir "+catalogDirName;
@@ -165,6 +166,8 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 			argz += " --no-hf";
 		if (bbpDataDir != null && !bbpDataDir.isEmpty())
 			argz += " --bbp-data-dir "+bbpDataDir;
+		if (nodeGFDir != null && !nodeGFDir.isEmpty())
+			argz += " --node-gf-dir "+nodeGFDir;
 		if (timeScalar != 1d) {
 			argz += " --time-scalar "+(float)timeScalar;
 			if (scaleVelocities)

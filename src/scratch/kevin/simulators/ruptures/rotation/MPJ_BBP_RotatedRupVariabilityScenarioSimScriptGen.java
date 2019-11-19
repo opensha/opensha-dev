@@ -73,6 +73,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		String bbpDataDir = "${TMPDIR}";
 		String nodeScratchDir = null;
 		String bbpCopyParentDir = "/staging/pjm/kmilner";
+		String nodeGFDir = "${TMPDIR}/gfs";
 		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
 		String sharedScratchDir = "${SCRATCHDIR}";
 		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
@@ -154,6 +155,8 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 			argz += " --no-hf";
 		if (bbpDataDir != null && !bbpDataDir.isEmpty())
 			argz += " --bbp-data-dir "+bbpDataDir;
+		if (nodeGFDir != null && !nodeGFDir.isEmpty())
+			argz += " --node-gf-dir "+nodeGFDir;
 		if (timeScalar != 1d) {
 			argz += " --time-scalar "+(float)timeScalar;
 			if (scaleVelocities)

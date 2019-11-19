@@ -178,7 +178,8 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		File bbpDir = new File(bbpParallelDir, "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites");
+//		File bbpDir = new File(bbpParallelDir, "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites");
+		File bbpDir = new File(bbpParallelDir, "2019_11_11-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
 		
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		File bbpDir = new File(bbpParallelDir, "2018_09_10-rundir2740-all-m6.5-skipYears5000-noHF-csLASites");

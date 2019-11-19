@@ -333,7 +333,27 @@ public class BBP_Wrapper implements Runnable {
 	}
 	
 	private static File runBBP_Script(File bbpScript) throws IOException {
-		String[] command = { "/bin/bash", "-c", "bash "+bbpScript.getAbsolutePath() };
+		List<String> stdout = new ArrayList<>();
+		int exit = runScript(bbpScript, stdout);
+		
+		System.out.println("Exit: "+exit);
+		
+		for (int i=stdout.size(); --i>=0;) {
+			String line = stdout.get(i).trim();
+			if (line.startsWith(RESULTS_PREFIX)) {
+				File dir = new File(line.substring(RESULTS_PREFIX.length()).trim());
+				return dir;
+			}
+		}
+		return null;
+	}
+	
+	public static int runScript(File script) throws IOException {
+		return runScript(script, null);
+	}
+	
+	private static int runScript(File script, List<String> stdout) throws IOException {
+		String[] command = { "/bin/bash", "-c", "bash "+script.getAbsolutePath() };
 		
 		Process p = Runtime.getRuntime().exec(command);
 		int exit;
@@ -341,9 +361,12 @@ public class BBP_Wrapper implements Runnable {
 			exit = p.waitFor();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-			return null;
+			return -1;
 		}
-		List<String> stdout = streamToLines(p.getInputStream());
+		if (stdout == null)
+			stdout = streamToLines(p.getInputStream());
+		else
+			stdout.addAll(streamToLines(p.getInputStream()));
 		List<String> stderr = streamToLines(p.getErrorStream());
 		
 		if (D) {
@@ -361,16 +384,7 @@ public class BBP_Wrapper implements Runnable {
 			System.out.println("======================");
 		}
 		
-		System.out.println("Exit: "+exit);
-		
-		for (int i=stdout.size(); --i>=0;) {
-			String line = stdout.get(i).trim();
-			if (line.startsWith(RESULTS_PREFIX)) {
-				File dir = new File(line.substring(RESULTS_PREFIX.length()).trim());
-				return dir;
-			}
-		}
-		return null;
+		return exit;
 	}
 	
 	private static void move(File from, File to, boolean dataOnly) throws IOException {

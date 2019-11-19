@@ -604,6 +604,11 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			sites.add(new Site(new Location(34.041824, -118.0653), "WNGC"));
 //			sites.add(new Site(new Location(34.557, -118.125), "LAPD"));
 			sites.add(new Site(new Location(34.00909, -118.48939), "SMCA"));
+			sites.add(new Site(new Location(34.6145, -118.7235), "OSI"));
+			sites.add(new Site(new Location(34.44199, -118.58215), "PDE"));
+			sites.add(new Site(new Location(34.1717, -118.64971), "WSS"));
+			sites.add(new Site(new Location(33.86889, -118.33143), "LAF"));
+			sites.add(new Site(new Location(34.24505, -119.18086), "s022"));
 			
 			Scenario[] scenarios = { Scenario.M6p6_REVERSE, Scenario.M6p6_VERT_SS_SURFACE, Scenario.M7p2_VERT_SS_SURFACE };
 			

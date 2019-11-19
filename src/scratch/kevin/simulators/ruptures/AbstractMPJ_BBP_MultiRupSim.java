@@ -2,13 +2,17 @@ package scratch.kevin.simulators.ruptures;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
@@ -28,7 +32,9 @@ import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 import org.opensha.sha.simulators.srf.SRF_PointData;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.io.Files;
+import com.google.common.primitives.Ints;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import mpi.MPI;
@@ -71,6 +77,8 @@ public abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
 	private int numRG = 0;
 	
 	private ExecutorService exec;
+	
+	private HashSet<Integer> alreadyDones;
 
 	public AbstractMPJ_BBP_MultiRupSim(CommandLine cmd) throws IOException {
 		super(cmd);
@@ -94,6 +102,9 @@ public abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
 		resultsDir = new File(mainOutputDir, "results");
 		if (rank == 0) {
 			Preconditions.checkState((mainOutputDir.exists() && mainOutputDir.isDirectory()) || mainOutputDir.mkdir());
+			if (!resultsDir.exists())
+				// don't need to search for already dones, first time
+				alreadyDones = new HashSet<>();
 			Preconditions.checkState((resultsDir.exists() && resultsDir.isDirectory()) || resultsDir.mkdir());
 		}
 		
@@ -150,6 +161,18 @@ public abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
 				debug("BBP GF dir: "+bbpGFDir.getAbsolutePath());
 		}
 		
+		if (cmd.hasOption("node-gf-dir")) {
+			File localDir = new File(cmd.getOptionValue("node-gf-dir"));
+			if (size >= 5) {
+				// stagger them by 10s each
+				try {
+					Thread.sleep(10000l*rank);
+				} catch (InterruptedException e) {}
+			}
+			rsyncGFs(localDir, bbpEnvFile, bbpGFDir, vm, rank, hostname);
+			bbpGFDir = localDir;
+		}
+		
 		// load the catalog
 		catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
 				null, null, null, FaultModels.FM3_1, DeformationModels.GEOLOGIC); // TODO make option
@@ -169,6 +192,105 @@ public abstract class AbstractMPJ_BBP_MultiRupSim extends MPJTaskCalculator {
 			postBatchHook = new MasterZipHook();
 		
 		exec = Executors.newFixedThreadPool(getNumThreads());
+	}
+	
+	@Override
+	protected synchronized Collection<Integer> getDoneIndexes() {
+		if (alreadyDones == null && rank == 0) {
+			debug("searching for simulations which are already complete...");
+			int num = getNumTasks();
+			alreadyDones = new HashSet<>();
+			int validateFails = 0;
+			Stopwatch totWatch = Stopwatch.createStarted();
+			Stopwatch getZipWatch = Stopwatch.createUnstarted();
+			Stopwatch validateWatch = Stopwatch.createUnstarted();
+			for (int i=0; i<num; i++) {
+				getZipWatch.start();
+				File zipFile = getZipFile(i);
+				getZipWatch.stop();
+				if (zipFile.exists()) {
+					try {
+						validateWatch.start();
+						validateZip(zipFile);
+						validateWatch.stop();
+						alreadyDones.add(i);
+					} catch (Exception e) {
+						validateFails++;
+					}
+				}
+			}
+			totWatch.stop();
+			debug("Took "+totWatch.elapsed(TimeUnit.MILLISECONDS)/1000f+" s to search for old sims");
+			debug("Took "+getZipWatch.elapsed(TimeUnit.MILLISECONDS)/1000f+" s to get zip files");
+			debug("Took "+validateWatch.elapsed(TimeUnit.MILLISECONDS)/1000f+" s to validate old sim zip files");
+			if (!alreadyDones.isEmpty()) {
+				debug("found "+alreadyDones.size()+" simulations which are already complete (will skip dispatching)");
+				if (validateFails > 0)
+					debug("also found "+validateFails+" zip files which did not validate and will be ru-run");
+				// send to post-batch hook for processing
+				int[] doneBatch = Ints.toArray(alreadyDones);
+				postBatchHook.batchProcessed(doneBatch, -1);
+			} else {
+				debug("didn't find any already complete simulations, will run everything");
+			}
+		}
+		return alreadyDones;
+	}
+
+	public static void rsyncGFs(File localDir, File bbpEnvFile, File bbpGFDir, VelocityModel vm, int rank, String hostname)
+			throws IOException {
+		debug(rank, hostname, "rsyncing GFs to "+localDir.getAbsolutePath());
+		MPJ_BBP_Utils.waitOnDir(localDir, 5, 100);
+		File script = new File(localDir, "rsync.sh");
+		FileWriter fw = new FileWriter(script);
+		
+		fw.write("#!/bin/bash\n");
+		fw.write("\n");
+		if (bbpEnvFile != null) {
+			fw.write(". "+bbpEnvFile.getAbsolutePath()+"\n");
+		} else {
+			fw.write("if [ -f ~/.bash_profile ]; then\n");
+			fw.write("    . ~/.bash_profile\n");
+			fw.write("fi\n");
+		}
+		fw.write("\n");
+		if (bbpGFDir != null) {
+			fw.write("export BBP_GF_DIR="+bbpGFDir+"\n");
+		} else {
+			fw.write("if [ -z ${BBP_GF_DIR+x} ];then\n");
+			fw.write("    echo \"BBP_GF_DIR is undefined\"\n");
+			fw.write("    exit 2\n");
+			fw.write("fi\n");
+		}
+		fw.write("VM_DIR=${BBP_GF_DIR}/"+vm.getDirName()+"\n");
+		fw.write("if [ ! -e $VM_DIR ];then\n");
+		fw.write("    echo \"VM_DIR is doesn't exist: $VM_DIR\"\n");
+		fw.write("    exit 2\n");
+		fw.write("fi\n");
+		fw.write("\n");
+		fw.write("VM_ZIP=\"${VM_DIR}.zip\"\n");
+		fw.write("if [ -e $VM_ZIP ];then\n");
+		fw.write("    echo \"Zip file exits, extracting: $VM_ZIP\"\n");
+		fw.write("    cd "+localDir.getAbsolutePath()+"\n");
+		fw.write("    unzip $VM_ZIP > /dev/null\n");
+		fw.write("    RET=$?\n");
+		fw.write("else\n");
+		fw.write("    echo \"rsync-ing from $VM_DIR\"\n");
+		fw.write("    rsync -a $VM_DIR "+localDir.getAbsolutePath()+" > /dev/null\n");
+		fw.write("    RET=$?\n");
+		fw.write("fi\n");
+		fw.write("\n");
+		fw.write("echo \"DONE. exitcode: $RET\"\n");
+		fw.write("\n");
+		fw.write("exit $RET\n");
+		
+		fw.close();
+		
+		int ret = BBP_Wrapper.runScript(script);
+		
+		Preconditions.checkState(ret == 0, "Couldn't copy GFs to node local storage");
+		
+		debug(rank, hostname, "done rsyncing GFs");
 	}
 	
 	private File copyCatalogDir(File catDir, File scratchDir) throws IOException {

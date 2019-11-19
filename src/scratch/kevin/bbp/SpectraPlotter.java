@@ -1169,12 +1169,14 @@ public class SpectraPlotter {
 				AttenRelRef.CB_2014.instance(null), AttenRelRef.CY_2014.instance(null) };
 		
 		File baseDir = new File("/data/kevin/simulators/catalogs");
+		File bbpDir = new File("/data/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
 //		File refDir = null;
 //		int eventID = 1670183;
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		File refDir = new File(bbpDir, "2019_11_12-rundir2585_1myr-event9955310-gp-dx1.17-noHF-cs500Sites");
 		File refDir = null;
 		int eventID = 9955310;
 		
@@ -1193,15 +1195,17 @@ public class SpectraPlotter {
 		
 //		Map<RSQSimEvent, EqkRupture> compEvents = null;
 		RSQSimCatalog compCatalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		String simName = "RSQSim/BBP";
+		String simName = "RSQSim-BBP";
 		String animTitle = "San Andreas (Mojave) Spectra, M7-7.5";
 		double animTime = 20; // seconds
 		double animFPS = 10;
-		BBP_SimZipLoader compLoader = new BBP_SimZipLoader(new File(
-				"/data/kevin/bbp/parallel/2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites/results_rotD.zip"), sites);
+		boolean titles = false;
+		BBP_SimZipLoader compLoader = new BBP_SimZipLoader(new File(bbpDir,
+//				"2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites/results_rotD.zip"), sites);
+				"2019_11_11-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites/results_rotD.zip"), sites);
 		Map<RSQSimEvent, EqkRupture> compEvents = getCompEvents(compCatalog, 7d, 7.5d, 5000, 286, 301);
 		
-		int numRefRuns = 0;
+		int numRefRuns = 400;
 		
 		EqkRupture gmpeRup = null;
 		if (gmpes != null) {
@@ -1227,10 +1231,11 @@ public class SpectraPlotter {
 				}
 				System.out.println("DONE spectra");
 			}
+			Range yRange = new Range(4e-4, 4e-1);
 //			plotRotD(rsRD50File, null, null, true, false, gmpeSpectra);
-			String title = "Event "+eventID+", "+siteName+" RotD50 Spectra";
+			String title = titles ? "Event "+eventID+", "+siteName+" RotD50 Spectra" : " ";
 			plotSpectra(new DiscretizedFunc[] { rd50 }, title, "Period (s)", "RotD50 (g)", true, true, new Range(1d, 10d),
-					new Range(1e-3, 1e0), rsDir, siteName+"_rd50_spectra", gmpeSpectra, false, true, false);
+					yRange, rsDir, siteName+"_rd50_spectra", gmpeSpectra, false, true, false);
 			if (compEvents != null) {
 				List<DiscretizedFunc> spectra = new ArrayList<>();
 				spectra.add(rd50);
@@ -1282,13 +1287,14 @@ public class SpectraPlotter {
 				}
 				
 				System.out.println("Building combined simulation spectra plot");
-				plotSpectraDistribution(spectra, simName, gmpeMeanSpectra, title, "Period (s)", "RotD50 (g)", true, true, new Range(1d, 10d),
-						new Range(1e-3, 1e0), rsDir, siteName+"_spectra_distribution");
+				String multiSpectraTitle = titles ? animTitle+", "+siteName : " ";
+				plotSpectraDistribution(spectra, simName, gmpeMeanSpectra, multiSpectraTitle, "Period (s)", "RotD50 (g)", true, true, new Range(1d, 10d),
+						yRange, rsDir, siteName+"_spectra_distribution");
 				
 				System.out.println("Building animation for "+spectra.size()+" spectra!");
 				File outputFile = new File(rsDir, siteName+"_spectra_animation.gif");
-				plotSpectraAnimation(spectra, gmpeSpectras, animTitle+", "+siteName, "Period (s)", "RotD50 (g)", true, true, new Range(1d, 10d),
-						new Range(1e-3, 1e0), outputFile, animFPS, animTime);
+				plotSpectraAnimation(spectra, gmpeSpectras, multiSpectraTitle, "Period (s)", "RotD50 (g)", true, true, new Range(1d, 10d),
+						yRange, outputFile, animFPS, animTime);
 			}
 			List<File> refRD50Files = new ArrayList<>();
 			File rsFASFile = findFASFile(rsDir, siteName);
@@ -1300,9 +1306,10 @@ public class SpectraPlotter {
 					refRD50Files.add(findRotD50File(subDir, siteName));
 					refFASFiles.add(findFASFile(subDir, siteName));
 				}
-				plotMultiRotD50(refRD50Files, "Graves & Pitarka", rsRD100File, "RSQSim", "Event "+eventID+" "+siteName+" Spectra",
+				String myTitle = titles ? "Event "+eventID+" "+siteName+" Spectra" : " ";
+				plotMultiRotD50(refRD50Files, "Graves & Pitarka", rsRD100File, "RSQSim", myTitle,
 						rsDir, siteName+"_RotD50_compare_event_"+eventID, gmpeSpectra);
-				plotMultiFAS(refFASFiles, "Graves & Pitarka", rsFASFile, "RSQSim", "Event "+eventID+" "+siteName+" Spectra",
+				plotMultiFAS(refFASFiles, "Graves & Pitarka", rsFASFile, "RSQSim", myTitle,
 						rsDir, siteName+"_FAS_compare_event_"+eventID);
 			}
 		}

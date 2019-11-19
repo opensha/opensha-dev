@@ -250,7 +250,7 @@ public class ZScoreHistPlot {
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, stdDevColor));
 			}
 			
-			String title = gmpe.getShortName()+" Log-Normal Comparision";
+			String title = periods.length == 1 ? " " : gmpe.getShortName()+" Log-Normal Comparision";
 			String xAxisLabel = "z-score (Standard Deviations)";
 			String yAxisLabel = "Density";
 			
@@ -279,7 +279,7 @@ public class ZScoreHistPlot {
 			meanAnn.setFont(bigFont);
 			anns.add(meanAnn);
 			XYTextAnnotation stdDevAnn = new XYTextAnnotation(
-					"σ = "+MultiRupGMPE_ComparePageGen.optionalDigitDF.format(stdDevs.get(i)), -x, y-yEach);
+					"σ-fract = "+MultiRupGMPE_ComparePageGen.optionalDigitDF.format(stdDevs.get(i)), -x, y-yEach);
 			stdDevAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 			stdDevAnn.setFont(bigFont);
 			anns.add(stdDevAnn);
@@ -329,7 +329,15 @@ public class ZScoreHistPlot {
 		gp.drawGraphPanel(specs, false, false, xRanges, yRanges);
 		
 		File file = new File(outputDir, prefix);
-		gp.getChartPanel().setSize(800, 200 + 300*specs.size());
+		int width, height;
+		if (specs.size() > 1) {
+			width = 800;
+			height = 200 + 300*specs.size();
+		} else {
+			width = 600;
+			height = 450;
+		}
+		gp.getChartPanel().setSize(width, height);
 		gp.saveAsPNG(file.getAbsolutePath()+".png");
 		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 		

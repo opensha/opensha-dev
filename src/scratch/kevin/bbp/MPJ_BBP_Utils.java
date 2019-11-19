@@ -185,6 +185,11 @@ public class MPJ_BBP_Utils {
 		gfDir.setRequired(false);
 		ops.addOption(gfDir);
 		
+		Option nodeGFDir = new Option("ngdd", "node-gf-dir", true,
+				"Node-local scratch directory to copy greens functions to in order to reduce I/O on network disks.");
+		nodeGFDir.setRequired(false);
+		ops.addOption(nodeGFDir);
+		
 		return ops;
 	}
 	

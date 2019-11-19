@@ -209,7 +209,7 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 
 	@Override
 	public String getName() {
-		return "RSQSim/BBP";
+		return "RSQSim-BBP";
 	}
 
 	@Override

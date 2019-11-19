@@ -31,6 +31,10 @@ public class BBP_Module implements XMLSaveable {
 			this.vs30 = vs30;
 		}
 		
+		public String getDirName() {
+			return xmlName;
+		}
+		
 		public double getVs30() {
 			return vs30;
 		}

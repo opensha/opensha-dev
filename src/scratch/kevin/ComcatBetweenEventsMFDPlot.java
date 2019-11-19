@@ -26,11 +26,20 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 public class ComcatBetweenEventsMFDPlot {
 
 	public static void main(String[] args) throws IOException {
+		// Ridgecrest
+//		String[] eventIDs = {
+//				"ci38443095",
+//				"ci38443183",
+//				"ci38457511"
+//		};
+//		Region region = new Region(new Location(35.25, -118.25), new Location(36.25, -117));
+		
 		String[] eventIDs = {
-				"ci38443095",
-				"ci38443183",
-				"ci38457511"
+				"ci3019681",
+				"ci3031111"
 		};
+		Region region = new Region(new Location(34.5, -117.2), new Location(33.8, -115.8));
+		
 		File outputDir = new File("/tmp");
 		String prefix = "mfd_plot";
 		
@@ -49,7 +58,6 @@ public class ComcatBetweenEventsMFDPlot {
 		double mfdMinX = minMag + 0.5*mfdDelta;
 		int mfdNum = (int)((maxMag - minMag)/mfdDelta)+1;
 		
-		Region region = new Region(new Location(35.25, -118.25), new Location(36.25, -117));
 		ComcatRegion cReg = new ComcatRegionAdapter(region);
 		
 		ComcatAccessor access = new ComcatAccessor();

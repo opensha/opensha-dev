@@ -711,8 +711,8 @@ class RupSpectraPageGen {
 //		int eventID = 31324;
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-//		int eventID = 9955310;
-		int eventID = 3817386;
+		int eventID = 9955310;
+//		int eventID = 3817386;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = false;

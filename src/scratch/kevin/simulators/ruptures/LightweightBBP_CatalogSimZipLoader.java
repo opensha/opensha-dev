@@ -67,7 +67,7 @@ public class LightweightBBP_CatalogSimZipLoader extends BBP_SimZipLoader impleme
 
 	@Override
 	public String getName() {
-		return "RSQSim/BBP";
+		return "RSQSim-BBP";
 	}
 
 	@Override
