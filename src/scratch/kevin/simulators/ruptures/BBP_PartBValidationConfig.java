@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYAnnotation;
@@ -183,7 +184,115 @@ public class BBP_PartBValidationConfig {
 				0, Range.closed(0d, 1d), // Ztor, range
 				0.2, true, // linearFrace, linearRelative
 				12, // width
-				false, false); // rXpositive, official
+				false, false),
+		M7p2_VERT_SS_SURFACE_RANDMAG("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.1) ",
+				"M7.2 SS RndMag 0.1", "m7p2_vert_ss_surface_rnd_mag",
+				7.2, 0.1, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.05, true, // linearFract, linearRelative
+				12, // width
+				false, false) {// rXpositive, official
+			
+			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
+				if (maxNum >= matches.size())
+					return matches;
+				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
+				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
+				return subMatches.subList(0, maxNum);
+			}
+		},
+		M7p2_VERT_SS_SURFACE_RANDMAG_0p05("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.05) ",
+				"M7.2 SS RndMag 0.05", "m7p2_vert_ss_surface_rnd_mag_0p05",
+				7.2, 0.05, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.05, true, // linearFract, linearRelative
+				12, // width
+				false, false) {// rXpositive, official
+			
+			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
+				if (maxNum >= matches.size())
+					return matches;
+				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
+				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
+				return subMatches.subList(0, maxNum);
+			}
+		},
+		M7p2_VERT_SS_SURFACE_RANDMAG_0p15("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.15) ",
+				"M7.2 SS RndMag 0.15", "m7p2_vert_ss_surface_rnd_mag_0p15",
+				7.2, 0.15, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.05, true, // linearFract, linearRelative
+				12, // width
+				false, false) {// rXpositive, official
+			
+			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
+				if (maxNum >= matches.size())
+					return matches;
+				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
+				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
+				return subMatches.subList(0, maxNum);
+			}
+		},
+		M7p2_VERT_SS_SURFACE_RANDMAG_0p2("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.2) ",
+				"M7.2 SS RndMag 0.2", "m7p2_vert_ss_surface_rnd_mag_0p2",
+				7.2, 0.2, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.05, true, // linearFract, linearRelative
+				12, // width
+				false, false) {// rXpositive, official
+			
+			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
+				if (maxNum >= matches.size())
+					return matches;
+				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
+				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
+				return subMatches.subList(0, maxNum);
+			}
+		},
+		M7p2_VERT_SS_SURFACE_RANDMAG_0p25("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.25) ",
+				"M7.2 SS RndMag 0.25", "m7p2_vert_ss_surface_rnd_mag_0p25",
+				7.2, 0.25, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.05, true, // linearFract, linearRelative
+				12, // width
+				false, false) {// rXpositive, official
+			
+			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
+				if (maxNum >= matches.size())
+					return matches;
+				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
+				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
+				return subMatches.subList(0, maxNum);
+			}
+		},
+		M7p2_VERT_SS_SURFACE_RANDMAG_0p3("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.3) ",
+				"M7.2 SS RndMag 0.3", "m7p2_vert_ss_surface_rnd_mag_0p3",
+				7.2, 0.3, // mag, tol
+				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
+				90, 0, // dip, dipTol
+				0, Range.closed(0d, 1d), // Ztor, range
+				0.05, true, // linearFract, linearRelative
+				12, // width
+				false, false) {// rXpositive, official
+			
+			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
+				if (maxNum >= matches.size())
+					return matches;
+				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
+				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
+				return subMatches.subList(0, maxNum);
+			}
+		};
 		
 		private String name;
 		private String shortName;
@@ -367,6 +476,12 @@ public class BBP_PartBValidationConfig {
 		public String[] getMatchCriteria() {
 			return matchCriteria;
 		}
+		
+		public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
+			if (maxNum >= matches.size())
+				return matches;
+			return getClosestMagMatches(mag, matches, maxNum);
+		}
 	}
 	
 	public static String[] buildMatchCriteria(double mag, double magTolerance, Range<Double> zTorRange, FaultStyle style, int rakeTolerance,
@@ -445,7 +560,7 @@ public class BBP_PartBValidationConfig {
 	public static double[] OFFICIAL_DISTANCES = { 20d, 50d };
 	public static Scenario[] OFFICIAL_SCENARIOS = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE};
 	
-	public static List<RSQSimEvent> getBestMatches(double targetMag, List<RSQSimEvent> matches, int maxNum) {
+	public static List<RSQSimEvent> getClosestMagMatches(double targetMag, List<RSQSimEvent> matches, int maxNum) {
 		if (matches.size() <= maxNum)
 			return matches;
 		matches = new ArrayList<>(matches);

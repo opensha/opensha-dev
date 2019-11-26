@@ -375,7 +375,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			throws IOException {
 		List<RSQSimEvent> ruptures = scenario.getMatches(catalog, skipYears);
 		if (maxRuptures > 0 && ruptures.size() > maxRuptures)
-			ruptures = BBP_PartBValidationConfig.getBestMatches(scenario.getMagnitude(), ruptures, maxRuptures);
+			ruptures = BBP_PartBValidationConfig.getClosestMagMatches(scenario.getMagnitude(), ruptures, maxRuptures);
 		return ruptures;
 	}
 	

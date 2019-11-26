@@ -1076,10 +1076,47 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		return "RSQSim Sect Bundled ERF";
 	}
 
+	private static void validateMappings(RSQSimSectBundledERF erf1, RSQSimSectBundledERF erf2) {
+		System.out.println("Validating mappings");
+		Preconditions.checkState(erf1.getNumSources() == erf2.getNumSources());
+		
+		SimulatorElementIDComparator elemComp = new SimulatorElementIDComparator();
+		for (int sourceID=0; sourceID<erf1.getNumSources(); sourceID++) {
+			RSQSimSectBundledSource source1 = erf1.getSource(sourceID);
+			RSQSimSectBundledSource source2 = erf2.getSource(sourceID);
+			
+			Preconditions.checkState(source1.getNumRuptures() == source2.getNumRuptures());
+			for (int rupID=0; rupID<source1.getNumRuptures(); rupID++) {
+				RSQSimProbEqkRup rup1 = source1.getRupture(rupID);
+				RSQSimProbEqkRup rup2 = source2.getRupture(rupID);
+				Preconditions.checkState(rup1.getEventID() == rup2.getEventID());
+				Preconditions.checkState(rup1.getTime() == rup2.getTime());
+				Preconditions.checkState(rup1.getMag() == rup2.getMag());
+				Preconditions.checkState(rup1.getAveRake() == rup2.getAveRake());
+				Preconditions.checkState(rup1.getProbability() == rup2.getProbability());
+				Preconditions.checkState(rup1.getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface().size()
+						== rup2.getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface().size());
+				Preconditions.checkState(rup1.elemLatRange.equals(rup2.elemLatRange));
+				Preconditions.checkState(rup1.elemLonRange.equals(rup2.elemLonRange));
+				Preconditions.checkState(rup1.elemDepthRange.equals(rup2.elemDepthRange));
+				
+				List<SimulatorElement> elems1 = rup1.getElements();
+				elems1.sort(elemComp);
+				List<SimulatorElement> elems2 = rup1.getElements();
+				elems2.sort(elemComp);
+				Preconditions.checkState(elems1.size() == elems2.size());
+				for (int i=0; i<elems1.size(); i++)
+					Preconditions.checkState(elems1.get(i).getID() == elems2.get(i).getID());
+			}
+		}
+		System.out.println("Done validating");
+	}
+
 	public static void main(String[] args) throws IOException {
 		RSQSimCatalog catalog;
 		boolean writePoints, writeSRFs, writeMappings, testReadOnly;
 		double maxDuration = 0;
+		File compMappings = null;
 		if (args.length >= 1 && args.length < 6) {
 			File catalogDir = new File(args[0]);
 			catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
@@ -1112,8 +1149,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 			writePoints = false;
 			writeSRFs = false;
-			writeMappings = true;
-			testReadOnly = false;
+			writeMappings = false;
+			testReadOnly = true;
+			compMappings = new File(catalog.getCatalogDir(), "erf_mappings.bin.bak");
 //			maxDuration = 10000;
 			maxDuration = 0;
 		}
@@ -1125,9 +1163,16 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		
 		if (testReadOnly) {
 			File mappingFile = new File(catalog.getCatalogDir(), "erf_mappings.bin");
-			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(mappingFile, null, fm, dm , subSects, elements);
+			File geomFile = compMappings == null ? null : catalog.getGeomFile();
+			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(mappingFile, geomFile, fm, dm , subSects, elements);
 			erf.updateForecast();
 			System.out.println("Source 0 has "+erf.getNumRuptures(0)+" ruptures");
+			if (compMappings != null) {
+				RSQSimSectBundledERF erf2 = new RSQSimSectBundledERF(
+						compMappings, geomFile, fm, dm, subSects, elements);
+				erf2.updateForecast();
+				validateMappings(erf, erf2);
+			}
 		} else {
 			double skipYears = 5000;
 			double minMag = 6.5;
@@ -1182,38 +1227,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				System.out.println("Building from mappings");
 				RSQSimSectBundledERF erf2 = new RSQSimSectBundledERF(mappingFile, null, fm, dm , subSects, elements);
 				erf2.updateForecast();
-				System.out.println("Validating mappings");
-				Preconditions.checkState(erf.getNumSources() == erf2.getNumSources());
-				
-				SimulatorElementIDComparator elemComp = new SimulatorElementIDComparator();
-				for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
-					RSQSimSectBundledSource source1 = erf.getSource(sourceID);
-					RSQSimSectBundledSource source2 = erf2.getSource(sourceID);
-					
-					Preconditions.checkState(source1.getNumRuptures() == source2.getNumRuptures());
-					for (int rupID=0; rupID<source1.getNumRuptures(); rupID++) {
-						RSQSimProbEqkRup rup1 = source1.getRupture(rupID);
-						RSQSimProbEqkRup rup2 = source2.getRupture(rupID);
-						Preconditions.checkState(rup1.getEventID() == rup2.getEventID());
-						Preconditions.checkState(rup1.getTime() == rup2.getTime());
-						Preconditions.checkState(rup1.getMag() == rup2.getMag());
-						Preconditions.checkState(rup1.getAveRake() == rup2.getAveRake());
-						Preconditions.checkState(rup1.getProbability() == rup2.getProbability());
-						Preconditions.checkState(rup1.getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface().size()
-								== rup2.getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface().size());
-						Preconditions.checkState(rup1.elemLatRange.equals(rup2.elemLatRange));
-						Preconditions.checkState(rup1.elemLonRange.equals(rup2.elemLonRange));
-						Preconditions.checkState(rup1.elemDepthRange.equals(rup2.elemDepthRange));
-						
-						List<SimulatorElement> elems1 = rup1.getElements();
-						elems1.sort(elemComp);
-						List<SimulatorElement> elems2 = rup1.getElements();
-						elems2.sort(elemComp);
-						Preconditions.checkState(elems1.size() == elems2.size());
-						for (int i=0; i<elems1.size(); i++)
-							Preconditions.checkState(elems1.get(i).getID() == elems2.get(i).getID());
-					}
-				}
+				validateMappings(erf, erf2);
 			}
 		}
 	}

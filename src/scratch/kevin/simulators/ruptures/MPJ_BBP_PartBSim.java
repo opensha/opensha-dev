@@ -86,7 +86,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 			
 			List<RSQSimEvent> eventMatches = new LogicalAndRupIden(scenarioIdens.get(s)).getMatches(allEvents);
 			if (maxRuptures > 0)
-				eventMatches = BBP_PartBValidationConfig.getBestMatches(scenario.getMagnitude(), eventMatches, maxRuptures);
+				eventMatches = scenario.selectBestMatches(eventMatches, maxRuptures);
 			
 			if (rank == 0)
 				debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);

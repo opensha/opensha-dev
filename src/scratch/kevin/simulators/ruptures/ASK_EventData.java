@@ -1,16 +1,27 @@
 package scratch.kevin.simulators.ruptures;
 
+import java.awt.Color;
+import java.awt.Font;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.HistogramFunction;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 
@@ -193,6 +204,115 @@ public class ASK_EventData {
 		}
 		
 		return line;
+	}
+	
+	public static void plotCountHist(File outputDir, String prefix,
+			Map<Integer, List<ASK_EventData>> data) throws IOException {
+		plotMultiCountHist(outputDir, prefix, "Event Recordings Distribution",
+				data.values(), null, null, null);
+	}
+	
+	private static HistogramFunction countsHist(Collection<List<ASK_EventData>> data, int max) {
+		double delta;
+		if (max > 100)
+			delta = 10;
+		else if (max < 50)
+			delta = 5d;
+		else if (max > 10)
+			delta = 2d;
+		else
+			delta = 1d;
+		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(1d, (double)max, delta);
+		
+		for (List<ASK_EventData> list : data)
+			hist.add(hist.getClosestXIndex(list.size()), 1d);
+		
+		return hist;
+	}
+	
+	public static void plotMultiCountHist(File outputDir, String prefix, String title,
+			Collection<List<ASK_EventData>> data1, String label1,
+			Collection<List<ASK_EventData>> data2, String label2) throws IOException {
+		int max = 0;
+		for (List<ASK_EventData> data : data1)
+			max = Integer.max(max, data.size());
+		if (data2 != null)
+			for (List<ASK_EventData> data : data2)
+				max = Integer.max(max, data.size());
+		max = (int)(10d*Math.ceil(max/10d));
+		
+		HistogramFunction hist1 = countsHist(data1, max);
+		PlotCurveCharacterstics pChar = new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK);
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(hist1);
+		chars.add(pChar);
+		
+		PlotSpec spec1 = new PlotSpec(funcs, chars, title, "Recordings", "Count");
+		
+		Font labelFont = new Font(Font.SANS_SERIF, Font.BOLD, 20);
+		double annX = max*0.95;
+
+		List<org.jfree.data.Range> yRanges = new ArrayList<>();
+		double maxY1 = hist1.getMaxY()*1.2;
+		yRanges.add(new org.jfree.data.Range(0d, maxY1));
+		if (label1 != null) {
+			double annY = maxY1*0.95;
+			XYTextAnnotation ann = new XYTextAnnotation(label1, annX, annY);
+			ann.setFont(labelFont);
+			ann.setTextAnchor(TextAnchor.TOP_RIGHT);
+			List<XYTextAnnotation> anns = new ArrayList<>();
+			anns.add(ann);
+			spec1.setPlotAnnotations(anns);
+		}
+		
+		List<PlotSpec> specs = new ArrayList<>();
+		specs.add(spec1);
+		
+		if (data2 != null) {
+			HistogramFunction hist2 = countsHist(data2, max);
+			funcs = new ArrayList<>();
+			chars = new ArrayList<>();
+			
+			funcs.add(hist2);
+			chars.add(pChar);
+			
+			PlotSpec spec2 = new PlotSpec(funcs, chars, title, "Recordings", "Count");
+			
+			double maxY2 = hist2.getMaxY()*1.2;
+			yRanges.add(new org.jfree.data.Range(0d, maxY2));
+			if (label2 != null) {
+				double annY = maxY2*0.95;
+				XYTextAnnotation ann = new XYTextAnnotation(label2, annX, annY);
+				ann.setFont(labelFont);
+				ann.setTextAnchor(TextAnchor.TOP_RIGHT);
+				List<XYTextAnnotation> anns = new ArrayList<>();
+				anns.add(ann);
+				spec2.setPlotAnnotations(anns);
+			}
+			
+			specs.add(spec2);
+		}
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(24);
+		gp.setPlotLabelFontSize(24);
+		gp.setLegendFontSize(28);
+		gp.setBackgroundColor(Color.WHITE);
+		
+		org.jfree.data.Range xRange = new org.jfree.data.Range(0, (double)max);
+		List<org.jfree.data.Range> xRanges = new ArrayList<>();
+		xRanges.add(xRange);
+		
+		gp.drawGraphPanel(specs, false, false, xRanges, yRanges);
+		
+		File file = new File(outputDir, prefix);
+		gp.getChartPanel().setSize(800, 600);
+		gp.saveAsPNG(file.getAbsolutePath()+".png");
+		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 	}
 	
 	private static final DecimalFormat twoDigit = new DecimalFormat("0.00");

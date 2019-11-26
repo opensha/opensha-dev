@@ -77,8 +77,7 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 				debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);
 			
 			if (eventMatches.size() > maxRups) {
-				// use the last events to avoid spin up time
-				eventMatches = eventMatches.subList(eventMatches.size()-maxRups, eventMatches.size());
+				eventMatches = scenario.selectBestMatches(eventMatches, maxRups);
 				debug("trimmed down to max of "+eventMatches.size()+" ruptures");
 			}
 			

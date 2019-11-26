@@ -129,7 +129,7 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 						debug("Loaded "+eventMatches.size()+" matches for scenario: "+rupType+", M="+(float)mag);
 					
 					if (eventMatches.size() > maxRups) {
-						eventMatches = BBP_PartBValidationConfig.getBestMatches(mag, eventMatches, maxRups);
+						eventMatches = BBP_PartBValidationConfig.getClosestMagMatches(mag, eventMatches, maxRups);
 						if (rank == 0)
 							debug("trimmed down to max of "+eventMatches.size()+" ruptures");
 					}

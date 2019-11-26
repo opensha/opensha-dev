@@ -108,7 +108,7 @@ public class BBP_Site {
 		gmpeSite.addParameter(vs30Param);
 		
 		Vs30_TypeParam vs30TypeParam = new Vs30_TypeParam();
-		vs30TypeParam.setValue(Vs30_TypeParam.VS30_TYPE_MEASURED); // TODO
+		vs30TypeParam.setValue(Vs30_TypeParam.VS30_TYPE_INFERRED); // TODO
 		gmpeSite.addParameter(vs30TypeParam);
 		
 		DepthTo1pt0kmPerSecParam z10Param = new DepthTo1pt0kmPerSecParam();

@@ -40,16 +40,19 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		int skipYears = 5000;
 
 //		Scenario[] scenarios = Scenario.values();
-		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE_RELAXED, Scenario.M7p2_VERT_SS_SURFACE_RELAXED};
+//		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE_RELAXED, Scenario.M7p2_VERT_SS_SURFACE_RELAXED};
+//		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG};
+		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p15, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p2,
+				Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p25, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p3};
 //		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE};
 //		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
 		double[] distances = { 20d, 50d, 100d };
 		int numSourceAz = 18;
 //		int numSiteToSourceAz = 36;
 		int numSiteToSourceAz = 1;
-		int maxRuptures = 400;
+		int maxRuptures = 100;
 		
-		RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_863;
+//		RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_863;
 		VelocityModel vm = RSQSimBBP_Config.VM;
 		
 //		List<BBP_Site> sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
@@ -66,7 +69,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 17;
+		int nodes = 34;
 		String queue = "scec";
 		int mins = 48*60;
 		int heapSizeMB = 45*1024;

@@ -60,6 +60,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		return scenario;
 	}
 
+	@SuppressWarnings("unused")
 	public static void main(String[] args) throws IOException, DocumentException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
@@ -68,9 +69,17 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_3165.instance(baseDir);
+
+//		File bbpDir = new File(bbpParallelDir,
+//				"2019_11_22-rundir2585_1myrs-rotatedRups-m7p2_vert_ss_surface_rnd_mag_0p05"
+//				+ "-3dists-18srcAz-1siteSrcAz-100rups-skipYears5000-vmLA_BASIN_500-noHF-1site");
+//		File bbpDir = new File(bbpParallelDir,
+//				"2019_11_21-rundir2585_1myrs-rotatedRups-2scenarios-3dists-18srcAz-1siteSrcAz"
+//				+ "-100rups-skipYears5000-vmLA_BASIN_500-noHF-1site");
+		File bbpDir = null;
 		
-		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
-//		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
+//		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
+		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
 //		VelocityModel forceVM = null;
 		
 		double[] calcPeriods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};
@@ -88,10 +97,14 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		if (catalogDirName.startsWith("JG_"))
 			// I sometimes modify Jacqui's directory names
 			catalogDirName = catalogDirName.substring(3);
-		File bbpDir = null;
 		File bbpZipFile = null;
-		File[] allBBPDirs = bbpParallelDir.listFiles();
-		Arrays.sort(allBBPDirs, new FileNameComparator());
+		File[] allBBPDirs;
+		if (bbpDir == null) {
+			allBBPDirs = bbpParallelDir.listFiles();
+			Arrays.sort(allBBPDirs, new FileNameComparator());
+		} else {
+			allBBPDirs = new File[] { bbpDir };
+		}
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-rotatedRups-")) {

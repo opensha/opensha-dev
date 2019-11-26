@@ -148,7 +148,7 @@ public class NormDistSumFigure {
 			yRange = new Range(0d, sumFunc.getMaxY()*1.25);
 		
 		gp.drawGraphPanel(spec, false, false, xRange, yRange);
-//		gp.getYAxis().setTickLabelsVisible(false);
+		gp.getYAxis().setTickLabelsVisible(false);
 		
 		File file = new File(outputDir, prefix);
 		gp.getChartPanel().setSize(800, 600);
