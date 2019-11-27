@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
@@ -57,6 +58,7 @@ import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
+import scratch.UCERF3.simulatedAnnealing.completion.CompoundCompletionCriteria;
 import scratch.UCERF3.simulatedAnnealing.completion.EnergyCompletionCriteria;
 import scratch.UCERF3.simulatedAnnealing.completion.IterationCompletionCriteria;
 import scratch.UCERF3.simulatedAnnealing.params.CoolingScheduleType;
@@ -82,7 +84,7 @@ public class SingleFaultInversion {
 	
 	// These values are the same for all fault sections
 	final static double UPPER_SEIS_DEPTH = 0;
-	final static double LOWER_SEIS_DEPTH = 14;
+	final static double LOWER_SEIS_DEPTH = 14.;
 	final static double FAULT_DIP = 90; // FIX MAX_SUBSECT_LENGTH_KM calc below if this is changed
 	final static double FAULT_RAKE = 0.0;
 	final static double FAULT_SLIP_RATE = 30;	// mm/yr
@@ -120,7 +122,8 @@ public class SingleFaultInversion {
 
 	public enum SlipRateProfileType {
 		UNIFORM,
-		TAPERED;
+		TAPERED,
+		UNIFORM_TRIMMED;
 	}
 	
 	public enum SA_InitialStateType {
@@ -154,6 +157,7 @@ public class SingleFaultInversion {
 	MFD_TargetType mfdTargetType; 				// Target MFD Constraint
 	double relativeMFD_constraintWt; 			// Target MFD Constraint Wt
 	double totalRateConstraint; 				// Total Rate Constraint
+	double totalRateSigma; 						// Total Rate Constraint
 	double relativeTotalRateConstraintWt;
 	InversionSolutionType solutionType;
 	long randomSeed;							// for SA reproducibility 
@@ -271,55 +275,34 @@ public class SingleFaultInversion {
 		parentFaultData.setSlipRateStdDev(FAULT_SLIP_RATE/10d);
 		faultSectionDataList = parentFaultData.getSubSectionsList(MAX_SUBSECT_LENGTH_KM);
 		
-//		double totMoRateFromSections = faultSectionDataList.get(0).calcMomentRate(true)*faultSectionDataList.size();
-//		double totLengthFromSections = faultSectionDataList.get(0).getTraceLength()*faultSectionDataList.size();
-//		System.out.println("parentFaultData MoRate: "+parentFaultData.calcMomentRate(true)+"\t"+totMoRateFromSections);
-//		System.out.println("parentFaultData Length: "+parentFaultData.getTraceLength()+"\t"+totLengthFromSections);
-//		System.out.println("parentFaultData DDW: "+parentFaultData.getReducedDownDipWidth()+"\t"+faultSectionDataList.get(0).getReducedDownDipWidth());
+		double moRateSum = 0, lengthSum = 0;
+		for(FaultSectionPrefData data : faultSectionDataList) {
+			lengthSum += data.getTraceLength();
+			moRateSum += data.calcMomentRate(true);
+		}
+		
+		if(D) {
+			double totMoRateFromSections = faultSectionDataList.get(0).calcMomentRate(true)*faultSectionDataList.size();
+			double totLengthFromSections = faultSectionDataList.get(0).getTraceLength()*faultSectionDataList.size();
+			System.out.println("MoRate Tests (parent, subSec sums): "+parentFaultData.calcMomentRate(true)+"\t"+totMoRateFromSections+"\t"+moRateSum);
+			System.out.println("Length Tests (parent, subSec sums): "+parentFaultData.getTraceLength()+"\t"+totLengthFromSections+"\t"+lengthSum);
+			System.out.println("DDW Tests (parent, subSec): "+parentFaultData.getReducedDownDipWidth()+"\t"+faultSectionDataList.get(0).getReducedDownDipWidth());			
+		}
 	}
 	
 		
 	private void initData() {
 		
-		if(parentFaultData == null)
-			makeFaultSectionDataList();
-//		FaultTrace parentFaultTrace = new FaultTrace("parentFaultTrace");
-//		parentFaultTrace.add(new Location(33d,-117d));
-//		parentFaultTrace.add(new Location(33d+FAULT_LENGTH_KM/111d,-117));
-//		System.out.println("Fault trace length: "+parentFaultTrace.getTraceLength());
-//		parentFaultData = new FaultSectionPrefData();
-//		parentFaultData.setFaultTrace(parentFaultTrace);
-//		parentFaultData.setAveDip(FAULT_DIP);
-//		parentFaultData.setAveRake(FAULT_RAKE);
-//		parentFaultData.setAveUpperDepth(UPPER_SEIS_DEPTH);
-//		parentFaultData.setAveLowerDepth(LOWER_SEIS_DEPTH);
-//		parentFaultData.setAveSlipRate(FAULT_SLIP_RATE);
-//		parentFaultData.setSlipRateStdDev(FAULT_SLIP_RATE/10d);
+		// need to re-make in case tapered was applied before
+		makeFaultSectionDataList();
 		
 		System.out.println("parentFaultData MoRate: "+parentFaultData.calcMomentRate(true));
-		
-		faultSectionDataList = parentFaultData.getSubSectionsList(MAX_SUBSECT_LENGTH_KM);
 		
 		int numSect = faultSectionDataList.size();
 		
 		// Apply any taper to slip rates
 		switch (slipRateProfile) {
 		case TAPERED:
-//			// linear taper over first and last 10%
-//			int numForTaper = numSect/10;
-////System.out.println("numForTaper = "+numForTaper);
-//
-//			for(int i=0; i<numForTaper-1; i++) {
-//				double wt = ((double)i+1.0)/(double)numForTaper; // =1 is to prevent zero
-////System.out.println("wt = "+wt);
-//				FaultSectionPrefData data = faultSectionDataList.get(i);
-//				data.setAveSlipRate(wt*data.getOrigAveSlipRate());
-//				data.setSlipRateStdDev(wt*data.getOrigSlipRateStdDev());
-//				data = faultSectionDataList.get(numSect-1-i);
-//				data.setAveSlipRate(wt*data.getOrigAveSlipRate());
-//				data.setSlipRateStdDev(wt*data.getOrigSlipRateStdDev());
-//			}
-			
 			// sqrtSine Taper
 			HistogramFunction taperedSlipCDF = FaultSystemRuptureRateInversion.getTaperedSlipFunc().getCumulativeDistFunction();
 			double subSectLength = faultSectionDataList.get(0).getTraceLength();
@@ -340,9 +323,32 @@ public class SingleFaultInversion {
 				currStartPoint+=subSectLength;
 
 			}
-// System.out.println("moRate = "+moRate);
-// System.exit(0);
+			if(D)System.out.println("moRate after tapering slip rates = "+moRate);
 			break;
+		case UNIFORM_TRIMMED:  // linear taper over first and last 3 subsections
+			double moRateOrig = 0;
+			for(FaultSectionPrefData data : faultSectionDataList) {
+				moRateOrig += data.calcMomentRate(true);
+			}
+			FaultSectionPrefData data;
+			data = faultSectionDataList.get(0); data.setAveSlipRate(0.25*data.getOrigAveSlipRate()); data.setSlipRateStdDev(0.25*data.getOrigSlipRateStdDev());
+			data = faultSectionDataList.get(1); data.setAveSlipRate(0.50*data.getOrigAveSlipRate()); data.setSlipRateStdDev(0.50*data.getOrigSlipRateStdDev());
+			data = faultSectionDataList.get(2); data.setAveSlipRate(0.75*data.getOrigAveSlipRate()); data.setSlipRateStdDev(0.75*data.getOrigSlipRateStdDev());
+			data = faultSectionDataList.get(faultSectionDataList.size()-1); data.setAveSlipRate(0.25*data.getOrigAveSlipRate()); data.setSlipRateStdDev(0.25*data.getOrigSlipRateStdDev());
+			data = faultSectionDataList.get(faultSectionDataList.size()-2); data.setAveSlipRate(0.50*data.getOrigAveSlipRate()); data.setSlipRateStdDev(0.50*data.getOrigSlipRateStdDev());
+			data = faultSectionDataList.get(faultSectionDataList.size()-3); data.setAveSlipRate(0.75*data.getOrigAveSlipRate()); data.setSlipRateStdDev(0.75*data.getOrigSlipRateStdDev());
+			double moRateAfter = 0;
+			for(FaultSectionPrefData data2 : faultSectionDataList) {
+				moRateAfter += data2.calcMomentRate(true);
+			}
+			double wt = moRateOrig/moRateAfter;
+			double totMoRate = 0;
+			for(FaultSectionPrefData data2 : faultSectionDataList) {
+				data2.setAveSlipRate(wt*data2.getOrigAveSlipRate());
+				data2.setSlipRateStdDev(wt*data2.getOrigSlipRateStdDev());
+				totMoRate += data2.calcMomentRate(true);
+			}
+			if(D)System.out.println("moRate after trimming uniform slip rates = "+totMoRate);
 		case UNIFORM:
 			break;
 		}
@@ -914,6 +920,7 @@ public class SingleFaultInversion {
 		 mfdTargetType = MFD_TargetType.GR_b_1pt0; // Target MFD Constraint
 		 relativeMFD_constraintWt = 0; // Target MFD Constraint Wt
 		 totalRateConstraint = 0.005328; // Total Rate Constraint
+		 totalRateSigma = 0.1*totalRateConstraint;
 		 relativeTotalRateConstraintWt = 0.0;
 		 solutionType = InversionSolutionType.SIMULATED_ANNEALING;
 		 randomSeed = 0;	// zero means use current time in millis as the seed
@@ -921,6 +928,8 @@ public class SingleFaultInversion {
 		 saCooling = CoolingScheduleType.FAST_SA;
 		 perturbationFunc = GenerationFunctionType.UNIFORM_NO_TEMP_DEPENDENCE;
 		 completionCriteria = new IterationCompletionCriteria((long) 1e5);
+//completionCriteria = new EnergyCompletionCriteria(600d);	// number of rows/subsections
+
 		 initialStateType = SA_InitialStateType.ALL_ZEROS;
 		 rupRatesFromFileDirName = null;  //if solution is from a file (previous solution); name example: ROOT_PATH+"OutDir/";
 		 magAareaAleatoryVariability = 0.0;
@@ -946,6 +955,11 @@ public class SingleFaultInversion {
 		initData();
 		
 		IncrementalMagFreqDist targetMFD = getTargetMFD(scalingRel, mfdTargetType);
+		IncrementalMagFreqDist mfdSigma = null;
+		if(targetMFD.getMinY()>0) {
+			mfdSigma = getTargetMFD(scalingRel, mfdTargetType);
+			mfdSigma.scale(0.1); // uncertainty is 10%
+		}
 		if(D) {
 			if(targetMFD != null)
 				System.out.println(mfdTargetType+" total rate "+targetMFD.getTotalIncrRate());
@@ -977,10 +991,12 @@ public class SingleFaultInversion {
 				applyProbVisible, 
 				moRateReduction,
 				targetMFD,
+				mfdSigma,
 				relativeMFD_constraintWt,
 				segmentationConstrFilename,
 				relative_segmentationConstrWt,
 				totalRateConstraint,
+				totalRateSigma,
 				relativeTotalRateConstraintWt,
 				magAareaAleatoryVariability);
 
@@ -997,7 +1013,7 @@ public class SingleFaultInversion {
 	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
 	    
 		
-		// set the intial state is SA
+		// set the intial state if SA
 	    double[] initialState = null;
 	    if(solutionType == InversionSolutionType.SIMULATED_ANNEALING) {
 	    	switch(initialStateType) {
@@ -1012,6 +1028,8 @@ public class SingleFaultInversion {
 	    		break;
 	    	case FROM_MFD_CONSTRAINT:
 	    		initialState = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD);
+//	    		for(int i=0;i<initialState.length;i++)
+//	    			initialState[i] *= 0.25;
 	    		break;
 	    	}
 	    }
@@ -1072,11 +1090,15 @@ public class SingleFaultInversion {
 	    }
 
 		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
-		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
+		
+		String runTimeString = "Done with Inversion after "+(float)runTimeSec+" seconds.";
+		if(D) System.out.println(runTimeString);
+		
+		fltSysRupInversion.addToModelRunInfoString("\n"+runTimeString+"\n");
 				
 		// write results to file
 		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
-			
+					
 		if(doDataFits) fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
 		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
@@ -1188,84 +1210,28 @@ public class SingleFaultInversion {
 		getSolution();
 	}
 	
-	/**
-	 * This one matches slip rates perfectly except at the ends
-	 * @param slipRateProfile
-	 * @param slipModelType
-	 * @param scalingRel
-	 */
-	public void doMaxRateSolutionAlt(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, ScalingRelationshipEnum scalingRel) {
-		this.setDefaultParameterValuess();
-		this.slipRateProfile = slipRateProfile;
-		this.slipModelType = slipModelType;
-		this.scalingRel = scalingRel;
-		// make the solution
-		solutionType = InversionSolutionType.APPLY_SOLUTION;
-		solutionRatesToApplyArray = new double[6555];
-//		double rupLengthKm = LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH;
-//		double rupAreaKmSq = (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)*FAULT_LENGTH_KM;
-//		double mag = scalingRel.getMag(maxRupAreaKmSq*1e6, FAULT_LENGTH_KM*1e3, (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)*1e3);
-//		double toMoRate = FaultMomentCalc.getMoment(maxRupAreaKmSq*1e6, FAULT_SLIP_RATE*1e-3);
-		makeFaultSectionDataList();
-		FaultSectionPrefData sectData = faultSectionDataList.get(0);
-		double rupLengthKm = NUM_SUBSECT_PER_RUP*sectData.getTraceLength();	
-		double rupAreaKmSq = rupLengthKm*sectData.getReducedDownDipWidth();
-		double mag = scalingRel.getMag(rupAreaKmSq*1e6, rupLengthKm*1e3, sectData.getReducedDownDipWidth()*1e3);
-		double slip = scalingRel.getAveSlip(rupAreaKmSq*1e6, rupLengthKm*1e3, sectData.getReducedDownDipWidth()*1e3)*1e3; // mm
-		double aveRate = FAULT_SLIP_RATE/(slip*NUM_SUBSECT_PER_RUP);
-		// round the mag
-		double magRounded = ((double)Math.round(100*mag))/100.0; // FaultSystemRuptureRateInversion.roundMagTo10thUnit(mag);
-		double magRoundingCorr = MagUtils.magToMoment(magRounded)/MagUtils.magToMoment(mag);
-		int numRup = faultSectionDataList.size()-NUM_SUBSECT_PER_RUP+1;
-		for(int i=0;i<numRup;i++)
-			solutionRatesToApplyArray[i] = aveRate*magRoundingCorr; 
-		solutionName = "MaxRateSolAlt_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
-		dirName = ROOT_PATH+"Output_"+solutionName;
-		getSolution();
-	}
 
 
 	public void doUnconstrainedSA(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
-			ScalingRelationshipEnum scalingRel, int numSim) {
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
 		this.setDefaultParameterValuess();
 		this.slipRateProfile = slipRateProfile;
 		this.slipModelType = slipModelType;
 		this.scalingRel = scalingRel;
 		// make the solution
 		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
 		numSolutions = numSim; 
-		solutionName = "UnconstrainedSA_"+numSolutions+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		solutionName = "UnconstrainedSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
 		dirName = ROOT_PATH+"Output_"+solutionName;
 		getSolution();
 	
 	}
 
-	/**
-	 * This evenly matches the data uncertainties in that the final misfit equals the data standard deviation.
-	 * @param slipRateProfile
-	 * @param slipModelType
-	 * @param scalingRel
-	 * @param numSim
-	 */
-	public void doUnconstrainedSA_EvenFit(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
-			ScalingRelationshipEnum scalingRel, int numSim) {
-		this.setDefaultParameterValuess();
-		this.slipRateProfile = slipRateProfile;
-		this.slipModelType = slipModelType;
-		this.scalingRel = scalingRel;
-		// make the solution
-		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
-		completionCriteria = new EnergyCompletionCriteria(117d);	// number of rows/subsections
-		numSolutions = numSim; 
-		solutionName = "UnconstrainedSA_EvenFit_"+numSolutions+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
-		dirName = ROOT_PATH+"Output_"+solutionName;
-		getSolution();
-	
-	}
 	
 	
 	public void doMFDconstrainedSA(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
-			ScalingRelationshipEnum scalingRel, int numSim, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState) {
+			ScalingRelationshipEnum scalingRel, int numSim, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState, double finalEnergy) {
 		this.setDefaultParameterValuess();
 		this.slipRateProfile = slipRateProfile;
 		this.slipModelType = slipModelType;
@@ -1274,19 +1240,26 @@ public class SingleFaultInversion {
 		relativeMFD_constraintWt = mfdWt; // Target MFD Constraint Wt
 		// make the solution
 		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
-//		completionCriteria = new IterationCompletionCriteria((long) 1e6);
+//		completionCriteria = new IterationCompletionCriteria((long) 1e4);
+//		completionCriteria = new EnergyCompletionCriteria(5);
+		ArrayList<CompletionCriteria> completionCriteriaList = new ArrayList<CompletionCriteria>();
+		completionCriteriaList.add(new IterationCompletionCriteria((long) 1e7));	// this is just a backup
+		completionCriteriaList.add(new EnergyCompletionCriteria(finalEnergy));
+		completionCriteria = new CompoundCompletionCriteria(completionCriteriaList);
+
 		String initStateString = "";
 		if(asInitState) {
 			initStateString = "initSt_";
 			initialStateType = SA_InitialStateType.FROM_MFD_CONSTRAINT;
 		}
 		numSolutions = numSim; 
-		solutionName = "MFDconstrSA_"+initStateString+numSolutions+"_"+mfdTargetType+"_wt"+Math.round(mfdWt)+"_"+slipRateProfile.toString()+"_"+
+		solutionName = "MFDconstrSA_"+initStateString+numSolutions+"_finalE="+finalEnergy+"_"+mfdTargetType+"_wt"+Math.round(mfdWt)+"_"+slipRateProfile.toString()+"_"+
 				slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
 		dirName = ROOT_PATH+"Output_"+solutionName;
 		getSolution();
 	
 	}
+	
 	
 	public void doAppliedMFD_bMinus1_Solution(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, ScalingRelationshipEnum scalingRel) {
 		this.setDefaultParameterValuess();
@@ -1300,6 +1273,23 @@ public class SingleFaultInversion {
 		getSolution();
 	}
 
+
+	public void doMFDconstrainedNNLS(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, MFD_TargetType mfdTargetType, double mfdWt) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		this.mfdTargetType = mfdTargetType;
+		relativeMFD_constraintWt = mfdWt; // Target MFD Constraint Wt
+		// make the solution
+		solutionType = InversionSolutionType.NON_NEGATIVE_LEAST_SQUARES;
+		solutionName = "MFDconstrNNLS_"+mfdTargetType+"_wt"+Math.round(mfdWt)+"_"+slipRateProfile.toString()+"_"+
+				slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution();
+	
+	}
 
 
 
@@ -1315,23 +1305,79 @@ public class SingleFaultInversion {
 		SingleFaultInversion singleFaultInversion = new SingleFaultInversion();
 		
 //		singleFaultInversion.doNSHMP_GR_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+		// this is qualitatively similar, but higher final energy
+//		singleFaultInversion.doNSHMP_GR_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.HANKS_BAKUN_08);
+		
+		// this is qualitatively similar, but lower energy
 //		singleFaultInversion.doNSHMP_GR_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);
+		
 //		singleFaultInversion.doNSHMP_Char_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
 //		singleFaultInversion.doNSHMP_Char_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);
 //		
 //		singleFaultInversion.doMinRateSolution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+//		singleFaultInversion.doMinRateSolution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);
+		
+		//This misfits the very ends and a little elsewhere
 //		singleFaultInversion.doMaxRateSolution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
-//		singleFaultInversion.doMaxRateSolutionAlt(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+		// This fixes that (slip rates trimmed down at ends)
+//		singleFaultInversion.doMaxRateSolution(SlipRateProfileType.UNIFORM_TRIMMED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+
+		// this took six minutes (final energy E = 2)
+//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, 2);
+		// this E=5 goes fast,and corresponds to RMS = sqrt(E/N) = sqrt(5/117) = 0.2 (ave Norm abs diff is less than this)
+//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, 5);
+//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5);
+		// this still produces edge effects (only sued this slip rate distribution for max rate model)
+//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.UNIFORM_TRIMMED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5);
+		
+		
+//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5);
+//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5);
+
+		// this is to not over fit the data
+//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, 137);
+		// on average this over-fits the data (also the error on the average is 94 versus 137, whereas it should be ~16 if it's not systematically over fitting)
+//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 50, 137);
+
+		// this should be the same as 3rd above (since wt=0 and zero initial state); looks good
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0, false, 5);	
+		// Use MFD as starting model only; REDO THESE AT ENERGY OF 1 (WILL TAKE LONG TIME)
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0, true, 5);	
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0, true, 5);	
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0, true, 2);
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0, true, 1);
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0, true, 1);	
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0, true, 1);	
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0, true, 1);	
+	
+		
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1, false, 2);	
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1, true, 2);	
+		
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 1, false, 2);	
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 1, true, 2);	
+
+		// MFD not perfectly fit in following; what happens if it's is (given high weight)?  This also took 3 hrs
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 1, false, 2);	
+
+		singleFaultInversion.doMFDconstrainedNNLS(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_minus1, 1);	
+
+				
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 1, true);	
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 1, false);	
+
+//		singleFaultInversion.doMFDconstrainedNNLS(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_minus1, 1);	
+
+
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 1, true);	
+//		singleFaultInversion.doAppliedMFD_bMinus1_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_1pt0, 2, true);
+//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.UNIFORM_TRIMMED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_0pt0, 1, false);
+		
+		
 
 		
-//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1);
-//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10);
-//		singleFaultInversion.doUnconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10);
-
-//		singleFaultInversion.doUnconstrainedSA_EvenFit(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10);
-//		singleFaultInversion.doUnconstrainedSA_EvenFit(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 50);
-
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_1pt0, 100d, false);
 //		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1e4, false);
 //		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_1pt0, 1e6, false); // I also increased the number of iterations here
 		
@@ -1346,7 +1392,6 @@ public class SingleFaultInversion {
 //		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0, true);
 //		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0, true);
 		
-//		singleFaultInversion.doAppliedMFD_bMinus1_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);
 
 //		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 1e4, true);
 //		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0, true);
