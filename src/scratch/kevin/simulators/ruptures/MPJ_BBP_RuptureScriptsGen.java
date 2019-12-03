@@ -25,9 +25,11 @@ import com.google.common.io.Files;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
+import scratch.kevin.bbp.BBP_Wrapper;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.bbp.MPJ_BBP_RupGenSim;
 import scratch.kevin.bbp.MPJ_BBP_ShakeMapSim;
+import scratch.kevin.bbp.MPJ_BBP_Utils;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
@@ -55,42 +57,51 @@ class MPJ_BBP_RuptureScriptsGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2194_LONG.instance(baseDir);
 //		int eventID = 526885;
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(baseDir);
-//		int eventID = 81854;
-//		int eventID = 2637969;
+////		int eventID = 81854;
+////		int eventID = 2637969;
 //		int eventID = 1670183;
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		int eventID = 385955;
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
-////		int eventID = 5304;
+		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
+		int eventID = 5304;
 //		int eventID = 31324;
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		int eventID = 9955310;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		int eventID = 9955310;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
+//		int eventID = 40636;
+////		int eventID = 92236;
+		
+		double timeScalar = 1d;
+		boolean scaleVelocities = false;
 		
 		File catalogDir = catalog.getCatalogDir();
 		
 		boolean stampede = false;
 		
-		boolean doGP = true;
-		boolean doShakeMap = false;
+		boolean doGP = false;
+		boolean doShakeMap = true;
+		boolean doGPShakeMaps = false;
 
 		boolean csSites = false;
 		boolean cs500Sites = true;
 		
 		int numGP = 400;
-//		double mapSpacing = 0.05;
-		double mapSpacing = 0.02;
-		int maxNodes = 18;
+		int numShakeMapGP = 5;
+		double mapSpacing = 0.05;
+//		double mapSpacing = 0.02;
+		int maxNodes = 36;
 //		int maxNodes = 10;
 		boolean gpAdjustDDW = true;
 		
 		File srcFile = RSQSimBBP_Config.getEventSrcFile(catalog, eventID);
-		File srfFile = RSQSimBBP_Config.getEventSRFFile(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE, RSQSimBBP_Config.SRF_DT);
+		File srfFile = RSQSimBBP_Config.getEventSRFFile(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
+				RSQSimBBP_Config.SRF_DT, timeScalar, scaleVelocities);
 		if (!srcFile.exists() || (doShakeMap && !srfFile.exists())) {
 			System.out.println("need to load event "+eventID);
 			RSQSimEvent event = catalog.loader().byID(eventID);
 			System.out.println("done loading");
 			
-			RSQSimBBP_Config.generateBBP_Inputs(catalog, event, false);
+			RSQSimBBP_Config.generateBBP_Inputs(catalog, event, false, timeScalar, scaleVelocities);
 			Preconditions.checkState(srcFile.exists(), "SRC file not generated?");
 			Preconditions.checkState(srfFile.exists(), "SRF file not generated?");
 			
@@ -153,11 +164,25 @@ class MPJ_BBP_RuptureScriptsGen {
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
 		mpjWrite.setClasspath(classpath);
 		
+		BBP_SourceFile src = BBP_SourceFile.readFile(srcFile);
+		BBP_SourceFile gpSRC = null;
+		if (gpAdjustDDW && (doGP || doGPShakeMaps)) {
+			Somerville_2006_MagAreaRel ma = new Somerville_2006_MagAreaRel();
+			double newArea = ma.getMedianArea(src.getMag());
+			BBP_PlanarSurface origSurf = src.getSurface();
+			double newWidth = newArea/origSurf.getLength();
+			BBP_PlanarSurface newSurf = new BBP_PlanarSurface(origSurf.getTopCenter(), origSurf.getLength(),
+					newWidth, origSurf.getFocalMechanism());
+			gpSRC = new BBP_SourceFile(newSurf, src.getMag(), src.getHypoAlongStrike(), src.getHypoDownDip(),
+					src.getdWid(), src.getdLen(), src.getCornerFreq(), src.getSeed());
+		} else {
+			gpSRC = src;
+		}
+		
 		if (doGP) {
 			String jobName = dateStr;
 			jobName += "-"+catalogDir.getName()+"-event"+eventID+"-gp";
 			
-			BBP_SourceFile gpSRC = BBP_SourceFile.readFile(srcFile);
 			String len = gpSRC.getdLen()+"";
 			if (len != null)
 				jobName += "-dx"+len;
@@ -169,17 +194,8 @@ class MPJ_BBP_RuptureScriptsGen {
 				jobName += "-csLASites";
 			if (cs500Sites)
 				jobName += "-cs500Sites";
-			if (gpAdjustDDW) {
+			if (gpAdjustDDW)
 				jobName += "-adjustDDW";
-				Somerville_2006_MagAreaRel ma = new Somerville_2006_MagAreaRel();
-				double newArea = ma.getMedianArea(gpSRC.getMag());
-				BBP_PlanarSurface origSurf = gpSRC.getSurface();
-				double newWidth = newArea/origSurf.getLength();
-				BBP_PlanarSurface newSurf = new BBP_PlanarSurface(origSurf.getTopCenter(), origSurf.getLength(),
-						newWidth, origSurf.getFocalMechanism());
-				gpSRC = new BBP_SourceFile(newSurf, gpSRC.getMag(), gpSRC.getHypoAlongStrike(), gpSRC.getHypoDownDip(),
-						gpSRC.getdWid(), gpSRC.getdLen(), gpSRC.getCornerFreq(), gpSRC.getSeed());
-			}
 			
 			System.out.println("Writing GP sim to "+jobName);
 			
@@ -250,7 +266,11 @@ class MPJ_BBP_RuptureScriptsGen {
 		if (doShakeMap) {
 			String jobName = dateStr;
 			jobName += "-"+catalogDir.getName()+"-event"+eventID+"-shakemap";
-			
+			if (timeScalar != 1d) {
+				jobName += "-timeScale"+(float)timeScalar;
+				if (scaleVelocities)
+					jobName += "-velScale";
+			}
 			if (!RSQSimBBP_Config.DO_HF)
 				jobName += "-noHF";
 			if (stampede)
@@ -294,6 +314,74 @@ class MPJ_BBP_RuptureScriptsGen {
 			
 			script = pbsWrite.buildScript(script, mapMins, nodes, threads, queue);
 			pbsWrite.writeScript(new File(localJobDir, "map_bbp_parallel.pbs"), script);
+		}
+		if (doGPShakeMaps) {
+			String jobPrefix = dateStr;
+			jobPrefix += "-"+catalogDir.getName()+"-event"+eventID+"-shakemap-gp";
+			if (!RSQSimBBP_Config.DO_HF)
+				jobPrefix += "-noHF";
+			if (stampede)
+				jobPrefix += "-stampede";
+			if (gpAdjustDDW)
+				jobPrefix += "-adjustDDW";
+			
+			for (int i=0; i<numShakeMapGP; i++) {
+				int seed = 1000 + i;
+				String jobName = jobPrefix+"-seed"+seed;
+				System.out.println("Writing ShakeMap sim to "+jobName);
+				
+				int nodes = maxNodes;
+				
+				File localJobDir = new File(localDir, jobName);
+				System.out.println(localJobDir.getAbsolutePath());
+				Preconditions.checkState(localJobDir.exists() || localJobDir.mkdir());
+				File remoteJobDir = new File(remoteDir, jobName);
+				
+				// write src file with unique seed
+				gpSRC.setSeed(seed);
+				File localSrcFile = new File(localJobDir, srcFile.getName());
+				gpSRC.writeToFile(localSrcFile);
+				File remoteSrcFile = new File(remoteJobDir, srcFile.getName());
+				
+				File runDir = new File(localJobDir, "srf_build");
+				MPJ_BBP_Utils.waitOnDir(runDir, 5, 1000);
+				BBP_Wrapper wrapper = new BBP_Wrapper(RSQSimBBP_Config.VM, RSQSimBBP_Config.METHOD, localSrcFile,
+						null, null, null, runDir);
+				wrapper.setSRFGenOnly(true);
+				wrapper.run();
+				
+				File newSRF = null;
+				for (File file : runDir.listFiles())
+					if (file.getName().endsWith(".srf"))
+						newSRF = file;
+				Preconditions.checkNotNull(newSRF, "Couldn't file new SRF file in "+runDir.getAbsolutePath());
+				Files.copy(newSRF, srfFile);
+				
+				Files.copy(newSRF, new File(localJobDir, newSRF.getName()));
+				File remoteSrfFile = new File(remoteJobDir, newSRF.getName());
+				String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).threads(threads).endTimeSlurm().build();
+				argz += " --vm "+RSQSimBBP_Config.VM.name()+" --method "+RSQSimBBP_Config.METHOD.name();
+				argz += " --src-file "+remoteSrcFile.getAbsolutePath();
+				argz += " --srf-file "+remoteSrfFile.getAbsolutePath();
+				argz += " --output-dir "+remoteJobDir.getAbsolutePath();
+				argz += " --buffer-dist "+RSQSimBBP_Config.MAX_DIST+" --spacing "+mapSpacing;
+				if (!RSQSimBBP_Config.DO_HF)
+					argz += " --no-hf";
+				if (bbpDataDir != null && !bbpDataDir.isEmpty())
+					argz += " --bbp-data-dir "+bbpDataDir;
+				
+				List<String> addLines = new ArrayList<>();
+				argz = MPJ_BBP_CatalogSimScriptGen.addBBP_EnvArgs(argz, addLines, remoteJobDir, nodeScratchDir,
+						sharedScratchDir, bbpCopyParentDir, bbpEnvFile);
+				
+				List<String> script = mpjWrite.buildScript(MPJ_BBP_ShakeMapSim.class.getName(), argz);
+				
+				if (!addLines.isEmpty())
+					script.addAll(2, addLines);
+				
+				script = pbsWrite.buildScript(script, mapMins, nodes, threads, queue);
+				pbsWrite.writeScript(new File(localJobDir, "map_bbp_parallel.pbs"), script);
+			}
 		}
 	}
 

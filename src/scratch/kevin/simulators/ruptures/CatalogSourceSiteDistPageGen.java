@@ -238,7 +238,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		for (int[] parents : parentIDs)
 			for (int parent : parents)
 				allParents.add(parent);
-		loader.forPerentSections(true, Ints.toArray(allParents));
+		loader.forParentSections(true, Ints.toArray(allParents));
 		System.out.println("Loading events...");
 		List<RSQSimEvent> events = loader.minMag(minMag).load();
 		System.out.println("Loaded "+events.size()+" events");

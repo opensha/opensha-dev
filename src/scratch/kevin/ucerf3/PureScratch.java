@@ -1473,13 +1473,50 @@ public class PureScratch {
 		cpt.setNanColor(Color.LIGHT_GRAY);
 		cpt.writeCPTFile(new File("/tmp/cpt.cpt"));
 	}
+	
+	private static void test58() throws IOException {
+		double mean = 5d;
+		
+		int num = 10000;
+		double[] rnds = { 0.1d, 0.5d, 1d, 2d, 3d, 4d, 5d };
+		
+		for (double rnd : rnds) {
+			double[] vals = new double[num];
+			double[] diffs = new double[num];
+			double rms = 0d;
+			double rmsDiff = 0d;
+			for (int i=0; i<num; i++) {
+				double r = Math.random() - 0.5;
+				vals[i] = mean + rnd*r;
+				rms += vals[i]*vals[i];
+				rmsDiff += (vals[i]-mean)*(vals[i]-mean);
+				diffs[i] = Math.abs(vals[i] - mean);
+			}
+			rms /= (double)num;
+			rms = Math.sqrt(rms);
+			rmsDiff /= (double)num;
+			rmsDiff = Math.sqrt(rmsDiff);
+			
+			System.out.println("Rnd="+(float)rnd+"\tmean="+(float)StatUtils.mean(vals)
+				+"\tgeoMean="+(float)StatUtils.geometricMean(vals)+"\trms="+(float)rms
+				+"\trmsDiff="+(float)rmsDiff+"\taveDiff="+(float)StatUtils.mean(diffs)
+				+"\tstdDev="+(float)Math.sqrt(StatUtils.variance(vals)));
+		}
+		
+		double momentNM = 1e20;
+		double mag1 = (Math.log10(momentNM) - 9.05) / 1.5;
+		System.out.println("mag1: "+mag1);
+		double momentDC = momentNM*1e7;
+		double mag2 = (2d/3d)*Math.log10(momentDC) - 10.7;
+		System.out.println("mag2: "+mag2);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test57();
+		test58();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

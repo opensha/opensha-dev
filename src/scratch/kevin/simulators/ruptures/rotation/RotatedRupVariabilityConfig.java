@@ -487,13 +487,18 @@ public class RotatedRupVariabilityConfig {
 	
 	private static final boolean D = false;
 	
-	private RSQSimEvent getInitialOrientation(RSQSimEvent rupture) {
-		if (D) System.out.println("Initial orientation for "+rupture.getID());
+	Location getCentroid(RSQSimEvent rupture) {
 		Location centroid = centroidCache.get(rupture);
 		if (centroid == null) {
 			centroid = RuptureRotationUtils.calcRuptureCentroid(rupture);
 			centroidCache.putIfAbsent(rupture, centroid);
 		}
+		return centroid;
+	}
+	
+	RSQSimEvent getInitialOrientation(RSQSimEvent rupture) {
+		if (D) System.out.println("Initial orientation for "+rupture.getID());
+		Location centroid = getCentroid(rupture);
 		if (D) System.out.println("Initial centroid: "+centroid);
 		
 		List<FaultSectionPrefData> allSubSects = catalog.getU3SubSects();

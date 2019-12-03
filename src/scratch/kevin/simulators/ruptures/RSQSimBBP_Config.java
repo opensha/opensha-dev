@@ -139,7 +139,7 @@ public class RSQSimBBP_Config {
 		return new BBP_PlanarSurface(topCenter, length, width, mech);
 	}
 	
-	private static double absAngleDiff(double angle1, double angle2) {
+	public static double absAngleDiff(double angle1, double angle2) {
 		double angleDiff = Math.abs(angle1 - angle2);
 		while (angleDiff > 270)
 			angleDiff -= 360;

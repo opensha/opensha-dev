@@ -1105,7 +1105,7 @@ public class SpectraPlotter {
 	
 	private static Map<RSQSimEvent, EqkRupture> getCompEvents(RSQSimCatalog catalog, double minMag, double maxMag, int skipYears,
 			int... parentIDs) throws IOException {
-		List<RSQSimEvent> events = catalog.loader().skipYears(skipYears).minMag(minMag).maxMag(maxMag).forPerentSections(true, parentIDs).load();
+		List<RSQSimEvent> events = catalog.loader().skipYears(skipYears).minMag(minMag).maxMag(maxMag).forParentSections(true, parentIDs).load();
 		Map<RSQSimEvent, EqkRupture> ret = new HashMap<>();
 		for (RSQSimEvent event : events) {
 			RSQSimSubSectEqkRupture gmpeRup = catalog.getMappedSubSectRupture(event);

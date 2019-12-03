@@ -890,9 +890,18 @@ public class RSQSimCatalog implements XMLSaveable {
 					partBLink = name;
 				} else if (name.startsWith("rotated_ruptures_")) {
 					for (Scenario scenario : Scenario.values()) {
-						if (name.equals("rotated_ruptures_"+scenario.getPrefix())) {
+						String dirName = "rotated_ruptures_"+scenario.getPrefix();
+						if (name.equals(dirName)) {
 							rotatedRupLinks.add(name);
 							rotatedRupNames.add(scenario.getName());
+						} else if (name.startsWith(dirName+"_timeScale")) {
+							String scenName = scenario.getName();
+							String timeScale = name.substring(name.indexOf("_timeScale"));
+							timeScale = timeScale.replaceAll("_timeScale", ", Time Scale Factor: ");
+							if (timeScale.contains("_velScale"))
+								timeScale = timeScale.replaceAll("_velScale", ", Velocities Scaled");
+							rotatedRupLinks.add(name);
+							rotatedRupNames.add(scenName+timeScale);
 						}
 					}
 					for (RuptureType rupType : RuptureType.values()) {
@@ -1270,7 +1279,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			return this;
 		}
 		
-		public Loader forPerentSections(boolean calcU3Offset, int... parentIDs) throws IOException {
+		public Loader forParentSections(boolean calcU3Offset, int... parentIDs) throws IOException {
 			List<Integer> sectionIDs = new ArrayList<>();
 			for (FaultSectionPrefData sect : getU3SubSects())
 				if (Ints.contains(parentIDs, sect.getParentSectionId()))

@@ -31,14 +31,14 @@ public class RuptureSearch {
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		
 		int parentID = 301; // Mojave S
-		double minMag = 7.3;
+		double minMag = 7.0;
 		double maxMag = 7.5;
-		double maxMagDiff = 0.2;
+		double maxMagDiff = 0.3;
 //		MagAreaRelationship magAreaRel = new Somerville_2006_MagAreaRel();
 		MagAreaRelationship magAreaRel = new Ellsworth_A_WG02_MagAreaRel();
 //		Region hypocenterReg = new Region(new Location(34.25, -117.5), 20d);
@@ -60,8 +60,8 @@ public class RuptureSearch {
 		double elementOffPenalty = 50d * aveElemArea / aveSectArea;
 		System.out.println("Stray penalty (each): "+elementOffPenalty);
 		
-		List<RSQSimEvent> events = catalog.loader().minMag(minMag).maxMag(maxMag).matches(
-				new FaultIDIden("FID", catalog.getElements(), parentID)).load();
+		List<RSQSimEvent> events = catalog.loader().minMag(minMag).maxMag(maxMag)
+				.forParentSections(true, parentID).load();
 		
 		System.out.println("Found "+events.size()+" events with M>"+minMag+" on parent "+parentID);
 		

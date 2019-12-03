@@ -21,6 +21,7 @@ import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.XMLUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
@@ -60,12 +61,6 @@ public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 		method = Method.valueOf(cmd.getOptionValue("method"));
 		srcFile = new File(cmd.getOptionValue("src-file"));
 		Preconditions.checkState(srcFile.exists());
-		if (cmd.hasOption("srf-file")) {
-			srfFile = new File(cmd.getOptionValue("srf-file"));
-			Preconditions.checkState(srfFile.exists());
-			if (rank == 0)
-				debug("Using input SRF file: "+srfFile.getAbsolutePath());
-		}
 		mainOutputDir = new File(cmd.getOptionValue("output-dir"));
 		resultsDir = new File(mainOutputDir, "results");
 		if (rank == 0) {
@@ -158,6 +153,34 @@ public class MPJ_BBP_ShakeMapSim extends MPJTaskCalculator {
 			// initialize bundle dirs
 			for (int i=0; i<=getNumTasks(); i+=BUNDLE_SIZE)
 				getRunBundleDir(i, true);
+		}
+
+		if (cmd.hasOption("srf-file")) {
+			srfFile = new File(cmd.getOptionValue("srf-file"));
+			Preconditions.checkState(srfFile.exists());
+			if (rank == 0)
+				debug("Using input SRF file: "+srfFile.getAbsolutePath());
+		} else {
+			// need to build the SRF
+			srfFile = new File(mainOutputDir, "input_event.srf");
+			if (rank == 0) {
+				debug("building SRF file");
+				File runDir = new File(mainOutputDir, "srf_build");
+				MPJ_BBP_Utils.waitOnDir(runDir, 5, 1000);
+				BBP_Wrapper wrapper = new BBP_Wrapper(vm, method, srcFile, null, null, null, runDir);
+				wrapper.setSRFGenOnly(true);
+				wrapper.setBBPEnvFile(bbpEnvFile);
+				wrapper.setBBPDataDir(bbpDataDir);
+				wrapper.setBBPGFDir(bbpGFDir);
+				wrapper.run();
+				
+				File newSRF = null;
+				for (File file : runDir.listFiles())
+					if (file.getName().endsWith(".srf"))
+						newSRF = file;
+				Preconditions.checkNotNull(newSRF, "Couldn't file new SRF file in "+runDir.getAbsolutePath());
+				Files.copy(newSRF, srfFile);
+			}
 		}
 	}
 	

@@ -1,6 +1,8 @@
 package scratch.kevin.simulators.ruptures.rotation;
 
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -25,10 +27,19 @@ import java.util.concurrent.Future;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.MathArrays;
+import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYBoxAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.axis.NumberTickUnit;
+import org.jfree.chart.axis.TickUnit;
+import org.jfree.chart.axis.TickUnits;
 import org.jfree.data.Range;
+import org.jfree.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -39,8 +50,12 @@ import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
+import org.opensha.commons.data.xyz.GriddedGeoDataSet;
+import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.geo.LocationVector;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -60,8 +75,13 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.faultSurface.QuadSurface;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_WrapperFullParam;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.ScalarGroundMotion;
+import org.opensha.sha.imr.mod.impl.BaylessSomerville2013DirectivityModifier;
+import org.opensha.sha.imr.mod.impl.BaylessSomerville2013DirectivityModifier.DirectivityParams;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
@@ -73,6 +93,11 @@ import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
+import org.opensha.sha.simulators.utils.RupturePlotGenerator;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SlipAlongSectAlgorithm;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -82,16 +107,19 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
+import com.google.common.collect.Table.Cell;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 
+import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.ruptures.ASK_EventData;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationPageGen;
+import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationPageGen.ValidationResult;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
@@ -131,6 +159,7 @@ public abstract class RotatedRupVariabilityPageGen {
 	private LoadingCache<VarGroupingKey, VariabilityResult> varResultCache;
 	private LoadingCache<VarGroupingKey, VariabilityResult[]> downsampledVarResultCache;
 	private LoadingCache<GMPE_GroupingKey, GMPE_Result> gmpeResultCache;
+	private LoadingCache<EventTermKey, EventTerm> eventTermCache;
 	
 	private Map<Integer, List<ASK_EventData>> realEventData;
 	private int numRealDataSamples;
@@ -239,6 +268,15 @@ public abstract class RotatedRupVariabilityPageGen {
 			@Override
 			public RSQSimSubSectEqkRupture load(RSQSimEvent key) throws Exception {
 				return buildGMPE_Rupture(key);
+			}
+			
+		});
+		
+		eventTermCache = CacheBuilder.newBuilder().build(new CacheLoader<EventTermKey, EventTerm>() {
+
+			@Override
+			public EventTerm load(EventTermKey key) throws Exception {
+				return calcEventTerm(key.eventID, key.mag, key.distance, key.sites);
 			}
 			
 		});
@@ -657,6 +695,41 @@ public abstract class RotatedRupVariabilityPageGen {
 			@Override
 			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
 				return pageGen.calcVprop(pageGen.getEvent(rotation.eventID));
+			}
+		},
+		MAG("Mag", "mag") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+				return pageGen.getEvent(rotation.eventID).getMagnitude();
+			}
+		},
+		AREA("Area", "area") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+				return pageGen.getEvent(rotation.eventID).getArea();
+			}
+		},
+		MAX_SLIP("Max Slip", "max_slip") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+				return StatUtils.max(pageGen.getEvent(rotation.eventID).getAllElementSlips());
+			}
+		},
+		MEAN_SLIP("Mean Slip", "mean_slip") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+				RSQSimEvent event = pageGen.getEvent(rotation.eventID);
+				ArrayList<SimulatorElement> elems = event.getAllElements();
+				double[] slips = event.getAllElementSlips();
+				double mean = 0d;
+				double totArea = 0d;
+				for (int i=0; i<slips.length; i++) {
+					double area = elems.get(i).getArea();
+					mean += area*slips[i];
+					totArea += area;
+				}
+				mean /= totArea;
+				return mean;
 			}
 		},
 		SOURCE_AZ("Source Azimuth", "src_az") {
@@ -1124,6 +1197,112 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 		System.out.println("*** DONE summary table ***");
 		lines.addAll(summaryTableIndex, summaryLines);
+		
+		if (!hasMagDist) {
+			System.out.println("*** doing event term scatters ***");
+			Site[] scatterSites;
+			lines.add("## Event Term Scatters");
+			lines.add(topLink); lines.add("");
+			if (sites.size() == 1 || vs30SiteBundles.isEmpty()) {
+				scatterSites = new Site[] { sites.get(0) };
+			} else {
+				scatterSites = null;
+				Float vs30 = null;
+				for (Float myVs30 : vs30SiteBundles.keySet()) {
+					List<Site> bundle = vs30SiteBundles.get(myVs30);
+					if (scatterSites == null || bundle.size() > scatterSites.length) {
+						scatterSites = bundle.toArray(new Site[0]);
+						vs30 = myVs30;
+					}
+				}
+				
+				if (scatterSites.length < sites.size()) {
+					lines.add("These results use the "+scatterSites.length+" sites with Vs30="+vs30);
+					lines.add("");
+				}
+			}
+			Double mag = plotMags.get(0);
+			for (EventDisaggQuantity q : EventDisaggQuantity.values()) {
+				lines.add("### "+q.name+" Event Term Scatters");
+				lines.add(topLink); lines.add("");
+				table = MarkdownUtils.tableBuilder();
+				table.initNewLine();
+				table.addColumn("");
+				for (double period : periods)
+					table.addColumn(optionalDigitDF.format(period)+" s");
+				table.finalizeLine();
+				
+				for (Float dist : distances) {
+					table.initNewLine();
+					table.addColumn("**"+optionalDigitDF.format(dist)+" km**");
+					for (double period : periods) {
+						File plot = plotEventTermScatter(q, mag, dist, period, scatterSites, resourcesDir);
+						table.addColumn("![plot]("+resourcesDir.getName()+"/"+plot.getName()+")");
+					}
+					table.finalizeLine();
+				}
+				lines.addAll(table.build());
+			}
+			System.out.println("*** DONE event term scatters ***");
+		}
+		
+		if (!hasMagDist) {
+			System.out.println("*** doing directivity ***");
+			Site[] scatterSites;
+			lines.add("## Directivity Comparisons");
+			lines.add(topLink); lines.add("");
+			if (sites.size() == 1 || vs30SiteBundles.isEmpty()) {
+				scatterSites = new Site[] { sites.get(0) };
+			} else {
+				scatterSites = null;
+				Float vs30 = null;
+				for (Float myVs30 : vs30SiteBundles.keySet()) {
+					List<Site> bundle = vs30SiteBundles.get(myVs30);
+					if (scatterSites == null || bundle.size() > scatterSites.length) {
+						scatterSites = bundle.toArray(new Site[0]);
+						vs30 = myVs30;
+					}
+				}
+				
+				if (scatterSites.length < sites.size()) {
+					lines.add("These results use the "+scatterSites.length+" sites with Vs30="+vs30);
+					lines.add("");
+				}
+			}
+			Double mag = plotMags.get(0);
+			
+			System.out.println("Calculating directivity...");
+			Table<Float, Double, XY_DataSet> scatters =
+					calcDirectivityComparisons(mag, periods, scatterSites, resourcesDir);
+			System.out.println("DONE calculating directivity");
+			if (DIRECTIVITY_DEBUG) {
+				lines.add("Directivity comparisons for individual ruptures can be found [here]("
+						+resourcesDir.getName()+"/"+DIRECTIVITY_DEBUG_DIRNAME+"/README.md).");
+				lines.add("");
+			}
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			table.addColumn("");
+			for (double period : periods)
+				table.addColumn(optionalDigitDF.format(period)+" s");
+			table.finalizeLine();
+			
+			for (Float dist : distances) {
+				table.initNewLine();
+				table.addColumn("**"+optionalDigitDF.format(dist)+" km**");
+				for (double period : periods) {
+					String prefix = "directivity_"+optionalDigitDF.format(dist)
+						+"km_"+optionalDigitDF.format(period)+"s";
+					if (plotDirectivityComparison(resourcesDir, prefix, scatters.get(dist, period)))
+						table.addColumn("![plot]("+resourcesDir.getName()+"/"+prefix+".png)");
+					else
+						table.addColumn("*N/A*");
+				}
+				table.finalizeLine();
+			}
+			lines.addAll(table.build());
+			System.out.println("*** DONE directivity scatters ***");
+		}
 		
 		if (sourceAzimuths.size() > 1 || siteSourceAzimuths.size() > 1 && !plotMags.isEmpty()) {
 			lines.add("## Azumth Dependence");
@@ -3115,6 +3294,107 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 	}
 	
+	private class EventTermKey {
+		private final int eventID;
+		private final double mag;
+		private final float distance;
+		private final Site[] sites;
+		public EventTermKey(int eventID, double mag, float distance, Site[] sites) {
+			super();
+			this.eventID = eventID;
+			this.mag = mag;
+			this.distance = distance;
+			this.sites = sites;
+		}
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getEnclosingInstance().hashCode();
+			result = prime * result + Float.floatToIntBits(distance);
+			result = prime * result + eventID;
+			long temp;
+			temp = Double.doubleToLongBits(mag);
+			result = prime * result + (int) (temp ^ (temp >>> 32));
+			result = prime * result + Arrays.hashCode(sites);
+			return result;
+		}
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			EventTermKey other = (EventTermKey) obj;
+			if (!getEnclosingInstance().equals(other.getEnclosingInstance()))
+				return false;
+			if (Float.floatToIntBits(distance) != Float.floatToIntBits(other.distance))
+				return false;
+			if (eventID != other.eventID)
+				return false;
+			if (Double.doubleToLongBits(mag) != Double.doubleToLongBits(other.mag))
+				return false;
+			if (!Arrays.equals(sites, other.sites))
+				return false;
+			return true;
+		}
+		private RotatedRupVariabilityPageGen getEnclosingInstance() {
+			return RotatedRupVariabilityPageGen.this;
+		}
+	}
+	
+	private class EventTerm {
+		final double[] eventTerms;
+		final List<RotationSpec> rotations;
+		final List<double[]> rotLogVals;
+		
+		public EventTerm(double[] eventTerms, List<RotationSpec> rotations, List<double[]> rotLogVals) {
+			super();
+			this.eventTerms = eventTerms;
+			this.rotations = rotations;
+			this.rotLogVals = rotLogVals;
+		}
+	}
+	
+	private EventTerm calcEventTerm(Integer eventID, Double mag, Float distance,
+			List<Site> sites) throws IOException {
+		return calcEventTerm(eventID, mag, distance, sites.toArray(new Site[0]));
+	}
+	
+	private EventTerm calcEventTerm(Integer eventID, Double mag, Float distance,
+			Site... sites) throws IOException {
+		Preconditions.checkState(sites.length > 0);
+		HashSet<RotationSpec> rotationSet = new HashSet<>();
+		RotatedRupVariabilityConfig config = magConfigs.get(mag);
+		for (Site site : sites)
+			rotationSet.addAll(config.getRotationsForQuantities(Quantity.SITE, site,
+					Quantity.EVENT_ID, eventID, Quantity.DISTANCE, distance));
+		Mean[] means = new Mean[calcPeriods.length];
+		for (int i=0; i<means.length; i++)
+			means[i] = new Mean();
+		SimulationRotDProvider<RotationSpec> prov = magProvs.get(mag);
+		List<RotationSpec> rotations = new ArrayList<>(rotationSet);
+		
+		List<double[]> rotLogVals = new ArrayList<>();
+		for (RotationSpec spec : rotations) {
+			DiscretizedFunc rd50s = prov.getRotD50(spec.site, spec, 0);
+			double[] vals = new double[calcPeriods.length];
+			for (int i=0; i<calcPeriods.length; i++) {
+				vals[i] = Math.log(rd50s.getInterpolatedY(calcPeriods[i]));
+				means[i].increment(vals[i]);
+			}
+			rotLogVals.add(vals);
+		}
+		
+		double[] ret = new double[means.length];
+		for (int i=0; i<ret.length; i++)
+			ret[i] = means[i].getResult();
+		
+		return new EventTerm(ret, rotations, rotLogVals);
+	}
+	
 	private Random repeatableRandom;
 	
 	private PeriodDepResidualsList calcResiduals(Double magnitude, Quantity[] constQuantities, Object[] constValues,
@@ -4666,5 +4946,790 @@ public abstract class RotatedRupVariabilityPageGen {
 //		csv.writeToStream(new GZIPOutputStream(new FileOutputStream(outFile)));
 		
 		return null;
+	}
+	
+	private enum EventDisaggQuantity {
+		V_PROP("Propagation Velocity", "v_prop", "m/s") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
+				return pageGen.calcVprop(event);
+			}
+		},
+		MAG("Mag", "mag", null) {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
+				return event.getMagnitude();
+			}
+		},
+		AREA("Log10(Area)", "area", "m^2") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
+				return event.getArea();
+			}
+		},
+		MAX_SLIP("Max Slip", "max_slip", "m") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
+				return StatUtils.max(event.getAllElementSlips());
+			}
+		},
+		MEAN_SLIP("Mean Slip", "mean_slip", "m") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
+				ArrayList<SimulatorElement> elems = event.getAllElements();
+				double[] slips = event.getAllElementSlips();
+				double mean = 0d;
+				double totArea = 0d;
+				for (int i=0; i<slips.length; i++) {
+					double area = elems.get(i).getArea();
+					mean += area*slips[i];
+					totArea += area;
+				}
+				mean /= totArea;
+				return mean;
+			}
+		},
+		SLIP_STD_DEV("Slip Std Dev", "slip_std_dev", "m") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
+				ArrayList<SimulatorElement> elems = event.getAllElements();
+				double[] slips = event.getAllElementSlips();
+				double[] weights = new double[slips.length];
+				for (int i=0; i<slips.length; i++)
+					weights[i] = elems.get(i).getArea();
+				double var = new Variance().evaluate(slips, MathArrays.normalizeArray(weights, weights.length));
+				return Math.sqrt(var);
+			}
+		},
+		MID_SEIS_MEAN_SLIP("Mid-Seismogenic Mean Slip", "mid_seis_mean_slip", "m") {
+			@Override
+			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
+				RSQSimSubSectionMapper mapper;
+				try {
+					mapper = pageGen.catalog.getSubSectMapper();
+					mapper.trackSlipOnSections();
+				} catch (IOException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+				SlipAlongSectAlgorithm slipAlg = SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN;
+				List<List<SubSectionMapping>> mappings = mapper.getAllSubSectionMappings(event);
+				
+				double areaWeightedSlip = 0d;
+				double sumArea = 0d;
+				for (List<SubSectionMapping> bundle : mappings) {
+					for (SubSectionMapping mapping : bundle) {
+						double area = mapping.getAreaForAverageSlip(slipAlg);
+						double slip = mapping.getAverageSlip(slipAlg);
+						areaWeightedSlip += slip*area;
+						sumArea += area;
+					}
+				}
+				return areaWeightedSlip == 0 ? 0 : areaWeightedSlip / sumArea;
+			}
+		};
+		
+		private String name;
+		private String prefix;
+		private String units;
+		
+		private EventDisaggQuantity(String name, String prefix, String units) {
+			this.name = name;
+			this.prefix = prefix;
+			this.units = units;
+		}
+		
+		public abstract double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event);
+	}
+	
+	private File plotEventTermScatter(EventDisaggQuantity q, Double mag,
+			Float distance, double period, Site[] sites, File resourcesDir)
+					throws IOException {
+		RotatedRupVariabilityConfig config = magConfigs.get(mag);
+		
+		List<Integer> eventIDs = config.getValues(Integer.class, Quantity.EVENT_ID);
+		
+		double[] eventTerms = new double[eventIDs.size()];
+		double[] values = new double[eventIDs.size()];
+		
+		int periodIndex = Doubles.indexOf(calcPeriods, period);
+		DefaultXY_DataSet scatter = new DefaultXY_DataSet();
+		
+		try {
+			for (int i=0; i<eventTerms.length; i++) {
+				eventTerms[i] = eventTermCache.get(
+						new EventTermKey(eventIDs.get(i), mag, distance, sites)).eventTerms[periodIndex];
+				values[i] = q.getValue(this, getEvent(eventIDs.get(i)));
+				
+				scatter.set(values[i], eventTerms[i]);
+			}
+		} catch (ExecutionException e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
+
+		double maxX = StatUtils.max(values);
+		double minX = StatUtils.min(values);
+		double spanX = maxX - minX;
+		Range xRange = new Range(minX - 0.05*spanX, maxX + 0.05*spanX);
+		
+		HistogramFunction xHist = calcHist(values, xRange, 20);
+		
+		double maxY = StatUtils.max(eventTerms);
+		double minY = StatUtils.min(eventTerms);
+		double spanY = maxY - minY;
+		Range yRange = new Range(minY - 0.05*spanY, maxY + 0.05*spanY);
+		
+		HistogramFunction yHist = calcHist(eventTerms, yRange, 20);
+
+//		double maxHistY = Math.max(yHist.getMaxY(), xHist.getMaxY());
+//		double scalarX = 0.25*yRange.getLength()/maxHistY;
+//		double scalarY = 0.25*xRange.getLength()/maxHistY;
+		double scalarX = 0.25*yRange.getLength()/xHist.getMaxY();
+		double scalarY = 0.25*xRange.getLength()/yHist.getMaxY();
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(scatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_X, 5f, Color.BLACK));
+		
+		SimpleRegression regression = new SimpleRegression();
+		for (Point2D pt : scatter)
+			regression.addData(pt.getX(), pt.getY());
+		double b = regression.getIntercept();
+		double m = regression.getSlope();
+		DefaultXY_DataSet fit = new DefaultXY_DataSet();
+		fit.set(xRange.getLowerBound(), m*xRange.getLowerBound()+b);
+		fit.set(xRange.getUpperBound(), m*xRange.getUpperBound()+b);
+		
+		funcs.add(fit);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.GRAY));
+		
+		String prefix = "event_term_scatter_"+q.prefix;
+		if (magConfigs.size() > 0)
+			prefix += "_m"+optionalDigitDF.format(mag);
+		prefix += "_"+optionalDigitDF.format(distance)+"km";
+		if (sites.length == 1)
+			prefix += "_"+sites[0].getName();
+		else
+			prefix += "_"+sites.length+"sites";
+		prefix += "_"+optionalDigitDF.format(period)+"s";
+		
+		String xAxisLabel = q.name;
+		if (q.units != null)
+			xAxisLabel += " ("+q.units+")";
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, " ", xAxisLabel, "Event Term");
+		List<XYAnnotation> anns = new ArrayList<>();
+		anns.addAll(buildHistAnns(xHist, false, xRange, yRange, scalarX,
+				new Color(255,0,0,80)));
+		anns.addAll(buildHistAnns(yHist, true, xRange, yRange, scalarY,
+				new Color(0,0,255,80)));
+		spec.setPlotAnnotations(anns);
+		
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		gp.getChartPanel().setSize(800, 600);
+		File pngFile = new File(resourcesDir, prefix+".png");
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+		return pngFile;
+	}
+	
+	private HistogramFunction calcHist(double[] values, Range range, int num) {
+		HistogramFunction hist = new HistogramFunction(range.getLowerBound(),
+				range.getUpperBound(), num);
+		
+		for (double value : values)
+			hist.add(hist.getClosestXIndex(value), 1d);
+		
+		return hist;
+	}
+	
+	private List<XYAnnotation> buildHistAnns(HistogramFunction hist, boolean vertical,
+			Range xAxis, Range yAxis, double scalar, Color color) {
+		List<XYAnnotation> anns = new ArrayList<>();
+		
+		double baselineValue = vertical ? xAxis.getLowerBound() : yAxis.getLowerBound();
+		
+		double delta = hist.getDelta();
+		double halfDelta = 0.5*delta;
+		
+		for (int i=0; i<hist.size(); i++) {
+			double middle = hist.getX(i);
+			double start = middle - halfDelta;
+			double end = middle + halfDelta;
+			
+			double rawHeight = hist.getY(i);
+			if (rawHeight == 0d)
+				continue;
+			double top = baselineValue + scalar*rawHeight;
+			
+			double x0, y0, x1, y1;
+			if (vertical) {
+				x0 = baselineValue;
+				x1 = top;
+				y0 = start;
+				y1 = end;
+			} else {
+				y0 = baselineValue;
+				y1 = top;
+				x0 = start;
+				x1 = end;
+			}
+			
+			anns.add(new XYBoxAnnotation(x0, y0, x1, y1, null, null, color));
+		}
+		
+		return anns;
+	}
+	
+	private static boolean DIRECTIVITY_DEBUG = true;
+	private static String DIRECTIVITY_DEBUG_DIRNAME = "directivity_debug";
+	
+	private Table<Float, Double, XY_DataSet> calcDirectivityComparisons(Double mag, double[] periods,
+			Site[] sites, File resourcesDir) {
+		RotatedRupVariabilityConfig config = magConfigs.get(mag);
+		if (!config.hasRuptures()) {
+			if (eventsMap == null) {
+				try {
+					eventsMap = loadEvents(catalog, getAllEventIDs());
+				} catch (IOException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+			}
+			config.setRuptures(eventsMap.values());
+		}
+		
+		List<Integer> eventIDs = config.getValues(Integer.class, Quantity.EVENT_ID);
+		
+		int[] periodIndexes = new int[periods.length];
+		for (int i=0; i<periods.length; i++)
+			periodIndexes[i] = Doubles.indexOf(calcPeriods, periods[i]);
+		
+		BaylessSomerville2013DirectivityModifier bs = new BaylessSomerville2013DirectivityModifier();
+		
+		Table<Float, Double, XY_DataSet> distPeriodXYs = HashBasedTable.create();
+		
+		TableBuilder table = null;
+		File dirDir = null;
+		if (DIRECTIVITY_DEBUG) {
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			for (double period : periods)
+				table.addColumn(optionalDigitDF.format(period)+"s Map Plot");
+			table.addColumn("Residuals Plot");
+			table.finalizeLine();
+			dirDir = new File(resourcesDir, DIRECTIVITY_DEBUG_DIRNAME);
+		}
+		
+		try {
+			for (int i=0; i<eventIDs.size(); i++) {
+				// build simple rupture description
+				int eventID = eventIDs.get(i);
+				RSQSimEvent event = getEvent(eventID);
+				
+				// rotated such that strike is zero, e.g. oriented facing north
+				// aki & richards, dips to right (if dips)
+				RSQSimEvent oriented = config.getInitialOrientation(event);
+				
+				Location centroid = config.getCentroid(event);
+				double centroidDepth = Double.NaN;
+				double centroidDist = Double.POSITIVE_INFINITY;
+				
+				Location hypo = RSQSimUtils.getHypocenter(oriented);
+				
+				double minLat = Double.POSITIVE_INFINITY;
+				double maxLat = Double.NEGATIVE_INFINITY;
+				List<Double> dips = new ArrayList<>();
+				double minDepth = Double.POSITIVE_INFINITY;
+				double maxDepth = Double.NEGATIVE_INFINITY;
+				for (SimulatorElement elem : oriented.getAllElements()) {
+					for (Location loc : elem.getVertices()) {
+						double lat = loc.getLatitude();
+						minLat = Double.min(minLat, lat);
+						maxLat = Double.max(maxLat, lat);
+						minDepth = Double.min(minDepth, loc.getDepth());
+						maxDepth = Double.max(maxDepth, loc.getDepth());
+						
+						double cDist = LocationUtils.horzDistanceFast(loc, centroid);
+						if (cDist < centroidDist) {
+							centroidDepth = loc.getDepth();
+							centroidDist = cDist;
+						}
+					}
+					dips.add(elem.getFocalMechanism().getDip());
+				}
+				
+				Location southernExtent = new Location(minLat, centroid.getLongitude());
+				Location northernExtent = new Location(maxLat, centroid.getLongitude());
+				
+				double aveDip = StatUtils.mean(Doubles.toArray(dips));
+				boolean dipping = aveDip < 80;
+				
+				if (dipping) {
+					// not strike-slip, figure out trace
+					double horzOffset = (centroidDepth-minDepth)/Math.tan(Math.toRadians(aveDip));
+//					System.out.println("aveDip="+aveDip+"centroidDepth="+centroidDepth+", minDepth="+minDepth+", horzOffset="+horzOffset);
+					double west = 1.5*Math.PI;
+					// move west to be the surface projection of trace
+					southernExtent = LocationUtils.location(southernExtent, west, horzOffset);
+					northernExtent = LocationUtils.location(northernExtent, west, horzOffset);
+				}
+				FaultTrace tr = new FaultTrace(null);
+				tr.add(new Location(southernExtent.getLatitude(), southernExtent.getLongitude(), minDepth));
+				tr.add(new Location(northernExtent.getLatitude(), northernExtent.getLongitude(), minDepth));
+				double width = (maxDepth-minDepth)/Math.sin(Math.toRadians(aveDip));
+				DistanceOverrideQuadSurface surf = new DistanceOverrideQuadSurface(tr, aveDip, width, oriented.getAllElements());
+				double aveRake = dipping ? 90 : 180;
+				EqkRupture rup = new EqkRupture(mag, aveRake, surf, hypo);
+
+				Table<Float, Float, Location> azDistLocMap = HashBasedTable.create();
+				Table<Float, Float, double[]> azDistFdMap = HashBasedTable.create();
+				for (Float sourceAz : config.getValues(Float.class, Quantity.SOURCE_AZIMUTH)) {
+					float siteAz = 180 - sourceAz;
+					for (Float distance : distances) {
+						Location siteLoc = LocationUtils.location(centroid, Math.toRadians(siteAz), distance);
+						// correct distance
+						for (int j=0; j<3; j++) {
+							double minDist = RuptureRotationUtils.calcMinDist(
+									siteLoc, oriented, BBP_PartBValidationConfig.DIST_JB);
+							// positive means we're too close and need to move further
+							double distDiff = distance - minDist;
+							siteLoc = LocationUtils.location(siteLoc, Math.toRadians(siteAz), distDiff);
+						}
+						
+						surf.distsMap.put(siteLoc, distance.doubleValue());
+						
+						double[] fds = new double[periods.length];
+						for (int p=0; p<periods.length; p++)
+							fds[p] = bs.getFd(rup, siteLoc, periods[p]);
+						
+						azDistFdMap.put(sourceAz, distance, fds);
+						azDistLocMap.put(sourceAz, distance, siteLoc);
+					}
+				}
+				
+				Map<RotationSpec, double[]> diffsMap = new HashMap<>();
+				
+				for (Float distance : distances) {
+					EventTerm eventTerm = eventTermCache.get(
+							new EventTermKey(eventID, mag, distance, sites));
+					
+					List<RotationSpec> rotations = eventTerm.rotations;
+					for (int j=0; j<rotations.size(); j++) {
+						RotationSpec rot = rotations.get(j);
+						
+						float sourceAz = nullAsZero(rot.sourceAz);
+						
+						double[] fds = azDistFdMap.get(sourceAz, distance);
+						
+						double[] diffs = new double[periods.length];
+						
+						for (int p=0; p<periods.length; p++) {
+							double meanVal = eventTerm.eventTerms[periodIndexes[p]];
+							double value = eventTerm.rotLogVals.get(j)[periodIndexes[p]];
+							diffs[p] = value - meanVal;
+							
+							XY_DataSet xy = distPeriodXYs.get(distance, periods[p]);
+							if (xy == null) {
+								xy = new DefaultXY_DataSet();
+								distPeriodXYs.put(distance, periods[p], xy);
+							}
+							xy.set(fds[p], diffs[p]);
+						}
+						diffsMap.put(rot, diffs);
+					}
+					
+				}
+				if (DIRECTIVITY_DEBUG) {
+					File[] files = plotIndvRupDirectivity(oriented, rup, azDistFdMap, azDistLocMap,
+							diffsMap, periods, dirDir);
+					table.initNewLine();
+					for (File file : files)
+						table.addColumn("![plot]("+file.getName()+")");
+					table.finalizeLine();
+				}
+			}
+		} catch (Exception e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
+		
+		if (DIRECTIVITY_DEBUG) {
+			List<String> lines = new ArrayList<>();
+			lines.add("# Directivity Debug");
+			lines.add("");
+			lines.add("Map plots show the re-oriented (with strike=0) raw rupture in black, "
+					+ "the linear GMPE source used to predict directivity with a dashed line, "
+					+ "and hypocenter with a star. Map background is empirical fD estimates, and mean "
+					+ "simulated values at 20 and 50 km are overlaid. The chart on the right shows "
+					+ "the simulated values for 20 km at each spectral period.");
+			lines.add("");
+			lines.addAll(table.build());
+			lines.add("");
+			File outputDir = new File(resourcesDir, DIRECTIVITY_DEBUG_DIRNAME);
+			try {
+				MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		return distPeriodXYs;
+	}
+	
+	private class DistanceOverrideQuadSurface extends QuadSurface {
+		
+		private Map<Location, Double> distsMap = new HashMap<>();
+		private List<SimulatorElement> elems;
+
+		public DistanceOverrideQuadSurface(FaultTrace trace, double dip, double width,
+				List<SimulatorElement> elems) {
+			super(trace, dip, width);
+			this.elems = elems;
+		}
+
+		@Override
+		public double getDistanceRup(Location loc) {
+			if (distsMap.containsKey(loc))
+				return distsMap.get(loc);
+			double dist = Double.POSITIVE_INFINITY;
+			for (SimulatorElement elem : elems)
+				for (Location v : elem.getVertices())
+					dist = Math.min(dist, LocationUtils.linearDistanceFast(v, loc));
+			distsMap.put(loc, dist);
+			return dist;
+		}
+		
+	}
+	
+	private boolean plotDirectivityComparison(File resourcesDir, String prefix, XY_DataSet scatter)
+			throws IOException {
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(scatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.X, 3f, Color.GRAY));
+		
+		double minX = scatter.getMinX();
+		double maxX = scatter.getMaxX();
+		
+		if (minX == maxX && minX == 0d)
+			return false;
+		
+		EvenlyDiscretizedFunc xFunc = new EvenlyDiscretizedFunc(minX, maxX, 21);
+		// now shift so that the edges are at min and max
+		double delta = xFunc.getDelta();
+		xFunc = new EvenlyDiscretizedFunc(minX + 0.5*delta, xFunc.size()-1, delta);
+		
+		List<List<Double>> binnedVals = new ArrayList<>();
+		for (int i=0; i<xFunc.size(); i++)
+			binnedVals.add(new ArrayList<>());
+		
+		for (Point2D pt : scatter) {
+			int index = xFunc.getClosestXIndex(pt.getX());
+			binnedVals.get(index).add(pt.getY());
+		}
+		
+		ArbitrarilyDiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
+		ArbitrarilyDiscretizedFunc medianFunc = new ArbitrarilyDiscretizedFunc();
+		for (int i=0; i<xFunc.size(); i++) {
+			List<Double> vals = binnedVals.get(i);
+			if (vals.isEmpty())
+				continue;
+			double[] array = Doubles.toArray(vals);
+			double x = xFunc.getX(i);
+			meanFunc.set(x, StatUtils.mean(array));
+			medianFunc.set(x, DataUtils.median(array));
+		}
+		
+		meanFunc.setName("Mean");
+		medianFunc.setName("Median");
+		
+		funcs.add(meanFunc);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, Color.BLACK));
+		funcs.add(medianFunc);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, Color.BLUE));
+		
+		double absMaxX = Math.max(maxX, -minX);
+		minX = -absMaxX - 0.1;
+		maxX = absMaxX + 0.1;
+		
+		Range xRange = new Range(minX, maxX);
+		Range yRange = new Range(scatter.getMinY()-0.1, scatter.getMaxY()+0.1);
+		
+		DefaultXY_DataSet oneToOne = new DefaultXY_DataSet();
+		oneToOne.set(minX, minX);
+		oneToOne.set(maxX, maxX);
+		
+		funcs.add(oneToOne);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.DARK_GRAY));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, " ",
+				"Bayless & Sommerville (2013) fD", "Within-Event Residual");
+		
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		gp.getChartPanel().setSize(800, 600);
+		File pngFile = new File(resourcesDir, prefix+".png");
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+		
+		return true;
+	}
+	
+	private File[] plotIndvRupDirectivity(RSQSimEvent oriented, EqkRupture rup,
+			Table<Float, Float, double[]> azDistFdMap, Table<Float, Float, Location> azDistLocMap,
+			Map<RotationSpec, double[]> diffsMap, double[] periods, File outputDir) throws IOException {
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		if (periods.length > 3) {
+			List<Double> keep = new ArrayList<>();
+			for (double period : periods)
+				if ((float)period <= 3f || (float)period == (float)Math.floor(period))
+					keep.add(period);
+			periods = Doubles.toArray(keep);
+		}
+		
+		String commonPrefix = "event_"+oriented.getID();
+
+		Float chartDistance = distances.get(0);
+		float maxMapDistance = 60f;
+		
+		PlotSpec mapSpec = RupturePlotGenerator.writeMapPlot(null, oriented, null, null, null,
+				null, null, rup.getRuptureSurface(), null, null, null, null);
+		MinMaxAveTracker latTrack = new MinMaxAveTracker();
+		MinMaxAveTracker lonTrack = new MinMaxAveTracker();
+		for (Cell<Float, Float, Location> cell : azDistLocMap.cellSet()) {
+			if (cell.getColumnKey() > maxMapDistance)
+				continue;
+			Location loc = cell.getValue();
+			latTrack.addValue(loc.getLatitude());
+			lonTrack.addValue(loc.getLongitude());
+		}
+		double minLat = latTrack.getMin();
+		double maxLat = latTrack.getMax();
+		double minLon = lonTrack.getMin();
+		double maxLon = lonTrack.getMax();
+		double maxSpan = Math.max(maxLat-minLat, maxLon-minLon);
+		double centerLat = 0.5*(minLat+maxLat);
+		double centerLon = 0.5*(minLon+maxLon);
+//		System.out.println("orig lat range: "+minLat+" "+maxLat);
+//		System.out.println("center lat: "+centerLat);
+//		System.out.println("maxSpan: "+maxSpan);
+		minLat = centerLat - 0.6*maxSpan;
+		maxLat = centerLat + 0.6*maxSpan;
+		minLon = centerLon - 0.6*maxSpan;
+		maxLon = centerLon + 0.6*maxSpan;
+		Region mapRegion = new Region(new Location(minLat, minLon), new Location(maxLat, maxLon));
+		GriddedRegion gridReg = new GriddedRegion(mapRegion, 0.05, null);
+		GriddedGeoDataSet[] xyzs = new GriddedGeoDataSet[periods.length];
+		for (int p=0; p<periods.length; p++)
+			xyzs[p] = new GriddedGeoDataSet(gridReg, false);
+		BaylessSomerville2013DirectivityModifier bs = new BaylessSomerville2013DirectivityModifier();
+		for (int i=0; i<xyzs[0].size(); i++) {
+			Location loc = gridReg.getLocation(i);
+			for (int p=0; p<periods.length; p++) {
+				double fd = bs.getFd(rup, loc, periods[p]);
+				xyzs[p].set(i, fd);
+			}
+		}
+		
+		Map<Float, List<RotationSpec>> azRotsMap = new HashMap<>();
+		double minAz = Double.POSITIVE_INFINITY;
+		double maxAz = Double.NEGATIVE_INFINITY;
+		for (RotationSpec spec : diffsMap.keySet()) {
+			Float az = nullAsZero(spec.sourceAz);
+			List<RotationSpec> list = azRotsMap.get(az);
+			if (list == null) {
+				list = new ArrayList<>();
+				azRotsMap.put(az, list);
+			}
+			list.add(spec);
+			
+			minAz = Math.min(minAz, az);
+			maxAz = Math.max(maxAz, az);
+		}
+		
+		DefaultXY_DataSet[] scatters = new DefaultXY_DataSet[periods.length];
+		ArbitrarilyDiscretizedFunc[] meanFuncs = new ArbitrarilyDiscretizedFunc[periods.length];
+		ArbitrarilyDiscretizedFunc[] medianFuncs = new ArbitrarilyDiscretizedFunc[periods.length];
+		ArbitrarilyDiscretizedFunc[] fdFuncs = new ArbitrarilyDiscretizedFunc[periods.length];
+		
+		for (int p=0; p<scatters.length; p++) {
+			scatters[p] = new DefaultXY_DataSet();
+			meanFuncs[p] = new ArbitrarilyDiscretizedFunc();
+			medianFuncs[p] = new ArbitrarilyDiscretizedFunc();
+			fdFuncs[p] = new ArbitrarilyDiscretizedFunc();
+		}
+		
+		boolean hasMultiple = false;
+		
+		List<XYAnnotation> anns = mapSpec.getPlotAnnotations();
+		if (anns == null)
+			anns = new ArrayList<>();
+		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 12);
+		
+		CPT cpt = GMT_CPT_Files.GMT_POLAR.instance();
+		cpt = cpt.rescale(-1, 1d);
+		
+		for (Float dist : azDistFdMap.columnKeySet()) {
+			if (dist > maxMapDistance)
+				continue;
+			
+			for (Float az : azRotsMap.keySet()) {
+				List<double[]> vals = new ArrayList<>();
+				for (RotationSpec rot : azRotsMap.get(az)) {
+					if (!rot.distance.equals(dist))
+						continue;
+					double[] diffs = diffsMap.get(rot);
+					vals.add(diffs);
+				}
+				hasMultiple = hasMultiple || vals.size() > 1;
+				for (int p=0; p<periods.length; p++) {
+					double fd = azDistFdMap.get(az, dist)[p];
+					double[] valsArray = new double[vals.size()];
+					for (int i=0; i<vals.size(); i++) {
+						valsArray[i] = vals.get(i)[p];
+						scatters[p].set(az, valsArray[i]);
+					}
+					double mean = StatUtils.mean(valsArray);
+					double median = DataUtils.median(valsArray);
+					if (dist.equals(chartDistance)) {
+						fdFuncs[p].set(az, fd);
+						meanFuncs[p].set(az, mean);
+						medianFuncs[p].set(az, median);
+					}
+					
+					if (p == 0) {
+						Location loc = azDistLocMap.get(az, dist);
+						double lat = loc.getLatitude();
+						double lon = loc.getLongitude();
+						
+						Color c = cpt.getColor((float)mean);
+						double width = maxSpan/15d;
+						double d = width * 0.5;
+						double x0 = lon-d;
+						double x1 = lon+d;
+						double y0 = lat-d;
+						double y1 = lat+d;
+						XYBoxAnnotation boxAnn = new XYBoxAnnotation(x0, y0, x1, y1,
+								PlotLineType.SOLID.buildStroke(1f), Color.BLACK, c);
+						
+						anns.add(boxAnn);
+						XYTextAnnotation textAnn = new XYTextAnnotation(
+								optionalDigitDF.format(az), lon, lat);
+						textAnn.setFont(font);
+						textAnn.setTextAnchor(TextAnchor.CENTER);
+						anns.add(textAnn);
+					}
+				}
+			}
+		}
+		
+		Range yRange = new Range(-2d, 2d);
+		Range xRange = new Range(minAz-5d, maxAz+5d);
+		
+		List<Range> xRanges = new ArrayList<>();
+		xRanges.add(xRange);
+		List<Range> yRanges = new ArrayList<>();
+		
+		List<PlotSpec> specs = new ArrayList<>();
+		for (int p=0; p<periods.length; p++) {
+			yRanges.add(yRange);
+			List<XY_DataSet> funcs = new ArrayList<>();
+			List<PlotCurveCharacterstics> chars = new ArrayList<>();
+			
+			if (hasMultiple) {
+				scatters[p].setName("Simulated Data");
+				funcs.add(scatters[p]);
+				chars.add(new PlotCurveCharacterstics(PlotSymbol.X, 3f, Color.GRAY));
+				
+				meanFuncs[p].setName("Simulated Mean");
+				funcs.add(meanFuncs[p]);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+				
+				medianFuncs[p].setName("Simulated Median");
+				funcs.add(medianFuncs[p]);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE));
+			} else {
+				meanFuncs[p].setName("Simulated Data");
+				funcs.add(meanFuncs[p]);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+			}
+			
+			fdFuncs[p].setName("B&S fD");
+			funcs.add(fdFuncs[p]);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN));
+			
+			PlotSpec spec = new PlotSpec(funcs, chars, "Event "+oriented.getID(), "Source Azimuth",
+					optionalDigitDF.format(periods[p])+"s Residual");
+			spec.setLegendVisible(p == 0);
+			specs.add(spec);
+		}
+		
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+
+		gp.drawGraphPanel(specs, false, false, xRanges, yRanges);
+		gp.getChartPanel().setSize(800, 600);
+		File pngFile = new File(outputDir, commonPrefix+"_residuals.png");
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+		
+		File[] ret = new File[periods.length+1];
+		ret[ret.length-1] = pngFile;
+		
+		for (int p=0; p<periods.length; p++) {
+			XYZPlotSpec xyzSpec = new XYZPlotSpec(xyzs[p], cpt, " ", "Latitude", "Longitude",
+					optionalDigitDF.format(periods[p])+"s Residual");
+			xyzSpec.setXYElems((List<XY_DataSet>)mapSpec.getPlotElems());
+			xyzSpec.setXYChars(mapSpec.getChars());
+			xyzSpec.setPlotAnnotations(anns);
+			
+			XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
+			double spacing = gridReg.getSpacing();
+			xyzGP.drawPlot(xyzSpec, false, false, new Range(minLon-0.5*spacing, maxLon+0.5*spacing),
+					new Range(minLat-0.5*spacing, maxLat+0.5*spacing));
+			
+			double tick;
+			if (maxSpan > 3d)
+				tick = 1d;
+			else if (maxSpan > 1.5d)
+				tick = 0.5;
+			else if (maxSpan > 0.8)
+				tick = 0.25;
+			else
+				tick = 0.1;
+			TickUnits tus = new TickUnits();
+			TickUnit tu = new NumberTickUnit(tick);
+			tus.add(tu);
+			xyzGP.getXAxis().setStandardTickUnits(tus);
+			xyzGP.getYAxis().setStandardTickUnits(tus);
+			
+			// write plot
+			xyzGP.getChartPanel().setSize(800, 800);
+			String fName = commonPrefix+"_map_"+optionalDigitDF.format(periods[p])+"s.png";
+			File file = new File(outputDir, fName);
+			ret[p] = file;
+			xyzGP.saveAsPNG(file.getAbsolutePath());
+		}
+		
+		return ret;
 	}
 }

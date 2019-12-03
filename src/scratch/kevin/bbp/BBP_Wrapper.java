@@ -46,6 +46,7 @@ public class BBP_Wrapper implements Runnable {
 	private File bbpEnvFile = null;
 	
 	private int maxRetries = 5;
+	private boolean srfGenOnly = false;
 	private boolean doHF = true;
 	private boolean doRotD50 = false;
 	private boolean doRotD100 = true;
@@ -130,6 +131,10 @@ public class BBP_Wrapper implements Runnable {
 		this.maxRetries = maxRetries;
 	}
 
+	public void setSRFGenOnly(boolean srfGenOnly) {
+		this.srfGenOnly = srfGenOnly;
+	}
+
 	public void setDoHF(boolean doHF) {
 		this.doHF = doHF;
 	}
@@ -177,7 +182,7 @@ public class BBP_Wrapper implements Runnable {
 			srcFile = writeSrcFileNewSeed(srcFile, seedOverride, outputDir);
 		
 		File bbpRunDir = doRun(outputDir, scriptFileName, xmlFileName, simID,
-				srcFile, srfFile, sitesFile, vm, method, doHF, doRotD50, doRotD100, doFAS, dataOnly, lowpassFreq,
+				srcFile, srfFile, sitesFile, vm, method, srfGenOnly, doHF, doRotD50, doRotD100, doFAS, dataOnly, lowpassFreq,
 				bbpEnvFile, bbpDataDir, bbpGFDir);
 		if (bbpRunDir == null)
 			return false;
@@ -200,10 +205,16 @@ public class BBP_Wrapper implements Runnable {
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
 			File srcFile, File srfFile, File siteFile, VelocityModel vm, Method method,
-			boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS, boolean dataOnly, double lowpassFreq,
-			File bbpEnvFile, File bbpDataDir, File bbpGFDir) throws IOException {
+			boolean srfGenOnly, boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS,
+			boolean dataOnly, double lowpassFreq, File bbpEnvFile, File bbpDataDir, File bbpGFDir) throws IOException {
 		Preconditions.checkState(method == Method.GP, "Only GP supported currently");
 		List<BBP_Module> modules = new ArrayList<>();
+		
+		if (srfGenOnly) {
+			Preconditions.checkState(srfFile == null, "Already have an SRF file but srfGenOnly=true");
+			modules.add(BBP_Module.buildGenSlip(vm, srcFile));
+			return doRun(outputDir, scriptFileName, xmlFileName, simID, modules, siteFile, bbpEnvFile, bbpDataDir, bbpGFDir);
+		}
 		if (srfFile == null)
 			modules.add(BBP_Module.buildGenSlip(vm, srcFile));
 		modules.add(BBP_Module.buildJBSim(vm, srcFile, srfFile, siteFile));
@@ -433,7 +444,8 @@ public class BBP_Wrapper implements Runnable {
 		Document doc = XMLUtils.createDocumentWithRoot("BBP_Run_Specification");
 		Element root = doc.getRootElement();
 		Element runEl = root.addElement("Scenario_Run");
-		runEl.addAttribute("input_station_file", siteFile.getAbsolutePath());
+		if (siteFile != null)
+			runEl.addAttribute("input_station_file", siteFile.getAbsolutePath());
 		runEl.addAttribute("version", BBP_Module.VERSION);
 		Element modsEl = root.addElement("BBP_Modules");
 		for (BBP_Module module : modules)
@@ -571,7 +583,8 @@ public class BBP_Wrapper implements Runnable {
 		File srcFile = new File(eventDir, "event_136704.src");
 //		File srfFile = new File(eventDir, "event_136704_0.05s_ADJ_VEL.srf");
 		File srfFile = null;
-		File sitesFile = new File("/home/kevin/bbp/bbp_data/run/stations_cs_sites.stl");
+//		File sitesFile = new File("/home/kevin/bbp/bbp_data/run/stations_cs_sites.stl");
+		File sitesFile = null;
 		File outputDir = new File("/tmp/bbp_test1");
 		
 //		runBBP(2, 1, srcFile, null, srfFile, sitesFile, outputDir);
@@ -582,6 +595,7 @@ public class BBP_Wrapper implements Runnable {
 		wrapper.maxRetries = 1;
 		wrapper.doHF = false;
 		wrapper.dataOnly = true;
+		wrapper.setSRFGenOnly(true);
 		wrapper.run();
 		
 //		velToAccel(new File("/data/kevin/bbp/bbp_data/outdata/1507151299716/1507151299716.SBSM.vel.bbp"),

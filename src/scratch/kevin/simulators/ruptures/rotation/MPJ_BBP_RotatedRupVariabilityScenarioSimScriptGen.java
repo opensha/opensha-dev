@@ -34,7 +34,8 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
 		// REMOTE paths
-		String catalogDirName = "rundir2585_1myrs";
+//		String catalogDirName = "rundir2585_1myrs";
+		String catalogDirName = "rundir4320";
 //		String catalogDirName = "rundir4317";
 		
 		int skipYears = 5000;
@@ -42,9 +43,11 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 //		Scenario[] scenarios = Scenario.values();
 //		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE_RELAXED, Scenario.M7p2_VERT_SS_SURFACE_RELAXED};
 //		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG};
-		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p15, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p2,
-				Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p25, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p3};
-//		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE};
+//		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p15, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p2,
+//				Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p25, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p3};
+		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE};
+//		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE,
+//				Scenario.M7p2_VERT_SS_SURFACE};
 //		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
 		double[] distances = { 20d, 50d, 100d };
 		int numSourceAz = 18;
@@ -64,7 +67,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		System.out.println("Expected num: "+(numSourceAz*numSiteToSourceAz*distances.length*scenarios.length*maxRuptures*sites.size()));
 		
 		double timeScalar = 1d;
-		boolean scaleVelocities = true;
+		boolean scaleVelocities = false;
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
 		

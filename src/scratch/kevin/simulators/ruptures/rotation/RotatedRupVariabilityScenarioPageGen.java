@@ -66,9 +66,9 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_3165.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4320.instance(baseDir);
 
 //		File bbpDir = new File(bbpParallelDir,
 //				"2019_11_22-rundir2585_1myrs-rotatedRups-m7p2_vert_ss_surface_rnd_mag_0p05"
@@ -76,11 +76,17 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 //		File bbpDir = new File(bbpParallelDir,
 //				"2019_11_21-rundir2585_1myrs-rotatedRups-2scenarios-3dists-18srcAz-1siteSrcAz"
 //				+ "-100rups-skipYears5000-vmLA_BASIN_500-noHF-1site");
+//		File bbpDir = new File(bbpParallelDir,
+//				"2019_02_27-rundir2585_1myrs-rotatedRups-6scenarios-3dists-18srcAz-1siteSrcAz"
+//				+ "-400rups-skipYears5000-vmLA_BASIN_500-noHF-1site");
 		File bbpDir = null;
 		
 //		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
 //		VelocityModel forceVM = null;
+		
+		double timeScale = 1d;
+		boolean scaleVelocities = false;
 		
 		double[] calcPeriods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};
 		double[] periods = {3d, 5d, 7.5, 10d};
@@ -114,6 +120,16 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 				if (zipFile.exists()) {
 					if (forceVM != null && RSQSimBBP_Config.detectVM(dir) != forceVM)
 						continue;
+					if (timeScale == 1d && name.contains("-timeScale"))
+						continue;
+					if (timeScale != 1d) {
+						if (!name.contains("-timeScale"+(float)timeScale))
+							continue;
+						if (scaleVelocities && !name.contains("-velScale"))
+							continue;
+						if (!scaleVelocities && name.contains("-velScale"))
+							continue;
+					}
 					bbpDir = dir;
 					bbpZipFile = zipFile;
 				}
@@ -170,7 +186,14 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 			if (realData != null)
 				pageGen.setRealEventData(ASK_EventData.getMatches(realData, null, null, scenario.getFaultStyle(), 30d), 100);
 			
-			File rotDir = new File(vmDir, "rotated_ruptures_"+scenario.getPrefix());
+			String dirName = "rotated_ruptures_"+scenario.getPrefix();
+			if (timeScale != 1d) {
+				dirName += "_timeScale"+(float)timeScale;
+				if (scaleVelocities)
+					dirName += "_velScale";
+			}
+			File rotDir = new File(vmDir, dirName);
+			System.out.println("Output dir: "+rotDir.getAbsolutePath());
 			Preconditions.checkState(rotDir.exists() || rotDir.mkdir());
 			
 			List<String> methodSpecificLines = new ArrayList<>();

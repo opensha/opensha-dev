@@ -75,6 +75,10 @@ class RupSpectraPageGen {
 	private GriddedRegion shakemapRegion;
 	private List<BBP_Site> shakemapSites;
 	private ScalarIMR shakemapGMPE;
+	
+	private List<File> gpShakemapFiles;
+	private GriddedRegion gpShakemapRegion;
+	private List<BBP_Site> gpShakemapSites;
 
 	public RupSpectraPageGen(RSQSimCatalog catalog, File outputDir, double timeScale, boolean scaleVelocities) {
 		this.catalog = catalog;
@@ -96,6 +100,13 @@ class RupSpectraPageGen {
 		this.shakemapRegion = shakemapRegion;
 		this.shakemapSites = shakemapSites;
 		this.shakemapGMPE = shakemapGMPE;
+	}
+	
+	public void setGPShakeMaps(List<File> shakemapFiles, GriddedRegion shakemapRegion,
+			List<BBP_Site> shakemapSites) {
+		this.gpShakemapFiles = shakemapFiles;
+		this.gpShakemapRegion = shakemapRegion;
+		this.gpShakemapSites = shakemapSites;
 	}
 	
 	private static DecimalFormat twoDigitsDF = new DecimalFormat("0.00");
@@ -647,6 +658,120 @@ class RupSpectraPageGen {
 			}
 		}
 		
+		if (gpShakemapFiles != null && !gpShakemapFiles.isEmpty()) {
+			lines.add("");
+			lines.add("## G&P ShakeMaps");
+			lines.add(topLink); lines.add("");
+			
+			double[] periods = { 1d, 2d, 3d, 4d, 5d, 7.5, 10d };
+			
+			List<File[]> mapFilesList = new ArrayList<>();
+			List<File[]> rd100MapFilesList = new ArrayList<>();
+			List<File[]> rdRatioMapFilesList = new ArrayList<>();
+			
+			List<String> seeds = new ArrayList<>();
+			
+			for (File gpShakemapFile : gpShakemapFiles) {
+				String parentName = gpShakemapFile.getParentFile().getName();
+				System.out.println("Processing GP ShakeMaps for "+parentName);
+				Preconditions.checkState(parentName.contains("-seed"));
+				String seed = parentName.substring(parentName.indexOf("-seed")+1);
+				if (seed.contains("-"))
+					seed = seed.substring(0, seed.indexOf("-"));
+				String prefix = "gp_shakemap_"+seed;
+				
+				seed = seed.replaceAll("seed", "");
+				System.out.print("Seed: "+seed);
+				seeds.add(seed);
+				
+				BBP_ShakeMapSimZipLoader shakemap =
+						new BBP_ShakeMapSimZipLoader(gpShakemapFile, gpShakemapSites);
+				
+				File[] mapFiles = new File[periods.length];
+				mapFilesList.add(mapFiles);
+				File[] rd100MapFiles = null;
+				File[] rdRatioMapFiles = null;
+				if (shakemap.hasRotD100()) {
+					rd100MapFiles = new File[periods.length];
+					rdRatioMapFiles = new File[periods.length];
+					rd100MapFilesList.add(rd100MapFiles);
+					rdRatioMapFilesList.add(rdRatioMapFiles);
+				}
+				for (int i=0; i<periods.length; i++) {
+					double p = periods[i];
+					String name;
+					if (p == Math.round(p))
+						name = (int)p+"s";
+					else
+						name = (float)p+"s";
+					mapFiles[i] = new File(resourcesDir, prefix+"_"+name+".png");
+					if (shakemap.hasRotD100()) {
+						rd100MapFiles[i] = new File(resourcesDir, prefix+"_"+name+"_rd100.png");
+						rdRatioMapFiles[i] = new File(resourcesDir, prefix+"_"+name+"_rd100_ratio.png");
+					}
+				}
+				
+				double[] plotPeriods = periods;
+				if (!rebuildMaps) {
+					// see if we can skip any...
+					List<Double> retainedPeriods = new ArrayList<>();
+					for (int i=0; i<periods.length; i++) {
+						boolean skip = mapFiles[i].exists();
+						if (shakemap.hasRotD100())
+							skip = skip && rd100MapFiles[i].exists() && rdRatioMapFiles[i].exists();
+						if (!skip)
+							retainedPeriods.add(periods[i]);
+					}
+					plotPeriods = Doubles.toArray(retainedPeriods);
+				}
+				
+				if (periods.length > 0) {
+					String label = "GP Seed "+seed;
+					ShakemapPlotter.plotShakemaps(shakemap, gpShakemapRegion, gpShakemapSites, label, resourcesDir,
+							prefix, true, null, null, plotPeriods);
+				} else {
+					System.out.println("Skipping all maps!");
+				}
+			}
+			
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine().addColumn("SA Period");
+			for (String seed : seeds)
+				table.addColumn("G&P Seed "+seed);
+			table.finalizeLine();
+			for (int i=0; i<periods.length; i++) {
+				table.initNewLine().addColumn("**"+(float)periods[i]+" s**");
+				for (File[] mapFiles : mapFilesList)
+					table.addColumn("![GP Map]("+resourcesDir.getName()+"/"+mapFiles[i].getName()+")");
+				table.finalizeLine();
+			}
+			
+			lines.add("");
+			lines.addAll(table.build());
+			
+			for (int s=0; s<seeds.size(); s++) {
+				File[] mapFiles = mapFilesList.get(s);
+				File[] rd100MapFiles = rd100MapFilesList.get(s);
+				File[] rdRatioMapFiles = rdRatioMapFilesList.get(s);
+				if (rd100MapFiles != null) {
+					lines.add("### GP Region RotD100/RotD50 Ratio, Seed "+seeds.get(s));
+					lines.add(topLink); lines.add("");
+					table = MarkdownUtils.tableBuilder();
+					table.addLine("SA Period", "RotD50", "RotD100", "RotD100/RotD50 Ratio");
+					for (int i=0; i<periods.length; i++) {
+						table.initNewLine().addColumn("**"+(float)periods[i]+" s**");
+						table.addColumn("![RotD50 Map]("+resourcesDir.getName()+"/"+mapFiles[i].getName()+")");
+						table.addColumn("![RotD100 Map]("+resourcesDir.getName()+"/"+rd100MapFiles[i].getName()+")");
+						table.addColumn("![RotD Ratio Map]("+resourcesDir.getName()+"/"+rdRatioMapFiles[i].getName()+")");
+						table.finalizeLine();
+					}
+					
+					lines.add("");
+					lines.addAll(table.build());
+				}
+			}
+		}
+		
 		// add TOC
 		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));
 		lines.add(tocIndex, "## Table Of Contents");
@@ -713,10 +838,14 @@ class RupSpectraPageGen {
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 		int eventID = 9955310;
 //		int eventID = 3817386;
+
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
+////		int eventID = 40636;
+//		int eventID = 92236;
 		
 		double timeScale = 1d;
-		boolean scaleVelocities = false;
-		boolean gpAdjustDDW = false;
+		boolean scaleVelocities = true;
+		boolean gpAdjustDDW = true;
 		
 		File eventBBPDir = RSQSimBBP_Config.getEventBBPDir(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
 				RSQSimBBP_Config.SRF_DT, timeScale, scaleVelocities);
@@ -749,9 +878,11 @@ class RupSpectraPageGen {
 		for (File dir : refDirs) {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalog.getCatalogDir().getName()) && name.contains(eventID+"")
-					&& name.contains("shakemap")) {
+					&& name.contains("-shakemap-")) {
 				if (timeScale != 1d && !name.contains("-timeScale"+(float)timeScale) && (!scaleVelocities || !name.contains("-velScale")))
 					continue;
+				if (name.contains("-gp-"))
+					continue; // TODO
 				File shakemapFile = new File(dir, "results_rotD.zip");
 				if (!shakemapFile.exists())
 					shakemapFile = new File(dir, "results.zip");
@@ -761,6 +892,23 @@ class RupSpectraPageGen {
 		}
 		if (refShakeMapZip != null)
 			System.out.println("Located ref ShakeMap zip: "+refShakeMapZip.getAbsolutePath());
+		
+		List<File> gpShakeMapFiles = new ArrayList<>();
+		for (File dir : refDirs) {
+			String name = dir.getName();
+			if (dir.isDirectory() && name.contains(catalog.getCatalogDir().getName()) && name.contains(eventID+"")
+					&& name.contains("-shakemap-") && name.contains("-gp-")) {
+				if ((gpAdjustDDW && !name.contains("adjustDDW")) || (!gpAdjustDDW && name.contains("adjustDDW")))
+					continue;
+				File shakemapFile = new File(dir, "results_rotD.zip");
+				if (!shakemapFile.exists())
+					shakemapFile = new File(dir, "results.zip");
+				if (shakemapFile.exists())
+					gpShakeMapFiles.add(shakemapFile);
+			}
+		}
+		if (!gpShakeMapFiles.isEmpty())
+			System.out.println("Found "+gpShakeMapFiles.size()+" GP ShakeMaps");
 		
 		RSQSimEvent event = catalog.loader().byID(eventID);
 		
@@ -827,6 +975,14 @@ class RupSpectraPageGen {
 			GriddedRegion reg = ShakemapPlotter.loadGriddedRegion(sitesXML);
 			BBP_ShakeMapSimZipLoader loader = new BBP_ShakeMapSimZipLoader(refShakeMapZip, shakemapSites);
 			gen.setShakeMap(loader, reg, shakemapSites, shakemapGMPE);
+		}
+		
+		if (!gpShakeMapFiles.isEmpty()) {
+			File dir0 = gpShakeMapFiles.get(0).getParentFile();
+			List<BBP_Site> shakemapSites = BBP_Site.readFile(dir0);
+			File sitesXML = new File(dir0, "sites.xml");
+			GriddedRegion reg = ShakemapPlotter.loadGriddedRegion(sitesXML);
+			gen.setGPShakeMaps(gpShakeMapFiles, reg, shakemapSites);
 		}
 		
 		gen.generatePage(event, eventBBPDir, sites, rebuildGIF, rebuildMaps);
