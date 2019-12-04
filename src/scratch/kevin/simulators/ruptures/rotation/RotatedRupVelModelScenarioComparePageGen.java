@@ -59,7 +59,7 @@ import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Ro
 
 public class RotatedRupVelModelScenarioComparePageGen {
 
-	private Table<VelocityModel, Scenario, RotatedRupVariabilityConfig> configTable;
+	private Table<VelocityModel, Scenario, RSQSimRotatedRupVariabilityConfig> configTable;
 	private Table<VelocityModel, Scenario, BBP_RotatedRupSimLoader> loaderTable;
 	private Map<Scenario, Integer> eventCountMap;
 	
@@ -87,7 +87,8 @@ public class RotatedRupVelModelScenarioComparePageGen {
 			for (Scenario scenario : Scenario.values()) {
 				File rotConfFile = new File(bbpDir, "rotation_config_"+scenario.getPrefix()+".csv");
 				if (rotConfFile.exists()) {
-					RotatedRupVariabilityConfig config = RotatedRupVariabilityConfig.loadCSV(catalog, rotConfFile, null, sites);
+					RSQSimRotatedRupVariabilityConfig config = RSQSimRotatedRupVariabilityConfig.loadCSV(
+							catalog, rotConfFile, null, sites);
 					
 					BBP_RotatedRupSimLoader bbpLoader = new BBP_RotatedRupSimLoader(bbpZipFile, bbpSites, scenario.getPrefix());
 					
@@ -392,7 +393,7 @@ public class RotatedRupVelModelScenarioComparePageGen {
 	}
 	
 	private DiscretizedFunc calcSim(Scenario scenario, VelocityModel vm, Float distance) throws IOException {
-		RotatedRupVariabilityConfig config = configTable.get(vm, scenario);
+		RSQSimRotatedRupVariabilityConfig config = configTable.get(vm, scenario);
 		BBP_RotatedRupSimLoader loader = loaderTable.get(vm, scenario);
 		
 		List<DiscretizedFunc> spectra = new ArrayList<>();
@@ -435,7 +436,7 @@ public class RotatedRupVelModelScenarioComparePageGen {
 	private DiscretizedFunc calcGMPE(Scenario scenario, VelocityModel vm, ScalarIMR gmpe, Float distance, double[] periods) {
 		gmpe.setParamDefaults();
 		
-		RotatedRupVariabilityConfig config = configTable.get(vm, scenario);
+		RSQSimRotatedRupVariabilityConfig config = configTable.get(vm, scenario);
 		List<Integer> eventIDs = config.getValues(Integer.class, Quantity.EVENT_ID);
 		
 		List<double[]> results = new ArrayList<>();

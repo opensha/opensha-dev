@@ -98,7 +98,7 @@ import scratch.kevin.simulators.plots.StationarityPlot;
 import scratch.kevin.simulators.plots.ElasticReboundTriggeringPlot;
 import scratch.kevin.simulators.plots.U3StyleNormalizedRuptureRecurrenceIntervalPlot;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
-import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityMagDistPageGen.RuptureType;
+import scratch.kevin.simulators.ruptures.rotation.RSQSimRotatedRupVariabilityMagDistPageGen.RuptureType;
 
 public class RSQSimCatalog implements XMLSaveable {
 	

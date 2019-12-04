@@ -43,7 +43,7 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.erf.RSQSimSectBundledERF.RSQSimProbEqkRup;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
-import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig;
+import scratch.kevin.simulators.ruptures.rotation.RSQSimRotatedRupVariabilityConfig;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
@@ -58,7 +58,7 @@ import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Ro
 public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 	
 	private RSQSimCatalog catalog;
-	private Map<Scenario, RotatedRupVariabilityConfig> configMap;
+	private Map<Scenario, RSQSimRotatedRupVariabilityConfig> configMap;
 	
 	private List<Site> sites;
 	private List<Scenario> scenarios;
@@ -69,7 +69,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 	
 	private int totNumRuptures;
 
-	public RSQSimRotatedRuptureFakeERF(RSQSimCatalog catalog, Map<Scenario, RotatedRupVariabilityConfig> configMap) {
+	public RSQSimRotatedRuptureFakeERF(RSQSimCatalog catalog, Map<Scenario, RSQSimRotatedRupVariabilityConfig> configMap) {
 		this.catalog = catalog;
 		this.configMap = configMap;
 		
@@ -80,7 +80,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			if (!configMap.containsKey(scenario))
 				continue;
 			scenarios.add(scenario);
-			RotatedRupVariabilityConfig config = configMap.get(scenario);
+			RSQSimRotatedRupVariabilityConfig config = configMap.get(scenario);
 			if (this.sites == null) {
 				// need to do it this way in order to get sites in rotation order
 				sites = new ArrayList<>();
@@ -120,7 +120,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		
 		for (Site site : sites) {
 			for (Scenario scenario : scenarios) {
-				RotatedRupVariabilityConfig config = configMap.get(scenario);
+				RSQSimRotatedRupVariabilityConfig config = configMap.get(scenario);
 				for (Float distance : distances) {
 					for (Integer eventID : eventIDs.get(scenario)) {
 						List<RotationSpec> rotations = config.getRotationsForQuantities(Quantity.SITE, site,
@@ -141,7 +141,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		int numSiteToSourceAz = -1;
 		int numDistances = -1;
 		
-		for (RotatedRupVariabilityConfig config : configMap.values()) {
+		for (RSQSimRotatedRupVariabilityConfig config : configMap.values()) {
 			numSourceAz = config.getValues(Float.class, Quantity.SOURCE_AZIMUTH).size();
 			numSiteToSourceAz = config.getValues(Float.class, Quantity.SITE_TO_SOURTH_AZIMUTH).size();
 			numDistances = config.getValues(Float.class, Quantity.DISTANCE).size();
@@ -175,7 +175,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		this.timeSpan.setDuration(1d);
 	}
 	
-	public Map<Scenario, RotatedRupVariabilityConfig> getConfigMap() {
+	public Map<Scenario, RSQSimRotatedRupVariabilityConfig> getConfigMap() {
 		return configMap;
 	}
 	
@@ -277,7 +277,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			return;
 		// have to load them
 		HashSet<Integer> eventIDs = new HashSet<>();
-		for (RotatedRupVariabilityConfig config : configMap.values())
+		for (RSQSimRotatedRupVariabilityConfig config : configMap.values())
 			eventIDs.addAll(config.getValues(Integer.class, Quantity.EVENT_ID));
 		
 		System.out.println("Loading "+eventIDs.size()+" events...");
@@ -290,7 +290,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		System.out.println("Done loading "+events.size()+" events");
 		Preconditions.checkState(events.size() == eventIDs.size(), 
 				"Loaded %s events, expected %s", events.size(), eventIDs.size());
-		for (RotatedRupVariabilityConfig config : configMap.values())
+		for (RSQSimRotatedRupVariabilityConfig config : configMap.values())
 			config.setRuptures(events);
 	}
 	
@@ -383,9 +383,9 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		return new File(outputDir, "rotation_config_"+scenario.getPrefix()+".csv");
 	}
 	
-	public static Map<Scenario, RotatedRupVariabilityConfig> loadRotationConfigs(RSQSimCatalog catalog, File dir, boolean loadRuptures)
+	public static Map<Scenario, RSQSimRotatedRupVariabilityConfig> loadRotationConfigs(RSQSimCatalog catalog, File dir, boolean loadRuptures)
 			throws IOException {
-		Map<Scenario, RotatedRupVariabilityConfig> configsMap = new HashMap<>();
+		Map<Scenario, RSQSimRotatedRupVariabilityConfig> configsMap = new HashMap<>();
 		List<Site> sites = null;
 		HashSet<Integer> eventIDs = new HashSet<>();
 		for (Scenario scenario : Scenario.values()) {
@@ -393,7 +393,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			if (csvFile.exists()) {
 				System.out.println("Located CSV for "+scenario+": "+csvFile.getAbsolutePath());
 				System.out.println("Loading CSV...");
-				RotatedRupVariabilityConfig config = RotatedRupVariabilityConfig.loadCSV(catalog, csvFile, null, sites);
+				RSQSimRotatedRupVariabilityConfig config = RSQSimRotatedRupVariabilityConfig.loadCSV(catalog, csvFile, null, sites);
 				if (sites == null)
 					sites = config.getValues(Site.class, Quantity.SITE);
 				System.out.println("Loaded "+config.getRotations().size()+" rotations");
@@ -405,7 +405,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			System.out.println("Loading "+eventIDs.size()+" events");
 			List<RSQSimEvent> events = catalog.loader().byIDs(Ints.toArray(eventIDs));
 			System.out.println("Loaded "+events.size()+" events");
-			for (RotatedRupVariabilityConfig config : configsMap.values())
+			for (RSQSimRotatedRupVariabilityConfig config : configsMap.values())
 				config.setRuptures(events);
 		}
 		return configsMap;
@@ -590,7 +590,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		SRFInterpolationMode interpMode = SRFInterpolationMode.ADJ_VEL;
 		double momentPDiffThreshold = 2;
 		
-		Map<Scenario, RotatedRupVariabilityConfig> configsMap = new HashMap<>();
+		Map<Scenario, RSQSimRotatedRupVariabilityConfig> configsMap = new HashMap<>();
 		if (buildConfigs) {
 			List<Site> sites = new ArrayList<>();
 			
@@ -628,7 +628,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 				System.out.println("Loaded "+ruptures.size()+" ruptures");
 				
 				System.out.println("Building rotation config...");
-				RotatedRupVariabilityConfig config = new RotatedRupVariabilityConfig(
+				RSQSimRotatedRupVariabilityConfig config = new RSQSimRotatedRupVariabilityConfig(
 						catalog, sites, ruptures, distances, numSourceAz, numSiteToSourceAz);
 				System.out.println("Built "+config.getRotations().size()+" rotations");
 				numRotations += config.getRotations().size();

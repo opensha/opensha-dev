@@ -383,6 +383,10 @@ public class BBP_PartBValidationConfig {
 			return style;
 		}
 		
+		public double getDip() {
+			return dip;
+		}
+		
 		private synchronized UncertainArbDiscDataset calcLoacRawCriterion(double vs30, double distance) {
 			if (rawCriteriaCache == null)
 				rawCriteriaCache = HashBasedTable.create();

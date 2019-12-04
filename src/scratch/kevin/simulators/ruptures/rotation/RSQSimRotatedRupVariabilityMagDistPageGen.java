@@ -44,7 +44,7 @@ import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
-public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPageGen {
+public class RSQSimRotatedRupVariabilityMagDistPageGen extends RSQSimRotatedRupVariabilityPageGen {
 	
 	public enum RuptureType {
 		VERT_STIKE_SLIP("Vertical Strike-Slip with Surface Rupture", "SS", "vert_ss_surface",
@@ -132,9 +132,9 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 	
 	private RuptureType ruptureType;
 	private double minMag;
-	private Map<Double, RotatedRupVariabilityConfig> magConfigs;
+	private Map<Double, RSQSimRotatedRupVariabilityConfig> magConfigs;
 
-	public RotatedRupVariabilityMagDistPageGen(RSQSimCatalog catalog, Map<Double, RotatedRupVariabilityConfig> magConfigs,
+	public RSQSimRotatedRupVariabilityMagDistPageGen(RSQSimCatalog catalog, Map<Double, RSQSimRotatedRupVariabilityConfig> magConfigs,
 			Map<Double, SimulationRotDProvider<RotationSpec>> magProvs, RuptureType ruptureType, double[] calcPeriods) {
 		super(catalog, magConfigs, magProvs, calcPeriods);
 		this.magConfigs = magConfigs;
@@ -247,7 +247,7 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
 		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
 		
-		Map<RuptureType, RotatedRupVariabilityMagDistPageGen> pageGensMap = new HashMap<>();
+		Map<RuptureType, RSQSimRotatedRupVariabilityMagDistPageGen> pageGensMap = new HashMap<>();
 		HashSet<Integer> eventIDsSet = new HashSet<>();
 		// reverse, latest first
 		Collections.reverse(matchingZipFiles);
@@ -257,7 +257,7 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 			for (RuptureType rupType : RuptureType.values()) {
 				if (pageGensMap.containsKey(rupType))
 					continue;
-				Map<Double, RotatedRupVariabilityConfig> configsMap = new HashMap<>();
+				Map<Double, RSQSimRotatedRupVariabilityConfig> configsMap = new HashMap<>();
 				Map<Double, SimulationRotDProvider<RotationSpec>> loadersMap = new HashMap<>();
 				
 				for (File file : bbpDir.listFiles()) {
@@ -270,15 +270,15 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 					double mag = Double.parseDouble(magStr);
 					System.out.println("Located CSV for "+rupType.getName()+", M"+(float)mag+": "+name);
 
-					configsMap.put(mag, RotatedRupVariabilityConfig.loadCSV(catalog, file, null, sites));;
+					configsMap.put(mag, RSQSimRotatedRupVariabilityConfig.loadCSV(catalog, file, null, sites));;
 					loadersMap.put(mag, new BBP_RotatedRupSimLoader(bbpZipFile, bbpSites, rupType.getMagPrefix(mag)));
 				}
 				
 				if (configsMap.isEmpty())
 					continue;
 				
-				RotatedRupVariabilityMagDistPageGen pageGen =
-						new RotatedRupVariabilityMagDistPageGen(catalog, configsMap, loadersMap, rupType, calcPeriods);
+				RSQSimRotatedRupVariabilityMagDistPageGen pageGen =
+						new RSQSimRotatedRupVariabilityMagDistPageGen(catalog, configsMap, loadersMap, rupType, calcPeriods);
 				
 				pageGen.setGMPEs(refGMPEs);
 				
@@ -293,7 +293,7 @@ public class RotatedRupVariabilityMagDistPageGen extends RotatedRupVariabilityPa
 		for (RuptureType rupType : pageGensMap.keySet()) {
 			System.out.println("Doing scenario: "+rupType);
 			
-			RotatedRupVariabilityPageGen pageGen = pageGensMap.get(rupType);
+			RSQSimRotatedRupVariabilityPageGen pageGen = pageGensMap.get(rupType);
 			
 			pageGen.setEventsMap(eventsMap);
 			

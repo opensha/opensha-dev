@@ -18,7 +18,7 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.ruptures.MPJ_BBP_CatalogSimScriptGen;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
-import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityMagDistPageGen.RuptureType;
+import scratch.kevin.simulators.ruptures.rotation.RSQSimRotatedRupVariabilityMagDistPageGen.RuptureType;
 
 class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 

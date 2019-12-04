@@ -33,27 +33,37 @@ import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
-		// REMOTE paths
-//		String catalogDirName = "rundir2585_1myrs";
-		String catalogDirName = "rundir4320";
-//		String catalogDirName = "rundir4317";
+////		String catalogDirName = "rundir2585_1myrs";
+//		String catalogDirName = "rundir4320";
+////		String catalogDirName = "rundir4317";
+//		boolean gp = false;
+
+		String catalogDirName = null;
+		boolean gp = true;
 		
 		int skipYears = 5000;
+		double gpPatchArea = 1d;
 
 //		Scenario[] scenarios = Scenario.values();
 //		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE_RELAXED, Scenario.M7p2_VERT_SS_SURFACE_RELAXED};
 //		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG};
 //		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p15, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p2,
 //				Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p25, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p3};
-		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE};
-//		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE,
-//				Scenario.M7p2_VERT_SS_SURFACE};
-//		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
+//		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE};
+		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE,
+				Scenario.M7p2_VERT_SS_SURFACE};
+////		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
 		double[] distances = { 20d, 50d, 100d };
 		int numSourceAz = 18;
 //		int numSiteToSourceAz = 36;
 		int numSiteToSourceAz = 1;
 		int maxRuptures = 100;
+
+//		double[] distances = { 20d };
+//		int numSourceAz = 4;
+////		int numSiteToSourceAz = 36;
+//		int numSiteToSourceAz = 1;
+//		int maxRuptures = 10;
 		
 //		RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_863;
 		VelocityModel vm = RSQSimBBP_Config.VM;
@@ -72,7 +82,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 34;
+		int nodes = 36;
 		String queue = "scec";
 		int mins = 48*60;
 		int heapSizeMB = 45*1024;
@@ -109,7 +119,14 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 //		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		jobName += "-"+catalogDirName+"-rotatedRups";
+		if (gp) {
+			Preconditions.checkState(catalogDirName == null, "can't supply catalog with GP");
+			jobName += "-gp";
+		} else {
+			Preconditions.checkNotNull(catalogDirName, "GP is false but no catalog specified");
+			jobName += "-"+catalogDirName;
+		}
+		jobName += "-rotatedRups";
 		if (scenarios.length == 1)
 			jobName += "-"+scenarios[0].getPrefix();
 		else
@@ -121,7 +138,10 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		jobName += "-"+numSourceAz+"srcAz-"+numSiteToSourceAz+"siteSrcAz";
 		if (maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE)
 			jobName += "-"+maxRuptures+"rups";
-		jobName += "-skipYears"+skipYears;
+		if (gp)
+			jobName += "-patchArea"+(float)gpPatchArea;
+		else
+			jobName += "-skipYears"+skipYears;
 		jobName += "-vm"+vm.name();
 		if (!RSQSimBBP_Config.DO_HF)
 			jobName += "-noHF";
@@ -144,10 +164,23 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
 		argz += " --vm "+vm.name()+" --method "+RSQSimBBP_Config.METHOD.name();
-		argz += " --catalog-dir "+catalogDirName;
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
-		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
-		argz += " --skip-years "+skipYears;
+		if (!gp) {
+			argz += " --catalog-dir "+catalogDirName;
+			argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
+			argz += " --skip-years "+skipYears;
+			if (maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE)
+				argz += " --max-ruptures "+maxRuptures;
+			if (timeScalar != 1d) {
+				argz += " --time-scalar "+(float)timeScalar;
+				if (scaleVelocities)
+					argz += " --velocity-scale";
+			}
+		} else {
+			Preconditions.checkState(maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE);
+			argz += " --num-ruptures "+maxRuptures;
+			argz += " --patch-area "+(float)gpPatchArea;
+		}
 		argz += " --scenarios "+scenarios[0].name();
 		for (int i=1; i<scenarios.length; i++)
 			argz += ","+scenarios[i].name();
@@ -155,30 +188,27 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		argz += " --num-source-az "+numSourceAz;
 		argz += " --num-site-source-az "+numSiteToSourceAz;
 		argz += " --sites "+remoteSitesFile.getAbsolutePath();
-		if (maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE)
-			argz += " --max-ruptures "+maxRuptures;
 		if (!RSQSimBBP_Config.DO_HF)
 			argz += " --no-hf";
 		if (bbpDataDir != null && !bbpDataDir.isEmpty())
 			argz += " --bbp-data-dir "+bbpDataDir;
 		if (nodeGFDir != null && !nodeGFDir.isEmpty())
 			argz += " --node-gf-dir "+nodeGFDir;
-		if (timeScalar != 1d) {
-			argz += " --time-scalar "+(float)timeScalar;
-			if (scaleVelocities)
-				argz += " --velocity-scale";
-		}
 		List<String> addLines = new ArrayList<>();
 		argz = MPJ_BBP_CatalogSimScriptGen.addBBP_EnvArgs(argz, addLines, remoteJobDir, nodeScratchDir,
 				sharedScratchDir, bbpCopyParentDir, bbpEnvFile);
 		
-		List<String> script = mpjWrite.buildScript(MPJ_BBP_RotatedRupVariabilityScenarioSim.class.getName(), argz);
+		String clazz = gp ? MPJ_BBP_GP_RotatedRupVariabilityScenarioSim.class.getName()
+				: MPJ_BBP_RotatedRupVariabilityScenarioSim.class.getName();
+		
+		List<String> script = mpjWrite.buildScript(clazz, argz);
 		
 		if (!addLines.isEmpty())
 			script.addAll(2, addLines);
 		
 		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
-		pbsWrite.writeScript(new File(localJobDir, "cat_bbp_rotated.slurm"), script);
+		String scriptName = gp ? "gp_bbp_rotated.slurm" : "cat_bbp_rotated.slurm";
+		pbsWrite.writeScript(new File(localJobDir, scriptName), script);
 	}
 	
 	private static String commaSeparate(Object... vals) {

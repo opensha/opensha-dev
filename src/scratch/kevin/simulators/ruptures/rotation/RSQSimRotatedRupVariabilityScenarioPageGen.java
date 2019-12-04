@@ -30,12 +30,12 @@ import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
-public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityPageGen {
+public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRupVariabilityPageGen {
 
 	private Scenario scenario;
 
-	public RotatedRupVariabilityScenarioPageGen(RSQSimCatalog catalog, Scenario scenario,
-			RotatedRupVariabilityConfig config, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
+	public RSQSimRotatedRupVariabilityScenarioPageGen(RSQSimCatalog catalog, Scenario scenario,
+			RSQSimRotatedRupVariabilityConfig config, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
 		super(catalog, config, scenario.getMagnitude(), prov, calcPeriods);
 		this.scenario = scenario;
 	}
@@ -56,7 +56,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 	}
 
 	@Override
-	protected Scenario getBBP_PartB_Scenario(RotatedRupVariabilityConfig config) {
+	protected Scenario getBBP_PartB_Scenario(RotatedRupVariabilityConfig<RSQSimEvent> config) {
 		return scenario;
 	}
 
@@ -152,17 +152,18 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
 		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
 		
-		Map<Scenario, RotatedRupVariabilityScenarioPageGen> pageGensMap = new HashMap<>();
+		Map<Scenario, RSQSimRotatedRupVariabilityScenarioPageGen> pageGensMap = new HashMap<>();
 		HashSet<Integer> eventIDsSet = new HashSet<>();
 		for (Scenario scenario : Scenario.values()) {
 			File rotConfFile = new File(bbpDir, "rotation_config_"+scenario.getPrefix()+".csv");
 			if (rotConfFile.exists()) {
-				RotatedRupVariabilityConfig config = RotatedRupVariabilityConfig.loadCSV(catalog, rotConfFile, null, sites);
+				RSQSimRotatedRupVariabilityConfig config = RSQSimRotatedRupVariabilityConfig.loadCSV(
+						catalog, rotConfFile, null, sites);
 				
 				BBP_RotatedRupSimLoader bbpLoader = new BBP_RotatedRupSimLoader(bbpZipFile, bbpSites, scenario.getPrefix());
 				
-				RotatedRupVariabilityScenarioPageGen pageGen =
-						new RotatedRupVariabilityScenarioPageGen(catalog, scenario, config, bbpLoader, calcPeriods);
+				RSQSimRotatedRupVariabilityScenarioPageGen pageGen =
+						new RSQSimRotatedRupVariabilityScenarioPageGen(catalog, scenario, config, bbpLoader, calcPeriods);
 				
 				pageGen.setGMPEs(refGMPEs);
 				
@@ -179,7 +180,7 @@ public class RotatedRupVariabilityScenarioPageGen extends RotatedRupVariabilityP
 				continue;
 			System.out.println("Doing scenario: "+scenario);
 			
-			RotatedRupVariabilityPageGen pageGen = pageGensMap.get(scenario);
+			RSQSimRotatedRupVariabilityPageGen pageGen = pageGensMap.get(scenario);
 			
 			pageGen.setEventsMap(eventsMap);
 			

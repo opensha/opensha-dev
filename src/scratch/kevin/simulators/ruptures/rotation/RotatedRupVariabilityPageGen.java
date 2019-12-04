@@ -1,5 +1,6 @@
 package scratch.kevin.simulators.ruptures.rotation;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.geom.Point2D;
@@ -34,6 +35,7 @@ import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.MathArrays;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYBoxAnnotation;
+import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.axis.TickUnit;
@@ -124,51 +126,49 @@ import scratch.kevin.simulators.ruptures.BBP_PartBValidationPageGen.ValidationRe
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
-public abstract class RotatedRupVariabilityPageGen {
+public abstract class RotatedRupVariabilityPageGen<E> {
 	
 	private static final boolean D = false;
 
-	private RSQSimCatalog catalog;
-	private Map<Double, RotatedRupVariabilityConfig> magConfigs;
-	private Map<Double, SimulationRotDProvider<RotationSpec>> magProvs;
+	protected Map<Double, ? extends RotatedRupVariabilityConfig<E>> magConfigs;
+	protected Map<Double, SimulationRotDProvider<RotationSpec>> magProvs;
 	
-	private double[] calcPeriods;
+	protected double[] calcPeriods;
 	
-	private List<Site> sites;
-	private Map<Float, List<Site>> vs30SiteBundles;
-	private List<Float> sourceAzimuths;
-	private List<Float> siteSourceAzimuths;
-	private List<Float> distances;
-	private Map<Double, List<Integer>> magEventIDs;
+	protected List<Site> sites;
+	protected Map<Float, List<Site>> vs30SiteBundles;
+	protected List<Float> sourceAzimuths;
+	protected List<Float> siteSourceAzimuths;
+	protected List<Float> distances;
+	protected Map<Double, List<Integer>> magEventIDs;
 	private int maxNumEvents = 0;
 	private int minNumEvents = Integer.MAX_VALUE;
 	private Table<Double, Quantity, List<?>> magQuantitiesTable;
 	
 	private boolean replotAzimuthDependence = false;
 	
-	private Map<Integer, RSQSimEvent> eventsMap;
-	private LoadingCache<RSQSimEvent, RSQSimSubSectEqkRupture> gmpeEventCache;
+	private LoadingCache<E, EqkRupture> gmpeEventCache;
 	
 	private NGAW2_WrapperFullParam[] gmpes;
 	
-	private int numExampleRotations = 5;
+	protected static final int numExampleRotations = 5;
 	
 	private Color gmpeColor;
 	private List<Color> siteColors;
 	
-	private LoadingCache<VarGroupingKey, VariabilityResult> varResultCache;
-	private LoadingCache<VarGroupingKey, VariabilityResult[]> downsampledVarResultCache;
-	private LoadingCache<GMPE_GroupingKey, GMPE_Result> gmpeResultCache;
-	private LoadingCache<EventTermKey, EventTerm> eventTermCache;
+	protected LoadingCache<VarGroupingKey, VariabilityResult> varResultCache;
+	protected LoadingCache<VarGroupingKey, VariabilityResult[]> downsampledVarResultCache;
+	protected LoadingCache<GMPE_GroupingKey, GMPE_Result> gmpeResultCache;
+	protected LoadingCache<EventTermKey, EventTerm> eventTermCache;
 	
 	private Map<Integer, List<ASK_EventData>> realEventData;
 	private int numRealDataSamples;
 	
 	private boolean hasMagDist;
 
-	public RotatedRupVariabilityPageGen(RSQSimCatalog catalog, RotatedRupVariabilityConfig config,
+	public RotatedRupVariabilityPageGen(RotatedRupVariabilityConfig<E> config,
 			double mag, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
-		this(catalog, emptyMagMap(mag, config), emptyMagMap(mag, prov), calcPeriods);
+		this(emptyMagMap(mag, config), emptyMagMap(mag, prov), calcPeriods);
 	}
 	
 	private static <T> HashMap<Double, T> emptyMagMap(double mag, T value) {
@@ -177,14 +177,13 @@ public abstract class RotatedRupVariabilityPageGen {
 		return map;
 	}
 
-	public RotatedRupVariabilityPageGen(RSQSimCatalog catalog, Map<Double, RotatedRupVariabilityConfig> magConfigs,
+	public RotatedRupVariabilityPageGen(Map<Double, ? extends RotatedRupVariabilityConfig<E>> magConfigs,
 			Map<Double, SimulationRotDProvider<RotationSpec>> magProvs, double[] calcPeriods) {
-		this.catalog = catalog;
 		this.magConfigs = magConfigs;
 		this.magProvs = magProvs;
 		this.calcPeriods = calcPeriods;
 		
-		RotatedRupVariabilityConfig config0 = magConfigs.values().iterator().next();
+		RotatedRupVariabilityConfig<E> config0 = magConfigs.values().iterator().next();
 		
 		sites = config0.getValues(Site.class, Quantity.SITE);
 		
@@ -210,7 +209,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		
 		magEventIDs = new HashMap<>();
 		for (Double mag : magConfigs.keySet()) {
-			RotatedRupVariabilityConfig config = magConfigs.get(mag);
+			RotatedRupVariabilityConfig<E> config = magConfigs.get(mag);
 			List<Integer> eventIDs = config.getValues(Integer.class, Quantity.EVENT_ID);
 			magEventIDs.put(mag, eventIDs);
 			maxNumEvents = Integer.max(maxNumEvents, eventIDs.size());
@@ -263,10 +262,10 @@ public abstract class RotatedRupVariabilityPageGen {
 			
 		});
 		
-		gmpeEventCache = CacheBuilder.newBuilder().build(new CacheLoader<RSQSimEvent, RSQSimSubSectEqkRupture>() {
+		gmpeEventCache = CacheBuilder.newBuilder().build(new CacheLoader<E, EqkRupture>() {
 
 			@Override
-			public RSQSimSubSectEqkRupture load(RSQSimEvent key) throws Exception {
+			public EqkRupture load(E key) throws Exception {
 				return buildGMPE_Rupture(key);
 			}
 			
@@ -284,6 +283,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		hasMagDist = magConfigs.size() > 3 && distances.size() > 3;
 	}
 	
+	// TODO
 	public static Map<Integer, RSQSimEvent> loadEvents(RSQSimCatalog catalog, Collection<Integer> ids) throws IOException {
 		System.out.println("Loading "+ids.size()+" events...");
 		Map<Integer, RSQSimEvent> eventsMap = new HashMap<>();
@@ -301,10 +301,6 @@ public abstract class RotatedRupVariabilityPageGen {
 		gmpeEventCache.invalidateAll();
 	}
 	
-	protected void setEventsMap(Map<Integer, RSQSimEvent> eventsMap) {
-		this.eventsMap = eventsMap;
-	}
-	
 	protected Collection<Integer> getAllEventIDs() {
 		HashSet<Integer> idSet = new HashSet<>();
 		for (List<Integer> ids : magEventIDs.values())
@@ -317,22 +313,11 @@ public abstract class RotatedRupVariabilityPageGen {
 		this.numRealDataSamples = numRealDataSamples;
 	}
 	
-	private synchronized RSQSimEvent getEvent(int eventID) {
-		if (eventsMap == null) {
-			try {
-				eventsMap = loadEvents(catalog, getAllEventIDs());
-			} catch (IOException e) {
-				throw ExceptionUtils.asRuntimeException(e);
-			}
-		}
-		return eventsMap.get(eventID);
-	}
+	protected abstract E getEvent(int eventID);
 	
-	private RSQSimSubSectEqkRupture buildGMPE_Rupture(RSQSimEvent event) {
-		return catalog.getMappedSubSectRupture(event);
-	}
+	protected abstract EqkRupture buildGMPE_Rupture(E event);
 	
-	protected Scenario getBBP_PartB_Scenario(RotatedRupVariabilityConfig config) {
+	protected Scenario getBBP_PartB_Scenario(RotatedRupVariabilityConfig<E> config) {
 		return null;
 	}
 	
@@ -511,7 +496,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			return variedCount;
 		}
 		
-		public List<String> buildMethodologyLines(RotatedRupVariabilityPageGen pageGen, File resourcesDir) throws IOException {
+		public List<String> buildMethodologyLines(RotatedRupVariabilityPageGen<?> pageGen, File resourcesDir) throws IOException {
 			List<String> lines = new ArrayList<>();
 			String line = name+" variability, denoted "+htmlSymbol;
 			if (reference != null)
@@ -643,104 +628,54 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 	}
 	
-	private Map<IDPairing, Double> elemDistCache = new HashMap<>();
-	private double calcVprop(RSQSimEvent event) {
-		double minTime = Double.POSITIVE_INFINITY;
-		SimulatorElement hypo = null;
-		for (EventRecord rec : event) {
-			double[] times = rec.getElementTimeFirstSlips();
-			Preconditions.checkNotNull(times, "Event doesn't have timing information");
-			List<SimulatorElement> elems = rec.getElements();
-			
-			for (int i=0; i<elems.size(); i++) {
-				if (times[i] < minTime) {
-					minTime = times[i];
-					hypo = elems.get(i);
-				}
-			}
-		}
-
-		int hypoID = hypo.getID();
-		List<Double> vels = new ArrayList<>();
-		for (EventRecord rec : event) {
-			double[] times = rec.getElementTimeFirstSlips();
-			Preconditions.checkNotNull(times, "Event doesn't have timing information");
-			List<SimulatorElement> elems = rec.getElements();
-			
-			for (int i=0; i<elems.size(); i++) {
-				SimulatorElement elem = elems.get(i);
-				if (elem.getID() == hypoID)
-					continue;
-				int elemID = elem.getID();
-				IDPairing pair = hypoID > elemID ? new IDPairing(elemID, hypoID) : new IDPairing(hypoID, elemID);
-				Double dist = elemDistCache.get(pair);
-				if (dist == null) {
-					dist = LocationUtils.linearDistanceFast(hypo.getCenterLocation(), elem.getCenterLocation());
-					elemDistCache.put(pair, dist);
-				}
-				double tDelta = times[i] - minTime;
-				if (tDelta == 0)
-					continue;
-				double vel = dist/(tDelta);
-				vels.add(vel);
-			}
-			
-		}
-		
-		return DataUtils.median(Doubles.toArray(vels));
-	}
+	protected abstract double calcVprop(E event);
+	protected abstract double getMag(E event);
+	protected abstract double getArea(E event);
+	protected abstract double getMaxSlip(E event);
+	protected abstract double getMeanSlip(E event);
+	protected abstract double getSlipStdDev(E event);
+	protected abstract double getMeanMidSeisSlip(E event);
 	
 	private enum ScatterDisaggQuantity {
 		V_PROP("Vprop", "v_prop") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, RotationSpec rotation) {
 				return pageGen.calcVprop(pageGen.getEvent(rotation.eventID));
 			}
 		},
 		MAG("Mag", "mag") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
-				return pageGen.getEvent(rotation.eventID).getMagnitude();
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, RotationSpec rotation) {
+				return pageGen.getMag(pageGen.getEvent(rotation.eventID));
 			}
 		},
 		AREA("Area", "area") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
-				return pageGen.getEvent(rotation.eventID).getArea();
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, RotationSpec rotation) {
+				return pageGen.getArea(pageGen.getEvent(rotation.eventID));
 			}
 		},
 		MAX_SLIP("Max Slip", "max_slip") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
-				return StatUtils.max(pageGen.getEvent(rotation.eventID).getAllElementSlips());
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, RotationSpec rotation) {
+				return pageGen.getMaxSlip(pageGen.getEvent(rotation.eventID));
 			}
 		},
 		MEAN_SLIP("Mean Slip", "mean_slip") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
-				RSQSimEvent event = pageGen.getEvent(rotation.eventID);
-				ArrayList<SimulatorElement> elems = event.getAllElements();
-				double[] slips = event.getAllElementSlips();
-				double mean = 0d;
-				double totArea = 0d;
-				for (int i=0; i<slips.length; i++) {
-					double area = elems.get(i).getArea();
-					mean += area*slips[i];
-					totArea += area;
-				}
-				mean /= totArea;
-				return mean;
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, RotationSpec rotation) {
+				return pageGen.getMeanSlip(pageGen.getEvent(rotation.eventID));
 			}
 		},
 		SOURCE_AZ("Source Azimuth", "src_az") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, RotationSpec rotation) {
 				return rotation.sourceAz == null ? 0d : rotation.sourceAz;
 			}
 		},
 		SITE_TO_SOURCE_AZ("Site-to-Source Az", "site_source_az") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation) {
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, RotationSpec rotation) {
 				return rotation.siteToSourceAz == null ? 0d : rotation.siteToSourceAz;
 			}
 		};
@@ -753,7 +688,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			this.prefix = prefix;
 		}
 		
-		public abstract double getValue(RotatedRupVariabilityPageGen pageGen, RotationSpec rotation);
+		public abstract <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, RotationSpec rotation);
 	}
 	
 	protected abstract String getScenarioName();
@@ -772,6 +707,8 @@ public abstract class RotatedRupVariabilityPageGen {
 		generatePage(outputDir, periods, methodSpecificLines, null, null);
 	}
 	
+	protected abstract String getModelName();
+	
 	public void generatePage(File outputDir, double[] periods, List<String> methodSpecificLines,
 			double[] highlightMags, float[] highlightDists) throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
@@ -782,7 +719,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		String distName = BBP_PartBValidationConfig.DIST_JB ? "Joyner-Boore distance" : "3-dimensional distance";
 		String distSymbol = BBP_PartBValidationConfig.DIST_JB ? "Rjb" : "Rrup";
 		
-		lines.add("# "+catalog.getName()+" Rotated Rupture Variability, "+getScenarioShortName());
+		lines.add("# "+getModelName()+" Rotated Rupture Variability, "+getScenarioShortName());
 		lines.add("");
 		lines.add("This exercise uses translations and rotations to estimate ground motion variability from different "
 				+ "sources. We begin by selecting a subset of similar ruptures which match a set of criteria (in this case, "
@@ -824,16 +761,16 @@ public abstract class RotatedRupVariabilityPageGen {
 				"Total number of combinations of the above.");
 		lines.addAll(table.build());
 		lines.add("");
-		lines.add("## "+getScenarioShortName()+" RSQSim Rupture Match Criteria");
+		lines.add("## "+getScenarioShortName()+" Rupture Match Criteria");
 		lines.add(topLink); lines.add("");
 		String[] criteria = getScenarioMatchCriteria();
-		lines.add("We condisder "+maxNumEvents+" events in the catalog which match the following criteria:");
+		lines.add("We condisder "+maxNumEvents+" events which match the following criteria:");
 		lines.add("");
 		for (String criterion : criteria)
 			lines.add("* "+criterion);
 		lines.add("");
 		
-		if (magConfigs.size() == 1) {
+		if (magConfigs.size() == 1 && this instanceof RSQSimRotatedRupVariabilityPageGen) {
 			lines.add("### Fault Section Counts");
 			lines.add(topLink); lines.add("");
 			lines.add("This tables gives a list of all fault sections which participate in the ruptures matching the above "
@@ -844,11 +781,11 @@ public abstract class RotatedRupVariabilityPageGen {
 			List<Double> mags = new ArrayList<>();
 			int totalCount = 0;
 			for (int eventID : magConfigs.values().iterator().next().getValues(Integer.class, Quantity.EVENT_ID)) {
-				RSQSimEvent event = getEvent(eventID);
+				RSQSimEvent event = (RSQSimEvent)getEvent(eventID);
 				mags.add(event.getMagnitude());
 				RSQSimSubSectEqkRupture rup;
 				try {
-					rup = gmpeEventCache.get(event);
+					rup = (RSQSimSubSectEqkRupture)gmpeEventCache.get((E)event);
 				} catch (ExecutionException e) {
 					throw ExceptionUtils.asRuntimeException(e);
 				}
@@ -1009,7 +946,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			
 			for (Double mag : plotMags) {
 				System.out.println("*** Plotting M="+mag+" for "+type.name+" ***");
-				RotatedRupVariabilityConfig config = magConfigs.get(mag);
+				RotatedRupVariabilityConfig<E> config = magConfigs.get(mag);
 				String curHeading = "##";
 				String uniqueTitleSection = mag == null ? type.name : "M"+optionalDigitDF.format(mag)+" "+type.name;
 				if (!type.separateDists || distances.size() == 1) {
@@ -1237,7 +1174,10 @@ public abstract class RotatedRupVariabilityPageGen {
 					table.addColumn("**"+optionalDigitDF.format(dist)+" km**");
 					for (double period : periods) {
 						File plot = plotEventTermScatter(q, mag, dist, period, scatterSites, resourcesDir);
-						table.addColumn("![plot]("+resourcesDir.getName()+"/"+plot.getName()+")");
+						if (plot == null)
+							table.addColumn("*N/A*");
+						else
+							table.addColumn("![plot]("+resourcesDir.getName()+"/"+plot.getName()+")");
 					}
 					table.finalizeLine();
 				}
@@ -1459,7 +1399,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				Double mag = partBConfigMap.get(scenario);
 				if (mag == null)
 					continue;
-				RotatedRupVariabilityConfig config = magConfigs.get(mag);
+				RotatedRupVariabilityConfig<E> config = magConfigs.get(mag);
 				
 				lines.add("### BBP PartB, "+scenario.getName());
 				lines.add(topLink); lines.add("");
@@ -1638,7 +1578,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		return false;
 	}
 	
-	private List<String> generateVariabilityLines(RotatedRupVariabilityConfig config, VariabilityType type, Double mag, Float distance,
+	private List<String> generateVariabilityLines(RotatedRupVariabilityConfig<E> config, VariabilityType type, Double mag, Float distance,
 			double[] periods, String topLink, File resourcesDir) throws IOException {
 		List<String> lines = new ArrayList<>();
 //		if (!type.stdDevOfMedians)
@@ -2227,7 +2167,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		if (numEventsFunc.getMaxX() < maxNumEvents)
 			numEventsFunc.set((double)maxNumEvents, 0d);
 		
-		RotatedRupVariabilityConfig config = magConfigs.get(key.magnitude);
+		RotatedRupVariabilityConfig<E> config = magConfigs.get(key.magnitude);
 		Map<Quantity, List<?>> qMap = config.getQuantitiesMap();
 		int fixedNumRecordings;
 		if (dependUseSimCounts) {
@@ -2583,13 +2523,13 @@ public abstract class RotatedRupVariabilityPageGen {
 
 	static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
 	
-	private static Float nullAsZero(Float value) {
+	protected static Float nullAsZero(Float value) {
 		if (value == null)
 			return 0f;
 		return value;
 	}
 	
-	private class ResidualSet {
+	private static class ResidualSet {
 		double[] residuals;
 		double median;
 		double residualStdDev;
@@ -2767,7 +2707,7 @@ public abstract class RotatedRupVariabilityPageGen {
 					residualStdDevs[p] = new ResidualStdDevSet(allResStdDevs);
 				}
 			}
-			return new VariabilityResult(null, null, residualStdDevs, medianStdDevs);
+			return new VariabilityResult(null, null, residualStdDevs, medianStdDevs, calcPeriods, hasMagDist);
 		}
 		if (key.separateSites && key.sites.length > 1) {
 			// do all sites at once
@@ -2827,7 +2767,8 @@ public abstract class RotatedRupVariabilityPageGen {
 				}
 				
 				if (key.realDataList == null)
-					varResultCache.put(siteKey, new VariabilityResult(commonRotSpecs, logVals, residualStdDevs, medianStdDevs));
+					varResultCache.put(siteKey, new VariabilityResult(commonRotSpecs, logVals, residualStdDevs, medianStdDevs,
+							calcPeriods, hasMagDist));
 			}
 
 			// now combine sites
@@ -2866,7 +2807,7 @@ public abstract class RotatedRupVariabilityPageGen {
 				}
 			}
 			
-			return new VariabilityResult(commonRotSpecs, totLogVals, totResidualStdDevs, totMedianStdDevs);
+			return new VariabilityResult(commonRotSpecs, totLogVals, totResidualStdDevs, totMedianStdDevs, calcPeriods, hasMagDist);
 		}
 		List<List<ResidualSet>> residuals = loadResiduals(key);
 
@@ -2908,7 +2849,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			}
 		}
 		if (D) System.out.println("DONE");
-		return new VariabilityResult(commonRotSpecs, logVals, residualStdDevs, medianStdDevs);
+		return new VariabilityResult(commonRotSpecs, logVals, residualStdDevs, medianStdDevs, calcPeriods, hasMagDist);
 	}
 	
 	double getDeltaDistance(Float distance) {
@@ -3068,7 +3009,7 @@ public abstract class RotatedRupVariabilityPageGen {
 
 	}
 	
-	private class VariabilityResult {
+	private static class VariabilityResult {
 		private final RotationSpec[] commonRotationSpecs;
 		private final LogValueSet[] logVals;
 		private final ResidualStdDevSet[] residualStdDevs;
@@ -3076,8 +3017,14 @@ public abstract class RotatedRupVariabilityPageGen {
 		private final MedianStdDevSet[] medianStdDevs;
 		private final MedianStdDevSet periodIndepMedianStdDev;
 		
+		private double[] calcPeriods;
+		private boolean hasMagDist;
+		
 		public VariabilityResult(RotationSpec[] commonRotationSpecs, LogValueSet[] logVals,
-				ResidualStdDevSet[] residualStdDevs, MedianStdDevSet[] medianStdDevs) {
+				ResidualStdDevSet[] residualStdDevs, MedianStdDevSet[] medianStdDevs,
+				double[] calcPeriods, boolean hasMagDist) {
+			this.calcPeriods = calcPeriods;
+			this.hasMagDist = hasMagDist;
 			this.commonRotationSpecs = commonRotationSpecs;
 			if (hasMagDist)
 				this.logVals = logVals;
@@ -3118,7 +3065,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 	}
 	
-	private class LogValueSet {
+	private static class LogValueSet {
 		private final double mean;
 		private final double median;
 		private final double min;
@@ -3154,7 +3101,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		return allResiduals;
 	}
 	
-	private class ResidualStdDevSet {
+	private static class ResidualStdDevSet {
 		private final double total;
 		private final double mean;
 		private final double median;
@@ -3217,7 +3164,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 	}
 	
-	private class MedianStdDevSet {
+	private static class MedianStdDevSet {
 		private final double stdDev;
 		private final double[] medians;
 		private final int num;
@@ -3294,7 +3241,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		}
 	}
 	
-	private class EventTermKey {
+	protected static class EventTermKey {
 		private final int eventID;
 		private final double mag;
 		private final float distance;
@@ -3310,7 +3257,6 @@ public abstract class RotatedRupVariabilityPageGen {
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + getEnclosingInstance().hashCode();
 			result = prime * result + Float.floatToIntBits(distance);
 			result = prime * result + eventID;
 			long temp;
@@ -3328,8 +3274,6 @@ public abstract class RotatedRupVariabilityPageGen {
 			if (getClass() != obj.getClass())
 				return false;
 			EventTermKey other = (EventTermKey) obj;
-			if (!getEnclosingInstance().equals(other.getEnclosingInstance()))
-				return false;
 			if (Float.floatToIntBits(distance) != Float.floatToIntBits(other.distance))
 				return false;
 			if (eventID != other.eventID)
@@ -3340,12 +3284,9 @@ public abstract class RotatedRupVariabilityPageGen {
 				return false;
 			return true;
 		}
-		private RotatedRupVariabilityPageGen getEnclosingInstance() {
-			return RotatedRupVariabilityPageGen.this;
-		}
 	}
 	
-	private class EventTerm {
+	protected static class EventTerm {
 		final double[] eventTerms;
 		final List<RotationSpec> rotations;
 		final List<double[]> rotLogVals;
@@ -3367,7 +3308,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			Site... sites) throws IOException {
 		Preconditions.checkState(sites.length > 0);
 		HashSet<RotationSpec> rotationSet = new HashSet<>();
-		RotatedRupVariabilityConfig config = magConfigs.get(mag);
+		RotatedRupVariabilityConfig<E> config = magConfigs.get(mag);
 		for (Site site : sites)
 			rotationSet.addAll(config.getRotationsForQuantities(Quantity.SITE, site,
 					Quantity.EVENT_ID, eventID, Quantity.DISTANCE, distance));
@@ -3401,7 +3342,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			Quantity[] groupQuantities, Quantity[] singletons, List<List<ASK_EventData>> realDataList)
 					throws IOException {
 //		if (D) System.out.println("Rotations for mag: "+magnitude);
-		RotatedRupVariabilityConfig config = magConfigs.get(magnitude);
+		RotatedRupVariabilityConfig<E> config = magConfigs.get(magnitude);
 		List<RotationSpec> totalRotations;
 		if (constQuantities != null && constQuantities.length > 0) {
 //			for (int i=0; i<constQuantities.length; i++)
@@ -3419,7 +3360,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			// now downsample randomly
 			
 			if (repeatableRandom == null)
-				repeatableRandom = new Random(eventsMap.size());
+				repeatableRandom = new Random(magConfigs.get(magnitude).getRotations().size());
 			
 			Map<Integer, List<RotationSpec>> eventRotMap = new HashMap<>();
 			List<Integer> eventIDs = new ArrayList<>();
@@ -3754,7 +3695,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		int ind = 0;
 		
 		for (int eventID : eventIDs) {
-			RSQSimEvent event = getEvent(eventID);
+			E event = getEvent(eventID);
 			EqkRupture rup = gmpeEventCache.get(event);
 			gmpe.setEqkRupture(rup);
 			
@@ -4488,7 +4429,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		if (!replot)
 			return retMap;
 		
-		RotatedRupVariabilityConfig config = magConfigs.get(magnitude);
+		RotatedRupVariabilityConfig<E> config = magConfigs.get(magnitude);
 		List<Float> values = config.getValues(Float.class, quantity);
 		// will already be sorted
 		
@@ -4644,7 +4585,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		if (!replot)
 			return retMap;
 		
-		RotatedRupVariabilityConfig config = magConfigs.get(magnitude);
+		RotatedRupVariabilityConfig<E> config = magConfigs.get(magnitude);
 		List<Float> values = config.getValues(Float.class, quantity);
 		// will already be sorted
 		
@@ -4758,7 +4699,11 @@ public abstract class RotatedRupVariabilityPageGen {
 		plotPrefs.setBackgroundColor(Color.WHITE);
 		
 		double[] distArray = Doubles.toArray(distances);
-		CPT distCPT = new CPT(StatUtils.min(distArray), StatUtils.max(distArray), Color.GRAY, Color.BLACK);
+		double minDist = StatUtils.min(distArray);
+		double maxDist = StatUtils.max(distArray);
+		if (maxDist == minDist)
+			maxDist++;
+		CPT distCPT = new CPT(minDist, maxDist, Color.GRAY, Color.BLACK);
 		
 		for (VariabilityType type : xysMap.keySet()) {
 			File[] ret = retMap.get(type);
@@ -4831,24 +4776,8 @@ public abstract class RotatedRupVariabilityPageGen {
 		return retMap;
 	}
 	
-	private void plotExample(File resourcesDir, String prefix, double distance, List<Quantity> variedQuantities)
-			throws IOException {
-		List<Site> sites = new ArrayList<>();
-		
-		Double minMag = Double.POSITIVE_INFINITY;
-		for (Double mag : magEventIDs.keySet())
-			minMag = Double.min(minMag, mag);
-		RSQSimEvent exampleRupture = getEvent(magEventIDs.get(minMag).get(0));
-		sites.add(this.sites.get(0));
-		List<RSQSimEvent> ruptures = new ArrayList<>();
-		ruptures.add(exampleRupture);
-		int numSourceAz = variedQuantities.contains(Quantity.SOURCE_AZIMUTH) ? numExampleRotations : 1;
-		int numSiteToSourceAz = variedQuantities.contains(Quantity.SITE_TO_SOURTH_AZIMUTH) ? numExampleRotations : 1;
-		RotatedRupVariabilityConfig config = new RotatedRupVariabilityConfig(catalog, sites, ruptures, new double[] {distance},
-				numSourceAz, numSiteToSourceAz);
-		
-		config.plotRotations(resourcesDir, prefix, config.getRotations(), true);
-	}
+	protected abstract void plotExample(File resourcesDir, String prefix, double distance, List<Quantity> variedQuantities)
+			throws IOException;
 	
 	private File writeSiteCSV(File resourcesDir, Site site, Double magnitude, Float distance) throws IOException {
 		CSVFile<String> csv = new CSVFile<>(true);
@@ -4861,7 +4790,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		csv.addLine(header);
 		
 		SimulationRotDProvider<RotationSpec> prov = magProvs.get(magnitude);
-		RotatedRupVariabilityConfig config = magConfigs.get(magnitude);
+		RotatedRupVariabilityConfig<E> config = magConfigs.get(magnitude);
 		
 		for (RotationSpec rotation : config.getRotationsForQuantities(Quantity.SITE, site, Quantity.DISTANCE, distance)) {
 			DiscretizedFunc spectrum = prov.getRotD50(site, rotation, 0);
@@ -4924,7 +4853,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		eventTermCSV.addLine(logValueHeader);
 		
 		SimulationRotDProvider<RotationSpec> prov = magProvs.get(magnitude);
-		RotatedRupVariabilityConfig config = magConfigs.get(magnitude);
+		RotatedRupVariabilityConfig<E> config = magConfigs.get(magnitude);
 		
 		// TODO
 		
@@ -4951,80 +4880,44 @@ public abstract class RotatedRupVariabilityPageGen {
 	private enum EventDisaggQuantity {
 		V_PROP("Propagation Velocity", "v_prop", "m/s") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, R event) {
 				return pageGen.calcVprop(event);
 			}
 		},
 		MAG("Mag", "mag", null) {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
-				return event.getMagnitude();
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, R event) {
+				return pageGen.getMag(event);
 			}
 		},
 		AREA("Log10(Area)", "area", "m^2") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
-				return event.getArea();
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, R event) {
+				return pageGen.getArea(event);
 			}
 		},
 		MAX_SLIP("Max Slip", "max_slip", "m") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
-				return StatUtils.max(event.getAllElementSlips());
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, R event) {
+				return pageGen.getMaxSlip(event);
 			}
 		},
 		MEAN_SLIP("Mean Slip", "mean_slip", "m") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
-				ArrayList<SimulatorElement> elems = event.getAllElements();
-				double[] slips = event.getAllElementSlips();
-				double mean = 0d;
-				double totArea = 0d;
-				for (int i=0; i<slips.length; i++) {
-					double area = elems.get(i).getArea();
-					mean += area*slips[i];
-					totArea += area;
-				}
-				mean /= totArea;
-				return mean;
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, R event) {
+				return pageGen.getMeanSlip(event);
 			}
 		},
 		SLIP_STD_DEV("Slip Std Dev", "slip_std_dev", "m") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
-				ArrayList<SimulatorElement> elems = event.getAllElements();
-				double[] slips = event.getAllElementSlips();
-				double[] weights = new double[slips.length];
-				for (int i=0; i<slips.length; i++)
-					weights[i] = elems.get(i).getArea();
-				double var = new Variance().evaluate(slips, MathArrays.normalizeArray(weights, weights.length));
-				return Math.sqrt(var);
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, R event) {
+				return pageGen.getSlipStdDev(event);
 			}
 		},
 		MID_SEIS_MEAN_SLIP("Mid-Seismogenic Mean Slip", "mid_seis_mean_slip", "m") {
 			@Override
-			public double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event) {
-				RSQSimSubSectionMapper mapper;
-				try {
-					mapper = pageGen.catalog.getSubSectMapper();
-					mapper.trackSlipOnSections();
-				} catch (IOException e) {
-					throw ExceptionUtils.asRuntimeException(e);
-				}
-				SlipAlongSectAlgorithm slipAlg = SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN;
-				List<List<SubSectionMapping>> mappings = mapper.getAllSubSectionMappings(event);
-				
-				double areaWeightedSlip = 0d;
-				double sumArea = 0d;
-				for (List<SubSectionMapping> bundle : mappings) {
-					for (SubSectionMapping mapping : bundle) {
-						double area = mapping.getAreaForAverageSlip(slipAlg);
-						double slip = mapping.getAverageSlip(slipAlg);
-						areaWeightedSlip += slip*area;
-						sumArea += area;
-					}
-				}
-				return areaWeightedSlip == 0 ? 0 : areaWeightedSlip / sumArea;
+			public <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, R event) {
+				return pageGen.getMeanMidSeisSlip(event);
 			}
 		};
 		
@@ -5038,13 +4931,13 @@ public abstract class RotatedRupVariabilityPageGen {
 			this.units = units;
 		}
 		
-		public abstract double getValue(RotatedRupVariabilityPageGen pageGen, RSQSimEvent event);
+		public abstract <R> double getValue(RotatedRupVariabilityPageGen<R> pageGen, R event);
 	}
 	
 	private File plotEventTermScatter(EventDisaggQuantity q, Double mag,
 			Float distance, double period, Site[] sites, File resourcesDir)
 					throws IOException {
-		RotatedRupVariabilityConfig config = magConfigs.get(mag);
+		RotatedRupVariabilityConfig<E> config = magConfigs.get(mag);
 		
 		List<Integer> eventIDs = config.getValues(Integer.class, Quantity.EVENT_ID);
 		
@@ -5054,20 +4947,27 @@ public abstract class RotatedRupVariabilityPageGen {
 		int periodIndex = Doubles.indexOf(calcPeriods, period);
 		DefaultXY_DataSet scatter = new DefaultXY_DataSet();
 		
+		boolean allNaN = true;
 		try {
 			for (int i=0; i<eventTerms.length; i++) {
 				eventTerms[i] = eventTermCache.get(
 						new EventTermKey(eventIDs.get(i), mag, distance, sites)).eventTerms[periodIndex];
 				values[i] = q.getValue(this, getEvent(eventIDs.get(i)));
 				
+				allNaN = allNaN && !Double.isFinite(values[i]);
+				
 				scatter.set(values[i], eventTerms[i]);
 			}
 		} catch (ExecutionException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
+		if (allNaN)
+			return null;
 
 		double maxX = StatUtils.max(values);
 		double minX = StatUtils.min(values);
+		if (minX == maxX)
+			return null;
 		double spanX = maxX - minX;
 		Range xRange = new Range(minX - 0.05*spanX, maxX + 0.05*spanX);
 		
@@ -5188,225 +5088,11 @@ public abstract class RotatedRupVariabilityPageGen {
 		
 		return anns;
 	}
+	protected static boolean DIRECTIVITY_DEBUG = true;
+	protected static String DIRECTIVITY_DEBUG_DIRNAME = "directivity_debug";
 	
-	private static boolean DIRECTIVITY_DEBUG = true;
-	private static String DIRECTIVITY_DEBUG_DIRNAME = "directivity_debug";
-	
-	private Table<Float, Double, XY_DataSet> calcDirectivityComparisons(Double mag, double[] periods,
-			Site[] sites, File resourcesDir) {
-		RotatedRupVariabilityConfig config = magConfigs.get(mag);
-		if (!config.hasRuptures()) {
-			if (eventsMap == null) {
-				try {
-					eventsMap = loadEvents(catalog, getAllEventIDs());
-				} catch (IOException e) {
-					throw ExceptionUtils.asRuntimeException(e);
-				}
-			}
-			config.setRuptures(eventsMap.values());
-		}
-		
-		List<Integer> eventIDs = config.getValues(Integer.class, Quantity.EVENT_ID);
-		
-		int[] periodIndexes = new int[periods.length];
-		for (int i=0; i<periods.length; i++)
-			periodIndexes[i] = Doubles.indexOf(calcPeriods, periods[i]);
-		
-		BaylessSomerville2013DirectivityModifier bs = new BaylessSomerville2013DirectivityModifier();
-		
-		Table<Float, Double, XY_DataSet> distPeriodXYs = HashBasedTable.create();
-		
-		TableBuilder table = null;
-		File dirDir = null;
-		if (DIRECTIVITY_DEBUG) {
-			table = MarkdownUtils.tableBuilder();
-			table.initNewLine();
-			for (double period : periods)
-				table.addColumn(optionalDigitDF.format(period)+"s Map Plot");
-			table.addColumn("Residuals Plot");
-			table.finalizeLine();
-			dirDir = new File(resourcesDir, DIRECTIVITY_DEBUG_DIRNAME);
-		}
-		
-		try {
-			for (int i=0; i<eventIDs.size(); i++) {
-				// build simple rupture description
-				int eventID = eventIDs.get(i);
-				RSQSimEvent event = getEvent(eventID);
-				
-				// rotated such that strike is zero, e.g. oriented facing north
-				// aki & richards, dips to right (if dips)
-				RSQSimEvent oriented = config.getInitialOrientation(event);
-				
-				Location centroid = config.getCentroid(event);
-				double centroidDepth = Double.NaN;
-				double centroidDist = Double.POSITIVE_INFINITY;
-				
-				Location hypo = RSQSimUtils.getHypocenter(oriented);
-				
-				double minLat = Double.POSITIVE_INFINITY;
-				double maxLat = Double.NEGATIVE_INFINITY;
-				List<Double> dips = new ArrayList<>();
-				double minDepth = Double.POSITIVE_INFINITY;
-				double maxDepth = Double.NEGATIVE_INFINITY;
-				for (SimulatorElement elem : oriented.getAllElements()) {
-					for (Location loc : elem.getVertices()) {
-						double lat = loc.getLatitude();
-						minLat = Double.min(minLat, lat);
-						maxLat = Double.max(maxLat, lat);
-						minDepth = Double.min(minDepth, loc.getDepth());
-						maxDepth = Double.max(maxDepth, loc.getDepth());
-						
-						double cDist = LocationUtils.horzDistanceFast(loc, centroid);
-						if (cDist < centroidDist) {
-							centroidDepth = loc.getDepth();
-							centroidDist = cDist;
-						}
-					}
-					dips.add(elem.getFocalMechanism().getDip());
-				}
-				
-				Location southernExtent = new Location(minLat, centroid.getLongitude());
-				Location northernExtent = new Location(maxLat, centroid.getLongitude());
-				
-				double aveDip = StatUtils.mean(Doubles.toArray(dips));
-				boolean dipping = aveDip < 80;
-				
-				if (dipping) {
-					// not strike-slip, figure out trace
-					double horzOffset = (centroidDepth-minDepth)/Math.tan(Math.toRadians(aveDip));
-//					System.out.println("aveDip="+aveDip+"centroidDepth="+centroidDepth+", minDepth="+minDepth+", horzOffset="+horzOffset);
-					double west = 1.5*Math.PI;
-					// move west to be the surface projection of trace
-					southernExtent = LocationUtils.location(southernExtent, west, horzOffset);
-					northernExtent = LocationUtils.location(northernExtent, west, horzOffset);
-				}
-				FaultTrace tr = new FaultTrace(null);
-				tr.add(new Location(southernExtent.getLatitude(), southernExtent.getLongitude(), minDepth));
-				tr.add(new Location(northernExtent.getLatitude(), northernExtent.getLongitude(), minDepth));
-				double width = (maxDepth-minDepth)/Math.sin(Math.toRadians(aveDip));
-				DistanceOverrideQuadSurface surf = new DistanceOverrideQuadSurface(tr, aveDip, width, oriented.getAllElements());
-				double aveRake = dipping ? 90 : 180;
-				EqkRupture rup = new EqkRupture(mag, aveRake, surf, hypo);
-
-				Table<Float, Float, Location> azDistLocMap = HashBasedTable.create();
-				Table<Float, Float, double[]> azDistFdMap = HashBasedTable.create();
-				for (Float sourceAz : config.getValues(Float.class, Quantity.SOURCE_AZIMUTH)) {
-					float siteAz = 180 - sourceAz;
-					for (Float distance : distances) {
-						Location siteLoc = LocationUtils.location(centroid, Math.toRadians(siteAz), distance);
-						// correct distance
-						for (int j=0; j<3; j++) {
-							double minDist = RuptureRotationUtils.calcMinDist(
-									siteLoc, oriented, BBP_PartBValidationConfig.DIST_JB);
-							// positive means we're too close and need to move further
-							double distDiff = distance - minDist;
-							siteLoc = LocationUtils.location(siteLoc, Math.toRadians(siteAz), distDiff);
-						}
-						
-						surf.distsMap.put(siteLoc, distance.doubleValue());
-						
-						double[] fds = new double[periods.length];
-						for (int p=0; p<periods.length; p++)
-							fds[p] = bs.getFd(rup, siteLoc, periods[p]);
-						
-						azDistFdMap.put(sourceAz, distance, fds);
-						azDistLocMap.put(sourceAz, distance, siteLoc);
-					}
-				}
-				
-				Map<RotationSpec, double[]> diffsMap = new HashMap<>();
-				
-				for (Float distance : distances) {
-					EventTerm eventTerm = eventTermCache.get(
-							new EventTermKey(eventID, mag, distance, sites));
-					
-					List<RotationSpec> rotations = eventTerm.rotations;
-					for (int j=0; j<rotations.size(); j++) {
-						RotationSpec rot = rotations.get(j);
-						
-						float sourceAz = nullAsZero(rot.sourceAz);
-						
-						double[] fds = azDistFdMap.get(sourceAz, distance);
-						
-						double[] diffs = new double[periods.length];
-						
-						for (int p=0; p<periods.length; p++) {
-							double meanVal = eventTerm.eventTerms[periodIndexes[p]];
-							double value = eventTerm.rotLogVals.get(j)[periodIndexes[p]];
-							diffs[p] = value - meanVal;
-							
-							XY_DataSet xy = distPeriodXYs.get(distance, periods[p]);
-							if (xy == null) {
-								xy = new DefaultXY_DataSet();
-								distPeriodXYs.put(distance, periods[p], xy);
-							}
-							xy.set(fds[p], diffs[p]);
-						}
-						diffsMap.put(rot, diffs);
-					}
-					
-				}
-				if (DIRECTIVITY_DEBUG) {
-					File[] files = plotIndvRupDirectivity(oriented, rup, azDistFdMap, azDistLocMap,
-							diffsMap, periods, dirDir);
-					table.initNewLine();
-					for (File file : files)
-						table.addColumn("![plot]("+file.getName()+")");
-					table.finalizeLine();
-				}
-			}
-		} catch (Exception e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-		
-		if (DIRECTIVITY_DEBUG) {
-			List<String> lines = new ArrayList<>();
-			lines.add("# Directivity Debug");
-			lines.add("");
-			lines.add("Map plots show the re-oriented (with strike=0) raw rupture in black, "
-					+ "the linear GMPE source used to predict directivity with a dashed line, "
-					+ "and hypocenter with a star. Map background is empirical fD estimates, and mean "
-					+ "simulated values at 20 and 50 km are overlaid. The chart on the right shows "
-					+ "the simulated values for 20 km at each spectral period.");
-			lines.add("");
-			lines.addAll(table.build());
-			lines.add("");
-			File outputDir = new File(resourcesDir, DIRECTIVITY_DEBUG_DIRNAME);
-			try {
-				MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		
-		return distPeriodXYs;
-	}
-	
-	private class DistanceOverrideQuadSurface extends QuadSurface {
-		
-		private Map<Location, Double> distsMap = new HashMap<>();
-		private List<SimulatorElement> elems;
-
-		public DistanceOverrideQuadSurface(FaultTrace trace, double dip, double width,
-				List<SimulatorElement> elems) {
-			super(trace, dip, width);
-			this.elems = elems;
-		}
-
-		@Override
-		public double getDistanceRup(Location loc) {
-			if (distsMap.containsKey(loc))
-				return distsMap.get(loc);
-			double dist = Double.POSITIVE_INFINITY;
-			for (SimulatorElement elem : elems)
-				for (Location v : elem.getVertices())
-					dist = Math.min(dist, LocationUtils.linearDistanceFast(v, loc));
-			distsMap.put(loc, dist);
-			return dist;
-		}
-		
-	}
+	protected abstract Table<Float, Double, XY_DataSet> calcDirectivityComparisons(Double mag, double[] periods,
+			Site[] sites, File resourcesDir);
 	
 	private boolean plotDirectivityComparison(File resourcesDir, String prefix, XY_DataSet scatter)
 			throws IOException {
@@ -5489,7 +5175,7 @@ public abstract class RotatedRupVariabilityPageGen {
 		return true;
 	}
 	
-	private File[] plotIndvRupDirectivity(RSQSimEvent oriented, EqkRupture rup,
+	protected File[] plotIndvRupDirectivity(int eventID, RSQSimEvent oriented, EqkRupture rup,
 			Table<Float, Float, double[]> azDistFdMap, Table<Float, Float, Location> azDistLocMap,
 			Map<RotationSpec, double[]> diffsMap, double[] periods, File outputDir) throws IOException {
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -5502,13 +5188,22 @@ public abstract class RotatedRupVariabilityPageGen {
 			periods = Doubles.toArray(keep);
 		}
 		
-		String commonPrefix = "event_"+oriented.getID();
+		String commonPrefix = "event_"+eventID;
 
 		Float chartDistance = distances.get(0);
 		float maxMapDistance = 60f;
 		
 		PlotSpec mapSpec = RupturePlotGenerator.writeMapPlot(null, oriented, null, null, null,
 				null, null, rup.getRuptureSurface(), null, null, null, null);
+		if (oriented == null) {
+			double hypoRadius = 0.02;
+			BasicStroke hypoStroke = new BasicStroke(1f);
+			Location hypoLoc = rup.getHypocenterLocation();
+			XYPolygonAnnotation rectHypoPoly = new XYPolygonAnnotation(
+					RupturePlotGenerator.star(hypoLoc.getLongitude(), hypoLoc.getLatitude(), hypoRadius), hypoStroke,
+					Color.BLACK, RupturePlotGenerator.HYPO_COLOR);
+			mapSpec.getPlotAnnotations().add(rectHypoPoly);
+		}
 		MinMaxAveTracker latTrack = new MinMaxAveTracker();
 		MinMaxAveTracker lonTrack = new MinMaxAveTracker();
 		for (Cell<Float, Float, Location> cell : azDistLocMap.cellSet()) {
@@ -5673,7 +5368,7 @@ public abstract class RotatedRupVariabilityPageGen {
 			funcs.add(fdFuncs[p]);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN));
 			
-			PlotSpec spec = new PlotSpec(funcs, chars, "Event "+oriented.getID(), "Source Azimuth",
+			PlotSpec spec = new PlotSpec(funcs, chars, "Event "+eventID, "Source Azimuth",
 					optionalDigitDF.format(periods[p])+"s Residual");
 			spec.setLegendVisible(p == 0);
 			specs.add(spec);

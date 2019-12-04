@@ -27,14 +27,14 @@ import scratch.kevin.simulators.ruptures.MPJ_BBP_PartBSim;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
-import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityMagDistPageGen.RuptureType;
+import scratch.kevin.simulators.ruptures.rotation.RSQSimRotatedRupVariabilityMagDistPageGen.RuptureType;
 
 public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_MultiRupSim {
 
 	private List<BBP_Site> sites;
 	private Map<Site, BBP_Site> siteToBBPSites;
 	
-	private Map<RotatedRupVariabilityConfig, File> csvsToWrite;
+	private Map<RSQSimRotatedRupVariabilityConfig, File> csvsToWrite;
 	
 	private List<Config> configs;
 	
@@ -94,13 +94,13 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 				double mag = mags[m];
 				File configCSV = new File(mainOutputDir, "rotation_config_"+rupType.getMagPrefix(mag)+".csv");
 				
-				RotatedRupVariabilityConfig config;
+				RSQSimRotatedRupVariabilityConfig config;
 				
 				if (configCSV.exists()) {
 					// load it in
 					if (rank == 0)
 						debug("Loading matches for rupture type: "+rupType+", M="+(float)mag+" from "+configCSV.getAbsolutePath());
-					config = RotatedRupVariabilityConfig.loadCSV(catalog, configCSV, allEvents, gmpeSites);
+					config = RSQSimRotatedRupVariabilityConfig.loadCSV(catalog, configCSV, allEvents, gmpeSites);
 					
 					// validate it
 					int numEvents = config.getValues(Integer.class, Quantity.EVENT_ID).size();
@@ -143,7 +143,7 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 					if (rank == 0)
 						debug("Creating rotations for "+numSourceAz+" source azimuths, "+numSiteToSourceAz+" site-source azimuths, "
 								+distances.length+" distances, and "+eventMatches.size()+" events");
-					config = new RotatedRupVariabilityConfig(
+					config = new RSQSimRotatedRupVariabilityConfig(
 							catalog, gmpeSites, eventMatches, distances, numSourceAz, numSiteToSourceAz);
 					List<RotationSpec> rotations = config.getRotations();
 					if (rank == 0)
@@ -189,7 +189,7 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 	protected void calculateBatch(int[] batch) throws Exception {
 		if (rank == 0 && csvsToWrite != null) {
 			debug("flushing CSVs to disk...");
-			for (RotatedRupVariabilityConfig config : csvsToWrite.keySet())
+			for (RSQSimRotatedRupVariabilityConfig config : csvsToWrite.keySet())
 				config.writeCSV(csvsToWrite.get(config));
 			debug("done flushing CSVs to disk.");
 			csvsToWrite = null;
@@ -227,11 +227,11 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 	private class Config {
 		private final RuptureType rupType;
 		private final double mag;
-		private final RotatedRupVariabilityConfig config;
+		private final RSQSimRotatedRupVariabilityConfig config;
 		private final RotationSpec rotation;
 		private final File eventDir;
 		
-		public Config(RuptureType rupType, double mag, RotatedRupVariabilityConfig config, RotationSpec rotation, File eventDir) {
+		public Config(RuptureType rupType, double mag, RSQSimRotatedRupVariabilityConfig config, RotationSpec rotation, File eventDir) {
 			this.rupType = rupType;
 			this.mag = mag;
 			this.config = config;

@@ -11,39 +11,34 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.opensha.commons.data.Site;
-import org.opensha.commons.geo.Location;
-import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.srf.SRF_PointData;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
+import mpi.MPI;
 import scratch.kevin.bbp.BBP_Site;
+import scratch.kevin.bbp.BBP_SourceFile;
 import scratch.kevin.bbp.MPJ_BBP_Utils;
-import scratch.kevin.simulators.ruptures.AbstractMPJ_BBP_MultiRupSim;
+import scratch.kevin.simulators.ruptures.AbstractMPJ_BBP_Sim;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.MPJ_BBP_PartBSim;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
-public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_MultiRupSim {
+public class MPJ_BBP_GP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Sim {
 
 	private List<BBP_Site> sites;
 	private Map<Site, BBP_Site> siteToBBPSites;
 	
 	private List<Config> configs;
 	
-	private MPJ_BBP_RotatedRupVariabilityScenarioSim(CommandLine cmd) throws IOException {
+	private MPJ_BBP_GP_RotatedRupVariabilityScenarioSim(CommandLine cmd) throws IOException {
 		super(cmd);
 		this.shuffle = false; // do them in order for better caching
 		
-		int skipYears = -1;
-		if (cmd.hasOption("skip-years"))
-			skipYears = Integer.parseInt(cmd.getOptionValue("skip-years"));
-		
-		int maxRups = Integer.MAX_VALUE;
-		if (cmd.hasOption("max-ruptures"))
-			maxRups = Integer.parseInt(cmd.getOptionValue("max-ruptures"));
+		int numRups = Integer.parseInt(cmd.getOptionValue("num-ruptures"));
 		
 		File sitesFile = new File(cmd.getOptionValue("sites-file"));
 		Preconditions.checkState(sitesFile.exists());
@@ -63,6 +58,8 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 		double[] distances = MPJ_BBP_PartBSim.getDistances(cmd);
 		Scenario[] scenarios = MPJ_BBP_PartBSim.getScenarios(cmd);
 		
+		double patchArea = Double.parseDouble(cmd.getOptionValue("patch-area"));
+		
 		configs = new ArrayList<>();
 		
 		for (int s=0; s<scenarios.length; s++) {
@@ -71,21 +68,29 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 			if (rank == 0)
 				debug("Loading matches for scenario: "+scenario);
 			
-			List<RSQSimEvent> eventMatches = scenario.getMatches(catalog, skipYears);
-			
+			File rupDir = new File(mainOutputDir, "rups_"+scenario.getPrefix());
 			if (rank == 0)
-				debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);
-			
-			if (eventMatches.size() > maxRups) {
-				eventMatches = scenario.selectBestMatches(eventMatches, maxRups);
-				debug("trimmed down to max of "+eventMatches.size()+" ruptures");
+				MPJ_BBP_Utils.waitOnDir(rupDir, 5, 1000);
+			// build them
+			List<Integer> myIndexes = new ArrayList<>();
+			for (int i=0; i<numRups; i++) {
+				if (i % size == rank) {
+					// my responsibility
+					if (!new File(rupDir, "rup_"+i+".srf").exists())
+						myIndexes.add(i);
+				}
 			}
-			
-			if (eventMatches.isEmpty()) {
-				if (rank == 0)
-					debug("skipping...");
-				continue;
+			MPI.COMM_WORLD.Barrier();
+			if (!myIndexes.isEmpty()) {
+				debug("Building "+myIndexes.size()+" SRFs");
+				List<GPRotatedRupture> rups = GPRotatedRupVariabilityConfig.buildRuptures(
+						scenario, myIndexes, patchArea);
+				MPJ_BBP_Utils.waitOnDir(rupDir, 5, 1000);
+				GPRotatedRupVariabilityConfig.writeRuptures(rupDir, rups);
 			}
+			MPI.COMM_WORLD.Barrier();
+			
+			List<GPRotatedRupture> ruptures = GPRotatedRupVariabilityConfig.readRuptures(rupDir, numRups);
 			
 			File scenarioDir = new File(resultsDir, scenario.getPrefix());
 			
@@ -94,9 +99,9 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 			
 			if (rank == 0)
 				debug("Creating rotations for "+numSourceAz+" source azimuths, "+numSiteToSourceAz+" site-source azimuths, "
-						+distances.length+" distances, and "+eventMatches.size()+" events");
-			RSQSimRotatedRupVariabilityConfig config = new RSQSimRotatedRupVariabilityConfig(
-					catalog, gmpeSites, eventMatches, distances, numSourceAz, numSiteToSourceAz);
+						+distances.length+" distances, and "+ruptures.size()+" events");
+			GPRotatedRupVariabilityConfig config = new GPRotatedRupVariabilityConfig(gmpeSites, ruptures,
+					distances, numSourceAz, numSiteToSourceAz);
 			List<RotationSpec> rotations = config.getRotations();
 			if (rank == 0)
 				debug("Created "+rotations.size()+" rotations");
@@ -110,9 +115,9 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 					if (rank == 0)
 						MPJ_BBP_Utils.waitOnDir(siteDistDir, 10, 2000);
 					siteDistDirTable.put(site, (float)distance, siteDistDir);
-					for (RSQSimEvent event : eventMatches) {
-						File eventDir = new File (siteDistDir, "event_"+event.getID());
-						eventDirTable.put(siteDistDir, event.getID(), eventDir);
+					for (GPRotatedRupture event : ruptures) {
+						File eventDir = new File (siteDistDir, "event_"+event.eventID);
+						eventDirTable.put(siteDistDir, event.eventID, eventDir);
 						if (rank == 0)
 							MPJ_BBP_Utils.waitOnDir(eventDir, 10, 2000);
 					}
@@ -129,11 +134,11 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 	
 	private class Config {
 		private final Scenario scenario;
-		private final RSQSimRotatedRupVariabilityConfig config;
+		private final GPRotatedRupVariabilityConfig config;
 		private final RotationSpec rotation;
 		private final File eventDir;
 		
-		public Config(Scenario scenario, RSQSimRotatedRupVariabilityConfig config, RotationSpec rotation, File eventDir) {
+		public Config(Scenario scenario, GPRotatedRupVariabilityConfig config, RotationSpec rotation, File eventDir) {
 			this.scenario = scenario;
 			this.config = config;
 			this.rotation = rotation;
@@ -141,8 +146,7 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 		}
 	}
 	
-	@Override
-	protected RSQSimEvent eventForIndex(int index) {
+	protected GPRotatedRupture eventForIndex(int index) {
 		Config config = configs.get(index);
 		return config.config.getRotatedRupture(config.rotation);
 	}
@@ -165,11 +169,23 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 	protected int getNumTasks() {
 		return configs.size();
 	}
+
+	@Override
+	protected List<SRF_PointData> getSRFPoints(int index) throws IOException {
+		Config config = configs.get(index);
+		return config.config.getRotatedRupture(config.rotation).srf;
+	}
+
+	@Override
+	protected BBP_SourceFile getBBPSource(int index) {
+		Config config = configs.get(index);
+		return config.config.getRotatedRupture(config.rotation).src;
+	}
 	
 	static void addRotatedRupOptions(Options ops) {
-		Option numSites = new Option("mr", "max-ruptures", true, "Maximum number of ruptures per scenario");
-		numSites.setRequired(false);
-		ops.addOption(numSites);
+		Option numRups = new Option("nr", "num-ruptures", true, "Number of ruptures per scenario");
+		numRups.setRequired(true);
+		ops.addOption(numRups);
 		
 		Option skipYears = new Option("skip", "skip-years", true, "Skip the given number of years at the start");
 		skipYears.setRequired(false);
@@ -182,6 +198,10 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 		Option nSiteSourceAz = new Option("nsitesrc", "num-site-source-az", true, "Num site to source source rotation azimuths");
 		nSiteSourceAz.setRequired(true);
 		ops.addOption(nSiteSourceAz);
+		
+		Option patchArea = new Option("pa", "patch-area", true, "Patch area in square kilometers");
+		patchArea.setRequired(true);
+		ops.addOption(patchArea);
 	}
 	
 	public static Options createOptions() {
@@ -202,9 +222,9 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 			
 			Options options = createOptions();
 			
-			CommandLine cmd = parse(options, args, MPJ_BBP_PartBSim.class);
+			CommandLine cmd = parse(options, args, MPJ_BBP_GP_RotatedRupVariabilityScenarioSim.class);
 			
-			MPJ_BBP_RotatedRupVariabilityScenarioSim driver = new MPJ_BBP_RotatedRupVariabilityScenarioSim(cmd);
+			MPJ_BBP_GP_RotatedRupVariabilityScenarioSim driver = new MPJ_BBP_GP_RotatedRupVariabilityScenarioSim(cmd);
 			driver.run();
 			
 			finalizeMPJ();
