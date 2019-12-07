@@ -124,7 +124,7 @@ public class FaultSystemRuptureRateInversion {
 	// rupture attributes
 	int numRuptures;
 	private String[] rupNameShort;
-	private double[] rupLength, rupArea, rupMeanMag, rupMeanMo, rupMoRate, totRupRate,rupAveSlip, rupAveRake;
+	private double[] rupLength, rupArea, rupMeanMag, rupMeanMo, rupMoRateMax, rupAveSlip, rupAveRake; // rupMoRateMax is the moment rate available if the rupture is the only one on the sections
 	private double minRupMag, maxRupMag,minRupMagWithAleatory, maxRupMagWithAleatory;
 	double[] rupRateSolution; // these are the rates from the inversion (not total rate of MFD)
 	
@@ -1331,17 +1331,21 @@ public class FaultSystemRuptureRateInversion {
 		int num = (int)Math.round((maxMagMFD_WithAleatory-minMagMFD_WithAleatory)/MAG_DELTA + 1);
 		if(num==1) num=2;
 		magFreqDist = new SummedMagFreqDist(minMagMFD_WithAleatory,num,MAG_DELTA);
+		double totRupMoRate = 0;
 		for(int rup=0; rup<numRuptures;rup++) {
 			if(GAUSS_MFD_SIGMA==0d) {
 				int index = magFreqDist.getClosestXIndex(rupMeanMag[rup]);
 				magFreqDist.add(index, rupRateSolution[rup]);
 				// the following produces different results
 //				magFreqDist.addResampledMagRate(rupMeanMag[rup], rupRateSolution[rup], true);
+				totRupMoRate += rupRateSolution[rup]*rupMeanMo[rup];
 			}
 			else {
 				GaussianMagFreqDist gDist = new GaussianMagFreqDist(minMagMFD_WithAleatory,num,MAG_DELTA,rupMeanMag[rup],GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
 				gDist.scaleToCumRate(0, rupRateSolution[rup]);
 				magFreqDist.addIncrementalMagFreqDist(gDist);
+//				totRupMoRate += magFreqDist.getTotalMomentRate();
+				totRupMoRate += rupRateSolution[rup]*rupMeanMo[rup]*gaussMFD_slipCorr;
 			}
 		}
 		magFreqDist.setInfo("Incremental Mag Freq Dist");
@@ -1349,10 +1353,11 @@ public class FaultSystemRuptureRateInversion {
 		
 		// check moment rate
 		double origMoRate = totMoRate*(1-moRateReduction);
-		double ratio = origMoRate/magFreqDist.getTotalMomentRate();
-		String tempString = "Moment Rates: from Fault Sections (possible reduced) = "+ (float)origMoRate+
-				";  from total MFD = "+(float)magFreqDist.getTotalMomentRate()+
-				",  ratio = "+(float)ratio;
+		double mfdRatio = origMoRate/magFreqDist.getTotalMomentRate();
+		String tempString = "Moment Rates: \n\n\tFrom Fault Sections (possibly reduced) = "+ (float)origMoRate+
+				"\n\tSum From Rups = "+(float)totRupMoRate+",  ratio = "+(float)(totRupMoRate/origMoRate)+
+				"\n\tFrom total MFD = "+(float)magFreqDist.getTotalMomentRate()+
+				",  ratio = "+(float)mfdRatio;
 		if(D)
 			System.out.println(tempString+"\n");
 		modelRunInfoString += "\n"+ tempString+"\n";
@@ -1604,7 +1609,7 @@ public class FaultSystemRuptureRateInversion {
 		if(mfdNumRows>0) 
 			resultsString += "MFD Rates  \t"+(float)mfdErr+"\t"+(float)mfdRMS+"\t"+(float)mfdDiff+"\t"+relativeMFD_constraintWt+"\n";
 		if(totRateNumRows>0)
-			resultsString += "Tot Rates  \t"+(float)totRateErr+"\t"+(float)totRateRMS+"\t"+(float)totRateDiff+"\t"+relativeTotalRateConstraintWt+"\n";
+			resultsString += "Total Rate \t"+(float)totRateErr+"\t"+(float)totRateRMS+"\t"+(float)totRateDiff+"\t"+relativeTotalRateConstraintWt+"\n";
 		
 		return resultsString;
 	}
@@ -2398,6 +2403,7 @@ public class FaultSystemRuptureRateInversion {
 		rupNameShort = new String[numRuptures];
 		rupLength = new double[numRuptures];
 		rupArea = new double[numRuptures];
+		rupMoRateMax = new double[numRuptures];
 		rupAveRake = new double[numRuptures];
 		numSectInRup = new int[numRuptures];
 		firstSectOfRup = new int[numRuptures];
@@ -2409,6 +2415,7 @@ public class FaultSystemRuptureRateInversion {
 				if(rupSectionMatrix[s][r] == 1) {
 					rupLength[r] += sectLength[s];
 					rupArea[r] += sectArea[s];
+					rupMoRateMax[r] += sectMoRate[s];
 					rupAveRake[r] += sectRake[s];
 					numSectInRup[r] += 1;
 					if(!foundFirstSect) {
@@ -2723,7 +2730,9 @@ public class FaultSystemRuptureRateInversion {
 	public double[] getRupRatesForTargetMFD(IncrementalMagFreqDist targetMFD) {
 		double[] rupRateArray = new double[this.numRuptures];
 		for(int r=0;r<numRuptures;r++) {
-			rupRateArray[r] = targetMFD.getClosestYtoX(rupMeanMag[r])/meanMagHistorgram.getClosestYtoX(rupMeanMag[r]);
+			int index = targetMFD.getClosestXIndex(rupMeanMag[r]);
+			rupRateArray[r] = targetMFD.getY(index)/meanMagHistorgram.getY(index);
+//			rupRateArray[r] = targetMFD.getClosestYtoX(rupMeanMag[r])/meanMagHistorgram.getClosestYtoX(rupMeanMag[r]);
 		}
 		return rupRateArray;
 	}
@@ -2754,6 +2763,89 @@ public class FaultSystemRuptureRateInversion {
 		
 		setMiscRunInfo();
 	}
+	
+	/**
+	 * This sets the rate of each rupture as the rupMoRateMax*totMoRate/totMaxMoRate, where rupMoRateMax is the sum of 
+	 * the moment rate of sections involved, and totMaxMoRate is the sum of rupMoRateMax over all ruptures.  This model
+	 * is described in Visini et al., 2019, Pure Appl. Geophys, https://doi.org/10.1007/s00024-019-02114-6.
+	 * @param
+	 */
+	public void doSUNFiSH_Solution() {
+		
+		modelRunInfoString = "\nInversion Type = SUNFiSH Solution\n";
+		
+		double totMaxMoRate = 0;
+		for(int r=0;r<numRuptures;r++) {
+			totMaxMoRate += rupMoRateMax[r];
+		}
+		double[] rupMoRateArray = new double[numRuptures];
+		for(int r=0;r<numRuptures;r++) {
+			rupMoRateArray[r] = rupMoRateMax[r]*totMoRate/totMaxMoRate;
+		}
+		rupRateSolution = new double[numRuptures];
+		for(int r=0;r<numRuptures;r++) {
+			rupRateSolution[r] = rupMoRateArray[r]/rupMeanMo[r];
+		}
+
+		// MINIMUM RATE CONSTRAINT IS INGORED
+
+		// compute predicted data
+		d_pred = new double[totNumRows];  // predicted data vector
+		for(int row=0;row<totNumRows; row++)
+			for(int col=0; col <numRuptures; col++)
+				d_pred[row] += rupRateSolution[col]*C[row][col];
+				
+		// Compute final segment slip rates and event rates
+		computeFinalStuff();
+		
+		computeSegMFDs();
+		
+		setMiscRunInfo();
+	}
+
+	
+	
+	/**
+	 * This sets the rate of each rupture from the supplied MFD, weighted by rupMoRateMax (the sum of the
+	 * the moment rate of sections involved in each rupture.  This model is described in 
+	 * Visini et al., 2019, Pure Appl. Geophys, https://doi.org/10.1007/s00024-019-02114-6.
+	 * @param targetMFD
+	 */
+	public void doFRESH_Solution(IncrementalMagFreqDist targetMFD) {
+		
+		modelRunInfoString = "\nInversion Type = FRESH Solution\n";
+		
+		SummedMagFreqDist mfdWt = new SummedMagFreqDist(minMagMFD,targetMFD.size(),MAG_DELTA);
+
+		for(int r=0;r<numRuptures;r++) {
+			int index = targetMFD.getClosestXIndex(rupMeanMag[r]);
+			mfdWt.add(index, rupMoRateMax[r]);
+		}
+		rupRateSolution = new double[numRuptures];
+		for(int r=0;r<numRuptures;r++) {
+			int index = targetMFD.getClosestXIndex(rupMeanMag[r]);
+			rupRateSolution[r] = targetMFD.getY(index)*rupMoRateMax[r]/mfdWt.getY(index);
+//System.out.println(r+"\t"+index+"\t"+rupMeanMag[r]+"\t"+rupRateSolution[r]+"\t"+rupMoRateMax[r]);
+		}
+//System.exit(1);
+
+
+		// MINIMUM RATE CONSTRAINT IS INGORED
+
+		// compute predicted data
+		d_pred = new double[totNumRows];  // predicted data vector
+		for(int row=0;row<totNumRows; row++)
+			for(int col=0; col <numRuptures; col++)
+				d_pred[row] += rupRateSolution[col]*C[row][col];
+				
+		// Compute final segment slip rates and event rates
+		computeFinalStuff();
+		
+		computeSegMFDs();
+		
+		setMiscRunInfo();
+	}
+
 	
 	/**
 	 * This enables one to add info to the modelRunInfoString (such as runtime)
