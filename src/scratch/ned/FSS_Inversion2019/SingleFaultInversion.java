@@ -1486,8 +1486,9 @@ public class SingleFaultInversion {
 
 		// this took 118 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-
+//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
+//	FINISH ABOVE ********
+		
 		// this took 16 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, false, 2);
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, false, 2);
@@ -1532,7 +1533,7 @@ public class SingleFaultInversion {
 		// E=1348 for this:
 //		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);	
 		// E=1336 for this (should be same as above):
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
+		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
 
 		// this has E=86:
 //		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MAX_RATE);	
