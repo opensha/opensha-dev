@@ -22,6 +22,7 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.MPJ_BBP_Utils;
 import scratch.kevin.simulators.ruptures.AbstractMPJ_BBP_MultiRupSim;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.MPJ_BBP_PartBSim;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
@@ -63,6 +64,8 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 		double[] distances = MPJ_BBP_PartBSim.getDistances(cmd);
 		Scenario[] scenarios = MPJ_BBP_PartBSim.getScenarios(cmd);
 		
+		FilterMethod filter = MPJ_BBP_PartBSim.getFilterMethod(cmd);
+		
 		configs = new ArrayList<>();
 		
 		for (int s=0; s<scenarios.length; s++) {
@@ -77,7 +80,7 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 				debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);
 			
 			if (eventMatches.size() > maxRups) {
-				eventMatches = scenario.selectBestMatches(eventMatches, maxRups);
+				eventMatches = filter.filter(eventMatches, maxRups, catalog, scenario.getMagnitude());
 				debug("trimmed down to max of "+eventMatches.size()+" ruptures");
 			}
 			

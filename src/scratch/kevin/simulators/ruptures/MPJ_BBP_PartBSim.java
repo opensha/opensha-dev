@@ -25,6 +25,7 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import oracle.net.aso.i;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.MPJ_BBP_Utils;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 
 public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
@@ -79,6 +80,8 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		List<RSQSimEvent> allEvents = catalog.loader().skipYears(skipYears).matches(new LogicalOrRupIden(magIdens)).load();
 		debug("Loaded "+allEvents.size()+" potential matches");
 		
+		FilterMethod filter = getFilterMethod(cmd);
+		
 		for (int s=0; s<scenarios.length; s++) {
 			Scenario scenario = scenarios[s];
 			if (rank == 0)
@@ -86,7 +89,7 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 			
 			List<RSQSimEvent> eventMatches = new LogicalAndRupIden(scenarioIdens.get(s)).getMatches(allEvents);
 			if (maxRuptures > 0)
-				eventMatches = scenario.selectBestMatches(eventMatches, maxRuptures);
+				eventMatches = filter.filter(eventMatches, maxRuptures, catalog, scenario.getMagnitude());
 			
 			if (rank == 0)
 				debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);
@@ -144,6 +147,12 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		}
 	}
 	
+	public static FilterMethod getFilterMethod(CommandLine cmd) {
+		if (cmd.hasOption("filter"))
+			return FilterMethod.valueOf(cmd.getOptionValue("filter"));
+		return BBP_PartBValidationConfig.FILTER_METHOD_DEFAULT;
+	}
+	
 	static String getDirName(Scenario scenario, int eventID, double distance) {
 		return scenario.getPrefix()+"_event_"+eventID+"_dist_"+(float)distance;
 	}
@@ -188,6 +197,10 @@ public class MPJ_BBP_PartBSim extends AbstractMPJ_BBP_MultiRupSim {
 		Option scenarios = new Option("scen", "scenarios", true, "BBP Part B Scenario names (comma separated). Default is all");
 		scenarios.setRequired(false);
 		ops.addOption(scenarios);
+		
+		Option filter = new Option("fil", "filter", true, "Filter method (for when there are more matches than allowed)");
+		filter.setRequired(false);
+		ops.addOption(filter);
 		
 		Option distances = new Option("d", "distances", true, "Distances to consider");
 		distances.setRequired(false);

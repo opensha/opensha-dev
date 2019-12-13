@@ -16,6 +16,8 @@ import com.google.common.base.Preconditions;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.MPJ_BBP_CatalogSimScriptGen;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.rotation.RSQSimRotatedRupVariabilityMagDistPageGen.RuptureType;
@@ -32,6 +34,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 
 //		RuptureType[] rupTypes = RuptureType.values();
 		RuptureType[] rupTypes = { RuptureType.REVERSE };
+		FilterMethod filter = BBP_PartBValidationConfig.FILTER_METHOD_DEFAULT;
 		boolean writeIndividual = true;
 		
 		VelocityModel vm = RSQSimBBP_Config.VM;
@@ -102,6 +105,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 			jobName += "-"+rupTypes[0].getPrefix();
 		else
 			jobName += "-"+rupTypes.length+"types";
+		jobName += "-filter_"+filter.getPrefix();
 		jobName += "-"+numDist+"dists";
 		jobName += "-"+numMag+"mags";
 		jobName += "-"+numSourceAz+"srcAz-"+numSiteToSourceAz+"siteSrcAz";
@@ -122,7 +126,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		Preconditions.checkState(localJobDir.exists() || localJobDir.mkdir());
 		File remoteJobDir = new File(remoteDir, jobName);
 		
-		writeScript(catalogDirName, skipYears, rupTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
+		writeScript(catalogDirName, skipYears, rupTypes, filter, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
 				numSiteToSourceAz, minRuptures, maxRuptures, timeScalar, scaleVelocities, threads, nodes, queue, mins,
 				bbpDataDir, nodeGFDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
 				localJobDir, remoteJobDir, "cat_bbp_rotated.slurm", vm);
@@ -131,7 +135,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 				RuptureType[] myTypes = { rupType };
 				File myRemoteDir = new File(remoteJobDir, rupType.getPrefix());
 				new File(localJobDir, rupType.getPrefix()).mkdir();
-				writeScript(catalogDirName, skipYears, myTypes, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
+				writeScript(catalogDirName, skipYears, myTypes, filter, minDist, numDist, deltaDist, minMag, numMag, deltaMag, numSourceAz,
 						numSiteToSourceAz, minRuptures, maxRuptures, timeScalar, scaleVelocities, threads, nodes, queue, mins,
 						bbpDataDir, nodeGFDir, nodeScratchDir, bbpCopyParentDir, bbpEnvFile, sharedScratchDir, pbsWrite, mpjWrite,
 						localJobDir, myRemoteDir, rupType.getPrefix()+".slurm", vm);
@@ -139,7 +143,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		}
 	}
 
-	private static void writeScript(String catalogDirName, int skipYears, RuptureType[] rupTypes, double minDist, int numDist,
+	private static void writeScript(String catalogDirName, int skipYears, RuptureType[] rupTypes, FilterMethod filter, double minDist, int numDist,
 			double deltaDist, double minMag, int numMag, double deltaMag, int numSourceAz, int numSiteToSourceAz,
 			int minRuptures, int maxRuptures, double timeScalar, boolean scaleVelocities, int threads, int nodes,
 			String queue, int mins, String bbpDataDir, String nodeGFDir, String nodeScratchDir, String bbpCopyParentDir,
@@ -152,6 +156,7 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
 		argz += " --skip-years "+skipYears;
 		argz += " --rupture-type "+rupTypes[0].name();
+		argz += " --filter "+filter.name();
 		for (int i=1; i<rupTypes.length; i++)
 			argz += ","+rupTypes[i].name();
 		argz += " --min-distance "+minDist+" --num-distance "+numDist+" --delta-distance "+deltaDist;

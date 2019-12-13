@@ -40,6 +40,7 @@ import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
@@ -134,9 +135,9 @@ public class RSQSimRotatedRupVariabilityMagDistPageGen extends RSQSimRotatedRupV
 	private double minMag;
 	private Map<Double, RSQSimRotatedRupVariabilityConfig> magConfigs;
 
-	public RSQSimRotatedRupVariabilityMagDistPageGen(RSQSimCatalog catalog, Map<Double, RSQSimRotatedRupVariabilityConfig> magConfigs,
+	public RSQSimRotatedRupVariabilityMagDistPageGen(RSQSimCatalog catalog, FilterMethod filter, Map<Double, RSQSimRotatedRupVariabilityConfig> magConfigs,
 			Map<Double, SimulationRotDProvider<RotationSpec>> magProvs, RuptureType ruptureType, double[] calcPeriods) {
-		super(catalog, magConfigs, magProvs, calcPeriods);
+		super(catalog, filter, magConfigs, magProvs, calcPeriods);
 		this.magConfigs = magConfigs;
 		minMag = Double.POSITIVE_INFINITY;
 		for (Double mag : magConfigs.keySet())
@@ -205,6 +206,7 @@ public class RSQSimRotatedRupVariabilityMagDistPageGen extends RSQSimRotatedRupV
 		File[] allBBPDirs = bbpParallelDir.listFiles();
 		Arrays.sort(allBBPDirs, new FileNameComparator());
 		List<File> matchingZipFiles = new ArrayList<>();
+		FilterMethod filter = null;
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
 			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-rotatedRupsMagDist-")) {
@@ -215,6 +217,9 @@ public class RSQSimRotatedRupVariabilityMagDistPageGen extends RSQSimRotatedRupV
 					VelocityModel newVM = RSQSimBBP_Config.detectVM(dir);
 					if (forceVM != null && forceVM != newVM)
 						continue;
+					FilterMethod myFilter = FilterMethod.fromDirName(name);
+					Preconditions.checkState(filter == null || filter == myFilter, "filter mismatch, TODO");
+					filter = myFilter;
 					if (newVM != vm && !matchingZipFiles.isEmpty()) {
 						System.out.println("We switched VMs, only using most recent");
 						matchingZipFiles.clear();
@@ -278,7 +283,7 @@ public class RSQSimRotatedRupVariabilityMagDistPageGen extends RSQSimRotatedRupV
 					continue;
 				
 				RSQSimRotatedRupVariabilityMagDistPageGen pageGen =
-						new RSQSimRotatedRupVariabilityMagDistPageGen(catalog, configsMap, loadersMap, rupType, calcPeriods);
+						new RSQSimRotatedRupVariabilityMagDistPageGen(catalog, filter, configsMap, loadersMap, rupType, calcPeriods);
 				
 				pageGen.setGMPEs(refGMPEs);
 				
@@ -297,7 +302,7 @@ public class RSQSimRotatedRupVariabilityMagDistPageGen extends RSQSimRotatedRupV
 			
 			pageGen.setEventsMap(eventsMap);
 			
-			File rotDir = new File(vmDir, "rotated_ruptures_mag_dist_"+rupType.getPrefix());
+			File rotDir = new File(vmDir, "rotated_ruptures_mag_dist_"+rupType.getPrefix()+"_filter_"+filter.getPrefix());
 			Preconditions.checkState(rotDir.exists() || rotDir.mkdir());
 			
 			List<String> methodSpecificLines = new ArrayList<>();

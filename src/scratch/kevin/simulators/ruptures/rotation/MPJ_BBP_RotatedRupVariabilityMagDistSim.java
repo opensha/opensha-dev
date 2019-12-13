@@ -25,6 +25,7 @@ import scratch.kevin.simulators.ruptures.AbstractMPJ_BBP_MultiRupSim;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.MPJ_BBP_PartBSim;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 import scratch.kevin.simulators.ruptures.rotation.RSQSimRotatedRupVariabilityMagDistPageGen.RuptureType;
@@ -87,6 +88,8 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 		if (rank == 0)
 			csvsToWrite = new HashMap<>();
 		
+		FilterMethod filter = MPJ_BBP_PartBSim.getFilterMethod(cmd);
+		
 		for (int r=0; r<rupTypes.length; r++) {
 			RuptureType rupType = rupTypes[r];
 			
@@ -129,7 +132,7 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 						debug("Loaded "+eventMatches.size()+" matches for scenario: "+rupType+", M="+(float)mag);
 					
 					if (eventMatches.size() > maxRups) {
-						eventMatches = BBP_PartBValidationConfig.getClosestMagMatches(mag, eventMatches, maxRups);
+						eventMatches = filter.filter(eventMatches, maxRups, catalog, mag);
 						if (rank == 0)
 							debug("trimmed down to max of "+eventMatches.size()+" ruptures");
 					}
@@ -303,6 +306,10 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 		Option rupTypeOp = new Option("rt", "rupture-type", true, "Rupture type(s), comma separated");
 		rupTypeOp.setRequired(true);
 		ops.addOption(rupTypeOp);
+		
+		Option filter = new Option("fil", "filter", true, "Filter method (for when there are more matches than allowed)");
+		filter.setRequired(false);
+		ops.addOption(filter);
 		
 		return ops;
 	}

@@ -42,6 +42,7 @@ import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.erf.RSQSimSectBundledERF.RSQSimProbEqkRup;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.rotation.RSQSimRotatedRupVariabilityConfig;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
@@ -371,11 +372,11 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		System.out.println("\tMax: "+(float)momentStats.getMax());
 	}
 	
-	private static List<RSQSimEvent> getScenarioEvents(RSQSimCatalog catalog, Scenario scenario, int skipYears, int maxRuptures)
+	private static List<RSQSimEvent> getScenarioEvents(RSQSimCatalog catalog, Scenario scenario, FilterMethod filter, int skipYears, int maxRuptures)
 			throws IOException {
 		List<RSQSimEvent> ruptures = scenario.getMatches(catalog, skipYears);
 		if (maxRuptures > 0 && ruptures.size() > maxRuptures)
-			ruptures = BBP_PartBValidationConfig.getClosestMagMatches(scenario.getMagnitude(), ruptures, maxRuptures);
+			ruptures = filter.filter(ruptures, maxRuptures, catalog, scenario.getMagnitude());
 		return ruptures;
 	}
 	
@@ -587,6 +588,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		
 //		double dt = 0.05;
 		double dt = 0.1;
+		FilterMethod filter = BBP_PartBValidationConfig.FILTER_METHOD_DEFAULT;
 		SRFInterpolationMode interpMode = SRFInterpolationMode.ADJ_VEL;
 		double momentPDiffThreshold = 2;
 		
@@ -624,7 +626,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			
 			for (Scenario scenario : scenarios) {
 				System.out.println("Loading ruptures for "+scenario);
-				List<RSQSimEvent> ruptures = getScenarioEvents(catalog, scenario, skipYears, maxRuptures);
+				List<RSQSimEvent> ruptures = getScenarioEvents(catalog, scenario, filter, skipYears, maxRuptures);
 				System.out.println("Loaded "+ruptures.size()+" ruptures");
 				
 				System.out.println("Building rotation config...");

@@ -25,6 +25,7 @@ import com.google.common.primitives.Floats;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.bbp.BBP_Site;
 
 class MPJ_BBP_PartBSimScriptGen {
@@ -44,6 +45,7 @@ class MPJ_BBP_PartBSimScriptGen {
 		
 		VelocityModel vm = RSQSimBBP_Config.VM;
 		float[] distances = { 20, 50, 100 };
+		FilterMethod filter = BBP_PartBValidationConfig.FILTER_METHOD_DEFAULT;
 		
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
@@ -94,6 +96,7 @@ class MPJ_BBP_PartBSimScriptGen {
 			if (scaleVelocities)
 				jobName += "-velScale";
 		}
+		jobName += "-filter_"+filter.getPrefix();
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -110,6 +113,7 @@ class MPJ_BBP_PartBSimScriptGen {
 		argz += " --distances "+Joiner.on(",").join(Floats.asList(distances));
 		if (maxRuptures > 0)
 			argz += " --max-ruptures "+maxRuptures;
+		argz += " --filter "+filter.name();
 		if (randomAz)
 			argz += " --random-azimuth";
 		if (!RSQSimBBP_Config.DO_HF)
