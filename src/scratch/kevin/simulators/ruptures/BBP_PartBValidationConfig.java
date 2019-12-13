@@ -26,6 +26,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.commons.util.IDPairing;
+import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -185,114 +186,51 @@ public class BBP_PartBValidationConfig {
 				0.2, true, // linearFrace, linearRelative
 				12, // width
 				false, false),
-		M7p2_VERT_SS_SURFACE_RANDMAG("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.1) ",
-				"M7.2 SS RndMag 0.1", "m7p2_vert_ss_surface_rnd_mag",
+		M7p2_VERT_SS_SURFACE_DM_0p1("M7.2, Vertical Strike-Slip with Surface Rupture (dM=0.1) ",
+				"M7.2 SS DM 0.1", "m7p2_vert_ss_surface_dm_0p1",
 				7.2, 0.1, // mag, tol
 				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
 				90, 0, // dip, dipTol
 				0, Range.closed(0d, 1d), // Ztor, range
 				0.05, true, // linearFract, linearRelative
 				12, // width
-				false, false) {// rXpositive, official
-			
-			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
-				if (maxNum >= matches.size())
-					return matches;
-				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
-				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
-				return subMatches.subList(0, maxNum);
-			}
-		},
-		M7p2_VERT_SS_SURFACE_RANDMAG_0p05("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.05) ",
-				"M7.2 SS RndMag 0.05", "m7p2_vert_ss_surface_rnd_mag_0p05",
-				7.2, 0.05, // mag, tol
-				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
-				90, 0, // dip, dipTol
-				0, Range.closed(0d, 1d), // Ztor, range
-				0.05, true, // linearFract, linearRelative
-				12, // width
-				false, false) {// rXpositive, official
-			
-			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
-				if (maxNum >= matches.size())
-					return matches;
-				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
-				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
-				return subMatches.subList(0, maxNum);
-			}
-		},
-		M7p2_VERT_SS_SURFACE_RANDMAG_0p15("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.15) ",
-				"M7.2 SS RndMag 0.15", "m7p2_vert_ss_surface_rnd_mag_0p15",
+				false, false), // rXpositive, official,
+		M7p2_VERT_SS_SURFACE_DM_0p15("M7.2, Vertical Strike-Slip with Surface Rupture (dM=0.15) ",
+				"M7.2 SS dM 0.15", "m7p2_vert_ss_surface_dm_0p15",
 				7.2, 0.15, // mag, tol
 				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
 				90, 0, // dip, dipTol
 				0, Range.closed(0d, 1d), // Ztor, range
 				0.05, true, // linearFract, linearRelative
 				12, // width
-				false, false) {// rXpositive, official
-			
-			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
-				if (maxNum >= matches.size())
-					return matches;
-				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
-				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
-				return subMatches.subList(0, maxNum);
-			}
-		},
-		M7p2_VERT_SS_SURFACE_RANDMAG_0p2("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.2) ",
-				"M7.2 SS RndMag 0.2", "m7p2_vert_ss_surface_rnd_mag_0p2",
+				false, false), // rXpositive, official,
+		M7p2_VERT_SS_SURFACE_DM_0p2("M7.2, Vertical Strike-Slip with Surface Rupture (dM=0.2) ",
+				"M7.2 SS dM 0.2", "m7p2_vert_ss_surface_dm_0p2",
 				7.2, 0.2, // mag, tol
 				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
 				90, 0, // dip, dipTol
 				0, Range.closed(0d, 1d), // Ztor, range
 				0.05, true, // linearFract, linearRelative
 				12, // width
-				false, false) {// rXpositive, official
-			
-			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
-				if (maxNum >= matches.size())
-					return matches;
-				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
-				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
-				return subMatches.subList(0, maxNum);
-			}
-		},
-		M7p2_VERT_SS_SURFACE_RANDMAG_0p25("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.25) ",
-				"M7.2 SS RndMag 0.25", "m7p2_vert_ss_surface_rnd_mag_0p25",
+				false, false), // rXpositive, official,
+		M7p2_VERT_SS_SURFACE_DM_0p25("M7.2, Vertical Strike-Slip with Surface Rupture (dM=0.25) ",
+				"M7.2 SS dM 0.25", "m7p2_vert_ss_surface_dm_0p25",
 				7.2, 0.25, // mag, tol
 				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
 				90, 0, // dip, dipTol
 				0, Range.closed(0d, 1d), // Ztor, range
 				0.05, true, // linearFract, linearRelative
 				12, // width
-				false, false) {// rXpositive, official
-			
-			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
-				if (maxNum >= matches.size())
-					return matches;
-				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
-				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
-				return subMatches.subList(0, maxNum);
-			}
-		},
-		M7p2_VERT_SS_SURFACE_RANDMAG_0p3("M7.2, Vertical Strike-Slip with Surface Rupture (randMag, Dm=0.3) ",
-				"M7.2 SS RndMag 0.3", "m7p2_vert_ss_surface_rnd_mag_0p3",
+				false, false), // rXpositive, official,
+		M7p2_VERT_SS_SURFACE_DM_0p3("M7.2, Vertical Strike-Slip with Surface Rupture (dM=0.3) ",
+				"M7.2 SS dM 0.3", "m7p2_vert_ss_surface_dm_0p3",
 				7.2, 0.3, // mag, tol
 				FaultStyle.STRIKE_SLIP, 10, // type, rakeTol
 				90, 0, // dip, dipTol
 				0, Range.closed(0d, 1d), // Ztor, range
 				0.05, true, // linearFract, linearRelative
 				12, // width
-				false, false) {// rXpositive, official
-			
-			public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
-				if (maxNum >= matches.size())
-					return matches;
-				List<RSQSimEvent> subMatches = new ArrayList<>(matches);
-				Collections.shuffle(subMatches, new Random(matches.size()*maxNum));
-				return subMatches.subList(0, maxNum);
-			}
-		};
+				false, false);// rXpositive, official
 		
 		private String name;
 		private String shortName;
@@ -480,12 +418,147 @@ public class BBP_PartBValidationConfig {
 		public String[] getMatchCriteria() {
 			return matchCriteria;
 		}
+	}
+	
+	public static FilterMethod FILTER_METHOD_DEFAULT = FilterMethod.SECT_VARIABILITY;
+	
+	public enum FilterMethod {
+		CLOSEST_MAG("Closest Mag", "closest_mag", "Selects the ruptures with magnitude closest to the target magnitude") {
+			@Override
+			public List<RSQSimEvent> filter(List<RSQSimEvent> allMatches, int maxNum, RSQSimCatalog catalog,
+					double mag) {
+				if (allMatches.size() <= maxNum)
+					return allMatches;
+				allMatches = new ArrayList<>(allMatches);
+				Collections.sort(allMatches, new MagDiffEventComparator(mag));
+				allMatches = allMatches.subList(0, maxNum);
+				Collections.sort(allMatches);
+				return allMatches;
+			}
+		},
+		RANDOM("Random", "random", "Randomly selects ruptures from all potential matches") {
+			@Override
+			public List<RSQSimEvent> filter(List<RSQSimEvent> allMatches, int maxNum, RSQSimCatalog catalog,
+					double mag) {
+				if (maxNum >= allMatches.size())
+					return allMatches;
+				List<RSQSimEvent> subMatches = new ArrayList<>(allMatches);
+				Collections.shuffle(subMatches, new Random(allMatches.size()*maxNum));
+				return subMatches.subList(0, maxNum);
+			}
+		},
+		SECT_VARIABILITY("Sect Variability", "sect_variable", "Minimizes parent fault section duplication") {
+			@Override
+			public List<RSQSimEvent> filter(List<RSQSimEvent> allMatches, int maxNum, RSQSimCatalog catalog,
+					double mag) {
+				if (maxNum >= allMatches.size())
+					return allMatches;
+				List<RSQSimEvent> randomized = new ArrayList<>(allMatches);
+				Random r = new Random(allMatches.size()*maxNum);
+				Collections.shuffle(randomized, r);
+				
+				Map<RSQSimEvent, HashSet<Integer>> eventParents = new HashMap<>();
+				for (RSQSimEvent e : randomized) {
+					HashSet<Integer> parents = new HashSet<>();
+					for (FaultSectionPrefData sect : catalog.getSubSectsForRupture(e))
+						parents.add(sect.getParentSectionId());
+					eventParents.put(e, parents);
+				}
+				Map<Integer, Integer> sectCounts = new HashMap<>();
+				
+				int maxPerParent = 0;
+				List<RSQSimEvent> ret = new ArrayList<>();
+				while (ret.size() < maxNum) {
+					// look for an event which doesn't involve a parent that has been used more than
+					// maxPerParent times
+					Preconditions.checkState(!randomized.isEmpty());
+					RSQSimEvent match = null;
+					for (int i=0; i<randomized.size(); i++) {
+						RSQSimEvent event = randomized.get(i);
+						HashSet<Integer> parents = eventParents.get(event);
+						int maxCount = 0;
+						for (Integer parent : parents) {
+							Integer count = sectCounts.get(parent);
+							if (count == null)
+								continue;
+							maxCount = Integer.max(maxCount, count);
+						}
+						if (maxCount > maxPerParent)
+							// at least one of the parents has already been used too often
+							continue;
+						// use this one, first increment counts for each parent
+						for (Integer parent : parents) {
+							Integer count = sectCounts.get(parent);
+							if (count == null)
+								count = 0;
+							sectCounts.put(parent, count+1);
+						}
+						// then remove it from the list
+						match = randomized.remove(i);
+						break;
+					}
+					if (match == null) {
+						// need to raise the threshold
+						maxPerParent++;
+					} else {
+						// we have a match
+						ret.add(match);
+					}
+				}
+				return ret;
+			}
+		};
 		
-		public List<RSQSimEvent> selectBestMatches(List<RSQSimEvent> matches, int maxNum) {
-			if (maxNum >= matches.size())
-				return matches;
-			return getClosestMagMatches(mag, matches, maxNum);
+		private String name;
+		private String prefix;
+		private String description;
+
+		private FilterMethod(String name, String prefix, String description) {
+			this.name = name;
+			this.prefix = prefix;
+			this.description = description;
 		}
+		
+		public String getName() {
+			return name;
+		}
+
+		public String getPrefix() {
+			return prefix;
+		}
+
+		public String getDescription() {
+			return description;
+		}
+
+		public abstract List<RSQSimEvent> filter(List<RSQSimEvent> allMatches, int maxNum, RSQSimCatalog catalog,
+				double mag);
+		
+		public static FilterMethod fromDirName(String dirName) {
+			for (FilterMethod method : values()) {
+				if (dirName.contains("-filter_"+method.prefix))
+					return method;
+			}
+			// this was the original scheme
+			return CLOSEST_MAG;
+		}
+	}
+	
+	private static class MagDiffEventComparator implements Comparator<RSQSimEvent> {
+		
+		private double targetMag;
+
+		public MagDiffEventComparator(double targetMag) {
+			this.targetMag = targetMag;
+		}
+
+		@Override
+		public int compare(RSQSimEvent e0, RSQSimEvent e1) {
+			double diff1 = Math.abs(e0.getMagnitude() - targetMag);
+			double diff2 = Math.abs(e1.getMagnitude() - targetMag);
+			return Double.compare(diff1, diff2);
+		}
+		
 	}
 	
 	public static String[] buildMatchCriteria(double mag, double magTolerance, Range<Double> zTorRange, FaultStyle style, int rakeTolerance,
@@ -563,33 +636,6 @@ public class BBP_PartBValidationConfig {
 	
 	public static double[] OFFICIAL_DISTANCES = { 20d, 50d };
 	public static Scenario[] OFFICIAL_SCENARIOS = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE};
-	
-	public static List<RSQSimEvent> getClosestMagMatches(double targetMag, List<RSQSimEvent> matches, int maxNum) {
-		if (matches.size() <= maxNum)
-			return matches;
-		matches = new ArrayList<>(matches);
-		Collections.sort(matches, new MagDiffEventComparator(targetMag));
-		matches = matches.subList(0, maxNum);
-		Collections.sort(matches);
-		return matches;
-	}
-	
-	private static class MagDiffEventComparator implements Comparator<RSQSimEvent> {
-		
-		private double targetMag;
-
-		public MagDiffEventComparator(double targetMag) {
-			this.targetMag = targetMag;
-		}
-
-		@Override
-		public int compare(RSQSimEvent e0, RSQSimEvent e1) {
-			double diff1 = Math.abs(e0.getMagnitude() - targetMag);
-			double diff2 = Math.abs(e1.getMagnitude() - targetMag);
-			return Double.compare(diff1, diff2);
-		}
-		
-	}
 	
 	private static DiscretizedFunc[] calcNGA2_Medians(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
 			double zTor, double width, double vs30) {

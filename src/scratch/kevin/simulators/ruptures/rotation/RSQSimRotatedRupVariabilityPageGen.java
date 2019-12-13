@@ -41,6 +41,7 @@ import com.google.common.primitives.Doubles;
 import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
@@ -50,15 +51,15 @@ public abstract class RSQSimRotatedRupVariabilityPageGen extends RotatedRupVaria
 	private Map<Integer, RSQSimEvent> eventsMap;
 
 	public RSQSimRotatedRupVariabilityPageGen(RSQSimCatalog catalog, RotatedRupVariabilityConfig<RSQSimEvent> config,
-			double mag, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
-		super(config, mag, prov, calcPeriods);
+			FilterMethod filter, double mag, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
+		super(config, filter, mag, prov, calcPeriods);
 	}
 	
 	public RSQSimRotatedRupVariabilityPageGen(RSQSimCatalog catalog,
-			Map<Double, ? extends RotatedRupVariabilityConfig<RSQSimEvent>> magConfigs,
+			FilterMethod filter, Map<Double, ? extends RotatedRupVariabilityConfig<RSQSimEvent>> magConfigs,
 			Map<Double, SimulationRotDProvider<RotationSpec>> magProvs,
 			double[] calcPeriods) {
-		super(magConfigs, magProvs, calcPeriods);
+		super(filter, magConfigs, magProvs, calcPeriods);
 	}
 	
 	@Override

@@ -47,6 +47,7 @@ import com.google.common.primitives.Ints;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 
 public class BBP_PartBValidationPageGen {
@@ -87,7 +88,7 @@ public class BBP_PartBValidationPageGen {
 		lines.add("This page reproduces the SCEC BroadBand Platform \"Part B\" validation exercise as defined in:");
 		lines.add("");
 		lines.add("*Goulet, C. A., Abrahamson, N. A., Somerville, P. G., & Wooddell, K. E. (2014). The SCEC broadband platform "
-				+ "validation exercise: Methodology for code validation in the context of seismic‐hazard analyses. "
+				+ "validation exercise: Methodology for code validation in the context of seismicâ€�hazard analyses. "
 				+ "Seismological Research Letters, 86(1), 17-26.* [(link)](https://pubs.geoscienceworld.org/ssa/srl/article/86/1/17/315438/"
 				+ "the-scec-broadband-platform-validation-exercise)");
 		lines.add("");
@@ -95,10 +96,10 @@ public class BBP_PartBValidationPageGen {
 				+ "against the NGA-West GMPEs (the original study used NGA-West1, we use NGA-West2) for scenario ruptures where the NGA "
 				+ "relations are well constrained:");
 		lines.add("");
-		lines.add("* M 5.5, 45°-dipping reverse, Ztor = 6 km");
+		lines.add("* M 5.5, 45Â°-dipping reverse, Ztor = 6 km");
 		lines.add("* M 6.2, vertical strike slip, Ztor = 4 km");
 		lines.add("* M 6.6, vertical strike slip with a surface rupture");
-		lines.add("* M 6.6, 45°-dipping reverse, Ztor = 3 km");
+		lines.add("* M 6.6, 45Â°-dipping reverse, Ztor = 3 km");
 		lines.add("");
 		lines.add("50 rupture realizations were generated for each scenario with randomly distributed hypocenters, and 40 sites were distributed "
 				+ "at random azimuths on the footwall side of the faults at rupture distances of 20 and 50 km. Resultant ground motions were "
@@ -561,7 +562,7 @@ public class BBP_PartBValidationPageGen {
 			// bottom line
 			funcs.add(line(boxLeft, minusSD, boxRight, minusSD));
 			if (firstMedian) {
-				funcs.get(funcs.size()-1).setName("± σ");
+				funcs.get(funcs.size()-1).setName("Â± Ïƒ");
 				firstMedian = false;
 			}
 			chars.add(boxChar);
@@ -717,6 +718,7 @@ public class BBP_PartBValidationPageGen {
 		System.out.println("Located ref BBP dir: "+bbpDir.getAbsolutePath());
 		System.out.println("\tInput file: "+bbpZipFile.getName());
 		System.out.println("\tNum sites: "+numSites);
+		FilterMethod filter = FilterMethod.fromDirName(bbpDir.getName());
 		
 		BBP_PartBSimZipLoader bbpLoader = new BBP_PartBSimZipLoader(bbpZipFile, numSites);
 		
@@ -727,7 +729,7 @@ public class BBP_PartBValidationPageGen {
 		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
 		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
 		
-		File partBDir = new File(vmDir, "bbp_part_b");
+		File partBDir = new File(vmDir, "bbp_part_b_filter_"+filter.getPrefix());
 		Preconditions.checkState(partBDir.exists() || partBDir.mkdir());
 		
 		BBP_PartBValidationPageGen pageGen = new BBP_PartBValidationPageGen(

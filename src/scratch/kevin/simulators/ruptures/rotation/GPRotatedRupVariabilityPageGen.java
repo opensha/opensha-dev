@@ -59,7 +59,7 @@ public abstract class GPRotatedRupVariabilityPageGen extends RotatedRupVariabili
 	
 	public GPRotatedRupVariabilityPageGen(GPRotatedRupVariabilityConfig config,
 			double mag, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
-		super(config, mag, prov, calcPeriods);
+		super(config, null, mag, prov, calcPeriods);
 		ruptures = config.getRuptureList();
 	}
 	
