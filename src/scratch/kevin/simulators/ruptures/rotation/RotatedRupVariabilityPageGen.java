@@ -119,6 +119,7 @@ import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.ruptures.ASK_EventData;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationPageGen;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
@@ -130,6 +131,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 	
 	private static final boolean D = false;
 
+	private FilterMethod filter;
+	
 	protected Map<Double, ? extends RotatedRupVariabilityConfig<E>> magConfigs;
 	protected Map<Double, SimulationRotDProvider<RotationSpec>> magProvs;
 	
@@ -145,7 +148,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 	private int minNumEvents = Integer.MAX_VALUE;
 	private Table<Double, Quantity, List<?>> magQuantitiesTable;
 	
-	private boolean replotAzimuthDependence = false;
+	private boolean replotAzimuthDependence = true;
 	
 	private LoadingCache<E, EqkRupture> gmpeEventCache;
 	
@@ -167,8 +170,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 	private boolean hasMagDist;
 
 	public RotatedRupVariabilityPageGen(RotatedRupVariabilityConfig<E> config,
-			double mag, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
-		this(emptyMagMap(mag, config), emptyMagMap(mag, prov), calcPeriods);
+			FilterMethod filter, double mag, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
+		this(filter, emptyMagMap(mag, config), emptyMagMap(mag, prov), calcPeriods);
 	}
 	
 	private static <T> HashMap<Double, T> emptyMagMap(double mag, T value) {
@@ -177,10 +180,11 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		return map;
 	}
 
-	public RotatedRupVariabilityPageGen(Map<Double, ? extends RotatedRupVariabilityConfig<E>> magConfigs,
+	public RotatedRupVariabilityPageGen(FilterMethod filter, Map<Double, ? extends RotatedRupVariabilityConfig<E>> magConfigs,
 			Map<Double, SimulationRotDProvider<RotationSpec>> magProvs, double[] calcPeriods) {
 		this.magConfigs = magConfigs;
 		this.magProvs = magProvs;
+		this.filter = filter;
 		this.calcPeriods = calcPeriods;
 		
 		RotatedRupVariabilityConfig<E> config0 = magConfigs.values().iterator().next();
@@ -333,25 +337,25 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 	private static final String aki_richards = "Aki & Richards (1980)";
 	
 	private enum GMPE_Var {
-		TOTAL("σ", "&sigma;") {
+		TOTAL("Ïƒ", "&sigma;") {
 			@Override
 			public double calculate(ScalarGroundMotion gm) {
 				return gm.stdDev();
 			}
 		},
-		PHI("φ", "&phi;") {
+		PHI("Ï†", "&phi;") {
 			@Override
 			public double calculate(ScalarGroundMotion gm) {
 				return gm.phi();
 			}
 		},
-		PHI_SS("φ_ss", "&phi;<sub>SS</sub>") {
+		PHI_SS("Ï†_ss", "&phi;<sub>SS</sub>") {
 			@Override
 			public double calculate(ScalarGroundMotion gm) {
 				return Math.sqrt(gm.phi()*gm.phi() - 0.3*0.3);
 			}
 		},
-		TAU("τ", "&tau;") {
+		TAU("Ï„", "&tau;") {
 			@Override
 			public double calculate(ScalarGroundMotion gm) {
 				return gm.tau();
@@ -373,48 +377,48 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 	}
 	
 	public enum VariabilityType {
-		PATH("Path-to-path", "path", "φ_p2p", "&phi;<sub>P2P</sub>", al_atik,
+		PATH("Path-to-path", "path", "Ï†_p2p", "&phi;<sub>P2P</sub>", al_atik,
 				null, null,
 				qarr(Quantity.SITE, Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID, Quantity.SOURCE_AZIMUTH), // group quantities
 				qarr(Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
 				qarr(), // singleton quantities
 				false), // std dev of residuals
-		SOUCE_STRIKE("Source-strike", "source_strike", "φ_s", "&phi;<sub>s</sub>", aki_richards,
+		SOUCE_STRIKE("Source-strike", "source_strike", "Ï†_s", "&phi;<sub>s</sub>", aki_richards,
 //				GMPE_Var.PHI_SS, new ScatterDisaggQuantity[] {ScatterDisaggQuantity.V_PROP},
 				GMPE_Var.PHI_SS, null,
 				qarr(Quantity.SITE, Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID, Quantity.SITE_TO_SOURTH_AZIMUTH), // group quantities
 				qarr(Quantity.SOURCE_AZIMUTH), // vary quantities
 				qarr(), // singleton quantities
-				false, "δw_es", "&delta;W<sub>es</sub>"), // std dev of residuals
+				false, "Î´w_es", "&delta;W<sub>es</sub>"), // std dev of residuals
 //				Quantity.SITE, Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SITE_TO_SOURTH_AZIMUTH),
-		WITHIN_EVENT_SS("Within-event, single-site", "within_event_ss", "φ_ss", "&phi;<sub>SS</sub>", al_atik,
+		WITHIN_EVENT_SS("Within-event, single-site", "within_event_ss", "Ï†_ss", "&phi;<sub>SS</sub>", al_atik,
 //				GMPE_Var.PHI_SS, new ScatterDisaggQuantity[] {ScatterDisaggQuantity.V_PROP},
 				GMPE_Var.PHI_SS, null,
 				qarr(Quantity.SITE, Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID), // group quantities
 				qarr(Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
 				qarr(), // singleton quantities
-				false, "δw_es", "&delta;W<sub>es</sub>"), // std dev of residuals
-		WITHIN_EVENT("Within-event", "within_event", "φ", "&phi;", al_atik,
+				false, "Î´w_es", "&delta;W<sub>es</sub>"), // std dev of residuals
+		WITHIN_EVENT("Within-event", "within_event", "Ï†", "&phi;", al_atik,
 				GMPE_Var.PHI, null,
 				qarr(Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID), // group quantities
 				qarr(Quantity.SITE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
 				qarr(Quantity.SITE), // singleton quantities
-				false, "δw_es", "&delta;W<sub>es</sub>"), // std dev of residuals
-//		BETWEEN_EVENTS_SINGLE_PATH("Between-events, single-path", "between_events_single_path", "τ_0", "&tau;<sub>0</sub>", al_atik,
+				false, "Î´w_es", "&delta;W<sub>es</sub>"), // std dev of residuals
+//		BETWEEN_EVENTS_SINGLE_PATH("Between-events, single-path", "between_events_single_path", "Ï„_0", "&tau;<sub>0</sub>", al_atik,
 //				true, true, Quantity.SITE, Quantity.DISTANCE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH),
-		BETWEEN_EVENTS("Between-events", "between_events", "τ", "&tau;", al_atik,
+		BETWEEN_EVENTS("Between-events", "between_events", "Ï„", "&tau;", al_atik,
 				GMPE_Var.TAU, null,
 				qarr(Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID), // group quantities
 				qarr(Quantity.SITE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
 				qarr(), // singleton quantities
-				true, "δB_e", "&delta;B<sub>e</sub>"); // medains
+				true, "Î´B_e", "&delta;B<sub>e</sub>"); // medains
 		// TODO phi_s2s is relative to the site classification, so leave it out for now
-//		SITE_TO_SITE("Site Variability", "site_var", "φ_s2s", "&phi;<sub>S2S</sub>", al_atik,
+//		SITE_TO_SITE("Site Variability", "site_var", "Ï†_s2s", "&phi;<sub>S2S</sub>", al_atik,
 //				false, true, null, null,
 //				Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH);
 		
@@ -769,6 +773,11 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		for (String criterion : criteria)
 			lines.add("* "+criterion);
 		lines.add("");
+
+		if (filter != null) {
+			lines.add("In the case of more than "+maxNumEvents+" available matches, we use the "+filter.getName()+" filter method: "+filter.getDescription());
+			lines.add("");
+		}
 		
 		if (magConfigs.size() == 1 && this instanceof RSQSimRotatedRupVariabilityPageGen) {
 			lines.add("### Fault Section Counts");
@@ -1369,7 +1378,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			lines.add("Here we attempt to reproduce the SCEC BroadBand Platform \"Part B\" validation exercise as defined in:");
 			lines.add("");
 			lines.add("*Goulet, C. A., Abrahamson, N. A., Somerville, P. G., & Wooddell, K. E. (2014). The SCEC broadband platform "
-					+ "validation exercise: Methodology for code validation in the context of seismic‐hazard analyses. "
+					+ "validation exercise: Methodology for code validation in the context of seismicâ€�hazard analyses. "
 					+ "Seismological Research Letters, 86(1), 17-26.* [(link)](https://pubs.geoscienceworld.org/ssa/srl/article/86/1/17/315438/"
 					+ "the-scec-broadband-platform-validation-exercise)");
 			lines.add("");
@@ -2340,7 +2349,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 					for (List<ASK_EventData> data : subDataMatches)
 						aveDistRecs += data.size();
 					aveDistRecs /= subDataMatches.size();
-					dataVals.put("ASK2014 R≅"+optionalDigitDF.format(key.distance)+" Recs/Event", aveDistRecs);
+					dataVals.put("ASK2014 Râ‰…"+optionalDigitDF.format(key.distance)+" Recs/Event", aveDistRecs);
 					dataVals.put("Total Recs/Event", aveTotRecs);
 				}
 				
@@ -2384,7 +2393,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			float lower = key.distance - (float)dr;
 			float upper = key.distance + (float)dr;
 			ASK_EventData.plotMultiCountHist(resourcesDir, prefix, "ASK 2014 Recordings Distribution",
-					subDataMatches, "Dist ∈ ["+lower+","+upper+"] km", totalDataMatches.values(), "All Distances");
+					subDataMatches, "Dist âˆˆ ["+lower+","+upper+"] km", totalDataMatches.values(), "All Distances");
 			line += " The top plot shows the subset with distance in the range ["+lower+","+upper+"], "
 					+ "and the bottom the whole distribution at all distances.";
 		}
@@ -2537,7 +2546,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		private RotationSpec commonRotSpec;
 		
 		public ResidualSet(List<RotationSpec> rotations, double[] values) {
-			this.residuals = values; // will subract median in a sec
+			this.residuals = values; // will subtract median in a sec
 			this.median = DataUtils.median(values);
 			Preconditions.checkState(Double.isFinite(median), "Non-finite median: %s", median);
 			for (int i=0; i<values.length; i++)
@@ -3026,11 +3035,11 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			this.calcPeriods = calcPeriods;
 			this.hasMagDist = hasMagDist;
 			this.commonRotationSpecs = commonRotationSpecs;
-			if (hasMagDist)
+//			if (hasMagDist)
 				this.logVals = logVals;
-			else
-				// only need them for mag-dist
-				this.logVals = null;
+//			else
+//				// only need them for mag-dist
+//				this.logVals = null;
 			this.residualStdDevs = residualStdDevs;
 			this.medianStdDevs = medianStdDevs;
 			
@@ -4314,7 +4323,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 					double[] gmpeVars = gmpeResult == null || type.gmpeStdDevType == null ?
 							null : gmpeResult.getVariability(type.gmpeStdDevType);
 					for (int p=0; p<periods.length; p++) {
-						double gmpeSD = gmpeVars == null ? -1 : gmpeVars[p];
+						int gmpeP = Doubles.indexOf(calcPeriods, periods[p]);
+						double gmpeSD = gmpeVars == null ? -1 : gmpeVars[gmpeP];
 						double val;
 						switch (plotType) {
 						case SIM_STD_DEV:
@@ -4672,8 +4682,10 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 					if (type.gmpeStdDevType != null && gmpeResult != null) {
 						DiscretizedFunc[][] gmpeXYs = gmpeXYsMap.get(type);
 						double[] gmpeVars = gmpeResult.getVariability(type.gmpeStdDevType);
-						for (int p=0; p<periods.length; p++)
-							gmpeXYs[d][p].set(value, gmpeVars[p]);
+						for (int p=0; p<periods.length; p++) {
+							int gmpeP = Doubles.indexOf(calcPeriods, periods[p]);
+							gmpeXYs[d][p].set(value, gmpeVars[gmpeP]);
+						}
 					}
 				}
 				// now do median
@@ -4686,8 +4698,10 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 				}
 				if (gmpeResult != null) {
 					DiscretizedFunc[][] gmpeXYs = gmpeXYsMap.get(null);
-					for (int p=0; p<periods.length; p++)
-						gmpeXYs[d][p].set(value, Math.exp(gmpeResult.logMedian[p]));
+					for (int p=0; p<periods.length; p++) {
+						int gmpeP = Doubles.indexOf(calcPeriods, periods[p]);
+						gmpeXYs[d][p].set(value, Math.exp(gmpeResult.logMedian[gmpeP]));
+					}
 				}
 			}
 		}
@@ -5175,11 +5189,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		return true;
 	}
 	
-	protected File[] plotIndvRupDirectivity(int eventID, RSQSimEvent oriented, EqkRupture rup,
-			Table<Float, Float, double[]> azDistFdMap, Table<Float, Float, Location> azDistLocMap,
-			Map<RotationSpec, double[]> diffsMap, double[] periods, File outputDir) throws IOException {
-		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-		
+	protected double[] getDirectivityPlotPeriods(double[] periods) {
 		if (periods.length > 3) {
 			List<Double> keep = new ArrayList<>();
 			for (double period : periods)
@@ -5187,6 +5197,14 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 					keep.add(period);
 			periods = Doubles.toArray(keep);
 		}
+		return periods;
+	}
+	protected File[] plotIndvRupDirectivity(int eventID, RSQSimEvent oriented, EqkRupture rup,
+			Table<Float, Float, double[]> azDistFdMap, Table<Float, Float, Location> azDistLocMap,
+			Map<RotationSpec, double[]> diffsMap, double[] periods, File outputDir) throws IOException {
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		periods = getDirectivityPlotPeriods(periods);
 		
 		String commonPrefix = "event_"+eventID;
 

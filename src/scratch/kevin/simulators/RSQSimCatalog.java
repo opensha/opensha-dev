@@ -97,6 +97,7 @@ import scratch.kevin.simulators.plots.SlipRateComparePlot;
 import scratch.kevin.simulators.plots.StationarityPlot;
 import scratch.kevin.simulators.plots.ElasticReboundTriggeringPlot;
 import scratch.kevin.simulators.plots.U3StyleNormalizedRuptureRecurrenceIntervalPlot;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.rotation.RSQSimRotatedRupVariabilityMagDistPageGen.RuptureType;
 
@@ -324,13 +325,25 @@ public class RSQSimCatalog implements XMLSaveable {
 				"variable slip speed.  fracArea=0.8 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.008 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_4320("bruce/rundir4320", "Bruce 4320", "Bruce Shaw", cal(2019, 7, 28),
-				"variable slip speed.  fracArea=0.8 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.010 a=.003",
+				"variable slip speed. fracArea=0.7 ; variableSpeed s2ddf=.7 ddfmin=.01; b=.008 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_4322("bruce/rundir4322", "Bruce 4322", "Bruce Shaw", cal(2019, 7, 28),
-				"variable slip speed.  fracArea=0.7 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.008 a=.001",
+				"variable slip speed. fracArea=0.8 ; variableSpeed s2ddf=.7 ddfmin=.01; b=.010 a=.003",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_4576("bruce/rundir4576", "Bruce 4576", "Bruce Shaw", cal(2019, 10, 16),
 				"same as r2585 but larger distanceTop=4.0; H=18 (4,10,4)",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4655("bruce/rundir4655", "Bruce 4655", "Bruce Shaw", cal(2019, 12, 9),
+				"variable slip speed. fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.008 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4660("bruce/rundir4660", "Bruce 4660", "Bruce Shaw", cal(2019, 12, 11),
+				"variable slip speed. fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.007 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4661("bruce/rundir4661", "Bruce 4661", "Bruce Shaw", cal(2019, 12, 11),
+				"variable slip speed. fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.006 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4682("bruce/rundir4682", "Bruce 4682", "Bruce Shaw", cal(2019, 12, 12),
+				"higher resolution delta=1.25; variable slip speed. fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.008 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -833,7 +846,9 @@ public class RSQSimCatalog implements XMLSaveable {
 			List<String> rotatedRupLinks = new ArrayList<>();
 			List<String> rotatedRupNames = new ArrayList<>();
 			
-			String partBLink = null;
+			List<String> partBLinks = new ArrayList<>();
+			List<String> partBNames = new ArrayList<>();
+			
 			String rotDDLink = null;
 			String sourceSiteLink = null;
 			
@@ -886,14 +901,19 @@ public class RSQSimCatalog implements XMLSaveable {
 				} else if (name.equals("source_site_comparisons")) {
 					Preconditions.checkState(sourceSiteLink == null, "Duplicate Source/Site dirs! %s and %s", name, sourceSiteLink);
 					sourceSiteLink = name;
-				} else if (name.equals("bbp_part_b")) {
-					partBLink = name;
+				} else if (name.startsWith("bbp_part_b")) {
+					FilterMethod filter = FilterMethod.fromDirName(name);
+					name = checkMoveFilter(subDir, filter);
+					partBLinks.add(name);
+					partBNames.add(filter.getName());
 				} else if (name.startsWith("rotated_ruptures_")) {
+					FilterMethod filter = FilterMethod.fromDirName(name);
+					name = checkMoveFilter(subDir, filter);
 					for (Scenario scenario : Scenario.values()) {
 						String dirName = "rotated_ruptures_"+scenario.getPrefix();
 						if (name.equals(dirName)) {
 							rotatedRupLinks.add(name);
-							rotatedRupNames.add(scenario.getName());
+							rotatedRupNames.add(scenario.getName()+", "+filter.getName());
 						} else if (name.startsWith(dirName+"_timeScale")) {
 							String scenName = scenario.getName();
 							String timeScale = name.substring(name.indexOf("_timeScale"));
@@ -901,7 +921,7 @@ public class RSQSimCatalog implements XMLSaveable {
 							if (timeScale.contains("_velScale"))
 								timeScale = timeScale.replaceAll("_velScale", ", Velocities Scaled");
 							rotatedRupLinks.add(name);
-							rotatedRupNames.add(scenName+timeScale);
+							rotatedRupNames.add(scenName+timeScale+", "+filter.getName());
 						}
 					}
 					for (RuptureType rupType : RuptureType.values()) {
@@ -967,12 +987,13 @@ public class RSQSimCatalog implements XMLSaveable {
 				lines.add("");
 				lines.add("[Source/Site Ground Motion Comparisons here]("+bbpDir.getName()+"/"+sourceSiteLink+"/)");
 			}
-			if (partBLink != null) {
+			if (!partBLinks.isEmpty()) {
 				lines.add("");
 				lines.add("### BBP Part B Analysis, "+vm);
 				lines.add(topLink);
 				lines.add("");
-				lines.add("[BBP Part B Analysis Here]("+bbpDir.getName()+"/"+partBLink+")");
+				for (int i=0; i<partBLinks.size(); i++)
+					lines.add("[BBP Part B Analysis Here, "+partBNames.get(i)+"]("+bbpDir.getName()+"/"+partBLinks.get(i)+")");
 			}
 			if (!rotatedRupLinks.isEmpty()) {
 				lines.add("");
@@ -1035,6 +1056,17 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		// write metadata
 		XMLUtils.writeObjectToXMLAsRoot(this, new File(dir, "catalog.xml"));
+	}
+	
+	private String checkMoveFilter(File subDir, FilterMethod filter) throws IOException {
+		String name = subDir.getName();
+		if (!name.contains(filter.getPrefix())) {
+			String target = name+"_filter_"+filter.getPrefix();
+			System.out.println("Renaming (missing filter): "+name+" to "+target);
+			Files.move(subDir, new File(subDir.getParentFile(), target));
+			name = target;
+		}
+		return name;
 	}
 
 	public File getGeomFile() throws FileNotFoundException {

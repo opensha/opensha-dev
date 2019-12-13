@@ -59,7 +59,7 @@ public abstract class GPRotatedRupVariabilityPageGen extends RotatedRupVariabili
 	
 	public GPRotatedRupVariabilityPageGen(GPRotatedRupVariabilityConfig config,
 			double mag, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
-		super(config, mag, prov, calcPeriods);
+		super(config, null, mag, prov, calcPeriods);
 		ruptures = config.getRuptureList();
 	}
 	
@@ -207,7 +207,7 @@ public abstract class GPRotatedRupVariabilityPageGen extends RotatedRupVariabili
 		if (DIRECTIVITY_DEBUG) {
 			table = MarkdownUtils.tableBuilder();
 			table.initNewLine();
-			for (double period : periods)
+			for (double period : getDirectivityPlotPeriods(periods))
 				table.addColumn(optionalDigitDF.format(period)+"s Map Plot");
 			table.addColumn("Residuals Plot");
 			table.finalizeLine();
@@ -225,7 +225,7 @@ public abstract class GPRotatedRupVariabilityPageGen extends RotatedRupVariabili
 				
 				Location centroid = event.centroid;
 				Location hypo = calcHypocenter(event.srf);
-				System.out.println("Hypocenter: "+hypo);
+//				System.out.println("Hypocenter: "+hypo);
 				RuptureSurface surf = event.src.getSurface().getQuadSurface();
 				double aveRake = event.src.getFocalMechanism().getRake();
 				EqkRupture rup = new EqkRupture(mag, aveRake, surf, hypo);

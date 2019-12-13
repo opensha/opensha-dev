@@ -26,6 +26,7 @@ import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.ASK_EventData;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
@@ -35,8 +36,8 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 	private Scenario scenario;
 
 	public RSQSimRotatedRupVariabilityScenarioPageGen(RSQSimCatalog catalog, Scenario scenario,
-			RSQSimRotatedRupVariabilityConfig config, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
-		super(catalog, config, scenario.getMagnitude(), prov, calcPeriods);
+			FilterMethod filter, RSQSimRotatedRupVariabilityConfig config, SimulationRotDProvider<RotationSpec> prov, double[] calcPeriods) {
+		super(catalog, config, filter, scenario.getMagnitude(), prov, calcPeriods);
 		this.scenario = scenario;
 	}
 
@@ -68,7 +69,8 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4320.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4320.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4682.instance(baseDir);
 
 //		File bbpDir = new File(bbpParallelDir,
 //				"2019_11_22-rundir2585_1myrs-rotatedRups-m7p2_vert_ss_surface_rnd_mag_0p05"
@@ -139,6 +141,8 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 		System.out.println("Located ref BBP dir: "+bbpDir.getAbsolutePath());
 		System.out.println("\tInput file: "+bbpZipFile.getName());
 		
+		FilterMethod filter = FilterMethod.fromDirName(bbpDir.getName());
+		
 		List<BBP_Site> bbpSites = BBP_Site.readFile(bbpDir);
 		
 		List<Site> sites = new ArrayList<>();
@@ -163,7 +167,7 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 				BBP_RotatedRupSimLoader bbpLoader = new BBP_RotatedRupSimLoader(bbpZipFile, bbpSites, scenario.getPrefix());
 				
 				RSQSimRotatedRupVariabilityScenarioPageGen pageGen =
-						new RSQSimRotatedRupVariabilityScenarioPageGen(catalog, scenario, config, bbpLoader, calcPeriods);
+						new RSQSimRotatedRupVariabilityScenarioPageGen(catalog, scenario, filter, config, bbpLoader, calcPeriods);
 				
 				pageGen.setGMPEs(refGMPEs);
 				
@@ -187,7 +191,7 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 			if (realData != null)
 				pageGen.setRealEventData(ASK_EventData.getMatches(realData, null, null, scenario.getFaultStyle(), 30d), 100);
 			
-			String dirName = "rotated_ruptures_"+scenario.getPrefix();
+			String dirName = "rotated_ruptures_"+scenario.getPrefix()+"_filter_"+filter.getPrefix();
 			if (timeScale != 1d) {
 				dirName += "_timeScale"+(float)timeScale;
 				if (scaleVelocities)

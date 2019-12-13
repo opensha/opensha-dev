@@ -67,7 +67,8 @@ public class GPRotatedRupVariabilityScenarioPageGen extends GPRotatedRupVariabil
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 		File bbpDir = new File(bbpParallelDir,
-				"2019_12_03-gp-rotatedRups-3scenarios-20.0km-4srcAz-1siteSrcAz-10rups-patchArea1.0-vmLA_BASIN_500-noHF-1site");
+				"2019_12_03-gp-rotatedRups-3scenarios-3dists-18srcAz-1siteSrcAz-"
+				+ "100rups-patchArea1.0-vmLA_BASIN_500-noHF-1site");
 		File bbpZipFile = new File(bbpDir, "results_rotD.zip");
 		
 		double[] calcPeriods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};

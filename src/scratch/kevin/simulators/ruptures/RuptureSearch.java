@@ -31,7 +31,7 @@ public class RuptureSearch {
 	public static void main(String[] args) throws IOException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4655.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		

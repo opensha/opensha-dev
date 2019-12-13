@@ -791,7 +791,7 @@ class RupSpectraPageGen {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
-		String refName = "Graves & Pitarka (2015)";
+		String refName = "Graves & Pitarka (2016)";
 		boolean rebuildGIF = false;
 		boolean rebuildMaps = false;
 		FaultBasedMapGen.LOCAL_MAPGEN = true;
@@ -835,13 +835,20 @@ class RupSpectraPageGen {
 ////		int eventID = 5304;
 //		int eventID = 31324;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		int eventID = 9955310;
-//		int eventID = 3817386;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+//		int eventID = 9955310;
+////		int eventID = 3817386;
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
 ////		int eventID = 40636;
 //		int eventID = 92236;
+
+		RSQSimCatalog catalog = Catalogs.BRUCE_4655.instance(baseDir);
+//		int eventID = 2106470;
+//		int eventID = 1029675;
+//		int eventID = 467544;
+//		int eventID = 923866;
+		int eventID = 1318657;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = true;

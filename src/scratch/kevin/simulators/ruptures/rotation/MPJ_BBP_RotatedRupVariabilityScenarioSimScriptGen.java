@@ -26,20 +26,22 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.MPJ_BBP_CatalogSimScriptGen;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 
 class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 
 	public static void main(String[] args) throws IOException {
-////		String catalogDirName = "rundir2585_1myrs";
-//		String catalogDirName = "rundir4320";
-////		String catalogDirName = "rundir4317";
-//		boolean gp = false;
+//		String catalogDirName = "rundir2585_1myrs";
+		String catalogDirName = "rundir4682";
+//		String catalogDirName = "rundir4317";
+		boolean gp = false;
 
-		String catalogDirName = null;
-		boolean gp = true;
+//		String catalogDirName = null;
+//		boolean gp = true;
 		
 		int skipYears = 5000;
 		double gpPatchArea = 1d;
@@ -49,10 +51,11 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 //		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG};
 //		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p15, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p2,
 //				Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p25, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p3};
-//		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE};
-		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE,
-				Scenario.M7p2_VERT_SS_SURFACE};
+		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE};
+//		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE,
+//				Scenario.M7p2_VERT_SS_SURFACE};
 ////		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
+		FilterMethod filter = BBP_PartBValidationConfig.FILTER_METHOD_DEFAULT;
 		double[] distances = { 20d, 50d, 100d };
 		int numSourceAz = 18;
 //		int numSiteToSourceAz = 36;
@@ -131,6 +134,8 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 			jobName += "-"+scenarios[0].getPrefix();
 		else
 			jobName += "-"+scenarios.length+"scenarios";
+		if (!gp)
+			jobName += "-filter_"+filter.getPrefix();
 		if (distances.length == 1)
 			jobName += "-"+(float)distances[0]+"km";
 		else
@@ -182,6 +187,8 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 			argz += " --patch-area "+(float)gpPatchArea;
 		}
 		argz += " --scenarios "+scenarios[0].name();
+		if (!gp)
+			argz += " --filter "+filter.name();
 		for (int i=1; i<scenarios.length; i++)
 			argz += ","+scenarios[i].name();
 		argz += " --distances "+commaSeparate(Doubles.asList(distances).toArray());
