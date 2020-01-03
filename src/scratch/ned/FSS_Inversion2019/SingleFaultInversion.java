@@ -177,6 +177,7 @@ public class SingleFaultInversion {
 	boolean doMagHistograms;
 	boolean doNonZeroRateRups;
     boolean doSectPartMFDs;
+    boolean doSectSlipDists;
 	Location hazCurveLoc; 						// to make hazard curve (set loc=null to ignore)
     String hazCurveLocName;
     boolean makeHazardMaps; 					// to make hazard maps
@@ -948,6 +949,7 @@ public class SingleFaultInversion {
 		 doMagHistograms=true;
 		 doNonZeroRateRups=true;
 	     doSectPartMFDs=true;
+	     doSectSlipDists=true;
 		 hazCurveLoc = null; // to make hazard curve (set loc=null to ignore)
 	     hazCurveLocName = "Hazard Curve";
 	     makeHazardMaps = false; //// to make hazard maps
@@ -1124,6 +1126,7 @@ public class SingleFaultInversion {
 		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
+		if(doSectSlipDists) fltSysRupInversion.writeAndOrPlotSectSlipDistributions(dirName, popUpPlots);
 	    
 	    // hazard curve:
 		if(hazCurveLoc != null) {
@@ -1486,8 +1489,7 @@ public class SingleFaultInversion {
 
 		// this took 118 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-//	FINISH ABOVE ********
+		singleFaultInversion.doTotalRateconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
 		
 		// this took 16 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, false, 2);
@@ -1533,7 +1535,7 @@ public class SingleFaultInversion {
 		// E=1348 for this:
 //		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);	
 		// E=1336 for this (should be same as above):
-		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
+//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
 
 		// this has E=86:
 //		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MAX_RATE);	
@@ -1555,6 +1557,10 @@ public class SingleFaultInversion {
 		// this has E=2231
 //		singleFaultInversion.doSUNFiSH_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);	
 
+		
+		
+		
+		
 		
 		
 		

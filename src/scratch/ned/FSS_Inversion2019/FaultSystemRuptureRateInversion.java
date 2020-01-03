@@ -359,6 +359,85 @@ public class FaultSystemRuptureRateInversion {
 			e.printStackTrace();
 		}			
 	}
+	
+	
+	/**
+	 * This writes and/or plots the rates and slip-rate contribution of each rupture that has a 
+	 * final rate above the minimum.  
+	 * @param dirName - set as null if no files are to be saved
+	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
+	 */
+	public void writeAndOrPlotSectSlipDistributions(String dirName, boolean popUpWindow) {
+		
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+				
+		// get max slip
+		double maxSlip = 0;
+		for(int rup=0; rup<numRuptures;rup++) 
+				for(int s=0; s<numSections; s++) 
+					if(sectSlipInRup[s][rup] > maxSlip)
+						maxSlip = sectSlipInRup[s][rup];
+		
+		maxSlip = Math.ceil(maxSlip); // next meter higher
+		double deltaSlip = 1.0;
+		double minSlip = deltaSlip/2;
+		int numSlip = (int)Math.round(maxSlip/deltaSlip)+1;
+
+		HistogramFunction meanHist = new HistogramFunction(minSlip,numSlip,deltaSlip);
+		
+
+		
+		ArrayList<XY_DataSet> sectSlipDistList = new ArrayList<XY_DataSet>();
+//		ArrayList<XY_DataSet> sectSlipCumDistList = new ArrayList<XY_DataSet>();
+//		ArbDiscrEmpiricalDistFunc[] sectSlipDistArray = new ArbDiscrEmpiricalDistFunc[numSections];
+		for(int s=0; s<numSections;s++) {
+//			sectSlipDistList.add(new ArbDiscrEmpiricalDistFunc());
+//			sectSlipDistList.get(s).setName("sect "+s+" slip distribution");
+			sectSlipDistList.add(new HistogramFunction(minSlip,numSlip,deltaSlip));
+			sectSlipDistList.get(s).setName("sect "+s+" slip distribution");
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+		}
+		
+		String fileNamePrefix = dirName+"/sectSlipDist";
+
+		
+		try{
+			for(int rup=0; rup<numRuptures;rup++) {
+				if(rupRateSolution[rup]>0) {
+					for(int s=0; s<numSections; s++) {
+						if(rupSectionMatrix[s][rup] == 1) {
+							((HistogramFunction)sectSlipDistList.get(s)).add(sectSlipInRup[s][rup],rupRateSolution[rup]);
+							meanHist.add(sectSlipInRup[s][rup],rupRateSolution[rup]);
+						}
+					}
+				}
+			}	
+			
+			
+			ArbDiscrEmpiricalDistFunc_3D sectSlipDists_3D = new ArbDiscrEmpiricalDistFunc_3D(minSlip,numSlip,deltaSlip);
+			for(int s=0; s<numSections;s++) {
+				((HistogramFunction)sectSlipDistList.get(s)).normalizeBySumOfY_Vals();;
+				sectSlipDists_3D.set((HistogramFunction)sectSlipDistList.get(s), 1.0);
+			}
+			meanHist.normalizeBySumOfY_Vals();
+//			sectSlipDistList.add(meanHist);
+			sectSlipDistList.add(sectSlipDists_3D.getMeanCurve());
+			sectSlipDistList.add(sectSlipDists_3D.getDiscreteFractileCurve(0.16));
+			sectSlipDistList.add(sectSlipDists_3D.getDiscreteFractileCurve(0.84));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED));
+
+
+			
+			writeAndOrPlotFuncs(sectSlipDistList, plotChars, "Sect Slip PDFs", "Slip", "Density", 
+					null, null, false, false, fileNamePrefix, popUpWindow);
+
+		}catch(Exception e) {
+			e.printStackTrace();
+		}			
+	}
+
 
 	/**
 	 * Write the inversion-run info to a file
