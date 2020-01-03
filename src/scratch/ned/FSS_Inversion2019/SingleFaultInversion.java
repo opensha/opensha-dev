@@ -40,7 +40,6 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
-import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.SegRateConstraint;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.gcim.ui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
@@ -96,7 +95,6 @@ public class SingleFaultInversion {
 	final static double hazGridSpacing = 0.05;
 		
 	ArrayList<FaultSectionPrefData> faultSectionDataList;
-	ArrayList<SegRateConstraint> sectionRateConstraints;
 	int[][] rupSectionMatrix;
 		
 	FaultSectionPrefData parentFaultData;
@@ -148,8 +146,9 @@ public class SingleFaultInversion {
 	SlipRateProfileType slipRateProfile;
 	SlipAlongRuptureModelEnum slipModelType;	// Average slip along rupture model
 	ScalingRelationshipEnum scalingRel; 		// Scaling Relationship
+	ArrayList<SectionRateConstraint> sectionRateConstraintList;
 	double relativeSectRateWt; 					// Section Rate Constraints wt
-	String segmentationConstrFilename; 			// = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
+	ArrayList<SegmentationConstraint> segmentationConstrList; 			// 
 	double relative_segmentationConstrWt; 		// Segmentation Constraints wt
 	double relative_aPrioriRupWt;  				// A priori rupture rates wts
 	String aPrioriRupRateFilename;  			// A priori rupture rates file name; e.g., ROOT_DATA_DIR+"aPrioriRupRates.txt"
@@ -177,7 +176,6 @@ public class SingleFaultInversion {
 	boolean doMagHistograms;
 	boolean doNonZeroRateRups;
     boolean doSectPartMFDs;
-    boolean doSectSlipDists;
 	Location hazCurveLoc; 						// to make hazard curve (set loc=null to ignore)
     String hazCurveLocName;
     boolean makeHazardMaps; 					// to make hazard maps
@@ -385,16 +383,12 @@ public class SingleFaultInversion {
 //				System.out.print(rupSectionMatrix[s][r]+"\t");
 //		}
 		
-		sectionRateConstraints = new ArrayList<SegRateConstraint>();
 	}
 	
 	public ArrayList<FaultSectionPrefData> getFaultSectionDataList() {
 		return faultSectionDataList;
 	}
 	
-	public ArrayList<SegRateConstraint> getSectionRateConstraints() {
-		return sectionRateConstraints;
-	}
 	
 	public int[][] getRupSectionMatrix() {
 		return rupSectionMatrix;
@@ -919,7 +913,7 @@ public class SingleFaultInversion {
 		 slipModelType = SlipAlongRuptureModelEnum.TAPERED; // Average slip along rupture model
 		 scalingRel = ScalingRelationshipEnum.ELLSWORTH_B; // Scaling Relationship
 		 relativeSectRateWt=0; // Section Rate Constraints wt
-		 segmentationConstrFilename = null; // = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
+		 segmentationConstrList = null; // ;
 		 relative_segmentationConstrWt = 0; // Segmentation Constraints wt
 		 relative_aPrioriRupWt = 0;  // A priori rupture rates wts
 		 aPrioriRupRateFilename = null; // file that has the a prior rupture rates
@@ -949,7 +943,6 @@ public class SingleFaultInversion {
 		 doMagHistograms=true;
 		 doNonZeroRateRups=true;
 	     doSectPartMFDs=true;
-	     doSectSlipDists=true;
 		 hazCurveLoc = null; // to make hazard curve (set loc=null to ignore)
 	     hazCurveLocName = "Hazard Curve";
 	     makeHazardMaps = false; //// to make hazard maps
@@ -977,7 +970,6 @@ public class SingleFaultInversion {
 		}
 		
 		ArrayList<FaultSectionPrefData> fltSectDataList = getFaultSectionDataList();
-		ArrayList<SegRateConstraint> sectionRateConstraints = getSectionRateConstraints();
 		int[][] rupSectionMatrix = getRupSectionMatrix();
 		
 		// this will be used to keep track of runtimes
@@ -990,7 +982,7 @@ public class SingleFaultInversion {
 				solutionName,
 				slipRateProfile.toString(),
 				fltSectDataList, 
-				sectionRateConstraints, 
+				sectionRateConstraintList, 
 				rupSectionMatrix, 
 				slipModelType, 
 				scalingRel, 
@@ -1004,7 +996,7 @@ public class SingleFaultInversion {
 				targetMFD,
 				mfdSigma,
 				relativeMFD_constraintWt,
-				segmentationConstrFilename,
+				segmentationConstrList,
 				relative_segmentationConstrWt,
 				totalRateConstraint,
 				totalRateSigma,
@@ -1126,7 +1118,6 @@ public class SingleFaultInversion {
 		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
-		if(doSectSlipDists) fltSysRupInversion.writeAndOrPlotSectSlipDistributions(dirName, popUpPlots);
 	    
 	    // hazard curve:
 		if(hazCurveLoc != null) {
@@ -1489,8 +1480,8 @@ public class SingleFaultInversion {
 
 		// this took 118 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-		singleFaultInversion.doTotalRateconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-		
+		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
+
 		// this took 16 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, false, 2);
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, false, 2);
@@ -1557,10 +1548,6 @@ public class SingleFaultInversion {
 		// this has E=2231
 //		singleFaultInversion.doSUNFiSH_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);	
 
-		
-		
-		
-		
 		
 		
 		
