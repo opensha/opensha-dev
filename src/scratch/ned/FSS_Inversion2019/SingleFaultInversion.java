@@ -66,6 +66,7 @@ import scratch.ned.FSS_Inversion2019.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.SlipAlongRuptureModelEnum;
 
 /**
+ * 
  * This class runs the inversion.
  * 
  * Slip rate and event rate standard deviations are computed as the difference of the 95% confidence bounds divided by 4.

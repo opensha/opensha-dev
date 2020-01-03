@@ -85,6 +85,7 @@ import scratch.ned.FSS_Inversion2019.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.SlipAlongRuptureModelEnum;
 
 /**
+ * 
  * This class does an inversion for the rate of events in an unsegmented fault model:
  * 
  * TO DO:

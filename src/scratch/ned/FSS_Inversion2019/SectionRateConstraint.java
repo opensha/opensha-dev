@@ -7,6 +7,7 @@ import java.util.ArrayList;
 
 
 /**
+ * 
  * This class represents a fault section rate constraint
  * @TODO add ability to compute confidence bounds from stdom (and vice versa), and 
  * use log-normal assumption to avoid negative rates?

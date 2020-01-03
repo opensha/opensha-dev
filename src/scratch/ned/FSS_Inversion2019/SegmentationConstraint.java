@@ -4,6 +4,7 @@
 package scratch.ned.FSS_Inversion2019;
 
 /**
+ * 
  * This class specifies the rate at which two fault sections co-rupture.  e.g., a strict segmentation constraint
  * exists between two neighboring sections that have a co-rupture rate of zero.
  * @author Field
