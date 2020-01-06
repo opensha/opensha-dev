@@ -1123,7 +1123,11 @@ public class DoubleFaultInversion {
 		}
 					
 		if(doDataFits) fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
-fltSysRupInversion.writeAndOrPlotPartMFD_ForSection(dirName, popUpPlots, 58);
+		if(applySlipRateSegmentation || sectionRateConstraintList.size() == 1)
+			fltSysRupInversion.writeAndOrPlotPartMFD_ForSection(dirName, popUpPlots, 58);
+		if(segmentationConstrList != null)
+			for(SegmentationConstraint segConst :segmentationConstrList)
+				fltSysRupInversion.writeAndOrPlotJointPartMFD_ForSections(dirName, popUpPlots, segConst.getSect1_Index(), segConst.getSect2_Index());
 		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
@@ -1281,7 +1285,6 @@ fltSysRupInversion.writeAndOrPlotPartMFD_ForSection(dirName, popUpPlots, 58);
 		this.slipModelType = slipModelType;
 		this.scalingRel = scalingRel;
 		this.relativeSectRateWt = 1;
-		this.sectionRateConstraintList = new ArrayList<SectionRateConstraint>();
 		SectionRateConstraint sectRateConstr = new SectionRateConstraint("Test Sect Constr", 58, 5e-4, 5e-6);
 		sectionRateConstraintList.add(sectRateConstr);
 		this.relative_segmentationConstrWt = 1.0;
@@ -1492,9 +1495,9 @@ fltSysRupInversion.writeAndOrPlotPartMFD_ForSection(dirName, popUpPlots, 58);
 //		doubleFaultInversion.doUnconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 //		doubleFaultInversion.doUnconstrainedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 
-		doubleFaultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
+//		doubleFaultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 //		doubleFaultInversion.doSectRateConstrSegSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 85);
-//		doubleFaultInversion.doSegConstrainedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
+		doubleFaultInversion.doSegConstrainedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 
 		
 		

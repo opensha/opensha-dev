@@ -1634,6 +1634,12 @@ public class FaultSystemRuptureRateInversion {
 	}
 	
 	
+	/**
+	 * This plots/writes out the participation MFD for the given section
+	 * @param dirName
+	 * @param popupWindow
+	 * @param targetSect
+	 */
 	public void writeAndOrPlotPartMFD_ForSection(String dirName, boolean popupWindow, int targetSect) {
 		
 		ArrayList<XY_DataSet> mfdList = new ArrayList<XY_DataSet>();
@@ -1713,6 +1719,141 @@ public class FaultSystemRuptureRateInversion {
 		if(dirName != null)
 			fileNamePrefix = dirName+"/sect"+targetSect+"partMFD";
 		String plotName = "Section "+targetSect+" Part. MFD";
+		String xAxisLabel = "Magnitude";
+		String yAxisLabel = "Rate (per yr)";
+		Range xAxisRange = new Range(6.0, 9.0);
+		Range yAxisRange = new Range(1e-8, 1e-1);
+		boolean logX = false;
+		boolean logY = true;
+
+		writeAndOrPlotFuncs(mfdList, plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+
+		// write alternative rupture rates file to get rid of big header
+		try{
+			FileWriter fw = new FileWriter(fileNamePrefix+"Alt.txt");
+			for(int i=0;i<numRuptures; i++) {				
+				fw.write(i+"\t"+rupRateSolution[i]+"\n");
+			}
+			fw.close();
+		}catch(Exception e) {
+			e.printStackTrace();
+		}		
+	}
+	
+	/**
+	 * This plots/writes out the participation MFD for the given section
+	 * @param dirName
+	 * @param popupWindow
+	 * @param targetSect
+	 */
+	public void writeAndOrPlotJointPartMFD_ForSections(String dirName, boolean popupWindow, int sect1, int sect2) {
+		
+		ArrayList<XY_DataSet> mfdList = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
+		SummedMagFreqDist tempMFD = sectParticipationMFDs.get(sect1);
+		double tempSum=0;
+
+		if(rupRatesFromMultRuns != null) {
+			
+			ArbDiscrEmpiricalDistFunc_3D partMFDsFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(tempMFD.getMinX(), tempMFD.size(), tempMFD.getDelta());
+			
+			for(double[] rupRatesArray : rupRatesFromMultRunsArrayList) {
+				SummedMagFreqDist sectPartMFD = new SummedMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA);
+				
+				for(int rup=0; rup < rupRatesArray.length; rup++) {
+					if(rupSectionMatrix[sect1][rup] == 1 && rupSectionMatrix[sect2][rup] == 1) {
+						double rupRate = rupRatesArray[rup];
+						if(rupRate > 0) {
+							double mag;
+							if(GAUSS_MFD_SIGMA==0d) {
+								int index = sectPartMFD.getClosestXIndex(rupMeanMag[rup]);
+								mag = sectPartMFD.getX(index);
+							}
+							else
+								mag = rupMeanMag[rup];
+							GaussianMagFreqDist mfd = new GaussianMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA,mag,GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+							mfd.scaleToCumRate(0, rupRate);
+							sectPartMFD.addIncrementalMagFreqDist(mfd);
+						}
+					}
+				}
+				partMFDsFromMultRuns.set(sectPartMFD, 1.0);
+			}
+			tempSum = partMFDsFromMultRuns.getMeanCurve().calcSumOfY_Vals();
+			UncertainArbDiscDataset mfdMeanMinMaxRange = new UncertainArbDiscDataset(partMFDsFromMultRuns.getMeanCurve(), 
+					partMFDsFromMultRuns.getMinCurve(), partMFDsFromMultRuns.getMaxCurve());
+			mfdMeanMinMaxRange.setName("jointPartMFD_MeanMinMaxRange");
+			mfdList.add(mfdMeanMinMaxRange);
+			
+			UncertainArbDiscDataset mfdMean95conf = get95perConfForMultRuns(partMFDsFromMultRuns);
+			mfdMean95conf.setName("jointPartMFD_Mean95conf");
+			mfdList.add(mfdMean95conf);
+			
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,200)));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,120)));
+			
+			EvenlyDiscretizedFunc meanMFD = partMFDsFromMultRuns.getMeanCurve();
+			meanMFD.setName("Joint Part. MFD");
+			mfdList.add(meanMFD);
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		}
+		else {
+			SummedMagFreqDist sectPartMFD = new SummedMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA);
+			
+			for(int rup=0; rup < numRuptures; rup++) {
+				if(rupSectionMatrix[sect1][rup] == 1 && rupSectionMatrix[sect2][rup] == 1) {
+					double rupRate = this.rupRateSolution[rup];
+					if(rupRate > 0) {
+						double mag;
+						if(GAUSS_MFD_SIGMA==0d) {
+							int index = sectPartMFD.getClosestXIndex(rupMeanMag[rup]);
+							mag = sectPartMFD.getX(index);
+						}
+						else
+							mag = rupMeanMag[rup];
+						GaussianMagFreqDist mfd = new GaussianMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA,mag,GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+						mfd.scaleToCumRate(0, rupRate);
+						sectPartMFD.addIncrementalMagFreqDist(mfd);
+					}
+				}
+			}
+			sectPartMFD.setName("Joint Part. MFD");
+			mfdList.add(sectPartMFD);
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		}
+		
+
+		
+		//
+		SummedMagFreqDist sectMagProbMFD = new SummedMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA);
+		for(int rup=0; rup < numRuptures; rup++) {
+			if(rupSectionMatrix[sect1][rup] == 1 && rupSectionMatrix[sect2][rup] == 1) {
+				double mag;
+				if(GAUSS_MFD_SIGMA==0d) {
+					int index = sectMagProbMFD.getClosestXIndex(rupMeanMag[rup]);
+					mag = sectMagProbMFD.getX(index);
+				}
+				else
+					mag = rupMeanMag[rup];
+				GaussianMagFreqDist mfd = new GaussianMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA,mag,GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+				mfd.scaleToCumRate(0, 1.0);
+				sectMagProbMFD.addIncrementalMagFreqDist(mfd);
+			}
+		}
+		
+		sectMagProbMFD.scaleToCumRate(0, tempSum);
+		sectMagProbMFD.setName("sectMagProbMFD");
+		sectMagProbMFD.setInfo("Relative probability of sampling magnitude");
+		mfdList.add(sectMagProbMFD);
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK));
+
+		
+		String fileNamePrefix = null;
+		if(dirName != null)
+			fileNamePrefix = dirName+"/sect"+sect1+"and"+sect2+"_JointPartMFD";
+		String plotName = "Section "+sect1+" & "+sect2+" Joint Part. MFD";
 		String xAxisLabel = "Magnitude";
 		String yAxisLabel = "Rate (per yr)";
 		Range xAxisRange = new Range(6.0, 9.0);
