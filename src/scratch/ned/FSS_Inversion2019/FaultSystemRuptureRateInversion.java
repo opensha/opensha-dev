@@ -85,6 +85,7 @@ import scratch.ned.FSS_Inversion2019.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.SlipAlongRuptureModelEnum;
 
 /**
+ * 
  * This class does an inversion for the rate of events in an unsegmented fault model:
  * 
  * TO DO:
@@ -114,7 +115,7 @@ public class FaultSystemRuptureRateInversion {
 	
 	// input data
 	private ArrayList<FaultSectionPrefData> fltSectionDataList;
-	private ArrayList<SegRateConstraint> sectionRateConstraints; // using old class for "segments"
+	private ArrayList<SectionRateConstraint> sectionRateConstraints; // using old class for "segments"
 	private int[][] rupSectionMatrix;
 	
 	// section attributes
@@ -155,9 +156,7 @@ public class FaultSystemRuptureRateInversion {
 	
 	// segmentation (rup rate = 0) constraints
 	int num_segConstraints;
-	int[] segConstraint_rupIndex;
-	double[] segConstraint_rupRate, segConstraint_RupWt;
-	String segConstraintFilename;
+	ArrayList<SegmentationConstraint> segmentationConstraintList;
 
 
 	
@@ -414,7 +413,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param mfdConstraint - an IncrementalMagFreqDist constraint
 	 * @param mfdSigma - the 1 standard deviation uncertainty on mfdConstraint
 	 * @param relativeMFD_constraintWt - weight for MFD constraint
-	 * @param segConstraintFilename - 
+	 * @param segConstraintFilename - each line has sect1_ID, sect2_ID, and wt (rups that utilize these sections are given a prior rate of zero)
 	 * @param relative_segConstraintWt - 
 	 * @param totalRateConstraint,
 	 * @param totalRateSigma,
@@ -424,7 +423,7 @@ public class FaultSystemRuptureRateInversion {
 	public FaultSystemRuptureRateInversion( String modelName,
 			String slipRateModelName,
 			ArrayList<FaultSectionPrefData> fltSectionDataList, 
-			ArrayList<SegRateConstraint> sectionRateConstraints,
+			ArrayList<SectionRateConstraint> sectionRateConstraints,
 			int[][] rupSectionMatrix, 
 			SlipAlongRuptureModelEnum slipModelType, 
 			ScalingRelationshipEnum scalingRel, 
@@ -438,7 +437,7 @@ public class FaultSystemRuptureRateInversion {
 			IncrementalMagFreqDist mfdConstraint,
 			IncrementalMagFreqDist mfdSigma, // uncertainty of the MFD (1 sigma)
 			double relativeMFD_constraintWt,
-			String segConstraintFilename,
+			ArrayList<SegmentationConstraint> segmentationConstraintList,
 			double relative_segConstraintWt,
 			double totalRateConstraint,
 			double totalRateSigma,
@@ -461,7 +460,7 @@ public class FaultSystemRuptureRateInversion {
 		this.mfdConstraint = mfdConstraint;
 		this.mfdSigma = mfdSigma;
 		this.relativeMFD_constraintWt = relativeMFD_constraintWt;
-		this.segConstraintFilename = segConstraintFilename;
+		this.segmentationConstraintList = segmentationConstraintList;
 		this.relative_segConstraintWt = relative_segConstraintWt;
 		this.totalRateConstraint = totalRateConstraint;
 		this.totalRateSigma = totalRateSigma;
@@ -486,7 +485,8 @@ public class FaultSystemRuptureRateInversion {
 		modelSetUpInfoString += "\tapplyProbVisible = "+applyProbVisible+"\n";
 		modelSetUpInfoString += "\tmoRateReduction = "+moRateReduction+"\n";
 		modelSetUpInfoString += "\trelativeMFD_constraintWt = "+relativeMFD_constraintWt+"\n";
-		modelSetUpInfoString += "\tsegConstraintFilename = "+segConstraintFilename+"\n";
+		if(segmentationConstraintList != null)
+			modelSetUpInfoString += "\tsegmentationConstraintList.size() = "+segmentationConstraintList.size()+"\n";
 		modelSetUpInfoString += "\trelative_segConstraintWt = "+relative_segConstraintWt+"\n";
 		modelSetUpInfoString += "\ttotalRateConstraint = "+totalRateConstraint+"\n";
 		modelSetUpInfoString += "\ttotalRateSigma = "+totalRateSigma+"\n";
@@ -510,8 +510,8 @@ public class FaultSystemRuptureRateInversion {
 		}
 		
 		num_segConstraints = 0;
-		if(relative_segConstraintWt>0 ) {
-			setSegmentationConstrints();
+		if(relative_segConstraintWt>0 && segmentationConstraintList !=null ) {
+			num_segConstraints = segmentationConstraintList.size();
 		}
 		
 		initMatricesEtc();
@@ -534,7 +534,9 @@ public class FaultSystemRuptureRateInversion {
 		}
 					
 		// get the number of section rate constraints
-		int numSectRateConstraints = sectionRateConstraints.size();
+		int numSectRateConstraints = 0;
+		if(sectionRateConstraints != null)
+			numSectRateConstraints = sectionRateConstraints.size();
 		
 		// set the minimum rupture rate constraints
 		if(minRupRate >0.0) {
@@ -623,19 +625,19 @@ public class FaultSystemRuptureRateInversion {
 		
 		// now fill in the section event rate constraints if requested
 		if(relativeSectRateWt > 0.0) {
-			SegRateConstraint constraint;
+			SectionRateConstraint constraint;
 			for(int i = 0; i < numSectRateConstraints; i ++) {
 				constraint = sectionRateConstraints.get(i);
-				int seg = constraint.getSegIndex();
+				int sect = constraint.getSectIndex();
 				int row = i+firstRowSectEventRateData;
-				d[row] = constraint.getMean(); // this is the average sub-section rate
+				d[row] = constraint.getMeanRate(); // this is the average sub-section rate
 				if(wtedInversion)
 					data_wt[row] = 1/constraint.getStdDevOfMean();
 				for(int col=0; col<numRuptures; col++)
 					if(applyProbVisible)
-						C[row][col] = rupSectionMatrix[seg][col]*getProbVisible(rupMeanMag[col]);
+						C[row][col] = rupSectionMatrix[sect][col]*getProbVisible(rupMeanMag[col]);
 					else
-						C[row][col] = rupSectionMatrix[seg][col];
+						C[row][col] = rupSectionMatrix[sect][col];
 			}
 		}
 		
@@ -655,12 +657,16 @@ public class FaultSystemRuptureRateInversion {
 		// now fill in the segmentation constraint if needed
 		if(relative_segConstraintWt > 0.0) {
 			for(int i=0; i < num_segConstraints; i++) {
+				SegmentationConstraint segConst = this.segmentationConstraintList.get(i);
+				int sect1 = segConst.getSect1_Index();
+				int sect2 = segConst.getSect2_Index();
 				int row = i+firstRowSegConstraint;
-				int col = segConstraint_rupIndex[i];
-				d[row] = segConstraint_rupRate[i];
+				d[row] = segConst.getMeanCoRuptureRate(); // set sum as zero rate for now
 				if(wtedInversion)
-					data_wt[row] = segConstraint_RupWt[i];
-				C[row][col]=1.0;
+					data_wt[row] = 1.0/segConst.getStdDevOfMean();
+				for(int col=0;col<numRuptures; col++)
+					if(rupSectionMatrix[sect1][col]==1 && rupSectionMatrix[sect2][col]==1)
+						C[row][col]=1.0;
 // System.out.println("HERE: "+segConstraint_rupIndex[i]+"\t\t"+ segConstraint_rupRate[i] +"\t\t"+segConstraint_RupWt[i]);
 			}
 		}
@@ -722,7 +728,7 @@ public class FaultSystemRuptureRateInversion {
 			for(int col=0; col<numRuptures; col++)
 				C_wted[row][col] *= full_wt[row];
 		}
-		// segment event rate wts
+		// sect event rate wts
 		if(relativeSectRateWt > 0.0) {
 			for(int i = 0; i < numSectRateConstraints; i ++) {
 				int row = i+firstRowSectEventRateData;
@@ -744,18 +750,19 @@ public class FaultSystemRuptureRateInversion {
 				C_wted[row][col]=full_wt[row];
 			}
 		}
-		// a-priori rate wts
+		// seg const wts
 		if(relative_segConstraintWt > 0.0) {
 			for(int i=0; i < num_segConstraints; i++) {
+				SegmentationConstraint segConst = segmentationConstraintList.get(i);
 				int row = i+firstRowSegConstraint;
-				int col = segConstraint_rupIndex[i];
 				full_wt[row] = relative_segConstraintWt;
 				if(wtedInversion) full_wt[row] *= data_wt[row];
 				d_wted[row] *= full_wt[row];
-				C_wted[row][col]=full_wt[row];
+				for(int col=0;col<numRuptures; col++)
+					if(rupSectionMatrix[segConst.getSect1_Index()][col]==1 && rupSectionMatrix[segConst.getSect2_Index()][col]==1)
+						C_wted[row][col]=full_wt[row];
 			}
 		}
-
 		// MFD constraint wts
 		if(relativeMFD_constraintWt > 0.0) {
 			for(int i=0; i < numMFD_constraints; i++) {
@@ -827,7 +834,7 @@ public class FaultSystemRuptureRateInversion {
 		// Compute final segment slip rates and event rates
 		computeFinalStuff();
 		
-		computeSegMFDs();
+		computeSectMFDs();
 		
 		setMiscRunInfo();
 		
@@ -854,7 +861,7 @@ public class FaultSystemRuptureRateInversion {
 		// Compute final segment slip rates and event rates
 		computeFinalStuff();
 		
-		computeSegMFDs();
+		computeSectMFDs();
 		
 		setMiscRunInfo();
 
@@ -895,7 +902,7 @@ public class FaultSystemRuptureRateInversion {
 			
 			// Compute stuff
 			computeFinalStuff();
-			computeSegMFDs();
+			computeSectMFDs();
 			setMiscRunInfo();
 						
 			String fileNamePrefix = null;
@@ -983,7 +990,7 @@ public class FaultSystemRuptureRateInversion {
 		// Compute final segment slip rates and event rates
 		computeFinalStuff();
 		
-		computeSegMFDs();
+		computeSectMFDs();
 		
 		setMiscRunInfo();
 		
@@ -1051,7 +1058,7 @@ public class FaultSystemRuptureRateInversion {
 			
 			// Compute stuff
 			computeFinalStuff();
-			computeSegMFDs();
+			computeSectMFDs();
 			setMiscRunInfo();
 						
 			String fileNamePrefix = null;
@@ -1206,12 +1213,12 @@ public class FaultSystemRuptureRateInversion {
 	 * @return
 	 */
 	private double getTotEventRatePredErr() {
-		SegRateConstraint constraint;
+		SectionRateConstraint constraint;
 		double totPredErr=0;
 		for(int i = 0; i < sectionRateConstraints.size(); i ++) {
 			constraint = sectionRateConstraints.get(i);
-			int seg = constraint.getSegIndex();
-			double normResid = (finalPaleoVisibleSectEventRate[seg]-constraint.getMean())/constraint.getStdDevOfMean();
+			int sect = constraint.getSectIndex();
+			double normResid = (finalPaleoVisibleSectEventRate[sect]-constraint.getMeanRate())/constraint.getStdDevOfMean();
 			totPredErr += normResid*normResid;
 		}
 		return totPredErr;
@@ -1377,7 +1384,7 @@ public class FaultSystemRuptureRateInversion {
 	/**
 	 * This computes both participation and nucleation MFDs for each sub-section
 	 */
-	private void computeSegMFDs() {
+	private void computeSectMFDs() {
 		int num = (int)Math.round((maxMagMFD_WithAleatory-minMagMFD_WithAleatory)/MAG_DELTA + 1);
 		if(num==1) num = 2;
 		sectNucleationMFDs = new ArrayList<SummedMagFreqDist>();
@@ -1419,6 +1426,8 @@ public class FaultSystemRuptureRateInversion {
 		aveOfSectPartMFDs.setInfo("Average Seg Participation MFD");
 		
 	}
+	
+	
 	
 	
 	private void setMiscRunInfo() {
@@ -1467,19 +1476,19 @@ public class FaultSystemRuptureRateInversion {
 		if(relativeSectRateWt > 0.0) {
 //			System.out.println("\nSegment Rates: index, final, orig, and final/orig");
 			aveRatio = 0;
-			SegRateConstraint constraint;
+			SectionRateConstraint constraint;
 			for(int i = 0; i < sectionRateConstraints.size(); i ++) {
 				int row = firstRowSectEventRateData+i;
 				constraint = sectionRateConstraints.get(i);
-				int seg = constraint.getSegIndex();
+				int seg = constraint.getSectIndex();
 //				this checks that finalSegEventRate[seg] and d_pred[row} are the same (RECONSIDER PROB VISIBLE IF I USE THIS AGAIN)
 //				System.out.println(seg+"\t"+(float)finalSegEventRate[seg]+"\t"+(float)d_pred[row]+"\t"+(float)(finalSegEventRate[seg]/d_pred[row]));
 				if(applyProbVisible) {
-					aveRatio += finalPaleoVisibleSectEventRate[seg]/constraint.getMean();
+					aveRatio += finalPaleoVisibleSectEventRate[seg]/constraint.getMeanRate();
 //					System.out.println(seg+"\t"+(float)finalPaleoReducedSegEventRate[seg]+"\t"+(float)constraint.getMean()+"\t"+(float)aveRatio);				
 				}
 				else {
-					aveRatio += finalSectEventRate[seg]/constraint.getMean();
+					aveRatio += finalSectEventRate[seg]/constraint.getMeanRate();
 //					System.out.println(seg+"\t"+(float)finalSegEventRate[seg]+"\t"+(float)constraint.getMean()+"\t"+(float)aveRatio);					
 				}
 			}
@@ -1523,10 +1532,10 @@ public class FaultSystemRuptureRateInversion {
 	
 	private String getErrorTableString(boolean includeEquationSetWts) {
 		// First without equation set weights
-		double totPredErr=0, slipRateErr=0, eventRateErr=0, aPrioriErr=0, mfdErr=0, totRateErr=0;
-		double totRMS=0, slipRateRMS=0, eventRateRMS=0, aPrioriRMS=0, mfdRMS=0, totRateRMS=0;
-		double totAveAbsDiff=0, slipRateDiff=0, eventRateDiff=0, aPrioriDiff=0, mfdDiff=0, totRateDiff=0; 	// these are for ave absolute value of diffs
-		double testNumRows=0, slipRateNumRows=0, eventRateNumRows=0, aPrioriNumRows=0, mfdNumRows=0, totRateNumRows=0;
+		double totPredErr=0, slipRateErr=0, eventRateErr=0, aPrioriErr=0, segConstrErr=0, mfdErr=0, totRateErr=0;
+		double totRMS=0, slipRateRMS=0, eventRateRMS=0, aPrioriRMS=0, segConstrRMS=0, mfdRMS=0, totRateRMS=0;
+		double totAveAbsDiff=0, slipRateDiff=0, eventRateDiff=0, aPrioriDiff=0, segConstrDiff=0, mfdDiff=0, totRateDiff=0; 	// these are for ave absolute value of diffs
+		double testNumRows=0, slipRateNumRows=0, eventRateNumRows=0, aPrioriNumRows=0, segConstrNumRows=0, mfdNumRows=0, totRateNumRows=0;
 
 		double[] wt;
 		if(includeEquationSetWts)
@@ -1552,7 +1561,13 @@ public class FaultSystemRuptureRateInversion {
 				aPrioriDiff += Math.abs((d[row]-d_pred[row])*wt[row]);
 				aPrioriNumRows += 1;
 			}
-
+		if(relative_segConstraintWt > 0)
+			for(int row=firstRowSegConstraint; row <= lastRowSegConstraint; row++) {
+//System.out.println("segConstraint HERE:"+d[row]+"\t"+d_pred[row]+"\t"+wt[row]);
+				segConstrErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*wt[row]*wt[row];
+				segConstrDiff += Math.abs((d[row]-d_pred[row])*wt[row]);
+				segConstrNumRows += 1;
+			}
 		if(relativeMFD_constraintWt>0)
 			for(int row=firstRowMFD_constraintData; row <= lastRowMFD_constraintData; row++){
 				mfdErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*wt[row]*wt[row];
@@ -1567,24 +1582,26 @@ public class FaultSystemRuptureRateInversion {
 			}
 		}
 		
-		testNumRows = slipRateNumRows+eventRateNumRows+aPrioriNumRows+mfdNumRows+totRateNumRows;
+		testNumRows = slipRateNumRows+eventRateNumRows+aPrioriNumRows+segConstrNumRows+mfdNumRows+totRateNumRows;
 		if(testNumRows != totNumRows) {
 			throw new RuntimeException("Problem with number of rows");
 		}
 
-		totPredErr = slipRateErr + eventRateErr + aPrioriErr + mfdErr + totRateErr;
+		totPredErr = slipRateErr + eventRateErr + aPrioriErr + segConstrErr + mfdErr + totRateErr;
 		totRMS = Math.sqrt(totPredErr/totNumRows);
-		totAveAbsDiff = (slipRateDiff+eventRateDiff+aPrioriDiff+mfdDiff+totRateDiff)/totNumRows;
+		totAveAbsDiff = (slipRateDiff+eventRateDiff+aPrioriDiff+segConstrDiff+mfdDiff+totRateDiff)/totNumRows;
 		
 		slipRateRMS = Math.sqrt(slipRateErr/slipRateNumRows);
 		eventRateRMS = Math.sqrt(eventRateErr/eventRateNumRows);
 		aPrioriRMS = Math.sqrt(aPrioriErr/aPrioriNumRows);
+		segConstrRMS = Math.sqrt(segConstrErr/segConstrNumRows);
 		mfdRMS = Math.sqrt(mfdErr/mfdNumRows); 
 		totRateRMS = Math.sqrt(totRateErr/totRateNumRows);
 		
 		slipRateDiff /= slipRateNumRows;
 		eventRateDiff /= eventRateNumRows;
 		aPrioriDiff /= aPrioriNumRows;
+		segConstrDiff /= segConstrNumRows;
 		mfdDiff /= mfdNumRows;
 		totRateDiff /= totRateNumRows;
 		
@@ -1606,6 +1623,8 @@ public class FaultSystemRuptureRateInversion {
 			resultsString += "EventRate \t"+(float)eventRateErr+"\t"+(float)eventRateRMS+"\t"+(float)eventRateDiff+"\t"+relativeSectRateWt+"\n";
 		if(aPrioriNumRows>0)
 			resultsString += "A Priori  \t"+(float)aPrioriErr+"\t"+(float)aPrioriRMS+"\t"+(float)aPrioriDiff+"\t"+relative_aPrioriRupWt+"\n";
+		if(segConstrNumRows>0)
+			resultsString += "Seg Constr  \t"+(float)segConstrErr+"\t"+(float)segConstrRMS+"\t"+(float)segConstrDiff+"\t"+relative_segConstraintWt+"\n";
 		if(mfdNumRows>0) 
 			resultsString += "MFD Rates  \t"+(float)mfdErr+"\t"+(float)mfdRMS+"\t"+(float)mfdDiff+"\t"+relativeMFD_constraintWt+"\n";
 		if(totRateNumRows>0)
@@ -1613,6 +1632,250 @@ public class FaultSystemRuptureRateInversion {
 		
 		return resultsString;
 	}
+	
+	
+	/**
+	 * This plots/writes out the participation MFD for the given section
+	 * @param dirName
+	 * @param popupWindow
+	 * @param targetSect
+	 */
+	public void writeAndOrPlotPartMFD_ForSection(String dirName, boolean popupWindow, int targetSect) {
+		
+		ArrayList<XY_DataSet> mfdList = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
+		SummedMagFreqDist avePartMFD = sectParticipationMFDs.get(targetSect);
+
+
+		if(rupRatesFromMultRuns != null) {
+			
+			ArbDiscrEmpiricalDistFunc_3D partMFDsFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(avePartMFD.getMinX(), avePartMFD.size(), avePartMFD.getDelta());
+			
+			for(double[] rupRatesArray : rupRatesFromMultRunsArrayList) {
+				SummedMagFreqDist sectPartMFD = new SummedMagFreqDist(avePartMFD.getMinX(),avePartMFD.size(),MAG_DELTA);
+				
+				for(int rup=0; rup < rupRatesArray.length; rup++) {
+					if(rupSectionMatrix[targetSect][rup] == 1) {
+						double rupRate = rupRatesArray[rup];
+						if(rupRate > 0) {
+							double mag;
+							if(GAUSS_MFD_SIGMA==0d) {
+								int index = sectPartMFD.getClosestXIndex(rupMeanMag[rup]);
+								mag = sectPartMFD.getX(index);
+							}
+							else
+								mag = rupMeanMag[rup];
+							GaussianMagFreqDist mfd = new GaussianMagFreqDist(avePartMFD.getMinX(),avePartMFD.size(),MAG_DELTA,mag,GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+							mfd.scaleToCumRate(0, rupRate);
+							sectPartMFD.addIncrementalMagFreqDist(mfd);
+						}
+					}
+				}
+				partMFDsFromMultRuns.set(sectPartMFD, 1.0);
+			}
+			
+			UncertainArbDiscDataset mfdMeanMinMaxRange = new UncertainArbDiscDataset(partMFDsFromMultRuns.getMeanCurve(), 
+					partMFDsFromMultRuns.getMinCurve(), partMFDsFromMultRuns.getMaxCurve());
+			mfdMeanMinMaxRange.setName("partMFD_MeanMinMaxRange");
+			mfdList.add(mfdMeanMinMaxRange);
+			
+			UncertainArbDiscDataset mfdMean95conf = get95perConfForMultRuns(partMFDsFromMultRuns);
+			mfdMean95conf.setName("partMFD_Mean95conf");
+			mfdList.add(mfdMean95conf);
+			
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,200)));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,120)));
+
+		}
+		
+		mfdList.add(avePartMFD);
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		
+		//
+		SummedMagFreqDist sectMagProbMFD = new SummedMagFreqDist(avePartMFD.getMinX(),avePartMFD.size(),MAG_DELTA);
+		for(int rup=0; rup < numRuptures; rup++) {
+			if(rupSectionMatrix[targetSect][rup] == 1) {
+				double mag;
+				if(GAUSS_MFD_SIGMA==0d) {
+					int index = sectMagProbMFD.getClosestXIndex(rupMeanMag[rup]);
+					mag = sectMagProbMFD.getX(index);
+				}
+				else
+					mag = rupMeanMag[rup];
+				GaussianMagFreqDist mfd = new GaussianMagFreqDist(avePartMFD.getMinX(),avePartMFD.size(),MAG_DELTA,mag,GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+				mfd.scaleToCumRate(0, 1.0);
+				sectMagProbMFD.addIncrementalMagFreqDist(mfd);
+			}
+		}
+		sectMagProbMFD.scaleToCumRate(0, avePartMFD.calcSumOfY_Vals());
+		sectMagProbMFD.setName("sectMagProbMFD");
+		sectMagProbMFD.setInfo("Relative probability of sampling magnitude");
+		mfdList.add(sectMagProbMFD);
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK));
+
+		
+		String fileNamePrefix = null;
+		if(dirName != null)
+			fileNamePrefix = dirName+"/sect"+targetSect+"partMFD";
+		String plotName = "Section "+targetSect+" Part. MFD";
+		String xAxisLabel = "Magnitude";
+		String yAxisLabel = "Rate (per yr)";
+		Range xAxisRange = new Range(6.0, 9.0);
+		Range yAxisRange = new Range(1e-8, 1e-1);
+		boolean logX = false;
+		boolean logY = true;
+
+		writeAndOrPlotFuncs(mfdList, plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+
+		// write alternative rupture rates file to get rid of big header
+		try{
+			FileWriter fw = new FileWriter(fileNamePrefix+"Alt.txt");
+			for(int i=0;i<numRuptures; i++) {				
+				fw.write(i+"\t"+rupRateSolution[i]+"\n");
+			}
+			fw.close();
+		}catch(Exception e) {
+			e.printStackTrace();
+		}		
+	}
+	
+	/**
+	 * This plots/writes out the participation MFD for the given section
+	 * @param dirName
+	 * @param popupWindow
+	 * @param targetSect
+	 */
+	public void writeAndOrPlotJointPartMFD_ForSections(String dirName, boolean popupWindow, int sect1, int sect2) {
+		
+		ArrayList<XY_DataSet> mfdList = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
+		SummedMagFreqDist tempMFD = sectParticipationMFDs.get(sect1);
+		double tempSum=0;
+
+		if(rupRatesFromMultRuns != null) {
+			
+			ArbDiscrEmpiricalDistFunc_3D partMFDsFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(tempMFD.getMinX(), tempMFD.size(), tempMFD.getDelta());
+			
+			for(double[] rupRatesArray : rupRatesFromMultRunsArrayList) {
+				SummedMagFreqDist sectPartMFD = new SummedMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA);
+				
+				for(int rup=0; rup < rupRatesArray.length; rup++) {
+					if(rupSectionMatrix[sect1][rup] == 1 && rupSectionMatrix[sect2][rup] == 1) {
+						double rupRate = rupRatesArray[rup];
+						if(rupRate > 0) {
+							double mag;
+							if(GAUSS_MFD_SIGMA==0d) {
+								int index = sectPartMFD.getClosestXIndex(rupMeanMag[rup]);
+								mag = sectPartMFD.getX(index);
+							}
+							else
+								mag = rupMeanMag[rup];
+							GaussianMagFreqDist mfd = new GaussianMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA,mag,GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+							mfd.scaleToCumRate(0, rupRate);
+							sectPartMFD.addIncrementalMagFreqDist(mfd);
+						}
+					}
+				}
+				partMFDsFromMultRuns.set(sectPartMFD, 1.0);
+			}
+			tempSum = partMFDsFromMultRuns.getMeanCurve().calcSumOfY_Vals();
+			UncertainArbDiscDataset mfdMeanMinMaxRange = new UncertainArbDiscDataset(partMFDsFromMultRuns.getMeanCurve(), 
+					partMFDsFromMultRuns.getMinCurve(), partMFDsFromMultRuns.getMaxCurve());
+			mfdMeanMinMaxRange.setName("jointPartMFD_MeanMinMaxRange");
+			mfdList.add(mfdMeanMinMaxRange);
+			
+			UncertainArbDiscDataset mfdMean95conf = get95perConfForMultRuns(partMFDsFromMultRuns);
+			mfdMean95conf.setName("jointPartMFD_Mean95conf");
+			mfdList.add(mfdMean95conf);
+			
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,200)));
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,120)));
+			
+			EvenlyDiscretizedFunc meanMFD = partMFDsFromMultRuns.getMeanCurve();
+			meanMFD.setName("Joint Part. MFD");
+			mfdList.add(meanMFD);
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		}
+		else {
+			SummedMagFreqDist sectPartMFD = new SummedMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA);
+			
+			for(int rup=0; rup < numRuptures; rup++) {
+				if(rupSectionMatrix[sect1][rup] == 1 && rupSectionMatrix[sect2][rup] == 1) {
+					double rupRate = this.rupRateSolution[rup];
+					if(rupRate > 0) {
+						double mag;
+						if(GAUSS_MFD_SIGMA==0d) {
+							int index = sectPartMFD.getClosestXIndex(rupMeanMag[rup]);
+							mag = sectPartMFD.getX(index);
+						}
+						else
+							mag = rupMeanMag[rup];
+						GaussianMagFreqDist mfd = new GaussianMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA,mag,GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+						mfd.scaleToCumRate(0, rupRate);
+						sectPartMFD.addIncrementalMagFreqDist(mfd);
+					}
+				}
+			}
+			sectPartMFD.setName("Joint Part. MFD");
+			mfdList.add(sectPartMFD);
+			plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		}
+		
+
+		
+		//
+		SummedMagFreqDist sectMagProbMFD = new SummedMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA);
+		for(int rup=0; rup < numRuptures; rup++) {
+			if(rupSectionMatrix[sect1][rup] == 1 && rupSectionMatrix[sect2][rup] == 1) {
+				double mag;
+				if(GAUSS_MFD_SIGMA==0d) {
+					int index = sectMagProbMFD.getClosestXIndex(rupMeanMag[rup]);
+					mag = sectMagProbMFD.getX(index);
+				}
+				else
+					mag = rupMeanMag[rup];
+				GaussianMagFreqDist mfd = new GaussianMagFreqDist(tempMFD.getMinX(),tempMFD.size(),MAG_DELTA,mag,GAUSS_MFD_SIGMA,1.0,GAUSS_MFD_TRUNCATION,2); // dist w/ unit moment rate
+				mfd.scaleToCumRate(0, 1.0);
+				sectMagProbMFD.addIncrementalMagFreqDist(mfd);
+			}
+		}
+		
+		sectMagProbMFD.scaleToCumRate(0, tempSum);
+		sectMagProbMFD.setName("sectMagProbMFD");
+		sectMagProbMFD.setInfo("Relative probability of sampling magnitude");
+		mfdList.add(sectMagProbMFD);
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLACK));
+
+		
+		String fileNamePrefix = null;
+		if(dirName != null)
+			fileNamePrefix = dirName+"/sect"+sect1+"and"+sect2+"_JointPartMFD";
+		String plotName = "Section "+sect1+" & "+sect2+" Joint Part. MFD";
+		String xAxisLabel = "Magnitude";
+		String yAxisLabel = "Rate (per yr)";
+		Range xAxisRange = new Range(6.0, 9.0);
+		Range yAxisRange = new Range(1e-8, 1e-1);
+		boolean logX = false;
+		boolean logY = true;
+
+		writeAndOrPlotFuncs(mfdList, plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+
+		// write alternative rupture rates file to get rid of big header
+		try{
+			FileWriter fw = new FileWriter(fileNamePrefix+"Alt.txt");
+			for(int i=0;i<numRuptures; i++) {				
+				fw.write(i+"\t"+rupRateSolution[i]+"\n");
+			}
+			fw.close();
+		}catch(Exception e) {
+			e.printStackTrace();
+		}		
+	}
+	
 	
 	
 	/**
@@ -1778,12 +2041,12 @@ public class FaultSystemRuptureRateInversion {
 			ArbitrarilyDiscretizedFunc meanER_Func = new ArbitrarilyDiscretizedFunc();
 			er_funcs.add(meanER_Func);
 			obs_er_funcs.add(meanER_Func);
-			SegRateConstraint constraint;
+			SectionRateConstraint constraint;
 			for(int c=0;c<num;c++) {
 				func = new DefaultXY_DataSet();
 				constraint = sectionRateConstraints.get(c);
-				int s = constraint.getSegIndex();
-				meanER_Func.set((double)s, constraint.getMean());
+				int s = constraint.getSectIndex();
+				meanER_Func.set((double)s, constraint.getMeanRate());
 				func.set((double)s, constraint.getLower95Conf());
 				func.set((double)s, constraint.getUpper95Conf());
 				func.setName(constraint.getFaultName());
@@ -2590,76 +2853,6 @@ public class FaultSystemRuptureRateInversion {
 
 	
 	
-	/**
-	 * This applies the segmentation constraints by setting the rate of ruptures that 
-	 * cross the boundaries to zero.
-	 */
-	private void setSegmentationConstrints() {	
-		
-		// Read Segment Boundary Data:
-		int numBoundaries=0;
-		int sect1_array[]=null;
-		int sect2_array[]=null;
-		double wt_array[]=null;
-
-		try {
-			File file = new File(segConstraintFilename);
-			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
-			numBoundaries = fileLines.size();
-			sect1_array = new int[numBoundaries];
-			sect2_array = new int[numBoundaries];
-			wt_array = new double[numBoundaries];
-			if(D) System.out.println("numBoundaries="+numBoundaries);
-			for (int i=0; i<numBoundaries; i++) {
-				//			System.out.println(line);
-				String line = fileLines.get(i).trim();
-				String[] split = line.split("\t");	// tab delimited
-				Preconditions.checkState(split.length == 3, "Expected 3 items, got %s", split.length);
-				//			System.out.println(split[0]+"\t"+split[1]+"\t"+split[2]);
-				sect1_array[i] = Integer.valueOf(split[0]);
-				sect2_array[i] = Integer.valueOf(split[1]);
-				wt_array[i] = Double.valueOf(split[2]);
-			}
-		}catch(Exception e) {
-			e.printStackTrace();
-		}			
-		int numRuptures = rupSectionMatrix[0].length;
-		int numSections = rupSectionMatrix.length;
-
-		// get the number of constraints
-		num_segConstraints = 0;
-		for(int i=0;i<numBoundaries; i++) {				
-			for(int rup=0; rup<numRuptures; ++rup) {
-				if(rupSectionMatrix[sect1_array[i]][rup]==1 && rupSectionMatrix[sect2_array[i]][rup]==1) {
-					num_segConstraints+=1;
-				}
-			}
-		}
-		
-		if(D) System.out.println("num_segConstraints = "+num_segConstraints);
-		
-		segConstraint_rupIndex = new int[num_segConstraints];
-		segConstraint_rupRate = new double[num_segConstraints];
-		segConstraint_RupWt = new double[num_segConstraints];
-		
-		// now fill them in
-		int index = 0;
-		for(int i=0;i<numBoundaries; i++) {				
-			for(int rup=0; rup<numRuptures; ++rup) {
-				if(rupSectionMatrix[sect1_array[i]][rup]==1 && rupSectionMatrix[sect2_array[i]][rup]==1) {
-					segConstraint_rupIndex[index]=rup;
-					segConstraint_rupRate[index]=0.0;
-//					double wt = wt_array[i]*Math.pow(10, (rupMeanMag[rup]-minRupMag));
-					double wt = wt_array[i];
-					segConstraint_RupWt[index]=wt;
-					index += 1;
-				}
-			}
-		}	
-	}
-	
-
-
 	// The returns the fault system solution for current solution (or the mean from multiple solutions)
 	public FaultSystemSolution getFaultSystemSolution() {
 		
@@ -2759,7 +2952,7 @@ public class FaultSystemRuptureRateInversion {
 		// Compute final segment slip rates and event rates
 		computeFinalStuff();
 		
-		computeSegMFDs();
+		computeSectMFDs();
 		
 		setMiscRunInfo();
 	}
@@ -2798,7 +2991,7 @@ public class FaultSystemRuptureRateInversion {
 		// Compute final segment slip rates and event rates
 		computeFinalStuff();
 		
-		computeSegMFDs();
+		computeSectMFDs();
 		
 		setMiscRunInfo();
 	}
@@ -2841,7 +3034,7 @@ public class FaultSystemRuptureRateInversion {
 		// Compute final segment slip rates and event rates
 		computeFinalStuff();
 		
-		computeSegMFDs();
+		computeSectMFDs();
 		
 		setMiscRunInfo();
 	}

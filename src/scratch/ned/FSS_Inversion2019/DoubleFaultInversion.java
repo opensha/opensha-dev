@@ -74,7 +74,7 @@ import scratch.ned.FSS_Inversion2019.logicTreeEnums.SlipAlongRuptureModelEnum;
  * @author 
  *
  */
-public class SingleFaultInversion {
+public class DoubleFaultInversion {
 
 	final static boolean D = true;	// debugging flag
 	
@@ -88,9 +88,9 @@ public class SingleFaultInversion {
 	final static double FAULT_DIP = 90; // FIX MAX_SUBSECT_LENGTH_KM calc below if this is changed
 	final static double FAULT_RAKE = 0.0;
 	final static double FAULT_SLIP_RATE = 30;	// mm/yr
-	final static double FAULT_LENGTH_KM = 14*29;
+	final static double FAULT_LENGTH_KM = 14*29*2;
 	
-	final static int NUM_SUBSECT_PER_RUP = 4;
+	final static int NUM_SUBSECT_PER_RUP = 2;
 	final static double MAX_SUBSECT_LENGTH_KM = (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)/NUM_SUBSECT_PER_RUP;
 	
 	final static double hazGridSpacing = 0.05;
@@ -147,6 +147,7 @@ public class SingleFaultInversion {
 	SlipRateProfileType slipRateProfile;
 	SlipAlongRuptureModelEnum slipModelType;	// Average slip along rupture model
 	ScalingRelationshipEnum scalingRel; 		// Scaling Relationship
+	boolean applySlipRateSegmentation;			// whether or not to reduce slip rate/std at middle section (hard coded)
 	ArrayList<SectionRateConstraint> sectionRateConstraintList;
 	double relativeSectRateWt; 					// Section Rate Constraints wt
 	ArrayList<SegmentationConstraint> segmentationConstrList; 			// 
@@ -184,7 +185,7 @@ public class SingleFaultInversion {
 
 
 	
-	public SingleFaultInversion() {
+	public DoubleFaultInversion() {
 		setDefaultParameterValuess();
 	}
 		
@@ -277,6 +278,11 @@ public class SingleFaultInversion {
 		parentFaultData.setAveSlipRate(FAULT_SLIP_RATE);
 		parentFaultData.setSlipRateStdDev(FAULT_SLIP_RATE/10d);
 		faultSectionDataList = parentFaultData.getSubSectionsList(MAX_SUBSECT_LENGTH_KM);
+		
+		if(applySlipRateSegmentation) {
+			faultSectionDataList.get(58).setAveSlipRate(FAULT_SLIP_RATE/10d);
+			faultSectionDataList.get(58).setSlipRateStdDev(FAULT_SLIP_RATE/1000d); // 1/100 the target value	
+		}
 		
 		double moRateSum = 0, lengthSum = 0;
 		for(FaultSectionPrefData data : faultSectionDataList) {
@@ -389,7 +395,6 @@ public class SingleFaultInversion {
 	public ArrayList<FaultSectionPrefData> getFaultSectionDataList() {
 		return faultSectionDataList;
 	}
-	
 	
 	public int[][] getRupSectionMatrix() {
 		return rupSectionMatrix;
@@ -911,8 +916,10 @@ public class SingleFaultInversion {
 		 solutionName = "No Name Solution"; // Inversion name
 		 wtedInversion = true; // Whether to apply data weights
 		 slipRateProfile = SlipRateProfileType.TAPERED;
+		 applySlipRateSegmentation = false;
 		 slipModelType = SlipAlongRuptureModelEnum.TAPERED; // Average slip along rupture model
 		 scalingRel = ScalingRelationshipEnum.ELLSWORTH_B; // Scaling Relationship
+		 sectionRateConstraintList = new ArrayList<SectionRateConstraint>();
 		 relativeSectRateWt=0; // Section Rate Constraints wt
 		 segmentationConstrList = null; // ;
 		 relative_segmentationConstrWt = 0; // Segmentation Constraints wt
@@ -1116,6 +1123,11 @@ public class SingleFaultInversion {
 		}
 					
 		if(doDataFits) fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
+		if(applySlipRateSegmentation || sectionRateConstraintList.size() == 1)
+			fltSysRupInversion.writeAndOrPlotPartMFD_ForSection(dirName, popUpPlots, 58);
+		if(segmentationConstrList != null)
+			for(SegmentationConstraint segConst :segmentationConstrList)
+				fltSysRupInversion.writeAndOrPlotJointPartMFD_ForSections(dirName, popUpPlots, segConst.getSect1_Index(), segConst.getSect2_Index());
 		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
@@ -1238,11 +1250,71 @@ public class SingleFaultInversion {
 		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
 		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
 		numSolutions = numSim; 
-		solutionName = "UnconstrainedSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		solutionName = "DoubleFltUnconstrSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
 		dirName = ROOT_PATH+"Output_"+solutionName;
 		getSolution(rePlotOny);
 	
 	}
+	
+	
+	public void doSegConstrainedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		this.segmentationConstrList = new ArrayList<SegmentationConstraint>();
+		SegmentationConstraint segConstr = new SegmentationConstraint("Test Seg Const", 58, 59, 5e-4, 5e-6);
+		segmentationConstrList.add(segConstr);
+		this.relative_segmentationConstrWt = 1.0;
+		// make the solution
+		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
+		numSolutions = numSim; 
+		solutionName = "DoubleFltSegConstrSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution(rePlotOny);
+	}
+	
+	
+	
+	public void doSectRateConstrSegSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		this.relativeSectRateWt = 1;
+		SectionRateConstraint sectRateConstr = new SectionRateConstraint("Test Sect Constr", 58, 5e-4, 5e-6);
+		sectionRateConstraintList.add(sectRateConstr);
+		this.relative_segmentationConstrWt = 1.0;
+		// make the solution
+		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
+		numSolutions = numSim; 
+		solutionName = "DoubleSectRateConstrSegSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution(rePlotOny);
+	}
+
+	
+	public void doSlipRateSegmentedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.applySlipRateSegmentation = true;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		// make the solution
+		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
+		numSolutions = numSim; 
+		solutionName = "DoubleFltSlipRateSegSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution(rePlotOny);
+	
+	}
+
 
 	
 	
@@ -1417,38 +1489,18 @@ public class SingleFaultInversion {
 	 */
 	public static void main(String []args) {
 		
-		SingleFaultInversion singleFaultInversion = new SingleFaultInversion();
+		DoubleFaultInversion doubleFaultInversion = new DoubleFaultInversion();
 		
-//		singleFaultInversion.doNSHMP_GR_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
-		// this is qualitatively similar, but higher final energy
-//		singleFaultInversion.doNSHMP_GR_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.HANKS_BAKUN_08);
 		
-		// this is qualitatively similar, but lower energy
-//		singleFaultInversion.doNSHMP_GR_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);
-		
-//		singleFaultInversion.doNSHMP_Char_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
-//		singleFaultInversion.doNSHMP_Char_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);
-		
-//		singleFaultInversion.doMinRateSolution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
-//		singleFaultInversion.doMinRateSolution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);
-		
-		//This misfits the very ends and a little elsewhere
-//		singleFaultInversion.doMaxRateSolution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
-		// This fixes that (slip rates trimmed down at ends)
-//		singleFaultInversion.doMaxRateSolution(SlipRateProfileType.UNIFORM_TRIMMED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);
+//		doubleFaultInversion.doUnconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
+//		doubleFaultInversion.doUnconstrainedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 
-		// this took six minutes (final energy E = 2)
-//		singleFaultInversion.doUnconstrainedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, 2);
-		// this E=5 goes fast,and corresponds to RMS = sqrt(E/N) = sqrt(5/117) = 0.2 (ave Norm abs diff is less than this)
-//		singleFaultInversion.doUnconstrainedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, 5);
-//		singleFaultInversion.doUnconstrainedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5);
-		// this still produces edge effects (only use this slip rate distribution for max rate model)
-//		singleFaultInversion.doUnconstrainedSA(true, SlipRateProfileType.UNIFORM_TRIMMED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5);
-		
-		
-//		singleFaultInversion.doUnconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5);
-//		singleFaultInversion.doUnconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5);
+//		doubleFaultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
+//		doubleFaultInversion.doSectRateConstrSegSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 85);
+		doubleFaultInversion.doSegConstrainedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 
+		
+		
 		// this is to not over fit the data
 //		singleFaultInversion.doUnconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, 137);
 		// on average this over-fits the data (also the error on the average is 94 versus 137, whereas it should be ~16 if it's not systematically over fitting)
@@ -1481,7 +1533,7 @@ public class SingleFaultInversion {
 
 		// this took 118 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
+//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
 
 		// this took 16 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, false, 2);
