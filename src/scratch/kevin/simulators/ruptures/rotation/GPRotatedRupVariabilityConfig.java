@@ -178,7 +178,7 @@ public class GPRotatedRupVariabilityConfig extends RotatedRupVariabilityConfig<G
 					if (D) System.out.println("Orig trans dist: "+origTransDist);
 					// only move north/south
 					rupAngle = siteToRup.getAzimuth();
-					angleDiff = angleDiff(rupAngle, 0d);
+					angleDiff = RuptureRotationUtils.angleDiff(rupAngle, 0d);
 					if (D) System.out.println("Angle diff: "+angleDiff);
 					// cap it at 45 degrees as we can get stuck in a loop otherwise
 					transDist = origTransDist*Math.cos(Math.toRadians(Math.min(angleDiff, 45)));

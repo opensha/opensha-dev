@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.opensha.commons.calc.FaultMomentCalc;
@@ -19,8 +20,12 @@ import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.geo.utm.UTM;
 import org.opensha.commons.geo.utm.WGS84;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.sha.earthquake.FocalMechanism;
+import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.RSQSimEventRecord;
@@ -28,9 +33,11 @@ import org.opensha.sha.simulators.RectangularElement;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.TriangularElement;
 import org.opensha.sha.simulators.Vertex;
+import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Doubles;
 
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -234,7 +241,7 @@ public class RuptureRotationUtils {
 	}
 	
 	private static final boolean centroid_utm = true; 
-	static Location calcRuptureCentroid(RSQSimEvent event) {
+	public static Location calcRuptureCentroid(RSQSimEvent event) {
 		List<SimulatorElement> elems = event.getAllElements();
 		double[] slips = event.getAllElementSlips();
 		Preconditions.checkState(!elems.isEmpty());
@@ -294,6 +301,111 @@ public class RuptureRotationUtils {
 			lat -= 360;
 		
 		return new Location(lat, lon);
+	}
+	
+	protected static final boolean D = false;
+	
+	public static RSQSimEvent getInitiallyOriented(RSQSimCatalog catalog, RSQSimEvent rupture,
+			Location centroid) {
+		List<FaultSectionPrefData> allSubSects = catalog.getU3SubSects();
+		int offset;
+		try {
+			offset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), catalog.getU3SubSects());
+		} catch (IOException e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
+		
+		// rotate it such that average strike is 0
+		List<Double> strikes = new ArrayList<>();
+		List<Double> weights = new ArrayList<>();
+		ArrayList<SimulatorElement> rupElems = rupture.getAllElements();
+		double[] elemSlips = rupture.getAllElementSlips();
+		for (int i=0; i<rupElems.size(); i++) {
+			SimulatorElement elem = rupElems.get(i);
+			FaultSectionPrefData sect = allSubSects.get(elem.getSectionID()-offset);
+			double elemStrike = elem.getFocalMechanism().getStrike();
+			
+			// check to see if it's flipped ~180 from the section strike (happens often for SS faults)
+			// and correct if necessary
+			double sectStrike = sect.getFaultTrace().getAveStrike();
+			double strikeDiff = angleDiff(sectStrike, elemStrike);
+			if (strikeDiff > 120)
+				elemStrike += 180;
+			
+			strikes.add(elemStrike);
+			weights.add(FaultMomentCalc.getMoment(elem.getArea(), elemSlips[i]));
+		}
+		double aveStrike = FaultUtils.getScaledAngleAverage(weights, strikes);
+		if (D) System.out.println("Average strike: "+aveStrike);
+		RSQSimEvent rotated = RuptureRotationUtils.getRotated(rupture, centroid, -aveStrike);
+		
+		if (RSQSimRotatedRupVariabilityConfig.HYPO_NORTH) {
+			// now make sure the hypocenter is on the North side of the centroid
+			Location hypocenter = RSQSimUtils.getHypocenter(rotated);
+			if (hypocenter.getLatitude() < centroid.getLatitude()) {
+				if (D) System.out.println("Mirroring");
+				// flip the rupture horizontally. don't spin it, as that would mess up
+				// Aki & Richards convention, mirror it
+				rotated = RuptureRotationUtils.getMirroredNS(rotated, centroid.getLatitude());
+			}
+		}
+		
+		return rotated;
+	}
+	
+	protected static double angleDiff(double angle1, double angle2) {
+		double angleDiff = Math.abs(angle1 - angle2);
+		while (angleDiff > 270)
+			angleDiff -= 360;
+		return Math.abs(angleDiff);
+	}
+	
+	public static QuadSurface getIdealizedQuadSurfaceRepresentation(RSQSimEvent oriented, Location centroid) {
+		double centroidDepth = Double.NaN;
+		double centroidDist = Double.POSITIVE_INFINITY;
+		
+		double minLat = Double.POSITIVE_INFINITY;
+		double maxLat = Double.NEGATIVE_INFINITY;
+		List<Double> dips = new ArrayList<>();
+		double minDepth = Double.POSITIVE_INFINITY;
+		double maxDepth = Double.NEGATIVE_INFINITY;
+		for (SimulatorElement elem : oriented.getAllElements()) {
+			for (Location loc : elem.getVertices()) {
+				double lat = loc.getLatitude();
+				minLat = Double.min(minLat, lat);
+				maxLat = Double.max(maxLat, lat);
+				minDepth = Double.min(minDepth, loc.getDepth());
+				maxDepth = Double.max(maxDepth, loc.getDepth());
+				
+				double cDist = LocationUtils.horzDistanceFast(loc, centroid);
+				if (cDist < centroidDist) {
+					centroidDepth = loc.getDepth();
+					centroidDist = cDist;
+				}
+			}
+			dips.add(elem.getFocalMechanism().getDip());
+		}
+		
+		Location southernExtent = new Location(minLat, centroid.getLongitude());
+		Location northernExtent = new Location(maxLat, centroid.getLongitude());
+		
+		double aveDip = StatUtils.mean(Doubles.toArray(dips));
+		boolean dipping = aveDip < 80;
+		
+		if (dipping) {
+			// not strike-slip, figure out trace
+			double horzOffset = (centroidDepth-minDepth)/Math.tan(Math.toRadians(aveDip));
+//			System.out.println("aveDip="+aveDip+"centroidDepth="+centroidDepth+", minDepth="+minDepth+", horzOffset="+horzOffset);
+			double west = 1.5*Math.PI;
+			// move west to be the surface projection of trace
+			southernExtent = LocationUtils.location(southernExtent, west, horzOffset);
+			northernExtent = LocationUtils.location(northernExtent, west, horzOffset);
+		}
+		FaultTrace tr = new FaultTrace(null);
+		tr.add(new Location(southernExtent.getLatitude(), southernExtent.getLongitude(), minDepth));
+		tr.add(new Location(northernExtent.getLatitude(), northernExtent.getLongitude(), minDepth));
+		double width = (maxDepth-minDepth)/Math.sin(Math.toRadians(aveDip));
+		return new QuadSurface(tr, aveDip, width);
 	}
 
 	public static void main(String[] args) throws IOException {

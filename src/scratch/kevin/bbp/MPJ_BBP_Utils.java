@@ -23,7 +23,9 @@ public class MPJ_BBP_Utils {
 	
 	public static abstract class MasterZipHook extends AsyncPostBatchHook {
 		
+		private File ipZipFile;
 		private File zipFile;
+		private File ipRDZipFile;
 		private File rdZipFile;
 		
 		private ZipArchiveOutputStream out;
@@ -42,16 +44,14 @@ public class MPJ_BBP_Utils {
 			debug("async post-batch extimates: "+getRatesString());
 			try {
 				if (out == null && zipFile != null) {
-					if (zipFile.exists())
-						Files.move(zipFile, new File(zipFile.getAbsolutePath()+".prev"));
+					ipZipFile = new File(zipFile.getParentFile(), "partial_"+zipFile.getName());
 					out = new ZipArchiveOutputStream(new BufferedOutputStream(
-							new FileOutputStream(zipFile), buffer.length*4));
+							new FileOutputStream(ipZipFile), buffer.length*4));
 				}
 				if (outRD == null && rdZipFile != null) {
-					if (rdZipFile.exists())
-						Files.move(rdZipFile, new File(rdZipFile.getAbsolutePath()+".prev"));
+					ipRDZipFile = new File(rdZipFile.getParentFile(), "partial_"+rdZipFile.getName());
 					outRD = new ZipArchiveOutputStream(new BufferedOutputStream(
-							new FileOutputStream(rdZipFile), buffer.length*4));
+							new FileOutputStream(ipRDZipFile), buffer.length*4));
 				}
 				Preconditions.checkState(out != null || outRD != null);
 				for (int index : batch) {
@@ -120,10 +120,14 @@ public class MPJ_BBP_Utils {
 		public void shutdown() {
 			super.shutdown();
 			try {
-				if (out != null)
+				if (out != null) {
 					out.close();
-				if (outRD != null)
+					Files.move(ipZipFile, zipFile);
+				}
+				if (outRD != null) {
 					outRD.close();
+					Files.move(ipRDZipFile, rdZipFile);
+				}
 			} catch (IOException e) {
 				ExceptionUtils.throwAsRuntimeException(e);
 			}

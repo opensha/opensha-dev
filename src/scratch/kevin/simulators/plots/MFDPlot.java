@@ -21,12 +21,17 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
+
+import scratch.kevin.simulators.RSQSimCatalog;
+import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+import scratch.kevin.simulators.RSQSimCatalog.Loader;
 
 public class MFDPlot extends AbstractPlot {
 	
@@ -37,6 +42,7 @@ public class MFDPlot extends AbstractPlot {
 	private static double max_mag_default = 9d;
 	private static double delta_default = 0.1;
 	private Range xRange;
+	private Range yRange;
 	
 	private IncrementalMagFreqDist comparableMFD;
 	private EvenlyDiscretizedFunc comparableCumulativeMFD;
@@ -179,6 +185,10 @@ public class MFDPlot extends AbstractPlot {
 		csv.writeToFile(new File(getOutputDir(), prefix+".csv"));
 	}
 	
+	public void setYRange(Range yRange) {
+		this.yRange = yRange;
+	}
+	
 	private void makePlot(File outputDir, String catalogName, String prefix, EvenlyDiscretizedFunc mfd, EvenlyDiscretizedFunc cumulative)
 			throws IOException {
 		List<DiscretizedFunc> funcs = Lists.newArrayList();
@@ -267,11 +277,13 @@ public class MFDPlot extends AbstractPlot {
 			minY = Math.min(minY, minNonZero(func));
 			maxY = Math.max(maxY, func.getMaxY());
 		}
-		Range yRange;
-		if (!Doubles.isFinite(minY))
-			yRange = new Range(1d, 10d);
-		else
-			yRange = calcEncompassingLog10Range(minY, maxY);
+		Range yRange = this.yRange;
+		if (yRange == null) {
+			if (!Doubles.isFinite(minY))
+				yRange = new Range(1d, 10d);
+			else
+				yRange = calcEncompassingLog10Range(minY, maxY);
+		}
 		
 		HeadlessGraphPanel gp = getGraphPanel();
 		gp.drawGraphPanel(plot, false, true, xRange, yRange);
@@ -332,6 +344,37 @@ public class MFDPlot extends AbstractPlot {
 		gp.getChartPanel().setSize(650, 600);
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
+	}
+	
+	public static void main(String[] args) throws IOException {
+		RSQSimCatalog catalog = Catalogs.BRUCE_4665.instance();
+		double minMag = 5d;
+		
+		int[] skipYears = { 5000, 5000, 315000 };
+		double[] maxDurs = { 0d, 310000d, 0d };
+		
+		File outputDir = new File(catalog.getCatalogDir(), "sub_mfds");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		for (int i=0; i<skipYears.length; i++) {
+			String prefix = "mfd";
+			if (skipYears[i] < 50000 && maxDurs[i] == 0d)
+				prefix += "_full";
+			else if (skipYears[i] < 50000 && maxDurs[i] > 0d)
+				prefix += "_first_half";
+			else if (skipYears[i] > 50000)
+				prefix += "_second_half";
+			Loader loader = catalog.loader().skipYears(skipYears[i]);
+			if (maxDurs[i] > 0)
+				loader.maxDuration(maxDurs[i]);
+			System.out.println("Processing: "+prefix);
+			MFDPlot plot = new MFDPlot(minMag);
+			plot.setYRange(new Range(1e-6, 1e2));
+			plot.initialize(catalog.getName(), outputDir, prefix);
+			for (RSQSimEvent e : loader.iterable())
+				plot.processEvent(e);
+			plot.finalizePlot();
+		}
 	}
 
 }

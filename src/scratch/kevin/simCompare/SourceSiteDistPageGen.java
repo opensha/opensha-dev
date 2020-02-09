@@ -377,6 +377,8 @@ public class SourceSiteDistPageGen<E> {
 		for (int p=0; p<periods.length; p++) {
 			double max = stats[p].getMax();
 			double min = stats[p].getMin();
+			if (max == min)
+				max = min+0.1;
 			ret[p][0] = HistogramFunction.getEncompassingHistogram(min, max, simLogHistDelta);
 			for (double val : vals.get(p))
 				ret[p][0].add(ret[p][0].getClosestXIndex(val), 1d);

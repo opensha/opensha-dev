@@ -13,6 +13,10 @@ import org.apache.commons.cli.Options;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.iden.LogicalAndRupIden;
+import org.opensha.sha.simulators.iden.LogicalOrRupIden;
+import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
+import org.opensha.sha.simulators.iden.RuptureIdentifier;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -66,6 +70,21 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 		
 		FilterMethod filter = MPJ_BBP_PartBSim.getFilterMethod(cmd);
 		
+		List<List<RuptureIdentifier>> scenarioIdens = new ArrayList<>();
+		List<RuptureIdentifier> magIdens = new ArrayList<>();
+		for (Scenario scenario : scenarios) {
+			List<RuptureIdentifier> idens = scenario.getIdentifiers(catalog);
+			scenarioIdens.add(idens);
+			for (RuptureIdentifier iden : idens)
+				if (iden instanceof MagRangeRuptureIdentifier)
+					magIdens.add(iden);
+		}
+		
+		if (rank == 0)
+			debug("Loading events for "+scenarios.length+" scenarios");
+		List<RSQSimEvent> allEvents = catalog.loader().skipYears(skipYears).matches(new LogicalOrRupIden(magIdens)).load();
+		debug("Loaded "+allEvents.size()+" potential matches");
+		
 		configs = new ArrayList<>();
 		
 		for (int s=0; s<scenarios.length; s++) {
@@ -74,7 +93,8 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 			if (rank == 0)
 				debug("Loading matches for scenario: "+scenario);
 			
-			List<RSQSimEvent> eventMatches = scenario.getMatches(catalog, skipYears);
+			List<RSQSimEvent> eventMatches = new LogicalAndRupIden(
+					scenarioIdens.get(s)).getMatches(allEvents);
 			
 			if (rank == 0)
 				debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);

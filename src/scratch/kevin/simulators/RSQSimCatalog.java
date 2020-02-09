@@ -343,7 +343,65 @@ public class RSQSimCatalog implements XMLSaveable {
 				"variable slip speed. fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.006 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_4682("bruce/rundir4682", "Bruce 4682", "Bruce Shaw", cal(2019, 12, 12),
-				"higher resolution delta=1.25; variable slip speed. fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.008 a=.001",
+				"higher resolution delta=1.25; variable slip speed. fracArea=0 ; "
+				+ "variableSpeed s2ddf=.8 ddfmin=.1; b=.008 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4665("bruce/rundir4665", "Bruce 4665", "Bruce Shaw", cal(2019, 12, 18),
+				"Long run. variable slip speed. fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.007 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4667("bruce/rundir4667", "Bruce 4667", "Bruce Shaw", cal(2019, 12, 23),
+				"Long run. variable slip speed. fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.007 a=.001;"
+				+ " higher tau0 to reduce transient",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4780("bruce/rundir4780", "Bruce 4780", "Bruce Shaw", cal(2020, 1, 23),
+				"draft causal.  tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=.4 ; b=.01 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4812("bruce/rundir4812", "Bruce 4812", "Bruce Shaw", cal(2020, 1, 24),
+				"draft causal.  tCausalF=0.65 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=.4 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4819("bruce/rundir4819", "Bruce 4819", "Bruce Shaw", cal(2020, 1, 29),
+				"draft causal.  tCausalF=0.65 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=.4 ; b=.009 a=.001"
+				+ " . [V>0 constraint]",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4820("bruce/rundir4820", "Bruce 4820", "Bruce Shaw", cal(2020, 1, 29),
+				"variable slip speed. fracArea=0 ; variableSpeed s2ddf=.8 ddfmin=.1; b=.007 a=.001"
+				+ " . [V>0 constraint]",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4827("bruce/rundir4827", "Bruce 4827", "Bruce Shaw", cal(2020, 1, 30),
+				"draft causal.  tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=.4 ; b=.0085 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4836("bruce/rundir4836", "Bruce 4836", "Bruce Shaw", cal(2020, 2, 3),
+				"draft causal.  tCausalF=0.65 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=.4 ; b=.0085 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4838("bruce/rundir4838", "Bruce 4838", "Bruce Shaw", cal(2020, 2, 3),
+				"draft causal.  tCausalF=0.74 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=.4 ; b=.0085 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4841("bruce/rundir4841", "Bruce 4841", "Bruce Shaw", cal(2020, 2, 3),
+				"draft causal.  tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=.3 ; b=.0085 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+//		BRUCE_4851("bruce/rundir4851", "Bruce 4851", "Bruce Shaw", cal(2020, 2, 3),
+//				"higher res.  draft causal.  tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=.4 "
+//				+ "; b=.0085 a=.001",
+//				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4853("bruce/rundir4853", "Bruce 4853", "Bruce Shaw", cal(2020, 2, 3),
+				"higher res.  draft causal.  tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=.3 "
+				+ "; b=.0085 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4848("bruce/rundir4848", "Bruce 4848", "Bruce Shaw", cal(2020, 2, 6),
+				"draft causal.  tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.22 ; b=.0085 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4849("bruce/rundir4849", "Bruce 4849", "Bruce Shaw", cal(2020, 2, 6),
+				"draft causal.  tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.1 ; b=.0085 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4860("bruce/rundir4860", "Bruce 4860", "Bruce Shaw", cal(2020, 2, 6),
+				"higher res.  draft causal.  tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4862("bruce/rundir4862", "Bruce 4862", "Bruce Shaw", cal(2020, 2, 6),
+				"higher res.  draft causal.  tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.1 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		TEST_DOUBLE_4860("test_double_4860", "Test Double 4860", "Kevin Milner", cal(2020, 2, 7),
+				"This is a test of catalog and transition file combining code, containing two copies of 4860. The "
+				+ "first 5000 years are also skipped from the second copy.",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -627,52 +685,14 @@ public class RSQSimCatalog implements XMLSaveable {
 	private synchronized Map<String, String> getParams() throws IOException {
 		if (params == null) {
 			File paramFile = getParamFile();
-			if (paramFile != null) {
-				System.out.println("Loading params from "+paramFile.getAbsolutePath());
-				params = new HashMap<>();
-				for (String line : Files.readLines(paramFile, Charset.defaultCharset())) {
-					line = line.trim();
-					if (line.contains("=")) {
-						int ind = line.indexOf("=");
-						String key = line.substring(0, ind).trim();
-						String val = line.substring(ind+1).trim();
-						params.put(key, val);
-					}
-				}
-			}
+			if (paramFile != null)
+				params = RSQSimFileReader.readParams(paramFile);
 		}
 		return params;
 	}
 	
 	public File getParamFile() throws IOException {
-		File dir = getCatalogDir();
-		File bruceInFile = new File(dir, "multiparam.in");
-		if (bruceInFile.exists())
-			return bruceInFile;
-		for (File file : getCatalogDir().listFiles()) {
-			String name = file.getName();
-			if (!name.endsWith(".in"))
-				continue;
-			String lower = name.toLowerCase();
-//			if (lower.contains("deepen") || lower.contains("dotmod"))
-//				continue;
-			if (isParamFile(file))
-				return file;
-		}
-		return null;
-	}
-	
-	private boolean isParamFile(File file) throws IOException {
-		int max = 1000;
-		int count = 0;
-		for (String line : Files.readLines(file, Charset.defaultCharset())) {
-			line = line.trim();
-			if (line.startsWith("A_1"))
-				return true;
-			if (count++ > max)
-				return false;
-		}
-		return false;
+		return RSQSimFileReader.getParamFile(getCatalogDir());
 	}
 	
 	public void writeMarkdownSummary(File dir, boolean plots, boolean replot,
@@ -846,6 +866,9 @@ public class RSQSimCatalog implements XMLSaveable {
 			List<String> rotatedRupLinks = new ArrayList<>();
 			List<String> rotatedRupNames = new ArrayList<>();
 			
+			List<String> azimuthalRupLinks = new ArrayList<>();
+			List<String> azimuthalRupNames = new ArrayList<>();
+			
 			List<String> partBLinks = new ArrayList<>();
 			List<String> partBNames = new ArrayList<>();
 			
@@ -911,23 +934,41 @@ public class RSQSimCatalog implements XMLSaveable {
 					name = checkMoveFilter(subDir, filter);
 					for (Scenario scenario : Scenario.values()) {
 						String dirName = "rotated_ruptures_"+scenario.getPrefix();
-						if (name.equals(dirName)) {
-							rotatedRupLinks.add(name);
-							rotatedRupNames.add(scenario.getName()+", "+filter.getName());
-						} else if (name.startsWith(dirName+"_timeScale")) {
+						if (name.startsWith(dirName+"_timeScale")) {
 							String scenName = scenario.getName();
 							String timeScale = name.substring(name.indexOf("_timeScale"));
+							if (timeScale.contains("_filter"))
+								timeScale = timeScale.substring(0, timeScale.indexOf("_filter"));
 							timeScale = timeScale.replaceAll("_timeScale", ", Time Scale Factor: ");
 							if (timeScale.contains("_velScale"))
 								timeScale = timeScale.replaceAll("_velScale", ", Velocities Scaled");
 							rotatedRupLinks.add(name);
 							rotatedRupNames.add(scenName+timeScale+", "+filter.getName());
+						} else if (name.equals(dirName) || name.startsWith(dirName+"_filter")) {
+							rotatedRupLinks.add(name);
+							rotatedRupNames.add(scenario.getName()+", "+filter.getName());
 						}
 					}
 					for (RuptureType rupType : RuptureType.values()) {
 						if (name.equals("rotated_ruptures_mag_dist_"+rupType.getPrefix())) {
 							rotatedRupLinks.add(name);
 							rotatedRupNames.add(rupType.getName()+", Mag-Dist Bins");
+						}
+					}
+				} else if (name.startsWith("azimuthal_")) {
+					for (Scenario scenario : Scenario.values()) {
+						String dirName = "azimuthal_"+scenario.getPrefix();
+						if (name.startsWith(dirName+"_timeScale")) {
+							String scenName = scenario.getName();
+							String timeScale = name.substring(name.indexOf("_timeScale"));
+							timeScale = timeScale.replaceAll("_timeScale", ", Time Scale Factor: ");
+							if (timeScale.contains("_velScale"))
+								timeScale = timeScale.replaceAll("_velScale", ", Velocities Scaled");
+							azimuthalRupLinks.add(name);
+							azimuthalRupNames.add(scenName+timeScale);
+						} else if (name.equals(dirName)) {
+							azimuthalRupLinks.add(name);
+							azimuthalRupNames.add(scenario.getName());
 						}
 					}
 				}
@@ -1002,6 +1043,14 @@ public class RSQSimCatalog implements XMLSaveable {
 				lines.add("");
 				for (int i=0; i<rotatedRupLinks.size(); i++)
 					lines.add("* ["+rotatedRupNames.get(i)+"]("+bbpDir.getName()+"/"+rotatedRupLinks.get(i)+"/)");
+			}
+			if (!rotatedRupLinks.isEmpty()) {
+				lines.add("");
+				lines.add("### Scenario Spatial Distribution Plots, "+vm);
+				lines.add(topLink);
+				lines.add("");
+				for (int i=0; i<azimuthalRupLinks.size(); i++)
+					lines.add("* ["+azimuthalRupNames.get(i)+"]("+bbpDir.getName()+"/"+azimuthalRupLinks.get(i)+"/)");
 			}
 		}
 		
@@ -1108,7 +1157,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			if ((transV && name.startsWith("transv.") || !transV && name.startsWith("trans.")) && name.endsWith(".out"))
 				return file;
 		}
-		throw new FileNotFoundException("No transitions file found in "+dir.getAbsolutePath());
+		throw new FileNotFoundException("No transitions file found in "+dir.getAbsolutePath()+". TransV? "+transV);
 	}
 	
 	public synchronized RSQSimStateTransitionFileReader getTransitions() throws IOException {
@@ -2652,16 +2701,16 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
-		GregorianCalendar minDate = cal(2019, 7, 1);
+		GregorianCalendar minDate = cal(2020, 1, 1);
 		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : new Catalogs[] {
 ////				Catalogs.BRUCE_2585,
-//				Catalogs.BRUCE_2585_1MYR,
+////				Catalogs.BRUCE_2585_1MYR,
 ////				Catalogs.BRUCE_2740,
 ////				Catalogs.BRUCE_2829,
-////				Catalogs.BRUCE_3271,
+//				Catalogs.BRUCE_4860,
 ////				Catalogs.JG_tunedBase1m_ddotEQmod,
 ////				Catalogs.JG_tuneBase1m,
 //				}) {

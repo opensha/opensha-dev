@@ -767,10 +767,15 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		for (double period : periods)
 			table.addColumn("![Detrend XYZ]("+resourcesDir.getName()+"/detrend_residuals_"+optionalDigitDF.format(period)+"s.png)");
 		table.finalizeLine();
+		table.initNewLine();
+		for (double period : periods)
+			table.addColumn("![Detrend Std Dev XYZ]("+resourcesDir.getName()+"/detrend_std_dev_"+optionalDigitDF.format(period)+"s.png)");
+		table.finalizeLine();
 		lines.addAll(table.build());
 		lines.add("");
 		System.out.println("Calculating detrended residual components");
-		if (replotResiduals || !new File(resourcesDir, "period_residual_detrend_components.png").exists())
+		if (replotResiduals || !new File(resourcesDir, "period_residual_detrend_components.png").exists()
+				|| !new File(resourcesDir, "detrend_std_dev_"+optionalDigitDF.format(periods[0])+"s.png").exists())
 			ResidualScatterPlot.plotPeriodDependentSigma(resourcesDir, "period_residual_detrend_components", siteCompsMap, simProv, true, periods);
 		lines.add("![Residual Components]("+resourcesDir.getName()+"/period_residual_detrend_components.png)");
 		lines.add("");

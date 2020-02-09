@@ -25,6 +25,8 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.commons.util.DataUtils;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -54,10 +56,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Range;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Doubles;
 
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
+import scratch.kevin.simulators.ruptures.rotation.RuptureRotationUtils;
 
 public class BBP_PartBValidationConfig {
 	
@@ -505,7 +509,46 @@ public class BBP_PartBValidationConfig {
 						ret.add(match);
 					}
 				}
+				System.out.println("Selected "+ret.size()+" ruptures with at most "
+						+maxPerParent+" ruptures on each section");
 				return ret;
+			}
+		},
+		MEDIAN_LENGTH("Median Length", "med_len", "Selects ruptures whose length are closest to"
+				+ " the median lengh of all ruptures") {
+			@Override
+			public List<RSQSimEvent> filter(List<RSQSimEvent> allMatches, int maxNum, RSQSimCatalog catalog,
+					double mag) {
+				if (maxNum >= allMatches.size())
+					return allMatches;
+				List<Double> lengths = new ArrayList<>();
+				Map<RSQSimEvent, Double> lenMap = new HashMap<>();
+				for (RSQSimEvent event : allMatches) {
+					Location centroid = RuptureRotationUtils.calcRuptureCentroid(event);
+					RSQSimEvent oriented = RuptureRotationUtils.getInitiallyOriented(catalog, event, centroid);
+					MinMaxAveTracker latTrack = new MinMaxAveTracker();
+					for (SimulatorElement elem : oriented.getAllElements())
+						for (Location l : elem.getVertices())
+							latTrack.addValue(l.getLatitude());
+					Location p1 = new Location(latTrack.getMin(), centroid.getLongitude());
+					Location p2 = new Location(latTrack.getMax(), centroid.getLongitude());
+					double len = LocationUtils.horzDistanceFast(p1, p2);
+					lengths.add(len);
+					lenMap.put(event, len);
+				}
+				double median = DataUtils.median(Doubles.toArray(lengths));
+				Comparator<RSQSimEvent> comparator = new Comparator<RSQSimEvent>() {
+					
+					@Override
+					public int compare(RSQSimEvent o1, RSQSimEvent o2) {
+						double l1 = lenMap.get(o1);
+						double l2 = lenMap.get(o2);
+						return Double.compare(Math.abs(l1-median), Math.abs(l2-median));
+					}
+				};
+				List<RSQSimEvent> ret = new ArrayList<>(allMatches);
+				Collections.sort(ret, comparator);
+				return ret.subList(0, maxNum);
 			}
 		};
 		
@@ -536,7 +579,7 @@ public class BBP_PartBValidationConfig {
 		
 		public static FilterMethod fromDirName(String dirName) {
 			for (FilterMethod method : values()) {
-				if (dirName.contains("-filter_"+method.prefix))
+				if (dirName.contains("filter_"+method.prefix))
 					return method;
 			}
 			// this was the original scheme
@@ -637,12 +680,17 @@ public class BBP_PartBValidationConfig {
 	public static double[] OFFICIAL_DISTANCES = { 20d, 50d };
 	public static Scenario[] OFFICIAL_SCENARIOS = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE};
 	
-	private static DiscretizedFunc[] calcNGA2_Medians(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
+	public static DiscretizedFunc[] calcNGA2_Medians(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
 			double zTor, double width, double vs30) {
-		NGAW2_GMM[] gmms = { new ASK_2014(), new BSSA_2014(), new CB_2014(), new CY_2014(), new Idriss_2014() };
-		
 //		double zHyp = zTor + Math.sin(dip * TO_RAD) * width / 2.0;
 		double zHyp = 9.498;
+		return calcNGA2_Medians(mag, rRup, rJB, rX, style, dip, zTor, width, vs30, Double.NaN, Double.NaN, zHyp);
+	}
+	
+	public static DiscretizedFunc[] calcNGA2_Medians(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
+			double zTor, double width, double vs30, double z10, double z25, double zHyp) {
+		NGAW2_GMM[] gmms = { new ASK_2014(), new BSSA_2014(), new CB_2014(), new CY_2014(), new Idriss_2014() };
+		
 //		System.out.println("zHyp: "+zHyp);
 		
 		HashSet<IMT> imtSet = null;
@@ -660,8 +708,8 @@ public class BBP_PartBValidationConfig {
 			gmm.set_vs30(vs30);
 			gmm.set_vsInf(false);
 			gmm.set_width(width);
-			gmm.set_z1p0(Double.NaN);
-			gmm.set_z2p5(Double.NaN);
+			gmm.set_z1p0(z10);
+			gmm.set_z2p5(z25);
 			gmm.set_zHyp(zHyp);
 			gmm.set_zTop(zTor);
 			
@@ -690,10 +738,13 @@ public class BBP_PartBValidationConfig {
 		return ret;
 	}
 	
-	private static UncertainArbDiscDataset calcNGA2_Criterion(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
+	public static UncertainArbDiscDataset calcNGA2_Criterion(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
 			double zTor, double width, double vs30) {
 		DiscretizedFunc[] gmmMedianFuncs = calcNGA2_Medians(mag, rRup, rJB, rX, style, dip, zTor, width, vs30);
-		
+		return calcNGA2_Criterion(gmmMedianFuncs);
+	}
+	
+	public static UncertainArbDiscDataset calcNGA2_Criterion(DiscretizedFunc[] gmmMedianFuncs) {
 		DiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
 		DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
 		DiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();

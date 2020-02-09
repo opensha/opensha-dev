@@ -30,7 +30,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		// REMOTE paths
 		@SuppressWarnings("unused")
 //		String catalogDirName = "rundir2585_1myrs";
-		String catalogDirName = "rundir4682";
+		String catalogDirName = "test_double_4860";
+//		String catalogDirName = "rundir4860";
 //		String catalogDirName = "rundir4576";
 		
 		boolean standardSites = false;
@@ -60,7 +61,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 30;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;

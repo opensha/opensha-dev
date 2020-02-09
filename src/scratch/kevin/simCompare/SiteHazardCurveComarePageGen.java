@@ -325,10 +325,15 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 					lines.add("#### "+optionalDigitDF.format(period)+"s Source Contributions");
 					lines.add(topLink); lines.add("");
 					lines.add("");
-					lines.add("These plots show the contribution of each fault source to the hazard curves. The same set of "
+					String line = "These plots show the contribution of each fault source to the hazard curves. The same set of "
 							+ "sources are plotted for both simulation values (left) and GMPE values (right). Sources are sorted in the legend "
-							+ "(and colored by) their contrubution in the simulation results at the **POE="+(float)+sourceRupContributionSortProb
-							+ "** level, and only the top "+sourceRupContributionNum+" sources are plotted.");
+							+ "(and colored by) their ";
+					if (sourceRupContributionSortProb > 0)
+						line += "contrubution in the simulation results at the **POE="+(float)+sourceRupContributionSortProb+"** level";
+					else
+						line += "risk-targeted ground motion in the simulation results";
+					line += ", and only the top "+sourceRupContributionNum+" sources are plotted.";
+					lines.add(line);
 					lines.add("");
 					if (!sourceRupContributionsMutuallyExclusive) {
 						lines.add("*NOTE: Source curves are not mututally exclusive. For the case of multi fault ruptures, "

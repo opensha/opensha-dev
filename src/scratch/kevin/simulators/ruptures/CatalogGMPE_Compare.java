@@ -533,9 +533,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-//		RSQSimCatalog catalog = Catalogs.JG_modLoad_testB.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.TEST_DOUBLE_4860.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4682.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4860.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -554,13 +554,13 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
 		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
-		AttenRelRef rotDGMPE = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
+		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
 		
 		String[] highlightNames;
 		if (doGridded)
 			highlightNames = new String[0];
 		else
-			highlightNames = new String[] { "USC", "SBSM" };
+			highlightNames = new String[] { "USC" };
 		
 		RuptureIdentifier loadIden = null;
 		String loadIdenPrefix = null;

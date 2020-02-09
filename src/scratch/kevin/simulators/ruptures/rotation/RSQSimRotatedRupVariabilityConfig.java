@@ -91,50 +91,7 @@ public class RSQSimRotatedRupVariabilityConfig extends RotatedRupVariabilityConf
 		Location centroid = getCentroid(rupture);
 		if (D) System.out.println("Initial centroid: "+centroid);
 		
-		List<FaultSectionPrefData> allSubSects = catalog.getU3SubSects();
-		int offset;
-		try {
-			offset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), catalog.getU3SubSects());
-		} catch (IOException e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-		
-		// rotate it such that average strike is 0
-		List<Double> strikes = new ArrayList<>();
-		List<Double> weights = new ArrayList<>();
-		ArrayList<SimulatorElement> rupElems = rupture.getAllElements();
-		double[] elemSlips = rupture.getAllElementSlips();
-		for (int i=0; i<rupElems.size(); i++) {
-			SimulatorElement elem = rupElems.get(i);
-			FaultSectionPrefData sect = allSubSects.get(elem.getSectionID()-offset);
-			double elemStrike = elem.getFocalMechanism().getStrike();
-			
-			// check to see if it's flipped ~180 from the section strike (happens often for SS faults)
-			// and correct if necessary
-			double sectStrike = sect.getFaultTrace().getAveStrike();
-			double strikeDiff = angleDiff(sectStrike, elemStrike);
-			if (strikeDiff > 120)
-				elemStrike += 180;
-			
-			strikes.add(elemStrike);
-			weights.add(FaultMomentCalc.getMoment(elem.getArea(), elemSlips[i]));
-		}
-		double aveStrike = FaultUtils.getScaledAngleAverage(weights, strikes);
-		if (D) System.out.println("Average strike: "+aveStrike);
-		RSQSimEvent rotated = RuptureRotationUtils.getRotated(rupture, centroid, -aveStrike);
-		
-		if (HYPO_NORTH) {
-			// now make sure the hypocenter is on the North side of the centroid
-			Location hypocenter = RSQSimUtils.getHypocenter(rotated);
-			if (hypocenter.getLatitude() < centroid.getLatitude()) {
-				if (D) System.out.println("Mirroring");
-				// flip the rupture horizontally. don't spin it, as that would mess up
-				// Aki & Richards convention, mirror it
-				rotated = RuptureRotationUtils.getMirroredNS(rotated, centroid.getLatitude());
-			}
-		}
-		
-		return rotated;
+		return RuptureRotationUtils.getInitiallyOriented(catalog, rupture, centroid);
 	}
 	
 	private static final double trans_p_diff_thresh = 0.5;
@@ -263,7 +220,7 @@ public class RSQSimRotatedRupVariabilityConfig extends RotatedRupVariabilityConf
 					if (D) System.out.println("Orig trans dist: "+origTransDist);
 					// only move north/south
 					rupAngle = siteToRup.getAzimuth();
-					angleDiff = angleDiff(rupAngle, 0d);
+					angleDiff = RuptureRotationUtils.angleDiff(rupAngle, 0d);
 					if (D) System.out.println("Angle diff: "+angleDiff);
 					// cap it at 45 degrees as we can get stuck in a loop otherwise
 					transDist = origTransDist*Math.cos(Math.toRadians(Math.min(angleDiff, 45)));

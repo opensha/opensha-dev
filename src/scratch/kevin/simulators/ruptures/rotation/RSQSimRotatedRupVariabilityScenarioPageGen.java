@@ -70,7 +70,7 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4320.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4682.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4860.instance(baseDir);
 
 //		File bbpDir = new File(bbpParallelDir,
 //				"2019_11_22-rundir2585_1myrs-rotatedRups-m7p2_vert_ss_surface_rnd_mag_0p05"
@@ -82,6 +82,9 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 //				"2019_02_27-rundir2585_1myrs-rotatedRups-6scenarios-3dists-18srcAz-1siteSrcAz"
 //				+ "-400rups-skipYears5000-vmLA_BASIN_500-noHF-1site");
 		File bbpDir = null;
+		
+		FilterMethod forceFilter = FilterMethod.SECT_VARIABILITY;
+//		FilterMethod forceFilter = null;
 		
 //		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 		VelocityModel forceVM = VelocityModel.LA_BASIN_500;
@@ -121,6 +124,8 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 					zipFile = new File(dir, "results_rotD.zip");
 				if (zipFile.exists()) {
 					if (forceVM != null && RSQSimBBP_Config.detectVM(dir) != forceVM)
+						continue;
+					if (forceFilter != null && FilterMethod.fromDirName(name) != forceFilter)
 						continue;
 					if (timeScale == 1d && name.contains("-timeScale"))
 						continue;

@@ -1,4 +1,4 @@
-package scratch.kevin.simulators.ruptures.rotation;
+package scratch.kevin.simulators.ruptures.azimuthal;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,35 +9,28 @@ import java.util.List;
 
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
-import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter.Device;
+import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
-import org.opensha.sha.simulators.srf.RSQSimState;
-import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.io.Files;
-import com.google.common.primitives.Doubles;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
-import scratch.kevin.bbp.BBP_Module.Method;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
-import scratch.kevin.bbp.BBP_Site;
+import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
+import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
-import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
 import scratch.kevin.simulators.ruptures.MPJ_BBP_CatalogSimScriptGen;
-import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 
-class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
+public class AzimuthalScriptsGen {
 
 	public static void main(String[] args) throws IOException {
 //		String catalogDirName = "rundir2585_1myrs";
+//		String catalogDirName = "rundir4682";
 		String catalogDirName = "rundir4860";
-//		String catalogDirName = "rundir4317";
 		boolean gp = false;
 
 //		String catalogDirName = null;
@@ -45,6 +38,12 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		
 		int skipYears = 5000;
 		double gpPatchArea = 1d;
+		
+		int numRuptures = 100;
+		double spacing = 5d;
+//		double spacing = 10d;
+		double buffer = 100d;
+		boolean positiveX = false;
 
 //		Scenario[] scenarios = Scenario.values();
 //		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE_RELAXED, Scenario.M7p2_VERT_SS_SURFACE_RELAXED};
@@ -52,32 +51,17 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 //		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p15, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p2,
 //				Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p25, Scenario.M7p2_VERT_SS_SURFACE_RANDMAG_0p3};
 //		Scenario[] scenarios = {Scenario.M7p2_VERT_SS_SURFACE};
+//		Scenario[] scenarios = {Scenario.M6p6_REVERSE};
 		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE, Scenario.M6p6_REVERSE,
 				Scenario.M7p2_VERT_SS_SURFACE};
+//		Scenario[] scenarios = {Scenario.M6p6_VERT_SS_SURFACE,
+//				Scenario.M7p2_VERT_SS_SURFACE};
 ////		double[] distances = BBP_PartBValidationConfig.OFFICIAL_DISTANCES;
-		FilterMethod filter = BBP_PartBValidationConfig.FILTER_METHOD_DEFAULT;
-		double[] distances = { 20d, 50d, 100d };
-		int numSourceAz = 18;
-//		int numSiteToSourceAz = 36;
-		int numSiteToSourceAz = 1;
-		int maxRuptures = 100;
-
-//		double[] distances = { 20d };
-//		int numSourceAz = 4;
-////		int numSiteToSourceAz = 36;
-//		int numSiteToSourceAz = 1;
-//		int maxRuptures = 10;
+		FilterMethod filter = FilterMethod.MEDIAN_LENGTH;
+//		FilterMethod filter = BBP_PartBValidationConfig.FILTER_METHOD_DEFAULT;
 		
 //		RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_863;
 		VelocityModel vm = RSQSimBBP_Config.VM;
-		
-//		List<BBP_Site> sites = RSQSimBBP_Config.getCyberShakeInitialLASites();
-//		String stitesStr = "csLASites";
-		
-		List<BBP_Site> sites = RSQSimBBP_Config.getCyberShakeInitialLASites().subList(0, 1);
-		String stitesStr = "1site";
-		
-		System.out.println("Expected num: "+(numSourceAz*numSiteToSourceAz*distances.length*scenarios.length*maxRuptures*sites.size()));
 		
 		double timeScalar = 1d;
 		boolean scaleVelocities = false;
@@ -85,7 +69,7 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 30;
 		String queue = "scec";
 		int mins = 48*60;
 		int heapSizeMB = 45*1024;
@@ -103,13 +87,14 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
 		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
-//		int threads = 96;
+//		int threads = 48;
 //		int nodes = 10;
 //		String queue = "skx-normal";
 //		int mins = 24*60;
 //		int heapSizeMB = 100*1024;
 //		String bbpDataDir = "/tmp";
 //		String nodeScratchDir = null;
+//		String nodeGFDir = "/tmp/gfs";
 //		String bbpCopyParentDir = "/scratch/00950/kevinm/bbp";
 //		File bbpEnvFile = new File("/work/00950/kevinm/stampede2/bbp/bbp_env.sh");
 //		String sharedScratchDir = "/scratch/00950/kevinm/";
@@ -129,20 +114,18 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 			Preconditions.checkNotNull(catalogDirName, "GP is false but no catalog specified");
 			jobName += "-"+catalogDirName;
 		}
-		jobName += "-rotatedRups";
+		jobName += "-azimuthal";
 		if (scenarios.length == 1)
 			jobName += "-"+scenarios[0].getPrefix();
 		else
 			jobName += "-"+scenarios.length+"scenarios";
 		if (!gp)
 			jobName += "-filter_"+filter.getPrefix();
-		if (distances.length == 1)
-			jobName += "-"+(float)distances[0]+"km";
-		else
-			jobName += "-"+distances.length+"dists";
-		jobName += "-"+numSourceAz+"srcAz-"+numSiteToSourceAz+"siteSrcAz";
-		if (maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE)
-			jobName += "-"+maxRuptures+"rups";
+		jobName += "-"+numRuptures+"rups";
+		jobName += "-buffer"+(int)buffer;
+		jobName += "-spacing"+(int)spacing;
+		if (positiveX)
+			jobName += "-positiveX";
 		if (gp)
 			jobName += "-patchArea"+(float)gpPatchArea;
 		else
@@ -155,17 +138,11 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 			if (scaleVelocities)
 				jobName += "-velScale";
 		}
-		jobName += "-"+stitesStr;
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
 		Preconditions.checkState(localJobDir.exists() || localJobDir.mkdir());
 		File remoteJobDir = new File(remoteDir, jobName);
-		
-		File sitesFile = new File(localJobDir, "sites.stl");
-		System.out.println("Writing "+sites.size()+" sites to "+sitesFile.getAbsolutePath());
-		BBP_Site.writeToFile(sitesFile, sites);
-		File remoteSitesFile = new File(remoteJobDir, sitesFile.getName());
 		
 		String argz = MPJTaskCalculator.argumentBuilder().minDispatch(threads).maxDispatch(500).threads(threads).endTimeSlurm().build();
 		argz += " --vm "+vm.name()+" --method "+RSQSimBBP_Config.METHOD.name();
@@ -174,27 +151,24 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 			argz += " --catalog-dir "+catalogDirName;
 			argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
 			argz += " --skip-years "+skipYears;
-			if (maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE)
-				argz += " --max-ruptures "+maxRuptures;
 			if (timeScalar != 1d) {
 				argz += " --time-scalar "+(float)timeScalar;
 				if (scaleVelocities)
 					argz += " --velocity-scale";
 			}
 		} else {
-			Preconditions.checkState(maxRuptures > 0 && maxRuptures < Integer.MAX_VALUE);
-			argz += " --num-ruptures "+maxRuptures;
 			argz += " --patch-area "+(float)gpPatchArea;
 		}
+		argz += " --num-ruptures "+numRuptures;
 		argz += " --scenarios "+scenarios[0].name();
 		for (int i=1; i<scenarios.length; i++)
 			argz += ","+scenarios[i].name();
 		if (!gp)
 			argz += " --filter "+filter.name();
-		argz += " --distances "+commaSeparate(Doubles.asList(distances).toArray());
-		argz += " --num-source-az "+numSourceAz;
-		argz += " --num-site-source-az "+numSiteToSourceAz;
-		argz += " --sites "+remoteSitesFile.getAbsolutePath();
+		argz += " --buffer "+(float)buffer;
+		argz += " --spacing "+(float)spacing;
+		if (positiveX)
+			argz += " --positive-x";
 		if (!RSQSimBBP_Config.DO_HF)
 			argz += " --no-hf";
 		if (bbpDataDir != null && !bbpDataDir.isEmpty())
@@ -205,8 +179,8 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 		argz = MPJ_BBP_CatalogSimScriptGen.addBBP_EnvArgs(argz, addLines, remoteJobDir, nodeScratchDir,
 				sharedScratchDir, bbpCopyParentDir, bbpEnvFile);
 		
-		String clazz = gp ? MPJ_BBP_GP_RotatedRupVariabilityScenarioSim.class.getName()
-				: MPJ_BBP_RotatedRupVariabilityScenarioSim.class.getName();
+		String clazz = gp ? MPJ_GP_AzimuthalSim.class.getName()
+				: MPJ_RSQSimAzimuthalSim.class.getName();
 		
 		List<String> script = mpjWrite.buildScript(clazz, argz);
 		
@@ -214,23 +188,8 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 			script.addAll(2, addLines);
 		
 		script = pbsWrite.buildScript(script, mins, nodes, threads, queue);
-		String scriptName = gp ? "gp_bbp_rotated.slurm" : "cat_bbp_rotated.slurm";
+		String scriptName = gp ? "gp_bbp_azimuthal.slurm" : "cat_bbp_azimuthal.slurm";
 		pbsWrite.writeScript(new File(localJobDir, scriptName), script);
-	}
-	
-	private static String commaSeparate(Object... vals) {
-		String[] strs = new String[vals.length];
-		for (int i=0; i<vals.length; i++)
-			strs[i] = vals[i].toString();
-		return commaSeparate(strs);
-	}
-	
-	private static String commaSeparate(String... vals) {
-		Preconditions.checkState(vals.length > 0);
-		String str = vals[0].toString();
-		for (int i=1; i<vals.length; i++)
-			str += ","+vals[i];
-		return str;
 	}
 
 }

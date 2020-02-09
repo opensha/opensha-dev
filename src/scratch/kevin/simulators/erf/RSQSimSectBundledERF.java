@@ -1146,7 +1146,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				System.err.println("hardcoded dir doesn't exist: "+baseDir.getAbsolutePath());
 				System.exit(2);
 			}
-			catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+			catalog = Catalogs.BRUCE_4860.instance(baseDir);
 			writePoints = false;
 			writeSRFs = false;
 			writeMappings = false;

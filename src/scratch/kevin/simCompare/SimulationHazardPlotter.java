@@ -25,6 +25,7 @@ import org.opensha.commons.calc.GaussianDistCalc;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.gui.plot.AnimatedGIFRenderer;
@@ -39,6 +40,7 @@ import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sra.rtgm.RTGM;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -415,7 +417,7 @@ public class SimulationHazardPlotter<E> {
 		return curves;
 	}
 	
-	private synchronized Map<String, DiscretizedFunc> getCalcGMPESourceCurves(double period, double contribIML)
+	private synchronized Map<String, DiscretizedFunc> getCalcGMPESourceCurves(double period)
 			throws IOException {
 		if (gmpeSourceCurves.containsRow(period))
 			return gmpeSourceCurves.row(period);
@@ -424,27 +426,33 @@ public class SimulationHazardPlotter<E> {
 		for (String sourceName : sourceRupContribFracts.rowKeySet()) {
 			Map<E, Double> rupContribFracts = sourceRupContribFracts.row(sourceName);
 			DiscretizedFunc simSourceCurve = getCalcSimSourceCurves(period).get(sourceName);
-			if (simSourceCurve == null || simSourceCurve.size() == 0 || simSourceCurve.getMaxX() < contribIML)
+			if (simSourceCurve == null || simSourceCurve.size() == 0) {
+				System.out.println("Skipping "+sourceName+" (null ? "+(simSourceCurve == null)+")");
 				continue;
-			double simSourceVal = simSourceCurve.getInterpolatedY_inLogXLogYDomain(contribIML);
-			if (simSourceVal > 0) {
-				List<ModRateRuptureComparison<E>> modComps = new ArrayList<>();
-				for (RuptureComparison<E> comp : new RuptureComparisonFilter.SiteFilter<E>().getMatches(comps, site)) {
-					double rupRate = comp.getAnnualRate();
-					Double fract = rupContribFracts.get(comp.getRupture());
-					if (fract == null || fract <= 0 || rupRate == 0)
-						continue;
-					rupRate *= fract;
-					modComps.add(new ModRateRuptureComparison<>(comp, rupRate));
-				}
-				
-				SimulationHazardPlotter<E> modCalc = new SimulationHazardPlotter<>(simCalc, modComps, site, curveDuration, gmpeRef);
-				modCalc.setGMPE_FixedSigmas(null);
-				modCalc.setGMPE_TruncationLevels(null);
-				DiscretizedFunc gmpeCurve = modCalc.getCalcGMPECurve(period);
-				
-				curves.put(sourceName, gmpeCurve);
 			}
+//			if (contribIML > 0) {
+//				if (simSourceCurve.getMaxX() < contribIML)
+//					continue;
+//				double simSourceVal = simSourceCurve.getInterpolatedY_inLogXLogYDomain(contribIML);
+//				if (!Double.isFinite(simSourceVal) || simSourceVal <= 0)
+//					continue;
+//			}
+			List<ModRateRuptureComparison<E>> modComps = new ArrayList<>();
+			for (RuptureComparison<E> comp : new RuptureComparisonFilter.SiteFilter<E>().getMatches(comps, site)) {
+				double rupRate = comp.getAnnualRate();
+				Double fract = rupContribFracts.get(comp.getRupture());
+				if (fract == null || fract <= 0 || rupRate == 0)
+					continue;
+				rupRate *= fract;
+				modComps.add(new ModRateRuptureComparison<>(comp, rupRate));
+			}
+			
+			SimulationHazardPlotter<E> modCalc = new SimulationHazardPlotter<>(simCalc, modComps, site, curveDuration, gmpeRef);
+			modCalc.setGMPE_FixedSigmas(null);
+			modCalc.setGMPE_TruncationLevels(null);
+			DiscretizedFunc gmpeCurve = modCalc.getCalcGMPECurve(period);
+			
+			curves.put(sourceName, gmpeCurve);
 		}
 		for (String sourceName : curves.keySet())
 			gmpeSourceCurves.put(period, sourceName, curves.get(sourceName));
@@ -457,23 +465,74 @@ public class SimulationHazardPlotter<E> {
 		Map<String, Double> simSourceSortVals = new HashMap<>();
 		
 		DiscretizedFunc refCurve = getCalcSimCurve(simCalc, period);
-		if (sourceContribSortProb < refCurve.getMinY() || sourceContribSortProb > refCurve.getMaxY()) {
-			System.out.println("Source contribution sort probability ("+(float)sourceContribSortProb
-					+") is not contained in simulation curve, can't determine ground motion");
-			return null;
+		double contribIML;
+		if (sourceContribSortProb > 0) {
+			if (sourceContribSortProb < refCurve.getMinY() || sourceContribSortProb > refCurve.getMaxY()) {
+				System.out.println("Source contribution sort probability ("+(float)sourceContribSortProb
+						+") is not contained in simulation curve, can't determine ground motion");
+				return null;
+			}
+			contribIML = refCurve.getFirstInterpolatedX_inLogXLogYDomain(sourceContribSortProb);
+			System.out.println("Sorting source contirubtions for IML="+(float)+contribIML
+					+" at p="+(float)sourceContribSortProb);
+		} else {
+			// use RTGM
+			contribIML = 0d;
 		}
-		double contribIML = refCurve.getFirstInterpolatedX_inLogXLogYDomain(sourceContribSortProb);
-		System.out.println("Sorting source contirubtions for IML="+(float)+contribIML
-				+" at p="+(float)sourceContribSortProb);
+		
 		
 		Map<String, DiscretizedFunc> simSourceCurves = getCalcSimSourceCurves(period);
-		Map<String, DiscretizedFunc> gmpeSourceCurves = getCalcGMPESourceCurves(period, contribIML);
+		Map<String, DiscretizedFunc> gmpeSourceCurves =
+				gmpeSources ? getCalcGMPESourceCurves(period) : null;
 		
 		for (String sourceName : simSourceCurves.keySet()) {
 			DiscretizedFunc simSourceCurve = simSourceCurves.get(sourceName);
-			if (simSourceCurve == null || simSourceCurve.size() == 0 || simSourceCurve.getMaxX() < contribIML)
+			if (simSourceCurve == null || simSourceCurve.size() == 0)
 				continue;
-			double simSourceVal = simSourceCurve.getInterpolatedY_inLogXLogYDomain(contribIML);
+			double simSourceVal;
+			if (sourceContribSortProb > 0) {
+				if (simSourceCurve.getMaxX() < contribIML)
+					continue;
+				simSourceVal = simSourceCurve.getInterpolatedY_inLogXLogYDomain(contribIML);
+			} else {
+				// calculate RTGM
+				// first discretize evenly
+				DiscretizedFunc discrCurve = new EvenlyDiscretizedFunc(
+						simSourceCurve.getMinX(), simSourceCurve.getMaxX(), 100);
+				for (int i=0; i<discrCurve.size(); i++) {
+					double x = discrCurve.getX(i);
+					double y;
+					if ((float)x == 0f)
+						y = simSourceCurve.getY(0);
+					else if ((float)x == (float)simSourceCurve.getMaxX())
+						y = simSourceCurve.getY(simSourceCurve.size()-1);
+					else
+						y = simSourceCurve.getInterpolatedY(x);
+					y = - Math.log(1-y)/curveDuration;
+					discrCurve.set(i, y);
+				}
+				if (RTGM.AFE4UHGM < discrCurve.getMinY() || RTGM.AFE4UHGM > discrCurve.getMaxY()) {
+					simSourceVal = 0d;
+				} else {
+					RTGM calc = RTGM.create(discrCurve, null, null);
+					try {
+						calc.call();
+					} catch (RuntimeException e) {
+						System.err.println("RTGM Calc failed for Hazard Curve:\n"+discrCurve);
+						System.err.flush();
+						throw e;
+					}
+					double rtgm = calc.get();
+					if (!Double.isFinite(rtgm)) {
+						System.err.println("WARNING: could not calculate RTGM for "+sourceName+": "+rtgm);
+						rtgm = 0d;
+					}
+//					Preconditions.checkState(rtgm >= 0, "RTGM is not >=0: %s\n\n%s", rtgm, discrCurve);
+					simSourceVal = rtgm;
+				}
+//				System.out.println(sourceName+" RTGM: "+simSourceVal+", y(0): "+discrCurve.getY(0));
+			}
+			
 			simSourceSortVals.put(sourceName, simSourceVal);
 		}
 		
@@ -514,6 +573,7 @@ public class SimulationHazardPlotter<E> {
 				curve = gmpeSourceCurves.get(sourceName);
 			else
 				curve = simSourceCurves.get(sourceName);
+			Preconditions.checkNotNull(curve, "No curve for %s, gmpeSources=%s", sourceName, gmpeSources);
 			curve.setName(sourceName);
 			double val = simSourceSortVals.get(sourceName);
 			if (numSoFar >= numSourceCurves || val == 0)
@@ -1085,7 +1145,7 @@ public class SimulationHazardPlotter<E> {
 //					+" at p="+(float)probLevel);
 			
 			Map<String, DiscretizedFunc> simCurves = getCalcSimSourceCurves(period);
-			Map<String, DiscretizedFunc> gmpeCurves = getCalcGMPESourceCurves(period, contribIML);
+			Map<String, DiscretizedFunc> gmpeCurves = getCalcGMPESourceCurves(period);
 			
 			for (String sourceName : simCurves.keySet()) {
 				DiscretizedFunc sourceSimCurve = simCurves.get(sourceName);

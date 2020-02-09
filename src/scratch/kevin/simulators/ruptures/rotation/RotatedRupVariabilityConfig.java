@@ -436,13 +436,6 @@ public abstract class RotatedRupVariabilityConfig<E> {
 	
 	protected static final boolean HYPO_NORTH = false;
 	
-	protected static double angleDiff(double angle1, double angle2) {
-		double angleDiff = Math.abs(angle1 - angle2);
-		while (angleDiff > 270)
-			angleDiff -= 360;
-		return Math.abs(angleDiff);
-	}
-	
 	protected static final boolean D = false;
 	
 	public Location getCentroid(E rupture) {

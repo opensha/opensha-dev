@@ -290,6 +290,7 @@ public class RSQSimBBP_Config {
 		sites.add(new BBP_Site("SMCA", new Location(34.00909, -118.48939), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("OSI", new Location(34.6145, -118.7235), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("PDE", new Location(34.44199, -118.58215), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+//		sites.add(new BBP_Site("UCR", new Location(33.96425, -117.31636), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("WSS", new Location(34.1717, -118.64971), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("LAF", new Location(33.86889, -118.33143), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
 		sites.add(new BBP_Site("s022", new Location(34.24505, -119.18086), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));

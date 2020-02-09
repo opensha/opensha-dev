@@ -267,53 +267,13 @@ public abstract class RSQSimRotatedRupVariabilityPageGen extends RotatedRupVaria
 				RSQSimEvent oriented = config.getInitiallyOrientedRupture(eventID);
 				
 				Location centroid = config.getCentroid(event);
-				double centroidDepth = Double.NaN;
-				double centroidDist = Double.POSITIVE_INFINITY;
+				
+				QuadSurface qSurf = RuptureRotationUtils.getIdealizedQuadSurfaceRepresentation(oriented, centroid);
+				
+				DistanceOverrideQuadSurface surf = new DistanceOverrideQuadSurface(qSurf, oriented.getAllElements());
 				
 				Location hypo = RSQSimUtils.getHypocenter(oriented);
-				
-				double minLat = Double.POSITIVE_INFINITY;
-				double maxLat = Double.NEGATIVE_INFINITY;
-				List<Double> dips = new ArrayList<>();
-				double minDepth = Double.POSITIVE_INFINITY;
-				double maxDepth = Double.NEGATIVE_INFINITY;
-				for (SimulatorElement elem : oriented.getAllElements()) {
-					for (Location loc : elem.getVertices()) {
-						double lat = loc.getLatitude();
-						minLat = Double.min(minLat, lat);
-						maxLat = Double.max(maxLat, lat);
-						minDepth = Double.min(minDepth, loc.getDepth());
-						maxDepth = Double.max(maxDepth, loc.getDepth());
-						
-						double cDist = LocationUtils.horzDistanceFast(loc, centroid);
-						if (cDist < centroidDist) {
-							centroidDepth = loc.getDepth();
-							centroidDist = cDist;
-						}
-					}
-					dips.add(elem.getFocalMechanism().getDip());
-				}
-				
-				Location southernExtent = new Location(minLat, centroid.getLongitude());
-				Location northernExtent = new Location(maxLat, centroid.getLongitude());
-				
-				double aveDip = StatUtils.mean(Doubles.toArray(dips));
-				boolean dipping = aveDip < 80;
-				
-				if (dipping) {
-					// not strike-slip, figure out trace
-					double horzOffset = (centroidDepth-minDepth)/Math.tan(Math.toRadians(aveDip));
-//					System.out.println("aveDip="+aveDip+"centroidDepth="+centroidDepth+", minDepth="+minDepth+", horzOffset="+horzOffset);
-					double west = 1.5*Math.PI;
-					// move west to be the surface projection of trace
-					southernExtent = LocationUtils.location(southernExtent, west, horzOffset);
-					northernExtent = LocationUtils.location(northernExtent, west, horzOffset);
-				}
-				FaultTrace tr = new FaultTrace(null);
-				tr.add(new Location(southernExtent.getLatitude(), southernExtent.getLongitude(), minDepth));
-				tr.add(new Location(northernExtent.getLatitude(), northernExtent.getLongitude(), minDepth));
-				double width = (maxDepth-minDepth)/Math.sin(Math.toRadians(aveDip));
-				DistanceOverrideQuadSurface surf = new DistanceOverrideQuadSurface(tr, aveDip, width, oriented.getAllElements());
+				boolean dipping = qSurf.getAveDip() < 80;
 				double aveRake = dipping ? 90 : 180;
 				EqkRupture rup = new EqkRupture(mag, aveRake, surf, hypo);
 
@@ -416,9 +376,9 @@ public abstract class RSQSimRotatedRupVariabilityPageGen extends RotatedRupVaria
 		private Map<Location, Double> distsMap = new HashMap<>();
 		private List<SimulatorElement> elems;
 
-		public DistanceOverrideQuadSurface(FaultTrace trace, double dip, double width,
+		public DistanceOverrideQuadSurface(QuadSurface surf,
 				List<SimulatorElement> elems) {
-			super(trace, dip, width);
+			super(surf.getUpperEdge(), surf.getAveDip(), surf.getAveWidth());
 			this.elems = elems;
 		}
 

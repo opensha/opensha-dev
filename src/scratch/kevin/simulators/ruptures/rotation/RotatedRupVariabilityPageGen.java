@@ -343,19 +343,19 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 				return gm.stdDev();
 			}
 		},
-		PHI("Ï†", "&phi;") {
+		PHI("ϕ", "&phi;") {
 			@Override
 			public double calculate(ScalarGroundMotion gm) {
 				return gm.phi();
 			}
 		},
-		PHI_SS("Ï†_ss", "&phi;<sub>SS</sub>") {
+		PHI_SS("ϕ_ss", "&phi;<sub>SS</sub>") {
 			@Override
 			public double calculate(ScalarGroundMotion gm) {
 				return Math.sqrt(gm.phi()*gm.phi() - 0.3*0.3);
 			}
 		},
-		TAU("Ï„", "&tau;") {
+		TAU("τ", "&tau;") {
 			@Override
 			public double calculate(ScalarGroundMotion gm) {
 				return gm.tau();
@@ -377,48 +377,48 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 	}
 	
 	public enum VariabilityType {
-		PATH("Path-to-path", "path", "Ï†_p2p", "&phi;<sub>P2P</sub>", al_atik,
+		PATH("Path-to-path", "path", "ϕ_p2p", "&phi;<sub>P2P</sub>", al_atik,
 				null, null,
 				qarr(Quantity.SITE, Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID, Quantity.SOURCE_AZIMUTH), // group quantities
 				qarr(Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
 				qarr(), // singleton quantities
 				false), // std dev of residuals
-		SOUCE_STRIKE("Source-strike", "source_strike", "Ï†_s", "&phi;<sub>s</sub>", aki_richards,
+		SOUCE_STRIKE("Source-strike", "source_strike", "ϕ_s", "&phi;<sub>s</sub>", aki_richards,
 //				GMPE_Var.PHI_SS, new ScatterDisaggQuantity[] {ScatterDisaggQuantity.V_PROP},
 				GMPE_Var.PHI_SS, null,
 				qarr(Quantity.SITE, Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID, Quantity.SITE_TO_SOURTH_AZIMUTH), // group quantities
 				qarr(Quantity.SOURCE_AZIMUTH), // vary quantities
 				qarr(), // singleton quantities
-				false, "Î´w_es", "&delta;W<sub>es</sub>"), // std dev of residuals
+				false, "δw_es", "&delta;W<sub>es</sub>"), // std dev of residuals
 //				Quantity.SITE, Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SITE_TO_SOURTH_AZIMUTH),
-		WITHIN_EVENT_SS("Within-event, single-site", "within_event_ss", "Ï†_ss", "&phi;<sub>SS</sub>", al_atik,
+		WITHIN_EVENT_SS("Within-event, single-site", "within_event_ss", "ϕ_ss", "&phi;<sub>SS</sub>", al_atik,
 //				GMPE_Var.PHI_SS, new ScatterDisaggQuantity[] {ScatterDisaggQuantity.V_PROP},
 				GMPE_Var.PHI_SS, null,
 				qarr(Quantity.SITE, Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID), // group quantities
 				qarr(Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
 				qarr(), // singleton quantities
-				false, "Î´w_es", "&delta;W<sub>es</sub>"), // std dev of residuals
-		WITHIN_EVENT("Within-event", "within_event", "Ï†", "&phi;", al_atik,
+				false, "δw_es", "&delta;W<sub>es</sub>"), // std dev of residuals
+		WITHIN_EVENT("Within-event", "within_event", "ϕ", "&phi;", al_atik,
 				GMPE_Var.PHI, null,
 				qarr(Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID), // group quantities
 				qarr(Quantity.SITE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
 				qarr(Quantity.SITE), // singleton quantities
-				false, "Î´w_es", "&delta;W<sub>es</sub>"), // std dev of residuals
-//		BETWEEN_EVENTS_SINGLE_PATH("Between-events, single-path", "between_events_single_path", "Ï„_0", "&tau;<sub>0</sub>", al_atik,
+				false, "δw_es", "&delta;W<sub>es</sub>"), // std dev of residuals
+//		BETWEEN_EVENTS_SINGLE_PATH("Between-events, single-path", "between_events_single_path", "τ_0", "&tau;<sub>0</sub>", al_atik,
 //				true, true, Quantity.SITE, Quantity.DISTANCE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH),
-		BETWEEN_EVENTS("Between-events", "between_events", "Ï„", "&tau;", al_atik,
+		BETWEEN_EVENTS("Between-events", "between_events", "τ", "&tau;", al_atik,
 				GMPE_Var.TAU, null,
 				qarr(Quantity.DISTANCE), // separate quantities
 				qarr(Quantity.EVENT_ID), // group quantities
 				qarr(Quantity.SITE, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH), // vary quantities
 				qarr(), // singleton quantities
-				true, "Î´B_e", "&delta;B<sub>e</sub>"); // medains
+				true, "δB_e", "&delta;B<sub>e</sub>"); // medains
 		// TODO phi_s2s is relative to the site classification, so leave it out for now
-//		SITE_TO_SITE("Site Variability", "site_var", "Ï†_s2s", "&phi;<sub>S2S</sub>", al_atik,
+//		SITE_TO_SITE("Site Variability", "site_var", "ϕ_s2s", "&phi;<sub>S2S</sub>", al_atik,
 //				false, true, null, null,
 //				Quantity.DISTANCE, Quantity.EVENT_ID, Quantity.SOURCE_AZIMUTH, Quantity.SITE_TO_SOURTH_AZIMUTH);
 		
@@ -3371,6 +3371,12 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			if (repeatableRandom == null)
 				repeatableRandom = new Random(magConfigs.get(magnitude).getRotations().size());
 			
+			List<List<ASK_EventData>> filteredRealDataList = new ArrayList<>();
+			for (List<ASK_EventData> datas : realDataList)
+				if (datas.size() > 1)
+					filteredRealDataList.add(datas);
+			realDataList = filteredRealDataList;
+			
 			Map<Integer, List<RotationSpec>> eventRotMap = new HashMap<>();
 			List<Integer> eventIDs = new ArrayList<>();
 			for (RotationSpec rot : totalRotations) {
@@ -3388,7 +3394,9 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			int origNumRecordings = 0;
 			for (List<ASK_EventData> data : realDataList)
 				origNumRecordings += data.size();
+			Preconditions.checkState(eventIDs.size() > 1, "Don't have enough events: %s", eventIDs.size());
 			int eventsToInclude = Integer.min(eventIDs.size(), realDataList.size());
+			Preconditions.checkState(eventsToInclude > 1, "eventsToInclude must be > 1: %s", eventsToInclude);
 //			System.out.println("Doing "+eventsToInclude+" events");
 			for (int i=0; i<eventsToInclude; i++) {
 				int eventID = eventIDs.get(i);

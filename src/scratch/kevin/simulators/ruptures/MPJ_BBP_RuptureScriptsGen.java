@@ -62,14 +62,20 @@ class MPJ_BBP_RuptureScriptsGen {
 //		int eventID = 1670183;
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		int eventID = 385955;
-		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
-		int eventID = 5304;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2829.instance(baseDir);
+//		int eventID = 5304;
 //		int eventID = 31324;
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		int eventID = 9955310;
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
 //		int eventID = 40636;
 ////		int eventID = 92236;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4827.instance(baseDir);
+//		int eventID = 195167;
+////		int eventID = 128149;
+		RSQSimCatalog catalog = Catalogs.BRUCE_4841.instance(baseDir);
+		int eventID = 755070;
+//		int eventID = 2441060;
 		
 		double timeScalar = 1d;
 		boolean scaleVelocities = false;
@@ -78,8 +84,8 @@ class MPJ_BBP_RuptureScriptsGen {
 		
 		boolean stampede = false;
 		
-		boolean doGP = false;
-		boolean doShakeMap = true;
+		boolean doGP = true;
+		boolean doShakeMap = false;
 		boolean doGPShakeMaps = false;
 
 		boolean csSites = false;
@@ -89,9 +95,9 @@ class MPJ_BBP_RuptureScriptsGen {
 		int numShakeMapGP = 5;
 		double mapSpacing = 0.05;
 //		double mapSpacing = 0.02;
-		int maxNodes = 36;
+		int maxNodes = 30;
 //		int maxNodes = 10;
-		boolean gpAdjustDDW = true;
+		boolean gpAdjustDDW = false;
 		
 		File srcFile = RSQSimBBP_Config.getEventSrcFile(catalog, eventID);
 		File srfFile = RSQSimBBP_Config.getEventSRFFile(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,

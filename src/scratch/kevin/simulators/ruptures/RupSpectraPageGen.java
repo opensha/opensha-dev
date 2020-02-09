@@ -26,6 +26,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.FileNameComparator;
+import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -36,10 +37,14 @@ import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
+import org.opensha.sha.simulators.srf.RSQSimSRFGenerator;
+import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
+import org.opensha.sha.simulators.srf.SRF_PointData;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.analysis.FaultBasedMapGen;
@@ -49,6 +54,7 @@ import scratch.kevin.bbp.BBP_SimZipLoader.BBP_RupGenSimZipLoader;
 import scratch.kevin.bbp.BBP_SimZipLoader.BBP_ShakeMapSimZipLoader;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
+import scratch.kevin.bbp.BBP_Wrapper;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
 import scratch.kevin.bbp.SeismogramPlotter;
 import scratch.kevin.bbp.ShakemapPlotter;
@@ -335,6 +341,92 @@ class RupSpectraPageGen {
 		rupVelPlot.finalizePlot();
 		lines.add(topLink); lines.add("");
 		lines.add("![Rupture Velocity Plot]("+resourcesDir.getName()+"/rupture_velocity_scatter_dist.png)");
+		
+		lines.add("");
+		lines.add("### RSQSim Patch Slip-Time Histories");
+		lines.add(topLink); lines.add("");
+		
+		lines.add("Slip-time histories on a subset of patches which participate in the event. The top panel "
+				+ "shows cumulative slipi, and the bottom shows instantaneous velocity. Raw slip-time functions "
+				+ "are in black, and interpolated/discretized for SRF files representation are colored.");
+		lines.add("");
+		
+		int targetPatches = 10;
+		int mod = Integer.max(1, elems.size()/targetPatches);
+		
+		table = MarkdownUtils.tableBuilder();
+		
+		table.initNewLine();
+		for (int i=0; i<elems.size(); i++) {
+			if (i % mod > 0)
+				continue;
+			SimulatorElement elem = elems.get(i);
+			String prefix = "rsqsim_patch_"+elem.getID();
+			RSQSimSRFGenerator.plotSlip(resourcesDir, prefix, func, elem, RSQSimBBP_Config.SRF_DT,
+					RSQSimBBP_Config.SRF_INTERP_MODE);
+			table.addColumn("![plot](resources/"+prefix+".png)");
+		}
+		table.finalizeLine();
+		lines.addAll(table.wrap(4, 0).build());
+		lines.add("");
+		
+		if (refBBPDir != null) {
+			lines.add("");
+			lines.add("### GP Comparison Patch Slip-Time Histories");
+			lines.add(topLink); lines.add("");
+			
+			lines.add("Same as above, but for a Graves & Pitarka rupture.");
+			lines.add("");
+			
+			File refSRF = new File(resourcesDir, "ref_srf.srf");
+			if (!refSRF.exists()) {
+				System.out.println("Generating ref SRF");
+				File srcFile = null;
+				for (File file : refBBPDir.listFiles()) {
+					if (file.getName().toLowerCase().endsWith(".src")) {
+						srcFile = file;
+						break;
+					}
+				}
+				Preconditions.checkNotNull("SRC file not found in "+refBBPDir.getAbsolutePath());
+				File tempDir = FileUtils.createTempDir();
+				BBP_Wrapper wrapper = new BBP_Wrapper(RSQSimBBP_Config.VM, RSQSimBBP_Config.METHOD,
+						srcFile, null, null, null, tempDir);
+				wrapper.setSRFGenOnly(true);
+				wrapper.run();
+				File srfFile = null;
+				for (File file : tempDir.listFiles()) {
+					if (file.getName().toLowerCase().endsWith(".srf")) {
+						srfFile = file;
+						break;
+					}
+				}
+				Preconditions.checkNotNull("SRF file not found in "+tempDir.getAbsolutePath());
+				Files.copy(srfFile, refSRF);
+			}
+			
+			List<SRF_PointData> points = SRF_PointData.readSRF(refSRF);
+			double maxTime = 0d;
+			for (SRF_PointData point : points)
+				maxTime = Math.max(maxTime, point.getEndTime());
+			
+			mod = Integer.max(1, points.size()/targetPatches);
+			
+			table = MarkdownUtils.tableBuilder();
+			
+			table.initNewLine();
+			for (int i=0; i<points.size(); i++) {
+				if (i % mod > 0)
+					continue;
+				SRF_PointData point = points.get(i);
+				String prefix = "gp_patch_"+i;
+				RSQSimSRFGenerator.plotSlip(resourcesDir, prefix, point, maxTime);
+				table.addColumn("![plot](resources/"+prefix+".png)");
+			}
+			table.finalizeLine();
+			lines.addAll(table.wrap(4, 0).build());
+			lines.add("");
+		}
 		
 		lines.add("");
 		lines.add("## Spectra Plots");
@@ -843,16 +935,34 @@ class RupSpectraPageGen {
 ////		int eventID = 40636;
 //		int eventID = 92236;
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_4655.instance(baseDir);
-//		int eventID = 2106470;
-//		int eventID = 1029675;
-//		int eventID = 467544;
-//		int eventID = 923866;
-		int eventID = 1318657;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4655.instance(baseDir);
+////		int eventID = 2106470;
+////		int eventID = 1029675;
+////		int eventID = 467544;
+////		int eventID = 923866;
+//		int eventID = 1318657;
+
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4827.instance(baseDir);
+////		int eventID = 195167;
+//		int eventID = 128149;
+
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4841.instance(baseDir);
+//		int eventID = 755070;
+////		int eventID = 2441060;
+
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4853.instance(baseDir);
+//		int eventID = 516171;
+
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4849.instance(baseDir);
+//		int eventID = 80686;
+		
+		RSQSimCatalog catalog = Catalogs.TEST_DOUBLE_4860.instance(baseDir);
+//		int eventID = 4853;
+		int eventID = 15377;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = true;
-		boolean gpAdjustDDW = true;
+		boolean gpAdjustDDW = false;
 		
 		File eventBBPDir = RSQSimBBP_Config.getEventBBPDir(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
 				RSQSimBBP_Config.SRF_DT, timeScale, scaleVelocities);

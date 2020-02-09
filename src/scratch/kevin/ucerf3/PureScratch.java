@@ -151,6 +151,7 @@ import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
+import scratch.UCERF3.utils.FaultSectionDataWriter;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.MatrixIO;
@@ -1510,13 +1511,20 @@ public class PureScratch {
 		double mag2 = (2d/3d)*Math.log10(momentDC) - 10.7;
 		System.out.println("mag2: "+mag2);
 	}
+	
+	private static void test59() throws IOException {
+		List<FaultSectionPrefData> subSects31 = DeformationModels.loadSubSects(FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+		List<FaultSectionPrefData> subSects32 = DeformationModels.loadSubSects(FaultModels.FM3_2, DeformationModels.GEOLOGIC);
+		FaultSectionDataWriter.writeSectionsToFile(subSects31, null, new File("/tmp/fm_3_1.txt"), false);
+		FaultSectionDataWriter.writeSectionsToFile(subSects32, null, new File("/tmp/fm_3_2.txt"), false);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test58();
+		test59();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

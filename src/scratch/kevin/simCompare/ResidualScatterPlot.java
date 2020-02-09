@@ -711,6 +711,7 @@ public class ResidualScatterPlot {
 			boolean detrend, double... periods) throws IOException {
 		// for detrending
 		EvenlyDiscrXYZ_DataSet detrendXYZ[] = null;
+		EvenlyDiscrXYZ_DataSet detrendStdDevXYZ[] = null;
 		double minMag = Double.POSITIVE_INFINITY;
 		double maxMag = 0d;
 		double minDist = 1;
@@ -729,13 +730,23 @@ public class ResidualScatterPlot {
 			double distSpacing = (Math.log10(maxDist) - Math.log10(minDist)) / (double)numDist;
 			double magSpacing = (maxMag - minMag) / (double)numMag;
 			detrendXYZ = new EvenlyDiscrXYZ_DataSet[periods.length];
-			for (int p=0; p<periods.length; p++)
+			detrendStdDevXYZ = new EvenlyDiscrXYZ_DataSet[periods.length];
+			for (int p=0; p<periods.length; p++) {
 				detrendXYZ[p] = new EvenlyDiscrXYZ_DataSet(numDist, numMag, Math.log10(minDist)+0.5*distSpacing,
 						minMag+0.5*magSpacing, distSpacing, magSpacing);
+				detrendStdDevXYZ[p] = detrendXYZ[p].copy();
+			}
 			System.out.println("Detrend distance range: "+(float)Math.pow(10, detrendXYZ[0].getX(0)-0.5*distSpacing)
 				+" => "+(float)Math.pow(10, detrendXYZ[0].getX(numDist-1)+0.5*distSpacing)+". Log10 Spacing: "+(float)distSpacing);
 			System.out.println("Detrend mag range: "+(float)(detrendXYZ[0].getY(0)-0.5*magSpacing)
 				+" => "+(float)(detrendXYZ[0].getY(numMag-1)+0.5*magSpacing)+". Spacing: "+(float)magSpacing);
+			List<List<List<double[]>>> rawVals = new ArrayList<>();
+			for (int i=0; i<detrendXYZ[0].getNumX(); i++) {
+				List<List<double[]>> subList= new ArrayList<>();
+				for (int j=0; j<detrendXYZ[0].getNumY(); j++)
+					subList.add(new ArrayList<>());
+				rawVals.add(subList);
+			}
 			int[][] detrendCounts = new int[numDist][numMag];
 			for (Site site : siteCompsMap.keySet()) {
 				for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
@@ -760,20 +771,35 @@ public class ResidualScatterPlot {
 					for (int i=0; i<numSims; i++) {
 						DiscretizedFunc simRD50 = simProv.getRotD50(site, rupture, i);
 						detrendCounts[xInd][yInd]++;
+						double[] vals = new double[periods.length];
 						for (int p=0; p<periods.length; p++) {
 							double simVal = Math.log(simRD50.getY(periods[p]));
 							double residual = simVal - gmpeVals[p];
+							vals[p] = residual;
 							detrendXYZ[p].set(xInd, yInd, detrendXYZ[p].get(xInd, yInd)+residual);
 						}
+						rawVals.get(xInd).get(yInd).add(vals);
 					}
 				}
 			}
 			// now convert to average residual
-			for (int x=0; x<numDist; x++)
-				for (int y=0; y<numMag; y++)
-					for (int p=0; p<periods.length; p++)
+			for (int x=0; x<numDist; x++) {
+				for (int y=0; y<numMag; y++) {
+					for (int p=0; p<periods.length; p++) {
 						if (detrendCounts[x][y] > 0)
 							detrendXYZ[p].set(x, y, detrendXYZ[p].get(x, y)/(double)detrendCounts[x][y]);
+						if (detrendCounts[x][y] > 1) {
+							// std dev
+							double[] vals = new double[detrendCounts[x][y]];
+							for (int i=0; i<vals.length; i++)
+								vals[i] = rawVals.get(x).get(y).get(i)[p];
+							detrendStdDevXYZ[p].set(x, y, Math.sqrt(StatUtils.variance(vals)));
+						} else {
+							detrendStdDevXYZ[p].set(x, y, Double.NaN);
+						}
+					}
+				}
+			}
 		}
 		Table<RuptureComparison<E>, Integer, List<double[]>> rupResidualsTable = HashBasedTable.create();
 		Variance[] totalVars = new Variance[periods.length];
@@ -931,6 +957,24 @@ public class ResidualScatterPlot {
 				String title = periodStr+" Mean Residuals";
 				String detrendPrefix = "detrend_residuals_"+periodStr;
 				XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendXYZ[p], detrendCPT, title, "Log10 Distance Rup", "Magnitude", "Mean Residual");
+				XYZGraphPanel xyzGP = new XYZGraphPanel(gp.getPlotPrefs());
+				xyzGP.drawPlot(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
+				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
+				xyzGP.getChartPanel().setSize(700, 550);
+				xyzGP.saveAsPNG(new File(outputDir, detrendPrefix+".png").getAbsolutePath());
+			}
+			CPT stdCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0d, 1d);
+			stdCPT.setNanColor(Color.WHITE);
+			for (int p=0; p<periods.length; p++) {
+				String periodStr;
+				if (periods[p] == Math.round(periods[p]))
+					periodStr = (int)periods[p]+"s";
+				else
+					periodStr = (float)periods[p]+"s";
+				String title = periodStr+" Standard Deviations";
+				String detrendPrefix = "detrend_std_dev_"+periodStr;
+				XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendStdDevXYZ[p], stdCPT, title, "Log10 Distance Rup", "Magnitude", 
+						"Residual Standard Deviation");
 				XYZGraphPanel xyzGP = new XYZGraphPanel(gp.getPlotPrefs());
 				xyzGP.drawPlot(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
 				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);

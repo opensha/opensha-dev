@@ -234,7 +234,7 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 		fw.write("if [ -e $VM_ZIP ];then\n");
 		fw.write("    echo \"Zip file exits, extracting: $VM_ZIP\"\n");
 		fw.write("    cd "+localDir.getAbsolutePath()+"\n");
-		fw.write("    unzip $VM_ZIP > /dev/null\n");
+		fw.write("    unzip -u -o -q $VM_ZIP > /dev/null\n");
 		fw.write("    RET=$?\n");
 		fw.write("else\n");
 		fw.write("    echo \"rsync-ing from $VM_DIR\"\n");
@@ -351,15 +351,34 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 					MPJ_BBP_Utils.waitOnDir(runDir, 10, 2000);
 				}
 				
-				List<SRF_PointData> srfPoints = getSRFPoints(index);
-				File srfFile = new File(runDir, runDir.getName()+".srf");
-				if (srfFile != null)
-					SRF_PointData.writeSRF(srfFile, srfPoints, 1d);
-				
 				// write SRC
 				BBP_SourceFile bbpSource = getBBPSource(index);
 				File srcFile = new File(runDir, runDir.getName()+".src");
 				bbpSource.writeToFile(srcFile);
+				
+				List<SRF_PointData> srfPoints = getSRFPoints(index);
+				File srfFile = new File(runDir, runDir.getName()+".srf");
+				if (srfPoints == null) {
+					while (!srcFile.exists()) {
+						Thread.sleep(1000);
+					}
+					
+					File tmpDir = Files.createTempDir();
+					BBP_Wrapper wrapper = new BBP_Wrapper(RSQSimBBP_Config.VM, RSQSimBBP_Config.METHOD, srcFile,
+							null, null, null, tmpDir);
+					wrapper.setSRFGenOnly(true);
+					wrapper.run();
+					
+					File tmpSRF = null;
+					for (File file : tmpDir.listFiles())
+						if (file.getName().endsWith(".srf"))
+							tmpSRF = file;
+					Preconditions.checkNotNull(tmpSRF, "Couldn't file SRF file in "+tmpDir.getAbsolutePath());
+					Files.copy(tmpSRF, srfFile);
+					FileUtils.deleteRecursive(tmpDir);
+				} else {
+					SRF_PointData.writeSRF(srfFile, srfPoints, 1d);
+				}
 				
 				// write sites file
 				File sitesFile = new File(runDir, "sites.stl");
