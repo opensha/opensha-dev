@@ -402,6 +402,9 @@ public class RSQSimCatalog implements XMLSaveable {
 		TEST_DOUBLE_4860("test_double_4860", "Test Double 4860", "Kevin Milner", cal(2020, 2, 7),
 				"This is a test of catalog and transition file combining code, containing two copies of 4860. The "
 				+ "first 5000 years are also skipped from the second copy.",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4860_10X("rundir4860_multi_combine", "Bruce 4860 10X Combine", "Kevin Milner", cal(2020, 2, 12),
+				"Stitch of 10 different seeds of 4860 (should not be used for time-dependent calculations)",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
