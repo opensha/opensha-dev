@@ -62,6 +62,8 @@ import scratch.UCERF3.simulatedAnnealing.completion.EnergyCompletionCriteria;
 import scratch.UCERF3.simulatedAnnealing.completion.IterationCompletionCriteria;
 import scratch.UCERF3.simulatedAnnealing.params.CoolingScheduleType;
 import scratch.UCERF3.simulatedAnnealing.params.GenerationFunctionType;
+import scratch.ned.FSS_Inversion2019.SingleFaultInversion.MFD_TargetType;
+import scratch.ned.FSS_Inversion2019.SingleFaultInversion.SA_InitialStateType;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.SlipAlongRuptureModelEnum;
 
@@ -147,7 +149,8 @@ public class DoubleFaultInversion {
 	SlipRateProfileType slipRateProfile;
 	SlipAlongRuptureModelEnum slipModelType;	// Average slip along rupture model
 	ScalingRelationshipEnum scalingRel; 		// Scaling Relationship
-	boolean applySlipRateSegmentation;			// whether or not to reduce slip rate/std at middle section (hard coded)
+//	boolean applySlipRateSegmentation;			// whether or not to reduce slip rate/std at middle section (hard coded)
+	ArrayList<SlipRateSegmentationConstraint> slipRateSegmentationConstraintList;
 	ArrayList<SectionRateConstraint> sectionRateConstraintList;
 	double relativeSectRateWt; 					// Section Rate Constraints wt
 	ArrayList<SegmentationConstraint> segmentationConstrList; 			// 
@@ -279,10 +282,9 @@ public class DoubleFaultInversion {
 		parentFaultData.setSlipRateStdDev(FAULT_SLIP_RATE/10d);
 		faultSectionDataList = parentFaultData.getSubSectionsList(MAX_SUBSECT_LENGTH_KM);
 		
-		if(applySlipRateSegmentation) {
-			faultSectionDataList.get(58).setAveSlipRate(FAULT_SLIP_RATE/10d);
-			faultSectionDataList.get(58).setSlipRateStdDev(FAULT_SLIP_RATE/1000d); // 1/100 the target value	
-		}
+		// set all the section ids so we can apply constraints
+		for(int i=0; i<faultSectionDataList.size() ;i++)
+			faultSectionDataList.get(i).setSectionId(i);
 		
 		double moRateSum = 0, lengthSum = 0;
 		for(FaultSectionPrefData data : faultSectionDataList) {
@@ -916,12 +918,12 @@ public class DoubleFaultInversion {
 		 solutionName = "No Name Solution"; // Inversion name
 		 wtedInversion = true; // Whether to apply data weights
 		 slipRateProfile = SlipRateProfileType.TAPERED;
-		 applySlipRateSegmentation = false;
 		 slipModelType = SlipAlongRuptureModelEnum.TAPERED; // Average slip along rupture model
 		 scalingRel = ScalingRelationshipEnum.ELLSWORTH_B; // Scaling Relationship
+		 slipRateSegmentationConstraintList = new ArrayList<SlipRateSegmentationConstraint> ();
 		 sectionRateConstraintList = new ArrayList<SectionRateConstraint>();
 		 relativeSectRateWt=0; // Section Rate Constraints wt
-		 segmentationConstrList = null; // ;
+		 segmentationConstrList = new ArrayList<SegmentationConstraint>(); // ;
 		 relative_segmentationConstrWt = 0; // Segmentation Constraints wt
 		 relative_aPrioriRupWt = 0;  // A priori rupture rates wts
 		 aPrioriRupRateFilename = null; // file that has the a prior rupture rates
@@ -990,10 +992,11 @@ public class DoubleFaultInversion {
 				solutionName,
 				slipRateProfile.toString(),
 				fltSectDataList, 
-				sectionRateConstraintList, 
 				rupSectionMatrix, 
 				slipModelType, 
 				scalingRel, 
+				slipRateSegmentationConstraintList,
+				sectionRateConstraintList, 
 				relativeSectRateWt, 
 				relative_aPrioriRupWt, 
 				aPrioriRupRateFilename,
@@ -1046,13 +1049,12 @@ public class DoubleFaultInversion {
 	    		break;
 	    	case FROM_MFD_CONSTRAINT:
 	    		initialState = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD);
-//	    		for(int i=0;i<initialState.length;i++)
-//	    			initialState[i] *= 0.25;
 	    		break;
 	    	}
 	    }
-
-
+	    
+	    
+	    
 	    switch (solutionType) {
 	    case FRESH:
 	    	if(D) System.out.println("FRESH Solution");
@@ -1123,11 +1125,12 @@ public class DoubleFaultInversion {
 		}
 					
 		if(doDataFits) fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
-		if(applySlipRateSegmentation || sectionRateConstraintList.size() == 1)
-			fltSysRupInversion.writeAndOrPlotPartMFD_ForSection(dirName, popUpPlots, 58);
-		if(segmentationConstrList != null)
-			for(SegmentationConstraint segConst :segmentationConstrList)
-				fltSysRupInversion.writeAndOrPlotJointPartMFD_ForSections(dirName, popUpPlots, segConst.getSect1_Index(), segConst.getSect2_Index());
+		for(SectionRateConstraint sectRateConstr : sectionRateConstraintList)
+			fltSysRupInversion.writeAndOrPlotPartMFD_ForSection(dirName, popUpPlots, sectRateConstr.getSectIndex());
+		for(SlipRateSegmentationConstraint srSegConstr : slipRateSegmentationConstraintList)
+			fltSysRupInversion.writeAndOrPlotPartMFD_ForSection(dirName, popUpPlots, srSegConstr.getSectIndex());
+		for(SegmentationConstraint segConst :segmentationConstrList)
+			fltSysRupInversion.writeAndOrPlotJointPartMFD_ForSections(dirName, popUpPlots, segConst.getSect1_Index(), segConst.getSect2_Index());
 		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
 		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
 		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
@@ -1259,27 +1262,78 @@ public class DoubleFaultInversion {
 	
 	public void doSegConstrainedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
 			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
+		
+		doSegConstrainedSA(rePlotOny, slipRateProfile, slipModelType, scalingRel, numSim, finalEnergy, null, 0.0, false);
+		
+//		this.setDefaultParameterValuess();
+//		this.slipRateProfile = slipRateProfile;
+//		this.slipModelType = slipModelType;
+//		this.scalingRel = scalingRel;
+//		segmentationConstrList.add(new SegmentationConstraint("Test Seg Const", 58, 59, 5e-4, 5e-6));
+//		this.relative_segmentationConstrWt = 1.0;
+//		// make the solution
+//		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+//		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
+//		numSolutions = numSim; 
+//		solutionName = "DoubleFltSegConstrSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+//		dirName = ROOT_PATH+"Output_"+solutionName;
+//		getSolution(rePlotOny);
+	}
+	
+	
+	public void doSegConstrainedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState) {
 		this.setDefaultParameterValuess();
 		this.slipRateProfile = slipRateProfile;
 		this.slipModelType = slipModelType;
 		this.scalingRel = scalingRel;
-		this.segmentationConstrList = new ArrayList<SegmentationConstraint>();
-		SegmentationConstraint segConstr = new SegmentationConstraint("Test Seg Const", 58, 59, 5e-4, 5e-6);
-		segmentationConstrList.add(segConstr);
+		segmentationConstrList.add(new SegmentationConstraint("Test Seg Const", 58, 59, 5e-4, 5e-6));
 		this.relative_segmentationConstrWt = 1.0;
+		String namePrefix = "DoubleFltSegConstrSA_";
+		String initStateString = "";
+		if(mfdTargetType != null) {
+			namePrefix += "wMFD_";
+			this.mfdTargetType = mfdTargetType;
+			relativeMFD_constraintWt = mfdWt; // Target MFD Constraint Wt
+			if(asInitState) {
+				initStateString = "initSt_";
+				initialStateType = SA_InitialStateType.FROM_MFD_CONSTRAINT;
+			}		
+		}
 		// make the solution
 		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
 		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
 		numSolutions = numSim; 
-		solutionName = "DoubleFltSegConstrSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		solutionName = namePrefix+initStateString+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
 		dirName = ROOT_PATH+"Output_"+solutionName;
 		getSolution(rePlotOny);
 	}
-	
+
 	
 	
 	public void doSectRateConstrSegSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
 			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
+		doSectRateConstrSegSA(rePlotOny, slipRateProfile, slipModelType, scalingRel, numSim, finalEnergy, null, 0, false);
+		
+//		this.setDefaultParameterValuess();
+//		this.slipRateProfile = slipRateProfile;
+//		this.slipModelType = slipModelType;
+//		this.scalingRel = scalingRel;
+//		this.relativeSectRateWt = 1;
+//		SectionRateConstraint sectRateConstr = new SectionRateConstraint("Test Sect Constr", 58, 5e-4, 5e-6);
+//		sectionRateConstraintList.add(sectRateConstr);
+//		this.relative_segmentationConstrWt = 1.0;
+//		// make the solution
+//		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+//		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
+//		numSolutions = numSim; 
+//		solutionName = "DoubleSectRateConstrSegSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+//		dirName = ROOT_PATH+"Output_"+solutionName;
+//		getSolution(rePlotOny);
+	}
+	
+	public void doSectRateConstrSegSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState) {
 		this.setDefaultParameterValuess();
 		this.slipRateProfile = slipRateProfile;
 		this.slipModelType = slipModelType;
@@ -1288,21 +1342,63 @@ public class DoubleFaultInversion {
 		SectionRateConstraint sectRateConstr = new SectionRateConstraint("Test Sect Constr", 58, 5e-4, 5e-6);
 		sectionRateConstraintList.add(sectRateConstr);
 		this.relative_segmentationConstrWt = 1.0;
+		String namePrefix = "DoubleSectRateConstrSegSA_";
+		String initStateString = "";
+		if(mfdTargetType != null) {
+			namePrefix += "wMFD_";
+			this.mfdTargetType = mfdTargetType;
+			relativeMFD_constraintWt = mfdWt; // Target MFD Constraint Wt
+			if(asInitState) {
+				initStateString = "initSt_";
+				initialStateType = SA_InitialStateType.FROM_MFD_CONSTRAINT;
+			}		
+		}
 		// make the solution
 		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
 		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
 		numSolutions = numSim; 
-		solutionName = "DoubleSectRateConstrSegSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		solutionName = namePrefix+initStateString+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
 		dirName = ROOT_PATH+"Output_"+solutionName;
 		getSolution(rePlotOny);
 	}
+	
+	public void doSectRateConstrSegTwoPtsSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		this.relativeSectRateWt = 1;
+		sectionRateConstraintList.add(new SectionRateConstraint("Test Sect Constr", 58, 5e-4, 5e-6));
+		sectionRateConstraintList.add(new SectionRateConstraint("Test Sect Constr", 87, 0.03, 3e-4));
+		this.relative_segmentationConstrWt = 1.0;
+		String namePrefix = "DoubleSectRateConstrSegTwoPtsSA_";
+		String initStateString = "";
+		if(mfdTargetType != null) {
+			namePrefix += "wMFD_";
+			this.mfdTargetType = mfdTargetType;
+			relativeMFD_constraintWt = mfdWt; // Target MFD Constraint Wt
+			if(asInitState) {
+				initStateString = "initSt_";
+				initialStateType = SA_InitialStateType.FROM_MFD_CONSTRAINT;
+			}		
+		}
+		// make the solution
+		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
+		numSolutions = numSim; 
+		solutionName = namePrefix+initStateString+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution(rePlotOny);
+	}
+
 
 	
 	public void doSlipRateSegmentedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
 			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
 		this.setDefaultParameterValuess();
 		this.slipRateProfile = slipRateProfile;
-		this.applySlipRateSegmentation = true;
+		this.slipRateSegmentationConstraintList.add(new SlipRateSegmentationConstraint("sect58", 58, 0.1, 0.001));
 		this.slipModelType = slipModelType;
 		this.scalingRel = scalingRel;
 		// make the solution
@@ -1314,6 +1410,35 @@ public class DoubleFaultInversion {
 		getSolution(rePlotOny);
 	
 	}
+	
+	
+	public void doSlipRateSegmentedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState) {
+		this.setDefaultParameterValuess();
+		this.slipRateProfile = slipRateProfile;
+		this.slipRateSegmentationConstraintList.add(new SlipRateSegmentationConstraint("sect58", 58, 0.1, 0.001));
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		this.mfdTargetType = mfdTargetType;
+		relativeMFD_constraintWt = mfdWt; // Target MFD Constraint Wt
+		String initStateString = "";
+		if(asInitState) {
+			initStateString = "initSt_";
+			initialStateType = SA_InitialStateType.FROM_MFD_CONSTRAINT;
+		}
+
+		// make the solution
+		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
+		numSolutions = numSim; 
+		solutionName = "DoubleFltSlipRateSegSA_wMFD_"+initStateString+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_".toString()+"_"+scalingRel.toString(); // Inversion name
+		dirName = ROOT_PATH+"Output_"+solutionName;
+		getSolution(rePlotOny);
+	
+	}
+	
+	
+	
 
 
 	
@@ -1479,6 +1604,58 @@ public class DoubleFaultInversion {
 	}
 
 
+	public static void doLaplacianSmoothingTest() {
+		int cols=9;	// num sections
+		int rows = cols+1;	// num constraints
+
+		double[][] X = new double[rows][cols];	// inversion matrices
+		double[] d = new double[rows];  // the data vector
+		d[rows-1] = 1;
+		
+		for(int r=0;r<cols-2;r++) {
+			X[r][r] = -1;
+			X[r][r+1] = 2;
+			X[r][r+2] = -1;
+		}
+		X[rows-3][0] = 1;		// set rate of first section to zero
+		X[rows-2][cols-1] = 1;	// set rate of last section to zero
+		X[rows-1][4] = 1;
+		
+		for(int r=0;r<rows;r++) {
+			System.out.print("\n");
+			for(int c=0;c<cols;c++) {
+				System.out.print(X[r][c]+"\t");
+			}
+		}
+		
+		System.out.print("\n\n");
+		for(int r=0;r<rows;r++) {
+			System.out.println(d[r]+"\t");
+		}
+		
+//		System.out.println("nRow = "+X.length);
+//		System.out.println( "nCol = "+X[0].length);
+
+
+		double[] result = FaultSystemRuptureRateInversion.getNNLS_solution(X, d);
+		System.out.print("\n\n");
+		for(int c=0;c<cols;c++) {
+			System.out.println(result[c]+"\t");
+		}
+		
+		// compute predicted data
+		double[] d_pred = new double[rows];  // predicted data vector
+		for(int r=0;r<rows; r++)
+			for(int c=0; c <cols; c++)
+				d_pred[r] += result[c]*X[r][c];
+
+		System.out.print("\n\n");
+		for(int r=0;r<rows;r++) {
+			System.out.println(d_pred[r]+"\t");
+		}
+
+		
+	}
 
 	
 	/**
@@ -1489,16 +1666,32 @@ public class DoubleFaultInversion {
 	 */
 	public static void main(String []args) {
 		
+//		DoubleFaultInversion.doLaplacianSmoothingTest();
+//		System.exit(-1);
+//		
 		DoubleFaultInversion doubleFaultInversion = new DoubleFaultInversion();
 		
 		
 //		doubleFaultInversion.doUnconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 //		doubleFaultInversion.doUnconstrainedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 
-//		doubleFaultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
+//		doubleFaultInversion.doSlipRateSegmentedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 //		doubleFaultInversion.doSectRateConstrSegSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 85);
-		doubleFaultInversion.doSegConstrainedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
+//		doubleFaultInversion.doSegConstrainedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 
+		// Try initial state from MFD
+//		doubleFaultInversion.doSlipRateSegmentedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2, MFD_TargetType.GR_b_1pt0, 0.0, true);
+//		doubleFaultInversion.doSectRateConstrSegSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 95, MFD_TargetType.GR_b_1pt0, 0.0, true);
+//		doubleFaultInversion.doSegConstrainedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2, MFD_TargetType.GR_b_1pt0, 0.0, true);
+
+//		doubleFaultInversion.doSectRateConstrSegTwoPtsSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, 100, null, 0.0, true);
+//		doubleFaultInversion.doSectRateConstrSegTwoPtsSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, 4000, MFD_TargetType.GR_b_1pt0, 0.0, true);
+//		doubleFaultInversion.doSectRateConstrSegTwoPtsSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 400, null, 0.0, true);
+		doubleFaultInversion.doSectRateConstrSegTwoPtsSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 4000, MFD_TargetType.GR_b_1pt0, 0.0, true);
+
+		
+		
+		
 		
 		
 		// this is to not over fit the data
