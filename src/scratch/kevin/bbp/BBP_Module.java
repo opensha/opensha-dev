@@ -16,19 +16,25 @@ public class BBP_Module implements XMLSaveable {
 	public static final String VERSION = "17.3.0";
 	
 	public static enum VelocityModel {
-		LA_BASIN_863("LA Basin 863 (m/s)", "LABasin863", "$BBP_INSTALL_GF/LABasin863/gp/genslip_nr_generic1d-gp01.vmod", 863),
-		LA_BASIN_500("LA Basin 500 (m/s)", "LABasin500", "$BBP_INSTALL_GF/LABasin500/gp/nr02-vs500.fk1d", 500);
+		LA_BASIN_863("LA Basin 863 (m/s)", "LABasin863",
+				"$BBP_INSTALL_GF/LABasin863/gp/genslip_nr_generic1d-gp01.vmod", 863, 0.02, 3),
+		LA_BASIN_500("LA Basin 500 (m/s)", "LABasin500",
+				"$BBP_INSTALL_GF/LABasin500/gp/nr02-vs500.fk1d", 500, 0.2, 2.5);
 		
 		private String name;
 		private String xmlName;
 		private String filePath;
-		private double vs30;
+		private double vs30; // m/s
+		private double z10; // km
+		private double z25; // km
 
-		private VelocityModel(String name, String xmlName, String filePath, double vs30) {
+		private VelocityModel(String name, String xmlName, String filePath, double vs30, double z10, double z25) {
 			this.name = name;
 			this.xmlName = xmlName;
 			this.filePath = filePath;
 			this.vs30 = vs30;
+			this.z10 = z10;
+			this.z25 = z25;
 		}
 		
 		public String getDirName() {
@@ -37,6 +43,14 @@ public class BBP_Module implements XMLSaveable {
 		
 		public double getVs30() {
 			return vs30;
+		}
+		
+		public double getZ10() {
+			return z10;
+		}
+		
+		public double getZ25() {
+			return z25;
 		}
 		
 		public File getFilePath(String gfDir) {

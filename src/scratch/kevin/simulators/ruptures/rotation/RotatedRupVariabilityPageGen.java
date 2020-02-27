@@ -818,7 +818,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			table.addLine("Section Name", "Participation Count");
 			for (String parentName : parentNames)
 				table.addLine(parentName, parentCountsMap.get(parentName));
-			table.addLine("TOTAL # PARENTS", totalCount);
+			table.addLine("SUM OF PARENT PARTICIPATIONS", totalCount);
+			table.addLine("# UNIQUE PARENTS", parentNames);
 			lines.addAll(table.build());
 			lines.add("");
 			double[] magsArray = Doubles.toArray(mags);

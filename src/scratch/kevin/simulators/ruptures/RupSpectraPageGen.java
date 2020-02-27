@@ -72,6 +72,8 @@ class RupSpectraPageGen {
 	private double timeScale;
 	private boolean scaleVelocities;
 	
+	private VelocityModel vm;
+	
 	private ScalarIMR[] spectraGMPEs;
 	private File refBBPDir;
 	private String refName;
@@ -86,11 +88,12 @@ class RupSpectraPageGen {
 	private GriddedRegion gpShakemapRegion;
 	private List<BBP_Site> gpShakemapSites;
 
-	public RupSpectraPageGen(RSQSimCatalog catalog, File outputDir, double timeScale, boolean scaleVelocities) {
+	public RupSpectraPageGen(RSQSimCatalog catalog, File outputDir, double timeScale, boolean scaleVelocities, VelocityModel vm) {
 		this.catalog = catalog;
 		this.outputDir = outputDir;
 		this.timeScale = timeScale;
 		this.scaleVelocities = scaleVelocities;
+		this.vm = vm;
 	}
 	
 	public void setRefBBP(File refBBPDir, String refName, ScalarIMR[] spectraGMPEs, EqkRupture gmpeRup) {
@@ -351,7 +354,7 @@ class RupSpectraPageGen {
 				+ "are in black, and interpolated/discretized for SRF files representation are colored.");
 		lines.add("");
 		
-		int targetPatches = 10;
+		int targetPatches = 20;
 		int mod = Integer.max(1, elems.size()/targetPatches);
 		
 		table = MarkdownUtils.tableBuilder();
@@ -362,7 +365,9 @@ class RupSpectraPageGen {
 				continue;
 			SimulatorElement elem = elems.get(i);
 			String prefix = "rsqsim_patch_"+elem.getID();
-			RSQSimSRFGenerator.plotSlip(resourcesDir, prefix, func, elem, RSQSimBBP_Config.SRF_DT,
+			RSQSimSRFGenerator.plotSlip(resourcesDir, prefix, func, elem, RSQSimBBP_Config.SRF_DT, false,
+					RSQSimBBP_Config.SRF_INTERP_MODE);
+			RSQSimSRFGenerator.plotSlip(resourcesDir, prefix+"_pub", func, elem, RSQSimBBP_Config.SRF_DT, true,
 					RSQSimBBP_Config.SRF_INTERP_MODE);
 			table.addColumn("![plot](resources/"+prefix+".png)");
 		}
@@ -536,7 +541,7 @@ class RupSpectraPageGen {
 				System.out.print("Calculating GMPEs...");
 				gmpeSpectra = new UncertainArbDiscDataset[spectraGMPEs.length];
 				for (int i=0; i<gmpeSpectra.length; i++)
-					gmpeSpectra[i] = SpectraPlotter.calcGMPE_RotD50(gmpeRup, site, spectraGMPEs[i]);
+					gmpeSpectra[i] = SpectraPlotter.calcGMPE_RotD50(gmpeRup, site, spectraGMPEs[i], vm);
 				System.out.println("DONE.");
 			}
 			
@@ -684,7 +689,7 @@ class RupSpectraPageGen {
 			
 			if (periods.length > 0) {
 				String label = "Event "+eventID;
-				ShakemapPlotter.plotShakemaps(shakemap, shakemapRegion, shakemapSites, label, resourcesDir,
+				ShakemapPlotter.plotShakemaps(shakemap, shakemapRegion, shakemapSites, vm, label, resourcesDir,
 						prefix, true, shakemapGMPE, gmpeRup, plotPeriods);
 			} else {
 				System.out.println("Skipping all maps!");
@@ -819,7 +824,7 @@ class RupSpectraPageGen {
 				
 				if (periods.length > 0) {
 					String label = "GP Seed "+seed;
-					ShakemapPlotter.plotShakemaps(shakemap, gpShakemapRegion, gpShakemapSites, label, resourcesDir,
+					ShakemapPlotter.plotShakemaps(shakemap, gpShakemapRegion, gpShakemapSites, vm, label, resourcesDir,
 							prefix, true, null, null, plotPeriods);
 				} else {
 					System.out.println("Skipping all maps!");
@@ -956,9 +961,16 @@ class RupSpectraPageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4849.instance(baseDir);
 //		int eventID = 80686;
 		
-		RSQSimCatalog catalog = Catalogs.TEST_DOUBLE_4860.instance(baseDir);
-//		int eventID = 4853;
-		int eventID = 15377;
+//		RSQSimCatalog catalog = Catalogs.TEST_DOUBLE_4860.instance(baseDir);
+////		int eventID = 4853;
+//		int eventID = 15377;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+//		int eventID = 51863;
+//		int eventID = 39055;
+		int eventID = 12581;
+//		int eventID = 77272;
+//		int eventID = 41890; // fig 4
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = true;
@@ -1073,7 +1085,7 @@ class RupSpectraPageGen {
 		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
 		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
 		
-		RupSpectraPageGen gen = new RupSpectraPageGen(catalog, vmDir, timeScale, scaleVelocities);
+		RupSpectraPageGen gen = new RupSpectraPageGen(catalog, vmDir, timeScale, scaleVelocities, vm);
 		
 		EqkRupture gmpeRup = null;
 		

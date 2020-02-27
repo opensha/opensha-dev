@@ -85,7 +85,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	private File gmpeCacheDir;
 
 	public CatalogGMPE_Compare(RSQSimCatalog catalog, ZipFile bbpZipFile, List<BBP_Site> sites, double minMag, int skipYears,
-			File gmpeCacheDir, RuptureIdentifier loadCriteria) throws IOException {
+			File gmpeCacheDir, RuptureIdentifier loadCriteria, VelocityModel vm) throws IOException {
 		this.catalog = catalog;
 		this.sites = sites;
 		this.minMag = minMag;
@@ -96,7 +96,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		List<Site> gmpeSites = new ArrayList<>();
 		for (BBP_Site site : sites) {
 			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), MPJ_BBP_CatalogSim.CUTOFF_DIST)));
-			Site gmpeSite = site.buildGMPE_Site();
+			Site gmpeSite = site.buildGMPE_Site(vm);
 			gmpeSite.setName(RSQSimBBP_Config.siteCleanName(site));
 			gmpeSites.add(gmpeSite);
 			sitesBBPtoGMPE.put(site, gmpeSite);
@@ -533,9 +533,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.TEST_DOUBLE_4860.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_4860.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4930.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -572,10 +572,10 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		RuptureIdentifier loadIden = FocalMechIden.builder().forRake(-105, -75).forDip(35, 55).build();
 //		String loadIdenPrefix = "mech_normal";
 
-		boolean replotScatters = false;
+		boolean replotScatters = true;
 		boolean replotZScores = true;
-		boolean replotCurves = false;
-		boolean replotResiduals = false;
+		boolean replotCurves = true;
+		boolean replotResiduals = true;
 		
 //		boolean replotScatters = true;
 //		boolean replotZScores = true;
@@ -687,7 +687,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		ZipFile zipFile = new ZipFile(bbpZipFile);
 		
 		CatalogGMPE_Compare comp = new CatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
-				gmpeCacheDir, loadIden);
+				gmpeCacheDir, loadIden, bbpVM);
 		comp.setReplotCurves(replotCurves);
 		comp.setReplotResiduals(replotResiduals);
 		comp.setReplotScatters(replotScatters);

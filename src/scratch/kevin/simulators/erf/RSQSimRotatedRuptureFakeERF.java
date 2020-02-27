@@ -7,6 +7,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.cli.CommandLine;
@@ -33,11 +36,14 @@ import org.opensha.sha.simulators.srf.RSQSimSRFGenerator.SRFInterpolationMode;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
+import mpi.MPI;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.kevin.bbp.MPJ_BBP_Utils;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.erf.RSQSimSectBundledERF.RSQSimProbEqkRup;
@@ -421,6 +427,10 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		private double dt;
 		private SRFInterpolationMode interpMode;
 		private double momentPDiffThreshold;
+		private File scratchDir;
+		
+		private ExecutorService cleanExec;
+		private List<Future<?>> cleanFutures;
 		
 		private Map<Integer, Double> patchAreas;
 
@@ -444,6 +454,11 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			patchAreas = new HashMap<>();
 			for (SimulatorElement elem : erf.catalog.getElements())
 				patchAreas.put(elem.getID(), elem.getArea());
+			
+			scratchDir = Files.createTempDir();
+			
+			cleanExec = Executors.newFixedThreadPool(1);
+			cleanFutures = new ArrayList<>();
 		}
 
 		@Override
@@ -468,7 +483,18 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		@Override
 		protected void calculateBatch(int[] batch) throws Exception {
 			for (int sourceID : batch) {
-				File sourceDir = new File(csSourcesDir, sourceID+"");
+				File sourceDir = new File(scratchDir, sourceID+"");
+				File zipFile = new File(csSourcesDir, sourceID+".zip");
+				if (zipFile.exists()) {
+					// try opening it
+					debug("checking existing zip for "+sourceID);
+					if (validateZipFile(zipFile)) {
+						debug("zip is valid, skipping");
+						continue;
+					} else {
+						debug("bad zip for "+sourceID+", will rebuild");
+					}
+				}
 				if (writePoints || writeSRFs) {
 					// build directories first
 					waitOnDir(sourceDir);
@@ -478,7 +504,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 				}
 				if (writePoints) {
 					debug("Writing point files for "+sourceID);
-					RSQSimSectBundledERF.writeRupturePointFiles(erf, csSourcesDir, sourceID, false);
+					RSQSimSectBundledERF.writeRupturePointFiles(erf, scratchDir, sourceID, false);
 					debug("DONE writing point files for "+sourceID);
 				}
 				if (writeSRFs) {
@@ -486,29 +512,38 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 					RSQSimRotatedRuptureSource source = erf.getSource(sourceID);
 					for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
 						RSQSimEvent event = source.getEvent(rupID);
-						RSQSimSectBundledERF.writeRuptureSRF(csSourcesDir, erf.catalog, sourceID, rupID, event, dt, interpMode,
+						RSQSimSectBundledERF.writeRuptureSRF(scratchDir, erf.catalog, sourceID, rupID, event, dt, interpMode,
 								momentPDiffThreshold, patchAreas, null, false);
 					}
 					debug("DONE writing SRFs  for "+sourceID);
 				}
-				File zipFile = new File(sourceDir.getAbsolutePath()+".zip");
-				if (zipFile.exists()) {
-					// try opening it
-					debug("checking existing zip for "+sourceID);
-					try {
-						new ZipFile(zipFile).close();
-						// if we get here, we're good
-						continue;
-					} catch (Exception e) {
-						debug("bad zip for "+sourceID+", will rebuild");
-					}
-				}
 				FileUtils.createZipFile(zipFile, sourceDir, false);
+				cleanFutures.add(cleanExec.submit(new Runnable() {
+					
+					@Override
+					public void run() {
+						FileUtils.deleteRecursive(sourceDir);
+					}
+				}));
+			}
+		}
+		
+		private boolean validateZipFile(File zipFile) {
+			try {
+				new ZipFile(zipFile).close();
+				// if we get here, we're good
+				return true;
+			} catch (Exception e) {
+				return false;
 			}
 		}
 
 		@Override
-		protected void doFinalAssembly() throws Exception {}
+		protected void doFinalAssembly() throws Exception {
+			for (Future<?> f : cleanFutures)
+				f.get();
+			cleanExec.shutdown();
+		}
 		
 		protected static String[] initMPJ(String[] args) {
 			return MPJTaskCalculator.initMPJ(args);
@@ -528,6 +563,45 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		
 	}
 	
+	private static File copyCatalogDir(File catDir, File scratchDir) throws IOException {
+		File destDir = new File(scratchDir, catDir.getName());
+		if (!destDir.exists()) {
+			destDir.mkdir();
+			MPJ_BBP_Utils.waitOnDir(destDir, 10, 2000);
+		}
+		List<File> filesToCopy = new ArrayList<>();
+		for (File f : catDir.listFiles()) {
+			String name = f.getName().toLowerCase();
+			if (name.endsWith("list"))
+				filesToCopy.add(f);
+			else if (name.startsWith("trans.") && name.endsWith(".out"))
+				filesToCopy.add(f);
+			else if (name.startsWith("transv.") && name.endsWith(".out"))
+				filesToCopy.add(f);
+			else if (name.endsWith(".in"))
+				filesToCopy.add(f);
+			else if (name.endsWith(".flt"))
+				filesToCopy.add(f);
+		}
+		if (filesToCopy.size() < 7) {
+			String error = "Need at least 7 files: 4 list, trans, input, geom. Have "+filesToCopy.size()+":";
+			for (File f : filesToCopy)
+				error += "\n\t"+f.getAbsolutePath();
+			throw new IllegalStateException(error);
+		}
+		
+		System.out.println("copying "+filesToCopy.size()+" catalog files to "+destDir.getAbsolutePath());
+		for (File f : filesToCopy) {
+			File destFile = new File(destDir, f.getName());
+			if (destFile.exists() && destFile.length() == f.length())
+				// skip copy, already exists
+				continue;
+			Files.copy(f, destFile);
+		}
+		
+		return destDir;
+	}
+	
 	public static void main(String[] args) throws IOException {
 		RSQSimCatalog catalog;
 		
@@ -537,9 +611,11 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 				mpj = true;
 		
 		CommandLine cmd = null;
+		int rank = -1;
 		if (mpj) {
-			System.out.println("MPJ!");
 			args = MPJ_PointsAndSRFsWriter.initMPJ(args);
+			rank = MPI.COMM_WORLD.Rank();
+			System.out.println("MPJ! "+rank);
 			
 			Options options = MPJ_PointsAndSRFsWriter.createOptions();
 			
@@ -549,8 +625,22 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		
 		boolean writePoints, writeSRFs, buildConfigs;
 		
+		File origCatalogDir = null;
+		
 		if (args.length >= 1 && args.length < 5) {
-			File catalogDir = new File(args[0]);
+			origCatalogDir = new File(args[0]);
+			
+			File catalogDir = origCatalogDir;
+			
+			if (mpj) {
+				// copy catalog data over to shared scratch
+				File sharedScratch = new File("/staging/pjm/kmilner/catalogs");
+				if (rank == 0)
+					copyCatalogDir(catalogDir, sharedScratch);
+				MPI.COMM_WORLD.Barrier();
+				catalogDir = new File(sharedScratch, catalogDir.getName());
+			}
+			
 			catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
 					null, null, null, FaultModels.FM3_1, DeformationModels.GEOLOGIC); // TODO
 			
@@ -581,7 +671,9 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			buildConfigs = true;
 		}
 		
-		File outputDir = new File(catalog.getCatalogDir(), "cybershake_rotation_inputs");
+		File outputDir = new File(origCatalogDir == null ? catalog.getCatalogDir() : origCatalogDir,
+				"cybershake_rotation_inputs");
+		System.out.println("Output dir: "+outputDir.getAbsolutePath());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		int skipYears = 5000;
@@ -593,18 +685,36 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		double momentPDiffThreshold = 2;
 		
 		Map<Scenario, RSQSimRotatedRupVariabilityConfig> configsMap = new HashMap<>();
+		boolean mpjBuild = mpj && buildConfigs;
+		if (mpjBuild && rank > 0)
+			buildConfigs = false;
+		if (mpj) {
+			System.out.println("rank "+rank+": build="+buildConfigs+", mpjBuild="+mpjBuild);
+		}
 		if (buildConfigs) {
 			List<Site> sites = new ArrayList<>();
 			
+//			sites.add(new Site(new Location(34.0192, -118.286), "USC"));
+//			sites.add(new Site(new Location(34.148426, -118.17119), "PAS"));
+////			sites.add(new Site(new Location(34.55314, -118.72826), "s119"));
+////			sites.add(new Site(new Location(34.37809, -118.34757), "s279"));
+////			sites.add(new Site(new Location(34.15755, -117.87389), "s480"));
+//			sites.add(new Site(new Location(33.93088, -118.17881), "STNI"));
+//			sites.add(new Site(new Location(34.064986, -117.29201), "SBSM"));
+//			sites.add(new Site(new Location(34.041824, -118.0653), "WNGC"));
+////			sites.add(new Site(new Location(34.557, -118.125), "LAPD"));
+//			sites.add(new Site(new Location(34.00909, -118.48939), "SMCA"));
+//			sites.add(new Site(new Location(34.6145, -118.7235), "OSI"));
+//			sites.add(new Site(new Location(34.44199, -118.58215), "PDE"));
+//			sites.add(new Site(new Location(34.1717, -118.64971), "WSS"));
+//			sites.add(new Site(new Location(33.86889, -118.33143), "LAF"));
+//			sites.add(new Site(new Location(34.24505, -119.18086), "s022"));
+			
+
 			sites.add(new Site(new Location(34.0192, -118.286), "USC"));
-			sites.add(new Site(new Location(34.148426, -118.17119), "PAS"));
-//			sites.add(new Site(new Location(34.55314, -118.72826), "s119"));
-//			sites.add(new Site(new Location(34.37809, -118.34757), "s279"));
-//			sites.add(new Site(new Location(34.15755, -117.87389), "s480"));
-			sites.add(new Site(new Location(33.93088, -118.17881), "STNI"));
 			sites.add(new Site(new Location(34.064986, -117.29201), "SBSM"));
 			sites.add(new Site(new Location(34.041824, -118.0653), "WNGC"));
-//			sites.add(new Site(new Location(34.557, -118.125), "LAPD"));
+			sites.add(new Site(new Location(33.93088, -118.17881), "STNI"));
 			sites.add(new Site(new Location(34.00909, -118.48939), "SMCA"));
 			sites.add(new Site(new Location(34.6145, -118.7235), "OSI"));
 			sites.add(new Site(new Location(34.44199, -118.58215), "PDE"));
@@ -616,9 +726,13 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			
 			double[] distances = { 20d, 50d, 100d };
 			
+//			int numSourceAz = 18;
+//			int numSiteToSourceAz = 36;
+//			int maxRuptures = 100;
+			
 			int numSourceAz = 18;
-			int numSiteToSourceAz = 36;
-			int maxRuptures = 100;
+			int numSiteToSourceAz = 18;
+			int maxRuptures = 50;
 			
 			int numRotations = 0;
 			
@@ -652,7 +766,12 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			
 			long pointsPerSite = pointCount/sites.size();
 			System.out.println("Will have "+pointsPerSite+" points per site");
+			
+			if (mpjBuild)
+				MPI.COMM_WORLD.Barrier();
 		} else {
+			if (mpjBuild)
+				MPI.COMM_WORLD.Barrier();
 			configsMap = loadRotationConfigs(catalog, outputDir, writePoints || writeSRFs);
 			Preconditions.checkState(!configsMap.isEmpty(), "No configuration CSV files found in %s", outputDir.getAbsolutePath());
 		}

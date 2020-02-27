@@ -74,7 +74,7 @@ public class RSQSimU3RupturePageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(catalogsBaseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_3271.instance(catalogsBaseDir);
-		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(catalogsBaseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(catalogsBaseDir);
 		
 		File catalogDir = catalog.getCatalogDir();
 		

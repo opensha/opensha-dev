@@ -46,6 +46,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 
 import scratch.kevin.bbp.SpectraPlotter;
+import scratch.kevin.simCompare.RuptureComparisonFilter.SiteFilter;
+import scratch.kevin.simCompare.ZScoreHistPlot.ZScoreResult;
+
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
@@ -58,6 +61,9 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	private double cutoffDist;
 	private double minMag;
 	private double maxMag;
+	
+	private List<List<Site>> siteBundles = new ArrayList<>();
+	private List<String> siteBundleNames = new ArrayList<>();
 	
 	private List<Range> magRanges;
 	private List<RuptureComparisonFilter<E>> magFilters;
@@ -98,6 +104,15 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		rupSiteAzMap = HashBasedTable.create();
 		
 		exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+	}
+	
+	protected void addSiteBundle(List<Site> sites, String name) {
+		siteBundles.add(sites);
+		siteBundleNames.add(name);
+	}
+	
+	protected List<Site> getSites() {
+		return sites;
 	}
 	
 	public void setReplotScatters(boolean replotScatters) {
@@ -352,6 +367,20 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		return simCurvePlot.plotHazardCurves(outputDir, prefix, period);
 	}
 	
+	private static DecimalFormat twoSigFig = new DecimalFormat("0.00");
+	
+	private static List<String> getZscoreTableLine(String siteName, ZScoreResult[] scores) {
+		List<String> line = new ArrayList<>();
+		
+		line.add(siteName);
+		for (ZScoreResult score : scores) {
+			line.add(twoSigFig.format(score.mean));
+			line.add(twoSigFig.format(score.stdDevFract));
+		}
+		
+		return line;
+	}
+	
 	public void generateGMPE_Page(File outputDir, List<String> headerLines, AttenRelRef gmpeRef, double[] periods,
 			List<? extends RuptureComparison<E>> comps, List<Site> highlightSites) throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
@@ -376,8 +405,157 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		// add null for all sites aggregated
 		sites.add(0, null);
 		
-		lines.add("## Site Scatters/Z-Score Histograms");
+		lines.add("## Site Scatters/z-score Histograms");
 		lines.add(topLink); lines.add("");
+		
+		lines.add("### z-score Summary Table");
+		lines.add(topLink); lines.add("");
+		
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		table.initNewLine();
+		table.addColumn("Site");
+		for (double period : periods) {
+			table.addColumn(optionalDigitDF.format(period)+"s Mean");
+			table.addColumn(optionalDigitDF.format(period)+"s &sigma;-fract");
+		}
+		table.finalizeLine();
+		
+		ZScoreResult[] scores = ZScoreHistPlot.calcZScores(simProv, comps, this.sites, periods, null);
+		table.addLine(getZscoreTableLine("All Sites", scores));
+		
+		List<List<RuptureComparison<E>>> bundleSiteComps = null;
+		if (this.sites.size() > 1) {
+			SiteFilter<E> siteFilter = new RuptureComparisonFilter.SiteFilter<E>();
+			if (!siteBundles.isEmpty()) {
+				bundleSiteComps = new ArrayList<>();
+				for (int s=0; s<siteBundles.size(); s++) {
+					String name = siteBundleNames.get(s);
+					
+					List<Site> scatterSites = siteBundles.get(s);
+					List<RuptureComparison<E>> siteComps = new ArrayList<>();
+					
+					for (RuptureComparison<E> comp : comps) {
+						for (Site site : scatterSites) {
+							if (siteFilter.matches(comp, site)) {
+								siteComps.add(comp);
+								break;
+							}
+						}
+					}
+					bundleSiteComps.add(siteComps);
+					
+					scores = ZScoreHistPlot.calcZScores(simProv, siteComps, scatterSites, periods, null);
+					table.addLine(getZscoreTableLine(name, scores));
+				}
+			}
+			for (Site site : this.sites) {
+				if (site == null)
+					continue;
+				List<Site> mySites = new ArrayList<>();
+				mySites.add(site);
+				
+				List<? extends RuptureComparison<E>> siteComps = siteFilter.getMatches(comps, site);
+				scores = ZScoreHistPlot.calcZScores(simProv, siteComps, mySites, periods, null);
+				table.addLine(getZscoreTableLine(site.getName(), scores));
+			}
+		}
+		
+		lines.addAll(table.build());
+		lines.add("");
+		
+		if (!siteBundles.isEmpty() && sites.size() > 1) {
+			System.out.println("All sites aggregated");
+			lines.add("### Bundled z-scores");
+			lines.add(topLink); lines.add("");
+			
+			for (int s=0; s<siteBundles.size(); s++) {
+				String name = siteBundleNames.get(s);
+				String prefix = "site_bundle_"+name.replaceAll("\\W+", "_")+"_std_norm";
+				
+				System.out.println("Processing site bundle: "+name);
+				
+				List<Site> scatterSites = siteBundles.get(s);
+				List<RuptureComparison<E>> siteComps = bundleSiteComps.get(s);
+				
+				File plotFile = new File(resourcesDir, prefix+".png");
+				boolean success;
+				if (plotFile.exists() && !replotZScores)
+					success = true;
+				else
+					success = ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, periods,
+						gmpeRef, null, new ArrayList<>(), resourcesDir, prefix);
+				if (success) {
+					lines.add("#### "+name+" z-scores");
+					lines.add(topLink); lines.add("");
+					lines.add("");
+					lines.add("Site bundle with "+scatterSites.size()+" sites.");
+					lines.add("");
+					lines.add("z-score standard normal plots across all magnitudes/distances");
+					lines.add("");
+					lines.add("**z-score**: (ln(*"+simName+"*) - ln(*GMPE-mean*)) / *GMPE-sigma*");
+					lines.add("");
+					lines.add("**Legend**");
+					lines.add("* Black Line: Standard Normal distribution (in natural log space)");
+					lines.add("* Gray Histogram: z-score for each rupture");
+					lines.add("* Blue Dashed Line: "+simName+" Mean");
+					
+					lines.add("");
+					Preconditions.checkState(plotFile.exists());
+					
+					String srcPrefix = prefix+"_source_contrib";
+					File srcPlotFile = new File(resourcesDir, srcPrefix+".png");
+					boolean srcSuccess = sourceRupContributionFracts != null &&
+							((srcPlotFile.exists() && !replotZScores) ||
+							ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, periods,
+							gmpeRef, null, new ArrayList<>(), resourcesDir, srcPrefix, sourceRupContributionFracts,
+							sourceRupContributionNum));
+					
+					if (srcSuccess) {
+						// plot with source contributions
+						table = MarkdownUtils.tableBuilder();
+						table.initNewLine();
+						table.addColumn("Total");
+						table.addColumn("Source Contributions");
+						table.finalizeLine();
+						table.initNewLine();
+						table.addColumn("![Standard Normal Plot]("+resourcesDir.getName()
+								+"/"+plotFile.getName()+")");
+						
+						table.addColumn("![Standard Normal Plot]("+resourcesDir.getName()
+								+"/"+srcPlotFile.getName()+")");
+						table.finalizeLine();
+						lines.addAll(table.build());
+
+						for (double period : periods) {
+							String periodPrefix = prefix+"_"+optionalDigitDF.format(period)+"s";
+							File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
+							if (!periodPlotFile.exists() || replotZScores)
+								ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new double[] {period},
+										gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+							String srcPeriodPrefix = periodPrefix+"_source_contrib";
+							File srcPeriodPlotFile = new File(resourcesDir, srcPeriodPrefix+".png");
+							if (!srcPeriodPlotFile.exists() || replotZScores)
+								ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new double[] {period},
+										gmpeRef, null, new ArrayList<>(), resourcesDir, srcPeriodPrefix,
+										sourceRupContributionFracts, sourceRupContributionNum);
+						}
+					} else {
+						
+						lines.add("![Standard Normal Plot]("+resourcesDir.getName()
+						+"/"+plotFile.getName()+")");
+
+						for (double period : periods) {
+							String periodPrefix = prefix+"_"+optionalDigitDF.format(period)+"s";
+							File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
+							if (!periodPlotFile.exists() || replotZScores)
+								ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new double[] {period},
+										gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+						}
+					}
+					
+				}
+			}
+		}
 		
 		for (Site site : sites) {
 			List<? extends RuptureComparison<E>> siteComps;
@@ -389,7 +567,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				lines.add(topLink); lines.add("");
 				lines.add("**"+this.sites.size()+" sites**");
 				lines.add("");
-				TableBuilder table = MarkdownUtils.tableBuilder();
+				table = MarkdownUtils.tableBuilder();
 				table.addLine("Name", "Location", "# Ruptures", "Vs30 (m/s)", "Z1.0 (km)", "Z2.5 (km)");
 				for (Site s : this.sites) {
 					table.initNewLine();
@@ -444,7 +622,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				lines.add("* Yellow Region: Factor of 2 above & below");
 				lines.add("* Green Line: Linear Regression");
 				
-				TableBuilder table = MarkdownUtils.tableBuilder();
+				table = MarkdownUtils.tableBuilder();
 				table.initNewLine().addColumn("**Distance Bin**");
 				for (double period : periods)
 					table.addColumn("**"+optionalDigitDF.format(period)+" s**");
@@ -487,7 +665,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				lines.add("");
 				lines.addAll(table.wrap(max_table_fig_columns, 1).build());
 				
-				lines.add("##### "+siteName+", "+magLabels.get(m)+", Z-Score Histograms");
+				lines.add("##### "+siteName+", "+magLabels.get(m)+", z-Score Histograms");
 				lines.add(topLink); lines.add("");
 				lines.add("These plots compare "+simName+" to the full GMPE log-normal distributions. "
 						+ "Each rupture's GMPE distribution is converted to a standard log-normal "
@@ -569,7 +747,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				
 				if (srcSuccess) {
 					// plot with source contributions
-					TableBuilder table = MarkdownUtils.tableBuilder();
+					table = MarkdownUtils.tableBuilder();
 					table.initNewLine();
 					table.addColumn("Total");
 					table.addColumn("Source Contributions");
@@ -616,7 +794,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		// now hazard curves
 		List<List<File>> curveFiles = new ArrayList<>();
 		List<Site> curveSites;
-		if (this.sites.size() > 15 && highlightSites != null)
+		if (this.sites.size() > 20 && highlightSites != null)
 			curveSites = highlightSites;
 		else
 			curveSites = this.sites;
@@ -645,7 +823,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 //			lines.addAll(getCurveLegend(simName, gmpeRef.getShortName(), gmpe_truncs, gmpe_fixed_sigmas, 0));
 			lines.addAll(curvePlotters.get(0).getCurveLegend(false, true, true, 0));
 			lines.add("");
-			TableBuilder table = MarkdownUtils.tableBuilder();
+			table = MarkdownUtils.tableBuilder();
 			table.initNewLine().addColumn("Site");
 			for (double period : periods)
 				table.addColumn(optionalDigitDF.format(period)+"s");
@@ -694,7 +872,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		lines.add("GMPE Residuals use the following values, averaged among all ruptures, for all paremeters which are not varied. "
 				+ "All other parameters set to GMPE defaults");
 		lines.add("");
-		TableBuilder table = MarkdownUtils.tableBuilder().addLine("Name", "Average Value");
+		table = MarkdownUtils.tableBuilder().addLine("Name", "Average Value");
 		Map<ResidualType, Double> residualDefaults = new HashMap<>();
 		Map<ResidualType, Integer> regressValCounts = new HashMap<>();
 		System.out.println("Determining GMPE default parameter values for residual analysis (averaged across all ruptures)");

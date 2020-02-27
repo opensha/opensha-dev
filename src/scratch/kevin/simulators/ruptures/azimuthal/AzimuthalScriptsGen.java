@@ -29,8 +29,8 @@ public class AzimuthalScriptsGen {
 
 	public static void main(String[] args) throws IOException {
 //		String catalogDirName = "rundir2585_1myrs";
-//		String catalogDirName = "rundir4682";
-		String catalogDirName = "rundir4860";
+		String catalogDirName = "rundir4317";
+//		String catalogDirName = "rundir4860_multi_combine";
 		boolean gp = false;
 
 //		String catalogDirName = null;

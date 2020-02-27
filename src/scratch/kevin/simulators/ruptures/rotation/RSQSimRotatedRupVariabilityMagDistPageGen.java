@@ -244,7 +244,7 @@ public class RSQSimRotatedRupVariabilityMagDistPageGen extends RSQSimRotatedRupV
 		
 		List<Site> sites = new ArrayList<>();
 		for (BBP_Site site : bbpSites)
-			sites.add(site.buildGMPE_Site());
+			sites.add(site.buildGMPE_Site(vm));
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());

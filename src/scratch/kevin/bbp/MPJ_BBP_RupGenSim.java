@@ -66,6 +66,9 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 		int numSeeds = numSims;
 		doHF = !cmd.hasOption("no-hf");
 		
+		if (rank == 0)
+			debug("Setting up BBP environment...");
+		
 		if (cmd.hasOption("bbp-env")) {
 			bbpEnvFile = new File(cmd.getOptionValue("bbp-env"));
 			if (rank == 0) {
@@ -104,6 +107,8 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 		exec = Executors.newFixedThreadPool(getNumThreads());
 		
 		if (cmd.hasOption("split-sites")) {
+			if (rank == 0)
+				debug("Splitting sites...");
 			individualSiteFiles = new ArrayList<>();
 			File subSiteDir = new File(mainOutputDir, "sites_individual");
 			if (rank == 0)
@@ -122,6 +127,8 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 		
 		// initialize results dirs, and create seeds
 		if (rank == 0) {
+			if (rank == 0)
+				debug("Initializing dirs and creating seeds...");
 			postBatchHook = new MasterZipHook();
 			
 			BBP_SourceFile sourceFile = BBP_SourceFile.readFile(srcFile);
@@ -139,10 +146,14 @@ public class MPJ_BBP_RupGenSim extends MPJTaskCalculator {
 				}
 				for (int index : indexes) {
 					File runDir = getRunDir(index, true);
-					sourceFile.writeToFile(new File(runDir, srcFile.getName()));
+					File destFile = new File(runDir, srcFile.getName());
+					if (!destFile.exists())
+						sourceFile.writeToFile(destFile);
 				}
 			}
 		}
+		if (rank == 0)
+			debug("Done initializing");
 	}
 	
 	private File getRunDir(int index, boolean create) {

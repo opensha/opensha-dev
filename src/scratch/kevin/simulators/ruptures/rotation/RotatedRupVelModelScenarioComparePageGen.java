@@ -83,7 +83,7 @@ public class RotatedRupVelModelScenarioComparePageGen {
 			
 			List<Site> sites = new ArrayList<>();
 			for (BBP_Site site : bbpSites)
-				sites.add(site.buildGMPE_Site());
+				sites.add(site.buildGMPE_Site(vm));
 			for (Scenario scenario : Scenario.values()) {
 				File rotConfFile = new File(bbpDir, "rotation_config_"+scenario.getPrefix()+".csv");
 				if (rotConfFile.exists()) {

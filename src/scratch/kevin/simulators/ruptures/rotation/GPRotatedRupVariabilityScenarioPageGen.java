@@ -71,6 +71,7 @@ public class GPRotatedRupVariabilityScenarioPageGen extends GPRotatedRupVariabil
 				+ "100rups-patchArea1.0-vmLA_BASIN_500-noHF-1site");
 		File bbpZipFile = new File(bbpDir, "results_rotD.zip");
 		
+		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
 		double[] calcPeriods = {1d, 2d, 3d, 4d, 5d, 7.5, 10d};
 		double[] periods = {3d, 5d, 7.5, 10d};
 		
@@ -88,7 +89,7 @@ public class GPRotatedRupVariabilityScenarioPageGen extends GPRotatedRupVariabil
 		
 		List<Site> sites = new ArrayList<>();
 		for (BBP_Site site : bbpSites)
-			sites.add(site.buildGMPE_Site());
+			sites.add(site.buildGMPE_Site(vm));
 		
 		File parentDir = new File(outputDir, bbpDir.getName());
 		Preconditions.checkState(parentDir.exists() || parentDir.mkdir());

@@ -100,7 +100,7 @@ public class BBP_Site {
 		return hiPassFreq;
 	}
 	
-	public Site buildGMPE_Site() {
+	public Site buildGMPE_Site(VelocityModel vm) {
 		Site gmpeSite = new Site(getLoc(), getName());
 		
 		Vs30_Param vs30Param = new Vs30_Param(vs30);
@@ -112,11 +112,11 @@ public class BBP_Site {
 		gmpeSite.addParameter(vs30TypeParam);
 		
 		DepthTo1pt0kmPerSecParam z10Param = new DepthTo1pt0kmPerSecParam();
-		z10Param.setValue(null);
+		z10Param.setValue(vm == null ? null : vm.getZ10()*1000d);
 		gmpeSite.addParameter(z10Param);
 		
 		DepthTo2pt5kmPerSecParam z25Param = new DepthTo2pt5kmPerSecParam();
-		z25Param.setValue(null);
+		z25Param.setValue(vm == null ? null : vm.getZ25());
 		gmpeSite.addParameter(z25Param);
 		
 		return gmpeSite;

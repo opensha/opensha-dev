@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,24 +45,31 @@ public class ZScoreHistPlot {
 	
 	private static final boolean rate_weighted = true;
 	
-	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
-			List<Site> sites, double[] periods, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
-			File outputDir, String prefix) throws IOException {
-		return plotStandardNormal(simProv, eventComps, sites, periods, gmpe, filter, binDescriptions, outputDir, prefix, null, 0);
+	public static class ZScoreResult {
+		
+		public final double mean;
+		public final double stdDevFract;
+		public final HistogramFunction hist;
+		public final Map<String, HistogramFunction> sourceHists;
+		
+		private ZScoreResult(double mean, double stdDevFract, HistogramFunction hist, Map<String, HistogramFunction> sourceHists) {
+			super();
+			this.mean = mean;
+			this.stdDevFract = stdDevFract;
+			this.hist = hist;
+			this.sourceHists = sourceHists;
+		}
 	}
 	
-	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
-			List<Site> sites, double[] periods, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
-			File outputDir, String prefix, Table<String, E, Double> sourceRupContribFracts, int maxNumSourceContribs) throws IOException {
-		
-		List<PlotSpec> specs = new ArrayList<>();
-		double maxY = 0.7d;
-		double numStdDev = 3.75;
-		List<Range> xRanges = new ArrayList<>();
-		xRanges.add(new Range(-numStdDev, numStdDev));
-		
-		List<Double> means = new ArrayList<>();
-		List<Double> stdDevs = new ArrayList<>();
+	public static <E> ZScoreResult[] calcZScores(SimulationRotDProvider<E> simProv,
+			Collection<? extends RuptureComparison<E>> eventComps, List<Site> sites, double[] periods,
+					RuptureComparisonFilter<E> filter) throws IOException {
+		return calcZScores(simProv, eventComps, sites, periods, filter, null);
+	}
+	
+	public static <E> ZScoreResult[] calcZScores(SimulationRotDProvider<E> simProv,
+			Collection<? extends RuptureComparison<E>> eventComps, List<Site> sites, double[] periods,
+					RuptureComparisonFilter<E> filter, Table<String, E, Double> sourceRupContribFracts) throws IOException {
 		int numComputed = 0;
 		int numMatches = 0;
 		for (Site site : sites) {
@@ -84,11 +92,10 @@ public class ZScoreHistPlot {
 			numBins = 100;
 		System.out.println("Binning with "+numBins+" bins");
 		
-		Color stdDevColor = new Color(0, 150, 0);
+		ZScoreResult[] ret = new ZScoreResult[periods.length];
 		
-		DatasetRenderingOrder order = DatasetRenderingOrder.FORWARD;
-		
-		for (double period : periods) {
+		for (int p=0; p<periods.length; p++) {
+			double period = periods[p];
 			HistogramFunction hist = new HistogramFunction(-numStdDev, numStdDev, numBins);
 			
 			Map<String, HistogramFunction> sourceHists = sourceRupContribFracts == null ? null : new HashMap<>();
@@ -142,7 +149,7 @@ public class ZScoreHistPlot {
 				}
 			}
 			if (count == 0)
-				return false;
+				return null;
 			double[] valsArray = Doubles.toArray(allVals);
 			double mean, stdDev;
 			if (rate_weighted) {
@@ -156,16 +163,59 @@ public class ZScoreHistPlot {
 				mean = new Mean().evaluate(valsArray);
 				stdDev = Math.sqrt(new Variance().evaluate(valsArray, mean));
 			}
-			means.add(mean);
-			stdDevs.add(stdDev);
 			
 			double area = calcArea(hist);
 			hist.scale(1d/area);
 			
+			if (sourceHists != null)
+				for (HistogramFunction sourceHist : sourceHists.values())
+					sourceHist.scale(1d/area);
+			
+			ret[p] = new ZScoreResult(mean, stdDev, hist, sourceHists);
+		}
+		
+		return ret;
+	}
+	
+	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
+			List<Site> sites, double[] periods, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
+			File outputDir, String prefix) throws IOException {
+		return plotStandardNormal(simProv, eventComps, sites, periods, gmpe, filter, binDescriptions, outputDir, prefix, null, 0);
+	}
+	
+	private static final double maxY = 0.7d;
+	private static final double numStdDev = 3.75;
+	
+	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
+			List<Site> sites, double[] periods, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
+			File outputDir, String prefix, Table<String, E, Double> sourceRupContribFracts, int maxNumSourceContribs) throws IOException {
+		
+		List<PlotSpec> specs = new ArrayList<>();
+		
+		List<Range> xRanges = new ArrayList<>();
+		xRanges.add(new Range(-numStdDev, numStdDev));
+		
+		List<Double> means = new ArrayList<>();
+		List<Double> stdDevs = new ArrayList<>();
+		
+		Color stdDevColor = new Color(0, 150, 0);
+		
+		DatasetRenderingOrder order = DatasetRenderingOrder.FORWARD;
+		
+		ZScoreResult[] scores = calcZScores(simProv, eventComps, sites, periods, filter, sourceRupContribFracts);
+		if (scores == null)
+			return false;
+		
+		for (int p=0; p<periods.length; p++) {
+			double period = periods[p];
+			ZScoreResult score = scores[p];
+			means.add(score.mean);
+			stdDevs.add(score.stdDevFract);
+			
 			List<XY_DataSet> funcs = new ArrayList<>();
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
 			
-			EvenlyDiscretizedFunc stdNormal = new EvenlyDiscretizedFunc(hist.getMinX(), hist.getMaxX(), 1000);
+			EvenlyDiscretizedFunc stdNormal = new EvenlyDiscretizedFunc(score.hist.getMinX(), score.hist.getMaxX(), 1000);
 			double scalar = 1d/Math.sqrt(2d*Math.PI);
 			for (int i=0; i<stdNormal.size(); i++) {
 				double x = stdNormal.getX(i);
@@ -173,24 +223,25 @@ public class ZScoreHistPlot {
 				stdNormal.set(i, y);
 			}
 			
-			hist.setName(simProv.getName());
+			score.hist.setName(simProv.getName());
 			stdNormal.setName("Standard Normal");
 			
 //			maxY = Math.max(maxY, Math.max(stdNormal.getMaxY(), hist.getMaxY()));
 			DefaultXY_DataSet meanLine = new DefaultXY_DataSet();
-			meanLine.set(mean, 0);
-			meanLine.set(mean, maxY-0.1);
+			meanLine.set(score.mean, 0);
+			meanLine.set(score.mean, maxY-0.1);
 			meanLine.setName("Mean");
 			
-			if (sourceHists != null && !sourceHists.isEmpty()) {
+			if (score.sourceHists != null && !score.sourceHists.isEmpty()) {
 				order = DatasetRenderingOrder.REVERSE;
 				List<HistogramFunction> sourceHistList = new ArrayList<>();
-				for (String sourceName : sourceHists.keySet())
-					sourceHistList.add(sourceHists.get(sourceName));
+				for (String sourceName : score.sourceHists.keySet())
+					sourceHistList.add(score.sourceHists.get(sourceName));
 				// sort by area, decreasing
 				Collections.sort(sourceHistList, histComparator);
 				if (sourceHistList.size() > maxNumSourceContribs) {
-					HistogramFunction otherHist = new HistogramFunction(hist.getMinX(), hist.getMaxX(), hist.size());
+					HistogramFunction otherHist = new HistogramFunction(
+							score.hist.getMinX(), score.hist.getMaxX(), score.hist.size());
 					otherHist.setName("Other");
 					for (int i=maxNumSourceContribs-1; i<sourceHistList.size(); i++) {
 						HistogramFunction sourceHist = sourceHistList.get(i);
@@ -210,13 +261,11 @@ public class ZScoreHistPlot {
 				funcs.add(stdNormal);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 				
-				HistogramFunction runningTotal = new HistogramFunction(hist.getMinX(), hist.getMaxX(), hist.size());
+				HistogramFunction runningTotal = new HistogramFunction(score.hist.getMinX(), score.hist.getMaxX(), score.hist.size());
 				for (int i=0; i<sourceHistList.size(); i++) {
 					HistogramFunction sourceHist = sourceHistList.get(i);
-					// scale to match regular hist
-					sourceHist.scale(1d/area);
 					
-					for (int j=0; j<hist.size(); j++)
+					for (int j=0; j<score.hist.size(); j++)
 						runningTotal.add(j, sourceHist.getY(j));
 					
 					EvenlyDiscretizedFunc clone = runningTotal.deepClone();
@@ -231,10 +280,10 @@ public class ZScoreHistPlot {
 					chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, colorCPT.getColor(cptVal)));
 				}
 				
-				funcs.add(hist);
+				funcs.add(score.hist);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
 			} else {
-				funcs.add(hist);
+				funcs.add(score.hist);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
 				funcs.add(stdNormal);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
@@ -260,6 +309,8 @@ public class ZScoreHistPlot {
 			specs.add(spec);
 		}
 		
+		DecimalFormat twoSigFig = new DecimalFormat("0.00");
+		
 		List<Range> yRanges = new ArrayList<>();
 		for (int i=0; i<periods.length; i++) {
 			List<String> labels = new ArrayList<>(binDescriptions);
@@ -274,12 +325,12 @@ public class ZScoreHistPlot {
 			
 			List<XYAnnotation> anns = new ArrayList<>();
 			XYTextAnnotation meanAnn = new XYTextAnnotation(
-					"Mean = "+MultiRupGMPE_ComparePageGen.optionalDigitDF.format(means.get(i)), -x, y);
+					"Mean = "+twoSigFig.format(means.get(i)), -x, y);
 			meanAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 			meanAnn.setFont(bigFont);
 			anns.add(meanAnn);
 			XYTextAnnotation stdDevAnn = new XYTextAnnotation(
-					"σ-fract = "+MultiRupGMPE_ComparePageGen.optionalDigitDF.format(stdDevs.get(i)), -x, y-yEach);
+					"σ-fract = "+twoSigFig.format(stdDevs.get(i)), -x, y-yEach);
 			stdDevAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 			stdDevAnn.setFont(bigFont);
 			anns.add(stdDevAnn);

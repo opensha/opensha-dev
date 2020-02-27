@@ -66,7 +66,7 @@ public class MPJ_BBP_RotatedRupVariabilityMagDistSim extends AbstractMPJ_BBP_Mul
 		
 		List<Site> gmpeSites = new ArrayList<>();
 		for (BBP_Site bbpSite : sites) {
-			Site site = bbpSite.buildGMPE_Site();
+			Site site = bbpSite.buildGMPE_Site(null);
 			siteToBBPSites.put(site, bbpSite);
 			gmpeSites.add(site);
 		}

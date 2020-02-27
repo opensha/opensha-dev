@@ -111,6 +111,7 @@ import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.attenRelImpl.CB_2008_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.USGS_Combined_2004_AttenRel;
+import org.opensha.sha.imr.attenRelImpl.ngaw2.ASK_2014;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -1470,7 +1471,7 @@ public class PureScratch {
 	}
 	
 	private static void test57() throws IOException {
-		CPT cpt = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0d, 6d);
+		CPT cpt = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0d, 5d);
 		cpt.setNanColor(Color.LIGHT_GRAY);
 		cpt.writeCPTFile(new File("/tmp/cpt.cpt"));
 	}
@@ -1518,13 +1519,17 @@ public class PureScratch {
 		FaultSectionDataWriter.writeSectionsToFile(subSects31, null, new File("/tmp/fm_3_1.txt"), false);
 		FaultSectionDataWriter.writeSectionsToFile(subSects32, null, new File("/tmp/fm_3_2.txt"), false);
 	}
+	
+	private static void test60() throws IOException {
+		System.out.println(ASK_2014.calcZ1ref(500));
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test59();
+		test57();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

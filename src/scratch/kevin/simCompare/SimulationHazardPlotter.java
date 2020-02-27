@@ -340,7 +340,7 @@ public class SimulationHazardPlotter<E> {
 		// primary simulation curve
 		addSimulationCurves(funcs, chars, period, true, true);
 		
-		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, null);
+		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, null, true);
 	}
 	
 	public File plotGMPE_SimHazardCurves(File outputDir, String prefix, double period,
@@ -404,7 +404,7 @@ public class SimulationHazardPlotter<E> {
 		// primary simulation curve
 		addSimulationCurves(funcs, chars, period, true, false);
 		
-		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, null);
+		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, null, false);
 	}
 	
 	private synchronized Map<String, DiscretizedFunc> getCalcSimSourceCurves(double period) throws IOException {
@@ -553,7 +553,7 @@ public class SimulationHazardPlotter<E> {
 		addSourceContributionFuncs(funcs, chars, simSourceCurves, gmpeSourceCurves, simSourceSortVals,
 				numSourceCurves, sourceContribMutuallyExclusive, gmpeSources, false);
 		
-		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, null);
+		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, null, true);
 	}
 	
 	private void addSourceContributionFuncs(List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars,
@@ -745,7 +745,7 @@ public class SimulationHazardPlotter<E> {
 			durationAnn.setTextAnchor(TextAnchor.BASELINE_LEFT);
 			anns.add(durationAnn);
 			
-			imageFiles.add(plotHazardCurves(tempDir, "frame_"+frameIndex, site, period, curveDuration, funcs, chars, anns));
+			imageFiles.add(plotHazardCurves(tempDir, "frame_"+frameIndex, site, period, curveDuration, funcs, chars, anns, false));
 			
 			if (frameIndex == numFrames-1 && numFrames > 1) {
 				funcs = new ArrayList<>();
@@ -783,11 +783,11 @@ public class SimulationHazardPlotter<E> {
 				double maxY = 1e-2;
 				minY = Math.pow(10, Math.floor(Math.log10(minY)-0.2));
 				double minX = simCurve.getFirstInterpolatedX(maxY);
-				maxX = Math.pow(10, Math.ceil(Math.log10(maxX)+0.2));
+				maxX = Math.pow(10, Math.ceil(Math.log10(maxX)+0.1));
 				
 				String prefix = outputFile.getName().replaceAll(".gif", "")+"_final";
 				plotHazardCurves(outputFile.getParentFile(), prefix, site, period, curveDuration,
-						funcs, chars, null, new Range(minX, maxX), new Range(minY, maxY));
+						funcs, chars, null, true, new Range(minX, maxX), new Range(minY, maxY));
 			}
 			
 			prevGMPECurves.add(gmpeCurve);
@@ -809,13 +809,15 @@ public class SimulationHazardPlotter<E> {
 	}
 	
 	File plotHazardCurves(File outputDir, String prefix, Site site, double period, double curveDuration,
-			List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars, List<XYAnnotation> anns) throws IOException {
-		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, anns, curveXRange, curveYRange);
+			List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars, List<XYAnnotation> anns,
+			boolean pubFig) throws IOException {
+		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, anns, pubFig,
+				curveXRange, curveYRange);
 	}
 	
 	File plotHazardCurves(File outputDir, String prefix, Site site, double period, double curveDuration,
 			List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars, List<XYAnnotation> anns,
-			Range curveXRange, Range curveYRange) throws IOException {
+			boolean pubFig, Range curveXRange, Range curveYRange) throws IOException {
 		// now plot
 		String xAxisLabel = (float)period+"s SA (g)";
 		String yAxisLabel;
@@ -864,6 +866,17 @@ public class SimulationHazardPlotter<E> {
 		gp.saveAsPNG(pngFile.getAbsolutePath());
 		File pdfFile = new File(outputDir, prefix+".pdf");
 		gp.saveAsPDF(pdfFile.getAbsolutePath());
+		
+		if (pubFig) {
+			// write version without title, for publications
+			spec.setTitle(" ");
+			gp.drawGraphPanel(spec, true, true, curveXRange, curveYRange);
+			gp.getChartPanel().setSize(800, 600);
+			File pubPNGFile = new File(outputDir, prefix+"_pub.png");
+			gp.saveAsPNG(pubPNGFile.getAbsolutePath());
+			File pubPDFFile = new File(outputDir, prefix+"_pub.pdf");
+			gp.saveAsPDF(pubPDFFile.getAbsolutePath());
+		}
 		System.out.println("DONE "+prefix+", "+site.getName()+", "+xAxisLabel);
 		return pngFile;
 	}

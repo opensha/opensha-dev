@@ -1067,8 +1067,8 @@ public class SpectraPlotter {
 		return files;
 	}
 	
-	public static UncertainArbDiscDataset calcGMPE_RotD50(EqkRupture rupture, BBP_Site bbpSite, ScalarIMR gmpe) {
-		Site site = bbpSite.buildGMPE_Site();
+	public static UncertainArbDiscDataset calcGMPE_RotD50(EqkRupture rupture, BBP_Site bbpSite, ScalarIMR gmpe, VelocityModel vm) {
+		Site site = bbpSite.buildGMPE_Site(vm);
 		
 		gmpe.setSite(site);
 		gmpe.setEqkRupture(rupture);
@@ -1175,14 +1175,20 @@ public class SpectraPlotter {
 //		File refDir = null;
 //		int eventID = 1670183;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-//		File refDir = new File(bbpDir, "2019_11_12-rundir2585_1myr-event9955310-gp-dx1.17-noHF-cs500Sites");
-		File refDir = null;
-		int eventID = 9955310;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+////		File refDir = new File(bbpDir, "2019_11_12-rundir2585_1myr-event9955310-gp-dx1.17-noHF-cs500Sites");
+//		File refDir = null;
+//		int eventID = 9955310;
+		
+		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 //		RSQSimCatalog catalog = Catalogs.JG_UCERF3_millionElement.instance(baseDir);
 //		File refDir = new File("/home/kevin/bbp/parallel/2017_10_04-JG_UCERF3_millionElement-event4099020-dx0.48-noHF/results");
 //		int eventID = 4099020;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+		File refDir = null;
+		int eventID = 12581;
 		
 		File srfDir = new File(catalog.getCatalogDir(), "event_srfs");
 		File rsDir = new File(srfDir, "event_"+eventID+"_0.05s_ADJ_VEL_bbp");
@@ -1194,7 +1200,7 @@ public class SpectraPlotter {
 			sites = BBP_Site.readFile(rsDir);
 		
 //		Map<RSQSimEvent, EqkRupture> compEvents = null;
-		RSQSimCatalog compCatalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog compCatalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
 		String simName = "RSQSim-BBP";
 		String animTitle = "San Andreas (Mojave) Spectra, M7-7.5";
 		double animTime = 20; // seconds
@@ -1202,7 +1208,8 @@ public class SpectraPlotter {
 		boolean titles = false;
 		BBP_SimZipLoader compLoader = new BBP_SimZipLoader(new File(bbpDir,
 //				"2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites/results_rotD.zip"), sites);
-				"2019_11_11-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites/results_rotD.zip"), sites);
+//				"2019_11_11-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites/results_rotD.zip"), sites);
+				"2020_02_12-rundir4860_multi_combine-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites/results_rotD.zip"), sites);
 		Map<RSQSimEvent, EqkRupture> compEvents = getCompEvents(compCatalog, 7d, 7.5d, 5000, 286, 301);
 		
 		int numRefRuns = 400;
@@ -1227,7 +1234,7 @@ public class SpectraPlotter {
 				gmpeSpectra = new UncertainArbDiscDataset[gmpes.length];
 				for (int i=0; i<gmpes.length; i++) {
 					System.out.println("Calculating spectra for "+gmpes[i].getShortName());
-					gmpeSpectra[i] = calcGMPE_RotD50(gmpeRup, site, gmpes[i]);
+					gmpeSpectra[i] = calcGMPE_RotD50(gmpeRup, site, gmpes[i], vm);
 				}
 				System.out.println("DONE spectra");
 			}
@@ -1268,7 +1275,7 @@ public class SpectraPlotter {
 					if (gmpes != null) {
 						UncertainArbDiscDataset[] myGMPEs = new UncertainArbDiscDataset[gmpes.length];
 						for (int i=0; i<gmpes.length; i++) {
-							myGMPEs[i] = calcGMPE_RotD50(compEvents.get(event), site, gmpes[i]);
+							myGMPEs[i] = calcGMPE_RotD50(compEvents.get(event), site, gmpes[i], vm);
 							gmpeMeans[i] = getAveraged(gmpeMeans[i], myGMPEs[i], count);
 							gmpeLowers[i] = getAveraged(gmpeLowers[i], myGMPEs[i].getLower(), count);
 							gmpeUppers[i] = getAveraged(gmpeUppers[i], myGMPEs[i].getUpper(), count);

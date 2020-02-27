@@ -40,7 +40,8 @@ public class SiteMapGenerator {
 //	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
 //	private static Region region = new Region(new Location(35, -115), new Location(33, -120));
 //	private static Region region = new Region(new Location(35, -116), new Location(33.25, -119.5));
-	private static Region region = new Region(new Location(34.8, -116.7), new Location(33.6, -119.5));
+//	private static Region region = new Region(new Location(34.8, -116.7), new Location(33.6, -119.5));
+	private static Region region = new Region(new Location(34.8, -116.7), new Location(30, -119.5));
 	
 	private static GriddedGeoDataSet fetchTopo(TopographicSlopeFile topoRes) throws IOException {
 		SRTM30PlusTopography topo = new SRTM30PlusTopography();

@@ -32,13 +32,13 @@ import scratch.kevin.bbp.BBP_SimZipLoader.BBP_ShakeMapSimZipLoader;
 
 public class ShakemapPlotter {
 	
-	public static void plotShakemaps(BBP_ShakeMapSimZipLoader loader, GriddedRegion gridReg, List<BBP_Site> sites,
+	public static void plotShakemaps(BBP_ShakeMapSimZipLoader loader, GriddedRegion gridReg, List<BBP_Site> sites, VelocityModel vm,
 			String label, File outputDir, String prefix, boolean log, double... periods)
 					throws IOException, GMT_MapException {
-		plotShakemaps(loader, gridReg, sites, label, outputDir, prefix, log, null, null, periods);
+		plotShakemaps(loader, gridReg, sites, vm, label, outputDir, prefix, log, null, null, periods);
 	}
 	
-	public static void plotShakemaps(BBP_ShakeMapSimZipLoader loader, GriddedRegion gridReg, List<BBP_Site> sites,
+	public static void plotShakemaps(BBP_ShakeMapSimZipLoader loader, GriddedRegion gridReg, List<BBP_Site> sites, VelocityModel vm,
 			String label, File outputDir, String prefix, boolean log, ScalarIMR gmpe, EqkRupture rup,
 			double... periods) throws IOException, GMT_MapException {
 		GriddedGeoDataSet[] xyzs = load(loader, gridReg, sites, periods, false);
@@ -48,7 +48,7 @@ public class ShakemapPlotter {
 		
 		GriddedGeoDataSet[] gmpes = null;
 		if (gmpe != null)
-			gmpes = calcGMPE(gmpe, rup, gridReg, sites, periods);
+			gmpes = calcGMPE(gmpe, rup, gridReg, sites, periods, vm);
 		
 		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
 		
@@ -188,7 +188,7 @@ public class ShakemapPlotter {
 	}
 	
 	private static GriddedGeoDataSet[] calcGMPE(ScalarIMR gmpe, EqkRupture rup,
-			GriddedRegion gridReg, List<BBP_Site> sites, double[] periods) {
+			GriddedRegion gridReg, List<BBP_Site> sites, double[] periods, VelocityModel vm) {
 		gmpe.setParamDefaults();
 		
 		gmpe.setEqkRupture(rup);
@@ -201,7 +201,7 @@ public class ShakemapPlotter {
 		
 		System.out.println("Calculating GMPE shakemaps for "+periods.length+" periods...");
 		for (int i=0; i<sites.size(); i++) {
-			Site site = sites.get(i).buildGMPE_Site();
+			Site site = sites.get(i).buildGMPE_Site(vm);
 			gmpe.setSite(site);
 			
 			for (int p=0; p<periods.length; p++) {
@@ -223,6 +223,7 @@ public class ShakemapPlotter {
 
 	public static void main(String[] args) throws ZipException, IOException, DocumentException, GMT_MapException {
 		File dir = new File("/data/kevin/bbp/parallel/2017_10_12-rundir2194_long-event136704-shakemap-noHF");
+		VelocityModel vm = null;
 		File zipFile = new File(dir, "results.zip");
 		List<BBP_Site> sites = BBP_Site.readFile(dir);
 		BBP_ShakeMapSimZipLoader loader = new BBP_ShakeMapSimZipLoader(zipFile, sites);
@@ -232,7 +233,7 @@ public class ShakemapPlotter {
 		
 		FaultBasedMapGen.LOCAL_MAPGEN = true;
 		
-		plotShakemaps(loader, gridReg, sites, "Test Map", new File("/tmp"), "shakemap", true, 1d, 2d, 5d);
+		plotShakemaps(loader, gridReg, sites, vm, "Test Map", new File("/tmp"), "shakemap", true, 1d, 2d, 5d);
 	}
 
 }

@@ -177,12 +177,17 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-//		File bbpDir = new File(bbpParallelDir, "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites");
-		File bbpDir = new File(bbpParallelDir, "2019_11_11-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+////		File bbpDir = new File(bbpParallelDir, "2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites");
+//		File bbpDir = new File(bbpParallelDir, "2019_11_11-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
 		
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		File bbpDir = new File(bbpParallelDir, "2018_09_10-rundir2740-all-m6.5-skipYears5000-noHF-csLASites");
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+		File bbpDir = new File(bbpParallelDir, "2020_02_12-rundir4860_multi_combine-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
+		
+		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
 		
 		List<String> sourceNames = new ArrayList<>();
 		List<int[]> parentIDs = new ArrayList<>();
@@ -222,7 +227,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 					continue;
 			}
 			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), MPJ_BBP_CatalogSim.CUTOFF_DIST)));
-			Site gmpeSite = site.buildGMPE_Site();
+			Site gmpeSite = site.buildGMPE_Site(vm);
 			gmpeSite.setName(RSQSimBBP_Config.siteCleanName(site));
 			gmpeSites.add(gmpeSite);
 			sitesBBPtoGMPE.put(site, gmpeSite);
@@ -284,7 +289,6 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
 		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
 		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
 		

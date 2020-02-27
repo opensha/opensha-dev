@@ -1146,12 +1146,12 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				System.err.println("hardcoded dir doesn't exist: "+baseDir.getAbsolutePath());
 				System.exit(2);
 			}
-			catalog = Catalogs.BRUCE_4860.instance(baseDir);
+			catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
 			writePoints = false;
 			writeSRFs = false;
-			writeMappings = false;
-			testReadOnly = true;
-			compMappings = new File(catalog.getCatalogDir(), "erf_mappings.bin.bak");
+			writeMappings = true;
+			testReadOnly = false;
+//			compMappings = new File(catalog.getCatalogDir(), "erf_mappings.bin.bak");
 //			maxDuration = 10000;
 			maxDuration = 0;
 		}
@@ -1177,7 +1177,14 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			double skipYears = 5000;
 			double minMag = 6.5;
 			double minFractForInclusion = 0.2;
-			Loader loader = catalog.loader().skipYears(skipYears).minMag(minMag).hasTransitions();
+			Loader loader = catalog.loader().skipYears(skipYears).minMag(minMag);
+			try {
+				catalog.getTransitions();
+				loader.hasTransitions();
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.out.println("WARNING: not forcing events to have transitions");
+			}
 			if (maxDuration > 0)
 				loader.maxDuration(maxDuration);
 			List<RSQSimEvent> events = loader.load();

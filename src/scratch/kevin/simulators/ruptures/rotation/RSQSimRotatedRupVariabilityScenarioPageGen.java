@@ -70,7 +70,7 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4320.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4860.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
 
 //		File bbpDir = new File(bbpParallelDir,
 //				"2019_11_22-rundir2585_1myrs-rotatedRups-m7p2_vert_ss_surface_rnd_mag_0p05"
@@ -150,14 +150,15 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 		
 		List<BBP_Site> bbpSites = BBP_Site.readFile(bbpDir);
 		
+		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
+		
 		List<Site> sites = new ArrayList<>();
 		for (BBP_Site site : bbpSites)
-			sites.add(site.buildGMPE_Site());
+			sites.add(site.buildGMPE_Site(vm));
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
 		File vmDir = new File(catalogOutputDir, "bbp_"+vm.name());
 		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
 		

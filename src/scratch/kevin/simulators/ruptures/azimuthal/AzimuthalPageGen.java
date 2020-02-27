@@ -709,8 +709,8 @@ public class AzimuthalPageGen {
 		File mainCatalogsDir = new File(gitDir, "catalogs");
 		File mainBBPDir = new File("/data/kevin/bbp/parallel");
 		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
-		RSQSimCatalog catalog = Catalogs.BRUCE_4860.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_4317.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance();
 //		RSQSimCatalog catalog = null;
 		
 		double[] periods = {2d, 3d, 5d, 7.5d, 10d};

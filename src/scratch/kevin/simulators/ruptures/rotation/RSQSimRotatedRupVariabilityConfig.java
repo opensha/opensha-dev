@@ -434,7 +434,7 @@ public class RSQSimRotatedRupVariabilityConfig extends RotatedRupVariabilityConf
 			
 			List<Site> sites = new ArrayList<>();
 			for (BBP_Site bbpSite : bbpSites)
-				sites.add(bbpSite.buildGMPE_Site());
+				sites.add(bbpSite.buildGMPE_Site(null));
 			
 			config = new RSQSimRotatedRupVariabilityConfig(catalog,
 					sites, ruptures, distances, numSourceAz, numSiteToSourceAz);
