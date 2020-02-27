@@ -157,6 +157,7 @@ public class FaultSystemRuptureRateInversion {
 	// segmentation (rup rate = 0) constraints
 	int num_segConstraints;
 	ArrayList<SegmentationConstraint> segmentationConstraintList;
+	ArrayList<SlipRateSegmentationConstraint> slipRateSegmentationConstraintList;
 
 
 	
@@ -423,10 +424,11 @@ public class FaultSystemRuptureRateInversion {
 	public FaultSystemRuptureRateInversion( String modelName,
 			String slipRateModelName,
 			ArrayList<FaultSectionPrefData> fltSectionDataList, 
-			ArrayList<SectionRateConstraint> sectionRateConstraints,
 			int[][] rupSectionMatrix, 
 			SlipAlongRuptureModelEnum slipModelType, 
 			ScalingRelationshipEnum scalingRel, 
+			ArrayList<SlipRateSegmentationConstraint> slipRateSegmentationConstraintList,
+			ArrayList<SectionRateConstraint> sectionRateConstraints,
 			double relativeSectRateWt, 
 			double relative_aPrioriRupWt, 
 			String aPrioriRupRatesFilename,
@@ -450,6 +452,7 @@ public class FaultSystemRuptureRateInversion {
 		this.rupSectionMatrix = rupSectionMatrix;
 		this.slipModelType = slipModelType;
 		this.magAreaRel = scalingRel;
+		this.slipRateSegmentationConstraintList = slipRateSegmentationConstraintList;
 		this.relativeSectRateWt = relativeSectRateWt;
 		this.relative_aPrioriRupWt = relative_aPrioriRupWt;
 		this.aPrioriRupRatesFilename = aPrioriRupRatesFilename;
@@ -487,12 +490,26 @@ public class FaultSystemRuptureRateInversion {
 		modelSetUpInfoString += "\trelativeMFD_constraintWt = "+relativeMFD_constraintWt+"\n";
 		if(segmentationConstraintList != null)
 			modelSetUpInfoString += "\tsegmentationConstraintList.size() = "+segmentationConstraintList.size()+"\n";
+		if(slipRateSegmentationConstraintList != null)
+			modelSetUpInfoString += "\tslipRateSegmentationConstraintList.size() = "+slipRateSegmentationConstraintList.size()+"\n";
 		modelSetUpInfoString += "\trelative_segConstraintWt = "+relative_segConstraintWt+"\n";
 		modelSetUpInfoString += "\ttotalRateConstraint = "+totalRateConstraint+"\n";
 		modelSetUpInfoString += "\ttotalRateSigma = "+totalRateSigma+"\n";
 		modelSetUpInfoString += "\trelativeTotalRateConstraintWt = "+relativeTotalRateConstraintWt+"\n";
 		modelSetUpInfoString += "\tGAUSS_MFD_SIGMA = "+GAUSS_MFD_SIGMA+"\n";
 		modelSetUpInfoString += "\tGAUSS_MFD_TRUNCATION = "+GAUSS_MFD_TRUNCATION+"\n";
+		
+		
+		// apply slip rate segmentation constraints
+		if(slipRateSegmentationConstraintList != null) {
+			for(SlipRateSegmentationConstraint srConstr: slipRateSegmentationConstraintList) {
+				for(FaultSectionPrefData fltSect:fltSectionDataList)
+					if(srConstr.getSectIndex() == fltSect.getSectionId()) {
+						fltSect.setAveSlipRate(fltSect.getOrigAveSlipRate()*srConstr.getSlipRateReductionFactor());
+						fltSect.setSlipRateStdDev(fltSect.getOrigSlipRateStdDev()*srConstr.getSlipRateStdevReductionFactor());
+					}
+			}
+		}
 
 		
 		// initialize section and rupture attributes
@@ -516,8 +533,6 @@ public class FaultSystemRuptureRateInversion {
 		
 		initMatricesEtc();
 	}
-	
-	
 	
 	
 	private void initMatricesEtc() {
@@ -1262,7 +1277,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param d
 	 * @return
 	 */
-	private static double[] getNNLS_solution(double[][] C, double[] d) {
+	public static double[] getNNLS_solution(double[][] C, double[] d) {
 
 		int nRow = C.length;
 		int nCol = C[0].length;
@@ -2927,6 +2942,59 @@ public class FaultSystemRuptureRateInversion {
 			rupRateArray[r] = targetMFD.getY(index)/meanMagHistorgram.getY(index);
 //			rupRateArray[r] = targetMFD.getClosestYtoX(rupMeanMag[r])/meanMagHistorgram.getClosestYtoX(rupMeanMag[r]);
 		}
+		
+	    // adjust initial state for various segmentation type constraints
+		// for slip rate segmentation constraints:
+		if(slipRateSegmentationConstraintList !=null && slipRateSegmentationConstraintList.size()>0) {
+			for(SlipRateSegmentationConstraint srSegConstr : slipRateSegmentationConstraintList) {		
+				int sectID = srSegConstr.getSectIndex();
+				double sectSlipRateTemp = 0;
+				for(int rup=0; rup < numRuptures; rup++) {
+					if(rupSectionMatrix[sectID][rup]==1)
+						sectSlipRateTemp += rupRateArray[rup]*sectSlipInRup[sectID][rup];
+				}
+				double scaleFactor = srSegConstr.getSlipRateReductionFactor()*sectSlipRate[sectID]/sectSlipRateTemp;
+				for(int r=0;r<rupRateArray.length;r++) {
+					if(rupSectionMatrix[srSegConstr.getSectIndex()][r] == 1.0)
+						rupRateArray[r] = scaleFactor*rupRateArray[r];
+				}
+			}
+		}
+		// for segmentation constraints:
+		if(segmentationConstraintList !=null && segmentationConstraintList.size()>0) {
+			for(SegmentationConstraint segConstr : segmentationConstraintList) {		
+				int sect1 = segConstr.getSect1_Index();
+				int sect2 = segConstr.getSect1_Index();
+				double sectRateTemp = 0;
+				for(int r=0; r < numRuptures; r++) {
+					if(rupSectionMatrix[sect1][r]==1 && rupSectionMatrix[sect2][r]==1)
+						sectRateTemp += rupRateArray[r];
+				}
+				double scaleFactor = segConstr.getMeanCoRuptureRate()/sectRateTemp;
+				for(int r=0;r<rupRateArray.length;r++) {
+					if(rupSectionMatrix[sect1][r]==1 && rupSectionMatrix[sect2][r]==1)
+						rupRateArray[r] = scaleFactor*rupRateArray[r];
+				}
+			}
+		}
+	    // for section rate constraints:
+		if(sectionRateConstraints !=null && sectionRateConstraints.size()>0) {
+			for(SectionRateConstraint sectRateConstr : sectionRateConstraints) {		
+				int sectID = sectRateConstr.getSectIndex();
+				double sectRateTemp = 0;
+				for(int r=0; r < numRuptures; r++) {
+					if(rupSectionMatrix[sectID][r]==1)
+						sectRateTemp += rupRateArray[r];
+				}
+				double scaleFactor = sectRateConstr.getMeanRate()/sectRateTemp;
+//scaleFactor=0;
+				for(int r=0;r<rupRateArray.length;r++) {
+					if(rupSectionMatrix[sectID][r] == 1.0)
+						rupRateArray[r] = scaleFactor*rupRateArray[r];
+				}
+			}
+		}
+
 		return rupRateArray;
 	}
 	

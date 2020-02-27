@@ -983,10 +983,11 @@ public class SingleFaultInversion {
 				solutionName,
 				slipRateProfile.toString(),
 				fltSectDataList, 
-				sectionRateConstraintList, 
 				rupSectionMatrix, 
 				slipModelType, 
 				scalingRel, 
+				null,
+				sectionRateConstraintList, 
 				relativeSectRateWt, 
 				relative_aPrioriRupWt, 
 				aPrioriRupRateFilename,
@@ -1460,7 +1461,7 @@ public class SingleFaultInversion {
 //		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0, true, 1);
 //		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0, true, 1);	
 //		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0, true, 1);	
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0, true, 1);	
+		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0, true, 1);	
 	
 		
 //		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1, false, 2);	
