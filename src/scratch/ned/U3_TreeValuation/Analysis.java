@@ -158,7 +158,7 @@ public class Analysis {
 		if(mkDiffForEachBranchPlots) {
 			
 			makeDiffForEachBranchPlot(popupWindows, outDirName != null, wtAbsValMeanForBrMap, "wtAbsValMeanForBrMap", "Expected Fractional Mean Change", 0d, -0.3, 0.3);
-			makeDiffForEachBranchPlot(popupWindows, outDirName != null, covForBrMap, "covForBrMap", "Expected COV Change", totCOV_EAL, 0.1, 0.42);
+			makeDiffForEachBranchPlot(popupWindows, outDirName != null, covForBrMap, "covForBrMap", "Expected COV Change", totCOV_EAL, 0.1, 0.43);
 			
 			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, meanDiffForBrValMap, "meanDiffForBrValMap", "Mean Fractional Change", 0d, -1d, 1d);
 			makeDiffForEachBranchOptionPlot(popupWindows, outDirName != null, meanDiffWtedForBrValMap, "meanDiffWtedForBrValMap", "Mean Fractional Change", 0d, -0.2, 0.2);
@@ -446,10 +446,14 @@ public class Analysis {
 			infoString += "\nsize = "+branchWt.length;
 			
 			// do normalizations
+			double maxNormEAL = 0;
 			for(int i=0;i<branchNormEAL.length;i++) {
 				branchNormEAL[i] = branchEAL[i]/totMeanEAL;
+				if(branchNormEAL[i]>maxNormEAL)
+					maxNormEAL = branchNormEAL[i];
 				branchWt[i] /= totOrigWeight;
 			}
+			System.out.println("maxNormEAL = "+maxNormEAL);
 			double totWt=0;
 			for(double wt:branchWt) totWt+=wt;
 			infoString += "\nTotal Weight (after normalization; should = 1) = "+(float)totWt;
@@ -795,8 +799,8 @@ public class Analysis {
 	public void generateBranchValueResults(boolean popUpWindows, boolean saveResults) {
 
 		double min = 0;
-		double max = 6;
-		int num = 120;
+		double max = 7;
+		int num = 140;
 
 		String tableHeaderLine = "Branch Name\tBranch Value\tWeight\tMean (fractional change)\tCOV\t95% Conf Factor\tFract Within 10%\t"+
 				"Mean (fractional change) if removed\tCOV if removed\t95% Conf Factor if removed\tFract Within 10% if removed";	
@@ -1808,8 +1812,8 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 
 	public void makeEAL_Historgram(boolean popUpWindows, boolean savePlots) {
 		double min = 0;
-		double max =6;
-		int num = 120;
+		double max =7;
+		int num = 140;
 		
 		HistogramFunction hist = new HistogramFunction(0.0+(max-min)/(num*2),max-(max-min)/(num*2), num);
 		for(int i=0; i<branchNormEAL.length; i++) {
@@ -2529,12 +2533,21 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		
 //		doCOV_ReductionAnalysis();
 		
-		ArrayList<String> branchesToRemove = new ArrayList<String>();
-		Analysis analysisFig8 = new Analysis("all_branch_results.csv", "Figure8_Data", branchesToRemove, false, false);
-		// This takes a very long time:
-//		analysisFig8.doCOV_ReductionAnalysisComplete(true, true);
-		// this recreates the plot from saved data
-		analysisFig8.makeCOV_ReductionAnalysisCompletePlotsAgain();
+//		ArrayList<String> branchesToRemove = new ArrayList<String>();
+//		Analysis analysisFig8 = new Analysis("all_branch_results.csv", "Figure8_Data", branchesToRemove, false, false);
+//		// This takes a very long time:
+////		analysisFig8.doCOV_ReductionAnalysisComplete(true, true);
+//		// this recreates the plot from saved data
+//		analysisFig8.makeCOV_ReductionAnalysisCompletePlotsAgain();
+		
+		// LA Analysis
+		// from:  http://opensha.usc.edu/ftp/kmilner/ucerf3/eal_calcs/2020_03_17-ucerf3-ngaw2-cea-consolidate-los-angeles/
+		Analysis la_analysis = new Analysis("LosAngeles_all_branch_results.csv", "LosAngeles_Data", null, false, true);
+
+//		// SF Analysis
+//		// from:  http://opensha.usc.edu/ftp/kmilner/ucerf3/eal_calcs/2020_03_17-ucerf3-ngaw2-cea-consolidate-san-francisco/
+//		Analysis sf_analysis = new Analysis("SanFrancisco_all_branch_results.csv", "SanFrancisco_Data", null, false, true);
+
 		
 //		// Fairfield census tracts
 //		// from: http://opensha.usc.edu/ftp/kmilner/ucerf3/eal_calcs/2019_02_13-ucerf3-ngaw2-cea-consolidate-fairfield/
