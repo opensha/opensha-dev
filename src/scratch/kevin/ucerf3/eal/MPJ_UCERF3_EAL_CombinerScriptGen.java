@@ -25,41 +25,66 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		File remoteDir = new File("/home/scec-02/kmilner/ucerf3/eal");
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		jobName += "-ucerf3-ngaw2-cea-consolidate";
 		
 		File trueMeanFile = new File(remoteDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_TRUE_HAZARD_MEAN_SOL_WITH_MAPPING.zip");
 		File cfssFile = new File("/home/scec-02/kmilner/ucerf3/inversion_compound_plots/2013_05_10-ucerf3p3-production-10runs/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip");
 		
-		File willsDir = new File(remoteDir, "2017_05_24-ucerf3-ngaw2-cea-proxy-wills2015");
-		File waldDir = new File(remoteDir, "2017_05_26-ucerf3-ngaw2-cea-proxy-wald");
-		BackgroundRupType bgType = BackgroundRupType.CROSSHAIR;
+//		File willsDir = new File(remoteDir, "2017_05_24-ucerf3-ngaw2-cea-proxy-wills2015");
+//		File waldDir = new File(remoteDir, "2017_05_26-ucerf3-ngaw2-cea-proxy-wald");
+//		jobName += "-ucerf3-ngaw2-cea-consolidate";
 		// only used for tracts, can be from either directory
-		File portfolioFile = new File(remoteDir, "Porter-24May2017-CA-RES1-2017-Wills2015.csv");
+//		File portfolioFile = new File(remoteDir, "Porter-24May2017-CA-RES1-2017-Wills2015.csv");
+		
+		File willsDir = new File(remoteDir, "2020_03_17-ucerf3-ngaw2-cea-proxy-100pct-wills2015");
+		File waldDir = new File(remoteDir, "2020_03_17-ucerf3-ngaw2-cea-proxy-100pct-wald2007");
+		jobName += "-ucerf3-ngaw2-cea-100pct-consolidate";
+		// only used for tracts, can be from either directory
+		File portfolioFile = new File(remoteDir, "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wills2015.csv");
+		
+		BackgroundRupType bgType = BackgroundRupType.CROSSHAIR;
 		
 		File erfProbsDir = new File("/home/scec-02/kmilner/ucerf3/erf_probs/2014_10_07-ucerf3-erf-probs");
 		double erfProbsDuration = 1d;
 		
-//		Location tractLoc = null;
-//		String cityPrefix = null;
-//		double tractRadius = 0;
+		Location tractLoc = null;
+		String cityPrefix = null;
+		double tractRadius = 0;
+		boolean tractIndividual = false;
+		boolean lec = true;
 		
 //		Location tractLoc = new Location(34.108300, -117.289646);
 //		String cityPrefix = "san-bernardino";
 //		double tractRadius = 5;
 		
-		Location tractLoc = new Location(38.2494, -122.0400);
-		String cityPrefix = "fairfield";
-		double tractRadius = 15;
+//		Location tractLoc = new Location(38.2494, -122.0400);
+//		String cityPrefix = "fairfield";
+//		double tractRadius = 15;
+		
+//		Location tractLoc = new Location(34.0407, -118.2468);
+//		String cityPrefix = "los-angeles";
+//		double tractRadius = 100;
+		
+//		Location tractLoc = new Location(37.7946, -122.3999);
+//		String cityPrefix = "san-francisco";
+//		double tractRadius = 100;
 		
 		if (tractLoc != null)
 			jobName += "-"+cityPrefix;
 		
+		if (tractIndividual)
+			jobName += "-tractEALs";
+		
+		if (lec)
+			jobName += "-calcLEC";
+		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 32;
 		String queue = "scec";
 		int mins = 24*60;
-		int heapSizeMB = 45*1024;
+		if (tractIndividual)
+			mins = mins*7;
+		int heapSizeMB = 55*1024;
 		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
@@ -72,7 +97,11 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		Preconditions.checkState(localJobDir.exists() || localJobDir.mkdir());
 		File remoteJobDir = new File(remoteDir, jobName);
 		
-		String argz = MPJTaskCalculator.argumentBuilder().threads(threads).endTimeSlurm().minDispatch(threads).maxDispatch(threads*10).build();
+		int minDispatch = tractIndividual ? 1 : threads;
+		int maxDispatch = tractIndividual ? 10 : threads*10;
+		
+		String argz = MPJTaskCalculator.argumentBuilder().threads(threads).endTimeSlurm()
+					.minDispatch(minDispatch).maxDispatch(maxDispatch).build();
 		argz += " --wills-dir "+willsDir.getAbsolutePath();
 		argz += " --wald-dir "+waldDir.getAbsolutePath();
 		argz += " --erf-probs-dir "+erfProbsDir.getAbsolutePath();
@@ -83,8 +112,15 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 			argz += " --tract-location "+tractLoc.getLatitude()+","+tractLoc.getLongitude();
 			if (tractRadius > 0)
 				argz += " --tract-radius "+tractRadius;
+			argz += " --portfolio "+portfolioFile.getAbsolutePath();
+			argz += " --node-temp-dir ${TMPDIR}";
+		}
+		if (tractIndividual) {
 			argz += " --background-type "+bgType.name();
 			argz += " --portfolio "+portfolioFile.getAbsolutePath();
+			argz += " --tract-branch-eals";
+		} else if (lec) {
+			argz += " --calc-lec";
 		}
 		argz += " "+remoteJobDir.getAbsolutePath();
 		

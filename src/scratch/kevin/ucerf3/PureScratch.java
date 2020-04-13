@@ -2,6 +2,7 @@ package scratch.kevin.ucerf3;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -116,6 +117,9 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
+import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.SimulatorElement;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Joiner;
@@ -160,6 +164,8 @@ import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
+import scratch.kevin.simulators.RSQSimCatalog;
+import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class PureScratch {
 
@@ -1523,13 +1529,144 @@ public class PureScratch {
 	private static void test60() throws IOException {
 		System.out.println(ASK_2014.calcZ1ref(500));
 	}
+	
+	private static void test61() {
+		List<FaultSectionPrefData> subSects = DeformationModels.loadSubSects(
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+		
+		List<FaultSectionPrefData> gv07Sects = new ArrayList<>();
+		List<FaultSectionPrefData> gv08Sects = new ArrayList<>();
+		List<FaultSectionPrefData> gv10Sects = new ArrayList<>();
+		List<FaultSectionPrefData> ortigalitaSects = new ArrayList<>(); //Ortigalita
+		
+		for (FaultSectionPrefData sect : subSects) {
+			if (sect.getParentSectionId() == 136)
+				gv07Sects.add(sect);
+			if (sect.getParentSectionId() == 137)
+				gv08Sects.add(sect);
+			if (sect.getParentSectionId() == 138)
+				gv10Sects.add(sect);
+			if (sect.getParentSectionId() == 921 || sect.getParentSectionId() == 9) 
+				ortigalitaSects.add(sect);
+		}
+
+		double min07Dist = Double.POSITIVE_INFINITY;
+		for (FaultSectionPrefData gvSect : gv07Sects)
+			for (FaultSectionPrefData oSect : ortigalitaSects)
+				min07Dist = Double.min(min07Dist, minDist(gvSect, oSect));
+		System.out.println("GV 07 to O dist: "+min07Dist);
+		
+		double min08Dist = Double.POSITIVE_INFINITY;
+		for (FaultSectionPrefData gvSect : gv08Sects)
+			for (FaultSectionPrefData oSect : ortigalitaSects)
+				min08Dist = Double.min(min08Dist, minDist(gvSect, oSect));
+		System.out.println("GV 08 to O dist: "+min08Dist);
+		
+		double min10Dist = Double.POSITIVE_INFINITY;
+		for (FaultSectionPrefData gvSect : gv10Sects)
+			for (FaultSectionPrefData oSect : ortigalitaSects)
+				min10Dist = Double.min(min10Dist, minDist(gvSect, oSect));
+		System.out.println("GV 10 to O dist: "+min10Dist);
+		
+		// reset depths
+		double ave07Upper = 0d;
+		for (FaultSectionPrefData gvSect : gv07Sects)
+			ave07Upper += gvSect.getOrigAveUpperDepth();
+		ave07Upper /= gv07Sects.size();
+		double ave08Upper = 0d;
+		for (FaultSectionPrefData gvSect : gv08Sects)
+			ave08Upper += gvSect.getOrigAveUpperDepth();
+		ave08Upper /= gv08Sects.size();
+		System.out.println("GV 07 Upper: "+ave07Upper);
+		System.out.println("GV 08 Upper: "+ave08Upper);
+		
+		// mod gv08 depths
+		double delta = ave07Upper - ave08Upper;
+//		delta *= 3;
+		for (FaultSectionPrefData sect : gv08Sects) {
+			sect.setAveLowerDepth(sect.getAveLowerDepth()+delta);
+			sect.setAveUpperDepth(sect.getOrigAveUpperDepth()+delta);
+			StirlingGriddedSurface surf = sect.getStirlingGriddedSurface(1d+0.05*Math.random()); // to clear cache
+			System.out.println("Surf upper: "+surf.getUpperSeismogenicDepth());
+			System.out.println("Surf lower: "+surf.getLowerSeismogenicDepth());
+		}
+		
+		double mod08Dist = Double.POSITIVE_INFINITY;
+		for (FaultSectionPrefData gvSect : gv08Sects)
+			for (FaultSectionPrefData oSect : ortigalitaSects)
+				mod08Dist = Double.min(mod08Dist, minDist(gvSect, oSect));
+		System.out.println("Mod 08 to O dist: "+mod08Dist);
+	}
+
+	
+	private static double minDist(FaultSectionPrefData s1, FaultSectionPrefData s2) {
+		StirlingGriddedSurface surf1 = s1.getStirlingGriddedSurface(1d, false, false);
+		StirlingGriddedSurface surf2 = s2.getStirlingGriddedSurface(1d, false, false);
+		
+		double minDist = Double.POSITIVE_INFINITY;
+		for (Location l1 : surf1.getEvenlyDiscritizedListOfLocsOnSurface())
+			for (Location l2 : surf2.getEvenlyDiscritizedListOfLocsOnSurface())
+				minDist = Math.min(minDist, LocationUtils.linearDistanceFast(l1, l2));
+		
+		return minDist;
+	}
+	
+	private static void test62() throws IOException {
+		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
+		RSQSimSubSectionMapper mapper = catalog.getSubSectMapper();
+		HashSet<String> names = new HashSet<>();
+		for (FaultSectionPrefData sect : mapper.getSubSections()) {
+			if (sect.getName().contains("Mojave")) {
+				Collection<SimulatorElement> elems = mapper.getElementsForSection(sect);
+				names.add(elems.iterator().next().getSectionName());
+			}
+		}
+		for (String name : names)
+			System.out.println(name);
+	}
+	
+	private static void test63() {
+		int num = (int)Math.round((9d)/0.1d)+1;
+		EvenlyDiscretizedFunc logXVals = new EvenlyDiscretizedFunc(0d, num, 0.1);
+		System.out.println(logXVals);
+		DiscretizedFunc xVals = new ArbitrarilyDiscretizedFunc();
+		xVals.set(0d, 0d);
+		for (Point2D pt : logXVals)
+			xVals.set(Math.pow(10, pt.getX()), 0d);
+		System.out.println(xVals);
+	}
+	
+	private static void test64() throws IOException {
+		RSQSimCatalog catalog = Catalogs.BRUCE_4965.instance();
+		double firstTime = -1;
+		for (RSQSimEvent event : catalog.loader().iterable()) {
+			double time = event.getTimeInYears();
+			if (firstTime < 0) {
+				System.out.println("First event is at "+time+"yr");
+				firstTime = time;
+			}
+			if (event.getMagnitude() > 8.5)
+				System.out.println("Event "+event.getID()+" is M"+(float)event.getMagnitude()+" at "+time+"yr");
+		}
+	}
+	
+	private static void test65() {
+		float start = 1000f;
+		float next = Math.nextUp(start);
+		float maxDiff = 0;
+		for (int i=0; i<1000; i++) {
+			float diff = next - start;
+			maxDiff = Float.max(maxDiff, diff);
+		}
+		System.out.println("diff: "+maxDiff);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test57();
+		test65();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

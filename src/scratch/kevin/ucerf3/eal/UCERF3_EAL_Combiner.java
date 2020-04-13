@@ -80,6 +80,9 @@ public class UCERF3_EAL_Combiner {
 	private double erfProbsDuration;
 	private ZipFile erfProbsZipFile;
 	
+	private DiscretizedFunc lecXVals;
+	private DiscretizedFunc[] lecs;
+	
 	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<LogicTreeBranch, List<Integer>> mappings,
 			FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses)
 					throws DocumentException, IOException {
@@ -90,6 +93,13 @@ public class UCERF3_EAL_Combiner {
 			FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses,
 			ZipFile erfProbsZipFile, double erfProbsDuration)
 					throws DocumentException, IOException {
+		this(fetcher, mappings, trueMeanSol, fssLosses, griddedLosses, erfProbsZipFile, erfProbsDuration, null);
+	}
+	
+	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<LogicTreeBranch, List<Integer>> mappings,
+			FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses,
+			ZipFile erfProbsZipFile, double erfProbsDuration, DiscretizedFunc lecXVals)
+					throws DocumentException, IOException {
 		this.fetcher = fetcher;
 		this.mappings = mappings;
 		this.trueMeanSol = trueMeanSol;
@@ -97,6 +107,7 @@ public class UCERF3_EAL_Combiner {
 		this.griddedLosses = griddedLosses;
 		this.erfProbsZipFile = erfProbsZipFile;
 		this.erfProbsDuration = erfProbsDuration;
+		this.lecXVals = lecXVals;
 		
 		// get list of branches sorted by name
 		branches = Lists.newArrayList(mappings.keySet());
@@ -111,6 +122,9 @@ public class UCERF3_EAL_Combiner {
 		faultEALs = new double[branches.size()];
 		griddedEALs = new double[branches.size()];
 		totalEALs = new double[branches.size()];
+		
+		if (lecXVals != null)
+			lecs = new DiscretizedFunc[branches.size()];
 		
 		if (branches.size() > 1)
 			System.out.println("calculating branch eals");
@@ -143,6 +157,14 @@ public class UCERF3_EAL_Combiner {
 				debugFaultCSV = new CSVFile<String>(false);
 				debugFaultCSV.addLine("Rup Index", "Mag", "Rate", "Cond. Loss", "Rup EAL");
 				debugFaultScatter = new DefaultXY_DataSet();
+			}
+			
+			DiscretizedFunc lec = null;
+			if (lecXVals != null) {
+				lec = lecXVals.deepClone();
+				for (int j=0; j<lec.size(); j++)
+					lec.set(j, 0d);
+				lecs[i] = lec;
 			}
 			
 			for (int r=0; r<rates.length; r++) {
@@ -188,6 +210,15 @@ public class UCERF3_EAL_Combiner {
 					debugFaultScatter.set(rate, rupEAL);
 				}
 				faultEALs[i] += rupEAL;
+				
+				if (lec != null) {
+					for (int j=0; j<lec.size(); j++) {
+						if (rupLoss >= lec.getX(j))
+							lec.set(j, lec.getY(j)+rate);
+						else
+							break;
+					}
+				}
 			}
 			
 			if (debugFaultCSV != null && plots) {
@@ -272,6 +303,14 @@ public class UCERF3_EAL_Combiner {
 							debugGridScatter.set(rate, rupEAL);
 						}
 						griddedEALs[i] += rupEAL;
+						if (lec != null) {
+							for (int k=0; k<lec.size(); k++) {
+								if (loss >= lec.getX(k))
+									lec.set(k, lec.getY(k)+rate);
+								else
+									break;
+							}
+						}
 					}
 				}
 				
@@ -309,6 +348,10 @@ public class UCERF3_EAL_Combiner {
 
 	public double[] getTotalEALs() {
 		return totalEALs;
+	}
+	
+	public DiscretizedFunc[] getLECs() {
+		return lecs;
 	}
 	
 	public EvenlyDiscretizedFunc getTotalEALMagDist(double lossScale) {

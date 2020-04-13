@@ -44,10 +44,14 @@ public class UCERF3_EAL_ScriptGen {
 //		String runSubDirName = "2016_11_28-ucerf3-90percent-wills-san-bernardino";
 //		String runSubDirName = "2016_11_28-ucerf3-90percent-wills-coachella-valley";
 //		String runSubDirName = "2017_05_22-stampede-2-test";
-		String runSubDirName = "2017_05_24-ucerf3-ngaw2-cea-proxy-wills2015";
+//		String runSubDirName = "2017_05_24-ucerf3-ngaw2-cea-proxy-wills2015";
 //		String runSubDirName = "2017_05_26-ucerf3-ngaw2-cea-proxy-wald";
+//		String runSubDirName = "2020_03_17-ucerf3-ngaw2-cea-proxy-100pct-wills2015";
+		String runSubDirName = "2020_03_17-ucerf3-ngaw2-cea-proxy-100pct-wald2007";
 		
 		EpistemicOption ngaEpistemic = EpistemicOption.UPPER;
+//		EpistemicOption ngaEpistemic = EpistemicOption.LOWER;
+//		EpistemicOption ngaEpistemic = null;
 		
 		writeDir = new File(writeDir, runSubDirName);
 		if (!writeDir.exists())
@@ -70,8 +74,8 @@ public class UCERF3_EAL_ScriptGen {
 		File mpjHome = StampedeScriptWriter.FMPJ_HOME;
 //		int maxHeapMB = 26000;
 //		int numThreads = -1;
-		int maxHeapMB = 78*1024;
-		int numThreads = 68*4;
+		int maxHeapMB = 72*1024;
+		int numThreads = 68*2;
 		int maxDispatch = numThreads*5;
 		
 		boolean gzip = false;
@@ -99,7 +103,9 @@ public class UCERF3_EAL_ScriptGen {
 //		String portfolioFileName = "coachella_valley_Porter-22-May-14-CA-ppty-90pct-Wills.txt"; // 90% Wills, Coachella Valley (20km circle, Rancho Mirage)
 		// 2017 CEA proxy
 //		String portfolioFileName = "Porter-24May2017-CA-RES1-2017-Wills2015.csv"; // Wills 2015
-		String portfolioFileName = "Porter-24May2017-CA-RES1-2017-Wald.csv"; // Wald
+//		String portfolioFileName = "Porter-24May2017-CA-RES1-2017-Wald.csv"; // Wald
+//		String portfolioFileName = "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wills2015.csv"; // From Keith 
+		String portfolioFileName = "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wald2007.csv"; // From Keith 
 		File portfolioFile = new File(remoteMainDir, portfolioFileName);
 		
 		FastMPJShellScriptWriter javaWrite = new FastMPJShellScriptWriter(javaBin, maxHeapMB,
@@ -116,7 +122,9 @@ public class UCERF3_EAL_ScriptGen {
 		int ppn = 8;
 		if (numThreads > 0)
 			ppn = numThreads;
-		String queue = null;
+		if (numThreads > 68)
+			ppn = 68;
+		String queue = "normal";
 		
 		String className = MPJ_CondLossCalc.class.getName();
 		
@@ -168,7 +176,7 @@ public class UCERF3_EAL_ScriptGen {
 			jobArgs += "--vuln-file \""+vulnFile.getAbsolutePath()+"\" \""+portfolioFile.getAbsolutePath()+"\" "
 					+remoteXML.getAbsolutePath()+" "+remoteOutput.getAbsolutePath();
 			
-			File jobFile = new File(writeDir, name+".pbs");
+			File jobFile = new File(writeDir, name+".slurm");
 			pbsWrite.writeScript(jobFile, javaWrite.buildScript(className, jobArgs), mins, nodes, ppn, queue);
 		}
 	}
