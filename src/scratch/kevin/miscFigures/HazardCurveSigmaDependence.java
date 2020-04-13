@@ -26,6 +26,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.mod.ModAttenRelRef;
 import org.opensha.sha.imr.mod.ModAttenuationRelationship;
 import org.opensha.sha.imr.mod.impl.FixedStdDevMod;
+import org.opensha.sha.imr.mod.impl.SimpleScaleMod;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.util.SiteTranslator;
 
@@ -42,14 +43,20 @@ public class HazardCurveSigmaDependence {
 		erf.setPreset(Presets.BOTH_FM_BRANCH_AVG);
 		erf.getTimeSpan().setDuration(1d);
 		erf.updateForecast();
-		ModAttenuationRelationship modAttenRel = new ModAttenuationRelationship(AttenRelRef.ASK_2014, ModAttenRelRef.FIXED_STD_DEV);
+
+//		boolean fixed = true;
+//		double[] sigmas = {0.7, 0.5, 0.3};
+		boolean fixed = false;
+		double[] sigmas = { 1d, 0.66, 0.33};
+		
+		ModAttenuationRelationship modAttenRel = new ModAttenuationRelationship(AttenRelRef.ASK_2014,
+				fixed ? ModAttenRelRef.FIXED_STD_DEV : ModAttenRelRef.SIMPLE_SCALE);
 		modAttenRel.setParamDefaults();
 		Site site = new Site(new Location(34.0192, -118.286)); // USC
 		double period = 3d;
 		
 		modAttenRel.setIntensityMeasure(SA_Param.NAME);
 		SA_Param.setPeriodInSA_Param(modAttenRel.getIntensityMeasure(), period);
-		FixedStdDevMod mod = (FixedStdDevMod) modAttenRel.getCurrentMod();
 		
 		OrderedSiteDataProviderList provs = OrderedSiteDataProviderList.createSiteDataProviderDefaults();
 		SiteTranslator trans = new SiteTranslator();
@@ -60,7 +67,6 @@ public class HazardCurveSigmaDependence {
 			site.addParameter(param);
 		}
 		
-		double[] sigmas = {0.7, 0.5, 0.3};
 		Color[] colors = {Color.BLACK, Color.DARK_GRAY, Color.GRAY};
 		
 		double minX = 1e-3;
@@ -77,7 +83,10 @@ public class HazardCurveSigmaDependence {
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
 		for (int i=0; i<sigmas.length; i++) {
-			mod.setStdDev(sigmas[i]);
+			if (fixed)
+				((FixedStdDevMod)modAttenRel.getCurrentMod()).setStdDev(sigmas[i]);
+			else
+				((SimpleScaleMod)modAttenRel.getCurrentMod()).setStdDevScaleFactor(sigmas[i]);
 			
 			calc.getHazardCurve(logXVals, site, modAttenRel, erf);
 			
@@ -85,7 +94,14 @@ public class HazardCurveSigmaDependence {
 			for (int j=0; j<curve.size(); j++)
 				curve.set(j, logXVals.getY(j));
 			
-			curve.setName("σ="+(float)sigmas[i]);
+			if (fixed)
+				curve.setName("σ="+(float)sigmas[i]+" ");
+			else {
+				if (sigmas[i] == 1d)
+					curve.setName("Total σ ");
+				else
+					curve.setName((float)sigmas[i]+"*σ ");
+			}
 			funcs.add(curve);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, colors[i]));
 		}
@@ -109,6 +125,17 @@ public class HazardCurveSigmaDependence {
 		gp.drawGraphPanel(spec, true, true, xRange, yRange);
 		
 		File file = new File(outputDir, prefix);
+		gp.getChartPanel().setSize(800, 600);
+		gp.saveAsPNG(file.getAbsolutePath()+".png");
+		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
+		
+		funcs.get(0).setName("Hazard Curve");
+		spec.setPlotElems(funcs.subList(0, 1));
+		spec.setChars(chars.subList(0, 1));
+		
+		gp.drawGraphPanel(spec, true, true, xRange, yRange);
+		
+		file = new File(outputDir, prefix+"_main");
 		gp.getChartPanel().setSize(800, 600);
 		gp.saveAsPNG(file.getAbsolutePath()+".png");
 		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
