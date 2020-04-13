@@ -37,6 +37,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Table;
 
 import scratch.kevin.simCompare.SimulationDisaggAttenuationRelationshipWrapper.Source;
+import scratch.kevin.util.ReturnPeriodUtils;
+
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
@@ -201,6 +203,57 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		for (SimulationHazardCurveCalc<?> key : customPlotChars.keySet())
 			curvePlotter.setCustomPlotColors(key, customPlotChars.get(key));
 		
+		lines.add("## Curve Values Table");
+		lines.add(topLink); lines.add("");
+		
+		table = MarkdownUtils.tableBuilder();
+		table.initNewLine();
+		table.addColumn("Hazard Level");
+		for (double period : periods) {
+			table.addColumn(simName+" "+optionalDigitDF.format(period)+"s");
+			table.addColumn(gmpeRef.getShortName()+" "+optionalDigitDF.format(period)+"s");
+		}
+		table.finalizeLine();
+		int[] rps = MultiRupGMPE_ComparePageGen.hazard_curve_rps;
+		List<Double> probLevels = new ArrayList<>();
+		List<String> probLabels = new ArrayList<>();
+		for (int rp : rps) {
+			probLabels.add(rp+"yr");
+			probLevels.add((curveDuration/(double)rp));
+		}
+		probLabels.add("RTGM");
+		probLevels.add(0d);
+		
+		for (int i=0; i<probLabels.size(); i++) {
+			double level = probLevels.get(i);
+			table.initNewLine();
+			table.addColumn(probLabels.get(i));
+			for (double period : periods) {
+				DiscretizedFunc[] curves = {
+						curvePlotter.getCalcSimCurve(simCalc, period),
+						curvePlotter.getCalcGMPECurve(period)
+				};
+				for (DiscretizedFunc curve : curves) {
+					if (level == 0d) {
+						// RTGM
+						double rtgm = SimulationHazardPlotter.calcRTGM(curve, curveDuration);
+						if (rtgm > 0d)
+							table.addColumn((float)rtgm+"");
+						else
+							table.addColumn("N/A");
+					} else  {
+						if (level < curve.getMinY() || level > curve.getMaxY())
+							table.addColumn("N/A");
+						else
+							table.addColumn((float)curve.getFirstInterpolatedX_inLogXLogYDomain(level)+"");
+					}
+				}
+			}
+			table.finalizeLine();
+		}
+		lines.addAll(table.build());
+		lines.add("");
+		
 		lines.add("## Hazard Spectra");
 		lines.add(topLink); lines.add("");
 		lines.addAll(curvePlotter.getCurveLegend(true, true, true, 0));
@@ -208,7 +261,6 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		
 		table = MarkdownUtils.tableBuilder();
 		String spectraPrefix = site.getName().replaceAll(" ", "_")+"_spectra_"+gmpeRef.getShortName();
-		int[] rps = MultiRupGMPE_ComparePageGen.hazard_curve_rps;
 		for (int rp : rps) {
 			String rpPrefix = spectraPrefix+"_"+rp+"yr";
 			double probLevel = 1d/(double)rp;

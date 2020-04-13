@@ -13,6 +13,8 @@ import org.apache.commons.cli.Options;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.iden.EventIDsRupIden;
+import org.opensha.sha.simulators.iden.LinearRuptureIden;
 import org.opensha.sha.simulators.iden.LogicalAndRupIden;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
@@ -21,14 +23,17 @@ import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Ints;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
+import mpi.MPI;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.MPJ_BBP_Utils;
 import scratch.kevin.simulators.ruptures.AbstractMPJ_BBP_MultiRupSim;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.FilterMethod;
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig.Scenario;
 import scratch.kevin.simulators.ruptures.MPJ_BBP_PartBSim;
+import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.Quantity;
 import scratch.kevin.simulators.ruptures.rotation.RotatedRupVariabilityConfig.RotationSpec;
 
 public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_MultiRupSim {
@@ -70,44 +75,81 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 		
 		FilterMethod filter = MPJ_BBP_PartBSim.getFilterMethod(cmd);
 		
+		File[] csvFiles = new File[scenarios.length];
+		RSQSimRotatedRupVariabilityConfig[] rotConfigs =
+				new RSQSimRotatedRupVariabilityConfig[scenarios.length];
 		List<List<RuptureIdentifier>> scenarioIdens = new ArrayList<>();
-		List<RuptureIdentifier> magIdens = new ArrayList<>();
-		for (Scenario scenario : scenarios) {
-			List<RuptureIdentifier> idens = scenario.getIdentifiers(catalog);
+		List<RuptureIdentifier> loadIdens = new ArrayList<>();
+		for (int s=0; s<scenarios.length; s++) {
+			csvFiles[s] = new File(mainOutputDir, "rotation_config_"+scenarios[s].getPrefix()+".csv");
+			List<RuptureIdentifier> idens = scenarios[s].getIdentifiers(catalog);
 			scenarioIdens.add(idens);
-			for (RuptureIdentifier iden : idens)
-				if (iden instanceof MagRangeRuptureIdentifier)
-					magIdens.add(iden);
+			if (csvFiles[s].exists()) {
+				debug("loading previous CSV: "+csvFiles[s].getName());
+				rotConfigs[s] = RSQSimRotatedRupVariabilityConfig.loadCSV(catalog, csvFiles[s]);
+				loadIdens.add(new EventIDsRupIden(
+						Ints.toArray(rotConfigs[s].getValues(Integer.class, Quantity.EVENT_ID))));
+			} else {
+				for (RuptureIdentifier iden : idens)
+					if (iden instanceof MagRangeRuptureIdentifier)
+						loadIdens.add(iden);
+			}
 		}
+		
+		MPI.COMM_WORLD.Barrier();
 		
 		if (rank == 0)
 			debug("Loading events for "+scenarios.length+" scenarios");
-		List<RSQSimEvent> allEvents = catalog.loader().skipYears(skipYears).matches(new LogicalOrRupIden(magIdens)).load();
+		List<RSQSimEvent> allEvents = catalog.loader().skipYears(skipYears).matches(new LogicalOrRupIden(loadIdens)).hasTransitions().load();
 		debug("Loaded "+allEvents.size()+" potential matches");
+		Map<Integer, RSQSimEvent> idEventMap = new HashMap<>();
+		for (RSQSimEvent event : allEvents)
+			idEventMap.put(event.getID(), event);
 		
 		configs = new ArrayList<>();
 		
 		for (int s=0; s<scenarios.length; s++) {
 			Scenario scenario = scenarios[s];
 			
+
 			if (rank == 0)
 				debug("Loading matches for scenario: "+scenario);
 			
-			List<RSQSimEvent> eventMatches = new LogicalAndRupIden(
-					scenarioIdens.get(s)).getMatches(allEvents);
-			
-			if (rank == 0)
-				debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);
-			
-			if (eventMatches.size() > maxRups) {
-				eventMatches = filter.filter(eventMatches, maxRups, catalog, scenario.getMagnitude());
-				debug("trimmed down to max of "+eventMatches.size()+" ruptures");
-			}
-			
-			if (eventMatches.isEmpty()) {
+			List<RSQSimEvent> eventMatches;
+			if (rotConfigs[s] == null) {
+				eventMatches = new LogicalAndRupIden(scenarioIdens.get(s)).getMatches(allEvents);
+				
 				if (rank == 0)
-					debug("skipping...");
-				continue;
+					debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);
+				
+				if (eventMatches.size() > maxRups) {
+					eventMatches = filter.filter(eventMatches, maxRups, catalog, scenario.getMagnitude());
+					debug("trimmed down to max of "+eventMatches.size()+" ruptures");
+				}
+				
+				if (eventMatches.isEmpty()) {
+					if (rank == 0)
+						debug("skipping...");
+					continue;
+				}
+				
+				if (rank == 0)
+					debug("Creating rotations for "+numSourceAz+" source azimuths, "+numSiteToSourceAz+" site-source azimuths, "
+							+distances.length+" distances, and "+eventMatches.size()+" events");
+				rotConfigs[s] = new RSQSimRotatedRupVariabilityConfig(
+						catalog, gmpeSites, eventMatches, distances, numSourceAz, numSiteToSourceAz);
+				if (rank == 0)
+					rotConfigs[s].writeCSV(csvFiles[s]);
+			} else {
+				eventMatches = new ArrayList<>();
+				for (int eventID : rotConfigs[s].getValues(Integer.class, Quantity.EVENT_ID)) {
+					RSQSimEvent event = idEventMap.get(eventID);
+					Preconditions.checkNotNull(event);
+					eventMatches.add(event);
+				}
+				if (rank == 0)
+					debug("Loaded "+eventMatches.size()+" matches for scenario: "+scenario);
+				rotConfigs[s].setRuptures(allEvents);
 			}
 			
 			File scenarioDir = new File(resultsDir, scenario.getPrefix());
@@ -115,16 +157,9 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 			if (rank == 0)
 				MPJ_BBP_Utils.waitOnDir(scenarioDir, 10, 2000);
 			
-			if (rank == 0)
-				debug("Creating rotations for "+numSourceAz+" source azimuths, "+numSiteToSourceAz+" site-source azimuths, "
-						+distances.length+" distances, and "+eventMatches.size()+" events");
-			RSQSimRotatedRupVariabilityConfig config = new RSQSimRotatedRupVariabilityConfig(
-					catalog, gmpeSites, eventMatches, distances, numSourceAz, numSiteToSourceAz);
-			List<RotationSpec> rotations = config.getRotations();
+			List<RotationSpec> rotations = rotConfigs[s].getRotations();
 			if (rank == 0)
 				debug("Created "+rotations.size()+" rotations");
-			if (rank == 0)
-				config.writeCSV(new File(mainOutputDir, "rotation_config_"+scenario.getPrefix()+".csv"));
 			Table<Site, Float, File> siteDistDirTable = HashBasedTable.create();
 			Table<File, Integer, File> eventDirTable = HashBasedTable.create();
 			for (Site site : gmpeSites) {
@@ -141,11 +176,11 @@ public class MPJ_BBP_RotatedRupVariabilityScenarioSim extends AbstractMPJ_BBP_Mu
 					}
 				}
 			}
-			for (RotationSpec rotation : config.getRotations()) {
+			for (RotationSpec rotation : rotConfigs[s].getRotations()) {
 				File siteDistDir = siteDistDirTable.get(rotation.site, rotation.distance);
 				File eventDir = eventDirTable.get(siteDistDir, rotation.eventID);
 				Preconditions.checkNotNull(eventDir);
-				configs.add(new Config(scenario, config, rotation, eventDir));
+				configs.add(new Config(scenario, rotConfigs[s], rotation, eventDir));
 			}
 		}
 	}

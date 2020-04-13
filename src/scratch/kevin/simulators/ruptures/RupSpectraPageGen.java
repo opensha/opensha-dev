@@ -365,9 +365,9 @@ class RupSpectraPageGen {
 				continue;
 			SimulatorElement elem = elems.get(i);
 			String prefix = "rsqsim_patch_"+elem.getID();
-			RSQSimSRFGenerator.plotSlip(resourcesDir, prefix, func, elem, RSQSimBBP_Config.SRF_DT, false,
+			RSQSimSRFGenerator.plotSlip(resourcesDir, prefix, event, func, elem, RSQSimBBP_Config.SRF_DT, false,
 					RSQSimBBP_Config.SRF_INTERP_MODE);
-			RSQSimSRFGenerator.plotSlip(resourcesDir, prefix+"_pub", func, elem, RSQSimBBP_Config.SRF_DT, true,
+			RSQSimSRFGenerator.plotSlip(resourcesDir, prefix+"_pub", event, func, elem, RSQSimBBP_Config.SRF_DT, true,
 					RSQSimBBP_Config.SRF_INTERP_MODE);
 			table.addColumn("![plot](resources/"+prefix+".png)");
 		}
@@ -425,8 +425,9 @@ class RupSpectraPageGen {
 					continue;
 				SRF_PointData point = points.get(i);
 				String prefix = "gp_patch_"+i;
-				RSQSimSRFGenerator.plotSlip(resourcesDir, prefix, point, maxTime);
+				RSQSimSRFGenerator.plotSlip(resourcesDir, prefix, point, maxTime, false);
 				table.addColumn("![plot](resources/"+prefix+".png)");
+				RSQSimSRFGenerator.plotSlip(resourcesDir, prefix+"_zoom", point, maxTime, true);
 			}
 			table.finalizeLine();
 			lines.addAll(table.wrap(4, 0).build());
@@ -965,12 +966,16 @@ class RupSpectraPageGen {
 ////		int eventID = 4853;
 //		int eventID = 15377;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
-//		int eventID = 51863;
-//		int eventID = 39055;
-		int eventID = 12581;
-//		int eventID = 77272;
-//		int eventID = 41890; // fig 4
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+////		int eventID = 51863;
+////		int eventID = 39055;
+//		int eventID = 12581;
+////		int eventID = 77272;
+////		int eventID = 41890; // fig 4
+
+		RSQSimCatalog catalog = Catalogs.BRUCE_4950.instance(baseDir);
+//		int eventID = 469461;
+		int eventID = 368122; // event with lowest ave slip ratio from trans to dlist
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = true;

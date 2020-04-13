@@ -37,14 +37,17 @@ public class TransFileValidation {
 			File dir = new File(args[0]);
 			catalog = new RSQSimCatalog(dir, "Temp", "None", null, "Metadata", null, null);
 		} else {
-			catalog = Catalogs.BRUCE_2829.instance(new File("/home/kevin/Simulators/catalogs"));
+//			catalog = Catalogs.BRUCE_2585_1MYR.instance(new File("/home/kevin/Simulators/catalogs"));
+			catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
+					"Single SS", null, null);
 		}
 		
 		DefaultXY_DataSet momPDiffScatter = new DefaultXY_DataSet();
 		DefaultXY_DataSet magPDiffScatter = new DefaultXY_DataSet();
 		DefaultXY_DataSet magDiffScatter = new DefaultXY_DataSet();
 		
-		double minMag = 6.5;
+//		double minMag = 6.5;
+		double minMag = 0;
 		double printThreshold = 5;
 		FileWriter debugFW = new FileWriter(new File(catalog.getCatalogDir(), "trans_file_validation.txt"));
 		

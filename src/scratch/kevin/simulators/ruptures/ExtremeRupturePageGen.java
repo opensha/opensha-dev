@@ -362,7 +362,7 @@ public class ExtremeRupturePageGen {
 		
 //		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4965.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		

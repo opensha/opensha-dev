@@ -411,6 +411,27 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_4935("bruce/rundir4935", "Bruce 4935", "Bruce Shaw", cal(2020, 2, 27),
 				"higher res. draft causal. tCausalF=0.65 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.15 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4950("bruce/rundir4950", "Bruce 4950", "Bruce Shaw", cal(2020, 3, 31),
+				"same as 4860, but with an I/O fix to (hopefully) correct the double peak in patch velocities",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4962("bruce/rundir4962", "Bruce 4962", "Bruce Shaw", cal(2020, 4, 2),
+				"tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4963("bruce/rundir4963", "Bruce 4963", "Bruce Shaw", cal(2020, 4, 2),
+				"tCausalF=0.7 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4964("bruce/rundir4964", "Bruce 4964", "Bruce Shaw", cal(2020, 4, 2),
+				"tCausalF=0.67 ; fracArea=0.9 ; varV s2ddf=.8 ddfmin=0.3 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4965("bruce/rundir4965", "Bruce 4965", "Bruce Shaw", cal(2020, 4, 2),
+				"tCausalF=0.67 ; fracArea=0.95 ; varV s2ddf=.8 ddfmin=0.3 ; b=.010 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4970("bruce/rundir4970", "Bruce 4970", "Bruce Shaw", cal(2020, 4, 5),
+				"tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.010 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4976("bruce/rundir4976", "Bruce 4976", "Bruce Shaw", cal(2020, 4, 5),
+				"tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.9 ddfmin=0.3 ; b=.010 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -1053,7 +1074,7 @@ public class RSQSimCatalog implements XMLSaveable {
 				for (int i=0; i<rotatedRupLinks.size(); i++)
 					lines.add("* ["+rotatedRupNames.get(i)+"]("+bbpDir.getName()+"/"+rotatedRupLinks.get(i)+"/)");
 			}
-			if (!rotatedRupLinks.isEmpty()) {
+			if (!azimuthalRupLinks.isEmpty()) {
 				lines.add("");
 				lines.add("### Scenario Spatial Distribution Plots, "+vm);
 				lines.add(topLink);

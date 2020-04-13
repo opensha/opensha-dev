@@ -47,6 +47,7 @@ import org.opensha.sha.simulators.iden.DepthIden;
 import org.opensha.sha.simulators.iden.FocalMechIden;
 import org.opensha.sha.simulators.iden.FocalMechIden.Builder;
 import org.opensha.sha.simulators.iden.LinearRuptureIden;
+import org.opensha.sha.simulators.iden.LogicalAndRupIden;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.srf.RSQSimTransValidIden;
@@ -504,6 +505,8 @@ public class BBP_PartBValidationConfig {
 					if (match == null) {
 						// need to raise the threshold
 						maxPerParent++;
+//						System.out.println("Raising threshold to "+maxPerParent
+//								+" ("+randomized.size()+" candidate events left)");
 					} else {
 						// we have a match
 						ret.add(match);
@@ -887,6 +890,67 @@ public class BBP_PartBValidationConfig {
 	}
 	
 	public static void main(String[] args) throws IOException {
+		FilterMethod filter = FilterMethod.SECT_VARIABILITY;
+		
+		RSQSimCatalog c = Catalogs.BRUCE_4962.instance();
+//		Scenario scen = Scenario.M6p6_VERT_SS_SURFACE;
+//		Scenario scen = Scenario.M6p6_REVERSE;
+		Scenario scen = Scenario.M7p2_VERT_SS_SURFACE;
+		List<RuptureIdentifier> idens = scen.getIdentifiers(c);
+		boolean hasTrans = true;
+		try {
+			c.getTransitions();
+		} catch (Exception e1) {
+			hasTrans = false;
+		}
+		if (!hasTrans)
+			for (int j=idens.size(); --j>=0;)
+				if (idens.get(j) instanceof RSQSimTransValidIden)
+					idens.remove(j);
+		
+		MagRangeRuptureIdentifier magIden = null;
+		for (RuptureIdentifier iden : idens) {
+			if (iden instanceof MagRangeRuptureIdentifier) {
+				System.out.println("Found mag range");
+				magIden = (MagRangeRuptureIdentifier)iden;
+			}
+		}
+		
+		Loader l = c.loader().skipYears(5000);
+		if (hasTrans)
+			l.hasTransitions();
+		List<RSQSimEvent> potential = l.matches(magIden).load();
+		System.out.println("Found "+potential.size()+" potential matches");
+		int[] rejectCounts = new int[idens.size()];
+		int passCount = 0;
+		LinearRuptureIden.D = false;
+		for (RSQSimEvent e : potential) {
+			boolean pass = true;
+			for (int i=0; i<idens.size(); i++) {
+				if (!idens.get(i).isMatch(e)) {
+					pass = false;
+					rejectCounts[i]++;
+				}
+			}
+			if (pass)
+				passCount++;
+		}
+		System.out.println("Found "+passCount+" actual matches");
+		System.out.println("Iden rejections:");
+		for (int i=0; i<idens.size(); i++) {
+			RuptureIdentifier iden = idens.get(i);
+			System.out.println("\t"+iden.getName()+" ("
+					+ClassUtils.getClassNameWithoutPackage(iden.getClass())+"): "+rejectCounts[i]);
+		}
+		
+//		List<RSQSimEvent> firstMatches = Scenario.M7p2_VERT_SS_SURFACE_DM_0p15.getMatches(c, 5000);
+//		System.out.println("Loaded a total of "+firstMatches.size()+" first matches");
+//		System.out.println("Filtering to 200...");
+//		filter.filter(firstMatches, 200, c, 7.2);
+//		System.out.println("DONE");
+		
+		System.exit(0);
+		
 //		System.out.println(calcNGA2_Criterion(6.6, 20, 20, -20, FaultStyle.STRIKE_SLIP, 90, 0, 5.62, 500));
 //		System.out.println(getNGA2(6.6, 20, FaultStyle.STRIKE_SLIP, 90, 0, 863));
 		System.out.println(Scenario.M6p6_VERT_SS_SURFACE.getMeanPrediction(500, 20));

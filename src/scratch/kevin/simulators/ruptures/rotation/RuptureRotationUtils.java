@@ -81,7 +81,9 @@ public class RuptureRotationUtils {
 			newRecords.add(new RelocatedRecord((RSQSimEventRecord)record, newElems));
 		}
 		
-		return new RSQSimEvent(newRecords);
+		RSQSimEvent newEvent = new RSQSimEvent(newRecords);
+		newEvent.setNextEventTime(event.getNextEventTime());
+		return newEvent;
 	}
 	
 	public static RSQSimEvent getMirroredNS(RSQSimEvent event, double latitude) {
@@ -101,7 +103,9 @@ public class RuptureRotationUtils {
 			newRecords.add(new RelocatedRecord((RSQSimEventRecord)record, newElems));
 		}
 		
-		return new RSQSimEvent(newRecords);
+		RSQSimEvent newEvent = new RSQSimEvent(newRecords);
+		newEvent.setNextEventTime(event.getNextEventTime());
+		return newEvent;
 	}
 	
 	private static class RelocatedRecord extends RSQSimEventRecord {
@@ -137,7 +141,6 @@ public class RuptureRotationUtils {
 			setLength(origRec.getLength());
 			setMagnitude(origRec.getMagnitude());
 			setMoment(origRec.getMoment());
-			setNextSlipTimes(origRec.getNextSlipTimes());
 			setSectionID(origRec.getSectionID());
 			setTime(origRec.getTime());
 		}

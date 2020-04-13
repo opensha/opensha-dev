@@ -89,7 +89,7 @@ public class VariableSlipSpeedDebug {
 				int mod = patches.size() < 30 ? 1 : patches.size() / 20;
 				for (int p=0; p<patches.size(); p += mod) {
 					SimulatorElement patch = patches.get(p);
-					RSQSimSRFGenerator.plotSlip(eventDir, "patch_"+patch.getID(), func, patch, dt, false, mode);
+					RSQSimSRFGenerator.plotSlip(eventDir, "patch_"+patch.getID(), event, func, patch, dt, false, mode);
 				}
 				System.out.println("Plotting slip animation");
 				RupturePlotGenerator.writeSlipAnimation(event, func, new File(eventDir, "event_"+event.getID()+".gif"), 10);

@@ -819,7 +819,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			for (String parentName : parentNames)
 				table.addLine(parentName, parentCountsMap.get(parentName));
 			table.addLine("SUM OF PARENT PARTICIPATIONS", totalCount);
-			table.addLine("# UNIQUE PARENTS", parentNames);
+			table.addLine("# UNIQUE PARENTS", parentNames.size());
 			lines.addAll(table.build());
 			lines.add("");
 			double[] magsArray = Doubles.toArray(mags);
@@ -1691,12 +1691,12 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		}
 
 		List<List<ResidualStdDevSet>> bundleTotResidualStdDevs = new ArrayList<>();
-//		List<List<MedianStdDevSet>> bundleTotMedianStdDevs = new ArrayList<>();
+		List<List<MedianStdDevSet>> bundleTotMedianStdDevs = new ArrayList<>();
 		List<DiscretizedFunc> bundleStdDevFuncs = new ArrayList<>();
 		List<StdDevPercentileFuncs> bundlePercentilesList = null;
 		for (int i=0; i<periods.length; i++) {
 			bundleTotResidualStdDevs.add(new ArrayList<>());
-//			bundleTotMedianStdDevs.add(new ArrayList<>());
+			bundleTotMedianStdDevs.add(new ArrayList<>());
 		}
 
 		PeriodDepResidualsList downsampledList = null;
@@ -1859,6 +1859,9 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			if (type.stdDevOfMedians) {
 				MedianStdDevSet set = result.getPeriodIndepMedianStdDevSet();
 				stdDevFunc.set(0d, set.stdDev);
+				
+				for (int p=0; p<periods.length; p++)
+					bundleTotMedianStdDevs.get(p).add(result.getMedianStdDevSet(periods[p]));
 			} else {
 				ResidualStdDevSet set = result.getPeriodIndepResidualStdDevSet();
 				stdDevFunc.set(0d, set.total);
@@ -1945,7 +1948,27 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		lines.add("");
 		lines.addAll(table.build());
 		lines.add("");
-		if (!type.stdDevOfMedians) {
+		if (type.stdDevOfMedians) {
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			for (double period : periods)
+				table.addColumn(optionalDigitDF.format(period)+"s");
+			table.finalizeLine();
+			table.initNewLine();
+			for (int p=0; p<periods.length; p++) {
+				prefix = type.prefix+magPrefix+distPrefix+"_"+optionalDigitDF.format(periods[p])+"s_hist";
+				plotEventTermHistogram(resourcesDir, prefix, optionalDigitDF.format(periods[p])+"s "+type.name+" ("+type.symbol+")",
+						periods[p], bundleTotMedianStdDevs.get(p).get(0));
+				table.addColumn("!["+optionalDigitDF.format(periods[p])+"s](resources/"+prefix+".png)");
+			}
+			table.finalizeLine();
+			table.wrap(periods.length > 4 ? 3 : 2, 0);
+			lines.add("Here are plots of the histogram of event-terms for each individual rupture, from "
+					+ "which we take the standard deviation to compute "+type.htmlSymbol);
+			lines.add("");
+			lines.addAll(table.build());
+			lines.add("");
+		} else {
 			table = MarkdownUtils.tableBuilder();
 			table.initNewLine();
 			for (double period : periods)
@@ -2340,7 +2363,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 						new UncertainArbDiscDataset(numRecordingsFunc, lower68Func, upper68Func), sigmaFunc);
 				Map<String, Double> dataVals = new HashMap<>();
 				if (key.distance == null) {
-					dataVals.put("ASK2014 Recs/Event", aveNumRecordings);
+					dataVals.put("Data Recs/Event", aveNumRecordings);
 				} else {					
 					double aveTotRecs = 0d;
 					for (List<ASK_EventData> data : totalDataMatches.values())
@@ -2350,8 +2373,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 					for (List<ASK_EventData> data : subDataMatches)
 						aveDistRecs += data.size();
 					aveDistRecs /= subDataMatches.size();
-					dataVals.put("ASK2014 Râ‰…"+optionalDigitDF.format(key.distance)+" Recs/Event", aveDistRecs);
-					dataVals.put("Total Recs/Event", aveTotRecs);
+					dataVals.put("Data ~"+optionalDigitDF.format(key.distance)+"km Recs/Event", aveDistRecs);
+					dataVals.put("Data Recs/Event", aveTotRecs);
 				}
 				
 				plotDataSizeDependence(numRecordingsFunc, numRecordingsPercentiles, type.name+" ("+type.symbol+") Event Recordings Dependence",
@@ -4050,6 +4073,47 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 		
 		Range xRange = new Range(0d, 1d);
+		Range yRange = new Range(0d, 1d);
+
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		gp.getChartPanel().setSize(800, 450);
+		File pngFile = new File(resourcesDir, prefix+".png");
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+	}
+	
+	private void plotEventTermHistogram(File resourcesDir, String prefix, String title, double period,
+			MedianStdDevSet totalStdDev) throws IOException {
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		double[] medians = totalStdDev.medians;
+		
+		double delta = 0.05;
+		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(
+				StatUtils.min(medians), StatUtils.max(medians), delta);
+		hist.setName("Event Term Histogram");
+		for (double median : medians)
+			hist.add(hist.getClosestXIndex(median), 1d);
+		hist.normalizeBySumOfY_Vals();
+		
+		funcs.add(hist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+		
+//		funcs.add(line(totalStdDev.stdDev, 0d, totalStdDev.stdDev, 1d, "Std. Dev."));
+//		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, "Event Term", "");
+		spec.setLegendVisible(true);
+
+		PlotPreferences plotPrefs = PlotPreferences.getDefault();
+		plotPrefs.setTickLabelFontSize(18);
+		plotPrefs.setAxisLabelFontSize(20);
+		plotPrefs.setPlotLabelFontSize(21);
+		plotPrefs.setBackgroundColor(Color.WHITE);
+
+		HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
+		
+		Range xRange = new Range(hist.getMinX()-0.5*delta, hist.getMaxX()+0.5*delta);
 		Range yRange = new Range(0d, 1d);
 
 		gp.drawGraphPanel(spec, false, false, xRange, yRange);

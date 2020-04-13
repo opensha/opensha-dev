@@ -459,6 +459,47 @@ public class SimulationHazardPlotter<E> {
 		return curves;
 	}
 	
+	public static double calcRTGM(DiscretizedFunc curve, double curveDuration) {
+		// first discretize evenly
+		DiscretizedFunc discrCurve;
+		if (curve instanceof EvenlyDiscretizedFunc) {
+			discrCurve = curve;
+		} else {
+			discrCurve = new EvenlyDiscretizedFunc(
+					curve.getMinX(), curve.getMaxX(), 100);
+			for (int i=0; i<discrCurve.size(); i++) {
+				double x = discrCurve.getX(i);
+				double y;
+				if ((float)x == 0f)
+					y = curve.getY(0);
+				else if ((float)x == (float)curve.getMaxX())
+					y = curve.getY(curve.size()-1);
+				else
+					y = curve.getInterpolatedY(x);
+				y = - Math.log(1-y)/curveDuration;
+				discrCurve.set(i, y);
+			}
+		}
+		if (RTGM.AFE4UHGM < discrCurve.getMinY() || RTGM.AFE4UHGM > discrCurve.getMaxY()) {
+			return 0d;
+		}
+		RTGM calc = RTGM.create(discrCurve, null, null);
+		try {
+			calc.call();
+		} catch (RuntimeException e) {
+			System.err.println("RTGM Calc failed for Hazard Curve:\n"+discrCurve);
+			System.err.flush();
+			throw e;
+		}
+		double rtgm = calc.get();
+		if (!Double.isFinite(rtgm)) {
+			System.err.println("WARNING: could not calculate RTGM for "+curve.getName()+": "+rtgm);
+			rtgm = 0d;
+		}
+//		Preconditions.checkState(rtgm >= 0, "RTGM is not >=0: %s\n\n%s", rtgm, discrCurve);
+		return rtgm;
+	}
+	
 	public File plotSourceContributionHazardCurves(File outputDir, String prefix, double period,
 			double sourceContribSortProb, int numSourceCurves, boolean gmpeSources) throws IOException {
 		Preconditions.checkState(sourceRupContribFracts != null, "Source rup contribution fractions not set!");
@@ -480,7 +521,6 @@ public class SimulationHazardPlotter<E> {
 			contribIML = 0d;
 		}
 		
-		
 		Map<String, DiscretizedFunc> simSourceCurves = getCalcSimSourceCurves(period);
 		Map<String, DiscretizedFunc> gmpeSourceCurves =
 				gmpeSources ? getCalcGMPESourceCurves(period) : null;
@@ -496,40 +536,7 @@ public class SimulationHazardPlotter<E> {
 				simSourceVal = simSourceCurve.getInterpolatedY_inLogXLogYDomain(contribIML);
 			} else {
 				// calculate RTGM
-				// first discretize evenly
-				DiscretizedFunc discrCurve = new EvenlyDiscretizedFunc(
-						simSourceCurve.getMinX(), simSourceCurve.getMaxX(), 100);
-				for (int i=0; i<discrCurve.size(); i++) {
-					double x = discrCurve.getX(i);
-					double y;
-					if ((float)x == 0f)
-						y = simSourceCurve.getY(0);
-					else if ((float)x == (float)simSourceCurve.getMaxX())
-						y = simSourceCurve.getY(simSourceCurve.size()-1);
-					else
-						y = simSourceCurve.getInterpolatedY(x);
-					y = - Math.log(1-y)/curveDuration;
-					discrCurve.set(i, y);
-				}
-				if (RTGM.AFE4UHGM < discrCurve.getMinY() || RTGM.AFE4UHGM > discrCurve.getMaxY()) {
-					simSourceVal = 0d;
-				} else {
-					RTGM calc = RTGM.create(discrCurve, null, null);
-					try {
-						calc.call();
-					} catch (RuntimeException e) {
-						System.err.println("RTGM Calc failed for Hazard Curve:\n"+discrCurve);
-						System.err.flush();
-						throw e;
-					}
-					double rtgm = calc.get();
-					if (!Double.isFinite(rtgm)) {
-						System.err.println("WARNING: could not calculate RTGM for "+sourceName+": "+rtgm);
-						rtgm = 0d;
-					}
-//					Preconditions.checkState(rtgm >= 0, "RTGM is not >=0: %s\n\n%s", rtgm, discrCurve);
-					simSourceVal = rtgm;
-				}
+				simSourceVal = calcRTGM(simSourceCurve, curveDuration);
 //				System.out.println(sourceName+" RTGM: "+simSourceVal+", y(0): "+discrCurve.getY(0));
 			}
 			
@@ -786,6 +793,42 @@ public class SimulationHazardPlotter<E> {
 				maxX = Math.pow(10, Math.ceil(Math.log10(maxX)+0.1));
 				
 				String prefix = outputFile.getName().replaceAll(".gif", "")+"_final";
+				plotHazardCurves(outputFile.getParentFile(), prefix, site, period, curveDuration,
+						funcs, chars, null, true, new Range(minX, maxX), new Range(minY, maxY));
+				
+				// now a subset
+				funcs = new ArrayList<>();
+				chars = new ArrayList<>();
+				
+				int mod = 1;
+				
+				for (int i=0; i<prevSimCurves.size(); i++) {
+					if (i == 1)
+						mod = 2;
+					else if (i == 2)
+						mod = 4;
+					if ((i+1) % mod > 0)
+						continue;
+					
+					DiscretizedFunc prevSimCurve = prevSimCurves.get(i);
+					prevSimCurve.setName(groupedIntDF.format(prevRelLengths.get(i))+" yrs");
+					funcs.add(prevSimCurve);
+//					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, finalSimCPT.getColor((float)generation)));
+//					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.DARK_GRAY));
+				}
+				
+				CPT summaryCPT = new CPT(0, Integer.max(1, funcs.size()-1), Color.LIGHT_GRAY, Color.DARK_GRAY);
+				for (int i=0; i<funcs.size(); i++)
+					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, summaryCPT.getColor((float)i)));
+				
+//				funcs.add(gmpeCurve);
+//				chars.add(gmpeCurveChar);
+				
+				simCurve.setName("Complete Model");
+				funcs.add(simCurve);
+				chars.add(simCurveChar);
+				
+				prefix = outputFile.getName().replaceAll(".gif", "")+"_summary";
 				plotHazardCurves(outputFile.getParentFile(), prefix, site, period, curveDuration,
 						funcs, chars, null, true, new Range(minX, maxX), new Range(minY, maxY));
 			}
