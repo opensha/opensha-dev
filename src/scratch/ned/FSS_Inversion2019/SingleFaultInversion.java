@@ -1003,6 +1003,8 @@ public class SingleFaultInversion {
 				totalRateConstraint,
 				totalRateSigma,
 				relativeTotalRateConstraintWt,
+				null,
+				0.0,
 				magAareaAleatoryVariability);
 
 		
@@ -1063,11 +1065,11 @@ public class SingleFaultInversion {
 	    case SIMULATED_ANNEALING:
 	    	if(numSolutions==1) {
 	    		if(D) System.out.println("SIMULATED_ANNEALING; numSolutions=1");
-	    		fltSysRupInversion.doInversionSA(completionCriteria, initialState, randomSeed, saCooling, perturbationFunc);
+	    		fltSysRupInversion.doInversionSA(completionCriteria, initialState, randomSeed, saCooling, perturbationFunc, null);
 	    	}
 	    	else if(numSolutions>1) {
 	    		if(D) System.out.println("SIMULATED_ANNEALING; numSolutions="+numSolutions);
-	    		fltSysRupInversion.doInversionSA_MultTimes(completionCriteria, initialState, randomSeed, numSolutions, dirName, saCooling,perturbationFunc);
+	    		fltSysRupInversion.doInversionSA_MultTimes(completionCriteria, initialState, randomSeed, numSolutions, dirName, saCooling,perturbationFunc, null);
 	    	}
 	    	else {
 	    		throw new RuntimeException("bad numIterations");
@@ -1461,7 +1463,7 @@ public class SingleFaultInversion {
 //		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0, true, 1);
 //		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0, true, 1);	
 //		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0, true, 1);	
-		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0, true, 1);	
+//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0, true, 1);	
 	
 		
 //		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1, false, 2);	
@@ -1482,7 +1484,7 @@ public class SingleFaultInversion {
 
 		// this took 118 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
+//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
 
 		// this took 16 minutes
 //		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, false, 2);

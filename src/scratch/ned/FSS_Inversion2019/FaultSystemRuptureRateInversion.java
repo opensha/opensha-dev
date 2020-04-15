@@ -31,6 +31,7 @@ import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
+import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.function.XY_DataSetList;
@@ -143,7 +144,8 @@ public class FaultSystemRuptureRateInversion {
 	
 	IncrementalMagFreqDist mfdConstraint, mfdSigma; 
 
-	private SummedMagFreqDist aveOfSectPartMFDs;
+	private SummedMagFreqDist aveOfSectPartMFDs, rupSamplerMFD;
+	
 	
 	// this accounts for fact that ave slip from Gauss MFD is greater than the slip of the average mag
 	private double gaussMFD_slipCorr;
@@ -158,6 +160,9 @@ public class FaultSystemRuptureRateInversion {
 	int num_segConstraints;
 	ArrayList<SegmentationConstraint> segmentationConstraintList;
 	ArrayList<SlipRateSegmentationConstraint> slipRateSegmentationConstraintList;
+	
+	// the following specifies fault section indices where a Laplacian smoothness constraint should be applied
+	ArrayList<int[]> smoothnessConstraintList;
 
 
 	
@@ -171,11 +176,13 @@ public class FaultSystemRuptureRateInversion {
 	private double relativeSectRateWt, relative_aPrioriRupWt, relative_segConstraintWt; 
 	private double relativeMFD_constraintWt;
 	private double totalRateConstraint, totalRateSigma, relativeTotalRateConstraintWt;
+	private double relativeSmoothnessConstraintWt;
 
 	private int  firstRowSectSlipRateData=-1,firstRowSectEventRateData=-1, firstRowAprioriData=-1, firstRowSegConstraint=-1;
 	private int  lastRowSectSlipRateData=-1,lastRowSectEventRateData=-1, lastRowAprioriData=-1, lastRowSegConstraint=-1;
 	private int firstRowMFD_constraintData=-1, lastRowMFD_constraintData=-1;
 	private int firstRowTotalRateConstraint=-1, lastRowTotalRateConstraint=-1;
+	private int firstRowSmoothnessConstraint=-1, lastRowSmoothnessConstraint=-1;
 	private int totNumRows;
 	
 	// average slip along rupture model
@@ -190,7 +197,7 @@ public class FaultSystemRuptureRateInversion {
 	
 	
 	
-	private double[] finalSectEventRate, finalPaleoVisibleSectEventRate, finalSectSlipRate;
+	private double[] finalSectEventRate, finalPaleoVisibleSectEventRate, finalSectSlipRate, finalSectMeanSlip, finalSectSlipCOV;
 	
 	// the following is the total moment-rate reduction, including that which goes to the  
 	// background, afterslip, events smaller than the min mag here, and aftershocks and foreshocks.
@@ -210,6 +217,8 @@ public class FaultSystemRuptureRateInversion {
 	ArbDiscrEmpiricalDistFunc_3D finalSectSlipRateFromMultRuns;
 	ArbDiscrEmpiricalDistFunc_3D finalPaleoVisibleSectEventRateFromMultRuns;
 	ArbDiscrEmpiricalDistFunc_3D rateOfThroughGoingRupsAtSectBoudaryFromMultRuns;
+	ArbDiscrEmpiricalDistFunc_3D finalSectMeanSlipFromMultRuns;
+	ArbDiscrEmpiricalDistFunc_3D finalSectSlipCOV_FromMultRuns;
 	
 
 	/**
@@ -359,6 +368,53 @@ public class FaultSystemRuptureRateInversion {
 			e.printStackTrace();
 		}			
 	}
+	
+	
+	
+	/**
+	 *   
+	 * @param dirName - set as null if no files are to be saved
+	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
+	 */
+	public void writeAndOrPlotRupRateOfFirstSection(String dirName, boolean popUpWindow) {
+		
+		EvenlyDiscrXYZ_DataSet xyzDataRupRate = new EvenlyDiscrXYZ_DataSet(numSections,numSections+1, 0, 0, 1, 1);
+		for(int x=0; x<numSections;x++)
+			for(int y=0; y<numSections+1;y++)
+				xyzDataRupRate.set(x, y, Double.NaN);
+		
+		try{
+			FileWriter fw=null;
+			String fileName_rr=null;
+			if(dirName != null) {
+				fileName_rr = dirName+"/rupRateOnFirstSectData";
+				fw = new FileWriter(fileName_rr+".txt");
+				fw.write("firstSect\tnumSectInRup\tlog10_rate\n");				
+			}
+			for(int rup=0; rup<numRuptures;rup++) {
+				int numSect = numSectInRup[rup];
+					double logRate = Double.NaN;
+					if(rupRateSolution[rup]>0)
+						logRate = Math.log10(rupRateSolution[rup]);
+					for(int s=0; s<numSections; s++) {
+						if(rupSectionMatrix[s][rup] == 1) {
+							if(dirName != null) {
+								fw.write(s+"\t"+numSect+"\t"+(float)logRate+"\n");
+							}
+							xyzDataRupRate.set(s, numSect,logRate);
+							break;
+						}
+					}
+			}	
+
+			fw.close();
+			make2D_plot(xyzDataRupRate, "Rate of Ruptures", "First Section", "Num Sections In Rupture", "Log10 Rate", fileName_rr, popUpWindow, 0.5, 0.5);
+
+		}catch(Exception e) {
+			e.printStackTrace();
+		}			
+	}
+
 
 	/**
 	 * Write the inversion-run info to a file
@@ -416,9 +472,11 @@ public class FaultSystemRuptureRateInversion {
 	 * @param relativeMFD_constraintWt - weight for MFD constraint
 	 * @param segConstraintFilename - each line has sect1_ID, sect2_ID, and wt (rups that utilize these sections are given a prior rate of zero)
 	 * @param relative_segConstraintWt - 
-	 * @param totalRateConstraint,
-	 * @param totalRateSigma,
+	 * @param totalRateConstraint
+	 * @param totalRateSigma
 	 * @param relativeTotalRateConstraintWt,
+	 * @param smoothnessConstraintList - ArrayList<int[]>, Laplacian smoothing applied to each list of fault sections
+	 * @param relativeSmoothnessConstraintWt,
 	 * @param magAareaAleatoryVariability - 
 	 */
 	public FaultSystemRuptureRateInversion( String modelName,
@@ -444,6 +502,8 @@ public class FaultSystemRuptureRateInversion {
 			double totalRateConstraint,
 			double totalRateSigma,
 			double relativeTotalRateConstraintWt,
+			ArrayList<int[]> smoothnessConstraintList,
+			double relativeSmoothnessConstraintWt,
 			double magAareaAleatoryVariability) {
 		
 		this.modelName = modelName;
@@ -468,6 +528,8 @@ public class FaultSystemRuptureRateInversion {
 		this.totalRateConstraint = totalRateConstraint;
 		this.totalRateSigma = totalRateSigma;
 		this.relativeTotalRateConstraintWt = relativeTotalRateConstraintWt;
+		this.smoothnessConstraintList = smoothnessConstraintList;
+		this.relativeSmoothnessConstraintWt = relativeSmoothnessConstraintWt;
 		this.GAUSS_MFD_SIGMA = magAareaAleatoryVariability;
 
 		
@@ -497,6 +559,8 @@ public class FaultSystemRuptureRateInversion {
 		modelSetUpInfoString += "\ttotalRateSigma = "+totalRateSigma+"\n";
 		modelSetUpInfoString += "\trelativeTotalRateConstraintWt = "+relativeTotalRateConstraintWt+"\n";
 		modelSetUpInfoString += "\tGAUSS_MFD_SIGMA = "+GAUSS_MFD_SIGMA+"\n";
+		if(smoothnessConstraintList != null)
+			modelSetUpInfoString += "\tsmoothnessConstraintList.size() = "+smoothnessConstraintList.size()+"\n";
 		modelSetUpInfoString += "\tGAUSS_MFD_TRUNCATION = "+GAUSS_MFD_TRUNCATION+"\n";
 		
 		
@@ -604,13 +668,23 @@ public class FaultSystemRuptureRateInversion {
 			totNumRows += numTotalRateConstraints;
 			lastRowTotalRateConstraint = totNumRows-1;
 		}
-		
+		// smoothness constraints
+		int numSmoothnessConstraints=0;
+		if(relativeSmoothnessConstraintWt>0 && smoothnessConstraintList != null) {
+			for(int[] sectArray : smoothnessConstraintList)
+				numSmoothnessConstraints += sectArray.length-2;
+			firstRowSmoothnessConstraint = totNumRows;
+			totNumRows += numSmoothnessConstraints;
+			lastRowSmoothnessConstraint = totNumRows-1;
+		}
+
 				
 		String tempString = "firstRowSegEventRateData = "+firstRowSectEventRateData+
 				"; firstRowAprioriData = "+firstRowAprioriData+
 				"; firstRowSegConstraint = "+firstRowSegConstraint+
 				"; firstRowMFD_constraintData = "+firstRowMFD_constraintData+
 				"; firstRowTotalRateConstraint = "+firstRowTotalRateConstraint+
+				"; firstRowSmoothnessConstraint = "+firstRowSmoothnessConstraint+
 				"; totNumRows = "+totNumRows;
 		if(D) System.out.println("\n"+tempString+"\n");
 		modelSetUpInfoString += "\n"+tempString+"\n";
@@ -711,6 +785,21 @@ public class FaultSystemRuptureRateInversion {
 				C[row][col]=1.0;
 		}
 		
+		// now fill in the smoothness constraints if requested
+		if(relativeSmoothnessConstraintWt > 0.0 && smoothnessConstraintList != null) {
+			int rowIncrement = 0;
+			for(int[] sectArray : smoothnessConstraintList) {
+				for(int s = 1; s<sectArray.length-1; s++) {
+					int row = rowIncrement+firstRowSmoothnessConstraint;
+					d[row] = 0.0; 
+					for(int col=0; col<numRuptures; col++)
+						C[row][col] = -rupSectionMatrix[s-1][col] + 2*rupSectionMatrix[s][col] - rupSectionMatrix[s+1][col];
+					rowIncrement += 1;
+				}
+			}
+		}
+
+		
 		
 		// copy un-wted data to wted versions (wts added below)
 		for(int row=0;row<totNumRows; row++){
@@ -801,6 +890,17 @@ public class FaultSystemRuptureRateInversion {
 
 		}
 		
+		// smoothness constraint
+		if(relativeSmoothnessConstraintWt>0) {
+			for(int i=0; i<numSmoothnessConstraints; i++) {
+				int row = i+firstRowSmoothnessConstraint;
+				full_wt[row] = relativeSmoothnessConstraintWt;
+//				if(wtedInversion) full_wt[row] *= data_wt[row]; // not data wt for smoothness constraint
+				d_wted[row] *= full_wt[row];
+				for(int rup=0; rup<numRuptures; rup++)
+					C_wted[row][rup] *= full_wt[row];
+			}
+		}
 	}
 	
 	
@@ -896,6 +996,8 @@ public class FaultSystemRuptureRateInversion {
 		finalSectSlipRateFromMultRuns = null;
 		finalPaleoVisibleSectEventRateFromMultRuns = null;
 		rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = null;
+		finalSectMeanSlipFromMultRuns = null;
+		finalSectSlipCOV_FromMultRuns = null;
 
 		if(info !=null)
 			modelRunInfoString = "\n"+info+"\n";
@@ -944,6 +1046,8 @@ public class FaultSystemRuptureRateInversion {
 				finalSectSlipRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
 				finalPaleoVisibleSectEventRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
 				rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(-0.5, rateOfThroughGoingRupsAtSectBoudary.length, 1.0);
+				finalSectMeanSlipFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
+				finalSectSlipCOV_FromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
 			}
 			for(int i=0;i<numRuptures;i++)
 				rupRatesFromMultRuns.set(i, rupRateSolution[i], 1.0);
@@ -954,12 +1058,13 @@ public class FaultSystemRuptureRateInversion {
 			for(int s=0;s<numSections;s++) {
 				finalSectSlipRateFromMultRuns.set(s, finalSectSlipRate[s], 1.0);
 				finalPaleoVisibleSectEventRateFromMultRuns.set(s, finalPaleoVisibleSectEventRate[s], 1.0);
+				finalSectMeanSlipFromMultRuns.set(s, finalSectMeanSlip[s], 1.0);
+				finalSectSlipCOV_FromMultRuns.set(s, finalSectSlipCOV[s], 1.0);
 			}
 			
 			for(int s=0;s<rateOfThroughGoingRupsAtSectBoudary.length;s++) {
 				rateOfThroughGoingRupsAtSectBoudaryFromMultRuns.set(s, rateOfThroughGoingRupsAtSectBoudary[s], 1.0);
 			}
-
 		}
 		
 		modelRunInfoString += "\nFOR MEAN INVERSION:\n---------------------------------\n";
@@ -975,19 +1080,30 @@ public class FaultSystemRuptureRateInversion {
 	/**
 	 * This does the inversion using simulated annealing
 	 */
-	public void doInversionSA(CompletionCriteria completionCriteria, double[] initialState, long randomSeed, CoolingScheduleType sa_coolingSchedule, GenerationFunctionType perturbationFunc) {
+	public void doInversionSA(CompletionCriteria completionCriteria, double[] initialState, long randomSeed, CoolingScheduleType sa_coolingSchedule, 
+			GenerationFunctionType perturbationFunc, IntegerPDF_FunctionSampler rupSampler) {
 		
 		this.sa_coolingSchedule = sa_coolingSchedule;
 		
 		
-		modelRunInfoString = "\nInversion Type = Simulated Annearling with\n\n\t"+completionCriteria.toString()+
-				"\n\trandomSeed = "+randomSeed+"\n\tsa_CoolingSchedule = "+sa_coolingSchedule+"\n";
-		
+		modelRunInfoString = "\nInversion Type = Simulated Annearling with\n\n\tcompletionCriteria = "+completionCriteria.toString()+
+				"\n\trandomSeed = "+randomSeed+
+				"\n\tsa_CoolingSchedule = "+sa_coolingSchedule+
+				"\n\tperturbationFunc = "+perturbationFunc.toString();
+		if(initialState != null)
+			modelRunInfoString += "\n\tinitialState is NOT null";
+		else
+			modelRunInfoString += "\n\tinitialState is null";
+		if(rupSampler != null)
+			modelRunInfoString += "\n\trupSampler is NOT null";
+		else
+			modelRunInfoString += "\n\trupSampler is null\n";
+
 		// SOLVE THE INVERSE PROBLEM
 //		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState, completionCriteria, randomSeed, perturbationFunc);
 		
 		// Not exactly sure how the following works, and doesn't appear to take a seed
-		rupRateSolution = getSimulatedAnnealingThreadedSolution(C_wted, d_wted, initialState, completionCriteria, randomSeed);
+		rupRateSolution = getSimulatedAnnealingThreadedSolution(C_wted, d_wted, initialState, completionCriteria, randomSeed, rupSampler);
 
 		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 		if(minRupRate >0.0)
@@ -1023,7 +1139,7 @@ public class FaultSystemRuptureRateInversion {
 	 * This does the inversion using simulated annealing
 	 */
 	public void doInversionSA_MultTimes(CompletionCriteria completionCriteria, double[] initialState, long randomSeed, int numInversions, String dirName,
-			CoolingScheduleType sa_coolingSchedule, GenerationFunctionType perturbationFunc) {
+			CoolingScheduleType sa_coolingSchedule, GenerationFunctionType perturbationFunc, IntegerPDF_FunctionSampler rupSampler) {
 		
 		this.sa_coolingSchedule = sa_coolingSchedule;
 		
@@ -1035,12 +1151,24 @@ public class FaultSystemRuptureRateInversion {
 		finalSectSlipRateFromMultRuns = null;
 		finalPaleoVisibleSectEventRateFromMultRuns = null;
 		rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = null;
+		finalSectMeanSlipFromMultRuns = null;
+		finalSectSlipCOV_FromMultRuns = null;
 
 				
-		modelRunInfoString = "\nInversion Type = Simulated Annearling with\n\n\t"+
+		modelRunInfoString = "\nInversion Type = Simulated Annearling with\n\n\tcompletionCriteria = "+
 				completionCriteria.toString()+
-				"\n\trandomSeed = "+randomSeed+"\n\tnumInversions = "+numInversions+
-				"\n\tsa_CoolingSchedule = "+sa_coolingSchedule+"\n";
+				"\n\trandomSeed = "+randomSeed+
+				"\n\tnumInversions = "+numInversions+
+				"\n\tsa_CoolingSchedule = "+sa_coolingSchedule+
+				"\n\tperturbationFunc = "+perturbationFunc.toString();
+		if(initialState != null)
+			modelRunInfoString += "\n\tinitialState is NOT null";
+		else
+			modelRunInfoString += "\n\tinitialState is null";
+		if(rupSampler != null)
+			modelRunInfoString += "\n\trupSampler is NOT null";
+		else
+			modelRunInfoString += "\n\trupSampler is null\n";
 
 		
 		for(int invNum=0; invNum<numInversions;invNum++) {
@@ -1051,7 +1179,7 @@ public class FaultSystemRuptureRateInversion {
 //			rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState, completionCriteria, randomSeed, perturbationFunc);
 			
 			// Not exactly sure how the following works, and doesn't appear to take a seed
-			rupRateSolution = getSimulatedAnnealingThreadedSolution(C_wted, d_wted, initialState, completionCriteria, randomSeed);
+			rupRateSolution = getSimulatedAnnealingThreadedSolution(C_wted, d_wted, initialState, completionCriteria, randomSeed, rupSampler);
 
 
 			// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
@@ -1100,6 +1228,8 @@ public class FaultSystemRuptureRateInversion {
 				finalSectSlipRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
 				finalPaleoVisibleSectEventRateFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
 				rateOfThroughGoingRupsAtSectBoudaryFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(-0.5, rateOfThroughGoingRupsAtSectBoudary.length, 1.0);
+				finalSectMeanSlipFromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
+				finalSectSlipCOV_FromMultRuns = new ArbDiscrEmpiricalDistFunc_3D(0, numSections, 1.0);
 			}
 			rupRatesFromMultRunsArrayList.add(rupRateSolution);
 			for(int i=0;i<numRuptures;i++)
@@ -1111,6 +1241,8 @@ public class FaultSystemRuptureRateInversion {
 			for(int s=0;s<numSections;s++) {
 				finalSectSlipRateFromMultRuns.set(s, finalSectSlipRate[s], 1.0);
 				finalPaleoVisibleSectEventRateFromMultRuns.set(s, finalPaleoVisibleSectEventRate[s], 1.0);
+				finalSectMeanSlipFromMultRuns.set(s, finalSectMeanSlip[s], 1.0);
+				finalSectSlipCOV_FromMultRuns.set(s, finalSectSlipCOV[s], 1.0);
 			}
 			
 			for(int s=0;s<rateOfThroughGoingRupsAtSectBoudary.length;s++) {
@@ -1241,19 +1373,21 @@ public class FaultSystemRuptureRateInversion {
 	
 		
 	private double[] getSimulatedAnnealingSolution(double[][] C, double[] d, double[] initialState, CompletionCriteria completionCriteria,  long randomSeed,
-			GenerationFunctionType perturbationFunc) {
+			GenerationFunctionType perturbationFunc, IntegerPDF_FunctionSampler rupSampler) {
 		SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
 		SerialSimulatedAnnealing simulatedAnnealing =new SerialSimulatedAnnealing(matrixC, d, initialState);
 		simulatedAnnealing.setCoolingFunc(sa_coolingSchedule);
 		simulatedAnnealing.setRandom(new Random(randomSeed));
-		simulatedAnnealing.iterate(completionCriteria);
 		simulatedAnnealing.setPerturbationFunc(perturbationFunc);
+		simulatedAnnealing.setRuptureSampler(rupSampler);
+		simulatedAnnealing.iterate(completionCriteria);
 		return simulatedAnnealing.getBestSolution();
 	}
 
 
 
-	private double[] getSimulatedAnnealingThreadedSolution(double[][] C, double[] d, double[] initialState, CompletionCriteria completionCriteria,  long randomSeed) {
+	private double[] getSimulatedAnnealingThreadedSolution(double[][] C, double[] d, double[] initialState, CompletionCriteria completionCriteria,  
+			long randomSeed, IntegerPDF_FunctionSampler rupSampler) {
 		SparseDoubleMatrix2D matrixC = new SparseDoubleMatrix2D(C); //
 		//this is the "sub completion criteria" - the amount of time (or iterations) between synchronization
 		CompletionCriteria subCompetionCriteria = TimeCompletionCriteria.getInSeconds(1); // 1 second;
@@ -1262,6 +1396,7 @@ public class FaultSystemRuptureRateInversion {
 
 		ThreadedSimulatedAnnealing simulatedAnnealing = new ThreadedSimulatedAnnealing(
 				matrixC, d, initialState, numThreads, subCompetionCriteria);
+		simulatedAnnealing.setRuptureSampler(rupSampler);
 //		simulatedAnnealing.setRandom(new Random(randomSeed));
 		simulatedAnnealing.iterate(completionCriteria);
 		return simulatedAnnealing.getBestSolution();
@@ -1335,19 +1470,35 @@ public class FaultSystemRuptureRateInversion {
 		finalSectSlipRate = new double[numSections];
 		finalSectEventRate = new double[numSections];
 		finalPaleoVisibleSectEventRate = new double[numSections];
-		for(int seg=0; seg < numSections; seg++) {
-			finalSectSlipRate[seg] = 0;
-			finalSectEventRate[seg] = 0;
+		for(int s=0; s < numSections; s++) {
+			finalSectSlipRate[s] = 0;
+			finalSectEventRate[s] = 0;
 			for(int rup=0; rup < numRuptures; rup++) 
-				if(rupSectionMatrix[seg][rup]==1) {
-					finalSectSlipRate[seg] += rupRateSolution[rup]*sectSlipInRup[seg][rup];
-					finalSectEventRate[seg]+=rupRateSolution[rup];
+				if(rupSectionMatrix[s][rup]==1) {
+					finalSectSlipRate[s] += rupRateSolution[rup]*sectSlipInRup[s][rup];
+					finalSectEventRate[s]+=rupRateSolution[rup];
 					if(applyProbVisible)
-						finalPaleoVisibleSectEventRate[seg]+=rupRateSolution[rup]*getProbVisible(rupMeanMag[rup]);
+						finalPaleoVisibleSectEventRate[s]+=rupRateSolution[rup]*getProbVisible(rupMeanMag[rup]);
 					else
-						finalPaleoVisibleSectEventRate[seg]+=rupRateSolution[rup];
+						finalPaleoVisibleSectEventRate[s]+=rupRateSolution[rup];
 				}
 		}
+		
+		
+		// compute section mean slip and cov
+		finalSectMeanSlip = new double[numSections];
+		finalSectSlipCOV = new double[numSections];
+		for(int s=0; s < numSections; s++) {
+			ArbDiscrEmpiricalDistFunc dist = new ArbDiscrEmpiricalDistFunc();
+			for(int r=0; r < numRuptures; r++) {
+				if(rupRateSolution[r] > 0 && rupSectionMatrix[s][r] == 1) {
+					dist.set(sectSlipInRup[s][r]*gaussMFD_slipCorr, rupRateSolution[r]);
+				}
+			}
+			finalSectMeanSlip[s] = dist.getMean();
+			finalSectSlipCOV[s] = dist.getCOV();
+		}
+
 		
 		// Compute the total Mag Freq Dist
 		int num = (int)Math.round((maxMagMFD_WithAleatory-minMagMFD_WithAleatory)/MAG_DELTA + 1);
@@ -1394,6 +1545,7 @@ public class FaultSystemRuptureRateInversion {
 				rateOfThroughGoingRupsAtSectBoudary[s] += rupRateSolution[rup];
 		}
 	}
+	
 	
 	
 	/**
@@ -1547,10 +1699,10 @@ public class FaultSystemRuptureRateInversion {
 	
 	private String getErrorTableString(boolean includeEquationSetWts) {
 		// First without equation set weights
-		double totPredErr=0, slipRateErr=0, eventRateErr=0, aPrioriErr=0, segConstrErr=0, mfdErr=0, totRateErr=0;
-		double totRMS=0, slipRateRMS=0, eventRateRMS=0, aPrioriRMS=0, segConstrRMS=0, mfdRMS=0, totRateRMS=0;
-		double totAveAbsDiff=0, slipRateDiff=0, eventRateDiff=0, aPrioriDiff=0, segConstrDiff=0, mfdDiff=0, totRateDiff=0; 	// these are for ave absolute value of diffs
-		double testNumRows=0, slipRateNumRows=0, eventRateNumRows=0, aPrioriNumRows=0, segConstrNumRows=0, mfdNumRows=0, totRateNumRows=0;
+		double totPredErr=0, slipRateErr=0, eventRateErr=0, aPrioriErr=0, segConstrErr=0, mfdErr=0, totRateErr=0, totSmoothnessErr=0;
+		double totRMS=0, slipRateRMS=0, eventRateRMS=0, aPrioriRMS=0, segConstrRMS=0, mfdRMS=0, totRateRMS=0, totSmoothnessRMS=0;
+		double totAveAbsDiff=0, slipRateDiff=0, eventRateDiff=0, aPrioriDiff=0, segConstrDiff=0, mfdDiff=0, totRateDiff=0, totSmoothnessDiff=0; 	// these are for ave absolute value of diffs
+		double testNumRows=0, slipRateNumRows=0, eventRateNumRows=0, aPrioriNumRows=0, segConstrNumRows=0, mfdNumRows=0, totRateNumRows=0, totSmoothnessNumRows=0;
 
 		double[] wt;
 		if(includeEquationSetWts)
@@ -1590,21 +1742,27 @@ public class FaultSystemRuptureRateInversion {
 				mfdNumRows += 1;
 			}
 		if(relativeTotalRateConstraintWt>0) {
-			int row=firstRowTotalRateConstraint; {
+			int row=firstRowTotalRateConstraint;
 			totRateErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*wt[row]*wt[row];
 			totRateDiff += Math.abs((d[row]-d_pred[row])*wt[row]);
 			totRateNumRows += 1;
+		}
+		if(relativeSmoothnessConstraintWt>0) {
+			for(int row=firstRowSmoothnessConstraint; row <= lastRowSmoothnessConstraint; row++) {
+				totSmoothnessErr += (d[row]-d_pred[row])*(d[row]-d_pred[row])*wt[row]*wt[row];
+				totSmoothnessDiff += Math.abs((d[row]-d_pred[row])*wt[row]);
+				totSmoothnessNumRows += 1;		
 			}
 		}
-		
-		testNumRows = slipRateNumRows+eventRateNumRows+aPrioriNumRows+segConstrNumRows+mfdNumRows+totRateNumRows;
+
+		testNumRows = slipRateNumRows+eventRateNumRows+aPrioriNumRows+segConstrNumRows+mfdNumRows+totRateNumRows+totSmoothnessNumRows;
 		if(testNumRows != totNumRows) {
 			throw new RuntimeException("Problem with number of rows");
 		}
 
-		totPredErr = slipRateErr + eventRateErr + aPrioriErr + segConstrErr + mfdErr + totRateErr;
+		totPredErr = slipRateErr + eventRateErr + aPrioriErr + segConstrErr + mfdErr + totRateErr + totSmoothnessErr;
 		totRMS = Math.sqrt(totPredErr/totNumRows);
-		totAveAbsDiff = (slipRateDiff+eventRateDiff+aPrioriDiff+segConstrDiff+mfdDiff+totRateDiff)/totNumRows;
+		totAveAbsDiff = (slipRateDiff+eventRateDiff+aPrioriDiff+segConstrDiff+mfdDiff+totRateDiff+totSmoothnessDiff)/totNumRows;
 		
 		slipRateRMS = Math.sqrt(slipRateErr/slipRateNumRows);
 		eventRateRMS = Math.sqrt(eventRateErr/eventRateNumRows);
@@ -1612,6 +1770,7 @@ public class FaultSystemRuptureRateInversion {
 		segConstrRMS = Math.sqrt(segConstrErr/segConstrNumRows);
 		mfdRMS = Math.sqrt(mfdErr/mfdNumRows); 
 		totRateRMS = Math.sqrt(totRateErr/totRateNumRows);
+		totSmoothnessRMS = Math.sqrt(totSmoothnessErr/totSmoothnessNumRows);
 		
 		slipRateDiff /= slipRateNumRows;
 		eventRateDiff /= eventRateNumRows;
@@ -1619,6 +1778,7 @@ public class FaultSystemRuptureRateInversion {
 		segConstrDiff /= segConstrNumRows;
 		mfdDiff /= mfdNumRows;
 		totRateDiff /= totRateNumRows;
+		totSmoothnessDiff /= totSmoothnessNumRows;
 		
 		// get alt versions in case equation wts zero
 		double eventRateErrAlt = getTotEventRatePredErr();
@@ -1644,6 +1804,8 @@ public class FaultSystemRuptureRateInversion {
 			resultsString += "MFD Rates  \t"+(float)mfdErr+"\t"+(float)mfdRMS+"\t"+(float)mfdDiff+"\t"+relativeMFD_constraintWt+"\n";
 		if(totRateNumRows>0)
 			resultsString += "Total Rate \t"+(float)totRateErr+"\t"+(float)totRateRMS+"\t"+(float)totRateDiff+"\t"+relativeTotalRateConstraintWt+"\n";
+		if(totSmoothnessNumRows>0)
+			resultsString += "Total Smoothness \t"+(float)totSmoothnessErr+"\t"+(float)totSmoothnessRMS+"\t"+(float)totSmoothnessDiff+"\t"+relativeSmoothnessConstraintWt+"\n";
 		
 		return resultsString;
 	}
@@ -1892,6 +2054,22 @@ public class FaultSystemRuptureRateInversion {
 	}
 	
 	
+	public void computeRupSamplerMFD(IntegerPDF_FunctionSampler rupSampler) {
+		
+		rupSamplerMFD = new SummedMagFreqDist(meanMagHistorgram.getMinX(),meanMagHistorgram.size(),meanMagHistorgram.getDelta());
+		for(int rup=0; rup<numRuptures;rup++) {
+			int index = rupSamplerMFD.getClosestXIndex(rupMeanMag[rup]);
+			rupSamplerMFD.add(index, rupSampler.getY(rup));
+		}
+		rupSamplerMFD.setName("RupSamplerMFD");
+		rupSamplerMFD.normalizeByTotalRate();
+		
+//		System.out.println(rupSampler);
+//		System.out.println(rupSamplerMFD);
+//		System.exit(0);
+	}
+
+	
 	
 	/**
 	 * This writes and/or plot various data fits.
@@ -1945,8 +2123,8 @@ public class FaultSystemRuptureRateInversion {
 		// SECTION SLIP RATES:
 		double min = 0, max = numSections-1;
 		EvenlyDiscretizedFunc origSlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
-//		EvenlyDiscretizedFunc origUpper95_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
-//		EvenlyDiscretizedFunc origLower95_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
+		EvenlyDiscretizedFunc origUpper68_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
+		EvenlyDiscretizedFunc origLower68_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
 		EvenlyDiscretizedFunc finalSlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
 		ArrayList<DefaultXY_DataSet> slipRate95confFuncsList = new ArrayList<DefaultXY_DataSet>();
 		DefaultXY_DataSet slipRate95confFunc;
@@ -1957,11 +2135,13 @@ public class FaultSystemRuptureRateInversion {
 			slipRate95confFunc.set((double)s,(sectSlipRate[s]+1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
 			slipRate95confFunc.setName("95% conf for orig slip rate on section "+s);
 			slipRate95confFuncsList.add(slipRate95confFunc);
-//			origUpper95_SlipRateFunc.set(s,(sectSlipRate[s]+1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
-//			origLower95_SlipRateFunc.set(s,(sectSlipRate[s]-1.96*sectSlipRateStdDev[s])*(1-moRateReduction));
+			origUpper68_SlipRateFunc.set(s,(sectSlipRate[s]+sectSlipRateStdDev[s])*(1-moRateReduction));
+			origLower68_SlipRateFunc.set(s,(sectSlipRate[s]-sectSlipRateStdDev[s])*(1-moRateReduction));
 			finalSlipRateFunc.set(s,finalSectSlipRate[s]);
 		}
-		origSlipRateFunc.setName("Orig Slip Rates");
+		origSlipRateFunc.setName("Target Slip Rates");
+		origUpper68_SlipRateFunc.setName("Target Slip Rate Upper (+stdev)");
+		origLower68_SlipRateFunc.setName("Target Slip Rate Lower (-stdev)");
 		finalSlipRateFunc.setName("Final Slip Rates");
 
 		ArrayList<XY_DataSet> sr_funcs = new ArrayList<XY_DataSet>();
@@ -1988,13 +2168,18 @@ public class FaultSystemRuptureRateInversion {
 
 		sr_funcs.add(finalSlipRateFunc);
 		sr_funcs.add(origSlipRateFunc);
-		sr_funcs.addAll(slipRate95confFuncsList);
+		sr_funcs.add(origUpper68_SlipRateFunc);
+		sr_funcs.add(origLower68_SlipRateFunc);
+//		sr_funcs.addAll(slipRate95confFuncsList);
 		
 		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
-		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.BLUE));
-		for(int i=0;i<slipRate95confFuncsList.size();i++) {
-			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 4f, Color.BLUE));
-		}
+//		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.BLUE));
+		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.DASH, 1f, Color.BLACK));
+		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.DASH, 1f, Color.BLACK));
+//		for(int i=0;i<slipRate95confFuncsList.size();i++) {
+//			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 4f, Color.BLUE));
+//		}
 		
 
 		fileNamePrefix = null;
@@ -2090,6 +2275,75 @@ public class FaultSystemRuptureRateInversion {
 		writeAndOrPlotFuncs(er_funcs, er_plotChars, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
 
+		
+		// SECTION MEAN SLIP AND COV:
+		EvenlyDiscretizedFunc finalMeanSlipFunc = new EvenlyDiscretizedFunc(min, max, numSections);
+		EvenlyDiscretizedFunc finalSlipCOVFunc = new EvenlyDiscretizedFunc(min, max, numSections);
+		for(int s=0; s<numSections;s++) {
+			finalMeanSlipFunc.set(s, finalSectMeanSlip[s]);
+			finalSlipCOVFunc.set(s,finalSectSlipCOV[s]);
+		}
+		finalMeanSlipFunc.setName("Mean Slip");
+		finalSlipCOVFunc.setName("Slip COV");
+
+		ArrayList<XY_DataSet> slip_mean_cov_funcs = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> slip_mean_cov_plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
+		if(finalSectMeanSlipFromMultRuns != null) {
+			EvenlyDiscretizedFunc meanSlipFromMultipleRuns = finalSectMeanSlipFromMultRuns.getMeanCurve();
+			meanSlipFromMultipleRuns.setName("meanSlipFromMultipleRuns");
+			UncertainArbDiscDataset meanSlipMinMaxRange = new UncertainArbDiscDataset(meanSlipFromMultipleRuns, 
+					finalSectMeanSlipFromMultRuns.getMinCurve(), finalSectMeanSlipFromMultRuns.getMaxCurve());
+			meanSlipMinMaxRange.setName("meanSlipMinMaxRange");
+			slip_mean_cov_funcs.add(meanSlipMinMaxRange);
+			
+			UncertainArbDiscDataset meanSlip95conf = get95perConfForMultRuns(finalSectMeanSlipFromMultRuns);
+			meanSlip95conf.setName("meanSlip95conf");
+			slip_mean_cov_funcs.add(meanSlip95conf);
+			slip_mean_cov_funcs.add(meanSlipFromMultipleRuns);
+	
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLUE));
+			
+			EvenlyDiscretizedFunc slipCOV_FromMultipleRuns = finalSectSlipCOV_FromMultRuns.getMeanCurve();
+			slipCOV_FromMultipleRuns.setName("slipCOV_FromMultipleRuns");
+			UncertainArbDiscDataset slipCOV_MinMaxRange = new UncertainArbDiscDataset(slipCOV_FromMultipleRuns, 
+					finalSectSlipCOV_FromMultRuns.getMinCurve(), finalSectSlipCOV_FromMultRuns.getMaxCurve());
+			slipCOV_MinMaxRange.setName("slipCOV_MinMaxRange");
+			slip_mean_cov_funcs.add(slipCOV_MinMaxRange);
+			
+			UncertainArbDiscDataset slipCOV_95conf = get95perConfForMultRuns(finalSectSlipCOV_FromMultRuns);
+			slipCOV_95conf.setName("slipCOV_95conf");
+			slip_mean_cov_funcs.add(slipCOV_95conf);
+			slip_mean_cov_funcs.add(slipCOV_FromMultipleRuns);
+	
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,255,200)));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,255,120)));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.GREEN));
+		}
+		
+		slip_mean_cov_funcs.add(finalMeanSlipFunc);
+		slip_mean_cov_funcs.add(finalSlipCOVFunc);
+		
+		slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
+
+		fileNamePrefix = null;
+		if(dirName != null)
+			fileNamePrefix = dirName+"/sectionMeanSlipAndCOV";
+
+		plotName = "";
+		xAxisLabel = "Section";
+		yAxisLabel = "Mean Slip (m) and COV";
+		xAxisRange = new Range(-1,numSections);
+		yAxisRange = null;
+		logX = false;
+		logY = false;
+		
+		writeAndOrPlotFuncs(slip_mean_cov_funcs, slip_mean_cov_plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		
 		
 				
 		// RUPTURE RATES
@@ -2436,8 +2690,30 @@ public class FaultSystemRuptureRateInversion {
 
 		writeAndOrPlotFuncs(funcs3, plotChars, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		
+		
+		if(rupSamplerMFD != null) {
+			// plot the SA rupture sampler
+			ArrayList<XY_DataSet> funcs4 = new ArrayList<XY_DataSet>();
+			funcs4.add(rupSamplerMFD);
+			ArrayList<PlotCurveCharacterstics> plotChars4 = new ArrayList<PlotCurveCharacterstics>();
+			plotChars4.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
 
+			fileNamePrefix = null;
+			if(dirName != null)
+				fileNamePrefix = dirName+"/rupSamplerMFD";
+			plotName ="SA RupSamplerMFD";
+			xAxisLabel = "Magnitude";
+			yAxisLabel = "PDF";
+			xAxisRange = new Range(minX-0.05,maxX+0.05);
+			yAxisRange = null;
+			logX = false;
+			logY = true;
 
+			writeAndOrPlotFuncs(funcs4, plotChars4, plotName, xAxisLabel, yAxisLabel, 
+					xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);	
+		
+		}
 	}
 	
 	
@@ -2455,7 +2731,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param fileNamePrefix - set a null if you don't want to save to files
 	 * @param popupWindow - set as false if you don't want a pop-up windows with the plots
 	 */
-	public void writeAndOrPlotFuncs(
+	public static void writeAndOrPlotFuncs(
 			ArrayList<XY_DataSet> funcs, 
 			ArrayList<PlotCurveCharacterstics> plotChars, 
 			String plotName,
@@ -2467,7 +2743,6 @@ public class FaultSystemRuptureRateInversion {
 			boolean logY,
 			String fileNamePrefix, 
 			boolean popupWindow) {
-		
 		
 		if(popupWindow) {
 			
@@ -2484,25 +2759,29 @@ public class FaultSystemRuptureRateInversion {
 			graph.setY_AxisLabel(yAxisLabel);
 			graph.setTickLabelFontSize(18);
 			graph.setAxisLabelFontSize(20);
-	
-			if(fileNamePrefix != null) {
-				try {
-					graph.saveAsPDF(fileNamePrefix+".pdf");
-					graph.saveAsPNG(fileNamePrefix+".png");
-					graph.saveAsTXT(fileNamePrefix+".txt");
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}		
+
+//			graph.setBackground(Color.WHITE); // this does not work so not using what follows
+//			if(fileNamePrefix != null) {
+//				try {
+//					graph.saveAsPDF(fileNamePrefix+".pdf");
+//					graph.saveAsPNG(fileNamePrefix+".png");
+//					graph.saveAsTXT(fileNamePrefix+".txt");
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
+//			}		
 		}
-		else if (fileNamePrefix != null){	// no pop-up window; just save plot
+//		else if (fileNamePrefix != null){	// no pop-up window; just save plot
+		if (fileNamePrefix != null){	// no pop-up window; just save plot
 			PlotSpec spec = new PlotSpec(funcs, plotChars, plotName, xAxisLabel, yAxisLabel);
 			HeadlessGraphPanel gp = new HeadlessGraphPanel();
-			gp.setTickLabelFontSize(24);
-			gp.setAxisLabelFontSize(26);
+			gp.setUserBounds(xAxisRange, yAxisRange);
+			gp.setTickLabelFontSize(40);
+			gp.setAxisLabelFontSize(48);
+			gp.setBackgroundColor(Color.WHITE);
 			gp.drawGraphPanel(spec, logX, logY);
-			gp.getChartPanel().setSize(1000, 800);
-			
+			gp.getChartPanel().setSize(936, 748); // this is 13 by 10.4 inches (72 points per inch); scale by 0.25 to get 3.25 inch wide plot
+			// such a wide plot is need to have enough pixels in the png file below
 			try {
 				gp.saveAsPNG(fileNamePrefix+".png");
 				gp.saveAsPDF(fileNamePrefix+".pdf");
@@ -2823,7 +3102,7 @@ public class FaultSystemRuptureRateInversion {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+		cpt.setNanColor(Color.white);
 		XYZPlotSpec spec = new XYZPlotSpec(xyzData, cpt, title, xAxisLabel, yAxisLabel, zAxisLabel);
 		
 		Range xRange = new Range(xyzData.getMinX()-xAddOn,xyzData.getMaxX()+xAddOn);
