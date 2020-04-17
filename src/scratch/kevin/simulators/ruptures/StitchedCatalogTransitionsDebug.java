@@ -208,10 +208,10 @@ public class StitchedCatalogTransitionsDebug {
 		if (trans.isEmpty())
 			return trans;
 		int numInitializers = 0;
-		double tFirst = trans.get(0).getStartTime();
+		double tFirst = trans.get(0).absoluteTime;
 		for (int i=0; i<trans.size(); i++) {
 			RSQSimStateTime st = trans.get(i);
-			if (st.getStartTime() == tFirst && st.getState() == RSQSimState.LOCKED)
+			if (st.absoluteTime == tFirst && st.state == RSQSimState.LOCKED)
 				numInitializers++;
 			else
 				break;
@@ -231,7 +231,7 @@ public class StitchedCatalogTransitionsDebug {
 		boolean inOrder = true;
 		for (int i=0; i<trans.size(); i++) {
 			RSQSimStateTime st = trans.get(i);
-			times[i] = st.getStartTime()-stitchTime;
+			times[i] = st.absoluteTime-stitchTime;
 			counts[i] = i+1;
 			if (i > 0 && times[i]<times[i-1])
 				inOrder = false;
@@ -250,7 +250,7 @@ public class StitchedCatalogTransitionsDebug {
 		
 		for (int i=0; i<trans.size(); i++) {
 			RSQSimStateTime st = trans.get(i);
-			int index = bins.getClosestXIndex(st.getStartTime()-stitchTime);
+			int index = bins.getClosestXIndex(st.absoluteTime-stitchTime);
 			bins.add(index, 1d);
 		}
 		

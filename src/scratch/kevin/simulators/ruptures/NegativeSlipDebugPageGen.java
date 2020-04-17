@@ -15,6 +15,7 @@ import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.srf.RSQSimStateTime;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
+import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader.TransVersion;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 import org.opensha.sha.simulators.utils.SimulatorUtils;
 
@@ -43,7 +44,7 @@ public class NegativeSlipDebugPageGen {
 		Map<SimulatorElement, Integer> negEventDisplacementCounts = new HashMap<>();
 		
 		RSQSimStateTransitionFileReader transFile = catalog.getTransitions();
-		Preconditions.checkState(transFile.isVariableSlipSpeed());
+		Preconditions.checkState(transFile.getVersion() != TransVersion.ORIGINAL);
 		
 		List<RSQSimEvent> negDisplEvents = new ArrayList<>();
 		

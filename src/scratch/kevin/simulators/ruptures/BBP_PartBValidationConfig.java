@@ -673,7 +673,7 @@ public class BBP_PartBValidationConfig {
 		if (linearFract != null)
 			idens.add(new LinearRuptureIden(linearFract, linearRelative, horzDistanceCache));
 		try {
-			idens.add(new RSQSimTransValidIden(catalog.getTransitions(), catalog.getSlipVelocities()));
+			idens.add(new RSQSimTransValidIden(catalog.getTransitions()));
 		} catch (Exception e) {
 			System.out.println("Warning, couldn't force events with transitions. Missing trans file? "+e.getMessage());
 		}

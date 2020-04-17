@@ -110,7 +110,7 @@ public class TransSlipCompare {
 			double[] transSlips = calcTransSlips(catalog, e, trans, eventTrans);
 			
 			for (RSQSimStateTime eTrans : eventTrans) {
-				if (eTrans.getState() == RSQSimState.EARTHQUAKE_SLIP) {
+				if (eTrans.state == RSQSimState.EARTHQUAKE_SLIP) {
 					numSlips++;
 					totalTimeSlipping += eTrans.getDuration();
 				}
@@ -240,9 +240,6 @@ public class TransSlipCompare {
 	static double[] calcTransSlips(RSQSimCatalog catalog, RSQSimEvent event,
 			RSQSimStateTransitionFileReader transReader, List<RSQSimStateTime> transToFillIn)
 					throws IOException {
-		Map<Integer, Double> patchVels = transReader.isVariableSlipSpeed() ? null
-				: catalog.getSlipVelocities();
-		
 		ArrayList<SimulatorElement> elems = event.getAllElements();
 		double[] transSlips = new double[elems.size()];
 		
@@ -252,10 +249,9 @@ public class TransSlipCompare {
 			List<RSQSimStateTime> patchTrans = trans.get(elems.get(i).getID());
 			for (int j=0; j<patchTrans.size(); j++) {
 				RSQSimStateTime thisTrans = patchTrans.get(j);
-				if (thisTrans.getState() == RSQSimState.EARTHQUAKE_SLIP) {
+				if (thisTrans.state == RSQSimState.EARTHQUAKE_SLIP) {
 					double duration = thisTrans.getDuration();
-					double vel = transReader.isVariableSlipSpeed()
-							? thisTrans.getVelocity() : patchVels.get(elems.get(i).getID());
+					double vel = thisTrans.velocity;
 					transSlips[i] += vel*duration;
 				}
 			}

@@ -60,6 +60,7 @@ import org.opensha.sha.simulators.iden.SkipYearsLoadIden;
 import org.opensha.sha.simulators.parsers.RSQSimFileReader;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
+import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader.TransVersion;
 import org.opensha.sha.simulators.srf.RSQSimTransValidIden;
 import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
@@ -1201,14 +1202,46 @@ public class RSQSimCatalog implements XMLSaveable {
 	
 	public synchronized RSQSimStateTransitionFileReader getTransitions() throws IOException {
 		if (transReader == null) {
-			File transFile = getTransFile(getCatalogDir(), isVariableSlipSpeed());
-			transReader = new RSQSimStateTransitionFileReader(transFile, getElements(), isVariableSlipSpeed());
+//			File transFile = getTransFile(getCatalogDir(), isVariableSlipSpeed());
+			File transFile = null;
+			TransVersion transVersion = null;
+			boolean transV = isVariableSlipSpeed();
+			Map<String, String> params = getParams();
+			
+			String newStyleStr = params.get("writeSlipSpeedInMainTransFile");
+			if (newStyleStr != null) {
+				int newStyleInt = Integer.parseInt(newStyleStr);
+				if (newStyleInt == 0)
+					transVersion = TransVersion.ORIGINAL;
+				else
+					transVersion = TransVersion.CONSOLIDATED_RELATIVE;
+			}
+			for (File file : getCatalogDir().listFiles()) {
+				String name = file.getName().toLowerCase();
+				if (!name.startsWith("trans") || !name.endsWith(".out"))
+					continue;
+				if (name.startsWith("transv.")) {
+					transFile = file;
+					Preconditions.checkState(transV, "have a transV file params indicate not transv: %s", file.getName());
+					transVersion = TransVersion.TRANSV;
+					// if we have a transv, use that. might have an old style plain trans as well
+					break;
+				} else {
+					transFile = file;
+				}
+			}
+			System.out.println("Trans file: "+transFile.getAbsolutePath());
+			System.out.println("Trans version: "+transVersion);
+//			System.out.println("TransV: "+transV);
+			transReader = new RSQSimStateTransitionFileReader(transFile, getElements(), transVersion);
+			if (transVersion == TransVersion.ORIGINAL)
+				transReader.setPatchFixedVelocities(getSlipVelocities());
 		}
 		return transReader;
 	}
 	
 	public synchronized RSQSimEventSlipTimeFunc getSlipTimeFunc(RSQSimEvent event) throws IOException {
-		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event), getSlipVelocities(), isVariableSlipSpeed());
+		return new RSQSimEventSlipTimeFunc(getTransitions().getTransitions(event));
 	}
 
 	static GregorianCalendar cal(int year, int month, int day) {
@@ -1395,7 +1428,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		
 		public Loader hasTransitions() throws IOException {
-			loadIdens.add(new RSQSimTransValidIden(getTransitions(), getSlipVelocities()));
+			loadIdens.add(new RSQSimTransValidIden(getTransitions()));
 			return this;
 		}
 		

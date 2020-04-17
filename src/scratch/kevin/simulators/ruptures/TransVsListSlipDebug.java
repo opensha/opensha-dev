@@ -23,18 +23,18 @@ import scratch.kevin.simulators.RSQSimCatalog.Loader;
 public class TransVsListSlipDebug {
 
 	public static void main(String[] args) throws IOException {
-		RSQSimCatalog catalog = Catalogs.BRUCE_4950.instance();
-		int eventID = 368122;
-		int patchID = -1;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4950.instance();
+//		int eventID = 368122;
+//		int patchID = -1;
 		
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 //		int eventID = 8324165;
 //		int patchID = -1;
 		
-//		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
-//				"Single SS", null, null);
-//		int eventID = -1;
-//		int patchID = -1;
+		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
+				"Single SS", null, null);
+		int eventID = -1;
+		int patchID = -1;
 		
 		RSQSimStateTransitionFileReader transReader = catalog.getTransitions();
 		transReader.setQuiet(true);
@@ -78,7 +78,7 @@ public class TransVsListSlipDebug {
 		System.out.println("Event occurs at "+eventTime);
 		List<RSQSimStateTime> eventTrans = new ArrayList<>();
 		transReader.getTransitions(event, eventTrans);
-		double eventEndTime = eventTrans.get(eventTrans.size()-1).getStartTime();
+		double eventEndTime = eventTrans.get(eventTrans.size()-1).absoluteTime;
 		System.out.println("Event ends at "+eventEndTime);
 		System.out.println("Event duration: "+(eventEndTime-eventTime));
 		System.out.println("Next event is at "+event.getNextEventTime());
@@ -93,9 +93,6 @@ public class TransVsListSlipDebug {
 //		System.out.println("\tPatch next time: "+patchEndTime);
 //		System.out.println("\tPatch duration: "+(patchEndTime - patchStartTime));
 		
-		double patchVel = transReader.isVariableSlipSpeed() ?
-				Double.NaN : catalog.getSlipVelocities().get(patchID);
-		
 		boolean before = true;
 		boolean during = false;
 		
@@ -109,14 +106,14 @@ public class TransVsListSlipDebug {
 		
 		List<RSQSimStateTime> patchTrans = new ArrayList<>();
 		for (RSQSimStateTime trans : allTrans)
-			if (trans.getPatchID() == patchID)
+			if (trans.patchID == patchID)
 				patchTrans.add(trans);
 		
 		for (int i=0; i<patchTrans.size(); i++) {
 			RSQSimStateTime trans = patchTrans.get(i);
 			
-			double time = trans.getStartTime();
-			double relTime = time - eventTime;
+			double time = trans.absoluteTime;
+			double relTime = trans.relativeTime;
 			
 			if (before && time >= eventTime) {
 				before = false;
@@ -133,10 +130,11 @@ public class TransVsListSlipDebug {
 			}
 			
 			double slip = Double.NaN;
-			double myEndTime = trans.getEndTime();
-			double duration = trans.getDuration();
-			if (trans.getState() == RSQSimState.EARTHQUAKE_SLIP) {
-				double vel = transReader.isVariableSlipSpeed() ? trans.getVelocity() : patchVel;
+			double duration = trans.state == RSQSimState.EARTHQUAKE_SLIP ?
+					trans.getDuration() : Double.NaN;
+			double myEndTime = time+duration;
+			if (trans.state == RSQSimState.EARTHQUAKE_SLIP) {
+				double vel = trans.velocity;
 				slip = vel*duration;
 				
 				if (before)
@@ -146,11 +144,9 @@ public class TransVsListSlipDebug {
 				else
 					afterSlip += slip;
 			}
-			String str = relTime+" => "+(myEndTime-eventTime)+" ("+duration+"): "+trans.getState();
-			if (trans.getState() == RSQSimState.EARTHQUAKE_SLIP) {
-				str += "\tslip="+slip;
-				if (transReader.isVariableSlipSpeed())
-					str += "\tvel="+trans.getVelocity();
+			String str = relTime+" => "+(myEndTime-eventTime)+" ("+duration+"): "+trans.state;
+			if (trans.state == RSQSimState.EARTHQUAKE_SLIP) {
+				str += "\tslip="+slip+"\tvel="+trans.velocity;
 			}
 			System.out.println(str);
 		}

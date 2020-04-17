@@ -28,10 +28,10 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 public class TransTotalPatchSlipCompare {
 
 	public static void main(String[] args) throws IOException {
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4950.instance();
-//		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
-//				"Single SS", null, null);
+		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
+				"Single SS", null, null);
 //		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS_tri"),
 //				"Single SS Triangles", null, null);
 		
@@ -46,42 +46,21 @@ public class TransTotalPatchSlipCompare {
 		}
 		
 		RSQSimStateTransitionFileReader transReader = catalog.getTransitions();
+		System.out.println("Trans version: "+transReader.getVersion());
 		transReader.setQuiet(true);
 		
 		double[] patchTransSlips = new double[catalog.getElements().size()];
-		
-		Map<Integer, RSQSimStateTime> prevEQSlips = new HashMap<>();
-		
-		Map<Integer, Double> patchVels = catalog.getSlipVelocities();
 		
 		int numSlips = 0;
 		double totalTimeSlipping = 0d;
 		
 		System.out.println("Loading trans slips...");
 		for (RSQSimStateTime trans : transReader.getTransitionsIterable(0d, Double.POSITIVE_INFINITY)) {
-			double time = trans.getStartTime();
-			
-			int patchID = trans.getPatchID();
-			if (prevEQSlips.containsKey(patchID)) {
-				// close it out
-				RSQSimStateTime prevTrans = prevEQSlips.get(patchID);
-				double duration = time-prevTrans.getStartTime();
-				double vel = transReader.isVariableSlipSpeed() ? prevTrans.getVelocity() : patchVels.get(patchID);
-				double slip = vel*duration;
-				patchTransSlips[patchID-1] += slip;
-				
-				numSlips++;
-				totalTimeSlipping += duration;
-				
-				prevEQSlips.remove(patchID);
-			}
-			
-			if (trans.getState() == RSQSimState.EARTHQUAKE_SLIP) {
-				prevEQSlips.put(patchID, trans);
+			if (trans.state == RSQSimState.EARTHQUAKE_SLIP) {
+				double slip = trans.velocity*trans.getDuration();
+				patchTransSlips[trans.patchID-1] += slip;
 			}
 		}
-		
-		System.out.println("Done with trans, "+prevEQSlips.size()+" left open");
 		
 		System.out.println("Total number of slips: "+numSlips);
 		System.out.println("Total time slipping: "+totalTimeSlipping);
