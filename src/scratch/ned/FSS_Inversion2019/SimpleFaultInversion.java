@@ -2802,6 +2802,8 @@ public class SimpleFaultInversion {
 		    String label = name+"_RatioToNSHMcombinedMFDCase";
 			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
 		}
+		
+		
 
 		
 		
