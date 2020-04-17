@@ -41,11 +41,15 @@ public class UCERF3_LEC_TreeTrimmer {
 		
 		Table<U3_EAL_LogicTreeBranch, Double, DiscretizedFunc> branchLECs = loadLECs(csvFile);
 		
+		File csvFileEAL = new File(inputDir, "all_branch_results.csv");
+		
+		Table<U3_EAL_LogicTreeBranch, Double, Double> branchEALs = loadEALs(csvFileEAL);
+		
 		DiscretizedFunc totalLEC = calcBranchAveragedLEC(branchLECs.rowKeySet(), branchLECs);
 		totalLEC.setName("Branch Averaged LEC");
 		System.out.println(totalLEC);
 		
-		double[] lecProbLevels = new double[] { 0.01, 0.004, 0.0025, 0.0018, 0.0004 };
+		double[] lecProbLevels = new double[] { Double.NaN, 0.01, 0.004, 0.0025, 0.0018, 0.0004 };
 		
 		HashSet<LogicTreeBranchNode<?>> allChoices = new HashSet<>();
 		for (U3_EAL_LogicTreeBranch branch : branchLECs.rowKeySet())
@@ -55,7 +59,10 @@ public class UCERF3_LEC_TreeTrimmer {
 		U3_EAL_LogicTreeBranch branch0 = branchLECs.cellSet().iterator().next().getRowKey();
 		
 		for (double lecProbLevel : lecProbLevels) {
-			System.out.println("Doing calculation for p="+(float)lecProbLevel);
+			if (lecProbLevel > 0)
+				System.out.println("Doing calculation for p="+(float)lecProbLevel);
+			else
+				System.out.println("Doing calculation for EAL");
 			
 			CSVFile<String> csv = new CSVFile<>(true);
 			List<String> header = new ArrayList<>();
@@ -63,7 +70,10 @@ public class UCERF3_LEC_TreeTrimmer {
 			header.add("Branch Level");
 			header.add("Branch Choice");
 			header.add("Leaf Count");
-			header.add("Loss at P="+(float)lecProbLevel);
+			if (lecProbLevel > 0)
+				header.add("Loss at P="+(float)lecProbLevel);
+			else
+				header.add("Expected Annualized Loss");
 			header.add("Error WRT Full Model");
 			for (int i=0; i<totalLEC.size(); i++) {
 				if (i == 0)
@@ -80,7 +90,11 @@ public class UCERF3_LEC_TreeTrimmer {
 			line.add("Full Tree"); // branch level
 			line.add("N/A"); // branch choice
 			line.add(branches.size()+""); // leaf count
-			double totalLossVal = totalLEC.getFirstInterpolatedX(lecProbLevel);
+			double totalLossVal;
+			if (lecProbLevel > 0)
+				totalLossVal = totalLEC.getFirstInterpolatedX(lecProbLevel);
+			else
+				totalLossVal = calcBranchAveragedEAL(branches, branchEALs);
 			Preconditions.checkState(Double.isFinite(totalLossVal));
 			System.out.println("Complete model value: "+totalLossVal);
 			line.add(totalLossVal+""); // loss at this prob level
@@ -130,7 +144,11 @@ public class UCERF3_LEC_TreeTrimmer {
 						System.out.println("\t\t"+subBranches.size()+" branches");
 						if (!subBranches.isEmpty()) {
 							DiscretizedFunc subLEC = calcBranchAveragedLEC(subBranches, branchLECs);
-							double subLossVal = subLEC.getFirstInterpolatedX(lecProbLevel);
+							double subLossVal;
+							if (lecProbLevel > 0)
+								subLossVal = subLEC.getFirstInterpolatedX(lecProbLevel);
+							else
+								subLossVal = calcBranchAveragedEAL(subBranches, branchEALs);
 							System.out.println("\t\tLoss: "+(float)+subLossVal);
 							double error = Math.abs(subLossVal-totalLossVal)/totalLossVal;
 							System.out.println("\t\tError: "+(float)+error);
@@ -164,7 +182,10 @@ public class UCERF3_LEC_TreeTrimmer {
 				iteration++;
 			}
 			
-			csv.writeToFile(new File(outputDir, "lec_trim_p"+(float)lecProbLevel+".csv"));
+			if (lecProbLevel > 0)
+				csv.writeToFile(new File(outputDir, "lec_trim_p"+(float)lecProbLevel+".csv"));
+			else
+				csv.writeToFile(new File(outputDir, "eal_trim.csv"));
 		}
 	}
 	
@@ -221,6 +242,50 @@ public class UCERF3_LEC_TreeTrimmer {
 		return ret;
 	}
 	
+	private static final int eal_col = 2;
+	private static final int eal_ti_branch_first_col = 5;
+	private static final int eal_td_erf_col = 14;
+	private static final int eal_gmm_col = 15;
+	private static final int eal_gmm_epi_col = 16;
+	private static final int eal_vs30_col = 17;
+	
+	private static Table<U3_EAL_LogicTreeBranch, Double, Double> loadEALs(File csvFile)
+			throws IOException {
+		CSVFile<String> csv = CSVFile.readFile(csvFile, true);
+		
+		System.out.println("Loading EALs...");
+		
+		Table<U3_EAL_LogicTreeBranch, Double, Double> ret = HashBasedTable.create();
+		
+		double totWeight = 0d;
+		
+		int rows = csv.getNumRows();
+		List<Class<? extends LogicTreeBranchNode<?>>> classList = LogicTreeBranch.getLogicTreeNodeClasses();
+		for (int row=1; row<rows; row++) {
+			double eal = csv.getDouble(row, eal_col);
+			double weight = csv.getDouble(row, weight_col);
+			List<LogicTreeBranchNode<?>> tiVals = new ArrayList<>();
+			for (int i=0; i<classList.size(); i++) {
+				String str = csv.get(row, i+eal_ti_branch_first_col);
+				LogicTreeBranchNode<?> match = forShortName(classList.get(i), str);
+				tiVals.add(match);
+			}
+			LogicTreeBranch tiBranch = LogicTreeBranch.fromValues(tiVals);
+			U3_EAL_ProbModels probModel = forShortName(U3_EAL_ProbModels.class, csv.get(row, eal_td_erf_col));
+			U3_EAL_GMMs gmm = forShortName(U3_EAL_GMMs.class, csv.get(row, eal_gmm_col));
+			U3_EAL_GMM_Epistemic gmmEpi = forShortName(U3_EAL_GMM_Epistemic.class, csv.get(row, eal_gmm_epi_col));
+			U3_EAL_Vs30Model vs30 = forShortName(U3_EAL_Vs30Model.class, csv.get(row, eal_vs30_col));
+			U3_EAL_LogicTreeBranch ealBranch = new U3_EAL_LogicTreeBranch(tiBranch, probModel, gmm, gmmEpi, vs30);
+			
+			ret.put(ealBranch, weight, eal);
+			totWeight += weight;
+		}
+		
+		System.out.println("Loaded "+ret.size()+" LECs, total weight: "+totWeight);
+		
+		return ret;
+	}
+	
 	private static <E extends LogicTreeBranchNode<?>> E forShortName(Class<E> clazz, String shortName) {
 		for (E opt : clazz.getEnumConstants())
 			if (opt.getShortName().equals(shortName))
@@ -256,5 +321,24 @@ public class UCERF3_LEC_TreeTrimmer {
 		lec.scale(1d/totWeight);
 		
 		return lec;
+	}
+	
+	private static double calcBranchAveragedEAL(Collection<U3_EAL_LogicTreeBranch> branches,
+			Table<U3_EAL_LogicTreeBranch, Double, Double> branchEALs) {
+		double totEAL = 0d;
+		
+		double totWeight = 0d;
+		
+		for (U3_EAL_LogicTreeBranch branch : branches) {
+			Map<Double, Double> map = branchEALs.row(branch);
+			Preconditions.checkState(map.size() == 1);
+			Double weight = map.keySet().iterator().next();
+			Double branchEAL = map.get(weight);
+			
+			totEAL += weight*branchEAL;
+			totWeight += weight;
+		}
+		// rescale
+		return totEAL/totWeight;
 	}
 }
