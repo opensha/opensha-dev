@@ -1254,7 +1254,7 @@ public class DoubleFaultInversion {
 	    		initialState = tempArray;
 	    		break;
 	    	case FROM_MFD_CONSTRAINT:
-	    		initialState = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD);
+	    		initialState = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD, false);
 	    		break;
 	    	}
 	    }
@@ -1263,7 +1263,7 @@ public class DoubleFaultInversion {
 	    // set the rupture sampler; hard coded for GR for now
 	    IntegerPDF_FunctionSampler rupSampler = null;
 	    if(applyRuptureSampler) {
-		    double[] rupSampleProbArray = fltSysRupInversion.getRupRatesForTargetMFD(getTargetMFD(scalingRel, MFD_TargetType.GR_b_1pt0));
+		    double[] rupSampleProbArray = fltSysRupInversion.getRupRatesForTargetMFD(getTargetMFD(scalingRel, MFD_TargetType.GR_b_1pt0), false);
 		    rupSampler = new IntegerPDF_FunctionSampler(rupSampleProbArray.length);
 		    for(int r=0; r<rupSampleProbArray.length; r++)
 		    	rupSampler.set(r,rupSampleProbArray[r]);	    	

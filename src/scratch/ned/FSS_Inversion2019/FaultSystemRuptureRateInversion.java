@@ -2064,7 +2064,7 @@ public class FaultSystemRuptureRateInversion {
 		rupSamplerMFD.setName("RupSamplerMFD");
 		rupSamplerMFD.normalizeByTotalRate();
 		
-//		System.out.println(rupSampler);
+//System.out.println("\nrupSamplerMFD:\n"+rupSamplerMFD);
 //		System.out.println(rupSamplerMFD);
 //		System.exit(0);
 	}
@@ -3008,8 +3008,8 @@ public class FaultSystemRuptureRateInversion {
 			rupMeanMag[r] = ((double)Math.round(100*mag))/100.0;
 			rupMeanMo[r] = MagUtils.magToMoment(rupMeanMag[r])*gaussMFD_slipCorr;   // increased if magSigma >0
 //			rupAveSlip[r] = rupMeanMo[r]/(rupArea[r]*FaultMomentCalc.SHEAR_MODULUS);  // inlcudes aveSlipCor in rupMeanMo
-			rupAveSlip[r] = magAreaRel.getAveSlip(rupArea[r], rupLength[r], Double.NaN)*gaussMFD_slipCorr;
-
+			rupAveSlip[r] = magAreaRel.getAveSlip(rupArea[r], rupLength[r], rupArea[r]/rupLength[r])*gaussMFD_slipCorr;
+			
 			if(minRupMag>rupMeanMag[r])
 				minRupMag=rupMeanMag[r];
 			if(maxRupMag<rupMeanMag[r])
@@ -3214,7 +3214,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param targetMFD
 	 * @return
 	 */
-	public double[] getRupRatesForTargetMFD(IncrementalMagFreqDist targetMFD) {
+	public double[] getRupRatesForTargetMFD(IncrementalMagFreqDist targetMFD, boolean correctForSegConstraints) {
 		double[] rupRateArray = new double[this.numRuptures];
 		for(int r=0;r<numRuptures;r++) {
 			int index = targetMFD.getClosestXIndex(rupMeanMag[r]);
@@ -3222,57 +3222,60 @@ public class FaultSystemRuptureRateInversion {
 //			rupRateArray[r] = targetMFD.getClosestYtoX(rupMeanMag[r])/meanMagHistorgram.getClosestYtoX(rupMeanMag[r]);
 		}
 		
-	    // adjust initial state for various segmentation type constraints
-		// for slip rate segmentation constraints:
-		if(slipRateSegmentationConstraintList !=null && slipRateSegmentationConstraintList.size()>0) {
-			for(SlipRateSegmentationConstraint srSegConstr : slipRateSegmentationConstraintList) {		
-				int sectID = srSegConstr.getSectIndex();
-				double sectSlipRateTemp = 0;
-				for(int rup=0; rup < numRuptures; rup++) {
-					if(rupSectionMatrix[sectID][rup]==1)
-						sectSlipRateTemp += rupRateArray[rup]*sectSlipInRup[sectID][rup];
+		if(correctForSegConstraints) {
+		    // adjust initial state for various segmentation type constraints
+			// for slip rate segmentation constraints:
+			if(slipRateSegmentationConstraintList !=null && slipRateSegmentationConstraintList.size()>0) {
+				for(SlipRateSegmentationConstraint srSegConstr : slipRateSegmentationConstraintList) {		
+					int sectID = srSegConstr.getSectIndex();
+					double sectSlipRateTemp = 0;
+					for(int rup=0; rup < numRuptures; rup++) {
+						if(rupSectionMatrix[sectID][rup]==1)
+							sectSlipRateTemp += rupRateArray[rup]*sectSlipInRup[sectID][rup];
+					}
+					double scaleFactor = srSegConstr.getSlipRateReductionFactor()*sectSlipRate[sectID]/sectSlipRateTemp;
+					for(int r=0;r<rupRateArray.length;r++) {
+						if(rupSectionMatrix[srSegConstr.getSectIndex()][r] == 1.0)
+							rupRateArray[r] = scaleFactor*rupRateArray[r];
+					}
 				}
-				double scaleFactor = srSegConstr.getSlipRateReductionFactor()*sectSlipRate[sectID]/sectSlipRateTemp;
-				for(int r=0;r<rupRateArray.length;r++) {
-					if(rupSectionMatrix[srSegConstr.getSectIndex()][r] == 1.0)
-						rupRateArray[r] = scaleFactor*rupRateArray[r];
+			}
+			// for segmentation constraints:
+			if(segmentationConstraintList !=null && segmentationConstraintList.size()>0) {
+				for(SegmentationConstraint segConstr : segmentationConstraintList) {		
+					int sect1 = segConstr.getSect1_Index();
+					int sect2 = segConstr.getSect1_Index();
+					double sectRateTemp = 0;
+					for(int r=0; r < numRuptures; r++) {
+						if(rupSectionMatrix[sect1][r]==1 && rupSectionMatrix[sect2][r]==1)
+							sectRateTemp += rupRateArray[r];
+					}
+					double scaleFactor = segConstr.getMeanCoRuptureRate()/sectRateTemp;
+					for(int r=0;r<rupRateArray.length;r++) {
+						if(rupSectionMatrix[sect1][r]==1 && rupSectionMatrix[sect2][r]==1)
+							rupRateArray[r] = scaleFactor*rupRateArray[r];
+					}
+				}
+			}
+		    // for section rate constraints:
+			if(sectionRateConstraints !=null && sectionRateConstraints.size()>0) {
+				for(SectionRateConstraint sectRateConstr : sectionRateConstraints) {		
+					int sectID = sectRateConstr.getSectIndex();
+					double sectRateTemp = 0;
+					for(int r=0; r < numRuptures; r++) {
+						if(rupSectionMatrix[sectID][r]==1)
+							sectRateTemp += rupRateArray[r];
+					}
+					double scaleFactor = sectRateConstr.getMeanRate()/sectRateTemp;
+	//scaleFactor=0;
+					for(int r=0;r<rupRateArray.length;r++) {
+						if(rupSectionMatrix[sectID][r] == 1.0)
+							rupRateArray[r] = scaleFactor*rupRateArray[r];
+					}
 				}
 			}
 		}
-		// for segmentation constraints:
-		if(segmentationConstraintList !=null && segmentationConstraintList.size()>0) {
-			for(SegmentationConstraint segConstr : segmentationConstraintList) {		
-				int sect1 = segConstr.getSect1_Index();
-				int sect2 = segConstr.getSect1_Index();
-				double sectRateTemp = 0;
-				for(int r=0; r < numRuptures; r++) {
-					if(rupSectionMatrix[sect1][r]==1 && rupSectionMatrix[sect2][r]==1)
-						sectRateTemp += rupRateArray[r];
-				}
-				double scaleFactor = segConstr.getMeanCoRuptureRate()/sectRateTemp;
-				for(int r=0;r<rupRateArray.length;r++) {
-					if(rupSectionMatrix[sect1][r]==1 && rupSectionMatrix[sect2][r]==1)
-						rupRateArray[r] = scaleFactor*rupRateArray[r];
-				}
-			}
-		}
-	    // for section rate constraints:
-		if(sectionRateConstraints !=null && sectionRateConstraints.size()>0) {
-			for(SectionRateConstraint sectRateConstr : sectionRateConstraints) {		
-				int sectID = sectRateConstr.getSectIndex();
-				double sectRateTemp = 0;
-				for(int r=0; r < numRuptures; r++) {
-					if(rupSectionMatrix[sectID][r]==1)
-						sectRateTemp += rupRateArray[r];
-				}
-				double scaleFactor = sectRateConstr.getMeanRate()/sectRateTemp;
-//scaleFactor=0;
-				for(int r=0;r<rupRateArray.length;r++) {
-					if(rupSectionMatrix[sectID][r] == 1.0)
-						rupRateArray[r] = scaleFactor*rupRateArray[r];
-				}
-			}
-		}
+		
 
 		return rupRateArray;
 	}
@@ -3286,7 +3289,7 @@ public class FaultSystemRuptureRateInversion {
 		modelRunInfoString = "\nInversion Type = NSHMP Solution\n";
 
 		// set rates from MFD
-		rupRateSolution = getRupRatesForTargetMFD(targetMFD);
+		rupRateSolution = getRupRatesForTargetMFD(targetMFD, false);
 
 		// MINIMUM RATE CONSTRAINT IS INGORED
 

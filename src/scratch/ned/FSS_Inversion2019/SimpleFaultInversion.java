@@ -114,6 +114,9 @@ public class SimpleFaultInversion {
 	int[][] rupSectionMatrix;
 		
 	FaultSectionPrefData parentFaultData;
+	
+	ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+
 
 	public enum InversionSolutionType {
 		FRESH,
@@ -128,14 +131,21 @@ public class SimpleFaultInversion {
 
 	public enum MFD_TargetType {
 		GR_b_0pt32,	// equiv to NSHM combined for EllsworthB
+		GR_b_1pt6,
+		GR_b_1pt4,
+		GR_b_1pt2,
 		GR_b_1pt0,
 		GR_b_0pt8,
+		GR_b_0pt6,
+		GR_b_0pt4,
+		GR_b_0pt2,
 		GR_b_0pt0,
 		GR_b_minus1,
 		MAX_RATE,  // all in minimum magnitude bin
 		MIN_RATE,  // all in maximum magnitude bin
 		M7pt25only,
 		NSHM_Combined,
+		GR_b_0pt8_ForSegmented,
 		NONE;
 	}
 
@@ -164,7 +174,7 @@ public class SimpleFaultInversion {
 	// Adjustable Parameters
 	String dirName;
 	String solutionName; 						// Inversion name
-	boolean shortFault;							// whther fault is ~800 or 1600 km
+	public boolean shortFault=true;							// whther fault is ~800 or 1600 km
 	boolean wtedInversion; 						// Whether to apply data weights
 	SlipRateProfileType slipRateProfile;
 	SlipAlongRuptureModelEnum slipModelType;	// Average slip along rupture model
@@ -726,6 +736,9 @@ public class SimpleFaultInversion {
 				// override default trace width
 				for(PSXYPolygon fltTracePoly: map.getPolys())
 					fltTracePoly.setPenWidth(1);
+				
+				// remove coast and poitical boundaries
+				map.setCoast(null);
 
 				try {
 					FaultBasedMapGen.SAVE_ZIPS=true;
@@ -814,38 +827,70 @@ public class SimpleFaultInversion {
 	 
 	 public void plotNormPDF_FromMultHazMaps(GriddedGeoDataSet[] griddedHazDataArray, String label, String hazDirName, boolean popupWindow) {
 		 
-		HistogramFunction ratioHistogram = new HistogramFunction(0.0,200,0.05);
+		int numMaps = griddedHazDataArray.length;
+
+		ArrayList<HistogramFunction> ratioHistogramList = new ArrayList<HistogramFunction>();
+		for(int j=0;j<numMaps;j++)
+			ratioHistogramList.add(new HistogramFunction(0.51,80,0.02));
+		HistogramFunction ratioHistogram = new HistogramFunction(0.51,80,0.02);
 		ArbDiscrEmpiricalDistFunc ratioData = new ArbDiscrEmpiricalDistFunc();
 		int numLocs = griddedHazDataArray[0].size();
-		int numMaps = griddedHazDataArray.length;
 		double minRatio = Double.MAX_VALUE;
 		double maxRatio = 0.0;
+		double fractMoreThan10percASway = 0;
+		double[] meanArray = new double[numLocs];
 		for(int i=0;i<numLocs;i++) {
 			double mean = 0;
 			for(int j=0;j<numMaps;j++) 
 				mean += griddedHazDataArray[j].get(i);
 			mean /= (double)numMaps;
+			meanArray[i] = mean;
 			for(int j=0;j<numMaps;j++) {
 				double ratio = griddedHazDataArray[j].get(i)/mean;
 				ratioHistogram.add(ratio, 1.0);
+				ratioHistogramList.get(j).add(ratio, 1.0);
 				ratioData.set(ratio,1.0);
 				if(minRatio>ratio) minRatio=ratio;
 				if(maxRatio<ratio) maxRatio=ratio;
+				if(ratio>1.1 || ratio<0.9) {
+					fractMoreThan10percASway += 1;
+				}
+			}
+		}
+		fractMoreThan10percASway /= ratioData.size();
+		
+		// find which dataset is closest to the mean
+		int closestIndex = -1;
+		double closestVal = Double.MAX_VALUE;
+		for(int j=0;j<numMaps;j++) {
+			double sum = 0;
+			for(int i=0;i<numLocs;i++) 
+				sum += Math.abs((griddedHazDataArray[j].get(i) - meanArray[i])/meanArray[i]);
+			sum /= (double)numLocs;
+			if(sum<closestVal) {
+				closestVal=sum;
+				closestIndex = j;
 			}
 		}
 
+		
+		double numData = ratioHistogram.calcSumOfY_Vals();
 		ArrayList<XY_DataSet> funcs = new ArrayList<XY_DataSet>();
 		ratioHistogram.setName(label+"Ratio Histogram");
-		ratioHistogram.setInfo("\nNum Data = "+(float)ratioHistogram.calcSumOfY_Vals()+"\nCOV from Hist = "+(float)ratioHistogram.computeCOV()+
-		"\nCOV from Data = "+(float)ratioData.getCOV()+"\nminRatio = "+(float)minRatio+"\nmaxRatio = "+(float)maxRatio);
+		ratioHistogram.setInfo("\nNum Data = "+(float)numData+"\nCOV from Hist = "+(float)ratioHistogram.computeCOV()+
+		"\nCOV from Data = "+(float)ratioData.getCOV()+"\nminRatio = "+(float)minRatio+"\nmaxRatio = "+(float)maxRatio+
+		"\nFraction More Than 10% Away From 1.0: "+(float)fractMoreThan10percASway+"\n Data set "+closestIndex+
+		" is closest to mean (ave abs norm diff = "+(float)closestVal+")");
 		ratioHistogram.normalizeBySumOfY_Vals();
 		funcs.add(ratioHistogram);
+		
+		if(D) System.out.println(label+ ": data set "+closestIndex+" is closest to mean");
 		
 		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLUE));
 		
-		double minX=0.0;
-		double maxX=2.0;
+		double minX=0.5;
+		double maxX=1.5;
 
 		String fileNamePrefix = null;
 		if(hazDirName != null)
@@ -863,7 +908,7 @@ public class SimpleFaultInversion {
 
 		ArrayList<XY_DataSet> funcs2 = new ArrayList<XY_DataSet>();
 		ArbitrarilyDiscretizedFunc cumDist = ratioData.getCumDist();
-		cumDist.scale(1.0/cumDist.calcSumOfY_Vals());
+		cumDist.scale(1.0/cumDist.getMaxY());
 		funcs2.add(cumDist);
 		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
@@ -876,8 +921,43 @@ public class SimpleFaultInversion {
 		FaultSystemRuptureRateInversion.writeAndOrPlotFuncs(funcs2, plotChars2, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
 
+		
+		
+		// stacked histograms
+		ArrayList<Color> colorList = new ArrayList<Color>();
+		colorList.add(new Color(128,0,128)); colorList.add(Color.BLUE); colorList.add(Color.CYAN); colorList.add(Color.GREEN); colorList.add(Color.LIGHT_GRAY); 
+		colorList.add(Color.YELLOW); colorList.add(Color.ORANGE); colorList.add(Color.RED); colorList.add(Color.MAGENTA); 
+		colorList.add(Color.DARK_GRAY); colorList.add(Color.GRAY); 
+		
+		HistogramFunction testRatioHistogram = new HistogramFunction(0.51,80,0.02);
+		ArrayList<XY_DataSet> funcs3 = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> plotChars3 = new ArrayList<PlotCurveCharacterstics>();
+		for(int j=0;j<numMaps;j++) {
+			ratioHistogramList.get(j).scale(1.0/numData);;
+			plotChars3.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, colorList.get(j)));
+			for(int k=0;k<testRatioHistogram.size();k++)
+				testRatioHistogram.add(k, ratioHistogramList.get(j).getY(k));
+		}
+		
+		 for(HistogramFunction func : HistogramFunction.getStackedHists(ratioHistogramList, true))
+				 funcs3.add(func);
+		
+//		for(int k=0;k<testRatioHistogram.size();k++)
+//			System.out.println((float)testRatioHistogram.getY(k)+"\t"+(float)ratioHistogram.getY(k));
 
+		fileNamePrefix = null;
+		if(hazDirName != null)
+			fileNamePrefix = hazDirName+"/"+label+"_NormPDF_Stacked";
+		plotName =label+"_NormPDF";
+		xAxisLabel = "Ratio";
+		yAxisLabel = "PDF";
+		xAxisRange = new Range(minX,maxX);
+		yAxisRange = null;
+		logX = false;
+		logY = false;
 
+		FaultSystemRuptureRateInversion.writeAndOrPlotFuncs(funcs3, plotChars3, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
 	 }
 	
 	
@@ -932,7 +1012,6 @@ public class SimpleFaultInversion {
 		erf.updateForecast();
 		
 		// set the attenuation relationship (GMPE)
-		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
 		imr.setParamDefaults();
 		
 		// set the IMT & curve x-axis values
@@ -1079,7 +1158,7 @@ public class SimpleFaultInversion {
 
 		
 		double[] ratioArray = new double[data1.size()];
-		double numMoreThan10percASway = 0;
+		double fractMoreThan10percASway = 0;
 		double aveAbsValDiff = 0;
 		double min = Double.MAX_VALUE;
 		double max = 0;
@@ -1094,7 +1173,7 @@ public class SimpleFaultInversion {
 			ratioArray[i] = ratio;
 			aveAbsValDiff += Math.abs(ratio-1.0)/ratioArray.length;
 			if(ratio>1.1 || ratio<0.9) {
-				numMoreThan10percASway += 1;
+				fractMoreThan10percASway += 1;
 			}
 			if(min>ratio) {
 				min=ratio;
@@ -1109,7 +1188,7 @@ public class SimpleFaultInversion {
 				equalLoc = data1.getLocation(i);
 			}
 		}
-		numMoreThan10percASway /= (double)data1.size();
+		fractMoreThan10percASway /= (double)data1.size();
 		double mean = StatUtils.mean(ratioArray);
 		double cov = Math.sqrt(StatUtils.populationVariance(ratioArray)) / mean;
 		aveAbsValDiff /= mean; // normalize so it's fractional diff
@@ -1170,7 +1249,7 @@ public class SimpleFaultInversion {
 			ratioHistogram.setName("ratioHistogram");
 			ratioHistogram.setInfo("Num Data = "+(float)ratioHistogram.calcSumOfY_Vals()+"\nMean = "+mean+
 					"\nFraction More Than 10% Away From 1.0: "+
-					numMoreThan10percASway+"\nCOV = "+(float)cov+
+					fractMoreThan10percASway+"\nCOV = "+(float)cov+
 					"\nAveAbsValDiff (mean normalized) = "+(float)aveAbsValDiff+
 					"\nminRatio = "+(float)min+" at lat/lon: "+minLoc.getLatitude()+", "+minLoc.getLongitude()+
 					"\nmaxRatio = "+(float)max+" at lat/lon: "+maxLoc.getLatitude()+", "+maxLoc.getLongitude()+
@@ -1332,6 +1411,31 @@ public class SimpleFaultInversion {
 
 	}
 	
+	private static void corrMoRateForScalingRelationship(ScalingRelationshipEnum scalingRel, IncrementalMagFreqDist mfd,
+			double downDipWidthMeters) {
+			
+		double moRate = mfd.getTotalMomentRate();
+		double logAreaMinMeters = Math.log10(10*1e6);	// 10 km-sq
+		double logAreaMaxMeters = Math.log10(50000*1e6);//50,000 km-sq
+		EvenlyDiscretizedFunc magAreaFunc = new EvenlyDiscretizedFunc(logAreaMinMeters, logAreaMaxMeters, 200);
+		for(int i=0;i<magAreaFunc.size();i++) {
+			double areaSqM = Math.pow(10,magAreaFunc.getX(i));
+			double length = areaSqM/downDipWidthMeters;
+			magAreaFunc.set(i, scalingRel.getMag(areaSqM, length, downDipWidthMeters));
+		}
+		double moRate2 = 0;
+		for(int i=0;i<mfd.size();i++) {
+			double mag = mfd.getX(i);
+			double area = Math.pow(10, magAreaFunc.getFirstInterpolatedX(mag));
+			double slip = scalingRel.getAveSlip(area, area/downDipWidthMeters, downDipWidthMeters);
+			double moment = FaultMomentCalc.getMoment(area, slip);
+			moRate2+=moment*mfd.getY(i);
+		}
+		mfd.scale(moRate/moRate2);
+//		System.out.println(scalingRel+" correction: "+(float)(moRate2/moRate));
+//		System.exit(-1);	
+	}
+	
 	
 	public IncrementalMagFreqDist getTargetMFD(ScalingRelationshipEnum scalingRel, MFD_TargetType mfdType) {
 
@@ -1358,10 +1462,28 @@ public class SimpleFaultInversion {
 			gr.setName("GR, b=0.32");
 			mfd = gr;
 			break;
+		case GR_b_1pt6:
+			GutenbergRichterMagFreqDist gr_b1p6 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_b1p6.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 1.6);
+			gr_b1p6.setName("GR, b=1.6");
+			mfd = gr_b1p6;
+			break;
+		case GR_b_1pt4:
+			GutenbergRichterMagFreqDist gr_b1p4 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_b1p4.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 1.4);
+			gr_b1p4.setName("GR, b=1.4");
+			mfd = gr_b1p4;
+			break;
+		case GR_b_1pt2:
+			GutenbergRichterMagFreqDist gr_b1p2 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_b1p2.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 1.2);
+			gr_b1p2.setName("GR, b=1.2");
+			mfd = gr_b1p2;
+			break;
 		case GR_b_1pt0:
 			GutenbergRichterMagFreqDist gr_b1 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
 			gr_b1.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 1.0);
-			gr_b1.setName("GR, b=1");
+			gr_b1.setName("GR, b=1.0");
 			mfd = gr_b1;
 			break;
 		case GR_b_0pt8:
@@ -1370,10 +1492,37 @@ public class SimpleFaultInversion {
 			gr_b0p8.setName("GR, b=0.8");
 			mfd = gr_b0p8;
 			break;
+		case GR_b_0pt8_ForSegmented:
+			GutenbergRichterMagFreqDist tempGR = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			tempGR.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 0.8);
+			mfd = new IncrementalMagFreqDist(minMFD_Mag,num-5,0.1);	// skip M>7.75
+			for(int i=0;i<mfd.size();i++)
+				if(i != 1) // skip the empty cell
+					mfd.set(i, tempGR.getY(i));
+			mfd.scaleToTotalMomentRate(toMoRate);
+			break;
+		case GR_b_0pt6:
+			GutenbergRichterMagFreqDist gr_b0p6 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_b0p6.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 0.6);
+			gr_b0p6.setName("GR, b=0.6");
+			mfd = gr_b0p6;
+			break;
+		case GR_b_0pt4:
+			GutenbergRichterMagFreqDist gr_b0p4 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_b0p4.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 0.4);
+			gr_b0p4.setName("GR, b=0.4");
+			mfd = gr_b0p4;
+			break;
+		case GR_b_0pt2:
+			GutenbergRichterMagFreqDist gr_b0p2 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
+			gr_b0p2.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 0.2);
+			gr_b0p2.setName("GR, b=0.2");
+			mfd = gr_b0p2;
+			break;
 		case GR_b_0pt0:
 			GutenbergRichterMagFreqDist gr_b0 = new GutenbergRichterMagFreqDist(minMFD_Mag,num,0.1);
 			gr_b0.setAllButTotCumRate(minMFD_Mag, maxMFD_Mag, toMoRate, 0.0);
-			gr_b0.setName("GR, b=1");
+			gr_b0.setName("GR, b=0.0");
 			mfd = gr_b0;
 			break;
 		case GR_b_minus1:
@@ -1423,6 +1572,9 @@ public class SimpleFaultInversion {
 			mfd = null;
 			break;
 		}
+		
+		if(scalingRel == ScalingRelationshipEnum.ELLB_SQRT_LENGTH || scalingRel == ScalingRelationshipEnum.SHAW_CONST_STRESS_DROP)
+			corrMoRateForScalingRelationship(scalingRel, mfd, (LOWER_SEIS_DEPTH-UPPER_SEIS_DEPTH)*1e3);
 
 		return mfd;
 	}
@@ -1434,7 +1586,7 @@ public class SimpleFaultInversion {
 	public void setDefaultParameterValuess() {
 		 dirName = ROOT_PATH+"NoNameOutput";
 		 solutionName = "No Name Solution"; // Inversion name
-		 shortFault = true;
+//		 shortFault = true;	// change this elsewhere
 		 wtedInversion = true; // Whether to apply data weights
 		 slipRateProfile = SlipRateProfileType.TAPERED;
 		 slipModelType = SlipAlongRuptureModelEnum.TAPERED; // Average slip along rupture model
@@ -1489,7 +1641,7 @@ public class SimpleFaultInversion {
 	/**
 	 * This generates a solution and diagnostic info for the current parameter settings
 	 */
-	public void getSolution(boolean rePlotOny) {	
+	public FaultSystemRuptureRateInversion getSolution(boolean rePlotOny) {	
 		if(randomSeed == 0)
 			randomSeed = System.currentTimeMillis();
 		initData();
@@ -1565,13 +1717,14 @@ public class SimpleFaultInversion {
 		    if(applyRuptureSampler) {
 		    	double[] rupSampleProbArray;
 		    	if(targetMFD == null)	// GR is default
-			    	rupSampleProbArray = fltSysRupInversion.getRupRatesForTargetMFD(getTargetMFD(scalingRel, MFD_TargetType.GR_b_1pt0));
+			    	rupSampleProbArray = fltSysRupInversion.getRupRatesForTargetMFD(getTargetMFD(scalingRel, MFD_TargetType.GR_b_1pt0), false);
 		    	else
-		    		rupSampleProbArray = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD);
+		    		rupSampleProbArray = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD, false);
 			    rupSampler = new IntegerPDF_FunctionSampler(rupSampleProbArray.length);
 			    for(int r=0; r<rupSampleProbArray.length; r++)
 			    	rupSampler.set(r,rupSampleProbArray[r]);	
 			    // do this here so re-plot includes this MFD
+// System.out.println("targetMFD:\n"+targetMFD);
 			    fltSysRupInversion.computeRupSamplerMFD(rupSampler);
 		    }
 	    }
@@ -1604,7 +1757,7 @@ public class SimpleFaultInversion {
 		}
 
 
-		// set the intial state & rupSampler if SA
+		// set the initial state & rupSampler if SA
 	    double[] initialState = null;
 	    if(solutionType == InversionSolutionType.SIMULATED_ANNEALING) {
 	    	switch(initialStateType) {
@@ -1618,7 +1771,7 @@ public class SimpleFaultInversion {
 	    		initialState = tempArray;
 	    		break;
 	    	case FROM_MFD_CONSTRAINT:
-	    		initialState = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD);
+	    		initialState = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD, false);
 	    		break;
 	    	}
 	    }
@@ -1752,6 +1905,8 @@ public class SimpleFaultInversion {
 			}
 		}
 		if(D) System.out.println("Done getting solution");
+		
+		return fltSysRupInversion;
 		
 	}
 
@@ -1936,28 +2091,7 @@ public class SimpleFaultInversion {
 	}
 	
 	
-	public void doSegConstrainedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
-			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
-		
-		doSegConstrainedSA(rePlotOny, slipRateProfile, slipModelType, scalingRel, numSim, finalEnergy, null, 0.0, false);
-		
-//		this.setDefaultParameterValuess();
-//		this.slipRateProfile = slipRateProfile;
-//		this.slipModelType = slipModelType;
-//		this.scalingRel = scalingRel;
-//		segmentationConstrList.add(new SegmentationConstraint("Test Seg Const", 58, 59, 5e-4, 5e-6));
-//		this.relative_segmentationConstrWt = 1.0;
-//		// make the solution
-//		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
-//		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
-//		numSolutions = numSim; 
-//		solutionName = "DoubleFltSegConstrSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_"+scalingRel.toString(); // Inversion name
-//		dirName = ROOT_PATH+solutionName;
-//		getSolution(rePlotOny);
-	}
-	
-	
-	public void doSegConstrainedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+	public void doSegConstrainedSA_old(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
 			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState) {
 		this.setDefaultParameterValuess();
 		this.slipRateProfile = slipRateProfile;
@@ -1985,40 +2119,60 @@ public class SimpleFaultInversion {
 		dirName = ROOT_PATH+solutionName;
 		getSolution(rePlotOny);
 	}
+	
+	public void doSegConstrainedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, 
+			double mfdWt, boolean asInitState, ArrayList<SegmentationConstraint> segConstrList, String sectInfo, boolean applyRupSampler, 
+			boolean makeHazardMaps) {
+		this.setDefaultParameterValuess();
+		this.makeHazardMaps = makeHazardMaps;
+		this.applyRuptureSampler = applyRupSampler;
+		this.slipRateProfile = slipRateProfile;
+		this.segmentationConstrList = segConstrList;
+		this.relative_segmentationConstrWt = 1.0;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		this.mfdTargetType = mfdTargetType;
+		relativeMFD_constraintWt = mfdWt; // Target MFD Constraint Wt
+		String initStateString = "";
+		if(asInitState) {
+			initStateString = "_initSol";
+			initialStateType = SA_InitialStateType.FROM_MFD_CONSTRAINT;
+		}
+		String prefix = "";
+		if(!shortFault)
+			prefix = "LongFlt_";
+
+		// make the solution
+		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
+		numSolutions = numSim; 
+		solutionName = prefix+"SegConstrSA_"+numSolutions+"_finalE="+finalEnergy+"_"+"_"+mfdTargetType+"_wt"+Math.round(mfdWt)+"_"+
+				slipRateProfile.toString()+"_"+slipModelType.toString()+"_"+scalingRel.toString()+initStateString+"_"+sectInfo; // Inversion name
+		if(applyRuptureSampler)
+			solutionName+= "_rupSamp";
+		dirName = ROOT_PATH+solutionName;
+		getSolution(rePlotOny);
+	
+	}
+
 
 	
 	
-	public void doSectRateConstrSegSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
-			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
-		doSectRateConstrSegSA(rePlotOny, slipRateProfile, slipModelType, scalingRel, numSim, finalEnergy, null, 0, false);
-		
-//		this.setDefaultParameterValuess();
-//		this.slipRateProfile = slipRateProfile;
-//		this.slipModelType = slipModelType;
-//		this.scalingRel = scalingRel;
-//		this.relativeSectRateWt = 1;
-//		SectionRateConstraint sectRateConstr = new SectionRateConstraint("Test Sect Constr", 58, 5e-4, 5e-6);
-//		sectionRateConstraintList.add(sectRateConstr);
-//		this.relative_segmentationConstrWt = 1.0;
-//		// make the solution
-//		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
-//		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
-//		numSolutions = numSim; 
-//		solutionName = "DoubleSectRateConstrSegSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_"+scalingRel.toString(); // Inversion name
-//		dirName = ROOT_PATH+solutionName;
-//		getSolution(rePlotOny);
-	}
-	
-	public void doSectRateConstrSegSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
-			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState) {
+	public void OLDdoSectRateConstrSegSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState,
+			ArrayList<SectionRateConstraint> segConstrList, String segInfo, boolean applyRupSampler, boolean makeHazardMaps) {
 		this.setDefaultParameterValuess();
+		this.makeHazardMaps = makeHazardMaps;
 		this.slipRateProfile = slipRateProfile;
 		this.slipModelType = slipModelType;
 		this.scalingRel = scalingRel;
 		this.relativeSectRateWt = 1;
-		SectionRateConstraint sectRateConstr = new SectionRateConstraint("Test Sect Constr", 58, 5e-4, 5e-6);
-		sectionRateConstraintList.add(sectRateConstr);
+	//	SectionRateConstraint sectRateConstr = new SectionRateConstraint("Test Sect Constr", 58, 5e-4, 5e-6);
+		sectionRateConstraintList = segConstrList;
 		this.relative_segmentationConstrWt = 1.0;
+		
+		
 		String namePrefix = "DoubleSectRateConstrSegSA_";
 		String initStateString = "";
 		if(mfdTargetType != null) {
@@ -2046,7 +2200,7 @@ public class SimpleFaultInversion {
 		getSolution(rePlotOny);
 	}
 	
-	public void doSectRateConstrSegTwoPtsSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+	public void old_doSectRateConstrSegTwoPtsSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
 			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState) {
 		this.setDefaultParameterValuess();
 		this.slipRateProfile = slipRateProfile;
@@ -2118,28 +2272,13 @@ public class SimpleFaultInversion {
 
 	
 	public void doSlipRateSegmentedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
-			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy) {
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, 
+			double mfdWt, boolean asInitState, ArrayList<SlipRateSegmentationConstraint> segConstrList, String segInfo, boolean applyRupSampler, boolean makeHazardMaps) {
 		this.setDefaultParameterValuess();
+		this.makeHazardMaps = makeHazardMaps;
+		this.applyRuptureSampler = applyRupSampler;
 		this.slipRateProfile = slipRateProfile;
-		this.slipRateSegmentationConstraintList.add(new SlipRateSegmentationConstraint("sect58", 58, 0.1, 0.001));
-		this.slipModelType = slipModelType;
-		this.scalingRel = scalingRel;
-		// make the solution
-		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
-		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
-		numSolutions = numSim; 
-		solutionName = "DoubleFltSlipRateSegSA_"+numSolutions+"_finalE="+finalEnergy+"_"+slipRateProfile.toString()+"_"+slipModelType.toString()+"_"+scalingRel.toString(); // Inversion name
-		dirName = ROOT_PATH+solutionName;
-		getSolution(rePlotOny);
-	
-	}
-	
-	
-	public void doSlipRateSegmentedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
-			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState) {
-		this.setDefaultParameterValuess();
-		this.slipRateProfile = slipRateProfile;
-		this.slipRateSegmentationConstraintList.add(new SlipRateSegmentationConstraint("sect58", 58, 0.1, 0.001));
+		slipRateSegmentationConstraintList = segConstrList;
 		this.slipModelType = slipModelType;
 		this.scalingRel = scalingRel;
 		this.mfdTargetType = mfdTargetType;
@@ -2149,25 +2288,65 @@ public class SimpleFaultInversion {
 			initStateString = "_initSol";
 			initialStateType = SA_InitialStateType.FROM_MFD_CONSTRAINT;
 		}
+		String prefix = "";
+		if(!shortFault)
+			prefix = "LongFlt_";
 
 		// make the solution
 		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
 		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
 		numSolutions = numSim; 
-		solutionName = "DoubleFltSlipRateSegSA_wMFD_"+numSolutions+"_finalE="+finalEnergy+"_"+
-		slipRateProfile.toString()+"_"+slipModelType.toString()+"_"+scalingRel.toString()+initStateString; // Inversion name
+		solutionName = prefix+"SlipRateSegSA_"+numSolutions+"_finalE="+finalEnergy+"_"+"_"+mfdTargetType+"_wt"+Math.round(mfdWt)+"_"+
+				slipRateProfile.toString()+"_"+slipModelType.toString()+"_"+scalingRel.toString()+initStateString+"_"+segInfo; // Inversion name
+		if(applyRuptureSampler)
+			solutionName+= "_rupSamp";
 		dirName = ROOT_PATH+solutionName;
 		getSolution(rePlotOny);
 	
 	}
 	
 	
+	public void doSectRateConstrSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+			ScalingRelationshipEnum scalingRel, int numSim, double finalEnergy, MFD_TargetType mfdTargetType, 
+			double mfdWt, boolean asInitState, ArrayList<SectionRateConstraint> sectConstrList, String sectInfo, boolean applyRupSampler, 
+			boolean makeHazardMaps) {
+		this.setDefaultParameterValuess();
+		this.makeHazardMaps = makeHazardMaps;
+		this.applyRuptureSampler = applyRupSampler;
+		this.slipRateProfile = slipRateProfile;
+		this.sectionRateConstraintList = sectConstrList;
+		this.relativeSectRateWt = 1.0;
+		this.slipModelType = slipModelType;
+		this.scalingRel = scalingRel;
+		this.mfdTargetType = mfdTargetType;
+		relativeMFD_constraintWt = mfdWt; // Target MFD Constraint Wt
+		String initStateString = "";
+		if(asInitState) {
+			initStateString = "_initSol";
+			initialStateType = SA_InitialStateType.FROM_MFD_CONSTRAINT;
+		}
+		String prefix = "";
+		if(!shortFault)
+			prefix = "LongFlt_";
+
+		// make the solution
+		solutionType = InversionSolutionType.SIMULATED_ANNEALING;
+		completionCriteria = new EnergyCompletionCriteria(finalEnergy);	// number of rows/subsections
+		numSolutions = numSim; 
+		solutionName = prefix+"SectRateConstrSA_"+numSolutions+"_finalE="+finalEnergy+"_"+"_"+mfdTargetType+"_wt"+Math.round(mfdWt)+"_"+
+				slipRateProfile.toString()+"_"+slipModelType.toString()+"_"+scalingRel.toString()+initStateString+"_"+sectInfo; // Inversion name
+		if(applyRuptureSampler)
+			solutionName+= "_rupSamp";
+		dirName = ROOT_PATH+solutionName;
+		getSolution(rePlotOny);
 	
+	}
 
 
+
 	
 	
-	public void doMFDconstrainedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
+	public FaultSystemRuptureRateInversion doMFDconstrainedSA(boolean rePlotOny, SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
 			ScalingRelationshipEnum scalingRel, int numSim, MFD_TargetType mfdTargetType, double mfdWt, boolean asInitState, 
 			double finalEnergy, boolean applyRupSampler, boolean makeHazardMaps) {
 		this.setDefaultParameterValuess();
@@ -2198,7 +2377,7 @@ public class SimpleFaultInversion {
 		if(applyRuptureSampler)
 			solutionName+= "_rupSamp";
 		dirName = ROOT_PATH+solutionName;
-		getSolution(rePlotOny);
+		return getSolution(rePlotOny);
 	
 	}
 	
@@ -2265,7 +2444,8 @@ public class SimpleFaultInversion {
 	 * @param mfdTargetType
 	 */
 	public void doFRESH_Solution(SlipRateProfileType slipRateProfile, SlipAlongRuptureModelEnum slipModelType, 
-			ScalingRelationshipEnum scalingRel, MFD_TargetType mfdTargetType, boolean makeHazardMaps, LocationList hazCurveLocList, ArrayList<String> hazCurveLocNameList) {
+			ScalingRelationshipEnum scalingRel, MFD_TargetType mfdTargetType, boolean makeHazardMaps, 
+			LocationList hazCurveLocList, ArrayList<String> hazCurveLocNameList) {
 		this.setDefaultParameterValuess();
 		this.hazCurveLocList = hazCurveLocList;
 		this.hazCurveLocNameList = hazCurveLocNameList;
@@ -2399,6 +2579,33 @@ public class SimpleFaultInversion {
 		}
 
 		
+	}
+	
+	public void computeHazardForGMM() {
+		
+		// get the reference model (don't recompute and don't compute hazard)
+		FaultSystemRuptureRateInversion solution = doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt8, 1, false, 5, false, false);
+
+		ArrayList<ScalarIMR> imrList = new ArrayList<ScalarIMR>();
+		imrList.add(AttenRelRef.BSSA_2014.instance(null));
+		imrList.add(AttenRelRef.CB_2014.instance(null));
+		imrList.add(AttenRelRef.CY_2014.instance(null));
+		imrList.add(AttenRelRef.ASK_2014.instance(null));
+		
+		double[] saPeriodForHazArray = {0.0, 1.0};
+
+		dirName = ROOT_PATH+"/GMM_OptionsHazardVariability";
+		File file = new File(dirName);
+		file.mkdirs();
+		
+		for(ScalarIMR imrToApply:imrList) {
+			this.imr = imrToApply;
+			System.out.println("Working on GMM "+imr.getShortName());
+			for(double saPeriodForHaz : saPeriodForHazArray) {
+				String subDirName = dirName+"/"+imr.getShortName()+"_HazardMaps";
+				makeHazardMaps(solution, saPeriodForHaz, subDirName, popUpPlots);
+			}			
+		}
 	}
 
 	
@@ -2549,9 +2756,8 @@ public class SimpleFaultInversion {
 //		faultInversion.doUnconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5, false, false);
 //		faultInversion.doUnconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5, false, false);
 
-		
-		// Apply default b=1 initial solution; this took <? min; 
-		faultInversion.doUnconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5, true, false);
+		// Apply default b=1 initial solution; this took 22 min; 
+//		faultInversion.doUnconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5, true, false);
 
 		// this took <5 min; using the rup sampler leads to a different final solution (uses default b=1)
 //		faultInversion.doUnconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 5, false, true);
@@ -2763,7 +2969,7 @@ public class SimpleFaultInversion {
 //			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
 //		}
 
-		// ratio of tot-rate to MFD constrained; b=-1; min=0.955 & max=1.051; max ave norm abs diff is 1.018; COV = 0.02
+		// ratio of tot-rate to MFD constrained; b=-1; min=0.955 & max=1.051; max ave norm abs diff is 0.018; COV = 0.02
 //		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
 //		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
 //		for(String name: nameArray) {
@@ -2793,23 +2999,134 @@ public class SimpleFaultInversion {
 		
 		// the following is NSHM Combined MFD and fitting slip rates; hazard ratios are significantly smaller (less than 2% of points are more than 10% away, on ave)
 //		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.NSHM_Combined, 1, false, 5, true, true);
-		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
-		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
-		for(String name: nameArray) {
-		    String fileName1 = ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt32_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt";
-		    String fileName2 = ROOT_PATH+"MFDconstrSA_10_finalE=5.0_NSHM_Combined_wt1_TAPERED_TAPERED_ELLSWORTH_B_rupSamp/hazardMaps/"+name+".txt";
-		    String dirName = ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt32_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps";
-		    String label = name+"_RatioToNSHMcombinedMFDCase";
-			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
-		}
+//		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//		    String fileName1 = ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt32_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt";
+//		    String fileName2 = ROOT_PATH+"MFDconstrSA_10_finalE=5.0_NSHM_Combined_wt1_TAPERED_TAPERED_ELLSWORTH_B_rupSamp/hazardMaps/"+name+".txt";
+//		    String dirName = ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt32_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps";
+//		    String label = name+"_RatioToNSHMcombinedMFDCase";
+//			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+//		}
 		
 		
+		
+		// Do a range of GR bValues
+		// 26 min
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt2, 1, false, 5, false, true);
+		// 20 min
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt4, 1, false, 5, false, true);
+		// 16 min
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt6, 1, false, 5, false, true);
+		// 15 min
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt8, 1, false, 5, false, true);
+		// 16 min
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt2, 1, false, 5, false, true);
+		// 19 min
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt4, 1, false, 5, false, true);
+		//  min
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt6, 1, false, 5, false, true);
+
+//		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//			ArrayList<String> fileNameList = new ArrayList<String>();
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_1pt6_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_1pt4_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_1pt2_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt8_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt"); // this one is closest to the mean
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt6_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt4_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt2_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_0pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//		    String label = name+"_GR_bValueRange0p0To1p6";
+//		    String dirName = ROOT_PATH+"GR_bValueRange0p0To1p6_HazardVariability";
+//			File tempFile = new File(dirName); tempFile.mkdirs();
+//		    GriddedGeoDataSet[] dataArray = faultInversion.readMultipleHazardMapGriddedData(fileNameList);
+//		    faultInversion.plotNormPDF_FromMultHazMaps(dataArray, label, dirName, true);
+//		}
+
+		
+		// Do different scaling relationships for b=0.8
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.HANKS_BAKUN_08, 10, MFD_TargetType.GR_b_0pt8, 1, false, 5, false, true);
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLB_SQRT_LENGTH, 10, MFD_TargetType.GR_b_0pt8, 1, false, 5, false, true);
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.SHAW_CONST_STRESS_DROP, 10, MFD_TargetType.GR_b_0pt8, 1, false, 105, false, true);
+		// this skips a mag bin so E cannot get below 100
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.SHAW_2009_MOD, 10, MFD_TargetType.GR_b_0pt8, 1, false, 105, false, true);
+//		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//			ArrayList<String> fileNameList = new ArrayList<String>();
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt8_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=105.0_GR_b_0pt8_wt1_TAPERED_TAPERED_SHAW_2009_MOD/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=105.0_GR_b_0pt8_wt1_TAPERED_TAPERED_SHAW_CONST_STRESS_DROP/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt8_wt1_TAPERED_TAPERED_ELLB_SQRT_LENGTH/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt8_wt1_TAPERED_TAPERED_HANKS_BAKUN_08/hazardMaps/"+name+".txt"); // this one is closest to the mean
+//		    String label = name+"_ScalingRelationshipOptions";
+//		    String dirName = ROOT_PATH+"ScalingRelationshipOptionsHazardVariability";
+//			File tempFile = new File(dirName); tempFile.mkdirs();
+//		    GriddedGeoDataSet[] dataArray = faultInversion.readMultipleHazardMapGriddedData(fileNameList);
+//		    faultInversion.plotNormPDF_FromMultHazMaps(dataArray, label, dirName, true);
+//		}
+
+		// Do alternate SlipAlongRuptureModel
+//		faultInversion.doMFDconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt8, 1, false, 5, false, true);
+//		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//			ArrayList<String> fileNameList = new ArrayList<String>();
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt8_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt8_wt1_TAPERED_UNIFORM_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//		    String label = name+"_SlipAlongRuptureOptions";
+//		    String dirName = ROOT_PATH+"SlipAlongRuptureOptionsHazardVariability";
+//			File tempFile = new File(dirName); tempFile.mkdirs();
+//		    GriddedGeoDataSet[] dataArray = faultInversion.readMultipleHazardMapGriddedData(fileNameList);
+//		    faultInversion.plotNormPDF_FromMultHazMaps(dataArray, label, dirName, true);
+//		}
+
+
+		
+		// Do alternate SlipRateProfile (this needs higher energy because of necessary slip-rate misfits at ends)
+//		faultInversion.doMFDconstrainedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt8, 1, false, 50, true, true);
+//		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//			ArrayList<String> fileNameList = new ArrayList<String>();
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=5.0_GR_b_0pt8_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"MFDconstrSA_10_finalE=50.0_GR_b_0pt8_wt1_UNIFORM_TAPERED_ELLSWORTH_B_rupSamp/hazardMaps/"+name+".txt");
+//		    String label = name+"_SlipRateProfileOptions";
+//		    String dirName = ROOT_PATH+"SlipRateProfileOptionsHazardVariability";
+//			File tempFile = new File(dirName); tempFile.mkdirs();
+//		    GriddedGeoDataSet[] dataArray = faultInversion.readMultipleHazardMapGriddedData(fileNameList);
+//		    faultInversion.plotNormPDF_FromMultHazMaps(dataArray, label, dirName, true);
+//		}
+
+		// This compares different GMMs for the GR b=0.8 case
+//		faultInversion.computeHazardForGMM();
+//		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//			ArrayList<String> fileNameList = new ArrayList<String>();
+//			fileNameList.add(ROOT_PATH+"GMM_OptionsHazardVariability/ASK2014_HazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"GMM_OptionsHazardVariability/CY2014_HazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"GMM_OptionsHazardVariability/CB2014_HazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"GMM_OptionsHazardVariability/BSSA2014_HazardMaps/"+name+".txt");
+//		    String label = name+"_GMM_OptionsHazardVariability";
+//		    String dirName = ROOT_PATH+"GMM_OptionsHazardVariability";
+//			File tempFile = new File(dirName); tempFile.mkdirs();
+//		    GriddedGeoDataSet[] dataArray = faultInversion.readMultipleHazardMapGriddedData(fileNameList);
+//		    faultInversion.plotNormPDF_FromMultHazMaps(dataArray, label, dirName, true);
+//		}
+		// here's a test ratio to explore why ASK is an outlier; it's at far distances, which I confirmed for median values with the GMM gui
+//		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
+//		File file = new File(ROOT_PATH+"TestRatioASKvsCY"); file.mkdir();
+//		faultInversion.makeHazardMapRatio(ROOT_PATH+"GMM_OptionsHazardVariability/ASK2014_HazardMaps/1.0secSA_2in50.txt"
+//				, ROOT_PATH+"GMM_OptionsHazardVariability/CY2014_HazardMaps/1.0secSA_2in50.txt"
+//				, "TestRatioASKvsCY", ROOT_PATH+"TestRatioASKvsCY", true);
 
 		
 		
-		
-		
-
 		// max Rate case: (THIS WOULD NEVER BE USED?)
 		
 		// this took 8.5 hrs; 2242 are nonzero
@@ -2838,51 +3155,176 @@ public class SimpleFaultInversion {
 
 		
 		// NEED TO UNDERSTAND WHY THESE FRESH SOLUTION ARE NOT BETTER FITS
-		// E=1170 for this:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);	
-		// E = 543 for this:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
-		// E=488 for this:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);	
-		// E=131 for this:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
-		// E=1348 for this:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);	
-		// E=1336 for this (should be same as above):
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
+		// E=1293 for this:
+//		faultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_0pt8, false, null, null);	
+		// try uniform slip; E=483
+//		faultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_0pt8, false, null, null);	
+		// E=747 (better than FRESH)
+//		faultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_0pt8);
+		// E=184; this is because the standard floater model has a taper that happens to match the slip-rate taper here.
+//		faultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_0pt8);
 
-		// this has E=86:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MAX_RATE);	
-		// this has E=2424:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MAX_RATE);
-
-		// this has E=437:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MIN_RATE);	
-		// this has E=435:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MIN_RATE);
-
-		// this has E=880:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.M7pt25only);	
-		// this has E=456:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.M7pt25only);
-
-		// this has E=895
-//		singleFaultInversion.doSUNFiSH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);	
-		// this has E=2231
-//		singleFaultInversion.doSUNFiSH_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);	
+		// SUNFISH MODELS
+		// this has E=1908; this has a negative b-value (rates increase with magnitude)
+//		faultInversion.doSUNFiSH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B);	
+		// this has E=2231; looks about the same
+//		faultInversion.doSUNFiSH_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);	
 
 		
 		
-				
+		// SEGMENTATION CONSTRAINTS
+		faultInversion.shortFault = false;	// use longer fault for the rest of these
+		
+//		ArrayList<SlipRateSegmentationConstraint> segConstr = new ArrayList<SlipRateSegmentationConstraint>();
+//		segConstr.add(new SlipRateSegmentationConstraint("sect58", 58, 0.1, 0.001));	
+//		 this has high energy because of a zero MFD bin and highest mag rates conflict with segmentation
+//		faultInversion.doSlipRateSegmentedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 1, 600, MFD_TargetType.GR_b_0pt8, 1.0, false, segConstr, "s58_0.1");
+//		faultInversion.doSlipRateSegmentedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 1, 600, MFD_TargetType.GR_b_0pt8, 1.0, true, segConstr, "s58_0.1");
+//		faultInversion.doSlipRateSegmentedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//				ScalingRelationshipEnum.ELLSWORTH_B, 10, 100, MFD_TargetType.GR_b_0pt8, 0.0, true, segConstr, "s58_0.1");
+//		faultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 10, 10, MFD_TargetType.GR_b_0pt8, 0.0, false, segConstr, "s58_0.1", true);
+//		faultInversion.doSlipRateSegmentedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 10, 10, MFD_TargetType.GR_b_0pt8_ForSegmented, 1.0, false, segConstr, "s58_0.1");
+		// PREFERRED MODEL:
+//		faultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 10, 10, MFD_TargetType.GR_b_0pt8, 0.0, false, segConstr, "s58_0.1", true, true);
+
+//		ArrayList<SlipRateSegmentationConstraint> segConstr = new ArrayList<SlipRateSegmentationConstraint>();
+//		segConstr.add(new SlipRateSegmentationConstraint("sect58", 58, 0.0, 0.000001));	
+//		faultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 10, 10, MFD_TargetType.GR_b_0pt8, 0.0, false, segConstr, "s58_0.0", true, true);
+
+		// 50% segmentation
+//		ArrayList<SlipRateSegmentationConstraint> segConstr = new ArrayList<SlipRateSegmentationConstraint>();
+//		segConstr.add(new SlipRateSegmentationConstraint("sect58", 58, 0.5, 0.001));	
+//		faultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 10, 10, MFD_TargetType.GR_b_0pt8, 0.0, false, segConstr, "s58_0.5", true, true);
+
+
+		// no constraint:
+//		ArrayList<SlipRateSegmentationConstraint> segConstr = new ArrayList<SlipRateSegmentationConstraint>();
+//		faultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//				ScalingRelationshipEnum.ELLSWORTH_B, 10, 5, MFD_TargetType.GR_b_0pt8, 0.0, false, segConstr, "noSeg", true);
+//		faultInversion.doSlipRateSegmentedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//				ScalingRelationshipEnum.ELLSWORTH_B, 10, 5, MFD_TargetType.GR_b_0pt8, 0.0, true, segConstr, "noSeg");
+		// PREFERRED MODEL:
+//		faultInversion.doSlipRateSegmentedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 10, 5, MFD_TargetType.GR_b_0pt8, 0.0, false, segConstr, "noSeg", true, true);
+
+		
+		// Ratio of no RupSampler cases for total segmentation
+//		faultInversion.shortFault=false; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//		    String fileName1 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.0_rupSamp/hazardMaps/"+name+".txt";
+//		    String fileName2 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=5.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_noSeg_rupSamp/hazardMaps/"+name+".txt";
+//		    String dirName = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.0_rupSamp/hazardMaps";
+//		    String label = name+"_RatioToNoSegCase";
+//			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+//		}
+		
+//		// The treats the three segmentation levels as branches
+//		faultInversion.shortFault=false; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//			ArrayList<String> fileNameList = new ArrayList<String>();
+//			fileNameList.add(ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.0_rupSamp/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=5.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_noSeg_rupSamp/hazardMaps/"+name+".txt");
+//			fileNameList.add(ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.5_rupSamp/hazardMaps/"+name+".txt");
+//		    String label = name+"_SlipRateSegmentationHazardVariability";
+//		    String dirName = ROOT_PATH+"SlipRateSegmentationHazardVariability";
+//			File tempFile = new File(dirName); tempFile.mkdirs();
+//		    GriddedGeoDataSet[] dataArray = faultInversion.readMultipleHazardMapGriddedData(fileNameList);
+//		    faultInversion.plotNormPDF_FromMultHazMaps(dataArray, label, dirName, true);
+//		}
+		
+		// Ratio of no RupSampler cases
+//		faultInversion.shortFault=false; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//		    String fileName1 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.1/hazardMaps/"+name+".txt";
+//		    String fileName2 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=5.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_noSeg/hazardMaps/"+name+".txt";
+//		    String dirName = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.1/hazardMaps";
+//		    String label = name+"_RatioToNoSegCase";
+//			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+//		}
+
+		// Ratio of RupSampler cases; PREFERRED MODEL
+//		faultInversion.shortFault=false; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//		    String fileName1 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.1_rupSamp/hazardMaps/"+name+".txt";
+//		    String fileName2 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=5.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_noSeg_rupSamp/hazardMaps/"+name+".txt";
+//		    String dirName = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.1_rupSamp/hazardMaps";
+//		    String label = name+"_RatioToNoSegCase";
+//			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+//		}
 		
 		
+		// Test Ratio (influence of RupSampler); hazard results are close enough
+//		faultInversion.shortFault=false; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//		    String fileName1 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.1/hazardMaps/"+name+".txt";
+//		    String fileName2 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.1_rupSamp/hazardMaps/"+name+".txt";
+//		    String dirName = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.1/hazardMaps";
+//		    String label = name+"_RatioToRupSamplerCase";
+//			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+//		}
+//		for(String name: nameArray) {
+//		    String fileName1 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=5.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_noSeg/hazardMaps/"+name+".txt";
+//		    String fileName2 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=5.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_noSeg_rupSamp/hazardMaps/"+name+".txt";
+//		    String dirName = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=5.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_noSeg/hazardMaps";
+//		    String label = name+"_RatioToRupSamplerCase";
+//			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+//		}
+
+		
+		// do the 50% segmentation case using section rate constraint; need higher energy because slip rate not fit at sect 58
+//		ArrayList<SectionRateConstraint> sectConstrList = new ArrayList<SectionRateConstraint>();
+//		sectConstrList.add(new SectionRateConstraint("50percSeg", 58, 0.0037, 0.0037/500.)); // the rate from the slip rate case
+//		faultInversion.doSectRateConstrSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 10, 40, MFD_TargetType.GR_b_0pt8, 0.0, false, sectConstrList, "s58_0.5", true, true);
+		
+		// confirm that the two different ways of doing the 50% segmentation produce the same hazard
+//		faultInversion.shortFault=false; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//		    String fileName1 = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.5_rupSamp/hazardMaps/"+name+".txt";
+//		    String fileName2 = ROOT_PATH+"LongFlt_SectRateConstrSA_10_finalE=40.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.5_rupSamp/hazardMaps/"+name+".txt";
+//		    String dirName = ROOT_PATH+"LongFlt_SlipRateSegSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.5_rupSamp/hazardMaps";
+//		    String label = name+"_RatioToSectRateSegCase";
+//			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+//		}
+
+		
+		// do the 50% segmentation case using segmentation constraint
+//		ArrayList<SegmentationConstraint> segConstrList = new ArrayList<SegmentationConstraint>();
+//		segConstrList.add(new SegmentationConstraint("50percSeg", 58, 59, 0.0037, 0.0037/500.)); // the rate from the slip rate case
+//		faultInversion.doSegConstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, 
+//		ScalingRelationshipEnum.ELLSWORTH_B, 10, 10, MFD_TargetType.GR_b_0pt8, 0.0, false, segConstrList, "s58_0.5", true, true);
+
+		// confirm that this third way of doing the 50% segmentation produce the same hazard; they do
+		faultInversion.shortFault=false; faultInversion.makeFaultSectionDataList();
+		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+		for(String name: nameArray) {
+		    String fileName1 = ROOT_PATH+"LongFlt_SegConstrSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.5_rupSamp/hazardMaps/"+name+".txt";
+		    String fileName2 = ROOT_PATH+"LongFlt_SectRateConstrSA_10_finalE=40.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.5_rupSamp/hazardMaps/"+name+".txt";
+		    String dirName = ROOT_PATH+"LongFlt_SegConstrSA_10_finalE=10.0__GR_b_0pt8_wt0_TAPERED_TAPERED_ELLSWORTH_B_s58_0.5_rupSamp/hazardMaps";
+		    String label = name+"_RatioToSectRateConstrCase";
+			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+		}
+	
+
 		
 		
-//		doubleFaultInversion.doUnconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
+//		faultInversion.doUnconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 //		doubleFaultInversion.doUnconstrainedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 
-//		doubleFaultInversion.doSlipRateSegmentedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
-//		doubleFaultInversion.doSectRateConstrSegSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 100);
+//		faultInversion.doSlipRateSegmentedSA(false, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 //		doubleFaultInversion.doSegConstrainedSA(true, SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, 2);
 
 		// Try initial state from MFD
@@ -2918,419 +3360,5 @@ public class SimpleFaultInversion {
 ////		System.exit(-1);
 
 		
-		// this is to not over fit the data
-//		singleFaultInversion.doUnconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, 137);
-		// on average this over-fits the data (also the error on the average is 94 versus 137, whereas it should be ~16 if it's not systematically over fitting)
-//		singleFaultInversion.doUnconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 50, 137);
-
-		// this should be the same as 3rd above (since wt=0 and zero initial state); looks good
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0, false, 5);	
-		// Use MFD as starting model only
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0, true, 1);
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0, true, 1);	
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0, true, 1);	
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0, true, 1);	
-	
-		
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1, false, 2);	
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1, true, 2);	
-		
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 1, false, 2);	
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 1, true, 2);	
-
-		// MFD not perfectly fit in following; what happens if it's is (given high weight)?  This also took 3 hrs
-//		singleFaultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 1, false, 2);	
-
-		// NNLS Solutions
-//		singleFaultInversion.doMFDconstrainedNNLS(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_minus1, 1);	
-//		singleFaultInversion.doMFDconstrainedNNLS(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_0pt0, 1);	
-//		singleFaultInversion.doMFDconstrainedNNLS(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0, 1);	
-		// removing MFD produces the minimum rate model
-//		singleFaultInversion.doMFDconstrainedNNLS(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0, 0);	
-
-		// this took 118 minutes
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, true, 2);
-
-		// this took 16 minutes
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.02, 1.0, false, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.02, 1.0, false, 2);
-
-		// this took 25 min
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_0pt0, 0.02, 1.0, true, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0.02, 1.0, true, 2);
-		// this took 2.5 minutes
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_0pt0, 0.02, 1.0, false, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0.02, 1.0, false, 2);
-		// this took 2.5 minutes
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_1pt0, 0.02, 1.0, true, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0.02, 1.0, true, 2);
-		// this took <1.5 minutes
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_1pt0, 0.02, 1.0, false, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0.02, 1.0, false, 2);
-		// this took 15 minutes
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.MAX_RATE, 0.02, 1.0, true, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.MAX_RATE, 0.02, 1.0, true, 2);
-		// this, as expected, has a 10e-22 initial energy (no iterations necessary)
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.UNI_TRIM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.MAX_RATE, 0.02, 1.0, true, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.UNI_TRIM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.MAX_RATE, 0.02, 1.0, true, 2);
-		// this took 86 minutes
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.MAX_RATE, 0.02, 1.0, false, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.MAX_RATE, 0.02, 1.0, false, 2);
-
-		// this takes forever and never got below energy of ~10
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.MIN_RATE, 0.02, 1.0, true, 2);
-		// this takes forever and never got below energy of ~10
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.MIN_RATE, 0.02, 1.0, false, 2);
-
-		
-		// NEED TO UNDERSTAND WHY THESE FRESH SOLUTION ARE NOT BETTER FITS
-		// E=1170 for this:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);	
-		// E = 543 for this:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
-		// E=488 for this:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);	
-		// E=131 for this:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
-		// E=1348 for this:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);	
-		// E=1336 for this (should be same as above):
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_1pt0);
-
-		// this has E=86:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MAX_RATE);	
-		// this has E=2424:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MAX_RATE);
-
-		// this has E=437:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MIN_RATE);	
-		// this has E=435:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.MIN_RATE);
-
-		// this has E=880:
-//		singleFaultInversion.doFRESH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.M7pt25only);	
-		// this has E=456:
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.M7pt25only);
-
-		// this has E=895
-//		singleFaultInversion.doSUNFiSH_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);	
-		// this has E=2231
-//		singleFaultInversion.doSUNFiSH_Solution(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B);	
-
-		
-		
-		
-		
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_1pt0, 0.1, 1.0, false, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0.1, 1.0, false, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0.1, 1.0, true, 2);
-		
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0.1, 10.0, false, 5);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0.1, 1.0, true, 2);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0.1, 10.0, true, 5);
-
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0.1, 10.0, false, 5);
-//		singleFaultInversion.doTotalRateconstrainedSA(false, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0.1, 10.0, true, 5);
-
-				
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 1, true);	
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 1, false);	
-
-//		singleFaultInversion.doMFDconstrainedNNLS(SlipRateProfileType.UNIFORM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_minus1, 1);	
-
-
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 1, true);	
-//		singleFaultInversion.doAppliedMFD_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, MFD_TargetType.GR_b_minus1);
-
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_1pt0, 2, true);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.UNI_TRIM, SlipAlongRuptureModelEnum.UNIFORM, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_0pt0, 1, false);
-		
-		
-
-		
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1e4, false);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_1pt0, 1e6, false); // I also increased the number of iterations here
-		
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 1e4, false);
-
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 1e4, false);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 1e4, false);
-
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 1e4, true);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 1e4, true);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 1e2, true);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 1, MFD_TargetType.GR_b_minus1, 0, true);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_minus1, 0, true);
-		
-
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 1e4, true);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_0pt0, 0, true);
-
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1e4, true);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 0, true);
-
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.MIN_RATE, 0, true);
-//		singleFaultInversion.doMFDconstrainedSA(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.MIN_RATE, 1e4, true);
-
-
-
-		//DELETE THE FOLLOWING EVENTULLY)
-
-//		// THE FOLLOWING SETS ALL THE INVERSION ATTRIBUTES:
-//		//------------------------------------------------
-//		
-//		String dirName = ROOT_PATH+"Output";
-//	
-//		// Inversion name
-//		String solutionName = "Single Fault Inversion";
-//		
-//		// Weighted inversion (whether to apply data weights)
-//		boolean wtedInversion = true;
-//		
-//		// fault slip rates:
-//		SlipRateProfileType slipRateProfile = SlipRateProfileType.TAPERED;
-//		
-//		// Average slip along rupture model
-//		SlipAlongRuptureModelEnum slipModelType = SlipAlongRuptureModelEnum.UNIFORM;
-//		
-//		// Scaling Relationship
-//		ScalingRelationshipEnum scalingRel = ScalingRelationshipEnum.ELLSWORTH_B;
-//		
-//		// Section Rate Constraints
-//		double relativeSectRateWt=0;
-//		
-//		// Segmentation Constraints
-////		String segmentationConstrFilename = ROOT_DATA_DIR+SEGMENT_BOUNDARY_DATA_FILE;
-//		String segmentationConstrFilename = null;
-//		double relative_segmentationConstrWt = 0;
-//		
-//		// A priori rupture rates
-//		double relative_aPrioriRupWt = 0;
-//		
-//		// Minimum Rupture Rate
-////		double minRupRate = 1e-8;
-//		double minRupRate = 0.0;
-//		
-//		// Apply prob visible
-//		boolean applyProbVisible = false;
-//		
-//		// Moment Rate Reduction
-//		double moRateReduction = 0.0;	// this is the amount to reduce due to smaller earthquakes being ignored (not due to asiesmity or coupling coeff, which are part of the fault section attributes)
-//		
-//		// Target MFD Constraint
-//		MFD_TargetType mfdTargetType = MFD_TargetType.GR_b_1pt0;
-//		double relativeMFD_constraintWt = 0; // 
-//		
-//		// Total Rate Constraint
-//		double totalRateConstraint = 0.005328;
-//		double relativeTotalRateConstraintWt = 100/totalRateConstraint;
-//
-//		
-//		// Inversion Solution Type:
-//		
-////		InversionSolutionType solutionType = InversionSolutionType.NSHMP_SOLUTION;
-//
-////		InversionSolutionType solutionType = InversionSolutionType.FROM_FILE;
-//		String rupRatesFileDirName = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform_4/";	// don't comment out; this is only used if solutionType = InversionSolutionType.FROM_FILE
-//
-////		InversionSolutionType solutionType = InversionSolutionType.NON_NEGATIVE_LEAST_SQUARES;
-//		
-//		InversionSolutionType solutionType = InversionSolutionType.SIMULATED_ANNEALING;
-//		int numSolutions = 1; // this is ignored for NON_NEGATIVE_LEAST_SQUARES which only has one possible solution
-//		CoolingScheduleType saCooling = CoolingScheduleType.LINEAR;
-//		GenerationFunctionType perturbationFunc = GenerationFunctionType.UNIFORM_NO_TEMP_DEPENDENCE;
-//		// set the SA completion criteria (choose one of these):
-//		long numIterations = (long) 1e5;
-//		IterationCompletionCriteria completionCriteria = new IterationCompletionCriteria(numIterations);
-////		double finalEnergy = 117d;	// this should be the number of rows to match data uncertinaties
-////		EnergyCompletionCriteria completionCriteria = new EnergyCompletionCriteria(finalEnergy);
-//		boolean initStateFromAprioriRupRates = true;
-//		long randomSeed = System.currentTimeMillis();
-////		long randomSeed = 1525892588112l; // for reproducibility; note that the last character here is the letter "l" to indicated a long value
-//		
-//		
-//		// Data to plot and/or save:
-//		boolean popUpPlots = true;	// this tells whether to show plots in a window (set null to turn off; e.g., for HPC)
-//		boolean doDataFits=true;
-//		boolean doMagHistograms=true;
-//		boolean doNonZeroRateRups=true;
-//	    boolean doSectPartMFDs=true;
-//	    
-//	    // to make hazard curve (set loc=null to ignore)
-//		Location hazCurveLoc = null; 
-//	    String hazCurveLocName = "Hazard Curve";
-//	    
-//	    // to make hazard maps
-//	    boolean makeHazardMaps = false;
-//		double saPeriodForHaz = 1.0;	// set as 0.0 for PGA
-//		
-
-		// THIS IS THE END OF THE INVERSION SETTINGS
-
-		// Create an instance of this inversion class
-//		SingleFaultInversion singleFaultInversion = new SingleFaultInversion();
-		
-//		singleFaultInversion.tempSetNSHMP_GR_Model(scalingRel);
-		
-//		// get the target MFD
-//		IncrementalMagFreqDist targetMFD = singleFaultInversion.getTargetMFD(scalingRel, mfdTargetType);
-//		if(D) System.out.println(mfdTargetType+" total rate "+targetMFD.getTotalIncrRate());
-		
-//		// This writes out a range of total rates
-//		System.out.println("Rates for "+scalingRel);
-//		double rate = singleFaultInversion.getTargetMFD(scalingRel, MFD_TargetType.GR_b_1pt0).getTotalIncrRate();
-//		System.out.printf("\tGR b=1 Rate: %f\n",rate);
-//		rate = singleFaultInversion.getTargetMFD(scalingRel, MFD_TargetType.GR_b_0pt0).getTotalIncrRate();
-//		System.out.printf("\tGR b=0 Rate: %f\n",rate);
-//		rate = singleFaultInversion.getTargetMFD(scalingRel, MFD_TargetType.BR_b_minus1).getTotalIncrRate();
-//		System.out.printf("\tGR b=-1 Rate: %f\n",rate);
-//		System.out.printf("\tMax Rate: %f\n",singleFaultInversion.getMaxPossibleRate(scalingRel));
-//		System.out.printf("\tMin Rate: %f\n",singleFaultInversion.getMinPossibleRate(scalingRel));
-//		System.exit(0);
-//		// Result:
-//		Rates for ELLSWORTH_B
-//			GR b=1 Rate: 	0.088471
-//			GR b=0 Rate: 	0.021428
-//			GR b=-1 Rate: 	0.009476
-//			Max Rate: 		0.842805
-//			Min Rate: 		0.005328
-
-		
-//		singleFaultInversion.writeApriorRupRatesForMaxRateModel();
-
-
-//		//Write section data (e.g., so it can be checked)
-//		if(D) {
-//			String str = "sectID\tslipRate\tslipRateStd\tlength\tdip\trake\tupDepth\tlowDepth\tDDW+\n";
-//			for(int s=0;s<fltSectDataList.size();s++) {
-//				FaultSectionPrefData fltSectData = fltSectDataList.get(s);
-//				str += fltSectData.getSectionId()+"\t";
-//				str += fltSectData.getOrigAveSlipRate()+"\t";
-//				str += fltSectData.getOrigSlipRateStdDev()+"\t";
-//				str += (float)fltSectData.getTraceLength()+"\t";
-//				str += fltSectData.getAveDip()+"\t";
-//				str += fltSectData.getAveRake()+"\t";
-//				str += fltSectData.getOrigAveUpperDepth()+"\t";
-//				str += fltSectData.getAveLowerDepth()+"\t";
-//				str += fltSectData.getOrigDownDipWidth()+"\t";
-//				str += (float)fltSectData.getStirlingGriddedSurface(1.0).getArea()+"\n";
-//			}
-//			System.out.println(str);			
-//		}
-		
-//	    // THE FOLLOWING IS TO MAKE HAZARD MAP RATIOS FOR DATA IN FILES
-//	    String fileName1 = ROOT_PATH+"OutputDataAndFigs_SA10_Unsegmented_Uniform"+"/hazardMaps/1.0secSA_2in50.txt";
-//	    String fileName2 = ROOT_PATH+"OutputDataAndFigs_SA10_Segmented_Uniform"+"/hazardMaps/1.0secSA_2in50.txt";
-//	    String label = "1.0secSA_2in50_2in50_ratio";
-//	    wasatchInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName+"/hazardMaps", true);
-//		System.exit(-1);
-//		
-
-
-//		System.exit(0);
-		
-//		// this will be used to keep track of runtimes
-//		long startTimeMillis = System.currentTimeMillis();
-//		if(D)
-//			System.out.println("Starting Inversion");
-//		
-//		// create an instance of the inversion class with the above settings
-//		FaultSystemRuptureRateInversion fltSysRupInversion = new  FaultSystemRuptureRateInversion(
-//				solutionName,
-//				"default",
-//				fltSectDataList, 
-//				sectionRateConstraints, 
-//				rupSectionMatrix, 
-//				slipModelType, 
-//				scalingRel, 
-//				relativeSectRateWt, 
-//				relative_aPrioriRupWt, 
-//				ROOT_DATA_DIR+APRIORI_RUP_RATE_FILENAME,
-//				wtedInversion, 
-//				minRupRate, 
-//				applyProbVisible, 
-//				moRateReduction,
-//				targetMFD,
-//				relativeMFD_constraintWt,
-//				segmentationConstrFilename,
-//				relative_segmentationConstrWt,
-//				totalRateConstraint,
-//				relativeTotalRateConstraintWt);
-//
-//		
-//		// make the directory for storing results
-//	    File file = new File(dirName);
-//	    file.mkdirs();
-//	    
-//	    // set a-prior rates from MFD so these can be applied as initial model
-//	    fltSysRupInversion.setAprioriRupRatesFromMFD_Constrint();
-//	    
-//	    // write the setup info to a file
-//	    fltSysRupInversion.writeInversionSetUpInfoToFile(dirName);
-//	    
-//	    switch (solutionType) {
-//	    		case NON_NEGATIVE_LEAST_SQUARES:
-//	    			if(D) System.out.println("NON_NEGATIVE_LEAST_SQUARES");
-//	    			fltSysRupInversion.doInversionNNLS();
-//	    			break;
-//	    		case NSHMP_SOLUTION:
-//	    			if(D) System.out.println("NSHMP_SOLUTION");
-//	    			fltSysRupInversion.doNSHMP_Solution(targetMFD);
-//	    			break;
-//	    		case SIMULATED_ANNEALING:
-//	    			if(numSolutions==1) {
-//		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions=1");
-//	    				fltSysRupInversion.doInversionSA(completionCriteria, initStateFromAprioriRupRates, randomSeed, saCooling, perturbationFunc);
-//	    			}
-//	    			else if(numSolutions>1) {
-//		    			if(D) System.out.println("SIMULATED_ANNEALING; numSolutions="+numSolutions);
-//	    				fltSysRupInversion.doInversionSA_MultTimes(completionCriteria, initStateFromAprioriRupRates, randomSeed, numSolutions, dirName, saCooling,perturbationFunc);
-//	    			}
-//	    			else {
-//	    				throw new RuntimeException("bad numIterations");
-//	    			}
-//	    			break;
-//	    		case FROM_FILE:
-//			    	if(numSolutions==1) {
-//		    			if(D) System.out.println("FROM_FILE; numSolutions=1");
-//		    			String rupRatesFileName = rupRatesFileDirName+ "ruptureRatesAlt.txt";
-//			    		double[] rupRatesArray = singleFaultInversion.readRuptureRatesFromFile(rupRatesFileName);
-//			    		fltSysRupInversion.setSolution(rupRatesArray, "Solution from file: "+rupRatesFileName);
-//			    	}
-//			    	else if(numSolutions>1) {
-//		    			if(D) System.out.println("FROM_FILE; numSolutions="+numSolutions);
-//		    			ArrayList<double[]> rupRatesArrayList = new ArrayList<double[]>();
-//		    			for(int i=0;i<numSolutions;i++) {
-//			    			String rupRatesFileName = rupRatesFileDirName+ "ruptureRates_"+i+".txt";
-//			    			rupRatesArrayList.add(singleFaultInversion.readRuptureRatesFromFile(rupRatesFileName));
-//			    			fltSysRupInversion.setMultipleSolutions(rupRatesArrayList, "Multiple solutions read from files with prefix "+rupRatesFileName, dirName);
-//		    			}
-//			    	}
-//			    	else {
-//			    		throw new RuntimeException("bad numIterations");
-//			    	}
-//			    	break;
-//	    }
-//
-//		double runTimeSec = ((double)(System.currentTimeMillis()-startTimeMillis))/1000.0;
-//		if(D) System.out.println("Done with Inversion after "+(float)runTimeSec+" seconds.");
-//				
-//		// write results to file
-//		fltSysRupInversion.writeInversionRunInfoToFile(dirName);
-//			
-//		if(doDataFits) fltSysRupInversion.writeAndOrPlotDataFits(dirName, popUpPlots);
-//		if(doMagHistograms) fltSysRupInversion.writeAndOrPlotMagHistograms(dirName, popUpPlots);
-//		if(doNonZeroRateRups) fltSysRupInversion.writeAndOrPlotNonZeroRateRups(dirName, popUpPlots);
-//		if(doSectPartMFDs) fltSysRupInversion.writeAndOrPlotSectPartMFDs(dirName, popUpPlots);
-//	    
-//	    // hazard curve:
-//		if(hazCurveLoc != null) {
-//			singleFaultInversion.writeAndOrPlotHazardCurve(fltSysRupInversion, hazCurveLoc, saPeriodForHaz, dirName, popUpPlots, hazCurveLocName);
-//		}
-//	    
-//	    // second parameter here is SA period; set as 0.0 for PGA:
-//		if(makeHazardMaps)
-//			singleFaultInversion.makeHazardMaps(fltSysRupInversion, saPeriodForHaz, dirName, popUpPlots);
 	}
 }

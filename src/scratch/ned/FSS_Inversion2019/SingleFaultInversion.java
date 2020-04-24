@@ -1041,7 +1041,7 @@ public class SingleFaultInversion {
 	    		initialState = tempArray;
 	    		break;
 	    	case FROM_MFD_CONSTRAINT:
-	    		initialState = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD);
+	    		initialState = fltSysRupInversion.getRupRatesForTargetMFD(targetMFD, true);
 //	    		for(int i=0;i<initialState.length;i++)
 //	    			initialState[i] *= 0.25;
 	    		break;
