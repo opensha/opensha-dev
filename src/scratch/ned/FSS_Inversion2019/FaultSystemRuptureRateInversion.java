@@ -750,13 +750,25 @@ public class FaultSystemRuptureRateInversion {
 				int sect1 = segConst.getSect1_Index();
 				int sect2 = segConst.getSect2_Index();
 				int row = i+firstRowSegConstraint;
-				d[row] = segConst.getMeanCoRuptureRate(); // set sum as zero rate for now
-				if(wtedInversion)
-					data_wt[row] = 1.0/segConst.getStdDevOfMean();
-				for(int col=0;col<numRuptures; col++)
-					if(rupSectionMatrix[sect1][col]==1 && rupSectionMatrix[sect2][col]==1)
-						C[row][col]=1.0;
-// System.out.println("HERE: "+segConstraint_rupIndex[i]+"\t\t"+ segConstraint_rupRate[i] +"\t\t"+segConstraint_RupWt[i]);
+				d[row] = segConst.getMeanJointRate(); 
+				if(wtedInversion) {
+					if(segConst.isSlipRateConstraint())
+						data_wt[row] = 1.0/(segConst.getStdDevOfMean()*(1-moRateReduction));
+					else
+						data_wt[row] = 1.0/segConst.getStdDevOfMean();
+				}
+				for(int col=0;col<numRuptures; col++) {
+					if(rupSectionMatrix[sect1][col]==1 && rupSectionMatrix[sect2][col]==1) {
+						if(segConst.isSlipRateConstraint()) {
+							double aveSlip = (sectSlipInRup[sect1][col]+sectSlipInRup[sect2][col])/2.0;
+							C[row][col] = aveSlip*(1-moRateReduction);
+						}
+						else {
+							C[row][col]=1.0;
+				// System.out.println("HERE: "+segConstraint_rupIndex[i]+"\t\t"+ segConstraint_rupRate[i] +"\t\t"+segConstraint_RupWt[i]);
+						}
+					}
+				}
 			}
 		}
 		
@@ -851,7 +863,7 @@ public class FaultSystemRuptureRateInversion {
 				full_wt[row] = relative_aPrioriRupWt;
 				if(wtedInversion) full_wt[row] *= data_wt[row];
 				d_wted[row] *= full_wt[row];
-				C_wted[row][col]=full_wt[row];
+				C_wted[row][col]*=full_wt[row];
 			}
 		}
 		// seg const wts
@@ -864,7 +876,7 @@ public class FaultSystemRuptureRateInversion {
 				d_wted[row] *= full_wt[row];
 				for(int col=0;col<numRuptures; col++)
 					if(rupSectionMatrix[segConst.getSect1_Index()][col]==1 && rupSectionMatrix[segConst.getSect2_Index()][col]==1)
-						C_wted[row][col]=full_wt[row];
+						C_wted[row][col]*=full_wt[row];
 			}
 		}
 		// MFD constraint wts
@@ -1101,10 +1113,10 @@ public class FaultSystemRuptureRateInversion {
 
 		// SOLVE THE INVERSE PROBLEM
 //		rupRateSolution = getSimulatedAnnealingSolution(C_wted, d_wted, initialState, completionCriteria, randomSeed, perturbationFunc);
-		
+
 		// Not exactly sure how the following works, and doesn't appear to take a seed
 		rupRateSolution = getSimulatedAnnealingThreadedSolution(C_wted, d_wted, initialState, completionCriteria, randomSeed, rupSampler);
-
+		
 		// CORRECT FINAL RATES IF MINIMUM RATE CONSTRAINT APPLIED
 		if(minRupRate >0.0)
 			for(int rup=0; rup<numRuptures;rup++) rupRateSolution[rup] += minRupRateArray[rup];
@@ -3041,12 +3053,24 @@ public class FaultSystemRuptureRateInversion {
 		int num = (int)Math.round((maxMagMFD-minMagMFD)/MAG_DELTA + 1);
 		if(num==1) num=2;
 		meanMagHistorgram = new SummedMagFreqDist(minMagMFD,num,MAG_DELTA);
+		String[] numSectInBinArray = new String[meanMagHistorgram.size()];
+		ArrayList<Integer> numBeenDone = new ArrayList<Integer>();
+		for(int i=0;i<numSectInBinArray.length;i++)
+			numSectInBinArray[i] = (float)meanMagHistorgram.getX(i)+": ";
 		for(int rup=0; rup<numRuptures;rup++) {
 			int index = meanMagHistorgram.getClosestXIndex(rupMeanMag[rup]);
 			meanMagHistorgram.add(index, 1.0);
+			int numSect = numSectInRup[rup];
+			if(!numBeenDone.contains(numSect)) {
+				numSectInBinArray[index] += ", "+numSect;
+				numBeenDone.add(numSect);
+			}
 //			meanMagHistorgram.addResampledMagRate(rupMeanMag[rup], 1.0, true);
 		}
-		meanMagHistorgram.setInfo("Mean Mag Histogram");
+		String info = "Mean Mag Histogram\n\nNum Sect in Bin:\n\n";
+		for(String st:numSectInBinArray)
+			info += st+"\n";
+		meanMagHistorgram.setInfo(info);
 		
 		// compute mag historgram with aleatory variability
 		num = (int)Math.round((maxMagMFD_WithAleatory-minMagMFD_WithAleatory)/MAG_DELTA + 1);
@@ -3245,12 +3269,18 @@ public class FaultSystemRuptureRateInversion {
 				for(SegmentationConstraint segConstr : segmentationConstraintList) {		
 					int sect1 = segConstr.getSect1_Index();
 					int sect2 = segConstr.getSect1_Index();
-					double sectRateTemp = 0;
+					double rateTemp = 0;
 					for(int r=0; r < numRuptures; r++) {
 						if(rupSectionMatrix[sect1][r]==1 && rupSectionMatrix[sect2][r]==1)
-							sectRateTemp += rupRateArray[r];
+							if(segConstr.isSlipRateConstraint()) {
+								double aveSlip = (sectSlipInRup[sect1][r]+sectSlipInRup[sect2][r])/2.0;
+								rateTemp += rupRateArray[r]*aveSlip;
+							}
+							else {
+								rateTemp += rupRateArray[r];
+							}
 					}
-					double scaleFactor = segConstr.getMeanCoRuptureRate()/sectRateTemp;
+					double scaleFactor = segConstr.getMeanJointRate()/rateTemp;
 					for(int r=0;r<rupRateArray.length;r++) {
 						if(rupSectionMatrix[sect1][r]==1 && rupSectionMatrix[sect2][r]==1)
 							rupRateArray[r] = scaleFactor*rupRateArray[r];
