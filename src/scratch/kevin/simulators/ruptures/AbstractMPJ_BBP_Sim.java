@@ -394,6 +394,8 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 				wrapper.setDoFAS(false);
 				wrapper.setDoRotD100(true);
 				wrapper.setDoRotD50(false);
+				wrapper.setDoPGV(true);
+				wrapper.setDoArias(true);
 				wrapper.setBBPEnvFile(bbpEnvFile);
 				wrapper.setBBPDataDir(bbpDataDir);
 				wrapper.setBBPGFDir(bbpGFDir);

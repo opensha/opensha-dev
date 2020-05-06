@@ -151,6 +151,12 @@ public class BBP_Module implements XMLSaveable {
 		return new BBP_Module("RotD50", stagedFiles, arguments, null);
 	}
 	
+	public static BBP_Module buildRotDPGV(File siteFile) {
+		List<String> stagedFiles = Lists.newArrayList(siteFile.getAbsolutePath());
+		List<Argument> arguments = Lists.newArrayList(stringArg(siteFile.getName()));
+		return new BBP_Module("RotDVel", stagedFiles, arguments, null);
+	}
+	
 	public static BBP_Module buildRotD100(File siteFile) {
 		List<String> stagedFiles = Lists.newArrayList(siteFile.getAbsolutePath());
 		List<Argument> arguments = Lists.newArrayList(stringArg(siteFile.getName()));
@@ -161,6 +167,12 @@ public class BBP_Module implements XMLSaveable {
 		List<String> stagedFiles = Lists.newArrayList(siteFile.getAbsolutePath());
 		List<Argument> arguments = Lists.newArrayList(stringArg(siteFile.getName()));
 		return new BBP_Module("FAS", stagedFiles, arguments, null);
+	}
+	
+	public static BBP_Module buildArias(File siteFile) {
+		List<String> stagedFiles = Lists.newArrayList(siteFile.getAbsolutePath());
+		List<Argument> arguments = Lists.newArrayList(stringArg(siteFile.getName()));
+		return new BBP_Module("AriasDuration", stagedFiles, arguments, null);
 	}
 	
 	public static BBP_Module buildGenHTML(VelocityModel vm, Method method, File siteFile, File srcFile) {

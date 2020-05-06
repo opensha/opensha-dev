@@ -12,6 +12,7 @@ import java.util.zip.ZipFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
+import org.opensha.sha.imr.param.IntensityMeasureParams.DurationTimeInterval;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
@@ -34,6 +35,8 @@ public class LightweightBBP_CatalogSimZipLoader extends BBP_SimZipLoader impleme
 	private Table<Integer, BBP_Site, DiscretizedFunc> rd50Table;
 	private Table<Integer, Site, DiscretizedFunc> rdRatioTable;
 	private Table<Integer, BBP_Site, DiscretizedFunc[]> rdTable;
+	private Table<Integer, BBP_Site, double[]> pgvTable;
+	private Table<Integer, BBP_Site, Map<DurationTimeInterval, double[]>> durationTable;
 	
 	public LightweightBBP_CatalogSimZipLoader(ZipFile zip, List<BBP_Site> sites, BiMap<BBP_Site, Site> gmpeSites, double durationYears) {
 		super(zip, sites);
@@ -63,6 +66,10 @@ public class LightweightBBP_CatalogSimZipLoader extends BBP_SimZipLoader impleme
 			rdTable = HashBasedTable.create();
 			rdRatioTable = HashBasedTable.create();
 		}
+		if (hasPGV())
+			pgvTable = HashBasedTable.create();
+		if (hasDurations())
+			durationTable = HashBasedTable.create();
 	}
 
 	@Override
@@ -123,6 +130,39 @@ public class LightweightBBP_CatalogSimZipLoader extends BBP_SimZipLoader impleme
 			DiscretizedFunc ratio = SimulationRotDProvider.calcRotDRatio(spectras);
 			rdRatioTable.put(eventID, site, ratio);
 			return ratio;
+		}
+	}
+
+	@Override
+	public double getPGV(Site site, Integer eventID, int index) throws IOException {
+		Preconditions.checkState(index == 0);
+		if (pgvTable.contains(eventID, site))
+			return pgvTable.get(eventID, site)[0];
+		synchronized (pgvTable) {
+			// repeat here as could have been populated while waiting for the lock
+			if (pgvTable.contains(eventID, site))
+				return pgvTable.get(eventID, site)[0];
+			BBP_Site bbpSite = gmpeToBBP.get(site);
+			double[] vals = readPGV(bbpSite, getDirName(eventID));
+			pgvTable.put(eventID, bbpSite, vals);
+			return vals[0];
+		}
+	}
+
+	@Override
+	public double getDuration(Site site, Integer eventID, DurationTimeInterval interval, int index)
+			throws IOException {
+		Preconditions.checkState(index == 0);
+		if (durationTable.contains(eventID, site))
+			return durationTable.get(eventID, site).get(interval)[3];
+		synchronized (durationTable) {
+			// repeat here as could have been populated while waiting for the lock
+			if (durationTable.contains(eventID, site))
+				return durationTable.get(eventID, site).get(interval)[3];
+			BBP_Site bbpSite = gmpeToBBP.get(site);
+			Map<DurationTimeInterval, double[]> vals = readDurations(bbpSite, getDirName(eventID));
+			durationTable.put(eventID, bbpSite, vals);
+			return vals.get(interval)[3];
 		}
 	}
 	

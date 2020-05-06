@@ -39,7 +39,10 @@ import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.IntensityMeasureRelationship;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -52,12 +55,14 @@ import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
+import scratch.kevin.simCompare.IMT;
 import scratch.kevin.simCompare.MultiRupGMPE_ComparePageGen;
 import scratch.kevin.simCompare.RuptureComparison;
 import scratch.kevin.simulators.RSQSimCatalog;
@@ -199,7 +204,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 		for (int row=1; row<csv.getNumRows(); row++) {
 			Integer eventID = Integer.parseInt(csv.get(row, 0));
-			Double period = Double.parseDouble(csv.get(row, 1));
+			String imtStr = csv.get(row, 1);
+			IMT imt = IMT.forString(imtStr);
 			Double logMean = Double.parseDouble(csv.get(row, 2));
 			Double stdDev = Double.parseDouble(csv.get(row, 3));
 			Double rRup = Double.parseDouble(csv.get(row, 4));
@@ -207,7 +213,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			
 			EventComparison comp = eventComps.get(eventID);
 			if (comp != null) {
-				comp.addResult(site, period, logMean, stdDev);
+				comp.addResult(site, imt, logMean, stdDev);
 				comp.setDistances(site, rRup, rJB);
 				count++;
 			}
@@ -222,8 +228,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 		for (Integer eventID : sorted(comps.keySet())) {
 			EventComparison comp = comps.get(eventID);
-			for (Double period : sorted(comp.getPeriods(site))) {
-				csv.addLine(eventID+"", period+"", comp.getLogMean(site, period)+"", comp.getStdDev(site, period)+"",
+			for (IMT imt : sorted(comp.getIMTs(site))) {
+				csv.addLine(eventID+"", imt.name(), comp.getLogMean(site, imt)+"", comp.getStdDev(site, imt)+"",
 						comp.getDistanceRup(site)+"", comp.getDistanceJB(site)+"");
 			}
 		}
@@ -237,7 +243,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		return list;
 	}
 	
-	public synchronized void calcGMPE(Map<Integer, EventComparison> eventComps, Site site, AttenRelRef gmpeRef, double... periods) {
+	public synchronized void calcGMPE(Map<Integer, EventComparison> eventComps, Site site, AttenRelRef gmpeRef, IMT... imts) {
 		List<Future<?>> futures = new ArrayList<>();
 		
 		File gmpeCacheFile = null;
@@ -256,26 +262,26 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			}
 		}
 		
-		List<Double> periodsList = Doubles.asList(periods);
+		List<IMT> imtsList = Lists.newArrayList(imts);
 		
 		for (EventComparison comp : eventComps.values()) {
 			if (!comp.isSiteApplicable(site))
 				continue;
-			List<Double> myPeriods;
-			Set<Double> computedPeriods = null;
+			List<IMT> myIMTs;
+			Set<IMT> computedIMTs = null;
 			if (comp.hasSite(site))
-				computedPeriods = comp.getPeriods(site);
-			if (computedPeriods == null || computedPeriods.isEmpty()) {
+				computedIMTs = comp.getIMTs(site);
+			if (computedIMTs == null || computedIMTs.isEmpty()) {
 				// nothing cached
-				myPeriods = periodsList;
+				myIMTs = imtsList;
 			} else {
-				myPeriods = new ArrayList<>();
-				for (double period : periods)
-					if (!computedPeriods.contains(period))
-						myPeriods.add(period);
+				myIMTs = new ArrayList<>();
+				for (IMT imt : imts)
+					if (!computedIMTs.contains(imt))
+						myIMTs.add(imt);
 			}
-			if (!myPeriods.isEmpty())
-				futures.add(exec.submit(new EventComparisonCalc(comp, gmpeRef, site, myPeriods)));
+			if (!myIMTs.isEmpty())
+				futures.add(exec.submit(new EventComparisonCalc(comp, gmpeRef, site, myIMTs)));
 		}
 		
 		System.out.println("Calculating for "+futures.size()+" events, site "+site.getName());
@@ -308,20 +314,20 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		private EventComparison eventComp;
 		private AttenRelRef gmpeRef;
 		private Site site;
-		private List<Double> periods;
+		private List<IMT> imts;
 		
-		public EventComparisonCalc(EventComparison eventComp, AttenRelRef gmpeRef, Site site, List<Double> periods) {
+		public EventComparisonCalc(EventComparison eventComp, AttenRelRef gmpeRef, Site site, List<IMT> imts) {
 			this.eventComp = eventComp;
 			this.gmpeRef = gmpeRef;
 			this.site = site;
-			this.periods = periods;
+			this.imts = imts;
 		}
 
 		@Override
 		public void run() {
 			ScalarIMR gmpe = checkOutGMPE(gmpeRef);
 			
-			eventComp.calculate(gmpe, site, Doubles.toArray(periods));
+			eventComp.calculate(gmpe, site, imts.toArray(new IMT[0]));
 			
 			checkInGMPE(gmpeRef, gmpe);
 		}
@@ -372,7 +378,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		}
 	}
 	
-	public List<EventComparison> loadCalcComps(AttenRelRef gmpeRef, double[] periods) {
+	public List<EventComparison> loadCalcComps(AttenRelRef gmpeRef, IMT[] imts) {
 		Map<Integer, EventComparison> compsMap = new HashMap<>();
 		
 		for (BBP_Site site : sites) {
@@ -387,12 +393,12 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 					System.out.println("Adding site for "+eventID+" "+site.getName());
 				comp.addApplicableSite(gmpeSite);
 			}
-			calcGMPE(compsMap, sitesBBPtoGMPE.get(site), gmpeRef, periods);
+			calcGMPE(compsMap, sitesBBPtoGMPE.get(site), gmpeRef, imts);
 		}
 		return new ArrayList<>(compsMap.values());
 	}
 	
-	public void generateGMPE_Page(File outputDir, AttenRelRef gmpeRef, double[] periods, List<EventComparison> comps)
+	public void generateGMPE_Page(File outputDir, AttenRelRef gmpeRef, IMT[] imts, List<EventComparison> comps)
 			throws IOException {
 		LinkedList<String> lines = new LinkedList<>();
 		
@@ -416,7 +422,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		lines.add("");
 		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 		
-		super.generateGMPE_Page(outputDir, lines, gmpeRef, periods, comps, highlightSites);
+		super.generateGMPE_Page(outputDir, lines, gmpeRef, imts, comps, highlightSites);
 	}
 	
 	@Override
@@ -511,15 +517,19 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		lines.add("");
 		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 		
+		IMT[] aggregatedIMTs = new IMT[aggregatedPeriods.length];
+		for (int i=0; i<aggregatedIMTs.length; i++)
+			aggregatedIMTs[i] = IMT.forPeriod(aggregatedPeriods[i]);
+		
 		if (gmpeComps == null) {
-			gmpeComps = loadCalcComps(gmpeRef, aggregatedPeriods);
+			gmpeComps = loadCalcComps(gmpeRef, aggregatedIMTs);
 		} else {
 			// might not have all periods required
 			for (BBP_Site site : sites) {
 				Map<Integer, EventComparison> compMap = new HashMap<>();
 				for (EventComparison comp : gmpeComps)
 					compMap.put(comp.getRupture().getID(), comp);
-				calcGMPE(compMap, sitesBBPtoGMPE.get(site), gmpeRef, aggregatedPeriods);
+				calcGMPE(compMap, sitesBBPtoGMPE.get(site), gmpeRef, aggregatedIMTs);
 			}
 		}
 		
@@ -535,7 +545,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4979.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -553,8 +563,13 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
-		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
-		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
+//		IMT[] imts = { IMT.PGV, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
+//		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
+		
+		AttenRelRef[] gmpeRefs = { AttenRelRef.AFSHARI_STEWART_2016 };
+		IMT[] imts = { IMT.DUR_5_75, IMT.DUR_5_95, IMT.DUR_20_80 };
+		AttenRelRef rotDGMPE = null;
 		
 		String[] highlightNames;
 		if (doGridded)
@@ -588,10 +603,6 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		boolean skipRGdirs = true;
 		boolean rgOnlyIfPossible = true;
 		
-//		double[] periods = { 1, 2, 3, 5, 10 };
-//		double[] periods = { 1, 2, 5 };
-//		double[] periods = { 1, 5, 10 };
-		double[] periods = { 3, 5, 10 };
 		double[] rotDPeriods = { 1, 2, 5, 7.5, 10 };
 		
 		// find BBP parallel dir
@@ -713,7 +724,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 							else
 								comp.setHighlightSites();
 						}
-						List<EventComparison> comps = comp.loadCalcComps(gmpeRef, periods);
+						List<EventComparison> comps = comp.loadCalcComps(gmpeRef, imts);
 						String dirname = "gmpe_bbp_comparisons_"+gmpeRef.getShortName();
 						if (doGridded)
 							dirname += "_GriddedSites";
@@ -726,7 +737,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 							dirname += "_"+loadIdenPrefix;
 						File catalogGMPEDir = new File(vmDir, dirname);
 						Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
-						comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, periods, comps);
+						comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, imts, comps);
 						if (gmpeRef == rotDGMPE)
 							rotD_GMPEcomps = comps;
 					}
@@ -747,7 +758,11 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			if (doRotD) {
 				File catalogRotDDir = new File(vmDir, "catalog_rotd_ratio_comparisons");
 				Preconditions.checkState(catalogRotDDir.exists() || catalogRotDDir.mkdir());
-				comp.generateRotDRatioPage(catalogRotDDir, rotDPeriods, periods, rotDGMPE, rotD_GMPEcomps);
+				List<Double> allPeriods = new ArrayList<>();
+				for (IMT imt : imts)
+					if (imt.getParamName().equals(SA_Param.NAME))
+						allPeriods.add(imt.getPeriod());
+				comp.generateRotDRatioPage(catalogRotDDir, rotDPeriods, Doubles.toArray(allPeriods), rotDGMPE, rotD_GMPEcomps);
 			}
 			
 			catalog.writeMarkdownSummary(catalogOutputDir, true, false);

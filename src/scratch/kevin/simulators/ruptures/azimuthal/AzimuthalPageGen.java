@@ -709,7 +709,7 @@ public class AzimuthalPageGen {
 		File mainCatalogsDir = new File(gitDir, "catalogs");
 		File mainBBPDir = new File("/data/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_4317.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance();
 //		RSQSimCatalog catalog = null;
 		

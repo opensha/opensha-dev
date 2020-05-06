@@ -6,6 +6,8 @@ import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -75,6 +77,7 @@ import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FileUtils;
+import org.opensha.commons.util.ServerPrefUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.nshmp2.imr.impl.AB2006_140_AttenRel;
@@ -1660,13 +1663,71 @@ public class PureScratch {
 		}
 		System.out.println("diff: "+maxDiff);
 	}
+	
+	private static void test66() throws UnknownHostException {
+		InetAddress host = InetAddress.getLocalHost();
+		System.out.println("My hostname (getCanonicalHostName): "+host.getCanonicalHostName());
+		System.out.println("My hostname (getHostName): "+host.getHostName());
+		System.out.println("My hostname (getHostAddress): "+host.getHostAddress());
+		System.out.println("Servlet URL: "+ServerPrefUtils.SERVER_PREFS.getServletBaseURL());
+		System.out.println("Testing servlet:");
+		System.out.flush();
+		try {
+			new WillsMap2015().getValue(new Location(34, -118));
+			System.out.println("Success!");
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+			System.err.flush();
+			System.out.println("Fail :(");
+		}
+		System.out.println("Testing http:");
+		System.out.flush();
+		try {
+			FileUtils.downloadURL("http://opensha.usc.edu/ftp", File.createTempFile("test", ".tmp"));
+			System.out.println("Success!");
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+			System.err.flush();
+			System.out.println("Fail :(");
+		}
+		System.out.println("Testing http IP:");
+		System.out.flush();
+		try {
+			FileUtils.downloadURL("http://68.181.32.140/ftp", File.createTempFile("test", ".tmp"));
+			System.out.println("Success!");
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+			System.err.flush();
+			System.out.println("Fail :(");
+		}
+		System.out.println("Testing localhost:");
+		System.out.flush();
+		try {
+			FileUtils.downloadURL("http://localhost/ftp", File.createTempFile("test", ".tmp"));
+			System.out.println("Success!");
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+			System.err.flush();
+			System.out.println("Fail :(");
+		}
+		System.out.println("Testing 127.0.0.1:");
+		System.out.flush();
+		try {
+			FileUtils.downloadURL("http://127.0.0.1/ftp", File.createTempFile("test", ".tmp"));
+			System.out.println("Success!");
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+			System.err.flush();
+			System.out.println("Fail :(");
+		}
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test65();
+		test66();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

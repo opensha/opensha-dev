@@ -11,6 +11,7 @@ import org.opensha.commons.data.Site;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 
 import com.google.common.collect.HashBasedTable;
@@ -30,9 +31,9 @@ public abstract class RuptureComparison<E> {
 	
 	public abstract Collection<Site> getApplicableSites();
 	
-	public abstract double getLogMean(Site site, double period);
+	public abstract double getLogMean(Site site, IMT imt);
 	
-	public abstract double getStdDev(Site site, double period);
+	public abstract double getStdDev(Site site, IMT imt);
 	
 	public abstract double getDistanceRup(Site site);
 	
@@ -40,7 +41,7 @@ public abstract class RuptureComparison<E> {
 	
 	public abstract boolean hasSite(Site site);
 	
-	public abstract boolean isComputed(Site site, double period);
+	public abstract boolean isComputed(Site site, IMT imt);
 	
 	public abstract EqkRupture getGMPERupture();
 	
@@ -73,8 +74,8 @@ public abstract class RuptureComparison<E> {
 	
 	public static abstract class Cached<Y> extends RuptureComparison<Y> {
 		
-		private Table<Site, Double, Double> logMeans;
-		private Table<Site, Double, Double> stdDevs;
+		private Table<Site, IMT, Double> logMeans;
+		private Table<Site, IMT, Double> stdDevs;
 		private Map<Site, Double> distanceRups;
 		private Map<Site, Double> distanceJBs;
 
@@ -87,9 +88,9 @@ public abstract class RuptureComparison<E> {
 			distanceJBs = new HashMap<>();
 		}
 		
-		public void addResult(Site site, double period, double logMean, double stdDev) {
-			logMeans.put(site, period, logMean);
-			stdDevs.put(site, period, stdDev);
+		public void addResult(Site site, IMT imt, double logMean, double stdDev) {
+			logMeans.put(site, imt, logMean);
+			stdDevs.put(site, imt, stdDev);
 		}
 		
 		public void setDistances(Site site, double distanceRup, double distanceJB) {
@@ -98,13 +99,13 @@ public abstract class RuptureComparison<E> {
 		}
 		
 		@Override
-		public double getLogMean(Site site, double period) {
-			return logMeans.get(site, period);
+		public double getLogMean(Site site, IMT imt) {
+			return logMeans.get(site, imt);
 		}
 		
 		@Override
-		public double getStdDev(Site site, double period) {
-			return stdDevs.get(site, period);
+		public double getStdDev(Site site, IMT imt) {
+			return stdDevs.get(site, imt);
 		}
 		
 		@Override
@@ -123,39 +124,38 @@ public abstract class RuptureComparison<E> {
 		}
 		
 		@Override
-		public boolean isComputed(Site site, double period) {
-			return logMeans.contains(site, period);
+		public boolean isComputed(Site site, IMT imt) {
+			return logMeans.contains(site, imt);
 		}
 		
-		public Set<Double> getPeriods(Site site) {
+		public Set<IMT> getIMTs(Site site) {
 			return logMeans.row(site).keySet();
 		}
 		
-		public void calculate(ScalarIMR gmpe, double... periods) {
-			calculate(gmpe, getApplicableSites(), periods);
+		public void calculate(ScalarIMR gmpe, IMT... imts) {
+			calculate(gmpe, getApplicableSites(), imts);
 		}
 		
-		public void calculate(ScalarIMR gmpe, Site site, double... periods) {
+		public void calculate(ScalarIMR gmpe, Site site, IMT... imts) {
 			List<Site> sites = new ArrayList<>();
 			sites.add(site);
-			calculate(gmpe, sites, periods);
+			calculate(gmpe, sites, imts);
 		}
 		
-		public void calculate(ScalarIMR gmpe, Collection<Site> sites, double... periods) {
+		public void calculate(ScalarIMR gmpe, Collection<Site> sites, IMT... imts) {
 			EqkRupture rup = getGMPERupture();
 			gmpe.setEqkRupture(rup);
-			gmpe.setIntensityMeasure(SA_Param.NAME);
 			for (Site site : sites) {
 				gmpe.setSite(site);
 				RuptureSurface surf = rup.getRuptureSurface();
 				double distanceRup = surf.getDistanceRup(site.getLocation());
 				double distanceJB = surf.getDistanceJB(site.getLocation());
 				setDistances(site, distanceRup, distanceJB);
-				for (double period : periods) {
-					SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), period);
+				for (IMT imt : imts) {
+					imt.setIMT(gmpe);
 					double logMean = gmpe.getMean();
 					double stdDev = gmpe.getStdDev();
-					addResult(site, period, logMean, stdDev);
+					addResult(site, imt, logMean, stdDev);
 				}
 			}
 		}

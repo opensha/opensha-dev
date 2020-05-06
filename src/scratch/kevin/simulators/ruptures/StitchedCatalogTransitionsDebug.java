@@ -36,12 +36,25 @@ import scratch.kevin.simulators.RSQSimCatalog;
 public class StitchedCatalogTransitionsDebug {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File("/data/kevin/simulators/catalogs/rundir2585_1myr/stitch_debug");
-		File stitchedDir = new File("/data/kevin/simulators/catalogs/rundir2585_1myr");
-		File beforeDir = new File("/data/kevin/simulators/catalogs/restart2585");
-		File afterDir = new File("/data/kevin/simulators/catalogs/rundir2585extend");
+//		File baseDir = new File("/data/kevin/simulators/catalogs/");
+//		File outputDir = new File(baseDir, "rundir2585_1myr/stitch_debug");
+//		File stitchedDir = new File(baseDir, "rundir2585_1myr");
+//		File beforeDir = new File(baseDir, "restart2585");
+//		File afterDir = new File(baseDir, "rundir2585extend");
+//		double stitchTime = 26772011003374.0078125d;
+//		File baseDir = new File("/home/scec-00/rsqsim/catalogs/kmilner");
+//		File outputDir = new File(baseDir, "rundir4983_stitched/stitch_debug");
+//		File stitchedDir = new File(baseDir, "rundir4983_stitched");
+//		File beforeDir = new File(baseDir, "rundir4983");
+//		File afterDir = new File(baseDir, "rundir4983.01");
+//		double stitchTime = 6.720495558189346E12d;
+		File baseDir = new File("/data-0/kevin/simulators/catalogs");
+		File outputDir = new File(baseDir, "rundir4983_stitched/stitch_debug");
+		File stitchedDir = new File(baseDir, "rundir4983_stitched");
+		File beforeDir = new File(baseDir, "bruce/rundir4983");
+		File afterDir = new File(baseDir, "bruce/rundir4983.01");
+		double stitchTime = 6.720495558189346E12d;
 		
-		double stitchTime = 26772011003374.0078125d;
 //		double minMag = 6.5;
 		double minMag = 0d;
 		
@@ -154,8 +167,8 @@ public class StitchedCatalogTransitionsDebug {
 			File pngFile = new File(outputDir, prefix+".png");
 			gp.saveAsPNG(pngFile.getAbsolutePath());
 			
-			GraphWindow gw = new GraphWindow(new GraphWidget(spec, plotPrefs, false, false, xRange, yRange));
-			gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+//			GraphWindow gw = new GraphWindow(new GraphWidget(spec, plotPrefs, false, false, xRange, yRange));
+//			gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 		}
 	}
 	
@@ -181,26 +194,33 @@ public class StitchedCatalogTransitionsDebug {
 			Preconditions.checkState(!patchSlipMap.containsKey(ids[i]));
 			patchSlipMap.put(ids[i], slips[i]);
 		}
+		RSQSimEvent match = null;
+		double deltaTime = Double.POSITIVE_INFINITY;
+		eventLoop:
 		for (RSQSimEvent e : catalog) {
 			if ((float)mag == (float)e.getMagnitude()) {
 				ids = target.getAllElementIDs();
 				slips = target.getAllElementSlips();
 				if (ids.length != patchSlipMap.size())
-					continue;
+					continue eventLoop;
 				for (int i=0; i<ids.length; i++) {
 					if (!patchSlipMap.containsKey(ids[i]))
-						continue;
+						continue eventLoop;
 					if ((float)slips[i] != patchSlipMap.get(ids[i]).floatValue())
-						continue;
+						continue eventLoop;
 				}
-				return e;
+				double delta = Math.abs(e.getTime() - target.getTime());
+				if (delta < deltaTime) {
+					match = e;
+					deltaTime = delta;
+				}
 			}
 //			if (id == e.getID() && (float)mag == (float)e.getMagnitude())
 //				return e;
 //			if ((float)mag == (float)e.getMagnitude() && (float)time == (float)e.getTime())
 //				return e;
 		}
-		return null;
+		return match;
 	}
 	
 	private static List<RSQSimStateTime> getTransitions(RSQSimCatalog catalog, double tStart, double tEnd) throws IOException {

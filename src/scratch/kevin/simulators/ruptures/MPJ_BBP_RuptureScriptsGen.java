@@ -76,11 +76,13 @@ class MPJ_BBP_RuptureScriptsGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4841.instance(baseDir);
 //		int eventID = 755070;
 ////		int eventID = 2441060;
-		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
-//		int eventID = 51863;
-//		int eventID = 39055;
-		int eventID = 12581;
-//		int eventID = 77272;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+////		int eventID = 51863;
+////		int eventID = 39055;
+//		int eventID = 12581;
+////		int eventID = 77272;
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
+		int eventID = 1499589;
 		
 		double timeScalar = 1d;
 		boolean scaleVelocities = false;
@@ -100,7 +102,7 @@ class MPJ_BBP_RuptureScriptsGen {
 		int numShakeMapGP = 5;
 		double mapSpacing = 0.05;
 //		double mapSpacing = 0.02;
-		int maxNodes = 25;
+		int maxNodes = 30;
 //		int maxNodes = 10;
 		boolean gpAdjustDDW = false;
 		
@@ -272,7 +274,7 @@ class MPJ_BBP_RuptureScriptsGen {
 				script.addAll(2, addLines);
 			
 			script = pbsWrite.buildScript(script, gpMins, nodes, threads, queue);
-			pbsWrite.writeScript(new File(localJobDir, "gp_bbp_parallel.pbs"), script);
+			pbsWrite.writeScript(new File(localJobDir, "gp_bbp_parallel.slurm"), script);
 		}
 		if (doShakeMap) {
 			String jobName = dateStr;
@@ -324,7 +326,7 @@ class MPJ_BBP_RuptureScriptsGen {
 				script.addAll(2, addLines);
 			
 			script = pbsWrite.buildScript(script, mapMins, nodes, threads, queue);
-			pbsWrite.writeScript(new File(localJobDir, "map_bbp_parallel.pbs"), script);
+			pbsWrite.writeScript(new File(localJobDir, "map_bbp_parallel.slurm"), script);
 		}
 		if (doGPShakeMaps) {
 			String jobPrefix = dateStr;
@@ -391,7 +393,7 @@ class MPJ_BBP_RuptureScriptsGen {
 					script.addAll(2, addLines);
 				
 				script = pbsWrite.buildScript(script, mapMins, nodes, threads, queue);
-				pbsWrite.writeScript(new File(localJobDir, "map_bbp_parallel.pbs"), script);
+				pbsWrite.writeScript(new File(localJobDir, "map_bbp_parallel.slurm"), script);
 			}
 		}
 	}

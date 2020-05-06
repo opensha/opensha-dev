@@ -10,6 +10,9 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
+import org.opensha.sha.imr.param.IntensityMeasureParams.DurationTimeInterval;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SignificantDurationParam;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
@@ -111,6 +114,76 @@ public interface SimulationRotDProvider<E> extends Named {
 	/**
 	 * @param site
 	 * @param rupture
+	 * @param index
+	 * @return RotD50 PGV for the index-th simulation of rupture E at the given site
+	 * @throws IOException
+	 */
+	public double getPGV(Site site, E rupture, int index) throws IOException;
+	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @return RotD50 PGV for each simulation of rupture E at the given site
+	 * @throws IOException
+	 */
+	public default List<Double> getPGVs(Site site, E rupture) throws IOException {
+		ArrayList<Double> list = new ArrayList<>();
+		for (int i=0; i<getNumSimulations(site, rupture); i++)
+			list.add(getPGV(site, rupture, i));
+		return list;
+	}
+	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @param interval
+	 * @param index
+	 * @return RotD50 PGV for the index-th simulation of rupture E at the given site
+	 * @throws IOException
+	 */
+	public double getDuration(Site site, E rupture, DurationTimeInterval interval, int index) throws IOException;
+	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @param interval
+	 * @return RotD50 PGV for each simulation of rupture E at the given site
+	 * @throws IOException
+	 */
+	public default List<Double> getDurations(Site site, E rupture, DurationTimeInterval interval) throws IOException {
+		ArrayList<Double> list = new ArrayList<>();
+		for (int i=0; i<getNumSimulations(site, rupture); i++)
+			list.add(getDuration(site, rupture, interval, i));
+		return list;
+	}
+	
+	public default double getValue(Site site, E rupture, IMT imt, int index) throws IOException {
+		return getValues(site, rupture, imt).get(index);
+	}
+	
+	public default List<Double> getValues(Site site, E rupture, IMT imt) throws IOException {
+		if (imt == IMT.PGV) {
+			Preconditions.checkState(hasPGV(), "PGV not supported by this provider");
+			return getPGVs(site, rupture);
+		}
+		if (imt.getParamName().equals(SA_Param.NAME)) {
+			double period = imt.getPeriod();
+			List<DiscretizedFunc> rd50s = getRotD50s(site, rupture);
+			List<Double> ret = new ArrayList<>();
+			for (DiscretizedFunc rd50 : rd50s)
+				ret.add(rd50.getInterpolatedY(period));
+			return ret;
+		}
+		if (imt.getParamName().equals(SignificantDurationParam.NAME)) {
+			Preconditions.checkState(hasDurations(), "Durations not supported by this provider");
+			return getDurations(site, rupture, imt.getDurationInterval());
+		}
+		throw new IllegalStateException("Unsupported IMT: "+imt);
+	}
+	
+	/**
+	 * @param site
+	 * @param rupture
 	 * @return the number of simulations available of rupture E at the given site
 	 */
 	public int getNumSimulations(Site site, E rupture);
@@ -148,6 +221,16 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @return true if RotD100 is available from this source
 	 */
 	public boolean hasRotD100();
+	
+	/**
+	 * @return true if PGV is available from this source
+	 */
+	public boolean hasPGV();
+	
+	/**
+	 * @return true if significant durations are available from this source
+	 */
+	public boolean hasDurations();
 	
 	/**
 	 * Utility method to compute RotD100/RotD50 ratio for an array of [RotD50, RotD100] 

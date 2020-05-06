@@ -3,6 +3,7 @@ package scratch.kevin.simulators.ruptures;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,10 +32,17 @@ public class TransVsListSlipDebug {
 //		int eventID = 8324165;
 //		int patchID = -1;
 		
-		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
-				"Single SS", null, null);
+//		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
+//				"Single SS", null, null);
+//		int eventID = -1;
+//		int patchID = -1;
+		
+		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/bruce/rundirtest3"),
+				"Bruce test", null, null);
 		int eventID = -1;
 		int patchID = -1;
+		debugEventIDs(catalog);
+		System.exit(0);
 		
 		RSQSimStateTransitionFileReader transReader = catalog.getTransitions();
 		transReader.setQuiet(true);
@@ -78,7 +86,13 @@ public class TransVsListSlipDebug {
 		System.out.println("Event occurs at "+eventTime);
 		List<RSQSimStateTime> eventTrans = new ArrayList<>();
 		transReader.getTransitions(event, eventTrans);
-		double eventEndTime = eventTrans.get(eventTrans.size()-1).absoluteTime;
+		double eventEndTime;
+		if (eventTrans.isEmpty()) {
+			System.out.println("No transitions found for event!");
+			eventEndTime = Double.NaN;
+		} else {
+			eventEndTime = eventTrans.get(eventTrans.size()-1).absoluteTime;
+		}
 		System.out.println("Event ends at "+eventEndTime);
 		System.out.println("Event duration: "+(eventEndTime-eventTime));
 		System.out.println("Next event is at "+event.getNextEventTime());
@@ -172,6 +186,7 @@ public class TransVsListSlipDebug {
 			loader = catalog.loader().minMag(6.5).skipYears(5000);
 		else
 			loader = catalog.loader();
+		loader.hasTransitions();
 		for (RSQSimEvent e : loader.iterable()) {
 			ArrayList<SimulatorElement> elems = e.getAllElements();
 			double[] slips = e.getAllElementSlips();
@@ -229,6 +244,45 @@ public class TransVsListSlipDebug {
 				+". slip="+slip+", transSlip="+transSlip);
 		
 		return maxID;
+	}
+	
+	private static void debugEventIDs(RSQSimCatalog catalog) throws IOException {
+		Map<Integer, Double> firstTransTimes = new HashMap<>();
+		RSQSimStateTransitionFileReader transReader = catalog.getTransitions();
+		transReader.setQuiet(true);
+		for (RSQSimStateTime trans : transReader.getTransitionsIterable(0d, Double.POSITIVE_INFINITY)) {
+			if (!firstTransTimes.containsKey(trans.eventID))
+				firstTransTimes.put(trans.eventID, trans.absoluteTime);
+		}
+		int numZeroBased = 0;
+		int numOneBased = 0;
+		int numNeitherBased = 0;
+		int prevEventID = -2;
+		for (RSQSimEvent event : catalog.loader().load()) {
+			int eventID = event.getID();
+			if (prevEventID > -2 && eventID != prevEventID+1)
+				System.out.println("Event ID sequence is off. Prev="+prevEventID+", cur="+eventID);
+			prevEventID = eventID;
+			double time = event.getTime();
+			Double transTime = firstTransTimes.get(event.getID());
+			Double prevTransTime = firstTransTimes.get(event.getID()-1);
+			if (transTime != null && transTime.floatValue() == (float)time) {
+				if (numOneBased == 0)
+					System.out.println("Event "+eventID+" is the first one based");
+				numOneBased++;
+			} else if (prevTransTime != null && prevTransTime.floatValue() == (float)time) {
+				if (numZeroBased == 0)
+					System.out.println("Event "+eventID+" is the first zero based");
+				numZeroBased++;
+			} else {
+				if (numNeitherBased == 0)
+					System.out.println("Event "+eventID+" is the first neither");
+				numNeitherBased++;
+			}
+		}
+		System.out.println(numOneBased+" are 1-based");
+		System.out.println(numZeroBased+" are 0-based");
+		System.out.println(numNeitherBased+" are unmatched");
 	}
 
 }

@@ -32,7 +32,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir4860_multi_combine";
 //		String catalogDirName = "rundir4860";
-		String catalogDirName = "rundir4979";
+		String catalogDirName = "rundir4983_stitched";
 		
 		boolean standardSites = false;
 		boolean csInitialLASites = false;
@@ -70,7 +70,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		String bbpCopyParentDir = "/staging/pjm/kmilner";
 		String nodeGFDir = "${TMPDIR}/gfs";
 		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
-		String sharedScratchDir = "${SCRATCHDIR}";
+//		String sharedScratchDir = "${SCRATCHDIR}";
+		String sharedScratchDir = null;
 		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
 		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
 		List<File> classpath = new ArrayList<>();

@@ -22,13 +22,13 @@ public class ModRateRuptureComparison<E> extends RuptureComparison<E> {
 	}
 
 	@Override
-	public double getLogMean(Site site, double period) {
-		return comp.getLogMean(site, period);
+	public double getLogMean(Site site, IMT imt) {
+		return comp.getLogMean(site, imt);
 	}
 
 	@Override
-	public double getStdDev(Site site, double period) {
-		return comp.getStdDev(site, period);
+	public double getStdDev(Site site, IMT imt) {
+		return comp.getStdDev(site, imt);
 	}
 
 	@Override
@@ -47,8 +47,8 @@ public class ModRateRuptureComparison<E> extends RuptureComparison<E> {
 	}
 
 	@Override
-	public boolean isComputed(Site site, double period) {
-		return comp.isComputed(site, period);
+	public boolean isComputed(Site site, IMT imt) {
+		return comp.isComputed(site, imt);
 	}
 
 	@Override

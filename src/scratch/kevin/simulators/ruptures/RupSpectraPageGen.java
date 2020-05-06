@@ -637,7 +637,11 @@ class RupSpectraPageGen {
 			lines.add("## ShakeMaps");
 			lines.add(topLink); lines.add("");
 			
-			double[] periods = { 1d, 2d, 3d, 4d, 5d, 7.5, 10d };
+			double[] periods;
+			if (shakemap.hasPGV())
+				periods = new double[] { -1, 1d, 2d, 3d, 4d, 5d, 7.5, 10d };
+			else
+				periods = new double[] { 1d, 2d, 3d, 4d, 5d, 7.5, 10d };
 			String prefix = "shakemap";
 			File[] mapFiles = new File[periods.length];
 			File[] gmpeMapFiles = null;
@@ -655,7 +659,9 @@ class RupSpectraPageGen {
 			for (int i=0; i<periods.length; i++) {
 				double p = periods[i];
 				String name;
-				if (p == Math.round(p))
+				if (p == -1d)
+					name = "pgv";
+				else if (p == Math.round(p))
 					name = (int)p+"s";
 				else
 					name = (float)p+"s";
@@ -697,12 +703,15 @@ class RupSpectraPageGen {
 			}
 			
 			table = MarkdownUtils.tableBuilder();
-			table.initNewLine().addColumn("SA Period").addColumn("RSQSim");
+			table.initNewLine().addColumn("").addColumn("RSQSim");
 			if (shakemapGMPE != null)
 				table.addColumn(shakemapGMPE.getShortName()).addColumn("Ratio");
 			table.finalizeLine();
 			for (int i=0; i<periods.length; i++) {
-				table.initNewLine().addColumn("**"+(float)periods[i]+" s**");
+				if (periods[i] == -1d)
+					table.initNewLine().addColumn("**PGV**");
+				else
+					table.initNewLine().addColumn("**"+(float)periods[i]+" s SA**");
 				table.addColumn("![RSQSim Map]("+resourcesDir.getName()+"/"+mapFiles[i].getName()+")");
 				if (shakemapGMPE != null) {
 					table.addColumn("!["+shakemapGMPE.getShortName()+" Map]("
@@ -742,9 +751,12 @@ class RupSpectraPageGen {
 				lines.add("![ShakeMap RotD Dist Dependence]("+resourcesDir.getName()+"/"+prefix+".png)");
 				
 				table = MarkdownUtils.tableBuilder();
-				table.addLine("SA Period", "RotD50", "RotD100", "RotD100/RotD50 Ratio");
+				table.addLine("", "RotD50", "RotD100", "RotD100/RotD50 Ratio");
 				for (int i=0; i<periods.length; i++) {
-					table.initNewLine().addColumn("**"+(float)periods[i]+" s**");
+					if (periods[i] == -1d)
+						table.initNewLine().addColumn("**PGV**");
+					else
+						table.initNewLine().addColumn("**"+(float)periods[i]+" s SA**");
 					table.addColumn("![RotD50 Map]("+resourcesDir.getName()+"/"+mapFiles[i].getName()+")");
 					table.addColumn("![RotD100 Map]("+resourcesDir.getName()+"/"+rd100MapFiles[i].getName()+")");
 					table.addColumn("![RotD Ratio Map]("+resourcesDir.getName()+"/"+rdRatioMapFiles[i].getName()+")");
@@ -973,9 +985,12 @@ class RupSpectraPageGen {
 ////		int eventID = 77272;
 ////		int eventID = 41890; // fig 4
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_4950.instance(baseDir);
-//		int eventID = 469461;
-		int eventID = 368122; // event with lowest ave slip ratio from trans to dlist
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4950.instance(baseDir);
+////		int eventID = 469461;
+//		int eventID = 368122; // event with lowest ave slip ratio from trans to dlist
+
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
+		int eventID = 1499589;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = true;
