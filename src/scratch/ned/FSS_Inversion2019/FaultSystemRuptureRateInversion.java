@@ -29,6 +29,7 @@ import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
@@ -44,6 +45,7 @@ import org.opensha.commons.gui.plot.PlotColorAndLineTypeSelectorControlPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
@@ -131,7 +133,7 @@ public class FaultSystemRuptureRateInversion {
 	double[] rupRateSolution; // these are the rates from the inversion (not total rate of MFD)
 	
 	// these are for MFD plots (rounded to nearest 0.1 mag unit)
-	private double minMagMFD, maxMagMFD,minMagMFD_WithAleatory, maxMagMFD_WithAleatory;
+	public double minMagMFD, maxMagMFD,minMagMFD_WithAleatory, maxMagMFD_WithAleatory;
 
 
 	// section-rupture attributes
@@ -244,7 +246,10 @@ public class FaultSystemRuptureRateInversion {
 	 * @param dirName - set as null if no files are to be saved
 	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
 	 */
-	public void writeAndOrPlotSectPartMFDs(String dirName, boolean popUpWindow) {
+	public ArrayList<XYZPlotSpec> writeAndOrPlotSectPartMFDs(String dirName, boolean popUpWindow, double widthInches, double heightInches,
+			Range xRange, Range yRange) {
+		
+		ArrayList<XYZPlotSpec> specList = new ArrayList<XYZPlotSpec>();
 		
 		// this writes out 
 		try{
@@ -289,12 +294,16 @@ public class FaultSystemRuptureRateInversion {
 			fw.close();
 			cfw.close();
 			
-			make2D_plot(xyzDataSectPart, "Incr. Participation", "Section", "Magnitude", "Rate", fileName, popUpWindow, 0.5, MAG_DELTA/2);
-			make2D_plot(xyzDataSectPartCum, "Cum. Participation", "Section", "Magnitude", "CumRate", fileNameCum, popUpWindow, 0.5, MAG_DELTA/2);		
+			specList.add(PlottingUtils.make2D_plot(xyzDataSectPart, null, "Section", "Magnitude", "Incremental Rate", 
+					fileName, popUpWindow, xRange, yRange, null, widthInches, heightInches));
+			specList.add(PlottingUtils.make2D_plot(xyzDataSectPartCum, null, "Section", "Magnitude", "Cumulative Rate", 
+					fileNameCum, popUpWindow, xRange, yRange, null, widthInches, heightInches));		
 
 		}catch(Exception e) {
 			e.printStackTrace();
 		}
+		
+		return specList;
 	}
 
 	
@@ -308,8 +317,8 @@ public class FaultSystemRuptureRateInversion {
 	 * @param dirName - set as null if no files are to be saved
 	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
 	 */
-	public void writeAndOrPlotNonZeroRateRups(String dirName, boolean popUpWindow) {
-		
+	public void writeAndOrPlotNonZeroRateRups(String dirName, boolean popUpWindow, double widthInches, double heightInches) {
+				
 		// get number of ruptures above minRupRate
 		int numAboveMinRate = 0;
 		for(int rup=0; rup<numRuptures;rup++)
@@ -360,8 +369,14 @@ public class FaultSystemRuptureRateInversion {
 
 			fw.close();
 			fw2.close();
-			make2D_plot(xyzDataRupSlipRate, "Slip Rate from Ruptures", "Section", "Rupture", "Log10 Slip Rate", fileName_sr, popUpWindow, 0.5, 0.5);
-			make2D_plot(xyzDataRupRate, "Rate of Ruptures", "Section", "Rupture", "Log10 Rate", fileName_rr, popUpWindow, 0.5, 0.5);
+			
+			Range xAxisRange = new Range(0-0.5, numSections+0.5);
+			Range yAxisRange = new Range(xyzDataRupSlipRate.getMinY()-0.5, xyzDataRupSlipRate.getMaxY()+0.5);
+
+			PlottingUtils.make2D_plot(xyzDataRupSlipRate, "Slip Rate from Ruptures", "Section", "Rupture", "Log10 Slip Rate", 
+					fileName_sr, popUpWindow, xAxisRange, yAxisRange, null, widthInches, heightInches);
+			PlottingUtils.make2D_plot(xyzDataRupRate, "Rate of Ruptures", "Section", "Rupture", "Log10 Rate", 
+					fileName_rr, popUpWindow, xAxisRange, yAxisRange, null, widthInches, heightInches);
 
 
 		}catch(Exception e) {
@@ -376,7 +391,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param dirName - set as null if no files are to be saved
 	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
 	 */
-	public void writeAndOrPlotRupRateOfFirstSection(String dirName, boolean popUpWindow) {
+	public void writeAndOrPlotRupRateOfFirstSection(String dirName, boolean popUpWindow, double widthInches, double heightInches) {
 		
 		EvenlyDiscrXYZ_DataSet xyzDataRupRate = new EvenlyDiscrXYZ_DataSet(numSections,numSections+1, 0, 0, 1, 1);
 		for(int x=0; x<numSections;x++)
@@ -407,8 +422,11 @@ public class FaultSystemRuptureRateInversion {
 					}
 			}	
 
+			Range rangeX = new Range(-0.5,numSections+0.5);
+			Range rangeY = new Range(-0.5,numSections+1.5);
 			fw.close();
-			make2D_plot(xyzDataRupRate, "Rate of Ruptures", "First Section", "Num Sections In Rupture", "Log10 Rate", fileName_rr, popUpWindow, 0.5, 0.5);
+			PlottingUtils.make2D_plot(xyzDataRupRate, null, "First Section", "Num Sections In Rupture", "Log10 Rupture Rate", 
+					fileName_rr, popUpWindow, rangeX, rangeY, null, widthInches, heightInches);
 
 		}catch(Exception e) {
 			e.printStackTrace();
@@ -1033,21 +1051,7 @@ public class FaultSystemRuptureRateInversion {
 			computeFinalStuff();
 			computeSectMFDs();
 			setMiscRunInfo();
-						
-			String fileNamePrefix = null;
-			if(dirName != null) {
-				fileNamePrefix = dirName+"/ruptureRates_"+solNum;
-				try{
-					FileWriter fw = new FileWriter(fileNamePrefix+".txt");
-					for(int i=0;i<numRuptures; i++) {				
-						fw.write(i+"\t"+rupRateSolution[i]+"\n");
-					}
-					fw.close();
-				}catch(Exception e) {
-					e.printStackTrace();
-				}		
-			}
-			
+									
 			// create mult run data objects if currently null
 			if(rupRatesFromMultRuns==null) {
 				rupRatesFromMultRunsArrayList = rupRatesArrayList;
@@ -1216,6 +1220,7 @@ public class FaultSystemRuptureRateInversion {
 			computeSectMFDs();
 			setMiscRunInfo();
 						
+			// write these out now in case of crash
 			String fileNamePrefix = null;
 			if(dirName != null) {
 				fileNamePrefix = dirName+"/ruptureRates_"+invNum;
@@ -1915,7 +1920,7 @@ public class FaultSystemRuptureRateInversion {
 		boolean logX = false;
 		boolean logY = true;
 
-		writeAndOrPlotFuncs(mfdList, plotChars, plotName, xAxisLabel, yAxisLabel, 
+		PlottingUtils.writeAndOrPlotFuncs(mfdList, plotChars, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
 
 		// write alternative rupture rates file to get rid of big header
@@ -2050,7 +2055,7 @@ public class FaultSystemRuptureRateInversion {
 		boolean logX = false;
 		boolean logY = true;
 
-		writeAndOrPlotFuncs(mfdList, plotChars, plotName, xAxisLabel, yAxisLabel, 
+		PlottingUtils.writeAndOrPlotFuncs(mfdList, plotChars, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
 
 		// write alternative rupture rates file to get rid of big header
@@ -2082,17 +2087,130 @@ public class FaultSystemRuptureRateInversion {
 	}
 
 	
+	public void writeAndOrPlotMFDs(String dirName, boolean popupWindow, Range xAxisRange, Range yAxisRange, 
+			double widthInches, double heightInches) {
+
+		ArrayList<XY_DataSet> mfd_funcs = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> mfd_plotChars = new ArrayList<PlotCurveCharacterstics>();
+		
+		// If multiple SA runs have been generated
+		if(mfdsFromMultRuns != null) {
+			// Incremental Distributions:
+			EvenlyDiscretizedFunc meanMfdFromMultipleRuns = mfdsFromMultRuns.getMeanCurve();
+			meanMfdFromMultipleRuns.setName("meanMfdFromMultipleRuns");
+			UncertainArbDiscDataset mfdMinMaxRange = new UncertainArbDiscDataset(meanMfdFromMultipleRuns, 
+					mfdsFromMultRuns.getMinCurve(), mfdsFromMultRuns.getMaxCurve());
+			mfdMinMaxRange.setName("mfdMinMaxRange");
+			mfd_funcs.add(mfdMinMaxRange);
+			UncertainArbDiscDataset mfdMean95conf = get95perConfForMultRuns(mfdsFromMultRuns);
+			mfdMean95conf.setName("mfdMean95conf");
+			mfd_funcs.add(mfdMean95conf);
+			mfd_funcs.add(meanMfdFromMultipleRuns);
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+
+			// Cumulative Distributions:
+			EvenlyDiscretizedFunc meanCumMfdFromMultipleRuns = cumMfdsFromMultRuns.getMeanCurve();
+			meanCumMfdFromMultipleRuns.setName("meanCumMfdFromMultipleRuns");
+			UncertainArbDiscDataset cumMfdMinMaxRange = new UncertainArbDiscDataset(meanCumMfdFromMultipleRuns, 
+					cumMfdsFromMultRuns.getMinCurve(), cumMfdsFromMultRuns.getMaxCurve());
+			cumMfdMinMaxRange.setName("cumMfdMinMaxRange");
+			mfd_funcs.add(cumMfdMinMaxRange);
+			UncertainArbDiscDataset cumMfdMean95conf = get95perConfForMultRuns(cumMfdsFromMultRuns);
+			cumMfdMean95conf.setName("cumMfdMean95conf");
+			mfd_funcs.add(cumMfdMean95conf);
+			mfd_funcs.add(meanCumMfdFromMultipleRuns);
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,200,200)));
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,120,120)));
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		}
+		else { // just single run value
+			mfd_funcs.add(magFreqDist);
+			EvenlyDiscretizedFunc cumMagFreqDist = magFreqDist.getCumRateDistWithOffset();
+			cumMagFreqDist.setInfo("Cumulative Mag Freq Dist");
+			mfd_funcs.add(cumMagFreqDist);
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		}
+		
+		// add average/single section participation MFD
+		mfd_funcs.add(aveOfSectPartMFDs);
+		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
+
+		// Add target or a comparison MFD
+		IncrementalMagFreqDist mfdComparison;
+		EvenlyDiscretizedFunc mfdCumComparison;
+		if(mfdConstraint != null) {
+			mfdComparison = mfdConstraint;
+			mfdComparison.setName("Target MFD Constraint Incr. Dist.");
+			mfdCumComparison = mfdComparison.getCumRateDistWithOffset();
+			mfdCumComparison.setName("Target Cumulative MFD Constraint");
+		}
+		else {
+			mfdComparison = getGR_DistFit();
+			mfdComparison.setName("GR Incr. Dist. with same Mmin, Mmax and moment rate, and b=1");
+			mfdCumComparison = mfdComparison.getCumRateDistWithOffset();
+			mfdCumComparison.setName("GR Cumulative Dist. with same Mmin, Mmax and moment rate, and b=1");
+		}
+		mfd_funcs.add(mfdComparison);
+		mfd_funcs.add(mfdCumComparison);
+		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLUE));
+		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.RED));
+
+		if(yAxisRange==null) {
+			double minY=Double.POSITIVE_INFINITY, maxY=Double.NEGATIVE_INFINITY;
+			for(XY_DataSet func : mfd_funcs) {
+				// loop over all y values to avoid zero (which will screw up log plotting)
+				for(int i=0; i<func.size();i++) {
+					double val = func.getY(i);
+					if(val>0) 
+						if(minY>val) minY=val;
+					if(maxY<val) maxY=val;
+
+				}
+			}
+			if(minY==maxY) {
+				minY /= 2;
+				maxY *= 2;
+			}
+			// round minY and maxY to tick marks in log space
+			double temp = Math.pow(10, Math.floor(Math.log10(minY)));
+			double ratio = Math.floor(minY/temp);
+			minY = temp*ratio;
+			temp = Math.pow(10, Math.floor(Math.log10(maxY)));
+			ratio = Math.ceil(maxY/temp);
+			maxY = temp*ratio;
+				
+			yAxisRange = new Range(minY, maxY);
+		}
+		
+		if(xAxisRange==null) {
+			double minX=minMagMFD_WithAleatory, maxX=maxMagMFD_WithAleatory;
+			if(minX==maxX) {
+				minX += 2;
+				maxX += 2;
+			}
+			xAxisRange = new Range(minX-0.05, maxX+0.05);
+		}
+
+		
+		String fileNamePrefix = null;
+		if(dirName != null)
+			fileNamePrefix = dirName+"/MFDs";
+		String plotName = "Magnitude Frequency Distributions";
+		String xAxisLabel = "Magnitude";
+		String yAxisLabel = "Rate (per yr)";
+		boolean logX = false;
+		boolean logY = true;
+
+		PlottingUtils.writeAndOrPlotFuncs(mfd_funcs, mfd_plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, widthInches, heightInches, fileNamePrefix, popupWindow);
+	}
+
 	
-	/**
-	 * This writes and/or plot various data fits.
-	 * @param dirName - set as null if you don't want to save results
-	 * @param popupWindow - set as true if you want plot windows to pop up
-	 */
-	public void writeAndOrPlotDataFits(String dirName, boolean popupWindow) {
+	public void writeAndOrPlotNormalizedResiduals(String dirName, boolean popupWindow, double widthInches, double heightInches) {
 		
-		
-		// NORMALIZED RESIDUALS
-//		double[] normResidsArray = new double[totNumRows];
 		DefaultXY_DataSet normResids = new DefaultXY_DataSet();
 		normResids.setName("normResidsArray");
 		normResids.setInfo("(p-o)/std for each row (data constraint), where p = predicted value, o = obs value, and std is the standard deviation of the observation (assuming wt = 1/std)");
@@ -2111,7 +2229,7 @@ public class FaultSystemRuptureRateInversion {
 		ArrayList<XY_DataSet> nr_funcs = new ArrayList<XY_DataSet>();
 		ArrayList<PlotCurveCharacterstics> nr_plotChars = new ArrayList<PlotCurveCharacterstics>();
 		nr_funcs.add(normResids);
-		nr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 4f, Color.BLUE));
+		nr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 2f, Color.BLUE));
 		String fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/normalizedResiduals";
@@ -2127,12 +2245,14 @@ public class FaultSystemRuptureRateInversion {
 		boolean logX = false;
 		boolean logY = false;
 		
-		writeAndOrPlotFuncs(nr_funcs, nr_plotChars, plotName, xAxisLabel, yAxisLabel, 
+		PlottingUtils.writeAndOrPlotFuncs(nr_funcs, nr_plotChars, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
 
-		
-		
-		// SECTION SLIP RATES:
+	}
+	
+	public PlotSpec writeAndOrPlotSlipRates(String dirName, boolean popupWindow, Range xAxisRange, Range yAxisRange, 
+			double widthInches, double heightInches) {
+
 		double min = 0, max = numSections-1;
 		EvenlyDiscretizedFunc origSlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
 		EvenlyDiscretizedFunc origUpper68_SlipRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
@@ -2151,10 +2271,17 @@ public class FaultSystemRuptureRateInversion {
 			origLower68_SlipRateFunc.set(s,(sectSlipRate[s]-sectSlipRateStdDev[s])*(1-moRateReduction));
 			finalSlipRateFunc.set(s,finalSectSlipRate[s]);
 		}
-		origSlipRateFunc.setName("Target Slip Rates");
+		origSlipRateFunc.setName("Target Slip Rates (mm/yr)");
 		origUpper68_SlipRateFunc.setName("Target Slip Rate Upper (+stdev)");
 		origLower68_SlipRateFunc.setName("Target Slip Rate Lower (-stdev)");
-		finalSlipRateFunc.setName("Final Slip Rates");
+		finalSlipRateFunc.setName("Final Slip Rates (mm/yr)");
+		
+		// convert to mm/yr:
+		origSlipRateFunc.scale(1000);;
+		origUpper68_SlipRateFunc.scale(1000);
+		origLower68_SlipRateFunc.scale(1000);
+		finalSlipRateFunc.scale(1000);
+	
 
 		ArrayList<XY_DataSet> sr_funcs = new ArrayList<XY_DataSet>();
 		ArrayList<PlotCurveCharacterstics> sr_plotChars = new ArrayList<PlotCurveCharacterstics>();
@@ -2162,68 +2289,104 @@ public class FaultSystemRuptureRateInversion {
 		if(finalSectSlipRateFromMultRuns != null) {
 			EvenlyDiscretizedFunc meanSlipRateFromMultipleRuns = finalSectSlipRateFromMultRuns.getMeanCurve();
 			meanSlipRateFromMultipleRuns.setName("meanSlipRateFromMultipleRuns");
-			UncertainArbDiscDataset slipRatesMinMaxRange = new UncertainArbDiscDataset(meanSlipRateFromMultipleRuns, 
-					finalSectSlipRateFromMultRuns.getMinCurve(), finalSectSlipRateFromMultRuns.getMaxCurve());
+			meanSlipRateFromMultipleRuns.scale(1000);	// convert to mm/yr
+			
+			DiscretizedFunc minCurve = finalSectSlipRateFromMultRuns.getMinCurve();;
+			DiscretizedFunc maxCurve = finalSectSlipRateFromMultRuns.getMaxCurve();
+			minCurve.scale(1000);	// convert to mm/yr
+			maxCurve.scale(1000);	// convert to mm/yr
+			UncertainArbDiscDataset slipRatesMinMaxRange = new UncertainArbDiscDataset(meanSlipRateFromMultipleRuns, minCurve, maxCurve);
 			slipRatesMinMaxRange.setName("slipRatesMinMaxRange");
 			sr_funcs.add(slipRatesMinMaxRange);
 			
-			UncertainArbDiscDataset slipRatesMean95conf = get95perConfForMultRuns(finalSectSlipRateFromMultRuns);
+//			UncertainArbDiscDataset slipRatesStdDevRange = new UncertainArbDiscDataset(meanSlipRateFromMultipleRuns, 
+//					finalSectSlipRateFromMultRuns.getMeanPlusXstdDevCurve(-1.0), finalSectSlipRateFromMultRuns.getMeanPlusXstdDevCurve(1.0));
+//			slipRatesStdDevRange.setName("slipRatesPlusMinus1stdDevRange");
+//			sr_funcs.add(slipRatesStdDevRange);
+
+
+			// need the following to scale to mm/yr
+			EvenlyDiscretizedFunc meanCurve = finalSectSlipRateFromMultRuns.getMeanCurve();
+			EvenlyDiscretizedFunc stdevCurve = finalSectSlipRateFromMultRuns.getStdDevCurve();
+			EvenlyDiscretizedFunc upper95 = stdevCurve.deepClone();
+			EvenlyDiscretizedFunc lower95 = stdevCurve.deepClone();
+			double numRuns = finalSectSlipRateFromMultRuns.getArbDiscrEmpDistFuncArray()[0].calcSumOfY_Vals();
+			double sqrtNum = Math.sqrt(numRuns);
+			for(int i=0;i<meanCurve.size();i++) {
+				double mean = meanCurve.getY(i);
+				double stdom = stdevCurve.getY(i)/sqrtNum;
+				upper95.set(i,mean+1.96*stdom);
+				lower95.set(i,mean-1.96*stdom);
+			}
+			meanCurve.scale(1000);
+			lower95.scale(1000);
+			upper95.scale(1000);
+			UncertainArbDiscDataset slipRatesMean95conf = new UncertainArbDiscDataset(meanCurve,lower95,upper95);
+
+			// this cannot be scaled to mm/yr:
+//			UncertainArbDiscDataset slipRatesMean95conf = get95perConfForMultRuns(finalSectSlipRateFromMultRuns);
 			slipRatesMean95conf.setName("slipRatesMean95conf");
 			sr_funcs.add(slipRatesMean95conf);
 			sr_funcs.add(meanSlipRateFromMultipleRuns);
 	
 			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
 			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
-			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLUE));
+//			// if stdDev included:
+//			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(220,220,255)));
+//			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(150,150,255)));
+//			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(80,80,255)));
+			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
 		}
-		
+		else {
+			sr_funcs.add(finalSlipRateFunc);
+			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		}
 
-		sr_funcs.add(finalSlipRateFunc);
 		sr_funcs.add(origSlipRateFunc);
 		sr_funcs.add(origUpper68_SlipRateFunc);
 		sr_funcs.add(origLower68_SlipRateFunc);
 //		sr_funcs.addAll(slipRate95confFuncsList);
 		
-		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
 //		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.BLUE));
-		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
-		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.DASH, 1f, Color.BLACK));
-		sr_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.DASH, 1f, Color.BLACK));
+		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.5f, Color.BLACK));
+		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 0.5f, Color.BLACK));
+		sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 0.5f, Color.BLACK));
 //		for(int i=0;i<slipRate95confFuncsList.size();i++) {
 //			sr_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 4f, Color.BLUE));
 //		}
 		
-
-		fileNamePrefix = null;
+		String fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/sectionSlipRates";
 
-		plotName = "";
-		xAxisLabel = "Section";
-		yAxisLabel = "Slip Rate (m/sec)";
-		xAxisRange = new Range(-1,numSections);
-		yAxisRange = null;
-		logX = false;
-		logY = false;
+		String plotName = "";
+		String xAxisLabel = "Section";
+		String yAxisLabel = "Slip Rate (mm/yr)";
+		boolean logX = false;
+		boolean logY = false;
 		
-		writeAndOrPlotFuncs(sr_funcs, sr_plotChars, plotName, xAxisLabel, yAxisLabel, 
-				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		return PlottingUtils.writeAndOrPlotFuncs(sr_funcs, sr_plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, widthInches, heightInches, fileNamePrefix, popupWindow);
+	}
+	
+	
+	public PlotSpec writeAndOrPlotEventRates(String dirName, boolean popupWindow, Range xAxisRange, Range yAxisRange, 
+			double widthInches, double heightInches) {
 
-		
-		// SECTION EVENT RATES:
+		double min = 0, max = numSections-1;
 		ArrayList<XY_DataSet> er_funcs = new ArrayList<XY_DataSet>();
 		ArrayList<PlotCurveCharacterstics> er_plotChars = new ArrayList<PlotCurveCharacterstics>();
-
-		// now fill in final event rates
+		
 		EvenlyDiscretizedFunc finalEventRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
 		EvenlyDiscretizedFunc finalPaleoVisibleEventRateFunc = new EvenlyDiscretizedFunc(min, max, numSections);
 		for(int s=0;s < numSections; s++) {
-			finalEventRateFunc.set(s,finalSectEventRate[s]);
 			finalPaleoVisibleEventRateFunc.set(s, finalPaleoVisibleSectEventRate[s]);
+			finalEventRateFunc.set(s,finalSectEventRate[s]);
 		}
 		finalPaleoVisibleEventRateFunc.setName("Final Paleoseismically Visible Event Rates");
 		finalEventRateFunc.setName("Final Event Rates (dashed)");
-		
+
+
 		if(finalPaleoVisibleSectEventRateFromMultRuns != null) {
 			EvenlyDiscretizedFunc meanPaleoVisEventRateFromMultipleRuns = finalPaleoVisibleSectEventRateFromMultRuns.getMeanCurve();
 			meanPaleoVisEventRateFromMultipleRuns.setName("meanPaleoVisEventRateFromMultipleRuns");
@@ -2236,15 +2399,21 @@ public class FaultSystemRuptureRateInversion {
 			UncertainArbDiscDataset paleoVisEventRatesMean95conf = get95perConfForMultRuns(finalPaleoVisibleSectEventRateFromMultRuns);
 			paleoVisEventRatesMean95conf.setName("paleoVisEventRatesMean95conf");
 			er_funcs.add(paleoVisEventRatesMean95conf);
-			er_funcs.add(meanPaleoVisEventRateFromMultipleRuns);
 			
 			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,200,200)));
 			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,120,120)));
-			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.RED));
+			er_funcs.add(finalEventRateFunc);
+			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+			er_funcs.add(meanPaleoVisEventRateFromMultipleRuns);
+			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		}
+		else {
+			er_funcs.add(finalEventRateFunc);
+			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+			er_funcs.add(finalPaleoVisibleEventRateFunc);
+			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
 		}
 		
-		er_funcs.add(finalPaleoVisibleEventRateFunc);
-		er_funcs.add(finalEventRateFunc);
 		int num = sectionRateConstraints.size();
 		ArrayList<AbstractXY_DataSet> obs_er_funcs = new ArrayList<AbstractXY_DataSet>();
 
@@ -2266,37 +2435,30 @@ public class FaultSystemRuptureRateInversion {
 				er_funcs.add(func);
 			}			
 		}
-		er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
-		er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
 		er_plotChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.RED));
 		for(int c=0;c<num;c++)
 			er_plotChars.add(new PlotCurveCharacterstics(
 					PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 4f, Color.RED));
 
-		fileNamePrefix = null;
+		String fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/sectionEventRates";
-		plotName = "";
-		xAxisLabel = "Section";
-		yAxisLabel = "Event Rate (per yr)";
-//		xAxisRange = null;
-		yAxisRange = null;
-		logX = false;
-		logY = true;
+		String plotName = null;
+		String xAxisLabel = "Section";
+		String yAxisLabel = "Event Rate (per yr)";
+		boolean logX = false;
+		boolean logY = false;
 
-		writeAndOrPlotFuncs(er_funcs, er_plotChars, plotName, xAxisLabel, yAxisLabel, 
-				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		return PlottingUtils.writeAndOrPlotFuncs(er_funcs, er_plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, widthInches, heightInches, fileNamePrefix, popupWindow);
+	}
 
-		
-		// SECTION MEAN SLIP AND COV:
-		EvenlyDiscretizedFunc finalMeanSlipFunc = new EvenlyDiscretizedFunc(min, max, numSections);
-		EvenlyDiscretizedFunc finalSlipCOVFunc = new EvenlyDiscretizedFunc(min, max, numSections);
-		for(int s=0; s<numSections;s++) {
-			finalMeanSlipFunc.set(s, finalSectMeanSlip[s]);
-			finalSlipCOVFunc.set(s,finalSectSlipCOV[s]);
-		}
-		finalMeanSlipFunc.setName("Mean Slip");
-		finalSlipCOVFunc.setName("Slip COV");
+
+	
+	public PlotSpec writeAndOrPlotAveSlipAndCOV(String dirName, boolean popupWindow, Range xAxisRange, Range yAxisRange, 
+			double widthInches, double heightInches) {
+
+		double min = 0, max = numSections-1;
 
 		ArrayList<XY_DataSet> slip_mean_cov_funcs = new ArrayList<XY_DataSet>();
 		ArrayList<PlotCurveCharacterstics> slip_mean_cov_plotChars = new ArrayList<PlotCurveCharacterstics>();
@@ -2316,7 +2478,7 @@ public class FaultSystemRuptureRateInversion {
 	
 			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
 			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
-			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLUE));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
 			
 			EvenlyDiscretizedFunc slipCOV_FromMultipleRuns = finalSectSlipCOV_FromMultRuns.getMeanCurve();
 			slipCOV_FromMultipleRuns.setName("slipCOV_FromMultipleRuns");
@@ -2332,40 +2494,45 @@ public class FaultSystemRuptureRateInversion {
 	
 			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,255,200)));
 			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,255,120)));
-			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.GREEN));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
+		}
+		else {
+			EvenlyDiscretizedFunc finalMeanSlipFunc = new EvenlyDiscretizedFunc(min, max, numSections);
+			EvenlyDiscretizedFunc finalSlipCOVFunc = new EvenlyDiscretizedFunc(min, max, numSections);
+			for(int s=0; s<numSections;s++) {
+				finalMeanSlipFunc.set(s, finalSectMeanSlip[s]);
+				finalSlipCOVFunc.set(s,finalSectSlipCOV[s]);
+			}
+			finalMeanSlipFunc.setName("Mean Slip");
+			finalSlipCOVFunc.setName("Slip COV");
+			slip_mean_cov_funcs.add(finalMeanSlipFunc);
+			slip_mean_cov_funcs.add(finalSlipCOVFunc);
+			
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
 		}
 		
-		slip_mean_cov_funcs.add(finalMeanSlipFunc);
-		slip_mean_cov_funcs.add(finalSlipCOVFunc);
-		
-		slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
-		slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
 
-		fileNamePrefix = null;
+		String fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/sectionMeanSlipAndCOV";
 
-		plotName = "";
-		xAxisLabel = "Section";
-		yAxisLabel = "Mean Slip (m) and COV";
-		xAxisRange = new Range(-1,numSections);
-		yAxisRange = null;
-		logX = false;
-		logY = false;
+		String plotName = null;
+		String xAxisLabel = "Section";
+		String yAxisLabel = "Mean Slip (m); COV";
+		boolean logX = false;
+		boolean logY = false;
 		
-		writeAndOrPlotFuncs(slip_mean_cov_funcs, slip_mean_cov_plotChars, plotName, xAxisLabel, yAxisLabel, 
-				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		return PlottingUtils.writeAndOrPlotFuncs(slip_mean_cov_funcs, slip_mean_cov_plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, widthInches, heightInches, fileNamePrefix, popupWindow);
+	}
+
+
+	public void writeAndOrPlotRupRateVsIndex(String dirName, boolean popupWindow, double widthInches, double heightInches) {
 		
-		
-				
-		// RUPTURE RATES
-		// plot the final rupture rates
-		max = numRuptures-1;
-		EvenlyDiscretizedFunc rupRateFunc = new EvenlyDiscretizedFunc(min, max, numRuptures);
-		for(int rup=0; rup<numRuptures;rup++) {
-			rupRateFunc.set(rup,rupRateSolution[rup]);
-		}
-		rupRateFunc.setName("Rupture Rates");
+		double min = -1;
+		double max = numRuptures-1;
+
 		ArrayList<XY_DataSet> rup_funcs = new ArrayList<XY_DataSet>();
 		ArrayList<PlotCurveCharacterstics> rup_plotChars = new ArrayList<PlotCurveCharacterstics>();
 
@@ -2383,26 +2550,40 @@ public class FaultSystemRuptureRateInversion {
 			rup_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,120)));
 
 		}
+		
+		EvenlyDiscretizedFunc rupRateFunc = new EvenlyDiscretizedFunc(min, max, numRuptures);
+		for(int rup=0; rup<numRuptures;rup++) {
+			rupRateFunc.set(rup,rupRateSolution[rup]);
+		}
+		rupRateFunc.setName("Rupture Rates");
 		rup_funcs.add(rupRateFunc);
 		rup_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 		
-		fileNamePrefix = null;
+		String fileNamePrefix = null;
 		if(dirName != null)
-			fileNamePrefix = dirName+"/ruptureRates";
-		plotName = "Rupture Rates";
-		xAxisLabel = "Rupture Index";
-		yAxisLabel = "Rate (per yr)";
-		xAxisRange = new Range(-1, numRuptures);
-		yAxisRange = new Range(1e-10, rupRateFunc.getMaxY());
-		logX = false;
-		logY = true;
+			fileNamePrefix = dirName+"/ruptureRatesVsIndex";
+		String plotName = "Rupture Rates";
+		String xAxisLabel = "Rupture Index";
+		String yAxisLabel = "Rate (per yr)";
+		Range xAxisRange = new Range(-1, numRuptures);
+		Range yAxisRange = new Range(1e-10, rupRateFunc.getMaxY());
+		boolean logX = false;
+		boolean logY = true;
 
-		writeAndOrPlotFuncs(rup_funcs, rup_plotChars, plotName, xAxisLabel, yAxisLabel, 
-				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		PlottingUtils.writeAndOrPlotFuncs(rup_funcs, rup_plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, widthInches, heightInches, fileNamePrefix, popupWindow);
 
+	}
+	
+	/**
+	 * This only writes out the single or average solution (multiple SA solutions are
+	 * written out in the simulation loop in case of crash)
+	 * @param fileName
+	 */
+	public void writeRuptureRatesToFile(String dirName) {
 		// write alternative rupture rates file to get rid of big header
 		try{
-			FileWriter fw = new FileWriter(fileNamePrefix+"Alt.txt");
+			FileWriter fw = new FileWriter(dirName+ "/ruptureRates.txt");	// fileNamePrefix+"Alt.txt"
 			for(int i=0;i<numRuptures; i++) {				
 				fw.write(i+"\t"+rupRateSolution[i]+"\n");
 			}
@@ -2410,125 +2591,13 @@ public class FaultSystemRuptureRateInversion {
 		}catch(Exception e) {
 			e.printStackTrace();
 		}			
+	}
 
+	
 		
+	public void writeAndOrPlotSectionBoundaryRates(String dirName, boolean popupWindow, Range yAxisRange, 
+			double widthInches, double heightInches) {
 
-		// PLOT MFDs
-		ArrayList<XY_DataSet> mfd_funcs = new ArrayList<XY_DataSet>();
-		ArrayList<PlotCurveCharacterstics> mfd_plotChars = new ArrayList<PlotCurveCharacterstics>();
-		
-		EvenlyDiscretizedFunc cumMagFreqDist = magFreqDist.getCumRateDistWithOffset();
-		cumMagFreqDist.setInfo("Cumulative Mag Freq Dist");
-
-		// If multiple SA runs have been generated
-		if(mfdsFromMultRuns != null) {
-			EvenlyDiscretizedFunc meanMfdFromMultipleRuns = mfdsFromMultRuns.getMeanCurve();
-			meanMfdFromMultipleRuns.setName("meanMfdFromMultipleRuns");
-			UncertainArbDiscDataset mfdMinMaxRange = new UncertainArbDiscDataset(meanMfdFromMultipleRuns, 
-					mfdsFromMultRuns.getMinCurve(), mfdsFromMultRuns.getMaxCurve());
-			mfdMinMaxRange.setName("mfdMinMaxRange");
-			mfd_funcs.add(mfdMinMaxRange);
-			UncertainArbDiscDataset mfdMean95conf = get95perConfForMultRuns(mfdsFromMultRuns);
-			mfdMean95conf.setName("mfdMean95conf");
-			mfd_funcs.add(mfdMean95conf);
-			mfd_funcs.add(meanMfdFromMultipleRuns);
-			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
-			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
-			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.BLUE));
-			
-			EvenlyDiscretizedFunc meanCumMfdFromMultipleRuns = cumMfdsFromMultRuns.getMeanCurve();
-			meanCumMfdFromMultipleRuns.setName("meanCumMfdFromMultipleRuns");
-			UncertainArbDiscDataset cumMfdMinMaxRange = new UncertainArbDiscDataset(meanCumMfdFromMultipleRuns, 
-					cumMfdsFromMultRuns.getMinCurve(), cumMfdsFromMultRuns.getMaxCurve());
-			cumMfdMinMaxRange.setName("cumMfdMinMaxRange");
-			mfd_funcs.add(cumMfdMinMaxRange);
-			UncertainArbDiscDataset cumMfdMean95conf = get95perConfForMultRuns(cumMfdsFromMultRuns);
-			cumMfdMean95conf.setName("cumMfdMean95conf");
-			mfd_funcs.add(cumMfdMean95conf);
-			mfd_funcs.add(meanCumMfdFromMultipleRuns);
-			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,200,200)));
-			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(255,120,120)));
-			mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.RED));
-		}
-		
-		mfd_funcs.add(magFreqDist);
-		mfd_funcs.add(cumMagFreqDist);
-		// add average seg participation MFD
-		mfd_funcs.add(aveOfSectPartMFDs);
-		EvenlyDiscretizedFunc cumAveOfSegPartMFDs = aveOfSectPartMFDs.getCumRateDistWithOffset();
-		cumAveOfSegPartMFDs.setInfo("cumulative "+aveOfSectPartMFDs.getInfo());
-		
-		IncrementalMagFreqDist mfdComparison;
-		EvenlyDiscretizedFunc mfdCumComparison;
-		if(mfdConstraint != null) {
-			mfdComparison = mfdConstraint;
-			mfdComparison.setName("Target MFD Constraint Incr. Dist.");
-			mfdCumComparison = mfdComparison.getCumRateDistWithOffset();
-			mfdCumComparison.setName("Target Cumulative MFD Constraint");
-		}
-		else {
-			mfdComparison = getGR_DistFit();
-			mfdComparison.setName("GR Incr. Dist. with same Mmin, Mmax and moment rate, and b=1");
-			mfdCumComparison = mfdComparison.getCumRateDistWithOffset();
-			mfdCumComparison.setName("GR Cumulative Dist. with same Mmin, Mmax and moment rate, and b=1");
-		}
-		mfd_funcs.add(mfdComparison);
-		mfd_funcs.add(mfdCumComparison);
-		
-		double minX=Double.POSITIVE_INFINITY, maxX=Double.NEGATIVE_INFINITY, minY=Double.POSITIVE_INFINITY, maxY=Double.NEGATIVE_INFINITY;
-		for(XY_DataSet func : mfd_funcs) {
-			if(minX>func.getMinX()) minX=func.getMinX();
-			if(maxX<func.getMaxX()) maxX=func.getMaxX();
-			// loop over all y values to avoid zero (which will screw up lo g plotting)
-			for(int i=0; i<func.size();i++) {
-				double val = func.getY(i);
-				if(val>0) 
-					if(minY>val) minY=val;
-				if(maxY<val) maxY=val;
-
-			}
-		}
-		if(minX==maxX) {
-			minX /= 2;
-			maxX *= 2;
-		}
-		if(minY==maxY) {
-			minY /= 2;
-			maxY *= 2;
-		}
-// System.out.println(minY+"\there\t"+maxY);
-		// round minY and maxY to tick marks in log space
-		double temp = Math.pow(10, Math.floor(Math.log10(minY)));
-		double ratio = Math.floor(minY/temp);
-		minY = temp*ratio;
-		temp = Math.pow(10, Math.floor(Math.log10(maxY)));
-		ratio = Math.ceil(maxY/temp);
-		maxY = temp*ratio;
-
-		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE));
-		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED));
-		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN));
-		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.BLUE));
-		mfd_plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.RED));
-		
-		fileNamePrefix = null;
-		if(dirName != null)
-			fileNamePrefix = dirName+"/MFDs";
-		plotName = "Magnitude Frequency Distributions";
-		xAxisLabel = "Magnitude";
-		yAxisLabel = "Rate (per yr)";
-		xAxisRange = new Range(minX-0.05, maxX+0.05);
-		yAxisRange = new Range(minY, maxY);
-		logX = false;
-		logY = true;
-
-		writeAndOrPlotFuncs(mfd_funcs, mfd_plotChars, plotName, xAxisLabel, yAxisLabel, 
-				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
-
-
-
-
-		// PLOT RATE AT WHICH RUPTURES PASS THROUGH EACH SECTION BOUNDARY
 		EvenlyDiscretizedFunc rateOfThroughgoingRupsFunc = new EvenlyDiscretizedFunc(-0.5, numSections+1, 1.0);
 		for(int s=0; s<numSections+1;s++) {
 			rateOfThroughgoingRupsFunc.set(s,rateOfThroughGoingRupsAtSectBoudary[s]);
@@ -2537,7 +2606,7 @@ public class FaultSystemRuptureRateInversion {
 
 		ArrayList<XY_DataSet> sect_funcs = new ArrayList<XY_DataSet>();
 		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();
-		
+
 		if(rateOfThroughGoingRupsAtSectBoudaryFromMultRuns != null) {
 			EvenlyDiscretizedFunc meanRateOfThroughGoingRupsFromMultipleRuns = rateOfThroughGoingRupsAtSectBoudaryFromMultRuns.getMeanCurve();
 			meanRateOfThroughGoingRupsFromMultipleRuns.setName("meanRateOfThroughGoingRupsFromMultipleRuns");
@@ -2550,42 +2619,25 @@ public class FaultSystemRuptureRateInversion {
 			UncertainArbDiscDataset rateOfThroughGoingRupsMean95conf = get95perConfForMultRuns(rateOfThroughGoingRupsAtSectBoudaryFromMultRuns);
 			rateOfThroughGoingRupsMean95conf.setName("rateOfThroughGoingRupsMean95conf");
 			sect_funcs.add(rateOfThroughGoingRupsMean95conf);
-			sect_funcs.add(meanRateOfThroughGoingRupsFromMultipleRuns);
 
 			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,200)));
 			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,120)));
-			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLACK));
-
 		}
-		
-		sect_funcs.add(origSlipRateFunc);
-		sect_funcs.add(finalSlipRateFunc);
-		sect_funcs.add(finalPaleoVisibleEventRateFunc);
-		// add paleoseismic obs
-		for(int i=0; i<obs_er_funcs.size();i++) sect_funcs.add(obs_er_funcs.get(i));
+
 		sect_funcs.add(rateOfThroughgoingRupsFunc);
-		
-		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 2f, Color.BLUE));
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
-		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
-		plotChars2.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.RED));
-		for(int c=0;c<num;c++)
-			plotChars2.add(new PlotCurveCharacterstics(
-					PlotLineType.SOLID, 1f, PlotSymbol.CROSS, 4f, Color.RED));
 		plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
-		
-		fileNamePrefix = null;
+
+		String fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/sectionBoundaryRates";
-		plotName =  "Section Boundary Rates";
-		xAxisLabel = "Section Boundary";
-		yAxisLabel = "Rate (per yr)";
-		xAxisRange = new Range(-1,numSections);
-		yAxisRange = null;
-		logX = false;
-		logY = false;
+		String plotName =  "Section Boundary Rates";
+		String xAxisLabel = "Section Boundary";
+		String yAxisLabel = "Rate (per yr)";
+		Range xAxisRange = new Range(-1,numSections);
+		boolean logX = false;
+		boolean logY = false;
 
-		writeAndOrPlotFuncs(sect_funcs, plotChars2, plotName, xAxisLabel, yAxisLabel, 
+		PlottingUtils.writeAndOrPlotFuncs(sect_funcs, plotChars2, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
 
 
@@ -2620,12 +2672,13 @@ public class FaultSystemRuptureRateInversion {
 	
 
 	/**
-	 * This makes histograms of the number of ruptures in each magnitude interval and the number
-	 * of sections in each
+	 * This makes the following histograms: 1) the number of ruptures having N subsection, the number
+	 * of ruptures in each magnitude bin, the default likelihood that a subsection will be included in
+	 * a randomly chosen rupture, and the ruptureSampler implied MFD (if ruptureSampler != null)
 	 * @param dirName - set as null if you don't want to save results
 	 * @param popupWindow - set as true if you want plot windows to pop up
 	 */
-	public void writeAndOrPlotMagHistograms(String dirName, boolean popupWindow) {
+	public void writeAndOrPlotMagHistograms(String dirName, boolean popupWindow, double widthInches, double heightInches) {
 		
 		ArrayList<XY_DataSet> funcs1 = new ArrayList<XY_DataSet>();
 		funcs1.add(meanMagHistorgram);
@@ -2633,36 +2686,36 @@ public class FaultSystemRuptureRateInversion {
 
 		
 		// make a numSegInRupHistogram
-		HistogramFunction numSegInRupHistogram = new HistogramFunction(1.0,numSections,1.0);
-		for(int r=0;r<numSectInRup.length;r++) numSegInRupHistogram.add((double)numSectInRup[r], 1.0);
-		numSegInRupHistogram.setName("Num Segments In Rupture Histogram");
+		HistogramFunction numSectInRupHistogram = new HistogramFunction(1.0,numSections,1.0);
+		for(int r=0;r<numSectInRup.length;r++) numSectInRupHistogram.add((double)numSectInRup[r], 1.0);
+		numSectInRupHistogram.setName("Num Segments In Rupture Histogram");
 		ArrayList<XY_DataSet> funcs2 = new ArrayList<XY_DataSet>();
-		funcs2.add(numSegInRupHistogram);	
+		funcs2.add(numSectInRupHistogram);	
 		
 		
 		// make prob of section being randomly selected
-		HistogramFunction probSegSelectedHistogram = new HistogramFunction(0.0,numSections,1.0);
+		HistogramFunction probSectSelectedHistogram = new HistogramFunction(0.0,numSections,1.0);
 		for(int r=0;r<numRuptures;r++) {
 			for(int s=0; s<numSections; s++) {
 				if(rupSectionMatrix[s][r] == 1)
-					probSegSelectedHistogram.add(s, 1);
+					probSectSelectedHistogram.add(s, 1);
 			}
 		}
-		probSegSelectedHistogram.normalizeBySumOfY_Vals();
-		probSegSelectedHistogram.setName("Prob Section Randomly Selected Histogram");
+//		probSectSelectedHistogram.normalizeBySumOfY_Vals();
+		probSectSelectedHistogram.setName("Prob Section Randomly Selected Histogram (or num rups that touch sect)");
 		ArrayList<XY_DataSet> funcs3 = new ArrayList<XY_DataSet>();
-		funcs3.add(probSegSelectedHistogram);
+		funcs3.add(probSectSelectedHistogram);
 
 		
 		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.gray));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
 		
 		double minX=magHistorgram.getMinX();
 		double maxX=magHistorgram.getMaxX();
 		if(minX==maxX) {
-			minX /= 2;
-			maxX *= 2;
+			minX += 1;
+			maxX -= 1;
 		}
 
 		String fileNamePrefix = null;
@@ -2671,37 +2724,37 @@ public class FaultSystemRuptureRateInversion {
 		String plotName ="Mag Histograms";
 		String xAxisLabel = "Magnitude";
 		String yAxisLabel = "Num Ruptures";
-		Range xAxisRange = new Range(minX-0.05,maxX+0.05);
+		Range xAxisRange = new Range(minX-MAG_DELTA/2.0,maxX+MAG_DELTA/2.0);
 		Range yAxisRange = null;
 		boolean logX = false;
 		boolean logY = false;
 
-		writeAndOrPlotFuncs(funcs1, plotChars, plotName, xAxisLabel, yAxisLabel, 
+		PlottingUtils.writeAndOrPlotFuncs(funcs1, plotChars, plotName, xAxisLabel, yAxisLabel, 
 				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
 		
 		fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/numSectInRuptHistogram";
 		plotName = "Num Sect In Rup Histograms";
-		xAxisLabel = "Num Section";
+		xAxisLabel = "Num Subsections";
 		yAxisLabel = "Num Ruptures";
 		xAxisRange = new Range(-1,numSections);
 		yAxisRange = null;
 		logX = false;
 		logY = false;
 
-		writeAndOrPlotFuncs(funcs2, plotChars, plotName, xAxisLabel, yAxisLabel, 
-				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		PlottingUtils.writeAndOrPlotFuncs(funcs2, plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, widthInches, heightInches, fileNamePrefix, popupWindow);
 		
 		fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/probSegSelectedHistogram";
 		plotName = "Prob Section Randomly Selected Histogram";
-		xAxisLabel = "Section ID";
-		yAxisLabel = "PDF";
+		xAxisLabel = "Subsection ID";
+		yAxisLabel = "Num Ruptures";
 
-		writeAndOrPlotFuncs(funcs3, plotChars, plotName, xAxisLabel, yAxisLabel, 
-				xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);
+		PlottingUtils.writeAndOrPlotFuncs(funcs3, plotChars, plotName, xAxisLabel, yAxisLabel, 
+				xAxisRange, yAxisRange, logX, logY, widthInches, heightInches, fileNamePrefix, popupWindow);
 		
 		
 		if(rupSamplerMFD != null) {
@@ -2722,90 +2775,13 @@ public class FaultSystemRuptureRateInversion {
 			logX = false;
 			logY = true;
 
-			writeAndOrPlotFuncs(funcs4, plotChars4, plotName, xAxisLabel, yAxisLabel, 
-					xAxisRange, yAxisRange, logX, logY, fileNamePrefix, popupWindow);	
+			PlottingUtils.writeAndOrPlotFuncs(funcs4, plotChars4, plotName, xAxisLabel, yAxisLabel, 
+					xAxisRange, yAxisRange, logX, logY, widthInches, heightInches, fileNamePrefix, popupWindow);	
 		
 		}
 	}
 	
 	
-	/**
-	 * The general x-y plotting method
-	 * @param funcs
-	 * @param plotChars
-	 * @param plotName
-	 * @param xAxisLabel
-	 * @param yAxisLabel
-	 * @param xAxisRange
-	 * @param yAxisRange
-	 * @param logX
-	 * @param logY
-	 * @param fileNamePrefix - set a null if you don't want to save to files
-	 * @param popupWindow - set as false if you don't want a pop-up windows with the plots
-	 */
-	public static void writeAndOrPlotFuncs(
-			ArrayList<XY_DataSet> funcs, 
-			ArrayList<PlotCurveCharacterstics> plotChars, 
-			String plotName,
-			String xAxisLabel,
-			String yAxisLabel,
-			Range xAxisRange,
-			Range yAxisRange,
-			boolean logX,
-			boolean logY,
-			String fileNamePrefix, 
-			boolean popupWindow) {
-		
-		if(popupWindow) {
-			
-			GraphWindow graph = new GraphWindow(funcs, plotName);
-
-			if(xAxisRange != null)
-				graph.setX_AxisRange(xAxisRange.getLowerBound(),xAxisRange.getUpperBound());
-			if(yAxisRange != null)
-				graph.setY_AxisRange(yAxisRange.getLowerBound(),yAxisRange.getUpperBound());
-			graph.setXLog(logX);
-			graph.setYLog(logY);
-			graph.setPlotChars(plotChars);
-			graph.setX_AxisLabel(xAxisLabel);
-			graph.setY_AxisLabel(yAxisLabel);
-			graph.setTickLabelFontSize(18);
-			graph.setAxisLabelFontSize(20);
-
-//			graph.setBackground(Color.WHITE); // this does not work so not using what follows
-//			if(fileNamePrefix != null) {
-//				try {
-//					graph.saveAsPDF(fileNamePrefix+".pdf");
-//					graph.saveAsPNG(fileNamePrefix+".png");
-//					graph.saveAsTXT(fileNamePrefix+".txt");
-//				} catch (IOException e) {
-//					e.printStackTrace();
-//				}
-//			}		
-		}
-//		else if (fileNamePrefix != null){	// no pop-up window; just save plot
-		if (fileNamePrefix != null){	// no pop-up window; just save plot
-			PlotSpec spec = new PlotSpec(funcs, plotChars, plotName, xAxisLabel, yAxisLabel);
-			HeadlessGraphPanel gp = new HeadlessGraphPanel();
-			gp.setUserBounds(xAxisRange, yAxisRange);
-			gp.setTickLabelFontSize(40);
-			gp.setAxisLabelFontSize(48);
-			gp.setBackgroundColor(Color.WHITE);
-			gp.drawGraphPanel(spec, logX, logY);
-			gp.getChartPanel().setSize(936, 748); // this is 13 by 10.4 inches (72 points per inch); scale by 0.25 to get 3.25 inch wide plot
-			// such a wide plot is need to have enough pixels in the png file below
-			try {
-				gp.saveAsPNG(fileNamePrefix+".png");
-				gp.saveAsPDF(fileNamePrefix+".pdf");
-				gp.saveAsTXT(fileNamePrefix+".txt");
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		
-
-
-	}
 
 	
 	
@@ -3003,7 +2979,8 @@ public class FaultSystemRuptureRateInversion {
 		}
 
 		if(D) System.out.println("minNumSectInRup="+minNumSectInRup);
-		modelSetUpInfoString += "\nminNumSectInRup = "+minNumSectInRup+"\n";
+		modelSetUpInfoString += "\nminNumSectInRup = "+minNumSectInRup+"\n\n"+
+				"gaussMFD_slipCorr="+(float)gaussMFD_slipCorr+"\n";
 
 		// compute rupture mean mags etc
 		rupMeanMag = new double[numRuptures];
@@ -3096,78 +3073,6 @@ public class FaultSystemRuptureRateInversion {
 		return ((double)Math.round(10*(mag-0.05)))/10.0 +0.05;
 	}
 	
-	
-	/**
-	 * This is the general 2D plotting method.
-	 * @param xyzData
-	 * @param title
-	 * @param xAxisLabel
-	 * @param yAxisLabel
-	 * @param zAxisLabel
-	 * @param fileNamePrefix - set as null if no files are to be saved
-	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
-	 * @param xAddOn - amount to add to min and max data values for plotting range
-	 * @param yAddOn - amount to add to min and max data values for plotting range
-
-	 */
-	protected static void make2D_plot(EvenlyDiscrXYZ_DataSet xyzData, String title,
-			String xAxisLabel, String yAxisLabel, String zAxisLabel, String fileNamePrefix, 
-			boolean popupWindow, double xAddOn, double yAddOn) {
-		CPT cpt=null;
-		try {
-			double ratio = Math.pow(10, xyzData.getMaxZ()-xyzData.getMinZ());
-//			System.out.println("ratio\t"+ratio);
-			if(ratio>1.01) {	// more than 1% difference
-				cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(xyzData.getMinZ(), xyzData.getMaxZ());
-			}
-			else {
-				cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(xyzData.getMinZ()-Math.log10(2d), xyzData.getMinZ()+Math.log10(2d));
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		cpt.setNanColor(Color.white);
-		XYZPlotSpec spec = new XYZPlotSpec(xyzData, cpt, title, xAxisLabel, yAxisLabel, zAxisLabel);
-		
-		Range xRange = new Range(xyzData.getMinX()-xAddOn,xyzData.getMaxX()+xAddOn);
-		Range yRange = new Range(xyzData.getMinY()-yAddOn,xyzData.getMaxY()+yAddOn);
-		
-//		System.out.println(xyzData.getMinZ()+"\t"+xyzData.getMaxZ());
-		
-//		if(xyzData.getMaxX() > xyzData.getMinX()+xyzData.getGridSpacingX()/2)
-//			xRange = new Range(xyzData.getMinX(),xyzData.getMaxX());
-//		else
-//			xRange = new Range(xyzData.getMinX(),xyzData.getMaxX()+xyzData.getGridSpacingX());
-//		
-//		if(xyzData.getMaxY() > xyzData.getMinY()+xyzData.getGridSpacingY()/2)
-//			yRange = new Range(xyzData.getMinY(),xyzData.getMaxY());
-//		else
-//			yRange = new Range(xyzData.getMinY(),xyzData.getMaxY()+xyzData.getGridSpacingY());
-
-		
-//System.out.println("xRange\t"+xRange.getLowerBound()+"\t"+xRange.getUpperBound());
-//System.out.println("yRange\t"+yRange.getLowerBound()+"\t"+yRange.getUpperBound());
-		
-		try {
-			if(popupWindow) {
-				XYZPlotWindow window = new XYZPlotWindow(spec, xRange, yRange);
-				XYZGraphPanel panel = window.getXYZPanel();
-				if(fileNamePrefix != null) {
-					panel.saveAsPDF(fileNamePrefix+".pdf");
-					panel.saveAsPNG(fileNamePrefix+".png");
-				}
-			}
-			else if (fileNamePrefix != null) {
-				XYZGraphPanel xyzGP = new XYZGraphPanel();
-				xyzGP.drawPlot(spec, false, false, xRange, yRange);
-				xyzGP.getChartPanel().setSize(700, 800);
-				xyzGP.saveAsPNG(fileNamePrefix+".png");
-				xyzGP.saveAsPDF(fileNamePrefix+".pdf");
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
 	
 	
