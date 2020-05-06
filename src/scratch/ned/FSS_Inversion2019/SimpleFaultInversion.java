@@ -85,6 +85,7 @@ import scratch.UCERF3.simulatedAnnealing.params.GenerationFunctionType;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.SlipAlongRuptureModelEnum;
 
+
 /**
  * 
  * This class runs the inversion.
