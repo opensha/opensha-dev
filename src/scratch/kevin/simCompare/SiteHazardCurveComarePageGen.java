@@ -35,6 +35,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Doubles;
 
 import scratch.kevin.simCompare.SimulationDisaggAttenuationRelationshipWrapper.Source;
 import scratch.kevin.util.ReturnPeriodUtils;
@@ -149,7 +150,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	}
 	
 	public void generateSitePage(Site site, List<? extends RuptureComparison<E>> comps, File outputDir, List<String> headerLines,
-			double[] periods, AttenRelRef gmpeRef) throws IOException {
+			IMT[] imts, AttenRelRef gmpeRef) throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		List<String> lines = new LinkedList<>();
@@ -209,9 +210,9 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		table = MarkdownUtils.tableBuilder();
 		table.initNewLine();
 		table.addColumn("Hazard Level");
-		for (double period : periods) {
-			table.addColumn(simName+" "+optionalDigitDF.format(period)+"s");
-			table.addColumn(gmpeRef.getShortName()+" "+optionalDigitDF.format(period)+"s");
+		for (IMT imt : imts) {
+			table.addColumn(simName+" "+imt.getDisplayName());
+			table.addColumn(gmpeRef.getShortName()+" "+imt.getDisplayName());
 		}
 		table.finalizeLine();
 		int[] rps = MultiRupGMPE_ComparePageGen.hazard_curve_rps;
@@ -228,10 +229,10 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			double level = probLevels.get(i);
 			table.initNewLine();
 			table.addColumn(probLabels.get(i));
-			for (double period : periods) {
+			for (IMT imt : imts) {
 				DiscretizedFunc[] curves = {
-						curvePlotter.getCalcSimCurve(simCalc, period),
-						curvePlotter.getCalcGMPECurve(period)
+						curvePlotter.getCalcSimCurve(simCalc, imt),
+						curvePlotter.getCalcGMPECurve(imt)
 				};
 				for (DiscretizedFunc curve : curves) {
 					if (level == 0d) {
@@ -259,13 +260,19 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		lines.addAll(curvePlotter.getCurveLegend(true, true, true, 0));
 		lines.add("");
 		
+		List<Double> saPeriodList = new ArrayList<>();
+		for (IMT imt : imts)
+			if (imt.getParamName().equals(SA_Param.NAME))
+				saPeriodList.add(imt.getPeriod());
+		double[] saPeriods = Doubles.toArray(saPeriodList);
+		
 		table = MarkdownUtils.tableBuilder();
 		String spectraPrefix = site.getName().replaceAll(" ", "_")+"_spectra_"+gmpeRef.getShortName();
 		for (int rp : rps) {
 			String rpPrefix = spectraPrefix+"_"+rp+"yr";
 			double probLevel = 1d/(double)rp;
 			if (replotCurves || !new File(resourcesDir, rpPrefix+".png").exists())
-				curvePlotter.plotHazardSpectra(resourcesDir, rpPrefix, probLevel, rp+"yr RotD50 (g)", periods);
+				curvePlotter.plotHazardSpectra(resourcesDir, rpPrefix, probLevel, rp+"yr RotD50 (g)", saPeriods);
 			
 			table.addLine("**"+rp+"yr**", "![Hazard Spectra]("+resourcesDir.getName()+"/"+rpPrefix+".png)");
 		}
@@ -285,10 +292,10 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 				if (replotCurves || !new File(resourcesDir, rpPrefix+"_gmpe.png").exists()) {
 					System.out.println("Plotting simulation source curves");
 					simFiles[i] = curvePlotter.plotSourceContributionHazardSpectra(resourcesDir, rpPrefix+"_sim",
-							periods, probLevel, yAxisLabel, sourceRupContributionNum, false);
+							saPeriods, probLevel, yAxisLabel, sourceRupContributionNum, false);
 					System.out.println("Calculating/plotting GMPE source curves");
 					gmpeFiles[i] = curvePlotter.plotSourceContributionHazardSpectra(resourcesDir, rpPrefix+"_gmpe",
-							periods, probLevel, yAxisLabel, sourceRupContributionNum, true);
+							saPeriods, probLevel, yAxisLabel, sourceRupContributionNum, true);
 				} else {
 					simFiles[i] = new File(resourcesDir, rpPrefix+"_sim.png");
 					gmpeFiles[i] = new File(resourcesDir, rpPrefix+"_gmpe.png");
@@ -327,22 +334,22 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		lines.add("");
 		
 		GMPESimulationBasedProvider<E> gmpeSimProv = new GMPESimulationBasedProvider<>(
-				simProv, comps, gmpeRef.getShortName()+" Simulatios", periods);
+				simProv, comps, gmpeRef.getShortName()+" Simulatios", imts);
 		
-		for (double period : periods) {
+		for (IMT imt : imts) {
 			System.out.println("Calculating primary hazard curve");
 			
-			String prefix = site.getName().replaceAll(" ", "_")+"_curves_"+(float)period+"s_"+gmpeRef.getShortName();
+			String prefix = site.getName().replaceAll(" ", "_")+"_curves_"+imt.getPrefix()+"_"+gmpeRef.getShortName();
 			
 			if (replotCurves || !new File(resourcesDir, prefix+".png").exists())
-				curvePlotter.plotHazardCurves(resourcesDir, prefix, period);
+				curvePlotter.plotHazardCurves(resourcesDir, prefix, imt);
 			
-			lines.add("### "+optionalDigitDF.format(period)+"s Hazard Curves");
+			lines.add("### "+imt.getDisplayName()+" Hazard Curves");
 			lines.add(topLink); lines.add("");
 			lines.add("![Hazard Curve]("+resourcesDir.getName()+"/"+prefix+".png)");
 			lines.add("");
 			
-			lines.add("#### "+optionalDigitDF.format(period)+"s GMPE-Sim Comparison");
+			lines.add("#### "+imt.getDisplayName()+" GMPE-Sim Comparison");
 			lines.add(topLink); lines.add("");
 			int numGMPESims = 100;
 			lines.addAll(curvePlotter.getCurveLegend(false, false, false, numGMPESims));
@@ -351,7 +358,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			String gmpeSimPrefix = prefix+"_gmpe_sims";
 			
 			if (replotCurves || !new File(resourcesDir, gmpeSimPrefix+".png").exists())
-				curvePlotter.plotGMPE_SimHazardCurves(resourcesDir, gmpeSimPrefix, period, gmpeSimProv, numGMPESims);
+				curvePlotter.plotGMPE_SimHazardCurves(resourcesDir, gmpeSimPrefix, imt, gmpeSimProv, numGMPESims);
 			
 			lines.add("![Hazard Curve]("+resourcesDir.getName()+"/"+gmpeSimPrefix+".png)");
 			lines.add("");
@@ -363,10 +370,10 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 				
 				if (replotCurves || !new File(resourcesDir, sourceContribPrefix+"_gmpe.png").exists()) {
 					System.out.println("Plotting simulation source curves");
-					simFile = curvePlotter.plotSourceContributionHazardCurves(resourcesDir, sourceContribPrefix+"_sim", period,
+					simFile = curvePlotter.plotSourceContributionHazardCurves(resourcesDir, sourceContribPrefix+"_sim", imt,
 							sourceRupContributionSortProb, sourceRupContributionNum, false);
 					System.out.println("Calculating/plotting GMPE source curves");
-					gmpeFile = curvePlotter.plotSourceContributionHazardCurves(resourcesDir, sourceContribPrefix+"_gmpe", period,
+					gmpeFile = curvePlotter.plotSourceContributionHazardCurves(resourcesDir, sourceContribPrefix+"_gmpe", imt,
 							sourceRupContributionSortProb, sourceRupContributionNum, true);
 				} else {
 					simFile = new File(resourcesDir, sourceContribPrefix+"_sim.png");
@@ -374,7 +381,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 				}
 				
 				if (simFile != null && simFile.exists() && gmpeFile != null && gmpeFile.exists()) {
-					lines.add("#### "+optionalDigitDF.format(period)+"s Source Contributions");
+					lines.add("#### "+imt.getDisplayName()+" Source Contributions");
 					lines.add(topLink); lines.add("");
 					lines.add("");
 					String line = "These plots show the contribution of each fault source to the hazard curves. The same set of "
@@ -427,7 +434,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 				else
 					delta = 0d;
 				if (delta > 0) {
-					lines.add("#### "+optionalDigitDF.format(period)+"s Simulation Curve Animation");
+					lines.add("#### "+imt.getDisplayName()+" Simulation Curve Animation");
 					lines.add(topLink); lines.add("");
 					lines.add("This animation shows the affect of input simulation catalog length on the simulation hazard curve. "
 							+ "Each frame adds an additional "+optionalDigitDF.format(delta)+" years of the catalog to the simulation "
@@ -437,7 +444,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 					File animFile = new File(resourcesDir, prefix+"_animation.gif");
 					
 					if (replotCurves || !animFile.exists())
-						curvePlotter.plotCurveAnimation(animFile, timeRange, delta, period);
+						curvePlotter.plotCurveAnimation(animFile, timeRange, delta, imt);
 					
 					lines.add("![Hazard Curve Animation]("+resourcesDir.getName()+"/"+animFile.getName()+")");
 					lines.add("");
@@ -479,12 +486,12 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		disaggERF.updateForecast();
 		
 		List<Future<File>> disaggFutures = new ArrayList<>();
-		for (int p=0; p<periods.length; p++) {
-			double period = periods[p];
-			DiscretizedFunc simCurve = curvePlotter.getCalcSimCurve(simCalc, period);
-			DiscretizedFunc gmpeCurve = curvePlotter.getCalcGMPECurve(period);
+		for (int p=0; p<imts.length; p++) {
+			IMT imt = imts[p];
+			DiscretizedFunc simCurve = curvePlotter.getCalcSimCurve(simCalc, imt);
+			DiscretizedFunc gmpeCurve = curvePlotter.getCalcGMPECurve(imt);
 			
-			lines.add("### "+optionalDigitDF.format(period)+"s Disaggregations");
+			lines.add("### "+imt.getDisplayName()+" Disaggregations");
 			lines.add(topLink); lines.add("");
 			
 			List<String> disaggHeaders = new ArrayList<>();
@@ -565,7 +572,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 					continue;
 				boolean isProb = isProbs.get(i);
 				
-				lines.add("#### "+optionalDigitDF.format(period)+"s Disaggregations at "+disaggHeaders.get(i));
+				lines.add("#### "+imt.getDisplayName()+" Disaggregations at "+disaggHeaders.get(i));
 				lines.add(topLink); lines.add("");
 				
 				table = MarkdownUtils.tableBuilder();
@@ -595,17 +602,17 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 						table.addColumn("N/A");
 					} else {
 						if (hasSimDist) {
-							String prefix = "disagg_sim_"+optionalDigitDF.format(period)+"s_"+myFileLabels.get(j);
+							String prefix = "disagg_sim_"+imt.getPrefix()+"_"+myFileLabels.get(j);
 							ScalarIMR gmpe = new SimulationDisaggAttenuationRelationshipWrapper<>(
-									simProv, Source.SIMULATION, Source.SIMULATION, Source.SIMULATION, periods);
+									simProv, Source.SIMULATION, Source.SIMULATION, Source.SIMULATION, imts);
 							if (replotDisaggs || !new File(resourcesDir, prefix+".png").exists())
 								disaggFutures.add(getExec().submit(new DisaggCallable(gmpe, site, disaggERF, iml, minMag, resourcesDir, prefix)));
 							table.addColumn("![Disaggregation]("+resourcesDir.getName()+"/"+prefix+".png)");
 						}
 						
-						String prefix = "disagg_sim_gmpe_dist_for_epsilon_"+optionalDigitDF.format(period)+"s_"+myFileLabels.get(j);
+						String prefix = "disagg_sim_gmpe_dist_for_epsilon_"+imt.getPrefix()+"_"+myFileLabels.get(j);
 						ScalarIMR gmpe = new SimulationDisaggAttenuationRelationshipWrapper<>(
-								simProv, Source.SIMULATION, Source.GMPE, Source.GMPE, periods);
+								simProv, Source.SIMULATION, Source.GMPE, Source.GMPE, imts);
 						if (replotDisaggs || !new File(resourcesDir, prefix+".png").exists())
 							disaggFutures.add(getExec().submit(new DisaggCallable(gmpe, site, disaggERF, iml, minMag, resourcesDir, prefix)));
 						table.addColumn("![Disaggregation]("+resourcesDir.getName()+"/"+prefix+".png)");
@@ -616,9 +623,9 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 						System.out.println("Couldn't get IML for GMPE, "+myLabels.get(j)+". Skipping disagg!");
 						table.addColumn("N/A");
 					} else {
-						String prefix = "disagg_gmpe_"+optionalDigitDF.format(period)+"s_"+myFileLabels.get(j);
+						String prefix = "disagg_gmpe_"+imt.getPrefix()+"_"+myFileLabels.get(j);
 						ScalarIMR gmpe = new SimulationDisaggAttenuationRelationshipWrapper<>(
-								simProv, Source.GMPE, Source.GMPE, Source.GMPE, periods);
+								simProv, Source.GMPE, Source.GMPE, Source.GMPE, imts);
 						if (replotDisaggs || !new File(resourcesDir, prefix+".png").exists())
 							disaggFutures.add(getExec().submit(new DisaggCallable(gmpe, site, disaggERF, iml, minMag, resourcesDir, prefix)));
 						table.addColumn("![Disaggregation]("+resourcesDir.getName()+"/"+prefix+".png)");

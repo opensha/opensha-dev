@@ -72,7 +72,8 @@ class MPJ_BBP_RotatedRupVariabilityMagDistSimScriptGen {
 		String nodeGFDir = "${TMPDIR}/gfs";
 		String bbpCopyParentDir = "/staging/pjm/kmilner";
 		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
-		String sharedScratchDir = "${SCRATCHDIR}";
+//		String sharedScratchDir = "${SCRATCHDIR}";
+		String sharedScratchDir = null;
 		File remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
 		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
 		List<File> classpath = new ArrayList<>();

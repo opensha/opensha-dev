@@ -31,6 +31,8 @@ public class MPJ_BBP_Utils {
 		private ZipArchiveOutputStream out;
 		private ZipArchiveOutputStream outRD;
 		private byte[] buffer = new byte[1048576];
+		
+		private boolean hasRD100;
 
 		public MasterZipHook(File zipFile, File rdZipFile) {
 			super(1);
@@ -88,7 +90,20 @@ public class MPJ_BBP_Utils {
 					Enumeration<? extends ZipArchiveEntry> entries = sub.getEntries();
 					while (entries.hasMoreElements()) {
 						ZipArchiveEntry e = entries.nextElement();
-						boolean rd = e.getName().endsWith(".rd50") || e.getName().endsWith(".rd100");
+						String name = e.getName();
+						boolean rd = false;
+						if (name.endsWith(".rd50")) {
+							rd = !hasRD100;
+						} else if (name.endsWith(".rd100")) {
+							hasRD100 = true; // don't also keep RD50 files
+							rd = true;
+						} else if (name.endsWith(".rdvel")) {
+							// RotD vel
+							rd = true;
+						} else if (name.endsWith(".ard")) {
+							// also keep arias duration files, they're tiny
+							rd = true;
+						}
 						if (out == null && !rd)
 							continue;
 						ZipArchiveEntry outEntry = new ZipArchiveEntry(simDirName+e.getName());

@@ -52,7 +52,7 @@ public class SourceSiteDistPageGen<E> {
 	}
 	
 	public void generatePage(Table<AttenRelRef, String, List<RuptureComparison<E>>> sourceComps,
-			File outputDir, List<String> headerLines, double[] periods, boolean hypoFilter)
+			File outputDir, List<String> headerLines, IMT[] imts, boolean hypoFilter)
 					throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
@@ -97,7 +97,7 @@ public class SourceSiteDistPageGen<E> {
 			String sourcePrefix = sourceName.replaceAll("\\W+", "_");
 			
 			for (Site site : sites) {
-				Table<Range, Double, File> plotsTable = HashBasedTable.create();
+				Table<Range, IMT, File> plotsTable = HashBasedTable.create();
 				
 				for (int m=0; m<magRanges.size(); m++) {
 					Range magRange = magRanges.get(m);
@@ -111,7 +111,7 @@ public class SourceSiteDistPageGen<E> {
 					int numSims = 0;
 					int numRups = 0;
 					for (RuptureComparison<E> comp : magComps.get(gmpeRefs.get(0))) {
-						if (!comp.isComputed(site, periods[0]))
+						if (!comp.isComputed(site, imts[0]))
 							continue;
 						E rup = comp.getRupture();
 						numRups++;
@@ -120,26 +120,26 @@ public class SourceSiteDistPageGen<E> {
 					
 					System.out.println("Calculating for "+sourceName+", "+site.getName()+", "+magStr);
 					
-					HistogramFunction[][] simHists = calcSimHist(simProv, site, periods, magComps.get(gmpeRefs.get(0)), hypoFilter);
+					HistogramFunction[][] simHists = calcSimHist(simProv, site, imts, magComps.get(gmpeRefs.get(0)), hypoFilter);
 					if (simHists == null)
 						// nothing for this site/mag range
 						continue;
 					Map<AttenRelRef, HistogramFunction[]> gmpeHists = new HashMap<>();
 					for (AttenRelRef gmpeRef : gmpeRefs)
-						gmpeHists.put(gmpeRef, calcGMPEHist(site, periods, magComps.get(gmpeRef)));
+						gmpeHists.put(gmpeRef, calcGMPEHist(site, imts, magComps.get(gmpeRef)));
 					
-					for (int p=0; p<periods.length; p++) {
-						String prefix = sourcePrefix+"_"+site.getName()+"_"+magPrefix+"_"+optionalDigitDF.format(periods[p])+"s";
+					for (int p=0; p<imts.length; p++) {
+						String prefix = sourcePrefix+"_"+site.getName()+"_"+magPrefix+"_"+imts[p].getPrefix();
 						File file = new File(resourcesDir, prefix+".png");
 						String title = sourceName+", "+site.getName()+", "+magStr;
 						Map<AttenRelRef, HistogramFunction> gmpePeriodHists = new HashMap<>();
 						for (AttenRelRef gmpeRef : gmpeHists.keySet())
 							gmpePeriodHists.put(gmpeRef, gmpeHists.get(gmpeRef)[p]);
-						plotSourceSiteHist(resourcesDir, prefix, simHists[p], gmpePeriodHists, title, periods[p],
+						plotSourceSiteHist(resourcesDir, prefix, simHists[p], gmpePeriodHists, title, imts[p],
 								numSims, numRups, false);
-						plotSourceSiteHist(resourcesDir, prefix+"_pub", simHists[p], gmpePeriodHists, title, periods[p],
+						plotSourceSiteHist(resourcesDir, prefix+"_pub", simHists[p], gmpePeriodHists, title, imts[p],
 								numSims, numRups, true);
-						plotsTable.put(magRange, periods[p], file);
+						plotsTable.put(magRange, imts[p], file);
 					}
 				}
 				
@@ -152,8 +152,8 @@ public class SourceSiteDistPageGen<E> {
 				TableBuilder table = MarkdownUtils.tableBuilder();
 				
 				table.initNewLine().addColumn("Mag Range");
-				for (double period : periods)
-					table.addColumn("**"+optionalDigitDF.format(period)+"s**");
+				for (IMT imt : imts)
+					table.addColumn("**"+imt.getDisplayName()+"**");
 				table.finalizeLine();
 				
 				for (int m=0; m<magRanges.size(); m++) {
@@ -162,8 +162,8 @@ public class SourceSiteDistPageGen<E> {
 						continue;
 					
 					table.initNewLine().addColumn("**"+magStrs.get(m)+"**");
-					for (double period : periods)
-						table.addColumn("![Plot]("+resourcesDir.getName()+"/"+plotsTable.get(magRange, period).getName()+")");
+					for (IMT imt : imts)
+						table.addColumn("![Plot]("+resourcesDir.getName()+"/"+plotsTable.get(magRange, imt).getName()+")");
 					table.finalizeLine();
 				}
 				
@@ -204,7 +204,7 @@ public class SourceSiteDistPageGen<E> {
 	};
 	
 	private void plotSourceSiteHist(File outputDir, String prefix, HistogramFunction[] simHists,
-			Map<AttenRelRef, HistogramFunction> gmpeHists, String title, double period, int numSims, int numRups,
+			Map<AttenRelRef, HistogramFunction> gmpeHists, String title, IMT imt, int numSims, int numRups,
 			boolean publication) throws IOException {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -252,7 +252,7 @@ public class SourceSiteDistPageGen<E> {
 		Range yRange = new Range(0, maxY);
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, publication ? " " : title,
-				"Log10 "+optionalDigitDF.format(period)+"s RotD50", "Count");
+				"Log10 "+imt.getDisplayName(), "Count");
 		spec.setLegendVisible(true);
 		
 		List<XYTextAnnotation> anns = new ArrayList<>();
@@ -299,11 +299,11 @@ public class SourceSiteDistPageGen<E> {
 		}
 	}
 	
-	private static <E> HistogramFunction[][] calcSimHist(SimulationRotDProvider<E> simProv, Site site, double[] periods,
+	private static <E> HistogramFunction[][] calcSimHist(SimulationRotDProvider<E> simProv, Site site, IMT[] imts,
 			List<? extends RuptureComparison<E>> sourceComps, boolean hypoFilter) throws IOException {
 		List<List<Double>> vals = new ArrayList<>();
-		SummaryStatistics[] stats = new SummaryStatistics[periods.length];
-		for (int p=0; p<periods.length; p++) {
+		SummaryStatistics[] stats = new SummaryStatistics[imts.length];
+		for (int p=0; p<imts.length; p++) {
 			vals.add(new ArrayList<>());
 			stats[p] = new SummaryStatistics();
 		}
@@ -312,16 +312,15 @@ public class SourceSiteDistPageGen<E> {
 		if (hypoFilter)
 			hypoDistList = new ArrayList<>();
 		for (RuptureComparison<E> comp : sourceComps) {
-			if (!comp.isComputed(site, periods[0]))
+			if (!comp.isComputed(site, imts[0]))
 				continue;
 			E rup = comp.getRupture();
 			int num = simProv.getNumSimulations(site, rup);
 			for (int i=0; i<num; i++) {
-				DiscretizedFunc func = simProv.getRotD50(site, rup, i);
-				double[] myVals = new double[periods.length];
-				for (int p=0; p<periods.length; p++)
-					myVals[p] = Math.log10(func.getInterpolatedY(periods[p]));
-				for (int p=0; p<periods.length; p++) {
+				double[] myVals = new double[imts.length];
+				for (int p=0; p<imts.length; p++)
+					myVals[p] = Math.log10(simProv.getValue(site, rup, imts[p], i));
+				for (int p=0; p<imts.length; p++) {
 					vals.get(p).add(myVals[p]);
 					stats[p].addValue(myVals[p]);
 				}
@@ -338,8 +337,8 @@ public class SourceSiteDistPageGen<E> {
 		
 		hypoFilter = hypoFilter && hypoDistList.size() > 2;
 		
-		HistogramFunction[][] ret = hypoFilter ? new HistogramFunction[periods.length][3]
-				: new HistogramFunction[periods.length][1];
+		HistogramFunction[][] ret = hypoFilter ? new HistogramFunction[imts.length][3]
+				: new HistogramFunction[imts.length][1];
 		
 		List<double[]> nearHypoVals = null;
 		List<double[]> farHypoVals = null;
@@ -374,7 +373,7 @@ public class SourceSiteDistPageGen<E> {
 				farHypoVals.add(hypoDistList.get(i).vals);
 		}
 		
-		for (int p=0; p<periods.length; p++) {
+		for (int p=0; p<imts.length; p++) {
 			double max = stats[p].getMax();
 			double min = stats[p].getMin();
 			if (max == min)
@@ -402,25 +401,25 @@ public class SourceSiteDistPageGen<E> {
 		return ret;
 	}
 	
-	private HistogramFunction[] calcGMPEHist(Site site, double[] periods, List<? extends RuptureComparison<E>> sourceComps)
+	private HistogramFunction[] calcGMPEHist(Site site, IMT[] imts, List<? extends RuptureComparison<E>> sourceComps)
 			throws IOException {
 		List<List<Double>> logMeans = new ArrayList<>();
 		List<List<Double>> stdDevs = new ArrayList<>();
 		List<Integer> simCounts = new ArrayList<>();
-		SummaryStatistics[] stats = new SummaryStatistics[periods.length];
-		for (int p=0; p<periods.length; p++) {
+		SummaryStatistics[] stats = new SummaryStatistics[imts.length];
+		for (int p=0; p<imts.length; p++) {
 			logMeans.add(new ArrayList<>());
 			stdDevs.add(new ArrayList<>());
 			stats[p] = new SummaryStatistics();
 		}
 		
 		for (RuptureComparison<E> comp : sourceComps) {
-			if (!comp.isComputed(site, periods[0]))
+			if (!comp.isComputed(site, imts[0]))
 				continue;
 			simCounts.add(simProv.getNumSimulations(site, comp.getRupture()));
-			for (int p=0; p<periods.length; p++) {
-				double logMean = comp.getLogMean(site, periods[p]);
-				double stdDev = comp.getStdDev(site, periods[p]);
+			for (int p=0; p<imts.length; p++) {
+				double logMean = comp.getLogMean(site, imts[p]);
+				double stdDev = comp.getStdDev(site, imts[p]);
 				stats[p].addValue(logMean - gmpeTruncLevel*stdDev);
 				stats[p].addValue(logMean + gmpeTruncLevel*stdDev);
 				logMeans.get(p).add(logMean);
@@ -428,11 +427,11 @@ public class SourceSiteDistPageGen<E> {
 			}
 		}
 		
-		HistogramFunction[] ret = new HistogramFunction[periods.length];
+		HistogramFunction[] ret = new HistogramFunction[imts.length];
 		
 		NormalDistribution stdNorm = new NormalDistribution(0d, 1d);
 		
-		for (int p=0; p<periods.length; p++) {
+		for (int p=0; p<imts.length; p++) {
 			double max = Math.log10(Math.exp(stats[p].getMax()));
 			double min = Math.log10(Math.exp(stats[p].getMin()));
 			ret[p] = HistogramFunction.getEncompassingHistogram(min, max, gmpeLogHistDelta);

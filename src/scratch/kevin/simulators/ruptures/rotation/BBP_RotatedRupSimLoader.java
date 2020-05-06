@@ -12,6 +12,7 @@ import java.util.zip.ZipFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
+import org.opensha.sha.imr.param.IntensityMeasureParams.DurationTimeInterval;
 
 import scratch.kevin.bbp.BBP_SimZipLoader;
 import scratch.kevin.bbp.BBP_Site;
@@ -98,6 +99,17 @@ public class BBP_RotatedRupSimLoader extends BBP_SimZipLoader implements Simulat
 
 	@Override
 	public double getMagnitude(RotationSpec rupture) {
+		throw new UnsupportedOperationException("not implemented");
+	}
+
+	@Override
+	public double getPGV(Site site, RotationSpec rupture, int index) throws IOException {
+		throw new UnsupportedOperationException("not implemented");
+	}
+
+	@Override
+	public double getDuration(Site site, RotationSpec rupture, DurationTimeInterval interval, int index)
+			throws IOException {
 		throw new UnsupportedOperationException("not implemented");
 	}
 

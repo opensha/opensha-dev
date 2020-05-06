@@ -62,19 +62,19 @@ public class ZScoreHistPlot {
 	}
 	
 	public static <E> ZScoreResult[] calcZScores(SimulationRotDProvider<E> simProv,
-			Collection<? extends RuptureComparison<E>> eventComps, List<Site> sites, double[] periods,
+			Collection<? extends RuptureComparison<E>> eventComps, List<Site> sites, IMT[] imts,
 					RuptureComparisonFilter<E> filter) throws IOException {
-		return calcZScores(simProv, eventComps, sites, periods, filter, null);
+		return calcZScores(simProv, eventComps, sites, imts, filter, null);
 	}
 	
 	public static <E> ZScoreResult[] calcZScores(SimulationRotDProvider<E> simProv,
-			Collection<? extends RuptureComparison<E>> eventComps, List<Site> sites, double[] periods,
+			Collection<? extends RuptureComparison<E>> eventComps, List<Site> sites, IMT[] imts,
 					RuptureComparisonFilter<E> filter, Table<String, E, Double> sourceRupContribFracts) throws IOException {
 		int numComputed = 0;
 		int numMatches = 0;
 		for (Site site : sites) {
 			for (RuptureComparison<E> comp : eventComps) {
-				if (!comp.isComputed(site, periods[0]))
+				if (!comp.isComputed(site, imts[0]))
 					continue;
 				numComputed++;
 				if ((filter != null && !filter.matches(comp, site)))
@@ -92,10 +92,10 @@ public class ZScoreHistPlot {
 			numBins = 100;
 		System.out.println("Binning with "+numBins+" bins");
 		
-		ZScoreResult[] ret = new ZScoreResult[periods.length];
+		ZScoreResult[] ret = new ZScoreResult[imts.length];
 		
-		for (int p=0; p<periods.length; p++) {
-			double period = periods[p];
+		for (int p=0; p<imts.length; p++) {
+			IMT imt = imts[p];
 			HistogramFunction hist = new HistogramFunction(-numStdDev, numStdDev, numBins);
 			
 			Map<String, HistogramFunction> sourceHists = sourceRupContribFracts == null ? null : new HashMap<>();
@@ -107,21 +107,22 @@ public class ZScoreHistPlot {
 				for (RuptureComparison<E> comp : eventComps) {
 					if (!comp.hasSite(site))
 						continue;
-					Preconditions.checkState(comp.isComputed(site, period),
-							"Computed for %ss but not %ss", periods[0], period);
+					Preconditions.checkState(comp.isComputed(site, imt),
+							"Computed for %s but not %s", imts[0], imt);
 					if ((filter != null && !filter.matches(comp, site)))
 						continue;
-					double gmpeVal = comp.getLogMean(site, period);
+					double gmpeVal = comp.getLogMean(site, imt);
 					Map<String, Double> sourceFracts = sourceHists == null ?
 							null : sourceRupContribFracts.column(comp.getRupture());
 					
-					List<DiscretizedFunc> rd50s = simProv.getRotD50s(site, comp.getRupture());
-					double rateEach = comp.getAnnualRate()/(double)rd50s.size();
-					for (DiscretizedFunc spectra : rd50s) {
+					List<Double> simVals = simProv.getValues(site, comp.getRupture(), imt);
+					
+					double rateEach = comp.getAnnualRate()/(double)simVals.size();
+					for (double simVal : simVals) {
 						// in log space
-						double simVal = Math.log(spectra.getY(period));
+						simVal = Math.log(simVal);
 
-						double val = (simVal - gmpeVal)/comp.getStdDev(site, period);
+						double val = (simVal - gmpeVal)/comp.getStdDev(site, imt);
 						
 						int ind = hist.getClosestXIndex(val);
 						if (sourceFracts != null) {
@@ -158,7 +159,8 @@ public class ZScoreHistPlot {
 				mean = new Mean().evaluate(valsArray, weightsArray);
 				double var = new Variance().evaluate(valsArray, weightsArray, mean);
 				stdDev = Math.sqrt(var);
-				System.out.println((float)period+"s mean="+(float)mean+"\tvar="+(float)var+"\tsd="+(float)stdDev);
+				System.out.println(imt.getDisplayName()+" mean="+(float)mean
+						+"\tvar="+(float)var+"\tsd="+(float)stdDev);
 			} else {
 				mean = new Mean().evaluate(valsArray);
 				stdDev = Math.sqrt(new Variance().evaluate(valsArray, mean));
@@ -178,16 +180,16 @@ public class ZScoreHistPlot {
 	}
 	
 	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
-			List<Site> sites, double[] periods, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
+			List<Site> sites, IMT[] imts, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
 			File outputDir, String prefix) throws IOException {
-		return plotStandardNormal(simProv, eventComps, sites, periods, gmpe, filter, binDescriptions, outputDir, prefix, null, 0);
+		return plotStandardNormal(simProv, eventComps, sites, imts, gmpe, filter, binDescriptions, outputDir, prefix, null, 0);
 	}
 	
 	private static final double maxY = 0.7d;
 	private static final double numStdDev = 3.75;
 	
 	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
-			List<Site> sites, double[] periods, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
+			List<Site> sites, IMT[] imts, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
 			File outputDir, String prefix, Table<String, E, Double> sourceRupContribFracts, int maxNumSourceContribs) throws IOException {
 		
 		List<PlotSpec> specs = new ArrayList<>();
@@ -202,12 +204,12 @@ public class ZScoreHistPlot {
 		
 		DatasetRenderingOrder order = DatasetRenderingOrder.FORWARD;
 		
-		ZScoreResult[] scores = calcZScores(simProv, eventComps, sites, periods, filter, sourceRupContribFracts);
+		ZScoreResult[] scores = calcZScores(simProv, eventComps, sites, imts, filter, sourceRupContribFracts);
 		if (scores == null)
 			return false;
 		
-		for (int p=0; p<periods.length; p++) {
-			double period = periods[p];
+		for (int p=0; p<imts.length; p++) {
+			IMT imt = imts[p];
 			ZScoreResult score = scores[p];
 			means.add(score.mean);
 			stdDevs.add(score.stdDevFract);
@@ -299,12 +301,12 @@ public class ZScoreHistPlot {
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, stdDevColor));
 			}
 			
-			String title = periods.length == 1 ? " " : gmpe.getShortName()+" Log-Normal Comparision";
+			String title = imts.length == 1 ? " " : gmpe.getShortName()+" Log-Normal Comparision";
 			String xAxisLabel = "z-score (Standard Deviations)";
 			String yAxisLabel = "Density";
 			
 			PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, yAxisLabel);
-			spec.setLegendVisible(period == periods[periods.length-1]);
+			spec.setLegendVisible(imt == imts[imts.length-1]);
 			
 			specs.add(spec);
 		}
@@ -312,9 +314,9 @@ public class ZScoreHistPlot {
 		DecimalFormat twoSigFig = new DecimalFormat("0.00");
 		
 		List<Range> yRanges = new ArrayList<>();
-		for (int i=0; i<periods.length; i++) {
+		for (int i=0; i<imts.length; i++) {
 			List<String> labels = new ArrayList<>(binDescriptions);
-			labels.add(0, MultiRupGMPE_ComparePageGen.optionalDigitDF.format(periods[i])+"s SA");
+			labels.add(0, imts[i].getShortName());
 			
 			double yEach = maxY/8d;
 			double x = -numStdDev + 0.2;

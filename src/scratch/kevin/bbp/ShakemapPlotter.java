@@ -22,6 +22,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 
 import com.google.common.base.Preconditions;
@@ -53,6 +54,7 @@ public class ShakemapPlotter {
 		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
 		
 		for (int p=0; p<periods.length; p++) {
+			boolean pgv = periods[p] == -1d;
 			System.out.println("Plotting "+(float)periods[p]+"s map");
 			double max = xyzs[p].getMaxZ();
 			if (gmpes != null)
@@ -72,7 +74,7 @@ public class ShakemapPlotter {
 				double cleanLogMax = Math.ceil(logMax);
 				if (cleanLogMax - logMax > 0.5)
 					cleanLogMax -= 0.5;
-				cpt = cpt.rescale(-3d, cleanLogMax);
+				cpt = cpt.rescale(pgv ? -1 : -3d, cleanLogMax);
 			} else {
 				max = Math.ceil(max*5d)/5d;
 				cpt = cpt.rescale(0d, max);
@@ -95,19 +97,26 @@ public class ShakemapPlotter {
 			}
 			
 			String pStr;
-			if (periods[p] == Math.round(periods[p]))
-				pStr = (int)periods[p]+"";
-			else
-				pStr = (float)periods[p]+"";
+			String preStr;
+			if (pgv) {
+				pStr = "PGV";
+				preStr = "pgv";
+			} else if (periods[p] == Math.round(periods[p])) {
+				pStr = (int)periods[p]+"s SA";
+				preStr = (int)periods[p]+"s";
+			} else {
+				pStr = (float)periods[p]+"s SA";
+				preStr = (float)periods[p]+"s";
+			}
 			
-			map.setCustomLabel("Log10 "+label+" "+pStr+"s SA (RotD50)");
-			String myPrefix = prefix+"_"+pStr+"s";
+			map.setCustomLabel("Log10 "+label+" "+pStr+" (RotD50)");
+			String myPrefix = prefix+"_"+preStr;
 			
 			FaultBasedMapGen.plotMap(outputDir, myPrefix, false, map);
 			
 			if (rd100xyzs != null) {
-				map.setCustomLabel("Log10 "+label+" "+pStr+"s SA (RotD100)");
-				myPrefix = prefix+"_"+pStr+"s_rd100";
+				map.setCustomLabel("Log10 "+label+" "+pStr+" (RotD100)");
+				myPrefix = prefix+"_"+preStr+"_rd100";
 				GriddedGeoDataSet origRD_XYZ = rd100xyzs[p];
 				if (log) {
 					origRD_XYZ = origRD_XYZ.copy();
@@ -128,8 +137,8 @@ public class ShakemapPlotter {
 				for (int i=0; i<ratioXYZ.size(); i++)
 					ratioXYZ.set(i, origRD_XYZ.get(i)/origXYZ.get(i));
 				
-				map.setCustomLabel(label+" "+pStr+"s SA RotD100/RotD50 Ratio");
-				myPrefix = prefix+"_"+pStr+"s_rd100_ratio";
+				map.setCustomLabel(label+" "+pStr+" RotD100/RotD50 Ratio");
+				myPrefix = prefix+"_"+preStr+"_rd100_ratio";
 				map.setCPTCustomInterval(0.1);
 				map.setGriddedData(ratioXYZ);
 				map.setCpt(ratioCPT);
@@ -141,9 +150,9 @@ public class ShakemapPlotter {
 				// plot GMPE
 				map.setGriddedData(gmpes[p]);
 				map.setCpt(cpt);
-				map.setCustomLabel("Log10 "+gmpe.getShortName()+" "+pStr+"s SA (RotD50)");
+				map.setCustomLabel("Log10 "+gmpe.getShortName()+" "+pStr+" (RotD50)");
 				map.setCPTCustomInterval(mapInterval);
-				myPrefix = prefix+"_"+pStr+"s_"+gmpe.getShortName();
+				myPrefix = prefix+"_"+preStr+"_"+gmpe.getShortName();
 				
 				FaultBasedMapGen.plotMap(outputDir, myPrefix, false, map);
 				
@@ -154,10 +163,10 @@ public class ShakemapPlotter {
 					ratioData.set(i, Math.log10(origXYZ.get(i)/origGMPE.get(i)));
 				
 				map.setGriddedData(ratioData);
-				map.setCustomLabel("Log10 Ratio "+pStr+"s SA (RotD50)");
+				map.setCustomLabel("Log10 Ratio "+pStr+" (RotD50)");
 				map.setCpt(ratioCPT);
 				map.setCPTCustomInterval(0.5);
-				myPrefix = prefix+"_"+pStr+"s_"+gmpe.getShortName()+"_ratio";
+				myPrefix = prefix+"_"+preStr+"_"+gmpe.getShortName()+"_ratio";
 				
 				FaultBasedMapGen.plotMap(outputDir, myPrefix, false, map);
 			}
@@ -179,8 +188,14 @@ public class ShakemapPlotter {
 			else
 				spectra = loader.readRotD50(i);
 			
-			for (int p=0; p<periods.length; p++)
-				ret[p].set(i, spectra.getInterpolatedY(periods[p]));
+			for (int p=0; p<periods.length; p++) {
+				if (periods[p] == -1d) {
+					double[] pgvs = loader.readPGV(i);
+					ret[p].set(i, rotD100 ? pgvs[1] : pgvs[0]);
+				} else {
+					ret[p].set(i, spectra.getInterpolatedY(periods[p]));
+				}
+			}
 		}
 		System.out.println("DONE");
 		
@@ -192,7 +207,6 @@ public class ShakemapPlotter {
 		gmpe.setParamDefaults();
 		
 		gmpe.setEqkRupture(rup);
-		gmpe.setIntensityMeasure(SA_Param.NAME);
 		
 		Preconditions.checkState(gridReg.getNodeCount() == sites.size(), "Sites/gridded region mismatch!");
 		GriddedGeoDataSet[] ret = new GriddedGeoDataSet[periods.length];
@@ -205,7 +219,12 @@ public class ShakemapPlotter {
 			gmpe.setSite(site);
 			
 			for (int p=0; p<periods.length; p++) {
-				SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), periods[p]);
+				if (periods[p] == -1d) {
+					gmpe.setIntensityMeasure(PGV_Param.NAME);
+				} else {
+					gmpe.setIntensityMeasure(SA_Param.NAME);
+					SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), periods[p]);
+				}
 				ret[p].set(i, Math.exp(gmpe.getMean()));
 			}
 		}

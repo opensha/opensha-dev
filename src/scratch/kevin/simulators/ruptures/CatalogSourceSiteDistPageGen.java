@@ -38,6 +38,7 @@ import com.google.common.primitives.Ints;
 
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import scratch.kevin.simCompare.IMT;
 import scratch.kevin.simCompare.RuptureComparison;
 import scratch.kevin.simCompare.SimulationRotDProvider;
 import scratch.kevin.simCompare.SourceSiteDistPageGen;
@@ -128,19 +129,19 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 
 		private RSQSimCatalog catalog;
 		private AttenRelRef[] gmpeRefs;
-		private double[] periods;
+		private IMT[] imts;
 		private List<Site> gmpeSites;
 		private double catDurationYears;
 		private Table<AttenRelRef, String, List<RuptureComparison<RSQSimEvent>>> sourceComps;
 		private Map<Integer, String> parentIDtoSourceNameMap;
 		private RSQSimEvent event;
 
-		public GMPECalcTask(RSQSimCatalog catalog, AttenRelRef[] gmpeRefs, double[] periods, List<Site> gmpeSites,
+		public GMPECalcTask(RSQSimCatalog catalog, AttenRelRef[] gmpeRefs, IMT[] imts, List<Site> gmpeSites,
 				double catDurationYears, Table<AttenRelRef, String, List<RuptureComparison<RSQSimEvent>>> sourceComps,
 				Map<Integer, String> parentIDtoSourceNameMap, RSQSimEvent event) {
 			this.catalog = catalog;
 			this.gmpeRefs = gmpeRefs;
-			this.periods = periods;
+			this.imts = imts;
 			this.gmpeSites = gmpeSites;
 			this.catDurationYears = catDurationYears;
 			this.sourceComps = sourceComps;
@@ -161,7 +162,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 				for (AttenRelRef gmpeRef : gmpeRefs) {
 					EventComparison comp = new EventComparison(event, gmpeRup, catDurationYears);
 					ScalarIMR gmpe = checkOutGMPE(gmpeRef);
-					comp.calculate(gmpe, gmpeSites, periods);
+					comp.calculate(gmpe, gmpeSites, imts);
 					checkInGMPE(gmpeRef, gmpe);
 					synchronized (sourceComps) {
 						sourceComps.get(gmpeRef, sourceName).add(comp);
@@ -184,8 +185,11 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
 //		File bbpDir = new File(bbpParallelDir, "2018_09_10-rundir2740-all-m6.5-skipYears5000-noHF-csLASites");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
-		File bbpDir = new File(bbpParallelDir, "2020_02_12-rundir4860_multi_combine-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+//		File bbpDir = new File(bbpParallelDir, "2020_02_12-rundir4860_multi_combine-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
+		File bbpDir = new File(bbpParallelDir, "2020_04_19-rundir4983-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
 		
 		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
 		
@@ -205,7 +209,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		boolean hypoSort = true;
 		
 		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014, AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-		double[] periods = { 3, 5, 10 };
+		IMT[] imts = { IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
 		
 		ZipFile bbpZip = new ZipFile(new File(bbpDir, "results_rotD.zip"));
 		
@@ -273,7 +277,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		List<Future<?>> gmpeFutures = new ArrayList<>();
 		System.out.println("Processing events/building ruptures");
 		for (RSQSimEvent event : events)
-			gmpeFutures.add(exec.submit(new GMPECalcTask(catalog, gmpeRefs, periods, gmpeSites, catDurationYears,
+			gmpeFutures.add(exec.submit(new GMPECalcTask(catalog, gmpeRefs, imts, gmpeSites, catDurationYears,
 					sourceComps, parentIDtoSourceNameMap, event)));
 		System.out.println("Waiting on "+gmpeFutures.size()+" GMPE futures");
 		for (Future<?> future : gmpeFutures) {
@@ -304,7 +308,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		for (AttenRelRef gmpe : gmpeRefs)
 			headerLines.add("* "+gmpe.getName());
 		
-		pageGen.generatePage(sourceComps, sourceOutputDir, headerLines, periods, hypoSort);
+		pageGen.generatePage(sourceComps, sourceOutputDir, headerLines, imts, hypoSort);
 		
 		catalog.writeMarkdownSummary(catalogOutputDir, true, false);
 		RSQSimCatalog.writeCatalogsIndex(outputDir);

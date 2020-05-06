@@ -1,5 +1,6 @@
 package scratch.kevin.ucerf3.eal;
 
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -8,6 +9,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.math3.stat.descriptive.moment.Mean;
+import org.apache.commons.math3.stat.descriptive.moment.Variance;
+import org.apache.commons.math3.util.MathArrays;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -40,14 +44,17 @@ public class UCERF3_LEC_TreeTrimmer {
 		File csvFile = new File(inputDir, "all_branch_lec_results.csv");
 		
 		Table<U3_EAL_LogicTreeBranch, Double, DiscretizedFunc> branchLECs = loadLECs(csvFile);
+		// double as we'll use it for floating point math later
+		double totNumBranches = branchLECs.rowKeySet().size();
+		System.out.println("Total branch count: "+(int)totNumBranches);
 		
 		File csvFileEAL = new File(inputDir, "all_branch_results.csv");
 		
 		Table<U3_EAL_LogicTreeBranch, Double, Double> branchEALs = loadEALs(csvFileEAL);
 		
-		DiscretizedFunc totalLEC = calcBranchAveragedLEC(branchLECs.rowKeySet(), branchLECs);
+		DiscretizedFunc totalLEC = calcLossDist(branchLECs.rowKeySet(), branchLECs, Double.NaN).lec;
 		totalLEC.setName("Branch Averaged LEC");
-		System.out.println(totalLEC);
+//		System.out.println(totalLEC);
 		
 		double[] lecProbLevels = new double[] { Double.NaN, 0.01, 0.004, 0.0025, 0.0018, 0.0004 };
 		
@@ -74,12 +81,25 @@ public class UCERF3_LEC_TreeTrimmer {
 				header.add("Loss at P="+(float)lecProbLevel);
 			else
 				header.add("Expected Annualized Loss");
-			header.add("Error WRT Full Model");
+			header.add("COV");
+			header.add("K-S Dn");
+			header.add("Mean error");
+			header.add("COV error");
+			header.add("Passes?");
 			for (int i=0; i<totalLEC.size(); i++) {
 				if (i == 0)
-					header.add("LEC X="+(float)totalLEC.getX(i));
+					header.add("CDF X="+(float)totalLEC.getX(i));
 				else
 					header.add((float)totalLEC.getX(i)+"");
+			}
+			if (lecProbLevel > 0d) {
+				// also include LEC
+				for (int i=0; i<totalLEC.size(); i++) {
+					if (i == 0)
+						header.add("LEC X="+(float)totalLEC.getX(i));
+					else
+						header.add((float)totalLEC.getX(i)+"");
+				}
 			}
 			csv.addLine(header);
 			
@@ -90,17 +110,25 @@ public class UCERF3_LEC_TreeTrimmer {
 			line.add("Full Tree"); // branch level
 			line.add("N/A"); // branch choice
 			line.add(branches.size()+""); // leaf count
-			double totalLossVal;
-			if (lecProbLevel > 0)
-				totalLossVal = totalLEC.getFirstInterpolatedX(lecProbLevel);
+			
+			LossDistribution totalDist;
+			if (lecProbLevel > 0d)
+				totalDist = calcLossDist(branches, branchLECs, lecProbLevel);
 			else
-				totalLossVal = calcBranchAveragedEAL(branches, branchEALs);
-			Preconditions.checkState(Double.isFinite(totalLossVal));
-			System.out.println("Complete model value: "+totalLossVal);
-			line.add(totalLossVal+""); // loss at this prob level
-			line.add("0.0"); // error WRT full model
-			for (int i=0; i<totalLEC.size(); i++)
-				line.add(totalLEC.getY(i)+""); // full LEC
+				totalDist = calcBranchAveragedEAL(branches, branchEALs, totalLEC);
+
+			System.out.println("Complete model value: "+totalDist.mean+" (sd="+totalDist.sd+")");
+			Preconditions.checkState(Double.isFinite(totalDist.mean));
+			Preconditions.checkState(Double.isFinite(totalDist.sd));
+			line.add(totalDist.mean+""); // loss at this prob level
+			line.add((totalDist.sd/totalDist.mean)+""); // COV of loss at this prob level
+			line.add("N/A"); // K-S Dn
+			line.add("N/A"); // mean error WRT full model
+			line.add("N/A"); // cov error WRT full model
+			line.add("N/A"); // passes tests
+			addFuncYVals(totalDist.cdf, line); // full CDF
+			if (lecProbLevel > 0d)
+				addFuncYVals(totalDist.lec, line); // full LEC
 			csv.addLine(line);
 			
 			List<Class<? extends LogicTreeBranchNode<?>>> availableBranchLevels = new ArrayList<>();
@@ -121,18 +149,19 @@ public class UCERF3_LEC_TreeTrimmer {
 				System.out.println("Iteration "+iteration+" with "
 						+availableBranchLevels.size()+" available branch levels and "+branches.size()+" branches");
 				
-				double minError = Double.POSITIVE_INFINITY;
-				int minErrorLevelIndex = -1;
-				double minErrorLoss = Double.NaN;
-				LogicTreeBranchNode minErrorChoice = null;
-				List<U3_EAL_LogicTreeBranch> minErrorBranches = null;
-				DiscretizedFunc minErrorLEC = null;
+				double minDn = Double.POSITIVE_INFINITY;
+				double meanErrorAtMinDn = Double.NaN;
+				double covErrorAtMinDn = Double.NaN;
+				int minDnLevelIndex = -1;
+				LossDistribution minDnDist = null;
+				LogicTreeBranchNode minDnChoice = null;
+				List<U3_EAL_LogicTreeBranch> minDnBranches = null;
 				
 				for (int i=0; i<availableBranchLevels.size(); i++) {
 					Class<? extends LogicTreeBranchNode<?>> levelClass = availableBranchLevels.get(i);
 					LogicTreeBranchNode[] values = levelClass.getEnumConstants();
 					
-					System.out.println("Testing level: "+ClassUtils.getClassNameWithoutPackage(levelClass));
+//					System.out.println("Testing level: "+ClassUtils.getClassNameWithoutPackage(levelClass));
 					
 					for (LogicTreeBranchNode value : values) {
 						List<U3_EAL_LogicTreeBranch> subBranches = new ArrayList<>();
@@ -140,44 +169,71 @@ public class UCERF3_LEC_TreeTrimmer {
 							if (branch.getValueUnchecked(levelClass) == value)
 								subBranches.add(branch);
 						}
-						System.out.println("\t"+value.getName());
-						System.out.println("\t\t"+subBranches.size()+" branches");
+//						System.out.println("\t"+value.getName());
+//						System.out.println("\t\t"+subBranches.size()+" branches");
 						if (!subBranches.isEmpty()) {
-							DiscretizedFunc subLEC = calcBranchAveragedLEC(subBranches, branchLECs);
-							double subLossVal;
+							LossDistribution subLossDist;
 							if (lecProbLevel > 0)
-								subLossVal = subLEC.getFirstInterpolatedX(lecProbLevel);
+								subLossDist = calcLossDist(subBranches, branchLECs, lecProbLevel);
 							else
-								subLossVal = calcBranchAveragedEAL(subBranches, branchEALs);
-							System.out.println("\t\tLoss: "+(float)+subLossVal);
-							double error = Math.abs(subLossVal-totalLossVal)/totalLossVal;
-							System.out.println("\t\tError: "+(float)+error);
-							if (error < minError) {
-								minError = error;
-								minErrorLevelIndex = i;
-								minErrorLoss = subLossVal;
-								minErrorChoice = value;
-								minErrorBranches = subBranches;
-								minErrorLEC = subLEC;
+								subLossDist = calcBranchAveragedEAL(subBranches, branchEALs, totalLEC);
+							
+							double ksDn = 0d;
+							for (int j=0; j<totalDist.cdf.size(); j++)
+								ksDn = Math.max(ksDn, Math.abs(totalDist.cdf.getY(j)-subLossDist.cdf.getY(j)));
+							double meanError = (subLossDist.mean - totalDist.mean)/totalDist.mean;
+							double cov = subLossDist.sd/totalDist.mean;
+							double covError = (cov - cov)/cov;
+							
+//							System.out.println("\t\tLoss: "+(float)+subLossDist.mean);
+//							System.out.println("\t\tK-S Dn: "+(float)+ksDn);
+//							System.out.println("\t\tMean Error: "+(float)+meanError);
+//							System.out.println("\t\tCOV Error: "+(float)+covError);
+							if (ksDn < minDn) {
+								minDn = ksDn;
+								minDnLevelIndex = i;
+								minDnDist = subLossDist;
+								minDnChoice = value;
+								minDnBranches = subBranches;
+								meanErrorAtMinDn = meanError;
+								covErrorAtMinDn = covError;
 							}
 						}
 					}
 				}
-				System.out.println("Selected level: "+minErrorChoice.getBranchLevelName());
-				System.out.println("Selected choice: "+minErrorChoice.getName());
+				System.out.println("Selected level: "+minDnChoice.getBranchLevelName());
+				System.out.println("Selected choice: "+minDnChoice.getName());
 				
-				availableBranchLevels.remove(minErrorLevelIndex);
-				branches = minErrorBranches;
+				availableBranchLevels.remove(minDnLevelIndex);
+				branches = minDnBranches;
 				
 				line = new ArrayList<>();
 				line.add(iteration+""); // iteration
-				line.add(minErrorChoice.getBranchLevelName()); // branch level
-				line.add(minErrorChoice.getName()); // branch choice
+				line.add(minDnChoice.getBranchLevelName()); // branch level
+				line.add(minDnChoice.getName()); // branch choice
 				line.add(branches.size()+""); // leaf count
-				line.add(minErrorLoss+""); // loss at this prob level
-				line.add(minError+""); // error WRT full model
-				for (int i=0; i<minErrorLEC.size(); i++)
-					line.add(minErrorLEC.getY(i)+""); // full LEC
+				line.add(minDnDist.mean+""); // loss at this prob level
+				line.add((minDnDist.sd/totalDist.mean)+""); // COV of loss at this prob level
+				line.add(minDn+""); // K-S Dn
+				line.add(meanErrorAtMinDn+""); // mean error WRT full model
+				line.add(covErrorAtMinDn+""); // cov error WRT full model
+				double n = ((double)branches.size()*totNumBranches)/((double)branches.size()+totNumBranches);
+				System.out.println("\tN="+(float)n+" (leaf count: "+branches.size()+")");
+				System.out.println("\tDn: "+(float)minDn);
+				double dnThresh = 1.63/Math.sqrt(n);
+				System.out.println("\tThreshold: "+dnThresh);
+				boolean passes = minDn <= 1.63/Math.sqrt(n);
+				System.out.println("\tPasses Dn? "+passes);
+				passes = passes && Math.abs(meanErrorAtMinDn) <= 0.05;
+				passes = passes && Math.abs(covErrorAtMinDn) <= 0.05;
+				System.out.println("\tPasses all? "+passes);
+				if (passes)
+					line.add("TRUE");
+				else
+					line.add("FALSE");
+				addFuncYVals(minDnDist.cdf, line); // full CDF
+				if (lecProbLevel > 0d)
+					addFuncYVals(minDnDist.lec, line); // full LEC
 				csv.addLine(line);
 				iteration++;
 			}
@@ -187,6 +243,11 @@ public class UCERF3_LEC_TreeTrimmer {
 			else
 				csv.writeToFile(new File(outputDir, "eal_trim.csv"));
 		}
+	}
+	
+	private static void addFuncYVals(DiscretizedFunc func, List<String> line) {
+		for (Point2D pt : func)
+			line.add((float)pt.getY()+"");
 	}
 	
 	private static final int lec_first_col = 15;
@@ -293,12 +354,21 @@ public class UCERF3_LEC_TreeTrimmer {
 		throw new IllegalStateException("No match found for '"+shortName+"' for class "+clazz.getName());
 	}
 	
-	private static DiscretizedFunc calcBranchAveragedLEC(Collection<U3_EAL_LogicTreeBranch> branches,
-			Table<U3_EAL_LogicTreeBranch, Double, DiscretizedFunc> branchLECs) {
+	private static LossDistribution calcLossDist(Collection<U3_EAL_LogicTreeBranch> branches,
+			Table<U3_EAL_LogicTreeBranch, Double, DiscretizedFunc> branchLECs, double probLevel) {
 		DiscretizedFunc lec = null;
 		
 		double totWeight = 0d;
 		
+		double[] values = null;
+		double[] weights = null;
+		DiscretizedFunc cdf = null;
+		if (probLevel > 0d) {
+			values = new double[branches.size()];
+			weights = new double[branches.size()];
+		}
+		
+		int index = 0;
 		for (U3_EAL_LogicTreeBranch branch : branches) {
 			Map<Double, DiscretizedFunc> map = branchLECs.row(branch);
 			Preconditions.checkState(map.size() == 1);
@@ -316,16 +386,75 @@ public class UCERF3_LEC_TreeTrimmer {
 			for (int i=0; i<lec.size(); i++)
 				 lec.set(i, lec.getY(i) + weight*branchLEC.getY(i));
 			totWeight += weight;
+			
+			if (probLevel > 0d) {
+				try {
+					values[index] = branchLEC.getFirstInterpolatedX(probLevel);
+				} catch (Exception e) {
+					e.printStackTrace();
+					System.err.flush();
+					System.err.println("LEC:\n"+branchLEC);
+					System.exit(1);
+				}
+				weights[index] = weight;
+				if (index == 0) {
+					cdf = new ArbitrarilyDiscretizedFunc();
+					for (Point2D pt : branchLEC)
+						cdf.set(pt.getX(), 0d);
+				}
+				for (int i=0; i<cdf.size(); i++)
+					if (values[index] <= cdf.getX(i))
+						cdf.set(i, cdf.getY(i)+weight);
+			}
+			
+			index++;
 		}
 		// rescale
 		lec.scale(1d/totWeight);
+		if (cdf != null)
+			cdf.scale(1d/totWeight);
 		
-		return lec;
+		return new LossDistribution(values, weights, cdf, lec);
 	}
 	
-	private static double calcBranchAveragedEAL(Collection<U3_EAL_LogicTreeBranch> branches,
-			Table<U3_EAL_LogicTreeBranch, Double, Double> branchEALs) {
-		double totEAL = 0d;
+	private static class LossDistribution {
+		private final double[] lossVals;
+		private final double[] lossWeights;
+		private final double mean;
+		private final double sd;
+		private final DiscretizedFunc cdf;
+		private final DiscretizedFunc lec;
+		
+		public LossDistribution(double[] lossVals, double[] lossWeights, DiscretizedFunc cdf,
+				DiscretizedFunc lec) {
+			super();
+			this.lossVals = lossVals;
+			this.lossWeights = lossWeights;
+			this.cdf = cdf;
+			this.lec = lec;
+			
+			if (lossVals == null) {
+				mean = Double.NaN;
+				sd = Double.NaN;
+			} else {
+				Variance v = new Variance();
+				double var = v.evaluate(lossVals, MathArrays.normalizeArray(lossWeights, lossVals.length));
+				this.sd = Math.sqrt(var);
+				Mean m = new Mean();
+				this.mean = m.evaluate(lossVals, lossWeights);
+			}
+		}
+	}
+	
+	private static LossDistribution calcBranchAveragedEAL(Collection<U3_EAL_LogicTreeBranch> branches,
+			Table<U3_EAL_LogicTreeBranch, Double, Double> branchEALs, DiscretizedFunc xVals) {
+		double[] values = new double[branches.size()];
+		double[] weights = new double[branches.size()];
+		DiscretizedFunc cdf = xVals.deepClone();
+		for (int i=0; i<cdf.size(); i++)
+			cdf.set(i, 0d);
+		
+		int index = 0;
 		
 		double totWeight = 0d;
 		
@@ -335,10 +464,20 @@ public class UCERF3_LEC_TreeTrimmer {
 			Double weight = map.keySet().iterator().next();
 			Double branchEAL = map.get(weight);
 			
-			totEAL += weight*branchEAL;
 			totWeight += weight;
+			
+			values[index] = branchEAL;
+			weights[index] = weight;
+			
+			for (int i=0; i<cdf.size(); i++)
+				if (values[index] <= cdf.getX(i))
+					cdf.set(i, cdf.getY(i)+weight);
+			
+			index++;
 		}
 		// rescale
-		return totEAL/totWeight;
+		cdf.scale(1d/totWeight);
+		
+		return new LossDistribution(values, weights, cdf, null);
 	}
 }

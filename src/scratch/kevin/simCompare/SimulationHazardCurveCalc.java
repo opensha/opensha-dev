@@ -12,7 +12,10 @@ import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.sha.gui.infoTools.IMT_Info;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SignificantDurationParam;
 
 import com.google.common.collect.Table;
 
@@ -21,11 +24,11 @@ import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 public class SimulationHazardCurveCalc<E> {
 	
 	private SimulationRotDProvider<E> simProv;
+
+	private Map<String, DiscretizedFunc> xValsMap;
 	
-	private DiscretizedFunc xVals;
-	
-	public static DiscretizedFunc getDefaultHazardCurve(int xValMult) {
-		ArbitrarilyDiscretizedFunc xValues = new IMT_Info().getDefaultHazardCurve(SA_Param.NAME);
+	public static DiscretizedFunc getDefaultHazardCurve(String paramName, int xValMult) {
+		ArbitrarilyDiscretizedFunc xValues = new IMT_Info().getDefaultHazardCurve(paramName);
 		if (xValMult > 0) {
 			ArbitrarilyDiscretizedFunc newXValues = new ArbitrarilyDiscretizedFunc();
 			for (int i=0; i<xValues.size()-1; i++) {
@@ -42,43 +45,53 @@ public class SimulationHazardCurveCalc<E> {
 	}
 
 	public SimulationHazardCurveCalc(SimulationRotDProvider<E> simProv) {
-		this(simProv, getDefaultHazardCurve(4));
+		this(simProv, null);
 	}
 
-	public SimulationHazardCurveCalc(SimulationRotDProvider<E> simProv, DiscretizedFunc xVals) {
+	public SimulationHazardCurveCalc(SimulationRotDProvider<E> simProv, Map<String, DiscretizedFunc> xValsMap) {
 		this.simProv = simProv;
-		this.xVals = xVals;
+		if (xValsMap == null)
+			xValsMap = new HashMap<>();
+		if (!xValsMap.containsKey(SA_Param.NAME))
+			xValsMap.put(SA_Param.NAME, getDefaultHazardCurve(SA_Param.NAME, 4));
+		if (!xValsMap.containsKey(PGV_Param.NAME))
+			xValsMap.put(PGV_Param.NAME, getDefaultHazardCurve(PGV_Param.NAME, 4));
+		if (!xValsMap.containsKey(PGA_Param.NAME))
+			xValsMap.put(PGA_Param.NAME, getDefaultHazardCurve(PGA_Param.NAME, 4));
+		if (!xValsMap.containsKey(SignificantDurationParam.NAME))
+			xValsMap.put(SignificantDurationParam.NAME, getDefaultHazardCurve(SignificantDurationParam.NAME, 4));
+		this.xValsMap = xValsMap;
 	}
 	
 	public SimulationRotDProvider<E> getSimProv() {
 		return simProv;
 	}
 	
-	public DiscretizedFunc getXVals() {
-		return xVals;
+	public Map<String, DiscretizedFunc> getXValsMap() {
+		return xValsMap;
 	}
 	
-	public DiscretizedFunc calc(Site site, double period, double curveDuration) throws IOException {
-		return calc(site, period, curveDuration, null);
+	public DiscretizedFunc calc(Site site, IMT imt, double curveDuration) throws IOException {
+		return calc(site, imt, curveDuration, null);
 	}
 	
-	public Map<String, DiscretizedFunc> calcSourceContributionCurves(Site site, double period, double curveDuration,
+	public Map<String, DiscretizedFunc> calcSourceContributionCurves(Site site, IMT imt, double curveDuration,
 			Table<String, E, Double> sourceRupContribFracts) throws IOException {
 		Map<String, DiscretizedFunc> ret = new HashMap<>();
 		
 		for (String sourceName : sourceRupContribFracts.rowKeySet())
-			ret.put(sourceName, calc(site, period, curveDuration, sourceRupContribFracts.row(sourceName)));
+			ret.put(sourceName, calc(site, imt, curveDuration, sourceRupContribFracts.row(sourceName)));
 		
 		return ret;
 	}
 	
-	private DiscretizedFunc calc(Site site, double period, double curveDuration, Map<E, Double> rupRateScalars)
+	private DiscretizedFunc calc(Site site, IMT imt, double curveDuration, Map<E, Double> rupRateScalars)
 			throws IOException {
 		// annual rate curve
-		DiscretizedFunc curve = xVals.deepClone();
+		DiscretizedFunc curve = xValsMap.get(imt.getParamName()).deepClone();
 		for (int i=0; i<curve.size(); i++)
 			curve.set(i, 0d);
-		int[] numExceed = new int[xVals.size()];
+		int[] numExceed = new int[curve.size()];
 		int numRuptures = 0;
 		double firstRate = -1;
 		double minRate = Double.POSITIVE_INFINITY;
@@ -98,13 +111,12 @@ public class SimulationHazardCurveCalc<E> {
 			else
 				allRatesSame = allRatesSame && firstRate == rupRate;
 			minRate = Math.min(rupRate, minRate);
-			List<DiscretizedFunc> spectras = simProv.getRotD50s(site, rupture);
-			for (int j=0; j<spectras.size(); j++) {
-				DiscretizedFunc spectra = spectras.get(j);
-				double simRate = simProv.getIndividualSimulationRate(rupture, rupRate, j, spectras.size());
-				double rd50 = spectra.getInterpolatedY(period);
+			List<Double> vals = simProv.getValues(site, rupture, imt);
+			for (int j=0; j<vals.size(); j++) {
+				double simRate = simProv.getIndividualSimulationRate(rupture, rupRate, j, vals.size());
+				double val = vals.get(j);
 				for (int i=0; i<curve.size(); i++) {
-					if (curve.getX(i) <= rd50) {
+					if (curve.getX(i) <= val) {
 						numExceed[i]++;
 						curve.set(i, curve.getY(i)+simRate);
 					}
@@ -118,12 +130,12 @@ public class SimulationHazardCurveCalc<E> {
 		DiscretizedFunc lowerCurve = null;
 		DiscretizedFunc upperCurve = null;
 		if (allRatesSame && rupRateScalars == null) {
-			lowerCurve = xVals.deepClone();
-			upperCurve = xVals.deepClone();
+			lowerCurve = curve.deepClone();
+			upperCurve = curve.deepClone();
 			
 			double scale = firstRate*numRuptures;
 			
-			for (int i=0; i<xVals.size(); i++) {
+			for (int i=0; i<curve.size(); i++) {
 				double[] conf = ETAS_Utils.getBinomialProportion95confidenceInterval(
 						(double)numExceed[i]/(double)numRuptures, numRuptures);
 				lowerCurve.set(i, 1d - Math.exp(-conf[0]*scale*curveDuration));

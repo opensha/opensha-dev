@@ -708,7 +708,7 @@ public class ResidualScatterPlot {
 	
 	public static <E> void plotPeriodDependentSigma(File outputDir, String prefix,
 			Map<Site, List<RuptureComparison<E>>> siteCompsMap, SimulationRotDProvider<E> simProv,
-			boolean detrend, double... periods) throws IOException {
+			boolean detrend, IMT... imts) throws IOException {
 		// for detrending
 		EvenlyDiscrXYZ_DataSet detrendXYZ[] = null;
 		EvenlyDiscrXYZ_DataSet detrendStdDevXYZ[] = null;
@@ -729,9 +729,9 @@ public class ResidualScatterPlot {
 			int numMag = 15;
 			double distSpacing = (Math.log10(maxDist) - Math.log10(minDist)) / (double)numDist;
 			double magSpacing = (maxMag - minMag) / (double)numMag;
-			detrendXYZ = new EvenlyDiscrXYZ_DataSet[periods.length];
-			detrendStdDevXYZ = new EvenlyDiscrXYZ_DataSet[periods.length];
-			for (int p=0; p<periods.length; p++) {
+			detrendXYZ = new EvenlyDiscrXYZ_DataSet[imts.length];
+			detrendStdDevXYZ = new EvenlyDiscrXYZ_DataSet[imts.length];
+			for (int p=0; p<imts.length; p++) {
 				detrendXYZ[p] = new EvenlyDiscrXYZ_DataSet(numDist, numMag, Math.log10(minDist)+0.5*distSpacing,
 						minMag+0.5*magSpacing, distSpacing, magSpacing);
 				detrendStdDevXYZ[p] = detrendXYZ[p].copy();
@@ -750,9 +750,9 @@ public class ResidualScatterPlot {
 			int[][] detrendCounts = new int[numDist][numMag];
 			for (Site site : siteCompsMap.keySet()) {
 				for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
-					double[] gmpeVals = new double[periods.length];
-					for (int p=0; p<periods.length; p++)
-						gmpeVals[p] = comp.getLogMean(site, periods[p]);
+					double[] gmpeVals = new double[imts.length];
+					for (int p=0; p<imts.length; p++)
+						gmpeVals[p] = comp.getLogMean(site, imts[p]);
 					E rupture = comp.getRupture();
 					int numSims = simProv.getNumSimulations(site, rupture);
 					double dist = comp.getDistanceRup(site);
@@ -769,11 +769,10 @@ public class ResidualScatterPlot {
 					Preconditions.checkState(yInd >= 0 && yInd < numMag,
 							"Bad mag index %s for mag=%s, nMag=%s", yInd, comp.getMagnitude(), numMag);
 					for (int i=0; i<numSims; i++) {
-						DiscretizedFunc simRD50 = simProv.getRotD50(site, rupture, i);
 						detrendCounts[xInd][yInd]++;
-						double[] vals = new double[periods.length];
-						for (int p=0; p<periods.length; p++) {
-							double simVal = Math.log(simRD50.getY(periods[p]));
+						double[] vals = new double[imts.length];
+						for (int p=0; p<imts.length; p++) {
+							double simVal = Math.log(simProv.getValue(site, rupture, imts[p], i));
 							double residual = simVal - gmpeVals[p];
 							vals[p] = residual;
 							detrendXYZ[p].set(xInd, yInd, detrendXYZ[p].get(xInd, yInd)+residual);
@@ -785,7 +784,7 @@ public class ResidualScatterPlot {
 			// now convert to average residual
 			for (int x=0; x<numDist; x++) {
 				for (int y=0; y<numMag; y++) {
-					for (int p=0; p<periods.length; p++) {
+					for (int p=0; p<imts.length; p++) {
 						if (detrendCounts[x][y] > 0)
 							detrendXYZ[p].set(x, y, detrendXYZ[p].get(x, y)/(double)detrendCounts[x][y]);
 						if (detrendCounts[x][y] > 1) {
@@ -802,14 +801,14 @@ public class ResidualScatterPlot {
 			}
 		}
 		Table<RuptureComparison<E>, Integer, List<double[]>> rupResidualsTable = HashBasedTable.create();
-		Variance[] totalVars = new Variance[periods.length];
-		for (int p=0; p<periods.length; p++)
+		Variance[] totalVars = new Variance[imts.length];
+		for (int p=0; p<imts.length; p++)
 			totalVars[p] = new Variance();
 		for (Site site : siteCompsMap.keySet()) {
 			for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
-				double[] gmpeVals = new double[periods.length];
-				for (int p=0; p<periods.length; p++)
-					gmpeVals[p] = comp.getLogMean(site, periods[p]);
+				double[] gmpeVals = new double[imts.length];
+				for (int p=0; p<imts.length; p++)
+					gmpeVals[p] = comp.getLogMean(site, imts[p]);
 				E rupture = comp.getRupture();
 				int numSims = simProv.getNumSimulations(site, rupture);
 				Preconditions.checkState(numSims > 0);
@@ -819,15 +818,14 @@ public class ResidualScatterPlot {
 					detrendMag = Math.min(Math.max(comp.getMagnitude(), detrendXYZ[0].getMinY()), detrendXYZ[0].getMaxY());
 				}
 				for (int i=0; i<numSims; i++) {
-					DiscretizedFunc simRD50 = simProv.getRotD50(site, rupture, i);
 					List<double[]> residualsList = rupResidualsTable.get(comp, i);
 					if (residualsList == null) {
 						residualsList = new ArrayList<>();
 						rupResidualsTable.put(comp, i, residualsList);
 					}
-					double[] residuals = new double[periods.length];
-					for (int p=0; p<periods.length; p++) {
-						double simVal = Math.log(simRD50.getY(periods[p]));
+					double[] residuals = new double[imts.length];
+					for (int p=0; p<imts.length; p++) {
+						double simVal = Math.log(simProv.getValue(site, rupture, imts[p], i));
 						residuals[p] = simVal - gmpeVals[p];
 						if (detrend)
 							residuals[p] -= detrendXYZ[p].bilinearInterpolation(detrendDist, detrendMag);
@@ -839,9 +837,9 @@ public class ResidualScatterPlot {
 		}
 		
 		// calculate mean within event variances, phi^2, and betweetn event variances, tau^2
-		double[] phiSq = new double[periods.length];
-		double[] tauSq = new double[periods.length];
-		for (int p=0; p<periods.length; p++) {
+		double[] phiSq = new double[imts.length];
+		double[] tauSq = new double[imts.length];
+		for (int p=0; p<imts.length; p++) {
 			Collection<List<double[]>> allVals = rupResidualsTable.values();
 			List<Double> rupVariances = new ArrayList<>();
 			List<Double> rupEventTerms = new ArrayList<>();
@@ -873,12 +871,12 @@ public class ResidualScatterPlot {
 		PlotCurveCharacterstics sumSigmaChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK);
 		PlotCurveCharacterstics sigmaChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY);
 		
-		Range xRange = new Range(0d, periods.length);
+		Range xRange = new Range(0d, imts.length);
 		Range yRange = new Range(0d, 1d);
 		
 		double centerHalfBuffer = 0.5*centerBuffer;
 		
-		for (int p=0; p<periods.length; p++) {
+		for (int p=0; p<imts.length; p++) {
 			double tau = Math.sqrt(tauSq[p]);
 			double phi = Math.sqrt(phiSq[p]);
 			double sigma = Math.sqrt(tauSq[p] + phiSq[p]);
@@ -910,11 +908,7 @@ public class ResidualScatterPlot {
 			sigmaAnn.setPaint(sumSigmaChar.getColor());
 			anns.add(sigmaAnn);
 			
-			String periodStr;
-			if (periods[p] == Math.round(periods[p]))
-				periodStr = (int)periods[p]+"s";
-			else
-				periodStr = (float)periods[p]+"s";
+			String periodStr = imts[p].getShortName();
 			XYTextAnnotation periodAnn = new XYTextAnnotation(periodStr, curCenter, yRange.getUpperBound()*0.95);
 			periodAnn.setFont(periodFont);
 			periodAnn.setTextAnchor(TextAnchor.TOP_CENTER);
@@ -948,14 +942,9 @@ public class ResidualScatterPlot {
 				maxDetrend = Math.max(maxDetrend, Math.max(Math.abs(xyz.getMinZ()), Math.abs(xyz.getMaxZ())));
 //			CPT detrendCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(-maxDetrend, maxDetrend);
 			CPT detrendCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-maxDetrend, maxDetrend);
-			for (int p=0; p<periods.length; p++) {
-				String periodStr;
-				if (periods[p] == Math.round(periods[p]))
-					periodStr = (int)periods[p]+"s";
-				else
-					periodStr = (float)periods[p]+"s";
-				String title = periodStr+" Mean Residuals";
-				String detrendPrefix = "detrend_residuals_"+periodStr;
+			for (int p=0; p<imts.length; p++) {
+				String title = imts[p].getDisplayName()+" Mean Residuals";
+				String detrendPrefix = "detrend_residuals_"+imts[p].getPrefix();
 				XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendXYZ[p], detrendCPT, title, "Log10 Distance Rup", "Magnitude", "Mean Residual");
 				XYZGraphPanel xyzGP = new XYZGraphPanel(gp.getPlotPrefs());
 				xyzGP.drawPlot(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
@@ -965,14 +954,9 @@ public class ResidualScatterPlot {
 			}
 			CPT stdCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0d, 1d);
 			stdCPT.setNanColor(Color.WHITE);
-			for (int p=0; p<periods.length; p++) {
-				String periodStr;
-				if (periods[p] == Math.round(periods[p]))
-					periodStr = (int)periods[p]+"s";
-				else
-					periodStr = (float)periods[p]+"s";
-				String title = periodStr+" Standard Deviations";
-				String detrendPrefix = "detrend_std_dev_"+periodStr;
+			for (int p=0; p<imts.length; p++) {
+				String title = imts[p].getDisplayName()+" Standard Deviations";
+				String detrendPrefix = "detrend_std_dev_"+imts[p].getPrefix();
 				XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendStdDevXYZ[p], stdCPT, title, "Log10 Distance Rup", "Magnitude", 
 						"Residual Standard Deviation");
 				XYZGraphPanel xyzGP = new XYZGraphPanel(gp.getPlotPrefs());

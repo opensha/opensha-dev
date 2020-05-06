@@ -30,10 +30,12 @@ public class TransTotalPatchSlipCompare {
 	public static void main(String[] args) throws IOException {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4950.instance();
-		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
-				"Single SS", null, null);
+//		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
+//				"Single SS", null, null);
 //		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS_tri"),
 //				"Single SS Triangles", null, null);
+		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/bruce/rundirtest"),
+				"Bruce test", null, null);
 		
 		System.out.println("Loading list slips...");
 		double[] patchSlips = new double[catalog.getElements().size()];
@@ -57,8 +59,14 @@ public class TransTotalPatchSlipCompare {
 		System.out.println("Loading trans slips...");
 		for (RSQSimStateTime trans : transReader.getTransitionsIterable(0d, Double.POSITIVE_INFINITY)) {
 			if (trans.state == RSQSimState.EARTHQUAKE_SLIP) {
-				double slip = trans.velocity*trans.getDuration();
-				patchTransSlips[trans.patchID-1] += slip;
+				numSlips++;
+				if (trans.hasDuration()) {
+					double slip = trans.velocity*trans.getDuration();
+					patchTransSlips[trans.patchID-1] += slip;
+					totalTimeSlipping += trans.getDuration();
+				} else {
+					System.err.println("Warning: no duration for EQ slip trans: "+trans);
+				}
 			}
 		}
 		

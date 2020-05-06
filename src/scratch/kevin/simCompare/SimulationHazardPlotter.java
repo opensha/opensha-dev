@@ -40,6 +40,10 @@ import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SignificantDurationParam;
 import org.opensha.sra.rtgm.RTGM;
 
 import com.google.common.base.Joiner;
@@ -81,7 +85,7 @@ public class SimulationHazardPlotter<E> {
 //	private double[] gmpe_fixed_sigmas = { 0d, 0.3 };
 	private double[] gmpeFixedSigmas = { 0d };
 	private Map<SimulationHazardCurveCalc<?>, PlotCurveCharacterstics> customPlotChars = new HashMap<>();
-	private Range curveXRange = new Range(1e-3, 1e1);
+	private Map<String, Range> curveXRanges;
 	private Range curveYRange = new Range(1e-8, 1e0);
 
 	// inputs
@@ -91,24 +95,24 @@ public class SimulationHazardPlotter<E> {
 	private Site site;
 	private double curveDuration;
 	private AttenRelRef gmpeRef;
-	private DiscretizedFunc xVals;
+	private Map<String, DiscretizedFunc> xValsMap;
 	
 	private Table<String, E, Double> sourceRupContribFracts;
 	private boolean sourceContribMutuallyExclusive;
 	
 	// results so far
-	private Table<SimulationHazardCurveCalc<?>, Double, DiscretizedFunc> simCurves = HashBasedTable.create();
-	private Map<Double, DiscretizedFunc> gmpeCurves = new HashMap<>();
+	private Table<SimulationHazardCurveCalc<?>, IMT, DiscretizedFunc> simCurves = HashBasedTable.create();
+	private Map<IMT, DiscretizedFunc> gmpeCurves = new HashMap<>();
 	/**
-	 * Period, Trucation Level, Curve
+	 * IMT, Trucation Level, Curve
 	 */
-	private Table<Double, Double, DiscretizedFunc> gmpeTruncCurves = HashBasedTable.create();
+	private Table<IMT, Double, DiscretizedFunc> gmpeTruncCurves = HashBasedTable.create();
 	/**
-	 * Period, Sigma, Curve
+	 * IMT, Sigma, Curve
 	 */
-	private Table<Double, Double, DiscretizedFunc> gmpeFixedSigmaCurves = HashBasedTable.create();
-	private Table<Double, String, DiscretizedFunc> simSourceCurves = HashBasedTable.create();
-	private Table<Double, String, DiscretizedFunc> gmpeSourceCurves = HashBasedTable.create();
+	private Table<IMT, Double, DiscretizedFunc> gmpeFixedSigmaCurves = HashBasedTable.create();
+	private Table<IMT, String, DiscretizedFunc> simSourceCurves = HashBasedTable.create();
+	private Table<IMT, String, DiscretizedFunc> gmpeSourceCurves = HashBasedTable.create();
 	
 	public SimulationHazardPlotter(SimulationHazardCurveCalc<E> simCalc, List<? extends RuptureComparison<E>> comps,
 			Site site, double curveDuration, AttenRelRef gmpeRef) {
@@ -125,8 +129,13 @@ public class SimulationHazardPlotter<E> {
 		this.site = site;
 		this.curveDuration = curveDuration;
 		this.gmpeRef = gmpeRef;
-		
-		this.xVals = simCalc.getXVals();
+
+		this.xValsMap = simCalc.getXValsMap();
+		curveXRanges = new HashMap<>();
+		curveXRanges.put(SA_Param.NAME, new Range(1e-3, 1e1));
+		curveXRanges.put(PGA_Param.NAME, new Range(1e-3, 1e1));
+		curveXRanges.put(PGV_Param.NAME, new Range(1e-1, 1e3));
+		curveXRanges.put(SignificantDurationParam.NAME, new Range(1e-1, 1e3));
 	}
 	
 	public Site getSite() {
@@ -164,47 +173,47 @@ public class SimulationHazardPlotter<E> {
 		this.sourceContribMutuallyExclusive = mutuallyExclusive;
 	}
 	
-	public synchronized DiscretizedFunc getCalcSimCurve(SimulationHazardCurveCalc<?> simCalc, double period) throws IOException {
-		if (simCurves.contains(simCalc, period))
-			return simCurves.get(simCalc, period);
-		DiscretizedFunc curve = simCalc.calc(site, period, curveDuration);
-		simCurves.put(simCalc, period, curve);
+	public synchronized DiscretizedFunc getCalcSimCurve(SimulationHazardCurveCalc<?> simCalc, IMT imt) throws IOException {
+		if (simCurves.contains(simCalc, imt))
+			return simCurves.get(simCalc, imt);
+		DiscretizedFunc curve = simCalc.calc(site, imt, curveDuration);
+		simCurves.put(simCalc, imt, curve);
 		return curve;
 	}
 	
-	private DiscretizedFunc getGMPECurve(double period, double sigmaTruncation, double fixedSigma) {
+	private DiscretizedFunc getGMPECurve(IMT imt, double sigmaTruncation, double fixedSigma) {
 		Preconditions.checkState(sigmaTruncation < 0 || fixedSigma < 0);
-		if (sigmaTruncation < 0 && fixedSigma < 0 && gmpeCurves.containsKey(period))
+		if (sigmaTruncation < 0 && fixedSigma < 0 && gmpeCurves.containsKey(imt))
 			// regular gmpe curve
-			return gmpeCurves.get(period);
-		if (sigmaTruncation > 0 && gmpeTruncCurves.contains(period, sigmaTruncation))
+			return gmpeCurves.get(imt);
+		if (sigmaTruncation > 0 && gmpeTruncCurves.contains(imt, sigmaTruncation))
 			// truncated curve
-			return gmpeTruncCurves.get(period, sigmaTruncation);
-		if (fixedSigma >= 0 && gmpeFixedSigmaCurves.contains(period, fixedSigma))
+			return gmpeTruncCurves.get(imt, sigmaTruncation);
+		if (fixedSigma >= 0 && gmpeFixedSigmaCurves.contains(imt, fixedSigma))
 			// fixed sigma curve
-			return gmpeFixedSigmaCurves.get(period, fixedSigma);
+			return gmpeFixedSigmaCurves.get(imt, fixedSigma);
 		return null; // not calculated
 	}
 	
-	public synchronized DiscretizedFunc getCalcGMPECurve(double period) {
-		return getCalcGMPECurve(period, -1, -1);
+	public synchronized DiscretizedFunc getCalcGMPECurve(IMT imt) {
+		return getCalcGMPECurve(imt, -1, -1);
 	}
 	
-	public synchronized DiscretizedFunc getCalcGMPECurve(double period, double sigmaTruncation, double fixedSigma) {
-		DiscretizedFunc curve = getGMPECurve(period, sigmaTruncation, fixedSigma);
+	public synchronized DiscretizedFunc getCalcGMPECurve(IMT imt, double sigmaTruncation, double fixedSigma) {
+		DiscretizedFunc curve = getGMPECurve(imt, sigmaTruncation, fixedSigma);
 		if (curve != null)
 			return curve;
 		
 		// we don't have the curve we need, calculate them all for this period
 		
-		DiscretizedFunc gmpeCurve = xVals.deepClone();
+		DiscretizedFunc gmpeCurve = xValsMap.get(imt.getParamName()).deepClone();
 		// init to 1, non-exceedance curves
 		for (int i=0; i<gmpeCurve.size(); i++)
 			gmpeCurve.set(i, 1d);
 		
 		DiscretizedFunc[] calcTruncCurves = new DiscretizedFunc[gmpeTruncs.length];
 		for (int t=0; t<calcTruncCurves.length; t++) {
-			calcTruncCurves[t] = xVals.deepClone();
+			calcTruncCurves[t] = gmpeCurve.deepClone();
 			Preconditions.checkState(gmpeTruncs[t] > 0, "Truncation level not positive: %s", gmpeTruncs[t]);
 			// init to 1, non-exceedance curves
 			for (int i=0; i<calcTruncCurves[t].size(); i++)
@@ -213,7 +222,7 @@ public class SimulationHazardPlotter<E> {
 		
 		DiscretizedFunc[] calcFixedSigmaCurves = new DiscretizedFunc[gmpeFixedSigmas.length];
 		for (int t=0; t<calcFixedSigmaCurves.length; t++) {
-			calcFixedSigmaCurves[t] = xVals.deepClone();
+			calcFixedSigmaCurves[t] = gmpeCurve.deepClone();
 			Preconditions.checkState(gmpeFixedSigmas[t] >= 0, "Fixed sigma level is negative: %s", gmpeFixedSigmas[t]);
 			if (gmpeFixedSigmas[t] > 0) {
 				// init to 1, non-exceedance curves
@@ -237,8 +246,8 @@ public class SimulationHazardPlotter<E> {
 				continue;
 			double rupProb = 1d - Math.exp(-rupRate*curveDuration);
 			
-			double mean = comp.getLogMean(site, period);
-			double stdDev = comp.getStdDev(site, period);
+			double mean = comp.getLogMean(site, imt);
+			double stdDev = comp.getStdDev(site, imt);
 			
 			// regular curve
 			for(int k=0; k<logXVals.size(); k++) {
@@ -278,11 +287,11 @@ public class SimulationHazardPlotter<E> {
 		// convert to exceedance probabilities
 		for (int i=0; i<gmpeCurve.size(); i++)
 			gmpeCurve.set(i, 1d-gmpeCurve.getY(i));
-		gmpeCurves.put(period, gmpeCurve);
+		gmpeCurves.put(imt, gmpeCurve);
 		for (int t=0; t<calcTruncCurves.length; t++) {
 			for (int i=0; i<calcTruncCurves[t].size(); i++)
 				calcTruncCurves[t].set(i, 1d-calcTruncCurves[t].getY(i));
-			gmpeTruncCurves.put(period, gmpeTruncs[t], calcTruncCurves[t]);
+			gmpeTruncCurves.put(imt, gmpeTruncs[t], calcTruncCurves[t]);
 		}
 		for (int t=0; t< calcFixedSigmaCurves.length; t++) {
 			if (gmpeFixedSigmas[t] > 0) {
@@ -296,18 +305,22 @@ public class SimulationHazardPlotter<E> {
 					calcFixedSigmaCurves[t].set(i, prob);
 				}
 			}
-			gmpeFixedSigmaCurves.put(period, gmpeFixedSigmas[t], calcFixedSigmaCurves[t]);
+			gmpeFixedSigmaCurves.put(imt, gmpeFixedSigmas[t], calcFixedSigmaCurves[t]);
 		}
 		
 		// now return it
-		return getGMPECurve(period, sigmaTruncation, fixedSigma);
+		return getGMPECurve(imt, sigmaTruncation, fixedSigma);
 	}
 	
 	public File plotHazardCurves(File outputDir, String prefix, double period) throws IOException {
+		return plotHazardCurves(outputDir, prefix, IMT.forPeriod(period));
+	}
+	
+	public File plotHazardCurves(File outputDir, String prefix, IMT imt) throws IOException {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		DiscretizedFunc gmpeCurve = getCalcGMPECurve(period);
+		DiscretizedFunc gmpeCurve = getCalcGMPECurve(imt);
 		
 		// primary GMPE curve
 		gmpeCurve.setName(gmpeRef.getShortName());
@@ -316,7 +329,7 @@ public class SimulationHazardPlotter<E> {
 		
 		// GMPE truncated curves
 		for (int i=0; i<gmpeTruncs.length; i++) {
-			DiscretizedFunc gmpeTruncCurve = getCalcGMPECurve(period, gmpeTruncs[i], -1);
+			DiscretizedFunc gmpeTruncCurve = getCalcGMPECurve(imt, gmpeTruncs[i], -1);
 			String name = optionalDigitDF.format(gmpeTruncs[i])+" σₜ";
 			float thickness = 2f;
 			gmpeTruncCurve.setName(name);
@@ -326,7 +339,7 @@ public class SimulationHazardPlotter<E> {
 		
 		// GMPE fixed sigma curves
 		for (int i=0; i<gmpeFixedSigmas.length; i++) {
-			DiscretizedFunc gmpeFixedSigmaCurve = getCalcGMPECurve(period, -1, gmpeFixedSigmas[i]);
+			DiscretizedFunc gmpeFixedSigmaCurve = getCalcGMPECurve(imt, -1, gmpeFixedSigmas[i]);
 			String name = "σ="+optionalDigitDF.format(gmpeFixedSigmas[i]);
 			if (i == 0)
 				name = "Fixed "+name;
@@ -338,24 +351,25 @@ public class SimulationHazardPlotter<E> {
 		}
 		
 		// primary simulation curve
-		addSimulationCurves(funcs, chars, period, true, true);
+		addSimulationCurves(funcs, chars, imt, true, true);
 		
-		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, null, true);
+		return plotHazardCurves(outputDir, prefix, site, imt, curveDuration, funcs, chars, null, true);
 	}
 	
-	public File plotGMPE_SimHazardCurves(File outputDir, String prefix, double period,
+	public File plotGMPE_SimHazardCurves(File outputDir, String prefix, IMT imt,
 			GMPESimulationBasedProvider<E> gmpeSimProv, int numGMPESims) throws IOException {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
 		DiscretizedFunc[] gmpeSimCurves = new DiscretizedFunc[numGMPESims];
-		SimulationHazardCurveCalc<E> gmpeSimCalc = new SimulationHazardCurveCalc<>(gmpeSimProv, xVals);
+		SimulationHazardCurveCalc<E> gmpeSimCalc = new SimulationHazardCurveCalc<>(
+				gmpeSimProv, xValsMap);
 		for (int i=0; i<gmpeSimCurves.length; i++) {
 			gmpeSimProv.clearCache();
-			gmpeSimCurves[i] = gmpeSimCalc.calc(site, period, curveDuration);
+			gmpeSimCurves[i] = gmpeSimCalc.calc(site, imt, curveDuration);
 		}
 		
-		DiscretizedFunc meanCurve = xVals.deepClone();
+		DiscretizedFunc meanCurve = gmpeSimCalc.getXValsMap().get(imt.getParamName()).deepClone();
 		for (int i=0; i<meanCurve.size(); i++)
 			meanCurve.set(i, 0);
 		meanCurve.setName(gmpeRef.getShortName()+" mean, N="+gmpeSimCurves.length);
@@ -394,7 +408,7 @@ public class SimulationHazardPlotter<E> {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, meanSimColor));
 		}
 		
-		DiscretizedFunc gmpeCurve = getCalcGMPECurve(period);
+		DiscretizedFunc gmpeCurve = getCalcGMPECurve(imt);
 		
 		// primary GMPE curve
 		gmpeCurve.setName(gmpeRef.getShortName());
@@ -402,30 +416,30 @@ public class SimulationHazardPlotter<E> {
 		chars.add(gmpeCurveChar);
 		
 		// primary simulation curve
-		addSimulationCurves(funcs, chars, period, true, false);
+		addSimulationCurves(funcs, chars, imt, true, false);
 		
-		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, null, false);
+		return plotHazardCurves(outputDir, prefix, site, imt, curveDuration, funcs, chars, null, false);
 	}
 	
-	private synchronized Map<String, DiscretizedFunc> getCalcSimSourceCurves(double period) throws IOException {
-		if (simSourceCurves.containsRow(period))
-			return simSourceCurves.row(period);
+	private synchronized Map<String, DiscretizedFunc> getCalcSimSourceCurves(IMT imt) throws IOException {
+		if (simSourceCurves.containsRow(imt))
+			return simSourceCurves.row(imt);
 		Map<String, DiscretizedFunc> curves = simCalc.calcSourceContributionCurves(
-				site, period, curveDuration, sourceRupContribFracts);
+				site, imt, curveDuration, sourceRupContribFracts);
 		for (String sourceName : curves.keySet())
-			simSourceCurves.put(period, sourceName, curves.get(sourceName));
+			simSourceCurves.put(imt, sourceName, curves.get(sourceName));
 		return curves;
 	}
 	
-	private synchronized Map<String, DiscretizedFunc> getCalcGMPESourceCurves(double period)
+	private synchronized Map<String, DiscretizedFunc> getCalcGMPESourceCurves(IMT imt)
 			throws IOException {
-		if (gmpeSourceCurves.containsRow(period))
-			return gmpeSourceCurves.row(period);
+		if (gmpeSourceCurves.containsRow(imt))
+			return gmpeSourceCurves.row(imt);
 		
 		Map<String, DiscretizedFunc> curves = new HashMap<>();
 		for (String sourceName : sourceRupContribFracts.rowKeySet()) {
 			Map<E, Double> rupContribFracts = sourceRupContribFracts.row(sourceName);
-			DiscretizedFunc simSourceCurve = getCalcSimSourceCurves(period).get(sourceName);
+			DiscretizedFunc simSourceCurve = getCalcSimSourceCurves(imt).get(sourceName);
 			if (simSourceCurve == null || simSourceCurve.size() == 0) {
 				System.out.println("Skipping "+sourceName+" (null ? "+(simSourceCurve == null)+")");
 				continue;
@@ -450,12 +464,12 @@ public class SimulationHazardPlotter<E> {
 			SimulationHazardPlotter<E> modCalc = new SimulationHazardPlotter<>(simCalc, modComps, site, curveDuration, gmpeRef);
 			modCalc.setGMPE_FixedSigmas(null);
 			modCalc.setGMPE_TruncationLevels(null);
-			DiscretizedFunc gmpeCurve = modCalc.getCalcGMPECurve(period);
+			DiscretizedFunc gmpeCurve = modCalc.getCalcGMPECurve(imt);
 			
 			curves.put(sourceName, gmpeCurve);
 		}
 		for (String sourceName : curves.keySet())
-			gmpeSourceCurves.put(period, sourceName, curves.get(sourceName));
+			gmpeSourceCurves.put(imt, sourceName, curves.get(sourceName));
 		return curves;
 	}
 	
@@ -500,12 +514,12 @@ public class SimulationHazardPlotter<E> {
 		return rtgm;
 	}
 	
-	public File plotSourceContributionHazardCurves(File outputDir, String prefix, double period,
+	public File plotSourceContributionHazardCurves(File outputDir, String prefix, IMT imt,
 			double sourceContribSortProb, int numSourceCurves, boolean gmpeSources) throws IOException {
 		Preconditions.checkState(sourceRupContribFracts != null, "Source rup contribution fractions not set!");
 		Map<String, Double> simSourceSortVals = new HashMap<>();
 		
-		DiscretizedFunc refCurve = getCalcSimCurve(simCalc, period);
+		DiscretizedFunc refCurve = getCalcSimCurve(simCalc, imt);
 		double contribIML;
 		if (sourceContribSortProb > 0) {
 			if (sourceContribSortProb < refCurve.getMinY() || sourceContribSortProb > refCurve.getMaxY()) {
@@ -521,9 +535,9 @@ public class SimulationHazardPlotter<E> {
 			contribIML = 0d;
 		}
 		
-		Map<String, DiscretizedFunc> simSourceCurves = getCalcSimSourceCurves(period);
+		Map<String, DiscretizedFunc> simSourceCurves = getCalcSimSourceCurves(imt);
 		Map<String, DiscretizedFunc> gmpeSourceCurves =
-				gmpeSources ? getCalcGMPESourceCurves(period) : null;
+				gmpeSources ? getCalcGMPESourceCurves(imt) : null;
 		
 		for (String sourceName : simSourceCurves.keySet()) {
 			DiscretizedFunc simSourceCurve = simSourceCurves.get(sourceName);
@@ -548,25 +562,25 @@ public class SimulationHazardPlotter<E> {
 		
 		// primary GMPE curve
 		if (gmpeSources) {
-			DiscretizedFunc gmpeCurve = getCalcGMPECurve(period, -1, -1);
+			DiscretizedFunc gmpeCurve = getCalcGMPECurve(imt, -1, -1);
 			gmpeCurve.setName(gmpeRef.getShortName());
 			funcs.add(gmpeCurve);
 			chars.add(gmpeCurveChar);
 		} else {
 			// primary simulation curve
-			addSimulationCurves(funcs, chars, period, true, false);
+			addSimulationCurves(funcs, chars, imt, true, false);
 		}
 		
 		addSourceContributionFuncs(funcs, chars, simSourceCurves, gmpeSourceCurves, simSourceSortVals,
-				numSourceCurves, sourceContribMutuallyExclusive, gmpeSources, false);
+				numSourceCurves, sourceContribMutuallyExclusive, gmpeSources, false, imt);
 		
-		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, null, true);
+		return plotHazardCurves(outputDir, prefix, site, imt, curveDuration, funcs, chars, null, true);
 	}
 	
 	private void addSourceContributionFuncs(List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars,
 			Map<String, DiscretizedFunc> simSourceCurves, Map<String, DiscretizedFunc> gmpeSourceCurves,
 			Map<String, Double> simSourceSortVals, int numSourceCurves, boolean sourceContribMutuallyExclusive,
-			boolean gmpeSources, boolean symbols) throws IOException {
+			boolean gmpeSources, boolean symbols, IMT imt) throws IOException {
 		List<String> sortedSourceNames = ComparablePairing.getSortedData(simSourceSortVals);
 		Collections.reverse(sortedSourceNames);
 		List<DiscretizedFunc> otherCurves = new ArrayList<>();
@@ -614,7 +628,7 @@ public class SimulationHazardPlotter<E> {
 		if (sourceContribMutuallyExclusive) {
 			// now build other sources curves
 			if (!otherCurves.isEmpty()) {
-				DiscretizedFunc otherCurve = xVals.deepClone();
+				DiscretizedFunc otherCurve = xValsMap.get(imt.getParamName()).deepClone();
 				// init to 1, do in non-exceed space
 				for (int i=0; i<otherCurve.size(); i++)
 					otherCurve.set(i, 1d);
@@ -633,8 +647,8 @@ public class SimulationHazardPlotter<E> {
 	}
 	
 	private void addSimulationCurves(List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars,
-			double period, boolean includeUncertainty, boolean includeComps) throws IOException {
-		DiscretizedFunc simCurve = getCalcSimCurve(simCalc, period);
+			IMT imt, boolean includeUncertainty, boolean includeComps) throws IOException {
+		DiscretizedFunc simCurve = getCalcSimCurve(simCalc, imt);
 		if (includeUncertainty && simCurve instanceof UncertainArbDiscDataset) {
 			// this is so that it is first in the legend
 			funcs.add(simCurve);
@@ -653,7 +667,7 @@ public class SimulationHazardPlotter<E> {
 		int charIndex = 0;
 		for (int i=0; i<compCalcs.size() && includeComps; i++) {
 			SimulationHazardCurveCalc<?> compCalc = compCalcs.get(i);
-			DiscretizedFunc curve = getCalcSimCurve(compCalc, period);
+			DiscretizedFunc curve = getCalcSimCurve(compCalc, imt);
 			funcs.add(curve);
 			if (customPlotChars.containsKey(compCalc))
 				chars.add(customPlotChars.get(compCalc));
@@ -668,7 +682,7 @@ public class SimulationHazardPlotter<E> {
 		chars.add(simCurveChar);
 	}
 	
-	public void plotCurveAnimation(File outputFile, double[] timeRange, double delta, double period) throws IOException {
+	public void plotCurveAnimation(File outputFile, double[] timeRange, double delta, IMT imt) throws IOException {
 		Preconditions.checkState(delta > 0);
 		
 		List<DiscretizedFunc> prevSimCurves = new ArrayList<>();
@@ -715,11 +729,11 @@ public class SimulationHazardPlotter<E> {
 			SubSetSimulationRotDProvider<E> subSetProv = new SubSetSimulationRotDProvider<>(simCalc.getSimProv(), ruptures, rateScalar);
 			SimulationHazardCurveCalc<E> subSetCalc = new SimulationHazardCurveCalc<>(subSetProv);
 			
-			DiscretizedFunc simCurve = subSetCalc.calc(site, period, curveDuration);
+			DiscretizedFunc simCurve = subSetCalc.calc(site, imt, curveDuration);
 			SimulationHazardPlotter<E> subSetPlotter = new SimulationHazardPlotter<>(simCalc, subComps, site, curveDuration, gmpeRef);
 			subSetPlotter.setGMPE_FixedSigmas(null);
 			subSetPlotter.setGMPE_TruncationLevels(null);
-			DiscretizedFunc gmpeCurve = subSetPlotter.getCalcGMPECurve(period);
+			DiscretizedFunc gmpeCurve = subSetPlotter.getCalcGMPECurve(imt);
 			
 			List<DiscretizedFunc> funcs = new ArrayList<>();
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -752,7 +766,7 @@ public class SimulationHazardPlotter<E> {
 			durationAnn.setTextAnchor(TextAnchor.BASELINE_LEFT);
 			anns.add(durationAnn);
 			
-			imageFiles.add(plotHazardCurves(tempDir, "frame_"+frameIndex, site, period, curveDuration, funcs, chars, anns, false));
+			imageFiles.add(plotHazardCurves(tempDir, "frame_"+frameIndex, site, imt, curveDuration, funcs, chars, anns, false));
 			
 			if (frameIndex == numFrames-1 && numFrames > 1) {
 				funcs = new ArrayList<>();
@@ -793,7 +807,7 @@ public class SimulationHazardPlotter<E> {
 				maxX = Math.pow(10, Math.ceil(Math.log10(maxX)+0.1));
 				
 				String prefix = outputFile.getName().replaceAll(".gif", "")+"_final";
-				plotHazardCurves(outputFile.getParentFile(), prefix, site, period, curveDuration,
+				plotHazardCurves(outputFile.getParentFile(), prefix, site, imt, curveDuration,
 						funcs, chars, null, true, new Range(minX, maxX), new Range(minY, maxY));
 				
 				// now a subset
@@ -829,7 +843,7 @@ public class SimulationHazardPlotter<E> {
 				chars.add(simCurveChar);
 				
 				prefix = outputFile.getName().replaceAll(".gif", "")+"_summary";
-				plotHazardCurves(outputFile.getParentFile(), prefix, site, period, curveDuration,
+				plotHazardCurves(outputFile.getParentFile(), prefix, site, imt, curveDuration,
 						funcs, chars, null, true, new Range(minX, maxX), new Range(minY, maxY));
 			}
 			
@@ -851,18 +865,18 @@ public class SimulationHazardPlotter<E> {
 		FileUtils.deleteRecursive(tempDir);
 	}
 	
-	File plotHazardCurves(File outputDir, String prefix, Site site, double period, double curveDuration,
+	File plotHazardCurves(File outputDir, String prefix, Site site, IMT imt, double curveDuration,
 			List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars, List<XYAnnotation> anns,
 			boolean pubFig) throws IOException {
-		return plotHazardCurves(outputDir, prefix, site, period, curveDuration, funcs, chars, anns, pubFig,
-				curveXRange, curveYRange);
+		return plotHazardCurves(outputDir, prefix, site, imt, curveDuration, funcs, chars, anns, pubFig,
+				curveXRanges.get(imt.getParamName()), curveYRange);
 	}
 	
-	File plotHazardCurves(File outputDir, String prefix, Site site, double period, double curveDuration,
+	File plotHazardCurves(File outputDir, String prefix, Site site, IMT imt, double curveDuration,
 			List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars, List<XYAnnotation> anns,
 			boolean pubFig, Range curveXRange, Range curveYRange) throws IOException {
 		// now plot
-		String xAxisLabel = (float)period+"s SA (g)";
+		String xAxisLabel = imt.getDisplayName()+" ("+imt.getUnits()+")";
 		String yAxisLabel;
 		if (curveDuration == 1d)
 			yAxisLabel = "Annual Probability of Exceedance";
@@ -1035,28 +1049,34 @@ public class SimulationHazardPlotter<E> {
 		
 		DiscretizedFunc[] compSimSpectras = buildEmptyFuncs(compCalcs.size());
 		
-		for (double period : periods) {
-			DiscretizedFunc gmpeCurve = getCalcGMPECurve(period);
-			addToSpectra(gmpeSpectra, period, gmpeCurve, probLevel);
+		List<IMT> imts = new ArrayList<>();
+		for (double period : periods)
+			if (period > 0)
+				imts.add(IMT.forPeriod(period));
+		Preconditions.checkState(!imts.isEmpty(), "No SA periods supplied");
+		
+		for (IMT imt : imts) {
+			DiscretizedFunc gmpeCurve = getCalcGMPECurve(imt);
+			addToSpectra(gmpeSpectra, imt.getPeriod(), gmpeCurve, probLevel);
 			
-			DiscretizedFunc simCurve = getCalcSimCurve(simCalc, period);
-			addToSpectra(simSpectra, period, simCurve, probLevel);
+			DiscretizedFunc simCurve = getCalcSimCurve(simCalc, imt);
+			addToSpectra(simSpectra, imt.getPeriod(), simCurve, probLevel);
 			
 			// GMPE truncated curves
 			for (int i=0; i<gmpeTruncs.length; i++) {
-				DiscretizedFunc gmpeTruncCurve = getCalcGMPECurve(period, gmpeTruncs[i], -1);
-				addToSpectra(gmpeTruncSpectras[i], period, gmpeTruncCurve, probLevel);
+				DiscretizedFunc gmpeTruncCurve = getCalcGMPECurve(imt, gmpeTruncs[i], -1);
+				addToSpectra(gmpeTruncSpectras[i], imt.getPeriod(), gmpeTruncCurve, probLevel);
 			}
 			
 			// GMPE fixed sigma curves
 			for (int i=0; i<gmpeFixedSigmas.length; i++) {
-				DiscretizedFunc gmpeFixedSigmaCurve = getCalcGMPECurve(period, -1, gmpeFixedSigmas[i]);
-				addToSpectra(gmpeFixedSigmaSpectras[i], period, gmpeFixedSigmaCurve, probLevel);
+				DiscretizedFunc gmpeFixedSigmaCurve = getCalcGMPECurve(imt, -1, gmpeFixedSigmas[i]);
+				addToSpectra(gmpeFixedSigmaSpectras[i], imt.getPeriod(), gmpeFixedSigmaCurve, probLevel);
 			}
 			
 			for (int i=0; i<compSimSpectras.length; i++) {
-				DiscretizedFunc curve = getCalcSimCurve(compCalcs.get(i), period);
-				addToSpectra(compSimSpectras[i], period, curve, probLevel);
+				DiscretizedFunc curve = getCalcSimCurve(compCalcs.get(i), imt);
+				addToSpectra(compSimSpectras[i], imt.getPeriod(), curve, probLevel);
 			}
 		}
 		
@@ -1187,12 +1207,18 @@ public class SimulationHazardPlotter<E> {
 		Map<String, DiscretizedFunc> gmpeSourceSpectra = new HashMap<>();
 		Map<String, List<Double>> fractionalContribs = new HashMap<>();
 		
-		for (double period : periods) {
-			DiscretizedFunc gmpeCurve = getCalcGMPECurve(period);
-			addToSpectra(gmpeSpectra, period, gmpeCurve, probLevel);
+		List<IMT> imts = new ArrayList<>();
+		for (double period : periods)
+			if (period > 0)
+				imts.add(IMT.forPeriod(period));
+		Preconditions.checkState(!imts.isEmpty(), "No SA periods supplied");
+		
+		for (IMT imt : imts) {
+			DiscretizedFunc gmpeCurve = getCalcGMPECurve(imt);
+			addToSpectra(gmpeSpectra, imt.getPeriod(), gmpeCurve, probLevel);
 			
-			DiscretizedFunc simCurve = getCalcSimCurve(simCalc, period);
-			addToSpectra(simSpectra, period, simCurve, probLevel);
+			DiscretizedFunc simCurve = getCalcSimCurve(simCalc, imt);
+			addToSpectra(simSpectra, imt.getPeriod(), simCurve, probLevel);
 			
 			if (probLevel < simCurve.getMinY() || probLevel > simCurve.getMaxY())
 				continue;
@@ -1200,8 +1226,8 @@ public class SimulationHazardPlotter<E> {
 //			System.out.println("Sorting source contirubtions for IML="+(float)+contribIML
 //					+" at p="+(float)probLevel);
 			
-			Map<String, DiscretizedFunc> simCurves = getCalcSimSourceCurves(period);
-			Map<String, DiscretizedFunc> gmpeCurves = getCalcGMPESourceCurves(period);
+			Map<String, DiscretizedFunc> simCurves = getCalcSimSourceCurves(imt);
+			Map<String, DiscretizedFunc> gmpeCurves = getCalcGMPESourceCurves(imt);
 			
 			for (String sourceName : simCurves.keySet()) {
 				DiscretizedFunc sourceSimCurve = simCurves.get(sourceName);
@@ -1213,12 +1239,12 @@ public class SimulationHazardPlotter<E> {
 					gmpeSourceSpectra.put(sourceName, new ArbitrarilyDiscretizedFunc(sourceName));
 					fractionalContribs.put(sourceName, new ArrayList<>());
 				}
-				addContributionToSpectra(simSourceSpectra.get(sourceName), period, simCurve, sourceSimCurve, probLevel);
-				addContributionToSpectra(gmpeSourceSpectra.get(sourceName), period, gmpeCurve, sourceGMPECurve, probLevel);
+				addContributionToSpectra(simSourceSpectra.get(sourceName), imt.getPeriod(), simCurve, sourceSimCurve, probLevel);
+				addContributionToSpectra(gmpeSourceSpectra.get(sourceName), imt.getPeriod(), gmpeCurve, sourceGMPECurve, probLevel);
 //				addToSpectra(simSourceSpectra.get(sourceName), period, sourceSimCurve, probLevel);
 //				addToSpectra(gmpeSourceSpectra.get(sourceName), period, sourceGMPECurve, probLevel);
-				if (simSourceSpectra.get(sourceName).hasX(period))
-					fractionalContribs.get(sourceName).add(simSourceSpectra.get(sourceName).getY(period)/contribIML);
+				if (simSourceSpectra.get(sourceName).hasX(imt.getPeriod()))
+					fractionalContribs.get(sourceName).add(simSourceSpectra.get(sourceName).getY(imt.getPeriod())/contribIML);
 //					fractionalContribs.get(sourceName).add(simSourceSpectra.get(sourceName).getY(period));
 				else
 					fractionalContribs.get(sourceName).add(0d);
@@ -1245,7 +1271,7 @@ public class SimulationHazardPlotter<E> {
 		}
 		
 		addSourceContributionFuncs(funcs, chars, simSourceSpectra, gmpeSourceSpectra, simSourceSortVals,
-				numSourceCurves, sourceContribMutuallyExclusive, gmpeSources, true);
+				numSourceCurves, sourceContribMutuallyExclusive, gmpeSources, true, IMT.SA1P0); // IMT determines x values only
 		
 		// now plot
 		String xAxisLabel = "Period (s)";

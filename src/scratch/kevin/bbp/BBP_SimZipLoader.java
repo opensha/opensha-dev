@@ -17,6 +17,7 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.sha.imr.param.IntensityMeasureParams.DurationTimeInterval;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -27,17 +28,22 @@ public class BBP_SimZipLoader {
 	protected enum FileType {
 		RotD50(".rd50"),
 		RotD100(".rd100"),
+		RotDPGV(".rdpgv", ".rdvel"),
+		ARIAS_DURATION(".ard"),
 		VEL_SEIS(".vel.bbp"),
 		ACC_SEIS(".acc.bbp"),
 		FAS(".fs.col");
 		
-		private String ext;
-		private FileType(String ext) {
-			this.ext = ext;
+		private String[] exts;
+		private FileType(String... exts) {
+			this.exts = exts;
 		}
 		
 		public boolean matches(String name) {
-			return name.endsWith(ext);
+			for (String ext : exts)
+				if (name.endsWith(ext))
+					return true;
+			return false;
 		}
 	}
 	
@@ -132,6 +138,10 @@ public class BBP_SimZipLoader {
 		
 		public DiscretizedFunc[] readRotD(int index) throws IOException {
 			return readRotD(sites.get(index), getDirName(index));
+		}
+		
+		public double[] readPGV(int index) throws IOException {
+			return readPGV(sites.get(index), getDirName(index));
 		}
 		
 		public DiscretizedFunc readFAS(int index) throws IOException {
@@ -287,12 +297,83 @@ public class BBP_SimZipLoader {
 		}
 	}
 	
+	public double[] readPGV(BBP_Site site, String dirName) throws IOException {
+		ZipEntry entry = locate(site, dirName, FileType.RotDPGV);
+		try {
+			DiscretizedFunc[] spectra = SpectraPlotter.loadRotD(loadFileLines(entry));
+			double[] ret = { spectra[0].getY(0), spectra[1].getY(0) };
+			return ret;
+		} catch (RuntimeException e) {
+			System.err.println("Exception loading from "+entry.getName());
+			throw e;
+		}
+	}
+	
+	/**
+	 * 
+	 * @param site
+	 * @param dirName
+	 * @return map from duration interval to array containing [N, E, Z, GEOM] durations
+	 * @throws IOException
+	 */
+	public Map<DurationTimeInterval, double[]> readDurations(BBP_Site site, String dirName) throws IOException {
+		ZipEntry entry = locate(site, dirName, FileType.ARIAS_DURATION);
+		try {
+			Map<DurationTimeInterval, double[]> ret = new HashMap<>();
+			ret.put(DurationTimeInterval.INTERVAL_5_75, new double[4]);
+			ret.put(DurationTimeInterval.INTERVAL_5_95, new double[4]);
+			ret.put(DurationTimeInterval.INTERVAL_20_80, new double[4]);
+			// format:
+			// Component  Peak Arias (cm/s)  T5-75 (s)  T5-95 (s)  T20-80 (s)
+			// 
+			for (String line : loadFileLines(entry)) {
+				line = line.trim();
+				if (line.isEmpty() || line.startsWith("#"))
+					continue;
+				line = line.replaceAll("\t", " ");
+				while (line.contains("  "))
+					line = line.replaceAll("  ", " ");
+				String[] split = line.split(" ");
+				Preconditions.checkState(split.length == 5, "Bad arias line: %s", line);
+				int arrayIndex;
+				if (split[0].equals("N"))
+					arrayIndex = 0;
+				else if (split[0].equals("E"))
+					arrayIndex = 1;
+				else if (split[0].equals("Z"))
+					arrayIndex = 2;
+				else if (split[0].equals("GEOM"))
+					arrayIndex = 3;
+				else
+					throw new IllegalStateException("Unknown compoent for line: "+line);
+				double d5_75 = Double.parseDouble(split[2]);
+				double d5_95 = Double.parseDouble(split[3]);
+				double d20_80 = Double.parseDouble(split[4]);
+				ret.get(DurationTimeInterval.INTERVAL_5_75)[arrayIndex] = d5_75;
+				ret.get(DurationTimeInterval.INTERVAL_5_95)[arrayIndex] = d5_95;
+				ret.get(DurationTimeInterval.INTERVAL_20_80)[arrayIndex] = d20_80;
+			}
+			return ret;
+		} catch (RuntimeException e) {
+			System.err.println("Exception loading from "+entry.getName());
+			throw e;
+		}
+	}
+	
 	public boolean hasRotD50() {
 		return allTypes.contains(FileType.RotD50);
 	}
 	
 	public boolean hasRotD100() {
 		return allTypes.contains(FileType.RotD100);
+	}
+	
+	public boolean hasPGV() {
+		return allTypes.contains(FileType.RotDPGV);
+	}
+	
+	public boolean hasDurations() {
+		return allTypes.contains(FileType.ARIAS_DURATION);
 	}
 	
 	public boolean hasFAS() {

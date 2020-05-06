@@ -732,7 +732,10 @@ public class SpectraPlotter {
 		spec.setLegendVisible(true);
 		
 		HeadlessGraphPanel gp = buildGP();
-		gp.drawGraphPanel(spec, true, false, getXRange(funcs, true), rot_d_ratio_y_range);
+		Range xRange = getXRange(funcs, true);
+		if (xRange.getLowerBound() < 1e-1)
+			xRange = new Range(1e-1, xRange.getUpperBound());
+		gp.drawGraphPanel(spec, true, false, xRange, rot_d_ratio_y_range);
 		
 		File file = new File(outputDir, prefix);
 		gp.getChartPanel().setSize(800, 500);
@@ -777,13 +780,21 @@ public class SpectraPlotter {
 		List<XY_DataSet> rangeFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> rangeChars = new ArrayList<>();
 		
-		CPT periodCPT = new CPT(Doubles.min(periods), Doubles.max(periods), Color.DARK_GRAY, Color.RED.darker());
+		
+		double minPositivePeriod = Double.MAX_VALUE;
+		for (double period : periods)
+			if (period > 0)
+				minPositivePeriod = Math.min(minPositivePeriod, period);
+		
+		CPT periodCPT = new CPT(minPositivePeriod, Doubles.max(periods), Color.DARK_GRAY, Color.RED.darker());
 		
 		int minBinCount = Integer.MAX_VALUE;
 		int maxBinCount = 0;
 		
 		for (int p=0; p<periods.length; p++) {
 			double period = periods[p];
+			if (period <= 0d)
+				continue;
 			EvenlyDiscretizedFunc xValsFunc;
 			if (logX)
 				xValsFunc = new EvenlyDiscretizedFunc(Math.log10(minScalar), Math.log10(maxScalar), numBins);

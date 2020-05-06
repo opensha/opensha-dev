@@ -50,7 +50,9 @@ public class BBP_Wrapper implements Runnable {
 	private boolean doHF = true;
 	private boolean doRotD50 = false;
 	private boolean doRotD100 = true;
+	private boolean doPGV = true;
 	private boolean doFAS = true;
+	private boolean doArias = true;
 	private boolean dataOnly = false;
 	
 	private double lowpassFreq;
@@ -147,8 +149,16 @@ public class BBP_Wrapper implements Runnable {
 		this.doRotD100 = doRotD100;
 	}
 
+	public void setDoPGV(boolean doPGV) {
+		this.doPGV = doPGV;
+	}
+
 	public void setDoFAS(boolean doFAS) {
 		this.doFAS = doFAS;
+	}
+
+	public void setDoArias(boolean doArias) {
+		this.doArias = doArias;
 	}
 	
 	public void setDataOnly(boolean dataOnly) {
@@ -182,8 +192,8 @@ public class BBP_Wrapper implements Runnable {
 			srcFile = writeSrcFileNewSeed(srcFile, seedOverride, outputDir);
 		
 		File bbpRunDir = doRun(outputDir, scriptFileName, xmlFileName, simID,
-				srcFile, srfFile, sitesFile, vm, method, srfGenOnly, doHF, doRotD50, doRotD100, doFAS, dataOnly, lowpassFreq,
-				bbpEnvFile, bbpDataDir, bbpGFDir);
+				srcFile, srfFile, sitesFile, vm, method, srfGenOnly, doHF, doRotD50, doRotD100, doPGV,
+				doFAS, doArias, dataOnly, lowpassFreq, bbpEnvFile, bbpDataDir, bbpGFDir);
 		if (bbpRunDir == null)
 			return false;
 		
@@ -205,8 +215,9 @@ public class BBP_Wrapper implements Runnable {
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,
 			File srcFile, File srfFile, File siteFile, VelocityModel vm, Method method,
-			boolean srfGenOnly, boolean doHF, boolean doRotD50, boolean doRotD100, boolean doFAS,
-			boolean dataOnly, double lowpassFreq, File bbpEnvFile, File bbpDataDir, File bbpGFDir) throws IOException {
+			boolean srfGenOnly, boolean doHF, boolean doRotD50, boolean doRotD100, boolean doPGV, boolean doFAS,
+			boolean doArias, boolean dataOnly, double lowpassFreq, File bbpEnvFile, File bbpDataDir, File bbpGFDir)
+					throws IOException {
 		Preconditions.checkState(method == Method.GP, "Only GP supported currently");
 		List<BBP_Module> modules = new ArrayList<>();
 		
@@ -273,10 +284,14 @@ public class BBP_Wrapper implements Runnable {
 		}
 		if (doRotD50)
 			modules.add(BBP_Module.buildRotD50(siteFile));
+		if (doPGV)
+			modules.add(BBP_Module.buildRotDPGV(siteFile));
 		if (doRotD100)
 			modules.add(BBP_Module.buildRotD100(siteFile));
 		if (doFAS)
 			modules.add(BBP_Module.buildFAS(siteFile));
+		if (doArias)
+			modules.add(BBP_Module.buildArias(siteFile));
 		if (!dataOnly)
 			modules.add(BBP_Module.buildGenHTML(vm, method, siteFile, srcFile));
 		
@@ -290,7 +305,7 @@ public class BBP_Wrapper implements Runnable {
 		writeBBP_XML_File(xmlFile, siteFile, modules);
 		writeBBP_Script(scriptFile, xmlFile, simID, bbpEnvFile, bbpDataDir, bbpGFDir);
 		
-		System.out.println("Running BBP with simulation ID "+simID);
+		System.out.println("Running BBP with simulation ID "+simID+" ("+scriptFile.getAbsolutePath()+")");
 		return runBBP_Script(scriptFile);
 	}
 	
@@ -426,7 +441,9 @@ public class BBP_Wrapper implements Runnable {
 	
 	private static boolean isDataFile(File file) {
 		String name = file.getName();
-		return name.endsWith(".bbp") || name.endsWith(".rd100") || name.endsWith(".rd50") || name.endsWith(".fs.col");
+		return name.endsWith(".bbp") || name.endsWith(".rd100") || name.endsWith(".rd50")
+				|| name.endsWith(".rdvel") || name.endsWith(".arias") || name.endsWith(".ard")
+				|| name.endsWith(".fs.col");
 	}
 	
 	private static List<String> streamToLines(InputStream stream) throws IOException {
@@ -579,12 +596,12 @@ public class BBP_Wrapper implements Runnable {
 //	}
 
 	public static void main(String[] args) throws IOException {
-		File eventDir = new File("/data/kevin/simulators/catalogs/rundir2194_long/event_srfs");
-		File srcFile = new File(eventDir, "event_136704.src");
-//		File srfFile = new File(eventDir, "event_136704_0.05s_ADJ_VEL.srf");
-		File srfFile = null;
-//		File sitesFile = new File("/home/kevin/bbp/bbp_data/run/stations_cs_sites.stl");
-		File sitesFile = null;
+		File eventDir = new File("/home/kevin/Simulators/catalogs/bruce/rundir4983/event_srfs");
+		File srcFile = new File(eventDir, "event_1499589.src");
+		File srfFile = new File(eventDir, "event_1499589_0.05s_ADJ_VEL.srf");
+//		File srfFile = null;
+		File sitesFile = new File("/tmp/bbp_test1/sites.stl");
+//		File sitesFile = null;
 		File outputDir = new File("/tmp/bbp_test1");
 		
 //		runBBP(2, 1, srcFile, null, srfFile, sitesFile, outputDir);
@@ -595,7 +612,8 @@ public class BBP_Wrapper implements Runnable {
 		wrapper.maxRetries = 1;
 		wrapper.doHF = false;
 		wrapper.dataOnly = true;
-		wrapper.setSRFGenOnly(true);
+		wrapper.setDoPGV(true);
+		wrapper.setSRFGenOnly(false);
 		wrapper.run();
 		
 //		velToAccel(new File("/data/kevin/bbp/bbp_data/outdata/1507151299716/1507151299716.SBSM.vel.bbp"),

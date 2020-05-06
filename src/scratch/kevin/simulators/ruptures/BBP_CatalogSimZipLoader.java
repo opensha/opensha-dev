@@ -12,6 +12,7 @@ import java.util.zip.ZipFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
+import org.opensha.sha.imr.param.IntensityMeasureParams.DurationTimeInterval;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
@@ -34,6 +35,8 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 	private Table<Integer, BBP_Site, DiscretizedFunc> rd50Table;
 	private Table<Integer, Site, DiscretizedFunc> rdRatioTable;
 	private Table<Integer, BBP_Site, DiscretizedFunc[]> rdTable;
+	private Table<Integer, BBP_Site, double[]> rdPGVTable;
+	private Table<Integer, BBP_Site, Map<DurationTimeInterval, double[]>> durationTable;
 	
 	public BBP_CatalogSimZipLoader(File file, List<BBP_Site> sites, BiMap<BBP_Site, Site> gmpeSites,
 			Map<Integer, RSQSimEvent> eventsMap) throws ZipException, IOException {
@@ -59,6 +62,10 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 			rdTable = HashBasedTable.create();
 			rdRatioTable = HashBasedTable.create();
 		}
+		if (hasPGV())
+			rdPGVTable = HashBasedTable.create();
+		if (hasDurations())
+			durationTable = HashBasedTable.create();
 	}
 	
 	private static String getDirName(int eventID) {
@@ -99,6 +106,32 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 			DiscretizedFunc[] spectras = readRotD(site, getDirName(eventID));
 			rdTable.put(eventID, site, spectras);
 			return spectras;
+		}
+	}
+	
+	public double[] readPGV(BBP_Site site, int eventID) throws IOException {
+		if (rdPGVTable.contains(eventID, site))
+			return rdPGVTable.get(eventID, site);
+		synchronized (rdPGVTable) {
+			// repeat here as could have been populated while waiting for the lock
+			if (rdPGVTable.contains(eventID, site))
+				return rdPGVTable.get(eventID, site);
+			double[] vals = readPGV(site, getDirName(eventID));
+			rdPGVTable.put(eventID, site, vals);
+			return vals;
+		}
+	}
+	
+	public Map<DurationTimeInterval, double[]> readDurations(BBP_Site site, int eventID) throws IOException {
+		if (durationTable.contains(eventID, site))
+			return durationTable.get(eventID, site);
+		synchronized (durationTable) {
+			// repeat here as could have been populated while waiting for the lock
+			if (durationTable.contains(eventID, site))
+				return durationTable.get(eventID, site);
+			Map<DurationTimeInterval, double[]> durations = readDurations(site, getDirName(eventID));
+			durationTable.put(eventID, site, durations);
+			return durations;
 		}
 	}
 	
@@ -191,6 +224,18 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 			rdRatioTable.put(rupture.getID(), site, ratio);
 			return ratio;
 		}
+	}
+
+	@Override
+	public double getPGV(Site site, RSQSimEvent rupture, int index) throws IOException {
+		Preconditions.checkState(index == 0);
+		return readPGV(gmpeToBBP.get(site), rupture.getID())[0];
+	}
+
+	@Override
+	public double getDuration(Site site, RSQSimEvent rupture, DurationTimeInterval interval, int index) throws IOException {
+		Preconditions.checkState(index == 0);
+		return readDurations(gmpeToBBP.get(site), rupture.getID()).get(interval)[3]; // 3 is geo mean
 	}
 
 	@Override

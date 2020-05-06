@@ -9,6 +9,7 @@ import java.util.Set;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
+import org.opensha.sha.imr.param.IntensityMeasureParams.DurationTimeInterval;
 
 import com.google.common.base.Preconditions;
 
@@ -54,6 +55,18 @@ public class SubSetSimulationRotDProvider<E> implements SimulationRotDProvider<E
 	}
 
 	@Override
+	public double getPGV(Site site, E rupture, int index) throws IOException {
+		Preconditions.checkState(ruptures.contains(rupture));
+		return simProv.getPGV(site, rupture, index);
+	}
+
+	@Override
+	public double getDuration(Site site, E rupture, DurationTimeInterval interval, int index) throws IOException {
+		Preconditions.checkState(ruptures.contains(rupture));
+		return simProv.getDuration(site, rupture, interval, index);
+	}
+
+	@Override
 	public int getNumSimulations(Site site, E rupture) {
 		Preconditions.checkState(ruptures.contains(rupture));
 		return simProv.getNumSimulations(site, rupture);
@@ -74,6 +87,16 @@ public class SubSetSimulationRotDProvider<E> implements SimulationRotDProvider<E
 	@Override
 	public boolean hasRotD100() {
 		return simProv.hasRotD100();
+	}
+
+	@Override
+	public boolean hasPGV() {
+		return simProv.hasPGV();
+	}
+
+	@Override
+	public boolean hasDurations() {
+		return simProv.hasDurations();
 	}
 
 	@Override

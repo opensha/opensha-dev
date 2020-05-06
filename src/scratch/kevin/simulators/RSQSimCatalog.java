@@ -48,6 +48,7 @@ import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.CatalogLengthLoadIden;
+import org.opensha.sha.simulators.iden.EventIDsRangeIden;
 import org.opensha.sha.simulators.iden.EventIDsRupIden;
 import org.opensha.sha.simulators.iden.EventTimeIdentifier;
 import org.opensha.sha.simulators.iden.LogicalAndRupIden;
@@ -442,6 +443,18 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_4979("bruce/rundir4979", "Bruce 4979", "Bruce Shaw", cal(2020, 4, 11),
 				"higher res.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.010 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4983("bruce/rundir4983", "Bruce 4983", "Bruce Shaw", cal(2020, 4, 20),
+				"tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4984("bruce/rundir4984", "Bruce 4984", "Bruce Shaw", cal(2020, 4, 20),
+				"higher res.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.010 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4983_STITCHED("rundir4983_stitched", "Bruce 4983 (Stitched)", "Bruce Shaw", cal(2020, 4, 27),
+				"Stitched extension of 4983, currently 2 runs",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_4987("bruce/rundir4987", "Bruce 4987", "Bruce Shaw", cal(2020, 4, 29),
+				"VeqMax=4.0; tCausalF=0.63 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.009 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -1230,8 +1243,8 @@ public class RSQSimCatalog implements XMLSaveable {
 					transFile = file;
 				}
 			}
-			System.out.println("Trans file: "+transFile.getAbsolutePath());
-			System.out.println("Trans version: "+transVersion);
+//			System.out.println("Trans file: "+transFile.getAbsolutePath());
+//			System.out.println("Trans version: "+transVersion);
 //			System.out.println("TransV: "+transV);
 			transReader = new RSQSimStateTransitionFileReader(transFile, getElements(), transVersion);
 			if (transVersion == TransVersion.ORIGINAL)
@@ -1461,6 +1474,21 @@ public class RSQSimCatalog implements XMLSaveable {
 		public List<RSQSimEvent> byIDs(int... eventIDs) throws IOException {
 			loadIdens.add(new EventIDsRupIden(eventIDs));
 			return this.load();
+		}
+		
+		public Loader maxEventID(int maxID) {
+			loadIdens.add(new EventIDsRangeIden(com.google.common.collect.Range.closed(Integer.MIN_VALUE, maxID)));
+			return this;
+		}
+		
+		public Loader minEventID(int minID) {
+			loadIdens.add(new EventIDsRangeIden(com.google.common.collect.Range.closed(minID, Integer.MAX_VALUE)));
+			return this;
+		}
+		
+		public Loader forEventIDRange(com.google.common.collect.Range<Integer> range) {
+			loadIdens.add(new EventIDsRangeIden(range));
+			return this;
 		}
 		
 		public List<RSQSimEvent> load() throws IOException {
@@ -2778,11 +2806,12 @@ public class RSQSimCatalog implements XMLSaveable {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : new Catalogs[] {
+//				Catalogs.BRUCE_4983,
 ////				Catalogs.BRUCE_2585,
 ////				Catalogs.BRUCE_2585_1MYR,
 ////				Catalogs.BRUCE_2740,
 ////				Catalogs.BRUCE_2829,
-//				Catalogs.BRUCE_4860,
+////				Catalogs.BRUCE_4860,
 ////				Catalogs.JG_tunedBase1m_ddotEQmod,
 ////				Catalogs.JG_tuneBase1m,
 //				}) {

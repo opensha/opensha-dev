@@ -43,8 +43,13 @@ public class TransSlipCompare {
 //		File stderrFile = new File(catalog.getCatalogDir(), "write.706045.0.err");
 //		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS"),
 //				"Single SS", null, null);
-		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS_tri"),
-				"Single SS Triangles", null, null);
+//		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/singleSS_tri"),
+//				"Single SS Triangles", null, null);
+		RSQSimCatalog catalog = new RSQSimCatalog(new File("/home/kevin/Simulators/catalogs/bruce/rundirtest2"),
+				"Bruce test", null, null);
+		
+		int maxEventID = -1;
+//		int maxEventID = 41499;
 		File stderrFile = null;
 		
 		Map<Integer, HashSet<Integer>> eventPinnedPatches = null;
@@ -102,6 +107,8 @@ public class TransSlipCompare {
 			loader = catalog.loader().minMag(6.5).skipYears(5000);
 		else
 			loader = catalog.loader();
+		if (maxEventID > 0)
+			loader.maxEventID(maxEventID);
 		for (RSQSimEvent e : loader.hasTransitions().iterable()) {
 //			System.out.println("event "+e.getID()+" at year "+e.getTimeInYears());
 			ArrayList<SimulatorElement> elems = e.getAllElements();
