@@ -247,7 +247,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
 	 */
 	public ArrayList<XYZPlotSpec> writeAndOrPlotSectPartMFDs(String dirName, boolean popUpWindow, double widthInches, double heightInches,
-			Range xRange, Range yRange) {
+			Range xRange, Range yRange, Range zRange) {
 		
 		ArrayList<XYZPlotSpec> specList = new ArrayList<XYZPlotSpec>();
 		
@@ -294,10 +294,10 @@ public class FaultSystemRuptureRateInversion {
 			fw.close();
 			cfw.close();
 			
-			specList.add(PlottingUtils.make2D_plot(xyzDataSectPart, null, "Section", "Magnitude", "Incremental Rate", 
-					fileName, popUpWindow, xRange, yRange, null, widthInches, heightInches));
-			specList.add(PlottingUtils.make2D_plot(xyzDataSectPartCum, null, "Section", "Magnitude", "Cumulative Rate", 
-					fileNameCum, popUpWindow, xRange, yRange, null, widthInches, heightInches));		
+			specList.add(PlottingUtils.make2D_plot(xyzDataSectPart, null, "Subsection", "Magnitude", "Incremental Rate", 
+					fileName, popUpWindow, xRange, yRange, zRange, widthInches, heightInches));
+			specList.add(PlottingUtils.make2D_plot(xyzDataSectPartCum, null, "Subsection", "Magnitude", "Cumulative Rate", 
+					fileNameCum, popUpWindow, xRange, yRange, zRange, widthInches, heightInches));		
 
 		}catch(Exception e) {
 			e.printStackTrace();
@@ -391,7 +391,7 @@ public class FaultSystemRuptureRateInversion {
 	 * @param dirName - set as null if no files are to be saved
 	 * @param popUpWindow - this tells whether to make a pop-up plot and save it
 	 */
-	public void writeAndOrPlotRupRateOfFirstSection(String dirName, boolean popUpWindow, double widthInches, double heightInches) {
+	public void writeAndOrPlotRupRateOfFirstSection(String dirName, boolean popUpWindow, double widthInches, double heightInches, Range zRange) {
 		
 		EvenlyDiscrXYZ_DataSet xyzDataRupRate = new EvenlyDiscrXYZ_DataSet(numSections,numSections+1, 0, 0, 1, 1);
 		for(int x=0; x<numSections;x++)
@@ -425,8 +425,8 @@ public class FaultSystemRuptureRateInversion {
 			Range rangeX = new Range(-0.5,numSections+0.5);
 			Range rangeY = new Range(-0.5,numSections+1.5);
 			fw.close();
-			PlottingUtils.make2D_plot(xyzDataRupRate, null, "First Section", "Num Sections In Rupture", "Log10 Rupture Rate", 
-					fileName_rr, popUpWindow, rangeX, rangeY, null, widthInches, heightInches);
+			PlottingUtils.make2D_plot(xyzDataRupRate, null, "First Subsection", "Num Subsections In Rupture", "Log10 Rupture Rate", 
+					fileName_rr, popUpWindow, rangeX, rangeY, zRange, widthInches, heightInches);
 
 		}catch(Exception e) {
 			e.printStackTrace();
@@ -2047,7 +2047,7 @@ public class FaultSystemRuptureRateInversion {
 		String fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/sect"+sect1+"and"+sect2+"_JointPartMFD";
-		String plotName = "Section "+sect1+" & "+sect2+" Joint Part. MFD";
+		String plotName = "Subsection "+sect1+" & "+sect2+" Joint Part. MFD";
 		String xAxisLabel = "Magnitude";
 		String yAxisLabel = "Rate (per yr)";
 		Range xAxisRange = new Range(6.0, 9.0);
@@ -2360,7 +2360,7 @@ public class FaultSystemRuptureRateInversion {
 			fileNamePrefix = dirName+"/sectionSlipRates";
 
 		String plotName = "";
-		String xAxisLabel = "Section";
+		String xAxisLabel = "Subsection";
 		String yAxisLabel = "Slip Rate (mm/yr)";
 		boolean logX = false;
 		boolean logY = false;
@@ -2405,13 +2405,13 @@ public class FaultSystemRuptureRateInversion {
 			er_funcs.add(finalEventRateFunc);
 			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
 			er_funcs.add(meanPaleoVisEventRateFromMultipleRuns);
-			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
 		}
 		else {
 			er_funcs.add(finalEventRateFunc);
 			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
 			er_funcs.add(finalPaleoVisibleEventRateFunc);
-			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+			er_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
 		}
 		
 		int num = sectionRateConstraints.size();
@@ -2444,7 +2444,7 @@ public class FaultSystemRuptureRateInversion {
 		if(dirName != null)
 			fileNamePrefix = dirName+"/sectionEventRates";
 		String plotName = null;
-		String xAxisLabel = "Section";
+		String xAxisLabel = "Subsection";
 		String yAxisLabel = "Event Rate (per yr)";
 		boolean logX = false;
 		boolean logY = false;
@@ -2476,9 +2476,13 @@ public class FaultSystemRuptureRateInversion {
 			slip_mean_cov_funcs.add(meanSlip95conf);
 			slip_mean_cov_funcs.add(meanSlipFromMultipleRuns);
 	
-			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
-			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
-			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+//			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(200,200,255)));
+//			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(120,120,255)));
+//			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(225,195,225)));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(180,128,180)));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(128,0,128)));
+			
 			
 			EvenlyDiscretizedFunc slipCOV_FromMultipleRuns = finalSectSlipCOV_FromMultRuns.getMeanCurve();
 			slipCOV_FromMultipleRuns.setName("slipCOV_FromMultipleRuns");
@@ -2508,7 +2512,7 @@ public class FaultSystemRuptureRateInversion {
 			slip_mean_cov_funcs.add(finalMeanSlipFunc);
 			slip_mean_cov_funcs.add(finalSlipCOVFunc);
 			
-			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(128,0,128)));
 			slip_mean_cov_plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
 		}
 		
@@ -2518,8 +2522,8 @@ public class FaultSystemRuptureRateInversion {
 			fileNamePrefix = dirName+"/sectionMeanSlipAndCOV";
 
 		String plotName = null;
-		String xAxisLabel = "Section";
-		String yAxisLabel = "Mean Slip (m); COV";
+		String xAxisLabel = "Subsection";
+		String yAxisLabel = "Slip (m)";
 		boolean logX = false;
 		boolean logY = false;
 		
@@ -2630,8 +2634,8 @@ public class FaultSystemRuptureRateInversion {
 		String fileNamePrefix = null;
 		if(dirName != null)
 			fileNamePrefix = dirName+"/sectionBoundaryRates";
-		String plotName =  "Section Boundary Rates";
-		String xAxisLabel = "Section Boundary";
+		String plotName =  "Subsection Boundary Rates";
+		String xAxisLabel = "Subaection Boundary";
 		String yAxisLabel = "Rate (per yr)";
 		Range xAxisRange = new Range(-1,numSections);
 		boolean logX = false;

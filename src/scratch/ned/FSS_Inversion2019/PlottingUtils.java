@@ -18,6 +18,7 @@ import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.cpt.CPTVal;
 
 public class PlottingUtils {
 	
@@ -136,7 +137,7 @@ public class PlottingUtils {
 	
 	
 	/**
-	 * This is the general 2D plotting method.
+	 * This is the general 2D plotting method; the color scale is for log rates (-1 to -9).
 	 * @param xyzData
 	 * @param title
 	 * @param xAxisLabel
@@ -154,7 +155,24 @@ public class PlottingUtils {
 			String xAxisLabel, String yAxisLabel, String zAxisLabel, String fileNamePrefix, 
 			boolean popupWindow, Range xRange, Range yRange, Range zRange, double widthInches,
 			double heightInches) {
-		CPT cpt=null;
+		
+//		cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(zRange.getLowerBound(),zRange.getUpperBound());
+
+		CPT cpt = new CPT();;
+		Color purple = new Color(128,0,128);
+		Color orange = new Color(255,165,0); // this looks better than the default			
+		cpt.add(new CPTVal(-9f, Color.BLACK, -8f, purple));
+		cpt.add(new CPTVal(-8f, purple, -7f, Color.BLUE));
+		cpt.add(new CPTVal(-7f, Color.BLUE, -6f, Color.CYAN));
+		cpt.add(new CPTVal(-6f, Color.CYAN, -5f, Color.GREEN));
+		cpt.add(new CPTVal(-5f, Color.GREEN, -4f, Color.YELLOW));
+		cpt.add(new CPTVal(-4f, Color.YELLOW, -3f, orange));
+		cpt.add(new CPTVal(-3f, orange, -2f, Color.RED));
+		cpt.add(new CPTVal(-2f, Color.RED, -1f, Color.MAGENTA));
+		cpt.setBelowMinColor(Color.BLACK);
+		cpt.setAboveMaxColor(Color.MAGENTA);
+		cpt.setNanColor(Color.white);
+
 		if(zRange == null) {
 			double ratio = Math.pow(10, xyzData.getMaxZ()-xyzData.getMinZ());
 //			System.out.println("ratio\t"+ratio);
@@ -166,13 +184,10 @@ public class PlottingUtils {
 			}
 	
 		}
-		try {
-			cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(zRange.getLowerBound(),zRange.getUpperBound());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		cpt.setNanColor(Color.white);
-		XYZPlotSpec spec = new XYZPlotSpec(xyzData, cpt, title, xAxisLabel, yAxisLabel, zAxisLabel);
+			
+		CPT cptAlt = cpt.rescale(zRange.getLowerBound(), zRange.getUpperBound());
+			
+		XYZPlotSpec spec = new XYZPlotSpec(xyzData, cptAlt, title, xAxisLabel, yAxisLabel, zAxisLabel);
 				
 //		System.out.println(xyzData.getMinZ()+"\t"+xyzData.getMaxZ());
 		
