@@ -41,7 +41,7 @@ public class DistanceMethodsComparePageGen {
 	private static final double MAX_DIST = 200d;
 
 	public static void main(String[] args) throws IOException, DocumentException {
-		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File mainOutputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 		RSQSimCatalog catalog = Catalogs.BRUCE_4660.instance();

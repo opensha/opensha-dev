@@ -94,7 +94,8 @@ public class SimulationHazardCurveCalc<E> {
 		int[] numExceed = new int[curve.size()];
 		int numRuptures = 0;
 		double firstRate = -1;
-		double minRate = Double.POSITIVE_INFINITY;
+//		double minRate = Double.POSITIVE_INFINITY;
+		simProv.getMinimumCurvePlotRate(site);
 		boolean allRatesSame = true;
 		for (E rupture : simProv.getRupturesForSite(site)) {
 			double rupRate = simProv.getAnnualRate(rupture);
@@ -110,7 +111,7 @@ public class SimulationHazardCurveCalc<E> {
 				firstRate = rupRate;
 			else
 				allRatesSame = allRatesSame && firstRate == rupRate;
-			minRate = Math.min(rupRate, minRate);
+//			minRate = Math.min(rupRate, minRate);
 			List<Double> vals = simProv.getValues(site, rupture, imt);
 			for (int j=0; j<vals.size(); j++) {
 				double simRate = simProv.getIndividualSimulationRate(rupture, rupRate, j, vals.size());
@@ -153,9 +154,11 @@ public class SimulationHazardCurveCalc<E> {
 			curve.set(i, prob);
 		}
 		
-		minRate = Math.min(minRate, simProv.getMinimumCurvePlotRate(site));
-		if (minRate > 0) {
-			double minProb = 1d - Math.exp(-minRate*curveDuration);
+		double minPlotRate = simProv.getMinimumCurvePlotRate(site);
+		if (minPlotRate > 0 && Double.isFinite(minPlotRate)) {
+//		minRate = Math.min(minRate, );
+//		if (minRate > 0) {
+			double minProb = 1d - Math.exp(-minPlotRate*curveDuration);
 			// truncate curve to remove x values never seen in finite catalog
 			ArbitrarilyDiscretizedFunc truncatedCurve = new ArbitrarilyDiscretizedFunc();
 			ArbitrarilyDiscretizedFunc truncatedLowerCurve = null;

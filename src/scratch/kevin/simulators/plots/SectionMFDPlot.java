@@ -245,13 +245,14 @@ public class SectionMFDPlot extends AbstractPlot {
 
 	public static void main(String[] args) throws IOException, DocumentException {
 		File baseDir = new File("/home/kevin/Simulators/catalogs");
-		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		double skipYears = 5000;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_3271.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_3062.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
 		
 		File catalogOutputDir = new File(gitDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());

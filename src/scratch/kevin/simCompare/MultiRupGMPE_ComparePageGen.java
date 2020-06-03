@@ -33,6 +33,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.MultiIMR_Averaged_AttenRel;
 import org.opensha.sha.imr.param.EqkRuptureParams.MagParam;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
@@ -865,14 +866,15 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			residualTypes.add(ResidualType.DIST_RUP);
 		checkInGMPE(gmpeRef, tempGMPE);
 		sites = this.sites; // we previously added a null element for all sites above
-		if (sites.get(0).containsParameter(Vs30_Param.NAME) && doesParameterVary(Vs30_Param.NAME, sites))
+		if (tempGMPE.getSiteParams().containsParameter(Vs30_Param.NAME) && doesParameterVary(Vs30_Param.NAME, sites))
 			residualTypes.add(ResidualType.VS30);
-		if (sites.get(0).containsParameter(DepthTo1pt0kmPerSecParam.NAME) && doesParameterVary(DepthTo1pt0kmPerSecParam.NAME, sites))
+		if (tempGMPE.getSiteParams().containsParameter(DepthTo1pt0kmPerSecParam.NAME) && doesParameterVary(DepthTo1pt0kmPerSecParam.NAME, sites))
 			residualTypes.add(ResidualType.Z10);
-		if (sites.get(0).containsParameter(DepthTo2pt5kmPerSecParam.NAME) && doesParameterVary(DepthTo2pt5kmPerSecParam.NAME, sites))
+		if (tempGMPE.getSiteParams().containsParameter(DepthTo2pt5kmPerSecParam.NAME) && doesParameterVary(DepthTo2pt5kmPerSecParam.NAME, sites))
 			residualTypes.add(ResidualType.Z25);
 		if (RuptureComparison.getRuptureTimeRange(comps) != null)
 			residualTypes.add(ResidualType.OCCUR_TIME);
+		checkInGMPE(gmpeRef, tempGMPE);
 		
 		lines.add("GMPE Residuals use the following values, averaged among all ruptures, for all paremeters which are not varied. "
 				+ "All other parameters set to GMPE defaults");

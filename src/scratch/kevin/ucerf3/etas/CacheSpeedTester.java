@@ -109,7 +109,7 @@ public class CacheSpeedTester {
 			System.gc();
 			ETAS_Simulator.runETAS_Simulation(subdir, erf, reg, mainshockRup, histQkList, includeSpontEvents,
 					includeIndirectTriggering, gridSeisDiscr, null, randSeed, fractionSrcAtPointList, srcAtPointList,
-					isCubeInsideFaultPolygon, new ETAS_ParameterList(),null);
+					isCubeInsideFaultPolygon, new ETAS_ParameterList(),null, null);
 		}
 		
 //		ETAS_Simulator.testETAS_Simulation(resultsDir, erf, reg, mainshockRup, histQkList, includeSpontEvents,

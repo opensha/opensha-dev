@@ -42,7 +42,7 @@ public class HazardPeriodDependenceCalc {
 	public static void main(String[] args) throws Exception {
 		File hazardJobDir = new File("/home/kevin/Simulators/hazard/");
 		File catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
-		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File mainOutputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2388.instance(catalogsBaseDir);
 		File catAllIMTsDir = new File(hazardJobDir, "2018_01_05-bruce2388-m6.5-sectArea0.2-skip5000yr-all_imts-8xPoints/curves_all_imts");

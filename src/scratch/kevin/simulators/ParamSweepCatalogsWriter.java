@@ -32,7 +32,7 @@ public class ParamSweepCatalogsWriter {
 		File catalogsDir = new File("/home/scec-00/rsqsim/catalogs/gilchrij/paramSweep");
 		File csvFile = new File("/home/scec-02/kmilner/simulators/catalogs/rsqsim_param_sweep_catalogs.csv");
 		
-//		File gitDir = new File("/home/kevin/git/rsqsim-analysis/2018_param_sweep");
+//		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/2018_param_sweep");
 //		File catalogsDir = null;
 //		File csvFile = new File("/home/kevin/Simulators/catalogs/rsqsim_param_sweep_catalogs.csv");
 		

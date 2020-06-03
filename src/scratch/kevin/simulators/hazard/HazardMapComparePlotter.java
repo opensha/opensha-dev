@@ -112,7 +112,7 @@ public class HazardMapComparePlotter {
 		if (args.length == 0) {
 			hazardJobDir = new File("/home/kevin/Simulators/hazard/");
 			catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
-			mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+			mainOutputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		} else {
 			Preconditions.checkArgument(args.length >= 3, "USAGE: <root-haz-dir> <catalog-base-dir> <git-catalogs-dir> "
 					+ "[<catalog name> <dir-name-1> ... <dir-name-N>]");

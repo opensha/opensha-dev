@@ -500,7 +500,7 @@ public class RotatedRupVelModelScenarioComparePageGen {
 
 	public static void main(String[] args) throws IOException, DocumentException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
-		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File outputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 
 		Map<VelocityModel, File> vmDirsMap = new HashMap<>();

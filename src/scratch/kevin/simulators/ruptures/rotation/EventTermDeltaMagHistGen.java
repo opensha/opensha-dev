@@ -25,7 +25,7 @@ import org.opensha.commons.util.cpt.CPT;
 public class EventTermDeltaMagHistGen {
 
 	public static void main(String[] args) throws IOException {
-		File baseDir = new File("/home/kevin/git/rsqsim-analysis/catalogs/"
+		File baseDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs/"
 				+ "rundir2585_1myr/bbp_LA_BASIN_500");
 		String csvName = "between_events_m7.2_50km_std_dev_3s_medians_table.csv";
 		File outputFile = new File("/tmp/event_term_hists.png");

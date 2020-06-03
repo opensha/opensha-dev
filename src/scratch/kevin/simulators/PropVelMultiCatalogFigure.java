@@ -62,8 +62,8 @@ public class PropVelMultiCatalogFigure {
 			Catalogs.BRUCE_2585.instance(),
 			Catalogs.BRUCE_2740.instance(),
 			Catalogs.BRUCE_4317.instance(),
-			Catalogs.BRUCE_4860_10X.instance()
-//			Catalogs.BRUCE_4860.instance()
+//			Catalogs.BRUCE_4860_10X.instance()
+			Catalogs.BRUCE_4983_STITCHED.instance()
 		};
 		
 		String[] names = {

@@ -24,6 +24,7 @@ import org.jfree.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.GMT_MapException;
@@ -34,11 +35,14 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
+import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 
 import com.google.common.base.Preconditions;
@@ -69,11 +73,11 @@ public class RSQSimU3RupturePageGen {
 
 	public static void main(String[] args) throws IOException, DocumentException, GMT_MapException, RuntimeException {
 		File catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
-		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File mainOutputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(catalogsBaseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_3271.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_3062.instance(catalogsBaseDir);
 		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(catalogsBaseDir);
 		
 		File catalogDir = catalog.getCatalogDir();
@@ -343,7 +347,7 @@ public class RSQSimU3RupturePageGen {
 		
 		// cumulant mag
 		System.out.println("Plotting cumulant mag");
-		calcCumulantMedianMag(catalog.getU3CompareSol(), sol, catalogType, resourcesDir);
+		plotCumulantMags(catalog.getU3CompareSol(), sol, catalogType, resourcesDir);
 		
 		lines.add("## Cumulant Magnitude");
 		lines.add(topLink); lines.add("");
@@ -359,6 +363,20 @@ public class RSQSimU3RupturePageGen {
 		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
 				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")",
 				"![Difference]("+resourcesDir.getName()+"/"+diffPlot.getName()+")");
+		rsPlot = new File(resourcesDir, "mag_cumulant_iqr_"+catalogType.toLowerCase()+".png");
+		Preconditions.checkState(rsPlot.exists());
+		u3Plot = new File(resourcesDir, "mag_cumulant_iqr_ucerf3.png");
+		Preconditions.checkState(u3Plot.exists());
+		diffPlot = new File(resourcesDir, "mag_cumulant_iqr_diff.png");
+		Preconditions.checkState(diffPlot.exists());
+		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
+				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")",
+				"![Difference]("+resourcesDir.getName()+"/"+diffPlot.getName()+")");
+		lines.addAll(table.build());
+		lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("![Median Scatter]("+resourcesDir.getName()+"/mag_cumulant_medians_scatter.png)",
+				"![IQR Scatter]("+resourcesDir.getName()+"/mag_cumulant_iqr_scatter.png)");
 		lines.addAll(table.build());
 		lines.add("");
 		
@@ -523,29 +541,60 @@ public class RSQSimU3RupturePageGen {
 		throw new IllegalStateException();
 	}
 	
-	static void calcCumulantMedianMag(FaultSystemSolution u3Sol, FaultSystemSolution rsSol,
+	static void plotCumulantMags(FaultSystemSolution u3Sol, FaultSystemSolution rsSol,
 			String catalogName, File outputDir) throws IOException, GMT_MapException, RuntimeException {
 		CSVFile<String> csv = new CSVFile<>(true);
-		csv.addLine("Sect Index", "Sect Name", catalogName, "UCERF3");
+		csv.addLine("Sect Index", "Sect Name", catalogName+" Median", catalogName+" IQR",
+				"UCERF3 Median", "UCERF3 IQR");
 		
 		FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
 		FaultSystemRupSet rsRupSet = rsSol.getRupSet();
 		
 		Preconditions.checkState(u3RupSet.getNumSections() == rsRupSet.getNumSections());
 		
-		List<Double> rsVals = new ArrayList<>();
-		List<Double> u3Vals = new ArrayList<>();
+		List<Double> rsMedians = new ArrayList<>();
+		List<Double> u3Medians = new ArrayList<>();
+		
+		List<Double> rsIQRs = new ArrayList<>();
+		List<Double> u3IQRs = new ArrayList<>();
+		
+		DefaultXY_DataSet medianScatter = new DefaultXY_DataSet();
+		DefaultXY_DataSet iqrScatter = new DefaultXY_DataSet();
 		
 		for (int s=0; s<u3RupSet.getNumSections(); s++) {
 			List<String> line = new ArrayList<>();
 			line.add(s+"");
 			line.add(u3RupSet.getFaultSectionData(s).getName());
-			double rsVal = calcCumulantMedianMag(rsSol, s);
-			rsVals.add(rsVal);
-			line.add(rsVal+"");
-			double u3Val = calcCumulantMedianMag(u3Sol, s);
-			u3Vals.add(u3Val);
-			line.add(u3Val+"");
+			EvenlyDiscretizedFunc rsFunc = calcCumulantMagFunc(rsSol, s);
+			double rsMedian, rsIQR;
+			if (rsFunc == null) {
+				rsMedian = Double.NaN;
+				rsIQR = Double.NaN;
+			} else {
+				rsMedian = rsFunc.getFirstInterpolatedX(0.5);
+				rsIQR = rsFunc.getFirstInterpolatedX(0.75) - rsFunc.getFirstInterpolatedX(0.25);
+			}
+			rsMedians.add(rsMedian);
+			rsIQRs.add(rsIQR);
+			line.add(rsMedian+"");
+			line.add(rsIQR+"");
+			EvenlyDiscretizedFunc u3Func = calcCumulantMagFunc(u3Sol, s);
+			double u3Median, u3IQR;
+			if (u3Func == null) {
+				u3Median = Double.NaN;
+				u3IQR = Double.NaN;
+			} else {
+				u3Median = u3Func.getFirstInterpolatedX(0.5);
+				u3IQR = u3Func.getFirstInterpolatedX(0.75) - u3Func.getFirstInterpolatedX(0.25);
+				if (!Double.isNaN(rsMedian)) {
+					medianScatter.set(u3Median, rsMedian);
+					iqrScatter.set(u3IQR, rsIQR);
+				}
+			}
+			u3Medians.add(u3Median);
+			u3IQRs.add(u3IQR);
+			line.add(u3Median+"");
+			line.add(u3IQR+"");
 			csv.addLine(line);
 		}
 		
@@ -557,9 +606,9 @@ public class RSQSimU3RupturePageGen {
 		
 		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(6d,  8.5d);
 		Region reg = new CaliforniaRegions.RELM_TESTING();
-		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(u3Vals), reg, outputDir,
+		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(u3Medians), reg, outputDir,
 				"mag_cumulant_medians_ucerf3", false, false, "UCERF3 Mag Cumulant Median");
-		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(rsVals), reg, outputDir,
+		FaultBasedMapGen.makeFaultPlot(cpt, faults, Doubles.toArray(rsMedians), reg, outputDir,
 				"mag_cumulant_medians_"+catalogName.toLowerCase(), false, false, catalogName+" Mag Cumulant Median");
 		
 //		CPT diffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
@@ -572,13 +621,141 @@ public class RSQSimU3RupturePageGen {
 		double[] diffVals = new double[faults.size()];
 		
 		for (int i=0; i<diffVals.length; i++)
-			diffVals[i] = rsVals.get(i) - u3Vals.get(i);
+			diffVals[i] = rsMedians.get(i) - u3Medians.get(i);
 		
 		FaultBasedMapGen.makeFaultPlot(diffCPT, faults, diffVals, reg, outputDir,
 				"mag_cumulant_medians_diff", false, true, catalogName+"-U3 Mag Cumulant Median");
+		
+		// IQRs
+		double maxIQR = Math.ceil(2*Math.max(iqrScatter.getMaxX(), iqrScatter.getMaxY()))*0.5d;
+//		CPT iqrCPT = new CPT(0d, 1d, new Color(40, 0, 0), new Color(80, 0, 0), 	new Color(140, 0, 0),
+//				new Color(200, 60, 0), new Color(255, 120, 0), new Color(255, 200, 0),
+//				new Color(255, 225, 0), Color.WHITE);
+		CPT iqrCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().rescale(0d, 0.7);
+		Color lastIQRCOlor = new Color(255, 255, 200);
+		iqrCPT.add(new CPTVal(iqrCPT.getMaxValue(), iqrCPT.getMaxColor(), 1f, lastIQRCOlor));
+		iqrCPT.setAboveMaxColor(lastIQRCOlor);
+		iqrCPT.setNanColor(Color.GRAY);
+		FaultBasedMapGen.makeFaultPlot(iqrCPT, faults, Doubles.toArray(u3IQRs), reg, outputDir,
+				"mag_cumulant_iqr_ucerf3", false, false, "UCERF3 Mag Cumulant IQR");
+		FaultBasedMapGen.makeFaultPlot(iqrCPT, faults, Doubles.toArray(rsIQRs), reg, outputDir,
+				"mag_cumulant_iqr_"+catalogName.toLowerCase(), false, false, catalogName+" Mag Cumulant IQR");
+		
+		diffCPT = diffCPT.rescale(-0.5, 0.5);
+		diffVals = new double[faults.size()];
+		
+		for (int i=0; i<diffVals.length; i++)
+			diffVals[i] = rsIQRs.get(i) - u3IQRs.get(i);
+		
+		FaultBasedMapGen.makeFaultPlot(diffCPT, faults, diffVals, reg, outputDir,
+				"mag_cumulant_iqr_diff", false, true, catalogName+"-U3 Mag Cumulant IQR");
+		
+		// scatters
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		double minMedian = 0.5*Math.floor(2d*Math.min(medianScatter.getMinX(), medianScatter.getMinY()));
+		double maxMedian = 0.5*Math.ceil(2d*Math.max(medianScatter.getMaxX(), medianScatter.getMaxY()));
+		DefaultXY_DataSet oneToOne = new DefaultXY_DataSet();
+		oneToOne.set(minMedian, minMedian);
+		oneToOne.set(maxMedian, maxMedian);
+		
+		funcs.add(oneToOne);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+		
+		funcs.add(medianScatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, "Median Cumulant Mag Scatter", "UCERF3", catalogName);
+		
+		List<XYTextAnnotation> anns = new ArrayList<>();
+		DecimalFormat magDF = new DecimalFormat("0.0");
+		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 22);
+		double[] rsMedianArray = getNoNans(rsMedians);
+		double rsMeanMedian = StatUtils.mean(rsMedianArray);
+		double rsMedianMedian = DataUtils.median(rsMedianArray);
+		XYTextAnnotation ann = new XYTextAnnotation(
+				"  "+catalogName+": mean="+magDF.format(rsMeanMedian)+", mdn.="+magDF.format(rsMedianMedian),
+				minMedian, minMedian + 0.95*(maxMedian-minMedian));
+		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+		ann.setFont(annFont);
+		anns.add(ann);
+		double[] u3MedianArray = getNoNans(u3Medians);
+		double u3MeanMedian = StatUtils.mean(u3MedianArray);
+		double u3MedianMedian = DataUtils.median(u3MedianArray);
+		ann = new XYTextAnnotation(
+				"  UCERF3: mean="+magDF.format(u3MeanMedian)+", mdn.="+magDF.format(u3MedianMedian),
+				minMedian, minMedian + 0.9*(maxMedian-minMedian));
+		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+		ann.setFont(annFont);
+		anns.add(ann);
+		spec.setPlotAnnotations(anns);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setBackgroundColor(Color.WHITE);
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		
+		File pngFile = new File(outputDir, "mag_cumulant_medians_scatter.png");
+		
+		gp.drawGraphPanel(spec, false, false, new Range(minMedian, maxMedian), new Range(minMedian, maxMedian));
+		gp.getChartPanel().setSize(800, 800);
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+		
+		funcs = new ArrayList<>();
+		chars = new ArrayList<>();
+		
+		oneToOne = new DefaultXY_DataSet();
+		oneToOne.set(0d, 0d);
+		oneToOne.set(maxIQR, maxIQR);
+		
+		funcs.add(oneToOne);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+		
+		funcs.add(iqrScatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 2f, Color.BLACK));
+		
+		spec = new PlotSpec(funcs, chars, "Cumulant Mag IQR Scatter", "UCERF3", catalogName);
+		
+		anns = new ArrayList<>();
+		DecimalFormat iqrDF = new DecimalFormat("0.00");
+		double[] rsIQRArray = getNoNans(rsIQRs);
+		double rsMeanIQR = StatUtils.mean(rsIQRArray);
+		double rsMedianIQR = DataUtils.median(rsIQRArray);
+		ann = new XYTextAnnotation(
+				"  "+catalogName+": mean="+iqrDF.format(rsMeanIQR)+", mdn.="+iqrDF.format(rsMedianIQR),
+				0d, 0.95*maxIQR);
+		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+		ann.setFont(annFont);
+		anns.add(ann);
+		double[] u3IQRArray = getNoNans(u3IQRs);
+		double u3MeanIQR = StatUtils.mean(u3IQRArray);
+		double u3MedianIQR = DataUtils.median(u3IQRArray);
+		ann = new XYTextAnnotation(
+				"  UCERF3: mean="+iqrDF.format(u3MeanIQR)+", mdn.="+iqrDF.format(u3MedianIQR),
+				0d, 0.9*maxIQR);
+		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+		ann.setFont(annFont);
+		anns.add(ann);
+		spec.setPlotAnnotations(anns);
+		
+		pngFile = new File(outputDir, "mag_cumulant_iqr_scatter.png");
+		
+		gp.drawGraphPanel(spec, false, false, new Range(0, maxIQR), new Range(0, maxIQR));
+		gp.getChartPanel().setSize(800, 800);
+		gp.saveAsPNG(pngFile.getAbsolutePath());
 	}
 	
-	private static double calcCumulantMedianMag(FaultSystemSolution sol, int s) {
+	private static double[] getNoNans(List<Double> vals) {
+		List<Double> ret = new ArrayList<>();
+		for (double val : vals)
+			if (Double.isFinite(val))
+				ret.add(val);
+		return Doubles.toArray(ret);
+	}
+	
+	private static EvenlyDiscretizedFunc calcCumulantMagFunc(FaultSystemSolution sol, int s) {
 		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(5d, 9d, (int)((9d-5d)/0.01) + 1);
 		for (int r : sol.getRupSet().getRupturesForSection(s)) {
 			double mag = sol.getRupSet().getMagForRup(r);
@@ -587,9 +764,9 @@ public class RSQSimU3RupturePageGen {
 				func.add(x, MagUtils.magToMoment(mag));
 		}
 		if (func.calcSumOfY_Vals() == 0)
-			return Double.NaN;
+			return null;
 		func.scale(1d/func.getMaxY());
-		return func.getFirstInterpolatedX(0.5);
+		return func;
 	}
 	
 	static void plotConnectivity(FaultSystemRupSet rupSet, File outputDir, String prefix, String title)

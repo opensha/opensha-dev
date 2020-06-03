@@ -175,7 +175,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 	
 	public static void main(String[] args) throws ZipException, IOException, DocumentException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
-		File outputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File outputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
@@ -188,8 +188,11 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
 //		File bbpDir = new File(bbpParallelDir, "2020_02_12-rundir4860_multi_combine-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
-		File bbpDir = new File(bbpParallelDir, "2020_04_19-rundir4983-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
+//		File bbpDir = new File(bbpParallelDir, "2020_04_19-rundir4983-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
+		File bbpDir = new File(bbpParallelDir, "2020_05_05-rundir4983_stitched-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites");
 		
 		VelocityModel vm = RSQSimBBP_Config.detectVM(bbpDir);
 		
@@ -201,6 +204,9 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		
 		sourceNames.add("Puente Hills");
 		parentIDs.add(new int[] { 240});
+		
+		sourceNames.add("San Jacinto (San Beranardino)");
+		parentIDs.add(new int[] { 119});
 		
 		String[] siteNames = null; // all
 		

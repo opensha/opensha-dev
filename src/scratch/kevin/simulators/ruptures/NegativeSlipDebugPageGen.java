@@ -27,7 +27,7 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 public class NegativeSlipDebugPageGen {
 
 	public static void main(String[] args) throws IOException {
-		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_4660.instance();
 		

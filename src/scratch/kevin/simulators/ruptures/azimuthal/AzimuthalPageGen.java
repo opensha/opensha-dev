@@ -705,11 +705,11 @@ public class AzimuthalPageGen {
 
 	@SuppressWarnings("unused")
 	public static void main(String[] args) throws IOException, DocumentException {
-		File gitDir = new File("/home/kevin/git/rsqsim-analysis");
+		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis");
 		File mainCatalogsDir = new File(gitDir, "catalogs");
 		File mainBBPDir = new File("/data/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance();
 //		RSQSimCatalog catalog = null;
 		

@@ -1197,9 +1197,13 @@ public class SpectraPlotter {
 //		File refDir = new File("/home/kevin/bbp/parallel/2017_10_04-JG_UCERF3_millionElement-event4099020-dx0.48-noHF/results");
 //		int eventID = 4099020;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+//		File refDir = null;
+//		int eventID = 12581
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
 		File refDir = null;
-		int eventID = 12581;
+		int eventID = 1499589;
 		
 		File srfDir = new File(catalog.getCatalogDir(), "event_srfs");
 		File rsDir = new File(srfDir, "event_"+eventID+"_0.05s_ADJ_VEL_bbp");
@@ -1211,7 +1215,7 @@ public class SpectraPlotter {
 			sites = BBP_Site.readFile(rsDir);
 		
 //		Map<RSQSimEvent, EqkRupture> compEvents = null;
-		RSQSimCatalog compCatalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
+		RSQSimCatalog compCatalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
 		String simName = "RSQSim-BBP";
 		String animTitle = "San Andreas (Mojave) Spectra, M7-7.5";
 		double animTime = 20; // seconds
@@ -1220,7 +1224,8 @@ public class SpectraPlotter {
 		BBP_SimZipLoader compLoader = new BBP_SimZipLoader(new File(bbpDir,
 //				"2018_04_13-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-csLASites/results_rotD.zip"), sites);
 //				"2019_11_11-rundir2585_1myrs-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites/results_rotD.zip"), sites);
-				"2020_02_12-rundir4860_multi_combine-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites/results_rotD.zip"), sites);
+//				"2020_02_12-rundir4860_multi_combine-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites/results_rotD.zip"), sites);
+				"2020_05_05-rundir4983_stitched-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-cs500Sites/results_rotD.zip"), sites);
 		Map<RSQSimEvent, EqkRupture> compEvents = getCompEvents(compCatalog, 7d, 7.5d, 5000, 286, 301);
 		
 		int numRefRuns = 400;

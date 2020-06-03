@@ -24,7 +24,7 @@ public class MultiVMdirReorg {
 				"rotated_ruptures_"
 		};
 		
-		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		VelocityModel defaultVM = VelocityModel.LA_BASIN_863;
 		

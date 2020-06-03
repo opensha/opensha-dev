@@ -91,6 +91,7 @@ import scratch.kevin.simulators.plots.PaleoOpenIntervalPlot;
 import scratch.kevin.simulators.plots.PaleoRecurrencePlot;
 import scratch.kevin.simulators.plots.RecurrenceIntervalPlot;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
+import scratch.kevin.simulators.plots.SectParticipationNucleationPlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 import scratch.kevin.simulators.plots.SlipAlongRupturePlot;
@@ -925,6 +926,12 @@ public class RSQSimCatalog implements XMLSaveable {
 			List<String> partBLinks = new ArrayList<>();
 			List<String> partBNames = new ArrayList<>();
 			
+			List<String> sourceDetailLinks = new ArrayList<>();
+			List<String> sourceDetailNames = new ArrayList<>();
+			
+			Map<String, List<String>> siteHazardLinksTable = new HashMap<>();
+			Map<String, List<String>> siteHazardNamesTable = new HashMap<>();
+			
 			String rotDDLink = null;
 			String sourceSiteLink = null;
 			
@@ -977,6 +984,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				} else if (name.equals("source_site_comparisons")) {
 					Preconditions.checkState(sourceSiteLink == null, "Duplicate Source/Site dirs! %s and %s", name, sourceSiteLink);
 					sourceSiteLink = name;
+				} else if (name.startsWith("source_site_")) {
+					sourceDetailLinks.add(name);
+					sourceDetailNames.add(MarkdownUtils.getTitle(mdFile));
 				} else if (name.startsWith("bbp_part_b")) {
 					FilterMethod filter = FilterMethod.fromDirName(name);
 					name = checkMoveFilter(subDir, filter);
@@ -1024,6 +1034,18 @@ public class RSQSimCatalog implements XMLSaveable {
 							azimuthalRupNames.add(scenario.getName());
 						}
 					}
+				} else if (name.startsWith("site_hazard_")) {
+					String siteName = name.substring("site_hazard_".length());
+					siteName = siteName.substring(0, siteName.indexOf("_"));
+					String gmpeName = name.substring("site_hazard_".length()+siteName.length()+1);
+					
+					if (!siteHazardNamesTable.containsKey(gmpeName)) {
+						siteHazardLinksTable.put(gmpeName, new ArrayList<>());
+						siteHazardNamesTable.put(gmpeName, new ArrayList<>());
+					}
+					
+					siteHazardLinksTable.get(gmpeName).add(name);
+					siteHazardNamesTable.get(gmpeName).add(siteName);
 				}
 			}
 			
@@ -1074,12 +1096,33 @@ public class RSQSimCatalog implements XMLSaveable {
 				lines.add("");
 				lines.add("[Full Catalog RotD100/RotD50 Ratios Plotted Here]("+bbpDir.getName()+"/"+rotDDLink+"/)");
 			}
-			if (sourceSiteLink != null) {
+			if (sourceSiteLink != null || !sourceDetailLinks.isEmpty()) {
 				lines.add("");
 				lines.add("### Source/Site Ground Motion Comparisons, "+vm);
 				lines.add(topLink);
+				if (sourceSiteLink != null) {
+					lines.add("");
+					lines.add("[Source/Site Ground Motion Comparisons here]("+bbpDir.getName()+"/"+sourceSiteLink+"/)");
+				}
+				if (!sourceDetailLinks.isEmpty()) {
+					for (int i=0; i<sourceDetailLinks.size(); i++) {
+						lines.add("");
+						lines.add("["+sourceDetailNames.get(i)+"]("+bbpDir.getName()+"/"+sourceDetailLinks.get(i)+"/)");
+					}
+				}
+			}
+			if (!siteHazardLinksTable.isEmpty()) {
 				lines.add("");
-				lines.add("[Source/Site Ground Motion Comparisons here]("+bbpDir.getName()+"/"+sourceSiteLink+"/)");
+				lines.add("### Site Hazard Comparisons");
+				lines.add(topLink);
+				lines.add("");
+				for (String gmpe : siteHazardLinksTable.keySet()) {
+					List<String> siteNames = siteHazardNamesTable.get(gmpe);
+					List<String> siteLinks = siteHazardLinksTable.get(gmpe);
+					
+					for (int i=0; i<siteNames.size(); i++)
+						lines.add("* ["+siteNames.get(i)+"]("+siteLinks.get(i)+"/)");
+				}
 			}
 			if (!partBLinks.isEmpty()) {
 				lines.add("");
@@ -1247,6 +1290,7 @@ public class RSQSimCatalog implements XMLSaveable {
 //			System.out.println("Trans version: "+transVersion);
 //			System.out.println("TransV: "+transV);
 			transReader = new RSQSimStateTransitionFileReader(transFile, getElements(), transVersion);
+			transVersion = transReader.getVersion();
 			if (transVersion == TransVersion.ORIGINAL)
 				transReader.setPatchFixedVelocities(getSlipVelocities());
 		}
@@ -1543,6 +1587,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		U3_NORM_RECURRENCE,
 		STATIONARITY,
 		SECTION_RECURRENCE,
+		SECT_PARTIC_NUCL,
 		PALEO_RECURRENCE,
 		PALEO_OPEN_INTERVAL,
 		MOMENT_RATE_VARIABILITY,
@@ -1816,15 +1861,14 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.addAll(table.build());
 		}
 		
-		
-		if (replot || !new File(outputDir, "slip_rate_sim_map.png").exists()) {
-			SlipRateComparePlot plot = new SlipRateComparePlot(getSubSectMapper(), getFaultModel(), getDeformationModel(),
-					getComparisonSolution());
-			plot.initialize(getName(), outputDir, "slip_rate");
-			plots.add(plot);
-		}
-		
 		if (plotsSet.contains(StandardPlots.SLIP_RATE)) {
+			if (replot || !new File(outputDir, "slip_rate_sim_map.png").exists()) {
+				SlipRateComparePlot plot = new SlipRateComparePlot(getSubSectMapper(), getFaultModel(), getDeformationModel(),
+						getComparisonSolution());
+				plot.initialize(getName(), outputDir, "slip_rate");
+				plots.add(plot);
+			}
+			
 			lines.add("### Slip Rate Plots");
 			lines.add(topLink);
 			lines.add("");
@@ -2032,6 +2076,34 @@ public class RSQSimCatalog implements XMLSaveable {
 			testMagStr = (int)riMinMags[0]+"";
 		else
 			testMagStr = (float)riMinMags[0]+"";
+		if (plotsSet.contains(StandardPlots.SECT_PARTIC_NUCL)) {
+			if (replot || !new File(outputDir, "sub_sect_m"+testMagStr+"_partic_map.png").exists()) {
+				RSQSimSubSectionMapper mapper = getSubSectMapper();
+				SectParticipationNucleationPlot sectPlot = new SectParticipationNucleationPlot(mapper, riMinMags);
+				sectPlot.initialize(getName(), outputDir, "sub_sect");
+				plots.add(sectPlot);
+			}
+			lines.add("### Subsection Participation & Nucleation Maps");
+			lines.add(topLink);
+			lines.add("");
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("Min Mag", "Participation Rate", "Nucleation Rate", "Nucleation/Participation Ratio");
+			for (double riMinMag : riMinMags) {
+				String prefix = "sub_sect_m";
+				if (riMinMag == Math.floor(riMinMag))
+					prefix += (int)riMinMag;
+				else
+					prefix += (float)riMinMag;
+				table.initNewLine();
+				table.addColumn("**M≥"+(float)riMinMag+"**");
+				table.addColumn("![Partic]("+outputDir.getName()+"/"+prefix+"_partic_map.png)");
+				table.addColumn("![Nucl]("+outputDir.getName()+"/"+prefix+"_nucl_map.png)");
+				table.addColumn("![Ratio]("+outputDir.getName()+"/"+prefix+"_nucl_partic_ratio_map.png)");
+				table.finalizeLine();
+			}
+			lines.addAll(table.build());
+		}
+		
 		if (plotsSet.contains(StandardPlots.SECTION_RECURRENCE)) {
 			if (replot || !new File(outputDir, "interevent_elements_m"+testMagStr+"_scatter.png").exists()) {
 				RSQSimSubSectionMapper mapper = getSubSectMapper();
@@ -2791,7 +2863,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public static void main(String args[]) throws IOException, DocumentException {
-		File gitDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		boolean overwriteIndividual = true;
 		boolean replot = false;
@@ -2801,20 +2873,20 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
-		GregorianCalendar minDate = cal(2020, 1, 1);
-		for (Catalogs cat : cats) {
+//		GregorianCalendar minDate = cal(2020, 1, 1);
+//		for (Catalogs cat : cats) {
 		// specific catalog
-//		GregorianCalendar minDate = cal(2000, 1, 1);
-//		for (Catalogs cat : new Catalogs[] {
-//				Catalogs.BRUCE_4983,
-////				Catalogs.BRUCE_2585,
-////				Catalogs.BRUCE_2585_1MYR,
-////				Catalogs.BRUCE_2740,
-////				Catalogs.BRUCE_2829,
-////				Catalogs.BRUCE_4860,
-////				Catalogs.JG_tunedBase1m_ddotEQmod,
-////				Catalogs.JG_tuneBase1m,
-//				}) {
+		GregorianCalendar minDate = cal(2000, 1, 1);
+		for (Catalogs cat : new Catalogs[] {
+				Catalogs.BRUCE_4983_STITCHED,
+//				Catalogs.BRUCE_2585,
+//				Catalogs.BRUCE_2585_1MYR,
+//				Catalogs.BRUCE_2740,
+//				Catalogs.BRUCE_3062,
+//				Catalogs.BRUCE_4860,
+//				Catalogs.JG_tunedBase1m_ddotEQmod,
+//				Catalogs.JG_tuneBase1m,
+				}) {
 		// all catalogs
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : cats) {

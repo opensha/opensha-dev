@@ -404,6 +404,7 @@ public class BBP_SimZipLoader {
 	}
 	
 	public Collection<String> getDirNames(BBP_Site site) {
+		Preconditions.checkNotNull(site);
 		return entriesTable.row(site).keySet();
 	}
 

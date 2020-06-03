@@ -10,8 +10,10 @@ import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.time.StopWatch;
 import org.dom4j.Document;
 import org.dom4j.Element;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -20,6 +22,7 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.XMLUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.io.Files;
 
 import scratch.kevin.bbp.BBP_Module.Method;
@@ -235,9 +238,14 @@ public class BBP_Wrapper implements Runnable {
 		} else {
 			String preScriptName = "lf_only_"+scriptFileName;
 			String preXMLFileName = "lf_only_"+xmlFileName;
+			Stopwatch lfWatch = Stopwatch.createStarted();
 			File dir = doRun(outputDir, preScriptName, preXMLFileName, simID, modules, siteFile, bbpEnvFile, bbpDataDir, bbpGFDir);
+			lfWatch.stop();
+			float lfSecs = lfWatch.elapsed(TimeUnit.MILLISECONDS)/1000f;
+			if (D) System.out.println("LF calculation took "+lfSecs+" seconds");
 			if (dir == null)
 				return null;
+			Stopwatch processWatch = Stopwatch.createStarted();
 			File tempDir = new File(new File(dir.getParentFile().getParentFile(), "tmpdata"), dir.getName());
 			Preconditions.checkState(tempDir.exists(), "Temp dir doesn't exist: %s", tempDir.getAbsolutePath());
 			if (D) System.out.println("Processing temp dir for velocity seismograms: "+tempDir.getAbsolutePath());
@@ -273,6 +281,9 @@ public class BBP_Wrapper implements Runnable {
 					writeBBPSeis(accelDest, accelSeis, true);
 				}
 			}
+			processWatch.stop();
+			float processSecs = processWatch.elapsed(TimeUnit.MILLISECONDS)/1000f;
+			if (D) System.out.println("Processing took "+processSecs+" seconds");
 			if (D) System.out.println("DONE processing velocity seismograms");
 			modules.clear();
 			scriptFileName = "pp_only_"+scriptFileName;
@@ -295,7 +306,12 @@ public class BBP_Wrapper implements Runnable {
 		if (!dataOnly)
 			modules.add(BBP_Module.buildGenHTML(vm, method, siteFile, srcFile));
 		
-		return doRun(outputDir, scriptFileName, xmlFileName, simID, modules, siteFile, bbpEnvFile, bbpDataDir, bbpGFDir);
+		Stopwatch ppWatch = Stopwatch.createStarted();
+		File ret = doRun(outputDir, scriptFileName, xmlFileName, simID, modules, siteFile, bbpEnvFile, bbpDataDir, bbpGFDir);
+		ppWatch.stop();
+		float ppSecs = ppWatch.elapsed(TimeUnit.MILLISECONDS)/1000f;
+		if (D) System.out.println("PP calculation took "+ppSecs+" seconds");
+		return ret;
 	}
 	
 	private static File doRun(File outputDir, String scriptFileName, String xmlFileName, long simID,

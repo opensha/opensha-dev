@@ -23,7 +23,7 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 public class RSQSimOccupancyCopulaCalculator {
 
 	public static void main(String[] args) throws IOException, DocumentException {
-		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File mainOutputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		File catalogsDir = new File("/data/kevin/simulators/catalogs");
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(catalogsDir);
 		

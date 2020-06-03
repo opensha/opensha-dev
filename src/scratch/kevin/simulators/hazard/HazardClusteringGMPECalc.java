@@ -69,7 +69,7 @@ public class HazardClusteringGMPECalc {
 
 	public static void main(String[] args) throws IOException, DocumentException {
 		File catalogsBaseDir = new File("/data/kevin/simulators/catalogs");
-		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File mainOutputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		RSQSimCatalog catalog = Catalogs.BRUCE_2381.instance(catalogsBaseDir);
 		

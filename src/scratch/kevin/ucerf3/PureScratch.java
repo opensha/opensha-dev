@@ -1721,13 +1721,17 @@ public class PureScratch {
 			System.out.println("Fail :(");
 		}
 	}
+	
+	private static void test67() {
+		System.out.println(new CaliforniaRegions.RELM_TESTING().contains(new Location(38.1589, -117.8749)));
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test66();
+		test67();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

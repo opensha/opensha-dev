@@ -426,8 +426,11 @@ public class SimulationHazardPlotter<E> {
 			return simSourceCurves.row(imt);
 		Map<String, DiscretizedFunc> curves = simCalc.calcSourceContributionCurves(
 				site, imt, curveDuration, sourceRupContribFracts);
-		for (String sourceName : curves.keySet())
-			simSourceCurves.put(imt, sourceName, curves.get(sourceName));
+		for (String sourceName : curves.keySet()) {
+			DiscretizedFunc curve = curves.get(sourceName);
+			if (curve != null)
+				simSourceCurves.put(imt, sourceName, curve);
+		}
 		return curves;
 	}
 	

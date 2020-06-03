@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 import org.apache.commons.math3.util.MathArrays;
@@ -182,7 +183,8 @@ public class UCERF3_LEC_TreeTrimmer {
 							for (int j=0; j<totalDist.cdf.size(); j++)
 								ksDn = Math.max(ksDn, Math.abs(totalDist.cdf.getY(j)-subLossDist.cdf.getY(j)));
 							double meanError = (subLossDist.mean - totalDist.mean)/totalDist.mean;
-							double cov = subLossDist.sd/totalDist.mean;
+//							double cov = subLossDist.sd/subLossDist.mean;
+							double cov = subLossDist.cov;
 							double covError = (cov - cov)/cov;
 							
 //							System.out.println("\t\tLoss: "+(float)+subLossDist.mean);
@@ -213,7 +215,7 @@ public class UCERF3_LEC_TreeTrimmer {
 				line.add(minDnChoice.getName()); // branch choice
 				line.add(branches.size()+""); // leaf count
 				line.add(minDnDist.mean+""); // loss at this prob level
-				line.add((minDnDist.sd/totalDist.mean)+""); // COV of loss at this prob level
+				line.add(minDnDist.cov+""); // COV of loss at this prob level
 				line.add(minDn+""); // K-S Dn
 				line.add(meanErrorAtMinDn+""); // mean error WRT full model
 				line.add(covErrorAtMinDn+""); // cov error WRT full model
@@ -422,6 +424,7 @@ public class UCERF3_LEC_TreeTrimmer {
 		private final double[] lossWeights;
 		private final double mean;
 		private final double sd;
+		private final double cov;
 		private final DiscretizedFunc cdf;
 		private final DiscretizedFunc lec;
 		
@@ -436,12 +439,20 @@ public class UCERF3_LEC_TreeTrimmer {
 			if (lossVals == null) {
 				mean = Double.NaN;
 				sd = Double.NaN;
+				cov = Double.NaN;
 			} else {
 				Variance v = new Variance();
 				double var = v.evaluate(lossVals, MathArrays.normalizeArray(lossWeights, lossVals.length));
 				this.sd = Math.sqrt(var);
 				Mean m = new Mean();
 				this.mean = m.evaluate(lossVals, lossWeights);
+				
+				double sumWeights = StatUtils.sum(lossWeights);
+				
+				double tempSum = 0d;
+				for (int i=0; i<lossVals.length; i++)
+					tempSum += lossVals[i]*lossVals[i]*lossWeights[i]/sumWeights;
+				cov = Math.sqrt(tempSum - mean*mean)/mean;
 			}
 		}
 	}

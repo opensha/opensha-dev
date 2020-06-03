@@ -358,11 +358,11 @@ public class ExtremeRupturePageGen {
 	
 	public static void main(String[] args) throws IOException, DocumentException {
 		File baseDir = new File("/data/kevin/simulators/catalogs");
-		File mainOutputDir = new File("/home/kevin/git/rsqsim-analysis/catalogs");
+		File mainOutputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 //		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		
