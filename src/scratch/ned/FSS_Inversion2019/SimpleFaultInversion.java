@@ -103,6 +103,9 @@ public class SimpleFaultInversion {
 	final static String ROOT_DATA_DIR = "src/scratch/ned/FSS_Inversion2019/data/"; // where to find the data; this really needed?
 
 	
+	// this is to limit ruptures to evenly discretized in magnitude (geometric length increase)
+	boolean GEOMETRIC_RUP_LENGTH_INCREASE = false;
+	
 	// These values are the same for all fault sections
 	final static double UPPER_SEIS_DEPTH = 0;
 	final static double LOWER_SEIS_DEPTH = 14.;
@@ -414,26 +417,78 @@ public class SimpleFaultInversion {
 		}
 		
 		numRuptures =0;
-		int curNumRup = numSections - (NUM_SUBSECT_PER_RUP-1);
-		while(curNumRup>0) {
-			numRuptures += curNumRup;
-			curNumRup -= 1;
-		}
-
-		int rupIndex=0;
-
-//		rupSectionMatrix = new int[numSect][numSect - (NUM_SUBSECT_PER_RUP-1)];
-//		for(int curSectPerRup = NUM_SUBSECT_PER_RUP; curSectPerRup<NUM_SUBSECT_PER_RUP+1; curSectPerRup++)
-		rupSectionMatrix = new int[numSections][numRuptures];
-		for(int curSectPerRup = NUM_SUBSECT_PER_RUP; curSectPerRup<numSections+1; curSectPerRup++)
-			for(int s=0;s<numSections-curSectPerRup+1;s++) {
-				int firstSect = s;
-				int lastSect = s+curSectPerRup-1;
-//				System.out.println(rupIndex+":\t"+firstSect+"\t"+lastSect);
-				for(int col=firstSect; col <= lastSect; col++)
-					rupSectionMatrix[col][rupIndex] = 1;
-				rupIndex += 1;
+		
+		if (!GEOMETRIC_RUP_LENGTH_INCREASE) {
+			// ***********  INCLUDE ALL RUPTURES *****************
+			
+			int curNumRup = numSections - (NUM_SUBSECT_PER_RUP-1);
+			while(curNumRup>0) {
+				numRuptures += curNumRup;
+				curNumRup -= 1;
 			}
+			int rupIndex=0;
+//			rupSectionMatrix = new int[numSect][numSect - (NUM_SUBSECT_PER_RUP-1)];
+//			for(int curSectPerRup = NUM_SUBSECT_PER_RUP; curSectPerRup<NUM_SUBSECT_PER_RUP+1; curSectPerRup++)
+			rupSectionMatrix = new int[numSections][numRuptures];
+			for(int curSectPerRup = NUM_SUBSECT_PER_RUP; curSectPerRup<numSections+1; curSectPerRup++) {
+				for(int s=0;s<numSections-curSectPerRup+1;s++) {
+					int firstSect = s;
+					int lastSect = s+curSectPerRup-1;
+//					System.out.println(rupIndex+":\t"+firstSect+"\t"+lastSect);
+					for(int col=firstSect; col <= lastSect; col++)
+						rupSectionMatrix[col][rupIndex] = 1;
+					rupIndex += 1;
+				}
+			}		
+		}
+		
+		else {
+			//************  GEOMETRIC INCREASE IN RUPTURE LENGTH ***************
+			// this is to get the magnitude increments
+			IncrementalMagFreqDist tempMFD = getTargetMFD(scalingRel, MFD_TargetType.GR_b_1pt0);
+			double subSectLength = faultSectionDataList.get(0).getTraceLength()*1e3; // convert to meters
+			double subSectDDW = faultSectionDataList.get(0).getReducedDownDipWidth()*1e3;
+			double subSectArea = subSectLength*subSectDDW;
+			int[] numSectForMag = new int[tempMFD.size()];
+			for(int m=0;m<tempMFD.size();m++) {
+				double targetMag = tempMFD.getX(m);
+				// find num sections that have the closest mag
+				double magDiff = Double.POSITIVE_INFINITY;
+				int targetNumSect = -1;
+				for(int numSubSect=NUM_SUBSECT_PER_RUP; numSubSect<numSections; numSubSect++) {
+					double mag = scalingRel.getMag(subSectArea*numSubSect, subSectLength*numSubSect, subSectDDW*numSubSect);
+					double tempDiff = Math.abs(targetMag-mag);
+					if(magDiff>tempDiff) {
+						magDiff=tempDiff;
+						targetNumSect = numSubSect;
+					}
+				}
+				numSectForMag[m] = targetNumSect;
+				double finalMag = scalingRel.getMag(subSectArea*targetNumSect, subSectLength*targetNumSect, subSectDDW*targetNumSect);
+				System.out.println(m+"\t"+(float)targetMag+"\t"+targetNumSect+"\t"+(float)finalMag+"\t"+(float)(finalMag-targetMag));
+				numRuptures += faultSectionDataList.size()-targetNumSect+1;
+				
+			}
+			System.out.println("numRup = "+numRuptures);
+
+			int rupIndex=0;
+
+//			rupSectionMatrix = new int[numSect][numSect - (NUM_SUBSECT_PER_RUP-1)];
+//			for(int curSectPerRup = NUM_SUBSECT_PER_RUP; curSectPerRup<NUM_SUBSECT_PER_RUP+1; curSectPerRup++)
+			rupSectionMatrix = new int[numSections][numRuptures];
+			for(int curSectPerRup:numSectForMag) {
+				for(int s=0;s<numSections-curSectPerRup+1;s++) {
+					int firstSect = s;
+					int lastSect = s+curSectPerRup-1;
+//					System.out.println(rupIndex+":\t"+firstSect+"\t"+lastSect);
+					for(int col=firstSect; col <= lastSect; col++)
+						rupSectionMatrix[col][rupIndex] = 1;
+					rupIndex += 1;
+				}
+			}
+		}
+		
+		
 		
 //		for(int r=0;r<numRup;r++) {
 //			System.out.print("\n");
@@ -2596,6 +2651,8 @@ yAxisRange=null;
 					slipRateProfile.toString()+"_"+slipModelType.toString()+"_"+scalingRel.toString()+initStateString; // Inversion name
 		if(applyRuptureSampler)
 			solutionName+= "_rupSamp";
+		if(GEOMETRIC_RUP_LENGTH_INCREASE)
+			solutionName+= "_geomRupLen";
 		dirName = ROOT_PATH+solutionName;
 		return getSolution(rePlotOny);
 	
@@ -3005,7 +3062,20 @@ yAxisRange=null;
 		// test above with E=2; this took 28 minutes
 //		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1, false, 2, false, true);
 
-		
+		// do this with geometric rupture length increase (sub-sampled ruptures)
+//		faultInversion.GEOMETRIC_RUP_LENGTH_INCREASE = true;
+//		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1, false, 2, false, true);
+		// Ratio of geom rup length increase to original GR b=1 case
+		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
+		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+		for(String name: nameArray) {
+		    String fileName1 = ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B_geomRupLen/hazardMaps/"+name+".txt";
+		    String fileName2 = ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt";
+		    String dirName = ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B_geomRupLen/hazardMaps";
+		    String label = name+"_RatioToAllRupturesCase";
+			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+		}
+
 		
 		// Re-Plot histogram of hazard from 10 GR b=1 cases (doing it this way to avoid recomputing hazard maps)
 //		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
