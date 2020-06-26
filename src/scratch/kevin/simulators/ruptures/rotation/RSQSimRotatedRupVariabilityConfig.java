@@ -1,6 +1,11 @@
 package scratch.kevin.simulators.ruptures.rotation;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.Shape;
+import java.awt.Stroke;
+import java.awt.geom.Ellipse2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -11,6 +16,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYLineAnnotation;
+import org.jfree.chart.annotations.XYPolygonAnnotation;
+import org.jfree.chart.annotations.XYShapeAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.ui.TextAnchor;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
@@ -22,6 +32,7 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.Vertex;
@@ -324,18 +335,67 @@ public class RSQSimRotatedRupVariabilityConfig extends RotatedRupVariabilityConf
 		for (RotationSpec rotation : rotations) {
 			Site site = rotation.site;
 			if (!sites.contains(site)) {
-				anns.add(RuptureRotationUtils.getLocationAnn(0.02, site.getLocation(), Color.BLUE));
+				anns.add(RuptureRotationUtils.getLocationRectAnn(0.02, site.getLocation(), Color.BLUE));
 				sites.add(site);
 			}
 			RSQSimEvent rotated = getRotatedRupture(rotation);
-			if (first == null)
+			Location hypo = RSQSimUtils.getHypocenter(rotated);
+			if (first == null) {
 				first = rotated;
+				
+				// draw a circle at the given distance
+				double distKM = rotation.distance.doubleValue()*0.99;
+				Location siteLoc = site.getLocation();
+				Location topLoc = LocationUtils.location(siteLoc, 0d, distKM);
+				Location botLoc = LocationUtils.location(siteLoc, Math.PI, distKM);
+				Location rightLoc = LocationUtils.location(siteLoc, 0.5*Math.PI, distKM);
+				Location leftLoc = LocationUtils.location(siteLoc, 1.5*Math.PI, distKM);
+				double circleHeight = topLoc.getLatitude() - botLoc.getLatitude();
+				double circleWidth = rightLoc.getLongitude() - leftLoc.getLongitude();
+				// docs say says "upper left", but seems to be lower left corner of framing rectangle
+				double x = siteLoc.getLongitude() - 0.5*circleWidth;
+				double y = siteLoc.getLatitude() - 0.5*circleHeight;
+				Shape shape = new Ellipse2D.Double(x, y, circleWidth, circleHeight);
+				Stroke stroke = new BasicStroke(2f, BasicStroke.CAP_BUTT,
+						BasicStroke.JOIN_BEVEL,0,new float[] {9},0);
+				Color circleColor = new Color(0, 0, 0, 60);
+				XYShapeAnnotation distCircle =  new XYShapeAnnotation(shape, stroke, circleColor, null);
+				anns.add(distCircle);
+				Location distLineLoc = LocationUtils.location(siteLoc, Math.PI/6d, distKM);
+				XYLineAnnotation distLine = new XYLineAnnotation(
+						siteLoc.getLongitude(), siteLoc.getLatitude(),
+						distLineLoc.getLongitude(), distLineLoc.getLatitude(), stroke, circleColor);
+				anns.add(distLine);
+				Location distTextLoc = LocationUtils.location(siteLoc, Math.PI/6d, distKM*0.5);
+				XYTextAnnotation distLabel = new XYTextAnnotation(" "+rotation.distance.intValue()+" km",
+						distTextLoc.getLongitude(), distTextLoc.getLatitude());
+				distLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+				distLabel.setTextAnchor(TextAnchor.TOP_LEFT);
+				anns.add(distLabel);
+				
+//				anns.add(RuptureRotationUtils.getLocationCircleAnn(0.015, hypo, new Color(200, 0, 0)));
+				if (highlightCentroid)
+					anns.add(RuptureRotationUtils.getLocationCircleAnn(
+							0.015, RuptureRotationUtils.calcRuptureCentroid(rotated), new Color(0, 200, 0)));
+			} else {
+				XYPolygonAnnotation rectHypoPoly = new XYPolygonAnnotation(
+						RupturePlotGenerator.star(hypo.getLongitude(), hypo.getLatitude(), 0.0075), new BasicStroke(1f), Color.BLACK, new Color(200, 0, 0, 127));
+				anns.add(rectHypoPoly);
+//				anns.add(RuptureRotationUtils.getLocationCircleAnn(0.008, hypo, new Color(255, 120, 120)));
+				if (highlightCentroid)
+					anns.add(RuptureRotationUtils.getLocationCircleAnn(
+							0.008, RuptureRotationUtils.calcRuptureCentroid(rotated), new Color(0, 200, 0, 127)));
+			}
 			plotElems.addAll(rotated.getAllElements());
 		}
 		
-		if (highlightCentroid) {
-			anns.add(RuptureRotationUtils.getLocationAnn(0.01, RuptureRotationUtils.calcRuptureCentroid(first), Color.GREEN));
-		}
+//		// clear out the element time of first slips so that it won't plot the hypocenter star
+//		for (EventRecord rec : first)
+//			rec.setElementTimeFirstSlips(null);
+		
+//		if (highlightCentroid) {
+//			anns.add(RuptureRotationUtils.getLocationRectAnn(0.01, RuptureRotationUtils.calcRuptureCentroid(first), Color.GREEN));
+//		}
 
 		// add tiny annotations at the extremes to force it to plot everything
 		MinMaxAveTracker latTrack = new MinMaxAveTracker();
@@ -352,9 +412,11 @@ public class RSQSimRotatedRupVariabilityConfig extends RotatedRupVariabilityConf
 		rectangle[2] = new Location(latTrack.getMin(), lonTrack.getMax());
 		rectangle[3] = new Location(latTrack.getMin(), lonTrack.getMin());
 		for (Location loc : rectangle)
-			anns.add(RuptureRotationUtils.getLocationAnn(1e-10, loc, Color.WHITE));
+			anns.add(RuptureRotationUtils.getLocationRectAnn(1e-10, loc, Color.WHITE));
 
 		RupturePlotGenerator.OTHER_ELEM_COLOR = new Color(100, 100, 100);
+		RupturePlotGenerator.HYPO_RADIUS = 0.015;
+		RupturePlotGenerator.HYPO_COLOR = new Color(200, 0, 0);
 		RupturePlotGenerator.writeMapPlot(plotElems, first, null, outputDir, prefix, null, null, null, null, null, null, anns);
 	}
 	
@@ -525,7 +587,7 @@ public class RSQSimRotatedRupVariabilityConfig extends RotatedRupVariabilityConf
 				bbpWrap.run();
 				
 				List<XYAnnotation> anns = new ArrayList<>();
-				anns.add(RuptureRotationUtils.getLocationAnn(0.02, site.getLocation(), Color.BLUE));
+				anns.add(RuptureRotationUtils.getLocationRectAnn(0.02, site.getLocation(), Color.BLUE));
 				RupturePlotGenerator.writeMapPlot(null, rupture, func, outputDir, "event_"+rupture.getID(), null, null, null, null, null, null, anns);
 			}
 		}

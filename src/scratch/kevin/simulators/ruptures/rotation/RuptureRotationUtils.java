@@ -1,6 +1,8 @@
 package scratch.kevin.simulators.ruptures.rotation;
 
 import java.awt.Color;
+import java.awt.Shape;
+import java.awt.geom.Ellipse2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,6 +15,7 @@ import java.util.Random;
 import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
+import org.jfree.chart.annotations.XYShapeAnnotation;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
@@ -439,7 +442,7 @@ public class RuptureRotationUtils {
 			
 			// centroid annotation
 			List<XYAnnotation> anns = new ArrayList<>();
-			anns.add(getLocationAnn(locRectWidth, centroid, Color.BLUE));
+			anns.add(getLocationRectAnn(locRectWidth, centroid, Color.BLUE));
 			
 			List<SimulatorElement> plotElems = new ArrayList<>();
 			double rotAngle = 360d/(double)numRots;
@@ -480,7 +483,7 @@ public class RuptureRotationUtils {
 			
 			// origin annotation
 			List<XYAnnotation> anns = new ArrayList<>();
-			anns.add(getLocationAnn(locRectWidth*10, origin, Color.BLUE));
+			anns.add(getLocationRectAnn(locRectWidth*10, origin, Color.BLUE));
 			
 			// now rotate
 			List<SimulatorElement> plotElems = new ArrayList<>();
@@ -507,7 +510,7 @@ public class RuptureRotationUtils {
 			rectangle[2] = new Location(latTrack.getMin(), lonTrack.getMax());
 			rectangle[3] = new Location(latTrack.getMin(), lonTrack.getMin());
 			for (Location loc : rectangle)
-				anns.add(getLocationAnn(1e-10, loc, Color.WHITE));
+				anns.add(getLocationRectAnn(1e-10, loc, Color.WHITE));
 			
 			RupturePlotGenerator.writeMapPlot(plotElems, event, null, outputDir, "rot_origin_dist_test_"+i, null, null, null, null, null, null, anns);
 		}
@@ -530,7 +533,7 @@ public class RuptureRotationUtils {
 		return minDist;
 	}
 	
-	static XYPolygonAnnotation getLocationAnn(double locRectWidth, Location loc, Color c) {
+	static XYPolygonAnnotation getLocationRectAnn(double locRectWidth, Location loc, Color c) {
 		double[] poly = new double[10];
 		double lat = loc.getLatitude();
 		double lon = loc.getLongitude();
@@ -549,6 +552,17 @@ public class RuptureRotationUtils {
 		poly[8] = ux;
 		poly[9] = uy;
 		return new XYPolygonAnnotation(poly, null, null, c);
+	}
+	
+	static XYShapeAnnotation getLocationCircleAnn(double diameter, Location loc, Color c) {
+		double lat = loc.getLatitude();
+		double lon = loc.getLongitude();
+		
+		// docs say says "upper left", but seems to be lower left corner of framing rectangle
+		double x = lon - 0.5*diameter;
+		double y = lat - 0.5*diameter;
+		Shape shape = new Ellipse2D.Double(x, y, diameter, diameter);
+		return new XYShapeAnnotation(shape, null, null, c);
 	}
 
 }

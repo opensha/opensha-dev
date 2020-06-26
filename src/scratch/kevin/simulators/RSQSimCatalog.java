@@ -452,7 +452,7 @@ public class RSQSimCatalog implements XMLSaveable {
 				"higher res.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.010 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_4983_STITCHED("rundir4983_stitched", "Bruce 4983 (Stitched)", "Bruce Shaw", cal(2020, 4, 27),
-				"Stitched extension of 4983, currently 2 runs",
+				"Stitched extension of 4983, 4 runs",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_4987("bruce/rundir4987", "Bruce 4987", "Bruce Shaw", cal(2020, 4, 29),
 				"VeqMax=4.0; tCausalF=0.63 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.009 a=.001",

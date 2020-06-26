@@ -78,6 +78,10 @@ public class SimulationHazardPlotter<E> {
 			new PlotCurveCharacterstics(PlotLineType.DOTTED_AND_DASHED, 2f, Color.DARK_GRAY)
 	};
 	
+	private static double[] simCurveFractiles = { 0.025, 0.16, 0.5, 0.84, 0.975 };
+	private static PlotCurveCharacterstics simFractileCurveChar = new PlotCurveCharacterstics(
+			PlotLineType.SOLID, 2f, Color.DARK_GRAY);
+	
 	// plotting settings
 	// these should be empty arrays if disabled, not null
 	private int[] hazardCurveRPs = { 1000, 2500, 10000 };
@@ -352,6 +356,46 @@ public class SimulationHazardPlotter<E> {
 		
 		// primary simulation curve
 		addSimulationCurves(funcs, chars, imt, true, true);
+		
+		return plotHazardCurves(outputDir, prefix, site, imt, curveDuration, funcs, chars, null, true);
+	}
+	
+	public File plotSimFractileHazardCurves(File outputDir, String prefix, IMT imt)
+			throws IOException {
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		DiscretizedFunc gmpeCurve = getCalcGMPECurve(imt);
+		
+		// primary GMPE curve
+		gmpeCurve.setName(gmpeRef.getShortName());
+		funcs.add(gmpeCurve);
+		chars.add(gmpeCurveChar);
+		
+		for (int i=0; i<simCurveFractiles.length; i++) {
+			double fractile = simCurveFractiles[i];
+			DiscretizedFunc simCurve = simCalc.calcSimDistributionFractileCurve(
+					site, imt, curveDuration, fractile);
+			if (i == 0) {
+				String str = null;
+				for (double f : simCurveFractiles) {
+					if (str == null)
+						str = "";
+					else
+						str += ",";
+					str += "p"+(float)(f*100d);
+				}
+				simCurve.setName(str);
+			} else {
+				simCurve.setName(null);
+			}
+			
+			funcs.add(simCurve);
+			chars.add(simFractileCurveChar);
+		}
+		
+		// primary simulation curve
+		addSimulationCurves(funcs, chars, imt, false, false);
 		
 		return plotHazardCurves(outputDir, prefix, site, imt, curveDuration, funcs, chars, null, true);
 	}
@@ -941,7 +985,8 @@ public class SimulationHazardPlotter<E> {
 		return pngFile;
 	}
 	
-	public List<String> getCurveLegend(boolean spectra, boolean hasGMPETruncs, boolean hasGMPESigmas, int numGMPESims) {
+	public List<String> getCurveLegend(boolean spectra, boolean hasGMPETruncs,
+			boolean hasGMPESigmas, boolean hasPercentiles, int numGMPESims) {
 		List<String> lines = new ArrayList<>();
 		String typeStr = spectra ? "Spectra" : "Curves";
 		lines.add("**Legend**:");
@@ -951,8 +996,11 @@ public class SimulationHazardPlotter<E> {
 			lines.add("* **Simulation "+typeStr+"** *(truncated below lowest possible y-value)*");
 		lines.add("  * Black Solid Line: "+simCalc.getSimProv().getName());
 		
+		if (hasPercentiles)
+			lines.add("  * Gray Thin Solid Lines: Rupture simulated distribution percentiles");
+		
 		int charIndex = 0;
-		for (int i=0; i<compCalcs.size(); i++) {
+		for (int i=0; !hasPercentiles && i<compCalcs.size(); i++) {
 			SimulationHazardCurveCalc<?> compCalc = compCalcs.get(i);
 			PlotLineType type;
 			String colorStr;

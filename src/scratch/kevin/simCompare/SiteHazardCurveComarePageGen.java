@@ -257,7 +257,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		
 		lines.add("## Hazard Spectra");
 		lines.add(topLink); lines.add("");
-		lines.addAll(curvePlotter.getCurveLegend(true, true, true, 0));
+		lines.addAll(curvePlotter.getCurveLegend(true, true, true, false, 0));
 		lines.add("");
 		
 		List<Double> saPeriodList = new ArrayList<>();
@@ -330,11 +330,20 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		lines.add("## Hazard Curves");
 		lines.add(topLink); lines.add("");
 		
-		lines.addAll(curvePlotter.getCurveLegend(false, true, true, 0));
+		lines.addAll(curvePlotter.getCurveLegend(false, true, true, false, 0));
 		lines.add("");
 		
 		GMPESimulationBasedProvider<E> gmpeSimProv = new GMPESimulationBasedProvider<>(
 				simProv, comps, gmpeRef.getShortName()+" Simulatios", imts);
+		
+		boolean hasMultiple = true;
+		for (E rup : simProv.getRupturesForSite(site)) {
+			hasMultiple = hasMultiple && simProv.getNumSimulations(site, rup) > 1;
+			if (!hasMultiple)
+				break;
+		}
+		
+		System.out.println("Have multiple sims per rup? "+hasMultiple);
 		
 		for (IMT imt : imts) {
 			System.out.println("Calculating primary hazard curve");
@@ -349,10 +358,25 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			lines.add("![Hazard Curve]("+resourcesDir.getName()+"/"+prefix+".png)");
 			lines.add("");
 			
+			if (hasMultiple) {
+				lines.add("#### "+imt.getDisplayName()+" Percentile Curves");
+				lines.add(topLink); lines.add("");
+				lines.addAll(curvePlotter.getCurveLegend(false, false, false, true, 0));
+				lines.add("");
+				
+				String percentilePrefix = prefix+"_percentiles";
+				
+				if (replotCurves || !new File(resourcesDir, percentilePrefix+".png").exists())
+					curvePlotter.plotSimFractileHazardCurves(resourcesDir, percentilePrefix, imt);
+				
+				lines.add("![Hazard Curve]("+resourcesDir.getName()+"/"+percentilePrefix+".png)");
+				lines.add("");
+			}
+			
 			lines.add("#### "+imt.getDisplayName()+" GMPE-Sim Comparison");
 			lines.add(topLink); lines.add("");
 			int numGMPESims = 100;
-			lines.addAll(curvePlotter.getCurveLegend(false, false, false, numGMPESims));
+			lines.addAll(curvePlotter.getCurveLegend(false, false, false, false, numGMPESims));
 			lines.add("");
 			
 			String gmpeSimPrefix = prefix+"_gmpe_sims";

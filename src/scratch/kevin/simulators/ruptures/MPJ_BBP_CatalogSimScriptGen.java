@@ -65,10 +65,10 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
-		String bbpDataDir = "${TMPDIR}";
+		String bbpDataDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR;
 		String nodeScratchDir = null;
-		String bbpCopyParentDir = "/staging/pjm/kmilner";
-		String nodeGFDir = "${TMPDIR}/gfs";
+		String bbpCopyParentDir = USC_HPCC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
+		String nodeGFDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
 		File bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
 //		String sharedScratchDir = "${SCRATCHDIR}";
 		String sharedScratchDir = null;

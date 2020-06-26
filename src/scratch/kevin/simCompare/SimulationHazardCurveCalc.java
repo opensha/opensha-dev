@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -17,7 +18,9 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SignificantDurationParam;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 
@@ -72,7 +75,12 @@ public class SimulationHazardCurveCalc<E> {
 	}
 	
 	public DiscretizedFunc calc(Site site, IMT imt, double curveDuration) throws IOException {
-		return calc(site, imt, curveDuration, null);
+		return calc(site, imt, curveDuration, null, null);
+	}
+	
+	public DiscretizedFunc calcSimDistributionFractileCurve(Site site, IMT imt,
+			double curveDuration, double fractile) throws IOException {
+		return calc(site, imt, curveDuration, null, fractile);
 	}
 	
 	public Map<String, DiscretizedFunc> calcSourceContributionCurves(Site site, IMT imt, double curveDuration,
@@ -80,13 +88,13 @@ public class SimulationHazardCurveCalc<E> {
 		Map<String, DiscretizedFunc> ret = new HashMap<>();
 		
 		for (String sourceName : sourceRupContribFracts.rowKeySet())
-			ret.put(sourceName, calc(site, imt, curveDuration, sourceRupContribFracts.row(sourceName)));
+			ret.put(sourceName, calc(site, imt, curveDuration, sourceRupContribFracts.row(sourceName), null));
 		
 		return ret;
 	}
 	
-	private DiscretizedFunc calc(Site site, IMT imt, double curveDuration, Map<E, Double> rupRateScalars)
-			throws IOException {
+	private DiscretizedFunc calc(Site site, IMT imt, double curveDuration,
+			Map<E, Double> rupRateScalars, Double fractile) throws IOException {
 		// annual rate curve
 		DiscretizedFunc curve = xValsMap.get(imt.getParamName()).deepClone();
 		for (int i=0; i<curve.size(); i++)
@@ -113,13 +121,27 @@ public class SimulationHazardCurveCalc<E> {
 				allRatesSame = allRatesSame && firstRate == rupRate;
 //			minRate = Math.min(rupRate, minRate);
 			List<Double> vals = simProv.getValues(site, rupture, imt);
-			for (int j=0; j<vals.size(); j++) {
-				double simRate = simProv.getIndividualSimulationRate(rupture, rupRate, j, vals.size());
-				double val = vals.get(j);
+			if (fractile == null) {
+				for (int j=0; j<vals.size(); j++) {
+					double simRate = simProv.getIndividualSimulationRate(rupture, rupRate, j, vals.size());
+					double val = vals.get(j);
+					for (int i=0; i<curve.size(); i++) {
+						if (curve.getX(i) <= val) {
+							numExceed[i]++;
+							curve.set(i, curve.getY(i)+simRate);
+						}
+					}
+					numRuptures++;
+				}
+			} else {
+				Preconditions.checkState(vals.size() > 1,
+						"Must have multiple values per rupture for fractile curves");
+				double[] array = Doubles.toArray(vals);
+				double val = StatUtils.percentile(array, fractile*100d);
 				for (int i=0; i<curve.size(); i++) {
 					if (curve.getX(i) <= val) {
 						numExceed[i]++;
-						curve.set(i, curve.getY(i)+simRate);
+						curve.set(i, curve.getY(i)+rupRate);
 					}
 				}
 				numRuptures++;

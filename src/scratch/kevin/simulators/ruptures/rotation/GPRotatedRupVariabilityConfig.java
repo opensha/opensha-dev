@@ -249,7 +249,7 @@ public class GPRotatedRupVariabilityConfig extends RotatedRupVariabilityConfig<G
 		for (RotationSpec rotation : rotations) {
 			Site site = rotation.site;
 			if (!sites.contains(site)) {
-				anns.add(RuptureRotationUtils.getLocationAnn(0.02, site.getLocation(), Color.BLUE));
+				anns.add(RuptureRotationUtils.getLocationRectAnn(0.02, site.getLocation(), Color.BLUE));
 				sites.add(site);
 			}
 			GPRotatedRupture rotated = getRotatedRupture(rotation);
@@ -264,7 +264,7 @@ public class GPRotatedRupVariabilityConfig extends RotatedRupVariabilityConfig<G
 		}
 
 		if (highlightCentroid) {
-			anns.add(RuptureRotationUtils.getLocationAnn(0.01, first.centroid, Color.GREEN));
+			anns.add(RuptureRotationUtils.getLocationRectAnn(0.01, first.centroid, Color.GREEN));
 		}
 
 		// add tiny annotations at the extremes to force it to plot everything
@@ -282,7 +282,7 @@ public class GPRotatedRupVariabilityConfig extends RotatedRupVariabilityConfig<G
 		rectangle[2] = new Location(latTrack.getMin(), lonTrack.getMax());
 		rectangle[3] = new Location(latTrack.getMin(), lonTrack.getMin());
 		for (Location loc : rectangle)
-			anns.add(RuptureRotationUtils.getLocationAnn(1e-10, loc, Color.WHITE));
+			anns.add(RuptureRotationUtils.getLocationRectAnn(1e-10, loc, Color.WHITE));
 
 		RupturePlotGenerator.OTHER_ELEM_COLOR = new Color(100, 100, 100);
 		RupturePlotGenerator.writeMapPlot(plotElems, null, null, outputDir, prefix, null, null, null, null, null, null, anns);

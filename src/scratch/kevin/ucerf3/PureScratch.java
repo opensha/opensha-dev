@@ -1725,13 +1725,20 @@ public class PureScratch {
 	private static void test67() {
 		System.out.println(new CaliforniaRegions.RELM_TESTING().contains(new Location(38.1589, -117.8749)));
 	}
+	
+	private static void test68() throws IOException {
+		List<FaultSectionPrefData> sects31 = FaultModels.FM3_1.fetchFaultSections();
+		List<FaultSectionPrefData> sects32 = FaultModels.FM3_1.fetchFaultSections();
+		FaultSectionDataWriter.writeSectionsToFile(sects31, null, new File("/tmp/fm_3_1.txt"), false);
+		FaultSectionDataWriter.writeSectionsToFile(sects32, null, new File("/tmp/fm_3_2.txt"), false);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test67();
+		test68();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

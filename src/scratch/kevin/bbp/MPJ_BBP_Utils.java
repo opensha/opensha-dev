@@ -43,7 +43,7 @@ public class MPJ_BBP_Utils {
 		@Override
 		protected synchronized void batchProcessedAsync(int[] batch, int processIndex) {
 			debug("running async post-batch hook for process "+processIndex+". "+getCountsString());
-			debug("async post-batch extimates: "+getRatesString());
+			debug("async post-batch estimates: "+getRatesString());
 			try {
 				if (out == null && zipFile != null) {
 					ipZipFile = new File(zipFile.getParentFile(), "partial_"+zipFile.getName());

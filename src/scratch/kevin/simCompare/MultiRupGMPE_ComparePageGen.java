@@ -823,7 +823,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			lines.add("## Hazard Curves");
 			lines.add(topLink); lines.add("");
 //			lines.addAll(getCurveLegend(simName, gmpeRef.getShortName(), gmpe_truncs, gmpe_fixed_sigmas, 0));
-			lines.addAll(curvePlotters.get(0).getCurveLegend(false, true, true, 0));
+			lines.addAll(curvePlotters.get(0).getCurveLegend(false, true, true, false, 0));
 			lines.add("");
 			table = MarkdownUtils.tableBuilder();
 			table.initNewLine().addColumn("Site");

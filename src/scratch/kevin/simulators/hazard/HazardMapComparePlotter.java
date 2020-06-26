@@ -364,6 +364,7 @@ public class HazardMapComparePlotter {
 					System.out.println("Writing CSV to "+csvFile.getAbsolutePath());
 					OutputStream gzFileOut = new GZIPOutputStream(new FileOutputStream(csvFile));
 					csv.writeToStream(gzFileOut);
+					gzFileOut.close();
 					
 					plotMaps(resourcesDir, "map_"+durationLabel+"_"+catalogFileName, rsqsimData, region,
 							(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), catalogName+", "+durationLabel+", "+imtLabel, hazardCPT, false);

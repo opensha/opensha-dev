@@ -41,7 +41,7 @@ public class MPJ_BBP_RupGenSimScriptGen {
 		String queue = "scec";
 		int mins = 10*60;
 		boolean splitSites = true;
-		String bbpDataDir = "${TMPDIR}";
+		String bbpDataDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR;
 		
 		int numSims = threads*nodes;
 		if (splitSites)

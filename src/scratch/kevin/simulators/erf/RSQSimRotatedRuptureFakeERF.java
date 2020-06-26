@@ -22,6 +22,7 @@ import org.opensha.commons.exceptions.ParameterException;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.param.impl.IntegerParameter;
 import org.opensha.commons.util.ExceptionUtils;
@@ -564,6 +565,10 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 	}
 	
 	private static File copyCatalogDir(File catDir, File scratchDir) throws IOException {
+		if (!scratchDir.exists()) {
+			scratchDir.mkdir();
+			MPJ_BBP_Utils.waitOnDir(scratchDir, 10, 2000);
+		}
 		File destDir = new File(scratchDir, catDir.getName());
 		if (!destDir.exists()) {
 			destDir.mkdir();
@@ -634,7 +639,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 			
 			if (mpj) {
 				// copy catalog data over to shared scratch
-				File sharedScratch = new File("/staging/pjm/kmilner/catalogs");
+				File sharedScratch = new File(USC_HPCC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner/catalogs");
 				if (rank == 0)
 					copyCatalogDir(catalogDir, sharedScratch);
 				MPI.COMM_WORLD.Barrier();

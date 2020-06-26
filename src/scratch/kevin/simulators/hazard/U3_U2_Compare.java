@@ -88,6 +88,7 @@ public class U3_U2_Compare {
 			System.out.println("Writing CSV to "+csvFile.getAbsolutePath());
 			OutputStream gzFileOut = new GZIPOutputStream(new FileOutputStream(csvFile));
 			csv.writeToStream(gzFileOut);
+			gzFileOut.close();
 			
 			HazardMapComparePlotter.plotMaps(outputDir, "map_"+durationLabel+"_"+catalogFileName, rsqsimData, region,
 					(double)hazardCPT.getMinValue(), (double)hazardCPT.getMaxValue(), catalogName+", "+durationLabel+", "+imtLabel, hazardCPT, false);

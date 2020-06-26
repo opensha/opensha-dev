@@ -208,31 +208,38 @@ class RupSpectraPageGen {
 		lines.add("## Fault List");
 		lines.add(topLink); lines.add("");
 		TableBuilder table = MarkdownUtils.tableBuilder();
-		table.addLine("Section Name", "Area Ruptured", "Patches Ruptured", "Moment", "Equiv. Mag", "Max Slip");
+		table.addLine("Section Name", "Area Ruptured", "Patches Ruptured", "Moment",
+				"Equiv. Mag", "Max Slip", "Time First Slip");
 		Map<String, Double> sectAreas = new HashedMap<>();
 		Map<String, Integer> sectPatchCounts = new HashMap<>();
 		Map<String, Double> sectMoments = new HashMap<>();
 		Map<String, Double> sectMaxSlips = new HashMap<>();
+		Map<String, Double> sectTimeFirsts = new HashMap<>();
 		List<SimulatorElement> elems = event.getAllElements();
 		double[] elemSlips = event.getAllElementSlips();
+		double[] elemTimes = event.getAllElementTimes();
+		double eventTime = event.getTime();
 		List<FaultSectionPrefData> u3SubSects = catalog.getU3SubSects();
 		int subSectOffset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), u3SubSects);
 		for (int i=0; i<elems.size(); i++) {
 			SimulatorElement elem = elems.get(i);
 			String fault = u3SubSects.get(elem.getSectionID()-subSectOffset).getParentSectionName();
-			Double totArea, totMoment, maxSlip;
+			Double totArea, totMoment, maxSlip, timeFirst;
 			Integer patchCount;
 			if (sectAreas.containsKey(fault)) {
 				totArea = sectAreas.get(fault);
 				totMoment = sectMoments.get(fault);
 				patchCount = sectPatchCounts.get(fault);
 				maxSlip = sectMaxSlips.get(fault);
+				timeFirst = sectTimeFirsts.get(fault);
 			} else {
 				totArea = 0d;
 				totMoment = 0d;
 				patchCount = 0;
 				maxSlip = 0d;
+				timeFirst = Double.POSITIVE_INFINITY;
 			}
+			sectTimeFirsts.put(fault, Math.min(timeFirst, elemTimes[i] - eventTime));
 			sectAreas.put(fault, totArea + elem.getArea());
 			sectMoments.put(fault, totMoment + FaultMomentCalc.getMoment(elem.getArea(), elemSlips[i]));
 			sectPatchCounts.put(fault, patchCount + 1);
@@ -264,6 +271,7 @@ class RupSpectraPageGen {
 			sectPatchCounts.put(totalName, totalPatches);
 			sectMoments.put(totalName, totalMoment);
 			sectMaxSlips.put(totalName, maxSlips);
+			sectTimeFirsts.put(totalName, 0d);
 		}
 		for (String fault : faultNames) {
 			table.initNewLine().addColumn(fault);
@@ -274,6 +282,7 @@ class RupSpectraPageGen {
 			double mag = MagUtils.momentToMag(moment);
 			table.addColumn("M"+twoDigitsDF.format(mag));
 			table.addColumn(twoDigitsDF.format(sectMaxSlips.get(fault))+" m");
+			table.addColumn(twoDigitsDF.format(sectTimeFirsts.get(fault))+" s");
 			table.finalizeLine();
 		}
 		lines.addAll(table.build());
@@ -991,6 +1000,9 @@ class RupSpectraPageGen {
 
 		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
 		int eventID = 1499589;
+
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
+//		int eventID = 3092204;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = true;

@@ -4891,7 +4891,9 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		}
 		
 		File outFile = new File(resourcesDir, "sa_"+site.getName()+"_m"+magnitude.floatValue()+"_"+distance+"km.csv.gz");
-		csv.writeToStream(new GZIPOutputStream(new FileOutputStream(outFile)));
+		GZIPOutputStream gz = new GZIPOutputStream(new FileOutputStream(outFile));
+		csv.writeToStream(gz);
+		gz.close();
 		
 		return outFile;
 	}

@@ -44,10 +44,10 @@ public class HazardCurveSigmaDependence {
 		erf.getTimeSpan().setDuration(1d);
 		erf.updateForecast();
 
-//		boolean fixed = true;
-//		double[] sigmas = {0.7, 0.5, 0.3};
-		boolean fixed = false;
-		double[] sigmas = { 1d, 0.66, 0.33};
+		boolean fixed = true;
+		double[] sigmas = {0.7, 0.5, 0.3};
+//		boolean fixed = false;
+//		double[] sigmas = { 1d, 0.66, 0.33};
 		
 		ModAttenuationRelationship modAttenRel = new ModAttenuationRelationship(AttenRelRef.ASK_2014,
 				fixed ? ModAttenRelRef.FIXED_STD_DEV : ModAttenRelRef.SIMPLE_SCALE);

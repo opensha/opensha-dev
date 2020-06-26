@@ -202,12 +202,37 @@ public abstract class RSQSimRotatedRupVariabilityPageGen extends RotatedRupVaria
 	@Override
 	protected void plotExample(File resourcesDir, String prefix, double distance, List<Quantity> variedQuantities)
 			throws IOException {
-		List<Site> sites = new ArrayList<>();
 		
 		Double minMag = Double.POSITIVE_INFINITY;
 		for (Double mag : magEventIDs.keySet())
 			minMag = Double.min(minMag, mag);
-		RSQSimEvent exampleRupture = getEvent(magEventIDs.get(minMag).get(0));
+		
+		// choose event with the least difference between Rrup and Rjb
+		double minAbsDistDiff = Double.POSITIVE_INFINITY;
+		RSQSimEvent exampleRupture = null;
+		for (Integer eventID : magEventIDs.get(minMag)) {
+			RSQSimEvent event = getEvent(eventID);
+			Location centroid = RuptureRotationUtils.calcRuptureCentroid(event);
+			event = RuptureRotationUtils.getInitiallyOriented( catalog, event, centroid);
+			Location testLoc = LocationUtils.location(centroid, Math.PI, 100d);
+			double rRup = RuptureRotationUtils.calcMinDist(testLoc, event, false);
+			double rJB = RuptureRotationUtils.calcMinDist(testLoc, event, true);
+			double diff = Math.abs(rRup - rJB);
+//			System.out.println("Testing event "+eventID+": rJB="+(float)rJB+", rRup="+(float)rRup+", diff="+(float)diff);
+			if (diff < minAbsDistDiff) {
+				// check that the hypcoenter isn't on top of the centroid
+				Location hypo = RSQSimUtils.getHypocenter(event);
+				double dist = LocationUtils.horzDistance(centroid, hypo);
+				if (dist > 5d) {
+					exampleRupture = event;
+					minAbsDistDiff = diff;
+				}
+			}
+		}
+//		System.out.println("Went with "+exampleRupture.getID()+" with diff="+(float)minAbsDistDiff);
+		
+//		RSQSimEvent exampleRupture = getEvent(magEventIDs.get(minMag).get(0));
+		List<Site> sites = new ArrayList<>();
 		sites.add(this.sites.get(0));
 		List<RSQSimEvent> ruptures = new ArrayList<>();
 		ruptures.add(exampleRupture);

@@ -159,10 +159,10 @@ class MPJ_BBP_RuptureScriptsGen {
 			threads = 20;
 			queue = "scec";
 			remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
-			bbpDataDir = "${TMPDIR}";
+			bbpDataDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR;
 			nodeScratchDir = null;
-			nodeGFDir = "${TMPDIR}/gfs";
-			bbpCopyParentDir = "/staging/pjm/kmilner";
+			nodeGFDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
+			bbpCopyParentDir = USC_HPCC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
 			bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
 //			sharedScratchDir = "${SCRATCHDIR}";
 			sharedScratchDir = null;
