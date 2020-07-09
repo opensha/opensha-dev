@@ -24,7 +24,22 @@ public class U3_EAL_LogicTreeBranch extends LogicTreeBranch {
 
 	public U3_EAL_LogicTreeBranch(LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
 			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30, File fssIndexBinFile, File griddedBinFile, File tractDir) {
-		super(build(tiBranch, probModel, gmm, gmmEpi, vs30));
+		super(build(tiBranch, probModel, gmm, gmmEpi, vs30, null));
+		this.tiBranch = tiBranch;
+		this.fssIndexBinFile = fssIndexBinFile;
+		this.griddedBinFile = griddedBinFile;
+		this.tractDir = tractDir;
+	}
+
+	public U3_EAL_LogicTreeBranch(LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
+			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30, U3_EAL_GM_Variability gmVar) {
+		this(tiBranch, probModel, gmm, gmmEpi, vs30, gmVar, null, null, null);
+	}
+
+	public U3_EAL_LogicTreeBranch(LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
+			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30, U3_EAL_GM_Variability gmVar,
+			File fssIndexBinFile, File griddedBinFile, File tractDir) {
+		super(build(tiBranch, probModel, gmm, gmmEpi, vs30, gmVar));
 		this.tiBranch = tiBranch;
 		this.fssIndexBinFile = fssIndexBinFile;
 		this.griddedBinFile = griddedBinFile;
@@ -32,7 +47,7 @@ public class U3_EAL_LogicTreeBranch extends LogicTreeBranch {
 	}
 	
 	private static List<LogicTreeBranchNode<? extends Enum<?>>> build(LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
-			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30) {
+			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30, U3_EAL_GM_Variability gmVar) {
 		List<LogicTreeBranchNode<? extends Enum<?>>> branches = new ArrayList<>();
 		for (LogicTreeBranchNode<? extends Enum<?>> node : tiBranch)
 			branches.add(node);
@@ -40,6 +55,8 @@ public class U3_EAL_LogicTreeBranch extends LogicTreeBranch {
 		branches.add(gmm);
 		branches.add(gmmEpi);
 		branches.add(vs30);
+		if (gmVar != null)
+			branches.add(gmVar);
 		return branches;
 	}
 	

@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,7 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
+import java.util.zip.ZipFile;
 
 import javax.swing.JComponent;
 import javax.swing.JTextArea;
@@ -42,6 +45,7 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 import org.dom4j.DocumentException;
 import org.jfree.data.Range;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -1732,13 +1736,30 @@ public class PureScratch {
 		FaultSectionDataWriter.writeSectionsToFile(sects31, null, new File("/tmp/fm_3_1.txt"), false);
 		FaultSectionDataWriter.writeSectionsToFile(sects32, null, new File("/tmp/fm_3_2.txt"), false);
 	}
+	
+	private static void test69() throws ZipException, IOException {
+		File zipFile = new File("/home/kevin/OpenSHA/UCERF3/fss_csvs/full_model_csvs.zip");
+		ZipFile zip = new ZipFile(zipFile);
+		
+		Enumeration<? extends ZipEntry> entriesEnum = zip.entries();
+		
+		while (entriesEnum.hasMoreElements()) {
+			ZipEntry entry = entriesEnum.nextElement();
+			if (!entry.getName().contains("FM3_1"))
+				continue;
+			CSVFile<String> csv = CSVFile.readStream(zip.getInputStream(entry), true);
+			if (csv.getNumRows() < 253707)
+				System.out.println("Bad CSV? "+entry.getName()+" has "+csv.getNumRows());
+		}
+		zip.close();
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test68();
+		test69();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
