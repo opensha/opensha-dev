@@ -1,5 +1,6 @@
 package scratch.kevin.simulators.ruptures.distCalc;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.util.ComparablePairing;
+import org.opensha.sha.earthquake.FocalMechanism;
 import org.opensha.sha.faultSurface.cache.SurfaceDistances;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -154,5 +156,17 @@ public class SimRuptureDistCalcUtils {
 		
 		return cumulativeFunc;
 	}
+	
+//	public static double calcAveStrikeForDistX(SimulatorEvent event) {
+//		ArrayList<SimulatorElement> elems = event.getAllElements();
+//		double[] slips = event.getAllElementSlips();
+//		
+//		for (int i=0; i<elems.size(); i++) {
+//			SimulatorElement elem = elems.get(i);
+//			double moment = FaultMomentCalc.getMoment(elem.getArea(), slips[i]);
+//			
+//			elem.getFocalMechanism();
+//		}
+//	}
 
 }

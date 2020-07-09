@@ -778,6 +778,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		String multiFaultLink = null;
 		String extremeEventLink = null;
 		String parentMFDLink = null;
+		String distCalcLink = null;
 		
 		File[] dirList = dir.listFiles();
 		Arrays.sort(dirList, new FileNameComparator());
@@ -846,6 +847,8 @@ public class RSQSimCatalog implements XMLSaveable {
 				partBSummaryLink = name;
 			} else if (name.equals("parent_sect_mfds")) {
 				parentMFDLink = name;
+			} else if (name.equals("dist_method_comparisons")) {
+				distCalcLink = name;
 			}
 		}
 		
@@ -878,6 +881,13 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add(topLink);
 			lines.add("");
 			lines.add("[Parent Section MFDs here]("+parentMFDLink+"/)");
+		}
+		if (distCalcLink != null) {
+			lines.add("");
+			lines.add("## Distance Calculation Method Comparisons");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[Distance Calculation Methods here]("+distCalcLink+"/)");
 		}
 		if (extremeEventLink != null) {
 			lines.add("");
