@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -35,15 +36,15 @@ public class CoulombImperialMappingFix {
 		for (FaultModels fm : fms) {
 			DeformationModelFetcher fetch = new DeformationModelFetcher(
 					fm, DeformationModels.GEOLOGIC, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1);
-			List<FaultSectionPrefData> origSubSects = fetch.getSubSectionList();
+			List<? extends FaultSection> origSubSects = fetch.getSubSectionList();
 			
-			List<FaultSectionPrefData> newSubSects = Lists.newArrayList();
+			List<FaultSection> newSubSects = Lists.newArrayList();
 			// now remap sections
 			int origTolayIndex = -1;
 			int origTolayNum = 0;
 			int newSectIndex = 0;
 			for (int i=0; i<origSubSects.size(); i++) {
-				FaultSectionPrefData sect = origSubSects.get(i);
+				FaultSection sect = origSubSects.get(i);
 				if (sect.getParentSectionId() == tolayParent) {
 					if (origSubSects.get(i-1).getParentSectionId() != 97) {
 						// this means first tolay

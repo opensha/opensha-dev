@@ -31,6 +31,7 @@ import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -131,7 +132,7 @@ public class BayAreaFactSheetCalc {
 				Map<Integer, String> parentNamesMap = Maps.newHashMap();
 				
 				Map<Integer, List<Integer>> subSectsInRegion = Maps.newHashMap();
-				for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+				for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 					for (Location loc : sect.getFaultTrace()) {
 						if (reg.contains(loc)) {
 							List<Integer> subSects = subSectsInRegion.get(sect.getParentSectionId());

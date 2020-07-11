@@ -26,6 +26,7 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.calc.recurInterval.BPT_DistCalc;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -46,7 +47,7 @@ public class U3StyleNormalizedRuptureRecurrenceIntervalPlot extends AbstractPlot
 	private double overallMinMag;
 	
 	private RSQSimSubSectionMapper mapper;
-	private List<FaultSectionPrefData> subSects;
+	private List<? extends FaultSection> subSects;
 	private double[] subSectPrevTimes;
 
 	private Map<Double, List<RuptureRecord>> magRecords;

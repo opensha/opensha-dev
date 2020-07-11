@@ -12,6 +12,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.SimpleFaultData;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 
@@ -27,26 +28,26 @@ public class ScottTestRuptures {
 		List<Integer> sectIndexes = rupSet.getSectionsIndicesForRup(rupID);
 		
 		// bin them by common parents
-		ArrayList<ArrayList<FaultSectionPrefData>> binnedByParent =
-				new ArrayList<ArrayList<FaultSectionPrefData>>();
-		binnedByParent.add(new ArrayList<FaultSectionPrefData>());
+		ArrayList<ArrayList<FaultSection>> binnedByParent =
+				new ArrayList<>();
+		binnedByParent.add(new ArrayList<>());
 		
 		for (int sectIndex : sectIndexes) {
-			FaultSectionPrefData sect = rupSet.getFaultSectionData(sectIndex);
-			ArrayList<FaultSectionPrefData> curList = binnedByParent.get(binnedByParent.size()-1);
+			FaultSection sect = rupSet.getFaultSectionData(sectIndex);
+			ArrayList<FaultSection> curList = binnedByParent.get(binnedByParent.size()-1);
 			if (!curList.isEmpty() &&
 					curList.get(curList.size()-1).getParentSectionId() != sect.getParentSectionId()) {
 				// this means that we have a previous list, and it's parent is different.
-				curList = new ArrayList<FaultSectionPrefData>();
+				curList = new ArrayList<>();
 				binnedByParent.add(curList);
 			}
 			curList.add(sect);
 		}
 		
 		ArrayList<EvenlyGriddedSurface> surfs = new ArrayList<EvenlyGriddedSurface>();
-		for (ArrayList<FaultSectionPrefData> sects : binnedByParent) {
+		for (ArrayList<FaultSection> sects : binnedByParent) {
 			ArrayList<SimpleFaultData> sfds = new ArrayList<SimpleFaultData>();
-			for (FaultSectionPrefData sect : sects)
+			for (FaultSection sect : sects)
 				sfds.add(sect.getSimpleFaultData(false));
 			SimpleFaultData sfd = SimpleFaultData.getCombinedSimpleFaultData(sfds);
 			StirlingGriddedSurface surf = new StirlingGriddedSurface(sfds, gridSpacing);
@@ -62,17 +63,17 @@ public class ScottTestRuptures {
 		List<Integer> sectIndexes = rupSet.getSectionsIndicesForRup(rupID);
 		
 		// bin them by common parents
-		ArrayList<ArrayList<FaultSectionPrefData>> binnedByParent =
-				new ArrayList<ArrayList<FaultSectionPrefData>>();
-		binnedByParent.add(new ArrayList<FaultSectionPrefData>());
+		ArrayList<ArrayList<FaultSection>> binnedByParent =
+				new ArrayList<ArrayList<FaultSection>>();
+		binnedByParent.add(new ArrayList<FaultSection>());
 		
 		for (int sectIndex : sectIndexes) {
-			FaultSectionPrefData sect = rupSet.getFaultSectionData(sectIndex);
-			ArrayList<FaultSectionPrefData> curList = binnedByParent.get(binnedByParent.size()-1);
+			FaultSection sect = rupSet.getFaultSectionData(sectIndex);
+			ArrayList<FaultSection> curList = binnedByParent.get(binnedByParent.size()-1);
 			if (!curList.isEmpty() &&
 					curList.get(curList.size()-1).getParentSectionId() != sect.getParentSectionId()) {
 				// this means that we have a previous list, and it's parent is different.
-				curList = new ArrayList<FaultSectionPrefData>();
+				curList = new ArrayList<FaultSection>();
 				binnedByParent.add(curList);
 			}
 			curList.add(sect);
@@ -80,11 +81,11 @@ public class ScottTestRuptures {
 		
 		ArrayList<EvenlyGriddedSurface> surfs = new ArrayList<EvenlyGriddedSurface>();
 		ArrayList<Double> rakes = new ArrayList<Double>();
-		for (ArrayList<FaultSectionPrefData> sects : binnedByParent) {
+		for (ArrayList<FaultSection> sects : binnedByParent) {
 			Preconditions.checkState(!sects.isEmpty());
 			ArrayList<SimpleFaultData> sfds = new ArrayList<SimpleFaultData>();
 			ArrayList<Double> parentRakes = new ArrayList<Double>();
-			for (FaultSectionPrefData sect : sects) {
+			for (FaultSection sect : sects) {
 				sfds.add(sect.getSimpleFaultData(false));
 				parentRakes.add(sect.getAveRake());
 			}

@@ -24,6 +24,7 @@ import org.opensha.commons.util.threads.ThreadedTaskComputer;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
@@ -57,7 +58,7 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 	private Map<FaultModels, List<double[]>> charFactorsMap;
 	private Map<FaultModels, List<Double>> weightsMap;
 	
-	private transient ConcurrentMap<FaultModels, List<FaultSectionPrefData>> subSectsMap;
+	private transient ConcurrentMap<FaultModels, List<? extends FaultSection>> subSectsMap;
 	
 	private transient List<LogicTreeBranch> branches;
 	
@@ -246,7 +247,7 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 	}
 	
 	private static void writeCSV(File outputFile, List<double[]> factors, double[] weights,
-			List<FaultSectionPrefData> subSects) throws IOException {
+			List<? extends FaultSection> subSects) throws IOException {
 		CSVFile<String> csv = new CSVFile<String>(true);
 		
 //		mean, stdDev, stdDevOfMean, median, and 0.05 and 0.95 fractiles

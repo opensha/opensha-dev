@@ -34,6 +34,7 @@ import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.ElementMagRangeDescription;
@@ -365,7 +366,7 @@ public class TimeDepFSS_ERF_Simulator_Test {
 	static FaultSystemSolution combineIdenticalRups(FaultSystemSolution orig) {
 		FaultSystemRupSet origRupSet = orig.getRupSet();
 		
-		List<FaultSectionPrefData> faultSectionData = origRupSet.getFaultSectionDataList();
+		List<? extends FaultSection> faultSectionData = origRupSet.getFaultSectionDataList();
 		double[] sectSlipRates = origRupSet.getSlipRateForAllSections();
 		double[] sectSlipRateStdDevs = origRupSet.getSlipRateStdDevForAllSections();
 		double[] sectAreas = origRupSet.getAreaForAllSections();

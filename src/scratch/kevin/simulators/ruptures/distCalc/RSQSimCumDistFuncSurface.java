@@ -8,6 +8,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.faultSurface.CompoundSurface;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.simulators.RSQSimEvent;
 
@@ -21,19 +22,20 @@ public class RSQSimCumDistFuncSurface extends CompoundSurface {
 	private Scalar scalar;
 	private double threshold;
 
-	public RSQSimCumDistFuncSurface(RSQSimEvent event, Scalar scalar, double threshold, List<FaultSectionPrefData> subSects) {
+	public RSQSimCumDistFuncSurface(RSQSimEvent event, Scalar scalar, double threshold,
+			List<? extends FaultSection> subSects) {
 		super(buildSurfs(subSects));
 		this.event = event;
 		this.scalar = scalar;
 		this.threshold = threshold;
 	}
 	
-	private static List<RuptureSurface> buildSurfs(List<FaultSectionPrefData> subSects) {
+	private static List<RuptureSurface> buildSurfs(List<? extends FaultSection> subSects) {
 		double gridSpacing = 1d;
 
 		List<RuptureSurface> rupSurfs = new ArrayList<>();
-		for (FaultSectionPrefData sect : subSects)
-			rupSurfs.add(sect.getStirlingGriddedSurface(gridSpacing, false, false));
+		for (FaultSection sect : subSects)
+			rupSurfs.add(sect.getFaultSurface(gridSpacing, false, false));
 		return rupSurfs;
 	}
 

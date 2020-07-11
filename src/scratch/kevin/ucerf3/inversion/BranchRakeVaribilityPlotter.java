@@ -12,6 +12,7 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -44,7 +45,7 @@ public class BranchRakeVaribilityPlotter {
 		for (FaultModels fm : FaultModels.values()) {
 			if (fm == FaultModels.FM2_1)
 				continue;
-			List<FaultSectionPrefData> sects = fm.fetchFaultSections();
+			List<FaultSection> sects = fm.fetchFaultSections();
 			
 			List<Map<Integer, DeformationSection>> dmSectsMaps = Lists.newArrayList();
 			
@@ -65,7 +66,7 @@ public class BranchRakeVaribilityPlotter {
 			
 			double maxMaxDiff = 0;
 			
-			for (FaultSectionPrefData sect : sects) {
+			for (FaultSection sect : sects) {
 				Integer sectID = sect.getSectionId();
 				
 				int minis = sect.getFaultTrace().size()-1;

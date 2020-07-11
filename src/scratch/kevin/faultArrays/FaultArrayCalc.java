@@ -9,6 +9,7 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
 import com.google.common.base.Preconditions;
@@ -49,25 +50,25 @@ public class FaultArrayCalc {
 	
 	private static final double trace_discr = 0.1;
 	
-	public static LocationList getSAF_LinearTrace(Map<Integer, FaultSectionPrefData> allParents) {
+	public static LocationList getSAF_LinearTrace(Map<Integer, FaultSection> allParents) {
 		return getLinearMultiParentTrace(allParents, SAF_PARENTS);
 	}
 	
-	public static LocationList getSJC_LinearTrace(Map<Integer, FaultSectionPrefData> allParents) {
+	public static LocationList getSJC_LinearTrace(Map<Integer, FaultSection> allParents) {
 		return getLinearMultiParentTrace(allParents, SJC_PARENTS);
 	}
 	
-	public static LocationList getElsinoreLinearTrace(Map<Integer, FaultSectionPrefData> allParents) {
+	public static LocationList getElsinoreLinearTrace(Map<Integer, FaultSection> allParents) {
 		return getLinearMultiParentTrace(allParents, ELSINORE_PARENTS);
 	}
 	
-	private static LocationList getLinearMultiParentTrace(Map<Integer, FaultSectionPrefData> allParents, int[] parentIDs) {
+	private static LocationList getLinearMultiParentTrace(Map<Integer, FaultSection> allParents, int[] parentIDs) {
 		LocationList ret = new LocationList();
 		
 		Location first = null;
 		for (int parentID : parentIDs) {
-			FaultSectionPrefData sect = allParents.get(parentID);
-			FaultTrace sampledTrace = sect.getStirlingGriddedSurface(trace_discr, false, false).getEvenlyDiscritizedUpperEdge();
+			FaultSection sect = allParents.get(parentID);
+			FaultTrace sampledTrace = sect.getFaultSurface(trace_discr, false, false).getEvenlyDiscritizedUpperEdge();
 			double az = LocationUtils.azimuth(sampledTrace.first(), sampledTrace.last());
 			if (az > 45 && az < 225)
 				// reverse if it's NW to SE

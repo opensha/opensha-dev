@@ -8,6 +8,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.dom4j.DocumentException;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
 import scratch.UCERF3.FaultSystemRupSet;
@@ -61,7 +62,7 @@ public class NonZeroCalc {
 		return false;
 	}
 	
-	private static double calcDist(FaultSectionPrefData data1, FaultSectionPrefData data2, int rupID) {
+	private static double calcDist(FaultSection data1, FaultSection data2, int rupID) {
 		FaultTrace trace1 = data1.getFaultTrace();
 		FaultTrace trace2 = data2.getFaultTrace();
 		

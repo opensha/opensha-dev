@@ -77,6 +77,7 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -799,7 +800,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 					throw ExceptionUtils.asRuntimeException(e);
 				}
 				HashSet<String> parentNames = new HashSet<>();
-				for (FaultSectionPrefData sect : rup.getSubSections())
+				for (FaultSection sect : rup.getSubSections())
 					parentNames.add(sect.getParentSectionName());
 				
 				for (String parentName : parentNames) {

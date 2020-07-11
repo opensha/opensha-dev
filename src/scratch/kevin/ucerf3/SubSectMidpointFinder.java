@@ -3,11 +3,13 @@ package scratch.kevin.ucerf3;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -29,11 +31,11 @@ public class SubSectMidpointFinder {
 		csv.addLine("Sub Section Index", "Sub Section Name", "Parent Section Name", "Parent Section ID",
 				"Midpoint Lat", "Midpoint Lon");
 		
-		ArrayList<FaultSectionPrefData> subSects = new DeformationModelFetcher(
+		List<? extends FaultSection> subSects = new DeformationModelFetcher(
 				fm, DeformationModels.GEOLOGIC,
 				UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1).getSubSectionList();
 		
-		for (FaultSectionPrefData subSect : subSects) {
+		for (FaultSection subSect : subSects) {
 			Location midPt = FaultUtils.resampleTrace(subSect.getFaultTrace(), 11).get(5);
 			csv.addLine(subSect.getSectionId()+"", subSect.getName(), subSect.getParentSectionName(),
 					subSect.getParentSectionId()+"",midPt.getLatitude()+"", midPt.getLongitude()+"");

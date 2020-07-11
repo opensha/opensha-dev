@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -33,27 +34,27 @@ public class CoulombTolayRemovalMappingFix {
 		double maxDistance = 5d;
 		
 		int imperialParent = 97;
-		List<FaultSectionPrefData> newImperialSubSects = null;
+		List<? extends FaultSection> newImperialSubSects = null;
 		
 		FaultModels[] fms = { FaultModels.FM3_1, FaultModels.FM3_2 };
 		
 		for (FaultModels fm : fms) {
 			if (newImperialSubSects == null) {
-				FaultSectionPrefData section = fm.fetchFaultSectionsMap().get(imperialParent);
+				FaultSection section = fm.fetchFaultSectionsMap().get(imperialParent);
 				double ddw = section.getOrigDownDipWidth();
 				newImperialSubSects = section.getSubSectionsList(ddw*0.5, 0, 2);
 			}
 			DeformationModelFetcher fetch = new DeformationModelFetcher(
 					fm, DeformationModels.GEOLOGIC, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1);
-			List<FaultSectionPrefData> origSubSects = fetch.getSubSectionList();
+			List<? extends FaultSection> origSubSects = fetch.getSubSectionList();
 			
-			List<FaultSectionPrefData> newSubSects = Lists.newArrayList();
+			List<FaultSection> newSubSects = Lists.newArrayList();
 			// now remap sections
 			int firstImperialIndex = -1;
 			int firstPostImperialIndex = -1;
 			int newSectIndex = 0;
 			for (int i=0; i<origSubSects.size(); i++) {
-				FaultSectionPrefData sect = origSubSects.get(i);
+				FaultSection sect = origSubSects.get(i);
 				if (sect.getParentSectionId() == 97) {
 					if (origSubSects.get(i-1).getParentSectionId() != 97) {
 						// this means first imperial

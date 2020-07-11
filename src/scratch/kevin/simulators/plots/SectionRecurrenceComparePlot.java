@@ -27,6 +27,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -125,7 +126,7 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 			for (List<SubSectionMapping> bundle : bundled) {
 				Preconditions.checkState(!bundle.isEmpty());
 				for (SubSectionMapping mapping : bundle) {
-					FaultSectionPrefData sect = mapping.getSubSect();
+					FaultSection sect = mapping.getSubSect();
 					if (sectType == SectType.PARENT)
 						ids.add(sect.getParentSectionId());
 					else

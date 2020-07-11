@@ -21,6 +21,7 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -153,7 +154,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		public void run() {
 			RSQSimSubSectEqkRupture gmpeRup = catalog.getMappedSubSectRupture(event);
 			HashSet<String> rupSources = new HashSet<>();
-			for (FaultSectionPrefData sect : gmpeRup.getSubSections())
+			for (FaultSection sect : gmpeRup.getSubSections())
 				if (parentIDtoSourceNameMap.containsKey(sect.getParentSectionId()))
 					rupSources.add(parentIDtoSourceNameMap.get(sect.getParentSectionId()));
 			for (String sourceName : rupSources) {

@@ -48,6 +48,7 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.EventRecord;
@@ -98,8 +99,8 @@ public abstract class SourceSiteDetailPageGen {
 		
 		// figure out reference frame
 		System.out.println("Calculating reference frame");
-		List<FaultSectionPrefData> subSects = new ArrayList<>();
-		for (FaultSectionPrefData sect : catalog.getSubSectMapper().getSubSections()) {
+		List<FaultSection> subSects = new ArrayList<>();
+		for (FaultSection sect : catalog.getSubSectMapper().getSubSections()) {
 			if (parentIDsSet.contains(sect.getParentSectionId()))
 				subSects.add(sect);
 		}

@@ -7,6 +7,7 @@ import java.util.Map;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -56,12 +57,12 @@ public class LaughTestRupExclusionDebugger {
 		FaultModels fm = FaultModels.FM3_1;
 		DeformationModels dm = DeformationModels.GEOLOGIC;
 		DeformationModelFetcher fetch = new DeformationModelFetcher(fm, dm, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1);
-		List<FaultSectionPrefData> datas = fetch.getSubSectionList();
+		List<? extends FaultSection> datas = fetch.getSubSectionList();
 		
 		Map<IDPairing, Double> subSectionDistances = fetch.getSubSectionDistanceMap(filter.getMaxJumpDist());
 		Map<IDPairing, Double> subSectionAzimuths = fetch.getSubSectionAzimuthMap(subSectionDistances.keySet());
 		
-		List<FaultSectionPrefData> rupture = Lists.newArrayList();
+		List<FaultSection> rupture = Lists.newArrayList();
 		for (int sect : sects)
 			rupture.add(datas.get(sect));
 		
@@ -100,7 +101,7 @@ public class LaughTestRupExclusionDebugger {
 			// print out coulomb at junctions
 			int prevID = -1;
 			int prevParent = -1;
-			for (FaultSectionPrefData sect : rupture) {
+			for (FaultSection sect : rupture) {
 				int id = sect.getSectionId();
 				int parent = sect.getParentSectionId();
 				if (prevParent != -1 && prevParent != parent) {

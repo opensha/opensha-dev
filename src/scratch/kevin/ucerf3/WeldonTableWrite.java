@@ -7,6 +7,7 @@ import java.util.List;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
 import com.google.common.base.Preconditions;
@@ -24,7 +25,7 @@ public class WeldonTableWrite {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException {
-		List<FaultSectionPrefData> subSects = new DeformationModelFetcher(
+		List<? extends FaultSection> subSects = new DeformationModelFetcher(
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 				UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1).getSubSectionList();
 		
@@ -51,10 +52,10 @@ public class WeldonTableWrite {
 			String parentName = line.get(0).replaceAll("-", " ");
 			int subsectNum = Integer.parseInt(line.get(1));
 			
-			FaultSectionPrefData matchingSect = null;
+			FaultSection matchingSect = null;
 			
 			int cntInParent = -1;
-			for (FaultSectionPrefData sect : subSects) {
+			for (FaultSection sect : subSects) {
 				if (sect.getParentSectionName().equals(parentName)) {
 					cntInParent++;
 					if (cntInParent == subsectNum) {

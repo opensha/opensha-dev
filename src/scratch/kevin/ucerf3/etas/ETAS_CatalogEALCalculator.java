@@ -48,6 +48,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.griddedSeis.Point2Vert_FaultPoisSource;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
@@ -616,7 +617,7 @@ public class ETAS_CatalogEALCalculator {
 	public void setTriggerFaultRup(int fssRupID) {
 		triggerRup = new ETAS_EqkRupture();
 		triggerRup.setMag(meanSol.getRupSet().getMagForRup(fssRupID));
-		triggerRup.setRuptureSurface(meanSol.getRupSet().getSurfaceForRupupture(fssRupID, 1d, false));
+		triggerRup.setRuptureSurface(meanSol.getRupSet().getSurfaceForRupupture(fssRupID, 1d));
 		triggerRup.setNthERF_Index(erf.get_nthRupIndicesForSource(erf.getSrcIndexForFltSysRup(fssRupID))[0]);
 	}
 	
@@ -1444,7 +1445,7 @@ public class ETAS_CatalogEALCalculator {
 		long ot = Math.round((2014.0-1970.0)*ProbabilityModelsCalc.MILLISEC_PER_YEAR); // occurs at 2014
 		
 		sectLoop:
-		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 			if (safParents.contains(sect.getParentSectionId()))
 				continue;
 			for (Location loc : sect.getFaultTrace()) {
@@ -1461,7 +1462,7 @@ public class ETAS_CatalogEALCalculator {
 			for (ETAS_EqkRupture rup : catalog) {
 				int fssIndex = getFSSIndex(rup);
 				if (fssIndex >= 0) {
-					List<FaultSectionPrefData> data = rupSet.getFaultSectionDataForRupture(fssIndex);
+					List<FaultSection> data = rupSet.getFaultSectionDataForRupture(fssIndex);
 					for (int sectID : rupSet.getSectionsIndicesForRup(fssIndex)) {
 						if (sectIDs.contains(sectID)) {
 							String name = data.size()+" SECTIONS BETWEEN "+data.get(0).getName()

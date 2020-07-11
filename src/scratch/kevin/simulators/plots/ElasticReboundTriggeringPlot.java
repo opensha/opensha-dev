@@ -30,6 +30,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.RSQSimEventRecord;
@@ -141,11 +142,11 @@ public class ElasticReboundTriggeringPlot extends AbstractPlot {
 				}
 			}
 		}
-		FaultSectionPrefData hypoSect = mapper.getMappedSection(hypoEl);
+		FaultSection hypoSect = mapper.getMappedSection(hypoEl);
 		int hypoSectIndex = -1;
 		boolean allVert = true;
 		for (int i=0; i<allMappings.size(); i++) {
-			FaultSectionPrefData subSect = allMappings.get(i).getSubSect();
+			FaultSection subSect = allMappings.get(i).getSubSect();
 			if (subSect == hypoSect)
 				hypoSectIndex = i;
 			allVert = allVert && subSect.getAveDip() == 90d;
@@ -423,7 +424,7 @@ public class ElasticReboundTriggeringPlot extends AbstractPlot {
 		double maxDepth = 0d;
 		
 		for (SubSectionMapping mapping : encompRup.allMappings) {
-			FaultSectionPrefData subSect = mapping.getSubSect();
+			FaultSection subSect = mapping.getSubSect();
 			
 			double sectLen = subSect.getTraceLength();
 			

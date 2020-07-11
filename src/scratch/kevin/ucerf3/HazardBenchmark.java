@@ -22,6 +22,7 @@ import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
 import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.gcim.ui.infoTools.IMT_Info;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.sha.imr.ScalarIMR;
@@ -40,7 +41,7 @@ public class HazardBenchmark {
 	private static void makeSubSectArticulationsHist(FaultSystemSolution fss) {
 		HistogramFunction hist = new HistogramFunction(0d, 10, 1d);
 		
-		for (FaultSectionPrefData sect : fss.getRupSet().getFaultSectionDataList()) {
+		for (FaultSection sect : fss.getRupSet().getFaultSectionDataList()) {
 			int num = sect.getFaultTrace().size()-2;
 			hist.add((double)num, 1d);
 		}

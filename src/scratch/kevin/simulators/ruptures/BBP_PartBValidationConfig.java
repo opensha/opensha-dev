@@ -29,6 +29,7 @@ import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -465,7 +466,7 @@ public class BBP_PartBValidationConfig {
 				Map<RSQSimEvent, HashSet<Integer>> eventParents = new HashMap<>();
 				for (RSQSimEvent e : randomized) {
 					HashSet<Integer> parents = new HashSet<>();
-					for (FaultSectionPrefData sect : catalog.getSubSectsForRupture(e))
+					for (FaultSection sect : catalog.getSubSectsForRupture(e))
 						parents.add(sect.getParentSectionId());
 					eventParents.put(e, parents);
 				}

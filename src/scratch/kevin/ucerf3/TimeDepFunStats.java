@@ -25,6 +25,7 @@ import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurfFromSimpleFaultData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RupInRegionCache;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -66,7 +67,7 @@ public class TimeDepFunStats {
 			if (mag < 7)
 				continue;
 			boolean match = false;
-			for (FaultSectionPrefData sect : sol.getRupSet().getFaultSectionDataForRupture(rupIndex)) {
+			for (FaultSection sect : sol.getRupSet().getFaultSectionDataForRupture(rupIndex)) {
 				if (parentsSet.contains(sect.getParentSectionId())) {
 					match = true;
 					break;

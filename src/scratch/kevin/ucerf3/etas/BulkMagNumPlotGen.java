@@ -11,6 +11,7 @@ import org.dom4j.DocumentException;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -57,7 +58,7 @@ public class BulkMagNumPlotGen {
 			
 			double mainshockMag = sol.getRupSet().getMagForRup(id);
 			List<String> parentNames = Lists.newArrayList();
-			for (FaultSectionPrefData sect : sol.getRupSet().getFaultSectionDataForRupture(id)) {
+			for (FaultSection sect : sol.getRupSet().getFaultSectionDataForRupture(id)) {
 				String parentName = sect.getParentSectionName();
 				if (parentNames.isEmpty() || !parentNames.get(parentNames.size()-1).equals(parentName))
 					parentNames.add(parentName);

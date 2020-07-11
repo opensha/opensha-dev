@@ -19,7 +19,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.ArbIncrementalMagFreqDist;
 
-import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
 
 /**
  * This class store information about all ruptures that nucleate inside this geographic block.
@@ -29,7 +29,7 @@ import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
 public class EqksInGeoBlock {
 	
 	double minLat, maxLat, minLon,maxLon, minDepth, maxDepth; // the dimensions of the block
-	FaultSystemSolutionPoissonERF erf;					// reference to the erf this block is used with
+	FaultSystemSolutionERF erf;					// reference to the erf this block is used with
 	
 	// these lists hold information about each rupture that nucleates in this block
 	ArrayList<Integer> rupIndexN_List;	// this stores the Nth index of the rupture inside the ERF
@@ -98,7 +98,7 @@ public class EqksInGeoBlock {
 	 * @param erf
 	 */
 	public EqksInGeoBlock(double minLat, double maxLat, double minLon, double maxLon, 
-			double minDepth, double maxDepth, FaultSystemSolutionPoissonERF erf) {
+			double minDepth, double maxDepth, FaultSystemSolutionERF erf) {
 		
 		this(minLat, maxLat, minLon, maxLon, minDepth, maxDepth);
 		this.erf=erf;
@@ -219,7 +219,7 @@ public class EqksInGeoBlock {
 	}
 	
 	
-	public void testThisBlock(FaultSystemSolutionPoissonERF erf) {
+	public void testThisBlock(FaultSystemSolutionERF erf) {
 		
 		EqksInGeoBlock testBlock = new EqksInGeoBlock(minLat, maxLat, minLon, maxLon, minDepth, maxDepth);
 		double duration = erf.getTimeSpan().getDuration();
@@ -332,7 +332,7 @@ public class EqksInGeoBlock {
 	 * @param numAlongDepth
 	 * @return
 	 */
-	public ArrayList<EqksInGeoBlock> getSubBlocks(int numAlongLatLon, int numAlongDepth, FaultSystemSolutionPoissonERF erf) {
+	public ArrayList<EqksInGeoBlock> getSubBlocks(int numAlongLatLon, int numAlongDepth, FaultSystemSolutionERF erf) {
 		ArrayList<EqksInGeoBlock> subBlocks = new ArrayList<EqksInGeoBlock>();
 		double forecastDuration = erf.getTimeSpan().getDuration();
 		int numSubBlocks = numAlongLatLon*numAlongLatLon*numAlongDepth;
@@ -463,7 +463,7 @@ public class EqksInGeoBlock {
 	 * @param numAlongDepth
 	 * @return
 	 */
-	public ArrayList<EqksInGeoBlock> getSubBlocksOld(int numAlongLatLon, int numAlongDepth, FaultSystemSolutionPoissonERF erf) {
+	public ArrayList<EqksInGeoBlock> getSubBlocksOld(int numAlongLatLon, int numAlongDepth, FaultSystemSolutionERF erf) {
 		ArrayList<EqksInGeoBlock> subBlocks = new ArrayList<EqksInGeoBlock>();
 		double forecastDuration = erf.getTimeSpan().getDuration();
 		int numSubBlocks = numAlongLatLon*numAlongLatLon*numAlongDepth;
@@ -629,7 +629,7 @@ public class EqksInGeoBlock {
 		
 		long startTime=System.currentTimeMillis();
 
-		FaultSystemSolutionPoissonERF erf = new FaultSystemSolutionPoissonERF("/Users/field/ALLCAL_UCERF2.zip");
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF("/Users/field/ALLCAL_UCERF2.zip");
 		erf.getAdjustableParameterList().getParameter(AleatoryMagAreaStdDevParam.NAME).setValue(0.12);
 		erf.updateForecast();
 

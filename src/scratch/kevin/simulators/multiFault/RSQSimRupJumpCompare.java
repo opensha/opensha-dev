@@ -29,6 +29,7 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -298,7 +299,7 @@ public class RSQSimRupJumpCompare {
 		for (int r=0; r<rupSet.getNumRuptures(); r++) {
 			if (rupSet.getMagForRup(r) >= minMag) {
 				double len = 0d;
-				for (FaultSectionPrefData sect : rupSet.getFaultSectionDataForRupture(r))
+				for (FaultSection sect : rupSet.getFaultSectionDataForRupture(r))
 					len += sect.getTraceLength();
 				hist.add(hist.getClosestXIndex(len), sol.getRateForRup(r));
 			}
@@ -351,13 +352,13 @@ public class RSQSimRupJumpCompare {
 //		return jumps;
 //	}
 	
-	private static List<Double> getJumps(List<FaultSectionPrefData> rupture, Map<IDPairing, Double> distances) {
+	private static List<Double> getJumps(List<? extends FaultSection> rupture, Map<IDPairing, Double> distances) {
 		List<Double> jumps = new ArrayList<>();
 		
 		// bin by parent section
-		Map<Integer, List<FaultSectionPrefData>> parentSects = new HashMap<>();
-		for (FaultSectionPrefData sect : rupture) {
-			List<FaultSectionPrefData> sects = parentSects.get(sect.getParentSectionId());
+		Map<Integer, List<FaultSection>> parentSects = new HashMap<>();
+		for (FaultSection sect : rupture) {
+			List<FaultSection> sects = parentSects.get(sect.getParentSectionId());
 			if (sects == null) {
 				sects = new ArrayList<>();
 				parentSects.put(sect.getParentSectionId(), sects);
@@ -378,8 +379,8 @@ public class RSQSimRupJumpCompare {
 				if (oParentID == parentID)
 					continue;
 				double myMinDist = Double.POSITIVE_INFINITY;
-				for (FaultSectionPrefData s1 : parentSects.get(parentID)) {
-					for (FaultSectionPrefData s2 : parentSects.get(oParentID)) {
+				for (FaultSection s1 : parentSects.get(parentID)) {
+					for (FaultSection s2 : parentSects.get(oParentID)) {
 						Double dist = distances.get(new IDPairing(s1.getSectionId(), s2.getSectionId()));
 						if (dist == null)
 							// longer than 1000km rupture

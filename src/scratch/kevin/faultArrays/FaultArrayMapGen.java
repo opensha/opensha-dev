@@ -28,9 +28,9 @@ import org.opensha.commons.mapping.gmt.elements.PSXYPolygon;
 import org.opensha.commons.mapping.gmt.elements.PSXYSymbol;
 import org.opensha.commons.mapping.gmt.elements.TopographicSlopeFile;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
@@ -118,21 +118,21 @@ public class FaultArrayMapGen {
 		map.setGMT_Param("MAP_FRAME_WIDTH", "0.04i");
 		map.setGMT_Param("MAP_TICK_LENGTH_PRIMARY", "0.04i");
 		
-		for (FaultSectionPrefData sect : meanU3.getSolution().getRupSet().getFaultSectionDataList())
+		for (FaultSection sect : meanU3.getSolution().getRupSet().getFaultSectionDataList())
 			for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(sect.getFaultTrace(), Color.BLACK, 0.3))
 				map.addPolys(poly);
 		
-		Map<Integer, FaultSectionPrefData> allParents = fm.fetchFaultSectionsMap();
+		Map<Integer, FaultSection> allParents = fm.fetchFaultSectionsMap();
 		
 		CPT cpt = null;
 		
 		if (scalarType != null) {
-			List<FaultSectionPrefData> sects = new ArrayList<>();
+			List<FaultSection> sects = new ArrayList<>();
 			HashSet<Integer> parentsToPlot = new HashSet<>();
 			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.SAF_PARENTS));
 			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.SJC_PARENTS));
 			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.ELSINORE_PARENTS));
-			for (FaultSectionPrefData sect : meanU3.getSolution().getRupSet().getFaultSectionDataList())
+			for (FaultSection sect : meanU3.getSolution().getRupSet().getFaultSectionDataList())
 				if (parentsToPlot.contains(sect.getParentSectionId()))
 					sects.add(sect);
 			
@@ -176,7 +176,7 @@ public class FaultArrayMapGen {
 				throw new IllegalStateException("Not Yet Implemented: "+scalarType);
 			}
 			
-			for (FaultSectionPrefData sect : sects) {
+			for (FaultSection sect : sects) {
 				Color color;
 				if (scalarType == ScalarType.ALL_GRAY) {
 					color = Color.DARK_GRAY;

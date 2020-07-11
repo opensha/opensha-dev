@@ -23,6 +23,7 @@ import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.UCERF2;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.gcim.ui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -67,9 +68,9 @@ public class MehrdadDemo {
 			sol = new FaultSystemSolution(rupSet, rates);
 			// write new solution to disk
 			FaultSystemIO.writeSol(sol, new File("/tmp/test_sol.zip"));
-			List<FaultSectionPrefData> subSects = rupSet.getFaultSectionDataList();
-			FaultSectionPrefData sect0 = subSects.get(0);
-			for (FaultSectionPrefData sect : subSects)
+			List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
+			FaultSection sect0 = subSects.get(0);
+			for (FaultSection sect : subSects)
 				System.out.println(sect.getName());
 			int parentSectID = 301; // Mopjave S
 			// list of all ruptures which include Mojave S
@@ -97,7 +98,7 @@ public class MehrdadDemo {
 				}
 			}
 			for (int sectIndex : multiFaultParticRates.keySet()) {
-				FaultSectionPrefData sect = rupSet.getFaultSectionData(sectIndex);
+				FaultSection sect = rupSet.getFaultSectionData(sectIndex);
 				System.out.println("Section "+sectIndex+", "+sect.getSectionName()
 					+" participates with parent section "+parentSectID+" with rate "
 						+multiFaultParticRates.get(sectIndex));
@@ -152,9 +153,8 @@ public class MehrdadDemo {
 		FaultSystemSolution sol = FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemRupSet origRupSet = sol.getRupSet();
-		List<FaultSectionPrefData> faultSectionData = origRupSet.getFaultSectionDataList();
 		// create new list that contains contents of old one, old one probably unmodifiable
-		faultSectionData = new ArrayList<FaultSectionPrefData>(faultSectionData);
+		List<FaultSection> faultSectionData = new ArrayList<>(origRupSet.getFaultSectionDataList());
 		// add a new fault
 		FaultSectionPrefData newFault = new FaultSectionPrefData();
 		newFault.setSectionId(faultSectionData.size());

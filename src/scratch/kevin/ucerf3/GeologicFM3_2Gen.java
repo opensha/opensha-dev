@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.opensha.commons.geo.Location;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -29,11 +30,11 @@ public class GeologicFM3_2Gen {
 		
 		File outputFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/DeformationModels/geologic_slip_rake_fm3pt2_2012_02_27.csv");
 		
-		ArrayList<FaultSectionPrefData> fm3_2_sects = FaultModels.FM3_1.fetchFaultSections();
+		ArrayList<? extends FaultSection> fm3_2_sects = FaultModels.FM3_1.fetchFaultSections();
 		
 		ArrayList<DeformationSection> fm3_2 = new ArrayList<DeformationModelFileParser.DeformationSection>();
 		
-		for (FaultSectionPrefData data : fm3_2_sects) {
+		for (FaultSection data : fm3_2_sects) {
 			int id = data.getSectionId();
 			DeformationSection def = fm3_1.get(id);
 			if (def == null) {

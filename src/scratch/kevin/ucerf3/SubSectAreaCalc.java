@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.opensha.commons.data.CSVFile;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.collect.Lists;
 
@@ -36,11 +37,11 @@ public class SubSectAreaCalc {
 			DeformationModels dm = dms[d];
 			DeformationModelFetcher fetch = new DeformationModelFetcher(
 					fm, dm, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1);
-			List<FaultSectionPrefData> sects = fetch.getSubSectionList();
+			List<? extends FaultSection> sects = fetch.getSubSectionList();
 			double[] myAreas = new double[sects.size()];
 			double[] mySlips = new double[sects.size()];
 			for (int i=0; i<sects.size(); i++) {
-				FaultSectionPrefData sect = sects.get(i);
+				FaultSection sect = sects.get(i);
 				
 				// aseismicity reduces area; km --> m on length & DDW
 				double area = sect.getTraceLength()*1e3*sect.getReducedDownDipWidth()*1e3;

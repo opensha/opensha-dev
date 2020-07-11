@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
@@ -35,7 +36,7 @@ public class RSQSimMarkovChainBuilder {
 		for (int i=0; i<parentIDs.length; i++) {
 			String name = u3ParentSectionNames[i];
 			parentIDs[i] = -1;
-			for (FaultSectionPrefData sect : catalog.getU3SubSects()) {
+			for (FaultSection sect : catalog.getU3SubSects()) {
 				if (sect.getParentSectionName().equals(name)) {
 					parentIDs[i] = sect.getParentSectionId();
 					break;
@@ -48,13 +49,13 @@ public class RSQSimMarkovChainBuilder {
 	
 	public static SectionIDIden getU3_SectionIdentifier(RSQSimCatalog catalog, double minAreaFract, boolean middleSubSectOnly,
 			int... u3ParentSectionIDs) throws IOException {
-		List<FaultSectionPrefData> subSects = catalog.getU3SubSects();
+		List<? extends FaultSection> subSects = catalog.getU3SubSects();
 		// sometimes the RSQSim section numbers are 1-based inssead of 0-based, this is used to convert to UCERF3 convention
 		int subSectOffset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), subSects);
 		
 		String[] parentNames = new String[u3ParentSectionIDs.length];
 		for (int i=0; i<u3ParentSectionIDs.length; i++) {
-			for (FaultSectionPrefData sect : subSects) {
+			for (FaultSection sect : subSects) {
 				if (sect.getParentSectionId() == u3ParentSectionIDs[i]) {
 					parentNames[i] = sect.getParentSectionName();
 					break;
@@ -66,7 +67,7 @@ public class RSQSimMarkovChainBuilder {
 		String parentName = getCombinedParentsName(subSects, parentNames);
 		
 		List<Integer> sectIDsForParent = new ArrayList<Integer>();
-		for (FaultSectionPrefData subSect : subSects) {
+		for (FaultSection subSect : subSects) {
 			if (Ints.contains(u3ParentSectionIDs, subSect.getParentSectionId())) {
 				// this subsection is on the given parent section
 				sectIDsForParent.add(subSect.getSectionId()+subSectOffset);
@@ -83,7 +84,7 @@ public class RSQSimMarkovChainBuilder {
 		return iden;
 	}
 	
-	public static String getCombinedParentsName(List<FaultSectionPrefData> subSects, String[] parentNames) {
+	public static String getCombinedParentsName(List<? extends FaultSection> subSects, String[] parentNames) {
 		String parentName;
 		if (parentNames.length > 1) {
 			String prefix = StringUtils.getCommonPrefix(parentNames);

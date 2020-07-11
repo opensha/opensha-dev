@@ -41,7 +41,6 @@ import java.io.IOException;
 
 import scratch.UCERF3.analysis.GMT_CA_Maps;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.UCERF3.utils.ModUCERF2.NSHMP_GridSourceGeneratorMod2;
 

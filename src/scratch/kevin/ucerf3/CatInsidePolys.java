@@ -10,6 +10,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.observedEarthquake.parsers.UCERF3_CatalogParser;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 
@@ -20,7 +21,7 @@ public class CatInsidePolys {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException {
-		ArrayList<FaultSectionPrefData> sects = FaultModels.FM3_1.fetchFaultSections();
+		ArrayList<FaultSection> sects = FaultModels.FM3_1.fetchFaultSections();
 		
 //		ObsEqkRupList cat = UCERF3_CatalogParser.loadCatalog(new File("/home/kevin/OpenSHA/UCERF3/UCERF3_Catalog3_0.txt"));
 		ObsEqkRupList cat = UCERF3_CatalogParser.loadCatalog(new File("/home/kevin/OpenSHA/UCERF3/Felzer_UCERF3_Catalog4_0.txt"));
@@ -31,7 +32,7 @@ public class CatInsidePolys {
 			Location loc = rup.getHypocenterLocation();
 			tot++;
 			
-			for (FaultSectionPrefData sect : sects) {
+			for (FaultSection sect : sects) {
 				Region poly = sect.getZonePolygon();
 				if (poly != null && poly.contains(loc)) {
 					contains++;

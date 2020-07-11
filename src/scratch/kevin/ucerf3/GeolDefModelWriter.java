@@ -8,6 +8,7 @@ import java.util.Map;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -24,7 +25,7 @@ public class GeolDefModelWriter {
 		File inputFile = new File("/tmp/Geologic_Def_model_3_2_2012_09_06.csv");
 		CSVFile<String> inputCSV = CSVFile.readFile(inputFile, true);
 		
-		Map<Integer, FaultSectionPrefData> fmSects = fm.fetchFaultSectionsMap();
+		Map<Integer, FaultSection> fmSects = fm.fetchFaultSectionsMap();
 		
 		CSVFile<String> dmCSV = new CSVFile<String>(true);
 		CSVFile<String> minCSV = new CSVFile<String>(true);
@@ -61,7 +62,7 @@ public class GeolDefModelWriter {
 			}
 			double rake = Double.parseDouble(inputLine.get(5));
 
-			FaultSectionPrefData sect = fmSects.get(mini[0]);
+			FaultSection sect = fmSects.get(mini[0]);
 			Location startLoc = sect.getFaultTrace().get(mini[1]-1);
 			Location endLoc = sect.getFaultTrace().get(mini[1]);
 

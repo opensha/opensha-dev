@@ -30,6 +30,7 @@ import org.opensha.sha.earthquake.param.BackgroundRupParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.FocalMech;
@@ -78,23 +79,23 @@ public class UCER3_EAL_CombinerTest {
 	public static InversionFaultSystemRupSet buildSmallTestRupSet() {
 		LogicTreeBranch branch = LogicTreeBranch.UCERF2;
 		// this list will store our subsections
-		List<FaultSectionPrefData> subSections = Lists.newArrayList();
+		List<FaultSection> subSections = Lists.newArrayList();
 		
 		FaultModels fm = branch.getValue(FaultModels.class);
-		List<FaultSectionPrefData> fsd = fm.fetchFaultSections();
+		List<FaultSection> fsd = fm.fetchFaultSections();
 		double maxSubSectionLength = 0.5;
 		double maxDistance = 5d;
 		
 		// build the subsections
 		int sectIndex = 0;
-		for (FaultSectionPrefData parentSect : fsd) {
+		for (FaultSection parentSect : fsd) {
 			if (parentSect.getSectionId() != 301)
 				// only one fault, Mojave S
 				continue;
 			double ddw = parentSect.getOrigDownDipWidth();
 			double maxSectLength = ddw*maxSubSectionLength;
 			// the "2" here sets a minimum number of sub sections
-			List<FaultSectionPrefData> newSubSects = parentSect.getSubSectionsList(maxSectLength, sectIndex, 2);
+			List<? extends FaultSection> newSubSects = parentSect.getSubSectionsList(maxSectLength, sectIndex, 2);
 			subSections.addAll(newSubSects);
 			sectIndex += newSubSects.size();
 		}
@@ -138,7 +139,7 @@ public class UCER3_EAL_CombinerTest {
 		
 		MinMaxAveTracker latTrack = new MinMaxAveTracker();
 		MinMaxAveTracker lonTrack = new MinMaxAveTracker();
-		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 			for (Location loc : sect.getFaultTrace()) {
 				latTrack.addValue(loc.getLatitude());
 				lonTrack.addValue(loc.getLongitude());

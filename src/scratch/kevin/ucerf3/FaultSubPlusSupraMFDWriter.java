@@ -13,6 +13,7 @@ import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
@@ -46,7 +47,7 @@ public class FaultSubPlusSupraMFDWriter {
 			Map<String, IncrementalMagFreqDist> supraParentMFDs = new HashMap<>();
 			Map<String, Integer> parentIDsMap = new HashMap<>();
 			for (int s=0; s<rupSet.getNumSections(); s++) {
-				FaultSectionPrefData fsd = rupSet.getFaultSectionData(s);
+				FaultSection fsd = rupSet.getFaultSectionData(s);
 				parentIDsMap.put(fsd.getParentSectionName(), fsd.getParentSectionId());
 			}
 			for (String parentName : parentIDsMap.keySet())

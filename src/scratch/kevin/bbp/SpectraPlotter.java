@@ -40,6 +40,7 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -1121,7 +1122,7 @@ public class SpectraPlotter {
 		for (RSQSimEvent event : events) {
 			RSQSimSubSectEqkRupture gmpeRup = catalog.getMappedSubSectRupture(event);
 			boolean match = false;
-			for (FaultSectionPrefData sect : gmpeRup.getSubSections()) {
+			for (FaultSection sect : gmpeRup.getSubSections()) {
 				if (Ints.contains(parentIDs, sect.getParentSectionId())) {
 					match = true;
 					break;

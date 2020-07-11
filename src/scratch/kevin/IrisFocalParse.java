@@ -12,6 +12,7 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import scratch.UCERF3.FaultSystemSolution;
@@ -69,8 +70,8 @@ public class IrisFocalParse {
 		for (Point2D pt : mfd.getCumRateDistWithOffset())
 			System.out.println("Mag: "+(float)pt.getX()+"\tRate: "+(float)pt.getY()+"\tRI: "+(float)(1d/pt.getY()));
 		
-		FaultSectionPrefData salmonData = FaultModels.FM3_1.fetchFaultSectionsMap().get(16);
-		System.out.println("Salmon Distance: "+salmonData.getStirlingGriddedSurface(1d).getDistanceRup(eqLoc)+" km");
+		FaultSection salmonData = FaultModels.FM3_1.fetchFaultSectionsMap().get(16);
+		System.out.println("Salmon Distance: "+salmonData.getFaultSurface(1d).getDistanceRup(eqLoc)+" km");
 	}
 
 }

@@ -8,6 +8,7 @@ import java.util.List;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
 import com.google.common.collect.Lists;
@@ -41,9 +42,9 @@ public class TomParsonsSubSectGen {
 				DeformationModelFetcher fetch = new DeformationModelFetcher(
 						fm, dm, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1d);
 				
-				ArrayList<FaultSectionPrefData> subSects = fetch.getSubSectionList();
+				List<? extends FaultSection> subSects = fetch.getSubSectionList();
 				
-				for (FaultSectionPrefData subSect : subSects) {
+				for (FaultSection subSect : subSects) {
 					FaultTrace trace = subSect.getFaultTrace();
 					Location loc1 = trace.get(0);
 					Location loc2 = trace.get(trace.size()-1);

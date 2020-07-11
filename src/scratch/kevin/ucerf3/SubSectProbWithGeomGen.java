@@ -10,6 +10,7 @@ import java.util.List;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 
@@ -36,23 +37,23 @@ public class SubSectProbWithGeomGen {
 		for (int row=1; row<probCSV.getNumRows(); row++)
 			probsMap.put(probCSV.get(row, 0), Double.parseDouble(probCSV.get(row, probCol)));
 		
-		List<FaultSectionPrefData> fm31 = RSQSimUtils.getUCERF3SubSectsForComparison(FaultModels.FM3_1, DeformationModels.GEOLOGIC);
-		List<FaultSectionPrefData> fm32 = RSQSimUtils.getUCERF3SubSectsForComparison(FaultModels.FM3_2, DeformationModels.GEOLOGIC);
+		List<? extends FaultSection> fm31 = RSQSimUtils.getUCERF3SubSectsForComparison(FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+		List<? extends FaultSection> fm32 = RSQSimUtils.getUCERF3SubSectsForComparison(FaultModels.FM3_2, DeformationModels.GEOLOGIC);
 		
-		HashMap<String, FaultSectionPrefData> sectNameMap = new HashMap<>();
-		for (FaultSectionPrefData sect : fm31)
+		HashMap<String, FaultSection> sectNameMap = new HashMap<>();
+		for (FaultSection sect : fm31)
 			sectNameMap.put(sect.getName(), sect);
-		for (FaultSectionPrefData sect : fm32)
+		for (FaultSection sect : fm32)
 			sectNameMap.put(sect.getName(), sect);
 		
-		List<FaultSectionPrefData> allSects = new ArrayList<>(sectNameMap.values());
+		List<FaultSection> allSects = new ArrayList<>(sectNameMap.values());
 		allSects.sort(new SubSectNameComparator());
 		
 		CSVFile<String> outCSV = new CSVFile<>(true);
 		outCSV.addLine("Parent Section Name", "Parent Section ID", "Sub Section Number",
 				"Start Latitude", "Start Longitude", "End Latitude", "End Longitude", probColName);
 		
-		for (FaultSectionPrefData sect : allSects) {
+		for (FaultSection sect : allSects) {
 			double prob = probsMap.get(sect.getName());
 			FaultTrace trace = sect.getFaultTrace();
 			String parentName = sect.getParentSectionName();
@@ -77,9 +78,9 @@ public class SubSectProbWithGeomGen {
 		return Integer.parseInt(name.substring(ss1_index));
 	}
 	
-	public static class SubSectNameComparator implements Comparator<FaultSectionPrefData> {
+	public static class SubSectNameComparator implements Comparator<FaultSection> {
 		@Override
-		public int compare(FaultSectionPrefData s1, FaultSectionPrefData s2) {
+		public int compare(FaultSection s1, FaultSection s2) {
 			String o1 = s1.getName();
 			String o2 = s2.getName();
 			int ss1_index = o1.indexOf(sect_key)+sect_key_len;

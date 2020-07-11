@@ -36,6 +36,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -107,7 +108,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 
 	@Override
 	public void finalizePlot() throws IOException {
-		List<FaultSectionPrefData> subSects = mapper.getSubSections();
+		List<? extends FaultSection> subSects = mapper.getSubSections();
 		double[] simSlipRates = new double[subSects.size()];
 		double[] simTargetSlipRates = new double[subSects.size()];
 		
@@ -121,7 +122,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 		double durationYears = getCurrentDurationYears();
 		List<LocationList> faults = new ArrayList<>();
 		for (int i=0; i<subSects.size(); i++) {
-			FaultSectionPrefData subSect = subSects.get(i);
+			FaultSection subSect = subSects.get(i);
 			if (u3SolSlipRates != null) {
 				u3SolSlipRates[i] = 1e3 * compSol.calcSlipRateForSect(i);
 				u3TargetSlipRates[i] = 1e3 * compSol.getRupSet().getSlipRateForSection(i);
@@ -215,7 +216,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 			throws IOException {
 		Map<String, List<Integer>> namedFaults = fm.getNamedFaultsMapAlt();
 		
-		List<FaultSectionPrefData> allSubSects = mapper.getSubSections();
+		List<? extends FaultSection> allSubSects = mapper.getSubSections();
 		
 		for (String fault : namedFaults.keySet()) {
 			HashSet<Integer> parentIDs = new HashSet<>(namedFaults.get(fault));
@@ -223,10 +224,10 @@ public class SlipRateComparePlot extends AbstractPlot {
 			MinMaxAveTracker latTrack = new MinMaxAveTracker();
 			MinMaxAveTracker lonTrack = new MinMaxAveTracker();
 			
-			Map<Integer, List<FaultSectionPrefData>> sectionsForFault = new HashMap<>();
+			Map<Integer, List<FaultSection>> sectionsForFault = new HashMap<>();
 			
 			for (int i=0; i<allSubSects.size(); i++) {
-				FaultSectionPrefData subSect= allSubSects.get(i);
+				FaultSection subSect= allSubSects.get(i);
 				if (parentIDs.contains(subSect.getParentSectionId())) {
 					Location first = subSect.getFaultTrace().first();
 					Location last = subSect.getFaultTrace().last();
@@ -235,7 +236,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 					lonTrack.addValue(first.getLongitude());
 					lonTrack.addValue(last.getLongitude());
 					
-					List<FaultSectionPrefData> subSectsForFault = sectionsForFault.get(subSect.getParentSectionId());
+					List<FaultSection> subSectsForFault = sectionsForFault.get(subSect.getParentSectionId());
 					if (subSectsForFault == null) {
 						subSectsForFault = new ArrayList<>();
 						sectionsForFault.put(subSect.getParentSectionId(), subSectsForFault);
@@ -250,7 +251,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 			// find common prefix if any
 			List<String> parentNames = Lists.newArrayList();
 			for (Integer parentID : namedFaults.get(fault)) {
-				List<FaultSectionPrefData> sectionsForParent = sectionsForFault.get(parentID);
+				List<FaultSection> sectionsForParent = sectionsForFault.get(parentID);
 				if (sectionsForParent == null)
 					continue;
 				String parentName = sectionsForParent.get(0).getParentSectionName();
@@ -276,12 +277,12 @@ public class SlipRateComparePlot extends AbstractPlot {
 			PlotCurveCharacterstics u3TargetChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED.darker());
 			PlotCurveCharacterstics u3SolChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GREEN.darker());
 			
-			for (List<FaultSectionPrefData> parentSections : sectionsForFault.values()) {
+			for (List<FaultSection> parentSections : sectionsForFault.values()) {
 				DefaultXY_DataSet simFunc = new DefaultXY_DataSet();
 				DefaultXY_DataSet simTargetFunc = new DefaultXY_DataSet();
 				DefaultXY_DataSet u3TargetFunc = new DefaultXY_DataSet();
 				DefaultXY_DataSet u3SolFunc = u3SolSlipRates == null ? null : new DefaultXY_DataSet();
-				for (FaultSectionPrefData sect : parentSections) {
+				for (FaultSection sect : parentSections) {
 					int index = sect.getSectionId(); // 0-indexed
 					
 					Location first = sect.getFaultTrace().first();
@@ -349,7 +350,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 			PlotCurveCharacterstics sepChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.GRAY);
 			Font annFont = new Font(Font.SANS_SERIF, Font.PLAIN, 20);
 			List<XYTextAnnotation> anns = new ArrayList<>();
-			for (List<FaultSectionPrefData> parentSects : sectionsForFault.values()) {
+			for (List<FaultSection> parentSects : sectionsForFault.values()) {
 				String annotationName = parentSects.get(0).getParentSectionName();
 				if (!commonPrefix.isEmpty())
 					annotationName = annotationName.substring(commonPrefix.length());

@@ -1,9 +1,11 @@
 package scratch.kevin.ucerf3;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.opensha.commons.geo.Location;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -19,11 +21,11 @@ public class GeologicTaperInfoPrint {
 		FaultModels fm = FaultModels.FM3_1;
 		DeformationModels dm = DeformationModels.GEOLOGIC;
 		
-		ArrayList<FaultSectionPrefData> datas =
+		List<? extends FaultSection> datas =
 				new DeformationModelFetcher(fm, dm, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1).getSubSectionList();
 		
 		System.out.println("Name\tOrig Slip Rate\tReduced Slip Rate\tCoupling Coeff\tAseismicity Factor");
-		for (FaultSectionPrefData data : datas) {
+		for (FaultSection data : datas) {
 			if (data.getParentSectionId() == 97 || data.getParentSectionId() == 172) {
 				System.out.println(data.getName()+"\t"+data.getOrigAveSlipRate()+"\t"+data.getReducedAveSlipRate()
 						+"\t"+data.getCouplingCoeff()+"\t"+data.getAseismicSlipFactor());
@@ -36,7 +38,7 @@ public class GeologicTaperInfoPrint {
 //					new DeformationModelFetcher(fm1, dm, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1).getSubSectionList();
 			datas = fm1.fetchFaultSections();
 			System.out.println("\n"+fm1);
-			for (FaultSectionPrefData data : datas) {
+			for (FaultSection data : datas) {
 				if (data.getSectionId() == 13) {
 					for (Location loc : data.getFaultTrace())
 						System.out.println("\t"+loc.getLatitude()+"\t"+loc.getLongitude());
