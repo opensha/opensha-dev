@@ -11,6 +11,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.commons.gui.plot.GraphWindow;
 
 import com.google.common.collect.Lists;
@@ -27,7 +28,7 @@ public class LaughTestExclusionCountGen {
 		InversionFaultSystemRupSet rupSet = InversionFaultSystemRupSetFactory.forBranch(
 				filter, 0.1, FaultModels.FM3_1);
 		int numPossibleConnections = 0;
-		List<FaultSectionPrefData> sects = rupSet.getFaultSectionDataList();
+		List<? extends FaultSection> sects = rupSet.getFaultSectionDataList();
 		for (int sect1=0; sect1<rupSet.getNumSections(); sect1++) {
 			int parent1 = sects.get(sect1).getParentSectionId();
 			for (int sect2 : rupSet.getCloseSectionsList(sect1)) {
@@ -39,10 +40,10 @@ public class LaughTestExclusionCountGen {
 		}
 		HashSet<IDPairing> junctions = new HashSet<IDPairing>();
 		for (int rupIndex=0; rupIndex<rupSet.getNumRuptures(); rupIndex++) {
-			List<FaultSectionPrefData> rupSects = rupSet.getFaultSectionDataForRupture(rupIndex);
+			List<FaultSection> rupSects = rupSet.getFaultSectionDataForRupture(rupIndex);
 			for (int i=1; i<rupSects.size(); i++) {
-				FaultSectionPrefData sect1 = rupSects.get(i-1);
-				FaultSectionPrefData sect2 = rupSects.get(i);
+				FaultSection sect1 = rupSects.get(i-1);
+				FaultSection sect2 = rupSects.get(i);
 				if (sect1.getParentSectionId() != sect2.getParentSectionId()) {
 					if (sect1.getSectionId() < sect2.getSectionId())
 						junctions.add(new IDPairing(sect1.getSectionId(), sect2.getSectionId()));

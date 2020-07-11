@@ -6,6 +6,7 @@ import java.io.IOException;
 import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 
@@ -52,7 +53,7 @@ public class UCERF3_RSQSimTuningFileGen {
 		Preconditions.checkState(rates.length == rupSet.getNumSections());
 		
 		for (int s=0; s<rupSet.getNumSections(); s++) {
-			FaultSectionPrefData sect = rupSet.getFaultSectionData(s);
+			FaultSection sect = rupSet.getFaultSectionData(s);
 			
 			double ri = 1d/rates[s];
 			

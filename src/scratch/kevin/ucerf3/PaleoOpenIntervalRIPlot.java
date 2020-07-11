@@ -30,6 +30,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.calc.recurInterval.BPT_DistCalc;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
@@ -50,7 +51,7 @@ public class PaleoOpenIntervalRIPlot {
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemRupSet rupSet = baSol.getRupSet();
 		
-		List<FaultSectionPrefData> subSects = rupSet.getFaultSectionDataList();
+		List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
 		
 		ArrayList<PaleoRateConstraint> constraints = UCERF3_PaleoRateConstraintFetcher.getConstraints(
 				subSects);
@@ -100,7 +101,7 @@ public class PaleoOpenIntervalRIPlot {
 			PaleoRateConstraint constr = constraints.get(i);
 			if (reg != null && !reg.contains(constr.getPaleoSiteLoction()))
 				continue;
-			FaultSectionPrefData subSect = subSects.get(constraints.get(i).getSectionIndex());
+			FaultSection subSect = subSects.get(constraints.get(i).getSectionIndex());
 			int s = subSect.getSectionId();
 //			double rate = 0d;
 //			for (int r : rupSet.getRupturesForSection(s)) {

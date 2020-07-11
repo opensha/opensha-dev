@@ -14,6 +14,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
@@ -69,7 +70,7 @@ public class U3TD_Participation_Probs {
 								+ "/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
-		List<FaultSectionPrefData> faultSectionData = sol.getRupSet().getFaultSectionDataList();
+		List<? extends FaultSection> faultSectionData = sol.getRupSet().getFaultSectionDataList();
 		
 		// Print list of all parent section numbers and names
 		// ListIterator<FaultSectionPrefData> faultSectionDataIterator = faultSectionData.listIterator();
@@ -104,7 +105,7 @@ public class U3TD_Participation_Probs {
 		// Print parent section IDs, names, and total participation probability
 		for (int i=0; i<parentIDs.length; i++) {
 			int parID=parentIDs[i];
-			ListIterator<FaultSectionPrefData> faultSectionDataIterator = faultSectionData.listIterator();
+			ListIterator<? extends FaultSection> faultSectionDataIterator = faultSectionData.listIterator();
 			boolean parentSectFound=false;
 			while (!parentSectFound && faultSectionDataIterator.hasNext()) {				
 				int nextIndex = faultSectionDataIterator.nextIndex();

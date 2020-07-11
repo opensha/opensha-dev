@@ -25,6 +25,7 @@ import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.ClassUtils;
@@ -34,7 +35,9 @@ import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.EventRecord;
@@ -70,12 +73,12 @@ public class UCERF3ComparisonAnalysis {
 	public static Map<Integer, SimulatorElement> loadElements(FaultSystemRupSet rupSet) {
 		Map<Integer, SimulatorElement> elems = Maps.newHashMap();
 		
-		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 			Vertex[] vertices = new Vertex[4];
 			
-			StirlingGriddedSurface surf = sect.getStirlingGriddedSurface(1d);
+			RuptureSurface surf = sect.getFaultSurface(1d);
 			FaultTrace upper = surf.getEvenlyDiscritizedUpperEdge();
-			FaultTrace lower = surf.getEvenlyDiscritizedLowerEdge();
+			LocationList lower = surf.getEvenlyDiscritizedLowerEdge();
 			
 			vertices[0] = new Vertex(upper.first());
 			vertices[1] = new Vertex(upper.last());
@@ -210,7 +213,7 @@ public class UCERF3ComparisonAnalysis {
 			sectIndexesInRegion = null;
 		} else {
 			sectIndexesInRegion = new HashSet<Integer>();
-			for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+			for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 				for (Location loc : sect.getFaultTrace()) {
 					if (region.contains(loc)) {
 						sectIndexesInRegion.add(sect.getSectionId());
@@ -408,7 +411,7 @@ public class UCERF3ComparisonAnalysis {
 			Preconditions.checkState(u3Iden instanceof ElementMagRangeDescription);
 			ElementMagRangeDescription iden = (ElementMagRangeDescription)u3Iden;
 			int sectIndex = iden.getElementIDs().get(0);
-			FaultSectionPrefData sect = rupSet.getFaultSectionData(sectIndex);
+			FaultSection sect = rupSet.getFaultSectionData(sectIndex);
 			Preconditions.checkState(sect.getDateOfLastEvent() > Long.MIN_VALUE, "No open interval for: %s", sect.getName());
 			
 			long millis = sect.getDateOfLastEvent() - startTime;

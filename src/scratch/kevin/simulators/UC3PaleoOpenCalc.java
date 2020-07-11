@@ -27,6 +27,7 @@ import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.ElementIden;
@@ -111,7 +112,7 @@ public class UC3PaleoOpenCalc {
 	
 	private static List<PaleoOpenIden> getUC3SitesWithOpenIntervals(
 			FaultSystemSolution sol, List<SimulatorElement> geom) throws IOException {
-		List<FaultSectionPrefData> fsd = sol.getRupSet().getFaultSectionDataList();
+		List<? extends FaultSection> fsd = sol.getRupSet().getFaultSectionDataList();
 		ArrayList<PaleoRateConstraint> constraints = UCERF3_PaleoRateConstraintFetcher.getConstraints(fsd);
 		
 		List<PaleoOpenIden> idens = Lists.newArrayList();
@@ -164,7 +165,7 @@ public class UC3PaleoOpenCalc {
 			
 			// clear any last open intervals that are too short
 			List<Integer> constrIndexes = Lists.newArrayList();
-			for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+			for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 				if (sect.getDateOfLastEvent() > startYearInMillis) {
 //					System.out.println("Clearing date last event on "+sect.getParentSectionName());
 					sect.setDateOfLastEvent(Long.MIN_VALUE);

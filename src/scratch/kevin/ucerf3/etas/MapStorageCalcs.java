@@ -14,6 +14,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.faultSurface.CompoundSurface;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
 import com.google.common.base.Joiner;
@@ -108,25 +109,25 @@ public class MapStorageCalcs {
 //						}
 						
 //						CompoundSurface surf = (CompoundSurface) rupSet.getSurfaceForRupupture(fssIndex, 1d, false);
-						List<List<FaultSectionPrefData>> sectsByParent = Lists.newArrayList();
+						List<List<FaultSection>> sectsByParent = Lists.newArrayList();
 						List<String> parents = Lists.newArrayList();
 						int curParentID = -1;
 						for (int s : rupSet.getSectionsIndicesForRup(fssIndex)) {
-							FaultSectionPrefData fsd = rupSet.getFaultSectionData(s);
+							FaultSection fsd = rupSet.getFaultSectionData(s);
 							if (fsd.getParentSectionId() != curParentID) {
 								curParentID = fsd.getParentSectionId();
-								sectsByParent.add(new ArrayList<FaultSectionPrefData>());
+								sectsByParent.add(new ArrayList<FaultSection>());
 								parents.add(fsd.getParentSectionName());
 							}
 							sectsByParent.get(sectsByParent.size()-1).add(fsd);
 						}
 						
 						List<Region> parentRegionsComposite = Lists.newArrayList();
-						for (List<FaultSectionPrefData> sects : sectsByParent) {
+						for (List<FaultSection> sects : sectsByParent) {
 							// build composite surface for just this parent section
 							List<RuptureSurface> surfs = Lists.newArrayList();
-							for(FaultSectionPrefData fltData : sects)
-								surfs.add(fltData.getStirlingGriddedSurface(spacing, false, true));
+							for(FaultSection fltData : sects)
+								surfs.add(fltData.getFaultSurface(spacing, false, true));
 							RuptureSurface compound;
 							if (surfs.size() == 1)
 								compound = surfs.get(0);

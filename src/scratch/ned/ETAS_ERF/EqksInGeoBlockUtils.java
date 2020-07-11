@@ -11,7 +11,7 @@ import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 
-import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
 
 public class EqksInGeoBlockUtils {
 
@@ -51,7 +51,7 @@ public class EqksInGeoBlockUtils {
 	/**
 	 * This creates an EqksInGeoBlock for the given ERF at each point in the GriddedRegion region
 	 */
-	public static ArrayList<EqksInGeoBlock> makeAllEqksInGeoBlocks(FaultSystemSolutionPoissonERF erf, GriddedRegion griddedRegion, double maxDepth) {
+	public static ArrayList<EqksInGeoBlock> makeAllEqksInGeoBlocks(FaultSystemSolutionERF erf, GriddedRegion griddedRegion, double maxDepth) {
 
 		double calcStartTime=System.currentTimeMillis();
 		System.out.println("Starting to make blocks");

@@ -22,7 +22,7 @@ import org.opensha.sha.gui.infoTools.CalcProgressBar;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
-import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.UCERF2_Mapped.UCERF2_FM2pt1_FaultSysSolTimeDepERF;
 
 public class ERF_RatesAtPointsInSpace {
@@ -58,7 +58,7 @@ public class ERF_RatesAtPointsInSpace {
 	 * @param depthDiscr
 	 * @param pointSrcDiscr - the grid spacing of off-fault/background events
 	 */
-	public ERF_RatesAtPointsInSpace(GriddedRegion griddedRegion, FaultSystemSolutionPoissonERF erf, double sourceRates[],
+	public ERF_RatesAtPointsInSpace(GriddedRegion griddedRegion, FaultSystemSolutionERF erf, double sourceRates[],
 			double maxDepth, double depthDiscr, double pointSrcDiscr, String oututFileNameWithPath) {
 		
 		this.maxDepth=maxDepth;
@@ -322,7 +322,7 @@ public class ERF_RatesAtPointsInSpace {
 	}
 
 
-	public void testRates(FaultSystemSolutionPoissonERF erf) {
+	public void testRates(FaultSystemSolutionERF erf) {
 		
 		System.out.println("Testing total rate");
 		getPointSampler();
@@ -343,7 +343,7 @@ public class ERF_RatesAtPointsInSpace {
 	}
 	
 	
-	public void testMagFreqDist(FaultSystemSolutionPoissonERF erf) {
+	public void testMagFreqDist(FaultSystemSolutionERF erf) {
 		
 		System.out.println("Running testMagFreqDist()");
 		SummedMagFreqDist magDist = new SummedMagFreqDist(2.05, 8.95, 70);
@@ -506,7 +506,7 @@ public class ERF_RatesAtPointsInSpace {
 	 * @param dirName
 	 * @return
 	 */
-	public String plotOrigERF_RatesMap(String label, boolean local, String dirName, FaultSystemSolutionPoissonERF erf) {
+	public String plotOrigERF_RatesMap(String label, boolean local, String dirName, FaultSystemSolutionERF erf) {
 		
 		GMT_MapGenerator mapGen = new GMT_MapGenerator();
 		mapGen.setParameter(GMT_MapGenerator.GMT_SMOOTHING_PARAM_NAME, false);
@@ -574,7 +574,7 @@ public class ERF_RatesAtPointsInSpace {
 	 * @param dirName
 	 * @return
 	 */
-	public String plotRandomSampleRatesMap(String label, boolean local, String dirName, FaultSystemSolutionPoissonERF erf, int numYrs) {
+	public String plotRandomSampleRatesMap(String label, boolean local, String dirName, FaultSystemSolutionERF erf, int numYrs) {
 		
 		GMT_MapGenerator mapGen = new GMT_MapGenerator();
 		mapGen.setParameter(GMT_MapGenerator.GMT_SMOOTHING_PARAM_NAME, false);

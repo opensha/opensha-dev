@@ -13,6 +13,7 @@ import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.threads.Task;
 import org.opensha.commons.util.threads.ThreadedTaskComputer;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -45,7 +46,7 @@ public class RupSetValidator {
 			if (D) {
 				System.out.println("Single Parent Rup Test Failed! "
 						+parent+". expected: "+expected+"\tactual: "+actual);
-				for (FaultSectionPrefData data : rupSet.getFaultSectionDataList())
+				for (FaultSection data : rupSet.getFaultSectionDataList())
 					if (data.getParentSectionId() == parent) {
 						System.out.println(data.getSectionName());
 						break;
@@ -62,7 +63,7 @@ public class RupSetValidator {
 		HashSet<Integer> rupsForParent = null;
 //		System.out.println("Starting the test!");
 		for (int sectIndex=0; sectIndex<rupSet.getNumSections(); sectIndex++) {
-			FaultSectionPrefData data = rupSet.getFaultSectionData(sectIndex);
+			FaultSection data = rupSet.getFaultSectionData(sectIndex);
 			if (rupsForParent == null || prevParent != data.getParentSectionId()) {
 				if (rupsForParent != null) {
 					// do the test
@@ -87,7 +88,7 @@ public class RupSetValidator {
 	private static boolean isMultiFault(int rup, FaultSystemRupSet rupSet) {
 		int parentID = -1;
 		for (int sectIndex : rupSet.getSectionsIndicesForRup(rup)) {
-			FaultSectionPrefData data = rupSet.getFaultSectionData(sectIndex);
+			FaultSection data = rupSet.getFaultSectionData(sectIndex);
 			if (parentID < 0)
 				parentID = data.getParentSectionId();
 			else if (parentID != data.getParentSectionId())
@@ -322,14 +323,14 @@ public class RupSetValidator {
 		private FaultModels faultModel;
 		private DeformationModels defModel;
 		private LaughTestFilter filter;
-		private List<FaultSectionPrefData> faultSectionData;
+		private List<? extends FaultSection> faultSectionData;
 		private Map<IDPairing, Double> subSectionDistances;
 		private Map<IDPairing, Double> subSectionAzimuths;
 		private int numRups;
 		private Boolean passes = null;
 		
 		public ValidationTask(FaultModels faultModel, DeformationModels defModel, LaughTestFilter filter,
-				List<FaultSectionPrefData> faultSectionData, Map<IDPairing, Double> subSectionDistances, Map<IDPairing, Double> subSectionAzimuths) {
+				List<? extends FaultSection> faultSectionData, Map<IDPairing, Double> subSectionDistances, Map<IDPairing, Double> subSectionAzimuths) {
 			this.faultModel = faultModel;
 			this.defModel = defModel;
 			this.filter = filter;
@@ -384,7 +385,7 @@ public class RupSetValidator {
 				fetch.getSubSectionDistanceMap(filters.get(0).getMaxJumpDist());
 			Map<IDPairing, Double> subSectionAzimuths =
 				fetch.getSubSectionAzimuthMap(subSectionDistances.keySet());
-			ArrayList<FaultSectionPrefData> faultSectionData = fetch.getSubSectionList();
+			List<? extends FaultSection> faultSectionData = fetch.getSubSectionList();
 			
 			ArrayList<ValidationTask> tasks = new ArrayList<RupSetValidator.ValidationTask>();
 			for (LaughTestFilter filter : filters) {
@@ -439,7 +440,7 @@ public class RupSetValidator {
 	
 	private static class FakeRupSet extends InversionFaultSystemRupSet {
 		
-		private List<FaultSectionPrefData> data;
+		private List<? extends FaultSection> data;
 		private List<List<Integer>> rups;
 		private int numRups;
 		private FaultModels fm;
@@ -466,7 +467,7 @@ public class RupSetValidator {
 		}
 		
 		@Override
-		public FaultSectionPrefData getFaultSectionData(int sectIndex) {
+		public FaultSection getFaultSectionData(int sectIndex) {
 			return data.get(sectIndex);
 		}
 		
@@ -553,13 +554,13 @@ public class RupSetValidator {
 		}
 
 		@Override
-		public List<FaultSectionPrefData> getFaultSectionDataList() {
+		public List<? extends FaultSection> getFaultSectionDataList() {
 			// TODO Auto-generated method stub
 			return null;
 		}
 
 		@Override
-		public List<FaultSectionPrefData> getFaultSectionDataForRupture(
+		public List<FaultSection> getFaultSectionDataForRupture(
 				int rupIndex) {
 			// TODO Auto-generated method stub
 			return null;

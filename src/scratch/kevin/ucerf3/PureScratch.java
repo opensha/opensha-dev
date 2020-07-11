@@ -111,6 +111,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.UCERF2_Tim
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.faultSurface.EvenlyGridCenteredSurface;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
@@ -226,7 +227,7 @@ public class PureScratch {
 
 		Map<Integer, Boolean> safSectsInSoCal = Maps.newHashMap();
 		for (int sectIndex=0; sectIndex<rupSet.getNumSections(); sectIndex++) {
-			FaultSectionPrefData sect = rupSet.getFaultSectionData(sectIndex);
+			FaultSection sect = rupSet.getFaultSectionData(sectIndex);
 			if (!parents.contains(sect.getParentSectionId()))
 				continue;
 			boolean inside = false;
@@ -279,7 +280,7 @@ public class PureScratch {
 		Map<String, Integer> parentsInBox = Maps.newHashMap();
 
 		for (int sectIndex=0; sectIndex<rupSet.getNumSections(); sectIndex++) {
-			FaultSectionPrefData sect = rupSet.getFaultSectionData(sectIndex);
+			FaultSection sect = rupSet.getFaultSectionData(sectIndex);
 			boolean inside = false;
 			for (Location loc : sect.getFaultTrace()) {
 				if (region.contains(loc)) {
@@ -312,7 +313,7 @@ public class PureScratch {
 	}
 
 	private static void test5() throws IOException {
-		ArrayList<FaultSectionPrefData> subSects = new DeformationModelFetcher(
+		List<? extends FaultSection> subSects = new DeformationModelFetcher(
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 				UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1d).getSubSectionList();
 		LastEventData.populateSubSects(subSects, LastEventData.load());
@@ -331,7 +332,7 @@ public class PureScratch {
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 
-		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 			System.out.println(sect.getSectionId()+". "+sect.getName());
 			if (sect.getSectionId() > 50)
 				break;
@@ -339,7 +340,7 @@ public class PureScratch {
 
 		Map<String, List<Integer>> parentCounts = Maps.newHashMap();
 
-		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 			String parentName = sect.getParentSectionName();
 			List<Integer> indexes = parentCounts.get(parentName);
 			if (indexes == null) {
@@ -604,12 +605,12 @@ public class PureScratch {
 		List<Integer> sjSects = map.get("San Jacinto (SB to C)");
 		sjSects.addAll(map.get("San Jacinto (CC to SM)"));
 		
-		Map<Integer, FaultSectionPrefData> sectMap = fm.fetchFaultSectionsMap();
+		Map<Integer, FaultSection> sectMap = fm.fetchFaultSectionsMap();
 		
 //		System.out.println("SSAF sects before removal: "+safSects.size());
 //		
 //		for (int i=safSects.size(); --i>=0;) {
-//			FaultSectionPrefData sect = sectMap.get(safSects.get(i));
+//			FaultSection sect = sectMap.get(safSects.get(i));
 //			boolean inside = false;
 //			for (Location loc : sect.getFaultTrace()) {
 //				if (soCalReg.contains(loc)) {
@@ -1018,7 +1019,7 @@ public class PureScratch {
 		FaultSystemRupSet rupSet = FaultSystemIO.loadRupSet(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		int index = TestScenario.MOJAVE_M7.getFSS_Index();
-		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataForRupture(index))
+		for (FaultSection sect : rupSet.getFaultSectionDataForRupture(index))
 			System.out.println(sect.getSectionId()+": "+sect.getSectionName());
 	}
 	
@@ -1335,9 +1336,9 @@ public class PureScratch {
 		int num3plus = 0;
 		int max = 0;
 		
-		List<FaultSectionPrefData> sects = RSQSimUtils.getUCERF3SubSectsForComparison(FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+		List<? extends FaultSection> sects = RSQSimUtils.getUCERF3SubSectsForComparison(FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
-		for (FaultSectionPrefData sect : sects) {
+		for (FaultSection sect : sects) {
 			int num = sect.getFaultTrace().size();
 			if (num == 2)
 				num2++;
@@ -1396,10 +1397,10 @@ public class PureScratch {
 		erf.updateForecast();
 		FaultSystemSolution sol = erf.getSolution();
 		int index = 44602;
-		for (FaultSectionPrefData sect : sol.getRupSet().getFaultSectionDataForRupture(index)) {
+		for (FaultSection sect : sol.getRupSet().getFaultSectionDataForRupture(index)) {
 			System.out.println("Section: "+sect.getName());
 		}
-		RuptureSurface surf = sol.getRupSet().getSurfaceForRupupture(index, 1d, false);
+		RuptureSurface surf = sol.getRupSet().getSurfaceForRupupture(index, 1d);
 		System.out.println("Ztor: "+surf.getAveRupTopDepth());
 		Location loc = new Location(37.78849, -122.26912);
 		System.out.println("Rjb: "+surf.getDistanceJB(loc));
@@ -1429,10 +1430,10 @@ public class PureScratch {
 		Location bombay = new Location(33.3172, -115.72800000000001, 5.96);
 		double minMojave = Double.POSITIVE_INFINITY;
 		double minBombay = Double.POSITIVE_INFINITY;
-		for (FaultSectionPrefData sect : sol.getRupSet().getFaultSectionDataList()) {
+		for (FaultSection sect : sol.getRupSet().getFaultSectionDataList()) {
 			if (!sect.getName().contains("Mojave") && !sect.getName().contains("Coachella"))
 				continue;
-			StirlingGriddedSurface surf = sect.getStirlingGriddedSurface(0.1, false, false);
+			RuptureSurface surf = sect.getFaultSurface(0.1, false, false);
 			for (Location loc : surf.getEvenlyDiscritizedListOfLocsOnSurface()) {
 				minMojave = Double.min(minMojave, LocationUtils.linearDistanceFast(mojave, loc));
 				minBombay = Double.min(minBombay, LocationUtils.linearDistanceFast(bombay, loc));
@@ -1527,8 +1528,8 @@ public class PureScratch {
 	}
 	
 	private static void test59() throws IOException {
-		List<FaultSectionPrefData> subSects31 = DeformationModels.loadSubSects(FaultModels.FM3_1, DeformationModels.GEOLOGIC);
-		List<FaultSectionPrefData> subSects32 = DeformationModels.loadSubSects(FaultModels.FM3_2, DeformationModels.GEOLOGIC);
+		List<? extends FaultSection> subSects31 = DeformationModels.loadSubSects(FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+		List<? extends FaultSection> subSects32 = DeformationModels.loadSubSects(FaultModels.FM3_2, DeformationModels.GEOLOGIC);
 		FaultSectionDataWriter.writeSectionsToFile(subSects31, null, new File("/tmp/fm_3_1.txt"), false);
 		FaultSectionDataWriter.writeSectionsToFile(subSects32, null, new File("/tmp/fm_3_2.txt"), false);
 	}
@@ -1538,15 +1539,15 @@ public class PureScratch {
 	}
 	
 	private static void test61() {
-		List<FaultSectionPrefData> subSects = DeformationModels.loadSubSects(
+		List<? extends FaultSection> subSects = DeformationModels.loadSubSects(
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
-		List<FaultSectionPrefData> gv07Sects = new ArrayList<>();
-		List<FaultSectionPrefData> gv08Sects = new ArrayList<>();
-		List<FaultSectionPrefData> gv10Sects = new ArrayList<>();
-		List<FaultSectionPrefData> ortigalitaSects = new ArrayList<>(); //Ortigalita
+		List<FaultSection> gv07Sects = new ArrayList<>();
+		List<FaultSection> gv08Sects = new ArrayList<>();
+		List<FaultSection> gv10Sects = new ArrayList<>();
+		List<FaultSection> ortigalitaSects = new ArrayList<>(); //Ortigalita
 		
-		for (FaultSectionPrefData sect : subSects) {
+		for (FaultSection sect : subSects) {
 			if (sect.getParentSectionId() == 136)
 				gv07Sects.add(sect);
 			if (sect.getParentSectionId() == 137)
@@ -1558,30 +1559,30 @@ public class PureScratch {
 		}
 
 		double min07Dist = Double.POSITIVE_INFINITY;
-		for (FaultSectionPrefData gvSect : gv07Sects)
-			for (FaultSectionPrefData oSect : ortigalitaSects)
+		for (FaultSection gvSect : gv07Sects)
+			for (FaultSection oSect : ortigalitaSects)
 				min07Dist = Double.min(min07Dist, minDist(gvSect, oSect));
 		System.out.println("GV 07 to O dist: "+min07Dist);
 		
 		double min08Dist = Double.POSITIVE_INFINITY;
-		for (FaultSectionPrefData gvSect : gv08Sects)
-			for (FaultSectionPrefData oSect : ortigalitaSects)
+		for (FaultSection gvSect : gv08Sects)
+			for (FaultSection oSect : ortigalitaSects)
 				min08Dist = Double.min(min08Dist, minDist(gvSect, oSect));
 		System.out.println("GV 08 to O dist: "+min08Dist);
 		
 		double min10Dist = Double.POSITIVE_INFINITY;
-		for (FaultSectionPrefData gvSect : gv10Sects)
-			for (FaultSectionPrefData oSect : ortigalitaSects)
+		for (FaultSection gvSect : gv10Sects)
+			for (FaultSection oSect : ortigalitaSects)
 				min10Dist = Double.min(min10Dist, minDist(gvSect, oSect));
 		System.out.println("GV 10 to O dist: "+min10Dist);
 		
 		// reset depths
 		double ave07Upper = 0d;
-		for (FaultSectionPrefData gvSect : gv07Sects)
+		for (FaultSection gvSect : gv07Sects)
 			ave07Upper += gvSect.getOrigAveUpperDepth();
 		ave07Upper /= gv07Sects.size();
 		double ave08Upper = 0d;
-		for (FaultSectionPrefData gvSect : gv08Sects)
+		for (FaultSection gvSect : gv08Sects)
 			ave08Upper += gvSect.getOrigAveUpperDepth();
 		ave08Upper /= gv08Sects.size();
 		System.out.println("GV 07 Upper: "+ave07Upper);
@@ -1590,25 +1591,25 @@ public class PureScratch {
 		// mod gv08 depths
 		double delta = ave07Upper - ave08Upper;
 //		delta *= 3;
-		for (FaultSectionPrefData sect : gv08Sects) {
-			sect.setAveLowerDepth(sect.getAveLowerDepth()+delta);
-			sect.setAveUpperDepth(sect.getOrigAveUpperDepth()+delta);
-			StirlingGriddedSurface surf = sect.getStirlingGriddedSurface(1d+0.05*Math.random()); // to clear cache
-			System.out.println("Surf upper: "+surf.getUpperSeismogenicDepth());
-			System.out.println("Surf lower: "+surf.getLowerSeismogenicDepth());
+		for (FaultSection sect : gv08Sects) {
+			((FaultSectionPrefData)sect).setAveLowerDepth(sect.getAveLowerDepth()+delta);
+			((FaultSectionPrefData)sect).setAveUpperDepth(sect.getOrigAveUpperDepth()+delta);
+			RuptureSurface surf = sect.getFaultSurface(1d+0.05*Math.random()); // to clear cache
+			System.out.println("Surf upper: "+surf.getAveRupTopDepth());
+//			System.out.println("Surf lower: "+surf.getave);
 		}
 		
 		double mod08Dist = Double.POSITIVE_INFINITY;
-		for (FaultSectionPrefData gvSect : gv08Sects)
-			for (FaultSectionPrefData oSect : ortigalitaSects)
+		for (FaultSection gvSect : gv08Sects)
+			for (FaultSection oSect : ortigalitaSects)
 				mod08Dist = Double.min(mod08Dist, minDist(gvSect, oSect));
 		System.out.println("Mod 08 to O dist: "+mod08Dist);
 	}
 
 	
-	private static double minDist(FaultSectionPrefData s1, FaultSectionPrefData s2) {
-		StirlingGriddedSurface surf1 = s1.getStirlingGriddedSurface(1d, false, false);
-		StirlingGriddedSurface surf2 = s2.getStirlingGriddedSurface(1d, false, false);
+	private static double minDist(FaultSection s1, FaultSection s2) {
+		RuptureSurface surf1 = s1.getFaultSurface(1d, false, false);
+		RuptureSurface surf2 = s2.getFaultSurface(1d, false, false);
 		
 		double minDist = Double.POSITIVE_INFINITY;
 		for (Location l1 : surf1.getEvenlyDiscritizedListOfLocsOnSurface())
@@ -1622,7 +1623,7 @@ public class PureScratch {
 		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 		RSQSimSubSectionMapper mapper = catalog.getSubSectMapper();
 		HashSet<String> names = new HashSet<>();
-		for (FaultSectionPrefData sect : mapper.getSubSections()) {
+		for (FaultSection sect : mapper.getSubSections()) {
 			if (sect.getName().contains("Mojave")) {
 				Collection<SimulatorElement> elems = mapper.getElementsForSection(sect);
 				names.add(elems.iterator().next().getSectionName());
@@ -1731,8 +1732,8 @@ public class PureScratch {
 	}
 	
 	private static void test68() throws IOException {
-		List<FaultSectionPrefData> sects31 = FaultModels.FM3_1.fetchFaultSections();
-		List<FaultSectionPrefData> sects32 = FaultModels.FM3_1.fetchFaultSections();
+		List<FaultSection> sects31 = FaultModels.FM3_1.fetchFaultSections();
+		List<FaultSection> sects32 = FaultModels.FM3_1.fetchFaultSections();
 		FaultSectionDataWriter.writeSectionsToFile(sects31, null, new File("/tmp/fm_3_1.txt"), false);
 		FaultSectionDataWriter.writeSectionsToFile(sects32, null, new File("/tmp/fm_3_2.txt"), false);
 	}
@@ -1861,13 +1862,13 @@ public class PureScratch {
 		//						+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		//		FaultSystemRupSet rupSet = theSol.getRupSet();
 		//		int numWith = 0;
-		//		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList())
+		//		for (FaultSection sect : rupSet.getFaultSectionDataList())
 		//			if (sect.getDateOfLastEvent() > Long.MIN_VALUE)
 		//				numWith++;
 		//		System.out.println(numWith+"/"+rupSet.getNumSections()+" have last event data");
 		//		System.exit(0);
 		//		HistogramFunction hist = new HistogramFunction(0.25, 40, 0.5);
-		//		for (FaultSectionPrefData sect : theSol.getRupSet().getFaultSectionDataList()) {
+		//		for (FaultSection sect : theSol.getRupSet().getFaultSectionDataList()) {
 		//			double len = sect.getTraceLength();
 		//			hist.add(len, 1d);
 		//		}
@@ -1984,8 +1985,8 @@ public class PureScratch {
 		//
 		//		PrefFaultSectionDataDB_DAO faultSectionDB_DAO = new PrefFaultSectionDataDB_DAO(db);
 		//
-		//		List<FaultSectionPrefData> sections = faultSectionDB_DAO.getAllFaultSectionPrefData(); 
-		//		for (FaultSectionPrefData data : sections)
+		//		List<FaultSection> sections = faultSectionDB_DAO.getAllFaultSection(); 
+		//		for (FaultSection data : sections)
 		//			System.out.println(data);
 		//		System.exit(0);
 		//		

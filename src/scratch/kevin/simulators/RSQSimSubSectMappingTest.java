@@ -10,6 +10,8 @@ import java.util.List;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
@@ -30,7 +32,7 @@ public class RSQSimSubSectMappingTest {
 		
 		RSQSimSubSectionMapper mapper = catalog.getSubSectMapper();
 		
-		List<FaultSectionPrefData> subSects = catalog.getU3SubSects();
+		List<? extends FaultSection> subSects = catalog.getU3SubSects();
 		List<SimulatorElement> elems = catalog.getElements();
 		int offset = RSQSimUtils.getSubSectIndexOffset(elems, subSects);
 		fw.write("Catalog: "+catalog.getName()+"\n");
@@ -41,12 +43,12 @@ public class RSQSimSubSectMappingTest {
 		fw.write("\n");
 		
 		DecimalFormat df = new DecimalFormat("0.000");
-		List<FaultSectionPrefData> missingSubSects = new ArrayList<>();
+		List<FaultSection> missingSubSects = new ArrayList<>();
 		MinMaxAveTracker totTrack = new MinMaxAveTracker();
 		for (int s=0; s<subSects.size(); s++) {
 			MinMaxAveTracker sectTrack = new MinMaxAveTracker();
-			FaultSectionPrefData subSect = subSects.get(s);
-			StirlingGriddedSurface surf = subSect.getStirlingGriddedSurface(spacing, false, false);
+			FaultSection subSect = subSects.get(s);
+			RuptureSurface surf = subSect.getFaultSurface(spacing, false, false);
 			for (SimulatorElement elem : mapper.getElementsForSection(subSect)) {
 				Location loc = elem.getCenterLocation();
 				double dist = surf.getDistanceJB(new Location(loc.getLatitude(), loc.getLongitude()));
@@ -68,7 +70,7 @@ public class RSQSimSubSectMappingTest {
 		fw.write("Total Distances:\tmin="+df.format(totTrack.getMin())+"\tmax="+df.format(totTrack.getMax())
 			+"\tmean="+df.format(totTrack.getAverage())+"\n");
 		fw.write(missingSubSects.size()+" sub-sections without mappings"+(missingSubSects.isEmpty() ? "" : ":")+"\n");
-		for (FaultSectionPrefData missing : missingSubSects)
+		for (FaultSection missing : missingSubSects)
 			fw.write("\t"+missing.getSectionId()+". "+missing.getName()+"\n");
 		fw.close();
 	}

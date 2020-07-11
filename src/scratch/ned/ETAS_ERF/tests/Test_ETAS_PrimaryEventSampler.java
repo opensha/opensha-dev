@@ -9,7 +9,6 @@ import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.param.AleatoryMagAreaStdDevParam;
 
-import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
 import scratch.ned.ETAS_ERF.EqksInGeoBlock;
 import scratch.ned.ETAS_ERF.EqksInGeoBlockUtils;
 import scratch.ned.ETAS_ERF.testModels.TestModel1_ERF;

@@ -27,6 +27,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.sha.earthquake.FocalMechanism;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.simulators.EventRecord;
@@ -313,7 +314,7 @@ public class RuptureRotationUtils {
 	
 	public static RSQSimEvent getInitiallyOriented(RSQSimCatalog catalog, RSQSimEvent rupture,
 			Location centroid) {
-		List<FaultSectionPrefData> allSubSects = catalog.getU3SubSects();
+		List<? extends FaultSection> allSubSects = catalog.getU3SubSects();
 		int offset;
 		try {
 			offset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), catalog.getU3SubSects());
@@ -328,7 +329,7 @@ public class RuptureRotationUtils {
 		double[] elemSlips = rupture.getAllElementSlips();
 		for (int i=0; i<rupElems.size(); i++) {
 			SimulatorElement elem = rupElems.get(i);
-			FaultSectionPrefData sect = allSubSects.get(elem.getSectionID()-offset);
+			FaultSection sect = allSubSects.get(elem.getSectionID()-offset);
 			double elemStrike = elem.getFocalMechanism().getStrike();
 			
 			// check to see if it's flipped ~180 from the section strike (happens often for SS faults)

@@ -11,6 +11,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.collect.Lists;
 
@@ -26,7 +27,7 @@ public class FaultPolyDataWriter {
 		FaultPolyMgr polyManager = rupSet.getInversionTargetMFDs().getGridSeisUtils().getPolyMgr();
 		CSVFile<String> csv = new CSVFile<String>(true);
 		csv.addLine("Sect Index", "Sect Name", "Parent Sect ID", "Num Poly Locations", "Latitude", "Longitude");
-		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 			Region region = polyManager.getPoly(sect.getSectionId());
 			LocationList border = region.getBorder();
 			List<String> line = Lists.newArrayList(sect.getSectionId()+"", sect.getSectionName(),

@@ -36,6 +36,7 @@ import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.parsers.EQSIMv06FileReader;
@@ -268,10 +269,10 @@ public class SimJunctionMapper {
 	}
 	
 	private List<ParentSectInfo> getParentSects(FaultSystemRupSet rupSet) {
-		Map<Integer, List<FaultSectionPrefData>> map = Maps.newHashMap();
-		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+		Map<Integer, List<FaultSection>> map = Maps.newHashMap();
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 			Integer parentID = sect.getParentSectionId();
-			List<FaultSectionPrefData> sects = map.get(parentID);
+			List<FaultSection> sects = map.get(parentID);
 			if (sects == null) {
 				sects = Lists.newArrayList();
 				map.put(parentID, sects);
@@ -280,7 +281,7 @@ public class SimJunctionMapper {
 		}
 		
 		List<ParentSectInfo> parents = Lists.newArrayList();
-		for (List<FaultSectionPrefData> sects : map.values())
+		for (List<FaultSection> sects : map.values())
 			parents.add(new ParentSectInfo(sects));
 		
 		return parents;
@@ -325,11 +326,11 @@ public class SimJunctionMapper {
 				List<Integer> parentsForRup = rupSet.getParentSectionsForRup(rupIndex);
 				if (parentsForRup.contains(pair.getID2())) {
 					// this is a multi fault with both parents
-					List<FaultSectionPrefData> sects = rupSet.getFaultSectionDataForRupture(rupIndex);
+					List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(rupIndex);
 					// find the connecting sub section
 					for (int i=1; i<sects.size(); i++) {
-						FaultSectionPrefData s1 = sects.get(i-1);
-						FaultSectionPrefData s2 = sects.get(i);
+						FaultSection s1 = sects.get(i-1);
+						FaultSection s2 = sects.get(i);
 						if (s1.getParentSectionId() == pair.getID1() && s2.getParentSectionId() == pair.getID2()) {
 							sects1.add(s1.getSectionId());
 							sects2.add(s2.getSectionId());
@@ -388,7 +389,7 @@ public class SimJunctionMapper {
 	private static Map<Integer, Double> calcParentSectMeanSlipRates(FaultSystemRupSet rupSet) {
 		Map<Integer, List<Double>> parentAllSlipRates = Maps.newHashMap();
 		for (int sectIndex=0; sectIndex<rupSet.getNumSections(); sectIndex++) {
-			FaultSectionPrefData sect = rupSet.getFaultSectionData(sectIndex);
+			FaultSection sect = rupSet.getFaultSectionData(sectIndex);
 			double slip = sect.getOrigAveSlipRate();
 			List<Double> slips = parentAllSlipRates.get(sect.getParentSectionId());
 			if (slips == null) {
@@ -422,13 +423,13 @@ public class SimJunctionMapper {
 		private double avgRake;
 		private double avgDip;
 
-		public ParentSectInfo(List<FaultSectionPrefData> sectsForParent) {
+		public ParentSectInfo(List<FaultSection> sectsForParent) {
 			this.parentID = sectsForParent.get(0).getParentSectionId();
 			this.parentName = sectsForParent.get(0).getParentSectionName();
 			
 			length = 0;
 			List<Double> rakes = Lists.newArrayList();
-			for (FaultSectionPrefData sect: sectsForParent) {
+			for (FaultSection sect: sectsForParent) {
 				FaultTrace trace = sect.getFaultTrace();
 				double subLen = trace.getTraceLength();
 				length += subLen;
@@ -834,7 +835,7 @@ public class SimJunctionMapper {
 			if (plotJunctions) {
 				String nameLeft = null;
 				String nameRight = null;
-				for (FaultSectionPrefData sect : ucerfRupSet.getFaultSectionDataList()) {
+				for (FaultSection sect : ucerfRupSet.getFaultSectionDataList()) {
 					if (sect.getParentSectionId() == pair.getID1())
 						nameLeft = sect.getParentSectionName();
 					if (sect.getParentSectionId() == pair.getID2())
@@ -1027,7 +1028,7 @@ public class SimJunctionMapper {
 		List<Double> rates = Lists.newArrayList();
 		
 		for (int rupIndex : rupIndexes) {
-			List<FaultSectionPrefData> sects = rupSet.getFaultSectionDataForRupture(rupIndex);
+			List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(rupIndex);
 			int junctIndex = -1;
 			boolean reversed = false;
 			for (int i=1; i<sects.size(); i++) {

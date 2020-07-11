@@ -25,6 +25,7 @@ import org.opensha.sha.calc.ScenarioShakeMapCalculator;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.AttenuationRelationship;
@@ -106,7 +107,7 @@ public class JorgeShakeMapCalc {
 			metaFW.write("Hypocenter for Directivity Calcs: "+rup.getHypocenterLocation()+"\n");
 		}
 		metaFW.write("UCERF3 Subsection For Rupture:\n");
-		for (FaultSectionPrefData sect : fss.getRupSet().getFaultSectionDataForRupture(fssIndex))
+		for (FaultSection sect : fss.getRupSet().getFaultSectionDataForRupture(fssIndex))
 			metaFW.write("\t"+sect.getName()+"\n");
 		metaFW.write("Fault Trace:\n");
 		for (Location loc : rup.getRuptureSurface().getUpperEdge())

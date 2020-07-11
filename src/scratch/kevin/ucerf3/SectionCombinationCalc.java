@@ -11,6 +11,7 @@ import java.util.zip.ZipException;
 import org.dom4j.DocumentException;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashBasedTable;
@@ -44,7 +45,7 @@ public class SectionCombinationCalc {
 		for (int rup : potentialRups) {
 			boolean allOnSects = true;
 			HashSet<Integer> mySects = new HashSet<Integer>();
-			for (FaultSectionPrefData sect : rupSet.getFaultSectionDataForRupture(rup)) {
+			for (FaultSection sect : rupSet.getFaultSectionDataForRupture(rup)) {
 				if (!sectMap.containsRow(sect.getParentSectionId())) {
 					allOnSects = false;
 					break;

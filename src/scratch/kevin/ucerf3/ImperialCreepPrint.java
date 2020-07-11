@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -24,11 +25,11 @@ public class ImperialCreepPrint {
 		for (DeformationModels dm : DeformationModels.forFaultModel(fm)) {
 			if (dm.getRelativeWeight(InversionModels.CHAR_CONSTRAINED) == 0)
 				continue;
-			ArrayList<FaultSectionPrefData> subSects =
+			List<? extends FaultSection> subSects =
 					new DeformationModelFetcher(fm, dm, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1).getSubSectionList();
 			
 			List<Double> aseis = Lists.newArrayList();
-			for (FaultSectionPrefData sect : subSects) {
+			for (FaultSection sect : subSects) {
 				if (sect.getParentSectionId() == imperialParentID) {
 					double myAseis = sect.getAseismicSlipFactor();
 					if (!aseis.contains(myAseis))

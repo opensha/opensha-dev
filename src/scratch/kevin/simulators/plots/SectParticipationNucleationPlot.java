@@ -16,6 +16,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -31,7 +32,7 @@ public class SectParticipationNucleationPlot extends AbstractPlot {
 	
 	private double overallMinMag;
 	
-	private List<FaultSectionPrefData> subSects;
+	private List<? extends FaultSection> subSects;
 	private double[][] particRates;
 	private double[][] nuclRates;
 
@@ -94,7 +95,7 @@ public class SectParticipationNucleationPlot extends AbstractPlot {
 		ratioCPT.setNanColor(Color.GRAY);
 		
 		List<LocationList> faults = new ArrayList<>();
-		for (FaultSectionPrefData sect : subSects)
+		for (FaultSection sect : subSects)
 			faults.add(sect.getFaultTrace());
 		
 		for (int m=0; m<minMags.length; m++) {

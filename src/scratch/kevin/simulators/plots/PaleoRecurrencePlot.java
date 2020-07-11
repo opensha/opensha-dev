@@ -25,6 +25,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -44,7 +45,7 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 	
 	private List<PaleoResult> results;
 	private Map<SimulatorElement, List<PaleoResult>> elemPaleoMappings;
-	private Map<FaultSectionPrefData, List<PaleoResult>> sectPaleoMappings;
+	private Map<FaultSection, List<PaleoResult>> sectPaleoMappings;
 	
 	private PaleoProbabilityModel paleoProbModel;
 	
@@ -55,7 +56,7 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 	
 	public PaleoRecurrencePlot(List<SimulatorElement> elements, RSQSimSubSectionMapper mapper) throws IOException {
 		this.mapper = mapper;
-		List<FaultSectionPrefData> subSects = mapper.getSubSections();
+		List<? extends FaultSection> subSects = mapper.getSubSections();
 		ArrayList<PaleoRateConstraint> constraints = UCERF3_PaleoRateConstraintFetcher.getConstraints(subSects);
 		
 		paleoProbModel = UCERF3_PaleoProbabilityModel.load();
@@ -69,7 +70,7 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 		for (PaleoRateConstraint constr : constraints) {
 			if (D) System.out.println("Paleo constraint: "+constr.getPaleoSiteName());
 			int sectIndex = constr.getSectionIndex();
-			FaultSectionPrefData subSect = subSects.get(sectIndex);
+			FaultSection subSect = subSects.get(sectIndex);
 			if (D) System.out.println("\tMapped section: "+subSect.getSectionName());
 			if (!mapper.isMapped(subSect)) {
 				if (D) System.out.println("\tSkipping section (no mapped elements)");
@@ -128,7 +129,7 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 			this.constraint = constraint;
 		}
 		
-		public void addSubSectMatch(double mag, List<FaultSectionPrefData> rupSections, int sectionIndex) {
+		public void addSubSectMatch(double mag, List<FaultSection> rupSections, int sectionIndex) {
 			sectEventCount++;
 			sectPaleoProbCount += paleoProbModel.getProbPaleoVisible(mag, rupSections, sectionIndex);
 		}
@@ -143,12 +144,12 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 	protected void doProcessEvent(SimulatorEvent e) {
 		RSQSimEvent event = (RSQSimEvent)e;
 		List<List<SubSectionMapping>> mappedSects = mapper.getFilteredSubSectionMappings(event);
-		List<FaultSectionPrefData> sects = new ArrayList<>();
+		List<FaultSection> sects = new ArrayList<>();
 		for (List<SubSectionMapping> bundle : mappedSects)
 			for (SubSectionMapping mapping : bundle)
 				sects.add(mapping.getSubSect());
 		
-		for (FaultSectionPrefData sect : sects)
+		for (FaultSection sect : sects)
 			if (sectPaleoMappings.containsKey(sect))
 				for (PaleoResult result : sectPaleoMappings.get(sect))
 					result.addSubSectMatch(event.getMagnitude(), sects, sect.getSectionId());

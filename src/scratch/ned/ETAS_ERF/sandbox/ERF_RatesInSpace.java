@@ -32,7 +32,7 @@ import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.sha.magdist.ArbIncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
-import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.UCERF2_Mapped.UCERF2_FM2pt1_FaultSysSolTimeDepERF;
 import scratch.ned.ETAS_ERF.EqksInGeoBlock;
 
@@ -65,7 +65,7 @@ public class ERF_RatesInSpace {
 	 * @param depthDiscr
 	 * @param pointSrcDiscr - the grid spacing of off-fault/background events
 	 */
-	public ERF_RatesInSpace(GriddedRegion griddedRegion, FaultSystemSolutionPoissonERF erf, double maxDepth, double depthDiscr,
+	public ERF_RatesInSpace(GriddedRegion griddedRegion, FaultSystemSolutionERF erf, double maxDepth, double depthDiscr,
 			String oututFileNameWithPath) {
 		
 		this.maxDepth=maxDepth;
@@ -95,7 +95,7 @@ public class ERF_RatesInSpace {
 	 * @param depthDiscr
 	 * @param pointSrcDiscr - the grid spacing of off-fault/background events
 	 */
-	public ERF_RatesInSpace(GriddedRegion griddedRegion, FaultSystemSolutionPoissonERF erf, double maxDepth, double depthDiscr,
+	public ERF_RatesInSpace(GriddedRegion griddedRegion, FaultSystemSolutionERF erf, double maxDepth, double depthDiscr,
 			double pointSrcDiscr, String oututFileNameWithPath) {
 		
 		this.maxDepth=maxDepth;
@@ -364,7 +364,7 @@ public class ERF_RatesInSpace {
 	}
 
 
-	public void testRates(FaultSystemSolutionPoissonERF erf) {
+	public void testRates(FaultSystemSolutionERF erf) {
 		
 		System.out.println("Testing total rate");
 		
@@ -389,7 +389,7 @@ public class ERF_RatesInSpace {
 	}
 	
 	
-	public void testMagFreqDist(FaultSystemSolutionPoissonERF erf) {
+	public void testMagFreqDist(FaultSystemSolutionERF erf) {
 		SummedMagFreqDist magDist = new SummedMagFreqDist(2.05, 8.95, 70);
 		getPointSampler();	// make sure it exisits
 		for(int i=0; i<pointSampler.size();i++) {
@@ -416,7 +416,7 @@ public class ERF_RatesInSpace {
 	
 	
 	
-	public void testChangeRatesInSpace(FaultSystemSolutionPoissonERF erf){
+	public void testChangeRatesInSpace(FaultSystemSolutionERF erf){
 		System.out.println("Testing changing rates in space");
 		for(int s=0; s<erf.getNumFaultSystemSources();s++) {
 			ProbEqkSource src = erf.getSource(s);
@@ -669,7 +669,7 @@ public class ERF_RatesInSpace {
 	 * @param dirName
 	 * @return
 	 */
-	public String plotOrigERF_RatesMap(String label, boolean local, String dirName, FaultSystemSolutionPoissonERF erf) {
+	public String plotOrigERF_RatesMap(String label, boolean local, String dirName, FaultSystemSolutionERF erf) {
 		
 		GMT_MapGenerator mapGen = new GMT_MapGenerator();
 		mapGen.setParameter(GMT_MapGenerator.GMT_SMOOTHING_PARAM_NAME, false);
@@ -737,7 +737,7 @@ public class ERF_RatesInSpace {
 	 * @param dirName
 	 * @return
 	 */
-	public String plotRandomSampleRatesMap(String label, boolean local, String dirName, FaultSystemSolutionPoissonERF erf, int numYrs) {
+	public String plotRandomSampleRatesMap(String label, boolean local, String dirName, FaultSystemSolutionERF erf, int numYrs) {
 		
 		GMT_MapGenerator mapGen = new GMT_MapGenerator();
 		mapGen.setParameter(GMT_MapGenerator.GMT_SMOOTHING_PARAM_NAME, false);

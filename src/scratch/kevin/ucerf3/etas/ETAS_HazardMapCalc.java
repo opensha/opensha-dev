@@ -74,6 +74,7 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -555,7 +556,7 @@ public class ETAS_HazardMapCalc {
 		long erfStartMillis = timeSpan.getStartTimeInMillis();
 		long eventTimeMillis = erfStartMillis - 1000l; // 1 second before
 		FaultSystemRupSet rupSet = sol.getRupSet();
-		for (FaultSectionPrefData sect : rupSet.getFaultSectionDataForRupture(scenario.getFSS_Index()))
+		for (FaultSection sect : rupSet.getFaultSectionDataForRupture(scenario.getFSS_Index()))
 			// use startYear not minOT in case the calc started in the middle of the year
 			sect.setDateOfLastEvent(eventTimeMillis);
 	}
@@ -1560,7 +1561,7 @@ public class ETAS_HazardMapCalc {
 		
 		EqkRupture rup;
 		if (scenario.getFSS_Index() >= 0) {
-			RuptureSurface surf = sol.getRupSet().getSurfaceForRupupture(scenario.getFSS_Index(), 1d, false);
+			RuptureSurface surf = sol.getRupSet().getSurfaceForRupupture(scenario.getFSS_Index(), 1d);
 			double mag = scenario.getMagnitude();
 			if (Double.isNaN(mag))
 				mag = sol.getRupSet().getMagForRup(scenario.getFSS_Index());
@@ -1653,7 +1654,7 @@ public class ETAS_HazardMapCalc {
 			FaultSystemRupSet rupSet = sol.getRupSet();
 			
 			for (int s=0; s<rupSet.getNumSections(); s++) {
-				FaultSectionPrefData sect = rupSet.getFaultSectionData(s);
+				FaultSection sect = rupSet.getFaultSectionData(s);
 				for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(sect.getFaultTrace(), Color.BLACK, thickness))
 					map.addPolys(poly);
 			}
@@ -1661,7 +1662,7 @@ public class ETAS_HazardMapCalc {
 		if (scenario != null && scenario.getFSS_Index() >= 0) {
 			Preconditions.checkNotNull(sol, "Must have FSS if you want faults");
 			FaultSystemRupSet rupSet = sol.getRupSet();
-			for (FaultSectionPrefData s : rupSet.getFaultSectionDataForRupture(scenario.getFSS_Index())) {
+			for (FaultSection s : rupSet.getFaultSectionDataForRupture(scenario.getFSS_Index())) {
 				for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(s.getFaultTrace(), Color.WHITE, 2f*thickness))
 					map.addPolys(poly);
 			}

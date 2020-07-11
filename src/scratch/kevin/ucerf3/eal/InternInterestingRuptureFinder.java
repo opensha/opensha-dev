@@ -11,6 +11,7 @@ import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 
 import com.google.common.collect.Lists;
@@ -87,7 +88,7 @@ public class InternInterestingRuptureFinder {
 		csv.addLine("Index", "Mag", "Loss: "+label, "Rate", "Loss*Rate", "First Section", "Last Section");
 		for (int i = 0; i < rups.size(); i++) {
 			Rupture rup = rups.get(i);
-			List<FaultSectionPrefData> sects = baSol.getRupSet().getFaultSectionDataForRupture(rup.id);
+			List<FaultSection> sects = baSol.getRupSet().getFaultSectionDataForRupture(rup.id);
 			csv.addLine(rup.id+"", rup.mag+"", rup.loss+"", rup.rate+"", (rup.loss*rup.rate)+"",
 					sects.get(0).getName(), sects.get(sects.size()-1).getName());
 		}

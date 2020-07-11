@@ -19,7 +19,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.ArbIncrementalMagFreqDist;
 
-import scratch.UCERF3.erf.FaultSystemSolutionPoissonERF;
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
 
 /**
  * This class store information about all ruptures that nucleate inside this geographic block.
@@ -288,7 +288,7 @@ public class EqksAtPoint {
 	 * 
 	 * @return
 	 */
-	public ArbIncrementalMagFreqDist getMagFreqDist(FaultSystemSolutionPoissonERF erf) {
+	public ArbIncrementalMagFreqDist getMagFreqDist(FaultSystemSolutionERF erf) {
 		getRandomSampler(); // do this to make sure it exists
 		ArbIncrementalMagFreqDist magDist = new ArbIncrementalMagFreqDist(2.05, 8.95, 70);
 		for(int j=0; j<rupIndexN_Array.length; j++) {
@@ -312,7 +312,7 @@ public class EqksAtPoint {
 	 * 
 	 * @return
 	 */
-	public ArbIncrementalMagFreqDist getMagProbDist(FaultSystemSolutionPoissonERF erf) {
+	public ArbIncrementalMagFreqDist getMagProbDist(FaultSystemSolutionERF erf) {
 		throw new RuntimeException("Method needs work");
 //		ArbIncrementalMagFreqDist magDist = new ArbIncrementalMagFreqDist(2.05, 8.95, 70);
 //		for(int j=0; j<rupIndexN_Array.length; j++) {

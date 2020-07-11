@@ -12,6 +12,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.simulators.SimulatorEvent;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.SimulatorElement;
 
@@ -50,7 +51,7 @@ public class UCERF3_ETASComparisons {
 			sectIndexesInRegion = null;
 		} else {
 			sectIndexesInRegion = new HashSet<Integer>();
-			for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+			for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 				for (Location loc : sect.getFaultTrace()) {
 					if (region.contains(loc)) {
 						sectIndexesInRegion.add(sect.getSectionId());

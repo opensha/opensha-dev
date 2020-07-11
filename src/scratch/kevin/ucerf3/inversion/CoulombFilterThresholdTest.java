@@ -8,6 +8,7 @@ import java.util.Map;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -62,7 +63,7 @@ public class CoulombFilterThresholdTest {
 				
 				int filteredCount = 0;
 				for (int r=0; r<rupSet.getNumRuptures(); r++) {
-					List<FaultSectionPrefData> rupture = rupSet.getFaultSectionDataForRupture(r);
+					List<? extends FaultSection> rupture = rupSet.getFaultSectionDataForRupture(r);
 					if (cf.doesRupturePass(rupture))
 						filteredCount++;
 				}
@@ -103,7 +104,7 @@ public class CoulombFilterThresholdTest {
 				line.add(sizeNullZero(excludedMap.get(Likelihood.POSSIBLE))+"");
 				line.add(sizeNullZero(includedMap.get(Likelihood.NO))+"");
 				line.add(sizeNullZero(excludedMap.get(Likelihood.NO))+"");
-				List<FaultSectionPrefData> datas = rupSet.getFaultSectionDataList();
+				List<? extends FaultSection> datas = rupSet.getFaultSectionDataList();
 				line.add(getPairingsString(excludedMap.get(Likelihood.LIKELY), datas, rates));
 				line.add(getPairingsString(excludedMap.get(Likelihood.POSSIBLE), datas, rates));
 				line.add(getPairingsString(includedMap.get(Likelihood.NO), datas, rates));
@@ -121,7 +122,7 @@ public class CoulombFilterThresholdTest {
 		return list.size();
 	}
 	
-	private static String getPairingsString(List<BiasiCoulombRecord> recs, List<FaultSectionPrefData> datas, CoulombRates rates) {
+	private static String getPairingsString(List<BiasiCoulombRecord> recs, List<? extends FaultSection> datas, CoulombRates rates) {
 		if (recs == null || recs.isEmpty())
 			return "";
 		List<String> list = Lists.newArrayList();

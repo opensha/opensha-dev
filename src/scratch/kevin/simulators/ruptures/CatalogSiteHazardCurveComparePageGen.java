@@ -14,6 +14,7 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
@@ -210,17 +211,17 @@ public class CatalogSiteHazardCurveComparePageGen extends SiteHazardCurveComareP
 		
 		Table<String, RSQSimEvent, Double> table = HashBasedTable.create();
 		for (RSQSimEvent event : events) {
-			List<FaultSectionPrefData> sects = catalog.getMappedSubSectRupture(event).getSubSections();
+			List<? extends FaultSection> sects = catalog.getMappedSubSectRupture(event).getSubSections();
 			double totArea = 0d;
 			List<Double> areas = new ArrayList<>();
-			for (FaultSectionPrefData sect : sects) {
+			for (FaultSection sect : sects) {
 				double area = sect.getOrigDownDipWidth()*sect.getTraceLength();
 				totArea += area;
 				areas.add(area);
 			}
 			Map<String, Double> sourceFracts = new HashMap<>();
 			for (int i=0; i<sects.size(); i++) {
-				FaultSectionPrefData sect = sects.get(i);
+				FaultSection sect = sects.get(i);
 				int id = sect.getParentSectionId();
 				String name = idsToFaultNamesMap.get(id);
 				if (name == null) {

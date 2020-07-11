@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.dom4j.DocumentException;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.collect.Lists;
 
@@ -55,7 +56,7 @@ public class SAFRupFileWriter {
 						if (rups.contains(rup) || skippedRups.contains(rup))
 							continue;
 						boolean skip = false;
-						for (FaultSectionPrefData sect : rupSet.getFaultSectionDataForRupture(rup)) {
+						for (FaultSection sect : rupSet.getFaultSectionDataForRupture(rup)) {
 							if (!allParents.contains(sect.getParentSectionId())) {
 								skip = true;
 								break;

@@ -11,6 +11,7 @@ import org.dom4j.DocumentException;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -61,7 +62,7 @@ public class StandaloneSubSectRupGen {
 		Preconditions.checkState(!coulombFilter || fm == FaultModels.FM3_1 || fm == FaultModels.FM3_2);
 		
 		// load in the fault section data ("parent sections")
-		List<FaultSectionPrefData> fsd = FaultModels.loadStoredFaultSections(fsdFile);
+		List<FaultSection> fsd = FaultModels.loadStoredFaultSections(fsdFile);
 		
 		if (sectsToRemove != null && !sectsToRemove.isEmpty()) {
 			System.out.println("Removing these parent fault sections: "
@@ -84,15 +85,15 @@ public class StandaloneSubSectRupGen {
 		System.out.println(fsd.size()+" Parent Fault Sections");
 		
 		// this list will store our subsections
-		List<FaultSectionPrefData> subSections = Lists.newArrayList();
+		List<FaultSection> subSections = Lists.newArrayList();
 		
 		// build the subsections
 		int sectIndex = 0;
-		for (FaultSectionPrefData parentSect : fsd) {
+		for (FaultSection parentSect : fsd) {
 			double ddw = parentSect.getOrigDownDipWidth();
 			double maxSectLength = ddw*maxSubSectionLength;
 			// the "2" here sets a minimum number of sub sections
-			List<FaultSectionPrefData> newSubSects = parentSect.getSubSectionsList(maxSectLength, sectIndex, 2);
+			List<? extends FaultSection> newSubSects = parentSect.getSubSectionsList(maxSectLength, sectIndex, 2);
 			subSections.addAll(newSubSects);
 			sectIndex += newSubSects.size();
 		}
@@ -160,27 +161,27 @@ public class StandaloneSubSectRupGen {
 		FaultSystemIO.writeRupSet(rupSet, zipFile);
 	}
 	
-	public static CoulombRates remapCoulombRates(List<FaultSectionPrefData> subSections, FaultModels fm) throws IOException {
+	public static CoulombRates remapCoulombRates(List<? extends FaultSection> subSections, FaultModels fm) throws IOException {
 		// original coulomb rates
 		CoulombRates origRates = CoulombRates.loadUCERF3CoulombRates(fm);
 		
 		// now load the original subsections
-		List<FaultSectionPrefData> origSubSects = new DeformationModelFetcher(
+		List<? extends FaultSection> origSubSects = new DeformationModelFetcher(
 				fm, DeformationModels.GEOLOGIC, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR,
 				InversionFaultSystemRupSetFactory.DEFAULT_ASEIS_VALUE).getSubSectionList();
 		
 		Map<IDPairing, CoulombRatesRecord> rates = Maps.newHashMap();
 		
-		Map<FaultSectionPrefData, FaultSectionPrefData> remappings = Maps.newHashMap();
-		for (FaultSectionPrefData sect : origSubSects)
+		Map<FaultSection, FaultSection> remappings = Maps.newHashMap();
+		for (FaultSection sect : origSubSects)
 			remappings.put(sect, getRemappedSubSect(sect, subSections));
 		
 		for (IDPairing pair : origRates.keySet()) {
-			FaultSectionPrefData subSect1 = origSubSects.get(pair.getID1());
-			FaultSectionPrefData subSect2 = origSubSects.get(pair.getID2());
+			FaultSection subSect1 = origSubSects.get(pair.getID1());
+			FaultSection subSect2 = origSubSects.get(pair.getID2());
 			
-			FaultSectionPrefData mapped1 = remappings.get(subSect1);
-			FaultSectionPrefData mapped2 = remappings.get(subSect2);
+			FaultSection mapped1 = remappings.get(subSect1);
+			FaultSection mapped2 = remappings.get(subSect2);
 			
 			if (mapped1 != null && mapped2 != null) {
 				CoulombRatesRecord origRec = origRates.get(pair);
@@ -191,9 +192,9 @@ public class StandaloneSubSectRupGen {
 		return new CoulombRates(rates);
 	}
 	
-	private static FaultSectionPrefData getRemappedSubSect(FaultSectionPrefData origSubSect,
-			List<FaultSectionPrefData> newSubSects) {
-		for (FaultSectionPrefData newSect : newSubSects) {
+	private static FaultSection getRemappedSubSect(FaultSection origSubSect,
+			List<? extends FaultSection> newSubSects) {
+		for (FaultSection newSect : newSubSects) {
 			if (newSect.getParentSectionId() != origSubSect.getParentSectionId())
 				continue;
 			if (newSect.getSectionName().equals(origSubSect.getSectionName()))

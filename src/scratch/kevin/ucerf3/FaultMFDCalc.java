@@ -18,6 +18,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
@@ -59,7 +60,7 @@ public class FaultMFDCalc {
 				parentIDsSet.add(parentID);
 			
 			HashSet<Integer> subSects = new HashSet<>();
-			for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList())
+			for (FaultSection sect : rupSet.getFaultSectionDataList())
 				if (parentIDsSet.contains(sect.getParentSectionId()))
 					subSects.add(sect.getSectionId());
 			

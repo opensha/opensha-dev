@@ -29,6 +29,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -52,7 +53,7 @@ public class ExtremeRupturePageGen {
 				"Total count of mapped UCERF3 subsections (e.g. SAF Mojave S Subsection 3), "
 				+ "after application of minimum subsection area filter") {
 			@Override
-			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<FaultSectionPrefData> eventSections,
+			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<? extends FaultSection> eventSections,
 					int subSectIDOffset, Map<IDPairing, Double> subSectsDistCache, Map<IDPairing, Double> elementDistsCache) {
 				return eventSections.size();
 			}
@@ -61,10 +62,10 @@ public class ExtremeRupturePageGen {
 				"Total count of mapped UCERF3 subsections (e.g. SAF Mojave S), "
 				+ "after application of minimum subsection area filter") {
 			@Override
-			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<FaultSectionPrefData> eventSections,
+			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<? extends FaultSection> eventSections,
 					int subSectIDOffset, Map<IDPairing, Double> subSectsDistCache, Map<IDPairing, Double> elementDistsCache) {
 				HashSet<Integer> parentIDs = new HashSet<>();
-				for (FaultSectionPrefData sect : eventSections)
+				for (FaultSection sect : eventSections)
 					parentIDs.add(sect.getParentSectionId());
 				return parentIDs.size();
 			}
@@ -86,10 +87,10 @@ public class ExtremeRupturePageGen {
 		MAPPED_LENTH_RATIO("Mapped Length Ratio", "mapped_len_ratio", null, "Ratio of the total rupture length (UCERF3 mapped subsection rupture)"
 				+ " to the idealized length, defined as the straight line distance between the furthest 2 subsections") {
 			@Override
-			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<FaultSectionPrefData> eventSections,
+			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<? extends FaultSection> eventSections,
 					int subSectIDOffset, Map<IDPairing, Double> subSectsDistCache, Map<IDPairing, Double> elementDistsCache) {
 				double totLen = 0d;
-				for (FaultSectionPrefData sect : eventSections)
+				for (FaultSection sect : eventSections)
 					totLen += sect.getTraceLength();
 				double idealLen = calcIdealMinLength(eventSections, subSectsDistCache);
 				Preconditions.checkState(idealLen > 0);
@@ -102,10 +103,10 @@ public class ExtremeRupturePageGen {
 		MAPPED_EXCESS_LENTH("Mapped Excess Length", "mapped_len_excess", "km", "Total rupture length (UCERF3 mapped subsection rupture)"
 				+ " minus the idealized length, defined as the straight line distance between the furthest 2 subsections") {
 			@Override
-			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<FaultSectionPrefData> eventSections,
+			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<? extends FaultSection> eventSections,
 					int subSectIDOffset, Map<IDPairing, Double> subSectsDistCache, Map<IDPairing, Double> elementDistsCache) {
 				double totLen = 0d;
-				for (FaultSectionPrefData sect : eventSections)
+				for (FaultSection sect : eventSections)
 					totLen += sect.getTraceLength();
 				double idealLen = calcIdealMinLength(eventSections, subSectsDistCache);
 				Preconditions.checkState(idealLen > 0);
@@ -115,11 +116,11 @@ public class ExtremeRupturePageGen {
 		MOMENT_OFF_MAPPED("Moment Off Mapped Rupture", "moment_off_mapped", "N-m",
 				"Moment of simulator elements not included in mapped UCERF3 subsection rupture") {
 			@Override
-			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<FaultSectionPrefData> eventSections,
+			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<? extends FaultSection> eventSections,
 					int subSectIDOffset, Map<IDPairing, Double> subSectsDistCache, Map<IDPairing, Double> elementDistsCache) {
 				
 				HashSet<Integer> mappedIDs = new HashSet<>();
-				for (FaultSectionPrefData sect : eventSections)
+				for (FaultSection sect : eventSections)
 					mappedIDs.add(sect.getSectionId());
 				
 				double momentOff = 0d;
@@ -136,7 +137,7 @@ public class ExtremeRupturePageGen {
 		},
 		MAG("Magnitude", "mag", null, "Event Moment Magnitude") {
 			@Override
-			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<FaultSectionPrefData> eventSections,
+			public double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<? extends FaultSection> eventSections,
 					int subSectIDOffset, Map<IDPairing, Double> subSectsDistCache, Map<IDPairing, Double> elementDistsCache) {
 				return event.getMagnitude();
 			}
@@ -146,12 +147,12 @@ public class ExtremeRupturePageGen {
 			private final double buffer = 100;
 			private Map<FaultSectionPrefData, Region> sectRegions;
 			@Override
-			public synchronized double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<FaultSectionPrefData> eventSections,
+			public synchronized double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<? extends FaultSection> eventSections,
 					int subSectIDOffset, Map<IDPairing, Double> subSectsDistCache, Map<IDPairing, Double> elementDistsCache) {
 				if (sectRegions == null)
 					sectRegions = new HashMap<>();
 				List<Region> myRegions = new ArrayList<>(eventSections.size());
-				for (FaultSectionPrefData sect : eventSections) {
+				for (FaultSection sect : eventSections) {
 					Region region = sectRegions.get(sect);
 					if (region == null) {
 						region = new Region(sect.getFaultTrace(), buffer);
@@ -195,18 +196,18 @@ public class ExtremeRupturePageGen {
 			this.threshold = threshold;
 		}
 		
-		public abstract double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<FaultSectionPrefData> eventSections,
+		public abstract double calculate(RSQSimCatalog catalog, RSQSimEvent event, List<? extends FaultSection> eventSections,
 				int subSectIDOffset, Map<IDPairing, Double> subSectsDistCache, Map<IDPairing, Double> elementDistsCache);
 	}
 	
-	private static double calcIdealMinLength(List<FaultSectionPrefData> subSects, Map<IDPairing, Double> subSectsDistCache) {
-		FaultSectionPrefData farS1 = null;
-		FaultSectionPrefData farS2 = null;
+	private static double calcIdealMinLength(List<? extends FaultSection> subSects, Map<IDPairing, Double> subSectsDistCache) {
+		FaultSection farS1 = null;
+		FaultSection farS2 = null;
 		double maxDist = 0d;
 		for (int i=0; i<subSects.size(); i++) {
-			FaultSectionPrefData s1 = subSects.get(i);
+			FaultSection s1 = subSects.get(i);
 			for (int j=i; j<subSects.size(); j++) {
-				FaultSectionPrefData s2 = subSects.get(j);
+				FaultSection s2 = subSects.get(j);
 				double dist = getSubSectDist(subSectsDistCache, s1, s2);
 				if (dist >= maxDist) {
 					maxDist = dist;
@@ -251,7 +252,7 @@ public class ExtremeRupturePageGen {
 		
 	}
 	
-	private static double getSubSectDist(Map<IDPairing, Double> distsCache, FaultSectionPrefData s1, FaultSectionPrefData s2) {
+	private static double getSubSectDist(Map<IDPairing, Double> distsCache, FaultSection s1, FaultSection s2) {
 		if (s1.getSectionId() == s2.getSectionId())
 			return 0d;
 		IDPairing pairing = new IDPairing(s1.getSectionId(), s2.getSectionId());
@@ -395,7 +396,7 @@ public class ExtremeRupturePageGen {
 		for (RSQSimEvent event : events) {
 			Map<Metric, Double> scores = new HashMap<>();
 			
-			List<FaultSectionPrefData> subSects = catalog.getSubSectsForRupture(event);
+			List<? extends FaultSection> subSects = catalog.getSubSectsForRupture(event);
 			
 			for (Metric metric : metrics)
 				scores.put(metric, metric.calculate(catalog, event, subSects, subSectIDOffset, sectDistsCache, elemDistsCache));

@@ -11,6 +11,7 @@ import java.util.Map;
 
 import org.dom4j.DocumentException;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
@@ -35,9 +36,9 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 		faultNames = new ArrayList<>();
 
 		FaultSystemRupSet rupSet = sol.getRupSet();
-		Map<String, List<FaultSectionPrefData>> sectsForParents = new HashMap<>();
-		for (FaultSectionPrefData subSect : rupSet.getFaultSectionDataList()) {
-			List<FaultSectionPrefData> sectsForParent = sectsForParents.get(subSect.getParentSectionName());
+		Map<String, List<FaultSection>> sectsForParents = new HashMap<>();
+		for (FaultSection subSect : rupSet.getFaultSectionDataList()) {
+			List<FaultSection> sectsForParent = sectsForParents.get(subSect.getParentSectionName());
 			if (sectsForParent == null) {
 				sectsForParent = new ArrayList<>();
 				sectsForParents.put(subSect.getParentSectionName(), sectsForParent);
@@ -47,12 +48,12 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 		
 //		System.out.println("Rupture Counts");
 		for (String[] parentNames : parentSectNames) {
-			List<FaultSectionPrefData> subSectsForParent = new ArrayList<>();
+			List<FaultSection> subSectsForParent = new ArrayList<>();
 			for (String parentName : parentNames)
 				subSectsForParent.addAll(sectsForParents.get(parentName));
 			double totArea = 0d;
 			HashSet<Integer> subSectIDs = new HashSet<>();
-			for (FaultSectionPrefData sect : subSectsForParent) {
+			for (FaultSection sect : subSectsForParent) {
 				totArea += rupSet.getAreaForSection(sect.getSectionId());
 				subSectIDs.add(sect.getSectionId());
 			}

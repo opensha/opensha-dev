@@ -12,6 +12,7 @@ import org.dom4j.Element;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -61,7 +62,7 @@ public class DateLastEventAdder {
 		
 		Document doc = XMLUtils.loadDocument(fsdFile);
 		Element fsEl = doc.getRootElement().element(FaultSectionPrefData.XML_METADATA_NAME+"List");
-		ArrayList<FaultSectionPrefData> faultSectionData = FaultSystemIO.fsDataFromXML(fsEl);
+		ArrayList<FaultSection> faultSectionData = FaultSystemIO.fsDataFromXML(fsEl);
 		int withBefore = countLastEventData(faultSectionData);
 		LastEventData.populateSubSects(faultSectionData, data);
 		int withAfter = countLastEventData(faultSectionData);
@@ -95,10 +96,10 @@ public class DateLastEventAdder {
 		FileUtils.deleteRecursive(tempDir);
 	}
 	
-	private static int countLastEventData(List<FaultSectionPrefData> fsd) {
+	private static int countLastEventData(List<? extends FaultSection> fsd) {
 		int cnt = 0;
 		
-		for (FaultSectionPrefData sect : fsd)
+		for (FaultSection sect : fsd)
 			if (sect.getDateOfLastEvent() > Long.MIN_VALUE)
 				cnt++;
 		

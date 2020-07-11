@@ -49,6 +49,7 @@ import org.opensha.commons.util.DataUtils;
 import org.opensha.nshmp2.tmp.TestGrid;
 import org.opensha.nshmp2.util.Period;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
@@ -2124,8 +2125,8 @@ public class UC33_MapMaker {
 
 
 	private static void addFaultTraces(FaultModels fm, GMT_Map map, Color c) {
-		List<FaultSectionPrefData> faults = fm.fetchFaultSections();
-		for (FaultSectionPrefData fspd : faults) {
+		List<FaultSection> faults = fm.fetchFaultSections();
+		for (FaultSection fspd : faults) {
 			PSXYPolygon poly = new PSXYPolygon(fspd.getFaultTrace());
 			poly.setPenColor(c);
 			poly.setPenWidth(2);

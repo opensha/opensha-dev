@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -24,9 +25,9 @@ public class NamedFaultsTest {
 				continue;
 			Map<Integer, List<Integer>> named = fm.getNamedFaultsMap();
 			
-			ArrayList<FaultSectionPrefData> sects = fm.fetchFaultSections();
+			ArrayList<FaultSection> sects = fm.fetchFaultSections();
 			
-			for (FaultSectionPrefData fault : sects) {
+			for (FaultSection fault : sects) {
 				int id = fault.getSectionId();
 				if (id == 402)
 					System.out.println("402: "+fault.getSectionName());
@@ -35,7 +36,7 @@ public class NamedFaultsTest {
 			}
 			FaultSystemRupSet rupSet = InversionFaultSystemRupSetFactory.cachedForBranch(
 					true, fm, DeformationModels.forFaultModel(fm).get(0));
-			for (FaultSectionPrefData subSect : rupSet.getFaultSectionDataList()) {
+			for (FaultSection subSect : rupSet.getFaultSectionDataList()) {
 				int parentID = subSect.getParentSectionId();
 				if (!named.containsKey(parentID)) {
 					System.out.println(fm+" missing named faults for parent: "+parentID);

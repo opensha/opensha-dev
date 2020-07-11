@@ -44,6 +44,7 @@ import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -150,12 +151,12 @@ public class RSQSimU3RupturePageGen {
 		File scratchDir = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/");
 		DeformationModelFetcher fetch = new DeformationModelFetcher(fm, dm, scratchDir, 0.1);
 		
-		List<FaultSectionPrefData> datas = fetch.getSubSectionList();
+		List<? extends FaultSection> datas = fetch.getSubSectionList();
 		
 		Map<IDPairing, Double> distances = fetch.getSubSectionDistanceMap(1000d);
 		Map<IDPairing, Double> azimuths = fetch.getSubSectionAzimuthMap(distances.keySet());
 		Map<Integer, Double> rakesMap = new HashMap<Integer, Double>();
-		for (FaultSectionPrefData data : rupSet.getFaultSectionDataList())
+		for (FaultSection data : rupSet.getFaultSectionDataList())
 			rakesMap.put(data.getSectionId(), data.getAveRake());
 		boolean applyGarlockPintoMtnFix = true;
 		
@@ -200,7 +201,7 @@ public class RSQSimU3RupturePageGen {
 			int numCatalogOccurances = (int)Math.round(sol.getRateForRup(r)/minRate);
 			tot += numCatalogOccurances;
 			Preconditions.checkState(numCatalogOccurances >= 1);
-			List<FaultSectionPrefData> rupture = rupSet.getFaultSectionDataForRupture(r);
+			List<? extends FaultSection> rupture = rupSet.getFaultSectionDataForRupture(r);
 			boolean allPass = true;
 			int onlyFailureIndex = -1;
 			for (int t=0; t<tests.size(); t++) {
@@ -467,7 +468,7 @@ public class RSQSimU3RupturePageGen {
 		}
 
 		@Override
-		public boolean doesLastSectionPass(List<FaultSectionPrefData> rupture, List<IDPairing> pairings,
+		public boolean doesLastSectionPass(List<? extends FaultSection> rupture, List<IDPairing> pairings,
 				List<Integer> junctionIndexes) {
 			if (junctionIndexes.isEmpty())
 				return true;
@@ -508,7 +509,7 @@ public class RSQSimU3RupturePageGen {
 		}
 
 		@Override
-		public boolean doesLastSectionPass(List<FaultSectionPrefData> rupture, List<IDPairing> pairings,
+		public boolean doesLastSectionPass(List<? extends FaultSection> rupture, List<IDPairing> pairings,
 				List<Integer> junctionIndexes) {
 			boolean passContinual = continualFilter.doesLastSectionPass(rupture, pairings, junctionIndexes);
 			boolean passCleanup = cleanupFilter.doesLastSectionPass(rupture, pairings, junctionIndexes);
@@ -601,7 +602,7 @@ public class RSQSimU3RupturePageGen {
 		csv.writeToFile(new File(outputDir, "mag_cumulant_medians.csv"));
 		
 		List<LocationList> faults = new ArrayList<>();
-		for (FaultSectionPrefData fault : u3RupSet.getFaultSectionDataList())
+		for (FaultSection fault : u3RupSet.getFaultSectionDataList())
 			faults.add(fault.getFaultTrace());
 		
 		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(6d,  8.5d);

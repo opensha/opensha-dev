@@ -9,6 +9,7 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -46,13 +47,13 @@ public class PolygonFileWriter {
 		}
 	}
 	
-	private static void writePolygons(File outputFile, List<FaultSectionPrefData> sects, FaultPolyMgr polys)
+	private static void writePolygons(File outputFile, List<? extends FaultSection> sects, FaultPolyMgr polys)
 			throws IOException {
 		CSVFile<String> csv = new CSVFile<String>(true);
 		
 		csv.addLine("Section ID", "Name", "Parent ID", "Parent Name", "Latitude", "Longitude");
 		
-		for (FaultSectionPrefData sect : sects) {
+		for (FaultSection sect : sects) {
 			List<String> line = Lists.newArrayList(sect.getSectionId()+"", sect.getName());
 			if (sect.getParentSectionId() >= 0) {
 				line.add(sect.getParentSectionId()+"");

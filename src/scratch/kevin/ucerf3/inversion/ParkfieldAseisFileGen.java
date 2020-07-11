@@ -9,6 +9,7 @@ import java.util.Map;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
 import com.google.common.collect.Lists;
@@ -41,7 +42,7 @@ public class ParkfieldAseisFileGen {
 		
 		csv.addLine(header);
 		
-		ArrayList<FaultSectionPrefData> sects = fm.fetchFaultSections();
+		ArrayList<FaultSection> sects = fm.fetchFaultSections();
 		
 		ArrayList<Integer> parentSects = Lists.newArrayList(657, 658, 32, 285, 300);
 		
@@ -56,7 +57,7 @@ public class ParkfieldAseisFileGen {
 		for (int sectID : parentSects) {
 			String name = null;
 			FaultTrace trace = null;
-			for (FaultSectionPrefData data : sects) {
+			for (FaultSection data : sects) {
 				if (data.getSectionId() == sectID) {
 					name = data.getSectionName();
 					trace = data.getFaultTrace();

@@ -20,6 +20,7 @@ import org.opensha.commons.mapping.gmt.elements.PSXYSymbol;
 import org.opensha.commons.mapping.gmt.elements.PSXYSymbol.Symbol;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.collect.Lists;
 
@@ -39,7 +40,7 @@ public class TopoMapGen {
 		List<Location> annotations = Lists.newArrayList();
 		annotations.add(new Location(33.739683, -116.412925));
 		
-		List<FaultSectionPrefData> faults = FaultModels.FM3_1.fetchFaultSections();
+		List<FaultSection> faults = FaultModels.FM3_1.fetchFaultSections();
 		float faultThickness = 1f;
 		
 		GriddedRegion gridReg = new GriddedRegion(region, spacing, null);
@@ -72,7 +73,7 @@ public class TopoMapGen {
 		map.setJPGFileName(null);
 		
 		if (faults != null) {
-			for (FaultSectionPrefData sect : faults) {
+			for (FaultSection sect : faults) {
 				for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(sect.getFaultTrace(), Color.BLACK, faultThickness))
 					map.addPolys(poly);
 			}

@@ -13,6 +13,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -51,7 +52,7 @@ public class RuptureSearch {
 		double aveElemArea = catalog.getAveArea();
 		double aveSectArea = 0d;
 		int numSects = 0;
-		for (FaultSectionPrefData sect : catalog.getU3SubSects()) {
+		for (FaultSection sect : catalog.getU3SubSects()) {
 			if (sect.getParentSectionId() == parentID) {
 				aveSectArea += sect.getTraceLength() * sect.getOrigDownDipWidth();
 				numSects++;
@@ -92,10 +93,10 @@ public class RuptureSearch {
 				if (magDiff > maxMagDiff)
 					continue;
 			}
-			List<FaultSectionPrefData> sects = catalog.getSubSectsForRupture(event);
+			List<FaultSection> sects = catalog.getSubSectsForRupture(event);
 			int numOn = 0;
 			int numOff = 0;
-			for (FaultSectionPrefData sect : sects) {
+			for (FaultSection sect : sects) {
 				if (sect.getParentSectionId() == parentID)
 					numOn++;
 				else

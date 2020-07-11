@@ -25,6 +25,7 @@ import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -66,7 +67,7 @@ public class SectionMFDPlot extends AbstractPlot {
 		
 		parentSectMFDs = new HashMap<>();
 		parentSectNames = new HashMap<>();
-		for (FaultSectionPrefData sect : mapper.getSubSections()) {
+		for (FaultSection sect : mapper.getSubSections()) {
 			Integer parentID = sect.getParentSectionId();
 			if (!parentSectMFDs.containsKey(parentID)) {
 				parentSectMFDs.put(parentID, new IncrementalMagFreqDist(minMag, numMag, deltaMag));
@@ -105,13 +106,13 @@ public class SectionMFDPlot extends AbstractPlot {
 		
 		GridSourceProvider gridProv = null;
 		FaultPolyMgr polyMgr = null;
-		Map<Integer, List<FaultSectionPrefData>> parentToSubSects = null;
+		Map<Integer, List<FaultSection>> parentToSubSects = null;
 		if (comparisonSol != null && comparisonSol.getGridSourceProvider() != null) {
 			polyMgr = FaultPolyMgr.create(comparisonSol.getRupSet().getFaultSectionDataList(), InversionTargetMFDs.FAULT_BUFFER);
 			gridProv = comparisonSol.getGridSourceProvider();
 			parentToSubSects = new HashMap<>();
-			for (FaultSectionPrefData sect : comparisonSol.getRupSet().getFaultSectionDataList()) {
-				List<FaultSectionPrefData> parentSects = parentToSubSects.get(sect.getParentSectionId());
+			for (FaultSection sect : comparisonSol.getRupSet().getFaultSectionDataList()) {
+				List<FaultSection> parentSects = parentToSubSects.get(sect.getParentSectionId());
 				if (parentSects == null) {
 					parentSects = new ArrayList<>();
 					parentToSubSects.put(sect.getParentSectionId(), parentSects);
@@ -152,7 +153,7 @@ public class SectionMFDPlot extends AbstractPlot {
 						parentID, minMag, mfdXVals.getMaxX(), numMag);
 				if (gridProv != null) {
 					// add gridded
-					for (FaultSectionPrefData sect : parentToSubSects.get(parentID)) {
+					for (FaultSection sect : parentToSubSects.get(parentID)) {
 						Map<Integer, Double> nodeFracts = polyMgr.getNodeFractions(sect.getSectionId());
 						for (int nodeIndex : nodeFracts.keySet()) {
 							IncrementalMagFreqDist nodeMFD = gridProv.getNodeSubSeisMFD(nodeIndex);

@@ -30,6 +30,7 @@ import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -219,7 +220,7 @@ class RupSpectraPageGen {
 		double[] elemSlips = event.getAllElementSlips();
 		double[] elemTimes = event.getAllElementTimes();
 		double eventTime = event.getTime();
-		List<FaultSectionPrefData> u3SubSects = catalog.getU3SubSects();
+		List<? extends FaultSection> u3SubSects = catalog.getU3SubSects();
 		int subSectOffset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), u3SubSects);
 		for (int i=0; i<elems.size(); i++) {
 			SimulatorElement elem = elems.get(i);

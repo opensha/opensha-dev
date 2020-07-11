@@ -44,6 +44,7 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -504,7 +505,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	
 	private List<SimulatorElement> elements;
 	private RSQSimStateTransitionFileReader transReader;
-	private List<FaultSectionPrefData> subSects;
+	private List<? extends FaultSection> subSects;
 	private Map<Integer, Double> subSectAreas;
 	private Map<IDPairing, Double> subSectDistsCache;
 	private RSQSimSubSectionMapper subSectMapper;
@@ -1325,7 +1326,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		this.minFractForInclusion = minFractForInclusion;
 	}
 	
-	public synchronized List<FaultSectionPrefData> getU3SubSects() {
+	public synchronized List<? extends FaultSection> getU3SubSects() {
 		if (subSects == null)
 			subSects = RSQSimUtils.getUCERF3SubSectsForComparison(getFaultModel(), getDeformationModel());
 		return subSects;
@@ -1411,7 +1412,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		return RSQSimUtils.buildSubSectBasedRupture(mapper, event);
 	}
 	
-	public List<FaultSectionPrefData> getSubSectsForRupture(RSQSimEvent event) {
+	public List<FaultSection> getSubSectsForRupture(RSQSimEvent event) {
 		RSQSimSubSectionMapper mapper;
 		try {
 			mapper = getSubSectMapper();
@@ -1422,7 +1423,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<List<SubSectionMapping>> bundled =  mapper.getFilteredSubSectionMappings(event);
 		if (minFractForInclusion >= 0 && bundled.isEmpty())
 			bundled = mapper.getAllSubSectionMappings(event);
-		List<FaultSectionPrefData> allSects = new ArrayList<>();
+		List<FaultSection> allSects = new ArrayList<>();
 		for (List<SubSectionMapping> bundle : bundled)
 			for (SubSectionMapping mapping : bundle)
 				allSects.add(mapping.getSubSect());
@@ -1501,7 +1502,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		public Loader forParentSections(boolean calcU3Offset, int... parentIDs) throws IOException {
 			List<Integer> sectionIDs = new ArrayList<>();
-			for (FaultSectionPrefData sect : getU3SubSects())
+			for (FaultSection sect : getU3SubSects())
 				if (Ints.contains(parentIDs, sect.getParentSectionId()))
 					sectionIDs.add(sect.getSectionId());
 			return forSections(calcU3Offset, Ints.toArray(sectionIDs));

@@ -9,6 +9,7 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
 import com.google.common.collect.Lists;
@@ -42,7 +43,7 @@ public class DefModelEndsFileWriter {
 			
 				for (int maxAwayFromEnd : maxAways) {
 				
-				List<FaultSectionPrefData> isolated =
+				List<FaultSection> isolated =
 						DeformationModelsCalc.getIsolatedEndpoints(fetch.getSubSectionList(), distances, maxAwayFromEnd);
 				
 				File file = new File(dir, fm.getShortName()+"_isolated_"+maxAwayFromEnd+"_from_end.csv");
@@ -51,7 +52,7 @@ public class DefModelEndsFileWriter {
 				
 				csv.addLine(Lists.newArrayList(
 						"Sub Section ID", "Parent Section ID", "Sub Section Name", "Endpoint Lat", "Endpoint Lon"));
-				for (FaultSectionPrefData sect : isolated) {
+				for (FaultSection sect : isolated) {
 					String[] split = sect.getName().split(" ");
 					int subSectID = Integer.parseInt(split[split.length-1]);
 					FaultTrace trace = sect.getFaultTrace();

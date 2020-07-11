@@ -15,6 +15,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
+import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.FaultSystemRupSet;
@@ -57,7 +58,7 @@ public class SubSectTDProbCICalc {
 				FaultSystemRupSet rupSet = cfss.getSolution(branch).getRupSet();
 				HashSet<Integer> allRups = new HashSet<Integer>();
 				sectLoop:
-				for (FaultSectionPrefData sect : rupSet.getFaultSectionDataList()) {
+				for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 					for (Location loc : sect.getFaultTrace()) {
 						if (reg.contains(loc)) {
 							allRups.addAll(rupSet.getRupturesForSection(sect.getSectionId()));
