@@ -1,6 +1,5 @@
 package scratch.kevin.simulators.multiFault;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Stroke;
@@ -13,21 +12,32 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.dom4j.DocumentException;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYBoxAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.axis.NumberTickUnit;
+import org.jfree.chart.axis.TickUnit;
+import org.jfree.chart.axis.TickUnits;
 import org.jfree.data.Range;
 import org.jfree.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.GMT_MapException;
+import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -36,15 +46,20 @@ import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.IDPairing;
+import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
-import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.faultSurface.utils.GriddedSurfaceUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -67,8 +82,6 @@ import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
-import org.opensha.commons.util.MarkdownUtils;
-import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
 public class RSQSimU3RupturePageGen {
 
@@ -80,6 +93,8 @@ public class RSQSimU3RupturePageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_3062.instance(catalogsBaseDir);
 		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(catalogsBaseDir);
+		
+		boolean rebuildSol = false;
 		
 		File catalogDir = catalog.getCatalogDir();
 		
@@ -130,7 +145,7 @@ public class RSQSimU3RupturePageGen {
 		String catParams = "m"+(float)minMag+"_skip"+skipYears+"_sectArea"+(float)minFractForInclusion;
 		File solFile = new File(fssDir, "rsqsim_sol_"+catParams+".zip");
 		FaultSystemSolution sol;
-		if (solFile.exists()) {
+		if (solFile.exists() && !rebuildSol) {
 			System.out.println("Loading solution from: "+solFile.getAbsolutePath());
 			sol = FaultSystemIO.loadSol(solFile);
 		} else {
@@ -381,11 +396,116 @@ public class RSQSimU3RupturePageGen {
 		lines.addAll(table.build());
 		lines.add("");
 		
+		System.out.println("Plotting section connections");
+		Map<IDPairing, Double> rsConnections = calcConnecitons(sol, distances, 100d);
+		System.out.println("Detected "+rsConnections.size()+" connections for "+prefix);
+		FaultSystemSolution u3Sol = catalog.getU3CompareSol();
+		Map<IDPairing, Double> u3Connections = calcConnecitons(u3Sol, distances, 25d);
+		System.out.println("Detected "+u3Connections.size()+" U3 connections");
+//		Color rsColor = Color.RED.darker();
+//		Color u3Color = Color.BLUE.darker();
+		Color rsColor = Color.RED;
+		Color u3Color = Color.BLUE;
+		Region fullReg = new CaliforniaRegions.RELM_TESTING();
+		plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_"+catalogTypeFileName,
+				catalogName+" Connectivity", rsConnections.keySet(), rsColor, fullReg);
+		plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_ucerf3",
+				"UCERF3 Connectivity", u3Connections.keySet(), u3Color, fullReg);
+		Map<IDPairing, Double> rsUniqueConnections = new HashMap<>(rsConnections);
+		for (IDPairing pair : u3Connections.keySet())
+			if (rsUniqueConnections.containsKey(pair))
+				rsUniqueConnections.remove(pair);
+		plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName,
+				catalogName+" Unique Connectivity", rsUniqueConnections.keySet(), rsColor, fullReg);
+		Map<IDPairing, Double> u3UniqueConnections = new HashMap<>(u3Connections);
+		for (IDPairing pair : rsConnections.keySet())
+			if (u3UniqueConnections.containsKey(pair))
+				u3UniqueConnections.remove(pair);
+		plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_unique_ucerf3",
+				"UCERF3 Unique Connectivity", u3UniqueConnections.keySet(), u3Color, fullReg);
+		
+		double maxConnDist = 0d;
+		for (IDPairing pair : rsConnections.keySet())
+			maxConnDist = Math.max(maxConnDist, distances.get(pair));
+		for (IDPairing pair : u3Connections.keySet())
+			maxConnDist = Math.max(maxConnDist, distances.get(pair));
+		plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_"+catalogTypeFileName,
+				catalogName+" Connectivity", rsConnections, rsUniqueConnections, maxConnDist,
+				distances, rsColor, false);
+		plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_ucerf3",
+				"UCERF3 Connectivity", u3Connections, u3UniqueConnections, maxConnDist,
+				distances, u3Color, false);
+		plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName,
+				catalogName+" Connectivity", rsConnections, rsUniqueConnections, maxConnDist,
+				distances, rsColor, true);
+		plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_ucerf3",
+				"UCERF3 Connectivity", u3Connections, u3UniqueConnections, maxConnDist,
+				distances, u3Color, true);
+		
+		lines.add("## Fault Section Connections");
+		lines.add(topLink); lines.add("");
+		table = MarkdownUtils.tableBuilder();
+		table.addLine(catalogName, "UCERF3");
+		rsPlot = new File(resourcesDir, "sect_connectivity_"+catalogTypeFileName+".png");
+		Preconditions.checkState(rsPlot.exists());
+		u3Plot = new File(resourcesDir, "sect_connectivity_ucerf3.png");
+		Preconditions.checkState(u3Plot.exists());
+		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
+				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")");
+		rsPlot = new File(resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName+".png");
+		Preconditions.checkState(rsPlot.exists());
+		u3Plot = new File(resourcesDir, "sect_connectivity_unique_ucerf3.png");
+		Preconditions.checkState(u3Plot.exists());
+		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
+				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")");
+		rsPlot = new File(resourcesDir, "sect_connectivity_hist_"+catalogTypeFileName+".png");
+		Preconditions.checkState(rsPlot.exists());
+		u3Plot = new File(resourcesDir, "sect_connectivity_hist_ucerf3.png");
+		Preconditions.checkState(u3Plot.exists());
+		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
+				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")");
+		rsPlot = new File(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName+".png");
+		Preconditions.checkState(rsPlot.exists());
+		u3Plot = new File(resourcesDir, "sect_connectivity_hist_rates_ucerf3.png");
+		Preconditions.checkState(u3Plot.exists());
+		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
+				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")");
+		lines.addAll(table.build());
+		lines.add("");
+		
+		lines.add("### Zoomed Connection Maps");
+		lines.add(topLink); lines.add("");
+		
+		table = MarkdownUtils.tableBuilder();
+		table.addLine(catalogName, "UCERF3");
+
+		Region northZoomReg = new Region(new Location(35.5, -120.5), new Location(39.5, -123));
+		northZoomReg.setName("zoom_north");
+		Region southZoomReg = new Region(new Location(32.5, -115), new Location(35.5, -121));
+		southZoomReg.setName("south_north");
+		Region[] zoomRegions = { northZoomReg, southZoomReg };
+		for (Region zoomReg : zoomRegions) {
+			String zoomPrefix = "sect_connectivity_"+zoomReg.getName();
+			plotConnectivityLines(sol.getRupSet(), resourcesDir, zoomPrefix+"_"+catalogTypeFileName,
+					catalogName+" Connectivity", rsConnections.keySet(), rsColor, zoomReg);
+			plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, zoomPrefix+"_ucerf3",
+					"UCERF3 Connectivity", u3Connections.keySet(), u3Color, zoomReg);
+			rsPlot = new File(resourcesDir, zoomPrefix+"_"+catalogTypeFileName+".png");
+			Preconditions.checkState(rsPlot.exists());
+			u3Plot = new File(resourcesDir, zoomPrefix+"_ucerf3.png");
+			Preconditions.checkState(u3Plot.exists());
+			table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
+					"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")");
+		}
+		
+		lines.addAll(table.build());
+		lines.add("");
+		
 		System.out.println("Plotting connectivity clusters");
 		plotConnectivity(catalog.getU3CompareSol().getRupSet(), resourcesDir, "connectivity_ucerf3", "UCERF3 Connectivity");
 		plotConnectivity(sol.getRupSet(), resourcesDir, "connectivity_"+catalogTypeFileName, catalogName+" Connectivity");
 		
-		lines.add("## Fault Connectivity");
+		lines.add("## Fault Connectivity Clusters");
 		lines.add(topLink); lines.add("");
 		lines.add("");
 		table = MarkdownUtils.tableBuilder();
@@ -836,6 +956,298 @@ public class RSQSimU3RupturePageGen {
 				processClusterRecursive(rupSet, sect2, clusterIndex, clusters, sectIndexToClusterIndexMap);
 			}
 		}
+	}
+	
+	static void plotConnectivityLines(FaultSystemRupSet rupSet, File outputDir, String prefix, String title,
+			Set<IDPairing> connections, Color connectedColor, Region reg) throws IOException {
+		Color faultColor = Color.DARK_GRAY;
+		Color faultOutlineColor = Color.LIGHT_GRAY;
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		XY_DataSet[] outlines = PoliticalBoundariesData.loadCAOutlines();
+		PlotCurveCharacterstics outlineChar = new PlotCurveCharacterstics(PlotLineType.SOLID, (float)1d, Color.GRAY);
+		
+		for (XY_DataSet outline : outlines) {
+			funcs.add(outline);
+			chars.add(outlineChar);
+		}
+		
+		List<Location> middles = new ArrayList<>();
+		
+		for (int s=0; s<rupSet.getNumSections(); s++) {
+			FaultSection sect = rupSet.getFaultSectionData(s);
+			RuptureSurface surf = sect.getFaultSurface(1d);
+			
+			XY_DataSet trace = new DefaultXY_DataSet();
+			for (Location loc : surf.getEvenlyDiscritizedUpperEdge())
+				trace.set(loc.getLongitude(), loc.getLatitude());
+			
+			if (sect.getAveDip() != 90d) {
+				XY_DataSet outline = new DefaultXY_DataSet();
+				LocationList perimeter = surf.getPerimeter();
+				for (Location loc : perimeter)
+					outline.set(loc.getLongitude(), loc.getLatitude());
+				Location first = perimeter.first();
+				outline.set(first.getLongitude(), first.getLatitude());
+				
+				funcs.add(0, outline);
+				chars.add(0, new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, faultOutlineColor));
+			}
+			
+			middles.add(GriddedSurfaceUtils.getSurfaceMiddleLoc(surf));
+			
+			if (s == 0)
+				trace.setName("Fault Sections");
+			
+			funcs.add(trace);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, faultColor));
+		}
+		
+		boolean first = true;
+		for (IDPairing connection : connections) {
+			DefaultXY_DataSet xy = new DefaultXY_DataSet();
+			
+			if (first) {
+				xy.setName("Connections");
+				first = false;
+			}
+			
+			Location loc1 = middles.get(connection.getID1());
+			Location loc2 = middles.get(connection.getID2());
+			
+			xy.set(loc1.getLongitude(), loc1.getLatitude());
+			xy.set(loc2.getLongitude(), loc2.getLatitude());
+			
+			funcs.add(xy);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, connectedColor));
+		}
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, "Longitude", "Latitude");
+		spec.setLegendVisible(true);
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(24);
+		gp.setPlotLabelFontSize(24);
+		gp.setBackgroundColor(Color.WHITE);
+		
+		Range xRange = new Range(reg.getMinLon(), reg.getMaxLon());
+		Range yRange = new Range(reg.getMinLat(), reg.getMaxLat());
+		
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		double tick = 2d;
+		TickUnits tus = new TickUnits();
+		TickUnit tu = new NumberTickUnit(tick);
+		tus.add(tu);
+		gp.getXAxis().setStandardTickUnits(tus);
+		gp.getYAxis().setStandardTickUnits(tus);
+		
+		File file = new File(outputDir, prefix);
+		double aspectRatio = yRange.getLength() / xRange.getLength();
+		gp.getChartPanel().setSize(800, 200 + (int)(600d*aspectRatio));
+		gp.saveAsPNG(file.getAbsolutePath()+".png");
+	}
+	
+	static void plotConnectivityHistogram(File outputDir, String prefix, String title,
+			Map<IDPairing, Double> connections, Map<IDPairing, Double> uniqueConnections,
+			double maxDist,	Map<IDPairing, Double> distances, Color connectedColor, boolean rateWeighted)
+					throws IOException {
+		double delta = 1d;
+//		if (maxDist > 90)
+//			delta = 5d;
+//		else if (maxDist > 40)
+//			delta = 2;
+//		else if (maxDist > 20)
+//			delta = 1d;
+//		else
+//			delta = 0.5d;
+		
+		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(0d, maxDist, delta);
+		hist.setName("All Connections");
+		HistogramFunction uniqueHist = HistogramFunction.getEncompassingHistogram(0d, maxDist, delta);
+		uniqueHist.setName("Unique To Model");
+		
+		double myMax = 0d;
+		double mean = 0d;
+		double sumWeights = 0d;
+		double meanAbove = 0d;
+		double sumWeightsAbove = 0d;
+		
+		for (IDPairing pair : connections.keySet()) {
+			double dist = distances.get(pair);
+			double weight = rateWeighted ? connections.get(pair) : 1d;
+			
+			myMax = Math.max(myMax, dist);
+			mean += dist*weight;
+			sumWeights += weight;
+			if (dist >= 0.1) {
+				meanAbove += dist*weight;
+				sumWeightsAbove += weight;
+			}
+			
+			int xIndex = hist.getClosestXIndex(dist);
+			hist.add(xIndex, weight);
+			if (uniqueConnections.containsKey(pair))
+				uniqueHist.add(xIndex, weight);
+		}
+
+		mean /= sumWeights;
+		meanAbove /= sumWeightsAbove;
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		Color uniqueColor = new Color(connectedColor.getRed()/4,
+				connectedColor.getGreen()/4, connectedColor.getBlue()/4);
+		
+		funcs.add(hist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, connectedColor));
+		
+		funcs.add(uniqueHist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, uniqueColor));
+		
+		String yAxisLabel = rateWeighted ? "Annual Rate" : "Count";
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, "Jump Distance (km)", yAxisLabel);
+		spec.setLegendVisible(true);
+		
+		Range xRange = new Range(0d, maxDist);
+		Range yRange = new Range(0d, 1.05*hist.getMaxY());
+		
+		DecimalFormat distDF = new DecimalFormat("0.0");
+		double annX = 0.975*maxDist;
+		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 20);
+		
+		double annYScalar = 0.975;
+		double annYDelta = 0.05;
+		
+		double annY = annYScalar*yRange.getUpperBound();
+		XYTextAnnotation maxAnn = new XYTextAnnotation(
+				"Max: "+distDF.format(myMax), annX, annY);
+		maxAnn.setFont(annFont);
+		maxAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+		spec.addPlotAnnotation(maxAnn);
+		
+		annYScalar -= annYDelta;
+		annY = annYScalar*yRange.getUpperBound();
+		XYTextAnnotation meanAnn = new XYTextAnnotation(
+				"Mean: "+distDF.format(mean), annX, annY);
+		meanAnn.setFont(annFont);
+		meanAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+		spec.addPlotAnnotation(meanAnn);
+		
+		annYScalar -= annYDelta;
+		annY = annYScalar*yRange.getUpperBound();
+		if (rateWeighted) {
+			XYTextAnnotation rateAnn = new XYTextAnnotation(
+					"Total Rate: "+distDF.format(sumWeights), annX, annY);
+			rateAnn.setFont(annFont);
+			rateAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+			spec.addPlotAnnotation(rateAnn);
+		} else {
+			XYTextAnnotation countAnn = new XYTextAnnotation(
+					"Total Count: "+(int)sumWeights, annX, annY);
+			countAnn.setFont(annFont);
+			countAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+			spec.addPlotAnnotation(countAnn);
+		}
+		
+		annYScalar -= annYDelta;
+		annY = annYScalar*yRange.getUpperBound();
+		XYTextAnnotation meanAboveAnn = new XYTextAnnotation(
+				"Mean >0.1: "+distDF.format(meanAbove), annX, annY);
+		meanAboveAnn.setFont(annFont);
+		meanAboveAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+		spec.addPlotAnnotation(meanAboveAnn);
+		
+		annYScalar -= annYDelta;
+		annY = annYScalar*yRange.getUpperBound();
+		if (rateWeighted) {
+			XYTextAnnotation rateAnn = new XYTextAnnotation(
+					"Total Rate >0.1: "+distDF.format(sumWeightsAbove), annX, annY);
+			rateAnn.setFont(annFont);
+			rateAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+			spec.addPlotAnnotation(rateAnn);
+		} else {
+			XYTextAnnotation countAnn = new XYTextAnnotation(
+					"Total Count >0.1: "+(int)sumWeightsAbove, annX, annY);
+			countAnn.setFont(annFont);
+			countAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+			spec.addPlotAnnotation(countAnn);
+		}
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(24);
+		gp.setPlotLabelFontSize(24);
+		gp.setBackgroundColor(Color.WHITE);
+		
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		
+		File file = new File(outputDir, prefix);
+		gp.getChartPanel().setSize(800, 650);
+		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
+		gp.saveAsPNG(file.getAbsolutePath()+".png");
+	}
+	
+	private static Map<IDPairing, Double> calcConnecitons(FaultSystemSolution sol,
+			Map<IDPairing, Double> distCache, double maxPossilbeJump) {
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		RupSetConnectionSearch search = new RupSetConnectionSearch(
+				rupSet, distCache, maxPossilbeJump, RupSetConnectionSearch.CUMULATIVE_JUMPS_DEFAULT);
+		
+		ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		
+		List<Future<HashSet<IDPairing>>> futures = new ArrayList<>();
+		for (int r=0; r<rupSet.getNumRuptures(); r++)
+			futures.add(exec.submit(new ConnectionCalc(search, r)));
+		
+		Map<IDPairing, Double> connections = new HashMap<>();
+		
+		for (int r=0; r<futures.size(); r++) {
+			double rate = sol.getRateForRup(r);
+			if (r % 1000 == 0)
+				System.out.println("Calculating for rupture "+r+"/"+rupSet.getNumRuptures()
+					+" ("+connections.size()+" connections found so far)");
+			Future<HashSet<IDPairing>> future = futures.get(r);
+			try {
+				HashSet<IDPairing> pairings = future.get();
+				for (IDPairing pair : pairings) {
+					Double prevRate = connections.get(pair);
+					if (prevRate == null)
+						prevRate = 0d;
+					connections.put(pair, prevRate + rate);
+				}
+			} catch (InterruptedException | ExecutionException e) {
+				exec.shutdown();
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+		}
+		
+		System.out.println("Found "+connections.size()+" total connections");
+		
+		exec.shutdown();
+		
+		return connections;
+	}
+	
+	private static class ConnectionCalc implements Callable<HashSet<IDPairing>> {
+		
+		private RupSetConnectionSearch search;
+		private int rupIndex;
+
+		public ConnectionCalc(RupSetConnectionSearch search, int rupIndex) {
+			this.search = search;
+			this.rupIndex = rupIndex;
+		}
+
+		@Override
+		public HashSet<IDPairing> call() throws Exception {
+			return search.calcConnections(rupIndex);
+		}
+		
 	}
 
 }
