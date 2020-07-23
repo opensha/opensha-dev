@@ -8,3 +8,4 @@ classes
 tmp
 Scratch*.java
 .DS_Store
+*.log

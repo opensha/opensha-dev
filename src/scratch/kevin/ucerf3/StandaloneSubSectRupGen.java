@@ -26,9 +26,11 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.SectionCluster;
 import scratch.UCERF3.inversion.SectionClusterList;
+import scratch.UCERF3.inversion.SectionConnectionStrategy;
+import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
 import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesRecord;
-import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSystemIO;
@@ -107,7 +109,7 @@ public class StandaloneSubSectRupGen {
 		XMLUtils.writeDocumentToFile(subSectDataFile, doc);
 		
 		// instantiate our laugh test filter
-		LaughTestFilter laughTest = LaughTestFilter.getDefault();
+		UCERF3PlausibilityConfig laughTest = UCERF3PlausibilityConfig.getDefault();
 		// you will have to disable our coulomb filter as it uses a data file specific to our subsections
 		CoulombRates coulombRates;
 		if (coulombFilter) {
@@ -116,6 +118,7 @@ public class StandaloneSubSectRupGen {
 			laughTest.setCoulombFilter(null);
 			coulombRates = null;
 		}
+		laughTest.setCoulombRates(coulombRates);
 		
 		// calculate distances between each subsection
 		Map<IDPairing, Double> subSectionDistances = DeformationModelFetcher.calculateDistances(maxDistance, subSections);
@@ -132,8 +135,10 @@ public class StandaloneSubSectRupGen {
 		// this separates the sub sections into clusters which are all within maxDist of each other and builds ruptures
 		// fault model and deformation model here are needed by InversionFaultSystemRuptSet later, just to create a rup set
 		// zip file
+		SectionConnectionStrategy connectionStrategy = new UCERF3SectionConnectionStrategy(
+				laughTest.getMaxJumpDist(), coulombRates);
 		SectionClusterList clusters = new SectionClusterList(
-				fm, DeformationModels.GEOLOGIC, laughTest, coulombRates, subSections, subSectionDistances, subSectionAzimuths);
+				connectionStrategy, laughTest, subSections, subSectionDistances, subSectionAzimuths);
 		
 		List<List<Integer>> ruptures = Lists.newArrayList();
 		for (SectionCluster cluster : clusters) {

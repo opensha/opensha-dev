@@ -28,7 +28,7 @@ import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.enumTreeBranches.SpatialSeisPDF;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
 import scratch.UCERF3.simulatedAnnealing.SimulatedAnnealing;
 import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;

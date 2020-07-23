@@ -16,13 +16,14 @@ import com.google.common.primitives.Ints;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.SectionClusterList;
+import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
 import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
-import scratch.UCERF3.inversion.laughTest.AbstractLaughTest;
+import scratch.UCERF3.inversion.laughTest.AbstractPlausibilityFilter;
 import scratch.UCERF3.inversion.laughTest.AzimuthChangeFilter;
 import scratch.UCERF3.inversion.laughTest.BuggyCoulombFilter;
 import scratch.UCERF3.inversion.laughTest.CoulombFilter;
-import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
@@ -51,7 +52,7 @@ public class LaughTestRupExclusionDebugger {
 		
 		boolean applyGarlockPintoMtnFix = true;
 		
-		LaughTestFilter filter = LaughTestFilter.getDefault();
+		UCERF3PlausibilityConfig filter = UCERF3PlausibilityConfig.getDefault();
 		filter.setAllowSingleSectDuringJumps(true);
 		
 		FaultModels fm = FaultModels.FM3_1;
@@ -67,12 +68,12 @@ public class LaughTestRupExclusionDebugger {
 			rupture.add(datas.get(sect));
 		
 		CoulombRates coulombRates = CoulombRates.loadUCERF3CoulombRates(fm);
+		filter.setCoulombRates(coulombRates);
 		
-		List<List<Integer>> sectionConnectionsListList = SectionClusterList.computeCloseSubSectionsListList(
+		List<List<Integer>> sectionConnectionsListList = UCERF3SectionConnectionStrategy.computeCloseSubSectionsListList(
 				datas, subSectionDistances, filter.getMaxJumpDist(), coulombRates);
-		
-		List<AbstractLaughTest> laughTests = filter.buildLaughTests(subSectionAzimuths, subSectionDistances, null, coulombRates,
-				applyGarlockPintoMtnFix, sectionConnectionsListList, datas);
+
+		List<AbstractPlausibilityFilter> laughTests = filter.buildPlausibilityFilters(subSectionAzimuths, subSectionDistances, sectionConnectionsListList, datas);
 		
 		for (int i=1; i<rupture.size(); i++) {
 			if (rupture.get(i).getParentSectionId() != rupture.get(i-1).getParentSectionId()) {
@@ -88,8 +89,8 @@ public class LaughTestRupExclusionDebugger {
 		}
 		
 		boolean failedCoulomb = false;
-		for (AbstractLaughTest test : laughTests) {
-			if (!test.doesRupturePass(rupture)) {
+		for (AbstractPlausibilityFilter test : laughTests) {
+			if (!test.apply(rupture).isPass()) {
 				System.out.println("FAILED: "+ClassUtils.getClassNameWithoutPackage(test.getClass()));
 				if (test instanceof CoulombFilter || test instanceof BuggyCoulombFilter)
 					failedCoulomb = true;

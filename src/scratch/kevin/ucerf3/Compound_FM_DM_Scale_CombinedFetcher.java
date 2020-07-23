@@ -72,7 +72,7 @@ public class Compound_FM_DM_Scale_CombinedFetcher extends FaultSystemSolutionFet
 		InversionFaultSystemSolution refSol = fetch.getSolution(subBranches.get(0));
 		InversionFaultSystemRupSet rupSet = refSol.getRupSet();
 		// change the branch
-		rupSet = new InversionFaultSystemRupSet(rupSet, branch, rupSet.getLaughTestFilter(),
+		rupSet = new InversionFaultSystemRupSet(rupSet, branch, rupSet.getPlausibilityConfiguration(),
 				rupSet.getAveSlipForAllRups(), rupSet.getCloseSectionsListList(),
 				rupSet.getRupturesForClusters(), rupSet.getSectionsForClusters());
 		double[] rates = new double[rupSet.getNumRuptures()];

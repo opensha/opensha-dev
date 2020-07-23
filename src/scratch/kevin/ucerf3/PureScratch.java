@@ -161,6 +161,7 @@ import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.UCERF3_GridSourceGenerator;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
+import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
@@ -1754,13 +1755,77 @@ public class PureScratch {
 		}
 		zip.close();
 	}
+	
+	private static void test70() throws ZipException, IOException {
+		ArrayList<FaultSection> sects = FaultModels.FM3_1.fetchFaultSections();
+		for (FaultSection sect : sects)
+			System.out.println(sect.getSectionId()+". "+sect.getSectionName());
+		System.out.println(sects.size()+" sects");
+	}
+	
+	private static void test71() throws ZipException, IOException {
+		ObsEqkRupList loadedRups = UCERF3_CatalogParser.loadCatalog(
+				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/EarthquakeCatalog/"
+						+ "ofr2013-1165_EarthquakeCat.txt"));
+		for (ObsEqkRupture rup : loadedRups) {
+			GregorianCalendar cal = rup.getOriginTimeCal();
+			int year = cal.get(GregorianCalendar.YEAR);
+			int month = cal.get(GregorianCalendar.MONTH)+1;
+			int day = cal.get(GregorianCalendar.DAY_OF_MONTH);
+			if (rup.getMag() > 7d)
+				System.out.println("M"+(float)rup.getMag()+" on "+year+"/"+month+"/"+day
+						+" at "+rup.getHypocenterLocation());
+		}
+	}
+	
+	private static void test72() throws IOException, DocumentException {
+		Map<FaultModels, FaultSystemRupSet> rupSetMap = new HashMap<>();
+		rupSetMap.put(FaultModels.FM3_1, FaultSystemIO.loadRupSet(
+				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
+				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip")));
+		rupSetMap.put(FaultModels.FM3_2, FaultSystemIO.loadRupSet(
+				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
+				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip")));
+		
+		for (FaultModels fm : rupSetMap.keySet()) {
+			FaultSystemRupSet origRupSet = rupSetMap.get(fm);
+			System.out.println(fm);
+			FaultSystemRupSet newRupSet = InversionFaultSystemRupSetFactory.forBranch(fm);
+			System.out.println("new has "+newRupSet.getNumRuptures()+" ruptures");
+			System.out.println("orig has "+origRupSet.getNumRuptures()+" ruptures");
+			if (newRupSet.getNumRuptures() != origRupSet.getNumRuptures())
+				continue;
+			int numCountDiffs = 0;
+			int numContentsDiffs = 0;
+			for (int r=0; r<origRupSet.getNumRuptures(); r++) {
+				List<Integer> sects1 = origRupSet.getSectionsIndicesForRup(r);
+				List<Integer> sects2 = newRupSet.getSectionsIndicesForRup(r);
+				if (sects1.size() != sects2.size()) {
+					numCountDiffs++;
+					continue;
+				}
+				for (int s=0; s<sects1.size(); s++) {
+					if (!sects1.get(s).equals(sects2.get(s))) {
+						numContentsDiffs++;
+						break;
+					}
+				}
+				if (r == 0 || r == 10) {
+					System.out.println("Orig rup "+r+": "+Joiner.on(",").join(sects1));
+					System.out.println("New rup "+r+": "+Joiner.on(",").join(sects2));
+				}
+			}
+			System.out.println("Differences: "+numCountDiffs+" in count");
+			System.out.println("Differences: "+numContentsDiffs+" in contents only");
+		}
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test69();
+		test72();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

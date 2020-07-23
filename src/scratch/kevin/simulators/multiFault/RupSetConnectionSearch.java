@@ -1,6 +1,7 @@
 package scratch.kevin.simulators.multiFault;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
@@ -13,13 +14,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipException;
 
 import org.dom4j.DocumentException;
+import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.axis.TickUnit;
 import org.jfree.chart.axis.TickUnits;
 import org.jfree.data.Range;
+import org.jfree.ui.TextAnchor;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
@@ -444,9 +448,20 @@ public class RupSetConnectionSearch {
 	}
 	
 	public void plotConnections(File outputDir, String prefix, int rupIndex) throws IOException {
+		
+	}
+	
+	public void plotConnections(File outputDir, String prefix, int rupIndex, Set<IDPairing> highlightConn, String highlightName)
+			throws IOException {
 		HashSet<IDPairing> connections = calcConnections(rupIndex, true);
+		List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(rupIndex);
+		List<Cluster> clusters = calcClusters(sects, false);
+		HashSet<Integer> parentIDs = new HashSet<>();
+		for (FaultSection sect : sects)
+			parentIDs.add(sect.getParentSectionId());
 		
 		Color connectedColor = Color.GREEN.darker();
+		Color highlightColor = Color.RED.darker();
 		Color faultColor = Color.DARK_GRAY;
 		Color faultOutlineColor = Color.LIGHT_GRAY;
 		
@@ -457,8 +472,6 @@ public class RupSetConnectionSearch {
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
 		Map<Integer, Location> middles = new HashMap<>();
-		
-		List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(rupIndex);
 		
 		for (int s=0; s<sects.size(); s++) {
 			FaultSection sect = sects.get(s);
@@ -490,8 +503,10 @@ public class RupSetConnectionSearch {
 		}
 		
 		boolean first = true;
+		double maxDist = 0d;
 		for (IDPairing connection : connections) {
 			DefaultXY_DataSet xy = new DefaultXY_DataSet();
+			maxDist = Math.max(maxDist, calcSectDist(connection.getID1(), connection.getID2()));
 			
 			if (first) {
 				xy.setName("Connections");
@@ -506,6 +521,28 @@ public class RupSetConnectionSearch {
 			
 			funcs.add(xy);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, connectedColor));
+		}
+		
+		if (highlightConn != null) {
+			boolean firstHighlight = true;
+			for (IDPairing connection : connections) {
+				if (!highlightConn.contains(connection))
+					continue;
+				DefaultXY_DataSet xy = new DefaultXY_DataSet();
+				if (firstHighlight) {
+					xy.setName(highlightName);
+					firstHighlight = false;
+				}
+				
+				Location loc1 = middles.get(connection.getID1());
+				Location loc2 = middles.get(connection.getID2());
+				
+				xy.set(loc1.getLongitude(), loc1.getLatitude());
+				xy.set(loc2.getLongitude(), loc2.getLatitude());
+				
+				funcs.add(xy);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, highlightColor));
+			}
 		}
 		
 		for (XY_DataSet xy : funcs) {
@@ -526,14 +563,36 @@ public class RupSetConnectionSearch {
 		PlotSpec spec = new PlotSpec(funcs, chars, "Rupture "+rupIndex+" Connections", "Longitude", "Latitude");
 		spec.setLegendVisible(true);
 		
+		Range xRange = new Range(lonTrack.getMin()-0.5, lonTrack.getMax()+0.5);
+		Range yRange = new Range(latTrack.getMin()-0.5, latTrack.getMax()+0.5);
+		
+		double annX = xRange.getLowerBound() + 0.975*xRange.getLength();
+		double annYmult = 0.975d;
+		double deltaAnnYmult = 0.05;
+		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 22);
+		
+		double annY = yRange.getLowerBound() + annYmult*yRange.getLength();
+		XYTextAnnotation cAnn = new XYTextAnnotation(
+				clusters.size()+" clusters on "+parentIDs.size()+" parent sects",
+				annX, annY);
+		cAnn.setFont(annFont);
+		cAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+		spec.addPlotAnnotation(cAnn);
+		
+		annYmult -= deltaAnnYmult;
+		annY = yRange.getLowerBound() + annYmult*yRange.getLength();
+		XYTextAnnotation jumpAnn = new XYTextAnnotation(
+				connections.size()+" connections (max dist: "+distDF.format(maxDist)+")",
+				annX, annY);
+		jumpAnn.setFont(annFont);
+		jumpAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
+		spec.addPlotAnnotation(jumpAnn);
+		
 		HeadlessGraphPanel gp = new HeadlessGraphPanel();
 		gp.setTickLabelFontSize(18);
 		gp.setAxisLabelFontSize(24);
 		gp.setPlotLabelFontSize(24);
 		gp.setBackgroundColor(Color.WHITE);
-		
-		Range xRange = new Range(lonTrack.getMin()-0.5, lonTrack.getMax()+0.5);
-		Range yRange = new Range(latTrack.getMin()-0.5, latTrack.getMax()+0.5);
 		
 		gp.drawGraphPanel(spec, false, false, xRange, yRange);
 		double len = Math.max(xRange.getLength(), yRange.getLength());
@@ -562,21 +621,23 @@ public class RupSetConnectionSearch {
 	}
 
 	public static void main(String[] args) throws ZipException, IOException, DocumentException {
-//		File fssFile = new File("/home/kevin/Simulators/catalogs/rundir4983_stitched/fss/"
-//				+ "rsqsim_sol_m6.5_skip5000_sectArea0.2.zip");
+		File fssFile = new File("/home/kevin/Simulators/catalogs/rundir4983_stitched/fss/"
+				+ "rsqsim_sol_m6.5_skip5000_sectArea0.2.zip");
 //		int[] plotIndexes = { 1001, 27845, 173243, 193669 };
 //		double debugDist = Double.POSITIVE_INFINITY;
-//		double maxPossibleJumpDist = MAX_POSSIBLE_JUMP_DEFAULT;
-//		File outputDir = new File("/tmp/rup_conn_rsqsim");
+		int[] plotIndexes = {  };
+		double debugDist = 30d;
+		double maxPossibleJumpDist = MAX_POSSIBLE_JUMP_DEFAULT;
+		File outputDir = new File("/tmp/rup_conn_rsqsim");
 		
-		File fssFile = new File("/home/kevin/workspace/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/"
-				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
-		int[] plotIndexes = { 25000, 50000, 75000, 100000, 125000, 150000, 175000, 200000, 225000, 238293, 250000 };
-		double debugDist = Double.POSITIVE_INFINITY;
-//		int[] plotIndexes = {};
-//		double debugDist = 5d;
-		double maxPossibleJumpDist = 15d;
-		File outputDir = new File("/tmp/rup_conn_u3");
+//		File fssFile = new File("/home/kevin/workspace/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/"
+//				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
+//		int[] plotIndexes = { 25000, 50000, 75000, 100000, 125000, 150000, 175000, 200000, 225000, 238293, 250000 };
+//		double debugDist = Double.POSITIVE_INFINITY;
+////		int[] plotIndexes = {};
+////		double debugDist = 5d;
+//		double maxPossibleJumpDist = 15d;
+//		File outputDir = new File("/tmp/rup_conn_u3");
 		
 		FaultSystemRupSet rupSet = FaultSystemIO.loadRupSet(fssFile);
 		

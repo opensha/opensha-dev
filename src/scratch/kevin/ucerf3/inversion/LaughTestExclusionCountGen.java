@@ -20,11 +20,11 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
-import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 
 public class LaughTestExclusionCountGen {
 	
-	public static int[] getRupCount(LaughTestFilter filter) {
+	public static int[] getRupCount(UCERF3PlausibilityConfig filter) {
 		InversionFaultSystemRupSet rupSet = InversionFaultSystemRupSetFactory.forBranch(
 				filter, 0.1, FaultModels.FM3_1);
 		int numPossibleConnections = 0;
@@ -70,7 +70,7 @@ public class LaughTestExclusionCountGen {
 	 */
 	public static void main(String[] args) {
 //		LaughTestFilter filter = LaughTestFilter.getUCERF3p2Filter();
-		LaughTestFilter filter = LaughTestFilter.getDefault();
+		UCERF3PlausibilityConfig filter = UCERF3PlausibilityConfig.getDefault();
 		
 		int[] origRups = getRupCount(filter);
 		

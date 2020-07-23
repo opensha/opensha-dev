@@ -18,7 +18,7 @@ import scratch.UCERF3.inversion.coulomb.CoulombRatesRecord;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester.TestType;
 import scratch.UCERF3.inversion.laughTest.CoulombFilter;
-import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -42,7 +42,7 @@ public class CoulombFilterThresholdTest {
 		double[] minStresses = { 0.5, 0.75, 1, 1.25, 1.5, Double.POSITIVE_INFINITY };
 		double[] pdcffs = { 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 1 };
 		
-		LaughTestFilter filter = LaughTestFilter.getDefault();
+		UCERF3PlausibilityConfig filter = UCERF3PlausibilityConfig.getDefault();
 		filter.setAllowSingleSectDuringJumps(true);
 		filter.setCoulombFilter(new CoulombRatesTester(TestType.COULOMB_STRESS, 0d, 0d, 0d, true, true));
 		
@@ -64,7 +64,7 @@ public class CoulombFilterThresholdTest {
 				int filteredCount = 0;
 				for (int r=0; r<rupSet.getNumRuptures(); r++) {
 					List<? extends FaultSection> rupture = rupSet.getFaultSectionDataForRupture(r);
-					if (cf.doesRupturePass(rupture))
+					if (cf.apply(rupture).isPass())
 						filteredCount++;
 				}
 				

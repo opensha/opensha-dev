@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.threads.Task;
 import org.opensha.commons.util.threads.ThreadedTaskComputer;
@@ -23,9 +24,12 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.SectionCluster;
 import scratch.UCERF3.inversion.SectionClusterList;
+import scratch.UCERF3.inversion.SectionConnectionStrategy;
+import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
+import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester.TestType;
-import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
@@ -237,8 +241,8 @@ public class RupSetValidator {
 		return true;
 	}
 	
-	private static ArrayList<LaughTestFilter> generateFilters() {
-		ArrayList<LaughTestFilter> filters = new ArrayList<LaughTestFilter>();
+	private static ArrayList<UCERF3PlausibilityConfig> generateFilters() {
+		ArrayList<UCERF3PlausibilityConfig> filters = new ArrayList<UCERF3PlausibilityConfig>();
 		
 //		double maxJumpDist = 5;
 //		double[] maxAzChanges = { 45, 75, 90 };
@@ -288,6 +292,7 @@ public class RupSetValidator {
 //		double[] minimumStressExclusionCeilings = { 1, 1.25, 1.5, 1.75, 2, 2.15  };
 		double[] minimumStressExclusionCeilings = { 1.5 };
 		boolean applyBranchesOnly = true;
+		boolean applyGarlockPintoMtnFix = true;
 		
 		for (double maxAzimuthChange : maxAzChanges) {
 			for (double maxTotAzimuthChange : maxTotAzChanges) {
@@ -302,10 +307,10 @@ public class RupSetValidator {
 										CoulombRatesTester coulombFilter =
 											new CoulombRatesTester(TestType.COULOMB_STRESS, minAverageProb,
 													minIndividualProb, minimumStressExclusionCeiling, applyBranchesOnly, true);
-										filters.add(new LaughTestFilter(maxJumpDist, maxAzimuthChange,
+										filters.add(new UCERF3PlausibilityConfig(maxJumpDist, maxAzimuthChange,
 												maxTotAzimuthChange, maxCumJumpDist,
 												maxCmlRakeChange, maxCmlAzimuthChange, minNumSectInRup,
-												false, coulombFilter));
+												false, coulombFilter, applyGarlockPintoMtnFix));
 									}
 								}
 							}
@@ -322,18 +327,23 @@ public class RupSetValidator {
 		
 		private FaultModels faultModel;
 		private DeformationModels defModel;
-		private LaughTestFilter filter;
+		private UCERF3PlausibilityConfig filter;
+		private CoulombRates coulombRates;
+		private SectionConnectionStrategy connectionStrategy;
 		private List<? extends FaultSection> faultSectionData;
 		private Map<IDPairing, Double> subSectionDistances;
 		private Map<IDPairing, Double> subSectionAzimuths;
 		private int numRups;
 		private Boolean passes = null;
 		
-		public ValidationTask(FaultModels faultModel, DeformationModels defModel, LaughTestFilter filter,
-				List<? extends FaultSection> faultSectionData, Map<IDPairing, Double> subSectionDistances, Map<IDPairing, Double> subSectionAzimuths) {
+		public ValidationTask(FaultModels faultModel, DeformationModels defModel, UCERF3PlausibilityConfig filter, CoulombRates coulombRates,
+				SectionConnectionStrategy connectionStrategy, List<? extends FaultSection> faultSectionData,
+				Map<IDPairing, Double> subSectionDistances, Map<IDPairing, Double> subSectionAzimuths) {
 			this.faultModel = faultModel;
 			this.defModel = defModel;
 			this.filter = filter;
+			this.coulombRates = coulombRates;
+			this.connectionStrategy = connectionStrategy;
 			this.faultSectionData = faultSectionData;
 			this.subSectionDistances = subSectionDistances;
 			this.subSectionAzimuths = subSectionAzimuths;
@@ -342,9 +352,10 @@ public class RupSetValidator {
 		@Override
 		public void compute() {
 			System.out.println("Building a rup set.");
-			SectionClusterList clusters = new SectionClusterList(faultModel, defModel, filter,
+			filter.setCoulombRates(coulombRates);
+			SectionClusterList clusters = new SectionClusterList(connectionStrategy, filter,
 					faultSectionData, subSectionDistances, subSectionAzimuths);
-			InversionFaultSystemRupSet rupSet = new FakeRupSet(clusters);
+			InversionFaultSystemRupSet rupSet = new FakeRupSet(faultModel, clusters);
 			numRups = rupSet.getNumRuptures();
 			System.out.println("Done building a rup set.");
 			if (numRups < currentMin) {
@@ -359,7 +370,7 @@ public class RupSetValidator {
 	}
 	
 	private static int currentMin = Integer.MAX_VALUE;
-	private static synchronized void updateCurrentMin(int rups, LaughTestFilter filter) {
+	private static synchronized void updateCurrentMin(int rups, UCERF3PlausibilityConfig filter) {
 		if (rups < currentMin) {
 			currentMin = rups;
 			System.out.println("We have a new min ("+currentMin+"): "+filter);
@@ -372,11 +383,11 @@ public class RupSetValidator {
 	 */
 	public static void main(String[] args) throws IOException {
 		try {
-			ArrayList<LaughTestFilter> filters = generateFilters();
+			ArrayList<UCERF3PlausibilityConfig> filters = generateFilters();
 			Collections.shuffle(filters);
 			System.out.println("Num filters: "+filters.size());
 			
-			LaughTestFilter best = null;
+			UCERF3PlausibilityConfig best = null;
 			FaultModels faultModel = FaultModels.FM3_2;
 			DeformationModels defModel = DeformationModels.GEOLOGIC;
 			DeformationModelFetcher fetch = new DeformationModelFetcher(faultModel,
@@ -388,8 +399,18 @@ public class RupSetValidator {
 			List<? extends FaultSection> faultSectionData = fetch.getSubSectionList();
 			
 			ArrayList<ValidationTask> tasks = new ArrayList<RupSetValidator.ValidationTask>();
-			for (LaughTestFilter filter : filters) {
-				tasks.add(new ValidationTask(faultModel, defModel, filter,
+			for (UCERF3PlausibilityConfig filter : filters) {
+				CoulombRates coulombRates = null;
+				if (filter.getCoulombFilter() != null) {
+					try {
+						coulombRates = CoulombRates.loadUCERF3CoulombRates(faultModel);
+					} catch (IOException e) {
+						ExceptionUtils.throwAsRuntimeException(e);
+					}
+				}
+				SectionConnectionStrategy connectionStrategy = new UCERF3SectionConnectionStrategy(
+						filter.getMaxJumpDist(), coulombRates);
+				tasks.add(new ValidationTask(faultModel, defModel, filter, coulombRates, connectionStrategy,
 						faultSectionData, subSectionDistances, subSectionAzimuths));
 			}
 			
@@ -445,15 +466,15 @@ public class RupSetValidator {
 		private int numRups;
 		private FaultModels fm;
 		
-		public FakeRupSet(SectionClusterList clusters) {
-			super(LogicTreeBranch.fromValues(false, clusters.getFaultModel()), clusters, clusters.getFaultSectionData());
+		public FakeRupSet(FaultModels fm, SectionClusterList clusters) {
+			super(LogicTreeBranch.fromValues(false, fm), clusters, clusters.getFaultSectionData());
 			this.data = clusters.getFaultSectionData();
 			rups = new ArrayList<List<Integer>>();
 			for (SectionCluster c : clusters) {
 				rups.addAll(c.getSectionIndicesForRuptures());
 			}
 			numRups = rups.size();
-			fm = clusters.getFaultModel();
+			this.fm = fm;
 		}
 
 		@Override

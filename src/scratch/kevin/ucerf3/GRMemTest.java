@@ -14,7 +14,7 @@ import scratch.UCERF3.inversion.InversionConfiguration;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionInputGenerator;
-import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;
 import scratch.UCERF3.simulatedAnnealing.completion.TimeCompletionCriteria;
 import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
@@ -35,7 +35,7 @@ public class GRMemTest {
 			InversionModels im = InversionModels.GR_CONSTRAINED;
 //			FaultSystemRupSet rupSet = InversionFaultSystemRupSetFactory.forBranch(FaultModels.FM3_1,
 //					DeformationModels.GEOLOGIC_PLUS_ABM, im);
-			LaughTestFilter filter = LaughTestFilter.getDefault();
+			UCERF3PlausibilityConfig filter = UCERF3PlausibilityConfig.getDefault();
 			filter.setMaxCmlAzimuthChange(180);
 			InversionFaultSystemRupSet rupSet = InversionFaultSystemRupSetFactory.forBranch(filter,
 					InversionFaultSystemRupSetFactory.DEFAULT_ASEIS_VALUE, FaultModels.FM3_1,

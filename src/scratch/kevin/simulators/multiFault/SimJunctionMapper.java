@@ -55,7 +55,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesRecord;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
-import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
@@ -152,7 +152,7 @@ public class SimJunctionMapper {
 		System.out.println("UCERF has "+ucerfParentTogetherRates.size()+" parent connections");
 		System.out.println("Coulomb has "+parentCoulombs.size()+" parent connections");
 		
-		tester = LaughTestFilter.getDefault().getCoulombFilter();
+		tester = UCERF3PlausibilityConfig.getDefault().getCoulombFilter();
 		
 		ucerfParentSlipsMap = calcParentSectMeanSlipRates(ucerfRupSet);
 	}

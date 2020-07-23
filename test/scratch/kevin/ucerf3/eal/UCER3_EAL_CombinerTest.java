@@ -56,7 +56,9 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.inversion.SectionCluster;
 import scratch.UCERF3.inversion.SectionClusterList;
-import scratch.UCERF3.inversion.laughTest.LaughTestFilter;
+import scratch.UCERF3.inversion.SectionConnectionStrategy;
+import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
+import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.utils.DeformationModelFetcher;
@@ -100,7 +102,7 @@ public class UCER3_EAL_CombinerTest {
 			sectIndex += newSubSects.size();
 		}
 				
-		LaughTestFilter laughTest = LaughTestFilter.getDefault();
+		UCERF3PlausibilityConfig laughTest = UCERF3PlausibilityConfig.getDefault();
 		laughTest.setCoulombFilter(null);
 		
 		// calculate distances between each subsection
@@ -115,8 +117,11 @@ public class UCER3_EAL_CombinerTest {
 		Map<IDPairing, Double> subSectionAzimuths = DeformationModelFetcher.getSubSectionAzimuthMap(
 				subSectionDistances.keySet(), subSections);
 		
-		SectionClusterList clusters = new SectionClusterList(
-				fm, DeformationModels.GEOLOGIC, laughTest, null, subSections, subSectionDistances, subSectionAzimuths);
+		SectionConnectionStrategy connectionStrategy = new UCERF3SectionConnectionStrategy(
+				laughTest.getMaxJumpDist(), null);
+		
+		SectionClusterList clusters = new SectionClusterList(connectionStrategy,
+				laughTest, subSections, subSectionDistances, subSectionAzimuths);
 		
 		List<List<Integer>> ruptures = Lists.newArrayList();
 		for (SectionCluster cluster : clusters) {
@@ -188,7 +193,7 @@ public class UCER3_EAL_CombinerTest {
 					rupSet.getSectionIndicesForAllRups(), mags, rupSet.getAveRakeForAllRups(), rupSet.getAreaForAllRups(),
 					rupSet.getLengthForAllRups(), "");
 			
-			InversionFaultSystemRupSet subInvRupSet = new InversionFaultSystemRupSet(subRupSet, branch, rupSet.getLaughTestFilter(),
+			InversionFaultSystemRupSet subInvRupSet = new InversionFaultSystemRupSet(subRupSet, branch, rupSet.getPlausibilityConfiguration(),
 					rupSet.getAveSlipForAllRups(), rupSet.getCloseSectionsListList(),
 					rupSet.getRupturesForClusters(), rupSet.getSectionsForClusters());
 			
