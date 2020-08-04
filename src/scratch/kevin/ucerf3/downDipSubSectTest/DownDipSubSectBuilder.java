@@ -105,7 +105,7 @@ public class DownDipSubSectBuilder {
 	}
 	
 	public FaultSectionPrefData getSubSect(int row, int col) {
-		return subSects[row][col];
+		return subSects[col][row];
 	}
 	
 	public int getRow(FaultSection sect) {
@@ -118,6 +118,14 @@ public class DownDipSubSectBuilder {
 		Preconditions.checkArgument(idToColMap.containsKey(sect.getSectionId()),
 				"Unexpected sub sect: %s. %s", sect.getSectionId(), sect.getSectionName());
 		return idToColMap.get(sect.getSectionId());
+	}
+	
+	public int getNumCols() {
+		return subSects.length;
+	}
+	
+	public int getNumRows() {
+		return subSects[0].length;
 	}
 	
 	public List<Integer> getNeighbors(FaultSection sect) {

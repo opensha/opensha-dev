@@ -11,6 +11,13 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRuptureBuilder;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityFilter;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ClusterConnectionStrategy;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ClusterPermutationStrategy;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.DistCutoffClosestSectClusterConnectionStrategy;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.SimpleFaultData;
@@ -38,8 +45,10 @@ public class DownDipTestRupSetBuilder {
 		double upperDepth = 0d;
 		double lowerDepth = 30d;
 		double dip = 20d;
-		int numDownDip = 5;
-		int numAlongStrike = 6;
+//		int numDownDip = 5;
+//		int numAlongStrike = 6;
+		int numDownDip = 20;
+		int numAlongStrike = 30;
 		FaultTrace trace = new FaultTrace(sectName);
 		trace.add(new Location(34, -119, upperDepth));
 		trace.add(new Location(34.1, -118.75, upperDepth));
@@ -50,11 +59,11 @@ public class DownDipTestRupSetBuilder {
 		SimpleFaultData faultData = new SimpleFaultData(dip, lowerDepth, upperDepth, trace);
 		double aveRake = 90d;
 		
-		DownDipSubSectBuilder builder = new DownDipSubSectBuilder(sectName, sectID, startID,
+		DownDipSubSectBuilder downDipBuilder = new DownDipSubSectBuilder(sectName, sectID, startID,
 				faultData, aveRake, numAlongStrike, numDownDip);
 		
 		List<FaultSection> subSections = new ArrayList<>();
-		subSections.addAll(builder.getSubSectsList());
+		subSections.addAll(downDipBuilder.getSubSectsList());
 		System.out.println("Have "+subSections.size()+" sub-sections for "+sectName);
 		startID = subSections.size();
 		
@@ -84,76 +93,24 @@ public class DownDipTestRupSetBuilder {
 			Preconditions.checkState(subSections.get(s).getSectionId() == s,
 				"section at index %s has ID %s", s, subSections.get(s).getSectionId());
 		
-		// instantiate our laugh test filter
-		DownDipTestPlausibilityConfig plausibility = new DownDipTestPlausibilityConfig(builder);
-
-		// calculate distances between each subsection
-		Map<IDPairing, Double> subSectionDistances = DeformationModelFetcher.calculateDistances(
-				plausibility.getMaxJumpDist(), subSections);
-		System.out.println("Calculated "+subSectionDistances.size()+" distance pairings");
-		Map<IDPairing, Double> reversed = new HashMap<>();
-		// now add the reverse distance
-		for (IDPairing pair : subSectionDistances.keySet()) {
-			IDPairing reverse = pair.getReversed();
-			reversed.put(reverse, subSectionDistances.get(pair));
-		}
-		subSectionDistances.putAll(reversed);
-		Map<IDPairing, Double> subSectionAzimuths = DeformationModelFetcher.getSubSectionAzimuthMap(
-				subSectionDistances.keySet(), subSections);
-		System.out.println("Calculated "+subSectionAzimuths.size()+" azimuths");
-
-		// custom connection strategy for this down-dip test
-		SectionConnectionStrategy connectionStrategy = new DownDipTestConnectionStrategy(
-				builder, plausibility.getMaxJumpDist());
-		SectionCluster.D = true;
-		SectionClusterList clusters = new SectionClusterList(
-				connectionStrategy, plausibility, subSections, subSectionDistances, subSectionAzimuths);
-		List<List<Integer>> connections = clusters.getSectionConnectionsListList();
-		for (int s=0; s<connections.size(); s++) {
-			List<Integer> sectConnections = connections.get(s);
-			FaultSection sect = subSections.get(s);
-			System.out.println("Section "+s+" on parent "+sect.getParentSectionId()
-				+" has "+sectConnections.size()+" connections: "+sect.getName());
-			Map<Integer, List<Integer>> parentConnections = new HashMap<>();
-			for (int connected : sectConnections) {
-				FaultSection sect2 = subSections.get(connected);
-				List<Integer> parentIndexes = parentConnections.get(sect2.getParentSectionId());
-				if (parentIndexes == null) {
-					parentIndexes = new ArrayList<>();
-					parentConnections.put(sect2.getParentSectionId(), parentIndexes);
-				}
-				parentIndexes.add(connected);
-			}
-			for (int parentID : parentConnections.keySet()) {
-				double minDist = Double.POSITIVE_INFINITY;
-				double maxDist = 0d;
-				int count = 0;
-				String connStr = null;
-				for (int oID : parentConnections.get(parentID)) {
-					IDPairing pair = new IDPairing(s, oID);
-					Preconditions.checkState(subSectionDistances.containsKey(pair), "No distance for %s", pair);
-					double dist = subSectionDistances.get(pair);
-					minDist = Math.min(minDist, dist);
-					maxDist = Math.max(maxDist, dist);
-					count++;
-					if (connStr == null)
-						connStr = "";
-					else
-						connStr += ",";
-					connStr += oID;
-				}
-				System.out.println("\t"+count+" connections to parent "+parentID
-						+". dist range: ["+(float)minDist+" "+(float)maxDist+"]. sects: "+connStr);
-			}
-		}
-
-		System.out.println("Building ruptures...");
-		List<List<Integer>> ruptures = new ArrayList<>();
-		for (SectionCluster cluster : clusters) {
-			System.out.println("Cluster has "+cluster.getSectionIndicesForRuptures().size()+" rups");
-			ruptures.addAll(cluster.getSectionIndicesForRuptures());
-		}
-		System.out.println("Have "+ruptures.size()+" total ruptures");
+		// instantiate plausibility filters
+		List<PlausibilityFilter> filters = new ArrayList<>();
+		filters.add(new RectangularityFilter(downDipBuilder, 1));
+		
+		SectionDistanceAzimuthCalculator distAzCalc = new SectionDistanceAzimuthCalculator(subSections);
+		
+		// this creates rectangular permutations only for our down-dip fault to speed up rupture building
+		ClusterPermutationStrategy permutationStrategy = new DownDipTestPermutationStrategy(downDipBuilder);
+		// connection strategy: parent faults connect at closest point, and only when dist <=5 km
+		ClusterConnectionStrategy connectionStrategy = new DistCutoffClosestSectClusterConnectionStrategy(5d);
+		int maxNumSplays = 0; // don't allow any splays
+		
+		ClusterRuptureBuilder builder = new ClusterRuptureBuilder(subSections, connectionStrategy,
+				distAzCalc, filters, maxNumSplays);
+		
+		List<ClusterRupture> ruptures = builder.build(permutationStrategy);
+		
+		System.out.println("Built "+ruptures.size()+" total ruptures");
 		
 		// build a rupture set (doing this manually instead of creating an inversion fault system rup set,
 		// mostly as a demonstration)
@@ -172,20 +129,23 @@ public class DownDipTestRupSetBuilder {
 		double[] rupAreas = new double[ruptures.size()];
 		double[] rupLengths = new double[ruptures.size()];
 		ScalingRelationships scale = ScalingRelationships.SHAW_2009_MOD;
+		List<List<Integer>> rupsIDsList = new ArrayList<>();
 		for (int r=0; r<ruptures.size(); r++) {
-			List<Integer> sectIDs = ruptures.get(r);
+			ClusterRupture rup = ruptures.get(r);
+			List<FaultSection> rupSects = rup.buildOrderedSectionList();
+			List<Integer> sectIDs = new ArrayList<>();
 			double totLength = 0d;
 			double totArea = 0d;
 			double totOrigArea = 0d; // not reduced for aseismicity
 			List<Double> sectAreas = new ArrayList<>();
 			List<Double> sectRakes = new ArrayList<>();
-			for (Integer s : sectIDs) {
-				FaultSection sect = subSections.get(s);
+			for (FaultSection sect : rupSects) {
+				sectIDs.add(sect.getSectionId());
 				double length = sect.getTraceLength()*1e3;	// km --> m
 				totLength += length;
-				double area = sectAreasReduced[s];	// sq-m
+				double area = sectAreasReduced[sect.getSectionId()];	// sq-m
 				totArea += area;
-				totOrigArea += sectAreasOrig[sectID];	// sq-m
+				totOrigArea += sectAreasOrig[sect.getSectionId()];	// sq-m
 				sectAreas.add(area);
 				sectRakes.add(sect.getAveRake());
 			}
@@ -194,13 +154,13 @@ public class DownDipTestRupSetBuilder {
 			rupRakes[r] = FaultUtils.getInRakeRange(FaultUtils.getScaledAngleAverage(sectAreas, sectRakes));
 			double origDDW = totOrigArea/totLength;
 			rupMags[r] = scale.getMag(totArea, origDDW);
-			
+			rupsIDsList.add(sectIDs);
 		}
 		
 		String info = "Test down-dip subsectioning rup set";
 		
 		FaultSystemRupSet rupSet = new FaultSystemRupSet(subSections, sectSlipRates, null, sectAreasReduced,
-				ruptures, rupMags, rupRakes, rupAreas, rupLengths, info);
+				rupsIDsList, rupMags, rupRakes, rupAreas, rupLengths, info);
 		FaultSystemIO.writeRupSet(rupSet, outputFile);
 	}
 

@@ -93,19 +93,32 @@ public class RupSetDiffMaker {
 //		watch.stop();
 //		double secsOld = watch.elapsed(TimeUnit.MILLISECONDS) / 1000d;
 		
-		File rsDir = new File("/home/kevin/Simulators/catalogs/rundir4983_stitched/fss");
-		File rsRupsFile = new File(rsDir, "rsqsim_sol_m6.5_skip5000_sectArea0.2.zip");
+//		File rsDir = new File("/home/kevin/Simulators/catalogs/rundir4983_stitched/fss");
+//		File rsRupsFile = new File(rsDir, "rsqsim_sol_m6.5_skip5000_sectArea0.2.zip");
+//		File u3File = new File("/home/kevin/workspace/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/"
+//				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
+//		
+//		FaultSystemRupSet rsRupSet = FaultSystemIO.loadRupSet(rsRupsFile);
+//		FaultSystemRupSet u3RupSet = FaultSystemIO.loadRupSet(u3File);
+//		
+//		System.out.println("RSQSim has: "+rsRupSet.getNumRuptures()+" rups");
+//		System.out.println("UCERF3 has: "+u3RupSet.getNumRuptures()+" rups");
+//		
+//		writeDiffs(new File(rsDir, "new_rups_in.zip"), rsRupSet, u3RupSet);
+//		writeDiffs(new File(rsDir, "new_rups_out.zip"), u3RupSet, rsRupSet);
+		
+		File testFile = new File("/tmp/test_rup_set.zip");
 		File u3File = new File("/home/kevin/workspace/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
 		
-		FaultSystemRupSet rsRupSet = FaultSystemIO.loadRupSet(rsRupsFile);
+		FaultSystemRupSet testRupSet = FaultSystemIO.loadRupSet(testFile);
 		FaultSystemRupSet u3RupSet = FaultSystemIO.loadRupSet(u3File);
 		
-		System.out.println("RSQSim has: "+rsRupSet.getNumRuptures()+" rups");
+		System.out.println("Test has: "+testRupSet.getNumRuptures()+" rups");
 		System.out.println("UCERF3 has: "+u3RupSet.getNumRuptures()+" rups");
 		
-		writeDiffs(new File(rsDir, "new_rups_in.zip"), rsRupSet, u3RupSet);
-		writeDiffs(new File(rsDir, "new_rups_out.zip"), u3RupSet, rsRupSet);
+		writeDiffs(new File("/tmp/test_new_rups_in.zip"), testRupSet, u3RupSet);
+		writeDiffs(new File("/tmp/test_new_rups_out.zip"), u3RupSet, testRupSet);
 	}
 
 	public static void writeDiffs(File diffFile, FaultSystemRupSet rupSet1,
@@ -155,7 +168,8 @@ public class RupSetDiffMaker {
 		double[] rupAveSlips = new double[newRups.size()];
 		double[] rakes = new double[newRups.size()];
 		double[] rupAreas = new double[newRups.size()];
-		double[] rupLenghts = new double[newRups.size()];
+		double[] rupLenghts = rupSet1.getLengthForAllRups() == null || rupSet2.getLengthForAllRups() == null
+				? null : new double[newRups.size()];
 		List<List<Integer>> sectionForRups = Lists.newArrayList();
 		
 		for (int i=0; i<newRups.size(); i++) {
@@ -165,7 +179,8 @@ public class RupSetDiffMaker {
 				rupAveSlips[i] = ((SlipEnabledRupSet)rupSet1).getAveSlipForRup(r);
 			rakes[i] = rupSet1.getAveRakeForRup(r);
 			rupAreas[i] = rupSet1.getAreaForRup(r);
-			rupLenghts[i] = rupSet1.getLengthForRup(r);
+			if (rupLenghts != null)
+				rupLenghts[i] = rupSet1.getLengthForRup(r);
 			sectionForRups.add(rupSet1.getSectionsIndicesForRup(r));
 		}
 		

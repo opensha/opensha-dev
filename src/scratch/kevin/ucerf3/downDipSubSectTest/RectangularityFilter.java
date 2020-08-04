@@ -1,14 +1,14 @@
 package scratch.kevin.ucerf3.downDipSubSectTest;
 
-import java.util.List;
-
-import org.opensha.commons.util.IDPairing;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityFilter;
 import org.opensha.sha.faultSurface.FaultSection;
 
-import scratch.UCERF3.inversion.laughTest.AbstractPlausibilityFilter;
 import scratch.UCERF3.inversion.laughTest.PlausibilityResult;
 
-class RectangularityFilter extends AbstractPlausibilityFilter {
+class RectangularityFilter implements PlausibilityFilter {
 
 	private DownDipSubSectBuilder builder;
 	private int minDimension;
@@ -27,47 +27,72 @@ class RectangularityFilter extends AbstractPlausibilityFilter {
 	public String getName() {
 		return getShortName();
 	}
-
-	@Override
-	public PlausibilityResult applyLastSection(List<? extends FaultSection> rupture, List<IDPairing> pairings,
-			List<Integer> junctionIndexes) {
+	
+	private PlausibilityResult apply(FaultSubsectionCluster cluster, boolean verbose) {
+		if (cluster.parentSectionID != builder.getParentID())
+			return PlausibilityResult.PASS;
 		int maxRow = 0;
 		int minRow = Integer.MAX_VALUE;
 		int maxCol = 0;
 		int minCol = Integer.MAX_VALUE;
-		int matchCount = 0;
-		for (FaultSection sect : rupture) {
-			if (sect.getParentSectionId() == builder.getParentID()) {
-				int row = builder.getRow(sect);
-				int col = builder.getColumn(sect);
-				maxRow = Integer.max(maxRow, row);
-				minRow = Integer.min(minRow, row);
-				maxCol = Integer.max(maxCol, col);
-				minCol = Integer.min(minCol, col);
-				matchCount++;
-			}
+		for (FaultSection sect : cluster.subSects) {
+			int row = builder.getRow(sect);
+			int col = builder.getColumn(sect);
+			maxRow = Integer.max(maxRow, row);
+			minRow = Integer.min(minRow, row);
+			maxCol = Integer.max(maxCol, col);
+			minCol = Integer.min(minCol, col);
 		}
-		if (matchCount == 0)
-			return PlausibilityResult.PASS;
 		int rowSpan = 1 + maxRow - minRow;
 		int colSpan = 1 + maxCol - minCol;
-		if (rowSpan < minDimension || colSpan < minDimension)
+		if (verbose)
+			System.out.println(getShortName()+": testing with rowSpan="+rowSpan+" and colSpan="+colSpan);
+		if (rowSpan < minDimension || colSpan < minDimension) {
+			if (verbose)
+				System.out.println(getShortName()+": failing because below min dimension of "+minDimension);
 			return PlausibilityResult.FAIL_FUTURE_POSSIBLE;
+		}
 		// if it's rectangular, then the count will be rowSpan x colSpan
 		int expectedNum = rowSpan*colSpan;
-		if (matchCount == expectedNum)
+		if (cluster.subSects.size() == expectedNum) {
+			if (verbose)
+				System.out.println(getShortName()+": passing with exact match of "+expectedNum+" sects");
 			return PlausibilityResult.PASS;
+		}
 		// if multiple columns have holes, it will never pass, bail here
 		int minToContinue = (colSpan-1)*rowSpan + 1;
-		if (expectedNum < minToContinue)
+		if (expectedNum < minToContinue) {
+			if (verbose)
+				System.out.println(getShortName()+": failing with multiple holes");
 			return PlausibilityResult.FAIL_HARD_STOP;
+		}
+		if (verbose)
+			System.out.println(getShortName()+": failing with a hole");
 		return PlausibilityResult.FAIL_FUTURE_POSSIBLE;
 	}
 
 	@Override
-	public boolean isApplyJunctionsOnly() {
-		// applies within parent fault sections
-		return false;
+	public PlausibilityResult apply(ClusterRupture rupture, boolean verbose) {
+		PlausibilityResult result = PlausibilityResult.PASS;
+		for (FaultSubsectionCluster cluster : rupture.clusters) {
+			result = result.logicalAnd(apply(cluster, verbose));
+			if (!result.canContinue())
+				return result;
+		}
+		for (ClusterRupture splay : rupture.splays.values()) {
+			result = result.logicalAnd(apply(splay, verbose));
+			if (!result.canContinue())
+				return result;
+		}
+		return result;
+	}
+
+	@Override
+	public PlausibilityResult testJump(ClusterRupture rupture, Jump newJump, boolean verbose) {
+		PlausibilityResult result = apply(rupture, verbose);
+		if (result.canContinue())
+			result = result.logicalAnd(apply(newJump.toCluster, verbose));
+		return result;
 	}
 
 }
