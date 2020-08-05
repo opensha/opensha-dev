@@ -95,7 +95,9 @@ public class DownDipTestRupSetBuilder {
 		
 		// instantiate plausibility filters
 		List<PlausibilityFilter> filters = new ArrayList<>();
-		filters.add(new RectangularityFilter(downDipBuilder, 1));
+		int minDimension = 1; // minimum numer of rows or columns
+		double maxAspectRatio = 5d; // max aspect ratio of rows/cols or cols/rows
+		filters.add(new RectangularityFilter(downDipBuilder, minDimension, maxAspectRatio));
 		
 		SectionDistanceAzimuthCalculator distAzCalc = new SectionDistanceAzimuthCalculator(subSections);
 		

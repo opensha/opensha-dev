@@ -5,14 +5,14 @@ import java.util.List;
 
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.CachedClusterPermutationStrategy;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ClusterPermutationStrategy;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 
-public class DownDipTestPermutationStrategy extends CachedClusterPermutationStrategy {
+public class DownDipTestPermutationStrategy implements ClusterPermutationStrategy {
 	
 	private DownDipSubSectBuilder downDipBuilder;
 	private static final boolean D = false;
@@ -22,7 +22,7 @@ public class DownDipTestPermutationStrategy extends CachedClusterPermutationStra
 	}
 
 	@Override
-	protected List<FaultSubsectionCluster> calcPermutations(
+	public List<FaultSubsectionCluster> getPermutations(
 			FaultSubsectionCluster fullCluster, FaultSection firstSection) {
 		List<FaultSection> clusterSects = fullCluster.subSects;
 		int myInd = fullCluster.subSects.indexOf(firstSection);

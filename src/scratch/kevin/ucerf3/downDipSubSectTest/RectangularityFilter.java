@@ -12,10 +12,12 @@ class RectangularityFilter implements PlausibilityFilter {
 
 	private DownDipSubSectBuilder builder;
 	private int minDimension;
+	private double maxAspectRatio;
 
-	RectangularityFilter(DownDipSubSectBuilder builder, int minDimension) {
+	RectangularityFilter(DownDipSubSectBuilder builder, int minDimension, double maxAspectRatio) {
 		this.builder = builder;
 		this.minDimension = minDimension;
+		this.maxAspectRatio = maxAspectRatio;
 	}
 
 	@Override
@@ -50,7 +52,13 @@ class RectangularityFilter implements PlausibilityFilter {
 		if (rowSpan < minDimension || colSpan < minDimension) {
 			if (verbose)
 				System.out.println(getShortName()+": failing because below min dimension of "+minDimension);
-			return PlausibilityResult.FAIL_FUTURE_POSSIBLE;
+			return PlausibilityResult.FAIL_HARD_STOP;
+		}
+		double aspectRatio = Math.max((double)rowSpan/(double)colSpan, (double)colSpan/(double)rowSpan);
+		if (aspectRatio > maxAspectRatio) {
+			if (verbose)
+				System.out.println(getShortName()+": failing because of aspect ratio of "+aspectRatio);
+			return PlausibilityResult.FAIL_HARD_STOP;
 		}
 		// if it's rectangular, then the count will be rowSpan x colSpan
 		int expectedNum = rowSpan*colSpan;
@@ -59,16 +67,10 @@ class RectangularityFilter implements PlausibilityFilter {
 				System.out.println(getShortName()+": passing with exact match of "+expectedNum+" sects");
 			return PlausibilityResult.PASS;
 		}
-		// if multiple columns have holes, it will never pass, bail here
-		int minToContinue = (colSpan-1)*rowSpan + 1;
-		if (expectedNum < minToContinue) {
-			if (verbose)
-				System.out.println(getShortName()+": failing with multiple holes");
-			return PlausibilityResult.FAIL_HARD_STOP;
-		}
 		if (verbose)
-			System.out.println(getShortName()+": failing with a hole");
-		return PlausibilityResult.FAIL_FUTURE_POSSIBLE;
+			System.out.println(getShortName()+": failing because of hole(s). have "
+					+cluster.subSects.size()+", complete would be "+expectedNum);
+		return PlausibilityResult.FAIL_HARD_STOP;
 	}
 
 	@Override
