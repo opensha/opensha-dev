@@ -41,12 +41,24 @@ public class UCERF3_LEC_TreeTrimmer {
 		File inputDir = new File("/home/kevin/OpenSHA/UCERF3/eal/"
 //				+ "2020_04_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC");
 				+ "2020_07_08-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-gmVar");
+		List<LogicTreeBranchNode<?>> fixedBranches = new ArrayList<>();
+//		fixedBranches.add(U3_EAL_GMMs.BSSA_2014);
+		fixedBranches.add(U3_EAL_GMM_Epistemic.NONE);
+		
 		File outputDir = new File(inputDir, "tree_trimming");
+		if (fixedBranches != null && !fixedBranches.isEmpty()) {
+			String dirName = outputDir.getName()+"_fixed";
+			for (LogicTreeBranchNode<?> fixed : fixedBranches)
+				dirName += "_"+fixed.encodeChoiceString();
+			outputDir = new File(inputDir, dirName);
+		}
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		File csvFile = new File(inputDir, "all_branch_lec_results.csv");
 		
 		Table<U3_EAL_LogicTreeBranch, Double, DiscretizedFunc> branchLECs = loadLECs(csvFile);
+		if (fixedBranches != null)
+			pruneForFixed(fixedBranches, branchLECs);
 		// double as we'll use it for floating point math later
 		double totNumBranches = branchLECs.rowKeySet().size();
 		System.out.println("Total branch count: "+(int)totNumBranches);
@@ -54,6 +66,8 @@ public class UCERF3_LEC_TreeTrimmer {
 		File csvFileEAL = new File(inputDir, "all_branch_results.csv");
 		
 		Table<U3_EAL_LogicTreeBranch, Double, Double> branchEALs = loadEALs(csvFileEAL);
+		if (fixedBranches != null)
+			pruneForFixed(fixedBranches, branchEALs);
 		
 		DiscretizedFunc totalLEC = calcLossDist(branchLECs.rowKeySet(), branchLECs, Double.NaN).lec;
 		totalLEC.setName("Branch Averaged LEC");
@@ -252,6 +266,24 @@ public class UCERF3_LEC_TreeTrimmer {
 	private static void addFuncYVals(DiscretizedFunc func, List<String> line) {
 		for (Point2D pt : func)
 			line.add((float)pt.getY()+"");
+	}
+	
+	@SuppressWarnings("unchecked")
+	private static void pruneForFixed(List<LogicTreeBranchNode<?>> fixedBranches,
+			Table<U3_EAL_LogicTreeBranch, Double, ?> table) {
+		List<U3_EAL_LogicTreeBranch> branches = new ArrayList<>(table.rowKeySet());
+		for (U3_EAL_LogicTreeBranch branch : branches) {
+			for (LogicTreeBranchNode<?> fixed : fixedBranches) {
+				Class<? extends LogicTreeBranchNode<?>> clazz =
+						(Class<? extends LogicTreeBranchNode<?>>)fixed.getClass();
+				if (branch.getValueUnchecked(clazz) != fixed) {
+					List<Double> weights = new ArrayList<>(table.row(branch).keySet());
+					for (Double weight : weights)
+						Preconditions.checkNotNull(table.remove(branch, weight));
+					break;
+				}
+			}
+		}
 	}
 	
 	private static final int weight_col = 1;
