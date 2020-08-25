@@ -26,7 +26,8 @@ public class DownDipSubSectBuilder {
 	private Map<Integer, Integer> idToColMap;
 	
 	public DownDipSubSectBuilder(String sectName, int parentID, int startID,
-			SimpleFaultData faultData, double aveRake, int numAlongStrike, int numDownDip) {
+			SimpleFaultData faultData, double aveRake, int numAlongStrike, int numDownDip,
+			double slipRate) {
 		this.sectName = sectName;
 		this.parentID = parentID;
 		Preconditions.checkArgument(numAlongStrike > 1);
@@ -96,6 +97,7 @@ public class DownDipSubSectBuilder {
 				subSects[col][row].setDipDirection((float)dipDir);
 				subSects[col][row].setAveDip(dip);
 				subSects[col][row].setAveRake(aveRake);
+				subSects[col][row].setAveSlipRate(slipRate);
 			}
 		}
 	}
@@ -183,12 +185,13 @@ public class DownDipSubSectBuilder {
 		trace.add(new Location(34.15, -118.5, upperDepth));
 		trace.add(new Location(34.1, -118.75, upperDepth));
 		trace.add(new Location(34, -119, upperDepth));
+		double slipRate = 10d; // mm/yr
 		
 		SimpleFaultData faultData = new SimpleFaultData(dip, lowerDepth, upperDepth, trace);
 		double aveRake = 90d;
 		
 		DownDipSubSectBuilder builder = new DownDipSubSectBuilder(sectName, sectID, startID,
-				faultData, aveRake, numAlongStrike, numDownDip);
+				faultData, aveRake, numAlongStrike, numDownDip, slipRate);
 		
 		for (int col=0; col<numAlongStrike; col++) {
 			for (int row=0; row<numDownDip; row++) {
