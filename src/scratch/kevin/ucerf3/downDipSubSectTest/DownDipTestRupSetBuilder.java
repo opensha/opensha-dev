@@ -57,7 +57,7 @@ public class DownDipTestRupSetBuilder {
 		long inversionMins = 1; // run it for this many minutes
 		
 		File rupSetFile = new File("/tmp/down_dip_sub_sect_rup_set.zip");
-		File solFile = new File("/tmp/down_dip_sub_sect_rup_set.zip");
+		File solFile = new File("/tmp/down_dip_sub_sect_sol.zip");
 		
 		// we're going to manually build faults here
 		// first, build a big fault with down-dip subsections
@@ -207,7 +207,7 @@ public class DownDipTestRupSetBuilder {
 			CompletionCriteria criteria = TimeCompletionCriteria.getInMinutes(inversionMins);
 			
 			// Bring up window to track progress
-			criteria = new ProgressTrackingCompletionCriteria(criteria, 0.25);
+			criteria = new ProgressTrackingCompletionCriteria(criteria, 0.1);
 
 			// this will use all available processors
 			int numThreads = Runtime.getRuntime().availableProcessors();
@@ -239,6 +239,8 @@ public class DownDipTestRupSetBuilder {
 			FaultSystemSolution sol = new FaultSystemSolution(rupSet, solution_adjusted);
 			FaultSystemIO.writeSol(sol, solFile);
 		}
+		
+		System.exit(0);
 	}
 	
 	private static class MySlipEnabledRupSet extends SlipAlongRuptureModelRupSet {
