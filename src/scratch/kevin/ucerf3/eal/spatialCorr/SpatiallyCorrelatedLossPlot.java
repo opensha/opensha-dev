@@ -30,6 +30,8 @@ public class SpatiallyCorrelatedLossPlot {
 		File resultsDir = new File("/home/kevin/OpenSHA/UCERF3/eal/"
 				+ "2020_06_30-ucerf3-ngaw2-cea-100pct-spatial/results");
 		
+		int numZeros = 0;
+		
 		for (File file : resultsDir.listFiles()) {
 			if (!file.getName().endsWith(".csv"))
 				continue;
@@ -49,8 +51,12 @@ public class SpatiallyCorrelatedLossPlot {
 					vals = new ArrayList<>();
 					resultsTable.put(between, meanLoss, vals);
 				}
-				vals.add(csv.getDouble(row, 9));
+				double val = csv.getDouble(row, 9);
+				vals.add(val);
+				if (val == 0d)
+					numZeros++;
 			}
+			System.out.println("have "+numZeros+" zeroes");
 			
 			for (Double between : resultsTable.rowKeySet()) {
 				Map<Double, List<Double>> map = resultsTable.row(between);

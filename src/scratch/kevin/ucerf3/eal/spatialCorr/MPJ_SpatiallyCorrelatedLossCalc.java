@@ -17,6 +17,9 @@ import java.util.concurrent.Future;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
+import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.random.Well19937c;
+import org.apache.commons.math3.stat.StatUtils;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -68,8 +71,13 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 	private ExecutorService exec;
 	
 	private List<Asset> assets;
-	private double[] betweenEventStdDevs;
 	private RandomFieldLoader[] fields;
+	
+	// for preset between-event standard deviations
+	private double[] betweenEventStdDevs;
+	// for random tau samples
+	private int randTaus;
+	private NormalDistribution normDist;
 	
 	public MPJ_SpatiallyCorrelatedLossCalc(CommandLine cmd, File outputDir) throws IOException, DocumentException {
 		super(cmd);
@@ -151,11 +159,21 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 		VulnerabilityFetcher.getVulnerabilities(vulnFile);
 		System.out.println("DONE loading vulns.");
 		
-		String tauStr = cmd.getOptionValue("taus");
-		String[] tauSplit = tauStr.split(",");
-		betweenEventStdDevs = new double[tauSplit.length];
-		for (int i=0; i<betweenEventStdDevs.length; i++)
-			betweenEventStdDevs[i] = Double.parseDouble(tauSplit[i]);
+		if (cmd.hasOption("taus")) {
+			Preconditions.checkState(!cmd.hasOption("rand-taus"),
+					"cannot supply both --taus and --rand-taus options");
+			String tauStr = cmd.getOptionValue("taus");
+			String[] tauSplit = tauStr.split(",");
+			betweenEventStdDevs = new double[tauSplit.length];
+			for (int i=0; i<betweenEventStdDevs.length; i++)
+				betweenEventStdDevs[i] = Double.parseDouble(tauSplit[i]);
+		} else {
+			Preconditions.checkState(cmd.hasOption("rand-taus"),
+					"must supply --taus or --rand-taus options");
+			randTaus = Integer.parseInt(cmd.getOptionValue("rand-taus"));
+			Well19937c rng = new Well19937c(System.nanoTime()*(rank+1));
+			normDist = new NormalDistribution(rng, 0d, 1d);
+		}
 		
 		File fieldsDir = new File(cmd.getOptionValue("fields-dir"));
 		Preconditions.checkArgument(fieldsDir.exists());
@@ -253,60 +271,153 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 					}
 				}
 				
-				if (rup != null)
-					futures.add(exec.submit(new CalcCallable(gmpe, rup, lossXVal, meanLossAtMaxRate)));
+				if (rup != null) {
+					double[] betweenEventStdDevs;
+					if (this.betweenEventStdDevs == null)
+						// randomly sample between-event standard deviations
+						betweenEventStdDevs = normDist.sample(randTaus);
+					else
+						betweenEventStdDevs = this.betweenEventStdDevs;
+					futures.add(exec.submit(new CalcCallable(gmpe, rup, lossXVal,
+							meanLossAtMaxRate, betweenEventStdDevs)));
+				}
 			}
 			
 			debug("Waiting on "+futures.size()+" futures for "+index);
 			
-			CSVFile<String> csv = new CSVFile<>(true);
-			List<String> header = new ArrayList<>();
-			header.add("GMPE");
-			header.add("GMPE Epistempic Branch");
-			header.add("Vs30 Model");
-			header.add("Loss Bin");
-			header.add("Modal Rupture Rate");
-			header.add("Modal Rupture Mag");
-			header.add("Modal Rupture Mean Loss");
-			header.add("Modal Rupture Between-Event Term");
-			header.add("Field ID");
-			header.add("Loss");
-			csv.addLine(header);
-			
+			List<CalcCallable> calls = new ArrayList<>();
 			for (Future<CalcCallable> future : futures) {
-				CalcCallable call = null;
 				try {
-					call = future.get();
+					calls.add(future.get());
 				} catch (Exception e) {
 					abortAndExit(e, 1);
 				}
-				
-				if (call.rup == null)
-					continue;
-				
-				for (double between : betweenEventStdDevs) {
-					List<String> linePrefix = new ArrayList<>();
-					linePrefix.add(gmmBranch.getShortName());
-					linePrefix.add(gmmEpiBranch.getShortName());
-					linePrefix.add(vs30Branch.getShortName());
-					linePrefix.add((float)call.lossXVal+"");
-					linePrefix.add(call.rup.getMeanAnnualRate(erfDuration)+"");
-					linePrefix.add(call.rup.getMag()+"");
-					linePrefix.add(call.rupMeanLoss+"");
-					linePrefix.add((float)between+"");
-					for (int i=0; i<fields.length; i++) {
-						List<String> line = new ArrayList<>(linePrefix);
-						line.add(i+"");
-						line.add(call.lossTable.get(between, fields[i]).toString());
-						csv.addLine(line);
-					}
-				}
 			}
 			
-			String outputName = gmmBranch.encodeChoiceString()+"_"+gmmEpiBranch.encodeChoiceString()
-				+"_"+vs30Branch.encodeChoiceString()+".csv";
-			debug("Writing "+outputName);
-			csv.writeToFile(new File(resultsDir, outputName));
+			if (betweenEventStdDevs == null) {
+				// random samples
+				CSVFile<String> fullCSV = new CSVFile<>(true);
+				List<String> header = new ArrayList<>();
+				header.add("GMPE");
+				header.add("GMPE Epistempic Branch");
+				header.add("Vs30 Model");
+				header.add("Loss Bin");
+				header.add("Modal Rupture Rate");
+				header.add("Modal Rupture Mag");
+				header.add("Modal Rupture Mean Loss");
+				header.add("Between-Event Index");
+				header.add("Between-Event Term");
+				for (int f=0; f<fields.length; f++)
+					header.add("Loss for Field "+f);
+				fullCSV.addLine(header);
+				CSVFile<String> summaryCSV = new CSVFile<>(true);
+				header = new ArrayList<>();
+				header.add("GMPE");
+				header.add("GMPE Epistempic Branch");
+				header.add("Vs30 Model");
+				header.add("Loss Bin");
+				header.add("Modal Rupture Rate");
+				header.add("Modal Rupture Mag");
+				header.add("Modal Rupture Mean Loss");
+				header.add("Ln-Mean Calculated Loss");
+				header.add("Ln Loss Standard Deviation");
+				summaryCSV.addLine(header);
+				
+				for (CalcCallable call : calls) {
+					if (call.rup == null)
+						continue;
+					
+					double[] logLosses = new double[call.betweenEventStdDevs.length*fields.length];
+					int lossIndex = 0;
+					for (int t=0; t<call.betweenEventStdDevs.length; t++) {
+						double between = call.betweenEventStdDevs[t];
+						List<String> line = new ArrayList<>();
+						line.add(gmmBranch.getShortName());
+						line.add(gmmEpiBranch.getShortName());
+						line.add(vs30Branch.getShortName());
+						line.add((float)call.lossXVal+"");
+						line.add(call.rup.getMeanAnnualRate(erfDuration)+"");
+						line.add(call.rup.getMag()+"");
+						line.add(call.rupMeanLoss+"");
+						line.add(t+"");
+						line.add((float)between+"");
+						for (int i=0; i<fields.length; i++) {
+							double val = call.lossTable.get(between, fields[i]);
+							Preconditions.checkState(Double.isFinite(val));
+							line.add(val+"");
+							logLosses[lossIndex++] = Math.log(val);
+						}
+						fullCSV.addLine(line);
+					}
+					Preconditions.checkState(logLosses.length == lossIndex);
+					List<String> line = new ArrayList<>();
+					line.add(gmmBranch.getShortName());
+					line.add(gmmEpiBranch.getShortName());
+					line.add(vs30Branch.getShortName());
+					line.add((float)call.lossXVal+"");
+					line.add(call.rup.getMeanAnnualRate(erfDuration)+"");
+					line.add(call.rup.getMag()+"");
+					line.add(call.rupMeanLoss+"");
+					double lnMean = StatUtils.mean(logLosses);
+					double std = Math.sqrt(StatUtils.variance(logLosses));
+					line.add(lnMean+"");
+					line.add(std+"");
+					summaryCSV.addLine(line);
+				}
+				
+				String outputPrefix = gmmBranch.encodeChoiceString()+"_"+gmmEpiBranch.encodeChoiceString()
+					+"_"+vs30Branch.encodeChoiceString();
+				String outputName = outputPrefix+".csv";
+				debug("Writing "+outputName);
+				fullCSV.writeToFile(new File(resultsDir, outputName));
+
+				outputName = outputPrefix+"_summary.csv";
+				debug("Writing "+outputName);
+				summaryCSV.writeToFile(new File(resultsDir, outputName));
+			} else {
+				CSVFile<String> csv = new CSVFile<>(true);
+				List<String> header = new ArrayList<>();
+				header.add("GMPE");
+				header.add("GMPE Epistempic Branch");
+				header.add("Vs30 Model");
+				header.add("Loss Bin");
+				header.add("Modal Rupture Rate");
+				header.add("Modal Rupture Mag");
+				header.add("Modal Rupture Mean Loss");
+				header.add("Modal Rupture Between-Event Term");
+				header.add("Field ID");
+				header.add("Loss");
+				csv.addLine(header);
+				
+				for (CalcCallable call : calls) {
+					if (call.rup == null)
+						continue;
+					
+					for (double between : betweenEventStdDevs) {
+						List<String> linePrefix = new ArrayList<>();
+						linePrefix.add(gmmBranch.getShortName());
+						linePrefix.add(gmmEpiBranch.getShortName());
+						linePrefix.add(vs30Branch.getShortName());
+						linePrefix.add((float)call.lossXVal+"");
+						linePrefix.add(call.rup.getMeanAnnualRate(erfDuration)+"");
+						linePrefix.add(call.rup.getMag()+"");
+						linePrefix.add(call.rupMeanLoss+"");
+						linePrefix.add((float)between+"");
+						for (int i=0; i<fields.length; i++) {
+							List<String> line = new ArrayList<>(linePrefix);
+							line.add(i+"");
+							line.add(call.lossTable.get(between, fields[i]).toString());
+							csv.addLine(line);
+						}
+					}
+				}
+				
+				String outputName = gmmBranch.encodeChoiceString()+"_"+gmmEpiBranch.encodeChoiceString()
+					+"_"+vs30Branch.encodeChoiceString()+".csv";
+				debug("Writing "+outputName);
+				csv.writeToFile(new File(resultsDir, outputName));
+			}
+			
 			debug("Done with "+index);
 		}
 	}
@@ -317,15 +428,18 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 		private ProbEqkRupture rup;
 		private double lossXVal;
 		private double rupMeanLoss;
+		private double[] betweenEventStdDevs;
 		
 		private Table<Double, RandomFieldLoader, Double> lossTable;
 
-		public CalcCallable(ScalarIMR gmpe, ProbEqkRupture rup, double lossXVal, double rupMeanLoss) {
+		public CalcCallable(ScalarIMR gmpe, ProbEqkRupture rup, double lossXVal,
+				double rupMeanLoss, double[] betweenEventStdDevs) {
 			super();
 			this.gmpe = gmpe;
 			this.rup = rup;
 			this.lossXVal = lossXVal;
 			this.rupMeanLoss = rupMeanLoss;
+			this.betweenEventStdDevs = betweenEventStdDevs;
 		}
 
 		@Override
@@ -385,8 +499,13 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 		
 		Option betweenStdDevs = new Option("ts", "taus", true,
 				"Between-event standard deviations (comma separated)");
-		betweenStdDevs.setRequired(true);
+		betweenStdDevs.setRequired(false);
 		options.addOption(betweenStdDevs);
+		
+		Option randBetweenStdDevs = new Option("rts", "rand-taus", true,
+				"Number of randomly-sampled between-event standard deviations");
+		randBetweenStdDevs.setRequired(false);
+		options.addOption(randBetweenStdDevs);
 		
 		Option fieldsDir = new Option("fd", "fields-dir", true,
 				"Directory containing random field CSV files");

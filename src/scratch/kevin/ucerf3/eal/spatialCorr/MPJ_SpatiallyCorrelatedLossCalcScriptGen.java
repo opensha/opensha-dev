@@ -39,7 +39,12 @@ public class MPJ_SpatiallyCorrelatedLossCalcScriptGen {
 		File portfolioFile = new File(remoteDir, "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wills2015.csv");
 		File vulnFile = new File(remoteDir, "2014_05_16_VUL06.txt");
 		
-		String taus = "-2,-1,0,1,2";
+//		String taus = "-2,-1,0,1,2";
+//		int randTaus = 0;
+		
+		String taus = null;
+		int randTaus = 100;
+		
 		File randFieldsDir = new File("/home/scec-02/kmilner/ucerf3/eal/random_fields/sa10_1km_800x800");
 		double fieldSpacing = 1d;
 		
@@ -56,6 +61,8 @@ public class MPJ_SpatiallyCorrelatedLossCalcScriptGen {
 		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
 		jobName += "-spatial";
+		if (randTaus > 0)
+			jobName += "-randTau"+randTaus;
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -72,7 +79,10 @@ public class MPJ_SpatiallyCorrelatedLossCalcScriptGen {
 		argz += " --true-mean-sol "+trueMeanFile.getAbsolutePath();
 		argz += " --portfolio "+portfolioFile.getAbsolutePath();
 		argz += " --vuln-file "+vulnFile.getAbsolutePath();
-		argz += " --taus "+taus;
+		if (randTaus > 0)
+			argz += " --rand-taus "+randTaus;
+		else
+			argz += " --taus "+taus;
 		argz += " --fields-dir "+randFieldsDir.getAbsolutePath();
 		argz += " --field-spacing "+fieldSpacing;
 		
