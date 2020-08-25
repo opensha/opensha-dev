@@ -11,8 +11,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.math3.stat.StatUtils;
+import org.jfree.chart.axis.NumberTickUnit;
+import org.jfree.chart.axis.TickUnit;
+import org.jfree.chart.axis.TickUnits;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.data.Range;
+import org.jfree.ui.RectangleEdge;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
@@ -39,6 +43,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.EventRecord;
+import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
@@ -47,6 +52,9 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
+
+import scratch.kevin.simulators.RSQSimCatalog;
+import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class MagAreaScalingPlot extends AbstractPlot {
 	
@@ -155,7 +163,7 @@ public class MagAreaScalingPlot extends AbstractPlot {
 					magTrack.addValue(comp.getMedianMag(areaTrack.getMax()));
 				}
 			}
-			yRange = new Range(Math.floor(magTrack.getMin()), Math.ceil(magTrack.getMax()));
+			yRange = new Range(0.5*Math.floor(2*magTrack.getMin()), 0.5*Math.ceil(2*magTrack.getMax()));
 		}
 		for (FaultStyle style : scatterMap.keySet()) {
 			DefaultXY_DataSet scatter = scatterMap.get(style);
@@ -200,7 +208,8 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		List<EvenlyDiscretizedFunc> compFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> compChars = new ArrayList<>();
 		
-		Color[] compColors = { Color.RED.darker(), Color.BLUE.darker(), Color.GREEN.darker(), Color.ORANGE.darker(), Color.MAGENTA.darker() };
+		Color[] compColors = { Color.BLUE.darker(), Color.GREEN.darker(),
+				Color.CYAN.darker(), Color.MAGENTA.darker(), Color.GRAY };
 		
 		if (!meanSlip) {
 			List<MagAreaRelationship> list = comparisons.get(faultStyle);
@@ -342,7 +351,8 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		System.out.println("MinZ: "+minZ);
 		System.out.println("MaxZ: "+maxZ);
 		
-		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
+//		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
+		CPT cpt = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse();
 		if ((float)minZ == (float)maxZ)
 			cpt = cpt.rescale(minZ, minZ*2);
 		else if (!Doubles.isFinite(minZ))
@@ -356,6 +366,7 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		if (!meanSlip)
 			xAxisLabel = "Log10 "+xAxisLabel;
 		XYZPlotSpec xyzSpec = new XYZPlotSpec(xyz, cpt, title, xAxisLabel, yAxisLabel, zAxisLabel);
+		xyzSpec.setCPTPosition(RectangleEdge.BOTTOM);
 		if (!meanSlip) {
 			// add W-C
 			funcs = Lists.newArrayList();
@@ -375,6 +386,10 @@ public class MagAreaScalingPlot extends AbstractPlot {
 		XYZGraphPanel xyzGP = buildXYZGraphPanel();
 		xyzGP.drawPlot(xyzSpec, false, false, new Range(minX-0.5*gridSpacingX, maxX+0.5*gridSpacingX),
 				new Range(Math.max(0d, yRange.getLowerBound()-0.5*gridSpacingY), yRange.getUpperBound()+0.5*gridSpacingY));
+		TickUnits tus = new TickUnits();
+		TickUnit tu = new NumberTickUnit(0.5d);
+		tus.add(tu);
+		xyzGP.getYAxis().setStandardTickUnits(tus);
 		// write plot
 		xyzGP.getChartPanel().setSize(plotWidth, plotHeight);
 		xyzGP.saveAsPNG(new File(outputDir, prefix+"_hist2D.png").getAbsolutePath());
@@ -578,6 +593,20 @@ public class MagAreaScalingPlot extends AbstractPlot {
 	@Override
 	public Collection<SimulatorElement> getApplicableElements() {
 		return null;
+	}
+	
+	public static void main(String[] args) throws IOException {
+		MagAreaScalingPlot plot = new MagAreaScalingPlot(false);
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
+		
+		plot.initialize(catalog.getName(), new File("/home/kevin/Documents/papers/"
+				+ "2020_RSQSim_PSHA/supplement"), "figure_s1");
+		
+		for (RSQSimEvent event : catalog.loader().skipSlipsAndTimes().skipYears(5000).minMag(6.5d).iterable())
+			plot.processEvent(event);
+		
+		plot.finalizePlot();
 	}
 
 }

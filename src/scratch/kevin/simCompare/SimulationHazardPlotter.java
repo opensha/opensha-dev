@@ -848,10 +848,16 @@ public class SimulationHazardPlotter<E> {
 						maxX = Math.max(maxX, pt.getX());
 					}
 				}
-				double maxY = 1e-2;
+				double maxY = 2e-3;
 				minY = Math.pow(10, Math.floor(Math.log10(minY)-0.2));
-				double minX = simCurve.getFirstInterpolatedX(maxY);
-				maxX = Math.pow(10, Math.ceil(Math.log10(maxX)+0.1));
+				double minX = Double.POSITIVE_INFINITY;
+				for (DiscretizedFunc func : funcs)
+					minX = Math.min(minX, func.getFirstInterpolatedX(maxY));
+				minX = 0.1*Math.floor(10d*minX);
+				if (minX == 0d)
+					minX = Math.pow(10, Math.floor(Math.log10(simCurve.getFirstInterpolatedX(maxY))));
+//				maxX = Math.pow(10, Math.ceil(Math.log10(maxX)+0.1));
+				maxX = 0.2*Math.ceil(5.01d*maxX);
 				
 				String prefix = outputFile.getName().replaceAll(".gif", "")+"_final";
 				plotHazardCurves(outputFile.getParentFile(), prefix, site, imt, curveDuration,

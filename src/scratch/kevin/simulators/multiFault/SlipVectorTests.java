@@ -37,17 +37,23 @@ import org.opensha.sha.faultSurface.utils.GriddedSurfaceUtils;
 public class SlipVectorTests {
 	
 	public static void main(String[] args) throws IOException {
+		// fault 1
 		FaultTrace trace1 = new FaultTrace("test trace");
 		trace1.add(new Location(0d, 0d));
 		trace1.add(new Location(1d, 0d));
-		FaultTrace trace2 = new FaultTrace("test trace");
-		trace2.add(new Location(1d, 0.1d));
-		trace2.add(new Location(2d, 0.1d));
-		
+		double rake1 = 180d;
 		double dip1 = 90d;
-		double dip2 = 90d;
-		double rake1 = 0d;
+		
+		
+		// fault 2
+		FaultTrace trace2 = new FaultTrace("test trace");
+//		trace2.add(new Location(1.1d, 0.1d));
+//		trace2.add(new Location(2.1d, 0.1d));
+		trace2.add(new Location(1d, 0d));
+		trace2.add(new Location(0.5d, 2d));
 		double rake2 = 0d;
+		double dip2 = 90d;
+		
 		
 		double upperDepth = 0d;
 		double lowerDepth = 10d;
@@ -70,6 +76,8 @@ public class SlipVectorTests {
 		
 		plot(sect1, sect2);
 		
+		plotCompatibility(sect1, sect2);
+		
 //		for (double dip : dips) {
 //			for (double rake : rakes) {
 //				FaultSectionPrefData sect = new FaultSectionPrefData();
@@ -88,58 +96,92 @@ public class SlipVectorTests {
 //		}
 	}
 	
-	private static void plot(FaultSection sect) {
+	private static void plot(FaultSection... sects) {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		RuptureSurface surf = sect.getFaultSurface(1d, false, false);
+		boolean first = true;
 		
-		plotSurf(surf, funcs, chars);
+		for (FaultSection sect : sects) {
+			RuptureSurface surf = sect.getFaultSurface(1d, false, false);
+			
+			plotSurf(surf, funcs, chars);
+			
+			LocationVector hwVect = RSQSimU3RupturePageGen.calcSlipVector(sect, false);
+			System.out.println("\tHanging wall motion: "+hwVect);
+			LocationVector fwVect = RSQSimU3RupturePageGen.calcSlipVector(sect, true);
+			System.out.println("\tFoot wall motion: "+fwVect);
+			
+			double scale = 25d;
+			hwVect = new LocationVector(hwVect.getAzimuth(), scale*hwVect.getHorzDistance(),
+					scale*hwVect.getVertDistance());
+			fwVect = new LocationVector(fwVect.getAzimuth(), scale*fwVect.getHorzDistance(),
+					scale*fwVect.getVertDistance());
+			
+			double strike = sect.getFaultTrace().getStrikeDirection();
+			
+			double offset = sect.getFaultTrace().getTraceLength()*0.05;
+			
+			Location midPt = GriddedSurfaceUtils.getSurfaceMiddleLoc(surf);
+			Location fwPt = LocationUtils.location(midPt, new LocationVector(strike-90d, offset, 0d));
+			Location hwPt = LocationUtils.location(midPt, new LocationVector(strike+90d, offset, 0d));
+			
+			Location hwEnd = LocationUtils.location(hwPt, stripVert(hwVect));
+//			System.out.println("hw moved "+LocationUtils.linearDistance(midPt, hwEnd));
+			Location fwEnd = LocationUtils.location(fwPt, stripVert(fwVect));
+//			System.out.println("fw moved "+LocationUtils.linearDistance(midPt, fwEnd));
+			
+			DefaultXY_DataSet hwLine = new DefaultXY_DataSet();
+			hwLine.set(hwPt.getLongitude(), hwPt.getLatitude());
+			hwLine.set(hwEnd.getLongitude(), hwEnd.getLatitude());
+			funcs.add(hwLine);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.RED));
+			if (first)
+				hwLine.setName("Hanging Wall Motion");
+			hwLine.setInfo(hwVect.toString());
+			System.out.println(hwLine);
+			
+			DefaultXY_DataSet fwLine = new DefaultXY_DataSet();
+			fwLine.set(fwPt.getLongitude(), fwPt.getLatitude());
+			fwLine.set(fwEnd.getLongitude(), fwEnd.getLatitude());
+			funcs.add(fwLine);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.GREEN));
+			if (first)
+				fwLine.setName("Footwall Motion");
+			fwLine.setInfo(fwVect.toString());
+			System.out.println(fwLine);
+			
+			first = false;
+		}
 		
-		LocationVector hwVect = RSQSimU3RupturePageGen.calcSlipVector(sect, false);
-		System.out.println("\tHanging wall motion: "+hwVect);
-		LocationVector fwVect = RSQSimU3RupturePageGen.calcSlipVector(sect, true);
-		System.out.println("\tFoot wall motion: "+fwVect);
-		
-		double scale = 25d;
-		hwVect = new LocationVector(hwVect.getAzimuth(), scale*hwVect.getHorzDistance(),
-				scale*hwVect.getVertDistance());
-		fwVect = new LocationVector(fwVect.getAzimuth(), scale*fwVect.getHorzDistance(),
-				scale*fwVect.getVertDistance());
-		
-		Location midPt = GriddedSurfaceUtils.getSurfaceMiddleLoc(surf);
-		
-		Location hwEnd = LocationUtils.location(midPt, stripVert(hwVect));
-//		System.out.println("hw moved "+LocationUtils.linearDistance(midPt, hwEnd));
-		Location fwEnd = LocationUtils.location(midPt, stripVert(fwVect));
-//		System.out.println("fw moved "+LocationUtils.linearDistance(midPt, fwEnd));
-		
-		DefaultXY_DataSet hwLine = new DefaultXY_DataSet();
-		hwLine.set(midPt.getLongitude(), midPt.getLatitude());
-		hwLine.set(hwEnd.getLongitude(), hwEnd.getLatitude());
-		funcs.add(hwLine);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.RED));
-		hwLine.setName("Hanging Wall Motion");
-		hwLine.setInfo(hwVect.toString());
-		System.out.println(hwLine);
-		
-		DefaultXY_DataSet fwLine = new DefaultXY_DataSet();
-		fwLine.set(midPt.getLongitude(), midPt.getLatitude());
-		fwLine.set(fwEnd.getLongitude(), fwEnd.getLatitude());
-		funcs.add(fwLine);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.GREEN));
-		fwLine.setName("Footwall Motion");
-		fwLine.setInfo(fwVect.toString());
-		System.out.println(fwLine);
-		String title = "Strike="+df.format(sect.getFaultTrace().getAveStrike());
-		title += ", Dip="+df.format(sect.getAveDip());
-		title += ", Rake="+df.format(sect.getAveRake());
+		String title;
+		if (sects.length == 1) {
+			title = "Strike="+df.format(sects[0].getFaultTrace().getAveStrike());
+			title += ", Dip="+df.format(sects[0].getAveDip());
+			title += ", Rake="+df.format(sects[0].getAveRake());
+		} else {
+			title = " ";
+		}
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, "Longitude", "Latitude");
 		spec.setLegendVisible(true);
 		
-		Range yRange = new Range(-0.5d, 1.5d);
-		Range xRange = new Range(-1d, 1d);
+		MinMaxAveTracker latTrack = new MinMaxAveTracker();
+		MinMaxAveTracker lonTrack = new MinMaxAveTracker();
+		
+		for (XY_DataSet func : funcs) {
+			for (Point2D pt : func) {
+				latTrack.addValue(pt.getY());
+				lonTrack.addValue(pt.getX());
+			}
+		}
+		
+		double maxSpan = Math.max(latTrack.getMax()-latTrack.getMin(), lonTrack.getMax() - lonTrack.getMin());
+		double midLat = latTrack.getMin() + 0.5*(latTrack.getMax()-latTrack.getMin());
+		double midLon = lonTrack.getMin() + 0.5*(lonTrack.getMax()-lonTrack.getMin());
+		
+		Range yRange = new Range(midLat-0.6*maxSpan, midLat+0.6*maxSpan);
+		Range xRange = new Range(midLon-0.6*maxSpan, midLon+0.6*maxSpan);
 		
 		GraphWindow gw = new GraphWindow(spec, true);
 		gw.setAxisRange(xRange, yRange);
@@ -165,7 +207,7 @@ public class SlipVectorTests {
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 	}
 	
-	private static void plot(FaultSection sect1, FaultSection sect2) throws IOException {
+	private static void plotCompatibility(FaultSection sect1, FaultSection sect2) throws IOException {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 
@@ -174,28 +216,32 @@ public class SlipVectorTests {
 		
 		plotSurf(surf1, funcs, chars);
 		plotSurf(surf2, funcs, chars);
+		
+		MinMaxAveTracker latTrack = new MinMaxAveTracker();
+		MinMaxAveTracker lonTrack = new MinMaxAveTracker();
+		
+		for (XY_DataSet func : funcs) {
+			for (Point2D pt : func) {
+				latTrack.addValue(pt.getY());
+				lonTrack.addValue(pt.getX());
+			}
+		}
+		
+		double maxSpan = Math.max(latTrack.getMax()-latTrack.getMin(), lonTrack.getMax() - lonTrack.getMin());
+		double midLat = latTrack.getMin() + 0.5*(latTrack.getMax()-latTrack.getMin());
+		double midLon = lonTrack.getMin() + 0.5*(lonTrack.getMax()-lonTrack.getMin());
+		
+		Range yRange = new Range(midLat-0.6*maxSpan, midLat+0.6*maxSpan);
+		Range xRange = new Range(midLon-0.6*maxSpan, midLon+0.6*maxSpan);
 
 		LocationVector hwVect1 = RSQSimU3RupturePageGen.calcSlipVector(sect1, false);
 		LocationVector fwVect1 = RSQSimU3RupturePageGen.calcSlipVector(sect1, true);
 		LocationVector hwVect2 = RSQSimU3RupturePageGen.calcSlipVector(sect2, false);
 		LocationVector fwVect2 = RSQSimU3RupturePageGen.calcSlipVector(sect2, true);
 		
-		MinMaxAveTracker latTrack = new MinMaxAveTracker();
-		MinMaxAveTracker lonTrack = new MinMaxAveTracker();
-		
-		for (XY_DataSet xy : funcs) {
-			for (Point2D pt : xy) {
-				latTrack.addValue(pt.getY());
-				lonTrack.addValue(pt.getX());
-			}
-		}
-		double minLat = latTrack.getMin() - 0.5;
-		double maxLat = latTrack.getMax() + 0.5;
-		double minLon = lonTrack.getMin() - 0.5;
-		double maxLon = lonTrack.getMax() + 0.5;
-		
-		Region reg = new Region(new Location(minLat, minLon), new Location(maxLat, maxLon));
-		GriddedRegion gridReg = new GriddedRegion(reg, 0.01, null);
+		Region reg = new Region(new Location(yRange.getLowerBound(), xRange.getLowerBound()),
+				new Location(yRange.getUpperBound(), xRange.getUpperBound()));
+		GriddedRegion gridReg = new GriddedRegion(reg, 0.05, null);
 		
 		GriddedGeoDataSet xyz = new GriddedGeoDataSet(gridReg, false);
 		double[] vals = new double[xyz.size()];
@@ -220,9 +266,6 @@ public class SlipVectorTests {
 				"Latitude", "Compatibility");
 		spec.setXYElems(funcs);
 		spec.setXYChars(chars);
-		
-		Range xRange = new Range(reg.getMinLon(), reg.getMaxLon());
-		Range yRange = new Range(reg.getMinLat(), reg.getMaxLat());
 		
 		XYZPlotWindow xyzWind = new XYZPlotWindow(spec, xRange, yRange);
 		xyzWind.setVisible(true);

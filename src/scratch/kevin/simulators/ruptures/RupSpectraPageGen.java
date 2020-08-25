@@ -311,8 +311,8 @@ class RupSpectraPageGen {
 		String rupPlotPrefix = "rupture_plot_"+eventID;
 		RupturePlotGenerator.writeSlipPlot(event, func, resourcesDir, rupPlotPrefix, bbpSourceRect, bbpSourceHypo, gmpeSurf);
 		// write grayscale friendly version
-		RupturePlotGenerator.writeSlipPlot(event, func, resourcesDir, rupPlotPrefix+"_gsfriendly",
-				null, null, null, true);
+		RupturePlotGenerator.writeSlipPlot(event, func, resourcesDir, rupPlotPrefix+"_pub",
+				null, null, null, true, false);
 		File rupPlot = new File(resourcesDir, rupPlotPrefix+".png");
 		Preconditions.checkState(rupPlot.exists());
 		lines.add("### Slip/Time Plot");
@@ -959,8 +959,8 @@ class RupSpectraPageGen {
 //		int eventID = 9955310;
 ////		int eventID = 3817386;
 
-//		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
-////		int eventID = 40636;
+		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
+		int eventID = 40636;
 //		int eventID = 92236;
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4655.instance(baseDir);
@@ -999,8 +999,8 @@ class RupSpectraPageGen {
 ////		int eventID = 469461;
 //		int eventID = 368122; // event with lowest ave slip ratio from trans to dlist
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
-		int eventID = 1499589;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
+//		int eventID = 1499589;
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
 //		int eventID = 3092204;

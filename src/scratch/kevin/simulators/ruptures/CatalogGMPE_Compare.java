@@ -575,8 +575,10 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
-		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
-		IMT[] imts = { IMT.PGV, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
+		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+		IMT[] imts = { IMT.SA3P0 };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
+//		IMT[] imts = { IMT.PGV, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
 		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.AFSHARI_STEWART_2016 };

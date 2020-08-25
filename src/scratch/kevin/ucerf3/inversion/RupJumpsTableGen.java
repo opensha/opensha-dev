@@ -16,7 +16,7 @@ import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.inversion.InversionInputGenerator;
+import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
@@ -43,7 +43,7 @@ public class RupJumpsTableGen {
 		Map<IDPairing, Double> dists = dmFetch.getSubSectionDistanceMap(5d);
 		
 		String prefix = solFile.getName().replaceAll(".zip", "");
-		PaleoProbabilityModel paleoProbModel = InversionInputGenerator.loadDefaultPaleoProbabilityModel();
+		PaleoProbabilityModel paleoProbModel = UCERF3InversionInputGenerator.loadDefaultPaleoProbabilityModel();
 		CommandLineInversionRunner.writeJumpPlot(sol, dists, solFile.getParentFile(), prefix, 1d, 7d, null);
 		CommandLineInversionRunner.writeJumpPlot(sol, dists, solFile.getParentFile(), prefix, 1d, 0d, paleoProbModel);
 		CommandLineInversionRunner.writeJumpPlot(sol, dists, solFile.getParentFile(), prefix, 1d, 0d, null);
