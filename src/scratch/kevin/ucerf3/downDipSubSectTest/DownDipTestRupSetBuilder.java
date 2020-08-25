@@ -232,7 +232,7 @@ public class DownDipTestRupSetBuilder {
 			if (energies != null) {
 				System.out.println("Final energies:");
 				for (ConstraintRange range : energies.keySet())
-					System.out.println("\t"+range.name+": "+energies.get(energies).floatValue());
+					System.out.println("\t"+range.name+": "+energies.get(range).floatValue());
 			}
 			
 			// now write out the solution
