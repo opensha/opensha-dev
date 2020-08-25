@@ -20,10 +20,10 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
-import scratch.UCERF3.inversion.InversionConfiguration;
+import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
-import scratch.UCERF3.inversion.InversionInputGenerator;
+import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;
 import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
@@ -72,7 +72,7 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 		InversionFaultSystemRupSet rupSet = InversionFaultSystemRupSetFactory.forBranch(
 				filter, defaultAseis, inversionModel, FaultModels.FM3_1);
 		
-		InversionConfiguration config = InversionConfiguration.forModel(inversionModel, rupSet);
+		UCERF3InversionConfiguration config = UCERF3InversionConfiguration.forModel(inversionModel, rupSet);
 		
 		// get the paleo rate constraints
 		List<PaleoRateConstraint> paleoRateConstraints = null;
@@ -92,7 +92,7 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 		// paleo probability model
 		PaleoProbabilityModel paleoProbabilityModel = null;
 		try {
-			paleoProbabilityModel = InversionInputGenerator.loadDefaultPaleoProbabilityModel();
+			paleoProbabilityModel = UCERF3InversionInputGenerator.loadDefaultPaleoProbabilityModel();
 		} catch (IOException e) {
 			e.printStackTrace();
 			// exit
@@ -108,7 +108,7 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 		}
 		
 		// create the input generator
-		InversionInputGenerator gen = new InversionInputGenerator(rupSet, config, paleoRateConstraints, aveSlipConstraints,
+		UCERF3InversionInputGenerator gen = new UCERF3InversionInputGenerator(rupSet, config, paleoRateConstraints, aveSlipConstraints,
 				improbabilityConstraint, paleoProbabilityModel);
 		
 		// generate the inputs
@@ -124,8 +124,8 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 		d = gen.getD();
 		A_ineq = gen.getA_ineq();
 		d_ineq = gen.getD_ineq();
-		initial = gen.getInitial();
-		minimumRuptureRates = gen.getMinimumRuptureRates();
+		initial = gen.getInitialSolution();
+		minimumRuptureRates = gen.getWaterLevelRates();
 		
 		// use one of these to run it for a set amount of time: 
 //		criteria = TimeCompletionCriteria.getInMinutes(90);

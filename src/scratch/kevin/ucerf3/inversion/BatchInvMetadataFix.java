@@ -18,7 +18,7 @@ import org.dom4j.Element;
 import org.opensha.commons.util.XMLUtils;
 
 import scratch.UCERF3.inversion.BatchPlotGen;
-import scratch.UCERF3.inversion.InversionConfiguration;
+import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.logicTree.VariableLogicTreeBranch;
@@ -69,8 +69,8 @@ public class BatchInvMetadataFix {
 			Document invDoc = XMLUtils.loadDocument(zip.getInputStream(invEntry));
 			Element invRoot = invDoc.getRootElement().element("InversionFaultSystemSolution");
 			
-			Element confEl = invRoot.element(InversionConfiguration.XML_METADATA_NAME);
-			InversionConfiguration conf = InversionConfiguration.fromXMLMetadata(confEl);
+			Element confEl = invRoot.element(UCERF3InversionConfiguration.XML_METADATA_NAME);
+			UCERF3InversionConfiguration conf = UCERF3InversionConfiguration.fromXMLMetadata(confEl);
 			
 			Element energiesEl = invRoot.element("Energies");
 			Map<String, Double> energies = Maps.newHashMap();
