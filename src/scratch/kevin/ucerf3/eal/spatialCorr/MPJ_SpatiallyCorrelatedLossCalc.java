@@ -79,6 +79,8 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 	private int randTaus;
 	private NormalDistribution normDist;
 	
+	private DiscretizedFunc magThreshFunc;
+	
 	public MPJ_SpatiallyCorrelatedLossCalc(CommandLine cmd, File outputDir) throws IOException, DocumentException {
 		super(cmd);
 		this.shuffle = false;
@@ -190,6 +192,8 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 		if (rank == 0)
 			debug("Loaded "+randFields.size()+" random fields");
 		fields = randFields.toArray(new RandomFieldLoader[0]);
+		
+		magThreshFunc = MPJ_CondLossCalc.getDefaultMagDistFunc();
 		
 		exec = Executors.newFixedThreadPool(getNumThreads());
 	}
@@ -324,7 +328,7 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 				summaryCSV.addLine(header);
 				
 				for (CalcCallable call : calls) {
-					if (call.rup == null)
+					if (call.rup == null || call.lossTable.isEmpty())
 						continue;
 					
 					double[] logLosses = new double[call.betweenEventStdDevs.length*fields.length];
@@ -390,7 +394,7 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 				csv.addLine(header);
 				
 				for (CalcCallable call : calls) {
-					if (call.rup == null)
+					if (call.rup == null || call.lossTable.isEmpty())
 						continue;
 					
 					for (double between : betweenEventStdDevs) {
@@ -450,7 +454,7 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 			
 			Location rupCentroid = SpatiallyCorrelatedLossCalc.calcRupCentroid(rup.getRuptureSurface());
 			lossTable =	SpatiallyCorrelatedLossCalc.calcSpatiallyCorrelatedLoss(
-							gmpe, assets, rup, rupCentroid, betweenEventStdDevs, fields);
+							gmpe, assets, rup, rupCentroid, betweenEventStdDevs, fields, magThreshFunc);
 			
 			return this;
 		}

@@ -1,5 +1,21 @@
 package scratch.kevin.ucerf3.eal.branches;
 
+import java.awt.Color;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.jfree.chart.plot.DatasetRenderingOrder;
+import org.jfree.data.Range;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSpec;
+
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 
@@ -75,15 +91,60 @@ public enum U3_EAL_GM_Variability implements LogicTreeBranchNode<U3_EAL_GM_Varia
 		return A_sub_L * lambda;
 	}
 	
-	public static void main(String[] args) {
-		double lambda = 10000;
+	public static void main(String[] args) throws IOException {
+		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(1000d, 1000000d, 1001);
 		
-		System.out.println("Nominal loss: "+lambda);
-		for (U3_EAL_GM_Variability var : values()) {
-			double varLoss = var.calcGMVarLoss(lambda);
-			double ratio = varLoss/lambda;
-			System.out.println(var.name+": varLoss = "+(float)varLoss+",\tratio="+(float)ratio);
+		for (int i=0; i<func.size(); i++) {
+			double lambda = func.getX(i);
+//			System.out.println("Nominal loss: "+lambda);
+			double wtVal = 0d;
+			for (U3_EAL_GM_Variability var : values()) {
+				double varLoss = var.calcGMVarLoss(lambda);
+				double ratio = varLoss/lambda;
+//				System.out.println(var.name+": varLoss = "+(float)varLoss+",\tratio="+(float)ratio);
+				wtVal += varLoss*var.weight;
+			}
+//			System.out.println("Weight average: "+wtVal);
+			func.set(i, wtVal);
 		}
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		Range xRange = new Range(Math.min(func.getMinX(), func.getMinY()),
+				Math.max(func.getMaxX(), func.getMaxY()));
+		Range yRange = xRange;
+		
+		DiscretizedFunc oneToOne = new ArbitrarilyDiscretizedFunc();
+		oneToOne.set(xRange.getLowerBound(), xRange.getLowerBound());
+		oneToOne.set(xRange.getUpperBound(), xRange.getUpperBound());
+		
+		funcs.add(oneToOne);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1.5f, Color.GRAY));
+		
+		funcs.add(func);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, "GM Var Bias", "Nominal Loss", "Weighted-Mean GMVar Loss");
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(24);
+		gp.setPlotLabelFontSize(24);
+		gp.setLegendFontSize(28);
+		gp.setBackgroundColor(Color.WHITE);
+		
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		
+		File file = new File("/tmp/gm_var_bias");
+		gp.getChartPanel().setSize(800, 800);
+		gp.saveAsPNG(file.getAbsolutePath()+".png");
+		
+		gp.drawGraphPanel(spec, true, true, xRange, yRange);
+		
+		file = new File("/tmp/gm_var_bias_log");
+		gp.getChartPanel().setSize(800, 800);
+		gp.saveAsPNG(file.getAbsolutePath()+".png");
 	}
 
 }

@@ -12,6 +12,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.utm.UTM;
 import org.opensha.commons.geo.utm.WGS84;
+import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.nshmp2.erf.source.PointSource;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -83,18 +84,40 @@ public class SpatiallyCorrelatedLossCalc {
 		return new Location(lat, lon);
 	}
 	
-	// TODO add mag-dist thresh func
 	public static Table<Double, RandomFieldLoader, Double> calcSpatiallyCorrelatedLoss(
 			ScalarIMR gmpe, List<Asset> assets, EqkRupture rup, Location rupCentroid,
 			double[] betweenEventStdDevs, RandomFieldLoader[] randFields) {
+		return calcSpatiallyCorrelatedLoss(gmpe, assets, rup, rupCentroid,
+				betweenEventStdDevs, randFields, null);
+	}
+	
+	public static Table<Double, RandomFieldLoader, Double> calcSpatiallyCorrelatedLoss(
+			ScalarIMR gmpe, List<Asset> assets, EqkRupture rup, Location rupCentroid,
+			double[] betweenEventStdDevs, RandomFieldLoader[] randFields, DiscretizedFunc magThreshFunc) {
 		Table<Double, RandomFieldLoader, Double> ret = HashBasedTable.create();
-		
-		Site site = new Site();
-		site.addParameterList(gmpe.getSiteParams());
 		
 		gmpe.setEqkRupture(rup);
 		for (Asset asset : assets) {
+			Site site = new Site();
+			for (Parameter<?> param : gmpe.getSiteParams())
+				site.addParameter((Parameter<?>)param.clone());
 			asset.siteSetup(site);
+			site = asset.getSite();
+			
+			if (magThreshFunc != null) {
+				double distance = rup.getRuptureSurface().getQuickDistance(site.getLocation());
+				if (distance > magThreshFunc.getMaxX()) {
+					if (D) System.out.println("Skipping an asset above max dist (dist="+(float)distance+")");
+					continue;
+				}
+				double magThresh = magThreshFunc.getInterpolatedY(distance);
+				
+				if (rup.getMag() < magThresh) {
+					if (D) System.out.println("Skipping due to mag-dist thresh fail (mag="+(float)rup.getMag()
+						+", thresh="+(float)magThresh+", dist="+(float)distance+")");
+					continue;
+				}
+			}
 			
 			Vulnerability vulnModel;
 			try {
@@ -123,19 +146,13 @@ public class SpatiallyCorrelatedLossCalc {
 				tau = gmpe.getStdDev();
 				type.setValue(StdDevTypeParam.STD_DEV_TYPE_INTRA);
 				phi = gmpe.getStdDev();
+				type.setValue(StdDevTypeParam.STD_DEV_TYPE_TOTAL);
 			}
 			
 			if (D) System.out.println("Calculating for asset "+asset.getVulnModelName()+" with value "+asset.getValue());
 			if (D) System.out.println("mean="+mean+", phi="+phi+", tau="+tau);
 			
-			// linear IMs
-			double[] imls = vulnModel.getIMLValues();
-			DiscretizedFunc mafe = new ArbitrarilyDiscretizedFunc();
-			for (double iml : imls)
-				mafe.set(iml, 0d);
-			
-			EALCalculator ealCalc = new EALCalculator(mafe,
-					vulnModel.getVulnerabilityFunc(), asset.getValue() );
+			DiscretizedFunc vulnFunc = vulnModel.getVulnerabilityFunc();
 			
 			for (double betweenEventStdDev : betweenEventStdDevs) {
 				// ground motion considering the between-event term
@@ -155,20 +172,29 @@ public class SpatiallyCorrelatedLossCalc {
 					// set MAFE. 1 if below GM, 0 if above
 					double linearGM = Math.exp(phiGM);
 					if (D) System.out.println("\t\tlinearGM="+linearGM);
-					if (D) System.out.println("\t\tMAFE");
-					Preconditions.checkState(linearGM > 0d, "bad linearGM=%s for phiGM=%s", linearGM, phiGM);
-					for (int i=0; i<mafe.size(); i++) {
-						if (linearGM >= mafe.getX(i))
-							mafe.set(i, 1d);
-						else
-							mafe.set(i, 0d);
-						if (D) System.out.println("\t\t\t"+(float)mafe.getX(i)+"="+(float)mafe.getY(i)
-							+"\t(D="+ealCalc.getDF().get(i).floatValue()+")");
-					}
-					ealCalc.setMAFE(mafe);
-					
-					// expected loss conditioned on occurence of this rup with this GM value
-					double el = ealCalc.computeEAL();
+//					if (D) System.out.println("\t\tMAFE");
+//					Preconditions.checkState(linearGM > 0d, "bad linearGM=%s for phiGM=%s", linearGM, phiGM);
+//					for (int i=0; i<mafe.size(); i++) {
+//						if (linearGM >= mafe.getX(i))
+//							mafe.set(i, 1d);
+//						else
+//							mafe.set(i, 0d);
+//						if (D) System.out.println("\t\t\t"+(float)mafe.getX(i)+"="+(float)mafe.getY(i)
+//							+"\t(D="+ealCalc.getDF().get(i).floatValue()+")");
+//					}
+//					ealCalc.setMAFE(mafe);
+//					
+//					// expected loss conditioned on occurence of this rup with this GM value
+//					double el = ealCalc.computeEAL();
+					double interpDF;
+					if (linearGM < vulnFunc.getMinX())
+						interpDF = 0d;
+					else if (linearGM > vulnFunc.getMaxX())
+						interpDF = vulnFunc.getMaxY();
+					else
+						interpDF = vulnFunc.getInterpolatedY(linearGM);
+					if (D) System.out.println("\t\tInterp DF: "+interpDF);
+					double el = asset.getValue()*interpDF;
 					if (D) System.out.println("\t\tLoss: "+el);
 					
 					Double prevLoss = ret.get(betweenEventStdDev, field);

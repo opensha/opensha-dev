@@ -39,17 +39,17 @@ public class MPJ_SpatiallyCorrelatedLossCalcScriptGen {
 		File portfolioFile = new File(remoteDir, "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wills2015.csv");
 		File vulnFile = new File(remoteDir, "2014_05_16_VUL06.txt");
 		
-//		String taus = "-2,-1,0,1,2";
-//		int randTaus = 0;
+		String taus = "-2,-1,0,1,2";
+		int randTaus = 0;
 		
-		String taus = null;
-		int randTaus = 100;
+//		String taus = null;
+//		int randTaus = 100;
 		
 		File randFieldsDir = new File("/home/scec-02/kmilner/ucerf3/eal/random_fields/sa10_1km_800x800");
 		double fieldSpacing = 1d;
 		
 		int threads = 20;
-		int nodes = 10;
+		int nodes = 24;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 55*1024;
