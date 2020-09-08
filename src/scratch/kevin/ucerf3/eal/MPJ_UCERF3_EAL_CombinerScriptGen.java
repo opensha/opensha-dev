@@ -52,7 +52,7 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		double tractRadius = 0;
 		boolean tractIndividual = false;
 		boolean lec = true;
-		boolean gmVar = true;
+		LossCOV_Model covModel = LossCOV_Model.PORTER_POWER_LAW_2020_09_01;
 		
 //		Location tractLoc = new Location(34.108300, -117.289646);
 //		String cityPrefix = "san-bernardino";
@@ -76,11 +76,11 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		if (tractIndividual)
 			jobName += "-tractEALs";
 		
-		if (lec)
+		if (lec) {
 			jobName += "-calcLEC";
-		
-		if (gmVar)
-			jobName += "-gmVar";
+			if (covModel != null)
+				jobName += "-covModel";
+		}
 		
 		int threads = 20;
 		int nodes = 32;
@@ -125,9 +125,9 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 			argz += " --tract-branch-eals";
 		} else if (lec) {
 			argz += " --calc-lec";
+			if (covModel != null)
+				argz += " --lec-cov "+covModel.name();
 		}
-		if (gmVar)
-			argz += " --gm-variability";
 		argz += " "+remoteJobDir.getAbsolutePath();
 		
 		List<String> script = mpjWrite.buildScript(MPJ_UCERF3_EAL_Combiner.class.getName(), argz);

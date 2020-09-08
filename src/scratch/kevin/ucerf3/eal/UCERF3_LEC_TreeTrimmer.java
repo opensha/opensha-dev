@@ -29,7 +29,6 @@ import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
-import scratch.kevin.ucerf3.eal.branches.U3_EAL_GM_Variability;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_LogicTreeBranch;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_ProbModels;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_Vs30Model;
@@ -40,9 +39,10 @@ public class UCERF3_LEC_TreeTrimmer {
 	public static void main(String[] args) throws IOException {
 		File inputDir = new File("/home/kevin/OpenSHA/UCERF3/eal/"
 //				+ "2020_04_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC");
-				+ "2020_07_08-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-gmVar");
+//				+ "2020_07_08-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-gmVar");
+				+ "2020_09_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-covModel");
 		List<LogicTreeBranchNode<?>> fixedBranches = new ArrayList<>();
-//		fixedBranches.add(U3_EAL_GMMs.BSSA_2014);
+		fixedBranches.add(U3_EAL_GMMs.BSSA_2014);
 		fixedBranches.add(U3_EAL_GMM_Epistemic.NONE);
 		
 		File outputDir = new File(inputDir, "tree_trimming");
@@ -292,15 +292,13 @@ public class UCERF3_LEC_TreeTrimmer {
 	private static final int gmm_col = 12;
 	private static final int gmm_epi_col = 13;
 	private static final int vs30_col = 14;
-	private static final int gm_var_col = 15;
 	
 	private static Table<U3_EAL_LogicTreeBranch, Double, DiscretizedFunc> loadLECs(File csvFile)
 			throws IOException {
 		CSVFile<String> csv = CSVFile.readFile(csvFile, true);
 		
 		List<Double> xVals = new ArrayList<>();
-		boolean hasGMVar = csv.get(0, gm_var_col).contains("Variability");
-		int lecFirstCol = hasGMVar ? gm_var_col + 1 : vs30_col + 1;
+		int lecFirstCol = vs30_col + 1;
 		for (int col=lecFirstCol; col<csv.getNumCols(); col++)
 			xVals.add(csv.getDouble(0, col));
 		System.out.println("Have "+xVals.size()+" xVals");
@@ -330,8 +328,7 @@ public class UCERF3_LEC_TreeTrimmer {
 			U3_EAL_GMMs gmm = forShortName(U3_EAL_GMMs.class, csv.get(row, gmm_col));
 			U3_EAL_GMM_Epistemic gmmEpi = forShortName(U3_EAL_GMM_Epistemic.class, csv.get(row, gmm_epi_col));
 			U3_EAL_Vs30Model vs30 = forShortName(U3_EAL_Vs30Model.class, csv.get(row, vs30_col));
-			U3_EAL_GM_Variability gmVar = hasGMVar ? forShortName(U3_EAL_GM_Variability.class, csv.get(row, gm_var_col)) : null;
-			U3_EAL_LogicTreeBranch ealBranch = new U3_EAL_LogicTreeBranch(tiBranch, probModel, gmm, gmmEpi, vs30, gmVar);
+			U3_EAL_LogicTreeBranch ealBranch = new U3_EAL_LogicTreeBranch(tiBranch, probModel, gmm, gmmEpi, vs30);
 			
 			ret.put(ealBranch, weight, new LightFixedXFunc(xValsArray, yVals));
 			totWeight += weight;
@@ -348,15 +345,12 @@ public class UCERF3_LEC_TreeTrimmer {
 	private static final int eal_gmm_col = 15;
 	private static final int eal_gmm_epi_col = 16;
 	private static final int eal_vs30_col = 17;
-	private static final int eal_gm_var_col = 18;
 	
 	private static Table<U3_EAL_LogicTreeBranch, Double, Double> loadEALs(File csvFile)
 			throws IOException {
 		CSVFile<String> csv = CSVFile.readFile(csvFile, true);
 		
 		System.out.println("Loading EALs...");
-		
-		boolean hasGMVar = csv.get(0, eal_gm_var_col).contains("Variability");
 		
 		Table<U3_EAL_LogicTreeBranch, Double, Double> ret = HashBasedTable.create();
 		
@@ -378,8 +372,7 @@ public class UCERF3_LEC_TreeTrimmer {
 			U3_EAL_GMMs gmm = forShortName(U3_EAL_GMMs.class, csv.get(row, eal_gmm_col));
 			U3_EAL_GMM_Epistemic gmmEpi = forShortName(U3_EAL_GMM_Epistemic.class, csv.get(row, eal_gmm_epi_col));
 			U3_EAL_Vs30Model vs30 = forShortName(U3_EAL_Vs30Model.class, csv.get(row, eal_vs30_col));
-			U3_EAL_GM_Variability gmVar = hasGMVar ? forShortName(U3_EAL_GM_Variability.class, csv.get(row, eal_gm_var_col)) : null;
-			U3_EAL_LogicTreeBranch ealBranch = new U3_EAL_LogicTreeBranch(tiBranch, probModel, gmm, gmmEpi, vs30, gmVar);
+			U3_EAL_LogicTreeBranch ealBranch = new U3_EAL_LogicTreeBranch(tiBranch, probModel, gmm, gmmEpi, vs30);
 			
 			ret.put(ealBranch, weight, eal);
 			totWeight += weight;
