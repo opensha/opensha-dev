@@ -508,7 +508,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 							((srcPlotFile.exists() && !replotZScores) ||
 							ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, imts,
 							gmpeRef, null, new ArrayList<>(), resourcesDir, srcPrefix, sourceRupContributionFracts,
-							sourceRupContributionNum));
+							sourceRupContributionNum, false));
 					
 					if (srcSuccess) {
 						// plot with source contributions
@@ -531,13 +531,13 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 							File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
 							if (!periodPlotFile.exists() || replotZScores)
 								ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new IMT[] {imt},
-										gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+										gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix, null, 0, true);
 							String srcPeriodPrefix = periodPrefix+"_source_contrib";
 							File srcPeriodPlotFile = new File(resourcesDir, srcPeriodPrefix+".png");
 							if (!srcPeriodPlotFile.exists() || replotZScores)
 								ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new IMT[] {imt},
 										gmpeRef, null, new ArrayList<>(), resourcesDir, srcPeriodPrefix,
-										sourceRupContributionFracts, sourceRupContributionNum);
+										sourceRupContributionFracts, sourceRupContributionNum, true);
 						}
 					} else {
 						
@@ -549,7 +549,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 							File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
 							if (!periodPlotFile.exists() || replotZScores)
 								ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new IMT[] {imt},
-										gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+										gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix, null, 0, true);
 						}
 					}
 					
@@ -745,7 +745,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 						((srcPlotFile.exists() && !replotZScores) ||
 						ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, imts,
 						gmpeRef, null, new ArrayList<>(), resourcesDir, srcPrefix, sourceRupContributionFracts,
-						sourceRupContributionNum));
+						sourceRupContributionNum, false));
 				
 				if (srcSuccess) {
 					// plot with source contributions
@@ -768,13 +768,13 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 						File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
 						if (!periodPlotFile.exists() || replotZScores)
 							ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new IMT[] {imt},
-									gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+									gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix, null, 0, true);
 						String srcPeriodPrefix = periodPrefix+"_source_contrib";
 						File srcPeriodPlotFile = new File(resourcesDir, srcPeriodPrefix+".png");
 						if (!srcPeriodPlotFile.exists() || replotZScores)
 							ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new IMT[] {imt},
 									gmpeRef, null, new ArrayList<>(), resourcesDir, srcPeriodPrefix,
-									sourceRupContributionFracts, sourceRupContributionNum);
+									sourceRupContributionFracts, sourceRupContributionNum, true);
 					}
 				} else {
 					
@@ -786,7 +786,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 						File periodPlotFile = new File(resourcesDir, periodPrefix+".png");
 						if (!periodPlotFile.exists() || replotZScores)
 							ZScoreHistPlot.plotStandardNormal(simProv, siteComps, scatterSites, new IMT[] {imt},
-									gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix);
+									gmpeRef, null, new ArrayList<>(), resourcesDir, periodPrefix, null, 0, true);
 					}
 				}
 				

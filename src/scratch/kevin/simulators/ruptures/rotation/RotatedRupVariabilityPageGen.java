@@ -2549,10 +2549,20 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 		Range xRange = new Range(0d, medianFunc.getMaxX());
 		Range yRange = new Range(0d, 1d);
 
-		gp.drawGraphPanel(spec, false, false, xRange, yRange);
-		gp.getChartPanel().setSize(800, 600);
-		File pngFile = new File(resourcesDir, prefix+".png");
-		gp.saveAsPNG(pngFile.getAbsolutePath());
+		for (boolean pub : new boolean[] {false, true}) {
+			if (pub) {
+				spec.setTitle(" ");
+				prefix += "_pub";
+			}
+			gp.drawGraphPanel(spec, false, false, xRange, yRange);
+			gp.getChartPanel().setSize(800, 600);
+			File pngFile = new File(resourcesDir, prefix+".png");
+			gp.saveAsPNG(pngFile.getAbsolutePath());
+			if (pub) {
+				File pdfFile = new File(resourcesDir, prefix+".pdf");
+				gp.saveAsPDF(pdfFile.getAbsolutePath());
+			}
+		}
 	}
 
 	static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");

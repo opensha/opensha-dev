@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -32,11 +33,12 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 public class SpinUpTimePlot {
 
 	public static void main(String[] args) throws IOException {
-		double maxTime = 50000;
+		double maxTime = 150000;
 		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
 		
-		double[] minMags = { 0d, 6d, 6.5d, 7d };
-		double[] printTimes = { 1000d, 5000d, 10000d, 20000d, 50000d };
+		double[] minMags = { 0d };
+		double[] printTimes = { 1000d, 5000d, 10000d, 20000d, 50000d,
+				100000d, 150000d };
 		
 		EvenlyDiscretizedFunc timeDiscr = new EvenlyDiscretizedFunc(0d, maxTime, 1000);
 		
@@ -57,6 +59,7 @@ public class SpinUpTimePlot {
 		System.out.println(subSectsRuptured.size()+" sub sects");
 		System.out.println(sectsRuptured.size()+" sects");
 		double firstTime = Double.NaN;
+		HashSet<Integer> sectsRupturedSet = new HashSet<>();
 		for (RSQSimEvent event : catalog.loader().maxDuration(maxTime).iterable()) {
 			double time = event.getTimeInYears();
 			if (Double.isNaN(firstTime))
@@ -73,8 +76,16 @@ public class SpinUpTimePlot {
 					elemsRuptured[m][elemIndex][timeIndex]++;
 					subSectsRuptured.get(sect.getSectionId(), minMags[m])[timeIndex]++;
 					sectsRuptured.get(sect.getParentSectionId(), minMags[m])[timeIndex]++;
+					if (!sectsRupturedSet.contains(sect.getParentSectionId())) {
+						sectsRupturedSet.add(sect.getParentSectionId());
+						int numLeft = sectsRuptured.rowKeySet().size() - sectsRupturedSet.size();
+						System.out.println("A fault ("+numLeft+" left) had it's "
+								+ "first rupture at "+(float)timeDelta+": "+sect.getParentSectionName());
+					}
 				}
 			}
+			
+			
 		}
 		
 		System.out.println("Converting to cumulative...");

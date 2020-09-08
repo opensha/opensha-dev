@@ -137,8 +137,10 @@ import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
+import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 
 public class PureScratch {
 
@@ -1783,13 +1785,24 @@ public class PureScratch {
 			System.out.println("Differences: "+numContentsDiffs+" in contents only");
 		}
 	}
+	
+	private static void test73() {
+		FaultSection sect = FaultModels.FM3_1.fetchFaultSectionsMap().get(541);
+		System.out.println(sect.getSectionName());
+		RuptureSurface surf = sect.getFaultSurface(1d, false, false);
+		for (BBP_Site site : RSQSimBBP_Config.getCyberShakeVs500LASites()) {
+			Location loc = site.getLoc();
+			double dist = surf.getDistanceJB(loc);
+			System.out.println("Site "+site.getName()+" is "+(float)dist+" km away");
+		}
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test72();
+		test73();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
