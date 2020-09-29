@@ -556,7 +556,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5043.instance();
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;

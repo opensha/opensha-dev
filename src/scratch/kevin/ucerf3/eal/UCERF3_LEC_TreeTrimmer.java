@@ -293,7 +293,7 @@ public class UCERF3_LEC_TreeTrimmer {
 	private static final int gmm_epi_col = 13;
 	private static final int vs30_col = 14;
 	
-	private static Table<U3_EAL_LogicTreeBranch, Double, DiscretizedFunc> loadLECs(File csvFile)
+	static Table<U3_EAL_LogicTreeBranch, Double, DiscretizedFunc> loadLECs(File csvFile)
 			throws IOException {
 		CSVFile<String> csv = CSVFile.readFile(csvFile, true);
 		
@@ -483,6 +483,7 @@ public class UCERF3_LEC_TreeTrimmer {
 				
 				double sumWeights = StatUtils.sum(lossWeights);
 				
+				// eqns 17-18 of Porter et al. 2020
 				double tempSum = 0d;
 				for (int i=0; i<lossVals.length; i++)
 					tempSum += lossVals[i]*lossVals[i]*lossWeights[i]/sumWeights;

@@ -58,10 +58,8 @@ import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils;
-import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
-import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
@@ -71,24 +69,40 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRuptureBuilde
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityFilter;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.CoulombJunctionFilter;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.U3CoulombJunctionFilter;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.ClusterCoulombCompatibilityFilter;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.ClusterPathCoulombCompatibilityFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.CumulativeAzimuthChangeFilter;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.GapWithinSectFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.JumpAzimuthChangeFilter;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.JumpDistFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.JumpAzimuthChangeFilter.AzimuthCalc;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.JumpDistFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.MinSectsPerParentFilter;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.MultiDirectionalPlausibilityFilter;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.ParentCoulombCompatibilityFilter;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.ParentCoulombCompatibilityFilter.Directionality;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.SingleClusterPerParentFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.SplayCountFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.TotalAzimuthChangeFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.U3CompatibleCumulativeRakeChangeFilter;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ClusterConnectionStrategy;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.DistCutoffClosestSectClusterConnectionStrategy;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.UCERF3ClusterConnectionStrategy;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetConnectionSearch;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RuptureConnectionSearch;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetDiagnosticsPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetDiagnosticsPageGen.RakeType;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetDiagnosticsPageGen.RupSetPlausibilityResult;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.utils.GriddedSurfaceUtils;
+import org.opensha.sha.simulators.stiffness.RuptureCoulombResult;
+import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator;
+import org.opensha.sha.simulators.stiffness.RuptureCoulombResult.RupCoulombQuantity;
+import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessAggregationMethod;
+import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessResult;
+import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -99,10 +113,7 @@ import com.google.common.primitives.Doubles;
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
-import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.inversion.CommandLineInversionRunner;
-import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
 import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester.TestType;
@@ -121,7 +132,12 @@ public class RSQSimU3RupturePageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(catalogsBaseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_3062.instance(catalogsBaseDir);
+		
 		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(catalogsBaseDir);
+		double minMag = 6.5;
+		int skipYears = 65000;
+		double minFractForInclusion = 0.5;
+		catalog.setFractForInclusion(minFractForInclusion);
 		
 		boolean rebuildSol = false;
 		
@@ -130,7 +146,11 @@ public class RSQSimU3RupturePageGen {
 		File catalogOutputDir = new File(mainOutputDir, catalogDir.getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		File multiFaultDir = new File(catalogOutputDir, "multi_fault");
+		File multiFaultDir;
+		if ((float)minFractForInclusion != (float)RSQSimCatalog.MIN_SUB_SECT_FRACT_DEFAULT)
+			multiFaultDir = new File(catalogOutputDir, "multi_fault_area_fract_"+(float)minFractForInclusion);
+		else
+			multiFaultDir = new File(catalogOutputDir, "multi_fault");
 		Preconditions.checkState(multiFaultDir.exists() || multiFaultDir.mkdir());
 		
 		File resourcesDir = new File(multiFaultDir, "resources");
@@ -143,17 +163,12 @@ public class RSQSimU3RupturePageGen {
 		String catalogType = "RSQSim";
 		String catalogTypeFileName = "rsqsim";
 		
-		double minMag = 6.5;
-		int skipYears = 5000;
-		
 		List<String> lines = new ArrayList<>();
 		
 		FaultBasedMapGen.MAP_LABEL_SIZE = 24;
 		FaultBasedMapGen.MAP_LABEL_TICK_SIZE = 20;
 		FaultBasedMapGen.LOCAL_MAPGEN = true;
 		FaultBasedMapGen.FAULT_THICKNESS = 4d;
-		
-		double minFractForInclusion = catalog.getMinSubSectFractForInclusion();
 		
 		// header
 		lines.add("# Multi Fault Rupture Comparisons");
@@ -191,14 +206,13 @@ public class RSQSimU3RupturePageGen {
 		File distAzCacheFile = new File(fssDir, "dist_az_cache.csv");
 		if (distAzCacheFile.exists())
 			distAzCalc.loadCacheFile(distAzCacheFile);
-		RupSetConnectionSearch rsConnSearch = new RupSetConnectionSearch(rupSet, distAzCalc,
-				new DistCutoffClosestSectClusterConnectionStrategy(1000d),
-				RupSetConnectionSearch.CUMULATIVE_JUMPS_DEFAULT);
+		RuptureConnectionSearch rsConnSearch = new RuptureConnectionSearch(rupSet, distAzCalc,
+				1000d, RuptureConnectionSearch.CUMULATIVE_JUMPS_DEFAULT);
 		
 		System.out.println("Building ClusterRuptures for RSQSim");
-		List<ClusterRupture> rsClusterRups = buildClusterRups(rupSet, rsConnSearch);
+		List<ClusterRupture> rsClusterRups = RupSetDiagnosticsPageGen.buildClusterRups(rupSet, rsConnSearch);
 		Map<Jump, List<Integer>> rsJumpsToRupsMap = new HashMap<>();
-		Map<Jump, Double> rsJumps = getJumps(sol, rsClusterRups, rsJumpsToRupsMap);
+		Map<Jump, Double> rsJumps = RupSetDiagnosticsPageGen.getJumps(sol, rsClusterRups, rsJumpsToRupsMap);
 		HashSet<UniqueRupture> rsUniqueRups = new HashSet<>();
 		for (ClusterRupture rup : rsClusterRups)
 			rsUniqueRups.add(rup.unique);
@@ -208,15 +222,14 @@ public class RSQSimU3RupturePageGen {
 		System.out.println("Building ClusterRuptures for UCERF3");
 		FaultSystemSolution u3Sol = catalog.getComparisonSolution();
 		FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
-		RupSetConnectionSearch u3ConnSearch = new RupSetConnectionSearch(u3RupSet, distAzCalc,
-				new DistCutoffClosestSectClusterConnectionStrategy(15d),
-				RupSetConnectionSearch.CUMULATIVE_JUMPS_DEFAULT);
+		RuptureConnectionSearch u3ConnSearch = new RuptureConnectionSearch(u3RupSet, distAzCalc,
+				15d, RuptureConnectionSearch.CUMULATIVE_JUMPS_DEFAULT);
 		List<ClusterRupture> u3ClusterRups = new ArrayList<>();
 		for (int r=0; r<u3RupSet.getNumRuptures(); r++)
 			u3ClusterRups.add(ClusterRupture.forOrderedSingleStrandRupture(
 					u3RupSet.getFaultSectionDataForRupture(r), distAzCalc));
 		Map<Jump, List<Integer>> u3JumpsToRupsMap = new HashMap<>();
-		Map<Jump, Double> u3Jumps = getJumps(u3Sol, u3ClusterRups, u3JumpsToRupsMap);
+		Map<Jump, Double> u3Jumps = RupSetDiagnosticsPageGen.getJumps(u3Sol, u3ClusterRups, u3JumpsToRupsMap);
 		System.out.println("Detected "+u3Jumps.size()+" U3 connections");
 		
 		// we want actual catalog rupture counts before binning into U3 style ruptures
@@ -228,17 +241,18 @@ public class RSQSimU3RupturePageGen {
 		// these are sort of by-construction filters
 		filters.add(new JumpDistFilter(maxJumpDist));
 		CoulombRates coulombRates = CoulombRates.loadUCERF3CoulombRates(fm);
-		List<FaultSubsectionCluster> clusters = ClusterRuptureBuilder.buildClusters(
-				rupSet.getFaultSectionDataList(),
-				new UCERF3ClusterConnectionStrategy(maxJumpDist, coulombRates), distAzCalc);
-		filters.add(new MinSectsPerParentFilter(2, true, clusters));
-		filters.add(new SingleClusterPerParentFilter());
+		ClusterConnectionStrategy u3ConnStrategy = new UCERF3ClusterConnectionStrategy(
+				u3RupSet.getFaultSectionDataList(), distAzCalc, maxJumpDist, coulombRates);
+		filters.add(new MinSectsPerParentFilter(2, true, u3ConnStrategy));
+		filters.add(new GapWithinSectFilter());
 		filters.add(new SplayCountFilter(0));
 		
 		// these are rupture properties themselves
 		AzimuthCalc u3AzCalc = new JumpAzimuthChangeFilter.UCERF3LeftLateralFlipAzimuthCalc(distAzCalc);
-		filters.add(new FailOnCantEvalAzFilter(new JumpAzimuthChangeFilter(u3AzCalc, 60f), false));
-		filters.add(new FailOnCantEvalAzFilter(new TotalAzimuthChangeFilter(u3AzCalc, 60f, true, true), true));
+		filters.add(new RupSetDiagnosticsPageGen.ErrOnCantEvalAzFilter(
+				new JumpAzimuthChangeFilter(u3AzCalc, 60f), false));
+		filters.add(new RupSetDiagnosticsPageGen.ErrOnCantEvalAzFilter(
+				new TotalAzimuthChangeFilter(u3AzCalc, 60f, true, true), true));
 		filters.add(new CumulativeAzimuthChangeFilter(
 				new JumpAzimuthChangeFilter.SimpleAzimuthCalc(distAzCalc), 560f));
 //		filters.add(new CumulativeRakeChangeFilter(180f));
@@ -246,168 +260,20 @@ public class RSQSimU3RupturePageGen {
 		filters.add(new U3CompatibleCumulativeRakeChangeFilter(180d));
 		CoulombRatesTester coulombTester = new CoulombRatesTester(
 				TestType.COULOMB_STRESS, 0.04, 0.04, 1.25d, true, true);
-		filters.add(new CoulombJunctionFilter(coulombTester, coulombRates));
+		filters.add(new U3CoulombJunctionFilter(coulombTester, coulombRates));
 		
-		Color[] colors = { Color.DARK_GRAY, new Color(102, 51, 0), Color.RED, Color.BLUE,
-				Color.GREEN.darker(), Color.CYAN, Color.PINK, Color.ORANGE.darker(), Color.MAGENTA };
-		
-		int allPassCount = 0;
-		int[] failCounts = new int[filters.size()];
-		int[] failCanContinueCounts = new int[filters.size()];
-		int[] onlyFailCounts = new int[filters.size()];
-		int[] erredCounts = new int[filters.size()];
-		
-		int tot = 0;
-		
-		for (int r=0; r<rupSet.getNumRuptures(); r++) {
-			int numCatalogOccurances = (int)Math.round(sol.getRateForRup(r)/minRate);
-			tot += numCatalogOccurances;
-			Preconditions.checkState(numCatalogOccurances >= 1);
-			ClusterRupture rupture = rsClusterRups.get(r);
-			boolean allPass = true;
-			int onlyFailureIndex = -1;
-			for (int t=0; t<filters.size(); t++) {
-				PlausibilityFilter test = filters.get(t);
-				PlausibilityResult result;
-				boolean subPass;
-				try {
-					result = test.apply(rupture, false);
-					if (result == PlausibilityResult.FAIL_FUTURE_POSSIBLE)
-						failCanContinueCounts[t]++;
-					subPass = result.isPass();
-				} catch (Exception e) {
-					if (erredCounts[t] == 0) {
-						System.err.println("First exception for "+test.getName()+":");
-						e.printStackTrace();
-					}
-					erredCounts[t] += numCatalogOccurances;
-					subPass = true; // do not fail on error
-				}
-				if (!subPass && allPass) {
-					// this is the first failure
-					onlyFailureIndex = t;
-				} else if (!subPass) {
-					// failed more than 1
-					onlyFailureIndex = -1;
-				}
-				allPass = subPass && allPass;
-				if (!subPass)
-					failCounts[t] += numCatalogOccurances;
-			}
-			if (allPass)
-				allPassCount += numCatalogOccurances;
-			if (onlyFailureIndex >= 0)
-				onlyFailCounts[onlyFailureIndex] += numCatalogOccurances;
-		}
-		TableBuilder table = MarkdownUtils.tableBuilder();
-		table.addLine("Filter", "Failed", "Only Failure", "Erred");
-		System.out.println("Passed all filters: "+countStats(allPassCount, tot));
-		for (int t=0; t<filters.size(); t++) {
-			table.initNewLine();
-			table.addColumn("**"+filters.get(t).getName()+"**");
-			table.addColumn(countStats(failCounts[t], tot));
-			table.addColumn(countStats(onlyFailCounts[t], tot));
-			table.addColumn(countStats(erredCounts[t], tot));
-			table.finalizeLine();
-		}
+		RupSetPlausibilityResult result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, filters, rsConnSearch);
+		TableBuilder table = RupSetDiagnosticsPageGen.getRupSetPlausibilityTable(result);
 		
 		// now plot
-		double dx = 1d;
-		double buffer = 0.2*dx;
-		double deltaEachSide = (dx - buffer)/2d;
-		float thickness = 80f;
-		double maxY = 50;
-
-		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 22);
-		Font allFont = new Font(Font.SANS_SERIF, Font.BOLD, 26);
-		
-		List<PlotElement> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		funcs.add(new DefaultXY_DataSet(new double[] {0d, 1d}, new double[] {0d, 0d}));
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 0f, Color.WHITE));
-		
-		List<XYAnnotation> anns = new ArrayList<>();
-		
-		double topRowY = maxY*0.95;
-		double secondRowY = maxY*0.91;
-		double thirdRowY = maxY*0.85;
-		
-		for (int i=0; i<filters.size(); i++) {
-			double x = i*dx + 0.5*dx;
-			double percentFailed = 100d*failCounts[i]/tot;
-			double percentOnly = 100d*onlyFailCounts[i]/tot;
-			double percentErred = 100d*erredCounts[i]/tot;
-			
-			Color c = colors[i % colors.length];
-			
-			String title = filters.get(i).getShortName();
-			
-			if (percentErred > 0) {
-//				funcs.add(vertLine(x, percentFailed, percentFailed + percentErred));
-//				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, Color.LIGHT_GRAY));
-				anns.add(emptyBox(x-deltaEachSide, 0d, x+deltaEachSide, percentFailed + percentErred,
-						PlotLineType.DASHED, Color.LIGHT_GRAY, 2f));
-				title += "*";
-			}
-			
-//			funcs.add(vertLine(x, 0, percentFailed));
-//			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, c));
-			anns.add(filledBox(x-deltaEachSide, 0, x+deltaEachSide, percentFailed, c));
-			
-			if (percentOnly > 0) {
-//				funcs.add(vertLine(x, 0, percentOnly));
-//				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, thickness, darker(c)));
-				anns.add(filledBox(x-deltaEachSide, 0, x+deltaEachSide, percentOnly, darker(c)));
-			}
-			
-			XYTextAnnotation ann = new XYTextAnnotation(title, x, i % 2 == 0 ? secondRowY : thirdRowY);
-			ann.setTextAnchor(TextAnchor.TOP_CENTER);
-			ann.setPaint(c);
-			ann.setFont(font);
-			
-			anns.add(ann);
-			
-			ann = new XYTextAnnotation(percentDF.format(percentFailed/100d), x, percentFailed+0.6);
-			ann.setTextAnchor(TextAnchor.BOTTOM_CENTER);
-			ann.setPaint(Color.BLACK);
-			ann.setFont(font);
-			
-			anns.add(ann);
-		}
-		
-		Range xRange = new Range(-0.15*dx, (filters.size()+0.15)*dx);
-		
-		XYTextAnnotation ann = new XYTextAnnotation(
-				percentDF.format((double)allPassCount/tot)+" passed all", xRange.getCentralValue(), topRowY);
-		ann.setTextAnchor(TextAnchor.CENTER);
-		ann.setPaint(Color.BLACK);
-		ann.setFont(allFont);
-		
-		anns.add(ann);
-		
 		String title = "Rupture Plausibility Filters, M≥"+(float)minMag+", SectArea≥"+(float)minFractForInclusion;
-		PlotSpec spec = new PlotSpec(funcs, chars, title, " ", "Percent Failed");
-		spec.setPlotAnnotations(anns);
+		String prefix = "filters_"+catParams;
 		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setBackgroundColor(Color.WHITE);
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(20);
-		gp.setPlotLabelFontSize(21);
-		
-		String prefix = new File(resourcesDir, "filters_"+catParams).getAbsolutePath();
-		
-		gp.drawGraphPanel(spec, false, false, xRange, new Range(0, maxY));
-		gp.getXAxis().setTickLabelsVisible(false);
-//		gp.getXAxis().setvisi
-		gp.getChartPanel().setSize(1200, 600);
-		gp.saveAsPNG(prefix+".png");
-		gp.saveAsPDF(prefix+".pdf");
+		File filterPlot = RupSetDiagnosticsPageGen.plotRupSetPlausibility(result, resourcesDir, prefix, title);
 		
 		lines.add("## Plausibility Filter Comparisons");
 		lines.add(topLink); lines.add("");
-		lines.add("![Plausibility Filter]("+resourcesDir.getName()+"/filters_"+catParams+".png)");
+		lines.add("![Plausibility Filter]("+resourcesDir.getName()+"/"+filterPlot.getName()+")");
 		lines.add("");
 		lines.addAll(table.build());
 		lines.add("");
@@ -420,8 +286,11 @@ public class RSQSimU3RupturePageGen {
 		for (float jumpDist : maxJumpDists) {
 			lines.add("");
 			System.out.println("Plotting num jumps");
-			File plotFile = plotFixedJumpDist(u3Sol, u3ClusterRups, sol, rsClusterRups, distAzCalc, catalogName,
-					minMag, jumpDist, resourcesDir);
+			File plotFile = RupSetDiagnosticsPageGen.plotFixedJumpDist(rupSet, sol, rsClusterRups,
+					catalogName, u3RupSet, u3Sol, u3ClusterRups, "UCERF3", distAzCalc, minMag,
+					jumpDist, resourcesDir);
+//			File plotFile = RupSetDiagnosticsPageGen.plotFixedJumpDist(u3Sol, u3ClusterRups, sol, rsClusterRups, distAzCalc, catalogName,
+//					minMag, jumpDist, resourcesDir);
 			lines.add("![Plausibility Filter]("+resourcesDir.getName()+"/"+plotFile.getName()+")");
 		}
 		lines.add("");
@@ -434,8 +303,10 @@ public class RSQSimU3RupturePageGen {
 		lines.add("## Jump Azimuths");
 		lines.add(topLink); lines.add("");
 		
-		Table<RakeType, RakeType, List<Double>> rsRakeAzTable = calcJumpAzimuths(rsClusterRups, distAzCalc);
-		Table<RakeType, RakeType, List<Double>> u3RakeAzTable = calcJumpAzimuths(u3ClusterRups, distAzCalc);
+		Table<RakeType, RakeType, List<Double>> rsRakeAzTable =
+				RupSetDiagnosticsPageGen.calcJumpAzimuths(rsClusterRups, distAzCalc);
+		Table<RakeType, RakeType, List<Double>> u3RakeAzTable =
+				RupSetDiagnosticsPageGen.calcJumpAzimuths(u3ClusterRups, distAzCalc);
 		
 		for (RakeType sourceType : rakeTypes) {
 			if (sourceType == null) {
@@ -456,10 +327,10 @@ public class RSQSimU3RupturePageGen {
 			table.addLine(catalogName, "UCERF3");
 			
 			table.initNewLine();
-			File plotFile = plotJumpAzimuths(sourceType, rakeTypes, rsRakeAzTable,
+			File plotFile = RupSetDiagnosticsPageGen.plotJumpAzimuths(sourceType, rakeTypes, rsRakeAzTable,
 					resourcesDir, prefix, title);
 			table.addColumn("!["+title+"](resources/"+plotFile.getName()+")");
-			plotFile = plotJumpAzimuths(sourceType, rakeTypes, u3RakeAzTable,
+			plotFile = RupSetDiagnosticsPageGen.plotJumpAzimuths(sourceType, rakeTypes, u3RakeAzTable,
 					resourcesDir, "u3_"+prefix, title);
 			table.addColumn("!["+title+"](resources/"+plotFile.getName()+")");
 			table.finalizeLine();
@@ -480,7 +351,7 @@ public class RSQSimU3RupturePageGen {
 					myTitle += destType.name;
 				}
 				
-				plotFile = plotJumpAzimuthsRadial(sourceType, destType, rsRakeAzTable,
+				plotFile = RupSetDiagnosticsPageGen.plotJumpAzimuthsRadial(sourceType, destType, rsRakeAzTable,
 						resourcesDir, myPrefix, myTitle);
 				table.addColumn("!["+title+"](resources/"+plotFile.getName()+")");
 			}
@@ -496,13 +367,13 @@ public class RSQSimU3RupturePageGen {
 		Color u3Color = Color.BLUE;
 		Color bothColor = Color.GREEN.darker();
 		Region fullReg = new CaliforniaRegions.RELM_TESTING();
-		plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_"+catalogTypeFileName,
+		RupSetDiagnosticsPageGen.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_"+catalogTypeFileName,
 				catalogName+" Connectivity", rsJumps.keySet(), rsColor, fullReg, 800);
-		plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_ucerf3",
+		RupSetDiagnosticsPageGen.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_ucerf3",
 				"UCERF3 Connectivity", u3Jumps.keySet(), u3Color, fullReg, 800);
-		plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_"+catalogTypeFileName+"_hires",
+		RupSetDiagnosticsPageGen.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_"+catalogTypeFileName+"_hires",
 				catalogName+" Connectivity", rsJumps.keySet(), rsColor, fullReg, 3000);
-		plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_ucerf3_hires",
+		RupSetDiagnosticsPageGen.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_ucerf3_hires",
 				"UCERF3 Connectivity", u3Jumps.keySet(), u3Color, fullReg, 3000);
 		Map<Jump, Double> rsUniqueJumps = new HashMap<>(rsJumps);
 		Set<Jump> commonJumps = new HashSet<>();
@@ -512,17 +383,17 @@ public class RSQSimU3RupturePageGen {
 				commonJumps.add(jump);
 			}
 		}
-		plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName,
+		RupSetDiagnosticsPageGen.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName,
 				catalogName+" Unique Connectivity", rsUniqueJumps.keySet(), rsColor, fullReg, 800);
-		plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName+"_hires",
+		RupSetDiagnosticsPageGen.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName+"_hires",
 				catalogName+" Unique Connectivity", rsUniqueJumps.keySet(), rsColor, fullReg, 3000);
 		Map<Jump, Double> u3UniqueJumps = new HashMap<>(u3Jumps);
 		for (Jump jump : rsJumps.keySet())
 			if (u3UniqueJumps.containsKey(jump))
 				u3UniqueJumps.remove(jump);
-		plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_unique_ucerf3",
+		RupSetDiagnosticsPageGen.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_unique_ucerf3",
 				"UCERF3 Unique Connectivity", u3UniqueJumps.keySet(), u3Color, fullReg, 800);
-		plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_unique_ucerf3_hires",
+		RupSetDiagnosticsPageGen.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_unique_ucerf3_hires",
 				"UCERF3 Unique Connectivity", u3UniqueJumps.keySet(), u3Color, fullReg, 3000);
 		
 		double maxConnDist = 0d;
@@ -530,18 +401,24 @@ public class RSQSimU3RupturePageGen {
 			maxConnDist = Math.max(maxConnDist, jump.distance);
 		for (Jump jump : u3Jumps.keySet())
 			maxConnDist = Math.max(maxConnDist, jump.distance);
-		plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_"+catalogTypeFileName,
+		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_"+catalogTypeFileName,
 				catalogName+" Connectivity", rsJumps, rsUniqueJumps, maxConnDist,
-				rsColor, false);
-		plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_ucerf3",
+				rsColor, false, false);
+		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_ucerf3",
 				"UCERF3 Connectivity", u3Jumps, u3UniqueJumps, maxConnDist,
-				u3Color, false);
-		plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName,
+				u3Color, false, false);
+		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName,
 				catalogName+" Connectivity", rsJumps, rsUniqueJumps, maxConnDist,
-				rsColor, true);
-		plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_ucerf3",
+				rsColor, true, false);
+		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_ucerf3",
 				"UCERF3 Connectivity", u3Jumps, u3UniqueJumps, maxConnDist,
-				u3Color, true);
+				u3Color, true, false);
+		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName+"_log",
+				catalogName+" Connectivity", rsJumps, rsUniqueJumps, maxConnDist,
+				rsColor, true, true);
+		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_ucerf3_log",
+				"UCERF3 Connectivity", u3Jumps, u3UniqueJumps, maxConnDist,
+				u3Color, true, true);
 		
 		lines.add("## Fault Section Connections");
 		lines.add(topLink); lines.add("");
@@ -563,9 +440,9 @@ public class RSQSimU3RupturePageGen {
 		connNames.add("Common Connections");
 		
 		String combConnPrefix = "sect_connectivity_combined";
-		plotConnectivityLines(rupSet, resourcesDir, combConnPrefix, "Combined Connectivity",
+		RupSetDiagnosticsPageGen.plotConnectivityLines(rupSet, resourcesDir, combConnPrefix, "Combined Connectivity",
 				connectionsList, connectedColors, connNames, fullReg, 800);
-		plotConnectivityLines(rupSet, resourcesDir, combConnPrefix+"_hires", "Combined Connectivity",
+		RupSetDiagnosticsPageGen.plotConnectivityLines(rupSet, resourcesDir, combConnPrefix+"_hires", "Combined Connectivity",
 				connectionsList, connectedColors, connNames, fullReg, 3000);
 		lines.add("![Combined]("+resourcesDir.getName()+"/"+combConnPrefix+".png)");
 		lines.add("");
@@ -606,6 +483,12 @@ public class RSQSimU3RupturePageGen {
 		Preconditions.checkState(u3Plot.exists());
 		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
 				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")");
+		rsPlot = new File(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName+"_log.png");
+		Preconditions.checkState(rsPlot.exists());
+		u3Plot = new File(resourcesDir, "sect_connectivity_hist_rates_ucerf3_log.png");
+		Preconditions.checkState(u3Plot.exists());
+		table.addLine("!["+catalogName+"]("+resourcesDir.getName()+"/"+rsPlot.getName()+")",
+				"![UCERF3]("+resourcesDir.getName()+"/"+u3Plot.getName()+")");
 		lines.addAll(table.build());
 		lines.add("");
 		
@@ -616,7 +499,7 @@ public class RSQSimU3RupturePageGen {
 		lines.add("**RSQSim Ruptures with Unique Connections**");
 		int maxRups = 20;
 		int maxCols = 5;
-		table = plotConnRupExamples(rsConnSearch, rsUniqueJumps.keySet(),
+		table = RupSetDiagnosticsPageGen.plotConnRupExamples(rsConnSearch, rsUniqueJumps.keySet(),
 				rsJumpsToRupsMap, maxRups, maxCols, resourcesDir, "rs_conn_example");
 		lines.add("");
 		if (table == null)
@@ -625,13 +508,216 @@ public class RSQSimU3RupturePageGen {
 			lines.addAll(table.build());
 		lines.add("");
 		lines.add("**UCERF3 Ruptures with Unique Connections**");
-		table = plotConnRupExamples(u3ConnSearch, u3UniqueJumps.keySet(),
+		table = RupSetDiagnosticsPageGen.plotConnRupExamples(u3ConnSearch, u3UniqueJumps.keySet(),
 				u3JumpsToRupsMap, maxRups, maxCols, resourcesDir, "u3_conn_example");
 		lines.add("");
 		if (table == null)
 			lines.add("*N/A*");
 		else
 			lines.addAll(table.build());
+		lines.add("");
+		
+		// now stiffness comparisons
+		Map<String, String> params = catalog.getParams();
+		double lambda = 30000;
+		double mu = 30000;
+		if (params.containsKey("lameLambda"))
+			lambda = Double.parseDouble(params.get("lameLambda"));
+		if (params.containsKey("lameMu"))
+			lambda = Double.parseDouble(params.get("lameMu"));
+		double coeffOfFriction = 0.5;
+		SubSectStiffnessCalculator stiffnessCalc = new SubSectStiffnessCalculator(
+				rupSet.getFaultSectionDataList(), 2d, lambda, mu, coeffOfFriction);
+		StiffnessType type = StiffnessType.CFF;
+		
+		System.out.println("Plotting Jump Coulomb");
+		
+		lines.add("## Coulomb Comparisons");
+		lines.add(topLink); lines.add("");
+		lines.add("These calculations compute "+type.getHTML()+" between each subsection. This is done by "
+				+ "discretizing each subsection into "+(float)stiffnessCalc.getGridSpacing()+" x "
+				+ (float)stiffnessCalc.getGridSpacing()+" km rectangular patches, and them computing "
+				+ "stiffness between each patch on each surface. So for two subsections with N and M "
+				+ "patches each, we get N x M total stiffness calculations. We then use various aggregation "
+				+ "methods to to compute compatibility between those subsections:");
+		lines.add("");
+		StiffnessAggregationMethod[] plotQuantities = { StiffnessAggregationMethod.MEDIAN,
+				StiffnessAggregationMethod.MAX, StiffnessAggregationMethod.FRACT_POSITIVE };
+		for (StiffnessAggregationMethod q : plotQuantities)
+			lines.add("* **"+q.toString()+"**: "+q.getDescription());
+		lines.add("");
+		
+		List<PlausibilityFilter> coulombFilters = new ArrayList<>();
+		coulombFilters.add(new ParentCoulombCompatibilityFilter(
+				stiffnessCalc, StiffnessAggregationMethod.MEDIAN, 0f, Directionality.EITHER));
+		coulombFilters.add(new ClusterCoulombCompatibilityFilter(
+				stiffnessCalc, StiffnessAggregationMethod.MEDIAN, 0f));
+		coulombFilters.add(new ClusterPathCoulombCompatibilityFilter(
+				stiffnessCalc, StiffnessAggregationMethod.MEDIAN, 0f));
+		
+		System.out.println("Testing new coulomb filters");
+		result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, coulombFilters, rsConnSearch);
+		table = RupSetDiagnosticsPageGen.getRupSetPlausibilityTable(result);
+		
+		// now plot
+		title = "New Coulomb Plausibility Filters, M≥"+(float)minMag+", SectArea≥"+(float)minFractForInclusion;
+		prefix = "filters_coulomb_"+catParams;
+		
+		filterPlot = RupSetDiagnosticsPageGen.plotRupSetPlausibility(result, resourcesDir, prefix, title);
+		
+		lines.add("### Coulomb Plausibility Filter Comparisons");
+		lines.add(topLink); lines.add("");
+		lines.add("![Plausibility Filter]("+resourcesDir.getName()+"/"+filterPlot.getName()+")");
+		lines.add("");
+		lines.addAll(table.build());
+		lines.add("");
+		
+		for (boolean fullClusters : new boolean[] {false, true}) {
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("RSQSim", "UCERF3");
+			
+			prefix = "jump_cff";
+			if (fullClusters)
+				prefix += "_clusters";
+			else
+				prefix += "_subsections";
+
+			System.out.println("Plotting RSQSim, fullClusters="+fullClusters);
+			File[][] rsPlots = plotJumpStiffnessHistogram(rsClusterRups, sol, stiffnessCalc, type,
+					plotQuantities, fullClusters, resourcesDir, prefix+"_rsqsim");
+			System.out.println("Plotting UCERF3, fullClusters="+fullClusters);
+			File[][] u3Plots = plotJumpStiffnessHistogram(u3ClusterRups, u3Sol, stiffnessCalc, type,
+					plotQuantities, fullClusters, resourcesDir, prefix+"_ucerf3");
+			for (int q=0; q<plotQuantities.length; q++) {
+				table.initNewLine();
+				if (rsPlots[q] == null)
+					table.addColumn("N/A");
+				else
+					table.addColumn("![plot](resources/"+rsPlots[q][q].getName()+")");
+				if (u3Plots[q] == null)
+					table.addColumn("N/A");
+				else
+					table.addColumn("![plot](resources/"+u3Plots[q][q].getName()+")");
+				table.finalizeLine();
+			}
+			// now scatters
+			for (int q1=0; q1<plotQuantities.length; q1++) {
+				for (int q2=q1+1; q2<plotQuantities.length; q2++) {
+					table.initNewLine();
+					if (rsPlots[q1] == null)
+						table.addColumn("N/A");
+					else
+						table.addColumn("![plot](resources/"+rsPlots[q1][q2].getName()+")");
+					if (u3Plots[q1] == null)
+						table.addColumn("N/A");
+					else
+						table.addColumn("![plot](resources/"+u3Plots[q1][q2].getName()+")");
+					table.finalizeLine();
+				}
+			}
+			if (fullClusters) {
+				lines.add("### Jump Coulomb Comparisons, Full Clusters");
+				lines.add(topLink); lines.add("");
+				lines.add("This gives the aggregated coulomb compatibility of every jump, computed between "
+						+ "the full subsection clusters on either side of that jump.");
+			} else {
+				lines.add("### Jump Coulomb Comparisons, Jump Subsections Only");
+				lines.add(topLink); lines.add("");
+				lines.add("This gives the aggregated coulomb compatibility of every jump, computed between "
+						+ "only the closest subsections on either side of that jump.");
+			}
+			lines.add("");
+			lines.addAll(table.build());
+			lines.add("");
+		}
+		
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("RSQSim", "UCERF3");
+		
+		prefix = "rup_to_cluster_cff";
+
+		System.out.println("Plotting Rup to Cluster, RSQSim");
+		File[][] rsPlots = plotRupToClusterCoulombHistogram(rsClusterRups, sol, stiffnessCalc,
+				type, plotQuantities, resourcesDir, prefix+"_rsqsim");
+		System.out.println("Plotting Rup to Cluster, UCERF3");
+		File[][] u3Plots = plotRupToClusterCoulombHistogram(u3ClusterRups, u3Sol, stiffnessCalc,
+				type, plotQuantities, resourcesDir, prefix+"_ucerf3");
+		for (int q=0; q<plotQuantities.length; q++) {
+			table.initNewLine();
+			if (rsPlots[q] == null)
+				table.addColumn("N/A");
+			else
+				table.addColumn("![plot](resources/"+rsPlots[q][q].getName()+")");
+			if (u3Plots[q] == null)
+				table.addColumn("N/A");
+			else
+				table.addColumn("![plot](resources/"+u3Plots[q][q].getName()+")");
+			table.finalizeLine();
+		}
+		// now scatters
+		for (int q1=0; q1<plotQuantities.length; q1++) {
+			for (int q2=q1+1; q2<plotQuantities.length; q2++) {
+				table.initNewLine();
+				if (rsPlots[q1] == null)
+					table.addColumn("N/A");
+				else
+					table.addColumn("![plot](resources/"+rsPlots[q1][q2].getName()+")");
+				if (u3Plots[q1] == null)
+					table.addColumn("N/A");
+				else
+					table.addColumn("![plot](resources/"+u3Plots[q1][q2].getName()+")");
+				table.finalizeLine();
+			}
+		}
+		lines.add("### Jump Coulomb Comparisons, Full Rupture to Cluster");
+		lines.add(topLink); lines.add("");
+		lines.add("This gives the aggregated coulomb compatibility of each individual subsection cluster, "
+				+ "computed to the rest of the rupture");
+		lines.add("");
+		lines.addAll(table.build());
+		lines.add("");
+		
+		lines.add("### Rupture Aggregate Section Coulomb Comparisons");
+		lines.add(topLink); lines.add("");
+		lines.add("This gives aggregated coulomb compatibilty of entire ruptures. We first calculate a net "
+				+ "coulomb stress change for each subsection, conditioned on unit slip on all other subsection "
+				+ "which participate in the rupture. We then plot the mean/min of those subsection net coulomb "
+				+ "stress changes to ge a single number for the full rupture. We also keep track of the number "
+				+ "of subsections in each rupture which are net negative.");
+		lines.add("");
+
+		System.out.println("Calculating RSQSim Rupture Coulomb");
+		List<RuptureCoulombResult> rsRupCoulombs = calcRupCoulombs(
+				rsClusterRups, stiffnessCalc, StiffnessAggregationMethod.MEDIAN);
+		System.out.println("Calculating UCERF3 Rupture Coulomb");
+		List<RuptureCoulombResult> u3RupCoulombs = calcRupCoulombs(
+				u3ClusterRups, stiffnessCalc, StiffnessAggregationMethod.MEDIAN);
+		
+		System.out.println("Plotting Rupture Coulomb");
+		
+		table = MarkdownUtils.tableBuilder();
+		table.addLine("RSQSim", "UCERF3");
+		StiffnessAggregationMethod stiffAggMethod = StiffnessAggregationMethod.MEDIAN;
+		for (RupCoulombQuantity quantity : RupCoulombQuantity.values()) {
+			System.out.println("Plotting RSQSim, "+quantity);
+			prefix = "rup_cff_"+quantity.name();
+			File plot = plotRupCoulombHistogram(rsRupCoulombs, sol, quantity,
+					resourcesDir, prefix+"_rsqsim");
+			table.initNewLine();
+			if (plot == null)
+				table.addColumn("N/A");
+			else
+				table.addColumn("![plot](resources/"+plot.getName()+")");
+			System.out.println("Plotting UCERF3, "+quantity);
+			plot = plotRupCoulombHistogram(u3RupCoulombs, u3Sol, quantity,
+					resourcesDir, prefix+"_ucerf3");
+			if (plot == null)
+				table.addColumn("N/A");
+			else
+				table.addColumn("![plot](resources/"+plot.getName()+")");
+			table.finalizeLine();
+		}
+		lines.addAll(table.build());
 		lines.add("");
 		
 		System.out.println("Plotting connectivity clusters");
@@ -698,95 +784,6 @@ public class RSQSimU3RupturePageGen {
 		RSQSimCatalog.writeCatalogsIndex(mainOutputDir);
 		
 		distAzCalc.writeCacheFile(distAzCacheFile);
-	}
-	
-	private static Color darker(Color c) {
-		int r = c.getRed();
-		int g = c.getGreen();
-		int b = c.getBlue();
-//		r += (255-r)/2;
-//		g += (255-g)/2;
-//		b += (255-b)/2;
-		r /= 2;
-		g /= 2;
-		b /= 2;
-		return new Color(r, g, b);
-	}
-	
-	private static DefaultXY_DataSet vertLine(double x, double y0, double y1) {
-		DefaultXY_DataSet line = new DefaultXY_DataSet();
-		line.set(x, y0);
-		line.set(x, y1);
-		return line;
-	}
-	
-	private static XYBoxAnnotation filledBox(double x0, double y0, double x1, double y1, Color c) {
-		XYBoxAnnotation ann = new XYBoxAnnotation(x0, y0, x1, y1, null, null, c);
-		return ann;
-	}
-	
-	private static XYBoxAnnotation emptyBox(double x0, double y0, double x1, double y1,
-			PlotLineType lineType, Color c, float thickness) {
-		Stroke stroke = lineType.buildStroke(thickness);
-		XYBoxAnnotation ann = new XYBoxAnnotation(x0, y0, x1, y1, stroke, c, null);
-		return ann;
-	}
-	
-	private static final DecimalFormat percentDF = new DecimalFormat("0.00%");
-	private static String countStats(int count, int tot) {
-		return count+"/"+tot+" ("+percentDF.format((double)count/(double)tot)+")";
-	}
-	
-	private static class FailOnCantEvalAzFilter implements PlausibilityFilter {
-		
-		private PlausibilityFilter filter;
-		private boolean endsOnly;
-
-		private FailOnCantEvalAzFilter(PlausibilityFilter filter, boolean endsOnly) {
-			this.filter = filter;
-			this.endsOnly = endsOnly;
-		}
-
-		@Override
-		public String getShortName() {
-			return filter.getShortName();
-		}
-
-		@Override
-		public String getName() {
-			return filter.getName();
-		}
-
-		@Override
-		public PlausibilityResult apply(ClusterRupture rupture, boolean verbose) {
-			PlausibilityResult result = filter.apply(rupture, verbose);
-			if (result.isPass() || !result.canContinue())
-				return result;
-			if (endsOnly) {
-				checkStrandEndsRecursive(rupture);
-			} else {
-				for (Jump jump : rupture.getJumpsIterable()) {
-					if (rupture.sectDescendantsMap.get(jump.toSection).isEmpty())
-						throw new IllegalStateException("Jump to single section. Rupture:\n"+rupture);
-				}
-			}
-			return result;
-		}
-		
-		private void checkStrandEndsRecursive(ClusterRupture rupture) {
-			for (Jump jump : rupture.internalJumps)
-				if (jump.toCluster == rupture.clusters[rupture.clusters.length-1])
-					if (rupture.sectDescendantsMap.get(jump.toSection).isEmpty())
-						throw new IllegalStateException("Jump to single section. Rupture:\n"+rupture);
-			for (ClusterRupture splay : rupture.splays.values())
-				checkStrandEndsRecursive(splay);
-		}
-
-		@Override
-		public PlausibilityResult testJump(ClusterRupture rupture, Jump newJump, boolean verbose) {
-			return apply(rupture.take(newJump), verbose);
-		}
-		
 	}
 	
 	static void plotCumulantMags(FaultSystemSolution u3Sol, FaultSystemSolution rsSol,
@@ -1085,834 +1082,7 @@ public class RSQSimU3RupturePageGen {
 		}
 	}
 	
-	static void plotConnectivityLines(FaultSystemRupSet rupSet, File outputDir, String prefix, String title,
-			Set<Jump> connections, Color connectedColor, Region reg, int width) throws IOException {
-		List<Set<Jump>> connectionsList = new ArrayList<>();
-		List<Color> connectedColors = new ArrayList<>();
-		List<String> connNames = new ArrayList<>();
-		
-		connectionsList.add(connections);
-		connectedColors.add(connectedColor);
-		connNames.add("Connections");
-		
-		plotConnectivityLines(rupSet, outputDir, prefix, title, connectionsList, connectedColors, connNames, reg, width);
-	}
 	
-	static void plotConnectivityLines(FaultSystemRupSet rupSet, File outputDir, String prefix, String title,
-			List<Set<Jump>> connectionsList, List<Color> connectedColors, List<String> connNames,
-			Region reg, int width) throws IOException {
-		Color faultColor = Color.DARK_GRAY;
-		Color faultOutlineColor = Color.LIGHT_GRAY;
-		
-		List<XY_DataSet> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		XY_DataSet[] outlines = PoliticalBoundariesData.loadCAOutlines();
-		PlotCurveCharacterstics outlineChar = new PlotCurveCharacterstics(PlotLineType.SOLID, (float)1d, Color.GRAY);
-		
-		for (XY_DataSet outline : outlines) {
-			funcs.add(outline);
-			chars.add(outlineChar);
-		}
-		
-		List<Location> middles = new ArrayList<>();
-		
-		for (int s=0; s<rupSet.getNumSections(); s++) {
-			FaultSection sect = rupSet.getFaultSectionData(s);
-			RuptureSurface surf = sect.getFaultSurface(1d);
-			
-			XY_DataSet trace = new DefaultXY_DataSet();
-			for (Location loc : surf.getEvenlyDiscritizedUpperEdge())
-				trace.set(loc.getLongitude(), loc.getLatitude());
-			
-			if (sect.getAveDip() != 90d) {
-				XY_DataSet outline = new DefaultXY_DataSet();
-				LocationList perimeter = surf.getPerimeter();
-				for (Location loc : perimeter)
-					outline.set(loc.getLongitude(), loc.getLatitude());
-				Location first = perimeter.first();
-				outline.set(first.getLongitude(), first.getLatitude());
-				
-				funcs.add(0, outline);
-				chars.add(0, new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, faultOutlineColor));
-			}
-			
-			middles.add(GriddedSurfaceUtils.getSurfaceMiddleLoc(surf));
-			
-			if (s == 0)
-				trace.setName("Fault Sections");
-			
-			funcs.add(trace);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, faultColor));
-		}
-		
-		for (int i=0; i<connectionsList.size(); i++) {
-			Set<Jump> connections = connectionsList.get(i);
-			Color connectedColor = connectedColors.get(i);
-			String connName = connNames.get(i);
-			
-			boolean first = true;
-			for (Jump connection : connections) {
-				DefaultXY_DataSet xy = new DefaultXY_DataSet();
-				
-				if (first) {
-					xy.setName(connName);
-					first = false;
-				}
-				
-				Location loc1 = middles.get(connection.fromSection.getSectionId());
-				Location loc2 = middles.get(connection.toSection.getSectionId());
-				
-				xy.set(loc1.getLongitude(), loc1.getLatitude());
-				xy.set(loc2.getLongitude(), loc2.getLatitude());
-				
-				funcs.add(xy);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, connectedColor));
-			}
-		}
-		
-		PlotSpec spec = new PlotSpec(funcs, chars, title, "Longitude", "Latitude");
-		spec.setLegendVisible(true);
-		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(24);
-		gp.setPlotLabelFontSize(24);
-		gp.setBackgroundColor(Color.WHITE);
-		
-		Range xRange = new Range(reg.getMinLon(), reg.getMaxLon());
-		Range yRange = new Range(reg.getMinLat(), reg.getMaxLat());
-		
-		gp.drawGraphPanel(spec, false, false, xRange, yRange);
-		double tick = 2d;
-		TickUnits tus = new TickUnits();
-		TickUnit tu = new NumberTickUnit(tick);
-		tus.add(tu);
-		gp.getXAxis().setStandardTickUnits(tus);
-		gp.getYAxis().setStandardTickUnits(tus);
-		
-		File file = new File(outputDir, prefix);
-		double aspectRatio = yRange.getLength() / xRange.getLength();
-		gp.getChartPanel().setSize(width, 200 + (int)((width-200d)*aspectRatio));
-		gp.saveAsPNG(file.getAbsolutePath()+".png");
-	}
-	
-	static void plotConnectivityHistogram(File outputDir, String prefix, String title,
-			Map<Jump, Double> connections, Map<Jump, Double> uniqueConnections,
-			double maxDist, Color connectedColor, boolean rateWeighted)
-					throws IOException {
-		double delta = 1d;
-//		if (maxDist > 90)
-//			delta = 5d;
-//		else if (maxDist > 40)
-//			delta = 2;
-//		else if (maxDist > 20)
-//			delta = 1d;
-//		else
-//			delta = 0.5d;
-		
-		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(0d, maxDist, delta);
-		hist.setName("All Connections");
-		HistogramFunction uniqueHist = HistogramFunction.getEncompassingHistogram(0d, maxDist, delta);
-		uniqueHist.setName("Unique To Model");
-		
-		double myMax = 0d;
-		double mean = 0d;
-		double sumWeights = 0d;
-		double meanAbove = 0d;
-		double sumWeightsAbove = 0d;
-		
-		for (Jump pair : connections.keySet()) {
-			double dist = pair.distance;
-			double weight = rateWeighted ? connections.get(pair) : 1d;
-			
-			myMax = Math.max(myMax, dist);
-			mean += dist*weight;
-			sumWeights += weight;
-			if (dist >= 0.1) {
-				meanAbove += dist*weight;
-				sumWeightsAbove += weight;
-			}
-			
-			int xIndex = hist.getClosestXIndex(dist);
-			hist.add(xIndex, weight);
-			if (uniqueConnections.containsKey(pair))
-				uniqueHist.add(xIndex, weight);
-		}
-
-		mean /= sumWeights;
-		meanAbove /= sumWeightsAbove;
-		
-		List<XY_DataSet> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		Color uniqueColor = new Color(connectedColor.getRed()/4,
-				connectedColor.getGreen()/4, connectedColor.getBlue()/4);
-		
-		funcs.add(hist);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, connectedColor));
-		
-		funcs.add(uniqueHist);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, uniqueColor));
-		
-		String yAxisLabel = rateWeighted ? "Annual Rate" : "Count";
-		
-		PlotSpec spec = new PlotSpec(funcs, chars, title, "Jump Distance (km)", yAxisLabel);
-		spec.setLegendVisible(true);
-		
-		Range xRange = new Range(0d, maxDist);
-		Range yRange = new Range(0d, 1.05*hist.getMaxY());
-		
-		DecimalFormat distDF = new DecimalFormat("0.0");
-		double annX = 0.975*maxDist;
-		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 20);
-		
-		double annYScalar = 0.975;
-		double annYDelta = 0.05;
-		
-		double annY = annYScalar*yRange.getUpperBound();
-		XYTextAnnotation maxAnn = new XYTextAnnotation(
-				"Max: "+distDF.format(myMax), annX, annY);
-		maxAnn.setFont(annFont);
-		maxAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
-		spec.addPlotAnnotation(maxAnn);
-		
-		annYScalar -= annYDelta;
-		annY = annYScalar*yRange.getUpperBound();
-		XYTextAnnotation meanAnn = new XYTextAnnotation(
-				"Mean: "+distDF.format(mean), annX, annY);
-		meanAnn.setFont(annFont);
-		meanAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
-		spec.addPlotAnnotation(meanAnn);
-		
-		annYScalar -= annYDelta;
-		annY = annYScalar*yRange.getUpperBound();
-		if (rateWeighted) {
-			XYTextAnnotation rateAnn = new XYTextAnnotation(
-					"Total Rate: "+distDF.format(sumWeights), annX, annY);
-			rateAnn.setFont(annFont);
-			rateAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
-			spec.addPlotAnnotation(rateAnn);
-		} else {
-			XYTextAnnotation countAnn = new XYTextAnnotation(
-					"Total Count: "+(int)sumWeights, annX, annY);
-			countAnn.setFont(annFont);
-			countAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
-			spec.addPlotAnnotation(countAnn);
-		}
-		
-		annYScalar -= annYDelta;
-		annY = annYScalar*yRange.getUpperBound();
-		XYTextAnnotation meanAboveAnn = new XYTextAnnotation(
-				"Mean >0.1: "+distDF.format(meanAbove), annX, annY);
-		meanAboveAnn.setFont(annFont);
-		meanAboveAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
-		spec.addPlotAnnotation(meanAboveAnn);
-		
-		annYScalar -= annYDelta;
-		annY = annYScalar*yRange.getUpperBound();
-		if (rateWeighted) {
-			XYTextAnnotation rateAnn = new XYTextAnnotation(
-					"Total Rate >0.1: "+distDF.format(sumWeightsAbove), annX, annY);
-			rateAnn.setFont(annFont);
-			rateAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
-			spec.addPlotAnnotation(rateAnn);
-		} else {
-			XYTextAnnotation countAnn = new XYTextAnnotation(
-					"Total Count >0.1: "+(int)sumWeightsAbove, annX, annY);
-			countAnn.setFont(annFont);
-			countAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
-			spec.addPlotAnnotation(countAnn);
-		}
-		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(24);
-		gp.setPlotLabelFontSize(24);
-		gp.setBackgroundColor(Color.WHITE);
-		
-		gp.drawGraphPanel(spec, false, false, xRange, yRange);
-		
-		File file = new File(outputDir, prefix);
-		gp.getChartPanel().setSize(800, 650);
-		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
-		gp.saveAsPNG(file.getAbsolutePath()+".png");
-	}
-	
-	private static List<ClusterRupture> buildClusterRups(FaultSystemRupSet rupSet,
-			RupSetConnectionSearch search) {
-		ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-		
-		List<Future<ClusterRupture>> futures = new ArrayList<>();
-		for (int r=0; r<rupSet.getNumRuptures(); r++)
-			futures.add(exec.submit(new ClusterRupCalc(search, r)));
-		
-		List<ClusterRupture> ruptures = new ArrayList<>();
-		
-		for (int r=0; r<futures.size(); r++) {
-			if (r % 1000 == 0)
-				System.out.println("Calculating for rupture "+r+"/"+rupSet.getNumRuptures());
-			Future<ClusterRupture> future = futures.get(r);
-			try {
-//				HashSet<IDPairing> pairings = future.get();
-//				for (IDPairing pair : pairings) {
-//					Double prevRate = connections.get(pair);
-//					if (prevRate == null)
-//						prevRate = 0d;
-//					connections.put(pair, prevRate + rate);
-//					List<Integer> prevRups = pairToRupsMap.get(pair);
-//					if (prevRups == null) {
-//						prevRups = new ArrayList<>();
-//						pairToRupsMap.put(pair, prevRups);
-//					}
-//					prevRups.add(r);
-//				}
-				ruptures.add(future.get());
-			} catch (InterruptedException | ExecutionException e) {
-				exec.shutdown();
-				throw ExceptionUtils.asRuntimeException(e);
-			}
-		}
-		
-		System.out.println("Built "+ruptures.size()+" ruptures");
-		
-		exec.shutdown();
-		Preconditions.checkState(ruptures.size() == rupSet.getNumRuptures());
-		
-		return ruptures;
-	}
-	
-	private static Map<Jump, Double> getJumps(FaultSystemSolution sol, List<ClusterRupture> ruptures,
-			Map<Jump, List<Integer>> jumpToRupsMap) {
-		Map<Jump, Double> jumpRateMap = new HashMap<>();
-		for (int r=0; r<ruptures.size(); r++) {
-			double rate = sol.getRateForRup(r);
-			ClusterRupture rupture = ruptures.get(r);
-			for (Jump jump : rupture.getJumpsIterable()) {
-				if (jump.fromSection.getSectionId() > jump.toSection.getSectionId())
-					jump = jump.reverse();
-				Double prevRate = jumpRateMap.get(jump);
-				if (prevRate == null)
-					prevRate = 0d;
-				jumpRateMap.put(jump, prevRate + rate);
-				if (jumpToRupsMap != null) {
-					List<Integer> prevRups = jumpToRupsMap.get(jump);
-					if (prevRups == null) {
-						prevRups = new ArrayList<>();
-						jumpToRupsMap.put(jump, prevRups);
-					}
-					prevRups.add(r);
-				}
-			}
-		}
-		return jumpRateMap;
-	}
-	
-	private static class ClusterRupCalc implements Callable<ClusterRupture> {
-		
-		private RupSetConnectionSearch search;
-		private int rupIndex;
-
-		public ClusterRupCalc(RupSetConnectionSearch search, int rupIndex) {
-			this.search = search;
-			this.rupIndex = rupIndex;
-		}
-
-		@Override
-		public ClusterRupture call() throws Exception {
-			return search.buildClusterRupture(rupIndex, false);
-		}
-		
-	}
-	
-	private static TableBuilder plotConnRupExamples(RupSetConnectionSearch search, Set<Jump> pairings,
-			Map<Jump, List<Integer>> pairRupsMap, int maxRups, int maxCols,
-			File resourcesDir, String prefix) throws IOException {
-		List<Jump> sortedPairings = new ArrayList<>(pairings);
-		Collections.sort(sortedPairings, Jump.id_comparator);
-		
-		Random r = new Random(sortedPairings.size()*maxRups);
-		Collections.shuffle(sortedPairings, r);
-		
-		int possibleRups = 0;
-		for (Jump pair : pairings)
-			possibleRups += pairRupsMap.get(pair).size();
-		if (possibleRups < maxRups)
-			maxRups = possibleRups;
-		if (maxRups == 0)
-			return null;
-		
-		int indInPairing = 0;
-		List<Integer> rupsToPlot = new ArrayList<>();
-		while (rupsToPlot.size() < maxRups) {
-			for (Jump pair : sortedPairings) {
-				List<Integer> rups = pairRupsMap.get(pair);
-				if (rups.size() > indInPairing) {
-					rupsToPlot.add(rups.get(indInPairing));
-					if (rupsToPlot.size() == maxRups)
-						break;
-				}
-			}
-			indInPairing++;
-		}
-		
-		System.out.println("Plotting "+rupsToPlot+" ruptures");
-		TableBuilder table = MarkdownUtils.tableBuilder();
-		table.initNewLine();
-		for (int rupIndex : rupsToPlot) {
-			String rupPrefix = prefix+"_"+rupIndex;
-			search.plotConnections(resourcesDir, rupPrefix, rupIndex, pairings, "Unique Connections");
-			table.addColumn("![Rupture "+rupIndex+"]("
-					+resourcesDir.getName()+"/"+rupPrefix+".png)");
-		}
-		table.finalizeLine();
-		return table.wrap(maxCols, 0);
-	}
-	
-	private static File plotFixedJumpDist(FaultSystemSolution u3Sol, List<ClusterRupture> u3ClusterRups,
-			FaultSystemSolution rsSol, List<ClusterRupture> rsClusterRups, SectionDistanceAzimuthCalculator distAzCalc,
-			String rsName, double minMag, float jumpDist, File outputDir) throws IOException {
-		DiscretizedFunc u3Func = calcJumpDistFunc(u3Sol, u3ClusterRups, minMag, jumpDist);
-		u3Func.scale(1d/u3Func.calcSumOfY_Vals());
-		
-		List<DiscretizedFunc> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		funcs.add(u3Func);
-		u3Func.setName("UCERF3");
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED));
-		
-		DiscretizedFunc rsFunc = calcJumpDistFunc(rsSol, rsClusterRups, minMag, jumpDist);
-		rsFunc.scale(1d/rsFunc.calcSumOfY_Vals());
-		rsFunc.setName(rsName);
-		funcs.add(rsFunc);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.DARK_GRAY));
-		
-		PlotSpec spec = new PlotSpec(funcs, chars, "M≥"+(float)minMag+" Jump Comparison",
-				"Num Jumps ≥"+(float)jumpDist+"km", "Fraction (Rate-Weighted)");
-		spec.setLegendVisible(true);
-		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setBackgroundColor(Color.WHITE);
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(20);
-		gp.setPlotLabelFontSize(21);
-		
-		String prefix = new File(outputDir, "jumps_"+(float)jumpDist+"km").getAbsolutePath();
-		
-		gp.drawGraphPanel(spec, false, false, null, new Range(0d, 1d));
-		TickUnits tus = new TickUnits();
-		TickUnit tu = new NumberTickUnit(1d);
-		tus.add(tu);
-		gp.getXAxis().setStandardTickUnits(tus);
-		gp.getChartPanel().setSize(1000, 500);
-		gp.saveAsPNG(prefix+".png");
-		gp.saveAsPDF(prefix+".pdf");
-		gp.saveAsTXT(prefix+".txt");
-		return new File(prefix+".png");
-	}
-	
-	private static DiscretizedFunc calcJumpDistFunc(FaultSystemSolution sol, List<ClusterRupture> clusterRups,
-			double minMag, float jumpDist) {
-		EvenlyDiscretizedFunc solFunc = new EvenlyDiscretizedFunc(0d, 5, 1d);
-		FaultSystemRupSet rupSet = sol.getRupSet();
-
-		for (int r=0; r<rupSet.getNumRuptures(); r++) {
-			double mag = rupSet.getMagForRup(r);
-
-			if (mag < minMag)
-				continue;
-			
-			ClusterRupture rup = clusterRups.get(r);
-			int jumpsOverDist = 0;
-			for (Jump jump : rup.getJumpsIterable()) {
-				if ((float)jump.distance > jumpDist)
-					jumpsOverDist++;
-			}
-
-			double rate = sol.getRateForRup(r);
-			
-			// indexes are fine to use here since it starts at zero with a delta of one 
-			if (jumpsOverDist < solFunc.size())
-				solFunc.set(jumpsOverDist, solFunc.getY(jumpsOverDist) + rate);
-		}
-		
-		return solFunc;
-	}
-	
-	private enum RakeType {
-		RIGHT_LATERAL("Right-Lateral SS", "rl", Color.RED.darker()) {
-			@Override
-			public boolean isMatch(double rake) {
-				return (float)rake >= -180f && (float)rake <= -170f
-						|| (float)rake <= 180f && (float)rake >= 170f;
-			}
-		},
-		LEFT_LATERAL("Left-Lateral SS", "ll", Color.GREEN.darker()) {
-			@Override
-			public boolean isMatch(double rake) {
-				return (float)rake >= -10f && (float)rake <= 10f;
-			}
-		},
-		REVERSE("Reverse", "rev", Color.BLUE.darker()) {
-			@Override
-			public boolean isMatch(double rake) {
-				return (float)rake >= 80f && (float)rake <= 100f;
-			}
-		},
-		NORMAL("Normal", "norm", Color.YELLOW.darker()) {
-			@Override
-			public boolean isMatch(double rake) {
-				return (float)rake >= -100f && (float)rake <= -80f;
-			}
-		},
-		OBLIQUE("Oblique", "oblique", Color.MAGENTA.darker()) {
-			@Override
-			public boolean isMatch(double rake) {
-				for (RakeType type : values())
-					if (type != this && type.isMatch(rake))
-						return false;
-				return true;
-			}
-		};
-		
-		private String name;
-		private String prefix;
-		private Color color;
-
-		private RakeType(String name, String prefix, Color color) {
-			this.name = name;
-			this.prefix = prefix;
-			this.color = color;
-		}
-		
-		public abstract boolean isMatch(double rake);
-	}
-	
-	private static Table<RakeType, RakeType, List<Double>> calcJumpAzimuths(
-			List<ClusterRupture> rups, SectionDistanceAzimuthCalculator distAzCalc) {
-		AzimuthCalc azCalc = new JumpAzimuthChangeFilter.SimpleAzimuthCalc(distAzCalc);
-		Table<RakeType, RakeType, List<Double>> ret = HashBasedTable.create();
-		for (RakeType r1 : RakeType.values())
-			for (RakeType r2 : RakeType.values())
-				ret.put(r1, r2, new ArrayList<>());
-		for (ClusterRupture rup : rups) {
-			for (Jump jump : rup.getJumpsIterable()) {
-				RakeType sourceRake = null, destRake = null;
-				for (RakeType type : RakeType.values()) {
-					if (type.isMatch(jump.fromSection.getAveRake()))
-						sourceRake = type;
-					if (type.isMatch(jump.toSection.getAveRake()))
-						destRake = type;
-				}
-				Preconditions.checkNotNull(sourceRake);
-				Preconditions.checkNotNull(destRake);
-				FaultSection before1 = rup.sectPredecessorsMap.get(jump.fromSection);
-				if (before1 == null)
-					continue;
-				FaultSection before2 = jump.fromSection;
-				double beforeAz = azCalc.calcAzimuth(before1, before2);
-				FaultSection after1 = jump.toSection;
-				for (FaultSection after2 : rup.sectDescendantsMap.get(after1)) {
-					double afterAz = azCalc.calcAzimuth(after1, after2);
-					double rawDiff = JumpAzimuthChangeFilter.getAzimuthDifference(beforeAz, afterAz);
-					Preconditions.checkState(rawDiff >= -180 && rawDiff <= 180);
-					double[] azDiffs;
-					if ((float)before2.getAveDip() == 90f) {
-						// strike slip, include both directions
-						azDiffs = new double[] { rawDiff, -rawDiff };
-					} else {
-						// follow the aki & richards convention
-						double dipDir = before2.getDipDirection();
-						double dipDirDiff = JumpAzimuthChangeFilter.getAzimuthDifference(dipDir, beforeAz);
-						if (dipDirDiff < 0)
-							// this means that the fault dips to the right of beforeAz, we're good
-							azDiffs = new double[] { rawDiff };
-						else
-							// this means that the fault dips to the left of beforeAz, flip it
-							azDiffs = new double[] { -rawDiff };
-					}
-					for (double azDiff : azDiffs)
-						ret.get(sourceRake, destRake).add(azDiff);
-				}
-			}
-		}
-		return ret;
-	}
-	
-	private static Map<RakeType, List<Double>> getAzimuthsFrom (RakeType sourceRake,
-			Table<RakeType, RakeType, List<Double>> azTable) {
-		Map<RakeType, List<Double>> azMap;
-		if (sourceRake == null) {
-			azMap = new HashMap<>();
-			for (RakeType type : RakeType.values())
-				azMap.put(type, new ArrayList<>());
-			for (RakeType source : RakeType.values()) {
-				Map<RakeType, List<Double>> row = azTable.row(source);
-				for (RakeType dest : row.keySet()) 
-					azMap.get(dest).addAll(row.get(dest));
-			}
-		} else {
-			azMap = azTable.row(sourceRake);
-		}
-		return azMap;
-	}
-	
-	private static File plotJumpAzimuths(RakeType sourceRake, List<RakeType> destRakes,
-			Table<RakeType, RakeType, List<Double>> azTable,
-			File outputDir, String prefix, String title) throws IOException {
-		Map<RakeType, List<Double>> azMap = getAzimuthsFrom(sourceRake, azTable);
-		
-		Range xRange = new Range(-180d, 180d);
-		List<Range> xRanges = new ArrayList<>();
-		xRanges.add(xRange);
-		
-		List<Range> yRanges = new ArrayList<>();
-		List<PlotSpec> specs = new ArrayList<>();
-		
-		for (int i=0; i<destRakes.size(); i++) {
-			RakeType destRake = destRakes.get(i);
-			
-			HistogramFunction hist = HistogramFunction.getEncompassingHistogram(-179d, 179d, 15d);
-			for (RakeType oRake : azMap.keySet()) {
-				if (destRake != null && destRake != oRake)
-					continue;
-				for (double azDiff : azMap.get(oRake)) {
-					hist.add(hist.getClosestXIndex(azDiff), 1d);
-				}
-			}
-
-			Color color;
-			String label;
-			if (destRake == null) {
-				color = Color.DARK_GRAY;
-				label = "Any";
-			} else {
-				color = destRake.color;
-				label = destRake.name;
-			}
-			
-			List<XY_DataSet> funcs = new ArrayList<>();
-			List<PlotCurveCharacterstics> chars = new ArrayList<>();
-			
-			funcs.add(hist);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, color));
-			
-			double maxY = Math.max(1.1*hist.getMaxY(), 1d);
-			Range yRange = new Range(0d, maxY);
-			
-			PlotSpec spec = new PlotSpec(funcs, chars, title, "Azimuthal Difference", "Count");
-			
-			XYTextAnnotation ann = new XYTextAnnotation("To "+label, 175, maxY*0.975);
-			ann.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 24));
-			ann.setTextAnchor(TextAnchor.TOP_RIGHT);
-			spec.addPlotAnnotation(ann);
-			
-			specs.add(spec);
-			yRanges.add(yRange);
-		}
-		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(24);
-		gp.setPlotLabelFontSize(24);
-		gp.setBackgroundColor(Color.WHITE);
-		
-		gp.drawGraphPanel(specs, false, false, xRanges, yRanges);
-		
-		File file = new File(outputDir, prefix+".png");
-		gp.getChartPanel().setSize(700, 1000);
-		gp.saveAsPNG(file.getAbsolutePath());
-		return file;
-	}
-	
-	private static double azDiffDegreesToAngleRad(double azDiff) {
-		// we want zero to be up, 90 to be right, 180 to be down, -90 to be left
-		// sin/cos convention is zero at the right, 90 up, 180 left, -90 down
-		
-		Preconditions.checkState((float)azDiff >= (float)-180f && (float)azDiff <= 180f,
-				"Bad azDiff: %s", azDiff);
-		// first mirror it
-		azDiff *= -1;
-		// now rotate 90 degrees
-		azDiff += 90d;
-		
-		return Math.toRadians(azDiff);
-	}
-	
-	private static File plotJumpAzimuthsRadial(RakeType sourceRake, RakeType destRake,
-			Table<RakeType, RakeType, List<Double>> azTable,
-			File outputDir, String prefix, String title) throws IOException {
-		System.out.println("Plotting "+title);
-		Map<RakeType, List<Double>> azMap = getAzimuthsFrom(sourceRake, azTable);
-		
-		List<XY_DataSet> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		Map<Float, List<Color>> azColorMap = new HashMap<>();
-		
-		HistogramFunction hist = HistogramFunction.getEncompassingHistogram(-179d, 179d, 15d);
-		long totCount = 0;
-		for (RakeType oRake : azMap.keySet()) {
-			if (destRake != null && destRake != oRake)
-				continue;
-			for (double azDiff : azMap.get(oRake)) {
-				hist.add(hist.getClosestXIndex(azDiff), 1d);
-				
-				Float azFloat = (float)azDiff;
-				List<Color> colors = azColorMap.get(azFloat);
-				if (colors == null) {
-					colors = new ArrayList<>();
-					azColorMap.put(azFloat, colors);
-				}
-				colors.add(oRake.color);
-				totCount++;
-			}
-		}
-		
-		System.out.println("Have "+azColorMap.size()+" unique azimuths, "+totCount+" total");
-//		Random r = new Random(azColorMap.keySet().size());
-		double alphaEach = 0.025;
-		if (totCount > 0)
-			alphaEach = Math.max(alphaEach, 1d/totCount);
-		for (Float azFloat : azColorMap.keySet()) {
-			double sumRed = 0d;
-			double sumGreen = 0d;
-			double sumBlue = 0d;
-			double sumAlpha = 0;
-			int count = 0;
-			for (Color azColor : azColorMap.get(azFloat)) {
-				sumRed += azColor.getRed();
-				sumGreen += azColor.getGreen();
-				sumBlue += azColor.getBlue();
-				if (sumAlpha < 1d)
-					sumAlpha += alphaEach;
-				count++;
-			}
-			double red = sumRed/(double)count;
-			double green = sumGreen/(double)count;
-			double blue = sumBlue/(double)count;
-			if (red > 1d)
-				red = 1d;
-			if (green > 1d)
-				green = 1d;
-			if (blue > 1d)
-				blue = 1d;
-			if (sumAlpha > 1d)
-				sumAlpha = 1d;
-			Color color = new Color((float)red, (float)green, (float)blue, (float)sumAlpha);
-//			if (destRake == null) {
-//				// multipe types, choose a random color sampled from the actual colors
-//				// for this azimuth
-//				List<Color> colorList = azColorMap.get(azFloat);
-//				color = colorList.get(r.nextInt(colorList.size()));
-//			} else {
-//				color = destRake.color;
-//			}
-			
-			DefaultXY_DataSet line = new DefaultXY_DataSet();
-			line.set(0d, 0d);
-			double azRad = azDiffDegreesToAngleRad(azFloat);
-			double x = Math.cos(azRad);
-			double y = Math.sin(azRad);
-			line.set(x, y);
-			
-			funcs.add(line);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, color));
-		}
-		
-		double dip;
-		if (sourceRake == RakeType.LEFT_LATERAL || sourceRake == RakeType.RIGHT_LATERAL)
-			dip = 90d;
-		else if (sourceRake == RakeType.NORMAL || sourceRake == RakeType.REVERSE)
-			dip = 60d;
-		else
-			dip = 75d;
-		
-		double traceLen = 0.5d;
-		double lowerDepth = 0.25d;
-		if (dip < 90d) {
-			// add surface
-			
-			double horzWidth = lowerDepth/Math.tan(Math.toRadians(dip));
-			DefaultXY_DataSet outline = new DefaultXY_DataSet();
-			outline.set(0d, 0d);
-			outline.set(horzWidth, 0d);
-			outline.set(horzWidth, -traceLen);
-			outline.set(0d, -traceLen);
-			
-			funcs.add(outline);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GRAY));
-		}
-		
-		DefaultXY_DataSet trace = new DefaultXY_DataSet();
-		trace.set(0d, 0d);
-		trace.set(0d, -traceLen);
-		
-		funcs.add(trace);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 6f, Color.BLACK));
-		PlotSpec spec = new PlotSpec(funcs, chars, title, "", " ");
-		
-		CPT cpt = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse();
-		cpt = cpt.rescale(2d*Float.MIN_VALUE, 0.25d);
-		cpt.setBelowMinColor(Color.WHITE);
-		double halfDelta = 0.5*hist.getDelta();
-		double innerMult = 0.95;
-		double outerMult = 1.05;
-		double sumY = Math.max(1d, hist.calcSumOfY_Vals());
-		for (int i=0; i<hist.size(); i++) {
-			double centerAz = hist.getX(i);
-			double startAz = azDiffDegreesToAngleRad(centerAz-halfDelta);
-			double endAz = azDiffDegreesToAngleRad(centerAz+halfDelta);
-			
-			List<Point2D> points = new ArrayList<>();
-			
-			double startX = Math.cos(startAz);
-			double startY = Math.sin(startAz);
-			double endX = Math.cos(endAz);
-			double endY = Math.sin(endAz);
-			
-			points.add(new Point2D.Double(innerMult*startX, innerMult*startY));
-			points.add(new Point2D.Double(outerMult*startX, outerMult*startY));
-			points.add(new Point2D.Double(outerMult*endX, outerMult*endY));
-			points.add(new Point2D.Double(innerMult*endX, innerMult*endY));
-			points.add(new Point2D.Double(innerMult*startX, innerMult*startY));
-			
-			double[] polygon = new double[points.size()*2];
-			int cnt = 0;
-			for (Point2D pt : points) {
-				polygon[cnt++] = pt.getX();
-				polygon[cnt++] = pt.getY();
-			}
-			Color color = cpt.getColor((float)(hist.getY(i)/sumY));
-			
-			Stroke stroke = PlotLineType.SOLID.buildStroke(2f);
-			spec.addPlotAnnotation(new XYPolygonAnnotation(polygon, stroke, Color.DARK_GRAY, color));
-		}
-		
-		PaintScaleLegend cptBar = XYZGraphPanel.getLegendForCPT(cpt, "Fraction",
-				24, 18, 0.05d, RectangleEdge.BOTTOM);
-		spec.addSubtitle(cptBar);
-		
-		Range xRange = new Range(-1.1d, 1.1d);
-		Range yRange = new Range(-1.1d, 1.1d);
-		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(24);
-		gp.setPlotLabelFontSize(22);
-		gp.setBackgroundColor(Color.WHITE);
-		
-		gp.drawGraphPanel(spec, false, false, xRange, yRange);
-		
-		gp.getXAxis().setTickLabelsVisible(false);
-		gp.getYAxis().setTickLabelsVisible(false);
-		
-		File file = new File(outputDir, prefix+".png");
-		gp.getChartPanel().setSize(800, 800);
-		gp.saveAsPNG(file.getAbsolutePath());
-		return file;
-	}
 	
 	static LocationVector calcSlipVector(FaultSection sect, boolean footwall) {
 		double strike = sect.getFaultTrace().getAveStrike();
@@ -1941,6 +1111,316 @@ public class RSQSimU3RupturePageGen {
 	
 	static boolean isOnFootwall(RuptureSurface surf, Location loc) {
 		return surf.getDistanceX(loc) < 0;
+	}
+	
+	private static File[][] plotJumpStiffnessHistogram(List<ClusterRupture> ruptures, FaultSystemSolution sol,
+			SubSectStiffnessCalculator calc, StiffnessType type, StiffnessAggregationMethod[] quantities, boolean fullClusters,
+			File resourcesDir, String prefix) throws IOException {
+		List<List<Double>> valuesList = new ArrayList<>();
+		double[] allMaxAbs = new double[quantities.length];
+		for (int q=0; q<quantities.length; q++)
+			valuesList.add(new ArrayList<>());
+		List<Double> rates = new ArrayList<>();
+		
+		for (int r=0; r<ruptures.size(); r++) {
+			ClusterRupture rup = ruptures.get(r);
+			double rate = sol.getRateForRup(r);
+			for (Jump rawJump : rup.getJumpsIterable()) {
+				for (Jump jump : new Jump[] { rawJump, rawJump.reverse() }) {
+//					System.out.println("Calculating for jump "+jump);
+					StiffnessResult[] stiffness;
+					if (fullClusters)
+						stiffness = calc.calcClusterStiffness(jump.fromCluster, jump.toCluster);
+					else
+						stiffness = calc.calcStiffness(jump.fromSection, jump.toSection);
+					if (stiffness == null)
+						continue;
+					for (int q=0; q<quantities.length; q++) {
+						double val = calc.getValue(stiffness, type, quantities[q]);
+						allMaxAbs[q] = Math.max(allMaxAbs[q], Math.abs(val));
+						valuesList.get(q).add(val);
+					}
+					rates.add(0.5*rate); // 0.5 since we're including it both forwards and backwards
+				}
+			}
+		}
+		if (valuesList.get(0).isEmpty())
+			return null;
+		File[][] ret = new File[quantities.length][quantities.length];
+		for (int q=0; q<quantities.length; q++) {
+			double maxAbs = allMaxAbs[q];
+			String title = "Jump "+quantities[q].toString();
+			if (fullClusters)
+				title += ", Full Clusters";
+			else
+				title += ", Closest Subsections";
+			
+			String xAxisLabel = type+", "+quantities[q];
+			List<Double> values = valuesList.get(q);
+			
+			ret[q][q] = plotValueHist(resourcesDir, prefix+"_"+quantities[q].name(), values, rates,
+					maxAbs, title, xAxisLabel, quantities[q]);
+			for (int q2=q+1; q2<quantities.length; q2++) {
+				String scatterTitle = "Jump "+type.toString()+" Scatter";
+				String scatterPrefix = prefix+"_"+quantities[q].name()+"_vs_"+quantities[q2].name();
+				ret[q][q2] = plotValueScatter(resourcesDir, scatterPrefix, values, valuesList.get(q2),
+						maxAbs, allMaxAbs[q2], scatterTitle, quantities[q], quantities[q2]);
+				ret[q2][q] = ret[q][q2];
+			}
+		}
+		
+		return ret;
+	}
+
+	static File plotValueHist(File resourcesDir, String myPrefix, List<Double> values, List<Double> rates, double maxAbs,
+			String title, String xAxisLabel, StiffnessAggregationMethod quantity) throws IOException {
+		maxAbs = Math.ceil(10d*maxAbs)/10d;
+		
+		HistogramFunction hist;
+		Range xRange;
+		if (quantity == StiffnessAggregationMethod.FRACT_POSITIVE) {
+			hist = HistogramFunction.getEncompassingHistogram(0d, 1d, 0.02);
+			xRange = new Range(0d, hist.getMaxX()+0.5*hist.getDelta());
+		} else {
+			hist = new HistogramFunction(-maxAbs, maxAbs, 50);
+			xRange = new Range(-maxAbs-0.5*hist.getDelta(), maxAbs+0.5*hist.getDelta());
+		}
+		for (int i=0; i<values.size(); i++) {
+			double val = values.get(i);
+			hist.add(hist.getClosestXIndex(val), rates.get(i));
+		}
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(hist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, "Jump Annual Rate");
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setBackgroundColor(Color.WHITE);
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		
+		double minNonZero = Double.POSITIVE_INFINITY;
+		for (Point2D pt : hist)
+			if (pt.getY() > 0)
+				minNonZero = Math.min(minNonZero, pt.getY());
+		
+		Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minNonZero))),
+				Math.pow(10, Math.ceil(Math.log10(hist.getMaxY()))));
+		
+		File pngFile = new File(resourcesDir, myPrefix+".png");
+		
+		gp.drawGraphPanel(spec, false, true, xRange, yRange);
+		gp.getChartPanel().setSize(800, 600);
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+		return pngFile;
+	}
+
+	static File plotValueScatter(File resourcesDir, String myPrefix, List<Double> values1, List<Double> values2,
+			double maxAbs1, double maxAbs2, String title, StiffnessAggregationMethod quantity1,
+			StiffnessAggregationMethod quantity2) throws IOException {
+		maxAbs1 = Math.ceil(10d*maxAbs1)/10d;
+		maxAbs2 = Math.ceil(10d*maxAbs2)/10d;
+		
+		Range xRange, yRange;
+		if (quantity1 == StiffnessAggregationMethod.FRACT_POSITIVE)
+			xRange = new Range(0d, 1d);
+		else
+			xRange = new Range(-maxAbs1, maxAbs1);
+		if (quantity2 == StiffnessAggregationMethod.FRACT_POSITIVE)
+			yRange = new Range(0d, 1d);
+		else
+			yRange = new Range(-maxAbs2, maxAbs2);
+		Preconditions.checkState(values1.size() == values2.size());
+		DefaultXY_DataSet scatter = new DefaultXY_DataSet();
+		for (int i=0; i<values1.size(); i++)
+			scatter.set(values1.get(i), values2.get(i));
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(scatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, quantity1.toString(), quantity2.toString());
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setBackgroundColor(Color.WHITE);
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		
+		File pngFile = new File(resourcesDir, myPrefix+".png");
+		
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		gp.getChartPanel().setSize(800, 600);
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+		return pngFile;
+	}
+	
+	private static List<RuptureCoulombResult> calcRupCoulombs(List<ClusterRupture> ruptures,
+			SubSectStiffnessCalculator calc, StiffnessAggregationMethod stiffAggMethod) {
+		List<Future<RuptureCoulombResult>> futures = new ArrayList<>();
+		ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		for (ClusterRupture rup : ruptures)
+			futures.add(exec.submit(new RupCoulombCalcCall(rup, calc, stiffAggMethod)));
+		List<RuptureCoulombResult> results = new ArrayList<>();
+		for (Future<RuptureCoulombResult> future : futures) {
+			try {
+				results.add(future.get());
+			} catch (InterruptedException | ExecutionException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+		}
+		exec.shutdown();
+		return results;
+	}
+	
+	private static class RupCoulombCalcCall implements Callable<RuptureCoulombResult> {
+		
+		private ClusterRupture rup;
+		private SubSectStiffnessCalculator calc;
+		private StiffnessAggregationMethod stiffAggMethod;
+
+		public RupCoulombCalcCall(ClusterRupture rup, SubSectStiffnessCalculator calc,
+				StiffnessAggregationMethod stiffAggMethod) {
+			this.rup = rup;
+			this.calc = calc;
+			this.stiffAggMethod = stiffAggMethod;
+		}
+
+		@Override
+		public RuptureCoulombResult call() throws Exception {
+			if (rup.unique.size() < 2)
+				return null;
+			else
+				return new RuptureCoulombResult(rup, calc, stiffAggMethod);
+		}
+		
+	}
+	
+	private static File plotRupCoulombHistogram(List<RuptureCoulombResult> rupCoulombs, FaultSystemSolution sol,
+			RupCoulombQuantity quantity, File resourcesDir, String prefix) throws IOException {
+		List<Double> values = new ArrayList<>();
+		List<Double> rates = new ArrayList<>();
+		double maxAbs = 0d;
+		for (int r=0; r<rupCoulombs.size(); r++) {
+			RuptureCoulombResult result = rupCoulombs.get(r);
+			if (result == null)
+				continue;
+			double rate = sol.getRateForRup(r);
+			double val = result.getValue(quantity);
+			maxAbs = Math.max(Math.abs(val), maxAbs);
+			values.add(val);
+			rates.add(rate);
+		}
+		if (values.isEmpty())
+			return null;
+		maxAbs = Math.ceil(10d*maxAbs)/10d;
+		
+		HistogramFunction hist;
+		Range xRange;
+		if (quantity == RupCoulombQuantity.MEAN_SECT_FRACT_POSITIVES
+				|| quantity == RupCoulombQuantity.MIN_SECT_FRACT_POSITIVES) {
+			hist = HistogramFunction.getEncompassingHistogram(0d, 1d, 0.02);
+			xRange = new Range(0d, hist.getMaxX()+0.5*hist.getDelta());
+		} else if (quantity == RupCoulombQuantity.NUM_NET_NEGATIVE_SECTS) {
+			hist = new HistogramFunction(0d, 10d, 11);
+			xRange = new Range(-0.5, hist.getMaxX()+0.5*hist.getDelta());
+		} else {
+			hist = new HistogramFunction(-maxAbs, maxAbs, 50);
+			xRange = new Range(-maxAbs-0.5*hist.getDelta(), maxAbs+0.5*hist.getDelta());
+		}
+		for (int i=0; i<values.size(); i++) {
+			double val = values.get(i);
+			hist.add(hist.getClosestXIndex(val), rates.get(i));
+		}
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(hist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
+		
+		String title = "Full Rupture Aggregated Coulomb";
+		
+		String xAxisLabel = quantity.toString();
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, "Annual Rate");
+		
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setBackgroundColor(Color.WHITE);
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		
+		double minNonZero = Double.POSITIVE_INFINITY;
+		for (Point2D pt : hist)
+			if (pt.getY() > 0)
+				minNonZero = Math.min(minNonZero, pt.getY());
+		
+		Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minNonZero))),
+				Math.pow(10, Math.ceil(Math.log10(hist.getMaxY()))));
+		
+		File pngFile = new File(resourcesDir, prefix+".png");
+		
+		gp.drawGraphPanel(spec, false, true, xRange, yRange);
+		gp.getChartPanel().setSize(800, 600);
+		gp.saveAsPNG(pngFile.getAbsolutePath());
+		return pngFile;
+	}
+	
+	private static File[][] plotRupToClusterCoulombHistogram(List<ClusterRupture> ruptures, FaultSystemSolution sol,
+			SubSectStiffnessCalculator calc, StiffnessType type, StiffnessAggregationMethod[] quantities,
+			File resourcesDir, String prefix) throws IOException {
+		List<List<Double>> valuesList = new ArrayList<>();
+		double[] allMaxAbs = new double[quantities.length];
+		for (int q=0; q<quantities.length; q++)
+			valuesList.add(new ArrayList<>());
+		List<Double> rates = new ArrayList<>();
+		for (int r=0; r<ruptures.size(); r++) {
+			ClusterRupture rupture = ruptures.get(r);
+			if (rupture.unique.size() < 2 || rupture.getTotalNumJumps() == 0)
+				continue;
+			double rate = sol.getRateForRup(r);
+			for (FaultSubsectionCluster cluster : rupture.getClustersIterable()) {
+				StiffnessResult[] stiffness = calc.calcAggRupToClusterStiffness(rupture, cluster);
+				if (stiffness == null)
+					continue;
+				for (int q=0; q<quantities.length; q++) {
+					double val = calc.getValue(stiffness, type, quantities[q]);
+					allMaxAbs[q] = Math.max(allMaxAbs[q], Math.abs(val));
+					valuesList.get(q).add(val);
+				}
+				rates.add(rate);
+			}
+		}
+		if (valuesList.get(0).isEmpty())
+			return null;
+		File[][] ret = new File[quantities.length][quantities.length];
+		for (int q=0; q<quantities.length; q++) {
+			double maxAbs = allMaxAbs[q];
+			String title = "Aggregate Full Rup to Cluster "+quantities[q].toString();
+			
+			String xAxisLabel = type+", "+quantities[q];
+			List<Double> values = valuesList.get(q);
+			
+			ret[q][q] = plotValueHist(resourcesDir, prefix+"_"+quantities[q].name(), values, rates,
+					maxAbs, title, xAxisLabel, quantities[q]);
+			for (int q2=q+1; q2<quantities.length; q2++) {
+				String scatterTitle = "Aggregate Full Rup to Cluster "+type.toString()+" Scatter";
+				String scatterPrefix = prefix+"_"+quantities[q].name()+"_vs_"+quantities[q2].name();
+				ret[q][q2] = plotValueScatter(resourcesDir, scatterPrefix, values, valuesList.get(q2),
+						maxAbs, allMaxAbs[q2], scatterTitle, quantities[q], quantities[q2]);
+				ret[q2][q] = ret[q][q2];
+			}
+		}
+		
+		return ret;
 	}
 
 }

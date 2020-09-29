@@ -617,7 +617,7 @@ public class ETAS_CatalogEALCalculator {
 	public void setTriggerFaultRup(int fssRupID) {
 		triggerRup = new ETAS_EqkRupture();
 		triggerRup.setMag(meanSol.getRupSet().getMagForRup(fssRupID));
-		triggerRup.setRuptureSurface(meanSol.getRupSet().getSurfaceForRupupture(fssRupID, 1d));
+		triggerRup.setRuptureSurface(meanSol.getRupSet().getSurfaceForRupture(fssRupID, 1d));
 		triggerRup.setNthERF_Index(erf.get_nthRupIndicesForSource(erf.getSrcIndexForFltSysRup(fssRupID))[0]);
 	}
 	

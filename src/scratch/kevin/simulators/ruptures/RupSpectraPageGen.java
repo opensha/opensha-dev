@@ -324,9 +324,9 @@ class RupSpectraPageGen {
 			File rupAnim = new File(resourcesDir, rupPlotPrefix+".gif");
 			if (rebuildGIF || !rupAnim.exists()) {
 				if (bbpSourceRect == null)
-					RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 5);
+					RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 10);
 				else
-					RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 5, bbpSourceRect[0], bbpSourceRect[1]);
+					RupturePlotGenerator.writeSlipAnimation(event, func, rupAnim, 10, bbpSourceRect[0], bbpSourceRect[1]);
 			}
 			Preconditions.checkState(rupAnim.exists());
 			lines.add("### Slip/Vel Animation");

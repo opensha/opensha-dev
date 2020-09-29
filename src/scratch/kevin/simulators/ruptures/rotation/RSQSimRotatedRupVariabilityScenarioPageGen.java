@@ -69,8 +69,8 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_4320.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_5041.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
 
 //		File bbpDir = new File(bbpParallelDir,
 //				"2019_11_22-rundir2585_1myrs-rotatedRups-m7p2_vert_ss_surface_rnd_mag_0p05"
@@ -83,8 +83,8 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 //				+ "-400rups-skipYears5000-vmLA_BASIN_500-noHF-1site");
 		File bbpDir = null;
 		
-		FilterMethod forceFilter = FilterMethod.SECT_VARIABILITY;
-//		FilterMethod forceFilter = null;
+//		FilterMethod forceFilter = FilterMethod.SECT_VARIABILITY;
+		FilterMethod forceFilter = null;
 		
 //		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 		VelocityModel forceVM = VelocityModel.LA_BASIN_500;

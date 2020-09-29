@@ -358,12 +358,12 @@ public class ExtremeRupturePageGen {
 	private static final DecimalFormat optionalDigitDF = new DecimalFormat("0.##");
 	
 	public static void main(String[] args) throws IOException, DocumentException {
-		File baseDir = new File("/data/kevin/simulators/catalogs");
 		File mainOutputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
-//		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.JG_tuneBase1m.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5042.instance();
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		
@@ -447,7 +447,7 @@ public class ExtremeRupturePageGen {
 			lines.add("### "+metric.name+" Events");
 			lines.add(topLink); lines.add("");
 			TableBuilder table = MarkdownUtils.tableBuilder();
-			table.addLine("Event ID", metric.name, "Plot");
+			table.addLine("Event ID", "Time (yrs)", metric.name, "Plot");
 			ScoreComparator comp = new ScoreComparator(metric);
 			eventScores.sort(comp);
 			for (int i=0; i<numToPlot && i<eventScores.size(); i++) {
@@ -484,8 +484,8 @@ public class ExtremeRupturePageGen {
 					valStr = optionalDigitDF.format(val);
 				if (metric.units != null)
 					valStr += " ("+metric.units+")";
-				table.addLine("**"+score.event.getID()+"**", "**"+valStr+"**",
-						"![Rupture Plot]("+resourcesDir.getName()+"/"+plotPrefix+".png)");
+				table.addLine("**"+score.event.getID()+"**", "**"+(float)score.event.getTimeInYears()+"**",
+						"**"+valStr+"**", "![Rupture Plot]("+resourcesDir.getName()+"/"+plotPrefix+".png)");
 			}
 			lines.addAll(table.build());
 			lines.add("");

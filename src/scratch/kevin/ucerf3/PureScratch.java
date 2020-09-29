@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.concurrent.ExecutionException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -65,8 +66,10 @@ import org.opensha.commons.param.editor.AbstractParameterEditor;
 import org.opensha.commons.param.editor.impl.NumericTextField;
 import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.util.DataUtils;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FileUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.ServerPrefUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
@@ -74,6 +77,8 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.observedEarthquake.parsers.UCERF3_CatalogParser;
@@ -1367,7 +1372,7 @@ public class PureScratch {
 		for (FaultSection sect : sol.getRupSet().getFaultSectionDataForRupture(index)) {
 			System.out.println("Section: "+sect.getName());
 		}
-		RuptureSurface surf = sol.getRupSet().getSurfaceForRupupture(index, 1d);
+		RuptureSurface surf = sol.getRupSet().getSurfaceForRupture(index, 1d);
 		System.out.println("Ztor: "+surf.getAveRupTopDepth());
 		Location loc = new Location(37.78849, -122.26912);
 		System.out.println("Rjb: "+surf.getDistanceJB(loc));
@@ -1796,13 +1801,91 @@ public class PureScratch {
 			System.out.println("Site "+site.getName()+" is "+(float)dist+" km away");
 		}
 	}
+	
+	private static void test74() {
+		ArbitrarilyDiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
+		func.set(1e-1, 0.1d);
+		func.set(2e-1, 0.2d);
+		func.set(3e-1, 0.3d);
+		func.set(4e-1, 0.4d);
+		func.set(5e-1, 0.5d);
+		
+		GraphWindow gw = new GraphWindow(func, "Test",
+				new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
+		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+		gw.setXLog(true);
+	}
+	
+	private static void test75() {
+		int subSize = 	60000;
+		int fullSize = 	100000;
+		double n = ((double)subSize*fullSize)/((double)subSize + fullSize);
+		System.out.println("\tN="+(float)n+" (leaf count: "+subSize+")");
+//		System.out.println("\tDn: "+(float)minDn);
+		double dnThresh = 1.63/Math.sqrt(n);
+		System.out.println("\tThreshold: "+dnThresh);
+//		boolean passes = minDn <= 1.63/Math.sqrt(n);
+		
+		System.out.println("now the other way around");
+		n = ((double)subSize + fullSize)/((double)subSize*fullSize);
+		System.out.println("\tN="+(float)n+" (leaf count: "+subSize+")");
+//		System.out.println("\tDn: "+(float)minDn);
+		dnThresh = 1.63*Math.sqrt(n);
+		System.out.println("\tThreshold: "+dnThresh);
+	}
+	
+	private static void test76() throws ZipException, IOException, DocumentException {
+		File rupSetsDir = new File("/home/kevin/OpenSHA/UCERF4/rup_sets");
+		File rupSetFile = new File(rupSetsDir, "fm3_1_ucerf3.zip");
+		
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		FaultSystemRupSet rupSet = FaultSystemIO.loadRupSet(rupSetFile);
+		SectionDistanceAzimuthCalculator fakeDistAzCalc =
+				new SectionDistanceAzimuthCalculator(rupSet.getFaultSectionDataList()) {
+			public double getDistance(FaultSection sect1, FaultSection sect2) {
+				return 0d;
+			}
+			
+			public double getDistance(int id1, int id2) {
+				return 0d;
+			}
+		};
+		System.gc();
+		System.out.println("Loaded rupture set");
+		try {
+			Thread.sleep(20000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("Loading cluster ruptures");
+		List<ClusterRupture> rups = new ArrayList<>();
+//		for (int r=0; r<rupSet.getNumRuptures(); r++)
+		for (int r=0; r<20000; r++)
+			rups.add(ClusterRupture.forOrderedSingleStrandRupture(
+					rupSet.getFaultSectionDataForRupture(r), fakeDistAzCalc));
+		System.out.println("DONE");
+		System.gc();
+		try {
+			Thread.sleep(100000000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test73();
+		test76();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

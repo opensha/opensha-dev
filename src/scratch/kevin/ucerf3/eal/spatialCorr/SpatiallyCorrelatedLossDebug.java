@@ -140,7 +140,7 @@ public class SpatiallyCorrelatedLossDebug {
 			lines.add(topLink); lines.add("");
 			
 			System.out.println("Calculating for rupture "+rupIndex+" with M="+(float)mag);
-			RuptureSurface surf = rupSet.getSurfaceForRupupture(rupIndex, 1d);
+			RuptureSurface surf = rupSet.getSurfaceForRupture(rupIndex, 1d);
 			
 			EqkRupture rup = new EqkRupture(mag, rate, surf, null);
 			

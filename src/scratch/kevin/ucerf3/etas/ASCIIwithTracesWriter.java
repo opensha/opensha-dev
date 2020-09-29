@@ -46,7 +46,7 @@ public class ASCIIwithTracesWriter {
 				String line = ETAS_CatalogIO.getEventFileLine(rup);
 				if (rup.getFSSIndex() >= 0) {
 					// add fault trace
-					RuptureSurface surf = rupSet.getSurfaceForRupupture(rup.getFSSIndex(), 1d);
+					RuptureSurface surf = rupSet.getSurfaceForRupture(rup.getFSSIndex(), 1d);
 					
 					FaultTrace upper = surf.getUpperEdge();
 					

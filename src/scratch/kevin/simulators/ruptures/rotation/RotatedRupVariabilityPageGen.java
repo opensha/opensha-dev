@@ -1380,7 +1380,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			lines.add("Here we attempt to reproduce the SCEC BroadBand Platform \"Part B\" validation exercise as defined in:");
 			lines.add("");
 			lines.add("*Goulet, C. A., Abrahamson, N. A., Somerville, P. G., & Wooddell, K. E. (2014). The SCEC broadband platform "
-					+ "validation exercise: Methodology for code validation in the context of seismicâ€�hazard analyses. "
+					+ "validation exercise: Methodology for code validation in the context of seismic hazard analyses. "
 					+ "Seismological Research Letters, 86(1), 17-26.* [(link)](https://pubs.geoscienceworld.org/ssa/srl/article/86/1/17/315438/"
 					+ "the-scec-broadband-platform-validation-exercise)");
 			lines.add("");
@@ -2418,7 +2418,7 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			float lower = key.distance - (float)dr;
 			float upper = key.distance + (float)dr;
 			ASK_EventData.plotMultiCountHist(resourcesDir, prefix, "ASK 2014 Recordings Distribution",
-					subDataMatches, "Dist âˆˆ ["+lower+","+upper+"] km", totalDataMatches.values(), "All Distances");
+					subDataMatches, "Dist ∈ ["+lower+","+upper+"] km", totalDataMatches.values(), "All Distances");
 			line += " The top plot shows the subset with distance in the range ["+lower+","+upper+"], "
 					+ "and the bottom the whole distribution at all distances.";
 		}

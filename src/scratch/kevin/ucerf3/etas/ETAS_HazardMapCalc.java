@@ -1561,7 +1561,7 @@ public class ETAS_HazardMapCalc {
 		
 		EqkRupture rup;
 		if (scenario.getFSS_Index() >= 0) {
-			RuptureSurface surf = sol.getRupSet().getSurfaceForRupupture(scenario.getFSS_Index(), 1d);
+			RuptureSurface surf = sol.getRupSet().getSurfaceForRupture(scenario.getFSS_Index(), 1d);
 			double mag = scenario.getMagnitude();
 			if (Double.isNaN(mag))
 				mag = sol.getRupSet().getMagForRup(scenario.getFSS_Index());

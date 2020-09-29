@@ -335,7 +335,7 @@ public class HazardCurveTimeScales {
 					RuptureSurface surf;
 					double rake;
 					if (fssIndex > 0) {
-						surf = rupSet.getSurfaceForRupupture(fssIndex, 1d);
+						surf = rupSet.getSurfaceForRupture(fssIndex, 1d);
 						rake = rupSet.getAveRakeForRup(fssIndex);
 					} else {
 						PointSurface psurf = new PointSurface(rup.getHypocenterLocation());
