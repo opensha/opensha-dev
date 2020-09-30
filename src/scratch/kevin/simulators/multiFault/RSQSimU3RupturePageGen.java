@@ -210,7 +210,12 @@ public class RSQSimU3RupturePageGen {
 				1000d, RuptureConnectionSearch.CUMULATIVE_JUMPS_DEFAULT);
 		
 		System.out.println("Building ClusterRuptures for RSQSim");
-		List<ClusterRupture> rsClusterRups = RupSetDiagnosticsPageGen.buildClusterRups(rupSet, rsConnSearch);
+//		List<ClusterRupture> rsClusterRups = RupSetDiagnosticsPageGen.buildClusterRups(rupSet, rsConnSearch);
+		List<ClusterRupture> rsClusterRups = rupSet.getClusterRuptures();
+		if (rsClusterRups == null) {
+			rupSet.buildClusterRups(rsConnSearch);
+			rsClusterRups = rupSet.getClusterRuptures();
+		}
 		Map<Jump, List<Integer>> rsJumpsToRupsMap = new HashMap<>();
 		Map<Jump, Double> rsJumps = RupSetDiagnosticsPageGen.getJumps(sol, rsClusterRups, rsJumpsToRupsMap);
 		HashSet<UniqueRupture> rsUniqueRups = new HashSet<>();
@@ -1128,15 +1133,15 @@ public class RSQSimU3RupturePageGen {
 			for (Jump rawJump : rup.getJumpsIterable()) {
 				for (Jump jump : new Jump[] { rawJump, rawJump.reverse() }) {
 //					System.out.println("Calculating for jump "+jump);
-					StiffnessResult[] stiffness;
+					StiffnessResult stiffness;
 					if (fullClusters)
-						stiffness = calc.calcClusterStiffness(jump.fromCluster, jump.toCluster);
+						stiffness = calc.calcClusterStiffness(type, jump.fromCluster, jump.toCluster);
 					else
-						stiffness = calc.calcStiffness(jump.fromSection, jump.toSection);
+						stiffness = calc.calcStiffness(type, jump.fromSection, jump.toSection);
 					if (stiffness == null)
 						continue;
 					for (int q=0; q<quantities.length; q++) {
-						double val = calc.getValue(stiffness, type, quantities[q]);
+						double val = stiffness.getValue(quantities[q]);
 						allMaxAbs[q] = Math.max(allMaxAbs[q], Math.abs(val));
 						valuesList.get(q).add(val);
 					}
@@ -1388,11 +1393,11 @@ public class RSQSimU3RupturePageGen {
 				continue;
 			double rate = sol.getRateForRup(r);
 			for (FaultSubsectionCluster cluster : rupture.getClustersIterable()) {
-				StiffnessResult[] stiffness = calc.calcAggRupToClusterStiffness(rupture, cluster);
+				StiffnessResult stiffness = calc.calcAggRupToClusterStiffness(type, rupture, cluster);
 				if (stiffness == null)
 					continue;
 				for (int q=0; q<quantities.length; q++) {
-					double val = calc.getValue(stiffness, type, quantities[q]);
+					double val = stiffness.getValue(quantities[q]);
 					allMaxAbs[q] = Math.max(allMaxAbs[q], Math.abs(val));
 					valuesList.get(q).add(val);
 				}
