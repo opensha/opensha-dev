@@ -629,8 +629,12 @@ public class BBP_Wrapper implements Runnable {
 		wrapper.doHF = false;
 		wrapper.dataOnly = true;
 		wrapper.setDoPGV(true);
+		wrapper.setDoArias(true);
 		wrapper.setSRFGenOnly(false);
+		Stopwatch watch = Stopwatch.createStarted();
 		wrapper.run();
+		watch.stop();
+		System.out.println("Took "+watch.elapsed(TimeUnit.SECONDS)+" seconds");
 		
 //		velToAccel(new File("/data/kevin/bbp/bbp_data/outdata/1507151299716/1507151299716.SBSM.vel.bbp"),
 //				new File("/data/kevin/bbp/bbp_data/outdata/1507151299716/1507151299716.SBSM.acc.bbp.2"));

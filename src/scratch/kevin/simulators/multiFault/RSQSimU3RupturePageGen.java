@@ -248,16 +248,16 @@ public class RSQSimU3RupturePageGen {
 		CoulombRates coulombRates = CoulombRates.loadUCERF3CoulombRates(fm);
 		ClusterConnectionStrategy u3ConnStrategy = new UCERF3ClusterConnectionStrategy(
 				u3RupSet.getFaultSectionDataList(), distAzCalc, maxJumpDist, coulombRates);
-		filters.add(new MinSectsPerParentFilter(2, true, u3ConnStrategy));
+		filters.add(new MinSectsPerParentFilter(2, true, true, u3ConnStrategy));
 		filters.add(new GapWithinSectFilter());
 		filters.add(new SplayCountFilter(0));
 		
 		// these are rupture properties themselves
 		AzimuthCalc u3AzCalc = new JumpAzimuthChangeFilter.UCERF3LeftLateralFlipAzimuthCalc(distAzCalc);
-		filters.add(new RupSetDiagnosticsPageGen.ErrOnCantEvalAzFilter(
-				new JumpAzimuthChangeFilter(u3AzCalc, 60f), false));
-		filters.add(new RupSetDiagnosticsPageGen.ErrOnCantEvalAzFilter(
-				new TotalAzimuthChangeFilter(u3AzCalc, 60f, true, true), true));
+		JumpAzimuthChangeFilter jumpAz = new JumpAzimuthChangeFilter(u3AzCalc, 60f);
+		jumpAz.setErrOnCantEvaluate(true);
+		filters.add(jumpAz);
+		filters.add(new TotalAzimuthChangeFilter(u3AzCalc, 60f, true, true));
 		filters.add(new CumulativeAzimuthChangeFilter(
 				new JumpAzimuthChangeFilter.SimpleAzimuthCalc(distAzCalc), 560f));
 //		filters.add(new CumulativeRakeChangeFilter(180f));

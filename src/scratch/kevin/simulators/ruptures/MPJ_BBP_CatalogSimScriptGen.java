@@ -31,7 +31,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		@SuppressWarnings("unused")
 //		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir4860_multi_combine";
-		String catalogDirName = "rundir5045";
+		String catalogDirName = "rundir5056";
 //		String catalogDirName = "rundir4983_stitched";
 		
 		boolean standardSites = false;

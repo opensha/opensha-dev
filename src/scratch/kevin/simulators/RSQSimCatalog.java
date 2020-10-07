@@ -472,6 +472,45 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_5044("bruce/rundir5044", "Bruce 5044", "Bruce Shaw", cal(2020, 9, 17),
 				"updated tdelay.  tCausalF=0.70 ; fracArea=0.9 ; varV s2ddf=.8 ddfmin=0.1 ; b=.010 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5045("bruce/rundir5045", "Bruce 5045", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.1  ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5046("bruce/rundir5046", "Bruce 5046", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.25 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5047("bruce/rundir5047", "Bruce 5047", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.15 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5048("bruce/rundir5048", "Bruce 5048", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.85 ; varV s2ddf=.8 ddfmin=0.2 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5049("bruce/rundir5049", "Bruce 5049", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.75 ; varV s2ddf=.8 ddfmin=0.2 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5050("bruce/rundir5050", "Bruce 5050", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   bigger   b= .010",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5051("bruce/rundir5051", "Bruce 5051", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   smaller  b= .008",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5052("bruce/rundir5052", "Bruce 5052", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   bigger   s2ddf= .9",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5053("bruce/rundir5053", "Bruce 5053", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   smaller  s2ddf= .7",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5054("bruce/rundir5054", "Bruce 5054", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   bigger   ddfmin= .27",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5055("bruce/rundir5055", "Bruce 5055", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   smaller  ddfmin= .23",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5056("bruce/rundir5056", "Bruce 5056", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   bigger   tCausalF= .70",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5057("bruce/rundir5057", "Bruce 5057", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   smaller  tCausalF= .65",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -2925,7 +2964,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
-		GregorianCalendar minDate = cal(2020, 9, 1);
+		GregorianCalendar minDate = cal(2020, 10, 1);
 		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);

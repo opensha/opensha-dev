@@ -69,7 +69,7 @@ public class RSQSimRotatedRupVariabilityScenarioPageGen extends RSQSimRotatedRup
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2740.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_5041.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_5049.instance(baseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
 
 //		File bbpDir = new File(bbpParallelDir,

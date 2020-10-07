@@ -37,14 +37,14 @@ class MPJ_BBP_RotatedRupVariabilityScenarioSimScriptGen {
 	public static void main(String[] args) throws IOException {
 //		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir4860_multi_combine";
-		String catalogDirName = "rundir5041";
+		String catalogDirName = "rundir504";
 //		String catalogDirName = "rundir4983_stitched";
 		boolean gp = false;
 
 //		String catalogDirName = null;
 //		boolean gp = true;
 		
-		int skipYears = 10000;
+		int skipYears = 20000;
 		double gpPatchArea = 1d;
 
 //		Scenario[] scenarios = Scenario.values();
