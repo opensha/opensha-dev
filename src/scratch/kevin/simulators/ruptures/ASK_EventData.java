@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.jfree.chart.annotations.XYTextAnnotation;
-import org.jfree.ui.TextAnchor;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;

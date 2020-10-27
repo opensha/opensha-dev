@@ -20,7 +20,8 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.data.Range;
-import org.jfree.ui.TextAnchor;
+import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.calc.GaussianDistCalc;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -978,8 +979,10 @@ public class SimulationHazardPlotter<E> {
 		gp.saveAsPDF(pdfFile.getAbsolutePath());
 		
 		if (pubFig) {
-			// write version without title, for publications
+			// write modified version without title, different legend, for publications
 			spec.setTitle(" ");
+			plotPrefs.setLegendFontSize(18);
+			spec.setLegendInset(RectangleAnchor.TOP_RIGHT, 0.95, 0.9, 0.4, true);
 			gp.drawGraphPanel(spec, true, true, curveXRange, curveYRange);
 			gp.getChartPanel().setSize(800, 600);
 			File pubPNGFile = new File(outputDir, prefix+"_pub.png");

@@ -18,7 +18,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.dom4j.DocumentException;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.data.Range;
-import org.jfree.ui.RectangleEdge;
+import org.jfree.chart.ui.RectangleEdge;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -709,8 +709,8 @@ public class AzimuthalPageGen {
 		File mainCatalogsDir = new File(gitDir, "catalogs");
 		File mainBBPDir = new File("/data/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
-//		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5046.instance();
 //		RSQSimCatalog catalog = null;
 		
 		double[] periods = {2d, 3d, 5d, 7.5d, 10d};

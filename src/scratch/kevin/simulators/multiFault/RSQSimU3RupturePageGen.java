@@ -32,8 +32,8 @@ import org.jfree.chart.axis.TickUnit;
 import org.jfree.chart.axis.TickUnits;
 import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.data.Range;
-import org.jfree.ui.RectangleEdge;
-import org.jfree.ui.TextAnchor;
+import org.jfree.chart.ui.RectangleEdge;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -267,7 +267,7 @@ public class RSQSimU3RupturePageGen {
 				TestType.COULOMB_STRESS, 0.04, 0.04, 1.25d, true, true);
 		filters.add(new U3CoulombJunctionFilter(coulombTester, coulombRates));
 		
-		RupSetPlausibilityResult result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, filters, rsConnSearch);
+		RupSetPlausibilityResult result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, filters, null, rsConnSearch);
 		TableBuilder table = RupSetDiagnosticsPageGen.getRupSetPlausibilityTable(result);
 		
 		// now plot
@@ -504,7 +504,7 @@ public class RSQSimU3RupturePageGen {
 		lines.add("**RSQSim Ruptures with Unique Connections**");
 		int maxRups = 20;
 		int maxCols = 5;
-		table = RupSetDiagnosticsPageGen.plotConnRupExamples(rsConnSearch, rsUniqueJumps.keySet(),
+		table = RupSetDiagnosticsPageGen.plotConnRupExamples(rsConnSearch, rupSet, rsUniqueJumps.keySet(),
 				rsJumpsToRupsMap, maxRups, maxCols, resourcesDir, "rs_conn_example");
 		lines.add("");
 		if (table == null)
@@ -513,7 +513,7 @@ public class RSQSimU3RupturePageGen {
 			lines.addAll(table.build());
 		lines.add("");
 		lines.add("**UCERF3 Ruptures with Unique Connections**");
-		table = RupSetDiagnosticsPageGen.plotConnRupExamples(u3ConnSearch, u3UniqueJumps.keySet(),
+		table = RupSetDiagnosticsPageGen.plotConnRupExamples(u3ConnSearch, u3RupSet, u3UniqueJumps.keySet(),
 				u3JumpsToRupsMap, maxRups, maxCols, resourcesDir, "u3_conn_example");
 		lines.add("");
 		if (table == null)
@@ -561,7 +561,7 @@ public class RSQSimU3RupturePageGen {
 				stiffnessCalc, StiffnessAggregationMethod.MEDIAN, 0f));
 		
 		System.out.println("Testing new coulomb filters");
-		result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, coulombFilters, rsConnSearch);
+		result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, coulombFilters, null, rsConnSearch);
 		table = RupSetDiagnosticsPageGen.getRupSetPlausibilityTable(result);
 		
 		// now plot
