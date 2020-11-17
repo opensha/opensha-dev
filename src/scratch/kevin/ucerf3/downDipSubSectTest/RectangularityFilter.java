@@ -89,12 +89,4 @@ class RectangularityFilter implements PlausibilityFilter {
 		return result;
 	}
 
-	@Override
-	public PlausibilityResult testJump(ClusterRupture rupture, Jump newJump, boolean verbose) {
-		PlausibilityResult result = apply(rupture, verbose);
-		if (result.canContinue())
-			result = result.logicalAnd(apply(newJump.toCluster, verbose));
-		return result;
-	}
-
 }
