@@ -59,7 +59,7 @@ public class Analysis {
 	double totMeanEAL, totMedianNormEAL, totModalNormEAL;
 	double totStdDevEAL, totCOV_EAL, totFactor95perc, totWithin10perc;
 	
-	
+	int dataCol=2;
 	
 	double totOrigWeight;
 	HashMap<String, String> closestValuesForBranchMap; // this stores the branch value that has a mean closest to the totalMeanEAL
@@ -123,8 +123,34 @@ public class Analysis {
 		return Math.sqrt(stdDevSquared);
 	}
 
+	/**
+	 * This is for AAL data
+	 * @param fileInputName
+	 * @param outDirName
+	 * @param branchesToRemove
+	 * @param popupWindows
+	 * @param mkDiffForEachBranchPlots
+	 */
+	public Analysis(String fileInputName, String outDirName, ArrayList<String> branchesToRemove, boolean popupWindows, 
+			boolean mkDiffForEachBranchPlots) {
+		this(fileInputName, outDirName, branchesToRemove, popupWindows, mkDiffForEachBranchPlots, 2);
+	}
 	
-	public Analysis(String fileInputName, String outDirName, ArrayList<String> branchesToRemove, boolean popupWindows, boolean mkDiffForEachBranchPlots) {
+	/**
+	 * Note that output files and plots will say "AAL" even though the analysis may be for the 
+	 * other points on the curve (as set by dataCol).
+	 * 
+	 * @param fileInputName
+	 * @param outDirName
+	 * @param branchesToRemove
+	 * @param popupWindows
+	 * @param mkDiffForEachBranchPlots
+	 * @param dataCol - 2 for AAL, 18 for Loss@0.01; 19 for	Loss@0.004; 20 for Loss@0.0025; 21 for Loss@0.0018; and 22 for Loss@4.0E-4
+	 */
+	public Analysis(String fileInputName, String outDirName, ArrayList<String> branchesToRemove, boolean popupWindows, 
+			boolean mkDiffForEachBranchPlots, int dataCol) {
+		
+		this.dataCol = dataCol;
 		
 		boolean savePlots = true;
 		
@@ -140,6 +166,10 @@ public class Analysis {
 
 		infoString += "Input File Name: "+inputFileName+"\n";
 		infoString += "Output Dir Name: "+outDirName+"\n";
+		
+		if(dataCol != 2)
+			infoString += "\nNOTE: EAL BELOW IS REALLY THE LOSS AT ANOTHER POINT ON THE CURVE, AS INDICATED IN THE FILENAME\n";
+
 		
 //		readBranchLevelSummaryDataFromFile();
 		readAllBranchDataFromFile();
@@ -390,7 +420,7 @@ public class Analysis {
 				str = fileLines.get(i);
 				String[] split = str.split(",");
 				branchWt[arrayIndex] = Double.parseDouble(split[1]);
-				branchEAL[arrayIndex] = Double.parseDouble(split[2])*1e-6;	// convert to Billions
+				branchEAL[arrayIndex] = Double.parseDouble(split[dataCol])*1e-6;	// convert to Billions
 				totOrigWeight+=branchWt[arrayIndex];
 				if(minEAL > branchEAL[arrayIndex]) {
 					minEAL = branchEAL[arrayIndex];
@@ -1894,6 +1924,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //		specCombinedLegend.setLegendLocation(RectangleEdge.RIGHT);
 		
 		double yVal = hist.getMaxY()*1.1;
+//		yVal = 2.25;
 
 		if(popUpWindows) {
 			GraphWindow gw = new GraphWindow(spec);
@@ -2525,6 +2556,23 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 //		Analysis analysisFig1 = new Analysis("all_branch_results.csv", "junk", null, false);
 //		analysisFig1.writeFigure1_Data();
 		
+		// CEA PORTFOLIO ANALYSIS ******************
+		// for Figure 2-7 data for CEA-specific portolio from: 
+		// http://opensha.usc.edu/ftp/kmilner/ucerf3/eal_calcs/2020_09_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-covModel/all_branch_results.csv
+		// OLD: http://opensha.usc.edu/ftp/kmilner/ucerf3/eal_calcs/2020_04_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC/all_branch_results.csv
+//		Analysis cea_analysisFig2to7 = new Analysis("ceaPortfolio_all_branch_results.csv", "CEA_PortfolioFigure2to7_Data", null, false, true);
+	
+		//dataCol: - 2 for AAL, 18 for Loss@0.01; 19 for Loss@0.004; 20 for Loss@0.0025; 21 for Loss@0.0018; and 22 for Loss@4.0E-4
+//		Analysis cea_analysisFig2to7_ = new Analysis("ceaPortfolio_all_branch_results.csv", "CEA_PortfolioFigure2to7_Data_LossAt0.01", null, false, true, 18);
+//		Analysis cea_analysisFig2to7_ = new Analysis("ceaPortfolio_all_branch_results.csv", "CEA_PortfolioFigure2to7_Data_LossAt0.004", null, false, true, 19);
+//		Analysis cea_analysisFig2to7_ = new Analysis("ceaPortfolio_all_branch_results.csv", "CEA_PortfolioFigure2to7_Data_LossAt0.0025", null, false, true, 20);
+//		Analysis cea_analysisFig2to7_ = new Analysis("ceaPortfolio_all_branch_results.csv", "CEA_PortfolioFigure2to7_Data_LossAt0.0018", null, false, true, 21);
+		Analysis cea_analysisFig2to7_ = new Analysis("ceaPortfolio_all_branch_results.csv", "CEA_PortfolioFigure2to7_Data_LossAt4e-4", null, false, true, 22);
+
+		
+		
+		
+		
 //		// for Figure 2-7 data:
 //		Analysis analysisFig2to7 = new Analysis("all_branch_results.csv", "Figure2to7_Data", null, false, true);
 		
@@ -2542,7 +2590,7 @@ System.out.println("branch to set for next:\t"+minCombinedName);
 		
 		// LA Analysis
 		// from:  http://opensha.usc.edu/ftp/kmilner/ucerf3/eal_calcs/2020_03_17-ucerf3-ngaw2-cea-consolidate-los-angeles/
-		Analysis la_analysis = new Analysis("LosAngeles_all_branch_results.csv", "LosAngeles_Data", null, false, true);
+//		Analysis la_analysis = new Analysis("LosAngeles_all_branch_results.csv", "LosAngeles_Data", null, false, true);
 
 //		// SF Analysis
 //		// from:  http://opensha.usc.edu/ftp/kmilner/ucerf3/eal_calcs/2020_03_17-ucerf3-ngaw2-cea-consolidate-san-francisco/
