@@ -194,7 +194,7 @@ public class StandaloneSubSectRupGen {
 			}
 		}
 		
-		return new CoulombRates(rates);
+		return new CoulombRates(null, rates);
 	}
 	
 	private static FaultSection getRemappedSubSect(FaultSection origSubSect,

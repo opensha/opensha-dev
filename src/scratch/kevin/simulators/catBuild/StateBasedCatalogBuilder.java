@@ -10,7 +10,7 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.jfree.data.Range;
-import org.jfree.ui.RectangleEdge;
+import org.jfree.chart.ui.RectangleEdge;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.gui.plot.GraphWindow;

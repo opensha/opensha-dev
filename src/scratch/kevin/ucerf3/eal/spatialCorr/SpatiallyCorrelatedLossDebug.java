@@ -17,7 +17,7 @@ import org.dom4j.DocumentException;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.data.Range;
-import org.jfree.ui.TextAnchor;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -140,7 +140,7 @@ public class SpatiallyCorrelatedLossDebug {
 			lines.add(topLink); lines.add("");
 			
 			System.out.println("Calculating for rupture "+rupIndex+" with M="+(float)mag);
-			RuptureSurface surf = rupSet.getSurfaceForRupupture(rupIndex, 1d);
+			RuptureSurface surf = rupSet.getSurfaceForRupture(rupIndex, 1d);
 			
 			EqkRupture rup = new EqkRupture(mag, rate, surf, null);
 			

@@ -29,15 +29,15 @@ public class AzimuthalScriptsGen {
 
 	public static void main(String[] args) throws IOException {
 //		String catalogDirName = "rundir2585_1myrs";
-//		String catalogDirName = "rundir4983";
+		String catalogDirName = "rundir5046";
 //		String catalogDirName = "rundir4860_multi_combine";
-		String catalogDirName = "rundir4983_stitched";
+//		String catalogDirName = "rundir4983_stitched";
 		boolean gp = false;
 
 //		String catalogDirName = null;
 //		boolean gp = true;
 		
-		int skipYears = 5000;
+		int skipYears = 20000;
 		double gpPatchArea = 1d;
 		
 		int numRuptures = 100;

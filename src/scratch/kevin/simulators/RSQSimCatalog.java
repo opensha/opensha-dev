@@ -457,6 +457,60 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_4987("bruce/rundir4987", "Bruce 4987", "Bruce Shaw", cal(2020, 4, 29),
 				"VeqMax=4.0; tCausalF=0.63 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5040("bruce/rundir5040", "Bruce 5040", "Bruce Shaw", cal(2020, 9, 17),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.3 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5041("bruce/rundir5041", "Bruce 5041", "Bruce Shaw", cal(2020, 9, 17),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.2 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5042("bruce/rundir5042", "Bruce 5042", "Bruce Shaw", cal(2020, 9, 17),
+				"updated tdelay.  tCausalF=0.70 ; fracArea=0.9 ; varV s2ddf=.8 ddfmin=0.2 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5043("bruce/rundir5043", "Bruce 5043", "Bruce Shaw", cal(2020, 9, 17),
+				"updated tdelay.  tCausalF=0.70 ; fracArea=0.9 ; varV s2ddf=.8 ddfmin=0.2 ; b=.010 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5044("bruce/rundir5044", "Bruce 5044", "Bruce Shaw", cal(2020, 9, 17),
+				"updated tdelay.  tCausalF=0.70 ; fracArea=0.9 ; varV s2ddf=.8 ddfmin=0.1 ; b=.010 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5045("bruce/rundir5045", "Bruce 5045", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.1  ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5046("bruce/rundir5046", "Bruce 5046", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.25 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5047("bruce/rundir5047", "Bruce 5047", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.8 ; varV s2ddf=.8 ddfmin=0.15 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5048("bruce/rundir5048", "Bruce 5048", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.85 ; varV s2ddf=.8 ddfmin=0.2 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5049("bruce/rundir5049", "Bruce 5049", "Bruce Shaw", cal(2020, 9, 28),
+				"updated tdelay.  tCausalF=0.67 ; fracArea=0.75 ; varV s2ddf=.8 ddfmin=0.2 ; b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5050("bruce/rundir5050", "Bruce 5050", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   bigger   b= .010",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5051("bruce/rundir5051", "Bruce 5051", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   smaller  b= .008",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5052("bruce/rundir5052", "Bruce 5052", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   bigger   s2ddf= .9",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5053("bruce/rundir5053", "Bruce 5053", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   smaller  s2ddf= .7",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5054("bruce/rundir5054", "Bruce 5054", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   bigger   ddfmin= .27",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5055("bruce/rundir5055", "Bruce 5055", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   smaller  ddfmin= .23",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5056("bruce/rundir5056", "Bruce 5056", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   bigger   tCausalF= .70",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5057("bruce/rundir5057", "Bruce 5057", "Bruce Shaw", cal(2020, 10, 5),
+				"Default5046.   smaller  tCausalF= .65",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -737,7 +791,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		return durationYears;
 	}
 	
-	private synchronized Map<String, String> getParams() throws IOException {
+	public synchronized Map<String, String> getParams() throws IOException {
 		if (params == null) {
 			File paramFile = getParamFile();
 			if (paramFile != null)
@@ -773,13 +827,16 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		List<String> occCopulaLinks = new ArrayList<>();
 		List<String> occCopulaNames = new ArrayList<>();
+		
+		List<String> multiFaultLinks = new ArrayList<>();
+		List<String> multiFaultNames = new ArrayList<>();
 
 		String partBSummaryLink = null;
 		String vmCompareRotRupLink = null;
-		String multiFaultLink = null;
 		String extremeEventLink = null;
 		String parentMFDLink = null;
 		String distCalcLink = null;
+		String searchEventLink = null;
 		
 		File[] dirList = dir.listFiles();
 		Arrays.sort(dirList, new FileNameComparator());
@@ -832,11 +889,20 @@ public class RSQSimCatalog implements XMLSaveable {
 					hazardLinks.add(name);
 					hazardNames.add(hazName);
 				}
-			} else if (name.equals("multi_fault")) {
-				Preconditions.checkState(multiFaultLink == null, "Duplicate Multi Fault dirs! %s and %s", name, multiFaultLink);
-				multiFaultLink = name;
+			} else if (name.startsWith("multi_fault")) {
+				if (name.equals("multi_fault")) {
+					multiFaultLinks.add(name);
+					multiFaultNames.add("Default sub-section mapping");
+				} else {
+					Preconditions.checkState(name.contains("_area_fract_"));
+					multiFaultLinks.add(name);
+					double fract = Double.parseDouble(name.substring(
+							name.indexOf("_area_fract_")+("_area_fract_").length()));
+					multiFaultNames.add("Sub-section mapping with areaFract="+(fract));
+				}
 			} else if (name.equals("extreme_events")) {
-				Preconditions.checkState(extremeEventLink == null, "Duplicate Extreme Event dirs! %s and %s", name, multiFaultLink);
+				Preconditions.checkState(extremeEventLink == null,
+						"Duplicate Extreme Event dirs! %s and %s", name, extremeEventLink);
 				extremeEventLink = name;
 			} else if (name.startsWith("occupancy_copula_m")) {
 				String title = MarkdownUtils.getTitle(mdFile);
@@ -850,6 +916,8 @@ public class RSQSimCatalog implements XMLSaveable {
 				parentMFDLink = name;
 			} else if (name.equals("dist_method_comparisons")) {
 				distCalcLink = name;
+			} else if (name.equals("search_events")) {
+				searchEventLink = name;
 			}
 		}
 		
@@ -869,12 +937,17 @@ public class RSQSimCatalog implements XMLSaveable {
 			for (int i=0; i<hazardClusterNames.size(); i++)
 				lines.add("* ["+hazardClusterNames.get(i)+"]("+hazardClusterLinks.get(i)+"/)");
 		}
-		if (multiFaultLink != null) {
+		if (!multiFaultLinks.isEmpty()) {
 			lines.add("");
 			lines.add("## Multi-Fault Rupture Comparisons");
 			lines.add(topLink);
 			lines.add("");
-			lines.add("[Multi-Fault Rupture Comparisons here]("+multiFaultLink+"/)");
+			if (multiFaultLinks.size() == 1) {
+				lines.add("[Multi-Fault Rupture Comparisons here]("+multiFaultLinks.get(0)+"/)");
+			} else {
+				for (int i=0; i<multiFaultLinks.size(); i++)
+					lines.add("* ["+multiFaultNames.get(i)+"]("+multiFaultLinks.get(i)+"/)");
+			}
 		}
 		if (parentMFDLink != null) {
 			lines.add("");
@@ -882,6 +955,13 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add(topLink);
 			lines.add("");
 			lines.add("[Parent Section MFDs here]("+parentMFDLink+"/)");
+		}
+		if (searchEventLink != null) {
+			lines.add("");
+			lines.add("## Event Search Results");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[Event search results here]("+searchEventLink+"/)");
 		}
 		if (distCalcLink != null) {
 			lines.add("");
@@ -2884,20 +2964,20 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
-//		GregorianCalendar minDate = cal(2020, 1, 1);
-//		for (Catalogs cat : cats) {
+		GregorianCalendar minDate = cal(2020, 10, 1);
+		for (Catalogs cat : cats) {
 		// specific catalog
-		GregorianCalendar minDate = cal(2000, 1, 1);
-		for (Catalogs cat : new Catalogs[] {
-				Catalogs.BRUCE_4983_STITCHED,
-//				Catalogs.BRUCE_2585,
-//				Catalogs.BRUCE_2585_1MYR,
-//				Catalogs.BRUCE_2740,
-//				Catalogs.BRUCE_3062,
-//				Catalogs.BRUCE_4860,
-//				Catalogs.JG_tunedBase1m_ddotEQmod,
-//				Catalogs.JG_tuneBase1m,
-				}) {
+//		GregorianCalendar minDate = cal(2000, 1, 1);
+//		for (Catalogs cat : new Catalogs[] {
+//				Catalogs.BRUCE_4983_STITCHED,
+////				Catalogs.BRUCE_2585,
+////				Catalogs.BRUCE_2585_1MYR,
+////				Catalogs.BRUCE_2740,
+////				Catalogs.BRUCE_3062,
+////				Catalogs.BRUCE_4860,
+////				Catalogs.JG_tunedBase1m_ddotEQmod,
+////				Catalogs.JG_tuneBase1m,
+//				}) {
 		// all catalogs
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : cats) {

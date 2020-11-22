@@ -551,13 +551,13 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	static final boolean DIST_JB = true;
 	
 	public static void main(String[] args) throws ZipException, IOException {
-		File baseDir = new File("/data/kevin/simulators/catalogs");
 		File outputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance(baseDir);
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5057.instance();
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -575,15 +575,15 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
-		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-		IMT[] imts = { IMT.SA3P0 };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+//		IMT[] imts = { IMT.SA3P0 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
 //		IMT[] imts = { IMT.PGV, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
-		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
+//		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
 		
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.AFSHARI_STEWART_2016 };
-//		IMT[] imts = { IMT.DUR_5_75, IMT.DUR_5_95, IMT.DUR_20_80 };
-//		AttenRelRef rotDGMPE = null;
+		AttenRelRef[] gmpeRefs = { AttenRelRef.AFSHARI_STEWART_2016 };
+		IMT[] imts = { IMT.DUR_5_75, IMT.DUR_5_95, IMT.DUR_20_80 };
+		AttenRelRef rotDGMPE = null;
 		
 		String[] highlightNames;
 		if (doGridded)

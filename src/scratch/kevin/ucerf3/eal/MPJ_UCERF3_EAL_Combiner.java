@@ -63,7 +63,7 @@ import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
-import scratch.kevin.ucerf3.eal.branches.U3_EAL_GM_Variability;
+
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_LogicTreeBranch;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_ProbModels;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_Vs30Model;
@@ -107,7 +107,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	private CSVFile<String> lecResultsCSV;
 	private File lecResultsFileCSV;
 	
-	private boolean doGMVar;
+	private LossCOV_Model covModel;
 
 	public MPJ_UCERF3_EAL_Combiner(CommandLine cmd, File outputDir) throws IOException, DocumentException {
 		super(cmd);
@@ -259,18 +259,14 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		if (rank == 0)
 			debug("Building EAL branches");
 		
-		doGMVar = cmd.hasOption("gm-variability");
+		if (cmd.hasOption("lec-cov"))
+			covModel = LossCOV_Model.valueOf(cmd.getOptionValue("lec-cov"));
 		
 		branches = new ArrayList<>();
 		HashSet<U3_EAL_ProbModels> probModels = new HashSet<>();
 		HashSet<U3_EAL_GMMs> gmms = new HashSet<>();
 		HashSet<U3_EAL_GMM_Epistemic> gmmEpis = new HashSet<>();
 		HashSet<U3_EAL_Vs30Model> vs30s = new HashSet<>();
-		HashSet<U3_EAL_GM_Variability> gmVars = new HashSet<>();
-		
-		U3_EAL_GM_Variability[] gmVarArray = { null };
-		if (doGMVar)
-			gmVarArray = U3_EAL_GM_Variability.values();
 		
 		int numTI = mappings.keySet().size();
 		for (U3_EAL_ProbModels probModel : probsZipFiles.keySet()) {
@@ -302,13 +298,9 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 						gmms.add(gmm);
 						gmmEpis.add(gmmEpi);
 						vs30s.add(vs30);
-						for (U3_EAL_GM_Variability gmVar : gmVarArray) {
-							if (gmVar != null)
-								gmVars.add(gmVar);
-							for (LogicTreeBranch tiBranch : mappings.keySet())
-								branches.add(new U3_EAL_LogicTreeBranch(tiBranch, probModel, gmm, gmmEpi, vs30, gmVar,
-										fssFile, griddedFile, tractDir));
-						}
+						for (LogicTreeBranch tiBranch : mappings.keySet())
+							branches.add(new U3_EAL_LogicTreeBranch(tiBranch, probModel, gmm, gmmEpi, vs30,
+									fssFile, griddedFile, tractDir));
 					}
 				}
 			}
@@ -319,9 +311,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			debug("GMMs: "+Joiner.on(", ").join(gmms));
 			debug("GMM Epis: "+Joiner.on(", ").join(gmmEpis));
 			debug("Vs30s: "+Joiner.on(", ").join(vs30s));
-			if (doGMVar)
-				debug("GMVars: "+Joiner.on(", ").join(gmVars));
-			int calcNum = numTI*probModels.size()*gmms.size()*gmmEpis.size()*vs30s.size()*gmVars.size();
+			int calcNum = numTI*probModels.size()*gmms.size()*gmmEpis.size()*vs30s.size();
 			debug("Calculated number if fully specified: "+calcNum+" (fully specified ? "+(calcNum == branches.size())+")");
 		}
 		Collections.sort(branches, new ReadOptimizedBranchComparator());
@@ -480,8 +470,6 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			sortOrderClasses.add(U3_EAL_GMMs.class);
 			sortOrderClasses.add(U3_EAL_GMM_Epistemic.class);
 			sortOrderClasses.add(U3_EAL_ProbModels.class);
-			if (doGMVar)
-				sortOrderClasses.add(U3_EAL_GM_Variability.class);
 			sortOrderClasses.addAll(LogicTreeBranch.getLogicTreeNodeClasses());
 		}
 
@@ -777,16 +765,10 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 				griddedLosses = tractLoader.griddedLosses;
 			}
 			
-			if (doGMVar) {
-				U3_EAL_GM_Variability gmVar = branch.getValue(U3_EAL_GM_Variability.class);
-				fssLosses = applyGMVar(fssLosses, gmVar);
-				griddedLosses = applyGMVar(griddedLosses, gmVar);
-			}
-			
 			ZipFile erfProbsZipFile = probsZipFiles.get(branch.getValue(U3_EAL_ProbModels.class));
 			
 			UCERF3_EAL_Combiner calc = new UCERF3_EAL_Combiner(cfss, taskMappings, trueMeanSol, fssLosses, griddedLosses,
-					erfProbsZipFile, erfProbsDuration, lecXVals);
+					erfProbsZipFile, erfProbsDuration, lecXVals, covModel);
 			
 			faultEAL = calc.getFaultEALs()[0];
 			griddedEAL = calc.getGriddedEALs()[0];
@@ -798,42 +780,6 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			return this;
 		}
 		
-	}
-	
-	private static double[][] applyGMVar(double[][] losses, U3_EAL_GM_Variability gmVar) {
-		double[][] ret = new double[losses.length][];
-		
-		for (int i=0; i<losses.length; i++) {
-			if (losses[i] == null)
-				continue;
-			ret[i] = new double[losses[i].length];
-			for (int j=0; j<losses[i].length; j++) {
-				ret[i][j] = gmVar.calcGMVarLoss(losses[i][j]);
-				Preconditions.checkState(Double.isFinite(ret[i][j]),
-						"Bad loss at [%s,%s]=%s for gmVar=%s, lambda=%s",
-						i, j, ret[i][j], gmVar.name(), losses[i][j]);
-			}
-		}
-		return ret;
-	}
-	
-	private static DiscretizedFunc[] applyGMVar(DiscretizedFunc[] losses, U3_EAL_GM_Variability gmVar) {
-		DiscretizedFunc[] ret = new DiscretizedFunc[losses.length];
-		
-		for (int i=0; i<losses.length; i++) {
-			if (losses[i] == null)
-				continue;
-			ret[i] = losses[i].deepClone();
-			for (int j=0; j<ret[i].size(); j++) {
-				double lambda = losses[i].getY(j);
-				double varLoss = gmVar.calcGMVarLoss(lambda);
-				Preconditions.checkState(Double.isFinite(varLoss),
-						"Bad loss at [%s,%s]=%s for gmVar=%s, lambda=%s",
-						i, j, varLoss, gmVar.name(), lambda);
-				ret[i].set(j, varLoss);
-			}
-		}
-		return ret;
 	}
 	
 	private class BranchNodeVals {
@@ -1054,10 +1000,10 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		doLEC.setRequired(false);
 		options.addOption(doLEC);
 		
-		Option doGMVar = new Option("gmv", "gm-variability", false,
-				"Flag to include GM variability branches");
-		doGMVar.setRequired(false);
-		options.addOption(doGMVar);
+		Option cov = new Option("cov", "lec-cov", true,
+				"Loss COV model for LECs");
+		cov.setRequired(false);
+		options.addOption(cov);
 		
 		return options;
 	}

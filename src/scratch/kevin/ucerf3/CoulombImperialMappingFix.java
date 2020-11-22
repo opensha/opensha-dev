@@ -136,7 +136,7 @@ public class CoulombImperialMappingFix {
 				Preconditions.checkNotNull(newDistsMap.get(pair),
 						"New coulomb has extra mapping: "+pair+" (orig has it? "+origRates.containsKey(pair)+")");
 			
-			CoulombRates.writeExcelFile(new CoulombRates(newCoulombRatesMap), newDistsMap,
+			CoulombRates.writeExcelFile(new CoulombRates(fm, newCoulombRatesMap), newDistsMap,
 					new File("/tmp/2013_04_08-Stress_Table-"+fm.getShortName().replaceAll("_", ".")+".xls"));
 		}
 	}

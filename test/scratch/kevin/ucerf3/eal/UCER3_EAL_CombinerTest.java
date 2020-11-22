@@ -193,7 +193,7 @@ public class UCER3_EAL_CombinerTest {
 					rupSet.getSectionIndicesForAllRups(), mags, rupSet.getAveRakeForAllRups(), rupSet.getAreaForAllRups(),
 					rupSet.getLengthForAllRups(), "");
 			
-			InversionFaultSystemRupSet subInvRupSet = new InversionFaultSystemRupSet(subRupSet, branch, rupSet.getPlausibilityConfiguration(),
+			InversionFaultSystemRupSet subInvRupSet = new InversionFaultSystemRupSet(subRupSet, branch, rupSet.getOldPlausibilityConfiguration(),
 					rupSet.getAveSlipForAllRups(), rupSet.getCloseSectionsListList(),
 					rupSet.getRupturesForClusters(), rupSet.getSectionsForClusters());
 			

@@ -244,7 +244,7 @@ public class SpatiallyCorrelatedLossCalc {
 			
 			double mag = rupSet.getMagForRup(rupIndex);
 			double rate = rupSet.getAveRakeForRup(rupIndex);
-			RuptureSurface surf = rupSet.getSurfaceForRupupture(rupIndex, 1d);
+			RuptureSurface surf = rupSet.getSurfaceForRupture(rupIndex, 1d);
 			
 			EqkRupture rup = new EqkRupture(mag, rate, surf, null);
 			

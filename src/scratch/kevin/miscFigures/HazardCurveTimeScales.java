@@ -12,7 +12,7 @@ import java.util.List;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.data.Range;
-import org.jfree.ui.TextAnchor;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -335,7 +335,7 @@ public class HazardCurveTimeScales {
 					RuptureSurface surf;
 					double rake;
 					if (fssIndex > 0) {
-						surf = rupSet.getSurfaceForRupupture(fssIndex, 1d);
+						surf = rupSet.getSurfaceForRupture(fssIndex, 1d);
 						rake = rupSet.getAveRakeForRup(fssIndex);
 					} else {
 						PointSurface psurf = new PointSurface(rup.getHypocenterLocation());

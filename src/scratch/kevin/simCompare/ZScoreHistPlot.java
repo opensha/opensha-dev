@@ -22,7 +22,7 @@ import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.data.Range;
-import org.jfree.ui.TextAnchor;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -182,7 +182,7 @@ public class ZScoreHistPlot {
 	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
 			List<Site> sites, IMT[] imts, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
 			File outputDir, String prefix) throws IOException {
-		return plotStandardNormal(simProv, eventComps, sites, imts, gmpe, filter, binDescriptions, outputDir, prefix, null, 0);
+		return plotStandardNormal(simProv, eventComps, sites, imts, gmpe, filter, binDescriptions, outputDir, prefix, null, 0, false);
 	}
 	
 	private static final double maxY = 0.7d;
@@ -190,7 +190,8 @@ public class ZScoreHistPlot {
 	
 	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
 			List<Site> sites, IMT[] imts, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
-			File outputDir, String prefix, Table<String, E, Double> sourceRupContribFracts, int maxNumSourceContribs) throws IOException {
+			File outputDir, String prefix, Table<String, E, Double> sourceRupContribFracts, int maxNumSourceContribs, boolean pub)
+					throws IOException {
 		
 		List<PlotSpec> specs = new ArrayList<>();
 		
@@ -231,7 +232,7 @@ public class ZScoreHistPlot {
 //			maxY = Math.max(maxY, Math.max(stdNormal.getMaxY(), hist.getMaxY()));
 			DefaultXY_DataSet meanLine = new DefaultXY_DataSet();
 			meanLine.set(score.mean, 0);
-			meanLine.set(score.mean, maxY-0.1);
+			meanLine.set(score.mean, pub ? maxY : maxY-0.1);
 			meanLine.setName("Mean");
 			
 			if (score.sourceHists != null && !score.sourceHists.isEmpty()) {
@@ -259,7 +260,7 @@ public class ZScoreHistPlot {
 				colorCPT.setAboveMaxColor(colorCPT.getMaxColor());
 				
 				funcs.add(meanLine);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.BLUE));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, pub ? Color.BLACK : Color.BLUE));
 				funcs.add(stdNormal);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 				
@@ -290,10 +291,10 @@ public class ZScoreHistPlot {
 				funcs.add(stdNormal);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 				funcs.add(meanLine);
-				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.BLUE));
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, pub ? Color.BLACK : Color.BLUE));
 			}
 			
-			for (double sigma=Math.ceil(-numStdDev); sigma<=numStdDev; sigma++) {
+			for (double sigma=Math.ceil(-numStdDev); !pub && sigma<=numStdDev; sigma++) {
 				DefaultXY_DataSet sigmaLine = new DefaultXY_DataSet();
 				sigmaLine.set(sigma, 0);
 				sigmaLine.set(sigma, maxY-0.075);
@@ -301,7 +302,7 @@ public class ZScoreHistPlot {
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, stdDevColor));
 			}
 			
-			String title = imts.length == 1 ? " " : gmpe.getShortName()+" Log-Normal Comparision";
+			String title = pub ? " " : gmpe.getShortName()+" Log-Normal Comparision";
 			String xAxisLabel = "z-score (Standard Deviations)";
 			String yAxisLabel = "Density";
 			
@@ -316,23 +317,28 @@ public class ZScoreHistPlot {
 		List<Range> yRanges = new ArrayList<>();
 		for (int i=0; i<imts.length; i++) {
 			List<String> labels = new ArrayList<>(binDescriptions);
-			labels.add(0, imts[i].getShortName());
+			if (!pub)
+				labels.add(0, imts[i].getShortName());
 			
 			double yEach = maxY/8d;
 			double x = -numStdDev + 0.2;
-			double y = maxY - yEach*1.2;
+			double y = maxY;
+			if (pub)
+				y -= 0.2*yEach;
+			else
+				y -= 1.2*yEach;
 			
 			Font bigFont = new Font(Font.SANS_SERIF, Font.BOLD, 24);
 			Font smallFont = new Font(Font.SANS_SERIF, Font.BOLD, 20);
 			
 			List<XYAnnotation> anns = new ArrayList<>();
 			XYTextAnnotation meanAnn = new XYTextAnnotation(
-					"Mean = "+twoSigFig.format(means.get(i)), -x, y);
+					"Mean: "+twoSigFig.format(means.get(i)), -x, y);
 			meanAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 			meanAnn.setFont(bigFont);
 			anns.add(meanAnn);
 			XYTextAnnotation stdDevAnn = new XYTextAnnotation(
-					"σ-fract = "+twoSigFig.format(stdDevs.get(i)), -x, y-yEach);
+					"σ-fract: "+twoSigFig.format(stdDevs.get(i)), -x, y-yEach);
 			stdDevAnn.setTextAnchor(TextAnchor.TOP_RIGHT);
 			stdDevAnn.setFont(bigFont);
 			anns.add(stdDevAnn);
@@ -351,7 +357,7 @@ public class ZScoreHistPlot {
 				anns.add(ann);
 			}
 			
-			for (double sigma=Math.ceil(-numStdDev); sigma<=numStdDev; sigma++) {
+			for (double sigma=Math.ceil(-numStdDev); !pub && sigma<=numStdDev; sigma++) {
 				int s = (int)Math.round(Math.abs(sigma));
 				String label;
 				if (sigma < -0.1)

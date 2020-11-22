@@ -129,11 +129,14 @@ public class DownDipTestRupSetBuilder {
 		// this creates rectangular permutations only for our down-dip fault to speed up rupture building
 		ClusterPermutationStrategy permutationStrategy = new DownDipTestPermutationStrategy(downDipBuilder);
 		// connection strategy: parent faults connect at closest point, and only when dist <=5 km
-		ClusterConnectionStrategy connectionStrategy = new DistCutoffClosestSectClusterConnectionStrategy(5d);
+		ClusterConnectionStrategy connectionStrategy = new DistCutoffClosestSectClusterConnectionStrategy(
+				subSections, distAzCalc, 5d);
 		int maxNumSplays = 0; // don't allow any splays
 		
-		ClusterRuptureBuilder builder = new ClusterRuptureBuilder(subSections, connectionStrategy,
-				distAzCalc, filters, maxNumSplays);
+//		ClusterRuptureBuilder builder = new ClusterRuptureBuilder(subSections, connectionStrategy,
+//				distAzCalc, filters, maxNumSplays);
+		ClusterRuptureBuilder builder = new ClusterRuptureBuilder(
+				connectionStrategy.getClusters(), filters, maxNumSplays);
 		
 		List<ClusterRupture> ruptures = builder.build(permutationStrategy);
 		
