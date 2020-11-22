@@ -3,6 +3,7 @@ package scratch.ned.SpatiallyCorrelatedLossPDF;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -27,7 +28,7 @@ public class SpatiallyCorrelatedLossPDF {
 		// just do one
 //		File[] csvFiles = { new File(resultsDir, "ASK_2014_EpiNONE_Wills2015.csv") };
 		
-		System.out.println("ModalRupInfo"+"\t"+"OrigMean"+"\t"+"NumNonZero"+"\t"
+		System.out.println("ModalRupInfo"+"\tMag\t"+"OrigMean"+"\t"+"NumNonZero"+"\t"
 				+"LinearMean"+"\t"+"LnMeanNonZero"+"\t"+"LnStdDev"+"\t"+"linearMeanCalc"+"\t"+"linearCOVcalc"+"\t"+"linearCOV");
 
 		
@@ -54,9 +55,13 @@ public class SpatiallyCorrelatedLossPDF {
 			int numVals = 0;
 			
 //			System.out.println("Working on "+name);
+//			ArrayList<Double> magList = new ArrayList<Double>();
+			HashMap<Double,Double> magHashMap = new HashMap<Double,Double>();
 			
 			for (int row=1; row<csv.getNumRows(); row++) {
+				double mag = csv.getDouble(row, 5);
 				double meanLoss = csv.getDouble(row, 6);
+				magHashMap.put(meanLoss, mag);
 				double betweenEventIndex = csv.getDouble(row, 7);
 //				String epistemicBranch = csv.get(row, 1);
 //				if(!epistemicBranch.equals("NONE"))
@@ -84,6 +89,8 @@ public class SpatiallyCorrelatedLossPDF {
 				Map<Double, List<Double>> betweenToLosses = resultsTable.row(origMean);
 				double linearMean = 0d;
 				double logMeanNonZero = 0d;
+				
+				double mag = magHashMap.get(origMean);
 				
 				List<Double> nonZeroLogVals = new ArrayList<>();
 				List<Double> allLinearVals = new ArrayList<>();
@@ -127,7 +134,7 @@ public class SpatiallyCorrelatedLossPDF {
 				
 				double linearMeanCalc = Math.exp(logMeanNonZero+stdDevLogVals*stdDevLogVals/2.0);
 				
-				System.out.println(fullName+"\t"+origMean.floatValue()+"\t"+nonZeroLogVals.size()+"\t"
+				System.out.println(fullName+"\t"+(float)mag+"\t"+origMean.floatValue()+"\t"+nonZeroLogVals.size()+"\t"
 						+(float)linearMean+"\t"+(float)logMeanNonZero+"\t"+(float)stdDevLogVals+"\t"+(float)linearMeanCalc+"\t"+
 						(float)linearCOVcalc+"\t"+(float)linearCOV);
 			}
