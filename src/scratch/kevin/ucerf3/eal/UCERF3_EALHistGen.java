@@ -205,7 +205,7 @@ public class UCERF3_EALHistGen {
 		
 		try {
 			FaultSysSolutionERF_Calc.combineBranchSensHists(histPDFs, new File(plotDir, "eal_branch_sens_hists.pdf"));
-		} catch (com.lowagie.text.DocumentException e) {
+		} catch (com.itextpdf.text.DocumentException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
 		

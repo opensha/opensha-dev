@@ -36,6 +36,7 @@ import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
+import org.opensha.commons.gui.plot.pdf.PDF_UTF8_FontMapper;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.cpt.CPT;
@@ -44,14 +45,12 @@ import org.opensha.sha.simulators.iden.RuptureIdentifier;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.lowagie.text.Document;
-import com.lowagie.text.DocumentException;
-import com.lowagie.text.HeaderFooter;
-import com.lowagie.text.Phrase;
-import com.lowagie.text.pdf.DefaultFontMapper;
-import com.lowagie.text.pdf.PdfContentByte;
-import com.lowagie.text.pdf.PdfTemplate;
-import com.lowagie.text.pdf.PdfWriter;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Phrase; 
+import com.itextpdf.text.pdf.PdfContentByte;
+import com.itextpdf.text.pdf.PdfTemplate;
+import com.itextpdf.text.pdf.PdfWriter;
 
 import scratch.kevin.markov.EmpiricalMarkovChain;
 import scratch.kevin.simulators.MarkovChainBuilder;
@@ -389,12 +388,10 @@ public class OccupancyCopulaCalculator {
 	public static void writePlotPDF(JPanel panel, File outputFile) throws FileNotFoundException {
 		int width = (int)panel.getPreferredSize().getWidth();
 		int height = (int)panel.getPreferredSize().getHeight();
-		Document metadataDocument = new Document(new com.lowagie.text.Rectangle(
+		Document metadataDocument = new Document(new com.itextpdf.text.Rectangle(
 				width, height));
 		metadataDocument.addAuthor("OpenSHA");
 		metadataDocument.addCreationDate();
-		HeaderFooter footer = new HeaderFooter(new Phrase("Powered by OpenSHA"), true);
-		metadataDocument.setFooter(footer);
 		try {
 			// step 2
 			PdfWriter writer;
@@ -407,7 +404,7 @@ public class OccupancyCopulaCalculator {
 			PdfContentByte cb = writer.getDirectContent();
 			PdfTemplate tp = cb.createTemplate(width, height);
 			Graphics2D g2d = tp.createGraphics(width, height,
-					new DefaultFontMapper());
+					new PDF_UTF8_FontMapper());
 			panel.print(g2d);
 			g2d.dispose();
 			cb.addTemplate(tp, 0, 0);

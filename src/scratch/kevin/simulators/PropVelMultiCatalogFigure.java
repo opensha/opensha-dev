@@ -51,7 +51,7 @@ public class PropVelMultiCatalogFigure {
 			xVals = new EvenlyDiscretizedFunc(5d, 20, 10d);
 		
 		File outputDir = new File("/home/kevin/Documents/papers/2020_RSQSim_PSHA");
-		String prefix = "figure_5";
+		String prefix = "figure_6";
 		
 		CSVFile<String> csv = new CSVFile<>(true);
 		

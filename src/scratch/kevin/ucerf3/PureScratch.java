@@ -46,6 +46,8 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.region.CaliforniaRegions.RELM_SOCAL;
+import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
+import org.opensha.commons.data.siteData.SiteDataValue;
 import org.opensha.commons.data.siteData.impl.WillsMap2006;
 import org.opensha.commons.data.siteData.impl.WillsMap2015;
 import org.opensha.commons.eq.MagUtils;
@@ -62,6 +64,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.editor.AbstractParameterEditor;
 import org.opensha.commons.param.editor.impl.NumericTextField;
 import org.opensha.commons.param.impl.DoubleParameter;
@@ -74,8 +77,11 @@ import org.opensha.commons.util.ServerPrefUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
@@ -87,15 +93,22 @@ import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
+import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.AttenuationRelationship;
+import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.USGS_Combined_2004_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.ASK_2014;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -103,6 +116,7 @@ import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
+import org.opensha.sha.util.SiteTranslator;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -121,15 +135,19 @@ import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO.BinarayCatalogsIterable;
+import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO.ETAS_Catalog;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
+import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.association.FiniteFaultMappingData;
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
+import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
@@ -1883,13 +1901,87 @@ public class PureScratch {
 	private static void test77() throws ZipException, IOException, DocumentException {
 		FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_reproduce_ucerf3.zip"));
 	}
+	
+//	public void process(Collection<? extends ObsEqkRupture> catalog)
+	
+//	public <E extends ObsEqkRupture> List<E> process(Collection<E> catalog) {
+//		List<E> ret = new ArrayList<>();
+//		// do stuff
+//		return ret;
+//	}
+//	
+//	public <E>
+	
+	private static void test78() throws IOException, DocumentException {
+		File fssFile = new File("/home/kevin/git/ucerf3-etas-launcher/inputs/"
+				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip");
+		File resultsFile = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
+				+ "2019_11_05-Start2012_500yr_kCOV1p5_Spontaneous_HistoricalCatalog/"
+				+ "results_m5_preserve_chain.bin");
+		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55d;
+		FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);
+		FaultSystemSolutionERF_ETAS erf = ETAS_Launcher.buildERF(sol,
+				false, 500d, 2012);
+		erf.updateForecast();
+
+		// 5d will filter out below M5
+		List<ETAS_Catalog> catalogs =
+				ETAS_CatalogIO.loadCatalogsBinary(resultsFile, 5d);
+
+		int numPtMatches = 0;
+		int numPtFails = 0;
+		for (ETAS_Catalog catalog : catalogs) {
+			for (ETAS_EqkRupture rup : catalog) {
+				int nth = rup.getNthERF_Index();
+//				EqkRupture nthRup = erf.getNthRupture(nth);
+				int sourceID = erf.getSrcIndexForNthRup(nth);
+				ProbEqkSource source = erf.getSource(sourceID);
+				int rupID = erf.getRupIndexInSourceForNthRup(nth);
+				EqkRupture nthRup = source.getRupture(rupID);
+				if ((float)rup.getMag() != (float)nthRup.getMag()) {
+					Preconditions.checkState(source instanceof PointSource13b);
+					if (numPtFails == 0) {
+						System.out.println("ETAS rup w/ M="+(float)rup.getMag()+", loc="+rup.getHypocenterLocation());
+						System.out.println("\tsource "+sourceID+" for nth="+nth+" is type "+source.getClass());
+						System.out.println("\trup "+rupID+" for nth has M="+(float)nthRup.getMag()
+							+", loc="+nthRup.getHypocenterLocation());
+						System.out.println("MAG MISMATCH. Nth rup has M="+(float)nthRup.getMag());
+						PointSource13b ptSrc = (PointSource13b)source;
+						for (int r=0; r<ptSrc.getNumRuptures(); r++) {
+							ProbEqkRupture ptRup = ptSrc.getRupture(r);
+							System.out.println("\tr="+r+",\tM"+(float)ptRup.getMag()
+								+",\trake="+(float)ptRup.getAveRake()+",\tp="+(float)ptRup.getProbability());
+						}
+					}
+					numPtFails++;
+				} else {
+					if (source instanceof PointSource13b)
+						numPtMatches++;
+					else
+						Preconditions.checkState((float)rup.getMag() ==
+							(float)nthRup.getMag(),
+							"Nth rupture mag=%s doesn't match ETAS mag=%s",
+							nthRup.getMag(), rup.getMag());
+				}
+//				Preconditions.checkState((float)rup.getMag() ==
+//						(float)nthRup.getMag(),
+//						"Nth rupture mag=%s doesn't match ETAS mag=%s",
+//						nthRup.getMag(), rup.getMag());
+				// you can then either use nthRup, or set the surface in the original rupture as here:
+				rup.setRuptureSurface(nthRup.getRuptureSurface());
+//				new PointSource13
+			}
+		}
+		System.out.println(numPtMatches+" pt matches and "+numPtFails
+				+" fails, "+(numPtMatches+numPtFails)+" tot pt source");
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test77();
+		test78();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
