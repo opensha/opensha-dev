@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Random;
 import java.util.TimeZone;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
@@ -80,7 +81,9 @@ public class U3ETAS_SimulationAnalysis {
 	static final boolean D = true; // debug flag
 	
 	static String fssFileName = "/Users/field/workspace/git/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip";
-	static String catalogsFileName = "/Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringAnalysis/Data/U3ETAS_SimulationData/results_m5_preserve_chain.bin"; 
+	static String catalogsFileName = "/Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringAnalysis/Data/U3ETAS_SimulationData/results_m5_preserve_chain_FullTD_totRateScaleFactor1pt14.bin"; 
+//	static String catalogsFileName = "/Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringAnalysis/Data/U3ETAS_SimulationData/results_m5_preserve_chain_FullTD_totRateScaleFactor1pt5.bin.bin"; 
+//	static String catalogsFileName = "/Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringAnalysis/Data/U3ETAS_SimulationData/results_m5_preserve_chain_NoERT.bin"; 
 	static double catalogDuration=500; // hard coded
 	static double catalogStartYear=2012;
 	static long millisPerYr = (long)(1000*60*60*24*365.25);
@@ -88,62 +91,82 @@ public class U3ETAS_SimulationAnalysis {
 	
 	ArrayList<ObsEqkRupList> catalogList;
 	ArrayList<ObsEqkRupList> catalogDeclusteredList;
+	ArrayList<ObsEqkRupList> catalogRandomizedList;
 	static double minMag = 5.05;
 	static double deltaMag = 0.1;
 	static int numMag = 40;
 	
-	double hazCurveLnMin = Math.log(0.001);
-	double hazCurveLnMax = Math.log(10);
-	int hazCurveNum = 40;
-	double hazCurveDelta = (hazCurveLnMax-hazCurveLnMin)/(double)(hazCurveNum-1);
+	static double hazCurveLnMin = Math.log(0.001);
+	static double hazCurveLnMax = Math.log(10);
+	static int hazCurveNum = 40;
+	static double hazCurveDelta = (hazCurveLnMax-hazCurveLnMin)/(double)(hazCurveNum-1);
 
-	ScalarIMR imr;
+//	ScalarIMR imr;
 	
 	
 	public U3ETAS_SimulationAnalysis() {
-		this(loadCatalogs(fssFileName, catalogsFileName));
-	}
-
-	public U3ETAS_SimulationAnalysis(ArrayList<ObsEqkRupList> catalogList) {
 		
-		this.catalogList = catalogList;
+		this.catalogList = loadCatalogs(new File(fssFileName), new File(catalogsFileName));
+		
 //		System.out.println("num Catalogs = "+catalogList.size());
 		
-		catalogDeclusteredList = new ArrayList<ObsEqkRupList>();
-		for(ObsEqkRupList rupList: catalogList) {
-			ObsEqkRupList declusteredCatalog = GardnerKnopoffDeclustering.getDeclusteredCatalog(rupList);
-			catalogDeclusteredList.add(declusteredCatalog);
-		}
+		catalogDeclusteredList = getGK_DeclusteredCatalog(catalogList);
 		if(D) System.out.println("Done Declustering");
 		
-		imr = AttenRelRef.CB_2014.instance(null);
 
 	}
+	
+	
+	public static ArrayList<ObsEqkRupList> getGK_DeclusteredCatalog(ArrayList<ObsEqkRupList> catalogList) {
+		
+		ArrayList<ObsEqkRupList> declusteredList = new ArrayList<ObsEqkRupList>();
+		for(ObsEqkRupList rupList: catalogList) {
+			ObsEqkRupList declusteredCatalog = GardnerKnopoffDeclustering.getDeclusteredCatalog(rupList);
+			declusteredList.add(declusteredCatalog);
+		}
+		return declusteredList;
+	}
+	
+	
+	
+	public ArrayList<ObsEqkRupList> getRandomizedCatalogs() {
+		if(catalogRandomizedList==null)
+			catalogRandomizedList = getRandomizedCatalogs(this.getCatalogs(), null);
+		return catalogRandomizedList;
+	}
+
+	
 
 	/**
 	 * This not only randomizes event times within each catalog, but also among catalogs
-	 * so there isn't a high variance of total rates among catalogs.  This destroys the
-	 * privious ordering.
+	 * so there isn't a high variance of total rates among catalogs.  This clones the
+	 * ruptures and modifies the origin times.
 	 */
-	public void randomizeCatalogEventTimes() {
+	public static ArrayList<ObsEqkRupList> getRandomizedCatalogs(ArrayList<ObsEqkRupList> catalogList, Random random) {
+		if(random==null)
+			random = new Random();
 		ArrayList<ObsEqkRupList> catalogRandomizedList = new ArrayList<ObsEqkRupList>();
 		for(int i=0;i<catalogList.size();i++)
 			catalogRandomizedList.add(new ObsEqkRupList());
 		for(ObsEqkRupList catalog:catalogList) {
 			for(ObsEqkRupture rup:catalog) {
-				int ithCatalog = (int)Math.floor(Math.random()*catalogList.size());
-				double randomTimeYr = catalogStartYear+Math.random()*catalogDuration;
+				int ithCatalog = (int)Math.floor(random.nextDouble()*catalogList.size());
+				double randomTimeYr = catalogStartYear+random.nextDouble()*catalogDuration;
 				if(randomTimeYr<catalogStartYear || randomTimeYr>catalogStartYear+catalogDuration)
 					throw new RuntimeException("ERROR: "+randomTimeYr);
-				rup.setOriginTime((long)((double)millisPerYr*(randomTimeYr-1970)));
-				catalogRandomizedList.get(ithCatalog).add(rup);
+//				rup.setOriginTime((long)((double)millisPerYr*(randomTimeYr-1970)));
+				ObsEqkRupture newRup = (ObsEqkRupture) rup.clone();
+				newRup.setOriginTime((long)((double)millisPerYr*(randomTimeYr-1970)));
+//				catalogRandomizedList.get(ithCatalog).add(rup);
+				catalogRandomizedList.get(ithCatalog).add(newRup);
 			}
 		}
 		for(int i=0;i<catalogRandomizedList.size();i++) {
 			catalogRandomizedList.get(i).sortByOriginTime();
-//			System.out.println(catalogRandomizedList.get(i).size()+" events in randomized catalog "+i);
+			System.out.println(catalogRandomizedList.get(i).size()+" events in randomized catalog "+i);
 		}
-		catalogList = catalogRandomizedList;
+//		catalogList = catalogRandomizedList;
+		return catalogRandomizedList;
 	}
 	
 	
@@ -205,17 +228,15 @@ public class U3ETAS_SimulationAnalysis {
 	}
 	
 	
-	public static ArrayList<ObsEqkRupList> loadCatalogs(String fssFileName, String catalogsFileName) {
+	public static ArrayList<ObsEqkRupList> loadCatalogs(File fssFile, File catalogsFile) {
 		
 
-		File fssFile = new File(fssFileName);
-		File resultsFile = new File(catalogsFileName); // fill in with ETAS binary file
 		FaultSystemSolution sol = null;
 		List<ETAS_Catalog> catalogs=null;
 
 		try {
 			sol = FaultSystemIO.loadSol(fssFile);
-			catalogs = ETAS_CatalogIO.loadCatalogsBinary(resultsFile, 5d); // 5d will filter out below M5
+			catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile, 5d); // 5d will filter out below M5
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -237,9 +258,6 @@ public class U3ETAS_SimulationAnalysis {
 				try {
 					Preconditions.checkState((float)rup.getMag() == (float)nthRup.getMag(), "Nth rupture mag=%s doesn't match ETAS mag=%s",
 							nthRup.getMag(), rup.getMag());
-					// you can then either use nthRup, or set the surface
-					// set in the original rupture as here:
-					
 				} catch (Exception e) {
 					if(errorMessage == null)
 						errorMessage = "ERROR: one or more magnitudes did not match";
@@ -250,7 +268,7 @@ public class U3ETAS_SimulationAnalysis {
 //					System.exit(0);
 				}
 				
-				// replace surface is it's a FSS rupture
+				// replace surface if it's a FSS rupture
 				if(rup.getFSSIndex() != -1) {
 					rup.setRuptureSurface(nthRup.getRuptureSurface());
 					rup.setAveRake(nthRup.getAveRake());
@@ -277,7 +295,6 @@ public class U3ETAS_SimulationAnalysis {
 			}
 			obsEqkRupListList.add(obsEqkRupList);
 		}
-		
 		
 		return obsEqkRupListList;
 	}
@@ -321,7 +338,7 @@ public class U3ETAS_SimulationAnalysis {
 		}
 	}
 	
-	private String getIMT_String(double saPeriod) {
+	private static String getIMT_String(double saPeriod) {
 		String imtString = "PGA";
 		if(saPeriod != 0)
 			imtString = saPeriod+"secSA";
@@ -338,8 +355,8 @@ public class U3ETAS_SimulationAnalysis {
 	 * @return - the first array element has the mean, min, and max and the second has the 
 	 * mean, lower95 conf of the mean, and upper 95 conf of the mean
 	 */
-	public UncertainArbDiscDataset[] computeHazardCurvesFromCatalogs(ArrayList<ObsEqkRupList> catalogList, Location location, 
-			double duration, double saPeriod, boolean randomIML) {
+	public static UncertainArbDiscDataset[] computeHazardCurvesFromCatalogs(ArrayList<ObsEqkRupList> catalogList, Location location, 
+			double duration, double saPeriod, boolean randomIML, ScalarIMR imr) {
 		
 		// get subcatalogs
 		ArrayList<ObsEqkRupList> eqkRupListList = getSubcatalogList(catalogList, duration);		
@@ -359,7 +376,7 @@ public class U3ETAS_SimulationAnalysis {
 					System.out.println(i);
 					showProgressAt+=eqkRupListList.size()/10;
 				}
-				EvenlyDiscretizedFunc func = computeHazardCurveLnX(eqkRupListList.get(i), location, saPeriod, duration, randomIML);
+				EvenlyDiscretizedFunc func = computeHazardCurveLnX(eqkRupListList.get(i), location, saPeriod, duration, randomIML, imr);
 				curvesFromAllCatalogsFunc_3D.set(func, 1.0);
 				
 //				if(num<maxNum) {
@@ -442,12 +459,20 @@ public class U3ETAS_SimulationAnalysis {
 	 * @return - ArrayList of Cumulative Num Distributions (one for each iml in the given array)
 	 */
 	public ArrayList<ArbitrarilyDiscretizedFunc>  computeNumHazardExceedDist(ArrayList<ObsEqkRupList> catalogList, Location location, 
-			double duration, double saPeriod, double[] imlLinearArray) {
+			double duration, double saPeriod, double[] imlLinearArray, ScalarIMR imr) {
 		
 		ArrayList<ArbitrarilyDiscretizedFunc> funcsList = new ArrayList<ArbitrarilyDiscretizedFunc>();
-		
+				
 		// get subcatalogs
 		ArrayList<ObsEqkRupList> eqkRupListList = getSubcatalogList(catalogList, duration);
+		
+		ArrayList<XY_DataSet> expNumVsTimeFuncList = new ArrayList<XY_DataSet>();
+		for(int i=0;i<imlLinearArray.length;i++) {
+			EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(25.,eqkRupListList.size(),50.);
+			func.setName("Exp Num Exceedances vs Time for IML = "+imlLinearArray[i]);
+			expNumVsTimeFuncList.add(func);
+		}
+
 		
 		ArbDiscrEmpiricalDistFunc_3D curvesFromAllCatalogsFunc_3D = new ArbDiscrEmpiricalDistFunc_3D(hazCurveLnMin,hazCurveNum,hazCurveDelta);
 		
@@ -457,9 +482,27 @@ public class U3ETAS_SimulationAnalysis {
 				if(D) System.out.println(i);
 				showProgressAt+=eqkRupListList.size()/10;
 			}
-			EvenlyDiscretizedFunc func = computeExpNumExceedCurveLnX(eqkRupListList.get(i), location, saPeriod, duration);
+			EvenlyDiscretizedFunc func = computeExpNumExceedCurveLnX(eqkRupListList.get(i), location, saPeriod, duration, imr);
 			curvesFromAllCatalogsFunc_3D.set(func, 1.0);
+			
+			for(int j=0;j<imlLinearArray.length;j++) {
+				double iml_ln = Math.log(imlLinearArray[j]);
+				int iml_index=func.getClosestXIndex(iml_ln);
+				expNumVsTimeFuncList.get(j).set(i,func.getY(iml_index));
+			}
 		}		
+		
+		// ***************************
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.MAGENTA));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.CYAN));
+		PlottingUtils.writeAndOrPlotFuncs(expNumVsTimeFuncList, plotChars, "", "Time (yrs)", "Exp Num Exceedances", 
+				new Range(0,50e3), new Range(1e-3,350), false, true, null, true);
+		// ***************************
+
 		
 		EvenlyDiscretizedFunc meanExpNumExceedCurveLnX = curvesFromAllCatalogsFunc_3D.getMeanCurve();
 		
@@ -541,12 +584,19 @@ public class U3ETAS_SimulationAnalysis {
 	 * @return
 	 */
 	public ArrayList<ArbitrarilyDiscretizedFunc> computeNumHazardExceedDistRandomIML(ArrayList<ObsEqkRupList> catalogList, Location location, 
-			double duration, double saPeriod, double[] imlLinearArray) {
+			double duration, double saPeriod, double[] imlLinearArray, ScalarIMR imr) {
 		
 		ArrayList<ArbitrarilyDiscretizedFunc> funcsList = new ArrayList<ArbitrarilyDiscretizedFunc>();
 		
 		// get subcatalogs
 		ArrayList<ObsEqkRupList> eqkRupListList = getSubcatalogList(catalogList, duration);
+		
+		ArrayList<XY_DataSet> expNumVsTimeFuncList = new ArrayList<XY_DataSet>();
+		for(int i=0;i<imlLinearArray.length;i++) {
+			EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(25.,eqkRupListList.size(),50.);
+			func.setName("Exp Num Exceedances vs Time for IML = "+imlLinearArray[i]);
+			expNumVsTimeFuncList.add(func);
+		}
 		
 		ArbDiscrEmpiricalDistFunc_3D curvesFromAllCatalogsFunc_3D = new ArbDiscrEmpiricalDistFunc_3D(hazCurveLnMin,hazCurveNum,hazCurveDelta);
 		
@@ -556,9 +606,28 @@ public class U3ETAS_SimulationAnalysis {
 				if(D) System.out.println(i);
 				showProgressAt+=eqkRupListList.size()/10;
 			}
-			EvenlyDiscretizedFunc func = computeNumExceedCurveRandomIML_LnX(eqkRupListList.get(i), location, saPeriod, duration);
+			EvenlyDiscretizedFunc func = computeNumExceedCurveRandomIML_LnX(eqkRupListList.get(i), location, saPeriod, duration, imr);
 			curvesFromAllCatalogsFunc_3D.set(func, 1.0);
+			
+			for(int j=0;j<imlLinearArray.length;j++) {
+				double iml_ln = Math.log(imlLinearArray[j]);
+				int iml_index=func.getClosestXIndex(iml_ln);
+				expNumVsTimeFuncList.get(j).set(i,func.getY(iml_index));
+			}
+
 		}		
+		
+		// ***************************
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLACK));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.MAGENTA));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.CYAN));
+		PlottingUtils.writeAndOrPlotFuncs(expNumVsTimeFuncList, plotChars, "", "Time (yrs)", "Exp Num Exceedances", 
+				new Range(0,50e3), new Range(1e-3,350), false, true, null, true);
+		// ***************************
+
 		
 		EvenlyDiscretizedFunc meanExpNumExceedCurveLnX = curvesFromAllCatalogsFunc_3D.getMeanCurve();
 		
@@ -605,8 +674,8 @@ public class U3ETAS_SimulationAnalysis {
 	 * @param saPeriod
 	 * @return
 	 */
-	public ArbitrarilyDiscretizedFunc computeHazardCurvesFromCatalogsPoisson(ArrayList<ObsEqkRupList> catalogList, Location location, 
-			double duration, double saPeriod) {
+	public static ArbitrarilyDiscretizedFunc computeHazardCurvesFromCatalogsPoisson(ArrayList<ObsEqkRupList> catalogList, Location location, 
+			double duration, double saPeriod, ScalarIMR imr) {
 		
 		// get subcatalogs
 		ArrayList<ObsEqkRupList> eqkRupListList = getSubcatalogList(catalogList, duration);
@@ -619,7 +688,7 @@ public class U3ETAS_SimulationAnalysis {
 				if(D) System.out.println(i);
 				showProgressAt+=eqkRupListList.size()/10;
 			}
-			EvenlyDiscretizedFunc func = computeExpNumExceedCurveLnX(eqkRupListList.get(i), location, saPeriod, duration);
+			EvenlyDiscretizedFunc func = computeExpNumExceedCurveLnX(eqkRupListList.get(i), location, saPeriod, duration, imr);
 			curvesFromAllCatalogsFunc_3D.set(func, 1.0);
 		}		
 		
@@ -633,7 +702,10 @@ public class U3ETAS_SimulationAnalysis {
 			hazCurve.set(Math.exp(meanExpNumExceedCurveLnX.getX(i)), 1.0-Math.exp(-meanExpNumExceedCurveLnX.getY(i)));
 		}
 
-		hazCurve.setName("Hazard curve computed from expected num exceedances (using Poisson model)");
+		hazCurve.setName("ComputeHazardCurvesFromCatalogsPoisson");
+		hazCurve.setInfo("Hazard curve computed from expected num exceedances (using Poisson model)");
+		
+		
 		
 
 		return hazCurve;
@@ -832,7 +904,7 @@ public class U3ETAS_SimulationAnalysis {
 
 	}
 	
-	public void writeAndOrPlotHazardCurves(ArrayList<UncertainArbDiscDataset[]> dataSetsArray, ArrayList<XY_DataSet> funcsArray, double duration, 
+	public static void writeAndOrPlotHazardCurves(ArrayList<UncertainArbDiscDataset[]> dataSetsArray, ArrayList<XY_DataSet> funcsArray, double duration, 
 			double saPeriod, String dirName, boolean popupWindow, String plotTitle) {
 		
 		Color[] colorArray = {Color.BLUE, Color.RED, Color.BLACK, Color.MAGENTA, Color.CYAN};
@@ -908,7 +980,7 @@ public class U3ETAS_SimulationAnalysis {
 	}
 	
 	
-	public 	UncertainArbDiscDataset get95perConfForMultRuns(ArbDiscrEmpiricalDistFunc_3D arbDiscrEmpiricalDistFunc_3D) {
+	public static UncertainArbDiscDataset get95perConfForMultRuns(ArbDiscrEmpiricalDistFunc_3D arbDiscrEmpiricalDistFunc_3D) {
 		EvenlyDiscretizedFunc meanCurve = arbDiscrEmpiricalDistFunc_3D.getMeanCurve();
 		EvenlyDiscretizedFunc stdevCurve = arbDiscrEmpiricalDistFunc_3D.getStdDevCurve();
 		EvenlyDiscretizedFunc upper95 = stdevCurve.deepClone();
@@ -935,8 +1007,8 @@ public class U3ETAS_SimulationAnalysis {
 	
 	/**
 	 */
-	private EvenlyDiscretizedFunc computeHazardCurveLnX(ObsEqkRupList obsQkList, Location location, double saPeriod, double forecastDuration, 
-			boolean randomIML) {
+	private static EvenlyDiscretizedFunc computeHazardCurveLnX(ObsEqkRupList obsQkList, Location location, double saPeriod, double forecastDuration, 
+			boolean randomIML, ScalarIMR imr) {
 		
 		// set imr to default values
 		imr.setParamDefaults();
@@ -976,6 +1048,7 @@ public class U3ETAS_SimulationAnalysis {
 		return curveLogXvalues;
 	}
 	
+	
 	/**
 	 * This gets the hazare curve calculator, setting any special parameters (do this once here for consistency)
 	 * @param calc
@@ -984,13 +1057,15 @@ public class U3ETAS_SimulationAnalysis {
 	private static HazardCurveCalculator getHazardCurveCalculator() {
 		HazardCurveCalculator calc = new HazardCurveCalculator();
 		calc.setPtSrcDistCorrType(PtSrcDistCorr.Type.NSHMP08);
+		calc.setMinMagnitude(5.0);
 		return calc;
 	}
 	
 	
 	/**
 	 */
-	private EvenlyDiscretizedFunc computeExpNumExceedCurveLnX(ObsEqkRupList obsQkList, Location location, double saPeriod, double forecastDuration) {
+	private static EvenlyDiscretizedFunc computeExpNumExceedCurveLnX(ObsEqkRupList obsQkList, Location location, 
+			double saPeriod, double forecastDuration, ScalarIMR imr) {
 		
 		// set imr to default values
 		imr.setParamDefaults();
@@ -1029,7 +1104,8 @@ public class U3ETAS_SimulationAnalysis {
 	
 	/**
 	 */
-	private EvenlyDiscretizedFunc computeNumExceedCurveRandomIML_LnX(ObsEqkRupList obsQkList, Location location, double saPeriod, double forecastDuration) {
+	private EvenlyDiscretizedFunc computeNumExceedCurveRandomIML_LnX(ObsEqkRupList obsQkList, Location location, 
+			double saPeriod, double forecastDuration, ScalarIMR imr) {
 		
 		// set imr to default values
 		imr.setParamDefaults();
@@ -1072,7 +1148,7 @@ public class U3ETAS_SimulationAnalysis {
 	
 	/**
 	 */
-	private void testRandomSamplesFromIMR(EqkRupture rup, Location location, double saPeriod) {
+	private void testRandomSamplesFromIMR(EqkRupture rup, Location location, double saPeriod, ScalarIMR imr) {
 		
 		// set imr to default values
 		imr.setParamDefaults();
@@ -1126,7 +1202,8 @@ public class U3ETAS_SimulationAnalysis {
 	
 	
 	
-	private ArbitrarilyDiscretizedFunc computeHazardCurveFromERF(FaultSystemSolutionERF erf, Location location, double saPeriod, double forecastDuration) {
+	private ArbitrarilyDiscretizedFunc computeHazardCurveFromERF(FaultSystemSolutionERF erf, Location location, 
+			double saPeriod, double forecastDuration, ScalarIMR imr) {
 		
 
 		// set imr to default values
@@ -1159,7 +1236,7 @@ public class U3ETAS_SimulationAnalysis {
 		for(int i=0;i<curveLogXvalues.size();i++)
 			curveLinearXvalues.set(Math.exp(curveLogXvalues.getX(i)),curveLogXvalues.getY(i));
 		
-		
+		curveLinearXvalues.setName("computeHazardCurveFromERF");
 		return curveLinearXvalues;
 	}
 	
@@ -1285,53 +1362,66 @@ public class U3ETAS_SimulationAnalysis {
 	
 	public static void main(String[] args) {
 		
-		double duration = 50;
-		double saPeriod = 0; // 0 = PGA
+		// FOR KEVIN **********************
+		
+		// loop over sites in RELM gridded region
 		Location loc = new Location(34.05,-118.25);
-		
-		U3ETAS_SimulationAnalysis analysis = new U3ETAS_SimulationAnalysis();
-		
-		// Write out data sets
-		// loop over sites in RELM gridded region (filename convention for output)
 		// loop over saPeriods of 0, 0.2, 1, 5
+		double saPeriod = 0; // 0 = PGA
+		
+		ScalarIMR imr = AttenRelRef.CB_2014.instance(null);
+		
+		double duration = 50;
+		
+		Random random = new Random();
+		
+		ArrayList<ObsEqkRupList> catalogsList = U3ETAS_SimulationAnalysis.loadCatalogs(new File(fssFileName), new File(catalogsFileName));
+		UncertainArbDiscDataset[] datasetsArray1 = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(catalogsList, loc, duration, saPeriod, false, imr);
+		ArbitrarilyDiscretizedFunc poissonCurve = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogsPoisson(catalogsList, loc, duration, saPeriod, imr);
+		ArrayList<ObsEqkRupList> declusteredCatalogsList = U3ETAS_SimulationAnalysis.getGK_DeclusteredCatalog(catalogsList);
+		UncertainArbDiscDataset[] datasetsArray2 = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(declusteredCatalogsList, loc, duration, saPeriod, false, imr);
+		ArrayList<ObsEqkRupList> catalogsRandmizedList = U3ETAS_SimulationAnalysis.getRandomizedCatalogs(catalogsList, random);
+		UncertainArbDiscDataset[] datasetsArray3 = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(catalogsRandmizedList, loc, duration, saPeriod, false, imr);
+		
+		// write out contents of poissonCurve, datasetsArray1, datasetsArray2, and datasetsArray3,
+		
+		// END FOR KEVIN **********************
+		
+//		// TEST PLOT THE ABOVE:
+		ArrayList<UncertainArbDiscDataset[]> dataSetsArray = new ArrayList<UncertainArbDiscDataset[]>();
+		ArrayList<XY_DataSet> funcsArray = new ArrayList<XY_DataSet>();
+		
+		String locName = "Los Angeles";
+		
+		dataSetsArray.add(datasetsArray1);
+		dataSetsArray.add(datasetsArray2);
+		dataSetsArray.add(datasetsArray3);
+		funcsArray.add(poissonCurve);
+		U3ETAS_SimulationAnalysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
+
+	
+		
+//		U3ETAS_SimulationAnalysis analysis = new U3ETAS_SimulationAnalysis();
+//		
+//		
+//		funcsArray.add(analysis.computeHazardCurvesFromCatalogsPoisson(analysis.getCatalogs(), loc, duration, saPeriod, imr)); // Magenta
+//		dataSetsArray.add(U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(analysis.getCatalogs(), loc, duration, saPeriod, false, imr)); // Blue
+//		dataSetsArray.add(U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(analysis.getCatalogsDeclustered(), loc, duration, saPeriod, false, imr));	// Red
+//		dataSetsArray.add(U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(analysis.getRandomizedCatalogs(), loc, duration, saPeriod, false, imr)); // Black
+//		U3ETAS_SimulationAnalysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
 
 		
-//		// TEST PLOT OF WHAT I'M AFTER:
-//		ArrayList<UncertainArbDiscDataset[]> dataSetsArray = new ArrayList<UncertainArbDiscDataset[]>();
-//		ArrayList<XY_DataSet> funcsArray = new ArrayList<XY_DataSet>();
-//		
-//		String locName = "Los Angeles";
-//		
-//		funcsArray.add(analysis.computeHazardCurvesFromCatalogsPoisson(analysis.getCatalogs(), loc, duration, saPeriod)); // Magenta
-//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(analysis.getCatalogs(), loc, duration, saPeriod, false)); // Blue
-//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(analysis.getCatalogsDeclustered(), loc, duration, saPeriod, false));	// Red
-//		analysis.randomizeCatalogEventTimes();
-//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(analysis.getCatalogs(), loc, duration, saPeriod, false)); // Black
-//		analysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
 //		analysis.doMFDs();
-
-		
-		
-		
-		// TODO - num exceedances versus time (for given IMLs) & comparison with Poission (embed in analisis below?)
-		
-		
-		
-//		FaultSystemSolutionERF erf = analysis.getTimeIndERF_Instance(duration);
-//		funcsArray.add(ERF_Calculator.getTotalMFD_ForERF(erf, minMag, 8.95, numMag, true));
-//		funcsArray.add(analysis.makeMFD(analysis.makeRandomCatalogListFromERF(erf)));
-//		analysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
-		
 		
 //		// THIS COMPARES HAZARD CURVES USING THE TI ERF WITH RANDOM CATALOGS FROM THE ERF (NOTE THE HARD CODING COMMENT)
-		// THE MATCH IS PERFECT
+//		// THE MATCH IS PERFECT
 //		FaultSystemSolutionERF erf = analysis.getTimeIndERF_Instance(duration);
-//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
+//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration, imr)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
 //		System.out.println("starting Rand Cats");
 //		ArrayList<ObsEqkRupList> randCats = analysis.makeRandomCatalogListFromERF(erf);
 //		System.out.println("done with Rand Cats");
-//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(randCats, loc, duration, saPeriod, false));
-//		funcsArray.add(analysis.computeHazardCurvesFromCatalogsPoisson(randCats, loc, duration, saPeriod));
+//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(randCats, loc, duration, saPeriod, false, imr));
+//		funcsArray.add(analysis.computeHazardCurvesFromCatalogsPoisson(randCats, loc, duration, saPeriod, imr));
 //		analysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
 		
 //		// THIS COMPARES THE USGS LA HAZARD CURVE TO THAT COMPUTED WITH THE ERF FOR 4 DIFF IMRs
@@ -1340,26 +1430,26 @@ public class U3ETAS_SimulationAnalysis {
 //		FaultSystemSolutionERF erf = analysis.getTimeIndERF_Instance(duration);
 //		erf.setParameter(ApplyGardnerKnopoffAftershockFilterParam.NAME, true);
 //		erf.updateForecast();
-//		analysis.imr = AttenRelRef.CB_2014.instance(null);
-//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
-//		analysis.imr = AttenRelRef.ASK_2014.instance(null);
-//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
-//		analysis.imr = AttenRelRef.BSSA_2014.instance(null);
-//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
-//		analysis.imr = AttenRelRef.CY_2014.instance(null);
-//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
+//		imr = AttenRelRef.CB_2014.instance(null);
+//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration, imr)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
+//		imr = AttenRelRef.ASK_2014.instance(null);
+//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration, imr)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
+//		imr = AttenRelRef.BSSA_2014.instance(null);
+//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration, imr)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
+//		imr = AttenRelRef.CY_2014.instance(null);
+//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration, imr)); // HAD TO SKIP M≤5 EVENTS IN THE HAZARD CURVE CALCULATOR (HARD CODED) FOR THIS TO WORK
 //		funcsArray.add(analysis.getUSGS_LosAngelesPGA_2in50_HazardCurve());
 //		analysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
 
 		
 //		// THIS COMPARES ERF HAZARD CURVE TO U3ETAS RANDOMIZED CURVE; DIFFERENCE IS 16% AT 2 IN 50, WHICH SEEMS HIGH
 //		// BUT IS WITHIN UNCERTAINTIES AT LA FOR U3-TI SUPPLEMENTAL DATA
-//		// MFD COMPARISON SHOWS THE PROBLEM THAT U3ETAS IS UNDERPREDICTING EVENTS AROUND M 7 AT ABOUT THE SAME
-//		// AMOUNT THE BSSA PAPER SHOWS.  NEED TO BUMP UP THE totRateScaleFactor BY 23% (1.14*1.23=1.4) TO 
-//		// MINIMIZE MFD DISCREPENCIES
+//		// MFD COMPARISON SHOWS THE PROBLEM THAT U3ETAS IS UNDERPREDICTING (by 26%) EVENTS AROUND M≥7, WHICH IS ABOUT THE SAME
+//		// AMOUNT THE BSSA PAPER SHOWS.  NEED TO BUMP UP THE totRateScaleFactor BY 31% (1.14*1.31=1.5) TO 
+//		// BALANCE MFD DISCREPENCIES. NoERT CASE SHOWS LESS, BUT STILL A DISCREPANCY (14% ON MFD; 12% ON 2IN50).
 //		FaultSystemSolutionERF erf = analysis.getTimeIndERF_Instance(duration);
-//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration));
-//		funcsArray.add(analysis.computeHazardCurvesFromCatalogsPoisson(analysis.getCatalogs(), loc, duration, saPeriod));
+//		funcsArray.add(analysis.computeHazardCurveFromERF(erf, loc, saPeriod, duration, imr));
+//		funcsArray.add(analysis.computeHazardCurvesFromCatalogsPoisson(analysis.getCatalogs(), loc, duration, saPeriod, imr));
 //		funcsArray.add(analysis.getUSGS_LosAngelesPGA_2in50_HazardCurve());
 //		analysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
 //		// COMPARE MFDS
@@ -1382,15 +1472,13 @@ public class U3ETAS_SimulationAnalysis {
 //		analysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray2, duration, saPeriod, null, true, locName);
 
 
-		// THIS LOOKS AT NUM EXCEEDANCE DISTRIBUTIONS AT THE SPECIFIED IMLS USING RANDOM IML SAMPLES
-//		analysis.computeNumHazardExceedDistRandomIML(analysis.getCatalogs(), loc, duration, saPeriod, new double[]{0.02,0.2,0.7,2.0});
-//		analysis.randomizeCatalogEventTimes();
-//		analysis.computeNumHazardExceedDistRandomIML(analysis.getCatalogs(), loc, duration, saPeriod, new double[]{0.02,0.2,0.7,2.0});
+//		// THIS LOOKS AT NUM EXCEEDANCE DISTRIBUTIONS AT THE SPECIFIED IMLS USING RANDOM IML SAMPLES
+//		analysis.computeNumHazardExceedDistRandomIML(analysis.getCatalogs(), loc, duration, saPeriod, new double[]{0.02,0.2,0.7,2.0}, imr);
+//		analysis.computeNumHazardExceedDistRandomIML(analysis.getRandomizedCatalogs(), loc, duration, saPeriod, new double[]{0.02,0.2,0.7,2.0}, imr);
 
-		// THIS LOOKS AT NUM EXCEEDANCE DISTRIBUTIONS AT THE SPECIFIED IMLS
-//		analysis.computeNumHazardExceedDist(analysis.getCatalogs(), loc, duration, saPeriod, new double[]{0.02,0.2,0.7,2.0});
-//		analysis.randomizeCatalogEventTimes();
-//		analysis.computeNumHazardExceedDist(analysis.getCatalogs(), loc, duration, saPeriod, new double[]{0.02,0.2,0.7,2.0});
+//		// THIS LOOKS AT NUM EXCEEDANCE DISTRIBUTIONS AT THE SPECIFIED IMLS
+//		analysis.computeNumHazardExceedDist(analysis.getCatalogs(), loc, duration, saPeriod, new double[]{0.02,0.2,0.7,2.0}, imr);
+//		analysis.computeNumHazardExceedDist(analysis.getRandomizedCatalogs(), loc, duration, saPeriod, new double[]{0.02,0.2,0.7,2.0}, imr);
 
 		
 		
@@ -1400,14 +1488,11 @@ public class U3ETAS_SimulationAnalysis {
 //		duration = 50;
 //		analysis.computeNumEventDistribution(analysis.getCatalogs(), duration, new double[]{5.0,6.0, 7.0, 8.0});
 //		analysis.computeNumEventDistribution(analysis.getCatalogsDeclustered(), duration, new double[]{5.0,6.0, 7.0, 8.0});
-//		analysis.randomizeCatalogEventTimes();
-//		analysis.computeNumEventDistribution(analysis.getCatalogs(), duration, new double[]{5.0,6.0, 7.0, 8.0});
-
+//		analysis.computeNumEventDistribution(analysis.getRandomizedCatalogs(), duration, new double[]{5.0,6.0, 7.0, 8.0});
 		
 //		// THIS PLOTS CUMULATIVE RATES VERSUS TIME
 //		analysis.writeAndOrPlotRateVersusTime(analysis.getCatalogs(), null, true, "Test U3ETAS");
-//		analysis.randomizeCatalogEventTimes();
-//		analysis.writeAndOrPlotRateVersusTime(analysis.getCatalogs(), null, true, "Test Poisson");
+//		analysis.writeAndOrPlotRateVersusTime(analysis.getRandomizedCatalogs(), null, true, "Test Poisson");
 		
 //		// THIS TESTS THAT CUTTING SUMULATIONS IN HALF PRODUCES CONSISENT RESULTS
 //		// cut catalogs in half:
@@ -1418,26 +1503,24 @@ public class U3ETAS_SimulationAnalysis {
 //			firstHalfCats.add(allCatalogs.get(i));
 //			secondHalfCats.add(allCatalogs.get(i+500));
 //		}
-//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(firstHalfCats, loc, duration, saPeriod));
-//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(secondHalfCats, loc, duration, saPeriod));
-
+//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(firstHalfCats, loc, duration, saPeriod,false, imr));
+//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(secondHalfCats, loc, duration, saPeriod,false, imr));
+//		U3ETAS_SimulationAnalysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
 		
 //		// THIS TESTS THAT A RANDOMIZED CATALOG PRODUCES THE SAME CURVE AS THAT FROM A POISSON MODEL USING THE AVERAGE NUMBER OF EXCEEDANCES
-//		funcsArray.add(analysis.computeHazardCurvesFromCatalogsPoisson(analysis.getCatalogs(), loc, duration, saPeriod));
-//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(analysis.getCatalogsRandomized(), loc, duration, saPeriod, false));	
-//		analysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
-
+//		funcsArray.add(analysis.computeHazardCurvesFromCatalogsPoisson(analysis.getCatalogs(), loc, duration, saPeriod, imr));
+//		dataSetsArray.add(U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(analysis.getRandomizedCatalogs(), loc, duration, saPeriod, false, imr));	
+//		U3ETAS_SimulationAnalysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
 		
 //		// THIS TESTS THAT RANDOM IML SAMPLES PRODUCE THE SAME RESULT
 //		boolean randIML = false;
-//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(analysis.getCatalogs(), loc, duration, saPeriod, randIML));
+//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(analysis.getCatalogs(), loc, duration, saPeriod, randIML, imr));
 //		randIML = true;
-//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(analysis.getCatalogs(), loc, duration, saPeriod, randIML));
+//		dataSetsArray.add(analysis.computeHazardCurvesFromCatalogs(analysis.getCatalogs(), loc, duration, saPeriod, randIML, imr));
 //		analysis.writeAndOrPlotHazardCurves(dataSetsArray, funcsArray, duration, saPeriod, null, true, locName);
 		
 		// THIS TESTS THAT RANDOM IMLs FROM THE IMR REPRODUCE THE DISTRIBUTION, INCLUDING TRUNCATION
-//		analysis.testRandomSamplesFromIMR(analysis.getCatalogs().get(0).get(0), loc, saPeriod);
-//		System.exit(0);
+//		analysis.testRandomSamplesFromIMR(analysis.getCatalogs().get(0).get(0), loc, saPeriod, imr);
 
 
 	}
