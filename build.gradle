@@ -10,6 +10,7 @@ dependencies {
     compileOnly 'org.apache.commons:commons-collections4:4.1'
     compileAndResource 'org.apache.commons:commons-compress:1.15'
     compileAndResource 'uk.me.berndporr:iirj:1.0'
+    compileAndResource 'org.apache.spark:spark-core_2.12:2.4.7'
     
     /* no remote repo */
     compileOnly files('lib/EventWebService.jar')
