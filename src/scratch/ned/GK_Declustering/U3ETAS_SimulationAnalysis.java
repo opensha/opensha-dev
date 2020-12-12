@@ -4,14 +4,18 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.dom4j.DocumentException;
 import org.jfree.data.Range;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.AbstractDiscretizedFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
@@ -28,6 +32,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.params.PtSrcDistanceCorrectionParam;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -106,7 +111,11 @@ public class U3ETAS_SimulationAnalysis {
 	
 	public U3ETAS_SimulationAnalysis() {
 		
-		this.catalogList = loadCatalogs(new File(fssFileName), new File(catalogsFileName));
+		try {
+			this.catalogList = loadCatalogs(new File(fssFileName), new File(catalogsFileName));
+		} catch (IOException | DocumentException e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
 		
 //		System.out.println("num Catalogs = "+catalogList.size());
 		
@@ -228,18 +237,11 @@ public class U3ETAS_SimulationAnalysis {
 	}
 	
 	
-	public static ArrayList<ObsEqkRupList> loadCatalogs(File fssFile, File catalogsFile) {
+	public static ArrayList<ObsEqkRupList> loadCatalogs(File fssFile, File catalogsFile) throws IOException, DocumentException {
 		
 
-		FaultSystemSolution sol = null;
-		List<ETAS_Catalog> catalogs=null;
-
-		try {
-			sol = FaultSystemIO.loadSol(fssFile);
-			catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile, 5d); // 5d will filter out below M5
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);;
+		List<ETAS_Catalog> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile, 5d); // 5d will filter out below M5
 		
 		// temporary hack
 		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
@@ -1359,9 +1361,78 @@ public class U3ETAS_SimulationAnalysis {
 				return catalogList;
 	}
 	
-	
-	public static void main(String[] args) {
+	private static void demoLoadZippedCSVs(File file) throws IOException {
+		ZipFile zip = new ZipFile(file);
 		
+		Enumeration<? extends ZipEntry> entries = zip.entries();
+		
+		while (entries.hasMoreElements()) {
+			ZipEntry entry = entries.nextElement();
+			String name = entry.getName();
+			if (!name.endsWith(".csv"))
+				continue;
+			System.out.println("Loading "+entry);
+			String dirName = name.substring(0, name.indexOf('/'));
+			String fileName = name.substring(name.indexOf('/')+1);
+			
+			// parse the name for node/location
+			String[] split = dirName.split("_");
+			int node = Integer.parseInt(split[1]);
+			double lat = Double.parseDouble(split[2]);
+			double lon = Double.parseDouble(split[2]);
+			Location loc = new Location(lat, lon);
+			
+			String imt;
+			double period;
+			if (fileName.startsWith("sa_")) {
+				imt = SA_Param.NAME;
+				String periodStr = fileName.substring(3, fileName.indexOf(".csv"));
+				period = Double.parseDouble(periodStr);
+			} else {
+				imt = PGA_Param.NAME;
+				period = 0d;
+			}
+			
+			System.out.println(fileName);
+			System.out.println("Loading "+name+": node="+node+", loc="+loc+", "+imt+" ("+(float)period+" s)");
+			CSVFile<String> csv = CSVFile.readStream(zip.getInputStream(entry), true);
+			
+			int col = 1;
+			ArbitrarilyDiscretizedFunc fullMean = loadFuncFromCSV(csv, 0, col++);
+			UncertainArbDiscDataset fullMinMax = new UncertainArbDiscDataset(
+					fullMean, loadFuncFromCSV(csv, 0, col++), loadFuncFromCSV(csv, 0, col++));
+			UncertainArbDiscDataset fullConf95 = new UncertainArbDiscDataset(
+					fullMean, loadFuncFromCSV(csv, 0, col++), loadFuncFromCSV(csv, 0, col++));
+			ArbitrarilyDiscretizedFunc poisson = loadFuncFromCSV(csv, 0, col++);
+			ArbitrarilyDiscretizedFunc declusteredMean = loadFuncFromCSV(csv, 0, col++);
+			UncertainArbDiscDataset declusteredMinMax = new UncertainArbDiscDataset(
+					declusteredMean, loadFuncFromCSV(csv, 0, col++), loadFuncFromCSV(csv, 0, col++));
+			UncertainArbDiscDataset declusteredConf95 = new UncertainArbDiscDataset(
+					declusteredMean, loadFuncFromCSV(csv, 0, col++), loadFuncFromCSV(csv, 0, col++));
+			ArbitrarilyDiscretizedFunc randomMean = loadFuncFromCSV(csv, 0, col++);
+			UncertainArbDiscDataset randomMinMax = new UncertainArbDiscDataset(
+					randomMean, loadFuncFromCSV(csv, 0, col++), loadFuncFromCSV(csv, 0, col++));
+			UncertainArbDiscDataset randomConf95 = new UncertainArbDiscDataset(
+					randomMean, loadFuncFromCSV(csv, 0, col++), loadFuncFromCSV(csv, 0, col++));
+			if (node == 0)
+				System.out.println(fullMinMax);
+			Preconditions.checkState(col == csv.getNumCols());
+		}
+		
+		zip.close();
+	}
+	
+	private static ArbitrarilyDiscretizedFunc loadFuncFromCSV(CSVFile<String> csv, int xCol, int yCol) {
+		ArbitrarilyDiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
+		for (int row=1; row<csv.getNumRows(); row++)
+			func.set(csv.getDouble(row, xCol), csv.getDouble(row, yCol));
+		return func;
+	}
+	
+	public static void main(String[] args) throws IOException, DocumentException {
+		demoLoadZippedCSVs(new File("/home/kevin/OpenSHA/UCERF3/etas/etas_decluster/"
+				+ "2020_12_11-decluster-full-td-kCOV1.5-scale1.14-spacing1/results.zip"));
+		System.exit(0);
 		// FOR KEVIN **********************
 		
 		// loop over sites in RELM gridded region
