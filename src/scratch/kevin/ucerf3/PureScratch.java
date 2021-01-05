@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -36,6 +37,11 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
+import org.apache.spark.mllib.linalg.Vectors;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoder;
+import org.apache.spark.sql.Encoders;
+import org.apache.spark.sql.SparkSession;
 import org.dom4j.DocumentException;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
@@ -123,6 +129,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
+import com.google.common.primitives.Doubles;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -164,6 +171,7 @@ import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
+import smile.stat.distribution.GaussianMixture;
 
 public class PureScratch {
 
@@ -1975,13 +1983,25 @@ public class PureScratch {
 		System.out.println(numPtMatches+" pt matches and "+numPtFails
 				+" fails, "+(numPtMatches+numPtFails)+" tot pt source");
 	}
+	
+	private static void test79() {
+		SparkSession spark = SparkSession.builder().master("local").getOrCreate();
+		double[] data = { 0, 1, 2, 3, 4 };
+		Dataset<Double> dataset = spark.createDataset(Doubles.asList(data), Encoders.DOUBLE());
+		dataset.toJavaRDD().map(s -> Vectors.dense(s));
+		
+		List<FaultSection> sects = null;
+		Map<Integer, List<FaultSection>> parentMap = sects.stream().collect(Collectors.groupingBy(s -> s.getParentSectionId()));
+		sects.removeIf(s -> s.getParentSectionId() == 2);
+		GaussianMixture.fit(data);
+	}
 
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test78();
+		test79();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

@@ -10,9 +10,9 @@ dependencies {
     compileOnly 'org.apache.commons:commons-collections4:4.1'
     compileAndResource 'org.apache.commons:commons-compress:1.15'
     compileAndResource 'uk.me.berndporr:iirj:1.0'
-    compileAndResource 'org.apache.spark:spark-core_2.12:3.0.1'
-    compileAndResource 'org.apache.spark:spark-mllib_2.12:3.0.1'
-    compileAndResource 'com.github.haifengl:smile-core:2.6.0'
+    compileOnly 'org.apache.spark:spark-core_2.12:3.0.1'
+    compileOnly 'org.apache.spark:spark-mllib_2.12:3.0.1'
+    compileOnly 'com.github.haifengl:smile-core:2.6.0'
     
     /* no remote repo */
     compileOnly files('lib/EventWebService.jar')

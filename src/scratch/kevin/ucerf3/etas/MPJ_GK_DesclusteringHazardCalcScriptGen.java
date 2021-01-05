@@ -24,7 +24,7 @@ public class MPJ_GK_DesclusteringHazardCalcScriptGen {
 				+ "2019_11_05-Start2012_500yr_kCOV1p5_Spontaneous_HistoricalCatalog/results_m5_preserve_chain.bin");
 		File fssFile = new File("/home/scec-06/kmilner/ucerf3/ucerf3-etas-launcher/inputs/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip");
-		double spacing = 0.1d;
+		double spacing = 0.05d;
 		
 		String dirName = "2020_12_11-decluster-full-td-kCOV1.5-scale1.14-spacing"+(float)spacing;
 

@@ -417,7 +417,7 @@ public class RSQSimRotatedRupVariabilityConfig extends RotatedRupVariabilityConf
 		RupturePlotGenerator.OTHER_ELEM_COLOR = new Color(100, 100, 100);
 		RupturePlotGenerator.HYPO_RADIUS = 0.015;
 		RupturePlotGenerator.HYPO_COLOR = new Color(200, 0, 0);
-		RupturePlotGenerator.writeMapPlot(plotElems, first, null, outputDir, prefix, null, null, null, null, null, null, anns);
+		RupturePlotGenerator.writeMapPlot(plotElems, first, null, outputDir, prefix, null, null, null, null, null, null, null, anns, " ");
 	}
 	
 	public RSQSimRotatedRupVariabilityConfig forSites(List<Site> sites) {
