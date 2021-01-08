@@ -1575,9 +1575,6 @@ public class U3ETAS_SimulationAnalysis {
 		return funcArray;
 	}
 	
-
-	
-	
 	
 	public static void main(String[] args) throws IOException, DocumentException {
 
