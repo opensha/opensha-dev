@@ -2,9 +2,12 @@ package scratch.ned.FSS_Inversion2019;
 
 import java.awt.Color;
 import java.io.IOException;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
@@ -24,6 +27,8 @@ public class PlottingUtils {
 	
 	final static double defaultWidthInches = 3.5;
 	final static double defaultHeightInches = 3.0;
+	
+	final static boolean integerYaxisTickLabeIncrements = false;
 	
 	/**
 	 * The general x-y plotting method with default width and height
@@ -54,6 +59,80 @@ public class PlottingUtils {
 		
 		writeAndOrPlotFuncs(funcs, plotChars, plotName, xAxisLabel, yAxisLabel, xAxisRange, yAxisRange, 
 				logX, logY, defaultWidthInches, defaultHeightInches, fileNamePrefix,  popupWindow);
+	}
+	
+	
+	/**
+	 * The general x-y plotting method with default width and height, for a single function
+	 * @param func
+	 * @param plotChar
+	 * @param plotName
+	 * @param xAxisLabel
+	 * @param yAxisLabel
+	 * @param xAxisRange
+	 * @param yAxisRange
+	 * @param logX
+	 * @param logY
+	 * @param fileNamePrefix - set a null if you don't want to save to files
+	 * @param popupWindow - set as false if you don't want a pop-up windows with the plots
+	 */
+	public static void writeAndOrPlotFuncs(
+			XY_DataSet func, 
+			PlotCurveCharacterstics plotChar, 
+			String plotName,
+			String xAxisLabel,
+			String yAxisLabel,
+			Range xAxisRange,
+			Range yAxisRange,
+			boolean logX,
+			boolean logY,
+			String fileNamePrefix, 
+			boolean popupWindow) {
+		
+		ArrayList<XY_DataSet> funcs = new ArrayList<XY_DataSet>(); 
+		funcs.add(func);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(plotChar);
+		writeAndOrPlotFuncs(funcs, plotChars, plotName, xAxisLabel, yAxisLabel, xAxisRange, yAxisRange, 
+				logX, logY, defaultWidthInches, defaultHeightInches, fileNamePrefix,  popupWindow);
+	}
+
+
+	/**
+	 * The general x-y plotting method with default width and height, for a single function
+	 * @param func
+	 * @param plotChar
+	 * @param plotName
+	 * @param xAxisLabel
+	 * @param yAxisLabel
+	 * @param xAxisRange
+	 * @param yAxisRange
+	 * @param logX
+	 * @param logY
+	 * @param fileNamePrefix - set a null if you don't want to save to files
+	 * @param popupWindow - set as false if you don't want a pop-up windows with the plots
+	 */
+	public static void writeAndOrPlotFuncs(
+			XY_DataSet func, 
+			PlotCurveCharacterstics plotChar, 
+			String plotName,
+			String xAxisLabel,
+			String yAxisLabel,
+			Range xAxisRange,
+			Range yAxisRange,
+			boolean logX,
+			boolean logY,
+			double widthInches,
+			double heightInches,
+			String fileNamePrefix, 
+			boolean popupWindow) {
+		
+		ArrayList<XY_DataSet> funcs = new ArrayList<XY_DataSet>(); 
+		funcs.add(func);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(plotChar);
+		writeAndOrPlotFuncs(funcs, plotChars, plotName, xAxisLabel, yAxisLabel, xAxisRange, yAxisRange, 
+				logX, logY, widthInches, heightInches, fileNamePrefix,  popupWindow);
 	}
 
 	
@@ -106,18 +185,26 @@ public class PlottingUtils {
 
 		}
 		
-		PlotSpec spec = new PlotSpec(funcs, plotChars, null, xAxisLabel, yAxisLabel);
-
+		PlotSpec spec = new PlotSpec(funcs, plotChars, plotName, xAxisLabel, yAxisLabel);
+		
 		if (fileNamePrefix != null){
 			HeadlessGraphPanel gp = new HeadlessGraphPanel();
 			gp.setUserBounds(xAxisRange, yAxisRange);
 			gp.setTickLabelFontSize(9);
 			gp.setAxisLabelFontSize(11);
+			gp.setPlotLabelFontSize(9);
 			gp.setBackgroundColor(Color.WHITE);
 			gp.drawGraphPanel(spec, logX, logY); // spec can be a list
 			int width = (int)(widthInches*72.);
 			int height = (int)(heightInches*72.);
 			gp.getChartPanel().setSize(width, height); 
+
+			if(integerYaxisTickLabeIncrements)
+				gp.getChartPanel().getChart().getXYPlot().getRangeAxis().setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+			
+//			XYTextAnnotation annotation = new XYTextAnnotation("here",xAxisRange.getCentralValue(),yAxisRange.getCentralValue());
+//			gp.getChartPanel().getChart().getXYPlot().addAnnotation(annotation);	
+//
 			// None of these worked for setting the x-axis width:
 //			gp.getXAxis().setFixedDimension(width-72);
 //			gp.getYAxis().setFixedDimension(height-36);
@@ -134,6 +221,9 @@ public class PlottingUtils {
 		
 		return spec;
 	}
+	
+	
+
 	
 	
 	/**
