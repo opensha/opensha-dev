@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -56,7 +57,9 @@ import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
 import org.opensha.commons.data.siteData.SiteDataValue;
 import org.opensha.commons.data.siteData.impl.WillsMap2006;
 import org.opensha.commons.data.siteData.impl.WillsMap2015;
+import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.exceptions.GMT_MapException;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -69,6 +72,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.mapping.gmt.GMT_Map;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.editor.AbstractParameterEditor;
@@ -135,6 +139,7 @@ import com.google.gson.GsonBuilder;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -1995,13 +2000,70 @@ public class PureScratch {
 		sects.removeIf(s -> s.getParentSectionId() == 2);
 		GaussianMixture.fit(data);
 	}
+	
+	private static void test80() throws IOException, GMT_MapException {
+		GriddedRegion reg = new GriddedRegion(new CaliforniaRegions.RELM_TESTING(), 0.02, GriddedRegion.ANCHOR_0_0);
+		GriddedGeoDataSet xyz = new GriddedGeoDataSet(reg, false);
+		for (String line : Files.readLines(new File("/home/kevin/Downloads/map_data.txt"), Charset.defaultCharset())) {
+			line = line.trim();
+			if (line.isEmpty())
+				continue;
+			String[] split = line.split("\t");
+			Preconditions.checkState(split.length == 3);
+			double lat = Double.parseDouble(split[0]);
+			double lon = Double.parseDouble(split[1]);
+			double val = Double.parseDouble(split[2]);
+			xyz.set(new Location(lat, lon), val);
+		}
+		int lineIndex = 0;
+		double prevLat = 0d;
+		for (int i=0; i<xyz.size(); i++) {
+			Location loc = xyz.getLocation(i);
+			if (loc.getLatitude() != prevLat) {
+				prevLat = loc.getLatitude();
+				lineIndex++;
+			}
+			if (lineIndex % 2 != 0)
+				xyz.set(i, -6d);
+			else
+				xyz.set(i, -(i % 4));
+		}
+		System.out.println(lineIndex+" lines");
+		Region plotReg = reg;
+//		Region plotReg = new Region(new Location(34, -118), new Location(35, -120));
+		
+		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(-6, -2);
+		GMT_Map map = new GMT_Map(plotReg, xyz, reg.getSpacing(), cpt);
+		map.setUseGMTSmoothing(false);
+		map.setCustomLabel("Test map");
+//		map.setDpi(600);
+//		map.setDpi(300);
+//		map.setImageWidth(20d);
+		map.setUseGRDView(true);
+		
+		FaultBasedMapGen.plotMap(new File("/tmp"), "test_map", false, map);
+	}
 
+	
+	private static void test81() {
+		// Get current size of heap in bytes
+		double heapSize = Runtime.getRuntime().totalMemory(); 
+		heapSize /= 1024; // KB
+		heapSize /= 1024; // MB
+		System.out.println("Current heap: "+(float)heapSize+" MB = "+(float)(heapSize/1024d)+" GB");
+
+		// Get maximum size of heap in bytes. The heap cannot grow beyond this size.// Any attempt will result in an OutOfMemoryException.
+		double heapMaxSize = Runtime.getRuntime().maxMemory();
+		heapMaxSize /= 1024; // KB
+		heapMaxSize /= 1024; // MB
+		System.out.println("Max heap: "+(float)heapMaxSize+" MB = "+(float)(heapMaxSize/1024d)+" GB");
+	}
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test79();
+		test81();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

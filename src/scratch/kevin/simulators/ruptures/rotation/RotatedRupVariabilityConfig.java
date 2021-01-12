@@ -44,13 +44,20 @@ public abstract class RotatedRupVariabilityConfig<E> {
 	private LoadingCache<Integer, E> initialOrientationCache;
 	private Map<E, Location> centroidCache;
 	
+	private static final boolean test = true;
+	
+	// these in-line if statements weren't compiling with some jdk'sin the enum constructor, so I had to switch to
+	// these external variables. I have no clue why
+	private static final String dist_name = BBP_PartBValidationConfig.DIST_JB ? "Joyner-Boore Distance" : "Distance";
+	private static final String dist_desc = BBP_PartBValidationConfig.DIST_JB ?
+			"Shortest horizontal distance between the site and the surface projection of the rupture."
+			: "3-dimensional distance between the site and the rupture surface.";
+	
 	public enum Quantity {
 		SITE("Site", "Unique site locations. If 3-d, each will have unique velocity profiles.", new NamedComparator()),
 		EVENT_ID("Rupture", "Unique (but similar in faulting style and magnitude) ruptures which match the "
 				+ "given scenario."),
-		DISTANCE(BBP_PartBValidationConfig.DIST_JB ? "Joyner-Boore Distance" : "Distance",
-				BBP_PartBValidationConfig.DIST_JB ? "Shortest horizontal distance between the site and the surface projection of the rupture."
-						: "3-dimensional distance between the site and the rupture surface."),
+		DISTANCE(dist_name, dist_desc),
 		SOURCE_AZIMUTH("Rupture Strike", "Rupture strike conforming to the Aki & Richards (1980) convention, where dipping "
 				+ "faults dip to the right of the rupture. If path rotation is also performed, this azimuth is relative to the path."),
 		SITE_TO_SOURTH_AZIMUTH("Path", "Path from the site to the centroid of the rupture, in azimuthal degrees (0 is North)");

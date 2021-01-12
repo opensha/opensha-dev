@@ -81,7 +81,7 @@ public class MPJ_GK_DesclusteringHazardCalc extends MPJTaskCalculator {
 		Random random = new Random(random_seed);
 		
 		debug("Loading catalogs...");
-		catalogsList = U3ETAS_SimulationAnalysis.loadCatalogs(fssFile, catalogFile);
+		catalogsList = U3ETAS_SimulationAnalysis.loadCatalogs(fssFile, catalogFile, 5d);
 		debug("Declustering catalog...");
 		declusteredCatalogsList = U3ETAS_SimulationAnalysis.getGK_DeclusteredCatalog(catalogsList);
 		debug("Randomizing catalogs...");

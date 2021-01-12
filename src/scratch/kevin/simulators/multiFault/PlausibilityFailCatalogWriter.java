@@ -17,7 +17,6 @@ import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.iden.AbstractRuptureIdentifier;
 import org.opensha.sha.simulators.parsers.RSQSimFileWriter;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator;
-import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessAggregationMethod;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessType;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
@@ -35,13 +34,14 @@ public class PlausibilityFailCatalogWriter {
 		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
 		catalog.setFractForInclusion(0.5);
 		
-		SubSectStiffnessCalculator subSectCalc = new SubSectStiffnessCalculator(catalog.getU3SubSects(),
-				2d, 3e4, 3e4, 0.5);
-		subSectCalc.loadCacheFile(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
-				+ "cff_cache_2606sects_2km_lambda30000_mu30000_coeff0.5.csv"), StiffnessType.CFF);
-		
-		PlausibilityFilter filter = new ClusterPathCoulombCompatibilityFilter(
-				subSectCalc, StiffnessAggregationMethod.MEDIAN, 0f);
+//		SubSectStiffnessCalculator subSectCalc = new SubSectStiffnessCalculator(catalog.getU3SubSects(),
+//				2d, 3e4, 3e4, 0.5);
+//		subSectCalc.loadCacheFile(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+//				+ "cff_cache_2606sects_2km_lambda30000_mu30000_coeff0.5.csv"), StiffnessType.CFF);
+//		
+//		PlausibilityFilter filter = new ClusterPathCoulombCompatibilityFilter(
+//				subSectCalc, StiffnessAggregationMethod.MEDIAN, 0f);
+		PlausibilityFilter filter = null;
 		
 		File outputDir = new File(catalog.getCatalogDir(), "plausibility_filtered");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());

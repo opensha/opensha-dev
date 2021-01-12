@@ -97,11 +97,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetDiagnosti
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.utils.GriddedSurfaceUtils;
-import org.opensha.sha.simulators.stiffness.RuptureCoulombResult;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator;
-import org.opensha.sha.simulators.stiffness.RuptureCoulombResult.RupCoulombQuantity;
-import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessAggregationMethod;
-import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessResult;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessType;
 
 import com.google.common.base.Preconditions;
@@ -522,208 +518,212 @@ public class RSQSimU3RupturePageGen {
 			lines.addAll(table.build());
 		lines.add("");
 		
-		// now stiffness comparisons
-		Map<String, String> params = catalog.getParams();
-		double lambda = 30000;
-		double mu = 30000;
-		if (params.containsKey("lameLambda"))
-			lambda = Double.parseDouble(params.get("lameLambda"));
-		if (params.containsKey("lameMu"))
-			lambda = Double.parseDouble(params.get("lameMu"));
-		double coeffOfFriction = 0.5;
-		SubSectStiffnessCalculator stiffnessCalc = new SubSectStiffnessCalculator(
-				rupSet.getFaultSectionDataList(), 2d, lambda, mu, coeffOfFriction);
-		StiffnessType type = StiffnessType.CFF;
-		
-		System.out.println("Plotting Jump Coulomb");
-		
-		lines.add("## Coulomb Comparisons");
-		lines.add(topLink); lines.add("");
-		lines.add("These calculations compute "+type.getHTML()+" between each subsection. This is done by "
-				+ "discretizing each subsection into "+(float)stiffnessCalc.getGridSpacing()+" x "
-				+ (float)stiffnessCalc.getGridSpacing()+" km rectangular patches, and them computing "
-				+ "stiffness between each patch on each surface. So for two subsections with N and M "
-				+ "patches each, we get N x M total stiffness calculations. We then use various aggregation "
-				+ "methods to to compute compatibility between those subsections:");
-		lines.add("");
-		StiffnessAggregationMethod[] plotQuantities = { StiffnessAggregationMethod.MEDIAN,
-				StiffnessAggregationMethod.MAX, StiffnessAggregationMethod.FRACT_POSITIVE };
-		for (StiffnessAggregationMethod q : plotQuantities)
-			lines.add("* **"+q.toString()+"**: "+q.getDescription());
-		lines.add("");
-		
-		List<PlausibilityFilter> coulombFilters = new ArrayList<>();
-		coulombFilters.add(new ParentCoulombCompatibilityFilter(
-				stiffnessCalc, StiffnessAggregationMethod.MEDIAN, 0f, Directionality.EITHER));
-		coulombFilters.add(new ClusterCoulombCompatibilityFilter(
-				stiffnessCalc, StiffnessAggregationMethod.MEDIAN, 0f));
-		coulombFilters.add(new ClusterPathCoulombCompatibilityFilter(
-				stiffnessCalc, StiffnessAggregationMethod.MEDIAN, 0f));
-		
-		System.out.println("Testing new coulomb filters");
-		result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, coulombFilters, null, rsConnSearch);
-		table = RupSetDiagnosticsPageGen.getRupSetPlausibilityTable(result);
-		
-		// now plot
-		title = "New Coulomb Plausibility Filters, M≥"+(float)minMag+", SectArea≥"+(float)minFractForInclusion;
-		prefix = "filters_coulomb_"+catParams;
-		
-		filterPlot = RupSetDiagnosticsPageGen.plotRupSetPlausibility(result, resourcesDir, prefix, title);
-		
-		lines.add("### Coulomb Plausibility Filter Comparisons");
-		lines.add(topLink); lines.add("");
-		lines.add("![Plausibility Filter]("+resourcesDir.getName()+"/"+filterPlot.getName()+")");
-		lines.add("");
-		lines.addAll(table.build());
-		lines.add("");
-		
-		for (boolean fullClusters : new boolean[] {false, true}) {
-			table = MarkdownUtils.tableBuilder();
-			table.addLine("RSQSim", "UCERF3");
-			
-			prefix = "jump_cff";
-			if (fullClusters)
-				prefix += "_clusters";
-			else
-				prefix += "_subsections";
-
-			System.out.println("Plotting RSQSim, fullClusters="+fullClusters);
-			File[][] rsPlots = plotJumpStiffnessHistogram(rsClusterRups, sol, stiffnessCalc, type,
-					plotQuantities, fullClusters, resourcesDir, prefix+"_rsqsim");
-			System.out.println("Plotting UCERF3, fullClusters="+fullClusters);
-			File[][] u3Plots = plotJumpStiffnessHistogram(u3ClusterRups, u3Sol, stiffnessCalc, type,
-					plotQuantities, fullClusters, resourcesDir, prefix+"_ucerf3");
-			for (int q=0; q<plotQuantities.length; q++) {
-				table.initNewLine();
-				if (rsPlots[q] == null)
-					table.addColumn("N/A");
-				else
-					table.addColumn("![plot](resources/"+rsPlots[q][q].getName()+")");
-				if (u3Plots[q] == null)
-					table.addColumn("N/A");
-				else
-					table.addColumn("![plot](resources/"+u3Plots[q][q].getName()+")");
-				table.finalizeLine();
-			}
-			// now scatters
-			for (int q1=0; q1<plotQuantities.length; q1++) {
-				for (int q2=q1+1; q2<plotQuantities.length; q2++) {
-					table.initNewLine();
-					if (rsPlots[q1] == null)
-						table.addColumn("N/A");
-					else
-						table.addColumn("![plot](resources/"+rsPlots[q1][q2].getName()+")");
-					if (u3Plots[q1] == null)
-						table.addColumn("N/A");
-					else
-						table.addColumn("![plot](resources/"+u3Plots[q1][q2].getName()+")");
-					table.finalizeLine();
-				}
-			}
-			if (fullClusters) {
-				lines.add("### Jump Coulomb Comparisons, Full Clusters");
-				lines.add(topLink); lines.add("");
-				lines.add("This gives the aggregated coulomb compatibility of every jump, computed between "
-						+ "the full subsection clusters on either side of that jump.");
-			} else {
-				lines.add("### Jump Coulomb Comparisons, Jump Subsections Only");
-				lines.add(topLink); lines.add("");
-				lines.add("This gives the aggregated coulomb compatibility of every jump, computed between "
-						+ "only the closest subsections on either side of that jump.");
-			}
-			lines.add("");
-			lines.addAll(table.build());
-			lines.add("");
-		}
-		
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("RSQSim", "UCERF3");
-		
-		prefix = "rup_to_cluster_cff";
-
-		System.out.println("Plotting Rup to Cluster, RSQSim");
-		File[][] rsPlots = plotRupToClusterCoulombHistogram(rsClusterRups, sol, stiffnessCalc,
-				type, plotQuantities, resourcesDir, prefix+"_rsqsim");
-		System.out.println("Plotting Rup to Cluster, UCERF3");
-		File[][] u3Plots = plotRupToClusterCoulombHistogram(u3ClusterRups, u3Sol, stiffnessCalc,
-				type, plotQuantities, resourcesDir, prefix+"_ucerf3");
-		for (int q=0; q<plotQuantities.length; q++) {
-			table.initNewLine();
-			if (rsPlots[q] == null)
-				table.addColumn("N/A");
-			else
-				table.addColumn("![plot](resources/"+rsPlots[q][q].getName()+")");
-			if (u3Plots[q] == null)
-				table.addColumn("N/A");
-			else
-				table.addColumn("![plot](resources/"+u3Plots[q][q].getName()+")");
-			table.finalizeLine();
-		}
-		// now scatters
-		for (int q1=0; q1<plotQuantities.length; q1++) {
-			for (int q2=q1+1; q2<plotQuantities.length; q2++) {
-				table.initNewLine();
-				if (rsPlots[q1] == null)
-					table.addColumn("N/A");
-				else
-					table.addColumn("![plot](resources/"+rsPlots[q1][q2].getName()+")");
-				if (u3Plots[q1] == null)
-					table.addColumn("N/A");
-				else
-					table.addColumn("![plot](resources/"+u3Plots[q1][q2].getName()+")");
-				table.finalizeLine();
-			}
-		}
-		lines.add("### Jump Coulomb Comparisons, Full Rupture to Cluster");
-		lines.add(topLink); lines.add("");
-		lines.add("This gives the aggregated coulomb compatibility of each individual subsection cluster, "
-				+ "computed to the rest of the rupture");
-		lines.add("");
-		lines.addAll(table.build());
-		lines.add("");
-		
-		lines.add("### Rupture Aggregate Section Coulomb Comparisons");
-		lines.add(topLink); lines.add("");
-		lines.add("This gives aggregated coulomb compatibilty of entire ruptures. We first calculate a net "
-				+ "coulomb stress change for each subsection, conditioned on unit slip on all other subsection "
-				+ "which participate in the rupture. We then plot the mean/min of those subsection net coulomb "
-				+ "stress changes to ge a single number for the full rupture. We also keep track of the number "
-				+ "of subsections in each rupture which are net negative.");
-		lines.add("");
-
-		System.out.println("Calculating RSQSim Rupture Coulomb");
-		List<RuptureCoulombResult> rsRupCoulombs = calcRupCoulombs(
-				rsClusterRups, stiffnessCalc, StiffnessAggregationMethod.MEDIAN);
-		System.out.println("Calculating UCERF3 Rupture Coulomb");
-		List<RuptureCoulombResult> u3RupCoulombs = calcRupCoulombs(
-				u3ClusterRups, stiffnessCalc, StiffnessAggregationMethod.MEDIAN);
-		
-		System.out.println("Plotting Rupture Coulomb");
-		
-		table = MarkdownUtils.tableBuilder();
-		table.addLine("RSQSim", "UCERF3");
-		StiffnessAggregationMethod stiffAggMethod = StiffnessAggregationMethod.MEDIAN;
-		for (RupCoulombQuantity quantity : RupCoulombQuantity.values()) {
-			System.out.println("Plotting RSQSim, "+quantity);
-			prefix = "rup_cff_"+quantity.name();
-			File plot = plotRupCoulombHistogram(rsRupCoulombs, sol, quantity,
-					resourcesDir, prefix+"_rsqsim");
-			table.initNewLine();
-			if (plot == null)
-				table.addColumn("N/A");
-			else
-				table.addColumn("![plot](resources/"+plot.getName()+")");
-			System.out.println("Plotting UCERF3, "+quantity);
-			plot = plotRupCoulombHistogram(u3RupCoulombs, u3Sol, quantity,
-					resourcesDir, prefix+"_ucerf3");
-			if (plot == null)
-				table.addColumn("N/A");
-			else
-				table.addColumn("![plot](resources/"+plot.getName()+")");
-			table.finalizeLine();
-		}
-		lines.addAll(table.build());
-		lines.add("");
+//		// now stiffness comparisons
+//		Map<String, String> params = catalog.getParams();
+//		double lambda = 30000;
+//		double mu = 30000;
+//		if (params.containsKey("lameLambda"))
+//			lambda = Double.parseDouble(params.get("lameLambda"));
+//		if (params.containsKey("lameMu"))
+//			lambda = Double.parseDouble(params.get("lameMu"));
+//		double coeffOfFriction = 0.5;
+//		SubSectStiffnessCalculator stiffnessCalc = new SubSectStiffnessCalculator(
+//				rupSet.getFaultSectionDataList(), 2d, lambda, mu, coeffOfFriction);
+//		StiffnessType type = StiffnessType.CFF;
+//		
+//		System.out.println("Plotting Jump Coulomb");
+//		
+//		lines.add("## Coulomb Comparisons");
+//		lines.add(topLink); lines.add("");
+//		lines.add("These calculations compute "+type.getHTML()+" between each subsection. This is done by "
+//				+ "discretizing each subsection into "+(float)stiffnessCalc.getGridSpacing()+" x "
+//				+ (float)stiffnessCalc.getGridSpacing()+" km rectangular patches, and them computing "
+//				+ "stiffness between each patch on each surface. So for two subsections with N and M "
+//				+ "patches each, we get N x M total stiffness calculations. We then use various aggregation "
+//				+ "methods to to compute compatibility between those subsections:"); // TODO update
+//		lines.add("");
+//		AggregatedStiffnessCalculator medianCalc = new AggregatedStiffnessCalculator(type, stiffnessCalc, false,
+//				AggregationMethod.FLATTEN, AggregationMethod.MEDIAN, AggregationMethod.SUM, AggregationMethod.SUM);
+//		AggregatedStiffnessCalculator[] aggCalcs = {
+//				medianCalc,
+//				new AggregatedStiffnessCalculator(type, stiffnessCalc, false,
+//						AggregationMethod.MAX, AggregationMethod.MAX, AggregationMethod.SUM, AggregationMethod.SUM),
+//				new AggregatedStiffnessCalculator(type, stiffnessCalc, false,
+//						AggregationMethod.SUM, AggregationMethod.SUM, AggregationMethod.SUM, AggregationMethod.SUM)
+//		};
+//		for (AggregatedStiffnessCalculator q : aggCalcs)
+//			lines.add("* **"+q.toString());
+//		lines.add("");
+//		
+//		List<PlausibilityFilter> coulombFilters = new ArrayList<>();
+//		coulombFilters.add(new ParentCoulombCompatibilityFilter(medianCalc, 0f, Directionality.EITHER));
+//		coulombFilters.add(new ClusterCoulombCompatibilityFilter(medianCalc, 0f));
+//		coulombFilters.add(new ClusterPathCoulombCompatibilityFilter(medianCalc, 0f));
+//		
+//		System.out.println("Testing new coulomb filters");
+//		result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, coulombFilters, null, rsConnSearch);
+//		table = RupSetDiagnosticsPageGen.getRupSetPlausibilityTable(result);
+//		
+//		// now plot
+//		title = "New Coulomb Plausibility Filters, M≥"+(float)minMag+", SectArea≥"+(float)minFractForInclusion;
+//		prefix = "filters_coulomb_"+catParams;
+//		
+//		filterPlot = RupSetDiagnosticsPageGen.plotRupSetPlausibility(result, resourcesDir, prefix, title);
+//		
+//		lines.add("### Coulomb Plausibility Filter Comparisons");
+//		lines.add(topLink); lines.add("");
+//		lines.add("![Plausibility Filter]("+resourcesDir.getName()+"/"+filterPlot.getName()+")");
+//		lines.add("");
+//		lines.addAll(table.build());
+//		lines.add("");
+//		
+//		for (boolean fullClusters : new boolean[] {false, true}) {
+//			table = MarkdownUtils.tableBuilder();
+//			table.addLine("RSQSim", "UCERF3");
+//			
+//			prefix = "jump_cff";
+//			if (fullClusters)
+//				prefix += "_clusters";
+//			else
+//				prefix += "_subsections";
+//
+//			System.out.println("Plotting RSQSim, fullClusters="+fullClusters);
+//			File[][] rsPlots = plotJumpStiffnessHistogram(rsClusterRups, sol, stiffnessCalc, type,
+//					plotQuantities, fullClusters, resourcesDir, prefix+"_rsqsim");
+//			System.out.println("Plotting UCERF3, fullClusters="+fullClusters);
+//			File[][] u3Plots = plotJumpStiffnessHistogram(u3ClusterRups, u3Sol, stiffnessCalc, type,
+//					plotQuantities, fullClusters, resourcesDir, prefix+"_ucerf3");
+//			for (int q=0; q<plotQuantities.length; q++) {
+//				table.initNewLine();
+//				if (rsPlots[q] == null)
+//					table.addColumn("N/A");
+//				else
+//					table.addColumn("![plot](resources/"+rsPlots[q][q].getName()+")");
+//				if (u3Plots[q] == null)
+//					table.addColumn("N/A");
+//				else
+//					table.addColumn("![plot](resources/"+u3Plots[q][q].getName()+")");
+//				table.finalizeLine();
+//			}
+//			// now scatters
+//			for (int q1=0; q1<plotQuantities.length; q1++) {
+//				for (int q2=q1+1; q2<plotQuantities.length; q2++) {
+//					table.initNewLine();
+//					if (rsPlots[q1] == null)
+//						table.addColumn("N/A");
+//					else
+//						table.addColumn("![plot](resources/"+rsPlots[q1][q2].getName()+")");
+//					if (u3Plots[q1] == null)
+//						table.addColumn("N/A");
+//					else
+//						table.addColumn("![plot](resources/"+u3Plots[q1][q2].getName()+")");
+//					table.finalizeLine();
+//				}
+//			}
+//			if (fullClusters) {
+//				lines.add("### Jump Coulomb Comparisons, Full Clusters");
+//				lines.add(topLink); lines.add("");
+//				lines.add("This gives the aggregated coulomb compatibility of every jump, computed between "
+//						+ "the full subsection clusters on either side of that jump.");
+//			} else {
+//				lines.add("### Jump Coulomb Comparisons, Jump Subsections Only");
+//				lines.add(topLink); lines.add("");
+//				lines.add("This gives the aggregated coulomb compatibility of every jump, computed between "
+//						+ "only the closest subsections on either side of that jump.");
+//			}
+//			lines.add("");
+//			lines.addAll(table.build());
+//			lines.add("");
+//		}
+//		
+//		table = MarkdownUtils.tableBuilder();
+//		table.addLine("RSQSim", "UCERF3");
+//		
+//		prefix = "rup_to_cluster_cff";
+//
+//		System.out.println("Plotting Rup to Cluster, RSQSim");
+//		File[][] rsPlots = plotRupToClusterCoulombHistogram(rsClusterRups, sol, stiffnessCalc,
+//				type, plotQuantities, resourcesDir, prefix+"_rsqsim");
+//		System.out.println("Plotting Rup to Cluster, UCERF3");
+//		File[][] u3Plots = plotRupToClusterCoulombHistogram(u3ClusterRups, u3Sol, stiffnessCalc,
+//				type, plotQuantities, resourcesDir, prefix+"_ucerf3");
+//		for (int q=0; q<plotQuantities.length; q++) {
+//			table.initNewLine();
+//			if (rsPlots[q] == null)
+//				table.addColumn("N/A");
+//			else
+//				table.addColumn("![plot](resources/"+rsPlots[q][q].getName()+")");
+//			if (u3Plots[q] == null)
+//				table.addColumn("N/A");
+//			else
+//				table.addColumn("![plot](resources/"+u3Plots[q][q].getName()+")");
+//			table.finalizeLine();
+//		}
+//		// now scatters
+//		for (int q1=0; q1<plotQuantities.length; q1++) {
+//			for (int q2=q1+1; q2<plotQuantities.length; q2++) {
+//				table.initNewLine();
+//				if (rsPlots[q1] == null)
+//					table.addColumn("N/A");
+//				else
+//					table.addColumn("![plot](resources/"+rsPlots[q1][q2].getName()+")");
+//				if (u3Plots[q1] == null)
+//					table.addColumn("N/A");
+//				else
+//					table.addColumn("![plot](resources/"+u3Plots[q1][q2].getName()+")");
+//				table.finalizeLine();
+//			}
+//		}
+//		lines.add("### Jump Coulomb Comparisons, Full Rupture to Cluster");
+//		lines.add(topLink); lines.add("");
+//		lines.add("This gives the aggregated coulomb compatibility of each individual subsection cluster, "
+//				+ "computed to the rest of the rupture");
+//		lines.add("");
+//		lines.addAll(table.build());
+//		lines.add("");
+//		
+//		lines.add("### Rupture Aggregate Section Coulomb Comparisons");
+//		lines.add(topLink); lines.add("");
+//		lines.add("This gives aggregated coulomb compatibilty of entire ruptures. We first calculate a net "
+//				+ "coulomb stress change for each subsection, conditioned on unit slip on all other subsection "
+//				+ "which participate in the rupture. We then plot the mean/min of those subsection net coulomb "
+//				+ "stress changes to ge a single number for the full rupture. We also keep track of the number "
+//				+ "of subsections in each rupture which are net negative.");
+//		lines.add("");
+//
+//		System.out.println("Calculating RSQSim Rupture Coulomb");
+//		List<RuptureCoulombResult> rsRupCoulombs = calcRupCoulombs(
+//				rsClusterRups, stiffnessCalc, StiffnessAggregationMethod.MEDIAN);
+//		System.out.println("Calculating UCERF3 Rupture Coulomb");
+//		List<RuptureCoulombResult> u3RupCoulombs = calcRupCoulombs(
+//				u3ClusterRups, stiffnessCalc, StiffnessAggregationMethod.MEDIAN);
+//		
+//		System.out.println("Plotting Rupture Coulomb");
+//		
+//		table = MarkdownUtils.tableBuilder();
+//		table.addLine("RSQSim", "UCERF3");
+//		StiffnessAggregationMethod stiffAggMethod = StiffnessAggregationMethod.MEDIAN;
+//		for (RupCoulombQuantity quantity : RupCoulombQuantity.values()) {
+//			System.out.println("Plotting RSQSim, "+quantity);
+//			prefix = "rup_cff_"+quantity.name();
+//			File plot = plotRupCoulombHistogram(rsRupCoulombs, sol, quantity,
+//					resourcesDir, prefix+"_rsqsim");
+//			table.initNewLine();
+//			if (plot == null)
+//				table.addColumn("N/A");
+//			else
+//				table.addColumn("![plot](resources/"+plot.getName()+")");
+//			System.out.println("Plotting UCERF3, "+quantity);
+//			plot = plotRupCoulombHistogram(u3RupCoulombs, u3Sol, quantity,
+//					resourcesDir, prefix+"_ucerf3");
+//			if (plot == null)
+//				table.addColumn("N/A");
+//			else
+//				table.addColumn("![plot](resources/"+plot.getName()+")");
+//			table.finalizeLine();
+//		}
+//		lines.addAll(table.build());
+//		lines.add("");
 		
 		System.out.println("Plotting connectivity clusters");
 		plotConnectivity(catalog.getU3CompareSol().getRupSet(), resourcesDir, "connectivity_ucerf3", "UCERF3 Connectivity");
@@ -1118,314 +1118,313 @@ public class RSQSimU3RupturePageGen {
 		return surf.getDistanceX(loc) < 0;
 	}
 	
-	private static File[][] plotJumpStiffnessHistogram(List<ClusterRupture> ruptures, FaultSystemSolution sol,
-			SubSectStiffnessCalculator calc, StiffnessType type, StiffnessAggregationMethod[] quantities, boolean fullClusters,
-			File resourcesDir, String prefix) throws IOException {
-		List<List<Double>> valuesList = new ArrayList<>();
-		double[] allMaxAbs = new double[quantities.length];
-		for (int q=0; q<quantities.length; q++)
-			valuesList.add(new ArrayList<>());
-		List<Double> rates = new ArrayList<>();
-		
-		for (int r=0; r<ruptures.size(); r++) {
-			ClusterRupture rup = ruptures.get(r);
-			double rate = sol.getRateForRup(r);
-			for (Jump rawJump : rup.getJumpsIterable()) {
-				for (Jump jump : new Jump[] { rawJump, rawJump.reverse() }) {
-//					System.out.println("Calculating for jump "+jump);
-					StiffnessResult stiffness;
-					if (fullClusters)
-						stiffness = calc.calcClusterStiffness(type, jump.fromCluster, jump.toCluster);
-					else
-						stiffness = calc.calcStiffness(type, jump.fromSection, jump.toSection);
-					if (stiffness == null)
-						continue;
-					for (int q=0; q<quantities.length; q++) {
-						double val = stiffness.getValue(quantities[q]);
-						allMaxAbs[q] = Math.max(allMaxAbs[q], Math.abs(val));
-						valuesList.get(q).add(val);
-					}
-					rates.add(0.5*rate); // 0.5 since we're including it both forwards and backwards
-				}
-			}
-		}
-		if (valuesList.get(0).isEmpty())
-			return null;
-		File[][] ret = new File[quantities.length][quantities.length];
-		for (int q=0; q<quantities.length; q++) {
-			double maxAbs = allMaxAbs[q];
-			String title = "Jump "+quantities[q].toString();
-			if (fullClusters)
-				title += ", Full Clusters";
-			else
-				title += ", Closest Subsections";
-			
-			String xAxisLabel = type+", "+quantities[q];
-			List<Double> values = valuesList.get(q);
-			
-			ret[q][q] = plotValueHist(resourcesDir, prefix+"_"+quantities[q].name(), values, rates,
-					maxAbs, title, xAxisLabel, quantities[q]);
-			for (int q2=q+1; q2<quantities.length; q2++) {
-				String scatterTitle = "Jump "+type.toString()+" Scatter";
-				String scatterPrefix = prefix+"_"+quantities[q].name()+"_vs_"+quantities[q2].name();
-				ret[q][q2] = plotValueScatter(resourcesDir, scatterPrefix, values, valuesList.get(q2),
-						maxAbs, allMaxAbs[q2], scatterTitle, quantities[q], quantities[q2]);
-				ret[q2][q] = ret[q][q2];
-			}
-		}
-		
-		return ret;
-	}
-
-	static File plotValueHist(File resourcesDir, String myPrefix, List<Double> values, List<Double> rates, double maxAbs,
-			String title, String xAxisLabel, StiffnessAggregationMethod quantity) throws IOException {
-		maxAbs = Math.ceil(10d*maxAbs)/10d;
-		
-		HistogramFunction hist;
-		Range xRange;
-		if (quantity == StiffnessAggregationMethod.FRACT_POSITIVE) {
-			hist = HistogramFunction.getEncompassingHistogram(0d, 1d, 0.02);
-			xRange = new Range(0d, hist.getMaxX()+0.5*hist.getDelta());
-		} else {
-			hist = new HistogramFunction(-maxAbs, maxAbs, 50);
-			xRange = new Range(-maxAbs-0.5*hist.getDelta(), maxAbs+0.5*hist.getDelta());
-		}
-		for (int i=0; i<values.size(); i++) {
-			double val = values.get(i);
-			hist.add(hist.getClosestXIndex(val), rates.get(i));
-		}
-		
-		List<DiscretizedFunc> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		funcs.add(hist);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
-		
-		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, "Jump Annual Rate");
-		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setBackgroundColor(Color.WHITE);
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(20);
-		gp.setPlotLabelFontSize(21);
-		
-		double minNonZero = Double.POSITIVE_INFINITY;
-		for (Point2D pt : hist)
-			if (pt.getY() > 0)
-				minNonZero = Math.min(minNonZero, pt.getY());
-		
-		Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minNonZero))),
-				Math.pow(10, Math.ceil(Math.log10(hist.getMaxY()))));
-		
-		File pngFile = new File(resourcesDir, myPrefix+".png");
-		
-		gp.drawGraphPanel(spec, false, true, xRange, yRange);
-		gp.getChartPanel().setSize(800, 600);
-		gp.saveAsPNG(pngFile.getAbsolutePath());
-		return pngFile;
-	}
-
-	static File plotValueScatter(File resourcesDir, String myPrefix, List<Double> values1, List<Double> values2,
-			double maxAbs1, double maxAbs2, String title, StiffnessAggregationMethod quantity1,
-			StiffnessAggregationMethod quantity2) throws IOException {
-		maxAbs1 = Math.ceil(10d*maxAbs1)/10d;
-		maxAbs2 = Math.ceil(10d*maxAbs2)/10d;
-		
-		Range xRange, yRange;
-		if (quantity1 == StiffnessAggregationMethod.FRACT_POSITIVE)
-			xRange = new Range(0d, 1d);
-		else
-			xRange = new Range(-maxAbs1, maxAbs1);
-		if (quantity2 == StiffnessAggregationMethod.FRACT_POSITIVE)
-			yRange = new Range(0d, 1d);
-		else
-			yRange = new Range(-maxAbs2, maxAbs2);
-		Preconditions.checkState(values1.size() == values2.size());
-		DefaultXY_DataSet scatter = new DefaultXY_DataSet();
-		for (int i=0; i<values1.size(); i++)
-			scatter.set(values1.get(i), values2.get(i));
-		
-		List<XY_DataSet> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		funcs.add(scatter);
-		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
-		
-		PlotSpec spec = new PlotSpec(funcs, chars, title, quantity1.toString(), quantity2.toString());
-		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setBackgroundColor(Color.WHITE);
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(20);
-		gp.setPlotLabelFontSize(21);
-		
-		File pngFile = new File(resourcesDir, myPrefix+".png");
-		
-		gp.drawGraphPanel(spec, false, false, xRange, yRange);
-		gp.getChartPanel().setSize(800, 600);
-		gp.saveAsPNG(pngFile.getAbsolutePath());
-		return pngFile;
-	}
-	
-	private static List<RuptureCoulombResult> calcRupCoulombs(List<ClusterRupture> ruptures,
-			SubSectStiffnessCalculator calc, StiffnessAggregationMethod stiffAggMethod) {
-		List<Future<RuptureCoulombResult>> futures = new ArrayList<>();
-		ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-		for (ClusterRupture rup : ruptures)
-			futures.add(exec.submit(new RupCoulombCalcCall(rup, calc, stiffAggMethod)));
-		List<RuptureCoulombResult> results = new ArrayList<>();
-		for (Future<RuptureCoulombResult> future : futures) {
-			try {
-				results.add(future.get());
-			} catch (InterruptedException | ExecutionException e) {
-				throw ExceptionUtils.asRuntimeException(e);
-			}
-		}
-		exec.shutdown();
-		return results;
-	}
-	
-	private static class RupCoulombCalcCall implements Callable<RuptureCoulombResult> {
-		
-		private ClusterRupture rup;
-		private SubSectStiffnessCalculator calc;
-		private StiffnessAggregationMethod stiffAggMethod;
-
-		public RupCoulombCalcCall(ClusterRupture rup, SubSectStiffnessCalculator calc,
-				StiffnessAggregationMethod stiffAggMethod) {
-			this.rup = rup;
-			this.calc = calc;
-			this.stiffAggMethod = stiffAggMethod;
-		}
-
-		@Override
-		public RuptureCoulombResult call() throws Exception {
-			if (rup.unique.size() < 2)
-				return null;
-			else
-				return new RuptureCoulombResult(rup, calc, stiffAggMethod);
-		}
-		
-	}
-	
-	private static File plotRupCoulombHistogram(List<RuptureCoulombResult> rupCoulombs, FaultSystemSolution sol,
-			RupCoulombQuantity quantity, File resourcesDir, String prefix) throws IOException {
-		List<Double> values = new ArrayList<>();
-		List<Double> rates = new ArrayList<>();
-		double maxAbs = 0d;
-		for (int r=0; r<rupCoulombs.size(); r++) {
-			RuptureCoulombResult result = rupCoulombs.get(r);
-			if (result == null)
-				continue;
-			double rate = sol.getRateForRup(r);
-			double val = result.getValue(quantity);
-			maxAbs = Math.max(Math.abs(val), maxAbs);
-			values.add(val);
-			rates.add(rate);
-		}
-		if (values.isEmpty())
-			return null;
-		maxAbs = Math.ceil(10d*maxAbs)/10d;
-		
-		HistogramFunction hist;
-		Range xRange;
-		if (quantity == RupCoulombQuantity.MEAN_SECT_FRACT_POSITIVES
-				|| quantity == RupCoulombQuantity.MIN_SECT_FRACT_POSITIVES) {
-			hist = HistogramFunction.getEncompassingHistogram(0d, 1d, 0.02);
-			xRange = new Range(0d, hist.getMaxX()+0.5*hist.getDelta());
-		} else if (quantity == RupCoulombQuantity.NUM_NET_NEGATIVE_SECTS) {
-			hist = new HistogramFunction(0d, 10d, 11);
-			xRange = new Range(-0.5, hist.getMaxX()+0.5*hist.getDelta());
-		} else {
-			hist = new HistogramFunction(-maxAbs, maxAbs, 50);
-			xRange = new Range(-maxAbs-0.5*hist.getDelta(), maxAbs+0.5*hist.getDelta());
-		}
-		for (int i=0; i<values.size(); i++) {
-			double val = values.get(i);
-			hist.add(hist.getClosestXIndex(val), rates.get(i));
-		}
-		
-		List<DiscretizedFunc> funcs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		funcs.add(hist);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
-		
-		String title = "Full Rupture Aggregated Coulomb";
-		
-		String xAxisLabel = quantity.toString();
-		
-		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, "Annual Rate");
-		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setBackgroundColor(Color.WHITE);
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(20);
-		gp.setPlotLabelFontSize(21);
-		
-		double minNonZero = Double.POSITIVE_INFINITY;
-		for (Point2D pt : hist)
-			if (pt.getY() > 0)
-				minNonZero = Math.min(minNonZero, pt.getY());
-		
-		Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minNonZero))),
-				Math.pow(10, Math.ceil(Math.log10(hist.getMaxY()))));
-		
-		File pngFile = new File(resourcesDir, prefix+".png");
-		
-		gp.drawGraphPanel(spec, false, true, xRange, yRange);
-		gp.getChartPanel().setSize(800, 600);
-		gp.saveAsPNG(pngFile.getAbsolutePath());
-		return pngFile;
-	}
-	
-	private static File[][] plotRupToClusterCoulombHistogram(List<ClusterRupture> ruptures, FaultSystemSolution sol,
-			SubSectStiffnessCalculator calc, StiffnessType type, StiffnessAggregationMethod[] quantities,
-			File resourcesDir, String prefix) throws IOException {
-		List<List<Double>> valuesList = new ArrayList<>();
-		double[] allMaxAbs = new double[quantities.length];
-		for (int q=0; q<quantities.length; q++)
-			valuesList.add(new ArrayList<>());
-		List<Double> rates = new ArrayList<>();
-		for (int r=0; r<ruptures.size(); r++) {
-			ClusterRupture rupture = ruptures.get(r);
-			if (rupture.unique.size() < 2 || rupture.getTotalNumJumps() == 0)
-				continue;
-			double rate = sol.getRateForRup(r);
-			for (FaultSubsectionCluster cluster : rupture.getClustersIterable()) {
-				StiffnessResult stiffness = calc.calcAggRupToClusterStiffness(type, rupture, cluster);
-				if (stiffness == null)
-					continue;
-				for (int q=0; q<quantities.length; q++) {
-					double val = stiffness.getValue(quantities[q]);
-					allMaxAbs[q] = Math.max(allMaxAbs[q], Math.abs(val));
-					valuesList.get(q).add(val);
-				}
-				rates.add(rate);
-			}
-		}
-		if (valuesList.get(0).isEmpty())
-			return null;
-		File[][] ret = new File[quantities.length][quantities.length];
-		for (int q=0; q<quantities.length; q++) {
-			double maxAbs = allMaxAbs[q];
-			String title = "Aggregate Full Rup to Cluster "+quantities[q].toString();
-			
-			String xAxisLabel = type+", "+quantities[q];
-			List<Double> values = valuesList.get(q);
-			
-			ret[q][q] = plotValueHist(resourcesDir, prefix+"_"+quantities[q].name(), values, rates,
-					maxAbs, title, xAxisLabel, quantities[q]);
-			for (int q2=q+1; q2<quantities.length; q2++) {
-				String scatterTitle = "Aggregate Full Rup to Cluster "+type.toString()+" Scatter";
-				String scatterPrefix = prefix+"_"+quantities[q].name()+"_vs_"+quantities[q2].name();
-				ret[q][q2] = plotValueScatter(resourcesDir, scatterPrefix, values, valuesList.get(q2),
-						maxAbs, allMaxAbs[q2], scatterTitle, quantities[q], quantities[q2]);
-				ret[q2][q] = ret[q][q2];
-			}
-		}
-		
-		return ret;
-	}
+//	private static File[][] plotJumpStiffnessHistogram(List<ClusterRupture> ruptures, FaultSystemSolution sol,
+//			AggregatedStiffnessCalculator[] aggCalcs, File resourcesDir, String prefix) throws IOException {
+//		List<List<Double>> valuesList = new ArrayList<>();
+//		double[] allMaxAbs = new double[quantities.length];
+//		for (int q=0; q<quantities.length; q++)
+//			valuesList.add(new ArrayList<>());
+//		List<Double> rates = new ArrayList<>();
+//		
+//		for (int r=0; r<ruptures.size(); r++) {
+//			ClusterRupture rup = ruptures.get(r);
+//			double rate = sol.getRateForRup(r);
+//			for (Jump rawJump : rup.getJumpsIterable()) {
+//				for (Jump jump : new Jump[] { rawJump, rawJump.reverse() }) {
+////					System.out.println("Calculating for jump "+jump);
+//					StiffnessResult stiffness;
+//					if (fullClusters)
+//						stiffness = calc.calcClusterStiffness(type, jump.fromCluster, jump.toCluster);
+//					else
+//						stiffness = calc.calcStiffness(type, jump.fromSection, jump.toSection);
+//					if (stiffness == null)
+//						continue;
+//					for (int q=0; q<quantities.length; q++) {
+//						double val = stiffness.getValue(quantities[q]);
+//						allMaxAbs[q] = Math.max(allMaxAbs[q], Math.abs(val));
+//						valuesList.get(q).add(val);
+//					}
+//					rates.add(0.5*rate); // 0.5 since we're including it both forwards and backwards
+//				}
+//			}
+//		}
+//		if (valuesList.get(0).isEmpty())
+//			return null;
+//		File[][] ret = new File[quantities.length][quantities.length];
+//		for (int q=0; q<quantities.length; q++) {
+//			double maxAbs = allMaxAbs[q];
+//			String title = "Jump "+quantities[q].toString();
+//			if (fullClusters)
+//				title += ", Full Clusters";
+//			else
+//				title += ", Closest Subsections";
+//			
+//			String xAxisLabel = type+", "+quantities[q];
+//			List<Double> values = valuesList.get(q);
+//			
+//			ret[q][q] = plotValueHist(resourcesDir, prefix+"_"+quantities[q].name(), values, rates,
+//					maxAbs, title, xAxisLabel, quantities[q]);
+//			for (int q2=q+1; q2<quantities.length; q2++) {
+//				String scatterTitle = "Jump "+type.toString()+" Scatter";
+//				String scatterPrefix = prefix+"_"+quantities[q].name()+"_vs_"+quantities[q2].name();
+//				ret[q][q2] = plotValueScatter(resourcesDir, scatterPrefix, values, valuesList.get(q2),
+//						maxAbs, allMaxAbs[q2], scatterTitle, quantities[q], quantities[q2]);
+//				ret[q2][q] = ret[q][q2];
+//			}
+//		}
+//		
+//		return ret;
+//	}
+//
+//	static File plotValueHist(File resourcesDir, String myPrefix, List<Double> values, List<Double> rates, double maxAbs,
+//			String title, String xAxisLabel, StiffnessAggregationMethod quantity) throws IOException {
+//		maxAbs = Math.ceil(10d*maxAbs)/10d;
+//		
+//		HistogramFunction hist;
+//		Range xRange;
+//		if (quantity == StiffnessAggregationMethod.FRACT_POSITIVE) {
+//			hist = HistogramFunction.getEncompassingHistogram(0d, 1d, 0.02);
+//			xRange = new Range(0d, hist.getMaxX()+0.5*hist.getDelta());
+//		} else {
+//			hist = new HistogramFunction(-maxAbs, maxAbs, 50);
+//			xRange = new Range(-maxAbs-0.5*hist.getDelta(), maxAbs+0.5*hist.getDelta());
+//		}
+//		for (int i=0; i<values.size(); i++) {
+//			double val = values.get(i);
+//			hist.add(hist.getClosestXIndex(val), rates.get(i));
+//		}
+//		
+//		List<DiscretizedFunc> funcs = new ArrayList<>();
+//		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+//		
+//		funcs.add(hist);
+//		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
+//		
+//		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, "Jump Annual Rate");
+//		
+//		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+//		gp.setBackgroundColor(Color.WHITE);
+//		gp.setTickLabelFontSize(18);
+//		gp.setAxisLabelFontSize(20);
+//		gp.setPlotLabelFontSize(21);
+//		
+//		double minNonZero = Double.POSITIVE_INFINITY;
+//		for (Point2D pt : hist)
+//			if (pt.getY() > 0)
+//				minNonZero = Math.min(minNonZero, pt.getY());
+//		
+//		Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minNonZero))),
+//				Math.pow(10, Math.ceil(Math.log10(hist.getMaxY()))));
+//		
+//		File pngFile = new File(resourcesDir, myPrefix+".png");
+//		
+//		gp.drawGraphPanel(spec, false, true, xRange, yRange);
+//		gp.getChartPanel().setSize(800, 600);
+//		gp.saveAsPNG(pngFile.getAbsolutePath());
+//		return pngFile;
+//	}
+//
+//	static File plotValueScatter(File resourcesDir, String myPrefix, List<Double> values1, List<Double> values2,
+//			double maxAbs1, double maxAbs2, String title, StiffnessAggregationMethod quantity1,
+//			StiffnessAggregationMethod quantity2) throws IOException {
+//		maxAbs1 = Math.ceil(10d*maxAbs1)/10d;
+//		maxAbs2 = Math.ceil(10d*maxAbs2)/10d;
+//		
+//		Range xRange, yRange;
+//		if (quantity1 == StiffnessAggregationMethod.FRACT_POSITIVE)
+//			xRange = new Range(0d, 1d);
+//		else
+//			xRange = new Range(-maxAbs1, maxAbs1);
+//		if (quantity2 == StiffnessAggregationMethod.FRACT_POSITIVE)
+//			yRange = new Range(0d, 1d);
+//		else
+//			yRange = new Range(-maxAbs2, maxAbs2);
+//		Preconditions.checkState(values1.size() == values2.size());
+//		DefaultXY_DataSet scatter = new DefaultXY_DataSet();
+//		for (int i=0; i<values1.size(); i++)
+//			scatter.set(values1.get(i), values2.get(i));
+//		
+//		List<XY_DataSet> funcs = new ArrayList<>();
+//		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+//		
+//		funcs.add(scatter);
+//		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
+//		
+//		PlotSpec spec = new PlotSpec(funcs, chars, title, quantity1.toString(), quantity2.toString());
+//		
+//		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+//		gp.setBackgroundColor(Color.WHITE);
+//		gp.setTickLabelFontSize(18);
+//		gp.setAxisLabelFontSize(20);
+//		gp.setPlotLabelFontSize(21);
+//		
+//		File pngFile = new File(resourcesDir, myPrefix+".png");
+//		
+//		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+//		gp.getChartPanel().setSize(800, 600);
+//		gp.saveAsPNG(pngFile.getAbsolutePath());
+//		return pngFile;
+//	}
+//	
+//	private static List<RuptureCoulombResult> calcRupCoulombs(List<ClusterRupture> ruptures,
+//			SubSectStiffnessCalculator calc, StiffnessAggregationMethod stiffAggMethod) {
+//		List<Future<RuptureCoulombResult>> futures = new ArrayList<>();
+//		ExecutorService exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+//		for (ClusterRupture rup : ruptures)
+//			futures.add(exec.submit(new RupCoulombCalcCall(rup, calc, stiffAggMethod)));
+//		List<RuptureCoulombResult> results = new ArrayList<>();
+//		for (Future<RuptureCoulombResult> future : futures) {
+//			try {
+//				results.add(future.get());
+//			} catch (InterruptedException | ExecutionException e) {
+//				throw ExceptionUtils.asRuntimeException(e);
+//			}
+//		}
+//		exec.shutdown();
+//		return results;
+//	}
+//	
+//	private static class RupCoulombCalcCall implements Callable<RuptureCoulombResult> {
+//		
+//		private ClusterRupture rup;
+//		private SubSectStiffnessCalculator calc;
+//		private StiffnessAggregationMethod stiffAggMethod;
+//
+//		public RupCoulombCalcCall(ClusterRupture rup, SubSectStiffnessCalculator calc,
+//				StiffnessAggregationMethod stiffAggMethod) {
+//			this.rup = rup;
+//			this.calc = calc;
+//			this.stiffAggMethod = stiffAggMethod;
+//		}
+//
+//		@Override
+//		public RuptureCoulombResult call() throws Exception {
+//			if (rup.unique.size() < 2)
+//				return null;
+//			else
+//				return new RuptureCoulombResult(rup, calc, stiffAggMethod);
+//		}
+//		
+//	}
+//	
+//	private static File plotRupCoulombHistogram(List<RuptureCoulombResult> rupCoulombs, FaultSystemSolution sol,
+//			RupCoulombQuantity quantity, File resourcesDir, String prefix) throws IOException {
+//		List<Double> values = new ArrayList<>();
+//		List<Double> rates = new ArrayList<>();
+//		double maxAbs = 0d;
+//		for (int r=0; r<rupCoulombs.size(); r++) {
+//			RuptureCoulombResult result = rupCoulombs.get(r);
+//			if (result == null)
+//				continue;
+//			double rate = sol.getRateForRup(r);
+//			double val = result.getValue(quantity);
+//			maxAbs = Math.max(Math.abs(val), maxAbs);
+//			values.add(val);
+//			rates.add(rate);
+//		}
+//		if (values.isEmpty())
+//			return null;
+//		maxAbs = Math.ceil(10d*maxAbs)/10d;
+//		
+//		HistogramFunction hist;
+//		Range xRange;
+//		if (quantity == RupCoulombQuantity.MEAN_SECT_FRACT_POSITIVES
+//				|| quantity == RupCoulombQuantity.MIN_SECT_FRACT_POSITIVES) {
+//			hist = HistogramFunction.getEncompassingHistogram(0d, 1d, 0.02);
+//			xRange = new Range(0d, hist.getMaxX()+0.5*hist.getDelta());
+//		} else if (quantity == RupCoulombQuantity.NUM_NET_NEGATIVE_SECTS) {
+//			hist = new HistogramFunction(0d, 10d, 11);
+//			xRange = new Range(-0.5, hist.getMaxX()+0.5*hist.getDelta());
+//		} else {
+//			hist = new HistogramFunction(-maxAbs, maxAbs, 50);
+//			xRange = new Range(-maxAbs-0.5*hist.getDelta(), maxAbs+0.5*hist.getDelta());
+//		}
+//		for (int i=0; i<values.size(); i++) {
+//			double val = values.get(i);
+//			hist.add(hist.getClosestXIndex(val), rates.get(i));
+//		}
+//		
+//		List<DiscretizedFunc> funcs = new ArrayList<>();
+//		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+//		
+//		funcs.add(hist);
+//		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLACK));
+//		
+//		String title = "Full Rupture Aggregated Coulomb";
+//		
+//		String xAxisLabel = quantity.toString();
+//		
+//		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, "Annual Rate");
+//		
+//		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+//		gp.setBackgroundColor(Color.WHITE);
+//		gp.setTickLabelFontSize(18);
+//		gp.setAxisLabelFontSize(20);
+//		gp.setPlotLabelFontSize(21);
+//		
+//		double minNonZero = Double.POSITIVE_INFINITY;
+//		for (Point2D pt : hist)
+//			if (pt.getY() > 0)
+//				minNonZero = Math.min(minNonZero, pt.getY());
+//		
+//		Range yRange = new Range(Math.pow(10, Math.floor(Math.log10(minNonZero))),
+//				Math.pow(10, Math.ceil(Math.log10(hist.getMaxY()))));
+//		
+//		File pngFile = new File(resourcesDir, prefix+".png");
+//		
+//		gp.drawGraphPanel(spec, false, true, xRange, yRange);
+//		gp.getChartPanel().setSize(800, 600);
+//		gp.saveAsPNG(pngFile.getAbsolutePath());
+//		return pngFile;
+//	}
+//	
+//	private static File[][] plotRupToClusterCoulombHistogram(List<ClusterRupture> ruptures, FaultSystemSolution sol,
+//			SubSectStiffnessCalculator calc, StiffnessType type, StiffnessAggregationMethod[] quantities,
+//			File resourcesDir, String prefix) throws IOException {
+//		List<List<Double>> valuesList = new ArrayList<>();
+//		double[] allMaxAbs = new double[quantities.length];
+//		for (int q=0; q<quantities.length; q++)
+//			valuesList.add(new ArrayList<>());
+//		List<Double> rates = new ArrayList<>();
+//		for (int r=0; r<ruptures.size(); r++) {
+//			ClusterRupture rupture = ruptures.get(r);
+//			if (rupture.unique.size() < 2 || rupture.getTotalNumJumps() == 0)
+//				continue;
+//			double rate = sol.getRateForRup(r);
+//			for (FaultSubsectionCluster cluster : rupture.getClustersIterable()) {
+//				StiffnessResult stiffness = calc.calcAggRupToClusterStiffness(type, rupture, cluster);
+//				if (stiffness == null)
+//					continue;
+//				for (int q=0; q<quantities.length; q++) {
+//					double val = stiffness.getValue(quantities[q]);
+//					allMaxAbs[q] = Math.max(allMaxAbs[q], Math.abs(val));
+//					valuesList.get(q).add(val);
+//				}
+//				rates.add(rate);
+//			}
+//		}
+//		if (valuesList.get(0).isEmpty())
+//			return null;
+//		File[][] ret = new File[quantities.length][quantities.length];
+//		for (int q=0; q<quantities.length; q++) {
+//			double maxAbs = allMaxAbs[q];
+//			String title = "Aggregate Full Rup to Cluster "+quantities[q].toString();
+//			
+//			String xAxisLabel = type+", "+quantities[q];
+//			List<Double> values = valuesList.get(q);
+//			
+//			ret[q][q] = plotValueHist(resourcesDir, prefix+"_"+quantities[q].name(), values, rates,
+//					maxAbs, title, xAxisLabel, quantities[q]);
+//			for (int q2=q+1; q2<quantities.length; q2++) {
+//				String scatterTitle = "Aggregate Full Rup to Cluster "+type.toString()+" Scatter";
+//				String scatterPrefix = prefix+"_"+quantities[q].name()+"_vs_"+quantities[q2].name();
+//				ret[q][q2] = plotValueScatter(resourcesDir, scatterPrefix, values, valuesList.get(q2),
+//						maxAbs, allMaxAbs[q2], scatterTitle, quantities[q], quantities[q2]);
+//				ret[q2][q] = ret[q][q2];
+//			}
+//		}
+//		
+//		return ret;
+//	}
 
 }

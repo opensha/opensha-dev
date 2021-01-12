@@ -15,7 +15,6 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistance
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator;
-import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessAggregationMethod;
 import org.opensha.sha.simulators.stiffness.SubSectStiffnessCalculator.StiffnessType;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
@@ -32,13 +31,14 @@ public class PlausibilityEventIDCompare {
 		
 		int[] eventIDs = { 66240 };
 		
-		SubSectStiffnessCalculator subSectCalc = new SubSectStiffnessCalculator(catalog.getU3SubSects(),
-				2d, 3e4, 3e4, 0.5);
-		subSectCalc.loadCacheFile(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
-				+ "cff_cache_2606sects_2km_lambda30000_mu30000_coeff0.5.csv"), StiffnessType.CFF);
+//		SubSectStiffnessCalculator subSectCalc = new SubSectStiffnessCalculator(catalog.getU3SubSects(),
+//				2d, 3e4, 3e4, 0.5);
+//		subSectCalc.loadCacheFile(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+//				+ "cff_cache_2606sects_2km_lambda30000_mu30000_coeff0.5.csv"), StiffnessType.CFF);
 		
-		PlausibilityFilter filter = new ClusterPathCoulombCompatibilityFilter(
-				subSectCalc, StiffnessAggregationMethod.MEDIAN, 0f);
+//		PlausibilityFilter filter = new ClusterPathCoulombCompatibilityFilter(
+//				subSectCalc, StiffnessAggregationMethod.MEDIAN, 0f);
+		PlausibilityFilter filter = null;
 		
 		List<RSQSimEvent> events = catalog.loader().byIDs(eventIDs);
 		
