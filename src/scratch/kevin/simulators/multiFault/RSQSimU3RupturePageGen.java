@@ -264,7 +264,7 @@ public class RSQSimU3RupturePageGen {
 		filters.add(new U3CoulombJunctionFilter(coulombTester, coulombRates));
 		
 		RupSetPlausibilityResult result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, filters, null, rsConnSearch);
-		TableBuilder table = RupSetDiagnosticsPageGen.getRupSetPlausibilityTable(result);
+		TableBuilder table = RupSetDiagnosticsPageGen.getRupSetPlausibilityTable(result, null);
 		
 		// now plot
 		String title = "Rupture Plausibility Filters, M≥"+(float)minMag+", SectArea≥"+(float)minFractForInclusion;
