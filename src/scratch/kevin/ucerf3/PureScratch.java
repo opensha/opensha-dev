@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
@@ -80,6 +81,7 @@ import org.opensha.commons.param.editor.impl.NumericTextField;
 import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.IDPairing;
@@ -94,6 +96,8 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
@@ -130,13 +134,16 @@ import org.opensha.sha.util.SiteTranslator;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Table;
 import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
@@ -164,6 +171,8 @@ import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
+import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSectionDataWriter;
 import scratch.UCERF3.utils.FaultSystemIO;
@@ -2044,7 +2053,6 @@ public class PureScratch {
 		FaultBasedMapGen.plotMap(new File("/tmp"), "test_map", false, map);
 	}
 
-	
 	private static void test81() {
 		// Get current size of heap in bytes
 		double heapSize = Runtime.getRuntime().totalMemory(); 
@@ -2058,12 +2066,179 @@ public class PureScratch {
 		heapMaxSize /= 1024; // MB
 		System.out.println("Max heap: "+(float)heapMaxSize+" MB = "+(float)(heapMaxSize/1024d)+" GB");
 	}
+
+	private static void test82() {
+		String str = "|asdf|";
+//		System.out.println(str.replaceAll("|", Matcher.quoteReplacement("\\|")));
+		System.out.println(str.replace("|", "\\|"));
+		System.exit(0);
+		
+		// list of faults with 90 degree dip and non-SS rakes
+		FaultModels fm = FaultModels.FM3_1;
+		List<FaultSection> sects = fm.fetchFaultSections();
+		Map<Integer, FaultSection> parentIDsMap = sects.stream().collect(Collectors.toMap(S -> S.getSectionId(), S->S));
+		
+		Table<DeformationModels, Integer, Double> dmParentRakes = HashBasedTable.create();
+		for (DeformationModels dm : DeformationModels.values()) {
+			if (dm.getRelativeWeight(null) == 0d)
+				continue;
+			List<? extends FaultSection> subSects = DeformationModels.loadSubSects(fm, dm);
+			Map<Integer, List<FaultSection>> parentSects = subSects.stream().collect(Collectors.groupingBy(S -> S.getParentSectionId()));
+			for (Integer parentID : parentIDsMap.keySet()) {
+				List<Double> rakes = new ArrayList<>();
+				for (FaultSection sect : parentSects.get(parentID))
+					rakes.add(sect.getAveRake());
+				double aveRake = FaultUtils.getInRakeRange(FaultUtils.getAngleAverage(rakes));
+//				if (parentID == 301) {
+//					System.out.println("301. rakes="+Joiner.on(",").join(rakes)+". ave="+aveRake);
+//					System.exit(0);
+//				}
+				dmParentRakes.put(dm, parentID, aveRake);
+			}
+		}
+		for (FaultSection sect : sects) {
+			if (sect.getAveDip() != 90d)
+				continue;
+			Map<DeformationModels, Double> dmRakes = dmParentRakes.column(sect.getSectionId());
+			double geolRake = dmRakes.get(DeformationModels.GEOLOGIC);
+			if ((float)geolRake != -180f && (float)geolRake != 0f && (float)geolRake != 180f) {
+				System.out.println(sect.getName()+" (ID="+sect.getSectionId()+") has dip=90 and non-SS geologic rake="+(float)geolRake);
+				for (DeformationModels dm : DeformationModels.values()) {
+					if (dmRakes.containsKey(dm))
+						System.out.println("\t"+dm.getName()+": "+dmRakes.get(dm).floatValue());
+				}
+			}
+		}
+	}
+	
+	private static void test83() throws IOException {
+		List<? extends FaultSection> subSects = DeformationModels.loadSubSects(FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+		FaultSubsectionCluster cluster = new FaultSubsectionCluster(subSects.subList(0, 3));
+		FaultSubsectionCluster splayCluster = new FaultSubsectionCluster(subSects.subList(30, 31));
+		Jump jump = new Jump(cluster.subSects.get(1), cluster, splayCluster.subSects.get(0), splayCluster, 1d);
+		cluster.addConnection(jump);
+		ClusterRupture rup = new ClusterRupture(cluster);
+		rup = rup.take(jump);
+		System.out.println(rup);
+		File file = new File("/tmp/splay.json");
+		ClusterRupture.writeJSON(file, Lists.newArrayList(rup), subSects);
+		List<ClusterRupture> rups = ClusterRupture.readJSON(file, subSects);
+		System.out.println(rups.get(0));
+	}
+	
+	private static void test84() throws IOException {
+		// corupture rate calculation for Mike Oskin & Alba Padilla
+		HashSet<String> sects1 = new HashSet<>();
+		HashSet<String> sects2 = new HashSet<>();
+		
+		String name1 = "SAF San Bernardino";
+		sects1.add("San Andreas (San Bernardino N), Subsection 0");
+		sects1.add("San Andreas (San Bernardino N), Subsection 1");
+		sects1.add("San Andreas (San Bernardino N), Subsection 2");
+		sects1.add("San Andreas (San Bernardino N), Subsection 3");
+		sects1.add("San Andreas (San Bernardino N), Subsection 4");
+		
+		String name2 = "SJF San Bernardino";
+		sects2.add("San Jacinto (San Bernardino), Subsection 0");
+		sects2.add("San Jacinto (San Bernardino), Subsection 1");
+		sects2.add("San Jacinto (San Bernardino), Subsection 2");
+		
+//		String name1 = "SAF Wrightwood";
+//		sects1.add("San Andreas (Mojave S), Subsection 13");
+//		
+//		String name2 = "SJF Mystic Lake";
+//		sects2.add("San Jacinto (Stepovers Combined), Subsection 0");
+		
+		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+				new File("/home/kevin/OpenSHA/UCERF3/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
+		APrioriBranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		double totWeight = 0d;
+		Map<FaultModels, List<Integer>> fmCorupsMap = new HashMap<>();
+		Map<FaultModels, List<Integer>> fmRups1Map = new HashMap<>();
+		Map<FaultModels, List<Integer>> fmRups2Map = new HashMap<>();
+		List<Double> corupVals = new ArrayList<>();
+		List<Double> vals1 = new ArrayList<>();
+		List<Double> vals2 = new ArrayList<>();
+		List<Double> weights = new ArrayList<>();
+		
+		for (LogicTreeBranch branch : cfss.getBranches()) {
+			double weight = weightProv.getWeight(branch);
+			weights.add(weight);
+			totWeight += weight;
+			FaultModels fm = branch.getValue(FaultModels.class);
+			List<Integer> corupIDs = fmCorupsMap.get(fm);
+			if (corupIDs == null) {
+				FaultSystemRupSet rupSet = cfss.getSolution(branch).getRupSet();
+				corupIDs = new ArrayList<>();
+				List<Integer> ids1 = new ArrayList<>();
+				List<Integer> ids2 = new ArrayList<>();
+				for (int r=0; r<rupSet.getNumRuptures(); r++) {
+					boolean has1 = false;
+					boolean has2 = false;
+					for (FaultSection sect : rupSet.getFaultSectionDataForRupture(r)) {
+						has1 = has1 || sects1.contains(sect.getSectionName());
+						has2 = has2 || sects2.contains(sect.getSectionName());
+					}
+					if (has1 && has2)
+						corupIDs.add(r);
+					if (has1)
+						ids1.add(r);
+					if (has2)
+						ids2.add(r);
+				}
+				System.out.println("Rup counts for "+fm);
+				System.out.println("\tFault 1: "+ids1.size());
+				System.out.println("\tFault 2: "+ids2.size());
+				System.out.println("\tCoruptures: "+corupIDs.size());
+				fmCorupsMap.put(fm, corupIDs);
+				fmRups1Map.put(fm, ids1);
+				fmRups2Map.put(fm, ids2);
+			}
+			List<Integer> ids1 = fmRups1Map.get(fm);
+			List<Integer> ids2 = fmRups2Map.get(fm);
+			double[] rates = cfss.getRates(branch);
+			corupVals.add(calcRate(rates, corupIDs));
+			vals1.add(calcRate(rates, ids1));
+			vals2.add(calcRate(rates, ids2));
+		}
+		
+		System.out.println("Co-rupture rate:");
+		printRateStats(corupVals, weights, totWeight);
+		System.out.println(name1+" rates");
+		printRateStats(vals1, weights, totWeight);
+		System.out.println(name2+" rates");
+		printRateStats(vals2, weights, totWeight);
+	}
+	
+	private static void printRateStats(List<Double> rates, List<Double> weights, double totWeight) {
+		double mean = 0d;
+		double min = Double.POSITIVE_INFINITY;
+		double max = Double.NEGATIVE_INFINITY;
+		for (int i=0; i<rates.size(); i++) {
+			double val = rates.get(i);
+			mean += val*weights.get(i);
+			min = Math.min(min, val);
+			max = Math.max(max, val);
+		}
+		mean /= totWeight;
+		
+		System.out.println("\tBranch-averaged rate: "+(float)mean);
+		System.out.println("\tBranch rate range: ["+(float)min+", "+(float)max+"]");
+	}
+	
+	private static double calcRate(double[] rates, List<Integer> ids) {
+		double rate = 0d;
+		for (int id : ids)
+			rate += rates[id];
+		return rate;
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test81();
+		test84();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

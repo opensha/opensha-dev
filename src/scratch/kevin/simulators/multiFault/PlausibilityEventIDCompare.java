@@ -9,7 +9,6 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityFilter;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.ClusterPathCoulombCompatibilityFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RuptureConnectionSearch;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.faultSurface.FaultSection;

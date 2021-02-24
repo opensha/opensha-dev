@@ -150,4 +150,9 @@ public class DownDipTestPermutationStrategy implements ClusterPermutationStrateg
 		return Joiner.on(",").join(Ints.asList(indexes));
 	}
 
+	@Override
+	public String getName() {
+		return "Down Dip Test";
+	}
+
 }
