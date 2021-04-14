@@ -1567,6 +1567,7 @@ yAxisRange=null;
 		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GREEN));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE));
+//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLUE));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
 		
 		Range xRange = new Range(combinedMFD.getMinX()-combinedMFD.getDelta()/2.0, combinedMFD.getMaxX()+combinedMFD.getDelta()/2.0);
@@ -3021,7 +3022,7 @@ yAxisRange=null;
 //		faultInversion.doNSHMP_GR_Solution(SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, false, null, null);
 
 
-//		faultInversion.plotClassicMFDs();
+		faultInversion.plotClassicMFDs();
 //		faultInversion.plotRupLengthForEllsworthB();
 		
 		
@@ -3066,15 +3067,15 @@ yAxisRange=null;
 //		faultInversion.GEOMETRIC_RUP_LENGTH_INCREASE = true;
 //		faultInversion.doMFDconstrainedSA(true, SlipRateProfileType.TAPERED, SlipAlongRuptureModelEnum.TAPERED, ScalingRelationshipEnum.ELLSWORTH_B, 10, MFD_TargetType.GR_b_1pt0, 1, false, 2, false, true);
 		// Ratio of geom rup length increase to original GR b=1 case
-		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
-		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
-		for(String name: nameArray) {
-		    String fileName1 = ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B_geomRupLen/hazardMaps/"+name+".txt";
-		    String fileName2 = ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt";
-		    String dirName = ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B_geomRupLen/hazardMaps";
-		    String label = name+"_RatioToAllRupturesCase";
-			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
-		}
+//		faultInversion.shortFault=true; faultInversion.makeFaultSectionDataList();
+//		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+//		for(String name: nameArray) {
+//		    String fileName1 = ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B_geomRupLen/hazardMaps/"+name+".txt";
+//		    String fileName2 = ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B/hazardMaps/"+name+".txt";
+//		    String dirName = ROOT_PATH+"MFDconstrSA_10_finalE=2.0_GR_b_1pt0_wt1_TAPERED_TAPERED_ELLSWORTH_B_geomRupLen/hazardMaps";
+//		    String label = name+"_RatioToAllRupturesCase";
+//			faultInversion.makeHazardMapRatio(fileName1, fileName2, label, dirName, true);			
+//		}
 
 		
 		// Re-Plot histogram of hazard from 10 GR b=1 cases (doing it this way to avoid recomputing hazard maps)
