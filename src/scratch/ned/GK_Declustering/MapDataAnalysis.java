@@ -392,7 +392,8 @@ public class MapDataAnalysis {
 		for(int i=0;i<dataset1.size();i++) {
 			double ratio = dataset1.get(i)/dataset2.get(i);
 			ratioArray[i] = ratio;
-			ratioHist.add(ratio, 1.0);
+			if(ratio < ratioHist.getMaxX()+ratioHist.getDelta()/2.0)
+				ratioHist.add(ratio, 1.0);
 			mean += ratio;
 			if(min>ratio) {
 				min = ratio;
@@ -410,8 +411,7 @@ public class MapDataAnalysis {
 		
 		double median = Quantiles.median().compute(ratioArray);
 		
-		ratioHist.normalizeBySumOfY_Vals();
-		ratioHist.scale(1.0/(ratioHist.calcSumOfY_Vals()*ratioHist.getDelta()));
+		ratioHist.scale(1.0/(dataset1.size()*ratioHist.getDelta()));
 		double maxYval = ratioHist.getMaxY();
 		
 		String infoString =
@@ -768,80 +768,123 @@ public class MapDataAnalysis {
 //			e.printStackTrace();
 //		}
 		
-		// This is for Figure 6 Map,
-		// which has to be fetched from:
-		// /Users/field/workspace/git/opensha-dev/src/scratch/UCERF3/data/scratch/GMT/Figure6_Map
-		String title = "Ratio of Full Poisson to Full TD, 2% in 50 yr 5-Hz SA";
-		try {
-			plotAndWriteRatioMap(
-					getIML_ForProbGeoDataset(sa0pt2_poisson_curves, 0.02), 
-					getIML_ForProbGeoDataset(sa0pt2_full_mean_curves, 0.02), 
-					title, title, "Figure6_Map");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-
-		try {
-			plotAndWriteRatioMap(
-					getIML_ForProbGeoDataset(sa0pt2_declustered_mean_curves, 0.02), 
-					getIML_ForProbGeoDataset(sa0pt2_poisson_curves, 0.02), 
-					title, title, "GK_DeclusteredVsFullPois_Map");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+//		// This is for Figure 6 Map,
+//		// which has to be fetched from:
+//		// /Users/field/workspace/git/opensha-dev/src/scratch/UCERF3/data/scratch/GMT/Figure6_Map
+//		String title = "Ratio of Full Poisson to Full TD, 2% in 50 yr 5-Hz SA";
+//		try {
+//			plotAndWriteRatioMap(
+//					getIML_ForProbGeoDataset(sa0pt2_poisson_curves, 0.02), 
+//					getIML_ForProbGeoDataset(sa0pt2_full_mean_curves, 0.02), 
+//					title, title, "Figure6_Map");
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//		
+//
+//		try {
+//			plotAndWriteRatioMap(
+//					getIML_ForProbGeoDataset(sa0pt2_declustered_mean_curves, 0.02), 
+//					getIML_ForProbGeoDataset(sa0pt2_poisson_curves, 0.02), 
+//					title, title, "GK_DeclusteredVsFullPois_Map");
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 
 		
 //		System.exit(0);
 		
+		
+//		// FOR 2% in 50-years: *********************************
+//		
+//		String infoString="";
+//		
+//		String imtString = "PGA";
+////		infoString += compareCases(pga_randomized_mean_curves, pga_poisson_curves, 0.02, "Randomized vs Full Poisson, 2in50 PGA", imtString);
+//		infoString += compareCases(pga_poisson_curves, pga_full_mean_curves, 0.02, "Full Poisson vs Full TD, 2in50 PGA", imtString);
+////		System.exit(0);
+//		infoString += compareCases(pga_declustered_mean_curves, pga_full_mean_curves, 0.02, "GK Declustered vs Full TD, 2in50 PGA", imtString);
+//		infoString += compareCases(pga_declustered_mean_curves, pga_poisson_curves, 0.02, "GK Declustered vs Full Poisson, 2in50 PGA", imtString);
+//
+//		imtString = "5-Hz SA";
+////		infoString += compareCases(sa0pt2_randomized_mean_curves, sa0pt2_poisson_curves, 0.02, "Randomized vs Full Poisson, 2in50 0.2secSA", imtString);
+//		infoString += compareCases(sa0pt2_poisson_curves, sa0pt2_full_mean_curves, 0.02, "Full Poisson vs Full TD, 2in50 0.2secSA", imtString);
+//		infoString += compareCases(sa0pt2_declustered_mean_curves, sa0pt2_full_mean_curves, 0.02, "GK Declustered vs Full TD, 2in50 0.2secSA", imtString);
+//		infoString += compareCases(sa0pt2_declustered_mean_curves, sa0pt2_poisson_curves, 0.02, "GK Declustered vs Full Poisson, 2in50 0.2secSA", imtString);
+//		
+////		infoString += compareCases(getRTGM_Dataset(sa0pt2_randomized_mean_curves, 0.2),getRTGM_Dataset(sa0pt2_poisson_curves, 0.2, imtString),
+////				"Randomized vs Full Poisson, RTGM 0.2secSA");
+//		infoString += compareCases(getRTGM_Dataset(sa0pt2_poisson_curves, 0.2),getRTGM_Dataset(sa0pt2_full_mean_curves, 0.2),
+//				"Full Poisson vs Full TD, RTGM 0.2secSA", imtString);
+//		infoString += compareCases(getRTGM_Dataset(sa0pt2_declustered_mean_curves, 0.2),getRTGM_Dataset(sa0pt2_full_mean_curves, 0.2),
+//				"GK Declustered vs Full TD, RTGM 0.2secSA", imtString);
+//		infoString += compareCases(getRTGM_Dataset(sa0pt2_declustered_mean_curves, 0.2),
+//				getRTGM_Dataset(sa0pt2_poisson_curves, 0.2),"GK Declustered vs Full Poisson, RTGM 0.2secSA", imtString);
+//
+//		imtString = "1-Hz SA";
+////		infoString += compareCases(sa1pt0_randomized_mean_curves, sa1pt0_poisson_curves, 0.02, "Randomized vs Full Poisson, 2in50 1.0secSA", imtString);
+//		infoString += compareCases(sa1pt0_poisson_curves, sa1pt0_full_mean_curves, 0.02, "Full Poisson vs Full TD, 2in50 1.0secSA", imtString);
+//		infoString += compareCases(sa1pt0_declustered_mean_curves, sa1pt0_full_mean_curves, 0.02, "GK Declustered vs Full TD, 2in50 1.0secSA", imtString);
+//		infoString += compareCases(sa1pt0_declustered_mean_curves, sa1pt0_poisson_curves, 0.02, "GK Declustered vs Full Poisson, 2in50 1.0secSA", imtString);
+//
+////		infoString += compareCases(getRTGM_Dataset(sa1pt0_randomized_mean_curves, 0.2),getRTGM_Dataset(sa1pt0_poisson_curves, 0.2, imtString),
+////				"Randomized vs Full Poisson, RTGM 1.0secSA");
+//		infoString += compareCases(getRTGM_Dataset(sa1pt0_poisson_curves, 1.0),getRTGM_Dataset(sa1pt0_full_mean_curves, 1.0),
+//				"Full Poisson vs Full TD, RTGM 1.0secSA", imtString);
+//		infoString += compareCases(getRTGM_Dataset(sa1pt0_declustered_mean_curves, 1.0),getRTGM_Dataset(sa1pt0_full_mean_curves, 1.0),
+//				"GK Declustered vs Full TD, RTGM 1.0secSA", imtString);
+//		infoString += compareCases(getRTGM_Dataset(sa1pt0_declustered_mean_curves, 1.0), getRTGM_Dataset(sa1pt0_poisson_curves, 1.0),
+//				"GK Declustered vs Full Poisson, RTGM 1.0secSA", imtString);
+//
+//		imtString = "0.2-Hz SA";
+////		infoString += compareCases(sa5pt0_randomized_mean_curves, sa5pt0_poisson_curves, 0.02, "Randomized vs Full Poisson, 2in50 5.0secSA", imtString);
+//		infoString += compareCases(sa5pt0_poisson_curves, sa5pt0_full_mean_curves, 0.02, "Full Poisson vs Full TD, 2in50 5.0secSA", imtString);
+//		infoString += compareCases(sa5pt0_declustered_mean_curves, sa5pt0_full_mean_curves, 0.02, "GK Declustered vs Full TD, 2in50 5.0secSA", imtString);
+//		infoString += compareCases(sa5pt0_declustered_mean_curves, sa5pt0_poisson_curves, 0.02, "GK Declustered vs Full Poisson, 2in50 5.0secSA", imtString);
+//		
+//		System.out.println("2%in 50:\nName\tmean\tmin\tmax\tmaxY");
+//		System.out.println(infoString);
+		
+		
+		
+		
+		
+		// FOR 40% in 50-years: *********************************
 		
 		String infoString="";
 		
 		String imtString = "PGA";
-//		infoString += compareCases(pga_randomized_mean_curves, pga_poisson_curves, 0.02, "Randomized vs Full Poisson, 2in50 PGA", imtString);
-		infoString += compareCases(pga_poisson_curves, pga_full_mean_curves, 0.02, "Full Poisson vs Full TD, 2in50 PGA", imtString);
+//		infoString += compareCases(pga_randomized_mean_curves, pga_poisson_curves, 0.4, "Randomized vs Full Poisson, 40in50 PGA", imtString);
+		infoString += compareCases(pga_poisson_curves, pga_full_mean_curves, 0.4, "Full Poisson vs Full TD, 40in50 PGA", imtString);
 //		System.exit(0);
-		infoString += compareCases(pga_declustered_mean_curves, pga_full_mean_curves, 0.02, "GK Declustered vs Full TD, 2in50 PGA", imtString);
-		infoString += compareCases(pga_declustered_mean_curves, pga_poisson_curves, 0.02, "GK Declustered vs Full Poisson, 2in50 PGA", imtString);
+		infoString += compareCases(pga_declustered_mean_curves, pga_full_mean_curves, 0.4, "GK Declustered vs Full TD, 40in50 PGA", imtString);
+		infoString += compareCases(pga_declustered_mean_curves, pga_poisson_curves, 0.4, "GK Declustered vs Full Poisson, 40in50 PGA", imtString);
 
 		imtString = "5-Hz SA";
-//		infoString += compareCases(sa0pt2_randomized_mean_curves, sa0pt2_poisson_curves, 0.02, "Randomized vs Full Poisson, 2in50 0.2secSA", imtString);
-		infoString += compareCases(sa0pt2_poisson_curves, sa0pt2_full_mean_curves, 0.02, "Full Poisson vs Full TD, 2in50 0.2secSA", imtString);
-		infoString += compareCases(sa0pt2_declustered_mean_curves, sa0pt2_full_mean_curves, 0.02, "GK Declustered vs Full TD, 2in50 0.2secSA", imtString);
-		infoString += compareCases(sa0pt2_declustered_mean_curves, sa0pt2_poisson_curves, 0.02, "GK Declustered vs Full Poisson, 2in50 0.2secSA", imtString);
+//		infoString += compareCases(sa0pt2_randomized_mean_curves, sa0pt2_poisson_curves, 0.4, "Randomized vs Full Poisson, 40in50 0.2secSA", imtString);
+		infoString += compareCases(sa0pt2_poisson_curves, sa0pt2_full_mean_curves, 0.4, "Full Poisson vs Full TD, 40in50 0.2secSA", imtString);
+		infoString += compareCases(sa0pt2_declustered_mean_curves, sa0pt2_full_mean_curves, 0.4, "GK Declustered vs Full TD, 40in50 0.2secSA", imtString);
+		infoString += compareCases(sa0pt2_declustered_mean_curves, sa0pt2_poisson_curves, 0.4, "GK Declustered vs Full Poisson, 40in50 0.2secSA", imtString);
 		
-//		infoString += compareCases(getRTGM_Dataset(sa0pt2_randomized_mean_curves, 0.2),getRTGM_Dataset(sa0pt2_poisson_curves, 0.2, imtString),
-//				"Randomized vs Full Poisson, RTGM 0.2secSA");
-		infoString += compareCases(getRTGM_Dataset(sa0pt2_poisson_curves, 0.2),getRTGM_Dataset(sa0pt2_full_mean_curves, 0.2),
-				"Full Poisson vs Full TD, RTGM 0.2secSA", imtString);
-		infoString += compareCases(getRTGM_Dataset(sa0pt2_declustered_mean_curves, 0.2),getRTGM_Dataset(sa0pt2_full_mean_curves, 0.2),
-				"GK Declustered vs Full TD, RTGM 0.2secSA", imtString);
-		infoString += compareCases(getRTGM_Dataset(sa0pt2_declustered_mean_curves, 0.2),
-				getRTGM_Dataset(sa0pt2_poisson_curves, 0.2),"GK Declustered vs Full Poisson, RTGM 0.2secSA", imtString);
 
 		imtString = "1-Hz SA";
-//		infoString += compareCases(sa1pt0_randomized_mean_curves, sa1pt0_poisson_curves, 0.02, "Randomized vs Full Poisson, 2in50 1.0secSA", imtString);
-		infoString += compareCases(sa1pt0_poisson_curves, sa1pt0_full_mean_curves, 0.02, "Full Poisson vs Full TD, 2in50 1.0secSA", imtString);
-		infoString += compareCases(sa1pt0_declustered_mean_curves, sa1pt0_full_mean_curves, 0.02, "GK Declustered vs Full TD, 2in50 1.0secSA", imtString);
-		infoString += compareCases(sa1pt0_declustered_mean_curves, sa1pt0_poisson_curves, 0.02, "GK Declustered vs Full Poisson, 2in50 1.0secSA", imtString);
-
-//		infoString += compareCases(getRTGM_Dataset(sa1pt0_randomized_mean_curves, 0.2),getRTGM_Dataset(sa1pt0_poisson_curves, 0.2, imtString),
-//				"Randomized vs Full Poisson, RTGM 1.0secSA");
-		infoString += compareCases(getRTGM_Dataset(sa1pt0_poisson_curves, 1.0),getRTGM_Dataset(sa1pt0_full_mean_curves, 1.0),
-				"Full Poisson vs Full TD, RTGM 1.0secSA", imtString);
-		infoString += compareCases(getRTGM_Dataset(sa1pt0_declustered_mean_curves, 1.0),getRTGM_Dataset(sa1pt0_full_mean_curves, 1.0),
-				"GK Declustered vs Full TD, RTGM 1.0secSA", imtString);
-		infoString += compareCases(getRTGM_Dataset(sa1pt0_declustered_mean_curves, 1.0), getRTGM_Dataset(sa1pt0_poisson_curves, 1.0),
-				"GK Declustered vs Full Poisson, RTGM 1.0secSA", imtString);
+//		infoString += compareCases(sa1pt0_randomized_mean_curves, sa1pt0_poisson_curves, 0.4, "Randomized vs Full Poisson, 40in50 1.0secSA", imtString);
+		infoString += compareCases(sa1pt0_poisson_curves, sa1pt0_full_mean_curves, 0.4, "Full Poisson vs Full TD, 40in50 1.0secSA", imtString);
+		infoString += compareCases(sa1pt0_declustered_mean_curves, sa1pt0_full_mean_curves, 0.4, "GK Declustered vs Full TD, 40in50 1.0secSA", imtString);
+		infoString += compareCases(sa1pt0_declustered_mean_curves, sa1pt0_poisson_curves, 0.4, "GK Declustered vs Full Poisson, 40in50 1.0secSA", imtString);
 
 		imtString = "0.2-Hz SA";
-//		infoString += compareCases(sa5pt0_randomized_mean_curves, sa5pt0_poisson_curves, 0.02, "Randomized vs Full Poisson, 2in50 5.0secSA", imtString);
-		infoString += compareCases(sa5pt0_poisson_curves, sa5pt0_full_mean_curves, 0.02, "Full Poisson vs Full TD, 2in50 5.0secSA", imtString);
-		infoString += compareCases(sa5pt0_declustered_mean_curves, sa5pt0_full_mean_curves, 0.02, "GK Declustered vs Full TD, 2in50 5.0secSA", imtString);
-		infoString += compareCases(sa5pt0_declustered_mean_curves, sa5pt0_poisson_curves, 0.02, "GK Declustered vs Full Poisson, 2in50 5.0secSA", imtString);
+//		infoString += compareCases(sa5pt0_randomized_mean_curves, sa5pt0_poisson_curves, 0.4, "Randomized vs Full Poisson, 40in50 5.0secSA", imtString);
+		infoString += compareCases(sa5pt0_poisson_curves, sa5pt0_full_mean_curves, 0.4, "Full Poisson vs Full TD, 40in50 5.0secSA", imtString);
+		infoString += compareCases(sa5pt0_declustered_mean_curves, sa5pt0_full_mean_curves, 0.4, "GK Declustered vs Full TD, 40in50 5.0secSA", imtString);
+		infoString += compareCases(sa5pt0_declustered_mean_curves, sa5pt0_poisson_curves, 0.4, "GK Declustered vs Full Poisson, 40in50 5.0secSA", imtString);
 		
-		System.out.println("Name\tmean\tmin\tmax\tmaxY");
+		System.out.println("40% in 50:\nName\tmean\tmin\tmax\tmaxY");
 		System.out.println(infoString);
+
+		
+		
+		
 	}
 	
 

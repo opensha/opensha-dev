@@ -1586,7 +1586,7 @@ public class U3ETAS_SimulationAnalysis {
 		MakeFigures.makeFigure1_Parts();
 		// be sure to fetch the map directories from:
 		// /Users/field/workspace/git/opensha-dev/src/scratch/UCERF3/data/scratch/GMT/
-		// and put them in /Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringAnalysis/FiguresFromEclipse/Figure1 
+		// and put them in /Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnHazardAnalysisPaper/FiguresFromEclipse/Figure1 
 
 		System.exit(0);
 
