@@ -20,7 +20,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRuptureBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ClusterConnectionStrategy;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ClusterPermutationStrategy;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.RuptureGrowingStrategy;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.DistCutoffClosestSectClusterConnectionStrategy;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -127,7 +127,7 @@ public class DownDipTestRupSetBuilder {
 		SectionDistanceAzimuthCalculator distAzCalc = new SectionDistanceAzimuthCalculator(subSections);
 		
 		// this creates rectangular permutations only for our down-dip fault to speed up rupture building
-		ClusterPermutationStrategy permutationStrategy = new DownDipTestPermutationStrategy(downDipBuilder);
+		RuptureGrowingStrategy permutationStrategy = new DownDipTestPermutationStrategy(downDipBuilder);
 		// connection strategy: parent faults connect at closest point, and only when dist <=5 km
 		ClusterConnectionStrategy connectionStrategy = new DistCutoffClosestSectClusterConnectionStrategy(
 				subSections, distAzCalc, 5d);
@@ -136,7 +136,7 @@ public class DownDipTestRupSetBuilder {
 //		ClusterRuptureBuilder builder = new ClusterRuptureBuilder(subSections, connectionStrategy,
 //				distAzCalc, filters, maxNumSplays);
 		ClusterRuptureBuilder builder = new ClusterRuptureBuilder(
-				connectionStrategy.getClusters(), filters, maxNumSplays);
+				connectionStrategy.getClusters(), filters, maxNumSplays, distAzCalc);
 		
 		List<ClusterRupture> ruptures = builder.build(permutationStrategy);
 		
