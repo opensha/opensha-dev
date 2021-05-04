@@ -2,14 +2,20 @@ package scratch.kevin.spatialVar;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
 import org.opensha.commons.data.siteData.SiteDataValue;
@@ -45,20 +51,18 @@ import scratch.UCERF3.analysis.FaultBasedMapGen;
 public class SpatialVarCalc {
 	
 	private double[] periods;
-	private List<? extends Site> sites;
+	private int numSites;
 	
-	private Matrix B1, B2, B3;
 	private Matrix K1, K2, K3;
-	private Matrix D1, D2;
 	private Matrix L1, L2;
 
 	public SpatialVarCalc(double[] periods, List<? extends Site> sites) {
 		this.periods = periods;
-		this.sites = sites;
+		this.numSites = sites.size();
 		
-		B1 = new Matrix(periods.length, periods.length);
-		B2 = new Matrix(periods.length, periods.length);
-		B3 = new Matrix(periods.length, periods.length);
+		Matrix B1 = new Matrix(periods.length, periods.length);
+		Matrix B2 = new Matrix(periods.length, periods.length);
+		Matrix B3 = new Matrix(periods.length, periods.length);
 		
 		// interpolate b matrices at the given periods
 		for (int i=0; i<periods.length; i++) {
@@ -85,8 +89,8 @@ public class SpatialVarCalc {
 		K3 = decompose(B3).getL();
 		
 		// coregionalization matrices
-		D1 = new Matrix(sites.size(), sites.size());
-		D2 = new Matrix(sites.size(), sites.size());
+		Matrix D1 = new Matrix(sites.size(), sites.size());
+		Matrix D2 = new Matrix(sites.size(), sites.size());
 		for (int s1=0; s1<sites.size(); s1++) {
 			Location l1 = sites.get(s1).getLocation();
 			for (int s2=s1; s2<sites.size(); s2++) {
@@ -106,6 +110,16 @@ public class SpatialVarCalc {
 		
 		L1 = decompose(D1).getL();
 		L2 = decompose(D2).getL();
+	}
+	
+	private SpatialVarCalc(double[] periods, int numSites, Matrix K1, Matrix K2, Matrix K3, Matrix L1, Matrix L2) {
+		this.periods = periods;
+		this.numSites = numSites;
+		this.K1 = K1;
+		this.K2 = K2;
+		this.K3 = K3;
+		this.L1 = L1;
+		this.L2 = L2;
 	}
 	
 	public Matrix[] computeRandWithinEventResiduals(Random rng, double sigma, int num) {
@@ -143,9 +157,9 @@ public class SpatialVarCalc {
 	}
 	
 	public Matrix computeRandomField(Random rng, double sigma) {
-		Matrix R1 = normRandArray(periods.length, sites.size(), rng);
-		Matrix R2 = normRandArray(periods.length, sites.size(), rng);
-		Matrix R3 = normRandArray(periods.length, sites.size(), rng);
+		Matrix R1 = normRandArray(periods.length, numSites, rng);
+		Matrix R2 = normRandArray(periods.length, numSites, rng);
+		Matrix R3 = normRandArray(periods.length, numSites, rng);
 		
 		Matrix S1 = K1.times(R1).times(L1);
 		Matrix S2 = K2.times(R2).times(L2);
@@ -201,9 +215,9 @@ public class SpatialVarCalc {
 	
 	public GeoDataSet calcRandomShakeMap(GeoDataSet input, Matrix S, int p) {
 		Preconditions.checkState(S.getRowDimension() == periods.length);
-		Preconditions.checkState(S.getColumnDimension() == sites.size());
+		Preconditions.checkState(S.getColumnDimension() == numSites);
 		Preconditions.checkState(p >= 0 && p < periods.length);
-		Preconditions.checkState(input.size() == sites.size());
+		Preconditions.checkState(input.size() == numSites);
 		GeoDataSet ret = input.copy();
 		for (int i=0; i<ret.size(); i++) {
 			double lnOrig = Math.log(ret.get(i));
@@ -212,6 +226,85 @@ public class SpatialVarCalc {
 			ret.set(i, Math.exp(lnOrig+lnRes));
 		}
 		return ret;
+	}
+	
+	private static String getCachePrefix(int numSites, double[] periods) {
+		String prefix = "sp_corr_"+numSites+"sites";
+		DecimalFormat df = new DecimalFormat("0.###");
+		for (double period : periods)
+			prefix += "_"+df.format(period)+"s";
+		return prefix;
+	}
+	
+	public void writeCache(File cacheDir) throws IOException {
+		String prefix = getCachePrefix(numSites, periods);
+		System.out.println("Writing spatial correlation matrices to "+cacheDir.getAbsolutePath()+" with prefix: "+prefix);
+		writeMatrixCSV(new File(cacheDir, prefix+"_K1.csv"), K1);
+		writeMatrixCSV(new File(cacheDir, prefix+"_K2.csv"), K2);
+		writeMatrixCSV(new File(cacheDir, prefix+"_K3.csv"), K3);
+		writeMatrixCSV(new File(cacheDir, prefix+"_L1.csv.gz"), L1);
+		writeMatrixCSV(new File(cacheDir, prefix+"_L2.csv.gz"), L2);
+	}
+	
+	public static void writeMatrixCSV(File outputFile, Matrix matrix) throws IOException {
+		CSVFile<Double> csv = new CSVFile<>(true);
+		for (int row=0; row<matrix.getRowDimension(); row++) {
+			List<Double> line = new ArrayList<>(matrix.getColumnDimension());
+			for (int col=0; col<matrix.getColumnDimension(); col++)
+				line.add(matrix.get(row, col));
+			csv.addLine(line);
+		}
+		if (outputFile.getName().endsWith(".gz")) {
+			FileOutputStream fout = new FileOutputStream(outputFile);
+			GZIPOutputStream gout = new GZIPOutputStream(fout);
+			csv.writeToStream(gout);
+			gout.close();
+		} else {
+			csv.writeToFile(outputFile);
+		}
+	}
+	
+	private static Matrix loadMatrix(File matFile) throws NumberFormatException, IOException {
+		CSVFile<Double> csv;
+		if (matFile.getName().endsWith(".gz")) {
+			FileInputStream fin = new FileInputStream(matFile);
+			GZIPInputStream gin = new GZIPInputStream(fin);
+			csv = CSVFile.readStreamNumeric(gin, true, -1, 0);
+			gin.close();
+		} else {
+			csv = CSVFile.readFileNumeric(matFile, true, 0);
+		}
+		Matrix matrix = new Matrix(csv.getNumRows(), csv.getNumCols());
+		for (int row=0; row<matrix.getRowDimension(); row++)
+			for (int col=0; col<matrix.getColumnDimension(); col++)
+				matrix.set(row, col, csv.get(row, col));
+		return matrix;
+	}
+	
+	public static boolean isCached(File cacheDir, int numSites, double[] periods) {
+		String prefix = getCachePrefix(numSites, periods);
+		String[] suffixes = { "_K1.csv", "_K2.csv", "_K3.csv", "_L1.csv.gz", "_L2.csv.gz" };
+		for (String suffix : suffixes)
+			if (!new File(cacheDir, prefix+suffix).exists())
+				return false;
+		return true;
+	}
+	
+	public static SpatialVarCalc loadCache(File cacheDir, double[] periods, int numSites)
+			throws NumberFormatException, IOException {
+		String prefix = getCachePrefix(numSites, periods);
+		System.out.println("Loading spatial correlation matrices from "+cacheDir.getAbsolutePath()+" with prefix: "+prefix);
+		Matrix K1 = loadMatrix(new File(cacheDir, prefix+"_K1.csv"));
+		Matrix K2 = loadMatrix(new File(cacheDir, prefix+"_K2.csv"));
+		Matrix K3 = loadMatrix(new File(cacheDir, prefix+"_K3.csv"));
+		Matrix L1 = loadMatrix(new File(cacheDir, prefix+"_L1.csv.gz"));
+		Matrix L2 = loadMatrix(new File(cacheDir, prefix+"_L2.csv.gz"));
+		
+		return new SpatialVarCalc(periods, numSites, K1, K2, K3, L1, L2);
+	}
+	
+	public int getNumSites() {
+		return numSites;
 	}
 	
 	public static void main(String[] args) throws IOException, GMT_MapException {
