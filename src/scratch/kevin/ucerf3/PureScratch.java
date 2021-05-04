@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -91,6 +92,7 @@ import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
+import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -99,6 +101,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.observedEarthquake.parsers.UCERF3_CatalogParser;
@@ -162,6 +165,7 @@ import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.association.FiniteFaultMappingData;
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Config;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
@@ -2233,12 +2237,226 @@ public class PureScratch {
 		return rate;
 	}
 	
+	private static void test85() {
+		for (FaultSection sect : FaultModels.FM3_2.fetchFaultSections()) {
+			float dipDir = sect.getDipDirection();
+			float calcDipDir = (float)(sect.getFaultTrace().getStrikeDirection()+90d);
+			if (calcDipDir >= 360f)
+				calcDipDir -=360f;
+			if (Math.abs(calcDipDir-dipDir) > 2d)
+				System.out.println(sect.getSectionName()+"\tdipDir="+dipDir+"\tcalcDir="+calcDipDir);
+		}
+	}
+	
+	private static void test86() throws ZipException, IOException, DocumentException {
+		// do we have landers?
+		FaultSystemRupSet u3 = FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
+		FaultSystemRupSet candidate = FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+				+ "fm3_1_plausible10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05.zip"));
+		int landersID = 246711;
+		ClusterRupture landersU3 = ClusterRupture.forOrderedSingleStrandRupture(
+				u3.getFaultSectionDataForRupture(landersID), candidate.getPlausibilityConfiguration().getDistAzCalc());
+		System.out.println("UCERF3 Landers: "+landersU3);
+		for (ClusterRupture rup : candidate.getClusterRuptures()) {
+			if (landersU3.unique.equals(rup.unique)) {
+				System.out.println("Candidate has landers!");
+				System.out.println("\t"+rup);
+				break;
+			}
+		}
+	}
+	
+	private static void test87() {
+		Map<Integer, FaultSection> map31 = FaultModels.FM3_1.fetchFaultSectionsMap();
+		Map<Integer, FaultSection> map32 = FaultModels.FM3_2.fetchFaultSectionsMap();
+		List<String> uniques1 = new ArrayList<>();
+		for (Integer id : map31.keySet())
+			if (!map32.containsKey(id))
+				uniques1.add(map31.get(id).getName());
+		Collections.sort(uniques1);
+		for (String name : uniques1)
+			System.out.println(name);
+	}
+	
+	private static void test88() throws IOException {
+		ETAS_Config conf = ETAS_Config.readJSON(new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
+				+ "2021_03_02-Start2012_500yr_CompletenessSTRICT_Spontaneous_HistoricalCatalog/config.json"));
+		ETAS_Launcher launcher = new ETAS_Launcher(conf, false);
+		AbstractERF erf = launcher.checkOutERF();
+		System.out.println("ERF params");
+		for (Parameter<?> param : erf.getAdjustableParameterList())
+			System.out.println(param.getName()+":\t"+param.getValue());
+		System.out.println("ETAS params");
+		for (Parameter<?> param : launcher.getETAS_Params())
+			System.out.println(param.getName()+":\t"+param.getValue());
+		List<ETAS_EqkRupture> hist = launcher.getHistQkList();
+		System.out.println("Have "+hist.size()+" hist quakes");
+		ETAS_EqkRupture last = hist.get(hist.size()-1);
+		System.out.println("\tLast: "+last.getEventId()+": M"+last.getMag());
+	}
+	
+	private static void test89() throws IOException {
+		File binFile = new File("/data/kevin/ucerf3/etas/simulations/"
+//				+ "2016_02_17-spontaneous-1000yr-scaleMFD1p14-full_td-subSeisSupraNucl-gridSeisCorr/results_m5_preserve.bin");
+				+ "2021_03_08-spontaneous-500yr-full_td-subSeisSupraNucl-gridSeisCorr-scale1.14-REDO-2016-JAR/results_m5.bin");
+		double duration = 1000d;
+		double modDuration = 500d;
+		List<ETAS_Catalog> catalogs = ETAS_CatalogIO.loadCatalogsBinary(binFile);
+		int[] maxIdenticalEvents = { -1 };
+		if (modDuration != duration) {
+			long firstEvent = Long.MAX_VALUE;
+			for (ETAS_Catalog catalog : catalogs)
+				firstEvent = Long.min(firstEvent, catalog.get(0).getOriginTime());
+			long maxTime = (long)(firstEvent + ProbabilityModelsCalc.MILLISEC_PER_YEAR*modDuration);
+			List<ETAS_Catalog> newCats = new ArrayList<>();
+			for (ETAS_Catalog cat : catalogs) {
+				ETAS_Catalog newCat = new ETAS_Catalog(null);
+				for (ETAS_EqkRupture rup : cat) {
+					if (rup.getOriginTime() > maxTime)
+						break;
+					newCat.add(rup);
+				}
+				newCats.add(newCat);
+			}
+			System.out.println("Truncated to "+modDuration+" years");
+			catalogs = newCats;
+			duration = modDuration;
+		}
+		
+		for (int maxIdentical : maxIdenticalEvents) {
+			List<HashSet<Integer>> grouped = new ArrayList<>();
+			int numMatches = 0;
+			System.out.println("Matching with "+maxIdentical+" events...");
+			for (int i=0; i<catalogs.size(); i++) {
+				ETAS_Catalog cat1 = catalogs.get(i);
+				for (int j=i+1; j<catalogs.size(); j++) {
+					ETAS_Catalog cat2 = catalogs.get(j);
+					boolean match = true;
+					int maxLen = Integer.max(cat1.size(), cat2.size());
+					for (int n=0; match && n<maxLen && (maxIdentical <= 0 || n < maxIdentical); n++) {
+						if (n == cat1.size() || n == cat2.size()) {
+							match = false;
+							break;
+						}
+						ETAS_EqkRupture rup1 = cat1.get(n);
+						ETAS_EqkRupture rup2 = cat2.get(n);
+						match = rup1.getGridNodeIndex() == rup2.getGridNodeIndex()
+								&& rup1.getFSSIndex() == rup2.getFSSIndex()
+								&& (float)rup1.getMag() == (float)rup2.getMag();
+					}
+					if (match) {
+//						System.out.println("\t"+i+" matches "+j);
+						boolean found = false;
+						HashSet<Integer> myGroup = null;
+						for (HashSet<Integer> group : grouped) {
+							if (group.contains(i)) {
+								myGroup = group;
+								break;
+							}
+						}
+						if (myGroup == null) {
+							myGroup = new HashSet<>();
+							grouped.add(myGroup);
+						}
+						myGroup.add(i);
+						myGroup.add(j);
+						numMatches++;
+					}
+				}
+			}
+			System.out.println("Found "+grouped.size()+" groups:");
+			int testNum = 0;
+			int numNonUnique = 0;
+			HashSet<Integer> nonUniqueIndexes = new HashSet<>();
+			for (HashSet<Integer> group : grouped) {
+//				testNum += group.size();
+				for (int i=0; i<group.size(); i++)
+					for (int j=i+1; j<group.size(); j++)
+						testNum++;
+				System.out.println("\t"+Joiner.on(",").join(group));
+				numNonUnique += group.size();
+				nonUniqueIndexes.addAll(group);
+			}
+			Preconditions.checkState(numMatches == testNum, "%s != %s", numMatches, testNum);
+			System.out.println("\t"+(catalogs.size()-numNonUnique)+"/"+catalogs.size()+" are unique");
+			System.out.println("Total M5 rate: "+annualRate(catalogs, duration, 5d));
+			List<ETAS_Catalog> uniqueCatalogs = new ArrayList<>();
+			for (int i=0; i<catalogs.size(); i++)
+				if (!nonUniqueIndexes.contains(i))
+					uniqueCatalogs.add(catalogs.get(i));
+			System.out.println("Unique catalog M5 rate: "+annualRate(uniqueCatalogs, duration, 5d));
+		}
+	}
+	
+	private static double annualRate(Collection<ETAS_Catalog> catalogs, double duration, double minMag) {
+		long count = 0;
+		for (ETAS_Catalog catalog : catalogs)
+			for (ETAS_EqkRupture rup : catalog)
+				if ((float)rup.getMag() >= 5f)
+					count++;
+		return (double)count/(duration*catalogs.size());
+	}
+	
+	private static void test90() throws ZipException, IOException, DocumentException {
+		File rupSetsDir = new File("/home/kevin/OpenSHA/UCERF4/rup_sets/");
+		File mainFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_"
+				+ "cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05.zip");
+		File altFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_"
+				+ "cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05_comp/alt_perm_Bilateral_Adaptive_5SectIncrease_MaintainConnectivity.zip");
+		
+		FaultSystemRupSet mainRupSet = FaultSystemIO.loadRupSet(mainFile);
+		FaultSystemRupSet altRupSet = FaultSystemIO.loadRupSet(altFile);
+		
+		ClusterRupture mainRup = mainRupSet.getClusterRuptures().get(137320);
+		ClusterRupture altRup = altRupSet.getClusterRuptures().get(226038);
+		
+		System.out.println("Main: "+mainRup);
+		System.out.println("\thash: "+mainRup.unique.hashCode());
+		System.out.println("Alt: "+altRup);
+		System.out.println("\thash: "+altRup.unique.hashCode());
+		System.out.println("Unique equals? "+mainRup.unique.equals(altRup.unique));
+		System.out.println("Regular equals? "+mainRup.equals(altRup));
+	}
+	
+	private static void test91() throws IOException, DocumentException {
+		FaultSystemSolution sol = FaultSystemIO.loadSol(
+				new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
+		
+		double rsRate = 1d/714516d;
+		int count = 0;
+		for (double rate : sol.getRateForAllRups())
+			if (rate <rsRate)
+				count++;
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		System.out.println(count+"/"+rupSet.getNumRuptures()+" ruptures have rates below "+rsRate+" ("
+				+new DecimalFormat("0.00%").format((double)count/(double)rupSet.getNumRuptures())+")");
+		
+		FaultSystemRupSet rsRupSet = FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+				+ "rsqsim_4983_stitched_m6.5_skip65000_sectArea0.5.zip"));
+		HashSet<UniqueRupture> uniques = new HashSet<>();
+		for (int r=0; r<rsRupSet.getNumRuptures(); r++)
+			uniques.add(UniqueRupture.forIDs(rsRupSet.getSectionsIndicesForRup(r)));
+		System.out.println("RSQSim has "+uniques.size()+"/"+rsRupSet.getNumRuptures()+" unique ruptures ("
+				+new DecimalFormat("0.00%").format((double)uniques.size()/(double)rsRupSet.getNumRuptures())+")");
+	}
+	
+	private static void test92() {
+		int n = 1001;
+		
+		int cnt = 0;
+		for (int i=0; i<n; i++)
+			for (int j=i+1; j<n; j++)
+				cnt++;
+		System.out.println(cnt);
+		System.out.println(n*(n-1)/2);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test84();
+		test92();
 
 		////		FaultSystemSolution sol3 = FaultSystemIO.loadSol(new File("/tmp/avg_SpatSeisU3/"
 		////				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

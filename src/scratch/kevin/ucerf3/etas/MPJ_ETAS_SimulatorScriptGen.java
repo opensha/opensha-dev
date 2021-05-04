@@ -43,23 +43,14 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int threads = 2;
 //		String queue = null;
 //		String pbsNameAdd = null;
-		boolean largeSCEC = false;
 		int threads;
-		String pbsNameAdd;
 		String queue;
 		if (stampede) {
 			queue = "normal";
-			pbsNameAdd = "-stampede";
 			threads = 10;
 		} else {
 			queue = "scec";
-			if (largeSCEC) {
-				threads = 20;
-				pbsNameAdd = "-scec-large";
-			} else {
-				threads = 8;
-				pbsNameAdd = "-scec";
-			}
+			threads = 8;
 		}
 		boolean smallTest = false;
 		
@@ -76,6 +67,11 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int hours = 24;
 //		int nodes = 34;
 		
+		double duration = 500;
+		int numSims = 100;
+		int hours = 24;
+		int nodes = 34;
+		
 //		double duration = 100;
 //		int numSims = 1000;
 //		int hours = 24;
@@ -91,10 +87,10 @@ public class MPJ_ETAS_SimulatorScriptGen {
 //		int hours = 24;
 //		int nodes = 60;
 		
-		double duration = 10;
-		int numSims = 100000;
-		int hours = 24;
-		int nodes = 36;
+//		double duration = 10;
+//		int numSims = 100000;
+//		int hours = 24;
+//		int nodes = 36;
 		
 		// CSEP benchmarks
 ////		double duration = 1d/365.25;
@@ -213,6 +209,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 			totRateScaleFactor = 1d;
 		
 		String nameAdd = null;
+//		String nameAdd = "2017jar";
 //		String nameAdd = "start1918";
 //		String nameAdd = "sect-reset-1pm";
 //		String nameAdd = "small-speed-test";
@@ -275,8 +272,6 @@ public class MPJ_ETAS_SimulatorScriptGen {
 		} else {
 			if (queue == null)
 				memGigs = 9;
-			else if (largeSCEC)
-				memGigs = 220;
 			else
 				memGigs = 60;
 			remoteDir = new File("/home/scec-02/kmilner/ucerf3/etas_sim");
@@ -309,7 +304,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 		mpjWrite.setAutoMemDetect(false);
 		
 		List<File> classpath = new ArrayList<File>();
-		classpath.add(new File(remoteDir, "commons-cli-1.2.jar"));
+//		classpath.add(new File(remoteDir, "commons-cli-1.2.jar"));
 		
 		boolean exactDispatch = numSims / nodes == threads;
 		
@@ -397,8 +392,8 @@ public class MPJ_ETAS_SimulatorScriptGen {
 					mpjWrite.setClasspath(subClasspath);
 					
 					String pbsName = jobName;
-					if (pbsNameAdd != null)
-						pbsName += pbsNameAdd;
+//					if (pbsNameAdd != null)
+//						pbsName += pbsNameAdd;
 					pbsName += ".pbs";
 					File pbsFile = new File(localJobDir, pbsName);
 					
@@ -413,7 +408,7 @@ public class MPJ_ETAS_SimulatorScriptGen {
 					if (exactDispatch) {
 						argBuild.minDispatch(threads).maxDispatch(threads).exactDispatch(threads);
 					} else {
-						argBuild.minDispatch(1).maxDispatch(threads*40);
+						argBuild.minDispatch(5).maxDispatch(threads*40);
 					}
 					String argz = argBuild.threads(threads).build(sep);
 					
