@@ -511,6 +511,12 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_5057("bruce/rundir5057", "Bruce 5057", "Bruce Shaw", cal(2020, 10, 5),
 				"Default5046.   smaller  tCausalF= .65",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5133("bruce/rundir5133", "Bruce 5133", "Bruce Shaw", cal(2021, 4, 14),
+				"Western US.  dx=2.0 Hmax=18.   a=.001 b=.0065",
+				null, null),
+		BRUCE_5212("bruce/rundir5212", "Bruce 5212", "Bruce Shaw", cal(2021, 4, 27),
+				"CA shallower.  H=16km.  b=.009 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -1690,15 +1696,19 @@ public class RSQSimCatalog implements XMLSaveable {
 		lines.add("## Plots");
 		List<AbstractPlot> plots = new ArrayList<>();
 		
+		boolean hasFM = getFaultModel() != null && getDeformationModel() != null;
+		
 		TableBuilder table;
 		
 		if (plotsSet.contains(StandardPlots.MFD)) {
 			if (replot || !new File(outputDir, "mfd.png").exists()) {
 				MFDPlot mfdPlot = new MFDPlot(minMag);
-				File mfdCSV = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
-						+"_"+getDeformationModel().encodeChoiceString()+"_supra_plus_sub_seis_cumulative.csv");
+				File mfdCSV = null;
+				if (hasFM)
+					mfdCSV = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
+							+"_"+getDeformationModel().encodeChoiceString()+"_supra_plus_sub_seis_cumulative.csv");
 //				System.out.println(mfdCSV.getAbsolutePath()+" ? "+mfdCSV.exists());
-				if (mfdCSV.exists()) {
+				if (mfdCSV != null && mfdCSV.exists()) {
 					System.out.println("Loading UCERF3 comparison MFD: "+mfdCSV.getAbsolutePath());
 					CSVFile<String> csv = CSVFile.readFile(mfdCSV, true);
 					DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
@@ -1796,7 +1806,8 @@ public class RSQSimCatalog implements XMLSaveable {
 				+ "no shallower than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_MIN_DEPTH_DEFAULT)+" km, "
 				+ "and no less than "+optionalDigitDF.format(RSQSimSubSectionMapper.MID_SEIS_BUFFER_DEFAULT)+" km down- or "
 				+ "up-dip from the top or bottom of the fault";
-		if (plotsSet.contains(StandardPlots.SLIP_LEN)) {
+		
+		if (plotsSet.contains(StandardPlots.SLIP_LEN) && hasFM) {
 			if (replot || !new File(outputDir, "slip_len_"+SlipAlongSectAlgorithm.MID_SEIS_SURF_SLIP_LEN.name()+".png").exists()) {
 				SlipLengthScalingPlot slipLengthPlot = new SlipLengthScalingPlot(getSubSectMapper(), 6.5);
 				slipLengthPlot.setDisaggregateFaultStyles(defaultSlipAlg);
@@ -1874,7 +1885,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		lengthBins.add(new Range(25, 50));
 		lengthBins.add(new Range(50, 100));
 		lengthBins.add(new Range(100, Double.POSITIVE_INFINITY));
-		if (plotsSet.contains(StandardPlots.SLIP_ALONG_RUPTURE)) {
+		if (plotsSet.contains(StandardPlots.SLIP_ALONG_RUPTURE) && hasFM) {
 			if (replot || !new File(outputDir, "slip_along_rupture_multi_norm.png").exists()) {
 				SlipAlongRupturePlot slipAlongPlot = new SlipAlongRupturePlot(getSubSectMapper(), 6.5, defaultSlipAlg, fm, lengthBins);
 				slipAlongPlot.initialize(getName(), outputDir, "slip_along_rupture");
@@ -1952,7 +1963,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.addAll(table.build());
 		}
 		
-		if (plotsSet.contains(StandardPlots.SLIP_RATE)) {
+		if (plotsSet.contains(StandardPlots.SLIP_RATE) && hasFM) {
 			if (replot || !new File(outputDir, "slip_rate_sim_map.png").exists()) {
 				SlipRateComparePlot plot = new SlipRateComparePlot(getSubSectMapper(), getFaultModel(), getDeformationModel(),
 						getComparisonSolution());
@@ -2070,11 +2081,13 @@ public class RSQSimCatalog implements XMLSaveable {
 			if (replot || !new File(outputDir, "norm_ri_elem_m7.5.png").exists()) {
 				List<NormalizedFaultRecurrenceIntervalPlot> myPlots = new ArrayList<>();
 				myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), riMinMags));
-				RSQSimSubSectionMapper mapper = getSubSectMapper();
-				myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.SUBSECTION,
-						mapper, riMinMags));
-				myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.PARENT,
-						mapper, riMinMags));
+				if (hasFM) {
+					RSQSimSubSectionMapper mapper = getSubSectMapper();
+					myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.SUBSECTION,
+							mapper, riMinMags));
+					myPlots.add(new NormalizedFaultRecurrenceIntervalPlot(getElements(), SectType.PARENT,
+							mapper, riMinMags));
+				}
 				for (NormalizedFaultRecurrenceIntervalPlot plot : myPlots)
 					plot.initialize(getName(), outputDir, "norm_ri_"+plot.getSectType().getPrefix());
 				plots.addAll(myPlots);
@@ -2094,7 +2107,12 @@ public class RSQSimCatalog implements XMLSaveable {
 				else
 					table.addColumn("**M≥"+(float)riMinMag+"**");
 			table.finalizeLine();
-			for (SectType type : new SectType[] {SectType.ELEMENT, SectType.SUBSECTION, SectType.PARENT }) {
+			SectType[] types;
+			if (hasFM)
+				types = new SectType[] {SectType.ELEMENT, SectType.SUBSECTION, SectType.PARENT };
+			else
+				types = new SectType[] {SectType.ELEMENT};
+			for (SectType type : types) {
 				table.initNewLine();
 				table.addColumn("**"+type.getSimType()+"s**");
 				for (double riMinMag : riMinMags)
@@ -2108,7 +2126,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 
 		BPTAveragingTypeOptions aveType = BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE;
-		if (plotsSet.contains(StandardPlots.U3_NORM_RECURRENCE)) {
+		if (plotsSet.contains(StandardPlots.U3_NORM_RECURRENCE) && hasFM) {
 			if (replot || !new File(outputDir, "u3_norm_ri_m7.5.png").exists()) {
 				U3StyleNormalizedRuptureRecurrenceIntervalPlot plot = new U3StyleNormalizedRuptureRecurrenceIntervalPlot(
 						getElements(), aveType, getSubSectMapper(), riMinMags);
@@ -2167,7 +2185,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			testMagStr = (int)riMinMags[0]+"";
 		else
 			testMagStr = (float)riMinMags[0]+"";
-		if (plotsSet.contains(StandardPlots.SECT_PARTIC_NUCL)) {
+		if (plotsSet.contains(StandardPlots.SECT_PARTIC_NUCL) && hasFM) {
 			if (replot || !new File(outputDir, "sub_sect_m"+testMagStr+"_partic_map.png").exists()) {
 				RSQSimSubSectionMapper mapper = getSubSectMapper();
 				SectParticipationNucleationPlot sectPlot = new SectParticipationNucleationPlot(mapper, riMinMags);
@@ -2195,7 +2213,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.addAll(table.build());
 		}
 		
-		if (plotsSet.contains(StandardPlots.SECTION_RECURRENCE)) {
+		if (plotsSet.contains(StandardPlots.SECTION_RECURRENCE) && hasFM) {
 			if (replot || !new File(outputDir, "interevent_elements_m"+testMagStr+"_scatter.png").exists()) {
 				RSQSimSubSectionMapper mapper = getSubSectMapper();
 				SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
@@ -2253,7 +2271,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.addAll(table.build());
 		}
 
-		if (plotsSet.contains(StandardPlots.PALEO_RECURRENCE)) {
+		if (plotsSet.contains(StandardPlots.PALEO_RECURRENCE) && hasFM) {
 			File paleoCSVFile = new File(outputDir, "paleo_recurrence.csv");
 			if (replot || !paleoCSVFile.exists()) {
 				PaleoRecurrencePlot plot = new PaleoRecurrencePlot(getElements(), getSubSectMapper());
@@ -2333,7 +2351,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			}
 		}
 		
-		if (plotsSet.contains(StandardPlots.ELASTIC_REBOUND_TRIGGERING)) {
+		if (plotsSet.contains(StandardPlots.ELASTIC_REBOUND_TRIGGERING) && hasFM) {
 			double[] maxTimes = { 1d, 10d, 100d }; 
 			double[] triggerMinMags = { 6d, 6.5d, 7d };
 			if (replot || !new File(outputDir, "elastic_rebound_triggering_m7_1yr.png").exists()) {

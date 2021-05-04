@@ -93,9 +93,11 @@ public class RSQSimU3RupturePageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585.instance(catalogsBaseDir);
 //		RSQSimCatalog catalog = Catalogs.BRUCE_3062.instance(catalogsBaseDir);
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(catalogsBaseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(catalogsBaseDir);
+//		int skipYears = 65000;
+		RSQSimCatalog catalog = Catalogs.BRUCE_5212.instance(catalogsBaseDir);
 		double minMag = 6.5;
-		int skipYears = 65000;
+		int skipYears = 50000;
 		double minFractForInclusion = 0.5;
 		catalog.setFractForInclusion(minFractForInclusion);
 		

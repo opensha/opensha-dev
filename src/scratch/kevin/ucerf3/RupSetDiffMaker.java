@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipException;
 
 import org.dom4j.DocumentException;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 
 import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.SlipEnabledRupSet;
@@ -107,32 +108,35 @@ public class RupSetDiffMaker {
 //		writeDiffs(new File(rsDir, "new_rups_in.zip"), rsRupSet, u3RupSet);
 //		writeDiffs(new File(rsDir, "new_rups_out.zip"), u3RupSet, rsRupSet);
 		
-		File testFile = new File("/tmp/test_rup_set.zip");
-		File u3File = new File("/home/kevin/workspace/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/"
-				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
+//		File testFile = new File("/tmp/test_rup_set.zip");
+//		File u3File = new File("/home/kevin/workspace/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/"
+//				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
+		File rupSetsDir = new File("/home/kevin/OpenSHA/UCERF4/rup_sets");
+		File refRupSetFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05.zip");
+		File testRupSetFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05_comp/add_CumulativeAzimuth.zip");
 		
-		FaultSystemRupSet testRupSet = FaultSystemIO.loadRupSet(testFile);
-		FaultSystemRupSet u3RupSet = FaultSystemIO.loadRupSet(u3File);
+		FaultSystemRupSet testRupSet = FaultSystemIO.loadRupSet(testRupSetFile);
+		FaultSystemRupSet refRupSet = FaultSystemIO.loadRupSet(refRupSetFile);
 		
 		System.out.println("Test has: "+testRupSet.getNumRuptures()+" rups");
-		System.out.println("UCERF3 has: "+u3RupSet.getNumRuptures()+" rups");
+		System.out.println("Ref has: "+refRupSet.getNumRuptures()+" rups");
 		
-		writeDiffs(new File("/tmp/test_new_rups_in.zip"), testRupSet, u3RupSet);
-		writeDiffs(new File("/tmp/test_new_rups_out.zip"), u3RupSet, testRupSet);
+		writeDiffs(new File("/tmp/test_new_rups_in.zip"), testRupSet, refRupSet);
+		writeDiffs(new File("/tmp/test_new_rups_out.zip"), refRupSet, testRupSet);
 	}
 
 	public static void writeDiffs(File diffFile, FaultSystemRupSet rupSet1,
 			FaultSystemRupSet rupSet2) throws IOException {
-		HashSet<Rup> rups2 = new HashSet<Rup>();
+		HashSet<UniqueRupture> rups2 = new HashSet<UniqueRupture>();
 		for (int r=0; r<rupSet2.getNumRuptures(); r++) {
-			rups2.add(new Rup(rupSet2.getSectionsIndicesForRup(r)));
+			rups2.add(UniqueRupture.forIDs(rupSet2.getSectionsIndicesForRup(r)));
 		}
 
-		HashSet<Rup> newRupsSet = new HashSet<Rup>();
+		HashSet<UniqueRupture> newRupsSet = new HashSet<UniqueRupture>();
 		List<Integer> newRups = Lists.newArrayList();
 		
 		for (int r=0; r<rupSet1.getNumRuptures(); r++) {
-			Rup rup = new Rup(rupSet1.getSectionsIndicesForRup(r));
+			UniqueRupture rup = UniqueRupture.forIDs(rupSet1.getSectionsIndicesForRup(r));
 			if (!rups2.contains(rup) && !newRupsSet.contains(rup)) {
 				newRups.add(r);
 				newRupsSet.add(rup);
@@ -197,37 +201,6 @@ public class RupSetDiffMaker {
 		}
 		
 		FaultSystemIO.writeRupSet(diffSet, diffFile);
-	}
-	
-	private static class Rup {
-		private List<Integer> sects;
-		public Rup(List<Integer> sects) {
-			this.sects = Lists.newArrayList(sects);
-			Collections.sort(this.sects);
-		}
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((sects == null) ? 0 : sects.hashCode());
-			return result;
-		}
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			Rup other = (Rup) obj;
-			if (sects == null) {
-				if (other.sects != null)
-					return false;
-			} else if (!sects.equals(other.sects))
-				return false;
-			return true;
-		}
 	}
 
 }
