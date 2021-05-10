@@ -80,7 +80,7 @@ public class LothBaker2013_SpatialVarCalc {
 	}
 	
 	static void validatePeriod(double period) {
-		Preconditions.checkState(period >= periods[0], "Period must be >=%s: %s", periods[0], period);
+		Preconditions.checkState(period >= 0d, "Period must be >=%s: %s", periods[0], period);
 		Preconditions.checkState(period <= periods[periods.length-1], "Period must be <=%s: %s",
 				periods[periods.length-1], period);
 	}
@@ -90,21 +90,51 @@ public class LothBaker2013_SpatialVarCalc {
 		int x0, x1, y0, y1;
 		if (ind1 < 0) {
 			// must be exactly on the bottom edge (checked externally)
+			Preconditions.checkState(ind1 == -1);
+			Preconditions.checkState((float)period1 <= (float)periods[0]);
 			x0 = 0;
 			x1 = 0;
+			if (period1 < periods[0])
+				System.err.println("Warning: can't interpolate for period="
+						+(float)period1+", using lower bound of "+(float)periods[0]);
 		} else {
+			Preconditions.checkState(ind1 <= periods.length);
 			x0 = ind1;
 			x1 = ind1+1;
+			if (period1 > periods[periods.length-1]) {
+				System.err.println("Warning: can't interpolate for period="
+						+(float)period1+", using upper bound of "+(float)periods[periods.length-1]);
+			} else {
+				Preconditions.checkState((float)period1 >= (float)periods[x0],
+						"period1=%s, periods[%s]=%s, periods[%s]=%s", period2, x0, periods[x0], x1, periods[x1]);
+				Preconditions.checkState((float)period1 <= (float)periods[x1],
+						"period1=%s, periods[%s]=%s, periods[%s]=%s", period2, x0, periods[x0], x1, periods[x1]);
+			}
 			if (x1 == periods.length)
 				x1 = x0;
 		}
 		if (ind2 < 0) {
 			// must be exactly on the bottom edge (checked externally)
+			Preconditions.checkState(ind2 == -1);
+			Preconditions.checkState((float)period2 <= (float)periods[0]);
 			y0 = 0;
 			y1 = 0;
+			if (period2 < periods[0])
+				System.err.println("Warning: can't interpolate for period="
+						+(float)period2+", using lower bound of "+(float)periods[0]);
 		} else {
+			Preconditions.checkState(ind2 <= periods.length);
 			y0 = ind2;
 			y1 = ind2+1;
+			if (period2 > periods[periods.length-1]) {
+				System.err.println("Warning: can't interpolate for period="
+						+(float)period2+", using upper bound of "+(float)periods[periods.length-1]);
+			} else {
+				Preconditions.checkState((float)period2 >= (float)periods[y0],
+						"period2=%s, periods[%s]=%s, periods[%s]=%s", period2, y0, periods[y0], y1, periods[y1]);
+				Preconditions.checkState((float)period2 <= (float)periods[y1],
+						"period2=%s, periods[%s]=%s, periods[%s]=%s", period2, y0, periods[y0], y1, periods[y1]);
+			}
 			if (y1 == periods.length)
 				y1 = y0;
 		}
@@ -128,23 +158,34 @@ public class LothBaker2013_SpatialVarCalc {
 	static int getPeriodIndexBefore(double period) {
 		if (period <= periods[0])
 			return -1;
-		int ind = 0;
+		int ind = -1;
+//		System.out.println("period="+period);
 		for (double p : periods) {
+//			System.out.println("checking p="+p+" with ind="+ind+" and periods[ind]="+periods[ind]);
 			if (p >= period)
 				break;
 			ind++;
 		}
 		Preconditions.checkState(ind < periods.length);
+		Preconditions.checkState((float)period >= (float)periods[ind],
+				"getPeriodIndexBefore failed with period=%s, ind=%s, periods[%s]=%s", period, ind, ind, periods[ind]);
+		if (ind < periods.length-1)
+			Preconditions.checkState((float)period <= (float)periods[ind+1],
+				"getPeriodIndexBefore failed with period=%s, ind=%s, periods[%s]=%s", period, ind, ind, periods[ind]);
 		return ind;
 	}
 
 	public static void main(String[] args) {
+		System.out.println(calcCovariance(10d, 1d, 0d));
 		System.out.println(calcCovariance(10d, 1d, 0.5d));
 		System.out.println(calcCovariance(10d, 1d, 0.6d));
 		System.out.println(calcCovariance(10d, 1d, 0.7d));
 		System.out.println(calcCovariance(10d, 1d, 0.8d));
 		System.out.println(calcCovariance(10d, 1d, 0.9d));
 		System.out.println(calcCovariance(10d, 1d, 1d));
+		System.out.println(calcCovariance(10d, 1d, 2d));
+		System.out.println(calcCovariance(10d, 1d, 3d));
+//		System.out.println(calcCovariance(10d, 1d, 11d));
 	}
 
 }

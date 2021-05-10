@@ -35,6 +35,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.gcim.calc.CholeskyDecomposition;
 import org.opensha.sha.gcim.calc.NearPD;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -44,7 +45,7 @@ import org.opensha.sha.util.SiteTranslator;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 
-import Jama.CholeskyDecomposition;
+//import Jama.CholeskyDecomposition;
 import Jama.Matrix;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 
@@ -84,9 +85,54 @@ public class SpatialVarCalc {
 			}
 		}
 		
+		System.out.println("B1");
+		printMatrix(B1);
+		System.out.println();
+		System.out.println("B2");
+		printMatrix(B2);
+		System.out.println();
+		System.out.println("B3");
+		printMatrix(B3);
+		System.out.println();
+		
+		// normalize B matrices
+		Matrix B = B1.plus(B2).plus(B3);
+//		System.out.println("B");
+//		printMatrix(B);
+//		System.out.println();
+		for (int i=0; i<periods.length; i++) {
+			for (int j=0; j<periods.length; j++) {
+				B1.set(i, j, B1.get(i, j)/Math.sqrt(B.get(i, i)*B.get(j, j)));
+				B2.set(i, j, B2.get(i, j)/Math.sqrt(B.get(i, i)*B.get(j, j)));
+				B3.set(i, j, B3.get(i, j)/Math.sqrt(B.get(i, i)*B.get(j, j)));
+			}
+		}
+		
+		System.out.println("B1 norm");
+		printMatrix(B1);
+		System.out.println();
+		System.out.println("B2 norm");
+		printMatrix(B2);
+		System.out.println();
+		System.out.println("B3 norm");
+		printMatrix(B3);
+		System.out.println();
+//		System.exit(0);
+		
 		K1 = decompose(B1).getL();
 		K2 = decompose(B2).getL();
 		K3 = decompose(B3).getL();
+		
+//		System.out.println("K1");
+//		printMatrix(B1);
+//		System.out.println();
+//		System.out.println("K2");
+//		printMatrix(B2);
+//		System.out.println();
+//		System.out.println("K3");
+//		printMatrix(B3);
+//		System.out.println();
+//		System.exit(0);
 		
 		// coregionalization matrices
 		Matrix D1 = new Matrix(sites.size(), sites.size());
@@ -190,6 +236,15 @@ public class SpatialVarCalc {
 		return ret;
 	}
 	
+	private static void printMatrix(Matrix mat) {
+		for (int i=0; i<mat.getRowDimension(); i++) {
+			for (int j=0; j<mat.getColumnDimension(); j++)
+				System.out.print(mat.get(i, j)+"\t");
+			System.out.println();
+		}
+		System.out.flush();
+	}
+	
 	private CholeskyDecomposition decompose(Matrix B) {
 		CholeskyDecomposition chol = new CholeskyDecomposition(B);
 		if (!chol.isSPD()) {
@@ -199,9 +254,11 @@ public class SpatialVarCalc {
 			boolean success = nearPD.calcNearPD(B);
 			double normFrob = nearPD.getFrobNorm();
 			if (!success) {
+				System.out.println("B is size "+B.getRowDimension()+"x"+B.getColumnDimension()+". normFrob="+normFrob);
+				printMatrix(B);
 				throw new RuntimeException("Error: nearPD failed to converge, the correlation matrix maybe" +
 						" significantly different from a PD matrix, check that the correlation equations" +
-						"used are reasonable");
+						" used are reasonable");
 			}
 			
 			Matrix x = nearPD.getX();
@@ -311,8 +368,8 @@ public class SpatialVarCalc {
 		File outputDir = new File("/tmp/spatial_var_test");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		Region reg = new Region(new Location(33.5, -119), new Location(35.5, -117));
-		double spacing = 0.025d;
-//		double spacing = 0.05d;
+//		double spacing = 0.025d;
+		double spacing = 0.05d;
 		GriddedRegion gridReg = new GriddedRegion(reg, spacing, null);
 		ScalarIMR gmpe = AttenRelRef.ASK_2014.instance(null);
 		gmpe.setParamDefaults();
@@ -325,9 +382,9 @@ public class SpatialVarCalc {
 		}
 		boolean[] siteDatas = { false, true };
 		
-		double[] periods = { 1d };
+		double[] periods = { 3d };
 		double sigma = 0.6d;
-		int num = 1000;
+		int num = 100;
 		int maxPlotNum = 5;
 		
 		Location center = new Location(0.5*(reg.getMaxLat() + reg.getMinLat()), 0.5*(reg.getMaxLon()+reg.getMinLon()));
