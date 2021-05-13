@@ -2,7 +2,7 @@
  * opensha-dev dependencies
  */
 
-apply from: '../opensha-commons/build-common.gradle'
+apply from: '../opensha/build-common.gradle'
 
 dependencies {
 
@@ -18,8 +18,8 @@ dependencies {
     compileOnly files('lib/EventWebService.jar')
     compileAndResource files('lib/flanagan.jar') // FFT and PSD library along with other tools
 
-    compileOnly project(path: ':opensha-apps', configuration: 'compileOnly')
-    compileAndResource project(path: ':opensha-apps')
+//    compileOnly project(path: ':opensha', configuration: 'compileOnly')
+    compileAndResource project(path: ':opensha')
 
-    testCompile 'junit:junit:4.12'
+    testCompileOnly 'junit:junit:4.12'
 }
