@@ -4,39 +4,11 @@
 
 apply plugin: 'java-library'
 
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
-compileJava.options.encoding = "UTF-8"
-
-repositories {
-    mavenCentral()
+ext {
+    parentProject = 'opensha'
 }
 
-configurations {
-    apiResolvable {
-        description 'resolvable view of the api classpath'
-        canBeResolved=true
-
-        extendsFrom api
-    }
-}
-
-task fatJar(type: Jar, dependsOn: ':opensha:fatJar') {
-    archiveBaseName = project.name + '-all'
-    // include all 'api' dependencies
-    from {
-        configurations.apiResolvable.collect { it.isDirectory() ? it : zipTree(it).matching {
-            exclude { it.path.contains('META-INF') }
-        }}
-    }
-    // include compiled source from this project
-    from sourceSets.main.allJava
-    // include upstream project fat jar
-    from zipTree(file('../opensha/build/libs/opensha-all.jar'))
-
-    duplicatesStrategy = 'exclude'
-    with jar
-}
+apply from: '../opensha/build-common.gradle'
 
 dependencies {
 
