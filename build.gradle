@@ -8,40 +8,33 @@ sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 compileJava.options.encoding = "UTF-8"
 
-/*
-
-TODO: deal with exludes. this was:
-
-            exclude 'resources/data/ngaWest'
-            exclude 'resources/data/site/'
-            exclude 'resources/data/site/Wills2000'
-            exclude 'scratch/UCERF3/data/scratch'
-            exclude 'scratch/ned'
-            exclude 'org/opensha/sha/earthquake/rupForecastImpl/NSHMP_CEUS08'
-*/
-
 repositories {
     jcenter()
 }
 
 configurations {
     apiResolvable {
-        description 'resolvable extension of the api classpath'
+        description 'resolvable view of the api classpath'
         canBeResolved=true
+
         extendsFrom api
     }
 }
 
-task fatJar(type: Jar) {
+task fatJar(type: Jar, dependsOn: ':opensha:fatJar') {
     baseName = project.name + '-all'
+    // include all 'api' dependencies
     from {
         configurations.apiResolvable.collect { it.isDirectory() ? it : zipTree(it).matching {
             exclude { it.path.contains('META-INF') }
         }}
     }
+    // include compiled source from this project
+    from sourceSets.main.allJava
+    // include upstream project fat jar
+    from zipTree(file('../opensha/build/libs/opensha-all.jar'))
 
     duplicatesStrategy = 'exclude'
-	from sourceSets.main.allJava
     with jar
 }
 
@@ -59,7 +52,7 @@ dependencies {
     implementation files('lib/EventWebService.jar')
     api files('lib/flanagan.jar') // FFT and PSD library along with other tools
 
-    api project(path: ':opensha')
+    implementation project(path: ':opensha')
 
     testImplementation 'junit:junit:4.12'
 }
