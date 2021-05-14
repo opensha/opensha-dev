@@ -9,7 +9,7 @@ targetCompatibility = JavaVersion.VERSION_11
 compileJava.options.encoding = "UTF-8"
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 configurations {
