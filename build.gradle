@@ -2,24 +2,29 @@
  * opensha-dev dependencies
  */
 
-apply from: '../opensha-commons/build-common.gradle'
+apply plugin: 'java-library'
+
+ext {
+    parentProject = 'opensha'
+}
+
+apply from: '../opensha/build-common.gradle'
 
 dependencies {
 
-    compileOnly 'org.apache.pdfbox:pdfbox:2.0.6'
-    compileOnly 'org.apache.commons:commons-collections4:4.1'
-    compileAndResource 'org.apache.commons:commons-compress:1.15'
-    compileAndResource 'uk.me.berndporr:iirj:1.0'
-    compileOnly 'org.apache.spark:spark-core_2.12:3.0.1'
-    compileOnly 'org.apache.spark:spark-mllib_2.12:3.0.1'
-    compileOnly 'com.github.haifengl:smile-core:2.6.0'
+    implementation 'org.apache.pdfbox:pdfbox:2.0.6'
+    implementation 'org.apache.commons:commons-collections4:4.1'
+    api 'org.apache.commons:commons-compress:1.15'
+    api 'uk.me.berndporr:iirj:1.0'
+    implementation 'org.apache.spark:spark-core_2.12:3.0.1'
+    implementation 'org.apache.spark:spark-mllib_2.12:3.0.1'
+    implementation 'com.github.haifengl:smile-core:2.6.0'
     
     /* no remote repo */
-    compileOnly files('lib/EventWebService.jar')
-    compileAndResource files('lib/flanagan.jar') // FFT and PSD library along with other tools
+    implementation files('lib/EventWebService.jar')
+    api files('lib/flanagan.jar') // FFT and PSD library along with other tools
 
-    compileOnly project(path: ':opensha-apps', configuration: 'compileOnly')
-    compileAndResource project(path: ':opensha-apps')
+    implementation project(path: ':opensha')
 
-    testCompile 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.12'
 }
