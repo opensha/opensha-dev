@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
@@ -59,6 +60,11 @@ public class UCERF3_IM_Calculator {
 	private List<ETAS_EqkRupture> etasCatalog;
 	
 	public UCERF3_IM_Calculator(CommandLine cmd) throws IOException, DocumentException {
+		if (cmd.hasOption("min-mag")) {
+			double minMag = Double.parseDouble(cmd.getOptionValue("min-mag"));
+			System.out.println("Setting UCERF3 minimum magnitude to: "+(float)minMag);
+			AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = minMag;
+		}
 		File fssFile = new File(cmd.getOptionValue("sol-file"));
 		FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);
 
@@ -311,9 +317,14 @@ public class UCERF3_IM_Calculator {
 		outputFile.setRequired(true);
 		ops.addOption(outputFile);
 		
-		Option etasCatalog = new Option("etas", "etas-catalog", true, "Optional path to ETAS catalog. If supplied, only ruptures in this catalog will be output");
+		Option etasCatalog = new Option("etas", "etas-catalog", true,
+				"Optional path to ETAS catalog. If supplied, only ruptures in this catalog will be output");
 		etasCatalog.setRequired(false);
 		ops.addOption(etasCatalog);
+		
+		Option magOption = new Option("m", "min-mag", true, "Minimum magnitude to consider from UCERF3 (default: 5.05)");
+		magOption.setRequired(false);
+		ops.addOption(magOption);
 		
 		return ops;
 	}
@@ -336,8 +347,7 @@ public class UCERF3_IM_Calculator {
 		Options options = createOptions();
 		
 		if (args.length == 1 && args[0].equals("--hardcoded")) {
-			String argStr = "--sol-file /home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
-					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip";
+			String argStr = "--sol-file /home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip";
 			argStr += " --latitude 34.038165 --longitude -118.266111";
 			// Vs30 in m/s, Z1.0 in m, Z2.5 in km (I know, it's weird that they're different units)
 			// Z1.0 and Z2.5 are optional
@@ -350,6 +360,7 @@ public class UCERF3_IM_Calculator {
 //			argStr += " --etas-catalog /path/to/catalog"
 			// flag to enable gridded seismicity
 			argStr += " --do-gridded";
+			argStr += " --min-mag 4.05";
 			// output file (.csv)
 			argStr += " --output-file /tmp/u3_ims.csv";
 			args = Lists.newArrayList(Splitter.on(" ").split(argStr)).toArray(new String[0]);
@@ -357,7 +368,7 @@ public class UCERF3_IM_Calculator {
 			printUsage(options, ClassUtils.getClassNameWithoutPackage(UCERF3_IM_Calculator.class));
 		}
 		
-		CommandLineParser parser = new GnuParser();
+		CommandLineParser parser = new DefaultParser();
 
 		CommandLine cmd = null;
 		try {
