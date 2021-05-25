@@ -25,6 +25,7 @@ dependencies {
     api files('lib/flanagan.jar') // FFT and PSD library along with other tools
 
     implementation project(path: ':opensha')
+    implementation project(path: ':opensha', configuration: 'implResolvable')
 
     testImplementation 'junit:junit:4.12'
 }
