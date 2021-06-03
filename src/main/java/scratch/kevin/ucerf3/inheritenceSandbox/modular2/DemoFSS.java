@@ -45,7 +45,6 @@ public class DemoFSS extends ModuleContainer<OpenSHA_Module> implements Archivab
 	}
 	
 	public void writeArchive(File file) throws IOException {
-		System.out.println("Writing FSS to "+file.getAbsolutePath());
 		boolean existing = archive != null;
 		if (archive == null)
 			archive = new ModuleArchive<>();

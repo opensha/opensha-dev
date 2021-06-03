@@ -75,13 +75,16 @@ public class DemoFSRS extends ModuleContainer<OpenSHA_Module> implements Archiva
 	public static void main(String[] args) throws IOException {
 		DemoFSRS fsrs = new DemoFSRS();
 		fsrs.addModule(new DemoInfoModule("This is my fake info\nnew line here\n"));
+		DemoModuleContainer container = new DemoModuleContainer();
+		container.addModule(new DemoInfoModule("Further nested info"));
+		fsrs.addModule(container);
 		File archive = new File("/tmp/new_module_test.zip");
 		fsrs.writeArchive(archive);
 		
 		DemoFSRS frss2 = load(archive);
 		DemoInfoModule info = frss2.getModule(DemoInfoModule.class);
 		Preconditions.checkNotNull(info);
-		System.out.println(info.getText());
+//		System.out.println(info.getText());
 	}
 	
 	static class DemoInfoModule implements TextBackedModule {
@@ -115,6 +118,30 @@ public class DemoFSRS extends ModuleContainer<OpenSHA_Module> implements Archiva
 		@Override
 		public void setText(String text) {
 			this.info = text;
+		}
+		
+	}
+	
+	static class DemoModuleContainer extends ModuleContainer<OpenSHA_Module> implements ArchivableModule {
+
+		@Override
+		public String getName() {
+			return "Demo embedded module container";
+		}
+
+		@Override
+		public void writeToArchive(ZipOutputStream zout, String entryPrefix) throws IOException {
+			
+		}
+
+		@Override
+		public void initFromArchive(ZipFile zip, String entryPrefix) throws IOException {
+			
+		}
+
+		@Override
+		protected String getNestingPrefix() {
+			return "demo_container/";
 		}
 		
 	}

@@ -21,6 +21,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
+import org.opensha.commons.data.Named;
+
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import com.google.gson.Gson;
@@ -65,7 +67,11 @@ public class ModuleArchive<E extends OpenSHA_Module> extends ModuleContainer<E> 
 	public ModuleArchive(ZipFile zip) throws IOException {
 		super();
 		this.zip = zip;
+		System.out.println("------------ LOADING ARCHIVE ------------");
+		System.out.println("Archive: "+zip.getName());
 		loadModules(this, zip, getPrefix(null, getNestingPrefix()));
+		System.out.println("Loaded "+getAvailableModules().size()+" available top-level modules");
+		System.out.println("---------- END LOADING ARCHIVE ----------");
 	}
 	
 	private static final String MODULE_FILE_NAME = "modules.json";
@@ -83,9 +89,9 @@ public class ModuleArchive<E extends OpenSHA_Module> extends ModuleContainer<E> 
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	public static <E extends OpenSHA_Module> void loadModules(ModuleContainer<E> container, ZipFile zip, String prefix)
+	private static <E extends OpenSHA_Module> void loadModules(ModuleContainer<E> container, ZipFile zip, String prefix)
 			throws IOException {
-		System.out.println("Loading modules for "+container.getClass().getName()+" with prefix="+prefix);
+//		System.out.println("Loading modules for "+container.getClass().getName()+" with prefix="+prefix);
 		if (prefix ==null)
 			prefix = "";
 		String entryName = prefix+MODULE_FILE_NAME;
@@ -116,6 +122,17 @@ public class ModuleArchive<E extends OpenSHA_Module> extends ModuleContainer<E> 
 				System.err.println("WARNING: cannot load module '"+record.name
 						+"' as the loading class isn't of the specified type: "+e.getMessage());
 				continue;
+			}
+			
+			if (ModuleContainer.class.isAssignableFrom(moduleClass)) {
+				// make sure that this record has a path, otherwise we could get stuck in an infinite loading loop
+				Preconditions.checkState(!record.path.isBlank(),
+						"Module '%s' is also a container but does not supply a path.Container modules must always "
+						+ "supply a custom path, otherwise we would keep loading the same top-level modules.json "
+						+ "file in an infinite loop.", record.name);
+				Preconditions.checkState(prefix.isBlank() || record.path.startsWith(prefix),
+						"Module '%s' is a container but it's supplied path ('%s') is not nested within the parent "
+						+ "module's path ('%s')", record.name, record.path, prefix);
 			}
 			
 			container.addAvailableModule(new ZipLoadCallable<E>(record, moduleClass, zip), moduleClass);
@@ -198,7 +215,9 @@ public class ModuleArchive<E extends OpenSHA_Module> extends ModuleContainer<E> 
 	 * @throws IOException
 	 */
 	public void writeArchive(File outputFile, boolean copySourceFiles) throws IOException {
+		System.out.println("------------ WRITING ARCHIVE ------------");
 		File tmpOutput = new File(outputFile.getAbsolutePath()+".tmp");
+		System.out.println("Temporary archive: "+tmpOutput.getAbsolutePath());
 		BufferedOutputStream bout = new BufferedOutputStream(new FileOutputStream(tmpOutput));
 		
 		copySourceFiles = copySourceFiles && zip != null;
@@ -235,7 +254,9 @@ public class ModuleArchive<E extends OpenSHA_Module> extends ModuleContainer<E> 
 		
 		zout.close();
 		
+		System.out.println("Moving to "+outputFile.getAbsolutePath());
 		Files.move(tmpOutput, outputFile);
+		System.out.println("---------- END WRITING ARCHIVE ----------");
 	}
 	
 	private static <E extends OpenSHA_Module> void writeModules(ModuleContainer<E> container, ZipOutputStream zout,
@@ -245,19 +266,26 @@ public class ModuleArchive<E extends OpenSHA_Module> extends ModuleContainer<E> 
 		if (prefix == null)
 			prefix = "";
 		
-		System.out.println("Processing "+container.getModules().size()+" modules from "
-				+container.getClass().getName()+" with prefix="+prefix);
+		String moduleStr;
+		if (container.getClass().equals(ModuleArchive.class))
+			moduleStr = "modules";
+		else if (container instanceof OpenSHA_Module)
+			moduleStr = "nested modules from '"+((OpenSHA_Module)container).getName()+"'";
+		else
+			moduleStr = "nested modules from '"+container.getClass().getName()+"'";
+		System.out.println("Writing "+container.getModules().size()+" "
+			+moduleStr+(prefix.isBlank() ? "" : " with prefix='"+prefix+"'"));
 		
 		for (OpenSHA_Module module : container.getModules(true)) {
 			if (module instanceof ArchivableModule) {
 				ArchivableModule archivable = (ArchivableModule)module;
-				System.out.println("Writing module: "+module.getName());
+				System.out.println("\tWriting module: "+module.getName());
 				
 				if (module instanceof ModuleContainer && module != container) {
 					ModuleContainer<?> archive = (ModuleContainer<?>)module;
 					String nestingPrefix = archive.getNestingPrefix();
-					System.out.println("Writing nested module container '"+module.getName()
-						+"' with nesting prefix: "+nestingPrefix);
+//					System.out.println("\tWriting nested module container '"+module.getName()
+//						+"' with nesting prefix: '"+nestingPrefix+"'");
 					Preconditions.checkState(nestingPrefix != null && !nestingPrefix.isEmpty(),
 							"Module '%s' is a nested archive but does not override getNestingPrefix()",
 							module.getName());
@@ -286,9 +314,9 @@ public class ModuleArchive<E extends OpenSHA_Module> extends ModuleContainer<E> 
 			System.out.println("Wrote "+records.size()+" modules, writing index to "+entryName);
 			zout.putNextEntry(new ZipEntry(entryName));
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(zout));
-			System.out.println("------ MODULES JSON ------");
-			System.out.println(gson.toJson(records));
-			System.out.println("--------------------------");
+//			System.out.println("------ MODULES JSON ------");
+//			System.out.println(gson.toJson(records));
+//			System.out.println("--------------------------");
 			gson.toJson(records, writer);
 			writer.write("\n");
 			writer.flush();

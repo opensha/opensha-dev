@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 import org.apache.commons.lang3.ClassUtils;
+import org.opensha.commons.data.Named;
 
 import com.google.common.base.Preconditions;
 
@@ -95,7 +96,7 @@ public class ModuleContainer<E extends OpenSHA_Module> {
 		for (int m=modules.size(); --m>=0;) {
 			E oModule = modules.get(m);
 			if (oModule.getClass().equals(module.getClass())) {
-				System.out.println("Overriding previous modlue: "+oModule.getName());
+				debug("Overriding previous modlue: "+oModule.getName());
 				removeMappings(modules.remove(m));
 			}
 		}
@@ -139,9 +140,9 @@ public class ModuleContainer<E extends OpenSHA_Module> {
 		Preconditions.checkState(clazz.getAnnotation(ModuleHelper.class) == null,
 				"Cannot map a class that implements @ModuleHelper: %s", clazz.getName());
 		if (mappings.containsKey(clazz))
-			System.out.println("Overriding module "+clazz.getName()+" with "+module.getName());
+			debug("Overriding module type '"+clazz.getName()+"' with: "+module.getName());
 		else
-			System.out.println("Mapping "+clazz.getName()+" to "+module.getName());
+			debug("Mapping module type '"+clazz.getName()+"' to: "+module.getName());
 		Preconditions.checkState(OpenSHA_Module.class.isAssignableFrom(clazz));
 		mappings.put((Class<E>)clazz, module);
 	}
@@ -245,11 +246,11 @@ public class ModuleContainer<E extends OpenSHA_Module> {
 		Preconditions.checkState(availableModules.remove(call));
 		E module = null;
 		try {
-			System.out.println("Lazily loading available module...");
+			debug("Lazily loading available module...");
 			module = call.call();
 		} catch (Exception e) {
 			e.printStackTrace();
-			System.err.println("WARNING: failed to lazily load a module (see exception above)");
+			debug("WARNING: failed to lazily load a module (see exception above)", true);
 		}
 		
 		// remove this available module, whether or not it was successful
@@ -275,9 +276,9 @@ public class ModuleContainer<E extends OpenSHA_Module> {
 		Preconditions.checkState(clazz.getAnnotation(ModuleHelper.class) == null,
 				"Cannot map a class that implements @ModuleHelper: %s", clazz.getName());
 		if (availableMappings.containsKey(clazz))
-			System.out.println("Overriding available module with class: "+clazz.getName());
+			debug("Overriding available module with type: "+clazz.getName());
 		else
-			System.out.println("Mapping available module with class: "+clazz.getName());
+			debug("Mapping available module with type: "+clazz.getName());
 		Preconditions.checkState(OpenSHA_Module.class.isAssignableFrom(clazz));
 		availableMappings.put((Class<E>)clazz, call);
 	}
@@ -345,6 +346,19 @@ public class ModuleContainer<E extends OpenSHA_Module> {
 	 */
 	protected String getNestingPrefix() {
 		return null;
+	}
+	
+	private void debug(String message) {
+		debug(message, false);
+	}
+	
+	private void debug(String message, boolean err) {
+		if (this instanceof Named)
+			message = ((Named)this).getName()+":\t"+message;
+		if (err)
+			System.err.println(message);
+		else
+			System.out.println(message);
 	}
 
 }
