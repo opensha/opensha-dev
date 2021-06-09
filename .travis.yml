@@ -1,0 +1,10 @@
+dist: bionic
+language: java
+jdk: openjdk11
+
+before_install:
+  - cd ../
+  - git clone --depth=50 --branch=master https://github.com/opensha/opensha.git
+  - cd opensha-dev
+script:
+  - ./gradlew assemble
