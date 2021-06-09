@@ -15,18 +15,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout primary repo
+      uses: actions/checkout@v2
+      with:
+        repository: opensha/opensha
+        path: 'opensha'
+    - name: Checkout dev repo
+      uses: actions/checkout@v2
+      with:
+        path: 'opensha-dev'
     - name: Set up JDK 11
       uses: actions/setup-java@v2
       with:
         java-version: '11'
         distribution: 'adopt'
-    - uses: actions/checkout@v2
-    - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        repository: opensha/opensha
-        path: '../opensha'
+    - name: CD to dev repo
+      run: cd opensha-dev
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
