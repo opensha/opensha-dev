@@ -26,7 +26,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         repository: opensha/opensha
-        path: './opensha'
+        path: '../opensha'
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
