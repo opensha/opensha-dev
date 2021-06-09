@@ -29,9 +29,9 @@ jobs:
       with:
         java-version: '11'
         distribution: 'adopt'
-    - name: CD to dev repo
-      run: cd opensha-dev
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+      working-directory: opensha-dev
     - name: Build with Gradle
       run: ./gradlew assemble
+      working-directory: opensha-dev
