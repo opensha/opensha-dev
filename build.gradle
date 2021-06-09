@@ -16,8 +16,6 @@ dependencies {
     implementation 'org.apache.commons:commons-collections4:4.1'
     api 'org.apache.commons:commons-compress:1.15'
     api 'uk.me.berndporr:iirj:1.0'
-    implementation 'org.apache.spark:spark-core_2.12:3.0.1'
-    implementation 'org.apache.spark:spark-mllib_2.12:3.0.1'
     implementation 'com.github.haifengl:smile-core:2.6.0'
     
     /* no remote repo */

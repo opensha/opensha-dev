@@ -42,11 +42,6 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
-import org.apache.spark.mllib.linalg.Vectors;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoder;
-import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.SparkSession;
 import org.dom4j.DocumentException;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
@@ -2005,15 +2000,15 @@ public class PureScratch {
 	}
 	
 	private static void test79() {
-		SparkSession spark = SparkSession.builder().master("local").getOrCreate();
-		double[] data = { 0, 1, 2, 3, 4 };
-		Dataset<Double> dataset = spark.createDataset(Doubles.asList(data), Encoders.DOUBLE());
-		dataset.toJavaRDD().map(s -> Vectors.dense(s));
-		
-		List<FaultSection> sects = null;
-		Map<Integer, List<FaultSection>> parentMap = sects.stream().collect(Collectors.groupingBy(s -> s.getParentSectionId()));
-		sects.removeIf(s -> s.getParentSectionId() == 2);
-		GaussianMixture.fit(data);
+//		SparkSession spark = SparkSession.builder().master("local").getOrCreate();
+//		double[] data = { 0, 1, 2, 3, 4 };
+//		Dataset<Double> dataset = spark.createDataset(Doubles.asList(data), Encoders.DOUBLE());
+//		dataset.toJavaRDD().map(s -> Vectors.dense(s));
+//		
+//		List<FaultSection> sects = null;
+//		Map<Integer, List<FaultSection>> parentMap = sects.stream().collect(Collectors.groupingBy(s -> s.getParentSectionId()));
+//		sects.removeIf(s -> s.getParentSectionId() == 2);
+//		GaussianMixture.fit(data);
 	}
 	
 	private static void test80() throws IOException, GMT_MapException {

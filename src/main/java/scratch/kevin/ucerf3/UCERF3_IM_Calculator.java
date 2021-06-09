@@ -355,7 +355,7 @@ public class UCERF3_IM_Calculator {
 //			argStr += " --vs30 760 --z10 100 --z25 1.5";
 			argStr += " --gmpe ASK_2014";
 			argStr += " --imt PGA";
-			argStr += " --period 0";
+//			argStr += " --period 0";
 			// optional argument to specify an etas catalog
 //			argStr += " --etas-catalog /path/to/catalog"
 			// flag to enable gridded seismicity

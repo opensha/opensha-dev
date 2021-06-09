@@ -7,18 +7,18 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.magdist.GaussianMagFreqDist;
-import org.sparkproject.guava.primitives.Doubles;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.mllib.clustering.GaussianMixture;
-import org.apache.spark.mllib.clustering.GaussianMixtureModel;
-import org.apache.spark.mllib.clustering.KMeans;
-import org.apache.spark.mllib.clustering.KMeansModel;
-import org.apache.spark.mllib.linalg.DenseVector;
-import org.apache.spark.mllib.linalg.Vector;
-import org.apache.spark.mllib.linalg.Vectors;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.SparkSession;
+//import org.sparkproject.guava.primitives.Doubles;
+//import org.apache.spark.api.java.JavaRDD;
+//import org.apache.spark.mllib.clustering.GaussianMixture;
+//import org.apache.spark.mllib.clustering.GaussianMixtureModel;
+//import org.apache.spark.mllib.clustering.KMeans;
+//import org.apache.spark.mllib.clustering.KMeansModel;
+//import org.apache.spark.mllib.linalg.DenseVector;
+//import org.apache.spark.mllib.linalg.Vector;
+//import org.apache.spark.mllib.linalg.Vectors;
+//import org.apache.spark.sql.Dataset;
+//import org.apache.spark.sql.Encoders;
+//import org.apache.spark.sql.SparkSession;
 
 import java.util.ArrayList;
 
@@ -144,29 +144,29 @@ public class NearestNeighborDeclustering {
 			shorterArray[i-1] = logNNDistanceToParentArray[i];
 		
 		// Spark gaussian mixture model
-		SparkSession spark = SparkSession.builder().master("local").getOrCreate();
-		Dataset<Double> dataset = spark.createDataset(Doubles.asList(shorterArray), Encoders.DOUBLE());
-		JavaRDD<Vector> parsedData = dataset.toJavaRDD().map(s -> Vectors.dense(s));
-		parsedData.cache();
-		// default tolerance = 0.01 and maxIterations=100
-//		GaussianMixtureModel gmm = new GaussianMixture().setK(2).run(parsedData.rdd());
-		
-		// this does not do any better
-		GaussianMixtureModel gmm = new GaussianMixture().setK(2).setConvergenceTol(0.001).setMaxIterations(1000).run(parsedData.rdd());
-		// Output the parameters of the mixture model
-		for (int j = 0; j < gmm.k(); j++) {
-		  System.out.printf("weight=%f\nmu=%s\nsigma=\n%s\n",
-		    gmm.weights()[j], gmm.gaussians()[j].mu(), gmm.gaussians()[j].sigma());
-		}
-		fitWt1 = gmm.weights()[0];
-		fitWt2 = gmm.weights()[1];
-		fitMean1 = gmm.gaussians()[0].mu().toArray()[0];
-		fitMean2 = gmm.gaussians()[1].mu().toArray()[0];
-		fitSigma1 = gmm.gaussians()[0].sigma().toArray()[0];
-		fitSigma2 = gmm.gaussians()[1].sigma().toArray()[0];
-		
-		System.out.println("fitMean1="+fitMean1+"\nfitMean2="+fitMean2+
-				"\nfitSigma1="+fitSigma1+"\nfitSigma2="+fitSigma2);
+//		SparkSession spark = SparkSession.builder().master("local").getOrCreate();
+//		Dataset<Double> dataset = spark.createDataset(Doubles.asList(shorterArray), Encoders.DOUBLE());
+//		JavaRDD<Vector> parsedData = dataset.toJavaRDD().map(s -> Vectors.dense(s));
+//		parsedData.cache();
+//		// default tolerance = 0.01 and maxIterations=100
+////		GaussianMixtureModel gmm = new GaussianMixture().setK(2).run(parsedData.rdd());
+//		
+//		// this does not do any better
+//		GaussianMixtureModel gmm = new GaussianMixture().setK(2).setConvergenceTol(0.001).setMaxIterations(1000).run(parsedData.rdd());
+//		// Output the parameters of the mixture model
+//		for (int j = 0; j < gmm.k(); j++) {
+//		  System.out.printf("weight=%f\nmu=%s\nsigma=\n%s\n",
+//		    gmm.weights()[j], gmm.gaussians()[j].mu(), gmm.gaussians()[j].sigma());
+//		}
+//		fitWt1 = gmm.weights()[0];
+//		fitWt2 = gmm.weights()[1];
+//		fitMean1 = gmm.gaussians()[0].mu().toArray()[0];
+//		fitMean2 = gmm.gaussians()[1].mu().toArray()[0];
+//		fitSigma1 = gmm.gaussians()[0].sigma().toArray()[0];
+//		fitSigma2 = gmm.gaussians()[1].sigma().toArray()[0];
+//		
+//		System.out.println("fitMean1="+fitMean1+"\nfitMean2="+fitMean2+
+//				"\nfitSigma1="+fitSigma1+"\nfitSigma2="+fitSigma2);
 		
 		// My attempt to find the roots as in Andrea's matlab code
 //		double a = fitSigma1*fitSigma1 - fitSigma2*fitSigma2;
