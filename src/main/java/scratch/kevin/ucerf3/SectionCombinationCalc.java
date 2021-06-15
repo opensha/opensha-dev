@@ -11,6 +11,7 @@ import java.util.zip.ZipException;
 import org.dom4j.DocumentException;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Joiner;
@@ -19,7 +20,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 
-import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.utils.FaultSystemIO;
 
 public class SectionCombinationCalc {

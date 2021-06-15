@@ -7,9 +7,9 @@ import java.util.Arrays;
 import org.dom4j.DocumentException;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.util.FileNameComparator;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.utils.FaultSystemIO;
 
 public class SolutionMomentCalc {

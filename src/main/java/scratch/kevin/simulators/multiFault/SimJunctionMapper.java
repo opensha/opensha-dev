@@ -36,6 +36,8 @@ import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -46,8 +48,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
@@ -1217,7 +1217,8 @@ public class SimJunctionMapper {
 			MatrixIO.doubleArraysListToFile(simSlipsMean, simSlipMeanFile);
 			MatrixIO.doubleArraysListToFile(simSlipsMax, simSlipMaxFile);
 			simSol = theSol;
-			FaultSystemIO.writeSol(simSol, simSolFile);
+//			FaultSystemIO.writeSol(simSol, simSolFile);
+			simSol.getArchive().write(simSolFile);
 		}
 		
 		SimJunctionMapper mapper = new SimJunctionMapper(ucerfSol, simSol,

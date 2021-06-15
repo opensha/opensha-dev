@@ -72,7 +72,8 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 		InversionFaultSystemRupSet rupSet = InversionFaultSystemRupSetFactory.forBranch(
 				filter, defaultAseis, inversionModel, FaultModels.FM3_1);
 		
-		UCERF3InversionConfiguration config = UCERF3InversionConfiguration.forModel(inversionModel, rupSet);
+		UCERF3InversionConfiguration config = UCERF3InversionConfiguration.forModel(inversionModel, rupSet,
+				rupSet.getFaultModel(), rupSet.getInversionTargetMFDs());
 		
 		// get the paleo rate constraints
 		List<PaleoRateConstraint> paleoRateConstraints = null;

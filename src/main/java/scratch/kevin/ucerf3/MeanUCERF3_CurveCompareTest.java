@@ -15,6 +15,8 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeParam;
@@ -32,8 +34,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
@@ -275,7 +275,8 @@ public class MeanUCERF3_CurveCompareTest {
 				getResortedArray(origRupSet.getMagForAllRups(), rupIDs),
 				getResortedArray(origRupSet.getAveRakeForAllRups(), rupIDs),
 				getResortedArray(origRupSet.getAreaForAllRups(), rupIDs),
-				getResortedArray(origRupSet.getLengthForAllRups(), rupIDs), origRupSet.getInfoString());
+				getResortedArray(origRupSet.getLengthForAllRups(), rupIDs));
+		newRupSet.setInfoString(origRupSet.getInfoString());
 		
 		return new FaultSystemSolution(newRupSet, getResortedArray(other.getRateForAllRups(), rupIDs));
 	}
@@ -405,7 +406,7 @@ public class MeanUCERF3_CurveCompareTest {
 				meanRupSet.getFaultSectionDataList(), meanRupSet.getSlipRateForAllSections(),
 				meanRupSet.getSlipRateStdDevForAllSections(), meanRupSet.getAreaForAllSections(),
 				meanRupSet.getSectionIndicesForAllRups(), meanNewMags, meanRupSet.getAveRakeForAllRups(),
-				meanRupSet.getAreaForAllRups(), meanRupSet.getLengthForAllRups(), meanSol.getInfoString()),
+				meanRupSet.getAreaForAllRups(), meanRupSet.getLengthForAllRups()),
 				meanSol.getRateForAllRups());
 	}
 	

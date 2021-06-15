@@ -8,8 +8,8 @@ import java.util.zip.ZipException;
 
 import org.dom4j.DocumentException;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
@@ -38,7 +38,7 @@ public class BatchPaleoTableWriter {
 		Preconditions.checkArgument(dir.exists() && dir.isDirectory(),
 				"Directory doesn't exist or isn't directory.");
 		
-		InversionFaultSystemSolution ucerf2Sol = UCERF2_ComparisonSolutionFetcher
+		FaultSystemSolution ucerf2Sol = UCERF2_ComparisonSolutionFetcher
 				.getUCERF2Solution(FaultModels.FM2_1);
 		List<AveSlipConstraint> ucerf2AveSlipConstraints;
 		List<PaleoRateConstraint> ucerf2PaleoConstraints;

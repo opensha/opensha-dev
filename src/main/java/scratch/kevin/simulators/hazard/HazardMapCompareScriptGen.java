@@ -28,6 +28,8 @@ import org.opensha.sha.calc.hazardMap.components.CalculationInputsXMLFile;
 import org.opensha.sha.calc.hazardMap.components.CalculationSettings;
 import org.opensha.sha.calc.hazardMap.components.CurveResultsArchiver;
 import org.opensha.sha.calc.hazardMap.mpj.MPJHazardCurveDriver;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
@@ -57,8 +59,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
@@ -344,10 +344,12 @@ public class HazardMapCompareScriptGen {
 				if (rsqsim) {
 					// write solution
 					localSolFile = new File(localJobDir, "rsqsim_solution.zip");
-					FaultSystemIO.writeSol(rsqsimSol, localSolFile);
+//					FaultSystemIO.writeSol(rsqsimSol, localSolFile);
+					rsqsimSol.getArchive().write(localSolFile);
 				} else {
 					localSolFile = new File(localJobDir, "ucerf3_sol_filtered.zip");
-					FaultSystemIO.writeSol(u3Sol, localSolFile);
+//					FaultSystemIO.writeSol(u3Sol, localSolFile);
+					u3Sol.getArchive().write(localSolFile);
 				}
 				File remoteSolFile = new File(remoteJobDir, localSolFile.getName());
 				

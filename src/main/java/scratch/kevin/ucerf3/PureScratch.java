@@ -6,6 +6,8 @@ import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
@@ -94,6 +96,8 @@ import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
@@ -144,8 +148,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -2246,21 +2248,21 @@ public class PureScratch {
 	}
 	
 	private static void test86() throws ZipException, IOException, DocumentException {
-		// do we have landers?
-		FaultSystemRupSet u3 = FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
-		FaultSystemRupSet candidate = FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
-				+ "fm3_1_plausible10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05.zip"));
-		int landersID = 246711;
-		ClusterRupture landersU3 = ClusterRupture.forOrderedSingleStrandRupture(
-				u3.getFaultSectionDataForRupture(landersID), candidate.getPlausibilityConfiguration().getDistAzCalc());
-		System.out.println("UCERF3 Landers: "+landersU3);
-		for (ClusterRupture rup : candidate.getClusterRuptures()) {
-			if (landersU3.unique.equals(rup.unique)) {
-				System.out.println("Candidate has landers!");
-				System.out.println("\t"+rup);
-				break;
-			}
-		}
+//		// do we have landers?
+//		FaultSystemRupSet u3 = FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
+//		FaultSystemRupSet candidate = FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+//				+ "fm3_1_plausible10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05.zip"));
+//		int landersID = 246711;
+//		ClusterRupture landersU3 = ClusterRupture.forOrderedSingleStrandRupture(
+//				u3.getFaultSectionDataForRupture(landersID), candidate.getPlausibilityConfiguration().getDistAzCalc());
+//		System.out.println("UCERF3 Landers: "+landersU3);
+//		for (ClusterRupture rup : candidate.getClusterRuptures()) {
+//			if (landersU3.unique.equals(rup.unique)) {
+//				System.out.println("Candidate has landers!");
+//				System.out.println("\t"+rup);
+//				break;
+//			}
+//		}
 	}
 	
 	private static void test87() {
@@ -2395,24 +2397,24 @@ public class PureScratch {
 	}
 	
 	private static void test90() throws ZipException, IOException, DocumentException {
-		File rupSetsDir = new File("/home/kevin/OpenSHA/UCERF4/rup_sets/");
-		File mainFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_"
-				+ "cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05.zip");
-		File altFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_"
-				+ "cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05_comp/alt_perm_Bilateral_Adaptive_5SectIncrease_MaintainConnectivity.zip");
-		
-		FaultSystemRupSet mainRupSet = FaultSystemIO.loadRupSet(mainFile);
-		FaultSystemRupSet altRupSet = FaultSystemIO.loadRupSet(altFile);
-		
-		ClusterRupture mainRup = mainRupSet.getClusterRuptures().get(137320);
-		ClusterRupture altRup = altRupSet.getClusterRuptures().get(226038);
-		
-		System.out.println("Main: "+mainRup);
-		System.out.println("\thash: "+mainRup.unique.hashCode());
-		System.out.println("Alt: "+altRup);
-		System.out.println("\thash: "+altRup.unique.hashCode());
-		System.out.println("Unique equals? "+mainRup.unique.equals(altRup.unique));
-		System.out.println("Regular equals? "+mainRup.equals(altRup));
+//		File rupSetsDir = new File("/home/kevin/OpenSHA/UCERF4/rup_sets/");
+//		File mainFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_"
+//				+ "cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05.zip");
+//		File altFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_"
+//				+ "cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05_comp/alt_perm_Bilateral_Adaptive_5SectIncrease_MaintainConnectivity.zip");
+//		
+//		FaultSystemRupSet mainRupSet = FaultSystemIO.loadRupSet(mainFile);
+//		FaultSystemRupSet altRupSet = FaultSystemIO.loadRupSet(altFile);
+//		
+//		ClusterRupture mainRup = mainRupSet.getClusterRuptures().get(137320);
+//		ClusterRupture altRup = altRupSet.getClusterRuptures().get(226038);
+//		
+//		System.out.println("Main: "+mainRup);
+//		System.out.println("\thash: "+mainRup.unique.hashCode());
+//		System.out.println("Alt: "+altRup);
+//		System.out.println("\thash: "+altRup.unique.hashCode());
+//		System.out.println("Unique equals? "+mainRup.unique.equals(altRup.unique));
+//		System.out.println("Regular equals? "+mainRup.equals(altRup));
 	}
 	
 	private static void test91() throws IOException, DocumentException {
@@ -2474,16 +2476,146 @@ public class PureScratch {
 	}
 	
 	private static void test94() throws IOException, DocumentException {
-		FaultSystemRupSet rupSet  = FaultSystemIO.loadRupSet(
-				new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
-						+ "nshm23_v1p2_all_plausibleMulti15km_adaptive6km_direct_cmlRake360_jumpP0.001_"
-						+ "slipP0.05incrCapDist_cff0.75IntsPos_comb2Paths_cffFavP0.01_cffFavRatioN2P0.5_"
-						+ "sectFractGrow0.1.zip"));
-		System.out.println("Done loading");
-		List<ClusterRupture> rups = rupSet.getClusterRuptures();
-		System.out.println("Have "+rups.size()+" cluster ruptures, now calling get(0)");
-		rups.get(0);
-		System.out.println("Done with get(0)");
+//		FaultSystemRupSet rupSet  = FaultSystemIO.loadRupSet(
+//				new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+//						+ "nshm23_v1p2_all_plausibleMulti15km_adaptive6km_direct_cmlRake360_jumpP0.001_"
+//						+ "slipP0.05incrCapDist_cff0.75IntsPos_comb2Paths_cffFavP0.01_cffFavRatioN2P0.5_"
+//						+ "sectFractGrow0.1.zip"));
+//		System.out.println("Done loading");
+//		List<ClusterRupture> rups = rupSet.getClusterRuptures();
+//		System.out.println("Have "+rups.size()+" cluster ruptures, now calling get(0)");
+//		rups.get(0);
+//		System.out.println("Done with get(0)");
+	}
+	
+	private static void test95() {
+		double lat = 37.09084333164281;
+		double lon = -121.96972173834948;
+//		Preconditions.checkState(lat == new Location(lat, lon).getLatitude());
+		Location loc1 = new Location(lat, lon);
+		Location loc2 = new Location(loc1.getLatitude(), loc1.getLongitude());
+		System.out.println("INPUT lat/lon");
+		System.out.println(lat+"\t"+lon);
+		System.out.println("ORIG loc.get*()");
+		System.out.println(loc1.getLatitude()+"\t"+loc1.getLongitude());
+		System.out.println("ORIG loc.get*Rad()");
+		System.out.println(loc1.getLatRad()+"\t"+loc1.getLonRad());
+		System.out.println("RECONSTRUCTED loc.get*()");
+		System.out.println(loc2.getLatitude()+"\t"+loc2.getLongitude());
+		System.out.println("RECONSTRUCTED loc.get*Rad()");
+		System.out.println(loc2.getLatRad()+"\t"+loc2.getLonRad());
+	}
+	
+	private static void test96() {
+		double lat = 37.09084333164281;
+		System.out.println("INPUT DEG\t"+lat);
+		System.out.println("Using Java 9+ Math.toRadians/toDegrees:");
+		double rad = Math.toRadians(lat);
+		double deg = Math.toDegrees(rad);
+		System.out.println("\tRAD:\t"+rad);
+		System.out.println("\tDEG:\t"+deg);
+		System.out.println("Using /180*PI and *180/PI");
+		rad = lat/180d * Math.PI;
+		deg = rad*180d / Math.PI;
+		System.out.println("\tRAD:\t"+rad);
+		System.out.println("\tDEG:\t"+deg);
+		System.out.println("Using BigDecimal");
+		BigDecimal PI = new BigDecimal(
+		        "3.14159265358979323846264338327950288419716939937510" +
+		        "5820974944592307816406286208998628034825342117067982");
+		rad = new BigDecimal(lat).divide(new BigDecimal(180), 100, RoundingMode.HALF_UP).multiply(PI).doubleValue(); 
+		deg = new BigDecimal(rad).multiply(new BigDecimal(180)).divide(PI, 100, RoundingMode.HALF_UP).doubleValue(); 
+		System.out.println("\tRAD:\t"+rad);
+		System.out.println("\tDEG:\t"+deg);
+	}
+	
+	private static void test97() {
+		BigDecimal PI = new BigDecimal(
+				"3.14159265358979323846264338327950288419716939937510" +
+				"5820974944592307816406286208998628034825342117067982");
+
+		double DEG_TO_RAD = PI.divide(new BigDecimal(180), 100, RoundingMode.HALF_UP).doubleValue();
+		double RAD_TO_DEG = new BigDecimal(180).divide(PI, 100, RoundingMode.HALF_UP).doubleValue(); 
+
+		Random random = new Random(0);
+
+		int toRadBetterTechniqueWins = 0;
+		int toRadBetterTechniqueLoses = 0;
+		int toDegBetterTechniqueWins = 0;
+		int toDegBetterTechniqueLoses = 0;
+
+		for (int i = 0; i < 10000; i++) {
+			double degrees = random.nextInt(360) + random.nextDouble();
+//			double degrees = 37.09084333164281;
+
+			double standard = degrees/180d * Math.PI;
+			double better = degrees * DEG_TO_RAD;
+			double best = new BigDecimal(degrees)
+					.divide(new BigDecimal(180), 100, RoundingMode.HALF_UP)
+					.multiply(PI)
+					.doubleValue();
+
+			double standardError = Math.abs(best - standard);
+			double betterError = Math.abs(best - better);
+
+			if (betterError < standardError) {
+				toRadBetterTechniqueWins++;
+			} else if (betterError > standardError) {
+				toRadBetterTechniqueLoses++;
+			}
+
+			if (!(standard == better && better == best)) {
+				System.out.println(
+						degrees + " => " +
+								"Standard: " + standard + "; " +
+								"Better: " + better + "; " +
+								"Best: " + best);
+			}
+		}
+
+		for (int i = 0; i < 10000; i++) {
+			double radians = random.nextDouble() * (2 * Math.PI);
+//			double radians = 0.6473573384785501;
+
+			double standard = radians*180d / Math.PI;
+
+			// seemingly more accurate to divide than to multiply by the reciprocal:
+			double better = radians / DEG_TO_RAD;
+			//double better = radians * RAD_TO_DEG;
+
+			double best = new BigDecimal(radians)
+					.multiply(new BigDecimal(180))
+					.divide(PI, 100, RoundingMode.HALF_UP)
+					.doubleValue();
+
+			double standardError = Math.abs(best - standard);
+			double betterError = Math.abs(best - better);
+
+			if (betterError < standardError) {
+				toDegBetterTechniqueWins++;
+			} else if (betterError > standardError) {
+				toDegBetterTechniqueLoses++;
+			}
+
+			if (!(standard == better && better == best)) {
+				System.out.println(
+						radians + " => " +
+								"Standard: " + standard + "; " +
+								"Better: " + better + "; " +
+								"Best: " + best);
+			}
+		}
+
+		System.out.println("When converting from degrees to radians:");
+		System.out.println("Better technique wins: " + toRadBetterTechniqueWins);
+		System.out.println("Better technique loses: " + toRadBetterTechniqueLoses);
+
+		System.out.println("When converting from radians to degrees:");
+		System.out.println("Better technique wins: " + toDegBetterTechniqueWins);
+		System.out.println("Better technique loses: " + toDegBetterTechniqueLoses);
+
+		//System.out.println("DEG_TO_RAD = " + DEG_TO_RAD);
+		//System.out.println("RAD_TO_DEG = " + RAD_TO_DEG); 
 	}
 	
 	/**
@@ -2491,7 +2623,7 @@ public class PureScratch {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test94();
+		test97();
 	}
 
 }
