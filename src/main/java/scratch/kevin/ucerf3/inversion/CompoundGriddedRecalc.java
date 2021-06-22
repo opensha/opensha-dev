@@ -16,7 +16,7 @@ import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceFileReader;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 public class CompoundGriddedRecalc {
 
@@ -29,7 +29,7 @@ public class CompoundGriddedRecalc {
 		if (!writeDir.exists())
 			writeDir.mkdir();
 		
-		ArrayDeque<LogicTreeBranch> branchQueue = new ArrayDeque<LogicTreeBranch>();
+		ArrayDeque<U3LogicTreeBranch> branchQueue = new ArrayDeque<U3LogicTreeBranch>();
 		branchQueue.addAll(cfss.getBranches());
 		
 		int numThreads = 4;
@@ -50,7 +50,7 @@ public class CompoundGriddedRecalc {
 			}
 	}
 	
-	private static synchronized LogicTreeBranch popBranch(ArrayDeque<LogicTreeBranch> branches) {
+	private static synchronized U3LogicTreeBranch popBranch(ArrayDeque<U3LogicTreeBranch> branches) {
 		if (branches.size() % 50 == 0)
 			System.out.println(branches.size()+" braches left");
 		return branches.pop();
@@ -67,11 +67,11 @@ public class CompoundGriddedRecalc {
 	}
 	
 	private static class CalcThread extends Thread {
-		private ArrayDeque<LogicTreeBranch> branches;
+		private ArrayDeque<U3LogicTreeBranch> branches;
 		private File dir;
 		private CompoundFaultSystemSolution cfss;
 		
-		public CalcThread(CompoundFaultSystemSolution cfss, File dir, ArrayDeque<LogicTreeBranch> branches) {
+		public CalcThread(CompoundFaultSystemSolution cfss, File dir, ArrayDeque<U3LogicTreeBranch> branches) {
 			this.branches = branches;
 			this.dir = dir;
 			this.cfss = cfss;
@@ -80,7 +80,7 @@ public class CompoundGriddedRecalc {
 		@Override
 		public void run() {
 			while (true) {
-				LogicTreeBranch branch;
+				U3LogicTreeBranch branch;
 				try {
 					branch = popBranch(branches);
 				} catch (NoSuchElementException e) {

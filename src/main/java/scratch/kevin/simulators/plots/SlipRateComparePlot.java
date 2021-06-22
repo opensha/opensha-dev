@@ -52,7 +52,7 @@ import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -80,7 +80,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 				this.compSol = (SlipEnabledSolution)compSol;
 			} else {
 				// make it slip enabled, assuming mean UCERF3
-				LogicTreeBranch branch = LogicTreeBranch.getMEAN_UCERF3(fm, dm);
+				U3LogicTreeBranch branch = U3LogicTreeBranch.getMEAN_UCERF3(fm, dm);
 				InversionFaultSystemRupSet iRupSet = new InversionFaultSystemRupSet(compSol.getRupSet(),
 						branch, null, null, null, null, null);
 				this.compSol = new InversionFaultSystemSolution(iRupSet, compSol.getRateForAllRups());

@@ -25,7 +25,7 @@ import scratch.UCERF3.enumTreeBranches.SpatialSeisPDF;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.UCERF3p2BranchWeightProvider;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 
@@ -49,14 +49,14 @@ public class CompoundSubsetWrite {
 		System.out.println("Compound has "+origCompound.getBranches().size()+" branches");
 		
 		// we want ref branch
-		LogicTreeBranch origRefBranch = LogicTreeBranch.fromValues(false, FaultModels.FM3_1, null,
+		U3LogicTreeBranch origRefBranch = U3LogicTreeBranch.fromValues(false, FaultModels.FM3_1, null,
 				null, SlipAlongRuptureModels.UNIFORM, InversionModels.CHAR_CONSTRAINED,
 				TotalMag5Rate.RATE_8p7, MaxMagOffFault.MAG_7p6, MomentRateFixes.NONE, SpatialSeisPDF.UCERF3);
 		
 		UCERF3p2BranchWeightProvider ucerf3p2WeightProvider = new UCERF3p2BranchWeightProvider();
 		
-		final List<LogicTreeBranch> subBranches = Lists.newArrayList();
-		for (LogicTreeBranch branch : origCompound.getBranches()) {
+		final List<U3LogicTreeBranch> subBranches = Lists.newArrayList();
+		for (U3LogicTreeBranch branch : origCompound.getBranches()) {
 			if (origRefBranch.matchesNonNulls(branch)) {
 //			if (branch.matchesNonNulls(origRefBranch)) {
 				Preconditions.checkState(ucerf3p2WeightProvider.getWeight(branch) > 0);
@@ -70,12 +70,12 @@ public class CompoundSubsetWrite {
 		FaultSystemSolutionFetcher fetch = new FaultSystemSolutionFetcher() {
 			
 			@Override
-			public Collection<LogicTreeBranch> getBranches() {
+			public Collection<U3LogicTreeBranch> getBranches() {
 				return subBranches;
 			}
 			
 			@Override
-			protected InversionFaultSystemSolution fetchSolution(LogicTreeBranch branch) {
+			protected InversionFaultSystemSolution fetchSolution(U3LogicTreeBranch branch) {
 				return origCompound.getSolution(branch);
 			}
 		};

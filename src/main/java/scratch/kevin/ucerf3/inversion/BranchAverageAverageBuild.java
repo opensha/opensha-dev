@@ -15,7 +15,7 @@ import scratch.UCERF3.AverageFaultSystemSolution;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
 
@@ -82,7 +82,7 @@ public class BranchAverageAverageBuild {
 				String runStr = name.substring(name.indexOf("_run")+1);
 				runStr = runStr.substring(0, runStr.indexOf("_"));
 				name = name.substring(0, name.indexOf("_run"));
-				LogicTreeBranch branch = LogicTreeBranch.fromFileName(name);
+				U3LogicTreeBranch branch = U3LogicTreeBranch.fromFileName(name);
 				Preconditions.checkState(branch.isFullySpecified());
 				double wt = weightProv.getWeight(branch);
 				totWt += wt;

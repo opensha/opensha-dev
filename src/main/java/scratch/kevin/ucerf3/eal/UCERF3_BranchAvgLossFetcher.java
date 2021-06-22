@@ -23,7 +23,7 @@ import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 
 import com.google.common.base.Preconditions;
@@ -34,7 +34,7 @@ public class UCERF3_BranchAvgLossFetcher {
 	private File[] ealDataDirs;
 	
 	private FaultSystemSolution trueMeanSol;
-	private Map<LogicTreeBranch, List<Integer>> branchMappings;
+	private Map<U3LogicTreeBranch, List<Integer>> branchMappings;
 	
 	private CompoundFaultSystemSolution cfss;
 	
@@ -51,7 +51,7 @@ public class UCERF3_BranchAvgLossFetcher {
 		this(FaultSystemIO.loadSol(trueMeanSolFile), TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile), cfss, ealDataDirs);
 	}
 	
-	public UCERF3_BranchAvgLossFetcher(FaultSystemSolution trueMeanSol, Map<LogicTreeBranch, List<Integer>> branchMappings,
+	public UCERF3_BranchAvgLossFetcher(FaultSystemSolution trueMeanSol, Map<U3LogicTreeBranch, List<Integer>> branchMappings,
 			CompoundFaultSystemSolution cfss, File... ealDataDirs) throws IOException, DocumentException {
 		Preconditions.checkState(ealDataDirs.length > 0, "Must supply at least one data dir");
 		this.ealDataDirs = ealDataDirs;
@@ -95,7 +95,7 @@ public class UCERF3_BranchAvgLossFetcher {
 		double totWeight = 0d;
 		
 		DiscretizedFunc[] rupLossDists = null;
-		for (LogicTreeBranch branch : branchMappings.keySet()) {
+		for (U3LogicTreeBranch branch : branchMappings.keySet()) {
 			FaultModels branchFM = branch.getValue(FaultModels.class);
 			if (branchFM != fm)
 				continue;

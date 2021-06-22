@@ -31,7 +31,7 @@ import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
 import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesRecord;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
@@ -158,7 +158,7 @@ public class StandaloneSubSectRupGen {
 		fw.close();
 		
 		// build actual rupture set for magnitudes and such
-		LogicTreeBranch branch = LogicTreeBranch.fromValues(fm, DeformationModels.GEOLOGIC,
+		U3LogicTreeBranch branch = U3LogicTreeBranch.fromValues(fm, DeformationModels.GEOLOGIC,
 				ScalingRelationships.SHAW_2009_MOD, SlipAlongRuptureModels.TAPERED);
 		InversionFaultSystemRupSet rupSet = new InversionFaultSystemRupSet(branch, clusters, subSections);
 		

@@ -38,7 +38,7 @@ import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.utils.MatrixIO;
 
@@ -60,7 +60,7 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 	
 	private transient ConcurrentMap<FaultModels, List<? extends FaultSection>> subSectsMap;
 	
-	private transient List<LogicTreeBranch> branches;
+	private transient List<U3LogicTreeBranch> branches;
 	
 	private transient BranchWeightProvider weightProv;
 
@@ -87,10 +87,10 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 		
 		if (cmd.hasOption("name-grep")) {
 			List<String> greps = Lists.newArrayList(Splitter.on(",").split(cmd.getOptionValue("name-grep")));
-			List<LogicTreeBranch> filtered = Lists.newArrayList();
+			List<U3LogicTreeBranch> filtered = Lists.newArrayList();
 			
 			branchLoop:
-			for (LogicTreeBranch branch : branches) {
+			for (U3LogicTreeBranch branch : branches) {
 				String fname = branch.buildFileName();
 				for (String grep : greps) {
 					if (!fname.contains(grep))
@@ -138,10 +138,10 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 	
 	private class CalcTask implements Task {
 		
-		private LogicTreeBranch branch;
+		private U3LogicTreeBranch branch;
 		private double[] result;
 
-		public CalcTask(LogicTreeBranch branch) {
+		public CalcTask(U3LogicTreeBranch branch) {
 			this.branch = branch;
 		}
 
@@ -208,12 +208,12 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 				double[] weights = Doubles.toArray(weightsMap.get(fm));
 				
 				// look for a common set of branches
-				LogicTreeBranch commonBranch = null;
-				for (LogicTreeBranch branch : branches) {
+				U3LogicTreeBranch commonBranch = null;
+				for (U3LogicTreeBranch branch : branches) {
 					if (branch.getValue(FaultModels.class) != fm)
 						continue;
 					if (commonBranch == null) {
-						commonBranch = (LogicTreeBranch) branch.clone();
+						commonBranch = (U3LogicTreeBranch) branch.clone();
 					} else {
 						for (int i=0; i<branch.size(); i++) {
 							if (branch.getValue(i) != commonBranch.getValue(i))

@@ -32,7 +32,7 @@ import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -42,7 +42,7 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 public class MPJ_MeanUCERF3_HazardCurveTest extends MPJTaskCalculator {
 	
 	private Compound_FM_DM_Scale_CombinedFetcher fetch;
-	private List<LogicTreeBranch> branches;
+	private List<U3LogicTreeBranch> branches;
 	
 	private ScalarIMR imr;
 	private Site site;
@@ -88,7 +88,7 @@ public class MPJ_MeanUCERF3_HazardCurveTest extends MPJTaskCalculator {
 		}
 	}
 	
-	private void calculate(LogicTreeBranch branch) throws IOException {
+	private void calculate(U3LogicTreeBranch branch) throws IOException {
 		String fName = branch.getValue(FaultModels.class).encodeChoiceString()
 				+"_"+branch.getValue(DeformationModels.class).encodeChoiceString()
 				+"_"+branch.getValue(ScalingRelationships.class).encodeChoiceString()+".txt";

@@ -30,7 +30,7 @@ import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester.TestType;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
@@ -467,7 +467,7 @@ public class RupSetValidator {
 		private FaultModels fm;
 		
 		public FakeRupSet(FaultModels fm, SectionClusterList clusters) {
-			super(LogicTreeBranch.fromValues(false, fm), clusters, clusters.getFaultSectionData());
+			super(U3LogicTreeBranch.fromValues(false, fm), clusters, clusters.getFaultSectionData());
 			this.data = clusters.getFaultSectionData();
 			rups = new ArrayList<List<Integer>>();
 			for (SectionCluster c : clusters) {

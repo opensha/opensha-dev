@@ -52,7 +52,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.ProbOfExceed;
 import scratch.peter.nshmp.CurveContainer;
 
@@ -2160,7 +2160,7 @@ public class UC33_MapMaker {
 		// create wt list
 		List<Double> wtList = Lists.newArrayList();
 		for (String brName : branchNames) {
-			LogicTreeBranch branch = LogicTreeBranch.fromFileName(brName);
+			U3LogicTreeBranch branch = U3LogicTreeBranch.fromFileName(brName);
 			wtList.add(branch.getAprioriBranchWt());
 		}
 		DataUtils.asWeights(wtList);

@@ -21,7 +21,7 @@ import org.opensha.nshmp2.calc.ThreadedHazardCalc;
 import org.opensha.nshmp2.tmp.TestGrid;
 import org.opensha.nshmp2.util.Period;
 
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;

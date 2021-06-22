@@ -26,7 +26,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
 import scratch.UCERF3.utils.FaultSystemIO;
@@ -85,7 +85,7 @@ public class SolSubMeanExtractor {
 								+ "_BRANCH_AVG_SOL.zip";
 						if (new File(outputDir, fName).exists())
 							continue;
-						List<LogicTreeBranch> branches = getMatchingBranches(
+						List<U3LogicTreeBranch> branches = getMatchingBranches(
 								cfss.getBranches(), fm, dm, scale, seis);
 						System.out.println("Making "+fName+" with "+branches.size()+" branches");
 						
@@ -178,12 +178,12 @@ public class SolSubMeanExtractor {
 		}
 	}
 	
-	private static List<LogicTreeBranch> getMatchingBranches(Collection<LogicTreeBranch> allBranches,
+	private static List<U3LogicTreeBranch> getMatchingBranches(Collection<U3LogicTreeBranch> allBranches,
 			LogicTreeBranchNode<?>... nodes) {
-		List<LogicTreeBranch> matches = Lists.newArrayList();
+		List<U3LogicTreeBranch> matches = Lists.newArrayList();
 		
 		branchLoop:
-		for (LogicTreeBranch branch : allBranches) {
+		for (U3LogicTreeBranch branch : allBranches) {
 			for (LogicTreeBranchNode<?> node : nodes) {
 				if (node == null)
 					continue;

@@ -24,7 +24,7 @@ import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 
 public class MPJ_ETAS_CatalogEALCalculator extends MPJTaskCalculator {
@@ -35,7 +35,7 @@ public class MPJ_ETAS_CatalogEALCalculator extends MPJTaskCalculator {
 	private FaultSystemSolution baSol;
 	private CompoundFaultSystemSolution cfss;
 	private FaultSystemSolution trueMeanSol;
-	private Map<LogicTreeBranch, List<Integer>> branchMappings;
+	private Map<U3LogicTreeBranch, List<Integer>> branchMappings;
 	private List<File> dataDirs;
 	private boolean triggeredOnly;
 	private boolean allSubDurations = false;

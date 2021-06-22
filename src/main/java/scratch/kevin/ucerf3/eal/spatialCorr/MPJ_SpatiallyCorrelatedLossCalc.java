@@ -48,7 +48,7 @@ import com.google.common.collect.Table;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
@@ -113,7 +113,7 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 		}
 		Preconditions.checkArgument(!vs30Dirs.isEmpty(), "No Vs30 model directories supplied!");
 		
-		LogicTreeBranch emptyTIBranch = (LogicTreeBranch)LogicTreeBranch.DEFAULT.clone();
+		U3LogicTreeBranch emptyTIBranch = (U3LogicTreeBranch)U3LogicTreeBranch.DEFAULT.clone();
 		for (int i=0; i<emptyTIBranch.size(); i++)
 			emptyTIBranch.clearValue(i);
 		

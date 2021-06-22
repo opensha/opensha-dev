@@ -25,7 +25,7 @@ import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.enumTreeBranches.InversionModels;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
@@ -152,7 +152,7 @@ public class UCERF3_LEC_TreeTrimmer {
 			for (int i=0; i<branch0.size(); i++) {
 				@SuppressWarnings("unchecked")
 				Class<? extends LogicTreeBranchNode<?>> clazz = (Class<? extends LogicTreeBranchNode<?>>)
-						LogicTreeBranch.getEnumEnclosingClass(branch0.getValue(i).getClass());
+						U3LogicTreeBranch.getEnumEnclosingClass(branch0.getValue(i).getClass());
 				int numNonZero = 0;
 				for (LogicTreeBranchNode<?> value : clazz.getEnumConstants())
 					if (allChoices.contains(value))
@@ -311,7 +311,7 @@ public class UCERF3_LEC_TreeTrimmer {
 		double totWeight = 0d;
 		
 		int rows = csv.getNumRows();
-		List<Class<? extends LogicTreeBranchNode<?>>> classList = LogicTreeBranch.getLogicTreeNodeClasses();
+		List<Class<? extends LogicTreeBranchNode<?>>> classList = U3LogicTreeBranch.getLogicTreeNodeClasses();
 		for (int row=1; row<rows; row++) {
 			double[] yVals = new double[xValsArray.length];
 			for (int i=0; i<xValsArray.length; i++)
@@ -323,7 +323,7 @@ public class UCERF3_LEC_TreeTrimmer {
 				LogicTreeBranchNode<?> match = forShortName(classList.get(i), str);
 				tiVals.add(match);
 			}
-			LogicTreeBranch tiBranch = LogicTreeBranch.fromValues(tiVals);
+			U3LogicTreeBranch tiBranch = U3LogicTreeBranch.fromValues(tiVals);
 			U3_EAL_ProbModels probModel = forShortName(U3_EAL_ProbModels.class, csv.get(row, td_erf_col));
 			U3_EAL_GMMs gmm = forShortName(U3_EAL_GMMs.class, csv.get(row, gmm_col));
 			U3_EAL_GMM_Epistemic gmmEpi = forShortName(U3_EAL_GMM_Epistemic.class, csv.get(row, gmm_epi_col));
@@ -357,7 +357,7 @@ public class UCERF3_LEC_TreeTrimmer {
 		double totWeight = 0d;
 		
 		int rows = csv.getNumRows();
-		List<Class<? extends LogicTreeBranchNode<?>>> classList = LogicTreeBranch.getLogicTreeNodeClasses();
+		List<Class<? extends LogicTreeBranchNode<?>>> classList = U3LogicTreeBranch.getLogicTreeNodeClasses();
 		for (int row=1; row<rows; row++) {
 			double eal = csv.getDouble(row, eal_col);
 			double weight = csv.getDouble(row, weight_col);
@@ -367,7 +367,7 @@ public class UCERF3_LEC_TreeTrimmer {
 				LogicTreeBranchNode<?> match = forShortName(classList.get(i), str);
 				tiVals.add(match);
 			}
-			LogicTreeBranch tiBranch = LogicTreeBranch.fromValues(tiVals);
+			U3LogicTreeBranch tiBranch = U3LogicTreeBranch.fromValues(tiVals);
 			U3_EAL_ProbModels probModel = forShortName(U3_EAL_ProbModels.class, csv.get(row, eal_td_erf_col));
 			U3_EAL_GMMs gmm = forShortName(U3_EAL_GMMs.class, csv.get(row, eal_gmm_col));
 			U3_EAL_GMM_Epistemic gmmEpi = forShortName(U3_EAL_GMM_Epistemic.class, csv.get(row, eal_gmm_epi_col));

@@ -48,7 +48,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 
 public class BayAreaFactSheetCalc {
@@ -113,7 +113,7 @@ public class BayAreaFactSheetCalc {
 		
 		Region reg = new CaliforniaRegions.SF_BOX();
 		
-		Table<LogicTreeBranch, String, Map<MagDependentAperiodicityOptions, EvenlyDiscretizedFunc>>
+		Table<U3LogicTreeBranch, String, Map<MagDependentAperiodicityOptions, EvenlyDiscretizedFunc>>
 			branchFaultProbsTable = HashBasedTable.create();
 		
 		BranchWeightProvider weightProv = new APrioriBranchWeightProvider();
@@ -122,7 +122,7 @@ public class BayAreaFactSheetCalc {
 		
 		int branchIndex = 0;
 		
-		for (LogicTreeBranch branch : cfss.getBranches()) {
+		for (U3LogicTreeBranch branch : cfss.getBranches()) {
 			FaultModels fm = branch.getValue(FaultModels.class);
 			
 			if (!rupturesTable.containsRow(fm)) {
@@ -333,7 +333,7 @@ public class BayAreaFactSheetCalc {
 			XY_DataSetList indepDatas = new XY_DataSetList();
 			List<Double> indepWeights = Lists.newArrayList();
 			
-			for (LogicTreeBranch branch : branchFaultProbsTable.rowKeySet()) {
+			for (U3LogicTreeBranch branch : branchFaultProbsTable.rowKeySet()) {
 				double branchWeight;
 				if (do_branch_averaged)
 					branchWeight = 0.5;

@@ -9,7 +9,7 @@ import java.util.zip.ZipFile;
 import org.opensha.commons.util.FileUtils;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.MatrixIO;
 
 import com.google.common.base.Preconditions;
@@ -40,7 +40,7 @@ public class CompoundAddToMean {
 		File tempDir = FileUtils.createTempDir();
 		FileUtils.unzipFile(meanFile, tempDir);
 		
-		for (LogicTreeBranch branch : meanSol.getBranches()) {
+		for (U3LogicTreeBranch branch : meanSol.getBranches()) {
 			double[] meanRates = meanSol.getRates(branch);
 			double[] newRates = newSol.getRates(branch);
 			

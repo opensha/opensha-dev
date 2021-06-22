@@ -19,7 +19,7 @@ import org.opensha.commons.gui.plot.GraphWindow;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.logicTree.TreeTrimmer;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
@@ -51,10 +51,10 @@ public class CarrizoRateHist {
 		double rateTot = 0;
 		
 		TreeTrimmer subsetTrim = LogicTreePBSWriter.getCustomTrimmer();
-		List<Class<? extends LogicTreeBranchNode<?>>> nodeClasses = LogicTreeBranch.getLogicTreeNodeClasses();
+		List<Class<? extends LogicTreeBranchNode<?>>> nodeClasses = U3LogicTreeBranch.getLogicTreeNodeClasses();
 		
-		Map<LogicTreeBranch, Double> ratesMap = Maps.newHashMap();
-		Map<LogicTreeBranch, Double> weightsMap = Maps.newHashMap();
+		Map<U3LogicTreeBranch, Double> ratesMap = Maps.newHashMap();
+		Map<U3LogicTreeBranch, Double> weightsMap = Maps.newHashMap();
 		
 		//9, 10
 		for (int i=1; i<csv.getNumRows(); i++) {
@@ -78,7 +78,7 @@ public class CarrizoRateHist {
 					}
 				}
 			}
-			LogicTreeBranch branch = LogicTreeBranch.fromValues(vals);
+			U3LogicTreeBranch branch = U3LogicTreeBranch.fromValues(vals);
 			Preconditions.checkState(branch.isFullySpecified(), branch);
 			
 			if (subsetTrim.isTreeValid(branch)) {
@@ -125,7 +125,7 @@ public class CarrizoRateHist {
 				if (val.getRelativeWeight(InversionModels.CHAR_CONSTRAINED) > 0) {
 					double totWt = 0;
 					double totRate = 0;
-					for (LogicTreeBranch branch : ratesMap.keySet()) {
+					for (U3LogicTreeBranch branch : ratesMap.keySet()) {
 						if (branch.getValueUnchecked((Class<? extends LogicTreeBranchNode<?>>)clazz) == val) {
 							double weight = weightsMap.get(branch);
 							totRate += ratesMap.get(branch)*weight;

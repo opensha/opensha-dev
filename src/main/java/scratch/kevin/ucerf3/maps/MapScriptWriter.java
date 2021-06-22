@@ -20,7 +20,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter.RunSites;
 
@@ -91,10 +91,10 @@ public class MapScriptWriter {
 		
 		BatchScriptWriter batchWrite = site.forBranch(null);
 		
-		List<List<LogicTreeBranch>> branchGroupLists = Lists.newArrayList();
+		List<List<U3LogicTreeBranch>> branchGroupLists = Lists.newArrayList();
 		
-		List<LogicTreeBranch> branchGroup = Lists.newArrayList();
-		for (LogicTreeBranch branch : fss.getBranches()) {
+		List<U3LogicTreeBranch> branchGroup = Lists.newArrayList();
+		for (U3LogicTreeBranch branch : fss.getBranches()) {
 			if (ignores != null && ignores.contains(branch.buildFileName()))
 				continue;
 			if (branchGroup.size() >= bundleSize) {
@@ -111,11 +111,11 @@ public class MapScriptWriter {
 		int batchCount = 0;
 		int jobCount = 0;
 		
-		for (List<LogicTreeBranch> branches : branchGroupLists) {
+		for (List<U3LogicTreeBranch> branches : branchGroupLists) {
 			List<String> classNames = Lists.newArrayList();
 			List<String> argss = Lists.newArrayList();
 			
-			for (LogicTreeBranch branch : branches) {
+			for (U3LogicTreeBranch branch : branches) {
 				classNames.add(UC3_CalcMPJ_MapCompound.class.getName());
 				argss.add(threadsArg+" --deadlock "+remoteCompoundfile.getAbsolutePath()+" "+branch.buildFileName()
 						+" "+regionCode+" "+resCode+" "+imtCode+" "+remoteDir.getAbsolutePath());
@@ -158,10 +158,10 @@ public class MapScriptWriter {
 		return ignores;
 	}
 	
-	private static HashSet<LogicTreeBranch> loadIgnoreBranchesFromDir(
-			File dir, Collection<LogicTreeBranch> branches) {
-		HashSet<LogicTreeBranch> ignores = new HashSet<LogicTreeBranch>();
-		for (LogicTreeBranch branch : branches) {
+	private static HashSet<U3LogicTreeBranch> loadIgnoreBranchesFromDir(
+			File dir, Collection<U3LogicTreeBranch> branches) {
+		HashSet<U3LogicTreeBranch> ignores = new HashSet<U3LogicTreeBranch>();
+		for (U3LogicTreeBranch branch : branches) {
 			File subDir = new File(dir, branch.buildFileName());
 			if (findCurvesFile(subDir))
 				ignores.add(branch);

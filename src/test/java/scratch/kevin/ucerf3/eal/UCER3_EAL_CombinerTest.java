@@ -59,7 +59,7 @@ import scratch.UCERF3.inversion.SectionClusterList;
 import scratch.UCERF3.inversion.SectionConnectionStrategy;
 import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 
@@ -69,7 +69,7 @@ public class UCER3_EAL_CombinerTest {
 	private static FaultSystemSolutionFetcher fetch;
 	private static FaultSystemSolution trueMeanSol;
 	private static double[][] fssLosses;
-	private static Map<LogicTreeBranch, List<Integer>> mappings;
+	private static Map<U3LogicTreeBranch, List<Integer>> mappings;
 	
 	// mech => [node][mag, loss]
 	private static Map<FocalMech, DiscretizedFunc[]> griddedLossFuncs;
@@ -79,7 +79,7 @@ public class UCER3_EAL_CombinerTest {
 	private static final Random r = new Random();
 	
 	public static InversionFaultSystemRupSet buildSmallTestRupSet() {
-		LogicTreeBranch branch = LogicTreeBranch.UCERF2;
+		U3LogicTreeBranch branch = U3LogicTreeBranch.UCERF2;
 		// this list will store our subsections
 		List<FaultSection> subSections = Lists.newArrayList();
 		
@@ -154,20 +154,20 @@ public class UCER3_EAL_CombinerTest {
 				new Location(latTrack.getMin()-1d, lonTrack.getMin()-1d), 0.1, null);
 		Preconditions.checkState(reg.getNodeCount() > 5);
 		
-		HashSet<LogicTreeBranch> branches = new HashSet<LogicTreeBranch>();
+		HashSet<U3LogicTreeBranch> branches = new HashSet<U3LogicTreeBranch>();
 		
 		DiscretizedFunc[] rupMFDs = new DiscretizedFunc[rupSet.getNumRuptures()];
 		for (int i=0; i<rupMFDs.length; i++)
 			rupMFDs[i] = new ArbitrarilyDiscretizedFunc();
 		
-		Map<LogicTreeBranch, InversionFaultSystemSolution> map = Maps.newHashMap();
+		Map<U3LogicTreeBranch, InversionFaultSystemSolution> map = Maps.newHashMap();
 		
 		Map<Integer, IncrementalMagFreqDist> meanNodeSubSeisMFDs = Maps.newHashMap();
 		Map<Integer, IncrementalMagFreqDist> meanNodeUnassociatedMFDs = Maps.newHashMap();
 		
 		for (int i=0; i<numSols; i++) {
 			// get unique branch
-			LogicTreeBranch branch = null;
+			U3LogicTreeBranch branch = null;
 			while (branch == null || branches.contains(branch))
 				branch = getRandomBranch();
 			branches.add(branch);
@@ -314,34 +314,34 @@ public class UCER3_EAL_CombinerTest {
 	
 	private static class InMemFSSFetch extends FaultSystemSolutionFetcher {
 		
-		private Map<LogicTreeBranch, InversionFaultSystemSolution> map;
+		private Map<U3LogicTreeBranch, InversionFaultSystemSolution> map;
 		
-		public InMemFSSFetch(Map<LogicTreeBranch, InversionFaultSystemSolution> map) {
+		public InMemFSSFetch(Map<U3LogicTreeBranch, InversionFaultSystemSolution> map) {
 			this.map = map;
 		}
 
 		@Override
-		public Collection<LogicTreeBranch> getBranches() {
+		public Collection<U3LogicTreeBranch> getBranches() {
 			return map.keySet();
 		}
 
 		@Override
 		protected InversionFaultSystemSolution fetchSolution(
-				LogicTreeBranch branch) {
+				U3LogicTreeBranch branch) {
 			return map.get(branch);
 		}
 		
 	}
 	
-	private static LogicTreeBranch getRandomBranch() {
+	private static U3LogicTreeBranch getRandomBranch() {
 		List<LogicTreeBranchNode<?>> vals = Lists.newArrayList();
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			if (clazz.equals(FaultModels.class))
 				vals.add(FaultModels.FM3_1);
 			else
 				vals.add(getRandomElem(clazz));
 		}
-		return LogicTreeBranch.fromValues(vals);
+		return U3LogicTreeBranch.fromValues(vals);
 	}
 	
 	private static LogicTreeBranchNode<?> getRandomElem(Class<? extends LogicTreeBranchNode<?>> clazz) {
@@ -360,7 +360,7 @@ public class UCER3_EAL_CombinerTest {
 		DiscretizedFunc[] rupMFDs = trueMeanSol.getRupMagDists();
 		
 		double[] faultEALs = comb.getFaultEALs();
-		List<LogicTreeBranch> branches = comb.getBranches();
+		List<U3LogicTreeBranch> branches = comb.getBranches();
 		
 		assertEquals(branches.size(), numSols);
 		assertEquals(branches.size(), faultEALs.length);
@@ -423,7 +423,7 @@ public class UCER3_EAL_CombinerTest {
 		UCERF3_EAL_Combiner comb = new UCERF3_EAL_Combiner(fetch, mappings, trueMeanSol, fssLosses, griddedLosses);
 		
 		double[] griddedEALs = comb.getGriddedEALs();
-		List<LogicTreeBranch> branches = comb.getBranches();
+		List<U3LogicTreeBranch> branches = comb.getBranches();
 		
 		assertEquals(branches.size(), numSols);
 		assertEquals(branches.size(), griddedEALs.length);

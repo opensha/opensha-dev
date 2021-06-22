@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
 import scratch.UCERF3.utils.FaultSystemIO;
 
@@ -95,13 +95,13 @@ public class UCERF3_EAL_Validate_ScriptGen {
 		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.CROSSHAIR);
 		
 		Random r = new Random();
-		List<LogicTreeBranch> branches = Lists.newArrayList(cfss.getBranches());
+		List<U3LogicTreeBranch> branches = Lists.newArrayList(cfss.getBranches());
 		
 		IncludeBackgroundOption[] bgIncls = { IncludeBackgroundOption.EXCLUDE, IncludeBackgroundOption.ONLY };
 		
 		for (AttenRelRef ref : imrs) {
 			for (int i=0; i<numBranches; i++) {
-				LogicTreeBranch branch = branches.get(r.nextInt(branches.size()));
+				U3LogicTreeBranch branch = branches.get(r.nextInt(branches.size()));
 				
 				FaultSystemSolution sol = cfss.getSolution(branch);
 				

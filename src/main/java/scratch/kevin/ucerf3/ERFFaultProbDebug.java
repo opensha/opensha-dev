@@ -37,7 +37,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
@@ -67,7 +67,7 @@ public class ERFFaultProbDebug {
 						"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 //		FaultSystemSolution sol = cfss.getSolution(LogicTreeBranch.fromFileName(
 //				"FM3_1_ZENGBB_ShConStrDrp_DsrTap_CharConst_M5Rate9.6_MMaxOff7.6_NoFix_SpatSeisU2"));
-		FaultSystemSolution sol = cfss.getSolution(LogicTreeBranch.fromFileName(
+		FaultSystemSolution sol = cfss.getSolution(U3LogicTreeBranch.fromFileName(
 				"FM3_1_NEOK_EllBsqrtLen_DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2"));
 		
 		FaultSystemRupSet rupSet = sol.getRupSet();

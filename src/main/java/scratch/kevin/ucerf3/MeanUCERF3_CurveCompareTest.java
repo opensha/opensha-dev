@@ -41,7 +41,7 @@ import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.RuptureCombiner;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
@@ -201,7 +201,7 @@ public class MeanUCERF3_CurveCompareTest {
 			String name = file.getName();
 			if (!name.endsWith(".txt"))
 				continue;
-			LogicTreeBranch branch = LogicTreeBranch.fromFileName(name);
+			U3LogicTreeBranch branch = U3LogicTreeBranch.fromFileName(name);
 			FaultModels fileFM = branch.getValue(FaultModels.class);
 			if (fm != null && fileFM != fm)
 				continue;
@@ -214,11 +214,11 @@ public class MeanUCERF3_CurveCompareTest {
 			
 			double fmWeight = 1;
 			if (fm == null)
-				fmWeight = LogicTreeBranch.getNormalizedWt(fileFM,
+				fmWeight = U3LogicTreeBranch.getNormalizedWt(fileFM,
 					InversionModels.CHAR_CONSTRAINED);
-			double dmWeight = LogicTreeBranch.getNormalizedWt(branch.getValue(DeformationModels.class),
+			double dmWeight = U3LogicTreeBranch.getNormalizedWt(branch.getValue(DeformationModels.class),
 					InversionModels.CHAR_CONSTRAINED);
-			double scaleWeight = LogicTreeBranch.getNormalizedWt(branch.getValue(ScalingRelationships.class),
+			double scaleWeight = U3LogicTreeBranch.getNormalizedWt(branch.getValue(ScalingRelationships.class),
 					InversionModels.CHAR_CONSTRAINED);
 			
 			double weight = fmWeight * dmWeight * scaleWeight;
@@ -270,8 +270,7 @@ public class MeanUCERF3_CurveCompareTest {
 			sectionForRups.add(origRupSet.getSectionsIndicesForRup(r));
 		
 		FaultSystemRupSet newRupSet = new FaultSystemRupSet(origRupSet.getFaultSectionDataList(),
-				origRupSet.getSlipRateForAllSections(), origRupSet.getSlipRateStdDevForAllSections(),
-				origRupSet.getAreaForAllSections(), sectionForRups,
+				sectionForRups,
 				getResortedArray(origRupSet.getMagForAllRups(), rupIDs),
 				getResortedArray(origRupSet.getAveRakeForAllRups(), rupIDs),
 				getResortedArray(origRupSet.getAreaForAllRups(), rupIDs),
@@ -403,10 +402,8 @@ public class MeanUCERF3_CurveCompareTest {
 		}
 		
 		return new FaultSystemSolution(new FaultSystemRupSet(
-				meanRupSet.getFaultSectionDataList(), meanRupSet.getSlipRateForAllSections(),
-				meanRupSet.getSlipRateStdDevForAllSections(), meanRupSet.getAreaForAllSections(),
-				meanRupSet.getSectionIndicesForAllRups(), meanNewMags, meanRupSet.getAveRakeForAllRups(),
-				meanRupSet.getAreaForAllRups(), meanRupSet.getLengthForAllRups()),
+				meanRupSet.getFaultSectionDataList(), meanRupSet.getSectionIndicesForAllRups(),
+				meanNewMags, meanRupSet.getAveRakeForAllRups(),	meanRupSet.getAreaForAllRups(), meanRupSet.getLengthForAllRups()),
 				meanSol.getRateForAllRups());
 	}
 	

@@ -19,7 +19,7 @@ import com.google.common.base.Preconditions;
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 
 public class UCERF3_EAL_MagDistWriter {

@@ -25,7 +25,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
 
@@ -51,7 +51,7 @@ public class SubSectProbSortingCheck {
 		CSVFile<String> csv = CSVFile.readFile(csvFile, true);
 		
 		// branches for processing
-		List<LogicTreeBranch> branches = Lists.newArrayList(CompoundFaultSystemSolution.fromZipFile(
+		List<U3LogicTreeBranch> branches = Lists.newArrayList(CompoundFaultSystemSolution.fromZipFile(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip")).getBranches());
 		
@@ -74,7 +74,7 @@ public class SubSectProbSortingCheck {
 		
 		// assemble probabilities
 		int branchCount = 0;
-		for (LogicTreeBranch branch : branches) {
+		for (U3LogicTreeBranch branch : branches) {
 			if (branchCount % 10 == 0)
 				System.out.println("Branch "+branchCount);
 			branchCount++;

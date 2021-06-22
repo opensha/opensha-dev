@@ -367,9 +367,6 @@ public class TimeDepFSS_ERF_Simulator_Test {
 		FaultSystemRupSet origRupSet = orig.getRupSet();
 		
 		List<? extends FaultSection> faultSectionData = origRupSet.getFaultSectionDataList();
-		double[] sectSlipRates = origRupSet.getSlipRateForAllSections();
-		double[] sectSlipRateStdDevs = origRupSet.getSlipRateStdDevForAllSections();
-		double[] sectAreas = origRupSet.getAreaForAllSections();
 		String info = origRupSet.getInfoString();
 		
 		int origNumRups = origRupSet.getNumRuptures();
@@ -416,8 +413,7 @@ public class TimeDepFSS_ERF_Simulator_Test {
 			rupLengths[i] /= cnt;
 		}
 		
-		FaultSystemRupSet rupSet = new FaultSystemRupSet(faultSectionData, sectSlipRates,
-				sectSlipRateStdDevs, sectAreas, sectionForRups, mags, rakes, rupAreas, rupLengths);
+		FaultSystemRupSet rupSet = new FaultSystemRupSet(faultSectionData, sectionForRups, mags, rakes, rupAreas, rupLengths);
 		rupSet.setInfoString(info);
 		
 		return new FaultSystemSolution(rupSet, rates);

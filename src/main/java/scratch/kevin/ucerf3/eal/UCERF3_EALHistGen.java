@@ -24,7 +24,7 @@ import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.enumTreeBranches.MomentRateFixes;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 
 import com.google.common.base.Preconditions;
@@ -122,7 +122,7 @@ public class UCERF3_EALHistGen {
 				
 				for (int row=1; row<csv.getNumRows(); row++) {
 					List<String> line = csv.getLine(row);
-					LogicTreeBranch branch = fromLine(line);
+					U3LogicTreeBranch branch = fromLine(line);
 					double weight = Double.parseDouble(line.get(1));
 					double eal = Double.parseDouble(line.get(2)); // total eal
 					
@@ -148,10 +148,10 @@ public class UCERF3_EALHistGen {
 		
 		List<File> histPDFs = Lists.newArrayList();
 		List<String> names = Lists.newArrayList();
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			if (clazz.equals(InversionModels.class) || clazz.equals(MomentRateFixes.class))
 				continue;
-			names.add(ClassUtils.getClassNameWithoutPackage(LogicTreeBranch.getEnumEnclosingClass(clazz)));
+			names.add(ClassUtils.getClassNameWithoutPackage(U3LogicTreeBranch.getEnumEnclosingClass(clazz)));
 		}
 		names.add(probModelCategoryName);
 		names.add(gmpeCategoryName);
@@ -223,11 +223,11 @@ public class UCERF3_EALHistGen {
 				new File(plotDir, "eal_branch_sens_tornado_mean.png").getAbsolutePath());
 	}
 	
-	private static LogicTreeBranch fromLine(List<String> line) {
+	private static U3LogicTreeBranch fromLine(List<String> line) {
 		int col = 5;
 		List<LogicTreeBranchNode<?>> nodes = Lists.newArrayList();
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			String strVal = line.get(col++);
 			LogicTreeBranchNode<?> node = null;
 			for (LogicTreeBranchNode<?> choice : clazz.getEnumConstants()) {
@@ -241,7 +241,7 @@ public class UCERF3_EALHistGen {
 		}
 		Preconditions.checkState(col == line.size());
 		
-		return LogicTreeBranch.fromValues(nodes);
+		return U3LogicTreeBranch.fromValues(nodes);
 	}
 
 }

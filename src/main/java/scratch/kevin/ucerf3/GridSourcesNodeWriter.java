@@ -13,7 +13,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.utils.FaultSystemIO;
 
@@ -43,14 +43,14 @@ public class GridSourcesNodeWriter {
 		
 		csv.writeToFile(outputFile);
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			System.out.println("== "+ClassUtils.getClassNameWithoutPackage(clazz)+" ==");
 			System.out.println("||= Prefix =||= Description =||");
 			for (LogicTreeBranchNode<?> node : clazz.getEnumConstants()) {
-				if (node.getRelativeWeight(LogicTreeBranch.DEFAULT.getValue(InversionModels.class)) <= 0)
+				if (node.getRelativeWeight(U3LogicTreeBranch.DEFAULT.getValue(InversionModels.class)) <= 0)
 					continue;
 				String str = "||";
-				if (LogicTreeBranch.DEFAULT.getValueUnchecked(clazz) == node)
+				if (U3LogicTreeBranch.DEFAULT.getValueUnchecked(clazz) == node)
 					str += "'''"+node.encodeChoiceString()+"'''";
 				else
 					str += node.encodeChoiceString();

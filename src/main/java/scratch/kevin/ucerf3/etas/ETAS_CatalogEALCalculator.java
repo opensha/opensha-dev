@@ -66,7 +66,7 @@ import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.kevin.ucerf3.eal.UCERF3_BranchAvgLossFetcher;
@@ -1608,7 +1608,7 @@ public class ETAS_CatalogEALCalculator {
 						+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
 		FaultSystemSolution trueMeanSol = FaultSystemIO.loadSol(trueMeanSolFile);
-		Map<LogicTreeBranch, List<Integer>> branchMappings = TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile);
+		Map<U3LogicTreeBranch, List<Integer>> branchMappings = TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile);
 		
 		System.out.println("Triggered only? "+triggeredOnly);
 		System.out.println("All sub durations? "+allSubDurations);
@@ -1623,7 +1623,7 @@ public class ETAS_CatalogEALCalculator {
 	public static void calculate(File resultsFile, boolean triggeredOnly, String xAxisLabel, double maxX,
 			double deltaX, double xAxisScale, List<File> dataDirs, Map<AttenRelRef, Double> imrWeightsMap,
 			FaultModels fm, FaultSystemSolution baSol, CompoundFaultSystemSolution cfss,
-			FaultSystemSolution trueMeanSol, Map<LogicTreeBranch, List<Integer>> branchMappings,
+			FaultSystemSolution trueMeanSol, Map<U3LogicTreeBranch, List<Integer>> branchMappings,
 			double[] durations, boolean allSubDurations, boolean magDistLosses) throws IOException, DocumentException {
 		File lossOutputDir = new File(resultsFile.getParentFile(), "loss_results");
 		Preconditions.checkState(lossOutputDir.exists() || lossOutputDir.mkdir());

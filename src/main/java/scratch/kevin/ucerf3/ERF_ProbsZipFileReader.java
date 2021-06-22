@@ -8,7 +8,7 @@ import java.util.zip.ZipFile;
 
 import com.google.common.base.Preconditions;
 
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.MatrixIO;
 
 public class ERF_ProbsZipFileReader {
@@ -29,7 +29,7 @@ public class ERF_ProbsZipFileReader {
 	 * @return
 	 * @throws IOException 
 	 */
-	public double[] getProbabilities(LogicTreeBranch branch) throws IOException {
+	public double[] getProbabilities(U3LogicTreeBranch branch) throws IOException {
 		String eName = branch.buildFileName()+".bin";
 		ZipEntry probsEntry = zip.getEntry(eName);
 		Preconditions.checkNotNull(probsEntry, "Entry not found in zip: "+eName);

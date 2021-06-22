@@ -10,7 +10,7 @@ import java.util.zip.ZipException;
 import com.google.common.base.Preconditions;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_LogicTreeBranch;
@@ -36,7 +36,7 @@ public class BranchSortTest {
 				for (U3_EAL_GMMs gmm : U3_EAL_GMMs.values())
 					for (U3_EAL_GMM_Epistemic gmmEpi : U3_EAL_GMM_Epistemic.values())
 						for (U3_EAL_Vs30Model vs30 : U3_EAL_Vs30Model.values())
-							for (LogicTreeBranch tiBranch : cfss.getBranches())
+							for (U3LogicTreeBranch tiBranch : cfss.getBranches())
 								branches.add(new U3_EAL_LogicTreeBranch(tiBranch, probModel, gmm, gmmEpi, vs30));
 			Collections.shuffle(branches);
 			Collections.sort(branches);

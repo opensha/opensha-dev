@@ -22,7 +22,7 @@ import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.analysis.BranchSensitivityHistogram;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
 public class BranchSensHistTests {
@@ -36,7 +36,7 @@ public class BranchSensHistTests {
 						"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
 		APrioriBranchWeightProvider weightProv = new APrioriBranchWeightProvider();
-		List<LogicTreeBranch> branches = Lists.newArrayList(cfss.getBranches());
+		List<U3LogicTreeBranch> branches = Lists.newArrayList(cfss.getBranches());
 		Collections.sort(branches);
 		
 		// first create "data"
@@ -47,7 +47,7 @@ public class BranchSensHistTests {
 		double mean = StatUtils.mean(vals);
 		
 		for (int i=0; i<branches.size(); i++) {
-			LogicTreeBranch branch = branches.get(i);
+			U3LogicTreeBranch branch = branches.get(i);
 			double weight = weightProv.getWeight(branch);
 			hists.addValues(branch, vals[i]/mean, weight);
 		}
