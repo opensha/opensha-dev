@@ -24,7 +24,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.SectionCluster;
 import scratch.UCERF3.inversion.SectionClusterList;
-import scratch.UCERF3.inversion.SectionConnectionStrategy;
+import scratch.UCERF3.inversion.OldSectionConnectionStrategy;
 import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
 import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
@@ -329,7 +329,7 @@ public class RupSetValidator {
 		private DeformationModels defModel;
 		private UCERF3PlausibilityConfig filter;
 		private CoulombRates coulombRates;
-		private SectionConnectionStrategy connectionStrategy;
+		private OldSectionConnectionStrategy connectionStrategy;
 		private List<? extends FaultSection> faultSectionData;
 		private Map<IDPairing, Double> subSectionDistances;
 		private Map<IDPairing, Double> subSectionAzimuths;
@@ -337,7 +337,7 @@ public class RupSetValidator {
 		private Boolean passes = null;
 		
 		public ValidationTask(FaultModels faultModel, DeformationModels defModel, UCERF3PlausibilityConfig filter, CoulombRates coulombRates,
-				SectionConnectionStrategy connectionStrategy, List<? extends FaultSection> faultSectionData,
+				OldSectionConnectionStrategy connectionStrategy, List<? extends FaultSection> faultSectionData,
 				Map<IDPairing, Double> subSectionDistances, Map<IDPairing, Double> subSectionAzimuths) {
 			this.faultModel = faultModel;
 			this.defModel = defModel;
@@ -408,7 +408,7 @@ public class RupSetValidator {
 						ExceptionUtils.throwAsRuntimeException(e);
 					}
 				}
-				SectionConnectionStrategy connectionStrategy = new UCERF3SectionConnectionStrategy(
+				OldSectionConnectionStrategy connectionStrategy = new UCERF3SectionConnectionStrategy(
 						filter.getMaxJumpDist(), coulombRates);
 				tasks.add(new ValidationTask(faultModel, defModel, filter, coulombRates, connectionStrategy,
 						faultSectionData, subSectionDistances, subSectionAzimuths));
