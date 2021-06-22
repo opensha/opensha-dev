@@ -34,11 +34,11 @@ import com.google.common.collect.Table.Cell;
 
 import mpi.MPI;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.ucerf3.etas.ETAS_HazardMapCalc.Duration;
 import scratch.kevin.ucerf3.etas.ETAS_HazardMapCalc.DurationConstants;
 import scratch.kevin.ucerf3.etas.ETAS_HazardMapCalc.MapType;
@@ -88,7 +88,7 @@ public class MPJ_ETAS_HazardMapCalc extends MPJTaskCalculator {
 		File catalogsFile = new File(cmd.getOptionValue("catalogs"));
 		catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile);
 		
-		FaultSystemSolution sol = null;
+		U3FaultSystemSolution sol = null;
 		if (cmd.hasOption("fault-data-file")) {
 			// precalc mode
 			File faultDataFile = new File(cmd.getOptionValue("fault-data-file"));
@@ -99,7 +99,7 @@ public class MPJ_ETAS_HazardMapCalc extends MPJTaskCalculator {
 					"Must supply fault system solution file if no fault data precalc file");
 			File solFile = new File(cmd.getOptionValue("solution-file"));
 			Preconditions.checkState(solFile.exists());
-			sol = FaultSystemIO.loadSol(solFile);
+			sol = U3FaultSystemIO.loadSol(solFile);
 		}
 		
 		double spacing = Double.parseDouble(cmd.getOptionValue("spacing"));

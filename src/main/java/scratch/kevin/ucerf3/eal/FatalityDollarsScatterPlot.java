@@ -27,7 +27,7 @@ import com.google.common.collect.Lists;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class FatalityDollarsScatterPlot {
 
@@ -69,7 +69,7 @@ public class FatalityDollarsScatterPlot {
 		FaultModels fm = FaultModels.FM3_1;
 
 		// Branch averaged FSS
-		FaultSystemSolution baSol = FaultSystemIO.loadSol(
+		FaultSystemSolution baSol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 						+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_"
 						+ "COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));

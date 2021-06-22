@@ -38,11 +38,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.griddedSeismicity.GridSourceFileReader;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class GriddedSeisImportanceHazardMapCalc {
 	
@@ -74,7 +74,7 @@ public class GriddedSeisImportanceHazardMapCalc {
 		File localU3File = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
 //				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
-		FaultSystemSolution u3Sol = FaultSystemIO.loadSol(localU3File);
+		U3FaultSystemSolution u3Sol = U3FaultSystemIO.loadSol(localU3File);
 		
 		Region region = new CaliforniaRegions.RELM_TESTING();
 		double spacing = 0.02;
@@ -115,24 +115,24 @@ public class GriddedSeisImportanceHazardMapCalc {
 				nodeUnassociatedMFDs.put(i, origProv.getNodeUnassociatedMFD(i));
 		}
 		GridSourceFileReader subSeisOnlyProv = new GridSourceFileReader(seisReg, nodeSubSeisMFDs, emptyMFDs);
-		FaultSystemSolution u3SubSeisOnlySol = new FaultSystemSolution(u3Sol.getRupSet(), u3Sol.getRateForAllRups());
+		U3FaultSystemSolution u3SubSeisOnlySol = new U3FaultSystemSolution(u3Sol.getRupSet(), u3Sol.getRateForAllRups());
 		u3SubSeisOnlySol.setGridSourceProvider(subSeisOnlyProv);
 		GridSourceFileReader unassociatedOnlyProv = new GridSourceFileReader(seisReg, emptyMFDs, nodeUnassociatedMFDs);
-		FaultSystemSolution u3UnassociatedOnlySol = new FaultSystemSolution(u3Sol.getRupSet(), u3Sol.getRateForAllRups());
+		U3FaultSystemSolution u3UnassociatedOnlySol = new U3FaultSystemSolution(u3Sol.getRupSet(), u3Sol.getRateForAllRups());
 		u3UnassociatedOnlySol.setGridSourceProvider(unassociatedOnlyProv);
 		
 		// write solutions
 		String fullSolName = "full_solution.zip";
 		File remoteFullSolFile = new File(remoteDir, fullSolName);
-		FaultSystemIO.writeSol(u3Sol, new File(localDir, fullSolName));
+		U3FaultSystemIO.writeSol(u3Sol, new File(localDir, fullSolName));
 		
 		String subSeisOnlySolName = "gridded_sub_seis_only_solution.zip";
 		File remoteSubSeisOnlySolFile = new File(remoteDir, subSeisOnlySolName);
-		FaultSystemIO.writeSol(u3SubSeisOnlySol, new File(localDir, subSeisOnlySolName));
+		U3FaultSystemIO.writeSol(u3SubSeisOnlySol, new File(localDir, subSeisOnlySolName));
 		
 		String unassociatedOnlySolName = "gridded_unassociated_only_solution.zip";
 		File remoteUnassociatedOnlySolFile = new File(remoteDir, unassociatedOnlySolName);
-		FaultSystemIO.writeSol(u3UnassociatedOnlySol, new File(localDir, unassociatedOnlySolName));
+		U3FaultSystemIO.writeSol(u3UnassociatedOnlySol, new File(localDir, unassociatedOnlySolName));
 		
 		// set up inputs
 		GriddedRegion gridded = new GriddedRegion(region, spacing, null);

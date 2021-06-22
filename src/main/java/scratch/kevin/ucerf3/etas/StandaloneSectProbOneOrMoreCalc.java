@@ -17,7 +17,7 @@ import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class StandaloneSectProbOneOrMoreCalc {
 
@@ -35,7 +35,7 @@ public class StandaloneSectProbOneOrMoreCalc {
 		File outputDir = new File(args[4]);
 		
 		try {
-			FaultSystemSolution fss = FaultSystemIO.loadSol(fssFile);
+			FaultSystemSolution fss = U3FaultSystemIO.loadSol(fssFile);
 			
 			System.out.println("Creating ERF for comparisons");
 //			FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fss);

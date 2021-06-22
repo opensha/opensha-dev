@@ -25,7 +25,7 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
 import com.google.common.base.Stopwatch;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class NGAW2_WrapperSpeedTest {
 
@@ -53,8 +53,8 @@ public class NGAW2_WrapperSpeedTest {
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_"
 				+ "MEAN_BRANCH_AVG_SOL.zip");
 		
-		FaultSystemSolution directFSS = FaultSystemIO.loadSol(fssFile);
-		FaultSystemSolution paramFSS = FaultSystemIO.loadSol(fssFile);
+		FaultSystemSolution directFSS = U3FaultSystemIO.loadSol(fssFile);
+		FaultSystemSolution paramFSS = U3FaultSystemIO.loadSol(fssFile);
 		
 		FaultSystemSolutionERF directERF = new FaultSystemSolutionERF(directFSS);
 		directERF.updateForecast();

@@ -10,7 +10,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
 
 public class PaleoReplot {
@@ -29,7 +29,7 @@ public class PaleoReplot {
 			if (!file.getName().endsWith("_sol.zip"))
 				continue;
 			System.out.println("Working on: "+file.getName());
-			InversionFaultSystemSolution sol = FaultSystemIO.loadInvSol(file);
+			InversionFaultSystemSolution sol = U3FaultSystemIO.loadInvSol(file);
 			String prefix = file.getName().substring(0, file.getName().indexOf("_sol.zip"));
 			
 			U3LogicTreeBranch branch = U3LogicTreeBranch.fromFileName(file.getName());

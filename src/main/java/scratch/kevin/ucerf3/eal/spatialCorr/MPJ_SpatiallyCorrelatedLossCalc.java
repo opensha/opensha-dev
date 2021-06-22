@@ -49,7 +49,7 @@ import com.google.common.collect.Table;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_LogicTreeBranch;
@@ -94,7 +94,7 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 		
 		if (rank == 0)
 			debug("Loading true mean solution from: "+trueMeanSolFile.getAbsolutePath());
-		trueMeanSol = FaultSystemIO.loadSol(trueMeanSolFile);
+		trueMeanSol = U3FaultSystemIO.loadSol(trueMeanSolFile);
 		
 		if (rank == 0)
 			Preconditions.checkState(resultsDir.exists() || resultsDir.mkdir(),

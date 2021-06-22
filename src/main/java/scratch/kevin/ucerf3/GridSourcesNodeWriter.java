@@ -15,12 +15,12 @@ import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class GridSourcesNodeWriter {
 
 	public static void main(String[] args) throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(new File(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(new File(
 				"/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		

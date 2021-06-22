@@ -28,7 +28,7 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
 import com.google.common.base.Stopwatch;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
 public class IMRParamSpeedTest {
@@ -37,7 +37,7 @@ public class IMRParamSpeedTest {
 		File baSolFile = new File(new File(UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, "InversionSolutions"),
 				"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
 		
-		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(FaultSystemIO.loadSol(baSolFile));
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(U3FaultSystemIO.loadSol(baSolFile));
 		erf.updateForecast();
 		
 		boolean direct = true;

@@ -51,7 +51,7 @@ import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
 
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.markov.EmpiricalMarkovChain;
 import scratch.kevin.simulators.MarkovChainBuilder;
 import scratch.kevin.simulators.PeriodicityPlotter;
@@ -515,7 +515,7 @@ public class UCERF3ComparisonAnalysis {
 		
 		Region region = new CaliforniaRegions.RELM_SOCAL();
 		
-		FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);
 		
 		List<Double> catalogLengths = Lists.newArrayList();
 		

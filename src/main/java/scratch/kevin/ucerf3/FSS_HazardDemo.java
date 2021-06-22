@@ -23,7 +23,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class FSS_HazardDemo {
 
@@ -31,7 +31,7 @@ public class FSS_HazardDemo {
 		File fssFile = new File("/home/kevin/workspace/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
 		System.out.println("Loading solution");
-		FaultSystemSolution fss = FaultSystemIO.loadSol(fssFile);
+		FaultSystemSolution fss = U3FaultSystemIO.loadSol(fssFile);
 		
 		System.out.println("Building ERF");
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fss);

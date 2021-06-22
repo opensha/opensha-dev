@@ -22,7 +22,7 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class FaultSubPlusSupraMFDWriter {
 
@@ -55,7 +55,7 @@ public class FaultSubPlusSupraMFDWriter {
 				supraParentMFDs.put(parentName, sol.calcParticipationMFD_forParentSect(
 						parentIDsMap.get(parentName), minMag, maxMag, numMag));
 			// now load in sub siesmo MFDs from original sol
-			FaultSystemSolution solWithSubSeis = FaultSystemIO.loadSol(subSeismoSolFiles[p]);
+			FaultSystemSolution solWithSubSeis = U3FaultSystemIO.loadSol(subSeismoSolFiles[p]);
 			FaultSystemRupSet rupSetWithSubSeis = solWithSubSeis.getRupSet();
 			
 			Map<String, SummedMagFreqDist> subParentMFDs = new HashMap<>();

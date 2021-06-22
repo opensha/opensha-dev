@@ -21,7 +21,7 @@ import org.opensha.commons.gui.plot.GraphWindow;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.UCERF2_ComparisonSolutionFetcher;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
 import com.google.common.collect.Lists;
@@ -50,7 +50,7 @@ public class RupLengthHistogramGenerator {
 		
 		double halfDelta = 0.5*delta;
 		
-		FaultSystemSolution sol = FaultSystemIO.loadSol(solFile);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(solFile);
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		
 //		double scaleToTotal = 246;

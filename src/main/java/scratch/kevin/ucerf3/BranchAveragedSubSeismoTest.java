@@ -28,7 +28,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class BranchAveragedSubSeismoTest {
 
@@ -46,7 +46,7 @@ public class BranchAveragedSubSeismoTest {
 		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
 				new File(invDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
-		InversionFaultSystemSolution baSol = FaultSystemIO.loadInvSol(
+		InversionFaultSystemSolution baSol = U3FaultSystemIO.loadInvSol(
 				new File(invDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		
 		int done = 0;

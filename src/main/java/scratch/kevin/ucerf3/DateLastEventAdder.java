@@ -20,7 +20,7 @@ import com.google.common.io.Files;
 
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
 
 public class DateLastEventAdder {
@@ -62,7 +62,7 @@ public class DateLastEventAdder {
 		
 		Document doc = XMLUtils.loadDocument(fsdFile);
 		Element fsEl = doc.getRootElement().element(FaultSectionPrefData.XML_METADATA_NAME+"List");
-		ArrayList<FaultSection> faultSectionData = FaultSystemIO.fsDataFromXML(fsEl);
+		ArrayList<FaultSection> faultSectionData = U3FaultSystemIO.fsDataFromXML(fsEl);
 		int withBefore = countLastEventData(faultSectionData);
 		LastEventData.populateSubSects(faultSectionData, data);
 		int withAfter = countLastEventData(faultSectionData);
@@ -83,7 +83,7 @@ public class DateLastEventAdder {
 		
 		doc = XMLUtils.createDocumentWithRoot();
 		Element root = doc.getRootElement();
-		FaultSystemIO.fsDataToXML(root, FaultSectionPrefData.XML_METADATA_NAME+"List", fm, dm, faultSectionData);
+		U3FaultSystemIO.fsDataToXML(root, FaultSectionPrefData.XML_METADATA_NAME+"List", fm, dm, faultSectionData);
 		XMLUtils.writeDocumentToFile(fsdFile, doc);
 		
 		List<String> fileNames = Lists.newArrayList();

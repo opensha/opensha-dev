@@ -10,7 +10,7 @@ import org.opensha.commons.util.FileNameComparator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class SolutionMomentCalc {
 
@@ -34,7 +34,7 @@ public class SolutionMomentCalc {
 			if (!name.endsWith("_sol.zip") && !name.endsWith("BRANCH_AVG_SOL.zip"))
 					continue;
 			// we have a solution
-			FaultSystemSolution sol = FaultSystemIO.loadSol(file);
+			FaultSystemSolution sol = U3FaultSystemIO.loadSol(file);
 			FaultSystemRupSet rupSet = sol.getRupSet();
 			
 			// calculate the moment

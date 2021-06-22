@@ -16,7 +16,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
 
 public class BranchAverageAverageBuild {
@@ -37,13 +37,13 @@ public class BranchAverageAverageBuild {
 				continue;
 			if (file.getName().endsWith("mean.zip"))
 				continue;
-			InversionFaultSystemSolution invSol = FaultSystemIO.loadInvSol(file);
+			InversionFaultSystemSolution invSol = U3FaultSystemIO.loadInvSol(file);
 			if (rupSet == null)
 				rupSet = invSol.getRupSet();
 			ratesList.add(invSol.getRateForAllRups());
 		}
 		AverageFaultSystemSolution avgSol = new AverageFaultSystemSolution(rupSet, ratesList);
-		FaultSystemIO.writeSol(avgSol, new File(dir, "mean.zip"));
+		U3FaultSystemIO.writeSol(avgSol, new File(dir, "mean.zip"));
 		
 		// now make average no means
 		File binsDir = new File("/home/kevin/OpenSHA/UCERF3/inversions/" +
@@ -66,7 +66,7 @@ public class BranchAverageAverageBuild {
 			ratesList.add(runningRates);
 		}
 		avgSol = new AverageFaultSystemSolution(rupSet, ratesList);
-		FaultSystemIO.writeSol(avgSol, new File(dir, "mean_noMins.zip"));
+		U3FaultSystemIO.writeSol(avgSol, new File(dir, "mean_noMins.zip"));
 	}
 	
 	private static double loadNoMins(File dir, APrioriBranchWeightProvider weightProv,

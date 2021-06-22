@@ -27,7 +27,7 @@ import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class PostEventETASPlotter {
 
@@ -62,7 +62,7 @@ public class PostEventETASPlotter {
 			AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 			File fssFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip");
-			FaultSystemSolution fss = FaultSystemIO.loadSol(fssFile);
+			FaultSystemSolution fss = U3FaultSystemIO.loadSol(fssFile);
 			
 			FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fss);
 			erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.U3_PREF_BLEND);

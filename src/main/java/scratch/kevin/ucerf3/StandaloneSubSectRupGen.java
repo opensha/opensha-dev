@@ -33,7 +33,7 @@ import scratch.UCERF3.inversion.coulomb.CoulombRatesRecord;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
 public class StandaloneSubSectRupGen {
@@ -105,7 +105,7 @@ public class StandaloneSubSectRupGen {
 		// write subsection data to file
 		File subSectDataFile = new File(outputDir, "sub_sections.xml");
 		Document doc = XMLUtils.createDocumentWithRoot();
-		FaultSystemIO.fsDataToXML(doc.getRootElement(), FaultModels.XML_ELEMENT_NAME, null, null, subSections);
+		U3FaultSystemIO.fsDataToXML(doc.getRootElement(), FaultModels.XML_ELEMENT_NAME, null, null, subSections);
 		XMLUtils.writeDocumentToFile(subSectDataFile, doc);
 		
 		// instantiate our laugh test filter
@@ -163,7 +163,7 @@ public class StandaloneSubSectRupGen {
 		InversionFaultSystemRupSet rupSet = new InversionFaultSystemRupSet(branch, clusters, subSections);
 		
 		File zipFile = new File(outputDir, "rupSet.zip");
-		FaultSystemIO.writeRupSet(rupSet, zipFile);
+		U3FaultSystemIO.writeRupSet(rupSet, zipFile);
 	}
 	
 	public static CoulombRates remapCoulombRates(List<? extends FaultSection> subSections, FaultModels fm) throws IOException {

@@ -9,8 +9,8 @@ import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.util.IDPairing;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
@@ -18,7 +18,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.utils.DeformationModelFetcher;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoProbabilityModel;
 
@@ -33,7 +33,7 @@ public class RupJumpsTableGen {
 //		File solFile = new File("/tmp/FM3_1_NEOK_EllB_DsrTap_CharConst_M5Rate8.7_MMaxOff7.6_NoFix_SpatSeisU3_sol.zip");
 //		File solFile = new File("/tmp/FM3_1_NEOK_EllB_DsrTap_GRConst_M5Rate8.7_MMaxOff7.6_ApplyCC_SpatSeisU3_sol.zip");
 		File solFile = new File("/tmp/FM3_1_GEOL_EllB_DsrTap_CharConst_M5Rate8.7_MMaxOff7.6_NoFix_SpatSeisU3_VarNoSubseismo_VarNone_VarAPrioriWt100_sol.zip");
-		InversionFaultSystemSolution sol = FaultSystemIO.loadInvSol(solFile);
+		InversionFaultSystemSolution sol = U3FaultSystemIO.loadInvSol(solFile);
 		InversionFaultSystemRupSet rupSet = sol.getRupSet();
 		
 		DeformationModelFetcher dmFetch = new DeformationModelFetcher(

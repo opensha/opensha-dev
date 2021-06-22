@@ -57,7 +57,7 @@ import scratch.UCERF3.inversion.coulomb.CoulombRatesRecord;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.utils.DeformationModelFetcher;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.kevin.simulators.erf.SimulatorFaultSystemSolution;
@@ -1180,7 +1180,7 @@ public class SimJunctionMapper {
 	public static void main(String[] args) throws IOException, DocumentException {
 		File invSolDir = new File(UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, "InversionSolutions");
 		System.out.println("Loading UCERF sol");
-		InversionFaultSystemSolution ucerfSol = FaultSystemIO.loadInvSol(new File(invSolDir,
+		InversionFaultSystemSolution ucerfSol = U3FaultSystemIO.loadInvSol(new File(invSolDir,
 						"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		CoulombRates coulombRates = CoulombRates.loadUCERF3CoulombRates(FaultModels.FM3_1);
 		
@@ -1198,7 +1198,7 @@ public class SimJunctionMapper {
 		FaultSystemSolution simSol;
 		if (simSolFile.exists() && simSlipMaxFile.exists() && simSlipMeanFile.exists()) {
 			System.out.println("Loading Sim sol");
-			simSol = FaultSystemIO.loadSol(simSolFile);
+			simSol = U3FaultSystemIO.loadSol(simSolFile);
 			simSlipsMean = MatrixIO.doubleArraysListFromFile(simSlipMeanFile);
 			simSlipsMax = MatrixIO.doubleArraysListFromFile(simSlipMaxFile);
 		} else {

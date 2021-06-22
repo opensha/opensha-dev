@@ -54,13 +54,13 @@ import com.google.common.io.Files;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import mpi.MPI;
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
 
@@ -70,7 +70,7 @@ import scratch.kevin.ucerf3.eal.branches.U3_EAL_Vs30Model;
 
 public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	
-	private FaultSystemSolution trueMeanSol;
+	private U3FaultSystemSolution trueMeanSol;
 	private FaultSystemSolutionERF erf;
 	private Map<U3LogicTreeBranch, List<Integer>> mappings;
 	private CompoundFaultSystemSolution cfss;
@@ -135,7 +135,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		
 		if (rank == 0)
 			debug("Loading true mean solution from: "+trueMeanSolFile.getAbsolutePath());
-		trueMeanSol = FaultSystemIO.loadSol(trueMeanSolFile);
+		trueMeanSol = U3FaultSystemIO.loadSol(trueMeanSolFile);
 		// now load in the mappings
 		if (rank == 0)
 			debug("Loading true mean branch mappings");

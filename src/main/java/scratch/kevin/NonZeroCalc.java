@@ -13,7 +13,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class NonZeroCalc {
 	
@@ -87,7 +87,7 @@ public class NonZeroCalc {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("dev/scratch/UCERF3/preComputedData/InversionSolutions/2011_10_19-morgan-ALLCAL_Model1.zip"));
 //				new File("dev/scratch/UCERF3/preComputedData/InversionSolutions/Model2.xml"));
 		int numMultFaults = 0;

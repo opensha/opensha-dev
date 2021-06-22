@@ -49,7 +49,7 @@ import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.utils.DeformationModelFetcher;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class RSQSimRupJumpCompare {
 	
@@ -61,7 +61,7 @@ public class RSQSimRupJumpCompare {
 		
 		File u3SolFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
-		FaultSystemSolution u3Sol = FaultSystemIO.loadSol(u3SolFile);
+		FaultSystemSolution u3Sol = U3FaultSystemIO.loadSol(u3SolFile);
 		
 		boolean calcFixedJumpHist = false;
 		boolean calcLengthHist = false;
@@ -82,7 +82,7 @@ public class RSQSimRupJumpCompare {
 		int skipYears = 5000;
 		double minFractForInclusion = 0.5;
 		
-		FaultSystemSolution rsSol = FaultSystemIO.loadSol(new File("/data/kevin/simulators/catalogs/rundir2194_long/laugh_test/"
+		FaultSystemSolution rsSol = U3FaultSystemIO.loadSol(new File("/data/kevin/simulators/catalogs/rundir2194_long/laugh_test/"
 				+ "rsqsim_sol_m6.5_skip5000_sectArea0.2.zip"));
 		String rsName = "Shaw 2194";
 		

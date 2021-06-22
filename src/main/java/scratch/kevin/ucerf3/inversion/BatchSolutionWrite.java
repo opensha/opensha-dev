@@ -5,11 +5,11 @@ import java.io.IOException;
 
 import org.dom4j.DocumentException;
 
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.utils.MatrixIO;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class BatchSolutionWrite {
 
@@ -23,7 +23,7 @@ public class BatchSolutionWrite {
 		File odir = new File("/home/kevin/OpenSHA/UCERF3/eal/2012_05_03-eal-tests-apriori-1000");
 		File rupSetFile = new File(dir, "rupSet.zip");
 		
-		InversionFaultSystemRupSet rupSet = FaultSystemIO.loadInvRupSet(rupSetFile);
+		InversionFaultSystemRupSet rupSet = U3FaultSystemIO.loadInvRupSet(rupSetFile);
 		
 		for (File file : dir.listFiles()) {
 			String name = file.getName();
@@ -39,7 +39,7 @@ public class BatchSolutionWrite {
 			double[] rates = MatrixIO.doubleArrayFromFile(file);
 			
 			InversionFaultSystemSolution sol = new InversionFaultSystemSolution(rupSet, rates);
-			FaultSystemIO.writeSol(sol, zipFile);
+			U3FaultSystemIO.writeSol(sol, zipFile);
 		}
 	}
 

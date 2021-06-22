@@ -14,7 +14,7 @@ import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 
 // Code from Kevin to find incremental or participation MFDs within a rectangular or circular region
@@ -26,7 +26,7 @@ public class MFDinRegion{
 
 	   FaultSystemSolution sol;
 	   
-	   sol = FaultSystemIO.loadSol(
+	   sol = U3FaultSystemIO.loadSol(
 		           new File("/Users/pagem/Desktop/"
 		           + "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 	   FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);

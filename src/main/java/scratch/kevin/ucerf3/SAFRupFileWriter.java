@@ -16,7 +16,7 @@ import org.opensha.sha.faultSurface.FaultSection;
 import com.google.common.collect.Lists;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class SAFRupFileWriter {
 
@@ -37,7 +37,7 @@ public class SAFRupFileWriter {
 		for (FaultModels fm : fms) {
 			File solFile = new File(inDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_"
 					+fm.name()+"_MEAN_BRANCH_AVG_SOL.zip");
-			FaultSystemSolution sol = FaultSystemIO.loadSol(solFile);
+			FaultSystemSolution sol = U3FaultSystemIO.loadSol(solFile);
 			FaultSystemRupSet rupSet = sol.getRupSet();
 			File outFile = new File("/tmp/"+fm.name()+"_ssaf"+onlyStr+"_rups.txt");
 			

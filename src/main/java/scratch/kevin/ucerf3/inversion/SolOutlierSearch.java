@@ -19,7 +19,7 @@ import org.opensha.sha.faultSurface.FaultTrace;
 import com.google.common.base.Joiner;
 
 import scratch.UCERF3.analysis.FaultBasedMapGen;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class SolOutlierSearch {
 
@@ -34,7 +34,7 @@ public class SolOutlierSearch {
 		File dir = new File(args[0]);
 		File saveDir = new File(args[1]);
 		File referenceSolFile = new File(args[2]);
-		FaultSystemSolution referenceSol = FaultSystemIO.loadSol(referenceSolFile);
+		FaultSystemSolution referenceSol = U3FaultSystemIO.loadSol(referenceSolFile);
 		Region region = new CaliforniaRegions.RELM_TESTING();
 		
 		Region bayRegion = new CaliforniaRegions.SF_BOX_GRIDDED();
@@ -53,7 +53,7 @@ public class SolOutlierSearch {
 			if (!file.getName().endsWith("_sol.zip"))
 				continue;
 			System.out.println("Working on: "+file.getName());
-			FaultSystemSolution sol = FaultSystemIO.loadSol(file);
+			FaultSystemSolution sol = U3FaultSystemIO.loadSol(file);
 			String prefix = file.getName().substring(0, file.getName().indexOf("_sol.zip"));
 			
 			double[] newVals = sol.calcParticRateForAllSects(minMag, maxMag);

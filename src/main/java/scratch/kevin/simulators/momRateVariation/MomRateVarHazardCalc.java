@@ -60,11 +60,11 @@ import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
 import org.opensha.sha.util.SiteTranslator;
 
-import scratch.UCERF3.FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
 import scratch.kevin.simulators.SimAnalysisCatLoader;
 import scratch.kevin.simulators.erf.SimulatorFaultSystemSolution;
@@ -99,7 +99,7 @@ public class MomRateVarHazardCalc {
 		
 		// UCERF3
 		File u3MainDir = new File("/home/kevin/Simulators/time_series/ucerf3_compare/2015_07_30-MID_VALUES");
-		FaultSystemSolution u3Sol = FaultSystemIO.loadSol(
+		FaultSystemSolution u3Sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		File u3EtasCatalogs = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"

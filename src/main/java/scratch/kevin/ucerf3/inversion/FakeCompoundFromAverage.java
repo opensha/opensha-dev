@@ -14,12 +14,12 @@ import com.google.common.collect.Lists;
 
 import scratch.UCERF3.AverageFaultSystemSolution;
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolutionFetcher;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.VariableLogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class FakeCompoundFromAverage {
 
@@ -37,7 +37,7 @@ public class FakeCompoundFromAverage {
 				"FM3_1_ZENGBB_Shaw09Mod_DsrTap_CharConst_M5Rate7.9_MMaxOff7.6_NoFix_SpatSeisU3_mean_sol.zip");
 		File outFile = new File(dir, "3p3_convergence_compound.zip");
 		
-		final AverageFaultSystemSolution avgSol = FaultSystemIO.loadAvgInvSol(inFile);
+		final AverageFaultSystemSolution avgSol = U3FaultSystemIO.loadAvgInvSol(inFile);
 		final U3LogicTreeBranch branch = U3LogicTreeBranch.fromFileName(inFile.getName());
 		
 		final int bundle = 1;

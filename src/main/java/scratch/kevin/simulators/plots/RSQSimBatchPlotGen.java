@@ -37,7 +37,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.plots.SectionRecurrenceComparePlot.SectType;
 
@@ -393,7 +393,7 @@ public class RSQSimBatchPlotGen {
 		FaultSystemSolution u3Sol = null;
 		FaultSystemRupSet rupSet = null;
 		if (cmd.hasOption("ucerf-sol")) {
-			u3Sol = FaultSystemIO.loadSol(new File(cmd.getOptionValue("ucerf-sol")));
+			u3Sol = U3FaultSystemIO.loadSol(new File(cmd.getOptionValue("ucerf-sol")));
 			rupSet = u3Sol.getRupSet();
 			if (elements.get(0).getFaultID() < 0)
 				RSQSimUtils.populateFaultIDWithParentIDs(elements, rupSet.getFaultSectionDataList());

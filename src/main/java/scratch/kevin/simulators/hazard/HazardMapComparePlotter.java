@@ -92,7 +92,7 @@ import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
@@ -421,11 +421,11 @@ public class HazardMapComparePlotter {
 			if (plotDisagg) {
 				System.out.println("Plotting disagg");
 				System.out.println("Building RSQSim ERF");
-				rsSol = FaultSystemIO.loadSol(rsSolFile);
+				rsSol = U3FaultSystemIO.loadSol(rsSolFile);
 				FaultSystemSolutionERF rsERF = buildERF(rsSol);
 				if (u3ERF == null) {
 					System.out.println("Building UCERF3 ERF");
-					u3Sol = FaultSystemIO.loadSol(u3SolFile);
+					u3Sol = U3FaultSystemIO.loadSol(u3SolFile);
 					u3ERF = buildERF(u3Sol);
 				}
 				

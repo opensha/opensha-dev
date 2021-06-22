@@ -53,7 +53,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
@@ -427,7 +427,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 		File baseDir = new File("/home/kevin/Simulators/catalogs");
 		
 		File compSolFile = new File("/home/kevin/.opensha/ucerf3_fm_dm_sols/FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
-		FaultSystemSolution compSol = FaultSystemIO.loadSol(compSolFile);
+		FaultSystemSolution compSol = U3FaultSystemIO.loadSol(compSolFile);
 //		SlipEnabledSolution compSol = null;
 		
 		double skipYears = 5000;

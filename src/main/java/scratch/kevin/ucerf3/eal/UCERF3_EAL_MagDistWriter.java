@@ -17,10 +17,10 @@ import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
 import com.google.common.base.Preconditions;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class UCERF3_EAL_MagDistWriter {
 
@@ -50,7 +50,7 @@ public class UCERF3_EAL_MagDistWriter {
 		String lossUnits = "$ (Billions)";
 		
 		System.out.println("Loading true mean");
-		FaultSystemSolution trueMeanSol = FaultSystemIO.loadSol(trueMeanSolFile);
+		U3FaultSystemSolution trueMeanSol = U3FaultSystemIO.loadSol(trueMeanSolFile);
 		
 		EvenlyDiscretizedFunc magDist = null;
 		for (File ealDir : ealDirs) {

@@ -50,7 +50,7 @@ import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
 import org.opensha.sha.simulators.utils.SimulatorUtils;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.MatrixIO;
 

@@ -36,7 +36,7 @@ import scratch.UCERF3.erf.FSSRupsInRegionCache;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.ucerf3.etas.ConditionalSectTriggerMPDCalc;
 
 public class TomRanchoMirageCalcs {
@@ -54,7 +54,7 @@ public class TomRanchoMirageCalcs {
 				+ "cached_FM3_1_dep100.0_depMean_rakeMean.zip"); // has rup mag prob dists
 		File solFileForETAS = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"); // correct IDs for ETAS sims
-		FaultSystemSolution sol = FaultSystemIO.loadSol(solFileForTD);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(solFileForTD);
 		
 //		File etasFile = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
 //				+ "2016_02_22-mojave_m7-10yr-full_td-no_ert-combined/results_descendents_m5_preserve.bin");
@@ -161,7 +161,7 @@ public class TomRanchoMirageCalcs {
 			long maxOT = ConditionalSectTriggerMPDCalc.calcMaxOTforDuration(catalogs, etasDuration);
 			
 			System.out.println("Calculating ETAS");
-			FaultSystemSolution solForETAS = FaultSystemIO.loadSol(solFileForETAS);
+			FaultSystemSolution solForETAS = U3FaultSystemIO.loadSol(solFileForETAS);
 			EvenlyDiscretizedFunc etasMPD = ConditionalSectTriggerMPDCalc.calcCumulativeMPD(
 					catalogs, solForETAS, coachellaID, 6.5, 8.5, 0.1, maxOT);
 			System.out.println("Max OT: "+maxOT);

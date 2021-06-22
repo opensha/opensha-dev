@@ -41,8 +41,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolutionFetcher;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -67,7 +67,7 @@ public class UCER3_EAL_CombinerTest {
 	
 	private static InversionFaultSystemRupSet rupSet;
 	private static FaultSystemSolutionFetcher fetch;
-	private static FaultSystemSolution trueMeanSol;
+	private static U3FaultSystemSolution trueMeanSol;
 	private static double[][] fssLosses;
 	private static Map<U3LogicTreeBranch, List<Integer>> mappings;
 	
@@ -188,7 +188,7 @@ public class UCER3_EAL_CombinerTest {
 					rupMFDs[r].set(mags[r], rates[r]);
 			}
 			
-			FaultSystemRupSet subRupSet = new FaultSystemRupSet(rupSet.getFaultSectionDataList(),
+			U3FaultSystemRupSet subRupSet = new U3FaultSystemRupSet(rupSet.getFaultSectionDataList(),
 					rupSet.getSlipRateForAllSections(), rupSet.getSlipRateStdDevForAllSections(), rupSet.getAreaForAllSections(),
 					rupSet.getSectionIndicesForAllRups(), mags, rupSet.getAveRakeForAllRups(), rupSet.getAreaForAllRups(),
 					rupSet.getLengthForAllRups(), "");
@@ -249,7 +249,7 @@ public class UCER3_EAL_CombinerTest {
 				sumY += pt.getY();
 			rates[r] = sumY/(double)numSols;
 		}
-		trueMeanSol = new FaultSystemSolution(rupSet, rates);
+		trueMeanSol = new U3FaultSystemSolution(rupSet, rates);
 		trueMeanSol.setRupMagDists(rupMFDs);
 		
 		GridSourceFileReader meanGridProv = new GridSourceFileReader(reg, meanNodeSubSeisMFDs, meanNodeUnassociatedMFDs);
@@ -368,7 +368,7 @@ public class UCER3_EAL_CombinerTest {
 		for (int i=0; i<numSols; i++) {
 			InversionFaultSystemSolution sol = fetch.getSolution(branches.get(i));
 			// calculate my own fault eal
-			FaultSystemRupSet rupSet = sol.getRupSet();
+			U3FaultSystemRupSet rupSet = sol.getRupSet();
 			double eal = 0d;
 			for (int r=0; r<rupSet.getNumRuptures(); r++) {
 				if (fssLosses[r].length == 0)

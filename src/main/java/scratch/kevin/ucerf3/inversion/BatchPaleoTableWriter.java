@@ -14,7 +14,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.inversion.UCERF2_ComparisonSolutionFetcher;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoFitPlotter;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoProbabilityModel;
@@ -80,7 +80,7 @@ public class BatchPaleoTableWriter {
 			if (!paleoDir.exists())
 				paleoDir.mkdir();
 			
-			InversionFaultSystemSolution sol = FaultSystemIO.loadInvSol(file);
+			InversionFaultSystemSolution sol = U3FaultSystemIO.loadInvSol(file);
 			
 			List<AveSlipConstraint> aveSlipConstraints =
 					AveSlipConstraint.load(sol.getRupSet().getFaultSectionDataList());

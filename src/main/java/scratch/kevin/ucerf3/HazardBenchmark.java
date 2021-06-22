@@ -34,7 +34,7 @@ import com.google.common.collect.Lists;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class HazardBenchmark {
 	
@@ -68,7 +68,7 @@ public class HazardBenchmark {
 		
 		imr.setIntensityMeasure(PGA_Param.NAME);
 		
-		InversionFaultSystemSolution fss = FaultSystemIO.loadInvSol(
+		InversionFaultSystemSolution fss = U3FaultSystemIO.loadInvSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/" +
 						"scratch/InversionSolutions/FM3_1_ZENG_Shaw09Mod_DsrTap_" +
 						"CharConst_M5Rate8.7_MMaxOff7.6_NoFix_SpatSeisU3_mean_sol.zip"));

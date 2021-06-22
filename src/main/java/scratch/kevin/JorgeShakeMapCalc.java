@@ -49,7 +49,7 @@ import com.google.common.collect.Lists;
 
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class JorgeShakeMapCalc {
 
@@ -75,7 +75,7 @@ public class JorgeShakeMapCalc {
 		
 		ModAttenRelRef directivityModel = ModAttenRelRef.BAYLESS_SOMERVILLE_2013_DIRECTIVITY;
 		
-		FaultSystemSolution fss = FaultSystemIO.loadSol(new File(
+		FaultSystemSolution fss = U3FaultSystemIO.loadSol(new File(
 				"/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fss);

@@ -67,8 +67,8 @@ import com.google.common.io.Files;
 
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import cern.colt.matrix.tdouble.impl.SparseDoubleMatrix2D;
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
@@ -2471,7 +2471,7 @@ public class FaultSystemRuptureRateInversion {
 
 
 	// The returns the fault system solution for current solution (or the mean from multiple solutions)
-	public FaultSystemSolution getFaultSystemSolution() {
+	public U3FaultSystemSolution getFaultSystemSolution() {
 		
 		List<List<Integer>> sectionsForRups = Lists.newArrayList();;
 		for(int r=0;r<numRuptures;r++) {
@@ -2483,7 +2483,7 @@ public class FaultSystemRuptureRateInversion {
 			sectionsForRups.add(sectList);
 		}
 		
-		FaultSystemRupSet rupSet = new FaultSystemRupSet(
+		U3FaultSystemRupSet rupSet = new U3FaultSystemRupSet(
 				fltSectionDataList,
 				sectSlipRate,
 				sectSlipRateStdDev,
@@ -2495,11 +2495,11 @@ public class FaultSystemRuptureRateInversion {
 				rupLength,
 				modelName);
 		
-		return new FaultSystemSolution(rupSet, rupRateSolution);
+		return new U3FaultSystemSolution(rupSet, rupRateSolution);
 		
 	}
 	
-	public FaultSystemSolution getFaultSystemSolution(int solutionIndex) {
+	public U3FaultSystemSolution getFaultSystemSolution(int solutionIndex) {
 		
 		if(rupRatesFromMultRunsArrayList == null)
 			throw new RuntimeException("Multiple solutions do not exist");
@@ -2514,7 +2514,7 @@ public class FaultSystemRuptureRateInversion {
 			sectionsForRups.add(sectList);
 		}
 		
-		FaultSystemRupSet rupSet = new FaultSystemRupSet(
+		U3FaultSystemRupSet rupSet = new U3FaultSystemRupSet(
 				fltSectionDataList,
 				sectSlipRate,
 				sectSlipRateStdDev,
@@ -2526,7 +2526,7 @@ public class FaultSystemRuptureRateInversion {
 				rupLength,
 				modelName);
 		
-		return new FaultSystemSolution(rupSet, this.rupRatesFromMultRunsArrayList.get(solutionIndex));
+		return new U3FaultSystemSolution(rupSet, this.rupRatesFromMultRunsArrayList.get(solutionIndex));
 		
 	}
 

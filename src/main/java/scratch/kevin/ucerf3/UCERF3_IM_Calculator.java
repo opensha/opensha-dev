@@ -47,7 +47,7 @@ import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.ucerf3.etas.MPJ_ETAS_Simulator;
 
 public class UCERF3_IM_Calculator {
@@ -66,7 +66,7 @@ public class UCERF3_IM_Calculator {
 			AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = minMag;
 		}
 		File fssFile = new File(cmd.getOptionValue("sol-file"));
-		FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);
 
 		double lat = Double.parseDouble(cmd.getOptionValue("latitude"));
 		double lon = Double.parseDouble(cmd.getOptionValue("longitude"));

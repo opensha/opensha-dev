@@ -41,7 +41,7 @@ import com.google.common.collect.Lists;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 /**
  * Calculates ShakeMaps (mean/std dev) for each grid node that are within a cutoff of each FaultSystemSolution rupture.
@@ -76,7 +76,7 @@ public class MPJ_UCERF3_ShakeMapPrecalc extends MPJTaskCalculator {
 		
 		File solFile = new File(cmd.getOptionValue("solution-file"));
 		debug("Loading FSS from "+solFile.getAbsolutePath());
-		sol = FaultSystemIO.loadSol(solFile);
+		sol = U3FaultSystemIO.loadSol(solFile);
 		
 		debug("Instantiating ERF");
 		erf = new FaultSystemSolutionERF(sol);

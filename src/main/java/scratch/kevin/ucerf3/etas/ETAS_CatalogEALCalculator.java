@@ -53,7 +53,7 @@ import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
@@ -67,7 +67,7 @@ import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.kevin.ucerf3.eal.UCERF3_BranchAvgLossFetcher;
 
@@ -104,7 +104,7 @@ public class ETAS_CatalogEALCalculator {
 	
 	// for getting fss index from Ned's "Nth" index
 	private FaultSystemSolutionERF erf;
-	private FaultSystemSolution meanSol;
+	private U3FaultSystemSolution meanSol;
 	
 	private ETAS_EqkRupture triggerRup;
 	
@@ -122,12 +122,12 @@ public class ETAS_CatalogEALCalculator {
 		return loadCatalogs(resultsBinFile, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF-0.05);
 	}
 	
-	public ETAS_CatalogEALCalculator(UCERF3_BranchAvgLossFetcher fetcher, FaultSystemSolution meanSol,
+	public ETAS_CatalogEALCalculator(UCERF3_BranchAvgLossFetcher fetcher, U3FaultSystemSolution meanSol,
 			FaultModels fm, File resultsBinFile) throws IOException, DocumentException {
 		this(fetcher, meanSol, fm, loadCatalogs(resultsBinFile));
 	}
 	
-	public ETAS_CatalogEALCalculator(UCERF3_BranchAvgLossFetcher fetcher, FaultSystemSolution meanSol,
+	public ETAS_CatalogEALCalculator(UCERF3_BranchAvgLossFetcher fetcher, U3FaultSystemSolution meanSol,
 			FaultModels fm, List<? extends List<ETAS_EqkRupture>> catalogs) throws IOException, DocumentException {
 		this.fetcher = fetcher;
 		this.fm = fm;
@@ -1597,7 +1597,7 @@ public class ETAS_CatalogEALCalculator {
 		FaultModels fm = FaultModels.FM3_1;
 
 		// Branch averaged FSS
-		FaultSystemSolution baSol = FaultSystemIO.loadSol(
+		U3FaultSystemSolution baSol = U3FaultSystemIO.loadSol(
 				new File("../opensha-ucerf3/src/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_"
 				+ "COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
@@ -1607,7 +1607,7 @@ public class ETAS_CatalogEALCalculator {
 				new File("../opensha-ucerf3/src/scratch/UCERF3/data/scratch/"
 						+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
-		FaultSystemSolution trueMeanSol = FaultSystemIO.loadSol(trueMeanSolFile);
+		U3FaultSystemSolution trueMeanSol = U3FaultSystemIO.loadSol(trueMeanSolFile);
 		Map<U3LogicTreeBranch, List<Integer>> branchMappings = TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile);
 		
 		System.out.println("Triggered only? "+triggeredOnly);
@@ -1622,8 +1622,8 @@ public class ETAS_CatalogEALCalculator {
 
 	public static void calculate(File resultsFile, boolean triggeredOnly, String xAxisLabel, double maxX,
 			double deltaX, double xAxisScale, List<File> dataDirs, Map<AttenRelRef, Double> imrWeightsMap,
-			FaultModels fm, FaultSystemSolution baSol, CompoundFaultSystemSolution cfss,
-			FaultSystemSolution trueMeanSol, Map<U3LogicTreeBranch, List<Integer>> branchMappings,
+			FaultModels fm, U3FaultSystemSolution baSol, CompoundFaultSystemSolution cfss,
+			U3FaultSystemSolution trueMeanSol, Map<U3LogicTreeBranch, List<Integer>> branchMappings,
 			double[] durations, boolean allSubDurations, boolean magDistLosses) throws IOException, DocumentException {
 		File lossOutputDir = new File(resultsFile.getParentFile(), "loss_results");
 		Preconditions.checkState(lossOutputDir.exists() || lossOutputDir.mkdir());

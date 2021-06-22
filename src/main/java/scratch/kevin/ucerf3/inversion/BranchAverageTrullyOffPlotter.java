@@ -14,7 +14,7 @@ import com.google.common.collect.Lists;
 
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class BranchAverageTrullyOffPlotter {
 
@@ -27,8 +27,8 @@ public class BranchAverageTrullyOffPlotter {
 		File u3p2File = new File("/tmp/2013_01_14-stampede_3p2_production_runs_fm3p1_dm_scale_subset_MEAN_BRANCH_AVG_SOL.zip");
 		File u3p3File = new File("/tmp/2013_05_01-ucerf3p3-proposed-subset-hpcc-salmonfix_COMPOUND_SOL_MEAN_BRANCH_AVG_SOL.zip");
 		
-		InversionFaultSystemSolution u3p2Sol = FaultSystemIO.loadInvSol(u3p2File);
-		InversionFaultSystemSolution u3p3Sol = FaultSystemIO.loadInvSol(u3p3File);
+		InversionFaultSystemSolution u3p2Sol = U3FaultSystemIO.loadInvSol(u3p2File);
+		InversionFaultSystemSolution u3p3Sol = U3FaultSystemIO.loadInvSol(u3p3File);
 		
 		SummedMagFreqDist u3p2TrulyOffMFD = new SummedMagFreqDist(0.05, 100, 0.1);
 		SummedMagFreqDist u3p3TrulyOffMFD = new SummedMagFreqDist(0.05, 100, 0.1);

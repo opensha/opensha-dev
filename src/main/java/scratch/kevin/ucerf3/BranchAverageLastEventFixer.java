@@ -10,8 +10,8 @@ import org.opensha.commons.util.ClassUtils;
 
 import com.google.common.base.Preconditions;
 
-import scratch.UCERF3.FaultSystemSolution;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.U3FaultSystemSolution;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
 
 public class BranchAverageLastEventFixer {
@@ -51,10 +51,10 @@ public class BranchAverageLastEventFixer {
 	
 	private static void handleSolFile(File file, Map<Integer, List<LastEventData>> data) throws IOException, DocumentException {
 		System.out.println("Loading "+file.getAbsolutePath());
-		FaultSystemSolution sol = FaultSystemIO.loadSol(file);
+		U3FaultSystemSolution sol = U3FaultSystemIO.loadSol(file);
 		LastEventData.populateSubSects(sol.getRupSet().getFaultSectionDataList(), data);
 		System.out.println("Writing populated sol");
-		FaultSystemIO.writeSol(sol, file);
+		U3FaultSystemIO.writeSol(sol, file);
 	}
 
 }

@@ -62,7 +62,7 @@ import com.google.common.io.Files;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class HazardMapCompareScriptGen {
 
@@ -132,7 +132,7 @@ public class HazardMapCompareScriptGen {
 			System.out.println("Loading/filtering U3 solution");
 			File localU3File = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 					+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
-			u3Sol = FaultSystemIO.loadSol(localU3File);
+			u3Sol = U3FaultSystemIO.loadSol(localU3File);
 			if (!u3SupraMinMag) {
 				FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
 				double[] modRates = new double[u3RupSet.getNumRuptures()];

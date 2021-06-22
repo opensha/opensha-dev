@@ -178,7 +178,7 @@ import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSectionDataWriter;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
@@ -231,7 +231,7 @@ public class PureScratch {
 	}
 
 	private static void test2() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemRupSet rupSet = sol.getRupSet();
@@ -285,7 +285,7 @@ public class PureScratch {
 	}
 
 	private static void test3() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemRupSet rupSet = sol.getRupSet();
@@ -316,10 +316,10 @@ public class PureScratch {
 	}
 
 	private static void test4() throws IOException, DocumentException {
-		FaultSystemSolution sol_31 = FaultSystemIO.loadSol(
+		FaultSystemSolution sol_31 = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
-		FaultSystemSolution sol_32 = FaultSystemIO.loadSol(
+		FaultSystemSolution sol_32 = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip"));
 
@@ -343,7 +343,7 @@ public class PureScratch {
 	}
 
 	private static void test6() throws ZipException, IOException, DocumentException {
-		FaultSystemRupSet rupSet = FaultSystemIO.loadRupSet(
+		FaultSystemRupSet rupSet = U3FaultSystemIO.loadRupSet(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 
@@ -393,7 +393,7 @@ public class PureScratch {
 						+ "ofr2013-1165_EarthquakeCat.txt"));
 		File xmlFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/EarthquakeCatalog/"
 				+ "finite_fault_mappings.xml");
-		FaultSystemRupSet rupSet = FaultSystemIO.loadRupSet(
+		FaultSystemRupSet rupSet = U3FaultSystemIO.loadRupSet(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FiniteFaultMappingData.loadRuptureSurfaces(xmlFile, loadedRups, FaultModels.FM3_1, rupSet);
@@ -450,7 +450,7 @@ public class PureScratch {
 	}
 
 	private static void test10() throws ZipException, IOException, DocumentException {
-		FaultSystemRupSet rupSet = FaultSystemIO.loadRupSet(
+		FaultSystemRupSet rupSet = U3FaultSystemIO.loadRupSet(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		int id = 193821;
@@ -458,7 +458,7 @@ public class PureScratch {
 	}
 
 	private static void test11() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 
@@ -595,7 +595,7 @@ public class PureScratch {
 	}
 	
 	private static void test19() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultModels fm = FaultModels.FM3_1;
@@ -724,7 +724,7 @@ public class PureScratch {
 //		File solFile = new File("/home/kevin/Documents/2016_SCEC_AM/ucerf3/FM3_1_ref_slip_high.zip");
 		File solFile = new File("/home/kevin/Documents/2016_SCEC_AM/ucerf3/FM3_1_ref_paleo_high.zip");
 //		File solFile = new File("/home/kevin/Documents/2016_SCEC_AM/ucerf3/FM3_1_ref.zip");
-		InversionFaultSystemSolution sol = FaultSystemIO.loadInvSol(solFile);
+		InversionFaultSystemSolution sol = U3FaultSystemIO.loadInvSol(solFile);
 		File outputDir = new File(solFile.getParentFile(), solFile.getName().replace(".zip", ""));
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		ArrayList<PaleoRateConstraint> paleoRateConstraints =
@@ -935,7 +935,7 @@ public class PureScratch {
 		int mojaveNID = 286;
 		int mojaveSID = 301;
 		
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemRupSet rupSet = sol.getRupSet();
@@ -969,7 +969,7 @@ public class PureScratch {
 		int niOnshoreID = 235;
 		int rcID = 123;
 		
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemRupSet rupSet = sol.getRupSet();
@@ -1015,9 +1015,9 @@ public class PureScratch {
 	}
 	
 	private static void test33() throws IOException, DocumentException {
-		FaultSystemSolution sol1 = FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
+		FaultSystemSolution sol1 = U3FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
-		FaultSystemSolution sol2 = FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
+		FaultSystemSolution sol2 = U3FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "UCERF3_ERF/cached_FM3_1_dep100.0_depMean_rakeMean.zip"));
 		int parentID = 295;
 		List<Integer> rups1 = sol1.getRupSet().getRupturesForParentSection(parentID);
@@ -1031,7 +1031,7 @@ public class PureScratch {
 	}
 	
 	private static void test34() throws IOException, DocumentException {
-		FaultSystemRupSet rupSet = FaultSystemIO.loadRupSet(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
+		FaultSystemRupSet rupSet = U3FaultSystemIO.loadRupSet(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		int index = TestScenario.MOJAVE_M7.getFSS_Index();
 		for (FaultSection sect : rupSet.getFaultSectionDataForRupture(index))
@@ -1039,7 +1039,7 @@ public class PureScratch {
 	}
 	
 	private static void test35() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 
@@ -1059,7 +1059,7 @@ public class PureScratch {
 	}
 	
 	private static void test37() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip"));
 //						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_TRUE_HAZARD_MEAN_SOL.zip"));
@@ -1072,7 +1072,7 @@ public class PureScratch {
 	}
 	
 	private static void test38() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 
@@ -1097,7 +1097,7 @@ public class PureScratch {
 	}
 	
 	private static void test39() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip"));
 
@@ -1438,7 +1438,7 @@ public class PureScratch {
 	}
 	
 	private static void test54() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		Location mojave = new Location(34.42295, -117.80177, 5.8);
@@ -1794,10 +1794,10 @@ public class PureScratch {
 	
 	private static void test72() throws IOException, DocumentException {
 		Map<FaultModels, FaultSystemRupSet> rupSetMap = new HashMap<>();
-		rupSetMap.put(FaultModels.FM3_1, FaultSystemIO.loadRupSet(
+		rupSetMap.put(FaultModels.FM3_1, U3FaultSystemIO.loadRupSet(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip")));
-		rupSetMap.put(FaultModels.FM3_2, FaultSystemIO.loadRupSet(
+		rupSetMap.put(FaultModels.FM3_2, U3FaultSystemIO.loadRupSet(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip")));
 		
@@ -1888,7 +1888,7 @@ public class PureScratch {
 			e.printStackTrace();
 		}
 		
-		FaultSystemRupSet rupSet = FaultSystemIO.loadRupSet(rupSetFile);
+		FaultSystemRupSet rupSet = U3FaultSystemIO.loadRupSet(rupSetFile);
 		SectionDistanceAzimuthCalculator fakeDistAzCalc =
 				new SectionDistanceAzimuthCalculator(rupSet.getFaultSectionDataList()) {
 			public double getDistance(FaultSection sect1, FaultSection sect2) {
@@ -1924,7 +1924,7 @@ public class PureScratch {
 	}
 	
 	private static void test77() throws ZipException, IOException, DocumentException {
-		FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_reproduce_ucerf3.zip"));
+		U3FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_reproduce_ucerf3.zip"));
 	}
 	
 //	public void process(Collection<? extends ObsEqkRupture> catalog)
@@ -1944,7 +1944,7 @@ public class PureScratch {
 				+ "2019_11_05-Start2012_500yr_kCOV1p5_Spontaneous_HistoricalCatalog/"
 				+ "results_m5_preserve_chain.bin");
 		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55d;
-		FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);
 		FaultSystemSolutionERF_ETAS erf = ETAS_Launcher.buildERF(sol,
 				false, 500d, 2012);
 		erf.updateForecast();
@@ -2418,7 +2418,7 @@ public class PureScratch {
 	}
 	
 	private static void test91() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
 		
 		double rsRate = 1d/714516d;
@@ -2430,7 +2430,7 @@ public class PureScratch {
 		System.out.println(count+"/"+rupSet.getNumRuptures()+" ruptures have rates below "+rsRate+" ("
 				+new DecimalFormat("0.00%").format((double)count/(double)rupSet.getNumRuptures())+")");
 		
-		FaultSystemRupSet rsRupSet = FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+		FaultSystemRupSet rsRupSet = U3FaultSystemIO.loadRupSet(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
 				+ "rsqsim_4983_stitched_m6.5_skip65000_sectArea0.5.zip"));
 		HashSet<UniqueRupture> uniques = new HashSet<>();
 		for (int r=0; r<rsRupSet.getNumRuptures(); r++)

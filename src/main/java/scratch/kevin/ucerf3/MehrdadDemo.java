@@ -36,12 +36,12 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.griddedSeismicity.GridSourceFileReader;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class MehrdadDemo {
 
@@ -56,18 +56,18 @@ public class MehrdadDemo {
 			erf.setParameter(UCERF2.PROB_MODEL_PARAM_NAME, MeanUCERF2.PROB_MODEL_WGCEP_PREF_BLEND);
 		} else {
 			// UCERF3
-			FaultSystemSolution sol = FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
+			U3FaultSystemSolution sol = U3FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 					+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
-			FaultSystemRupSet rupSet = sol.getRupSet();
+			U3FaultSystemRupSet rupSet = sol.getRupSet();
 			double[] rates = sol.getRateForAllRups();
 			
 			
 			// modify some rupture rates
 			rates[0] = 0; // disable rupture 0
 			// create new solution with my modified rates
-			sol = new FaultSystemSolution(rupSet, rates);
+			sol = new U3FaultSystemSolution(rupSet, rates);
 			// write new solution to disk
-			FaultSystemIO.writeSol(sol, new File("/tmp/test_sol.zip"));
+			U3FaultSystemIO.writeSol(sol, new File("/tmp/test_sol.zip"));
 			List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
 			FaultSection sect0 = subSects.get(0);
 			for (FaultSection sect : subSects)
@@ -150,9 +150,9 @@ public class MehrdadDemo {
 	}
 	
 	private static void customRupSet() throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
+		U3FaultSystemSolution sol = U3FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
-		FaultSystemRupSet origRupSet = sol.getRupSet();
+		U3FaultSystemRupSet origRupSet = sol.getRupSet();
 		// create new list that contains contents of old one, old one probably unmodifiable
 		List<FaultSection> faultSectionData = new ArrayList<>(origRupSet.getFaultSectionDataList());
 		// add a new fault
@@ -184,12 +184,12 @@ public class MehrdadDemo {
 		// modify externally
 		gridProv = GridSourceFileReader.fromFile(new File("/tmp/grid_sources.xml"));
 		
-		FaultSystemRupSet rupSet = new FaultSystemRupSet(
+		U3FaultSystemRupSet rupSet = new U3FaultSystemRupSet(
 				faultSectionData, null, null, null, sectionForRups, newMags, newRakes, newAreas, null, "metadata");
-		FaultSystemSolution newSol = new FaultSystemSolution(rupSet, newRates);
+		U3FaultSystemSolution newSol = new U3FaultSystemSolution(rupSet, newRates);
 		newSol.setGridSourceProvider(sol.getGridSourceProvider());
 		// write to file
-		FaultSystemIO.writeSol(newSol, new File("/tmp/test_sol.zip"));
+		U3FaultSystemIO.writeSol(newSol, new File("/tmp/test_sol.zip"));
 	}
 
 }

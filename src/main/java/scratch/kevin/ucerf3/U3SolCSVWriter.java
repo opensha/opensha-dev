@@ -11,7 +11,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 
 import scratch.UCERF3.utils.FaultSectionDataWriter;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class U3SolCSVWriter {
 
@@ -21,7 +21,7 @@ public class U3SolCSVWriter {
 		File solFile = new File(dataDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_TRUE_HAZARD_MEAN_SOL.zip");
 		File outputFile = new File(dataDir, solFile.getName().replaceAll(".zip", "")+".csv");
 		File textFile = new File(dataDir, solFile.getName().replaceAll(".zip", "")+".txt");
-		FaultSystemSolution sol = FaultSystemIO.loadSol(solFile);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(solFile);
 		CSVFile<String> csv = new CSVFile<>(false);
 		
 		FaultSystemRupSet rupSet = sol.getRupSet();
