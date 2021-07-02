@@ -26,6 +26,7 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -105,7 +106,7 @@ public class SectionMFDPlot extends AbstractPlot {
 		Range xRange = new Range(mfdXVals.getX(minMagIndex)-0.5*deltaMag, mfdXVals.getMaxX()+0.5*deltaMag);
 		
 		GridSourceProvider gridProv = null;
-		FaultPolyMgr polyMgr = null;
+		FaultGridAssociations polyMgr = null;
 		Map<Integer, List<FaultSection>> parentToSubSects = null;
 		if (comparisonSol != null && comparisonSol.getGridSourceProvider() != null) {
 			polyMgr = FaultPolyMgr.create(comparisonSol.getRupSet().getFaultSectionDataList(), InversionTargetMFDs.FAULT_BUFFER);

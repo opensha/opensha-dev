@@ -43,4 +43,9 @@ public enum U3_EAL_GMM_Epistemic implements LogicTreeBranchNode<U3_EAL_GMM_Epist
 		return "GMM Additional Epistemic Uncertainty";
 	}
 
+	@Override
+	public String getShortBranchLevelName() {
+		return "Epi";
+	}
+
 }

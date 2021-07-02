@@ -9,6 +9,7 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PolygonFaultGridAssociations;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
@@ -47,7 +48,7 @@ public class PolygonFileWriter {
 		}
 	}
 	
-	private static void writePolygons(File outputFile, List<? extends FaultSection> sects, FaultPolyMgr polys)
+	private static void writePolygons(File outputFile, List<? extends FaultSection> sects, PolygonFaultGridAssociations polys)
 			throws IOException {
 		CSVFile<String> csv = new CSVFile<String>(true);
 		

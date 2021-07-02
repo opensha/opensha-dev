@@ -31,10 +31,10 @@ public class U3_EAL_LogicTreeBranch extends U3LogicTreeBranch {
 		this.tractDir = tractDir;
 	}
 	
-	private static List<LogicTreeBranchNode<? extends Enum<?>>> build(U3LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
+	private static List<LogicTreeBranchNode<?>> build(U3LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
 			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30) {
-		List<LogicTreeBranchNode<? extends Enum<?>>> branches = new ArrayList<>();
-		for (LogicTreeBranchNode<? extends Enum<?>> node : tiBranch)
+		List<LogicTreeBranchNode<?>> branches = new ArrayList<>();
+		for (LogicTreeBranchNode<?> node : tiBranch)
 			branches.add(node);
 		branches.add(probModel);
 		branches.add(gmm);

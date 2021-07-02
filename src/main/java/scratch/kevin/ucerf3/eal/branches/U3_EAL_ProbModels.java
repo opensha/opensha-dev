@@ -49,4 +49,9 @@ public enum U3_EAL_ProbModels implements LogicTreeBranchNode<U3_EAL_ProbModels> 
 		return "ERF Probability Model";
 	}
 
+	@Override
+	public String getShortBranchLevelName() {
+		return "Prob";
+	}
+
 }

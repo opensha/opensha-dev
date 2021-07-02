@@ -42,4 +42,9 @@ public enum U3_EAL_Vs30Model implements LogicTreeBranchNode<U3_EAL_Vs30Model> {
 		return "Vs30 Model";
 	}
 
+	@Override
+	public String getShortBranchLevelName() {
+		return "Vs30";
+	}
+
 }
