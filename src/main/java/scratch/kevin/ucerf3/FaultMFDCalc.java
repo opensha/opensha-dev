@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import scratch.UCERF3.griddedSeismicity.FaultPolyMgr;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.InversionTargetMFDs;
+import scratch.UCERF3.inversion.U3InversionTargetMFDs;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class FaultMFDCalc {
@@ -43,7 +44,7 @@ public class FaultMFDCalc {
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		GridSourceProvider gridProv = sol.getGridSourceProvider();
-		FaultGridAssociations polyMgr = FaultPolyMgr.create(rupSet.getFaultSectionDataList(), InversionTargetMFDs.FAULT_BUFFER);
+		FaultGridAssociations polyMgr = FaultPolyMgr.create(rupSet.getFaultSectionDataList(), U3InversionTargetMFDs.FAULT_BUFFER);
 		
 		Map<String, int[]> parentIDsMap = new HashMap<>();
 		

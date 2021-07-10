@@ -16,6 +16,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.refFaultParamDb.vo.DeformationModel;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -67,9 +68,9 @@ public class BranchAveragedSubSeismoTest {
 			if (subSeismos == null)
 				subSeismos = new EvenlyDiscretizedFunc[sol.getRupSet().getNumSections()];
 			
-			List<GutenbergRichterMagFreqDist> subSeismoList = sol.getFinalSubSeismoOnFaultMFD_List();
+			List<? extends IncrementalMagFreqDist> subSeismoList = sol.getFinalSubSeismoOnFaultMFD_List();
 			for (int i=0; i<subSeismoList.size(); i++) {
-				GutenbergRichterMagFreqDist subSeismo = subSeismoList.get(i);
+				IncrementalMagFreqDist subSeismo = subSeismoList.get(i);
 				if (subSeismos[i] == null)
 					subSeismos[i] = new EvenlyDiscretizedFunc(
 							subSeismo.getMinX(), subSeismo.size(), subSeismo.getDelta());
@@ -92,7 +93,7 @@ public class BranchAveragedSubSeismoTest {
 		for (int i=0; i<subSeismos.length; i++)
 			subSeismos[i].scale(1d/totWeight);
 		
-		List<GutenbergRichterMagFreqDist> baFuncs = baSol.getFinalSubSeismoOnFaultMFD_List();
+		List<? extends IncrementalMagFreqDist> baFuncs = baSol.getFinalSubSeismoOnFaultMFD_List();
 		// now check differences
 		double totMaxAbsDiff = 0;
 		double totMaxPDiff = 0;

@@ -36,6 +36,7 @@ import org.opensha.sha.simulators.SimulatorEvent;
 import scratch.UCERF3.griddedSeismicity.FaultPolyMgr;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.InversionTargetMFDs;
+import scratch.UCERF3.inversion.U3InversionTargetMFDs;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
@@ -109,7 +110,7 @@ public class SectionMFDPlot extends AbstractPlot {
 		FaultGridAssociations polyMgr = null;
 		Map<Integer, List<FaultSection>> parentToSubSects = null;
 		if (comparisonSol != null && comparisonSol.getGridSourceProvider() != null) {
-			polyMgr = FaultPolyMgr.create(comparisonSol.getRupSet().getFaultSectionDataList(), InversionTargetMFDs.FAULT_BUFFER);
+			polyMgr = FaultPolyMgr.create(comparisonSol.getRupSet().getFaultSectionDataList(), U3InversionTargetMFDs.FAULT_BUFFER);
 			gridProv = comparisonSol.getGridSourceProvider();
 			parentToSubSects = new HashMap<>();
 			for (FaultSection sect : comparisonSol.getRupSet().getFaultSectionDataList()) {
