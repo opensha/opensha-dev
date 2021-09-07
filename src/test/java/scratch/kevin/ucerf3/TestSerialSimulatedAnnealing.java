@@ -148,7 +148,7 @@ public class TestSerialSimulatedAnnealing {
 	@Test
 	public void testThreadedAcuracy() {
 		ThreadedSimulatedAnnealing tsa = new ThreadedSimulatedAnnealing(a_cc, d, initialState, 0,
-				a_ineq_cc, d_ineq, null, 4, TimeCompletionCriteria.getInSeconds(2));
+				a_ineq_cc, d_ineq, 4, TimeCompletionCriteria.getInSeconds(2));
 		
 		TimeCompletionCriteria criteria = TimeCompletionCriteria.getInSeconds(10);
 		

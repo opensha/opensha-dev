@@ -220,7 +220,7 @@ public class DownDipTestRupSetBuilder {
 			
 			ThreadedSimulatedAnnealing tsa = new ThreadedSimulatedAnnealing(inputGen.getA(), inputGen.getD(),
 					inputGen.getInitialSolution(), smoothnessWt, inputGen.getA_ineq(), inputGen.getD_ineq(),
-					inputGen.getWaterLevelRates(), numThreads, subCompetionCriteria);
+					numThreads, subCompetionCriteria);
 			tsa.setConstraintRanges(inputGen.getConstraintRowRanges());
 			
 			tsa.iterate(criteria);

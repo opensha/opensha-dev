@@ -163,7 +163,7 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 					new ProgressTrackingCompletionCriteria(this.criteria, outputFile);
 			
 			final ThreadedSimulatedAnnealing tsa = new ThreadedSimulatedAnnealing(A, d, initial, relativeSmoothnessWt,
-					A_ineq, d_ineq, minimumRuptureRates, numThreads, subCompetionCriteria);
+					A_ineq, d_ineq, numThreads, subCompetionCriteria);
 			
 			futures.add(exec.submit(new Runnable() {
 				
