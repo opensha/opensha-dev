@@ -26,6 +26,9 @@ public class FaultArrayCalc {
 			301,	// San Andreas (Mojave S)
 			286,	// San Andreas (Mojave N)
 			287,	// San Andreas (Big Bend)
+			300,	// San Andreas (Carrizo)
+			285,	// San Andreas (Cholame)
+			32,		// San Andreas (Parkfield)
 	};
 	
 	public static int[] SJC_PARENTS = {

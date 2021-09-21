@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -88,6 +89,7 @@ import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.ServerPrefUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
+import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
@@ -152,6 +154,7 @@ import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
@@ -2618,12 +2621,63 @@ public class PureScratch {
 		//System.out.println("RAD_TO_DEG = " + RAD_TO_DEG); 
 	}
 	
+	private static void test98() {
+		double[] vals = {
+				0.004557008898170912,
+				0.006147943144848745,
+				5.52179640057068E-4,
+				4.279434356649868E-7,
+				0.0026159678814425035,
+				1.7629342361803746E-8,
+				5.78051085579677E-4,
+				6.305592933062744E-8,
+				2.865482448602668E-7,
+				3.77428890089215E-8,
+				8.701321712129223E-7,
+				Double.NaN,
+				Double.POSITIVE_INFINITY,
+				Double.NEGATIVE_INFINITY
+		};
+		for (double val : vals) {
+			System.out.println("Orig:\t"+val);
+			double rVal = DataUtils.roundFixed(val, 8, RoundingMode.HALF_EVEN);
+			double backVal = Double.parseDouble(rVal+"");
+			System.out.println("\t"+rVal+"\t->\t"+backVal);
+			rVal = DataUtils.roundSigFigs(val, 8, RoundingMode.HALF_EVEN);
+			backVal = Double.parseDouble(rVal+"");
+			System.out.println("\t"+rVal+"\t->\t"+backVal);
+		}
+	}
+	
+	private static void test99() throws IOException {
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/"
+//				+ "FM3_1_ZENGBB_Shaw09Mod_DsrUni_CharConst_M5Rate7.9_MMaxOff7.6_NoFix_SpatSeisU3.zip"));
+		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+				new File("/home/kevin/OpenSHA/UCERF3/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
+		FaultSystemSolution sol = cfss.getSolution(U3LogicTreeBranch.fromValues(true, SlipAlongRuptureModels.UNIFORM));
+		System.out.println(sol.requireModule(GridSourceProvider.class).getNodeUnassociatedMFD(0));
+	}
+	
+	private static void test100() throws IOException {
+		File inDir = new File("/data/kevin/markdown/inversions/2021_09_13-coulomb-nshm23_geol_dm_v1-slip_constr-gr_constr-1hr");
+//		File inRupSetFile = new File(inDir, "rupture_set.zip");
+		File inRupSetFile = new File(inDir, "solution2.zip");
+		File solFile = new File(inDir, "solution.zip");
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(inRupSetFile);
+		FaultSystemSolution origSol = FaultSystemSolution.load(solFile);
+		FaultSystemSolution newSol = new FaultSystemSolution(rupSet, origSol.getRateForAllRups());
+		for (OpenSHA_Module module : origSol.getModules())
+			newSol.addModule(module);
+		newSol.write(new File(inDir, "solution2.zip"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test97();
+		test100();
 	}
 
 }

@@ -61,7 +61,9 @@ public class FaultArrayMapGen {
 	}
 	
 //	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
-	private static Region region = new Region(new Location(35.5, -114), new Location(31.5, -121));
+//	private static Region region = new Region(new Location(35.5, -114), new Location(31.5, -121));
+//	private static Region region = new Region(new Location(36.5, -114), new Location(31.5, -121));
+	private static Region region = new Region(new Location(36, -114), new Location(31.5, -120.5)); // max upper left of Yehuda's GRD file
 	private static GriddedGeoDataSet topoXYZ = null;
 	
 	private static synchronized GriddedGeoDataSet fetchTopo(TopographicSlopeFile topoRes) throws IOException {
@@ -82,8 +84,9 @@ public class FaultArrayMapGen {
 	private static CPT topoCPT = null;
 	
 	private static synchronized CPT getTopoCPT() throws FileNotFoundException, IOException {
-		if (topoCPT == null)
+		if (topoCPT == null) {
 			topoCPT = CPT.loadFromFile(new File("/home/kevin/SCEC/2019_fault_array_proposal/origGMT/test.cpt"));
+		}
 		return topoCPT;
 	}
 	
@@ -92,10 +95,13 @@ public class FaultArrayMapGen {
 	
 	private static void plotMap(File outputDir, String prefix, double arraySpacing, FaultModels fm,
 			MeanUCERF3 meanU3, ScalarType scalarType, boolean plotLinearTrace) throws IOException, GMT_MapException {
-//		TopographicSlopeFile topoRes = TopographicSlopeFile.SRTM_30_PLUS;
-//		GriddedGeoDataSet gridData = fetchTopo(topoRes);
 		CPT topoCPT = getTopoCPT();
-		GMT_Map map = new GMT_Map(region, null, 3d/3600d, topoCPT);
+//		TopographicSlopeFile topoRes = TopographicSlopeFile.SRTM_30_PLUS;
+////		TopographicSlopeFile topoRes = TopographicSlopeFile.US_SIX;
+//		GriddedGeoDataSet gridData = fetchTopo(topoRes);
+		GriddedGeoDataSet gridData = null;
+		TopographicSlopeFile topoRes = null;
+		GMT_Map map = new GMT_Map(region, gridData, 3d/3600d, topoCPT);
 		
 		map.setBlackBackground(false);
 		map.setRescaleCPT(false);
@@ -105,9 +111,12 @@ public class FaultArrayMapGen {
 		map.setCoast(new CoastAttributes(Color.BLACK, 0.6d, new Color(112, 131, 147)));
 		map.setCustomLabel(null);
 		map.setUseGMTSmoothing(true);
-//		map.setTopoResolution(topoRes);
-		map.setCustomIntenPath("/home/kevin/SCEC/2019_fault_array_proposal/origGMT/socal_mex.grad");
-		map.setCustomGRDPath("/home/kevin/SCEC/2019_fault_array_proposal/origGMT/socal_mex.grd");
+		if (gridData != null) {
+			map.setTopoResolution(topoRes);
+		} else {
+			map.setCustomIntenPath("/home/kevin/SCEC/2019_fault_array_proposal/origGMT/socal_mex.grad");
+			map.setCustomGRDPath("/home/kevin/SCEC/2019_fault_array_proposal/origGMT/socal_mex.grd");
+		}
 //		map.setLabelSize(MAP_LABEL_SIZE);
 //		map.setLabelTickSize(MAP_LABEL_TICK_SIZE);
 //		map.setlabel
@@ -231,7 +240,7 @@ public class FaultArrayMapGen {
 		if (arraySpacing > 0) {
 			addArrayPolys(map, FaultArrayCalc.getSAF_LinearTrace(allParents), arraySpacing, Color.GREEN.darker());
 			addArrayPolys(map, FaultArrayCalc.getSJC_LinearTrace(allParents), arraySpacing, Color.MAGENTA.darker());
-			addArrayPolys(map, FaultArrayCalc.getElsinoreLinearTrace(allParents), arraySpacing, Color.BLUE);
+//			addArrayPolys(map, FaultArrayCalc.getElsinoreLinearTrace(allParents), arraySpacing, Color.BLUE);
 		}
 		
 		for (String city : cities.keySet()) {
@@ -288,8 +297,8 @@ public class FaultArrayMapGen {
 	}
 
 	public static void main(String[] args) throws IOException, GMT_MapException {
-		File outputDir = new File("/home/kevin/SCEC/2019_fault_array_proposal/plots");
-		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		File outputDir = new File("/home/kevin/SCEC/2021_fault_array_proposal/plots");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdirs());
 		FaultBasedMapGen.LOCAL_MAPGEN = true;
 		
 		FaultModels fm = FaultModels.FM3_1;
