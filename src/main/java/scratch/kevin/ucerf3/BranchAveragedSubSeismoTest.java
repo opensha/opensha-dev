@@ -16,6 +16,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.refFaultParamDb.vo.DeformationModel;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -27,8 +28,8 @@ import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class BranchAveragedSubSeismoTest {
 
@@ -46,11 +47,11 @@ public class BranchAveragedSubSeismoTest {
 		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
 				new File(invDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
-		InversionFaultSystemSolution baSol = FaultSystemIO.loadInvSol(
+		InversionFaultSystemSolution baSol = U3FaultSystemIO.loadInvSol(
 				new File(invDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		
 		int done = 0;
-		for (LogicTreeBranch branch : cfss.getBranches()) {
+		for (U3LogicTreeBranch branch : cfss.getBranches()) {
 			if (branch.getValue(FaultModels.class) != fm)
 				continue;
 			if (only20) {
@@ -67,9 +68,9 @@ public class BranchAveragedSubSeismoTest {
 			if (subSeismos == null)
 				subSeismos = new EvenlyDiscretizedFunc[sol.getRupSet().getNumSections()];
 			
-			List<GutenbergRichterMagFreqDist> subSeismoList = sol.getFinalSubSeismoOnFaultMFD_List();
+			List<? extends IncrementalMagFreqDist> subSeismoList = sol.getFinalSubSeismoOnFaultMFD_List();
 			for (int i=0; i<subSeismoList.size(); i++) {
-				GutenbergRichterMagFreqDist subSeismo = subSeismoList.get(i);
+				IncrementalMagFreqDist subSeismo = subSeismoList.get(i);
 				if (subSeismos[i] == null)
 					subSeismos[i] = new EvenlyDiscretizedFunc(
 							subSeismo.getMinX(), subSeismo.size(), subSeismo.getDelta());
@@ -92,7 +93,7 @@ public class BranchAveragedSubSeismoTest {
 		for (int i=0; i<subSeismos.length; i++)
 			subSeismos[i].scale(1d/totWeight);
 		
-		List<GutenbergRichterMagFreqDist> baFuncs = baSol.getFinalSubSeismoOnFaultMFD_List();
+		List<? extends IncrementalMagFreqDist> baFuncs = baSol.getFinalSubSeismoOnFaultMFD_List();
 		// now check differences
 		double totMaxAbsDiff = 0;
 		double totMaxPDiff = 0;

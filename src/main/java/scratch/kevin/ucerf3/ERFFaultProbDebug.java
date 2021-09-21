@@ -16,6 +16,8 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.DeformationModel;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeParam;
 import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
@@ -27,8 +29,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.CompoundFSSPlots.ERFBasedRegionalMagProbPlot;
 import scratch.UCERF3.analysis.MPJ_ERF_ProbGainCalc;
@@ -37,8 +37,8 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
 public class ERFFaultProbDebug {
@@ -67,7 +67,7 @@ public class ERFFaultProbDebug {
 						"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 //		FaultSystemSolution sol = cfss.getSolution(LogicTreeBranch.fromFileName(
 //				"FM3_1_ZENGBB_ShConStrDrp_DsrTap_CharConst_M5Rate9.6_MMaxOff7.6_NoFix_SpatSeisU2"));
-		FaultSystemSolution sol = cfss.getSolution(LogicTreeBranch.fromFileName(
+		FaultSystemSolution sol = cfss.getSolution(U3LogicTreeBranch.fromFileName(
 				"FM3_1_NEOK_EllBsqrtLen_DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2"));
 		
 		FaultSystemRupSet rupSet = sol.getRupSet();

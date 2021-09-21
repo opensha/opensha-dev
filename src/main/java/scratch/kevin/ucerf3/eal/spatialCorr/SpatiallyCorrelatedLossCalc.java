@@ -16,6 +16,8 @@ import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.nshmp2.erf.source.PointSource;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
@@ -34,9 +36,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class SpatiallyCorrelatedLossCalc {
 	
@@ -209,7 +209,7 @@ public class SpatiallyCorrelatedLossCalc {
 	}
 	
 	public static void main(String[] args) throws IOException, DocumentException {
-		FaultSystemSolution fss = FaultSystemIO.loadSol(
+		FaultSystemSolution fss = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		

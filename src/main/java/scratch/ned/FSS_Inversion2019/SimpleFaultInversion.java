@@ -52,6 +52,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
 import org.opensha.sha.cybershake.maps.GMT_InterpolationSettings;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.AleatoryMagAreaStdDevParam;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.gcim.ui.infoTools.IMT_Info;
@@ -72,7 +73,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import org.apache.commons.math3.stat.StatUtils;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;

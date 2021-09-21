@@ -4,17 +4,17 @@ import java.io.File;
 import java.util.List;
 
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class StandaloneSectParticScatterPlotter {
 
@@ -31,7 +31,7 @@ public class StandaloneSectParticScatterPlotter {
 		File outputDir = new File(args[3]);
 		
 		try {
-			FaultSystemSolution fss = FaultSystemIO.loadSol(fssFile);
+			FaultSystemSolution fss = U3FaultSystemIO.loadSol(fssFile);
 			
 			System.out.println("Creating ERF for comparisons");
 			FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fss);

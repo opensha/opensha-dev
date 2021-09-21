@@ -21,21 +21,21 @@ import com.google.common.io.Files;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class MPJ_ETAS_CatalogEALCalculator extends MPJTaskCalculator {
 	
 	private List<File> resultsFiles;
 	
 	private Map<AttenRelRef, Double> imrWeightsMap;
-	private FaultSystemSolution baSol;
+	private U3FaultSystemSolution baSol;
 	private CompoundFaultSystemSolution cfss;
-	private FaultSystemSolution trueMeanSol;
-	private Map<LogicTreeBranch, List<Integer>> branchMappings;
+	private U3FaultSystemSolution trueMeanSol;
+	private Map<U3LogicTreeBranch, List<Integer>> branchMappings;
 	private List<File> dataDirs;
 	private boolean triggeredOnly;
 	private boolean allSubDurations = false;
@@ -70,7 +70,7 @@ public class MPJ_ETAS_CatalogEALCalculator extends MPJTaskCalculator {
 		
 		File baSolFile = new File(cmd.getOptionValue("branch-avg-sol"));
 		Preconditions.checkArgument(baSolFile.exists());
-		baSol = FaultSystemIO.loadSol(baSolFile);
+		baSol = U3FaultSystemIO.loadSol(baSolFile);
 		
 		File compoundSolFile = new File(cmd.getOptionValue("compound-sol"));
 		Preconditions.checkArgument(compoundSolFile.exists());
@@ -78,7 +78,7 @@ public class MPJ_ETAS_CatalogEALCalculator extends MPJTaskCalculator {
 		
 		File trueMeanSolFile = new File(cmd.getOptionValue("true-mean-sol"));
 		Preconditions.checkArgument(trueMeanSolFile.exists());
-		trueMeanSol = FaultSystemIO.loadSol(trueMeanSolFile);
+		trueMeanSol = U3FaultSystemIO.loadSol(trueMeanSolFile);
 		branchMappings = TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile);
 		
 		dataDirs = Lists.newArrayList();

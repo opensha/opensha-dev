@@ -14,12 +14,12 @@ import com.google.common.collect.Lists;
 
 import scratch.UCERF3.AverageFaultSystemSolution;
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolutionFetcher;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.VariableLogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class FakeCompoundFromAverage {
 
@@ -37,12 +37,12 @@ public class FakeCompoundFromAverage {
 				"FM3_1_ZENGBB_Shaw09Mod_DsrTap_CharConst_M5Rate7.9_MMaxOff7.6_NoFix_SpatSeisU3_mean_sol.zip");
 		File outFile = new File(dir, "3p3_convergence_compound.zip");
 		
-		final AverageFaultSystemSolution avgSol = FaultSystemIO.loadAvgInvSol(inFile);
-		final LogicTreeBranch branch = LogicTreeBranch.fromFileName(inFile.getName());
+		final AverageFaultSystemSolution avgSol = U3FaultSystemIO.loadAvgInvSol(inFile);
+		final U3LogicTreeBranch branch = U3LogicTreeBranch.fromFileName(inFile.getName());
 		
 		final int bundle = 1;
 		
-		final List<LogicTreeBranch> branches = Lists.newArrayList();
+		final List<U3LogicTreeBranch> branches = Lists.newArrayList();
 		
 		if (bundle <= 1) {
 			for (int s=0; s<avgSol.getNumSolutions(); s++)
@@ -57,12 +57,12 @@ public class FakeCompoundFromAverage {
 		FaultSystemSolutionFetcher fetcher = new FaultSystemSolutionFetcher() {
 			
 			@Override
-			public Collection<LogicTreeBranch> getBranches() {
+			public Collection<U3LogicTreeBranch> getBranches() {
 				return branches;
 			}
 			
 			@Override
-			protected InversionFaultSystemSolution fetchSolution(LogicTreeBranch branch) {
+			protected InversionFaultSystemSolution fetchSolution(U3LogicTreeBranch branch) {
 				String var = ((VariableLogicTreeBranch)branch).getVariations().get(0);
 				int s = Integer.parseInt(var.substring(3));
 				if (bundle <= 1)

@@ -23,16 +23,16 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.util.FileUtils;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.magdist.ArbIncrementalMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class CatalogMFDInRegionTest {
 	
@@ -50,7 +50,7 @@ public class CatalogMFDInRegionTest {
 		};
 		File compareFile = new File("/home/kevin/.opensha/ucerf3_erf/"
 				+ "cached_dep100.0_depMean_rakeMean.zip");
-		FaultSystemSolution compSol = FaultSystemIO.loadSol(compareFile);
+		FaultSystemSolution compSol = U3FaultSystemIO.loadSol(compareFile);
 		FaultSystemRupSet compRupSet = compSol.getRupSet();
 		GridSourceProvider gridProv = compSol.getGridSourceProvider();
 		

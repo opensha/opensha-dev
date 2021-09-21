@@ -23,7 +23,7 @@ import org.opensha.commons.util.ClassUtils;
 import org.opensha.commons.gui.plot.GraphWindow;
 
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.MatrixIO;
 
 import com.google.common.base.Preconditions;

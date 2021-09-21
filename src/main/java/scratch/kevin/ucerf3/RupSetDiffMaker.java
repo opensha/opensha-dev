@@ -11,14 +11,14 @@ import java.util.zip.ZipException;
 import org.dom4j.DocumentException;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 
-import scratch.UCERF3.FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.SlipEnabledRupSet;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.laughTest.AzimuthChangeFilter;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
@@ -115,8 +115,8 @@ public class RupSetDiffMaker {
 		File refRupSetFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05.zip");
 		File testRupSetFile = new File(rupSetsDir, "fm3_1_plausibleMulti10km_direct_slipP0.05incr_cff0.75IntsPos_comb2Paths_cffFavP0.02_cffFavRatioN2P0.5_sectFractPerm0.05_comp/add_CumulativeAzimuth.zip");
 		
-		FaultSystemRupSet testRupSet = FaultSystemIO.loadRupSet(testRupSetFile);
-		FaultSystemRupSet refRupSet = FaultSystemIO.loadRupSet(refRupSetFile);
+		U3FaultSystemRupSet testRupSet = U3FaultSystemIO.loadRupSet(testRupSetFile);
+		U3FaultSystemRupSet refRupSet = U3FaultSystemIO.loadRupSet(refRupSetFile);
 		
 		System.out.println("Test has: "+testRupSet.getNumRuptures()+" rups");
 		System.out.println("Ref has: "+refRupSet.getNumRuptures()+" rups");
@@ -125,8 +125,8 @@ public class RupSetDiffMaker {
 		writeDiffs(new File("/tmp/test_new_rups_out.zip"), refRupSet, testRupSet);
 	}
 
-	public static void writeDiffs(File diffFile, FaultSystemRupSet rupSet1,
-			FaultSystemRupSet rupSet2) throws IOException {
+	public static void writeDiffs(File diffFile, U3FaultSystemRupSet rupSet1,
+			U3FaultSystemRupSet rupSet2) throws IOException {
 		HashSet<UniqueRupture> rups2 = new HashSet<UniqueRupture>();
 		for (int r=0; r<rupSet2.getNumRuptures(); r++) {
 			rups2.add(UniqueRupture.forIDs(rupSet2.getSectionsIndicesForRup(r)));
@@ -188,7 +188,7 @@ public class RupSetDiffMaker {
 			sectionForRups.add(rupSet1.getSectionsIndicesForRup(r));
 		}
 		
-		FaultSystemRupSet diffSet = new FaultSystemRupSet(
+		U3FaultSystemRupSet diffSet = new U3FaultSystemRupSet(
 				rupSet1.getFaultSectionDataList(), rupSet1.getSlipRateForAllSections(),
 				rupSet1.getSlipRateStdDevForAllSections(), rupSet1.getAreaForAllSections(),
 				sectionForRups, mags, rakes, rupAreas, rupLenghts,
@@ -200,7 +200,7 @@ public class RupSetDiffMaker {
 				invSet.getRupturesForClusters(), invSet.getSectionsForClusters());
 		}
 		
-		FaultSystemIO.writeRupSet(diffSet, diffFile);
+		U3FaultSystemIO.writeRupSet(diffSet, diffFile);
 	}
 
 }

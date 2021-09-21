@@ -30,22 +30,22 @@ import org.opensha.commons.util.ClassUtils;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.calc.params.MagDistCutoffParam;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolutionFetcher;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
@@ -67,12 +67,12 @@ import com.google.common.primitives.Doubles;
 public class UCERF3_EAL_Combiner {
 	
 	private FaultSystemSolutionFetcher fetcher;
-	private Map<LogicTreeBranch, List<Integer>> mappings;
-	private FaultSystemSolution trueMeanSol;
+	private Map<U3LogicTreeBranch, List<Integer>> mappings;
+	private U3FaultSystemSolution trueMeanSol;
 	private double[][] faultLosses;
 	private DiscretizedFunc[] griddedLosses;
 	
-	private List<LogicTreeBranch> branches;
+	private List<U3LogicTreeBranch> branches;
 	private double[] faultEALs;
 	private double[] griddedEALs;
 	private double[] totalEALs;
@@ -84,22 +84,22 @@ public class UCERF3_EAL_Combiner {
 	private LossCOV_Model lecCOV;
 	private DiscretizedFunc[] lecs;
 	
-	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<LogicTreeBranch, List<Integer>> mappings,
-			FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses)
+	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<U3LogicTreeBranch, List<Integer>> mappings,
+			U3FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses)
 					throws DocumentException, IOException {
 		this(fetcher, mappings, trueMeanSol, fssLosses, griddedLosses, null, Double.NaN);
 	}
 	
-	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<LogicTreeBranch, List<Integer>> mappings,
-			FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses,
+	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<U3LogicTreeBranch, List<Integer>> mappings,
+			U3FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses,
 			ZipFile erfProbsZipFile, double erfProbsDuration)
 					throws DocumentException, IOException {
 		this(fetcher, mappings, trueMeanSol, fssLosses, griddedLosses, erfProbsZipFile, erfProbsDuration,
 				null, null);
 	}
 	
-	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<LogicTreeBranch, List<Integer>> mappings,
-			FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses,
+	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<U3LogicTreeBranch, List<Integer>> mappings,
+			U3FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses,
 			ZipFile erfProbsZipFile, double erfProbsDuration, DiscretizedFunc lecXVals, LossCOV_Model lecCOV)
 					throws DocumentException, IOException {
 		this.fetcher = fetcher;
@@ -134,7 +134,7 @@ public class UCERF3_EAL_Combiner {
 		for (int i=0; i<branches.size(); i++) {
 			if (i % 100 == 0 && branches.size() > 1)
 				System.out.println("Branch "+i);
-			LogicTreeBranch branch = branches.get(i);
+			U3LogicTreeBranch branch = branches.get(i);
 			double[] rates = fetcher.getRates(branch);
 			double[] mags = fetcher.getMags(branch);
 			List<Integer> meanRupIndexes = mappings.get(branch);
@@ -342,7 +342,7 @@ public class UCERF3_EAL_Combiner {
 		gw.saveAsPNG(pngFile.getAbsolutePath());
 	}
 
-	public List<LogicTreeBranch> getBranches() {
+	public List<U3LogicTreeBranch> getBranches() {
 		return branches;
 	}
 
@@ -366,7 +366,7 @@ public class UCERF3_EAL_Combiner {
 		return getTotalEALMagDist(trueMeanSol, faultLosses, griddedLosses, lossScale);
 	}
 	
-	public static EvenlyDiscretizedFunc getTotalEALMagDist(FaultSystemSolution trueMeanSol, double[][] faultLosses,
+	public static EvenlyDiscretizedFunc getTotalEALMagDist(U3FaultSystemSolution trueMeanSol, double[][] faultLosses,
 			DiscretizedFunc[] griddedLosses, double lossScale) {
 		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(5.05, 41, 0.1);
 		
@@ -404,9 +404,9 @@ public class UCERF3_EAL_Combiner {
 		return func;
 	}
 	
-	private static Map<LogicTreeBranch, Double> loadValidateRuns(File validateDir, String prefix, boolean gridded)
+	private static Map<U3LogicTreeBranch, Double> loadValidateRuns(File validateDir, String prefix, boolean gridded)
 			throws IOException {
-		Map<LogicTreeBranch, Double> results = Maps.newHashMap();
+		Map<U3LogicTreeBranch, Double> results = Maps.newHashMap();
 		for (File file : validateDir.listFiles()) {
 			if (file.isDirectory())
 				continue;
@@ -419,7 +419,7 @@ public class UCERF3_EAL_Combiner {
 				continue;
 			else if (!gridded && !name.contains("_bgEXCLUDE"))
 				continue;
-			LogicTreeBranch branch = LogicTreeBranch.fromFileName(name);
+			U3LogicTreeBranch branch = U3LogicTreeBranch.fromFileName(name);
 			List<String> lines = FileUtils.readLines(file);
 			String[] split = lines.get(0).split(" ");
 			double eal = Double.parseDouble(split[split.length-1]);
@@ -482,9 +482,9 @@ public class UCERF3_EAL_Combiner {
 			double erfProbsDuration = 1d;
 			
 			System.out.println("Loading true mean/compound");
-			FaultSystemSolution trueMeanSol = FaultSystemIO.loadSol(trueMeanSolFile);
+			U3FaultSystemSolution trueMeanSol = U3FaultSystemIO.loadSol(trueMeanSolFile);
 			// now load in the mappings
-			Map<LogicTreeBranch, List<Integer>> mappings = TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile);
+			Map<U3LogicTreeBranch, List<Integer>> mappings = TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile);
 			DiscretizedFunc[] rupMFDs = trueMeanSol.getRupMagDists();
 			CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(compoundSolFile);
 			
@@ -541,7 +541,7 @@ public class UCERF3_EAL_Combiner {
 			double[] eals = comb.getFaultEALs();
 			double[] gridEALs = comb.getGriddedEALs();
 			
-			List<LogicTreeBranch> branches = comb.getBranches();
+			List<U3LogicTreeBranch> branches = comb.getBranches();
 			
 			double totWeights = 0d;
 			for (int i=0; i<branches.size(); i++)
@@ -549,7 +549,7 @@ public class UCERF3_EAL_Combiner {
 			System.out.println("Tot weight: "+totWeights);
 			double[] branchWeights = new double[branches.size()];
 			for (int i=0; i<branches.size(); i++) {
-				LogicTreeBranch branch = branches.get(i);
+				U3LogicTreeBranch branch = branches.get(i);
 				branchWeights[i] = weightProv.getWeight(branch)/totWeights;
 			}
 			
@@ -569,11 +569,11 @@ public class UCERF3_EAL_Combiner {
 			
 			CSVFile<String> csv = new CSVFile<String>(true);
 			List<String> header = Lists.newArrayList("Index", "Branch Weight", "Total EAL", "Fault EAL", "Gridded EAL");
-			for (Class<? extends LogicTreeBranchNode<?>> clazz : LogicTreeBranch.getLogicTreeNodeClasses())
+			for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses())
 				header.add(ClassUtils.getClassNameWithoutPackage(clazz));
 			csv.addLine(header);
 			for (int i=0; i<branches.size(); i++) {
-				LogicTreeBranch branch = branches.get(i);
+				U3LogicTreeBranch branch = branches.get(i);
 				double weight = branchWeights[i];
 				List<String> line = Lists.newArrayList();
 				line.add(i+"");
@@ -591,8 +591,8 @@ public class UCERF3_EAL_Combiner {
 				continue;
 			
 			if (validateDir != null) {
-				Map<LogicTreeBranch, Double> gridValidate = loadValidateRuns(validateDir, prefix, true);
-				Map<LogicTreeBranch, Double> faultValidate = loadValidateRuns(validateDir, prefix, false);
+				Map<U3LogicTreeBranch, Double> gridValidate = loadValidateRuns(validateDir, prefix, true);
+				Map<U3LogicTreeBranch, Double> faultValidate = loadValidateRuns(validateDir, prefix, false);
 
 				if (!gridValidate.isEmpty())
 					plotValidates(gridValidate, "Gridded Validate", branches, gridEALs,
@@ -610,15 +610,15 @@ public class UCERF3_EAL_Combiner {
 		}
 	}
 	
-	private static void plotValidates(Map<LogicTreeBranch, Double> validate, String title,
-			List<LogicTreeBranch> branches, double[] eals, File pngFile) throws IOException {
+	private static void plotValidates(Map<U3LogicTreeBranch, Double> validate, String title,
+			List<U3LogicTreeBranch> branches, double[] eals, File pngFile) throws IOException {
 		double[] refResults = new double[validate.size()];
 		double[] testResults = new double[validate.size()];
 		
 		MinMaxAveTracker track = new MinMaxAveTracker();
 		MinMaxAveTracker absTrack = new MinMaxAveTracker();
 		int cnt = 0;
-		for (LogicTreeBranch branch : validate.keySet()) {
+		for (U3LogicTreeBranch branch : validate.keySet()) {
 			int ind = branches.indexOf(branch);
 			Preconditions.checkPositionIndex(ind, eals.length);
 			refResults[cnt] = validate.get(branch);

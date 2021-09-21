@@ -9,18 +9,18 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class GridSourcesNodeWriter {
 
 	public static void main(String[] args) throws IOException, DocumentException {
-		FaultSystemSolution sol = FaultSystemIO.loadSol(new File(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(new File(
 				"/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		
@@ -43,14 +43,14 @@ public class GridSourcesNodeWriter {
 		
 		csv.writeToFile(outputFile);
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			System.out.println("== "+ClassUtils.getClassNameWithoutPackage(clazz)+" ==");
 			System.out.println("||= Prefix =||= Description =||");
 			for (LogicTreeBranchNode<?> node : clazz.getEnumConstants()) {
-				if (node.getRelativeWeight(LogicTreeBranch.DEFAULT.getValue(InversionModels.class)) <= 0)
+				if (node.getRelativeWeight(U3LogicTreeBranch.DEFAULT.getValue(InversionModels.class)) <= 0)
 					continue;
 				String str = "||";
-				if (LogicTreeBranch.DEFAULT.getValueUnchecked(clazz) == node)
+				if (U3LogicTreeBranch.DEFAULT.getValueUnchecked(clazz) == node)
 					str += "'''"+node.encodeChoiceString()+"'''";
 				else
 					str += node.encodeChoiceString();

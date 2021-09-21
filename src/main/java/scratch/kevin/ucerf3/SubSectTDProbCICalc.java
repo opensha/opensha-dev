@@ -14,16 +14,16 @@ import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.MatrixIO;
 
 import com.google.common.base.Preconditions;
@@ -52,7 +52,7 @@ public class SubSectTDProbCICalc {
 		File zipFileDir = new File("/home/kevin/OpenSHA/UCERF3/eal/2014_10_07-ucerf3-erf-probs");
 //		ZipFile zipFiles 
 		
-		for (LogicTreeBranch branch : cfss.getBranches()) {
+		for (U3LogicTreeBranch branch : cfss.getBranches()) {
 			FaultModels fm = branch.getValue(FaultModels.class);
 			if (!fmRupsMap.containsKey(fm)) {
 				FaultSystemRupSet rupSet = cfss.getSolution(branch).getRupSet();
@@ -79,7 +79,7 @@ public class SubSectTDProbCICalc {
 		}
 	}
 	
-	private static double[] getProbs(ZipFile zip, LogicTreeBranch branch) throws IOException {
+	private static double[] getProbs(ZipFile zip, U3LogicTreeBranch branch) throws IOException {
 		// get the rate from the zip file
 		String eName = branch.buildFileName()+".bin";
 		ZipEntry probsEntry = zip.getEntry(eName);

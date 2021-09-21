@@ -16,15 +16,15 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -33,8 +33,8 @@ public class UCERF3_BranchAvgLossFetcher {
 	
 	private File[] ealDataDirs;
 	
-	private FaultSystemSolution trueMeanSol;
-	private Map<LogicTreeBranch, List<Integer>> branchMappings;
+	private U3FaultSystemSolution trueMeanSol;
+	private Map<U3LogicTreeBranch, List<Integer>> branchMappings;
 	
 	private CompoundFaultSystemSolution cfss;
 	
@@ -48,10 +48,10 @@ public class UCERF3_BranchAvgLossFetcher {
 	 */
 	public UCERF3_BranchAvgLossFetcher(File trueMeanSolFile, CompoundFaultSystemSolution cfss, File... ealDataDirs)
 			throws IOException, DocumentException {
-		this(FaultSystemIO.loadSol(trueMeanSolFile), TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile), cfss, ealDataDirs);
+		this(U3FaultSystemIO.loadSol(trueMeanSolFile), TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile), cfss, ealDataDirs);
 	}
 	
-	public UCERF3_BranchAvgLossFetcher(FaultSystemSolution trueMeanSol, Map<LogicTreeBranch, List<Integer>> branchMappings,
+	public UCERF3_BranchAvgLossFetcher(U3FaultSystemSolution trueMeanSol, Map<U3LogicTreeBranch, List<Integer>> branchMappings,
 			CompoundFaultSystemSolution cfss, File... ealDataDirs) throws IOException, DocumentException {
 		Preconditions.checkState(ealDataDirs.length > 0, "Must supply at least one data dir");
 		this.ealDataDirs = ealDataDirs;
@@ -95,7 +95,7 @@ public class UCERF3_BranchAvgLossFetcher {
 		double totWeight = 0d;
 		
 		DiscretizedFunc[] rupLossDists = null;
-		for (LogicTreeBranch branch : branchMappings.keySet()) {
+		for (U3LogicTreeBranch branch : branchMappings.keySet()) {
 			FaultModels branchFM = branch.getValue(FaultModels.class);
 			if (branchFM != fm)
 				continue;
@@ -214,7 +214,7 @@ public class UCERF3_BranchAvgLossFetcher {
 		FaultModels fm = FaultModels.FM3_1;
 		
 		// Branch averaged FSS
-		FaultSystemSolution baSol = FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
+		U3FaultSystemSolution baSol = U3FaultSystemIO.loadSol(new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		
 		// Compound fault system solution

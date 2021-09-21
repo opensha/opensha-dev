@@ -24,14 +24,14 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
 /**
@@ -216,7 +216,7 @@ public class TestModel1_FSS extends InversionFaultSystemSolution {
 		
 		double[] rakes = new double[totNumRups];
 		
-		FaultSystemRupSet rupSet = new FaultSystemRupSet(subSectionData, null, null, areaForSections, sectionForRups, magForRup,
+		U3FaultSystemRupSet rupSet = new U3FaultSystemRupSet(subSectionData, null, null, areaForSections, sectionForRups, magForRup,
 				rakes, areaForRup, null, null);
 		
 		System.out.println("rupSet.getNumRuptures()="+rupSet.getNumRuptures());

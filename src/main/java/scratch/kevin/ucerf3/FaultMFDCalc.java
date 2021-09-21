@@ -18,18 +18,20 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Preconditions;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.griddedSeismicity.FaultPolyMgr;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.InversionTargetMFDs;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.inversion.U3InversionTargetMFDs;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class FaultMFDCalc {
 
@@ -37,12 +39,12 @@ public class FaultMFDCalc {
 		File outputDir = new File("/tmp/parsons");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		GridSourceProvider gridProv = sol.getGridSourceProvider();
-		FaultPolyMgr polyMgr = FaultPolyMgr.create(rupSet.getFaultSectionDataList(), InversionTargetMFDs.FAULT_BUFFER);
+		FaultGridAssociations polyMgr = FaultPolyMgr.create(rupSet.getFaultSectionDataList(), U3InversionTargetMFDs.FAULT_BUFFER);
 		
 		Map<String, int[]> parentIDsMap = new HashMap<>();
 		

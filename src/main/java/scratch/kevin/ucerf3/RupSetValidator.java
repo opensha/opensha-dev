@@ -14,9 +14,9 @@ import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.threads.Task;
 import org.opensha.commons.util.threads.ThreadedTaskComputer;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.faultSurface.FaultSection;
 
-import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
@@ -24,13 +24,13 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.SectionCluster;
 import scratch.UCERF3.inversion.SectionClusterList;
-import scratch.UCERF3.inversion.SectionConnectionStrategy;
+import scratch.UCERF3.inversion.OldSectionConnectionStrategy;
 import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
 import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester.TestType;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
@@ -329,7 +329,7 @@ public class RupSetValidator {
 		private DeformationModels defModel;
 		private UCERF3PlausibilityConfig filter;
 		private CoulombRates coulombRates;
-		private SectionConnectionStrategy connectionStrategy;
+		private OldSectionConnectionStrategy connectionStrategy;
 		private List<? extends FaultSection> faultSectionData;
 		private Map<IDPairing, Double> subSectionDistances;
 		private Map<IDPairing, Double> subSectionAzimuths;
@@ -337,7 +337,7 @@ public class RupSetValidator {
 		private Boolean passes = null;
 		
 		public ValidationTask(FaultModels faultModel, DeformationModels defModel, UCERF3PlausibilityConfig filter, CoulombRates coulombRates,
-				SectionConnectionStrategy connectionStrategy, List<? extends FaultSection> faultSectionData,
+				OldSectionConnectionStrategy connectionStrategy, List<? extends FaultSection> faultSectionData,
 				Map<IDPairing, Double> subSectionDistances, Map<IDPairing, Double> subSectionAzimuths) {
 			this.faultModel = faultModel;
 			this.defModel = defModel;
@@ -408,7 +408,7 @@ public class RupSetValidator {
 						ExceptionUtils.throwAsRuntimeException(e);
 					}
 				}
-				SectionConnectionStrategy connectionStrategy = new UCERF3SectionConnectionStrategy(
+				OldSectionConnectionStrategy connectionStrategy = new UCERF3SectionConnectionStrategy(
 						filter.getMaxJumpDist(), coulombRates);
 				tasks.add(new ValidationTask(faultModel, defModel, filter, coulombRates, connectionStrategy,
 						faultSectionData, subSectionDistances, subSectionAzimuths));
@@ -467,7 +467,7 @@ public class RupSetValidator {
 		private FaultModels fm;
 		
 		public FakeRupSet(FaultModels fm, SectionClusterList clusters) {
-			super(LogicTreeBranch.fromValues(false, fm), clusters, clusters.getFaultSectionData());
+			super(U3LogicTreeBranch.fromValues(false, fm), clusters, clusters.getFaultSectionData());
 			this.data = clusters.getFaultSectionData();
 			rups = new ArrayList<List<Integer>>();
 			for (SectionCluster c : clusters) {

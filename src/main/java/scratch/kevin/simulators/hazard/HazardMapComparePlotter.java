@@ -73,6 +73,7 @@ import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
 import org.opensha.sha.calc.hazardMap.BinaryHazardCurveReader;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.earthquake.AbstractERF;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
@@ -89,10 +90,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
@@ -421,11 +421,11 @@ public class HazardMapComparePlotter {
 			if (plotDisagg) {
 				System.out.println("Plotting disagg");
 				System.out.println("Building RSQSim ERF");
-				rsSol = FaultSystemIO.loadSol(rsSolFile);
+				rsSol = U3FaultSystemIO.loadSol(rsSolFile);
 				FaultSystemSolutionERF rsERF = buildERF(rsSol);
 				if (u3ERF == null) {
 					System.out.println("Building UCERF3 ERF");
-					u3Sol = FaultSystemIO.loadSol(u3SolFile);
+					u3Sol = U3FaultSystemIO.loadSol(u3SolFile);
 					u3ERF = buildERF(u3Sol);
 				}
 				

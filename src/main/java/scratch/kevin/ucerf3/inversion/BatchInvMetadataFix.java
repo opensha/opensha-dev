@@ -20,7 +20,7 @@ import org.opensha.commons.util.XMLUtils;
 import scratch.UCERF3.inversion.BatchPlotGen;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.VariableLogicTreeBranch;
 
 import com.google.common.base.Preconditions;

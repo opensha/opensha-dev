@@ -12,7 +12,7 @@ import com.google.common.collect.Lists;
 import scratch.UCERF3.AverageFaultSystemSolution;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class VarsPaleoBoundsPlot {
 	
@@ -35,8 +35,8 @@ public class VarsPaleoBoundsPlot {
 			System.out.println("Loading..."+file.getName());
 			
 			if (rupSet == null)
-				rupSet = FaultSystemIO.loadInvRupSet(file);
-			InversionFaultSystemSolution sol = FaultSystemIO.loadInvSol(file);
+				rupSet = U3FaultSystemIO.loadInvRupSet(file);
+			InversionFaultSystemSolution sol = U3FaultSystemIO.loadInvSol(file);
 			
 			sols.add(sol);
 		}

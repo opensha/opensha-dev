@@ -77,10 +77,10 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
 import scratch.kevin.simulators.plots.AbstractPlot;
@@ -571,13 +571,13 @@ public class RSQSimCatalog implements XMLSaveable {
 	private RSQSimSubSectionMapper subSectMapper;
 	
 	private static final File fmDmSolDir = new File(System.getProperty("user.home"), ".opensha/ucerf3_fm_dm_sols/");
-	private FaultSystemSolution compSol;
+	private U3FaultSystemSolution compSol;
 	
 	public static final double MIN_SUB_SECT_FRACT_DEFAULT = 0.2;
 	
 	private double minFractForInclusion = MIN_SUB_SECT_FRACT_DEFAULT;
 	
-	private static Table<FaultModels, DeformationModels, FaultSystemSolution> compSolsTable = HashBasedTable.create();
+	private static Table<FaultModels, DeformationModels, U3FaultSystemSolution> compSolsTable = HashBasedTable.create();
 	
 	public static final String XML_METADATA_NAME = "RSQSimCatalog";
 	
@@ -1443,9 +1443,9 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 	}
 	
-	public FaultSystemSolution getU3CompareSol() throws IOException {
+	public U3FaultSystemSolution getU3CompareSol() throws IOException {
 		synchronized (compSolsTable) {
-			FaultSystemSolution sol = compSolsTable.get(fm, dm);
+			U3FaultSystemSolution sol = compSolsTable.get(fm, dm);
 			
 			if (sol == null) {
 				File solDir = getSolCacheDir();
@@ -1458,7 +1458,7 @@ public class RSQSimCatalog implements XMLSaveable {
 				}
 				
 				try {
-					sol = FaultSystemIO.loadSol(solFile);
+					sol = U3FaultSystemIO.loadSol(solFile);
 				} catch (DocumentException e) {
 					throw ExceptionUtils.asRuntimeException(e);
 				}
@@ -1647,21 +1647,21 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 	}
 	
-	public FaultSystemSolution buildSolution(Loader loader, double minMag) throws IOException {
+	public U3FaultSystemSolution buildSolution(Loader loader, double minMag) throws IOException {
 		return buildSolution(loader.load(), minMag);
 	}
 	
-	public FaultSystemSolution buildSolution(List<RSQSimEvent> events, double minMag) throws IOException {
+	public U3FaultSystemSolution buildSolution(List<RSQSimEvent> events, double minMag) throws IOException {
 		return RSQSimUtils.buildFaultSystemSolution(getU3SubSects(), getElements(), events, minMag, minFractForInclusion);
 	}
 	
-	public FaultSystemSolution getComparisonSolution() throws IOException {
+	public U3FaultSystemSolution getComparisonSolution() throws IOException {
 		File solFile = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
 				+"_"+getDeformationModel().encodeChoiceString()+"_MEAN_BRANCH_AVG_SOL.zip");
 		if (solFile.exists()) {
 			System.out.println("Loading comparison FSS from "+solFile.getAbsolutePath());
 			try {
-				compSol = FaultSystemIO.loadSol(solFile);
+				compSol = U3FaultSystemIO.loadSol(solFile);
 			} catch (DocumentException e) {
 				throw ExceptionUtils.asRuntimeException(e);
 			}

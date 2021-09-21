@@ -72,7 +72,8 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 		InversionFaultSystemRupSet rupSet = InversionFaultSystemRupSetFactory.forBranch(
 				filter, defaultAseis, inversionModel, FaultModels.FM3_1);
 		
-		UCERF3InversionConfiguration config = UCERF3InversionConfiguration.forModel(inversionModel, rupSet);
+		UCERF3InversionConfiguration config = UCERF3InversionConfiguration.forModel(inversionModel, rupSet,
+				rupSet.getFaultModel(), rupSet.getInversionTargetMFDs());
 		
 		// get the paleo rate constraints
 		List<PaleoRateConstraint> paleoRateConstraints = null;
@@ -162,7 +163,7 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 					new ProgressTrackingCompletionCriteria(this.criteria, outputFile);
 			
 			final ThreadedSimulatedAnnealing tsa = new ThreadedSimulatedAnnealing(A, d, initial, relativeSmoothnessWt,
-					A_ineq, d_ineq, minimumRuptureRates, numThreads, subCompetionCriteria);
+					A_ineq, d_ineq, numThreads, subCompetionCriteria);
 			
 			futures.add(exec.submit(new Runnable() {
 				

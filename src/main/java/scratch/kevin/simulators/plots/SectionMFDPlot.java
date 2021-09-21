@@ -25,16 +25,18 @@ import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.griddedSeismicity.FaultPolyMgr;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.InversionTargetMFDs;
+import scratch.UCERF3.inversion.U3InversionTargetMFDs;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
@@ -105,10 +107,10 @@ public class SectionMFDPlot extends AbstractPlot {
 		Range xRange = new Range(mfdXVals.getX(minMagIndex)-0.5*deltaMag, mfdXVals.getMaxX()+0.5*deltaMag);
 		
 		GridSourceProvider gridProv = null;
-		FaultPolyMgr polyMgr = null;
+		FaultGridAssociations polyMgr = null;
 		Map<Integer, List<FaultSection>> parentToSubSects = null;
 		if (comparisonSol != null && comparisonSol.getGridSourceProvider() != null) {
-			polyMgr = FaultPolyMgr.create(comparisonSol.getRupSet().getFaultSectionDataList(), InversionTargetMFDs.FAULT_BUFFER);
+			polyMgr = FaultPolyMgr.create(comparisonSol.getRupSet().getFaultSectionDataList(), U3InversionTargetMFDs.FAULT_BUFFER);
 			gridProv = comparisonSol.getGridSourceProvider();
 			parentToSubSects = new HashMap<>();
 			for (FaultSection sect : comparisonSol.getRupSet().getFaultSectionDataList()) {

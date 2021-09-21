@@ -29,6 +29,8 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -43,13 +45,11 @@ import org.opensha.sha.simulators.utils.RSQSimUtils;
 
 import com.google.common.base.Preconditions;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.utils.DeformationModelFetcher;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class RSQSimRupJumpCompare {
 	
@@ -61,7 +61,7 @@ public class RSQSimRupJumpCompare {
 		
 		File u3SolFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
-		FaultSystemSolution u3Sol = FaultSystemIO.loadSol(u3SolFile);
+		FaultSystemSolution u3Sol = U3FaultSystemIO.loadSol(u3SolFile);
 		
 		boolean calcFixedJumpHist = false;
 		boolean calcLengthHist = false;
@@ -82,7 +82,7 @@ public class RSQSimRupJumpCompare {
 		int skipYears = 5000;
 		double minFractForInclusion = 0.5;
 		
-		FaultSystemSolution rsSol = FaultSystemIO.loadSol(new File("/data/kevin/simulators/catalogs/rundir2194_long/laugh_test/"
+		FaultSystemSolution rsSol = U3FaultSystemIO.loadSol(new File("/data/kevin/simulators/catalogs/rundir2194_long/laugh_test/"
 				+ "rsqsim_sol_m6.5_skip5000_sectArea0.2.zip"));
 		String rsName = "Shaw 2194";
 		

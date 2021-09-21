@@ -6,7 +6,7 @@ import com.google.common.collect.Lists;
 
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 public class RakeRupSetTest {
 
@@ -14,7 +14,7 @@ public class RakeRupSetTest {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		LogicTreeBranch branch = LogicTreeBranch.DEFAULT;
+		U3LogicTreeBranch branch = U3LogicTreeBranch.DEFAULT;
 		double defaultAseismicityValue = 0.1;
 		UCERF3PlausibilityConfig laughTest = UCERF3PlausibilityConfig.getDefault();
 		

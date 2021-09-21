@@ -16,6 +16,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -24,10 +25,9 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import com.google.common.collect.Lists;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 public class FSS_ERF_MemLeakTest {
 
@@ -45,7 +45,7 @@ public class FSS_ERF_MemLeakTest {
 				"InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip");
 		CompoundFaultSystemSolution fetch = CompoundFaultSystemSolution.fromZipFile(solFile);
 		
-		List<LogicTreeBranch> branches = Lists.newArrayList(fetch.getBranches());
+		List<U3LogicTreeBranch> branches = Lists.newArrayList(fetch.getBranches());
 		Collections.shuffle(branches);
 		
 		Region region = new CaliforniaRegions.RELM_TESTING();
@@ -63,7 +63,7 @@ public class FSS_ERF_MemLeakTest {
 		site.addParameterList(imr.getSiteParams());
 		
 		int cnt = 0;
-		for (LogicTreeBranch branch : branches) {
+		for (U3LogicTreeBranch branch : branches) {
 			FaultSystemSolution sol = fetch.getSolution(branch);
 			System.gc();
 			System.out.println("*** Loaded solution "+(cnt++));

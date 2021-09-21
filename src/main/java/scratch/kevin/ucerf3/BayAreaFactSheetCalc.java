@@ -22,6 +22,7 @@ import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeParam;
 import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
@@ -41,15 +42,14 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class BayAreaFactSheetCalc {
 	
@@ -84,13 +84,13 @@ public class BayAreaFactSheetCalc {
 		
 		File compoundFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip");
-		Map<FaultModels, FaultSystemSolution> baSols = null;
+		Map<FaultModels, U3FaultSystemSolution> baSols = null;
 		if (do_branch_averaged) {
 			baSols = Maps.newHashMap();
-			baSols.put(FaultModels.FM3_1, FaultSystemIO.loadSol(new File(
+			baSols.put(FaultModels.FM3_1, U3FaultSystemIO.loadSol(new File(
 					"/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip")));
-			baSols.put(FaultModels.FM3_2, FaultSystemIO.loadSol(new File(
+			baSols.put(FaultModels.FM3_2, U3FaultSystemIO.loadSol(new File(
 					"/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip")));
 		}
@@ -113,7 +113,7 @@ public class BayAreaFactSheetCalc {
 		
 		Region reg = new CaliforniaRegions.SF_BOX();
 		
-		Table<LogicTreeBranch, String, Map<MagDependentAperiodicityOptions, EvenlyDiscretizedFunc>>
+		Table<U3LogicTreeBranch, String, Map<MagDependentAperiodicityOptions, EvenlyDiscretizedFunc>>
 			branchFaultProbsTable = HashBasedTable.create();
 		
 		BranchWeightProvider weightProv = new APrioriBranchWeightProvider();
@@ -122,7 +122,7 @@ public class BayAreaFactSheetCalc {
 		
 		int branchIndex = 0;
 		
-		for (LogicTreeBranch branch : cfss.getBranches()) {
+		for (U3LogicTreeBranch branch : cfss.getBranches()) {
 			FaultModels fm = branch.getValue(FaultModels.class);
 			
 			if (!rupturesTable.containsRow(fm)) {
@@ -204,7 +204,7 @@ public class BayAreaFactSheetCalc {
 			Map<MagDependentAperiodicityOptions, double[]> baProbs = null;
 			if (do_branch_averaged) {
 				// get rupture probabilities for each rupture for each time dependent branch
-				FaultSystemSolution sol = baSols.get(branch.getValue(FaultModels.class));
+				U3FaultSystemSolution sol = baSols.get(branch.getValue(FaultModels.class));
 				mags = sol.getRupSet().getMagForAllRups();
 				
 				FaultSystemSolutionERF baERF = new FaultSystemSolutionERF(sol);
@@ -333,7 +333,7 @@ public class BayAreaFactSheetCalc {
 			XY_DataSetList indepDatas = new XY_DataSetList();
 			List<Double> indepWeights = Lists.newArrayList();
 			
-			for (LogicTreeBranch branch : branchFaultProbsTable.rowKeySet()) {
+			for (U3LogicTreeBranch branch : branchFaultProbsTable.rowKeySet()) {
 				double branchWeight;
 				if (do_branch_averaged)
 					branchWeight = 0.5;

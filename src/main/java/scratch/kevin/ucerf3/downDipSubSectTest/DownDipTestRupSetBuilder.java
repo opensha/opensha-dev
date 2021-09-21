@@ -32,14 +32,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.SlipAlongRuptureModelRupSet;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.inversion.SectionCluster;
 import scratch.UCERF3.inversion.SectionClusterList;
-import scratch.UCERF3.inversion.SectionConnectionStrategy;
+import scratch.UCERF3.inversion.OldSectionConnectionStrategy;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration.SlipRateConstraintWeightingType;
 import scratch.UCERF3.simulatedAnnealing.ConstraintRange;
 import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;
@@ -47,7 +47,7 @@ import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
 import scratch.UCERF3.simulatedAnnealing.completion.ProgressTrackingCompletionCriteria;
 import scratch.UCERF3.simulatedAnnealing.completion.TimeCompletionCriteria;
 import scratch.UCERF3.utils.DeformationModelFetcher;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MFD_InversionConstraint;
 
 public class DownDipTestRupSetBuilder {
@@ -145,7 +145,7 @@ public class DownDipTestRupSetBuilder {
 		MySlipEnabledRupSet rupSet = new MySlipEnabledRupSet(ruptures, subSections,
 				ScalingRelationships.SHAW_2009_MOD, SlipAlongRuptureModels.UNIFORM);
 		
-		FaultSystemIO.writeRupSet(rupSet, rupSetFile);
+		U3FaultSystemIO.writeRupSet(rupSet, rupSetFile);
 		
 		if (runInversion) {
 			List<InversionConstraint> constraints = new ArrayList<>();
@@ -220,7 +220,7 @@ public class DownDipTestRupSetBuilder {
 			
 			ThreadedSimulatedAnnealing tsa = new ThreadedSimulatedAnnealing(inputGen.getA(), inputGen.getD(),
 					inputGen.getInitialSolution(), smoothnessWt, inputGen.getA_ineq(), inputGen.getD_ineq(),
-					inputGen.getWaterLevelRates(), numThreads, subCompetionCriteria);
+					numThreads, subCompetionCriteria);
 			tsa.setConstraintRanges(inputGen.getConstraintRowRanges());
 			
 			tsa.iterate(criteria);
@@ -239,8 +239,8 @@ public class DownDipTestRupSetBuilder {
 			}
 			
 			// now write out the solution
-			FaultSystemSolution sol = new FaultSystemSolution(rupSet, solution_adjusted);
-			FaultSystemIO.writeSol(sol, solFile);
+			U3FaultSystemSolution sol = new U3FaultSystemSolution(rupSet, solution_adjusted);
+			U3FaultSystemIO.writeSol(sol, solFile);
 		}
 		
 		System.exit(0);

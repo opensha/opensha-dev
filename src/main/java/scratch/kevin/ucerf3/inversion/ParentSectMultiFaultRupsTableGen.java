@@ -8,10 +8,10 @@ import java.util.List;
 import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.faultSurface.FaultSection;
 
-import scratch.UCERF3.FaultSystemSolution;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -28,7 +28,7 @@ public class ParentSectMultiFaultRupsTableGen {
 		File file = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/" +
 				"2012_10_14-fm3-logic-tree-sample-x5_MEAN_BRANCH_AVG_SOL.zip");
 		
-		FaultSystemSolution sol = FaultSystemIO.loadSol(file);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(file);
 		
 		CSVFile<String> csv = new CSVFile<String>(true);
 		

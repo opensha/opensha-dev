@@ -36,6 +36,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -45,15 +46,14 @@ import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.SlipEnabledSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
@@ -80,7 +80,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 				this.compSol = (SlipEnabledSolution)compSol;
 			} else {
 				// make it slip enabled, assuming mean UCERF3
-				LogicTreeBranch branch = LogicTreeBranch.getMEAN_UCERF3(fm, dm);
+				U3LogicTreeBranch branch = U3LogicTreeBranch.getMEAN_UCERF3(fm, dm);
 				InversionFaultSystemRupSet iRupSet = new InversionFaultSystemRupSet(compSol.getRupSet(),
 						branch, null, null, null, null, null);
 				this.compSol = new InversionFaultSystemSolution(iRupSet, compSol.getRateForAllRups());
@@ -427,7 +427,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 		File baseDir = new File("/home/kevin/Simulators/catalogs");
 		
 		File compSolFile = new File("/home/kevin/.opensha/ucerf3_fm_dm_sols/FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
-		FaultSystemSolution compSol = FaultSystemIO.loadSol(compSolFile);
+		FaultSystemSolution compSol = U3FaultSystemIO.loadSol(compSolFile);
 //		SlipEnabledSolution compSol = null;
 		
 		double skipYears = 5000;

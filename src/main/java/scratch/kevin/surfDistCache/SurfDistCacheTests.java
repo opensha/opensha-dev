@@ -28,7 +28,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
 public class SurfDistCacheTests {
@@ -55,7 +55,7 @@ public class SurfDistCacheTests {
 		}
 		
 //		System.setProperty(SurfaceCachingPolicy.SIZE_PROP, "8");
-		final FaultSystemSolutionERF erf = new FaultSystemSolutionERF(FaultSystemIO.loadSol(baSolFile));
+		final FaultSystemSolutionERF erf = new FaultSystemSolutionERF(U3FaultSystemIO.loadSol(baSolFile));
 		erf.updateForecast();
 		
 //		final DiscretizedFunc xVals = IMT_Info.getUSGS_PGA_Function();

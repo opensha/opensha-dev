@@ -12,15 +12,15 @@ import java.util.zip.ZipException;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.FileUtils;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 import scratch.UCERF3.utils.MatrixIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
@@ -44,11 +44,11 @@ public class MFDDebug {
 		
 		MinMaxAveTracker track = new MinMaxAveTracker();
 		
-		LogicTreeBranch minBranch = null;
+		U3LogicTreeBranch minBranch = null;
 		
 		List<BranchVal> valList = Lists.newArrayList();
 		
-		for (LogicTreeBranch branch : fss.getBranches()) {
+		for (U3LogicTreeBranch branch : fss.getBranches()) {
 			FaultModels fm = branch.getValue(FaultModels.class);
 			if (track.getNum() % 50 == 0)
 				System.out.println("Workng on solution "+(track.getNum()+1));
@@ -107,8 +107,8 @@ public class MFDDebug {
 	
 	private static class BranchVal implements Comparable<BranchVal> {
 		private double val;
-		private LogicTreeBranch branch;
-		public BranchVal(double val, LogicTreeBranch branch) {
+		private U3LogicTreeBranch branch;
+		public BranchVal(double val, U3LogicTreeBranch branch) {
 			this.val = val;
 			this.branch = branch;
 		}
@@ -125,15 +125,15 @@ public class MFDDebug {
 	private static void listBranchCorrelations(List<BranchVal> branchVals, int num) {
 		Map<Class<? extends LogicTreeBranchNode<?>>, int[]> countsMap = Maps.newHashMap();
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			int[] counts = new int[clazz.getEnumConstants().length];
 			countsMap.put(clazz, counts);
 		}
 		
 		for (int i=0; i<num; i++) {
-			LogicTreeBranch branch = branchVals.get(i).branch;
+			U3LogicTreeBranch branch = branchVals.get(i).branch;
 			for (LogicTreeBranchNode<?> node : branch) {
-				Class<? extends LogicTreeBranchNode> enclClass = LogicTreeBranch.getEnumEnclosingClass(node.getClass());
+				Class<? extends LogicTreeBranchNode> enclClass = U3LogicTreeBranch.getEnumEnclosingClass(node.getClass());
 				int[] counts = countsMap.get(enclClass);
 				LogicTreeBranchNode<?>[] consts = enclClass.getEnumConstants();
 				int ind = -1;
@@ -144,7 +144,7 @@ public class MFDDebug {
 			}
 		}
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			LogicTreeBranchNode<?>[] consts = clazz.getEnumConstants();
 			int[] counts = countsMap.get(clazz);
 			System.out.println("\nBranch Choice: "+ClassUtils.getClassNameWithoutPackage(clazz));

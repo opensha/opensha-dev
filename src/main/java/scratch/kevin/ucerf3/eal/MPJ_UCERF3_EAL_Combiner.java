@@ -54,13 +54,13 @@ import com.google.common.io.Files;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import mpi.MPI;
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
 
@@ -70,9 +70,9 @@ import scratch.kevin.ucerf3.eal.branches.U3_EAL_Vs30Model;
 
 public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	
-	private FaultSystemSolution trueMeanSol;
+	private U3FaultSystemSolution trueMeanSol;
 	private FaultSystemSolutionERF erf;
-	private Map<LogicTreeBranch, List<Integer>> mappings;
+	private Map<U3LogicTreeBranch, List<Integer>> mappings;
 	private CompoundFaultSystemSolution cfss;
 	
 	private double erfProbsDuration;
@@ -135,7 +135,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		
 		if (rank == 0)
 			debug("Loading true mean solution from: "+trueMeanSolFile.getAbsolutePath());
-		trueMeanSol = FaultSystemIO.loadSol(trueMeanSolFile);
+		trueMeanSol = U3FaultSystemIO.loadSol(trueMeanSolFile);
 		// now load in the mappings
 		if (rank == 0)
 			debug("Loading true mean branch mappings");
@@ -298,7 +298,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 						gmms.add(gmm);
 						gmmEpis.add(gmmEpi);
 						vs30s.add(vs30);
-						for (LogicTreeBranch tiBranch : mappings.keySet())
+						for (U3LogicTreeBranch tiBranch : mappings.keySet())
 							branches.add(new U3_EAL_LogicTreeBranch(tiBranch, probModel, gmm, gmmEpi, vs30,
 									fssFile, griddedFile, tractDir));
 					}
@@ -470,7 +470,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			sortOrderClasses.add(U3_EAL_GMMs.class);
 			sortOrderClasses.add(U3_EAL_GMM_Epistemic.class);
 			sortOrderClasses.add(U3_EAL_ProbModels.class);
-			sortOrderClasses.addAll(LogicTreeBranch.getLogicTreeNodeClasses());
+			sortOrderClasses.addAll(U3LogicTreeBranch.getLogicTreeNodeClasses());
 		}
 
 		@Override
@@ -491,15 +491,15 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	
 	private class CachedGridSourceCFSS extends CompoundFaultSystemSolution {
 		
-		private LoadingCache<LogicTreeBranch, GridSourceProvider> gridProvCache;
+		private LoadingCache<U3LogicTreeBranch, GridSourceProvider> gridProvCache;
 
 		public CachedGridSourceCFSS(ZipFile zip) {
 			super(zip);
 			
-			gridProvCache = CacheBuilder.newBuilder().maximumSize(10).build(new CacheLoader<LogicTreeBranch, GridSourceProvider>() {
+			gridProvCache = CacheBuilder.newBuilder().maximumSize(10).build(new CacheLoader<U3LogicTreeBranch, GridSourceProvider>() {
 
 				@Override
-				public GridSourceProvider load(LogicTreeBranch branch) throws Exception {
+				public GridSourceProvider load(U3LogicTreeBranch branch) throws Exception {
 					try {
 						return CachedGridSourceCFSS.super.loadGridSourceProviderFile(branch);
 					} catch (Exception e) {}
@@ -511,7 +511,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		}
 
 		@Override
-		public GridSourceProvider loadGridSourceProviderFile(LogicTreeBranch branch)
+		public GridSourceProvider loadGridSourceProviderFile(U3LogicTreeBranch branch)
 				throws DocumentException, IOException {
 			try {
 				return gridProvCache.get(branch);
@@ -741,7 +741,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 
 		@Override
 		public CalcTask call() throws Exception {
-			Map<LogicTreeBranch, List<Integer>> taskMappings = new HashMap<>();
+			Map<U3LogicTreeBranch, List<Integer>> taskMappings = new HashMap<>();
 			taskMappings.put(branch.getTIBranch(), mappings.get(branch.getTIBranch()));
 			
 			double[][] fssLosses = null;

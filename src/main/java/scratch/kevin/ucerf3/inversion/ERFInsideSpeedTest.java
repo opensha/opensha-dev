@@ -21,7 +21,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.CompoundFSSPlots.RegionalMFDPlot;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;

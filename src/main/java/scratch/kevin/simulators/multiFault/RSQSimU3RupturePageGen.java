@@ -71,14 +71,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester.TestType;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
@@ -148,19 +148,19 @@ public class RSQSimU3RupturePageGen {
 		
 		String catParams = "m"+(float)minMag+"_skip"+skipYears+"_sectArea"+(float)minFractForInclusion;
 		File solFile = new File(fssDir, "rsqsim_sol_"+catParams+".zip");
-		FaultSystemSolution sol;
+		U3FaultSystemSolution sol;
 		if (solFile.exists() && !rebuildSol) {
 			System.out.println("Loading solution from: "+solFile.getAbsolutePath());
-			sol = FaultSystemIO.loadSol(solFile);
+			sol = U3FaultSystemIO.loadSol(solFile);
 		} else {
 			System.out.println("Loading events from: "+catalogDir.getAbsolutePath());
 			Loader loader = catalog.loader().minMag(minMag).skipYears(skipYears);
 			sol = catalog.buildSolution(loader, minMag);
 			System.out.println("Writing solution to: "+solFile.getAbsolutePath());
-			FaultSystemIO.writeSol(sol, solFile);
+			U3FaultSystemIO.writeSol(sol, solFile);
 		}
 		
-		FaultSystemRupSet rupSet = sol.getRupSet();
+		U3FaultSystemRupSet rupSet = sol.getRupSet();
 		System.out.println(rupSet.getNumRuptures()+" ruptures");
 		
 		SectionDistanceAzimuthCalculator distAzCalc = new SectionDistanceAzimuthCalculator(
@@ -187,8 +187,8 @@ public class RSQSimU3RupturePageGen {
 		System.out.println("Detected "+rsJumps.size()+" RSQSim connections");
 		
 		System.out.println("Building ClusterRuptures for UCERF3");
-		FaultSystemSolution u3Sol = catalog.getComparisonSolution();
-		FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
+		U3FaultSystemSolution u3Sol = catalog.getComparisonSolution();
+		U3FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
 		RuptureConnectionSearch u3ConnSearch = new RuptureConnectionSearch(u3RupSet, distAzCalc,
 				15d, RuptureConnectionSearch.CUMULATIVE_JUMPS_DEFAULT);
 		List<ClusterRupture> u3ClusterRups = new ArrayList<>();
@@ -757,14 +757,14 @@ public class RSQSimU3RupturePageGen {
 		distAzCalc.writeCacheFile(distAzCacheFile);
 	}
 	
-	static void plotCumulantMags(FaultSystemSolution u3Sol, FaultSystemSolution rsSol,
+	static void plotCumulantMags(U3FaultSystemSolution u3Sol, U3FaultSystemSolution rsSol,
 			String catalogName, File outputDir) throws IOException, GMT_MapException, RuntimeException {
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine("Sect Index", "Sect Name", catalogName+" Median", catalogName+" IQR",
 				"UCERF3 Median", "UCERF3 IQR");
 		
-		FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
-		FaultSystemRupSet rsRupSet = rsSol.getRupSet();
+		U3FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
+		U3FaultSystemRupSet rsRupSet = rsSol.getRupSet();
 		
 		Preconditions.checkState(u3RupSet.getNumSections() == rsRupSet.getNumSections());
 		
@@ -971,7 +971,7 @@ public class RSQSimU3RupturePageGen {
 		return Doubles.toArray(ret);
 	}
 	
-	private static EvenlyDiscretizedFunc calcCumulantMagFunc(FaultSystemSolution sol, int s) {
+	private static EvenlyDiscretizedFunc calcCumulantMagFunc(U3FaultSystemSolution sol, int s) {
 		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(5d, 9d, (int)((9d-5d)/0.01) + 1);
 		for (int r : sol.getRupSet().getRupturesForSection(s)) {
 			double mag = sol.getRupSet().getMagForRup(r);
@@ -985,7 +985,7 @@ public class RSQSimU3RupturePageGen {
 		return func;
 	}
 	
-	static void plotConnectivity(FaultSystemRupSet rupSet, File outputDir, String prefix, String title)
+	static void plotConnectivity(U3FaultSystemRupSet rupSet, File outputDir, String prefix, String title)
 			throws IOException, GMT_MapException, RuntimeException {
 		List<HashSet<Integer>> clusters = new ArrayList<>();
 		Map<Integer, Integer> sectIndexToClusterIndexMap = new HashMap<>();
@@ -1037,7 +1037,7 @@ public class RSQSimU3RupturePageGen {
 				prefix, false, false, title+" ("+colorValues.size()+" largest)");
 	}
 	
-	private static void processClusterRecursive(FaultSystemRupSet rupSet, int sect, int clusterIndex, List<HashSet<Integer>> clusters,
+	private static void processClusterRecursive(U3FaultSystemRupSet rupSet, int sect, int clusterIndex, List<HashSet<Integer>> clusters,
 			Map<Integer, Integer> sectIndexToClusterIndexMap) {
 		if (sectIndexToClusterIndexMap.containsKey(sect))
 			// we've already done this one

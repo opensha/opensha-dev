@@ -10,7 +10,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class FaultModelCacher {
 
@@ -24,7 +24,7 @@ public class FaultModelCacher {
 		for (FaultModels fm : FaultModels.values()) {
 			ArrayList<? extends FaultSection> datas = fm.fetchFaultSections(true);
 			Document doc = XMLUtils.createDocumentWithRoot();
-			FaultSystemIO.fsDataToXML(doc.getRootElement(), FaultModels.XML_ELEMENT_NAME, fm, null, datas);
+			U3FaultSystemIO.fsDataToXML(doc.getRootElement(), FaultModels.XML_ELEMENT_NAME, fm, null, datas);
 			XMLUtils.writeDocumentToFile(new File(dir, fm.getShortName()+".xml"), doc);
 		}
 		System.exit(0);

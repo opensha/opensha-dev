@@ -44,6 +44,7 @@ import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.params.PtSrcDistanceCorrectionParam;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.observedEarthquake.Declustering.GardnerKnopoffDeclustering;
@@ -74,7 +75,6 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 import com.google.common.base.Preconditions;
 import com.google.common.math.Quantiles;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO.ETAS_Catalog;
@@ -84,7 +84,7 @@ import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.GardnerKnopoffAftershockFilter;
 import scratch.ned.FSS_Inversion2019.FaultSystemRuptureRateInversion;
 import scratch.ned.FSS_Inversion2019.PlottingUtils;
@@ -363,7 +363,7 @@ public class U3ETAS_SimulationAnalysis {
 	public static ArrayList<ObsEqkRupList> loadCatalogs(File fssFile, File catalogsFile, double minMag) throws IOException, DocumentException {
 		
 
-		FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);;
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);;
 		List<ETAS_Catalog> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile, minMag); 
 		
 		// temporary hack
@@ -1427,7 +1427,7 @@ public class U3ETAS_SimulationAnalysis {
 	public static  FaultSystemSolutionERF getTimeIndERF_Instance(double duration, boolean gkFilterOn) {
 		FaultSystemSolution sol=null;
 		try {
-			sol = FaultSystemIO.loadSol(new File(fssFileName));
+			sol = U3FaultSystemIO.loadSol(new File(fssFileName));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

@@ -9,13 +9,14 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PolygonFaultGridAssociations;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.griddedSeismicity.FaultPolyMgr;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -30,12 +31,12 @@ public class PolygonFileWriter {
 		File outputDir = new File("/tmp/polygons");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		LogicTreeBranch branch = LogicTreeBranch.DEFAULT;
+		U3LogicTreeBranch branch = U3LogicTreeBranch.DEFAULT;
 		
 		FaultModels[] fms = { FaultModels.FM3_1, FaultModels.FM3_2 };
 		
 		for (FaultModels fm : fms) {
-			LogicTreeBranch fmBranch = (LogicTreeBranch)branch.clone();
+			U3LogicTreeBranch fmBranch = (U3LogicTreeBranch)branch.clone();
 			fmBranch.setValue(fm);
 			
 			InversionFaultSystemSolution sol = cfss.getSolution(fmBranch);
@@ -47,7 +48,7 @@ public class PolygonFileWriter {
 		}
 	}
 	
-	private static void writePolygons(File outputFile, List<? extends FaultSection> sects, FaultPolyMgr polys)
+	private static void writePolygons(File outputFile, List<? extends FaultSection> sects, PolygonFaultGridAssociations polys)
 			throws IOException {
 		CSVFile<String> csv = new CSVFile<String>(true);
 		

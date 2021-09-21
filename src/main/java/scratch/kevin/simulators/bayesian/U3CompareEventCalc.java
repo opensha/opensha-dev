@@ -11,15 +11,15 @@ import java.util.Map;
 
 import org.dom4j.DocumentException;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 import com.google.common.io.Files;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.simulators.RSQSimMarkovChainBuilder;
 
 public class U3CompareEventCalc extends FaultStateEventCalc {
@@ -175,7 +175,7 @@ public class U3CompareEventCalc extends FaultStateEventCalc {
 				new File(u3BaseSimDir, "1000000yr_run9")
 		};
 		File solFile = new File("/home/kevin/OpenSHA/UCERF3/FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip");
-		FaultSystemSolution sol = FaultSystemIO.loadSol(solFile);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(solFile);
 		
 		List<Range<Double>> magRanges = new ArrayList<>();
 		magRanges.add(Range.closed(7d, Double.POSITIVE_INFINITY));

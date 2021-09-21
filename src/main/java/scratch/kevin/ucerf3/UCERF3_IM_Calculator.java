@@ -24,6 +24,7 @@ import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
@@ -41,13 +42,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.ucerf3.etas.MPJ_ETAS_Simulator;
 
 public class UCERF3_IM_Calculator {
@@ -66,7 +66,7 @@ public class UCERF3_IM_Calculator {
 			AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = minMag;
 		}
 		File fssFile = new File(cmd.getOptionValue("sol-file"));
-		FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);
 
 		double lat = Double.parseDouble(cmd.getOptionValue("latitude"));
 		double lon = Double.parseDouble(cmd.getOptionValue("longitude"));

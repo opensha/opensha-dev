@@ -25,19 +25,19 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 public class Compound_FM_DM_Scale_CombinedFetcher extends FaultSystemSolutionFetcher {
 	
-	private Map<LogicTreeBranch, List<LogicTreeBranch>> branchesMap;
+	private Map<U3LogicTreeBranch, List<U3LogicTreeBranch>> branchesMap;
 	private FaultSystemSolutionFetcher fetch;
 	private BranchWeightProvider weightProv;
 	
 	public Compound_FM_DM_Scale_CombinedFetcher(FaultSystemSolutionFetcher fetch, BranchWeightProvider weightProv) {
 		branchesMap = Maps.newHashMap();
-		for (LogicTreeBranch branch : fetch.getBranches()) {
-			LogicTreeBranch meanBranch = getMeanBranch(branch);
-			List<LogicTreeBranch> subBranches = branchesMap.get(meanBranch);
+		for (U3LogicTreeBranch branch : fetch.getBranches()) {
+			U3LogicTreeBranch meanBranch = getMeanBranch(branch);
+			List<U3LogicTreeBranch> subBranches = branchesMap.get(meanBranch);
 			if (subBranches == null) {
 				subBranches = Lists.newArrayList();
 				branchesMap.put(meanBranch, subBranches);
@@ -51,24 +51,24 @@ public class Compound_FM_DM_Scale_CombinedFetcher extends FaultSystemSolutionFet
 		this.weightProv = weightProv;
 	}
 	
-	private static LogicTreeBranch getMeanBranch(LogicTreeBranch branch) {
+	private static U3LogicTreeBranch getMeanBranch(U3LogicTreeBranch branch) {
 		FaultModels fm = branch.getValue(FaultModels.class);
 		DeformationModels dm = branch.getValue(DeformationModels.class);
 		ScalingRelationships scale = branch.getValue(ScalingRelationships.class);
 		
-		return LogicTreeBranch.fromValues(fm, dm, scale, SlipAlongRuptureModels.MEAN_UCERF3,
+		return U3LogicTreeBranch.fromValues(fm, dm, scale, SlipAlongRuptureModels.MEAN_UCERF3,
 				InversionModels.CHAR_CONSTRAINED, TotalMag5Rate.RATE_6p5,
 				MaxMagOffFault.MAG_7p6, MomentRateFixes.NONE, SpatialSeisPDF.UCERF2);
 	}
 
 	@Override
-	public Collection<LogicTreeBranch> getBranches() {
+	public Collection<U3LogicTreeBranch> getBranches() {
 		return branchesMap.keySet();
 	}
 
 	@Override
-	protected InversionFaultSystemSolution fetchSolution(LogicTreeBranch branch) {
-		List<LogicTreeBranch> subBranches = branchesMap.get(branch);
+	protected InversionFaultSystemSolution fetchSolution(U3LogicTreeBranch branch) {
+		List<U3LogicTreeBranch> subBranches = branchesMap.get(branch);
 		InversionFaultSystemSolution refSol = fetch.getSolution(subBranches.get(0));
 		InversionFaultSystemRupSet rupSet = refSol.getRupSet();
 		// change the branch
@@ -77,7 +77,7 @@ public class Compound_FM_DM_Scale_CombinedFetcher extends FaultSystemSolutionFet
 				rupSet.getRupturesForClusters(), rupSet.getSectionsForClusters());
 		double[] rates = new double[rupSet.getNumRuptures()];
 		double totWeight = 0d;
-		for (LogicTreeBranch subBranch : subBranches) {
+		for (U3LogicTreeBranch subBranch : subBranches) {
 			double weight = weightProv.getWeight(subBranch);
 			double[] subRates = fetch.getRates(subBranch);
 			for (int r=0; r<rates.length; r++)

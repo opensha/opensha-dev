@@ -12,6 +12,8 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.simulators.SimulatorEvent;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.EventRecord;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -19,11 +21,9 @@ import org.opensha.sha.simulators.SimulatorElement;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.simulators.momRateVariation.UCERF3ComparisonAnalysis.UCERF3EventRecord;
 
 public class UCERF3_ETASComparisons {
@@ -92,7 +92,7 @@ public class UCERF3_ETASComparisons {
 		
 		Region region = new CaliforniaRegions.RELM_SOCAL();
 		
-		FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);
 		
 		int[] windowLens = { 10, 25, 50, 75, 100, 150, 200 };
 		

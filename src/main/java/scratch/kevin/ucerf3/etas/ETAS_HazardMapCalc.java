@@ -66,6 +66,7 @@ import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.param.AleatoryMagAreaStdDevParam;
 import org.opensha.sha.earthquake.param.BackgroundRupParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
@@ -99,8 +100,7 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 import com.google.common.primitives.Doubles;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
@@ -108,7 +108,7 @@ import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class ETAS_HazardMapCalc {
 	
@@ -135,7 +135,7 @@ public class ETAS_HazardMapCalc {
 	private DataInputStream in;
 	int faultSiteIndex = 0;
 	// for on the fly faults
-	private FaultSystemSolution sol;
+	private U3FaultSystemSolution sol;
 	private FaultSystemSolutionERF faultERF;
 	private ProbEqkSource[] sourcesForFSSRuptures;
 	
@@ -322,7 +322,7 @@ public class ETAS_HazardMapCalc {
 	private boolean calcLongTerm;
 	
 	public ETAS_HazardMapCalc(List<? extends List<ETAS_EqkRupture>> catalogs, GriddedRegion region, DiscretizedFunc xVals,
-			File precalcFile, FaultSystemSolution sol, ETAS_CatalogGridSourceProvider gridSources,
+			File precalcFile, U3FaultSystemSolution sol, ETAS_CatalogGridSourceProvider gridSources,
 			AttenRelRef gmpeRef, String imtName, double period, List<Site> sites, Duration[] durations) throws IOException {
 		this.catalogs = catalogs;
 		this.region = region;
@@ -477,7 +477,7 @@ public class ETAS_HazardMapCalc {
 		}
 	}
 	
-	public void setSol(FaultSystemSolution sol) {
+	public void setSol(U3FaultSystemSolution sol) {
 		this.sol = sol;
 	}
 	
@@ -2122,7 +2122,7 @@ public class ETAS_HazardMapCalc {
 		if (!calcFault)
 			faultBasedPrecalc = null;
 		
-		FaultSystemSolution sol = null;
+		U3FaultSystemSolution sol = null;
 		ETAS_HazardMapCalc calc;
 		if (precalcDir != null) {
 			if (mapTypePlotSubset != null && precalcDir.getName().contains("gridded")
@@ -2160,7 +2160,7 @@ public class ETAS_HazardMapCalc {
 				}
 				calc = new ETAS_MMI_HazardMapCalc(pgaCalc, pgvCalc);
 				if (plotShakeMap) {
-					sol = FaultSystemIO.loadSol(solFile);
+					sol = U3FaultSystemIO.loadSol(solFile);
 					pgaCalc.setSol(sol);
 					pgvCalc.setSol(sol);
 					calc.setSol(sol);
@@ -2185,7 +2185,7 @@ public class ETAS_HazardMapCalc {
 				calcLongTerm = true;
 			
 			if (calcFault && faultBasedPrecalc == null || calcLongTerm)
-				sol = FaultSystemIO.loadSol(solFile);
+				sol = U3FaultSystemIO.loadSol(solFile);
 			ETAS_CatalogGridSourceProvider gridSources = null;
 			if (calcGridded)
 				gridSources = new ETAS_CatalogGridSourceProvider(catalogs, griddedResolution, griddedConditional);
@@ -2304,7 +2304,7 @@ public class ETAS_HazardMapCalc {
 			Preconditions.checkState(!types.isEmpty());
 			
 			if ((faults || highlightScenario) && sol == null) {
-				sol = FaultSystemIO.loadSol(solFile);
+				sol = U3FaultSystemIO.loadSol(solFile);
 				calc.setSol(sol);
 			}
 			

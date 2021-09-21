@@ -28,7 +28,7 @@ import scratch.UCERF3.AverageFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
 
 import com.google.common.collect.Lists;
@@ -55,7 +55,7 @@ public class InversionConvergencePlotGen {
 		
 		File avgFile = new File(solDir, "FM3_1_ZENGBB_Shaw09Mod_DsrTap_CharConst_M5Rate8.7_MMaxOff7.6_" +
 				"NoFix_SpatSeisU3_mean_sol.zip");
-		AverageFaultSystemSolution avgSol = FaultSystemIO.loadAvgInvSol(avgFile);
+		AverageFaultSystemSolution avgSol = U3FaultSystemIO.loadAvgInvSol(avgFile);
 		
 		File avgSol0rates = new File(solDir, "FM3_1_ZENGBB_Shaw09Mod_DsrTap_CharConst_" +
 				"M5Rate8.7_MMaxOff7.6_NoFix_SpatSeisU3_run00.bin");
@@ -67,7 +67,7 @@ public class InversionConvergencePlotGen {
 		
 		// these are for branch averages
 		// now non waterlevel plots
-		InversionFaultSystemRupSet rupSet = FaultSystemIO.loadInvRupSet(
+		InversionFaultSystemRupSet rupSet = U3FaultSystemIO.loadInvRupSet(
 				new File(compoundSol.getParentFile(),
 						"2013_01_14-stampede_3p2_production_runs_combined_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		File fm3_1_bins = new File(solDir,
@@ -81,7 +81,7 @@ public class InversionConvergencePlotGen {
 		writeResults(loadBranchRuns(zip, FaultModels.FM3_1, null),
 				outputDir, "branch_runs_fm3_1_mean", rupSet);
 		
-		rupSet = FaultSystemIO.loadInvRupSet(
+		rupSet = U3FaultSystemIO.loadInvRupSet(
 				new File(compoundSol.getParentFile(),
 						"2013_01_14-stampede_3p2_production_runs_combined_FM3_2_MEAN_BRANCH_AVG_SOL.zip"));
 		writeResults(loadBranchAverages(zip, FaultModels.FM3_2, rupSet.getNumRuptures()),

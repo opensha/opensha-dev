@@ -15,6 +15,7 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.ClassUtils;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
@@ -27,11 +28,10 @@ import org.opensha.sha.simulators.EventRecord;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class UCERF3ComparisonCalc {
 	
@@ -86,7 +86,7 @@ public class UCERF3ComparisonCalc {
 		
 		for (int i=0; i<numThreads; i++) {
 			// need new one for each thread
-			FaultSystemSolution sol = FaultSystemIO.loadSol(fssFile);
+			FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);
 			
 			File subDir = new File(outputDir, duration+"yr_run"+i);
 			Preconditions.checkState(subDir.exists() || subDir.mkdir());;

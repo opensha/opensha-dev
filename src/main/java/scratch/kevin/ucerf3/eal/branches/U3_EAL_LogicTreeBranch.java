@@ -7,22 +7,22 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 
 import scratch.UCERF3.enumTreeBranches.InversionModels;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.LogicTreeBranchNode;
 
-public class U3_EAL_LogicTreeBranch extends LogicTreeBranch {
+public class U3_EAL_LogicTreeBranch extends U3LogicTreeBranch {
 	
-	private LogicTreeBranch tiBranch;
+	private U3LogicTreeBranch tiBranch;
 	private File fssIndexBinFile;
 	private File griddedBinFile;
 	private File tractDir;
 
-	public U3_EAL_LogicTreeBranch(LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
+	public U3_EAL_LogicTreeBranch(U3LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
 			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30) {
 		this(tiBranch, probModel, gmm, gmmEpi, vs30, null, null, null);
 	}
 
-	public U3_EAL_LogicTreeBranch(LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
+	public U3_EAL_LogicTreeBranch(U3LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
 			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30, File fssIndexBinFile, File griddedBinFile, File tractDir) {
 		super(build(tiBranch, probModel, gmm, gmmEpi, vs30));
 		this.tiBranch = tiBranch;
@@ -31,10 +31,10 @@ public class U3_EAL_LogicTreeBranch extends LogicTreeBranch {
 		this.tractDir = tractDir;
 	}
 	
-	private static List<LogicTreeBranchNode<? extends Enum<?>>> build(LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
+	private static List<LogicTreeBranchNode<?>> build(U3LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
 			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30) {
-		List<LogicTreeBranchNode<? extends Enum<?>>> branches = new ArrayList<>();
-		for (LogicTreeBranchNode<? extends Enum<?>> node : tiBranch)
+		List<LogicTreeBranchNode<?>> branches = new ArrayList<>();
+		for (LogicTreeBranchNode<?> node : tiBranch)
 			branches.add(node);
 		branches.add(probModel);
 		branches.add(gmm);
@@ -43,7 +43,7 @@ public class U3_EAL_LogicTreeBranch extends LogicTreeBranch {
 		return branches;
 	}
 	
-	public LogicTreeBranch getTIBranch() {
+	public U3LogicTreeBranch getTIBranch() {
 		return tiBranch;
 	}
 
@@ -60,7 +60,7 @@ public class U3_EAL_LogicTreeBranch extends LogicTreeBranch {
 	}
 	
 	public static void main(String[] args) {
-		LogicTreeBranch tiBranch = LogicTreeBranch.DEFAULT;
+		U3LogicTreeBranch tiBranch = U3LogicTreeBranch.DEFAULT;
 		System.out.println("TI Weight: "+tiBranch.getAprioriBranchWt());
 		InversionModels im = tiBranch.getValue(InversionModels.class);
 		for (U3_EAL_ProbModels probModel : U3_EAL_ProbModels.values()) {

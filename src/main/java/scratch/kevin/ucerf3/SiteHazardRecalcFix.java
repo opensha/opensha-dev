@@ -25,17 +25,17 @@ import scratch.UCERF3.analysis.CompoundFSSPlots;
 import scratch.UCERF3.analysis.CompoundFSSPlots.ERFBasedSiteHazardHistPlot;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 public class SiteHazardRecalcFix {
 	
 	public static void main(String[] args) throws Exception {
 		final FaultSystemSolutionFetcher origFetch = CompoundFaultSystemSolution.fromZipFile(
 				new File("/tmp/comp_plots/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
-		List<LogicTreeBranch> origBranches = Lists.newArrayList(origFetch.getBranches());
+		List<U3LogicTreeBranch> origBranches = Lists.newArrayList(origFetch.getBranches());
 		Collections.sort(origBranches);
 		int replaceIndex = 95;
-		final LogicTreeBranch fixBranch = origBranches.get(replaceIndex);
+		final U3LogicTreeBranch fixBranch = origBranches.get(replaceIndex);
 		
 		boolean calc = false;
 		
@@ -43,14 +43,14 @@ public class SiteHazardRecalcFix {
 		FaultSystemSolutionFetcher fetch = new FaultSystemSolutionFetcher() {
 			
 			@Override
-			public Collection<LogicTreeBranch> getBranches() {
-				List<LogicTreeBranch> branches = Lists.newArrayList();
+			public Collection<U3LogicTreeBranch> getBranches() {
+				List<U3LogicTreeBranch> branches = Lists.newArrayList();
 				branches.add(fixBranch);
 				return branches;
 			}
 			
 			@Override
-			protected InversionFaultSystemSolution fetchSolution(LogicTreeBranch branch) {
+			protected InversionFaultSystemSolution fetchSolution(U3LogicTreeBranch branch) {
 				return origFetch.getSolution(fixBranch);
 			}
 		};

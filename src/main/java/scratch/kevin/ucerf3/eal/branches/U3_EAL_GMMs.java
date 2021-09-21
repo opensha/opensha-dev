@@ -44,4 +44,9 @@ public enum U3_EAL_GMMs implements LogicTreeBranchNode<U3_EAL_GMMs> {
 		return "Ground Motion Model";
 	}
 
+	@Override
+	public String getShortBranchLevelName() {
+		return "GMM";
+	}
+
 }

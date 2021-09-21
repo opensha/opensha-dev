@@ -13,15 +13,16 @@ import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SubSeismoOnFaultMFDs;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class FaultSubPlusSupraMFDWriter {
 
@@ -54,7 +55,7 @@ public class FaultSubPlusSupraMFDWriter {
 				supraParentMFDs.put(parentName, sol.calcParticipationMFD_forParentSect(
 						parentIDsMap.get(parentName), minMag, maxMag, numMag));
 			// now load in sub siesmo MFDs from original sol
-			FaultSystemSolution solWithSubSeis = FaultSystemIO.loadSol(subSeismoSolFiles[p]);
+			FaultSystemSolution solWithSubSeis = U3FaultSystemIO.loadSol(subSeismoSolFiles[p]);
 			FaultSystemRupSet rupSetWithSubSeis = solWithSubSeis.getRupSet();
 			
 			Map<String, SummedMagFreqDist> subParentMFDs = new HashMap<>();
@@ -63,7 +64,7 @@ public class FaultSubPlusSupraMFDWriter {
 			
 			for (int s=0; s<rupSetWithSubSeis.getNumSections(); s++) {
 				String parentName = rupSetWithSubSeis.getFaultSectionData(s).getParentSectionName();
-				IncrementalMagFreqDist subSeisMFD = solWithSubSeis.getSubSeismoOnFaultMFD_List().get(s);
+				IncrementalMagFreqDist subSeisMFD = solWithSubSeis.requireModule(SubSeismoOnFaultMFDs.class).get(s);
 //				if (s == 0)
 //					System.out.println(subSeisMFD);
 				subParentMFDs.get(parentName).addIncrementalMagFreqDist(subSeisMFD);

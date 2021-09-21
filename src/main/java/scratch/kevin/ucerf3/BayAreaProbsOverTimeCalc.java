@@ -22,6 +22,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.threads.Task;
 import org.opensha.commons.util.threads.ThreadedTaskComputer;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeParam;
 import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
@@ -33,11 +34,10 @@ import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.erf.FSSRupsInRegionCache;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class BayAreaProbsOverTimeCalc {
 	
@@ -222,9 +222,9 @@ public class BayAreaProbsOverTimeCalc {
 			System.out.println("Calculating CSV");
 			File fssDir = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions");
 
-			FaultSystemSolution fm31Sol = FaultSystemIO.loadSol(new File(fssDir,
+			FaultSystemSolution fm31Sol = U3FaultSystemIO.loadSol(new File(fssDir,
 					"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
-			FaultSystemSolution fm32Sol = FaultSystemIO.loadSol(new File(fssDir,
+			FaultSystemSolution fm32Sol = U3FaultSystemIO.loadSol(new File(fssDir,
 					"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip"));
 			
 //			EvenlyDiscretizedFunc[] results31 = calc(fm31Sol, reg, startYear, endYear, yearDelta, minMag, numMag, deltaMag, duration);

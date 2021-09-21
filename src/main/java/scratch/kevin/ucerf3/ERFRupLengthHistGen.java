@@ -33,13 +33,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 
 import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemRupSet;
+import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class ERFRupLengthHistGen {
 
@@ -63,17 +63,17 @@ public class ERFRupLengthHistGen {
 		int num = 25;
 		double delta = 50d;
 		
-		Map<FaultModels, FaultSystemRupSet> rupSetsMap = new HashMap<>();
+		Map<FaultModels, U3FaultSystemRupSet> rupSetsMap = new HashMap<>();
 		File rupSetDir = new File("/home/kevin/workspace/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions");
-		rupSetsMap.put(FaultModels.FM3_1, FaultSystemIO.loadRupSet(new File(rupSetDir,
+		rupSetsMap.put(FaultModels.FM3_1, U3FaultSystemIO.loadRupSet(new File(rupSetDir,
 				"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip")));
-		rupSetsMap.put(FaultModels.FM3_2, FaultSystemIO.loadRupSet(new File(rupSetDir,
+		rupSetsMap.put(FaultModels.FM3_2, U3FaultSystemIO.loadRupSet(new File(rupSetDir,
 				"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip")));
 		
-		Collection<LogicTreeBranch> branches = CompoundFaultSystemSolution.fromZipFile(
+		Collection<U3LogicTreeBranch> branches = CompoundFaultSystemSolution.fromZipFile(
 				new File(rupSetDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip")).getBranches();
 		
-		Map<MagDependentAperiodicityOptions, Map<LogicTreeBranch, HistogramFunction>> u3Funcs = new HashMap<>();
+		Map<MagDependentAperiodicityOptions, Map<U3LogicTreeBranch, HistogramFunction>> u3Funcs = new HashMap<>();
 		
 		XY_DataSetList u3List = new XY_DataSetList();
 		List<Double> u3Weights = new ArrayList<>();
@@ -81,13 +81,13 @@ public class ERFRupLengthHistGen {
 		
 		for (MagDependentAperiodicityOptions cov : probsMap.keySet()) {
 			ERF_ProbsZipFileReader reader = probsMap.get(cov);
-			Map<LogicTreeBranch, HistogramFunction> valsMap = u3Funcs.get(cov);
+			Map<U3LogicTreeBranch, HistogramFunction> valsMap = u3Funcs.get(cov);
 			if (valsMap == null) {
 				valsMap = new HashMap<>();
 				u3Funcs.put(cov, valsMap);
 			}
-			for (LogicTreeBranch branch : branches) {
-				FaultSystemRupSet rupSet = rupSetsMap.get(branch.getValue(FaultModels.class));
+			for (U3LogicTreeBranch branch : branches) {
+				U3FaultSystemRupSet rupSet = rupSetsMap.get(branch.getValue(FaultModels.class));
 				double[] probs = reader.getProbabilities(branch);
 				Preconditions.checkState(probs.length == rupSet.getNumRuptures());
 				HistogramFunction hist = new HistogramFunction(min, num, delta);

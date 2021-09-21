@@ -39,9 +39,9 @@ import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
 public class SiteMapGenerator {
 
 //	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
-//	private static Region region = new Region(new Location(35, -115), new Location(33, -120));
+	private static Region region = new Region(new Location(35, -115), new Location(33, -120));
 //	private static Region region = new Region(new Location(35, -116), new Location(33.25, -119.5));
-	private static Region region = new Region(new Location(34.8, -116.7), new Location(33.6, -119.5));
+//	private static Region region = new Region(new Location(34.8, -116.7), new Location(33.6, -119.5));
 //	private static Region region = new Region(new Location(34.8, -116.7), new Location(30, -119.5));
 	
 	private static GriddedGeoDataSet fetchTopo(TopographicSlopeFile topoRes) throws IOException {
@@ -76,7 +76,8 @@ public class SiteMapGenerator {
 		map.setCustomScaleMin((double)topoCPT.getMinValue());
 		map.setCustomScaleMax((double)topoCPT.getMaxValue());
 //		map.setCoast(new CoastAttributes(Color.BLACK, 0.6d, new Color(160, 200, 200)));
-		map.setCoast(new CoastAttributes(Color.BLACK, 0.6d, new Color(112, 131, 147)));
+//		map.setCoast(new CoastAttributes(Color.BLACK, 0.6d, new Color(112, 131, 147)));
+		map.setCoast(new CoastAttributes(Color.BLACK, 0.6d, new Color(154, 169, 181)));
 		map.setCustomLabel(null);
 		map.setUseGMTSmoothing(true);
 //		map.setTopoResolution(topoRes);
@@ -100,22 +101,24 @@ public class SiteMapGenerator {
 		Table<String, Justify, PSXYSymbol> cities = HashBasedTable.create();
 		// San Diego, Los Angeles, Santa Barbara, Victorville, Palm Springs
 //		cities.put("San Diego", new Location(32.70, -117.15));
-		double symbolWidth = 0.07;
-		int fontSize = 16;
+//		double symbolWidth = 0.07;
+//		int fontSize = 16;
+		double symbolWidth = 0.1;
+		int fontSize = 18;
 		Color fontColor = Color.BLACK;
 //		Color fontColor = new Color(60, 15, 15);
-//		cities.put("Los Angeles", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-118.25, 34.05),
-//				Symbol.CIRCLE, symbolWidth, 0d, null, Color.BLACK));
-//		cities.put("Palm Springs", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-116.545593, 33.830368),
-//				Symbol.CIRCLE, symbolWidth, 0d, null, Color.BLACK));
-//		cities.put("STNI", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-118.17881, 33.93088),
-//				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
+		cities.put("Los Angeles", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-118.25, 34.05),
+				Symbol.CIRCLE, symbolWidth, 0d, null, Color.BLACK));
+		cities.put("Palm Springs", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-116.545593, 33.830368),
+				Symbol.CIRCLE, symbolWidth, 0d, null, Color.BLACK));
+		cities.put("STNI", Justify.RIGHT_TOP, new PSXYSymbol(new Point2D.Double(-118.17881, 33.93088),
+				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
 //		cities.put("PDU", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-117.63808, 34.1207),
 //				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
-//		cities.put("Bombay Beach M6", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-115.728, 33.3172),
-//				Symbol.STAR, symbolWidth*1.5, 0d, null, Color.RED.darker()));
-//		cities.put("Mojave M6", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-117.80177, 34.42295),
-//				Symbol.STAR, symbolWidth*1.5, 0d, null, Color.RED.darker()));
+		cities.put("Bombay Beach M6", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-115.728, 33.3172),
+				Symbol.STAR, symbolWidth*1.5, 0d, null, Color.RED.darker()));
+		cities.put("Mojave M6", Justify.RIGHT_BOTTOM, new PSXYSymbol(new Point2D.Double(-117.80177, 34.42295),
+				Symbol.STAR, symbolWidth*1.5, 0d, null, Color.RED.darker()));
 		
 
 //		cities.put("STNI", Justify.LEFT_TOP, new PSXYSymbol(new Point2D.Double(-118.17881, 33.93088),
@@ -128,16 +131,16 @@ public class SiteMapGenerator {
 //				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
 //		cities.put("SMCA", Justify.RIGHT_TOP, new PSXYSymbol(new Point2D.Double(-118.48939, 34.00909),
 //				Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
-		for (BBP_Site site : RSQSimBBP_Config.getCyberShakeVs500LASites()) {
-			Location loc = site.getLoc();
-			Justify just = Justify.LEFT_TOP;
-			if (site.getName().equals("SMCA"))
-				just = Justify.RIGHT_TOP;
-			cities.put(site.getName(), just, new PSXYSymbol(
-					new Point2D.Double(loc.getLongitude(), loc.getLatitude()),
-					Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
-		}
-		fontSize = 14;
+//		for (BBP_Site site : RSQSimBBP_Config.getCyberShakeVs500LASites()) {
+//			Location loc = site.getLoc();
+//			Justify just = Justify.LEFT_TOP;
+//			if (site.getName().equals("SMCA"))
+//				just = Justify.RIGHT_TOP;
+//			cities.put(site.getName(), just, new PSXYSymbol(
+//					new Point2D.Double(loc.getLongitude(), loc.getLatitude()),
+//					Symbol.INVERTED_TRIANGLE, symbolWidth*1.5, 0d, null, Color.BLUE.darker()));
+//		}
+//		fontSize = 14;
 		
 		for (Cell<String, Justify, PSXYSymbol> cell : cities.cellSet()) {
 			String city = cell.getRowKey();
@@ -146,9 +149,9 @@ public class SiteMapGenerator {
 			Justify justify = cell.getColumnKey();
 			double addX = 0;
 			if (justify == Justify.LEFT || justify == Justify.LEFT_TOP || justify == Justify.LEFT_BOTTOM)
-				addX = 0.04;
+				addX = 0.06;
 			if (justify == Justify.RIGHT || justify == Justify.RIGHT_TOP || justify == Justify.RIGHT_BOTTOM)
-				addX = -0.04;
+				addX = -0.06;
 			Point2D textPT = new Point2D.Double(pt.getX()+addX, pt.getY());
 			
 			map.addSymbol(symbol);

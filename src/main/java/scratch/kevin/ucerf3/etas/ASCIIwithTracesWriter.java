@@ -7,15 +7,15 @@ import java.util.List;
 
 import org.dom4j.DocumentException;
 import org.opensha.commons.geo.Location;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.RuptureSurface;
 
 import com.google.common.base.Preconditions;
 
-import scratch.UCERF3.FaultSystemRupSet;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class ASCIIwithTracesWriter {
 
@@ -27,7 +27,7 @@ public class ASCIIwithTracesWriter {
 		File outputDir = new File(dir, "results_ascii_m4_with_traces");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		FaultSystemRupSet rupSet = FaultSystemIO.loadRupSet(
+		FaultSystemRupSet rupSet = U3FaultSystemIO.loadRupSet(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		

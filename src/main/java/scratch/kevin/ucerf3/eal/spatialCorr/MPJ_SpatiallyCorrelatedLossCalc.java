@@ -34,6 +34,7 @@ import org.opensha.commons.util.XMLUtils;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.imr.AbstractIMR;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
@@ -46,10 +47,9 @@ import com.google.common.collect.Range;
 import com.google.common.collect.Table;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.logicTree.LogicTreeBranch;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_LogicTreeBranch;
@@ -94,7 +94,7 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 		
 		if (rank == 0)
 			debug("Loading true mean solution from: "+trueMeanSolFile.getAbsolutePath());
-		trueMeanSol = FaultSystemIO.loadSol(trueMeanSolFile);
+		trueMeanSol = U3FaultSystemIO.loadSol(trueMeanSolFile);
 		
 		if (rank == 0)
 			Preconditions.checkState(resultsDir.exists() || resultsDir.mkdir(),
@@ -113,7 +113,7 @@ public class MPJ_SpatiallyCorrelatedLossCalc extends MPJTaskCalculator {
 		}
 		Preconditions.checkArgument(!vs30Dirs.isEmpty(), "No Vs30 model directories supplied!");
 		
-		LogicTreeBranch emptyTIBranch = (LogicTreeBranch)LogicTreeBranch.DEFAULT.clone();
+		U3LogicTreeBranch emptyTIBranch = (U3LogicTreeBranch)U3LogicTreeBranch.DEFAULT.clone();
 		for (int i=0; i<emptyTIBranch.size(); i++)
 			emptyTIBranch.clearValue(i);
 		

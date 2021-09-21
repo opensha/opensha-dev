@@ -5,10 +5,10 @@ import java.io.IOException;
 import java.util.List;
 
 import org.dom4j.DocumentException;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 
-import scratch.UCERF3.FaultSystemRupSet;
-import scratch.UCERF3.FaultSystemSolution;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 
 public class SolRateSum {
@@ -20,7 +20,7 @@ public class SolRateSum {
 	 */
 	public static void main(String[] args) throws IOException, DocumentException {
 		// TODO Auto-generated method stub
-		FaultSystemSolution sol = FaultSystemIO.loadSol(
+		FaultSystemSolution sol = U3FaultSystemIO.loadSol(
 				new File("/tmp/FM3_1_ZENG_EllB_DsrTap_GRConst_M5Rate8.7_MMaxOff7.6_ApplyCC_SpatSeisU3_sol.zip"));
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		

@@ -18,6 +18,7 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -31,10 +32,9 @@ import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.FaultSystemSolution;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
-import scratch.UCERF3.utils.FaultSystemIO;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 
 import org.opensha.sha.simulators.EQSIM_Event;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -369,7 +369,7 @@ public class MFDCalc {
 		
 		double minMag = 5d;
 		
-		FaultSystemSolution fssForComparison = FaultSystemIO.loadSol(new File(""
+		FaultSystemSolution fssForComparison = U3FaultSystemIO.loadSol(new File(""
 				+ "/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "FM3_1_GEOL_MEAN_BRANCH_AVG_SOL.zip"));
 		
