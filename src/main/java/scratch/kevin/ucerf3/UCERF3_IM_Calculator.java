@@ -9,7 +9,6 @@ import java.util.List;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
@@ -25,9 +24,11 @@ import org.opensha.commons.util.ClassUtils;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
-import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.faultSurface.CompoundSurface;
+import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -58,6 +59,7 @@ public class UCERF3_IM_Calculator {
 	private boolean doGridded;
 	private File outputFile;
 	private List<ETAS_EqkRupture> etasCatalog;
+	private boolean fullTraces;
 	
 	public UCERF3_IM_Calculator(CommandLine cmd) throws IOException, DocumentException {
 		if (cmd.hasOption("min-mag")) {
@@ -90,6 +92,8 @@ public class UCERF3_IM_Calculator {
 			z25Param.setValue(z25);
 			site.addParameter(z25Param);
 		}
+		
+		fullTraces = cmd.hasOption("full-trace");
 		
 		AttenRelRef gmpe = AttenRelRef.valueOf(cmd.getOptionValue("gmpe"));
 		
@@ -142,7 +146,7 @@ public class UCERF3_IM_Calculator {
 		erf.getTimeSpan().setDuration(ERF_DURATION);
 		erf.updateForecast();
 		
-		CSVFile<String> csv = new CSVFile<>(true);
+		CSVFile<String> csv = new CSVFile<>(!fullTraces);
 		
 		List<String> header = Lists.newArrayList("FSS Index", "Grid Node Index", "Mag", "Rake", "U3 Annual Rate",
 				gmpe.getShortName()+" Log Mean", gmpe.getShortName()+" Total Std Dev");
@@ -175,12 +179,21 @@ public class UCERF3_IM_Calculator {
 		} catch (ParameterException e) {
 			hasRJB = false;
 		}
-		if (hasRrup)
+		if (hasRrup) {
 			header.add("Distance Rup (km)");
+			header.addAll(List.of("Rrup Location Latitude", "Rrup Location Longitude"));
+		}
 		if (hasRJB)
 			header.add("Distance J-B (km)");
 		if (etasCatalog != null)
 			header.add(0, "ETAS ID");
+		if (fullTraces) {
+			header.addAll(List.of("Trace Latitude 1", "Trace Longitude 1",
+					"Trace Latitude N", "Trace Longitude N"));
+		} else {
+			header.addAll(List.of("First Trace Latitude", "First Trace Longitude",
+					"Last Trace Latitude", "Last Trace Longitude"));
+		}
 		csv.addLine(header);
 		
 		int numSourcesFSS = erf.getNumFaultSystemSources();
@@ -262,12 +275,63 @@ public class UCERF3_IM_Calculator {
 		}
 		if (hasInterStdDev || hasIntraStdDev)
 			gmpe.getParameter(StdDevTypeParam.NAME).setValue(StdDevTypeParam.STD_DEV_TYPE_TOTAL);
-		if (hasRrup)
+		if (hasRrup) {
 			line.add(((Double)gmpe.getParameter(DistanceRupParameter.NAME).getValue()).floatValue()+"");
+			Location closestPt = null;
+			double minDist = Double.POSITIVE_INFINITY;
+			Location siteLoc = site.getLocation();
+			for (Location loc : closestSubSurf(rup.getRuptureSurface(), siteLoc).getEvenlyDiscritizedListOfLocsOnSurface()) {
+				double dist = LocationUtils.linearDistanceFast(loc, siteLoc);
+				if (dist < minDist) {
+					minDist = dist;
+					closestPt = loc;
+				}
+			}
+			line.add((float)closestPt.getLatitude()+"");
+			line.add((float)closestPt.getLongitude()+"");
+		}
 		if (hasRJB)
 			line.add(((Double)gmpe.getParameter(DistanceJBParameter.NAME).getValue()).floatValue()+"");
 		
+		List<Location> includeLocs;
+		FaultTrace upperEdge = rup.getRuptureSurface().getUpperEdge();
+		if (fullTraces)
+			includeLocs = pruneDuplicates(upperEdge);
+		else
+			includeLocs = List.of(upperEdge.first(), upperEdge.last());
+		for (Location loc : includeLocs) {
+			line.add((float)loc.getLatitude()+"");
+			line.add((float)loc.getLongitude()+"");
+		}
+		
 		return line;
+	}
+	
+	private List<Location> pruneDuplicates(List<Location> locs) {
+		List<Location> ret = new ArrayList<>();
+		Location prev = null;
+		for (Location loc : locs) {
+			if (prev == null || !LocationUtils.areSimilar(loc, prev))
+				ret.add(loc);
+			prev = loc;
+		}
+		return ret;
+	}
+	
+	private RuptureSurface closestSubSurf(RuptureSurface surf, Location loc) {
+		if (surf instanceof CompoundSurface) {
+			double minDist = Double.POSITIVE_INFINITY;
+			RuptureSurface closest = null;
+			for (RuptureSurface subSurf : ((CompoundSurface)surf).getSurfaceList()) {
+				double dist = subSurf.getDistanceRup(loc);
+				if (dist < minDist) {
+					minDist = dist;
+					closest = subSurf;
+				}
+			}
+			return closest;
+		}
+		return surf;
 	}
 	
 	public static Options createOptions() {
@@ -326,6 +390,10 @@ public class UCERF3_IM_Calculator {
 		magOption.setRequired(false);
 		ops.addOption(magOption);
 		
+		Option traceOption = new Option("tr", "full-trace", false, "Flag to include full rupture traces (might make large files).");
+		traceOption.setRequired(false);
+		ops.addOption(traceOption);
+		
 		return ops;
 	}
 	
@@ -360,6 +428,7 @@ public class UCERF3_IM_Calculator {
 //			argStr += " --etas-catalog /path/to/catalog"
 			// flag to enable gridded seismicity
 			argStr += " --do-gridded";
+			argStr += " --full-trace";
 			argStr += " --min-mag 4.05";
 			// output file (.csv)
 			argStr += " --output-file /tmp/u3_ims.csv";
