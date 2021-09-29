@@ -14,7 +14,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 
 public class GridSourcesNodeWriter {
@@ -43,10 +43,10 @@ public class GridSourcesNodeWriter {
 		
 		csv.writeToFile(outputFile);
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends U3LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			System.out.println("== "+ClassUtils.getClassNameWithoutPackage(clazz)+" ==");
 			System.out.println("||= Prefix =||= Description =||");
-			for (LogicTreeBranchNode<?> node : clazz.getEnumConstants()) {
+			for (U3LogicTreeBranchNode<?> node : clazz.getEnumConstants()) {
 				if (node.getRelativeWeight(U3LogicTreeBranch.DEFAULT.getValue(InversionModels.class)) <= 0)
 					continue;
 				String str = "||";

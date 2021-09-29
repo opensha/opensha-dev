@@ -26,7 +26,7 @@ import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_LogicTreeBranch;
@@ -41,14 +41,14 @@ public class UCERF3_LEC_TreeTrimmer {
 //				+ "2020_04_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC");
 //				+ "2020_07_08-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-gmVar");
 				+ "2020_09_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-covModel");
-		List<LogicTreeBranchNode<?>> fixedBranches = new ArrayList<>();
+		List<U3LogicTreeBranchNode<?>> fixedBranches = new ArrayList<>();
 		fixedBranches.add(U3_EAL_GMMs.BSSA_2014);
 		fixedBranches.add(U3_EAL_GMM_Epistemic.NONE);
 		
 		File outputDir = new File(inputDir, "tree_trimming");
 		if (fixedBranches != null && !fixedBranches.isEmpty()) {
 			String dirName = outputDir.getName()+"_fixed";
-			for (LogicTreeBranchNode<?> fixed : fixedBranches)
+			for (U3LogicTreeBranchNode<?> fixed : fixedBranches)
 				dirName += "_"+fixed.encodeChoiceString();
 			outputDir = new File(inputDir, dirName);
 		}
@@ -75,7 +75,7 @@ public class UCERF3_LEC_TreeTrimmer {
 		
 		double[] lecProbLevels = new double[] { 0.01, 0.004, 0.0025, 0.0018, 0.0004, Double.NaN };
 		
-		HashSet<LogicTreeBranchNode<?>> allChoices = new HashSet<>();
+		HashSet<U3LogicTreeBranchNode<?>> allChoices = new HashSet<>();
 		for (U3_EAL_LogicTreeBranch branch : branchLECs.rowKeySet())
 			for (int i=0; i<branch.size(); i++)
 				allChoices.add(branch.getValue(i));
@@ -148,13 +148,13 @@ public class UCERF3_LEC_TreeTrimmer {
 				addFuncYVals(totalDist.lec, line); // full LEC
 			csv.addLine(line);
 			
-			List<Class<? extends LogicTreeBranchNode<?>>> availableBranchLevels = new ArrayList<>();
+			List<Class<? extends U3LogicTreeBranchNode<?>>> availableBranchLevels = new ArrayList<>();
 			for (int i=0; i<branch0.size(); i++) {
 				@SuppressWarnings("unchecked")
-				Class<? extends LogicTreeBranchNode<?>> clazz = (Class<? extends LogicTreeBranchNode<?>>)
+				Class<? extends U3LogicTreeBranchNode<?>> clazz = (Class<? extends U3LogicTreeBranchNode<?>>)
 						U3LogicTreeBranch.getEnumEnclosingClass(branch0.getValue(i).getClass());
 				int numNonZero = 0;
-				for (LogicTreeBranchNode<?> value : clazz.getEnumConstants())
+				for (U3LogicTreeBranchNode<?> value : clazz.getEnumConstants())
 					if (allChoices.contains(value))
 						numNonZero++;
 				if (numNonZero > 1)
@@ -171,16 +171,16 @@ public class UCERF3_LEC_TreeTrimmer {
 				double covErrorAtMinDn = Double.NaN;
 				int minDnLevelIndex = -1;
 				LossDistribution minDnDist = null;
-				LogicTreeBranchNode minDnChoice = null;
+				U3LogicTreeBranchNode minDnChoice = null;
 				List<U3_EAL_LogicTreeBranch> minDnBranches = null;
 				
 				for (int i=0; i<availableBranchLevels.size(); i++) {
-					Class<? extends LogicTreeBranchNode<?>> levelClass = availableBranchLevels.get(i);
-					LogicTreeBranchNode[] values = levelClass.getEnumConstants();
+					Class<? extends U3LogicTreeBranchNode<?>> levelClass = availableBranchLevels.get(i);
+					U3LogicTreeBranchNode[] values = levelClass.getEnumConstants();
 					
 //					System.out.println("Testing level: "+ClassUtils.getClassNameWithoutPackage(levelClass));
 					
-					for (LogicTreeBranchNode value : values) {
+					for (U3LogicTreeBranchNode value : values) {
 						List<U3_EAL_LogicTreeBranch> subBranches = new ArrayList<>();
 						for (U3_EAL_LogicTreeBranch branch : branches) {
 							if (branch.getValueUnchecked(levelClass) == value)
@@ -269,13 +269,13 @@ public class UCERF3_LEC_TreeTrimmer {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private static void pruneForFixed(List<LogicTreeBranchNode<?>> fixedBranches,
+	private static void pruneForFixed(List<U3LogicTreeBranchNode<?>> fixedBranches,
 			Table<U3_EAL_LogicTreeBranch, Double, ?> table) {
 		List<U3_EAL_LogicTreeBranch> branches = new ArrayList<>(table.rowKeySet());
 		for (U3_EAL_LogicTreeBranch branch : branches) {
-			for (LogicTreeBranchNode<?> fixed : fixedBranches) {
-				Class<? extends LogicTreeBranchNode<?>> clazz =
-						(Class<? extends LogicTreeBranchNode<?>>)fixed.getClass();
+			for (U3LogicTreeBranchNode<?> fixed : fixedBranches) {
+				Class<? extends U3LogicTreeBranchNode<?>> clazz =
+						(Class<? extends U3LogicTreeBranchNode<?>>)fixed.getClass();
 				if (branch.getValueUnchecked(clazz) != fixed) {
 					List<Double> weights = new ArrayList<>(table.row(branch).keySet());
 					for (Double weight : weights)
@@ -311,16 +311,16 @@ public class UCERF3_LEC_TreeTrimmer {
 		double totWeight = 0d;
 		
 		int rows = csv.getNumRows();
-		List<Class<? extends LogicTreeBranchNode<?>>> classList = U3LogicTreeBranch.getLogicTreeNodeClasses();
+		List<Class<? extends U3LogicTreeBranchNode<?>>> classList = U3LogicTreeBranch.getLogicTreeNodeClasses();
 		for (int row=1; row<rows; row++) {
 			double[] yVals = new double[xValsArray.length];
 			for (int i=0; i<xValsArray.length; i++)
 				yVals[i] = csv.getDouble(row, i+lecFirstCol);
 			double weight = csv.getDouble(row, weight_col);
-			List<LogicTreeBranchNode<?>> tiVals = new ArrayList<>();
+			List<U3LogicTreeBranchNode<?>> tiVals = new ArrayList<>();
 			for (int i=0; i<classList.size(); i++) {
 				String str = csv.get(row, i+ti_branch_first_col);
-				LogicTreeBranchNode<?> match = forShortName(classList.get(i), str);
+				U3LogicTreeBranchNode<?> match = forShortName(classList.get(i), str);
 				tiVals.add(match);
 			}
 			U3LogicTreeBranch tiBranch = U3LogicTreeBranch.fromValues(tiVals);
@@ -357,14 +357,14 @@ public class UCERF3_LEC_TreeTrimmer {
 		double totWeight = 0d;
 		
 		int rows = csv.getNumRows();
-		List<Class<? extends LogicTreeBranchNode<?>>> classList = U3LogicTreeBranch.getLogicTreeNodeClasses();
+		List<Class<? extends U3LogicTreeBranchNode<?>>> classList = U3LogicTreeBranch.getLogicTreeNodeClasses();
 		for (int row=1; row<rows; row++) {
 			double eal = csv.getDouble(row, eal_col);
 			double weight = csv.getDouble(row, weight_col);
-			List<LogicTreeBranchNode<?>> tiVals = new ArrayList<>();
+			List<U3LogicTreeBranchNode<?>> tiVals = new ArrayList<>();
 			for (int i=0; i<classList.size(); i++) {
 				String str = csv.get(row, i+eal_ti_branch_first_col);
-				LogicTreeBranchNode<?> match = forShortName(classList.get(i), str);
+				U3LogicTreeBranchNode<?> match = forShortName(classList.get(i), str);
 				tiVals.add(match);
 			}
 			U3LogicTreeBranch tiBranch = U3LogicTreeBranch.fromValues(tiVals);
@@ -383,7 +383,7 @@ public class UCERF3_LEC_TreeTrimmer {
 		return ret;
 	}
 	
-	private static <E extends LogicTreeBranchNode<?>> E forShortName(Class<E> clazz, String shortName) {
+	private static <E extends U3LogicTreeBranchNode<?>> E forShortName(Class<E> clazz, String shortName) {
 		for (E opt : clazz.getEnumConstants())
 			if (opt.getShortName().equals(shortName))
 				return opt;

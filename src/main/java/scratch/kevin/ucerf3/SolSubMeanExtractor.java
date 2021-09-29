@@ -27,7 +27,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 
@@ -47,15 +47,15 @@ public class SolSubMeanExtractor {
 		
 		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(compoundFile);
 		
-		List<LogicTreeBranchNode<?>> fmBranches =
+		List<U3LogicTreeBranchNode<?>> fmBranches =
 				LogicTreePBSWriter.getNonZeroChoices(FaultModels.class, InversionModels.CHAR_CONSTRAINED);
-		List<LogicTreeBranchNode<?>> dmBranches =
+		List<U3LogicTreeBranchNode<?>> dmBranches =
 				LogicTreePBSWriter.getNonZeroChoices(DeformationModels.class, InversionModels.CHAR_CONSTRAINED);
-		List<LogicTreeBranchNode<?>> scaleBranches =
+		List<U3LogicTreeBranchNode<?>> scaleBranches =
 				LogicTreePBSWriter.getNonZeroChoices(ScalingRelationships.class, InversionModels.CHAR_CONSTRAINED);
 //				Lists.newArrayList();
 //		scaleBranches.add(null);
-		List<LogicTreeBranchNode<?>> seisBranches =
+		List<U3LogicTreeBranchNode<?>> seisBranches =
 //				LogicTreePBSWriter.getNonZeroChoices(SpatialSeisPDF.class, InversionModels.CHAR_CONSTRAINED);
 				Lists.newArrayList();
 		seisBranches.add(null);
@@ -64,16 +64,16 @@ public class SolSubMeanExtractor {
 		
 		APrioriBranchWeightProvider weightProv = new APrioriBranchWeightProvider();
 		
-		for (LogicTreeBranchNode<?> fm : fmBranches) {
+		for (U3LogicTreeBranchNode<?> fm : fmBranches) {
 //			if (fm.getRelativeWeight(InversionModels.CHAR_CONSTRAINED) <= 0d)
 //				continue;
-			for (LogicTreeBranchNode<?> dm : dmBranches) {
+			for (U3LogicTreeBranchNode<?> dm : dmBranches) {
 //				if (dm.getRelativeWeight(InversionModels.CHAR_CONSTRAINED) <= 0d)
 //					continue;
-				for (LogicTreeBranchNode<?> scale : scaleBranches) {
+				for (U3LogicTreeBranchNode<?> scale : scaleBranches) {
 //					if (scale.getRelativeWeight(InversionModels.CHAR_CONSTRAINED) <= 0d)
 //						continue;
-					for (LogicTreeBranchNode<?> seis : seisBranches) {
+					for (U3LogicTreeBranchNode<?> seis : seisBranches) {
 //						if (seis.getRelativeWeight(InversionModels.CHAR_CONSTRAINED) <= 0d)
 //							continue;
 						String fName = fm.encodeChoiceString()+"_"+dm.encodeChoiceString();
@@ -179,15 +179,15 @@ public class SolSubMeanExtractor {
 	}
 	
 	private static List<U3LogicTreeBranch> getMatchingBranches(Collection<U3LogicTreeBranch> allBranches,
-			LogicTreeBranchNode<?>... nodes) {
+			U3LogicTreeBranchNode<?>... nodes) {
 		List<U3LogicTreeBranch> matches = Lists.newArrayList();
 		
 		branchLoop:
 		for (U3LogicTreeBranch branch : allBranches) {
-			for (LogicTreeBranchNode<?> node : nodes) {
+			for (U3LogicTreeBranchNode<?> node : nodes) {
 				if (node == null)
 					continue;
-				if (branch.getValueUnchecked((Class<? extends LogicTreeBranchNode<?>>) node.getClass()) != node)
+				if (branch.getValueUnchecked((Class<? extends U3LogicTreeBranchNode<?>>) node.getClass()) != node)
 					continue branchLoop;
 			}
 			matches.add(branch);

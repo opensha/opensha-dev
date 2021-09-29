@@ -17,7 +17,7 @@ import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter.RunSites;
 
@@ -28,13 +28,13 @@ public class BulkCompoundScriptWrite {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException {
-		List<LogicTreeBranchNode<?>> fmBranches =
+		List<U3LogicTreeBranchNode<?>> fmBranches =
 				LogicTreePBSWriter.getNonZeroChoices(FaultModels.class, InversionModels.CHAR_CONSTRAINED);
-		List<LogicTreeBranchNode<?>> dmBranches =
+		List<U3LogicTreeBranchNode<?>> dmBranches =
 				LogicTreePBSWriter.getNonZeroChoices(DeformationModels.class, InversionModels.CHAR_CONSTRAINED);
 //		List<LogicTreeBranchNode<?>> scaleBranches =
 //				LogicTreePBSWriter.getNonZeroChoices(ScalingRelationships.class, InversionModels.CHAR_CONSTRAINED);
-		List<LogicTreeBranchNode<?>> scaleBranches = Lists.newArrayList();
+		List<U3LogicTreeBranchNode<?>> scaleBranches = Lists.newArrayList();
 		scaleBranches.add(null);
 		
 //		File remoteMainDir = new File("/auto/scec-02/kmilner/ucerf3/inversion_compound_plots/" +
@@ -100,9 +100,9 @@ public class BulkCompoundScriptWrite {
 		if (batchWrite instanceof USC_HPCC_ScriptWriter)
 			((USC_HPCC_ScriptWriter)batchWrite).setNodesAddition(null);
 		
-		for (LogicTreeBranchNode<?> fm : fmBranches) {
-			for (LogicTreeBranchNode<?> dm : dmBranches) {
-				for (LogicTreeBranchNode<?> scale : scaleBranches) {
+		for (U3LogicTreeBranchNode<?> fm : fmBranches) {
+			for (U3LogicTreeBranchNode<?> dm : dmBranches) {
+				for (U3LogicTreeBranchNode<?> scale : scaleBranches) {
 					String dirName = fm.getShortName()+"_"+dm.getShortName();
 					if (scale != null)
 						dirName += "_"+scale.getShortName();

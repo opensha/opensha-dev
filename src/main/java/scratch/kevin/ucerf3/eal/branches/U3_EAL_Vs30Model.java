@@ -1,9 +1,9 @@
 package scratch.kevin.ucerf3.eal.branches;
 
 import scratch.UCERF3.enumTreeBranches.InversionModels;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 
-public enum U3_EAL_Vs30Model implements LogicTreeBranchNode<U3_EAL_Vs30Model> {
+public enum U3_EAL_Vs30Model implements U3LogicTreeBranchNode<U3_EAL_Vs30Model> {
 	WILLS_2015("Wills (2015)", "Wills2015", 0.5),
 	WALD_ALLEN("Wald & Allen (2007,2008)", "WaldAllen", 0.5);
 

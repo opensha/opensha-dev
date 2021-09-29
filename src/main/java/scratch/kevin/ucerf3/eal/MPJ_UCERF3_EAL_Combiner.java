@@ -59,7 +59,7 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
@@ -459,7 +459,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	
 	private class ReadOptimizedBranchComparator implements Comparator<U3_EAL_LogicTreeBranch> {
 		
-		List<Class<? extends LogicTreeBranchNode<?>>> sortOrderClasses;
+		List<Class<? extends U3LogicTreeBranchNode<?>>> sortOrderClasses;
 		
 		public ReadOptimizedBranchComparator() {
 			sortOrderClasses = new ArrayList<>();
@@ -477,9 +477,9 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		public int compare(U3_EAL_LogicTreeBranch b1, U3_EAL_LogicTreeBranch b2) {
 			Preconditions.checkState(b1.size() == sortOrderClasses.size());
 			Preconditions.checkState(b2.size() == sortOrderClasses.size());
-			for (Class<? extends LogicTreeBranchNode<?>> clazz : sortOrderClasses) {
-				LogicTreeBranchNode<?> val = b1.getValueUnchecked(clazz);
-				LogicTreeBranchNode<?> oval = b2.getValueUnchecked(clazz);
+			for (Class<? extends U3LogicTreeBranchNode<?>> clazz : sortOrderClasses) {
+				U3LogicTreeBranchNode<?> val = b1.getValueUnchecked(clazz);
+				U3LogicTreeBranchNode<?> oval = b2.getValueUnchecked(clazz);
 				int cmp = val.getShortName().compareTo(oval.getShortName());
 				if (cmp != 0)
 					return cmp;
@@ -557,7 +557,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 				line.add(task.totalEAL+"");
 				line.add(task.faultEAL+"");
 				line.add(task.griddedEAL+"");
-				for (LogicTreeBranchNode<?> node : task.branch)
+				for (U3LogicTreeBranchNode<?> node : task.branch)
 					line.add(node.getShortName());
 				DiscretizedFunc lec = task.lec;
 				if (lecXVals != null && lecProbLevels != null && lecProbLevels.length > 0) {
@@ -577,7 +577,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 					line = new ArrayList<>();
 					line.add(task.index+"");
 					line.add(task.branch.getAprioriBranchWt()+"");
-					for (LogicTreeBranchNode<?> node : task.branch)
+					for (U3LogicTreeBranchNode<?> node : task.branch)
 						line.add(node.getShortName());
 					for (Point2D pt : lec)
 						line.add(pt.getY()+"");
@@ -613,7 +613,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 					line.add(task.totalEAL+"");
 					line.add(task.faultEAL+"");
 					line.add(task.griddedEAL+"");
-					for (LogicTreeBranchNode<?> node : task.branch)
+					for (U3LogicTreeBranchNode<?> node : task.branch)
 						line.add(node.getShortName());
 					csv.addLine(line);
 				}
@@ -806,7 +806,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 					allLECLines.add(null);
 			}
 			int loaded = 0;
-			List<Map<LogicTreeBranchNode<?>, BranchNodeVals>> nodeVals = new ArrayList<>();
+			List<Map<U3LogicTreeBranchNode<?>, BranchNodeVals>> nodeVals = new ArrayList<>();
 			for (int i=0; i<branches.get(0).size(); i++)
 				nodeVals.add(new HashMap<>());
 			double totalWeight = 0d;
@@ -862,7 +862,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 					griddedMean += griddedEAL*weight;
 					for (int i=0; i<branch.size(); i++) {
 						BranchNodeVals vals = nodeVals.get(i).get(branch.getValue(i));
-						LogicTreeBranchNode<?> node = branch.getValue(i);
+						U3LogicTreeBranchNode<?> node = branch.getValue(i);
 						if (vals == null) {
 							vals = new BranchNodeVals();
 							nodeVals.get(i).put(node, vals);
@@ -892,20 +892,20 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 			csv = new CSVFile<>(true);
 			csv.addLine("Branch Level", "Branch Choice", "Total Weight", "Weighted Total Mean EAL",
 					"Weighted Fault Mean EAL", "Weighted Gridded Mean EAL");
-			Comparator<LogicTreeBranchNode<?>> nodeComparator = new Comparator<LogicTreeBranchNode<?>>() {
+			Comparator<U3LogicTreeBranchNode<?>> nodeComparator = new Comparator<U3LogicTreeBranchNode<?>>() {
 
 				@Override
-				public int compare(LogicTreeBranchNode<?> o1, LogicTreeBranchNode<?> o2) {
+				public int compare(U3LogicTreeBranchNode<?> o1, U3LogicTreeBranchNode<?> o2) {
 					return o1.getShortName().compareTo(o2.getShortName());
 				}
 
 			};
 			
 			for (int i=0; i<nodeVals.size(); i++) {
-				Map<LogicTreeBranchNode<?>, BranchNodeVals> valsMap = nodeVals.get(i);
-				List<LogicTreeBranchNode<?>> choices = new ArrayList<>(valsMap.keySet());
+				Map<U3LogicTreeBranchNode<?>, BranchNodeVals> valsMap = nodeVals.get(i);
+				List<U3LogicTreeBranchNode<?>> choices = new ArrayList<>(valsMap.keySet());
 				choices.sort(nodeComparator);
-				for (LogicTreeBranchNode<?> choice : choices) {
+				for (U3LogicTreeBranchNode<?> choice : choices) {
 					List<String> line = new ArrayList<>();
 					line.add(choice.getBranchLevelName());
 					line.add(choice.getShortName());

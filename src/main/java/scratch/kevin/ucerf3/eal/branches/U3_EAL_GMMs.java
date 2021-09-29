@@ -3,9 +3,9 @@ package scratch.kevin.ucerf3.eal.branches;
 import org.opensha.sha.imr.AttenRelRef;
 
 import scratch.UCERF3.enumTreeBranches.InversionModels;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 
-public enum U3_EAL_GMMs implements LogicTreeBranchNode<U3_EAL_GMMs> {
+public enum U3_EAL_GMMs implements U3LogicTreeBranchNode<U3_EAL_GMMs> {
 	ASK_2014(AttenRelRef.ASK_2014, 0.22),
 	BSSA_2014(AttenRelRef.BSSA_2014, 0.22),
 	CB_2014(AttenRelRef.CB_2014, 0.22),

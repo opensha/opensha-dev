@@ -25,7 +25,7 @@ import scratch.UCERF3.enumTreeBranches.MomentRateFixes;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -148,7 +148,7 @@ public class UCERF3_EALHistGen {
 		
 		List<File> histPDFs = Lists.newArrayList();
 		List<String> names = Lists.newArrayList();
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends U3LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			if (clazz.equals(InversionModels.class) || clazz.equals(MomentRateFixes.class))
 				continue;
 			names.add(ClassUtils.getClassNameWithoutPackage(U3LogicTreeBranch.getEnumEnclosingClass(clazz)));
@@ -225,12 +225,12 @@ public class UCERF3_EALHistGen {
 	
 	private static U3LogicTreeBranch fromLine(List<String> line) {
 		int col = 5;
-		List<LogicTreeBranchNode<?>> nodes = Lists.newArrayList();
+		List<U3LogicTreeBranchNode<?>> nodes = Lists.newArrayList();
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends U3LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			String strVal = line.get(col++);
-			LogicTreeBranchNode<?> node = null;
-			for (LogicTreeBranchNode<?> choice : clazz.getEnumConstants()) {
+			U3LogicTreeBranchNode<?> node = null;
+			for (U3LogicTreeBranchNode<?> choice : clazz.getEnumConstants()) {
 				if (choice.getShortName().equals(strVal)) {
 					node = choice;
 					break;

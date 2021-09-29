@@ -21,7 +21,7 @@ import com.google.common.collect.Maps;
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.utils.MatrixIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
@@ -123,19 +123,19 @@ public class MFDDebug {
 	}
 	
 	private static void listBranchCorrelations(List<BranchVal> branchVals, int num) {
-		Map<Class<? extends LogicTreeBranchNode<?>>, int[]> countsMap = Maps.newHashMap();
+		Map<Class<? extends U3LogicTreeBranchNode<?>>, int[]> countsMap = Maps.newHashMap();
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
+		for (Class<? extends U3LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			int[] counts = new int[clazz.getEnumConstants().length];
 			countsMap.put(clazz, counts);
 		}
 		
 		for (int i=0; i<num; i++) {
 			U3LogicTreeBranch branch = branchVals.get(i).branch;
-			for (LogicTreeBranchNode<?> node : branch) {
-				Class<? extends LogicTreeBranchNode> enclClass = U3LogicTreeBranch.getEnumEnclosingClass(node.getClass());
+			for (U3LogicTreeBranchNode<?> node : branch) {
+				Class<? extends U3LogicTreeBranchNode> enclClass = U3LogicTreeBranch.getEnumEnclosingClass(node.getClass());
 				int[] counts = countsMap.get(enclClass);
-				LogicTreeBranchNode<?>[] consts = enclClass.getEnumConstants();
+				U3LogicTreeBranchNode<?>[] consts = enclClass.getEnumConstants();
 				int ind = -1;
 				for (int j=0; j<consts.length; j++)
 					if (consts[j].name().equals(node.name()))
@@ -144,8 +144,8 @@ public class MFDDebug {
 			}
 		}
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
-			LogicTreeBranchNode<?>[] consts = clazz.getEnumConstants();
+		for (Class<? extends U3LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
+			U3LogicTreeBranchNode<?>[] consts = clazz.getEnumConstants();
 			int[] counts = countsMap.get(clazz);
 			System.out.println("\nBranch Choice: "+ClassUtils.getClassNameWithoutPackage(clazz));
 			for (int i=0; i<counts.length; i++)

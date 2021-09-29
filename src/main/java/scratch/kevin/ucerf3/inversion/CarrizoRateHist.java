@@ -20,7 +20,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.logicTree.TreeTrimmer;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
 
@@ -39,7 +39,7 @@ public class CarrizoRateHist {
 		HistogramFunction branchHist = new HistogramFunction(0d, 40, 10d);
 		HistogramFunction subHist = new HistogramFunction(0d, 40, 10d);
 		
-		LogicTreeBranchNode<?> branchNode = TotalMag5Rate.RATE_9p6;
+		U3LogicTreeBranchNode<?> branchNode = TotalMag5Rate.RATE_9p6;
 		
 		double subWeightTot = 0d;
 		double subRate = 0d;
@@ -51,7 +51,7 @@ public class CarrizoRateHist {
 		double rateTot = 0;
 		
 		TreeTrimmer subsetTrim = LogicTreePBSWriter.getCustomTrimmer();
-		List<Class<? extends LogicTreeBranchNode<?>>> nodeClasses = U3LogicTreeBranch.getLogicTreeNodeClasses();
+		List<Class<? extends U3LogicTreeBranchNode<?>>> nodeClasses = U3LogicTreeBranch.getLogicTreeNodeClasses();
 		
 		Map<U3LogicTreeBranch, Double> ratesMap = Maps.newHashMap();
 		Map<U3LogicTreeBranch, Double> weightsMap = Maps.newHashMap();
@@ -69,9 +69,9 @@ public class CarrizoRateHist {
 			hist.add(ri, weight);
 			
 			List<String> branchVals = line.subList(0, 9);
-			List<LogicTreeBranchNode<?>> vals = Lists.newArrayList();
+			List<U3LogicTreeBranchNode<?>> vals = Lists.newArrayList();
 			for (int j=0; j<nodeClasses.size(); j++) {
-				for (LogicTreeBranchNode<?> node : nodeClasses.get(j).getEnumConstants()) {
+				for (U3LogicTreeBranchNode<?> node : nodeClasses.get(j).getEnumConstants()) {
 					if (node.getShortName().equals(branchVals.get(j))) {
 						vals.add(node);
 						break;
@@ -87,7 +87,7 @@ public class CarrizoRateHist {
 				subHist.add(ri, weight);
 			}
 			
-			if (branch.getValueUnchecked((Class<? extends LogicTreeBranchNode<?>>) branchNode.getClass()) == branchNode) {
+			if (branch.getValueUnchecked((Class<? extends U3LogicTreeBranchNode<?>>) branchNode.getClass()) == branchNode) {
 				fm31Rate += rate*weight;
 				fm31WeightTot += weight;
 				branchHist.add(ri, weight);
@@ -119,14 +119,14 @@ public class CarrizoRateHist {
 		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.BLUE));
 		new GraphWindow(funcs, "Carrizo RI Dist", chars);
 		
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : nodeClasses) {
+		for (Class<? extends U3LogicTreeBranchNode<?>> clazz : nodeClasses) {
 			System.out.println(ClassUtils.getClassNameWithoutPackage(clazz));
-			for (LogicTreeBranchNode<?> val : clazz.getEnumConstants()) {
+			for (U3LogicTreeBranchNode<?> val : clazz.getEnumConstants()) {
 				if (val.getRelativeWeight(InversionModels.CHAR_CONSTRAINED) > 0) {
 					double totWt = 0;
 					double totRate = 0;
 					for (U3LogicTreeBranch branch : ratesMap.keySet()) {
-						if (branch.getValueUnchecked((Class<? extends LogicTreeBranchNode<?>>)clazz) == val) {
+						if (branch.getValueUnchecked((Class<? extends U3LogicTreeBranchNode<?>>)clazz) == val) {
 							double weight = weightsMap.get(branch);
 							totRate += ratesMap.get(branch)*weight;
 							totWt += weight;

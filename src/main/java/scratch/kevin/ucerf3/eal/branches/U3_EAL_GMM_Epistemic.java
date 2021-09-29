@@ -1,9 +1,9 @@
 package scratch.kevin.ucerf3.eal.branches;
 
 import scratch.UCERF3.enumTreeBranches.InversionModels;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 
-public enum U3_EAL_GMM_Epistemic implements LogicTreeBranchNode<U3_EAL_GMM_Epistemic> {
+public enum U3_EAL_GMM_Epistemic implements U3LogicTreeBranchNode<U3_EAL_GMM_Epistemic> {
 	UPPER("Upper", "UPPER", 0.185),
 	NONE("None", "NONE", 0.630),
 	LOWER("Lower", "LOWER", 0.185);

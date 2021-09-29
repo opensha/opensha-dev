@@ -60,7 +60,7 @@ import scratch.UCERF3.inversion.OldSectionConnectionStrategy;
 import scratch.UCERF3.inversion.UCERF3SectionConnectionStrategy;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 
 public class UCER3_EAL_CombinerTest {
@@ -334,8 +334,8 @@ public class UCER3_EAL_CombinerTest {
 	}
 	
 	private static U3LogicTreeBranch getRandomBranch() {
-		List<LogicTreeBranchNode<?>> vals = Lists.newArrayList();
-		for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
+		List<U3LogicTreeBranchNode<?>> vals = Lists.newArrayList();
+		for (Class<? extends U3LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses()) {
 			if (clazz.equals(FaultModels.class))
 				vals.add(FaultModels.FM3_1);
 			else
@@ -344,9 +344,9 @@ public class UCER3_EAL_CombinerTest {
 		return U3LogicTreeBranch.fromValues(vals);
 	}
 	
-	private static LogicTreeBranchNode<?> getRandomElem(Class<? extends LogicTreeBranchNode<?>> clazz) {
-		List<LogicTreeBranchNode<?>> vals = Lists.newArrayList();
-		for (LogicTreeBranchNode<?> val : clazz.getEnumConstants()) {
+	private static U3LogicTreeBranchNode<?> getRandomElem(Class<? extends U3LogicTreeBranchNode<?>> clazz) {
+		List<U3LogicTreeBranchNode<?>> vals = Lists.newArrayList();
+		for (U3LogicTreeBranchNode<?> val : clazz.getEnumConstants()) {
 			if (val.getRelativeWeight(InversionModels.CHAR_CONSTRAINED) > 0)
 				vals.add(val);
 		}

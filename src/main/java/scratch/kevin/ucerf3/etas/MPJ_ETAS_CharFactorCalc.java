@@ -39,7 +39,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.utils.MatrixIO;
 
 import com.google.common.base.Preconditions;
@@ -226,7 +226,7 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 				}
 				String prefix = null;
 				for (int i=0; i<commonBranch.size(); i++) {
-					LogicTreeBranchNode<?> val = commonBranch.getValue(i);
+					U3LogicTreeBranchNode<?> val = commonBranch.getValue(i);
 					if (val == null)
 						continue;
 					if (prefix == null)

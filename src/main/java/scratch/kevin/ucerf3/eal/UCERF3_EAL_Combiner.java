@@ -44,7 +44,7 @@ import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.logicTree.LogicTreeBranchNode;
+import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
@@ -569,7 +569,7 @@ public class UCERF3_EAL_Combiner {
 			
 			CSVFile<String> csv = new CSVFile<String>(true);
 			List<String> header = Lists.newArrayList("Index", "Branch Weight", "Total EAL", "Fault EAL", "Gridded EAL");
-			for (Class<? extends LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses())
+			for (Class<? extends U3LogicTreeBranchNode<?>> clazz : U3LogicTreeBranch.getLogicTreeNodeClasses())
 				header.add(ClassUtils.getClassNameWithoutPackage(clazz));
 			csv.addLine(header);
 			for (int i=0; i<branches.size(); i++) {
@@ -581,7 +581,7 @@ public class UCERF3_EAL_Combiner {
 				line.add(combEALs[i]+"");
 				line.add(eals[i]+"");
 				line.add(gridEALs[i]+"");
-				for (LogicTreeBranchNode<?> node : branch)
+				for (U3LogicTreeBranchNode<?> node : branch)
 					line.add(node.getShortName());
 				csv.addLine(line);
 			}
