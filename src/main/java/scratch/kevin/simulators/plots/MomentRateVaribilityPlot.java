@@ -21,9 +21,9 @@ import org.opensha.commons.calc.FractileCurveCalculator;
 import org.opensha.commons.data.function.AbstractXY_DataSet;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.function.XY_DataSetList;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -211,7 +211,7 @@ public class MomentRateVaribilityPlot extends AbstractPlot {
 		ArbitrarilyDiscretizedFunc poissonLower = (ArbitrarilyDiscretizedFunc)poissonFractiles.getFractile(0.025);
 		ArbitrarilyDiscretizedFunc poissonUpper = (ArbitrarilyDiscretizedFunc)poissonFractiles.getFractile(0.975);
 		ArbitrarilyDiscretizedFunc poissonMedian = (ArbitrarilyDiscretizedFunc)poissonFractiles.getFractile(0.5);
-		UncertainArbDiscDataset poissonRange = new UncertainArbDiscDataset(poissonMedian, poissonLower, poissonUpper);
+		UncertainArbDiscFunc poissonRange = new UncertainArbDiscFunc(poissonMedian, poissonLower, poissonUpper);
 		
 		Range xRange = new Range(30, 3000);
 		double minY = Double.POSITIVE_INFINITY, maxY = 0d;

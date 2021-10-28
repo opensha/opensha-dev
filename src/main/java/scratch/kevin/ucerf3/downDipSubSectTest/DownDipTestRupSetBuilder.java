@@ -13,9 +13,14 @@ import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionInputGenerator;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDEqualityInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInequalityInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint.WeightingType;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ThreadedSimulatedAnnealing;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.ProgressTrackingCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRuptureBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityFilter;
@@ -40,12 +45,6 @@ import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.inversion.SectionCluster;
 import scratch.UCERF3.inversion.SectionClusterList;
 import scratch.UCERF3.inversion.OldSectionConnectionStrategy;
-import scratch.UCERF3.inversion.UCERF3InversionConfiguration.SlipRateConstraintWeightingType;
-import scratch.UCERF3.simulatedAnnealing.ConstraintRange;
-import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;
-import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.ProgressTrackingCompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.TimeCompletionCriteria;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MFD_InversionConstraint;
@@ -153,16 +152,9 @@ public class DownDipTestRupSetBuilder {
 			/*
 			 * Slip rate constraints
 			 */
-			// For SlipRateConstraintWeightingType.NORMALIZED (also used for SlipRateConstraintWeightingType.BOTH) -- NOT USED if UNNORMALIZED!
-			double slipRateConstraintWt_normalized = 1;
-			// For SlipRateConstraintWeightingType.UNNORMALIZED (also used for SlipRateConstraintWeightingType.BOTH) -- NOT USED if NORMALIZED!
-			double slipRateConstraintWt_unnormalized = 100;
-			// If normalized, slip rate misfit is % difference for each section (recommended since it helps fit slow-moving faults).
-			// If unnormalized, misfit is absolute difference.
-			// BOTH includes both normalized and unnormalized constraints.
-			SlipRateConstraintWeightingType slipRateWeighting = SlipRateConstraintWeightingType.BOTH; // (recommended: BOTH)
-			constraints.add(new SlipRateInversionConstraint(slipRateConstraintWt_normalized, slipRateConstraintWt_unnormalized,
-					slipRateWeighting, rupSet, rupSet.getSlipRateForAllSections()));
+			double slipRateConstraintWt = 1;
+			SlipRateInversionConstraint.WeightingType slipRateWeighting = SlipRateInversionConstraint.WeightingType.UNNORMALIZED;
+			constraints.add(new SlipRateInversionConstraint(slipRateConstraintWt, slipRateWeighting, rupSet));
 			
 			/*
 			 * MFD constraints
@@ -188,11 +180,11 @@ public class DownDipTestRupSetBuilder {
 			GutenbergRichterMagFreqDist inequalityMFD = new GutenbergRichterMagFreqDist(
 					bValue, totalRateM5, mfdTransitionMag, mfdMax, mfd.size()-equalityMFD.size());
 			MFD_InversionConstraint inequalityConstr = new MFD_InversionConstraint(inequalityMFD, null);
-			
-			constraints.add(new MFDEqualityInversionConstraint(rupSet, mfdEqualityConstraintWt,
-					Lists.newArrayList(equalityConstr), null));
-			constraints.add(new MFDInequalityInversionConstraint(rupSet, mfdInequalityConstraintWt,
-					Lists.newArrayList(inequalityConstr)));
+
+//			constraints.add(new MFDInversionConstraint(rupSet, mfdEqualityConstraintWt, false,
+//					Lists.newArrayList(equalityConstr), null));
+//			constraints.add(new MFDInversionConstraint(rupSet, mfdInequalityConstraintWt, true,
+//					Lists.newArrayList(inequalityConstr), null));
 			
 			// weight of entropy-maximization constraint (not used in UCERF3)
 			double smoothnessWt = 0;

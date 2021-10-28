@@ -28,7 +28,7 @@ import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.PlotPreferences;
@@ -1725,7 +1725,7 @@ public class RSQSimCatalog implements XMLSaveable {
 						minFunc.set(mag, Double.parseDouble(csv.get(row, 2)));
 						maxFunc.set(mag, Double.parseDouble(csv.get(row, 3)));
 					}
-					UncertainArbDiscDataset compRange = new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
+					UncertainArbDiscFunc compRange = new UncertainArbDiscFunc(meanFunc, minFunc, maxFunc);
 					compRange.setName("U3 On Fault");
 					mfdPlot.setComparableRange(compRange);
 				}

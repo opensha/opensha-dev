@@ -28,8 +28,9 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.LightFixedXFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
+import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -962,7 +963,7 @@ public class ETAS_CatalogEALCalculator {
 				lower.set(i, conf[0]);
 				upper.set(i, conf[1]);
 			}
-			return new UncertainArbDiscDataset(cumDist, lower, upper);
+			return new UncertainArbDiscFunc(cumDist, lower, upper);
 		}
 		return cumDist;
 	}
@@ -1027,7 +1028,7 @@ public class ETAS_CatalogEALCalculator {
 			// if size == 1, can be null so don't sort
 			Collections.sort(names);
 		
-		boolean hasConf = exceedFuncs.values().iterator().next() instanceof UncertainArbDiscDataset;
+		boolean hasConf = exceedFuncs.values().iterator().next() instanceof UncertainBoundedDiscretizedFunc;
 
 		CSVFile<String> csv = new CSVFile<String>(false);
 		List<String> header = Lists.newArrayList(xAxisLabel);
@@ -1103,7 +1104,7 @@ public class ETAS_CatalogEALCalculator {
 					DiscretizedFunc newDist = getSameNumX(dist, distMinX, distMaxX, num, false);
 					HistogramFunction myLower = null, myUpper = null;
 					if (hasConf) {
-						UncertainArbDiscDataset distWithConf = (UncertainArbDiscDataset)dist;
+						UncertainBoundedDiscretizedFunc distWithConf = (UncertainBoundedDiscretizedFunc)dist;
 						myLower = getSameNumX(distWithConf.getLower(), distMinX, distMaxX, num, false);
 						myUpper = getSameNumX(distWithConf.getUpper(), distMinX, distMaxX, num, true);
 					}
@@ -1131,11 +1132,11 @@ public class ETAS_CatalogEALCalculator {
 						}
 					}
 					if (hasConf)
-						newDist = new UncertainArbDiscDataset(newDist, myLower, myUpper);
+						newDist = new UncertainArbDiscFunc(newDist, myLower, myUpper);
 					cumDists.put(name, newDist);
 				}
 				if (hasConf)
-					cumDist = new UncertainArbDiscDataset(mean, lower, upper);
+					cumDist = new UncertainArbDiscFunc(mean, lower, upper);
 				else
 					cumDist = mean;
 			} else {
@@ -1153,16 +1154,16 @@ public class ETAS_CatalogEALCalculator {
 				List<String> line = csv.getLine(i+1);
 				line.add(cumDist.getY(i)+"");
 				if (hasConf) {
-					line.add(((UncertainArbDiscDataset)cumDist).getLowerY(i)+"");
-					line.add(((UncertainArbDiscDataset)cumDist).getUpperY(i)+"");
+					line.add(((UncertainBoundedDiscretizedFunc)cumDist).getLowerY(i)+"");
+					line.add(((UncertainBoundedDiscretizedFunc)cumDist).getUpperY(i)+"");
 				}
 				if (names.size() > 1) {
 					for (String name : names) {
 						DiscretizedFunc subDist = cumDists.get(name);
 						line.add(subDist.getY(i)+"");
 						if (hasConf) {
-							line.add(((UncertainArbDiscDataset)subDist).getLowerY(i)+"");
-							line.add(((UncertainArbDiscDataset)subDist).getUpperY(i)+"");
+							line.add(((UncertainBoundedDiscretizedFunc)subDist).getLowerY(i)+"");
+							line.add(((UncertainBoundedDiscretizedFunc)subDist).getUpperY(i)+"");
 						}
 					}
 				}
@@ -1211,7 +1212,7 @@ public class ETAS_CatalogEALCalculator {
 					lowerFunc.set(i, min);
 					upperFunc.set(i, max);
 				}
-				UncertainArbDiscDataset meanRange = new UncertainArbDiscDataset(cumDist, lowerFunc, upperFunc);
+				UncertainArbDiscFunc meanRange = new UncertainArbDiscFunc(cumDist, lowerFunc, upperFunc);
 
 				myElems.add(meanRange);
 				myChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, rangeColor));

@@ -16,8 +16,8 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.exceptions.GMT_MapException;
 import org.opensha.commons.geo.BorderType;
@@ -36,6 +36,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.CoolingScheduleType;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.SegRateConstraint;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.gcim.ui.infoTools.IMT_Info;
@@ -51,7 +52,6 @@ import com.google.common.io.Files;
 
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.simulatedAnnealing.params.CoolingScheduleType;
 import scratch.alessandro.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.alessandro.logicTreeEnums.SlipAlongRuptureModelEnum;
 import scratch.alessandro.logicTreeEnums.WasatchSlipRatesEnum;
@@ -447,7 +447,7 @@ public class WasatchInversion {
 			EvenlyDiscretizedFunc hazCurveMeanLnX = curvesFromMultRunsFunc_3D.getMeanCurve();
 			EvenlyDiscretizedFunc hazCurveMinLnX = curvesFromMultRunsFunc_3D.getMinCurve();
 			EvenlyDiscretizedFunc hazCurveMaxLnX = curvesFromMultRunsFunc_3D.getMaxCurve();
-			UncertainArbDiscDataset hazCurveMean95confLnX = fltSysRupInversion.get95perConfForMultRuns(curvesFromMultRunsFunc_3D);
+			UncertainArbDiscFunc hazCurveMean95confLnX = fltSysRupInversion.get95perConfForMultRuns(curvesFromMultRunsFunc_3D);
 
 			ArbitrarilyDiscretizedFunc hazCurveMean = new ArbitrarilyDiscretizedFunc();
 			ArbitrarilyDiscretizedFunc hazCurveMin = new ArbitrarilyDiscretizedFunc();
@@ -463,9 +463,9 @@ public class WasatchInversion {
 			}
 
 			hazCurveMean.setName("hazCurveMean");
-			UncertainArbDiscDataset hazCurveMinMaxRange = new UncertainArbDiscDataset(hazCurveMean, hazCurveMin, hazCurveMax);
+			UncertainArbDiscFunc hazCurveMinMaxRange = new UncertainArbDiscFunc(hazCurveMean, hazCurveMin, hazCurveMax);
 			hazCurveMinMaxRange.setName("hazCurveMinMaxRange");
-			UncertainArbDiscDataset hazCurveMean95conf = new UncertainArbDiscDataset(hazCurveMean, hazCurveMeanLower95, hazCurveMeanUpper95);
+			UncertainArbDiscFunc hazCurveMean95conf = new UncertainArbDiscFunc(hazCurveMean, hazCurveMeanLower95, hazCurveMeanUpper95);
 			hazCurveMean95conf.setName("hazCurveMean95conf");
 
 			plottingFuncsArray.add(hazCurveMinMaxRange);

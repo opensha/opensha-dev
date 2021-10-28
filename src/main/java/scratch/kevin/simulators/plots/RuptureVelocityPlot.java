@@ -21,8 +21,8 @@ import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -351,7 +351,7 @@ public class RuptureVelocityPlot extends AbstractPlot {
 			minusSigmaFunc.set(x, mean - sd);
 			plusSigmaFunc.set(x, mean + sd);
 		}
-		UncertainArbDiscDataset stdDevData = new UncertainArbDiscDataset(meanFunc, minusSigmaFunc, plusSigmaFunc);
+		UncertainArbDiscFunc stdDevData = new UncertainArbDiscFunc(meanFunc, minusSigmaFunc, plusSigmaFunc);
 		double maxY = Math.min(plot_max_vel, plusSigmaFunc.getMaxY()*1.4);
 		
 		List<XY_DataSet> funcs = new ArrayList<>();
@@ -582,7 +582,7 @@ public class RuptureVelocityPlot extends AbstractPlot {
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
 		if (baselineCSV != null) {
-			UncertainArbDiscDataset baselineFunc = loadDistVelCSV(baselineCSV);
+			UncertainArbDiscFunc baselineFunc = loadDistVelCSV(baselineCSV);
 			
 			if (baselineName == null)
 				baselineName = "";
@@ -595,7 +595,7 @@ public class RuptureVelocityPlot extends AbstractPlot {
 			funcs.add(baselineNoName);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 			
-			UncertainArbDiscDataset plusMinus = new UncertainArbDiscDataset(baselineFunc, baselineFunc.getLower(), baselineFunc.getUpper());
+			UncertainArbDiscFunc plusMinus = new UncertainArbDiscFunc(baselineFunc, baselineFunc.getLower(), baselineFunc.getUpper());
 			plusMinus.setName("±σ Range");
 			funcs.add(plusMinus);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, new Color(0, 255, 0, 100)));
@@ -610,7 +610,7 @@ public class RuptureVelocityPlot extends AbstractPlot {
 			if (csv == baselineCSV)
 				continue;
 			
-			UncertainArbDiscDataset func = loadDistVelCSV(csv);
+			UncertainArbDiscFunc func = loadDistVelCSV(csv);
 			
 			if (first) {
 				if (baselineCSV != null) {
@@ -655,7 +655,7 @@ public class RuptureVelocityPlot extends AbstractPlot {
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 	}
 	
-	private static UncertainArbDiscDataset loadDistVelCSV(CSVFile<String> csv) {
+	private static UncertainArbDiscFunc loadDistVelCSV(CSVFile<String> csv) {
 		DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
 		DiscretizedFunc upperFunc = new ArbitrarilyDiscretizedFunc();
 		DiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
@@ -668,7 +668,7 @@ public class RuptureVelocityPlot extends AbstractPlot {
 			upperFunc.set(dist, mean+sigma);
 			lowerFunc.set(dist, mean-sigma);
 		}
-		return new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+		return new UncertainArbDiscFunc(meanFunc, lowerFunc, upperFunc);
 	}
 	
 	public static void main(String[] args) throws IOException {

@@ -36,6 +36,7 @@ import org.opensha.commons.mapping.gmt.elements.TopographicSlopeFile;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.FileUtils;
+import org.opensha.commons.util.ReturnPeriodUtils;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.calc.HazardCurveCalculator;
@@ -54,7 +55,6 @@ import com.google.common.base.Preconditions;
 
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.kevin.util.ReturnPeriodUtils;
 
 public class HazardMapPlotter {
 

@@ -1116,8 +1116,13 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		RSQSimCatalog catalog;
 		boolean writePoints, writeSRFs, writeMappings, testReadOnly;
 		double maxDuration = 0;
+		
+		double dt = 0.05;
+//		double dt = 0.1;
+		double skipYears = 5000;
+		
 		File compMappings = null;
-		if (args.length >= 1 && args.length < 6) {
+		if (args.length >= 1 && args.length < 8) {
 			File catalogDir = new File(args[0]);
 			catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
 					null, null, null, FaultModels.FM3_1, DeformationModels.GEOLOGIC); // TODO
@@ -1130,14 +1135,18 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				writeSRFs = Boolean.parseBoolean(args[2]);
 			else
 				writeSRFs = true;
-			if (args.length == 4)
+			if (args.length >= 4)
 				writeMappings = Boolean.parseBoolean(args[3]);
 			else
 				writeMappings = true;
-			if (args.length == 5)
+			if (args.length >= 5)
 				testReadOnly = Boolean.parseBoolean(args[4]);
 			else
 				testReadOnly = false;
+			if (args.length >= 6)
+				dt = Double.parseDouble(args[5]);
+			if (args.length >= 7)
+				skipYears = Double.parseDouble(args[6]);
 		} else {
 			System.out.println("Assuming hardcoded. Otherwise usage is:");
 			System.out.println("<catalogDir> [writePoints writeSRFs writeMappings testReadOnly]");
@@ -1174,9 +1183,21 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				validateMappings(erf, erf2);
 			}
 		} else {
-			double skipYears = 5000;
 			double minMag = 6.5;
 			double minFractForInclusion = 0.2;
+			
+			System.out.println("Getting ready to load "+catalog.getName());
+			System.out.println("\twritePoints="+writePoints);
+			System.out.println("\twriteSRFs="+writeSRFs);
+			System.out.println("\twriteMappings="+writeMappings);
+			System.out.println("\tdt="+dt+" s");
+			System.out.println("\tskipYears="+skipYears+" yrs");
+			
+			File catalogDir = catalog.getCatalogDir();
+			File csDataDir = new File(catalogDir, "cybershake_inputs_"+(float)dt+"s_skip"+(int)skipYears+"yrs");
+			Preconditions.checkState(csDataDir.exists() || csDataDir.mkdir());
+			
+			System.out.println("\toutputDir="+csDataDir.getAbsolutePath());
 			Loader loader = catalog.loader().skipYears(skipYears).minMag(minMag);
 			try {
 				catalog.getTransitions();
@@ -1189,8 +1210,6 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				loader.maxDuration(maxDuration);
 			List<RSQSimEvent> events = loader.load();
 			
-//			double dt = 0.05;
-			double dt = 0.1;
 			SRFInterpolationMode interpMode = SRFInterpolationMode.ADJ_VEL;
 			double srfPointCullDist = 100;
 			double momentPDiffThreshold = 2;
@@ -1200,10 +1219,6 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			erf.updateForecast();
 			
 			System.out.println("Source 0 has "+erf.getNumRuptures(0)+" ruptures");
-			
-			File catalogDir = catalog.getCatalogDir();
-			File csDataDir = new File(catalogDir, "cybershake_inputs");
-			Preconditions.checkState(csDataDir.exists() || csDataDir.mkdir());
 			
 			if (writePoints) {
 				System.out.println("Writing rupture points");

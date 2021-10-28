@@ -27,9 +27,10 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.LightFixedXFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.function.XY_DataSetList;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
+import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.gui.plot.AnimatedGIFRenderer;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -170,7 +171,7 @@ public class SpectraPlotter {
 		plotRotD(file, null, null, rd50, rd100, null);
 	}
 	
-	public static void plotRotD(File file, File outputDir, String prefix, boolean rd50, boolean rd100, UncertainArbDiscDataset[] gmpes)
+	public static void plotRotD(File file, File outputDir, String prefix, boolean rd50, boolean rd100, UncertainArbDiscFunc[] gmpes)
 			throws IOException {
 		Preconditions.checkState(rd50 || rd100);
 		if (file.isDirectory()) {
@@ -233,7 +234,7 @@ public class SpectraPlotter {
 			Color.CYAN.brighter(), Color.MAGENTA.brighter() };
 	
 	private static void plotSpectra(DiscretizedFunc[] funcArray, String title, String xAxisLabel, String yAxisLabel,
-			boolean xLog, boolean yLog, Range xRange, Range yRange, File outputDir, String prefix, UncertainArbDiscDataset[] gmpes,
+			boolean xLog, boolean yLog, Range xRange, Range yRange, File outputDir, String prefix, UncertainArbDiscFunc[] gmpes,
 			boolean fas, boolean rd50, boolean rd100) throws IOException {
 		Preconditions.checkState(fas || rd50 || rd100);
 		List<DiscretizedFunc> funcs = new ArrayList<>();
@@ -288,14 +289,14 @@ public class SpectraPlotter {
 		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 	}
 	
-	private static void plotSpectraAnimation(List<DiscretizedFunc> spectra, List<UncertainArbDiscDataset[]> gmpeSpectras, String title,
+	private static void plotSpectraAnimation(List<DiscretizedFunc> spectra, List<UncertainArbDiscFunc[]> gmpeSpectras, String title,
 			String xAxisLabel, String yAxisLabel, boolean xLog, boolean yLog, Range xRange, Range yRange, File outputFile, double fps,
 			double animTime) throws IOException {
 		AnimatedGIFRenderer gifRender = new AnimatedGIFRenderer(outputFile, fps, true);
 		
 		CPT prevSimCPT = new CPT(0, spectra.size(), new Color(100, 100, 100, 127), new Color(100, 100, 100, 10));
 		
-		List<UncertainArbDiscDataset[]> gmpeAveragedSpectras = null;
+		List<UncertainArbDiscFunc[]> gmpeAveragedSpectras = null;
 		if (gmpeSpectras != null) {
 			int numGMPEs = gmpeSpectras.get(0).length;
 			gmpeAveragedSpectras = new ArrayList<>();
@@ -304,19 +305,19 @@ public class SpectraPlotter {
 //			gmpeUppers = new DiscretizedFunc[numGMPEs];
 			
 			for (int i=0; i<spectra.size(); i++) {
-				UncertainArbDiscDataset[] myGMPEs = gmpeSpectras.get(i);
+				UncertainArbDiscFunc[] myGMPEs = gmpeSpectras.get(i);
 				int count = i+1;
 				if (i == 0) {
 					gmpeAveragedSpectras.add(myGMPEs);
 				} else {
-					UncertainArbDiscDataset[] prevSpectra = gmpeAveragedSpectras.get(i-1);
-					UncertainArbDiscDataset[] newSpectra = new UncertainArbDiscDataset[numGMPEs];
+					UncertainArbDiscFunc[] prevSpectra = gmpeAveragedSpectras.get(i-1);
+					UncertainArbDiscFunc[] newSpectra = new UncertainArbDiscFunc[numGMPEs];
 					gmpeAveragedSpectras.add(newSpectra);
 					for (int j=0; j<myGMPEs.length; j++) {
 						DiscretizedFunc newMean = getAveraged(prevSpectra[j], myGMPEs[j], count);
 						DiscretizedFunc newUpper = getAveraged(prevSpectra[j].getUpper(), myGMPEs[j].getUpper(), count);
 						DiscretizedFunc newLower = getAveraged(prevSpectra[j].getLower(), myGMPEs[j].getLower(), count);
-						newSpectra[j] = new UncertainArbDiscDataset(newMean, newLower, newUpper);
+						newSpectra[j] = new UncertainArbDiscFunc(newMean, newLower, newUpper);
 					}
 				}
 			}
@@ -337,7 +338,7 @@ public class SpectraPlotter {
 			int spectraIndex = (int)Math.floor(f*frameToIndex);
 			
 			if (gmpeAveragedSpectras != null) {
-				UncertainArbDiscDataset[] myGMPEs = gmpeAveragedSpectras.get(spectraIndex);
+				UncertainArbDiscFunc[] myGMPEs = gmpeAveragedSpectras.get(spectraIndex);
 				for (int j=0; j<myGMPEs.length; j++) {
 					Color color = GMPE_COLORS[j % GMPE_COLORS.length];
 					PlotCurveCharacterstics outsideChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 1.5f, color);
@@ -378,7 +379,7 @@ public class SpectraPlotter {
 		gifRender.finalizeAnimation();
 	}
 	
-	private static void plotSpectraDistribution(List<DiscretizedFunc> spectra, String spectraName, UncertainArbDiscDataset[] gmpeSpectras, String title,
+	private static void plotSpectraDistribution(List<DiscretizedFunc> spectra, String spectraName, UncertainArbDiscFunc[] gmpeSpectras, String title,
 			String xAxisLabel, String yAxisLabel, boolean xLog, boolean yLog, Range xRange, Range yRange, File outputDir, String prefix)
 					throws IOException {
 		HeadlessGraphPanel gp = buildGP();
@@ -505,8 +506,8 @@ public class SpectraPlotter {
 		double max = Double.NEGATIVE_INFINITY;
 		List<XY_DataSet> allFuncs = new ArrayList<>();
 		for (XY_DataSet func : funcs) {
-			if (func instanceof UncertainArbDiscDataset) {
-				UncertainArbDiscDataset rangeFunc = (UncertainArbDiscDataset)func;
+			if (func instanceof UncertainBoundedDiscretizedFunc) {
+				UncertainBoundedDiscretizedFunc rangeFunc = (UncertainBoundedDiscretizedFunc)func;
 				allFuncs.add(rangeFunc.getUpper());
 				allFuncs.add(rangeFunc.getLower());
 			}
@@ -527,7 +528,7 @@ public class SpectraPlotter {
 	private static final DecimalFormat percentDF = new DecimalFormat("0.##%");
 	
 	public static void plotMultiRotD50(List<File> refFiles, String refName, File dataFile, String dataName, String title,
-			File outputDir, String prefix, UncertainArbDiscDataset[] gmpes) throws IOException {
+			File outputDir, String prefix, UncertainArbDiscFunc[] gmpes) throws IOException {
 		List<DiscretizedFunc> refSpectra = new ArrayList<>();
 		for (File refFile : refFiles)
 			refSpectra.add(loadRotD50(refFile));
@@ -536,7 +537,7 @@ public class SpectraPlotter {
 	}
 	
 	public static void plotMultiRotD50(List<DiscretizedFunc> refFiles, String refName, DiscretizedFunc dataSpectra, String dataName,
-			String title, File outputDir, String prefix, UncertainArbDiscDataset[] gmpes, DiscretizedFunc... otherSpectra) throws IOException {
+			String title, File outputDir, String prefix, UncertainArbDiscFunc[] gmpes, DiscretizedFunc... otherSpectra) throws IOException {
 		plotMultiSpectra(refFiles, refName, dataSpectra, dataName, title, outputDir, prefix, true, gmpes, otherSpectra);
 	}
 	
@@ -555,7 +556,7 @@ public class SpectraPlotter {
 	}
 	
 	private static void plotMultiSpectra(List<DiscretizedFunc> refSpectra, String refName, DiscretizedFunc dataSpectra,
-			String dataName, String title, File outputDir, String prefix, boolean rotD50, UncertainArbDiscDataset[] gmpes,
+			String dataName, String title, File outputDir, String prefix, boolean rotD50, UncertainArbDiscFunc[] gmpes,
 			DiscretizedFunc... otherSpectra) throws IOException {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -652,7 +653,7 @@ public class SpectraPlotter {
 			double[] range = fractiles.get(i);
 			DiscretizedFunc lowerFunc = (DiscretizedFunc)refFractCalc.getFractile(range[0]);
 			DiscretizedFunc upperFunc = (DiscretizedFunc)refFractCalc.getFractile(range[1]);
-			UncertainArbDiscDataset rangeFunc = new UncertainArbDiscDataset(refMean, lowerFunc, upperFunc);
+			UncertainArbDiscFunc rangeFunc = new UncertainArbDiscFunc(refMean, lowerFunc, upperFunc);
 			rangeFunc.setName(percentDF.format(range[0])+"-"+percentDF.format(range[1]));
 			funcs.add(rangeFunc);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, fractileColors.get(i)));
@@ -840,7 +841,7 @@ public class SpectraPlotter {
 				}
 			}
 			
-			UncertainArbDiscDataset rangeFunc = new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+			UncertainArbDiscFunc rangeFunc = new UncertainArbDiscFunc(meanFunc, lowerFunc, upperFunc);
 			Color c = periodCPT.getColor((float)period);
 			
 			rangeFuncs.add(rangeFunc);
@@ -988,7 +989,7 @@ public class SpectraPlotter {
 				}
 			}
 			
-			UncertainArbDiscDataset rangeFunc = new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+			UncertainArbDiscFunc rangeFunc = new UncertainArbDiscFunc(meanFunc, lowerFunc, upperFunc);
 			Color c = new Color(0, 200, 0);
 			
 			funcs.add(rangeFunc);
@@ -1079,7 +1080,7 @@ public class SpectraPlotter {
 		return files;
 	}
 	
-	public static UncertainArbDiscDataset calcGMPE_RotD50(EqkRupture rupture, BBP_Site bbpSite, ScalarIMR gmpe, VelocityModel vm) {
+	public static UncertainArbDiscFunc calcGMPE_RotD50(EqkRupture rupture, BBP_Site bbpSite, ScalarIMR gmpe, VelocityModel vm) {
 		Site site = bbpSite.buildGMPE_Site(vm);
 		
 		gmpe.setSite(site);
@@ -1110,7 +1111,7 @@ public class SpectraPlotter {
 			lowerFunc.set(period, Math.exp(logLower));
 		}
 		
-		UncertainArbDiscDataset func = new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+		UncertainArbDiscFunc func = new UncertainArbDiscFunc(meanFunc, lowerFunc, upperFunc);
 		func.setName(gmpe.getShortName()+" ±σ");
 		return func;
 	}
@@ -1246,9 +1247,9 @@ public class SpectraPlotter {
 			File rsRD100File = findRotD100File(rsDir, siteName);
 			DiscretizedFunc rd50 = loadRotD50(rsRD100File);
 			rd50.setName(simName);
-			UncertainArbDiscDataset[] gmpeSpectra = null;
+			UncertainArbDiscFunc[] gmpeSpectra = null;
 			if (gmpes != null) {
-				gmpeSpectra = new UncertainArbDiscDataset[gmpes.length];
+				gmpeSpectra = new UncertainArbDiscFunc[gmpes.length];
 				for (int i=0; i<gmpes.length; i++) {
 					System.out.println("Calculating spectra for "+gmpes[i].getShortName());
 					gmpeSpectra[i] = calcGMPE_RotD50(gmpeRup, site, gmpes[i], vm);
@@ -1264,7 +1265,7 @@ public class SpectraPlotter {
 				List<DiscretizedFunc> spectra = new ArrayList<>();
 				spectra.add(rd50);
 				
-				List<UncertainArbDiscDataset[]> gmpeSpectras;
+				List<UncertainArbDiscFunc[]> gmpeSpectras;
 				if (gmpes != null) {
 					gmpeSpectras = new ArrayList<>();
 					gmpeSpectras.add(gmpeSpectra);
@@ -1290,7 +1291,7 @@ public class SpectraPlotter {
 					}
 					
 					if (gmpes != null) {
-						UncertainArbDiscDataset[] myGMPEs = new UncertainArbDiscDataset[gmpes.length];
+						UncertainArbDiscFunc[] myGMPEs = new UncertainArbDiscFunc[gmpes.length];
 						for (int i=0; i<gmpes.length; i++) {
 							myGMPEs[i] = calcGMPE_RotD50(compEvents.get(event), site, gmpes[i], vm);
 							gmpeMeans[i] = getAveraged(gmpeMeans[i], myGMPEs[i], count);
@@ -1302,11 +1303,11 @@ public class SpectraPlotter {
 					}
 				}
 				
-				UncertainArbDiscDataset[] gmpeMeanSpectra = null;
+				UncertainArbDiscFunc[] gmpeMeanSpectra = null;
 				if (gmpes != null) {
-					gmpeMeanSpectra = new UncertainArbDiscDataset[gmpes.length];
+					gmpeMeanSpectra = new UncertainArbDiscFunc[gmpes.length];
 					for (int i=0; i<gmpeMeanSpectra.length; i++) {
-						gmpeMeanSpectra[i] = new UncertainArbDiscDataset(gmpeMeans[i], gmpeLowers[i], gmpeUppers[i]);
+						gmpeMeanSpectra[i] = new UncertainArbDiscFunc(gmpeMeans[i], gmpeLowers[i], gmpeUppers[i]);
 					}
 				}
 				

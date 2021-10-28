@@ -14,7 +14,7 @@ import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -55,7 +55,7 @@ public class MFDPlot extends AbstractPlot {
 	private boolean plotCombined = true;
 	
 	private boolean plotGR = true;
-	private UncertainArbDiscDataset compRange;
+	private UncertainArbDiscFunc compRange;
 	
 	public MFDPlot() {
 		this(min_mag_default);
@@ -114,7 +114,7 @@ public class MFDPlot extends AbstractPlot {
 		this.comparableName = comparableName;
 	}
 	
-	public void setComparableRange(UncertainArbDiscDataset compRange) {
+	public void setComparableRange(UncertainArbDiscFunc compRange) {
 		this.compRange = compRange;
 	}
 

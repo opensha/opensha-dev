@@ -25,6 +25,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoProbabilityModel;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -32,8 +33,7 @@ import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SubSectionMapping;
 
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoProbabilityModel;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoProbabilityModel;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 import scratch.kevin.simulators.RSQSimCatalog;
@@ -57,7 +57,7 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 	public PaleoRecurrencePlot(List<SimulatorElement> elements, RSQSimSubSectionMapper mapper) throws IOException {
 		this.mapper = mapper;
 		List<? extends FaultSection> subSects = mapper.getSubSections();
-		ArrayList<PaleoRateConstraint> constraints = UCERF3_PaleoRateConstraintFetcher.getConstraints(subSects);
+		ArrayList<U3PaleoRateConstraint> constraints = UCERF3_PaleoRateConstraintFetcher.getConstraints(subSects);
 		
 		paleoProbModel = UCERF3_PaleoProbabilityModel.load();
 		
@@ -67,7 +67,7 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 		
 		applicableElements = new HashSet<>();
 		
-		for (PaleoRateConstraint constr : constraints) {
+		for (U3PaleoRateConstraint constr : constraints) {
 			if (D) System.out.println("Paleo constraint: "+constr.getPaleoSiteName());
 			int sectIndex = constr.getSectionIndex();
 			FaultSection subSect = subSects.get(sectIndex);
@@ -118,14 +118,14 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 	}
 	
 	private class PaleoResult {
-		private PaleoRateConstraint constraint;
+		private U3PaleoRateConstraint constraint;
 		
 		private int sectEventCount = 0;
 		private int elemEventCount = 0;
 		private double sectPaleoProbCount = 0d;
 		private double elemPaleoProbCount = 0d;
 		
-		public PaleoResult(PaleoRateConstraint constraint) {
+		public PaleoResult(U3PaleoRateConstraint constraint) {
 			this.constraint = constraint;
 		}
 		
@@ -168,10 +168,10 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 	public void finalizePlot() throws IOException {
 		double totalDuration = getCurrentDurationYears();
 		
-		Map<PaleoRateConstraint, Double> rawSectRates = new HashMap<>();
-		Map<PaleoRateConstraint, Double> paleoProbSectRates = new HashMap<>();
-		Map<PaleoRateConstraint, Double> rawElemRates = new HashMap<>();
-		Map<PaleoRateConstraint, Double> paleoProbElemRates = new HashMap<>();
+		Map<U3PaleoRateConstraint, Double> rawSectRates = new HashMap<>();
+		Map<U3PaleoRateConstraint, Double> paleoProbSectRates = new HashMap<>();
+		Map<U3PaleoRateConstraint, Double> rawElemRates = new HashMap<>();
+		Map<U3PaleoRateConstraint, Double> paleoProbElemRates = new HashMap<>();
 		
 		for (PaleoResult result : results) {
 			rawSectRates.put(result.constraint, result.sectEventCount/totalDuration);
@@ -196,7 +196,7 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 				"Sim Paleo-Detectable Subsection Rate", "Sim Element Rate", "Sim Paleo-Detectable Element Rate");
 		for (PaleoResult result : results) {
 			List<String> line = new ArrayList<>();
-			PaleoRateConstraint constraint = result.constraint;
+			U3PaleoRateConstraint constraint = result.constraint;
 			line.add(constraint.getPaleoSiteName());
 			line.add((float)constraint.getMeanRate()+"");
 			line.add("["+(float)constraint.getLower95ConfOfRate()+" "+(float)result.constraint.getUpper95ConfOfRate()+"]");
@@ -210,7 +210,7 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 		csv.writeToFile(new File(outputDir, prefix+".csv"));
 	}
 	
-	private void plot(File outputDir, String prefix, Map<PaleoRateConstraint, Double> rateMap, String title, String yAxisLabel)
+	private void plot(File outputDir, String prefix, Map<U3PaleoRateConstraint, Double> rateMap, String title, String yAxisLabel)
 			throws IOException {
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -222,7 +222,7 @@ public class PaleoRecurrencePlot extends AbstractPlot {
 		double logWhiskerDelta95 = 0.03;
 		double logWhiskerDelta68 = 0.04;
 		
-		for (PaleoRateConstraint constr : rateMap.keySet()) {
+		for (U3PaleoRateConstraint constr : rateMap.keySet()) {
 			double rate = rateMap.get(constr);
 			if (rate == 0d)
 				continue;

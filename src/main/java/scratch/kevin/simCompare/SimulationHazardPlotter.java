@@ -28,7 +28,8 @@ import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.LightFixedXFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
+import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.gui.plot.AnimatedGIFRenderer;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -697,13 +698,13 @@ public class SimulationHazardPlotter<E> {
 	private void addSimulationCurves(List<DiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars,
 			IMT imt, boolean includeUncertainty, boolean includeComps) throws IOException {
 		DiscretizedFunc simCurve = getCalcSimCurve(simCalc, imt);
-		if (includeUncertainty && simCurve instanceof UncertainArbDiscDataset) {
+		if (includeUncertainty && simCurve instanceof UncertainBoundedDiscretizedFunc) {
 			// this is so that it is first in the legend
 			funcs.add(simCurve);
 			chars.add(simCurveChar);
 			// now clone so that we can change the name
-			UncertainArbDiscDataset uncertain = (UncertainArbDiscDataset)simCurve;
-			uncertain = new UncertainArbDiscDataset(simCurve, uncertain.getLower(), uncertain.getUpper());
+			UncertainArbDiscFunc uncertain = (UncertainArbDiscFunc)simCurve;
+			uncertain = new UncertainArbDiscFunc(simCurve, uncertain.getLower(), uncertain.getUpper());
 			uncertain.setName("95% conf");
 			funcs.add(uncertain);
 			chars.add(simUncertainChar);

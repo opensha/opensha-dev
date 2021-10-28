@@ -49,7 +49,7 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 import scratch.kevin.simulators.catBuild.RandomCatalogBuilder;
 import scratch.kevin.simulators.dists.RandomDistType;
@@ -60,16 +60,16 @@ public class UC3PaleoOpenCalc {
 	
 	private static class PaleoOpenIden extends ElementIden {
 		
-		private PaleoRateConstraint constr;
+		private U3PaleoRateConstraint constr;
 		private long dateOfLastEventMillis;
 		
-		public PaleoOpenIden(PaleoRateConstraint constr, long dateOfLastEventMillis, List<SimulatorElement> geom) {
+		public PaleoOpenIden(U3PaleoRateConstraint constr, long dateOfLastEventMillis, List<SimulatorElement> geom) {
 			super(constr.getPaleoSiteName(), getForLoc(constr.getPaleoSiteName(), constr.getPaleoSiteLoction(), geom));
 			this.constr = constr;
 			this.dateOfLastEventMillis = dateOfLastEventMillis;
 		}
 		
-		public PaleoRateConstraint getPaleoConstr() {
+		public U3PaleoRateConstraint getPaleoConstr() {
 			return constr;
 		}
 		
@@ -113,11 +113,11 @@ public class UC3PaleoOpenCalc {
 	private static List<PaleoOpenIden> getUC3SitesWithOpenIntervals(
 			FaultSystemSolution sol, List<SimulatorElement> geom) throws IOException {
 		List<? extends FaultSection> fsd = sol.getRupSet().getFaultSectionDataList();
-		ArrayList<PaleoRateConstraint> constraints = UCERF3_PaleoRateConstraintFetcher.getConstraints(fsd);
+		ArrayList<U3PaleoRateConstraint> constraints = UCERF3_PaleoRateConstraintFetcher.getConstraints(fsd);
 		
 		List<PaleoOpenIden> idens = Lists.newArrayList();
 		
-		for (PaleoRateConstraint constr : constraints) {
+		for (U3PaleoRateConstraint constr : constraints) {
 			if (constr.getPaleoSiteName().toLowerCase().startsWith("compton"))
 				// skip compton, not in RSQSim
 				continue;

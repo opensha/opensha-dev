@@ -32,13 +32,13 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.calc.recurInterval.BPT_DistCalc;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoProbabilityModel;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.utils.U3FaultSystemIO;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoProbabilityModel;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 
 import com.google.common.collect.Lists;
@@ -53,13 +53,13 @@ public class PaleoOpenIntervalRIPlot {
 		
 		List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
 		
-		ArrayList<PaleoRateConstraint> constraints = UCERF3_PaleoRateConstraintFetcher.getConstraints(
+		ArrayList<U3PaleoRateConstraint> constraints = UCERF3_PaleoRateConstraintFetcher.getConstraints(
 				subSects);
 //		PaleoProbabilityModel paleoProbs = UCERF3_PaleoProbabilityModel.load();
 		PaleoProbabilityModel paleoProbs = null;
 		// filter out constraints without OI data
 		for (int i=constraints.size(); --i>=0;) {
-			PaleoRateConstraint constr = constraints.get(i);
+			U3PaleoRateConstraint constr = constraints.get(i);
 			if (subSects.get(constr.getSectionIndex()).getDateOfLastEvent() == Long.MIN_VALUE)
 				constraints.remove(i);
 		}
@@ -98,7 +98,7 @@ public class PaleoOpenIntervalRIPlot {
 		List<ConfidenceInterval> intervals = Lists.newArrayList();
 		
 		for (int i=0; i<constraints.size(); i++) {
-			PaleoRateConstraint constr = constraints.get(i);
+			U3PaleoRateConstraint constr = constraints.get(i);
 			if (reg != null && !reg.contains(constr.getPaleoSiteLoction()))
 				continue;
 			FaultSection subSect = subSects.get(constraints.get(i).getSectionIndex());

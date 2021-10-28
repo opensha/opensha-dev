@@ -41,7 +41,7 @@ import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 import com.google.common.primitives.Doubles;
 
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 
 public class PaleoOpenIntervalPlot extends AbstractPlot {
@@ -83,7 +83,7 @@ public class PaleoOpenIntervalPlot extends AbstractPlot {
 
 	public static Table<String, Double, Location> getSetUCERF3() throws IOException {
 		Table<String, Double, Location> table = HashBasedTable.create();
-		for (PaleoRateConstraint constraint : UCERF3_PaleoRateConstraintFetcher.getConstraints())
+		for (U3PaleoRateConstraint constraint : UCERF3_PaleoRateConstraintFetcher.getConstraints())
 			if (!constraint.getPaleoSiteName().contains("Offshore"))
 				table.put(constraint.getPaleoSiteName().trim().replaceAll("\\W+", ""), constraint.getMeanRate(), constraint.getPaleoSiteLoction());
 		return table;

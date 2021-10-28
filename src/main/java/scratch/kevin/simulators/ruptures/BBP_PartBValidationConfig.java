@@ -20,7 +20,7 @@ import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
@@ -243,8 +243,8 @@ public class BBP_PartBValidationConfig {
 		private String prefix;
 		private String[] matchCriteria;
 
-		private Table<Double, Double, UncertainArbDiscDataset> rawCriteriaCache;
-		private Table<Double, Double, UncertainArbDiscDataset> trimmedCriteriaCache;
+		private Table<Double, Double, UncertainArbDiscFunc> rawCriteriaCache;
+		private Table<Double, Double, UncertainArbDiscFunc> trimmedCriteriaCache;
 		private Table<Double, Double, DiscretizedFunc[]> gmmMediansCache;
 		
 		private double mag;
@@ -331,10 +331,10 @@ public class BBP_PartBValidationConfig {
 			return dip;
 		}
 		
-		private synchronized UncertainArbDiscDataset calcLoacRawCriterion(double vs30, double distance) {
+		private synchronized UncertainArbDiscFunc calcLoacRawCriterion(double vs30, double distance) {
 			if (rawCriteriaCache == null)
 				rawCriteriaCache = HashBasedTable.create();
-			UncertainArbDiscDataset criterion = rawCriteriaCache.get(vs30, distance);
+			UncertainArbDiscFunc criterion = rawCriteriaCache.get(vs30, distance);
 			if (criterion == null) {
 				double rRup, rJB;
 				if (DIST_JB) {
@@ -373,14 +373,14 @@ public class BBP_PartBValidationConfig {
 			return medians;
 		}
 		
-		public synchronized UncertainArbDiscDataset getAcceptanceCriteria(double vs30, double distance, boolean trim) {
-			UncertainArbDiscDataset criterion;
+		public synchronized UncertainArbDiscFunc getAcceptanceCriteria(double vs30, double distance, boolean trim) {
+			UncertainArbDiscFunc criterion;
 			if (trim) {
 				if (trimmedCriteriaCache == null)
 					trimmedCriteriaCache = HashBasedTable.create();
 				criterion = trimmedCriteriaCache.get(vs30, distance);
 				if (criterion == null) {
-					UncertainArbDiscDataset rawCriterion = calcLoacRawCriterion(vs30, distance);
+					UncertainArbDiscFunc rawCriterion = calcLoacRawCriterion(vs30, distance);
 					
 					DiscretizedFunc avgFunc = new ArbitrarilyDiscretizedFunc();
 					DiscretizedFunc lowerFunc = new ArbitrarilyDiscretizedFunc();
@@ -394,7 +394,7 @@ public class BBP_PartBValidationConfig {
 						lowerFunc.set(period, rawCriterion.getLowerY(p));
 						upperFunc.set(period, rawCriterion.getUpperY(p));
 					}
-					criterion = new UncertainArbDiscDataset(avgFunc, lowerFunc, upperFunc);
+					criterion = new UncertainArbDiscFunc(avgFunc, lowerFunc, upperFunc);
 					criterion.setName("Acceptance Criteria");
 					trimmedCriteriaCache.put(vs30, distance, criterion);
 				}
@@ -742,13 +742,13 @@ public class BBP_PartBValidationConfig {
 		return ret;
 	}
 	
-	public static UncertainArbDiscDataset calcNGA2_Criterion(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
+	public static UncertainArbDiscFunc calcNGA2_Criterion(double mag, double rRup, double rJB, double rX, FaultStyle style, double dip,
 			double zTor, double width, double vs30) {
 		DiscretizedFunc[] gmmMedianFuncs = calcNGA2_Medians(mag, rRup, rJB, rX, style, dip, zTor, width, vs30);
 		return calcNGA2_Criterion(gmmMedianFuncs);
 	}
 	
-	public static UncertainArbDiscDataset calcNGA2_Criterion(DiscretizedFunc[] gmmMedianFuncs) {
+	public static UncertainArbDiscFunc calcNGA2_Criterion(DiscretizedFunc[] gmmMedianFuncs) {
 		DiscretizedFunc minFunc = new ArbitrarilyDiscretizedFunc();
 		DiscretizedFunc meanFunc = new ArbitrarilyDiscretizedFunc();
 		DiscretizedFunc maxFunc = new ArbitrarilyDiscretizedFunc();
@@ -773,7 +773,7 @@ public class BBP_PartBValidationConfig {
 			meanFunc.set(period, mean);
 			maxFunc.set(period, max);
 		}
-		return new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
+		return new UncertainArbDiscFunc(meanFunc, minFunc, maxFunc);
 	}
 	
 	public static Location[] selectSites(int num, double distance, boolean randomAz, RSQSimCatalog catalog, RSQSimEvent event) {

@@ -8,7 +8,7 @@ import java.util.Map;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -169,7 +169,7 @@ public class ETAS_CatalogEAL_MultiCombine {
 				upper.set(i, getCleaned(yUp));
 			}
 //			hists.put(duration, hist);
-			hists.put(duration, new UncertainArbDiscDataset(hist, lower, upper));
+			hists.put(duration, new UncertainArbDiscFunc(hist, lower, upper));
 		}
 		return hists;
 	}

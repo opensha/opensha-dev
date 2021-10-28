@@ -49,7 +49,7 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -1006,7 +1006,7 @@ public class ManyRunCompilation {
 		U3FaultSystemIO.writeSol(meanSol, new File(dir, prefix+"_mean_sol.zip"));
 		CommandLineInversionRunner.writeMFDPlots(meanSol, dir, prefix);
 		
-		ArrayList<PaleoRateConstraint> paleoConstraints = CommandLineInversionRunner.getPaleoConstraints(
+		ArrayList<U3PaleoRateConstraint> paleoConstraints = CommandLineInversionRunner.getPaleoConstraints(
 				meanSol.getRupSet().getFaultModel(), meanSol.getRupSet());
 		CommandLineInversionRunner.writePaleoPlots(paleoConstraints, null, meanSol, dir, prefix+"_mean");
 		

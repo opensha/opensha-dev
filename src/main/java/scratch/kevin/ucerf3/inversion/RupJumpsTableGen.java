@@ -8,6 +8,7 @@ import java.util.Map;
 import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.util.IDPairing;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoProbabilityModel;
 
 import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.U3FaultSystemSolution;
@@ -20,7 +21,6 @@ import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoProbabilityModel;
 
 public class RupJumpsTableGen {
 

@@ -33,9 +33,9 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.function.XY_DataSetList;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.Location;
@@ -55,6 +55,14 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.RunScript;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.SerialSimulatedAnnealing;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ThreadedSimulatedAnnealing;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.EnergyCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.IterationCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.CoolingScheduleType;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.SegRateConstraint;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.finalReferenceFaultParamDb.DeformationModelPrefDataFinal;
 import org.opensha.sha.faultSurface.FaultTrace;
@@ -76,14 +84,6 @@ import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
-import scratch.UCERF3.simulatedAnnealing.SerialSimulatedAnnealing;
-import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;
-import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.EnergyCompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.IterationCompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.TimeCompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.params.CoolingScheduleType;
-import scratch.UCERF3.simulatedAnnealing.params.GenerationFunctionType;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.SlipAlongRuptureModelEnum;
 
@@ -1869,12 +1869,12 @@ public class FaultSystemRuptureRateInversion {
 				partMFDsFromMultRuns.set(sectPartMFD, 1.0);
 			}
 			
-			UncertainArbDiscDataset mfdMeanMinMaxRange = new UncertainArbDiscDataset(partMFDsFromMultRuns.getMeanCurve(), 
+			UncertainArbDiscFunc mfdMeanMinMaxRange = new UncertainArbDiscFunc(partMFDsFromMultRuns.getMeanCurve(), 
 					partMFDsFromMultRuns.getMinCurve(), partMFDsFromMultRuns.getMaxCurve());
 			mfdMeanMinMaxRange.setName("partMFD_MeanMinMaxRange");
 			mfdList.add(mfdMeanMinMaxRange);
 			
-			UncertainArbDiscDataset mfdMean95conf = get95perConfForMultRuns(partMFDsFromMultRuns);
+			UncertainArbDiscFunc mfdMean95conf = get95perConfForMultRuns(partMFDsFromMultRuns);
 			mfdMean95conf.setName("partMFD_Mean95conf");
 			mfdList.add(mfdMean95conf);
 			
@@ -1976,12 +1976,12 @@ public class FaultSystemRuptureRateInversion {
 				partMFDsFromMultRuns.set(sectPartMFD, 1.0);
 			}
 			tempSum = partMFDsFromMultRuns.getMeanCurve().calcSumOfY_Vals();
-			UncertainArbDiscDataset mfdMeanMinMaxRange = new UncertainArbDiscDataset(partMFDsFromMultRuns.getMeanCurve(), 
+			UncertainArbDiscFunc mfdMeanMinMaxRange = new UncertainArbDiscFunc(partMFDsFromMultRuns.getMeanCurve(), 
 					partMFDsFromMultRuns.getMinCurve(), partMFDsFromMultRuns.getMaxCurve());
 			mfdMeanMinMaxRange.setName("jointPartMFD_MeanMinMaxRange");
 			mfdList.add(mfdMeanMinMaxRange);
 			
-			UncertainArbDiscDataset mfdMean95conf = get95perConfForMultRuns(partMFDsFromMultRuns);
+			UncertainArbDiscFunc mfdMean95conf = get95perConfForMultRuns(partMFDsFromMultRuns);
 			mfdMean95conf.setName("jointPartMFD_Mean95conf");
 			mfdList.add(mfdMean95conf);
 			
@@ -2098,11 +2098,11 @@ public class FaultSystemRuptureRateInversion {
 			// Incremental Distributions:
 			EvenlyDiscretizedFunc meanMfdFromMultipleRuns = mfdsFromMultRuns.getMeanCurve();
 			meanMfdFromMultipleRuns.setName("meanMfdFromMultipleRuns");
-			UncertainArbDiscDataset mfdMinMaxRange = new UncertainArbDiscDataset(meanMfdFromMultipleRuns, 
+			UncertainArbDiscFunc mfdMinMaxRange = new UncertainArbDiscFunc(meanMfdFromMultipleRuns, 
 					mfdsFromMultRuns.getMinCurve(), mfdsFromMultRuns.getMaxCurve());
 			mfdMinMaxRange.setName("mfdMinMaxRange");
 			mfd_funcs.add(mfdMinMaxRange);
-			UncertainArbDiscDataset mfdMean95conf = get95perConfForMultRuns(mfdsFromMultRuns);
+			UncertainArbDiscFunc mfdMean95conf = get95perConfForMultRuns(mfdsFromMultRuns);
 			mfdMean95conf.setName("mfdMean95conf");
 			mfd_funcs.add(mfdMean95conf);
 			mfd_funcs.add(meanMfdFromMultipleRuns);
@@ -2113,11 +2113,11 @@ public class FaultSystemRuptureRateInversion {
 			// Cumulative Distributions:
 			EvenlyDiscretizedFunc meanCumMfdFromMultipleRuns = cumMfdsFromMultRuns.getMeanCurve();
 			meanCumMfdFromMultipleRuns.setName("meanCumMfdFromMultipleRuns");
-			UncertainArbDiscDataset cumMfdMinMaxRange = new UncertainArbDiscDataset(meanCumMfdFromMultipleRuns, 
+			UncertainArbDiscFunc cumMfdMinMaxRange = new UncertainArbDiscFunc(meanCumMfdFromMultipleRuns, 
 					cumMfdsFromMultRuns.getMinCurve(), cumMfdsFromMultRuns.getMaxCurve());
 			cumMfdMinMaxRange.setName("cumMfdMinMaxRange");
 			mfd_funcs.add(cumMfdMinMaxRange);
-			UncertainArbDiscDataset cumMfdMean95conf = get95perConfForMultRuns(cumMfdsFromMultRuns);
+			UncertainArbDiscFunc cumMfdMean95conf = get95perConfForMultRuns(cumMfdsFromMultRuns);
 			cumMfdMean95conf.setName("cumMfdMean95conf");
 			mfd_funcs.add(cumMfdMean95conf);
 			mfd_funcs.add(meanCumMfdFromMultipleRuns);
@@ -2295,7 +2295,7 @@ public class FaultSystemRuptureRateInversion {
 			DiscretizedFunc maxCurve = finalSectSlipRateFromMultRuns.getMaxCurve();
 			minCurve.scale(1000);	// convert to mm/yr
 			maxCurve.scale(1000);	// convert to mm/yr
-			UncertainArbDiscDataset slipRatesMinMaxRange = new UncertainArbDiscDataset(meanSlipRateFromMultipleRuns, minCurve, maxCurve);
+			UncertainArbDiscFunc slipRatesMinMaxRange = new UncertainArbDiscFunc(meanSlipRateFromMultipleRuns, minCurve, maxCurve);
 			slipRatesMinMaxRange.setName("slipRatesMinMaxRange");
 			sr_funcs.add(slipRatesMinMaxRange);
 			
@@ -2321,7 +2321,7 @@ public class FaultSystemRuptureRateInversion {
 			meanCurve.scale(1000);
 			lower95.scale(1000);
 			upper95.scale(1000);
-			UncertainArbDiscDataset slipRatesMean95conf = new UncertainArbDiscDataset(meanCurve,lower95,upper95);
+			UncertainArbDiscFunc slipRatesMean95conf = new UncertainArbDiscFunc(meanCurve,lower95,upper95);
 
 			// this cannot be scaled to mm/yr:
 //			UncertainArbDiscDataset slipRatesMean95conf = get95perConfForMultRuns(finalSectSlipRateFromMultRuns);
@@ -2391,12 +2391,12 @@ public class FaultSystemRuptureRateInversion {
 			EvenlyDiscretizedFunc meanPaleoVisEventRateFromMultipleRuns = finalPaleoVisibleSectEventRateFromMultRuns.getMeanCurve();
 			meanPaleoVisEventRateFromMultipleRuns.setName("meanPaleoVisEventRateFromMultipleRuns");
 
-			UncertainArbDiscDataset paleoVisSlipRatesMinMaxRange = new UncertainArbDiscDataset(meanPaleoVisEventRateFromMultipleRuns, 
+			UncertainArbDiscFunc paleoVisSlipRatesMinMaxRange = new UncertainArbDiscFunc(meanPaleoVisEventRateFromMultipleRuns, 
 					finalPaleoVisibleSectEventRateFromMultRuns.getMinCurve(), finalPaleoVisibleSectEventRateFromMultRuns.getMaxCurve());
 			paleoVisSlipRatesMinMaxRange.setName("paleoVisSlipRatesMinMaxRange");
 			er_funcs.add(paleoVisSlipRatesMinMaxRange);
 			
-			UncertainArbDiscDataset paleoVisEventRatesMean95conf = get95perConfForMultRuns(finalPaleoVisibleSectEventRateFromMultRuns);
+			UncertainArbDiscFunc paleoVisEventRatesMean95conf = get95perConfForMultRuns(finalPaleoVisibleSectEventRateFromMultRuns);
 			paleoVisEventRatesMean95conf.setName("paleoVisEventRatesMean95conf");
 			er_funcs.add(paleoVisEventRatesMean95conf);
 			
@@ -2466,12 +2466,12 @@ public class FaultSystemRuptureRateInversion {
 		if(finalSectMeanSlipFromMultRuns != null) {
 			EvenlyDiscretizedFunc meanSlipFromMultipleRuns = finalSectMeanSlipFromMultRuns.getMeanCurve();
 			meanSlipFromMultipleRuns.setName("meanSlipFromMultipleRuns");
-			UncertainArbDiscDataset meanSlipMinMaxRange = new UncertainArbDiscDataset(meanSlipFromMultipleRuns, 
+			UncertainArbDiscFunc meanSlipMinMaxRange = new UncertainArbDiscFunc(meanSlipFromMultipleRuns, 
 					finalSectMeanSlipFromMultRuns.getMinCurve(), finalSectMeanSlipFromMultRuns.getMaxCurve());
 			meanSlipMinMaxRange.setName("meanSlipMinMaxRange");
 			slip_mean_cov_funcs.add(meanSlipMinMaxRange);
 			
-			UncertainArbDiscDataset meanSlip95conf = get95perConfForMultRuns(finalSectMeanSlipFromMultRuns);
+			UncertainArbDiscFunc meanSlip95conf = get95perConfForMultRuns(finalSectMeanSlipFromMultRuns);
 			meanSlip95conf.setName("meanSlip95conf");
 			slip_mean_cov_funcs.add(meanSlip95conf);
 			slip_mean_cov_funcs.add(meanSlipFromMultipleRuns);
@@ -2486,12 +2486,12 @@ public class FaultSystemRuptureRateInversion {
 			
 			EvenlyDiscretizedFunc slipCOV_FromMultipleRuns = finalSectSlipCOV_FromMultRuns.getMeanCurve();
 			slipCOV_FromMultipleRuns.setName("slipCOV_FromMultipleRuns");
-			UncertainArbDiscDataset slipCOV_MinMaxRange = new UncertainArbDiscDataset(slipCOV_FromMultipleRuns, 
+			UncertainArbDiscFunc slipCOV_MinMaxRange = new UncertainArbDiscFunc(slipCOV_FromMultipleRuns, 
 					finalSectSlipCOV_FromMultRuns.getMinCurve(), finalSectSlipCOV_FromMultRuns.getMaxCurve());
 			slipCOV_MinMaxRange.setName("slipCOV_MinMaxRange");
 			slip_mean_cov_funcs.add(slipCOV_MinMaxRange);
 			
-			UncertainArbDiscDataset slipCOV_95conf = get95perConfForMultRuns(finalSectSlipCOV_FromMultRuns);
+			UncertainArbDiscFunc slipCOV_95conf = get95perConfForMultRuns(finalSectSlipCOV_FromMultRuns);
 			slipCOV_95conf.setName("slipCOV_95conf");
 			slip_mean_cov_funcs.add(slipCOV_95conf);
 			slip_mean_cov_funcs.add(slipCOV_FromMultipleRuns);
@@ -2541,12 +2541,12 @@ public class FaultSystemRuptureRateInversion {
 		ArrayList<PlotCurveCharacterstics> rup_plotChars = new ArrayList<PlotCurveCharacterstics>();
 
 		if(rupRatesFromMultRuns != null) {
-			UncertainArbDiscDataset rupRatesMinMaxRange = new UncertainArbDiscDataset(rupRatesFromMultRuns.getMeanCurve(), 
+			UncertainArbDiscFunc rupRatesMinMaxRange = new UncertainArbDiscFunc(rupRatesFromMultRuns.getMeanCurve(), 
 					rupRatesFromMultRuns.getMinCurve(), rupRatesFromMultRuns.getMaxCurve());
 			rupRatesMinMaxRange.setName("rupRatesMinMaxRange");
 			rup_funcs.add(rupRatesMinMaxRange);
 			
-			UncertainArbDiscDataset rupRatesMean95conf = get95perConfForMultRuns(rupRatesFromMultRuns);
+			UncertainArbDiscFunc rupRatesMean95conf = get95perConfForMultRuns(rupRatesFromMultRuns);
 			rupRatesMean95conf.setName("rupRatesMean95conf");
 			rup_funcs.add(rupRatesMean95conf);
 			
@@ -2615,12 +2615,12 @@ public class FaultSystemRuptureRateInversion {
 			EvenlyDiscretizedFunc meanRateOfThroughGoingRupsFromMultipleRuns = rateOfThroughGoingRupsAtSectBoudaryFromMultRuns.getMeanCurve();
 			meanRateOfThroughGoingRupsFromMultipleRuns.setName("meanRateOfThroughGoingRupsFromMultipleRuns");
 
-			UncertainArbDiscDataset rateOfThroughGoingRupsMinMaxRange = new UncertainArbDiscDataset(meanRateOfThroughGoingRupsFromMultipleRuns, 
+			UncertainArbDiscFunc rateOfThroughGoingRupsMinMaxRange = new UncertainArbDiscFunc(meanRateOfThroughGoingRupsFromMultipleRuns, 
 					rateOfThroughGoingRupsAtSectBoudaryFromMultRuns.getMinCurve(), rateOfThroughGoingRupsAtSectBoudaryFromMultRuns.getMaxCurve());
 			rateOfThroughGoingRupsMinMaxRange.setName("rateOfThroughGoingRupsMinMaxRange");
 			sect_funcs.add(rateOfThroughGoingRupsMinMaxRange);
 
-			UncertainArbDiscDataset rateOfThroughGoingRupsMean95conf = get95perConfForMultRuns(rateOfThroughGoingRupsAtSectBoudaryFromMultRuns);
+			UncertainArbDiscFunc rateOfThroughGoingRupsMean95conf = get95perConfForMultRuns(rateOfThroughGoingRupsAtSectBoudaryFromMultRuns);
 			rateOfThroughGoingRupsMean95conf.setName("rateOfThroughGoingRupsMean95conf");
 			sect_funcs.add(rateOfThroughGoingRupsMean95conf);
 
@@ -2648,7 +2648,7 @@ public class FaultSystemRuptureRateInversion {
 	}
 
 	
-	public 	UncertainArbDiscDataset get95perConfForMultRuns(ArbDiscrEmpiricalDistFunc_3D arbDiscrEmpiricalDistFunc_3D) {
+	public 	UncertainArbDiscFunc get95perConfForMultRuns(ArbDiscrEmpiricalDistFunc_3D arbDiscrEmpiricalDistFunc_3D) {
 		EvenlyDiscretizedFunc meanCurve = arbDiscrEmpiricalDistFunc_3D.getMeanCurve();
 		EvenlyDiscretizedFunc stdevCurve = arbDiscrEmpiricalDistFunc_3D.getStdDevCurve();
 		EvenlyDiscretizedFunc upper95 = stdevCurve.deepClone();
@@ -2668,7 +2668,7 @@ public class FaultSystemRuptureRateInversion {
 			upper95.set(i,mean+1.96*stdom);
 			lower95.set(i,mean-1.96*stdom);
 		}
-		return new UncertainArbDiscDataset(meanCurve,lower95,upper95);
+		return new UncertainArbDiscFunc(meanCurve,lower95,upper95);
 	}
 	
 	

@@ -253,12 +253,14 @@ public class RuptureRotationUtils {
 		double[] slips = event.getAllElementSlips();
 		Preconditions.checkState(!elems.isEmpty());
 		
-		double lat, lon;
+		double lat, lon, depth;
 		
 		if (centroid_utm) {
 			double totWeight = 0d;
 			double northing = 0d;
 			double easting = 0d;
+			
+			depth = 0d;
 			
 			int zone = -1;
 			char letter = 'Z';
@@ -278,9 +280,11 @@ public class RuptureRotationUtils {
 				}
 				northing += weight*utm.getNorthing();
 				easting += weight*utm.getEasting();
+				depth += weight*loc.getDepth();
 			}
 			northing /= totWeight;
 			easting /= totWeight;
+			depth /= totWeight;
 			
 			UTM utm = new UTM(zone, letter, easting, northing);
 			WGS84 wgs = new WGS84(utm);
@@ -291,15 +295,21 @@ public class RuptureRotationUtils {
 			List<Double> lats = new ArrayList<>();
 			List<Double> lons = new ArrayList<>();
 			
+			depth = 0d;
+			double totWeight = 0d;
 			for (int i=0; i<elems.size(); i++) {
 				SimulatorElement elem = elems.get(i);
-				weights.add(FaultMomentCalc.getMoment(elem.getArea(), slips[i]));
+				double weight = FaultMomentCalc.getMoment(elem.getArea(), slips[i]);
+				totWeight += weight;
+				weights.add(weight);
 				Location loc = elem.getCenterLocation();
 				lats.add(loc.getLatitude());
 				lons.add(loc.getLongitude());
+				depth += loc.getDepth()*weight;
 			}
 			lat = FaultUtils.getScaledAngleAverage(weights, lats);
 			lon = FaultUtils.getScaledAngleAverage(weights, lons);
+			depth /= totWeight;
 		}
 		
 		while (lon > 180)
@@ -307,7 +317,7 @@ public class RuptureRotationUtils {
 		while (lat > 90)
 			lat -= 360;
 		
-		return new Location(lat, lon);
+		return new Location(lat, lon, depth);
 	}
 	
 	protected static final boolean D = false;

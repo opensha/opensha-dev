@@ -23,6 +23,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
+import org.opensha.commons.util.ReturnPeriodUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.AbstractERF;
@@ -37,7 +38,6 @@ import org.opensha.sha.util.SiteTranslator;
 
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
-import scratch.kevin.util.ReturnPeriodUtils;
 
 public class HazardCurveMagDependence {
 

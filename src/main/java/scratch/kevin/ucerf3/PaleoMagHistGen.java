@@ -19,7 +19,7 @@ import com.google.common.collect.Lists;
 
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 
 public class PaleoMagHistGen {
@@ -31,7 +31,7 @@ public class PaleoMagHistGen {
 	public static void main(String[] args) throws IOException {
 		FaultSystemRupSet rupSet = InversionFaultSystemRupSetFactory.forBranch(DeformationModels.GEOLOGIC_PLUS_ABM);
 
-		ArrayList<PaleoRateConstraint> paleoConsts = UCERF3_PaleoRateConstraintFetcher.getConstraints(rupSet.getFaultSectionDataList());
+		ArrayList<U3PaleoRateConstraint> paleoConsts = UCERF3_PaleoRateConstraintFetcher.getConstraints(rupSet.getFaultSectionDataList());
 
 		CharMatcher match = CharMatcher.inRange('a', 'z').or(CharMatcher.inRange('A', 'Z'))
 				.or(CharMatcher.inRange('0', '9')).or(CharMatcher.is('-')).precomputed();
@@ -40,7 +40,7 @@ public class PaleoMagHistGen {
 		if (!dir.exists())
 			dir.mkdir();
 
-		for (PaleoRateConstraint paleo : paleoConsts) {
+		for (U3PaleoRateConstraint paleo : paleoConsts) {
 			String paleoName = paleo.getPaleoSiteName();
 			Preconditions.checkNotNull(paleoName, "Paleo name is null!!!!");
 			String name = match.retainFrom(paleoName);

@@ -18,8 +18,7 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
-
-import scratch.UCERF3.simulatedAnnealing.completion.AnnealingProgress;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.AnnealingProgress;
 
 public class MultiRateVsRankPlot {
 

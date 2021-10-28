@@ -10,7 +10,7 @@ import java.util.Map;
 import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -85,7 +85,7 @@ public class CacheSpeedPlotter {
 			meanFunc.set(size, StatUtils.mean(timesArray));
 		}
 		
-		UncertainArbDiscDataset uncertFunc = new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
+		UncertainArbDiscFunc uncertFunc = new UncertainArbDiscFunc(meanFunc, minFunc, maxFunc);
 		
 		List<DiscretizedFunc> funcs = Lists.newArrayList();
 		List<PlotCurveCharacterstics> chars = Lists.newArrayList();
