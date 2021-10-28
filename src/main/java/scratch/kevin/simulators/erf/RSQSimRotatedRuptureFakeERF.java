@@ -173,7 +173,7 @@ public class RSQSimRotatedRuptureFakeERF extends AbstractERF {
 		
 		DoubleParameter rupSurfResParam = new DoubleParameter(RSQSimSectBundledERF.RUP_SURF_RESOLUTION_PARAM_NAME, 0d, 100d);
 		try {
-			rupSurfResParam.setValue(catalog.getAveArea());
+			rupSurfResParam.setValue(Math.sqrt(catalog.getAveArea()));
 		} catch (ConstraintException | ParameterException | IOException e) {
 			e.printStackTrace();
 		}
