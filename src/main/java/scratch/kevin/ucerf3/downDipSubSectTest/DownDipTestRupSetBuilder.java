@@ -12,10 +12,10 @@ import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionInputGenerator;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.ConstraintWeightingType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint.WeightingType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ThreadedSimulatedAnnealing;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
@@ -153,7 +153,7 @@ public class DownDipTestRupSetBuilder {
 			 * Slip rate constraints
 			 */
 			double slipRateConstraintWt = 1;
-			SlipRateInversionConstraint.WeightingType slipRateWeighting = SlipRateInversionConstraint.WeightingType.UNNORMALIZED;
+			ConstraintWeightingType slipRateWeighting = ConstraintWeightingType.UNNORMALIZED;
 			constraints.add(new SlipRateInversionConstraint(slipRateConstraintWt, slipRateWeighting, rupSet));
 			
 			/*

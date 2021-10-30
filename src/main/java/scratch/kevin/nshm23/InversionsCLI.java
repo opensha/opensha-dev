@@ -13,23 +13,24 @@ import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleUnaryOperator;
 
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.ConstraintWeightingType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.LaplacianSmoothingInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDLaplacianSmoothingInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDSubSectNuclInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDUncertaintyWeightedInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.NZ_MFDUncertaintyWeightedInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoProbabilityModel;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoSlipInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldUncertaintyWeightedInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RupRateMinimizationConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint.WeightingType;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.TotalRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
@@ -65,7 +66,7 @@ public class InversionsCLI {
 //		System.out.println("Yawn...");
 //		long minute = 1000l*60l;
 //		long hour = minute*60l;
-//		Thread.sleep(5l*hour + 30l*minute);
+//		Thread.sleep(0l*hour + 10l*minute);
 //		System.out.println("Im awake! "+new Date());
 		
 		File parentDir = new File("/home/kevin/markdown/inversions");
@@ -95,13 +96,13 @@ public class InversionsCLI {
 		argz.add("--avg-threads");
 		argz.add("4");
 
-		dirName += "-slip_constr";
-		argz.add("--slip-constraint");
-//		argz.add("--slip-weight"); argz.add("1");
-//		argz.add("--norm-slip-weight"); argz.add("0.01");
-		argz.add("--uncertain-slip-weight");
-		argz.add("1");
-		dirName += "_uncertain";
+//		dirName += "-slip_constr";
+//		argz.add("--slip-constraint");
+////		argz.add("--slip-weight"); argz.add("1");
+////		argz.add("--norm-slip-weight"); argz.add("0.01");
+//		argz.add("--uncertain-slip-weight");
+//		argz.add("1");
+//		dirName += "_uncertain";
 
 //		double b = 1;
 //		dirName += "-rel_gr_b"+oDF.format(b);
@@ -122,10 +123,10 @@ public class InversionsCLI {
 ////		argz.add("--mfd-ineq"); dirName += "_ineq";
 //		argz.add("--mfd-transition-mag"); argz.add("7.8"); dirName += "_trans7.8";
 
-		dirName += "-smooth";
-		argz.add("--smooth");
-		argz.add("--smooth-weight");
-		argz.add("1000");
+//		dirName += "-smooth";
+//		argz.add("--smooth");
+//		argz.add("--smooth-weight");
+//		argz.add("1000");
 
 //		dirName += "-minimize_below";
 //		argz.add("--minimize-below-sect-min");
@@ -133,9 +134,56 @@ public class InversionsCLI {
 //		argz.add("10000");
 		
 		boolean u3Constraints = false;
-//		boolean u3Constraints = true; dirName += "-u3_constraints";
-		boolean u3StdDevConstraints = false;
-//		boolean u3StdDevConstraints = true; dirName += "-u3_std_dev_tests";
+//		boolean u3Constraints = true;
+//		boolean u3StdDevConstraints = false;
+		boolean u3StdDevConstraints = true;
+
+		List<InversionConstraint> extraConstraints = new ArrayList<>();
+		
+		if (u3Constraints) {
+			FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
+			extraConstraints.addAll(getU3Constraints(rupSet));
+			dirName += "-u3_constraints";
+		}
+		
+		if (u3StdDevConstraints) {
+			FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
+			DoubleUnaryOperator mfdStdDevFunc = M->0.1;
+//			DoubleUnaryOperator mfdStdDevFunc = M->Math.max(0.1, 0.1*(M-5));
+//			DoubleUnaryOperator mfdStdDevFunc = M->0.1+Math.pow(10, M-8); dirName += "-aggresivePowMSD";
+			double slipWeight = 1d;
+			double mfdWeight = 1d;
+			double paleoWeight = 1d;
+			double parkfieldWeight = 1d;
+			extraConstraints.addAll(getStdDevWeightedU3Constraints(rupSet, slipWeight, mfdWeight, mfdStdDevFunc,
+					paleoWeight, parkfieldWeight, 0, 0, 0, 0d));
+			dirName += "-u3_std_dev_tests";
+		}
+		
+////		double[] minMags = { 0d };
+////		double[] minMags = { 6.5d };
+//		double[] minMags = { 7d };
+////		double[] minMags = { 0d, 6.5d };
+////		double[] minMags = { 0d, 6.5d, 7.5d };
+////		double[] minMags = { 0d, 6.5d, 7d, 7.5d };
+//		ConstraintWeightingType rateWeightType = ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY;
+//		double rateRelStdDev = 0.1;
+//		FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
+//		EvenlyDiscretizedFunc supraCmlMFD = rupSet.requireModule(InversionTargetMFDs.class)
+//				.getTotalOnFaultSupraSeisMFD().getCumRateDistWithOffset();
+//		dirName += rateWeightType == ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY ? "-uncertTotRate" : "-totRate";
+//		for (int i=0; i<minMags.length; i++) {
+//			double minMag = minMags[i];
+//			double rate = supraCmlMFD.getInterpolatedY_inLogYDomain(minMag);
+//			System.out.println("Target rate of M"+(float)minMag+" events: "+rate);
+//			extraConstraints.add(new TotalRateInversionConstraint(100d, rate, rupSet, minMag, rateWeightType, rate*rateRelStdDev));
+//			if (i > 0)
+//				dirName += "_";
+//			if (minMag > 0)
+//				dirName += "M"+oDF.format(minMag);
+//			else
+//				dirName += "Supra";
+//		}
 
 //		dirName += "-5h";
 //		argz.add("--completion"); argz.add("5h");
@@ -149,21 +197,6 @@ public class InversionsCLI {
 		dirName += "-10m";
 		argz.add("--completion"); argz.add("10m");
 		argz.add("-avg-completion"); argz.add("1m");
-
-		List<InversionConstraint> extraConstraints = new ArrayList<>();
-		
-		if (u3Constraints) {
-			FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
-			extraConstraints.addAll(getU3Constraints(rupSet));
-		}
-		
-		if (u3StdDevConstraints) {
-			FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
-			DoubleUnaryOperator mfdStdDevFunc = M->0.1;
-//			DoubleUnaryOperator mfdStdDevFunc = M->Math.max(0.1, 0.1*(M-5));
-//			DoubleUnaryOperator mfdStdDevFunc = M->0.1+Math.pow(10, M-8); dirName += "-aggresivePowMSD";
-			extraConstraints.addAll(getStdDevWeightedU3Constraints(rupSet, mfdStdDevFunc, 0, 0, 0, 0d));
-		}
 
 		File dir = new File(parentDir, dirName);
 		System.out.println("Output directory: " + dir.getAbsolutePath());
@@ -257,41 +290,48 @@ public class InversionsCLI {
 	}
 	
 	public static List<InversionConstraint> getStdDevWeightedU3Constraints(
-			FaultSystemRupSet rupSet, DoubleUnaryOperator relMFDstdDevFunc, double minimizeWeight,
+			FaultSystemRupSet rupSet, double slipWeight, double mfdWeight, DoubleUnaryOperator relMFDstdDevFunc,
+			double paleoWeight, double parkfieldWeight, double minimizeWeight,
 			double u2NuclWeight, double supraSmoothWeight, double mfdSmoothWeight) throws IOException {
 		InversionTargetMFDs targetMFDs = rupSet.requireModule(InversionTargetMFDs.class);
 		
 		List<InversionConstraint> constraints = new ArrayList<>();
 		
-		final double weightEach = 1d;
-		
 		// slip rate constraints
-		constraints.add(new SlipRateInversionConstraint(weightEach, WeightingType.NORMALIZED_BY_UNCERTAINTY, rupSet));
+		if (slipWeight > 0d) 
+			constraints.add(new SlipRateInversionConstraint(slipWeight, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, rupSet));
 		
-		// paleo event rate
-		List<U3PaleoRateConstraint> paleoRateConstraints =
-				UCERF3_PaleoRateConstraintFetcher.getConstraints(rupSet.getFaultSectionDataList());
-		constraints.add(new PaleoRateInversionConstraint(
-				rupSet, weightEach, paleoRateConstraints, UCERF3_PaleoProbabilityModel.load()));
-		
-		// paleo slip
-		List<U3AveSlipConstraint> aveSlipConstraints = U3AveSlipConstraint.load(rupSet.getFaultSectionDataList());
-		constraints.add(new PaleoSlipInversionConstraint(
-				rupSet, weightEach, aveSlipConstraints, U3AveSlipConstraint.slip_prob_model, true));
+		if (paleoWeight > 0d) {
+			// paleo event rate
+			List<U3PaleoRateConstraint> paleoRateConstraints =
+					UCERF3_PaleoRateConstraintFetcher.getConstraints(rupSet.getFaultSectionDataList());
+			constraints.add(new PaleoRateInversionConstraint(
+					rupSet, paleoWeight, paleoRateConstraints, UCERF3_PaleoProbabilityModel.load()));
+			
+			// paleo slip
+			List<U3AveSlipConstraint> aveSlipConstraints = U3AveSlipConstraint.load(rupSet.getFaultSectionDataList());
+			constraints.add(new PaleoSlipInversionConstraint(
+					rupSet, paleoWeight, aveSlipConstraints, U3AveSlipConstraint.slip_prob_model, true));
+		}
 		
 		// parkfield
-		double parkfieldMeanRate = 1.0/25.0; // Bakun et al. (2005)
-		double parkfieldStdDev = 0.1d*parkfieldMeanRate; // TODO made up
+		if (parkfieldWeight > 0d) {
+			double parkfieldMeanRate = 1.0/25.0; // Bakun et al. (2005)
+			double parkfieldStdDev = 0.1d*parkfieldMeanRate; // TODO made up
+			
+			// Find Parkfield M~6 ruptures
+			List<Integer> parkfieldRups = UCERF3InversionInputGenerator.findParkfieldRups(rupSet);
+			constraints.add(new ParkfieldInversionConstraint(parkfieldWeight, parkfieldMeanRate, parkfieldRups,
+					ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, parkfieldStdDev));
+		}
 		
-		// Find Parkfield M~6 ruptures
-		List<Integer> parkfieldRups = UCERF3InversionInputGenerator.findParkfieldRups(rupSet);
-		constraints.add(new ParkfieldUncertaintyWeightedInversionConstraint(
-				weightEach, parkfieldMeanRate, parkfieldStdDev, parkfieldRups));
-		
-		if (relMFDstdDevFunc != null)
-			constraints.add(new MFDInversionConstraint(rupSet, weightEach, false,
-					MFDInversionConstraint.WeightingType.NORMALIZED_BY_UNCERTAINTY, targetMFDs.getMFD_Constraints(),
-					MFDInversionConstraint.calcStdDevsFromRelativeFunc(targetMFDs.getMFD_Constraints(), relMFDstdDevFunc)));
+		if (relMFDstdDevFunc != null && mfdWeight > 0d) {
+			List<UncertainIncrMagFreqDist> mfds = new ArrayList<>();
+			for (IncrementalMagFreqDist mfd : targetMFDs.getMFD_Constraints())
+				mfds.add(UncertainIncrMagFreqDist.relStdDev(mfd, relMFDstdDevFunc));
+			constraints.add(new MFDInversionConstraint(rupSet, mfdWeight, false,
+					ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, mfds));
+		}
 		
 		if (minimizeWeight > 0d) {
 			ModSectMinMags modMinMags = rupSet.requireModule(ModSectMinMags.class);

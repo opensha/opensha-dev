@@ -29,10 +29,8 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MF
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoSlipInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldUncertaintyWeightedInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RupRateMinimizationConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint.WeightingType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.IterationCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
@@ -43,6 +41,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.A_PrioriRupRates;
+import org.opensha.sha.magdist.gui.MagFreqDistAppWindow;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
@@ -200,6 +199,10 @@ public class BatchInversionScriptWriter {
 		DoubleUnaryOperator mfdStdDevFunc = M->0.1; dirName += "-mfd_sd_0.1";
 //		DoubleUnaryOperator mfdStdDevFunc = M->Math.max(0.1, 0.1*(M-5)); dirName += "-mfd_sd_0.1xMmin5";
 //		DoubleUnaryOperator mfdStdDevFunc = M->0.1+Math.pow(10, M-8); dirName += "-mfd_sd_0.1pls10powMmin8";
+		double slipWeight = 1d;
+		double mfdWeight = 1d;
+		double paleoWeight = 100d;
+		double parkfieldWeight = 1d;
 		double minimizeWeight = 10000d;
 //		double minimizeWeight = 0d;
 //		double mfdSmoothWeight = 1000d;
@@ -209,6 +212,16 @@ public class BatchInversionScriptWriter {
 //		double u2NuclWeight = 0.01d;
 		double u2NuclWeight = 0d;
 		
+		int num = 5;
+
+		if (mfdWeight != 1d && mfdStdDevFunc != null)
+			dirName += "_wt"+oDF.format(mfdWeight);
+		if (slipWeight != 1d)
+			dirName += "-slip"+oDF.format(slipWeight);
+		if (paleoWeight != 1d)
+			dirName += "-paleo"+oDF.format(paleoWeight);
+		if (parkfieldWeight != 1d)
+			dirName += "-prakfield"+oDF.format(minimizeWeight);
 		if (minimizeWeight > 0)
 			dirName += "-minimize"+oDF.format(minimizeWeight);
 		if (supraSmoothWeight > 0)
@@ -219,13 +232,14 @@ public class BatchInversionScriptWriter {
 			dirName += "-u2Nucl"+oDF.format(u2NuclWeight);
 		dirName += "-5h";
 		List<InversionConstraint> u3Constraints = InversionsCLI.getStdDevWeightedU3Constraints(
-				rupSet, mfdStdDevFunc, minimizeWeight, u2NuclWeight, supraSmoothWeight, mfdSmoothWeight);
+				rupSet, slipWeight, mfdWeight, mfdStdDevFunc, paleoWeight, parkfieldWeight,
+				minimizeWeight, u2NuclWeight, supraSmoothWeight, mfdSmoothWeight);
 		InversionConfiguration config = InversionConfiguration.builder(
 				u3Constraints, TimeCompletionCriteria.getInHours(5))
 				.threads(remoteToalThreads)
 				.avgThreads(remoteToalThreads/4, TimeCompletionCriteria.getInMinutes(20))
 				.build();
-		for (int i=0; i<10; i++) {
+		for (int i=0; i<num; i++) {
 			configs.add(config);
 			subDirNames.add("uncert_weight_run_"+i);
 		}
