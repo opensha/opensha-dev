@@ -24,8 +24,8 @@ import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.GMT_MapException;
@@ -53,6 +53,13 @@ import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.hazardMap.HazardCurveSetCalculator;
 import org.opensha.sha.cybershake.maps.GMT_InterpolationSettings;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompoundCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.EnergyCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.IterationCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.CoolingScheduleType;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.param.AleatoryMagAreaStdDevParam;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.gcim.ui.infoTools.IMT_Info;
@@ -75,13 +82,6 @@ import org.apache.commons.math3.stat.StatUtils;
 
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.CompoundCompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.EnergyCompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.IterationCompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.TimeCompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.params.CoolingScheduleType;
-import scratch.UCERF3.simulatedAnnealing.params.GenerationFunctionType;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.ScalingRelationshipEnum;
 import scratch.ned.FSS_Inversion2019.logicTreeEnums.SlipAlongRuptureModelEnum;
 
@@ -563,7 +563,7 @@ public class SimpleFaultInversion {
 			EvenlyDiscretizedFunc hazCurveMeanLnX = curvesFromMultRunsFunc_3D.getMeanCurve();
 			EvenlyDiscretizedFunc hazCurveMinLnX = curvesFromMultRunsFunc_3D.getMinCurve();
 			EvenlyDiscretizedFunc hazCurveMaxLnX = curvesFromMultRunsFunc_3D.getMaxCurve();
-			UncertainArbDiscDataset hazCurveMean95confLnX = fltSysRupInversion.get95perConfForMultRuns(curvesFromMultRunsFunc_3D);
+			UncertainArbDiscFunc hazCurveMean95confLnX = fltSysRupInversion.get95perConfForMultRuns(curvesFromMultRunsFunc_3D);
 
 			ArbitrarilyDiscretizedFunc hazCurveMean = new ArbitrarilyDiscretizedFunc();
 			ArbitrarilyDiscretizedFunc hazCurveMin = new ArbitrarilyDiscretizedFunc();
@@ -579,9 +579,9 @@ public class SimpleFaultInversion {
 			}
 
 			hazCurveMean.setName("hazCurveMean");
-			UncertainArbDiscDataset hazCurveMinMaxRange = new UncertainArbDiscDataset(hazCurveMean, hazCurveMin, hazCurveMax);
+			UncertainArbDiscFunc hazCurveMinMaxRange = new UncertainArbDiscFunc(hazCurveMean, hazCurveMin, hazCurveMax);
 			hazCurveMinMaxRange.setName("hazCurveMinMaxRange");
-			UncertainArbDiscDataset hazCurveMean95conf = new UncertainArbDiscDataset(hazCurveMean, hazCurveMeanLower95, hazCurveMeanUpper95);
+			UncertainArbDiscFunc hazCurveMean95conf = new UncertainArbDiscFunc(hazCurveMean, hazCurveMeanLower95, hazCurveMeanUpper95);
 			hazCurveMean95conf.setName("hazCurveMean95conf");
 
 			plottingFuncsArray.add(hazCurveMinMaxRange);
@@ -1880,7 +1880,7 @@ yAxisRange=null;
 		 randomSeed = 0;	// zero means use current time in millis as the seed
 		 numSolutions = 1; // this is ignored for NON_NEGATIVE_LEAST_SQUARES which only has one possible solution
 		 saCooling = CoolingScheduleType.FAST_SA;
-		 perturbationFunc = GenerationFunctionType.UNIFORM_NO_TEMP_DEPENDENCE;
+		 perturbationFunc = GenerationFunctionType.UNIFORM_0p001;
 		 completionCriteria = new IterationCompletionCriteria((long) 1e5);
 //completionCriteria = new EnergyCompletionCriteria(600d);	// number of rows/subsections
 

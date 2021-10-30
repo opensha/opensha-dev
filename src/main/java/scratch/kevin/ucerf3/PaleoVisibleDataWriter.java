@@ -20,7 +20,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.utils.U3FaultSystemIO;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 
 public class PaleoVisibleDataWriter {
@@ -43,12 +43,12 @@ public class PaleoVisibleDataWriter {
 			U3FaultSystemSolution sol = fms.get(fm);
 			FaultSystemRupSet rupSet = sol.getRupSet();
 			
-			ArrayList<PaleoRateConstraint> constrs = UCERF3_PaleoRateConstraintFetcher.getConstraints(
+			ArrayList<U3PaleoRateConstraint> constrs = UCERF3_PaleoRateConstraintFetcher.getConstraints(
 					sol.getRupSet().getFaultSectionDataList());
 			
 			Map<Integer, Double> traceLengthCache = Maps.newConcurrentMap();
 			
-			for (PaleoRateConstraint constr : constrs) {
+			for (U3PaleoRateConstraint constr : constrs) {
 				CSVFile<String> csv = new CSVFile<>(true);
 				
 				csv.addLine("Rupture Index", "Magnitude", "Rate", "Ave Slip (m)", "x/L");

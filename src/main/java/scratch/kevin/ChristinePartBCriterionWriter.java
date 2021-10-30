@@ -7,7 +7,7 @@ import java.util.List;
 
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 
 import scratch.kevin.simulators.ruptures.BBP_PartBValidationConfig;
@@ -36,7 +36,7 @@ public class ChristinePartBCriterionWriter {
 			double rJB = rRup;
 			double rX = rJB;
 			DiscretizedFunc[] gmmMedians = BBP_PartBValidationConfig.calcNGA2_Medians(mag, rRup, rJB, rX, style, dip, zTor, width, vs30, z10, z25, zHyp);
-			UncertainArbDiscDataset criterion = BBP_PartBValidationConfig.calcNGA2_Criterion(gmmMedians);
+			UncertainArbDiscFunc criterion = BBP_PartBValidationConfig.calcNGA2_Criterion(gmmMedians);
 			
 			if (csv.getNumRows() == 0) {
 				// add header

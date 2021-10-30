@@ -29,9 +29,9 @@ import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -482,7 +482,7 @@ public class U3ETAS_SimulationAnalysis {
 	 * @return - the first array element has the mean, min, and max and the second has the 
 	 * mean, lower95 conf of the mean, and upper 95 conf of the mean
 	 */
-	public static UncertainArbDiscDataset[] computeHazardCurvesFromCatalogs(ArrayList<ObsEqkRupList> catalogList, Location location, 
+	public static UncertainArbDiscFunc[] computeHazardCurvesFromCatalogs(ArrayList<ObsEqkRupList> catalogList, Location location, 
 			double duration, double saPeriod, boolean randomIML, ScalarIMR imr) {
 		
 		// get subcatalogs
@@ -520,7 +520,7 @@ public class U3ETAS_SimulationAnalysis {
 		EvenlyDiscretizedFunc hazCurveMeanLnX = curvesFromAllCatalogsFunc_3D.getMeanCurve();
 		EvenlyDiscretizedFunc hazCurveMinLnX = curvesFromAllCatalogsFunc_3D.getMinCurve();
 		EvenlyDiscretizedFunc hazCurveMaxLnX = curvesFromAllCatalogsFunc_3D.getMaxCurve();
-		UncertainArbDiscDataset hazCurveMean95confLnX = get95perConfForMultRuns(curvesFromAllCatalogsFunc_3D);
+		UncertainArbDiscFunc hazCurveMean95confLnX = get95perConfForMultRuns(curvesFromAllCatalogsFunc_3D);
 
 		ArbitrarilyDiscretizedFunc hazCurveMean = new ArbitrarilyDiscretizedFunc();
 		ArbitrarilyDiscretizedFunc hazCurveMin = new ArbitrarilyDiscretizedFunc();
@@ -536,9 +536,9 @@ public class U3ETAS_SimulationAnalysis {
 		}
 
 		hazCurveMean.setName("hazCurveMean");
-		UncertainArbDiscDataset hazCurveMinMaxRange = new UncertainArbDiscDataset(hazCurveMean, hazCurveMin, hazCurveMax);
+		UncertainArbDiscFunc hazCurveMinMaxRange = new UncertainArbDiscFunc(hazCurveMean, hazCurveMin, hazCurveMax);
 		hazCurveMinMaxRange.setName("hazCurveMinMaxRange");
-		UncertainArbDiscDataset hazCurveMean95conf = new UncertainArbDiscDataset(hazCurveMean, hazCurveMeanLower95, hazCurveMeanUpper95);
+		UncertainArbDiscFunc hazCurveMean95conf = new UncertainArbDiscFunc(hazCurveMean, hazCurveMeanLower95, hazCurveMeanUpper95);
 		hazCurveMean95conf.setName("hazCurveMean95conf");
 		
 		
@@ -573,7 +573,7 @@ public class U3ETAS_SimulationAnalysis {
 //		plottingFuncsArray.add(erfHazCurveLinearXvalues);	
 //		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED));
 
-		return new UncertainArbDiscDataset[] {hazCurveMinMaxRange,hazCurveMean95conf};
+		return new UncertainArbDiscFunc[] {hazCurveMinMaxRange,hazCurveMean95conf};
 	}
 	
 	
@@ -1084,7 +1084,7 @@ public class U3ETAS_SimulationAnalysis {
 
 	}
 	
-	public static void writeAndOrPlotHazardCurves(ArrayList<UncertainArbDiscDataset[]> dataSetsArray, ArrayList<XY_DataSet> funcsArray, double duration, 
+	public static void writeAndOrPlotHazardCurves(ArrayList<UncertainArbDiscFunc[]> dataSetsArray, ArrayList<XY_DataSet> funcsArray, double duration, 
 			double saPeriod, String dirName, boolean popupWindow, String plotTitle) {
 		
 		Color[] colorArray = {Color.BLUE, Color.RED, Color.BLACK, Color.MAGENTA, Color.CYAN};
@@ -1095,7 +1095,7 @@ public class U3ETAS_SimulationAnalysis {
 		ArrayList<XY_DataSet> plottingFuncsArray = new ArrayList<XY_DataSet>();
 		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();	
 
-		for(UncertainArbDiscDataset[] dataSets:dataSetsArray) {
+		for(UncertainArbDiscFunc[] dataSets:dataSetsArray) {
 			plottingFuncsArray.add(dataSets[1]); // for solid line
 			plottingFuncsArray.add(dataSets[1]); // for shaded region
 			plottingFuncsArray.add(dataSets[0].getLower());
@@ -1160,7 +1160,7 @@ public class U3ETAS_SimulationAnalysis {
 	}
 	
 	
-	public static UncertainArbDiscDataset get95perConfForMultRuns(ArbDiscrEmpiricalDistFunc_3D arbDiscrEmpiricalDistFunc_3D) {
+	public static UncertainArbDiscFunc get95perConfForMultRuns(ArbDiscrEmpiricalDistFunc_3D arbDiscrEmpiricalDistFunc_3D) {
 		EvenlyDiscretizedFunc meanCurve = arbDiscrEmpiricalDistFunc_3D.getMeanCurve();
 		EvenlyDiscretizedFunc stdevCurve = arbDiscrEmpiricalDistFunc_3D.getStdDevCurve();
 		EvenlyDiscretizedFunc upper95 = stdevCurve.deepClone();
@@ -1180,7 +1180,7 @@ public class U3ETAS_SimulationAnalysis {
 			upper95.set(i,mean+1.96*stdom);
 			lower95.set(i,mean-1.96*stdom);
 		}
-		return new UncertainArbDiscDataset(meanCurve,lower95,upper95);
+		return new UncertainArbDiscFunc(meanCurve,lower95,upper95);
 	}
 
 
@@ -1596,7 +1596,7 @@ public class U3ETAS_SimulationAnalysis {
 		double saPeriod = 0.2; // 0 = PGA
 		ScalarIMR imr = AttenRelRef.CB_2014.instance(null);
 		double duration = 50;
-		ArrayList<UncertainArbDiscDataset[]> dataSetsArray = new ArrayList<UncertainArbDiscDataset[]>();
+		ArrayList<UncertainArbDiscFunc[]> dataSetsArray = new ArrayList<UncertainArbDiscFunc[]>();
 		ArrayList<XY_DataSet> funcsArray = new ArrayList<XY_DataSet>();
 		String filePrefix = "Test";
 

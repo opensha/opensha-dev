@@ -22,8 +22,9 @@ import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
+import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -1110,7 +1111,7 @@ public class SynchParamCalculator {
 			}
 		}
 
-		Map<IDPairing, UncertainArbDiscDataset> lagUncertainties = null;
+		Map<IDPairing, UncertainArbDiscFunc> lagUncertainties = null;
 		Map<IDPairing, Double> pairingStdDevs = Maps.newHashMap();
 		if (trialPrefix != null) {
 			System.out.println("Loading "+maxTrialsFound+" trials for each with prefix: "+trialPrefix);
@@ -1188,7 +1189,7 @@ public class SynchParamCalculator {
 			}
 			lagUncertainties = Maps.newHashMap();
 			for (IDPairing pairing : upperFuncs.keySet()) {
-				lagUncertainties.put(pairing, new UncertainArbDiscDataset(
+				lagUncertainties.put(pairing, new UncertainArbDiscFunc(
 						meanFuncs.get(pairing), lowerFuncs.get(pairing), upperFuncs.get(pairing)));
 			}
 			File stdDevDir = new File(file.getParentFile(), "synch_std_regression");
@@ -1351,7 +1352,7 @@ public class SynchParamCalculator {
 
 				if (lagUncertainties != null && lagUncertainties.containsKey(new IDPairing(m, n))) {
 					System.out.println("We have an uncertainty function!");
-					UncertainArbDiscDataset uncertainFunc = lagUncertainties.get(new IDPairing(m, n));
+					UncertainArbDiscFunc uncertainFunc = lagUncertainties.get(new IDPairing(m, n));
 					//						for (int i=0; i<uncertainFunc.getNum(); i++)
 					//							System.out.println("\t"+uncertainFunc.getLowerY(i)
 					//									+"\t"+uncertainFunc.getY(i)+"\t"+uncertainFunc.getUpperY(i));
@@ -1537,7 +1538,7 @@ public class SynchParamCalculator {
 				for (int m=0; m<nDims; m++) {
 					for (int n=m+1; n<nDims; n++) {
 						IDPairing pair = new IDPairing(m, n);
-						UncertainArbDiscDataset func = lagUncertainties.get(pair);
+						UncertainBoundedDiscretizedFunc func = lagUncertainties.get(pair);
 						double val;
 						if (func == null)
 							val = Double.NaN;
@@ -1554,7 +1555,7 @@ public class SynchParamCalculator {
 				for (int m=0; m<nDims; m++) {
 					for (int n=m+1; n<nDims; n++) {
 						IDPairing pair = new IDPairing(m, n);
-						UncertainArbDiscDataset func = lagUncertainties.get(pair);
+						UncertainBoundedDiscretizedFunc func = lagUncertainties.get(pair);
 						double val;
 						if (func == null)
 							val = Double.NaN;

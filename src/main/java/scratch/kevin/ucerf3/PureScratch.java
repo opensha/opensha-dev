@@ -100,9 +100,11 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
@@ -117,6 +119,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -184,8 +187,8 @@ import scratch.UCERF3.utils.FaultSectionDataWriter;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
-import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.simulators.RSQSimCatalog;
@@ -730,10 +733,10 @@ public class PureScratch {
 		InversionFaultSystemSolution sol = U3FaultSystemIO.loadInvSol(solFile);
 		File outputDir = new File(solFile.getParentFile(), solFile.getName().replace(".zip", ""));
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-		ArrayList<PaleoRateConstraint> paleoRateConstraints =
+		ArrayList<U3PaleoRateConstraint> paleoRateConstraints =
 				CommandLineInversionRunner.getPaleoConstraints(sol.getRupSet().getFaultModel(), sol.getRupSet());
 		System.out.println(paleoRateConstraints.size()+" paleo constraints");
-		List<AveSlipConstraint> aveSlipConstraints = AveSlipConstraint.load(sol.getRupSet().getFaultSectionDataList());
+		List<U3AveSlipConstraint> aveSlipConstraints = U3AveSlipConstraint.load(sol.getRupSet().getFaultSectionDataList());
 		System.out.println(aveSlipConstraints.size()+" ave slip constraints");
 		Map<String, List<Integer>> namedFaultsMap = sol.getRupSet().getFaultModel().getNamedFaultsMapAlt();
 		for (String name : Lists.newArrayList(namedFaultsMap.keySet())) {
@@ -1462,15 +1465,15 @@ public class PureScratch {
 	}
 	
 	private static void test55() throws IOException {
-		List<PaleoRateConstraint> biasiScharerSites = new ArrayList<>();
-		for (PaleoRateConstraint constraint : UCERF3_PaleoRateConstraintFetcher.getConstraints()) {
+		List<U3PaleoRateConstraint> biasiScharerSites = new ArrayList<>();
+		for (U3PaleoRateConstraint constraint : UCERF3_PaleoRateConstraintFetcher.getConstraints()) {
 			String name = constraint.getPaleoSiteName();
 			if (name.equals("S. San Andreas - Coachella") || name.equals("San Jacinto - Hog Lake")
 					|| name.equals("Frazier Mountian, SSAF") || name.equals("N. San Andreas - Santa Cruz Seg.")
 					|| name.equals("Hayward fault - South"))
 				biasiScharerSites.add(constraint);
 		}
-		for (PaleoRateConstraint constraint : biasiScharerSites)
+		for (U3PaleoRateConstraint constraint : biasiScharerSites)
 			System.out.println(constraint.getPaleoSiteName()+": "+(float)(1d/constraint.getMeanRate()));
 		Preconditions.checkState(biasiScharerSites.size() == 5);
 	}
@@ -2672,12 +2675,83 @@ public class PureScratch {
 		newSol.write(new File(inDir, "solution2.zip"));
 	}
 	
+	private static void test101() throws IOException {
+		File baseDir = new File("/home/kevin/OpenSHA/UCERF4/fault_models/");
+		
+		File fmFile = new File(baseDir, "NSHM23_FaultSections_v1p1/NSHM23_FaultSections_v1p1.geojson");
+		File dmFile = new File(baseDir, "NSHM23_GeolDefMod_v1/NSHM23_GeolDefMod_v1.csv");
+		
+		List<GeoJSONFaultSection> sects = GeoJSONFaultReader.readFaultSections(fmFile);
+		System.out.println("Loaded "+sects.size()+" sections");
+		
+		GeoJSONFaultReader.attachGeoDefModel(sects, dmFile);
+		
+		double confStdDevsAway = 2d;
+
+		MinMaxAveTracker stdDevTrack = new MinMaxAveTracker();
+		MinMaxAveTracker fractTrack = new MinMaxAveTracker();
+		
+		DefaultXY_DataSet xy = new DefaultXY_DataSet();
+
+		List<Double> stdDevs = new ArrayList<>();
+		List<Double> fracts = new ArrayList<>();
+		
+		for (GeoJSONFaultSection sect : sects) {
+			double high = sect.getProperty("HighRate", Double.NaN);
+			double low = sect.getProperty("LowRate", Double.NaN);
+			double mean = sect.getOrigAveSlipRate();
+			if (mean == 0d)
+				continue;
+			
+			double upperStdDev = (high-mean)/confStdDevsAway;
+			double lowerStdDev = (mean-low)/confStdDevsAway;
+//			double comb = 0.5*(upperStdDev + lowerStdDev);
+			double comb = (high-low)/(2*confStdDevsAway);
+			stdDevTrack.addValue(comb);
+			stdDevs.add(comb);
+			double fract = comb/mean;
+			fractTrack.addValue(fract);
+			fracts.add(fract);
+			
+			System.out.println(sect.getSectionId()+". "+sect.getSectionName());
+			System.out.println("\tSlip Rate:\t"+(float)mean+" ["+(float)low+", "+(float)high+"]");
+			System.out.println("\tImplied Std Dev:\t"+(float)comb+" ("+(float)lowerStdDev+", "+(float)upperStdDev+")");
+			System.out.println("\tImplied Fractional:\t"+(float)(fract));
+			
+			xy.set(mean, fract);
+		}
+		System.out.println("Standard Deviations: "+stdDevTrack);
+		System.out.println("\tMedian: "+DataUtils.median(Doubles.toArray(stdDevs)));
+		System.out.println("Standard Deviation Fractions: "+fractTrack);
+		System.out.println("\tMedian: "+DataUtils.median(Doubles.toArray(fracts)));
+		
+		GraphWindow gw = new GraphWindow(xy, "Fractional Std Dev vs Slip Rate",
+				new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
+		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+	}
+	
+	private static void test102() throws IOException {
+		File solFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2021_10_19-reproduce-ucerf3-ref_branch-tapered-convergence-u3Iters/mean_solution.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		
+		WaterLevelRates wlRates = sol.getModule(WaterLevelRates.class);
+		double[] wl = wlRates.get();
+		
+		for (int r=0; r<wl.length; r++) {
+			double rate = sol.getRateForRup(r);
+			double noMinRate = rate-wl[r];
+			if (noMinRate < 1e-16 && Math.random() < 0.01)
+				System.out.println(r+"\ttotRate="+rate+"\twl="+wl[r]+"\tnoMinRate="+noMinRate);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test100();
+		test101();
 	}
 
 }

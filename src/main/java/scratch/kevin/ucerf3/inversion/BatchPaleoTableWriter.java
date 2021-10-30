@@ -9,16 +9,16 @@ import java.util.zip.ZipException;
 import org.dom4j.DocumentException;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoProbabilityModel;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.inversion.UCERF2_ComparisonSolutionFetcher;
 import scratch.UCERF3.utils.U3FaultSystemIO;
-import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
+import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.PaleoFitPlotter;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoProbabilityModel;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoProbabilityModel;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 
@@ -40,10 +40,10 @@ public class BatchPaleoTableWriter {
 		
 		FaultSystemSolution ucerf2Sol = UCERF2_ComparisonSolutionFetcher
 				.getUCERF2Solution(FaultModels.FM2_1);
-		List<AveSlipConstraint> ucerf2AveSlipConstraints;
-		List<PaleoRateConstraint> ucerf2PaleoConstraints;
+		List<U3AveSlipConstraint> ucerf2AveSlipConstraints;
+		List<U3PaleoRateConstraint> ucerf2PaleoConstraints;
 		try {
-			ucerf2AveSlipConstraints = AveSlipConstraint.load(
+			ucerf2AveSlipConstraints = U3AveSlipConstraint.load(
 					ucerf2Sol.getRupSet().getFaultSectionDataList());
 			ucerf2PaleoConstraints = UCERF3_PaleoRateConstraintFetcher
 					.getConstraints(ucerf2Sol.getRupSet().getFaultSectionDataList());
@@ -62,8 +62,8 @@ public class BatchPaleoTableWriter {
 	}
 	
 	private static void handleDir(File dir, FaultSystemSolution ucerf2Sol,
-			List<AveSlipConstraint> ucerf2AveSlipConstraints,
-			List<PaleoRateConstraint> ucerf2PaleoRateConstraints,
+			List<U3AveSlipConstraint> ucerf2AveSlipConstraints,
+			List<U3PaleoRateConstraint> ucerf2PaleoRateConstraints,
 			PaleoProbabilityModel paleoProbModel) throws ZipException, IOException, DocumentException {
 		for (File file : dir.listFiles()) {
 			if (file.isDirectory()) {
@@ -82,10 +82,10 @@ public class BatchPaleoTableWriter {
 			
 			InversionFaultSystemSolution sol = U3FaultSystemIO.loadInvSol(file);
 			
-			List<AveSlipConstraint> aveSlipConstraints =
-					AveSlipConstraint.load(sol.getRupSet().getFaultSectionDataList());
+			List<U3AveSlipConstraint> aveSlipConstraints =
+					U3AveSlipConstraint.load(sol.getRupSet().getFaultSectionDataList());
 			
-			List<PaleoRateConstraint> paleoRateConstraints =
+			List<U3PaleoRateConstraint> paleoRateConstraints =
 					CommandLineInversionRunner.getPaleoConstraints(
 							sol.getRupSet().getFaultModel(), sol.getRupSet());
 			

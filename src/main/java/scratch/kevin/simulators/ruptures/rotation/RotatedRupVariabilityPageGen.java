@@ -49,8 +49,8 @@ import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
@@ -1930,8 +1930,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 //						System.out.println((float)period+"\t"+optionalDigitDF.format(stdDevFunc.getY(period))+"\t["
 //								+optionalDigitDF.format(lowerFunc.getY(period))+" "+optionalDigitDF.format(upperFunc.getY(period))+"]");
 					
-					stdDevPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscDataset(medianFunc, lower95Func, upper95Func),
-							new UncertainArbDiscDataset(medianFunc, lower68Func, upper68Func), sigmaFunc);
+					stdDevPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscFunc(medianFunc, lower95Func, upper95Func),
+							new UncertainArbDiscFunc(medianFunc, lower68Func, upper68Func), sigmaFunc);
 					
 					if (type == VariabilityType.BETWEEN_EVENTS || type == VariabilityType.WITHIN_EVENT_SS)
 						dataSizeDependenceLines = plotDataSizeDependence(key, resourcesDir, stdDevFunc, gmpeResult);
@@ -2300,8 +2300,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 					sigmaFunc.set(x, Math.sqrt(StatUtils.variance(results)));
 				}
 				System.out.println();
-				StdDevPercentileFuncs numEventsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscDataset(numEventsFunc, lower95Func, upper95Func),
-						new UncertainArbDiscDataset(numEventsFunc, lower68Func, upper68Func), sigmaFunc);
+				StdDevPercentileFuncs numEventsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscFunc(numEventsFunc, lower95Func, upper95Func),
+						new UncertainArbDiscFunc(numEventsFunc, lower68Func, upper68Func), sigmaFunc);
 				Map<String, Double> dataVals = new HashMap<>();
 				dataVals.put("ASK (2014) Num Events", (double)numEvents);
 				plotDataSizeDependence(numEventsFunc, numEventsPercentiles, type.name+" ("+type.symbol+") Event Count Dependence",
@@ -2360,8 +2360,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 					sigmaFunc.set(x, Math.sqrt(StatUtils.variance(results)));
 				}
 				System.out.println();
-				StdDevPercentileFuncs numRecordingsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscDataset(numRecordingsFunc, lower95Func, upper95Func),
-						new UncertainArbDiscDataset(numRecordingsFunc, lower68Func, upper68Func), sigmaFunc);
+				StdDevPercentileFuncs numRecordingsPercentiles = new StdDevPercentileFuncs(new UncertainArbDiscFunc(numRecordingsFunc, lower95Func, upper95Func),
+						new UncertainArbDiscFunc(numRecordingsFunc, lower68Func, upper68Func), sigmaFunc);
 				Map<String, Double> dataVals = new HashMap<>();
 				if (key.distance == null) {
 					dataVals.put("Data Recs/Event", aveNumRecordings);
@@ -3785,11 +3785,11 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 	}
 	
 	private class StdDevPercentileFuncs {
-		private final UncertainArbDiscDataset bounds95;
-		private final UncertainArbDiscDataset bounds68;
+		private final UncertainArbDiscFunc bounds95;
+		private final UncertainArbDiscFunc bounds68;
 		private final DiscretizedFunc sigmaFunc;
 		
-		public StdDevPercentileFuncs(UncertainArbDiscDataset bounds95, UncertainArbDiscDataset bounds68, DiscretizedFunc sigmaFunc) {
+		public StdDevPercentileFuncs(UncertainArbDiscFunc bounds95, UncertainArbDiscFunc bounds68, DiscretizedFunc sigmaFunc) {
 			this.bounds95 = bounds95;
 			this.bounds68 = bounds68;
 			this.sigmaFunc = sigmaFunc;
@@ -4002,8 +4002,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 //					System.out.println((float)period+"\t"+optionalDigitDF.format(stdDevFunc.getY(period))+"\t["
 //							+optionalDigitDF.format(lowerFunc.getY(period))+" "+optionalDigitDF.format(upperFunc.getY(period))+"]");
 				
-				UncertainArbDiscDataset func95 = new UncertainArbDiscDataset(medianFunc, lower95Func, upper95Func);
-				UncertainArbDiscDataset func68 = new UncertainArbDiscDataset(medianFunc, lower68Func, upper68Func);
+				UncertainArbDiscFunc func95 = new UncertainArbDiscFunc(medianFunc, lower95Func, upper95Func);
+				UncertainArbDiscFunc func68 = new UncertainArbDiscFunc(medianFunc, lower68Func, upper68Func);
 				
 				func95.setName(null);
 				funcs.add(0, func95);

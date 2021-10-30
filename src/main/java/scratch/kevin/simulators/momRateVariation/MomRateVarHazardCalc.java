@@ -19,11 +19,11 @@ import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.region.CaliforniaRegions.RELM_SOCAL;
 import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
 import org.opensha.commons.data.siteData.SiteDataValue;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
@@ -760,7 +760,7 @@ public class MomRateVarHazardCalc {
 		gp.saveAsPDF(outputFile.getAbsolutePath()+".pdf");
 	}
 	
-	private static UncertainArbDiscDataset calcMomRatesForMomRates(
+	private static UncertainArbDiscFunc calcMomRatesForMomRates(
 			List<? extends SimulatorEvent> events, double[] years, double[] moRates, double durationYears) {
 		Preconditions.checkArgument(moRates.length == years.length);
 		
@@ -839,7 +839,7 @@ public class MomRateVarHazardCalc {
 			upperFunc.set(x, mean + stdDev);
 		}
 		
-		return new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+		return new UncertainArbDiscFunc(meanFunc, lowerFunc, upperFunc);
 	}
 
 }

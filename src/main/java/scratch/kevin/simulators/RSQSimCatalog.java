@@ -28,7 +28,7 @@ import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.PlotPreferences;
@@ -517,6 +517,21 @@ public class RSQSimCatalog implements XMLSaveable {
 				null, null),
 		BRUCE_5212("bruce/rundir5212", "Bruce 5212", "Bruce Shaw", cal(2021, 4, 27),
 				"CA shallower.  H=16km.  b=.009 a=.001",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5250("bruce/rundir5250", "Bruce 5250", "Bruce Shaw", cal(2021, 10, 27),
+				"default=same as 4983;  dtau=.67",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5251("bruce/rundir5251", "Bruce 5251", "Bruce Shaw", cal(2021, 10, 27),
+				"default but dtau=.65",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5252("bruce/rundir5252", "Bruce 5252", "Bruce Shaw", cal(2021, 10, 27),
+				"default but dtau=.66",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5253("bruce/rundir5253", "Bruce 5253", "Bruce Shaw", cal(2021, 10, 27),
+				"default but dtau=.68",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5254("bruce/rundir5254", "Bruce 5254", "Bruce Shaw", cal(2021, 10, 27),
+				"default but dtau=.69",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -1725,7 +1740,7 @@ public class RSQSimCatalog implements XMLSaveable {
 						minFunc.set(mag, Double.parseDouble(csv.get(row, 2)));
 						maxFunc.set(mag, Double.parseDouble(csv.get(row, 3)));
 					}
-					UncertainArbDiscDataset compRange = new UncertainArbDiscDataset(meanFunc, minFunc, maxFunc);
+					UncertainArbDiscFunc compRange = new UncertainArbDiscFunc(meanFunc, minFunc, maxFunc);
 					compRange.setName("U3 On Fault");
 					mfdPlot.setComparableRange(compRange);
 				}
@@ -2944,11 +2959,11 @@ public class RSQSimCatalog implements XMLSaveable {
 	static {
 		catalogLocations = new File[] {
 				// USC HPC
-				new File("/home/scec-00/rsqsim/catalogs/kmilner"),
-				new File("/home/scec-00/rsqsim/catalogs/shaw"),
-				new File("/home/scec-00/rsqsim/catalogs/gilchrij"),
-				new File("/home/scec-00/rsqsim/catalogs/gilchrij/cybershake"),
-				new File("/home/scec-00/rsqsim/catalogs/gilchrij/paramSweep"),
+				new File("/project/scec_608/rsqsim/catalogs/kmilner"),
+				new File("/project/scec_608/rsqsim/catalogs/shaw"),
+				new File("/project/scec_608/rsqsim/catalogs/gilchrij"),
+				new File("/project/scec_608/rsqsim/catalogs/gilchrij/cybershake"),
+				new File("/project/scec_608/rsqsim/catalogs/gilchrij/paramSweep"),
 				// Kevin's laptop
 				new File("/data/kevin/simulators/catalogs"),
 				new File("/data/kevin/simulators/catalogs/bruce"),
@@ -2982,7 +2997,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
-		GregorianCalendar minDate = cal(2020, 10, 1);
+		GregorianCalendar minDate = cal(2021, 10, 1);
 		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);

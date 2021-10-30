@@ -28,7 +28,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 
 public class SAFThroughCreepingProbCalc {
@@ -42,7 +42,7 @@ public class SAFThroughCreepingProbCalc {
 		// paleo sites
 		int[] parentIDs = new int[] {32, 285, 300, 287, 286, 301, 282, 283, 284, 295, 294}; // parkfield to coachella
 		HashSet<Integer> parentIDSet = new HashSet<Integer>(Ints.asList(parentIDs));
-		for (PaleoRateConstraint constr :
+		for (U3PaleoRateConstraint constr :
 			UCERF3_PaleoRateConstraintFetcher.getConstraints(rupSet.getFaultSectionDataList())) {
 			int sectID = constr.getSectionIndex();
 			int parentID = rupSet.getFaultSectionData(sectID).getParentSectionId();

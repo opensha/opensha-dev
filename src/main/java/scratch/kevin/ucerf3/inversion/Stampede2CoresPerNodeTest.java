@@ -12,6 +12,11 @@ import java.util.concurrent.Future;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoProbabilityModel;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ThreadedSimulatedAnnealing;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.ProgressTrackingCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 
 import com.google.common.base.Preconditions;
 
@@ -25,13 +30,8 @@ import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.inversion.laughTest.UCERF3PlausibilityConfig;
-import scratch.UCERF3.simulatedAnnealing.ThreadedSimulatedAnnealing;
-import scratch.UCERF3.simulatedAnnealing.completion.CompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.ProgressTrackingCompletionCriteria;
-import scratch.UCERF3.simulatedAnnealing.completion.TimeCompletionCriteria;
-import scratch.UCERF3.utils.aveSlip.AveSlipConstraint;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoProbabilityModel;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 
 public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 	
@@ -76,7 +76,7 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 				rupSet.getFaultModel(), rupSet.getInversionTargetMFDs());
 		
 		// get the paleo rate constraints
-		List<PaleoRateConstraint> paleoRateConstraints = null;
+		List<U3PaleoRateConstraint> paleoRateConstraints = null;
 		try {
 			paleoRateConstraints = CommandLineInversionRunner.getPaleoConstraints(
 					rupSet.getFaultModel(), rupSet);
@@ -100,9 +100,9 @@ public class Stampede2CoresPerNodeTest extends MPJTaskCalculator {
 			System.exit(1);
 		}
 		
-		List<AveSlipConstraint> aveSlipConstraints = null;
+		List<U3AveSlipConstraint> aveSlipConstraints = null;
 		try {
-			aveSlipConstraints = AveSlipConstraint.load(rupSet.getFaultSectionDataList());
+			aveSlipConstraints = U3AveSlipConstraint.load(rupSet.getFaultSectionDataList());
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);

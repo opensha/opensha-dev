@@ -17,8 +17,8 @@ import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -59,7 +59,7 @@ public class GroundMotionScatterPlot {
 		ArbitrarilyDiscretizedFunc lower = new ArbitrarilyDiscretizedFunc();
 		for (Point2D pt : oneToOne)
 			lower.set(pt.getX(), pt.getY()/2);
-		UncertainArbDiscDataset shaded = new UncertainArbDiscDataset(oneToOne, lower, upper);
+		UncertainArbDiscFunc shaded = new UncertainArbDiscFunc(oneToOne, lower, upper);
 		
 		if (YELLOW_REGION) {
 			funcs.add(shaded);

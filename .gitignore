@@ -11,3 +11,4 @@ Scratch*.java
 *.log
 build.date
 build.githash
+build.gitbranch

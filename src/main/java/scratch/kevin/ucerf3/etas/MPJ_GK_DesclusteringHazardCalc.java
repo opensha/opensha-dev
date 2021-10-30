@@ -21,8 +21,8 @@ import org.apache.commons.cli.Options;
 import org.dom4j.DocumentException;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.util.ExceptionUtils;
@@ -165,13 +165,13 @@ public class MPJ_GK_DesclusteringHazardCalc extends MPJTaskCalculator {
 				
 				debug("Calculating index "+index+", period="+(float)period);
 				
-				UncertainArbDiscDataset[] datasetsArray1 = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(
+				UncertainArbDiscFunc[] datasetsArray1 = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(
 						catalogsList, loc, duration, period, false, gmpe);
 				ArbitrarilyDiscretizedFunc poissonCurve = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogsPoisson(
 						catalogsList, loc, duration, period, gmpe);
-				UncertainArbDiscDataset[] datasetsArray2 = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(
+				UncertainArbDiscFunc[] datasetsArray2 = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(
 						declusteredCatalogsList, loc, duration, period, false, gmpe);
-				UncertainArbDiscDataset[] datasetsArray3 = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(
+				UncertainArbDiscFunc[] datasetsArray3 = U3ETAS_SimulationAnalysis.computeHazardCurvesFromCatalogs(
 						catalogsRandmizedList, loc, duration, period, false, gmpe);
 				
 				CSVFile<String> csv = new CSVFile<>(true);

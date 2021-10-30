@@ -17,7 +17,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.dom4j.DocumentException;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.GMT_MapException;
 import org.opensha.commons.geo.GriddedRegion;
@@ -547,10 +547,10 @@ class RupSpectraPageGen {
 				rotDFile = SpectraPlotter.findRotD50File(eventBBPDir, site.getName());
 				hasRD100 = false;
 			}
-			UncertainArbDiscDataset[] gmpeSpectra = null;
+			UncertainArbDiscFunc[] gmpeSpectra = null;
 			if (spectraGMPEs != null && spectraGMPEs.length > 0 && gmpeRup != null) {
 				System.out.print("Calculating GMPEs...");
-				gmpeSpectra = new UncertainArbDiscDataset[spectraGMPEs.length];
+				gmpeSpectra = new UncertainArbDiscFunc[spectraGMPEs.length];
 				for (int i=0; i<gmpeSpectra.length; i++)
 					gmpeSpectra[i] = SpectraPlotter.calcGMPE_RotD50(gmpeRup, site, spectraGMPEs[i], vm);
 				System.out.println("DONE.");

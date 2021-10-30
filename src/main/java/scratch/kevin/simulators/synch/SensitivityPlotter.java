@@ -14,7 +14,8 @@ import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
+import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -113,7 +114,7 @@ public class SensitivityPlotter {
 		private List<Range> confidenceInvervals;
 		
 		private DiscretizedFunc gBarFunc;
-		private UncertainArbDiscDataset trialsFunc;
+		private UncertainArbDiscFunc trialsFunc;
 		
 		public SensitivityResult(Fault fault1, Fault fault2, CSVFile<String> csv) {
 			this.fault1 = fault1;
@@ -198,7 +199,7 @@ public class SensitivityPlotter {
 					upperFunc.set(val, Math.log(StatUtils.max(valArray)));
 				}
 				
-				gBarFunc = new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+				gBarFunc = new UncertainArbDiscFunc(meanFunc, lowerFunc, upperFunc);
 				
 				if (trials != null) {
 					meanFunc = new ArbitrarilyDiscretizedFunc();
@@ -219,7 +220,7 @@ public class SensitivityPlotter {
 						upperFunc.set(val, Math.log(StatUtils.percentile(valArray, 97.5)));
 					}
 					
-					trialsFunc = new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+					trialsFunc = new UncertainArbDiscFunc(meanFunc, lowerFunc, upperFunc);
 				}
 			} else {
 				gBarFunc = new ArbitrarilyDiscretizedFunc();
@@ -243,7 +244,7 @@ public class SensitivityPlotter {
 						upperFunc.set(x, Math.log(confidenceInvervals.get(i).getUpperBound()));
 					}
 					
-					trialsFunc = new UncertainArbDiscDataset(meanFunc, lowerFunc, upperFunc);
+					trialsFunc = new UncertainArbDiscFunc(meanFunc, lowerFunc, upperFunc);
 				}
 			}
 		}
@@ -277,7 +278,7 @@ public class SensitivityPlotter {
 		}
 		
 		// now main func
-		if (result.gBarFunc instanceof UncertainArbDiscDataset) {
+		if (result.gBarFunc instanceof UncertainBoundedDiscretizedFunc) {
 			funcs.add(result.gBarFunc);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, Color.RED));
 		}
@@ -291,8 +292,8 @@ public class SensitivityPlotter {
 		double maxVal = 0d;
 		for (DiscretizedFunc func : funcs) {
 			double funcMax = Math.max(Math.abs(func.getMaxY()), Math.abs(func.getMinY()));
-			if (func instanceof UncertainArbDiscDataset) {
-				UncertainArbDiscDataset ufunc = (UncertainArbDiscDataset)func;
+			if (func instanceof UncertainBoundedDiscretizedFunc) {
+				UncertainBoundedDiscretizedFunc ufunc = (UncertainBoundedDiscretizedFunc)func;
 				funcMax = Math.max(funcMax, Math.max(Math.abs(ufunc.getUpperMaxY()), Math.abs(ufunc.getUpperMinY())));
 				funcMax = Math.max(funcMax, Math.max(Math.abs(ufunc.getLowerMaxY()), Math.abs(ufunc.getLowerMinY())));
 			}
@@ -372,7 +373,7 @@ public class SensitivityPlotter {
 			Color color = defaultColors.get(colorIndex);
 			
 			DiscretizedFunc func = cell.getValue().gBarFunc;
-			if (func instanceof UncertainArbDiscDataset) {
+			if (func instanceof UncertainBoundedDiscretizedFunc) {
 				uncertainFuncs.add(func);
 				uncertainChars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, color));
 			}
@@ -392,8 +393,8 @@ public class SensitivityPlotter {
 		double maxVal = 0d;
 		for (DiscretizedFunc func : funcs) {
 			double funcMax = Math.max(Math.abs(func.getMaxY()), Math.abs(func.getMinY()));
-			if (func instanceof UncertainArbDiscDataset) {
-				UncertainArbDiscDataset ufunc = (UncertainArbDiscDataset)func;
+			if (func instanceof UncertainBoundedDiscretizedFunc) {
+				UncertainBoundedDiscretizedFunc ufunc = (UncertainBoundedDiscretizedFunc)func;
 				funcMax = Math.max(funcMax, Math.max(Math.abs(ufunc.getUpperMaxY()), Math.abs(ufunc.getUpperMinY())));
 				funcMax = Math.max(funcMax, Math.max(Math.abs(ufunc.getLowerMaxY()), Math.abs(ufunc.getLowerMinY())));
 			}

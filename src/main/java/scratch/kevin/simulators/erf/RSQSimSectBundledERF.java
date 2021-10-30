@@ -78,7 +78,7 @@ import scratch.kevin.simulators.RSQSimCatalog.Loader;
 public class RSQSimSectBundledERF extends AbstractERF {
 	
 	private static final int GEOM_LONG_ZONE = 11;
-	private static final char GEOM_LAT_ZONE = 'N';
+	private static final char GEOM_LAT_ZONE = 'S';
 	
 	// inputs
 	private List<? extends FaultSection> subSects;
@@ -107,6 +107,12 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	static final String RUP_SURF_RESOLUTION_PARAM_NAME = "Rupture Surface Resolution";
 	private DoubleParameter rupSurfResParam;
 	
+	static final String SRF_DT_PARAM_NAME = "SRF Time Step";
+	private DoubleParameter srfDT;
+	
+	static final String SPIN_UP_PARAM_NAME = "Spin-Up Time Skipped";
+	private DoubleParameter spinUpYears;
+	
 	// misc
 	private Map<Integer, List<FaultSection>> parentSectMappings;
 	
@@ -118,8 +124,15 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	private Map<SimulatorElement, Double> elemSiteDistances = null;
 
 	public RSQSimSectBundledERF(List<SimulatorElement> elements, List<RSQSimEvent> events, FaultModels fm, DeformationModels dm,
-			List<? extends FaultSection> subSects, double minMag, double minFractForInclusion, double sourceBuffer) {
-		init(null, null, fm, dm, subSects, elements);
+			List<? extends FaultSection> subSects, double minMag, double minFractForInclusion, double sourceBuffer, double dt,
+			double skipYears) {
+		double surfRes = 0d;
+		for (SimulatorElement elem : elements)
+			surfRes += elem.getArea();
+		surfRes /= elements.size();
+		surfRes = Math.sqrt(surfRes); // from area to spacing
+		surfRes *= 1e-3; // m -> km
+		init(null, null, fm, dm, subSects, elements, dt, skipYears, surfRes);
 		adjustableParams.removeParameter(mappingFileParam);
 		adjustableParams.removeParameter(geomFileParam);
 		
@@ -138,17 +151,18 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			List<? extends FaultSection> subSects, List<SimulatorElement> elements) throws IOException {
 		Preconditions.checkNotNull(mappingFile);
 		Preconditions.checkState(geometryFile != null || elements != null);
-		init(mappingFile, geometryFile, fm, dm, subSects, elements);
+		init(mappingFile, geometryFile, fm, dm, subSects, elements, Double.NaN, Double.NaN, Double.NaN);
 		adjustableParams.removeParameter(mappingFileParam);
 		adjustableParams.removeParameter(geomFileParam);
 	}
 
 	private RSQSimSectBundledERF() {
-		init(null, null, null, null, null, null);
+		init(null, null, null, null, null, null, Double.NaN, Double.NaN, Double.NaN);
 	}
 	
 	private void init(File mappingFile, File geometryFile, FaultModels fm, DeformationModels dm,
-			List<? extends FaultSection> subSects, List<SimulatorElement> elements) {
+			List<? extends FaultSection> subSects, List<SimulatorElement> elements, double dt,
+			double skipYears, double surfRes) {
 		mappingFileParam = new FileParameter(MAPPING_FILE_PARAM_NAME, mappingFile);
 		mappingFileParam.addParameterChangeListener(this);
 		adjustableParams.addParameter(mappingFileParam);
@@ -172,7 +186,30 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		adjustableParams.addParameter(defModelParam);
 		
 		rupSurfResParam = new DoubleParameter(RUP_SURF_RESOLUTION_PARAM_NAME, 0d, 100d);
+		rupSurfResParam.getConstraint().setNullAllowed(true);
 		adjustableParams.addParameter(rupSurfResParam);
+		if (Double.isFinite(surfRes))
+			rupSurfResParam.setValue(surfRes);
+		else
+			rupSurfResParam.setValue(null);
+		
+		srfDT = new DoubleParameter(SRF_DT_PARAM_NAME, 0d, 1d);
+		srfDT.getConstraint().setNullAllowed(true);
+		srfDT.setUnits("Seconds");
+		if (Double.isFinite(dt))
+			srfDT.setValue(dt);
+		else
+			srfDT.setValue(null);
+		adjustableParams.addParameter(srfDT);
+		
+		spinUpYears = new DoubleParameter(SPIN_UP_PARAM_NAME, 0d, 1000000d);
+		spinUpYears.getConstraint().setNullAllowed(true);
+		spinUpYears.setUnits("Years");
+		if (Double.isFinite(skipYears))
+			spinUpYears.setValue(skipYears);
+		else
+			spinUpYears.setValue(null);
+		adjustableParams.addParameter(spinUpYears);
 		
 		if (subSects == null)
 			loadSubSects();
@@ -1116,8 +1153,13 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		RSQSimCatalog catalog;
 		boolean writePoints, writeSRFs, writeMappings, testReadOnly;
 		double maxDuration = 0;
+		
+		double dt = 0.05;
+//		double dt = 0.1;
+		double skipYears = 5000;
+		
 		File compMappings = null;
-		if (args.length >= 1 && args.length < 6) {
+		if (args.length >= 1 && args.length < 8) {
 			File catalogDir = new File(args[0]);
 			catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
 					null, null, null, FaultModels.FM3_1, DeformationModels.GEOLOGIC); // TODO
@@ -1130,14 +1172,18 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				writeSRFs = Boolean.parseBoolean(args[2]);
 			else
 				writeSRFs = true;
-			if (args.length == 4)
+			if (args.length >= 4)
 				writeMappings = Boolean.parseBoolean(args[3]);
 			else
 				writeMappings = true;
-			if (args.length == 5)
+			if (args.length >= 5)
 				testReadOnly = Boolean.parseBoolean(args[4]);
 			else
 				testReadOnly = false;
+			if (args.length >= 6)
+				dt = Double.parseDouble(args[5]);
+			if (args.length >= 7)
+				skipYears = Double.parseDouble(args[6]);
 		} else {
 			System.out.println("Assuming hardcoded. Otherwise usage is:");
 			System.out.println("<catalogDir> [writePoints writeSRFs writeMappings testReadOnly]");
@@ -1164,7 +1210,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		if (testReadOnly) {
 			File mappingFile = new File(catalog.getCatalogDir(), "erf_mappings.bin");
 			File geomFile = compMappings == null ? null : catalog.getGeomFile();
-			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(mappingFile, geomFile, fm, dm , subSects, elements);
+			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(mappingFile, geomFile, fm, dm, subSects, elements);
 			erf.updateForecast();
 			System.out.println("Source 0 has "+erf.getNumRuptures(0)+" ruptures");
 			if (compMappings != null) {
@@ -1174,9 +1220,21 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				validateMappings(erf, erf2);
 			}
 		} else {
-			double skipYears = 5000;
 			double minMag = 6.5;
 			double minFractForInclusion = 0.2;
+			
+			System.out.println("Getting ready to load "+catalog.getName());
+			System.out.println("\twritePoints="+writePoints);
+			System.out.println("\twriteSRFs="+writeSRFs);
+			System.out.println("\twriteMappings="+writeMappings);
+			System.out.println("\tdt="+dt+" s");
+			System.out.println("\tskipYears="+skipYears+" yrs");
+			
+			File catalogDir = catalog.getCatalogDir();
+			File csDataDir = new File(catalogDir, "cybershake_inputs_"+(float)dt+"s_skip"+(int)skipYears+"yrs");
+			Preconditions.checkState(csDataDir.exists() || csDataDir.mkdir());
+			
+			System.out.println("\toutputDir="+csDataDir.getAbsolutePath());
 			Loader loader = catalog.loader().skipYears(skipYears).minMag(minMag);
 			try {
 				catalog.getTransitions();
@@ -1189,21 +1247,15 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				loader.maxDuration(maxDuration);
 			List<RSQSimEvent> events = loader.load();
 			
-//			double dt = 0.05;
-			double dt = 0.1;
 			SRFInterpolationMode interpMode = SRFInterpolationMode.ADJ_VEL;
 			double srfPointCullDist = 100;
 			double momentPDiffThreshold = 2;
 			
 			RSQSimSectBundledERF erf = new RSQSimSectBundledERF(catalog.getElements(), events,
-					fm, dm , subSects, minMag, minFractForInclusion, srfPointCullDist);
+					fm, dm , subSects, minMag, minFractForInclusion, srfPointCullDist, dt, skipYears);
 			erf.updateForecast();
 			
 			System.out.println("Source 0 has "+erf.getNumRuptures(0)+" ruptures");
-			
-			File catalogDir = catalog.getCatalogDir();
-			File csDataDir = new File(catalogDir, "cybershake_inputs");
-			Preconditions.checkState(csDataDir.exists() || csDataDir.mkdir());
 			
 			if (writePoints) {
 				System.out.println("Writing rupture points");
@@ -1225,6 +1277,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 				metadataERF.setParameter(GEOM_FILE_PARAM_NAME, geomFile);
 				metadataERF.setParameter(FAULT_MODEL_PARAM_NAME, fm);
 				metadataERF.setParameter(DEF_MODEL_PARAM_NAME, dm);
+				metadataERF.setParameter(RUP_SURF_RESOLUTION_PARAM_NAME, Math.sqrt(catalog.getAveArea()));
+				metadataERF.setParameter(SRF_DT_PARAM_NAME, dt);
+				metadataERF.setParameter(SPIN_UP_PARAM_NAME, skipYears);
 				Document doc = XMLUtils.createDocumentWithRoot();
 				Element root = doc.getRootElement();
 				metadataERF.toXMLMetadata(root);

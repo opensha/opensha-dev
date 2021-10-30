@@ -24,13 +24,14 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
+import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.MarkdownUtils;
@@ -476,8 +477,8 @@ public class BBP_PartBValidationPageGen {
 		
 		DiscretizedFunc gmpeMean = scenario.getMeanPrediction(vs30, distance);
 		DiscretizedFunc[] gmpeIndvMeans = scenario.getIndividualModelMeanPredictions(vs30, distance);
-		UncertainArbDiscDataset gmpeTrimmedBounds = scenario.getAcceptanceCriteria(vs30, distance, true);
-		UncertainArbDiscDataset gmpeFullBounds = scenario.getAcceptanceCriteria(vs30, distance, false);
+		UncertainArbDiscFunc gmpeTrimmedBounds = scenario.getAcceptanceCriteria(vs30, distance, true);
+		UncertainBoundedDiscretizedFunc gmpeFullBounds = scenario.getAcceptanceCriteria(vs30, distance, false);
 		DiscretizedFunc gmpeTrimmedUpper = gmpeTrimmedBounds.getUpper();
 		DiscretizedFunc gmpeTrimmedLower = gmpeTrimmedBounds.getLower();
 		DiscretizedFunc gmpeFullUpper = gmpeFullBounds.getUpper();

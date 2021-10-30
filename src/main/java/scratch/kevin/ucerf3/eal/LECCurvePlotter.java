@@ -12,9 +12,9 @@ import org.jfree.data.Range;
 import org.opensha.commons.calc.FractileCurveCalculator;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.function.XY_DataSetList;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -76,7 +76,7 @@ public class LECCurvePlotter {
 		
 		System.out.println("Plotting...");
 		
-		UncertainArbDiscDataset covUncertain = new UncertainArbDiscDataset(covMean, lowerFunc, upperFunc);
+		UncertainArbDiscFunc covUncertain = new UncertainArbDiscFunc(covMean, lowerFunc, upperFunc);
 		
 		covUncertain.setName("All Branch 95% Range");
 		funcs.add(covUncertain);

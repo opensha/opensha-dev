@@ -11,9 +11,9 @@ import org.dom4j.DocumentException;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
@@ -583,7 +583,7 @@ public class MakeFigures {
 	}
 
 	
-	public static void makeFigure3_Parts(ArrayList<UncertainArbDiscDataset[]> dataSetsArray, ArrayList<XY_DataSet> funcsArray, double duration, 
+	public static void makeFigure3_Parts(ArrayList<UncertainArbDiscFunc[]> dataSetsArray, ArrayList<XY_DataSet> funcsArray, double duration, 
 			double saPeriod, String dirName, boolean popupWindow, String plotTitle) {
 		
 		dataSetsArray.get(0)[0].getLower().setName("Full TD min");
@@ -629,7 +629,7 @@ public class MakeFigures {
 		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 1.2f, Color.BLACK));
 		
 		for(int i = dataSetsArray.size()-1; i>=0;i--) {  // reverse order for better layering
-			UncertainArbDiscDataset[] dataSets = dataSetsArray.get(i);
+			UncertainArbDiscFunc[] dataSets = dataSetsArray.get(i);
 			plottingFuncsArray.add(dataSets[1]); // for solid line
 			plottingFuncsArray.add(dataSets[1]); // for shaded region
 			plottingFuncsArray.add(dataSets[0].getLower());
@@ -686,7 +686,7 @@ public class MakeFigures {
 
 	}
 	
-	public static void makeFigure9_Parts(ArrayList<UncertainArbDiscDataset[]> dataSetsArray, ArrayList<XY_DataSet> funcsArray, double duration, 
+	public static void makeFigure9_Parts(ArrayList<UncertainArbDiscFunc[]> dataSetsArray, ArrayList<XY_DataSet> funcsArray, double duration, 
 			double saPeriod, String dirName, boolean popupWindow, String plotTitle) {
 		
 		dataSetsArray.get(0)[0].getLower().setName("Full TD min");
@@ -704,7 +704,7 @@ public class MakeFigures {
 		plottingFuncsArray.add(funcsArray.get(0));	// Poisson calc
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, lineWidth, Color.BLACK));
 		
-		UncertainArbDiscDataset[] dataSets = dataSetsArray.get(0);
+		UncertainArbDiscFunc[] dataSets = dataSetsArray.get(0);
 		plottingFuncsArray.add(dataSets[1]); // for solid line
 		plottingFuncsArray.add(dataSets[1]); // for shaded region
 		plottingFuncsArray.add(dataSets[0].getLower());

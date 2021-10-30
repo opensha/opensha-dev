@@ -11,7 +11,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
-import org.opensha.commons.data.function.UncertainArbDiscDataset;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
@@ -205,7 +205,7 @@ public class SimulationHazardCurveCalc<E> {
 		}
 		
 		if (lowerCurve != null)
-			curve = new UncertainArbDiscDataset(curve, lowerCurve, upperCurve);
+			curve = new UncertainArbDiscFunc(curve, lowerCurve, upperCurve);
 		
 		curve.setName(simProv.getName());
 		

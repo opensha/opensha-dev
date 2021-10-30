@@ -11,7 +11,7 @@ import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.U3FaultSystemIO;
-import scratch.UCERF3.utils.paleoRateConstraints.PaleoRateConstraint;
+import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 
 public class PaleoReplot {
 
@@ -34,7 +34,7 @@ public class PaleoReplot {
 			
 			U3LogicTreeBranch branch = U3LogicTreeBranch.fromFileName(file.getName());
 			
-			ArrayList<PaleoRateConstraint> paleoRateConstraints = CommandLineInversionRunner.getPaleoConstraints(branch.getValue(FaultModels.class),
+			ArrayList<U3PaleoRateConstraint> paleoRateConstraints = CommandLineInversionRunner.getPaleoConstraints(branch.getValue(FaultModels.class),
 					sol.getRupSet());
 			
 			CommandLineInversionRunner.writePaleoPlots(paleoRateConstraints, null, sol, dir, prefix);
