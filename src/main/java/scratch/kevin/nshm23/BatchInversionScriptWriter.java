@@ -86,12 +86,14 @@ public class BatchInversionScriptWriter {
 //		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
 //		rsPrefix = "coulomb-fm31-ref_branch-uniform";
 		
-//		File remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_10_18-reproduce-ucerf3-ref_branch-uniform-new_anneal-5x_avg-try_zero-var_perturb-noWL-5h/mean_solution.zip");
-//		String remoteMeanCompareName = "U3-New-Anneal";
 		File remoteMeanCompFile = new File(remoteMainDir,
-				"2021_10_25-reproduce-ucerf3-ref_branch-uniform-new_anneal-uncert_weighted-mfd_sd_0.1-minimize10000-smooth1000-5h/mean_solution.zip");
-		String remoteMeanCompareName = "U3-Uncert-Wtd";
+				"2021_10_18-reproduce-ucerf3-ref_branch-uniform-new_anneal-5x_avg-try_zero-var_perturb-noWL-5h/mean_solution.zip");
+		String remoteMeanCompareName = "U3-New-Anneal";
+//		File remoteMeanCompFile = new File(remoteMainDir,
+//				"2021_10_25-reproduce-ucerf3-ref_branch-uniform-new_anneal-uncert_weighted-mfd_sd_0.1-minimize10000-smooth1000-5h/mean_solution.zip");
+//		String remoteMeanCompareName = "U3-Uncert-Wtd";
+//		File remoteMeanCompFile = null;
+//		String remoteMeanCompareName = null;
 		
 		FaultSystemRupSet rupSet = FaultSystemRupSet.load(rupSetFile);
 		
@@ -175,75 +177,75 @@ public class BatchInversionScriptWriter {
 		/*
 		 * new annealing defaults, 10 times
 		 */
-//		dirName += "-"+rsPrefix+"-new_anneal-5x_avg-try_zero-var_perturb-noWL-5h";
-////		dirName += "-"+rsPrefix+"-new_anneal-no_avg-try_zero-var_perturb-noWL-5h";
-////		dirName += "-"+rsPrefix+"-new_anneal-no_avg-limit_zero-var_perturb-noWL-5h";
-//		UCERF3InversionInputGenerator u3Gen = InversionsCLI.getU3Generator(rupSet);
-//		List<InversionConstraint> u3Constraints = u3Gen.getConstraints();
-//		InversionConfiguration config = InversionConfiguration.builder(
-//				u3Constraints, TimeCompletionCriteria.getInHours(5))
-//				.threads(remoteToalThreads)
-//				.avgThreads(remoteToalThreads/4, TimeCompletionCriteria.getInMinutes(20))
-////				.nonNegativity(NonnegativityConstraintType.LIMIT_ZERO_RATES)
-//				.build();
-//		for (int i=0; i<10; i++) {
-//			configs.add(config);
-//			subDirNames.add("new_anneal_run_"+i);
-//		}
-//		avgJob = true;
-		
-		/*
-		 * uncertainty weighted
-		 */
-		dirName += "-"+rsPrefix+"-new_anneal-uncert_weighted";
-		DoubleUnaryOperator mfdStdDevFunc = M->0.1; dirName += "-mfd_sd_0.1";
-//		DoubleUnaryOperator mfdStdDevFunc = M->Math.max(0.1, 0.1*(M-5)); dirName += "-mfd_sd_0.1xMmin5";
-//		DoubleUnaryOperator mfdStdDevFunc = M->0.1+Math.pow(10, M-8); dirName += "-mfd_sd_0.1pls10powMmin8";
-		double slipWeight = 1d;
-		double mfdWeight = 1d;
-		double paleoWeight = 100d;
-		double parkfieldWeight = 1d;
-		double minimizeWeight = 10000d;
-//		double minimizeWeight = 0d;
-//		double mfdSmoothWeight = 1000d;
-		double mfdSmoothWeight = 0d;
-		double supraSmoothWeight = 1000d;
-//		double supraSmoothWeight = 0d;
-//		double u2NuclWeight = 0.01d;
-		double u2NuclWeight = 0d;
-		
-		int num = 5;
-
-		if (mfdWeight != 1d && mfdStdDevFunc != null)
-			dirName += "_wt"+oDF.format(mfdWeight);
-		if (slipWeight != 1d)
-			dirName += "-slip"+oDF.format(slipWeight);
-		if (paleoWeight != 1d)
-			dirName += "-paleo"+oDF.format(paleoWeight);
-		if (parkfieldWeight != 1d)
-			dirName += "-prakfield"+oDF.format(minimizeWeight);
-		if (minimizeWeight > 0)
-			dirName += "-minimize"+oDF.format(minimizeWeight);
-		if (supraSmoothWeight > 0)
-			dirName += "-supra_smooth"+oDF.format(supraSmoothWeight);
-		if (mfdSmoothWeight > 0)
-			dirName += "-mfd_smooth"+oDF.format(mfdSmoothWeight);
-		if (u2NuclWeight > 0)
-			dirName += "-u2Nucl"+oDF.format(u2NuclWeight);
-		dirName += "-5h";
-		List<InversionConstraint> u3Constraints = InversionsCLI.getStdDevWeightedU3Constraints(
-				rupSet, slipWeight, mfdWeight, mfdStdDevFunc, paleoWeight, parkfieldWeight,
-				minimizeWeight, u2NuclWeight, supraSmoothWeight, mfdSmoothWeight);
+		dirName += "-"+rsPrefix+"-new_anneal-5x_avg-try_zero-var_perturb-noWL-5h";
+//		dirName += "-"+rsPrefix+"-new_anneal-no_avg-try_zero-var_perturb-noWL-5h";
+//		dirName += "-"+rsPrefix+"-new_anneal-no_avg-limit_zero-var_perturb-noWL-5h";
+		UCERF3InversionInputGenerator u3Gen = InversionsCLI.getU3Generator(rupSet);
+		List<InversionConstraint> u3Constraints = u3Gen.getConstraints();
 		InversionConfiguration config = InversionConfiguration.builder(
 				u3Constraints, TimeCompletionCriteria.getInHours(5))
 				.threads(remoteToalThreads)
 				.avgThreads(remoteToalThreads/4, TimeCompletionCriteria.getInMinutes(20))
+//				.nonNegativity(NonnegativityConstraintType.LIMIT_ZERO_RATES)
 				.build();
-		for (int i=0; i<num; i++) {
+		for (int i=0; i<10; i++) {
 			configs.add(config);
-			subDirNames.add("uncert_weight_run_"+i);
+			subDirNames.add("new_anneal_run_"+i);
 		}
 		avgJob = true;
+		
+		/*
+		 * uncertainty weighted
+		 */
+//		dirName += "-"+rsPrefix+"-new_anneal-uncert_weighted";
+//		DoubleUnaryOperator mfdStdDevFunc = M->0.1; dirName += "-mfd_sd_0.1";
+////		DoubleUnaryOperator mfdStdDevFunc = M->Math.max(0.1, 0.1*(M-5)); dirName += "-mfd_sd_0.1xMmin5";
+////		DoubleUnaryOperator mfdStdDevFunc = M->0.1+Math.pow(10, M-8); dirName += "-mfd_sd_0.1pls10powMmin8";
+//		double slipWeight = 1d;
+//		double mfdWeight = 1d;
+//		double paleoWeight = 1d;
+//		double parkfieldWeight = 1d;
+//		double minimizeWeight = 10000d;
+////		double minimizeWeight = 0d;
+////		double mfdSmoothWeight = 1000d;
+//		double mfdSmoothWeight = 0d;
+//		double supraSmoothWeight = 1000d;
+////		double supraSmoothWeight = 0d;
+////		double u2NuclWeight = 0.01d;
+//		double u2NuclWeight = 0d;
+//		
+//		int num = 10;
+//
+//		if (mfdWeight != 1d && mfdStdDevFunc != null)
+//			dirName += "_wt"+oDF.format(mfdWeight);
+//		if (slipWeight != 1d)
+//			dirName += "-slip"+oDF.format(slipWeight);
+//		if (paleoWeight != 1d)
+//			dirName += "-paleo"+oDF.format(paleoWeight);
+//		if (parkfieldWeight != 1d)
+//			dirName += "-prakfield"+oDF.format(minimizeWeight);
+//		if (minimizeWeight > 0)
+//			dirName += "-minimize"+oDF.format(minimizeWeight);
+//		if (supraSmoothWeight > 0)
+//			dirName += "-supra_smooth"+oDF.format(supraSmoothWeight);
+//		if (mfdSmoothWeight > 0)
+//			dirName += "-mfd_smooth"+oDF.format(mfdSmoothWeight);
+//		if (u2NuclWeight > 0)
+//			dirName += "-u2Nucl"+oDF.format(u2NuclWeight);
+//		dirName += "-5h";
+//		List<InversionConstraint> u3Constraints = InversionsCLI.getStdDevWeightedU3Constraints(
+//				rupSet, slipWeight, mfdWeight, mfdStdDevFunc, paleoWeight, parkfieldWeight,
+//				minimizeWeight, u2NuclWeight, supraSmoothWeight, mfdSmoothWeight);
+//		InversionConfiguration config = InversionConfiguration.builder(
+//				u3Constraints, TimeCompletionCriteria.getInHours(5))
+//				.threads(remoteToalThreads)
+//				.avgThreads(remoteToalThreads/4, TimeCompletionCriteria.getInMinutes(20))
+//				.build();
+//		for (int i=0; i<num; i++) {
+//			configs.add(config);
+//			subDirNames.add("uncert_weight_run_"+i);
+//		}
+//		avgJob = true;
 		
 		/*
 		 * uncertainty weighted, individual
