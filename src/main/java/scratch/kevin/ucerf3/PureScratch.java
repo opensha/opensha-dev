@@ -100,6 +100,8 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
@@ -176,7 +178,6 @@ import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
-import scratch.UCERF3.griddedSeismicity.GridSourceProvider;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
@@ -2746,12 +2747,49 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test103() throws IOException {
+		NormalDistribution normDist = new NormalDistribution(0d, 1d);
+		MinMaxAveTracker track = new MinMaxAveTracker();
+		MinMaxAveTracker absTrack = new MinMaxAveTracker();
+		for (int r=0; r<100000; r++) {
+			double v = normDist.sample();
+			track.addValue(v);
+			absTrack.addValue(Math.abs(v));
+		}
+		System.out.println("Values: "+track);
+		System.out.println("Abs Values: "+absTrack);
+	}
+	
+	private static void test104() throws IOException {
+		File solFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2021_10_19-reproduce-ucerf3-ref_branch-tapered-convergence-u3Iters/mean_solution.zip");
+		
+		System.out.println("Loading as rupture set...");
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(solFile);
+		rupSet.setParent(null);
+		
+		System.out.println();
+		System.out.println("Loading as solution reusing rup set...");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile, rupSet);
+		Preconditions.checkState(sol.getRupSet() == rupSet);
+	}
+	
+	private static void test105() throws IOException {
+		File solFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2021_10_19-reproduce-ucerf3-ref_branch-tapered-convergence-u3Iters/mean_solution.zip");
+		
+		System.out.println("Loading as rupture set...");
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(solFile);
+		
+		rupSet.requireModule(InversionTargetMFDs.class);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test101();
+		test105();
 	}
 
 }

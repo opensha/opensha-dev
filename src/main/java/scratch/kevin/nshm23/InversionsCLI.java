@@ -23,14 +23,16 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.La
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDLaplacianSmoothingInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDSubSectNuclInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.NZ_MFDUncertaintyWeightedInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoProbabilityModel;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoSlipInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParentSectSmoothnessConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RelativeBValueConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RupRateMinimizationConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.TotalRateInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
@@ -44,7 +46,6 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
-import scratch.UCERF3.inversion.InversionTargetMFDs;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -66,7 +67,7 @@ public class InversionsCLI {
 //		System.out.println("Yawn...");
 //		long minute = 1000l*60l;
 //		long hour = minute*60l;
-//		Thread.sleep(0l*hour + 10l*minute);
+//		Thread.sleep(0l*hour + 35l*minute);
 //		System.out.println("Im awake! "+new Date());
 		
 		File parentDir = new File("/home/kevin/markdown/inversions");
@@ -104,10 +105,11 @@ public class InversionsCLI {
 //		argz.add("1");
 //		dirName += "_uncertain";
 
-//		double b = 1;
+//		double b = 0.8;
 //		dirName += "-rel_gr_b"+oDF.format(b);
 //		argz.add("--rel-gr-constraint");
 //		argz.add("--b-value"); argz.add(oDF.format(b));
+////		argz.add("--mfd-weight"); argz.add("100"); dirName += "_wt100";
 ////		argz.add("--mfd-weight"); argz.add("1000"); dirName += "_wt1000";
 ////		argz.add("--mfd-ineq"); dirName += "_ineq";
 
@@ -123,20 +125,20 @@ public class InversionsCLI {
 ////		argz.add("--mfd-ineq"); dirName += "_ineq";
 //		argz.add("--mfd-transition-mag"); argz.add("7.8"); dirName += "_trans7.8";
 
-//		dirName += "-smooth";
-//		argz.add("--smooth");
-//		argz.add("--smooth-weight");
-//		argz.add("1000");
+		dirName += "-smooth";
+		argz.add("--smooth");
+		argz.add("--smooth-weight");
+		argz.add("1000");
 
-//		dirName += "-minimize_below";
-//		argz.add("--minimize-below-sect-min");
-//		argz.add("--minimize-weight");
-//		argz.add("10000");
+		dirName += "-minimize_below";
+		argz.add("--minimize-below-sect-min");
+		argz.add("--minimize-weight");
+		argz.add("10000");
 		
 		boolean u3Constraints = false;
 //		boolean u3Constraints = true;
-//		boolean u3StdDevConstraints = false;
 		boolean u3StdDevConstraints = true;
+//		boolean u3StdDevConstraints = true;
 
 		List<InversionConstraint> extraConstraints = new ArrayList<>();
 		
@@ -152,13 +154,34 @@ public class InversionsCLI {
 //			DoubleUnaryOperator mfdStdDevFunc = M->Math.max(0.1, 0.1*(M-5));
 //			DoubleUnaryOperator mfdStdDevFunc = M->0.1+Math.pow(10, M-8); dirName += "-aggresivePowMSD";
 			double slipWeight = 1d;
-			double mfdWeight = 1d;
-			double paleoWeight = 1d;
-			double parkfieldWeight = 1d;
+			double mfdWeight = 5d;
+//			double paleoWeight = 1d;
+			double paleoWeight = 5d;
+			double parkfieldWeight = 5d;
 			extraConstraints.addAll(getStdDevWeightedU3Constraints(rupSet, slipWeight, mfdWeight, mfdStdDevFunc,
 					paleoWeight, parkfieldWeight, 0, 0, 0, 0d));
 			dirName += "-u3_std_dev_tests";
+			if (paleoWeight != 1d && paleoWeight > 0)
+				dirName += "-paleo"+oDF.format(paleoWeight);
 		}
+		
+//		double b = 0.8;
+//		dirName += "rel_gr_b"+oDF.format(b);
+//		FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
+////		DoubleUnaryOperator relMagStdDev = (M)->0.1; dirName += "_sd0.1";
+////		DoubleUnaryOperator relMagStdDev = (M)->0.1+0.5*Math.pow(Math.abs(M-6.5), 2); dirName += "_sd0.1_xCustom";
+////		DoubleUnaryOperator relMagStdDev = (M)->0.1+0.25*Math.pow(Math.abs(M-6.5), 2); dirName += "_sd0.1_xCustom2";
+//		DoubleUnaryOperator relMagStdDev = (M)->0.1+0.5*Math.pow(Math.abs(M-7), 2); dirName += "_sd0.1_xCustom3";
+//		extraConstraints.add(new RelativeBValueConstraint(rupSet, b, 1, ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, relMagStdDev));
+
+//		FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
+//		boolean slipAdj = true;
+//		double pWeight = 500;
+//		extraConstraints.add(new ParentSectSmoothnessConstraint(rupSet, pWeight, slipAdj));
+//		dirName += "_pSmooth";
+//		if (slipAdj)
+//			dirName += "SlipAdj";
+//		dirName += oDF.format(pWeight);
 		
 ////		double[] minMags = { 0d };
 ////		double[] minMags = { 6.5d };
@@ -187,16 +210,20 @@ public class InversionsCLI {
 
 //		dirName += "-5h";
 //		argz.add("--completion"); argz.add("5h");
-//		argz.add("-avg-completion"); argz.add("5m");
+//		argz.add("--avg-completion"); argz.add("5m");
 //		dirName += "-1h";
 //		argz.add("--completion"); argz.add("1h");
-//		argz.add("-avg-completion"); argz.add("5m");
+//		argz.add("--avg-completion"); argz.add("5m");
 //		dirName += "-30m";
 //		argz.add("--completion"); argz.add("30m");
-//		argz.add("-avg-completion"); argz.add("1m");
-		dirName += "-10m";
-		argz.add("--completion"); argz.add("10m");
-		argz.add("-avg-completion"); argz.add("1m");
+//		argz.add("--avg-completion"); argz.add("1m");
+//		dirName += "-10m";
+//		argz.add("--completion"); argz.add("10m");
+//		argz.add("--avg-completion"); argz.add("1m");
+		dirName += "-sd1";
+		argz.add("--completion-sd"); argz.add("1");
+		argz.add("--completion-sd-type"); argz.add(ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY.name());
+		argz.add("--avg-completion"); argz.add("1m");
 
 		File dir = new File(parentDir, dirName);
 		System.out.println("Output directory: " + dir.getAbsolutePath());
