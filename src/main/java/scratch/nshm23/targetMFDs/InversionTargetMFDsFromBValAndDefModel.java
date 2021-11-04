@@ -1,0 +1,239 @@
+package scratch.nshm23.targetMFDs;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
+
+import org.opensha.commons.calc.FaultMomentCalc;
+import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
+import org.opensha.commons.geo.Region;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.commons.util.modules.ArchivableModule;
+import org.opensha.commons.util.modules.SubModule;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SubSeismoOnFaultMFDs;
+import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.magdist.SummedMagFreqDist;
+
+import com.google.common.base.Preconditions;
+
+public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs implements ArchivableModule {
+	
+	// inputs
+	private double supraSeisBValue;
+	
+	// things we compute here
+	private SectSlipRates targetSlipRates;
+	private List<IncrementalMagFreqDist> sectFullMFDs;
+	private SubSeismoOnFaultMFDs sectSubSeisMFDs;
+	private List<IncrementalMagFreqDist> sectSupraSeisMFDs;
+	private SummedMagFreqDist totalOnFaultSupra;
+	private SummedMagFreqDist totalOnFaultSub;
+	private List<IncrementalMagFreqDist> mfdConstraints;
+	
+	// discretization parameters for MFDs
+	public final static double MIN_MAG = 0.05;
+	public final static double MAX_MAG = 8.95;
+	public final static int NUM_MAG = 90;
+	public final static double DELTA_MAG = 0.1;
+
+	public InversionTargetMFDsFromBValAndDefModel(FaultSystemRupSet rupSet, double supraSeisBValue) {
+		this(rupSet, supraSeisBValue, null);
+	}
+	
+	public InversionTargetMFDsFromBValAndDefModel(FaultSystemRupSet rupSet, double supraSeisBValue,
+			List<Region> constrainedRegions) {
+		super(rupSet);
+		this.supraSeisBValue = supraSeisBValue;
+		
+		ModSectMinMags minMags = rupSet.getModule(ModSectMinMags.class);
+		
+		int numSects = rupSet.getNumSections();
+		double[] slipRates = new double[numSects];
+		double[] slipRateStdDevs = new double[numSects];
+		sectFullMFDs = new ArrayList<>();
+		List<IncrementalMagFreqDist> sectSubSeisMFDs = new ArrayList<>();
+		sectSupraSeisMFDs = new ArrayList<>();
+		
+		totalOnFaultSupra = new SummedMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+		totalOnFaultSub = new SummedMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+		
+		MinMaxAveTracker fractSuprasTrack = new MinMaxAveTracker();
+
+		for (int s=0; s<numSects; s++) {
+			FaultSection sect = rupSet.getFaultSectionData(s);
+			double creepReducedSlipRate = sect.getReducedAveSlipRate()*1e-3; // mm/yr -> m/yr
+			double creepReducedSlipRateStdDev = sect.getReducedSlipRateStdDev()*1e-3; // mm/yr -> m/yr
+			
+			double area = rupSet.getAreaForSection(s); // m
+			
+			// convert it to a moment rate
+			// TODO: is this consistent with scaling relationships used?
+			double targetMoRate = FaultMomentCalc.getMoment(area, creepReducedSlipRate);
+			
+			// supra-seismogenic minimum magnitude
+			double sectMinMag = minMags == null ? rupSet.getMinMagForSection(s) : minMags.getMinMagForSection(s);
+			double sectMaxMag = rupSet.getMaxMagForSection(s);
+			
+			// construct a full G-R including sub-seismogenic ruptures
+			int minMagIndex = totalOnFaultSupra.getClosestXIndex(sectMinMag);
+			int maxMagIndex = totalOnFaultSupra.getClosestXIndex(sectMaxMag);
+			int targetMFDNum = maxMagIndex+1;
+			GutenbergRichterMagFreqDist sectFullMFD = new GutenbergRichterMagFreqDist(
+					MIN_MAG, targetMFDNum, DELTA_MAG, targetMoRate, supraSeisBValue);
+			
+			// split the target G-R into sub-seismo and supra-seismo parts
+			IncrementalMagFreqDist subSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+			for (int i=0; i<minMagIndex; i++)
+				subSeisMFD.set(i, sectFullMFD.getY(i));
+			IncrementalMagFreqDist supraSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+			for (int i=minMagIndex; i<sectFullMFD.size(); i++)
+				supraSeisMFD.set(i, sectFullMFD.getY(i));
+			
+			double supraMoRate = supraSeisMFD.getTotalMomentRate();
+			double subMoRate = subSeisMFD.getTotalMomentRate();
+			double targetMoRateTest = supraMoRate + subMoRate;
+			
+			double fractSupra = supraMoRate/targetMoRate;
+			
+			System.out.println("Section "+s+". target="+(float)targetMoRate+"\tsupra="+(float)supraMoRate
+					+"\tsup="+(float)subMoRate+"\tfractSupra="+(float)fractSupra);
+			
+			fractSuprasTrack.addValue(fractSupra);
+			
+//			System.out.println("TARGET\n"+sectFullMFD);
+//			System.out.println("SUB\n"+subSeisMFD);
+//			System.out.println("SUPRA\n"+supraSeisMFD);
+			
+			Preconditions.checkState((float)targetMoRateTest == (float)targetMoRate,
+					"Partitioned moment rate doesn't equal input: %s != %s", (float)targetMoRate, (float)targetMoRateTest);
+			
+			sectFullMFDs.add(sectFullMFD);
+			sectSubSeisMFDs.add(subSeisMFD);
+			sectSupraSeisMFDs.add(supraSeisMFD);
+			
+			if (supraSeisMFD.size() == 1) {
+				Preconditions.checkState(minMagIndex == maxMagIndex);
+				totalOnFaultSupra.add(minMagIndex, supraSeisMFD.getY(0));
+			} else {
+				totalOnFaultSupra.addIncrementalMagFreqDist(supraSeisMFD);
+			}
+			totalOnFaultSub.addIncrementalMagFreqDist(subSeisMFD);
+			
+			// scale target slip rates by the fraction that is supra-seismognic
+			slipRates[s] = creepReducedSlipRate*fractSupra;
+			slipRateStdDevs[s] = creepReducedSlipRateStdDev*fractSupra;
+		}
+		this.sectSubSeisMFDs = new SubSeismoOnFaultMFDs(sectSubSeisMFDs);
+		
+		System.out.println("Fraction supra-seismogenic stats: "+fractSuprasTrack);
+		
+		// give the newly computed target slip rates to the rupture set
+		this.targetSlipRates = SectSlipRates.precomputed(rupSet, slipRates, slipRateStdDevs);
+		rupSet.addModule(targetSlipRates);
+		
+		if (constrainedRegions != null) {
+			Preconditions.checkState(!constrainedRegions.isEmpty(), "Empty region list supplied");
+			mfdConstraints = new ArrayList<>();
+			for (Region region : constrainedRegions) {
+				SummedMagFreqDist regMFD = new SummedMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+				regMFD.setRegion(region);
+				double[] fractSectsInRegion = rupSet.getFractSectsInsideRegion(
+						region, MFDInversionConstraint.MFD_FRACT_IN_REGION_TRACE_ONLY);
+				for (int s=0; s<numSects; s++) {
+					if (fractSectsInRegion[s] > 0d) {
+						IncrementalMagFreqDist supraMFD = sectSubSeisMFDs.get(s);
+						if (fractSectsInRegion[s] != 1d) {
+							supraMFD = supraMFD.deepClone();
+							supraMFD.scale(fractSectsInRegion[s]);
+						}
+						regMFD.addIncrementalMagFreqDist(supraMFD);
+					}
+				}
+				mfdConstraints.add(regMFD);
+			}
+		} else {
+			mfdConstraints = List.of(totalOnFaultSupra);
+		}
+	}
+
+	public double getSupraSeisBValue() {
+		return supraSeisBValue;
+	}
+
+	public List<IncrementalMagFreqDist> getSectSupraSeisNuclMFDs() {
+		return sectSupraSeisMFDs;
+	}
+
+	@Override
+	public String getName() {
+		return "Supra-Seis B="+(float)supraSeisBValue+" Inversion Target MFDs";
+	}
+
+	@Override
+	public SubModule<FaultSystemRupSet> copy(FaultSystemRupSet newParent) throws IllegalStateException {
+		List<Region> regions = null;
+		if (mfdConstraints.size() > 1 || mfdConstraints.get(0).getRegion() != null) {
+			regions = new ArrayList<>();
+			for (IncrementalMagFreqDist constraint : mfdConstraints) {
+				Preconditions.checkNotNull(constraint.getRegion());
+				regions.add(constraint.getRegion());
+			}
+		}
+		return new InversionTargetMFDsFromBValAndDefModel(newParent, supraSeisBValue, regions);
+	}
+
+	@Override
+	public IncrementalMagFreqDist getTotalRegionalMFD() {
+		return null;
+	}
+
+	@Override
+	public IncrementalMagFreqDist getTotalOnFaultSupraSeisMFD() {
+		return totalOnFaultSupra;
+	}
+
+	@Override
+	public IncrementalMagFreqDist getTotalOnFaultSubSeisMFD() {
+		return totalOnFaultSub;
+	}
+
+	@Override
+	public IncrementalMagFreqDist getTrulyOffFaultMFD() {
+		return null;
+	}
+
+	@Override
+	public List<? extends IncrementalMagFreqDist> getMFD_Constraints() {
+		return mfdConstraints;
+	}
+
+	@Override
+	public SubSeismoOnFaultMFDs getOnFaultSubSeisMFDs() {
+		return sectSubSeisMFDs;
+	}
+
+	@Override
+	public void writeToArchive(ZipOutputStream zout, String entryPrefix) throws IOException {
+		new Precomputed(this).writeToArchive(zout, entryPrefix);
+	}
+
+	@Override
+	public void initFromArchive(ZipFile zip, String entryPrefix) throws IOException {
+		throw new IllegalStateException("Should be deserialized as Precomputed class");
+	}
+
+	@Override
+	public Class<? extends ArchivableModule> getLoadingClass() {
+		return InversionTargetMFDs.Precomputed.class;
+	}
+
+}

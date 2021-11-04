@@ -35,6 +35,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Pa
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RelativeBValueConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RupRateMinimizationConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SectionTotalRateConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.TotalRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
@@ -55,6 +56,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
+import scratch.nshm23.targetMFDs.DraftModelConstraintBuilder;
 
 public class BatchInversionScriptWriter {
 	
@@ -111,7 +113,8 @@ public class BatchInversionScriptWriter {
 		// this is applied to everything else
 //		PlotLevel allPlotLevel = PlotLevel.FULL;
 //		PlotLevel allPlotLevel = PlotLevel.DEFAULT;
-		PlotLevel allPlotLevel = PlotLevel.LIGHT;
+//		PlotLevel allPlotLevel = PlotLevel.LIGHT;
+		PlotLevel allPlotLevel = null;
 		// this is applied to the average job (if avgJob==true)
 		PlotLevel avgPlotLevel = PlotLevel.FULL;
 		
@@ -264,97 +267,129 @@ public class BatchInversionScriptWriter {
 //		allPlotLevel = null;
 		
 		/*
+		 * new NSHM23 draft scheme
+		 */
+		dirName += "-"+rsPrefix+"-nshm23_draft";
+		double bVal = 0.7;
+		dirName += "-supra_b_"+oDF.format(bVal);
+		
+		int num = 10;
+
+		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet);
+		
+		constrBuilder.defaultConstraints(bVal);
+		
+//		dirName += "-no_sect_rate";
+//		constrBuilder.except(SectionTotalRateConstraint.class);
+		
+		List<InversionConstraint> constraints = constrBuilder.build();
+		
+		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
+		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
+		
+		InversionConfiguration.Builder builder = InversionConfiguration.builder(constraints, completion)
+				.threads(remoteToalThreads).avgThreads(remoteToalThreads/4, avgCompletion);
+		
+		InversionConfiguration config = builder.build();
+		for (int i=0; i<num; i++) {
+			configs.add(config);
+			subDirNames.add("run_"+i);
+		}
+		avgJob = true;
+		allPlotLevel = null;
+		
+		/*
 		 * uncertainty weighted, 200 runs misfit-targeted
 		 */
-		dirName += "-"+rsPrefix+"-misfit_std_dev_targeted";
-		dirName += "-slip_only";
-		DoubleUnaryOperator mfdStdDevFunc = null;
-//		DoubleUnaryOperator mfdStdDevFunc = M->0.1; dirName += "-mfd_sd_0.1";
-//		DoubleUnaryOperator mfdStdDevFunc = M->Math.max(0.1, 0.1*(M-5)); dirName += "-mfd_sd_0.1xMmin5";
-//		DoubleUnaryOperator mfdStdDevFunc = M->0.1+Math.pow(10, M-8); dirName += "-mfd_sd_0.1pls10powMmin8";
-		double slipWeight = 1d;
-		double mfdWeight = 0d;
-		double paleoWeight = 0d;
-		double parkfieldWeight = 0d;
-		double minimizeWeight = 10000d;
-		double mfdSmoothWeight = 0d;
-		double supraSmoothWeight = 1000d;
-		double u2NuclWeight = 0d;
-		double parentSmoothWeight = 0;
-		
-		int num = 500;
-
-		if (mfdWeight > 0 && mfdWeight != 1d && mfdStdDevFunc != null)
-			dirName += "_wt"+oDF.format(mfdWeight);
-		if (slipWeight > 0 && slipWeight != 1d)
-			dirName += "-slip"+oDF.format(slipWeight);
-		if (paleoWeight > 0 && paleoWeight != 1d)
-			dirName += "-paleo"+oDF.format(paleoWeight);
-		if (parkfieldWeight > 0 && parkfieldWeight != 1d)
-			dirName += "-prakfield"+oDF.format(parkfieldWeight);
-		if (minimizeWeight > 0)
-			dirName += "-minimize"+oDF.format(minimizeWeight);
-		if (supraSmoothWeight > 0)
-			dirName += "-supra_smooth"+oDF.format(supraSmoothWeight);
-		if (mfdSmoothWeight > 0)
-			dirName += "-mfd_smooth"+oDF.format(mfdSmoothWeight);
-		if (parentSmoothWeight > 0)
-			dirName += "-parent_smooth"+oDF.format(parentSmoothWeight);
-		if (u2NuclWeight > 0)
-			dirName += "-u2Nucl"+oDF.format(u2NuclWeight);
-		List<InversionConstraint> u3Constraints = InversionsCLI.getStdDevWeightedU3Constraints(
-				rupSet, slipWeight, mfdWeight, mfdStdDevFunc, paleoWeight, parkfieldWeight,
-				minimizeWeight, u2NuclWeight, supraSmoothWeight, mfdSmoothWeight);
-		if (parentSmoothWeight > 0d)
-			u3Constraints.add(new ParentSectSmoothnessConstraint(rupSet, parentSmoothWeight, true));
-		
-		remoteMeanCompFile = new File(remoteMainDir,
-				"2021_10_26-reproduce-ucerf3-ref_branch-uniform-new_anneal-uncert_weighted-only-slip_rates-minimize10000-smooth1000-5h/mean_solution.zip");
-		remoteMeanCompareName = "Only-Slip-Overfit";
-		
-//		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
-//		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(20);
-
-//		double[] startingModel = null;
-		
-		dirName += "-start_smooth";
-		double[] startingModel = Inversions.getDefaultVariablePerturbationBasis(rupSet);
-		if (minimizeWeight > 0d) {
-			// have it never sample reates that are being minimized
-			for (InversionConstraint constraint : u3Constraints) {
-				if (constraint instanceof RupRateMinimizationConstraint) {
-					for (int rupIndex : ((RupRateMinimizationConstraint)constraint).getRupIndexes())
-						startingModel[rupIndex] = 0d;
-				}
-			}
-		}
-		
-		double[] samplerRates = null;
-		
-//		dirName += "-rup_sampler";
-//		double[] samplerRates = Inversions.getDefaultVariablePerturbationBasis(rupSet);
+//		dirName += "-"+rsPrefix+"-misfit_std_dev_targeted";
+//		dirName += "-slip_only";
+//		DoubleUnaryOperator mfdStdDevFunc = null;
+////		DoubleUnaryOperator mfdStdDevFunc = M->0.1; dirName += "-mfd_sd_0.1";
+////		DoubleUnaryOperator mfdStdDevFunc = M->Math.max(0.1, 0.1*(M-5)); dirName += "-mfd_sd_0.1xMmin5";
+////		DoubleUnaryOperator mfdStdDevFunc = M->0.1+Math.pow(10, M-8); dirName += "-mfd_sd_0.1pls10powMmin8";
+//		double slipWeight = 1d;
+//		double mfdWeight = 0d;
+//		double paleoWeight = 0d;
+//		double parkfieldWeight = 0d;
+//		double minimizeWeight = 10000d;
+//		double mfdSmoothWeight = 0d;
+//		double supraSmoothWeight = 1000d;
+//		double u2NuclWeight = 0d;
+//		double parentSmoothWeight = 0;
+//		
+//		int num = 500;
+//
+//		if (mfdWeight > 0 && mfdWeight != 1d && mfdStdDevFunc != null)
+//			dirName += "_wt"+oDF.format(mfdWeight);
+//		if (slipWeight > 0 && slipWeight != 1d)
+//			dirName += "-slip"+oDF.format(slipWeight);
+//		if (paleoWeight > 0 && paleoWeight != 1d)
+//			dirName += "-paleo"+oDF.format(paleoWeight);
+//		if (parkfieldWeight > 0 && parkfieldWeight != 1d)
+//			dirName += "-prakfield"+oDF.format(parkfieldWeight);
+//		if (minimizeWeight > 0)
+//			dirName += "-minimize"+oDF.format(minimizeWeight);
+//		if (supraSmoothWeight > 0)
+//			dirName += "-supra_smooth"+oDF.format(supraSmoothWeight);
+//		if (mfdSmoothWeight > 0)
+//			dirName += "-mfd_smooth"+oDF.format(mfdSmoothWeight);
+//		if (parentSmoothWeight > 0)
+//			dirName += "-parent_smooth"+oDF.format(parentSmoothWeight);
+//		if (u2NuclWeight > 0)
+//			dirName += "-u2Nucl"+oDF.format(u2NuclWeight);
+//		List<InversionConstraint> u3Constraints = InversionsCLI.getStdDevWeightedU3Constraints(
+//				rupSet, slipWeight, mfdWeight, mfdStdDevFunc, paleoWeight, parkfieldWeight,
+//				minimizeWeight, u2NuclWeight, supraSmoothWeight, mfdSmoothWeight);
+//		if (parentSmoothWeight > 0d)
+//			u3Constraints.add(new ParentSectSmoothnessConstraint(rupSet, parentSmoothWeight, true));
+//		
+//		remoteMeanCompFile = new File(remoteMainDir,
+//				"2021_10_26-reproduce-ucerf3-ref_branch-uniform-new_anneal-uncert_weighted-only-slip_rates-minimize10000-smooth1000-5h/mean_solution.zip");
+//		remoteMeanCompareName = "Only-Slip-Overfit";
+//		
+////		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
+////		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(20);
+//
+////		double[] startingModel = null;
+//		
+//		dirName += "-start_smooth";
+//		double[] startingModel = Inversions.getDefaultVariablePerturbationBasis(rupSet);
 //		if (minimizeWeight > 0d) {
 //			// have it never sample reates that are being minimized
 //			for (InversionConstraint constraint : u3Constraints) {
 //				if (constraint instanceof RupRateMinimizationConstraint) {
 //					for (int rupIndex : ((RupRateMinimizationConstraint)constraint).getRupIndexes())
-//						samplerRates[rupIndex] = 0d;
+//						startingModel[rupIndex] = 0d;
 //				}
 //			}
 //		}
-		
-		dirName += "-sd1";
-		CompletionCriteria completion = new MisfitStdDevCompletionCriteria(
-				ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, 1d);
-		
-		InversionConfiguration config = InversionConfiguration.builder(u3Constraints, completion)
-				.threads(remoteToalThreads).sampler(samplerRates).initialSolution(startingModel).build();
-		for (int i=0; i<num; i++) {
-			configs.add(config);
-			subDirNames.add("misfit_sd1_run_"+i);
-		}
-		avgJob = true;
-		allPlotLevel = null;
+//		
+//		double[] samplerRates = null;
+//		
+////		dirName += "-rup_sampler";
+////		double[] samplerRates = Inversions.getDefaultVariablePerturbationBasis(rupSet);
+////		if (minimizeWeight > 0d) {
+////			// have it never sample reates that are being minimized
+////			for (InversionConstraint constraint : u3Constraints) {
+////				if (constraint instanceof RupRateMinimizationConstraint) {
+////					for (int rupIndex : ((RupRateMinimizationConstraint)constraint).getRupIndexes())
+////						samplerRates[rupIndex] = 0d;
+////				}
+////			}
+////		}
+//		
+//		dirName += "-sd1";
+//		CompletionCriteria completion = new MisfitStdDevCompletionCriteria(
+//				ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, 1d);
+//		
+//		InversionConfiguration config = InversionConfiguration.builder(u3Constraints, completion)
+//				.threads(remoteToalThreads).sampler(samplerRates).initialSolution(startingModel).build();
+//		for (int i=0; i<num; i++) {
+//			configs.add(config);
+//			subDirNames.add("misfit_sd1_run_"+i);
+//		}
+//		avgJob = true;
+//		allPlotLevel = null;
 		
 		/*
 		 * uncertainty weighted with MFD alternatives

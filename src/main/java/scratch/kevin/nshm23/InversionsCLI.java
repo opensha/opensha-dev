@@ -56,6 +56,7 @@ import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoProbabilityModel;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
+import scratch.nshm23.targetMFDs.DraftModelConstraintBuilder;
 
 public class InversionsCLI {
 
@@ -86,11 +87,10 @@ public class InversionsCLI {
 		dirName += "-u3rs";
 		File origRupSetFile = new File(parentDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
 		
+		File rupSetFile = origRupSetFile;
+		
 //		dirName += "-coulomb-nshm23";
 //		File origRupSetFile = new File(parentDir, "nshm23_geo_dm_coulomb.zip");
-
-		argz.add("--rupture-set");
-		argz.add(origRupSetFile.getAbsolutePath());
 
 		argz.add("--threads");
 		argz.add("16");
@@ -125,20 +125,22 @@ public class InversionsCLI {
 ////		argz.add("--mfd-ineq"); dirName += "_ineq";
 //		argz.add("--mfd-transition-mag"); argz.add("7.8"); dirName += "_trans7.8";
 
-		dirName += "-smooth";
-		argz.add("--smooth");
-		argz.add("--smooth-weight");
-		argz.add("1000");
+//		dirName += "-smooth";
+//		argz.add("--smooth");
+//		argz.add("--smooth-weight");
+//		argz.add("1000");
 
-		dirName += "-minimize_below";
-		argz.add("--minimize-below-sect-min");
-		argz.add("--minimize-weight");
-		argz.add("10000");
+//		dirName += "-minimize_below";
+//		argz.add("--minimize-below-sect-min");
+//		argz.add("--minimize-weight");
+//		argz.add("10000");
 		
 		boolean u3Constraints = false;
 //		boolean u3Constraints = true;
-		boolean u3StdDevConstraints = true;
+		boolean u3StdDevConstraints = false;
 //		boolean u3StdDevConstraints = true;
+		boolean nshmDraftConstraints = true;
+//		boolean nshmDraftConstraints = false;
 
 		List<InversionConstraint> extraConstraints = new ArrayList<>();
 		
@@ -163,6 +165,17 @@ public class InversionsCLI {
 			dirName += "-u3_std_dev_tests";
 			if (paleoWeight != 1d && paleoWeight > 0)
 				dirName += "-paleo"+oDF.format(paleoWeight);
+		}
+		
+		if (nshmDraftConstraints) {
+			double supraBVal = 0.7;
+			FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
+			dirName += "-nshm23_draft-supra_b_"+oDF.format(supraBVal);
+			extraConstraints.addAll(new DraftModelConstraintBuilder(rupSet).defaultConstraints(supraBVal).build());
+			// write out new ruptures set with the new target MFDs
+			rupSetFile = File.createTempFile("fst_cli_temp", "rup_set.zip");
+			rupSetFile.deleteOnExit();
+			rupSet.write(rupSetFile);
 		}
 		
 //		double b = 0.8;
@@ -217,13 +230,16 @@ public class InversionsCLI {
 //		dirName += "-30m";
 //		argz.add("--completion"); argz.add("30m");
 //		argz.add("--avg-completion"); argz.add("1m");
-//		dirName += "-10m";
-//		argz.add("--completion"); argz.add("10m");
-//		argz.add("--avg-completion"); argz.add("1m");
-		dirName += "-sd1";
-		argz.add("--completion-sd"); argz.add("1");
-		argz.add("--completion-sd-type"); argz.add(ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY.name());
+		dirName += "-10m";
+		argz.add("--completion"); argz.add("10m");
 		argz.add("--avg-completion"); argz.add("1m");
+//		dirName += "-sd1";
+//		argz.add("--completion-sd"); argz.add("1");
+//		argz.add("--completion-sd-type"); argz.add(ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY.name());
+//		argz.add("--avg-completion"); argz.add("1m");
+
+		argz.add("--rupture-set");
+		argz.add(rupSetFile.getAbsolutePath());
 
 		File dir = new File(parentDir, dirName);
 		System.out.println("Output directory: " + dir.getAbsolutePath());
