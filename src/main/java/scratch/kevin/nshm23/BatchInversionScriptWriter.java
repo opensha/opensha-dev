@@ -17,9 +17,11 @@ import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleUnaryOperator;
 
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionInputGenerator;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
@@ -73,7 +75,7 @@ public class BatchInversionScriptWriter {
 		String queue = "scec";
 		
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2021_10_12";
+//		String dirName = "2021_11_09";
 		
 		List<InversionConfiguration> configs = new ArrayList<>();
 		List<String> subDirNames = new ArrayList<>();
@@ -86,6 +88,12 @@ public class BatchInversionScriptWriter {
 		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
 		rsPrefix = "reproduce-ucerf3-ref_branch-uniform";
 		
+//		rupSetFile = new File(rsDir, "fm3_1_u3ref_geol_uniform_reproduce_ucerf3.zip");
+//		rsPrefix = "reproduce-ucerf3-ref_branch-geol-uniform";
+		
+//		rupSetFile = new File(rsDir, "fm3_1_u3ref_tapered_reproduce_ucerf3.zip");
+//		rsPrefix = "reproduce-ucerf3-ref_branch-tapered";
+		
 //		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_reproduce_ucerf3_fractGrow0.1.zip");
 //		rsPrefix = "reproduce-ucerf3-ref_branch-uniform-grow0.1";
 		
@@ -97,7 +105,7 @@ public class BatchInversionScriptWriter {
 		
 		File remoteMeanCompFile = new File(remoteMainDir,
 				"2021_10_18-reproduce-ucerf3-ref_branch-uniform-new_anneal-5x_avg-try_zero-var_perturb-noWL-5h/mean_solution.zip");
-		String remoteMeanCompareName = "U3-New-Anneal";
+		String remoteMeanCompareName = "U3-New-Anneal-NoWL";
 //		File remoteMeanCompFile = new File(remoteMainDir,
 //				"2021_10_25-reproduce-ucerf3-ref_branch-uniform-new_anneal-uncert_weighted-mfd_sd_0.1-minimize10000-smooth1000-5h/mean_solution.zip");
 //		String remoteMeanCompareName = "U3-Uncert-Wtd";
@@ -270,8 +278,18 @@ public class BatchInversionScriptWriter {
 		 * new NSHM23 draft scheme
 		 */
 		dirName += "-"+rsPrefix+"-nshm23_draft";
-		double bVal = 0.7;
+		double bVal = 1.0;
 		dirName += "-supra_b_"+oDF.format(bVal);
+
+//		remoteMeanCompFile = new File(remoteMainDir,
+//				"2021_11_03-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-2h/mean_solution.zip");
+//		remoteMeanCompareName = "All-New-Constr-b=0.8";
+//		remoteMeanCompFile = new File(remoteMainDir,
+//				"2021_11_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-only-slip-mfd-mfd_wt_10-skipBelow-2h/mean_solution.zip");
+//		remoteMeanCompareName = "New-MFD-Constr-b=0.8-No-Nucl";
+//		remoteMeanCompFile = new File(remoteMainDir,
+//				"2021_11_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-sect_wt_0.1-smooth_paleo_wt_10000-skipBelow-2h/mean_solution.zip");
+//		remoteMeanCompareName = "Weighted-Pref-b=0.8";
 		
 		int num = 10;
 
@@ -279,16 +297,89 @@ public class BatchInversionScriptWriter {
 		
 		constrBuilder.defaultConstraints(bVal);
 		
+//		dirName += "-no_mfd";
+//		constrBuilder.except(MFDInversionConstraint.class);
+		
+//		dirName += "-only-slip-mfd-sect_rate";
+//		constrBuilder.slipRates().supraBValMFDs(bVal).sectSupraRates(bVal).defaultMetaConstraints();
+		
+//		dirName += "-only-slip-mfd";
+//		constrBuilder.slipRates().supraBValMFDs(bVal).defaultMetaConstraints();
+		
+//		dirName += "-only-slip-sect_rate";
+//		constrBuilder.slipRates().sectSupraRates(bVal).defaultMetaConstraints();
+		
+		double mfdWeight = 10;
+		dirName += "-mfd_wt_"+oDF.format(mfdWeight);
+		constrBuilder.weight(MFDInversionConstraint.class, mfdWeight);
+		
+		double paleoWeight = 5;
+		dirName += "-paleo_wt_"+oDF.format(paleoWeight);
+		constrBuilder.weight(PaleoRateInversionConstraint.class, paleoWeight);
+		constrBuilder.weight(PaleoSlipInversionConstraint.class, paleoWeight);
+		
+		double parkWeight = 10;
+		dirName += "-parkfield_wt_"+oDF.format(parkWeight);
+		constrBuilder.weight(ParkfieldInversionConstraint.class, parkWeight);
+		
+		double nuclWeight = 1;
+		dirName += "-sect_wt_"+oDF.format(nuclWeight);
+		constrBuilder.weight(SectionTotalRateConstraint.class, nuclWeight);
+		
+		dirName += "_u2";
+//		boolean aFaults = true; dirName += "_aFaults";
+		boolean aFaults = false;
+		constrBuilder.except(SectionTotalRateConstraint.class);
+		constrBuilder.u2NuclBVals(aFaults).weight(nuclWeight);
+		
 //		dirName += "-no_sect_rate";
 //		constrBuilder.except(SectionTotalRateConstraint.class);
 		
+//		dirName += "-smooth";
+//		constrBuilder.supraSmooth();
+		
+		dirName += "-smooth_paleo";
+		constrBuilder.supraPaleoSmooth();
+		constrBuilder.weight(10000); dirName += "_wt_10000";
+		
+//		FaultSystemSolution refSol = FaultSystemSolution.load(
+//				new File(new File(localMainDir, remoteMeanCompFile.getParentFile().getName()),
+//						remoteMeanCompFile.getName()));
+//		constrBuilder.testFlipBVals(refSol, bVal); dirName += "-test_flip_b";
+//		constrBuilder.testSameBVals(refSol); dirName += "-test_same_b";
+//		constrBuilder.weight(10d); dirName += "_wt_10";
+//		IntegerPDF_FunctionSampler sampler = constrBuilder.testGetSampleAllNew(refSol, true); dirName += "-test_sample_new";
+//		constrBuilder.except(RupRateMinimizationConstraint.class);
+		
+		IntegerPDF_FunctionSampler sampler = constrBuilder.getSkipBelowMinSampler();
+		dirName += "-skipBelow";
+		constrBuilder.except(RupRateMinimizationConstraint.class);
+		
+//		dirName += "-redo";
+		
+//		IntegerPDF_FunctionSampler sampler = null;
+		
 		List<InversionConstraint> constraints = constrBuilder.build();
 		
+//		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
 		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
+//		CompletionCriteria completion = TimeCompletionCriteria.getInMinutes(20); dirName += "-20m";
 		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
 		
 		InversionConfiguration.Builder builder = InversionConfiguration.builder(constraints, completion)
-				.threads(remoteToalThreads).avgThreads(remoteToalThreads/4, avgCompletion);
+				.threads(remoteToalThreads).avgThreads(remoteToalThreads/4, avgCompletion).sampler(sampler);
+		
+//		dirName += "-sampler";
+//		builder.sampler(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+		
+//		dirName += "-sampler";
+//		builder.sampler(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+		
+//		dirName += "-initial";
+//		builder.initialSolution(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+		
+//		dirName += "-simple_exp_perturb";
+//		builder.perturbation(GenerationFunctionType.EXPONENTIAL_SCALE);
 		
 		InversionConfiguration config = builder.build();
 		for (int i=0; i<num; i++) {
@@ -700,6 +791,7 @@ public class BatchInversionScriptWriter {
 		script.add("if [[ -e "+remoteOutput.getAbsolutePath()+" ]];then");
 		script.add("    # build a report");
 		script.add("    echo \"Building Report\"");
+		script.add("    export FST_HAZARD_SPACING=0.2");
 		String reportCommand = "    "+java+" "+ReportPageGen.class.getName()
 			+ " --input-file "+remoteOutput.getAbsolutePath()
 			+" --plot-level "+plotLevel.name()

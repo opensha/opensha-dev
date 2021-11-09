@@ -25,6 +25,10 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Preconditions;
 
+import scratch.UCERF3.enumTreeBranches.MaxMagOffFault;
+import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
+import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+
 public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs implements ArchivableModule {
 	
 	// inputs
@@ -38,6 +42,8 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 	private SummedMagFreqDist totalOnFaultSupra;
 	private SummedMagFreqDist totalOnFaultSub;
 	private List<IncrementalMagFreqDist> mfdConstraints;
+	
+	private IncrementalMagFreqDist totalRegional;
 	
 	// discretization parameters for MFDs
 	public final static double MIN_MAG = 0.05;
@@ -163,6 +169,27 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 		} else {
 			mfdConstraints = List.of(totalOnFaultSupra);
 		}
+		
+		if (rupSet.hasModule(U3LogicTreeBranch.class)) {
+			// create a simple U3 total MFD, but taper it with our supra-seismogenic target
+			U3LogicTreeBranch branch = rupSet.requireModule(U3LogicTreeBranch.class);
+			double m5Rate = branch.getValue(TotalMag5Rate.class).getRateMag5();
+			double maxMagOff = branch.getValue(MaxMagOffFault.class).getMaxMagOffFault();
+			
+			GutenbergRichterMagFreqDist targetGR = new GutenbergRichterMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+			targetGR.setAllButTotMoRate(MIN_MAG, targetGR.getMaxX(), 1d, 1d);
+			targetGR.scaleToCumRate(targetGR.getClosestXIndex(5.01), m5Rate);
+			
+			totalRegional = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+			int offMaxBin = totalRegional.getClosestXIndex(maxMagOff);
+			for (int i=0; i<NUM_MAG; i++) {
+				double rate = targetGR.getY(i);
+				if (i > offMaxBin)
+					// allow it to taper off with our supra-seismogenic target
+					rate = Math.min(rate, totalOnFaultSupra.getY(i));
+				totalRegional.set(i, rate);
+			}
+		}
 	}
 
 	public double getSupraSeisBValue() {
@@ -193,7 +220,7 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 
 	@Override
 	public IncrementalMagFreqDist getTotalRegionalMFD() {
-		return null;
+		return totalRegional;
 	}
 
 	@Override

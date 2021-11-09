@@ -47,6 +47,7 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
 import org.dom4j.DocumentException;
 import org.jfree.data.Range;
+import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -2784,12 +2785,55 @@ public class PureScratch {
 		rupSet.requireModule(InversionTargetMFDs.class);
 	}
 	
+	private static void test106() {
+		GutenbergRichterMagFreqDist refMFD = new GutenbergRichterMagFreqDist(6.05, 30, 0.1);
+		double targetB = 1.0;
+		double moRate = 1e17;
+		refMFD.setAllButTotCumRate(refMFD.getMinX(), refMFD.getMaxX(), moRate, targetB);
+		
+		double refRate = refMFD.getTotCumRate();
+		
+		System.out.println("Total rate w/ b="+(float)targetB+":\t"+refRate);
+		
+		double fakeB = targetB+0.5;
+		
+		GutenbergRichterMagFreqDist fakeGR = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		fakeGR.setAllButTotCumRate(refMFD.getMinX(), refMFD.getMaxX(), moRate, fakeB);
+		
+		double fakeRate = fakeGR.getTotCumRate();
+		
+		System.out.println("Total rate w/ b="+(float)fakeB+":\t"+fakeRate);
+		
+		double oppositeB = targetB - (fakeB-targetB);
+		
+		GutenbergRichterMagFreqDist oppGR = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		oppGR.setAllButTotCumRate(refMFD.getMinX(), refMFD.getMaxX(), moRate, oppositeB);
+		
+		double oppRate = oppGR.getTotCumRate();
+		
+		System.out.println("Opposite rate w/ b="+(float)oppositeB+":\t"+oppRate);
+	}
+	
+	private static void test107() {
+		GutenbergRichterMagFreqDist refMFD = new GutenbergRichterMagFreqDist(6.05, 30, 0.1);
+		double targetB = 1.0;
+		double moRate = 1e17;
+		refMFD.setAllButTotCumRate(refMFD.getMinX(), refMFD.getMaxX(), moRate, targetB);
+		
+		GutenbergRichterMagFreqDist charMFD = new GutenbergRichterMagFreqDist(6.05, 30, 0.1);
+		charMFD.setAllButTotCumRate(charMFD.getMaxX(), charMFD.getMaxX(), moRate, targetB);
+		
+		System.out.println("Ref MFD: "+refMFD);
+		System.out.println("Char MFD: "+charMFD);
+		System.out.println("Char moment: "+MagUtils.magToMoment(charMFD.getMaxX())*charMFD.getY(charMFD.size()-1));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test105();
+		test107();
 	}
 
 }

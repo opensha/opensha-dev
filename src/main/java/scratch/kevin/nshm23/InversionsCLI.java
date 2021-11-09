@@ -65,11 +65,11 @@ public class InversionsCLI {
 	public static void main(String[] args) throws InterruptedException, IOException {
 		Date date = new Date();
 		
-//		System.out.println("Yawn...");
-//		long minute = 1000l*60l;
-//		long hour = minute*60l;
-//		Thread.sleep(0l*hour + 35l*minute);
-//		System.out.println("Im awake! "+new Date());
+		System.out.println("Yawn...");
+		long minute = 1000l*60l;
+		long hour = minute*60l;
+		Thread.sleep(0l*hour + 12l*minute);
+		System.out.println("Im awake! "+new Date());
 		
 		File parentDir = new File("/home/kevin/markdown/inversions");
 		
@@ -81,11 +81,11 @@ public class InversionsCLI {
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(date);
 
-//		dirName += "-coulomb-u3";
-//		File origRupSetFile = new File(parentDir, "fm3_1_coulomb.zip");
+		dirName += "-coulomb-u3";
+		File origRupSetFile = new File(parentDir, "fm3_1_u3ref_uniform_coulomb.zip");
 
-		dirName += "-u3rs";
-		File origRupSetFile = new File(parentDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
+//		dirName += "-u3rs";
+//		File origRupSetFile = new File(parentDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
 		
 		File rupSetFile = origRupSetFile;
 		
@@ -159,7 +159,7 @@ public class InversionsCLI {
 			double mfdWeight = 5d;
 //			double paleoWeight = 1d;
 			double paleoWeight = 5d;
-			double parkfieldWeight = 5d;
+			double parkfieldWeight = 1d;
 			extraConstraints.addAll(getStdDevWeightedU3Constraints(rupSet, slipWeight, mfdWeight, mfdStdDevFunc,
 					paleoWeight, parkfieldWeight, 0, 0, 0, 0d));
 			dirName += "-u3_std_dev_tests";
@@ -168,7 +168,7 @@ public class InversionsCLI {
 		}
 		
 		if (nshmDraftConstraints) {
-			double supraBVal = 0.7;
+			double supraBVal = 1.0;
 			FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
 			dirName += "-nshm23_draft-supra_b_"+oDF.format(supraBVal);
 			extraConstraints.addAll(new DraftModelConstraintBuilder(rupSet).defaultConstraints(supraBVal).build());
@@ -224,15 +224,15 @@ public class InversionsCLI {
 //		dirName += "-5h";
 //		argz.add("--completion"); argz.add("5h");
 //		argz.add("--avg-completion"); argz.add("5m");
-//		dirName += "-1h";
-//		argz.add("--completion"); argz.add("1h");
-//		argz.add("--avg-completion"); argz.add("5m");
+		dirName += "-1h";
+		argz.add("--completion"); argz.add("1h");
+		argz.add("--avg-completion"); argz.add("5m");
 //		dirName += "-30m";
 //		argz.add("--completion"); argz.add("30m");
 //		argz.add("--avg-completion"); argz.add("1m");
-		dirName += "-10m";
-		argz.add("--completion"); argz.add("10m");
-		argz.add("--avg-completion"); argz.add("1m");
+//		dirName += "-10m";
+//		argz.add("--completion"); argz.add("10m");
+//		argz.add("--avg-completion"); argz.add("1m");
 //		dirName += "-sd1";
 //		argz.add("--completion-sd"); argz.add("1");
 //		argz.add("--completion-sd-type"); argz.add(ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY.name());
@@ -276,6 +276,7 @@ public class InversionsCLI {
 		File[] files = {
 				new File(parentDir, "fm3_1_u3ref_uniform_coulomb.zip"),
 				new File(parentDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip"),
+				new File(parentDir, "fm3_1_u3ref_geol_uniform_reproduce_ucerf3.zip"),
 				new File(parentDir, "fm3_1_u3ref_uniform_reproduce_ucerf3_fractGrow0.1.zip"),
 				new File(parentDir, "fm3_1_u3ref_tapered_reproduce_ucerf3.zip"),
 				new File(parentDir, "nshm23_geo_dm_coulomb.zip") };
@@ -290,7 +291,10 @@ public class InversionsCLI {
 			U3LogicTreeBranch myBranch = branch.copy();
 			if (file.getName().startsWith("fm3_1")) {
 				myBranch.setValue(FaultModels.FM3_1);
-				myBranch.setValue(defaultDM);
+				if (file.getName().contains("_geol_"))
+					myBranch.setValue(DeformationModels.GEOLOGIC);
+				else
+					myBranch.setValue(defaultDM);
 			} else {
 				myBranch.clearValue(FaultModels.class);
 				myBranch.clearValue(DeformationModels.class);
