@@ -31,7 +31,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		@SuppressWarnings("unused")
 //		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir4860_multi_combine";
-		String catalogDirName = "rundir5250";
+		String catalogDirName = "rundir5263";
 //		String catalogDirName = "rundir4983_stitched";
 		
 		boolean standardSites = false;
@@ -63,13 +63,14 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 30;
+		int nodes = 28;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
 		String bbpDataDir = USC_CARC_ScriptWriter.NODE_TEMP_DIR;
 		String nodeScratchDir = null;
-		String bbpCopyParentDir = USC_CARC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
+//		String bbpCopyParentDir = USC_CARC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
+		String bbpCopyParentDir = null;
 		String nodeGFDir = USC_CARC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
 		File bbpEnvFile = new File("/project/scec_608/kmilner/bbp/bbp_env.sh");
 //		String sharedScratchDir = "${SCRATCHDIR}";

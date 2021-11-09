@@ -104,7 +104,11 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		gmpesInstancesCache = new HashMap<>();
 		rupSiteAzMap = HashBasedTable.create();
 		
-		exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		int threads = Runtime.getRuntime().availableProcessors();
+		if (threads > 8)
+			threads = Integer.min(32, threads-2);
+		
+		exec = Executors.newFixedThreadPool(threads);
 	}
 	
 	protected void addSiteBundle(List<Site> sites, String name) {
