@@ -32,7 +32,6 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
@@ -371,9 +370,9 @@ public class AzimuthalPageGen {
 			spec.setXYChars(traceChars);
 			spec.setCPTPosition(RectangleEdge.BOTTOM);
 			
-			XYZGraphPanel gp = new XYZGraphPanel(plotPrefs);
+			HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 			
-			gp.drawPlot(spec, false, false, new Range(minX, maxX), new Range(minY, maxY));
+			gp.drawGraphPanel(spec, false, false, new Range(minX, maxX), new Range(minY, maxY));
 //			gp.getYAxis().setStandardTickUnits(tus);
 //			gp.getXAxis().setStandardTickUnits(tus);
 			gp.getChartPanel().setSize(width, height);

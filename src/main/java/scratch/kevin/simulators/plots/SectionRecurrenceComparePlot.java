@@ -21,7 +21,6 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.IDPairing;
@@ -311,9 +310,9 @@ public class SectionRecurrenceComparePlot extends AbstractPlot {
 			xyzSpec.setXYElems(funcs);
 			xyzSpec.setXYChars(chars);
 			
-			XYZGraphPanel xyzGP = getXYZGraphPanel();
+			HeadlessGraphPanel xyzGP = getGraphPanel();
 			Range logRange = new Range(logMin, logMax);
-			xyzGP.drawPlot(xyzSpec, false, false, logRange, logRange);
+			xyzGP.drawGraphPanel(xyzSpec, false, false, logRange, logRange);
 			// write plot
 			xyzGP.getChartPanel().setSize(getPlotWidth(), getPlotHeight());
 			xyzGP.saveAsPNG(new File(outputDir, myPrefix+"_hist2D.png").getAbsolutePath());

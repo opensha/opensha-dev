@@ -14,10 +14,10 @@ import org.jfree.chart.ui.RectangleEdge;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.gui.plot.GraphWindow;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.IDPairing;
@@ -395,8 +395,8 @@ public class StateBasedCatalogBuilder implements CatalogBuilder {
 		specs.add(new XYZPlotSpec(p_1_2, cpt, title, xAxisLabel, yAxisLabel, null));
 		specs.add(new XYZPlotSpec(p_n1_n2, cpt, title, xAxisLabel, yAxisLabel, null));
 		
-		XYZGraphPanel gp = new XYZGraphPanel();
-		gp.drawPlot(specs, false, false, xRanges, yRanges, null);
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.drawGraphPanel(specs, false, false, xRanges, yRanges);
 		gp.getChartPanel().setSize(1000, 2500);
 		gp.saveAsPDF(probFile.getAbsolutePath());
 		
@@ -415,8 +415,8 @@ public class StateBasedCatalogBuilder implements CatalogBuilder {
 				
 				probFile = new File(writeDir, probFName+"_sub"+i+".pdf");
 				
-				gp = new XYZGraphPanel();
-				gp.drawPlot(spec, false, false, xRange, yRange);
+				gp = new HeadlessGraphPanel();
+				gp.drawGraphPanel(spec, false, false, xRange, yRange);
 				gp.getChartPanel().setSize(1000, 1000);
 				gp.saveAsPDF(probFile.getAbsolutePath());
 			}
@@ -434,8 +434,8 @@ public class StateBasedCatalogBuilder implements CatalogBuilder {
 		specs.add(new XYZPlotSpec(synchOverIndepData1, logRatioCPT, title, xAxisLabel, yAxisLabel, null));
 		specs.add(new XYZPlotSpec(synchOverIndepData2, logRatioCPT, title, xAxisLabel, yAxisLabel, null));
 		
-		gp = new XYZGraphPanel();
-		gp.drawPlot(specs, false, false, xRanges, yRanges, null);
+		gp = new HeadlessGraphPanel(gp.getPlotPrefs());
+		gp.drawGraphPanel(specs, false, false, xRanges, yRanges);
 		gp.getChartPanel().setSize(1000, 2500);
 		gp.saveAsPDF(synchFile.getAbsolutePath());
 		

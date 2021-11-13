@@ -11,8 +11,8 @@ import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
@@ -136,7 +136,7 @@ public class TimeDepFunStats {
 		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance();
 		cpt = cpt.rescale(0d, 100d);
 		XYZPlotSpec spec = new XYZPlotSpec(xyz, cpt, "UCERF3 SoCal Time Dep Probability", "Duration", "Min Mag", "Probability (%)");
-		new XYZPlotWindow(spec);
+		new GraphWindow(spec);
 		
 		MeanUCERF2 u2erf = new MeanUCERF2();
 		u2erf.getTimeSpan().setStartTime(2013);
@@ -206,7 +206,7 @@ public class TimeDepFunStats {
 			}
 		}
 		spec = new XYZPlotSpec(u2XYZ, cpt, "UCERF2 SoCal Time Dep Probability", "Duration", "Min Mag", "Probability (%)");
-		new XYZPlotWindow(spec);
+		new GraphWindow(spec);
 	}
 
 }

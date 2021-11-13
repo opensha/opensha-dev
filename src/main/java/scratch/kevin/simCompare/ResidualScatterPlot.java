@@ -40,7 +40,6 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
@@ -388,9 +387,9 @@ public class ResidualScatterPlot {
 		plotPrefs.setAxisLabelFontSize(20);
 		plotPrefs.setPlotLabelFontSize(21);
 		plotPrefs.setBackgroundColor(Color.WHITE);
-		XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
+		HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(plotPrefs);
 		System.out.println("Plotting with xRange: "+xRange);
-		xyzGP.drawPlot(xyzSpec, false, false, xRange, yRange);
+		xyzGP.drawGraphPanel(xyzSpec, false, false, xRange, yRange);
 		// write plot
 		xyzGP.getYAxis().setStandardTickUnits(getYTickUnits());
 		xyzGP.getChartPanel().setSize(plotWidth, plotWidth-100);
@@ -946,8 +945,8 @@ public class ResidualScatterPlot {
 				String title = imts[p].getDisplayName()+" Mean Residuals";
 				String detrendPrefix = "detrend_residuals_"+imts[p].getPrefix();
 				XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendXYZ[p], detrendCPT, title, "Log10 Distance Rup", "Magnitude", "Mean Residual");
-				XYZGraphPanel xyzGP = new XYZGraphPanel(gp.getPlotPrefs());
-				xyzGP.drawPlot(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
+				HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(gp.getPlotPrefs());
+				xyzGP.drawGraphPanel(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
 				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
 				xyzGP.getChartPanel().setSize(700, 550);
 				xyzGP.saveAsPNG(new File(outputDir, detrendPrefix+".png").getAbsolutePath());
@@ -959,8 +958,8 @@ public class ResidualScatterPlot {
 				String detrendPrefix = "detrend_std_dev_"+imts[p].getPrefix();
 				XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendStdDevXYZ[p], stdCPT, title, "Log10 Distance Rup", "Magnitude", 
 						"Residual Standard Deviation");
-				XYZGraphPanel xyzGP = new XYZGraphPanel(gp.getPlotPrefs());
-				xyzGP.drawPlot(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
+				HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(gp.getPlotPrefs());
+				xyzGP.drawGraphPanel(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
 				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
 				xyzGP.getChartPanel().setSize(700, 550);
 				xyzGP.saveAsPNG(new File(outputDir, detrendPrefix+".png").getAbsolutePath());

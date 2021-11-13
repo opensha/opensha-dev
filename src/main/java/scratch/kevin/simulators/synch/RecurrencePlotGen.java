@@ -26,6 +26,7 @@ import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GraphPanel;
 import org.opensha.commons.gui.plot.GraphWidget;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -34,9 +35,8 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -214,7 +214,7 @@ public class RecurrencePlotGen {
 //		discreteCPT.setNanColor(Color.GRAY);
 //	}
 	
-	private static PlotPreferences prefs = XYZGraphPanel.getDefaultPrefs();
+	private static PlotPreferences prefs = PlotUtils.getDefaultFigurePrefs();
 	static {
 		prefs.setPlotLabelFontSize(50);
 		prefs.setAxisLabelFontSize(40);
@@ -280,16 +280,17 @@ public class RecurrencePlotGen {
 		if (zoom <= 0)
 			zoom = xyz.getNumX();
 		double max = (zoom+0.5)*xyz.getGridSpacingX();
-		XYZGraphPanel panel = new XYZGraphPanel();
-		panel.drawPlot(spec, false, false, new Range(0, max), new Range(0, max));
 		
 		if (outputFile == null) {
 			// display it
-			XYZPlotWindow window = new XYZPlotWindow(panel);
+			GraphWindow window = new GraphWindow(spec);
+			window.setAxisRange(new Range(0, max), new Range(0, max));
 			window.setSize(width, height);
-			window.setDefaultCloseOperation(XYZPlotWindow.EXIT_ON_CLOSE);
+			window.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 		} else {
 			// write plot
+			HeadlessGraphPanel panel = PlotUtils.initHeadless();
+			panel.drawGraphPanel(spec, false, false, new Range(0, max), new Range(0, max));
 			panel.getChartPanel().setSize(width, height);
 			panel.saveAsPNG(outputFile.getAbsolutePath());
 		}
@@ -372,7 +373,7 @@ public class RecurrencePlotGen {
 		plotRotated(datas, null, distCalc, cpt, widthEach, distSpacing, outputFile);
 	}
 	
-	private static XYZGraphPanel plotRotated(List<double[][]> datas, List<String> labels, DistanceMetric distCalc,
+	private static GraphPanel plotRotated(List<double[][]> datas, List<String> labels, DistanceMetric distCalc,
 			CPT cpt, int widthEach, double distSpacing, File outputFile) throws IOException {
 		return plotRotated(datas, labels, distCalc, cpt, widthEach, distSpacing, outputFile, null, null);
 	}
@@ -380,7 +381,7 @@ public class RecurrencePlotGen {
 	private static final Color[] rup_colors = { Color.RED.darker(), Color.BLUE.darker(),
 			Color.GREEN.darker(), Color.BLACK, Color.ORANGE.darker() };
 	
-	private static XYZGraphPanel plotRotated(List<double[][]> datas, List<String> labels, DistanceMetric distCalc,
+	private static GraphPanel plotRotated(List<double[][]> datas, List<String> labels, DistanceMetric distCalc,
 			CPT cpt, int widthEach, double distSpacing, File outputFile,
 			List<List<int[]>> paths, List<String> idenNames) throws IOException {
 		// now rotate to pixel space
@@ -548,19 +549,23 @@ public class RecurrencePlotGen {
 //		if (zoom <= 0)
 //			zoom = data.length;
 		
-		XYZGraphPanel panel = new XYZGraphPanel(prefs);
-		panel.drawPlot(specs, false, false, Lists.newArrayList(xRange), yRanges);
+		GraphPanel panel;
 		
 		if (outputFile == null) {
 			// display it
-			XYZPlotWindow window = new XYZPlotWindow(panel);
+			
+			GraphWidget widget = new GraphWidget(specs, prefs, false, false, Lists.newArrayList(xRange), yRanges);
+			GraphWindow window = new GraphWindow(widget);
 			window.setSize(width, (height-140)/4+140);
-			window.setDefaultCloseOperation(XYZPlotWindow.EXIT_ON_CLOSE);
+			window.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+			panel = widget.getGraphPanel();
 		} else {
 			// write plot
 			int myHeight = height;
 			if (specs.size() > 0)
 				myHeight = (height-200)*specs.size()+500;
+			panel = PlotUtils.initHeadless();
+			panel.drawGraphPanel(specs, false, false, Lists.newArrayList(xRange), yRanges);
 			panel.getChartPanel().setSize(plotWidth, myHeight);
 			panel.saveAsPNG(outputFile.getAbsolutePath());
 //			if (plotWidth < 5000) {
@@ -1594,7 +1599,7 @@ public class RecurrencePlotGen {
 		}
 		
 		String name = "rp_"+metric.name()+"_hybrid_"+threshStr+"_rotated.png";
-		XYZGraphPanel xyzGP = plotRotated(datas, comboPlotNames, metric, cpt, rotated_pixel_width, distSpacing,
+		GraphPanel xyzGP = plotRotated(datas, comboPlotNames, metric, cpt, rotated_pixel_width, distSpacing,
 				new File(comboDir, name), comboPlotPaths, idenNames);
 		
 		if (catalogs != null) {

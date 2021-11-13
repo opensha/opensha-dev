@@ -28,11 +28,11 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileNameComparator;
@@ -509,8 +509,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		Range xRange = new Range(xyz.getMinLon(), xyz.getMaxLon());
 		Range yRange = new Range(xyz.getMinLat(), xyz.getMaxLat());
 		
-		XYZPlotWindow gw = new XYZPlotWindow(spec, xRange, yRange);
-		gw.setDefaultCloseOperation(XYZPlotWindow.EXIT_ON_CLOSE);
+		GraphWindow gw = new GraphWindow(spec, xRange, yRange);
+		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 	}
 	
 	public void generateRotDRatioPage(File outputDir, double[] aggregatedPeriods, double[] scatterPeriods, AttenRelRef gmpeRef,

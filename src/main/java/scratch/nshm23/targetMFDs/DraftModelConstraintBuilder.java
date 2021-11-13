@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -27,6 +29,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Un
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBValuePlot;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -41,6 +44,7 @@ import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.inversion.UCERF2_ComparisonSolutionFetcher;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
 
 public class DraftModelConstraintBuilder {
@@ -69,6 +73,11 @@ public class DraftModelConstraintBuilder {
 		for (int i=constraints.size(); --i>=0;)
 			if (clazz.isAssignableFrom(constraints.get(i).getClass()))
 				constraints.remove(i);
+		return this;
+	}
+	
+	public DraftModelConstraintBuilder add(InversionConstraint constraint) {
+		constraints.add(constraint);
 		return this;
 	}
 	
@@ -188,12 +197,6 @@ public class DraftModelConstraintBuilder {
 					below = true;
 					break;
 				}
-//				int m = refMagFunc.getClosestXIndex(mag);
-//				float sectMin = (float)modMinMags.getMinMagForSection(s);
-//				if (sectMin > (float)(refMagFunc.getX(m)-halfDelta)) {
-//					below = true;
-//					break;
-//				}
 			}
 			if (below)
 				belowMinIndexes.add(r);
@@ -364,24 +367,56 @@ public class DraftModelConstraintBuilder {
 		return new IntegerPDF_FunctionSampler(weights);
 	}
 	
-	public DraftModelConstraintBuilder u2NuclBVals(boolean aFaults) {
+	public DraftModelConstraintBuilder u2NuclBVals(boolean aFaults, boolean reproduce) {
 		U3LogicTreeBranch branch = rupSet.requireModule(U3LogicTreeBranch.class);
 		AveSlipModule aveSlipModule = rupSet.requireModule(AveSlipModule.class);
+		ScalingRelationships scalingRel = branch.getValue(ScalingRelationships.class);
 		double fractGR = 0.33333;
 				
-		FaultSystemSolution UCERF2_FltSysSol = null;
-		if (aFaults)
-			UCERF2_FltSysSol = UCERF2_ComparisonSolutionFetcher.getUCERF2Solution(
+		FaultSystemSolution u2Sol = null;
+		FaultSystemRupSet u2RupSet = null;
+		if (aFaults && reproduce) {
+			u2Sol = UCERF2_ComparisonSolutionFetcher.getUCERF2Solution(
 					rupSet, branch.getValue(FaultModels.class), aveSlipModule);
+			u2RupSet = u2Sol.getRupSet();
+		}
 		
 		double[] targetNuclRates = new double[rupSet.getNumSections()];
 		double[] targetNuclRateStdDevs = new double[rupSet.getNumSections()];
 		
 		// targets with b=1
+		SectSlipRates slipRates = rupSet.getSectSlipRates();
 		InversionTargetMFDsFromBValAndDefModel targetB1 = new InversionTargetMFDsFromBValAndDefModel(rupSet, 1d);
+		// don't use slip rates with this target
+		rupSet.addModule(slipRates);
+
+		MinMaxAveTracker implBValU2Track = new MinMaxAveTracker();
+		MinMaxAveTracker implBValU2AFaultTrack = new MinMaxAveTracker();
 
 		MinMaxAveTracker implBValTrack = new MinMaxAveTracker();
 		MinMaxAveTracker implBValAFaultTrack = new MinMaxAveTracker();
+		
+		Map<Integer, List<FaultSection>> sectsByParent = rupSet.getFaultSectionDataList().stream().collect(
+				Collectors.groupingBy(S -> S.getParentSectionId()));
+		
+		List<SectionMFD_constraint> u2Constraints = null;
+		if (!reproduce) {
+			u2Constraints = FaultSystemRupSetCalc.getCharInversionSectMFD_Constraints(rupSet);
+			aFaults = false; // always use old constraint
+		}
+		
+		Map<Integer, Double> parentAreas = new HashMap<>();
+		Map<Integer, Double> parentLengths = new HashMap<>();
+		for (Integer parentID : sectsByParent.keySet()) {
+			double area = 0d;
+			double len = 0d;
+			for (FaultSection sect : sectsByParent.get(parentID)) {
+				area += rupSet.getAreaForSection(sect.getSectionId()); // m
+				len += sect.getTraceLength()*1e-3; // km -> m
+			}
+			parentAreas.put(parentID, area);
+			parentLengths.put(parentID, len);
+		}
 		
 		for (int s=0;s <rupSet.getNumSections(); s++) {
 			FaultSection data = rupSet.getFaultSectionData(s);
@@ -395,17 +430,54 @@ public class DraftModelConstraintBuilder {
 						minIndex = i;
 				}
 			}
+			double minMag = sectNuclB1.getX(minIndex);
 			double maxMag = sectNuclB1.getX(maxIndex);
 			double totSectMoment = sectNuclB1.getTotalMomentRate();
 			
 			boolean aFault = false;
 			
-			if (aFaults && UCERF2_A_FaultMapper.wasUCERF2_TypeAFault(data.getParentSectionId())) {
+			double maxCharMag = 0d;
+			int maxCharMagIndex = -1;
+			
+			if (!reproduce) {
+				// just use UCERF2
+				SectionMFD_constraint u2Constr = u2Constraints.get(s);
+				if (u2Constr == null) {
+					targetNuclRates[s] = Double.NaN;
+					targetNuclRateStdDevs[s] = Double.NaN;
+				} else {
+					targetNuclRates[s] = u2Constr.getCumMFD().getY(0);
+					targetNuclRateStdDevs[s] = 0.1*targetNuclRates[s];
+					maxCharMag = u2Constr.getMag(u2Constr.getNumMags()-1);
+					maxCharMagIndex = sectNuclB1.getClosestXIndex(maxCharMag);
+					if (maxCharMagIndex < minIndex) {
+						System.err.println("WARNING: characteristic mag ("+(float)maxCharMag+") is below sect min mag ("
+								+(float)minMag+"), setting to sect min: "+s+". "+data.getName());
+						maxCharMagIndex = minIndex;
+					}
+					maxCharMag = sectNuclB1.getX(maxCharMagIndex);
+					aFault = UCERF2_A_FaultMapper.wasUCERF2_TypeAFault(data.getParentSectionId());
+				}
+			}
+			
+			if (targetNuclRates[s] == 0d && aFaults && UCERF2_A_FaultMapper.wasUCERF2_TypeAFault(data.getParentSectionId())) {
 				// type a fault, use UCERF2
 				double solSupraNuclRate = 0d;
 				double sectArea = rupSet.getAreaForSection(s);
-				for (int r : UCERF2_FltSysSol.getRupSet().getRupturesForSection(s))
-					solSupraNuclRate += UCERF2_FltSysSol.getRateForRup(r)*sectArea/UCERF2_FltSysSol.getRupSet().getAreaForRup(r);
+				maxCharMag = 0d;
+				for (int r : u2RupSet.getRupturesForSection(s)) {
+					double rate = u2Sol.getRateForRup(r);
+					solSupraNuclRate += rate*sectArea/u2RupSet.getAreaForRup(r);
+					if (rate > 0d)
+						maxCharMag = Math.max(maxCharMag, u2RupSet.getMagForRup(r));
+				}
+				maxCharMagIndex = sectNuclB1.getClosestXIndex(maxCharMag);
+				if (maxCharMagIndex < minIndex) {
+					System.err.println("WARNING: characteristic mag ("+(float)maxCharMag+") is below sect min mag ("
+							+(float)minMag+"), setting to sect min: "+s+". "+data.getName());
+					maxCharMagIndex = minIndex;
+				}
+				maxCharMag = sectNuclB1.getX(maxCharMagIndex);
 				if (solSupraNuclRate == 0d) {
 					System.err.println("WARNING: no a-fault nucl rate for "+s+". "+data.getName()+", reverting to b-fault formula");
 				} else {
@@ -418,41 +490,94 @@ public class DraftModelConstraintBuilder {
 			
 			if (targetNuclRates[s] == 0d) {
 				// b fault, use functional form
+				
+				// compute max mag for rupture filling parent section area
+				double area = parentAreas.get(data.getParentSectionId());	// m-sq
+				double length = parentLengths.get(data.getParentSectionId()); // m
+				double width = area/length;	// km
+				maxCharMag = scalingRel.getMag(area, width);
+				maxCharMagIndex = sectNuclB1.getClosestXIndex(maxCharMag);
+				if (maxCharMagIndex < minIndex) {
+					System.err.println("WARNING: characteristic mag ("+(float)maxCharMag+") is below sect min mag ("
+							+(float)minMag+"), setting to sect min: "+s+". "+data.getName());
+					maxCharMagIndex = minIndex;
+				}
+				Preconditions.checkState(maxCharMagIndex <= maxIndex,
+						"charMag=%s, charMagIndex%s, supraMin=%s, supraMinIndex=%s, supraMax=%s, supraMaxIndex=%s",
+						maxCharMag, maxCharMagIndex, minMag, minIndex, maxMag, maxIndex);
+				maxCharMag = sectNuclB1.getX(maxCharMagIndex);
+				
+				// create characteristic MFD where all moment is put in a single magnitude bin related to the full
+				// parent section characteristic rupture
 				GutenbergRichterMagFreqDist charMFD = new GutenbergRichterMagFreqDist(
 						sectNuclB1.getMinX(), sectNuclB1.size(), sectNuclB1.getDelta());
-				
 				double charMoment = (1d-fractGR)*totSectMoment;
-				charMFD.setAllButTotCumRate(maxMag, maxMag, charMoment, 1d);
-				IncrementalMagFreqDist grMFD = sectNuclB1.deepClone();
-				grMFD.scaleToTotalMomentRate(totSectMoment*fractGR);
+				charMFD.setAllButTotCumRate(maxCharMag, maxCharMag, charMoment, 1d);
+				
+				// create G-R from min-supra to parent section characteristic max
+				GutenbergRichterMagFreqDist grMFD = new GutenbergRichterMagFreqDist(
+						sectNuclB1.getMinX(), sectNuclB1.size(), sectNuclB1.getDelta());
+				double grMoment = fractGR*totSectMoment;
+				grMFD.setAllButTotCumRate(minMag, maxCharMag, grMoment, 1d);
+				
+				// sum them to create U2-style target
 				Preconditions.checkState((float)(grMFD.getTotalMomentRate()+charMFD.getTotalMomentRate()) == (float)totSectMoment);
 				SummedMagFreqDist u2Target = new SummedMagFreqDist(charMFD.getMinX(), charMFD.size(), charMFD.getDelta());
 				u2Target.addIncrementalMagFreqDist(grMFD);
 				u2Target.addIncrementalMagFreqDist(charMFD);
 				
+				Preconditions.checkState((float)u2Target.getTotalMomentRate() == (float)totSectMoment);
+				
+//				if (s % 50 == 0)
+//					System.out.println(u2Target);
+				
 				targetNuclRates[s] = u2Target.getTotalIncrRate();
 				Preconditions.checkState(targetNuclRates[s] > 0d, "nucl rate is zero for b-fault: %s. %s", s, data.getName());
 				targetNuclRateStdDevs[s] = 0.1*targetNuclRates[s];
 			}
-			GutenbergRichterMagFreqDist grWithSolRate = new GutenbergRichterMagFreqDist(
-					sectNuclB1.getMinX(), sectNuclB1.size(), sectNuclB1.getDelta());
-			grWithSolRate.setAllButBvalue(sectNuclB1.getX(minIndex), maxMag, totSectMoment, targetNuclRates[s]);
-			
-			double implB = grWithSolRate.get_bValue();
-			
-			System.out.println(s+".\trate="+(float)targetNuclRates[s]+"\tb="+(float)implB+"\taFault="+aFault);
-			
-			if (aFault)
-				implBValAFaultTrack.addValue(implB);
-			else
-				implBValTrack.addValue(implB);
+//			if (data.getName().contains("Mono Lake") || data.getName().contains("Robinson"))
+			if (!Double.isFinite(targetNuclRates[s])) {
+				System.out.println(s+".\tNONE");
+			} else {
+				GutenbergRichterMagFreqDist grWithSolRate = new GutenbergRichterMagFreqDist(
+						sectNuclB1.getMinX(), sectNuclB1.size(), sectNuclB1.getDelta());
+				grWithSolRate.setAllButBvalue(sectNuclB1.getX(minIndex), maxMag, totSectMoment, targetNuclRates[s]);
+				
+				double implB = grWithSolRate.get_bValue();
+				
+				// now same thing, but only up to characteristic max mag
+				grWithSolRate = new GutenbergRichterMagFreqDist(
+						sectNuclB1.getMinX(), sectNuclB1.size(), sectNuclB1.getDelta());
+				grWithSolRate.setAllButBvalue(sectNuclB1.getX(minIndex), maxCharMag, totSectMoment, targetNuclRates[s]);
+				
+				double implU2B = grWithSolRate.get_bValue();
+				
+				System.out.println(s+".\trate="+(float)targetNuclRates[s]+"\tb="+(float)implB+"\tb-to-char-max="
+						+(float)implU2B+"\taFault="+aFault+"\tsectMin="+(float)minMag+"\tcharMax="+(float)maxCharMag
+						+"\tcharBins="+(1+maxCharMagIndex-minIndex));
+				
+				if (minIndex != maxIndex) {
+					if (aFault) {
+						implBValAFaultTrack.addValue(implB);
+						if (minIndex != maxCharMagIndex)
+							implBValU2AFaultTrack.addValue(implU2B);
+					} else {
+						implBValTrack.addValue(implB);
+						if (minIndex != maxCharMagIndex)
+							implBValU2Track.addValue(implU2B);
+					}
+				}
+			}
 		}
 		if (implBValAFaultTrack.getNum() > 0) {
 			System.out.println("UCERF2-style implied b-values:");
 			System.out.println("\t"+implBValAFaultTrack.getNum()+" a-faults: "+implBValAFaultTrack);
+			System.out.println("\t"+implBValAFaultTrack.getNum()+" a-faults, to char-max: "+implBValU2AFaultTrack);
 			System.out.println("\t"+implBValTrack.getNum()+" b-faults: "+implBValTrack);
+			System.out.println("\t"+implBValTrack.getNum()+" b-faults, to char-max: "+implBValU2Track);
 		} else {
 			System.out.println("UCERF2-style implied b-values: "+implBValTrack);
+			System.out.println("UCERF2-style implied b-values, to char-max: "+implBValU2Track);
 		}
 		
 		constraints.add(new SectionTotalRateConstraint(rupSet, 1d,

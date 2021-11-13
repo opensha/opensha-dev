@@ -64,7 +64,6 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
@@ -4481,8 +4480,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 				String myPrefix = prefix+"_"+periodStr+"_"+plotType.getPrefix();
 				String xAxisLabel = BBP_PartBValidationConfig.DIST_JB ? "DistanceJB" : "Distance";
 				XYZPlotSpec xyzSpec = new XYZPlotSpec(xyzs[p], cpt, title, xAxisLabel, "Magnitude", zLabel);
-				XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
-				xyzGP.drawPlot(xyzSpec, false, false, new Range(minDist-0.5*deltaDist, distances.get(distances.size()-1)+0.5*deltaDist),
+				HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(plotPrefs);
+				xyzGP.drawGraphPanel(xyzSpec, false, false, new Range(minDist-0.5*deltaDist, distances.get(distances.size()-1)+0.5*deltaDist),
 						new Range(minMag-0.5*deltaMag, magnitudes.get(magnitudes.size()-1)+0.5*deltaMag));
 				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
 				xyzGP.getChartPanel().setSize(700, 550);
@@ -4639,8 +4638,8 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 				String yAxisLabel = BBP_PartBValidationConfig.DIST_JB ? "DistanceJB" : "Distance";
 				
 				XYZPlotSpec xyzSpec = new XYZPlotSpec(xyzs[p], cpt, title, xAxisLabel, yAxisLabel, zLabel);
-				XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
-				xyzGP.drawPlot(xyzSpec, false, false, xRange, yRange);
+				HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(plotPrefs);
+				xyzGP.drawGraphPanel(xyzSpec, false, false, xRange, yRange);
 				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
 				xyzGP.getChartPanel().setSize(700, 550);
 				xyzGP.saveAsPNG(ret[p].getAbsolutePath());
@@ -5501,9 +5500,9 @@ public abstract class RotatedRupVariabilityPageGen<E> {
 			xyzSpec.setXYChars(mapSpec.getChars());
 			xyzSpec.setPlotAnnotations(anns);
 			
-			XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
+			HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(plotPrefs);
 			double spacing = gridReg.getSpacing();
-			xyzGP.drawPlot(xyzSpec, false, false, new Range(minLon-0.5*spacing, maxLon+0.5*spacing),
+			xyzGP.drawGraphPanel(xyzSpec, false, false, new Range(minLon-0.5*spacing, maxLon+0.5*spacing),
 					new Range(minLat-0.5*spacing, maxLat+0.5*spacing));
 			
 			double tick;

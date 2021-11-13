@@ -30,11 +30,12 @@ import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.gui.plot.GraphPanel;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.gui.plot.pdf.PDF_UTF8_FontMapper;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
@@ -278,8 +279,8 @@ public class OccupancyCopulaCalculator {
 		}
 		copulaSpec.setCPTVisible(false);
 		
-		XYZGraphPanel copulaGP = new XYZGraphPanel();
-		copulaGP.drawPlot(copulaSpec, false, false, copulaRange, copulaRange);
+		HeadlessGraphPanel copulaGP = PlotUtils.initHeadless();
+		copulaGP.drawGraphPanel(copulaSpec, false, false, copulaRange, copulaRange);
 		ChartPanel copulaChart = copulaGP.getChartPanel();
 		
 		// Occupancy
@@ -291,8 +292,8 @@ public class OccupancyCopulaCalculator {
 		}
 		occSpec.setCPTVisible(false);
 		
-		XYZGraphPanel occGP = new XYZGraphPanel();
-		occGP.drawPlot(occSpec, false, false, oiRange, oiRange);
+		HeadlessGraphPanel occGP = PlotUtils.initHeadless();
+		occGP.drawGraphPanel(occSpec, false, false, oiRange, oiRange);
 		ChartPanel occChart = occGP.getChartPanel();
 		
 		// Cumulative along X axis

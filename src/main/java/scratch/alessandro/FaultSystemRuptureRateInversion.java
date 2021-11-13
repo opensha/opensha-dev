@@ -43,9 +43,7 @@ import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.RunScript;
 import org.opensha.commons.util.cpt.CPT;
@@ -2379,19 +2377,20 @@ public class FaultSystemRuptureRateInversion {
 		
 		try {
 			if(popupWindow) {
-				XYZPlotWindow window = new XYZPlotWindow(spec, new Range(xyzData.getMinX(),xyzData.getMaxX()), new Range(xyzData.getMinY(),xyzData.getMaxY()));
-				XYZGraphPanel panel = window.getXYZPanel();
+				GraphWindow window = new GraphWindow(spec);
+				window.setAxisRange(new Range(xyzData.getMinX(),xyzData.getMaxX()), new Range(xyzData.getMinY(),xyzData.getMaxY()));
+				
 				if(fileNamePrefix != null) {
-					panel.saveAsPDF(fileNamePrefix+".pdf");
-					panel.saveAsPNG(fileNamePrefix+".png");
+					window.saveAsPDF(fileNamePrefix+".pdf");
+					window.saveAsPNG(fileNamePrefix+".png");
 				}
 			}
 			else if (fileNamePrefix != null) {
-				XYZGraphPanel xyzGP = new XYZGraphPanel();
-				xyzGP.drawPlot(spec, false, false, new Range(xyzData.getMinX(),xyzData.getMaxX()), new Range(xyzData.getMinY(),xyzData.getMaxY()));
-				xyzGP.getChartPanel().setSize(700, 800);
-				xyzGP.saveAsPNG(fileNamePrefix+".png");
-				xyzGP.saveAsPDF(fileNamePrefix+".pdf");
+				HeadlessGraphPanel gp = new HeadlessGraphPanel();
+				gp.drawGraphPanel(spec, false, false, new Range(xyzData.getMinX(),xyzData.getMaxX()), new Range(xyzData.getMinY(),xyzData.getMaxY()));
+				gp.getChartPanel().setSize(700, 800);
+				gp.saveAsPNG(fileNamePrefix+".png");
+				gp.saveAsPDF(fileNamePrefix+".pdf");
 			}
 		} catch (IOException e) {
 			e.printStackTrace();

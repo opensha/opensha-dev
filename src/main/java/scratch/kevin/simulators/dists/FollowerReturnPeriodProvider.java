@@ -22,14 +22,14 @@ import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.gui.plot.GraphPanel;
 import org.opensha.commons.gui.plot.GraphWindow;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.ExceptionUtils;
@@ -548,7 +548,7 @@ public class FollowerReturnPeriodProvider implements
 		cpt.setBelowMinColor(Color.WHITE);
 		XYZPlotSpec spec = new XYZPlotSpec(dataset, cpt, title,
 				"Auto ("+follower.getName()+") years", "Cross ("+driver.getName()+") years", "z value");
-		new XYZPlotWindow(spec);
+		new GraphWindow(spec);
 		if (!"sadf".isEmpty())
 			return;
 //		List<HistogramFunction> funcs = Lists.newArrayList();
@@ -786,7 +786,7 @@ public class FollowerReturnPeriodProvider implements
 	private void writeDistPDF(File file, List<SimulatorEvent> randomizedCat) throws IOException {
 		String followerName = follower.getName();
 		String driverName = driver.getName();
-		List<XYZPlotSpec> specs = Lists.newArrayList();
+		List<PlotSpec> specs = Lists.newArrayList();
 		List<Range> xRanges = Lists.newArrayList();
 		List<Range> yRanges = Lists.newArrayList();
 		
@@ -820,7 +820,6 @@ public class FollowerReturnPeriodProvider implements
 		for (double rp : followerActualDist.getRPs())
 			if (rp <= maxVal)
 				followerHist.add(rp, 1d);
-		GraphPanel intereventGP = new GraphPanel(PlotPreferences.getDefault());
 		List<PlotElement> intereventElems = Lists.newArrayList();
 		intereventElems.add(driverHist);
 		intereventElems.add(followerHist);
@@ -840,12 +839,11 @@ public class FollowerReturnPeriodProvider implements
 					+", orig events: "+(followerActualDist.getRPs().length+1));
 		}
 		PlotSpec intereventSpec = new PlotSpec(intereventElems, intereventChars, title, xAxisLabel, yAxisLabel);
-		intereventGP.drawGraphPanel(intereventSpec, false, false);
-		List<XYPlot> extraPlots = Lists.newArrayList(intereventGP.getPlot());
+		specs.add(intereventSpec);
 		
-		XYZGraphPanel xyzGP = new XYZGraphPanel();
+		HeadlessGraphPanel xyzGP = PlotUtils.initHeadless();
 		
-		xyzGP.drawPlot(specs, false, false, xRanges, yRanges, extraPlots);
+		xyzGP.drawGraphPanel(specs, false, false, xRanges, yRanges);
 		xyzGP.getChartPanel().setSize(1000, 2500);
 		xyzGP.saveAsPDF(file.getAbsolutePath());
 	}

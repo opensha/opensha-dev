@@ -13,7 +13,6 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
@@ -268,8 +267,8 @@ public class RenewalModelComparisons {
 		int height = 680;
 		
 		Range range = new Range(0d, xyz.getMaxY()+0.5*xyz.getGridSpacingY());
-		XYZGraphPanel panel = new XYZGraphPanel();
-		panel.drawPlot(xyzSpec, false, false, range, range);
+		HeadlessGraphPanel panel = new HeadlessGraphPanel();
+		panel.drawGraphPanel(xyzSpec, false, false, range, range);
 		
 		// write plot
 		panel.getChartPanel().setSize(width, height);

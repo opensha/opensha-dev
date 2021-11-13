@@ -13,11 +13,11 @@ import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.faultSurface.FaultTrace;
@@ -88,10 +88,10 @@ public class Ry0Debug {
 			spec.setXYElems(funcs);
 			spec.setXYChars(chars);
 			
-			XYZPlotWindow window = new XYZPlotWindow(spec, new Range(reg.getMinLon(), reg.getMaxLon()), new Range(reg.getMinLat(), reg.getMaxLat()));
+			GraphWindow window = new GraphWindow(spec, new Range(reg.getMinLon(), reg.getMaxLon()), new Range(reg.getMinLat(), reg.getMaxLat()));
 			window.setVisible(true);
 			window.setSize(450, 450);
-			window.setDefaultCloseOperation(XYZPlotWindow.EXIT_ON_CLOSE);
+			window.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 		}
 	}
 

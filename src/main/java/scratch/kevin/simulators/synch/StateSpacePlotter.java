@@ -14,15 +14,15 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.data.xyz.XYZ_DataSet;
 import org.opensha.commons.gui.plot.GraphPanel;
+import org.opensha.commons.gui.plot.GraphWidget;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.simulators.SimulatorEvent;
@@ -243,18 +243,23 @@ public class StateSpacePlotter {
 					List<XYZPlotSpec> specs = specLists.get(n);
 					String prefix = prefixes.get(n);
 					
-					XYZGraphPanel panel = new XYZGraphPanel();
-					panel.drawPlot(specs, false, false, null, null);
+					GraphPanel panel;
 					
 					if (outputDir == null) {
 						// display it
-						XYZPlotWindow window = new XYZPlotWindow(panel);
-						window.setSize(width, height);
+						
+						GraphWidget widget = new GraphWidget(specs, null, false, false, null, null);
+						GraphWindow window = new GraphWindow(widget);
+						window.setSize(width, (height-140)/4+140);
+						window.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+						panel = widget.getGraphPanel();
 					} else {
 						// write plot
+						panel = PlotUtils.initHeadless();
+						panel.drawGraphPanel(specs, false, false, null, null);
 						panel.getChartPanel().setSize(width, height);
 						File out = new File(outputDir, prefix+"_"+PeriodicityPlotter.getFileSafeString(name1)
-								+"_"+PeriodicityPlotter.getFileSafeString(name2));
+							+"_"+PeriodicityPlotter.getFileSafeString(name2));
 						panel.saveAsPNG(out.getAbsolutePath()+".png");
 						panel.saveAsPDF(out.getAbsolutePath()+".pdf");
 					}
@@ -308,14 +313,14 @@ public class StateSpacePlotter {
 				int width = 600;
 				int height = 2000;
 				
-				XYZGraphPanel panel = new XYZGraphPanel();
-				panel.drawPlot(specs, false, false, null, null,
-						null, null);
+				HeadlessGraphPanel panel = new HeadlessGraphPanel();
+				panel.drawGraphPanel(specs, false, false, null, null);
 				
 				if (outputDir == null) {
-					// display it
-					XYZPlotWindow window = new XYZPlotWindow(panel);
-					window.setSize(width, height);
+//					// display it
+//					XYZPlotWindow window = new XYZPlotWindow(panel);
+//					window.setSize(width, height);
+					throw new IllegalStateException();
 				} else {
 					// write plot
 					panel.getChartPanel().setSize(width, height);
@@ -599,16 +604,18 @@ public class StateSpacePlotter {
 			weights = Lists.newArrayList(4,1,1);
 			
 			height = 950;
+			throw new IllegalStateException("need to refactor to use regular graph panel to re-enable marginals");
 		}
 		
-		XYZGraphPanel panel = new XYZGraphPanel();
-		panel.drawPlot(Lists.newArrayList(xyzSpec), false, false, null, null,
-				extraPlots, weights);
+		HeadlessGraphPanel panel = new HeadlessGraphPanel();
+		panel.drawGraphPanel(Lists.newArrayList(xyzSpec), false, false, null, null);
+//				extraPlots, weights);
 		
 		if (outputDir == null) {
 			// display it
-			XYZPlotWindow window = new XYZPlotWindow(panel);
-			window.setSize(width, height);
+//			XYZPlotWindow window = new XYZPlotWindow(panel);
+//			window.setSize(width, height);
+			throw new IllegalStateException();
 		} else {
 			// write plot
 			panel.getChartPanel().setSize(width, height);

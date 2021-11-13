@@ -56,7 +56,6 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.GMT_Map;
 import org.opensha.commons.mapping.gmt.elements.CoastAttributes;
@@ -800,8 +799,8 @@ public class HazardMapComparePlotter {
 			xyzSpec.setXYElems(funcs);
 			xyzSpec.setXYChars(chars);
 			
-			XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
-			xyzGP.drawPlot(xyzSpec, false, false, plotRange, plotRange);
+			HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(plotPrefs);
+			xyzGP.drawGraphPanel(xyzSpec, false, false, plotRange, plotRange);
 			if (!log) {
 				TickUnits tus = new TickUnits();
 				TickUnit tu = new NumberTickUnit(0.25);

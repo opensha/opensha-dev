@@ -1,5 +1,6 @@
 package scratch.nshm23.targetMFDs;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,9 +8,12 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 import org.opensha.commons.calc.FaultMomentCalc;
+import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.ArchivableModule;
 import org.opensha.commons.util.modules.SubModule;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
@@ -18,6 +22,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SubSeismoOnFaultMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -44,6 +49,8 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 	private List<IncrementalMagFreqDist> mfdConstraints;
 	
 	private IncrementalMagFreqDist totalRegional;
+	
+	private double[] sectFractSupras;
 	
 	// discretization parameters for MFDs
 	public final static double MIN_MAG = 0.05;
@@ -73,6 +80,8 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 		totalOnFaultSub = new SummedMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
 		
 		MinMaxAveTracker fractSuprasTrack = new MinMaxAveTracker();
+		
+		sectFractSupras = new double[numSects];
 
 		for (int s=0; s<numSects; s++) {
 			FaultSection sect = rupSet.getFaultSectionData(s);
@@ -114,6 +123,7 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 					+"\tsup="+(float)subMoRate+"\tfractSupra="+(float)fractSupra);
 			
 			fractSuprasTrack.addValue(fractSupra);
+			sectFractSupras[s] = fractSupra;
 			
 //			System.out.println("TARGET\n"+sectFullMFD);
 //			System.out.println("SUB\n"+subSeisMFD);
@@ -261,6 +271,41 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 	@Override
 	public Class<? extends ArchivableModule> getLoadingClass() {
 		return InversionTargetMFDs.Precomputed.class;
+	}
+	
+	public static void main(String[] args) throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(
+				new File("/data/kevin/markdown/inversions/fm3_1_u3ref_uniform_reproduce_ucerf3.zip"));
+//				new File("/data/kevin/markdown/inversions/fm3_1_u3ref_uniform_coulomb.zip"));
+		
+		InversionTargetMFDs origTargets = rupSet.getModule(InversionTargetMFDs.class);
+		SectSlipRates origSlips = rupSet.getModule(SectSlipRates.class);
+		
+		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, new CaliforniaRegions.RELM_TESTING());
+		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, 1d);
+		
+		double b = 0.8;
+		InversionTargetMFDsFromBValAndDefModel target = new InversionTargetMFDsFromBValAndDefModel(rupSet, b);
+		
+		mapMaker.plotSectScalars(target.sectFractSupras, cpt, "New Fraction of Moment Supra-Seismogenic");
+		
+		File outputDir = new File("/tmp");
+		mapMaker.plot(outputDir, "supra_seis_fracts", " ");
+		
+		double[] u3FractSupra = new double[rupSet.getNumSections()];
+		MinMaxAveTracker track = new MinMaxAveTracker();
+		for (int s=0; s<u3FractSupra.length; s++) {
+			double creepReduced = rupSet.getFaultSectionData(s).getReducedAveSlipRate()*1e-3;
+			double targetSlip = origSlips.getSlipRate(s);
+			double fract = targetSlip/creepReduced;
+			track.addValue(fract);
+			u3FractSupra[s] = fract;
+		}
+		System.out.println("U3 fracts: "+track);
+		
+		mapMaker.plotSectScalars(u3FractSupra, cpt, "U3 Fraction of Moment Supra-Seismogenic");
+
+		mapMaker.plot(outputDir, "supra_seis_fracts_u3", " ");
 	}
 
 }

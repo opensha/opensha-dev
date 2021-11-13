@@ -29,10 +29,11 @@ import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
+import org.opensha.commons.gui.plot.GraphPanel;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
@@ -242,7 +243,7 @@ public class ShakeMoviePlotter {
 			plotPrefs.setAxisLabelFontSize(20);
 			plotPrefs.setPlotLabelFontSize(21);
 			plotPrefs.setBackgroundColor(Color.WHITE);
-			XYZGraphPanel xyzGP = new XYZGraphPanel();
+			HeadlessGraphPanel gp = new HeadlessGraphPanel(plotPrefs);
 			
 			List<XY_DataSet> funcs = new ArrayList<>();
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
@@ -274,7 +275,7 @@ public class ShakeMoviePlotter {
 			double maxSlip = slipTimeFunc.getMaxCumulativeSlip();
 			CPT slipCPT = new CPT(0d, maxSlip, new Color(200, 255, 200, 30), new Color(100, 255, 100, 80),
 					new Color(0, 255, 0, 110), new Color(0, 150, 0, 140));
-			PaintScaleLegend slipCPTbar = XYZGraphPanel.getLegendForCPT(slipCPT, "Slip (m)",
+			PaintScaleLegend slipCPTbar = GraphPanel.getLegendForCPT(slipCPT, "Slip (m)",
 					plotPrefs.getAxisLabelFontSize(), plotPrefs.getTickLabelFontSize(), 1d, RectangleEdge.BOTTOM);
 			
 			int maxDigits = ((numFrames-1)+"").length();
@@ -325,14 +326,14 @@ public class ShakeMoviePlotter {
 				
 				String frameName = prefix+"_"+frameStr+".png";
 				
-				xyzGP.drawPlot(spec, false, false, xRange, yRange);
-				xyzGP.getChartPanel().getChart().addSubtitle(slipCPTbar);
-				xyzGP.getYAxis().setStandardTickUnits(tus);
-				xyzGP.getXAxis().setStandardTickUnits(tus);
-				xyzGP.getChartPanel().setSize(PLOT_HEIGHT, PLOT_WIDTH);
+				gp.drawGraphPanel(spec, false, false, xRange, yRange);
+				gp.getChartPanel().getChart().addSubtitle(slipCPTbar);
+				gp.getYAxis().setStandardTickUnits(tus);
+				gp.getXAxis().setStandardTickUnits(tus);
+				gp.getChartPanel().setSize(PLOT_HEIGHT, PLOT_WIDTH);
 				
 				try {
-					xyzGP.saveAsPNG(new File(outputDir, frameName).getAbsolutePath());
+					gp.saveAsPNG(new File(outputDir, frameName).getAbsolutePath());
 				} catch (IOException e) {
 					throw ExceptionUtils.asRuntimeException(e);
 				}

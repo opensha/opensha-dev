@@ -16,13 +16,13 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.gui.plot.GraphPanel;
 import org.opensha.commons.gui.plot.GraphWindow;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.cpt.CPT;
@@ -229,8 +229,8 @@ public class PredictionTests {
 					
 					List<XYZPlotSpec> specs = Lists.newArrayList(xSpec, ySpec);
 					
-					XYZGraphPanel xyzGP = new XYZGraphPanel();
-					xyzGP.drawPlot(specs, false, false, null, null);
+					HeadlessGraphPanel xyzGP = PlotUtils.initHeadless();
+					xyzGP.drawGraphPanel(specs, false, false, null, null);
 					xyzGP.getChartPanel().setSize(1000, 2000);
 					String prefix = PeriodicityPlotter.getFileSafeString(name1)
 							+"_"+PeriodicityPlotter.getFileSafeString(name2);
@@ -401,15 +401,15 @@ public class PredictionTests {
 		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(0d, bvNormal.getMaxZ());
 		XYZPlotSpec spec = new XYZPlotSpec(bvNormal, cpt, "Bivariate Normal Integration", "X", "Y", "Density");
 		
-		XYZPlotWindow gw = new XYZPlotWindow(spec);
-		gw.setDefaultCloseOperation(XYZPlotWindow.EXIT_ON_CLOSE);
+		GraphWindow gw = new GraphWindow(spec);
+		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 		
 		// now occupancy
 		cpt = cpt.rescale(0d, occ.getMaxZ());
 		spec = new XYZPlotSpec(occ, cpt, "Occupancy", "X", "Y", "Occupancy");
 		
-		gw = new XYZPlotWindow(spec);
-		gw.setDefaultCloseOperation(XYZPlotWindow.EXIT_ON_CLOSE);
+		gw = new GraphWindow(spec);
+		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 		
 		// now 1D RI dists
 		List<DiscretizedFunc> funcs = Lists.newArrayList();

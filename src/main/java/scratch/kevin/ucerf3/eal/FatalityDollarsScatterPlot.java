@@ -17,7 +17,6 @@ import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -132,8 +131,8 @@ public class FatalityDollarsScatterPlot {
 			cpt.setBelowMinColor(Color.WHITE);
 			cpt.setNanColor(Color.WHITE);
 			XYZPlotSpec spec = new XYZPlotSpec(xyz, cpt, "Dollars vs Fatalities Per Rupture", dollarLabel, fatalityLabel, "Log10(Number)");
-			XYZPlotWindow gw = new XYZPlotWindow(spec);
-			gw.setDefaultCloseOperation(XYZPlotWindow.EXIT_ON_CLOSE);
+			GraphWindow gw = new GraphWindow(spec);
+			gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 		}
 	}
 	

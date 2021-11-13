@@ -15,7 +15,6 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotPreferences;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.utils.General_EQSIM_Tools;
@@ -35,7 +34,6 @@ public abstract class AbstractPlot {
 	private int plotHeight = plot_height_default;
 	
 	private HeadlessGraphPanel gp;
-	private XYZGraphPanel xyzGP;
 	private String catalogName;
 	private File outputDir;
 	private String outputPrefix;
@@ -213,16 +211,6 @@ public abstract class AbstractPlot {
 		}
 		
 		return gp;
-	}
-	
-	protected static XYZGraphPanel buildXYZGraphPanel() {
-		return new XYZGraphPanel(buildGraphPanel().getPlotPrefs());
-	}
-	
-	protected synchronized XYZGraphPanel getXYZGraphPanel() {
-		if (xyzGP == null)
-			xyzGP = buildXYZGraphPanel();
-		return xyzGP;
 	}
 	
 	public void setPlotSize(int plotWidth, int plotHeight) {

@@ -16,9 +16,7 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
@@ -297,8 +295,8 @@ public class PlottingUtils {
 		
 		try {
 			if(popupWindow) {
-				XYZPlotWindow window = new XYZPlotWindow(spec, xRange, yRange);
-				XYZGraphPanel panel = window.getXYZPanel();
+				GraphWindow window = new GraphWindow(spec, xRange, yRange);
+				window.setVisible(true);
 			}
 			if (fileNamePrefix != null) {
 				int width = (int)(widthInches*72.);
@@ -307,8 +305,8 @@ public class PlottingUtils {
 				plotPrefs.setAxisLabelFontSize(11);
 				plotPrefs.setTickLabelFontSize(9);
 				plotPrefs.setBackgroundColor(Color.WHITE);
-				XYZGraphPanel xyzGP = new XYZGraphPanel(plotPrefs);
-				xyzGP.drawPlot(spec, false, false, xRange, yRange);
+				HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(plotPrefs);
+				xyzGP.drawGraphPanel(spec, false, false, xRange, yRange);
 				xyzGP.getChartPanel().setSize(width, height);
 				xyzGP.saveAsPNG(fileNamePrefix+".png");
 				xyzGP.saveAsPDF(fileNamePrefix+".pdf");

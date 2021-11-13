@@ -20,11 +20,11 @@ import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
+import org.opensha.commons.gui.plot.GraphWindow;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.Interpolate;
@@ -505,11 +505,10 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		double maxY = xyz.getMaxY();
 		double gridSpacingY = xyz.getGridSpacingY();
 		
-		XYZGraphPanel xyzGP = buildXYZGraphPanel();
-		xyzGP.drawPlot(xyzSpec, false, false, new Range(minX-0.5*gridSpacingX, maxX+0.5*gridSpacingX),
+		GraphWindow gw = new GraphWindow(xyzSpec);
+		gw.setAxisRange(new Range(minX-0.5*gridSpacingX, maxX+0.5*gridSpacingX),
 				new Range(minY-0.5*gridSpacingY, maxY+0.5*gridSpacingY));
 		
-		new XYZPlotWindow(xyzGP);
 		numDebugPlots++;
 	}
 	
@@ -876,8 +875,8 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 		double maxY = xyz.getMaxY();
 		double gridSpacingY = xyz.getGridSpacingY();
 		
-		XYZGraphPanel xyzGP = buildXYZGraphPanel();
-		xyzGP.drawPlot(xyzSpec, false, false, new Range(minX-0.5*gridSpacingX, maxX+0.5*gridSpacingX),
+		HeadlessGraphPanel xyzGP = buildGraphPanel();
+		xyzGP.drawGraphPanel(xyzSpec, false, false, new Range(minX-0.5*gridSpacingX, maxX+0.5*gridSpacingX),
 				new Range(minY-0.5*gridSpacingY, maxY+0.5*gridSpacingY));
 		// write plot
 		xyzGP.getChartPanel().setSize(getPlotWidth(), getPlotHeight());

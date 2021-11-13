@@ -32,7 +32,7 @@ import org.opensha.commons.gui.plot.PlotElement;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
@@ -675,8 +675,8 @@ public class SynchParamCalculator {
 		}
 
 		List<XYZPlotSpec> xyzSpecs = Lists.newArrayList(gSpec, weightSpec, gWeightedSpec);
-		XYZGraphPanel xyzGP = new XYZGraphPanel();
-		xyzGP.drawPlot(xyzSpecs, false, false, xyzXRanges, xyzYRanges, null);
+		HeadlessGraphPanel xyzGP = PlotUtils.initHeadless();
+		xyzGP.drawGraphPanel(xyzSpecs, false, false, xyzXRanges, xyzYRanges);
 		xyzGP.getChartPanel().setSize(1000, 1500);
 		synch2DPlotFile = new File(synchXYZDir, PeriodicityPlotter.getFileSafeString(name1)
 				+"_"+PeriodicityPlotter.getFileSafeString(name2)+".pdf");
@@ -745,10 +745,10 @@ public class SynchParamCalculator {
 			// write poster images
 
 			// G
-			xyzGP = new XYZGraphPanel();
+			xyzGP = PlotUtils.initHeadless();
 			xyzXRange = xyzYRange;
 			gSpec.setTitle("Gain Factor");
-			xyzGP.drawPlot(gSpec, false, false, xyzXRange, xyzYRange);
+			xyzGP.drawGraphPanel(gSpec, false, false, xyzXRange, xyzYRange);
 			xyzGP.getChartPanel().setSize(1000, 1000);
 			File gPlotFile = new File(synchXYZDir, "gain_"+PeriodicityPlotter.getFileSafeString(name1)
 					+"_"+PeriodicityPlotter.getFileSafeString(name2)+".pdf");
@@ -776,9 +776,9 @@ public class SynchParamCalculator {
 			XYZPlotSpec occSpec = new XYZPlotSpec(occFreqXYZ, occCPT, "State Occupancy Frequency",
 					gSpec.getXAxisLabel(), gSpec.getYAxisLabel(), null);
 
-			xyzGP = new XYZGraphPanel();
+			xyzGP = PlotUtils.initHeadless();
 			xyzXRange = xyzYRange;
-			xyzGP.drawPlot(occSpec, false, false, xyzXRange, xyzYRange);
+			xyzGP.drawGraphPanel(occSpec, false, false, xyzXRange, xyzYRange);
 			xyzGP.getChartPanel().setSize(1000, 1000);
 			File freqPlotFile = new File(synchXYZDir, "freq_"+PeriodicityPlotter.getFileSafeString(name1)
 					+"_"+PeriodicityPlotter.getFileSafeString(name2)+".pdf");

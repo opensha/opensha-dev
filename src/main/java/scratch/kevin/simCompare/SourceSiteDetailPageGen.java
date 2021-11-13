@@ -34,13 +34,13 @@ import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.gui.plot.GraphPanel;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.MarkdownUtils;
@@ -497,14 +497,14 @@ public abstract class SourceSiteDetailPageGen {
 //			System.out.println("\taspect ratio: "+aspectRatio);
 //			System.out.println("\test height each: "+estHeightEach);
 			
-			PaintScaleLegend particBar = XYZGraphPanel.getLegendForCPT(countCPT, "Log₁₀ Participation Count",
+			PaintScaleLegend particBar = GraphPanel.getLegendForCPT(countCPT, "Log₁₀ Participation Count",
 					prefs.getAxisLabelFontSize(), prefs.getTickLabelFontSize(), 1d, RectangleEdge.TOP);
 			particBar.setBackgroundPaint(new Color(255, 255, 255, 127));
 			XYDrawableAnnotation particBarAnn = new XYDrawableAnnotation(
 					scaleAnnX, scaleAnnY, scaleWidth, scaleHeight, particBar);
 			particSpec.addPlotAnnotation(particBarAnn);
 			
-			PaintScaleLegend dirBar = XYZGraphPanel.getLegendForCPT(directivityCPT,
+			PaintScaleLegend dirBar = GraphPanel.getLegendForCPT(directivityCPT,
 					"⇦Leftward   Ave-Prop-Dir  Rightward⇨",
 					prefs.getAxisLabelFontSize(), prefs.getTickLabelFontSize(), 1d, RectangleEdge.TOP);
 			dirBar.setBackgroundPaint(new Color(255, 255, 255, 127));

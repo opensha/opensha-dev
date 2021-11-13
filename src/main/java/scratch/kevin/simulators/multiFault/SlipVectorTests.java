@@ -21,9 +21,7 @@ import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotWindow;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -267,7 +265,7 @@ public class SlipVectorTests {
 		spec.setXYElems(funcs);
 		spec.setXYChars(chars);
 		
-		XYZPlotWindow xyzWind = new XYZPlotWindow(spec, xRange, yRange);
+		GraphWindow xyzWind = new GraphWindow(spec, xRange, yRange);
 		xyzWind.setVisible(true);
 		xyzWind.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
 	}

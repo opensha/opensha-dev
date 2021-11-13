@@ -18,12 +18,12 @@ import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZGraphPanel;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
@@ -220,9 +220,9 @@ public class PaleoOpenIntervalRIPlot {
 		prefs.setPlotLabelFontSize(21);
 		prefs.setBackgroundColor(Color.WHITE);
 		
-		XYZGraphPanel gp = new XYZGraphPanel(prefs);
+		HeadlessGraphPanel gp = new HeadlessGraphPanel(prefs);
 		
-		gp.drawPlot(xyzSpec, log, log, range, range);
+		gp.drawGraphPanel(xyzSpec, log, log, range, range);
 //		gp.setUserBounds(range, range);
 //		gp.drawGraphPanel(spec, log, log);
 		
