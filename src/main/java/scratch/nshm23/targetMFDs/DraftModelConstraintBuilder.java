@@ -27,10 +27,13 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Se
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint.SectMappedUncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBValuePlot;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -124,13 +127,17 @@ public class DraftModelConstraintBuilder {
 		
 		List<? extends IncrementalMagFreqDist> origMFDs = target.getMFD_Constraints();
 		List<UncertainIncrMagFreqDist> uncertainMFDs = new ArrayList<>();
-		System.err.println("WARNING: temporary relative standard deviation of 0.1 set for all MFD bins"); // TODO
 		for (IncrementalMagFreqDist mfd : origMFDs) {
-			// TODO fake standard deviation
-			UncertainIncrMagFreqDist uMFD = UncertainIncrMagFreqDist.constantRelStdDev(mfd, 0.1);
-//			for (int i=0; i<uMFD.size(); i++)
-//				System.out.println(uMFD.getX(i)+"\t"+uMFD.getY(i)+"\t"+uMFD.getStdDev(i));
-			uncertainMFDs.add(uMFD);
+			if (mfd instanceof UncertainIncrMagFreqDist) {
+				// already uncertain
+				uncertainMFDs.add((UncertainIncrMagFreqDist)mfd);
+			} else {
+				System.err.println("WARNING: temporary relative standard deviation of 0.1 set for all MFD bins"); // TODO
+				UncertainIncrMagFreqDist uMFD = UncertainIncrMagFreqDist.constantRelStdDev(mfd, 0.1);
+//				for (int i=0; i<uMFD.size(); i++)
+//					System.out.println(uMFD.getX(i)+"\t"+uMFD.getY(i)+"\t"+uMFD.getStdDev(i));
+				uncertainMFDs.add(uMFD);
+			}
 		}
 		constraints.add(new MFDInversionConstraint(rupSet, 1d, false,
 				ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, uncertainMFDs));
@@ -583,6 +590,53 @@ public class DraftModelConstraintBuilder {
 		constraints.add(new SectionTotalRateConstraint(rupSet, 1d,
 				ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, targetNuclRates, targetNuclRateStdDevs, true));
 		return this;
+	}
+	
+	public IntegerPDF_FunctionSampler testSampleFaultsEqually(boolean skipBelow, double cap) {
+		Map<Integer, List<FaultSection>> sectsByParent = rupSet.getFaultSectionDataList().stream().collect(
+				Collectors.groupingBy(S -> S.getParentSectionId()));
+		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
+		Map<Integer, Integer> parentRupCounts = new HashMap<>();
+		int maxRups = 0;
+		int minRups = Integer.MAX_VALUE;
+		
+		HashSet<Integer> skipRups = null;
+		if (skipBelow)
+			skipRups = new HashSet<>(getRupIndexesBelowMinMag());
+		
+		for (int parentID : sectsByParent.keySet()) {
+			List<Integer> rups = rupSet.getRupturesForParentSection(parentID);
+			int count = rups.size();
+			if (skipBelow)
+				for (Integer r : rups)
+					if (skipRups.contains(r))
+						count--;
+			maxRups = Integer.max(maxRups, count);
+			if (count > 0)
+				minRups = Integer.min(minRups, count);
+			parentRupCounts.put(parentID, count);
+		}
+		System.out.println("Max ruptures per section: "+maxRups);
+		System.out.println("Min ruptures per section: "+minRups);
+		
+		double[] sampleRates = new double[rupSet.getNumRuptures()];
+		
+		MinMaxAveTracker scoreTrack = new MinMaxAveTracker();
+		for (int r=0; r<sampleRates.length; r++) {
+			if (skipBelow && skipRups.contains(r))
+				continue;
+			ClusterRupture rup = cRups.get(r);
+			double avgScore = 0d;
+			for (FaultSubsectionCluster cluster : rup.getClustersIterable())
+				avgScore += (double)maxRups/parentRupCounts.get(cluster.parentSectionID).doubleValue();
+			avgScore /= (double)rup.getTotalNumClusters();
+			avgScore = Math.min(avgScore, cap);
+			sampleRates[r] = avgScore;
+			scoreTrack.addValue(avgScore);
+		}
+		System.out.println("Sample score range: "+scoreTrack);
+		
+		return new IntegerPDF_FunctionSampler(sampleRates);
 	}
 
 }

@@ -30,6 +30,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Pa
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RelativeBValueConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RupRateMinimizationConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SectionTotalRateConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.TotalRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
@@ -65,11 +66,11 @@ public class InversionsCLI {
 	public static void main(String[] args) throws InterruptedException, IOException {
 		Date date = new Date();
 		
-		System.out.println("Yawn...");
-		long minute = 1000l*60l;
-		long hour = minute*60l;
-		Thread.sleep(0l*hour + 12l*minute);
-		System.out.println("Im awake! "+new Date());
+//		System.out.println("Yawn...");
+//		long minute = 1000l*60l;
+//		long hour = minute*60l;
+//		Thread.sleep(0l*hour + 12l*minute);
+//		System.out.println("Im awake! "+new Date());
 		
 		File parentDir = new File("/home/kevin/markdown/inversions");
 		
@@ -81,11 +82,11 @@ public class InversionsCLI {
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(date);
 
-		dirName += "-coulomb-u3";
-		File origRupSetFile = new File(parentDir, "fm3_1_u3ref_uniform_coulomb.zip");
+//		dirName += "-coulomb-u3";
+//		File origRupSetFile = new File(parentDir, "fm3_1_u3ref_uniform_coulomb.zip");
 
-//		dirName += "-u3rs";
-//		File origRupSetFile = new File(parentDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
+		dirName += "-u3rs";
+		File origRupSetFile = new File(parentDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
 		
 		File rupSetFile = origRupSetFile;
 		
@@ -159,19 +160,47 @@ public class InversionsCLI {
 			double mfdWeight = 5d;
 //			double paleoWeight = 1d;
 			double paleoWeight = 5d;
-			double parkfieldWeight = 1d;
+			double parkfieldWeight = 10d;
 			extraConstraints.addAll(getStdDevWeightedU3Constraints(rupSet, slipWeight, mfdWeight, mfdStdDevFunc,
 					paleoWeight, parkfieldWeight, 0, 0, 0, 0d));
 			dirName += "-u3_std_dev_tests";
 			if (paleoWeight != 1d && paleoWeight > 0)
 				dirName += "-paleo"+oDF.format(paleoWeight);
+			if (parkfieldWeight != 1d && paleoWeight > 0)
+				dirName += "-parkfield"+oDF.format(parkfieldWeight);
 		}
 		
 		if (nshmDraftConstraints) {
-			double supraBVal = 1.0;
+			double supraBVal = 0.8;
 			FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
 			dirName += "-nshm23_draft-supra_b_"+oDF.format(supraBVal);
-			extraConstraints.addAll(new DraftModelConstraintBuilder(rupSet).defaultConstraints(supraBVal).build());
+
+			DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet);
+			constrBuilder.defaultConstraints(supraBVal);
+			
+			double mfdWeight = 10;
+			dirName += "-mfd_wt_"+oDF.format(mfdWeight);
+			constrBuilder.weight(MFDInversionConstraint.class, mfdWeight);
+			
+			double paleoWeight = 5;
+			dirName += "-paleo_wt_"+oDF.format(paleoWeight);
+			constrBuilder.weight(PaleoRateInversionConstraint.class, paleoWeight);
+			constrBuilder.weight(PaleoSlipInversionConstraint.class, paleoWeight);
+			
+//			dirName += "-no_paleo";
+//			constrBuilder.except(PaleoRateInversionConstraint.class).except(PaleoSlipInversionConstraint.class);
+			
+			double parkWeight = 10;
+			dirName += "-parkfield_wt_"+oDF.format(parkWeight);
+			constrBuilder.weight(ParkfieldInversionConstraint.class, parkWeight);
+			
+//			dirName += "-no_parkfield";
+//			constrBuilder.except(ParkfieldInversionConstraint.class);
+			
+			double nuclWeight = 0.5;
+			dirName += "-sect_wt_"+oDF.format(nuclWeight);
+			constrBuilder.weight(SectionTotalRateConstraint.class, nuclWeight);
+			extraConstraints.addAll(constrBuilder.build());
 			// write out new ruptures set with the new target MFDs
 			rupSetFile = File.createTempFile("fst_cli_temp", "rup_set.zip");
 			rupSetFile.deleteOnExit();
@@ -224,15 +253,15 @@ public class InversionsCLI {
 //		dirName += "-5h";
 //		argz.add("--completion"); argz.add("5h");
 //		argz.add("--avg-completion"); argz.add("5m");
-		dirName += "-1h";
-		argz.add("--completion"); argz.add("1h");
-		argz.add("--avg-completion"); argz.add("5m");
+//		dirName += "-1h";
+//		argz.add("--completion"); argz.add("1h");
+//		argz.add("--avg-completion"); argz.add("5m");
 //		dirName += "-30m";
 //		argz.add("--completion"); argz.add("30m");
 //		argz.add("--avg-completion"); argz.add("1m");
-//		dirName += "-10m";
-//		argz.add("--completion"); argz.add("10m");
-//		argz.add("--avg-completion"); argz.add("1m");
+		dirName += "-10m";
+		argz.add("--completion"); argz.add("10m");
+		argz.add("--avg-completion"); argz.add("1m");
 //		dirName += "-sd1";
 //		argz.add("--completion-sd"); argz.add("1");
 //		argz.add("--completion-sd-type"); argz.add(ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY.name());

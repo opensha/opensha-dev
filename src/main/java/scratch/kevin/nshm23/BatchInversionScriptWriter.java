@@ -283,7 +283,7 @@ public class BatchInversionScriptWriter {
 		 */
 		dirName += "-"+rsPrefix+"-nshm23_draft";
 		double bVal = 0.8;
-		dirName += "-supra_b_"+oDF.format(bVal);
+		dirName += "-supra_b_"+(float)bVal;
 
 //		remoteMeanCompFile = new File(remoteMainDir,
 //				"2021_11_03-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-2h/mean_solution.zip");
@@ -291,9 +291,9 @@ public class BatchInversionScriptWriter {
 //		remoteMeanCompFile = new File(remoteMainDir,
 //				"2021_11_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-only-slip-mfd-mfd_wt_10-skipBelow-2h/mean_solution.zip");
 //		remoteMeanCompareName = "New-MFD-Constr-b=0.8-No-Nucl";
-//		remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_11_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-sect_wt_0.1-smooth_paleo_wt_10000-skipBelow-2h/mean_solution.zip");
-//		remoteMeanCompareName = "Weighted-Pref-b=0.8";
+		remoteMeanCompFile = new File(remoteMainDir,
+				"2021_11_15-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_100-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-2h/mean_solution.zip");
+		remoteMeanCompareName = "Weighted-Draft-b=0.8";
 //		remoteMeanCompFile = new File(remoteMainDir,
 //				"2021_11_10-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-10h-20x/mean_solution.zip");
 //		remoteMeanCompareName = "New-Draft-0.8-10hr-20x";
@@ -304,8 +304,17 @@ public class BatchInversionScriptWriter {
 //				"2021_11_12-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-smooth_all_wt_10000-skipBelow-10h/mean_solution.zip");
 //		remoteMeanCompareName = "New-Draft-NoSect-0.8-SmoothAll-10hr";
 //		remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_11_12-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-parent_smooth_wt_100-smooth_paleo_wt_10000-skipBelow-10h/mean_solution.zip");
-//		remoteMeanCompareName = "New-Draft-NoSect-0.8-ParentSmooth-10hr";
+//				"2021_11_13-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-parent_smooth_wt_10000-smooth_paleo_wt_10000-skipBelow-10h/mean_solution.zip");
+//		remoteMeanCompareName = "ParentSmooth-10hr";
+//		remoteMeanCompFile = new File(remoteMainDir,
+//				"2021_11_12-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-smooth_paleo_wt_10000-skipBelow-10h-simple_exp_perturb/mean_solution.zip");
+//		remoteMeanCompareName = "10hr-NoSect-SimplePerturb";
+//		remoteMeanCompFile = new File(remoteMainDir,
+//				"2021_11_13-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-smooth_paleo_wt_10000-parentFairSampler-10h/mean_solution.zip");
+//		remoteMeanCompareName = "10hr-ParentFairSampler";
+//		remoteMeanCompFile = new File(remoteMainDir,
+//				"2021_11_14-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_1-paleo_wt_5-parkfield_wt_10-no_sect_rate-smooth_paleo_wt_10000-skipBelow-10h/mean_solution.zip");
+//		remoteMeanCompareName = "10hr-MFDWt1";
 		
 		int num = 5;
 
@@ -334,16 +343,22 @@ public class BatchInversionScriptWriter {
 		constrBuilder.weight(PaleoRateInversionConstraint.class, paleoWeight);
 		constrBuilder.weight(PaleoSlipInversionConstraint.class, paleoWeight);
 		
-		double parkWeight = 10;
+//		dirName += "-no_paleo";
+//		constrBuilder.except(PaleoRateInversionConstraint.class).except(PaleoSlipInversionConstraint.class);
+		
+		double parkWeight = 100;
 		dirName += "-parkfield_wt_"+oDF.format(parkWeight);
 		constrBuilder.weight(ParkfieldInversionConstraint.class, parkWeight);
 		
-//		double nuclWeight = 0.5;
-//		dirName += "-sect_wt_"+oDF.format(nuclWeight);
-//		constrBuilder.weight(SectionTotalRateConstraint.class, nuclWeight);
+//		dirName += "-no_parkfield";
+//		constrBuilder.except(ParkfieldInversionConstraint.class);
 		
-		dirName += "-no_sect_rate";
-		constrBuilder.except(SectionTotalRateConstraint.class);
+		double nuclWeight = 0.5;
+		dirName += "-sect_wt_"+oDF.format(nuclWeight);
+		constrBuilder.weight(SectionTotalRateConstraint.class, nuclWeight);
+		
+//		dirName += "-no_sect_rate";
+//		constrBuilder.except(SectionTotalRateConstraint.class);
 		
 //		dirName += "_u2";
 //		boolean aFaults = true;
@@ -363,8 +378,9 @@ public class BatchInversionScriptWriter {
 //		constrBuilder.supraSmooth();
 //		constrBuilder.weight(10000); dirName += "_wt_10000";
 		
-//		dirName += "-parent_smooth_wt_100";
-//		constrBuilder.add(new ParentSectSmoothnessConstraint(rupSet, 100, true));
+//		int parentWt = 10000;
+//		dirName += "-parent_smooth_wt_"+parentWt;
+//		constrBuilder.add(new ParentSectSmoothnessConstraint(rupSet, parentWt, true));
 		
 		dirName += "-smooth_paleo";
 		constrBuilder.supraPaleoSmooth();
@@ -382,6 +398,16 @@ public class BatchInversionScriptWriter {
 		IntegerPDF_FunctionSampler sampler = constrBuilder.getSkipBelowMinSampler();
 		dirName += "-skipBelow";
 		constrBuilder.except(RupRateMinimizationConstraint.class);
+		
+//		IntegerPDF_FunctionSampler sampler = constrBuilder.testSampleFaultsEqually(true, 100d);
+//		dirName += "-parentFairSampler";
+//		constrBuilder.except(RupRateMinimizationConstraint.class);
+		
+//		dirName += "-sampleMohawkSurprise10x";
+//		for (int r : rupSet.getRupturesForParentSection(686)) // mohawk valley
+//			sampler.set(r, sampler.getY(r)*10);
+//		for (int r : rupSet.getRupturesForParentSection(708)) // surprise valley
+//			sampler.set(r, sampler.getY(r)*10);
 		
 //		dirName += "-redo";
 		

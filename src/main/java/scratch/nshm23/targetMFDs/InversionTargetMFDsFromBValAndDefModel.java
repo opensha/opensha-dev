@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.calc.FaultMomentCalc;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.commons.geo.Region;
@@ -22,6 +24,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SubSeismoOnFaultMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -42,10 +45,10 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 	// things we compute here
 	private SectSlipRates targetSlipRates;
 	private List<IncrementalMagFreqDist> sectFullMFDs;
-	private SubSeismoOnFaultMFDs sectSubSeisMFDs;
 	private List<IncrementalMagFreqDist> sectSupraSeisMFDs;
-	private SummedMagFreqDist totalOnFaultSupra;
-	private SummedMagFreqDist totalOnFaultSub;
+	private SubSeismoOnFaultMFDs sectSubSeisMFDs;
+	private IncrementalMagFreqDist totalOnFaultSupra;
+	private IncrementalMagFreqDist totalOnFaultSub;
 	private List<IncrementalMagFreqDist> mfdConstraints;
 	
 	private IncrementalMagFreqDist totalRegional;
@@ -57,6 +60,9 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 	public final static double MAX_MAG = 8.95;
 	public final static int NUM_MAG = 90;
 	public final static double DELTA_MAG = 0.1;
+
+	private static double TARGET_REL_STD_DEV = 0.1;
+	private static boolean WEIGHT_STD_DEV_BY_PARTICIPATION = false;
 
 	public InversionTargetMFDsFromBValAndDefModel(FaultSystemRupSet rupSet, double supraSeisBValue) {
 		this(rupSet, supraSeisBValue, null);
@@ -76,12 +82,16 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 		List<IncrementalMagFreqDist> sectSubSeisMFDs = new ArrayList<>();
 		sectSupraSeisMFDs = new ArrayList<>();
 		
-		totalOnFaultSupra = new SummedMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
-		totalOnFaultSub = new SummedMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+		SummedMagFreqDist totalOnFaultSupra = new SummedMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+		SummedMagFreqDist totalOnFaultSub = new SummedMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
 		
 		MinMaxAveTracker fractSuprasTrack = new MinMaxAveTracker();
 		
 		sectFractSupras = new double[numSects];
+		
+		// for each section, array of booleans for each magnitude bin, true if that section has one or more ruptures
+		// with a magnitude in that bin
+		List<boolean[]> sectRupParticipations = new ArrayList<>();
 
 		for (int s=0; s<numSects; s++) {
 			FaultSection sect = rupSet.getFaultSectionData(s);
@@ -147,6 +157,15 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 			// scale target slip rates by the fraction that is supra-seismognic
 			slipRates[s] = creepReducedSlipRate*fractSupra;
 			slipRateStdDevs[s] = creepReducedSlipRateStdDev*fractSupra;
+			
+			boolean[] rupParticipations = new boolean[NUM_MAG];
+			for (int r : rupSet.getRupturesForSection(s)) {
+				double mag = rupSet.getMagForRup(r);
+				int maxIndex = totalOnFaultSupra.getClosestXIndex(mag);
+				if (maxIndex >= minMagIndex)
+					rupParticipations[maxIndex] = true;
+			}
+			sectRupParticipations.add(rupParticipations);
 		}
 		this.sectSubSeisMFDs = new SubSeismoOnFaultMFDs(sectSubSeisMFDs);
 		
@@ -155,6 +174,9 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 		// give the newly computed target slip rates to the rupture set
 		this.targetSlipRates = SectSlipRates.precomputed(rupSet, slipRates, slipRateStdDevs);
 		rupSet.addModule(targetSlipRates);
+		
+		this.totalOnFaultSupra = totalOnFaultSupra;
+		this.totalOnFaultSub = totalOnFaultSub;
 		
 		if (constrainedRegions != null) {
 			Preconditions.checkState(!constrainedRegions.isEmpty(), "Empty region list supplied");
@@ -174,10 +196,13 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 						regMFD.addIncrementalMagFreqDist(supraMFD);
 					}
 				}
-				mfdConstraints.add(regMFD);
+				mfdConstraints.add(weightMFD(TARGET_REL_STD_DEV, WEIGHT_STD_DEV_BY_PARTICIPATION,
+						regMFD, sectRupParticipations, fractSectsInRegion));
 			}
 		} else {
-			mfdConstraints = List.of(totalOnFaultSupra);
+			this.totalOnFaultSupra = weightMFD(TARGET_REL_STD_DEV, WEIGHT_STD_DEV_BY_PARTICIPATION,
+					totalOnFaultSupra, sectRupParticipations, null);
+			mfdConstraints = List.of(this.totalOnFaultSupra);
 		}
 		
 		if (rupSet.hasModule(U3LogicTreeBranch.class)) {
@@ -200,6 +225,35 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 				totalRegional.set(i, rate);
 			}
 		}
+	}
+	
+	private static UncertainIncrMagFreqDist weightMFD(double targetRelStdDev, boolean weightBySectParticipation,
+			IncrementalMagFreqDist mfd,	List<boolean[]> sectRupParticipations, double[] fractSectsInRegion) {
+		if (!weightBySectParticipation)
+			return UncertainIncrMagFreqDist.constantRelStdDev(mfd, targetRelStdDev);
+		double[] binCounts = new double[mfd.size()];
+		for (int i=0; i<binCounts.length; i++) {
+			for (int s=0; s<sectRupParticipations.size(); s++) {
+				if (sectRupParticipations.get(s)[i])
+					binCounts[i] += fractSectsInRegion == null ? 1d : fractSectsInRegion[s];
+			}
+		}
+		
+		double refNum = fractSectsInRegion == null ? sectRupParticipations.size() : StatUtils.sum(fractSectsInRegion);
+		System.out.println("Weighting target MFD with target rel std dev="+(float)targetRelStdDev);
+		double max = StatUtils.max(binCounts);
+		System.out.println("\tMax section participation: "+(float)max);
+		System.out.println("\tReference section participation: "+(float)refNum);
+		EvenlyDiscretizedFunc stdDevs = new EvenlyDiscretizedFunc(mfd.getMinX(), mfd.getMaxX(), mfd.size());
+		for (int i=0; i<binCounts.length; i++) {
+			if (binCounts[i] == 0d || mfd.getY(i) == 0d)
+				continue;
+			double relStdDev = targetRelStdDev*refNum/binCounts[i];
+//			double relStdDev = targetRelStdDev*Math.sqrt(refNum)/Math.sqrt(binCounts[i]);
+			System.out.println("\t\tRelative target std dev for M="+(float)mfd.getX(i)+", binCount="+(float)binCounts[i]+": "+relStdDev);
+			stdDevs.set(i, relStdDev*mfd.getY(i));
+		}
+		return new UncertainIncrMagFreqDist(mfd, stdDevs);
 	}
 
 	public double getSupraSeisBValue() {
@@ -286,6 +340,7 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 		
 		double b = 0.8;
 		InversionTargetMFDsFromBValAndDefModel target = new InversionTargetMFDsFromBValAndDefModel(rupSet, b);
+		rupSet.addModule(target);
 		
 		mapMaker.plotSectScalars(target.sectFractSupras, cpt, "New Fraction of Moment Supra-Seismogenic");
 		
@@ -306,6 +361,11 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 		mapMaker.plotSectScalars(u3FractSupra, cpt, "U3 Fraction of Moment Supra-Seismogenic");
 
 		mapMaker.plot(outputDir, "supra_seis_fracts_u3", " ");
+		
+		SolMFDPlot plot = new SolMFDPlot();
+		File mfdOutput = new File(outputDir, "test_target_mfds");
+		Preconditions.checkState(mfdOutput.exists() || mfdOutput.mkdir());
+		plot.writePlot(rupSet, null, "Test Model", mfdOutput);
 	}
 
 }

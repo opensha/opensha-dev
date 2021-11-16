@@ -60,6 +60,8 @@ import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
 import org.opensha.commons.data.siteData.SiteDataValue;
 import org.opensha.commons.data.siteData.impl.WillsMap2006;
 import org.opensha.commons.data.siteData.impl.WillsMap2015;
+import org.opensha.commons.data.uncertainty.Uncertainty;
+import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.exceptions.GMT_MapException;
@@ -101,6 +103,7 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
@@ -2828,12 +2831,66 @@ public class PureScratch {
 		System.out.println("Char moment: "+MagUtils.magToMoment(charMFD.getMaxX())*charMFD.getY(charMFD.size()-1));
 	}
 	
+	private static void test108() throws IOException {
+//		File inputFile = new File("/home/kevin/.opensha/ucerf3_erf/cached_dep100.0_depMean_rakeMean.zip");
+		File inputFile = new File("/home/kevin/.opensha/ucerf3_erf/cached_FM3_1_dep100.0_depMean_rakeMean.zip");
+		File outputFile = new File(inputFile.getParentFile(), "modular_"+inputFile.getName());
+		FaultSystemSolution.load(inputFile).write(outputFile);
+	}
+	
+	private static void test109() throws IOException {
+		UncertainDataConstraint prior = new UncertainDataConstraint("Prior", 0.1,
+				UncertaintyBoundType.ONE_SIGMA.estimate(0.1, 0.01));
+		
+		UncertainDataConstraint paleo = new UncertainDataConstraint("Paleo", 0.5,
+				UncertaintyBoundType.ONE_SIGMA.estimate(0.5, 0.1));
+		
+		System.out.println("Prior:\t"+prior);
+		System.out.println("Paleo:\t"+paleo);
+		
+		double priorSD_2 = Math.pow(prior.getPreferredStdDev(), 2);
+		double paleoSD_2 = Math.pow(paleo.getPreferredStdDev(), 2);
+		
+		
+//		double meanEst = (priorSD_2*prior.bestEstimate + paleoSD_2*paleo.bestEstimate)/(priorSD_2 + paleoSD_2);
+//		double meanEst = (priorSD_2*paleo.bestEstimate + paleoSD_2*prior.bestEstimate)/(priorSD_2 + paleoSD_2);
+//		double sdEst = Math.sqrt((priorSD_2*paleoSD_2)/(priorSD_2 + paleoSD_2));
+		
+		
+		// from https://stats.stackexchange.com/a/15273
+//		double nPrior = 10;
+//		double nPaleo = 10;
+//		double meanEst = (nPrior*prior.bestEstimate/priorSD_2 + nPaleo*paleo.bestEstimate/paleoSD_2)/(nPrior/priorSD_2 + nPaleo/paleoSD_2);
+//		double sdEst = Math.sqrt(1d/(nPrior/priorSD_2 + nPaleo/paleoSD_2));
+		
+//		int nPriorSamples = 1000000;
+//		int nPaleoSamples = 1000000;
+//		NormalDistribution priorNorm = new NormalDistribution(prior.bestEstimate, prior.getPreferredStdDev());
+//		NormalDistribution paleoNorm = new NormalDistribution(paleo.bestEstimate, paleo.getPreferredStdDev());
+//		double[] vals = new double[nPriorSamples+nPaleoSamples];
+//		for (int i=0; i<vals.length; i++) {
+//			if (i < nPriorSamples)
+//				vals[i] = priorNorm.sample();
+//			else
+//				vals[i] = paleoNorm.sample();
+//		}
+//		double meanEst = StatUtils.mean(vals);
+//		double sdEst = Math.sqrt(StatUtils.variance(vals));
+		
+		double meanEst = 0.5*(prior.bestEstimate+paleo.bestEstimate);
+		double sdEst = 0.5*Math.sqrt(priorSD_2 + paleoSD_2);
+		
+		UncertainDataConstraint updated = new UncertainDataConstraint("Updated",
+				meanEst, UncertaintyBoundType.ONE_SIGMA.estimate(meanEst, sdEst));
+		System.out.println("Updated:\t"+updated);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test107();
+		test109();
 	}
 
 }
