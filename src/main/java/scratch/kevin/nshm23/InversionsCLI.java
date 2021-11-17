@@ -5,14 +5,10 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleUnaryOperator;
 
-import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -22,17 +18,14 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.Inversi
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.LaplacianSmoothingInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDLaplacianSmoothingInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDSubSectNuclInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoProbabilityModel;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoSlipInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParentSectSmoothnessConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RelativeBValueConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RupRateMinimizationConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SectionTotalRateConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.TotalRateInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.U3MFDSubSectNuclInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
@@ -50,9 +43,7 @@ import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
-import scratch.UCERF3.utils.MFD_InversionConstraint;
-import scratch.UCERF3.utils.MFD_WeightedInversionConstraint;
-import scratch.UCERF3.utils.SectionMFD_constraint;
+import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoProbabilityModel;
@@ -420,10 +411,10 @@ public class InversionsCLI {
 			constraints.add(new RupRateMinimizationConstraint(minimizeWeight, belowMinIndexes));
 		}
 		
-		ArrayList<SectionMFD_constraint> sectMFDConstraints = null;
+		ArrayList<U3SectionMFD_constraint> sectMFDConstraints = null;
 		if (u2NuclWeight > 0d) {
 			sectMFDConstraints = FaultSystemRupSetCalc.getCharInversionSectMFD_Constraints(rupSet);
-			constraints.add(new MFDSubSectNuclInversionConstraint(rupSet, u2NuclWeight, sectMFDConstraints));
+			constraints.add(new U3MFDSubSectNuclInversionConstraint(rupSet, u2NuclWeight, sectMFDConstraints));
 		}
 		
 		if (supraSmoothWeight > 0d)

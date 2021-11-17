@@ -2885,12 +2885,43 @@ public class PureScratch {
 		System.out.println("Updated:\t"+updated);
 	}
 	
+	private static void test110() {
+		double[] rates = new double[10];
+		double relStdDev = 0.1;
+		for (int i=0; i<rates.length; i++)
+			rates[i] = Math.random()*Math.random()*Math.random()*10000;
+//			rates[i] = 1;
+		
+		double[] stdDevs = new double[rates.length];
+		for (int i=0; i<rates.length; i++)
+			stdDevs[i] = rates[i]*relStdDev;
+		
+		double sumVar = 0d;
+		for (double stdDev : stdDevs)
+			sumVar += stdDev*stdDev;
+		
+		double sqrtSumVar = Math.sqrt(sumVar);
+		
+		double sumRates = StatUtils.sum(rates);
+		
+		double sumSqrtRel = sqrtSumVar/sumRates;
+		System.out.println("Sum rates: "+sumRates);
+		System.out.println("Sum variance: "+sumVar);
+		System.out.println("Sqrt(sum var): "+sqrtSumVar);
+		System.out.println("\tReltaive: "+sumSqrtRel);
+		
+		double sumStdDev = StatUtils.sum(stdDevs);
+		double sumStdDevRel = sumStdDev/sumRates;
+		System.out.println("Sum of standard deviations: "+sumStdDev);
+		System.out.println("\tReltaive: "+sumStdDevRel);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test109();
+		test110();
 	}
 
 }

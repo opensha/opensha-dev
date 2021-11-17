@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.jfree.data.Range;
-import org.opensha.commons.calc.nnls.NNLSWrapper;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
@@ -21,16 +20,11 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.SerialSimulatedAnnealing;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBValuePlot;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
-
-import cern.colt.matrix.tdouble.impl.DenseDoubleMatrix2D;
 
 public class SparseGutenbergRichterSolver {
 	
@@ -122,8 +116,12 @@ public class SparseGutenbergRichterSolver {
 //	}
 	
 	public static IncrementalMagFreqDist getEquivGR(IncrementalMagFreqDist refFunc, Collection<Double> mags,
-			double totMoRate, double targetBValue, double sampleDiscr, SpreadingMethod method, boolean preserveRates,
-			int numIterations) {
+			double totMoRate, double targetBValue) {
+		return getEquivGR(refFunc, mags, totMoRate, targetBValue, 0d, SpreadingMethod.NEAREST, false);
+	}
+	
+	public static IncrementalMagFreqDist getEquivGR(IncrementalMagFreqDist refFunc, Collection<Double> mags,
+			double totMoRate, double targetBValue, double sampleDiscr, SpreadingMethod method, boolean preserveRates) {
 		double minMag = Double.POSITIVE_INFINITY;
 		double maxMag = Double.NEGATIVE_INFINITY;
 		for (double mag : mags) {
@@ -154,35 +152,6 @@ public class SparseGutenbergRichterSolver {
 		for (double mag : mags)
 			superSampledParticipation[superSampledDiscretization.getClosestXIndex(mag)] = true;
 		
-		IncrementalMagFreqDist ret = doGetEquivGR(refFunc, totMoRate, targetBValue,
-				superSampledDiscretization, superSampledParticipation, method, preserveRates);
-		if (numIterations <= 1)
-			return ret;
-		int iterations = 1;
-		
-		double curTargetB = targetBValue;
-		while (iterations <= numIterations) {
-			GutenbergRichterMagFreqDist testGR = new GutenbergRichterMagFreqDist(
-					superSampledDiscretization.getMinX(), superSampledDiscretization.getMaxX(), 50);
-			testGR.setAllButBvalue(testGR.getMinX(), testGR.getMaxX(), ret.getTotalMomentRate(), ret.getTotalIncrRate());
-			
-			double equivB = testGR.get_bValue();
-			
-			double curDiff = Math.abs(equivB - targetBValue);
-			if (equivB > targetBValue)
-				curTargetB -= 0.5*curDiff;
-			else
-				curTargetB += 0.5*curDiff;
-			ret = doGetEquivGR(refFunc, totMoRate, curTargetB,
-					superSampledDiscretization, superSampledParticipation, method, preserveRates);
-			iterations++;
-		}
-		return ret;
-	}
-	
-	public static IncrementalMagFreqDist doGetEquivGR(IncrementalMagFreqDist refFunc,
-			double totMoRate, double targetBValue, EvenlyDiscretizedFunc superSampledDiscretization,
-			boolean[] superSampledParticipation, SpreadingMethod method, boolean preserveRates) {
 		IncrementalMagFreqDist ret = new IncrementalMagFreqDist(refFunc.getMinX(), refFunc.size(), refFunc.getDelta());
 		
 		GutenbergRichterMagFreqDist superSampledGR = new GutenbergRichterMagFreqDist(
@@ -264,35 +233,41 @@ public class SparseGutenbergRichterSolver {
 				(float)targetRate, (float)ret.calcSumOfY_Vals());
 		// TODO: moment here is calculated using the bin center, but ours (if super-sampled) is integrated
 		// across the bin and thus more accurate, so they shouldn't match
-//		else
-//			Preconditions.checkState((float)totMoRate == (float)ret.getTotalMomentRate(),
-//				"Target moment rate mismatch: %s != %s",
-//				(float)totMoRate, (float)ret.getTotalMomentRate());
+		else
+			Preconditions.checkState((sampleDiscr < refFunc.getDelta() && sampleDiscr > 0d) ||
+				(float)totMoRate == (float)ret.getTotalMomentRate(),
+				"Target moment rate mismatch: %s != %s",
+				(float)totMoRate, (float)ret.getTotalMomentRate());
 		
 		return ret;
 	}
 
 	public static void main(String[] args) throws IOException {
-		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/tmp/rupture_set.zip"));
+//		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/tmp/rupture_set.zip"));
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(
+				new File("/home/kevin/markdown/inversions/fm3_1_u3ref_uniform_reproduce_ucerf3.zip"));
 		
 		boolean preserveRates = false;
 		SpreadingMethod method = SpreadingMethod.NEAREST;
 //		double sampleDiscr = 0.0;
 		double sampleDiscr = 0.01;
-		int iterations = 1;
 
 		DefaultXY_DataSet scatter1 = new DefaultXY_DataSet();
 		DefaultXY_DataSet scatter2 = new DefaultXY_DataSet();
 		
+		DefaultXY_DataSet totRateScatter = new DefaultXY_DataSet();
+		DefaultXY_DataSet totMoRateScatter = new DefaultXY_DataSet();
+		
 		DefaultXY_DataSet scatter1Avg = new DefaultXY_DataSet();
 		DefaultXY_DataSet scatter2Avg = new DefaultXY_DataSet();
 		
-		int debugIndex = 99;
+		int debugIndex = 100;
 		
 //		for (double bValue : new double[] {0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4}) {
 		for (double bValue : new double[] {0.0, 0.4, 0.8, 1.2}) {
 			System.out.println("Doing b="+bValue);
-			InversionTargetMFDsFromBValAndDefModel targets = new InversionTargetMFDsFromBValAndDefModel(rupSet, bValue);
+			InversionTargetMFDsFromBValAndDefModel targets = new InversionTargetMFDsFromBValAndDefModel(
+					rupSet, bValue, false, 0.1d, false, false, null);
 
 			MinMaxAveTracker equivBTrack = new MinMaxAveTracker();
 			MinMaxAveTracker equivBTrack2 = new MinMaxAveTracker();
@@ -314,6 +289,21 @@ public class SparseGutenbergRichterSolver {
 				GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(
 						orig.getX(minNonZero), 1+maxNonZero-minNonZero, orig.getDelta(), orig.getTotalMomentRate(), bValue);
 				
+				if ((float)gr.getTotalIncrRate() != (float)orig.getTotalIncrRate()) {
+					System.err.println("WARNING: rate mismatch on input for "+s+": "
+							+(float)gr.getTotalIncrRate()+" != "+(float)orig.getTotalIncrRate());
+					for (int i=0; i<orig.size(); i++) {
+						double x = orig.getX(i);
+						double y1 = orig.getY(i);
+						if (gr.hasX(x)) {
+							double y2 = gr.getY(i);
+							System.out.println(x+"\t"+y1+"\t"+y2);
+						} else {
+							Preconditions.checkState(y1 == 0d);
+						}
+					}
+				}
+				
 				double minMag = gr.getMinX() - 0.5*gr.getDelta();
 				
 				double minEncounter = Double.POSITIVE_INFINITY;
@@ -333,7 +323,7 @@ public class SparseGutenbergRichterSolver {
 //						+(float)minAdded+"\tfirstBin="+(float)gr.getMinX()+"\tlowerEdge="+(float)minMag);
 				
 				IncrementalMagFreqDist sparseGR = getEquivGR(orig, mags, orig.getTotalMomentRate(),
-						bValue, sampleDiscr, method, preserveRates, iterations);
+						bValue, sampleDiscr, method, preserveRates);
 //				IncrementalMagFreqDist sparseGR = invertEquivGR(orig, mags, orig.getTotalMomentRate(), bValue);
 				
 				double equivB = SectBValuePlot.estBValue(gr.getMinX(), gr.getMaxX(),
@@ -351,6 +341,9 @@ public class SparseGutenbergRichterSolver {
 				double equivB2 = testGR.get_bValue();
 				scatter2.set(bValue, equivB2);
 				equivBTrack2.addValue(equivB2);
+				
+				totRateScatter.set(orig.getTotalIncrRate(), sparseGR.getTotalIncrRate());
+				totMoRateScatter.set(orig.getTotalMomentRate(), sparseGR.getTotalMomentRate());
 				
 				if (s == debugIndex) {
 					List<XY_DataSet> funcs = new ArrayList<>();
@@ -412,6 +405,48 @@ public class SparseGutenbergRichterSolver {
 		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.GREEN.darker()));
 		gw = new GraphWindow(funcs, "B-Value Scatter 2", chars);
 		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+		
+		funcs.clear();
+		chars.clear();
+		funcs.add(totRateScatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.GREEN.darker()));
+		Range range = calcBoundedLogRange(totRateScatter);
+		funcs.add(oneToOne(range));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+		gw = new GraphWindow(funcs, "Total Rate Scatter", chars);
+		gw.setXLog(true);
+		gw.setYLog(true);
+		gw.setAxisRange(range, range);
+		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+		
+		funcs.clear();
+		chars.clear();
+		funcs.add(totMoRateScatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.RED.darker()));
+		range = calcBoundedLogRange(totMoRateScatter);
+		funcs.add(oneToOne(range));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+		gw = new GraphWindow(funcs, "Moment Rate Scatter", chars);
+		gw.setXLog(true);
+		gw.setYLog(true);
+		gw.setAxisRange(range, range);
+		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+	}
+	
+	private static Range calcBoundedLogRange(XY_DataSet scatter) {
+		double min = Math.min(scatter.getMinX(), scatter.getMinY());
+		Preconditions.checkState(min > 0);
+		double max = Math.max(scatter.getMaxX(), scatter.getMaxY());
+		Preconditions.checkState(max > 0);
+		
+		return new Range(Math.pow(10, Math.floor(Math.log10(min))), Math.pow(10, Math.ceil(Math.log10(max))));
+	}
+	
+	private static XY_DataSet oneToOne(Range range) {
+		DefaultXY_DataSet line = new DefaultXY_DataSet();
+		line.set(range.getLowerBound(), range.getLowerBound());
+		line.set(range.getUpperBound(), range.getUpperBound());
+		return line;
 	}
 
 }

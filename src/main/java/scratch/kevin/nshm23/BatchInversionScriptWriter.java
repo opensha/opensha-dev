@@ -6,60 +6,30 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.function.DoubleBinaryOperator;
-import java.util.function.DoubleUnaryOperator;
 
-import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
-import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionInputGenerator;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.ConstraintWeightingType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.APrioriInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDLaplacianSmoothingInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDSubSectNuclInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoSlipInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParentSectSmoothnessConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RelativeBValueConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RupRateMinimizationConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SectionTotalRateConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.TotalRateInversionConstraint;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.IterationCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.MisfitStdDevCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
-import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.A_PrioriRupRates;
-import org.opensha.sha.magdist.gui.MagFreqDistAppWindow;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 
-import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.nshm23.targetMFDs.DraftModelConstraintBuilder;
-import scratch.nshm23.targetMFDs.InversionTargetMFDsFromBValAndDefModel;
 
 public class BatchInversionScriptWriter {
 	
@@ -291,36 +261,15 @@ public class BatchInversionScriptWriter {
 //		remoteMeanCompFile = new File(remoteMainDir,
 //				"2021_11_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-only-slip-mfd-mfd_wt_10-skipBelow-2h/mean_solution.zip");
 //		remoteMeanCompareName = "New-MFD-Constr-b=0.8-No-Nucl";
-		remoteMeanCompFile = new File(remoteMainDir,
-				"2021_11_15-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_100-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-2h/mean_solution.zip");
-		remoteMeanCompareName = "Weighted-Draft-b=0.8";
 //		remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_11_10-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-10h-20x/mean_solution.zip");
-//		remoteMeanCompareName = "New-Draft-0.8-10hr-20x";
-//		remoteMeanCompFile = new File(remoteMainDir,
-//		"2021_11_10-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-smooth_paleo_wt_10000-skipBelow-10h-20x/mean_solution.zip");
-//		remoteMeanCompareName = "New-Draft-NoSect-0.8-10hr-20x";
-//		remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_11_12-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-smooth_all_wt_10000-skipBelow-10h/mean_solution.zip");
-//		remoteMeanCompareName = "New-Draft-NoSect-0.8-SmoothAll-10hr";
-//		remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_11_13-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-parent_smooth_wt_10000-smooth_paleo_wt_10000-skipBelow-10h/mean_solution.zip");
-//		remoteMeanCompareName = "ParentSmooth-10hr";
-//		remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_11_12-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-smooth_paleo_wt_10000-skipBelow-10h-simple_exp_perturb/mean_solution.zip");
-//		remoteMeanCompareName = "10hr-NoSect-SimplePerturb";
-//		remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_11_13-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_10-no_sect_rate-smooth_paleo_wt_10000-parentFairSampler-10h/mean_solution.zip");
-//		remoteMeanCompareName = "10hr-ParentFairSampler";
-//		remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_11_14-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_1-paleo_wt_5-parkfield_wt_10-no_sect_rate-smooth_paleo_wt_10000-skipBelow-10h/mean_solution.zip");
-//		remoteMeanCompareName = "10hr-MFDWt1";
+//				"2021_11_15-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_100-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-2h/mean_solution.zip");
+//		remoteMeanCompareName = "Weighted-Draft-b=0.8";
 		
 		int num = 5;
 
 		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet);
 		
-		constrBuilder.defaultConstraints(bVal);
+//		constrBuilder.defaultConstraints(bVal); // don't usually want to use this, each one manually added below for now
 		
 //		dirName += "-no_mfd";
 //		constrBuilder.except(MFDInversionConstraint.class);
@@ -334,31 +283,54 @@ public class BatchInversionScriptWriter {
 //		dirName += "-only-slip-sect_rate";
 //		constrBuilder.slipRates().sectSupraRates(bVal).defaultMetaConstraints();
 		
-		double mfdWeight = 10;
-		dirName += "-mfd_wt_"+oDF.format(mfdWeight);
-		constrBuilder.weight(MFDInversionConstraint.class, mfdWeight);
+		double slipWeight = 1d;
+		if (slipWeight != 1d)
+			dirName += "-slip_wt_"+oDF.format(slipWeight);
+		constrBuilder.slipRates().weight(slipWeight);
 		
 		double paleoWeight = 5;
-		dirName += "-paleo_wt_"+oDF.format(paleoWeight);
-		constrBuilder.weight(PaleoRateInversionConstraint.class, paleoWeight);
-		constrBuilder.weight(PaleoSlipInversionConstraint.class, paleoWeight);
+		if (paleoWeight != 1d)
+			dirName += "-paleo_wt_"+oDF.format(paleoWeight);
+		constrBuilder.paleoRates().weight(paleoWeight);
+		constrBuilder.paleoSlips().weight(paleoWeight);
 		
 //		dirName += "-no_paleo";
 //		constrBuilder.except(PaleoRateInversionConstraint.class).except(PaleoSlipInversionConstraint.class);
 		
 		double parkWeight = 100;
-		dirName += "-parkfield_wt_"+oDF.format(parkWeight);
-		constrBuilder.weight(ParkfieldInversionConstraint.class, parkWeight);
+		if (parkWeight != 1d)
+			dirName += "-parkfield_wt_"+oDF.format(parkWeight);
+		constrBuilder.parkfield().weight(parkWeight);
 		
 //		dirName += "-no_parkfield";
 //		constrBuilder.except(ParkfieldInversionConstraint.class);
 		
-		double nuclWeight = 0.5;
-		dirName += "-sect_wt_"+oDF.format(nuclWeight);
-		constrBuilder.weight(SectionTotalRateConstraint.class, nuclWeight);
+		double mfdWeight = 10;
+		if (mfdWeight != 1d)
+			dirName += "-mfd_wt_"+oDF.format(mfdWeight);
+		constrBuilder.supraBValMFDs(bVal).weight(mfdWeight);
 		
-//		dirName += "-no_sect_rate";
+//		double nuclWeight = 0.5;
+//		if (nuclWeight != 1d)
+//			dirName += "-sect_wt_"+oDF.format(nuclWeight);
+//		constrBuilder.sectSupraRates(bVal).weight(nuclWeight);
+		
+		dirName += "-no_sect_rate";
+		constrBuilder.except(SectionTotalRateConstraint.class);
+		
+		double nuclMFDWeight = 0.001;
+		if (nuclMFDWeight != 1d)
+			dirName += "-sect_nucl_mfd_"+oDF.format(nuclMFDWeight);
+		constrBuilder.sectSupraNuclMFDs(bVal).weight(nuclMFDWeight);
+		
+//		dirName += "-no_sect_mfd";
+//		constrBuilder.except(SubSectMFDInversionConstraint.class);
+		
+//		double nuclWeight = 0.5;
+//		double parkHackNuclWt = 10d;
+//		dirName += "-sect_wt_"+oDF.format(nuclWeight)+"_park_hack_"+oDF.format(parkHackNuclWt);
 //		constrBuilder.except(SectionTotalRateConstraint.class);
+//		constrBuilder.parkfieldHackSectSupraRates(bVal, parkHackNuclWt).weight(nuclWeight);
 		
 //		dirName += "_u2";
 //		boolean aFaults = true;
@@ -414,6 +386,10 @@ public class BatchInversionScriptWriter {
 //		IntegerPDF_FunctionSampler sampler = null;
 		
 		List<InversionConstraint> constraints = constrBuilder.build();
+		
+		System.out.println("Constraint list:");
+		for (InversionConstraint constr : constraints)
+			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
 		
 //		CompletionCriteria completion = TimeCompletionCriteria.getInHours(40); dirName += "-40h";
 //		CompletionCriteria completion = TimeCompletionCriteria.getInHours(20); dirName += "-20h";
