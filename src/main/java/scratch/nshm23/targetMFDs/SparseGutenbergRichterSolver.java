@@ -262,10 +262,12 @@ public class SparseGutenbergRichterSolver {
 		if (preserveRates)
 			Preconditions.checkState((float)targetRate == (float)ret.calcSumOfY_Vals(), "Target rate mismatch: %s != %s",
 				(float)targetRate, (float)ret.calcSumOfY_Vals());
-		else
-			Preconditions.checkState((float)totMoRate == (float)ret.getTotalMomentRate(),
-				"Target moment rate mismatch: %s != %s",
-				(float)totMoRate, (float)ret.getTotalMomentRate());
+		// TODO: moment here is calculated using the bin center, but ours (if super-sampled) is integrated
+		// across the bin and thus more accurate, so they shouldn't match
+//		else
+//			Preconditions.checkState((float)totMoRate == (float)ret.getTotalMomentRate(),
+//				"Target moment rate mismatch: %s != %s",
+//				(float)totMoRate, (float)ret.getTotalMomentRate());
 		
 		return ret;
 	}
@@ -275,8 +277,8 @@ public class SparseGutenbergRichterSolver {
 		
 		boolean preserveRates = false;
 		SpreadingMethod method = SpreadingMethod.NEAREST;
-		double sampleDiscr = 0.0;
-//		double sampleDiscr = 0.01;
+//		double sampleDiscr = 0.0;
+		double sampleDiscr = 0.01;
 		int iterations = 1;
 
 		DefaultXY_DataSet scatter1 = new DefaultXY_DataSet();
