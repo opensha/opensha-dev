@@ -105,7 +105,20 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 			double targetMoRate = FaultMomentCalc.getMoment(area, creepReducedSlipRate);
 			
 			// supra-seismogenic minimum magnitude
-			double sectMinMag = minMags == null ? rupSet.getMinMagForSection(s) : minMags.getMinMagForSection(s);
+			double sectMinMag = rupSet.getMinMagForSection(s);
+			if (minMags != null) {
+				// not below the section minimum magnitude
+				sectMinMag = Math.max(sectMinMag, minMags.getMinMagForSection(s));
+				// make sure we actually have a rupture at that magnitude, otherwise there can be empty bins without
+				// any rupture at/above the section minimum magnitude but below the first rupture's bin
+				double minAbove = Double.POSITIVE_INFINITY;
+				for (int r : rupSet.getRupturesForSection(s)) {
+					double mag = rupSet.getMagForRup(r);
+					if ((float)mag >= (float)sectMinMag)
+						minAbove = Math.min(mag, minAbove);
+				}
+				sectMinMag = minAbove;
+			}
 			double sectMaxMag = rupSet.getMaxMagForSection(s);
 			
 			// construct a full G-R including sub-seismogenic ruptures
