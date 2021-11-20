@@ -2916,12 +2916,17 @@ public class PureScratch {
 		System.out.println("\tReltaive: "+sumStdDevRel);
 	}
 	
+	private static void test111() {
+		double impliedRate = 0.0060084797;
+		double constrRate = 3.1561314E-4;
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test110();
+		test111();
 	}
 
 }

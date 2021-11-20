@@ -4,6 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
@@ -11,23 +16,29 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.data.uncertainty.BoundedUncertainty;
+import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
+import org.opensha.commons.data.uncertainty.Uncertainty;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.ArchivableModule;
 import org.opensha.commons.util.modules.SubModule;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SubSeismoOnFaultMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -67,6 +78,7 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 	private static double TARGET_REL_STD_DEV_DEFAULT = 0.1;
 	private static boolean WEIGHT_STD_DEV_BY_PARTICIPATION_DEFAULT = false;
 	private static boolean APPLY_DEF_MODEL_UNCERTAINTIES_DEFAULT = false;
+	private static boolean USE_EXISTING_TARGET_SLIP_RATES_DEFAULT = false;
 	
 	private static boolean SPARSE_GR_DEFAULT = true;
 
@@ -79,24 +91,39 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 			double defaultRelStdDev, boolean applyDefModelUncertainties, boolean addSectCountUncertainties,
 			List<Region> constrainedRegions) {
 		this(rupSet, supraSeisBValue, sparseGR, defaultRelStdDev, applyDefModelUncertainties,
-				addSectCountUncertainties, null, null, constrainedRegions);
+				addSectCountUncertainties, USE_EXISTING_TARGET_SLIP_RATES_DEFAULT, null, null, constrainedRegions);
 	}
 	
 	public InversionTargetMFDsFromBValAndDefModel(FaultSystemRupSet rupSet, double supraSeisBValue, boolean sparseGR,
 			double defaultRelStdDev, boolean applyDefModelUncertainties, boolean addSectCountUncertainties,
-			List<DataSectNucleationRateEstimator> dataConstraints, UncertaintyBoundType expandUncertToDataBound,
-			List<Region> constrainedRegions) {
+			boolean useExistingTargetSlipRates, List<DataSectNucleationRateEstimator> dataConstraints,
+			UncertaintyBoundType expandUncertToDataBound, List<Region> constrainedRegions) {
 		super(rupSet);
 		this.supraSeisBValue = supraSeisBValue;
 		
 		ModSectMinMags minMags = rupSet.getModule(ModSectMinMags.class);
 		
 		int numSects = rupSet.getNumSections();
+		
+		SectSlipRates inputSlipRates = null;
+		if (useExistingTargetSlipRates)
+			inputSlipRates = rupSet.requireModule(SectSlipRates.class);
 		double[] slipRates = new double[numSects];
 		double[] slipRateStdDevs = new double[numSects];
 		sectFullMFDs = new ArrayList<>();
 		List<IncrementalMagFreqDist> sectSubSeisMFDs = new ArrayList<>();
-		sectSupraSeisMFDs = new ArrayList<>();
+		
+		// supra-seismogenic MFDs for the given b-value
+		List<IncrementalMagFreqDist> sectSupraSeisMFDs = new ArrayList<>();
+		// standard deviations of those MFDs inferred from deformation model uncertainties
+		List<EvenlyDiscretizedFunc> defModMFDStdDevs = applyDefModelUncertainties ? new ArrayList<>() : null;
+		// supra-seismogenic MFDs implied by supplied data constraints
+		List<Future<ImpliedDataCallable>> dataCalcFutures = null;
+		ExecutorService exec = null;
+		if (dataConstraints != null && !dataConstraints.isEmpty() && expandUncertToDataBound != null) {
+			dataCalcFutures = new ArrayList<>();
+			exec = Executors.newFixedThreadPool(FaultSysTools.defaultNumThreads());
+		}
 		
 		SummedMagFreqDist totalOnFaultSub = new SummedMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
 		
@@ -124,6 +151,7 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 			}
 			
 			List<Double> mags = new ArrayList<>();
+			List<Integer> rups = new ArrayList<>();
 			// make sure we actually have a rupture at that magnitude, otherwise there can be empty bins without
 			// any rupture at/above the section minimum magnitude but below the first rupture's bin
 			double minAbove = Double.POSITIVE_INFINITY;
@@ -132,6 +160,7 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 				if ((float)mag >= (float)sectMinMag) {
 					minAbove = Math.min(mag, minAbove);
 					mags.add(mag);
+					rups.add(r);
 				}
 			}
 			sectMinMag = minAbove;
@@ -141,134 +170,198 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 			int minMagIndex = totalOnFaultSub.getClosestXIndex(sectMinMag);
 			int maxMagIndex = totalOnFaultSub.getClosestXIndex(sectMaxMag);
 			int targetMFDNum = maxMagIndex+1;
-			GutenbergRichterMagFreqDist sectFullMFD = new GutenbergRichterMagFreqDist(
-					MIN_MAG, targetMFDNum, DELTA_MAG, targetMoRate, supraSeisBValue);
 			
-			// split the target G-R into sub-seismo and supra-seismo parts
-			IncrementalMagFreqDist subSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
-			for (int i=0; i<minMagIndex; i++)
-				subSeisMFD.set(i, sectFullMFD.getY(i));
-			IncrementalMagFreqDist supraSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
-			for (int i=minMagIndex; i<sectFullMFD.size(); i++)
-				supraSeisMFD.set(i, sectFullMFD.getY(i));
+			IncrementalMagFreqDist sectFullMFD, subSeisMFD, supraSeisMFD;
+			double supraMoRate, subMoRate, fractSupra;
+			if (useExistingTargetSlipRates) {
+				double supraSlipRate = inputSlipRates.getSlipRate(s); // m/yr
+				double supraSlipStdDev = inputSlipRates.getSlipRateStdDev(s); // m/yr
+				fractSupra = supraSlipRate/creepReducedSlipRate;
+				Preconditions.checkState(fractSupra > 0d && fractSupra <= 1d);
+				
+				supraMoRate = targetMoRate*fractSupra;
+				subMoRate = targetMoRate-supraMoRate;
+				
+				GutenbergRichterMagFreqDist supraGR = new GutenbergRichterMagFreqDist(
+						totalOnFaultSub.getX(minMagIndex), 1+maxMagIndex-minMagIndex, DELTA_MAG, supraMoRate, supraSeisBValue);
+				
+				supraSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+				for (int i=0; i<supraGR.size(); i++)
+					supraSeisMFD.set(i+minMagIndex, supraGR.getY(i));
+				
+				GutenbergRichterMagFreqDist subGR = new GutenbergRichterMagFreqDist(
+						totalOnFaultSub.getX(0), minMagIndex, DELTA_MAG, subMoRate, supraSeisBValue);
+				subSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+				for (int i=0; i<subGR.size(); i++)
+					subSeisMFD.set(i, subGR.getY(i));
+				
+				sectFullMFD = new IncrementalMagFreqDist(MIN_MAG, targetMFDNum, DELTA_MAG);
+				for (int i=0; i<targetMFDNum; i++) {
+					if (i < minMagIndex)
+						sectFullMFD.set(i, subSeisMFD.getY(i));
+					else
+						sectFullMFD.set(i, supraSeisMFD.getY(i));
+				}
+				
+				// scale target slip rates by the fraction that is supra-seismognic
+				slipRates[s] = supraSlipRate;
+				slipRateStdDevs[s] = supraSlipStdDev;
+			} else {
+				sectFullMFD = new GutenbergRichterMagFreqDist(
+						MIN_MAG, targetMFDNum, DELTA_MAG, targetMoRate, supraSeisBValue);
+				
+				// split the target G-R into sub-seismo and supra-seismo parts
+				subSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+				for (int i=0; i<minMagIndex; i++)
+					subSeisMFD.set(i, sectFullMFD.getY(i));
+				supraSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+				for (int i=minMagIndex; i<sectFullMFD.size(); i++)
+					supraSeisMFD.set(i, sectFullMFD.getY(i));
+				
+				supraMoRate = supraSeisMFD.getTotalMomentRate();
+				subMoRate = subSeisMFD.getTotalMomentRate();
+				fractSupra = supraMoRate/targetMoRate;
+				
+				// scale target slip rates by the fraction that is supra-seismognic
+				slipRates[s] = creepReducedSlipRate*fractSupra;
+				slipRateStdDevs[s] = creepReducedSlipRateStdDev*fractSupra;
+			}
 			
 			if (sparseGR)
 				// re-distribute to only bins that actually have ruptures available
 				supraSeisMFD = SparseGutenbergRichterSolver.getEquivGR(supraSeisMFD, mags,
 						supraSeisMFD.getTotalMomentRate(), supraSeisBValue);
 			
-			double supraMoRate = supraSeisMFD.getTotalMomentRate();
-			double subMoRate = subSeisMFD.getTotalMomentRate();
+			
 			double targetMoRateTest = supraMoRate + subMoRate;
 			
-			double fractSupra = supraMoRate/targetMoRate;
+			Preconditions.checkState((float)targetMoRateTest == (float)targetMoRate,
+					"Partitioned moment rate doesn't equal input: %s != %s", (float)targetMoRate, (float)targetMoRateTest);
 			
 			fractSuprasTrack.addValue(fractSupra);
 			sectFractSupras[s] = fractSupra;
 			
-			// scale target slip rates by the fraction that is supra-seismognic
-			slipRates[s] = creepReducedSlipRate*fractSupra;
-			slipRateStdDevs[s] = creepReducedSlipRateStdDev*fractSupra;
+			sectFullMFDs.add(sectFullMFD);
+			sectSubSeisMFDs.add(subSeisMFD);
+			sectSupraSeisMFDs.add(supraSeisMFD);
 			
-			UncertainIncrMagFreqDist uncertSupraSeisMFD;
-			if (applyDefModelUncertainties && slipRateStdDevs[s]  > 0d) {
-				// use the slip rate standard deviation. this simple treatment is confirmed to be the exact same as if
-				// we were to construct new GR distributions plus and minus one standard deviation and then calculate
-				// a standard deviation from those bounds
-				uncertSupraSeisMFD = UncertainIncrMagFreqDist.constantRelStdDev(supraSeisMFD, slipRateStdDevs[s]/slipRates[s]);
-			} else {
-				// use default relative standard deviation
-				uncertSupraSeisMFD = UncertainIncrMagFreqDist.constantRelStdDev(supraSeisMFD, defaultRelStdDev);
+			// on fault supra is added later (along with uncertainty propagation)
+			
+			// add sub seis to total
+			totalOnFaultSub.addIncrementalMagFreqDist(subSeisMFD);
+			
+			double relDefModStdDev = slipRateStdDevs[s]/slipRates[s];
+			
+			if (applyDefModelUncertainties) {
+				EvenlyDiscretizedFunc defModStdDevs = null;
+				if (slipRateStdDevs[s]  > 0d) {
+					// use the slip rate standard deviation. this simple treatment is confirmed to be the exact same as if
+					// we were to construct new GR distributions plus and minus one standard deviation and then calculate
+					// a standard deviation from those bounds
+					defModStdDevs = new EvenlyDiscretizedFunc(MIN_MAG, NUM_MAG, DELTA_MAG);
+					for (int i=0; i<supraSeisMFD.size(); i++)
+						defModStdDevs.set(i, supraSeisMFD.getY(i)*relDefModStdDev);
+				}
+				defModMFDStdDevs.add(defModStdDevs);
 			}
 			
 			System.out.println("Section "+s+". targetMo="+(float)targetMoRate+"\tsupraMo="+(float)supraMoRate
-					+"\tsubMo="+(float)subMoRate+"\tfractSupra="+(float)fractSupra+"\tsupraRate="
-					+(float)supraSeisMFD.getTotalIncrRate()+"\trelStdDevs: "+getStdDevsStr(uncertSupraSeisMFD, true));
+					+"\tsubMo="+(float)subMoRate+"\tfractSupra="+(float)fractSupra
+					+"\tsupraRate="+(float)supraSeisMFD.getTotalIncrRate());
 			
 //			System.out.println("TARGET\n"+sectFullMFD);
 //			System.out.println("SUB\n"+subSeisMFD);
 //			System.out.println("SUPRA\n"+supraSeisMFD);
 			
-			Preconditions.checkState((float)targetMoRateTest == (float)targetMoRate,
-					"Partitioned moment rate doesn't equal input: %s != %s", (float)targetMoRate, (float)targetMoRateTest);
-			
 			if (dataConstraints != null && expandUncertToDataBound != null) {
+				// see if we have any data constraints that imply a different MFD for this section,
+				// we will later adjust uncertainties accordingly
 				List<DataSectNucleationRateEstimator> constraints = new ArrayList<>();
 				for (DataSectNucleationRateEstimator constraint : dataConstraints)
 					if (constraint.appliesTo(sect))
 						constraints.add(constraint);
 				
 				if (!constraints.isEmpty()) {
-					System.out.println("*** Adjusting uncertainties to include "+constraints.size()+" data constraints");
-					EvenlyDiscretizedFunc modStdDevs = uncertSupraSeisMFD.getStdDevs().deepClone();
+					System.out.println("\tCalculating MFDs implied by "+constraints.size()+" data constraints");
 					
-					for (DataSectNucleationRateEstimator constraint : constraints) {
-						// nucleation rate implied by this constraint
-						double impliedNuclRate = constraint.estimateNuclRate(sect, uncertSupraSeisMFD);
-						IncrementalMagFreqDist dataTarget;
-						if (minMagIndex == maxMagIndex) {
-							// simple
-							dataTarget = new IncrementalMagFreqDist(minMagIndex, 1, DELTA_MAG);
-							dataTarget.set(0, impliedNuclRate);
-						} else {
-							// create a G-R with that nucleation rate
-							GutenbergRichterMagFreqDist impliedGR = new GutenbergRichterMagFreqDist(
-									supraSeisMFD.getX(minMagIndex), 1+maxMagIndex-minMagIndex, DELTA_MAG);
-							impliedGR.setAllButBvalue(impliedGR.getX(0), impliedGR.getX(impliedGR.size()-1),
-									targetMoRate, impliedNuclRate);
-							double impliedB = impliedGR.get_bValue();
-							System.out.println("\tConstraint of type "
-									+ClassUtils.getClassNameWithoutPackage(constraint.getClass())
-									+" implies nucl rate of: "+(float)impliedNuclRate+", b-value="+(float)impliedB);
-							dataTarget = impliedGR;
-							if (sparseGR)
-								dataTarget = SparseGutenbergRichterSolver.getEquivGR(impliedGR, mags,
-										impliedGR.getTotalMomentRate(), impliedB);
-						}
-						for (int i=0; i<dataTarget.size(); i++) {
-							int index = minMagIndex+i;
-							Preconditions.checkState((float)dataTarget.getX(i) == (float)supraSeisMFD.getX(index));
-							double primaryEst = supraSeisMFD.getY(index);
-							double curStdDev = modStdDevs.getY(index);
-							double dataEst = dataTarget.getY(i);
-							double diff = Math.abs(dataEst - primaryEst);
-							double impliedStdDev = expandUncertToDataBound.estimateStdDev(primaryEst, primaryEst-diff, primaryEst+diff);
-							if (impliedStdDev > curStdDev)
-								modStdDevs.set(index, impliedStdDev);
-						}
-					}
-					uncertSupraSeisMFD = new UncertainIncrMagFreqDist(supraSeisMFD, modStdDevs);
-					System.out.println("\tModified relStdDevs: "+getStdDevsStr(uncertSupraSeisMFD, true));
+					dataCalcFutures.add(exec.submit(new ImpliedDataCallable(sect, constraints, mags, rups, sparseGR,
+							supraSeisMFD, supraMoRate, relDefModStdDev)));
 				}
 			}
-			
-			sectFullMFDs.add(sectFullMFD);
-			sectSubSeisMFDs.add(subSeisMFD);
-			sectSupraSeisMFDs.add(uncertSupraSeisMFD);
-			
-			// on fault supra is added later (along with uncertainty propagation)
-			
-			// add sub seis to total
-			totalOnFaultSub.addIncrementalMagFreqDist(subSeisMFD);
 		}
 		this.sectSubSeisMFDs = new SubSeismoOnFaultMFDs(sectSubSeisMFDs);
 		
 		System.out.println("Fraction supra-seismogenic stats: "+fractSuprasTrack);
 		
-		// give the newly computed target slip rates to the rupture set
-		this.targetSlipRates = SectSlipRates.precomputed(rupSet, slipRates, slipRateStdDevs);
-		rupSet.addModule(targetSlipRates);
+		List<IncrementalMagFreqDist> dataImpliedSectSupraSeisMFDs = null;
+		if (dataCalcFutures != null) {
+			dataImpliedSectSupraSeisMFDs = new ArrayList<>();
+			for (int s=0; s<numSects; s++)
+				dataImpliedSectSupraSeisMFDs.add(null);
+			
+			System.out.println("Waiting on "+dataCalcFutures.size()+" data constraint calculation futures...");
+			
+			for (Future<ImpliedDataCallable> future : dataCalcFutures) {
+				try {
+					ImpliedDataCallable call = future.get();
+					dataImpliedSectSupraSeisMFDs.set(call.sect.getSectionId(), call.impliedMFD);
+				} catch (InterruptedException | ExecutionException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+			}
+			
+			System.out.println("Done calculating data constraint MFDs");
+			
+			exec.shutdown();
+		}
 		
-		this.totalOnFaultSupra = calcRegionalSupraTarget(sectSupraSeisMFDs, rupSet, null, addSectCountUncertainties);
+		if (!useExistingTargetSlipRates) {
+			// give the newly computed target slip rates to the rupture set
+			this.targetSlipRates = SectSlipRates.precomputed(rupSet, slipRates, slipRateStdDevs);
+			rupSet.addModule(targetSlipRates);
+		}
+		
+		this.totalOnFaultSupra = calcRegionalSupraTarget(sectSupraSeisMFDs, rupSet, null, defModMFDStdDevs,
+				dataImpliedSectSupraSeisMFDs, expandUncertToDataBound, addSectCountUncertainties, defaultRelStdDev);
 		this.totalOnFaultSub = totalOnFaultSub;
 		
 		if (constrainedRegions != null) {
 			Preconditions.checkState(!constrainedRegions.isEmpty(), "Empty region list supplied");
 			mfdConstraints = new ArrayList<>();
 			for (Region region : constrainedRegions)
-				mfdConstraints.add(calcRegionalSupraTarget(sectSupraSeisMFDs, rupSet, region, addSectCountUncertainties));
+				mfdConstraints.add(calcRegionalSupraTarget(sectSupraSeisMFDs, rupSet, region, defModMFDStdDevs,
+						dataImpliedSectSupraSeisMFDs, expandUncertToDataBound, addSectCountUncertainties, defaultRelStdDev));
 		} else {
 			mfdConstraints = List.of(this.totalOnFaultSupra);
+		}
+		
+		// now set individual supra-seis MFD uncertainties
+		this.sectSupraSeisMFDs = new ArrayList<>();
+		for (int s=0; s<numSects; s++) {
+			IncrementalMagFreqDist sectSupraMFD = sectSupraSeisMFDs.get(s);
+			
+			EvenlyDiscretizedFunc stdDevs = new EvenlyDiscretizedFunc(MIN_MAG, sectSupraMFD.size(), DELTA_MAG);
+			for (int i=0; i<stdDevs.size(); i++)
+				stdDevs.set(i, sectSupraMFD.getY(i)*defaultRelStdDev);
+			
+			if (applyDefModelUncertainties) {
+				EvenlyDiscretizedFunc defModStdDevs = defModMFDStdDevs.get(s);
+				if (defModStdDevs != null) {
+					for (int i=0; i<stdDevs.size(); i++)
+						stdDevs.set(i, Math.max(stdDevs.getY(i), defModStdDevs.getY(i)));
+				}
+			}
+			
+			UncertainIncrMagFreqDist uncertainSectSupraMFD = new UncertainIncrMagFreqDist(sectSupraMFD, stdDevs);
+			
+			if (dataImpliedSectSupraSeisMFDs != null) {
+				IncrementalMagFreqDist impliedMFD = dataImpliedSectSupraSeisMFDs.get(s);
+				if (impliedMFD != null) {
+					System.out.println("Adjusting MFD for s="+s+" to account for data constraints");
+					uncertainSectSupraMFD = adjustForDataImpliedBounds(uncertainSectSupraMFD, impliedMFD, expandUncertToDataBound, false);
+				}
+			}
+			this.sectSupraSeisMFDs.add(uncertainSectSupraMFD);
 		}
 		
 		if (rupSet.hasModule(U3LogicTreeBranch.class)) {
@@ -292,20 +385,100 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 			}
 		}
 	}
-	
-	private static String getStdDevsStr(UncertainIncrMagFreqDist mfd, boolean relative) {
-		MinMaxAveTracker track = new MinMaxAveTracker();
-		for (int i=0; i<mfd.size(); i++) {
-			double val = mfd.getY(i);
-			if (val == 0d)
-				continue;
-			double sd = mfd.getStdDev(i);
-			if (relative)
-				track.addValue(sd/val);
-			else
-				track.addValue(sd);
+
+	public static class ImpliedDataCallable implements Callable<ImpliedDataCallable> {
+		private FaultSection sect;
+		private List<DataSectNucleationRateEstimator> constraints;
+		private List<Double> mags;
+		private List<Integer> rups;
+		private boolean sparseGR;
+		private IncrementalMagFreqDist supraSeisMFD;
+		private double supraMoRate;
+		private double relDefModStdDev;
+		
+		private IncrementalMagFreqDist impliedMFD;
+
+		public ImpliedDataCallable(FaultSection sect, List<DataSectNucleationRateEstimator> constraints,
+				List<Double> mags, List<Integer> rups, boolean sparseGR, IncrementalMagFreqDist supraSeisMFD,
+				double supraMoRate, double relDefModStdDev) {
+					this.sect = sect;
+					this.constraints = constraints;
+					this.mags = mags;
+					this.rups = rups;
+					this.sparseGR = sparseGR;
+					this.supraSeisMFD = supraSeisMFD;
+					this.supraMoRate = supraMoRate;
+					this.relDefModStdDev = relDefModStdDev;
 		}
-		return "["+(float)track.getMin()+","+(float)track.getMax()+"], avg="+(float)track.getAverage();
+
+		@Override
+		public ImpliedDataCallable call() throws Exception {
+			UncertainDataConstraint moRateBounds = new UncertainDataConstraint(null, supraMoRate,
+					new Uncertainty(supraMoRate*relDefModStdDev));
+			
+			List<IncrementalMagFreqDist> impliedMFDs = new ArrayList<>();
+			
+			for (DataSectNucleationRateEstimator constraint : constraints) {
+				// nucleation mfd implied by this constraint
+				IncrementalMagFreqDist implied = constraint.estimateNuclMFD(
+						sect, supraSeisMFD, rups, mags, moRateBounds, sparseGR);
+				Preconditions.checkState(implied.size() == NUM_MAG);
+				Preconditions.checkState((float)implied.getMinX() == (float)MIN_MAG);
+				Preconditions.checkState((float)implied.getDelta() == (float)DELTA_MAG);
+				impliedMFDs.add(implied);
+			}
+			
+			if (impliedMFDs.size() > 1) {
+				// need to combine them
+				IncrementalMagFreqDist meanMFD = new IncrementalMagFreqDist(MIN_MAG, impliedMFDs.get(0).size(), DELTA_MAG);
+				IncrementalMagFreqDist upperMFD = null;
+				IncrementalMagFreqDist lowerMFD = null;
+				UncertaintyBoundType boundType = null;
+				int numBounded = 0;
+				for (IncrementalMagFreqDist mfd : impliedMFDs) {
+					Preconditions.checkState(mfd.size() == meanMFD.size());
+					for (int i=0; i<meanMFD.size(); i++)
+						if (mfd.getY(i) > 0)
+							meanMFD.add(i, mfd.getY(i));
+					if (mfd instanceof UncertainIncrMagFreqDist) {
+						UncertainBoundedIncrMagFreqDist bounded;
+						if (upperMFD == null) {
+							upperMFD = new IncrementalMagFreqDist(MIN_MAG, meanMFD.size(), DELTA_MAG);
+							lowerMFD = new IncrementalMagFreqDist(MIN_MAG, meanMFD.size(), DELTA_MAG);
+							if (mfd instanceof UncertainBoundedIncrMagFreqDist) {
+								bounded = (UncertainBoundedIncrMagFreqDist)mfd;
+								boundType = bounded.getBoundType();
+							} else {
+								boundType = UncertaintyBoundType.ONE_SIGMA;
+								bounded = ((UncertainIncrMagFreqDist)mfd).estimateBounds(boundType);
+							}
+						} else {
+							bounded = ((UncertainIncrMagFreqDist)mfd).estimateBounds(boundType);
+						}
+						numBounded++;
+						for (int i=0; i<meanMFD.size(); i++) {
+							upperMFD.add(i, bounded.getUpperY(i));
+							lowerMFD.add(i, bounded.getLowerY(i));
+						}
+					}
+				}
+				meanMFD.scale(1d/(double)impliedMFDs.size());
+				if (upperMFD != null) {
+					upperMFD.scale(1d/(double)numBounded);
+					lowerMFD.scale(1d/(double)numBounded);
+					for (int i=0; i<meanMFD.size(); i++) {
+						upperMFD.set(i, Math.max(upperMFD.getY(i), meanMFD.getY(i)));
+						lowerMFD.set(i, Math.max(0d, Math.min(lowerMFD.getY(i), meanMFD.getY(i))));
+					}
+					meanMFD = new UncertainBoundedIncrMagFreqDist(meanMFD, lowerMFD, upperMFD, boundType);
+				}
+				impliedMFD = meanMFD;
+			} else {
+				impliedMFD = impliedMFDs.get(0);
+			}
+			return this;
+		}
+		
 	}
 	
 	/*
@@ -320,22 +493,26 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 	 *  
 	 *  Because of this, I think we should just add our "standard deviations" for now
 	 */
-	private static final boolean SUM_VARIANCES = false;
+	private static final boolean SUM_VARIANCES = true;
 	
-	private static UncertainIncrMagFreqDist calcRegionalSupraTarget(List<UncertainIncrMagFreqDist> supraSeisMFDs,
-			FaultSystemRupSet rupSet, Region region, boolean addSectCountUncertainties) {
+	private UncertainIncrMagFreqDist calcRegionalSupraTarget(List<IncrementalMagFreqDist> sectSupraSeisMFDs,
+			FaultSystemRupSet rupSet, Region region, List<EvenlyDiscretizedFunc> defModMFDStdDevs,
+			List<IncrementalMagFreqDist> dataImpliedSectSupraSeisMFDs, UncertaintyBoundType expandUncertToDataBound,
+			boolean addSectCountUncertainties, double defaultRelStdDev) {
 		IncrementalMagFreqDist sumMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
-		EvenlyDiscretizedFunc stdDevs = new EvenlyDiscretizedFunc(MIN_MAG, NUM_MAG, DELTA_MAG);
+		
 		double[] binCounts = new double[NUM_MAG];
 		sumMFD.setRegion(region);
 		double[] fractSectsInRegion = null;
 		if (region != null)
 			fractSectsInRegion = rupSet.getFractSectsInsideRegion(
 				region, MFDInversionConstraint.MFD_FRACT_IN_REGION_TRACE_ONLY);
-		for (int s=0; s<supraSeisMFDs.size(); s++) {
+		
+		// first just sum the section supra-seismogenic MFDs
+		for (int s=0; s<sectSupraSeisMFDs.size(); s++) {
 			double scale = fractSectsInRegion == null ? 1d : fractSectsInRegion[s];
 			if (scale > 0d) {
-				UncertainIncrMagFreqDist supraMFD = supraSeisMFDs.get(s);
+				IncrementalMagFreqDist supraMFD = sectSupraSeisMFDs.get(s);
 				// make sure we have the same gridding
 				Preconditions.checkState(supraMFD.getMinX() == MIN_MAG);
 				Preconditions.checkState(supraMFD.getDelta() == DELTA_MAG);
@@ -344,23 +521,39 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 					if (rate > 0d) {
 						binCounts[i]++;
 						sumMFD.add(i, rate);
-						double stdDev = supraMFD.getStdDev(i);
-						Preconditions.checkState(Double.isFinite(stdDev),
-								"Bad std dev for m=%s & rate=%s: %s", supraMFD.getX(i), rate, stdDev);
-						if (SUM_VARIANCES)
-							// will take sqrt later
-							stdDevs.add(i, Math.pow(supraMFD.getStdDev(i), 2));
-						else
-							stdDevs.add(i, supraMFD.getStdDev(i));
 					}
 				}
 			}
 		}
-		if (SUM_VARIANCES)
-			for (int i=0; i<NUM_MAG; i++)
-				stdDevs.set(i, Math.sqrt(stdDevs.getY(i)));
+		
+		EvenlyDiscretizedFunc stdDevs = new EvenlyDiscretizedFunc(MIN_MAG, NUM_MAG, DELTA_MAG);
+		if (defModMFDStdDevs != null) {
+			// sum up deformation model implied std devs
+			Preconditions.checkState(defModMFDStdDevs.size() == sectSupraSeisMFDs.size());
+			for (int s=0; s<defModMFDStdDevs.size(); s++) {
+				EvenlyDiscretizedFunc dmStdDevs = defModMFDStdDevs.get(s);
+				double scale = fractSectsInRegion == null ? 1d : fractSectsInRegion[s];
+				if (scale > 0d && dmStdDevs != null) {
+					for (int i=0; i<dmStdDevs.size(); i++) {
+						if (SUM_VARIANCES)
+							// will take sqrt later
+							stdDevs.add(i, Math.pow(dmStdDevs.getY(i), 2));
+						else
+							stdDevs.add(i, dmStdDevs.getY(i));
+					}
+				}
+			}
+			if (SUM_VARIANCES)
+				for (int i=0; i<NUM_MAG; i++)
+					stdDevs.set(i, Math.sqrt(stdDevs.getY(i)));
+		}
+		
+		// now make sure that we're at least at the default uncertainty everywhere
+		for (int i=0; i<NUM_MAG; i++)
+			stdDevs.set(i, Math.max(stdDevs.getY(i), defaultRelStdDev*sumMFD.getY(i)));
+		
 		if (addSectCountUncertainties) {
-			double refNum = fractSectsInRegion == null ? supraSeisMFDs.size() : StatUtils.sum(fractSectsInRegion);
+			double refNum = fractSectsInRegion == null ? sectSupraSeisMFDs.size() : StatUtils.sum(fractSectsInRegion);
 			System.out.println("Re-weighting target MFD to account for section participation uncertainties.");
 			double max = StatUtils.max(binCounts);
 			System.out.println("\tMax section participation: "+(float)max);
@@ -380,18 +573,125 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 				stdDevs.set(i, origStdDev*relStdDev);
 			}
 		}
+		
+		UncertainIncrMagFreqDist uncertainMFD = new UncertainIncrMagFreqDist(sumMFD, stdDevs);
+		if (dataImpliedSectSupraSeisMFDs != null) {
+			// compute data implied std devs
+			Preconditions.checkState(dataImpliedSectSupraSeisMFDs.size() == sectSupraSeisMFDs.size());
+			IncrementalMagFreqDist sumImpliedMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+			IncrementalMagFreqDist sumLowerMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+			IncrementalMagFreqDist sumUpperMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+			
+			for (int s=0; s<dataImpliedSectSupraSeisMFDs.size(); s++) {
+				double scale = fractSectsInRegion == null ? 1d : fractSectsInRegion[s];
+				if (scale > 0d) {
+					IncrementalMagFreqDist impliedMFD = dataImpliedSectSupraSeisMFDs.get(s);
+					if (impliedMFD == null)
+						// no data constraint for this section, use the regular MFD
+						impliedMFD = sectSupraSeisMFDs.get(s);
+					// make sure we have the same gridding
+					Preconditions.checkState(impliedMFD.getMinX() == MIN_MAG);
+					Preconditions.checkState(impliedMFD.getDelta() == DELTA_MAG);
+					for (int i=0; i<impliedMFD.size(); i++)
+						sumImpliedMFD.add(i, impliedMFD.getY(i));
+					if (impliedMFD instanceof UncertainBoundedIncrMagFreqDist) {
+						UncertainBoundedIncrMagFreqDist bounded = (UncertainBoundedIncrMagFreqDist)impliedMFD;
+						for (int i=0; i<impliedMFD.size(); i++) {
+							sumLowerMFD.add(i, bounded.getLowerY(i));
+							sumUpperMFD.add(i, bounded.getUpperY(i));
+						}
+					} else {
+						for (int i=0; i<impliedMFD.size(); i++) {
+							double rate = impliedMFD.getY(i);
+							sumLowerMFD.add(i, rate);
+							sumUpperMFD.add(i, rate);
+						}
+					}
+				}
+			}
+			
+			UncertainBoundedIncrMagFreqDist impliedMFD = new UncertainBoundedIncrMagFreqDist(
+					sumImpliedMFD, sumLowerMFD, sumUpperMFD, expandUncertToDataBound);
+			
+			// adjust the standard deviations of the regional mfd to reach the implied MFD
+			System.out.println("Adjusting regional MFD to match data bounds");
+			uncertainMFD = adjustForDataImpliedBounds(uncertainMFD, impliedMFD, expandUncertToDataBound, true);
+		}
+		
 		System.out.println("Final regional MFD:");
 		boolean first = true;
-		for (int i=0; i<sumMFD.size(); i++) {
-			double x = sumMFD.getX(i);
-			double y = sumMFD.getY(i);
+		for (int i=0; i<uncertainMFD.size(); i++) {
+			double x = uncertainMFD.getX(i);
+			double y = uncertainMFD.getY(i);
 			if (first && y == 0d)
 				continue;
 			first = false;
-			double sd = stdDevs.getY(i);
+			double sd = uncertainMFD.getStdDev(i);
 			System.out.println("\tM="+(float)x+"\tRate="+(float)y+"\tStdDev="+(float)sd+"\tRelStdDev="+(float)(sd/y));
 		}
-		return new UncertainIncrMagFreqDist(sumMFD, stdDevs);
+		return uncertainMFD;
+	}
+	
+	private static UncertainBoundedIncrMagFreqDist adjustForDataImpliedBounds(UncertainIncrMagFreqDist mfd,
+			IncrementalMagFreqDist impliedMFD, UncertaintyBoundType expandUncertToDataBound, boolean verbose) {
+		Preconditions.checkState(mfd.size() == impliedMFD.size());
+		Preconditions.checkState((float)mfd.getMinX() == (float)impliedMFD.getMinX());
+		Preconditions.checkState((float)mfd.getDelta() == (float)impliedMFD.getDelta());
+		
+		UncertainBoundedIncrMagFreqDist boundedImplied = null;
+		if (impliedMFD instanceof UncertainBoundedIncrMagFreqDist)
+			boundedImplied = (UncertainBoundedIncrMagFreqDist)impliedMFD;
+		else if (impliedMFD instanceof UncertainIncrMagFreqDist)
+			boundedImplied = ((UncertainIncrMagFreqDist)impliedMFD).estimateBounds(expandUncertToDataBound);
+
+		
+		EvenlyDiscretizedFunc stdDevs = new EvenlyDiscretizedFunc(mfd.getMinX(), mfd.size(), mfd.getDelta());
+
+		UncertainBoundedIncrMagFreqDist boundedInput = mfd.estimateBounds(UncertaintyBoundType.ONE_SIGMA);
+		IncrementalMagFreqDist lower = boundedInput.getLower();
+		IncrementalMagFreqDist upper = boundedInput.getUpper();
+		EvenlyDiscretizedFunc inputStdDevs = boundedInput.getStdDevs();
+		
+		MinMaxAveTracker stdDevTrack = new MinMaxAveTracker();
+		MinMaxAveTracker relStdDevTrack = new MinMaxAveTracker();
+		for (int i=0; i<NUM_MAG; i++) {
+			if (mfd.getY(i) == 0)
+				continue;
+			double mag = mfd.getX(i);
+			double rate = mfd.getY(i);
+			double[] dataRates;
+			if (boundedImplied == null)
+				dataRates = new double[] { impliedMFD.getY(i) };
+			else
+				dataRates = new double[] { impliedMFD.getY(i), boundedImplied.getLowerY(i), boundedImplied.getUpperY(i) };
+			double minImpliedStdDev = Double.POSITIVE_INFINITY;
+			double closestData = Double.NaN;
+			for (double dataRate : dataRates) {
+				double diff = Math.abs(dataRate - rate);
+				double impliedStdDev = expandUncertToDataBound.estimateStdDev(rate, rate-diff, rate+diff);
+				if (impliedStdDev < minImpliedStdDev) {
+					minImpliedStdDev = impliedStdDev;
+					closestData = dataRate;
+				}
+			}
+			if (closestData > rate) {
+				// adjust the upper bound
+				upper.set(i, Math.max(upper.getY(i), rate+minImpliedStdDev));
+			} else {
+				lower.set(i, Math.max(0, Math.min(lower.getY(i), rate-minImpliedStdDev)));
+			}
+			double relStdDev = minImpliedStdDev/rate;
+			if (verbose) System.out.println("\tM="+(float)mag+"\trate="+(float)rate+"\tdataRate="+(float)dataRates[0]
+					+"\tdataBounds=["+(float)dataRates[1]+","+(float)dataRates[2]+"]\timplStdDev="+minImpliedStdDev
+					+"\timplRelStdDev="+(float)relStdDev);
+			stdDevTrack.addValue(minImpliedStdDev);
+			relStdDevTrack.addValue(relStdDev);
+			stdDevs.set(i, Math.max(minImpliedStdDev, inputStdDevs.getY(i)));
+		}
+		System.out.println("\tImplied std dev range:\t["+(float)stdDevTrack.getMin()+","+(float)stdDevTrack.getMax()
+				+"], avg="+(float)stdDevTrack.getAverage()+"\t\trel range:\t["+(float)relStdDevTrack.getMin()
+				+","+(float)relStdDevTrack.getMax()+"], avg="+(float)relStdDevTrack.getAverage());
+		return new UncertainBoundedIncrMagFreqDist(mfd, lower, upper, UncertaintyBoundType.ONE_SIGMA);
 	}
 
 	public double getSupraSeisBValue() {
@@ -481,14 +781,17 @@ public class InversionTargetMFDsFromBValAndDefModel extends InversionTargetMFDs 
 		boolean sparseGR = true;
 		double defaultRelStdDev = 0.1;
 		boolean applyDefModelUncertainties = true;
-		boolean addSectCountUncertainties = true;
+		boolean addSectCountUncertainties = false;
+		boolean useExistingTargetSlipRates = false;
 //		List<DataSectNucleationRateEstimator> dataConstraints = null;
-		List<DataSectNucleationRateEstimator> dataConstraints = List.of(new APrioriSecnNuclEstimator(
-				rupSet, UCERF3InversionInputGenerator.findParkfieldRups(rupSet), 1d/25d));
-		UncertaintyBoundType expandUncertToDataBound = UncertaintyBoundType.TWO_SIGMA;
+		List<DataSectNucleationRateEstimator> dataConstraints = new ArrayList<>();
+		dataConstraints.add(new APrioriSectNuclEstimator(
+				rupSet, UCERF3InversionInputGenerator.findParkfieldRups(rupSet), 1d/25d, 0.1d/25d));
+		dataConstraints.addAll(PaleoSectNuclEstimator.buildPaleoEstimates(rupSet, true));
+		UncertaintyBoundType expandUncertToDataBound = UncertaintyBoundType.ONE_SIGMA;
 		InversionTargetMFDsFromBValAndDefModel target = new InversionTargetMFDsFromBValAndDefModel(
 				rupSet, b, sparseGR, defaultRelStdDev, applyDefModelUncertainties, addSectCountUncertainties,
-				dataConstraints, expandUncertToDataBound, null);
+				useExistingTargetSlipRates, dataConstraints, expandUncertToDataBound, null);
 		rupSet.addModule(target);
 		
 		mapMaker.plotSectScalars(target.sectFractSupras, cpt, "New Fraction of Moment Supra-Seismogenic");

@@ -16,6 +16,10 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoSlipInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RupRateMinimizationConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SectionTotalRateConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
@@ -254,6 +258,31 @@ public class BatchInversionScriptWriter {
 		dirName += "-"+rsPrefix+"-nshm23_draft";
 		double bVal = 0.8;
 		dirName += "-supra_b_"+(float)bVal;
+		
+		double slipWeight=0d, paleoWeight=0d, parkWeight=0d, mfdWeight=0d, nuclWeight=0d, nuclMFDWeight=0d, paleoSmoothWeight=0d;
+		
+		// weights are zero (disabled) unless uncommented here
+		slipWeight = 1d;
+		paleoWeight = 5;
+		parkWeight = 100;
+		mfdWeight = 10;
+		nuclWeight = 0.5;
+//		nuclMFDWeight = 0.01;
+		paleoSmoothWeight = 10000;
+		
+		boolean skipBelow = true;
+		boolean applyDefModelUncertaintiesToNucl = true;
+		boolean addSectCountUncertaintiesToMFD = false;
+		boolean adjustForIncompatibleData = true;
+		
+//		if (applyDefModelUncertaintiesToNucl)
+//			dirName += "-dm_uncert_nucl";
+		
+		if (adjustForIncompatibleData && (mfdWeight > 0d || nuclWeight > 0d || nuclMFDWeight > 0d))
+			dirName += "-adj_ucert_for_data";
+		
+		if (addSectCountUncertaintiesToMFD && mfdWeight > 0d)
+			dirName += "-mfd_count_uncert";
 
 //		remoteMeanCompFile = new File(remoteMainDir,
 //				"2021_11_03-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-2h/mean_solution.zip");
@@ -262,89 +291,66 @@ public class BatchInversionScriptWriter {
 //				"2021_11_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-only-slip-mfd-mfd_wt_10-skipBelow-2h/mean_solution.zip");
 //		remoteMeanCompareName = "New-MFD-Constr-b=0.8-No-Nucl";
 //		remoteMeanCompFile = new File(remoteMainDir,
-//				"2021_11_15-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_0.8-mfd_wt_10-paleo_wt_5-parkfield_wt_100-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-2h/mean_solution.zip");
-//		remoteMeanCompareName = "Weighted-Draft-b=0.8";
+//				"2021_11_18-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_"+(float)bVal+"-adj_ucert_for_data-paleo_wt_5-parkfield_wt_100-mfd_wt_10-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-2h/mean_solution.zip");
+//		remoteMeanCompareName = "Tot-Sect-Nucl-Wt-Adjusted";
+//		remoteMeanCompFile = new File(remoteMainDir,
+//				"2021_11_18-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_"+(float)bVal+"-adj_ucert_for_data-paleo_wt_5-parkfield_wt_100-mfd_wt_10-no_sect_rate-sect_nucl_mfd_0.01-smooth_paleo_wt_10000-skipBelow-2h/mean_solution.zip");
+//		remoteMeanCompareName = "Sect-Nucl-MFD-Wt-Adjusted";
 		
 		int num = 5;
+		
+		if (num == 1)
+			primaryPlotLevel = avgPlotLevel;
 
-		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet);
+		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
+				applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
 		
-//		constrBuilder.defaultConstraints(bVal); // don't usually want to use this, each one manually added below for now
+//		dirName += "-u3_supra_reduction";
+//		constrBuilder.useExistingTargetSlipRates();
 		
-//		dirName += "-no_mfd";
-//		constrBuilder.except(MFDInversionConstraint.class);
+		if (slipWeight > 0d) {
+			if (slipWeight != 1d)
+				dirName += "-slip_wt_"+oDF.format(slipWeight);
+			constrBuilder.slipRates().weight(slipWeight);
+		} else {
+			dirName += "-no_slip";
+		}
 		
-//		dirName += "-only-slip-mfd-sect_rate";
-//		constrBuilder.slipRates().supraBValMFDs(bVal).sectSupraRates(bVal).defaultMetaConstraints();
-		
-//		dirName += "-only-slip-mfd";
-//		constrBuilder.slipRates().supraBValMFDs(bVal).defaultMetaConstraints();
-		
-//		dirName += "-only-slip-sect_rate";
-//		constrBuilder.slipRates().sectSupraRates(bVal).defaultMetaConstraints();
-		
-		double slipWeight = 1d;
-		if (slipWeight != 1d)
-			dirName += "-slip_wt_"+oDF.format(slipWeight);
-		constrBuilder.slipRates().weight(slipWeight);
-		
-		double paleoWeight = 5;
-		if (paleoWeight != 1d)
+		if (paleoWeight > 0d) {
 			dirName += "-paleo_wt_"+oDF.format(paleoWeight);
-		constrBuilder.paleoRates().weight(paleoWeight);
-		constrBuilder.paleoSlips().weight(paleoWeight);
+			constrBuilder.paleoRates().weight(paleoWeight);
+			constrBuilder.paleoSlips().weight(paleoWeight);
+		} else {
+			dirName += "-no_paleo";
+		}
 		
-//		dirName += "-no_paleo";
-//		constrBuilder.except(PaleoRateInversionConstraint.class).except(PaleoSlipInversionConstraint.class);
-		
-		double parkWeight = 100;
-		if (parkWeight != 1d)
+		if (parkWeight > 0d) {
 			dirName += "-parkfield_wt_"+oDF.format(parkWeight);
-		constrBuilder.parkfield().weight(parkWeight);
+			constrBuilder.parkfield().weight(parkWeight);
+		} else {
+			dirName += "-no_parkfield";
+		}
 		
-//		dirName += "-no_parkfield";
-//		constrBuilder.except(ParkfieldInversionConstraint.class);
-		
-		double mfdWeight = 10;
-		if (mfdWeight != 1d)
+		if (mfdWeight > 0d) {
 			dirName += "-mfd_wt_"+oDF.format(mfdWeight);
-		constrBuilder.supraBValMFDs(bVal).weight(mfdWeight);
+			constrBuilder.supraBValMFDs().weight(mfdWeight);
+		} else {
+			dirName += "-no_mfd";
+		}
 		
-//		double nuclWeight = 0.5;
-//		if (nuclWeight != 1d)
-//			dirName += "-sect_wt_"+oDF.format(nuclWeight);
-//		constrBuilder.sectSupraRates(bVal).weight(nuclWeight);
+		if (nuclWeight > 0d) {
+			dirName += "-sect_wt_"+oDF.format(nuclWeight);
+			constrBuilder.sectSupraRates().weight(nuclWeight);
+		} else {
+			dirName += "-no_sect_rate";
+		}
 		
-		dirName += "-no_sect_rate";
-		constrBuilder.except(SectionTotalRateConstraint.class);
-		
-		double nuclMFDWeight = 0.001;
-		if (nuclMFDWeight != 1d)
+		if (nuclMFDWeight > 0d) {
 			dirName += "-sect_nucl_mfd_"+oDF.format(nuclMFDWeight);
-		constrBuilder.sectSupraNuclMFDs(bVal).weight(nuclMFDWeight);
-		
-//		dirName += "-no_sect_mfd";
-//		constrBuilder.except(SubSectMFDInversionConstraint.class);
-		
-//		double nuclWeight = 0.5;
-//		double parkHackNuclWt = 10d;
-//		dirName += "-sect_wt_"+oDF.format(nuclWeight)+"_park_hack_"+oDF.format(parkHackNuclWt);
-//		constrBuilder.except(SectionTotalRateConstraint.class);
-//		constrBuilder.parkfieldHackSectSupraRates(bVal, parkHackNuclWt).weight(nuclWeight);
-		
-//		dirName += "_u2";
-//		boolean aFaults = true;
-////		boolean aFaults = false; dirName += "_all_as_bflts"
-//		boolean reproduce = false;
-//		constrBuilder.except(SectionTotalRateConstraint.class);
-//		constrBuilder.u2NuclBVals(aFaults, reproduce).weight(nuclWeight);
-		
-//		FaultSystemSolution refSol = FaultSystemSolution.load(
-//				new File(localMainDir, "2021_10_18-reproduce-ucerf3-ref_branch-uniform-new_anneal-5x_avg"
-//						+ "-try_zero-var_perturb-noWL-5h/mean_solution.zip"));
-//		constrBuilder.except(SectionTotalRateConstraint.class);
-//		constrBuilder.testSameBVals(refSol); dirName += "_u3_same";
-//		constrBuilder.weight(nuclWeight);
+			constrBuilder.sectSupraNuclMFDs().weight(nuclMFDWeight);
+		} else {
+//			dirName += "-no_sect_mfd";
+		}
 		
 //		dirName += "-smooth_all";
 //		constrBuilder.supraSmooth();
@@ -354,36 +360,21 @@ public class BatchInversionScriptWriter {
 //		dirName += "-parent_smooth_wt_"+parentWt;
 //		constrBuilder.add(new ParentSectSmoothnessConstraint(rupSet, parentWt, true));
 		
-		dirName += "-smooth_paleo";
-		constrBuilder.supraPaleoSmooth();
-		constrBuilder.weight(10000); dirName += "_wt_10000";
+		if (paleoSmoothWeight > 0d) {
+			dirName += "-smooth_paleo";
+			constrBuilder.supraPaleoSmooth();
+			constrBuilder.weight(paleoSmoothWeight); dirName += "_wt_"+oDF.format(paleoSmoothWeight);
+		}
 		
-//		FaultSystemSolution refSol = FaultSystemSolution.load(
-//				new File(new File(localMainDir, remoteMeanCompFile.getParentFile().getName()),
-//						remoteMeanCompFile.getName()));
-//		constrBuilder.testFlipBVals(refSol, bVal); dirName += "-test_flip_b";
-//		constrBuilder.testSameBVals(refSol); dirName += "-test_same_b";
-//		constrBuilder.weight(10d); dirName += "_wt_10";
-//		IntegerPDF_FunctionSampler sampler = constrBuilder.testGetSampleAllNew(refSol, true); dirName += "-test_sample_new";
-//		constrBuilder.except(RupRateMinimizationConstraint.class);
-		
-		IntegerPDF_FunctionSampler sampler = constrBuilder.getSkipBelowMinSampler();
-		dirName += "-skipBelow";
-		constrBuilder.except(RupRateMinimizationConstraint.class);
-		
-//		IntegerPDF_FunctionSampler sampler = constrBuilder.testSampleFaultsEqually(true, 100d);
-//		dirName += "-parentFairSampler";
-//		constrBuilder.except(RupRateMinimizationConstraint.class);
-		
-//		dirName += "-sampleMohawkSurprise10x";
-//		for (int r : rupSet.getRupturesForParentSection(686)) // mohawk valley
-//			sampler.set(r, sampler.getY(r)*10);
-//		for (int r : rupSet.getRupturesForParentSection(708)) // surprise valley
-//			sampler.set(r, sampler.getY(r)*10);
-		
-//		dirName += "-redo";
-		
-//		IntegerPDF_FunctionSampler sampler = null;
+		IntegerPDF_FunctionSampler sampler = null;
+		if (skipBelow) {
+			sampler = constrBuilder.getSkipBelowMinSampler();
+			dirName += "-skipBelow";
+			constrBuilder.except(RupRateMinimizationConstraint.class);
+		} else {
+			dirName += "-minimizeBelow";
+			constrBuilder.minimizeBelowSectMinMag();
+		}
 		
 		List<InversionConstraint> constraints = constrBuilder.build();
 		

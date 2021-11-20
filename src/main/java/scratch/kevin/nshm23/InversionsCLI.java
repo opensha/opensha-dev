@@ -162,12 +162,17 @@ public class InversionsCLI {
 		}
 		
 		if (nshmDraftConstraints) {
-			double supraBVal = 0.8;
+			double supraBVal = 0.0;
 			FaultSystemRupSet rupSet = FaultSystemRupSet.load(origRupSetFile);
 			dirName += "-nshm23_draft-supra_b_"+oDF.format(supraBVal);
+			
+			boolean applyDefModelUncertaintiesToNucl = true;
+			boolean addSectCountUncertaintiesToMFD = false;
+			boolean adjustForIncompatibleData = true;
 
-			DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet);
-			constrBuilder.defaultConstraints(supraBVal);
+			DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, supraBVal,
+					applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
+			constrBuilder.defaultConstraints();
 			
 			double mfdWeight = 10;
 			dirName += "-mfd_wt_"+oDF.format(mfdWeight);
@@ -284,6 +289,7 @@ public class InversionsCLI {
 				File reportDir = new File(dir, "sol_report");
 				ReportPageGen report = new ReportPageGen(sol.getRupSet(), sol, name, reportDir,
 						ReportPageGen.getDefaultSolutionPlots(plots));
+				report.setReplot(true);
 				report.generatePage();
 			}
 		} catch (Exception e) {

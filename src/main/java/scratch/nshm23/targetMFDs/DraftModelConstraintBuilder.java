@@ -13,6 +13,7 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
+import org.opensha.commons.data.uncertainty.Uncertainty;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
@@ -28,6 +29,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Ru
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SectionTotalRateConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SubSectMFDInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint.SectMappedUncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
@@ -57,9 +59,27 @@ public class DraftModelConstraintBuilder {
 	
 	private List<InversionConstraint> constraints;
 	private FaultSystemRupSet rupSet;
+	private double supraBVal;
+	private boolean applyDefModelUncertaintiesToNucl;
+	private boolean addSectCountUncertaintiesToMFD;
+	private boolean adjustForIncompatibleData;
 	
-	public DraftModelConstraintBuilder(FaultSystemRupSet rupSet) {
+	private boolean useExistingTargetSlipRates = false;
+	
+	private static final double DEFAULT_REL_STD_DEV = 0.1;
+	
+	public DraftModelConstraintBuilder(FaultSystemRupSet rupSet, double supraSeisB) {
+		
+	}
+	
+	public DraftModelConstraintBuilder(FaultSystemRupSet rupSet, double supraBVal,
+			boolean applyDefModelUncertaintiesToNucl, boolean addSectCountUncertaintiesToMFD,
+			boolean adjustForIncompatibleData) {
 		this.rupSet = rupSet;
+		this.supraBVal = supraBVal;
+		this.applyDefModelUncertaintiesToNucl = applyDefModelUncertaintiesToNucl;
+		this.addSectCountUncertaintiesToMFD = addSectCountUncertaintiesToMFD;
+		this.adjustForIncompatibleData = adjustForIncompatibleData;
 		this.constraints = new ArrayList<>();
 	}
 	
@@ -68,11 +88,7 @@ public class DraftModelConstraintBuilder {
 	}
 	
 	public DraftModelConstraintBuilder defaultConstraints() {
-		return defaultConstraints(0.8);
-	}
-	
-	public DraftModelConstraintBuilder defaultConstraints(double supraBVal) {
-		return defaultDataConstraints(supraBVal).defaultMetaConstraints();
+		return defaultDataConstraints().defaultMetaConstraints();
 	}
 	
 	public DraftModelConstraintBuilder except(Class<? extends InversionConstraint> clazz) {
@@ -88,11 +104,7 @@ public class DraftModelConstraintBuilder {
 	}
 	
 	public DraftModelConstraintBuilder defaultDataConstraints() {
-		return defaultDataConstraints(0.8);
-	}
-	
-	public DraftModelConstraintBuilder defaultDataConstraints(double supraBVal) {
-		return slipRates().paleo().parkfield().supraBValMFDs(supraBVal).sectSupraRates(supraBVal);
+		return slipRates().paleo().parkfield().supraBValMFDs().sectSupraRates();
 	}
 	
 	public DraftModelConstraintBuilder slipRates() {
@@ -116,16 +128,34 @@ public class DraftModelConstraintBuilder {
 		return this;
 	}
 	
+	public DraftModelConstraintBuilder useExistingTargetSlipRates() {
+		this.useExistingTargetSlipRates = true;
+		return this;
+	}
+	
+	private static UncertainDataConstraint parkfieldRate = 
+		new UncertainDataConstraint("Parkfield", 1d/25d, new Uncertainty(0.1d/25d));
+	
 	private InversionTargetMFDsFromBValAndDefModel getTargetMFDs(double supraBVal) {
 		InversionTargetMFDsFromBValAndDefModel target = rupSet.getModule(InversionTargetMFDsFromBValAndDefModel.class);
 		if (target == null || target.getSupraSeisBValue() != supraBVal) {
-			target = new InversionTargetMFDsFromBValAndDefModel(rupSet, supraBVal);
+			UncertaintyBoundType dataWithinType = UncertaintyBoundType.ONE_SIGMA;
+			List<DataSectNucleationRateEstimator> dataConstraints = null;
+			if (adjustForIncompatibleData) {
+				dataConstraints = new ArrayList<>();
+				dataConstraints.add(new APrioriSectNuclEstimator(rupSet,
+						UCERF3InversionInputGenerator.findParkfieldRups(rupSet), parkfieldRate));
+				dataConstraints.addAll(PaleoSectNuclEstimator.buildPaleoEstimates(rupSet, true));
+			}
+			target = new InversionTargetMFDsFromBValAndDefModel(rupSet, supraBVal, true, DEFAULT_REL_STD_DEV,
+					applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, useExistingTargetSlipRates,
+					dataConstraints, dataWithinType, null);
 			rupSet.addModule(target);
 		}
 		return target;
 	}
 	
-	public DraftModelConstraintBuilder supraBValMFDs(double supraBVal) {
+	public DraftModelConstraintBuilder supraBValMFDs() {
 		InversionTargetMFDsFromBValAndDefModel target = getTargetMFDs(supraBVal);
 		
 		List<? extends IncrementalMagFreqDist> origMFDs = target.getMFD_Constraints();
@@ -135,8 +165,9 @@ public class DraftModelConstraintBuilder {
 				// already uncertain
 				uncertainMFDs.add((UncertainIncrMagFreqDist)mfd);
 			} else {
-				System.err.println("WARNING: temporary relative standard deviation of 0.1 set for all MFD bins"); // TODO
-				UncertainIncrMagFreqDist uMFD = UncertainIncrMagFreqDist.constantRelStdDev(mfd, 0.1);
+				System.err.println("WARNING: temporary relative standard deviation of "+(float)DEFAULT_REL_STD_DEV
+						+" set for all MFD bins"); // TODO
+				UncertainIncrMagFreqDist uMFD = UncertainIncrMagFreqDist.constantRelStdDev(mfd, DEFAULT_REL_STD_DEV);
 //				for (int i=0; i<uMFD.size(); i++)
 //					System.out.println(uMFD.getX(i)+"\t"+uMFD.getY(i)+"\t"+uMFD.getStdDev(i));
 				uncertainMFDs.add(uMFD);
@@ -147,13 +178,11 @@ public class DraftModelConstraintBuilder {
 		return this;
 	}
 	
-	public DraftModelConstraintBuilder sectSupraRates(double supraBVal) {
+	public DraftModelConstraintBuilder sectSupraRates() {
 		InversionTargetMFDsFromBValAndDefModel target = getTargetMFDs(supraBVal);
 		
 		double[] targetRates = new double[rupSet.getNumSections()];
 		double[] targetRateStdDevs = new double[rupSet.getNumSections()];
-		
-//		System.err.println("WARNING: temporary relative standard deviation of 0.1 set for all section target rates"); // TODO
 		
 		List<UncertainIncrMagFreqDist> sectSupraMFDs = target.getSectSupraSeisNuclMFDs();
 		for (int s=0; s<targetRates.length; s++) {
@@ -163,8 +192,8 @@ public class DraftModelConstraintBuilder {
 			double upperVal = oneSigmaBoundedMFD.getUpper().calcSumOfY_Vals();
 			double lowerVal = oneSigmaBoundedMFD.getLower().calcSumOfY_Vals();
 			targetRateStdDevs[s] = UncertaintyBoundType.ONE_SIGMA.estimateStdDev(targetRates[s], lowerVal, upperVal);
-			System.out.println(rupSet.getFaultSectionData(s).getSectionName()+": totRate="+(float)targetRates[s]
-					+"\tstdDev="+(float)targetRateStdDevs[s]+"\trelStdDev="+(float)(targetRateStdDevs[s]/targetRates[s]));
+//			System.out.println(rupSet.getFaultSectionData(s).getSectionName()+": totRate="+(float)targetRates[s]
+//					+"\tstdDev="+(float)targetRateStdDevs[s]+"\trelStdDev="+(float)(targetRateStdDevs[s]/targetRates[s]));
 		}
 		
 		constraints.add(new SectionTotalRateConstraint(rupSet, 1d,
@@ -172,7 +201,7 @@ public class DraftModelConstraintBuilder {
 		return this;
 	}
 	
-	public DraftModelConstraintBuilder sectSupraNuclMFDs(double supraBVal) {
+	public DraftModelConstraintBuilder sectSupraNuclMFDs() {
 		InversionTargetMFDsFromBValAndDefModel target = getTargetMFDs(supraBVal);
 		
 		List<UncertainIncrMagFreqDist> sectSupraMFDs = target.getSectSupraSeisNuclMFDs();
@@ -184,8 +213,9 @@ public class DraftModelConstraintBuilder {
 	
 	public DraftModelConstraintBuilder parkfield() {
 		double parkfieldMeanRate = 1.0/25.0; // Bakun et al. (2005)
-		System.err.println("WARNING: temporary relative standard deviation of 0.1 set for parkfield constraint"); // TODO
-		double parkfieldStdDev = 0.1d*parkfieldMeanRate;
+		System.err.println("WARNING: temporary relative standard deviation of "
+				+(float)DEFAULT_REL_STD_DEV+" set for parkfield constraint"); // TODO
+		double parkfieldStdDev = DEFAULT_REL_STD_DEV*parkfieldMeanRate;
 		
 		// Find Parkfield M~6 ruptures
 		List<Integer> parkfieldRups = UCERF3InversionInputGenerator.findParkfieldRups(rupSet);
@@ -352,7 +382,7 @@ public class DraftModelConstraintBuilder {
 					+"\tsolRate="+(float)solSupraNuclRate+"\tsolBVal="+(float)solBVal
 					+"\tflippedBVal="+(float)flippedBVal+"\tflippedRate="+(float)flippedNuclRate);
 			targetNuclRates[s] = flippedNuclRate;
-			targetNuclRateStdDevs[s] = 0.1*targetNuclRates[s];
+			targetNuclRateStdDevs[s] = DEFAULT_REL_STD_DEV*targetNuclRates[s];
 		}
 		System.out.println("Solution b-values: "+solBVals);
 		System.out.println("Flipped b-values: "+flippedBVals);
@@ -372,7 +402,7 @@ public class DraftModelConstraintBuilder {
 				solSupraNuclRate += prevSol.getRateForRup(r)*sectArea/rupSet.getAreaForRup(r);
 			
 			targetNuclRates[s] = solSupraNuclRate;
-			targetNuclRateStdDevs[s] = 0.1*targetNuclRates[s];
+			targetNuclRateStdDevs[s] = DEFAULT_REL_STD_DEV*targetNuclRates[s];
 		}
 		constraints.add(new SectionTotalRateConstraint(rupSet, 1d,
 				ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, targetNuclRates, targetNuclRateStdDevs, true));
@@ -472,7 +502,7 @@ public class DraftModelConstraintBuilder {
 					targetNuclRateStdDevs[s] = Double.NaN;
 				} else {
 					targetNuclRates[s] = u2Constr.getCumMFD().getY(0);
-					targetNuclRateStdDevs[s] = 0.1*targetNuclRates[s];
+					targetNuclRateStdDevs[s] = DEFAULT_REL_STD_DEV*targetNuclRates[s];
 					maxCharMag = u2Constr.getMag(u2Constr.getNumMags()-1);
 					maxCharMagIndex = sectNuclB1.getClosestXIndex(maxCharMag);
 					if (maxCharMagIndex < minIndex) {
@@ -508,7 +538,7 @@ public class DraftModelConstraintBuilder {
 				} else {
 					Preconditions.checkState(solSupraNuclRate > 0d, "nucl rate is zero for a-fault: %s. %s", s, data.getName());
 					targetNuclRates[s] = solSupraNuclRate;
-					targetNuclRateStdDevs[s] = 0.1*targetNuclRates[s];
+					targetNuclRateStdDevs[s] = DEFAULT_REL_STD_DEV*targetNuclRates[s];
 					aFault = true;
 				}
 			}
@@ -558,7 +588,7 @@ public class DraftModelConstraintBuilder {
 				
 				targetNuclRates[s] = u2Target.getTotalIncrRate();
 				Preconditions.checkState(targetNuclRates[s] > 0d, "nucl rate is zero for b-fault: %s. %s", s, data.getName());
-				targetNuclRateStdDevs[s] = 0.1*targetNuclRates[s];
+				targetNuclRateStdDevs[s] = DEFAULT_REL_STD_DEV*targetNuclRates[s];
 			}
 //			if (data.getName().contains("Mono Lake") || data.getName().contains("Robinson"))
 			if (!Double.isFinite(targetNuclRates[s])) {
@@ -657,19 +687,20 @@ public class DraftModelConstraintBuilder {
 		return new IntegerPDF_FunctionSampler(sampleRates);
 	}
 	
-	public DraftModelConstraintBuilder parkfieldHackSectSupraRates(double supraBVal, double parkfieldRelStdDev) {
+	public DraftModelConstraintBuilder parkfieldHackSectSupraRates(double parkfieldRelStdDev) {
 		InversionTargetMFDsFromBValAndDefModel target = getTargetMFDs(supraBVal);
 		
 		double[] targetRates = new double[rupSet.getNumSections()];
 		double[] targetRateStdDevs = new double[rupSet.getNumSections()];
 		
-		System.err.println("WARNING: temporary relative standard deviation of 0.1 set for all section target rates"); // TODO
+		System.err.println("WARNING: temporary relative standard deviation of "+(float)DEFAULT_REL_STD_DEV
+				+" set for all section target rates"); // TODO
 		
 		List<UncertainIncrMagFreqDist> sectSupraMFDs = target.getSectSupraSeisNuclMFDs();
 		int numPark = 0;
 		for (int s=0; s<targetRates.length; s++) {
 			targetRates[s] = sectSupraMFDs.get(s).calcSumOfY_Vals();
-			targetRateStdDevs[s] = 0.1*targetRates[s];
+			targetRateStdDevs[s] = DEFAULT_REL_STD_DEV*targetRates[s];
 			if (rupSet.getFaultSectionData(s).getName().toLowerCase().contains("parkfield")) {
 				targetRateStdDevs[s] = targetRates[s]*parkfieldRelStdDev;
 				numPark++;
