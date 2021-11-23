@@ -12,9 +12,35 @@ import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
+/**
+ * Abstract class for a data-constraint that affects section nucleation MFDs. This can be used to adjust uncertainties
+ * in {@link SupraSeisBValInversionTargetMFDs} for sections where data constraitns might imply different MFDs than
+ * the assumed b-value. 
+ * 
+ * @author kevin
+ *
+ */
 public abstract class DataSectNucleationRateEstimator {
+	
+	/**
+	 * 
+	 * @param sect
+	 * @return true if this data constraint applies to the given section
+	 */
 	public abstract boolean appliesTo(FaultSection sect);
 	
+	/**
+	 * Estimate a section nucleation MFD for the given fault section that is consistent with this data constraint
+	 * 
+	 * @param sect fault section
+	 * @param curSectSupraSeisMFD the a priori supra-seismogenic MFD for this fault section
+	 * @param availableRupIndexes list of rupture indexes available for use, in which this section participates (and above
+	 * any minimum magnitude thresholds)
+	 * @param availableRupMags list of available magnitudes, one for each available rupture
+	 * @param sectMomentRate target supra-seismogenic moment rate from the deformation model
+	 * @param sparseGR boolean indicating that the returned MFD should be adjusted to account for any holes in the MFD
+	 * @return data-implied MFD
+	 */
 	public abstract IncrementalMagFreqDist estimateNuclMFD(FaultSection sect, IncrementalMagFreqDist curSectSupraSeisMFD,
 			List<Integer> availableRupIndexes, List<Double> availableRupMags, UncertainDataConstraint sectMomentRate,
 			boolean sparseGR);

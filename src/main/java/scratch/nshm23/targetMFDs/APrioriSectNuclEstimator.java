@@ -22,6 +22,14 @@ import com.google.common.base.Preconditions;
 
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 
+/**
+ * Estimates nucleation MFDs that satisfy a given a priori rupture constraint, e.g., Parkfield. The given ruptures
+ * are assigned their target rate, and any leftover moment is distributed to remaining ruptures following the input
+ * MFD.
+ * 
+ * @author kevin
+ *
+ */
 public class APrioriSectNuclEstimator extends DataSectNucleationRateEstimator {
 	
 	private FaultSystemRupSet rupSet;

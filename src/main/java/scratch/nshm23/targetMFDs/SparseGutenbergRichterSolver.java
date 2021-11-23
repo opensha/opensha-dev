@@ -266,8 +266,7 @@ public class SparseGutenbergRichterSolver {
 //		for (double bValue : new double[] {0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4}) {
 		for (double bValue : new double[] {0.0, 0.4, 0.8, 1.2}) {
 			System.out.println("Doing b="+bValue);
-			InversionTargetMFDsFromBValAndDefModel targets = new InversionTargetMFDsFromBValAndDefModel(
-					rupSet, bValue, false, 0.1d, false, false, null);
+			SupraSeisBValInversionTargetMFDs targets = new SupraSeisBValInversionTargetMFDs.Builder(rupSet, bValue).sparseGR(false).build();
 
 			MinMaxAveTracker equivBTrack = new MinMaxAveTracker();
 			MinMaxAveTracker equivBTrack2 = new MinMaxAveTracker();

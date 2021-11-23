@@ -19,6 +19,13 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
 
+/**
+ * Estimates G-R nucleation MFDs for sections that satisfy paleoseismic constraints. Sweeps over b-values from -3 to 3
+ * and returns the G-R that best fits the paleo-observable event rate implied by the data constraint.
+ * 
+ * @author kevin
+ *
+ */
 public abstract class PaleoSectNuclEstimator extends DataSectNucleationRateEstimator {
 	
 	protected FaultSystemRupSet rupSet;

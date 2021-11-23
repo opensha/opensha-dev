@@ -54,6 +54,7 @@ import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
+import scratch.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.SubSeisMoRateReduction;
 
 public class DraftModelConstraintBuilder {
 	
@@ -64,12 +65,13 @@ public class DraftModelConstraintBuilder {
 	private boolean addSectCountUncertaintiesToMFD;
 	private boolean adjustForIncompatibleData;
 	
-	private boolean useExistingTargetSlipRates = false;
+	private SubSeisMoRateReduction subSeisMoRateReduction = SupraSeisBValInversionTargetMFDs.SUB_SEIS_MO_RATE_REDUCTION_DEFAULT;
 	
 	private static final double DEFAULT_REL_STD_DEV = 0.1;
 	
 	public DraftModelConstraintBuilder(FaultSystemRupSet rupSet, double supraSeisB) {
-		
+		this(rupSet, supraSeisB, SupraSeisBValInversionTargetMFDs.APPLY_DEF_MODEL_UNCERTAINTIES_DEFAULT,
+				SupraSeisBValInversionTargetMFDs.ADD_SECT_COUNT_UNCERTAINTIES_DEFAULT, false);
 	}
 	
 	public DraftModelConstraintBuilder(FaultSystemRupSet rupSet, double supraBVal,
@@ -128,35 +130,39 @@ public class DraftModelConstraintBuilder {
 		return this;
 	}
 	
-	public DraftModelConstraintBuilder useExistingTargetSlipRates() {
-		this.useExistingTargetSlipRates = true;
+	public DraftModelConstraintBuilder subSeisMoRateReduction(SubSeisMoRateReduction subSeisMoRateReduction) {
+		this.subSeisMoRateReduction = subSeisMoRateReduction;
 		return this;
 	}
 	
 	private static UncertainDataConstraint parkfieldRate = 
 		new UncertainDataConstraint("Parkfield", 1d/25d, new Uncertainty(0.1d/25d));
 	
-	private InversionTargetMFDsFromBValAndDefModel getTargetMFDs(double supraBVal) {
-		InversionTargetMFDsFromBValAndDefModel target = rupSet.getModule(InversionTargetMFDsFromBValAndDefModel.class);
+	private SupraSeisBValInversionTargetMFDs getTargetMFDs(double supraBVal) {
+		SupraSeisBValInversionTargetMFDs target = rupSet.getModule(SupraSeisBValInversionTargetMFDs.class);
 		if (target == null || target.getSupraSeisBValue() != supraBVal) {
-			UncertaintyBoundType dataWithinType = UncertaintyBoundType.ONE_SIGMA;
-			List<DataSectNucleationRateEstimator> dataConstraints = null;
+			SupraSeisBValInversionTargetMFDs.Builder builder = new SupraSeisBValInversionTargetMFDs.Builder(
+					rupSet, supraBVal);
+			builder.applyDefModelUncertainties(applyDefModelUncertaintiesToNucl);
+			builder.constantDefaultRelStdDev(DEFAULT_REL_STD_DEV);
+			builder.addSectCountUncertainties(addSectCountUncertaintiesToMFD);
+			builder.subSeisMoRateReduction(subSeisMoRateReduction);
 			if (adjustForIncompatibleData) {
-				dataConstraints = new ArrayList<>();
+				UncertaintyBoundType dataWithinType = UncertaintyBoundType.ONE_SIGMA;
+				List<DataSectNucleationRateEstimator> dataConstraints = new ArrayList<>();
 				dataConstraints.add(new APrioriSectNuclEstimator(rupSet,
 						UCERF3InversionInputGenerator.findParkfieldRups(rupSet), parkfieldRate));
 				dataConstraints.addAll(PaleoSectNuclEstimator.buildPaleoEstimates(rupSet, true));
+				builder.expandUncertaintiesForData(dataConstraints, dataWithinType);
 			}
-			target = new InversionTargetMFDsFromBValAndDefModel(rupSet, supraBVal, true, DEFAULT_REL_STD_DEV,
-					applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, useExistingTargetSlipRates,
-					dataConstraints, dataWithinType, null);
+			target = builder.build();
 			rupSet.addModule(target);
 		}
 		return target;
 	}
 	
 	public DraftModelConstraintBuilder supraBValMFDs() {
-		InversionTargetMFDsFromBValAndDefModel target = getTargetMFDs(supraBVal);
+		SupraSeisBValInversionTargetMFDs target = getTargetMFDs(supraBVal);
 		
 		List<? extends IncrementalMagFreqDist> origMFDs = target.getMFD_Constraints();
 		List<UncertainIncrMagFreqDist> uncertainMFDs = new ArrayList<>();
@@ -179,7 +185,7 @@ public class DraftModelConstraintBuilder {
 	}
 	
 	public DraftModelConstraintBuilder sectSupraRates() {
-		InversionTargetMFDsFromBValAndDefModel target = getTargetMFDs(supraBVal);
+		SupraSeisBValInversionTargetMFDs target = getTargetMFDs(supraBVal);
 		
 		double[] targetRates = new double[rupSet.getNumSections()];
 		double[] targetRateStdDevs = new double[rupSet.getNumSections()];
@@ -202,7 +208,7 @@ public class DraftModelConstraintBuilder {
 	}
 	
 	public DraftModelConstraintBuilder sectSupraNuclMFDs() {
-		InversionTargetMFDsFromBValAndDefModel target = getTargetMFDs(supraBVal);
+		SupraSeisBValInversionTargetMFDs target = getTargetMFDs(supraBVal);
 		
 		List<UncertainIncrMagFreqDist> sectSupraMFDs = target.getSectSupraSeisNuclMFDs();
 		
@@ -233,8 +239,7 @@ public class DraftModelConstraintBuilder {
 		Preconditions.checkNotNull(modMinMags, "Rupture set must supply ModSectMinMags if minimization constraint is enabled");
 		
 		// we want to only grab ruptures with magnitudes below the MFD bin in which the section minimium magnitude resides
-		EvenlyDiscretizedFunc refMagFunc = new EvenlyDiscretizedFunc(InversionTargetMFDsFromBValAndDefModel.MIN_MAG,
-				InversionTargetMFDsFromBValAndDefModel.NUM_MAG, InversionTargetMFDsFromBValAndDefModel.DELTA_MAG);
+		EvenlyDiscretizedFunc refMagFunc = SupraSeisBValInversionTargetMFDs.buildRefXValues(rupSet);
 		double halfDelta = refMagFunc.getDelta()*0.5;
 		double[] mfdMappedSectMins = new double[rupSet.getNumSections()];
 		for (int s=0; s<mfdMappedSectMins.length; s++)
@@ -324,7 +329,7 @@ public class DraftModelConstraintBuilder {
 	
 	public DraftModelConstraintBuilder testFlipBVals(FaultSystemSolution prevSol, double targetBVal) {
 		Preconditions.checkState(rupSet.isEquivalentTo(prevSol.getRupSet()));
-		InversionTargetMFDsFromBValAndDefModel targetMFDs = getTargetMFDs(targetBVal);
+		SupraSeisBValInversionTargetMFDs targetMFDs = getTargetMFDs(targetBVal);
 		
 		List<UncertainIncrMagFreqDist> origSupraNuclMFDs = targetMFDs.getSectSupraSeisNuclMFDs();
 		
@@ -441,7 +446,8 @@ public class DraftModelConstraintBuilder {
 		
 		// targets with b=1
 		SectSlipRates slipRates = rupSet.getSectSlipRates();
-		InversionTargetMFDsFromBValAndDefModel targetB1 = new InversionTargetMFDsFromBValAndDefModel(rupSet, 1d);
+		SupraSeisBValInversionTargetMFDs targetB1 = new SupraSeisBValInversionTargetMFDs.Builder(u2RupSet, 1d)
+				.subSeisMoRateReduction(SubSeisMoRateReduction.SYSTEM_AVG_IMPLIED_FROM_SUPRA_B).build();
 		// don't use slip rates with this target
 		rupSet.addModule(slipRates);
 
@@ -688,7 +694,7 @@ public class DraftModelConstraintBuilder {
 	}
 	
 	public DraftModelConstraintBuilder parkfieldHackSectSupraRates(double parkfieldRelStdDev) {
-		InversionTargetMFDsFromBValAndDefModel target = getTargetMFDs(supraBVal);
+		SupraSeisBValInversionTargetMFDs target = getTargetMFDs(supraBVal);
 		
 		double[] targetRates = new double[rupSet.getNumSections()];
 		double[] targetRateStdDevs = new double[rupSet.getNumSections()];

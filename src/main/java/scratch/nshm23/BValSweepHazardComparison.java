@@ -33,16 +33,36 @@ public class BValSweepHazardComparison {
 	public static void main(String[] args) throws IOException {
 		File inversionDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
-		File compDir = new File(inversionDir, "2021_10_18-reproduce-ucerf3-ref_branch-uniform-new_anneal-5x_avg-try_zero-var_perturb-u3WL-5h");
-		FaultSystemSolution compSol = FaultSystemSolution.load(new File(compDir, "mean_solution.zip"));
+//		try {
+//			Thread.sleep(1000l*900l); // 15 m
+//		} catch (InterruptedException e) {}
 		
 		double[] bVals = { 0d, 0.1d, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1d };
 //		double[] bVals = { 0d, 0.3, 0.8, 1d };
-//		String sweepPrefix = "2021_11_18-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_";
-//		String sweepSuffix = "-adj_ucert_for_data-paleo_wt_5-parkfield_wt_100-mfd_wt_10-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-2h";
-		String sweepPrefix = "2021_11_19-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_";
-		String sweepSuffix = "-adj_ucert_for_data-u3_supra_reduction-paleo_wt_5-parkfield_wt_100-mfd_wt_10-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-2h";
 		
+//		File compDir = new File(inversionDir,
+////				"2021_10_18-reproduce-ucerf3-ref_branch-uniform-new_anneal-5x_avg-try_zero-var_perturb-u3WL-5h");
+//				"2021_11_21-reproduce-ucerf3-ref_branch-uniform-u3_constr-new_anneal-no_u2_ss_mfds-single_mfd_region-u3WL-5h");
+////				"2021_11_21-reproduce-ucerf3-ref_branch-uniform-u3_constr-new_anneal-single_mfd_region-u3WL-5h");
+////		String sweepPrefix = "2021_11_18-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_";
+////		String sweepSuffix = "-adj_ucert_for_data-paleo_wt_5-parkfield_wt_100-mfd_wt_10-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-2h";
+//		String sweepPrefix = "2021_11_19-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_";
+//		String sweepSuffix = "-adj_ucert_for_data-u3_supra_reduction-paleo_wt_5-parkfield_wt_100-mfd_wt_10-sect_wt_0.5-smooth_paleo_wt_10000-skipBelow-2h";
+////		String sweepPrefix = "2021_11_19-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_";
+////		String sweepSuffix = "-adj_ucert_for_data-u3_supra_reduction-paleo_wt_5-parkfield_wt_100-mfd_wt_10-no_sect_rate-smooth_paleo_wt_10000-skipBelow-10h";
+		
+		File compDir = new File(inversionDir,
+//				"2021_11_20-reproduce-ucerf3-ref_branch-uniform-u3_constr-new_anneal-no_paleo-no_parkfield-no_smooth-u3WL-5h");
+//				"2021_11_20-reproduce-ucerf3-ref_branch-uniform-u3_constr-new_anneal-no_paleo-no_parkfield-no_u2_ss_mfds-noWL-5h");
+//				"2021_11_21-reproduce-ucerf3-ref_branch-uniform-u3_constr-new_anneal-no_paleo-no_parkfield-no_smooth-single_mfd_region-u3WL-5h");
+//				"2021_11_22-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_NaN-no_paleo-no_parkfield-no_mfd-no_sect_rate-u3_target_mfds-single_mfd_region-skipBelow-2h");
+				"2021_11_22-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_NaN-no_paleo-no_parkfield-no_mfd-no_sect_rate-u3_target_mfds-skipBelow-2h");
+		String sweepPrefix = "2021_11_19-reproduce-ucerf3-ref_branch-uniform-nshm23_draft-supra_b_";
+		String sweepSuffix = "-u3_supra_reduction-no_paleo-no_parkfield-mfd_wt_10-sect_wt_0.5-skipBelow-2h";
+		
+		File sweepDir = new File(inversionDir, sweepPrefix+"sweep"+sweepSuffix);
+		
+		FaultSystemSolution compSol = FaultSystemSolution.load(new File(compDir, "mean_solution.zip"));
 		
 		double[] periods = { 0d, 0.2d, 1d };
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;;
@@ -67,17 +87,13 @@ public class BValSweepHazardComparison {
 		
 		GriddedGeoDataSet[][][] sweepMaps = new GriddedGeoDataSet[periods.length][rps.length][bVals.length];
 		
-		File primarySweepDir = null;
-		
 		for (int b=0; b<bVals.length; b++) {
 			double bVal = bVals[b];
-			File sweepDir = new File(inversionDir, sweepPrefix+(float)bVal+sweepSuffix);
-			if (b == 0)
-				primarySweepDir = sweepDir;
-			Preconditions.checkState(sweepDir.exists());
-			FaultSystemSolution sweepSol = FaultSystemSolution.load(new File(sweepDir, "mean_solution.zip"));
+			File subSweepDir = new File(sweepDir, sweepPrefix+(float)bVal+sweepSuffix);
+			Preconditions.checkState(subSweepDir.exists());
+			FaultSystemSolution sweepSol = FaultSystemSolution.load(new File(subSweepDir, "mean_solution.zip"));
 			
-			File hazardDir = new File(sweepDir, "hazard");
+			File hazardDir = new File(subSweepDir, "hazard");
 			
 			System.out.println("Calculating b="+(float)bVal+" sweep hazard...");
 			SolHazardMapCalc sweepCalc = getCalcCurves(hazardDir, sweepSol, gmpeRef, periods, gridReg, maxDistance);
@@ -102,7 +118,10 @@ public class BValSweepHazardComparison {
 			MarkdownUtils.writeReadmeAndHTML(lines, hazardDir);
 		}
 		
-		File outputDir = new File(primarySweepDir, "sweep_hazard");
+		File sweepHazDir = new File(sweepDir, "sweep_hazard");
+		Preconditions.checkState(sweepHazDir.exists() || sweepHazDir.mkdir());
+		
+		File outputDir = new File(sweepHazDir, "comp_"+compDir.getName());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		double minB = StatUtils.min(bVals);
