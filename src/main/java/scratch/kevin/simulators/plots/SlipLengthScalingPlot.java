@@ -274,7 +274,7 @@ public class SlipLengthScalingPlot extends AbstractPlot {
     		double length = len*1e3;
     		double area = length*LEN_COMP_DDW*1e3;
     		for (int i=0; i<compScales.length; i++)
-    			compFuncs.get(i).set(len, compScales[i].getAveSlip(area, length, origDDW));
+    			compFuncs.get(i).set(len, compScales[i].getAveSlip(area, length, origDDW, Double.NaN));
     	}
 		
 		for (SlipAlongSectAlgorithm slipAlg : slipAlgs) {

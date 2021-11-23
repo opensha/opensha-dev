@@ -558,7 +558,7 @@ public class HazardSensitivityTest {
 				double mag=magArray[m];
 				double area = scalingRelList.get(i).getArea(mag, fltWidth);
 				double length = area/fltWidth;
-				double slip = scalingRelList.get(i).getAveSlip(area, length, fltWidth);
+				double slip = scalingRelList.get(i).getAveSlip(area, length, fltWidth, rake);
 				length *= 1e-3; // convert to km
 				double eventRate = (slipRate/slip)*(maxLengthKm/length);
 				tempRate[m] = eventRate;
@@ -885,7 +885,7 @@ public class HazardSensitivityTest {
 
 		for(int i=0;i<scalingRelList.size();i++) {
 			ScalingRelationships scaleRel = scalingRelList.get(i);
-			magArray[0] = scaleRel.getMag(12*12*1e6, 12*1e3);
+			magArray[0] = scaleRel.getMag(12*12*1e6, 12*1e3, rake);
 			for(int p=0;p<saPeriod.length;p++) {
 				for(int d=0;d<siteDistKmArray.length;d++) {
 					Location location = new Location(36+siteDistKmArray[d]/111, -120,0);	// 
@@ -905,7 +905,7 @@ public class HazardSensitivityTest {
 						double mag=grDist.getX(m);
 						double area = scaleRel.getArea(mag, fltWidth);
 						double length = area/fltWidth;
-						double slip = scaleRel.getAveSlip(area, length, fltWidth);
+						double slip = scaleRel.getAveSlip(area, length, fltWidth, rake);
 						testSlipRate+=slip*grDist.getY(m);
 					}
 					grDist.scale(slipRate/testSlipRate);
@@ -915,7 +915,7 @@ public class HazardSensitivityTest {
 						double mag=grDist.getX(m);
 						double area = scaleRel.getArea(mag, fltWidth);
 						double length = area/fltWidth;
-						double slip = scaleRel.getAveSlip(area, length, fltWidth);
+						double slip = scaleRel.getAveSlip(area, length, fltWidth, rake);
 						testSlipRate+=slip*grDist.getY(m);
 					}
 					float ratio = (float)(slipRate/testSlipRate);
@@ -938,7 +938,7 @@ public class HazardSensitivityTest {
 						double mag=magArray[m];
 						double area = scaleRel.getArea(mag, fltWidth);
 						double length = area/fltWidth;
-						double slip = scaleRel.getAveSlip(area, length, fltWidth);
+						double slip = scaleRel.getAveSlip(area, length, fltWidth, rake);
 						length *= 1e-3;
 						double eventRate = slipRate/slip;
 						tempRate[m] = eventRate;
@@ -985,7 +985,7 @@ public class HazardSensitivityTest {
 			double mag=grDist.getX(m);
 			double area = scalingRel.getArea(mag, fltWidth);
 			double length = area/fltWidth;
-			double slip = scalingRel.getAveSlip(area, length, fltWidth);
+			double slip = scalingRel.getAveSlip(area, length, fltWidth, Double.NaN);
 			testSlipRate+=slip*grDist.getY(m);
 		}
 		grDist.scale(slipRate/testSlipRate);
@@ -996,7 +996,7 @@ public class HazardSensitivityTest {
 			double mag=grDist.getX(m);
 			double area = scalingRel.getArea(mag, fltWidth);
 			double length = area/fltWidth;
-			double slip = scalingRel.getAveSlip(area, length, fltWidth);
+			double slip = scalingRel.getAveSlip(area, length, fltWidth, Double.NaN);
 			testSlipRate+=slip*grDist.getY(m);
 		}
 		
@@ -1723,7 +1723,7 @@ public static void epsilon_test_oneVsManySrc(String dirName, boolean popupWindow
 				double mag = partMFD.getX(i);
 				double area = scaleRel.getArea(mag, ddw);
 				double rupLengh = area/ddw;
-				double aveSlip = scaleRel.getAveSlip(area, rupLengh, ddw);
+				double aveSlip = scaleRel.getAveSlip(area, rupLengh, ddw, Double.NaN);
 				if(i==0)
 					System.out.println(scaleRel.getName()+" length for M "+mMin+": "+rupLengh/1e3);
 				System.out.println((float)mag+"\t"+(float)partMFD.getY(i)+"\t"+(float)aveSlip);
@@ -1813,7 +1813,7 @@ public static void epsilon_test_oneVsManySrc(String dirName, boolean popupWindow
 				double area = scaleRel.getArea(mag, ddw);
 				double rupLengh = area/ddw;
 				double partRate = grDist.getY(i)*rupLengh/maxLength;
-				double aveSlip = scaleRel.getAveSlip(area, rupLengh, ddw);
+				double aveSlip = scaleRel.getAveSlip(area, rupLengh, ddw, Double.NaN);
 				pdf.add(aveSlip, partRate);
 //				System.out.println((float)mag+"\t"+(float)partMFD.getY(i)+"\t"+(float)aveSlip);
 				tempNumHist.add(aveSlip, 1.0);

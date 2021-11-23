@@ -556,7 +556,7 @@ public class DraftModelConstraintBuilder {
 				double area = parentAreas.get(data.getParentSectionId());	// m-sq
 				double length = parentLengths.get(data.getParentSectionId()); // m
 				double width = area/length;	// km
-				maxCharMag = scalingRel.getMag(area, width);
+				maxCharMag = scalingRel.getMag(area, width, data.getAveRake());
 				maxCharMagIndex = sectNuclB1.getClosestXIndex(maxCharMag);
 				if (maxCharMagIndex < minIndex) {
 					System.err.println("WARNING: characteristic mag ("+(float)maxCharMag+") is below sect min mag ("

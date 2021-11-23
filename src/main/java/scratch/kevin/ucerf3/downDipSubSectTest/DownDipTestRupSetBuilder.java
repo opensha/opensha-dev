@@ -287,9 +287,9 @@ public class DownDipTestRupSetBuilder {
 				rupLengths[r] = totLength;
 				rupRakes[r] = FaultUtils.getInRakeRange(FaultUtils.getScaledAngleAverage(sectAreas, sectRakes));
 				double origDDW = totOrigArea/totLength;
-				rupMags[r] = scale.getMag(totArea, origDDW);
+				rupMags[r] = scale.getMag(totArea, origDDW, rupRakes[r]);
 				rupsIDsList.add(sectIDs);
-				rupAveSlips[r] = scale.getAveSlip(totArea, totLength, origDDW);
+				rupAveSlips[r] = scale.getAveSlip(totArea, totLength, origDDW, rupRakes[r]);
 			}
 			
 			String info = "Test down-dip subsectioning rup set";
