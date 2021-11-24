@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.DoubleUnaryOperator;
 import java.util.stream.Collectors;
 
 import org.apache.commons.math3.stat.StatUtils;
@@ -68,6 +69,8 @@ public class DraftModelConstraintBuilder {
 	private SubSeisMoRateReduction subSeisMoRateReduction = SupraSeisBValInversionTargetMFDs.SUB_SEIS_MO_RATE_REDUCTION_DEFAULT;
 	
 	private static final double DEFAULT_REL_STD_DEV = 0.1;
+	
+	private DoubleUnaryOperator magDepRelStdDev = M->DEFAULT_REL_STD_DEV;
 	
 	public DraftModelConstraintBuilder(FaultSystemRupSet rupSet, double supraSeisB) {
 		this(rupSet, supraSeisB, SupraSeisBValInversionTargetMFDs.APPLY_DEF_MODEL_UNCERTAINTIES_DEFAULT,
@@ -135,6 +138,11 @@ public class DraftModelConstraintBuilder {
 		return this;
 	}
 	
+	public DraftModelConstraintBuilder magDepRelStdDev(DoubleUnaryOperator magDepRelStdDev) {
+		this.magDepRelStdDev = magDepRelStdDev;
+		return this;
+	}
+	
 	private static UncertainDataConstraint parkfieldRate = 
 		new UncertainDataConstraint("Parkfield", 1d/25d, new Uncertainty(0.1d/25d));
 	
@@ -144,7 +152,7 @@ public class DraftModelConstraintBuilder {
 			SupraSeisBValInversionTargetMFDs.Builder builder = new SupraSeisBValInversionTargetMFDs.Builder(
 					rupSet, supraBVal);
 			builder.applyDefModelUncertainties(applyDefModelUncertaintiesToNucl);
-			builder.constantDefaultRelStdDev(DEFAULT_REL_STD_DEV);
+			builder.magDepDefaultRelStdDev(magDepRelStdDev);
 			builder.addSectCountUncertainties(addSectCountUncertaintiesToMFD);
 			builder.subSeisMoRateReduction(subSeisMoRateReduction);
 			if (adjustForIncompatibleData) {

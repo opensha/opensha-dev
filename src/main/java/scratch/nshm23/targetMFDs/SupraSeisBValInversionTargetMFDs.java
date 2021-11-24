@@ -59,7 +59,7 @@ public class SupraSeisBValInversionTargetMFDs extends InversionTargetMFDs.Precom
 	 * @author kevin
 	 *
 	 */
-	enum SubSeisMoRateReduction {
+	public enum SubSeisMoRateReduction {
 		/**
 		 * Fault-specific implied sub-seismogenic moment rate reduction. First, a target G-R is created with the
 		 * supplied b-value and total deformation model moment rate (after any creep reductions). That target G-R
@@ -940,11 +940,12 @@ public class SupraSeisBValInversionTargetMFDs extends InversionTargetMFDs.Precom
 		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, new CaliforniaRegions.RELM_TESTING());
 		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, 1d);
 		
-		double b = 0.8;
+		double b = 0.3d;
 		Builder builder = new Builder(rupSet, b);
 		
 		builder.sparseGR(true);
-		builder.magDepDefaultRelStdDev(M->0.1);
+//		builder.magDepDefaultRelStdDev(M->0.1);
+		builder.magDepDefaultRelStdDev(M->0.1*Math.pow(10, b*0.5*(M-6)));
 		builder.applyDefModelUncertainties(true);
 		builder.addSectCountUncertainties(false);
 		builder.totalTargetMFD(rupSet.requireModule(InversionTargetMFDs.class).getTotalRegionalMFD());

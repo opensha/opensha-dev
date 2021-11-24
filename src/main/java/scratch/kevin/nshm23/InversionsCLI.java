@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.function.DoubleUnaryOperator;
 
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
+import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
@@ -339,7 +340,7 @@ public class InversionsCLI {
 	}
 	
 	public static UCERF3InversionInputGenerator getU3Generator(FaultSystemRupSet rupSet) throws IOException {
-		U3LogicTreeBranch branch = rupSet.requireModule(U3LogicTreeBranch.class);
+		LogicTreeBranch<?> branch = rupSet.requireModule(LogicTreeBranch.class);
 		
 		InversionTargetMFDs targetMFDs = rupSet.requireModule(InversionTargetMFDs.class);
 		FaultModels fm = branch.getValue(FaultModels.class);
