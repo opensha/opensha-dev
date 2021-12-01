@@ -4,7 +4,9 @@ import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
+import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.RuptureSets;
@@ -14,8 +16,10 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.Compl
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 
+import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -27,9 +31,9 @@ import scratch.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.SubSeisMoRateR
 public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactory {
 
 	@Override
-	public FaultSystemRupSet buildRuptureSet(LogicTreeBranch<?> branch) {
+	public FaultSystemRupSet buildRuptureSet(LogicTreeBranch<?> branch, int threads) {
 		FaultSystemRupSet rupSet = new RuptureSets.U3RupSetConfig(branch.requireValue(FaultModels.class),
-				branch.requireValue(ScalingRelationships.class)).build(FaultSysTools.defaultNumThreads());
+				branch.requireValue(ScalingRelationships.class)).build(threads);
 		
 		// create equivalent U3 branch
 		U3LogicTreeBranch u3Branch = U3LogicTreeBranch.DEFAULT.copy();
@@ -45,12 +49,16 @@ public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactor
 
 	@Override
 	public InversionConfiguration buildInversionConfig(FaultSystemRupSet rupSet, LogicTreeBranch<?> branch,
-			CommandLine cmd) {
+			CommandLine cmd, int threads) {
 		double bVal = branch.requireValue(SupraSeisBValue.class).bValue;
 		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
 				true, false, true);
 		
-		constrBuilder.subSeisMoRateReduction(SubSeisMoRateReduction.SYSTEM_AVG_IMPLIED_FROM_SUPRA_B);
+		SubSeisMoRateReduction reduction = SubSeisMoRateReduction.SYSTEM_AVG_IMPLIED_FROM_SUPRA_B;
+		if (branch.hasValue(SubSeisMoRateReductionNode.class))
+			reduction = branch.getValue(SubSeisMoRateReductionNode.class).getChoice();
+		
+		constrBuilder.subSeisMoRateReduction(reduction);
 		
 		SubSectConstraintModel constrModel = branch.requireValue(SubSectConstraintModel.class);
 		
@@ -91,8 +99,7 @@ public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactor
 		
 		List<InversionConstraint> constraints = constrBuilder.build();
 		
-		int totThreads = Runtime.getRuntime().availableProcessors();
-		int avgThreads = totThreads / 4;
+		int avgThreads = threads / 4;
 		
 		CompletionCriteria completion;
 		if (constrModel == SubSectConstraintModel.NUCL_MFD)
@@ -101,13 +108,66 @@ public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactor
 			completion = TimeCompletionCriteria.getInHours(2l);
 		
 		InversionConfiguration.Builder builder = InversionConfiguration.builder(constraints, completion)
-				.threads(totThreads)
+				.threads(threads)
 				.avgThreads(avgThreads, TimeCompletionCriteria.getInMinutes(5l))
 				.perturbation(GenerationFunctionType.VARIABLE_EXPONENTIAL_SCALE)
 				.nonNegativity(NonnegativityConstraintType.TRY_ZERO_RATES_OFTEN)
 				.forCommandLine(cmd).sampler(sampler);
 		
 		return builder.build();
+	}
+
+	@Override
+	public SolutionLogicTree initSolutionLogicTree(LogicTree<?> logicTree) {
+		return new DraftSolLogicTree(logicTree);
+	}
+	
+	public static class DraftSolLogicTree extends SolutionLogicTree {
+		
+		private DraftSolLogicTree() {
+			super(null);
+		}
+		
+		public DraftSolLogicTree(LogicTree<?> logicTree) {
+			super(logicTree);
+		}
+		
+		@Override
+		public List<? extends LogicTreeLevel<?>> getLevelsForFaultSections() {
+			return List.of(getLevelForType(FaultModels.class), getLevelForType(DeformationModels.class));
+		}
+
+		@Override
+		public List<? extends LogicTreeLevel<?>> getLevelsForRuptureSectionIndices() {
+			return List.of(getLevelForType(FaultModels.class));
+		}
+
+		@Override
+		public List<? extends LogicTreeLevel<?>> getLevelsForRuptureProperties() {
+			return List.of(getLevelForType(FaultModels.class), getLevelForType(DeformationModels.class),
+					getLevelForType(ScalingRelationships.class));
+		}
+
+		@Override
+		public List<? extends LogicTreeLevel<?>> getLevelsForRuptureRates() {
+			return getLogicTree().getLevels();
+		}
+
+		@Override
+		public List<? extends LogicTreeLevel<?>> getLevelsForGridRegion() {
+			return List.of();
+		}
+
+		@Override
+		public List<? extends LogicTreeLevel<?>> getLevelsForGridMechs() {
+			return List.of();
+		}
+
+		@Override
+		public List<? extends LogicTreeLevel<?>> getLevelsForGridMFDs() {
+			return getLogicTree().getLevels();
+		}
+		
 	}
 
 }

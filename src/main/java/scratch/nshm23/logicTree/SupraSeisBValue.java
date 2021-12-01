@@ -38,7 +38,7 @@ public enum SupraSeisBValue implements LogicTreeNode {
 
 	@Override
 	public String getFilePrefix() {
-		return "supra_b="+(float)bValue;
+		return "SupraB"+(float)bValue;
 	}
 	
 	public static void main(String[] args) {

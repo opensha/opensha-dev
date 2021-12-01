@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
+import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ExceptionUtils;
@@ -16,6 +17,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeC
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 
 import com.google.common.base.Preconditions;
@@ -32,9 +34,9 @@ import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 public class U3InversionConfigFactory implements InversionConfigurationFactory {
 
 	@Override
-	public FaultSystemRupSet buildRuptureSet(LogicTreeBranch<?> branch) {
+	public FaultSystemRupSet buildRuptureSet(LogicTreeBranch<?> branch, int threads) {
 		FaultSystemRupSet rupSet = new RuptureSets.U3RupSetConfig(branch.requireValue(FaultModels.class),
-				branch.requireValue(ScalingRelationships.class)).build(FaultSysTools.defaultNumThreads());
+				branch.requireValue(ScalingRelationships.class)).build(threads);
 		
 		U3LogicTreeBranch u3Branch;
 		if (branch instanceof U3LogicTreeBranch) {
@@ -53,7 +55,7 @@ public class U3InversionConfigFactory implements InversionConfigurationFactory {
 
 	@Override
 	public InversionConfiguration buildInversionConfig(FaultSystemRupSet rupSet, LogicTreeBranch<?> branch,
-			CommandLine cmd) {
+			CommandLine cmd, int threads) {
 		List<InversionConstraint> constraints;
 		try {
 			constraints = InversionsCLI.getU3Constraints(rupSet);
@@ -61,15 +63,19 @@ public class U3InversionConfigFactory implements InversionConfigurationFactory {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
 		
-		int totThreads = Runtime.getRuntime().availableProcessors();
-		int avgThreads = totThreads / 4;
+		int avgThreads = threads / 4;
 		
 		return InversionConfiguration.builder(constraints, TimeCompletionCriteria.getInHours(5l))
-				.threads(totThreads)
+				.threads(threads)
 				.avgThreads(avgThreads, TimeCompletionCriteria.getInMinutes(5l))
 				.perturbation(GenerationFunctionType.VARIABLE_EXPONENTIAL_SCALE)
 				.nonNegativity(NonnegativityConstraintType.TRY_ZERO_RATES_OFTEN)
 				.forCommandLine(cmd).build();
+	}
+
+	@Override
+	public SolutionLogicTree initSolutionLogicTree(LogicTree<?> logicTree) {
+		return new SolutionLogicTree.UCERF3(logicTree);
 	}
 
 }

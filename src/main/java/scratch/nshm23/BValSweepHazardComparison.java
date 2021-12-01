@@ -231,7 +231,6 @@ public class BValSweepHazardComparison {
 	}
 	
 	private static final int saturation_steps = 1;
-	private static final boolean linear_mag_time_prob = false;
 	
 	private static Color saturate(Color c) {
 		int r = c.getRed();
