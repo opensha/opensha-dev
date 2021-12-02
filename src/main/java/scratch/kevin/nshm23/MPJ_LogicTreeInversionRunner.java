@@ -84,10 +84,12 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
 		
+		debug("Factory type: "+factory.getClass().getName());
+		
 		if (rank == 0) {
 			SolutionLogicTree treeWriter = factory.initSolutionLogicTree(tree);
 			if (treeWriter != null) {
-				this.postBatchHook = new AsyncLogicTreeWriter(treeWriter);
+				this.postBatchHook = new AsyncLogicTreeWriter(treeWriter, cmd.hasOption("branch-average"));
 			}
 		}
 	}
@@ -96,9 +98,12 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		
 		private AsyncSolutionLogicTree asyncWriter;
 		private CompletableFuture<?> archiveFuture;
+		private CompletableFuture<?> branchAvgFuture;
+		private boolean branchAverage;
 		
-		public AsyncLogicTreeWriter(SolutionLogicTree treeWriter) {
+		public AsyncLogicTreeWriter(SolutionLogicTree treeWriter, boolean branchAverage) {
 			super(1);
+			this.branchAverage = branchAverage;
 			asyncWriter = new AsyncSolutionLogicTree(treeWriter);
 		}
 
@@ -115,6 +120,10 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 						File outputFile = new File(outputDir+".zip");
 						debug("AsyncLogicTree: submitting async write future");
 						archiveFuture = CompletableFuture.runAsync(new AsyncWriteRunnable(asyncWriter, outputFile));
+						if (branchAverage) {
+							File baFile = new File(outputDir.getParent(), "branch_averaged.zip");
+							branchAvgFuture = CompletableFuture.runAsync(new AsyncBranchAvgRunnable(asyncWriter, baFile));
+						}
 						debug("AsyncLogicTree: submitted async write future");
 					}
 				}
@@ -129,6 +138,8 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 			debug("AsyncLogicTree: waiting on async write future");
 			try {
 				archiveFuture.get();
+				if (branchAvgFuture != null)
+					branchAvgFuture.get();
 			} catch (InterruptedException | ExecutionException e) {
 				abortAndExit(e, 1);
 			}
@@ -157,6 +168,39 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 				abortAndExit(e, 1);
 			}
 			debug("AsyncLogicTree: DONE writing");
+		}
+		
+	}
+	
+	private class AsyncBranchAvgRunnable implements Runnable {
+
+		private AsyncSolutionLogicTree asyncWriter;
+		private File outputFile;
+
+		public AsyncBranchAvgRunnable(AsyncSolutionLogicTree asyncWriter, File outputFile) {
+			this.asyncWriter = asyncWriter;
+			this.outputFile = outputFile;
+		}
+
+		@Override
+		public void run() {
+			debug("AsyncLogicTree: beginning write to "+outputFile.getAbsolutePath());
+			FaultSystemSolution avgSol;
+			try {
+				avgSol = asyncWriter.calcBranchAveraged();
+			} catch (Exception e) {
+				debug("Failed to build branch averaged solution, see error below");
+				System.out.flush();
+				e.printStackTrace();
+				System.err.flush();
+				return;
+			}
+			try {
+				avgSol.write(outputFile);
+			} catch (IOException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			debug("AsyncLogicTree: DONE writing branch averaged");
 		}
 		
 	}
@@ -395,7 +439,7 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 			
 			InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, cmd, annealingThreads);
 			
-			debug("Running inversion for task "+index);
+			debug("Running inversion for task "+index+" with "+config.getConstraints().size()+" constraints");
 			FaultSystemSolution sol = Inversions.run(rupSet, config);
 			
 			try {
@@ -424,6 +468,7 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		ops.addOption("rpb", "runs-per-branch", true, "Runs per branch (default is 1)");
 		ops.addOption("rpb", "runs-per-bundle", true, "Simultaneous runs to executure (default is 1)");
 		ops.addRequiredOption("ifc", "inversion-factory", true, "Inversion configuration factory classname");
+		ops.addOption("ba", "branch-average", false, "Flag to also build a branch-averaged solution");
 		
 		for (Option op : InversionConfiguration.createSAOptions().getOptions())
 			ops.addOption(op);

@@ -186,6 +186,7 @@ public class MPJ_LogicTreeHazardCalc extends MPJTaskCalculator {
 	@Override
 	protected void calculateBatch(int[] batch) throws Exception {
 		for (int index : batch) {
+			System.gc();
 			LogicTreeBranch<?> branch = solTree.getLogicTree().getBranch(index);
 			
 			debug("Loading index "+index+": "+branch);
@@ -195,13 +196,22 @@ public class MPJ_LogicTreeHazardCalc extends MPJTaskCalculator {
 			Region region = new ReportMetadata(new RupSetMetadata(null, sol)).region;
 			GriddedRegion gridRegion = new GriddedRegion(region, gridSpacing, GriddedRegion.ANCHOR_0_0);
 			
-			SolHazardMapCalc calc = new SolHazardMapCalc(sol, gmpeRef, gridRegion, periods);
-			calc.setMaxSourceSiteDist(maxDistance);
-			
-			calc.calcHazardCurves(getNumThreads());
-			
 			File runDir = getSolDir(branch);
-			calc.writeCurvesCSVs(runDir, "curves", true);
+			
+			SolHazardMapCalc calc = null;
+			if (runDir.exists()) {
+				// see if it's already done
+				try {
+					calc = SolHazardMapCalc.loadCurves(sol, gridRegion, periods, runDir, "curves");
+				} catch (Exception e) {}
+			}
+			if (calc == null) {
+				calc = new SolHazardMapCalc(sol, gmpeRef, gridRegion, periods);
+				calc.setMaxSourceSiteDist(maxDistance);
+				
+				calc.calcHazardCurves(getNumThreads());
+				calc.writeCurvesCSVs(runDir, "curves", true);
+			}
 			
 			for (ReturnPeriods rp : rps) {
 				for (double period : periods) {

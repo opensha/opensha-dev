@@ -49,6 +49,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
 //		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 //		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
+//		boolean branchAverage = true;
 		
 		File remoteMainDir = new File("/work/00950/kevinm/stampede2/nshm23/batch_inversions");
 		int remoteToalThreads = 48;
@@ -61,32 +62,38 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
 				StampedeScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, StampedeScriptWriter.FMPJ_HOME);
 		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
+		boolean branchAverage = false;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 //		String dirName = "2021_11_23";
 		
 //		LogicTree<U3LogicTreeBranchNode<?>> logicTree = LogicTree.buildExhaustive(
 //				U3LogicTreeBranch.getLogicTreeLevels(), true);
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
+//		dirName += "-u3_branches";
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.NoPaleoParkfieldSingleReg.class;
+//		dirName += "-no_paleo-no_parkfield-single_mfd_reg";
 ////		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 ////				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
 //		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1 };
 ////		U3LogicTreeBranchNode<?>[] required = {  };
-//		dirName += "-u3_branches";
+//		Class<? extends LogicTreeNode> sortBy = null;
 		
 		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(
 				DraftNSHM23LogicTreeBranch.levels, true);
-		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.class;
+		dirName += "-nshm23_draft_branches";
+//		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.NoPaleoParkfield.class;
+		dirName += "-no_paleo-no_parkfield";
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 //				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
 //				SubSeisMoRateReductionNode.FAULT_SPECIFIC };
-		int defaultInvMins = 3*60;
-		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
+		int defaultInvMins = 4*60;
+		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModel.class;
-		dirName += "-nshm23_draft_branches";
 		
-		if (required != null && required.length > 1) {
+		if (required != null && required.length > 0) {
 			for (LogicTreeNode node : required)
 				dirName += "-"+node.getFilePrefix();
 			logicTree = logicTree.matchingAll(required);
@@ -115,7 +122,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		nodes = Integer.min(nodes, logicTree.size());
 		
 		int nodeRounds = (int)Math.ceil((double)logicTree.size()/(double)(nodes*remoteInversionsPerBundle));
-		double calcNodes = Math.ceil((double)logicTree.size()/(double)nodeRounds);
+		double calcNodes = Math.ceil((double)logicTree.size()/(double)(nodeRounds*remoteInversionsPerBundle));
 		System.out.println("Implies "+(float)calcNodes+" nodes for "+nodeRounds+" rounds");
 		nodes = Integer.min(nodes, (int)calcNodes);
 		if (origNodes != nodes)
@@ -148,12 +155,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		File resultsDir = new File(remoteDir, "results");
 		String argz = "--logic-tree "+remoteLogicTree.getAbsolutePath();
 		argz += " --output-dir "+resultsDir.getAbsolutePath();
-		argz += " --inversion-factory "+factoryClass.getName();
+		argz += " --inversion-factory '"+factoryClass.getName()+"'"; // surround in single quotes to escape $'s
 		argz += " --annealing-threads "+annealingThreads;
 		if (remoteInversionsPerBundle > 0)
 			argz += " --runs-per-bundle "+remoteInversionsPerBundle;
 		if (completionArg != null)
 			argz += " --completion "+completionArg;
+		if (branchAverage)
+			argz += " --branch-average";
 		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(remoteInversionsPerBundle).build();
 		List<String> script = mpjWrite.buildScript(MPJ_LogicTreeInversionRunner.class.getName(), argz);
 		
@@ -173,7 +182,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 		
 		mins = (int)60*5;
-//		nodes = Integer.min(18, nodes);
+		nodes = Integer.min(40, nodes);
 		pbsWrite.writeScript(new File(localDir, "batch_hazard.slurm"), script, mins, nodes, remoteToalThreads, queue);
 	}
 

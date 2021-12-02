@@ -39,6 +39,8 @@ import java.util.zip.ZipFile;
 
 import javax.swing.JFrame;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
@@ -103,6 +105,8 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
@@ -113,6 +117,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.observedEarthquake.parsers.UCERF3_CatalogParser;
@@ -196,6 +201,7 @@ import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 import scratch.kevin.bbp.BBP_Site;
+import scratch.kevin.nshm23.InversionConfigurationFactory;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
@@ -2921,12 +2927,39 @@ public class PureScratch {
 		double constrRate = 3.1561314E-4;
 	}
 	
+	private static void test112() {
+		Options ops = new Options();
+		ops.addRequiredOption("cl", "class", true, "asdf");
+		
+		String[] args = {"--class", "scratch.kevin.nshm23.U3InversionConfigFactory$NoPaleoParkfieldSingleReg"};
+		CommandLine cmd = FaultSysTools.parseOptions(ops, args, PureScratch.class);
+		System.out.println("Class: "+cmd.getOptionValue("class"));
+		
+		InversionConfigurationFactory factory;
+		try {
+			@SuppressWarnings("unchecked")
+			Class<? extends InversionConfigurationFactory> factoryClass = (Class<? extends InversionConfigurationFactory>)
+					Class.forName(cmd.getOptionValue("class"));
+			factory = factoryClass.getDeclaredConstructor().newInstance();
+		} catch (Exception e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
+		System.out.println("Factory type: "+factory.getClass().getName());
+//		U3InversionConfigFactory factory = new U3InversionConfigFactory.NoPaleoParkfieldSingleReg();
+		
+		U3LogicTreeBranch branch = U3LogicTreeBranch.DEFAULT;
+		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, 32);
+		InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, null, 32);
+		for (InversionConstraint constraint : config.getConstraints())
+			System.out.println(constraint.getName()+" has "+constraint.getNumRows()+" rows");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test111();
+		test112();
 	}
 
 }

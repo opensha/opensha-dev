@@ -51,6 +51,14 @@ public class LogicTreeHazardCompare {
 		LogicTreeNode[] compSubsetNodes = null;
 		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_redo");
 		
+//		File mainDir = new File(invDir, "2021_11_30-nshm23_draft_branches-FM3_1-FaultSpec");
+//		String mainName = "NSHM23 Draft";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
+//		String compName = "UCERF3 Redo";
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_redo");
+		
 //		File mainDir = new File(invDir, "2021_11_24-nshm23_draft_branches-FM3_1");
 //		String mainName = "SectTotRate";
 //		LogicTreeNode[] subsetNodes = {SubSectConstraintModel.TOT_NUCL_RATE};
@@ -60,12 +68,12 @@ public class LogicTreeHazardCompare {
 //		File outputDir = new File(mainDir, "hazard_maps_sect_rate_vs_mfd");
 		
 //		File mainDir = new File(invDir, "2021_11_24-nshm23_draft_branches-FM3_1");
-////		String mainName = "NSHM23 Draft SectTotRate";
-////		LogicTreeNode[] subsetNodes = {SubSectConstraintModel.TOT_NUCL_RATE};
-////		File outputDir = new File(mainDir, "hazard_maps_sect_rate_vs_ucerf3_redo");
-//		String mainName = "NSHM23 Draft SectMFD";
-//		LogicTreeNode[] subsetNodes = {SubSectConstraintModel.NUCL_MFD};
-//		File outputDir = new File(mainDir, "hazard_maps_sect_mfd_vs_ucerf3_redo");
+//		String mainName = "NSHM23 Draft SectTotRate";
+//		LogicTreeNode[] subsetNodes = {SubSectConstraintModel.TOT_NUCL_RATE};
+//		File outputDir = new File(mainDir, "hazard_maps_sect_rate_vs_ucerf3_redo");
+////		String mainName = "NSHM23 Draft SectMFD";
+////		LogicTreeNode[] subsetNodes = {SubSectConstraintModel.NUCL_MFD};
+////		File outputDir = new File(mainDir, "hazard_maps_sect_mfd_vs_ucerf3_redo");
 //		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
 //		String compName = "UCERF3 Redo";
 //		LogicTreeNode[] compSubsetNodes = null;
