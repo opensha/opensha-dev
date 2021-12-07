@@ -39,30 +39,30 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 	public static void main(String[] args) throws IOException {
 		File localMainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
-//		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
-//		int remoteToalThreads = 20;
-//		int remoteInversionsPerBundle = 1;
-//		int remoteTotalMemGB = 55;
-//		String queue = "scec";
-//		int nodes = 38;
+		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		int remoteToalThreads = 20;
+		int remoteInversionsPerBundle = 1;
+		int remoteTotalMemGB = 55;
+		String queue = "scec";
+		int nodes = 38;
 //		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
 //				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
-//		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
-//		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
-//		boolean branchAverage = true;
-		
-		File remoteMainDir = new File("/work/00950/kevinm/stampede2/nshm23/batch_inversions");
-		int remoteToalThreads = 48;
-		int remoteInversionsPerBundle = 3;
-		int remoteTotalMemGB = 100;
-		String queue = "skx-normal";
-		int nodes = 128;
-//		String queue = "skx-dev";
-//		int nodes = 4;
 		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
-				StampedeScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, StampedeScriptWriter.FMPJ_HOME);
-		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
-		boolean branchAverage = false;
+				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.FMPJ_HOME);
+		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
+		
+//		File remoteMainDir = new File("/work/00950/kevinm/stampede2/nshm23/batch_inversions");
+//		int remoteToalThreads = 48;
+//		int remoteInversionsPerBundle = 3;
+//		int remoteTotalMemGB = 100;
+//		String queue = "skx-normal";
+//		int nodes = 128;
+////		String queue = "skx-dev";
+////		int nodes = 4;
+//		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
+//				StampedeScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, StampedeScriptWriter.FMPJ_HOME);
+//		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
+//		boolean branchAverage = false;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 //		String dirName = "2021_11_23";
@@ -90,7 +90,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
 //				SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		int defaultInvMins = 4*60;
-		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
+//		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
+		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModel.class;
 		
 		if (required != null && required.length > 0) {
@@ -149,6 +150,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		File remoteLogicTree = new File(remoteDir, localLogicTree.getName());
 		
 		mpjWrite.setClasspath(classpath);
+		if (mpjWrite instanceof MPJExpressShellScriptWriter)
+			((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
 		int annealingThreads = remoteToalThreads/remoteInversionsPerBundle;
 		
@@ -161,8 +164,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " --runs-per-bundle "+remoteInversionsPerBundle;
 		if (completionArg != null)
 			argz += " --completion "+completionArg;
-		if (branchAverage)
-			argz += " --branch-average";
 		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(remoteInversionsPerBundle).build();
 		List<String> script = mpjWrite.buildScript(MPJ_LogicTreeInversionRunner.class.getName(), argz);
 		

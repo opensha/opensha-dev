@@ -248,10 +248,6 @@ public class DraftModelConstraintBuilder {
 		
 		// we want to only grab ruptures with magnitudes below the MFD bin in which the section minimium magnitude resides
 		EvenlyDiscretizedFunc refMagFunc = SupraSeisBValInversionTargetMFDs.buildRefXValues(rupSet);
-		double halfDelta = refMagFunc.getDelta()*0.5;
-		double[] mfdMappedSectMins = new double[rupSet.getNumSections()];
-		for (int s=0; s<mfdMappedSectMins.length; s++)
-			mfdMappedSectMins[s] = refMagFunc.getX(refMagFunc.getClosestXIndex(modMinMags.getMinMagForSection(s)))-halfDelta;
 		
 		List<Integer> belowMinIndexes = new ArrayList<>();
 		float maxMin = (float)StatUtils.max(modMinMags.getMinMagForSections());
@@ -259,14 +255,7 @@ public class DraftModelConstraintBuilder {
 			double mag = rupSet.getMagForRup(r);
 			if ((float)mag >= maxMin)
 				continue;
-			boolean below = false;
-			for (int s : rupSet.getSectionsIndicesForRup(r)) {
-				if ((float)mag < (float)mfdMappedSectMins[s]) {
-					below = true;
-					break;
-				}
-			}
-			if (below)
+			if (modMinMags.isRupBelowSectMinMag(r, refMagFunc))
 				belowMinIndexes.add(r);
 		}
 		System.out.println("Found "+belowMinIndexes.size()+" ruptures below sect min mags");

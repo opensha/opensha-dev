@@ -43,13 +43,16 @@ public class LogicTreeHazardCompare {
 	public static void main(String[] args) throws IOException {
 		File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
-		File mainDir = new File(invDir, "2021_11_24-nshm23_draft_branches-FM3_1");
-		String mainName = "NSHM23 Draft";
-		LogicTreeNode[] subsetNodes = null;
-		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
-		String compName = "UCERF3 Redo";
-		LogicTreeNode[] compSubsetNodes = null;
-		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_redo");
+//		File mainDir = new File(invDir, "2021_11_24-nshm23_draft_branches-FM3_1");
+//		String mainName = "NSHM23 Draft";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
+////		String compName = "UCERF3 Redo";
+////		LogicTreeNode[] compSubsetNodes = null;
+////		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_redo");
+//		String compName = "UCERF3 As Published";
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_as_published");
 		
 //		File mainDir = new File(invDir, "2021_11_30-nshm23_draft_branches-FM3_1-FaultSpec");
 //		String mainName = "NSHM23 Draft";
@@ -77,6 +80,14 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
 //		String compName = "UCERF3 Redo";
 //		LogicTreeNode[] compSubsetNodes = null;
+		
+		File mainDir = new File(invDir, "2021_12_01-nshm23_draft_branches-no_paleo-no_parkfield-FM3_1-SysAvg");
+		String mainName = "No Paleo/Park, Single MFD NSHM23 Draft";
+		LogicTreeNode[] subsetNodes = null;
+		File compDir = new File(invDir, "2021_12_01-u3_branches-no_paleo-no_parkfield-single_mfd_reg-FM3_1-5h");
+		String compName = "UCERF3";
+		LogicTreeNode[] compSubsetNodes = null;
+		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_no_paleo_park");
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		
@@ -352,6 +363,8 @@ public class LogicTreeHazardCompare {
 				table.addLine(meanMinMaxSpreadMaps(mean, min, max, spread, name, label, prefix, resourcesDir));
 				
 				GriddedGeoDataSet cmean = null;
+				GriddedGeoDataSet cmin = null;
+				GriddedGeoDataSet cmax = null;
 				GriddedGeoDataSet cspread = null;
 				
 				if (comp != null) {
@@ -361,13 +374,31 @@ public class LogicTreeHazardCompare {
 						Preconditions.checkNotNull(cmaps[i], "map %s is null", i);
 					
 					cmean = comp.buildMean(cmaps);
-					GriddedGeoDataSet cmax = comp.buildMax(cmaps);
-					GriddedGeoDataSet cmin = comp.buildMin(cmaps);
+					cmax = comp.buildMax(cmaps);
+					cmin = comp.buildMin(cmaps);
 					cspread = comp.buildSpread(log10(cmin), log10(cmax));
 					table.addLine(meanMinMaxSpreadMaps(cmean, cmin, cmax, cspread, compName, label, prefix+"_comp", resourcesDir));
 				}
 				
-				lines.addAll(table.invert().build());
+				table.invert();
+				
+				if (cmean != null) {
+					// add min vs min and max vs max comparisons
+					table.addLine(MarkdownUtils.boldCentered("Min vs Min Comparison"),
+							MarkdownUtils.boldCentered("Max vs Max Comparison"));
+					table.initNewLine();
+					GriddedGeoDataSet pDiff = buildPDiff(min, cmin);
+					File map = mapper.plotMap(resourcesDir, prefix+"_comp_min_pDiff", pDiff, pDiffCPT, name+" vs "+compName,
+							"Min Comparison, % Difference, "+label, true);
+					table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+					pDiff = buildPDiff(max, cmax);
+					map = mapper.plotMap(resourcesDir, prefix+"_comp_max_pDiff", pDiff, pDiffCPT, name+" vs "+compName,
+							"Max Comparison, % Difference, "+label, true);
+					table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+					table.finalizeLine();
+				}
+				
+				lines.addAll(table.build());
 				
 				if (cmean != null) {
 					table = MarkdownUtils.tableBuilder();

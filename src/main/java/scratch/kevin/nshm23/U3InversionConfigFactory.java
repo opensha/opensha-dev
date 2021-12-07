@@ -25,6 +25,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.Generatio
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -83,8 +84,8 @@ public class U3InversionConfigFactory implements InversionConfigurationFactory {
 	}
 
 	@Override
-	public SolutionLogicTree initSolutionLogicTree(LogicTree<?> logicTree) {
-		return new SolutionLogicTree.UCERF3(logicTree);
+	public SolutionProcessor getSolutionLogicTreeProcessor() {
+		return new SolutionLogicTree.UCERF3_SolutionProcessor();
 	}
 	
 	public static class NoPaleoParkfieldSingleReg extends U3InversionConfigFactory {
