@@ -44,7 +44,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		int remoteInversionsPerBundle = 1;
 		int remoteTotalMemGB = 55;
 		String queue = "scec";
-		int nodes = 38;
+		int nodes = 35;
 //		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
 //				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
 		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
@@ -82,16 +82,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(
 				DraftNSHM23LogicTreeBranch.levels, true);
 		dirName += "-nshm23_draft_branches";
-//		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.class;
-		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.NoPaleoParkfield.class;
-		dirName += "-no_paleo-no_parkfield";
+		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.NoPaleoParkfield.class;
+//		dirName += "-no_paleo-no_parkfield";
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 //				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
-//		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
-//				SubSeisMoRateReductionNode.FAULT_SPECIFIC };
+		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
+				SubSeisMoRateReductionNode.SUB_B_1 };
 		int defaultInvMins = 4*60;
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
-		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
+//		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModel.class;
 		
 		if (required != null && required.length > 0) {
@@ -131,9 +131,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		String completionArg = "1m"; int invMins = 1;
 //		String completionArg = "10m"; int invMins = 10;
-//		String completionArg = "2h"; int invMins = 2*60;
+		String completionArg = "2h"; int invMins = 2*60;
 //		String completionArg = "5h"; int invMins = 5*60;
-		String completionArg = null; int invMins = defaultInvMins;
+//		String completionArg = null; int invMins = defaultInvMins;
 		
 		if (completionArg != null)
 			dirName += "-"+completionArg;

@@ -109,7 +109,12 @@ public class DraftModelConstraintBuilder {
 	}
 	
 	public DraftModelConstraintBuilder defaultDataConstraints() {
-		return slipRates().paleo().parkfield().supraBValMFDs().sectSupraRates();
+		return magDepRelStdDev(M->0.1*Math.pow(10, supraBVal*0.5*(M-6)))
+				.slipRates().weight(1d)
+				.paleoRates().weight(5d).paleoSlips().weight(5d)
+				.parkfield().weight(100d)
+				.supraBValMFDs().weight(10)
+				.sectSupraRates().weight(0.5);
 	}
 	
 	public DraftModelConstraintBuilder slipRates() {
@@ -239,7 +244,7 @@ public class DraftModelConstraintBuilder {
 	}
 	
 	public DraftModelConstraintBuilder defaultMetaConstraints() {
-		return minimizeBelowSectMinMag();
+		return supraPaleoSmooth().weight(10000);
 	}
 	
 	private List<Integer> getRupIndexesBelowMinMag() {

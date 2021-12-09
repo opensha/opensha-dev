@@ -15,7 +15,8 @@ import scratch.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.SubSeisMoRateR
 @Affects(FaultSystemSolution.RATES_FILE_NAME)
 public enum SubSeisMoRateReductionNode implements LogicTreeNode {
 	FAULT_SPECIFIC("Fault-Specific", "FaultSpec", .5d, SubSeisMoRateReduction.FAULT_SPECIFIC_IMPLIED_FROM_SUPRA_B),
-	SYSTEM_AVG("System-Average", "SysAvg", .5d, SubSeisMoRateReduction.SYSTEM_AVG_IMPLIED_FROM_SUPRA_B);
+	SYSTEM_AVG("System-Average", "SysAvg", .5d, SubSeisMoRateReduction.SYSTEM_AVG_IMPLIED_FROM_SUPRA_B),
+	SUB_B_1("Sub-Seis b=1", "SubB1", .5d, SubSeisMoRateReduction.SUB_SEIS_B_1);
 	
 	private String name;
 	private String shortName;
