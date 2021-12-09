@@ -28,6 +28,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.Generatio
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -132,69 +133,6 @@ public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactor
 		
 		return builder.build();
 	}
-
-	@Override
-	public SolutionLogicTree initSolutionLogicTree(LogicTree<?> logicTree) {
-		return new DraftSolLogicTree(logicTree);
-	}
-	
-	public static class DraftSolLogicTree extends SolutionLogicTree {
-		
-		private Map<FaultModels, PaleoseismicConstraintData> paleoDataCache;
-		
-		private DraftSolLogicTree() {
-			super(null);
-		}
-		
-		public DraftSolLogicTree(LogicTree<?> logicTree) {
-			super(logicTree);
-		}
-		
-		@Override
-		public List<? extends LogicTreeLevel<?>> getLevelsForFaultSections() {
-			return List.of(getLevelForType(FaultModels.class), getLevelForType(DeformationModels.class));
-		}
-
-		@Override
-		public List<? extends LogicTreeLevel<?>> getLevelsForRuptureSectionIndices() {
-			return List.of(getLevelForType(FaultModels.class));
-		}
-
-		@Override
-		public List<? extends LogicTreeLevel<?>> getLevelsForRuptureProperties() {
-			return List.of(getLevelForType(FaultModels.class), getLevelForType(DeformationModels.class),
-					getLevelForType(ScalingRelationships.class));
-		}
-
-		@Override
-		public List<? extends LogicTreeLevel<?>> getLevelsForRuptureRates() {
-			return getLogicTree().getLevels();
-		}
-
-		@Override
-		public List<? extends LogicTreeLevel<?>> getLevelsForGridRegion() {
-			return List.of();
-		}
-
-		@Override
-		public List<? extends LogicTreeLevel<?>> getLevelsForGridMechs() {
-			return List.of();
-		}
-
-		@Override
-		public List<? extends LogicTreeLevel<?>> getLevelsForGridMFDs() {
-			return getLogicTree().getLevels();
-		}
-
-		@Override
-		protected FaultSystemRupSet processRupSet(FaultSystemRupSet rupSet, LogicTreeBranch<?> branch) {
-			U3LogicTreeBranch u3Branch = equivU3(branch);
-			rupSet = FaultSystemRupSet.buildFromExisting(rupSet).u3BranchModules(u3Branch).build();
-			rupSet.addModule(branch);
-			return super.processRupSet(rupSet, branch);
-		}
-		
-	}
 	
 	public static class NoPaleoParkfield extends DraftNSHM23InvConfigFactory {
 
@@ -213,7 +151,8 @@ public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactor
 		File dir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2021_11_24-nshm23_draft_branches-FM3_1/");
 //				+ "2021_11_30-nshm23_draft_branches-FM3_1-FaultSpec");
-		SolutionLogicTree tree = SolutionLogicTree.load(new File(dir, "results.zip"));
+		File ltFile = new File(dir, "results.zip");
+		SolutionLogicTree tree = SolutionLogicTree.load(ltFile);
 		
 		FaultSystemSolution ba = tree.calcBranchAveraged();
 		

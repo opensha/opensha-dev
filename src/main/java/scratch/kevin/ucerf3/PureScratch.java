@@ -2954,12 +2954,71 @@ public class PureScratch {
 			System.out.println(constraint.getName()+" has "+constraint.getNumRows()+" rows");
 	}
 	
+	private static void test113() {
+		double supraB = 0.5;
+		double subB = 1d;
+		double totMoRate = 1e17;
+		
+		EvenlyDiscretizedFunc refXVals = new EvenlyDiscretizedFunc(0.05, 78, 0.1);
+		int supraIndex = 72;
+		System.out.println("Max m="+refXVals.getMaxX());
+		System.out.println("Supra m="+refXVals.getX(supraIndex));
+		
+		// start with a full G-R with the supra b-value
+		GutenbergRichterMagFreqDist fullSupraB = new GutenbergRichterMagFreqDist(
+				refXVals.getMinX(), refXVals.size(), refXVals.getDelta(), totMoRate, supraB);
+		
+		// copy it to a regular MFD:
+		IncrementalMagFreqDist fullMFD = new IncrementalMagFreqDist(refXVals.getMinX(), refXVals.size(), refXVals.getDelta());
+		for (int i=0; i<fullSupraB.size(); i++)
+			fullMFD.set(i, fullSupraB.getY(i));
+		
+		System.out.println("Orig mo rate: "+fullMFD.getTotalMomentRate());
+		
+		// now correct the sub-seis portion to have the sub-seis b-value
+		
+		// first create a full MFD with the sub b-value. this will only be used in a relative sense
+		GutenbergRichterMagFreqDist fullSubB = new GutenbergRichterMagFreqDist(
+				refXVals.getMinX(), refXVals.size(), refXVals.getDelta(), totMoRate, subB);
+		
+		double targetFirstSupra = fullSupraB.getY(supraIndex);
+		double subFirstSupra = fullSubB.getY(supraIndex);
+		for (int i=0; i<supraIndex; i++) {
+			double targetRatio = fullSubB.getY(i)/subFirstSupra;
+			fullMFD.set(i, targetFirstSupra*targetRatio);
+		}
+		
+		System.out.println("Pre-scaled mo rate: "+fullMFD.getTotalMomentRate());
+		
+		fullMFD.scaleToTotalMomentRate(totMoRate);
+		
+		System.out.println("Scaled mo rate: "+fullMFD.getTotalMomentRate());
+		
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(fullSupraB);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		
+		funcs.add(fullSubB);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE));
+		
+		funcs.add(fullMFD);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED));
+		
+		GraphWindow gw = new GraphWindow(funcs, "MFD test", chars);
+		gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+		
+		gw.setYLog(true);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test112();
+		test113();
 	}
 
 }

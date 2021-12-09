@@ -5,7 +5,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
@@ -20,9 +25,11 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -43,13 +50,25 @@ public class LogicTreeHazardCompare {
 	public static void main(String[] args) throws IOException {
 		File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
-		File mainDir = new File(invDir, "2021_11_24-nshm23_draft_branches-FM3_1");
-		String mainName = "NSHM23 Draft";
+//		File mainDir = new File(invDir, "2021_11_24-nshm23_draft_branches-FM3_1");
+//		String mainName = "NSHM23 Draft";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
+//		String compName = "UCERF3 Redo";
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_redo");
+////		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
+////		String compName = "UCERF3 As Published";
+////		LogicTreeNode[] compSubsetNodes = null;
+////		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_as_published");
+		
+		File mainDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
+		String mainName = "UCERF3 As Published";
 		LogicTreeNode[] subsetNodes = null;
-		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
-		String compName = "UCERF3 Redo";
+		File compDir = null;
+		String compName = null;
 		LogicTreeNode[] compSubsetNodes = null;
-		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_redo");
+		File outputDir = new File(mainDir, "hazard_maps");
 		
 //		File mainDir = new File(invDir, "2021_11_30-nshm23_draft_branches-FM3_1-FaultSpec");
 //		String mainName = "NSHM23 Draft";
@@ -77,6 +96,22 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
 //		String compName = "UCERF3 Redo";
 //		LogicTreeNode[] compSubsetNodes = null;
+		
+//		File mainDir = new File(invDir, "2021_12_01-nshm23_draft_branches-no_paleo-no_parkfield-FM3_1-SysAvg");
+//		String mainName = "No Paleo/Park, Single MFD NSHM23 Draft";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = new File(invDir, "2021_12_01-u3_branches-no_paleo-no_parkfield-single_mfd_reg-FM3_1-5h");
+//		String compName = "UCERF3";
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_no_paleo_park");
+		
+//		File mainDir = new File(invDir, "2021_12_03-nshm23_draft_branches-no_paleo-no_parkfield-FM3_1-FaultSpec");
+//		String mainName = "No Paleo/Park, Single MFD NSHM23 Draft";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = new File(invDir, "2021_12_01-u3_branches-no_paleo-no_parkfield-single_mfd_reg-FM3_1-5h");
+//		String compName = "UCERF3";
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_no_paleo_park");
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		
@@ -114,6 +149,7 @@ public class LogicTreeHazardCompare {
 	private CPT percentileCPT;
 	
 	private SolHazardMapCalc mapper;
+	private SolutionLogicTree solLogicTree;
 
 	public LogicTreeHazardCompare(SolutionLogicTree solLogicTree, File mapsZipFile,
 			ReturnPeriods[] rps, double[] periods, double spacing) throws IOException {
@@ -122,6 +158,7 @@ public class LogicTreeHazardCompare {
 
 	public LogicTreeHazardCompare(SolutionLogicTree solLogicTree, LogicTree<?> tree, File mapsZipFile,
 			ReturnPeriods[] rps, double[] periods, double spacing) throws IOException {
+		this.solLogicTree = solLogicTree;
 		this.rps = rps;
 		this.periods = periods;
 
@@ -203,6 +240,24 @@ public class LogicTreeHazardCompare {
 			double val = 0d;
 			for (int j=0; j<maps.length; j++)
 				val += maps[j].get(i)*weights.get(j);
+			val /= totWeight;
+			avg.set(i, val);
+		}
+		
+		return avg;
+	}
+	
+	private GriddedGeoDataSet buildMean(List<GriddedGeoDataSet> maps, List<Double> weights) {
+		GriddedGeoDataSet avg = new GriddedGeoDataSet(maps.get(0).getRegion(), false);
+		
+		double totWeight = 0d;
+		for (Double weight : weights)
+			totWeight += weight;
+		
+		for (int i=0; i<avg.size(); i++) {
+			double val = 0d;
+			for (int j=0; j<maps.size(); j++)
+				val += maps.get(j).get(i)*weights.get(j);
 			val /= totWeight;
 			avg.set(i, val);
 		}
@@ -352,6 +407,8 @@ public class LogicTreeHazardCompare {
 				table.addLine(meanMinMaxSpreadMaps(mean, min, max, spread, name, label, prefix, resourcesDir));
 				
 				GriddedGeoDataSet cmean = null;
+				GriddedGeoDataSet cmin = null;
+				GriddedGeoDataSet cmax = null;
 				GriddedGeoDataSet cspread = null;
 				
 				if (comp != null) {
@@ -361,13 +418,31 @@ public class LogicTreeHazardCompare {
 						Preconditions.checkNotNull(cmaps[i], "map %s is null", i);
 					
 					cmean = comp.buildMean(cmaps);
-					GriddedGeoDataSet cmax = comp.buildMax(cmaps);
-					GriddedGeoDataSet cmin = comp.buildMin(cmaps);
+					cmax = comp.buildMax(cmaps);
+					cmin = comp.buildMin(cmaps);
 					cspread = comp.buildSpread(log10(cmin), log10(cmax));
 					table.addLine(meanMinMaxSpreadMaps(cmean, cmin, cmax, cspread, compName, label, prefix+"_comp", resourcesDir));
 				}
 				
-				lines.addAll(table.invert().build());
+				table.invert();
+				
+				if (cmean != null) {
+					// add min vs min and max vs max comparisons
+					table.addLine(MarkdownUtils.boldCentered("Min vs Min Comparison"),
+							MarkdownUtils.boldCentered("Max vs Max Comparison"));
+					table.initNewLine();
+					GriddedGeoDataSet pDiff = buildPDiff(min, cmin);
+					File map = mapper.plotMap(resourcesDir, prefix+"_comp_min_pDiff", pDiff, pDiffCPT, name+" vs "+compName,
+							"Min Comparison, % Difference, "+label, true);
+					table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+					pDiff = buildPDiff(max, cmax);
+					map = mapper.plotMap(resourcesDir, prefix+"_comp_max_pDiff", pDiff, pDiffCPT, name+" vs "+compName,
+							"Max Comparison, % Difference, "+label, true);
+					table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+					table.finalizeLine();
+				}
+				
+				lines.addAll(table.build());
 				
 				if (cmean != null) {
 					table = MarkdownUtils.tableBuilder();
@@ -405,6 +480,67 @@ public class LogicTreeHazardCompare {
 					lines.addAll(table.build());
 				}
 				lines.add("");
+				lines.add("### "+label+" Logic Tree Comparisons");
+				lines.add(topLink);
+				lines.add("");
+				
+				for (LogicTreeLevel<?> level : solLogicTree.getLogicTree().getLevels()) {
+					HashMap<LogicTreeNode, List<GriddedGeoDataSet>> choiceMaps = new HashMap<>();
+					HashMap<LogicTreeNode, List<Double>> choiceWeights = new HashMap<>();
+					for (int i=0; i<branches.size(); i++) {
+						LogicTreeBranch<?> branch = branches.get(i);
+						LogicTreeNode choice = branch.getValue(level.getType());
+						List<GriddedGeoDataSet> myChoiceMaps = choiceMaps.get(choice);
+						if (myChoiceMaps == null) {
+							myChoiceMaps = new ArrayList<>();
+							choiceMaps.put(choice, myChoiceMaps);
+							choiceWeights.put(choice, new ArrayList<>());
+						}
+						myChoiceMaps.add(maps[i]);
+						choiceWeights.get(choice).add(weights.get(i));
+					}
+					if (choiceMaps.size() > 1) {
+						lines.add("**"+level.getName()+"**");
+						lines.add("");
+						HashMap<LogicTreeNode, GriddedGeoDataSet> choiceMeans = new HashMap<>();
+						for (LogicTreeNode choice : choiceMaps.keySet())
+							choiceMeans.put(choice, buildMean(choiceMaps.get(choice), choiceWeights.get(choice)));
+						
+						table = MarkdownUtils.tableBuilder();
+						table.initNewLine();
+						table.addColumn("**Choice**").addColumn("**Vs Mean**");
+						List<LogicTreeNode> choices = new ArrayList<>(choiceMaps.keySet());
+						Collections.sort(choices, nodeNameCompare);
+						for (LogicTreeNode choice : choices)
+							table.addColumn("**Vs "+choice.getShortName()+"**");
+						table.finalizeLine();
+						
+						MinMaxAveTracker runningDiffAvg = new MinMaxAveTracker();
+						MinMaxAveTracker runningAbsDiffAvg = new MinMaxAveTracker();
+						
+						for (LogicTreeNode choice : choices) {
+							table.initNewLine().addColumn("**"+choice.getShortName()+"**");
+							
+							GriddedGeoDataSet choiceMap = choiceMeans.get(choice);
+							table.addColumn(mapPDiffStr(choiceMap, mean, null, null));
+							
+							for (LogicTreeNode oChoice : choices) {
+								if (choice == oChoice)
+									table.addColumn("");
+								else
+									table.addColumn(mapPDiffStr(choiceMap, choiceMeans.get(oChoice),
+											runningDiffAvg, runningAbsDiffAvg));
+							}
+							
+							table.finalizeLine();
+						}
+						lines.add("");
+						lines.add("Mean absolute difference: "+twoDigits.format(runningAbsDiffAvg.getAverage())+"%");
+						lines.add("");
+						lines.addAll(table.build());
+						lines.add("");
+					}
+				}
 			}
 		}
 		
@@ -415,6 +551,41 @@ public class LogicTreeHazardCompare {
 		// write markdown
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
 	}
+	
+	private static String mapPDiffStr(GriddedGeoDataSet map, GriddedGeoDataSet ref,
+			MinMaxAveTracker runningDiffAvg, MinMaxAveTracker runningAbsDiffAvg) {
+		double mean = 0d;
+		double meanAbs = 0d;
+		for (int i=0; i<map.size(); i++) {
+			double z1 = map.get(i);
+			double z2 = ref.get(i);
+			double pDiff = 100d*(z1-z2)/z2;
+			if (z1 == z2)
+				pDiff = 0d;
+			if (Double.isFinite(pDiff)) {
+				mean += pDiff;
+				meanAbs += Math.abs(pDiff);
+				if (runningDiffAvg != null)
+					runningDiffAvg.addValue(pDiff);
+				if (runningAbsDiffAvg != null)
+					runningAbsDiffAvg.addValue(Math.abs(pDiff));
+			}
+		}
+		mean /= (double)map.size();
+		meanAbs /= (double)map.size();
+		
+		return "Mean: "+twoDigits.format(mean)+"%, Mean Abs: "+twoDigits.format(meanAbs)+"%";
+	}
+	
+	private static final DecimalFormat twoDigits = new DecimalFormat("0.00");
+	
+	private static final Comparator<LogicTreeNode> nodeNameCompare = new Comparator<LogicTreeNode>() {
+
+		@Override
+		public int compare(LogicTreeNode o1, LogicTreeNode o2) {
+			return o1.getShortName().compareTo(o2.getShortName());
+		}
+	};
 	
 	private static GriddedGeoDataSet log10(GriddedGeoDataSet map) {
 		map = map.copy();

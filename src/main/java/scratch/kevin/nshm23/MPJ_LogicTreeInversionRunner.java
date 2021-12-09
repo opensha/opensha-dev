@@ -30,7 +30,9 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurat
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.AbstractExternalFetcher;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 
 import com.google.common.base.Preconditions;
 
@@ -87,47 +89,109 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		debug("Factory type: "+factory.getClass().getName());
 		
 		if (rank == 0) {
-			SolutionLogicTree treeWriter = factory.initSolutionLogicTree(tree);
-			if (treeWriter != null) {
-				this.postBatchHook = new AsyncLogicTreeWriter(treeWriter, cmd.hasOption("branch-average"));
-			}
+			this.postBatchHook = new AsyncLogicTreeWriter(factory.getSolutionLogicTreeProcessor());
 		}
 	}
 	
 	private class AsyncLogicTreeWriter extends AsyncPostBatchHook {
 		
-		private AsyncSolutionLogicTree asyncWriter;
-		private CompletableFuture<?> archiveFuture;
-		private CompletableFuture<?> branchAvgFuture;
-		private boolean branchAverage;
+		private SolutionProcessor processor;
 		
-		public AsyncLogicTreeWriter(SolutionLogicTree treeWriter, boolean branchAverage) {
+		private Map<String, BranchAverageSolutionCreator> baCreators;
+		private SolutionLogicTree.FileBuilder sltBuilder;
+		
+		private boolean[] dones;
+		
+		public AsyncLogicTreeWriter(SolutionProcessor processor) {
 			super(1);
-			this.branchAverage = branchAverage;
-			asyncWriter = new AsyncSolutionLogicTree(treeWriter);
+			this.processor = processor;
+			this.baCreators = new HashMap<>();
+			
+			dones = new boolean[getNumTasks()];
 		}
 
 		@Override
 		protected void batchProcessedAsync(int[] batch, int processIndex) {
 			debug("AsyncLogicTree: beginning async call with batch size "
 					+batch.length+" from "+processIndex+": "+getCountsString());
-			for (int index : batch)
-				asyncWriter.calcDone(index);
 			
-			if (archiveFuture == null) {
-				synchronized (this) {
-					if (archiveFuture == null) {
-						File outputFile = new File(outputDir+".zip");
-						debug("AsyncLogicTree: submitting async write future");
-						archiveFuture = CompletableFuture.runAsync(new AsyncWriteRunnable(asyncWriter, outputFile));
-						if (branchAverage) {
-							File baFile = new File(outputDir.getParent(), "branch_averaged.zip");
-							branchAvgFuture = CompletableFuture.runAsync(new AsyncBranchAvgRunnable(asyncWriter, baFile));
+			synchronized (dones) {
+				try {
+					if (sltBuilder == null)
+						sltBuilder = new SolutionLogicTree.FileBuilder(processor,
+								new File(outputDir.getParentFile(), outputDir.getName()+".zip"));
+					
+					for (int index : batch) {
+						dones[index] = true;
+						
+						int branchIndex = branchForCalcIndex(index);
+						LogicTreeBranch<?> branch = tree.getBranch(branchIndex);
+						
+						debug("AsyncLogicTree: calcDone "+index+" = branch "+branchIndex+": "+branch);
+						
+						List<File> solFiles = new ArrayList<>();
+						for (int run=0; run<runsPerBranch; run++) {
+							int doneIndex = indexForBranchRun(branchIndex, run);
+							if (dones[doneIndex]) {
+								solFiles.add(getSolFile(branch, run));
+							} else {
+								// not all runs for this branch are done
+								debug("AsyncLogicTree: not ready, waiting on run "+run+" for branch "+branchIndex
+										+" (origIndex="+index+", checkIndex="+doneIndex+"): "+branch);
+								return;
+							}
 						}
-						debug("AsyncLogicTree: submitted async write future");
+						
+						FaultSystemSolution sol;
+						if (runsPerBranch > 1) {
+							FaultSystemSolution[] inputs = new FaultSystemSolution[solFiles.size()];
+							for (int i=0; i<inputs.length; i++)
+								inputs[i] = FaultSystemSolution.load(solFiles.get(i));
+							sol = AverageSolutionCreator.buildAverage(inputs);
+						} else {
+							sol = FaultSystemSolution.load(solFiles.get(0));
+						}
+						
+						sltBuilder.solution(sol, branch);
+						
+						// now add in to branch averaged
+						if (baCreators != null) {
+							String baPrefix = null;
+							boolean allAffect = true;
+							for (int i=0; i<branch.size(); i++) {
+								if (branch.getLevel(i).affects(FaultSystemRupSet.RUP_SECTS_FILE_NAME, true)) {
+									if (baPrefix == null)
+										baPrefix = "";
+									else
+										baPrefix += "_";
+									baPrefix += branch.getValue(i).getFilePrefix();
+								} else {
+									allAffect = false;
+								}
+							}
+							
+							if (allAffect) {
+								debug("AsyncLogicTree won't branch average, all levels affect "+FaultSystemRupSet.RUP_PROPS_FILE_NAME);
+							} else {
+								if (!baCreators.containsKey(baPrefix))
+									baCreators.put(baPrefix, new BranchAverageSolutionCreator());
+								BranchAverageSolutionCreator baCreator = baCreators.get(baPrefix);
+								try {
+									baCreator.addSolution(sol, branch);
+								} catch (Exception e) {
+									e.printStackTrace();
+									System.err.flush();
+									debug("AsyncLogicTree: Branch averaging failed for branch "+branch+", disabling averaging");
+									baCreators = null;
+								}
+							}
+						}
 					}
+				} catch (IOException ioe) {
+					abortAndExit(ioe, 2);
 				}
 			}
+			
 			debug("AsyncLogicTree: exiting async process, stats: "+getCountsString());
 		}
 
@@ -135,204 +199,32 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		public void shutdown() {
 			super.shutdown();
 			
-			debug("AsyncLogicTree: waiting on async write future");
+			debug("AsyncLogicTree: finalizing logic tree zip");
 			try {
-				archiveFuture.get();
-				if (branchAvgFuture != null)
-					branchAvgFuture.get();
-			} catch (InterruptedException | ExecutionException e) {
-				abortAndExit(e, 1);
-			}
-		}
-		
-	}
-	
-	private class AsyncWriteRunnable implements Runnable {
-
-		private AsyncSolutionLogicTree asyncWriter;
-		private File outputFile;
-
-		public AsyncWriteRunnable(AsyncSolutionLogicTree asyncWriter, File outputFile) {
-			this.asyncWriter = asyncWriter;
-			this.outputFile = outputFile;
-		}
-
-		@Override
-		public void run() {
-			debug("AsyncLogicTree: beginning write to "+outputFile.getAbsolutePath());
-			ModuleArchive<AsyncSolutionLogicTree> compoundArchive = new ModuleArchive<>();
-			compoundArchive.addModule(asyncWriter);
-			try {
-				compoundArchive.write(outputFile);
+				sltBuilder.build();
 			} catch (IOException e) {
-				abortAndExit(e, 1);
-			}
-			debug("AsyncLogicTree: DONE writing");
-		}
-		
-	}
-	
-	private class AsyncBranchAvgRunnable implements Runnable {
-
-		private AsyncSolutionLogicTree asyncWriter;
-		private File outputFile;
-
-		public AsyncBranchAvgRunnable(AsyncSolutionLogicTree asyncWriter, File outputFile) {
-			this.asyncWriter = asyncWriter;
-			this.outputFile = outputFile;
-		}
-
-		@Override
-		public void run() {
-			debug("AsyncLogicTree: beginning write to "+outputFile.getAbsolutePath());
-			FaultSystemSolution avgSol;
-			try {
-				avgSol = asyncWriter.calcBranchAveraged();
-			} catch (Exception e) {
-				debug("Failed to build branch averaged solution, see error below");
-				System.out.flush();
+				debug("AsyncLogicTree: failed to build logic tree zip");
 				e.printStackTrace();
-				System.err.flush();
-				return;
 			}
-			try {
-				avgSol.write(outputFile);
-			} catch (IOException e) {
-				throw ExceptionUtils.asRuntimeException(e);
-			}
-			debug("AsyncLogicTree: DONE writing branch averaged");
-		}
-		
-	}
-	
-	private class AsyncSolutionLogicTree extends AbstractExternalFetcher {
-
-		private SolutionLogicTree treeWriter;
-		
-		private boolean[] dones;
-		private Map<LogicTreeBranch<?>, CompletableFuture<Callable<FaultSystemSolution>>> branchFutureMap;
-
-		protected AsyncSolutionLogicTree(SolutionLogicTree treeWriter) {
-			super(treeWriter.getLogicTree());
-			this.treeWriter = treeWriter;
 			
-			dones = new boolean[getNumTasks()];
-			branchFutureMap = new HashMap<>();
-			
-			for (LogicTreeBranch<?> branch : treeWriter.getLogicTree())
-				branchFutureMap.put(branch, new CompletableFuture<>());
-		}
-		
-		void calcDone(int index) {
-			int branchIndex = branchForCalcIndex(index);
-			LogicTreeBranch<?> branch = getLogicTree().getBranch(branchIndex);
-			
-			debug("AsyncLogicTree: calcDone "+index+" = branch "+branchIndex+": "+branch);
-			
-			synchronized (dones) {
-				dones[index] = true;
-				List<File> solFiles = new ArrayList<>();
-				for (int run=0; run<runsPerBranch; run++) {
-					int doneIndex = indexForBranchRun(branchIndex, run);
-					if (dones[doneIndex]) {
-						solFiles.add(getSolFile(branch, run));
-					} else {
-						// not all runs for this branch are done
-						debug("AsyncLogicTree: not ready, waiting on run "+run+" for branch "+branchIndex
-								+" (origIndex="+index+", checkIndex="+doneIndex+"): "+branch);
-						return;
+			if (baCreators != null && !baCreators.isEmpty()) {
+				for (String baPrefix : baCreators.keySet()) {
+					String prefix = outputDir.getName();
+					if (!baPrefix.isBlank())
+						prefix += "_"+baPrefix;
+					
+					File baFile = new File(outputDir.getParentFile(), prefix+"_branch_averaged.zip");
+					debug("AsyncLogicTree: building "+baFile.getAbsolutePath());
+					try {
+						FaultSystemSolution baSol = baCreators.get(baPrefix).build();
+						baSol.write(baFile);
+					} catch (Exception e) {
+						debug("AsyncLogicTree: failed to build BA for "+baFile.getAbsolutePath());
+						e.printStackTrace();
+						continue;
 					}
 				}
-				
-				Callable<FaultSystemSolution> call;
-				if (runsPerBranch > 1) {
-					call = new Callable<FaultSystemSolution>() {
-						
-						@Override
-						public FaultSystemSolution call() throws Exception {
-							FaultSystemSolution[] inputs = new FaultSystemSolution[solFiles.size()];
-							for (int i=0; i<inputs.length; i++)
-								inputs[i] = FaultSystemSolution.load(solFiles.get(i));
-							return AverageSolutionCreator.buildAverage(inputs);
-						}
-					};
-				} else {
-					call = new Callable<FaultSystemSolution>() {
-
-						@Override
-						public FaultSystemSolution call() throws Exception {
-							return FaultSystemSolution.load(solFiles.get(0));
-						}
-						
-					};
-				}
-				
-				CompletableFuture<Callable<FaultSystemSolution>> future = branchFutureMap.get(branch);
-				Preconditions.checkNotNull(future);
-				debug("AsyncLogicTree: calcDone "+index+" = branch "+branchIndex+" is READY: "+branch);
-				future.complete(call);
-				debug("AsyncLogicTree: calcDone "+index+" = branch "+branchIndex+" is COMPLETE: "+branch);
 			}
-		}
-
-		@Override
-		protected FaultSystemSolution loadExternalForBranch(LogicTreeBranch<?> branch) throws IOException {
-			try {
-				debug("AsyncLogicTree: waiting on "+branch);
-				Callable<FaultSystemSolution> solCall = branchFutureMap.get(branch).get();
-				debug("AsyncLogicTree: loading "+branch);
-				return solCall.call();
-			} catch (Exception e) {
-				System.err.println("FAILED to load Async!!");
-				e.printStackTrace();
-				abortAndExit(e, 2);
-				throw ExceptionUtils.asRuntimeException(e);
-			}
-		}
-
-		@Override
-		public List<? extends LogicTreeLevel<?>> getLevelsAffectingFile(String fileName) {
-			return treeWriter.getLevelsAffectingFile(fileName);
-		}
-
-		@Override
-		protected List<? extends LogicTreeLevel<?>> getLevelsForFaultSections() {
-			throw new IllegalStateException();
-		}
-
-		@Override
-		protected List<? extends LogicTreeLevel<?>> getLevelsForRuptureSectionIndices() {
-			throw new IllegalStateException();
-		}
-
-		@Override
-		protected List<? extends LogicTreeLevel<?>> getLevelsForRuptureProperties() {
-			throw new IllegalStateException();
-		}
-
-		@Override
-		protected List<? extends LogicTreeLevel<?>> getLevelsForRuptureRates() {
-			throw new IllegalStateException();
-		}
-
-		@Override
-		protected List<? extends LogicTreeLevel<?>> getLevelsForGridRegion() {
-			throw new IllegalStateException();
-		}
-
-		@Override
-		protected List<? extends LogicTreeLevel<?>> getLevelsForGridMechs() {
-			throw new IllegalStateException();
-		}
-
-		@Override
-		protected List<? extends LogicTreeLevel<?>> getLevelsForGridMFDs() {
-			throw new IllegalStateException();
-		}
-
-		@Override
-		public Class<? extends ArchivableModule> getLoadingClass() {
-			return treeWriter.getLoadingClass();
 		}
 		
 	}
@@ -468,7 +360,6 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		ops.addOption("rpb", "runs-per-branch", true, "Runs per branch (default is 1)");
 		ops.addOption("rpb", "runs-per-bundle", true, "Simultaneous runs to executure (default is 1)");
 		ops.addRequiredOption("ifc", "inversion-factory", true, "Inversion configuration factory classname");
-		ops.addOption("ba", "branch-average", false, "Flag to also build a branch-averaged solution");
 		
 		for (Option op : InversionConfiguration.createSAOptions().getOptions())
 			ops.addOption(op);

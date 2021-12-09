@@ -69,6 +69,13 @@ public class SupraSeisBValInversionTargetMFDs extends InversionTargetMFDs.Precom
 		 */
 		FAULT_SPECIFIC_IMPLIED_FROM_SUPRA_B,
 		/**
+		 * Same as FAULT_SPECIFIC_IMPLIED_FROM_SUPRA_B, except that the sub-seismogenic portion of the MFD will always
+		 * have B=1
+		 * 
+		 * Target section slip rates in the rupture set will be overridden with these new targets.
+		 */
+		SUB_SEIS_B_1,
+		/**
 		 * Computes a system-wide average implied sub-seismogenic moment rate reduction, and applies it to each fault.
 		 * 
 		 * Target section slip rates in the rupture set will be overridden with these new targets.
@@ -370,6 +377,47 @@ public class SupraSeisBValInversionTargetMFDs extends InversionTargetMFDs.Precom
 					supraSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
 					for (int i=minMagIndex; i<=maxMagIndex; i++)
 						supraSeisMFD.set(i, supraGR.getY(i-minMagIndex));
+					
+					// scale target slip rates by the fraction that is supra-seismognic
+					slipRates[s] = creepReducedSlipRate*fractSupra;
+					slipRateStdDevs[s] = creepReducedSlipRateStdDev*fractSupra;
+				} else if (subSeisMoRateReduction == SubSeisMoRateReduction.SUB_SEIS_B_1) {
+					// start with a full G-R with the supra b-value
+					GutenbergRichterMagFreqDist fullSupraB = new GutenbergRichterMagFreqDist(
+							MIN_MAG, NUM_MAG, DELTA_MAG, targetMoRate, supraSeisBValue);
+					
+					// copy it to a regular MFD:
+					IncrementalMagFreqDist sectFullMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+					for (int i=0; i<fullSupraB.size(); i++)
+						sectFullMFD.set(i, fullSupraB.getY(i));
+					
+					// now correct the sub-seis portion to have the sub-seis b-value
+					
+					// first create a full MFD with the sub b-value. this will only be used in a relative sense
+					GutenbergRichterMagFreqDist fullSubB = new GutenbergRichterMagFreqDist(
+							MIN_MAG, NUM_MAG, DELTA_MAG, targetMoRate, 1d); // b=1
+					
+					double targetFirstSupra = fullSupraB.getY(minMagIndex);
+					double subFirstSupra = fullSubB.getY(minMagIndex);
+					for (int i=0; i<minMagIndex; i++) {
+						double targetRatio = fullSubB.getY(i)/subFirstSupra;
+						sectFullMFD.set(i, targetFirstSupra*targetRatio);
+					}
+					
+					// rescale to match the original moment rate
+					sectFullMFD.scaleToTotalMomentRate(targetMoRate);
+					
+					// split the target G-R into sub-seismo and supra-seismo parts
+					subSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+					for (int i=0; i<minMagIndex; i++)
+						subSeisMFD.set(i, sectFullMFD.getY(i));
+					supraSeisMFD = new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+					for (int i=minMagIndex; i<sectFullMFD.size(); i++)
+						supraSeisMFD.set(i, sectFullMFD.getY(i));
+					
+					supraMoRate = supraSeisMFD.getTotalMomentRate();
+					subMoRate = subSeisMFD.getTotalMomentRate();
+					fractSupra = supraMoRate/targetMoRate;
 					
 					// scale target slip rates by the fraction that is supra-seismognic
 					slipRates[s] = creepReducedSlipRate*fractSupra;

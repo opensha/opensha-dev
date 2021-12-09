@@ -109,7 +109,12 @@ public class DraftModelConstraintBuilder {
 	}
 	
 	public DraftModelConstraintBuilder defaultDataConstraints() {
-		return slipRates().paleo().parkfield().supraBValMFDs().sectSupraRates();
+		return magDepRelStdDev(M->0.1*Math.pow(10, supraBVal*0.5*(M-6)))
+				.slipRates().weight(1d)
+				.paleoRates().weight(5d).paleoSlips().weight(5d)
+				.parkfield().weight(100d)
+				.supraBValMFDs().weight(10)
+				.sectSupraRates().weight(0.5);
 	}
 	
 	public DraftModelConstraintBuilder slipRates() {
@@ -239,7 +244,7 @@ public class DraftModelConstraintBuilder {
 	}
 	
 	public DraftModelConstraintBuilder defaultMetaConstraints() {
-		return minimizeBelowSectMinMag();
+		return supraPaleoSmooth().weight(10000);
 	}
 	
 	private List<Integer> getRupIndexesBelowMinMag() {
@@ -248,10 +253,6 @@ public class DraftModelConstraintBuilder {
 		
 		// we want to only grab ruptures with magnitudes below the MFD bin in which the section minimium magnitude resides
 		EvenlyDiscretizedFunc refMagFunc = SupraSeisBValInversionTargetMFDs.buildRefXValues(rupSet);
-		double halfDelta = refMagFunc.getDelta()*0.5;
-		double[] mfdMappedSectMins = new double[rupSet.getNumSections()];
-		for (int s=0; s<mfdMappedSectMins.length; s++)
-			mfdMappedSectMins[s] = refMagFunc.getX(refMagFunc.getClosestXIndex(modMinMags.getMinMagForSection(s)))-halfDelta;
 		
 		List<Integer> belowMinIndexes = new ArrayList<>();
 		float maxMin = (float)StatUtils.max(modMinMags.getMinMagForSections());
@@ -259,14 +260,7 @@ public class DraftModelConstraintBuilder {
 			double mag = rupSet.getMagForRup(r);
 			if ((float)mag >= maxMin)
 				continue;
-			boolean below = false;
-			for (int s : rupSet.getSectionsIndicesForRup(r)) {
-				if ((float)mag < (float)mfdMappedSectMins[s]) {
-					below = true;
-					break;
-				}
-			}
-			if (below)
+			if (modMinMags.isRupBelowSectMinMag(r, refMagFunc))
 				belowMinIndexes.add(r);
 		}
 		System.out.println("Found "+belowMinIndexes.size()+" ruptures below sect min mags");
