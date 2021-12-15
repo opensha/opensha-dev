@@ -42,6 +42,12 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
+import org.opensha.sha.earthquake.faultSysSolution.reports.plots.FaultSectionConnectionsPlot;
+import org.opensha.sha.earthquake.faultSysSolution.reports.plots.JumpAzimuthsPlot;
+import org.opensha.sha.earthquake.faultSysSolution.reports.plots.JumpCountsOverDistancePlot;
+import org.opensha.sha.earthquake.faultSysSolution.reports.plots.PlausibilityFilterPlot;
+import org.opensha.sha.earthquake.faultSysSolution.reports.plots.PlausibilityFilterPlot.RupSetPlausibilityResult;
+import org.opensha.sha.earthquake.faultSysSolution.reports.plots.RupHistogramPlots.RakeType;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityFilter;
@@ -57,9 +63,6 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.U3
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.coulomb.U3CoulombJunctionFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ClusterConnectionStrategy;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.UCERF3ClusterConnectionStrategy;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetDiagnosticsPageGen;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetDiagnosticsPageGen.RakeType;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetDiagnosticsPageGen.RupSetPlausibilityResult;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RuptureConnectionSearch;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
@@ -179,7 +182,7 @@ public class RSQSimU3RupturePageGen {
 			rsClusterRups = rupSet.getClusterRuptures();
 		}
 		Map<Jump, List<Integer>> rsJumpsToRupsMap = new HashMap<>();
-		Map<Jump, Double> rsJumps = RupSetDiagnosticsPageGen.getJumps(sol, rsClusterRups, rsJumpsToRupsMap);
+		Map<Jump, Double> rsJumps = FaultSectionConnectionsPlot.getJumps(sol, rsClusterRups, rsJumpsToRupsMap);
 		HashSet<UniqueRupture> rsUniqueRups = new HashSet<>();
 		for (ClusterRupture rup : rsClusterRups)
 			rsUniqueRups.add(rup.unique);
@@ -196,7 +199,7 @@ public class RSQSimU3RupturePageGen {
 			u3ClusterRups.add(ClusterRupture.forOrderedSingleStrandRupture(
 					u3RupSet.getFaultSectionDataForRupture(r), distAzCalc));
 		Map<Jump, List<Integer>> u3JumpsToRupsMap = new HashMap<>();
-		Map<Jump, Double> u3Jumps = RupSetDiagnosticsPageGen.getJumps(u3Sol, u3ClusterRups, u3JumpsToRupsMap);
+		Map<Jump, Double> u3Jumps = FaultSectionConnectionsPlot.getJumps(u3Sol, u3ClusterRups, u3JumpsToRupsMap);
 		System.out.println("Detected "+u3Jumps.size()+" U3 connections");
 		
 		// we want actual catalog rupture counts before binning into U3 style ruptures
@@ -229,14 +232,14 @@ public class RSQSimU3RupturePageGen {
 				TestType.COULOMB_STRESS, 0.04, 0.04, 1.25d, true, true);
 		filters.add(new U3CoulombJunctionFilter(coulombTester, coulombRates));
 		
-		RupSetPlausibilityResult result = RupSetDiagnosticsPageGen.testRupSetPlausibility(rsClusterRups, filters, null, rsConnSearch);
-		TableBuilder table = RupSetDiagnosticsPageGen.getRupSetPlausibilityTable(result, sol, null);
+		RupSetPlausibilityResult result = PlausibilityFilterPlot.testRupSetPlausibility(rsClusterRups, filters, null, rsConnSearch);
+		TableBuilder table = PlausibilityFilterPlot.getRupSetPlausibilityTable(result, sol, null);
 		
 		// now plot
 		String title = "Rupture Plausibility Filters, M≥"+(float)minMag+", SectArea≥"+(float)minFractForInclusion;
 		String prefix = "filters_"+catParams;
 		
-		File filterPlot = RupSetDiagnosticsPageGen.plotRupSetPlausibility(result, resourcesDir, prefix, title);
+		File filterPlot = PlausibilityFilterPlot.plotRupSetPlausibility(result, resourcesDir, prefix, title);
 		
 		lines.add("## Plausibility Filter Comparisons");
 		lines.add(topLink); lines.add("");
@@ -253,9 +256,8 @@ public class RSQSimU3RupturePageGen {
 		for (float jumpDist : maxJumpDists) {
 			lines.add("");
 			System.out.println("Plotting num jumps");
-			File plotFile = RupSetDiagnosticsPageGen.plotFixedJumpDist(rupSet, sol, rsClusterRups,
-					catalogName, u3RupSet, u3Sol, u3ClusterRups, "UCERF3", distAzCalc, minMag,
-					jumpDist, resourcesDir);
+			File plotFile = JumpCountsOverDistancePlot.plotFixedJumpDist(rupSet, sol, rsClusterRups, catalogName,
+					u3RupSet, u3Sol, u3ClusterRups, "UCERF3", minMag, jumpDist, resourcesDir);
 //			File plotFile = RupSetDiagnosticsPageGen.plotFixedJumpDist(u3Sol, u3ClusterRups, sol, rsClusterRups, distAzCalc, catalogName,
 //					minMag, jumpDist, resourcesDir);
 			lines.add("![Plausibility Filter]("+resourcesDir.getName()+"/"+plotFile.getName()+")");
@@ -271,9 +273,9 @@ public class RSQSimU3RupturePageGen {
 		lines.add(topLink); lines.add("");
 		
 		Table<RakeType, RakeType, List<Double>> rsRakeAzTable =
-				RupSetDiagnosticsPageGen.calcJumpAzimuths(rsClusterRups, distAzCalc);
+				JumpAzimuthsPlot.calcJumpAzimuths(rupSet);
 		Table<RakeType, RakeType, List<Double>> u3RakeAzTable =
-				RupSetDiagnosticsPageGen.calcJumpAzimuths(u3ClusterRups, distAzCalc);
+				JumpAzimuthsPlot.calcJumpAzimuths(u3RupSet);
 		
 		for (RakeType sourceType : rakeTypes) {
 			if (sourceType == null) {
@@ -294,10 +296,10 @@ public class RSQSimU3RupturePageGen {
 			table.addLine(catalogName, "UCERF3");
 			
 			table.initNewLine();
-			File plotFile = RupSetDiagnosticsPageGen.plotJumpAzimuths(sourceType, rakeTypes, rsRakeAzTable,
+			File plotFile = JumpAzimuthsPlot.plotJumpAzimuths(sourceType, rakeTypes, rsRakeAzTable,
 					resourcesDir, prefix, title);
 			table.addColumn("!["+title+"](resources/"+plotFile.getName()+")");
-			plotFile = RupSetDiagnosticsPageGen.plotJumpAzimuths(sourceType, rakeTypes, u3RakeAzTable,
+			plotFile = JumpAzimuthsPlot.plotJumpAzimuths(sourceType, rakeTypes, u3RakeAzTable,
 					resourcesDir, "u3_"+prefix, title);
 			table.addColumn("!["+title+"](resources/"+plotFile.getName()+")");
 			table.finalizeLine();
@@ -318,7 +320,8 @@ public class RSQSimU3RupturePageGen {
 					myTitle += destType.name;
 				}
 				
-				plotFile = RupSetDiagnosticsPageGen.plotJumpAzimuthsRadial(sourceType, destType, rsRakeAzTable,
+				
+				plotFile = JumpAzimuthsPlot.plotJumpAzimuthsRadial(sourceType, destType, rsRakeAzTable,
 						resourcesDir, myPrefix, myTitle);
 				table.addColumn("!["+title+"](resources/"+plotFile.getName()+")");
 			}
@@ -334,13 +337,13 @@ public class RSQSimU3RupturePageGen {
 		Color u3Color = Color.BLUE;
 		Color bothColor = Color.GREEN.darker();
 		Region fullReg = new CaliforniaRegions.RELM_TESTING();
-		RupSetDiagnosticsPageGen.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_"+catalogTypeFileName,
+		FaultSectionConnectionsPlot.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_"+catalogTypeFileName,
 				catalogName+" Connectivity", rsJumps.keySet(), rsColor, fullReg, 800);
-		RupSetDiagnosticsPageGen.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_ucerf3",
+		FaultSectionConnectionsPlot.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_ucerf3",
 				"UCERF3 Connectivity", u3Jumps.keySet(), u3Color, fullReg, 800);
-		RupSetDiagnosticsPageGen.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_"+catalogTypeFileName+"_hires",
+		FaultSectionConnectionsPlot.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_"+catalogTypeFileName+"_hires",
 				catalogName+" Connectivity", rsJumps.keySet(), rsColor, fullReg, 3000);
-		RupSetDiagnosticsPageGen.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_ucerf3_hires",
+		FaultSectionConnectionsPlot.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_ucerf3_hires",
 				"UCERF3 Connectivity", u3Jumps.keySet(), u3Color, fullReg, 3000);
 		Map<Jump, Double> rsUniqueJumps = new HashMap<>(rsJumps);
 		Set<Jump> commonJumps = new HashSet<>();
@@ -350,17 +353,17 @@ public class RSQSimU3RupturePageGen {
 				commonJumps.add(jump);
 			}
 		}
-		RupSetDiagnosticsPageGen.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName,
+		FaultSectionConnectionsPlot.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName,
 				catalogName+" Unique Connectivity", rsUniqueJumps.keySet(), rsColor, fullReg, 800);
-		RupSetDiagnosticsPageGen.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName+"_hires",
+		FaultSectionConnectionsPlot.plotConnectivityLines(sol.getRupSet(), resourcesDir, "sect_connectivity_unique_"+catalogTypeFileName+"_hires",
 				catalogName+" Unique Connectivity", rsUniqueJumps.keySet(), rsColor, fullReg, 3000);
 		Map<Jump, Double> u3UniqueJumps = new HashMap<>(u3Jumps);
 		for (Jump jump : rsJumps.keySet())
 			if (u3UniqueJumps.containsKey(jump))
 				u3UniqueJumps.remove(jump);
-		RupSetDiagnosticsPageGen.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_unique_ucerf3",
+		FaultSectionConnectionsPlot.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_unique_ucerf3",
 				"UCERF3 Unique Connectivity", u3UniqueJumps.keySet(), u3Color, fullReg, 800);
-		RupSetDiagnosticsPageGen.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_unique_ucerf3_hires",
+		FaultSectionConnectionsPlot.plotConnectivityLines(u3Sol.getRupSet(), resourcesDir, "sect_connectivity_unique_ucerf3_hires",
 				"UCERF3 Unique Connectivity", u3UniqueJumps.keySet(), u3Color, fullReg, 3000);
 		
 		double maxConnDist = 0d;
@@ -368,24 +371,25 @@ public class RSQSimU3RupturePageGen {
 			maxConnDist = Math.max(maxConnDist, jump.distance);
 		for (Jump jump : u3Jumps.keySet())
 			maxConnDist = Math.max(maxConnDist, jump.distance);
-		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_"+catalogTypeFileName,
-				catalogName+" Connectivity", rsJumps, rsUniqueJumps, maxConnDist,
-				rsColor, false, false);
-		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_ucerf3",
-				"UCERF3 Connectivity", u3Jumps, u3UniqueJumps, maxConnDist,
-				u3Color, false, false);
-		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName,
-				catalogName+" Connectivity", rsJumps, rsUniqueJumps, maxConnDist,
-				rsColor, true, false);
-		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_ucerf3",
-				"UCERF3 Connectivity", u3Jumps, u3UniqueJumps, maxConnDist,
-				u3Color, true, false);
-		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName+"_log",
-				catalogName+" Connectivity", rsJumps, rsUniqueJumps, maxConnDist,
-				rsColor, true, true);
-		RupSetDiagnosticsPageGen.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_ucerf3_log",
-				"UCERF3 Connectivity", u3Jumps, u3UniqueJumps, maxConnDist,
-				u3Color, true, true);
+		// TODO if needed
+//		FaultSectionConnectionsPlot.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_"+catalogTypeFileName,
+//				catalogName+" Connectivity", rsJumps, rsUniqueJumps, maxConnDist,
+//				rsColor, false, false);
+//		FaultSectionConnectionsPlot.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_ucerf3",
+//				"UCERF3 Connectivity", u3Jumps, u3UniqueJumps, maxConnDist,
+//				u3Color, false, false);
+//		FaultSectionConnectionsPlot.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName,
+//				catalogName+" Connectivity", rsJumps, rsUniqueJumps, maxConnDist,
+//				rsColor, true, false);
+//		FaultSectionConnectionsPlot.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_ucerf3",
+//				"UCERF3 Connectivity", u3Jumps, u3UniqueJumps, maxConnDist,
+//				u3Color, true, false);
+//		FaultSectionConnectionsPlot.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_"+catalogTypeFileName+"_log",
+//				catalogName+" Connectivity", rsJumps, rsUniqueJumps, maxConnDist,
+//				rsColor, true, true);
+//		FaultSectionConnectionsPlot.plotConnectivityHistogram(resourcesDir, "sect_connectivity_hist_rates_ucerf3_log",
+//				"UCERF3 Connectivity", u3Jumps, u3UniqueJumps, maxConnDist,
+//				u3Color, true, true);
 		
 		lines.add("## Fault Section Connections");
 		lines.add(topLink); lines.add("");
@@ -407,9 +411,9 @@ public class RSQSimU3RupturePageGen {
 		connNames.add("Common Connections");
 		
 		String combConnPrefix = "sect_connectivity_combined";
-		RupSetDiagnosticsPageGen.plotConnectivityLines(rupSet, resourcesDir, combConnPrefix, "Combined Connectivity",
+		FaultSectionConnectionsPlot.plotConnectivityLines(rupSet, resourcesDir, combConnPrefix, "Combined Connectivity",
 				connectionsList, connectedColors, connNames, fullReg, 800);
-		RupSetDiagnosticsPageGen.plotConnectivityLines(rupSet, resourcesDir, combConnPrefix+"_hires", "Combined Connectivity",
+		FaultSectionConnectionsPlot.plotConnectivityLines(rupSet, resourcesDir, combConnPrefix+"_hires", "Combined Connectivity",
 				connectionsList, connectedColors, connNames, fullReg, 3000);
 		lines.add("![Combined]("+resourcesDir.getName()+"/"+combConnPrefix+".png)");
 		lines.add("");
@@ -466,8 +470,8 @@ public class RSQSimU3RupturePageGen {
 		lines.add("**RSQSim Ruptures with Unique Connections**");
 		int maxRups = 20;
 		int maxCols = 5;
-		table = RupSetDiagnosticsPageGen.plotConnRupExamples(rsConnSearch, rupSet, rsUniqueJumps.keySet(),
-				rsJumpsToRupsMap, maxRups, maxCols, resourcesDir, "rs_conn_example");
+		table = FaultSectionConnectionsPlot.plotConnRupExamples(rsConnSearch, rupSet, rsUniqueJumps.keySet(),
+				rsJumpsToRupsMap, maxRups, maxCols, resourcesDir, resourcesDir.getName(), "rs_conn_example");
 		lines.add("");
 		if (table == null)
 			lines.add("*N/A*");
@@ -475,8 +479,8 @@ public class RSQSimU3RupturePageGen {
 			lines.addAll(table.build());
 		lines.add("");
 		lines.add("**UCERF3 Ruptures with Unique Connections**");
-		table = RupSetDiagnosticsPageGen.plotConnRupExamples(u3ConnSearch, u3RupSet, u3UniqueJumps.keySet(),
-				u3JumpsToRupsMap, maxRups, maxCols, resourcesDir, "u3_conn_example");
+		table = FaultSectionConnectionsPlot.plotConnRupExamples(u3ConnSearch, u3RupSet, u3UniqueJumps.keySet(),
+				u3JumpsToRupsMap, maxRups, maxCols, resourcesDir, resourcesDir.getName(), "u3_conn_example");
 		lines.add("");
 		if (table == null)
 			lines.add("*N/A*");
