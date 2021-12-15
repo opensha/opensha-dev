@@ -40,6 +40,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBValuePlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -720,6 +721,24 @@ public class DraftModelConstraintBuilder {
 		constraints.add(new SectionTotalRateConstraint(rupSet, 1d,
 				ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY, targetRates, targetRateStdDevs, true));
 		return this;
+	}
+	
+	public IntegerPDF_FunctionSampler testGetJumpDistSampler(double maxJumpDist, boolean skipBelow) {
+		double[] weights = new double[rupSet.getNumRuptures()];
+		Arrays.fill(weights, 1d);
+		if (skipBelow)
+			for (int r : getRupIndexesBelowMinMag())
+				weights[r] = 0;
+		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
+		for (int r=0; r<weights.length; r++) {
+			for (Jump jump : cRups.get(r).getJumpsIterable()) {
+				if ((float)jump.distance > (float)maxJumpDist) {
+					weights[r] = 0d;
+					break;
+				}
+			}
+		}
+		return new IntegerPDF_FunctionSampler(weights);
 	}
 
 }

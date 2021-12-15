@@ -59,7 +59,7 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 			compsMap.put(comp.getRupture(), comp);
 		stdNorm = new NormalDistribution(new Well19937c(comps.size()), 0d, 1d);
 		cache = HashBasedTable.create();
-		cache = HashBasedTable.create();
+		pgvCache = HashBasedTable.create();
 	}
 	
 	public void clearCache() {

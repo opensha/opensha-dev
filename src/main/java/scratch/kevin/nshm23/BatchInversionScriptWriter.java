@@ -19,6 +19,8 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurat
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration.Builder;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.JumpProbabilityConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.JumpProbabilityConstraint.InitialModelParticipationRateEstimator;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDLaplacianSmoothingInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
@@ -38,6 +40,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeC
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -515,9 +518,9 @@ public class BatchInversionScriptWriter {
 //		allPlotLevel = null;
 		
 		/*
-		 * new NSHM23 draft scheme defaults + segmentation
+		 * new NSHM23 draft scheme defaults + new jump probability model
 		 */
-		dirName += "-"+rsPrefix+"-nshm23_draft_default-segmentation_tests";
+		dirName += "-"+rsPrefix+"-nshm23_draft_default-jump_prob_shaw07";
 		double bVal = 0.8;
 		dirName += "-supra_b_"+(float)bVal;
 		
@@ -546,18 +549,16 @@ public class BatchInversionScriptWriter {
 		for (InversionConstraint constr : constraints)
 			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
 		
-		RateCombiner combiner = RateCombiner.MIN;
-		dirName += "-combine_min";
-		
-		double r0 = 3d;
-		SegmentationModel model = new SlipRateSegmentationConstraint.Shaw07JumpDistSegModel(1, r0);
-		dirName += "-shaw_r0_"+oDF.format(r0);
-		
+		double[] r0s = { 1d, 2d, 3d, 4d, 5d, 6d };
+//		double[] weights = { 0.01, 0.05, 0.1d, 0.5, 1d, 5d, 10d };
+		double[] weights = { 0.1d, 0.5, 1d };
+//		boolean[] proxySlips = { false, true };
+		boolean[] proxySlips = { false };
 //		boolean[] ineqs = { false, true };
-		boolean[] ineqs = { false };
-		boolean[] netIncludeUnuseds = { false, true };
-		double[] netWeights = { 0d, 10d, 100d };
-		double[] indvWeights = { 0d, 1d, 10d };
+		boolean[] ineqs = { true };
+		
+		if (ineqs.length == 1 && ineqs[0])
+			dirName = dirName.replace("_shaw07", "_shaw07_ineq");
 		
 //		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
 		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
@@ -582,49 +583,206 @@ public class BatchInversionScriptWriter {
 		
 		InversionConfiguration config = builder.build();
 		
-		for (boolean ineq : ineqs) {
-			for (double netWeight : netWeights) {
-				for (double indvWeight : indvWeights) {
-					if (netWeight == 0d && indvWeight == 0d)
-						continue;
-					if (netWeight > 0d && indvWeight > netWeight)
-						// unlikely to ever have individual weight greater than net weight
-						continue;
-					boolean[] myNetIncludeUnuseds = { false };
-					if (netWeight > 0d)
-						 myNetIncludeUnuseds = netIncludeUnuseds;
-					for (boolean netIncludeUnused : myNetIncludeUnuseds) {
-						String myName = "";
-						
+		InitialModelParticipationRateEstimator initialModelEst = new InitialModelParticipationRateEstimator(
+				rupSet, Inversions.getDefaultVariablePerturbationBasis(rupSet));
+		
+		for (double r0 : r0s) {
+			Shaw07JumpDistProb model = new Shaw07JumpDistProb(1d, r0);
+//			dirName += "-shaw_r0_"+oDF.format(r0);
+			for (boolean proxySlip : proxySlips) {
+				for (double weight : weights) {
+					for (boolean ineq : ineqs) {
+						String name = "r0_"+oDF.format(r0);
 						Builder subBuilder = InversionConfiguration.builder(config);
-						if (netWeight > 0d)
-							subBuilder.add(new SlipRateSegmentationConstraint(rupSet, model, combiner,
-									netWeight, true, ineq, true, netIncludeUnused));
-						myName += "net_wt_"+(float)netWeight;
-						if (netWeight > 0d) {
-							if (netIncludeUnused)
-								myName += "_incl_unused";
-							else
-								myName += "_only_used";
+						if (proxySlip) {
+							name += "-proxy_slip";
+							subBuilder.add(new JumpProbabilityConstraint.ProxySlip(
+									weight, ineq, rupSet, model));
+						} else {
+							name += "-rel_rate";
+							subBuilder.add(new JumpProbabilityConstraint.RelativeRate(
+									weight, ineq, rupSet, model, initialModelEst));
 						}
-						if (indvWeight > 0d)
-							subBuilder.add(new SlipRateSegmentationConstraint(rupSet, model, combiner,
-									indvWeight, true, ineq));
-						myName += "-indv_wt_"+(float)indvWeight;
-						
+						name += "-wt_"+oDF.format(weight);
 						if (ineq)
-							myName += "-ineq";
+							name += "_ineq";
 						
 						configs.add(subBuilder.build());
-						subDirNames.add(myName);
+						subDirNames.add(name);
 					}
 				}
 			}
+			
 		}
 		primaryPlotLevel = avgPlotLevel;
 		allPlotLevel = avgPlotLevel;
 		avgJob = false;
 		skipSectBySect = true;
+		
+		/*
+		 * new NSHM23 draft scheme defaults + don't sample above certain jump dists
+		 */
+//		dirName += "-"+rsPrefix+"-nshm23_draft_default-jump_skip_above";
+//		double bVal = 0.8;
+//		dirName += "-supra_b_"+(float)bVal;
+//		
+//		boolean applyDefModelUncertaintiesToNucl = true;
+//		boolean addSectCountUncertaintiesToMFD = false;
+//		boolean adjustForIncompatibleData = true;
+//		
+//		double[] jumpDists;
+//		
+//		if (dirName.contains("coulomb")) {
+//			remoteAllCompFile = new File(remoteMainDir,
+//					"2021_12_08-coulomb-fm31-ref_branch-uniform-nshm23_draft_default-supra_b_0.8-2h/run_0/solution.zip");
+//			jumpDists = new double[] { 1d, 2d, 3d, 5d, 8d, 12d, 15d };
+//		} else if (dirName.contains("reproduce-ucerf3")) {
+//			remoteAllCompFile = new File(remoteMainDir,
+//					"2021_12_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft_default-supra_b_0.8-2h/run_0/solution.zip");
+//			jumpDists = new double[] { 1d, 2d, 3d, 5d };
+//		} else {
+//			throw new IllegalStateException();
+//		}
+//		remoteAllCompareName = "No-Seg-Constr";
+//
+//		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
+//				applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
+//		
+//		constrBuilder.defaultConstraints();
+//		
+//		List<InversionConstraint> constraints = constrBuilder.build();
+//		
+////		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
+//		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
+//		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
+//		
+//		for (double maxJumpDist : jumpDists) {
+//			IntegerPDF_FunctionSampler sampler = constrBuilder.testGetJumpDistSampler(maxJumpDist, true);
+//			
+//			InversionConfiguration.Builder builder = InversionConfiguration.builder(constraints, completion)
+//					.threads(remoteToalThreads).sampler(sampler);
+//			if (avgCompletion != null)
+//				builder.avgThreads(remoteToalThreads/4, avgCompletion);
+//			
+//			configs.add(builder.build());
+//			subDirNames.add("jump_"+oDF.format(maxJumpDist)+"_km");
+//		}
+//		primaryPlotLevel = avgPlotLevel;
+//		allPlotLevel = avgPlotLevel;
+//		avgJob = true;
+//		skipSectBySect = true;
+		
+		/*
+		 * new NSHM23 draft scheme defaults + prev slip rate segmentation model
+		 */
+//		dirName += "-"+rsPrefix+"-nshm23_draft_default-segmentation_tests";
+//		double bVal = 0.8;
+//		dirName += "-supra_b_"+(float)bVal;
+//		
+//		boolean applyDefModelUncertaintiesToNucl = true;
+//		boolean addSectCountUncertaintiesToMFD = false;
+//		boolean adjustForIncompatibleData = true;
+//		
+//		if (dirName.contains("coulomb"))
+//			remoteAllCompFile = new File(remoteMainDir,
+//					"2021_12_08-coulomb-fm31-ref_branch-uniform-nshm23_draft_default-supra_b_0.8-2h/run_0/solution.zip");
+//		else if (dirName.contains("reproduce-ucerf3"))
+//			remoteAllCompFile = new File(remoteMainDir,
+//					"2021_12_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft_default-supra_b_0.8-2h/run_0/solution.zip");
+//		remoteAllCompareName = "No-Seg-Constr";
+//
+//		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
+//				applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
+//		
+//		constrBuilder.defaultConstraints();
+//		
+//		IntegerPDF_FunctionSampler sampler = constrBuilder.getSkipBelowMinSampler();
+//		
+//		List<InversionConstraint> constraints = constrBuilder.build();
+//		
+//		System.out.println("Default Constraint list:");
+//		for (InversionConstraint constr : constraints)
+//			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
+//		
+//		RateCombiner combiner = RateCombiner.MIN;
+//		dirName += "-combine_min";
+//		
+//		double r0 = 3d;
+//		SegmentationModel model = new SlipRateSegmentationConstraint.Shaw07JumpDistSegModel(1, r0);
+//		dirName += "-shaw_r0_"+oDF.format(r0);
+//		
+////		boolean[] ineqs = { false, true };
+//		boolean[] ineqs = { false };
+//		boolean[] netIncludeUnuseds = { false, true };
+//		double[] netWeights = { 0d, 10d, 100d };
+//		double[] indvWeights = { 0d, 1d, 10d };
+//		
+////		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
+//		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
+//		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
+//		
+//		InversionConfiguration.Builder builder = InversionConfiguration.builder(constraints, completion)
+//				.threads(remoteToalThreads).sampler(sampler);
+//		if (avgCompletion != null)
+//			builder.avgThreads(remoteToalThreads/4, avgCompletion);
+//		
+////		dirName += "-sampler";
+////		builder.sampler(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+//		
+////		dirName += "-sampler";
+////		builder.sampler(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+//		
+////		dirName += "-initial";
+////		builder.initialSolution(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+//		
+////		dirName += "-simple_exp_perturb";
+////		builder.perturbation(GenerationFunctionType.EXPONENTIAL_SCALE);
+//		
+//		InversionConfiguration config = builder.build();
+//		
+//		for (boolean ineq : ineqs) {
+//			for (double netWeight : netWeights) {
+//				for (double indvWeight : indvWeights) {
+//					if (netWeight == 0d && indvWeight == 0d)
+//						continue;
+//					if (netWeight > 0d && indvWeight > netWeight)
+//						// unlikely to ever have individual weight greater than net weight
+//						continue;
+//					boolean[] myNetIncludeUnuseds = { false };
+//					if (netWeight > 0d)
+//						 myNetIncludeUnuseds = netIncludeUnuseds;
+//					for (boolean netIncludeUnused : myNetIncludeUnuseds) {
+//						String myName = "";
+//						
+//						Builder subBuilder = InversionConfiguration.builder(config);
+//						if (netWeight > 0d)
+//							subBuilder.add(new SlipRateSegmentationConstraint(rupSet, model, combiner,
+//									netWeight, true, ineq, true, netIncludeUnused));
+//						myName += "net_wt_"+(float)netWeight;
+//						if (netWeight > 0d) {
+//							if (netIncludeUnused)
+//								myName += "_incl_unused";
+//							else
+//								myName += "_only_used";
+//						}
+//						if (indvWeight > 0d)
+//							subBuilder.add(new SlipRateSegmentationConstraint(rupSet, model, combiner,
+//									indvWeight, true, ineq));
+//						myName += "-indv_wt_"+(float)indvWeight;
+//						
+//						if (ineq)
+//							myName += "-ineq";
+//						
+//						configs.add(subBuilder.build());
+//						subDirNames.add(myName);
+//					}
+//				}
+//			}
+//		}
+//		primaryPlotLevel = avgPlotLevel;
+//		allPlotLevel = avgPlotLevel;
+//		avgJob = false;
+//		skipSectBySect = true;
 		
 		/*
 		 * U3 constraints, but swapping in new nucleation and smoothing scheme

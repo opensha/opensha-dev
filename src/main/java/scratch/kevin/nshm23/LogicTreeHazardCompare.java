@@ -43,6 +43,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
+import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.nshm23.logicTree.SegmentationModel;
 import scratch.nshm23.logicTree.SubSectConstraintModel;
 
 public class LogicTreeHazardCompare {
@@ -62,13 +64,13 @@ public class LogicTreeHazardCompare {
 ////		LogicTreeNode[] compSubsetNodes = null;
 ////		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_as_published");
 		
-		File mainDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
-		String mainName = "UCERF3 As Published";
-		LogicTreeNode[] subsetNodes = null;
-		File compDir = null;
-		String compName = null;
-		LogicTreeNode[] compSubsetNodes = null;
-		File outputDir = new File(mainDir, "hazard_maps");
+//		File mainDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
+//		String mainName = "UCERF3 As Published";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = null;
+//		String compName = null;
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps");
 		
 //		File mainDir = new File(invDir, "2021_11_30-nshm23_draft_branches-FM3_1-FaultSpec");
 //		String mainName = "NSHM23 Draft";
@@ -112,6 +114,26 @@ public class LogicTreeHazardCompare {
 //		String compName = "UCERF3";
 //		LogicTreeNode[] compSubsetNodes = null;
 //		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_no_paleo_park");
+		
+//		File mainDir = new File(invDir, "2021_12_12-nshm23_draft_branches-coulomb-FM3_1-ZENGBB-Shaw09Mod-FaultSpec");
+//		String mainName = "CoulombRS, Zeng/ShawMod, Segmentation";
+//		LogicTreeNode[] subsetNodes = null;
+////		File compDir = new File(invDir, "2021_12_11-u3_branches-coulomb-FM3_1-ZENGBB-Shaw09Mod-5h");
+////		String compName = "CoulombRS, Zeng/ShawMod, UCERF3";
+////		LogicTreeNode[] compSubsetNodes = null;
+////		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3");
+//		File compDir = mainDir;
+//		String compName = mainName.replace("Segmentation", "No Segmentation");
+//		LogicTreeNode[] compSubsetNodes = { SegmentationModel.NONE };
+//		File outputDir = new File(mainDir, "hazard_maps_vs_no_seg");
+		
+		File mainDir = new File(invDir, "2021_12_08-nshm23_draft_branches-FM3_1-TotNuclRate-SubB1-2h");
+		String mainName = "NSHM23 Draft, Sect-Nucl-Rate, Sub-Seis b=1";
+		LogicTreeNode[] subsetNodes = null;
+		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
+		String compName = "UCERF3";
+		LogicTreeNode[] compSubsetNodes = null;
+		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3");
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		
@@ -185,7 +207,7 @@ public class LogicTreeHazardCompare {
 			
 			if (gridReg == null) {
 				FaultSystemSolution sol = solLogicTree.forBranch(branch);
-				Region region = new ReportMetadata(new RupSetMetadata(null, sol)).region;
+				Region region = ReportMetadata.detectRegion(sol);
 				gridReg = new GriddedRegion(region, spacing, GriddedRegion.ANCHOR_0_0);
 				
 				mapper = new SolHazardMapCalc(sol, null, gridReg, periods);
@@ -337,27 +359,67 @@ public class LogicTreeHazardCompare {
 	}
 	
 	private GriddedGeoDataSet calcPercentile(GriddedGeoDataSet[] maps, GriddedGeoDataSet comp) {
-		GriddedGeoDataSet ret = new GriddedGeoDataSet(maps[0].getRegion(), false);
+		return calcPercentile(List.of(maps), weights, comp);
+	}
+	
+	private GriddedGeoDataSet calcPercentile(List<GriddedGeoDataSet> maps, List<Double> weights, GriddedGeoDataSet comp) {
+		Preconditions.checkState(maps.size() == weights.size());
+		GriddedGeoDataSet ret = new GriddedGeoDataSet(maps.get(0).getRegion(), false);
+		
+		double totWeight;
+		if (weights == this.weights) {
+			totWeight = this.totWeight;
+		} else {
+			totWeight = 0d;
+			for (double weight : weights)
+				totWeight += weight;
+		}
 		
 		for (int i=0; i<ret.size(); i++) {
 			double compVal = comp.get(i);
 			double weightAbove = 0d; // weight of tree thats above comp value
+			double weightEqual = 0d; // weight of tree thats equal to comp value
+			double weightBelow = 0d; // weight of tree thats below comp value
 			int numAbove = 0;
 			int numBelow = 0;
-			for (int j=0; j<maps.length; j++) {
-				double val = maps[j].get(i);
-				if (compVal < val) {
-					weightAbove += weights.get(j);
+			for (int j=0; j<maps.size(); j++) {
+				double val = maps.get(j).get(i);
+				double weight = weights.get(j);
+				if (((float) compVal == (float)val) || (Double.isNaN(compVal)) && Double.isNaN(val)) {
+					weightEqual += weight;
+				} else if (compVal < val) {
+					weightAbove += weight;
 					numAbove++;
 				} else if (compVal > val) {
 					numBelow++;
+					weightBelow += weight;
 				}
 			}
+			if (weightEqual != 0d) {
+				// redistribute any exactly equal to either side
+				weightAbove += 0.5*weightEqual;
+				weightBelow += 0.5*weightEqual;
+			}
+			// normalize by total weight
+			weightAbove /= totWeight;
+			weightBelow /= totWeight;
 			double percentile;
-			if (numAbove == maps.length || numBelow == maps.length)
+			if (numAbove == maps.size() || numBelow == maps.size())
 				percentile = Double.NaN;
 			else
-				percentile = 100d*(1d-weightAbove/totWeight);
+				percentile = 100d*weightBelow;
+//			if (numAbove == maps.size() || numBelow == maps.size()) {
+//				percentile = Double.NaN;
+//			} else if (weightAbove > weightBelow) {
+//				// more of the distribution is above my value
+//				// this means that the percentile is <50
+//				percentile = 100d*weightBelow/totWeight;
+//			} else {
+//				// more of the distribution is below my value
+//				// this means that the percentile is >50
+//				percentile = 100d*weightAbove/totWeight;
+//				percentile = 100d*(1d - (weightAbove/totWeight));
+//			}
 			ret.set(i, percentile);
 		}
 		
@@ -481,7 +543,24 @@ public class LogicTreeHazardCompare {
 				}
 				lines.add("");
 				lines.add("### "+label+" Logic Tree Comparisons");
-				lines.add(topLink);
+				lines.add(topLink); lines.add("");
+				
+				// plot mean percentile
+				table = MarkdownUtils.tableBuilder();
+				
+				File meanMap = new File(outputDir, prefix+"_mean.png");
+				GriddedGeoDataSet meanPercentile = calcPercentile(maps, mean);
+				File meanPercentileMap = mapper.plotMap(resourcesDir, prefix+"_mean_percentile",
+						meanPercentile, percentileCPT, "Branch-Averaged Percentiles",
+						"Branch Averaged %-ile, "+label);
+				table.addLine("Branch Averaged Map", "Branch Averaged Percentiles");
+				table.addLine("![BA map]("+resourcesDir.getName()+"/"+meanMap.getName()+")",
+						"![BA percentiles]("+resourcesDir.getName()+"/"+meanPercentileMap.getName()+")");
+				lines.add("Branched-average hazard can be dominated by outlier branches. This map shows the percentile"
+						+ " at which the branch averaged map lies; areas far from the 50-th percentile are likely "
+						+ "outlier-dominated.");
+				lines.add("");
+				lines.addAll(table.build());
 				lines.add("");
 				
 				for (LogicTreeLevel<?> level : solLogicTree.getLogicTree().getLevels()) {
@@ -500,8 +579,8 @@ public class LogicTreeHazardCompare {
 						choiceWeights.get(choice).add(weights.get(i));
 					}
 					if (choiceMaps.size() > 1) {
-						lines.add("**"+level.getName()+"**");
-						lines.add("");
+						lines.add("#### "+level.getName());
+						lines.add(topLink); lines.add("");
 						HashMap<LogicTreeNode, GriddedGeoDataSet> choiceMeans = new HashMap<>();
 						for (LogicTreeNode choice : choiceMaps.keySet())
 							choiceMeans.put(choice, buildMean(choiceMaps.get(choice), choiceWeights.get(choice)));
@@ -514,6 +593,10 @@ public class LogicTreeHazardCompare {
 						for (LogicTreeNode choice : choices)
 							table.addColumn("**Vs "+choice.getShortName()+"**");
 						table.finalizeLine();
+						
+						TableBuilder mapTable = MarkdownUtils.tableBuilder();
+						mapTable.addLine("", "Choice Mean vs Full Mean", "Choice Percentile in Full Dist", 
+								"Choice Percentile in Dist Without");
 						
 						MinMaxAveTracker runningDiffAvg = new MinMaxAveTracker();
 						MinMaxAveTracker runningAbsDiffAvg = new MinMaxAveTracker();
@@ -533,11 +616,43 @@ public class LogicTreeHazardCompare {
 							}
 							
 							table.finalizeLine();
+							
+							// now maps
+							GriddedGeoDataSet pDiff = buildPDiff(mean, choiceMap);
+							
+							mapTable.initNewLine().addColumn("**"+choice.getShortName()+"**");
+							File map = mapper.plotMap(resourcesDir, prefix+"_"+choice.getFilePrefix()+"_pDiff",
+									pDiff, pDiffCPT, choice.getShortName()+" Comparison",
+									choice.getShortName()+" - Mean, % Difference, "+label, true);
+							mapTable.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+							GriddedGeoDataSet percentile = calcPercentile(maps, choiceMap);
+							map = mapper.plotMap(resourcesDir, prefix+"_"+choice.getFilePrefix()+"_percentile",
+									percentile, percentileCPT, choice.getShortName()+" Comparison",
+									choice.getShortName()+" %-ile, "+label);
+							mapTable.addColumn("![Percentile Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+							List<GriddedGeoDataSet> mapsWithout = new ArrayList<>();
+							List<Double> weightsWithout = new ArrayList<>();
+							for (int i=0; i<branches.size(); i++) {
+								LogicTreeBranch<?> branch = branches.get(i);
+								if (!branch.hasValue(choice)) {
+									mapsWithout.add(maps[i]);
+									weightsWithout.add(weights.get(i));
+								}
+							}
+							Preconditions.checkState(!mapsWithout.isEmpty());
+							GriddedGeoDataSet percentileWithout = calcPercentile(mapsWithout, weightsWithout, choiceMap);
+							map = mapper.plotMap(resourcesDir, prefix+"_"+choice.getFilePrefix()+"_percentile_without",
+									percentileWithout, percentileCPT, choice.getShortName()+" Comparison",
+									choice.getShortName()+" %-ile, "+label);
+							mapTable.addColumn("![Percentile Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+							mapTable.finalizeLine();
 						}
 						lines.add("");
 						lines.add("Mean absolute difference: "+twoDigits.format(runningAbsDiffAvg.getAverage())+"%");
 						lines.add("");
 						lines.addAll(table.build());
+						lines.add("");
+						lines.addAll(mapTable.build());
 						lines.add("");
 					}
 				}
@@ -601,6 +716,10 @@ public class LogicTreeHazardCompare {
 		File map = mapper.plotMap(resourcesDir, prefix+"_mean", log10(mean), logCPT, title, "Log10 Weighted-Average, "+label);
 		ret.add("![Mean Map]("+resourcesDir.getName()+"/"+map.getName()+")");
 		
+		ret.add(MarkdownUtils.boldCentered("Spread"));
+		map = mapper.plotMap(resourcesDir, prefix+"_spread", spread, spreadCPT, title, "Log10 Spread, "+label);
+		ret.add("![Spread Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+		
 		ret.add(MarkdownUtils.boldCentered("Minimum"));
 		map = mapper.plotMap(resourcesDir, prefix+"_min", log10(min), logCPT, title, "Log10 Min, "+label);
 		ret.add("![Min Map]("+resourcesDir.getName()+"/"+map.getName()+")");
@@ -608,10 +727,6 @@ public class LogicTreeHazardCompare {
 		ret.add(MarkdownUtils.boldCentered("Maximum"));
 		map = mapper.plotMap(resourcesDir, prefix+"_max", log10(max), logCPT, title, "Log10 Max, "+label);
 		ret.add("![Max Map]("+resourcesDir.getName()+"/"+map.getName()+")");
-		
-		ret.add(MarkdownUtils.boldCentered("Spread"));
-		map = mapper.plotMap(resourcesDir, prefix+"_spread", spread, spreadCPT, title, "Log10 Spread, "+label);
-		ret.add("![Spread Map]("+resourcesDir.getName()+"/"+map.getName()+")");
 		
 		return ret;
 	}

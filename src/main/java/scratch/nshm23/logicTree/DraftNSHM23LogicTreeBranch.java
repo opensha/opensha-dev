@@ -25,6 +25,7 @@ public class DraftNSHM23LogicTreeBranch extends LogicTreeBranch<LogicTreeNode> {
 		levels.add(LogicTreeLevel.forEnum(SupraSeisBValue.class, "Supra-Seis b-value", "SupraB"));
 		levels.add(LogicTreeLevel.forEnum(SubSectConstraintModel.class, "Sub-Sect Constraint Model", "SectConstr"));
 		levels.add(LogicTreeLevel.forEnum(SubSeisMoRateReductionNode.class, "Sub-Sect Moment Rate Reduction", "SectMoRed"));
+		levels.add(LogicTreeLevel.forEnum(SegmentationModel.class, "Segmentation Model", "SegModel"));
 	}
 	
 	private DraftNSHM23LogicTreeBranch() {

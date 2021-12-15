@@ -93,7 +93,7 @@ public class SupraSeisBValInversionTargetMFDs extends InversionTargetMFDs.Precom
 		NONE
 	}
 	
-	public static SubSeisMoRateReduction SUB_SEIS_MO_RATE_REDUCTION_DEFAULT = SubSeisMoRateReduction.FAULT_SPECIFIC_IMPLIED_FROM_SUPRA_B;
+	public static SubSeisMoRateReduction SUB_SEIS_MO_RATE_REDUCTION_DEFAULT = SubSeisMoRateReduction.SUB_SEIS_B_1;
 	
 	/**
 	 * Default relative standard deviation as a function of magnitude: constant (10%)

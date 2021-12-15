@@ -2,9 +2,11 @@ package scratch.nshm23.logicTree;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.apache.commons.cli.CommandLine;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
@@ -16,8 +18,13 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RuptureSets;
+import org.opensha.sha.earthquake.faultSysSolution.RuptureSets.CoulombRupSetConfig;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.JumpProbabilityConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.JumpProbabilityConstraint.InitialModelParticipationRateEstimator;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.JumpProbabilityConstraint.RelativeRate;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.LaplacianSmoothingInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoSlipInversionConstraint;
@@ -29,6 +36,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.Nonnegati
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -38,22 +46,22 @@ import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.kevin.nshm23.InversionConfigurationFactory;
 import scratch.nshm23.targetMFDs.DraftModelConstraintBuilder;
+import scratch.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import scratch.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.SubSeisMoRateReduction;
 
 public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactory {
+	
+	protected FaultSystemRupSet buildGenericRupSet(LogicTreeBranch<?> branch, int threads) {
+		return new RuptureSets.U3RupSetConfig(branch.requireValue(FaultModels.class),
+					branch.requireValue(ScalingRelationships.class)).build(threads);
+	}
 
 	@Override
 	public FaultSystemRupSet buildRuptureSet(LogicTreeBranch<?> branch, int threads) {
-		FaultSystemRupSet rupSet = new RuptureSets.U3RupSetConfig(branch.requireValue(FaultModels.class),
-				branch.requireValue(ScalingRelationships.class)).build(threads);
+		// build empty-ish rup set without modules attached
+		FaultSystemRupSet rupSet = buildGenericRupSet(branch, threads);
 		
-		// create equivalent U3 branch
-		U3LogicTreeBranch u3Branch = equivU3(branch);
-		
-		System.out.println("Equivalent U3 branch: "+u3Branch);
-		rupSet = FaultSystemRupSet.buildFromExisting(rupSet).forU3Branch(u3Branch).build();
-		rupSet.addModule(branch);
-		return rupSet;
+		return getSolutionLogicTreeProcessor().processRupSet(rupSet, branch);
 	}
 	
 	private static U3LogicTreeBranch equivU3(LogicTreeBranch<?> branch) {
@@ -65,13 +73,39 @@ public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactor
 	}
 
 	@Override
+	public SolutionProcessor getSolutionLogicTreeProcessor() {
+		return InversionConfigurationFactory.super.getSolutionLogicTreeProcessor();
+	}
+	
+	private static class DraftNSHM23SolProcessor implements SolutionProcessor {
+
+		@Override
+		public FaultSystemRupSet processRupSet(FaultSystemRupSet rupSet, LogicTreeBranch<?> branch) {
+			// create equivalent U3 branch
+			U3LogicTreeBranch u3Branch = equivU3(branch);
+			
+			System.out.println("Equivalent U3 branch: "+u3Branch);
+			// attach U3 modules
+			rupSet = FaultSystemRupSet.buildFromExisting(rupSet).forU3Branch(u3Branch).build();
+			rupSet.addModule(branch);
+			return rupSet;
+		}
+
+		@Override
+		public FaultSystemSolution processSolution(FaultSystemSolution sol, LogicTreeBranch<?> branch) {
+			return sol;
+		}
+		
+	}
+
+	@Override
 	public InversionConfiguration buildInversionConfig(FaultSystemRupSet rupSet, LogicTreeBranch<?> branch,
 			CommandLine cmd, int threads) {
 		double bVal = branch.requireValue(SupraSeisBValue.class).bValue;
 		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
 				true, false, true);
 		
-		SubSeisMoRateReduction reduction = SubSeisMoRateReduction.SYSTEM_AVG_IMPLIED_FROM_SUPRA_B;
+		SubSeisMoRateReduction reduction = SupraSeisBValInversionTargetMFDs.SUB_SEIS_MO_RATE_REDUCTION_DEFAULT;
 		if (branch.hasValue(SubSeisMoRateReductionNode.class))
 			reduction = branch.getValue(SubSeisMoRateReductionNode.class).getChoice();
 		
@@ -116,6 +150,22 @@ public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactor
 		
 		List<InversionConstraint> constraints = constrBuilder.build();
 		
+		SegmentationModel segModel = branch.getValue(SegmentationModel.class);
+		if (segModel != null && segModel != SegmentationModel.NONE) {
+			constraints = new ArrayList<>(constraints);
+			
+			InitialModelParticipationRateEstimator rateEst = new InitialModelParticipationRateEstimator(
+					rupSet, Inversions.getDefaultVariablePerturbationBasis(rupSet));
+
+//			double weight = 0.5d;
+//			boolean ineq = false;
+			double weight = 1d;
+			boolean ineq = true;
+			
+			constraints.add(new JumpProbabilityConstraint.RelativeRate(
+					weight, ineq, rupSet, segModel.getModel(rupSet), rateEst));
+		}
+		
 		int avgThreads = threads / 4;
 		
 		CompletionCriteria completion;
@@ -143,6 +193,65 @@ public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactor
 			return InversionConfiguration.builder(config).except(PaleoRateInversionConstraint.class)
 				.except(PaleoSlipInversionConstraint.class).except(ParkfieldInversionConstraint.class)
 				.except(LaplacianSmoothingInversionConstraint.class).build();
+		}
+		
+	}
+	
+	public static class CoulombRupSet extends DraftNSHM23InvConfigFactory {
+		
+		Map<FaultModels, FaultSystemRupSet> rupSetCache = new HashMap<>();
+
+		@Override
+		protected synchronized FaultSystemRupSet buildGenericRupSet(LogicTreeBranch<?> branch, int threads) {
+			FaultModels fm = branch.requireValue(FaultModels.class);
+			// check cache
+			FaultSystemRupSet rupSet = rupSetCache.get(fm);
+			if (rupSet != null)
+				return rupSet;
+			// need to build one
+			rupSet = new RuptureSets.CoulombRupSetConfig(fm,
+					branch.requireValue(ScalingRelationships.class)).build(threads);
+			// cache it
+			rupSetCache.put(fm, rupSet);
+			return rupSet;
+		}
+
+		@Override
+		public SolutionProcessor getSolutionLogicTreeProcessor() {
+			return new DraftCoulombNSHM23SolProcessor();
+		}
+		
+	}
+	
+	private static class DraftCoulombNSHM23SolProcessor extends DraftNSHM23SolProcessor {
+		
+		Map<FaultModels, PlausibilityConfiguration> configCache = new HashMap<>();
+
+		@Override
+		public FaultSystemRupSet processRupSet(FaultSystemRupSet rupSet, LogicTreeBranch<?> branch) {
+			rupSet = super.processRupSet(rupSet, branch);
+			if (!rupSet.hasModule(PlausibilityConfiguration.class)) {
+				// for branch averaging
+				rupSet.addAvailableModule(new Callable<PlausibilityConfiguration>() {
+
+					@Override
+					public PlausibilityConfiguration call() throws Exception {
+						FaultModels fm = branch.requireValue(FaultModels.class);
+						PlausibilityConfiguration config;
+						synchronized (configCache) {
+							config = configCache.get(fm);
+							if (config == null) {
+								config = new RuptureSets.CoulombRupSetConfig(fm,
+										branch.requireValue(ScalingRelationships.class)).getPlausibilityConfig();
+								configCache.put(fm, config);
+							}
+						}
+						return config;
+					}
+				}, PlausibilityConfiguration.class);
+				
+			}
+			return rupSet;
 		}
 		
 	}

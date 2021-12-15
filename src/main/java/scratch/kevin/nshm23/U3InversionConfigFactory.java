@@ -2,7 +2,10 @@ package scratch.kevin.nshm23;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.apache.commons.cli.CommandLine;
 import org.opensha.commons.data.region.CaliforniaRegions;
@@ -26,6 +29,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.Nonnegati
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -42,11 +46,16 @@ import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 
 public class U3InversionConfigFactory implements InversionConfigurationFactory {
+	
+	protected FaultSystemRupSet buildGenericRupSet(LogicTreeBranch<?> branch, int threads) {
+		return new RuptureSets.U3RupSetConfig(branch.requireValue(FaultModels.class),
+					branch.requireValue(ScalingRelationships.class)).build(threads);
+	}
 
 	@Override
 	public FaultSystemRupSet buildRuptureSet(LogicTreeBranch<?> branch, int threads) {
-		FaultSystemRupSet rupSet = new RuptureSets.U3RupSetConfig(branch.requireValue(FaultModels.class),
-				branch.requireValue(ScalingRelationships.class)).build(threads);
+		// build empty-ish rup set without modules attached
+		FaultSystemRupSet rupSet = buildGenericRupSet(branch, threads);
 		
 		U3LogicTreeBranch u3Branch;
 		if (branch instanceof U3LogicTreeBranch) {
@@ -118,6 +127,55 @@ public class U3InversionConfigFactory implements InversionConfigurationFactory {
 			for (MFDInversionConstraint constr : singleRegionConstrs)
 				builder.add(constr);
 			return builder.build();
+		}
+		
+	}
+	
+	public static class CoulombRupSet extends U3InversionConfigFactory {
+		
+		Map<FaultModels, FaultSystemRupSet> rupSetCache = new HashMap<>();
+
+		@Override
+		protected synchronized FaultSystemRupSet buildGenericRupSet(LogicTreeBranch<?> branch, int threads) {
+			FaultModels fm = branch.requireValue(FaultModels.class);
+			// check cache
+			FaultSystemRupSet rupSet = rupSetCache.get(fm);
+			if (rupSet != null)
+				return rupSet;
+			// need to build one
+			rupSet = new RuptureSets.CoulombRupSetConfig(fm,
+					branch.requireValue(ScalingRelationships.class)).build(threads);
+			// cache it
+			rupSetCache.put(fm, rupSet);
+			return rupSet;
+		}
+
+		@Override
+		public SolutionProcessor getSolutionLogicTreeProcessor() {
+			return new CoulombU3SolProcessor();
+		}
+		
+	}
+	
+	private static class CoulombU3SolProcessor extends SolutionLogicTree.UCERF3_SolutionProcessor {
+
+		@Override
+		public FaultSystemRupSet processRupSet(FaultSystemRupSet rupSet, LogicTreeBranch<?> branch) {
+			rupSet = super.processRupSet(rupSet, branch);
+			if (!rupSet.hasModule(PlausibilityConfiguration.class)) {
+				// for branch averaging
+				rupSet.addAvailableModule(new Callable<PlausibilityConfiguration>() {
+
+					@Override
+					public PlausibilityConfiguration call() throws Exception {
+						FaultModels fm = branch.requireValue(FaultModels.class);
+						return new RuptureSets.CoulombRupSetConfig(fm,
+								branch.requireValue(ScalingRelationships.class)).getPlausibilityConfig();
+					}
+				}, PlausibilityConfiguration.class);
+				
+			}
+			return rupSet;
 		}
 		
 	}

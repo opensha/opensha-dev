@@ -31,6 +31,7 @@ import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.nshm23.logicTree.DraftNSHM23InvConfigFactory;
 import scratch.nshm23.logicTree.DraftNSHM23LogicTreeBranch;
+import scratch.nshm23.logicTree.SegmentationModel;
 import scratch.nshm23.logicTree.SubSectConstraintModel;
 import scratch.nshm23.logicTree.SubSeisMoRateReductionNode;
 
@@ -71,24 +72,44 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3LogicTreeBranch.getLogicTreeLevels(), true);
 //		dirName += "-u3_branches";
 ////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.NoPaleoParkfieldSingleReg.class;
-//		dirName += "-no_paleo-no_parkfield-single_mfd_reg";
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.NoPaleoParkfieldSingleReg.class;
+////		dirName += "-no_paleo-no_parkfield-single_mfd_reg";
+//		
+//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.CoulombRupSet.class;
+//		dirName += "-coulomb";
+//		
 ////		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 ////				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
-//		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1 };
+//		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB,
+//				ScalingRelationships.SHAW_2009_MOD };
+////		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1 };
 ////		U3LogicTreeBranchNode<?>[] required = {  };
 //		Class<? extends LogicTreeNode> sortBy = null;
 		
 		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(
 				DraftNSHM23LogicTreeBranch.levels, true);
 		dirName += "-nshm23_draft_branches";
-		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.class;
+		
 //		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.NoPaleoParkfield.class;
 //		dirName += "-no_paleo-no_parkfield";
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.CoulombRupSet.class;
+		dirName += "-coulomb";
+		
+		dirName += "-ineq";
+		
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 //				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
-		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
-				SubSeisMoRateReductionNode.SUB_B_1 };
+//		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
+//				SubSeisMoRateReductionNode.SUB_B_1 };
+//		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
+//				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
+		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
+				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
+//		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
+//				SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		int defaultInvMins = 4*60;
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
@@ -131,9 +152,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		String completionArg = "1m"; int invMins = 1;
 //		String completionArg = "10m"; int invMins = 10;
-		String completionArg = "2h"; int invMins = 2*60;
+//		String completionArg = "2h"; int invMins = 2*60;
 //		String completionArg = "5h"; int invMins = 5*60;
-//		String completionArg = null; int invMins = defaultInvMins;
+		String completionArg = null; int invMins = defaultInvMins;
 		
 		if (completionArg != null)
 			dirName += "-"+completionArg;

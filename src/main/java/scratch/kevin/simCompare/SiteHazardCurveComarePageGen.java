@@ -31,6 +31,8 @@ import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 
 import com.google.common.base.Preconditions;
@@ -53,7 +55,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 //	private static double[] gmpe_truncs = {  };
 	private static double[] gmpe_fixed_sigmas = {  };
 	
-	private static double[] disagg_fixed_vals = { 0.1, 0.5, 1.0 };
+	private static double[] disagg_fixed_accel_vals = { 0.1, 0.5, 1.0 };
 	
 	private static ExecutorService exec;
 	
@@ -187,7 +189,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			lines.add("");
 			lines.add("![Site Map]("+resourcesDir.getName()+"/"+mapFile.getName()+")");
 			lines.add("");
-		} catch (IOException e1) {
+		} catch (Exception e1) {
 			System.out.println("Error fetching map! Skipping");
 			e1.printStackTrace();
 		}
@@ -512,6 +514,10 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		List<Future<File>> disaggFutures = new ArrayList<>();
 		for (int p=0; p<imts.length; p++) {
 			IMT imt = imts[p];
+			if (imt.getParamName().equals(PGV_Param.NAME)) {
+				System.err.println("WARNING: skipping PGV disagg until we figure out exceptions");
+				continue;
+			}
 			DiscretizedFunc simCurve = curvePlotter.getCalcSimCurve(simCalc, imt);
 			DiscretizedFunc gmpeCurve = curvePlotter.getCalcGMPECurve(imt);
 			
@@ -565,7 +571,8 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			}
 			
 			// for fixed locations
-			if (disagg_fixed_vals.length > 0) {
+			if (disagg_fixed_accel_vals.length > 0 &&
+					(imt.getParamName().equals(SA_Param.NAME) || imt.getParamName().equals(PGA_Param.NAME))) {
 				disaggHeaders.add("Fixed IMLs");
 				isProbs.add(false);
 				List<String> myDisaggLabels = new ArrayList<>();
@@ -574,7 +581,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 				disaggLabels.add(myDisaggLabels);
 				disaggFileLabels.add(myDisaggFileLabels);
 				disaggVals.add(myDisaggVals);
-				for (double iml : disagg_fixed_vals) {
+				for (double iml : disagg_fixed_accel_vals) {
 					myDisaggLabels.add((float)iml+" g");
 					myDisaggFileLabels.add("iml_"+(float)iml);
 					myDisaggVals.add(iml);
@@ -620,6 +627,10 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 					double val = myVals.get(j);
 					
 					double iml = isProb ? HazardDataSetLoader.getCurveVal(simCurve, false, val) : val;
+					double disaggIML = iml;
+					if (imt.getParamName().equals(SA_Param.NAME) || imt.getParamName().equals(PGA_Param.NAME))
+						// need to disagg on the log of the IML
+						disaggIML = Math.log(disaggIML);
 					if (!Double.isFinite(iml) || iml > simCurve.getMaxX()) {
 						System.out.println("Couldn't get IML for simulation, "+myLabels.get(j)+". Skipping disagg!");
 						table.addColumn("N/A");
@@ -630,7 +641,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 							ScalarIMR gmpe = new SimulationDisaggAttenuationRelationshipWrapper<>(
 									simProv, Source.SIMULATION, Source.SIMULATION, Source.SIMULATION, imts);
 							if (replotDisaggs || !new File(resourcesDir, prefix+".png").exists())
-								disaggFutures.add(getExec().submit(new DisaggCallable(gmpe, site, disaggERF, iml, minMag, resourcesDir, prefix)));
+								disaggFutures.add(getExec().submit(new DisaggCallable(gmpe, site, disaggERF, disaggIML, minMag, resourcesDir, prefix)));
 							table.addColumn("![Disaggregation]("+resourcesDir.getName()+"/"+prefix+".png)");
 						}
 						
@@ -638,7 +649,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 						ScalarIMR gmpe = new SimulationDisaggAttenuationRelationshipWrapper<>(
 								simProv, Source.SIMULATION, Source.GMPE, Source.GMPE, imts);
 						if (replotDisaggs || !new File(resourcesDir, prefix+".png").exists())
-							disaggFutures.add(getExec().submit(new DisaggCallable(gmpe, site, disaggERF, iml, minMag, resourcesDir, prefix)));
+							disaggFutures.add(getExec().submit(new DisaggCallable(gmpe, site, disaggERF, disaggIML, minMag, resourcesDir, prefix)));
 						table.addColumn("![Disaggregation]("+resourcesDir.getName()+"/"+prefix+".png)");
 					}
 					
@@ -651,7 +662,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 						ScalarIMR gmpe = new SimulationDisaggAttenuationRelationshipWrapper<>(
 								simProv, Source.GMPE, Source.GMPE, Source.GMPE, imts);
 						if (replotDisaggs || !new File(resourcesDir, prefix+".png").exists())
-							disaggFutures.add(getExec().submit(new DisaggCallable(gmpe, site, disaggERF, iml, minMag, resourcesDir, prefix)));
+							disaggFutures.add(getExec().submit(new DisaggCallable(gmpe, site, disaggERF, disaggIML, minMag, resourcesDir, prefix)));
 						table.addColumn("![Disaggregation]("+resourcesDir.getName()+"/"+prefix+".png)");
 					}
 					
@@ -771,6 +782,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			try {
 				file = disaggCalc.disagg(gmpe, site, erf, iml, outputDir, prefix);
 			} catch (IOException e) {
+				System.err.println("Disagg failed for iml="+iml+", prefix="+prefix);
 				throw ExceptionUtils.asRuntimeException(e);
 			}
 			
@@ -845,9 +857,9 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		}
 		
 		public File disagg(ScalarIMR gmpe, Site site, AbstractERF erf, double iml, File outputDir, String prefix) throws IOException {
-			boolean success = disaggCalc.disaggregate(Math.log(iml), site, gmpe, erf, disaggParams);
+			boolean success = disaggCalc.disaggregate(iml, site, gmpe, erf, disaggParams);
 			if (!success)
-				throw new RuntimeException("Disagg calc failed (see errors above, if any).");
+				throw new RuntimeException("Disagg calc failed for iml="+iml+", prefix='"+prefix+"'(see errors above, if any).");
 			disaggCalc.setMaxZAxisForPlot(maxZAxis);
 			System.out.println("Done Disaggregating");
 			String metadata = "temp metadata";
