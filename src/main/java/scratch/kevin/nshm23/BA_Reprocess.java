@@ -9,11 +9,12 @@ import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23InvConfigFactory;
 
 import com.google.common.base.Preconditions;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
-import scratch.nshm23.logicTree.DraftNSHM23InvConfigFactory;
 
 public class BA_Reprocess {
 
@@ -47,7 +48,7 @@ public class BA_Reprocess {
 //		String dirName = "2021_12_03-nshm23_draft_branches-no_paleo-no_parkfield-FM3_1-FaultSpec";
 //		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.NoPaleoParkfield.class;
 		String dirName = "2021_12_08-nshm23_draft_branches-FM3_1-TotNuclRate-SubB1-2h";
-		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23InvConfigFactory.class;
 		
 		File localDir = new File(localMainDir, dirName);
 		Preconditions.checkState(localDir.exists());

@@ -38,14 +38,14 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.nshm23.logicTree.SegmentationModel;
-import scratch.nshm23.logicTree.SubSectConstraintModel;
 
 public class LogicTreeHazardCompare {
 	

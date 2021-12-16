@@ -27,6 +27,7 @@ import org.opensha.commons.util.modules.ModuleArchive;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.AbstractExternalFetcher;
@@ -329,7 +330,9 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 			FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, annealingThreads);
 			rupSet.addModule(branch);
 			
-			InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, cmd, annealingThreads);
+			InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, annealingThreads);
+			// apply any command line overrides
+			config = InversionConfiguration.builder(config).forCommandLine(cmd).build();
 			
 			debug("Running inversion for task "+index+" with "+config.getConstraints().size()+" constraints");
 			FaultSystemSolution sol = Inversions.run(rupSet, config);

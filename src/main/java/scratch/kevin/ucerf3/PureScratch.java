@@ -106,6 +106,7 @@ import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
@@ -201,7 +202,6 @@ import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 import scratch.kevin.bbp.BBP_Site;
-import scratch.kevin.nshm23.InversionConfigurationFactory;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.RSQSimBBP_Config;
@@ -2949,7 +2949,7 @@ public class PureScratch {
 		
 		U3LogicTreeBranch branch = U3LogicTreeBranch.DEFAULT;
 		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, 32);
-		InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, null, 32);
+		InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, 32);
 		for (InversionConstraint constraint : config.getConstraints())
 			System.out.println(constraint.getName()+" has "+constraint.getNumRows()+" rows");
 	}

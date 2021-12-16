@@ -16,9 +16,18 @@ import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
 
 import com.google.common.base.Preconditions;
 
@@ -26,14 +35,10 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
+import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
-import scratch.nshm23.logicTree.DraftNSHM23InvConfigFactory;
-import scratch.nshm23.logicTree.DraftNSHM23LogicTreeBranch;
-import scratch.nshm23.logicTree.SegmentationModel;
-import scratch.nshm23.logicTree.SubSectConstraintModel;
-import scratch.nshm23.logicTree.SubSeisMoRateReductionNode;
 
 public class MPJ_LogicTreeInversionRunnerScriptWriter {
 	
@@ -87,18 +92,24 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 ////		U3LogicTreeBranchNode<?>[] required = {  };
 //		Class<? extends LogicTreeNode> sortBy = null;
 		
-		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(
-				DraftNSHM23LogicTreeBranch.levels, true);
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23LogicTreeBranch.levels;
 		dirName += "-nshm23_draft_branches";
+		
+		levels = new ArrayList<>(levels);
+		for (int i=levels.size(); --i>=0;)
+			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
+				levels.remove(i);
+		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
+		dirName += "-max_dist";
+			
+			
+		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
 //		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.NoPaleoParkfield.class;
 //		dirName += "-no_paleo-no_parkfield";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.CoulombRupSet.class;
-		dirName += "-coulomb";
-		
-		dirName += "-ineq";
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23InvConfigFactory.class;
 		
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 //				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
@@ -106,16 +117,23 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SubSeisMoRateReductionNode.SUB_B_1 };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
 //				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
+		LogicTreeNode[] required = {
+				FaultModels.FM3_1,
+				RupturePlausibilityModels.COULOMB,
+				DeformationModels.ZENGBB,
+				ScalingRelationships.SHAW_2009_MOD,
+				SlipAlongRuptureModels.UNIFORM,
+				SubSectConstraintModels.TOT_NUCL_RATE,
+				SubSeisMoRateReductions.SUB_B_1,
+				};
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
-//				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
-		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
-				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1, SegmentationModel.NONE };
+//				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1, SegmentationModel.NONE };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
 //				SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		int defaultInvMins = 4*60;
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
-		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModel.class;
+		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
 		
 		if (required != null && required.length > 0) {
 			for (LogicTreeNode node : required)
