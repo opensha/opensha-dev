@@ -21,6 +21,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.JumpProbabilityConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.JumpProbabilityConstraint.InitialModelParticipationRateEstimator;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.JumpProbabilityConstraint.SectParticipationRateEstimator;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDLaplacianSmoothingInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
@@ -42,6 +43,8 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.DraftModelConstraintBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.GRParticRateEstimator;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
@@ -51,7 +54,6 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
-import scratch.nshm23.targetMFDs.DraftModelConstraintBuilder;
 
 public class BatchInversionScriptWriter {
 	
@@ -78,8 +80,8 @@ public class BatchInversionScriptWriter {
 		File rupSetFile;
 		String rsPrefix;
 		
-		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
-		rsPrefix = "reproduce-ucerf3-ref_branch-uniform";
+//		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
+//		rsPrefix = "reproduce-ucerf3-ref_branch-uniform";
 		
 //		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
 //		rsPrefix = "coulomb-ref_branch-uniform";
@@ -96,8 +98,8 @@ public class BatchInversionScriptWriter {
 //		rupSetFile = new File(rsDir, "fm3_1_u3ref_tapered_reproduce_ucerf3.zip");
 //		rsPrefix = "reproduce-ucerf3-ref_branch-tapered";
 		
-//		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
-//		rsPrefix = "coulomb-fm31-ref_branch-uniform";
+		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
+		rsPrefix = "coulomb-fm31-ref_branch-uniform";
 		
 //		File remoteMeanCompFile = new File(remoteMainDir,
 //				"2021_10_18-reproduce-ucerf3-ref_branch-uniform-new_anneal-5x_avg-try_zero-var_perturb-noWL-5h/mean_solution.zip");
@@ -478,63 +480,13 @@ public class BatchInversionScriptWriter {
 		/*
 		 * new NSHM23 draft scheme, defaults
 		 */
-//		dirName += "-"+rsPrefix+"-nshm23_draft_default";
-//		double bVal = 0.8;
-//		dirName += "-supra_b_"+(float)bVal;
-//		
-//		boolean applyDefModelUncertaintiesToNucl = true;
-//		boolean addSectCountUncertaintiesToMFD = false;
-//		boolean adjustForIncompatibleData = true;
-//
-//		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
-//				applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
-//		
-//		constrBuilder.defaultConstraints();
-//		
-//		IntegerPDF_FunctionSampler sampler = constrBuilder.getSkipBelowMinSampler();
-//		
-//		List<InversionConstraint> constraints = constrBuilder.build();
-//		
-//		System.out.println("Default Constraint list:");
-//		for (InversionConstraint constr : constraints)
-//			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
-//		
-////		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
-//		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
-//		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
-//		
-//		InversionConfiguration.Builder builder = InversionConfiguration.builder(constraints, completion)
-//				.threads(remoteToalThreads).sampler(sampler);
-//		if (avgCompletion != null)
-//			builder.avgThreads(remoteToalThreads/4, avgCompletion);
-//		
-//		int num = 1;
-//		InversionConfiguration config = builder.build();
-//		for (int i=0; i<num; i++) {
-//			configs.add(config);
-//			subDirNames.add("run_"+i);
-//		}
-//		avgJob = num > 1;
-//		allPlotLevel = null;
-		
-		/*
-		 * new NSHM23 draft scheme defaults + new jump probability model
-		 */
-		dirName += "-"+rsPrefix+"-nshm23_draft_default-jump_prob_shaw07";
+		dirName += "-"+rsPrefix+"-nshm23_draft_default";
 		double bVal = 0.8;
 		dirName += "-supra_b_"+(float)bVal;
 		
 		boolean applyDefModelUncertaintiesToNucl = true;
 		boolean addSectCountUncertaintiesToMFD = false;
 		boolean adjustForIncompatibleData = true;
-		
-		if (dirName.contains("coulomb"))
-			remoteAllCompFile = new File(remoteMainDir,
-					"2021_12_08-coulomb-fm31-ref_branch-uniform-nshm23_draft_default-supra_b_0.8-2h/run_0/solution.zip");
-		else if (dirName.contains("reproduce-ucerf3"))
-			remoteAllCompFile = new File(remoteMainDir,
-					"2021_12_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft_default-supra_b_0.8-2h/run_0/solution.zip");
-		remoteAllCompareName = "No-Seg-Constr";
 
 		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
 				applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
@@ -549,17 +501,6 @@ public class BatchInversionScriptWriter {
 		for (InversionConstraint constr : constraints)
 			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
 		
-		double[] r0s = { 1d, 2d, 3d, 4d, 5d, 6d };
-//		double[] weights = { 0.01, 0.05, 0.1d, 0.5, 1d, 5d, 10d };
-		double[] weights = { 0.1d, 0.5, 1d };
-//		boolean[] proxySlips = { false, true };
-		boolean[] proxySlips = { false };
-//		boolean[] ineqs = { false, true };
-		boolean[] ineqs = { true };
-		
-		if (ineqs.length == 1 && ineqs[0])
-			dirName = dirName.replace("_shaw07", "_shaw07_ineq");
-		
 //		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
 		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
 		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
@@ -569,55 +510,129 @@ public class BatchInversionScriptWriter {
 		if (avgCompletion != null)
 			builder.avgThreads(remoteToalThreads/4, avgCompletion);
 		
-//		dirName += "-sampler";
-//		builder.sampler(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+		builder.variablePertubationBasis(new GRParticRateEstimator(rupSet, bVal).estimateRuptureRates());
+		dirName += "-gr_var_perturb_basis";
 		
-//		dirName += "-sampler";
-//		builder.sampler(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+		builder.initialSolution(new GRParticRateEstimator(rupSet, bVal).estimateRuptureRates());
+		dirName += "-gr_initial";
 		
-//		dirName += "-initial";
-//		builder.initialSolution(Inversions.getDefaultVariablePerturbationBasis(rupSet));
-		
-//		dirName += "-simple_exp_perturb";
-//		builder.perturbation(GenerationFunctionType.EXPONENTIAL_SCALE);
-		
+		int num = 5;
 		InversionConfiguration config = builder.build();
-		
-		InitialModelParticipationRateEstimator initialModelEst = new InitialModelParticipationRateEstimator(
-				rupSet, Inversions.getDefaultVariablePerturbationBasis(rupSet));
-		
-		for (double r0 : r0s) {
-			Shaw07JumpDistProb model = new Shaw07JumpDistProb(1d, r0);
-//			dirName += "-shaw_r0_"+oDF.format(r0);
-			for (boolean proxySlip : proxySlips) {
-				for (double weight : weights) {
-					for (boolean ineq : ineqs) {
-						String name = "r0_"+oDF.format(r0);
-						Builder subBuilder = InversionConfiguration.builder(config);
-						if (proxySlip) {
-							name += "-proxy_slip";
-							subBuilder.add(new JumpProbabilityConstraint.ProxySlip(
-									weight, ineq, rupSet, model));
-						} else {
-							name += "-rel_rate";
-							subBuilder.add(new JumpProbabilityConstraint.RelativeRate(
-									weight, ineq, rupSet, model, initialModelEst));
-						}
-						name += "-wt_"+oDF.format(weight);
-						if (ineq)
-							name += "_ineq";
-						
-						configs.add(subBuilder.build());
-						subDirNames.add(name);
-					}
-				}
-			}
-			
+		for (int i=0; i<num; i++) {
+			configs.add(config);
+			subDirNames.add("run_"+i);
 		}
-		primaryPlotLevel = avgPlotLevel;
-		allPlotLevel = avgPlotLevel;
-		avgJob = false;
-		skipSectBySect = true;
+		avgJob = num > 1;
+		allPlotLevel = null;
+		
+		/*
+		 * new NSHM23 draft scheme defaults + new jump probability model
+		 */
+//		dirName += "-"+rsPrefix+"-nshm23_draft_default-jump_prob_shaw07";
+//		double bVal = 0.8;
+//		dirName += "-supra_b_"+(float)bVal;
+//		
+//		boolean applyDefModelUncertaintiesToNucl = true;
+//		boolean addSectCountUncertaintiesToMFD = false;
+//		boolean adjustForIncompatibleData = true;
+//		
+//		if (dirName.contains("coulomb"))
+//			remoteAllCompFile = new File(remoteMainDir,
+//					"2021_12_08-coulomb-fm31-ref_branch-uniform-nshm23_draft_default-supra_b_0.8-2h/run_0/solution.zip");
+//		else if (dirName.contains("reproduce-ucerf3"))
+//			remoteAllCompFile = new File(remoteMainDir,
+//					"2021_12_08-reproduce-ucerf3-ref_branch-uniform-nshm23_draft_default-supra_b_0.8-2h/run_0/solution.zip");
+//		remoteAllCompareName = "No-Seg-Constr";
+//
+//		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
+//				applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
+//		
+//		constrBuilder.defaultConstraints();
+//		
+//		IntegerPDF_FunctionSampler sampler = constrBuilder.getSkipBelowMinSampler();
+//		
+//		List<InversionConstraint> constraints = constrBuilder.build();
+//		
+//		System.out.println("Default Constraint list:");
+//		for (InversionConstraint constr : constraints)
+//			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
+//		
+////		double[] r0s = { 1d, 2d, 3d, 4d, 5d, 6d };
+//		double[] r0s = { 3d };
+////		double[] weights = { 0.01, 0.05, 0.1d, 0.5, 1d, 5d, 10d };
+//		double[] weights = { 0.1d, 0.5, 1d };
+////		boolean[] proxySlips = { false, true };
+//		boolean[] proxySlips = { false };
+////		boolean[] ineqs = { false, true };
+//		boolean[] ineqs = { true };
+//		
+//		if (ineqs.length == 1 && ineqs[0])
+//			dirName = dirName.replace("_shaw07", "_shaw07_ineq");
+//		
+////		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
+//		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
+//		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
+//		
+//		InversionConfiguration.Builder builder = InversionConfiguration.builder(constraints, completion)
+//				.threads(remoteToalThreads).sampler(sampler);
+//		if (avgCompletion != null)
+//			builder.avgThreads(remoteToalThreads/4, avgCompletion);
+//		
+////		dirName += "-sampler";
+////		builder.sampler(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+//		
+////		dirName += "-sampler";
+////		builder.sampler(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+//		
+////		dirName += "-initial";
+////		builder.initialSolution(Inversions.getDefaultVariablePerturbationBasis(rupSet));
+//		
+////		dirName += "-simple_exp_perturb";
+////		builder.perturbation(GenerationFunctionType.EXPONENTIAL_SCALE);
+//
+////		SectParticipationRateEstimator initialModelEst = new InitialModelParticipationRateEstimator(
+////				rupSet, Inversions.getDefaultVariablePerturbationBasis(rupSet));
+//		SectParticipationRateEstimator initialModelEst = new GRParticRateEstimator(rupSet, bVal);
+//		
+//		if (initialModelEst instanceof GRParticRateEstimator) {
+//			dirName += "-gr_var_perturb_basis";
+//			builder.variablePertubationBasis(((GRParticRateEstimator)initialModelEst).estimateRuptureRates());
+//		}
+//		
+//		InversionConfiguration config = builder.build();
+//		
+//		for (double r0 : r0s) {
+//			Shaw07JumpDistProb model = new Shaw07JumpDistProb(1d, r0);
+////			dirName += "-shaw_r0_"+oDF.format(r0);
+//			for (boolean proxySlip : proxySlips) {
+//				for (double weight : weights) {
+//					for (boolean ineq : ineqs) {
+//						String name = "r0_"+oDF.format(r0);
+//						Builder subBuilder = InversionConfiguration.builder(config);
+//						if (proxySlip) {
+//							name += "-proxy_slip";
+//							subBuilder.add(new JumpProbabilityConstraint.ProxySlip(
+//									weight, ineq, rupSet, model));
+//						} else {
+//							name += "-rel_rate";
+//							subBuilder.add(new JumpProbabilityConstraint.RelativeRate(
+//									weight, ineq, rupSet, model, initialModelEst));
+//						}
+//						name += "-wt_"+oDF.format(weight);
+//						if (ineq)
+//							name += "_ineq";
+//						
+//						configs.add(subBuilder.build());
+//						subDirNames.add(name);
+//					}
+//				}
+//			}
+//			
+//		}
+//		primaryPlotLevel = avgPlotLevel;
+//		allPlotLevel = avgPlotLevel;
+//		avgJob = false;
+//		skipSectBySect = true;
 		
 		/*
 		 * new NSHM23 draft scheme defaults + don't sample above certain jump dists

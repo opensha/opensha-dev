@@ -127,13 +127,21 @@ public class LogicTreeHazardCompare {
 //		LogicTreeNode[] compSubsetNodes = { SegmentationModel.NONE };
 //		File outputDir = new File(mainDir, "hazard_maps_vs_no_seg");
 		
-		File mainDir = new File(invDir, "2021_12_08-nshm23_draft_branches-FM3_1-TotNuclRate-SubB1-2h");
-		String mainName = "NSHM23 Draft, Sect-Nucl-Rate, Sub-Seis b=1";
+//		File mainDir = new File(invDir, "2021_12_08-nshm23_draft_branches-FM3_1-TotNuclRate-SubB1-2h");
+//		String mainName = "NSHM23 Draft, Sect-Nucl-Rate, Sub-Seis b=1";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
+//		String compName = "UCERF3";
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3");
+		
+		File mainDir = new File(invDir, "2021_12_15-nshm23_draft_branches-coulomb-ineq-FM3_1-ZENGBB-Shaw09Mod-TotNuclRate-SubB1");
+		String mainName = "NSHM23 Draft With Segmentation";
 		LogicTreeNode[] subsetNodes = null;
-		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
-		String compName = "UCERF3";
+		File compDir = null;
+		String compName = null;
 		LogicTreeNode[] compSubsetNodes = null;
-		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3");
+		File outputDir = new File(mainDir, "hazard_maps");
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		

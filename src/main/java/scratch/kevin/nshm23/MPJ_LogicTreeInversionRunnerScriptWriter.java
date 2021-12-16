@@ -106,8 +106,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SubSeisMoRateReductionNode.SUB_B_1 };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
 //				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
+//		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
+//				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
 		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
-				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
+				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1, SegmentationModel.NONE };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
 //				SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		int defaultInvMins = 4*60;

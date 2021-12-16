@@ -38,6 +38,10 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.SubSeisMoRateReduction;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.DraftModelConstraintBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.GRParticRateEstimator;
 
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -45,9 +49,6 @@ import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.kevin.nshm23.InversionConfigurationFactory;
-import scratch.nshm23.targetMFDs.DraftModelConstraintBuilder;
-import scratch.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
-import scratch.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.SubSeisMoRateReduction;
 
 public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactory {
 	
@@ -179,7 +180,8 @@ public class DraftNSHM23InvConfigFactory implements InversionConfigurationFactor
 				.avgThreads(avgThreads, TimeCompletionCriteria.getInMinutes(5l))
 				.perturbation(GenerationFunctionType.VARIABLE_EXPONENTIAL_SCALE)
 				.nonNegativity(NonnegativityConstraintType.TRY_ZERO_RATES_OFTEN)
-				.forCommandLine(cmd).sampler(sampler);
+				.forCommandLine(cmd).sampler(sampler)
+				.variablePertubationBasis(new GRParticRateEstimator(rupSet, bVal).estimateRuptureRates());
 		
 		return builder.build();
 	}
