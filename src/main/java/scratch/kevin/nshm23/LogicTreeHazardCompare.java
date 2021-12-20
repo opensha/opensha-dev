@@ -135,8 +135,10 @@ public class LogicTreeHazardCompare {
 //		LogicTreeNode[] compSubsetNodes = null;
 //		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3");
 		
-		File mainDir = new File(invDir, "2021_12_15-nshm23_draft_branches-coulomb-ineq-FM3_1-ZENGBB-Shaw09Mod-TotNuclRate-SubB1");
-		String mainName = "NSHM23 Draft With Segmentation";
+//		File mainDir = new File(invDir, "2021_12_16-nshm23_draft_branches-reweight_seg_2_3_4-FM3_1-CoulombRupSet-ZENGBB-Shaw09Mod-DsrUni-TotNuclRate-SubB1");
+//		String mainName = "NSHM23 Draft With Segmentation";
+		File mainDir = new File(invDir, "2021_12_16-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-ZENGBB-Shaw09Mod-DsrUni-TotNuclRate-SubB1");
+		String mainName = "NSHM23 Draft With Max Mags";
 		LogicTreeNode[] subsetNodes = null;
 		File compDir = null;
 		String compName = null;

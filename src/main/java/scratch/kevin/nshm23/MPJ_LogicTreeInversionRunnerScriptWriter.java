@@ -37,6 +37,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
+import scratch.UCERF3.inversion.U3InversionConfigFactory;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 
@@ -48,7 +49,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
 		int remoteToalThreads = 20;
 		int remoteInversionsPerBundle = 1;
-		int remoteTotalMemGB = 55;
+		int remoteTotalMemGB = 53;
 		String queue = "scec";
 		int nodes = 35;
 //		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
@@ -86,9 +87,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		
 ////		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 ////				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
-//		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB,
-//				ScalingRelationships.SHAW_2009_MOD };
-////		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1 };
+////		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB,
+////				ScalingRelationships.SHAW_2009_MOD };
+//		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1 };
 ////		U3LogicTreeBranchNode<?>[] required = {  };
 //		Class<? extends LogicTreeNode> sortBy = null;
 		
@@ -99,9 +100,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		for (int i=levels.size(); --i>=0;)
 			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
 				levels.remove(i);
+//		dirName += "-no_seg";
 		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
 		dirName += "-max_dist";
-			
+		
+//		dirName += "-reweight_seg_2_3_4";
 			
 		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
 //		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.class;
@@ -120,6 +123,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		LogicTreeNode[] required = {
 				FaultModels.FM3_1,
 				RupturePlausibilityModels.COULOMB,
+//				RupturePlausibilityModels.UCERF3,
 				DeformationModels.ZENGBB,
 				ScalingRelationships.SHAW_2009_MOD,
 				SlipAlongRuptureModels.UNIFORM,
@@ -172,9 +176,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		String completionArg = "1m"; int invMins = 1;
 //		String completionArg = "10m"; int invMins = 10;
+		String completionArg = "30m"; int invMins = 30;
 //		String completionArg = "2h"; int invMins = 2*60;
 //		String completionArg = "5h"; int invMins = 5*60;
-		String completionArg = null; int invMins = defaultInvMins;
+//		String completionArg = null; int invMins = defaultInvMins;
 		
 		if (completionArg != null)
 			dirName += "-"+completionArg;
@@ -213,6 +218,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			mins += 60;
 		else
 			mins += Integer.max(10, invMins);
+		mins += (nodeRounds-1)*10; // add a little extra for overhead associated with each round
 		System.out.println("Total job time: "+mins+" mins = "+(float)((double)mins/60d)+" hours");
 		
 		pbsWrite.writeScript(new File(localDir, "batch_inversion.slurm"), script, mins, nodes, remoteToalThreads, queue);

@@ -65,7 +65,7 @@ public class BatchInversionScriptWriter {
 		
 		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
 		int remoteToalThreads = 20;
-		int remoteTotalMemGB = 55;
+		int remoteTotalMemGB = 53;
 		BatchScriptWriter scriptWrite = new USC_CARC_ScriptWriter();
 		String queue = "scec";
 		

@@ -3013,12 +3013,32 @@ public class PureScratch {
 		gw.setYLog(true);
 	}
 	
+	private static void test114() throws IOException {
+		System.gc();
+		Runtime rt = Runtime.getRuntime();
+		long totalMB = rt.totalMemory() / 1024 / 1024;
+		long freeMB = rt.freeMemory() / 1024 / 1024;
+		long usedMB = totalMB - freeMB;
+		System.out.println("mem t/u/f: "+totalMB+"/"+usedMB+"/"+freeMB);
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/solution.zip"));
+		totalMB = rt.totalMemory() / 1024 / 1024;
+		freeMB = rt.freeMemory() / 1024 / 1024;
+		usedMB = totalMB - freeMB;
+		System.out.println("mem t/u/f: "+totalMB+"/"+usedMB+"/"+freeMB);
+		System.gc();
+		totalMB = rt.totalMemory() / 1024 / 1024;
+		freeMB = rt.freeMemory() / 1024 / 1024;
+		usedMB = totalMB - freeMB;
+		System.out.println("mem t/u/f: "+totalMB+"/"+usedMB+"/"+freeMB);
+		System.out.println(sol.getTotalRateForAllFaultSystemRups());
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test113();
+		test114();
 	}
 
 }

@@ -2,6 +2,7 @@ package scratch.kevin.nshm23;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -113,7 +114,7 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 
 		@Override
 		protected void batchProcessedAsync(int[] batch, int processIndex) {
-			debug("AsyncLogicTree: beginning async call with batch size "
+			memoryDebug("AsyncLogicTree: beginning async call with batch size "
 					+batch.length+" from "+processIndex+": "+getCountsString());
 			
 			synchronized (dones) {
@@ -193,18 +194,18 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 				}
 			}
 			
-			debug("AsyncLogicTree: exiting async process, stats: "+getCountsString());
+			memoryDebug("AsyncLogicTree: exiting async process, stats: "+getCountsString());
 		}
 
 		@Override
 		public void shutdown() {
 			super.shutdown();
 			
-			debug("AsyncLogicTree: finalizing logic tree zip");
+			memoryDebug("AsyncLogicTree: finalizing logic tree zip");
 			try {
 				sltBuilder.build();
 			} catch (IOException e) {
-				debug("AsyncLogicTree: failed to build logic tree zip");
+				memoryDebug("AsyncLogicTree: failed to build logic tree zip");
 				e.printStackTrace();
 			}
 			
@@ -215,12 +216,12 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 						prefix += "_"+baPrefix;
 					
 					File baFile = new File(outputDir.getParentFile(), prefix+"_branch_averaged.zip");
-					debug("AsyncLogicTree: building "+baFile.getAbsolutePath());
+					memoryDebug("AsyncLogicTree: building "+baFile.getAbsolutePath());
 					try {
 						FaultSystemSolution baSol = baCreators.get(baPrefix).build();
 						baSol.write(baFile);
 					} catch (Exception e) {
-						debug("AsyncLogicTree: failed to build BA for "+baFile.getAbsolutePath());
+						memoryDebug("AsyncLogicTree: failed to build BA for "+baFile.getAbsolutePath());
 						e.printStackTrace();
 						continue;
 					}
@@ -228,6 +229,20 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 			}
 		}
 		
+	}
+	
+	private void memoryDebug(String info) {
+		if (info == null || info.isBlank())
+			info = "";
+		else
+			info += "; ";
+	    
+	    System.gc();
+		Runtime rt = Runtime.getRuntime();
+		long totalMB = rt.totalMemory() / 1024 / 1024;
+		long freeMB = rt.freeMemory() / 1024 / 1024;
+		long usedMB = totalMB - freeMB;
+		debug(info+"mem t/u/f: "+totalMB+"/"+usedMB+"/"+freeMB);
 	}
 	
 	private static void waitOnDir(File dir, int maxRetries, long sleepMillis) {
@@ -327,6 +342,8 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 				}
 			}
 			
+			memoryDebug("Beginning config for "+index);
+			
 			FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, annealingThreads);
 			rupSet.addModule(branch);
 			
@@ -334,7 +351,7 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 			// apply any command line overrides
 			config = InversionConfiguration.builder(config).forCommandLine(cmd).build();
 			
-			debug("Running inversion for task "+index+" with "+config.getConstraints().size()+" constraints");
+			memoryDebug("Running inversion for task "+index+" with "+config.getConstraints().size()+" constraints");
 			FaultSystemSolution sol = Inversions.run(rupSet, config);
 			
 			try {
@@ -342,15 +359,17 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 			} catch (IOException e) {
 				throw ExceptionUtils.asRuntimeException(e);
 			}
+			sol = null;
+			memoryDebug("DONE "+index);
 		}
 	}
 
 	@Override
 	protected void doFinalAssembly() throws Exception {
 		if (rank == 0) {
-			debug("waiting for any post batch hook operations to finish");
+			memoryDebug("waiting for any post batch hook operations to finish");
 			((AsyncLogicTreeWriter)postBatchHook).shutdown();
-			debug("post batch hook done");
+			memoryDebug("post batch hook done");
 		}
 	}
 	
