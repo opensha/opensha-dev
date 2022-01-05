@@ -111,7 +111,9 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.Inversi
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
+import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
@@ -3033,12 +3035,28 @@ public class PureScratch {
 		System.out.println(sol.getTotalRateForAllFaultSystemRups());
 	}
 	
+	private static void test115() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2021_12_17-nshm23_draft_branches-FM3_1-CoulombRupSet/node_branch_averaged/SegModel_ShawR0_2.zip"));
+		SolMFDPlot plot = new SolMFDPlot();
+		File outputDir = new File("/tmp/mfd_test");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		File withDir = new File(outputDir, "with");
+		Preconditions.checkState(withDir.exists() || withDir.mkdir());
+		plot.writePlot(sol.getRupSet(), sol, "Orig", withDir);
+		Preconditions.checkState(sol.hasModule(RupMFDsModule.class));
+		sol.removeModuleInstances(RupMFDsModule.class);
+		File withoutDir = new File(outputDir, "without");
+		Preconditions.checkState(withoutDir.exists() || withoutDir.mkdir());
+		plot.writePlot(sol.getRupSet(), sol, "Without", withoutDir);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test114();
+		test115();
 	}
 
 }

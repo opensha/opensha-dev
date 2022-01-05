@@ -198,6 +198,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		mpjWrite.setClasspath(classpath);
 		if (mpjWrite instanceof MPJExpressShellScriptWriter)
 			((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+		else if (mpjWrite instanceof FastMPJShellScriptWriter)
+			((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
 		int annealingThreads = remoteToalThreads/remoteInversionsPerBundle;
 		

@@ -100,8 +100,8 @@ public class JMapDeltaReader {
 	
 	public static void main(String[] args) throws IOException {
 //		Map<String, JMapData> orig = load(new File("/tmp/jmap.txt"));
-		Map<String, JMapData> orig = load(new File("/tmp/jmap6.txt"));
-		Map<String, JMapData> last = load(new File("/tmp/jmap7.txt"));
+		Map<String, JMapData> orig = load(new File("/tmp/jmap8.txt"));
+		Map<String, JMapData> last = load(new File("/tmp/jmap9.txt"));
 		
 		List<JMapDiff> diffs = new ArrayList<>();
 		for (String key : last.keySet())

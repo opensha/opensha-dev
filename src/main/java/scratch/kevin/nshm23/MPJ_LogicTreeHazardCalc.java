@@ -235,6 +235,7 @@ public class MPJ_LogicTreeHazardCalc extends MPJTaskCalculator {
 	}
 
 	public static void main(String[] args) {
+		System.setProperty("java.awt.headless", "true");
 		try {
 			args = MPJTaskCalculator.initMPJ(args);
 			
