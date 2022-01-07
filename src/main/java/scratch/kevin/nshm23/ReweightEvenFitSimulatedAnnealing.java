@@ -320,6 +320,7 @@ public class ReweightEvenFitSimulatedAnnealing extends ThreadedSimulatedAnnealin
 			System.out.println("Re-calculating energies");
 			double[] Ebest = SerialSimulatedAnnealing.calculateEnergy(xbest, misfit, misfit_ineq,
 					nRow, nCol, ineqRows, ranges, 0d);
+			System.out.println("\tnew total energy: "+(float)Ebest[0]);
 			
 			setAll(modA, modD, modA_ineq, modD_ineq, Ebest, xbest, misfit, misfit_ineq, getNumNonZero());
 			setConstraintRanges(modRanges);
@@ -333,8 +334,12 @@ public class ReweightEvenFitSimulatedAnnealing extends ThreadedSimulatedAnnealin
 	
 	private static void reweight(double[] scalars, boolean scaleToOrig, DoubleMatrix2D origA, DoubleMatrix2D modA,
 			double[] origD, double[] modD) {
-		for (int r=0; r<scalars.length; r++)
-			modD[r] = origD[r]*scalars[r];
+		for (int r=0; r<scalars.length; r++) {
+			if (scaleToOrig)
+				modD[r] = origD[r]*scalars[r];
+			else
+				modD[r] = modD[r]*scalars[r];
+		}
 		modA.forEachNonZero(new IntIntDoubleFunction() {
 
 			@Override
@@ -415,11 +420,14 @@ public class ReweightEvenFitSimulatedAnnealing extends ThreadedSimulatedAnnealin
 		
 //		boolean reweight = false;
 
-		CompletionCriteria completion = TimeCompletionCriteria.getInMinutes(30); dirName += "-30m-x1m";
-		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(1);
+//		CompletionCriteria completion = TimeCompletionCriteria.getInMinutes(30); dirName += "-30m-x1m";
+//		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(1);
 
 //		CompletionCriteria completion = TimeCompletionCriteria.getInMinutes(30); dirName += "-30m-x5m";
 //		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
+		
+		CompletionCriteria completion = TimeCompletionCriteria.getInHours(1); dirName += "-1h-x1m";
+		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(1);
 		
 //		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h-x5m";
 //		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
