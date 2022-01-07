@@ -145,24 +145,32 @@ public class LogicTreeHazardCompare {
 //		LogicTreeNode[] compSubsetNodes = null;
 //		File outputDir = new File(mainDir, "hazard_maps");
 		
-		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-FM3_1-CoulombRupSet");
-		String mainName = "NSHM23 Full Draft With Segmentation, CoulombRS";
+//		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-FM3_1-CoulombRupSet");
+//		String mainName = "NSHM23 Full Draft With Segmentation, CoulombRS";
+//		LogicTreeNode[] subsetNodes = null;
+////		File compDir = null;
+////		String compName = null;
+////		LogicTreeNode[] compSubsetNodes = null;
+////		File outputDir = new File(mainDir, "hazard_maps");
+////		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
+////		String compName = "UCERF3";
+////		LogicTreeNode[] compSubsetNodes = null;
+////		File outputDir = new File(mainDir, "hazard_maps_comp_u3");
+////		File compDir = new File(invDir, "2021_12_17-u3_branches-coulomb-FM3_1-5h");
+////		String compName = "UCERF3 w/ CoulombRS";
+////		LogicTreeNode[] compSubsetNodes = null;
+////		File outputDir = new File(mainDir, "hazard_maps_comp_u3_coulomb");
+//		File compDir = new File(invDir, "2021_12_17-nshm23_draft_branches-no_seg-FM3_1-CoulombRupSet");
+//		String compName = "No Segmentation";
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
+		
+		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
+		String mainName = "NSHM23 Full Draft With Mag Thresholds, CoulombRS";
 		LogicTreeNode[] subsetNodes = null;
-//		File compDir = null;
-//		String compName = null;
-//		LogicTreeNode[] compSubsetNodes = null;
-//		File outputDir = new File(mainDir, "hazard_maps");
-//		File compDir = new File(invDir, "2021_11_23-u3_branches-FM3_1-5h");
-//		String compName = "UCERF3";
-//		LogicTreeNode[] compSubsetNodes = null;
-//		File outputDir = new File(mainDir, "hazard_maps_comp_u3");
-//		File compDir = new File(invDir, "2021_12_17-u3_branches-coulomb-FM3_1-5h");
-//		String compName = "UCERF3 w/ CoulombRS";
-//		LogicTreeNode[] compSubsetNodes = null;
-//		File outputDir = new File(mainDir, "hazard_maps_comp_u3_coulomb");
 		File compDir = new File(invDir, "2021_12_17-nshm23_draft_branches-no_seg-FM3_1-CoulombRupSet");
 		String compName = "No Segmentation";
-		LogicTreeNode[] compSubsetNodes = null;
+		LogicTreeNode[] compSubsetNodes = { SubSectConstraintModels.NUCL_MFD };
 		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));

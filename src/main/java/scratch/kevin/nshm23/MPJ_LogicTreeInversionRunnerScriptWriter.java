@@ -100,9 +100,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		for (int i=levels.size(); --i>=0;)
 			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
 				levels.remove(i);
-//		dirName += "-no_seg";
-		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
-		dirName += "-max_dist";
+		dirName += "-no_seg";
+//		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
+//		dirName += "-max_dist";
 		
 //		dirName += "-reweight_seg_2_3_4";
 			
@@ -122,12 +122,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
 		LogicTreeNode[] required = {
 				FaultModels.FM3_1,
-				RupturePlausibilityModels.COULOMB,
-//				RupturePlausibilityModels.UCERF3,
-				DeformationModels.ZENGBB,
-				ScalingRelationships.SHAW_2009_MOD,
-				SlipAlongRuptureModels.UNIFORM,
-				SubSectConstraintModels.TOT_NUCL_RATE,
+//				RupturePlausibilityModels.COULOMB,
+				RupturePlausibilityModels.UCERF3,
+//				DeformationModels.ZENGBB,
+//				ScalingRelationships.SHAW_2009_MOD,
+//				SlipAlongRuptureModels.UNIFORM,
+//				SubSectConstraintModels.TOT_NUCL_RATE,
 				SubSeisMoRateReductions.SUB_B_1,
 				};
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
@@ -176,10 +176,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		String completionArg = "1m"; int invMins = 1;
 //		String completionArg = "10m"; int invMins = 10;
-		String completionArg = "30m"; int invMins = 30;
+//		String completionArg = "30m"; int invMins = 30;
 //		String completionArg = "2h"; int invMins = 2*60;
 //		String completionArg = "5h"; int invMins = 5*60;
-//		String completionArg = null; int invMins = defaultInvMins;
+		String completionArg = null; int invMins = defaultInvMins;
 		
 		if (completionArg != null)
 			dirName += "-"+completionArg;
