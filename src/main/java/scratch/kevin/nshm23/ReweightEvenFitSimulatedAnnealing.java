@@ -29,6 +29,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.Compl
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.ProgressTrackingCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.MisfitStats;
+import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.Quantity;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.DraftModelConstraintBuilder;
 
@@ -41,42 +42,105 @@ import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
-public class TestReweightInversion extends ThreadedSimulatedAnnealing {
+/**
+ * Extension of {@link ThreadedSimulatedAnnealing} that dynamically re-weights uncertainty-weighted inversion
+ * constraints after each annealing round, trying to fit each constraint equally.
+ * <p>
+ * This only applies to uncertainty-weighted constraints, as only misfits from those those can be simply compared.
+ * First you must choose a target quantity that you want to even-fit across all constraints. MAD is a good choice for
+ * this quantity, as it is less susceptible to outliers. Standard deviation is a poor choice as it doesn't account for
+ * net bias; if you want to control the total standard deviation (noting that it may be outlier-dominated), use RMSE instead.
+ * <p>
+ * After each annealing round, the an average misfit quantity is calculated across all uncertainty-weighted constraints.
+ * Then, each uncertainty-weighted constraint is re-weighted such that:
+ * <p>
+ * newWeight = prevRate * constrMisfit / avgMisfit
+ * <o>
+ * or, if {@link #USE_SQRT_FOR_TARGET_RATIOS_DEFAULT} is true,
+ * <p>
+ * newWeight = prevRate * sqrt(constrMisfit) / sqrt(avgMisfit)
+ * <o>
+ * This value is bounded to not be more than {@link #MAX_ADJUSTMENT_FACTOR} times greater or smaller than the original
+ * weight, and individual adjustments are bounded to not exceed {@link #MAX_INDV_ADJUSTMENT_FACTOR}. The latter ensures
+ * that weights are adjusted slowly, both to avoid over-reactions to brief deviations, and to slowly transition weight
+ * changes in the early part of the inversion where fit changes may happen rapidly.
+ * <p>
+ * A few more control parameters exist. First of all, weights are defaulted to their original values if the data are
+ * poorly fit on average, above {@link #AVG_TARGET_TRANSITION_UPPER_DEFAULT}. If the average fit is between
+ * {@link #AVG_TARGET_TRANSITION_UPPER_DEFAULT} and {@link #AVG_TARGET_TRANSITION_LOWER_DEFAULT}, then calculated
+ * weights are blended with original weights. This allows the inversion to slowly transition to even fitting as data
+ * fits may very widly (and change quickly) early on.
+ * <p>
+ * Setting {@link #USE_SQRT_FOR_TARGET_RATIOS_DEFAULT} to true will more conservatively (slowly) adjust weights, which
+ * can prevent wild swings in weighting.
+ * 
+ * @author kevin
+ *
+ */
+public class ReweightEvenFitSimulatedAnnealing extends ThreadedSimulatedAnnealing {
 	
 	private DoubleMatrix2D origA, origA_ineq, modA, modA_ineq;
 	private double[] origD, origD_ineq, modD, modD_ineq;
 	private List<ConstraintRange> origRanges;
-	
-	private double maxAdjustmentFactor = 100d;
 
-	public TestReweightInversion(DoubleMatrix2D A, double[] d, double[] initialState, double relativeSmoothnessWt,
+	// individual adjustments can never be this many times greater or lower than the previous weight
+	public static final double MAX_INDV_ADJUSTMENT_FACTOR = 1.2d;
+	// can never be this many times greater/less than original weight
+	public static final double MAX_ADJUSTMENT_FACTOR = 10d;
+	
+	public static final Quantity QUANTITY_DEFAULT = Quantity.MAD;
+	public static final double AVG_TARGET_TRANSITION_UPPER_DEFAULT = 2d;
+	public static final double AVG_TARGET_TRANSITION_LOWER_DEFAULT = 1d;
+	public static final boolean CONSERVE_TOT_WEIGHT_DEFAULT = true;
+	public static final boolean USE_SQRT_FOR_TARGET_RATIOS_DEFAULT = true;
+	public static final boolean USE_VALUE_WEIGHTED_AVERAGE_DEFAULT = true;
+	
+	// quantity that we are targeting
+	private Quantity quantity = QUANTITY_DEFAULT;
+	// if true, ensure that the total weight (scaled by row count for each constraint) is constant. this ensures
+	// that the relative weight of all uncertainty-weighted constraints does not change relative to any other
+	// constraints that are not adjusted
+	private boolean conserveTotalWeight = CONSERVE_TOT_WEIGHT_DEFAULT;
+	private boolean useValueWeightedAverage = USE_VALUE_WEIGHTED_AVERAGE_DEFAULT;
+	
+	// if true, calculate ratios as sqrt(misfit)/sqrt(avgMisfit)
+	private boolean useSqrtForTargetRatios = USE_SQRT_FOR_TARGET_RATIOS_DEFAULT;
+	
+	private String targetName = QUANTITY_DEFAULT.name();
+//	private static final double minTargetForPenalty = 1d; // don't penalize anything for being "better" than this value
+	
+	// don't mess with anything if the average is above this value
+	private double avgTargetWeight2 = AVG_TARGET_TRANSITION_UPPER_DEFAULT;
+	// linearly transition to targeted weights up to this average target
+	private static final double avgTargetWeight1 = AVG_TARGET_TRANSITION_LOWER_DEFAULT;
+	
+	// every x rounds, recompute A/d values as scalars from the original values to correct for any floating point error
+	// propagated through repeated multiplications
+	private static final int floatingPointDriftMod = 10;
+
+	public ReweightEvenFitSimulatedAnnealing(DoubleMatrix2D A, double[] d, double[] initialState, double relativeSmoothnessWt,
 			DoubleMatrix2D A_ineq, double[] d_ineq, int numThreads, CompletionCriteria subCompetionCriteria) {
 		super(A, d, initialState, relativeSmoothnessWt, A_ineq, d_ineq, numThreads, subCompetionCriteria);
 	}
 
-	public TestReweightInversion(List<? extends SimulatedAnnealing> sas, CompletionCriteria subCompetionCriteria,
+	public ReweightEvenFitSimulatedAnnealing(List<? extends SimulatedAnnealing> sas, CompletionCriteria subCompetionCriteria,
 			boolean average) {
 		super(sas, subCompetionCriteria, average);
 	}
 
-	public TestReweightInversion(ThreadedSimulatedAnnealing tsa) {
+	public ReweightEvenFitSimulatedAnnealing(ThreadedSimulatedAnnealing tsa) {
+		this(tsa, QUANTITY_DEFAULT);
+	}
+
+	public ReweightEvenFitSimulatedAnnealing(ThreadedSimulatedAnnealing tsa, Quantity quantity) {
 		super(tsa.getSAs(), tsa.getSubCompetionCriteria(), tsa.isAverage());
 		setConstraintRanges(tsa.getConstraintRanges());
 	}
-
-//	private static final String targetName = "MAD";
-//	private static double getTarget(MisfitStats stats) {
-//		return stats.absMean;
-//	}
 	
-	private static final String targetName = "RMSE";
-//	private static final double minTargetForPenalty = 1d; // don't penalize anything for being "better" than this value
-	
-	private static final double avgTargetWeight2 = 2d; // don't mess with anything if the average is above this value
-	private static final double avgTargetWeight1 = 1d; // linearly transition to targeted weights up to this average target
-	
-	private static double getTarget(MisfitStats stats) {
-		return stats.rmse;
+	public void setTargetQuantity(Quantity quantity) {
+		Preconditions.checkNotNull(quantity);
+		this.quantity = quantity;
+		this.targetName = quantity.name();
 	}
 
 	@Override
@@ -84,7 +148,7 @@ public class TestReweightInversion extends ThreadedSimulatedAnnealing {
 		if (round > 0) {
 			Stopwatch watch = Stopwatch.createStarted();
 			List<ConstraintRange> ranges = getConstraintRanges();
-			Preconditions.checkNotNull(ranges);
+			Preconditions.checkNotNull(ranges, "Constraint ranges must be set for re-weight inversion");
 			Preconditions.checkState(ranges.size() == origRanges.size());
 			
 			if (modA == null) {
@@ -96,14 +160,14 @@ public class TestReweightInversion extends ThreadedSimulatedAnnealing {
 				}
 			}
 			
-			List<ConstraintRange> modRanges = new ArrayList<>();
-			
 			double[] misfits = getBestMisfit();
 			double[] misfits_ineq = getBestInequalityMisfit();
 			
 			List<MisfitStats> stats = new ArrayList<>();
-			double avgTarget = 0d;
-			int num = 0;
+			double avgConstraintQuantity = 0d;
+			double avgValueQuantity = 0d;
+			int numConstraints = 0;
+			int numValues = 0;
 			for (ConstraintRange range : ranges) {
 				if (range.weightingType == ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY) {
 					double[] myMisfits = range.inequality ? misfits_ineq : misfits;
@@ -111,122 +175,132 @@ public class TestReweightInversion extends ThreadedSimulatedAnnealing {
 					for (int i=0; i<myMisfits.length; i++)
 						myMisfits[i] /= range.weight;
 					MisfitStats myStats = new MisfitStats(myMisfits, range);
-					avgTarget += getTarget(myStats);
+					double myVal = myStats.get(quantity);
 					stats.add(myStats);
-					num++;
+					numConstraints++;
+					avgConstraintQuantity += myVal;
+					int myNumVals = range.endRow - range.startRow;
+					numValues += myNumVals;
+					avgValueQuantity += myVal * (double)myNumVals;
 				} else {
 					stats.add(null);
 				}
 			}
-			System.out.println("Readjusting weights for "+num+" uncertainty-weighted constraints");
-			Preconditions.checkState(num > 0,
-					"Can't use re-weighted inversion without any uncertainty-weighted constraints!");
-			avgTarget /= (double)num;
-			Preconditions.checkState(avgTarget > 0d && Double.isFinite(avgTarget), "Bad avg "+targetName+": %s", avgTarget);
+			avgConstraintQuantity /= (double)numConstraints;
+			avgValueQuantity /= (double)numValues;
 			
-			System.out.println("\tAverage misfit "+targetName+": "+(float)avgTarget);
+			double avgQuantity = useValueWeightedAverage ? avgValueQuantity : avgConstraintQuantity;
+			
+			System.out.println("Readjusting weights for "+numValues+" values across "+numConstraints
+					+" uncertainty-weighted constraints with average misfit "+targetName+":\t"+(float)avgQuantity);
+			Preconditions.checkState(numConstraints > 0,
+					"Can't use re-weighted inversion without any uncertainty-weighted constraints!");
+			Preconditions.checkState(avgQuantity > 0d && Double.isFinite(avgQuantity),
+					"Bad avg "+targetName+": %s", avgQuantity);
 //			if (avgTarget > minTargetForPenalty) {
 //				System.out.println("\tAverage is above threshold, resetting to: "+(float)minTargetForPenalty);
 //				avgTarget = minTargetForPenalty;
 //			}
+			
+			double[] origValScalars = new double[misfits.length];
+			double[] origValScalars_ineq = misfits_ineq == null ? null : new double[misfits_ineq.length];
+			
+			double origTotalWeight = 0d;
+			double newTotalWeight = 0d;
+			
+			double[] newWeights = new double[ranges.size()];
+			
+			boolean scaleToOrig = round > 0 && round % floatingPointDriftMod == 0 && floatingPointDriftMod > 0;
+			
 			for (int i=0; i<ranges.size(); i++) {
-				MisfitStats myStats = stats.get(i);
-				if (myStats == null) {
-					modRanges.add(ranges.get(i));
-					continue;
-				}
 				ConstraintRange range = ranges.get(i);
+				MisfitStats myStats = stats.get(i);
 				double prevWeight = range.weight;
 				double origWeight = origRanges.get(i).weight;
-				double myTarget = getTarget(myStats);
 				
-				double misfitRatio = myTarget/avgTarget;
-//				if (myTarget > minTargetForPenalty)
-//					// don't downweight if we're above the threshold
-//					misfitRatio = Math.max(misfitRatio, 1d);
-				
-//				double misfitRatio;
-////				if (myTarget < avgTarget && myTarget > minTargetForPenalty)
-////					// I'm better than average, but I'm still bad, don't penalize
-////					misfitRatio = 1d;
-////				else if (myTarget < avgTarget)
-////					// I'm better than average and pretty good, compare me to lesser of the average and
-////					// the target threshold
-////					misfitRatio = myTarget/Math.min(avgTarget, minTargetForPenalty);
-//				if (myTarget < avgTarget)
-//					// I'm better than average, compare me to lesser of the average and the target threshold
-//					misfitRatio = myTarget/Math.min(avgTarget, minTargetForPenalty);
-//				else
-//					misfitRatio = myTarget/avgTarget;
-				
-//				if (avgTarget > minTargetForPenalty) {
-//					// we're poorly fit on average, don't overly penalize any that are well fit
-//					if (myTarget < minTargetForPenalty)
-//						// I'm quite well fit, don't encourage me to get worse than the threshold
-//						misfitRatio = myTarget/minTargetForPenalty;
-//					else
-//						// don't penalize
-//						misfitRatio = Math.max(1d, misfitRatio);
-////					if (myTarget < avgTarget) {
-////						if (myTarget < minTargetForPenalty)
-////							// I'm quite well fit, don't encourage me to get worse than the threshold
-////							misfitRatio = myTarget/minTargetForPenalty;
-////						else
-////							// I'm in-between well fit and the (poor) average, interpolate between targets
-////							misfitRatio = 0.5*(misfitRatio + myTarget/minTargetForPenalty);
-////					}
-//				}
-				
-				double calcWeight = misfitRatio * prevWeight;
-				double newWeight = Math.max(calcWeight, origWeight/maxAdjustmentFactor);
-				newWeight = Math.min(newWeight, origWeight*maxAdjustmentFactor);
-//				if (avgTarget > minTargetForPenalty) {
-//					if (myTarget > avgTarget)
-//						// we're worse than average, don't allow it to expand infinitely, however; bound with the
-//						// original weight relative to threshold value
-//						newWeight = Math.min(newWeight, origWeight*myTarget/minTargetForPenalty);
-//					else
-//						// we're better than average
-//						newWeight = Math.max(newWeight, origWeight*myTarget/avgTarget);
-//				}
-//				if (myTarget > minTargetForPenalty)
-//					newWeight = origWeight;
-				
-				System.out.println("\t"+range.shortName+":\t"+targetName+": "+(float)myTarget
-						+";\tcalcWeight = "+(float)prevWeight+" x "+(float)misfitRatio+" = "+(float)calcWeight
-						+";\tboundedWeight: "+(float)newWeight);
-				
-				if (avgTarget > avgTargetWeight2) {
-					newWeight = origWeight;
-					System.out.println("\t\tAbove max avg target, reverting to original weight: "+(float)origWeight);
-				} else if (avgTarget > avgTargetWeight1) {
-					double fract = (avgTarget - avgTargetWeight1)/(avgTargetWeight2 - avgTargetWeight1);
-					Preconditions.checkState(fract >= 0d && fract <= 1d);
-					newWeight = origWeight*fract + newWeight*(1-fract);
-					System.out.println("\t\tAvg is poorly fit, linearly blending (fract="+(float)fract
-							+") calculated weight with orig: "+(float)newWeight);
-				}
-				
-				double scalar = newWeight / prevWeight;
-				
-				DoubleMatrix2D myA = range.inequality ? modA_ineq : modA;
-				double[] myD = range.inequality ? modD_ineq : modD;
-				for (int r=range.startRow; r<range.endRow; r++)
-					myD[r] *= scalar;
-				// could make this faster and only do once for all constraints
-				myA.forEachNonZero(new IntIntDoubleFunction() {
+				double newWeight, scalar;
+				if (myStats == null) {
+					newWeight = Double.NaN;
+					scalar = 1d;
+				} else {
+					double myTarget = myStats.get(quantity);
 					
-					@Override
-					public double apply(int row, int col, double val) {
-						if (row >= range.startRow && row < range.endRow)
-							return val*scalar;
-						return val;
+					int rangeRows = range.endRow-range.startRow;
+					origTotalWeight += rangeRows*origWeight;
+					
+					double misfitRatio;
+					if (useSqrtForTargetRatios)
+						misfitRatio = Math.sqrt(myTarget)/Math.sqrt(avgQuantity);
+					else
+						misfitRatio = myTarget/avgQuantity;
+					// bound ratio
+					misfitRatio = Math.max(misfitRatio, 1d/MAX_INDV_ADJUSTMENT_FACTOR);
+					misfitRatio = Math.min(misfitRatio, MAX_INDV_ADJUSTMENT_FACTOR);
+					
+					double calcWeight = misfitRatio * prevWeight;
+					// bound weight
+					newWeight = Math.max(calcWeight, origWeight/MAX_ADJUSTMENT_FACTOR);
+					newWeight = Math.min(newWeight, origWeight*MAX_ADJUSTMENT_FACTOR);
+					
+					System.out.println("\t"+range.shortName+":\t"+targetName+": "+(float)myTarget
+							+";\tcalcWeight = "+(float)prevWeight+" x "+(float)misfitRatio+" = "+(float)calcWeight
+							+";\tboundedWeight: "+(float)newWeight);
+					
+					if (avgValueQuantity > avgTargetWeight2) {
+						newWeight = origWeight;
+						System.out.println("\t\tAbove max avg target, reverting to original weight: "+(float)origWeight);
+					} else if (avgValueQuantity > avgTargetWeight1) {
+						double fract = (avgValueQuantity - avgTargetWeight1)/(avgTargetWeight2 - avgTargetWeight1);
+						Preconditions.checkState(fract >= 0d && fract <= 1d);
+						newWeight = origWeight*fract + newWeight*(1-fract);
+						System.out.println("\t\tAvg value is poorly fit, linearly blending (fract="+(float)fract
+								+") calculated weight with orig: "+(float)newWeight);
 					}
-				});
-				
-				// update the weight
-				modRanges.add(new ConstraintRange(range.name, range.shortName, range.startRow, range.endRow,
-						range.inequality, newWeight, range.weightingType));
+					
+					newTotalWeight += rangeRows*newWeight;
+					if (scaleToOrig)
+						scalar = newWeight / origWeight;
+					else
+						scalar = newWeight / prevWeight;
+				}
+
+				double[] myScalars = range.inequality ? origValScalars_ineq : origValScalars;
+				for (int r=range.startRow; r<range.endRow; r++)
+					myScalars[r] = scalar;
+				newWeights[i] = newWeight;
+			}
+			
+			if (conserveTotalWeight) {
+				// rescale weights
+				double weightScalar = origTotalWeight/newTotalWeight;
+				System.out.println("Re-scaling weights by "+(float)origTotalWeight+" / "+(float)newTotalWeight
+						+" = "+(float)weightScalar+" to conserve original total weight");
+				for (int i=0; i<newWeights.length; i++)
+					newWeights[i] *= weightScalar;
+				for (int r=0; r<origValScalars.length; r++)
+					origValScalars[r] *= weightScalar;
+				if (origValScalars_ineq != null)
+					for (int r=0; r<origValScalars_ineq.length; r++)
+						origValScalars_ineq[r] *= weightScalar;
+			}
+			
+			System.out.println("Updating matrices");
+			if (scaleToOrig)
+				System.out.println("\tRescaling relative to original values in order to correct any floating-point "
+						+ "drift, may take slighly longer (this is done every "+floatingPointDriftMod+" rounds)");
+			reweight(origValScalars, scaleToOrig, origA, modA, origD, modD);
+			if (misfits_ineq != null)
+				reweight(origValScalars_ineq, scaleToOrig, origA_ineq, modA_ineq, origD_ineq, modD_ineq);
+
+			// update the constraint range weights
+			List<ConstraintRange> modRanges = new ArrayList<>();
+			for (int i=0; i<ranges.size(); i++) {
+				ConstraintRange range = ranges.get(i);
+				if (stats.get(i) == null)
+					modRanges.add(range);
+				else
+					modRanges.add(new ConstraintRange(range.name, range.shortName, range.startRow, range.endRow,
+							range.inequality, newWeights[i], range.weightingType));
 			}
 			
 			System.out.println("Re-calculating misfits");
@@ -255,6 +329,21 @@ public class TestReweightInversion extends ThreadedSimulatedAnnealing {
 			System.out.println("Took "+timeStr(watch.elapsed(TimeUnit.MILLISECONDS))+" to re-weight");
 		}
 		super.beforeRound(curIter, round);
+	}
+	
+	private static void reweight(double[] scalars, boolean scaleToOrig, DoubleMatrix2D origA, DoubleMatrix2D modA,
+			double[] origD, double[] modD) {
+		for (int r=0; r<scalars.length; r++)
+			modD[r] = origD[r]*scalars[r];
+		modA.forEachNonZero(new IntIntDoubleFunction() {
+
+			@Override
+			public double apply(int row, int col, double val) {
+				if (scaleToOrig)
+					return origA.get(row, col)*scalars[row];
+				return val*scalars[row];
+			}
+		});
 	}
 
 	@Override
@@ -322,7 +411,7 @@ public class TestReweightInversion extends ThreadedSimulatedAnnealing {
 		constrBuilder.defaultConstraints();
 		
 		boolean reweight = true;
-		dirName += "-reweight";
+		dirName += "-reweight_"+QUANTITY_DEFAULT.name();
 		
 //		boolean reweight = false;
 
@@ -360,7 +449,7 @@ public class TestReweightInversion extends ThreadedSimulatedAnnealing {
 		SimulatedAnnealing sa = config.buildSA(inputs);
 		Preconditions.checkState(sa instanceof ThreadedSimulatedAnnealing);
 		if (reweight)
-			sa = new TestReweightInversion((ThreadedSimulatedAnnealing)sa);
+			sa = new ReweightEvenFitSimulatedAnnealing((ThreadedSimulatedAnnealing)sa);
 		
 		System.out.println("SA Parameters:");
 		System.out.println("\tImplementation: "+sa.getClass().getName());
