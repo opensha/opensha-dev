@@ -176,7 +176,7 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 								debug("AsyncLogicTree won't branch average, all levels affect "+FaultSystemRupSet.RUP_PROPS_FILE_NAME);
 							} else {
 								if (!baCreators.containsKey(baPrefix))
-									baCreators.put(baPrefix, new BranchAverageSolutionCreator());
+									baCreators.put(baPrefix, new BranchAverageSolutionCreator(tree.getWeightProvider()));
 								BranchAverageSolutionCreator baCreator = baCreators.get(baPrefix);
 								try {
 									baCreator.addSolution(sol, branch);

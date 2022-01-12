@@ -193,7 +193,7 @@ import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.DeformationModelFetcher;
 import scratch.UCERF3.utils.FaultSectionDataWriter;
@@ -2173,7 +2173,7 @@ public class PureScratch {
 		
 		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
 				new File("/home/kevin/OpenSHA/UCERF3/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
-		APrioriBranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		U3APrioriBranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		double totWeight = 0d;
 		Map<FaultModels, List<Integer>> fmCorupsMap = new HashMap<>();
 		Map<FaultModels, List<Integer>> fmRups1Map = new HashMap<>();

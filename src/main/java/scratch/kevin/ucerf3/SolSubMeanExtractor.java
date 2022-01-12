@@ -25,7 +25,7 @@ import scratch.UCERF3.griddedSeismicity.GridSourceFileReader;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
@@ -62,7 +62,7 @@ public class SolSubMeanExtractor {
 		
 		int threads = 4;
 		
-		APrioriBranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		U3APrioriBranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		
 		for (U3LogicTreeBranchNode<?> fm : fmBranches) {
 //			if (fm.getRelativeWeight(InversionModels.CHAR_CONSTRAINED) <= 0d)

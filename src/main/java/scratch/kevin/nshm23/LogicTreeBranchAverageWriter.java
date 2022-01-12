@@ -93,7 +93,7 @@ public class LogicTreeBranchAverageWriter {
 			if (nodes.size() > 1) {
 				System.out.println("Building "+nodes.size()+" BAs for "+level.getName());
 				for (LogicTreeNode node : nodes) {
-					BranchAverageSolutionCreator creator = new BranchAverageSolutionCreator();
+					BranchAverageSolutionCreator creator = new BranchAverageSolutionCreator(tree.getWeightProvider());
 //					creator.skipModule(SupraSeisBValInversionTargetMFDs.class);
 					creator.skipModule(InversionTargetMFDs.class);
 					nodeBACreators.put(node, creator);

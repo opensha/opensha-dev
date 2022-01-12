@@ -15,6 +15,7 @@ import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RuptureSets;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration.Builder;
@@ -82,8 +83,8 @@ public class BatchInversionScriptWriter {
 		File rupSetFile;
 		String rsPrefix;
 		
-		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
-		rsPrefix = "reproduce-ucerf3-ref_branch-uniform";
+//		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
+//		rsPrefix = "reproduce-ucerf3-ref_branch-uniform";
 		
 //		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
 //		rsPrefix = "coulomb-ref_branch-uniform";
@@ -100,8 +101,8 @@ public class BatchInversionScriptWriter {
 //		rupSetFile = new File(rsDir, "fm3_1_u3ref_tapered_reproduce_ucerf3.zip");
 //		rsPrefix = "reproduce-ucerf3-ref_branch-tapered";
 		
-//		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
-//		rsPrefix = "coulomb-fm31-ref_branch-uniform";
+		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
+		rsPrefix = "coulomb-fm31-ref_branch-uniform";
 		
 //		File remoteMeanCompFile = new File(remoteMainDir,
 //				"2021_10_18-reproduce-ucerf3-ref_branch-uniform-new_anneal-5x_avg-try_zero-var_perturb-noWL-5h/mean_solution.zip");
@@ -1116,13 +1117,64 @@ public class BatchInversionScriptWriter {
 		/*
 		 * DM fit tests
 		 */
-		dirName += "-"+rsPrefix+"-dm_fit_tests";
-		double bVal = 0.8;
-		DeformationModels dm = DeformationModels.ABM;
-		dirName += "-"+dm.encodeChoiceString();
-		dirName += "-supra_b_"+(float)bVal;
+//		dirName += "-"+rsPrefix+"-dm_fit_tests";
+//		double bVal = 0.8;
+//		DeformationModels dm = DeformationModels.ABM;
+//		dirName += "-"+dm.encodeChoiceString();
+//		dirName += "-supra_b_"+(float)bVal;
+//		
+//		rupSet = FaultSystemRupSet.buildFromExisting(rupSet).replaceFaultSections(RuptureSets.getU3SubSects(FaultModels.FM3_1, dm)).build();
+//		
+//		boolean applyDefModelUncertaintiesToNucl = true;
+//		boolean addSectCountUncertaintiesToMFD = false;
+//		boolean adjustForIncompatibleData = true;
+//
+//		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
+//				applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
+//		
+//		constrBuilder.slipRates().weight(1d).supraBValMFDs().weight(10d).sectSupraRates().weight(0.5);
+//		
+//		IntegerPDF_FunctionSampler sampler = constrBuilder.getSkipBelowMinSampler();
+//		
+//		List<InversionConstraint> constraints = constrBuilder.build();
+//		
+//		System.out.println("Default Constraint list:");
+//		for (InversionConstraint constr : constraints)
+//			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
+//		
+////		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
+//		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
+//		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
+//		
+//		InversionConfiguration.Builder builder = InversionConfiguration.builder(constraints, completion)
+//				.threads(remoteToalThreads).sampler(sampler);
+//		if (avgCompletion != null)
+//			builder.avgThreads(remoteToalThreads/4, avgCompletion);
+//		
+//		builder.variablePertubationBasis(new GRParticRateEstimator(rupSet, bVal).estimateRuptureRates());
+//		
+//		configs.add(builder.build());
+//		subDirNames.add("slip-mfd-sect_nucl");
+//		
+//		builder.except(SectionTotalRateConstraint.class);
+//		
+//		configs.add(builder.build());
+//		subDirNames.add("slip-mfd");
+//		
+//		builder.except(MFDInversionConstraint.class);
+//		
+//		configs.add(builder.build());
+//		subDirNames.add("slip-only");
+//		
+//		avgJob = false;
+//		allPlotLevel = PlotLevel.FULL;
 		
-		rupSet = FaultSystemRupSet.buildFromExisting(rupSet).replaceFaultSections(RuptureSets.getU3SubSects(FaultModels.FM3_1, dm)).build();
+		/*
+		 * Starting model using previous tests, reproducing Chris DC's tests
+		 */
+		dirName += "-"+rsPrefix+"-nshm23_draft_default";
+		double bVal = 0.8;
+		dirName += "-supra_b_"+(float)bVal;
 		
 		boolean applyDefModelUncertaintiesToNucl = true;
 		boolean addSectCountUncertaintiesToMFD = false;
@@ -1131,7 +1183,10 @@ public class BatchInversionScriptWriter {
 		DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, bVal,
 				applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
 		
-		constrBuilder.slipRates().weight(1d).supraBValMFDs().weight(10d).sectSupraRates().weight(0.5);
+		constrBuilder.defaultConstraints();
+		
+		dirName += "-no_sect_rate";
+		constrBuilder.except(SectionTotalRateConstraint.class);
 		
 		IntegerPDF_FunctionSampler sampler = constrBuilder.getSkipBelowMinSampler();
 		
@@ -1141,32 +1196,41 @@ public class BatchInversionScriptWriter {
 		for (InversionConstraint constr : constraints)
 			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
 		
+		long ips = 80000;
+		
+		
 //		CompletionCriteria completion = TimeCompletionCriteria.getInHours(5); dirName += "-5h";
-		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
-		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
+//		CompletionCriteria completion = TimeCompletionCriteria.getInHours(2); dirName += "-2h";
+		CompletionCriteria completion = new IterationCompletionCriteria(2000000000); dirName += "-2bil_iters";
+//		CompletionCriteria avgCompletion = TimeCompletionCriteria.getInMinutes(5);
+		CompletionCriteria avgCompletion = new IterationCompletionCriteria(5l*60l*ips);
 		
 		InversionConfiguration.Builder builder = InversionConfiguration.builder(constraints, completion)
 				.threads(remoteToalThreads).sampler(sampler);
+		builder.subCompletion(new IterationCompletionCriteria(ips));
 		if (avgCompletion != null)
 			builder.avgThreads(remoteToalThreads/4, avgCompletion);
 		
 		builder.variablePertubationBasis(new GRParticRateEstimator(rupSet, bVal).estimateRuptureRates());
 		
-		configs.add(builder.build());
-		subDirNames.add("slip-mfd-sect_nucl");
+		remoteMeanCompFile = new File(new File(remoteMainDir, dirName), "mean_solution.zip");
+		dirName += "-initial30m";
+		double[] initial = FaultSystemSolution.load(new File(
+//				"/home/kevin/markdown/inversions/2022_01_10-coulomb-u3-nshm23_draft-supra_b_0.8-randWeightChange-30m/"
+				"/home/kevin/markdown/inversions/2022_01_10-coulomb-u3-nshm23_draft-supra_b_0.8-randWeightChange-no_sect_rate-30m/"
+				+ "solution.zip")).getRateForAllRups();
+		for (int r : constrBuilder.getRupIndexesBelowMinMag())
+			initial[r] = 0d;
+		builder.initialSolution(initial);
 		
-		builder.except(SectionTotalRateConstraint.class);
-		
-		configs.add(builder.build());
-		subDirNames.add("slip-mfd");
-		
-		builder.except(MFDInversionConstraint.class);
-		
-		configs.add(builder.build());
-		subDirNames.add("slip-only");
-		
-		avgJob = false;
-		allPlotLevel = PlotLevel.FULL;
+		int num = 5;
+		InversionConfiguration config = builder.build();
+		for (int i=0; i<num; i++) {
+			configs.add(config);
+			subDirNames.add("run_"+i);
+		}
+		avgJob = num > 1;
+		allPlotLevel = null;
 		
 		// BELOW HERE IS COMMON TO EVERYTHING
 		

@@ -25,7 +25,7 @@ public class GRScalingMoRateTests {
 		
 		double slipRate = 30d*1e-3;
 		double length = 7.5d*1e3;
-		double width = 12d*1e3;
+		double width = 14d*1e3;
 		double area = length*width;
 		
 		double b = 0.8d;

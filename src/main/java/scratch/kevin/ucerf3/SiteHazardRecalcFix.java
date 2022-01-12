@@ -24,7 +24,7 @@ import scratch.UCERF3.FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.CompoundFSSPlots;
 import scratch.UCERF3.analysis.CompoundFSSPlots.ERFBasedSiteHazardHistPlot;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 public class SiteHazardRecalcFix {
@@ -61,7 +61,7 @@ public class SiteHazardRecalcFix {
 		
 		if (calc) {
 			ERFBasedSiteHazardHistPlot plot = new ERFBasedSiteHazardHistPlot(
-					new APrioriBranchWeightProvider(), tempCurveDir, 1);
+					new U3APrioriBranchWeightProvider(), tempCurveDir, 1);
 			
 			List<CompoundFSSPlots> plots = Lists.newArrayList();
 			plots.add(plot);

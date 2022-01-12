@@ -239,7 +239,7 @@ public class LogicTreeHazardCompare {
 		GriddedRegion gridReg = null;
 		for (int i=0; i<branches.size(); i++) {
 			LogicTreeBranch<?> branch = branches.get(i);
-			double weight = branch.getBranchWeight();
+			double weight = tree.getBranchWeight(branch);
 			weights.add(weight);
 			totWeight += weight;
 			

@@ -13,8 +13,8 @@ import scratch.UCERF3.analysis.CompoundFSSPlots;
 import scratch.UCERF3.analysis.CompoundFSSPlots.SubSectRITable;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.BranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3BranchWeightProvider;
 
 public class SubSectRITableGen {
 
@@ -27,7 +27,7 @@ public class SubSectRITableGen {
 		FaultModels fm = FaultModels.FM3_1;
 //		DeformationModels dm = DeformationModels.GEOLOGIC;
 		
-		BranchWeightProvider weightProvider = new APrioriBranchWeightProvider();
+		U3BranchWeightProvider weightProvider = new U3APrioriBranchWeightProvider();
 		
 //		FaultSystemSolutionFetcher fetch = FaultSystemSolutionFetcher.getSubset(cfss, fm, dm);
 		FaultSystemSolutionFetcher fetch = FaultSystemSolutionFetcher.getSubset(cfss, fm);

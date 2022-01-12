@@ -21,7 +21,7 @@ import com.google.common.collect.Lists;
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.analysis.BranchSensitivityHistogram;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 
@@ -35,7 +35,7 @@ public class BranchSensHistTests {
 				new File(new File(UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, "InversionSolutions"),
 						"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
-		APrioriBranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		U3APrioriBranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		List<U3LogicTreeBranch> branches = Lists.newArrayList(cfss.getBranches());
 		Collections.sort(branches);
 		

@@ -182,10 +182,22 @@ public class InversionsCLI {
 			boolean applyDefModelUncertaintiesToNucl = true;
 			boolean addSectCountUncertaintiesToMFD = false;
 			boolean adjustForIncompatibleData = true;
+			boolean randWeight = true;
 
 			DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, supraBVal,
 					applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
 			constrBuilder.defaultConstraints();
+			
+			if (randWeight) {
+				dirName += "-randWeightChange";
+				constrBuilder.weight(SlipRateInversionConstraint.class, 1*(Math.random()+0.5));
+				constrBuilder.weight(MFDInversionConstraint.class, 10*(Math.random()+0.5));
+				constrBuilder.weight(PaleoRateInversionConstraint.class, 5*(Math.random()+0.5));
+				constrBuilder.weight(PaleoSlipInversionConstraint.class, 5*(Math.random()+0.5));
+				constrBuilder.weight(ParkfieldInversionConstraint.class, 100*(Math.random()+0.5));
+				constrBuilder.weight(ParkfieldInversionConstraint.class, 100*(Math.random()+0.5));
+				constrBuilder.weight(SectionTotalRateConstraint.class, 0.5*(Math.random()+0.5));
+			}
 			
 //			double mfdWeight = 10;
 //			dirName += "-mfd_wt_"+oDF.format(mfdWeight);
@@ -210,6 +222,9 @@ public class InversionsCLI {
 //			dirName += "-sect_wt_"+oDF.format(nuclWeight);
 //			constrBuilder.weight(SectionTotalRateConstraint.class, nuclWeight);
 			
+			dirName += "-no_sect_rate";
+			constrBuilder.except(SectionTotalRateConstraint.class);
+			
 			extraConstraints.addAll(constrBuilder.build());
 			
 			// write out new ruptures set with the new target MFDs
@@ -224,27 +239,27 @@ public class InversionsCLI {
 //		extraConstraints.add(new RelativeRupJumpDistConstraint(rupSet, r0, 1d, 1000d, false));
 //		dirName += "-rup_jump_r0_"+oDF.format(r0);
 		
-		if (rupSet == null)
-			rupSet = FaultSystemRupSet.load(rupSetFile);
-		double r0 = 3d;
-		double weight = 1d;
-		JumpProbabilityCalc jumpProbCalc = new Shaw07JumpDistProb(1d, r0);
-		
-		boolean ineq = true;
-		
-//		extraConstraints.add(new JumpProbabilityConstraint.ProxySlip(weight, ineq, rupSet, jumpProbCalc));
-//		dirName += "-rel_slip_jump_r0_"+oDF.format(r0);
-		
-		extraConstraints.add(new JumpProbabilityConstraint.RelativeRate(weight, ineq, rupSet, jumpProbCalc,
-				new InitialModelParticipationRateEstimator(rupSet, Inversions.getDefaultVariablePerturbationBasis(rupSet))));
-		dirName += "-rel_rate_jump_r0_"+oDF.format(r0);
-		
-		if (weight != 1d)
-			dirName += "_wt"+oDF.format(weight);
-		if (ineq)
-			dirName += "_ineq";
-		
-		compSol = new File(new File(parentDir, "2021_12_10-coulomb-u3-nshm23_draft-supra_b_0.8-10m"), "solution.zip");
+//		if (rupSet == null)
+//			rupSet = FaultSystemRupSet.load(rupSetFile);
+//		double r0 = 3d;
+//		double weight = 1d;
+//		JumpProbabilityCalc jumpProbCalc = new Shaw07JumpDistProb(1d, r0);
+//		
+//		boolean ineq = true;
+//		
+////		extraConstraints.add(new JumpProbabilityConstraint.ProxySlip(weight, ineq, rupSet, jumpProbCalc));
+////		dirName += "-rel_slip_jump_r0_"+oDF.format(r0);
+//		
+//		extraConstraints.add(new JumpProbabilityConstraint.RelativeRate(weight, ineq, rupSet, jumpProbCalc,
+//				new InitialModelParticipationRateEstimator(rupSet, Inversions.getDefaultVariablePerturbationBasis(rupSet))));
+//		dirName += "-rel_rate_jump_r0_"+oDF.format(r0);
+//		
+//		if (weight != 1d)
+//			dirName += "_wt"+oDF.format(weight);
+//		if (ineq)
+//			dirName += "_ineq";
+//		
+//		compSol = new File(new File(parentDir, "2021_12_10-coulomb-u3-nshm23_draft-supra_b_0.8-10m"), "solution.zip");
 		
 //		double b = 0.8;
 //		dirName += "rel_gr_b"+oDF.format(b);
@@ -298,12 +313,12 @@ public class InversionsCLI {
 //		dirName += "-1h";
 //		argz.add("--completion"); argz.add("1h");
 //		argz.add("--avg-completion"); argz.add("5m");
-//		dirName += "-30m";
-//		argz.add("--completion"); argz.add("30m");
-//		argz.add("--avg-completion"); argz.add("1m");
-		dirName += "-10m";
-		argz.add("--completion"); argz.add("10m");
+		dirName += "-30m";
+		argz.add("--completion"); argz.add("30m");
 		argz.add("--avg-completion"); argz.add("1m");
+//		dirName += "-10m";
+//		argz.add("--completion"); argz.add("10m");
+//		argz.add("--avg-completion"); argz.add("1m");
 //		dirName += "-sd1";
 //		argz.add("--completion-sd"); argz.add("1");
 //		argz.add("--completion-sd-type"); argz.add(ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY.name());

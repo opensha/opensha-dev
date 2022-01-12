@@ -31,7 +31,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 import com.google.common.base.Preconditions;
@@ -55,7 +55,7 @@ public class MPJ_MeanUCERF3_HazardCurveTest extends MPJTaskCalculator {
 	public MPJ_MeanUCERF3_HazardCurveTest(CommandLine cmd, CompoundFaultSystemSolution cfss, File dir) {
 		super(cmd);
 		
-		fetch = new Compound_FM_DM_Scale_CombinedFetcher(cfss, new APrioriBranchWeightProvider());
+		fetch = new Compound_FM_DM_Scale_CombinedFetcher(cfss, new U3APrioriBranchWeightProvider());
 		branches = Lists.newArrayList(fetch.getBranches());
 		Collections.sort(branches);
 		

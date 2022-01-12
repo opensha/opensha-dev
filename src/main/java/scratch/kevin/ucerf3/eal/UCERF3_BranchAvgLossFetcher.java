@@ -21,8 +21,8 @@ import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.BranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 
@@ -90,7 +90,7 @@ public class UCERF3_BranchAvgLossFetcher {
 				trueMeanEAL += rupLosses[r][m] * totRupMFDs[r].getY(m);
 		System.out.println("True mean fault based EAL (both FMs): "+trueMeanEAL);
 		
-		BranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		U3BranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		
 		double totWeight = 0d;
 		

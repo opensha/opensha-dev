@@ -21,8 +21,8 @@ import org.opensha.sha.faultSurface.FaultSection;
 import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.BranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.MatrixIO;
 
@@ -44,7 +44,7 @@ public class SubSectTDProbCICalc {
 		List<Double> probs = Lists.newArrayList();
 		List<Double> weights = Lists.newArrayList();
 		
-		BranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		U3BranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		
 		MagDependentAperiodicityOptions[] covs = { null, MagDependentAperiodicityOptions.LOW_VALUES,
 				MagDependentAperiodicityOptions.MID_VALUES, MagDependentAperiodicityOptions.HIGH_VALUES };

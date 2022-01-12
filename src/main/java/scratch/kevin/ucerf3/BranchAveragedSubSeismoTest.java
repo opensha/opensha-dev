@@ -26,8 +26,8 @@ import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.BranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 
@@ -38,7 +38,7 @@ public class BranchAveragedSubSeismoTest {
 		
 		FaultModels fm = FaultModels.FM3_1;
 		File invDir = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions");
-		BranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		U3BranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		boolean only20 = true;
 		HashSet<String> done20 = new HashSet<String>();
 		

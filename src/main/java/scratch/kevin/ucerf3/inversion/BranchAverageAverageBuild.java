@@ -14,7 +14,7 @@ import com.google.common.collect.Maps;
 import scratch.UCERF3.AverageFaultSystemSolution;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
@@ -49,7 +49,7 @@ public class BranchAverageAverageBuild {
 		File binsDir = new File("/home/kevin/OpenSHA/UCERF3/inversions/" +
 				"2013_05_10-ucerf3p3-production-10runs/bins");
 		
-		APrioriBranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		U3APrioriBranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		
 		Map<String, double[]> map = Maps.newHashMap();
 		double totWt = loadNoMins(binsDir, weightProv, map);
@@ -69,7 +69,7 @@ public class BranchAverageAverageBuild {
 		U3FaultSystemIO.writeSol(avgSol, new File(dir, "mean_noMins.zip"));
 	}
 	
-	private static double loadNoMins(File dir, APrioriBranchWeightProvider weightProv,
+	private static double loadNoMins(File dir, U3APrioriBranchWeightProvider weightProv,
 			Map<String, double[]> map) throws IOException {
 		double totWt = 0;
 		for (File file : dir.listFiles()) {

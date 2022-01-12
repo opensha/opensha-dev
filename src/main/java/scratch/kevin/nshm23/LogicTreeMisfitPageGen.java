@@ -22,6 +22,7 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
@@ -30,10 +31,11 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.ConstraintWeightingType;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.MisfitStats;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.Quantity;
@@ -42,7 +44,6 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import com.google.common.collect.Table.Cell;
 
 public class LogicTreeMisfitPageGen {
 	
@@ -52,7 +53,9 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-FM3_1-CoulombRupSet");
 //		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
 //		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-no_seg-FM3_1-CoulombRupSet");
-		File mainDir = new File(invDir, "2021_12_17-u3_branches-coulomb-FM3_1-5h");
+//		File mainDir = new File(invDir, "2021_12_17-u3_branches-coulomb-FM3_1-5h");
+		File mainDir = new File(invDir, "2022_01_07-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-CoulombRupSet-SubB1-175_samples");
+//		File mainDir = new File(invDir, "2022_01_10-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-FM3_1-CoulombRupSet-SubB1-105_samples");
 //		File mainDir = new File(invDir, "");
 		File resultsFile = new File(mainDir, "results.zip");
 		
@@ -74,7 +77,7 @@ public class LogicTreeMisfitPageGen {
 		
 		Quantity[] quantities = { Quantity.STD_DEV, Quantity.MEAN, Quantity.MAD, Quantity.RMSE};
 		
-		Quantity[] summaryQuantities = { Quantity.STD_DEV };
+		Quantity[] summaryQuantities = { Quantity.MAD, Quantity.STD_DEV };
 		
 		int numSummaryBranches = 5;
 		
@@ -102,7 +105,7 @@ public class LogicTreeMisfitPageGen {
 			
 			if (fullAccumulator == null)
 				fullAccumulator = stats.averagingAccumulator();
-			fullAccumulator.process(stats, branch.getBranchWeight());
+			fullAccumulator.process(stats, tree.getBranchWeight(branch));
 		}
 		
 		zip.close();
@@ -111,6 +114,9 @@ public class LogicTreeMisfitPageGen {
 		
 		List<String> constraintNames = new ArrayList<>();
 		Map<String, List<MisfitStats>> constraintStatsMap = new HashMap<>();
+		Map<String, String> constraintShortNames = new HashMap<>();
+		
+		int numUncertConstraints = 0;
 		
 		for (InversionMisfitStats bstats : branchStats) {
 			for (MisfitStats stats : bstats.getStats()) {
@@ -119,6 +125,9 @@ public class LogicTreeMisfitPageGen {
 					list = new ArrayList<>();
 					constraintStatsMap.put(stats.range.name, list);
 					constraintNames.add(stats.range.name);
+					if (stats.range.weightingType == ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY)
+						numUncertConstraints++;
+					constraintShortNames.put(stats.range.name, stats.range.shortName);
 				}
 				list.add(stats);
 			}
@@ -172,7 +181,7 @@ public class LogicTreeMisfitPageGen {
 					accumulator = bstats.averagingAccumulator();
 					choiceAccumulators.put(node, accumulator);
 				}
-				accumulator.process(bstats, branch.getBranchWeight());
+				accumulator.process(bstats, tree.getBranchWeight(branch));
 				for (MisfitStats stats : bstats.getStats()) {
 					List<MisfitStats> statList = constraintChoiceAllVals.get(stats.range.name, node);
 					if (statList == null) {
@@ -262,7 +271,8 @@ public class LogicTreeMisfitPageGen {
 								table.finalizeLine();
 							}
 						}
-						lines.add("**Sorted branch values:**");
+						lines.add("**Sorted branch values:** A list of best and worst-fitting branches, sorted by how "
+								+ "well they fit the "+constraintName+" constraint.");
 						lines.add("");
 						lines.addAll(table.build());
 						lines.add("");
@@ -307,10 +317,252 @@ public class LogicTreeMisfitPageGen {
 							table.finalizeLine();
 						}
 					}
+					lines.add(constraintName+" misfit "+quantity+" for each logic tree branch choice");
+					lines.add("");
 					lines.addAll(table.build());
 					lines.add("");
 				}
 			}
+		}
+		
+		lines.add("## Constraint Summaries");
+		lines.add(topLink); lines.add("");
+		
+		// see if we have variable weights
+		Map<String, List<Double>> constraintWeights = new HashMap<>();
+		
+		boolean evenWeighting = true;
+		for (String constraintName : constraintNames) {
+			Double firstWeight = null;
+			List<Double> weights = new ArrayList<>();
+			for (MisfitStats stats : constraintBranchVals.row(constraintName).values()) {
+				if (firstWeight == null)
+					firstWeight = stats.range.weight;
+				evenWeighting = evenWeighting && (float)stats.range.weight == firstWeight.floatValue();
+				weights.add(stats.range.weight);
+			}
+			constraintWeights.put(constraintName, weights);
+		}
+		
+		lines.add("### Constraint Weights");
+		lines.add(topLink); lines.add("");
+		
+		TableBuilder wTable = MarkdownUtils.tableBuilder();
+		
+		if (evenWeighting)
+			wTable.addLine("Constraint Name", "Weight");
+		else
+			wTable.addLine("Constraint Name", "Average Weight", "Range", "Weight Distribution");
+		for (String constraintName : constraintNames) {
+			MinMaxAveTracker track = new MinMaxAveTracker();
+			List<Double> weights = constraintWeights.get(constraintName);
+			for (double weight : weights)
+				track.addValue(weight);
+			
+			wTable.initNewLine();
+			wTable.addColumn(constraintName);
+			wTable.addColumn((float)track.getAverage()+"");
+			if (evenWeighting) {
+				wTable.finalizeLine();
+				continue;
+			}
+			wTable.addColumn("["+(float)track.getMin()+", "+(float)track.getMax()+"]");
+			
+			double max = track.getMax();
+			double min = track.getMin();
+			if ((float)min == (float)max) {
+				wTable.addColumn("_(N/A)_");
+			} else {
+				double span = max - min;
+				Preconditions.checkState(span > 0d, "max == min: %s %s", max, min);
+				double histDelta = Math.max(1e-6, Math.pow(10, Math.floor(Math.log10(span))-1)/2);
+				if ((float)max < (float)(min+histDelta))
+					max = min+histDelta*1.1;
+				HistogramFunction hist = HistogramFunction.getEncompassingHistogram(min, max, histDelta);
+				for (double val : weights)
+					hist.add(hist.getClosestXIndex(val), 1d);
+				
+				List<XY_DataSet> funcs = new ArrayList<>();
+				List<PlotCurveCharacterstics> chars = new ArrayList<>();
+				
+				Range yRange = new Range(0, 1.1*hist.getMaxY());
+				Range xRagne = new Range(hist.getMinX()-0.5*hist.getDelta(), hist.getMaxX()+0.5*hist.getDelta());
+				
+				funcs.add(hist);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+				
+				DefaultXY_DataSet fullMean = new DefaultXY_DataSet();
+				fullMean.set(track.getAverage(), 0d);
+				fullMean.set(track.getAverage(), yRange.getUpperBound());
+				
+				funcs.add(fullMean);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.DARK_GRAY));
+				
+				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				
+				String shortName = constraintShortNames.get(constraintName);
+				PlotSpec spec = new PlotSpec(funcs, chars, shortName+" Weights", "", "Count");
+				
+				gp.drawGraphPanel(spec, false, false, xRagne, yRange);
+				
+				String prefix = shortName+"_weight_hist";
+				prefix = prefix.replaceAll("\\W+", "_");
+				PlotUtils.writePlots(resourcesDir, prefix, gp, 800, 650, true, true, false);
+				
+				wTable.addColumn("![histogram]("+resourcesDir.getName()+"/"+prefix+".png)");
+				wTable.finalizeLine();
+			}
+		}
+		
+		lines.addAll(wTable.build());
+		
+		for (String constraintName : constraintNames) {
+			lines.add("### "+constraintName+" Summary");
+			lines.add(topLink); lines.add("");
+			
+			TableBuilder table = MarkdownUtils.tableBuilder();
+			
+			MisfitStats fullAvgMisfit = null;
+			for (MisfitStats misfits : fullAvgStats.getStats()) {
+				if (misfits.range.name.equals(constraintName)) {
+					fullAvgMisfit = misfits;
+					break;
+				}
+			}
+			Preconditions.checkNotNull(fullAvgMisfit);
+			
+			table.initNewLine();
+			for (Quantity quantity : quantities)
+				table.addColumn(quantity+"");
+			table.finalizeLine();
+			table.initNewLine();
+			for (Quantity quantity : quantities)
+				table.addColumn("Average: "+(float)fullAvgMisfit.get(quantity));
+			table.finalizeLine();
+			for (Quantity quantity : quantities) {
+				double min = Double.POSITIVE_INFINITY;
+				double max = Double.NEGATIVE_INFINITY;
+				for (MisfitStats stats : constraintBranchVals.row(constraintName).values()) {
+					double val = stats.get(quantity);
+					min = Math.min(min, val);
+					max = Math.max(max, val);
+				}
+				table.addColumn("Range: ["+(float)min+", "+(float)max+"]");
+			}
+			table.finalizeLine();
+			table.initNewLine();
+			for (int q=0; q<quantities.length; q++) {
+				Quantity quantity = quantities[q];
+				HistogramFunction fullHist = constraintFullHistsMap.get(constraintName)[q];
+				
+				List<XY_DataSet> funcs = new ArrayList<>();
+				List<PlotCurveCharacterstics> chars = new ArrayList<>();
+				
+				Range yRange = new Range(0, 1.1*fullHist.getMaxY());
+				Range xRagne = new Range(fullHist.getMinX()-0.5*fullHist.getDelta(), fullHist.getMaxX()+0.5*fullHist.getDelta());
+				
+				funcs.add(fullHist);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+				
+				DefaultXY_DataSet fullMean = new DefaultXY_DataSet();
+				fullMean.set(fullAvgMisfit.get(quantity), 0d);
+				fullMean.set(fullAvgMisfit.get(quantity), yRange.getUpperBound());
+				
+				funcs.add(fullMean);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.DARK_GRAY));
+				
+				HeadlessGraphPanel gp = PlotUtils.initHeadless();
+				
+				PlotSpec spec = new PlotSpec(funcs, chars, constraintName+" Misfits", quantity.toString(), "Count");
+				
+				gp.drawGraphPanel(spec, false, false, xRagne, yRange);
+				
+				String prefix = fullAvgMisfit.range.shortName+"_"+quantity.name()+"_full_hist";
+				prefix = prefix.replaceAll("\\W+", "_");
+				PlotUtils.writePlots(resourcesDir, prefix, gp, 800, 650, true, true, false);
+				
+				table.addColumn("![histogram]("+resourcesDir.getName()+"/"+prefix+".png)");
+			}
+			table.finalizeLine();
+			
+			if (numUncertConstraints > 1 &&
+					constraintBranchVals.row(constraintName).values().iterator().next().range.weightingType
+					== ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY) {
+				table.initNewLine();
+				
+				for (Quantity quantity : quantities) {
+					// scatter plot of how well this constraint was fit relative to others
+					DefaultXY_DataSet scatter = new DefaultXY_DataSet();
+					
+					String shortName = null;
+					
+					for (int i=0; i<branches.size(); i++) {
+						LogicTreeBranch<?> branch = branches.get(i);
+						InversionMisfitStats allStats = branchStats.get(i);
+						MisfitStats myConstrStats = constraintBranchVals.get(constraintName, branch);
+						if (myConstrStats == null || myConstrStats.range.weightingType != ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY)
+							// this branch doesn't have this constraint
+							continue;
+						
+						if (shortName == null)
+							shortName = myConstrStats.range.shortName;
+						
+						double myVal = myConstrStats.get(quantity);
+						double avgOther = 0d;
+						int numOther = 0;
+						for (MisfitStats oStats : allStats.getStats()) {
+							if (oStats.range.weightingType == ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY
+									&& !oStats.range.name.equals(constraintName)) {
+								numOther++;
+								avgOther += oStats.get(quantity);
+							}
+						}
+						if (numOther == 0)
+							continue;
+						avgOther /= (double)numOther;
+						scatter.set(avgOther, myVal);
+					}
+					
+					if (scatter.size() == 0)
+						continue;
+					
+					List<XY_DataSet> funcs = new ArrayList<>();
+					List<PlotCurveCharacterstics> chars = new ArrayList<>();
+					
+					funcs.add(scatter);
+					chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_CROSS, 3f, Color.BLACK));
+					
+					double max = Math.ceil(Math.max(scatter.getMaxX(), scatter.getMaxY()));
+					double min = Math.floor(Math.min(scatter.getMinX(), scatter.getMinY()));
+					Preconditions.checkState(max > min, "%s %s", max, min);
+					
+					DefaultXY_DataSet oneToOne = new DefaultXY_DataSet();
+					oneToOne.set(min, min);
+					oneToOne.set(max, max);
+					
+					funcs.add(oneToOne);
+					chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.GRAY));
+					
+					PlotSpec spec = new PlotSpec(funcs, chars, shortName+" Relative Fits",
+							"Average Other Constraint "+quantity, shortName+" "+quantity);
+					
+					HeadlessGraphPanel gp = PlotUtils.initHeadless();
+					
+					Range range = new Range(min, max);
+					gp.drawGraphPanel(spec, false, false, range, range);
+					
+					String prefix = shortName+"_"+quantity.name()+"_misfit_scatter";
+					prefix = prefix.replaceAll("\\W+", "_");
+					
+					PlotUtils.writePlots(resourcesDir, prefix, gp, 800, -1, true, false, false);
+					
+					table.addColumn("!["+quantity+" Scatter]("+resourcesDir.getName()+"/"+prefix+".png)");
+				}
+				table.finalizeLine();
+			}
+			
+			lines.addAll(table.build());
+			lines.add("");
 		}
 		
 		for (LogicTreeLevel<?> level : levels) {
@@ -331,6 +583,43 @@ public class LogicTreeMisfitPageGen {
 			
 			lines.add("## "+level.getName());
 			lines.add(topLink); lines.add("");
+			
+			if (numUncertConstraints > 0) {
+				lines.add("### "+level.getName()+" Average Constraint Fits");
+				lines.add(topLink); lines.add("");
+				
+				lines.add("Average misfits across all constraints as a function of "+level.getName()+" choice");
+				lines.add("");
+				
+				TableBuilder table = MarkdownUtils.tableBuilder();
+				
+				table.addLine("Choice", "Quantity", "Average Constraint Misfit");
+				for (int q=0; q<quantities.length; q++) {
+					Quantity quantity = quantities[q];
+					
+					for (int i=0; i<sortedNodes.size(); i++) {
+						LogicTreeNode node = sortedNodes.get(i);
+						
+						double avgVal = 0d;
+						int avgNum = 0;
+						for (MisfitStats stats : constraintChoiceAvgVals.column(node).values()) {
+							if (stats.range.weightingType == ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY) {
+								avgVal += stats.get(quantity);
+								avgNum++;
+							}
+						}
+						if (avgNum == 0)
+							continue;
+						
+						avgVal /= (double)avgNum;
+						
+						table.addLine(node.getShortName(), quantity+"", (float)avgVal);
+					}
+				}
+				
+				lines.addAll(table.build());
+				lines.add("");
+			}
 			
 			for (String constraintName : constraintNames) {
 				lines.add("### "+level.getName()+", "+constraintName+" Misfits");

@@ -36,8 +36,8 @@ import scratch.UCERF3.CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.BranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 
@@ -77,7 +77,7 @@ public class ERFRupLengthHistGen {
 		
 		XY_DataSetList u3List = new XY_DataSetList();
 		List<Double> u3Weights = new ArrayList<>();
-		BranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		U3BranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		
 		for (MagDependentAperiodicityOptions cov : probsMap.keySet()) {
 			ERF_ProbsZipFileReader reader = probsMap.get(cov);

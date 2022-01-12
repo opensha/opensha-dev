@@ -23,17 +23,17 @@ import scratch.UCERF3.enumTreeBranches.SpatialSeisPDF;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.BranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 public class Compound_FM_DM_Scale_CombinedFetcher extends FaultSystemSolutionFetcher {
 	
 	private Map<U3LogicTreeBranch, List<U3LogicTreeBranch>> branchesMap;
 	private FaultSystemSolutionFetcher fetch;
-	private BranchWeightProvider weightProv;
+	private U3BranchWeightProvider weightProv;
 	
-	public Compound_FM_DM_Scale_CombinedFetcher(FaultSystemSolutionFetcher fetch, BranchWeightProvider weightProv) {
+	public Compound_FM_DM_Scale_CombinedFetcher(FaultSystemSolutionFetcher fetch, U3BranchWeightProvider weightProv) {
 		branchesMap = Maps.newHashMap();
 		for (U3LogicTreeBranch branch : fetch.getBranches()) {
 			U3LogicTreeBranch meanBranch = getMeanBranch(branch);
@@ -95,7 +95,7 @@ public class Compound_FM_DM_Scale_CombinedFetcher extends FaultSystemSolutionFet
 				new File("/tmp/comp_plots/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
 		Compound_FM_DM_Scale_CombinedFetcher subFetch =
-				new Compound_FM_DM_Scale_CombinedFetcher(cfss, new APrioriBranchWeightProvider());
+				new Compound_FM_DM_Scale_CombinedFetcher(cfss, new U3APrioriBranchWeightProvider());
 		
 		subFetch.getSolution(subFetch.getBranches().iterator().next());
 	}

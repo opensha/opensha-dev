@@ -112,7 +112,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.NoPaleoParkfield.class;
 //		dirName += "-no_paleo-no_parkfield";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23InvConfigFactory.class;
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23InvConfigFactory.ReweightedEvenFit.class;
+		dirName += "-reweighted_even_fit";
+		dirName += "-conserve";
+		dirName += "-aggressive";
 		
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 //				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
@@ -122,8 +127,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
 		LogicTreeNode[] required = {
 				FaultModels.FM3_1,
-//				RupturePlausibilityModels.COULOMB,
-				RupturePlausibilityModels.UCERF3,
+				RupturePlausibilityModels.COULOMB,
+//				RupturePlausibilityModels.UCERF3,
 //				DeformationModels.ZENGBB,
 //				ScalingRelationships.SHAW_2009_MOD,
 //				SlipAlongRuptureModels.UNIFORM,
@@ -139,10 +144,24 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
 		
+//		int numSamples = nodes*5;
+		int numSamples = nodes*3;
+		
 		if (required != null && required.length > 0) {
 			for (LogicTreeNode node : required)
 				dirName += "-"+node.getFilePrefix();
 			logicTree = logicTree.matchingAll(required);
+		}
+		
+		if (numSamples > 0) {
+			if (numSamples < logicTree.size()) {
+				System.out.println("Reducing tree of size "+logicTree.size()+" to "+numSamples+" samples");
+				dirName += "-"+numSamples+"_samples";
+				logicTree = logicTree.sample(numSamples, false);
+			} else {
+				System.out.println("Won't sample logic tree, as tree has "+logicTree.size()+" values, which is fewer "
+						+ "than the specified "+numSamples+" samples.");
+			}
 		}
 		
 		if (sortBy != null) {

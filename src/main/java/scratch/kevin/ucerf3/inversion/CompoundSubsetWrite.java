@@ -24,7 +24,7 @@ import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.enumTreeBranches.SpatialSeisPDF;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.UCERF3p2BranchWeightProvider;
 import scratch.UCERF3.utils.DeformationModelFetcher;
@@ -95,7 +95,7 @@ public class CompoundSubsetWrite {
 		// this is for generating comparison parent section MFD plots
 		// first create for the new solution
 		System.out.println("Calculating new MFD plots");
-		APrioriBranchWeightProvider newWeightProvider = new APrioriBranchWeightProvider();
+		U3APrioriBranchWeightProvider newWeightProvider = new U3APrioriBranchWeightProvider();
 		ParentSectMFDsPlot refMFDs = new ParentSectMFDsPlot(newWeightProvider);
 		List<CompoundFSSPlots> plots = Lists.newArrayList();
 		plots.add(refMFDs);

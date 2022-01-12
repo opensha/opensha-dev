@@ -36,8 +36,8 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.BranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
 import scratch.UCERF3.utils.MatrixIO;
@@ -62,13 +62,13 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 	
 	private transient List<U3LogicTreeBranch> branches;
 	
-	private transient BranchWeightProvider weightProv;
+	private transient U3BranchWeightProvider weightProv;
 
 	public MPJ_ETAS_CharFactorCalc(CommandLine cmd, File compoundFile, File outputDir) throws ZipException, IOException {
 		super(cmd);
 		
 		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
-		weightProv = new APrioriBranchWeightProvider();
+		weightProv = new U3APrioriBranchWeightProvider();
 		
 		cfss = CompoundFaultSystemSolution.fromZipFile(compoundFile);
 		

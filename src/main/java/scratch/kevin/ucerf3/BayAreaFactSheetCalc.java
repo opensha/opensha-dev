@@ -46,8 +46,8 @@ import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
-import scratch.UCERF3.logicTree.APrioriBranchWeightProvider;
-import scratch.UCERF3.logicTree.BranchWeightProvider;
+import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
+import scratch.UCERF3.logicTree.U3BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 
@@ -116,7 +116,7 @@ public class BayAreaFactSheetCalc {
 		Table<U3LogicTreeBranch, String, Map<MagDependentAperiodicityOptions, EvenlyDiscretizedFunc>>
 			branchFaultProbsTable = HashBasedTable.create();
 		
-		BranchWeightProvider weightProv = new APrioriBranchWeightProvider();
+		U3BranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		
 		EvenlyDiscretizedFunc xVals = null;
 		
