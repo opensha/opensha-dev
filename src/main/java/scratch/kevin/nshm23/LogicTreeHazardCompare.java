@@ -165,13 +165,21 @@ public class LogicTreeHazardCompare {
 //		LogicTreeNode[] compSubsetNodes = null;
 //		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
 		
-		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
-		String mainName = "NSHM23 Full Draft With Mag Thresholds, CoulombRS";
+//		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
+//		String mainName = "NSHM23 Full Draft With Mag Thresholds, CoulombRS";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = new File(invDir, "2021_12_17-nshm23_draft_branches-no_seg-FM3_1-CoulombRupSet");
+//		String compName = "No Segmentation";
+//		LogicTreeNode[] compSubsetNodes = { SubSectConstraintModels.NUCL_MFD };
+//		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
+		
+		File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
+		String mainName = "NSHM23 Full Draft Even Fit, U3RS";
 		LogicTreeNode[] subsetNodes = null;
-		File compDir = new File(invDir, "2021_12_17-nshm23_draft_branches-no_seg-FM3_1-CoulombRupSet");
-		String compName = "No Segmentation";
-		LogicTreeNode[] compSubsetNodes = { SubSectConstraintModels.NUCL_MFD };
-		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
+		File compDir = new File(invDir, "2022_01_06-nshm23_draft_branches-no_seg-FM3_1-U3RupSet-SubB1");
+		String compName = "Fixed Weights";
+		LogicTreeNode[] compSubsetNodes = null;
+		File outputDir = new File(mainDir, "hazard_maps_comp_fixed_weight");
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		

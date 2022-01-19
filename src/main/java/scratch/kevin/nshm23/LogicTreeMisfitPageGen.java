@@ -54,8 +54,11 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
 //		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-no_seg-FM3_1-CoulombRupSet");
 //		File mainDir = new File(invDir, "2021_12_17-u3_branches-coulomb-FM3_1-5h");
-		File mainDir = new File(invDir, "2022_01_07-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-CoulombRupSet-SubB1-175_samples");
+//		File mainDir = new File(invDir, "2022_01_07-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-CoulombRupSet-SubB1-175_samples");
 //		File mainDir = new File(invDir, "2022_01_10-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-FM3_1-CoulombRupSet-SubB1-105_samples");
+//		File mainDir = new File(invDir, "2022_01_11-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-aggressive-FM3_1-CoulombRupSet-SubB1-105_samples");
+//		File mainDir = new File(invDir, "2022_01_11-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-aggressiver-FM3_1-CoulombRupSet-SubB1-105_samples");
+		File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
 //		File mainDir = new File(invDir, "");
 		File resultsFile = new File(mainDir, "results.zip");
 		
@@ -223,6 +226,124 @@ public class LogicTreeMisfitPageGen {
 			for (Quantity quantity : summaryQuantities) {
 				lines.add("## "+quantity+" Summary");
 				lines.add(topLink); lines.add("");
+				
+				if (numUncertConstraints > 1) {
+					List<Double> averages = new ArrayList<>();
+					List<Double> averageWeights = new ArrayList<>();
+					List<LogicTreeBranch<?>> branchesWithAvg = new ArrayList<>();
+					WeightedTrack avgTrack = new WeightedTrack();
+					WeightedTrack avgRatioTrack = new WeightedTrack();
+
+					Map<String, WeightedTrack> constraintVals = new HashMap<>();
+					Map<String, WeightedTrack> constraintRatios = new HashMap<>();
+					
+					for (int i=0; i < branches.size(); i++) {
+						LogicTreeBranch<?> branch = branches.get(i);
+						InversionMisfitStats bStats = branchStats.get(i);
+						int numUncert = 0;
+						double mySum = 0d;
+						double myMax = 0d;
+						double myMin = Double.POSITIVE_INFINITY;
+						double weight = tree.getBranchWeight(branch);
+						for (MisfitStats stats : bStats.getStats()) {
+							if (stats.range.weightingType != ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY)
+								continue;
+							
+							double val = stats.get(quantity);
+							mySum += val;
+							myMax = Math.max(myMax, val);
+							myMin = Math.min(myMin, val);
+							numUncert++;
+						}
+						if (numUncert < 2)
+							continue;
+						double myAvg = mySum/(double)numUncert;
+						for (MisfitStats stats : bStats.getStats()) {
+							if (stats.range.weightingType != ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY)
+								continue;
+							WeightedTrack cVals = constraintVals.get(stats.range.name);
+							if (cVals == null) {
+								cVals = new WeightedTrack();
+								constraintVals.put(stats.range.name, cVals);
+								constraintRatios.put(stats.range.name, new WeightedTrack());
+							}
+							double val = stats.get(quantity);
+							double ratio = val/myAvg;
+//							avgRatioTrack.add(Math.max(ratio, 1d/ratio), weight);
+							avgRatioTrack.add(ratio, weight);
+							cVals.add(val, weight);
+							constraintRatios.get(stats.range.name).add(ratio, weight);
+						}
+						averages.add(myAvg);
+						averageWeights.add(weight);
+						branchesWithAvg.add(branch);
+						avgTrack.add(myAvg, weight);
+					}
+					System.out.println("Building average uncert-weighted summary for "+averages.size()+" branches");
+					if (averages.size() > 1) {
+						lines.add("### "+quantity+" Average Uncertainty-Weighted Constraint Fits");
+						lines.add(topLink); lines.add("");
+						
+						TableBuilder table = MarkdownUtils.tableBuilder();
+						
+						table.addLine("Constraint", "Average "+quantity,
+								"Best Fitting", "Worst Fitting", "Ratio to All Uncert-Weighted Constraints");
+						table.addLine("All Uncertainty-Weighted Average", "**"+(float)avgTrack.average()+"**",
+								"**"+(float)avgTrack.min+"**", "**"+(float)avgTrack.max+"**",
+								"**"+(float)avgRatioTrack.average()+"**");
+						for (String constraintName : constraintNames) {
+							WeightedTrack cVals = constraintVals.get(constraintName);
+							if (cVals == null)
+								continue;
+							WeightedTrack cRatios = constraintRatios.get(constraintName);
+							table.addLine(constraintName, (float)cVals.average(),
+									(float)cVals.min, (float)cVals.max, (float)cRatios.average());
+						}
+						
+						lines.addAll(table.build());
+						
+						if (numSummaryBranches > 0) {
+							List<ComparablePairing<Double, LogicTreeBranch<?>>> pairs = ComparablePairing.build(averages, branchesWithAvg);
+							Collections.sort(pairs);
+							
+							table = MarkdownUtils.tableBuilder();
+							
+							table.initNewLine();
+							table.addColumn("Rank").addColumn("Value");
+							for (LogicTreeLevel<?> level : levels)
+								if (levelNodes.get(level).size() > 1)
+									table.addColumn(level.getName());
+							table.finalizeLine();
+							
+							for (int i=0; i<pairs.size(); i++) {
+								if (i < numSummaryBranches || i >= pairs.size()-numSummaryBranches) {
+									ComparablePairing<Double, LogicTreeBranch<?>> pair = pairs.get(i);
+									table.initNewLine();
+									table.addColumn(i+1).addColumn(pair.getComparable().floatValue());
+									LogicTreeBranch<?> branch = pair.getData();
+									for (int j=0; j<levels.size(); j++)
+										if (levelNodes.get(levels.get(j)).size() > 1)
+											table.addColumn(branch.getValue(j).getShortName());
+									table.finalizeLine();
+								} else if (i == numSummaryBranches) {
+									table.initNewLine();
+									table.addColumn("...").addColumn("...");
+									for (LogicTreeLevel<?> level : levels)
+										if (levelNodes.get(level).size() > 1)
+											table.addColumn("...");
+									table.finalizeLine();
+								}
+							}
+							lines.add("**Sorted branch values:** A list of best and worst-fitting branches, sorted by how "
+									+ "well they fit all uncertainthy-weighted constraints on average.");
+							lines.add("");
+							lines.addAll(table.build());
+							lines.add("");
+						}
+						
+						// plot distributions here?
+					}
+				}
 				
 				for (String constraintName : constraintNames) {
 					lines.add("### "+constraintName+", "+quantity+" Summary");
@@ -728,6 +849,24 @@ public class LogicTreeMisfitPageGen {
 
 		// write markdown
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
+	}
+	
+	private static class WeightedTrack {
+		double sumWeighted = 0d;
+		double sumWeights = 0d;
+		double min = Double.POSITIVE_INFINITY;
+		double max = Double.NEGATIVE_INFINITY;
+		
+		public void add(double val, double weight) {
+			sumWeighted += val*weight;
+			sumWeights += weight;
+			min = Math.min(min, val);
+			max = Math.max(max, val);
+		}
+		
+		public double average() {
+			return sumWeighted/sumWeights;
+		}
 	}
 
 }

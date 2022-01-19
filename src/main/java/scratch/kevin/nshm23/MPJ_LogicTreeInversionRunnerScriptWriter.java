@@ -51,7 +51,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		int remoteInversionsPerBundle = 1;
 		int remoteTotalMemGB = 53;
 		String queue = "scec";
-		int nodes = 35;
+		int nodes = 38;
+		double itersPerSec = 200000;
 //		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
 //				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
 		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
@@ -116,8 +117,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23InvConfigFactory.ReweightedEvenFit.class;
 		dirName += "-reweighted_even_fit";
-		dirName += "-conserve";
-		dirName += "-aggressive";
+//		dirName += "-avg50ip";
+//		dirName += "-conserve";
+//		dirName += "-aggressiver";
 		
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
 //				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
@@ -127,8 +129,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
 		LogicTreeNode[] required = {
 				FaultModels.FM3_1,
-				RupturePlausibilityModels.COULOMB,
-//				RupturePlausibilityModels.UCERF3,
+//				RupturePlausibilityModels.COULOMB,
+				RupturePlausibilityModels.UCERF3,
 //				DeformationModels.ZENGBB,
 //				ScalingRelationships.SHAW_2009_MOD,
 //				SlipAlongRuptureModels.UNIFORM,
@@ -138,14 +140,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
 //				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1, SegmentationModel.NONE };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
-//				SubSeisMoRateReductionNode.FAULT_SPECIFIC };
-		int defaultInvMins = 4*60;
+//				SubSeisMoRateReductionNode.FAULT_SPECIFIC }; 
+		int defaultInvMins = 2*60;
+		double avgNumRups = 300000;
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
 		
 //		int numSamples = nodes*5;
-		int numSamples = nodes*3;
+//		int numSamples = nodes*3;
+		int numSamples = 0;
 		
 		if (required != null && required.length > 0) {
 			for (LogicTreeNode node : required)
@@ -198,7 +202,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		String completionArg = "30m"; int invMins = 30;
 //		String completionArg = "2h"; int invMins = 2*60;
 //		String completionArg = "5h"; int invMins = 5*60;
-		String completionArg = null; int invMins = defaultInvMins;
+//		String completionArg = null; int invMins = defaultInvMins;
+		
+		int rounds = 5000;
+		double numIters = avgNumRups*rounds;
+		double invSecs = numIters/itersPerSec;
+		int invMins = (int)(invSecs/60d + 0.5);
+		String completionArg = rounds+"ip";
 		
 		if (completionArg != null)
 			dirName += "-"+completionArg;

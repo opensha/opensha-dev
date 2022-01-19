@@ -31,7 +31,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		@SuppressWarnings("unused")
 //		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir4860_multi_combine";
-		String catalogDirName = "rundir5263";
+		String catalogDirName = "rundir5285";
 //		String catalogDirName = "rundir4983_stitched";
 		
 		boolean standardSites = false;
@@ -63,7 +63,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 28;
+		int nodes = 32;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
@@ -79,9 +79,12 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
-		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-				USC_CARC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_CARC_ScriptWriter.MPJ_HOME);
-		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+//		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+//				USC_CARC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_CARC_ScriptWriter.MPJ_HOME);
+//		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
+				USC_CARC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_CARC_ScriptWriter.FMPJ_HOME);
+		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
 //		int threads = 48;
 //		int nodes = 10;

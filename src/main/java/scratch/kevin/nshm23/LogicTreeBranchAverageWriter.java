@@ -36,9 +36,9 @@ public class LogicTreeBranchAverageWriter {
 //		File resultsFile = new File(mainDir, "results.zip");
 //		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
-		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
-		File resultsFile = new File(mainDir, "results.zip");
-		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+//		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
+//		File resultsFile = new File(mainDir, "results.zip");
+//		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
 //		File mainDir = new File(invDir, "2021_12_17-u3_branches-coulomb-FM3_1-5h");
 //		File resultsFile = new File(mainDir, "results.zip");
@@ -48,6 +48,10 @@ public class LogicTreeBranchAverageWriter {
 //		File resultsFile = new File(mainDir, "results.zip");
 //		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
+		File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
+		File resultsFile = new File(mainDir, "results.zip");
+		File fullBAFile = new File(mainDir, "results_FM3_1_U3RupSet_branch_averaged.zip");
+		
 		HazardMapPlot.SPACING_DEFAULT = 0.2;
 		
 		File outputDir = new File(mainDir, "node_branch_averaged");
@@ -56,7 +60,7 @@ public class LogicTreeBranchAverageWriter {
 		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
 		
 		FaultSystemSolution fullBA = fullBAFile == null ? null : FaultSystemSolution.load(fullBAFile);
-		PlotLevel plt = PlotLevel.FULL;
+		PlotLevel plt = PlotLevel.DEFAULT;
 		boolean compWithLoaded = false;
 		
 		LogicTree<?> tree = slt.getLogicTree();

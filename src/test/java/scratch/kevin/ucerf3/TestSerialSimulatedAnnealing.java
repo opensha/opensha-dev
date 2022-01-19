@@ -116,7 +116,7 @@ public class TestSerialSimulatedAnnealing {
 		
 		for (int i=0; i<10000; i++) {
 //			System.out.println("loop: "+i+" (energy: "+sa_cc.getBestEnergy()+")");
-			sa_cc.iterate(iter, 0l, new IterationCompletionCriteria(iter+numIterations));
+			sa_cc.iterate(new IterationCompletionCriteria(iter+numIterations));
 			iter += numIterations;
 			
 			double[] sol = sa_cc.getBestSolution();
@@ -135,8 +135,8 @@ public class TestSerialSimulatedAnnealing {
 					Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY };
 			sa_reg.setResults(initial, sol);
 			sa_cc.setResults(initial, sol);
-			sa_reg.iterate(iter, 0l, criteria);
-			sa_cc.iterate(iter, 0l, criteria);
+			sa_reg.iterate(criteria);
+			sa_cc.iterate(criteria);
 			
 			iter++;
 			
@@ -153,7 +153,7 @@ public class TestSerialSimulatedAnnealing {
 		
 		long iter = 0;
 		for (int i=0; i<10; i++) {
-			iter = tsa.iterate(iter, 0l, criteria)[0];
+			iter = tsa.iterate(criteria).iterations;
 			// check that energy was computed correctly for the current solution
 			
 			double[] tsa_misfit = tsa.getBestMisfit();

@@ -46,11 +46,11 @@ public class CatalogSiteHazardCurveComparePageGen extends SiteHazardCurveComareP
 		File outputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		File bbpParallelDir = new File("/home/kevin/bbp/parallel");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_3062.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5310.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
 		
-//		String[] siteNames = { "USC", "OSI", "SBSM" };
-		String[] siteNames = { "SBSM" };
+		String[] siteNames = { "USC", "OSI", "SBSM" };
+//		String[] siteNames = { "SBSM" };
 //		String[] siteNames = { "USC", "SMCA", "OSI", "WSS", "SBSM",
 //				"LAF", "s022", "STNI", "WNGC", "PDE" };
 

@@ -98,13 +98,13 @@ public class InversionsCLI {
 		argz.add("--avg-threads");
 		argz.add("4");
 
-//		dirName += "-slip_constr";
-//		argz.add("--slip-constraint");
+		dirName += "-slip_constr";
+		argz.add("--slip-constraint");
 ////		argz.add("--slip-weight"); argz.add("1");
 ////		argz.add("--norm-slip-weight"); argz.add("0.01");
-//		argz.add("--uncertain-slip-weight");
-//		argz.add("1");
-//		dirName += "_uncertain";
+		argz.add("--uncertain-slip-weight");
+		argz.add("1");
+		dirName += "_uncertain";
 
 //		double b = 0.8;
 //		dirName += "-rel_gr_b"+oDF.format(b);
@@ -118,12 +118,12 @@ public class InversionsCLI {
 //		argz.add("--mfd-constraint");
 //		argz.add("--mfd-transition-mag"); argz.add("7.8"); dirName += "_trans7.8";
 
-//		double b = 1;
-//		dirName += "-infer_gr_b"+oDF.format(b);
-//		argz.add("--mfd-constraint");
-//		argz.add("--infer-target-gr");
-//		argz.add("--b-value"); argz.add(oDF.format(b));
-////		argz.add("--mfd-ineq"); dirName += "_ineq";
+		double b = 0.5;
+		dirName += "-infer_gr_b"+oDF.format(b);
+		argz.add("--mfd-constraint");
+		argz.add("--infer-target-gr");
+		argz.add("--b-value"); argz.add(oDF.format(b));
+		argz.add("--mfd-ineq"); dirName += "_ineq";
 //		argz.add("--mfd-transition-mag"); argz.add("7.8"); dirName += "_trans7.8";
 
 //		dirName += "-smooth";
@@ -140,8 +140,8 @@ public class InversionsCLI {
 //		boolean u3Constraints = true;
 		boolean u3StdDevConstraints = false;
 //		boolean u3StdDevConstraints = true;
-		boolean nshmDraftConstraints = true;
-//		boolean nshmDraftConstraints = false;
+//		boolean nshmDraftConstraints = true;
+		boolean nshmDraftConstraints = false;
 		
 		FaultSystemRupSet rupSet = null;
 
@@ -313,12 +313,12 @@ public class InversionsCLI {
 //		dirName += "-1h";
 //		argz.add("--completion"); argz.add("1h");
 //		argz.add("--avg-completion"); argz.add("5m");
-		dirName += "-30m";
-		argz.add("--completion"); argz.add("30m");
-		argz.add("--avg-completion"); argz.add("1m");
-//		dirName += "-10m";
-//		argz.add("--completion"); argz.add("10m");
+//		dirName += "-30m";
+//		argz.add("--completion"); argz.add("30m");
 //		argz.add("--avg-completion"); argz.add("1m");
+		dirName += "-10m";
+		argz.add("--completion"); argz.add("10m");
+		argz.add("--avg-completion"); argz.add("1m");
 //		dirName += "-sd1";
 //		argz.add("--completion-sd"); argz.add("1");
 //		argz.add("--completion-sd-type"); argz.add(ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY.name());
