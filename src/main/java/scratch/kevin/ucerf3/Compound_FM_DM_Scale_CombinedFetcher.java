@@ -10,8 +10,8 @@ import java.util.zip.ZipException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
@@ -27,13 +27,13 @@ import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
 import scratch.UCERF3.logicTree.U3BranchWeightProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
-public class Compound_FM_DM_Scale_CombinedFetcher extends FaultSystemSolutionFetcher {
+public class Compound_FM_DM_Scale_CombinedFetcher extends U3FaultSystemSolutionFetcher {
 	
 	private Map<U3LogicTreeBranch, List<U3LogicTreeBranch>> branchesMap;
-	private FaultSystemSolutionFetcher fetch;
+	private U3FaultSystemSolutionFetcher fetch;
 	private U3BranchWeightProvider weightProv;
 	
-	public Compound_FM_DM_Scale_CombinedFetcher(FaultSystemSolutionFetcher fetch, U3BranchWeightProvider weightProv) {
+	public Compound_FM_DM_Scale_CombinedFetcher(U3FaultSystemSolutionFetcher fetch, U3BranchWeightProvider weightProv) {
 		branchesMap = Maps.newHashMap();
 		for (U3LogicTreeBranch branch : fetch.getBranches()) {
 			U3LogicTreeBranch meanBranch = getMeanBranch(branch);
@@ -91,7 +91,7 @@ public class Compound_FM_DM_Scale_CombinedFetcher extends FaultSystemSolutionFet
 	}
 
 	public static void main(String[] args) throws ZipException, IOException {
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File("/tmp/comp_plots/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
 		Compound_FM_DM_Scale_CombinedFetcher subFetch =

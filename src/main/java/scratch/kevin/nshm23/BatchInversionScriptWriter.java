@@ -15,6 +15,7 @@ import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -49,13 +50,17 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.DraftModelConstraintBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.GRParticRateEstimator;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -95,8 +100,8 @@ public class BatchInversionScriptWriter {
 		File rupSetFile;
 		String rsPrefix;
 		
-		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
-		rsPrefix = "reproduce-ucerf3-ref_branch-uniform";
+//		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_reproduce_ucerf3.zip");
+//		rsPrefix = "reproduce-ucerf3-ref_branch-uniform";
 		
 //		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
 //		rsPrefix = "coulomb-ref_branch-uniform";
@@ -113,8 +118,8 @@ public class BatchInversionScriptWriter {
 //		rupSetFile = new File(rsDir, "fm3_1_u3ref_tapered_reproduce_ucerf3.zip");
 //		rsPrefix = "reproduce-ucerf3-ref_branch-tapered";
 		
-//		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
-//		rsPrefix = "coulomb-fm31-ref_branch-uniform";
+		rupSetFile = new File(rsDir, "fm3_1_u3ref_uniform_coulomb.zip");
+		rsPrefix = "coulomb-fm31-ref_branch-uniform";
 		
 //		File remoteMeanCompFile = new File(remoteMainDir,
 //				"2021_10_18-reproduce-ucerf3-ref_branch-uniform-new_anneal-5x_avg-try_zero-var_perturb-noWL-5h/mean_solution.zip");
@@ -1247,9 +1252,119 @@ public class BatchInversionScriptWriter {
 		/*
 		 * Long re-weight tests
 		 */
-		dirName += "-"+rsPrefix.replace("-uniform", "").replace("-tapered", "")+"-long_reweight_test";
-		NSHM23InvConfigFactory factory = new NSHM23InvConfigFactory();
-		LogicTreeBranch<LogicTreeNode> branch = new NSHM23LogicTreeBranch();
+//		dirName += "-"+rsPrefix.replace("-uniform", "").replace("-tapered", "")+"-long_reweight_test";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+//		LogicTreeBranch<LogicTreeNode> branch = new NSHM23_U3_HybridLogicTreeBranch();
+//		branch.setValue(FaultModels.FM3_1);
+//		if (rsPrefix.toLowerCase().contains("coulomb"))
+//			branch.setValue(RupturePlausibilityModels.COULOMB);
+//		else
+//			branch.setValue(RupturePlausibilityModels.UCERF3);
+//		
+//		// good fitting
+//		branch.setValue(DeformationModels.ZENGBB);
+//		branch.setValue(ScalingRelationships.SHAW_2009_MOD);
+//		branch.setValue(SupraSeisBValues.B_1p0);
+//		branch.setValue(SlipAlongRuptureModels.UNIFORM);
+//		
+//		// poor fitting
+////		branch.setValue(DeformationModels.NEOKINEMA);
+////		branch.setValue(ScalingRelationships.ELLSWORTH_B);
+////		branch.setValue(SupraSeisBValues.B_0p0);
+////		branch.setValue(SlipAlongRuptureModels.TAPERED);
+//		
+//		// constant
+//		branch.setValue(SubSeisMoRateReductions.SUB_B_1);
+//		
+//		// inv model
+////		branch.setValue(SubSectConstraintModels.TOT_NUCL_RATE);
+//		branch.setValue(SubSectConstraintModels.NUCL_MFD);
+//		
+//		dirName += "-"+branch.getValue(DeformationModels.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(ScalingRelationships.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SlipAlongRuptureModels.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SupraSeisBValues.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SubSectConstraintModels.class).getFilePrefix();
+//		
+//		boolean reweight = true;
+//		
+//		if (reweight)
+//			dirName += "-reweight";
+//		
+//		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
+//		
+//		InversionConfiguration mainConfig = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
+//		
+//		System.out.println("Default Constraint list:");
+//		for (InversionConstraint constr : mainConfig.getConstraints())
+//			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
+//		
+//		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(10000d);
+////		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(100000d); dirName += "-extra_long";
+//		
+////		double[] subPers = { 0.1d, 0.2d, 0.5d, 1d, 5d };
+////		double[] avgPers = { 0d, 50d, 100d, 200d, 500d };
+//		
+//		double[] subPers = { 0.5d, 1d, 5d};
+//		double[] avgPers = { 50d, 100d, 200d };
+//		if (reweight) {
+////			dirName += "_linear";
+//			dirName += "_sqrt";
+////			dirName += "_median";
+//			dirName += "_conserve";
+//			dirName += "_phased";
+//		}
+//		
+//		dirName += "-initial_parkfield";
+//		double[] initial = new NSHM23_ConstraintBuilder(rupSet, branch.getValue(SupraSeisBValues.class).bValue)
+//				.getParkfieldInitial(true);
+//		mainConfig = InversionConfiguration.builder(mainConfig).initialSolution(initial).build();
+//		
+//		for (double subPer : subPers) {
+//			CompletionCriteria subCompletion = new IterationsPerVariableCompletionCriteria(subPer);
+//			for (double avgPer : avgPers) {
+//				CompletionCriteria avgCompletion = new IterationsPerVariableCompletionCriteria(avgPer);
+//				InversionConfiguration.Builder builder = InversionConfiguration.builder(mainConfig)
+//						.threads(remoteToalThreads).subCompletion(subCompletion).completion(completion);
+//				if (avgPer > 0d)
+//					builder.avgThreads(remoteToalThreads/4, avgCompletion);
+//				else
+//					builder.noAvg();
+//				if (reweight)
+//					builder.reweight();
+//				configs.add(builder.build());
+//				String name = "sub_"+oDF.format(subPer)+"_per";
+//				if (avgPer > 0d)
+//					name += "-avg_"+oDF.format(avgPer)+"_per";
+//				else
+//					name += "-no_avg";
+//				subDirNames.add(name);
+//			}
+//		}
+//		
+//		avgJob = false;
+//		allPlotLevel = PlotLevel.DEFAULT;
+		
+		/*
+		 * Segmentation MFD adjustment tests
+		 */
+		dirName += "-"+rsPrefix.replace("-uniform", "").replace("-tapered", "");
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		
+		boolean distCutoff = false;
+		
+		LogicTreeBranch<LogicTreeNode> branch;
+		
+		if (distCutoff) {
+			dirName += "-dist_cutoff";
+			List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levelsMaxDist;
+			branch = new LogicTreeBranch<>(levels);
+		} else {
+			dirName += "-seg_model";
+			List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+			branch = new LogicTreeBranch<>(levels);
+		}
+		
 		branch.setValue(FaultModels.FM3_1);
 		if (rsPrefix.toLowerCase().contains("coulomb"))
 			branch.setValue(RupturePlausibilityModels.COULOMB);
@@ -1257,9 +1372,9 @@ public class BatchInversionScriptWriter {
 			branch.setValue(RupturePlausibilityModels.UCERF3);
 		
 		// good fitting
-		branch.setValue(DeformationModels.ZENGBB);
+		branch.setValue(U3_UncertAddDeformationModels.U3_ZENG);
 		branch.setValue(ScalingRelationships.SHAW_2009_MOD);
-		branch.setValue(SupraSeisBValues.B_1p0);
+		branch.setValue(SupraSeisBValues.B_0p8);
 		branch.setValue(SlipAlongRuptureModels.UNIFORM);
 		
 		// poor fitting
@@ -1275,65 +1390,59 @@ public class BatchInversionScriptWriter {
 //		branch.setValue(SubSectConstraintModels.TOT_NUCL_RATE);
 		branch.setValue(SubSectConstraintModels.NUCL_MFD);
 		
-		dirName += "-"+branch.getValue(DeformationModels.class).getFilePrefix();
+		dirName += "-"+branch.getValue(U3_UncertAddDeformationModels.class).getFilePrefix();
 		dirName += "-"+branch.getValue(ScalingRelationships.class).getFilePrefix();
 		dirName += "-"+branch.getValue(SlipAlongRuptureModels.class).getFilePrefix();
 		dirName += "-"+branch.getValue(SupraSeisBValues.class).getFilePrefix();
 		dirName += "-"+branch.getValue(SubSectConstraintModels.class).getFilePrefix();
 		
-		boolean reweight = true;
+		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
 		
-		if (reweight)
-			dirName += "-reweight";
+		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(2000d);
 		
-		rupSet = factory.buildRuptureSet(branch, rupSet);
-		
-		InversionConfiguration mainConfig = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
-		
-		System.out.println("Default Constraint list:");
-		for (InversionConstraint constr : mainConfig.getConstraints())
-			System.out.println("\t"+constr.getName()+": wt="+(float)constr.getWeight()+"\twtType="+constr.getWeightingType());
-		
-		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(10000d);
-//		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(100000d); dirName += "-extra_long";
-		
-//		double[] subPers = { 0.1d, 0.2d, 0.5d, 1d, 5d };
-//		double[] avgPers = { 0d, 50d, 100d, 200d, 500d };
-		
-		double[] subPers = { 0.5d, 1d, 5d};
-		double[] avgPers = { 50d, 100d, 200d };
-		if (reweight) {
-//			dirName += "_linear";
-			dirName += "_sqrt";
-//			dirName += "_median";
-			dirName += "_conserve";
-			dirName += "_phased";
-		}
-		
-		dirName += "-initial_parkfield";
-		double[] initial = new DraftModelConstraintBuilder(rupSet, branch.getValue(SupraSeisBValues.class).bValue)
-				.getParkfieldInitial(true);
-		mainConfig = InversionConfiguration.builder(mainConfig).initialSolution(initial).build();
-		
-		for (double subPer : subPers) {
-			CompletionCriteria subCompletion = new IterationsPerVariableCompletionCriteria(subPer);
-			for (double avgPer : avgPers) {
-				CompletionCriteria avgCompletion = new IterationsPerVariableCompletionCriteria(avgPer);
-				InversionConfiguration.Builder builder = InversionConfiguration.builder(mainConfig)
-						.threads(remoteToalThreads).subCompletion(subCompletion).completion(completion);
-				if (avgPer > 0d)
-					builder.avgThreads(remoteToalThreads/4, avgCompletion);
-				else
-					builder.noAvg();
-				if (reweight)
-					builder.reweight();
-				configs.add(builder.build());
-				String name = "sub_"+oDF.format(subPer)+"_per";
-				if (avgPer > 0d)
-					name += "-avg_"+oDF.format(avgPer)+"_per";
-				else
-					name += "-no_avg";
-				subDirNames.add(name);
+		if (distCutoff) {
+			MaxJumpDistModels[] maxDists = {
+					MaxJumpDistModels.ONE,
+					MaxJumpDistModels.FIVE,
+					MaxJumpDistModels.TWELVE
+			};
+			for (MaxJumpDistModels maxDist : maxDists) {
+				branch.setValue(maxDist);
+				
+				factory.setAdjustTargetsForSegmentation(true);
+				InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
+				config = InversionConfiguration.builder(config).completion(completion).build();
+				configs.add(config);
+				subDirNames.add(maxDist.getFilePrefix()+"_adj_targets");
+				
+				factory.setAdjustTargetsForSegmentation(false);
+				config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
+				config = InversionConfiguration.builder(config).completion(completion).build();
+				configs.add(config);
+				subDirNames.add(maxDist.getFilePrefix()+"_no_adj");
+			}
+		} else {
+			SegmentationModels[] segModels = {
+					SegmentationModels.SHAW_R0_1,
+					SegmentationModels.SHAW_R0_2,
+					SegmentationModels.SHAW_R0_3,
+					SegmentationModels.SHAW_R0_4,
+					SegmentationModels.SHAW_R0_5
+			};
+			for (SegmentationModels segModel : segModels) {
+				branch.setValue(segModel);
+				
+				factory.setAdjustTargetsForSegmentation(true);
+				InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
+				config = InversionConfiguration.builder(config).completion(completion).build();
+				configs.add(config);
+				subDirNames.add(segModel.getFilePrefix()+"_adj_targets");
+				
+				factory.setAdjustTargetsForSegmentation(false);
+				config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
+				config = InversionConfiguration.builder(config).completion(completion).build();
+				configs.add(config);
+				subDirNames.add(segModel.getFilePrefix()+"_no_adj");
 			}
 		}
 		

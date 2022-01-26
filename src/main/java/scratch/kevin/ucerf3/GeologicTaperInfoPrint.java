@@ -36,7 +36,7 @@ public class GeologicTaperInfoPrint {
 //			dm = DeformationModels.forFaultModel(fm1).get(0);
 //			datas =
 //					new DeformationModelFetcher(fm1, dm, UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, 0.1).getSubSectionList();
-			datas = fm1.fetchFaultSections();
+			datas = fm1.getFaultSections();
 			System.out.println("\n"+fm1);
 			for (FaultSection data : datas) {
 				if (data.getSectionId() == 13) {

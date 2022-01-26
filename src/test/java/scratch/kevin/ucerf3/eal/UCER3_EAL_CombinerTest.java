@@ -41,10 +41,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.U3FaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
@@ -66,7 +66,7 @@ import scratch.UCERF3.utils.DeformationModelFetcher;
 public class UCER3_EAL_CombinerTest {
 	
 	private static InversionFaultSystemRupSet rupSet;
-	private static FaultSystemSolutionFetcher fetch;
+	private static U3FaultSystemSolutionFetcher fetch;
 	private static U3FaultSystemSolution trueMeanSol;
 	private static double[][] fssLosses;
 	private static Map<U3LogicTreeBranch, List<Integer>> mappings;
@@ -84,7 +84,7 @@ public class UCER3_EAL_CombinerTest {
 		List<FaultSection> subSections = Lists.newArrayList();
 		
 		FaultModels fm = branch.getValue(FaultModels.class);
-		List<FaultSection> fsd = fm.fetchFaultSections();
+		List<FaultSection> fsd = fm.getFaultSections();
 		double maxSubSectionLength = 0.5;
 		double maxDistance = 5d;
 		
@@ -312,7 +312,7 @@ public class UCER3_EAL_CombinerTest {
 		return mfd;
 	}
 	
-	private static class InMemFSSFetch extends FaultSystemSolutionFetcher {
+	private static class InMemFSSFetch extends U3FaultSystemSolutionFetcher {
 		
 		private Map<U3LogicTreeBranch, InversionFaultSystemSolution> map;
 		

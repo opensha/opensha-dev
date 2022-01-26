@@ -54,7 +54,7 @@ import com.google.common.io.Files;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import mpi.MPI;
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
@@ -73,7 +73,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 	private U3FaultSystemSolution trueMeanSol;
 	private FaultSystemSolutionERF erf;
 	private Map<U3LogicTreeBranch, List<Integer>> mappings;
-	private CompoundFaultSystemSolution cfss;
+	private U3CompoundFaultSystemSolution cfss;
 	
 	private double erfProbsDuration;
 	private Map<U3_EAL_ProbModels, ZipFile> probsZipFiles;
@@ -489,7 +489,7 @@ public class MPJ_UCERF3_EAL_Combiner extends MPJTaskCalculator {
 		
 	}
 	
-	private class CachedGridSourceCFSS extends CompoundFaultSystemSolution {
+	private class CachedGridSourceCFSS extends U3CompoundFaultSystemSolution {
 		
 		private LoadingCache<U3LogicTreeBranch, GridSourceProvider> gridProvCache;
 

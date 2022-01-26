@@ -20,9 +20,9 @@ import org.opensha.sha.faultSurface.RuptureSurface;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.CompoundFSSPlots.RegionalMFDPlot;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
@@ -37,7 +37,7 @@ public class ERFInsideSpeedTest {
 	public static void main(String[] args) throws ZipException, IOException {
 		File dir = new File("/tmp");
 		File file = new File(dir, "2012_10_29-logic-tree-fm3_1_x7-fm3_2_x1_COMPOUND_SOL.zip");
-		FaultSystemSolutionFetcher fetch = CompoundFaultSystemSolution.fromZipFile(file);
+		U3FaultSystemSolutionFetcher fetch = U3CompoundFaultSystemSolution.fromZipFile(file);
 		
 		InversionFaultSystemSolution sol = fetch.iterator().next();
 		

@@ -24,7 +24,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -43,7 +43,7 @@ public class FSS_ERF_MemLeakTest {
 		
 		File solFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/" +
 				"InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip");
-		CompoundFaultSystemSolution fetch = CompoundFaultSystemSolution.fromZipFile(solFile);
+		U3CompoundFaultSystemSolution fetch = U3CompoundFaultSystemSolution.fromZipFile(solFile);
 		
 		List<U3LogicTreeBranch> branches = Lists.newArrayList(fetch.getBranches());
 		Collections.shuffle(branches);

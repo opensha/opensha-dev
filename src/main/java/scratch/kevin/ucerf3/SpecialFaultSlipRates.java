@@ -30,7 +30,7 @@ public class SpecialFaultSlipRates {
 		int[] ids = {184, 196, 240};
 		Map<DeformationModels, double[]> slips = Maps.newHashMap();
 		
-		List<FaultSection> sects = fm.fetchFaultSections();
+		List<FaultSection> sects = fm.getFaultSections();
 		Map<Integer, FaultSection> sectsMap = Maps.newHashMap();
 		for (FaultSection sect : sects)
 			sectsMap.put(sect.getSectionId(), sect);

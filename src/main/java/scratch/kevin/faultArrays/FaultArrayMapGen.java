@@ -131,7 +131,7 @@ public class FaultArrayMapGen {
 			for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(sect.getFaultTrace(), Color.BLACK, 0.3))
 				map.addPolys(poly);
 		
-		Map<Integer, FaultSection> allParents = fm.fetchFaultSectionsMap();
+		Map<Integer, FaultSection> allParents = fm.getFaultSectionIDMap();
 		
 		CPT cpt = null;
 		

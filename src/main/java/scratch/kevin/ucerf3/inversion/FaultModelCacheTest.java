@@ -9,7 +9,7 @@ public class FaultModelCacheTest {
 	 */
 	public static void main(String[] args) {
 		for (FaultModels fm : FaultModels.values())
-			fm.fetchFaultSections();
+			fm.getFaultSections();
 		System.exit(0);
 	}
 

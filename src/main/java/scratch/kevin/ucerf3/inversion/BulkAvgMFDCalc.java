@@ -7,7 +7,7 @@ import org.dom4j.DocumentException;
 import org.opensha.commons.geo.Region;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
-import scratch.UCERF3.AverageFaultSystemSolution;
+import scratch.UCERF3.U3AverageFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
@@ -28,7 +28,7 @@ public class BulkAvgMFDCalc {
 		String prefix = "FM3_1_NEOK_EllB_DsrUni_CharUnconst_M5Rate8.7_MMaxOff7.6_NoFix_SpatSeisU3";
 		InversionFaultSystemRupSet rupSet = U3FaultSystemIO.loadInvRupSet(
 				new File(dir, "FM3_1_NEOK_EllB_DsrUni_CharUnconst_M5Rate8.7_MMaxOff7.6_NoFix_SpatSeisU3_run000_sol.zip"));
-		AverageFaultSystemSolution avgSol = AverageFaultSystemSolution.fromDirectory(rupSet, dir, prefix);
+		U3AverageFaultSystemSolution avgSol = U3AverageFaultSystemSolution.fromDirectory(rupSet, dir, prefix);
 		
 		Region region = RELM_RegionUtils.getGriddedRegionInstance();
 		UCERF2_MFD_ConstraintFetcher ucerf2Fetch = new UCERF2_MFD_ConstraintFetcher();

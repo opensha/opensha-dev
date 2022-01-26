@@ -25,7 +25,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
@@ -52,7 +52,7 @@ public class MPJ_MeanUCERF3_HazardCurveTest extends MPJTaskCalculator {
 	private File poissonDir;
 	private File timeDepDir;
 
-	public MPJ_MeanUCERF3_HazardCurveTest(CommandLine cmd, CompoundFaultSystemSolution cfss, File dir) {
+	public MPJ_MeanUCERF3_HazardCurveTest(CommandLine cmd, U3CompoundFaultSystemSolution cfss, File dir) {
 		super(cmd);
 		
 		fetch = new Compound_FM_DM_Scale_CombinedFetcher(cfss, new U3APrioriBranchWeightProvider());
@@ -160,7 +160,7 @@ public class MPJ_MeanUCERF3_HazardCurveTest extends MPJTaskCalculator {
 
 			Preconditions.checkArgument(inputFile.exists(), "Input file doesn't exist!: "+inputFile);
 			
-			CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(inputFile);
+			U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(inputFile);
 			
 			MPJ_MeanUCERF3_HazardCurveTest driver = new MPJ_MeanUCERF3_HazardCurveTest(cmd, cfss, dir);
 			

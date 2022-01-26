@@ -21,13 +21,15 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23InvConfigFactory;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 
 import com.google.common.base.Preconditions;
 
@@ -93,15 +95,17 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1 };
 ////		U3LogicTreeBranchNode<?>[] required = {  };
 //		Class<? extends LogicTreeNode> sortBy = null;
+
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+		dirName += "-nshm23_u3_hybrid_branches";
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
+//		dirName += "-nshm23_branches";
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23LogicTreeBranch.levels;
-		dirName += "-nshm23_draft_branches";
-		
-		levels = new ArrayList<>(levels);
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
-				levels.remove(i);
-		dirName += "-no_seg";
+//		levels = new ArrayList<>(levels);
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
+//				levels.remove(i);
+////		dirName += "-no_seg";
 //		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
 //		dirName += "-max_dist";
 		
@@ -113,35 +117,25 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.NoPaleoParkfield.class;
 //		dirName += "-no_paleo-no_parkfield";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23InvConfigFactory.ReweightedEvenFit.class;
-		dirName += "-reweighted_even_fit";
-//		dirName += "-avg50ip";
-//		dirName += "-conserve";
-//		dirName += "-aggressiver";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoSegAdjust.class;
+//		dirName += "-no_seg_adj_mfds";
 		
-//		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
-//				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
-//		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
-//				SubSeisMoRateReductionNode.SUB_B_1 };
-//		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
-//				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1 };
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoMFDScaleAdjust.class;
+		dirName += "-no_scale_adj_mfds";
+		
 		LogicTreeNode[] required = {
-				FaultModels.FM3_1,
-//				RupturePlausibilityModels.COULOMB,
-				RupturePlausibilityModels.UCERF3,
-//				DeformationModels.ZENGBB,
+//				FaultModels.FM3_1,
+				RupturePlausibilityModels.COULOMB,
+//				RupturePlausibilityModels.UCERF3,
+				U3_UncertAddDeformationModels.U3_ZENG,
 //				ScalingRelationships.SHAW_2009_MOD,
-//				SlipAlongRuptureModels.UNIFORM,
+				SlipAlongRuptureModels.UNIFORM,
 //				SubSectConstraintModels.TOT_NUCL_RATE,
 				SubSeisMoRateReductions.SUB_B_1,
-				};
-//		LogicTreeNode[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB, ScalingRelationships.SHAW_2009_MOD,
-//				SubSectConstraintModel.TOT_NUCL_RATE, SubSeisMoRateReductionNode.SUB_B_1, SegmentationModel.NONE };
-//		LogicTreeNode[] required = { FaultModels.FM3_1, SubSectConstraintModel.TOT_NUCL_RATE,
-//				SubSeisMoRateReductionNode.FAULT_SPECIFIC }; 
-		int defaultInvMins = 2*60;
+				SegmentationModels.SHAW_R0_3,
+				}; 
 		double avgNumRups = 300000;
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
@@ -204,11 +198,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		String completionArg = "5h"; int invMins = 5*60;
 //		String completionArg = null; int invMins = defaultInvMins;
 		
-		int rounds = 5000;
+//		int rounds = 5000;
+		int rounds = 2000;
 		double numIters = avgNumRups*rounds;
 		double invSecs = numIters/itersPerSec;
 		int invMins = (int)(invSecs/60d + 0.5);
 		String completionArg = rounds+"ip";
+		System.out.println("Estimate "+invMins+" minues per inversion");
 		
 		if (completionArg != null)
 			dirName += "-"+completionArg;
@@ -237,6 +233,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		argz += " --output-dir "+resultsDir.getAbsolutePath();
 		argz += " --inversion-factory '"+factoryClass.getName()+"'"; // surround in single quotes to escape $'s
 		argz += " --annealing-threads "+annealingThreads;
+		argz += " --cache-dir "+new File(remoteMainDir, "cache").getAbsolutePath();
 		if (remoteInversionsPerBundle > 0)
 			argz += " --runs-per-bundle "+remoteInversionsPerBundle;
 		if (completionArg != null)
@@ -245,10 +242,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		List<String> script = mpjWrite.buildScript(MPJ_LogicTreeInversionRunner.class.getName(), argz);
 		
 		int mins = (int)(nodeRounds*invMins);
-		if (invMins > 60)
-			mins += 60;
-		else
-			mins += Integer.max(10, invMins);
+		mins += Integer.max(60, invMins);
 		mins += (nodeRounds-1)*10; // add a little extra for overhead associated with each round
 		System.out.println("Total job time: "+mins+" mins = "+(float)((double)mins/60d)+" hours");
 		
@@ -262,6 +256,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		mins = (int)60*5;
 		nodes = Integer.min(40, nodes);
+		if (queue != null && queue.equals("scec"))
+			// run hazard in the high priority queue
+			queue = "scec_hiprio";
 		pbsWrite.writeScript(new File(localDir, "batch_hazard.slurm"), script, mins, nodes, remoteToalThreads, queue);
 	}
 

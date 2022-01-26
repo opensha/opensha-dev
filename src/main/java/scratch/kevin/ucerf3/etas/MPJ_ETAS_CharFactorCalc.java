@@ -28,8 +28,8 @@ import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
@@ -52,7 +52,7 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 	
 	private transient File outputDir;
 	
-	private transient FaultSystemSolutionFetcher cfss;
+	private transient U3FaultSystemSolutionFetcher cfss;
 	
 	// fault model: branch: factors
 	private Map<FaultModels, List<double[]>> charFactorsMap;
@@ -70,11 +70,11 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 		weightProv = new U3APrioriBranchWeightProvider();
 		
-		cfss = CompoundFaultSystemSolution.fromZipFile(compoundFile);
+		cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundFile);
 		
 		if (cmd.hasOption("random-sample")) {
 			int num = Integer.parseInt(cmd.getOptionValue("random-sample"));
-			cfss = FaultSystemSolutionFetcher.getRandomSample(cfss, num);
+			cfss = U3FaultSystemSolutionFetcher.getRandomSample(cfss, num);
 		}
 		
 		this.outputDir = outputDir;

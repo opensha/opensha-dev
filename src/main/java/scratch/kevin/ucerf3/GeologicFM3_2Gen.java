@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.opensha.commons.geo.Location;
@@ -30,7 +31,7 @@ public class GeologicFM3_2Gen {
 		
 		File outputFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/DeformationModels/geologic_slip_rake_fm3pt2_2012_02_27.csv");
 		
-		ArrayList<? extends FaultSection> fm3_2_sects = FaultModels.FM3_1.fetchFaultSections();
+		List<? extends FaultSection> fm3_2_sects = FaultModels.FM3_1.getFaultSections();
 		
 		ArrayList<DeformationSection> fm3_2 = new ArrayList<DeformationModelFileParser.DeformationSection>();
 		

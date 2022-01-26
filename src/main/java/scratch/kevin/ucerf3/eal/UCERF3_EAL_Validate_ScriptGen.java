@@ -22,7 +22,7 @@ import org.opensha.sra.calc.parallel.MPJ_EAL_Calc;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -58,7 +58,7 @@ public class UCERF3_EAL_Validate_ScriptGen {
 		
 		File compoundFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip");
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(compoundFile);
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundFile);
 		
 		int numBranches = 5;
 		

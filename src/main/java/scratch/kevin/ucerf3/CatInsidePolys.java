@@ -3,6 +3,7 @@ package scratch.kevin.ucerf3;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
@@ -21,7 +22,7 @@ public class CatInsidePolys {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException {
-		ArrayList<FaultSection> sects = FaultModels.FM3_1.fetchFaultSections();
+		List<FaultSection> sects = FaultModels.FM3_1.getFaultSections();
 		
 //		ObsEqkRupList cat = UCERF3_CatalogParser.loadCatalog(new File("/home/kevin/OpenSHA/UCERF3/UCERF3_Catalog3_0.txt"));
 		ObsEqkRupList cat = UCERF3_CatalogParser.loadCatalog(new File("/home/kevin/OpenSHA/UCERF3/Felzer_UCERF3_Catalog4_0.txt"));

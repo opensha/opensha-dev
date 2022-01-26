@@ -37,7 +37,8 @@ public class TestReweightFromMisfits {
 //		File mainDir = new File(invDir, "2022_01_10-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-FM3_1-CoulombRupSet-SubB1-105_samples");
 //		File mainDir = new File(invDir, "2022_01_11-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-aggressive-FM3_1-CoulombRupSet-SubB1-105_samples");
 //		File mainDir = new File(invDir, "2022_01_11-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-aggressiver-FM3_1-CoulombRupSet-SubB1-105_samples");
-		File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
+		File mainDir = new File(invDir, "2022_01_18-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
+		
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		File outputDir = new File(mainDir, "logic_tree_misfits");

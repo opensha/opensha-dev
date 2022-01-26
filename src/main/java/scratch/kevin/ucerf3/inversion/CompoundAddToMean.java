@@ -8,7 +8,7 @@ import java.util.zip.ZipFile;
 
 import org.opensha.commons.util.FileUtils;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.MatrixIO;
 
@@ -34,8 +34,8 @@ public class CompoundAddToMean {
 		Preconditions.checkArgument(numOrig > 0, "numOrig must be > 0");
 		File outFile = new File(args[3]);
 		
-		CompoundFaultSystemSolution meanSol = new CompoundFaultSystemSolution(new ZipFile(meanFile));
-		CompoundFaultSystemSolution newSol = new CompoundFaultSystemSolution(new ZipFile(newFile));
+		U3CompoundFaultSystemSolution meanSol = new U3CompoundFaultSystemSolution(new ZipFile(meanFile));
+		U3CompoundFaultSystemSolution newSol = new U3CompoundFaultSystemSolution(new ZipFile(newFile));
 		
 		File tempDir = FileUtils.createTempDir();
 		FileUtils.unzipFile(meanFile, tempDir);
@@ -48,7 +48,7 @@ public class CompoundAddToMean {
 			for (int i=0; i<combinedRates.length; i++)
 				combinedRates[i] = (meanRates[i] * (double)numOrig + newRates[i]) / (double)(numOrig+1);
 			
-			String ratesFileName = CompoundFaultSystemSolution.getRemappedName("rates.bin", branch);
+			String ratesFileName = U3CompoundFaultSystemSolution.getRemappedName("rates.bin", branch);
 			File ratesFile = new File(tempDir, ratesFileName);
 			Preconditions.checkState(ratesFile.exists());
 			MatrixIO.doubleArrayToFile(combinedRates, ratesFile);

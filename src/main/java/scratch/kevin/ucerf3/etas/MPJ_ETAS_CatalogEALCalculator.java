@@ -20,7 +20,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
@@ -33,7 +33,7 @@ public class MPJ_ETAS_CatalogEALCalculator extends MPJTaskCalculator {
 	
 	private Map<AttenRelRef, Double> imrWeightsMap;
 	private U3FaultSystemSolution baSol;
-	private CompoundFaultSystemSolution cfss;
+	private U3CompoundFaultSystemSolution cfss;
 	private U3FaultSystemSolution trueMeanSol;
 	private Map<U3LogicTreeBranch, List<Integer>> branchMappings;
 	private List<File> dataDirs;
@@ -74,7 +74,7 @@ public class MPJ_ETAS_CatalogEALCalculator extends MPJTaskCalculator {
 		
 		File compoundSolFile = new File(cmd.getOptionValue("compound-sol"));
 		Preconditions.checkArgument(compoundSolFile.exists());
-		cfss = CompoundFaultSystemSolution.fromZipFile(compoundSolFile);
+		cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundSolFile);
 		
 		File trueMeanSolFile = new File(cmd.getOptionValue("true-mean-sol"));
 		Preconditions.checkArgument(trueMeanSolFile.exists());

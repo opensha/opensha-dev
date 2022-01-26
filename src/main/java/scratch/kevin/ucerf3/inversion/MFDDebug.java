@@ -18,7 +18,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
@@ -38,7 +38,7 @@ public class MFDDebug {
 		File dir = new File(UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, "InversionSolutions");
 		File fssFile = new File(dir, "2013_01_14-stampede_3p2_production_runs_combined_COMPOUND_SOL.zip");
 		
-		CompoundFaultSystemSolution fss = CompoundFaultSystemSolution.fromZipFile(fssFile);
+		U3CompoundFaultSystemSolution fss = U3CompoundFaultSystemSolution.fromZipFile(fssFile);
 		
 		Map<FaultModels, List<Integer>> rupsListMap = Maps.newHashMap();
 		

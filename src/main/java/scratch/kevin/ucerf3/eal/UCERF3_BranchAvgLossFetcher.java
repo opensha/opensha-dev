@@ -16,7 +16,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
@@ -36,7 +36,7 @@ public class UCERF3_BranchAvgLossFetcher {
 	private U3FaultSystemSolution trueMeanSol;
 	private Map<U3LogicTreeBranch, List<Integer>> branchMappings;
 	
-	private CompoundFaultSystemSolution cfss;
+	private U3CompoundFaultSystemSolution cfss;
 	
 	/**
 	 * @param trueMeanSolFile True mean fault system solution, this must be the exact same file used with
@@ -46,13 +46,13 @@ public class UCERF3_BranchAvgLossFetcher {
 	 * @throws IOException
 	 * @throws DocumentException
 	 */
-	public UCERF3_BranchAvgLossFetcher(File trueMeanSolFile, CompoundFaultSystemSolution cfss, File... ealDataDirs)
+	public UCERF3_BranchAvgLossFetcher(File trueMeanSolFile, U3CompoundFaultSystemSolution cfss, File... ealDataDirs)
 			throws IOException, DocumentException {
 		this(U3FaultSystemIO.loadSol(trueMeanSolFile), TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile), cfss, ealDataDirs);
 	}
 	
 	public UCERF3_BranchAvgLossFetcher(U3FaultSystemSolution trueMeanSol, Map<U3LogicTreeBranch, List<Integer>> branchMappings,
-			CompoundFaultSystemSolution cfss, File... ealDataDirs) throws IOException, DocumentException {
+			U3CompoundFaultSystemSolution cfss, File... ealDataDirs) throws IOException, DocumentException {
 		Preconditions.checkState(ealDataDirs.length > 0, "Must supply at least one data dir");
 		this.ealDataDirs = ealDataDirs;
 		this.trueMeanSol = trueMeanSol;
@@ -218,7 +218,7 @@ public class UCERF3_BranchAvgLossFetcher {
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		
 		// Compound fault system solution
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		

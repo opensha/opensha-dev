@@ -25,7 +25,7 @@ public class GeolDefModelWriter {
 		File inputFile = new File("/tmp/Geologic_Def_model_3_2_2012_09_06.csv");
 		CSVFile<String> inputCSV = CSVFile.readFile(inputFile, true);
 		
-		Map<Integer, FaultSection> fmSects = fm.fetchFaultSectionsMap();
+		Map<Integer, FaultSection> fmSects = fm.getFaultSectionIDMap();
 		
 		CSVFile<String> dmCSV = new CSVFile<String>(true);
 		CSVFile<String> minCSV = new CSVFile<String>(true);

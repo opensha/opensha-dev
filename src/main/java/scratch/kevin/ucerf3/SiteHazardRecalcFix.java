@@ -19,8 +19,8 @@ import org.opensha.sha.calc.hazardMap.components.CurveMetadata;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.CompoundFSSPlots;
 import scratch.UCERF3.analysis.CompoundFSSPlots.ERFBasedSiteHazardHistPlot;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
@@ -30,7 +30,7 @@ import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 public class SiteHazardRecalcFix {
 	
 	public static void main(String[] args) throws Exception {
-		final FaultSystemSolutionFetcher origFetch = CompoundFaultSystemSolution.fromZipFile(
+		final U3FaultSystemSolutionFetcher origFetch = U3CompoundFaultSystemSolution.fromZipFile(
 				new File("/tmp/comp_plots/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		List<U3LogicTreeBranch> origBranches = Lists.newArrayList(origFetch.getBranches());
 		Collections.sort(origBranches);
@@ -40,7 +40,7 @@ public class SiteHazardRecalcFix {
 		boolean calc = false;
 		
 		
-		FaultSystemSolutionFetcher fetch = new FaultSystemSolutionFetcher() {
+		U3FaultSystemSolutionFetcher fetch = new U3FaultSystemSolutionFetcher() {
 			
 			@Override
 			public Collection<U3LogicTreeBranch> getBranches() {

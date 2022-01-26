@@ -25,7 +25,7 @@ public class NamedFaultsTest {
 				continue;
 			Map<Integer, List<Integer>> named = fm.getNamedFaultsMap();
 			
-			ArrayList<FaultSection> sects = fm.fetchFaultSections();
+			List<FaultSection> sects = fm.getFaultSections();
 			
 			for (FaultSection fault : sects) {
 				int id = fault.getSectionId();

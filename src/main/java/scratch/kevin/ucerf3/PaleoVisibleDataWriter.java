@@ -15,7 +15,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 
 import scratch.UCERF3.U3FaultSystemSolution;
-import scratch.UCERF3.SlipEnabledRupSet;
+import scratch.UCERF3.U3SlipEnabledRupSet;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;

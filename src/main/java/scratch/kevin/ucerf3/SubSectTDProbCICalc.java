@@ -18,7 +18,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
 import org.opensha.sha.faultSurface.FaultSection;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
@@ -35,7 +35,7 @@ public class SubSectTDProbCICalc {
 	public static void main(String[] args) throws ZipException, IOException {
 		File compoundFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip");
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(compoundFile);
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundFile);
 		
 		Region reg = new CaliforniaRegions.RELM_SOCAL();
 		

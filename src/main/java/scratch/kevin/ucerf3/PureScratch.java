@@ -51,11 +51,14 @@ import org.dom4j.DocumentException;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.IntegerSampler;
+import org.opensha.commons.data.IntegerSampler.ExclusionIntegerSampler;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.region.CaliforniaRegions.RELM_SOCAL;
 import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
@@ -79,6 +82,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.mapping.gmt.GMT_Map;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
@@ -107,10 +111,14 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionInputGenerator;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
@@ -131,6 +139,8 @@ import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -166,7 +176,7 @@ import com.google.common.primitives.Doubles;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -639,7 +649,7 @@ public class PureScratch {
 		List<Integer> sjSects = map.get("San Jacinto (SB to C)");
 		sjSects.addAll(map.get("San Jacinto (CC to SM)"));
 		
-		Map<Integer, FaultSection> sectMap = fm.fetchFaultSectionsMap();
+		Map<Integer, FaultSection> sectMap = fm.getFaultSectionIDMap();
 		
 //		System.out.println("SSAF sects before removal: "+safSects.size());
 //		
@@ -1766,8 +1776,8 @@ public class PureScratch {
 	}
 	
 	private static void test68() throws IOException {
-		List<FaultSection> sects31 = FaultModels.FM3_1.fetchFaultSections();
-		List<FaultSection> sects32 = FaultModels.FM3_1.fetchFaultSections();
+		List<FaultSection> sects31 = FaultModels.FM3_1.getFaultSections();
+		List<FaultSection> sects32 = FaultModels.FM3_1.getFaultSections();
 		FaultSectionDataWriter.writeSectionsToFile(sects31, null, new File("/tmp/fm_3_1.txt"), false);
 		FaultSectionDataWriter.writeSectionsToFile(sects32, null, new File("/tmp/fm_3_2.txt"), false);
 	}
@@ -1790,7 +1800,7 @@ public class PureScratch {
 	}
 	
 	private static void test70() throws ZipException, IOException {
-		ArrayList<FaultSection> sects = FaultModels.FM3_1.fetchFaultSections();
+		List<FaultSection> sects = FaultModels.FM3_1.getFaultSections();
 		for (FaultSection sect : sects)
 			System.out.println(sect.getSectionId()+". "+sect.getSectionName());
 		System.out.println(sects.size()+" sects");
@@ -1854,7 +1864,7 @@ public class PureScratch {
 	}
 	
 	private static void test73() {
-		FaultSection sect = FaultModels.FM3_1.fetchFaultSectionsMap().get(541);
+		FaultSection sect = FaultModels.FM3_1.getFaultSectionIDMap().get(541);
 		System.out.println(sect.getSectionName());
 		RuptureSurface surf = sect.getFaultSurface(1d, false, false);
 		for (BBP_Site site : RSQSimBBP_Config.getCyberShakeVs500LASites()) {
@@ -2097,7 +2107,7 @@ public class PureScratch {
 		
 		// list of faults with 90 degree dip and non-SS rakes
 		FaultModels fm = FaultModels.FM3_1;
-		List<FaultSection> sects = fm.fetchFaultSections();
+		List<FaultSection> sects = fm.getFaultSections();
 		Map<Integer, FaultSection> parentIDsMap = sects.stream().collect(Collectors.toMap(S -> S.getSectionId(), S->S));
 		
 		Table<DeformationModels, Integer, Double> dmParentRakes = HashBasedTable.create();
@@ -2171,7 +2181,7 @@ public class PureScratch {
 //		String name2 = "SJF Mystic Lake";
 //		sects2.add("San Jacinto (Stepovers Combined), Subsection 0");
 		
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File("/home/kevin/OpenSHA/UCERF3/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		U3APrioriBranchWeightProvider weightProv = new U3APrioriBranchWeightProvider();
 		double totWeight = 0d;
@@ -2256,7 +2266,7 @@ public class PureScratch {
 	}
 	
 	private static void test85() {
-		for (FaultSection sect : FaultModels.FM3_2.fetchFaultSections()) {
+		for (FaultSection sect : FaultModels.FM3_2.getFaultSections()) {
 			float dipDir = sect.getDipDirection();
 			float calcDipDir = (float)(sect.getFaultTrace().getStrikeDirection()+90d);
 			if (calcDipDir >= 360f)
@@ -2285,8 +2295,8 @@ public class PureScratch {
 	}
 	
 	private static void test87() {
-		Map<Integer, FaultSection> map31 = FaultModels.FM3_1.fetchFaultSectionsMap();
-		Map<Integer, FaultSection> map32 = FaultModels.FM3_2.fetchFaultSectionsMap();
+		Map<Integer, FaultSection> map31 = FaultModels.FM3_1.getFaultSectionIDMap();
+		Map<Integer, FaultSection> map32 = FaultModels.FM3_2.getFaultSectionIDMap();
 		List<String> uniques1 = new ArrayList<>();
 		for (Integer id : map31.keySet())
 			if (!map32.containsKey(id))
@@ -2669,7 +2679,7 @@ public class PureScratch {
 //		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
 //		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/"
 //				+ "FM3_1_ZENGBB_Shaw09Mod_DsrUni_CharConst_M5Rate7.9_MMaxOff7.6_NoFix_SpatSeisU3.zip"));
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File("/home/kevin/OpenSHA/UCERF3/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		FaultSystemSolution sol = cfss.getSolution(U3LogicTreeBranch.fromValues(true, SlipAlongRuptureModels.UNIFORM));
 		System.out.println(sol.requireModule(GridSourceProvider.class).getNodeUnassociatedMFD(0));
@@ -2929,7 +2939,7 @@ public class PureScratch {
 		double constrRate = 3.1561314E-4;
 	}
 	
-	private static void test112() {
+	private static void test112() throws IOException {
 		Options ops = new Options();
 		ops.addRequiredOption("cl", "class", true, "asdf");
 		
@@ -3051,12 +3061,77 @@ public class PureScratch {
 		plot.writePlot(sol.getRupSet(), sol, "Without", withoutDir);
 	}
 	
+	private static void test116() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+				+ "nshm23_geo_dm_v1p2_all_plausibleMulti15km_adaptive6km_direct_cmlRake360_jumpP0.001"
+				+ "_slipP0.05incrCapDist_cff0.75IntsPos_comb2Paths_cffFavP0.01_cffFavRatioN2P0.5_sectFractGrow0.1.zip"));
+//		PaleoseismicConstraintData.loadUCERF3(rupSet);
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		
+		LogicTreeBranch<?> branch = NSHM23_LogicTreeBranch.DEFAULT;
+		
+		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
+		
+		InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, 16);
+		config = InversionConfiguration.builder(config).completion(TimeCompletionCriteria.getInMinutes(1)).build();
+		
+		System.out.println("Inversion Constraints");
+		for (InversionConstraint constraint : config.getConstraints())
+			System.out.println("\t"+constraint.getName()+", weight="+constraint.getWeight());
+	
+		Inversions.run(rupSet, config).write(new File("/tmp/scrach_sol.zip"));
+	}
+	
+	private static void test117() throws IOException {
+		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_01_18-reproduce-ucerf3-ref_branch-long_reweight_test-NEOK-EllB-DsrTap-SupraB0.0-"
+				+ "NuclMFD-reweight_sqrt_conserve_phased-initial_parkfield/");
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File(inputDir, "rupture_set.zip"));
+		InversionConfiguration config = InversionConfiguration.readJSON(
+				new File(inputDir, "sub_0.5_per-avg_50_per/config.json"), rupSet);
+		IntegerPDF_FunctionSampler sampler = (IntegerPDF_FunctionSampler)config.getSampler();
+		
+		InversionConfiguration.writeJSON(config, new File("/tmp/config1.json"));
+		
+		HashSet<Integer> excludes = new HashSet<>();
+		for (int i=0; i<sampler.size(); i++)
+			if (sampler.getY(i) == 0d)
+				excludes.add(i);
+		
+		ExclusionIntegerSampler exclusionSampler = new ExclusionIntegerSampler(0, rupSet.getNumRuptures(), excludes);
+		config = InversionConfiguration.builder(config).sampler(exclusionSampler).build();
+		
+		InversionConfiguration.writeJSON(config, new File("/tmp/config2.json"));
+		
+		System.out.println(InversionConfiguration.readJSON(new File("/tmp/config1.json"), rupSet).getSampler().getClass());
+		System.out.println(InversionConfiguration.readJSON(new File("/tmp/config2.json"), rupSet).getSampler().getClass());
+	}
+	
+	private static void test118() throws IOException {
+		EvenlyDiscretizedFunc refMFD = new EvenlyDiscretizedFunc(0.05, 78, 0.1);
+		
+		double totMoRate = 1e16;
+		double supraB = 0;
+		
+		// start with a full G-R with the supra b-value
+		GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(
+				refMFD.getMinX(), refMFD.size(), refMFD.getDelta(), totMoRate, supraB);
+		
+		System.out.println(gr.getY(1)/gr.getY(0));
+		System.out.println(gr.getY(6)/gr.getY(5));
+		
+		double delta = refMFD.getDelta();
+		double relFract = (Math.pow(10, -supraB*delta) - Math.pow(10, -supraB*delta*2))
+				/(Math.pow(10, 0) - Math.pow(10, -supraB*delta));
+		System.out.println(relFract);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test115();
+		test118();
 	}
 
 }

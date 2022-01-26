@@ -18,7 +18,7 @@ import org.opensha.commons.gui.plot.PlotSpec;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.analysis.BranchSensitivityHistogram;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
@@ -31,7 +31,7 @@ public class BranchSensHistTests {
 		BranchSensitivityHistogram hists = new BranchSensitivityHistogram("Ratio");
 		
 		// use CFSS for branch
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File(new File(UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, "InversionSolutions"),
 						"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		

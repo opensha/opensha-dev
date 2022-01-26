@@ -29,7 +29,7 @@ public class SSAF_ParentsJSONWriter {
 				32,		// San Andreas (Parkfield)
 		};
 		
-		Map<Integer, FaultSection> fmMap = FaultModels.FM3_1.fetchFaultSectionsMap();
+		Map<Integer, FaultSection> fmMap = FaultModels.FM3_1.getFaultSectionIDMap();
 		
 		List<FaultSection> sects = new ArrayList<>();
 		for (int parentID : SAF_PARENTS) {

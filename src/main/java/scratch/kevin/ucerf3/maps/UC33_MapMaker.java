@@ -2125,7 +2125,7 @@ public class UC33_MapMaker {
 
 
 	private static void addFaultTraces(FaultModels fm, GMT_Map map, Color c) {
-		List<FaultSection> faults = fm.fetchFaultSections();
+		List<FaultSection> faults = fm.getFaultSections();
 		for (FaultSection fspd : faults) {
 			PSXYPolygon poly = new PSXYPolygon(fspd.getFaultTrace());
 			poly.setPenColor(c);

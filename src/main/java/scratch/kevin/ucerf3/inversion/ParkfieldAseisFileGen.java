@@ -42,7 +42,7 @@ public class ParkfieldAseisFileGen {
 		
 		csv.addLine(header);
 		
-		ArrayList<FaultSection> sects = fm.fetchFaultSections();
+		List<FaultSection> sects = fm.getFaultSections();
 		
 		ArrayList<Integer> parentSects = Lists.newArrayList(657, 658, 32, 285, 300);
 		

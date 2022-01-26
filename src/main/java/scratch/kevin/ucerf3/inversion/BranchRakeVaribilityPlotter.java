@@ -45,7 +45,7 @@ public class BranchRakeVaribilityPlotter {
 		for (FaultModels fm : FaultModels.values()) {
 			if (fm == FaultModels.FM2_1)
 				continue;
-			List<FaultSection> sects = fm.fetchFaultSections();
+			List<FaultSection> sects = fm.getFaultSections();
 			
 			List<Map<Integer, DeformationSection>> dmSectsMaps = Lists.newArrayList();
 			

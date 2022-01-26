@@ -2,45 +2,44 @@ package scratch.kevin.nshm23;
 
 import java.io.File;
 import java.io.IOException;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.function.Supplier;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
-import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ExceptionUtils;
-import org.opensha.commons.util.modules.ArchivableModule;
-import org.opensha.commons.util.modules.ModuleArchive;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
-import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.AbstractExternalFetcher;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 
 import com.google.common.base.Preconditions;
 
 import edu.usc.kmilner.mpj.taskDispatch.AsyncPostBatchHook;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 
+/**
+ * Class for running a full logic tree of inversions with a single job in an MPI environment
+ * 
+ * @author kevin
+ *
+ */
 public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 
 	private File outputDir;
@@ -87,6 +86,14 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		} catch (Exception e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
+		
+		File cacheDir = FaultSysTools.getCacheDir(cmd);
+		if (cacheDir != null) {
+			if (rank == 0)
+				waitOnDir(cacheDir, 3, 1000);
+			factory.setCacheDir(cacheDir);
+		}
+		factory.setAutoCache(rank == 0);
 		
 		debug("Factory type: "+factory.getClass().getName());
 		
@@ -344,15 +351,32 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 			
 			memoryDebug("Beginning config for "+index);
 			
-			FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, annealingThreads);
+			FaultSystemRupSet rupSet;
+			try {
+				rupSet = factory.buildRuptureSet(branch, annealingThreads);
+			} catch (IOException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
 			rupSet.addModule(branch);
 			
-			InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, annealingThreads);
+			InversionConfiguration config;
+			try {
+				config = factory.buildInversionConfig(rupSet, branch, annealingThreads);
+			} catch (IOException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			rupSet.addModule(branch);
 			// apply any command line overrides
 			config = InversionConfiguration.builder(config).forCommandLine(cmd).build();
 			
 			memoryDebug("Running inversion for task "+index+" with "+config.getConstraints().size()+" constraints");
 			FaultSystemSolution sol = Inversions.run(rupSet, config);
+			
+			// attach any relevant modules before writing out
+			SolutionProcessor processor = factory.getSolutionLogicTreeProcessor();
+			
+			if (processor != null)
+				processor.processSolution(sol, branch);
 			
 			try {
 				sol.write(solFile);
@@ -378,6 +402,7 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		
 		ops.addRequiredOption("lt", "logic-tree", true, "Path to logic tree JSON file");
 		ops.addRequiredOption("od", "output-dir", true, "Path to output directory");
+		ops.addOption(FaultSysTools.cacheDirOption());
 		ops.addRequiredOption("at", "annealing-threads", true, "Number of annealing threads per inversion");
 		ops.addOption("rpb", "runs-per-branch", true, "Runs per branch (default is 1)");
 		ops.addOption("rpb", "runs-per-bundle", true, "Simultaneous runs to executure (default is 1)");

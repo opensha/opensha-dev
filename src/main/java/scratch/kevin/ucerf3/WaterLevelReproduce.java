@@ -18,10 +18,12 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RuptureSets;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
+import scratch.UCERF3.inversion.U3InversionConfigFactory;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -77,8 +79,7 @@ public class WaterLevelReproduce {
 //		compSlips.add(rupSet.requireModule(SectSlipRates.class));
 //		compOrigSlips.add(rupSet.getSlipRateForAllSections());
 		
-		List<? extends FaultSection> subSects = RuptureSets.getU3SubSects(fm);
-		rupSet = FaultSystemRupSet.builder(subSects, rupSet.getSectionIndicesForAllRups()).forU3Branch(branch).build();
+		rupSet = new U3InversionConfigFactory().buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
 		comps.add(InversionsCLI.getU3Generator(rupSet).getWaterLevelRates());
 		compNames.add("Fully New Method");
 		compSlips.add(rupSet.requireModule(SectSlipRates.class));

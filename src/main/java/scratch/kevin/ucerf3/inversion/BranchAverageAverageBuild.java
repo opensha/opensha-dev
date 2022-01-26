@@ -11,7 +11,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.AverageFaultSystemSolution;
+import scratch.UCERF3.U3AverageFaultSystemSolution;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
@@ -42,7 +42,7 @@ public class BranchAverageAverageBuild {
 				rupSet = invSol.getRupSet();
 			ratesList.add(invSol.getRateForAllRups());
 		}
-		AverageFaultSystemSolution avgSol = new AverageFaultSystemSolution(rupSet, ratesList);
+		U3AverageFaultSystemSolution avgSol = new U3AverageFaultSystemSolution(rupSet, ratesList);
 		U3FaultSystemIO.writeSol(avgSol, new File(dir, "mean.zip"));
 		
 		// now make average no means
@@ -65,7 +65,7 @@ public class BranchAverageAverageBuild {
 				runningRates[r] = runningRates[r]/totWt;
 			ratesList.add(runningRates);
 		}
-		avgSol = new AverageFaultSystemSolution(rupSet, ratesList);
+		avgSol = new U3AverageFaultSystemSolution(rupSet, ratesList);
 		U3FaultSystemIO.writeSol(avgSol, new File(dir, "mean_noMins.zip"));
 	}
 	

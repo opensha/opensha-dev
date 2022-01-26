@@ -41,7 +41,7 @@ import org.opensha.sra.calc.parallel.ThreadedEALCalc;
 import org.opensha.sra.gui.portfolioeal.Asset;
 import org.opensha.sra.gui.portfolioeal.CalculationExceptionHandler;
 
-import scratch.UCERF3.AverageFaultSystemSolution;
+import scratch.UCERF3.U3AverageFaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.inversion.BatchPlotGen;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
@@ -1052,7 +1052,7 @@ public class ManyRunCompilation {
 			double[][] partRates = new double[numSects][numRuns];
 			
 			try {
-				AverageFaultSystemSolution.calcThreaded(rates, partRates, true, magLow, magHigh, rupSet);
+				U3AverageFaultSystemSolution.calcThreaded(rates, partRates, true, magLow, magHigh, rupSet);
 			} catch (InterruptedException e) {
 				ExceptionUtils.throwAsRuntimeException(e);
 			}
@@ -1081,7 +1081,7 @@ public class ManyRunCompilation {
 		double[][] slipRates = new double[numSects][numRuns];
 		
 		try {
-			AverageFaultSystemSolution.calcThreaded(rates, slipRates, false, 0, 0, rupSet);
+			U3AverageFaultSystemSolution.calcThreaded(rates, slipRates, false, 0, 0, rupSet);
 		} catch (InterruptedException e) {
 			ExceptionUtils.throwAsRuntimeException(e);
 		}

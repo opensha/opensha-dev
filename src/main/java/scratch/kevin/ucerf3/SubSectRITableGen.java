@@ -7,8 +7,8 @@ import java.util.zip.ZipException;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.CompoundFSSPlots;
 import scratch.UCERF3.analysis.CompoundFSSPlots.SubSectRITable;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -22,7 +22,7 @@ public class SubSectRITableGen {
 		File dir = new File("/tmp");
 		File compoundFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip");
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(compoundFile);
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundFile);
 		
 		FaultModels fm = FaultModels.FM3_1;
 //		DeformationModels dm = DeformationModels.GEOLOGIC;
@@ -30,7 +30,7 @@ public class SubSectRITableGen {
 		U3BranchWeightProvider weightProvider = new U3APrioriBranchWeightProvider();
 		
 //		FaultSystemSolutionFetcher fetch = FaultSystemSolutionFetcher.getSubset(cfss, fm, dm);
-		FaultSystemSolutionFetcher fetch = FaultSystemSolutionFetcher.getSubset(cfss, fm);
+		U3FaultSystemSolutionFetcher fetch = U3FaultSystemSolutionFetcher.getSubset(cfss, fm);
 		// for random sample
 //		fetch = FaultSystemSolutionFetcher.getRandomSample(fetch, 8, FaultModels.FM3_1);
 		System.out.println("Subset has "+fetch.getBranches().size()+" branches");

@@ -53,7 +53,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.griddedSei
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
@@ -1604,7 +1604,7 @@ public class ETAS_CatalogEALCalculator {
 				+ "COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 
 		// Compound fault system solution
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File("../opensha-ucerf3/src/scratch/UCERF3/data/scratch/"
 						+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
@@ -1623,7 +1623,7 @@ public class ETAS_CatalogEALCalculator {
 
 	public static void calculate(File resultsFile, boolean triggeredOnly, String xAxisLabel, double maxX,
 			double deltaX, double xAxisScale, List<File> dataDirs, Map<AttenRelRef, Double> imrWeightsMap,
-			FaultModels fm, U3FaultSystemSolution baSol, CompoundFaultSystemSolution cfss,
+			FaultModels fm, U3FaultSystemSolution baSol, U3CompoundFaultSystemSolution cfss,
 			U3FaultSystemSolution trueMeanSol, Map<U3LogicTreeBranch, List<Integer>> branchMappings,
 			double[] durations, boolean allSubDurations, boolean magDistLosses) throws IOException, DocumentException {
 		File lossOutputDir = new File(resultsFile.getParentFile(), "loss_results");

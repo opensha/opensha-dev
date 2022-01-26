@@ -36,6 +36,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
@@ -173,13 +174,21 @@ public class LogicTreeHazardCompare {
 //		LogicTreeNode[] compSubsetNodes = { SubSectConstraintModels.NUCL_MFD };
 //		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
 		
-		File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
-		String mainName = "NSHM23 Full Draft Even Fit, U3RS";
+//		File mainDir = new File(invDir, "2022_01_18-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
+//		String mainName = "NSHM23 Full Draft Even Fit, U3RS";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = new File(invDir, "2022_01_06-nshm23_draft_branches-no_seg-FM3_1-U3RupSet-SubB1");
+//		String compName = "Fixed Weights";
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps_comp_fixed_weight");
+		
+		File mainDir = new File(invDir, "2022_01_19-nshm23_branches-reweighted_even_fit-CoulombRupSet-DsrUni-SubB1-ShawR0_3-5000ip");
+		String mainName = "NSHM23 GeoDM1.2 Draft";
 		LogicTreeNode[] subsetNodes = null;
-		File compDir = new File(invDir, "2022_01_06-nshm23_draft_branches-no_seg-FM3_1-U3RupSet-SubB1");
-		String compName = "Fixed Weights";
+		File compDir = null;
+		String compName = null;
 		LogicTreeNode[] compSubsetNodes = null;
-		File outputDir = new File(mainDir, "hazard_maps_comp_fixed_weight");
+		File outputDir = new File(mainDir, "hazard_maps");
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		
@@ -233,7 +242,9 @@ public class LogicTreeHazardCompare {
 		logCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-3d, 1d);
 		spreadCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0, 1d);
 		spreadDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
+		spreadDiffCPT.setNanColor(Color.GRAY);
 		pDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-100d, 100d);
+		pDiffCPT.setNanColor(Color.GRAY);
 		percentileCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, 100d);
 		percentileCPT.setNanColor(Color.BLACK);
 		
@@ -254,6 +265,9 @@ public class LogicTreeHazardCompare {
 			if (gridReg == null) {
 				FaultSystemSolution sol = solLogicTree.forBranch(branch);
 				Region region = ReportMetadata.detectRegion(sol);
+				if (region == null)
+					// just use bounding box
+					region = RupSetMapMaker.buildBufferedRegion(sol.getRupSet().getFaultSectionDataList());
 				gridReg = new GriddedRegion(region, spacing, GriddedRegion.ANCHOR_0_0);
 				
 				mapper = new SolHazardMapCalc(sol, null, gridReg, periods);

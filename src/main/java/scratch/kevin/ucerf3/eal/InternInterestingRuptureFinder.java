@@ -17,7 +17,7 @@ import org.opensha.sha.imr.AttenRelRef;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 
@@ -51,7 +51,7 @@ public class InternInterestingRuptureFinder {
 		FaultModels fm = FaultModels.FM3_1;
 		
 		// Compound fault system solution
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 						+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		

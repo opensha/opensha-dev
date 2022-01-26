@@ -18,7 +18,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -51,7 +51,7 @@ public class SubSectProbSortingCheck {
 		CSVFile<String> csv = CSVFile.readFile(csvFile, true);
 		
 		// branches for processing
-		List<U3LogicTreeBranch> branches = Lists.newArrayList(CompoundFaultSystemSolution.fromZipFile(
+		List<U3LogicTreeBranch> branches = Lists.newArrayList(U3CompoundFaultSystemSolution.fromZipFile(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip")).getBranches());
 		

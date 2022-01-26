@@ -9,8 +9,8 @@ import java.util.zip.ZipException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.CompoundFSSPlots;
 import scratch.UCERF3.analysis.CompoundFSSPlots.BranchAvgFSSBuilder;
 import scratch.UCERF3.analysis.CompoundFSSPlots.ParentSectMFDsPlot;
@@ -43,8 +43,8 @@ public class CompoundSubsetWrite {
 		File newCompoundFile = new File("/tmp/2013_01_14-stampede_3p2_production_runs_fm3p1_dm_scale_subset_COMPOUND_SOL.zip");
 		File refCompoundFile = new File("/tmp/2013_04_28-refactored-test-runs_COMPOUND_SOL.zip");
 		
-		final CompoundFaultSystemSolution origCompound = CompoundFaultSystemSolution.fromZipFile(origCompoundFile);
-		CompoundFaultSystemSolution refCompound = CompoundFaultSystemSolution.fromZipFile(refCompoundFile);
+		final U3CompoundFaultSystemSolution origCompound = U3CompoundFaultSystemSolution.fromZipFile(origCompoundFile);
+		U3CompoundFaultSystemSolution refCompound = U3CompoundFaultSystemSolution.fromZipFile(refCompoundFile);
 		
 		System.out.println("Compound has "+origCompound.getBranches().size()+" branches");
 		
@@ -67,7 +67,7 @@ public class CompoundSubsetWrite {
 		
 		System.out.println("Found "+subBranches.size()+" sub branches");
 		
-		FaultSystemSolutionFetcher fetch = new FaultSystemSolutionFetcher() {
+		U3FaultSystemSolutionFetcher fetch = new U3FaultSystemSolutionFetcher() {
 			
 			@Override
 			public Collection<U3LogicTreeBranch> getBranches() {

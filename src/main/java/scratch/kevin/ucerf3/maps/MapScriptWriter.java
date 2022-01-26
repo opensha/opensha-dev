@@ -19,7 +19,7 @@ import org.opensha.commons.util.ExceptionUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter;
 import scratch.UCERF3.simulatedAnnealing.hpc.LogicTreePBSWriter.RunSites;
@@ -68,7 +68,7 @@ public class MapScriptWriter {
 		Preconditions.checkState(localCompoundFile.exists(), localCompoundFile.getAbsolutePath()+" doesn't exist!");
 		File remoteCompoundfile = new File(remoteDir, compoundFileName);
 		
-		CompoundFaultSystemSolution fss = CompoundFaultSystemSolution.fromZipFile(localCompoundFile);
+		U3CompoundFaultSystemSolution fss = U3CompoundFaultSystemSolution.fromZipFile(localCompoundFile);
 		
 //		HashSet<LogicTreeBranch> ignores = null;
 //		HashSet<String> ignores = loadIgnoreBranchesFromList(new File(

@@ -12,8 +12,8 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.CompoundFSSPlots;
 import scratch.UCERF3.analysis.CompoundFSSPlots.BranchAvgFSSBuilder;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -45,7 +45,7 @@ public class SolSubMeanExtractor {
 //		File outputDir = new File("/tmp/fm_dm_sols");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(compoundFile);
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundFile);
 		
 		List<U3LogicTreeBranchNode<?>> fmBranches =
 				LogicTreePBSWriter.getNonZeroChoices(FaultModels.class, InversionModels.CHAR_CONSTRAINED);
@@ -89,8 +89,8 @@ public class SolSubMeanExtractor {
 								cfss.getBranches(), fm, dm, scale, seis);
 						System.out.println("Making "+fName+" with "+branches.size()+" branches");
 						
-						FaultSystemSolutionFetcher subsetFetch =
-								FaultSystemSolutionFetcher.getSubsetSample(cfss, branches);
+						U3FaultSystemSolutionFetcher subsetFetch =
+								U3FaultSystemSolutionFetcher.getSubsetSample(cfss, branches);
 						
 						List<CompoundFSSPlots> plots = Lists.newArrayList();
 						plots.add(new BranchAvgFSSBuilder(weightProv));

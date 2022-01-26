@@ -40,7 +40,7 @@ public class CoulombTolayRemovalMappingFix {
 		
 		for (FaultModels fm : fms) {
 			if (newImperialSubSects == null) {
-				FaultSection section = fm.fetchFaultSectionsMap().get(imperialParent);
+				FaultSection section = fm.getFaultSectionIDMap().get(imperialParent);
 				double ddw = section.getOrigDownDipWidth();
 				newImperialSubSects = section.getSubSectionsList(ddw*0.5, 0, 2);
 			}

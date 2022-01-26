@@ -36,9 +36,9 @@ import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.logicTree.U3APrioriBranchWeightProvider;
@@ -66,7 +66,7 @@ import com.google.common.primitives.Doubles;
  */
 public class UCERF3_EAL_Combiner {
 	
-	private FaultSystemSolutionFetcher fetcher;
+	private U3FaultSystemSolutionFetcher fetcher;
 	private Map<U3LogicTreeBranch, List<Integer>> mappings;
 	private U3FaultSystemSolution trueMeanSol;
 	private double[][] faultLosses;
@@ -84,13 +84,13 @@ public class UCERF3_EAL_Combiner {
 	private LossCOV_Model lecCOV;
 	private DiscretizedFunc[] lecs;
 	
-	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<U3LogicTreeBranch, List<Integer>> mappings,
+	public UCERF3_EAL_Combiner(U3FaultSystemSolutionFetcher fetcher, Map<U3LogicTreeBranch, List<Integer>> mappings,
 			U3FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses)
 					throws DocumentException, IOException {
 		this(fetcher, mappings, trueMeanSol, fssLosses, griddedLosses, null, Double.NaN);
 	}
 	
-	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<U3LogicTreeBranch, List<Integer>> mappings,
+	public UCERF3_EAL_Combiner(U3FaultSystemSolutionFetcher fetcher, Map<U3LogicTreeBranch, List<Integer>> mappings,
 			U3FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses,
 			ZipFile erfProbsZipFile, double erfProbsDuration)
 					throws DocumentException, IOException {
@@ -98,7 +98,7 @@ public class UCERF3_EAL_Combiner {
 				null, null);
 	}
 	
-	public UCERF3_EAL_Combiner(FaultSystemSolutionFetcher fetcher, Map<U3LogicTreeBranch, List<Integer>> mappings,
+	public UCERF3_EAL_Combiner(U3FaultSystemSolutionFetcher fetcher, Map<U3LogicTreeBranch, List<Integer>> mappings,
 			U3FaultSystemSolution trueMeanSol, double[][] fssLosses, DiscretizedFunc[] griddedLosses,
 			ZipFile erfProbsZipFile, double erfProbsDuration, DiscretizedFunc lecXVals, LossCOV_Model lecCOV)
 					throws DocumentException, IOException {
@@ -234,9 +234,9 @@ public class UCERF3_EAL_Combiner {
 				}
 				
 				GridSourceProvider gridProv = null;
-				if (fetcher instanceof CompoundFaultSystemSolution) {
+				if (fetcher instanceof U3CompoundFaultSystemSolution) {
 					try {
-						gridProv = ((CompoundFaultSystemSolution)fetcher).loadGridSourceProviderFile(branch);
+						gridProv = ((U3CompoundFaultSystemSolution)fetcher).loadGridSourceProviderFile(branch);
 					} catch (Exception e) {}
 				}
 				if (gridProv == null)
@@ -486,7 +486,7 @@ public class UCERF3_EAL_Combiner {
 			// now load in the mappings
 			Map<U3LogicTreeBranch, List<Integer>> mappings = TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile);
 			DiscretizedFunc[] rupMFDs = trueMeanSol.getRupMagDists();
-			CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(compoundSolFile);
+			U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundSolFile);
 			
 			// now load in rupture expected losses
 			System.out.println("Loading losses");

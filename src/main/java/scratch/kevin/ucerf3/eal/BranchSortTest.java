@@ -9,7 +9,7 @@ import java.util.zip.ZipException;
 
 import com.google.common.base.Preconditions;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMM_Epistemic;
 import scratch.kevin.ucerf3.eal.branches.U3_EAL_GMMs;
@@ -20,7 +20,7 @@ import scratch.kevin.ucerf3.eal.branches.U3_EAL_Vs30Model;
 public class BranchSortTest {
 	
 	public static void main(String[] args) throws ZipException, IOException {
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(new File(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(new File(
 				"/home/kevin/workspace/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		

@@ -58,8 +58,10 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_01_10-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-FM3_1-CoulombRupSet-SubB1-105_samples");
 //		File mainDir = new File(invDir, "2022_01_11-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-aggressive-FM3_1-CoulombRupSet-SubB1-105_samples");
 //		File mainDir = new File(invDir, "2022_01_11-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-aggressiver-FM3_1-CoulombRupSet-SubB1-105_samples");
-		File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
-//		File mainDir = new File(invDir, "");
+//		File mainDir = new File(invDir, "2022_01_18-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
+//		File mainDir = new File(invDir, "2022_01_19-nshm23_branches-reweighted_even_fit-CoulombRupSet-DsrUni-SubB1-ShawR0_3-5000ip");
+//		File mainDir = new File(invDir, "2022_01_19-nshm23_u3_hybrid_branches-reweighted_even_fit-FM3_1-CoulombRupSet-SubB1-5000ip");
+		File mainDir = new File(invDir, "2022_01_24-nshm23_u3_hybrid_branches-reweighted_even_fit-adj_mfds-CoulombRupSet-U3_ZENG-DsrUni-SubB1-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		File outputDir = new File(mainDir, "logic_tree_misfits");

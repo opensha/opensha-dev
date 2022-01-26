@@ -35,8 +35,8 @@ public class RuptureSearch {
 		File mainOutputDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_5044.instance(baseDir);
-//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5044.instance(baseDir);
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
 		
 		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
 		

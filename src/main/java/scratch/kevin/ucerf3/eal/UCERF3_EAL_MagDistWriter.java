@@ -16,7 +16,7 @@ import org.opensha.sra.calc.parallel.MPJ_CondLossCalc;
 
 import com.google.common.base.Preconditions;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;

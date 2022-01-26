@@ -37,7 +37,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLev
 import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.DraftModelConstraintBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
@@ -48,6 +48,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.InversionModels;
 import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
+import scratch.UCERF3.inversion.U3InversionConfigFactory;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -175,8 +176,8 @@ public class InversionsCLI {
 		if (nshmDraftConstraints) {
 			double supraBVal = 0.8;
 			rupSet = FaultSystemRupSet.load(origRupSetFile);
-			rupSet = FaultSystemRupSet.buildFromExisting(rupSet)
-					.u3BranchModules(rupSet.getModule(U3LogicTreeBranch.class)).build();
+			rupSet = new U3InversionConfigFactory().updateRuptureSetForBranch(rupSet,
+					rupSet.requireModule(U3LogicTreeBranch.class));
 			dirName += "-nshm23_draft-supra_b_"+oDF.format(supraBVal);
 			
 			boolean applyDefModelUncertaintiesToNucl = true;
@@ -184,7 +185,7 @@ public class InversionsCLI {
 			boolean adjustForIncompatibleData = true;
 			boolean randWeight = true;
 
-			DraftModelConstraintBuilder constrBuilder = new DraftModelConstraintBuilder(rupSet, supraBVal,
+			NSHM23_ConstraintBuilder constrBuilder = new NSHM23_ConstraintBuilder(rupSet, supraBVal,
 					applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
 			constrBuilder.defaultConstraints();
 			
@@ -395,7 +396,7 @@ public class InversionsCLI {
 				myBranch.setValue(SlipAlongRuptureModels.TAPERED);
 			else if (file.getName().contains("uniform"))
 				myBranch.setValue(SlipAlongRuptureModels.UNIFORM);
-			rupSet = FaultSystemRupSet.buildFromExisting(rupSet).forU3Branch(myBranch).build();
+			rupSet = new U3InversionConfigFactory().updateRuptureSetForBranch(rupSet, branch);
 			rupSet.write(file);
 		}
 	}

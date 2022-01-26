@@ -12,7 +12,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PolygonFaultGridAssociations;
 import org.opensha.sha.faultSurface.FaultSection;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.griddedSeismicity.FaultPolyMgr;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
@@ -24,7 +24,7 @@ import com.google.common.collect.Lists;
 public class PolygonFileWriter {
 
 	public static void main(String[] args) throws ZipException, IOException {
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 		
@@ -42,7 +42,7 @@ public class PolygonFileWriter {
 			InversionFaultSystemSolution sol = cfss.getSolution(fmBranch);
 			
 			// parent sections
-			writePolygons(new File(outputDir, fm.name()+"_parents_geologic.csv"), fm.fetchFaultSections(), null);
+			writePolygons(new File(outputDir, fm.name()+"_parents_geologic.csv"), fm.getFaultSections(), null);
 			writePolygons(new File(outputDir, fm.name()+"_sub_sect_hazard.csv"), sol.getRupSet().getFaultSectionDataList(),
 					sol.getRupSet().getInversionTargetMFDs().getGridSeisUtils().getPolyMgr());
 		}

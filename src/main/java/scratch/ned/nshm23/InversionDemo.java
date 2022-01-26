@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RuptureSets;
@@ -44,6 +45,7 @@ import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.enumTreeBranches.SpatialSeisPDF;
 import scratch.UCERF3.griddedSeismicity.UCERF3_GridSourceGenerator;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
+import scratch.UCERF3.inversion.U3InversionConfigFactory;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.inversion.UCERF3InversionInputGenerator;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -54,7 +56,7 @@ import scratch.UCERF3.utils.paleoRateConstraints.U3PaleoRateConstraint;
 
 public class InversionDemo {
 	
-	public static void calcEquivBvaluesForU2_NuclConstr() {
+	public static void calcEquivBvaluesForU2_NuclConstr() throws IOException {
 		// output directory, change this
 		File outputDir = new File("/Users/field/tmp/inversion_test");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -92,7 +94,7 @@ public class InversionDemo {
 			rupSet = rsConfig.build(threads);
 			
 			// now add all of the things it needs to run a UCERF3-style inversion (e.g., polygons, target MFDs)
-			rupSet = FaultSystemRupSet.buildFromExisting(rupSet).forU3Branch(branch).build();
+			rupSet = new U3InversionConfigFactory().updateRuptureSetForBranch(rupSet, branch);
 			
 			// write it out
 			try {
@@ -324,7 +326,7 @@ public class InversionDemo {
 	}
 	
 	
-	public static void runInversion() {
+	public static void runInversion() throws IOException {
 		// output directory, change this
 		File outputDir = new File("/Users/field/tmp/inversion_test");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -362,7 +364,7 @@ public class InversionDemo {
 			rupSet = rsConfig.build(threads);
 			
 			// now add all of the things it needs to run a UCERF3-style inversion (e.g., polygons, target MFDs)
-			rupSet = FaultSystemRupSet.buildFromExisting(rupSet).forU3Branch(branch).build();
+			rupSet = new U3InversionConfigFactory().updateRuptureSetForBranch(rupSet, branch);
 			
 			// write it out
 			try {

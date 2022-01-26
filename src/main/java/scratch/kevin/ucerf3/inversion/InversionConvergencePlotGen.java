@@ -24,7 +24,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 
-import scratch.UCERF3.AverageFaultSystemSolution;
+import scratch.UCERF3.U3AverageFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
@@ -55,7 +55,7 @@ public class InversionConvergencePlotGen {
 		
 		File avgFile = new File(solDir, "FM3_1_ZENGBB_Shaw09Mod_DsrTap_CharConst_M5Rate8.7_MMaxOff7.6_" +
 				"NoFix_SpatSeisU3_mean_sol.zip");
-		AverageFaultSystemSolution avgSol = U3FaultSystemIO.loadAvgInvSol(avgFile);
+		U3AverageFaultSystemSolution avgSol = U3FaultSystemIO.loadAvgInvSol(avgFile);
 		
 		File avgSol0rates = new File(solDir, "FM3_1_ZENGBB_Shaw09Mod_DsrTap_CharConst_" +
 				"M5Rate8.7_MMaxOff7.6_NoFix_SpatSeisU3_run00.bin");
@@ -381,7 +381,7 @@ public class InversionConvergencePlotGen {
 	}
 
 	private static EvenlyDiscretizedFunc loadNonWaterlevelsForAvg(
-			AverageFaultSystemSolution avgSol, double[] waterlevels) throws IOException {
+			U3AverageFaultSystemSolution avgSol, double[] waterlevels) throws IOException {
 //		double[] waterlevels = new double[avgSol.getNumRuptures()];
 //		double[] run0NoMins = MatrixIO.doubleArrayFromFile(run0NoMinsFile);
 //		double[] run0Rates = avgSol.getRates(0);

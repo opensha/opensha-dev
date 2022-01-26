@@ -39,7 +39,7 @@ import com.google.common.collect.Lists;
 import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.U3FaultSystemSolution;
-import scratch.UCERF3.SlipAlongRuptureModelRupSet;
+import scratch.UCERF3.U3SlipAlongRuptureModelRupSet;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.inversion.SectionCluster;
@@ -238,7 +238,7 @@ public class DownDipTestRupSetBuilder {
 		System.exit(0);
 	}
 	
-	private static class MySlipEnabledRupSet extends SlipAlongRuptureModelRupSet {
+	private static class MySlipEnabledRupSet extends U3SlipAlongRuptureModelRupSet {
 		
 		private double[] rupAveSlips;
 		

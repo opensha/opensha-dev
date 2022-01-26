@@ -12,7 +12,7 @@ import org.dom4j.DocumentException;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 
 import scratch.UCERF3.U3FaultSystemRupSet;
-import scratch.UCERF3.SlipEnabledRupSet;
+import scratch.UCERF3.U3SlipEnabledRupSet;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSetFactory;
@@ -179,8 +179,8 @@ public class RupSetDiffMaker {
 		for (int i=0; i<newRups.size(); i++) {
 			int r = newRups.get(i);
 			mags[i] = rupSet1.getMagForRup(r);
-			if (rupSet1 instanceof SlipEnabledRupSet)
-				rupAveSlips[i] = ((SlipEnabledRupSet)rupSet1).getAveSlipForRup(r);
+			if (rupSet1 instanceof U3SlipEnabledRupSet)
+				rupAveSlips[i] = ((U3SlipEnabledRupSet)rupSet1).getAveSlipForRup(r);
 			rakes[i] = rupSet1.getAveRakeForRup(r);
 			rupAreas[i] = rupSet1.getAreaForRup(r);
 			if (rupLenghts != null)

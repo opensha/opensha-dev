@@ -46,7 +46,7 @@ import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.SlipEnabledSolution;
+import scratch.UCERF3.U3SlipEnabledSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -64,7 +64,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 	private DeformationModels dm;
 	
 	private Map<SimulatorElement, Double> elemTotalSlipsMap;
-	private SlipEnabledSolution compSol;
+	private U3SlipEnabledSolution compSol;
 
 	public SlipRateComparePlot(RSQSimSubSectionMapper mapper, FaultModels fm, DeformationModels dm) {
 		this(mapper, fm, dm, null);
@@ -76,8 +76,8 @@ public class SlipRateComparePlot extends AbstractPlot {
 		this.dm = dm;
 		if (compSol != null) {
 			Preconditions.checkState(mapper.getSubSections().size() == compSol.getRupSet().getFaultSectionDataList().size());
-			if (compSol instanceof SlipEnabledSolution) {
-				this.compSol = (SlipEnabledSolution)compSol;
+			if (compSol instanceof U3SlipEnabledSolution) {
+				this.compSol = (U3SlipEnabledSolution)compSol;
 			} else {
 				// make it slip enabled, assuming mean UCERF3
 				U3LogicTreeBranch branch = U3LogicTreeBranch.getMEAN_UCERF3(fm, dm);

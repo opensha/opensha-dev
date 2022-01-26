@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.utils.U3FaultSystemIO;
@@ -50,7 +50,7 @@ public class LossScatterPlotGen {
 		GridSourceProvider prov = baSol.getGridSourceProvider();
 
 		// Compound fault system solution
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 						+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 

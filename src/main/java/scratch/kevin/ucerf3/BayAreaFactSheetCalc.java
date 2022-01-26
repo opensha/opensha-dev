@@ -41,7 +41,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultSysSolutionERF_Calc;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -95,7 +95,7 @@ public class BayAreaFactSheetCalc {
 					+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip")));
 		}
 		
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(compoundFile);
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundFile);
 		
 		File probsDir = new File("/home/kevin/OpenSHA/UCERF3/time_dep_erf_probs");
 		Map<MagDependentAperiodicityOptions, ERF_ProbsZipFileReader> probsMap = Maps.newHashMap();

@@ -32,7 +32,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.U3FaultSystemRupSet;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
@@ -70,7 +70,7 @@ public class ERFRupLengthHistGen {
 		rupSetsMap.put(FaultModels.FM3_2, U3FaultSystemIO.loadRupSet(new File(rupSetDir,
 				"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_2_MEAN_BRANCH_AVG_SOL.zip")));
 		
-		Collection<U3LogicTreeBranch> branches = CompoundFaultSystemSolution.fromZipFile(
+		Collection<U3LogicTreeBranch> branches = U3CompoundFaultSystemSolution.fromZipFile(
 				new File(rupSetDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip")).getBranches();
 		
 		Map<MagDependentAperiodicityOptions, Map<U3LogicTreeBranch, HistogramFunction>> u3Funcs = new HashMap<>();

@@ -17,7 +17,7 @@ import org.opensha.commons.gui.plot.GraphWindow;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.AverageFaultSystemSolution;
+import scratch.UCERF3.U3AverageFaultSystemSolution;
 import scratch.UCERF3.inversion.CommandLineInversionRunner;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.MatrixIO;
@@ -63,7 +63,7 @@ public class NonzeroWaterlevelPlot {
 //		int numRups = Integer.parseInt(refBranch.getInfo().split(" ")[0]);
 		
 		File solFile = new File("/tmp/branch_avg_avg/mean_noMins.zip");
-		AverageFaultSystemSolution avgSol = U3FaultSystemIO.loadAvgInvSol(solFile);
+		U3AverageFaultSystemSolution avgSol = U3FaultSystemIO.loadAvgInvSol(solFile);
 		EvenlyDiscretizedFunc refBranch = new EvenlyDiscretizedFunc(1d, avgSol.getNumSolutions(), 1d);
 		int numRups = avgSol.getRupSet().getNumRuptures();
 		double[] nonZeros = new double[numRups];

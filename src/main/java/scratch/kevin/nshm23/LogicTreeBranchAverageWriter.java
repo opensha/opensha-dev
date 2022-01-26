@@ -2,15 +2,20 @@ package scratch.kevin.nshm23;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
@@ -20,6 +25,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLev
 import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.HazardMapPlot;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 
 import com.google.common.base.Preconditions;
 
@@ -48,9 +54,17 @@ public class LogicTreeBranchAverageWriter {
 //		File resultsFile = new File(mainDir, "results.zip");
 //		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
-		File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
+//		File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
+//		File resultsFile = new File(mainDir, "results.zip");
+//		File fullBAFile = new File(mainDir, "results_FM3_1_U3RupSet_branch_averaged.zip");
+		
+		File mainDir = new File(invDir, "2022_01_19-nshm23_branches-reweighted_even_fit-CoulombRupSet-DsrUni-SubB1-ShawR0_3-5000ip");
 		File resultsFile = new File(mainDir, "results.zip");
-		File fullBAFile = new File(mainDir, "results_FM3_1_U3RupSet_branch_averaged.zip");
+		File fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
+		
+		int totThreads = FaultSysTools.defaultNumThreads();
+		int maxPlotThreads = 8;
+		boolean replot = true;
 		
 		HazardMapPlot.SPACING_DEFAULT = 0.2;
 		
@@ -115,32 +129,76 @@ public class LogicTreeBranchAverageWriter {
 		
 		RupSetMetadata comparison = fullBA == null ? null : new RupSetMetadata("Full Tree", fullBA);
 		
+		int plotThreads =  Math.min(maxPlotThreads, Math.min(totThreads, nodeBACreators.size()));
+		
+		int threadsEach = Integer.max(1, totThreads / plotThreads);
+		System.out.println("Building "+nodeBACreators.size()+" BAs with "+plotThreads
+				+" plot threads ("+threadsEach+" threads per report)");
+		
+		ExecutorService exec = null;
+		List<Future<?>> futures = null;
+		
+		if (plotThreads > 1) {
+			exec = Executors.newFixedThreadPool(plotThreads);
+			futures = new ArrayList<>();
+		}
+		
 		for (LogicTreeNode node : nodeBACreators.keySet()) {
-			System.out.println("Building BA for "+node);
-			BranchAverageSolutionCreator creator = nodeBACreators.get(node);
-			FaultSystemSolution ba = creator.build();
+			Runnable run = new Runnable() {
+				
+				@Override
+				public void run() {
+					try {
+						System.out.println("Building BA for "+node);
+						BranchAverageSolutionCreator creator = nodeBACreators.get(node);
+						FaultSystemSolution ba = creator.build();
+						
+						LogicTreeLevel<?> level = nodeLevels.get(node);
+						
+						String prefix = level.getShortName().replaceAll("\\W+", "_")+"_"+node.getFilePrefix();
+						
+						File solFile = new File(outputDir, prefix+".zip");
+						ba.write(solFile);
+						
+						File reportDir = new File(outputDir, prefix+"_report");
+						Preconditions.checkState(reportDir.exists() || reportDir.mkdir());
+						System.out.println("Writing report to "+reportDir.getAbsolutePath());
+						RupSetMetadata primary = new RupSetMetadata(level.getShortName()+": "+node.getShortName(), ba);
+						
+						RupSetMetadata myComp = comparison;
+						
+						if (compWithLoaded)
+							// test to compare serialized and regular
+							myComp = new RupSetMetadata("Loaded", FaultSystemSolution.load(solFile));
+						
+						ReportMetadata meta = new ReportMetadata(primary, myComp);
+						ReportPageGen pageGen = new ReportPageGen(meta, reportDir, ReportPageGen.getDefaultSolutionPlots(plt));
+						pageGen.setReplot(replot);
+						pageGen.setNumThreads(threadsEach);
+						
+						pageGen.generatePage();
+					} catch (IOException e) {
+						throw ExceptionUtils.asRuntimeException(e);
+					}
+				}
+			};
+			if (plotThreads > 1)
+				futures.add(exec.submit(run));
+			else
+				run.run();
+		}
+		
+		if (futures != null) {
+			System.out.println("Waiting on "+futures.size()+" futures");
+			for (Future<?> future : futures) {
+				try {
+					future.get();
+				} catch (Exception e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+			}
 			
-			LogicTreeLevel<?> level = nodeLevels.get(node);
-			
-			String prefix = level.getShortName().replaceAll("\\W+", "_")+"_"+node.getFilePrefix();
-			
-			File solFile = new File(outputDir, prefix+".zip");
-			ba.write(solFile);
-			
-			File reportDir = new File(outputDir, prefix+"_report");
-			Preconditions.checkState(reportDir.exists() || reportDir.mkdir());
-			System.out.println("Writing report to "+reportDir.getAbsolutePath());
-			RupSetMetadata primary = new RupSetMetadata(level.getShortName()+": "+node.getShortName(), ba);
-			
-			if (compWithLoaded)
-				// test to compare serialized and regular
-				comparison = new RupSetMetadata("Loaded", FaultSystemSolution.load(solFile));
-			
-			ReportMetadata meta = new ReportMetadata(primary, comparison);
-			ReportPageGen pageGen = new ReportPageGen(meta, reportDir, ReportPageGen.getDefaultSolutionPlots(plt));
-			pageGen.setReplot(true);
-			
-			pageGen.generatePage();
+			exec.shutdown();
 		}
 	}
 

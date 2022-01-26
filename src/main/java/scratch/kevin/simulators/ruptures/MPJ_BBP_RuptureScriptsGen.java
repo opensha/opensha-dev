@@ -13,6 +13,7 @@ import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
+import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
@@ -81,8 +82,17 @@ class MPJ_BBP_RuptureScriptsGen {
 ////		int eventID = 39055;
 //		int eventID = 12581;
 ////		int eventID = 77272;
-		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
-		int eventID = 1499589;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
+//		int eventID = 1499589;
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
+//		int eventID = 7119753;
+//		int eventID = 8242900;
+//		int eventID = 1499589;
+//		int eventID = 7028377;
+//		int eventID = 13383629;
+//		int eventID = 6553169;
+//		int eventID = 13272163;
+		int eventID = 1651575;
 		
 		double timeScalar = 1d;
 		boolean scaleVelocities = false;
@@ -102,9 +112,9 @@ class MPJ_BBP_RuptureScriptsGen {
 		int numShakeMapGP = 5;
 		double mapSpacing = 0.05;
 //		double mapSpacing = 0.02;
-		int maxNodes = 30;
+		int maxNodes = 16;
 //		int maxNodes = 10;
-		boolean gpAdjustDDW = false;
+		boolean gpAdjustDDW = true;
 		
 		File srcFile = RSQSimBBP_Config.getEventSrcFile(catalog, eventID);
 		File srfFile = RSQSimBBP_Config.getEventSRFFile(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
@@ -156,19 +166,39 @@ class MPJ_BBP_RuptureScriptsGen {
 			mpjWrite = new FastMPJShellScriptWriter(StampedeScriptWriter.JAVA_BIN, heapSizeMB, null, StampedeScriptWriter.FMPJ_HOME);
 			((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		} else {
+//			threads = 20;
+//			queue = "scec";
+//			remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
+//			bbpDataDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR;
+//			nodeScratchDir = null;
+//			nodeGFDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
+//			bbpCopyParentDir = USC_HPCC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
+//			bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
+////			sharedScratchDir = "${SCRATCHDIR}";
+//			sharedScratchDir = null;
+//			pbsWrite = new USC_HPCC_ScriptWriter();
+//			mpjWrite = new MPJExpressShellScriptWriter(
+//					USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, null, USC_HPCC_ScriptWriter.MPJ_HOME);
 			threads = 20;
 			queue = "scec";
-			remoteDir = new File("/auto/scec-02/kmilner/bbp/parallel");
-			bbpDataDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR;
+			bbpDataDir = USC_CARC_ScriptWriter.NODE_TEMP_DIR;
 			nodeScratchDir = null;
-			nodeGFDir = USC_HPCC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
-			bbpCopyParentDir = USC_HPCC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
-			bbpEnvFile = new File("/auto/scec-02/kmilner/bbp/bbp_env.sh");
-//			sharedScratchDir = "${SCRATCHDIR}";
+//			String bbpCopyParentDir = USC_CARC_ScriptWriter.SHARED_SCRATCH_DIR+"/kmilner";
+			bbpCopyParentDir = null;
+			nodeGFDir = USC_CARC_ScriptWriter.NODE_TEMP_DIR+"/gfs";
+			bbpEnvFile = new File("/project/scec_608/kmilner/bbp/bbp_env.sh");
+//			String sharedScratchDir = "${SCRATCHDIR}";
 			sharedScratchDir = null;
-			pbsWrite = new USC_HPCC_ScriptWriter();
-			mpjWrite = new MPJExpressShellScriptWriter(
-					USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, null, USC_HPCC_ScriptWriter.MPJ_HOME);
+			remoteDir = new File("/project/scec_608/kmilner/bbp/parallel");
+			pbsWrite = new USC_CARC_ScriptWriter();
+//			List<File> classpath = new ArrayList<>();
+//			classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
+//			JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+//					USC_CARC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_CARC_ScriptWriter.MPJ_HOME);
+//			((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
+			mpjWrite = new FastMPJShellScriptWriter(
+					USC_CARC_ScriptWriter.JAVA_BIN, heapSizeMB, null, USC_CARC_ScriptWriter.FMPJ_HOME);
+			((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		}
 		
 		String dateStr = new SimpleDateFormat("yyyy_MM_dd").format(new Date());

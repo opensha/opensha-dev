@@ -40,7 +40,7 @@ public class TopoMapGen {
 		List<Location> annotations = Lists.newArrayList();
 		annotations.add(new Location(33.739683, -116.412925));
 		
-		List<FaultSection> faults = FaultModels.FM3_1.fetchFaultSections();
+		List<FaultSection> faults = FaultModels.FM3_1.getFaultSections();
 		float faultThickness = 1f;
 		
 		GriddedRegion gridReg = new GriddedRegion(region, spacing, null);

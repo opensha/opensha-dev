@@ -28,8 +28,8 @@ import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
-import scratch.UCERF3.FaultSystemSolutionFetcher;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
+import scratch.UCERF3.U3FaultSystemSolutionFetcher;
 import scratch.UCERF3.analysis.CompoundFSSPlots.ERFBasedRegionalMagProbPlot;
 import scratch.UCERF3.analysis.MPJ_ERF_ProbGainCalc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -62,7 +62,7 @@ public class ERFFaultProbDebug {
 //				new File(new File(UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, "InversionSolutions"),
 //						"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(
 				new File(new File(UCERF3_DataUtils.DEFAULT_SCRATCH_DATA_DIR, "InversionSolutions"),
 						"2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip"));
 //		FaultSystemSolution sol = cfss.getSolution(LogicTreeBranch.fromFileName(

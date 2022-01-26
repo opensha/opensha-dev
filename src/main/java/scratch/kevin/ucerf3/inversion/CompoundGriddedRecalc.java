@@ -12,7 +12,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.CompoundFaultSystemSolution;
+import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.griddedSeismicity.GridSourceFileReader;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
@@ -23,7 +23,7 @@ public class CompoundGriddedRecalc {
 	public static void main(String[] args) throws ZipException, IOException {
 		File compoundFile = new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/"
 				+ "InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip");
-		CompoundFaultSystemSolution cfss = CompoundFaultSystemSolution.fromZipFile(compoundFile);
+		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundFile);
 		
 		File writeDir = new File("/tmp/cfss_branches");
 		if (!writeDir.exists())
@@ -69,9 +69,9 @@ public class CompoundGriddedRecalc {
 	private static class CalcThread extends Thread {
 		private ArrayDeque<U3LogicTreeBranch> branches;
 		private File dir;
-		private CompoundFaultSystemSolution cfss;
+		private U3CompoundFaultSystemSolution cfss;
 		
-		public CalcThread(CompoundFaultSystemSolution cfss, File dir, ArrayDeque<U3LogicTreeBranch> branches) {
+		public CalcThread(U3CompoundFaultSystemSolution cfss, File dir, ArrayDeque<U3LogicTreeBranch> branches) {
 			this.branches = branches;
 			this.dir = dir;
 			this.cfss = cfss;
@@ -93,8 +93,8 @@ public class CompoundGriddedRecalc {
 				
 				File regXMLFile = null;
 				if (!isRegionWritten())
-					regXMLFile = new File(dir, CompoundFaultSystemSolution.getRemappedName("grid_sources_reg.xml", branch));
-				File binFile = new File(dir, CompoundFaultSystemSolution.getRemappedName("grid_sources.bin", branch));
+					regXMLFile = new File(dir, U3CompoundFaultSystemSolution.getRemappedName("grid_sources_reg.xml", branch));
+				File binFile = new File(dir, U3CompoundFaultSystemSolution.getRemappedName("grid_sources.bin", branch));
 				try {
 //					GridSourceFileReader.writeGriddedSeisFile(file, gridSources);
 					GridSourceFileReader.writeGriddedSeisBinFile(binFile, regXMLFile, gridSources,

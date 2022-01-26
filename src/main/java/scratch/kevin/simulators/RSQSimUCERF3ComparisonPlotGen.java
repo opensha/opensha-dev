@@ -16,7 +16,7 @@ import org.opensha.sha.simulators.utils.RSQSimUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.SlipEnabledSolution;
+import scratch.UCERF3.U3SlipEnabledSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 
@@ -75,7 +75,7 @@ public class RSQSimUCERF3ComparisonPlotGen {
 		
 		FaultModels fm = FaultModels.FM3_1;
 		DeformationModels dm = DeformationModels.GEOLOGIC;
-		SlipEnabledSolution sol = RSQSimUtils.buildFaultSystemSolution(RSQSimUtils.getUCERF3SubSectsForComparison(
+		U3SlipEnabledSolution sol = RSQSimUtils.buildFaultSystemSolution(RSQSimUtils.getUCERF3SubSectsForComparison(
 				fm, dm), elements, events, minMag);
 		
 		Preconditions.checkState(plotDir.exists() ||  plotDir.mkdir());

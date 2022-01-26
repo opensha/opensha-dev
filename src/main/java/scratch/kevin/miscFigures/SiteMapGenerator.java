@@ -94,7 +94,7 @@ public class SiteMapGenerator {
 		map.setGMT_Param("MAP_FRAME_WIDTH", "0.04i");
 		map.setGMT_Param("MAP_TICK_LENGTH_PRIMARY", "0.04i");
 		
-		for (FaultSection sect : fm.fetchFaultSections())
+		for (FaultSection sect : fm.getFaultSections())
 			for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(sect.getFaultTrace(), new Color(100, 100, 100), 0.3))
 				map.addPolys(poly);
 		

@@ -9,7 +9,7 @@ import org.dom4j.DocumentException;
 
 import com.google.common.collect.Lists;
 
-import scratch.UCERF3.AverageFaultSystemSolution;
+import scratch.UCERF3.U3AverageFaultSystemSolution;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.utils.U3FaultSystemIO;
@@ -41,7 +41,7 @@ public class VarsPaleoBoundsPlot {
 			sols.add(sol);
 		}
 		
-		AverageFaultSystemSolution.writePaleoBoundsPlot(dir, "zeng_ref_vars_lowpaleo", sols);
+		U3AverageFaultSystemSolution.writePaleoBoundsPlot(dir, "zeng_ref_vars_lowpaleo", sols);
 	}
 
 }
