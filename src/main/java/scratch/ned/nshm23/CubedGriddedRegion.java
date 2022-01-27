@@ -14,9 +14,9 @@ import scratch.UCERF3.utils.RELM_RegionUtils;
  * subdividing the supplied griddedRegion and depth according the values supplied in the constructor.
  * 
  * Note that a modified version of the gridded region is created and used internally to ensure that each grid cell has
- * a complete set of cubes and that not cubes are outside a cell of the griddedRegion.  This is done by creating and 
+ * a complete set of cubes and that no cubes are outside a cell of the griddedRegion.  This is done by creating and 
  * using a new Region (perimeter) that traces the actual exterior cell edges of the original griddedGegion (using the 
- * getRegionDefinedByExteriorCellEdges(griddedRegion) method).  Both regions has the exact same grid cells.
+ * getRegionDefinedByExteriorCellEdges(griddedRegion) method).  Both regions have the exact same grid cells.
  * 
  * A subclass of this could replace ETAS_CubeDiscretizationParams if the following methods in the latter added
  * to this new subclass:
@@ -189,7 +189,7 @@ public class CubedGriddedRegion {
 		return getCubeIndexForRegAndDepIndices(iReg,iDep);
 	}
 
-	private int getCubeIndexForRegAndDepIndices(int iReg,int iDep) {
+	public int getCubeIndexForRegAndDepIndices(int iReg,int iDep) {
 		int index = iDep*numCubesPerDepth+iReg;
 		if(index<numCubes && index>=0)
 			return index;
@@ -197,7 +197,7 @@ public class CubedGriddedRegion {
 			return -1;
 	}
 	
-	private int getCubeDepthIndex(double depth) {
+	public int getCubeDepthIndex(double depth) {
 		int index = (int)Math.round((depth-cubeDepthDiscr/2.0)/cubeDepthDiscr);
 //		if(index < numRateDepths && index >=0)
 			return index;
