@@ -26,8 +26,11 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.HazardMapPlot;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
 
 import com.google.common.base.Preconditions;
+
+import scratch.UCERF3.enumTreeBranches.FaultModels;
 
 public class LogicTreeBranchAverageWriter {
 
@@ -58,9 +61,21 @@ public class LogicTreeBranchAverageWriter {
 //		File resultsFile = new File(mainDir, "results.zip");
 //		File fullBAFile = new File(mainDir, "results_FM3_1_U3RupSet_branch_averaged.zip");
 		
-		File mainDir = new File(invDir, "2022_01_19-nshm23_branches-reweighted_even_fit-CoulombRupSet-DsrUni-SubB1-ShawR0_3-5000ip");
+//		File mainDir = new File(invDir, "2022_01_19-nshm23_branches-reweighted_even_fit-CoulombRupSet-DsrUni-SubB1-ShawR0_3-5000ip");
+//		File resultsFile = new File(mainDir, "results.zip");
+//		File fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
+		
+		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
-		File fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
+		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+		
+//		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
+		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
+		restrictBAClasses.add(MaxJumpDistModels.class);
+		
+		LogicTreeNode[] restrictNodes = {
+				FaultModels.FM3_1
+		};
 		
 		int totThreads = FaultSysTools.defaultNumThreads();
 		int maxPlotThreads = 8;
@@ -74,10 +89,14 @@ public class LogicTreeBranchAverageWriter {
 		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
 		
 		FaultSystemSolution fullBA = fullBAFile == null ? null : FaultSystemSolution.load(fullBAFile);
-		PlotLevel plt = PlotLevel.DEFAULT;
+		PlotLevel plt = PlotLevel.FULL;
 		boolean compWithLoaded = false;
+		boolean skipSectBySect = true;
 		
 		LogicTree<?> tree = slt.getLogicTree();
+		
+		if (restrictNodes != null && restrictNodes.length > 0)
+			tree = tree.matchingAll(restrictNodes);
 		
 //		tree = tree.matchingAll(SupraSeisBValues.B_0p0, DeformationModels.GEOLOGIC,
 //				SubSectConstraintModels.TOT_NUCL_RATE, SegmentationModels.SHAW_R0_3);
@@ -109,6 +128,10 @@ public class LogicTreeBranchAverageWriter {
 		for (LogicTreeLevel<?> level : levels) {
 			HashSet<LogicTreeNode> nodes = levelNodes.get(level);
 			if (nodes.size() > 1) {
+				if (restrictBAClasses != null && !restrictBAClasses.contains(level.getType())) {
+					System.out.println("Skipping "+nodes.size()+" BAs for "+level.getName());
+					continue;
+				}
 				System.out.println("Building "+nodes.size()+" BAs for "+level.getName());
 				for (LogicTreeNode node : nodes) {
 					BranchAverageSolutionCreator creator = new BranchAverageSolutionCreator(tree.getWeightProvider());
@@ -173,6 +196,8 @@ public class LogicTreeBranchAverageWriter {
 						
 						ReportMetadata meta = new ReportMetadata(primary, myComp);
 						ReportPageGen pageGen = new ReportPageGen(meta, reportDir, ReportPageGen.getDefaultSolutionPlots(plt));
+						if (skipSectBySect)
+							pageGen.skipSectBySect();
 						pageGen.setReplot(replot);
 						pageGen.setNumThreads(threadsEach);
 						

@@ -15,7 +15,9 @@ import java.util.zip.ZipFile;
 
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -36,6 +38,7 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.ConstraintWeightingType;
+import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitProgress;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.MisfitStats;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.Quantity;
@@ -61,7 +64,9 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_01_18-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
 //		File mainDir = new File(invDir, "2022_01_19-nshm23_branches-reweighted_even_fit-CoulombRupSet-DsrUni-SubB1-ShawR0_3-5000ip");
 //		File mainDir = new File(invDir, "2022_01_19-nshm23_u3_hybrid_branches-reweighted_even_fit-FM3_1-CoulombRupSet-SubB1-5000ip");
-		File mainDir = new File(invDir, "2022_01_24-nshm23_u3_hybrid_branches-reweighted_even_fit-adj_mfds-CoulombRupSet-U3_ZENG-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-CoulombRupSet-U3_ZENG-DsrUni-SubB1-ShawR0_3-2000ip");
+		File mainDir = new File(invDir, "2022_01_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		File outputDir = new File(mainDir, "logic_tree_misfits");

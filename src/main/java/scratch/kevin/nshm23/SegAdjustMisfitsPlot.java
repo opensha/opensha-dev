@@ -42,8 +42,8 @@ public class SegAdjustMisfitsPlot {
 //		};
 //		String xLabel = "Max Jump Dist";
 
-//		File mainDir = new File(invDir, "2022_01_25-coulomb-fm31-ref_branch-seg_model-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-TotNuclRate");
-		File mainDir = new File(invDir, "2022_01_25-coulomb-fm31-ref_branch-seg_model-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-NuclMFD");
+		File mainDir = new File(invDir, "2022_01_28-coulomb-fm31-ref_branch-seg_model-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-TotNuclRate");
+//		File mainDir = new File(invDir, "2022_01_28-coulomb-fm31-ref_branch-seg_model-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-NuclMFD");
 		String[] prefixes = {
 			"ShawR0_1",
 			"ShawR0_2",

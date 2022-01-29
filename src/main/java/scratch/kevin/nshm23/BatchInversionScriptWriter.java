@@ -61,9 +61,12 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstr
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.GRParticRateEstimator;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
 import org.opensha.sha.magdist.SummedMagFreqDist;
+import org.opensha.sha.magdist.SparseGutenbergRichterSolver.SpreadingMethod;
 
 import com.google.common.base.Preconditions;
 
@@ -90,7 +93,7 @@ public class BatchInversionScriptWriter {
 		String queue = "scec";
 		
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2021_11_09";
+//		String dirName = "2022_01_26";
 		
 		List<InversionConfiguration> configs = new ArrayList<>();
 		List<String> subDirNames = new ArrayList<>();
@@ -1387,8 +1390,8 @@ public class BatchInversionScriptWriter {
 		branch.setValue(SubSeisMoRateReductions.SUB_B_1);
 		
 		// inv model
-//		branch.setValue(SubSectConstraintModels.TOT_NUCL_RATE);
-		branch.setValue(SubSectConstraintModels.NUCL_MFD);
+		branch.setValue(SubSectConstraintModels.TOT_NUCL_RATE);
+//		branch.setValue(SubSectConstraintModels.NUCL_MFD);
 		
 		dirName += "-"+branch.getValue(U3_UncertAddDeformationModels.class).getFilePrefix();
 		dirName += "-"+branch.getValue(ScalingRelationships.class).getFilePrefix();
@@ -1398,13 +1401,16 @@ public class BatchInversionScriptWriter {
 		
 		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
 		
+		// keep track of MFDs without adjustment, will give to the rupture set that's written out
+		SupraSeisBValInversionTargetMFDs origTarget = rupSet.requireModule(SupraSeisBValInversionTargetMFDs.class);
+		
 		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(2000d);
 		
 		if (distCutoff) {
 			MaxJumpDistModels[] maxDists = {
 					MaxJumpDistModels.ONE,
 					MaxJumpDistModels.FIVE,
-					MaxJumpDistModels.TWELVE
+					MaxJumpDistModels.ELEVEN
 			};
 			for (MaxJumpDistModels maxDist : maxDists) {
 				branch.setValue(maxDist);
@@ -1446,8 +1452,76 @@ public class BatchInversionScriptWriter {
 			}
 		}
 		
+		rupSet.addModule(origTarget);
+		
 		avgJob = false;
 		allPlotLevel = PlotLevel.DEFAULT;
+		
+		/*
+		 * SparseGR spreading method tests
+		 */
+//		dirName += "-"+rsPrefix.replace("-uniform", "").replace("-tapered", "")+"-sparse_gr_tests";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+//		
+//		LogicTreeBranch<LogicTreeNode> branch = new NSHM23_U3_HybridLogicTreeBranch();
+//		
+//		branch.setValue(FaultModels.FM3_1);
+//		if (rsPrefix.toLowerCase().contains("coulomb"))
+//			branch.setValue(RupturePlausibilityModels.COULOMB);
+//		else
+//			branch.setValue(RupturePlausibilityModels.UCERF3);
+//		
+//		// good fitting
+//		branch.setValue(U3_UncertAddDeformationModels.U3_ZENG);
+//		branch.setValue(ScalingRelationships.SHAW_2009_MOD);
+//		branch.setValue(SupraSeisBValues.B_0p8);
+//		branch.setValue(SlipAlongRuptureModels.UNIFORM);
+//		
+//		// poor fitting
+////		branch.setValue(DeformationModels.NEOKINEMA);
+////		branch.setValue(ScalingRelationships.ELLSWORTH_B);
+////		branch.setValue(SupraSeisBValues.B_0p0);
+////		branch.setValue(SlipAlongRuptureModels.TAPERED);
+//		
+//		// constant
+//		branch.setValue(SubSeisMoRateReductions.SUB_B_1);
+//		
+//		// inv model
+//		branch.setValue(SubSectConstraintModels.TOT_NUCL_RATE);
+////		branch.setValue(SubSectConstraintModels.NUCL_MFD);
+//		
+//		dirName += "-"+branch.getValue(U3_UncertAddDeformationModels.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(ScalingRelationships.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SlipAlongRuptureModels.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SupraSeisBValues.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SubSectConstraintModels.class).getFilePrefix();
+//		
+//		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
+//		
+//		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(2000d);
+//		
+//		factory.adjustForActualRupSlips(false, false);
+//		
+//		List<SpreadingMethod> methods = new ArrayList<>();
+//		for (SpreadingMethod method : SpreadingMethod.values())
+//			methods.add(method);
+//		methods.add(null);
+//		
+//		for (SpreadingMethod method : methods) {
+//			SupraSeisBValInversionTargetMFDs.SPARSE_GR_DEFAULT = method != null;
+//			if (method != null)
+//				SparseGutenbergRichterSolver.METHOD_DEFAULT = method;
+//			InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
+//			config = InversionConfiguration.builder(config).completion(completion).build();
+//			configs.add(config);
+//			if (method == null)
+//				subDirNames.add("true_gr");
+//			else
+//				subDirNames.add("sparse_gr_"+method.name());
+//		}
+//		
+//		avgJob = false;
+//		allPlotLevel = PlotLevel.DEFAULT;
 		
 		// BELOW HERE IS COMMON TO EVERYTHING
 		

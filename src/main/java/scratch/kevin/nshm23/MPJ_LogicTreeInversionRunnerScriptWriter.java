@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
@@ -105,7 +106,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		for (int i=levels.size(); --i>=0;)
 //			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
 //				levels.remove(i);
-////		dirName += "-no_seg";
+//		dirName += "-no_seg";
 //		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
 //		dirName += "-max_dist";
 		
@@ -117,24 +118,25 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = DraftNSHM23InvConfigFactory.NoPaleoParkfield.class;
 //		dirName += "-no_paleo-no_parkfield";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoSegAdjust.class;
 //		dirName += "-no_seg_adj_mfds";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoMFDScaleAdjust.class;
-		dirName += "-no_scale_adj_mfds";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoMFDScaleAdjust.class;
+//		dirName += "-no_scale_adj_mfds";
 		
 		LogicTreeNode[] required = {
-//				FaultModels.FM3_1,
+				FaultModels.FM3_1,
 				RupturePlausibilityModels.COULOMB,
 //				RupturePlausibilityModels.UCERF3,
+//				RupturePlausibilityModels.UCERF3_REDUCED,
 				U3_UncertAddDeformationModels.U3_ZENG,
-//				ScalingRelationships.SHAW_2009_MOD,
+				ScalingRelationships.SHAW_2009_MOD,
 				SlipAlongRuptureModels.UNIFORM,
 //				SubSectConstraintModels.TOT_NUCL_RATE,
 				SubSeisMoRateReductions.SUB_B_1,
-				SegmentationModels.SHAW_R0_3,
+//				SegmentationModels.SHAW_R0_3,
 				}; 
 		double avgNumRups = 300000;
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
@@ -142,7 +144,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
 		
 //		int numSamples = nodes*5;
-//		int numSamples = nodes*3;
+//		int numSamples = nodes*4;
+//		long randSeed = System.currentTimeMillis();
+		long randSeed = 12345678l;
 		int numSamples = 0;
 		
 		if (required != null && required.length > 0) {
@@ -155,7 +159,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			if (numSamples < logicTree.size()) {
 				System.out.println("Reducing tree of size "+logicTree.size()+" to "+numSamples+" samples");
 				dirName += "-"+numSamples+"_samples";
-				logicTree = logicTree.sample(numSamples, false);
+				logicTree = logicTree.sample(numSamples, false, new Random(randSeed));
 			} else {
 				System.out.println("Won't sample logic tree, as tree has "+logicTree.size()+" values, which is fewer "
 						+ "than the specified "+numSamples+" samples.");
@@ -198,8 +202,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		String completionArg = "5h"; int invMins = 5*60;
 //		String completionArg = null; int invMins = defaultInvMins;
 		
-//		int rounds = 5000;
 		int rounds = 2000;
+//		int rounds = 5000;
+//		int rounds = 10000;
 		double numIters = avgNumRups*rounds;
 		double invSecs = numIters/itersPerSec;
 		int invMins = (int)(invSecs/60d + 0.5);
