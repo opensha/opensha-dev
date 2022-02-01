@@ -1404,7 +1404,7 @@ public class BatchInversionScriptWriter {
 			MaxJumpDistModels[] maxDists = {
 					MaxJumpDistModels.ONE,
 					MaxJumpDistModels.FIVE,
-					MaxJumpDistModels.TWELVE
+					MaxJumpDistModels.ELEVEN
 			};
 			for (MaxJumpDistModels maxDist : maxDists) {
 				branch.setValue(maxDist);
