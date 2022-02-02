@@ -100,7 +100,7 @@ public class GridSourceProvider2023 {
 	
 	// this is the total wt for each section summed from sectDistFractWtMapList (divide the wt directly above
 	// by this value to get the nucleation fraction for the section in the associated cube) 
-	double[] totSectDistWtAtCubeArray;
+	double[] totDistWtsAtCubesForSectArray;
 	
 	IncrementalMagFreqDist[] longTermSupraSeisMFD_OnSectArray;
 
@@ -157,6 +157,7 @@ public class GridSourceProvider2023 {
 			throw new RuntimeException("depthNuclProbHist y-axis values must sum to 1.0; sum=testSum");
 		// could also check the exact x-axis discretization of depthNuclProbHist
 			
+
 		// generate or read the sections and their distances for cubes 
 		long time = System.currentTimeMillis();
 		readOrGenerateCacheData();
@@ -176,6 +177,12 @@ public class GridSourceProvider2023 {
 		if(D) System.out.println("computeTotalOnAndOffFaultGriddedSeisMFDs() took "+(runtime/1000)+" seconds");
 
 		
+		// compute total MFDs
+		time = System.currentTimeMillis();
+		computeLongTermSupraSeisMFD_OnSectArray();
+		runtime = System.currentTimeMillis()-time;
+		if(D) System.out.println("computeLongTermSupraSeisMFD_OnSectArray() took "+(runtime/1000)+" seconds");
+	
 		if(D) System.out.println("Done with constructor");
 		
 	}
@@ -216,11 +223,11 @@ public class GridSourceProvider2023 {
 	 * 
 	 * @param sectIndex
 	 */
-	private void getCubeDistancesAndFractionsForFaultSection(int sectIndex, 
+	public void getCubeDistancesForFaultSection(int sectIndex, 
 			HashMap<Integer,Double> cubeDistMap) {
 
 		FaultSection fltSection = rupSet.getFaultSectionData(sectIndex);
-
+		
 		Region fltPolygon = getSectionPolygonRegion(fltSection, maxFaultNuclDist, true);
 		
 //		System.out.println(fltSection.getName()+"\nsectIndex = "+sectIndex+"\ndip = "+fltSection.getAveDip()
@@ -310,7 +317,7 @@ public class GridSourceProvider2023 {
 			
 			HashMap<Integer,Double> cubeDistMap = new HashMap<Integer,Double>();
 			
-			getCubeDistancesAndFractionsForFaultSection(sectIndex, cubeDistMap);
+			getCubeDistancesForFaultSection(sectIndex, cubeDistMap);
 
 			if(cubeDistMap != null) {	// null if section is outside the region
 				for(int cubeIndex:cubeDistMap.keySet()) {
@@ -340,7 +347,7 @@ public class GridSourceProvider2023 {
 	
 
 
-	private double getDistWt(double dist) {
+	public double getDistWt(double dist) {
 		return (maxFaultNuclDist-dist)/maxFaultNuclDist;
 	}
 	
@@ -355,7 +362,7 @@ public class GridSourceProvider2023 {
 	private void makeSectDistWtMapList() {
 		
 		sectDistWtMapAtCubeList = new ArrayList<HashMap<Integer,Double>>();
-		totSectDistWtAtCubeArray = new double[rupSet.getNumSections()];
+		totDistWtsAtCubesForSectArray = new double[rupSet.getNumSections()];
 		
 		for(int c=0;c<cgr.getNumCubes();c++) {
 			HashMap<Integer,Double> sectWtMap = new HashMap<Integer,Double>();
@@ -377,7 +384,7 @@ public class GridSourceProvider2023 {
 				int sectIndex = sectAtCubeList.get(c)[i];
 				double wt = prelimWts[i];
 				sectWtMap.put(sectIndex, wt);
-				totSectDistWtAtCubeArray[sectIndex] += wt;
+				totDistWtsAtCubesForSectArray[sectIndex] += wt;
 			}
 			sectDistWtMapAtCubeList.add(sectWtMap);
 		}
@@ -389,7 +396,7 @@ public class GridSourceProvider2023 {
 	 * this creates a blank (zero y-axis values) MFD with the same discretization as the constructor supplied totGriddedSeisMFD.
 	 * @return
 	 */
-	private SummedMagFreqDist getBlankMFD() {
+	public SummedMagFreqDist getBlankMFD() {
 		return new SummedMagFreqDist(totGriddedSeisMFD.getMinX(), totGriddedSeisMFD.size(),totGriddedSeisMFD.getDelta());
 	}
 	
@@ -410,16 +417,18 @@ public class GridSourceProvider2023 {
 		for(int i=0;i<totGriddedSeisMFD.size();i++) {
 			totalTrulyOffFaultMFD.add(i, totGriddedSeisMFD.getY(i) - totalSubSeisOnFaultMFD.getY(i));
 		}
-		if(D) {
-			System.out.println("totGriddedSeisMFD:\n"+totGriddedSeisMFD);
-			System.out.println("totGriddedSeisMFD Cumulative::\n"+totGriddedSeisMFD.getCumRateDistWithOffset());
-			System.out.println("totSubSeisMFD:\n"+totalSubSeisOnFaultMFD);
-			System.out.println("totalTrulyOffFaultMFD:\n"+totalTrulyOffFaultMFD);
-		}
+//		if(D) {
+//			System.out.println("totGriddedSeisMFD:\n"+totGriddedSeisMFD);
+//			System.out.println("totGriddedSeisMFD Cumulative::\n"+totGriddedSeisMFD.getCumRateDistWithOffset());
+//			System.out.println("totSubSeisMFD:\n"+totalSubSeisOnFaultMFD);
+//			System.out.println("totalTrulyOffFaultMFD:\n"+totalTrulyOffFaultMFD);
+//		}
 	}
 	
 	/**
-	 * Need to figure out how to compute this when fss has the module: ModSectMinMags
+	 * Need to figure out how to compute this when fss has the module: ModSectMinMags.
+	 * 
+	 * Note that this includes any fault sections that are outside the region
 	 */
 	private void computeLongTermSupraSeisMFD_OnSectArray() {
 		
@@ -436,6 +445,7 @@ public class GridSourceProvider2023 {
 		}
 		mfd.setName("totalSupraSeisOnFaultMFD");
 		totalSupraSeisOnFaultMFD=mfd;
+		
 	}
 
 	
@@ -492,14 +502,13 @@ public class GridSourceProvider2023 {
 	}
 	
 	public SummedMagFreqDist getSupraSeisMFD_ForCube(int cubeIndex) {
-		if(longTermSupraSeisMFD_OnSectArray == null)
-			computeLongTermSupraSeisMFD_OnSectArray();
+
 		HashMap<Integer,Double> sectWtMap = sectDistWtMapAtCubeList.get(cubeIndex);
 		if(sectWtMap.size()==0) // no sections nucleate here
 			return null;
 		SummedMagFreqDist supraMFD = getBlankMFD();
 		for(int s:sectWtMap.keySet()) {
-			double wt = sectWtMap.get(s)/totSectDistWtAtCubeArray[s];
+			double wt = sectWtMap.get(s)/totDistWtsAtCubesForSectArray[s];
 			IncrementalMagFreqDist mfd = longTermSupraSeisMFD_OnSectArray[s].deepClone();
 			mfd.scale(wt);
 			supraMFD.addIncrementalMagFreqDist(mfd);
@@ -550,41 +559,6 @@ public class GridSourceProvider2023 {
 	}
 	
 	/**
-	 * The computes how many different sections nucleate in each cube and then creates a
-	 * histogram (how many have 0, 1, 2, etc sections in the cube)
-	 */
-	public HistogramFunction computeHistogramOfNumSectionsInCubes() {
-		HistogramFunction numCubesWithNumSectHist = new HistogramFunction(0.0, 21,1.0);
-
-		int maxNum = 0;
-		for(int c=0; c<cgr.getNumCubes(); c++) {
-			int num = sectAtCubeList.get(c).length;
-			numCubesWithNumSectHist.add(num, 1.0);
-			if(maxNum<num)
-				maxNum = num;
-		}
-		
-		// write out those with the max muber:
-		if(D) {
-			for(int c=0; c<cgr.getNumCubes(); c++) {
-				int num = sectAtCubeList.get(c).length;
-				if(num==maxNum) {
-					System.out.println("\nCube "+c+ " has "+ maxNum+" sections; "+cgr.getCubeLocationForIndex(c));
-					for(int i=0;i<sectAtCubeList.get(c).length;i++) {
-						int s = sectAtCubeList.get(c)[i];
-						float dist = sectDistToCubeList.get(c)[i];
-						float wt = (float)getDistWt(dist);
-						System.out.println("\t"+s+"\t"+dist+"\t"+wt+"\t"+rupSet.getFaultSectionData(s).getName());
-					}
-				}
-			}
-			System.out.println(numCubesWithNumSectHist);	
-		}
-		return numCubesWithNumSectHist;
-	}
-
-	
-	/**
 	 * This test that the total gridded seismicity summed over all cubes equals the target
 	 */
 	private void testTotalGriddedSeisMFD() {
@@ -603,6 +577,7 @@ public class GridSourceProvider2023 {
 				throw new RuntimeException("testTotalGriddedSeisMFD() failed at index "+i+"; "+testMFD.getY(i)+" vs "+totGriddedSeisMFD.getY(i));
 //			System.out.println(totGriddedSeisMFD.getX(i)+"\t"+totGriddedSeisMFD.getY(i)+"\t"+testMFD.getY(i)+"\t"+(float)(testMFD.getY(i)/totGriddedSeisMFD.getY(i)));
 		}	
+		if(D) System.out.println("testTotalGriddedSeisMFD() succeeded.");
 	}
 
 	/**
@@ -627,6 +602,9 @@ public class GridSourceProvider2023 {
 				throw new RuntimeException("testTotalTrulyOffFaultGriddedSeisMFD() failed at index "+i+"; "+testMFD.getY(i)+" vs "+totalTrulyOffFaultMFD.getY(i));
 //			System.out.println(totalTrulyOffFaultMFD.getX(i)+"\t"+totalTrulyOffFaultMFD.getY(i)+"\t"+testMFD.getY(i)+"\t"+(float)(testMFD.getY(i)/totalTrulyOffFaultMFD.getY(i)));
 		}
+		
+		if(D) System.out.println("testTotalTrulyOffFaultGriddedSeisMFD() succeeded.");
+
 	}
 
 	
@@ -648,8 +626,15 @@ public class GridSourceProvider2023 {
 		}
 		ave /= spatialPDF.length;
 		
-		System.out.println("testTotalMgt5_RatesInCells(): \nave="+(float)ave+"\nmin="+
-		(float)min+"\nmax="+(float)max+"\n");
+//		System.out.println("testTotalMgt4_RatesInCells(): \nave="+(float)ave+"\nmin="+
+//		(float)min+"\nmax="+(float)max+"\n");
+		
+		if(min<0.9999 || max > 1.0001)
+			throw new RuntimeException("testTotalMgt4_RatesInCells(): \nave="+(float)ave+"\nmin="+
+					(float)min+"\nmax="+(float)max+"\n");
+		
+		if(D) System.out.println("testTotalMgt4_RatesInCells() succeeded.");
+
 
 //		for(int i=0;i<spatialPDF.length;i++) {
 //			Location loc = this.griddedRegion.getLocation(i);
@@ -664,24 +649,35 @@ public class GridSourceProvider2023 {
 	 */
 	private void testSectDistFractWtMapList() {
 		
+//		for(int s=0;s<rupSet.getNumSections();s++)
+//			if(totPotentialNumCubesForSectArray[s] != totNumCubesForSectArray[s])
+//				System.out.println(rupSet.getFaultSectionData(s).getName()+" tot Potential vs tot Used: "+
+//						totPotentialNumCubesForSectArray[s]+"; "+totNumCubesForSectArray[s]);
+		
 		double[] testArray = new double[rupSet.getNumSections()];
 		
 		for(int c=0;c<cgr.getNumCubes();c++) {
 			HashMap<Integer,Double> sectWtMap = sectDistWtMapAtCubeList.get(c);
 			for(int sectIndex: sectWtMap.keySet()) {
-				testArray[sectIndex] += sectWtMap.get(sectIndex)/totSectDistWtAtCubeArray[sectIndex];
+				testArray[sectIndex] += sectWtMap.get(sectIndex)/totDistWtsAtCubesForSectArray[sectIndex];
 			}
 		}
 		
 		System.out.println("testSectDistFractWtMapList():");
 		
+		boolean someSectionsOutsideRegion = false;
 		double ave=0, min=Double.MAX_VALUE, max=-Double.MAX_VALUE;
-		for(int i=0;i<testArray.length;i++) {
-			ave+=testArray[i];
-			if(min>testArray[i]) min=testArray[i];
-			if(max<testArray[i]) max=testArray[i];
-			if(testArray[i]<0.99)
-				System.out.println(testArray[i]+" for "+rupSet.getFaultSectionData(i).getName());
+		for(int s=0;s<testArray.length;s++) {
+			if(testArray[s]<0.999) {
+				
+//				for(Location loc:rupSet.getFaultSectionData(s).getFaultSurface(1.0).getPerimeter())
+//					if()
+					
+				System.out.println(testArray[s]+" for "+rupSet.getFaultSectionData(s).getName());
+			}
+			ave+=testArray[s];
+			if(min>testArray[s]) min=testArray[s];
+			if(max<testArray[s]) max=testArray[s];
 		}
 		
 		ave /= testArray.length;
@@ -690,417 +686,9 @@ public class GridSourceProvider2023 {
 		
 	}
 	
-	/**
-	 * This plots the event rates above the specified magnitude for cubes at the given depth
-	 * @param depth
-	 * @param dirName
-	 * @return
-	 */
-	public String plotRateAtDepthMap(double depth, double mag, String dirName) {
-		
-		GriddedRegion gridRegForCubes = cgr.getGridRegForCubes();
-		GriddedGeoDataSet xyzDataSet = new GriddedGeoDataSet(gridRegForCubes, true);
-		int depthIndex = cgr.getCubeDepthIndex(depth);
-		int numCubesAtDepth = xyzDataSet.size();
-		CalcProgressBar progressBar = new CalcProgressBar("Looping over all points", "junk");
-		progressBar.showProgress(true);
-		
-		int magIndex = totGriddedSeisMFD.getClosestXIndex(mag);
-
-		for(int i=0; i<numCubesAtDepth;i++) {
-			progressBar.updateProgress(i, numCubesAtDepth);
-			int cubeIndex = cgr.getCubeIndexForRegAndDepIndices(i, depthIndex);
-			SummedMagFreqDist mfd = getGriddedSeisMFD_ForCube(cubeIndex);
-			double rate = 0.0;
-			if(mfd != null)
-				rate = mfd.getCumRate(magIndex);
-			if(rate == 0.0)
-				rate = 1e-16;
-			xyzDataSet.set(i, rate);
-//			Location loc = xyzDataSet.getLocation(i);
-//			System.out.println(loc.getLongitude()+"\t"+loc.getLatitude()+"\t"+xyzDataSet.get(i));
-		}
-		progressBar.showProgress(false);
-
-		
-		GMT_MapGenerator mapGen = GMT_CA_Maps.getDefaultGMT_MapGenerator();
-		
-		CPTParameter cptParam = (CPTParameter )mapGen.getAdjustableParamsList().getParameter(GMT_MapGenerator.CPT_PARAM_NAME);
-		cptParam.setValue(GMT_CPT_Files.MAX_SPECTRUM.getFileName());
-		cptParam.getValue().setBelowMinColor(Color.WHITE);
-		
-		mapGen.setParameter(GMT_MapGenerator.MIN_LAT_PARAM_NAME,gridRegForCubes.getMinGridLat());
-		mapGen.setParameter(GMT_MapGenerator.MAX_LAT_PARAM_NAME,gridRegForCubes.getMaxGridLat());
-		mapGen.setParameter(GMT_MapGenerator.MIN_LON_PARAM_NAME,gridRegForCubes.getMinGridLon());
-		mapGen.setParameter(GMT_MapGenerator.MAX_LON_PARAM_NAME,gridRegForCubes.getMaxGridLon());
-		mapGen.setParameter(GMT_MapGenerator.GRID_SPACING_PARAM_NAME, gridRegForCubes.getLatSpacing());	// assume lat and lon spacing are same
-		mapGen.setParameter(GMT_MapGenerator.GMT_SMOOTHING_PARAM_NAME, false);
-		mapGen.setParameter(GMT_MapGenerator.GRD_VIEW_PARAM_NAME,true);
-
-		
-		mapGen.setParameter(GMT_MapGenerator.LOG_PLOT_NAME,true);
-//		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MODE_NAME,GMT_MapGenerator.COLOR_SCALE_MODE_FROMDATA);
-		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MODE_NAME,GMT_MapGenerator.COLOR_SCALE_MODE_MANUALLY);
-//		double maxZ = Math.ceil(Math.log10(xyzDataSet.getMaxZ()))+0.5;
-//		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MIN_PARAM_NAME,maxZ-5);
-//		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MAX_PARAM_NAME,maxZ);
-		
-		if(mag<5) {
-			mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MIN_PARAM_NAME,-5d);
-			mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MAX_PARAM_NAME,-1d);			
-		}
-		else {
-			mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MIN_PARAM_NAME,-11d);
-			mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MAX_PARAM_NAME,-6d);
-		}
-
-		String metadata = "Map from calling plotRateAtDepthMap(*) method";
-		
-		try {
-				String url = mapGen.makeMapUsingServlet(xyzDataSet, "M≥"+mag+" Rates at "+depth+" km depth", metadata, dirName);
-				metadata += GMT_MapGuiBean.getClickHereHTML(mapGen.getGMTFilesWebAddress());
-				ImageViewerWindow imgView = new ImageViewerWindow(url,metadata, true);		
-				
-				File downloadDir = new File(dirName);
-				if (!downloadDir.exists())
-					downloadDir.mkdir();
-				File zipFile = new File(downloadDir, "allFiles.zip");
-				// construct zip URL
-				String zipURL = url.substring(0, url.lastIndexOf('/')+1)+"allFiles.zip";
-				FileUtils.downloadURL(zipURL, zipFile);
-				FileUtils.unzipFile(zipFile, downloadDir);
-
-//			System.out.println("GMT Plot Filename: "+name);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return "For rates at depth above mag map: "+mapGen.getGMTFilesWebAddress()+" (deleted at midnight)";
-	}
 
 	
-	/**
-	 * This plots the event rates above the specified magnitude for cubes at the given depth
-	 * @param depth
-	 * @param dirName
-	 * @return
-	 */
-	public void plotCubeFractionOnAndOffFaultAtDepth(double depth) {
-		
-		GriddedRegion gridRegForCubes = cgr.getGridRegForCubes();
-		String dirNameOn = "CubeFractionOnFaultAtDepth"+depth+"km";
-		String dirNameOff = "CubeFractionOffFaultAtDepth"+depth+"km";
-		GriddedGeoDataSet xyzDataSetFractOn = new GriddedGeoDataSet(gridRegForCubes, true);
-		GriddedGeoDataSet xyzDataSetFractOff = new GriddedGeoDataSet(gridRegForCubes, true);
-
-		int depthIndex = cgr.getCubeDepthIndex(depth);
-		int numCubesAtDepth = xyzDataSetFractOn.size();
-		CalcProgressBar progressBar = new CalcProgressBar("Looping over all points", "junk");
-		progressBar.showProgress(true);
-		
-		double max = -1, min = 2;;
-		for(int i=0; i<numCubesAtDepth;i++) {
-			progressBar.updateProgress(i, numCubesAtDepth);
-			int cubeIndex = cgr.getCubeIndexForRegAndDepIndices(i, depthIndex);
-			
-			HashMap<Integer,Double> sectWtMap = sectDistWtMapAtCubeList.get(cubeIndex);
-			double wtSum =0;
-			for(int s:sectWtMap.keySet()) {
-				wtSum+=sectWtMap.get(s);
-			}
-			xyzDataSetFractOn.set(i, wtSum);
-			xyzDataSetFractOff.set(i, 1.0-wtSum);
-			
-			if(max<wtSum) max=wtSum;
-			if(min>wtSum) min=wtSum;
-		}
-		
-		if(D) System.out.println("plotCubeFractionOnAndOffFaultAtDepth:"+"\n\tmin="+min+"\n\tmax="+max);
-		
-		progressBar.showProgress(false);
-
-		
-		GMT_MapGenerator mapGen = GMT_CA_Maps.getDefaultGMT_MapGenerator();
-		
-		CPTParameter cptParam = (CPTParameter )mapGen.getAdjustableParamsList().getParameter(GMT_MapGenerator.CPT_PARAM_NAME);
-		cptParam.setValue(GMT_CPT_Files.GMT_POLAR.getFileName());
-		cptParam.getValue().setBelowMinColor(Color.WHITE);
-		
-		mapGen.setParameter(GMT_MapGenerator.MIN_LAT_PARAM_NAME,gridRegForCubes.getMinGridLat());
-		mapGen.setParameter(GMT_MapGenerator.MAX_LAT_PARAM_NAME,gridRegForCubes.getMaxGridLat());
-		mapGen.setParameter(GMT_MapGenerator.MIN_LON_PARAM_NAME,gridRegForCubes.getMinGridLon());
-		mapGen.setParameter(GMT_MapGenerator.MAX_LON_PARAM_NAME,gridRegForCubes.getMaxGridLon());
-		mapGen.setParameter(GMT_MapGenerator.GRID_SPACING_PARAM_NAME, gridRegForCubes.getLatSpacing());	// assume lat and lon spacing are same
-		mapGen.setParameter(GMT_MapGenerator.GMT_SMOOTHING_PARAM_NAME, false);
-		mapGen.setParameter(GMT_MapGenerator.GRD_VIEW_PARAM_NAME,true);
-
-		
-		mapGen.setParameter(GMT_MapGenerator.LOG_PLOT_NAME,false);
-//		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MODE_NAME,GMT_MapGenerator.COLOR_SCALE_MODE_FROMDATA);
-		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MODE_NAME,GMT_MapGenerator.COLOR_SCALE_MODE_MANUALLY);
-//		double maxZ = Math.ceil(Math.log10(xyzDataSet.getMaxZ()))+0.5;
-//		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MIN_PARAM_NAME,maxZ-5);
-//		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MAX_PARAM_NAME,maxZ);
-		
-		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MIN_PARAM_NAME,-1.0);
-		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MAX_PARAM_NAME,1.0);			
-
-		String metadata = "Map from calling plotCubeFractionOnAndOffFaultAtDepth(*) method";
-		
-		try {
-				String url = mapGen.makeMapUsingServlet(xyzDataSetFractOn, "Fraction On Fault at "+depth+" km depth", metadata, dirNameOn);
-				metadata += GMT_MapGuiBean.getClickHereHTML(mapGen.getGMTFilesWebAddress());
-				ImageViewerWindow imgView = new ImageViewerWindow(url,metadata, true);		
-				
-				File downloadDir = new File(dirNameOn);
-				if (!downloadDir.exists())
-					downloadDir.mkdir();
-				File zipFile = new File(downloadDir, "allFiles.zip");
-				// construct zip URL
-				String zipURL = url.substring(0, url.lastIndexOf('/')+1)+"allFiles.zip";
-				FileUtils.downloadURL(zipURL, zipFile);
-				FileUtils.unzipFile(zipFile, downloadDir);
-
-//			System.out.println("GMT Plot Filename: "+name);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		try {
-			String url = mapGen.makeMapUsingServlet(xyzDataSetFractOff, "Fraction Off Fault at "+depth+" km depth", metadata, dirNameOff);
-			metadata += GMT_MapGuiBean.getClickHereHTML(mapGen.getGMTFilesWebAddress());
-			ImageViewerWindow imgView = new ImageViewerWindow(url,metadata, true);		
-			
-			File downloadDir = new File(dirNameOff);
-			if (!downloadDir.exists())
-				downloadDir.mkdir();
-			File zipFile = new File(downloadDir, "allFiles.zip");
-			// construct zip URL
-			String zipURL = url.substring(0, url.lastIndexOf('/')+1)+"allFiles.zip";
-			FileUtils.downloadURL(zipURL, zipFile);
-			FileUtils.unzipFile(zipFile, downloadDir);
-
-//		System.out.println("GMT Plot Filename: "+name);
-	} catch (Exception e) {
-		e.printStackTrace();
-	}
-
-//		return "For rates at depth above mag map: "+mapGen.getGMTFilesWebAddress()+" (deleted at midnight)";
-	}
 	
-	
-	
-	
-	
-
-	
-	public void plotCharFactorAtDepth(double depth, double bVal) {
-		
-		if(longTermSupraSeisMFD_OnSectArray == null)
-			computeLongTermSupraSeisMFD_OnSectArray();
-		
-		GriddedRegion gridRegForCubes = cgr.getGridRegForCubes();
-		GriddedGeoDataSet xyzDataSet = new GriddedGeoDataSet(gridRegForCubes, true);
-
-		int depthIndex = cgr.getCubeDepthIndex(depth);
-		int numCubesAtDepth = xyzDataSet.size();
-		CalcProgressBar progressBar = new CalcProgressBar("Looping over all points", "junk");
-		progressBar.showProgress(true);
-		
-		for(int i=0; i<numCubesAtDepth;i++) {
-			progressBar.updateProgress(i, numCubesAtDepth);
-			int cubeIndex = cgr.getCubeIndexForRegAndDepIndices(i, depthIndex);
-			
-			HashMap<Integer,Double> sectWtMap = sectDistWtMapAtCubeList.get(cubeIndex);
-			
-			double aveMinSupraMag=0;
-			if(sectWtMap.size()==0) { // no sections nucleate here
-				aveMinSupraMag=6.35;
-			}
-			else {
-				double totWt=0;
-				for(int s:sectWtMap.keySet()) {
-					IncrementalMagFreqDist mfd = longTermSupraSeisMFD_OnSectArray[s];
-					double minMag = mfd.getMinMagWithNonZeroRate();
-					double wt = mfd.getTotalIncrRate()*sectWtMap.get(s)/totSectDistWtAtCubeArray[s];
-					aveMinSupraMag += wt*minMag;
-					totWt+=wt;
-				}
-				aveMinSupraMag /= totWt;			
-			}
-			
-			SummedMagFreqDist totalMFD = getTotalMFD_ForCube(cubeIndex);
-			
-			int index = totalMFD.getClosestXIndex(aveMinSupraMag);
-			aveMinSupraMag = totalMFD.getX(index);
-			
-			double minMag = totalMFD.getMinMagWithNonZeroRate();
-			double maxMag = totalMFD.getMaxMagWithNonZeroRate();
-			
-			GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(totalMFD.getMinX(), totalMFD.size(), totalMFD.getDelta(),
-					minMag, maxMag, 1.0, bVal);
-			gr.scaleToIncrRate(minMag, totalMFD.getY(minMag));
-			
-			double charFact = totalMFD.getCumRate(aveMinSupraMag)/gr.getCumRate(aveMinSupraMag);
-			xyzDataSet.set(i, charFact);
-			
-		}
-		
-		progressBar.showProgress(false);
-		
-		String dirName = "CharFactorAtDepth"+depth+"km";
-		
-		GMT_MapGenerator mapGen = GMT_CA_Maps.getDefaultGMT_MapGenerator();
-		
-		CPTParameter cptParam = (CPTParameter )mapGen.getAdjustableParamsList().getParameter(GMT_MapGenerator.CPT_PARAM_NAME);
-		cptParam.setValue(GMT_CPT_Files.UCERF3_RATIOS.getFileName());
-//		cptParam.getValue().setBelowMinColor(Color.WHITE);
-		
-		mapGen.setParameter(GMT_MapGenerator.MIN_LAT_PARAM_NAME,gridRegForCubes.getMinGridLat());
-		mapGen.setParameter(GMT_MapGenerator.MAX_LAT_PARAM_NAME,gridRegForCubes.getMaxGridLat());
-		mapGen.setParameter(GMT_MapGenerator.MIN_LON_PARAM_NAME,gridRegForCubes.getMinGridLon());
-		mapGen.setParameter(GMT_MapGenerator.MAX_LON_PARAM_NAME,gridRegForCubes.getMaxGridLon());
-		mapGen.setParameter(GMT_MapGenerator.GRID_SPACING_PARAM_NAME, gridRegForCubes.getLatSpacing());	// assume lat and lon spacing are same
-		mapGen.setParameter(GMT_MapGenerator.GMT_SMOOTHING_PARAM_NAME, false);
-		mapGen.setParameter(GMT_MapGenerator.GRD_VIEW_PARAM_NAME,true);
-		mapGen.setParameter(GMT_MapGenerator.LOG_PLOT_NAME,true);
-		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MODE_NAME,GMT_MapGenerator.COLOR_SCALE_MODE_MANUALLY);
-		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MIN_PARAM_NAME,-3d);
-		mapGen.setParameter(GMT_MapGenerator.COLOR_SCALE_MAX_PARAM_NAME,3d);
-		
-		
-		String metadata = "Map from calling plotCharFactorAtDepth(*) method";
-		
-		try {
-				String url = mapGen.makeMapUsingServlet(xyzDataSet, "Bulge at "+depth+" km depth", metadata, dirName);
-				metadata += GMT_MapGuiBean.getClickHereHTML(mapGen.getGMTFilesWebAddress());
-				ImageViewerWindow imgView = new ImageViewerWindow(url,metadata, true);		
-				
-				File downloadDir = new File(dirName);
-				if (!downloadDir.exists())
-					downloadDir.mkdir();
-				File zipFile = new File(downloadDir, "allFiles.zip");
-				// construct zip URL
-				String zipURL = url.substring(0, url.lastIndexOf('/')+1)+"allFiles.zip";
-				FileUtils.downloadURL(zipURL, zipFile);
-				FileUtils.unzipFile(zipFile, downloadDir);
-
-//			System.out.println("GMT Plot Filename: "+name);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-
-		
-	}
-	
-	/**
-	 * This plots the classic MFDs for the paper
-	 */
-	public void plotMFDs() {
-		
-		totGriddedSeisMFD.setName("totGriddedSeisMFD");
-		
-		SummedMagFreqDist testMFD = getBlankMFD();
-		testMFD.setName("Test totGriddedSeisMFD");
-		testMFD.addIncrementalMagFreqDist(totalSubSeisOnFaultMFD);
-		testMFD.addIncrementalMagFreqDist(totalTrulyOffFaultMFD);
-		
-		SummedMagFreqDist totalMFD = getBlankMFD();
-		totalMFD.setName("totalMFD");
-		totalMFD.addIncrementalMagFreqDist(totGriddedSeisMFD);
-		totalMFD.addIncrementalMagFreqDist(totalSupraSeisOnFaultMFD);
-		
-		ArrayList<XY_DataSet> funcs = new  ArrayList<XY_DataSet>();
-		funcs.add(totGriddedSeisMFD);
-		funcs.add(totalSubSeisOnFaultMFD);
-		funcs.add(totalTrulyOffFaultMFD);
-		funcs.add(testMFD);
-		funcs.add(totalSupraSeisOnFaultMFD);
-		funcs.add(totalMFD);
-
-
-		
-		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GRAY));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
-		plotChars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 4f, Color.BLACK));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GREEN));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
-
-		
-		Range xRange = new Range(5.0,9.0);
-		Range yRange = new Range(1e-7, 1);
-		
-		PlottingUtils.writeAndOrPlotFuncs(funcs, plotChars, null, "Magnitude", "Rate (per yr)", xRange, yRange, 
-				false, true, 3.5, 3.0, null, true);	
-
-	}
-	
-	
-	/**
-	 * 
-	 * To plot this result in 3D (rotatable) in Igor64 paste the data in and then paste 
-	 * this into the command window (all together, but without the leading "	 * "):
-	 * 
-	 * Concatenate {lon,lat,depth}, tripletWave
-	 * NewGizmo
-	 * AppendToGizmo DefaultScatter= root:tripletWave
-	 * ModifyGizmo makeTripletColorWave = {wt, grays, 1 }
-	 * ModifyGizmo stopUpdates
-	 * ModifyGizmo ModifyObject=scatter0,objectType=scatter,property={ scatterColorType,1}
-	 * ModifyGizmo ModifyObject=scatter0,objectType=scatter,property={ colorWave,root:wt_C}
-	 * ModifyGizmo resumeUpdates
-	 * ModifyGizmo ModifyObject=scatter0,objectType=scatter,property={ Shape,2}
-	 * ModifyGizmo ModifyObject=scatter0,objectType=scatter,property={ size,0.5}
-	 * 
-	 * @param parSectID
-	 * @param fileName
-	 */
-	public void writeCubeLocsAndWtsForForParentSect(int parSectID, String fileName) {
-		
-		
-//		for(int s=0;s<rupSet.getNumSections();s++) {
-//			String name = rupSet.getFaultSectionData(s).getName();
-//			if(name.contains("Mojave")) {
-//				System.out.println(rupSet.getFaultSectionData(s).getParentSectionId()+"\t"+rupSet.getFaultSectionData(s).getParentSectionName());
-//			}
-//		}
-//		System.exit(-1);
-		
-				
-		System.out.println("writeLocAndFactionOnForCubes:\n");
-		boolean didIt = false;
-		
-		FileWriter fw;
-		try {
-			fw = new FileWriter(fileName);
-			fw.write("lon\tlat\tdepth\twt\n");
-			for(int s=0;s<rupSet.getNumSections();s++) {
-				if(rupSet.getFaultSectionData(s).getParentSectionId() == parSectID) {
-					if(!didIt) {
-						System.out.println(rupSet.getFaultSectionData(s).getParentSectionName());
-						didIt=true;
-					}
-					
-					HashMap<Integer,Double> cubeDistMap = new HashMap<Integer,Double>();
-					getCubeDistancesAndFractionsForFaultSection(s, cubeDistMap);
-					if(cubeDistMap != null) {	// null if section is outside the region
-						for(int cubeIndex:cubeDistMap.keySet()) {
-							HashMap<Integer,Double> sectWtMap = sectDistWtMapAtCubeList.get(cubeIndex);
-							double wt = sectWtMap.get(s);
-							Location loc = cgr.getCubeLocationForIndex(cubeIndex);
-							fw.write((float)loc.getLongitude()+"\t"+(float)loc.getLatitude()+
-									"\t"+(float)-loc.getDepth()+"\t"+(float)wt+"\n");
-						}			
-					}
-				}
-			}
-			fw.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
 	
 	public static void main(String[] args) {
@@ -1147,33 +735,32 @@ public class GridSourceProvider2023 {
 //		System.exit(0);
 		
 		CubedGriddedRegion cgr = new CubedGriddedRegion(griddedRegion);
-
-		GridSourceProvider2023 gridProvider = new GridSourceProvider2023(fss, cgr, spatialPDF, totGriddedSeisMFD, binnedDepthDistFunc);
-				
-//		gridProvider.testGetCubeIndicesForGridCell();
 		
 		long startTime = System.currentTimeMillis();
-		
-		// this should not exactly equal Figure 9c in U3ETAS BSSA paper (due to how char factors for mult sections in cube are handled)
-//		gridProvider.plotCharFactorAtDepth(7d,1d);
 
-		// the following matches the U3ETAS map (Figure 5a)
-//		gridProvider.plotRateAtDepthMap(7d,2.55,"RatesAboveM2pt5_AtDepth7km");
-
-//		gridProvider.plotCubeFractionOnAndOffFaultAtDepth(7d);
-		
-//		gridProvider.writeCubeLocsAndWtsForForParentSect(301, "CubeLocWtsForSAF_MojaveSouth.txt");
-//		gridProvider.writeCubeLocsAndWtsForForParentSect(141, "CubeLocWtsForGreatValley14_KH.txt");
-		
+		GridSourceProvider2023 gridProvider = new GridSourceProvider2023(fss, cgr, spatialPDF, totGriddedSeisMFD, binnedDepthDistFunc);
+						
 //		gridProvider.testTotalGriddedSeisMFD();
 //		gridProvider.testTotalTrulyOffFaultGriddedSeisMFD();
-
-		gridProvider.plotMFDs();
-		
 //		gridProvider.testTotalMgt4_RatesInCells();
-//		gridProvider.testSectDistFractWtMapList();
+
+		gridProvider.testSectDistFractWtMapList();
 		
-//		gridProvider.computeHistogramOfNumSectionsInCubes();
+		// this should not exactly equal Figure 9c in U3ETAS BSSA paper (due to how char factors for mult sections in cube are handled)
+//		GridSourceProvider2023_Analysis.plotCharFactorAtDepth(gridProvider, 7d, 1d);
+		
+		// the following matches the U3ETAS map (Figure 5a)
+//		GridSourceProvider2023_Analysis.plotRateAtDepthMap(gridProvider,7d,2.55,"RatesAboveM2pt5_AtDepth7km");
+//		GridSourceProvider2023_Analysis.plotSupraSeisRateAtDepthMap(gridProvider, 7d, "SupraSeisRatesAtDepth7km");
+//		GridSourceProvider2023_Analysis.plotCubeFractionOnAndOffFaultAtDepth(gridProvider,7d);
+		
+//		GridSourceProvider2023_Analysis.writeCubeLocsAndWtsForForParentSect(gridProvider, 301, "CubeLocWtsForSAF_MojaveSouth.txt");
+//		GridSourceProvider2023_Analysis.writeCubeLocsAndWtsForForParentSect(gridProvider, 141, "CubeLocWtsForGreatValley14_KH.txt");
+		
+
+//		GridSourceProvider2023_Analysis.plotTotalMFDs(gridProvider);
+		
+//		GridSourceProvider2023_Analysis.computeHistogramOfNumSectionsInCubes(gridProvider, true);
 		
 		long runtime = System.currentTimeMillis()-startTime;
 		double runtimeMin = runtime/60000d;
