@@ -1155,7 +1155,7 @@ public class GridSourceProvider2023 {
 		long startTime = System.currentTimeMillis();
 		
 		// this should not exactly equal Figure 9c in U3ETAS BSSA paper (due to how char factors for mult sections in cube are handled)
-		gridProvider.plotCharFactorAtDepth(7d,1d);
+//		gridProvider.plotCharFactorAtDepth(7d,1d);
 
 		// the following matches the U3ETAS map (Figure 5a)
 //		gridProvider.plotRateAtDepthMap(7d,2.55,"RatesAboveM2pt5_AtDepth7km");
