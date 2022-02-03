@@ -37,6 +37,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.QuadSurface;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.gui.infoTools.CalcProgressBar;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -62,6 +63,8 @@ import scratch.ned.FSS_Inversion2019.PlottingUtils;
  * 	have computeLongTermSupraSeisMFD_OnSectArray() from fss apply the  if it's not already done
  * for the supplied fss.  Does rupSet.getMinMagForSection(s) really get the final minMag?
  * 
+ * QuadSurface - do we have analytical dist to a loc that is not on the earth surface?
+ * 
  * move the following to a more general class: ETAS_SimAnalysisTools.writeMemoryUse()
  * 
  * 
@@ -76,6 +79,8 @@ public class GridSourceProvider2023 {
 	
 	String defaultSectAtCubeCacheFilename = "/Users/field/tmp/defaultSectAtCubeCache";
 	String defaultSectDistForCubeCacheFilename = "/Users/field/tmp/defaultSectDistForCubeCache";
+	String defaultTotDistWtsAtCubesForSectArrayFilename = "/Users/field/tmp/defaultTotDistWtsAtCubesForSectArrayCache";
+	String defaultSectionsThatNucleateOutsideRegionListFilename = "/Users/field/tmp/defaultSectionsThatNucleateOutsideRegionListCache";
 	
 	double maxFaultNuclDist;
 	
@@ -104,7 +109,7 @@ public class GridSourceProvider2023 {
 	
 	IncrementalMagFreqDist[] longTermSupraSeisMFD_OnSectArray;
 
-
+	ArrayList<Integer> sectionsThatNucleateOutsideRegionList;
 	
 	/**
 	 * 
@@ -144,6 +149,8 @@ public class GridSourceProvider2023 {
 		
 		if(griddedRegion.getNodeCount() != spatialPDF.length)
 			throw new RuntimeException("griddedRegion and spatialPDF have differe sizes: "+griddedRegion.getNodeCount()+" vs "+spatialPDF.length);
+		
+		sectionsThatNucleateOutsideRegionList = new ArrayList<Integer>();
 		
 		// test that spatialPDF sums to 1.0
 		double testSum=0;
@@ -222,9 +229,10 @@ public class GridSourceProvider2023 {
 	/**
 	 * 
 	 * @param sectIndex
+	 * @param cubeDistMap
+	 * @return
 	 */
-	public void getCubeDistancesForFaultSection(int sectIndex, 
-			HashMap<Integer,Double> cubeDistMap) {
+	public double getCubeDistancesForFaultSection(int sectIndex, HashMap<Integer,Double> cubeDistMap) {
 
 		FaultSection fltSection = rupSet.getFaultSectionData(sectIndex);
 		
@@ -246,22 +254,35 @@ public class GridSourceProvider2023 {
 //			System.out.println(sectSurf.getEvenlyDiscretizedLocation(i));
 //		}
 		
-		QuadSurface sectQuadSurf = new QuadSurface(fltSection,false);
+		RuptureSurface sectSurf = fltSection.getFaultSurface(0.25);
+//		QuadSurface sectSurf = new QuadSurface(fltSection,false);
 
 		GriddedRegion griddedPolygonReg = new GriddedRegion(fltPolygon, cgr.getCubeLatLonSpacing(), cgr.getCubeLocationForIndex(0));
-
+		double totWt = 0;
+		double testWt=0;
 		for(int i=0;i<griddedPolygonReg.getNumLocations();i++) {
 			Location loc = griddedPolygonReg.getLocation(i);
 			double depthDiscr = cgr.getCubeDepthDiscr();
 			for(double depth = depthDiscr/2;depth<cgr.getMaxDepth();depth+=depthDiscr) {
 				Location loc2 = new Location(loc.getLatitude(),loc.getLongitude(),depth);
-				double dist = LocationUtils.distanceToSurf(loc2, sectQuadSurf);
-				int cubeIndex = cgr.getCubeIndexForLocation(loc2);
-				if(dist>maxFaultNuclDist || cubeIndex==-1)
-					continue;
-				cubeDistMap.put(cubeIndex,dist);
+				double dist = LocationUtils.distanceToSurf(loc2, sectSurf);
+				if(dist<=maxFaultNuclDist) { 
+					totWt += getDistWt(dist); // this will includes cubes outside the region where the section could nucleate
+					int cubeIndex = cgr.getCubeIndexForLocation(loc2);
+					if(cubeIndex>=0) {// make sure it's in the region
+						cubeDistMap.put(cubeIndex,dist);
+						testWt += getDistWt(dist);
+					}
+				}
 			}
 		}
+
+		float ratio = (float)testWt/(float)totWt;
+		if(ratio != 1.0) {
+			sectionsThatNucleateOutsideRegionList.add(sectIndex);
+			if(D) System.out.println((1f-ratio)+" of "+rupSet.getFaultSectionData(sectIndex).getName()+ " nucleates outside the region");
+		}
+		return totWt;
 	}
 
 
@@ -271,9 +292,12 @@ public class GridSourceProvider2023 {
 		
 		File sectAtCubeCacheFile = new File(defaultSectAtCubeCacheFilename);
 		File sectDistForCubeCacheFile = new File(defaultSectDistForCubeCacheFilename);
+		File totDistWtsAtCubesForSectArrayCacheFile = new File(defaultTotDistWtsAtCubesForSectArrayFilename);
+		File sectionsThatNucleateOutsideRegionListFilename = new File(defaultSectionsThatNucleateOutsideRegionListFilename);
+
 		
 		// make cache files if they don't exist
-		if (!sectAtCubeCacheFile.exists() || !sectDistForCubeCacheFile.exists()) { // read from file if it exists
+		if (!sectAtCubeCacheFile.exists() || !sectDistForCubeCacheFile.exists() || !totDistWtsAtCubesForSectArrayCacheFile.exists()) { // read from file if it exists
 			if(D) ETAS_SimAnalysisTools.writeMemoryUse("Memory before running generateAndWriteCacheDataToFiles()");
 			generateAndWriteCacheDataToFiles();
 			if(D) ETAS_SimAnalysisTools.writeMemoryUse("Memory after running generateAndWriteCacheDataToFiles()");
@@ -281,19 +305,27 @@ public class GridSourceProvider2023 {
 		}
 		
 		// now read them
+		int[] tempIntArray = null;
 		try {
-			if(D) ETAS_SimAnalysisTools.writeMemoryUse("Memory before reading "+sectAtCubeCacheFile);
-				sectAtCubeList = MatrixIO.intArraysListFromFile(sectAtCubeCacheFile);
-			if(D) ETAS_SimAnalysisTools.writeMemoryUse("Memory before reading "+sectDistForCubeCacheFile);
-				sectDistToCubeList = MatrixIO.floatArraysListFromFile(sectDistForCubeCacheFile);
+			if(D) ETAS_SimAnalysisTools.writeMemoryUse("Memory before reading files "+sectAtCubeCacheFile);
+			sectAtCubeList = MatrixIO.intArraysListFromFile(sectAtCubeCacheFile);
+			sectDistToCubeList = MatrixIO.floatArraysListFromFile(sectDistForCubeCacheFile);
+			totDistWtsAtCubesForSectArray = MatrixIO.doubleArrayFromFile(totDistWtsAtCubesForSectArrayCacheFile);
+			tempIntArray = MatrixIO.intArrayFromFile(sectionsThatNucleateOutsideRegionListFilename);
 			if(D) ETAS_SimAnalysisTools.writeMemoryUse("Memory after reading files");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		sectionsThatNucleateOutsideRegionList = new ArrayList<Integer>();
+		for(int i:tempIntArray)
+			sectionsThatNucleateOutsideRegionList.add(i);
+		
 	}
 	
 	
 	private void generateAndWriteCacheDataToFiles() {
+		
 		if(D) System.out.println("Starting "+this.getClass().getName()+".generateAndWriteListListDataToFile(); THIS WILL TAKE TIME AND MEMORY!");
 		long st = System.currentTimeMillis();
 		CalcProgressBar progressBar = null;
@@ -304,6 +336,7 @@ public class GridSourceProvider2023 {
 		}
 		ArrayList<ArrayList<Integer>> sectAtCubeListTemp = new ArrayList<ArrayList<Integer>>();
 		ArrayList<ArrayList<Float>> sectDistToCubeListTemp = new ArrayList<ArrayList<Float>>();
+		double[] totDistWtsForSectArray = new double[rupSet.getNumSections()];
 
 		for(int i=0; i<cgr.getNumCubes();i++) {
 			sectAtCubeListTemp.add(new ArrayList<Integer>());
@@ -317,7 +350,9 @@ public class GridSourceProvider2023 {
 			
 			HashMap<Integer,Double> cubeDistMap = new HashMap<Integer,Double>();
 			
-			getCubeDistancesForFaultSection(sectIndex, cubeDistMap);
+			// this will fill in cubeDistMap:
+			totDistWtsForSectArray[sectIndex] = getCubeDistancesForFaultSection(sectIndex, cubeDistMap);
+// System.out.println(+totDistWtsForSectArray[sectIndex]+" for "+rupSet.getFaultSectionData(sectIndex).getName());
 
 			if(cubeDistMap != null) {	// null if section is outside the region
 				for(int cubeIndex:cubeDistMap.keySet()) {
@@ -328,11 +363,20 @@ public class GridSourceProvider2023 {
 		}
 		
 		ETAS_SimAnalysisTools.writeMemoryUse("Memory before writing files");
+		
 		File sectAtCubeCacheFile = new File(defaultSectAtCubeCacheFilename);
 		File sectDistForCubeCacheFile = new File(defaultSectDistForCubeCacheFilename);
+		File totDistWtsAtCubesForSectArrayCacheFile = new File(defaultTotDistWtsAtCubesForSectArrayFilename);
+		File sectionsThatNucleateOutsideRegionListFilename = new File(defaultSectionsThatNucleateOutsideRegionListFilename);
+		
+		int[] tempIntArray = new int[sectionsThatNucleateOutsideRegionList.size()];
+		for(int i=0;i<tempIntArray.length;i++)
+			tempIntArray[i] = sectionsThatNucleateOutsideRegionList.get(i);
 		try {
 			MatrixIO.intListListToFile(sectAtCubeListTemp,sectAtCubeCacheFile);
 			MatrixIO.floatListListToFile(sectDistToCubeListTemp, sectDistForCubeCacheFile);
+			MatrixIO.doubleArrayToFile(totDistWtsForSectArray, totDistWtsAtCubesForSectArrayCacheFile);
+			MatrixIO.intArrayToFile(tempIntArray, sectionsThatNucleateOutsideRegionListFilename);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -362,29 +406,31 @@ public class GridSourceProvider2023 {
 	private void makeSectDistWtMapList() {
 		
 		sectDistWtMapAtCubeList = new ArrayList<HashMap<Integer,Double>>();
-		totDistWtsAtCubesForSectArray = new double[rupSet.getNumSections()];
 		
 		for(int c=0;c<cgr.getNumCubes();c++) {
 			HashMap<Integer,Double> sectWtMap = new HashMap<Integer,Double>();
 			int numSect = sectAtCubeList.get(c).length;
 			double[] prelimWts = new double[numSect];
 			double wtSum = 0;
-			for(int i=0;i<numSect;i++) {
-				float dist = sectDistToCubeList.get(c)[i];
-				prelimWts[i] = getDistWt(dist);
-				wtSum += prelimWts[i];
+			for(int s=0;s<numSect;s++) {
+				float dist = sectDistToCubeList.get(c)[s];
+				prelimWts[s] = getDistWt(dist);
+				wtSum += prelimWts[s];
 			}
+			double[] finalWts = prelimWts;
 			if(wtSum>1.0) {
-				for(int i=0;i<numSect;i++) {
-					prelimWts[i] /= wtSum;
+				finalWts = new double[numSect];
+				for(int s=0;s<numSect;s++) {
+					finalWts[s] = prelimWts[s]/wtSum;
+					int sectIndex = sectAtCubeList.get(c)[s];
+					totDistWtsAtCubesForSectArray[sectIndex] += (finalWts[s]-prelimWts[s]); // reduce this for the wt reduction here
 				}
 			}
 
-			for(int i=0;i<numSect;i++) {
-				int sectIndex = sectAtCubeList.get(c)[i];
-				double wt = prelimWts[i];
+			for(int s=0;s<numSect;s++) {
+				int sectIndex = sectAtCubeList.get(c)[s];
+				double wt = finalWts[s];
 				sectWtMap.put(sectIndex, wt);
-				totDistWtsAtCubesForSectArray[sectIndex] += wt;
 			}
 			sectDistWtMapAtCubeList.add(sectWtMap);
 		}
@@ -630,7 +676,7 @@ public class GridSourceProvider2023 {
 //		(float)min+"\nmax="+(float)max+"\n");
 		
 		if(min<0.9999 || max > 1.0001)
-			throw new RuntimeException("testTotalMgt4_RatesInCells(): \nave="+(float)ave+"\nmin="+
+			throw new RuntimeException("testTotalMgt4_RatesInCells() failure: \nave="+(float)ave+"\nmin="+
 					(float)min+"\nmax="+(float)max+"\n");
 		
 		if(D) System.out.println("testTotalMgt4_RatesInCells() succeeded.");
@@ -649,11 +695,6 @@ public class GridSourceProvider2023 {
 	 */
 	private void testSectDistFractWtMapList() {
 		
-//		for(int s=0;s<rupSet.getNumSections();s++)
-//			if(totPotentialNumCubesForSectArray[s] != totNumCubesForSectArray[s])
-//				System.out.println(rupSet.getFaultSectionData(s).getName()+" tot Potential vs tot Used: "+
-//						totPotentialNumCubesForSectArray[s]+"; "+totNumCubesForSectArray[s]);
-		
 		double[] testArray = new double[rupSet.getNumSections()];
 		
 		for(int c=0;c<cgr.getNumCubes();c++) {
@@ -663,27 +704,14 @@ public class GridSourceProvider2023 {
 			}
 		}
 		
-		System.out.println("testSectDistFractWtMapList():");
-		
-		boolean someSectionsOutsideRegion = false;
-		double ave=0, min=Double.MAX_VALUE, max=-Double.MAX_VALUE;
 		for(int s=0;s<testArray.length;s++) {
-			if(testArray[s]<0.999) {
-				
-//				for(Location loc:rupSet.getFaultSectionData(s).getFaultSurface(1.0).getPerimeter())
-//					if()
-					
-				System.out.println(testArray[s]+" for "+rupSet.getFaultSectionData(s).getName());
+			if(testArray[s]<0.9999 || testArray[s]>1.0001) {
+				if(!sectionsThatNucleateOutsideRegionList.contains(s))
+					throw new RuntimeException("testSectDistFractWtMapList() failure for section index "+s+"; "+rupSet.getFaultSectionData(s).getName());
 			}
-			ave+=testArray[s];
-			if(min>testArray[s]) min=testArray[s];
-			if(max<testArray[s]) max=testArray[s];
 		}
 		
-		ave /= testArray.length;
-		
-		System.out.println("nave="+(float)ave+"\nmin="+(float)min+"\nmax="+(float)max+"\n");
-		
+		if(D) System.out.println("testSectDistFractWtMapList() succeeded.");
 	}
 	
 
@@ -743,15 +771,20 @@ public class GridSourceProvider2023 {
 //		gridProvider.testTotalGriddedSeisMFD();
 //		gridProvider.testTotalTrulyOffFaultGriddedSeisMFD();
 //		gridProvider.testTotalMgt4_RatesInCells();
-
-		gridProvider.testSectDistFractWtMapList();
+//		gridProvider.testSectDistFractWtMapList();
+		
+//		GridSourceProvider2023_Analysis.plotSupraSeisRateAtDepthMap(gridProvider, 7d, "SupraSeisRatesAtDepth7km");
 		
 		// this should not exactly equal Figure 9c in U3ETAS BSSA paper (due to how char factors for mult sections in cube are handled)
 //		GridSourceProvider2023_Analysis.plotCharFactorAtDepth(gridProvider, 7d, 1d);
-		
-		// the following matches the U3ETAS map (Figure 5a)
-//		GridSourceProvider2023_Analysis.plotRateAtDepthMap(gridProvider,7d,2.55,"RatesAboveM2pt5_AtDepth7km");
-//		GridSourceProvider2023_Analysis.plotSupraSeisRateAtDepthMap(gridProvider, 7d, "SupraSeisRatesAtDepth7km");
+
+
+		// the following matches the associated U3ETAS map (Figure 5a) close enough
+//		GridSourceProvider2023_Analysis.plotRateAboveMagAtDepthMap(gridProvider, 2.55, 7d, "RatesAboveM2pt5_AtDepth7km");
+
+		// the following matches the associated U3ETAS map (Figure 9b) close enough
+//		GridSourceProvider2023_Analysis.plotRateAboveMagAtDepthMap(gridProvider, 6.35, 7d, "RatesAboveM6pt3_AtDepth7km");
+
 //		GridSourceProvider2023_Analysis.plotCubeFractionOnAndOffFaultAtDepth(gridProvider,7d);
 		
 //		GridSourceProvider2023_Analysis.writeCubeLocsAndWtsForForParentSect(gridProvider, 301, "CubeLocWtsForSAF_MojaveSouth.txt");
