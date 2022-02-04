@@ -436,10 +436,16 @@ public class RSQSimBBP_Config {
 		// now try sites
 		System.out.println("Fallback to VM detetion from sties...");
 		BBP_Site site = BBP_Site.readFile(bbpDir).get(0);
-		for (VelocityModel vm : VelocityModel.values())
-			if ((float)vm.getVs30() == (float)site.getVs30())
-				return vm;
-		throw new IllegalStateException("Couldn't detect VM for dir "+bbpDir.getAbsolutePath());
+		VelocityModel ret = null;
+		for (VelocityModel vm : VelocityModel.values()) {
+			if ((float)vm.getVs30() == (float)site.getVs30()) {
+				ret = vm;
+				break;
+			}
+		}
+		Preconditions.checkState(ret != null, "Couldn't detect VM for dir %s", bbpDir.getAbsolutePath());
+		System.out.println("\tDetected: "+ret);
+		return ret;
 	}
 	
 	public static void main(String[] args) throws IOException {

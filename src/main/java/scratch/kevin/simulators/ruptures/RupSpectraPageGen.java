@@ -27,8 +27,9 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.FileUtils;
+import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
-import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -39,7 +40,6 @@ import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimSRFGenerator;
-import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
 import org.opensha.sha.simulators.srf.SRF_PointData;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
@@ -50,21 +50,18 @@ import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
-import scratch.kevin.bbp.BBP_SimZipLoader;
 import scratch.kevin.bbp.BBP_SimZipLoader.BBP_RupGenSimZipLoader;
 import scratch.kevin.bbp.BBP_SimZipLoader.BBP_ShakeMapSimZipLoader;
 import scratch.kevin.bbp.BBP_Site;
 import scratch.kevin.bbp.BBP_SourceFile;
-import scratch.kevin.bbp.BBP_Wrapper;
 import scratch.kevin.bbp.BBP_SourceFile.BBP_PlanarSurface;
+import scratch.kevin.bbp.BBP_Wrapper;
 import scratch.kevin.bbp.SeismogramPlotter;
 import scratch.kevin.bbp.ShakemapPlotter;
 import scratch.kevin.bbp.SpectraPlotter;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.plots.RuptureVelocityPlot;
-import org.opensha.commons.util.MarkdownUtils;
-import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
 class RupSpectraPageGen {
 	
@@ -167,15 +164,30 @@ class RupSpectraPageGen {
 			lines.add("# "+title);
 			lines.add("");
 		}
+		
+		// add SRF download
+		String srfPrefix = eventBBPDir.getName().replaceAll("_bbp", "");
+		File srfFile = new File(eventBBPDir.getParentFile(), srfPrefix+".srf");
+		Preconditions.checkState(srfFile.exists(), "SRF file doesn't exist: %s", srfFile.getAbsolutePath());
+		File srfDest = new File(resourcesDir, srfFile.getName());
+		Files.copy(srfFile, srfDest);
+		
 		BBP_SourceFile bbpSource = null;
 		Location[] bbpSourceRect = null;
 		Location bbpSourceHypo = null;
 		if (refBBPDir != null) {
-			bbpSource = loadSourceFile(refBBPDir);
+			File bbpSourceFile = locateSourceFile(refBBPDir);
+			bbpSource = BBP_SourceFile.readFile(bbpSourceFile);
+			File srcDest = new File(resourcesDir, bbpSourceFile.getName());
+			Files.copy(bbpSourceFile, srcDest);
+			lines.add("Download Rupture Files: [SRF]("+resourcesDir.getName()+"/"+srfFile.getName()
+				+") [SRC]("+resourcesDir.getName()+"/"+srcDest.getName()+")");
+			lines.add("");
+			
 			bbpSourceRect = bbpSource.getSurface().getRectangle();
 			bbpSourceHypo = bbpSource.getHypoLoc();
 			if (refAdjustDDW) {
-				lines.add("**NOTE: "+refName+" DDW with has been modified for the area to match the Somerville (2006) relationship.**");
+				lines.add("**NOTE: "+refName+" DDW has been modified for the area to match the Somerville (2006) relationship:**");
 				lines.add("");
 				BBP_PlanarSurface bbpSurface = bbpSource.getSurface();
 				double origLen = bbpSurface.getLength();
@@ -188,9 +200,12 @@ class RupSpectraPageGen {
 					+" km = "+twoDigitsDF.format(newArea)+" km^2");
 				lines.add("");
 			}
+		} else {
+			lines.add("Download Rupture Files: [SRF]("+resourcesDir.getName()+"/"+srfFile.getName()+")");
+			lines.add("");
 		}
 		lines.add("");
-		lines.add("[Catalog Details](../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
+		lines.add("[Catalog Details](../../#"+MarkdownUtils.getAnchorName(catalog.getName())+")");
 		lines.add("");
 		lines.add("");
 		lines.add("");
@@ -409,15 +424,15 @@ class RupSpectraPageGen {
 						srcFile, null, null, null, tempDir);
 				wrapper.setSRFGenOnly(true);
 				wrapper.run();
-				File srfFile = null;
+				File tmpSRF = null;
 				for (File file : tempDir.listFiles()) {
 					if (file.getName().toLowerCase().endsWith(".srf")) {
-						srfFile = file;
+						tmpSRF = file;
 						break;
 					}
 				}
 				Preconditions.checkNotNull("SRF file not found in "+tempDir.getAbsolutePath());
-				Files.copy(srfFile, refSRF);
+				Files.copy(tmpSRF, refSRF);
 			}
 			
 			List<SRF_PointData> points = SRF_PointData.readSRF(refSRF);
@@ -900,10 +915,10 @@ class RupSpectraPageGen {
 		MarkdownUtils.writeReadmeAndHTML(lines, eventDir);
 	}
 	
-	private BBP_SourceFile loadSourceFile(File bbpDir) throws IOException {
+	private File locateSourceFile(File bbpDir) throws FileNotFoundException {
 		for (File file : bbpDir.listFiles())
 			if (file.getName().toLowerCase().endsWith(".src"))
-				return BBP_SourceFile.readFile(file);
+				return file;
 		throw new FileNotFoundException("No .src files found in "+bbpDir.getAbsolutePath());
 	}
 	
@@ -959,9 +974,9 @@ class RupSpectraPageGen {
 //		int eventID = 9955310;
 ////		int eventID = 3817386;
 
-		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
-		int eventID = 40636;
-//		int eventID = 92236;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_4322.instance(baseDir);
+//		int eventID = 40636;
+////		int eventID = 92236;
 
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4655.instance(baseDir);
 ////		int eventID = 2106470;
@@ -1002,12 +1017,20 @@ class RupSpectraPageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
 //		int eventID = 1499589;
 
-//		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
-//		int eventID = 3092204;
+		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
+//		int eventID = 3092204; // this is not an SAF event, multi fault
+//		int eventID = 7119753;
+//		int eventID = 8242900;
+//		int eventID = 1499589;
+//		int eventID = 7028377;
+//		int eventID = 13383629;
+//		int eventID = 6553169;
+//		int eventID = 13272163;
+		int eventID = 1651575;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = true;
-		boolean gpAdjustDDW = false;
+		boolean gpAdjustDDW = true;
 		
 		File eventBBPDir = RSQSimBBP_Config.getEventBBPDir(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
 				RSQSimBBP_Config.SRF_DT, timeScale, scaleVelocities);
@@ -1033,6 +1056,7 @@ class RupSpectraPageGen {
 			System.out.println("Located ref BBP dir: "+refBBPDir.getAbsolutePath());
 			vm = RSQSimBBP_Config.detectVM(refBBPDir);
 		} else {
+			System.out.println("No BBP comparison dir found");
 			vm = RSQSimBBP_Config.VM;
 		}
 		
