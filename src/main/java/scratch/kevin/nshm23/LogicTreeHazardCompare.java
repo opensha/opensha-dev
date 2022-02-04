@@ -215,19 +215,39 @@ public class LogicTreeHazardCompare {
 ////		File outputDir = new File(mainDir, "hazard_maps_comp_max_dist_no_adj");
 //		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
 		
-		File mainDir = new File(invDir, "2022_01_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
-		String mainName = "Mini-Sweep-Zeng-Shaw09-Coulomb-Shaw-Seg";
-//		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
-//		String mainName = "Mini-Sweep-Zeng-Shaw09-Coulomb-Max-Dist-Seg";
+//		File mainDir = new File(invDir, "2022_01_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
+//		String mainName = "Mini-Sweep-Zeng-Shaw09-Coulomb-Shaw-Seg";
+////		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
+////		String mainName = "Mini-Sweep-Zeng-Shaw09-Coulomb-Max-Dist-Seg";
+//		LogicTreeNode[] subsetNodes = null;
+////		File compDir = null;
+////		String compName = null;
+////		File outputDir = new File(mainDir, "hazard_maps");
+////		LogicTreeNode[] compSubsetNodes = null;
+//		File compDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
+//		String compName = "With-Max-Dist-Seg";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_max_dist");
+//		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
+		
+//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		String mainName = "Draft-Model-Coulomb-Shaw-Seg";
+		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+		String mainName = "Max-Dist-Seg";
 		LogicTreeNode[] subsetNodes = null;
-//		File compDir = null;
-//		String compName = null;
-//		File outputDir = new File(mainDir, "hazard_maps");
+		File compDir = null;
+		String compName = null;
+		File outputDir = new File(mainDir, "hazard_maps");
 //		LogicTreeNode[] compSubsetNodes = null;
-		File compDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
-		String compName = "With-Max-Dist-Seg";
-		File outputDir = new File(mainDir, "hazard_maps_comp_max_dist");
-		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
+//		File compDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-no_seg-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		String compName = "No-Seg";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
+//		File compDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		String compName = "With-Max-Dist-Seg";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_max_dist");
+//		File compDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-5000ip");
+//		String compName = "5000 Iters/Rup";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_5000ip");
+		LogicTreeNode[] compSubsetNodes = null;
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		

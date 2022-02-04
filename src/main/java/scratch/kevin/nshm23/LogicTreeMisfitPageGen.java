@@ -66,7 +66,12 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_01_19-nshm23_u3_hybrid_branches-reweighted_even_fit-FM3_1-CoulombRupSet-SubB1-5000ip");
 //		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
 //		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-CoulombRupSet-U3_ZENG-DsrUni-SubB1-ShawR0_3-2000ip");
-		File mainDir = new File(invDir, "2022_01_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_01_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-5000ip");
+//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-no_seg-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+		File mainDir = new File(invDir, "2022_01_31-nshm23_u3_hybrid_branches-no_seg-no_scale_adj_mfds-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		File outputDir = new File(mainDir, "logic_tree_misfits");

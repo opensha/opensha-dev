@@ -65,13 +65,18 @@ public class LogicTreeBranchAverageWriter {
 //		File resultsFile = new File(mainDir, "results.zip");
 //		File fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
 		
-		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
+//		File resultsFile = new File(mainDir, "results.zip");
+//		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+		
+//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
 		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
-//		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
-		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
-		restrictBAClasses.add(MaxJumpDistModels.class);
+		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
+//		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
+//		restrictBAClasses.add(MaxJumpDistModels.class);
 		
 		LogicTreeNode[] restrictNodes = {
 				FaultModels.FM3_1

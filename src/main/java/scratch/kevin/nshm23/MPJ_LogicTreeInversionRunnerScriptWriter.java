@@ -76,7 +76,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		boolean branchAverage = false;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2021_11_23";
+//		String dirName = "2022_01_28";
 		
 //		LogicTree<U3LogicTreeBranchNode<?>> logicTree = LogicTree.buildExhaustive(
 //				U3LogicTreeBranch.getLogicTreeLevels(), true);
@@ -102,13 +102,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
 //		dirName += "-nshm23_branches";
 		
-//		levels = new ArrayList<>(levels);
-//		for (int i=levels.size(); --i>=0;)
-//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
-//				levels.remove(i);
+		levels = new ArrayList<>(levels);
+		for (int i=levels.size(); --i>=0;)
+			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
+				levels.remove(i);
 //		dirName += "-no_seg";
-//		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
-//		dirName += "-max_dist";
+		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
+		dirName += "-max_dist";
 		
 //		dirName += "-reweight_seg_2_3_4";
 			
@@ -131,8 +131,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				RupturePlausibilityModels.COULOMB,
 //				RupturePlausibilityModels.UCERF3,
 //				RupturePlausibilityModels.UCERF3_REDUCED,
-				U3_UncertAddDeformationModels.U3_ZENG,
-				ScalingRelationships.SHAW_2009_MOD,
+//				U3_UncertAddDeformationModels.U3_ZENG,
+//				ScalingRelationships.SHAW_2009_MOD,
 				SlipAlongRuptureModels.UNIFORM,
 //				SubSectConstraintModels.TOT_NUCL_RATE,
 				SubSeisMoRateReductions.SUB_B_1,
