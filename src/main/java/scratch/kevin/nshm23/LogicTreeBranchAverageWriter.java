@@ -74,9 +74,9 @@ public class LogicTreeBranchAverageWriter {
 		File resultsFile = new File(mainDir, "results.zip");
 		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
-		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
-//		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
-//		restrictBAClasses.add(MaxJumpDistModels.class);
+//		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
+		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
+		restrictBAClasses.add(MaxJumpDistModels.class);
 		
 		LogicTreeNode[] restrictNodes = {
 				FaultModels.FM3_1

@@ -21,6 +21,7 @@ import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
@@ -1035,7 +1036,7 @@ Range yAxisRange = new Range(0,20);
 // yAxisRange=null;
 		
 		ArrayList<XY_DataSet> funcs2 = new ArrayList<XY_DataSet>();
-		ArbitrarilyDiscretizedFunc cumDist = ratioData.getCumDist();
+		DiscretizedFunc cumDist = ratioData.getCumDist();
 		cumDist.scale(1.0/cumDist.getMaxY());
 		funcs2.add(cumDist);
 		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();

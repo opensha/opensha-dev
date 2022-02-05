@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -27,6 +28,7 @@ import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.modules.ArchivableModule;
 import org.opensha.commons.util.modules.ModuleArchive;
@@ -39,11 +41,17 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.Abs
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.logicTree.ScalarIMR_LogicTreeNode;
+import org.opensha.sha.imr.logicTree.ScalarIMR_ParamsLogicTreeNode;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Doubles;
 
 import edu.usc.kmilner.mpj.taskDispatch.AsyncPostBatchHook;
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
@@ -54,11 +62,22 @@ public class MPJ_LogicTreeHazardCalc extends MPJTaskCalculator {
 
 	private SolutionLogicTree solTree;
 	
-	private AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
-	private double[] periods = { 0d, 0.2d, 1d };
-	private double maxDistance = 500d;
-	private double gridSpacing = 0.1;
+	private static final double GRID_SPACING_DEFAULT = 0.1d;
+	private double gridSpacing = GRID_SPACING_DEFAULT;
+	
+	private static final double MAX_DIST_DEFAULT = 500;
+	private double maxDistance = MAX_DIST_DEFAULT;
+	
+	private static AttenRelRef GMPE_DEFAULT = AttenRelRef.ASK_2014;
+	private AttenRelRef gmpeRef = GMPE_DEFAULT;
+	
+	private static final double[] PERIODS_DEFAULT = { 0d, 0.2d, 1d };
+	private double[] periods = PERIODS_DEFAULT;
+	
 	private ReturnPeriods[] rps = ReturnPeriods.values();
+	
+	private static final IncludeBackgroundOption GRID_SEIS_DEFAULT = IncludeBackgroundOption.EXCLUDE;
+	private IncludeBackgroundOption gridSeisOp = GRID_SEIS_DEFAULT;
 
 	public MPJ_LogicTreeHazardCalc(CommandLine cmd) throws IOException {
 		super(cmd);
@@ -73,6 +92,31 @@ public class MPJ_LogicTreeHazardCalc extends MPJTaskCalculator {
 			debug("Loaded "+solTree.getLogicTree().size()+" tree nodes/solutions");
 		
 		outputDir = new File(cmd.getOptionValue("output-dir"));
+		
+		if (cmd.hasOption("gridded-seis"))
+			gridSeisOp = IncludeBackgroundOption.valueOf(cmd.getOptionValue("gridded-seis"));
+		
+		if (cmd.hasOption("grid-spacing"))
+			gridSpacing = Double.parseDouble(cmd.getOptionValue("grid-spacing"));
+		
+		if (cmd.hasOption("max-distance"))
+			maxDistance = Double.parseDouble(cmd.getOptionValue("max-distance"));
+		
+		if (cmd.hasOption("gmpe"))
+			gmpeRef = AttenRelRef.valueOf(cmd.getOptionValue("gmpe"));
+		
+		if (cmd.hasOption("periods")) {
+			List<Double> periodsList = new ArrayList<>();
+			String periodsStr = cmd.getOptionValue("periods");
+			if (periodsStr.contains(",")) {
+				String[] split = periodsStr.split(",");
+				for (String str : split)
+					periodsList.add(Double.parseDouble(str));
+			} else {
+				periodsList.add(Double.parseDouble(periodsStr));
+			}
+			periods = Doubles.toArray(periodsList);
+		}
 		
 		if (rank == 0) {
 			waitOnDir(outputDir, 5, 1000);
@@ -182,6 +226,29 @@ public class MPJ_LogicTreeHazardCalc extends MPJTaskCalculator {
 		ret += "_"+rp.name();
 		return ret;
 	}
+	
+	private Supplier<ScalarIMR> getGMM_Supplier(LogicTreeBranch<?> branch) {
+		Supplier<ScalarIMR> supplier;
+		if (branch.hasValue(ScalarIMR_LogicTreeNode.class))
+			supplier = branch.requireValue(ScalarIMR_LogicTreeNode.class);
+		else
+			supplier = gmpeRef;
+		
+		if (branch.hasValue(ScalarIMR_ParamsLogicTreeNode.class)) {
+			ScalarIMR_ParamsLogicTreeNode params = branch.requireValue(ScalarIMR_ParamsLogicTreeNode.class);
+			return new Supplier<ScalarIMR>() {
+
+				@Override
+				public ScalarIMR get() {
+					ScalarIMR imr = supplier.get();
+					params.setParams(imr);
+					return imr;
+				}
+			};
+		}
+		
+		return supplier;
+	}
 
 	@Override
 	protected void calculateBatch(int[] batch) throws Exception {
@@ -206,7 +273,15 @@ public class MPJ_LogicTreeHazardCalc extends MPJTaskCalculator {
 				} catch (Exception e) {}
 			}
 			if (calc == null) {
-				calc = new SolHazardMapCalc(sol, gmpeRef, gridRegion, periods);
+				Supplier<ScalarIMR> gmpeSupplier = getGMM_Supplier(branch);
+				ScalarIMR gmpe = gmpeSupplier.get();
+				String paramStr = "";
+				for (Parameter<?> param : gmpe.getOtherParams())
+					paramStr += "; "+param.getName()+": "+param.getValue();
+				debug("Calculating hazard curve for "+index
+						+"\n\tBranch: "+branch
+						+"\n\tGMPE: "+gmpe.getName()+paramStr);
+				calc = new SolHazardMapCalc(sol, gmpeSupplier, gridRegion, gridSeisOp, periods);
 				calc.setMaxSourceSiteDist(maxDistance);
 				
 				calc.calcHazardCurves(getNumThreads());
@@ -230,6 +305,13 @@ public class MPJ_LogicTreeHazardCalc extends MPJTaskCalculator {
 		
 		ops.addRequiredOption("if", "input-file", true, "Path to input file (solution logic tree zip)");
 		ops.addRequiredOption("od", "output-dir", true, "Path to output directory");
+		ops.addOption("sp", "grid-spacing", true, "Grid spacing in decimal degrees. Default: "+(float)GRID_SPACING_DEFAULT);
+		ops.addOption("md", "max-distance", true, "Maximum source-site distance in km. Default: "+(float)MAX_DIST_DEFAULT);
+		ops.addOption("gs", "gridded-seis", true, "Gridded seismicity option. One of "
+				+FaultSysTools.enumOptions(IncludeBackgroundOption.class)+". Default: "+GRID_SEIS_DEFAULT.name());
+		ops.addOption("gm", "gmpe", true, "Sets GMPE. Note that this will be overriden if the Logic Tree "
+				+ "supplies GMPE choices. Default: "+GMPE_DEFAULT.name());
+		ops.addOption("p", "periods", true, "Calculation period(s). Mutliple can be comma separated");
 		
 		return ops;
 	}

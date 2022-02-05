@@ -16,6 +16,9 @@ import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.xyz.ArbDiscrGeoDataSet;
 import org.opensha.commons.data.xyz.GeoDataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
@@ -249,11 +252,20 @@ public class LogicTreeHazardCompare {
 //		File outputDir = new File(mainDir, "hazard_maps_comp_5000ip");
 		LogicTreeNode[] compSubsetNodes = null;
 		
+//		File mainDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h-with_gmm_branches-20_samples");
+//		String mainName = "UCERF3 As Published";
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = null;
+//		String compName = null;
+//		LogicTreeNode[] compSubsetNodes = null;
+//		File outputDir = new File(mainDir, "hazard_maps");
+		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		
 		ReturnPeriods[] rps = ReturnPeriods.values();
 		double[] periods = { 0d, 1d };
 		double spacing = 0.1;
+//		double spacing = 1;
 		
 		LogicTreeHazardCompare mapper = new LogicTreeHazardCompare(solTree,
 				subsetNodes == null ? solTree.getLogicTree() : solTree.getLogicTree().matchingAll(subsetNodes),
@@ -477,73 +489,136 @@ public class LogicTreeHazardCompare {
 		return diff;
 	}
 	
-	private GriddedGeoDataSet calcPercentile(GriddedGeoDataSet[] maps, GriddedGeoDataSet comp) {
-		return calcPercentile(List.of(maps), weights, comp);
+	private ArbDiscrEmpiricalDistFunc[] buildArbDiscrEmpiricalDists(GriddedGeoDataSet[] maps, List<Double> weights) {
+		return buildArbDiscrEmpiricalDists(List.of(maps), weights);
 	}
 	
-	private GriddedGeoDataSet calcPercentile(List<GriddedGeoDataSet> maps, List<Double> weights, GriddedGeoDataSet comp) {
+	private ArbDiscrEmpiricalDistFunc[] buildArbDiscrEmpiricalDists(List<GriddedGeoDataSet> maps, List<Double> weights) {
 		Preconditions.checkState(maps.size() == weights.size());
-		GriddedGeoDataSet ret = new GriddedGeoDataSet(maps.get(0).getRegion(), false);
+		ArbDiscrEmpiricalDistFunc[] ret = new ArbDiscrEmpiricalDistFunc[maps.get(0).size()];
 		
-		double totWeight;
-		if (weights == this.weights) {
-			totWeight = this.totWeight;
-		} else {
-			totWeight = 0d;
-			for (double weight : weights)
-				totWeight += weight;
+		double totWeight = 0d;
+		for (double weight : weights)
+			totWeight += weight;
+		
+		for (int i=0; i<ret.length; i++) {
+			ret[i] = new ArbDiscrEmpiricalDistFunc();
+			for (int j=0; j<maps.size(); j++) {
+				double weight = weights.get(j)/totWeight;
+				GriddedGeoDataSet map = maps.get(j);
+				
+				double val = map.get(i);
+				ret[i].set(val, weight);
+			}
 		}
+		
+		for (int i=0; i<ret.length; i++)
+			Preconditions.checkState((float)ret[i].calcSumOfY_Vals() == 1f);
+		
+		return ret;
+	}
+	
+	private GriddedGeoDataSet calcMapAtPercentile(ArbDiscrEmpiricalDistFunc[] cellDists, GriddedRegion gridReg,
+			double percentile) {
+		Preconditions.checkState(gridReg.getNodeCount() == cellDists.length);
+		GriddedGeoDataSet ret = new GriddedGeoDataSet(gridReg, false);
+		
+		for (int i=0; i<ret.size(); i++) {
+			double val = cellDists[i].getInterpolatedFractile(percentile/100d);
+			ret.set(i, val);
+		}
+		
+		return ret;
+	}
+	
+	private GriddedGeoDataSet calcPercentileWithinDist(ArbDiscrEmpiricalDistFunc[] cellDists, GriddedGeoDataSet comp) {
+		Preconditions.checkState(comp.size() == cellDists.length);
+		GriddedGeoDataSet ret = new GriddedGeoDataSet(comp.getRegion(), false);
 		
 		for (int i=0; i<ret.size(); i++) {
 			double compVal = comp.get(i);
-			double weightAbove = 0d; // weight of tree thats above comp value
-			double weightEqual = 0d; // weight of tree thats equal to comp value
-			double weightBelow = 0d; // weight of tree thats below comp value
-			int numAbove = 0;
-			int numBelow = 0;
-			for (int j=0; j<maps.size(); j++) {
-				double val = maps.get(j).get(i);
-				double weight = weights.get(j);
-				if (((float) compVal == (float)val) || (Double.isNaN(compVal)) && Double.isNaN(val)) {
-					weightEqual += weight;
-				} else if (compVal < val) {
-					weightAbove += weight;
-					numAbove++;
-				} else if (compVal > val) {
-					numBelow++;
-					weightBelow += weight;
-				}
-			}
-			if (weightEqual != 0d) {
-				// redistribute any exactly equal to either side
-				weightAbove += 0.5*weightEqual;
-				weightBelow += 0.5*weightEqual;
-			}
-			// normalize by total weight
-			weightAbove /= totWeight;
-			weightBelow /= totWeight;
+			
+			DiscretizedFunc ncd = cellDists[i].getNormalizedCumDist();
+			
 			double percentile;
-			if (numAbove == maps.size() || numBelow == maps.size())
+			if (compVal < ncd.getMinX() || compVal > ncd.getMaxX()) {
 				percentile = Double.NaN;
-			else
-				percentile = 100d*weightBelow;
-//			if (numAbove == maps.size() || numBelow == maps.size()) {
-//				percentile = Double.NaN;
-//			} else if (weightAbove > weightBelow) {
-//				// more of the distribution is above my value
-//				// this means that the percentile is <50
-//				percentile = 100d*weightBelow/totWeight;
-//			} else {
-//				// more of the distribution is below my value
-//				// this means that the percentile is >50
-//				percentile = 100d*weightAbove/totWeight;
-//				percentile = 100d*(1d - (weightAbove/totWeight));
-//			}
+			} else {
+				percentile = 100d * ncd.getInterpolatedY(compVal);
+			}
 			ret.set(i, percentile);
 		}
 		
 		return ret;
 	}
+	
+//	private GriddedGeoDataSet calcPercentile(GriddedGeoDataSet[] maps, GriddedGeoDataSet comp) {
+//		return calcPercentile(List.of(maps), weights, comp);
+//	}
+//	 
+//	private GriddedGeoDataSet calcPercentile(List<GriddedGeoDataSet> maps, List<Double> weights, GriddedGeoDataSet comp) {
+//		Preconditions.checkState(maps.size() == weights.size());
+//		GriddedGeoDataSet ret = new GriddedGeoDataSet(maps.get(0).getRegion(), false);
+//		
+//		double totWeight;
+//		if (weights == this.weights) {
+//			totWeight = this.totWeight;
+//		} else {
+//			totWeight = 0d;
+//			for (double weight : weights)
+//				totWeight += weight;
+//		}
+//		
+//		for (int i=0; i<ret.size(); i++) {
+//			double compVal = comp.get(i);
+//			double weightAbove = 0d; // weight of tree thats above comp value
+//			double weightEqual = 0d; // weight of tree thats equal to comp value
+//			double weightBelow = 0d; // weight of tree thats below comp value
+//			int numAbove = 0;
+//			int numBelow = 0;
+//			for (int j=0; j<maps.size(); j++) {
+//				double val = maps.get(j).get(i);
+//				double weight = weights.get(j);
+//				if (((float) compVal == (float)val) || (Double.isNaN(compVal)) && Double.isNaN(val)) {
+//					weightEqual += weight;
+//				} else if (compVal < val) {
+//					weightAbove += weight;
+//					numAbove++;
+//				} else if (compVal > val) {
+//					numBelow++;
+//					weightBelow += weight;
+//				}
+//			}
+//			if (weightEqual != 0d) {
+//				// redistribute any exactly equal to either side
+//				weightAbove += 0.5*weightEqual;
+//				weightBelow += 0.5*weightEqual;
+//			}
+//			// normalize by total weight
+//			weightAbove /= totWeight;
+//			weightBelow /= totWeight;
+//			double percentile;
+//			if (numAbove == maps.size() || numBelow == maps.size())
+//				percentile = Double.NaN;
+//			else
+//				percentile = 100d*weightBelow;
+////			if (numAbove == maps.size() || numBelow == maps.size()) {
+////				percentile = Double.NaN;
+////			} else if (weightAbove > weightBelow) {
+////				// more of the distribution is above my value
+////				// this means that the percentile is <50
+////				percentile = 100d*weightBelow/totWeight;
+////			} else {
+////				// more of the distribution is below my value
+////				// this means that the percentile is >50
+////				percentile = 100d*weightAbove/totWeight;
+////				percentile = 100d*(1d - (weightAbove/totWeight));
+////			}
+//			ret.set(i, percentile);
+//		}
+//		
+//		return ret;
+//	}
 	
 	public void buildReport(File outputDir, String name, LogicTreeHazardCompare comp, String compName) throws IOException {
 		List<String> lines = new ArrayList<>();
@@ -569,6 +644,8 @@ public class LogicTreeHazardCompare {
 			for (ReturnPeriods rp : rps) {
 				String label = perLabel+", "+rp.label;
 				String prefix = perPrefix+"_"+rp.name();
+				
+				System.out.println(label);
 				
 				lines.add("## "+label);
 				lines.add(topLink);
@@ -625,6 +702,8 @@ public class LogicTreeHazardCompare {
 				
 				lines.addAll(table.build());
 				
+				ArbDiscrEmpiricalDistFunc[] mapArbDiscrs = buildArbDiscrEmpiricalDists(maps, weights);
+				
 				if (cmean != null) {
 					table = MarkdownUtils.tableBuilder();
 					
@@ -644,7 +723,8 @@ public class LogicTreeHazardCompare {
 					
 					table.addLine(MarkdownUtils.boldCentered("Comparison Mean Percentile"),
 							MarkdownUtils.boldCentered("Spread Difference"));
-					GriddedGeoDataSet cMeanPercentile = calcPercentile(maps, cmean);
+//					GriddedGeoDataSet cMeanPercentile = calcPercentile(maps, cmean);
+					GriddedGeoDataSet cMeanPercentile = calcPercentileWithinDist(mapArbDiscrs, cmean);
 					table.initNewLine();
 					map = mapper.plotMap(resourcesDir, prefix+"_comp_percentile", cMeanPercentile,
 							percentileCPT, name+" vs "+compName, "Comparison %-ile, "+label);
@@ -668,13 +748,25 @@ public class LogicTreeHazardCompare {
 				table = MarkdownUtils.tableBuilder();
 				
 				File meanMap = new File(outputDir, prefix+"_mean.png");
-				GriddedGeoDataSet meanPercentile = calcPercentile(maps, mean);
+				GriddedGeoDataSet meanPercentile = calcPercentileWithinDist(mapArbDiscrs, mean);
 				File meanPercentileMap = mapper.plotMap(resourcesDir, prefix+"_mean_percentile",
 						meanPercentile, percentileCPT, "Branch-Averaged Percentiles",
 						"Branch Averaged %-ile, "+label);
+//				GriddedGeoDataSet median = calc
 				table.addLine("Branch Averaged Map", "Branch Averaged Percentiles");
+//				table.addLine("Branch Averaged Map", "Branch Averaged Percentiles", "Mean vs Median"); // TODO
 				table.addLine("![BA map]("+resourcesDir.getName()+"/"+meanMap.getName()+")",
 						"![BA percentiles]("+resourcesDir.getName()+"/"+meanPercentileMap.getName()+")");
+				table.addLine(MarkdownUtils.boldCentered("Median Map"), MarkdownUtils.boldCentered("Mean vs Median"));
+				GriddedGeoDataSet median = calcMapAtPercentile(mapArbDiscrs, maps[0].getRegion(), 50d);
+				File medianMap = mapper.plotMap(resourcesDir, prefix+"_median",
+						log10(median), logCPT, name, "Log10 Weighted-Median, "+label);
+				GriddedGeoDataSet meanMedDiff = buildPDiff(median, mean);
+				File meanMedDiffMap = mapper.plotMap(resourcesDir, prefix+"_mean_median_diff",
+						meanMedDiff, pDiffCPT, name, "Mean - Median, % Difference, "+label);
+				table.addLine("![BA Median map]("+resourcesDir.getName()+"/"+medianMap.getName()+")",
+						"![Median vs Mean]("+resourcesDir.getName()+"/"+meanMedDiffMap.getName()+")");
+//				File meanMap = new File(outputDir, prefix+"_median.png");
 				lines.add("Branched-average hazard can be dominated by outlier branches. This map shows the percentile"
 						+ " at which the branch averaged map lies; areas far from the 50-th percentile are likely "
 						+ "outlier-dominated.");
@@ -744,7 +836,7 @@ public class LogicTreeHazardCompare {
 									pDiff, pDiffCPT, choice.getShortName()+" Comparison",
 									choice.getShortName()+" - Mean, % Difference, "+label, true);
 							mapTable.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
-							GriddedGeoDataSet percentile = calcPercentile(maps, choiceMap);
+							GriddedGeoDataSet percentile = calcPercentileWithinDist(mapArbDiscrs, choiceMap);
 							map = mapper.plotMap(resourcesDir, prefix+"_"+choice.getFilePrefix()+"_percentile",
 									percentile, percentileCPT, choice.getShortName()+" Comparison",
 									choice.getShortName()+" %-ile, "+label);
@@ -759,7 +851,8 @@ public class LogicTreeHazardCompare {
 								}
 							}
 							Preconditions.checkState(!mapsWithout.isEmpty());
-							GriddedGeoDataSet percentileWithout = calcPercentile(mapsWithout, weightsWithout, choiceMap);
+							ArbDiscrEmpiricalDistFunc[] mapsWithoutArbDiscrs = buildArbDiscrEmpiricalDists(mapsWithout, weightsWithout);
+							GriddedGeoDataSet percentileWithout = calcPercentileWithinDist(mapsWithoutArbDiscrs, choiceMap);
 							map = mapper.plotMap(resourcesDir, prefix+"_"+choice.getFilePrefix()+"_percentile_without",
 									percentileWithout, percentileCPT, choice.getShortName()+" Comparison",
 									choice.getShortName()+" %-ile, "+label);

@@ -647,7 +647,7 @@ public class U3ETAS_SimulationAnalysis {
 			String info = "Target IML was: "+imlLinear;
 			double expNum = meanExpNumExceedCurveLnX.getY(iml_index);
 //			System.out.println(name+" for which expNum = "+(float)expNum);
-			ArbitrarilyDiscretizedFunc numCDF = curvesFromAllCatalogsFunc_3D.getArbDiscrEmpDistFuncArray()[iml_index].getNormalizedCumDist();
+			DiscretizedFunc numCDF = curvesFromAllCatalogsFunc_3D.getArbDiscrEmpDistFuncArray()[iml_index].getNormalizedCumDist();
 			numCDF.setName(name+"; ExpNum="+expNum);
 			numCDF.setInfo(info);
 //System.out.println("numCDF:\n"+numCDF);
