@@ -52,7 +52,7 @@ public class SparseGRTests {
 		for (double bValue : new double[] {0.0, 0.4, 0.8, 1.2}) {
 			System.out.println("Doing b="+bValue);
 			SupraSeisBValInversionTargetMFDs targets = new SupraSeisBValInversionTargetMFDs.Builder(rupSet, bValue)
-					.adjustForActualRupSlips(false, false).sparseGR(false).build();
+					.clearTargetAdjustments().sparseGR(false).build();
 
 			MinMaxAveTracker equivBTrack = new MinMaxAveTracker();
 			MinMaxAveTracker equivBTrack2 = new MinMaxAveTracker();
