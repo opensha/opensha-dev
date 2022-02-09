@@ -222,10 +222,10 @@ public class MFDCalc {
 				compTotal = new SummedMagFreqDist(compSupraSeis.getMinX(), compSupraSeis.size(), compSupraSeis.getDelta());
 				for (int index=0; index<prov.size(); index++) {
 					if (region == null || region.contains(reg.getLocation(index))) {
-						IncrementalMagFreqDist associatedMFD = prov.getNodeSubSeisMFD(index);
+						IncrementalMagFreqDist associatedMFD = prov.getMFD_SubSeisOnFault(index);
 						if (associatedMFD != null)
 							compSubSeis.addResampledMagFreqDist(associatedMFD, true);
-						compTotal.addResampledMagFreqDist(prov.getNodeMFD(index), true);
+						compTotal.addResampledMagFreqDist(prov.getMFD(index), true);
 					}
 				}
 				// now add in supra

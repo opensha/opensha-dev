@@ -94,7 +94,7 @@ public class FaultMFDCalc {
 			int numMatches = 0;
 			double totFractMatch = 0;
 			for (int i=0; i<gridProv.size(); i++) {
-				IncrementalMagFreqDist subSeisMFD = gridProv.getNodeSubSeisMFD(i);
+				IncrementalMagFreqDist subSeisMFD = gridProv.getMFD_SubSeisOnFault(i);
 				if (subSeisMFD == null)
 					continue;
 				double fractMatch = 0d;

@@ -205,8 +205,8 @@ public class UCER3_EAL_CombinerTest {
 			int numAboveZero = 0;
 			
 			for (int n=0; n<reg.getNodeCount(); n++) {
-				IncrementalMagFreqDist unMFD = gridProv.getNodeUnassociatedMFD(n);
-				IncrementalMagFreqDist subMFD = gridProv.getNodeSubSeisMFD(n);
+				IncrementalMagFreqDist unMFD = gridProv.getMFD_Unassociated(n);
+				IncrementalMagFreqDist subMFD = gridProv.getMFD_SubSeisOnFault(n);
 				
 				if (unMFD != null) {
 					IncrementalMagFreqDist meanUnMFD = meanNodeUnassociatedMFDs.get(n);
@@ -228,9 +228,9 @@ public class UCER3_EAL_CombinerTest {
 					((SummedMagFreqDist)meanSubMFD).addIncrementalMagFreqDist(subMFD);
 				}
 				
-				if (gridProv.getNodeMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF).calcSumOfY_Vals()>0)
+				if (gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF).calcSumOfY_Vals()>0)
 					numAboveZero++;
-				Preconditions.checkState(gridProv.getNodeMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF).size() > 0);
+				Preconditions.checkState(gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF).size() > 0);
 			}
 			Preconditions.checkState(numAboveZero>0, "Sol "+i+" has all zero mfd nodes!");
 			
@@ -261,7 +261,7 @@ public class UCER3_EAL_CombinerTest {
 		griddedLossFuncs.put(FocalMech.STRIKE_SLIP, new DiscretizedFunc[meanGridProv.size()]);
 		for (int n=0; n<meanGridProv.size(); n++) {
 			// make sure not nan
-			for (Point2D pt : meanGridProv.getNodeMFD(n))
+			for (Point2D pt : meanGridProv.getMFD(n))
 				Preconditions.checkState(!Double.isNaN(pt.getY()));
 			griddedLossFuncs.get(FocalMech.NORMAL)[n] = getRandMFD(mfdMax, 100d);
 			griddedLossFuncs.get(FocalMech.REVERSE)[n] = getRandMFD(mfdMax, 100d);
@@ -439,9 +439,9 @@ public class UCER3_EAL_CombinerTest {
 			for (int n=0; n<reg.getNodeCount(); n++) {
 				ProbEqkSource src = gridProv.getSource(n, 1d, false, bgType);
 				// make sure not nan
-				for (Point2D pt : gridProv.getNodeMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF))
+				for (Point2D pt : gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF))
 					Preconditions.checkState(!Double.isNaN(pt.getY()));
-				if (gridProv.getNodeMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF).calcSumOfY_Vals() > 0)
+				if (gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF).calcSumOfY_Vals() > 0)
 					numMFDNonZero++;
 				for (ProbEqkRupture rup : src) {
 					double loss = lossForGridRup(rup, n);

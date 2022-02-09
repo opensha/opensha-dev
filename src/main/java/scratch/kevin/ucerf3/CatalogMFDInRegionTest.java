@@ -76,7 +76,7 @@ public class CatalogMFDInRegionTest {
 				Location loc = gridProv.getGriddedRegion().getLocation(index);
 				if (!region.contains(loc))
 					continue;
-				IncrementalMagFreqDist nodeMFD = gridProv.getNodeMFD(index);
+				IncrementalMagFreqDist nodeMFD = gridProv.getMFD(index);
 				if (nodeMFD == null)
 					continue;
 				for (Point2D pt : nodeMFD) {

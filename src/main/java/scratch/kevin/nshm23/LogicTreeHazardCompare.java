@@ -26,6 +26,7 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
@@ -68,7 +69,8 @@ public class LogicTreeHazardCompare {
 ////		LogicTreeNode[] compSubsetNodes = null;
 ////		File outputDir = new File(mainDir, "hazard_maps_vs_ucerf3_as_published");
 		
-//		File mainDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
+////		File mainDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
+//		File mainDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h-with_gmm_branches");
 //		String mainName = "UCERF3 As Published";
 //		LogicTreeNode[] subsetNodes = null;
 //		File compDir = null;
@@ -232,18 +234,17 @@ public class LogicTreeHazardCompare {
 //		File outputDir = new File(mainDir, "hazard_maps_comp_max_dist");
 //		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
 		
-//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		String mainName = "Draft-Model-Coulomb-Shaw-Seg";
-		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-		String mainName = "Max-Dist-Seg";
+		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+		String mainName = "Draft-Model-Coulomb-Shaw-Seg";
+//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		String mainName = "Max-Dist-Seg";
 		LogicTreeNode[] subsetNodes = null;
-		File compDir = null;
-		String compName = null;
-		File outputDir = new File(mainDir, "hazard_maps");
-//		LogicTreeNode[] compSubsetNodes = null;
-//		File compDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-no_seg-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		String compName = "No-Seg";
-//		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
+//		File compDir = null;
+//		String compName = null;
+//		File outputDir = new File(mainDir, "hazard_maps");
+		File compDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-no_seg-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+		String compName = "No-Seg";
+		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
 //		File compDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 //		String compName = "With-Max-Dist-Seg";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_max_dist");
@@ -262,20 +263,29 @@ public class LogicTreeHazardCompare {
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		
+		boolean currentWeights = true;
 		ReturnPeriods[] rps = ReturnPeriods.values();
 		double[] periods = { 0d, 1d };
 		double spacing = 0.1;
-//		double spacing = 1;
+//		double spacing = 0.25;
 		
-		LogicTreeHazardCompare mapper = new LogicTreeHazardCompare(solTree,
-				subsetNodes == null ? solTree.getLogicTree() : solTree.getLogicTree().matchingAll(subsetNodes),
+		LogicTree<?> tree = solTree.getLogicTree();
+		if (subsetNodes != null)
+			tree = tree.matchingAll(subsetNodes);
+		if (currentWeights)
+			tree.setWeightProvider(new BranchWeightProvider.CurrentWeights());
+		LogicTreeHazardCompare mapper = new LogicTreeHazardCompare(solTree, tree,
 				new File(mainDir, "results_hazard.zip"), rps, periods, spacing);
 		
 		LogicTreeHazardCompare comp = null;
 		if (compDir != null) {
 			SolutionLogicTree compSolTree = SolutionLogicTree.load(new File(compDir, "results.zip"));
-			comp = new LogicTreeHazardCompare(compSolTree,
-					compSubsetNodes == null ? compSolTree.getLogicTree() : compSolTree.getLogicTree().matchingAll(compSubsetNodes),
+			LogicTree<?> compTree = compSolTree.getLogicTree();
+			if (compSubsetNodes != null)
+				compTree = compTree.matchingAll(compSubsetNodes);
+			if (currentWeights)
+				compTree.setWeightProvider(new BranchWeightProvider.CurrentWeights());
+			comp = new LogicTreeHazardCompare(compSolTree, compTree,
 					new File(compDir, "results_hazard.zip"), rps, periods, spacing);
 		}
 		
@@ -754,7 +764,6 @@ public class LogicTreeHazardCompare {
 						"Branch Averaged %-ile, "+label);
 //				GriddedGeoDataSet median = calc
 				table.addLine("Branch Averaged Map", "Branch Averaged Percentiles");
-//				table.addLine("Branch Averaged Map", "Branch Averaged Percentiles", "Mean vs Median"); // TODO
 				table.addLine("![BA map]("+resourcesDir.getName()+"/"+meanMap.getName()+")",
 						"![BA percentiles]("+resourcesDir.getName()+"/"+meanPercentileMap.getName()+")");
 				table.addLine(MarkdownUtils.boldCentered("Median Map"), MarkdownUtils.boldCentered("Mean vs Median"));
@@ -763,7 +772,7 @@ public class LogicTreeHazardCompare {
 						log10(median), logCPT, name, "Log10 Weighted-Median, "+label);
 				GriddedGeoDataSet meanMedDiff = buildPDiff(median, mean);
 				File meanMedDiffMap = mapper.plotMap(resourcesDir, prefix+"_mean_median_diff",
-						meanMedDiff, pDiffCPT, name, "Mean - Median, % Difference, "+label);
+						meanMedDiff, pDiffCPT, name, "Mean - Median, % Difference, "+label, true);
 				table.addLine("![BA Median map]("+resourcesDir.getName()+"/"+medianMap.getName()+")",
 						"![Median vs Mean]("+resourcesDir.getName()+"/"+meanMedDiffMap.getName()+")");
 //				File meanMap = new File(outputDir, prefix+"_median.png");

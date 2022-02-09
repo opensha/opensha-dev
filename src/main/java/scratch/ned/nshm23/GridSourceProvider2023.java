@@ -755,10 +755,10 @@ public class GridSourceProvider2023 {
 		
 		// Get target total gridded seis MFD
 		GridSourceProvider gridSrcProvider = fss.getGridSourceProvider();
-		IncrementalMagFreqDist tempMFD = gridSrcProvider.getNodeMFD(0);
+		IncrementalMagFreqDist tempMFD = gridSrcProvider.getMFD(0);
 		SummedMagFreqDist totGriddedSeisMFD = new SummedMagFreqDist(tempMFD.getMinX(), tempMFD.size(),tempMFD.getDelta());
 		for(int i=0;i<gridSrcProvider.size();i++)
-			totGriddedSeisMFD.addIncrementalMagFreqDist(gridSrcProvider.getNodeMFD(i));		
+			totGriddedSeisMFD.addIncrementalMagFreqDist(gridSrcProvider.getMFD(i));		
 //		System.out.println(totGriddedSeisMFD);
 //		System.exit(0);
 		

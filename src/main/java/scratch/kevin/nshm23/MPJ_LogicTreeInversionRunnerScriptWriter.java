@@ -102,13 +102,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
 //		dirName += "-nshm23_branches";
 		
-		levels = new ArrayList<>(levels);
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
-				levels.remove(i);
-//		dirName += "-no_seg";
-		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
-		dirName += "-max_dist";
+//		levels = new ArrayList<>(levels);
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
+//				levels.remove(i);
+////		dirName += "-no_seg";
+//		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
+//		dirName += "-max_dist";
 		
 //		dirName += "-reweight_seg_2_3_4";
 			
@@ -142,6 +142,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
+		
+//		dirName += "-seg_bin_dist_capped_distr";
+		dirName += "-seg_bin_dist_greedy_self_contained";
 		
 //		int numSamples = nodes*5;
 //		int numSamples = nodes*4;

@@ -651,9 +651,9 @@ public class RSQSimBatchPlotGen {
 			for (int i=0; i<gridProv.size(); i++) {
 				IncrementalMagFreqDist nodeMFD;
 				if (offFault)
-					nodeMFD = gridProv.getNodeMFD(i);
+					nodeMFD = gridProv.getMFD(i);
 				else
-					nodeMFD = gridProv.getNodeSubSeisMFD(i);
+					nodeMFD = gridProv.getMFD_SubSeisOnFault(i);
 				if (nodeMFD != null) {
 					for (int j=0; j<nodeMFD.size(); j++) {
 						double myX = nodeMFD.getX(j);

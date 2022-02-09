@@ -109,10 +109,10 @@ public class GriddedSeisImportanceHazardMapCalc {
 		Map<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs = new HashMap<>();
 		Map<Integer, IncrementalMagFreqDist> emptyMFDs = new HashMap<>();
 		for (int i=0; i<seisReg.getNodeCount(); i++) {
-			if (origProv.getNodeSubSeisMFD(i) != null)
-				nodeSubSeisMFDs.put(i, origProv.getNodeSubSeisMFD(i));
-			if (origProv.getNodeUnassociatedMFD(i) != null)
-				nodeUnassociatedMFDs.put(i, origProv.getNodeUnassociatedMFD(i));
+			if (origProv.getMFD_SubSeisOnFault(i) != null)
+				nodeSubSeisMFDs.put(i, origProv.getMFD_SubSeisOnFault(i));
+			if (origProv.getMFD_Unassociated(i) != null)
+				nodeUnassociatedMFDs.put(i, origProv.getMFD_Unassociated(i));
 		}
 		GridSourceFileReader subSeisOnlyProv = new GridSourceFileReader(seisReg, nodeSubSeisMFDs, emptyMFDs);
 		U3FaultSystemSolution u3SubSeisOnlySol = new U3FaultSystemSolution(u3Sol.getRupSet(), u3Sol.getRateForAllRups());

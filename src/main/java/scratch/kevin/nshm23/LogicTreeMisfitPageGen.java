@@ -71,7 +71,7 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-5000ip");
 //		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-no_seg-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 //		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-		File mainDir = new File(invDir, "2022_01_31-nshm23_u3_hybrid_branches-no_seg-no_scale_adj_mfds-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		File outputDir = new File(mainDir, "logic_tree_misfits");

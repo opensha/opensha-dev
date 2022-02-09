@@ -131,7 +131,7 @@ public class LossScatterPlotGen {
 		}
 		
 		for (int i=0; i<griddedLossDists.length; i++) {
-			IncrementalMagFreqDist mfd = prov.getNodeMFD(i);
+			IncrementalMagFreqDist mfd = prov.getMFD(i);
 			DiscretizedFunc losses = griddedLossDists[i];
 			
 			if (losses == null)

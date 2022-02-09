@@ -61,7 +61,7 @@ public class IrisFocalParse {
 			}
 		}
 		System.out.println("Closest node is "+minDist+" km away");
-		IncrementalMagFreqDist mfd = prov.getNodeUnassociatedMFD(reg.indexForLocation(closestNode));
+		IncrementalMagFreqDist mfd = prov.getMFD_Unassociated(reg.indexForLocation(closestNode));
 //		IncrementalMagFreqDist mfd = prov.getNodeUnassociatedMFD(reg.indexForLocation(eqLoc));
 		System.out.println("MFD at eq loc:");
 		for (Point2D pt : mfd)

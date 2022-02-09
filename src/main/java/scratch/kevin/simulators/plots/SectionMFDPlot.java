@@ -157,7 +157,7 @@ public class SectionMFDPlot extends AbstractPlot {
 					for (FaultSection sect : parentToSubSects.get(parentID)) {
 						Map<Integer, Double> nodeFracts = polyMgr.getNodeFractions(sect.getSectionId());
 						for (int nodeIndex : nodeFracts.keySet()) {
-							IncrementalMagFreqDist nodeMFD = gridProv.getNodeSubSeisMFD(nodeIndex);
+							IncrementalMagFreqDist nodeMFD = gridProv.getMFD_SubSeisOnFault(nodeIndex);
 							Preconditions.checkState((float)nodeMFD.getDelta() == (float)deltaMag);
 							int indexOffset = nodeMFD.getClosestXIndex(minMag);
 							Preconditions.checkState((float)nodeMFD.getX(indexOffset) == (float)minMag);

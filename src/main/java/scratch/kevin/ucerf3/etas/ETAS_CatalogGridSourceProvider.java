@@ -179,12 +179,12 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 	}
 
 	@Override
-	public IncrementalMagFreqDist getNodeUnassociatedMFD(int idx) {
+	public IncrementalMagFreqDist getMFD_Unassociated(int idx) {
 		return nodeMFDs.get(idx);
 	}
 
 	@Override
-	public IncrementalMagFreqDist getNodeSubSeisMFD(int idx) {
+	public IncrementalMagFreqDist getMFD_SubSeisOnFault(int idx) {
 		// always null, treat ever rup as unsassociated
 		return null;
 	}
@@ -238,10 +238,10 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 		int mfdIndex = getMagIndex(etasRup);
 		if (mfdIndex < 0)
 			return null;
-		IncrementalMagFreqDist nodeMFD = getNodeUnassociatedMFD(node);
+		IncrementalMagFreqDist nodeMFD = getMFD_Unassociated(node);
 		Preconditions.checkNotNull(nodeMFD, "Rupture maps to uninitialized node!");
 		Preconditions.checkState(nodeMFD.getY(mfdIndex) > 0, "Mag uninitialized in MFD node!");
-		IncrementalMagFreqDist trimmedMFD = getNodeMFD(node, SOURCE_MIN_MAG_CUTOFF);
+		IncrementalMagFreqDist trimmedMFD = getMFD(node, SOURCE_MIN_MAG_CUTOFF);
 //		Preconditions.checkState(trimmedMFD.size() > mfdIndex,
 //				"Trimmed MFD cuts it off! WTF?\n\nOrig MFD:\n%s\n\nTrimmedMFD\n%s", nodeMFD, trimmedMFD);
 		if (trimmedMFD.size() <= mfdIndex) {

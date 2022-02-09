@@ -260,7 +260,7 @@ public class UCERF3_BranchAvgLossFetcher {
 		watch.reset();
 		double totGriddedLosses = 0;
 		for (int i=0; i<griddedDists.length; i++) {
-			IncrementalMagFreqDist mfd = prov.getNodeMFD(i, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF);
+			IncrementalMagFreqDist mfd = prov.getMFD(i, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF);
 			for (Point2D pt : mfd) {
 				double mag = pt.getX();
 				double rate = pt.getY();

@@ -28,7 +28,7 @@ public class MaxDistReweight {
 		
 		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
 		
-		MaxJumpDistModels.WEIGHT_TARGET_R0 = 6;
+		MaxJumpDistModels.WEIGHT_TARGET_R0 = 3;
 		
 		System.out.println("Weights for "+MaxJumpDistModels.WEIGHT_TARGET_R0);
 		for (MaxJumpDistModels m : MaxJumpDistModels.values())
