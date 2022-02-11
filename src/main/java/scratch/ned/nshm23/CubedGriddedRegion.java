@@ -332,6 +332,10 @@ public class CubedGriddedRegion {
 		return cubeIndexArray;
 	}
 	
+	/**
+	 * This returns the gridded region (not the gridded region for cubes)
+	 * @return
+	 */
 	public GriddedRegion getGriddedRegion() {
 		return griddedRegion;
 	}

@@ -53,19 +53,38 @@ import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.ned.FSS_Inversion2019.PlottingUtils;
 
 /**
+ * This class represents a grid source provider where, rather than in UCERF3 where a fault represented 
+ * all supraseismogenic ruptures inside it's polygon, there is now a linear (ramp) transition between 
+ * fault-based ruptures and gridded seismicity events. Thus, fault-based ruptures are most likely to
+ * nucleate on the fault surface, but can also nucleate in the vicinity assuming a linear ramp with distance
+ * out to the specified maxFaultNuclDist, and in 3D.  Thus, a fault is 50% less likely to nucleate at a distance
+ * of maxFaultNuclDist/2 (from the nearest point on the fault surface), and has 0% likelihood of nucleating 
+ * beyond maxFaultNuclDist.  Likewise, large gridded-seismicity events taper with the opposite trend near faults,
+ * such that their rates are half at maxFaultNuclDist/2 and zero right on the fault surface.  Smaller events (those
+ * less than the smallest supraseismogenic magnitudes on faults) have grid cell rates that match the given 
+ * spatialPDF exactly (but internally they are apportioned between faults and off-fault ("unassociated") 
+ * seismicity according to the same linear ramp. 
  * 
- * Questions: 
+ * The class is backed by a CubedGriddedRegion for purposes of computing distances and associated nucleation rates.  
+ * Sources could be given for each cube if higher resolution hazard calculations are desired.
  * 
- * move getSectionPolygonRegion(*) method to faultSection; confirm that trace is not offset
+ * The scaleAllMFDs(double[]) method only scales the gridded region MFDs and sources (not the cube MFDs)
  * 
- * 	 * TODO - confirm that trace is surface projection and not offset by DDW
+ * To Do:
  * 
- * 	have computeLongTermSupraSeisMFD_OnSectArray() from fss apply the  if it's not already done
- * for the supplied fss.  Does rupSet.getMinMagForSection(s) really get the final minMag?
+ * 0) Finalize how cached files are handled
  * 
- * QuadSurface - do we have analytical dist to a loc that is not on the earth surface?
+ * 1) Improve how the fraction of Reverse, Strike Slip, and Normal faulting events are defined
  * 
- * move the following to a more general class: ETAS_SimAnalysisTools.writeMemoryUse()
+ * 2) Move getSectionPolygonRegion(*) method to faultSection? & confirm that trace is not offset
+ *    when UpperSeisDepth != 0.
+ *    
+ * 3) Make sure computeLongTermSupraSeisMFD_OnSectArray() from fss has the final Mmin applied.
+ * 
+ * 4) QuadSurface - do we have analytical dist to a loc that is not on the earth surface?
+ * 
+ * 5) Move ETAS_SimAnalysisTools.writeMemoryUse() to a more general class/location
+ * 
  * 
  * 
  * @author field
@@ -95,6 +114,8 @@ public class GridSourceProvider2023 {
 	IncrementalMagFreqDist totGriddedSeisMFD; // supplied as input
 
 	SummedMagFreqDist totalSubSeisOnFaultMFD, totalTrulyOffFaultMFD, totalSupraSeisOnFaultMFD; // all computed
+	
+	SummedMagFreqDist[] subSeisOnFaultMFD_ForGridArray, unassociatedMFD_ForGridArray;
 
 	List<int[]> sectAtCubeList;
 	List<float[]> sectDistToCubeList;
@@ -152,12 +173,15 @@ public class GridSourceProvider2023 {
 		
 		sectionsThatNucleateOutsideRegionList = new ArrayList<Integer>();
 		
-		// test that spatialPDF sums to 1.0
+		// test some things
 		double testSum=0;
 		for(double val:spatialPDF) testSum += val;
 		if(testSum>1.001 || testSum < 0.999)
 			throw new RuntimeException("spatialPDF values must sum to 1.0; sum="+testSum);
-
+		
+		if(spatialPDF.length != griddedRegion.getNumLocations())
+			throw new RuntimeException("spatialPDF and griddedRegion must be the same size; they are "+spatialPDF.length+
+					" and "+griddedRegion.getNumLocations()+",respectively");
 		
 		testSum = depthNuclProbHist.calcSumOfY_Vals();
 		if(testSum>1.0001 || testSum < 0.9999)
@@ -189,6 +213,17 @@ public class GridSourceProvider2023 {
 		computeLongTermSupraSeisMFD_OnSectArray();
 		runtime = System.currentTimeMillis()-time;
 		if(D) System.out.println("computeLongTermSupraSeisMFD_OnSectArray() took "+(runtime/1000)+" seconds");
+		
+		// compute grid cell MFDs
+		time = System.currentTimeMillis();
+		subSeisOnFaultMFD_ForGridArray = new SummedMagFreqDist[spatialPDF.length];
+		unassociatedMFD_ForGridArray = new SummedMagFreqDist[spatialPDF.length];
+		for(int i=0;i<spatialPDF.length;i++) {
+			subSeisOnFaultMFD_ForGridArray[i] = computeMFD_SubSeisOnFault(i);
+			unassociatedMFD_ForGridArray[i] = computeMFD_Unassociated(i);
+		}
+		runtime = System.currentTimeMillis()-time;
+		if(D) System.out.println("computing grid MFDs took "+(runtime/1000)+" seconds");
 	
 		if(D) System.out.println("Done with constructor");
 		
@@ -442,16 +477,16 @@ public class GridSourceProvider2023 {
 	 * this creates a blank (zero y-axis values) MFD with the same discretization as the constructor supplied totGriddedSeisMFD.
 	 * @return
 	 */
-	public SummedMagFreqDist getBlankMFD() {
+	public SummedMagFreqDist initSummedMFD(IncrementalMagFreqDist model) {
 		return new SummedMagFreqDist(totGriddedSeisMFD.getMinX(), totGriddedSeisMFD.size(),totGriddedSeisMFD.getDelta());
 	}
 	
 	
 	private void computeTotalOnAndOffFaultGriddedSeisMFDs() {
 		
-		totalSubSeisOnFaultMFD = getBlankMFD();
+		totalSubSeisOnFaultMFD = initSummedMFD(totGriddedSeisMFD);
 		totalSubSeisOnFaultMFD.setName("totalSubSeisMFD");
-		totalTrulyOffFaultMFD = getBlankMFD();
+		totalTrulyOffFaultMFD = initSummedMFD(totGriddedSeisMFD);
 		totalTrulyOffFaultMFD.setName("totalTrulyOffFaultMFD");
 		
 		for(int c=0;c<cgr.getNumCubes();c++) {
@@ -478,7 +513,7 @@ public class GridSourceProvider2023 {
 	 */
 	private void computeLongTermSupraSeisMFD_OnSectArray() {
 		
-		SummedMagFreqDist mfd = getBlankMFD();
+		SummedMagFreqDist mfd = initSummedMFD(totGriddedSeisMFD);
 
 		// this didn't work so use ERF to get section mdfs
 //		ModSectMinMags mod = fss.getModule(ModSectMinMags.class);
@@ -501,7 +536,7 @@ public class GridSourceProvider2023 {
 		HashMap<Integer,Double> sectWtMap = sectDistWtMapAtCubeList.get(cubeIndex);
 		if(sectWtMap.size()==0) // no sections nucleate here
 			return null;
-		SummedMagFreqDist subSeisMFD = getBlankMFD();
+		SummedMagFreqDist subSeisMFD = initSummedMFD(totGriddedSeisMFD);
 		int gridIndex = cgr.getRegionIndexForCubeIndex(cubeIndex);
 		int depIndex = cgr.getDepthIndexForCubeIndex(cubeIndex);
 		for(int s:sectWtMap.keySet()) {
@@ -516,7 +551,7 @@ public class GridSourceProvider2023 {
 	
 	
 	
-	public SummedMagFreqDist getTrulyOffFaultMFD_ForCube(int cubeIndex) {
+	public SummedMagFreqDist getUnassociatedMFD_ForCube(int cubeIndex) {
 		
 		double scaleFactor = totGriddedSeisMFD.getY(0)/totalTrulyOffFaultMFD.getY(0);
 		
@@ -525,7 +560,7 @@ public class GridSourceProvider2023 {
 		for(int s:sectWtMap.keySet()) {
 			wtSum+=sectWtMap.get(s);
 		}
-		SummedMagFreqDist trulyOffMFD = getBlankMFD();
+		SummedMagFreqDist trulyOffMFD = initSummedMFD(totGriddedSeisMFD);
 		int gridIndex = cgr.getRegionIndexForCubeIndex(cubeIndex);
 		int depIndex = cgr.getDepthIndexForCubeIndex(cubeIndex);
 		double wt = (1d-wtSum)*scaleFactor*spatialPDF[gridIndex]*depthNuclProbHist.getY(depIndex)/(cgr.getNumCubesPerGridEdge()*cgr.getNumCubesPerGridEdge());
@@ -537,11 +572,11 @@ public class GridSourceProvider2023 {
 	}
 	
 	public SummedMagFreqDist getGriddedSeisMFD_ForCube(int cubeIndex) {
-		SummedMagFreqDist cubeMFD = getBlankMFD();
+		SummedMagFreqDist cubeMFD = initSummedMFD(totGriddedSeisMFD);
 		SummedMagFreqDist mfd = getSubSeismoMFD_ForCube(cubeIndex);
 		if(mfd != null)
 			cubeMFD.addIncrementalMagFreqDist(mfd);
-		mfd = getTrulyOffFaultMFD_ForCube(cubeIndex);
+		mfd = getUnassociatedMFD_ForCube(cubeIndex);
 		if(mfd != null)
 			cubeMFD.addIncrementalMagFreqDist(mfd);
 		return cubeMFD;
@@ -552,7 +587,7 @@ public class GridSourceProvider2023 {
 		HashMap<Integer,Double> sectWtMap = sectDistWtMapAtCubeList.get(cubeIndex);
 		if(sectWtMap.size()==0) // no sections nucleate here
 			return null;
-		SummedMagFreqDist supraMFD = getBlankMFD();
+		SummedMagFreqDist supraMFD = initSummedMFD(totGriddedSeisMFD);
 		for(int s:sectWtMap.keySet()) {
 			double wt = sectWtMap.get(s)/totDistWtsAtCubesForSectArray[s];
 			IncrementalMagFreqDist mfd = longTermSupraSeisMFD_OnSectArray[s].deepClone();
@@ -563,7 +598,7 @@ public class GridSourceProvider2023 {
 	}
 	
 	public SummedMagFreqDist getTotalMFD_ForCube(int cubeIndex) {
-		SummedMagFreqDist cubeMFD = getBlankMFD();
+		SummedMagFreqDist cubeMFD = initSummedMFD(totGriddedSeisMFD);
 		SummedMagFreqDist mfd = getGriddedSeisMFD_ForCube(cubeIndex);
 		if(mfd != null)
 			cubeMFD.addIncrementalMagFreqDist(mfd);
@@ -577,41 +612,59 @@ public class GridSourceProvider2023 {
 
 	
 	
-	public SummedMagFreqDist getSubSeismoMFD_ForGridCell(int gridIndex) {
-		SummedMagFreqDist subSeisMFD = getBlankMFD();
+	public SummedMagFreqDist getMFD_SubSeisOnFault(int gridIndex) {
+		return subSeisOnFaultMFD_ForGridArray[gridIndex];
+	}
+	
+	
+	public SummedMagFreqDist getMFD_Unassociated(int gridIndex) {
+		return unassociatedMFD_ForGridArray[gridIndex];
+	}
+	
+	
+	private SummedMagFreqDist computeMFD_SubSeisOnFault(int gridIndex) {
+		SummedMagFreqDist summedMFD = initSummedMFD(totGriddedSeisMFD);
 		for(int c:cgr.getCubeIndicesForGridCell(gridIndex)) {
 			SummedMagFreqDist mfd = getSubSeismoMFD_ForCube(c);
 			if(mfd != null)
-				subSeisMFD.addIncrementalMagFreqDist(mfd);
+				summedMFD.addIncrementalMagFreqDist(mfd);
 		}
-		return subSeisMFD;
+		if(summedMFD.getTotalIncrRate() < 1e-10)
+			summedMFD=null;
+		return summedMFD;
 	}
 	
 	
-	public SummedMagFreqDist getTrulyOffFaultMFD_ForCell(int gridIndex) {
-		SummedMagFreqDist subSeisMFD = getBlankMFD();
+	private SummedMagFreqDist computeMFD_Unassociated(int gridIndex) {
+		SummedMagFreqDist summedMFD = initSummedMFD(totGriddedSeisMFD);
 		for(int c:cgr.getCubeIndicesForGridCell(gridIndex)) {
-			subSeisMFD.addIncrementalMagFreqDist(getTrulyOffFaultMFD_ForCube(c));
+			summedMFD.addIncrementalMagFreqDist(getUnassociatedMFD_ForCube(c));
 		}
-		return subSeisMFD;
+		if(summedMFD.getTotalIncrRate() < 1e-10)
+			summedMFD=null;
+		return summedMFD;
 	}
 
+	
+	
 
-	public SummedMagFreqDist getGriddedSeisMFD_ForCell(int gridIndex) {
-		SummedMagFreqDist gridSeisMFD = getBlankMFD();
-		gridSeisMFD.addIncrementalMagFreqDist(getSubSeismoMFD_ForGridCell(gridIndex));
-		gridSeisMFD.addIncrementalMagFreqDist(getTrulyOffFaultMFD_ForCell(gridIndex));
+
+	public SummedMagFreqDist getMFD(int gridIndex) {
+		SummedMagFreqDist gridSeisMFD = initSummedMFD(totGriddedSeisMFD);
+		gridSeisMFD.addIncrementalMagFreqDist(getMFD_SubSeisOnFault(gridIndex));
+		gridSeisMFD.addIncrementalMagFreqDist(getMFD_Unassociated(gridIndex));
 		return gridSeisMFD;
 	}
+	
 	
 	/**
 	 * This test that the total gridded seismicity summed over all cubes equals the target
 	 */
 	private void testTotalGriddedSeisMFD() {
-		SummedMagFreqDist testMFD = getBlankMFD();
+		SummedMagFreqDist testMFD = initSummedMFD(totGriddedSeisMFD);
 
 		for(int i=0;i<cgr.getGriddedRegion().getNumLocations();i++) {
-			testMFD.addIncrementalMagFreqDist(getGriddedSeisMFD_ForCell(i));
+			testMFD.addIncrementalMagFreqDist(getMFD(i));
 		}
 		for(int i=0;i<totGriddedSeisMFD.size();i++) {
 			if(totGriddedSeisMFD.getY(i)>0.0 ) {
@@ -631,10 +684,10 @@ public class GridSourceProvider2023 {
 	 */
 	private void testTotalTrulyOffFaultGriddedSeisMFD() {
 		
-		SummedMagFreqDist testMFD = getBlankMFD();
+		SummedMagFreqDist testMFD = initSummedMFD(totGriddedSeisMFD);
 		
 		for(int c=0;c<cgr.getNumCubes();c++) {
-			SummedMagFreqDist mfd = getTrulyOffFaultMFD_ForCube(c);
+			SummedMagFreqDist mfd = getUnassociatedMFD_ForCube(c);
 			testMFD.addIncrementalMagFreqDist(mfd);
 		}
 		
@@ -664,7 +717,7 @@ public class GridSourceProvider2023 {
 		double ave=0, min=Double.MAX_VALUE, max=-Double.MAX_VALUE;
 		
 		for(int i=0;i<spatialPDF.length;i++) {
-			double ratio = getGriddedSeisMFD_ForCell(i).getY(4.05)/(totRate*spatialPDF[i]);
+			double ratio = getMFD(i).getY(4.05)/(totRate*spatialPDF[i]);
 			ratioArray[i]=ratio;
 			ave+=ratio;
 			if(min>ratio) min=ratio;
