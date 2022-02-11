@@ -70,7 +70,6 @@ import scratch.ned.FSS_Inversion2019.PlottingUtils;
  * 
  * The scaleAllMFDs(double[]) method only scales the gridded region MFDs and sources (not the cube MFDs)
  * 
- 
  * 
  * To Do:
  * 
