@@ -478,16 +478,16 @@ public class GridSourceProvider2023 {
 	 * this creates a blank (zero y-axis values) MFD with the same discretization as the constructor supplied totGriddedSeisMFD.
 	 * @return
 	 */
-	public SummedMagFreqDist initSummedMFD(IncrementalMagFreqDist model) {
+	public SummedMagFreqDist initSummedMFD() {
 		return new SummedMagFreqDist(totGriddedSeisMFD.getMinX(), totGriddedSeisMFD.size(),totGriddedSeisMFD.getDelta());
 	}
 	
 	
 	private void computeTotalOnAndOffFaultGriddedSeisMFDs() {
 		
-		totalSubSeisOnFaultMFD = initSummedMFD(totGriddedSeisMFD);
+		totalSubSeisOnFaultMFD = initSummedMFD();
 		totalSubSeisOnFaultMFD.setName("totalSubSeisMFD");
-		totalTrulyOffFaultMFD = initSummedMFD(totGriddedSeisMFD);
+		totalTrulyOffFaultMFD = initSummedMFD();
 		totalTrulyOffFaultMFD.setName("totalTrulyOffFaultMFD");
 		
 		for(int c=0;c<cgr.getNumCubes();c++) {
@@ -514,7 +514,7 @@ public class GridSourceProvider2023 {
 	 */
 	private void computeLongTermSupraSeisMFD_OnSectArray() {
 		
-		SummedMagFreqDist mfd = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist mfd = initSummedMFD();
 
 		// this didn't work so use ERF to get section mdfs
 //		ModSectMinMags mod = fss.getModule(ModSectMinMags.class);
@@ -537,7 +537,7 @@ public class GridSourceProvider2023 {
 		HashMap<Integer,Double> sectWtMap = sectDistWtMapAtCubeList.get(cubeIndex);
 		if(sectWtMap.size()==0) // no sections nucleate here
 			return null;
-		SummedMagFreqDist subSeisMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist subSeisMFD = initSummedMFD();
 		int gridIndex = cgr.getRegionIndexForCubeIndex(cubeIndex);
 		int depIndex = cgr.getDepthIndexForCubeIndex(cubeIndex);
 		for(int s:sectWtMap.keySet()) {
@@ -561,7 +561,7 @@ public class GridSourceProvider2023 {
 		for(int s:sectWtMap.keySet()) {
 			wtSum+=sectWtMap.get(s);
 		}
-		SummedMagFreqDist trulyOffMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist trulyOffMFD = initSummedMFD();
 		int gridIndex = cgr.getRegionIndexForCubeIndex(cubeIndex);
 		int depIndex = cgr.getDepthIndexForCubeIndex(cubeIndex);
 		double wt = (1d-wtSum)*scaleFactor*spatialPDF[gridIndex]*depthNuclProbHist.getY(depIndex)/(cgr.getNumCubesPerGridEdge()*cgr.getNumCubesPerGridEdge());
@@ -573,7 +573,7 @@ public class GridSourceProvider2023 {
 	}
 	
 	public SummedMagFreqDist getGriddedSeisMFD_ForCube(int cubeIndex) {
-		SummedMagFreqDist cubeMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist cubeMFD = initSummedMFD();
 		SummedMagFreqDist mfd = getSubSeismoMFD_ForCube(cubeIndex);
 		if(mfd != null)
 			cubeMFD.addIncrementalMagFreqDist(mfd);
@@ -583,12 +583,14 @@ public class GridSourceProvider2023 {
 		return cubeMFD;
 	}
 	
+	
+	
 	public SummedMagFreqDist getSupraSeisMFD_ForCube(int cubeIndex) {
 
 		HashMap<Integer,Double> sectWtMap = sectDistWtMapAtCubeList.get(cubeIndex);
 		if(sectWtMap.size()==0) // no sections nucleate here
 			return null;
-		SummedMagFreqDist supraMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist supraMFD = initSummedMFD();
 		for(int s:sectWtMap.keySet()) {
 			double wt = sectWtMap.get(s)/totDistWtsAtCubesForSectArray[s];
 			IncrementalMagFreqDist mfd = longTermSupraSeisMFD_OnSectArray[s].deepClone();
@@ -599,7 +601,7 @@ public class GridSourceProvider2023 {
 	}
 	
 	public SummedMagFreqDist getTotalMFD_ForCube(int cubeIndex) {
-		SummedMagFreqDist cubeMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist cubeMFD = initSummedMFD();
 		SummedMagFreqDist mfd = getGriddedSeisMFD_ForCube(cubeIndex);
 		if(mfd != null)
 			cubeMFD.addIncrementalMagFreqDist(mfd);
@@ -624,7 +626,7 @@ public class GridSourceProvider2023 {
 	
 	
 	private SummedMagFreqDist computeMFD_SubSeisOnFault(int gridIndex) {
-		SummedMagFreqDist summedMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist summedMFD = initSummedMFD();
 		for(int c:cgr.getCubeIndicesForGridCell(gridIndex)) {
 			SummedMagFreqDist mfd = getSubSeismoMFD_ForCube(c);
 			if(mfd != null)
@@ -637,7 +639,7 @@ public class GridSourceProvider2023 {
 	
 	
 	private SummedMagFreqDist computeMFD_Unassociated(int gridIndex) {
-		SummedMagFreqDist summedMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist summedMFD = initSummedMFD();
 		for(int c:cgr.getCubeIndicesForGridCell(gridIndex)) {
 			summedMFD.addIncrementalMagFreqDist(getUnassociatedMFD_ForCube(c));
 		}
@@ -651,18 +653,53 @@ public class GridSourceProvider2023 {
 
 
 	public SummedMagFreqDist getMFD(int gridIndex) {
-		SummedMagFreqDist gridSeisMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist gridSeisMFD = initSummedMFD();
 		gridSeisMFD.addIncrementalMagFreqDist(getMFD_SubSeisOnFault(gridIndex));
 		gridSeisMFD.addIncrementalMagFreqDist(getMFD_Unassociated(gridIndex));
 		return gridSeisMFD;
 	}
+	
+	/**
+	 * this returns the total sub-seismogenic on-fault MFD
+	 * @return
+	 */
+	public SummedMagFreqDist getTotalSubSeisOnFaultMFD() {
+		return totalSubSeisOnFaultMFD;
+	}
+	
+	/**
+	 * This returns the total unassociated (truly off-fault) MFD
+	 * @return
+	 */
+	public SummedMagFreqDist getTotalUnassociatedMFD() {
+		return totalTrulyOffFaultMFD;
+	}
+
+	/**
+	 * This returns the total supraseismogenic on-fault MFD
+	 * @return
+	 */
+	public SummedMagFreqDist getTotalSupraSeisOnFaultMFD() {
+		return totalSupraSeisOnFaultMFD;
+	}
+	
+	/**
+	 * This returns the total gridded seismicity MFD (the total sub-seismogenic 
+	 * on-fault MFD plus the total unassociated MFD)
+	 * @return
+	 */
+	public IncrementalMagFreqDist getTotalGriddedSeisMFD() {
+		return totGriddedSeisMFD;
+	}
+
+
 	
 	
 	/**
 	 * This test that the total gridded seismicity summed over all cubes equals the target
 	 */
 	private void testTotalGriddedSeisMFD() {
-		SummedMagFreqDist testMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist testMFD = initSummedMFD();
 
 		for(int i=0;i<cgr.getGriddedRegion().getNumLocations();i++) {
 			testMFD.addIncrementalMagFreqDist(getMFD(i));
@@ -685,7 +722,7 @@ public class GridSourceProvider2023 {
 	 */
 	private void testTotalTrulyOffFaultGriddedSeisMFD() {
 		
-		SummedMagFreqDist testMFD = initSummedMFD(totGriddedSeisMFD);
+		SummedMagFreqDist testMFD = initSummedMFD();
 		
 		for(int c=0;c<cgr.getNumCubes();c++) {
 			SummedMagFreqDist mfd = getUnassociatedMFD_ForCube(c);

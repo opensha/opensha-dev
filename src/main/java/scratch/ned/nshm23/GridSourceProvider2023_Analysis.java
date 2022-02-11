@@ -454,12 +454,12 @@ public class GridSourceProvider2023_Analysis {
 		
 		gridProvider.totGriddedSeisMFD.setName("totGriddedSeisMFD");
 		
-		SummedMagFreqDist testMFD = gridProvider.getBlankMFD();
+		SummedMagFreqDist testMFD = gridProvider.initSummedMFD();
 		testMFD.setName("Test totGriddedSeisMFD");
 		testMFD.addIncrementalMagFreqDist(gridProvider.totalSubSeisOnFaultMFD);
 		testMFD.addIncrementalMagFreqDist(gridProvider.totalTrulyOffFaultMFD);
 		
-		SummedMagFreqDist totalMFD = gridProvider.getBlankMFD();
+		SummedMagFreqDist totalMFD = gridProvider.initSummedMFD();
 		totalMFD.setName("totalMFD");
 		totalMFD.addIncrementalMagFreqDist(gridProvider.totGriddedSeisMFD);
 		totalMFD.addIncrementalMagFreqDist(gridProvider.totalSupraSeisOnFaultMFD);
