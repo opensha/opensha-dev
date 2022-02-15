@@ -54,6 +54,8 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 	
 	private int annealingThreads;
 	private int runsPerBundle = 1;
+	
+	private boolean reprocess = false;
 
 	public MPJ_LogicTreeInversionRunner(CommandLine cmd) throws IOException {
 		super(cmd);
@@ -86,6 +88,8 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		} catch (Exception e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
+		
+		reprocess = factory.getSolutionLogicTreeProcessor() != null && cmd.hasOption("reprocess-existing");
 		
 		File cacheDir = FaultSysTools.getCacheDir(cmd);
 		if (cacheDir != null) {
@@ -341,8 +345,22 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 			if (solFile.exists()) {
 				debug(solFile.getAbsolutePath()+" exists, testing loading...");
 				try {
-					FaultSystemSolution.load(solFile);
+					FaultSystemSolution sol = FaultSystemSolution.load(solFile);
 					debug("skipping "+index+" (already done)");
+					if (reprocess) {
+						SolutionProcessor processor = factory.getSolutionLogicTreeProcessor();
+						// process the rupture set
+						FaultSystemRupSet rpRupSet = factory.updateRuptureSetForBranch(sol.getRupSet(), branch);
+						// build an inversion configuration so that any adjustments at that stage are processed
+						factory.buildInversionConfig(rpRupSet, branch, getNumThreads());
+						if (rpRupSet != sol.getRupSet())
+							// replaced the rupture set, need to copy the solution over to use the new rup set
+							sol = sol.copy(rpRupSet.getArchive());
+						// process the solution
+						sol = processor.processSolution(sol, branch);
+						// write out the reprocessed solution
+						sol.write(solFile);
+					}
 					return;
 				} catch (Exception e) {
 					debug("Failed to load, re-inverting: "+e.getMessage());
@@ -407,6 +425,8 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		ops.addOption("rpb", "runs-per-branch", true, "Runs per branch (default is 1)");
 		ops.addOption("rpb", "runs-per-bundle", true, "Simultaneous runs to executure (default is 1)");
 		ops.addRequiredOption("ifc", "inversion-factory", true, "Inversion configuration factory classname");
+		ops.addOption("rpe", "reprocess-existing", false, "Flag to enable re-processing of already completed solutions"
+				+ "with the factory's SolutionProcessor before branch averaging");
 		
 		for (Option op : InversionConfiguration.createSAOptions().getOptions())
 			ops.addOption(op);

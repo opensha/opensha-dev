@@ -58,7 +58,7 @@ public class SparseGRTests {
 			MinMaxAveTracker equivBTrack2 = new MinMaxAveTracker();
 
 			for (int s=0; s<rupSet.getNumSections(); s++) {
-				IncrementalMagFreqDist orig = targets.getSectSupraSeisNuclMFDs().get(s);
+				IncrementalMagFreqDist orig = targets.getOnFaultSupraSeisNucleationMFDs().get(s);
 
 				int minNonZero = -1;
 				int maxNonZero = 0;

@@ -27,6 +27,8 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.plots.HazardMapPlot;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 
 import com.google.common.base.Preconditions;
 
@@ -69,14 +71,17 @@ public class LogicTreeBranchAverageWriter {
 //		File resultsFile = new File(mainDir, "results.zip");
 //		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
-//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
 		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
 //		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
 		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
-		restrictBAClasses.add(MaxJumpDistModels.class);
+//		restrictBAClasses.add(MaxJumpDistModels.class);
+//		restrictBAClasses.add(SegmentationModels.class);
+		restrictBAClasses.add(SubSectConstraintModels.class);
 		
 		LogicTreeNode[] restrictNodes = {
 				FaultModels.FM3_1

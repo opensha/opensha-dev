@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23;
+package scratch.kevin.nshm23.segModelTests;
 
 import java.awt.Color;
 import java.io.File;
