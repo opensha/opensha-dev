@@ -527,12 +527,25 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test121() throws IOException {
+		// hack to replace target mfds, fake solution
+		File mainDir = new File("/data/kevin/ucerf4/batch_inversions/"
+				+ "2022_02_15-coulomb-fm31-ref_branch-seg_model_adjustments-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-TotNuclRate-ShawR0_3");
+		File inputSolFile = new File(mainDir, "JumpProb/solution.zip");
+		File inputRupSetFile = new File(mainDir, "StictEquivJumpProb/rupture_set.zip");
+		File destSolFile = new File(mainDir, "StictEquivJumpProb/solution.zip");
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(inputRupSetFile);
+		FaultSystemSolution sol = FaultSystemSolution.load(inputSolFile);
+		sol.getRupSet().addModule(rupSet.requireModule(InversionTargetMFDs.class));
+		sol.write(destSolFile);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test120();
+		test121();
 	}
 
 }

@@ -53,40 +53,34 @@ public class SegMFDsComparePageGen {
 	
 	public static void main(String[] args) throws IOException {
 		File mainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
+
+		File primaryDir = new File(mainDir, "2022_02_15-coulomb-fm31-ref_branch-seg_model_adjustments-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-TotNuclRate-ShawR0_3/"
+//				+ "JumpProb"); String primaryName = "Jump-Prob";
+//				+ "RupProb"); String primaryName = "Rupture-Prob";
+//				+ "CappedRdst"); String primaryName = "Capped Redist";
+				+ "Greedy"); String primaryName = "Greedy";
+//				+ "StictEquivJumpProb"); String primaryName = "Strict-Equiv-Jump-Prob";
+//		File primaryDir = new File(mainDir, "2022_02_16-coulomb-fm31-ref_branch-seg_model_adjustments-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-TotNuclRate-ShawR0_3/"
+////				+ "JumpProbGt1km"); String primaryName = "Jump-Prob>1km";
+//				+ "RupDistrWorstJumpProb"); String primaryName = "Rup-Distr-Worst-Jump";
+		FaultSystemSolution primarySol = FaultSystemSolution.load(
+				new File(primaryDir, "solution.zip"));
 		
-//		File primaryDir = new File(mainDir, "2022_02_14-nshm23_u3_hybrid_branches-seg-capped-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-//		String primaryName = "Imposed-Capped-Redist";
-////		File primaryDir = new File(mainDir, "2022_02_10-nshm23_u3_hybrid_branches-seg-greedy_self_contained-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-////		String primaryName = "Imposed-Greedy-Self-Contained";
-//		FaultSystemSolution primarySol = FaultSystemSolution.load(
-//				new File(primaryDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
-//		
-//		File compDir = new File(mainDir, "2022_02_11-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
+//		File compDir = new File(mainDir, "2022_02_15-coulomb-fm31-ref_branch-seg_model_adjustments-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-TotNuclRate-ShawR0_3/"
+//				+ "None"); String compName = "None";
+//		File outputDir = new File(primaryDir, "sect_targets_vs_none");
+		File compDir = new File(mainDir, "2022_02_15-coulomb-fm31-ref_branch-seg_model_adjustments-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-TotNuclRate-ShawR0_3/"
+				+ "JumpProb"); String compName = "Jump-Prob";
+				File outputDir = new File(primaryDir, "sect_targets_vs_jump_prob");
+//		File outputDir = new File(primaryDir, "sect_targets_vs_capped_redist");
+		FaultSystemSolution compSol = FaultSystemSolution.load(
+				new File(compDir, "solution.zip"));
+		
+//		File compDir = new File(mainDir, "2022_02_14-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-TotNuclRate-SubB1-SupraB0.8-2000ip");
 //		String compName = "Strict-Seg";
 //		FaultSystemSolution compSol = FaultSystemSolution.load(
 //				new File(compDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
 //		File outputDir = new File(primaryDir, "sect_targets_vs_strict_seg");
-		
-//		File compDir = new File(mainDir, "2022_02_10-nshm23_u3_hybrid_branches-seg-no_adj-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-//		String compName = "Imposed-No-Adj";
-//		FaultSystemSolution compSol = FaultSystemSolution.load(
-//				new File(compDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
-//		File outputDir = new File(primaryDir, "sect_targets_vs_no_adj");
-		
-		File primaryDir = new File(mainDir, "2022_02_15-coulomb-fm31-ref_branch-seg_model_adjustments-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-TotNuclRate-ShawR0_3/"
-//				+ "CAPPED_DISTRIBUTED"); String primaryName = "Capped-Redist";
-//				+ "CAPPED_DISTRIBUTED-self-contained"); String primaryName = "Capped-Redist-Self";
-//				+ "GREEDY"); String primaryName = "Greedy";
-				+ "GREEDY-self-contained");	String primaryName = "Greedy-Self";
-//		String primaryName = "Imposed-Greedy-Self-Contained";
-		FaultSystemSolution primarySol = FaultSystemSolution.load(
-				new File(primaryDir, "solution.zip"));
-		
-		File compDir = new File(mainDir, "2022_02_14-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-TotNuclRate-SubB1-SupraB0.8-2000ip");
-		String compName = "Strict-Seg";
-		FaultSystemSolution compSol = FaultSystemSolution.load(
-				new File(compDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
-		File outputDir = new File(primaryDir, "sect_targets_vs_strict_seg");
 		
 		FaultSystemRupSet rupSet = primarySol.getRupSet();
 		Preconditions.checkState(rupSet.isEquivalentTo(compSol.getRupSet()));

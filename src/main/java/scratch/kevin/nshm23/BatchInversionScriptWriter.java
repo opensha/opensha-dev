@@ -1402,8 +1402,14 @@ public class BatchInversionScriptWriter {
 		
 		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(2000d);
 		
+//		SegmentationMFD_Adjustment[] adjustments = SegmentationMFD_Adjustment.values();
+		SegmentationMFD_Adjustment[] adjustments = {
+				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_ABOVE_1KM,
+				SegmentationMFD_Adjustment.RUP_MULTIPLY_WORST_JUMP_PROB,
+		};
+		
 		rupSets = new ArrayList<>();
-		for (SegmentationMFD_Adjustment adjustment : SegmentationMFD_Adjustment.values()) {
+		for (SegmentationMFD_Adjustment adjustment : adjustments) {
 			String name = adjustment.getFilePrefix();
 			
 			branch.setValue(adjustment);
