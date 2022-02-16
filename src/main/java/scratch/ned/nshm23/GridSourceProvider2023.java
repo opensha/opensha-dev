@@ -47,6 +47,8 @@ import scratch.UCERF3.analysis.GMT_CA_Maps;
 import scratch.UCERF3.enumTreeBranches.SpatialSeisPDF;
 import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.SeisDepthDistribution;
+import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
+import scratch.UCERF3.griddedSeismicity.GridReader;
 import scratch.UCERF3.utils.MatrixIO;
 import scratch.UCERF3.utils.RELM_RegionUtils;
 import scratch.UCERF3.utils.U3FaultSystemIO;
@@ -68,15 +70,13 @@ import scratch.ned.FSS_Inversion2019.PlottingUtils;
  * The class is backed by a CubedGriddedRegion for purposes of computing distances and associated nucleation rates.  
  * Sources could be given for each cube if higher resolution hazard calculations are desired.
  * 
- * The scaleAllMFDs(double[]) method only scales the gridded region MFDs and sources (not the cube MFDs)
+ * The scaleAllMFDs(double[]) method only scales the gridded-region MFDs and sources (not the cube MFDs)
  * 
  * 
  * To Do:
  * 
- * 0) Finalize how cached files are handled
- * 
- * 1) Improve how the fraction of Reverse, Strike Slip, and Normal faulting events are defined
- * 
+ * 1) Finalize how cached files are handled
+ *  * 
  * 2) Move getSectionPolygonRegion(*) method to faultSection? & confirm that trace is not offset
  *    when UpperSeisDepth != 0.
  *    
@@ -86,12 +86,15 @@ import scratch.ned.FSS_Inversion2019.PlottingUtils;
  * 
  * 5) Move ETAS_SimAnalysisTools.writeMemoryUse() to a more general class/location
  * 
+ * 6) improve input of fracStrikeSlip,fracNormal, and fracReverse (e.g., bundle and
+ *    include fixed rake option?
+ * 
  * 
  * 
  * @author field
  *
  */
-public class GridSourceProvider2023 {
+public class GridSourceProvider2023 extends AbstractGridSourceProvider {
 	
 	final static boolean D = true;
 	
@@ -133,32 +136,36 @@ public class GridSourceProvider2023 {
 
 	ArrayList<Integer> sectionsThatNucleateOutsideRegionList;
 	
+	private static double[] fracStrikeSlip,fracNormal,fracReverse;
+
+	
 	/**
 	 * 
 	 * @param fss
-	 * @param griddedRegion
+	 * @param cgr
 	 * @param spatialPDF
 	 * @param totGriddedSeisMFD
+	 * @param depthNuclProbHist
 	 */
 	public GridSourceProvider2023(FaultSystemSolution fss, CubedGriddedRegion cgr, 
-			double[] spatialPDF, IncrementalMagFreqDist totGriddedSeisMFD, HistogramFunction depthNuclProbHist) {
+			double[] spatialPDF, IncrementalMagFreqDist totGriddedSeisMFD, HistogramFunction depthNuclProbHist,
+			double[] fracStrikeSlip, double[] fracNormal, double[] fracReverse) {
 
-		this(fss, cgr, spatialPDF, totGriddedSeisMFD, depthNuclProbHist, DEFAULT_MAX_FAULT_NUCL_DIST);
+		this(fss, cgr, spatialPDF, totGriddedSeisMFD, depthNuclProbHist, fracStrikeSlip, fracNormal, fracReverse, DEFAULT_MAX_FAULT_NUCL_DIST);
 	}
 	
-	
 	/**
 	 * 
 	 * @param fss
-	 * @param griddedRegion
+	 * @param cgr
 	 * @param spatialPDF
 	 * @param totGriddedSeisMFD
-	 * @param maxDepth
-	 * @param numCubeDepths
-	 * @param numCubesPerGridEdge
+	 * @param depthNuclProbHist
+	 * @param maxFaultNuclDist
 	 */
 	public GridSourceProvider2023(FaultSystemSolution fss, CubedGriddedRegion cgr, 
-			double[] spatialPDF, IncrementalMagFreqDist totGriddedSeisMFD, HistogramFunction depthNuclProbHist, double maxFaultNuclDist) {
+			double[] spatialPDF, IncrementalMagFreqDist totGriddedSeisMFD, HistogramFunction depthNuclProbHist, 
+			double[] fracStrikeSlip, double[] fracNormal, double[] fracReverse, double maxFaultNuclDist) {
 		
 		this.fss = fss;
 		this.cgr = cgr;
@@ -168,6 +175,9 @@ public class GridSourceProvider2023 {
 		this.depthNuclProbHist = depthNuclProbHist;
 		this.maxFaultNuclDist = maxFaultNuclDist;
 		this.griddedRegion = cgr.getGriddedRegion();
+		this.fracStrikeSlip = fracStrikeSlip;
+		this.fracNormal = fracNormal;
+		this.fracReverse = fracReverse;
 		
 		if(griddedRegion.getNodeCount() != spatialPDF.length)
 			throw new RuntimeException("griddedRegion and spatialPDF have differe sizes: "+griddedRegion.getNodeCount()+" vs "+spatialPDF.length);
@@ -232,7 +242,8 @@ public class GridSourceProvider2023 {
 
 
 	/**
-	 * 
+	 * This assumes the trace represents a surface projection of top edge of surface (and not projected
+	 * up-dip when upper seismogenic depth is nonzero)
 	 * @param faultSection
 	 * @param distance
 	 * @param accountForDip
@@ -614,12 +625,12 @@ public class GridSourceProvider2023 {
 
 
 	
-	
+	@Override
 	public SummedMagFreqDist getMFD_SubSeisOnFault(int gridIndex) {
 		return subSeisOnFaultMFD_ForGridArray[gridIndex];
 	}
 	
-	
+	@Override
 	public SummedMagFreqDist getMFD_Unassociated(int gridIndex) {
 		return unassociatedMFD_ForGridArray[gridIndex];
 	}
@@ -652,12 +663,12 @@ public class GridSourceProvider2023 {
 	
 
 
-	public SummedMagFreqDist getMFD(int gridIndex) {
-		SummedMagFreqDist gridSeisMFD = initSummedMFD();
-		gridSeisMFD.addIncrementalMagFreqDist(getMFD_SubSeisOnFault(gridIndex));
-		gridSeisMFD.addIncrementalMagFreqDist(getMFD_Unassociated(gridIndex));
-		return gridSeisMFD;
-	}
+//	public SummedMagFreqDist getMFD(int gridIndex) {
+//		SummedMagFreqDist gridSeisMFD = initSummedMFD();
+//		gridSeisMFD.addIncrementalMagFreqDist(getMFD_SubSeisOnFault(gridIndex));
+//		gridSeisMFD.addIncrementalMagFreqDist(getMFD_Unassociated(gridIndex));
+//		return gridSeisMFD;
+//	}
 	
 	/**
 	 * this returns the total sub-seismogenic on-fault MFD
@@ -691,9 +702,36 @@ public class GridSourceProvider2023 {
 	public IncrementalMagFreqDist getTotalGriddedSeisMFD() {
 		return totGriddedSeisMFD;
 	}
-
-
 	
+	
+	@Override
+	public double getFracStrikeSlip(int gridIndex) {
+		return fracStrikeSlip[gridIndex];
+	}
+
+
+	@Override
+	public double getFracReverse(int gridIndex) {
+		return fracReverse[gridIndex];
+	}
+
+
+	@Override
+	public double getFracNormal(int gridIndex) {
+		return fracNormal[gridIndex];
+	}
+	
+
+	@Override
+	public GriddedRegion getGriddedRegion() {
+		return griddedRegion;
+	}
+	
+	
+	@Override
+	public String getName() {
+		return "GridSourceProvider2023";
+	}	
 	
 	/**
 	 * This test that the total gridded seismicity summed over all cubes equals the target
@@ -812,6 +850,8 @@ public class GridSourceProvider2023 {
 	
 	public static void main(String[] args) {
 		
+		// example instantiation using UCERF3 ingredients
+		
 		String fileName="/Users/field/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip";
 		FaultSystemSolution fss;
 		try {
@@ -831,95 +871,33 @@ public class GridSourceProvider2023 {
 		}
 		System.out.println("Total Depth Prob Sum: "+binnedDepthDistFunc.calcSumOfY_Vals());
 
-		
-		double[] spatialPDF = SpatialSeisPDF.UCERF3.getPDF();
-		// this sums to 0.9994463999998295; correct it to 1.0
+		double[] spatialPDF = SpatialSeisPDF.UCERF3.getPDF();  // this sums to 0.9994463999998295; correct it to 1.0
 		double sum=0;
 		for(double val:spatialPDF) sum+=val;
 		for(int i=0;i<spatialPDF.length;i++)
 			spatialPDF[i] = spatialPDF[i]/sum;
 		
-//		// make spatialPDF constant for testing
-//		for(int i=0;i<spatialPDF.length;i++)
-//			spatialPDF[i] = 1.0/spatialPDF.length;
-
-		
-		// Get target total gridded seis MFD
-		GridSourceProvider gridSrcProvider = fss.getGridSourceProvider();
-		IncrementalMagFreqDist tempMFD = gridSrcProvider.getMFD(0);
+		GridSourceProvider gridSrcProviderU3 = fss.getGridSourceProvider();
+		IncrementalMagFreqDist tempMFD = gridSrcProviderU3.getMFD(0);
 		SummedMagFreqDist totGriddedSeisMFD = new SummedMagFreqDist(tempMFD.getMinX(), tempMFD.size(),tempMFD.getDelta());
-		for(int i=0;i<gridSrcProvider.size();i++)
-			totGriddedSeisMFD.addIncrementalMagFreqDist(gridSrcProvider.getMFD(i));		
-//		System.out.println(totGriddedSeisMFD);
-//		System.exit(0);
+		for(int i=0;i<gridSrcProviderU3.size();i++) {
+			totGriddedSeisMFD.addIncrementalMagFreqDist(gridSrcProviderU3.getMFD(i));	
+		}
 		
 		CubedGriddedRegion cgr = new CubedGriddedRegion(griddedRegion);
 		
+		double[] fracStrikeSlip, fracReverse, fracNormal;
+		fracStrikeSlip = new GridReader("StrikeSlipWts.txt").getValues();
+		fracReverse = new GridReader("ReverseWts.txt").getValues();
+		fracNormal = new GridReader("NormalWts.txt").getValues();
+		
 		long startTime = System.currentTimeMillis();
 
-		GridSourceProvider2023 gridProvider = new GridSourceProvider2023(fss, cgr, spatialPDF, totGriddedSeisMFD, binnedDepthDistFunc);
-						
-//		gridProvider.testTotalGriddedSeisMFD();
-//		gridProvider.testTotalTrulyOffFaultGriddedSeisMFD();
-//		gridProvider.testTotalMgt4_RatesInCells();
-//		gridProvider.testSectDistFractWtMapList();
-		
-//		GridSourceProvider2023_Analysis.plotSupraSeisRateAtDepthMap(gridProvider, 7d, "SupraSeisRatesAtDepth7km");
-		
-		// this should not exactly equal Figure 9c in U3ETAS BSSA paper (due to how char factors for mult sections in cube are handled)
-//		GridSourceProvider2023_Analysis.plotCharFactorAtDepth(gridProvider, 7d, 1d);
-
-
-		// the following matches the associated U3ETAS map (Figure 5a) close enough
-//		GridSourceProvider2023_Analysis.plotRateAboveMagAtDepthMap(gridProvider, 2.55, 7d, "RatesAboveM2pt5_AtDepth7km");
-
-		// the following matches the associated U3ETAS map (Figure 9b) close enough
-//		GridSourceProvider2023_Analysis.plotRateAboveMagAtDepthMap(gridProvider, 6.35, 7d, "RatesAboveM6pt3_AtDepth7km");
-
-//		GridSourceProvider2023_Analysis.plotCubeFractionOnAndOffFaultAtDepth(gridProvider,7d);
-		
-//		GridSourceProvider2023_Analysis.writeCubeLocsAndWtsForForParentSect(gridProvider, 301, "CubeLocWtsForSAF_MojaveSouth.txt");
-//		GridSourceProvider2023_Analysis.writeCubeLocsAndWtsForForParentSect(gridProvider, 141, "CubeLocWtsForGreatValley14_KH.txt");
-		
-
-//		GridSourceProvider2023_Analysis.plotTotalMFDs(gridProvider);
-		
-//		GridSourceProvider2023_Analysis.computeHistogramOfNumSectionsInCubes(gridProvider, true);
-		
+		GridSourceProvider2023 gridProvider = new GridSourceProvider2023(fss, cgr, spatialPDF, totGriddedSeisMFD, 
+				binnedDepthDistFunc, fracStrikeSlip, fracReverse, fracNormal);
+				
 		long runtime = System.currentTimeMillis()-startTime;
-		double runtimeMin = runtime/60000d;
-		System.out.println("Runtime = "+(float)runtimeMin+" min");
-		
-//		CalcProgressBar progressBar = null;
-//		try {
-//			progressBar = new CalcProgressBar("Sections to process", "junk");
-//			progressBar.showProgress(true);
-//		} catch (Exception e1) {} // headless
-//
-//		long startTime = System.currentTimeMillis();
-//		int numSect = fss.getRupSet().getNumSections();
-//		for(int s=0;s<numSect;s++) {
-//			if (progressBar != null) progressBar.updateProgress(s, numSect);
-//			gridProvider.tempDoSection(s);
-//		}
-//		long runtime = System.currentTimeMillis()-startTime;
-//		double runtimeMin = runtime/60000d;
-//		System.out.println("Runtime = "+(float)runtimeMin+" min");
-//		
-/*
-		int sectIndex=0;
-		for(int s=0;s<fss.getRupSet().getNumSections();s++) {
-//			if(fss.getRupSet().getFaultSectionData(s).getOrigAveUpperDepth() > 3d) {
-			if(fss.getRupSet().getFaultSectionData(s).getAveDip() > 89d) {
-				sectIndex = s;
-				break;
-			}
-		}
-
-		gridProvider.doSection(sectIndex);
-
-*/
-
+		System.out.println("Runtime = "+(float)(runtime/60000d)+" min");
 	}
 
 }
