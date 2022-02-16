@@ -56,6 +56,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistMo
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
@@ -1402,22 +1403,18 @@ public class BatchInversionScriptWriter {
 		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(2000d);
 		
 		rupSets = new ArrayList<>();
-		for (MultiBinDistributionMethod binDist : MultiBinDistributionMethod.values()) {
-			for (boolean selfContained : new boolean[] {false, true}) {
-				String name = binDist.name();
-				if (selfContained)
-					name += "-self-contained";
-				
-				factory.setAdjustTargetsForSegmentation(true, binDist, selfContained);
-				
-				FaultSystemRupSet myRupSet = FaultSystemRupSet.buildFromExisting(rupSet).build();
-				InversionConfiguration config = factory.buildInversionConfig(myRupSet, branch, remoteToalThreads);
-				config = InversionConfiguration.builder(config).completion(completion).build();
-				
-				configs.add(config);
-				subDirNames.add(name);
-				rupSets.add(myRupSet);
-			}
+		for (SegmentationMFD_Adjustment adjustment : SegmentationMFD_Adjustment.values()) {
+			String name = adjustment.getFilePrefix();
+			
+			branch.setValue(adjustment);
+			
+			FaultSystemRupSet myRupSet = FaultSystemRupSet.buildFromExisting(rupSet).build();
+			InversionConfiguration config = factory.buildInversionConfig(myRupSet, branch, remoteToalThreads);
+			config = InversionConfiguration.builder(config).completion(completion).build();
+			
+			configs.add(config);
+			subDirNames.add(name);
+			rupSets.add(myRupSet);
 		}
 		
 		avgJob = false;

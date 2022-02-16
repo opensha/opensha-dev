@@ -103,13 +103,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
 //		dirName += "-nshm23_branches";
 		
-		levels = new ArrayList<>(levels);
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
-				levels.remove(i);
-//		dirName += "-no_seg";
-		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
-		dirName += "-max_dist";
+//		levels = new ArrayList<>(levels);
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class))
+//				levels.remove(i);
+////		dirName += "-no_seg";
+//		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
+//		dirName += "-max_dist";
 		
 //		dirName += "-reweight_seg_2_3_4";
 			
@@ -123,17 +123,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
 //		dirName += "-no_reweight_use_prev";
-		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoSegAdjust.class;
-//		dirName += "-no_seg_adj_mfds";
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SegCapped.class;
-//		dirName += "-seg-capped";
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SegCappedSelfContained.class;
-//		dirName += "-seg-capped_self_contained";
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SegGreedy.class;
-//		dirName += "-seg-greedy";
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SegGreedySelfContained.class;
-//		dirName += "-seg-greedy_self_contained";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoMFDScaleAdjust.class;
 //		dirName += "-no_scale_adj_mfds";

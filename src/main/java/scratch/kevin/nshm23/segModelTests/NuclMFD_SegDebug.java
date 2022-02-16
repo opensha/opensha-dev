@@ -31,7 +31,8 @@ public class NuclMFD_SegDebug {
 		
 		List<UncertainIncrMagFreqDist> supraSeisTargets = targetMFDs.getOnFaultSupraSeisNucleationMFDs();
 		
-		factory.setAdjustTargetsForSegmentation(false);
+		// TODO
+//		factory.setAdjustTargetsForSegmentation(false);
 		factory.buildInversionConfig(rupSet, rupSet.requireModule(LogicTreeBranch.class), 16);
 		List<UncertainIncrMagFreqDist> noAdjSupraSeisTargets = rupSet.requireModule(SupraSeisBValInversionTargetMFDs.class)
 				.getOnFaultSupraSeisNucleationMFDs();

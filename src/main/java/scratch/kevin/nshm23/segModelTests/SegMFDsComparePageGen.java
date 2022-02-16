@@ -32,10 +32,13 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
@@ -292,6 +295,17 @@ public class SegMFDsComparePageGen {
 		
 		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
 		
+		SolutionSlipRates primarySolSlips = primarySol.getModule(SolutionSlipRates.class);
+		if (primarySolSlips == null)
+			primarySolSlips = SolutionSlipRates.calc(primarySol,
+					primarySol.getRupSet().requireModule(AveSlipModule.class),
+					primarySol.getRupSet().requireModule(SlipAlongRuptureModel.class));
+		SolutionSlipRates compSolSlips = compSol.getModule(SolutionSlipRates.class);
+		if (compSolSlips == null)
+			compSolSlips = SolutionSlipRates.calc(compSol,
+					compSol.getRupSet().requireModule(AveSlipModule.class),
+					compSol.getRupSet().requireModule(SlipAlongRuptureModel.class));
+		
 		int num = 0;
 		for (int sectIndex : sorted) {
 			FaultSection sect = rupSet.getFaultSectionData(sectIndex);
@@ -318,6 +332,28 @@ public class SegMFDsComparePageGen {
 			table.addColumn((float)primarySolRates[sectIndex]);
 			table.addColumn((float)compSolRates[sectIndex]);
 			table.addColumn((float)solPDiffs[sectIndex]+" %");
+			table.finalizeLine();
+			double primaryTargetSlipRate = primarySol.getRupSet().getSlipRateForSection(sectIndex);
+			double compTargetSlipRate = primarySol.getRupSet().getSlipRateForSection(sectIndex);
+			double primarySolSlipRate = primarySolSlips.get(tocIndex);
+			double compSolSlipRate = compSolSlips.get(tocIndex);
+			table.initNewLine();
+			table.addColumn("Target Slip Rate");
+			table.addColumn((float)primaryTargetSlipRate);
+			table.addColumn((float)compTargetSlipRate);
+			table.addColumn((float)(100d*(primaryTargetSlipRate-compTargetSlipRate)/compTargetSlipRate)+" %");
+			table.finalizeLine();
+			table.initNewLine();
+			table.addColumn("Solution Slip Rate");
+			table.addColumn((float)primarySolSlipRate);
+			table.addColumn((float)compSolSlipRate);
+			table.addColumn((float)(100d*(primarySolSlipRate-compSolSlipRate)/compSolSlipRate)+" %");
+			table.finalizeLine();
+			table.initNewLine();
+			table.addColumn("Solution Slip Misfits");
+			table.addColumn((float)(100d*(primarySolSlipRate-primaryTargetSlipRate)/primaryTargetSlipRate)+" %");
+			table.addColumn((float)(100d*(compSolSlipRate-compTargetSlipRate)/compTargetSlipRate)+" %");
+			table.addColumn("");
 			table.finalizeLine();
 			
 			lines.addAll(table.build());
