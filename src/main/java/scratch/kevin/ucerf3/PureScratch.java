@@ -510,12 +510,29 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test120() throws IOException {
+		// fix improperly attached modules in an inversion run
+		File mainDir = new File("/data/kevin/ucerf4/batch_inversions/"
+				+ "2022_02_15-coulomb-fm31-ref_branch-seg_model_adjustments-U3_ZENG-Shaw09Mod-DsrUni-SupraB0.8-TotNuclRate-ShawR0_3");
+		for (File subDir : mainDir.listFiles()) {
+			File solFile = new File(subDir, "solution.zip");
+			if (!solFile.exists())
+				continue;
+			File rupSetFile = new File(subDir, "rupture_set.zip");
+			FaultSystemRupSet rupSet = FaultSystemRupSet.load(rupSetFile);
+			FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+			
+			sol = sol.copy(rupSet.getArchive());
+			sol.write(solFile);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test119();
+		test120();
 	}
 
 }

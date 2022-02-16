@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23;
+package scratch.kevin.nshm23.segModelTests;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,12 +29,13 @@ public class NuclMFD_SegDebug {
 		
 		SupraSeisBValInversionTargetMFDs targetMFDs = rupSet.requireModule(SupraSeisBValInversionTargetMFDs.class);
 		
-		List<UncertainIncrMagFreqDist> supraSeisTargets = targetMFDs.getSectSupraSeisNuclMFDs();
+		List<UncertainIncrMagFreqDist> supraSeisTargets = targetMFDs.getOnFaultSupraSeisNucleationMFDs();
 		
-		factory.setAdjustTargetsForSegmentation(false);
+		// TODO
+//		factory.setAdjustTargetsForSegmentation(false);
 		factory.buildInversionConfig(rupSet, rupSet.requireModule(LogicTreeBranch.class), 16);
 		List<UncertainIncrMagFreqDist> noAdjSupraSeisTargets = rupSet.requireModule(SupraSeisBValInversionTargetMFDs.class)
-				.getSectSupraSeisNuclMFDs();
+				.getOnFaultSupraSeisNucleationMFDs();
 		
 		double printThreshold = 1000d;
 		

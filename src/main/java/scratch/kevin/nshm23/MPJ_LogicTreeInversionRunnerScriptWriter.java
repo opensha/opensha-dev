@@ -30,6 +30,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausi
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 
 import com.google.common.base.Preconditions;
@@ -120,8 +121,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoSegAdjust.class;
-//		dirName += "-no_seg_adj_mfds";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
+//		dirName += "-no_reweight_use_prev";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoMFDScaleAdjust.class;
 //		dirName += "-no_scale_adj_mfds";
@@ -134,17 +135,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3_UncertAddDeformationModels.U3_ZENG,
 //				ScalingRelationships.SHAW_2009_MOD,
 				SlipAlongRuptureModels.UNIFORM,
-//				SubSectConstraintModels.TOT_NUCL_RATE,
+				SubSectConstraintModels.TOT_NUCL_RATE,
 				SubSeisMoRateReductions.SUB_B_1,
+//				SupraSeisBValues.B_0p8,
 //				SegmentationModels.SHAW_R0_3,
 				}; 
 		double avgNumRups = 300000;
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
-		
-//		dirName += "-seg_bin_dist_capped_distr";
-		dirName += "-seg_bin_dist_greedy_self_contained";
 		
 //		int numSamples = nodes*5;
 //		int numSamples = nodes*4;

@@ -56,6 +56,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistMo
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
@@ -63,6 +64,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBVal
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.GRParticRateEstimator;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.SegmentationImpliedSectNuclMFD_Estimator.MultiBinDistributionMethod;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -97,6 +99,7 @@ public class BatchInversionScriptWriter {
 		
 		List<InversionConfiguration> configs = new ArrayList<>();
 		List<String> subDirNames = new ArrayList<>();
+		List<FaultSystemRupSet> rupSets = null; // if we have different rup sets per branch
 		
 		File rsDir = new File("/home/kevin/markdown/inversions/");
 		
@@ -1354,19 +1357,11 @@ public class BatchInversionScriptWriter {
 		dirName += "-"+rsPrefix.replace("-uniform", "").replace("-tapered", "");
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
 		
-		boolean distCutoff = false;
-		
 		LogicTreeBranch<LogicTreeNode> branch;
 		
-		if (distCutoff) {
-			dirName += "-dist_cutoff";
-			List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levelsMaxDist;
-			branch = new LogicTreeBranch<>(levels);
-		} else {
-			dirName += "-seg_model";
-			List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-			branch = new LogicTreeBranch<>(levels);
-		}
+		dirName += "-seg_model_adjustments";
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+		branch = new LogicTreeBranch<>(levels);
 		
 		branch.setValue(FaultModels.FM3_1);
 		if (rsPrefix.toLowerCase().contains("coulomb"))
@@ -1393,66 +1388,34 @@ public class BatchInversionScriptWriter {
 		branch.setValue(SubSectConstraintModels.TOT_NUCL_RATE);
 //		branch.setValue(SubSectConstraintModels.NUCL_MFD);
 		
+		// seg model
+		branch.setValue(SegmentationModels.SHAW_R0_3);
+		
 		dirName += "-"+branch.getValue(U3_UncertAddDeformationModels.class).getFilePrefix();
 		dirName += "-"+branch.getValue(ScalingRelationships.class).getFilePrefix();
 		dirName += "-"+branch.getValue(SlipAlongRuptureModels.class).getFilePrefix();
 		dirName += "-"+branch.getValue(SupraSeisBValues.class).getFilePrefix();
 		dirName += "-"+branch.getValue(SubSectConstraintModels.class).getFilePrefix();
+		dirName += "-"+branch.getValue(SegmentationModels.class).getFilePrefix();
 		
 		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
 		
-		// keep track of MFDs without adjustment, will give to the rupture set that's written out
-		SupraSeisBValInversionTargetMFDs origTarget = rupSet.requireModule(SupraSeisBValInversionTargetMFDs.class);
-		
 		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(2000d);
 		
-		if (distCutoff) {
-			MaxJumpDistModels[] maxDists = {
-					MaxJumpDistModels.ONE,
-					MaxJumpDistModels.FIVE,
-					MaxJumpDistModels.ELEVEN
-			};
-			for (MaxJumpDistModels maxDist : maxDists) {
-				branch.setValue(maxDist);
-				
-				factory.setAdjustTargetsForSegmentation(true);
-				InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
-				config = InversionConfiguration.builder(config).completion(completion).build();
-				configs.add(config);
-				subDirNames.add(maxDist.getFilePrefix()+"_adj_targets");
-				
-				factory.setAdjustTargetsForSegmentation(false);
-				config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
-				config = InversionConfiguration.builder(config).completion(completion).build();
-				configs.add(config);
-				subDirNames.add(maxDist.getFilePrefix()+"_no_adj");
-			}
-		} else {
-			SegmentationModels[] segModels = {
-					SegmentationModels.SHAW_R0_1,
-					SegmentationModels.SHAW_R0_2,
-					SegmentationModels.SHAW_R0_3,
-					SegmentationModels.SHAW_R0_4,
-					SegmentationModels.SHAW_R0_5
-			};
-			for (SegmentationModels segModel : segModels) {
-				branch.setValue(segModel);
-				
-				factory.setAdjustTargetsForSegmentation(true);
-				InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
-				config = InversionConfiguration.builder(config).completion(completion).build();
-				configs.add(config);
-				subDirNames.add(segModel.getFilePrefix()+"_adj_targets");
-				
-				factory.setAdjustTargetsForSegmentation(false);
-				config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
-				config = InversionConfiguration.builder(config).completion(completion).build();
-				configs.add(config);
-				subDirNames.add(segModel.getFilePrefix()+"_no_adj");
-			}
+		rupSets = new ArrayList<>();
+		for (SegmentationMFD_Adjustment adjustment : SegmentationMFD_Adjustment.values()) {
+			String name = adjustment.getFilePrefix();
+			
+			branch.setValue(adjustment);
+			
+			FaultSystemRupSet myRupSet = FaultSystemRupSet.buildFromExisting(rupSet).build();
+			InversionConfiguration config = factory.buildInversionConfig(myRupSet, branch, remoteToalThreads);
+			config = InversionConfiguration.builder(config).completion(completion).build();
+			
+			configs.add(config);
+			subDirNames.add(name);
+			rupSets.add(myRupSet);
 		}
-		
-		rupSet.addModule(origTarget);
 		
 		avgJob = false;
 		allPlotLevel = PlotLevel.DEFAULT;
@@ -1527,6 +1490,7 @@ public class BatchInversionScriptWriter {
 		
 		Preconditions.checkState(!configs.isEmpty());
 		Preconditions.checkState(configs.size() == subDirNames.size());
+		Preconditions.checkState(rupSets == null || rupSets.size() == configs.size());
 		
 		SlipAlongRuptureModel dsr = rupSet.getModule(SlipAlongRuptureModel.class);
 		if (dirName.contains("uniform"))
@@ -1541,7 +1505,8 @@ public class BatchInversionScriptWriter {
 		System.out.println("Writing "+configs.size()+" configurations to "+localDir.getName());
 		File remoteDir = new File(remoteMainDir, dirName);
 		File localRupSet = new File(localDir, "rupture_set.zip");
-		rupSet.write(localRupSet);
+		if (rupSets == null)
+			rupSet.write(localRupSet);
 		File remoteRupSet = new File(remoteDir, localRupSet.getName());
 		File remoteJar = new File(remoteDir, "opensha-all.jar");
 		
@@ -1618,6 +1583,13 @@ public class BatchInversionScriptWriter {
 			List<String> script = new ArrayList<>();
 			
 			PlotLevel plotLevel = i == 0 ? primaryPlotLevel : allPlotLevel;
+			
+			if (rupSets != null) {
+				FaultSystemRupSet myRupSet = rupSets.get(i);
+				File localFile = new File(localSubDir, localRupSet.getName());
+				myRupSet.write(localFile);
+				remoteRupSet = new File(new File(remoteDir, name), localRupSet.getName());
+			}
 			
 			script.add("#!/bin/bash");
 			script.add("");

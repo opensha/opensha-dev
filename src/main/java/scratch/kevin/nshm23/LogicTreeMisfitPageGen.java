@@ -26,6 +26,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
@@ -70,9 +71,12 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 //		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-5000ip");
 //		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-no_seg-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
+		
+		boolean currentWeights = true;
 		
 		File outputDir = new File(mainDir, "logic_tree_misfits");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -82,6 +86,8 @@ public class LogicTreeMisfitPageGen {
 		
 		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
 		LogicTree<?> tree = slt.getLogicTree();
+		if (currentWeights)
+			tree.setWeightProvider(new BranchWeightProvider.CurrentWeights());
 		Map<LogicTreeLevel<?>, HashSet<LogicTreeNode>> levelNodes = new HashMap<>();
 		List<? extends LogicTreeLevel<?>> levels = tree.getLevels();
 		for (LogicTreeLevel<?> level : levels)

@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23;
+package scratch.kevin.nshm23.segModelTests;
 
 import java.io.File;
 import java.io.IOException;
