@@ -41,7 +41,6 @@ import scratch.UCERF3.utils.RELM_RegionUtils;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.ned.FSS_Inversion2019.PlottingUtils;
 
-
 /**
  * This makes various plots and other analyses of GridSourceProvider2023.
  * 

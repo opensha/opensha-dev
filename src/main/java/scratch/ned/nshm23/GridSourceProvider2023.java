@@ -54,6 +54,7 @@ import scratch.UCERF3.utils.RELM_RegionUtils;
 import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.ned.FSS_Inversion2019.PlottingUtils;
 
+
 /**
  * This class represents a grid source provider where, rather than in UCERF3 where a fault represented 
  * all supraseismogenic ruptures inside it's polygon, there is now a linear (ramp) transition between 
