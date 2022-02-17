@@ -1,8 +1,10 @@
 package scratch.kevin.nshm23;
 
 import java.awt.Color;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -38,6 +40,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
+import org.opensha.commons.util.modules.helpers.FileBackedModule;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.ConstraintWeightingType;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitProgress;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats;
@@ -48,6 +51,8 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class LogicTreeMisfitPageGen {
 	
@@ -74,7 +79,8 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 //		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 //		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+//		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		boolean currentWeights = true;
@@ -103,34 +109,19 @@ public class LogicTreeMisfitPageGen {
 		
 		int numSummaryBranches = 5;
 		
-		ZipFile	zip = new ZipFile(resultsFile);
+		Map<LogicTreeBranch<?>, InversionMisfitStats> branchMisfits = loadBranchMisfits(resultsFile);
 		
 		AveragingAccumulator<InversionMisfitStats> fullAccumulator = null;
 		for (LogicTreeBranch<?> branch : tree) {
 			branches.add(branch);
 			
-			String entryName = "solution_logic_tree/";
-			for (int i=0; i<branch.size(); i++) {
-				LogicTreeLevel<?> level = branch.getLevel(i);
-				if (level.affects(InversionMisfitStats.MISFIT_STATS_FILE_NAME, true))
-					entryName += branch.getValue(i).getFilePrefix()+"/";
-			}
-			entryName += InversionMisfitStats.MISFIT_STATS_FILE_NAME;
-			System.out.println("Loading "+entryName);
-			ZipEntry entry = zip.getEntry(entryName);
-			Preconditions.checkNotNull(entry, "Entry not found: %s", entryName);
-			
-			CSVFile<String> csv = CSVFile.readStream(zip.getInputStream(entry), true);
-			InversionMisfitStats stats = new InversionMisfitStats(null);
-			stats.initFromCSV(csv);
+			InversionMisfitStats stats = branchMisfits.get(branch);
 			branchStats.add(stats);
 			
 			if (fullAccumulator == null)
 				fullAccumulator = stats.averagingAccumulator();
 			fullAccumulator.process(stats, tree.getBranchWeight(branch));
 		}
-		
-		zip.close();
 		
 		InversionMisfitStats fullAvgStats = fullAccumulator.getAverage();
 		
@@ -868,6 +859,43 @@ public class LogicTreeMisfitPageGen {
 
 		// write markdown
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
+	}
+	
+	public static Map<LogicTreeBranch<?>, InversionMisfitStats> loadBranchMisfits(File resultsFile) throws IOException {
+		return loadBranchMisfits(resultsFile, null);
+	}
+	
+	public static Map<LogicTreeBranch<?>, InversionMisfitStats> loadBranchMisfits(File resultsFile, LogicTree<?> tree)
+			throws IOException {
+		ZipFile	zip = new ZipFile(resultsFile);
+		
+		if (tree == null) {
+			BufferedInputStream logicTreeIS = FileBackedModule.getInputStream(zip, "solution_logic_tree/", "logic_tree.json");
+			Gson gson = new GsonBuilder().registerTypeAdapter(LogicTree.class, new LogicTree.Adapter<>()).create();
+			InputStreamReader reader = new InputStreamReader(logicTreeIS);
+			tree = gson.fromJson(reader, LogicTree.class);
+		}
+		Map<LogicTreeBranch<?>, InversionMisfitStats> ret = new HashMap<>();
+		for (LogicTreeBranch<?> branch : tree) {
+			String entryName = "solution_logic_tree/";
+			for (int i=0; i<branch.size(); i++) {
+				LogicTreeLevel<?> level = branch.getLevel(i);
+				if (level.affects(InversionMisfitStats.MISFIT_STATS_FILE_NAME, true))
+					entryName += branch.getValue(i).getFilePrefix()+"/";
+			}
+			entryName += InversionMisfitStats.MISFIT_STATS_FILE_NAME;
+			System.out.println("Loading "+entryName);
+			ZipEntry entry = zip.getEntry(entryName);
+			Preconditions.checkNotNull(entry, "Entry not found: %s", entryName);
+			
+			CSVFile<String> csv = CSVFile.readStream(zip.getInputStream(entry), true);
+			InversionMisfitStats stats = new InversionMisfitStats(null);
+			stats.initFromCSV(csv);
+			ret.put(branch, stats);
+		}
+		
+		zip.close();
+		return ret;
 	}
 	
 	private static class WeightedTrack {

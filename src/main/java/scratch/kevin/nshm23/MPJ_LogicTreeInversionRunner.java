@@ -134,6 +134,7 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 						sltBuilder = new SolutionLogicTree.FileBuilder(processor,
 								new File(outputDir.getParentFile(), outputDir.getName()+".zip"));
 					
+					batchLoop:
 					for (int index : batch) {
 						dones[index] = true;
 						
@@ -151,16 +152,27 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 								// not all runs for this branch are done
 								debug("AsyncLogicTree: not ready, waiting on run "+run+" for branch "+branchIndex
 										+" (origIndex="+index+", checkIndex="+doneIndex+"): "+branch);
-								return;
+								continue batchLoop;
 							}
 						}
 						
 						FaultSystemSolution sol;
 						if (runsPerBranch > 1) {
-							FaultSystemSolution[] inputs = new FaultSystemSolution[solFiles.size()];
-							for (int i=0; i<inputs.length; i++)
-								inputs[i] = FaultSystemSolution.load(solFiles.get(i));
-							sol = AverageSolutionCreator.buildAverage(inputs);
+							// see if it was already averaged on a compute node
+							String dirName = branch.buildFileName();
+							File avgDir = new File(outputDir, dirName);
+							File avgFile = new File(avgDir, "average_solution.zip");
+							if (avgFile.exists()) {
+								// it was
+								debug("AsyncLogicTree: loading external average from "+avgFile.getAbsolutePath());
+								sol = FaultSystemSolution.load(avgFile);
+							} else {
+								// need to build it here
+								FaultSystemSolution[] inputs = new FaultSystemSolution[solFiles.size()];
+								for (int i=0; i<inputs.length; i++)
+									inputs[i] = FaultSystemSolution.load(solFiles.get(i));
+								sol = AverageSolutionCreator.buildAverage(inputs);
+							}
 						} else {
 							sol = FaultSystemSolution.load(solFiles.get(0));
 						}
@@ -278,7 +290,7 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 	protected File getSolFile(LogicTreeBranch<?> branch, int run) {
 		String dirName = branch.buildFileName();
 		if (runsPerBranch > 1)
-			dirName += "_run "+run;
+			dirName += "_run"+run;
 		File runDir = new File(outputDir, dirName);
 		Preconditions.checkState(runDir.exists() || runDir.mkdir());
 		
@@ -319,6 +331,38 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 		} else {
 			for (int index : batch) {
 				new CalcRunnable(index).run();
+			}
+		}
+		
+		if (runsPerBranch > 1) {
+			// see if I can do an average in parallel so that the post-batch hook on the root node doesn't need to
+			for (int index : batch) {
+				int branchIndex = branchForCalcIndex(index);
+				int run = runForCalcIndex(index);
+				if (run == runsPerBranch - 1) {
+					// it's the last one for this branch, lets see if all of the previous ones are done
+					boolean allDone = true;
+					LogicTreeBranch<LogicTreeNode> branch = tree.getBranch(branchIndex);
+					List<File> solFiles = new ArrayList<>();
+					for (int oRun=0; oRun<runsPerBranch; oRun++) {
+						File solFile = getSolFile(branch, oRun);
+						if (solFile.exists()) {
+							solFiles.add(solFile);
+						} else {
+							allDone = false;
+							break;
+						}
+					}
+					if (allDone) {
+						Preconditions.checkState(solFiles.size() == runsPerBranch);
+						debug("Branch index "+branchIndex+" is all done, doing a compute node average for "+branch);
+						String dirName = branch.buildFileName();
+						File runDir = new File(outputDir, dirName);
+						Preconditions.checkState(runDir.exists() || runDir.mkdir());
+						File outputFile = new File(runDir, "average_solution.zip");
+						AverageSolutionCreator.average(outputFile, solFiles);
+					}
+				}
 			}
 		}
 	}

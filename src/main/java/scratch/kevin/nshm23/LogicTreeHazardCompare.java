@@ -71,15 +71,8 @@ public class LogicTreeHazardCompare {
 
 		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
 		String mainName = "Draft-Model-Coulomb-Shaw-Seg-Jump-Prob";
-//		File mainDir = new File(invDir, "2022_02_10-nshm23_u3_hybrid_branches-seg-capped-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
 //		String mainName = "Draft-Model-Coulomb-Shaw-Seg-Capped-Redist";
-//		File mainDir = new File(invDir, "2022_02_10-nshm23_u3_hybrid_branches-seg-capped_self_contained-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-//		String mainName = "Draft-Model-Coulomb-Shaw-Seg-Capped-Redist-Self";
-//		File mainDir = new File(invDir, "2022_02_10-nshm23_u3_hybrid_branches-seg-greedy-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-//		String mainName = "Draft-Model-Coulomb-Shaw-Seg-Greedy";
-//		File mainDir = new File(invDir, "2022_02_10-nshm23_u3_hybrid_branches-seg-greedy_self_contained-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-//		String mainName = "Draft-Model-Coulomb-Shaw-Seg-Greedy-Self";
-//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 //		String mainName = "Max-Dist-Seg";
 //		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 //		String mainName = "Draft-Model-Coulomb-Shaw-Seg";
@@ -95,9 +88,12 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2022_02_10-nshm23_u3_hybrid_branches-seg-greedy_self_contained-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
 //		String compName = "Self-Contained";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_self_contained");
-		File compDir = new File(invDir, "2022_02_11-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-		String compName = "With-Strict-Cutoff-Seg";
-		File outputDir = new File(mainDir, "hazard_maps_comp_strict_cutoff");
+//		File compDir = new File(invDir, "2022_02_11-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
+//		String compName = "With-Strict-Cutoff-Seg";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_strict_cutoff");
+		File compDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
+		String compName = "Seg-Capped-Redist";
+		File outputDir = new File(mainDir, "hazard_maps_comp_capped_redist");
 //		File compDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 //		String compName = "Capped-Distribution-Seg";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_capped_distr_tot_rate");

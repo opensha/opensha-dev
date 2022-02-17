@@ -4,8 +4,15 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
@@ -33,13 +40,17 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurat
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.U3MFDSubSectNuclInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
+import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
@@ -51,9 +62,13 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 
+import scratch.UCERF3.analysis.FaultSystemRupSetCalc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.U3SectionMFD_constraint;
+import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
 
 public class PureScratch {
 	
@@ -540,12 +555,189 @@ public class PureScratch {
 		sol.write(destSolFile);
 	}
 	
+	private static void test122() throws IOException {
+		File inputSol = new File("/tmp/bad_inv/solution.zip");
+		InversionConfiguration config = FaultSystemSolution.load(inputSol).requireModule(InversionConfiguration.class);
+		InversionConfiguration.writeJSON(config, new File(inputSol.getParentFile(), "config.json"));
+	}
+	
+	private static void test123() throws IOException, InterruptedException, ExecutionException {
+		File inputDir = new File("/tmp/avg_debug");
+		
+		List<FaultSystemSolution> sols = new ArrayList<>();
+		for (int i=0; i<10; i++) {
+			File solFile = new File(inputDir, "solution_"+i+".zip");
+			FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+			
+			sols.add(sol);
+		}
+		
+		List<List<ConstraintRange>> solRanges = new ArrayList<>();
+		for (int i=0; i<sols.size(); i++) {
+			FaultSystemSolution sol = sols.get(i);
+			InversionMisfits misfits = sol.requireModule(InversionMisfits.class);
+			double[] eqMisfits = misfits.getMisfits();
+			double[] ineqMisfits = misfits.getInequalityMisfits();
+			System.out.println("Solution "+i+" has "+eqMisfits.length+" equality misfits");
+			System.out.println("Solution "+i+" has "+ineqMisfits.length+" inequality misfits");
+			solRanges.add(misfits.getConstraintRanges());
+		}
+
+		System.out.println("Constraint Ranges 0");
+		for (ConstraintRange range : solRanges.get(0))
+			System.out.println("\t"+range);
+		System.out.println("Constraint Ranges 9");
+		for (ConstraintRange range : solRanges.get(9))
+			System.out.println("\t"+range);
+		
+////		int expected = getNumRows(FaultSystemRupSetCalc.getCharInversionSectMFD_Constraints(sols.get(0).getRupSet()));
+////		System.out.println("Reproduce with RS 0: "+expected+" rows");
+////		System.out.println("Reproduce with RS 9: "+getNumRows(
+////				FaultSystemRupSetCalc.getCharInversionSectMFD_Constraints(sols.get(9).getRupSet()))+" rows");
+//		// do it in parallel to try to catch a synchronization error
+//		List<Future<Integer>> futures = new ArrayList<>();
+//		ExecutorService exec = Executors.newFixedThreadPool(50);
+////		ExecutorService exec = Executors.newFixedThreadPool(1);
+//		for (int i=0; i<100; i++) {
+//			FaultSystemRupSet rupSet = sols.get(i % sols.size()).getRupSet();
+//			futures.add(exec.submit(new Callable<Integer>() {
+//
+//				@Override
+//				public Integer call() throws Exception {
+//					return getNumRows(FaultSystemRupSetCalc.getCharInversionSectMFD_Constraints(rupSet));
+//				}
+//			}));
+//		}
+//		
+//		Map<Integer, Integer> rowCountCounts = new HashMap<>();
+//		for (Future<Integer> future : futures) {
+//			int numRows = future.get();
+//			
+//			Integer prevCount = rowCountCounts.get(numRows);
+//			if (prevCount == null)
+//				prevCount = 0;
+//			rowCountCounts.put(numRows, prevCount+1);
+//		}
+//		for (int numRows : rowCountCounts.keySet()) {
+//			System.out.println(numRows+": "+rowCountCounts.get(numRows)+" times");
+//		}
+//		exec.shutdown();
+		
+		InversionConfiguration config0 = sols.get(0).requireModule(InversionConfiguration.class);
+		InversionConfiguration config9 = sols.get(9).requireModule(InversionConfiguration.class);
+		
+		U3MFDSubSectNuclInversionConstraint constr0 = null;
+		for (InversionConstraint constr : config0.getConstraints())
+			if (constr instanceof U3MFDSubSectNuclInversionConstraint)
+				constr0 = (U3MFDSubSectNuclInversionConstraint)constr;
+		U3MFDSubSectNuclInversionConstraint constr9 = null;
+		for (InversionConstraint constr : config9.getConstraints())
+			if (constr instanceof U3MFDSubSectNuclInversionConstraint)
+				constr9 = (U3MFDSubSectNuclInversionConstraint)constr;
+		
+		System.out.println("Rows0: "+constr0.getNumRows());
+		System.out.println("Rows1: "+constr9.getNumRows());
+		
+		List<U3SectionMFD_constraint> mfds0 = constr0.getConstraints();
+		List<U3SectionMFD_constraint> mfds1 = constr9.getConstraints();
+		
+		Preconditions.checkState(mfds0.size() == mfds1.size());
+		for (int i=0; i<mfds0.size(); i++) {
+			FaultSection sect = sols.get(0).getRupSet().getFaultSectionData(i);
+			String str = i+". "+sect.getName();
+			if (UCERF2_A_FaultMapper.wasUCERF2_TypeAFault(sect.getParentSectionId()))
+				str += " (type A)";
+			
+			U3SectionMFD_constraint mfd0 = mfds0.get(i);
+			U3SectionMFD_constraint mfd1 = mfds1.get(i);
+			
+			if ((mfd0 == null) != (mfd1 == null)) {
+				System.out.println("Null mismatch for "+str+": mfd0 ? "+(mfd0 == null)+", mfd1 ? "+(mfd1 == null));
+			} else if (mfd0 != null && mfd1 != null) {
+				// see if they're the same
+				boolean valsSame = true;
+				if (mfd0.getNumMags() != mfd1.getNumMags()) {
+					System.out.println("Mag count mismatch for "+str+": mfd0="+mfd0.getNumMags()+", mfd1="+mfd1.getNumMags());
+				} else {
+					for (int j=0; j<mfd0.getNumMags(); j++) {
+						double rate0 = mfd0.getRate(j);
+						double rate1 = mfd1.getRate(j);
+						if ((rate0 > 0) != (rate1 > 0)) {
+							System.out.println(">0 mismatch for "+str+", bin "+j+" ("+mfd0.getMag(j)+"): "+rate0+" != "+rate1);
+						}
+						valsSame = valsSame && (float)rate0 == (float)rate1;
+					}
+				}
+				if (!valsSame)
+					System.out.println("Value(s) mismatch for "+str);
+			}
+		}
+		
+//		AverageSolutionCreator.buildAverage(sols.toArray(new FaultSystemSolution[0]));
+	}
+	
+	private static int getNumRows(List<U3SectionMFD_constraint> constraints) {
+		int numRows = 0;
+		for (U3SectionMFD_constraint constraint : constraints)
+			if (constraint != null)
+				for (int i=0; i<constraint.getNumMags(); i++)
+					if (constraint.getRate(i) > 0)
+						numRows++;
+		return numRows;
+	}
+	
+	private static void test124() throws IOException, InterruptedException, ExecutionException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/tmp/avg_debug/solution_9.zip"));
+		
+////		int expected = getNumRows(FaultSystemRupSetCalc.getCharInversionSectMFD_Constraints(sols.get(0).getRupSet()));
+////		System.out.println("Reproduce with RS 0: "+expected+" rows");
+////		System.out.println("Reproduce with RS 9: "+getNumRows(
+////				FaultSystemRupSetCalc.getCharInversionSectMFD_Constraints(sols.get(9).getRupSet()))+" rows");
+		// do it in parallel to try to catch a synchronization error
+		List<Future<Integer>> futures = new ArrayList<>();
+		ExecutorService exec = Executors.newFixedThreadPool(16);
+//		ExecutorService exec = Executors.newFixedThreadPool(1);
+		for (int i=0; i<10000; i++) {
+			futures.add(exec.submit(new Callable<Integer>() {
+
+				@Override
+				public Integer call() throws Exception {
+					try {
+						UCERF3InversionConfiguration.getUCERF2MagsAndrates(rupSet, FaultModels.FM3_1);
+						return 0;
+					} catch (Exception e) {
+						e.printStackTrace();
+						System.err.flush();
+						System.exit(1);
+						return -1;
+					}
+				}
+			}));
+		}
+		
+		Map<Integer, Integer> rowCountCounts = new HashMap<>();
+		for (Future<Integer> future : futures) {
+			int numRows = future.get();
+			
+			Integer prevCount = rowCountCounts.get(numRows);
+			if (prevCount == null)
+				prevCount = 0;
+			rowCountCounts.put(numRows, prevCount+1);
+		}
+		for (int numRows : rowCountCounts.keySet()) {
+			System.out.println(numRows+": "+rowCountCounts.get(numRows)+" times");
+		}
+		exec.shutdown();
+		
+//		AverageSolutionCreator.buildAverage(sols.toArray(new FaultSystemSolution[0]));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test121();
+		test124();
 	}
 
 }

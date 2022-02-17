@@ -1389,7 +1389,8 @@ public class BatchInversionScriptWriter {
 //		branch.setValue(SubSectConstraintModels.NUCL_MFD);
 		
 		// seg model
-		branch.setValue(SegmentationModels.SHAW_R0_3);
+//		branch.setValue(SegmentationModels.SHAW_R0_3);
+		branch.setValue(SegmentationModels.SHAW_R0_3_SHIFT_1km);
 		
 		dirName += "-"+branch.getValue(U3_UncertAddDeformationModels.class).getFilePrefix();
 		dirName += "-"+branch.getValue(ScalingRelationships.class).getFilePrefix();
@@ -1404,8 +1405,10 @@ public class BatchInversionScriptWriter {
 		
 //		SegmentationMFD_Adjustment[] adjustments = SegmentationMFD_Adjustment.values();
 		SegmentationMFD_Adjustment[] adjustments = {
-				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_ABOVE_1KM,
-				SegmentationMFD_Adjustment.RUP_MULTIPLY_WORST_JUMP_PROB,
+				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
+				SegmentationMFD_Adjustment.CAPPED_REDIST,
+//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_ABOVE_1KM,
+//				SegmentationMFD_Adjustment.RUP_MULTIPLY_WORST_JUMP_PROB,
 		};
 		
 		rupSets = new ArrayList<>();
