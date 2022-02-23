@@ -1026,11 +1026,19 @@ class RupSpectraPageGen {
 //		int eventID = 13383629;
 //		int eventID = 6553169;
 //		int eventID = 13272163;
-		int eventID = 1651575;
+//		int eventID = 1651575;
+		int eventID = 3015199;
+//		int eventID = 1879413;
+//		int eventID = 10096082;
+//		int eventID = 7992279;
+//		int eventID = 7748150;
+//		int eventID = 3012841;
+//		int eventID = 2614773;
+//		int eventID = 1809975;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = true;
-		boolean gpAdjustDDW = true;
+		boolean gpAdjustDDW = false;
 		
 		File eventBBPDir = RSQSimBBP_Config.getEventBBPDir(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
 				RSQSimBBP_Config.SRF_DT, timeScale, scaleVelocities);

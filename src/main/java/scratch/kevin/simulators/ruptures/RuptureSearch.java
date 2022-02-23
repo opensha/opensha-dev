@@ -42,8 +42,12 @@ public class RuptureSearch {
 		
 		int parentID = 301; // Mojave S
 		String parentName = "SAF South Mojave";
-		double minMag = 7.0;
-		double maxMag = 7.5;
+		String dirName = "search_events";
+//		double minMag = 7.0;
+//		double maxMag = 7.5;
+		double minMag = 6.75;
+		double maxMag = 7.25;
+		dirName += "_m6p76_7p25";
 		double maxMagDiff = 0.3;
 //		MagAreaRelationship magAreaRel = new Somerville_2006_MagAreaRel();
 		MagAreaRelationship magAreaRel = new Ellsworth_A_WG02_MagAreaRel();
@@ -53,7 +57,7 @@ public class RuptureSearch {
 		File catalogOutputDir = new File(mainOutputDir, catalog.getCatalogDir().getName());
 		Preconditions.checkState(catalogOutputDir.exists() || catalogOutputDir.mkdir());
 		
-		File outputDir = new File(catalogOutputDir, "search_events");
+		File outputDir = new File(catalogOutputDir, dirName);
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		File resourcesDir = new File(outputDir, "resources");

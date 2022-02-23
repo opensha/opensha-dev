@@ -31,8 +31,12 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		@SuppressWarnings("unused")
 //		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir4860_multi_combine";
-		String catalogDirName = "rundir5320";
+		String catalogDirName = "rundir5296";
 //		String catalogDirName = "rundir4983_stitched";
+		
+//		int skipYears = 20000;
+		int skipYears = 5000;
+//		int skipYears = 65000;
 		
 		boolean standardSites = false;
 		boolean csInitialLASites = false;
@@ -52,10 +56,6 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		if (cs500LASites)
 			RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_500;
 		VelocityModel vm = RSQSimBBP_Config.VM;
-		
-		int skipYears = 20000;
-//		int skipYears = 5000;
-//		int skipYears = 65000;
 		
 		double timeScalar = 1d;
 		boolean scaleVelocities = true;

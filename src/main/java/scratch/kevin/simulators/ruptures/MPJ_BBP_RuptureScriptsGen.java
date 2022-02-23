@@ -85,14 +85,22 @@ class MPJ_BBP_RuptureScriptsGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
 //		int eventID = 1499589;
 		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
-//		int eventID = 7119753;
+		int eventID = 7119753;
 //		int eventID = 8242900;
 //		int eventID = 1499589;
 //		int eventID = 7028377;
 //		int eventID = 13383629;
 //		int eventID = 6553169;
 //		int eventID = 13272163;
-		int eventID = 1651575;
+//		int eventID = 1651575;
+//		int eventID = 3015199;
+//		int eventID = 1879413;
+//		int eventID = 10096082;
+//		int eventID = 7992279;
+//		int eventID = 7748150;
+//		int eventID = 3012841;
+//		int eventID = 2614773;
+//		int eventID = 1809975;
 		
 		double timeScalar = 1d;
 		boolean scaleVelocities = false;
@@ -114,7 +122,7 @@ class MPJ_BBP_RuptureScriptsGen {
 //		double mapSpacing = 0.02;
 		int maxNodes = 16;
 //		int maxNodes = 10;
-		boolean gpAdjustDDW = true;
+		boolean gpAdjustDDW = false;
 		
 		File srcFile = RSQSimBBP_Config.getEventSrcFile(catalog, eventID);
 		File srfFile = RSQSimBBP_Config.getEventSRFFile(catalog, eventID, RSQSimBBP_Config.SRF_INTERP_MODE,
