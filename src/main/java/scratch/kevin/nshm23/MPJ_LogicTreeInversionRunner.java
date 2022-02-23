@@ -161,6 +161,7 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 							// see if it was already averaged on a compute node
 							String dirName = branch.buildFileName();
 							File avgDir = new File(outputDir, dirName);
+							Preconditions.checkState(avgDir.exists() || avgDir.mkdir());
 							File avgFile = new File(avgDir, "average_solution.zip");
 							if (avgFile.exists()) {
 								// it was
@@ -168,10 +169,12 @@ public class MPJ_LogicTreeInversionRunner extends MPJTaskCalculator {
 								sol = FaultSystemSolution.load(avgFile);
 							} else {
 								// need to build it here
+								debug("AsyncLogicTree: building average for "+branch);
 								FaultSystemSolution[] inputs = new FaultSystemSolution[solFiles.size()];
 								for (int i=0; i<inputs.length; i++)
 									inputs[i] = FaultSystemSolution.load(solFiles.get(i));
 								sol = AverageSolutionCreator.buildAverage(inputs);
+								sol.write(avgFile);
 							}
 						} else {
 							sol = FaultSystemSolution.load(solFiles.get(0));

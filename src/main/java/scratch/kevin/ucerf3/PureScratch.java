@@ -18,6 +18,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.stat.StatUtils;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
 import org.opensha.commons.data.IntegerSampler.ExclusionIntegerSampler;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -732,12 +733,36 @@ public class PureScratch {
 //		AverageSolutionCreator.buildAverage(sols.toArray(new FaultSystemSolution[0]));
 	}
 	
+	private static final void test125() {
+		GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(6.05, 20, 0.1, 1e16, 0.8);
+		System.out.println(gr);
+		
+		double sectArea = 7d*14d;
+		Ellsworth_B_WG02_MagAreaRel ma = new Ellsworth_B_WG02_MagAreaRel();
+		
+		IncrementalMagFreqDist particMFD = new IncrementalMagFreqDist(gr.getMinX(), gr.size(), gr.getDelta());
+		for (int i=0; i<gr.size(); i++) {
+			double rupArea = ma.getMedianArea(gr.getX(i));
+			particMFD.set(i, gr.getY(i)*rupArea/sectArea);
+		}
+		
+		System.out.println(particMFD);
+		
+		double totParticRate = particMFD.calcSumOfY_Vals();
+		double particRateAbove7p5 = 0d;
+		for (int i=0; i<gr.size(); i++)
+			if (particMFD.getX(i) >= 7.5)
+				particRateAbove7p5 += particMFD.getY(i);
+		
+		System.out.println("Fract rate >7.5 = "+particRateAbove7p5+" / "+totParticRate+" = "+(particRateAbove7p5/totParticRate));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test124();
+		test125();
 	}
 
 }
