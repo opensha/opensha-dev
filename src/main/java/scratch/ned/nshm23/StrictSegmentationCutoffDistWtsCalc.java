@@ -1,5 +1,6 @@
 package scratch.ned.nshm23;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -7,6 +8,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.commons.calc.nnls.NNLSWrapper;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.gui.plot.GraphWindow;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
 
 import com.google.common.io.Files;
 
@@ -50,7 +56,6 @@ public class StrictSegmentationCutoffDistWtsCalc {
 				C[row][col]=data[1][row];
 			}
 			// put "1.0 in last row (sum of wts must equal 1.0)
-			double r = 
 			C[numRows-1][col] = 1.0;
 		}
 
@@ -113,14 +118,13 @@ public class StrictSegmentationCutoffDistWtsCalc {
 			for(int i=1; i<fileLines.size();i++ ) {
 				String str = fileLines.get(i);
 				String[] split = str.split(",");
-				data[0][i-1] = Double.parseDouble(split[0]);
-				data[1][i-1] = Double.parseDouble(split[1]);
-				data[2][i-1] = Double.parseDouble(split[2]);
+				data[0][i-1] = Double.parseDouble(split[0]); // distance
+				data[1][i-1] = Double.parseDouble(split[1]); // mean rate
+				data[2][i-1] = Double.parseDouble(split[2]); // median rate
 
 //				System.out.println(data[0][i-1]+"\t"+data[1][i-1]+"\t"+data[2][i-1]);
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return data;
@@ -129,14 +133,15 @@ public class StrictSegmentationCutoffDistWtsCalc {
 
 	
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		
 		// assuming functional form of Ae^(-r/ro), we solve for the weights w[] that will 
 		// produce the target ro.  We solve for A at the same time (the last element of the w[] array).
 		
 		double target_ro = 3d;
 		
-		int[] cutoffDistanceArray = {1,3,5,7,9,11,13,15};
+		// both these work:
+//		int[] cutoffDistanceArray = {1,3,5,7,9,11,13,15};
+		int[] cutoffDistanceArray = {3,5,7,9,11,13,15};
 		
 		// read data files
 		String rootPath = "src/main/java/scratch/ned/nshm23/passthroughData/";
@@ -153,6 +158,46 @@ public class StrictSegmentationCutoffDistWtsCalc {
 		// last element here is for "A" in A*exp(-r/ro)
 		for(double wt:wtArray)
 			System.out.println(wt);
+		
+		
+		ArbitrarilyDiscretizedFunc aveRateFunc = new ArbitrarilyDiscretizedFunc();
+		aveRateFunc.setName("aveRateFunc");
+		ArbitrarilyDiscretizedFunc targetRateFunc = new ArbitrarilyDiscretizedFunc();
+		targetRateFunc.setName("targetRateFunc");
+
+		double[][] firstDataArray = dataList.get(0);
+		int numPts = firstDataArray[0].length;
+		double[] aveRatesArray = new double[numPts];
+		for(int i=0;i<dataList.size();i++) {
+			double[][] dataArray = dataList.get(i);
+			for(int row=0;row<dataArray[0].length;row++) {
+				aveRatesArray[row] += wtArray[i]*dataArray[1][row];
+			}
+		}
+		for(int row=0;row<firstDataArray[0].length;row++) {
+			double dist = firstDataArray[0][row];
+			aveRateFunc.set(dist, aveRatesArray[row]);
+			double targetRate = wtArray[wtArray.length-1]*Math.exp(-dist/target_ro);
+			targetRateFunc.set(dist,targetRate);
+		}
+		
+		
+		ArrayList<XY_DataSet> funcs = new  ArrayList<XY_DataSet>();
+		funcs.add(targetRateFunc);
+		funcs.add(aveRateFunc);
+		ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLUE));
+		GraphWindow graph = new GraphWindow(funcs, "Paasthrough Rates");
+//		graph.setX_AxisRange(xAxisRange.getLowerBound(),xAxisRange.getUpperBound());
+//		graph.setY_AxisRange(yAxisRange.getLowerBound(),yAxisRange.getUpperBound());
+		graph.setXLog(false);
+		graph.setYLog(true);
+		graph.setPlotChars(plotChars);
+		graph.setX_AxisLabel("Distance");
+		graph.setY_AxisLabel("Ave Passthrough Rate");
+		graph.setTickLabelFontSize(18);
+		graph.setAxisLabelFontSize(20);
 
 
 	}

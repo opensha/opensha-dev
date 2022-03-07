@@ -857,6 +857,8 @@ public class GridSourceProvider2023_Analysis {
 		}
 
 		CaliforniaRegions.RELM_TESTING_GRIDDED griddedRegion = RELM_RegionUtils.getGriddedRegionInstance();
+		System.out.println(griddedRegion.getLocation(0));
+		System.exit(0);
 
 		SeisDepthDistribution seisDepthDistribution = new SeisDepthDistribution();
 		double delta=2;
