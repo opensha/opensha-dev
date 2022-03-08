@@ -85,7 +85,7 @@ class MPJ_BBP_RuptureScriptsGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983.instance(baseDir);
 //		int eventID = 1499589;
 		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
-		int eventID = 7119753;
+//		int eventID = 7119753;
 //		int eventID = 8242900;
 //		int eventID = 1499589;
 //		int eventID = 7028377;
@@ -100,7 +100,7 @@ class MPJ_BBP_RuptureScriptsGen {
 //		int eventID = 7748150;
 //		int eventID = 3012841;
 //		int eventID = 2614773;
-//		int eventID = 1809975;
+		int eventID = 1809975;
 		
 		double timeScalar = 1d;
 		boolean scaleVelocities = false;
@@ -120,7 +120,8 @@ class MPJ_BBP_RuptureScriptsGen {
 		int numShakeMapGP = 5;
 		double mapSpacing = 0.05;
 //		double mapSpacing = 0.02;
-		int maxNodes = 16;
+//		int maxNodes = 16;
+		int maxNodes = 8;
 //		int maxNodes = 10;
 		boolean gpAdjustDDW = false;
 		

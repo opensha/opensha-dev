@@ -589,6 +589,21 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_5320("bruce/rundir5320", "Bruce 5320", "Bruce Shaw", cal(2022, 1, 25),
 				"b_shallow= .002, b_deep=.011, h_shallow=3.0km, state2minf= .10, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5295("bruce/rundir5295", "Bruce 5295", "Bruce Shaw", cal(2022, 1, 30),
+				"Higher res: b_shallow= .003, b_deep=.013, h_shallow=3.0km, state2minf= .20, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5296("bruce/rundir5296", "Bruce 5296", "Bruce Shaw", cal(2022, 1, 30),
+				"Higher res: b_shallow= .003, b_deep=.015, h_shallow=3.0km, state2minf= .20, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5410("bruce/rundir5410", "Bruce 5410", "Bruce Shaw", cal(2022, 3, 4),
+				"b_shallow= .003, b_deep=.012, h_shallow=3.0km, state2minf= .3, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5411("bruce/rundir5411", "Bruce 5411", "Bruce Shaw", cal(2022, 3, 4),
+				"b_shallow= .0025, b_deep=.013, h_shallow=3.0km, state2minf= .3, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5412("bruce/rundir5412", "Bruce 5412", "Bruce Shaw", cal(2022, 3, 5),
+				"b_shallow= .0025, b_deep=.012, h_shallow=3.0km, state2minf= .3, state2f=.8",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
