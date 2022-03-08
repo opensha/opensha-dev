@@ -7,9 +7,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
@@ -72,23 +76,25 @@ public class LogicTreeBranchAverageWriter {
 //		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
 //		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 //		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
 		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
 		
 //		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
 		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
-//		restrictBAClasses.add(MaxJumpDistModels.class);
+		restrictBAClasses.add(MaxJumpDistModels.class);
 //		restrictBAClasses.add(SegmentationModels.class);
-		restrictBAClasses.add(SubSectConstraintModels.class);
+//		restrictBAClasses.add(SubSectConstraintModels.class);
 		
 		LogicTreeNode[] restrictNodes = {
 				FaultModels.FM3_1
 		};
 		
 		int totThreads = FaultSysTools.defaultNumThreads();
-		int maxPlotThreads = 8;
+		
+		int asyncThreads = Integer.min(8, totThreads);
 		boolean replot = true;
 		
 		HazardMapPlot.SPACING_DEFAULT = 0.2;
@@ -152,24 +158,49 @@ public class LogicTreeBranchAverageWriter {
 			}
 		}
 		
+		int maxTasks = asyncThreads * 2;
+		ExecutorService exec = new ThreadPoolExecutor(asyncThreads, asyncThreads,
+                0L, TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<Runnable>(maxTasks), new ThreadPoolExecutor.CallerRunsPolicy());
+		
+		int count = 0;
+		List<Future<?>> futures = new ArrayList<>();
 		for (LogicTreeBranch<?> branch : tree) {
+			System.out.println("Processing branch "+(count++)+"/"+tree.size()+": "+branch);
 			FaultSystemSolution sol = slt.forBranch(branch);
 			
-			for (LogicTreeNode node : branch)
-				if (nodeBACreators.containsKey(node))
-					nodeBACreators.get(node).addSolution(sol, branch);
+			futures.add(exec.submit(new Runnable() {
+				
+				@Override
+				public void run() {
+					for (LogicTreeNode node : branch)
+						if (nodeBACreators.containsKey(node))
+							nodeBACreators.get(node).addSolution(sol, branch);
+				}
+			}));
 		}
+		
+		for (Future<?> future : futures) {
+			try {
+				future.get();
+			} catch (InterruptedException | ExecutionException e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
+		}
+		
+		exec.shutdown();
 		
 		RupSetMetadata comparison = fullBA == null ? null : new RupSetMetadata("Full Tree", fullBA);
 		
-		int plotThreads =  Math.min(maxPlotThreads, Math.min(totThreads, nodeBACreators.size()));
+		int plotThreads =  Math.min(asyncThreads, Math.min(totThreads, nodeBACreators.size()));
 		
 		int threadsEach = Integer.max(1, totThreads / plotThreads);
 		System.out.println("Building "+nodeBACreators.size()+" BAs with "+plotThreads
 				+" plot threads ("+threadsEach+" threads per report)");
 		
-		ExecutorService exec = null;
-		List<Future<?>> futures = null;
+		exec = null;
+		futures = null;
 		
 		if (plotThreads > 1) {
 			exec = Executors.newFixedThreadPool(plotThreads);

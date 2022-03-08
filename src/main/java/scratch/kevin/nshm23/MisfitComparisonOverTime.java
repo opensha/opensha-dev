@@ -56,10 +56,13 @@ public class MisfitComparisonOverTime {
 //		File mainDir = new File(invDir, "2022_01_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-SubB1-152_samples-10000ip");
 //		File mainDir = new File(invDir, "2022_01_27-nshm23_u3_hybrid_branches-FM3_1-U3RedRupSet-SubB1-152_samples-10000ip");
 //		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-5000ip");
-		File mainDir = new File(invDir, "2022_02_10-nshm23_u3_hybrid_branches-seg-capped-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-		int maxCount = 2000;
+		File mainDir = new File(invDir, "2022_03_01-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-10000ip");
+//		int maxCount = 2000;
+//		int deltaCount = 50;
+//		int scatterDelta = 500;
+		int maxCount = 10000;
 		int deltaCount = 50;
-		int scatterDelta = 500;
+		int scatterDelta = 1000;
 		
 		List<InversionMisfitProgress> progresses = new ArrayList<>();
 		

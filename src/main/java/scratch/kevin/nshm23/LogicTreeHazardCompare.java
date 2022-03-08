@@ -37,6 +37,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
@@ -51,11 +52,15 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 
 public class LogicTreeHazardCompare {
 	
 	public static void main(String[] args) throws IOException {
 		File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
+		
+		boolean currentWeights = false;
+		boolean compCurrentWeights = false;
 		
 //		File mainDir = new File(invDir, "2021_11_24-nshm23_draft_branches-FM3_1");
 //		String mainName = "NSHM23 Draft";
@@ -71,8 +76,10 @@ public class LogicTreeHazardCompare {
 
 ////		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
 ////		String mainName = "Draft-Model-Coulomb-Shaw-Seg-Jump-Prob";
-//		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
-//		String mainName = "Draft-Model-Coulomb-Shaw-Seg-Capped-Redist";
+//		File mainDir = new File(invDir, "2022_02_22-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-StrictEquivJumpProb-2000ip");
+//		String mainName = "Seg-Strict-Equiv-Jump-Prob";
+////		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
+////		String mainName = "Draft-Model-Coulomb-Shaw-Seg-Capped-Redist";
 ////		String mainName = "Max-Dist-Seg";
 ////		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
 ////		String mainName = "Draft-Model-Coulomb-Shaw-Seg";
@@ -89,7 +96,7 @@ public class LogicTreeHazardCompare {
 ////		String compName = "Self-Contained";
 ////		File outputDir = new File(mainDir, "hazard_maps_comp_self_contained");
 //		File compDir = new File(invDir, "2022_02_11-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-//		String compName = "With-Strict-Cutoff-Seg";
+//		String compName = "Strict-Cutoff-Seg";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_strict_cutoff");
 ////		File compDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
 ////		String compName = "Seg-Capped-Redist";
@@ -103,29 +110,93 @@ public class LogicTreeHazardCompare {
 //		LogicTreeNode[] compSubsetNodes = null;
 ////		LogicTreeNode[] compSubsetNodes = { SubSectConstraintModels.TOT_NUCL_RATE };
 		
+		/*
+		 * Sweep of draft models, late Feb 2022
+		 */
 //		File mainDir = new File(invDir, "2022_02_16-u3_branches-orig_calc_params-FM3_1");
 //		String mainName = "UCERF3 2022 Reproduction";
+		
 //		File mainDir = new File(invDir, "2022_02_17-u3_branches-orig_calc_params-new_avg-converged-FM3_1-2000ip");
 //		String mainName = "UCERF3 New-Avg Converged";
+		
 //		File mainDir = new File(invDir, "2022_02_20-u3_branches-orig_calc_params-new_avg-converged-noWL-FM3_1-2000ip");
 //		String mainName = "UCERF3 New-Avg Converged No-WL";
+		
 //		File mainDir = new File(invDir, "2022_02_20-u3_branches-orig_calc_params-new_avg-converged-new_perturb-FM3_1-2000ip");
 //		String mainName = "UCERF3 New-Avg Converged New-Perturb";
-		File mainDir = new File(invDir, "2022_02_21-u3_branches-orig_calc_params-new_avg-converged-noWL-new_perturb-try_zero_often-FM3_1-2000ip");
-		String mainName = "UCERF3 New-Avg Converged New-Perturb No-WL Try-Zero";
-//		File mainDir = new File(invDir, "2022_02_17-u3_branches-FM3_1-2000ip");
+		
+//		File mainDir = new File(invDir, "2022_02_22-u3_branches-orig_calc_params-new_avg-converged-noWL-new_perturb-FM3_1-2000ip");
+//		String mainName = "UCERF3 New-Avg Converged No-WL New-Perturb";
+		
+//		File mainDir = new File(invDir, "2022_02_21-u3_branches-orig_calc_params-new_avg-converged-noWL-new_perturb-try_zero_often-FM3_1-2000ip");
+//		String mainName = "UCERF3 New-Avg Converged New-Perturb No-WL Try-Zero";
+		
+//		File mainDir = new File(invDir, "2022_02_22-u3_branches-FM3_1-2000ip");
 //		String mainName = "UCERF3 New-Anneal Params";
-//		File mainDir = new File(invDir, "2022_02_17-u3_branches-thinned_0.1-FM3_1-2000ip");
-//		String mainName = "UCERF3 New-Anneal Params, Thinned";
+		
+//		File mainDir = new File(invDir, "2022_02_22-u3_branches-thinned_0.1-FM3_1-2000ip");
+//		String mainName = "UCERF3 New-Anneal Params, Reduced RS";
+		
+//		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-no_seg-FM3_1-U3RupSet-DsrUni-TotNuclRate-SubB1-2000ip");
+//		String mainName = "NSHM23 Draft, U3 RS, No Seg";
+		
+//		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-no_seg-FM3_1-U3RedRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
+//		String mainName = "NSHM23 Draft, U3 Reduced RS, No Seg";
+		
+//		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-no_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
+//		String mainName = "NSHM23 Draft, Coulomb RS, No Seg";
+		
+//		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Strict Seg";
+//		currentWeights = true;
+		
+//		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip-branch-translated");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Strict Seg Translated";
+		
+//		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip-branch-translated-min3km");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Strict Seg Translated >=3km";
+		
+//		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-NoAdj-2000ip");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Seg No-Adj";
+		
+//		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg";
+		
+//		File mainDir = new File(invDir, "2022_02_22-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-StrictEquivJumpProb-2000ip");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg @ Strict Bins";
+		
+//		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg 1km-Shift";
+		
+//		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Seg Capped-Redist";
+		
+		File mainDir = new File(invDir, "2022_03_03-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-NuclMFD-SubB1-JumpProb-2000ip");
+		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg 1km-Shift, Nucl-MFD";
+		
 		LogicTreeNode[] subsetNodes = null;
-		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");;
-		String compName = "UCERF3 As Published";
+//		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
+////		String compName = "UCERF3 As Published";
+////		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
+//		String compName = "UCERF3 As Published, Uniform";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published_uniform");
+//		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1, SlipAlongRuptureModels.UNIFORM };
+//		File compDir = new File(invDir, "2022_02_22-u3_branches-FM3_1-2000ip");
+////		String compName = "UCERF3 New Anneal";
+////		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
+//		String compName = "UCERF3 New Anneal, Uniform";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal_uniform");
+//		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1, SlipAlongRuptureModels.UNIFORM };
+//		File compDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
+//		String compName = "Strict Segmentation";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_strict_seg");
+		File compDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+		String compName = "Threshold Avg Shift-1km";
+		File outputDir = new File(mainDir, "hazard_maps_comp_thresh_avg_shift_1km");
 		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
-		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		
-		boolean currentWeights = true;
 		ReturnPeriods[] rps = ReturnPeriods.values();
 		double[] periods = { 0d, 1d };
 		double spacing = 0.1;
@@ -145,7 +216,7 @@ public class LogicTreeHazardCompare {
 			LogicTree<?> compTree = compSolTree.getLogicTree();
 			if (compSubsetNodes != null)
 				compTree = compTree.matchingAll(compSubsetNodes);
-			if (currentWeights)
+			if (compCurrentWeights)
 				compTree.setWeightProvider(new BranchWeightProvider.CurrentWeights());
 			comp = new LogicTreeHazardCompare(compSolTree, compTree,
 					new File(compDir, "results_hazard.zip"), rps, periods, spacing);
@@ -198,10 +269,14 @@ public class LogicTreeHazardCompare {
 		
 		maps = HashBasedTable.create();
 		
+		BranchWeightProvider weightProv = tree.getWeightProvider();
+		
 		GriddedRegion gridReg = null;
 		for (int i=0; i<branches.size(); i++) {
 			LogicTreeBranch<?> branch = branches.get(i);
-			double weight = tree.getBranchWeight(branch);
+			double weight = weightProv.getWeight(branch);
+			Preconditions.checkState(weight > 0, "Bad weight=%s for branch %s, weightProv=%s",
+					weight, branch, weightProv.getClass().getName());
 			weights.add(weight);
 			totWeight += weight;
 			
@@ -377,6 +452,7 @@ public class LogicTreeHazardCompare {
 			ret[i] = new ArbDiscrEmpiricalDistFunc();
 			for (int j=0; j<maps.size(); j++) {
 				double weight = weights.get(j)/totWeight;
+				Preconditions.checkState(weight > 0d, "bad weight: %s", weight);
 				GriddedGeoDataSet map = maps.get(j);
 				
 				double val = map.get(i);
@@ -384,8 +460,10 @@ public class LogicTreeHazardCompare {
 			}
 		}
 		
-		for (int i=0; i<ret.length; i++)
-			Preconditions.checkState((float)ret[i].calcSumOfY_Vals() == 1f);
+		for (int i=0; i<ret.length; i++) {
+			float sum = (float)ret[i].calcSumOfY_Vals();
+			Preconditions.checkState(sum == 1f, "sum of distribution y-values is not 1: %s", sum);
+		}
 		
 		return ret;
 	}
@@ -528,15 +606,20 @@ public class LogicTreeHazardCompare {
 				for (int i=0; i<maps.length; i++)
 					Preconditions.checkNotNull(maps[i], "map %s is null", i);
 				
+				GriddedRegion region = maps[0].getRegion();
+				
+				ArbDiscrEmpiricalDistFunc[] mapArbDiscrs = buildArbDiscrEmpiricalDists(maps, weights);
 				GriddedGeoDataSet mean = buildMean(maps);
+				GriddedGeoDataSet median = calcMapAtPercentile(mapArbDiscrs, region, 50d);
 				GriddedGeoDataSet max = buildMax(maps);
 				GriddedGeoDataSet min = buildMin(maps);
 				GriddedGeoDataSet spread = buildSpread(log10(min), log10(max));
 				
-				TableBuilder table = MarkdownUtils.tableBuilder();
-				table.addLine(meanMinMaxSpreadMaps(mean, min, max, spread, name, label, prefix, resourcesDir));
+//				table.addLine(meanMinMaxSpreadMaps(mean, min, max, spread, name, label, prefix, resourcesDir));
 				
+				ArbDiscrEmpiricalDistFunc[] cmapArbDiscrs = null;
 				GriddedGeoDataSet cmean = null;
+				GriddedGeoDataSet cmedian = null;
 				GriddedGeoDataSet cmin = null;
 				GriddedGeoDataSet cmax = null;
 				GriddedGeoDataSet cspread = null;
@@ -546,96 +629,134 @@ public class LogicTreeHazardCompare {
 					Preconditions.checkNotNull(cmaps);
 					for (int i=0; i<cmaps.length; i++)
 						Preconditions.checkNotNull(cmaps[i], "map %s is null", i);
-					
+
+					cmapArbDiscrs = buildArbDiscrEmpiricalDists(cmaps, comp.weights);
 					cmean = comp.buildMean(cmaps);
+					cmedian = calcMapAtPercentile(cmapArbDiscrs, region, 50d);
 					cmax = comp.buildMax(cmaps);
 					cmin = comp.buildMin(cmaps);
 					cspread = comp.buildSpread(log10(cmin), log10(cmax));
-					table.addLine(meanMinMaxSpreadMaps(cmean, cmin, cmax, cspread, compName, label, prefix+"_comp", resourcesDir));
+//					table.addLine(meanMinMaxSpreadMaps(cmean, cmin, cmax, cspread, compName, label, prefix+"_comp", resourcesDir));
 				}
 				
-				table.invert();
+//				table.invert();
 				
-				if (cmean != null) {
-					// add min vs min and max vs max comparisons
-					table.addLine(MarkdownUtils.boldCentered("Min vs Min Comparison"),
-							MarkdownUtils.boldCentered("Max vs Max Comparison"));
+				TableBuilder table = MarkdownUtils.tableBuilder();
+				
+				File meanMapFile = mapper.plotMap(resourcesDir, prefix+"_mean", log10(mean),
+						logCPT, name, "Log10 Weighted-Average, "+label);
+				File medianMapFile = mapper.plotMap(resourcesDir, prefix+"_mean", log10(median),
+						logCPT, name, "Log10 Weighted-Median, "+label);
+				
+				if (cmean == null) {
+					// no comparison
 					table.initNewLine();
-					GriddedGeoDataSet pDiff = buildPDiff(min, cmin);
-					File map = mapper.plotMap(resourcesDir, prefix+"_comp_min_pDiff", pDiff, pDiffCPT, name+" vs "+compName,
-							"Min Comparison, % Difference, "+label, true);
-					table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
-					pDiff = buildPDiff(max, cmax);
-					map = mapper.plotMap(resourcesDir, prefix+"_comp_max_pDiff", pDiff, pDiffCPT, name+" vs "+compName,
-							"Max Comparison, % Difference, "+label, true);
-					table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+					table.addColumn(MarkdownUtils.boldCentered("Weighted-Average"));
+					table.addColumn(MarkdownUtils.boldCentered("Weighted-Median"));
+					table.finalizeLine().initNewLine();
+					table.addColumn("![Mean Map]("+resourcesDir.getName()+"/"+meanMapFile.getName()+")");
+					table.addColumn("![Median Map]("+resourcesDir.getName()+"/"+medianMapFile.getName()+")");
+					table.finalizeLine();
+				} else {
+					// comparison
+					File cmeanMapFile = mapper.plotMap(resourcesDir, prefix+"_comp_mean", log10(cmean),
+							logCPT, compName, "Log10 Weighted-Average, "+label);
+					File cmedianMapFile = mapper.plotMap(resourcesDir, prefix+"_comp_mean", log10(cmedian),
+							logCPT, compName, "Log10 Weighted-Median, "+label);
+					
+					table.initNewLine();
+					table.addColumn(MarkdownUtils.boldCentered("Primary Weighted-Average"));
+					table.addColumn(MarkdownUtils.boldCentered("Comparison Weighted-Average"));
+					table.finalizeLine().initNewLine();
+					table.addColumn("![Mean Map]("+resourcesDir.getName()+"/"+meanMapFile.getName()+")");
+					table.addColumn("![Mean Map]("+resourcesDir.getName()+"/"+cmeanMapFile.getName()+")");
+					table.finalizeLine();
+					
+					addDiffInclExtremesLines(mean, name, min, max, cmean, compName, prefix+"_mean", resourcesDir, table, "Mean", label);
+					
+					table.initNewLine();
+					table.addColumn(MarkdownUtils.boldCentered("Primary Weighted-Median"));
+					table.addColumn(MarkdownUtils.boldCentered("Comparison Weighted-Median"));
+					table.finalizeLine().initNewLine();
+					table.addColumn("![Median Map]("+resourcesDir.getName()+"/"+medianMapFile.getName()+")");
+					table.addColumn("![Median Map]("+resourcesDir.getName()+"/"+cmedianMapFile.getName()+")");
+					table.finalizeLine();
+					
+					addDiffInclExtremesLines(median, name, min, max, cmedian, compName, prefix+"_median", resourcesDir, table, "Median", label);
+					
+					table.addLine(MarkdownUtils.boldCentered("Comparison Mean Percentile"),
+							MarkdownUtils.boldCentered("Comparison Median Percentile"));
+					GriddedGeoDataSet cMeanPercentile = calcPercentileWithinDist(mapArbDiscrs, cmean);
+					GriddedGeoDataSet cMedianPercentile = calcPercentileWithinDist(mapArbDiscrs, cmedian);
+					table.initNewLine();
+					File map = mapper.plotMap(resourcesDir, prefix+"_comp_mean_percentile", cMeanPercentile,
+							percentileCPT, name+" vs "+compName, "Comparison Mean %-ile, "+label);
+					table.addColumn("![Mean Percentile Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+					map = mapper.plotMap(resourcesDir, prefix+"_comp_median_percentile", cMedianPercentile,
+							percentileCPT, name+" vs "+compName, "Comparison Median %-ile, "+label);
+					table.addColumn("![Median Percentile Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+//					GriddedGeoDataSet spreadDiff = new GriddedGeoDataSet(spread.getRegion(), false);
+//					for (int i=0; i<spreadDiff.size(); i++)
+//						spreadDiff.set(i, spread.get(i)-cspread.get(i));
+//					map = mapper.plotMap(resourcesDir, prefix+"_comp_spread_diff", spreadDiff,
+//							spreadDiffCPT, name+" vs "+compName, "Log10 Spread Difference, "+label);
+//					table.addColumn("![Spread Diff]("+resourcesDir.getName()+"/"+map.getName()+")");
 					table.finalizeLine();
 				}
 				
 				lines.addAll(table.build());
-				
-				ArbDiscrEmpiricalDistFunc[] mapArbDiscrs = buildArbDiscrEmpiricalDists(maps, weights);
-				
-				if (cmean != null) {
-					table = MarkdownUtils.tableBuilder();
-					
-					table.addLine(MarkdownUtils.boldCentered("Mean-Map Difference"),
-							MarkdownUtils.boldCentered("Comparison Diff From Extremes"));
-					
-					GriddedGeoDataSet pDiff = buildPDiff(mean, cmean);
-					table.initNewLine();
-					File map = mapper.plotMap(resourcesDir, prefix+"_comp_pDiff", pDiff, pDiffCPT, name+" vs "+compName,
-							"Comparison - Primary, % Difference, "+label, true);
-					table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
-					GriddedGeoDataSet pDiffFromRange = buildPDiffFromRange(min, max, cmean);
-					map = mapper.plotMap(resourcesDir, prefix+"_comp_pDiff_range", pDiffFromRange, pDiffCPT, name+" vs "+compName,
-							"Comparison - Extremes, % Difference, "+label, true);
-					table.addColumn("![Range Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
-					table.finalizeLine();
-					
-					table.addLine(MarkdownUtils.boldCentered("Comparison Mean Percentile"),
-							MarkdownUtils.boldCentered("Spread Difference"));
-//					GriddedGeoDataSet cMeanPercentile = calcPercentile(maps, cmean);
-					GriddedGeoDataSet cMeanPercentile = calcPercentileWithinDist(mapArbDiscrs, cmean);
-					table.initNewLine();
-					map = mapper.plotMap(resourcesDir, prefix+"_comp_percentile", cMeanPercentile,
-							percentileCPT, name+" vs "+compName, "Comparison %-ile, "+label);
-					table.addColumn("![Percentile Map]("+resourcesDir.getName()+"/"+map.getName()+")");
-					GriddedGeoDataSet spreadDiff = new GriddedGeoDataSet(spread.getRegion(), false);
-					for (int i=0; i<spreadDiff.size(); i++)
-						spreadDiff.set(i, spread.get(i)-cspread.get(i));
-					map = mapper.plotMap(resourcesDir, prefix+"_comp_spread_diff", spreadDiff,
-							spreadDiffCPT, name+" vs "+compName, "Log10 Spread Difference, "+label);
-					table.addColumn("![Spread Diff]("+resourcesDir.getName()+"/"+map.getName()+")");
-					table.finalizeLine();
-					
-					lines.add("");
-					lines.addAll(table.build());
-				}
 				lines.add("");
+
+				table = MarkdownUtils.tableBuilder();
+				if (cmean == null) {
+					// no comparison
+					table.addLine(MarkdownUtils.boldCentered("Minimum"), MarkdownUtils.boldCentered("Maximum"),
+							MarkdownUtils.boldCentered("Spread"));
+					
+					File minMapFile = mapper.plotMap(resourcesDir, prefix+"_min", log10(min),
+							logCPT, name, "Log10 Minimum, "+label);
+					File maxMapFile = mapper.plotMap(resourcesDir, prefix+"_max", log10(max),
+							logCPT, name, "Log10 Maximum, "+label);
+					File spreadMapFile = mapper.plotMap(resourcesDir, prefix+"_spread", spread,
+							spreadCPT, name, "Log10 Spread, "+label);
+					
+					table.initNewLine();
+					table.addColumn("![Min Map]("+resourcesDir.getName()+"/"+minMapFile.getName()+")");
+					table.addColumn("![Max Map]("+resourcesDir.getName()+"/"+maxMapFile.getName()+")");
+					table.addColumn("![Spread Map]("+resourcesDir.getName()+"/"+spreadMapFile.getName()+")");
+					table.finalizeLine();
+				} else {
+					// comparison
+					addMapCompDiffLines(min, name, cmin, compName, prefix+"_min", resourcesDir, table,
+							"Minimum", "Minimum "+label, logCPT, false);
+					addMapCompDiffLines(max, name, cmax, compName, prefix+"_max", resourcesDir, table,
+							"Maximum", "Maximum"+label, logCPT, false);
+					addMapCompDiffLines(spread, name, cspread, compName, prefix+"_spread", resourcesDir, table,
+							"Spread", "Log10 Spread "+label, spreadCPT, true);
+				}
+				
+				lines.addAll(table.build());
+				lines.add("");
+				
 				lines.add("### "+label+" Logic Tree Comparisons");
 				lines.add(topLink); lines.add("");
 				
 				// plot mean percentile
 				table = MarkdownUtils.tableBuilder();
 				
-				File meanMap = new File(outputDir, prefix+"_mean.png");
 				GriddedGeoDataSet meanPercentile = calcPercentileWithinDist(mapArbDiscrs, mean);
 				File meanPercentileMap = mapper.plotMap(resourcesDir, prefix+"_mean_percentile",
 						meanPercentile, percentileCPT, "Branch-Averaged Percentiles",
 						"Branch Averaged %-ile, "+label);
 //				GriddedGeoDataSet median = calc
 				table.addLine("Branch Averaged Map", "Branch Averaged Percentiles");
-				table.addLine("![BA map]("+resourcesDir.getName()+"/"+meanMap.getName()+")",
+				table.addLine("![BA map]("+resourcesDir.getName()+"/"+meanMapFile.getName()+")",
 						"![BA percentiles]("+resourcesDir.getName()+"/"+meanPercentileMap.getName()+")");
 				table.addLine(MarkdownUtils.boldCentered("Median Map"), MarkdownUtils.boldCentered("Mean vs Median"));
-				GriddedGeoDataSet median = calcMapAtPercentile(mapArbDiscrs, maps[0].getRegion(), 50d);
-				File medianMap = mapper.plotMap(resourcesDir, prefix+"_median",
-						log10(median), logCPT, name, "Log10 Weighted-Median, "+label);
 				GriddedGeoDataSet meanMedDiff = buildPDiff(median, mean);
 				File meanMedDiffMap = mapper.plotMap(resourcesDir, prefix+"_mean_median_diff",
 						meanMedDiff, pDiffCPT, name, "Mean - Median, % Difference, "+label, true);
-				table.addLine("![BA Median map]("+resourcesDir.getName()+"/"+medianMap.getName()+")",
+				table.addLine("![BA Median map]("+resourcesDir.getName()+"/"+medianMapFile.getName()+")",
 						"![Median vs Mean]("+resourcesDir.getName()+"/"+meanMedDiffMap.getName()+")");
 //				File meanMap = new File(outputDir, prefix+"_median.png");
 				lines.add("Branched-average hazard can be dominated by outlier branches. This map shows the percentile"
@@ -791,27 +912,58 @@ public class LogicTreeHazardCompare {
 		return map;
 	}
 	
-	private List<String> meanMinMaxSpreadMaps(GriddedGeoDataSet mean, GriddedGeoDataSet min, GriddedGeoDataSet max,
-			GriddedGeoDataSet spread, String title, String label, String prefix, File resourcesDir) throws IOException {
-		List<String> ret = new ArrayList<>();
+	private void addDiffInclExtremesLines(GriddedGeoDataSet primary, String name, GriddedGeoDataSet min,
+			GriddedGeoDataSet max, GriddedGeoDataSet comparison, String compName, String prefix, File resourcesDir,
+			TableBuilder table, String type, String label) throws IOException {
 		
-		ret.add(MarkdownUtils.boldCentered("Weighted-Average"));
-		File map = mapper.plotMap(resourcesDir, prefix+"_mean", log10(mean), logCPT, title, "Log10 Weighted-Average, "+label);
-		ret.add("![Mean Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+		table.addLine(MarkdownUtils.boldCentered(type+" Difference"),
+				MarkdownUtils.boldCentered("Comparison "+type+" Diff From Extremes"));
 		
-		ret.add(MarkdownUtils.boldCentered("Spread"));
-		map = mapper.plotMap(resourcesDir, prefix+"_spread", spread, spreadCPT, title, "Log10 Spread, "+label);
-		ret.add("![Spread Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+		table.initNewLine();
 		
-		ret.add(MarkdownUtils.boldCentered("Minimum"));
-		map = mapper.plotMap(resourcesDir, prefix+"_min", log10(min), logCPT, title, "Log10 Min, "+label);
-		ret.add("![Min Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+		GriddedGeoDataSet pDiff = buildPDiff(comparison, primary);
+		File map = mapper.plotMap(resourcesDir, prefix+"_comp_pDiff", pDiff, pDiffCPT, name+" vs "+compName,
+				"Primary - Comparison, % Difference, "+label, true);
+		table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+		GriddedGeoDataSet pDiffFromRange = buildPDiffFromRange(min, max, comparison);
+		map = mapper.plotMap(resourcesDir, prefix+"_comp_pDiff_range", pDiffFromRange, pDiffCPT, name+" vs "+compName,
+				"Comparison - Extremes, % Difference, "+label, true);
+		table.addColumn("![Range Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+		table.finalizeLine();
+	}
+	
+	private void addMapCompDiffLines(GriddedGeoDataSet primary, String name, GriddedGeoDataSet comparison,
+			String compName, String prefix, File resourcesDir, TableBuilder table, String type, String label,
+			CPT cpt, boolean spread) throws IOException {
+
+		CPT diffCPT;
+		GriddedGeoDataSet diff;
+		String diffLabel;
+		if (spread) {
+			diff = new GriddedGeoDataSet(primary.getRegion(), false);
+			for (int i=0; i<diff.size(); i++)
+				diff.set(i, primary.get(i)-comparison.get(i));
+			diffCPT = spreadDiffCPT;
+			diffLabel = "Primary - Comparison, "+label;
+		} else {
+			diff = buildPDiff(comparison, primary);;
+			primary = log10(primary);
+			comparison = log10(comparison);
+			diffCPT = pDiffCPT;
+			diffLabel = "Primary - Comparison, % Difference, "+label;
+		}
 		
-		ret.add(MarkdownUtils.boldCentered("Maximum"));
-		map = mapper.plotMap(resourcesDir, prefix+"_max", log10(max), logCPT, title, "Log10 Max, "+label);
-		ret.add("![Max Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+		table.addLine(MarkdownUtils.boldCentered("Primary "+type), MarkdownUtils.boldCentered("Comparison "+type),
+				MarkdownUtils.boldCentered(spread ? "Difference" : "% Difference"));
 		
-		return ret;
+		table.initNewLine();
+		File map = mapper.plotMap(resourcesDir, prefix, primary, cpt, name, (spread ? "" : "Log10 ")+label);
+		table.addColumn("!["+type+"]("+resourcesDir.getName()+"/"+map.getName()+")");
+		map = mapper.plotMap(resourcesDir, prefix+"_comp", comparison, cpt, name, (spread ? "" : "Log10 ")+label);
+		table.addColumn("!["+type+"]("+resourcesDir.getName()+"/"+map.getName()+")");
+		map = mapper.plotMap(resourcesDir, prefix+"_comp_pDiff", diff, diffCPT, name+" vs "+compName, diffLabel, !spread);
+		table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+		table.finalizeLine();
 	}
 
 }

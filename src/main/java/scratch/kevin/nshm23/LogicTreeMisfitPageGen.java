@@ -82,7 +82,7 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
 //		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
 //		File mainDir = new File(invDir, "2022_02_17-u3_branches-FM3_1-2000ip");
-		File mainDir = new File(invDir, "2022_02_21-u3_branches-orig_calc_params-new_avg-converged-noWL-new_perturb-try_zero_often-FM3_1-2000ip");
+		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		boolean currentWeights = true;

@@ -10,6 +10,7 @@ import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeInversionRunner;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 
 import com.google.common.base.Preconditions;

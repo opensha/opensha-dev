@@ -2,10 +2,12 @@ package scratch.kevin.nshm23;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
@@ -15,11 +17,14 @@ import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
+import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeHazardCalc;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeInversionRunner;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
@@ -55,6 +60,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		List<String> extraArgs = new ArrayList<>();
 		
+		boolean strictSeg = false;
+		double segTransMaxDist = 3d;
+		
 		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
 		int remoteToalThreads = 20;
 		int remoteInversionsPerBundle = 1;
@@ -84,7 +92,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2022_02_17";
+//		String dirName = "2022_02_27";
 		
 		/*
 		 * UCERF3 logic tree
@@ -147,14 +155,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
 //		dirName += "-nshm23_branches";
 		
-		levels = new ArrayList<>(levels);
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
-					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class))
-				levels.remove(i);
-		dirName += "-no_seg";
+//		levels = new ArrayList<>(levels);
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
+//					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class))
+//				levels.remove(i);
+////		dirName += "-no_seg";
 //		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
-//		dirName += "-max_dist";
+//		dirName += "-strict_cutoff_seg"; strictSeg = true;
 		
 //		dirName += "-reweight_seg_2_3_4";
 			
@@ -168,6 +176,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoMFDScaleAdjust.class;
 //		dirName += "-no_scale_adj_mfds";
 		
+		dirName += "-shift_seg_1km";
+		
 		LogicTreeNode[] required = {
 				FaultModels.FM3_1,
 				RupturePlausibilityModels.COULOMB,
@@ -176,11 +186,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3_UncertAddDeformationModels.U3_ZENG,
 //				ScalingRelationships.SHAW_2009_MOD,
 				SlipAlongRuptureModels.UNIFORM,
-				SubSectConstraintModels.TOT_NUCL_RATE,
+//				SubSectConstraintModels.TOT_NUCL_RATE,
+				SubSectConstraintModels.NUCL_MFD,
 				SubSeisMoRateReductions.SUB_B_1,
 //				SupraSeisBValues.B_0p8,
 //				SegmentationModels.SHAW_R0_3,
-//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG
+//				SegmentationMFD_Adjustment.NONE
+				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG
 //				SegmentationMFD_Adjustment.CAPPED_REDIST
 //				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED
 //				SegmentationMFD_Adjustment.GREEDY
@@ -252,6 +264,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		}
 		
 		System.out.println("Built "+logicTree.size()+" branches");
+		Preconditions.checkState(logicTree.size() > 0, "No matching branches");
 		
 		int origNodes = nodes;
 		nodes = Integer.min(nodes, logicTree.size());
@@ -322,6 +335,81 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			// run hazard in the high priority queue
 			queue = "scec_hiprio";
 		pbsWrite.writeScript(new File(localDir, "batch_hazard.slurm"), script, mins, nodes, remoteToalThreads, queue);
+		
+		if (strictSeg) {
+			// write strict segmentation branch translation job
+			String modDirName = localDir.getName()+"-branch-translated";
+			if (segTransMaxDist > 0d)
+				modDirName += "-min"+new DecimalFormat("0.#").format(segTransMaxDist)+"km";
+			File modLocalDir = new File(localMainDir, modDirName);
+			Preconditions.checkState(modLocalDir.exists() || modLocalDir.mkdir());
+			File modRemoteDir = new File(remoteMainDir, modLocalDir.getName());
+			
+			classpath = new ArrayList<>();
+			classpath.add(new File(modRemoteDir, "opensha-dev-all.jar"));
+			mpjWrite.setClasspath(classpath);
+			
+			List<LogicTreeLevel<? extends LogicTreeNode>> modLevels = new ArrayList<>();
+			for (LogicTreeLevel<? extends LogicTreeNode> level : levels)
+				if (!level.matchesType(MaxJumpDistModels.class))
+					modLevels.add(level);
+			modLevels.add(NSHM23_LogicTreeBranch.SEG);
+			
+			List<LogicTreeBranch<LogicTreeNode>> modBranches = new ArrayList<>();
+			
+			HashSet<String> branchNameHash = new HashSet<>();
+			for (LogicTreeBranch<?> branch : logicTree) {
+				LogicTreeBranch<LogicTreeNode> modBranch = new LogicTreeBranch<LogicTreeNode>(modLevels);
+				for (LogicTreeNode node : branch)
+					if (!(node instanceof MaxJumpDistModels))
+						modBranch.setValue(node);
+				String baseName = modBranch.toString();
+				if (branchNameHash.contains(baseName))
+					continue;
+				branchNameHash.add(baseName);
+				for (SegmentationModels segModel : SegmentationModels.values()) {
+					if (segModel.getNodeWeight(modBranch) > 0d) {
+						LogicTreeBranch<LogicTreeNode> fullBranch = modBranch.copy();
+						fullBranch.setValue(segModel);
+						modBranches.add(fullBranch);
+					}
+				}
+			}
+			
+			System.out.println("Translating "+logicTree.size()+" branches to "+modBranches.size());
+			LogicTree<LogicTreeNode> modTree = LogicTree.fromExisting(modLevels, modBranches);
+			File modLocalLogicTree = new File(modLocalDir, remoteLogicTree.getName());
+			modTree.write(modLocalLogicTree);
+			File modRemoteLogicTree = new File(modRemoteDir, modLocalLogicTree.getName());
+			
+			File modOutputDir = new File(modRemoteDir, "results");
+			argz = "--input-dir "+resultsDir.getAbsolutePath();
+			argz += " --input-logic-tree "+remoteLogicTree.getAbsolutePath();
+			argz += " --output-logic-tree "+modRemoteLogicTree.getAbsolutePath();
+			argz += " --inversion-factory '"+factoryClass.getName()+"'"; // surround in single quotes to escape $'s
+			argz += " --output-dir "+modOutputDir.getAbsolutePath();
+			if (segTransMaxDist > 0d)
+				argz += " --min-distance "+segTransMaxDist;
+			argz += " "+MPJTaskCalculator.argumentBuilder().threads(remoteToalThreads).build();
+			script = mpjWrite.buildScript(MPJ_StrictSegLogicTreeTranslation.class.getName(), argz);
+			
+			int transNodes = Integer.min(16, nodes);
+			mins = (int)60*10;
+			pbsWrite.writeScript(new File(modLocalDir, "batch_strict_branch_translate.slurm"), script, mins, transNodes, remoteToalThreads, queue);
+			
+			// now write hazard script
+			argz = "--input-file "+new File(modOutputDir.getAbsolutePath()+".zip");
+			argz += " --output-dir "+modOutputDir.getAbsolutePath();
+			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteToalThreads).build();
+			script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
+			
+			mins = (int)60*10;
+			nodes = Integer.min(40, nodes);
+			if (queue != null && queue.equals("scec"))
+				// run hazard in the high priority queue
+				queue = "scec_hiprio";
+			pbsWrite.writeScript(new File(modLocalDir, "batch_hazard.slurm"), script, mins, nodes, remoteToalThreads, queue);
+		}
 	}
 
 }
