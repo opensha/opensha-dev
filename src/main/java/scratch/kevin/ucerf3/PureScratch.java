@@ -54,11 +54,14 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultRea
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.simulators.RSQSimEvent;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
@@ -68,8 +71,10 @@ import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
+import scratch.UCERF3.utils.FaultSectionDataWriter;
 import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
+import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class PureScratch {
 	
@@ -733,7 +738,7 @@ public class PureScratch {
 //		AverageSolutionCreator.buildAverage(sols.toArray(new FaultSystemSolution[0]));
 	}
 	
-	private static final void test125() {
+	private static void test125() {
 		GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(6.05, 20, 0.1, 1e16, 0.8);
 		System.out.println(gr);
 		
@@ -757,12 +762,39 @@ public class PureScratch {
 		System.out.println("Fract rate >7.5 = "+particRateAbove7p5+" / "+totParticRate+" = "+(particRateAbove7p5/totParticRate));
 	}
 	
+	private static void test126() throws IOException {
+		List<? extends FaultSection> sects = NSHM23_DeformationModels.GEOL_V1p3.buildGeolFullSects(
+				NSHM23_FaultModels.NSHM23_v1p4, "v1p3");
+		
+		GeoJSONFaultReader.writeFaultSections(new File("/tmp/nshm23_dm1p3_sects.geojson"), sects);
+	}
+	
+	private static void test127() throws IOException {
+		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOL_V1p3.build(NSHM23_FaultModels.NSHM23_v1p4);
+		
+		FaultSectionDataWriter.writeSectionsToFile(subSects, null, new File("/tmp/nshm23_dm1p3_sub_sects.txt"), false);
+		GeoJSONFaultReader.writeFaultSections(new File("/tmp/nshm23_dm1p3_sub_sects.geojson"), subSects);
+	}
+	
+	private static void test128() throws IOException {
+		double minMag = Double.POSITIVE_INFINITY;
+//		for (RSQSimEvent e : Catalogs.BRUCE_2585_1MYR.instance().loader().skipYears(20000).iterable()) {
+		for (RSQSimEvent e : Catalogs.BRUCE_5295.instance().loader().skipYears(5000).iterable()) {
+			double mag = e.getMagnitude();
+			if (mag < minMag && Double.isFinite(mag)) {
+				System.out.println("New min mag: "+(float)mag);
+				minMag = mag;
+			}
+		}
+		System.exit(0);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test125();
+		test128();
 	}
 
 }

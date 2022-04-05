@@ -604,6 +604,15 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_5412("bruce/rundir5412", "Bruce 5412", "Bruce Shaw", cal(2022, 3, 5),
 				"b_shallow= .0025, b_deep=.012, h_shallow=3.0km, state2minf= .3, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5413("bruce/rundir5413", "Bruce 5413", "Bruce Shaw", cal(2022, 3, 11),
+				"b_shallow= .0025, b_deep=.012, h_shallow=3.0km, state2minf= .2, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5414("bruce/rundir5414", "Bruce 5414", "Bruce Shaw", cal(2022, 3, 11),
+				"b_shallow= .0025, b_deep=.012, h_shallow=3.0km, state2minf= .15, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5415("bruce/rundir5415", "Bruce 5415", "Bruce Shaw", cal(2022, 3, 11),
+				"b_shallow= .0025, b_deep=.012, h_shallow=3.0km, state2minf= .1, state2f=.8",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;

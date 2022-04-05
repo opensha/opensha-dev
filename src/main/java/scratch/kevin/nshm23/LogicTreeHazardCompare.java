@@ -137,6 +137,9 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_02_22-u3_branches-thinned_0.1-FM3_1-2000ip");
 //		String mainName = "UCERF3 New-Anneal Params, Reduced RS";
 		
+//		File mainDir = new File(invDir, "2022_03_08-u3_branches-coulomb-FM3_1-2000ip");
+//		String mainName = "UCERF3 New-Anneal Params, Coulomb RS";
+		
 //		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-no_seg-FM3_1-U3RupSet-DsrUni-TotNuclRate-SubB1-2000ip");
 //		String mainName = "NSHM23 Draft, U3 RS, No Seg";
 		
@@ -153,8 +156,8 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip-branch-translated");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Strict Seg Translated";
 		
-//		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip-branch-translated-min3km");
-//		String mainName = "NSHM23 Draft, Coulomb RS, Strict Seg Translated >=3km";
+		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip-branch-translated-min3km");
+		String mainName = "NSHM23 Draft, Coulomb RS, Strict Seg Translated >=3km";
 		
 //		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-NoAdj-2000ip");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Seg No-Adj";
@@ -165,34 +168,42 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_02_22-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-StrictEquivJumpProb-2000ip");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg @ Strict Bins";
 		
-//		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+//		File mainDir = new File(invDir, "2022_03_24-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+////		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg 1km-Shift";
 		
 //		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Seg Capped-Redist";
 		
-		File mainDir = new File(invDir, "2022_03_03-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-NuclMFD-SubB1-JumpProb-2000ip");
-		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg 1km-Shift, Nucl-MFD";
+//		File mainDir = new File(invDir, "2022_03_03-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-NuclMFD-SubB1-JumpProb-2000ip");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg 1km-Shift, Nucl-MFD";
+		
+//		File compDir = new File(invDir, "2022_03_24-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+//		String compName = "Previous Step";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_prev");
 		
 		LogicTreeNode[] subsetNodes = null;
-//		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
-////		String compName = "UCERF3 As Published";
-////		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
+		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
+		String compName = "UCERF3 As Published";
+		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
 //		String compName = "UCERF3 As Published, Uniform";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published_uniform");
 //		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1, SlipAlongRuptureModels.UNIFORM };
 //		File compDir = new File(invDir, "2022_02_22-u3_branches-FM3_1-2000ip");
-////		String compName = "UCERF3 New Anneal";
-////		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
+//		String compName = "UCERF3 New Anneal";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
+//		File compDir = new File(invDir, "2022_03_13-u3_branches-coulomb-bilateral-FM3_1-2000ip");
+//		String compName = "UCERF3 Coulomb Bilateral";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_coulomb_bilateral");
 //		String compName = "UCERF3 New Anneal, Uniform";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal_uniform");
 //		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1, SlipAlongRuptureModels.UNIFORM };
 //		File compDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
 //		String compName = "Strict Segmentation";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_strict_seg");
-		File compDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
-		String compName = "Threshold Avg Shift-1km";
-		File outputDir = new File(mainDir, "hazard_maps_comp_thresh_avg_shift_1km");
+//		File compDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+//		String compName = "Threshold Avg Shift-1km";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_thresh_avg_shift_1km");
 		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
