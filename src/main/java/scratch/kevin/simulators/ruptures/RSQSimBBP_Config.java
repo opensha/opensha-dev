@@ -310,6 +310,10 @@ public class RSQSimBBP_Config {
 		return cs500InitialSites;
 	}
 	
+	public static List<BBP_Site> getCyberShakeLAMapSites() throws IOException {
+		return BBP_Site.readFile(new File("src/main/resources/bbp/cs_la_sites.stl"));
+	}
+	
 	public static List<BBP_Site> getCAGriddedSites(double spacing) {
 		return getGriddedSites(new CaliforniaRegions.RELM_TESTING(), spacing);
 	}

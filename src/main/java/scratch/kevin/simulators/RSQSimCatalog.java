@@ -613,6 +613,12 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_5415("bruce/rundir5415", "Bruce 5415", "Bruce Shaw", cal(2022, 3, 11),
 				"b_shallow= .0025, b_deep=.012, h_shallow=3.0km, state2minf= .1, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5416("bruce/rundir5416", "Bruce 5416", "Bruce Shaw", cal(2022, 4, 20),
+				"b_shallow= .002, b_deep=.013, h_shallow=3.0km, state2minf= .20, state2f=.8",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5418("bruce/rundir5418", "Bruce 5418", "Bruce Shaw", cal(2022, 4, 20),
+				"b_shallow= .002, b_deep=.012, h_shallow=3.0km, state2minf= .20, state2f=.8, tdelay= 0.65",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -1110,6 +1116,9 @@ public class RSQSimCatalog implements XMLSaveable {
 			List<String> gmpeRGLinks = new ArrayList<>();
 			List<String> gmpeRGNames = new ArrayList<>();
 			
+			List<String> gmpeNonErgodicLinks = new ArrayList<>();
+			List<String> gmpeNonErgodicNames = new ArrayList<>();
+			
 			List<String> rotatedRupLinks = new ArrayList<>();
 			List<String> rotatedRupNames = new ArrayList<>();
 			
@@ -1168,6 +1177,10 @@ public class RSQSimCatalog implements XMLSaveable {
 						gmpeNames.add(subName);
 						gmpeLinks.add(name);
 					}
+				} else if (name.startsWith("gmpe_bbp_non_ergodic_maps_")) {
+					String subName = name.substring("gmpe_bbp_non_ergodic_maps_".length());
+					gmpeNonErgodicNames.add(subName);
+					gmpeNonErgodicLinks.add(name);
 				} else if (name.startsWith("gmpe_bbp_rg_comparisons_")) {
 					gmpeRGNames.add(name.substring("gmpe_bbp_rg_comparisons_".length()));
 					gmpeRGLinks.add(name);
@@ -1281,6 +1294,14 @@ public class RSQSimCatalog implements XMLSaveable {
 				lines.add("");
 				for (int i=0; i<gmpeRGNames.size(); i++)
 					lines.add("* ["+gmpeRGNames.get(i)+"]("+bbpDir.getName()+"/"+gmpeRGLinks.get(i)+"/)");
+			}
+			if (!gmpeNonErgodicNames.isEmpty()) {
+				lines.add("");
+				lines.add("### Full Catalog GMPE Non-Ergodic Map Comparisons, "+vm);
+				lines.add(topLink);
+				lines.add("");
+				for (int i=0; i<gmpeNonErgodicNames.size(); i++)
+					lines.add("* ["+gmpeNonErgodicNames.get(i)+"]("+bbpDir.getName()+"/"+gmpeNonErgodicLinks.get(i)+"/)");
 			}
 			if (rotDDLink != null) {
 				lines.add("");

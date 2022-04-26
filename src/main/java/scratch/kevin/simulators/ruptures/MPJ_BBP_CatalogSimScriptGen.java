@@ -31,7 +31,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		@SuppressWarnings("unused")
 //		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir4860_multi_combine";
-		String catalogDirName = "rundir5415";
+		String catalogDirName = "rundir5413";
 //		String catalogDirName = "rundir4983_stitched";
 		
 //		int skipYears = 20000;
@@ -40,7 +40,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		
 		boolean standardSites = false;
 		boolean csInitialLASites = false;
-		boolean cs500LASites = true;
+		boolean cs500LASites = false;
+		boolean csLAMapSites = true;
 		boolean griddedCASites = false;
 		boolean griddedSoCalSites = false;
 		double griddedSpacing = 1d;
@@ -122,10 +123,12 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-csLASites";
 		if (cs500LASites)
 			jobName += "-cs500Sites";
+		if (csLAMapSites)
+			jobName += "-csLAMapSites";
 		if (griddedCASites || griddedSoCalSites)
 			jobName += "-griddedSites";
 		Preconditions.checkArgument(!(griddedSoCalSites && griddedCASites));
-		Preconditions.checkState(standardSites || griddedCASites || griddedSoCalSites || csInitialLASites || cs500LASites);
+		Preconditions.checkState(standardSites || griddedCASites || griddedSoCalSites || csInitialLASites || cs500LASites || csLAMapSites);
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -140,6 +143,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			sites.addAll(RSQSimBBP_Config.getCyberShakeInitialLASites());
 		if (cs500LASites)
 			sites.addAll(RSQSimBBP_Config.getCyberShakeVs500LASites());
+		if (csLAMapSites)
+			sites.addAll(RSQSimBBP_Config.getCyberShakeLAMapSites());
 		if (griddedCASites)
 			sites.addAll(RSQSimBBP_Config.getCAGriddedSites(griddedSpacing));
 		if (griddedSoCalSites)

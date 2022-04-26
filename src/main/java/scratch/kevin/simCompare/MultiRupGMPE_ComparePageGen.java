@@ -1,6 +1,7 @@
 package scratch.kevin.simCompare;
 
 import java.awt.Color;
+import java.awt.Stroke;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
@@ -13,10 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.jfree.data.Range;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -24,16 +27,25 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.PrimitiveArrayXY_Dataset;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.impl.WarningDoubleParameter;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.MarkdownUtils.TableBuilder;
+import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.cpt.CPTVal;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.MultiIMR_Averaged_AttenRel;
 import org.opensha.sha.imr.param.EqkRuptureParams.MagParam;
-import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
@@ -44,14 +56,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
-import com.google.common.primitives.Doubles;
 
 import scratch.kevin.bbp.SpectraPlotter;
 import scratch.kevin.simCompare.RuptureComparisonFilter.SiteFilter;
 import scratch.kevin.simCompare.ZScoreHistPlot.ZScoreResult;
-
-import org.opensha.commons.util.MarkdownUtils;
-import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 
 public abstract class MultiRupGMPE_ComparePageGen<E> {
 	
@@ -1532,6 +1540,633 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 //				table.finalizeLine();
 //			}
 //			lines.addAll(table.build());
+		}
+		
+		// add TOC
+		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));
+		lines.add(tocIndex, "## Table Of Contents");
+
+		// write markdown
+		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
+	}
+	
+	protected static Region bufferRegion(Region reg, double bufferKM) {
+		Location topLeft = new Location(reg.getMaxLat(), reg.getMinLon());
+		Location botRight = new Location(reg.getMinLat(), reg.getMaxLon());
+		
+		return new Region(LocationUtils.location(topLeft, 1.75*Math.PI, bufferKM),
+				LocationUtils.location(botRight, 0.75*Math.PI, bufferKM));
+	}
+	
+	private static enum HazardRatioType {
+		PDIFF,
+		RATIO,
+		LOG_RATIO
+	}
+	
+	public void generateNonErgodicMapPage(File outputDir, List<String> headerLines, List<? extends FaultSection> subSects,
+			Region siteRegion, Region sourceRegion, AttenRelRef gmpeRef, List<? extends RuptureComparison<E>> comps,
+			Map<E, List<FaultSection>> rupSectMappings, Map<E, FaultSection> rupNuclSects, IMT[] imts,
+			List<Site> highlightSites) throws IOException {
+		File resourcesDir = new File(outputDir, "resources");
+		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
+		LinkedList<String> lines = new LinkedList<>();
+		
+		HazardRatioType ratioType = HazardRatioType.PDIFF;
+		double linearRatioFactor = 2d;
+		
+		lines.add("# Non-Ergodic Source & Site Maps");
+		lines.add("");
+		lines.add("This page compares non-ergodic simulation results against an ergodic GMPE, primarily through z-score"
+				+ " analysis of residuals. The comparison fully ergodic GMPE is _"+gmpeRef.getName()+"_ and results are"
+				+ " shown relative to the predicted mean and standard deviations from the model.");
+		lines.add("");
+		
+		// header
+		if (headerLines != null && !headerLines.isEmpty()) {
+			lines.addAll(headerLines);
+			if (!lines.getLast().isEmpty())
+				lines.add("");
+		}
+		
+		int tocIndex = lines.size();
+		String topLink = "*[(top)](#table-of-contents)*";
+		
+		RupSetMapMaker siteMapMaker = new RupSetMapMaker(subSects, siteRegion);
+		siteMapMaker.setWriteGeoJSON(false);
+//		siteMapMaker.setScatterSymbol(PlotSymbol.FILLED_TRIANGLE, 7f, PlotSymbol.TRIANGLE, new Color(0, 0, 0, 127));
+		siteMapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 10f, PlotSymbol.CIRCLE, new Color(0, 0, 0, 127));
+		RupSetMapMaker sourceMapMaker = new RupSetMapMaker(subSects, sourceRegion);
+		// this one is used for highlight sites
+		sourceMapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 15f, PlotSymbol.CIRCLE, Color.BLACK);
+		sourceMapMaker.setSkipNaNs(true);
+		
+		CPT zScoreCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
+		CPT sigmaCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0.5d, 1d);
+		
+		CPT ratioCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
+		if (ratioType == HazardRatioType.RATIO) {
+			CPT leftCPT = new CPT();
+			CPT rightCPT = new CPT();
+			for (CPTVal val : ratioCPT) {
+				if (val.start < 0f)
+					leftCPT.add(val);
+				else
+					rightCPT.add(val);
+			}
+			leftCPT = leftCPT.rescale(1d/linearRatioFactor, 1d);
+			rightCPT = rightCPT.rescale(1d, linearRatioFactor);
+			ratioCPT = new CPT();
+			ratioCPT.addAll(leftCPT);
+			ratioCPT.addAll(rightCPT);
+			ratioCPT.setBelowMinColor(ratioCPT.getMinColor());
+			ratioCPT.setAboveMaxColor(ratioCPT.getMaxColor());
+		} else if (ratioType == HazardRatioType.PDIFF) {
+			ratioCPT = ratioCPT.rescale(-100d, 100d);
+		} else {
+			Preconditions.checkState(ratioType == HazardRatioType.LOG_RATIO);
+		}
+		CPT rawHazardCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance();
+		
+		List<Site> sites = new ArrayList<>(this.sites);
+		for (int i=sites.size(); --i>=0;)
+			if (sites.get(i) == null)
+				sites.remove(i);
+		List<Location> siteLocs = new ArrayList<>();
+		for (Site site : sites)
+			siteLocs.add(site.getLocation());
+		
+		SiteFilter<E> siteFilter = new RuptureComparisonFilter.SiteFilter<E>();
+		List<Future<ZScoreResult[]>> scoreFutures = new ArrayList<>();
+		System.out.println("Calculating site z-scores");
+		for (Site site : sites) {
+			List<Site> mySites = new ArrayList<>();
+			mySites.add(site);
+			
+			List<? extends RuptureComparison<E>> siteComps = siteFilter.getMatches(comps, site);
+			scoreFutures.add(exec.submit(new Callable<ZScoreResult[]>() {
+
+				@Override
+				public ZScoreResult[] call() throws Exception {
+					return ZScoreHistPlot.calcZScores(simProv, siteComps, mySites, imts, null);
+				}
+			}));
+		}
+		List<ZScoreResult[]> siteScores = new ArrayList<>();
+		for (Future<ZScoreResult[]> future : scoreFutures) {
+			try {
+				siteScores.add(future.get());
+			} catch (InterruptedException | ExecutionException e) {
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+			System.out.println("Done with site "+siteScores.size()+"/"+scoreFutures.size());
+		}
+		
+		System.out.println("Calculating sect z-scores");
+		scoreFutures = new ArrayList<>();
+		int numSectsInside = 0;
+		boolean[] sectInsides = new boolean[subSects.size()];
+		for (FaultSection sect : subSects) {
+			boolean inside = false;
+			for (Location loc : sect.getFaultTrace()) {
+				if (sourceRegion.contains(loc)) {
+					inside = true;
+					break;
+				}
+			}
+			
+			if (inside) {
+				numSectsInside++;
+				sectInsides[sect.getSectionId()] = true;
+				RuptureComparisonFilter<E> filter = new RuptureComparisonFilter<E>() {
+					@Override
+					public boolean matches(RuptureComparison<E> comp, Site site) {
+						E rup = comp.getRupture();
+						for (FaultSection testSect : rupSectMappings.get(rup)) {
+							if (sect.equals(testSect))
+								return true;
+						}
+						return false;
+					}
+				};
+				scoreFutures.add(exec.submit(new Callable<ZScoreResult[]>() {
+
+					@Override
+					public ZScoreResult[] call() throws Exception {
+						return ZScoreHistPlot.calcZScores(simProv, comps, sites, imts, filter);
+					}
+				}));
+			} else {
+				scoreFutures.add(null);
+			}
+		}
+		
+		if (rupNuclSects != null) {
+			lines.add("## Source Nucleation");
+			lines.add(topLink); lines.add("");
+			
+			lines.add("The left plot gives the fraction of ruptures that nucleate on a given section, relative to the "
+					+ "total number of ruptures for which that section participates. The right plot gives the primary "
+					+ "propagation direction for ruptures involving each section. Colors are dark when all ruptures "
+					+ "follow the plotted propagation direction, and white when each direction is equally utilized.");
+			lines.add("");
+			
+			Map<FaultSection, List<E>> sectRups = new HashMap<>();
+			for (E rup : rupSectMappings.keySet()) {
+				for (FaultSection sect : rupSectMappings.get(rup)) {
+					if (!sectRups.containsKey(sect))
+						sectRups.put(sect, new ArrayList<>());
+					sectRups.get(sect).add(rup);
+				}
+			}
+			
+			List<Color> directionColors = new ArrayList<>();
+			List<Double> nuclFracts = new ArrayList<>();
+			CPT nuclCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0d, 1d);
+			CPT dirCPT = new CPT();
+			Color prevColor = null;
+			double bright = 0.9d;
+			for (int i=0; i<=360; i++) {
+				double hue = (double)i/360d;
+				Color color = Color.getHSBColor((float)hue, 1f, (float)bright);
+				if (prevColor != null)
+					dirCPT.add(new CPTVal(i-1, prevColor, i, color));
+				prevColor = color;
+			}
+			for (int s=0; s<subSects.size(); s++) {
+				FaultSection sect = subSects.get(s);
+				List<E> rups = sectRups.get(sect);
+				if (!sectInsides[s] || rups == null) {
+					// not in our map region, or no ruptures
+					directionColors.add(null);
+					nuclFracts.add(Double.NaN);
+					continue;
+				}
+				Location first = sect.getFaultTrace().first();
+				Location last = sect.getFaultTrace().last();
+				
+				int numParticipations = 0;
+				int numNucleations = 0;
+				int numForwards = 0;
+				int numBackwards = 0;
+				for (E rup : rups) {
+					numParticipations++;
+					FaultSection nuclSect = rupNuclSects.get(rup);
+					Preconditions.checkNotNull(nuclSect, "not all ruptures have nucleation sections");
+					if (nuclSect.equals(sect)) {
+						numNucleations++;
+					} else {
+						// see what way it propagated
+						double distToFirst = Double.POSITIVE_INFINITY;
+						double distToLast = Double.POSITIVE_INFINITY;
+						for (Location loc : nuclSect.getFaultTrace()) {
+							distToFirst = Math.min(distToFirst, LocationUtils.horzDistanceFast(first, loc));
+							distToLast = Math.min(distToLast, LocationUtils.horzDistanceFast(last, loc));
+						}
+						if (distToFirst < distToLast)
+							// nucleation section is closer to the first point on this fault trace, propagated forwards
+							numForwards++;
+						else
+							// opposite
+							numBackwards++;
+					}
+				}
+				nuclFracts.add((double)numNucleations/(double)numParticipations);
+				Color dirColor;
+				if (numForwards == numBackwards) {
+					dirColor = Color.WHITE;
+				} else {
+					double az;
+					int numExcessInDir;
+					if (numForwards > numBackwards) {
+						numExcessInDir = numForwards-numBackwards;
+						az = LocationUtils.azimuth(first, last);
+					} else {
+						numExcessInDir = numBackwards-numForwards;
+						az = LocationUtils.azimuth(last, first);
+					}
+					double blendFract = (double)numExcessInDir/(double)numParticipations;
+					dirColor = Color.getHSBColor((float)(az/360d), (float)blendFract, (float)(bright*blendFract + (1-blendFract)));
+				}
+				directionColors.add(dirColor);
+			}
+			sourceMapMaker.plotSectScalars(nuclFracts, nuclCPT, "Nucleation/Participation Ratio");
+			sourceMapMaker.plot(resourcesDir, "nucl_partic_ratios", " ", 900);
+			sourceMapMaker.clearSectScalars();
+			sourceMapMaker.plotSectColors(directionColors, dirCPT, "Primary Propagation Direction (deg)");
+			
+			PlotSpec spec = sourceMapMaker.buildPlot(" ");
+			// build color wheel annotation
+			
+			// figure out aspect ratio of lat to lon
+			Location centerLoc = new Location(0.5*(sourceRegion.getMinLat()+sourceRegion.getMaxLat()),
+					0.5*(sourceRegion.getMinLon()+sourceRegion.getMaxLon()));
+			double latLen = LocationUtils.horzDistance(centerLoc, new Location(centerLoc.getLatitude()+1, centerLoc.getLongitude()));
+			double lonLen = LocationUtils.horzDistance(centerLoc, new Location(centerLoc.getLatitude(), centerLoc.getLongitude()+1));
+			double aspect = latLen/lonLen;
+			
+			// center location of the wheel
+			double centerOffset = 0.12*(sourceRegion.getMaxLon()-sourceRegion.getMinLon());
+			double wheelCenterX = sourceRegion.getMinLon() + centerOffset;
+			double wheelCenterY = sourceRegion.getMinLat() + centerOffset/aspect;
+//			double widthX = 0.20*(sourceRegion.getMaxLat()-sourceRegion.getMinLat());
+//			double aspect = PlotUtils.calcAspectRatio(
+//					new Range(sourceRegion.getMinLon(), sourceRegion.getMaxLon()),
+//					new Range(sourceRegion.getMinLat(), sourceRegion.getMaxLat()), true);
+			
+			double innerMult = 0.3;
+			double outerMult = 0.4;
+//			double sumY = Math.max(1d, hist.calcSumOfY_Vals());
+			double halfDelta = 15d;
+			for (double centerAz=0d; centerAz<=350d; centerAz+=30d) {
+				double startAz = Math.toRadians(centerAz-halfDelta);
+				double endAz = Math.toRadians(centerAz+halfDelta);
+				
+				List<Point2D> points = new ArrayList<>();
+				
+				double startX = Math.sin(startAz);
+				double startY = Math.cos(startAz);
+				double endX = Math.sin(endAz);
+				double endY = Math.cos(endAz);
+				
+				points.add(new Point2D.Double(innerMult*startX, innerMult*startY));
+				points.add(new Point2D.Double(outerMult*startX, outerMult*startY));
+				points.add(new Point2D.Double(outerMult*endX, outerMult*endY));
+				points.add(new Point2D.Double(innerMult*endX, innerMult*endY));
+				points.add(new Point2D.Double(innerMult*startX, innerMult*startY));
+				
+				double[] polygon = new double[points.size()*2];
+				int cnt = 0;
+				for (Point2D pt : points) {
+					polygon[cnt++] = pt.getX()+wheelCenterX;
+					polygon[cnt++] = pt.getY()/aspect+wheelCenterY;
+				}
+				Color color = dirCPT.getColor((float)centerAz);
+				
+				Stroke stroke = PlotLineType.SOLID.buildStroke(1f);
+				spec.addPlotAnnotation(new XYPolygonAnnotation(polygon, stroke, Color.DARK_GRAY, color));
+			}
+			sourceMapMaker.plot(resourcesDir, "sect_prop_az", spec, 900);
+//			sourceMapMaker.plot(resourcesDir, "sect_prop_az", " ", 900);
+			sourceMapMaker.clearSectColors();
+//			System.out.println("ASPECT = "+latLen+" / "+lonLen+" = "+aspect);
+//			System.out.flush();
+//			System.exit(0);
+			
+			TableBuilder table = MarkdownUtils.tableBuilder();
+			
+			table.initNewLine();
+			table.addColumn("![Section Nucleation]("+resourcesDir.getName()+"/nucl_partic_ratios.png)");
+			table.addColumn("![Section Propagation]("+resourcesDir.getName()+"/sect_prop_az.png)");
+			table.finalizeLine();
+			
+			lines.addAll(table.build());
+			lines.add("");
+		}
+		
+		List<ZScoreResult[]> sectScores = new ArrayList<>();
+		int numSectsProcessed = 0;
+		for (Future<ZScoreResult[]> future : scoreFutures) {
+			if (future == null) {
+				sectScores.add(null);
+			} else {
+				try {
+					sectScores.add(future.get());
+					numSectsProcessed++;
+					System.out.println("Done with sect "+numSectsProcessed+"/"+numSectsInside);
+				} catch (InterruptedException | ExecutionException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+			}
+		}
+		
+		SimulationHazardCurveCalc<E> simCurveCalc = new SimulationHazardCurveCalc<>(simProv);
+		
+		for (int p=0; p<imts.length; p++) {
+			IMT imt = imts[p];
+			
+			lines.add("## "+imt.getDisplayName());
+			lines.add(topLink); lines.add("");
+			
+			lines.add("### "+imt.getDisplayName()+" z-scores");
+			lines.add(topLink); lines.add("");
+			
+			List<Double> zMeans = new ArrayList<>();
+			List<Double> zStdDevs = new ArrayList<>();
+			for (int i=0; i<siteScores.size(); i++) {
+				ZScoreResult score = siteScores.get(i)[p];
+				zMeans.add(score.mean);
+				zStdDevs.add(score.stdDevFract);
+			}
+			
+			String prefix = imt.getPrefix();
+			TableBuilder table = MarkdownUtils.tableBuilder();
+			
+			siteMapMaker.plotScatterScalars(siteLocs, zMeans, zScoreCPT, imt.getDisplayName()+" Site z-scores");
+			siteMapMaker.plot(resourcesDir, prefix+"_site_z_means", " ", 900);
+			siteMapMaker.plotScatterScalars(siteLocs, zStdDevs, sigmaCPT, imt.getDisplayName()+" Site σ-fracts");
+			siteMapMaker.plot(resourcesDir, prefix+"_site_z_sds", " ", 900);
+			
+			table.initNewLine();
+			table.addColumn("![Site z-scores]("+resourcesDir.getName()+"/"+prefix+"_site_z_means.png)");
+			table.addColumn("![Site z-scores]("+resourcesDir.getName()+"/"+prefix+"_site_z_sds.png)");
+			table.finalizeLine();
+			
+			siteMapMaker.clearScatterScalars();
+			
+			zMeans = new ArrayList<>();
+			zStdDevs = new ArrayList<>();
+			for (int s=0; s<subSects.size(); s++) {
+				ZScoreResult[] scores = sectScores.get(s);
+				if (scores == null) {
+					zMeans.add(Double.NaN);
+					zStdDevs.add(Double.NaN);
+				} else {
+					zMeans.add(scores[p].mean);
+					zStdDevs.add(scores[p].stdDevFract);
+				}
+			}
+			
+			sourceMapMaker.plotSectScalars(zMeans, zScoreCPT, imt.getDisplayName()+" Source z-scores");
+			sourceMapMaker.plot(resourcesDir, prefix+"_source_z_means", " ", 900);
+			sourceMapMaker.plotSectScalars(zStdDevs, sigmaCPT, imt.getDisplayName()+" Source σ-fracts");
+			sourceMapMaker.plot(resourcesDir, prefix+"_source_z_sds", " ", 900);
+			
+			table.initNewLine();
+			table.addColumn("![Source z-scores]("+resourcesDir.getName()+"/"+prefix+"_source_z_means.png)");
+			table.addColumn("![Source z-scores]("+resourcesDir.getName()+"/"+prefix+"_source_z_sds.png)");
+			table.finalizeLine();
+			
+			lines.addAll(table.build());
+			
+			lines.add("### "+imt.getDisplayName()+" Hazard Comparisons");
+			lines.add(topLink); lines.add("");
+			
+			List<Future<DiscretizedFunc[]>> curveFutures = new ArrayList<>();
+			for (Site site : sites) {
+				curveFutures.add(exec.submit(new Callable<DiscretizedFunc[]>() {
+
+					@Override
+					public DiscretizedFunc[] call() throws Exception {
+						SimulationHazardPlotter<E> curvePlotter = new SimulationHazardPlotter<>(
+								simCurveCalc, comps, site, 1d, gmpeRef);
+						DiscretizedFunc gmpeCurve = curvePlotter.getCalcGMPECurve(imt);
+						DiscretizedFunc simCurve = curvePlotter.getCalcSimCurve(simCurveCalc, imt);
+						return new DiscretizedFunc[] { simCurve, gmpeCurve };
+					}
+				}));
+			}
+			
+			List<DiscretizedFunc> simCurves = new ArrayList<>();
+			List<DiscretizedFunc> gmpeCurves = new ArrayList<>();
+			
+			for (Future<DiscretizedFunc[]> future : curveFutures) {
+				try {
+					DiscretizedFunc[] curves = future.get();
+					simCurves.add(curves[0]);
+					gmpeCurves.add(curves[1]);
+				} catch (InterruptedException | ExecutionException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+			}
+			
+			table = MarkdownUtils.tableBuilder();
+			
+			for (boolean rtgm : new boolean [] {false, true}) {
+				List<Double> simVals = new ArrayList<>();
+				List<Double> ratios = new ArrayList<>();
+				double maxVal = 0d;
+				
+				for (int s=0; s<sites.size(); s++) {
+					DiscretizedFunc simCurve = simCurves.get(s);
+					DiscretizedFunc gmpeCurve = gmpeCurves.get(s);
+					
+					double simVal, gmpeVal;
+					if (rtgm) {
+						simVal =  SimulationHazardPlotter.calcRTGM(simCurve, 1d);
+						gmpeVal =  SimulationHazardPlotter.calcRTGM(gmpeCurve, 1d);
+					} else {
+						simVal = simCurve.getFirstInterpolatedX_inLogXLogYDomain(4e-4);
+						gmpeVal = gmpeCurve.getFirstInterpolatedX_inLogXLogYDomain(4e-4);
+					}
+					maxVal = Math.max(maxVal, simVal);
+					
+					simVals.add(simVal);
+					double ratio;
+					switch (ratioType) {
+					case LOG_RATIO:
+						ratio = Math.log10(simVal/gmpeVal);
+						break;
+					case RATIO:
+						ratio = simVal/gmpeVal;
+						break;
+					case PDIFF:
+						ratio = 100d*(simVal - gmpeVal)/gmpeVal;
+						break;
+
+					default:
+						throw new IllegalStateException();
+					}
+					ratios.add(ratio);
+				}
+				
+//				String logStr = ratioType == HazardRatioType.LOG_RATIO ? "Log10 " : "";
+//				String ratioStr = ratioType == HazardRatioType.PDIFF ? ", % Difference" : ", Ratio";
+				String lableSuffix = "Simulation vs "+gmpeRef.getShortName();
+				switch (ratioType) {
+				case LOG_RATIO:
+					lableSuffix += ", Log10 Ratio";
+					break;
+				case RATIO:
+					lableSuffix += ", Ratio";
+					break;
+				case PDIFF:
+					lableSuffix += ", % Difference";
+					break;
+
+				default:
+					throw new IllegalStateException();
+				}
+				String label, ratioLabel, myPrefix;
+				if (rtgm) {
+					label = imt.getDisplayName()+", RTGM ("+imt.getUnits()+")";
+					ratioLabel = imt.getDisplayName()+", RTGM, "+lableSuffix;
+					myPrefix = prefix+"_rtgm";
+				} else {
+					label = imt.getDisplayName()+", 2% in 50yr Hazard ("+imt.getUnits()+")";
+					ratioLabel = imt.getDisplayName()+", 2% in 50yr, "+lableSuffix;
+					myPrefix = prefix+"_2in50";
+				}
+				double ceilScalar;
+				if (maxVal > 0.5)
+					ceilScalar = 0.2;
+				else
+					ceilScalar = 0.1;
+				CPT hazardCPT = rawHazardCPT.rescale(0d, 0.25*Math.ceil(maxVal*4d));
+				siteMapMaker.plotScatterScalars(siteLocs, simVals, hazardCPT, label);
+				siteMapMaker.plot(resourcesDir, myPrefix, " ", 900);
+				siteMapMaker.plotScatterScalars(siteLocs, ratios, ratioCPT, ratioLabel);
+				siteMapMaker.plot(resourcesDir, myPrefix+"_ratios", " ", 900);
+				
+				table.initNewLine();
+				table.addColumn("![Hazard]("+resourcesDir.getName()+"/"+myPrefix+".png)");
+				table.addColumn("![Hazard]("+resourcesDir.getName()+"/"+myPrefix+"_ratios.png)");
+				table.finalizeLine();
+			}
+			
+			lines.addAll(table.build());
+			lines.add("");
+		}
+		
+		if (highlightSites != null && !highlightSites.isEmpty()) {
+			lines.add("## Highlight Sites");
+			lines.add(topLink); lines.add("");
+			
+			for (Site site : highlightSites) {
+				ZScoreResult[] siteZScores = null;
+				for (int s=0; s<sites.size(); s++) {
+					Site oSite = sites.get(s);
+					if (site == oSite || site.equals(oSite)) {
+						siteZScores = siteScores.get(s);
+						break;
+					}
+				}
+				Preconditions.checkNotNull(siteZScores, "highlight site not found in site list");
+				
+				System.out.println("Calculating source z-scores for "+site.getName());
+				List<Site> mySites = new ArrayList<>();
+				mySites.add(site);
+				List<? extends RuptureComparison<E>> siteComps = siteFilter.getMatches(comps, site);
+				scoreFutures = new ArrayList<>();
+				for (FaultSection sect : subSects) {
+					if (sectInsides[sect.getSectionId()]) {
+						RuptureComparisonFilter<E> filter = new RuptureComparisonFilter<E>() {
+							@Override
+							public boolean matches(RuptureComparison<E> comp, Site site) {
+								E rup = comp.getRupture();
+								for (FaultSection testSect : rupSectMappings.get(rup)) {
+									if (sect.equals(testSect))
+										return true;
+								}
+								return false;
+							}
+						};
+						scoreFutures.add(exec.submit(new Callable<ZScoreResult[]>() {
+
+							@Override
+							public ZScoreResult[] call() throws Exception {
+								return ZScoreHistPlot.calcZScores(simProv, siteComps, sites, imts, filter);
+							}
+						}));
+					} else {
+						scoreFutures.add(null);
+					}
+				}
+				List<ZScoreResult[]> siteSectScores = new ArrayList<>();
+				numSectsProcessed = 0;
+				for (Future<ZScoreResult[]> future : scoreFutures) {
+					if (future == null) {
+						siteSectScores.add(null);
+					} else {
+						try {
+							siteSectScores.add(future.get());
+							numSectsProcessed++;
+							System.out.println("Done with sect "+numSectsProcessed+"/"+numSectsInside);
+						} catch (InterruptedException | ExecutionException e) {
+							throw ExceptionUtils.asRuntimeException(e);
+						}
+					}
+				}
+				TableBuilder table = MarkdownUtils.tableBuilder();
+				for (int p=0; p<imts.length; p++) {
+					IMT imt = imts[p];
+					
+					String prefix = site.getName().replaceAll("\\W+", "_")+"_"+imt.getPrefix();
+					
+					List<Color> sectZColors = new ArrayList<>();
+					List<Color> sectSdColors = new ArrayList<>();
+					for (int s=0; s<subSects.size(); s++) {
+						ZScoreResult[] scores = siteSectScores.get(s);
+						if (scores == null || Double.isNaN(scores[p].mean)) {
+							sectZColors.add(null);
+							sectSdColors.add(null);
+						} else {
+							sectZColors.add(zScoreCPT.getColor((float)scores[p].mean));
+							sectSdColors.add(sigmaCPT.getColor((float)scores[p].stdDevFract));
+						}
+					}
+					
+//					siteMapMaker.plotScatterScalars(siteLocs, zMeans, zScoreCPT, imt.getDisplayName()+" Site z-scores");
+//					siteMapMaker.plot(resourcesDir, prefix+"_site_z_means", " ", 900);
+//					siteMapMaker.plotScatterScalars(siteLocs, zStdDevs, sigmaCPT, imt.getDisplayName()+" Site σ-fracts");
+//					siteMapMaker.plot(resourcesDir, prefix+"_site_z_sds", " ", 900);
+					
+					sourceMapMaker.clearSectColors();
+					sourceMapMaker.clearSectScalars();
+					sourceMapMaker.plotScatterScalars(
+							List.of(site.getLocation()), List.of(siteZScores[p].mean), zScoreCPT,
+							site.getName()+" "+imt.getDisplayName()+" z-scores");
+					sourceMapMaker.plotSectColors(sectZColors);
+					sourceMapMaker.plot(resourcesDir, prefix+"_z_means", " ", 900);
+					sourceMapMaker.clearSectColors();
+					sourceMapMaker.clearSectScalars();
+					sourceMapMaker.plotScatterScalars(
+							List.of(site.getLocation()), List.of(siteZScores[p].stdDevFract), sigmaCPT,
+							site.getName()+" "+imt.getDisplayName()+" σ-fracts");
+					sourceMapMaker.plotSectColors(sectSdColors);
+					sourceMapMaker.plot(resourcesDir, prefix+"_z_sds", " ", 900);
+					
+					table.initNewLine();
+					table.addColumn("![Source z-scores]("+resourcesDir.getName()+"/"+prefix+"_z_means.png)");
+					table.addColumn("![Source z-scores]("+resourcesDir.getName()+"/"+prefix+"_z_sds.png)");
+					table.finalizeLine();
+				}
+				
+				lines.add("### "+site.getName());
+				lines.add(topLink); lines.add("");
+				lines.addAll(table.build());
+				lines.add("");
+			}
 		}
 		
 		// add TOC

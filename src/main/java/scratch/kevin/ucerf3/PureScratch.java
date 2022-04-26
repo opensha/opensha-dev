@@ -18,7 +18,9 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.stat.StatUtils;
+import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.IntegerSampler.ExclusionIntegerSampler;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -26,6 +28,8 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.geo.json.Feature;
+import org.opensha.commons.geo.json.FeatureCollection;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -789,12 +793,49 @@ public class PureScratch {
 		System.exit(0);
 	}
 	
+	private static void test129() throws IOException {
+		WC1994_MagLengthRelationship wc94 = new WC1994_MagLengthRelationship();
+		
+		wc94.setRake(-90);
+		System.out.println(wc94.getMedianMag(45.33335));
+		System.out.println(wc94.getMedianMag(39.34729));
+	}
+	
+	private static void test130() throws IOException {
+		double moment = MagUtils.magToMoment(7.2);
+		double len = 64.29441;
+		double width = 15d/Math.sin(45d*Math.PI/ 180);
+		double area = len*width;
+		System.out.println("Area = "+(float)len+" x "+(float)width+" = "+(float)area);
+		area *= 1e6; // km^2 -> m^2
+		double slip = FaultMomentCalc.getSlip(area, moment);
+		System.out.println("Slip: "+(float)slip);
+		double slipRate = slip * 1e-7;
+		System.out.println("Slip rate: "+(float)slipRate+" m/yr = "+(float)(slipRate*1e3)+" mm/yr");
+	}
+	
+	private static void test131() throws IOException {
+		FeatureCollection features = FeatureCollection.read(new File("/tmp/nshm18_test/fault_sections.geojson"));
+		List<Feature> modFeatures = new ArrayList<>();
+		
+		int index = 0;
+		for (int i=803; i<features.features.size(); i++) {
+			Feature feature = features.features.get(i);
+			Feature modFeature = new Feature(index, feature.geometry, feature.properties);
+			modFeature.properties.set(GeoJSONFaultSection.FAULT_ID, index);
+			index++;
+			modFeatures.add(modFeature);
+		}
+		
+		FeatureCollection.write(new FeatureCollection(modFeatures), new File("/tmp/nshm18_test/second_half.geojson"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test128();
+		test131();
 	}
 
 }

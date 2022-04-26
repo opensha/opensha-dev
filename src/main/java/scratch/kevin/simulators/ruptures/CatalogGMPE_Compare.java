@@ -23,10 +23,12 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -38,6 +40,7 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.IntensityMeasureRelationship;
 import org.opensha.sha.imr.ScalarIMR;
@@ -50,6 +53,7 @@ import org.opensha.sha.simulators.iden.FocalMechIden;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.RegionIden;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
+import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
 import org.opensha.sha.simulators.utils.RupturePlotGenerator;
 
 import com.google.common.base.Preconditions;
@@ -557,10 +561,15 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
-		RSQSimCatalog catalog = Catalogs.BRUCE_5415.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5413.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5418.instance();
 		
-		boolean doGMPE = true;
+		boolean doGMPE = false;
 		boolean doRotD = false;
+		boolean doNonErgodicMaps = true;
+		
+		Region siteMapRegion = new CaliforniaRegions.CYBERSHAKE_MAP_REGION();
+		Region sourceMapRegion = bufferRegion(siteMapRegion, 200d);
 		
 		boolean doGridded = false;
 		
@@ -589,7 +598,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		if (doGridded)
 			highlightNames = new String[0];
 		else
-			highlightNames = new String[] { "USC" };
+			highlightNames = new String[] { "USC", "SBSM" };
 		
 		RuptureIdentifier loadIden = null;
 		String loadIdenPrefix = null;
@@ -727,9 +736,13 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		File vmDir = new File(catalogOutputDir, "bbp_"+bbpVM.name());
 		Preconditions.checkState(vmDir.exists() || vmDir.mkdir());
 		
+		List<? extends FaultSection> subSects = null;
+		Map<RSQSimEvent, List<FaultSection>> rupSectMappings = null;
+		Map<RSQSimEvent, FaultSection> rupSectNucleations = null;
+		
 		try {
 			List<EventComparison> rotD_GMPEcomps = null;
-			if (doGMPE) {
+			if (doGMPE || doNonErgodicMaps) {
 				if (!hasRG || !rgOnlyIfPossible) {
 					for (AttenRelRef gmpeRef : gmpeRefs) {
 						if (highlightNames != null) {
@@ -739,21 +752,42 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 								comp.setHighlightSites();
 						}
 						List<EventComparison> comps = comp.loadCalcComps(gmpeRef, imts);
-						String dirname = "gmpe_bbp_comparisons_"+gmpeRef.getShortName();
-						if (doGridded)
-							dirname += "_GriddedSites";
-						if (timeScale != 1d) {
-							dirname += "_timeScale"+(float)timeScale;
-							if (scaleVelocities)
-								dirname += "_velScale";
+						
+						if (doGMPE) {
+							String dirname = "gmpe_bbp_comparisons_"+gmpeRef.getShortName();
+							if (doGridded)
+								dirname += "_GriddedSites";
+							if (timeScale != 1d) {
+								dirname += "_timeScale"+(float)timeScale;
+								if (scaleVelocities)
+									dirname += "_velScale";
+							}
+							if (loadIden != null && loadIdenPrefix.length() > 0)
+								dirname += "_"+loadIdenPrefix;
+							File catalogGMPEDir = new File(vmDir, dirname);
+							Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
+							comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, imts, comps);
+							if (gmpeRef == rotDGMPE)
+								rotD_GMPEcomps = comps;
 						}
-						if (loadIden != null && loadIdenPrefix.length() > 0)
-							dirname += "_"+loadIdenPrefix;
-						File catalogGMPEDir = new File(vmDir, dirname);
-						Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
-						comp.generateGMPE_Page(catalogGMPEDir, gmpeRef, imts, comps);
-						if (gmpeRef == rotDGMPE)
-							rotD_GMPEcomps = comps;
+						if (doNonErgodicMaps) {
+							String dirname = "gmpe_bbp_non_ergodic_maps_"+gmpeRef.getShortName();
+							File catalogGMPEDir = new File(vmDir, dirname);
+							Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
+							
+							if (subSects == null) {
+								subSects = catalog.getU3SubSects();
+								rupSectMappings = new HashMap<>();
+								rupSectNucleations = new HashMap<>();
+								for (RSQSimEvent event : comp.events) {
+									RSQSimSubSectEqkRupture mappedRup = catalog.getMappedSubSectRupture(event);
+									rupSectMappings.put(event, new ArrayList<>(mappedRup.getSubSections()));
+									rupSectNucleations.put(event, mappedRup.getNucleationSection());
+								}
+							}
+							comp.generateNonErgodicMapPage(catalogGMPEDir, null, subSects, siteMapRegion,
+									sourceMapRegion, gmpeRef, comps, rupSectMappings, rupSectNucleations, imts, comp.highlightSites);
+						}
 					}
 				}
 				if (hasRG) {
