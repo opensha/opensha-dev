@@ -40,6 +40,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstr
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 
 import com.google.common.base.Preconditions;
 
@@ -62,34 +64,35 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		boolean strictSeg = false;
 		double segTransMaxDist = 3d;
+		boolean hazardGridded = false;
 		
-//		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
-//		int remoteToalThreads = 20;
-//		int remoteInversionsPerBundle = 1;
-//		int remoteTotalMemGB = 53;
-//		String queue = "scec";
-//		int nodes = 36;
-//		double itersPerSec = 200000;
-//		int runsPerBranch = 1;
-////		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-////				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
-//		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
-//				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.FMPJ_HOME);
-//		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
-		
-		File remoteMainDir = new File("/work/00950/kevinm/stampede2/nshm23/batch_inversions");
-		int remoteToalThreads = 48;
-		int remoteInversionsPerBundle = 3;
-		int remoteTotalMemGB = 100;
-		String queue = "skx-normal";
-		int nodes = 100;
-		double itersPerSec = 300000;
+		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		int remoteToalThreads = 20;
+		int remoteInversionsPerBundle = 1;
+		int remoteTotalMemGB = 53;
+		String queue = "scec";
+		int nodes = 36;
+		double itersPerSec = 200000;
 		int runsPerBranch = 1;
-//		String queue = "skx-dev";
-//		int nodes = 4;
+//		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+//				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
 		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
-				StampedeScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, StampedeScriptWriter.FMPJ_HOME);
-		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
+				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.FMPJ_HOME);
+		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
+		
+//		File remoteMainDir = new File("/work/00950/kevinm/stampede2/nshm23/batch_inversions");
+//		int remoteToalThreads = 48;
+//		int remoteInversionsPerBundle = 3;
+//		int remoteTotalMemGB = 100;
+//		String queue = "skx-normal";
+//		int nodes = 100;
+//		double itersPerSec = 300000;
+//		int runsPerBranch = 1;
+////		String queue = "skx-dev";
+////		int nodes = 4;
+//		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
+//				StampedeScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, StampedeScriptWriter.FMPJ_HOME);
+//		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 //		String dirName = "2022_02_27";
@@ -101,8 +104,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		LogicTree<U3LogicTreeBranchNode<?>> logicTree = LogicTree.buildExhaustive(levels, true);
 		dirName += "-u3_branches";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
-//		int avgNumRups = 250000;
+		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
+		int avgNumRups = 250000;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParamsNewAvgConverged.class;
 //		dirName += "-orig_calc_params-new_avg-converged";
@@ -139,9 +142,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.NoPaleoParkfieldSingleReg.class;
 //		dirName += "-no_paleo-no_parkfield-single_mfd_reg";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.CoulombRupSet.class;
-		dirName += "-coulomb";
-		int avgNumRups = 325000;
+//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.CoulombRupSet.class;
+//		dirName += "-coulomb";
+//		int avgNumRups = 325000;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.CoulombBilateralRupSet.class;
 //		dirName += "-coulomb-bilateral";
@@ -165,13 +168,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-nshm23_u3_hybrid_branches";
 ////		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
 ////		dirName += "-nshm23_branches";
+////		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
+////		dirName += "-nshm18_branches";
 //		
-////		levels = new ArrayList<>(levels);
-////		for (int i=levels.size(); --i>=0;)
-////			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
-////					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class))
-////				levels.remove(i);
-////		dirName += "-no_seg";
+//		levels = new ArrayList<>(levels);
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
+//					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class))
+//				levels.remove(i);
+//		dirName += "-no_seg";
 //////		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
 //////		dirName += "-strict_cutoff_seg"; strictSeg = true;
 //		
@@ -184,28 +189,45 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 ////		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
 ////		dirName += "-no_reweight_use_prev";
 //		
+////		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedOrigWeights.class;
+////		dirName += "-no_reweight_use_orig";
+//		
 ////		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoMFDScaleAdjust.class;
 ////		dirName += "-no_scale_adj_mfds";
 //		
-//		dirName += "-shift_seg_1km";
+//		if (!dirName.contains("no_seg"))
+//			dirName += "-shift_seg_1km";
 //		
 //		LogicTreeNode[] required = {
 //				FaultModels.FM3_1,
-//				RupturePlausibilityModels.COULOMB,
+////				NSHM18_FaultModels.NSHM18_WUS_NoCA,
+//				
+////				RupturePlausibilityModels.COULOMB,
+////				RupturePlausibilityModels.AZIMUTHAL,
+//				RupturePlausibilityModels.SEGMENTED,
 ////				RupturePlausibilityModels.UCERF3,
 ////				RupturePlausibilityModels.UCERF3_REDUCED,
+//				
 ////				U3_UncertAddDeformationModels.U3_ZENG,
+//				
 ////				ScalingRelationships.SHAW_2009_MOD,
+//				
 //				SlipAlongRuptureModels.UNIFORM,
 ////				SlipAlongRuptureModels.TAPERED,
+//				
 //				SubSectConstraintModels.TOT_NUCL_RATE,
 ////				SubSectConstraintModels.NUCL_MFD,
+//				
 //				SubSeisMoRateReductions.SUB_B_1,
+////				SubSeisMoRateReductions.NONE,
 ////				SubSeisMoRateReductions.SYSTEM_AVG,
+//				
 ////				SupraSeisBValues.B_0p8,
+//				
 ////				SegmentationModels.SHAW_R0_3,
+//				
 ////				SegmentationMFD_Adjustment.NONE
-//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG
+////				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG
 ////				SegmentationMFD_Adjustment.CAPPED_REDIST
 ////				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED
 ////				SegmentationMFD_Adjustment.GREEDY
@@ -293,6 +315,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		if (completionArg != null)
 			dirName += "-"+completionArg;
 		
+		if (hazardGridded)
+			dirName += "-gridded";
+		
 		File localDir = new File(localMainDir, dirName);
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
 		File remoteDir = new File(remoteMainDir, dirName);
@@ -339,6 +364,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		// now write hazard script
 		argz = "--input-file "+new File(resultsDir.getAbsolutePath()+".zip");
 		argz += " --output-dir "+resultsDir.getAbsolutePath();
+		if (hazardGridded)
+			argz += " --gridded-seis INCLUDE";
 		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteToalThreads).build();
 		script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 		

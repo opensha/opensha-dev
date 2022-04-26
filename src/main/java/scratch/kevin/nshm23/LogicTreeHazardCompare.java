@@ -156,8 +156,8 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip-branch-translated");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Strict Seg Translated";
 		
-		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip-branch-translated-min3km");
-		String mainName = "NSHM23 Draft, Coulomb RS, Strict Seg Translated >=3km";
+//		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip-branch-translated-min3km");
+//		String mainName = "NSHM23 Draft, Coulomb RS, Strict Seg Translated >=3km";
 		
 //		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-NoAdj-2000ip");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Seg No-Adj";
@@ -168,9 +168,10 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_02_22-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-StrictEquivJumpProb-2000ip");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg @ Strict Bins";
 		
+		File mainDir = new File(invDir, "2022_03_31-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrTap-TotNuclRate-SubB1-JumpProb-2000ip");
 //		File mainDir = new File(invDir, "2022_03_24-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
-////		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
-//		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg 1km-Shift";
+//		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg 1km-Shift";
 		
 //		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Seg Capped-Redist";
@@ -183,15 +184,15 @@ public class LogicTreeHazardCompare {
 //		File outputDir = new File(mainDir, "hazard_maps_comp_prev");
 		
 		LogicTreeNode[] subsetNodes = null;
-		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
-		String compName = "UCERF3 As Published";
-		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
+//		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
+//		String compName = "UCERF3 As Published";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
 //		String compName = "UCERF3 As Published, Uniform";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published_uniform");
 //		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1, SlipAlongRuptureModels.UNIFORM };
-//		File compDir = new File(invDir, "2022_02_22-u3_branches-FM3_1-2000ip");
-//		String compName = "UCERF3 New Anneal";
-//		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
+		File compDir = new File(invDir, "2022_03_24-u3_branches-FM3_1-2000ip");
+		String compName = "UCERF3 New Anneal";
+		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
 //		File compDir = new File(invDir, "2022_03_13-u3_branches-coulomb-bilateral-FM3_1-2000ip");
 //		String compName = "UCERF3 Coulomb Bilateral";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_coulomb_bilateral");
@@ -204,7 +205,29 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
 //		String compName = "Threshold Avg Shift-1km";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_thresh_avg_shift_1km");
+//		File compDir = new File(invDir, "2022_04_11-nshm23_u3_hybrid_branches-no_seg-FM3_1-FullSegRupSet-DsrUni-TotNuclRate-SubB1-10000ip");
+//		String compName = "UCERF3 Full Segmented";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_fully_segmented");
 		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
+		
+		/**
+		 * NSHM18 ingredients
+		 */
+//		File mainDir = new File(invDir, "2022_04_08-nshm18_branches-shift_seg_1km-NSHM18_WUS_NoCA-CoulombRupSet-DsrUni-TotNuclRate-NoRed-JumpProb-10000ip");
+//		String mainName = "NSHM18 Ingred, Coulomb RS, Seg Thresh-Avg 1km-Shift";
+////		File mainDir = new File(invDir, "2022_04_08-nshm18_branches-no_seg-NSHM18_WUS_NoCA-AzimuthalRupSet-DsrUni-TotNuclRate-NoRed-10000ip");
+////		String mainName = "NSHM18 Ingred, Azimuthal RS, No Seg";
+////		File mainDir = new File(invDir, "2022_04_08-nshm18_branches-no_seg-NSHM18_WUS_NoCA-FullSegRupSet-DsrUni-TotNuclRate-NoRed-10000ip");
+////		String mainName = "NSHM18 Ingred, Full Segmented RS";
+//		
+//		LogicTreeNode[] subsetNodes = null;
+//		File compDir = new File(invDir, "2022_04_08-nshm18_branches-no_seg-NSHM18_WUS_NoCA-FullSegRupSet-DsrUni-TotNuclRate-NoRed-10000ip");
+//		String compName = "Fully Segmented RS";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_full_segmented");
+////		File compDir = new File(invDir, "2022_04_08-nshm18_branches-shift_seg_1km-NSHM18_WUS_NoCA-CoulombRupSet-DsrUni-TotNuclRate-NoRed-JumpProb-10000ip");
+////		String compName = "Coulomb RS w/ Seg";
+////		File outputDir = new File(mainDir, "hazard_maps_comp_coulomb");
+//		LogicTreeNode[] compSubsetNodes = null;
 		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		
@@ -656,8 +679,10 @@ public class LogicTreeHazardCompare {
 				
 				File meanMapFile = mapper.plotMap(resourcesDir, prefix+"_mean", log10(mean),
 						logCPT, name, "Log10 Weighted-Average, "+label);
-				File medianMapFile = mapper.plotMap(resourcesDir, prefix+"_mean", log10(median),
+				GriddedGeoDataSet.writeXYZFile(mean, new File(resourcesDir, prefix+"_mean.xyz"));
+				File medianMapFile = mapper.plotMap(resourcesDir, prefix+"_median", log10(median),
 						logCPT, name, "Log10 Weighted-Median, "+label);
+				GriddedGeoDataSet.writeXYZFile(median, new File(resourcesDir, prefix+"_median.xyz"));
 				
 				if (cmean == null) {
 					// no comparison
@@ -672,8 +697,10 @@ public class LogicTreeHazardCompare {
 					// comparison
 					File cmeanMapFile = mapper.plotMap(resourcesDir, prefix+"_comp_mean", log10(cmean),
 							logCPT, compName, "Log10 Weighted-Average, "+label);
-					File cmedianMapFile = mapper.plotMap(resourcesDir, prefix+"_comp_mean", log10(cmedian),
+					GriddedGeoDataSet.writeXYZFile(cmean, new File(resourcesDir, prefix+"_comp_mean.xyz"));
+					File cmedianMapFile = mapper.plotMap(resourcesDir, prefix+"_comp_median", log10(cmedian),
 							logCPT, compName, "Log10 Weighted-Median, "+label);
+					GriddedGeoDataSet.writeXYZFile(cmedian, new File(resourcesDir, prefix+"_comp_median.xyz"));
 					
 					table.initNewLine();
 					table.addColumn(MarkdownUtils.boldCentered("Primary Weighted-Average"));
