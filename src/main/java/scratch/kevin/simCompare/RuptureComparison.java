@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.opensha.commons.data.Site;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -74,23 +75,35 @@ public abstract class RuptureComparison<E> {
 	
 	public static abstract class Cached<Y> extends RuptureComparison<Y> {
 		
-		private Table<Site, IMT, Double> logMeans;
-		private Table<Site, IMT, Double> stdDevs;
+		private Map<Site, Map<IMT, double[]>> gms;
+//		private Table<Site, IMT, Double> logMeans;
+//		private Table<Site, IMT, Double> stdDevs;
 		private Map<Site, Double> distanceRups;
 		private Map<Site, Double> distanceJBs;
 
 		public Cached(Y rupture) {
 			super(rupture);
 			
-			logMeans = HashBasedTable.create();
-			stdDevs = HashBasedTable.create();
+			gms = new ConcurrentHashMap<>();
+//			logMeans = HashBasedTable.create();
+//			stdDevs = HashBasedTable.create();
 			distanceRups = new HashMap<>();
 			distanceJBs = new HashMap<>();
 		}
 		
 		public void addResult(Site site, IMT imt, double logMean, double stdDev) {
-			logMeans.put(site, imt, logMean);
-			stdDevs.put(site, imt, stdDev);
+			Map<IMT, double[]> siteGMs = gms.get(site);
+			if (siteGMs == null) {
+				synchronized (gms) {
+					siteGMs = gms.get(site);
+					if (siteGMs == null) {
+						siteGMs = new ConcurrentHashMap<>();
+						gms.put(site, siteGMs);
+					}
+				}
+			}
+			double[] vals = { logMean, stdDev };
+			siteGMs.putIfAbsent(imt, vals);
 		}
 		
 		public void setDistances(Site site, double distanceRup, double distanceJB) {
@@ -100,12 +113,12 @@ public abstract class RuptureComparison<E> {
 		
 		@Override
 		public double getLogMean(Site site, IMT imt) {
-			return logMeans.get(site, imt);
+			return gms.get(site).get(imt)[0];
 		}
 		
 		@Override
 		public double getStdDev(Site site, IMT imt) {
-			return stdDevs.get(site, imt);
+			return gms.get(site).get(imt)[1];
 		}
 		
 		@Override
@@ -120,16 +133,17 @@ public abstract class RuptureComparison<E> {
 
 		@Override
 		public boolean hasSite(Site site) {
-			return logMeans.containsRow(site);
+			return gms.containsKey(site);
 		}
 		
 		@Override
 		public boolean isComputed(Site site, IMT imt) {
-			return logMeans.contains(site, imt);
+			Map<IMT, double[]> siteGMs = gms.get(site);
+			return siteGMs != null && siteGMs.containsKey(imt);
 		}
 		
 		public Set<IMT> getIMTs(Site site) {
-			return logMeans.row(site).keySet();
+			return gms.get(site).keySet();
 		}
 		
 		public void calculate(ScalarIMR gmpe, IMT... imts) {

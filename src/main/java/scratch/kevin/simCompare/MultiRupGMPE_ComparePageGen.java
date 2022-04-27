@@ -19,19 +19,24 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.jfree.data.Range;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.PrimitiveArrayXY_Dataset;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.impl.WarningDoubleParameter;
@@ -1667,37 +1672,12 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		int numSectsInside = 0;
 		boolean[] sectInsides = new boolean[subSects.size()];
 		for (FaultSection sect : subSects) {
-			boolean inside = false;
 			for (Location loc : sect.getFaultTrace()) {
 				if (sourceRegion.contains(loc)) {
-					inside = true;
+					numSectsInside++;
+					sectInsides[sect.getSectionId()] = true;
 					break;
 				}
-			}
-			
-			if (inside) {
-				numSectsInside++;
-				sectInsides[sect.getSectionId()] = true;
-				RuptureComparisonFilter<E> filter = new RuptureComparisonFilter<E>() {
-					@Override
-					public boolean matches(RuptureComparison<E> comp, Site site) {
-						E rup = comp.getRupture();
-						for (FaultSection testSect : rupSectMappings.get(rup)) {
-							if (sect.equals(testSect))
-								return true;
-						}
-						return false;
-					}
-				};
-				scoreFutures.add(exec.submit(new Callable<ZScoreResult[]>() {
-
-					@Override
-					public ZScoreResult[] call() throws Exception {
-						return ZScoreHistPlot.calcZScores(simProv, comps, sites, imts, filter);
-					}
-				}));
-			} else {
-				scoreFutures.add(null);
 			}
 		}
 		
@@ -1864,6 +1844,35 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			lines.add("");
 		}
 		
+		// pre-sort by section
+		List<List<RuptureComparison<E>>> sectComps = new ArrayList<>();
+		for (int s=0; s<sectInsides.length; s++) {
+			if (sectInsides[s])
+				sectComps.add(new ArrayList<>());
+			else
+				sectComps.add(null);
+		}
+		for (RuptureComparison<E> comp : comps) {
+			for (FaultSection sect : rupSectMappings.get(comp.getRupture())) {
+				if (sectInsides[sect.getSectionId()])
+					sectComps.get(sect.getSectionId()).add(comp);
+			}
+		}
+		
+		for (FaultSection sect : subSects) {
+			if (sectInsides[sect.getSectionId()]) {
+				scoreFutures.add(exec.submit(new Callable<ZScoreResult[]>() {
+
+					@Override
+					public ZScoreResult[] call() throws Exception {
+						return ZScoreHistPlot.calcZScores(simProv, sectComps.get(sect.getSectionId()), sites, imts, null);
+					}
+				}));
+			} else {
+				scoreFutures.add(null);
+			}
+		}
+		
 		List<ZScoreResult[]> sectScores = new ArrayList<>();
 		int numSectsProcessed = 0;
 		for (Future<ZScoreResult[]> future : scoreFutures) {
@@ -1891,20 +1900,20 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			lines.add("### "+imt.getDisplayName()+" z-scores");
 			lines.add(topLink); lines.add("");
 			
-			List<Double> zMeans = new ArrayList<>();
-			List<Double> zStdDevs = new ArrayList<>();
+			List<Double> siteZMeans = new ArrayList<>();
+			List<Double> siteZStdDevs = new ArrayList<>();
 			for (int i=0; i<siteScores.size(); i++) {
 				ZScoreResult score = siteScores.get(i)[p];
-				zMeans.add(score.mean);
-				zStdDevs.add(score.stdDevFract);
+				siteZMeans.add(score.mean);
+				siteZStdDevs.add(score.stdDevFract);
 			}
 			
 			String prefix = imt.getPrefix();
 			TableBuilder table = MarkdownUtils.tableBuilder();
 			
-			siteMapMaker.plotScatterScalars(siteLocs, zMeans, zScoreCPT, imt.getDisplayName()+" Site z-scores");
+			siteMapMaker.plotScatterScalars(siteLocs, siteZMeans, zScoreCPT, imt.getDisplayName()+" Site z-scores");
 			siteMapMaker.plot(resourcesDir, prefix+"_site_z_means", " ", 900);
-			siteMapMaker.plotScatterScalars(siteLocs, zStdDevs, sigmaCPT, imt.getDisplayName()+" Site σ-fracts");
+			siteMapMaker.plotScatterScalars(siteLocs, siteZStdDevs, sigmaCPT, imt.getDisplayName()+" Site σ-fracts");
 			siteMapMaker.plot(resourcesDir, prefix+"_site_z_sds", " ", 900);
 			
 			table.initNewLine();
@@ -1914,22 +1923,34 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			
 			siteMapMaker.clearScatterScalars();
 			
-			zMeans = new ArrayList<>();
-			zStdDevs = new ArrayList<>();
+			// now histograms
+			ZScoreResult zSiteScores = buildZResult(siteZMeans, true);
+			
+			ZScoreHistPlot.plotStandardNormal(new ZScoreResult[] {zSiteScores}, "Site z-scores", new IMT[] {imt},
+					gmpeRef, null, resourcesDir, prefix+"_site_z_hist", 0, true);
+			sigFractHistPlot(resourcesDir, prefix+"_site_z_sds_hist", siteZStdDevs, "Site σ-fracts", " ");
+			
+			table.initNewLine();
+			table.addColumn("![Site histogram]("+resourcesDir.getName()+"/"+prefix+"_site_z_hist.png)");
+			table.addColumn("![Site histogram]("+resourcesDir.getName()+"/"+prefix+"_site_z_sds_hist.png)");
+			table.finalizeLine();
+			
+			List<Double> sourceZMeans = new ArrayList<>();
+			List<Double> sourceZStdDevs = new ArrayList<>();
 			for (int s=0; s<subSects.size(); s++) {
 				ZScoreResult[] scores = sectScores.get(s);
 				if (scores == null) {
-					zMeans.add(Double.NaN);
-					zStdDevs.add(Double.NaN);
+					sourceZMeans.add(Double.NaN);
+					sourceZStdDevs.add(Double.NaN);
 				} else {
-					zMeans.add(scores[p].mean);
-					zStdDevs.add(scores[p].stdDevFract);
+					sourceZMeans.add(scores[p].mean);
+					sourceZStdDevs.add(scores[p].stdDevFract);
 				}
 			}
 			
-			sourceMapMaker.plotSectScalars(zMeans, zScoreCPT, imt.getDisplayName()+" Source z-scores");
+			sourceMapMaker.plotSectScalars(sourceZMeans, zScoreCPT, imt.getDisplayName()+" Source z-scores");
 			sourceMapMaker.plot(resourcesDir, prefix+"_source_z_means", " ", 900);
-			sourceMapMaker.plotSectScalars(zStdDevs, sigmaCPT, imt.getDisplayName()+" Source σ-fracts");
+			sourceMapMaker.plotSectScalars(sourceZStdDevs, sigmaCPT, imt.getDisplayName()+" Source σ-fracts");
 			sourceMapMaker.plot(resourcesDir, prefix+"_source_z_sds", " ", 900);
 			
 			table.initNewLine();
@@ -1937,11 +1958,34 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			table.addColumn("![Source z-scores]("+resourcesDir.getName()+"/"+prefix+"_source_z_sds.png)");
 			table.finalizeLine();
 			
+			// now histograms
+			ZScoreResult zSourceScores = buildZResult(sourceZMeans, true);
+
+			ZScoreHistPlot.plotStandardNormal(new ZScoreResult[] {zSourceScores}, "Source z-scores", new IMT[] {imt},
+					gmpeRef, null, resourcesDir, prefix+"_source_z_hist", 0, true);
+			sigFractHistPlot(resourcesDir, prefix+"_source_z_sds_hist", sourceZStdDevs, "Source σ-fracts", " ");
+
+			table.initNewLine();
+			table.addColumn("![Source histogram]("+resourcesDir.getName()+"/"+prefix+"_source_z_hist.png)");
+			table.addColumn("![Source histogram]("+resourcesDir.getName()+"/"+prefix+"_source_z_sds_hist.png)");
+			table.finalizeLine();
+			
+			zMeanVsStdDevScatterPlot(resourcesDir, prefix+"_site_z_scatter", siteZMeans, siteZStdDevs,
+					"Site z/σ-fract relationship");
+			zMeanVsStdDevScatterPlot(resourcesDir, prefix+"_source_z_scatter", sourceZMeans, sourceZStdDevs,
+					"Source z/σ-fract relationship");
+			
+			table.initNewLine();
+			table.addColumn("![Site scatter]("+resourcesDir.getName()+"/"+prefix+"_site_z_scatter.png)");
+			table.addColumn("![Source scatter]("+resourcesDir.getName()+"/"+prefix+"_source_z_scatter.png)");
+			table.finalizeLine();
+			
 			lines.addAll(table.build());
 			
 			lines.add("### "+imt.getDisplayName()+" Hazard Comparisons");
 			lines.add(topLink); lines.add("");
 			
+			System.out.println("Calculating "+imt.getDisplayName()+" hazard curves");
 			List<Future<DiscretizedFunc[]>> curveFutures = new ArrayList<>();
 			for (Site site : sites) {
 				curveFutures.add(exec.submit(new Callable<DiscretizedFunc[]>() {
@@ -1971,6 +2015,8 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			}
 			
 			table = MarkdownUtils.tableBuilder();
+			
+			List<String> hazScatterPrefixes = new ArrayList<>();
 			
 			for (boolean rtgm : new boolean [] {false, true}) {
 				List<Double> simVals = new ArrayList<>();
@@ -2052,7 +2098,16 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				table.addColumn("![Hazard]("+resourcesDir.getName()+"/"+myPrefix+".png)");
 				table.addColumn("![Hazard]("+resourcesDir.getName()+"/"+myPrefix+"_ratios.png)");
 				table.finalizeLine();
+				
+				zMeanVsStdDevHazardScatterPlot(resourcesDir, myPrefix+"_z_scatter", siteZMeans, siteZStdDevs, ratios, ratioType,
+						ratioCPT, ratioLabel, "Hazard, z, and σ-fracts relationship");
+				hazScatterPrefixes.add(myPrefix+"_z_scatter");
 			}
+			
+			table.initNewLine();
+			for (String myPrefix : hazScatterPrefixes)
+				table.addColumn("![Scatter]("+resourcesDir.getName()+"/"+myPrefix+".png)");
+			table.finalizeLine();
 			
 			lines.addAll(table.build());
 			lines.add("");
@@ -2076,26 +2131,15 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				System.out.println("Calculating source z-scores for "+site.getName());
 				List<Site> mySites = new ArrayList<>();
 				mySites.add(site);
-				List<? extends RuptureComparison<E>> siteComps = siteFilter.getMatches(comps, site);
 				scoreFutures = new ArrayList<>();
 				for (FaultSection sect : subSects) {
 					if (sectInsides[sect.getSectionId()]) {
-						RuptureComparisonFilter<E> filter = new RuptureComparisonFilter<E>() {
-							@Override
-							public boolean matches(RuptureComparison<E> comp, Site site) {
-								E rup = comp.getRupture();
-								for (FaultSection testSect : rupSectMappings.get(rup)) {
-									if (sect.equals(testSect))
-										return true;
-								}
-								return false;
-							}
-						};
+						List<RuptureComparison<E>> siteSectComps = siteFilter.getMatches(sectComps.get(sect.getSectionId()), site);
 						scoreFutures.add(exec.submit(new Callable<ZScoreResult[]>() {
 
 							@Override
 							public ZScoreResult[] call() throws Exception {
-								return ZScoreHistPlot.calcZScores(simProv, siteComps, sites, imts, filter);
+								return ZScoreHistPlot.calcZScores(simProv, siteSectComps, sites, imts, null);
 							}
 						}));
 					} else {
@@ -2111,7 +2155,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 						try {
 							siteSectScores.add(future.get());
 							numSectsProcessed++;
-							System.out.println("Done with sect "+numSectsProcessed+"/"+numSectsInside);
+							System.out.println("Done with sect "+numSectsProcessed+"/"+numSectsInside+" for "+site.getName());
 						} catch (InterruptedException | ExecutionException e) {
 							throw ExceptionUtils.asRuntimeException(e);
 						}
@@ -2175,6 +2219,215 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 
 		// write markdown
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
+	}
+	
+	private static ZScoreResult buildZResult(List<Double> values, boolean zHistRange) {
+		double avgVal = 0d;
+		double maxVal = Double.NEGATIVE_INFINITY;
+		double minVal = Double.POSITIVE_INFINITY;
+		StandardDeviation stdDev = new StandardDeviation();
+		
+		int numValid = 0;
+		for (Double val : values) {
+			if (val != null && Double.isFinite(val)) {
+				numValid++;
+				minVal = Math.min(minVal, val);
+				maxVal = Math.max(maxVal, val);
+				avgVal += val;
+				stdDev.increment(val);
+			}
+		}
+		
+		Preconditions.checkState(numValid > 0);
+		
+		avgVal /= numValid;
+		
+		HistogramFunction hist;
+		if (zHistRange) {
+			int numBins;
+			if (numValid < 100)
+				numBins = 10;
+			else if (numValid < 500)
+				numBins = 40;
+			else
+				numBins = 100;
+			hist = new HistogramFunction(-ZScoreHistPlot.numStdDev, ZScoreHistPlot.numStdDev, numBins);
+		} else {
+			double spread = maxVal - minVal;
+			double delta;
+			if (numValid == 1 || spread > 1d)
+				delta = .1;
+			else if (spread > 0.5)
+				delta = 0.05;
+			else
+				delta = 0.02;
+			hist = HistogramFunction.getEncompassingHistogram(minVal, maxVal, delta);
+		}
+		
+		for (Double val : values)
+			if (val != null && Double.isFinite(val))
+				hist.add(hist.getClosestXIndex(val), 1d);
+		
+		double area = ZScoreHistPlot.calcArea(hist);
+		hist.scale(1d/area);
+		
+		return new ZScoreResult(avgVal, stdDev.getResult(), hist);
+	}
+	
+	private static void sigFractHistPlot(File resourcesDir, String prefix, List<Double> values, String name,
+			String title) throws IOException {
+		ZScoreResult fakeZ = buildZResult(values, false);
+		double avgVal = fakeZ.mean;
+		
+		HistogramFunction hist = fakeZ.hist;
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		hist.setName(name);
+		funcs.add(hist);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+		
+		Range yRange = new Range(0d, hist.calcSumOfY_Vals()*1.1);
+		DefaultXY_DataSet meanLine = new DefaultXY_DataSet();
+		meanLine.set(avgVal, 0d);
+		meanLine.set(avgVal, yRange.getUpperBound());
+		
+		meanLine.setName("Mean: "+twoSigFig.format(avgVal));
+		
+		funcs.add(meanLine);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.BLUE.darker()));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, "σ-fract", "Density");
+		spec.setLegendVisible(true);
+		
+		double minX = hist.getMinX();
+		double maxX = hist.getMaxX();
+		Range xRange = sigFractRange(minX, maxX);
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(24);
+		gp.setPlotLabelFontSize(24);
+		gp.setLegendFontSize(20);
+		gp.setBackgroundColor(Color.WHITE);
+		
+		int width = 600;
+		int height = 450;
+		
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		
+		PlotUtils.writePlots(resourcesDir, prefix, gp, width, height, true, true, false);
+	}
+	
+	private static Range sigFractRange(double min, double max) {
+		if (min < 0.25)
+			min = 0d;
+		else if (min < 0.5)
+			min = 0.25;
+		else
+			min = 0.5;
+		if (max > 1.5)
+			max = 2;
+		else if (max > 1.25)
+			max = 1.5;
+		else if (max > 1)
+			max = 1.25;
+		else
+			max = 1;
+			
+		return new Range(min, max);
+	}
+	
+	private static void zMeanVsStdDevScatterPlot(File resourcesDir, String prefix, List<Double> zMeans,
+			List<Double> zStdDevs, String title) throws IOException {
+		DefaultXY_DataSet xy = new DefaultXY_DataSet();
+		
+		for (int i=0; i<zMeans.size(); i++) {
+			Double zMean = zMeans.get(i);
+			Double zStdDev = zStdDevs.get(i);
+			if (zMean == null || !Double.isFinite(zMean))
+				continue;
+			xy.set(zMean, zStdDev);
+		}
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		funcs.add(xy);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_CROSS, 3f, Color.BLACK));
+		
+		Range xRange = new Range(-2, 2);
+		Range yRange = sigFractRange(xy.getMinY(), xy.getMaxY());
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, "z-score", "σ-fract");
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(24);
+		gp.setPlotLabelFontSize(24);
+		gp.setLegendFontSize(20);
+		gp.setBackgroundColor(Color.WHITE);
+		
+		int width = 600;
+		int height = 450;
+		
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		
+		PlotUtils.writePlots(resourcesDir, prefix, gp, width, height, true, true, false);
+	}
+	
+	private static void zMeanVsStdDevHazardScatterPlot(File resourcesDir, String prefix, List<Double> zMeans,
+			List<Double> zStdDevs, List<Double> hazardRatios, HazardRatioType ratioType, CPT cpt, String zLabel,
+			String title) throws IOException {
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		DefaultXY_DataSet outlineXY = new DefaultXY_DataSet();
+		
+		for (int i=0; i<zMeans.size(); i++) {
+			Double zMean = zMeans.get(i);
+			if (zMean == null || !Double.isFinite(zMean))
+				continue;
+			Double zStdDev = zStdDevs.get(i);
+			Double hazard = hazardRatios.get(i);
+			DefaultXY_DataSet xy = new DefaultXY_DataSet();
+			xy.set(zMean, zStdDev);
+			Color color = cpt.getColor(hazard.floatValue());
+			
+			funcs.add(xy);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, color));
+			
+			outlineXY.set(xy.get(0));
+		}
+		
+		funcs.add(outlineXY);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, 5f, new Color(0, 0, 0, 127)));
+		
+		Range xRange = new Range(-2, 2);
+		Range yRange = sigFractRange(outlineXY.getMinY(), outlineXY.getMaxY());
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, "z-score", "σ-fract");
+		
+		spec.addSubtitle(RupSetMapMaker.buildCPTLegend(cpt, zLabel));
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(24);
+		gp.setPlotLabelFontSize(24);
+		gp.setLegendFontSize(20);
+		gp.setBackgroundColor(Color.WHITE);
+		
+		int width = 600;
+		int height = 450;
+		
+		gp.drawGraphPanel(spec, false, false, xRange, yRange);
+		
+		PlotUtils.writePlots(resourcesDir, prefix, gp, width, height, true, true, false);
 	}
 	
 	public void shutdown() {

@@ -73,6 +73,8 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 	private HashSet<Integer> alreadyDones;
 	
 	protected int numRG = 0;
+	
+	private boolean rdOnly = false;
 
 	public AbstractMPJ_BBP_Sim(CommandLine cmd) throws IOException {
 		super(cmd);
@@ -143,9 +145,13 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 			rsyncGFs(localDir, bbpEnvFile, bbpGFDir, vm, rank, hostname);
 			bbpGFDir = localDir;
 		}
+		
+		rdOnly = cmd.hasOption("rd-only");
 
 		if (cmd.hasOption("rup-gen-sims")) {
 			numRG = Integer.parseInt(cmd.getOptionValue("rup-gen-sims"));
+			if (numRG > 0)
+				rdOnly = true;
 			if (rank == 0)
 				debug("also doing "+numRG+" rupture generation simulations each");
 		}
@@ -270,7 +276,7 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 	private class MasterZipHook extends MPJ_BBP_Utils.MasterZipHook {
 
 		public MasterZipHook() {
-			super(numRG > 0 ? null : new File(resultsDir.getParentFile(), resultsDir.getName()+".zip"),
+			super(rdOnly ? null : new File(resultsDir.getParentFile(), resultsDir.getName()+".zip"),
 					new File(resultsDir.getParentFile(), resultsDir.getName()+"_rotD.zip"));
 		}
 
@@ -395,7 +401,7 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 				wrapper.setDoRotD100(true);
 				wrapper.setDoRotD50(false);
 				wrapper.setDoPGV(true);
-				wrapper.setDoArias(true);
+				wrapper.setDoArias(!rdOnly);
 				wrapper.setBBPEnvFile(bbpEnvFile);
 				wrapper.setBBPDataDir(bbpDataDir);
 				wrapper.setBBPGFDir(bbpGFDir);
@@ -421,6 +427,15 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 						wrapper.setBBPDataDir(bbpDataDir);
 						wrapper.setBBPGFDir(bbpGFDir);
 						wrapper.run();
+					}
+				}
+				
+				if (rdOnly) {
+					// delete *acc.bbp and *vel.bbp files, we're only saving RotD50
+					for (File file : runDir.listFiles()) {
+						String name = file.getName();
+						if (name.endsWith(".vel.bbp") || name.endsWith(".acc.bbp"))
+							file.delete();
 					}
 				}
 				
@@ -461,11 +476,15 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 		}
 	}
 	
-	public static Options addCommonOptions(Options ops) {		
+	public static Options addCommonOptions(Options ops) {
 		Option gp = new Option("rgs", "rup-gen-sims", true, "If supplied, do this amount of simulations with a rupture "
 				+ "generator for each rupture. Only RotD50 will be archived.");
 		gp.setRequired(false);
 		ops.addOption(gp);
+		
+		Option rdOnly = new Option("rdo", "rd-only", false, "If supplied, only RotD values will be archived.");
+		rdOnly.setRequired(false);
+		ops.addOption(rdOnly);
 		
 		Option nodeScratchDir = new Option("nsdir", "node-scratch-dir", true,
 				"Node-local scratch directory to reduce I/O on network disks. Transition file will be copied here.");

@@ -52,7 +52,11 @@ public class ZScoreHistPlot {
 		public final HistogramFunction hist;
 		public final Map<String, HistogramFunction> sourceHists;
 		
-		private ZScoreResult(double mean, double stdDevFract, HistogramFunction hist, Map<String, HistogramFunction> sourceHists) {
+		public ZScoreResult(double mean, double stdDevFract, HistogramFunction hist) {
+			this(mean, stdDevFract, hist, null);
+		}
+		
+		public ZScoreResult(double mean, double stdDevFract, HistogramFunction hist, Map<String, HistogramFunction> sourceHists) {
 			super();
 			this.mean = mean;
 			this.stdDevFract = stdDevFract;
@@ -185,15 +189,28 @@ public class ZScoreHistPlot {
 		return plotStandardNormal(simProv, eventComps, sites, imts, gmpe, filter, binDescriptions, outputDir, prefix, null, 0, false);
 	}
 	
-	private static final double maxY = 0.7d;
-	private static final double numStdDev = 3.75;
+	public static final double maxY = 0.7d;
+	public static final double numStdDev = 3.75;
 	
 	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
 			List<Site> sites, IMT[] imts, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
 			File outputDir, String prefix, Table<String, E, Double> sourceRupContribFracts, int maxNumSourceContribs, boolean pub)
 					throws IOException {
 		
+		ZScoreResult[] scores = calcZScores(simProv, eventComps, sites, imts, filter, sourceRupContribFracts);
+		if (scores == null)
+			return false;
+		
+		return plotStandardNormal(scores, simProv.getName(), imts, gmpe, binDescriptions, outputDir, prefix, maxNumSourceContribs, pub);
+	}
+	
+	public static <E> boolean plotStandardNormal(ZScoreResult[] scores, String name, IMT[] imts, AttenRelRef gmpe,
+			List<String> binDescriptions, File outputDir, String prefix, int maxNumSourceContribs, boolean pub)
+					throws IOException {
+		
 		List<PlotSpec> specs = new ArrayList<>();
+		
+		DatasetRenderingOrder order = DatasetRenderingOrder.FORWARD;
 		
 		List<Range> xRanges = new ArrayList<>();
 		xRanges.add(new Range(-numStdDev, numStdDev));
@@ -202,12 +219,6 @@ public class ZScoreHistPlot {
 		List<Double> stdDevs = new ArrayList<>();
 		
 		Color stdDevColor = new Color(0, 150, 0);
-		
-		DatasetRenderingOrder order = DatasetRenderingOrder.FORWARD;
-		
-		ZScoreResult[] scores = calcZScores(simProv, eventComps, sites, imts, filter, sourceRupContribFracts);
-		if (scores == null)
-			return false;
 		
 		for (int p=0; p<imts.length; p++) {
 			IMT imt = imts[p];
@@ -226,7 +237,7 @@ public class ZScoreHistPlot {
 				stdNormal.set(i, y);
 			}
 			
-			score.hist.setName(simProv.getName());
+			score.hist.setName(name);
 			stdNormal.setName("Standard Normal");
 			
 //			maxY = Math.max(maxY, Math.max(stdNormal.getMaxY(), hist.getMaxY()));
@@ -302,7 +313,7 @@ public class ZScoreHistPlot {
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, stdDevColor));
 			}
 			
-			String title = pub ? " " : gmpe.getShortName()+" Log-Normal Comparision";
+			String title = pub ? " " : gmpe.getShortName()+" z-score Comparison";
 			String xAxisLabel = "z-score (Standard Deviations)";
 			String yAxisLabel = "Density";
 			
@@ -316,7 +327,9 @@ public class ZScoreHistPlot {
 		
 		List<Range> yRanges = new ArrayList<>();
 		for (int i=0; i<imts.length; i++) {
-			List<String> labels = new ArrayList<>(binDescriptions);
+			List<String> labels = new ArrayList<>();
+			if (binDescriptions != null)
+				labels.addAll(binDescriptions);
 			if (!pub)
 				labels.add(0, imts[i].getShortName());
 			
@@ -403,7 +416,7 @@ public class ZScoreHistPlot {
 		return true;
 	}
 	
-	private static double calcArea(HistogramFunction hist) {
+	public static double calcArea(HistogramFunction hist) {
 		double area = 0d;
 		for (Point2D pt : hist)
 			area += hist.getDelta()*pt.getY();

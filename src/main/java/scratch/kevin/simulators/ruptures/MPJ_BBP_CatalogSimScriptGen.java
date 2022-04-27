@@ -149,6 +149,10 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			sites.addAll(RSQSimBBP_Config.getCAGriddedSites(griddedSpacing));
 		if (griddedSoCalSites)
 			sites.addAll(RSQSimBBP_Config.getSoCalGriddedSites(griddedSpacing));
+		
+		boolean rdOnly = sites.size() < 100;
+		if (rdOnly)
+			System.out.println("Only saving RotD values, we have "+sites.size()+" sites");
 		File sitesFile = new File(localJobDir, "sites.stl");
 		System.out.println("Writing "+sites.size()+" sites to "+sitesFile.getAbsolutePath());
 		BBP_Site.writeToFile(sitesFile, sites);
@@ -174,6 +178,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			if (scaleVelocities)
 				argz += " --velocity-scale";
 		}
+		if (rdOnly)
+			argz += " --rd-only";
 		List<String> addLines = new ArrayList<>();
 		argz = addBBP_EnvArgs(argz, addLines, remoteJobDir, nodeScratchDir, sharedScratchDir, bbpCopyParentDir, bbpEnvFile);
 		
