@@ -1372,7 +1372,7 @@ public class BatchInversionScriptWriter {
 		// good fitting
 		branch.setValue(U3_UncertAddDeformationModels.U3_ZENG);
 		branch.setValue(ScalingRelationships.SHAW_2009_MOD);
-		branch.setValue(SupraSeisBValues.B_0p8);
+		branch.setValue(SupraSeisBValues.B_0p5);
 		branch.setValue(SlipAlongRuptureModels.UNIFORM);
 		
 		// poor fitting
@@ -1389,8 +1389,8 @@ public class BatchInversionScriptWriter {
 //		branch.setValue(SubSectConstraintModels.NUCL_MFD);
 		
 		// seg model
-//		branch.setValue(SegmentationModels.SHAW_R0_3);
-		branch.setValue(SegmentationModels.SHAW_R0_3_SHIFT_1km);
+		branch.setValue(SegmentationModels.SHAW_R0_3);
+//		branch.setValue(SegmentationModels.SHAW_R0_3_SHIFT_1km);
 		
 		dirName += "-"+branch.getValue(U3_UncertAddDeformationModels.class).getFilePrefix();
 		dirName += "-"+branch.getValue(ScalingRelationships.class).getFilePrefix();

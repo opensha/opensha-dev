@@ -282,7 +282,7 @@ public class MPJ_StrictSegLogicTreeTranslation extends MPJTaskCalculator {
 				FileUtils.deleteRecursive(tempDir);
 				
 				SegmentationModels segModel = branch.requireValue(SegmentationModels.class);
-				Shaw07JumpDistProb shawProb = (Shaw07JumpDistProb)segModel.getModel(sols.get(0).getRupSet());
+				Shaw07JumpDistProb shawProb = (Shaw07JumpDistProb)segModel.getModel(sols.get(0).getRupSet(), null);
 				double r0 = shawProb.getR0();
 				
 				List<Double> weights = new ArrayList<>();

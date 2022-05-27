@@ -22,6 +22,7 @@ import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeInversionRunner;
@@ -30,6 +31,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeC
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
@@ -100,63 +102,67 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * UCERF3 logic tree
 		 */
-		List<LogicTreeLevel<? extends U3LogicTreeBranchNode<?>>> levels = U3LogicTreeBranch.getLogicTreeLevels();
-		LogicTree<U3LogicTreeBranchNode<?>> logicTree = LogicTree.buildExhaustive(levels, true);
-		dirName += "-u3_branches";
-		
-		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
-		int avgNumRups = 250000;
-		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParamsNewAvgConverged.class;
-//		dirName += "-orig_calc_params-new_avg-converged";
+//		List<LogicTreeLevel<? extends U3LogicTreeBranchNode<?>>> levels = U3LogicTreeBranch.getLogicTreeLevels();
+//		LogicTree<U3LogicTreeBranchNode<?>> logicTree = LogicTree.buildExhaustive(levels, true);
+//		dirName += "-u3_branches";
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
+////		int avgNumRups = 250000;
+//		
+//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.ScaleLowerDepth1p3.class;
 //		int avgNumRups = 250000;
-		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParamsNewAvgNoWaterLevel.class;
-//		dirName += "-orig_calc_params-new_avg-converged-noWL";
-//		int avgNumRups = 250000;
-		
-//		dirName += "-new_perturb";
-//		extraArgs.add("--perturb "+GenerationFunctionType.VARIABLE_EXPONENTIAL_SCALE.name());
-		
-//		dirName += "-try_zero_often";
-//		extraArgs.add("--non-negativity "+NonnegativityConstraintType.TRY_ZERO_RATES_OFTEN.name());
-		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.ThinnedRupSet.class;
-//		int avgNumRups = 150000;
-//		dirName += "-thinned_0.1";
-		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParams.class;
-//		dirName += "-orig_calc_params";
-//		int avgNumRups = 250000;
-//		remoteInversionsPerBundle = 4;
-//		runsPerBranch = 10;
-//		String completionArg = null;
-//		int invMins = 30;
-		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParamsNewAvg.class;
-//		dirName += "-orig_calc_params-new_avg";
-//		int avgNumRups = 250000;
-//		String completionArg = null;
-//		int invMins = 30;
-		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.NoPaleoParkfieldSingleReg.class;
-//		dirName += "-no_paleo-no_parkfield-single_mfd_reg";
-		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.CoulombRupSet.class;
-//		dirName += "-coulomb";
-//		int avgNumRups = 325000;
-		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.CoulombBilateralRupSet.class;
-//		dirName += "-coulomb-bilateral";
-//		int avgNumRups = 500000;
-		
-//		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
-//				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
-//		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB,
-//				ScalingRelationships.SHAW_2009_MOD };
-		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1 };
-//		U3LogicTreeBranchNode<?>[] required = {  };
-		Class<? extends LogicTreeNode> sortBy = null;
+//		dirName += "-scaleLowerDepth1.3";
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParamsNewAvgConverged.class;
+////		dirName += "-orig_calc_params-new_avg-converged";
+////		int avgNumRups = 250000;
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParamsNewAvgNoWaterLevel.class;
+////		dirName += "-orig_calc_params-new_avg-converged-noWL";
+////		int avgNumRups = 250000;
+//		
+////		dirName += "-new_perturb";
+////		extraArgs.add("--perturb "+GenerationFunctionType.VARIABLE_EXPONENTIAL_SCALE.name());
+//		
+////		dirName += "-try_zero_often";
+////		extraArgs.add("--non-negativity "+NonnegativityConstraintType.TRY_ZERO_RATES_OFTEN.name());
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.ThinnedRupSet.class;
+////		int avgNumRups = 150000;
+////		dirName += "-thinned_0.1";
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParams.class;
+////		dirName += "-orig_calc_params";
+////		int avgNumRups = 250000;
+////		remoteInversionsPerBundle = 4;
+////		runsPerBranch = 10;
+////		String completionArg = null;
+////		int invMins = 30;
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParamsNewAvg.class;
+////		dirName += "-orig_calc_params-new_avg";
+////		int avgNumRups = 250000;
+////		String completionArg = null;
+////		int invMins = 30;
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.NoPaleoParkfieldSingleReg.class;
+////		dirName += "-no_paleo-no_parkfield-single_mfd_reg";
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.CoulombRupSet.class;
+////		dirName += "-coulomb";
+////		int avgNumRups = 325000;
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.CoulombBilateralRupSet.class;
+////		dirName += "-coulomb-bilateral";
+////		int avgNumRups = 500000;
+//		
+////		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.GEOLOGIC,
+////				ScalingRelationships.SHAW_2009_MOD, TotalMag5Rate.RATE_7p9 };
+////		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1, DeformationModels.ZENGBB,
+////				ScalingRelationships.SHAW_2009_MOD };
+//		U3LogicTreeBranchNode<?>[] required = { FaultModels.FM3_1 };
+////		U3LogicTreeBranchNode<?>[] required = {  };
+//		Class<? extends LogicTreeNode> sortBy = null;
 		/*
 		 * END UCERF3 logic tree
 		 */
@@ -164,91 +170,121 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * NSHM23 logic tree
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-//		dirName += "-nshm23_u3_hybrid_branches";
-////		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
-////		dirName += "-nshm23_branches";
-////		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
-////		dirName += "-nshm18_branches";
-//		
-//		levels = new ArrayList<>(levels);
-//		for (int i=levels.size(); --i>=0;)
-//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
-//					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class))
-//				levels.remove(i);
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+		dirName += "-nshm23_u3_hybrid_branches";
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
+//		dirName += "-nshm23_branches";
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
+//		dirName += "-nshm18_branches";
+		
+		levels = new ArrayList<>(levels);
+		for (int i=levels.size(); --i>=0;)
+			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
+					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class)
+					|| levels.get(i).getType().isAssignableFrom(DistDependSegShift.class))
+				levels.remove(i);
 //		dirName += "-no_seg";
-//////		levels.add(LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist"));
-//////		dirName += "-strict_cutoff_seg"; strictSeg = true;
-//		
-////		dirName += "-reweight_seg_2_3_4";
-//			
-//		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
-//		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
-//		
-////		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
-////		dirName += "-no_reweight_use_prev";
-//		
-////		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedOrigWeights.class;
-////		dirName += "-no_reweight_use_orig";
-//		
-////		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoMFDScaleAdjust.class;
-////		dirName += "-no_scale_adj_mfds";
-//		
-//		if (!dirName.contains("no_seg"))
-//			dirName += "-shift_seg_1km";
-//		
-//		LogicTreeNode[] required = {
-//				FaultModels.FM3_1,
-////				NSHM18_FaultModels.NSHM18_WUS_NoCA,
-//				
-////				RupturePlausibilityModels.COULOMB,
-////				RupturePlausibilityModels.AZIMUTHAL,
+		levels.add(NSHM23_LogicTreeBranch.MAX_DIST);
+		dirName += "-strict_cutoff_seg"; strictSeg = true;
+		
+//		dirName += "-reweight_seg_2_3_4";
+		
+//		levels = new ArrayList<>(levels);
+//		int origSize = levels.size();
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
+//				levels.remove(i);
+//		Preconditions.checkState(levels.size() < origSize);
+//		levels.add(LogicTreeLevel.forEnum(HardcodedTestScaleRels.class, "Hardocded Test Scaling Rels", "TestScales"));
+//		dirName += "-test_scale_rels";
+			
+		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
+//		dirName += "-mfd_uncert_0p1";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ClusterSpecific.class;
+//		dirName += "-cluster_specific_inversion";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
+//		dirName += "-no_reweight_use_prev";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedOrigWeights.class;
+//		dirName += "-no_reweight_use_orig";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoPaleoParkfield.class;
+//		dirName += "-no_paleo_parkfield";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoMFDScaleAdjust.class;
+//		dirName += "-no_scale_adj_mfds";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoIncompatibleDataAdjust.class;
+//		dirName += "-no_mfd_sigma_data_adj";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ScaleLowerDepth1p3.class;
+//		dirName += "-scaleLowerDepth1.3";
+		
+		LogicTreeNode[] required = {
+				FaultModels.FM3_1,
+//				NSHM18_FaultModels.NSHM18_WUS_NoCA,
+				
+				RupturePlausibilityModels.COULOMB,
+//				RupturePlausibilityModels.AZIMUTHAL,
 //				RupturePlausibilityModels.SEGMENTED,
-////				RupturePlausibilityModels.UCERF3,
-////				RupturePlausibilityModels.UCERF3_REDUCED,
-//				
-////				U3_UncertAddDeformationModels.U3_ZENG,
-//				
-////				ScalingRelationships.SHAW_2009_MOD,
-//				
-//				SlipAlongRuptureModels.UNIFORM,
-////				SlipAlongRuptureModels.TAPERED,
-//				
-//				SubSectConstraintModels.TOT_NUCL_RATE,
-////				SubSectConstraintModels.NUCL_MFD,
-//				
-//				SubSeisMoRateReductions.SUB_B_1,
-////				SubSeisMoRateReductions.NONE,
-////				SubSeisMoRateReductions.SYSTEM_AVG,
-//				
-////				SupraSeisBValues.B_0p8,
-//				
-////				SegmentationModels.SHAW_R0_3,
-//				
-////				SegmentationMFD_Adjustment.NONE
-////				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG
-////				SegmentationMFD_Adjustment.CAPPED_REDIST
-////				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED
-////				SegmentationMFD_Adjustment.GREEDY
-////				SegmentationMFD_Adjustment.GREEDY_SELF_CONTAINED
-////				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_MATCH_STRICT
-//				};
-//		double avgNumRups = 300000;
-////		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
-////		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
-//		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
+//				RupturePlausibilityModels.UCERF3,
+//				RupturePlausibilityModels.UCERF3_REDUCED,
+				
+//				U3_UncertAddDeformationModels.U3_ZENG,
+				
+//				ScalingRelationships.SHAW_2009_MOD,
+				
+				SlipAlongRuptureModels.UNIFORM,
+//				SlipAlongRuptureModels.TAPERED,
+				
+				SubSectConstraintModels.TOT_NUCL_RATE,
+//				SubSectConstraintModels.NUCL_MFD,
+				
+				SubSeisMoRateReductions.SUB_B_1,
+//				SubSeisMoRateReductions.NONE,
+//				SubSeisMoRateReductions.SYSTEM_AVG,
+				
+//				SupraSeisBValues.B_0p8,
+				
+//				SegmentationModels.SHAW_R0_3,
+				
+//				DistDependSegShift.NONE,
+//				DistDependSegShift.ONE_KM,
+//				DistDependSegShift.TWO_KM,
+//				DistDependSegShift.THREE_KM,
+				
+//				SegmentationMFD_Adjustment.NONE
+//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG
+//				SegmentationMFD_Adjustment.CAPPED_REDIST
+//				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED
+//				SegmentationMFD_Adjustment.GREEDY
+//				SegmentationMFD_Adjustment.GREEDY_SELF_CONTAINED
+//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_MATCH_STRICT
+				};
+		double avgNumRups = 300000;
+//		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
+//		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
+		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
 		/*
 		 * END NSHM23 logic tree
 		 */
 		
 		int rounds = 2000;
+		String completionArg = null;
+		
 //		int rounds = 5000;
 //		int rounds = 10000;
+//		String completionArg = rounds+"ip";
+		
 		double numIters = avgNumRups*rounds;
 		double invSecs = numIters/itersPerSec;
 		int invMins = (int)(invSecs/60d + 0.5);
-		String completionArg = rounds+"ip";
 		System.out.println("Estimate "+invMins+" minues per inversion");
 		
 //		String completionArg = "1m"; int invMins = 1;
@@ -435,7 +471,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			
 			int transNodes = Integer.min(16, nodes);
 			mins = (int)60*10;
-			pbsWrite.writeScript(new File(modLocalDir, "batch_strict_branch_translate.slurm"), script, mins, transNodes, remoteToalThreads, queue);
+			pbsWrite.writeScript(new File(modLocalDir, "batch_strict_branch_translate.slurm"), script, mins, transNodes,
+					Integer.min(remoteToalThreads, 10), queue);
 			
 			// now write hazard script
 			argz = "--input-file "+new File(modOutputDir.getAbsolutePath()+".zip");
@@ -445,9 +482,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			
 			mins = (int)60*10;
 			nodes = Integer.min(40, nodes);
-			if (queue != null && queue.equals("scec"))
-				// run hazard in the high priority queue
-				queue = "scec_hiprio";
 			pbsWrite.writeScript(new File(modLocalDir, "batch_hazard.slurm"), script, mins, nodes, remoteToalThreads, queue);
 		}
 	}

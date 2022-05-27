@@ -12,10 +12,12 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -139,8 +141,8 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_02_22-u3_branches-thinned_0.1-FM3_1-2000ip");
 //		String mainName = "UCERF3 New-Anneal Params, Reduced RS";
 		
-		File mainDir = new File(invDir, "2022_03_25-u3_branches-coulomb-FM3_1-2000ip");
-		String mainName = "UCERF3 New-Anneal Params, Coulomb RS";
+//		File mainDir = new File(invDir, "2022_03_25-u3_branches-coulomb-FM3_1-2000ip");
+//		String mainName = "UCERF3 New-Anneal Params, Coulomb RS";
 		
 //		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-no_seg-FM3_1-U3RupSet-DsrUni-TotNuclRate-SubB1-2000ip");
 //		String mainName = "NSHM23 Draft, U3 RS, No Seg";
@@ -170,9 +172,7 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_02_22-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-StrictEquivJumpProb-2000ip");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg @ Strict Bins";
 		
-//		File mainDir = new File(invDir, "2022_03_31-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrTap-TotNuclRate-SubB1-JumpProb-2000ip");
-////		File mainDir = new File(invDir, "2022_03_24-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
-////		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+//		File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		String mainName = "NSHM23 Draft, Coulomb RS, Seg Thresh-Avg 1km-Shift";
 		
 //		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
@@ -184,6 +184,21 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2022_03_24-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
 //		String compName = "Previous Step";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_prev");
+
+//		File mainDir = new File(invDir, "2022_04_27-u3_branches-scaleLowerDepth1.3-FM3_1-2000ip");
+//		String mainName = "UCERF3, 1.3x Lower-Seis Depth";
+		
+//		File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-cluster_specific_inversion-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
+//		String mainName = "NSHM23 Draft, Cluster-Specific Inversions";
+		
+//		File mainDir = new File(invDir, "2022_05_20-nshm23_u3_hybrid_branches-scaleLowerDepth1.3-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
+//		String mainName = "NSHM23 Draft, 1.3x Lower-Seis Depth";
+		
+		File mainDir = new File(invDir, "2022_05_20-nshm23_u3_hybrid_branches-test_scale_rels-scaleLowerDepth1.3-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
+		String mainName = "NSHM23 Draft, Test Scale Rels, 1.3x Lower-Seis Depth";
+		
+//		File mainDir = new File(invDir, "2022_05_20-nshm23_u3_hybrid_branches-test_scale_rels-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
+//		String mainName = "NSHM23 Draft, Test Scale Rels";
 		
 		LogicTreeNode[] subsetNodes = null;
 //		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
@@ -192,9 +207,9 @@ public class LogicTreeHazardCompare {
 //		String compName = "UCERF3 As Published, Uniform";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published_uniform");
 //		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1, SlipAlongRuptureModels.UNIFORM };
-		File compDir = new File(invDir, "2022_03_24-u3_branches-FM3_1-2000ip");
-		String compName = "UCERF3 New Anneal";
-		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
+//		File compDir = new File(invDir, "2022_03_24-u3_branches-FM3_1-2000ip");
+//		String compName = "UCERF3 New Anneal";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
 //		File compDir = new File(invDir, "2022_03_13-u3_branches-coulomb-bilateral-FM3_1-2000ip");
 //		String compName = "UCERF3 Coulomb Bilateral";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_coulomb_bilateral");
@@ -204,10 +219,14 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
 //		String compName = "Strict Segmentation";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_strict_seg");
-//		File compDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
+//		File compDir = new File(invDir, "");
 //		String compName = "Threshold Avg Shift-1km";
+//		String compName = "NSHM23 Draft";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_thresh_avg_shift_1km");
-//		File compDir = new File(invDir, "2022_04_11-nshm23_u3_hybrid_branches-no_seg-FM3_1-FullSegRupSet-DsrUni-TotNuclRate-SubB1-10000ip");
+//		File compDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
+		String compName = "NSHM23 Draft, Test Scale Rels";
+		File outputDir = new File(mainDir, "hazard_maps_comp_test_scale_rels");
+		File compDir = new File(invDir, "2022_05_20-nshm23_u3_hybrid_branches-test_scale_rels-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		String compName = "UCERF3 Full Segmented";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_fully_segmented");
 		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
@@ -651,6 +670,9 @@ public class LogicTreeHazardCompare {
 				GriddedGeoDataSet min = buildMin(maps);
 				GriddedGeoDataSet spread = buildSpread(log10(min), log10(max));
 				
+				File hazardCSV = new File(resourcesDir, prefix+".csv");
+				writeHazardCSV(hazardCSV, mean, median, min, max);
+				
 //				table.addLine(meanMinMaxSpreadMaps(mean, min, max, spread, name, label, prefix, resourcesDir));
 				
 				ArbDiscrEmpiricalDistFunc[] cmapArbDiscrs = null;
@@ -673,7 +695,16 @@ public class LogicTreeHazardCompare {
 					cmin = comp.buildMin(cmaps);
 					cspread = comp.buildSpread(log10(cmin), log10(cmax));
 //					table.addLine(meanMinMaxSpreadMaps(cmean, cmin, cmax, cspread, compName, label, prefix+"_comp", resourcesDir));
+					
+					File compHazardCSV = new File(resourcesDir, prefix+"_comp.csv");
+					writeHazardCSV(compHazardCSV, cmean, cmedian, cmin, cmax);
+					
+					lines.add("Download Hazard CSVs: ["+hazardCSV.getName()+"]("+resourcesDir.getName()+"/"+hazardCSV.getName()
+						+")  ["+compHazardCSV.getName()+"]("+resourcesDir.getName()+"/"+compHazardCSV.getName()+")");
+				} else {
+					lines.add("Download Hazard CSV: ["+hazardCSV.getName()+"]("+resourcesDir.getName()+"/"+hazardCSV.getName()+")");
 				}
+				lines.add("");
 				
 //				table.invert();
 				
@@ -837,6 +868,11 @@ public class LogicTreeHazardCompare {
 							table.addColumn("**Vs "+choice.getShortName()+"**");
 						table.finalizeLine();
 						
+						File choicesCSV = new File(resourcesDir, prefix+"_"+level.getShortName().replaceAll("\\W+", "_")+".csv");
+						writeChoiceHazardCSV(choicesCSV, mean, choices, choiceMeans);
+						lines.add("Download Choice Hazard CSV: ["+choicesCSV.getName()+"]("+resourcesDir.getName()+"/"+choicesCSV.getName()+")");
+						lines.add("");
+						
 						TableBuilder mapTable = MarkdownUtils.tableBuilder();
 						mapTable.addLine("", "Choice Mean vs Full Mean", "Choice Percentile in Full Dist", 
 								"Choice Percentile in Dist Without");
@@ -909,6 +945,54 @@ public class LogicTreeHazardCompare {
 		
 		// write markdown
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
+	}
+	
+	private void writeHazardCSV(File outputFile, GriddedGeoDataSet mean, GriddedGeoDataSet median,
+			GriddedGeoDataSet min, GriddedGeoDataSet max) throws IOException {
+		CSVFile<String> csv = new CSVFile<>(true);
+		
+		csv.addLine("Location Index", "Latitutde", "Longitude", "Weighted Mean", "Weighted Median", "Min", "Max");
+		
+		GriddedRegion reg = mean.getRegion();
+		for (int i=0; i<reg.getNodeCount(); i++) {
+			Location loc = reg.getLocation(i);
+			
+			csv.addLine(i+"", (float)loc.getLatitude()+"", (float)loc.getLongitude()+"", mean.get(i)+"",
+					median.get(i)+"", min.get(i)+"", max.get(i)+"");
+		}
+		
+		csv.writeToFile(outputFile);
+	}
+	
+	private void writeChoiceHazardCSV(File outputFile, GriddedGeoDataSet mean, List<LogicTreeNode> choices,
+			Map<LogicTreeNode, GriddedGeoDataSet> choiceMeans) throws IOException {
+		CSVFile<String> csv = new CSVFile<>(true);
+		
+		List<String> header = new ArrayList<>();
+		header.add("Location Index");
+		header.add("Latitutde");
+		header.add("Longitude");
+		header.add("Weighted Mean");
+		for (LogicTreeNode choice : choices)
+			header.add(choice.getShortName());
+		csv.addLine(header);
+		
+		GriddedRegion reg = mean.getRegion();
+		for (int i=0; i<reg.getNodeCount(); i++) {
+			Location loc = reg.getLocation(i);
+			
+			List<String> line = new ArrayList<>();
+			line.add(i+"");
+			line.add((float)loc.getLatitude()+"");
+			line.add((float)loc.getLongitude()+"");
+			line.add(mean.get(i)+"");
+			for (LogicTreeNode choice : choices)
+				line.add(choiceMeans.get(choice).get(i)+"");
+			
+			csv.addLine(line);
+		}
+		
+		csv.writeToFile(outputFile);
 	}
 	
 	private static String mapPDiffStr(GriddedGeoDataSet map, GriddedGeoDataSet ref,
