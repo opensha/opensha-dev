@@ -31,7 +31,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		@SuppressWarnings("unused")
 //		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir4860_multi_combine";
-		String catalogDirName = "rundir5413";
+		String catalogDirName = "rundir5450";
 //		String catalogDirName = "rundir4983_stitched";
 		
 //		int skipYears = 20000;
@@ -40,8 +40,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		
 		boolean standardSites = false;
 		boolean csInitialLASites = false;
-		boolean cs500LASites = false;
-		boolean csLAMapSites = true;
+		boolean cs500LASites = true;
+		boolean csLAMapSites = false;
 		boolean griddedCASites = false;
 		boolean griddedSoCalSites = false;
 		double griddedSpacing = 1d;

@@ -100,11 +100,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		this.minMag = minMag;
 		this.gmpeCacheDir = gmpeCacheDir;
 		
-		ArrayList<RegionIden> siteRegIdens = new ArrayList<>();
 		sitesBBPtoGMPE = HashBiMap.create();
 		List<Site> gmpeSites = new ArrayList<>();
 		for (BBP_Site site : sites) {
-			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), MPJ_BBP_CatalogSim.CUTOFF_DIST)));
 			Site gmpeSite = site.buildGMPE_Site(vm);
 			gmpeSite.setName(RSQSimBBP_Config.siteCleanName(site));
 			gmpeSites.add(gmpeSite);
@@ -119,7 +117,12 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			loader.skipYears(skipYears);
 		if (loadCriteria != null)
 			loader.matches(loadCriteria);
-		loader.matches(new LogicalOrRupIden(siteRegIdens));
+		if (sites.size() < 20) {
+			ArrayList<RegionIden> siteRegIdens = new ArrayList<>();
+			for (BBP_Site site : sites)
+				siteRegIdens.add(new RegionIden(new Region(site.getLoc(), MPJ_BBP_CatalogSim.CUTOFF_DIST)));
+			loader.matches(new LogicalOrRupIden(siteRegIdens));
+		}
 		System.out.println("Loading events...");
 		events = loader.minMag(minMag).load();
 		System.out.println("Loaded "+events.size()+" events");
@@ -244,10 +247,11 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 		for (Integer eventID : sorted(comps.keySet())) {
 			EventComparison comp = comps.get(eventID);
-			for (IMT imt : sorted(comp.getIMTs(site))) {
-				csv.addLine(eventID+"", imt.name(), comp.getLogMean(site, imt)+"", comp.getStdDev(site, imt)+"",
-						comp.getDistanceRup(site)+"", comp.getDistanceJB(site)+"");
-			}
+			Set<IMT> siteIMTs = comp.getIMTs(site);
+			if (siteIMTs != null)
+				for (IMT imt : sorted(siteIMTs))
+					csv.addLine(eventID+"", imt.name(), comp.getLogMean(site, imt)+"", comp.getStdDev(site, imt)+"",
+							comp.getDistanceRup(site)+"", comp.getDistanceJB(site)+"");
 		}
 		
 		csv.writeToFile(file);
@@ -561,10 +565,10 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4860_10X.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
-		RSQSimCatalog catalog = Catalogs.BRUCE_5413.instance();
-//		RSQSimCatalog catalog = Catalogs.BRUCE_5418.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5413.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5450.instance();
 		
-		boolean doGMPE = false;
+		boolean doGMPE = true;
 		boolean doRotD = false;
 		boolean doNonErgodicMaps = true;
 		

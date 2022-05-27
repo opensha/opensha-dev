@@ -201,11 +201,11 @@ public class ZScoreHistPlot {
 		if (scores == null)
 			return false;
 		
-		return plotStandardNormal(scores, simProv.getName(), imts, gmpe, binDescriptions, outputDir, prefix, maxNumSourceContribs, pub);
+		return plotStandardNormal(scores, simProv.getName(), imts, gmpe, binDescriptions, outputDir, prefix, maxNumSourceContribs, pub, maxY);
 	}
 	
 	public static <E> boolean plotStandardNormal(ZScoreResult[] scores, String name, IMT[] imts, AttenRelRef gmpe,
-			List<String> binDescriptions, File outputDir, String prefix, int maxNumSourceContribs, boolean pub)
+			List<String> binDescriptions, File outputDir, String prefix, int maxNumSourceContribs, boolean pub, double maxY)
 					throws IOException {
 		
 		List<PlotSpec> specs = new ArrayList<>();
@@ -219,6 +219,13 @@ public class ZScoreHistPlot {
 		List<Double> stdDevs = new ArrayList<>();
 		
 		Color stdDevColor = new Color(0, 150, 0);
+		
+		if (!Double.isFinite(maxY) || maxY <= 0d) {
+			// calculate maxY
+			maxY = 0;
+			for (ZScoreResult score : scores)
+				maxY = Math.max(maxY, score.hist.getMaxY()*1.05);
+		}
 		
 		for (int p=0; p<imts.length; p++) {
 			IMT imt = imts[p];

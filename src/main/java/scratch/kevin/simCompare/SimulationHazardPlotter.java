@@ -246,7 +246,7 @@ public class SimulationHazardPlotter<E> {
 			logXVals.set(Math.log(pt.getX()), 1d);
 		logXVals = new LightFixedXFunc(logXVals);
 		
-		for (RuptureComparison<E> comp : new RuptureComparisonFilter.SiteFilter<E>().getMatches(comps, site)) {
+		for (RuptureComparison<E> comp : new RuptureComparisonFilter.HasSiteFilter<E>().getMatches(comps, site)) {
 			double rupRate = comp.getAnnualRate();
 			if (rupRate == 0)
 				continue;
@@ -501,7 +501,7 @@ public class SimulationHazardPlotter<E> {
 //					continue;
 //			}
 			List<ModRateRuptureComparison<E>> modComps = new ArrayList<>();
-			for (RuptureComparison<E> comp : new RuptureComparisonFilter.SiteFilter<E>().getMatches(comps, site)) {
+			for (RuptureComparison<E> comp : new RuptureComparisonFilter.HasSiteFilter<E>().getMatches(comps, site)) {
 				double rupRate = comp.getAnnualRate();
 				Double fract = rupContribFracts.get(comp.getRupture());
 				if (fract == null || fract <= 0 || rupRate == 0)

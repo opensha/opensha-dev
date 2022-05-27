@@ -56,11 +56,26 @@ public abstract class RuptureComparisonFilter<E> {
 		
 	}
 	
-	public static class SiteFilter<E> extends RuptureComparisonFilter<E> {
+	public static class HasSiteFilter<E> extends RuptureComparisonFilter<E> {
 
 		@Override
 		public boolean matches(RuptureComparison<E> comp, Site site) {
 			return comp.hasSite(site);
+		}
+		
+	}
+	
+	public static class MatchesSiteFilter<E> extends RuptureComparisonFilter<E> {
+		
+		private Site site;
+
+		public MatchesSiteFilter(Site site) {
+			this.site = site;
+		}
+
+		@Override
+		public boolean matches(RuptureComparison<E> comp, Site site) {
+			return this.site.equals(site) && comp.hasSite(site);
 		}
 		
 	}

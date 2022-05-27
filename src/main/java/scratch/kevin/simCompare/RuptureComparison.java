@@ -143,7 +143,8 @@ public abstract class RuptureComparison<E> {
 		}
 		
 		public Set<IMT> getIMTs(Site site) {
-			return gms.get(site).keySet();
+			Map<IMT, double[]> imtMap = gms.get(site);
+			return imtMap == null ? null : imtMap.keySet();
 		}
 		
 		public void calculate(ScalarIMR gmpe, IMT... imts) {

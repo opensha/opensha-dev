@@ -84,42 +84,36 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 	public DiscretizedFunc readRotD50(BBP_Site site, int eventID) throws IOException {
 		if (rdTable != null)
 			return readRotD(site, eventID)[0];
-		if (rd50Table.contains(eventID, site))
-			return rd50Table.get(eventID, site);
-		synchronized (rd50Table) {
-			// repeat here as could have been populated while waiting for the lock
-			if (rd50Table.contains(eventID, site))
-				return rd50Table.get(eventID, site);
-			DiscretizedFunc spectra = readRotD50(site, getDirName(eventID));
-			rd50Table.put(eventID, site, spectra);
+		DiscretizedFunc spectra = rd50Table.get(eventID, site);
+		if (spectra != null)
 			return spectra;
+		spectra = readRotD50(site, getDirName(eventID));
+		synchronized (rd50Table) {
+			rd50Table.put(eventID, site, spectra);
 		}
+		return spectra;
 	}
 	
 	public DiscretizedFunc[] readRotD(BBP_Site site, int eventID) throws IOException {
-		if (rdTable.contains(eventID, site))
-			return rdTable.get(eventID, site);
-		synchronized (rdTable) {
-			// repeat here as could have been populated while waiting for the lock
-			if (rdTable.contains(eventID, site))
-				return rdTable.get(eventID, site);
-			DiscretizedFunc[] spectras = readRotD(site, getDirName(eventID));
-			rdTable.put(eventID, site, spectras);
+		DiscretizedFunc[] spectras = rdTable.get(eventID, site);
+		if (spectras != null)
 			return spectras;
+		spectras = readRotD(site, getDirName(eventID));
+		synchronized (rdTable) {
+			rdTable.put(eventID, site, spectras);
 		}
+		return spectras;
 	}
 	
 	public double[] readPGV(BBP_Site site, int eventID) throws IOException {
-		if (rdPGVTable.contains(eventID, site))
-			return rdPGVTable.get(eventID, site);
-		synchronized (rdPGVTable) {
-			// repeat here as could have been populated while waiting for the lock
-			if (rdPGVTable.contains(eventID, site))
-				return rdPGVTable.get(eventID, site);
-			double[] vals = readPGV(site, getDirName(eventID));
-			rdPGVTable.put(eventID, site, vals);
+		double[] vals = rdPGVTable.get(eventID, site);
+		if (vals != null)
 			return vals;
+		vals = readPGV(site, getDirName(eventID));
+		synchronized (rdPGVTable) {
+			rdPGVTable.put(eventID, site, vals);
 		}
+		return vals;
 	}
 	
 	public Map<DurationTimeInterval, double[]> readDurations(BBP_Site site, int eventID) throws IOException {
@@ -213,17 +207,15 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 	@Override
 	public DiscretizedFunc getRotDRatio(Site site, RSQSimEvent rupture, int index) throws IOException {
 		Preconditions.checkState(index == 0);
-		if (rdRatioTable.contains(rupture.getID(), site))
-			return rdRatioTable.get(rupture.getID(), site);
-		synchronized (rdTable) {
-			// repeat here as could have been populated while waiting for the lock
-			if (rdRatioTable.contains(rupture.getID(), site))
-				return rdRatioTable.get(rupture.getID(), site);
-			DiscretizedFunc[] spectras = getRotD(site, rupture, index);
-			DiscretizedFunc ratio = SimulationRotDProvider.calcRotDRatio(spectras);
-			rdRatioTable.put(rupture.getID(), site, ratio);
+		DiscretizedFunc ratio = rdRatioTable.get(rupture.getID(), site);
+		if (ratio != null)
 			return ratio;
+		DiscretizedFunc[] spectras = getRotD(site, rupture, index);
+		ratio = SimulationRotDProvider.calcRotDRatio(spectras);
+		synchronized (rdRatioTable) {
+			rdRatioTable.put(rupture.getID(), site, ratio);
 		}
+		return ratio;
 	}
 
 	@Override
