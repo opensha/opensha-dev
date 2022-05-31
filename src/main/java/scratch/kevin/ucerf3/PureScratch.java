@@ -3,6 +3,7 @@ package scratch.kevin.ucerf3;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,7 +17,9 @@ import java.util.concurrent.Future;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
+import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
@@ -67,12 +70,16 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
 
 import scratch.UCERF3.analysis.FaultSystemRupSetCalc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
+import scratch.UCERF3.inversion.U3InversionTargetMFDs;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSectionDataWriter;
@@ -774,7 +781,7 @@ public class PureScratch {
 	}
 	
 	private static void test127() throws IOException {
-		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOL_V1p3.build(NSHM23_FaultModels.NSHM23_v1p4);
+		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOL_V1p4.build(NSHM23_FaultModels.NSHM23_v1p4);
 		
 		FaultSectionDataWriter.writeSectionsToFile(subSects, null, new File("/tmp/nshm23_dm1p3_sub_sects.txt"), false);
 		GeoJSONFaultReader.writeFaultSections(new File("/tmp/nshm23_dm1p3_sub_sects.geojson"), subSects);
@@ -830,12 +837,117 @@ public class PureScratch {
 		FeatureCollection.write(new FeatureCollection(modFeatures), new File("/tmp/nshm18_test/second_half.geojson"));
 	}
 	
+	private static void test132() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/markdown/inversions/2022_05_06-nshm23-cluster_specific-u3_reduced/solution.zip"));
+		sol.write(new File("/tmp/asdf.zip"));
+	}
+	
+	private static void test133() throws IOException {
+		FaultSystemSolution sol1 = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_05_09-nshm23_u3_hybrid_branches-cluster_specific_inversion-shift_seg_1km-FM3_1-CoulombRupSet"
+				+ "-DsrUni-NuclMFD-SubB1-ThreshAvg/results_FM3_1_CoulombRupSet_branch_averaged.zip"));
+		FaultSystemSolution sol2 = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_05_09-nshm23_u3_hybrid_branches-cluster_specific_inversion-shift_seg_1km-FM3_1-CoulombRupSet"
+				+ "-DsrUni-TotNuclRate-SubB1-ThreshAvg/results_FM3_1_CoulombRupSet_branch_averaged.zip"));
+		
+		IncrementalMagFreqDist mfd1 = sol1.getRupSet().requireModule(InversionTargetMFDs.class).getTotalOnFaultSupraSeisMFD();
+		IncrementalMagFreqDist mfd2 = sol2.getRupSet().requireModule(InversionTargetMFDs.class).getTotalOnFaultSupraSeisMFD();
+		
+		System.out.println("Moment rates: "+mfd1.getTotalMomentRate()+"\t"+mfd2.getTotalMomentRate());
+		System.out.println("Incr rates: "+mfd1.getTotalIncrRate()+"\t"+mfd2.getTotalIncrRate());
+	}
+	
+	private static void test134() {
+		// From Baken et al (2004), Figure S2
+		List<int[]> parfieldYearsList = new ArrayList<>();
+		List<String> labels = new ArrayList<>();
+		
+		labels.add("Basic Sequence");
+		parfieldYearsList.add(new int[] { 1857, 1881, 1901, 1922, 1934, 1966, 2004 });
+		
+		labels.add("Alt 1");
+		parfieldYearsList.add(new int[] { 1857, 1877, 1881, 1901, 1922, 1934, 1966, 2004 });
+		
+		labels.add("Alt 2");
+		parfieldYearsList.add(new int[] { 1881, 1901, 1922, 1934, 1966, 2004 });
+		
+		System.out.println("Bakun et al. (2004) Figure S2:");
+		
+		DecimalFormat yrDF = new DecimalFormat("0.0");
+		DecimalFormat pDF = new DecimalFormat("0.0%");
+		
+		for (int s=0; s<labels.size(); s++) {
+			String label = labels.get(s);
+			int[] parkfieldYears = parfieldYearsList.get(s);
+			int[] parkfieldRIs = new int[parkfieldYears.length-1];
+			for (int i=1; i<parkfieldYears.length; i++)
+				parkfieldRIs[i-1] = parkfieldYears[i] - parkfieldYears[i-1];
+			
+			double[] risDouble = new double[parkfieldRIs.length];
+			for (int i=0; i<risDouble.length; i++)
+				risDouble[i] = parkfieldRIs[i];
+			
+			double mean = StatUtils.mean(risDouble);
+			double sd = Math.sqrt(StatUtils.variance(risDouble));
+			double sdom = sd/Math.sqrt(parkfieldRIs.length);
+			double fractSDOM = sdom/mean;
+			System.out.println("\n"+label);
+			System.out.println("Parkfield event years: "+Joiner.on(",").join(Ints.asList(parkfieldYears)));
+			System.out.println("Parkfield event RIs: "+Joiner.on(",").join(Ints.asList(parkfieldRIs)));
+			System.out.println("mean="+yrDF.format(mean)+"\tSD="+yrDF.format(sd)+"\tSDOM="+yrDF.format(sdom)+" ("+pDF.format(fractSDOM)+")");
+			
+			RealDistribution riMeanDist = new NormalDistribution(mean, sdom);
+			int trials = 10000000;
+			double[] testRates = new double[trials];
+			for (int i=0; i<trials; i++)
+				testRates[i] = 1d/Math.max(1d, riMeanDist.sample());
+			double testSD = Math.sqrt(StatUtils.variance(testRates));
+			double rate = 1d/mean;
+			System.out.println("Rate SDOM from normal dist: "+(float)testSD+" ("+pDF.format(testSD/rate)+")");
+			
+			double shape = sdom/mean;
+			System.out.println("LN shape: "+shape);
+			riMeanDist = new LogNormalDistribution(Math.log(mean), shape);
+			testRates = new double[trials];
+			for (int i=0; i<trials; i++)
+				testRates[i] = 1d/Math.max(1d, riMeanDist.sample());
+			testSD = Math.sqrt(StatUtils.variance(testRates));
+			rate = 1d/mean;
+			System.out.println("Rate SDOM from log-normal dist: "+(float)testSD+" ("+pDF.format(testSD/rate)+")");
+		}
+	}
+	
+	private static void test135() {
+		double rateM5 = TotalMag5Rate.RATE_7p9.getRateMag5();
+		
+		GutenbergRichterMagFreqDist u3Target = new GutenbergRichterMagFreqDist(U3InversionTargetMFDs.MIN_MAG,
+				U3InversionTargetMFDs.NUM_MAG, U3InversionTargetMFDs.DELTA_MAG);
+		double roundedMmaxOnFault = 8.55d;
+		u3Target.setAllButTotMoRate(U3InversionTargetMFDs.MIN_MAG, roundedMmaxOnFault, rateM5*1e5, 1.0);
+		
+		double u3CumRate = u3Target.getCumRateDistWithOffset().getY(5d);
+		
+		System.out.println("Target rate M>=5: "+rateM5);
+		System.out.println("U3 MFD rate M>=5: "+u3CumRate);
+		
+		GutenbergRichterMagFreqDist testTarget = new GutenbergRichterMagFreqDist(1.0, TotalMag5Rate.RATE_7p9.getRateMag5(), 5.05, 9.95, 50);
+		double testCumRate = testTarget.getCumRateDistWithOffset().getY(5d);
+		
+		System.out.println("Test MFD rate M>=5: "+testCumRate);
+		
+		testTarget = new GutenbergRichterMagFreqDist(5.05, 9.95, 50);
+		testTarget.setAllButTotMoRate(5.05, roundedMmaxOnFault, rateM5, 1d);
+		 testCumRate = testTarget.getCumRateDistWithOffset().getY(5d);
+		
+		System.out.println("Test2 MFD rate M>=5: "+testCumRate);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test131();
+		test127();
 	}
 
 }

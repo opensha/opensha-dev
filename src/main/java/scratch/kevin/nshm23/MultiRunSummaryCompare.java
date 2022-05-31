@@ -158,20 +158,27 @@ public class MultiRunSummaryCompare {
 		
 		runDirs.add(new File(mainDir, "2022_05_23-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift1km-ThreshAvg"));
 		runNames.add("NSHM23 Draft, Thresh-Avg, Shift-1km");
-		fixedComps.add(runDirs.get(runDirs.size()-1));
-		fixedCompNames.add(runNames.get(runNames.size()-1));
-		fixedCompDirNames.add("hazard_maps_comp_nshm23_draft_thresh_1km");
-		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED.darker()));
 		
 		runDirs.add(new File(mainDir, "2022_05_24-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg"));
 		runNames.add("NSHM23 Draft, Thresh-Avg, Shift-2km");
+		fixedComps.add(runDirs.get(runDirs.size()-1));
+		fixedCompNames.add(runNames.get(runNames.size()-1));
+		fixedCompDirNames.add("hazard_maps_comp_nshm23_draft_thresh_2km");
+		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED.darker()));
 		
 		runDirs.add(new File(mainDir, "2022_05_23-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift3km-ThreshAvg"));
 		runNames.add("NSHM23 Draft, Thresh-Avg, Shift-3km");
+//		fixedComps.add(runDirs.get(runDirs.size()-1));
+//		fixedCompNames.add(runNames.get(runNames.size()-1));
+//		fixedCompDirNames.add("hazard_maps_comp_nshm23_draft_thresh_3km");
+//		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.ORANGE.darker()));
+		
+		runDirs.add(new File(mainDir, "2022_05_25-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-branch-translated-min3km"));
+		runNames.add("NSHM23 Draft, Strict-Seg, Min-3km");
 		fixedComps.add(runDirs.get(runDirs.size()-1));
 		fixedCompNames.add(runNames.get(runNames.size()-1));
-		fixedCompDirNames.add("hazard_maps_comp_nshm23_draft_thresh_3km");
-		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.ORANGE.darker()));
+		fixedCompDirNames.add("hazard_maps_comp_nshm23_draft_strict_min_3km");
+		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.MAGENTA.darker()));
 		
 		runDirs.add(new File(mainDir, "2022_05_24-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-NoShift-ThreshAvg"));
 		runNames.add("NSHM23 Draft, Cluster-Specific, Thresh-Avg, No-Shift");
@@ -205,6 +212,9 @@ public class MultiRunSummaryCompare {
 		
 		runDirs.add(new File(mainDir, "2022_05_24-nshm23_u3_hybrid_branches-mfd_uncert_0p1-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift1km-ThreshAvg"));
 		runNames.add("NSHM23 Draft, Thresh-Avg, Shift-1km, 10% MFD Uncert");
+		
+		runDirs.add(new File(mainDir, "2022_05_24-nshm23_u3_hybrid_branches-mfd_uncert_0p1-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift3km-ThreshAvg"));
+		runNames.add("NSHM23 Draft, Thresh-Avg, Shift-3km, 10% MFD Uncert");
 		
 		Preconditions.checkState(indexDir.exists() || indexDir.mkdir());
 		

@@ -3,7 +3,9 @@ package scratch.kevin.nshm23;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,6 +14,7 @@ import java.util.concurrent.Future;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
@@ -33,6 +36,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ClusterCo
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SegmentationCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
 
@@ -231,6 +235,7 @@ public class MPJ_StrictSegLogicTreeTranslation extends MPJTaskCalculator {
 			
 			try {
 				List<FaultSystemSolution> sols = new ArrayList<>();
+				List<LogicTreeBranch<?>> branches = new ArrayList<>();
 				List<MaxJumpDistModels> maxDists = new ArrayList<>();
 				List<CSVFile<String>> passthroughCSVs = new ArrayList<>();
 				
@@ -276,6 +281,7 @@ public class MPJ_StrictSegLogicTreeTranslation extends MPJTaskCalculator {
 					
 					maxDists.add(maxDist);
 					sols.add(sol);
+					branches.add(inputBranch);
 					passthroughCSVs.add(CSVFile.readFile(csvFile, true));
 				};
 				
@@ -286,15 +292,33 @@ public class MPJ_StrictSegLogicTreeTranslation extends MPJTaskCalculator {
 				double r0 = shawProb.getR0();
 				
 				List<Double> weights = new ArrayList<>();
+				Map<LogicTreeBranch<?>, Double> weightsMap = new HashMap<>();
 				synchronized (MaxJumpDistModels.class) {
 					// recalculate weights
 					MaxJumpDistModels.invertForWeights(maxDists.toArray(new MaxJumpDistModels[0]), passthroughCSVs, r0);
-					for (MaxJumpDistModels maxDist : maxDists)
-						weights.add(maxDist.getNodeWeight(null));
+					for (int i=0; i<maxDists.size(); i++) {
+						MaxJumpDistModels maxDist = maxDists.get(i);
+						double weight = maxDist.getNodeWeight(null);
+						weights.add(weight);
+						weightsMap.put(branches.get(i), weight);
+					}
 				}
 				
-				FaultSystemSolution avgSol = AverageSolutionCreator.buildAverage(
-						sols.toArray(new FaultSystemSolution[0]), Doubles.toArray(weights));
+//				FaultSystemSolution avgSol = AverageSolutionCreator.buildAverage(
+//						sols.toArray(new FaultSystemSolution[0]), Doubles.toArray(weights));
+				
+				// need to do BA sol, some things like slip rates can vary across max dists (due to sub-seis reduction)
+				BranchAverageSolutionCreator baCreate = new BranchAverageSolutionCreator(
+						new BranchWeightProvider.HardcodedWeights(weightsMap));
+				for (int i=0; i<sols.size(); i++) {
+					if (weights.get(i) == 0d) {
+						System.out.println("Warning: inversion supplied zero weight for maxDist="+maxDists.get(i)+" on branch "+branches.get(i));
+						continue;
+					}
+					baCreate.addSolution(sols.get(i), branches.get(i));
+				}
+				
+				FaultSystemSolution avgSol = baCreate.build();
 				
 				String info = "Post-processed segmentation branch from "+sols.size()+" strict cutoff runs. Weights:\n\n";
 				for (int i=0; i<sols.size(); i++)
