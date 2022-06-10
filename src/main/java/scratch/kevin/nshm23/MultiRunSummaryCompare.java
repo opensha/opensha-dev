@@ -2,7 +2,9 @@ package scratch.kevin.nshm23;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipFile;
@@ -180,11 +182,17 @@ public class MultiRunSummaryCompare {
 		fixedCompDirNames.add("hazard_maps_comp_nshm23_draft_strict_min_3km");
 		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.MAGENTA.darker()));
 		
-		runDirs.add(new File(mainDir, "2022_05_24-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-NoShift-ThreshAvg"));
-		runNames.add("NSHM23 Draft, Cluster-Specific, Thresh-Avg, No-Shift");
+//		runDirs.add(new File(mainDir, "2022_05_24-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-NoShift-ThreshAvg"));
+//		runNames.add("NSHM23 Draft, Cluster-Specific, Thresh-Avg, No-Shift");
 		
-		runDirs.add(new File(mainDir, "2022_05_24-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift1km-ThreshAvg"));
-		runNames.add("NSHM23 Draft, Cluster-Specific, Thresh-Avg, Shift-1km");
+		runDirs.add(new File(mainDir, "2022_05_24-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg"));
+		runNames.add("NSHM23 Draft, Cluster-Specific, Thresh-Avg, Shift-2km");
+		
+		runDirs.add(new File(mainDir, "2022_06_03-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgRelGR-IncludeThruCreep"));
+		runNames.add("NSHM23 Draft, Cluster-Specific, Rel-GR-Thresh-Avg, Shift-2km");
+		
+		runDirs.add(new File(mainDir, "2022_06_07-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("NSHM23 Draft, Cluster-Specific, Iterated Rel-GR-Thresh-Avg, Shift-2km");
 		
 		runDirs.add(new File(mainDir, "2022_05_23-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift1km-CappedRdst"));
 		runNames.add("NSHM23 Draft, Capped-Redist, Shift-1km");
@@ -215,6 +223,12 @@ public class MultiRunSummaryCompare {
 		
 		runDirs.add(new File(mainDir, "2022_05_24-nshm23_u3_hybrid_branches-mfd_uncert_0p1-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift3km-ThreshAvg"));
 		runNames.add("NSHM23 Draft, Thresh-Avg, Shift-3km, 10% MFD Uncert");
+		
+		runDirs.add(new File(mainDir, "2022_06_01-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-NuclMFD-SubB1-ShawR0_3-Shift2km-ThreshAvg-IncludeThruCreep"));
+		runNames.add("NSHM23 Draft, Nucl-MFD, Thresh-Avg, Shift-2km, Cluster-Specific");
+		
+		runDirs.add(new File(mainDir, "2022_06_01-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg"));
+		runNames.add("NSHM23 Draft, Nucl-MFD, Thresh-Avg, Shift-2km, Creeping-Sect, Cluster-Specific");
 		
 		Preconditions.checkState(indexDir.exists() || indexDir.mkdir());
 		
@@ -266,10 +280,23 @@ public class MultiRunSummaryCompare {
 				File outputDir = new File(runDir, "hazard_maps_comp_prev");
 				Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 				
+				File prevNameFile = new File(outputDir, "prev_dir_name.txt");
+				boolean replotPrevious = true;
+				if (prevNameFile.exists()) {
+					String prevName = Files.readLines(prevNameFile, Charset.defaultCharset()).get(0).trim();
+					if (prevName.equals(runDir.getName()))
+						replotPrevious = false;
+				}
+				
 				File srcFile = new File(outputDir, targetImageName);
 				
-				if (replot || !srcFile.exists())
+				if (replot || !srcFile.exists() || replotPrevious) {
 					haz.buildReport(outputDir, runName, prev, runNames.get(i-1));
+					// write out the dir name
+					FileWriter fw = new FileWriter(prevNameFile);
+					fw.write(runDir.getName()+"\n");
+					fw.close();
+				}
 				
 				File destFile = new File(resourcesDir, i+"_vs_"+(i-1)+".png");
 				Files.copy(srcFile, destFile);

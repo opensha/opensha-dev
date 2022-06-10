@@ -86,7 +86,8 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		File mainDir = new File(invDir, "2022_05_12-nshm23_u3_hybrid_branches-no_mfd_sigma_data_adj-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		File mainDir = new File(invDir, "2022_05_16-nshm23_u3_hybrid_branches-default_uncert_0.05-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
-		File mainDir = new File(invDir, "2022_05_24-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg");
+//		File mainDir = new File(invDir, "2022_05_24-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg");
+		File mainDir = new File(invDir, "2022_06_07-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		boolean currentWeights = true;
@@ -212,8 +213,10 @@ public class LogicTreeMisfitPageGen {
 			}
 		}
 		Table<String, LogicTreeNode, MisfitStats> constraintChoiceAvgVals = HashBasedTable.create();
+		Map<LogicTreeNode, InversionMisfitStats> choiceMisfitStats = new HashMap<>();
 		for (LogicTreeNode node : choiceAccumulators.keySet()) {
 			InversionMisfitStats astats = choiceAccumulators.get(node).getAverage();
+			choiceMisfitStats.put(node, astats);
 			for (MisfitStats stats : astats.getStats())
 				constraintChoiceAvgVals.put(stats.range.name, node, stats);
 		}
@@ -359,6 +362,61 @@ public class LogicTreeMisfitPageGen {
 						
 						// plot distributions here?
 					}
+					
+					// average values
+					TableBuilder table = MarkdownUtils.tableBuilder();
+					
+					table.addLine("Choice", "Mean", "Min", "Max");
+					
+					for (LogicTreeLevel<?> level : levels) {
+						HashSet<LogicTreeNode> nodes = levelNodes.get(level);
+						if (nodes.size() < 2)
+							continue;
+						
+						List<LogicTreeNode> sortedNodes = new ArrayList<>(nodes);
+						sortedNodes.sort(new Comparator<LogicTreeNode>() {
+
+							@Override
+							public int compare(LogicTreeNode o1, LogicTreeNode o2) {
+								return o1.getName().compareTo(o2.getName());
+							}
+						});
+						table.addLine("**"+level.getName()+"**", "", "", "");
+						for (LogicTreeNode node : sortedNodes) {
+							InversionMisfitStats choiceStats = choiceMisfitStats.get(node);
+							table.initNewLine();
+							table.addColumn(node.getName());
+							if (choiceStats == null) {
+								table.addColumn("_(N/A)_").addColumn("_(N/A)_").addColumn("_(N/A)_");
+							} else {
+								double min = Double.POSITIVE_INFINITY;
+								double max = Double.NEGATIVE_INFINITY;
+								double avg = 0d;
+								int num = 0;
+								for (MisfitStats stats : choiceStats.getStats()) {
+									if (stats.range.weightingType != ConstraintWeightingType.NORMALIZED_BY_UNCERTAINTY)
+										continue;
+									double val = stats.get(quantity);
+									min = Math.min(min, val);
+									max = Math.max(max, val);
+									avg += val;
+									num++;
+								}
+								if (num == 0) {
+									table.addColumn("_(N/A)_").addColumn("_(N/A)_").addColumn("_(N/A)_");
+								} else {
+									avg /= num;
+									table.addColumn((float)avg).addColumn((float)min).addColumn((float)max);
+								}
+							}
+							table.finalizeLine();
+						}
+					}
+					lines.add("**Average branch choice values:** A list of average fits across all uncertainthy-weighted "
+							+ "constraints for each logic tree branch choice.");
+					lines.add("");
+					lines.addAll(table.build());
+					lines.add("");
 				}
 				
 				for (String constraintName : constraintNames) {

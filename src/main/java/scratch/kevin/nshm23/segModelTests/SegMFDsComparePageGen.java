@@ -23,6 +23,7 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ComparablePairing;
@@ -85,18 +86,26 @@ public class SegMFDsComparePageGen {
 //		FaultSystemSolution compSol = FaultSystemSolution.load(
 //				new File(compDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
 //		File outputDir = new File(primaryDir, "sect_targets_vs_strict_seg");
-		
-		File primaryDir = new File(mainDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
-		String primaryName = "Capped-Distribution";
+
+//		File primaryDir = new File(mainDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
+//		String primaryName = "Thresh-Avg";
+		File primaryDir = new File(mainDir, "2022_06_03-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgRelGR-IncludeThruCreep");
+		String primaryName = "Rel-GR-Thresh-Avg";
 		FaultSystemSolution primarySol = FaultSystemSolution.load(new File(primaryDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
-//		File compDir = new File(mainDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
-//		String compName = "Jump-Prob";
-//		FaultSystemSolution compSol = FaultSystemSolution.load(new File(compDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
-//		File outputDir = new File(primaryDir, "sect_targets_vs_jump_prob");
-		File compDir = new File(mainDir, "2022_02_11-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-		String compName = "Strict-Seg";
+		
+//		File compDir = new File(mainDir, "2022_05_25-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-branch-translated-min3km");
+//		String compName = "Strict-Seg";
+//		File outputDir = new File(primaryDir, "sect_targets_vs_strict_seg");
+//		File compDir = new File(mainDir, "2022_06_06-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-CappedRdst-IncludeThruCreep");
+//		String compName = "Capped-Redistribution";
+//		File outputDir = new File(primaryDir, "sect_targets_vs_capped_redist");
+//		File compDir = new File(mainDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
+//		String compName = "Thresh-Avg";
+//		File outputDir = new File(primaryDir, "sect_targets_vs_thresh_avg");
+		File compDir = new File(mainDir, "2022_06_07-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+		String compName = "Rel-GR-Thresh-Avg-Iters";
+		File outputDir = new File(primaryDir, "sect_targets_vs_rel_gr_thresh_avg_iters");
 		FaultSystemSolution compSol = FaultSystemSolution.load(new File(compDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
-		File outputDir = new File(primaryDir, "sect_targets_vs_strict_seg");
 		
 		FaultSystemRupSet rupSet = primarySol.getRupSet();
 		Preconditions.checkState(rupSet.isEquivalentTo(compSol.getRupSet()));
@@ -248,6 +257,11 @@ public class SegMFDsComparePageGen {
 			prefix = (primary ? "primary" : "comp")+"_sol_target_diff_nucl_rates";
 			mapMaker.plot(resourcesDir, prefix, name);
 			table.addColumn("![Difference]("+resourcesDir.getName()+"/"+prefix+".png)");
+			
+			File scatterPlot = logScatter(resourcesDir, (primary ? "primary" : "comp")+"_sol_target_nucl_rates_scatter",
+					name+" Nucleation Rate Scatter", "Target Nucleation Rate", "Solution Nucleation Rate", targets, sols);
+			table.addColumn("![Scatter]("+resourcesDir.getName()+"/"+scatterPlot.getName()+")");
+			
 			table.finalizeLine();
 		}
 		table.invert();
@@ -273,6 +287,15 @@ public class SegMFDsComparePageGen {
 		mapMaker.plot(resourcesDir, prefix, "Solution Rate Comparison");
 		table.addColumn("![Difference]("+resourcesDir.getName()+"/"+prefix+".png)");
 		
+		table.finalizeLine();
+		
+		table.initNewLine();
+		File scatterPlot = logScatter(resourcesDir, "target_nucl_rates_scatter", "Target Nucleation Rate Scatter",
+				primaryName, compName, primaryTargetRates, compTargetRates);
+		table.addColumn("![Scatter]("+resourcesDir.getName()+"/"+scatterPlot.getName()+")");
+		scatterPlot = logScatter(resourcesDir, "sol_nucl_rates_scatter", "Solution Nucleation Rate Scatter",
+				primaryName, compName, primaryTargetRates, compTargetRates);
+		table.addColumn("![Scatter]("+resourcesDir.getName()+"/"+scatterPlot.getName()+")");
 		table.finalizeLine();
 		
 		lines.addAll(table.build());
@@ -303,6 +326,8 @@ public class SegMFDsComparePageGen {
 			lines.add("");
 		}
 		
+		if (!rupSet.hasModule(ClusterRuptures.class))
+			rupSet.addModule(ClusterRuptures.singleStranged(rupSet));
 		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
 		
 		SolutionSlipRates primarySolSlips = primarySol.getModule(SolutionSlipRates.class);
@@ -669,6 +694,47 @@ public class SegMFDsComparePageGen {
 		gp.drawGraphPanel(spec, false, true, mfdXRange, yRange);
 		
 		PlotUtils.writePlots(resourcesDir, prefix+"_cumulative", gp, 800, 700, true, true, false);
+	}
+	
+	private static File logScatter(File resourcesDir, String prefix, String title, String xAxisName, String yAxisName,
+			double[] xData, double[] yData) throws IOException {
+		DefaultXY_DataSet scatter = new DefaultXY_DataSet(xData, yData);
+		
+		double minNonZero = Double.POSITIVE_INFINITY;
+		for (Point2D pt : scatter) {
+			if (pt.getX() > 0)
+				minNonZero = Math.min(minNonZero, pt.getX());
+			if (pt.getY() > 0)
+				minNonZero = Math.min(minNonZero, pt.getY());
+		}
+		
+		double max = Math.max(scatter.getMaxX(), scatter.getMaxY());
+		
+		Range range = new Range(Math.pow(10, Math.floor(Math.log10(minNonZero))),
+				Math.pow(10, Math.ceil(Math.log10(max))));
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		DefaultXY_DataSet oneToOne = new DefaultXY_DataSet();
+		oneToOne.set(range.getLowerBound(), range.getLowerBound());
+		oneToOne.set(range.getUpperBound(), range.getUpperBound());
+		
+		funcs.add(oneToOne);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+		
+		funcs.add(scatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.CROSS, 3f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisName, yAxisName);
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		
+		gp.drawGraphPanel(spec, true, true, range, range);
+		
+		PlotUtils.writePlots(resourcesDir, prefix, gp, 800, false, true, false, false);
+		
+		return new File(resourcesDir, prefix+".png");
 	}
 
 }

@@ -48,7 +48,8 @@ public class NodeBA_MFDComparePlot {
 		
 		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.SUPRA_B;
 		File invDir = new File(mainDir, 
-				"2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
+//				"2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
+				"2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
 		
 //		LogicTreeLevel<?> level = LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist");
 ////		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.MAX_DIST;
@@ -61,8 +62,9 @@ public class NodeBA_MFDComparePlot {
 		
 		FaultSystemSolution baSol = FaultSystemSolution.load(baSolFile);
 		
-		Range xRange = new Range(5d, 9d);
-		Range yRange = new Range(1e-5, 1e0);
+		Range xRange = new Range(5.8d, 8.8d);
+		Range yRange = new Range(1e-5, 1e-1);
+		Range yRangeCml = new Range(1e-5, 1e0);
 		IncrementalMagFreqDist[] dataMFDs = {
 				new GutenbergRichterMagFreqDist(1.0, TotalMag5Rate.RATE_6p5.getRateMag5(), 5.05, 9.95, 50),
 				new GutenbergRichterMagFreqDist(1.0, TotalMag5Rate.RATE_7p9.getRateMag5(), 5.05, 9.95, 50),
@@ -114,6 +116,11 @@ public class NodeBA_MFDComparePlot {
 			}
 		}
 		
+		double weight0 = nodeVals.get(0).getNodeWeight(null);
+		boolean allSameWeight = true;
+		for (LogicTreeNode node : nodeVals)
+			allSameWeight = allSameWeight && (float)weight0 == (float)node.getNodeWeight(null);
+		
 		Preconditions.checkState(!nodeVals.isEmpty(), "No matches found starting with %s", solPrefix);
 		
 		System.out.println("Loaded "+nodeVals.size()+" node BA solutions:");
@@ -143,11 +150,13 @@ public class NodeBA_MFDComparePlot {
 		incrFuncs.add(baMFD);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
 		
-		IncrementalMagFreqDist avgMFD = loadMFD(straightAvg, xRange);
-		avgMFD.setName("Even-Weight Average");
-		
-		incrFuncs.add(avgMFD);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GRAY));
+		if (!allSameWeight) {
+			IncrementalMagFreqDist avgMFD = loadMFD(straightAvg, xRange);
+			avgMFD.setName("Even-Weight Average");
+			
+			incrFuncs.add(avgMFD);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GRAY));
+		}
 		
 		for (int i=0; i<nodeVals.size(); i++) {
 			LogicTreeNode value = nodeVals.get(i);
@@ -223,7 +232,7 @@ public class NodeBA_MFDComparePlot {
 		spec = new PlotSpec(cmlFuncs, chars, level.getName()+" Sweep", "Magnitude", "Cumulative Rate (/yr)");
 		spec.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 		
-		gp.drawGraphPanel(spec, false, true, xRange, yRange);
+		gp.drawGraphPanel(spec, false, true, xRange, yRangeCml);
 		
 		PlotUtils.writePlots(nodeBAdir, prefix, gp, 900, 800, true, true, false);
 	}

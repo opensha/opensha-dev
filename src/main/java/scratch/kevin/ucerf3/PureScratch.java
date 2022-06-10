@@ -38,6 +38,7 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
@@ -56,14 +57,21 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
+import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetailPlots;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -78,6 +86,7 @@ import com.google.common.primitives.Ints;
 import scratch.UCERF3.analysis.FaultSystemRupSetCalc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.inversion.U3InversionTargetMFDs;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
@@ -942,12 +951,60 @@ public class PureScratch {
 		System.out.println("Test2 MFD rate M>=5: "+testCumRate);
 	}
 	
+	private static void test136() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(
+//				new File("/data/kevin/markdown/inversions/fm3_1_u3ref_uniform_reproduce_ucerf3.zip"));
+				new File("/data/kevin/markdown/inversions/fm3_1_u3ref_uniform_coulomb.zip"));
+		
+		rupSet = FaultSystemRupSet.buildFromExisting(rupSet)
+//				.replaceFaultSections(DeformationModels.MEAN_UCERF3.build(FaultModels.FM3_1))
+				.replaceFaultSections(U3_UncertAddDeformationModels.U3_MEAN.build(FaultModels.FM3_1))
+				.forScalingRelationship(ScalingRelationships.MEAN_UCERF3)
+				.build();
+		
+		File outputDir = new File("/tmp/test_sect_by_sect");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		SectBySectDetailPlots page = new SectBySectDetailPlots();
+		page.writePlot(rupSet, null, "Rupture Set", outputDir);
+	}
+	
+	private static void test137() throws IOException {
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT;
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_05_27-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg/"
+				+ "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip"));
+		
+//		FaultSystemRupSet rupSet = FaultSystemRupSet.load(
+////				new File("/data/kevin/markdown/inversions/fm3_1_u3ref_uniform_reproduce_ucerf3.zip"));
+//				new File("/data/kevin/markdown/inversions/fm3_1_u3ref_uniform_coulomb.zip"));
+////		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT.copy();
+//		
+//		branch.setValue(U3_UncertAddDeformationModels.U3_ABM);
+//		branch.setValue(ScalingRelationships.ELLSWORTH_B);
+//		branch.setValue(SupraSeisBValues.B_0p0);
+//		branch.setValue(SegmentationModels.SHAW_R0_3);
+//		branch.setValue(DistDependSegShift.TWO_KM);
+//		branch.setValue(SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_ITERATIVE);
+
+//		File outputFile = new File("/tmp/nshm_seg_wt_100.zip");
+//		InversionConfigurationFactory factory = new NSHM23_InvConfigFactory.ClusterSpecificSegWeight100();
+		File outputFile = new File("/tmp/nshm_seg_wt_10.zip");
+		InversionConfigurationFactory factory = new NSHM23_InvConfigFactory();
+		
+		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
+		
+		FaultSystemSolution fss = Inversions.run(rupSet, factory, branch, 16, null);
+		
+		fss.write(outputFile);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test127();
+		test137();
 	}
 
 }

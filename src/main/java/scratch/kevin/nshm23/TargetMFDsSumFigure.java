@@ -33,7 +33,7 @@ public class TargetMFDsSumFigure {
 //				new File("/data/kevin/markdown/inversions/fm3_1_u3ref_uniform_reproduce_ucerf3.zip"));
 				new File("/data/kevin/markdown/inversions/fm3_1_u3ref_uniform_coulomb.zip"));
 		
-		for (double b : new double[] {0d, 0.8d, 1d}) {
+		for (double b : new double[] {0d, 0.5d, 1d}) {
 			SupraSeisBValInversionTargetMFDs.Builder builder = new SupraSeisBValInversionTargetMFDs.Builder(rupSet, b);
 			
 			builder.sparseGR(true);

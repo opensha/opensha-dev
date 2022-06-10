@@ -23,6 +23,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.ClusterSpecificInversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeInversionRunner;
@@ -36,6 +37,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistMo
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSect;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
@@ -72,7 +74,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
 		int remoteTotalThreads = 20;
 		int remoteInversionsPerBundle = 1;
-		int remoteTotalMemGB = 53;
+		int remoteTotalMemGB = 50;
 		String queue = "scec";
 		int nodes = 36;
 		double itersPerSec = 200000;
@@ -173,8 +175,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 */
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
 		dirName += "-nshm23_u3_hybrid_branches";
+		double avgNumRups = 300000;
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
 //		dirName += "-nshm23_branches";
+//		double avgNumRups = 600000;
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
 		
@@ -184,9 +188,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class)
 //					|| levels.get(i).getType().isAssignableFrom(DistDependSegShift.class))
 //				levels.remove(i);
-////		dirName += "-no_seg";
-//		levels.add(NSHM23_LogicTreeBranch.MAX_DIST);
-//		dirName += "-strict_cutoff_seg"; strictSeg = true;
+//		dirName += "-no_seg";
+////		levels.add(NSHM23_LogicTreeBranch.MAX_DIST);
+////		dirName += "-strict_cutoff_seg"; strictSeg = true;
 		
 //		dirName += "-reweight_seg_2_3_4";
 		
@@ -206,14 +210,23 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.FullSysInv.class;
+//		dirName += "-full_sys_inv";
+		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ClusterSpecific.class;
 //		dirName += "-cluster_specific_inversion";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SegWeight100.class;
+//		dirName += "-seg_weight_100";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
 //		dirName += "-no_reweight_use_prev";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedOrigWeights.class;
 //		dirName += "-no_reweight_use_orig";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevAvgWeights.class;
+//		dirName += "-no_reweight_use_prev_avg";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoPaleoParkfield.class;
 //		dirName += "-no_paleo_parkfield";
@@ -251,6 +264,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				SubSeisMoRateReductions.SUB_B_1,
 //				SubSeisMoRateReductions.NONE,
 //				SubSeisMoRateReductions.SYSTEM_AVG,
+//				SubSeisMoRateReductions.SYSTEM_AVG_SUB_B_1,
 				
 //				SupraSeisBValues.B_0p8,
 				
@@ -261,15 +275,19 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				DistDependSegShift.TWO_KM,
 //				DistDependSegShift.THREE_KM,
 				
-//				SegmentationMFD_Adjustment.NONE
-				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG
-//				SegmentationMFD_Adjustment.CAPPED_REDIST
-//				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED
-//				SegmentationMFD_Adjustment.GREEDY
-//				SegmentationMFD_Adjustment.GREEDY_SELF_CONTAINED
-//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_MATCH_STRICT
+//				SegmentationMFD_Adjustment.NONE,
+//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
+//				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG,
+				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_ITERATIVE,
+//				SegmentationMFD_Adjustment.CAPPED_REDIST,
+//				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED,
+//				SegmentationMFD_Adjustment.GREEDY,
+//				SegmentationMFD_Adjustment.GREEDY_SELF_CONTAINED,
+//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_MATCH_STRICT,
+				
+				RupsThroughCreepingSect.INCLUDE,
+//				RupsThroughCreepingSect.EXCLUDE,
 				};
-		double avgNumRups = 300000;
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
 		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
@@ -287,6 +305,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		double numIters = avgNumRups*rounds;
 		double invSecs = numIters/itersPerSec;
 		int invMins = (int)(invSecs/60d + 0.5);
+		if (ClusterSpecificInversionConfigurationFactory.class.isAssignableFrom(factoryClass))
+			invMins *= 2;
 		System.out.println("Estimate "+invMins+" minues per inversion");
 		
 //		String completionArg = "1m"; int invMins = 1;
@@ -355,6 +375,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		if (hazardGridded)
 			dirName += "-gridded";
+		
+		System.out.println("Directory name: "+dirName);
 		
 		File localDir = new File(localMainDir, dirName);
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
