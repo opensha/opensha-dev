@@ -182,15 +182,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
 		
-//		levels = new ArrayList<>(levels);
-//		for (int i=levels.size(); --i>=0;)
-//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
-//					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class)
-//					|| levels.get(i).getType().isAssignableFrom(DistDependSegShift.class))
-//				levels.remove(i);
-//		dirName += "-no_seg";
-////		levels.add(NSHM23_LogicTreeBranch.MAX_DIST);
-////		dirName += "-strict_cutoff_seg"; strictSeg = true;
+		levels = new ArrayList<>(levels);
+		for (int i=levels.size(); --i>=0;)
+			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
+					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class)
+					|| levels.get(i).getType().isAssignableFrom(DistDependSegShift.class))
+				levels.remove(i);
+		dirName += "-no_seg";
+//		levels.add(NSHM23_LogicTreeBranch.MAX_DIST);
+//		dirName += "-strict_cutoff_seg"; strictSeg = true;
 		
 //		dirName += "-reweight_seg_2_3_4";
 		
@@ -244,8 +244,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				FaultModels.FM3_1,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 //				NSHM23_FaultModels.NSHM23_v1p4,
-				
-				RupturePlausibilityModels.COULOMB,
+
+//				RupturePlausibilityModels.COULOMB,
+				RupturePlausibilityModels.COULOMB_5km,
 //				RupturePlausibilityModels.AZIMUTHAL,
 //				RupturePlausibilityModels.SEGMENTED,
 //				RupturePlausibilityModels.UCERF3,
@@ -272,13 +273,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 //				DistDependSegShift.NONE,
 //				DistDependSegShift.ONE_KM,
-				DistDependSegShift.TWO_KM,
+//				DistDependSegShift.TWO_KM,
 //				DistDependSegShift.THREE_KM,
 				
 //				SegmentationMFD_Adjustment.NONE,
 //				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
 //				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG,
-				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_ITERATIVE,
+//				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_ITERATIVE,
 //				SegmentationMFD_Adjustment.CAPPED_REDIST,
 //				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED,
 //				SegmentationMFD_Adjustment.GREEDY,
