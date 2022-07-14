@@ -45,6 +45,9 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.Itera
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.IterationsPerVariableCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.MisfitStdDevCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.CoolingScheduleType;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
@@ -1354,80 +1357,80 @@ public class BatchInversionScriptWriter {
 		/*
 		 * Segmentation MFD adjustment tests
 		 */
-		dirName += "-"+rsPrefix.replace("-uniform", "").replace("-tapered", "");
-		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-		
-		LogicTreeBranch<LogicTreeNode> branch;
-		
-		dirName += "-seg_model_adjustments";
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-		branch = new LogicTreeBranch<>(levels);
-		
-		branch.setValue(FaultModels.FM3_1);
-		if (rsPrefix.toLowerCase().contains("coulomb"))
-			branch.setValue(RupturePlausibilityModels.COULOMB);
-		else
-			branch.setValue(RupturePlausibilityModels.UCERF3);
-		
-		// good fitting
-		branch.setValue(U3_UncertAddDeformationModels.U3_ZENG);
-		branch.setValue(ScalingRelationships.SHAW_2009_MOD);
-		branch.setValue(SupraSeisBValues.B_0p5);
-		branch.setValue(SlipAlongRuptureModels.UNIFORM);
-		
-		// poor fitting
-//		branch.setValue(DeformationModels.NEOKINEMA);
-//		branch.setValue(ScalingRelationships.ELLSWORTH_B);
-//		branch.setValue(SupraSeisBValues.B_0p0);
-//		branch.setValue(SlipAlongRuptureModels.TAPERED);
-		
-		// constant
-		branch.setValue(SubSeisMoRateReductions.SUB_B_1);
-		
-		// inv model
-		branch.setValue(SubSectConstraintModels.TOT_NUCL_RATE);
-//		branch.setValue(SubSectConstraintModels.NUCL_MFD);
-		
-		// seg model
-		branch.setValue(SegmentationModels.SHAW_R0_3);
-//		branch.setValue(SegmentationModels.SHAW_R0_3_SHIFT_1km);
-		
-		dirName += "-"+branch.getValue(U3_UncertAddDeformationModels.class).getFilePrefix();
-		dirName += "-"+branch.getValue(ScalingRelationships.class).getFilePrefix();
-		dirName += "-"+branch.getValue(SlipAlongRuptureModels.class).getFilePrefix();
-		dirName += "-"+branch.getValue(SupraSeisBValues.class).getFilePrefix();
-		dirName += "-"+branch.getValue(SubSectConstraintModels.class).getFilePrefix();
-		dirName += "-"+branch.getValue(SegmentationModels.class).getFilePrefix();
-		
-		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
-		
-		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(2000d);
-		
-//		SegmentationMFD_Adjustment[] adjustments = SegmentationMFD_Adjustment.values();
-		SegmentationMFD_Adjustment[] adjustments = {
-				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
-				SegmentationMFD_Adjustment.CAPPED_REDIST,
-//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_ABOVE_1KM,
-//				SegmentationMFD_Adjustment.RUP_MULTIPLY_WORST_JUMP_PROB,
-		};
-		
-		rupSets = new ArrayList<>();
-		for (SegmentationMFD_Adjustment adjustment : adjustments) {
-			String name = adjustment.getFilePrefix();
-			
-			branch.setValue(adjustment);
-			
-			FaultSystemRupSet myRupSet = FaultSystemRupSet.buildFromExisting(rupSet).build();
-			InversionConfiguration config = factory.buildInversionConfig(myRupSet, branch, remoteToalThreads);
-			config = InversionConfiguration.builder(config).completion(completion).build();
-			
-			configs.add(config);
-			subDirNames.add(name);
-			rupSets.add(myRupSet);
-		}
-		
-		avgJob = false;
-		allPlotLevel = PlotLevel.DEFAULT;
+//		dirName += "-"+rsPrefix.replace("-uniform", "").replace("-tapered", "");
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+//		
+//		LogicTreeBranch<LogicTreeNode> branch;
+//		
+//		dirName += "-seg_model_adjustments";
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+//		branch = new LogicTreeBranch<>(levels);
+//		
+//		branch.setValue(FaultModels.FM3_1);
+//		if (rsPrefix.toLowerCase().contains("coulomb"))
+//			branch.setValue(RupturePlausibilityModels.COULOMB);
+//		else
+//			branch.setValue(RupturePlausibilityModels.UCERF3);
+//		
+//		// good fitting
+//		branch.setValue(U3_UncertAddDeformationModels.U3_ZENG);
+//		branch.setValue(ScalingRelationships.SHAW_2009_MOD);
+//		branch.setValue(SupraSeisBValues.B_0p5);
+//		branch.setValue(SlipAlongRuptureModels.UNIFORM);
+//		
+//		// poor fitting
+////		branch.setValue(DeformationModels.NEOKINEMA);
+////		branch.setValue(ScalingRelationships.ELLSWORTH_B);
+////		branch.setValue(SupraSeisBValues.B_0p0);
+////		branch.setValue(SlipAlongRuptureModels.TAPERED);
+//		
+//		// constant
+//		branch.setValue(SubSeisMoRateReductions.SUB_B_1);
+//		
+//		// inv model
+//		branch.setValue(SubSectConstraintModels.TOT_NUCL_RATE);
+////		branch.setValue(SubSectConstraintModels.NUCL_MFD);
+//		
+//		// seg model
+//		branch.setValue(SegmentationModels.SHAW_R0_3);
+////		branch.setValue(SegmentationModels.SHAW_R0_3_SHIFT_1km);
+//		
+//		dirName += "-"+branch.getValue(U3_UncertAddDeformationModels.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(ScalingRelationships.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SlipAlongRuptureModels.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SupraSeisBValues.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SubSectConstraintModels.class).getFilePrefix();
+//		dirName += "-"+branch.getValue(SegmentationModels.class).getFilePrefix();
+//		
+//		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
+//		
+//		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(2000d);
+//		
+////		SegmentationMFD_Adjustment[] adjustments = SegmentationMFD_Adjustment.values();
+//		SegmentationMFD_Adjustment[] adjustments = {
+//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
+//				SegmentationMFD_Adjustment.CAPPED_REDIST,
+////				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_ABOVE_1KM,
+////				SegmentationMFD_Adjustment.RUP_MULTIPLY_WORST_JUMP_PROB,
+//		};
+//		
+//		rupSets = new ArrayList<>();
+//		for (SegmentationMFD_Adjustment adjustment : adjustments) {
+//			String name = adjustment.getFilePrefix();
+//			
+//			branch.setValue(adjustment);
+//			
+//			FaultSystemRupSet myRupSet = FaultSystemRupSet.buildFromExisting(rupSet).build();
+//			InversionConfiguration config = factory.buildInversionConfig(myRupSet, branch, remoteToalThreads);
+//			config = InversionConfiguration.builder(config).completion(completion).build();
+//			
+//			configs.add(config);
+//			subDirNames.add(name);
+//			rupSets.add(myRupSet);
+//		}
+//		
+//		avgJob = false;
+//		allPlotLevel = PlotLevel.DEFAULT;
 		
 		/*
 		 * SparseGR spreading method tests
@@ -1494,6 +1497,65 @@ public class BatchInversionScriptWriter {
 //		
 //		avgJob = false;
 //		allPlotLevel = PlotLevel.DEFAULT;
+		
+		/*
+		 * SA parameter tests
+		 */
+		dirName += "-"+rsPrefix.replace("-uniform", "").replace("-tapered", "");
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
+		
+		dirName += "-full_sys_inv-sa_param_tests";
+		
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT;
+		
+		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
+		
+//		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(5000d);
+//		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(20000d); dirName += "-20000ip";
+		CompletionCriteria completion = new IterationsPerVariableCompletionCriteria(200000d); dirName += "-200000ip";
+		
+		CoolingScheduleType coolDefault = CoolingScheduleType.FAST_SA;
+		CoolingScheduleType[] coolAlts = {CoolingScheduleType.CLASSICAL_SA};
+		GenerationFunctionType perturbDefault = GenerationFunctionType.VARIABLE_EXPONENTIAL_SCALE;
+		GenerationFunctionType[] perturbAlts = {};
+//		GenerationFunctionType[] perturbAlts = {GenerationFunctionType.UNIFORM_0p001, GenerationFunctionType.UNIFORM_0p0001,
+//				GenerationFunctionType.EXPONENTIAL_SCALE};
+		NonnegativityConstraintType nonnegDefault = NonnegativityConstraintType.TRY_ZERO_RATES_OFTEN;
+		NonnegativityConstraintType[] nonnegAlts = {};
+//		NonnegativityConstraintType[] nonnegAlts = {NonnegativityConstraintType.LIMIT_ZERO_RATES};
+		
+		InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
+		config = InversionConfiguration.builder(config).completion(completion).build();
+		
+		configs.add(config);
+		subDirNames.add("default");
+		
+		remoteAllCompareName = "Default";
+		remoteAllCompFile = new File(new File(new File(remoteMainDir, dirName), subDirNames.get(0)), "solution.zip");
+		
+		for (CoolingScheduleType cool : coolAlts) {
+			config = InversionConfiguration.builder(config).cooling(cool).build();
+			configs.add(config);
+			subDirNames.add("cool_"+cool.name());
+		}
+		config = InversionConfiguration.builder(config).cooling(coolDefault).build();
+		
+		for (GenerationFunctionType perturb : perturbAlts) {
+			config = InversionConfiguration.builder(config).perturbation(perturb).build();
+			configs.add(config);
+			subDirNames.add("perturb_"+perturb.name());
+		}
+		config = InversionConfiguration.builder(config).perturbation(perturbDefault).build();
+		
+		for (NonnegativityConstraintType nonneg : nonnegAlts) {
+			config = InversionConfiguration.builder(config).nonNegativity(nonneg).build();
+			configs.add(config);
+			subDirNames.add("nonneg_"+nonneg.name());
+		}
+		config = InversionConfiguration.builder(config).nonNegativity(nonnegDefault).build();
+		
+		avgJob = false;
+		allPlotLevel = PlotLevel.DEFAULT;
 		
 		// BELOW HERE IS COMMON TO EVERYTHING
 		

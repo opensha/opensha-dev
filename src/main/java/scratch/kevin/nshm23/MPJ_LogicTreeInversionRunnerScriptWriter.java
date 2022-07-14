@@ -29,6 +29,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeHa
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeInversionRunner;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.CoolingScheduleType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
@@ -182,15 +183,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
 		
-		levels = new ArrayList<>(levels);
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
-					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class)
-					|| levels.get(i).getType().isAssignableFrom(DistDependSegShift.class))
-				levels.remove(i);
-		dirName += "-no_seg";
-//		levels.add(NSHM23_LogicTreeBranch.MAX_DIST);
-//		dirName += "-strict_cutoff_seg"; strictSeg = true;
+//		levels = new ArrayList<>(levels);
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
+//					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class)
+//					|| levels.get(i).getType().isAssignableFrom(DistDependSegShift.class))
+//				levels.remove(i);
+//		dirName += "-no_seg";
+////		levels.add(NSHM23_LogicTreeBranch.MAX_DIST);
+////		dirName += "-strict_cutoff_seg"; strictSeg = true;
 		
 //		dirName += "-reweight_seg_2_3_4";
 		
@@ -205,7 +206,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			
 		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -222,11 +223,20 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
 //		dirName += "-no_reweight_use_prev";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjustFullSys.class;
+//		dirName += "-full_sys_inv-no_reweight_use_prev";
+		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedOrigWeights.class;
 //		dirName += "-no_reweight_use_orig";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedOrigWeightsFullSys.class;
+//		dirName += "-full_sys_inv-no_reweight_use_orig";
+		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevAvgWeights.class;
 //		dirName += "-no_reweight_use_prev_avg";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevAvgWeightsFullSys.class;
+//		dirName += "-full_sys_inv-no_reweight_use_prev_avg";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoPaleoParkfield.class;
 //		dirName += "-no_paleo_parkfield";
@@ -240,13 +250,28 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ScaleLowerDepth1p3.class;
 //		dirName += "-scaleLowerDepth1.3";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevAsInitial.class;
+//		dirName += "-prev_as_initial";
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoAvg.class;
+		dirName += "-no_avg";
+		
+//		dirName += "-u3_perturb";
+//		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
+//		dirName += "-exp_perturb";
+//		extraArgs.add("--perturb "+GenerationFunctionType.EXPONENTIAL_SCALE.name());
+//		dirName += "-limit_zeros";
+//		extraArgs.add("--non-negativity "+NonnegativityConstraintType.LIMIT_ZERO_RATES.name());
+//		dirName += "-classic_sa";
+//		extraArgs.add("--cooling-schedule "+CoolingScheduleType.CLASSICAL_SA.name());
+		
 		LogicTreeNode[] required = {
 				FaultModels.FM3_1,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 //				NSHM23_FaultModels.NSHM23_v1p4,
 
-//				RupturePlausibilityModels.COULOMB,
-				RupturePlausibilityModels.COULOMB_5km,
+				RupturePlausibilityModels.COULOMB,
+//				RupturePlausibilityModels.COULOMB_5km,
 //				RupturePlausibilityModels.AZIMUTHAL,
 //				RupturePlausibilityModels.SEGMENTED,
 //				RupturePlausibilityModels.UCERF3,
@@ -273,13 +298,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 //				DistDependSegShift.NONE,
 //				DistDependSegShift.ONE_KM,
-//				DistDependSegShift.TWO_KM,
+				DistDependSegShift.TWO_KM,
 //				DistDependSegShift.THREE_KM,
 				
 //				SegmentationMFD_Adjustment.NONE,
 //				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
 //				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG,
-//				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_ITERATIVE,
+				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_ITERATIVE,
 //				SegmentationMFD_Adjustment.CAPPED_REDIST,
 //				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED,
 //				SegmentationMFD_Adjustment.GREEDY,

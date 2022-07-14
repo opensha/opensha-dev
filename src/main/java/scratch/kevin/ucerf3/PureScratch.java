@@ -24,6 +24,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.IntegerSampler.ExclusionIntegerSampler;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -53,9 +54,13 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.U3
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
+import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel.Tapered;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetailPlots;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
@@ -783,14 +788,14 @@ public class PureScratch {
 	}
 	
 	private static void test126() throws IOException {
-		List<? extends FaultSection> sects = NSHM23_DeformationModels.GEOL_V1p3.buildGeolFullSects(
-				NSHM23_FaultModels.NSHM23_v1p4, "v1p3");
-		
-		GeoJSONFaultReader.writeFaultSections(new File("/tmp/nshm23_dm1p3_sects.geojson"), sects);
+//		List<? extends FaultSection> sects = NSHM23_DeformationModels.GEOL_V1p3.buildGeolFullSects(
+//				NSHM23_FaultModels.NSHM23_v1p4, "v1p3");
+//		
+//		GeoJSONFaultReader.writeFaultSections(new File("/tmp/nshm23_dm1p3_sects.geojson"), sects);
 	}
 	
 	private static void test127() throws IOException {
-		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOL_V1p4.build(NSHM23_FaultModels.NSHM23_v1p4);
+		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v1p4);
 		
 		FaultSectionDataWriter.writeSectionsToFile(subSects, null, new File("/tmp/nshm23_dm1p3_sub_sects.txt"), false);
 		GeoJSONFaultReader.writeFaultSections(new File("/tmp/nshm23_dm1p3_sub_sects.geojson"), subSects);
@@ -999,12 +1004,39 @@ public class PureScratch {
 		fss.write(outputFile);
 	}
 	
+	private static void test138() throws IOException {
+		SolutionLogicTree.load(new File("/data/kevin/ucerf4/batch_inversions/2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep/results.zip"));
+	}
+	
+	private static void test139() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/FM3_1_branch_averaged.zip"));
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		
+		CSVFile<String> taperedCSVs = new CSVFile<>(false);
+		taperedCSVs.addLine("Rupture Index", "Section 1 Slip (m)", "...");
+		
+		AveSlipModule aveSlips = rupSet.requireModule(AveSlipModule.class);
+		
+		Tapered dsr = new SlipAlongRuptureModel.Tapered();
+		
+		for (int r=0; r<rupSet.getNumRuptures(); r++) {
+			List<String> line = new ArrayList<>();
+			line.add(r+"");
+			double[] slips = dsr.calcSlipOnSectionsForRup(rupSet, aveSlips, r);
+			for (double slip : slips)
+				line.add((float)slip+"");
+			taperedCSVs.addLine(line);
+		}
+		
+		taperedCSVs.writeToFile(new File("/tmp/u3_fm3_1_tapered_dsr.csv"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test137();
+		test139();
 	}
 
 }
