@@ -16,13 +16,13 @@ import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
 public enum HardcodedTestScaleRels implements RupSetScalingRelationship {
 	ELLB_C_4p2 {
 		@Override
-		public double getMag(double area, double origWidth, double aveRake) {
+		public double getMag(double area, double length, double width, double origWidth, double aveRake) {
 			return  4.2 + Math.log10(area*1e-6);
 		}
 	},
 	ELLB_C_4p1 {
 		@Override
-		public double getMag(double area, double origWidth, double aveRake) {
+		public double getMag(double area, double length, double width, double origWidth, double aveRake) {
 			return  4.1 + Math.log10(area*1e-6);
 		}
 	};
@@ -48,13 +48,13 @@ public enum HardcodedTestScaleRels implements RupSetScalingRelationship {
 	}
 
 	@Override
-	public double getAveSlip(double area, double length, double origWidth, double aveRake) {
-		double mag = getMag(area, origWidth, aveRake);;
+	public double getAveSlip(double area, double length, double width, double origWidth, double aveRake) {
+		double mag = getMag(area, length, width, origWidth, aveRake);
 		double moment = MagUtils.magToMoment(mag);
 		return FaultMomentCalc.getSlip(area, moment);
 	}
 
 	@Override
-	public abstract double getMag(double area, double origWidth, double aveRake);
+	public abstract double getMag(double area, double length, double width, double origWidth, double aveRake);
 
 }

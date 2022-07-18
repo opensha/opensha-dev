@@ -37,6 +37,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSeg
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSect;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
@@ -106,16 +107,30 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * UCERF3 logic tree
 		 */
-//		List<LogicTreeLevel<? extends U3LogicTreeBranchNode<?>>> levels = U3LogicTreeBranch.getLogicTreeLevels();
-//		LogicTree<U3LogicTreeBranchNode<?>> logicTree = LogicTree.buildExhaustive(levels, true);
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>(U3LogicTreeBranch.getLogicTreeLevels());
+//		
+//		levels = new ArrayList<>(levels);
+//		int origSize = levels.size();
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
+//				levels.remove(i);
+//		Preconditions.checkState(levels.size() < origSize);
+//		levels.add(NSHM23_LogicTreeBranch.SCALE);
+//		dirName += "-new_scale_rels";
+//		
+//		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
 //		dirName += "-u3_branches";
 //		
-////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
-////		int avgNumRups = 250000;
-//		
-//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.ScaleLowerDepth1p3.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
 //		int avgNumRups = 250000;
-//		dirName += "-scaleLowerDepth1.3";
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.ScaleLowerDepth1p3.class;
+////		int avgNumRups = 250000;
+////		dirName += "-scaleLowerDepth1.3";
+//		
+////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.ForceNewPaleo.class;
+////		int avgNumRups = 250000;
+////		dirName += "-new_paleo";
 //		
 ////		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.OriginalCalcParamsNewAvgConverged.class;
 ////		dirName += "-orig_calc_params-new_avg-converged";
@@ -195,14 +210,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		dirName += "-reweight_seg_2_3_4";
 		
-//		levels = new ArrayList<>(levels);
-//		int origSize = levels.size();
-//		for (int i=levels.size(); --i>=0;)
-//			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
-//				levels.remove(i);
-//		Preconditions.checkState(levels.size() < origSize);
-//		levels.add(LogicTreeLevel.forEnum(HardcodedTestScaleRels.class, "Hardocded Test Scaling Rels", "TestScales"));
-//		dirName += "-test_scale_rels";
+		levels = new ArrayList<>(levels);
+		int origSize = levels.size();
+		for (int i=levels.size(); --i>=0;)
+			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
+				levels.remove(i);
+		Preconditions.checkState(levels.size() < origSize);
+		levels.add(NSHM23_LogicTreeBranch.SCALE);
+		dirName += "-new_scale_rels";
+		dirName += "-full_set";
 			
 		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
 		
@@ -253,8 +269,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevAsInitial.class;
 //		dirName += "-prev_as_initial";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoAvg.class;
-		dirName += "-no_avg";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoAvg.class;
+//		dirName += "-no_avg";
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceNewPaleo.class;
+		dirName += "-new_paleo";
 		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());

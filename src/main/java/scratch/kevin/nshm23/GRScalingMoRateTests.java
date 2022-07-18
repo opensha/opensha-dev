@@ -51,7 +51,7 @@ public class GRScalingMoRateTests {
 					rupLength = Math.sqrt(rupLength*rupWidth);
 					rupWidth = rupLength;
 				}
-				double aveSlip = scale.getAveSlip(rupArea, rupLength, rupWidth, rake);
+				double aveSlip = scale.getAveSlip(rupArea, rupLength, rupWidth, rupWidth, rake);
 //				System.out.println("mag="+mag+"\trate="+rate+"\twidth="+rupWidth+"\tlen="+rupLength+"\tslip="+aveSlip);
 				
 				double particRate;

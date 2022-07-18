@@ -59,7 +59,8 @@ public class PaleoVisibleDataWriter {
 						totOrigArea += sect.getTraceLength()*1e3*sect.getOrigDownDipWidth()*1e3;
 					double origDDW = totOrigArea/rupSet.getLengthForRup(rupIndex);
 					double aveSlip = scale.getAveSlip(rupSet.getAreaForRup(rupIndex),
-							rupSet.getLengthForRup(rupIndex), origDDW, rupSet.getAveRakeForRup(rupIndex));
+							rupSet.getLengthForRup(rupIndex), rupSet.getAreaForRup(rupIndex)/rupSet.getLengthForRup(rupIndex),
+							origDDW, rupSet.getAveRakeForRup(rupIndex));
 					
 					double distanceAlong = UCERF3InversionInputGenerator.getDistanceAlongRupture(
 							rupSet.getFaultSectionDataForRupture(rupIndex), constr.getSectionIndex(), traceLengthCache);
