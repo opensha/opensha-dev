@@ -1502,9 +1502,11 @@ public class BatchInversionScriptWriter {
 		 * SA parameter tests
 		 */
 		dirName += "-"+rsPrefix.replace("-uniform", "").replace("-tapered", "");
-		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
+//		dirName += "-full_sys_inv-sa_param_tests";
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.HardcodedOrigWeightsFullSys();
+		dirName += "-full_sys_inv-no_reweight-sa_param_tests";
 		
-		dirName += "-full_sys_inv-sa_param_tests";
 		
 		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT;
 		

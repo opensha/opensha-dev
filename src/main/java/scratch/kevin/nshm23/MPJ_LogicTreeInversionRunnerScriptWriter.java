@@ -272,8 +272,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoAvg.class;
 //		dirName += "-no_avg";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceNewPaleo.class;
-		dirName += "-new_paleo";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceNewPaleo.class;
+//		dirName += "-new_paleo";
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NewScaleUseOrigWidths.class;
+		dirName += "-use_orig_widths";
 		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());

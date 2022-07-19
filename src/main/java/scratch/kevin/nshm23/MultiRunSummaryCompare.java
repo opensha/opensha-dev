@@ -119,129 +119,132 @@ public class MultiRunSummaryCompare {
 //		fixedCompDirNames.add("hazard_maps_comp_nshm23_draft_iter_rel_gr_thresh_2km");
 //		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED.darker()));
 		
-//		String title = "Model Sensitivity";
-//		File indexDir = new File(mainDir, "2022_06_10-sensitivity-tests");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("Draft Preferred Model");
-//		fixedComps.add(runDirs.get(runDirs.size()-1));
-//		fixedCompNames.add(runNames.get(runNames.size()-1));
-//		fixedCompDirNames.add("hazard_maps_comp_nshm23_draft_iter_rel_gr_thresh_2km");
-//		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED.darker()));
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep-10000ip"));
-//		runNames.add("5x converged");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-full_sys_inv-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("Full-Sys-Inv");
-//		fixedComps.add(runDirs.get(runDirs.size()-1));
-//		fixedCompNames.add(runNames.get(runNames.size()-1));
-//		fixedCompDirNames.add("hazard_maps_comp_full_sys_inv");
-//		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE.darker()));
-//		
-//		runDirs.add(new File(mainDir, "2022_07_08-nshm23_u3_hybrid_branches-full_sys_inv-no_reweight_use_prev-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("Full-Sys-Inv, no-reweight, use prev");
-//		
-//		runDirs.add(new File(mainDir, "2022_07_08-nshm23_u3_hybrid_branches-full_sys_inv-no_reweight_use_prev_avg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("Full-Sys-Inv, no-reweight, use average");
-//		
-//		runDirs.add(new File(mainDir, "2022_07_11-nshm23_u3_hybrid_branches-full_sys_inv-no_reweight_use_orig-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("Full-Sys-Inv, no-reweight, use initial");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_reweight_use_orig-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("no-reweight, use initial");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_reweight_use_orig-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("no-reweight, use initial");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_paleo_parkfield-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("no paleo/parkfield");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_scale_adj_mfds-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("no scale adj. mfds");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_mfd_sigma_data_adj-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("no mfd sigma adjust");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-NoShift-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("no seg shift");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift1km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("1km seg shift");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift3km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("3km seg shift");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR"));
-//		runNames.add("with & without creeping section");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-NuclMFD-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("nucleation MFD branch");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SysAvgSubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("sys-avg b=1 sub-seis reduction");
-//		
-//		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("no sub-seis reduction");
-//		
-//		runDirs.add(new File(mainDir, "2022_07_12-nshm23_u3_hybrid_branches-classic_sa-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("Classic SA Cooling");
-//		
-//		runDirs.add(new File(mainDir, "2022_07_12-nshm23_u3_hybrid_branches-exp_perturb-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("Exponential Perturb");
-//		
-//		runDirs.add(new File(mainDir, "2022_07_12-nshm23_u3_hybrid_branches-limit_zeros-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("Limit Zero Rates");
-//		
-//		runDirs.add(new File(mainDir, "2022_07_12-nshm23_u3_hybrid_branches-no_avg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("No-Averaging");
-//		
-//		runDirs.add(new File(mainDir, "2022_07_15-nshm23_u3_hybrid_branches-new_paleo-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("New Draft Paleo");
-//		
-//		runDirs.add(new File(mainDir, "2022_07_15-nshm23_u3_hybrid_branches-new_scale_rels-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("New Draft Scaling");
-//		
-//		runDirs.add(new File(mainDir, "2022_07_15-nshm23_u3_hybrid_branches-new_scale_rels-new_paleo-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
-//		runNames.add("New Draft Scaling & Paleo");
+		String title = "Model Sensitivity";
+		File indexDir = new File(mainDir, "2022_06_10-sensitivity-tests");
 		
-		String title = "U3 Model Sweeps";
-		File indexDir = new File(mainDir, "2022_07_18-u3_model_sweeps_index");
-		
-		runDirs.add(new File(mainDir, "2021_11_30-u3_branches-orig_calcs-5h"));
-		runNames.add("UCERF3 As Published");
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("Draft Preferred Model");
 		fixedComps.add(runDirs.get(runDirs.size()-1));
 		fixedCompNames.add(runNames.get(runNames.size()-1));
-		fixedCompDirNames.add("hazard_maps_comp_u3_as_published");
-		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.RED.darker()));
+		fixedCompDirNames.add("hazard_maps_comp_nshm23_draft_iter_rel_gr_thresh_2km");
+		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.RED.darker()));
 		
-		runDirs.add(new File(mainDir, "2022_03_25-u3_branches-orig_calc_params-new_avg-converged-FM3_1-2000ip"));
-		runNames.add("Well Converged");
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep-10000ip"));
+		runNames.add("5x converged");
 		
-		runDirs.add(new File(mainDir, "2022_03_25-u3_branches-orig_calc_params-new_avg-converged-noWL-FM3_1-2000ip"));
-		runNames.add("Converged, No-WL");
-		
-		runDirs.add(new File(mainDir, "2022_03_25-u3_branches-orig_calc_params-new_avg-converged-noWL-new_perturb-FM3_1-2000ip"));
-		runNames.add("Converged, No-WL, Exp Perturb");
-		
-		runDirs.add(new File(mainDir, "2022_03_25-u3_branches-orig_calc_params-new_avg-converged-noWL-new_perturb-try_zero_often-FM3_1-2000ip"));
-		runNames.add("Converged, No-WL, Exp Perturb, Try-Zeros");
-		
-		runDirs.add(new File(mainDir, "2022_03_24-u3_branches-FM3_1-2000ip"));
-		runNames.add("UCERF3 New Anneal");
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-full_sys_inv-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("Full-Sys-Inv");
 		fixedComps.add(runDirs.get(runDirs.size()-1));
 		fixedCompNames.add(runNames.get(runNames.size()-1));
-		fixedCompDirNames.add("hazard_maps_comp_u3_new_anneal");
-		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.RED.darker()));
+		fixedCompDirNames.add("hazard_maps_comp_full_sys_inv");
+		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.BLUE.darker()));
 		
-		runDirs.add(new File(mainDir, "2022_07_15-u3_branches-new_paleo-FM3_1"));
+		runDirs.add(new File(mainDir, "2022_07_08-nshm23_u3_hybrid_branches-full_sys_inv-no_reweight_use_prev-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("Full-Sys-Inv, no-reweight, use prev");
+		
+		runDirs.add(new File(mainDir, "2022_07_08-nshm23_u3_hybrid_branches-full_sys_inv-no_reweight_use_prev_avg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("Full-Sys-Inv, no-reweight, use average");
+		
+		runDirs.add(new File(mainDir, "2022_07_11-nshm23_u3_hybrid_branches-full_sys_inv-no_reweight_use_orig-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("Full-Sys-Inv, no-reweight, use initial");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_reweight_use_orig-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("no-reweight, use initial");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_reweight_use_orig-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("no-reweight, use initial");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_paleo_parkfield-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("no paleo/parkfield");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_scale_adj_mfds-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("no scale adj. mfds");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-no_mfd_sigma_data_adj-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("no mfd sigma adjust");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-NoShift-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("no seg shift");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift1km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("1km seg shift");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift3km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("3km seg shift");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR"));
+		runNames.add("with & without creeping section");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-NuclMFD-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("nucleation MFD branch");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SysAvgSubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("sys-avg b=1 sub-seis reduction");
+		
+		runDirs.add(new File(mainDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("no sub-seis reduction");
+		
+		runDirs.add(new File(mainDir, "2022_07_12-nshm23_u3_hybrid_branches-classic_sa-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("Classic SA Cooling");
+		
+		runDirs.add(new File(mainDir, "2022_07_12-nshm23_u3_hybrid_branches-exp_perturb-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("Exponential Perturb");
+		
+		runDirs.add(new File(mainDir, "2022_07_12-nshm23_u3_hybrid_branches-limit_zeros-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("Limit Zero Rates");
+		
+		runDirs.add(new File(mainDir, "2022_07_12-nshm23_u3_hybrid_branches-no_avg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("No-Averaging");
+		
+		runDirs.add(new File(mainDir, "2022_07_15-nshm23_u3_hybrid_branches-new_paleo-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
 		runNames.add("New Draft Paleo");
 		
-		runDirs.add(new File(mainDir, "2022_07_15-new_scale_rels-u3_branches-FM3_1"));
+		runDirs.add(new File(mainDir, "2022_07_15-nshm23_u3_hybrid_branches-new_scale_rels-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
 		runNames.add("New Draft Scaling");
 		
-		runDirs.add(new File(mainDir, "2022_07_15-new_scale_rels-u3_branches-new_paleo-FM3_1"));
+		runDirs.add(new File(mainDir, "2022_07_15-nshm23_u3_hybrid_branches-new_scale_rels-full_set-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("New Draft Scaling, All 6");
+		
+		runDirs.add(new File(mainDir, "2022_07_15-nshm23_u3_hybrid_branches-new_scale_rels-new_paleo-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
 		runNames.add("New Draft Scaling & Paleo");
+		
+//		String title = "U3 Model Sweeps";
+//		File indexDir = new File(mainDir, "2022_07_18-u3_model_sweeps_index");
+//		
+//		runDirs.add(new File(mainDir, "2021_11_30-u3_branches-orig_calcs-5h"));
+//		runNames.add("UCERF3 As Published");
+//		fixedComps.add(runDirs.get(runDirs.size()-1));
+//		fixedCompNames.add(runNames.get(runNames.size()-1));
+//		fixedCompDirNames.add("hazard_maps_comp_u3_as_published");
+//		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.RED.darker()));
+//		
+//		runDirs.add(new File(mainDir, "2022_03_25-u3_branches-orig_calc_params-new_avg-converged-FM3_1-2000ip"));
+//		runNames.add("Well Converged");
+//		
+//		runDirs.add(new File(mainDir, "2022_03_25-u3_branches-orig_calc_params-new_avg-converged-noWL-FM3_1-2000ip"));
+//		runNames.add("Converged, No-WL");
+//		
+//		runDirs.add(new File(mainDir, "2022_03_25-u3_branches-orig_calc_params-new_avg-converged-noWL-new_perturb-FM3_1-2000ip"));
+//		runNames.add("Converged, No-WL, Exp Perturb");
+//		
+//		runDirs.add(new File(mainDir, "2022_03_25-u3_branches-orig_calc_params-new_avg-converged-noWL-new_perturb-try_zero_often-FM3_1-2000ip"));
+//		runNames.add("Converged, No-WL, Exp Perturb, Try-Zeros");
+//		
+//		runDirs.add(new File(mainDir, "2022_03_24-u3_branches-FM3_1-2000ip"));
+//		runNames.add("UCERF3 New Anneal");
+//		fixedComps.add(runDirs.get(runDirs.size()-1));
+//		fixedCompNames.add(runNames.get(runNames.size()-1));
+//		fixedCompDirNames.add("hazard_maps_comp_u3_new_anneal");
+//		fixedCurveChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.RED.darker()));
+//		
+//		runDirs.add(new File(mainDir, "2022_07_15-u3_branches-new_paleo-FM3_1"));
+//		runNames.add("New Draft Paleo");
+//		
+//		runDirs.add(new File(mainDir, "2022_07_15-new_scale_rels-u3_branches-FM3_1"));
+//		runNames.add("New Draft Scaling");
+//		
+//		runDirs.add(new File(mainDir, "2022_07_15-new_scale_rels-u3_branches-new_paleo-FM3_1"));
+//		runNames.add("New Draft Scaling & Paleo");
 		
 //		runDirs.add(new File(mainDir, ""));
 //		runNames.add("");
