@@ -205,6 +205,9 @@ public class MultiRunSummaryCompare {
 		runDirs.add(new File(mainDir, "2022_07_15-nshm23_u3_hybrid_branches-new_scale_rels-full_set-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
 		runNames.add("New Draft Scaling, All 6");
 		
+		runDirs.add(new File(mainDir, "2022_07_19-nshm23_u3_hybrid_branches-new_scale_rels-full_set-use_orig_widths-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
+		runNames.add("New Draft Scaling, All 6, Orig-W");
+		
 		runDirs.add(new File(mainDir, "2022_07_15-nshm23_u3_hybrid_branches-new_scale_rels-new_paleo-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep"));
 		runNames.add("New Draft Scaling & Paleo");
 		

@@ -189,12 +189,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * NSHM23 logic tree
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-		dirName += "-nshm23_u3_hybrid_branches";
-		double avgNumRups = 300000;
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
-//		dirName += "-nshm23_branches";
-//		double avgNumRups = 600000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+//		dirName += "-nshm23_u3_hybrid_branches";
+//		double avgNumRups = 300000;
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
+		dirName += "-nshm23_branches";
+		double avgNumRups = 600000;
+		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
 		
@@ -210,19 +212,19 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		dirName += "-reweight_seg_2_3_4";
 		
-		levels = new ArrayList<>(levels);
-		int origSize = levels.size();
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
-				levels.remove(i);
-		Preconditions.checkState(levels.size() < origSize);
-		levels.add(NSHM23_LogicTreeBranch.SCALE);
-		dirName += "-new_scale_rels";
-		dirName += "-full_set";
+//		levels = new ArrayList<>(levels);
+//		int origSize = levels.size();
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
+//				levels.remove(i);
+//		Preconditions.checkState(levels.size() < origSize);
+//		levels.add(NSHM23_LogicTreeBranch.SCALE);
+//		dirName += "-new_scale_rels";
+//		dirName += "-full_set";
 			
 		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -275,8 +277,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceNewPaleo.class;
 //		dirName += "-new_paleo";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NewScaleUseOrigWidths.class;
-		dirName += "-use_orig_widths";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NewScaleUseOrigWidths.class;
+//		dirName += "-use_orig_widths";
 		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
@@ -288,9 +290,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		extraArgs.add("--cooling-schedule "+CoolingScheduleType.CLASSICAL_SA.name());
 		
 		LogicTreeNode[] required = {
-				FaultModels.FM3_1,
+//				FaultModels.FM3_1,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
-//				NSHM23_FaultModels.NSHM23_v1p4,
+				NSHM23_FaultModels.NSHM23_v1p4,
 
 				RupturePlausibilityModels.COULOMB,
 //				RupturePlausibilityModels.COULOMB_5km,
@@ -316,7 +318,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 //				SupraSeisBValues.B_0p8,
 				
-//				SegmentationModels.SHAW_R0_3,
+				SegmentationModels.SHAW_R0_3,
 				
 //				DistDependSegShift.NONE,
 //				DistDependSegShift.ONE_KM,

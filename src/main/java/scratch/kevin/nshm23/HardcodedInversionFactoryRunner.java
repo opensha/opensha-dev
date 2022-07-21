@@ -35,7 +35,7 @@ public class HardcodedInversionFactoryRunner {
 	public static void main(String[] args) throws IOException {
 		File parentDir = new File("/home/kevin/markdown/inversions");
 		
-		int threads = 4;
+		int threads = 16;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 
@@ -56,32 +56,36 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT;
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-		levels = new ArrayList<>(levels);
-		int origSize = levels.size();
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
-				levels.remove(i);
-		Preconditions.checkState(levels.size() < origSize);
-		levels.add(NSHM23_LogicTreeBranch.SCALE);
-		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
-		for (LogicTreeNode node : NSHM23_U3_HybridLogicTreeBranch.DEFAULT)
-			if (!(node instanceof ScalingRelationships))
-				branch.setValue(node);
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+//		levels = new ArrayList<>(levels);
+//		int origSize = levels.size();
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
+//				levels.remove(i);
+//		Preconditions.checkState(levels.size() < origSize);
+//		levels.add(NSHM23_LogicTreeBranch.SCALE);
+//		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
+//		for (LogicTreeNode node : NSHM23_U3_HybridLogicTreeBranch.DEFAULT)
+//			if (!(node instanceof ScalingRelationships))
+//				branch.setValue(node);
 		
-		branch.setValue(RupturePlausibilityModels.UCERF3_REDUCED);
-		dirName += "-u3_reduced";
+//		branch.setValue(RupturePlausibilityModels.UCERF3_REDUCED);
+//		dirName += "-u3_reduced";
+		
+		branch.setValue(RupturePlausibilityModels.AZIMUTHAL_REDUCED);
+		dirName += "-az_reduced";
 		
 //		branch.setValue(ScalingRelationships.MEAN_UCERF3);
 //		dirName += "-u3_ave_scale";
 		
 ////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p1);
 ////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p2);
-//		branch.setValue(NSHM23_ScalingRelationships.WIDTH_LIMITED);
-//		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p1_SQRT_LEN);
-//		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p2_SQRT_LEN);
-		branch.setValue(NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD);
-		dirName += "-scale"+branch.getValue(NSHM23_ScalingRelationships.class).getShortName();
+////		branch.setValue(NSHM23_ScalingRelationships.WIDTH_LIMITED);
+////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p1_SQRT_LEN);
+////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p2_SQRT_LEN);
+//		branch.setValue(NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD);
+//		dirName += "-scale"+branch.getValue(NSHM23_ScalingRelationships.class).getShortName();
 		
 		FaultSystemSolution solution = Inversions.run(factory, branch, threads);
 		

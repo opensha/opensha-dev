@@ -35,6 +35,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Pa
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.RupRateMinimizationConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SectionTotalRateConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateSegmentationConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateSegmentationConstraint.RateCombiner;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateSegmentationConstraint.SegmentationModel;
@@ -97,8 +98,8 @@ public class BatchInversionScriptWriter {
 		BatchScriptWriter scriptWrite = new USC_CARC_ScriptWriter();
 		String queue = "scec";
 		
-		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2022_01_26";
+//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+		String dirName = "2022_07_20";
 		
 		List<InversionConfiguration> configs = new ArrayList<>();
 		List<String> subDirNames = new ArrayList<>();
@@ -1507,8 +1508,10 @@ public class BatchInversionScriptWriter {
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.HardcodedOrigWeightsFullSys();
 		dirName += "-full_sys_inv-no_reweight-sa_param_tests";
 		
-		
 		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT;
+		
+		boolean doSingleThread = true;
+		boolean doNoAvg = true;
 		
 		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
 		
@@ -1519,15 +1522,41 @@ public class BatchInversionScriptWriter {
 		CoolingScheduleType coolDefault = CoolingScheduleType.FAST_SA;
 		CoolingScheduleType[] coolAlts = {CoolingScheduleType.CLASSICAL_SA};
 		GenerationFunctionType perturbDefault = GenerationFunctionType.VARIABLE_EXPONENTIAL_SCALE;
-		GenerationFunctionType[] perturbAlts = {};
-//		GenerationFunctionType[] perturbAlts = {GenerationFunctionType.UNIFORM_0p001, GenerationFunctionType.UNIFORM_0p0001,
-//				GenerationFunctionType.EXPONENTIAL_SCALE};
+//		GenerationFunctionType[] perturbAlts = {};
+		GenerationFunctionType[] perturbAlts = {GenerationFunctionType.UNIFORM_0p001, GenerationFunctionType.UNIFORM_0p0001,
+				GenerationFunctionType.EXPONENTIAL_SCALE};
 		NonnegativityConstraintType nonnegDefault = NonnegativityConstraintType.TRY_ZERO_RATES_OFTEN;
-		NonnegativityConstraintType[] nonnegAlts = {};
-//		NonnegativityConstraintType[] nonnegAlts = {NonnegativityConstraintType.LIMIT_ZERO_RATES};
+//		NonnegativityConstraintType[] nonnegAlts = {};
+		NonnegativityConstraintType[] nonnegAlts = {NonnegativityConstraintType.LIMIT_ZERO_RATES};
 		
 		InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, remoteToalThreads);
 		config = InversionConfiguration.builder(config).completion(completion).build();
+		
+		// use previous weights
+		if (config.getReweightTargetQuantity() == null) {
+			dirName += "-prev_weights";
+			for (InversionConstraint constraint : config.getConstraints()) {
+				boolean set = true;
+				if (constraint instanceof SlipRateInversionConstraint)
+					constraint.setWeight(0.94d);
+				else if (constraint instanceof PaleoRateInversionConstraint)
+					constraint.setWeight(7.96);
+				else if (constraint instanceof PaleoSlipInversionConstraint)
+					constraint.setWeight(9.31);
+				else if (constraint instanceof ParkfieldInversionConstraint)
+					constraint.setWeight(17.99);
+				else if (constraint instanceof MFDInversionConstraint)
+					constraint.setWeight(9.45);
+				else if (constraint instanceof SectionTotalRateConstraint)
+					constraint.setWeight(0.49);
+				else
+					set = false;
+				if (set)
+					System.out.println("Set "+constraint.getName()+" weight to "+constraint.getWeight());
+				else
+					System.out.println("Did not change "+constraint.getName()+" weight");
+			}
+		}
 		
 		configs.add(config);
 		subDirNames.add("default");
@@ -1555,6 +1584,18 @@ public class BatchInversionScriptWriter {
 			subDirNames.add("nonneg_"+nonneg.name());
 		}
 		config = InversionConfiguration.builder(config).nonNegativity(nonnegDefault).build();
+		
+		if (doSingleThread) {
+			config = InversionConfiguration.builder(config).avgThreads(remoteToalThreads, config.getAvgCompletionCriteria()).build();
+			configs.add(config);
+			subDirNames.add("single_thread");
+		}
+		
+		if (doNoAvg) {
+			config = InversionConfiguration.builder(config).avgThreads(1, config.getAvgCompletionCriteria()).build();
+			configs.add(config);
+			subDirNames.add("no_avg");
+		}
 		
 		avgJob = false;
 		allPlotLevel = PlotLevel.DEFAULT;
@@ -1638,6 +1679,7 @@ public class BatchInversionScriptWriter {
 				mins += 20;
 			else
 				mins += Integer.max(60, (int)(mins*0.2d));
+			mins = Integer.min(mins, 60*24*7); // max 1 week
 			
 			// write the configuration
 			File remoteConfig;
