@@ -31,6 +31,8 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.plots.HazardMapPlot;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSect;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
@@ -84,20 +86,23 @@ public class LogicTreeBranchAverageWriter {
 //		File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-strict_cutoff_seg-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1");
 //		File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		File mainDir = new File(invDir, "2022_06_01-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg");
-		File mainDir = new File(invDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
+//		File mainDir = new File(invDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
+		File mainDir = new File(invDir, "2022_07_21-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
 		File resultsFile = new File(mainDir, "results.zip");
-		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+		File fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
 		
 //		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
 		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
+		restrictBAClasses.add(NSHM23_DeformationModels.class);
+		restrictBAClasses.add(NSHM23_ScalingRelationships.class);
 //		restrictBAClasses.add(MaxJumpDistModels.class);
 //		restrictBAClasses.add(SegmentationModels.class);
 //		restrictBAClasses.add(SubSectConstraintModels.class);
-		restrictBAClasses.add(SupraSeisBValues.class);
+//		restrictBAClasses.add(SupraSeisBValues.class);
 //		restrictBAClasses.add(RupsThroughCreepingSect.class);
 		
 		LogicTreeNode[] restrictNodes = {
-				FaultModels.FM3_1
+//				FaultModels.FM3_1
 		};
 		
 		int totThreads = FaultSysTools.defaultNumThreads();

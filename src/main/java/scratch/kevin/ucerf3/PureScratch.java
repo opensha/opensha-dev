@@ -30,14 +30,20 @@ import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
+import org.opensha.commons.geo.json.FeatureProperties;
+import org.opensha.commons.geo.json.Geometry;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.logicTree.BranchWeightProvider;
+import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.DataUtils;
@@ -57,6 +63,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeC
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel.Tapered;
@@ -66,6 +73,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetai
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
@@ -1031,12 +1039,75 @@ public class PureScratch {
 		taperedCSVs.writeToFile(new File("/tmp/u3_fm3_1_tapered_dsr.csv"));
 	}
 	
+	private static void test140() throws IOException {
+//		FeatureProperties props = new FeatureProperties();
+//		Feature feature = new Feature(new Geometry.Point(new Location(34, -118)), props);
+//		
+//		XY_DataSet xy1 = new DefaultXY_DataSet();
+//		xy1.set(3d, 5d);
+//		xy1.set(4d, 76d);
+//		
+//		props.set("TestFunc1", xy1);
+//		props.set("Color", Color.BLUE);
+//		IncrementalMagFreqDist mfd = new GutenbergRichterMagFreqDist(1d, 5d, 5d, 10d, 10);
+//		props.set("MFD", mfd);
+//		props.set("Name", "My feature");
+//		
+//		String json = feature.toJSON();
+//		System.out.println(json);
+//		
+//		Feature feature2 = Feature.fromJSON(json);
+		Feature feature2 = Feature.read(new File("/tmp/test.json"));
+		
+		for (String key : feature2.properties.keySet()) {
+			Object obj = feature2.properties.get(key);
+			if (obj == null)
+				System.out.println(key+": "+null);
+			else
+				System.out.println(key+": "+obj.getClass());
+		}
+	}
+	
+	private static void test141() throws IOException {
+		File runDir = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2022_07_21-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-"
+				+ "ThreshAvgIterRelGR-IncludeThruCreep");
+		LogicTree<?> tree = LogicTree.read(new File(runDir, "logic_tree.json"));
+		
+		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(new BranchWeightProvider.OriginalWeights());
+		
+		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v1p4;
+//		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
+		NSHM23_DeformationModels dm = NSHM23_DeformationModels.EVANS;
+		
+		File resultsDir = new File(runDir, "results");
+		
+		for (LogicTreeBranch<?> branch : tree) {
+			if (branch.hasValue(fm) && branch.hasValue(dm)) {
+				File branchDir = new File(resultsDir, branch.buildFileName());
+				Preconditions.checkState(branchDir.exists(), "Branch dir doesn't exist: %s", branchDir.getName());
+				File solFile = new File(branchDir, "solution.zip");
+				Preconditions.checkState(branchDir.exists(), "Branch solution doesn't exist: %s", solFile.getAbsolutePath());
+				FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+				// re-attach modules
+				sol.getRupSet().removeModuleInstances(RegionsOfInterest.class);
+				fm.attachDefaultModules(sol.getRupSet());
+				
+				baCreator.addSolution(sol, branch);
+			}
+		}
+		
+		FaultSystemSolution baSol = baCreator.build();
+		
+		baSol.write(new File(runDir, "results_"+fm.getFilePrefix()+"_CoulombRupSet_"+dm.getFilePrefix()+"_branch_averaged.zip"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test139();
+		test141();
 	}
 
 }

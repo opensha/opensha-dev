@@ -17,6 +17,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurat
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
@@ -75,6 +76,13 @@ public class HardcodedInversionFactoryRunner {
 		
 		branch.setValue(RupturePlausibilityModels.AZIMUTHAL_REDUCED);
 		dirName += "-az_reduced";
+		
+//		branch.setValue(NSHM23_DeformationModels.ZENG);
+//		dirName += "-zeng";
+		branch.setValue(NSHM23_DeformationModels.EVANS);
+		dirName += "-evans";
+//		branch.setValue(NSHM23_DeformationModels.SHEN_BIRD);
+//		dirName += "-shen_bird";
 		
 //		branch.setValue(ScalingRelationships.MEAN_UCERF3);
 //		dirName += "-u3_ave_scale";
