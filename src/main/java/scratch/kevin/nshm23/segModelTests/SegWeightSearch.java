@@ -24,7 +24,7 @@ public class SegWeightSearch {
 		List<DistDependentJumpProbabilityCalc> calcs = new ArrayList<>();
 		List<Double> weights = new ArrayList<>();
 		
-		DistDependentJumpProbabilityCalc target = new Shaw07JumpDistProb(1, 3d);
+//		DistDependentJumpProbabilityCalc target = new Shaw07JumpDistProb(1, 3d);
 		
 //		calcs.add(new Shaw07JumpDistProb(1, 1d));
 //		weights.add(0.15);
@@ -53,22 +53,37 @@ public class SegWeightSearch {
 //		calcs.add(new Shaw07JumpDistProb(1, 5d));
 //		weights.add(0.10);
 		
-		calcs.add(new Shaw07JumpDistProb(1, 2d));
-		weights.add(0.25);
+//		calcs.add(new Shaw07JumpDistProb(1, 2d));
+//		weights.add(0.25);
+//		
+//		calcs.add(new Shaw07JumpDistProb(1, 3d));
+//		weights.add(0.6);
+//		
+//		calcs.add(new Shaw07JumpDistProb(1, 5d));
+//		weights.add(0.15);
+//		
+//		calcs.add(new BiasiWesnouskyJumpProb.BiasiWesnousky2016SSJumpProb(1d));
+//		weights.add(0.2);
 		
-		calcs.add(new Shaw07JumpDistProb(1, 3d));
-		weights.add(0.6);
+		DistDependentJumpProbabilityCalc target = Shaw07JumpDistProb.forHorzOffset(1d, 3d, 2d);
 		
-		calcs.add(new Shaw07JumpDistProb(1, 5d));
-		weights.add(0.15);
+		calcs.add(Shaw07JumpDistProb.forHorzOffset(1d, 2d, 1d));
+//		calcs.add(new Shaw07JumpDistProb(1d, 2d));
+//		weights.add(0.3);
+		weights.add(1d);
 		
-		calcs.add(new BiasiWesnouskyJumpProb.BiasiWesnousky2016SSJumpProb(1d));
-		weights.add(0.2);
+		calcs.add(Shaw07JumpDistProb.forHorzOffset(1d, 3d, 2d));
+//		weights.add(0.5);
+		weights.add(1d);
+		
+		calcs.add(Shaw07JumpDistProb.forHorzOffset(1d, 4d, 3d));
+//		weights.add(0.2);
+		weights.add(1d);
 		
 		plotWeights(calcs, weights, target);
 	}
 	
-	private static final EvenlyDiscretizedFunc xVals = new EvenlyDiscretizedFunc(0d, 15d, 100);
+	private static final EvenlyDiscretizedFunc xVals = new EvenlyDiscretizedFunc(0d, 15d, 5000);
 	
 	private static EvenlyDiscretizedFunc calcWeighted(List<DistDependentJumpProbabilityCalc> calcs, List<Double> weights) {
 		EvenlyDiscretizedFunc weightFunc = new EvenlyDiscretizedFunc(xVals.getMinX(), xVals.getMaxX(), xVals.size());
@@ -93,9 +108,17 @@ public class SegWeightSearch {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		EvenlyDiscretizedFunc targetFunc = new EvenlyDiscretizedFunc(xVals.getMinX(), xVals.getMaxX(), xVals.size());
-		
 		EvenlyDiscretizedFunc weightFunc = calcWeighted(calcs, weights);
+		
+		for (DistDependentJumpProbabilityCalc calc : calcs) {
+			EvenlyDiscretizedFunc subFunc = new EvenlyDiscretizedFunc(xVals.getMinX(), xVals.getMaxX(), xVals.size());
+			for (int j=0; j<subFunc.size(); j++)
+				subFunc.set(j, calc.calcJumpProbability(subFunc.getX(j)));
+			funcs.add(subFunc);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
+		}
+		
+		EvenlyDiscretizedFunc targetFunc = new EvenlyDiscretizedFunc(xVals.getMinX(), xVals.getMaxX(), xVals.size());
 		
 		for (int j=0; j<targetFunc.size(); j++)
 			targetFunc.set(j, target.calcJumpProbability(targetFunc.getX(j)));

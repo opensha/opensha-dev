@@ -35,14 +35,16 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.Nonnegati
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSect;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
@@ -72,6 +74,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		boolean strictSeg = false;
 		double segTransMaxDist = 3d;
 		boolean hazardGridded = false;
+		boolean forceRequiredNonzeroWeight = false;
 		
 		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
 		int remoteTotalThreads = 20;
@@ -221,8 +224,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		levels.add(NSHM23_LogicTreeBranch.SCALE);
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
-			
-		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
 		
 		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
@@ -237,6 +238,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SegWeight100.class;
 //		dirName += "-seg_weight_100";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SegWeight1000.class;
+//		dirName += "-seg_weight_1000";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SegWeight10000.class;
+//		dirName += "-seg_weight_10000";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
 //		dirName += "-no_reweight_use_prev";
@@ -289,11 +296,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-classic_sa";
 //		extraArgs.add("--cooling-schedule "+CoolingScheduleType.CLASSICAL_SA.name());
 		
+		forceRequiredNonzeroWeight = true;
 		LogicTreeNode[] required = {
+				// FAULT MODELS
 //				FaultModels.FM3_1,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 				NSHM23_FaultModels.NSHM23_v1p4,
 
+				// RUPTURE SETS
 				RupturePlausibilityModels.COULOMB,
 //				RupturePlausibilityModels.COULOMB_5km,
 //				RupturePlausibilityModels.AZIMUTHAL,
@@ -301,30 +311,42 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				RupturePlausibilityModels.UCERF3,
 //				RupturePlausibilityModels.UCERF3_REDUCED,
 				
+				// DEFORMATION MODELS
 //				U3_UncertAddDeformationModels.U3_ZENG,
+//				NSHM23_DeformationModels.AVERAGE,
 				
+				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
+				NSHM23_ScalingRelationships.AVERAGE,
 				
+				// SLIP ALONG RUPTURE
 				SlipAlongRuptureModels.UNIFORM,
 //				SlipAlongRuptureModels.TAPERED,
 				
+				// SUB-SECT CONSTRAINT
 				SubSectConstraintModels.TOT_NUCL_RATE,
 //				SubSectConstraintModels.NUCL_MFD,
 				
+				// SUB-SEIS MO REDUCTION
 				SubSeisMoRateReductions.SUB_B_1,
 //				SubSeisMoRateReductions.NONE,
 //				SubSeisMoRateReductions.SYSTEM_AVG,
 //				SubSeisMoRateReductions.SYSTEM_AVG_SUB_B_1,
 				
+				// SUPRA-SEIS-B
 //				SupraSeisBValues.B_0p8,
 				
-				SegmentationModels.SHAW_R0_3,
+				// SEGMENTATION
+//				SegmentationModels.SHAW_R0_3,
+//				NSHM23_SegmentationModels.AVERAGE,
 				
+				// SEG-SHIFT
 //				DistDependSegShift.NONE,
 //				DistDependSegShift.ONE_KM,
-				DistDependSegShift.TWO_KM,
+//				DistDependSegShift.TWO_KM,
 //				DistDependSegShift.THREE_KM,
 				
+				// SEG ADJUSTMENT
 //				SegmentationMFD_Adjustment.NONE,
 //				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
 //				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG,
@@ -335,6 +357,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SegmentationMFD_Adjustment.GREEDY_SELF_CONTAINED,
 //				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_MATCH_STRICT,
 				
+				// CREEPING SECTION
 				RupsThroughCreepingSect.INCLUDE,
 //				RupsThroughCreepingSect.EXCLUDE,
 				};
@@ -344,6 +367,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * END NSHM23 logic tree
 		 */
+		
+		LogicTree<LogicTreeNode> logicTree;
+		if (forceRequiredNonzeroWeight)
+			logicTree = LogicTree.buildExhaustive(levels, true, new BranchWeightProvider.NodeWeightOverrides(required, 1d));
+		else
+			logicTree = LogicTree.buildExhaustive(levels, true);
 		
 		int rounds = 2000;
 		String completionArg = null;
@@ -517,7 +546,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				if (branchNameHash.contains(baseName))
 					continue;
 				branchNameHash.add(baseName);
-				for (SegmentationModels segModel : SegmentationModels.values()) {
+				for (ShawSegmentationModels segModel : ShawSegmentationModels.values()) {
 					if (segModel.getNodeWeight(modBranch) > 0d) {
 						LogicTreeBranch<LogicTreeNode> fullBranch = modBranch.copy();
 						fullBranch.setValue(segModel);
@@ -559,5 +588,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			pbsWrite.writeScript(new File(modLocalDir, "batch_hazard.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 		}
 	}
+	
+	
 
 }

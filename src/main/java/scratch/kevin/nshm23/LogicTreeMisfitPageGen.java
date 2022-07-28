@@ -87,7 +87,9 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_05_12-nshm23_u3_hybrid_branches-no_mfd_sigma_data_adj-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		File mainDir = new File(invDir, "2022_05_16-nshm23_u3_hybrid_branches-default_uncert_0.05-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		File mainDir = new File(invDir, "2022_05_24-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg");
-		File mainDir = new File(invDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+//		File mainDir = new File(invDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+//		File mainDir = new File(invDir, "2022_07_21-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+		File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		boolean currentWeights = true;

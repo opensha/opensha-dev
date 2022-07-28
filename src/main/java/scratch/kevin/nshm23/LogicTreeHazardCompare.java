@@ -46,7 +46,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 
 import com.google.common.base.Preconditions;
@@ -200,13 +200,22 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_05_20-nshm23_u3_hybrid_branches-test_scale_rels-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		String mainName = "NSHM23 Draft, Test Scale Rels";
 		
-		File mainDir = new File(invDir, "2022_07_21-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+//		File mainDir = new File(invDir, "2022_07_23-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+		File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
 		String mainName = "NSHM23 Draft";
 		
 		LogicTreeNode[] subsetNodes = null;
-		File compDir = null;
-		String compName = null;
-		File outputDir = new File(mainDir, "hazard_maps");
+		LogicTreeNode[] compSubsetNodes = null;
+//		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
+//		File compDir = null;
+//		String compName = null;
+//		File outputDir = new File(mainDir, "hazard_maps");
+//		File compDir = new File(invDir, "2022_07_23-nshm23_branches-no_seg-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-IncludeThruCreep");
+//		String compName = "No Segmentation";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
+		File compDir = new File(invDir, "2022_07_23-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+		String compName = "Prev Segmentation";
+		File outputDir = new File(mainDir, "hazard_maps_comp_prev_seg");
 //		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
 //		String compName = "UCERF3 As Published";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
@@ -235,7 +244,6 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2022_05_20-nshm23_u3_hybrid_branches-test_scale_rels-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		String compName = "UCERF3 Full Segmented";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_fully_segmented");
-		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
 		
 		/**
 		 * NSHM18 ingredients

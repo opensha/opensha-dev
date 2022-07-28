@@ -47,10 +47,10 @@ public class HardcodedInversionFactoryRunner {
 
 //		InversionConfigurationFactory factory = new U3InversionConfigFactory.ForceNewPaleo();
 //		dirName += "-u3-new_paleo";
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
+		dirName += "-nshm23-full_sys";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-//		dirName += "-nshm23";
-		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-		dirName += "-nshm23-cluster_specific";
+//		dirName += "-nshm23-cluster_specific";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
 //		dirName += "-nshm23-cluster_specific-new_paleo";
 		
@@ -79,8 +79,8 @@ public class HardcodedInversionFactoryRunner {
 		
 //		branch.setValue(NSHM23_DeformationModels.ZENG);
 //		dirName += "-zeng";
-		branch.setValue(NSHM23_DeformationModels.EVANS);
-		dirName += "-evans";
+//		branch.setValue(NSHM23_DeformationModels.EVANS);
+//		dirName += "-evans";
 //		branch.setValue(NSHM23_DeformationModels.SHEN_BIRD);
 //		dirName += "-shen_bird";
 		

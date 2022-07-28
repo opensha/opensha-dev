@@ -31,6 +31,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.Location;
@@ -41,8 +42,11 @@ import org.opensha.commons.geo.json.Geometry;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.logicTree.BranchWeightProvider;
+import org.opensha.commons.logicTree.BranchWeightProvider.OriginalWeights;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
@@ -65,9 +69,11 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel.Tapered;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetailPlots;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
@@ -80,11 +86,13 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSeg
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -1102,12 +1110,210 @@ public class PureScratch {
 		baSol.write(new File(runDir, "results_"+fm.getFilePrefix()+"_CoulombRupSet_"+dm.getFilePrefix()+"_branch_averaged.zip"));
 	}
 	
+	private static void test142() throws IOException {
+		File runDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions/"
+				+ "2022_07_23-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+		LogicTree<?> tree = LogicTree.read(new File(runDir, "logic_tree.json"));
+		
+		File resultsDir = new File(runDir, "results");
+		
+		for (LogicTreeBranch<?> branch : tree) {
+			File branchDir = new File(resultsDir, branch.buildFileName());
+			Preconditions.checkState(branchDir.exists(), "Branch dir doesn't exist: %s", branchDir.getName());
+			File solFile = new File(branchDir, "solution.zip");
+			Preconditions.checkState(branchDir.exists(), "Branch solution doesn't exist: %s", solFile.getAbsolutePath());
+			FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+			
+			InversionTargetMFDs targetMFDs = sol.getRupSet().requireModule(InversionTargetMFDs.class);
+			
+			List<? extends IncrementalMagFreqDist> supraSeisNuclMFDs = targetMFDs.getOnFaultSupraSeisNucleationMFDs();
+			for (int i=0; i<supraSeisNuclMFDs.size(); i++) {
+				IncrementalMagFreqDist supraMFD = supraSeisNuclMFDs.get(i);
+				if (!(supraMFD instanceof UncertainIncrMagFreqDist)) {
+					System.out.println(branch);
+					System.out.println("Section "+i+" is of type "+(supraMFD == null ? "null" : supraMFD.getClass()));
+					System.out.println(supraMFD);
+					System.out.flush();
+					System.exit(1);
+				}
+			}
+		}
+	}
+	
+	private static void test143() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/solution.zip"));
+		
+		InversionTargetMFDs mfds = sol.getRupSet().requireModule(InversionTargetMFDs.class);
+		
+		List<? extends IncrementalMagFreqDist> supraMFDs = mfds.getOnFaultSupraSeisNucleationMFDs();
+		
+		int sectIndex = 3707;
+		IncrementalMagFreqDist mfd = supraMFDs.get(sectIndex);
+		System.out.println("MFD type: "+mfd.getClass());
+		System.out.println(mfd);
+		SectSlipRates slipRates = sol.getRupSet().getSectSlipRates();
+		System.out.println("Target for "+sol.getRupSet().getFaultSectionData(sectIndex).getSectionName()+": "
+				+slipRates.getSlipRate(sectIndex)+" +/- "+slipRates.getSlipRateStdDev(sectIndex));
+	}
+	
+	private static void test144() throws IOException {
+		File runDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions/"
+				+ "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
+		LogicTree<?> tree = LogicTree.read(new File(runDir, "logic_tree.json"));
+		
+		File outputDir = new File(runDir, "partial_bas");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		NSHM23_DeformationModels[] restrictDMs = { NSHM23_DeformationModels.EVANS,
+				NSHM23_DeformationModels.GEOLOGIC, NSHM23_DeformationModels.POLLITZ };
+		
+		OriginalWeights weightProv = new BranchWeightProvider.OriginalWeights();
+		Map<NSHM23_SegmentationModels, BranchAverageSolutionCreator> segBACreators = new HashMap<>();
+		BranchAverageSolutionCreator fullCreator = new BranchAverageSolutionCreator(weightProv);
+		
+		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v1p4;
+		
+		File resultsDir = new File(runDir, "results");
+		
+		for (LogicTreeBranch<?> branch : tree) {
+			boolean hasDM = false;
+			for (NSHM23_DeformationModels dm : restrictDMs) {
+				if (branch.hasValue(dm)) {
+					hasDM = true;
+					break;
+				}
+			}
+			if (branch.hasValue(fm) && hasDM) {
+				File branchDir = new File(resultsDir, branch.buildFileName());
+				Preconditions.checkState(branchDir.exists(), "Branch dir doesn't exist: %s", branchDir.getName());
+				File solFile = new File(branchDir, "solution.zip");
+				Preconditions.checkState(branchDir.exists(), "Branch solution doesn't exist: %s", solFile.getAbsolutePath());
+				FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+				// re-attach modules
+				sol.getRupSet().removeModuleInstances(RegionsOfInterest.class);
+				fm.attachDefaultModules(sol.getRupSet());
+				
+				fullCreator.addSolution(sol, branch);
+				NSHM23_SegmentationModels segModel = branch.requireValue(NSHM23_SegmentationModels.class);
+				BranchAverageSolutionCreator segBACreator = segBACreators.get(segModel);
+				if (segBACreator == null) {
+					segBACreator = new BranchAverageSolutionCreator(weightProv);
+					segBACreators.put(segModel, segBACreator);
+				}
+				segBACreator.addSolution(sol, branch);
+			}
+		}
+		
+		FaultSystemSolution baSol = fullCreator.build();
+		
+		baSol.write(new File(outputDir, "results_"+fm.getFilePrefix()+"_CoulombRupSet_branch_averaged.zip"));
+		
+		for (NSHM23_SegmentationModels segModel : segBACreators.keySet()) {
+			FaultSystemSolution segSol = segBACreators.get(segModel).build();
+			segSol.write(new File(outputDir, "results_"+fm.getFilePrefix()+"_CoulombRupSet_"+segModel.getFilePrefix()+"_branch_averaged.zip"));
+		}
+	}
+	
+	private static void test145() throws IOException {
+		int sectIndex = 4412;
+//		int sectIndex = 4411;
+		
+		File baDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR"
+				+ "-IncludeThruCreep/node_branch_averaged");
+		
+		List<FaultSystemSolution> sols = new ArrayList<>();
+		List<String> names = new ArrayList<>();
+		List<Color> colors = new ArrayList<>();
+		
+		sols.add(FaultSystemSolution.load(new File(baDir, "SegModel_LowSeg.zip")));
+		names.add("Low-Seg");
+		colors.add(Color.GREEN.darker());
+		
+		sols.add(FaultSystemSolution.load(new File(baDir, "SegModel_MidSeg.zip")));
+		names.add("Mid-Seg");
+		colors.add(Color.BLUE.darker());
+		
+		sols.add(FaultSystemSolution.load(new File(baDir, "SegModel_HighSeg.zip")));
+		names.add("High-Seg");
+		colors.add(Color.RED.darker());
+		
+		List<IncrementalMagFreqDist> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		for (int i=0; i<sols.size(); i++) {
+			FaultSystemSolution sol = sols.get(i);
+			String name = names.get(i);
+			Color color = colors.get(i);
+			
+			InversionTargetMFDs targets = sol.getRupSet().getModule(InversionTargetMFDs.class);
+			
+			EvenlyDiscretizedFunc refMFD;
+			if (targets != null) {
+				IncrementalMagFreqDist target = targets.getOnFaultSupraSeisNucleationMFDs().get(sectIndex);
+				refMFD = target;
+				target.setName(name+" Target");
+				
+				funcs.add(target);
+				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, color));
+			} else {
+				refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(sol.getRupSet());
+			}
+			IncrementalMagFreqDist nucl = sol.calcNucleationMFD_forSect(
+					sectIndex, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
+			nucl.setName(name+" Nucl");
+			IncrementalMagFreqDist partic = sol.calcParticipationMFD_forSect(
+					sectIndex, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
+			partic.setName(name+" Partic");
+			
+			funcs.add(nucl);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, color));
+			
+			funcs.add(partic);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
+			
+			if (sol.hasModule(SolutionSlipRates.class)) {
+				SolutionSlipRates solSlips = sol.getModule(SolutionSlipRates.class);
+				SectSlipRates targetSlips = sol.getRupSet().getModule(SectSlipRates.class);
+				
+				double solSlip = solSlips.get(sectIndex)*1e3;
+				double targetSlip = targetSlips.getSlipRate(sectIndex)*1e3;
+				double targetSD = targetSlips.getSlipRateStdDev(sectIndex)*1e3;
+				double z = (solSlip - targetSlip)/targetSD;
+				
+				System.out.println(name+" Slip Rates");
+				System.out.println("\tTarget: "+(float)targetSlip+" +/- "+(float)targetSD);
+				System.out.println("\tSolution: "+(float)solSlip+"\tz="+(float)z);
+			}
+		}
+		
+		String title = sectIndex+". "+sols.get(0).getRupSet().getFaultSectionData(sectIndex).getSectionName();
+		
+		for (boolean cumulative : new boolean[] {false, true}) {
+			List<DiscretizedFunc> myFuncs = new ArrayList<>();
+			if (cumulative) {
+				for (IncrementalMagFreqDist func : funcs)
+					myFuncs.add(func.getCumRateDistWithOffset());
+			} else {
+				myFuncs.addAll(funcs);
+			}
+			PlotSpec spec = new PlotSpec(myFuncs, chars, title, "Magnitude",
+					cumulative ? "Cumulative Rate" : "Incremental Rate");
+			spec.setLegendVisible(true);
+			GraphWindow gw = new GraphWindow(spec);
+			gw.setYLog(true);
+			gw.setAxisRange(6d, 7.3, 1e-7, cumulative ? 1e-3 : 1e-4);
+			gw.setVisible(true);
+			gw.setDefaultCloseOperation(GraphWindow.EXIT_ON_CLOSE);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test141();
+		test145();
 	}
 
 }

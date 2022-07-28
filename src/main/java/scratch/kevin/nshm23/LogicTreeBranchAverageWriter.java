@@ -33,8 +33,9 @@ import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSect;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 
@@ -87,14 +88,15 @@ public class LogicTreeBranchAverageWriter {
 //		File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		File mainDir = new File(invDir, "2022_06_01-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg");
 //		File mainDir = new File(invDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
-		File mainDir = new File(invDir, "2022_07_21-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+		File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep/");
 		File resultsFile = new File(mainDir, "results.zip");
 		File fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
 		
 //		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
 		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
 		restrictBAClasses.add(NSHM23_DeformationModels.class);
-		restrictBAClasses.add(NSHM23_ScalingRelationships.class);
+//		restrictBAClasses.add(NSHM23_ScalingRelationships.class);
+		restrictBAClasses.add(NSHM23_SegmentationModels.class);
 //		restrictBAClasses.add(MaxJumpDistModels.class);
 //		restrictBAClasses.add(SegmentationModels.class);
 //		restrictBAClasses.add(SubSectConstraintModels.class);
@@ -118,7 +120,8 @@ public class LogicTreeBranchAverageWriter {
 		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
 		
 		FaultSystemSolution fullBA = fullBAFile == null ? null : FaultSystemSolution.load(fullBAFile);
-		PlotLevel plt = PlotLevel.FULL;
+//		PlotLevel plt = PlotLevel.FULL;
+		PlotLevel plt = PlotLevel.DEFAULT;
 		boolean compWithLoaded = false;
 		boolean skipSectBySect = true;
 		

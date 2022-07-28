@@ -38,7 +38,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SegmentationCal
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -287,7 +287,7 @@ public class MPJ_StrictSegLogicTreeTranslation extends MPJTaskCalculator {
 				
 				FileUtils.deleteRecursive(tempDir);
 				
-				SegmentationModels segModel = branch.requireValue(SegmentationModels.class);
+				ShawSegmentationModels segModel = branch.requireValue(ShawSegmentationModels.class);
 				Shaw07JumpDistProb shawProb = (Shaw07JumpDistProb)segModel.getModel(sols.get(0).getRupSet(), null);
 				double r0 = shawProb.getR0();
 				
