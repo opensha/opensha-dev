@@ -31,17 +31,17 @@ import com.google.common.io.Files;
  */
 public enum WasatchSlipRatesEnum {
 	
-	UNIFORM_MEAN("UNIFORM_MEAN", "src/scratch/alessandro/data/uniform_deformation_model_0703.txt", 1.0) {},
+	UNIFORM_MEAN("UNIFORM_MEAN", "src/main/java/scratch/alessandro/data/uniform_deformation_model_0703.txt", 1.0) {},
 	
-	UNIFORM_LOWER("UNIFORM_LOWER", "src/scratch/alessandro/data/uniform_deformation_model_0703.txt", 0.76) {},
+	UNIFORM_LOWER("UNIFORM_LOWER", "src/main/java/scratch/alessandro/data/uniform_deformation_model_0703.txt", 0.76) {},
 
-	UNIFORM_UPPER("UNIFORM_UPPER", "src/scratch/alessandro/data/uniform_deformation_model_0703.txt", 1.28) {},
+	UNIFORM_UPPER("UNIFORM_UPPER", "src/main/java/scratch/alessandro/data/uniform_deformation_model_0703.txt", 1.28) {},
 	
-	NON_UNIFORM_MEAN("NON_UNIFORM_MEAN", "src/scratch/alessandro/data/nonuniform_deformation_model_0703.txt", 1.0) {},
+	NON_UNIFORM_MEAN("NON_UNIFORM_MEAN", "src/main/java/scratch/alessandro/data/nonuniform_deformation_model_0703.txt", 1.0) {},
 	
-	NON_UNIFORM_LOWER("NON_UNIFORM_LOWER", "src/scratch/alessandro/data/nonuniform_deformation_model_0703.txt", 0.76) {},
+	NON_UNIFORM_LOWER("NON_UNIFORM_LOWER", "src/main/java/scratch/alessandro/data/nonuniform_deformation_model_0703.txt", 0.76) {},
 
-	NON_UNIFORM_UPPER("NON_UNIFORM_UPPER", "src/scratch/alessandro/data/nonuniform_deformation_model_0703.txt", 1.28) {};
+	NON_UNIFORM_UPPER("NON_UNIFORM_UPPER", "src/main/java/scratch/alessandro/data/nonuniform_deformation_model_0703.txt", 1.28) {};
 
 
 	private String name;

@@ -68,8 +68,8 @@ public class WasatchInversion {
 
 	final static boolean D = true;	// debugging flag
 	
-	public final static String ROOT_PATH = "src/scratch/alessandro/";
-	final static String ROOT_DATA_DIR = "src/scratch/alessandro/data/"; // where to find the data
+	public final static String ROOT_PATH = "src/main/java/scratch/alessandro/";
+	final static String ROOT_DATA_DIR = "src/main/java/scratch/alessandro/data/"; // where to find the data
 
 	
 	// These values are the same for all fault sections
@@ -232,7 +232,7 @@ public class WasatchInversion {
 
 
 			// Now read section rupture matrix
-			file = new File("src/scratch/alessandro/data/Gsr_matrix_new.txt");
+			file = new File("src/main/java/scratch/alessandro/data/Gsr_matrix_new.txt");
 			List<String> fileLines = Files.readLines(file, Charset.defaultCharset());
 			numRuptures = fileLines.size()-1;
 			rupSectionMatrix = new int[numSections][numRuptures];
