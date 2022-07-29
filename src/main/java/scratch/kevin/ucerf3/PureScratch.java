@@ -67,6 +67,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeC
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
@@ -75,19 +76,24 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
+import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
+import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetailPlots;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder.ParkfieldSelectionCriteria;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
@@ -1308,12 +1314,64 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test146() throws IOException {
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT.copy();
+		branch.setValue(RupturePlausibilityModels.AZIMUTHAL_REDUCED);
+		
+		int threads = 8;
+		
+		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, threads);
+		
+		File rupSetFile = new File("/tmp/rupture_set.zip");
+		rupSet.write(rupSetFile);
+		
+		rupSet = FaultSystemRupSet.load(rupSetFile);
+		PaleoseismicConstraintData data = rupSet.requireModule(PaleoseismicConstraintData.class);
+		
+		System.out.println("Prob model: "+data.getPaleoProbModel().getClass());
+		
+		InversionConfiguration config = factory.buildInversionConfig(rupSet, branch, threads);
+		config = InversionConfiguration.builder(config).avgThreads(4, TimeCompletionCriteria.getInMinutes(1))
+				.completion(TimeCompletionCriteria.getInMinutes(10)).build();
+		
+		FaultSystemSolution sol = Inversions.run(rupSet, config);
+		
+		sol.write(new File("/tmp/solution.zip"));
+		
+		ReportPageGen report = new ReportPageGen(rupSet, sol, "Test Solution", new File("/tmp/report"),
+				ReportPageGen.getDefaultSolutionPlots(PlotLevel.DEFAULT));
+		report.setReplot(true);
+		
+		report.generatePage();
+	}
+	
+	private static void test147() throws IOException {
+		File rupSetFile = new File("/tmp/rupture_set.zip");
+		
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(rupSetFile);
+		
+		for (ParkfieldSelectionCriteria criteria : ParkfieldSelectionCriteria.values()) {
+			System.out.println("Criteria: "+criteria);
+			List<Integer> parkfieldRups = NSHM23_ConstraintBuilder.findParkfieldRups(rupSet, criteria);
+			
+			System.out.println("Found "+parkfieldRups.size()+" ruptures");
+			for (int rupIndex : parkfieldRups) {
+				double mag = rupSet.getMagForRup(rupIndex);
+				System.out.println("\t"+rupIndex+". M="+(float)mag
+						+",\t"+rupSet.getSectionsIndicesForRup(rupIndex).size()+" sects");
+			}
+			System.out.println();
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test145();
+		test146();
 	}
 
 }
