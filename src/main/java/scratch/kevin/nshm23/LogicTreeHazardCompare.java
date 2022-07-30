@@ -204,8 +204,11 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
 //		String mainName = "NSHM23 Draft";
 		
-		File mainDir = new File(invDir, "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
-		String mainName = "NSHM23 Draft Subset";
+		File mainDir = new File(invDir, "2022_07_29-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+		String mainName = "NSHM23/U3 Draft";
+		
+//		File mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//		String mainName = "NSHM23 Draft Subset";
 		
 		LogicTreeNode[] subsetNodes = null;
 		LogicTreeNode[] compSubsetNodes = null;
@@ -217,11 +220,12 @@ public class LogicTreeHazardCompare {
 //		String compName = "No Segmentation";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
 //		File compDir = new File(invDir, "2022_07_23-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
-//		String compName = "Prev Segmentation";
-//		File outputDir = new File(mainDir, "hazard_maps_comp_prev_seg");
-		File compDir = new File(invDir, "2022_07_27-nshm23_branches-seg_weight_10000-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
-		String compName = "Prev Subset";
-		File outputDir = new File(mainDir, "hazard_maps_comp_prev_subset");
+		File compDir = new File(invDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+		String compName = "Prev Segmentation";
+		File outputDir = new File(mainDir, "hazard_maps_comp_prev_seg");
+//		File compDir = new File(invDir, "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
+//		String compName = "Prev Subset";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_prev_subset");
 //		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
 //		String compName = "UCERF3 As Published";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
