@@ -200,9 +200,12 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_05_20-nshm23_u3_hybrid_branches-test_scale_rels-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //		String mainName = "NSHM23 Draft, Test Scale Rels";
 		
-//		File mainDir = new File(invDir, "2022_07_23-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
-		File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
-		String mainName = "NSHM23 Draft";
+////		File mainDir = new File(invDir, "2022_07_23-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+//		File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
+//		String mainName = "NSHM23 Draft";
+		
+		File mainDir = new File(invDir, "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
+		String mainName = "NSHM23 Draft Subset";
 		
 		LogicTreeNode[] subsetNodes = null;
 		LogicTreeNode[] compSubsetNodes = null;
@@ -213,9 +216,12 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2022_07_23-nshm23_branches-no_seg-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-IncludeThruCreep");
 //		String compName = "No Segmentation";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
-		File compDir = new File(invDir, "2022_07_23-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
-		String compName = "Prev Segmentation";
-		File outputDir = new File(mainDir, "hazard_maps_comp_prev_seg");
+//		File compDir = new File(invDir, "2022_07_23-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+//		String compName = "Prev Segmentation";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_prev_seg");
+		File compDir = new File(invDir, "2022_07_27-nshm23_branches-seg_weight_10000-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
+		String compName = "Prev Subset";
+		File outputDir = new File(mainDir, "hazard_maps_comp_prev_subset");
 //		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
 //		String compName = "UCERF3 As Published";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
@@ -324,12 +330,14 @@ public class LogicTreeHazardCompare {
 
 		logCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-3d, 1d);
 		spreadCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0, 1d);
+		spreadCPT.setNanColor(Color.GRAY);
 		spreadDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
 		spreadDiffCPT.setNanColor(Color.GRAY);
 		pDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-100d, 100d);
 		pDiffCPT.setNanColor(Color.GRAY);
 		percentileCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, 100d);
 		percentileCPT.setNanColor(Color.BLACK);
+		percentileCPT.setBelowMinColor(Color.GRAY);
 		
 		ZipFile zip = new ZipFile(mapsZipFile);
 		
@@ -543,7 +551,15 @@ public class LogicTreeHazardCompare {
 		GriddedGeoDataSet ret = new GriddedGeoDataSet(gridReg, false);
 		
 		for (int i=0; i<ret.size(); i++) {
-			double val = cellDists[i].getInterpolatedFractile(percentile/100d);
+			double val;
+			if (cellDists[i].size() == 1) {
+				if (percentile == 50d)
+					val = cellDists[i].getX(0);
+				else
+					val = Double.NaN;
+			} else {
+				val = cellDists[i].getInterpolatedFractile(percentile/100d);
+			}
 			ret.set(i, val);
 		}
 		
@@ -560,7 +576,9 @@ public class LogicTreeHazardCompare {
 			DiscretizedFunc ncd = cellDists[i].getNormalizedCumDist();
 			
 			double percentile;
-			if (compVal < ncd.getMinX() || compVal > ncd.getMaxX()) {
+			if (cellDists[i].size() == 1) {
+				percentile = -1d;
+			} else if (compVal < ncd.getMinX() || compVal > ncd.getMaxX()) {
 				percentile = Double.NaN;
 			} else {
 				percentile = 100d * ncd.getInterpolatedY(compVal);

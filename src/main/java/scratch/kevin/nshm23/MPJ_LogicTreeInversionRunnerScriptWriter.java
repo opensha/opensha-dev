@@ -205,7 +205,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		levels = new ArrayList<>(levels);
 //		for (int i=levels.size(); --i>=0;)
-//			if (levels.get(i).getType().isAssignableFrom(SegmentationModels.class)
+//			if (levels.get(i).getType().isAssignableFrom(ShawSegmentationModels.class)
+//					|| levels.get(i).getType().isAssignableFrom(NSHM23_SegmentationModels.class)
 //					|| levels.get(i).getType().isAssignableFrom(SegmentationMFD_Adjustment.class)
 //					|| levels.get(i).getType().isAssignableFrom(DistDependSegShift.class))
 //				levels.remove(i);
@@ -317,7 +318,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
-				NSHM23_ScalingRelationships.AVERAGE,
+//				NSHM23_ScalingRelationships.AVERAGE,
 				
 				// SLIP ALONG RUPTURE
 				SlipAlongRuptureModels.UNIFORM,
@@ -358,7 +359,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_MATCH_STRICT,
 				
 				// CREEPING SECTION
-				RupsThroughCreepingSect.INCLUDE,
+//				RupsThroughCreepingSect.INCLUDE,
 //				RupsThroughCreepingSect.EXCLUDE,
 				};
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
@@ -386,7 +387,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		int invMins = (int)(invSecs/60d + 0.5);
 		if (ClusterSpecificInversionConfigurationFactory.class.isAssignableFrom(factoryClass))
 			invMins *= 2;
-		System.out.println("Estimate "+invMins+" minues per inversion");
+		System.out.println("Estimate "+invMins+" minutes per inversion");
 		
 //		String completionArg = "1m"; int invMins = 1;
 //		String completionArg = "10m"; int invMins = 10;
@@ -546,7 +547,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				if (branchNameHash.contains(baseName))
 					continue;
 				branchNameHash.add(baseName);
-				for (ShawSegmentationModels segModel : ShawSegmentationModels.values()) {
+				for (NSHM23_SegmentationModels segModel : NSHM23_SegmentationModels.values()) {
 					if (segModel.getNodeWeight(modBranch) > 0d) {
 						LogicTreeBranch<LogicTreeNode> fullBranch = modBranch.copy();
 						fullBranch.setValue(segModel);

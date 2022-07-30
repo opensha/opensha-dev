@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
@@ -53,9 +54,11 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
@@ -65,6 +68,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.Un
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
@@ -80,9 +84,12 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetailPlots;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
@@ -91,6 +98,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSeg
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
@@ -107,6 +115,7 @@ import org.opensha.sha.simulators.RSQSimEvent;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 
@@ -1348,22 +1357,181 @@ public class PureScratch {
 	}
 	
 	private static void test147() throws IOException {
-		File rupSetFile = new File("/tmp/rupture_set.zip");
+		File rupSetFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-"
+				+ "ThreshAvgIterRelGR-IncludeThruCreep/results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
+		RupSetScalingRelationship[] scales = NSHM23_ScalingRelationships.values();
 		
+//		File rupSetFile = new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip");
+//		RupSetScalingRelationship[] scales = ScalingRelationships.values();
+		
+		FaultSystemRupSet rawRupSet = FaultSystemRupSet.load(rupSetFile);
+		
+		for (RupSetScalingRelationship scale : scales) {
+			if (scale.getNodeWeight(null) == 0d)
+				continue;
+			FaultSystemRupSet rupSet = FaultSystemRupSet.buildFromExisting(rawRupSet).forScalingRelationship(scale).build();
+			
+			System.out.println("***********************");
+			System.out.println("Scaling relationship: "+scale.getName());
+			System.out.println("***********************");
+			for (ParkfieldSelectionCriteria criteria : ParkfieldSelectionCriteria.values()) {
+				System.out.println("Criteria: "+criteria);
+				List<Integer> parkfieldRups = NSHM23_ConstraintBuilder.findParkfieldRups(rupSet, criteria);
+				
+				System.out.println("Found "+parkfieldRups.size()+" ruptures");
+				for (int rupIndex : parkfieldRups) {
+					double mag = rupSet.getMagForRup(rupIndex);
+					System.out.println("\t"+rupIndex+". M="+(float)mag
+							+",\t"+rupSet.getSectionsIndicesForRup(rupIndex).size()+" sects");
+				}
+				System.out.println();
+			}
+			System.out.println("***********************");
+		}
+	}
+	
+	private static void test148() throws IOException {
+		File rupSetFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-"
+				+ "ThreshAvgIterRelGR-IncludeThruCreep/results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
 		FaultSystemRupSet rupSet = FaultSystemRupSet.load(rupSetFile);
 		
-		for (ParkfieldSelectionCriteria criteria : ParkfieldSelectionCriteria.values()) {
-			System.out.println("Criteria: "+criteria);
-			List<Integer> parkfieldRups = NSHM23_ConstraintBuilder.findParkfieldRups(rupSet, criteria);
-			
-			System.out.println("Found "+parkfieldRups.size()+" ruptures");
-			for (int rupIndex : parkfieldRups) {
-				double mag = rupSet.getMagForRup(rupIndex);
-				System.out.println("\t"+rupIndex+". M="+(float)mag
-						+",\t"+rupSet.getSectionsIndicesForRup(rupIndex).size()+" sects");
+		int printMod = 10;
+		
+		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, RupSetMapMaker.buildBufferedRegion(rupSet.getFaultSectionDataList()));
+		mapMaker.setWriteGeoJSON(false);
+		mapMaker.setWritePDFs(false);
+		
+		Stopwatch watch = Stopwatch.createStarted();
+		for (int i=0; i<100; i++) {
+			mapMaker.plot(new File("/tmp"), "test_map", "Test Map");
+			int cnt = i+1;
+			if (cnt % printMod == 0) {
+				double secs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+				double pps = (double)cnt/secs;
+				System.out.println("DONE "+cnt+", rate: "+(float)pps+" plots/sec");
 			}
-			System.out.println();
 		}
+		watch.stop();
+	}
+	
+	private static void test149() throws IOException {
+		Map<Integer, FaultSection> sects1p4 = NSHM23_FaultModels.NSHM23_v1p4.getFaultSectionIDMap();
+		Map<Integer, FaultSection> sects2 = NSHM23_FaultModels.NSHM23_v2.getFaultSectionIDMap();
+		
+		Map<NSHM23_DeformationModels, List<? extends FaultSection>> dmSects = new HashMap<>();
+		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values())
+			if (dm.getNodeWeight(null) > 0)
+				dmSects.put(dm, dm.build(NSHM23_FaultModels.NSHM23_v1p4));
+		
+		for (int id : new int[] {2922, 1098}) {
+			FaultSection sect1p4 = sects1p4.get(id);
+			FaultSection sect2 = sects2.get(id);
+			
+			System.out.println(id+". "+sect1p4.getName());
+			System.out.println("Trace, v1.4:");
+			for (Location loc : sect1p4.getFaultTrace())
+				System.out.println("\t"+(float)loc.getLatitude()+", "+(float)loc.getLongitude());
+			System.out.println("Trace, v2:");
+			for (Location loc : sect2.getFaultTrace())
+				System.out.println("\t"+(float)loc.getLatitude()+", "+(float)loc.getLongitude());
+			System.out.println();
+			
+			FaultSection s1 = sect1p4.clone();
+			s1.setSectionId(0);
+			FaultSection s2 = sect2.clone();
+			s2.setSectionId(1);
+			List<FaultSection> sects = List.of(s1, s2);
+			RupSetMapMaker mapMaker = new RupSetMapMaker(sects, RupSetMapMaker.buildBufferedRegion(sects));
+			
+			mapMaker.setWritePDFs(false);
+			mapMaker.setWriteGeoJSON(true);
+			mapMaker.plot(new File("/tmp"), "sect_"+id, sect2.getName()+" Debug");
+			
+			sects = List.of(s1);
+			mapMaker = new RupSetMapMaker(sects, RupSetMapMaker.buildBufferedRegion(sects));
+			mapMaker.setWritePDFs(false);
+			mapMaker.setWriteGeoJSON(false);
+			mapMaker.plot(new File("/tmp"), "sect_"+id+"_prev", sect2.getName()+", V1.4");
+			
+			s2.setSectionId(0);
+			sects = List.of(s2);
+			mapMaker = new RupSetMapMaker(sects, RupSetMapMaker.buildBufferedRegion(sects));
+			mapMaker.setWritePDFs(false);
+			mapMaker.setWriteGeoJSON(false);
+			mapMaker.plot(new File("/tmp"), "sect_"+id+"_new", sect2.getName()+", V2");
+		}
+		
+		for (int id : sects2.keySet()) {
+			FaultSection sect1p4 = sects1p4.get(id);
+			FaultSection sect2 = sects2.get(id);
+			
+			if (sect1p4 == null) {
+				System.err.println("ID mismatch, v1.4 didn't have "+id+". "+sect2.getName());
+			} else {
+				boolean bad = false;
+				if (!sect2.getFaultTrace().equals(sect1p4.getFaultTrace())) {
+					System.err.println("Trace mismatch for "+id+". "+sect2.getName());
+					bad = true;
+				}
+				if (sect2.getAveDip() != sect1p4.getAveDip()) {
+					System.err.println("Dip mismatch for "+id+". "+sect2.getName());
+					bad = true;
+				}
+				if (sect2.getAveRake() != sect1p4.getAveRake()) {
+					System.err.println("Rake mismatch for "+id+". "+sect2.getName()+": "+sect2.getAveRake()+" != "+sect1p4.getAveRake());
+					bad = true;
+				}
+				if (sect2.getOrigAveUpperDepth() != sect1p4.getOrigAveUpperDepth()) {
+					System.err.println("Upper depth mismatch for "+id+". "+sect2.getName());
+					bad = true;
+				}
+				if (sect2.getAveLowerDepth() != sect1p4.getAveLowerDepth()) {
+					System.err.println("Lower depth mismatch for "+id+". "+sect2.getName());
+					bad = true;
+				}
+				
+				if (bad) {
+					System.out.println("Average slip rates:");
+					for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values()) {
+						List<? extends FaultSection> dmSubSects = dmSects.get(dm);
+						if (dmSubSects != null) {
+							int count = 0;
+							double slipRate = 0d;
+							List<Double> rakes = new ArrayList<>();
+							for (FaultSection sect : dmSubSects) {
+								if (sect.getParentSectionId() == id) {
+									count++;
+									slipRate += sect.getOrigAveSlipRate();
+									rakes.add(sect.getAveRake());
+								}
+							}
+							
+							slipRate /= count;
+							double rake = FaultUtils.getInRakeRange(FaultUtils.getAngleAverage(rakes));
+							System.out.println("\t"+dm.getShortName()+": slip="+(float)slipRate+", rake="+(float)rake);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	private static void test150() throws IOException {
+		File rupSetFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-"
+				+ "ThreshAvgIterRelGR-IncludeThruCreep/results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(rupSetFile);
+		
+		int creepingID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "San", "Andreas", "Creeping");
+		int numThrough = 0;
+		for (ClusterRupture cRup : rupSet.requireModule(ClusterRuptures.class)) {
+			if (NSHM23_ConstraintBuilder.isRupThroughCreeping(creepingID, cRup))
+				numThrough++;
+		}
+		
+		System.out.println("Found "+numThrough+" / "+rupSet.getNumRuptures()+" ruptures through creeping");
 	}
 	
 	/**
@@ -1371,7 +1539,7 @@ public class PureScratch {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test146();
+		test149();
 	}
 
 }
