@@ -49,7 +49,7 @@ public class MaxDistSegComparisons {
 			parent = parent.getParentFile();
 		File outputDir = new File(parent, "seg_comparisons");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-		calc.plotShaw07Comparison(outputDir, "shaw_test", true, RateCombiner.MIN);
+		calc.plotDistDependComparison(outputDir, "shaw_test", true, RateCombiner.MIN);
 		double a = inputFile.getParentFile().getName().contains("-max_dist") ? MaxJumpDistModels.invertForWeights() : 1d;
 		for (MaxJumpDistModels maxDist : MaxJumpDistModels.values())
 			System.out.println(maxDist.getName()+": "+maxDist.getNodeWeight(null));

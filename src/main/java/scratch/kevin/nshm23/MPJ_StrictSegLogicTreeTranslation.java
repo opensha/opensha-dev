@@ -279,7 +279,7 @@ public class MPJ_StrictSegLogicTreeTranslation extends MPJTaskCalculator {
 					SegmentationCalculator calc = new SegmentationCalculator(
 							sol, cRups.getAll(), connStrat, distAzCalc, new double[] {0d});
 					String prefix = maxDist.name();
-					calc.plotShaw07Comparison(tempDir, maxDist.name(), false, RateCombiner.MIN);
+					calc.plotDistDependComparison(tempDir, maxDist.name(), false, RateCombiner.MIN);
 					File csvFile = new File(tempDir, prefix+"_supra_seis.csv");
 					
 					maxDists.add(maxDist);
