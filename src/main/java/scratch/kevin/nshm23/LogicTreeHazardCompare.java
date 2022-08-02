@@ -911,7 +911,7 @@ public class LogicTreeHazardCompare {
 						choiceWeights.get(choice).add(weights.get(i));
 					}
 					if (choiceMaps.size() > 1) {
-						lines.add("#### "+level.getName());
+						lines.add("#### "+level.getName()+", "+label);
 						lines.add(topLink); lines.add("");
 						HashMap<LogicTreeNode, GriddedGeoDataSet> choiceMeans = new HashMap<>();
 						for (LogicTreeNode choice : choiceMaps.keySet())
@@ -998,7 +998,7 @@ public class LogicTreeHazardCompare {
 		}
 		
 		// add TOC
-		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2, 3));
+		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2, 4));
 		lines.add(tocIndex, "## Table Of Contents");
 		
 		// write markdown
