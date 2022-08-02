@@ -274,6 +274,28 @@ public class LogicTreeHazardCompare {
 ////		File outputDir = new File(mainDir, "hazard_maps_comp_coulomb");
 //		LogicTreeNode[] compSubsetNodes = null;
 		
+		if (args.length > 0) {
+			// assume CLI instead
+			Preconditions.checkArgument(args.length == 3 || args.length == 5,
+					"USAGE: <primary-dir> <primary-name> [<comparison-dir> <comparison-name>] <output-dir>");
+			int cnt = 0;
+			mainDir = new File(args[cnt++]);
+			mainName = args[cnt++];
+			if (args.length > 3) {
+				compDir = new File(args[cnt++]);
+				compName = args[cnt++];
+			} else {
+				compDir = null;
+				compName = null;
+			}
+			outputDir = new File(args[cnt++]);
+			
+			subsetNodes = null;
+			compSubsetNodes = null;
+			currentWeights = false;
+			compCurrentWeights = false;
+		}
+		
 		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
 		
 		ReturnPeriods[] rps = ReturnPeriods.values();
