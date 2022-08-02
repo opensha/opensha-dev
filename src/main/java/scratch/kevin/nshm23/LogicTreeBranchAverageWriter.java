@@ -125,7 +125,11 @@ public class LogicTreeBranchAverageWriter {
 		
 		int totThreads = FaultSysTools.defaultNumThreads();
 		
-		int asyncThreads = Integer.min(8, totThreads);
+		int asyncThreads;
+		if (totThreads > 20)
+			asyncThreads = 8;
+		else
+			asyncThreads = Integer.min(4, totThreads);
 		boolean replot = true;
 		
 		HazardMapPlot.SPACING_DEFAULT = 0.2;
