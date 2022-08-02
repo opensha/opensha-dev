@@ -53,6 +53,8 @@ public class LogicTreeBranchAverageWriter {
 		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
 		LogicTreeNode[] restrictNodes = null;
 		
+		int totThreads = FaultSysTools.defaultNumThreads();
+		
 		if (args.length == 0) {
 			File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 			
@@ -117,13 +119,15 @@ public class LogicTreeBranchAverageWriter {
 //					FaultModels.FM3_1
 //			};
 		} else {
-			Preconditions.checkArgument(args.length == 3, "Usage: <dir> <results file> <full-BA file>");
+			Preconditions.checkArgument(args.length == 3 || args.length == 4,
+					"Usage: <dir> <results file> <full-BA file> [<threads>]");
 			mainDir = new File(args[0]);
 			resultsFile = new File(args[1]);
 			fullBAFile = new File(args[2]);
+			
+			if (args.length == 4)
+				totThreads = Integer.parseInt(args[3]);
 		}
-		
-		int totThreads = FaultSysTools.defaultNumThreads();
 		
 		int asyncThreads;
 		if (totThreads > 20)
