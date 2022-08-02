@@ -46,68 +46,82 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 public class LogicTreeBranchAverageWriter {
 
 	public static void main(String[] args) throws IOException {
-		File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
+		File mainDir;
+		File resultsFile;
+		File fullBAFile;
 		
-//		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-FM3_1-CoulombRupSet");
-//		File resultsFile = new File(mainDir, "results.zip");
-//		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
+		LogicTreeNode[] restrictNodes = null;
 		
-//		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-no_seg-FM3_1-CoulombRupSet");
-//		File resultsFile = new File(mainDir, "results.zip");
-//		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
-		
-//		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
-//		File resultsFile = new File(mainDir, "results.zip");
-//		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
-		
-//		File mainDir = new File(invDir, "2021_12_17-u3_branches-coulomb-FM3_1-5h");
-//		File resultsFile = new File(mainDir, "results.zip");
-//		File fullBAFile = new File(mainDir, "results_FM3_1_branch_averaged.zip");
-		
-//		File mainDir = new File(invDir, "2021_12_16-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-ZENGBB-Shaw09Mod-DsrUni-TotNuclRate-SubB1");
-//		File resultsFile = new File(mainDir, "results.zip");
-//		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
-		
-//		File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
-//		File resultsFile = new File(mainDir, "results.zip");
-//		File fullBAFile = new File(mainDir, "results_FM3_1_U3RupSet_branch_averaged.zip");
-		
-//		File mainDir = new File(invDir, "2022_01_19-nshm23_branches-reweighted_even_fit-CoulombRupSet-DsrUni-SubB1-ShawR0_3-5000ip");
-//		File resultsFile = new File(mainDir, "results.zip");
-//		File fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
-		
-//		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
-//		File resultsFile = new File(mainDir, "results.zip");
-//		File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
-		
-//		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-strict_cutoff_seg-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1");
-//		File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
-//		File mainDir = new File(invDir, "2022_06_01-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg");
-//		File mainDir = new File(invDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
-//		File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
-//		File mainDir = new File(invDir, "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
-		File mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-		File resultsFile = new File(mainDir, "results.zip");
-		File fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
-		
-//		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
-		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = new HashSet<>();
-		restrictBAClasses.add(NSHM23_DeformationModels.class);
-//		restrictBAClasses.add(NSHM23_ScalingRelationships.class);
-		restrictBAClasses.add(NSHM23_SegmentationModels.class);
-//		restrictBAClasses.add(MaxJumpDistModels.class);
-//		restrictBAClasses.add(SegmentationModels.class);
-//		restrictBAClasses.add(SubSectConstraintModels.class);
-//		restrictBAClasses.add(SupraSeisBValues.class);
-//		restrictBAClasses.add(RupsThroughCreepingSect.class);
-		
-		LogicTreeNode[] restrictNodes = {
-//				FaultModels.FM3_1
-		};
+		if (args.length == 0) {
+			File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
+			
+//			File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-FM3_1-CoulombRupSet");
+//			File resultsFile = new File(mainDir, "results.zip");
+//			File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+			
+//			File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-no_seg-FM3_1-CoulombRupSet");
+//			File resultsFile = new File(mainDir, "results.zip");
+//			File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+			
+//			File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
+//			File resultsFile = new File(mainDir, "results.zip");
+//			File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+			
+//			File mainDir = new File(invDir, "2021_12_17-u3_branches-coulomb-FM3_1-5h");
+//			File resultsFile = new File(mainDir, "results.zip");
+//			File fullBAFile = new File(mainDir, "results_FM3_1_branch_averaged.zip");
+			
+//			File mainDir = new File(invDir, "2021_12_16-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-ZENGBB-Shaw09Mod-DsrUni-TotNuclRate-SubB1");
+//			File resultsFile = new File(mainDir, "results.zip");
+//			File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+			
+//			File mainDir = new File(invDir, "2022_01_16-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
+//			File resultsFile = new File(mainDir, "results.zip");
+//			File fullBAFile = new File(mainDir, "results_FM3_1_U3RupSet_branch_averaged.zip");
+			
+//			File mainDir = new File(invDir, "2022_01_19-nshm23_branches-reweighted_even_fit-CoulombRupSet-DsrUni-SubB1-ShawR0_3-5000ip");
+//			File resultsFile = new File(mainDir, "results.zip");
+//			File fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
+			
+//			File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
+//			File resultsFile = new File(mainDir, "results.zip");
+//			File fullBAFile = new File(mainDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+			
+//			File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//			File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//			File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
+//			File mainDir = new File(invDir, "2022_02_27-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-2000ip");
+//			File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-strict_cutoff_seg-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1");
+//			File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
+//			File mainDir = new File(invDir, "2022_06_01-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg");
+//			File mainDir = new File(invDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
+//			File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
+//			File mainDir = new File(invDir, "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
+			mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+			resultsFile = new File(mainDir, "results.zip");
+			fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
+			
+//			HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
+			restrictBAClasses = new HashSet<>();
+			restrictBAClasses.add(NSHM23_DeformationModels.class);
+//			restrictBAClasses.add(NSHM23_ScalingRelationships.class);
+			restrictBAClasses.add(NSHM23_SegmentationModels.class);
+//			restrictBAClasses.add(MaxJumpDistModels.class);
+//			restrictBAClasses.add(SegmentationModels.class);
+//			restrictBAClasses.add(SubSectConstraintModels.class);
+//			restrictBAClasses.add(SupraSeisBValues.class);
+//			restrictBAClasses.add(RupsThroughCreepingSect.class);
+			
+//			restrictNodes = new LogicTreeNode[] {
+//					FaultModels.FM3_1
+//			};
+		} else {
+			Preconditions.checkArgument(args.length == 3, "Usage: <dir> <results file> <full-BA file>");
+			mainDir = new File(args[0]);
+			resultsFile = new File(args[1]);
+			fullBAFile = new File(args[2]);
+		}
 		
 		int totThreads = FaultSysTools.defaultNumThreads();
 		

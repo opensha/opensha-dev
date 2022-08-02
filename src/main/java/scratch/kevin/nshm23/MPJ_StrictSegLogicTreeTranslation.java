@@ -31,6 +31,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InfoModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityConfiguration;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.strategies.ClusterConnectionStrategy;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
@@ -38,6 +39,8 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SegmentationCal
 import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModelBranchNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 
 import com.google.common.base.Preconditions;
@@ -287,9 +290,23 @@ public class MPJ_StrictSegLogicTreeTranslation extends MPJTaskCalculator {
 				
 				FileUtils.deleteRecursive(tempDir);
 				
-				ShawSegmentationModels segModel = branch.requireValue(ShawSegmentationModels.class);
-				Shaw07JumpDistProb shawProb = (Shaw07JumpDistProb)segModel.getModel(sols.get(0).getRupSet(), null);
-				double r0 = shawProb.getR0();
+				SegmentationModelBranchNode segModel = branch.requireValue(
+						SegmentationModelBranchNode.class);
+				double r0;
+				if (segModel instanceof ShawSegmentationModels) {
+					Shaw07JumpDistProb shawProb = (Shaw07JumpDistProb)segModel.getModel(sols.get(0).getRupSet(), null);
+					r0 = shawProb.getR0();
+				} else if (segModel instanceof NSHM23_SegmentationModels) {
+					r0 = ((NSHM23_SegmentationModels)segModel).getShawR0();
+				} else {
+					// just try it
+					JumpProbabilityCalc model = segModel.getModel(sols.get(0).getRupSet(), null);
+					if (!(model instanceof Shaw07JumpDistProb))
+						model = segModel.getModel(null, null);
+					Preconditions.checkState(model instanceof Shaw07JumpDistProb,
+							"Couldn't get a Shaw07 from seg model: %s", segModel);
+					r0 = ((Shaw07JumpDistProb)model).getR0();
+				}
 				
 				List<Double> weights = new ArrayList<>();
 				Map<LogicTreeBranch<?>, Double> weightsMap = new HashMap<>();
