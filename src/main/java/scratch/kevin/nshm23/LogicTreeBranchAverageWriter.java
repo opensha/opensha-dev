@@ -54,6 +54,7 @@ public class LogicTreeBranchAverageWriter {
 		LogicTreeNode[] restrictNodes = null;
 		
 		int totThreads = FaultSysTools.defaultNumThreads();
+		int asyncThreads = -1;
 		
 		if (args.length == 0) {
 			File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
@@ -119,21 +120,24 @@ public class LogicTreeBranchAverageWriter {
 //					FaultModels.FM3_1
 //			};
 		} else {
-			Preconditions.checkArgument(args.length == 3 || args.length == 4,
-					"Usage: <dir> <results file> <full-BA file> [<threads>]");
+			Preconditions.checkArgument(args.length >= 3 && args.length <= 5,
+					"Usage: <dir> <results file> <full-BA file> [<threads> [<async-threads>]]");
 			mainDir = new File(args[0]);
 			resultsFile = new File(args[1]);
 			fullBAFile = new File(args[2]);
 			
-			if (args.length == 4)
+			if (args.length >= 4)
 				totThreads = Integer.parseInt(args[3]);
+			if (args.length >= 5)
+				asyncThreads = Integer.parseInt(args[4]);
 		}
 		
-		int asyncThreads;
-		if (totThreads > 20)
-			asyncThreads = 8;
-		else
-			asyncThreads = Integer.min(4, totThreads);
+		if (asyncThreads < 1) {
+			if (totThreads > 20)
+				asyncThreads = 8;
+			else
+				asyncThreads = Integer.min(4, totThreads);
+		}
 		boolean replot = true;
 		
 		HazardMapPlot.SPACING_DEFAULT = 0.2;
