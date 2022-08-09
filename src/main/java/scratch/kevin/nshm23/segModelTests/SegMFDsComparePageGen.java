@@ -89,9 +89,9 @@ public class SegMFDsComparePageGen {
 
 //		File primaryDir = new File(mainDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
 //		String primaryName = "Thresh-Avg";
-		File primaryDir = new File(mainDir, "2022_06_03-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgRelGR-IncludeThruCreep");
+		File primaryDir = new File(mainDir, "2022_08_08-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 		String primaryName = "Rel-GR-Thresh-Avg";
-		FaultSystemSolution primarySol = FaultSystemSolution.load(new File(primaryDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
+		FaultSystemSolution primarySol = FaultSystemSolution.load(new File(primaryDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
 		
 //		File compDir = new File(mainDir, "2022_05_25-nshm23_u3_hybrid_branches-strict_cutoff_seg-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-branch-translated-min3km");
 //		String compName = "Strict-Seg";
@@ -99,13 +99,13 @@ public class SegMFDsComparePageGen {
 //		File compDir = new File(mainDir, "2022_06_06-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-CappedRdst-IncludeThruCreep");
 //		String compName = "Capped-Redistribution";
 //		File outputDir = new File(primaryDir, "sect_targets_vs_capped_redist");
-//		File compDir = new File(mainDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
-//		String compName = "Thresh-Avg";
-//		File outputDir = new File(primaryDir, "sect_targets_vs_thresh_avg");
-		File compDir = new File(mainDir, "2022_06_07-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
-		String compName = "Rel-GR-Thresh-Avg-Iters";
-		File outputDir = new File(primaryDir, "sect_targets_vs_rel_gr_thresh_avg_iters");
-		FaultSystemSolution compSol = FaultSystemSolution.load(new File(compDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
+		File compDir = new File(mainDir, "2022_08_05-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvg");
+		String compName = "Thresh-Avg";
+		File outputDir = new File(primaryDir, "sect_targets_vs_thresh_avg");
+//		File compDir = new File(mainDir, "2022_06_07-nshm23_u3_hybrid_branches-cluster_specific_inversion-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
+//		String compName = "Rel-GR-Thresh-Avg-Iters";
+//		File outputDir = new File(primaryDir, "sect_targets_vs_rel_gr_thresh_avg_iters");
+		FaultSystemSolution compSol = FaultSystemSolution.load(new File(compDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
 		
 		FaultSystemRupSet rupSet = primarySol.getRupSet();
 		Preconditions.checkState(rupSet.isEquivalentTo(compSol.getRupSet()));
@@ -117,7 +117,10 @@ public class SegMFDsComparePageGen {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, ReportMetadata.detectRegion(rupSet));
+		Region mapRegion = ReportMetadata.detectRegion(rupSet);
+		if (mapRegion == null)
+			mapRegion = RupSetMapMaker.buildBufferedRegion(rupSet.getFaultSectionDataList());
+		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, mapRegion);
 		
 		IncrementalMagFreqDist defaultMFD = SolMFDPlot.initDefaultMFD(rupSet.getMinMag(), rupSet.getMaxMag());
 		Range mfdXRange = new Range(defaultMFD.getMinX()-0.5*defaultMFD.getDelta(),

@@ -40,6 +40,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultM
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SlipAlongRuptureModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSect;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
@@ -82,6 +83,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		int remoteTotalMemGB = 50;
 		String queue = "scec";
 		int nodes = 36;
+//		int nodes = 19;
 		double itersPerSec = 200000;
 		int runsPerBranch = 1;
 //		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
@@ -226,7 +228,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -288,6 +290,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NewScaleUseOrigWidths.class;
 //		dirName += "-use_orig_widths";
 		
+		// also set nonzero weights!
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceWideSegBranches.class;
+		dirName += "-wide_seg_branches";
+		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
 //		dirName += "-exp_perturb";
@@ -302,7 +308,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// FAULT MODELS
 //				FaultModels.FM3_1,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
-				NSHM23_FaultModels.NSHM23_v1p4,
+//				NSHM23_FaultModels.NSHM23_v1p4,
+				NSHM23_FaultModels.NSHM23_v2,
+//				NSHM23_FaultModels.NSHM23_v2_UTAH,
 
 				// RUPTURE SETS
 				RupturePlausibilityModels.COULOMB,
@@ -318,10 +326,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
-//				NSHM23_ScalingRelationships.AVERAGE,
+				NSHM23_ScalingRelationships.AVERAGE,
 				
 				// SLIP ALONG RUPTURE
-				SlipAlongRuptureModels.UNIFORM,
+//				NSHM23_SlipAlongRuptureModels.UNIFORM,
+//				SlipAlongRuptureModels.UNIFORM,
 //				SlipAlongRuptureModels.TAPERED,
 				
 				// SUB-SECT CONSTRAINT

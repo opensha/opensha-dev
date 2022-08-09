@@ -1,8 +1,11 @@
 package scratch.kevin.ucerf3;
 
 import java.awt.Color;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,6 +74,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
@@ -118,6 +122,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
 import scratch.UCERF3.analysis.FaultSystemRupSetCalc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -1534,12 +1541,28 @@ public class PureScratch {
 		System.out.println("Found "+numThrough+" / "+rupSet.getNumRuptures()+" ruptures through creeping");
 	}
 	
+	private static void test151() throws IOException {
+		Gson gson = new GsonBuilder().create();
+		
+		BufferedReader reader = new BufferedReader(
+				new InputStreamReader(NSHM23_FaultModels.class.getResourceAsStream("/data/erf/nshm23/fault_models/v2/named_faults.json")));
+		Type type = TypeToken.getParameterized(Map.class, String.class,
+				TypeToken.getParameterized(List.class, Integer.class).getType()).getType();
+		Map<String, List<Integer>> namedFaults = gson.fromJson(reader, type);
+		
+		for (String name : namedFaults.keySet())
+			System.out.println(name+": "+Joiner.on(",").join(namedFaults.get(name)));
+		
+		Preconditions.checkState(!namedFaults.isEmpty(), "No named faults found");
+		new NamedFaults(null, namedFaults);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test149();
+		test151();
 	}
 
 }

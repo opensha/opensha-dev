@@ -101,13 +101,16 @@ public class LogicTreeBranchAverageWriter {
 //			File mainDir = new File(invDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
 //			File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
 //			File mainDir = new File(invDir, "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
-			mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//			mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//			mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+			mainDir = new File(invDir, "2022_08_05-nshm23_branches-wide_seg_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//			mainDir = new File(invDir, "2022_08_05-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 			resultsFile = new File(mainDir, "results.zip");
-			fullBAFile = new File(mainDir, "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip");
+			fullBAFile = new File(mainDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
 			
 //			HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
 			restrictBAClasses = new HashSet<>();
-			restrictBAClasses.add(NSHM23_DeformationModels.class);
+//			restrictBAClasses.add(NSHM23_DeformationModels.class);
 //			restrictBAClasses.add(NSHM23_ScalingRelationships.class);
 			restrictBAClasses.add(NSHM23_SegmentationModels.class);
 //			restrictBAClasses.add(MaxJumpDistModels.class);
