@@ -25,6 +25,7 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.ClusterSpecificInversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.AbstractAsyncLogicTreeWriter;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeInversionRunner;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
@@ -86,6 +87,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		int nodes = 19;
 		double itersPerSec = 200000;
 		int runsPerBranch = 1;
+		int nodeBAAsyncThreads = 2;
 //		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
 //				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
 		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
@@ -107,7 +109,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2022_02_27";
+//		String dirName = "2022_08_08";
 		
 		/*
 		 * UCERF3 logic tree
@@ -228,7 +230,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -291,8 +293,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-use_orig_widths";
 		
 		// also set nonzero weights!
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceWideSegBranches.class;
-		dirName += "-wide_seg_branches";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceWideSegBranches.class;
+//		dirName += "-wide_seg_branches";
 		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
@@ -322,11 +324,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// DEFORMATION MODELS
 //				U3_UncertAddDeformationModels.U3_ZENG,
-//				NSHM23_DeformationModels.AVERAGE,
+				NSHM23_DeformationModels.AVERAGE,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
-				NSHM23_ScalingRelationships.AVERAGE,
+//				NSHM23_ScalingRelationships.AVERAGE,
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
@@ -524,6 +526,26 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			// run hazard in the high priority queue
 			queue = "scec_hiprio";
 		pbsWrite.writeScript(new File(localDir, "batch_hazard.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+		
+		// write node branch averaged script
+		JavaShellScriptWriter javaWrite = new JavaShellScriptWriter(
+				mpjWrite.getJavaBin(), remoteTotalMemGB*1024, classpath);
+		argz = "--input-file "+resultsDir.getAbsolutePath();
+		argz += " --logic-tree "+remoteLogicTree.getAbsolutePath();
+		argz += " --output-dir "+new File(remoteDir, "node_branch_averaged");
+		argz += " --threads "+remoteTotalThreads;
+		argz += " --async-threads "+nodeBAAsyncThreads;
+		// see if we have a single BA file to use as a comparison
+		List<File> baFiles = AbstractAsyncLogicTreeWriter.getBranchAverageSolutionFiles(resultsDir, logicTree);
+		if (baFiles != null && baFiles.size() == 1)
+			argz += " --branch-averaged-file "+baFiles.get(0).getAbsolutePath();
+		script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), argz);
+		
+		mins = (int)60*10;
+		if (queue != null && queue.equals("scec"))
+			// run hazard in the high priority queue
+			queue = "scec_hiprio";
+		pbsWrite.writeScript(new File(localDir, "node_ba.slurm"), script, mins, 1, remoteTotalThreads, queue);
 		
 		if (strictSeg) {
 			// write strict segmentation branch translation job

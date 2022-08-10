@@ -15,14 +15,19 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchAverageableModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
+import org.opensha.sha.earthquake.faultSysSolution.reports.AbstractRupSetPlot;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
@@ -46,15 +51,23 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 public class LogicTreeBranchAverageWriter {
 
 	public static void main(String[] args) throws IOException {
-		File mainDir;
-		File resultsFile;
-		File fullBAFile;
+		System.setProperty("java.awt.headless", "true");
+		
+		File fullBAFile = null;
+		File outputDir;
 		
 		HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
 		LogicTreeNode[] restrictNodes = null;
 		
+		List<Class<? extends BranchAverageableModule<?>>> skipModules = null;
+		
 		int totThreads = FaultSysTools.defaultNumThreads();
 		int asyncThreads = -1;
+		
+		SolutionLogicTree slt;
+		
+		PlotLevel plt = ReportPageGen.PLOT_LEVEL_DEFAULT;
+		boolean skipSectBySect = false;
 		
 		if (args.length == 0) {
 			File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
@@ -101,11 +114,11 @@ public class LogicTreeBranchAverageWriter {
 //			File mainDir = new File(invDir, "2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
 //			File mainDir = new File(invDir, "2022_07_25-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
 //			File mainDir = new File(invDir, "2022_07_28-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR-IncludeThruCreep");
-//			mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-//			mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-			mainDir = new File(invDir, "2022_08_05-nshm23_branches-wide_seg_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-//			mainDir = new File(invDir, "2022_08_05-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-			resultsFile = new File(mainDir, "results.zip");
+//			File mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//			File mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+			File mainDir = new File(invDir, "2022_08_08-nshm23_branches-wide_seg_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//			File mainDir = new File(invDir, "2022_08_05-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+			File resultsFile = new File(mainDir, "results.zip");
 			fullBAFile = new File(mainDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
 			
 //			HashSet<Class<? extends LogicTreeNode>> restrictBAClasses = null;
@@ -119,20 +132,52 @@ public class LogicTreeBranchAverageWriter {
 //			restrictBAClasses.add(SupraSeisBValues.class);
 //			restrictBAClasses.add(RupsThroughCreepingSect.class);
 			
+			skipModules = new ArrayList<>();
+			skipModules.add(InversionTargetMFDs.class);
+			
 //			restrictNodes = new LogicTreeNode[] {
 //					FaultModels.FM3_1
 //			};
-		} else {
-			Preconditions.checkArgument(args.length >= 3 && args.length <= 5,
-					"Usage: <dir> <results file> <full-BA file> [<threads> [<async-threads>]]");
-			mainDir = new File(args[0]);
-			resultsFile = new File(args[1]);
-			fullBAFile = new File(args[2]);
 			
-			if (args.length >= 4)
-				totThreads = Integer.parseInt(args[3]);
-			if (args.length >= 5)
-				asyncThreads = Integer.parseInt(args[4]);
+//			plt = PlotLevel.FULL;
+//			skipSectBySect = true;
+			
+			outputDir = new File(mainDir, "node_branch_averaged");
+			
+			slt = SolutionLogicTree.load(resultsFile);
+			
+			HazardMapPlot.SPACING_DEFAULT = 0.2;
+		} else {
+			CommandLine cmd = FaultSysTools.parseOptions(createOptions(), args, ReportPageGen.class);
+			
+			File inputFile = new File(cmd.getOptionValue("input-file"));
+			Preconditions.checkArgument(inputFile.exists(), "Input file doesn't exist: %s", inputFile.getAbsolutePath());
+			
+			if (inputFile.isDirectory()) {
+				Preconditions.checkArgument(cmd.hasOption("logic-tree"), "Must supply logic tree file if input-file is"
+						+ " a results directory");
+				File logicTreeFile = new File(cmd.getOptionValue("logic-tree"));
+				Preconditions.checkArgument(logicTreeFile.exists(), "Logic tree file doesn't exist: %s",
+						logicTreeFile.getAbsolutePath());
+				LogicTree<?> tree = LogicTree.read(logicTreeFile);
+				
+				slt = new SolutionLogicTree.ResultsDirReader(inputFile, tree);
+			} else {
+				// it should be SolutionLogicTree zip file
+				slt = SolutionLogicTree.load(inputFile);
+			}
+			
+			if (cmd.hasOption("branch-averaged-file"))
+				fullBAFile = new File(cmd.getOptionValue("branch-averaged-file"));
+			
+			outputDir = new File(cmd.getOptionValue("output-dir"));
+			
+			totThreads = FaultSysTools.getNumThreads(cmd);
+			if (cmd.hasOption("async-threads"))
+				asyncThreads = Integer.parseInt(cmd.getOptionValue("async-threads"));
+			
+			if (cmd.hasOption("plot-level"))
+				plt = PlotLevel.valueOf(cmd.getOptionValue("plot-level").trim().toUpperCase());
 		}
 		
 		if (asyncThreads < 1) {
@@ -143,18 +188,10 @@ public class LogicTreeBranchAverageWriter {
 		}
 		boolean replot = true;
 		
-		HazardMapPlot.SPACING_DEFAULT = 0.2;
-		
-		File outputDir = new File(mainDir, "node_branch_averaged");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
-		
 		FaultSystemSolution fullBA = fullBAFile == null ? null : FaultSystemSolution.load(fullBAFile);
-//		PlotLevel plt = PlotLevel.FULL;
-		PlotLevel plt = PlotLevel.DEFAULT;
 		boolean compWithLoaded = false;
-		boolean skipSectBySect = true;
 		
 		LogicTree<?> tree = slt.getLogicTree();
 		
@@ -198,8 +235,9 @@ public class LogicTreeBranchAverageWriter {
 				System.out.println("Building "+nodes.size()+" BAs for "+level.getName());
 				for (LogicTreeNode node : nodes) {
 					BranchAverageSolutionCreator creator = new BranchAverageSolutionCreator(tree.getWeightProvider());
-//					creator.skipModule(SupraSeisBValInversionTargetMFDs.class);
-					creator.skipModule(InversionTargetMFDs.class);
+					if (skipModules != null)
+						for (Class<? extends BranchAverageableModule<?>> moduleClass : skipModules)
+							creator.skipModule(moduleClass);
 					nodeBACreators.put(node, creator);
 				}
 			}
@@ -254,6 +292,8 @@ public class LogicTreeBranchAverageWriter {
 			futures = new ArrayList<>();
 		}
 		
+		List<AbstractRupSetPlot> plots = ReportPageGen.getDefaultSolutionPlots(plt);
+		
 		for (LogicTreeNode node : nodeBACreators.keySet()) {
 			Runnable run = new Runnable() {
 				
@@ -283,7 +323,7 @@ public class LogicTreeBranchAverageWriter {
 							myComp = new RupSetMetadata("Loaded", FaultSystemSolution.load(solFile));
 						
 						ReportMetadata meta = new ReportMetadata(primary, myComp);
-						ReportPageGen pageGen = new ReportPageGen(meta, reportDir, ReportPageGen.getDefaultSolutionPlots(plt));
+						ReportPageGen pageGen = new ReportPageGen(meta, reportDir, plots);
 						if (skipSectBySect)
 							pageGen.skipSectBySect();
 						pageGen.setReplot(replot);
@@ -313,6 +353,25 @@ public class LogicTreeBranchAverageWriter {
 			
 			exec.shutdown();
 		}
+	}
+	
+	public static Options createOptions() {
+		Options ops = new Options();
+
+		ops.addRequiredOption("if", "input-file", true, "Input SolutionLogicTree zip file or results directory. If a "
+				+ "results directory is supplied, you must also specify --logic-tree <file>");
+		ops.addOption("baf", "branch-averaged-file", true, "Optional path to a full branch-averaged solution, used "
+				+ "for comparison in reports");
+		ops.addOption("lt", "logic-tree", true, "Path to logic tree JSON file, required if a results directory is "
+				+ "supplied with --input-file");
+		ops.addRequiredOption("od", "output-dir", true, "Path to output directory");
+		ops.addOption(FaultSysTools.threadsOption());
+		ops.addOption("at", "async-threads", true, "Maximum number of asynchronous load/process threads, lower to "
+				+ "reduce memory usage or I/O load");
+		ops.addOption("pl", "plot-level", true, "This determins which set of plots should be included. One of: "
+						+FaultSysTools.enumOptions(PlotLevel.class)+". Default: "+ReportPageGen.PLOT_LEVEL_DEFAULT.name());
+		
+		return ops;
 	}
 
 }

@@ -18,6 +18,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
@@ -47,10 +48,10 @@ public class HardcodedInversionFactoryRunner {
 
 //		InversionConfigurationFactory factory = new U3InversionConfigFactory.ForceNewPaleo();
 //		dirName += "-u3-new_paleo";
-		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
-		dirName += "-nshm23-full_sys";
-//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-//		dirName += "-nshm23-cluster_specific";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
+//		dirName += "-nshm23-full_sys";
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		dirName += "-nshm23-cluster_specific";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
 //		dirName += "-nshm23-cluster_specific-new_paleo";
 		
@@ -73,6 +74,9 @@ public class HardcodedInversionFactoryRunner {
 		
 //		branch.setValue(RupturePlausibilityModels.UCERF3_REDUCED);
 //		dirName += "-u3_reduced";
+		
+		branch.setValue(NSHM23_FaultModels.NSHM23_v2_UTAH);
+		dirName += "-utah";
 		
 		branch.setValue(RupturePlausibilityModels.AZIMUTHAL_REDUCED);
 		dirName += "-az_reduced";

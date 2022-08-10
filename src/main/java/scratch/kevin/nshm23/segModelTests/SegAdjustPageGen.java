@@ -25,6 +25,8 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
@@ -43,6 +45,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.ConnectivityClu
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RuptureTreeNavigator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.Builder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb;
@@ -65,7 +68,8 @@ public class SegAdjustPageGen {
 //		int subSectIndex = 1907; // Hoback
 //		int subSectIndex = 692; // Cemetery
 //		int subSectIndex = 1903; // Hilton Creek
-		int subSectIndex = 4378; // Sangre de Cristo (south)
+//		int subSectIndex = 4378; // Sangre de Cristo (south)
+		int subSectIndex = 4366; // Sangre de Cristo (San Luis)
 		
 		FaultSection subSect = rupSet.getFaultSectionData(subSectIndex);
 		String sectName = subSect.getSectionName();
@@ -82,7 +86,7 @@ public class SegAdjustPageGen {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
-		double[] bVals = {0d, 0.5d, 1d};
+		SupraSeisBValues[] bVals = {SupraSeisBValues.B_0p0, SupraSeisBValues.B_0p5, SupraSeisBValues.B_1p0};
 		
 		List<SegmentationMFD_Adjustment> segAdjs = new ArrayList<>();
 		List<PlotCurveCharacterstics> segChars = new ArrayList<>();
@@ -92,8 +96,11 @@ public class SegAdjustPageGen {
 		segAdjs.add(SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_ITERATIVE);
 		segChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED.darker()));
 		
-//		segAdjs.add(SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG);
-//		segChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE.darker()));
+		segAdjs.add(SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_MATCH_STRICT);
+		segChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLUE.darker()));
+		
+//		segAdjs.add(SegmentationMFD_Adjustment.STRICT_SEG_REPRODUCE_THROUGH_INVERSION);
+//		segChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.ORANGE.darker().darker()));
 		
 		segAdjs.add(SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG);
 		segChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GREEN.darker()));
@@ -269,7 +276,14 @@ public class SegAdjustPageGen {
 		RuptureSubSetMappings subsetMappings = subsetRupSet.requireModule(RuptureSubSetMappings.class);
 		
 		DecimalFormat oDF = new DecimalFormat("0.##");
-		for (double bVal : bVals) {
+		for (SupraSeisBValues bValChoice : bVals) {
+			
+			LogicTreeBranch<LogicTreeNode> branch = rupSet.requireModule(LogicTreeBranch.class).copy();
+			branch.setValue(bValChoice);
+			double bVal = bValChoice.bValue;
+			
+			subsetRupSet.addModule(branch);
+			
 			lines.add("## b="+oDF.format(bVal)+" Section MFDs");
 			lines.add(topLink); lines.add("");
 			
@@ -346,7 +360,7 @@ public class SegAdjustPageGen {
 				
 				GutenbergRichterMagFreqDist refGR = new GutenbergRichterMagFreqDist(bVal, 1d,
 						refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
-				double halfDelta = 0.5*refMFD.getDelta();
+				double padDelta = 0.48*refMFD.getDelta();
 				
 				double minX = refMFD.getX(minMagIndex);
 				double maxX = refMFD.getX(maxMagIndex);
@@ -387,8 +401,8 @@ public class SegAdjustPageGen {
 							}
 							
 							double scaleToGR = y/refGR.getY(xInd);
-							curFunc.set(x-halfDelta, scaleToGR * refGR.getInterpolatedY(x-halfDelta));
-							curFunc.set(x+halfDelta, scaleToGR * refGR.getInterpolatedY(x+halfDelta));
+							curFunc.set(x-padDelta, scaleToGR * refGR.getInterpolatedY(x-padDelta));
+							curFunc.set(x+padDelta, scaleToGR * refGR.getInterpolatedY(x+padDelta));
 						} else if (curFunc != null) {
 							curFunc = null;
 						}
