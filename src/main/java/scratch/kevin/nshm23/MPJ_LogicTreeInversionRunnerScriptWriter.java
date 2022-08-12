@@ -41,6 +41,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultM
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SlipAlongRuptureModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSect;
@@ -102,6 +103,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		int nodes = 100;
 //		double itersPerSec = 300000;
 //		int runsPerBranch = 1;
+//		int nodeBAAsyncThreads = 4;
 ////		String queue = "skx-dev";
 ////		int nodes = 4;
 //		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
@@ -116,17 +118,20 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 */
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = new ArrayList<>(U3LogicTreeBranch.getLogicTreeLevels());
 //		
-//		levels = new ArrayList<>(levels);
-//		int origSize = levels.size();
-//		for (int i=levels.size(); --i>=0;)
-//			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
-//				levels.remove(i);
-//		Preconditions.checkState(levels.size() < origSize);
-//		levels.add(NSHM23_LogicTreeBranch.SCALE);
-//		dirName += "-new_scale_rels";
+////		levels = new ArrayList<>(levels);
+////		int origSize = levels.size();
+////		for (int i=levels.size(); --i>=0;)
+////			if (levels.get(i).getType().isAssignableFrom(ScalingRelationships.class))
+////				levels.remove(i);
+////		Preconditions.checkState(levels.size() < origSize);
+////		levels.add(NSHM23_LogicTreeBranch.SCALE);
+////		dirName += "-new_scale_rels";
 //		
-//		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true);
 //		dirName += "-u3_branches";
+//		
+//		levels = new ArrayList<>(levels);
+//		levels.add(NSHM23_LogicTreeBranch.SEG);
+//		dirName += "-new_seg";
 //		
 //		Class<? extends InversionConfigurationFactory> factoryClass = U3InversionConfigFactory.class;
 //		int avgNumRups = 250000;
@@ -296,6 +301,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceWideSegBranches.class;
 //		dirName += "-wide_seg_branches";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceNoGhostTransient.class;
+//		dirName += "-no_ghost_trans";
+		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
 //		dirName += "-exp_perturb";
@@ -305,6 +313,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-classic_sa";
 //		extraArgs.add("--cooling-schedule "+CoolingScheduleType.CLASSICAL_SA.name());
 		
+//		levels = new ArrayList<>(levels);
+//		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
+		
 		forceRequiredNonzeroWeight = true;
 		LogicTreeNode[] required = {
 				// FAULT MODELS
@@ -313,6 +324,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM23_FaultModels.NSHM23_v1p4,
 				NSHM23_FaultModels.NSHM23_v2,
 //				NSHM23_FaultModels.NSHM23_v2_UTAH,
+				
+				// SINGLE STATE
+//				NSHM23_SingleStates.NM,
 
 				// RUPTURE SETS
 				RupturePlausibilityModels.COULOMB,
@@ -324,11 +338,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// DEFORMATION MODELS
 //				U3_UncertAddDeformationModels.U3_ZENG,
-				NSHM23_DeformationModels.AVERAGE,
+//				NSHM23_DeformationModels.AVERAGE,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
-//				NSHM23_ScalingRelationships.AVERAGE,
+				NSHM23_ScalingRelationships.AVERAGE,
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
@@ -361,8 +375,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// SEG ADJUSTMENT
 //				SegmentationMFD_Adjustment.NONE,
 //				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
-//				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG,
-				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_ITERATIVE,
+//				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_SINGLE_ITER,
+				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG,
 //				SegmentationMFD_Adjustment.CAPPED_REDIST,
 //				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED,
 //				SegmentationMFD_Adjustment.GREEDY,

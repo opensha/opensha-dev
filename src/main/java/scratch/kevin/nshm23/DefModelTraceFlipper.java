@@ -15,8 +15,8 @@ import com.google.common.io.Files;
 public class DefModelTraceFlipper {
 
 	public static void main(String[] args) throws IOException {
-		File inputDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/nshm23/def_models/geodetic/2022_07_23");
-		File outputDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/nshm23/def_models/geodetic/2022_08_05");
+		File inputDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/nshm23/def_models/geodetic/fm_v1p4");
+		File outputDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/nshm23/def_models/geodetic/fm_v2");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		int[] traceFlipIDs = { 2922, 1098 };
@@ -24,6 +24,8 @@ public class DefModelTraceFlipper {
 		for (File file : inputDir.listFiles()) {
 			String name = file.getName();
 			if (!file.isFile() || !name.endsWith(".txt"))
+				continue;
+			if (!name.startsWith("EVANS"))
 				continue;
 			System.out.println("Processing "+name);
 			

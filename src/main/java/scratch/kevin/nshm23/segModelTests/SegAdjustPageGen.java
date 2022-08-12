@@ -93,7 +93,7 @@ public class SegAdjustPageGen {
 		
 		RelGRWorstJumpProb.D = true;
 		
-		segAdjs.add(SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_ITERATIVE);
+		segAdjs.add(SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG);
 		segChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.RED.darker()));
 		
 		segAdjs.add(SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_MATCH_STRICT);

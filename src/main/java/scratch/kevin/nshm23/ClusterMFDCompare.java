@@ -32,8 +32,8 @@ public class ClusterMFDCompare {
 	public static void main(String[] args) throws IOException {
 		File solFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2022_08_08-nshm23_branches-wide_seg_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-"
-//				+ "ThreshAvgIterRelGR/node_branch_averaged/SegModel_Max2km.zip");
-				+ "ThreshAvgIterRelGR/node_branch_averaged/SegModel_HighSeg.zip");
+				+ "ThreshAvgIterRelGR/node_branch_averaged/SegModel_Max2km.zip");
+//				+ "ThreshAvgIterRelGR/node_branch_averaged/SegModel_HighSeg.zip");
 		LogicTreeBranch<LogicTreeNode> defaultBranch = NSHM23_LogicTreeBranch.DEFAULT;
 		InversionConfigurationFactory factory = new NSHM23_InvConfigFactory();
 		
@@ -57,6 +57,42 @@ public class ClusterMFDCompare {
 		
 		Preconditions.checkNotNull(cluster);
 		
+		mfdComparison(sol, cluster);
+		
+		if (invert) {
+			FaultSystemRupSet rupSubSet = rupSet.getForSectionSubSet(cluster.getSectIDs());
+			
+			LogicTreeBranch<LogicTreeNode> branch = rupSet.requireModule(LogicTreeBranch.class).copy();
+			for (int i=0; i<branch.size(); i++) {
+				if (branch.getValue(i) == null) {
+					LogicTreeNode val;
+					if (NSHM23_DeformationModels.class.isAssignableFrom(branch.getLevel(i).getType()))
+//						val = NSHM23_DeformationModels.AVERAGE;
+						val = NSHM23_DeformationModels.POLLITZ;
+					else if (NSHM23_ScalingRelationships.class.isAssignableFrom(branch.getLevel(i).getType()))
+						val = NSHM23_ScalingRelationships.AVERAGE;
+					else
+						val = defaultBranch.getValue(i);
+					System.err.println("setting branch value to default: "+val.getName());
+					branch.setValue(val);
+				}
+			}
+			
+			InversionConfiguration config = factory.buildInversionConfig(rupSubSet, branch, FaultSysTools.defaultNumThreads());
+			
+			FaultSystemSolution subsetSol = Inversions.run(rupSubSet, config);
+			
+			subsetSol.write(new File("/tmp/subset_"+solFile.getName()));
+			
+			System.out.println("Original solution:");
+			mfdComparison(sol, cluster);
+			System.out.println("\nInverted subset solution:");
+			mfdComparison(subsetSol, null);
+		}
+	}
+	
+	private static void mfdComparison(FaultSystemSolution sol, ConnectivityCluster cluster) {
+		FaultSystemRupSet rupSet = sol.getRupSet();
 		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(rupSet);
 		
 		SummedMagFreqDist summedTarget = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
@@ -65,10 +101,18 @@ public class ClusterMFDCompare {
 		InversionTargetMFDs targets = rupSet.requireModule(InversionTargetMFDs.class);
 		List<? extends IncrementalMagFreqDist> sectTargets = targets.getOnFaultSupraSeisNucleationMFDs();
 		
-		for (int sectID : cluster.getSectIDs()) {
-			summedTarget.addIncrementalMagFreqDist(sectTargets.get(sectID));
-			summedSolution.addIncrementalMagFreqDist(sol.calcNucleationMFD_forSect(
-					sectID, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size()));
+		if (cluster == null) {
+			for (int sectID=0; sectID<rupSet.getNumSections(); sectID++) {
+				summedTarget.addIncrementalMagFreqDist(sectTargets.get(sectID));
+				summedSolution.addIncrementalMagFreqDist(sol.calcNucleationMFD_forSect(
+						sectID, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size()));
+			}
+		} else {
+			for (int sectID : cluster.getSectIDs()) {
+				summedTarget.addIncrementalMagFreqDist(sectTargets.get(sectID));
+				summedSolution.addIncrementalMagFreqDist(sol.calcNucleationMFD_forSect(
+						sectID, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size()));
+			}
 		}
 		
 		int minNonZeroIndex = refMFD.size();
@@ -84,31 +128,6 @@ public class ClusterMFDCompare {
 		for (int i=minNonZeroIndex; i<=maxNonZeroIndex; i++)
 			printComp((float)refMFD.getX(i)+"", summedTarget.getY(i), summedSolution.getY(i));
 		printComp("TOTAL", summedTarget.calcSumOfY_Vals(), summedSolution.calcSumOfY_Vals());
-		
-		if (invert) {
-			FaultSystemRupSet rupSubSet = rupSet.getForSectionSubSet(cluster.getSectIDs());
-			
-			LogicTreeBranch<LogicTreeNode> branch = rupSet.requireModule(LogicTreeBranch.class).copy();
-			for (int i=0; i<branch.size(); i++) {
-				if (branch.getValue(i) == null) {
-					LogicTreeNode val;
-					if (NSHM23_DeformationModels.class.isAssignableFrom(branch.getLevel(i).getType()))
-						val = NSHM23_DeformationModels.AVERAGE;
-					else if (NSHM23_ScalingRelationships.class.isAssignableFrom(branch.getLevel(i).getType()))
-						val = NSHM23_ScalingRelationships.AVERAGE;
-					else
-						val = defaultBranch.getValue(i);
-					System.err.println("setting branch value to default: "+val.getName());
-					branch.setValue(val);
-				}
-			}
-			
-			InversionConfiguration config = factory.buildInversionConfig(rupSubSet, branch, FaultSysTools.defaultNumThreads());
-			
-			FaultSystemSolution subsetSol = Inversions.run(rupSubSet, config);
-			
-			subsetSol.write(new File("/tmp/subset_"+solFile.getName()));
-		}
 	}
 	
 	private static final DecimalFormat eDF = new DecimalFormat("0.000E0");

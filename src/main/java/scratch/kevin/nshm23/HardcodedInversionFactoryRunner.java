@@ -21,6 +21,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Deform
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -55,10 +56,13 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
 //		dirName += "-nshm23-cluster_specific-new_paleo";
 		
+		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
+		
 //		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT;
-		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT;
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT;
+		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
 //		levels = new ArrayList<>(levels);
 //		int origSize = levels.size();
@@ -72,14 +76,25 @@ public class HardcodedInversionFactoryRunner {
 //			if (!(node instanceof ScalingRelationships))
 //				branch.setValue(node);
 		
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
+		levels = new ArrayList<>(levels);
+		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
+		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
+		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT)
+			branch.setValue(node);
+		
 //		branch.setValue(RupturePlausibilityModels.UCERF3_REDUCED);
 //		dirName += "-u3_reduced";
 		
-		branch.setValue(NSHM23_FaultModels.NSHM23_v2_UTAH);
-		dirName += "-utah";
+		branch.setValue(NSHM23_FaultModels.NSHM23_v2);
 		
-		branch.setValue(RupturePlausibilityModels.AZIMUTHAL_REDUCED);
-		dirName += "-az_reduced";
+//		branch.setValue(NSHM23_SingleStates.UT);
+//		dirName += "-utah";
+		branch.setValue(NSHM23_SingleStates.NM);
+		dirName += "-new_mexico";
+		
+//		branch.setValue(RupturePlausibilityModels.AZIMUTHAL_REDUCED);
+//		dirName += "-az_reduced";
 		
 //		branch.setValue(NSHM23_DeformationModels.ZENG);
 //		dirName += "-zeng";
