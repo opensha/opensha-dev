@@ -88,18 +88,18 @@ public class HardcodedInversionFactoryRunner {
 		
 		branch.setValue(NSHM23_FaultModels.NSHM23_v2);
 		
-//		branch.setValue(NSHM23_SingleStates.UT);
-//		dirName += "-utah";
-		branch.setValue(NSHM23_SingleStates.NM);
-		dirName += "-new_mexico";
+		branch.setValue(NSHM23_SingleStates.UT);
+		dirName += "-utah";
+//		branch.setValue(NSHM23_SingleStates.NM);
+//		dirName += "-new_mexico";
 		
 //		branch.setValue(RupturePlausibilityModels.AZIMUTHAL_REDUCED);
 //		dirName += "-az_reduced";
 		
 //		branch.setValue(NSHM23_DeformationModels.ZENG);
 //		dirName += "-zeng";
-//		branch.setValue(NSHM23_DeformationModels.EVANS);
-//		dirName += "-evans";
+		branch.setValue(NSHM23_DeformationModels.EVANS);
+		dirName += "-evans";
 //		branch.setValue(NSHM23_DeformationModels.SHEN_BIRD);
 //		dirName += "-shen_bird";
 		

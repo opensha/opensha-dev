@@ -207,7 +207,7 @@ public class LogicTreeHazardCompare {
 //		String mainName = "NSHM23 Draft, Test Scale Rels";
 		
 ////		File mainDir = new File(invDir, "2022_07_23-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
-//		File mainDir = new File(invDir, "2022_08_10-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//		File mainDir = new File(invDir, "2022_08_12-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 ////		File mainDir = new File(invDir, "2022_08_08-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 //		String mainName = "NSHM23 Draft";
 		
@@ -223,11 +223,14 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-NoAdj");
 //		String mainName = "No-Adj";
 		
-		File mainDir = new File(invDir, "2022_08_11-nshm23_branches-wide_seg_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-		String mainName = "Wide-Seg-Branches";
+//		File mainDir = new File(invDir, "2022_08_11-nshm23_branches-wide_seg_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//		String mainName = "Wide-Seg-Branches";
 		
-//		File mainDir = new File(invDir, "2022_08_11-nshm23_branches-wide_seg_branches-NSHM23_v2-NM_only-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-//		String mainName = "NM-Wide-Seg-Branches";
+//		File mainDir = new File(invDir, "2022_08_12-nshm23_branches-paleo_uncerts-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//		String mainName = "Paleo-Branches";
+		
+		File mainDir = new File(invDir, "2022_08_11-u3_branches-new_seg-FM3_1");
+		String mainName = "U3-Plus-Seg";
 		
 		LogicTreeNode[] subsetNodes = null;
 		LogicTreeNode[] compSubsetNodes = null;
@@ -248,18 +251,18 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2022_08_09-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 //		String compName = "NSHM23 Draft";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_nshm23_draft");
-		File compDir = new File(invDir, "2022_08_11-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-		String compName = "Cur Draft Subset";
-		File outputDir = new File(mainDir, "hazard_maps_comp_draft_subset");
+//		File compDir = new File(invDir, "2022_08_12-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//		String compName = "Cur Draft Subset";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_draft_subset");
 //		File compDir = new File(invDir, "2021_11_30-u3_branches-orig_calcs-5h");
 //		String compName = "UCERF3 As Published";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published");
 //		String compName = "UCERF3 As Published, Uniform";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published_uniform");
 //		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1, SlipAlongRuptureModels.UNIFORM };
-//		File compDir = new File(invDir, "2022_03_24-u3_branches-FM3_1-2000ip");
-//		String compName = "UCERF3 New Anneal";
-//		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
+		File compDir = new File(invDir, "2022_03_24-u3_branches-FM3_1-2000ip");
+		String compName = "UCERF3 New Anneal";
+		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
 //		File compDir = new File(invDir, "2022_03_13-u3_branches-coulomb-bilateral-FM3_1-2000ip");
 //		String compName = "UCERF3 Coulomb Bilateral";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_coulomb_bilateral");
@@ -1055,6 +1058,7 @@ public class LogicTreeHazardCompare {
 			}
 		}
 		System.out.println("DONE with maps");
+		exec.shutdown();
 		
 		// add TOC
 		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2, 4));

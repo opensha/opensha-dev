@@ -35,7 +35,9 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.BoundedUncertainty;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
+import org.opensha.commons.data.uncertainty.Uncertainty;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.Location;
@@ -68,6 +70,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.U3MFDSubSectNuclInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint.SectMappedUncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
@@ -97,6 +100,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder.ParkfieldSelectionCriteria;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
@@ -1557,12 +1561,146 @@ public class PureScratch {
 		new NamedFaults(null, namedFaults);
 	}
 	
+	private static void test152() throws IOException {
+		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2);
+		List<SectMappedUncertainDataConstraint> slipData = NSHM23_PaleoDataLoader.loadU3PaleoSlipData(subSects);
+
+		boolean applySlipRateUncertainty = true;
+		MinMaxAveTracker percentTrack = new MinMaxAveTracker();
+		MinMaxAveTracker percentTrackFromSlip = new MinMaxAveTracker();
+		for (SectMappedUncertainDataConstraint constraint : slipData) {
+			double targetSlipRate = subSects.get(constraint.sectionIndex).getReducedAveSlipRate()*1e-3;
+			double targetSlipRateStdDev = subSects.get(constraint.sectionIndex).getOrigSlipRateStdDev()*1e-3;
+			
+			BoundedUncertainty slipUncertainty;
+			UncertaintyBoundType refType;
+			if (constraint.uncertainties[0] instanceof BoundedUncertainty) {
+				// estimate slip rate bounds in the same units as the original uncertainty estimate
+				slipUncertainty = (BoundedUncertainty)constraint.uncertainties[0];
+				refType = slipUncertainty.type;
+			} else {
+				refType = UncertaintyBoundType.TWO_SIGMA;
+				slipUncertainty = constraint.estimateUncertaintyBounds(refType);
+			}
+			
+			System.out.println("Inferring rate constraint from paleo slip constraint on "+constraint.sectionName);
+			System.out.println("\tslip="+(float)constraint.bestEstimate+"\tslipUuncert="+slipUncertainty);
+			System.out.println("\tslip rate="+(float)targetSlipRate+" +/- "+targetSlipRateStdDev);
+			
+			// r = s / d
+			double meanRate = targetSlipRate / constraint.bestEstimate;
+			/*
+			 * uncertainty propagation:
+			 * 		r +/- deltaR = (s +/- deltaS)/(d +/- deltaD)
+			 * simplifies to (see https://www.geol.lsu.edu/jlorenzo/geophysics/uncertainties/Uncertaintiespart2.html):
+			 * 		deltaR/r = sqrt((deltaS/s)^2 + (deltaD/d)^2)
+			 * 		deltaR = r*sqrt((deltaS/s)^2 + (deltaD/d)^2)
+			 */
+			double rateSD;
+			if (applySlipRateUncertainty) {
+				rateSD = meanRate * Math.sqrt(Math.pow(targetSlipRateStdDev/targetSlipRate, 2)
+						+ Math.pow(constraint.getPreferredStdDev()/constraint.bestEstimate, 2));
+//				rateSD = meanRate * (targetSlipRateStdDev/targetSlipRate + constraint.getPreferredStdDev()/constraint.bestEstimate);
+			} else {
+				rateSD = meanRate * constraint.getPreferredStdDev()/constraint.bestEstimate;
+			}
+			Uncertainty rateUncertainty = new Uncertainty(rateSD);
+			
+			System.out.println("\tRate:\t"+meanRate+" +/- "+rateSD);
+			if (applySlipRateUncertainty) {
+				double rateSD_without = meanRate * constraint.getPreferredStdDev()/constraint.bestEstimate;
+				percentTrackFromSlip.addValue(100d*(rateSD - rateSD_without)/rateSD_without);
+			}
+			
+			// now do it the previous way
+//			double lowerRateTarget, upperRateTarget;
+//			if (applySlipRateUncertainty) {
+//				BoundedUncertainty slipRateUncertainty = refType.estimate(
+//						targetSlipRate, targetSlipRateStdDev);
+//				lowerRateTarget = Math.max(0d, slipRateUncertainty.lowerBound);
+//				upperRateTarget = slipRateUncertainty.upperBound;
+////				System.out.println("\tSlip Rate Uncertainties: "+slipRateUncertainty);
+//			} else {
+//				lowerRateTarget = targetSlipRate;
+//				upperRateTarget = targetSlipRate;
+//			}
+//			rateUncertainty = new Uncertainty(refType.estimateStdDev(meanRate,
+//					lowerRateTarget / slipUncertainty.upperBound,
+//					upperRateTarget / slipUncertainty.lowerBound));
+//			rateUncertainty = new Uncertainty(Math.sqrt(Math.pow((targetSlipRateStdDev+targetSlipRate)/constraint.bestEstimate, 2)
+//					+ Math.pow(targetSlipRateStdDev/(constraint.bestEstimate+constraint.getPreferredStdDev()), 2)));
+			rateUncertainty = new Uncertainty((targetSlipRateStdDev+targetSlipRate)/(constraint.bestEstimate+constraint.getPreferredStdDev()));
+			System.out.println("\tOLD:\t"+meanRate+" +/- "+rateUncertainty.stdDev);
+			
+			percentTrack.addValue(100d*(rateSD - rateUncertainty.stdDev)/rateUncertainty.stdDev);
+		}
+		System.out.println("New vs Old % diffs: "+percentTrack);
+		if (applySlipRateUncertainty)
+			System.out.println("% change from slip rate uncertainty: "+percentTrackFromSlip);
+//		double constrMean = 3.15;
+////		double constrLower = -1.1;
+////		double constrUpper = 7.4;
+////		double constrStdDev = 2.125;
+//		double constrLower = 2;
+//		double constrUpper = 5;
+//		double constrStdDev = UncertaintyBoundType.TWO_SIGMA.estimateStdDev(constrMean, constrLower, constrUpper);
+//		
+//		double targetSlipRate = 0.023757033;
+//		double targetSlipRateStdDev = 0.003452321;
+//		
+//		
+//		UncertaintyBoundType refType = UncertaintyBoundType.CONF_95;
+//		BoundedUncertainty slipUncertainty = new BoundedUncertainty(refType, constrLower, constrUpper, constrStdDev);
+//		
+//		System.out.println("Inferring rate constraint from paleo slip constraint");
+//		System.out.println("\tslip="+(float)constrMean+"\tslipUuncert="+slipUncertainty);
+//		System.out.println("\tslip rate="+(float)targetSlipRate);
+//		
+//		// r = s / d
+//		double meanRate = targetSlipRate / constrMean;
+//		/*
+//		 * uncertainty propagation:
+//		 * 		r +/- deltaR = (s +/- deltaS)/(d +/- deltaD)
+//		 * simplifies to (see https://www.geol.lsu.edu/jlorenzo/geophysics/uncertainties/Uncertaintiespart2.html):
+//		 * 		deltaR/r = sqrt((deltaS/s)^2 + (deltaD/d)^2)
+//		 * 		deltaR = r*sqrt((deltaS/s)^2 + (deltaD/d)^2)
+//		 */
+//		double rateSD;
+//		if (applySlipRateUncertainty) {
+//			rateSD = meanRate * Math.sqrt(Math.pow(targetSlipRateStdDev/targetSlipRate, 2)+Math.pow(constrStdDev/constrMean, 2));
+//		} else {
+//			rateSD = meanRate * constrStdDev/constrMean;
+//		}
+//		Uncertainty rateUncertainty = new Uncertainty(rateSD);
+//		
+//		System.out.println("RATE: "+meanRate);
+//		
+//		System.out.println("NEW SD: "+rateUncertainty);
+//		
+//		// now do it the previous way
+//		double lowerRateTarget, upperRateTarget;
+//		if (applySlipRateUncertainty) {
+//			BoundedUncertainty slipRateUncertainty = refType.estimate(
+//					targetSlipRate, targetSlipRateStdDev);
+//			lowerRateTarget = Math.max(0d, slipRateUncertainty.lowerBound);
+//			upperRateTarget = slipRateUncertainty.upperBound;
+//			System.out.println("\tSlip Rate Uncertainties: "+slipRateUncertainty);
+//		} else {
+//			lowerRateTarget = targetSlipRate;
+//			upperRateTarget = targetSlipRate;
+//		}
+//		rateUncertainty = new Uncertainty(refType.estimateStdDev(meanRate,
+//				lowerRateTarget / slipUncertainty.upperBound,
+//				upperRateTarget / slipUncertainty.lowerBound));
+//		System.out.println("OLD SD: "+rateUncertainty);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test151();
+		test152();
 	}
 
 }

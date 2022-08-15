@@ -203,7 +203,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 */
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
 //		dirName += "-nshm23_u3_hybrid_branches";
-//		double avgNumRups = 300000;
+//		double avgNumRups = 325000;
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
 		dirName += "-nshm23_branches";
@@ -220,8 +220,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //					|| levels.get(i).getType().isAssignableFrom(DistDependSegShift.class))
 //				levels.remove(i);
 //		dirName += "-no_seg";
+////		levels.add(NSHM23_LogicTreeBranch.RUPS_THROUGH_CREEPING);
+////		dirName += "-creep_branches";
 ////		levels.add(NSHM23_LogicTreeBranch.MAX_DIST);
 ////		dirName += "-strict_cutoff_seg"; strictSeg = true;
+		
 		
 //		dirName += "-reweight_seg_2_3_4";
 		
@@ -315,6 +318,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
+//		dirName += "-single_state";
+		
+		levels = new ArrayList<>(levels);
+		levels.add(NSHM23_LogicTreeBranch.PALEO_UNCERT);
+		dirName += "-paleo_uncerts";
 		
 		forceRequiredNonzeroWeight = true;
 		LogicTreeNode[] required = {
@@ -323,7 +331,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 //				NSHM23_FaultModels.NSHM23_v1p4,
 				NSHM23_FaultModels.NSHM23_v2,
-//				NSHM23_FaultModels.NSHM23_v2_UTAH,
 				
 				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
@@ -338,10 +345,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// DEFORMATION MODELS
 //				U3_UncertAddDeformationModels.U3_ZENG,
+//				U3_UncertAddDeformationModels.U3_MEAN,
 //				NSHM23_DeformationModels.AVERAGE,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
+//				ScalingRelationships.MEAN_UCERF3,
 				NSHM23_ScalingRelationships.AVERAGE,
 				
 				// SLIP ALONG RUPTURE
@@ -365,6 +374,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,
 //				NSHM23_SegmentationModels.AVERAGE,
+//				NSHM23_SegmentationModels.MID,
 				
 				// SEG-SHIFT
 //				DistDependSegShift.NONE,
