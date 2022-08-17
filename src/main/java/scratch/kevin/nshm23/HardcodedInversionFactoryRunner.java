@@ -20,10 +20,13 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_PaleoUncertainties;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
@@ -52,15 +55,15 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
 //		dirName += "-nshm23-full_sys";
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-		dirName += "-nshm23-cluster_specific";
+		dirName += "-nshm23";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
-//		dirName += "-nshm23-cluster_specific-new_paleo";
+//		dirName += "-nshm23-new_paleo";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
 //		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT;
-//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT;
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
@@ -77,34 +80,36 @@ public class HardcodedInversionFactoryRunner {
 //				branch.setValue(node);
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
+		dirName += "-single_state";
 		levels = new ArrayList<>(levels);
 		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
 		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
 		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT)
 			branch.setValue(node);
 		
-//		branch.setValue(RupturePlausibilityModels.UCERF3_REDUCED);
-//		dirName += "-u3_reduced";
-		
-		branch.setValue(NSHM23_FaultModels.NSHM23_v2);
-		
 		branch.setValue(NSHM23_SingleStates.UT);
-		dirName += "-utah";
 //		branch.setValue(NSHM23_SingleStates.NM);
-//		dirName += "-new_mexico";
+		
+//		branch.setValue(RupturePlausibilityModels.UCERF3_REDUCED);
+		
+//		branch.setValue(NSHM23_FaultModels.NSHM23_v2);
 		
 //		branch.setValue(RupturePlausibilityModels.AZIMUTHAL_REDUCED);
-//		dirName += "-az_reduced";
 		
 //		branch.setValue(NSHM23_DeformationModels.ZENG);
-//		dirName += "-zeng";
-		branch.setValue(NSHM23_DeformationModels.EVANS);
-		dirName += "-evans";
+//		branch.setValue(NSHM23_DeformationModels.EVANS);
 //		branch.setValue(NSHM23_DeformationModels.SHEN_BIRD);
-//		dirName += "-shen_bird";
+		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
 		
 //		branch.setValue(ScalingRelationships.MEAN_UCERF3);
-//		dirName += "-u3_ave_scale";
+		
+		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+		
+		branch.setValue(NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD);
+		
+		branch.setValue(SupraSeisBValues.B_0p0);
+		
+//		branch.setValue(NSHM23_PaleoUncertainties.OVER_FIT);
 		
 ////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p1);
 ////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p2);
@@ -114,9 +119,37 @@ public class HardcodedInversionFactoryRunner {
 //		branch.setValue(NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD);
 //		dirName += "-scale"+branch.getValue(NSHM23_ScalingRelationships.class).getShortName();
 		
-		FaultSystemSolution solution = Inversions.run(factory, branch, threads);
+		boolean first = true;
+		for (int i=0; i<branch.size(); i++) {
+			LogicTreeNode node = branch.getValue(i);
+			if (node != null) {
+				if (node.getNodeWeight(branch) > 0d) {
+					// only include its name if there are other alternatives (unless we have chosen a zero-weight option)
+					boolean hasOthers = false;
+					for (LogicTreeNode oNode : branch.getLevel(i).getNodes()) {
+						if (oNode != node && oNode.getNodeWeight(branch) > 0d) {
+							hasOthers = true;
+							break;
+						}
+					}
+					if (!hasOthers)
+						continue;
+				}
+				if (first) {
+					dirName += "-";
+					first = false;
+				} else {
+					dirName += "_";
+				}
+				dirName += node.getFilePrefix();
+			}
+		}
 		
 		File outputDir = new File(parentDir, dirName);
+		System.out.println("Will save results in: "+outputDir.getAbsolutePath());
+		
+		FaultSystemSolution solution = Inversions.run(factory, branch, threads);
+		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		solution.write(new File(outputDir, "solution.zip"));

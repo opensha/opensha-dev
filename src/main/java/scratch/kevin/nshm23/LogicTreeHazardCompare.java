@@ -229,15 +229,24 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_08_12-nshm23_branches-paleo_uncerts-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 //		String mainName = "Paleo-Branches";
 		
-		File mainDir = new File(invDir, "2022_08_11-u3_branches-new_seg-FM3_1");
-		String mainName = "U3-Plus-Seg";
+//		File mainDir = new File(invDir, "2022_08_11-u3_branches-new_seg-FM3_1");
+//		String mainName = "U3-Plus-Seg";
+		
+//		File mainDir = new File(invDir, "2022_08_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-U3_MEAN-MeanU3Scale-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//		String mainName = "NSHM23/U3 Draft, Seg-With-Classic";
+		
+		File mainDir = new File(invDir, "2022_08_16-nshm23_branches-NSHM23_v2-CoulombRupSet-GEOLOGIC-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+		String mainName = "NSHM23 Draft, Seg-With-Classic";
+		
+//		File mainDir = new File(invDir, "2022_08_15-nshm23_branches-paleo_uncerts-NSHM23_v2-CoulombRupSet-AVERAGE-TotNuclRate-SubB1-SupraB0.5-MidSeg-ThreshAvgIterRelGR");
+//		String mainName = "NSHM23 Draft, Mini-Scaling-Sweep";
 		
 		LogicTreeNode[] subsetNodes = null;
 		LogicTreeNode[] compSubsetNodes = null;
 //		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1 };
-//		File compDir = null;
-//		String compName = null;
-//		File outputDir = new File(mainDir, "hazard_maps");
+		File compDir = null;
+		String compName = null;
+		File outputDir = new File(mainDir, "hazard_maps");
 //		File compDir = new File(invDir, "2022_07_23-nshm23_branches-no_seg-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-IncludeThruCreep");
 //		String compName = "No Segmentation";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_no_seg");
@@ -247,8 +256,10 @@ public class LogicTreeHazardCompare {
 //		File compDir = new File(invDir, "2022_08_10-nshm23_branches-no_ghost_trans-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 //		String compName = "No Segmentation";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_no_ghost_trans");
-//		File compDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 //		File compDir = new File(invDir, "2022_08_09-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+//		String compName = "NSHM23/U3 Draft";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_nshm23_draft");
+//		File compDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 //		String compName = "NSHM23 Draft";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_nshm23_draft");
 //		File compDir = new File(invDir, "2022_08_12-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR");
@@ -260,9 +271,9 @@ public class LogicTreeHazardCompare {
 //		String compName = "UCERF3 As Published, Uniform";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_as_published_uniform");
 //		LogicTreeNode[] compSubsetNodes = { FaultModels.FM3_1, SlipAlongRuptureModels.UNIFORM };
-		File compDir = new File(invDir, "2022_03_24-u3_branches-FM3_1-2000ip");
-		String compName = "UCERF3 New Anneal";
-		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
+//		File compDir = new File(invDir, "2022_03_24-u3_branches-FM3_1-2000ip");
+//		String compName = "UCERF3 New Anneal";
+//		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_new_anneal");
 //		File compDir = new File(invDir, "2022_03_13-u3_branches-coulomb-bilateral-FM3_1-2000ip");
 //		String compName = "UCERF3 Coulomb Bilateral";
 //		File outputDir = new File(mainDir, "hazard_maps_comp_ucerf3_coulomb_bilateral");
@@ -956,8 +967,13 @@ public class LogicTreeHazardCompare {
 						table.initNewLine().addColumn("**Choice**").addColumn("**Vs Mean**");
 						TableBuilder mapVsChoiceTable = MarkdownUtils.tableBuilder();
 						mapVsChoiceTable.initNewLine().addColumn("**Choice**");
-						List<LogicTreeNode> choices = new ArrayList<>(choiceMaps.keySet());
-						Collections.sort(choices, nodeNameCompare);
+						List<LogicTreeNode> choices = new ArrayList<>();
+						for (LogicTreeNode choice : level.getNodes())
+							if (choiceMaps.containsKey(choice))
+								choices.add(choice);
+						Preconditions.checkState(choices.size() == choiceMaps.size());
+//						List<LogicTreeNode> choices = new ArrayList<>(choiceMaps.keySet());
+//						Collections.sort(choices, nodeNameCompare);
 						for (LogicTreeNode choice : choices) {
 							table.addColumn("**Vs "+choice.getShortName()+"**");
 							mapVsChoiceTable.addColumn("**Vs "+choice.getShortName()+"**");

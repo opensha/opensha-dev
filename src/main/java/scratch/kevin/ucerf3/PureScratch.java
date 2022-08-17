@@ -1695,12 +1695,45 @@ public class PureScratch {
 //		System.out.println("OLD SD: "+rateUncertainty);
 	}
 	
+	private static void test153() throws IOException {
+		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2022_08_12-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		
+		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(sol.getRupSet());
+		
+		sol.write(new File(solFile.getParentFile(), "mod_"+solFile.getName()));
+	}
+	
+	private static void test154() throws IOException {
+		// fix bruce's weird CSVs
+		File inputFile = new File("/tmp/slipLengthScaling.csv");
+		CSVFile<String> csv = CSVFile.readFile(inputFile, true);
+		
+		int numFixed = 0;
+		int numFine = 0;
+		for (int row=0; row<csv.getNumRows(); row++) {
+			for (int col=0; col<csv.getNumCols(); col++) {
+				String val = csv.get(row, col);
+				if (val.startsWith("b'") && val.endsWith("'")) {
+					csv.set(row, col, val.substring(2, val.length()-1));
+					numFixed++;
+				} else {
+					numFine++;
+				}
+			}
+		}
+		System.out.println("Fixed "+numFixed+"/"+(numFine+numFixed));
+		csv.writeToFile(new File(inputFile.getParentFile(), "mod_"+inputFile.getName()));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test152();
+		test154();
 	}
 
 }

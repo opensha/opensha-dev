@@ -39,6 +39,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistMo
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_PaleoUncertainties;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
@@ -320,10 +321,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
 //		dirName += "-single_state";
 		
-		levels = new ArrayList<>(levels);
-		levels.add(NSHM23_LogicTreeBranch.PALEO_UNCERT);
-		dirName += "-paleo_uncerts";
-		
 		forceRequiredNonzeroWeight = true;
 		LogicTreeNode[] required = {
 				// FAULT MODELS
@@ -347,6 +344,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3_UncertAddDeformationModels.U3_ZENG,
 //				U3_UncertAddDeformationModels.U3_MEAN,
 //				NSHM23_DeformationModels.AVERAGE,
+//				NSHM23_DeformationModels.GEOLOGIC,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
@@ -369,7 +367,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SubSeisMoRateReductions.SYSTEM_AVG_SUB_B_1,
 				
 				// SUPRA-SEIS-B
-//				SupraSeisBValues.B_0p8,
+				SupraSeisBValues.B_0p5,
+				
+				// PALEO UNCERT
+//				NSHM23_PaleoUncertainties.EVEN_FIT,
 				
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,

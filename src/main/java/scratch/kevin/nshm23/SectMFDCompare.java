@@ -28,6 +28,8 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetailPlots;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
+import com.google.common.base.Preconditions;
+
 public class SectMFDCompare {
 
 	public static void main(String[] args) throws IOException {
@@ -46,9 +48,11 @@ public class SectMFDCompare {
 		mfdComparison(sol, sectIndex, outputDir);
 		
 		if (sectParentPage) {
+			File parentSectDir = new File(outputDir, "parent_sect_pages");
+			Preconditions.checkState(parentSectDir.exists() || parentSectDir.mkdir());
 			ReportMetadata meta = new ReportMetadata(new RupSetMetadata("Solution", sol));
 			SectBySectDetailPlots plot = new SectBySectDetailPlots();
-			plot.plotSingleParent(outputDir, meta, sol.getRupSet().getFaultSectionData(sectIndex).getParentSectionId());
+			plot.plotSingleParent(parentSectDir, meta, sol.getRupSet().getFaultSectionData(sectIndex).getParentSectionId());
 		}
 	}
 	
