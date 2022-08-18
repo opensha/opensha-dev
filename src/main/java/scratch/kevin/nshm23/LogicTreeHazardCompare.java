@@ -235,7 +235,7 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_08_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-U3_MEAN-MeanU3Scale-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 //		String mainName = "NSHM23/U3 Draft, Seg-With-Classic";
 		
-		File mainDir = new File(invDir, "2022_08_16-nshm23_branches-NSHM23_v2-CoulombRupSet-GEOLOGIC-TotNuclRate-SubB1-ThreshAvgIterRelGR");
+		File mainDir = new File(invDir, "2022_08_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR-360_samples");
 		String mainName = "NSHM23 Draft, Seg-With-Classic";
 		
 //		File mainDir = new File(invDir, "2022_08_15-nshm23_branches-paleo_uncerts-NSHM23_v2-CoulombRupSet-AVERAGE-TotNuclRate-SubB1-SupraB0.5-MidSeg-ThreshAvgIterRelGR");

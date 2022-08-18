@@ -101,7 +101,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		int remoteInversionsPerBundle = 3;
 //		int remoteTotalMemGB = 100;
 //		String queue = "skx-normal";
-//		int nodes = 100;
+//		int nodes = 128;
 //		double itersPerSec = 300000;
 //		int runsPerBranch = 1;
 //		int nodeBAAsyncThreads = 4;
@@ -349,7 +349,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
 //				ScalingRelationships.MEAN_UCERF3,
-				NSHM23_ScalingRelationships.AVERAGE,
+//				NSHM23_ScalingRelationships.AVERAGE,
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
@@ -361,13 +361,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SubSectConstraintModels.NUCL_MFD,
 				
 				// SUB-SEIS MO REDUCTION
-				SubSeisMoRateReductions.SUB_B_1,
-//				SubSeisMoRateReductions.NONE,
+//				SubSeisMoRateReductions.SUB_B_1,
+				SubSeisMoRateReductions.NONE,
 //				SubSeisMoRateReductions.SYSTEM_AVG,
 //				SubSeisMoRateReductions.SYSTEM_AVG_SUB_B_1,
 				
 				// SUPRA-SEIS-B
-				SupraSeisBValues.B_0p5,
+//				SupraSeisBValues.B_0p5,
 				
 				// PALEO UNCERT
 //				NSHM23_PaleoUncertainties.EVEN_FIT,
@@ -400,7 +400,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				};
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
-		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
+//		Class<? extends LogicTreeNode> sortBy = SubSectConstraintModels.class;
+		Class<? extends LogicTreeNode> sortBy = NSHM23_SegmentationModels.class;
 		/*
 		 * END NSHM23 logic tree
 		 */
@@ -437,6 +438,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		long randSeed = System.currentTimeMillis();
 		long randSeed = 12345678l;
 		int numSamples = 0;
+//		int numSamples = 36*10;
 		
 		if (required != null && required.length > 0) {
 			for (LogicTreeNode node : required)
@@ -448,6 +450,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			if (numSamples < logicTree.size()) {
 				System.out.println("Reducing tree of size "+logicTree.size()+" to "+numSamples+" samples");
 				dirName += "-"+numSamples+"_samples";
+				randSeed *= numSamples;
 				logicTree = logicTree.sample(numSamples, false, new Random(randSeed));
 			} else {
 				System.out.println("Won't sample logic tree, as tree has "+logicTree.size()+" values, which is fewer "
@@ -463,7 +466,18 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				public int compare(LogicTreeBranch<?> o1, LogicTreeBranch<?> o2) {
 					LogicTreeNode v1 = o1.getValue(sortBy);
 					LogicTreeNode v2 = o2.getValue(sortBy);
-					if (v1.equals(v2))
+					boolean fallback = false;;
+					if (v1 == null || v2 == null) {
+						if (v1 == null && v2 == null)
+							fallback = true;
+						else if (v1 == null)
+							return -1;
+						else if (v2 == null)
+							return 1;
+					} else if (v1.equals(v2)) {
+						fallback = true;
+					}
+					if (fallback)
 						return ((LogicTreeBranch<LogicTreeNode>)o1).compareTo((LogicTreeBranch<LogicTreeNode>)o2);
 					
 					return v1.getShortName().compareTo(v2.getShortName());
