@@ -1708,7 +1708,8 @@ public class PureScratch {
 	
 	private static void test154() throws IOException {
 		// fix bruce's weird CSVs
-		File inputFile = new File("/tmp/slipLengthScaling.csv");
+//		File inputFile = new File("/tmp/slipLengthScaling.csv");
+		File inputFile = new File("C:\\Users\\Kevin Milner\\Downloads\\slipLengthScaling.csv");
 		CSVFile<String> csv = CSVFile.readFile(inputFile, true);
 		
 		int numFixed = 0;
