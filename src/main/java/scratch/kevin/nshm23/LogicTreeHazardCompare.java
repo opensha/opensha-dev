@@ -32,6 +32,7 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
@@ -40,6 +41,7 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.MarkdownUtils;
+import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
@@ -58,6 +60,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstr
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
@@ -232,11 +235,14 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_08_11-u3_branches-new_seg-FM3_1");
 //		String mainName = "U3-Plus-Seg";
 		
-//		File mainDir = new File(invDir, "2022_08_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-U3_MEAN-MeanU3Scale-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-//		String mainName = "NSHM23/U3 Draft, Seg-With-Classic";
+//		File mainDir = new File(invDir, "2022_08_22-nshm18_branches-NSHM18_WUS_NoCA-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//		String mainName = "NSHM23/18 Draft";
 		
-		File mainDir = new File(invDir, "2022_08_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR-360_samples");
-		String mainName = "NSHM23 Draft, Seg-With-Classic";
+//		File mainDir = new File(invDir, "2022_08_18-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//		String mainName = "NSHM23/U3 Draft";
+		
+		File mainDir = new File(invDir, "2022_08_22-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		String mainName = "NSHM23 Draft";
 		
 //		File mainDir = new File(invDir, "2022_08_15-nshm23_branches-paleo_uncerts-NSHM23_v2-CoulombRupSet-AVERAGE-TotNuclRate-SubB1-SupraB0.5-MidSeg-ThreshAvgIterRelGR");
 //		String mainName = "NSHM23 Draft, Mini-Scaling-Sweep";
@@ -339,7 +345,8 @@ public class LogicTreeHazardCompare {
 		
 		ReturnPeriods[] rps = ReturnPeriods.values();
 		double[] periods = { 0d, 1d };
-		double spacing = 0.1;
+		double spacing = -1; // detect
+//		double spacing = 0.1;
 //		double spacing = 0.25;
 		
 		LogicTree<?> tree = solTree.getLogicTree();
@@ -398,14 +405,14 @@ public class LogicTreeHazardCompare {
 
 		logCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-3d, 1d);
 		spreadCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0, 1d);
-		spreadCPT.setNanColor(Color.GRAY);
+		spreadCPT.setNanColor(Color.LIGHT_GRAY);
 		spreadDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
-		spreadDiffCPT.setNanColor(Color.GRAY);
+		spreadDiffCPT.setNanColor(Color.LIGHT_GRAY);
 		pDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-100d, 100d);
-		pDiffCPT.setNanColor(Color.GRAY);
+		pDiffCPT.setNanColor(Color.LIGHT_GRAY);
 		percentileCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, 100d);
 		percentileCPT.setNanColor(Color.BLACK);
-		percentileCPT.setBelowMinColor(Color.GRAY);
+		percentileCPT.setBelowMinColor(Color.LIGHT_GRAY);
 		
 		ZipFile zip = new ZipFile(mapsZipFile);
 		
@@ -417,6 +424,14 @@ public class LogicTreeHazardCompare {
 		BranchWeightProvider weightProv = tree.getWeightProvider();
 		
 		GriddedRegion gridReg = null;
+		// see if the zip file has a region attached
+		ZipEntry regEntry = zip.getEntry(MPJ_LogicTreeHazardCalc.GRID_REGION_ENTRY_NAME);
+		if (regEntry != null) {
+			System.out.println("Reading gridded region from zip file: "+regEntry.getName());
+			BufferedReader bRead = new BufferedReader(new InputStreamReader(zip.getInputStream(regEntry)));
+			gridReg = GriddedRegion.fromFeature(Feature.read(bRead));
+		}
+		
 		for (int i=0; i<branches.size(); i++) {
 			LogicTreeBranch<?> branch = branches.get(i);
 			double weight = weightProv.getWeight(branch);
@@ -425,16 +440,54 @@ public class LogicTreeHazardCompare {
 			weights.add(weight);
 			totWeight += weight;
 			
+			FaultSystemSolution sol = null;
+			if (mapper == null)
+				sol = solLogicTree.forBranch(branch, false);
+			
 			if (gridReg == null) {
-				FaultSystemSolution sol = solLogicTree.forBranch(branch);
+				if (spacing <= 0d) {
+					// detect spacing
+
+					String dirName = branch.buildFileName();
+					ZipEntry entry = zip.getEntry(dirName+"/"+MPJ_LogicTreeHazardCalc.mapPrefix(periods[0], rps[0])+".txt");
+					
+					BufferedReader bRead = new BufferedReader(new InputStreamReader(zip.getInputStream(entry)));
+					String line = bRead.readLine();
+					int index = 0;
+					double prevLat = Double.NaN;
+					double prevLon = Double.NaN;
+					List<Double> deltas = new ArrayList<>();
+					while (line != null) {
+						line = line.trim();
+						if (!line.startsWith("#")) {
+							StringTokenizer tok = new StringTokenizer(line);
+							double lon = Double.parseDouble(tok.nextToken());
+							double lat = Double.parseDouble(tok.nextToken());
+							if (Double.isFinite(prevLat)) {
+								deltas.add(Math.abs(lat - prevLat));
+								deltas.add(Math.abs(lon - prevLon));
+							}
+							prevLat = lat;
+							prevLon = lon;
+						}
+						line = bRead.readLine();
+					}
+					double medianSpacing = DataUtils.median(Doubles.toArray(deltas));
+					medianSpacing = (double)Math.round(medianSpacing * 1000d) / 1000d;
+					System.out.println("Detected spacing: "+medianSpacing+" degrees");
+					spacing = medianSpacing;
+				}
+				
+				sol = solLogicTree.forBranch(branch);
 				Region region = ReportMetadata.detectRegion(sol);
 				if (region == null)
 					// just use bounding box
 					region = RupSetMapMaker.buildBufferedRegion(sol.getRupSet().getFaultSectionDataList());
 				gridReg = new GriddedRegion(region, spacing, GriddedRegion.ANCHOR_0_0);
-				
-				mapper = new SolHazardMapCalc(sol, null, gridReg, periods);
 			}
+			
+			if (mapper == null)
+				mapper = new SolHazardMapCalc(sol, null, gridReg, periods);
 			
 			System.out.println("Processing maps for "+branch);
 			
@@ -1052,7 +1105,9 @@ public class LogicTreeHazardCompare {
 							mapTable.finalizeLine();
 						}
 						lines.add("");
-						lines.add("Mean absolute difference: "+twoDigits.format(runningAbsDiffAvg.getAverage())+"%");
+						lines.add("Mean absolute difference (summary statistic comparing the value at every location in "
+								+ "every choice map to that same location in every other choice map): "
+								+twoDigits.format(runningAbsDiffAvg.getAverage())+"%");
 						lines.add("");
 						lines.addAll(table.build());
 						lines.add("");
@@ -1162,11 +1217,12 @@ public class LogicTreeHazardCompare {
 			MinMaxAveTracker runningDiffAvg, MinMaxAveTracker runningAbsDiffAvg) {
 		double mean = 0d;
 		double meanAbs = 0d;
+		int numFinite = 0;;
 		for (int i=0; i<map.size(); i++) {
 			double z1 = map.get(i);
 			double z2 = ref.get(i);
 			double pDiff = 100d*(z1-z2)/z2;
-			if (z1 == z2)
+			if (z1 == z2 && z1 > 0)
 				pDiff = 0d;
 			if (Double.isFinite(pDiff)) {
 				mean += pDiff;
@@ -1175,10 +1231,11 @@ public class LogicTreeHazardCompare {
 					runningDiffAvg.addValue(pDiff);
 				if (runningAbsDiffAvg != null)
 					runningAbsDiffAvg.addValue(Math.abs(pDiff));
+				numFinite++;
 			}
 		}
-		mean /= (double)map.size();
-		meanAbs /= (double)map.size();
+		mean /= (double)numFinite;
+		meanAbs /= (double)numFinite;
 		
 		return "Mean: "+twoDigits.format(mean)+"%, Mean Abs: "+twoDigits.format(meanAbs)+"%";
 	}

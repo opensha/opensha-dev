@@ -34,7 +34,7 @@ public class ClusterMFDCompare {
 				+ "2022_08_08-nshm23_branches-wide_seg_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-SubB1-"
 				+ "ThreshAvgIterRelGR/node_branch_averaged/SegModel_Max2km.zip");
 //				+ "ThreshAvgIterRelGR/node_branch_averaged/SegModel_HighSeg.zip");
-		LogicTreeBranch<LogicTreeNode> defaultBranch = NSHM23_LogicTreeBranch.DEFAULT;
+		LogicTreeBranch<LogicTreeNode> defaultBranch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
 		InversionConfigurationFactory factory = new NSHM23_InvConfigFactory();
 		
 		int includeSubSect = 4366; // Sangre de Cristo (San Luis)

@@ -34,6 +34,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.CoolingSc
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.MPJ_GridSeisBranchBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.MaxJumpDistModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
@@ -110,9 +111,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
 //				StampedeScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, StampedeScriptWriter.FMPJ_HOME);
 //		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
+		
+		boolean griddedJob = false;
 
-		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2022_08_08";
+//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+		String dirName = "2022_08_22";
 		
 		/*
 		 * UCERF3 logic tree
@@ -206,12 +209,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-nshm23_u3_hybrid_branches";
 //		double avgNumRups = 325000;
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
 		dirName += "-nshm23_branches";
 		double avgNumRups = 600000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
+//		double avgNumRups = 100000;
 		
 //		levels = new ArrayList<>(levels);
 //		for (int i=levels.size(); --i>=0;)
@@ -322,6 +326,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-single_state";
 		
 		forceRequiredNonzeroWeight = true;
+		griddedJob = true;
 		LogicTreeNode[] required = {
 				// FAULT MODELS
 //				FaultModels.FM3_1,
@@ -458,7 +463,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			}
 		}
 		
-		if (sortBy != null) {
+		if (sortBy != null && remoteInversionsPerBundle > 1) {
+			// only sort if we're bundling multiple inversions
 			Comparator<LogicTreeBranch<?>> groupingComparator = new Comparator<LogicTreeBranch<?>>() {
 
 				@SuppressWarnings("unchecked")
@@ -556,6 +562,18 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		argz += " --output-dir "+resultsDir.getAbsolutePath();
 		if (hazardGridded)
 			argz += " --gridded-seis INCLUDE";
+		// figure out if CA or full WUS
+		// also use coarse if logic tree is enormous
+		double gridSpacing = logicTree.size() > 1000 ? 0.2 : 0.1;
+		for (LogicTreeLevel<? extends LogicTreeNode> level : levels) {
+			if (NSHM23_FaultModels.class.isAssignableFrom(level.getType()))
+				// WUS, use coarser spacing
+				gridSpacing = 0.2;
+			if (NSHM23_SingleStates.class.isAssignableFrom(level.getType()))
+				// but it's actually a single state, nevermind
+				gridSpacing = 0.1;
+		}
+		argz += " --grid-spacing "+(float)gridSpacing;
 		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 		script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 		
@@ -565,6 +583,20 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			// run hazard in the high priority queue
 			queue = "scec_hiprio";
 		pbsWrite.writeScript(new File(localDir, "batch_hazard.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+		
+		if (griddedJob) {
+			argz = "--logic-tree "+remoteLogicTree.getAbsolutePath();
+			argz += " --sol-dir "+resultsDir.getAbsolutePath();
+			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+			script = mpjWrite.buildScript(MPJ_GridSeisBranchBuilder.class.getName(), argz);
+			
+			mins = (int)60*10;
+			nodes = Integer.min(40, nodes);
+			if (queue != null && queue.equals("scec"))
+				// run hazard in the high priority queue
+				queue = "scec_hiprio";
+			pbsWrite.writeScript(new File(localDir, "batch_grid_calc.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+		}
 		
 		// write node branch averaged script
 		JavaShellScriptWriter javaWrite = new JavaShellScriptWriter(

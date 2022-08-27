@@ -62,7 +62,7 @@ public class SegAdjustPageGen {
 		File markdownDir = new File("/home/kevin/markdown/nshm23-misc/segmentation-adj");
 		
 		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_08_05-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR/"
+				+ "2022_08_18-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
 //		int subSectIndex = 1910; // Hogsback
 //		int subSectIndex = 1907; // Hoback

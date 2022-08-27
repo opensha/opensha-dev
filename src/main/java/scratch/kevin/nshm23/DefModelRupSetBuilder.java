@@ -29,7 +29,7 @@ public class DefModelRupSetBuilder {
 		
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
 		
-		LogicTreeBranch<LogicTreeNode> defaultBranch = NSHM23_LogicTreeBranch.DEFAULT;
+		LogicTreeBranch<LogicTreeNode> defaultBranch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
 		defaultBranch = defaultBranch.copy();
 		defaultBranch.setValue(NSHM23_ScalingRelationships.AVERAGE);
 		

@@ -35,11 +35,13 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.uncertainty.BoundedUncertainty;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.Uncertainty;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
@@ -108,6 +110,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultM
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
@@ -115,6 +118,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentat
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.PrimaryRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -528,7 +532,7 @@ public class PureScratch {
 //		PaleoseismicConstraintData.loadUCERF3(rupSet);
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
 		
-		LogicTreeBranch<?> branch = NSHM23_LogicTreeBranch.DEFAULT;
+		LogicTreeBranch<?> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
 		
 		rupSet = factory.updateRuptureSetForBranch(rupSet, branch);
 		
@@ -1017,7 +1021,7 @@ public class PureScratch {
 	}
 	
 	private static void test137() throws IOException {
-		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT;
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
 		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2022_05_27-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg/"
 				+ "results_NSHM23_v1p4_CoulombRupSet_branch_averaged.zip"));
@@ -1337,7 +1341,7 @@ public class PureScratch {
 	private static void test146() throws IOException {
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
 		
-		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT.copy();
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT.copy();
 		branch.setValue(RupturePlausibilityModels.AZIMUTHAL_REDUCED);
 		
 		int threads = 8;
@@ -1729,12 +1733,108 @@ public class PureScratch {
 		csv.writeToFile(new File(inputFile.getParentFile(), "mod_"+inputFile.getName()));
 	}
 	
+	private static void test155() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_08_18-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		PaleoseismicConstraintData paleoData = sol.getRupSet().requireModule(PaleoseismicConstraintData.class);
+		
+		for (SectMappedUncertainDataConstraint data : paleoData.getPaleoSlipConstraints()) {
+			if (data.sectionName.contains("Mojave")) {
+				System.out.println("Paleo slip for "+data.name+" mapped to "+data.sectionName);
+				
+				PaleoseismicConstraintData.inferRatesFromSlipConstraints(rupSet.requireModule(SectSlipRates.class), List.of(data), true);
+			}
+		}
+	}
+	
+	private static void test156() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_08_18-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(rupSet);
+		rupSet.getModule(RegionsOfInterest.class);
+	}
+	
+	private static void test157() throws IOException {
+		List<? extends FaultSection> allSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2);
+		System.out.println("State fractional slip std devs (geologic):");
+		for (NSHM23_SingleStates state : NSHM23_SingleStates.values()) {
+			MinMaxAveTracker track = new MinMaxAveTracker();
+			for (FaultSection sect : allSects) {
+				Preconditions.checkState(sect instanceof GeoJSONFaultSection);
+				GeoJSONFaultSection geoSect = (GeoJSONFaultSection)sect;
+				if (state.contains(geoSect))
+					track.addValue(sect.getOrigSlipRateStdDev()/sect.getOrigAveSlipRate());
+			}
+			System.out.println(state+": "+track);
+		}
+	}
+	
+	private static void test158() {
+		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.5d);
+		double totMoRate = 1e17;
+		GutenbergRichterMagFreqDist gr1 = new GutenbergRichterMagFreqDist(
+				refMFD.getMinX(), refMFD.size(), refMFD.getDelta(), totMoRate, -0.5);
+		GutenbergRichterMagFreqDist gr2 = new GutenbergRichterMagFreqDist(
+				refMFD.getMinX(), refMFD.size(), refMFD.getDelta(), totMoRate, 0.9);
+		// now average them
+		double weight1 = Math.random();
+		double weight2 = 1d - weight1;
+		
+		IncrementalMagFreqDist avg = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		
+		for (int i=0; i<avg.size(); i++)
+			avg.set(i, gr1.getY(i)*weight1 + gr2.getY(i)*weight2);
+		
+		System.out.println("GR1 moment: "+gr1.getTotalMomentRate());
+		System.out.println("GR2 moment: "+gr2.getTotalMomentRate());
+		System.out.println("Avg moment: "+avg.getTotalMomentRate());
+	}
+	
+	private static void test159() {
+		for (DeformationModels dm : DeformationModels.values()) {
+			if (!dm.isApplicableTo(FaultModels.FM3_1) || dm == DeformationModels.MEAN_UCERF3)
+				continue;
+			List<? extends FaultSection> subSects = dm.build(FaultModels.FM3_1);
+			double min = Double.POSITIVE_INFINITY;
+			for (FaultSection sect : subSects)
+//				min = Math.min(min, sect.getReducedAveSlipRate());
+				min = Math.min(min, sect.getOrigAveSlipRate());
+			System.out.println(dm+": min slip rate: "+min);
+		}
+	}
+	
+	private static void test160() throws IOException {
+		GriddedRegion relm1 = new CaliforniaRegions.RELM_TESTING_GRIDDED(0.1d);
+		GriddedRegion relm2 = new GriddedRegion(PrimaryRegions.CONUS_U3_RELM.load(), 0.1d, GriddedRegion.ANCHOR_0_0);
+		
+		System.out.println("orig has "+relm1.getNodeCount()+" locs");
+		System.out.println("new has "+relm2.getNodeCount()+" locs");
+	}
+	
+	private static void test161() throws IOException {
+		File dir = new File("/home/kevin/Downloads/tmp/DeclusteringSmoothingGrids/CEUS");
+		for (File file : dir.listFiles()) {
+			System.out.println(file.getName());
+			CSVFile<String> csv = CSVFile.readFile(file, true);
+			double sum = 0d;
+			for (int row=0; row<csv.getNumRows(); row++)
+				sum+= csv.getDouble(row, 2);
+			System.out.println(sum);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test154();
+		test161();
 	}
 
 }
