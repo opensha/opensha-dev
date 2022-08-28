@@ -14,6 +14,7 @@ import org.opensha.commons.geo.Region;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
@@ -353,6 +354,13 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 		ETAS_CatalogGridSourceProvider gridded = new ETAS_CatalogGridSourceProvider(catalogs, 0.01, false);
 		int numHighRes = gridded.highResRegion.getNodeCount();
 		System.out.println("Created "+gridded.nodeMFDs.size()+" MFDs at "+numHighRes+" possible nodes");
+	}
+
+	@Override
+	public GridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
+			Map<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs, double[] fracStrikeSlip, double[] fracNormal,
+			double[] fracReverse) {
+		throw new UnsupportedOperationException("Not implemented");
 	}
 
 }

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.HistogramFunction;
@@ -900,6 +901,13 @@ public class GridSourceProvider2023 extends AbstractGridSourceProvider {
 				
 		long runtime = System.currentTimeMillis()-startTime;
 		System.out.println("Runtime = "+(float)(runtime/60000d)+" min");
+	}
+
+	@Override
+	public GridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
+			Map<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs, double[] fracStrikeSlip, double[] fracNormal,
+			double[] fracReverse) {
+		throw new UnsupportedOperationException("Not implemented");
 	}
 
 }

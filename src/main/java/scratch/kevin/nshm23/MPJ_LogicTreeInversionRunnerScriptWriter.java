@@ -604,7 +604,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		argz = "--input-file "+resultsDir.getAbsolutePath();
 		argz += " --logic-tree "+remoteLogicTree.getAbsolutePath();
 		argz += " --output-dir "+new File(remoteDir, "node_branch_averaged");
-		argz += " --threads "+remoteTotalThreads;
+		argz += " --threads "+Integer.min(8, remoteTotalThreads);
 		argz += " --async-threads "+nodeBAAsyncThreads;
 		// see if we have a single BA file to use as a comparison
 		List<File> baFiles = AbstractAsyncLogicTreeWriter.getBranchAverageSolutionFiles(resultsDir, logicTree);
