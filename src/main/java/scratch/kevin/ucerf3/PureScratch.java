@@ -1829,12 +1829,17 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test162() throws IOException {
+		LogicTreeBranch<?> branch = new LogicTreeBranch<>(List.of(NSHM23_LogicTreeBranch.SINGLE_STATES), List.of(NSHM23_SingleStates.NM));
+		NSHM23_FaultModels.getDefaultRegion(branch);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test161();
+		test162();
 	}
 
 }

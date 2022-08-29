@@ -14,7 +14,6 @@ dependencies {
 
     implementation 'org.apache.pdfbox:pdfbox:2.0.6'
     implementation 'org.apache.commons:commons-collections4:4.1'
-    api 'org.apache.commons:commons-compress:1.15'
     api 'uk.me.berndporr:iirj:1.0'
     implementation 'com.github.haifengl:smile-core:2.6.0'
     

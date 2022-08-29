@@ -86,7 +86,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		int remoteInversionsPerBundle = 1;
 		int remoteTotalMemGB = 50;
 		String queue = "scec";
-		int nodes = 36;
+		int nodes = 5;
 //		int nodes = 19;
 		double itersPerSec = 200000;
 		int runsPerBranch = 1;
@@ -114,8 +114,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		boolean griddedJob = false;
 
-//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		String dirName = "2022_08_22";
+		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+//		String dirName = "2022_08_22";
 		
 		/*
 		 * UCERF3 logic tree
@@ -321,9 +321,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-classic_sa";
 //		extraArgs.add("--cooling-schedule "+CoolingScheduleType.CLASSICAL_SA.name());
 		
-//		levels = new ArrayList<>(levels);
-//		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
-//		dirName += "-single_state";
+		levels = new ArrayList<>(levels);
+		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
+		dirName += "-single_state";
 		
 		forceRequiredNonzeroWeight = true;
 		griddedJob = true;
@@ -334,8 +334,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM23_FaultModels.NSHM23_v1p4,
 				NSHM23_FaultModels.NSHM23_v2,
 				
-				// SINGLE STATE
-//				NSHM23_SingleStates.NM,
+//				// SINGLE STATE
+				NSHM23_SingleStates.NM,
 
 				// RUPTURE SETS
 				RupturePlausibilityModels.COULOMB,
@@ -349,12 +349,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3_UncertAddDeformationModels.U3_ZENG,
 //				U3_UncertAddDeformationModels.U3_MEAN,
 //				NSHM23_DeformationModels.AVERAGE,
-//				NSHM23_DeformationModels.GEOLOGIC,
+				NSHM23_DeformationModels.GEOLOGIC,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
 //				ScalingRelationships.MEAN_UCERF3,
-//				NSHM23_ScalingRelationships.AVERAGE,
+				NSHM23_ScalingRelationships.AVERAGE,
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
@@ -380,7 +380,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,
 //				NSHM23_SegmentationModels.AVERAGE,
-//				NSHM23_SegmentationModels.MID,
+				NSHM23_SegmentationModels.MID,
 				
 				// SEG-SHIFT
 //				DistDependSegShift.NONE,
@@ -589,13 +589,27 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " --sol-dir "+resultsDir.getAbsolutePath();
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 			script = mpjWrite.buildScript(MPJ_GridSeisBranchBuilder.class.getName(), argz);
-			
-			mins = (int)60*10;
-			nodes = Integer.min(40, nodes);
-			if (queue != null && queue.equals("scec"))
-				// run hazard in the high priority queue
-				queue = "scec_hiprio";
 			pbsWrite.writeScript(new File(localDir, "batch_grid_calc.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+			
+			// now add hazard calc job with gridded
+			for (boolean avgGridded : new boolean[] {true, false}) {
+				File jobFile;
+				if (avgGridded) {
+					argz = "--input-file "+new File(resultsDir.getAbsolutePath()+"_avg_gridded.zip");
+					argz += " --output-file "+new File(remoteDir, "results_hazard_avg_gridded.zip").getAbsolutePath();
+					jobFile = new File(localDir, "batch_hazard_avg_gridded.slurm");
+				} else {
+					argz = "--input-file "+new File(remoteDir.getAbsolutePath()+"_full_gridded.zip");
+					argz += " --output-file "+new File(resultsDir, "results_hazard_full_gridded.zip").getAbsolutePath();
+					jobFile = new File(localDir, "batch_hazard_full_gridded.slurm");
+				}
+				argz += " --output-dir "+resultsDir.getAbsolutePath();
+				argz += " --gridded-seis INCLUDE";
+				argz += " --grid-spacing "+(float)gridSpacing;
+				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+				script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
+				pbsWrite.writeScript(jobFile, script, mins, nodes, remoteTotalThreads, queue);
+			}
 		}
 		
 		// write node branch averaged script
