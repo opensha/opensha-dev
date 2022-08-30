@@ -43,6 +43,7 @@ import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
 import org.opensha.commons.geo.json.FeatureProperties;
@@ -118,7 +119,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentat
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.PrimaryRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -1811,7 +1813,7 @@ public class PureScratch {
 	
 	private static void test160() throws IOException {
 		GriddedRegion relm1 = new CaliforniaRegions.RELM_TESTING_GRIDDED(0.1d);
-		GriddedRegion relm2 = new GriddedRegion(PrimaryRegions.CONUS_U3_RELM.load(), 0.1d, GriddedRegion.ANCHOR_0_0);
+		GriddedRegion relm2 = new GriddedRegion(SeismicityRegions.CONUS_U3_RELM.load(), 0.1d, GriddedRegion.ANCHOR_0_0);
 		
 		System.out.println("orig has "+relm1.getNodeCount()+" locs");
 		System.out.println("new has "+relm2.getNodeCount()+" locs");
@@ -1834,12 +1836,28 @@ public class PureScratch {
 		NSHM23_FaultModels.getDefaultRegion(branch);
 	}
 	
+	private static void test163() throws IOException {
+		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		double refSpacing = 0.2;
+		int refCount = new GriddedRegion(reg, refSpacing, GriddedRegion.ANCHOR_0_0).getNodeCount();
+		
+		DecimalFormat refDF = new DecimalFormat("0.00");
+		
+		double[] spacings = { 0.1, 0.2, 0.25, 0.3, 1d/3d, 0.4, 0.5 };
+		for (double spacing : spacings) {
+			GriddedRegion gridReg = new GriddedRegion(reg, spacing, GriddedRegion.ANCHOR_0_0);
+			double ratio = (double)gridReg.getNodeCount()/(double)refCount;
+			System.out.println((float)spacing+": "+gridReg.getNodeCount()+" points\t("+refDF.format(ratio)+"x "+(float)refSpacing+")");
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test162();
+		test163();
 	}
 
 }

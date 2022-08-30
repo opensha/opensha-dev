@@ -560,8 +560,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		// now write hazard script
 		argz = "--input-file "+new File(resultsDir.getAbsolutePath()+".zip");
 		argz += " --output-dir "+resultsDir.getAbsolutePath();
-		if (hazardGridded)
+		if (hazardGridded) {
 			argz += " --gridded-seis INCLUDE";
+			argz += " --max-distance 200";
+		}
 		// figure out if CA or full WUS
 		// also use coarse if logic tree is enormous
 		double gridSpacing = logicTree.size() > 1000 ? 0.2 : 0.1;
@@ -587,7 +589,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		if (griddedJob) {
 			argz = "--logic-tree "+remoteLogicTree.getAbsolutePath();
 			argz += " --sol-dir "+resultsDir.getAbsolutePath();
-			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+			// these calculations can take a lot of memory
+			int gridThreads = Integer.max(1, remoteTotalThreads/2);
+			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(gridThreads).build();
 			script = mpjWrite.buildScript(MPJ_GridSeisBranchBuilder.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "batch_grid_calc.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 			
@@ -606,6 +610,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				argz += " --output-dir "+resultsDir.getAbsolutePath();
 				argz += " --gridded-seis INCLUDE";
 				argz += " --grid-spacing "+(float)gridSpacing;
+				argz += " --max-distance 200";
 				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 				script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 				pbsWrite.writeScript(jobFile, script, mins, nodes, remoteTotalThreads, queue);

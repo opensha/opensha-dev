@@ -319,18 +319,25 @@ public class LogicTreeHazardCompare {
 ////		File outputDir = new File(mainDir, "hazard_maps_comp_coulomb");
 //		LogicTreeNode[] compSubsetNodes = null;
 		
+		File resultsFile, hazardFile;
+		File compResultsFile, compHazardFile;
+		
 		if (args.length > 0) {
 			// assume CLI instead
-			Preconditions.checkArgument(args.length == 3 || args.length == 5,
-					"USAGE: <primary-dir> <primary-name> [<comparison-dir> <comparison-name>] <output-dir>");
+			Preconditions.checkArgument(args.length == 4 || args.length == 7,
+					"USAGE: <primary-results-zip> <primary-hazard-zip> <primary-name> [<comparison-results-zip> "
+					+ "<comparison-hazard-zip> <comparison-name>] <output-dir>");
 			int cnt = 0;
-			mainDir = new File(args[cnt++]);
+			resultsFile = new File(args[cnt++]);
+			hazardFile = new File(args[cnt++]);
 			mainName = args[cnt++];
-			if (args.length > 3) {
-				compDir = new File(args[cnt++]);
+			if (args.length > 4) {
+				compResultsFile = new File(args[cnt++]);
+				compHazardFile = new File(args[cnt++]);
 				compName = args[cnt++];
 			} else {
-				compDir = null;
+				compResultsFile = null;
+				compHazardFile = null;
 				compName = null;
 			}
 			outputDir = new File(args[cnt++]);
@@ -339,9 +346,19 @@ public class LogicTreeHazardCompare {
 			compSubsetNodes = null;
 			currentWeights = false;
 			compCurrentWeights = false;
+		} else {
+			resultsFile = new File(mainDir, "results.zip");
+			hazardFile = new File(mainDir, "results_hazard.zip");
+			if (compDir == null) {
+				compResultsFile = null;
+				compHazardFile = null;
+			} else {
+				compResultsFile = new File(compDir, "results.zip");
+				compHazardFile = new File(compDir, "results_hazard.zip");
+			}
 		}
 		
-		SolutionLogicTree solTree = SolutionLogicTree.load(new File(mainDir, "results.zip"));
+		SolutionLogicTree solTree = SolutionLogicTree.load(resultsFile);
 		
 		ReturnPeriods[] rps = ReturnPeriods.values();
 		double[] periods = { 0d, 1d };
@@ -355,18 +372,18 @@ public class LogicTreeHazardCompare {
 		if (currentWeights)
 			tree.setWeightProvider(new BranchWeightProvider.CurrentWeights());
 		LogicTreeHazardCompare mapper = new LogicTreeHazardCompare(solTree, tree,
-				new File(mainDir, "results_hazard.zip"), rps, periods, spacing);
+				hazardFile, rps, periods, spacing);
 		
 		LogicTreeHazardCompare comp = null;
 		if (compDir != null) {
-			SolutionLogicTree compSolTree = SolutionLogicTree.load(new File(compDir, "results.zip"));
+			SolutionLogicTree compSolTree = SolutionLogicTree.load(compResultsFile);
 			LogicTree<?> compTree = compSolTree.getLogicTree();
 			if (compSubsetNodes != null)
 				compTree = compTree.matchingAll(compSubsetNodes);
 			if (compCurrentWeights)
 				compTree.setWeightProvider(new BranchWeightProvider.CurrentWeights());
 			comp = new LogicTreeHazardCompare(compSolTree, compTree,
-					new File(compDir, "results_hazard.zip"), rps, periods, spacing);
+					compHazardFile, rps, periods, spacing);
 		}
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
