@@ -603,7 +603,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --output-file "+new File(remoteDir, "results_hazard_avg_gridded.zip").getAbsolutePath();
 					jobFile = new File(localDir, "batch_hazard_avg_gridded.slurm");
 				} else {
-					argz = "--input-file "+new File(remoteDir.getAbsolutePath()+"_full_gridded.zip");
+					argz = "--input-file "+new File(resultsDir.getAbsolutePath()+"_full_gridded.zip");
 					argz += " --output-file "+new File(resultsDir, "results_hazard_full_gridded.zip").getAbsolutePath();
 					jobFile = new File(localDir, "batch_hazard_full_gridded.slurm");
 				}
@@ -613,7 +613,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				argz += " --max-distance 200";
 				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 				script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
-				pbsWrite.writeScript(jobFile, script, mins, nodes, remoteTotalThreads, queue);
+				pbsWrite.writeScript(jobFile, script, mins*5, nodes, remoteTotalThreads, queue);
 			}
 		}
 		

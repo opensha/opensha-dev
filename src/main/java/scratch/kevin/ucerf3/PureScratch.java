@@ -78,6 +78,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
@@ -1852,12 +1853,33 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test164() throws IOException {
+		File mainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/2022_08_22-nshm23_branches-NSHM23_v2-"
+				+ "CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File resultsFile = new File(mainDir, "results_gridded_branches.zip");
+		
+		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
+		
+		for (LogicTreeBranch<?> branch : slt.getLogicTree()) {
+			FaultSystemSolution sol = slt.forBranch(branch);
+			GridSourceProvider gridProv = sol.getGridSourceProvider();
+			System.out.println(gridProv.getName()+": "+gridProv.getClass().getName());
+		}
+	}
+	
+	private static void test165() throws IOException {
+		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		System.out.println(fm.getFaultSections().size()+" sections");
+		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
+		System.out.println(dm.build(fm).size()+" subsections");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test163();
+		test165();
 	}
 
 }

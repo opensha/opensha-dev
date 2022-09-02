@@ -1,8 +1,14 @@
 package scratch.kevin.nshm23;
 
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
@@ -18,9 +24,19 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import javax.imageio.ImageIO;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.ChartRenderingInfo;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.title.PaintScaleLegend;
+import org.jfree.chart.ui.RectangleEdge;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -33,6 +49,13 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
+import org.opensha.commons.gui.plot.GraphPanel;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotPreferences;
+import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
+import org.opensha.commons.gui.plot.pdf.PDF_UTF8_FontMapper;
 import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
@@ -53,6 +76,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.RupSetMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
+import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.MapPlot;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
@@ -61,6 +85,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
+import com.itextpdf.awt.DefaultFontMapper;
+import com.itextpdf.awt.FontMapper;
+import com.itextpdf.awt.PdfGraphics2D;
+import com.itextpdf.text.BaseColor;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.ExceptionConverter;
+import com.itextpdf.text.FontFactory;
+import com.itextpdf.text.Phrase;
+import com.itextpdf.text.pdf.BaseFont;
+import com.itextpdf.text.pdf.PdfContentByte;
+import com.itextpdf.text.pdf.PdfTemplate;
+import com.itextpdf.text.pdf.PdfWriter;
 
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
@@ -241,6 +278,9 @@ public class LogicTreeHazardCompare {
 //		File mainDir = new File(invDir, "2022_08_18-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		String mainName = "NSHM23/U3 Draft";
 		
+//		File mainDir = new File(invDir, "2022_08_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR-360_samples");
+//		String mainName = "NSHM23 Draft";
+		
 		File mainDir = new File(invDir, "2022_08_22-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		String mainName = "NSHM23 Draft";
 		
@@ -375,7 +415,7 @@ public class LogicTreeHazardCompare {
 				hazardFile, rps, periods, spacing);
 		
 		LogicTreeHazardCompare comp = null;
-		if (compDir != null) {
+		if (compResultsFile != null) {
 			SolutionLogicTree compSolTree = SolutionLogicTree.load(compResultsFile);
 			LogicTree<?> compTree = compSolTree.getLogicTree();
 			if (compSubsetNodes != null)
@@ -400,6 +440,7 @@ public class LogicTreeHazardCompare {
 	private CPT logCPT;
 	private CPT spreadCPT;
 	private CPT spreadDiffCPT;
+	private CPT diffCPT;
 	private CPT pDiffCPT;
 	private CPT percentileCPT;
 	
@@ -425,8 +466,13 @@ public class LogicTreeHazardCompare {
 		spreadCPT.setNanColor(Color.LIGHT_GRAY);
 		spreadDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
 		spreadDiffCPT.setNanColor(Color.LIGHT_GRAY);
-		pDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-100d, 100d);
+//		pDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-100d, 100d);
+//		pDiffCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-50d, 50d);
+		pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
+//		pDiffCPT = GMT_CPT_Files.DIVERGING_DARK_BLUE_RED_UNIFORM.instance().rescale(-50d, 50d);
 		pDiffCPT.setNanColor(Color.LIGHT_GRAY);
+		diffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-0.2, 0.2d);
+		diffCPT.setNanColor(Color.LIGHT_GRAY);
 		percentileCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, 100d);
 		percentileCPT.setNanColor(Color.BLACK);
 		percentileCPT.setBelowMinColor(Color.LIGHT_GRAY);
@@ -884,8 +930,9 @@ public class LogicTreeHazardCompare {
 				
 				TableBuilder table = MarkdownUtils.tableBuilder();
 				
-				File meanMapFile = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_mean", log10(mean),
-						logCPT, TITLES ? name : " ", "Log10 Weighted-Average, "+label);
+				MapPlot meanMapPlot = mapper.buildMapPlot(resourcesDir, prefix+"_mean", log10(mean),
+						logCPT, TITLES ? name : " ", "Log10 Weighted-Average, "+label, false);
+				File meanMapFile = new File(resourcesDir, meanMapPlot.prefix+".png");
 				GriddedGeoDataSet.writeXYZFile(mean, new File(resourcesDir, prefix+"_mean.xyz"));
 				File medianMapFile = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_median", log10(median),
 						logCPT, TITLES ? name : " ", "Log10 Weighted-Median, "+label);
@@ -986,9 +1033,10 @@ public class LogicTreeHazardCompare {
 				lines.add("### "+label+" Logic Tree Comparisons");
 				lines.add(topLink); lines.add("");
 				
+				int combinedMapIndex = lines.size();
+				
 				// plot mean percentile
 				table = MarkdownUtils.tableBuilder();
-				
 				GriddedGeoDataSet meanPercentile = calcPercentileWithinDist(mapArbDiscrs, mean);
 				File meanPercentileMap = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_mean_percentile",
 						meanPercentile, percentileCPT, TITLES ? "Branch-Averaged Percentiles" : " ",
@@ -1005,11 +1053,17 @@ public class LogicTreeHazardCompare {
 						"![Median vs Mean]("+resourcesDir.getName()+"/"+meanMedDiffMap.getName()+")");
 //				File meanMap = new File(outputDir, prefix+"_median.png");
 				lines.add("Branched-average hazard can be dominated by outlier branches. This map shows the percentile"
-						+ " at which the branch averaged map lies; areas far from the 50-th percentile are likely "
-						+ "outlier-dominated.");
+						+ " at which the branch averaged map lies. Areas far from the 50-th percentile are likely "
+						+ "outlier-dominated and may show up in the percentile comparison maps below, even if mean "
+						+ "hazard differences are minimal");
 				lines.add("");
 				lines.addAll(table.build());
 				lines.add("");
+				
+				List<LogicTreeLevel<?>> branchLevels = new ArrayList<>();
+				List<List<LogicTreeNode>> branchLevelValues = new ArrayList<>();
+				List<List<MapPlot>> branchLevelPDiffPlots = new ArrayList<>();
+				List<List<MapPlot>> branchLevelDiffPlots = new ArrayList<>();
 				
 				for (LogicTreeLevel<?> level : solLogicTree.getLogicTree().getLevels()) {
 					HashMap<LogicTreeNode, List<GriddedGeoDataSet>> choiceMaps = new HashMap<>();
@@ -1057,11 +1111,18 @@ public class LogicTreeHazardCompare {
 						lines.add("");
 						
 						TableBuilder mapTable = MarkdownUtils.tableBuilder();
-						mapTable.addLine("", "Choice Mean vs Full Mean", "Choice Percentile in Full Dist", 
-								"Choice Percentile in Dist Without");
+						mapTable.addLine("", "Choice Mean vs Full Mean, % Difference", "Choice Mean - Full Mean",
+								"Choice Percentile in Full Dist", "Choice Percentile in Dist Without");
 						
 						MinMaxAveTracker runningDiffAvg = new MinMaxAveTracker();
 						MinMaxAveTracker runningAbsDiffAvg = new MinMaxAveTracker();
+						
+						branchLevels.add(level);
+						branchLevelValues.add(choices);
+						List<MapPlot> branchPDiffPlots = new ArrayList<>();
+						List<MapPlot> branchDiffPlots = new ArrayList<>();
+						branchLevelPDiffPlots.add(branchPDiffPlots);
+						branchLevelDiffPlots.add(branchDiffPlots);
 						
 						for (LogicTreeNode choice : choices) {
 							table.initNewLine().addColumn("**"+choice.getShortName()+"**");
@@ -1091,18 +1152,37 @@ public class LogicTreeHazardCompare {
 							mapVsChoiceTable.finalizeLine();
 							
 							// now maps
-							GriddedGeoDataSet pDiff = buildPDiff(mean, choiceMap);
 							
 							mapTable.initNewLine().addColumn("**"+choice.getShortName()+"**");
-							File map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_"+choice.getFilePrefix()+"_pDiff",
+							
+							// pDiff
+							GriddedGeoDataSet pDiff = buildPDiff(mean, choiceMap);
+							MapPlot pDiffMap = mapper.buildMapPlot(resourcesDir, prefix+"_"+choice.getFilePrefix()+"_pDiff",
 									pDiff, pDiffCPT, TITLES ? choice.getShortName()+" Comparison" : " ",
 									choice.getShortName()+" - Mean, % Difference, "+label, true);
+							branchPDiffPlots.add(pDiffMap);
+							File map = new File(resourcesDir, pDiffMap.prefix+".png");
+							mapTable.addColumn("![Percent Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+							
+							// regular diff
+							GriddedGeoDataSet diff = new GriddedGeoDataSet(region, false);
+							for (int i=0; i<diff.size(); i++)
+								diff.set(i, choiceMap.get(i) - mean.get(i));
+							MapPlot diffMap = mapper.buildMapPlot(resourcesDir, prefix+"_"+choice.getFilePrefix()+"_diff",
+									diff, diffCPT, TITLES ? choice.getShortName()+" Comparison" : " ",
+									choice.getShortName()+" - Mean, "+label, false);
+							branchDiffPlots.add(diffMap);
+							map = new File(resourcesDir, diffMap.prefix+".png");
 							mapTable.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+							
+							// percentile
 							GriddedGeoDataSet percentile = calcPercentileWithinDist(mapArbDiscrs, choiceMap);
 							map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_"+choice.getFilePrefix()+"_percentile",
 									percentile, percentileCPT, TITLES ? choice.getShortName()+" Comparison" : " ",
 									choice.getShortName()+" %-ile, "+label);
 							mapTable.addColumn("![Percentile Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+							
+							// percentile without
 							List<GriddedGeoDataSet> mapsWithout = new ArrayList<>();
 							List<Double> weightsWithout = new ArrayList<>();
 							for (int i=0; i<branches.size(); i++) {
@@ -1119,6 +1199,7 @@ public class LogicTreeHazardCompare {
 									percentileWithout, percentileCPT, TITLES ? choice.getShortName()+" Comparison" : " ",
 									choice.getShortName()+" %-ile, "+label);
 							mapTable.addColumn("![Percentile Map]("+resourcesDir.getName()+"/"+map.getName()+")");
+							
 							mapTable.finalizeLine();
 						}
 						lines.add("");
@@ -1133,6 +1214,27 @@ public class LogicTreeHazardCompare {
 						lines.addAll(mapVsChoiceTable.build());
 						lines.add("");
 					}
+				}
+				
+				if (!branchLevels.isEmpty()) {
+					String combPrefix = prefix+"_branches_combined";
+					writeCombinedBranchMap(resourcesDir, combPrefix, name+", Logic Tree Comparison",
+							meanMapPlot, branchLevels, branchLevelValues,
+							branchLevelPDiffPlots, "Branch Choice vs Mean, % Difference",
+							branchLevelDiffPlots, "Branch Choice - Mean (g)");
+					combPrefix = prefix+"_branches_combined_pDiff";
+					writeCombinedBranchMap(resourcesDir, combPrefix, name+", Logic Tree Comparison",
+							meanMapPlot, branchLevels, branchLevelValues, branchLevelPDiffPlots,
+							"Branch Choice vs Mean, % Difference");
+					table = MarkdownUtils.tableBuilder();
+					table.addLine("Combined Summary Maps");
+					table.addLine("![Combined Map]("+resourcesDir.getName()+"/"+combPrefix+".png)");
+					combPrefix = prefix+"_branches_combined_diff";
+					writeCombinedBranchMap(resourcesDir, combPrefix, name+", Logic Tree Comparison",
+							meanMapPlot, branchLevels, branchLevelValues, branchLevelDiffPlots,
+							"Branch Choice - Mean (g)");
+					table.addLine("![Combined Map]("+resourcesDir.getName()+"/"+combPrefix+".png)");
+					lines.addAll(combinedMapIndex, table.build());
 				}
 			}
 		}
@@ -1325,6 +1427,277 @@ public class LogicTreeHazardCompare {
 		map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_comp_pDiff", diff, diffCPT, name+" vs "+compName, diffLabel, !spread);
 		table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
 		table.finalizeLine();
+	}
+	
+	public void writeCombinedBranchMap(File resourcesDir, String prefix, String fullTitle, MapPlot meanMap,
+			List<LogicTreeLevel<?>> branchLevels, List<List<LogicTreeNode>> branchLevelValues,
+			List<List<MapPlot>> branchLevelPlots, String label) throws IOException {
+		writeCombinedBranchMap(resourcesDir, prefix, fullTitle, meanMap, branchLevels,
+				branchLevelValues, branchLevelPlots, label, null, null);
+	}
+	
+	public void writeCombinedBranchMap(File resourcesDir, String prefix, String fullTitle, MapPlot meanMap,
+			List<LogicTreeLevel<?>> branchLevels, List<List<LogicTreeNode>> branchLevelValues,
+			List<List<MapPlot>> branchLevelPlots1, String label1, List<List<MapPlot>> branchLevelPlots2, String label2)
+					throws IOException {
+		// constants
+		int primaryWidth = 1200;
+		int primaryWidthDelta = 5;
+		int secondaryWidth = primaryWidth/primaryWidthDelta;
+		int padding = 10;
+		int heightLevelName = 40;
+		int heightChoice = 25;
+		
+		double secondaryScale = (double)secondaryWidth/(double)primaryWidth;
+		
+		int maxNumChoices = 0;
+		for (List<MapPlot> plots : branchLevelPlots1)
+			maxNumChoices = Integer.max(maxNumChoices, plots.size());
+		if (branchLevelPlots2 != null)
+			Preconditions.checkState(branchLevelPlots2.size() == branchLevelPlots1.size());
+		Preconditions.checkState(maxNumChoices > 0);
+		
+		PlotPreferences primaryPrefs = PlotUtils.getDefaultFigurePrefs();
+		primaryPrefs.scaleFontSizes(1.25d);
+		PlotPreferences secondaryPrefs = primaryPrefs.clone();
+		secondaryPrefs.scaleFontSizes(secondaryScale);
+		
+		Font fontLevelName = new Font(Font.SANS_SERIF, Font.BOLD, primaryPrefs.getPlotLabelFontSize());
+		Font fontChoiceName = new Font(Font.SANS_SERIF, Font.BOLD, primaryPrefs.getLegendFontSize());
+		
+		// prepare primary figure and determine aspect ratio
+		HeadlessGraphPanel primaryGP = new HeadlessGraphPanel(primaryPrefs);
+		XYZPlotSpec primarySpec = meanMap.spec;
+		primarySpec.setCPTTickUnit(0.5d);
+		primarySpec.setTitle(fullTitle);
+		CPT diffCPT = branchLevelPlots1.get(0).get(0).spec.getCPT();
+		PlotPreferences prefs = primaryGP.getPlotPrefs();
+		PaintScaleLegend diffSubtitle = GraphPanel.getLegendForCPT(diffCPT, label1,
+				prefs.getAxisLabelFontSize(), prefs.getTickLabelFontSize(),
+				-1, RectangleEdge.BOTTOM);
+		if (branchLevelPlots2 != null) {
+			CPT diffCPT2 = branchLevelPlots2.get(0).get(0).spec.getCPT();
+			PaintScaleLegend diffSubtitle2 = GraphPanel.getLegendForCPT(diffCPT2, label2,
+					prefs.getAxisLabelFontSize(), prefs.getTickLabelFontSize(),
+					-1, RectangleEdge.BOTTOM);
+			primarySpec.addSubtitle(diffSubtitle2);
+		}
+		primarySpec.addSubtitle(diffSubtitle);
+		primaryGP.drawGraphPanel(primarySpec, false, false, meanMap.xRnage, meanMap.yRange);
+		PlotUtils.setXTick(primaryGP, meanMap.xTick);
+		PlotUtils.setYTick(primaryGP, meanMap.yTick);
+		int primaryHeight = PlotUtils.calcHeight(primaryGP, primaryWidth, true);
+		
+		// figure out secondary height
+		MapPlot secondaryPlot = branchLevelPlots1.get(0).get(0);
+		HeadlessGraphPanel secondaryGP = drawSimplifiedSecondaryPlot(secondaryPlot, secondaryPrefs, 1d);
+		int secondaryHeight = PlotUtils.calcHeight(secondaryGP, secondaryWidth, true);
+		
+		int secondaryHeightEach = heightLevelName + heightChoice + secondaryHeight;
+		if (branchLevelPlots2 != null)
+			secondaryHeightEach += secondaryHeight;
+		
+		int totalHeight = Integer.max(primaryHeight, padding*2 + branchLevels.size()*secondaryHeightEach);
+		
+		// TODO maybe revisit this
+//		if (totalHeight > primaryHeight) {
+//			// see if we can put some under the map
+//			int heightMinusOne = totalHeight - secondaryHeightEach;
+//			if (heightMinusOne < primaryHeight) {
+//				// we can
+//				// figure out which is the first one on the new row
+//				int firstRowIndex = -1;
+//				for (int i=1; i<branchLevelValues.size(); i++) {
+//					int yStart = padding + secondaryHeightEach*i;
+//					if (yStart > primaryHeight) {
+//						firstRowIndex = i;
+//						break;
+//					}
+//				}
+//				Preconditions.checkState(firstRowIndex > 0);
+//				int maxNumAfter = 0;
+//				for (int i=firstRowIndex; i<branchLevelValues.size(); i+=2)
+//					maxNumAfter = Integer.max(maxNumAfter, branchLevelValues.get(i).size());
+//				System.out.println("Wrapping starting with "+firstRowIndex+", maxNumAfter="+maxNumAfter);
+//				if (maxNumAfter > primaryWidthDelta) {
+//					// need more room
+//					primaryWidth = secondaryWidth*maxNumAfter;
+//					primaryGP.drawGraphPanel(primarySpec, false, false, meanMap.xRnage, meanMap.yRange);
+//					PlotUtils.setXTick(primaryGP, meanMap.xTick);
+//					PlotUtils.setYTick(primaryGP, meanMap.yTick);
+//					primaryHeight = PlotUtils.calcHeight(primaryGP, primaryWidth, true);
+//					System.out.println("Mod primary size: "+primaryWidth+"x"+primaryHeight);
+//				}
+//				
+//			}
+//		}
+		
+		int totalWidth = padding*2 + primaryWidth + maxNumChoices*secondaryWidth;
+		
+		System.out.println("Building combined map with dimensions: primary="+primaryWidth+"x"+primaryHeight
+				+", secondary="+secondaryWidth+"x"+secondaryHeight+", total="+totalWidth+"x"+totalHeight);
+		
+		JPanel panel = new JPanel();
+		panel.setLayout(null);
+		panel.setBackground(Color.WHITE);
+		panel.setSize(totalWidth, totalHeight);
+		
+		List<Consumer<Graphics2D>> redraws = new ArrayList<>();
+		
+		// X/Y reference frame is top left
+//		int primaryTopY = (totalHeight - primaryHeight)/2;
+		int primaryTopY = 0; // place it on top
+		redraws.add(placeGraph(panel, 0, primaryTopY, primaryWidth, primaryHeight, primaryGP.getChartPanel()));
+		// clear the custom subtitle we added
+		primarySpec.setSubtitles(null);
+		
+		int secondaryStartX = padding + primaryWidth;
+		int levelLabelX = secondaryStartX;
+		int levelLabelWidth = totalWidth - secondaryStartX - padding;
+		int y = 0;
+		for (int l=0; l<branchLevels.size(); l++) {
+			// TODO big label
+			// y is currently TOP, x is secondaryLabelX
+			int levelLabelY = y; // top
+			LogicTreeLevel<?> level = branchLevels.get(l);
+			placeLabel(panel, levelLabelX, levelLabelY, levelLabelWidth, heightLevelName, level.getName(), fontLevelName);
+			
+			int choiceLabelY = y + heightLevelName;
+
+			int choiceMapY = y + heightLevelName + heightChoice; // top
+			int choiceMapY2 = y + heightLevelName + heightChoice + secondaryHeight; // top
+			
+			List<LogicTreeNode> myChoices = branchLevelValues.get(l);
+			List<MapPlot> myPlots = branchLevelPlots1.get(l);
+			int x = secondaryStartX;
+			for (int i=0; i<myChoices.size(); i++) {
+				secondaryPlot = myPlots.get(i);
+				secondaryGP = drawSimplifiedSecondaryPlot(secondaryPlot, secondaryPrefs, secondaryScale);
+				
+				redraws.add(placeGraph(panel, x, choiceMapY, secondaryWidth, secondaryHeight, secondaryGP.getChartPanel()));
+				
+				LogicTreeNode choice = branchLevelValues.get(l).get(i);
+				placeLabel(panel, x, choiceLabelY, secondaryWidth, heightChoice, choice.getShortName(), fontChoiceName);
+				
+				x += secondaryWidth;
+			}
+			
+			if (branchLevelPlots2 != null) {
+				x = secondaryStartX;
+				List<MapPlot> myPlots2 = branchLevelPlots2.get(l);
+				for (int i=0; i<myChoices.size(); i++) {
+					secondaryPlot = myPlots2.get(i);
+					secondaryGP = drawSimplifiedSecondaryPlot(secondaryPlot, secondaryPrefs, secondaryScale);
+					
+					redraws.add(placeGraph(panel, x, choiceMapY2, secondaryWidth, secondaryHeight, secondaryGP.getChartPanel()));
+					
+					x += secondaryWidth;
+				}
+			}
+			
+			y += secondaryHeightEach;
+		}
+		
+		// write PNG
+		BufferedImage bi = new BufferedImage(totalWidth, totalHeight, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g2d = bi.createGraphics();
+		g2d.addRenderingHints(new RenderingHints(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON));
+		panel.paint(bi.getGraphics());
+		ImageIO.write(bi, "png", new File(resourcesDir, prefix+".png"));
+		
+		// write PDF
+		// step 1
+		Document metadataDocument = new Document(new com.itextpdf.text.Rectangle(
+				totalWidth, totalHeight));
+		metadataDocument.addAuthor("OpenSHA");
+		metadataDocument.addCreationDate();
+//		HeaderFooter footer = new HeaderFooter(new Phrase("Powered by OpenSHA"), true);
+//		metadataDocument.setFooter(footer);
+		try {
+			// step 2
+			PdfWriter writer;
+
+			writer = PdfWriter.getInstance(metadataDocument,
+					new FileOutputStream(new File(resourcesDir, prefix+".pdf")));
+			// step 3
+			metadataDocument.open();
+			// step 4
+			PdfContentByte cb = writer.getDirectContent();
+			PdfTemplate tp = cb.createTemplate(totalWidth, totalHeight);
+
+			FontMapper fontMapper = new PDF_UTF8_FontMapper();
+			g2d = new PdfGraphics2D(tp, totalWidth, totalHeight, fontMapper);
+			
+//			Graphics2D g2d = tp.createGraphics(width, height,
+//					new DefaultFontMapper());
+			panel.paint(g2d);
+			// repaint all chart panels
+			for (Consumer<Graphics2D> redraw : redraws)
+				redraw.accept(g2d);
+//			Rectangle2D r2d = new Rectangle2D.Double(0, 0, totalWidth, totalHeight);
+//			panel.draw(g2d, r2d);
+			g2d.dispose();
+			cb.addTemplate(tp, 0, 0);
+		}
+		catch (DocumentException de) {
+			de.printStackTrace();
+		}
+		// step 5
+		metadataDocument.close();
+	}
+	
+	private HeadlessGraphPanel drawSimplifiedSecondaryPlot(MapPlot secondaryPlot, PlotPreferences secondaryPrefs,
+			double lineScalar) {
+		secondaryPrefs.setAxisLabelFontSize(2);
+		HeadlessGraphPanel secondaryGP = new HeadlessGraphPanel(secondaryPrefs);
+		XYZPlotSpec secondarySpec = secondaryPlot.spec;
+		List<PlotCurveCharacterstics> origChars = null;
+		if (lineScalar != 1d && secondarySpec.getChars() != null) {
+			origChars = secondarySpec.getChars();
+			List<PlotCurveCharacterstics> modChars = new ArrayList<>();
+			for (PlotCurveCharacterstics pChar : origChars)
+				modChars.add(new PlotCurveCharacterstics(pChar.getLineType(), (float)(pChar.getLineWidth()*lineScalar),
+						pChar.getSymbol(), (float)(pChar.getSymbolWidth()*lineScalar), pChar.getColor()));
+			secondarySpec.setChars(modChars);
+		}
+		secondarySpec.setCPTVisible(false);
+		secondarySpec.setTitle(null);
+		secondarySpec.setPlotAnnotations(null);
+		secondaryGP.drawGraphPanel(secondarySpec, false, false, secondaryPlot.xRnage, secondaryPlot.yRange);
+		secondaryGP.getXAxis().setTickLabelsVisible(false);
+		secondaryGP.getXAxis().setLabel(" ");
+		secondaryGP.getYAxis().setTickLabelsVisible(false);
+		secondaryGP.getYAxis().setLabel(null);
+		PlotUtils.setXTick(secondaryGP, secondaryPlot.xTick);
+		PlotUtils.setYTick(secondaryGP, secondaryPlot.yTick);
+		if (origChars != null)
+			secondarySpec.setChars(origChars);
+		return secondaryGP;
+	}
+	
+	private Consumer<Graphics2D> placeGraph(JPanel panel, int xTop, int yTop, int width, int height, ChartPanel chart) {
+		chart.setBorder(null);
+		// this forces it to actually render
+		chart.getChart().createBufferedImage(width, height, new ChartRenderingInfo());
+		chart.setSize(width, height);
+		panel.add(chart);
+		chart.setLocation(xTop, yTop);
+		return new Consumer<Graphics2D>() {
+			@Override
+			public void accept(Graphics2D t) {
+				chart.getChart().draw(t, new Rectangle2D.Double(xTop, yTop, width, height));
+			}
+		};
+	}
+	
+	private void placeLabel(JPanel panel, int xTop, int yTop, int width, int height, String text, Font font) {
+		JLabel label = new JLabel(text, JLabel.CENTER);
+		label.setFont(font);
+		label.setSize(width, height);
+		panel.add(label);
+		label.setLocation(xTop, yTop);
 	}
 
 }
