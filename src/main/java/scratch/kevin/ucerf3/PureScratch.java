@@ -1874,12 +1874,43 @@ public class PureScratch {
 		System.out.println(dm.build(fm).size()+" subsections");
 	}
 	
+	private static void test166() throws IOException {
+		File dir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_08_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR-360_samples");
+		File resultsFile = new File(dir, "results.zip");
+		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
+		LogicTree<?> tree = slt.getLogicTree();
+		tree = tree.sample(10, false);
+		File outputFile = new File(dir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_rebuild.zip");
+		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(tree.getWeightProvider());
+		for (LogicTreeBranch<?> branch : tree)
+			baCreator.addSolution(slt.forBranch(branch, true), branch);
+		FaultSystemSolution ba = baCreator.build();
+		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(ba.getRupSet());
+		ba.write(outputFile);
+	}
+	
+	private static void test167() throws IOException {
+		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8d);
+		
+		int index5 = refMFD.getClosestXIndex(5.01d);
+		GutenbergRichterMagFreqDist fullGR = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		fullGR.setAllButTotMoRate(refMFD.getX(index5), refMFD.getX(refMFD.size()-1), 1d, 1d);
+		double totRate = fullGR.calcSumOfY_Vals();
+		for (int i=index5; i<refMFD.size(); i++) {
+			double rateAbove = 0d;
+			for (int j=i; j<fullGR.size(); j++)
+				rateAbove += fullGR.getY(j);
+			System.out.println("Fraction of rate >= "+(float)refMFD.getX(i)+": "+(float)(rateAbove/totRate));
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test165();
+		test167();
 	}
 
 }

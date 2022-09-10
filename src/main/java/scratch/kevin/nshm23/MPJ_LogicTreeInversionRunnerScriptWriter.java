@@ -86,7 +86,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		int remoteInversionsPerBundle = 1;
 		int remoteTotalMemGB = 50;
 		String queue = "scec";
-		int nodes = 5;
+		int nodes = 36;
 //		int nodes = 19;
 		double itersPerSec = 200000;
 		int runsPerBranch = 1;
@@ -321,9 +321,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-classic_sa";
 //		extraArgs.add("--cooling-schedule "+CoolingScheduleType.CLASSICAL_SA.name());
 		
-		levels = new ArrayList<>(levels);
-		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
-		dirName += "-single_state";
+//		levels = new ArrayList<>(levels);
+//		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
+//		dirName += "-single_state";
 		
 		forceRequiredNonzeroWeight = true;
 		griddedJob = true;
@@ -335,7 +335,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				NSHM23_FaultModels.NSHM23_v2,
 				
 //				// SINGLE STATE
-				NSHM23_SingleStates.NM,
+//				NSHM23_SingleStates.NM,
 
 				// RUPTURE SETS
 				RupturePlausibilityModels.COULOMB,
@@ -349,12 +349,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3_UncertAddDeformationModels.U3_ZENG,
 //				U3_UncertAddDeformationModels.U3_MEAN,
 //				NSHM23_DeformationModels.AVERAGE,
-				NSHM23_DeformationModels.GEOLOGIC,
+//				NSHM23_DeformationModels.GEOLOGIC,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
 //				ScalingRelationships.MEAN_UCERF3,
-				NSHM23_ScalingRelationships.AVERAGE,
+//				NSHM23_ScalingRelationships.AVERAGE,
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
@@ -362,8 +362,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SlipAlongRuptureModels.TAPERED,
 				
 				// SUB-SECT CONSTRAINT
-				SubSectConstraintModels.TOT_NUCL_RATE,
-//				SubSectConstraintModels.NUCL_MFD,
+//				SubSectConstraintModels.TOT_NUCL_RATE,
+				SubSectConstraintModels.NUCL_MFD,
 				
 				// SUB-SEIS MO REDUCTION
 //				SubSeisMoRateReductions.SUB_B_1,
@@ -380,7 +380,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,
 //				NSHM23_SegmentationModels.AVERAGE,
-				NSHM23_SegmentationModels.MID,
+//				NSHM23_SegmentationModels.MID,
 				
 				// SEG-SHIFT
 //				DistDependSegShift.NONE,
