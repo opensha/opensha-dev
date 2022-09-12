@@ -362,8 +362,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SlipAlongRuptureModels.TAPERED,
 				
 				// SUB-SECT CONSTRAINT
-//				SubSectConstraintModels.TOT_NUCL_RATE,
-				SubSectConstraintModels.NUCL_MFD,
+				SubSectConstraintModels.TOT_NUCL_RATE,
+//				SubSectConstraintModels.NUCL_MFD,
 				
 				// SUB-SEIS MO REDUCTION
 //				SubSeisMoRateReductions.SUB_B_1,
@@ -381,6 +381,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SegmentationModels.SHAW_R0_3,
 //				NSHM23_SegmentationModels.AVERAGE,
 //				NSHM23_SegmentationModels.MID,
+				NSHM23_SegmentationModels.CLASSIC_FULL,
 				
 				// SEG-SHIFT
 //				DistDependSegShift.NONE,
