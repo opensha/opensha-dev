@@ -1422,7 +1422,7 @@ public class LogicTreeHazardCompare {
 		table.initNewLine();
 		File map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix, primary, cpt, name, (spread ? "" : "Log10 ")+label);
 		table.addColumn("!["+type+"]("+resourcesDir.getName()+"/"+map.getName()+")");
-		map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_comp", comparison, cpt, name, (spread ? "" : "Log10 ")+label);
+		map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_comp", comparison, cpt, compName, (spread ? "" : "Log10 ")+label);
 		table.addColumn("!["+type+"]("+resourcesDir.getName()+"/"+map.getName()+")");
 		map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_comp_pDiff", diff, diffCPT, name+" vs "+compName, diffLabel, !spread);
 		table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
