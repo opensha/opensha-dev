@@ -55,6 +55,7 @@ public class NshmErf extends AbstractERF {
       SourceType type = tree.type();
       TectonicRegionType trt = NshmUtil.tectonicSettingToType(setting, type);
       List<NshmSource> sources = initTree(tree);
+      sources.forEach(s -> s.setTectonicRegionType(trt));
       allSources.addAll(sources);
       sourceMap.putAll(trt, sources);
     }
