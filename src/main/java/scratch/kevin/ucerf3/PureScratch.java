@@ -1905,12 +1905,21 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test168() throws IOException {
+		for (FaultSection sect : NSHM23_FaultModels.NSHM23_v2.getFaultSections()) {
+			if (sect.getAveDip() < 30) {
+				System.out.println(sect.getName()+": dip="+(float)sect.getAveDip()+"; depths=["
+						+(float)sect.getOrigAveUpperDepth()+","+(float)sect.getAveLowerDepth()+"]");
+			}
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test167();
+		test168();
 	}
 
 }

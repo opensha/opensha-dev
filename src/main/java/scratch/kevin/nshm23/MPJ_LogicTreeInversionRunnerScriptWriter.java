@@ -312,6 +312,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ForceNoGhostTransient.class;
 //		dirName += "-no_ghost_trans";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ScaleSurfSlipUseActualWidths.class;
+//		dirName += "-surf_slip_use_actual_w";
+		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
 //		dirName += "-exp_perturb";
@@ -348,13 +351,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// DEFORMATION MODELS
 //				U3_UncertAddDeformationModels.U3_ZENG,
 //				U3_UncertAddDeformationModels.U3_MEAN,
-//				NSHM23_DeformationModels.AVERAGE,
+				NSHM23_DeformationModels.AVERAGE,
 //				NSHM23_DeformationModels.GEOLOGIC,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
 //				ScalingRelationships.MEAN_UCERF3,
 //				NSHM23_ScalingRelationships.AVERAGE,
+//				NSHM23_ScalingRelationships.LOGA_C4p2_SQRT_LEN,
+//				NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD,
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
@@ -375,13 +380,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SupraSeisBValues.B_0p5,
 				
 				// PALEO UNCERT
-//				NSHM23_PaleoUncertainties.EVEN_FIT,
+				NSHM23_PaleoUncertainties.EVEN_FIT,
 				
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,
 //				NSHM23_SegmentationModels.AVERAGE,
-//				NSHM23_SegmentationModels.MID,
-				NSHM23_SegmentationModels.CLASSIC_FULL,
+				NSHM23_SegmentationModels.MID,
+//				NSHM23_SegmentationModels.CLASSIC_FULL,
 				
 				// SEG-SHIFT
 //				DistDependSegShift.NONE,
