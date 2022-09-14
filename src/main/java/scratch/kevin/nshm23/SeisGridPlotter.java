@@ -21,11 +21,12 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_MaxMagOffFault;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_RegionalSeismicity;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SpatialSeisPDFs;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
@@ -69,7 +70,7 @@ public class SeisGridPlotter {
 			lines.add("## "+seisRates.getName());
 			lines.add(topLink); lines.add("");
 			
-			GriddedGeoDataSet averagePDF = buildPDF(seisRates, NSHM23_SpatialSeisPDFs.AVERAGE,
+			GriddedGeoDataSet averagePDF = buildPDF(seisRates, NSHM23_DeclusteringAlgorithms.AVERAGE, NSHM23_SeisSmoothingAlgorithms.AVERAGE,
 					maxMagOff, gridReg, refMFD, seisRegions);
 			GriddedGeoDataSet logAveragePDF = averagePDF.copy();
 			logAveragePDF.log10();
@@ -91,44 +92,49 @@ public class SeisGridPlotter {
 			lines.addAll(table.build());
 			lines.add("");
 			
-			for (NSHM23_SpatialSeisPDFs pdf : NSHM23_SpatialSeisPDFs.values()) {
-				if (pdf.getNodeWeight(null) == 0d)
+
+			for (NSHM23_DeclusteringAlgorithms declustering : NSHM23_DeclusteringAlgorithms.values()) {
+				if (declustering.getNodeWeight(null) == 0d)
 					continue;
-				lines.add("### "+pdf.getName()+", "+seisRates.getName());
-				lines.add(topLink); lines.add("");
-				System.out.println("Processing "+pdf.getName()+", "+seisRates.getName());
-				table = MarkdownUtils.tableBuilder();
-				table.addLine(MarkdownUtils.boldCentered(pdf.getName()), "Ratio to Mean");
-				
-				GriddedGeoDataSet combinedPDF = buildPDF(seisRates, pdf, maxMagOff, gridReg, refMFD, seisRegions);
-				
-				String title = pdf.getName()+", "+seisRates.getName();
-				
-				table.initNewLine();
-				mapMaker.plotXYZData(combinedPDF, linearCPT, "Rate M≥5");
-				prefix = seisRates.getFilePrefix()+"_"+pdf.getFilePrefix();
-				mapMaker.plot(outputDir, prefix, title);
-				table.addColumn("![Map]("+prefix+".png)");
-				
-				GeoDataSet ratio = GeoDataSetMath.divide(combinedPDF, averagePDF);
-				mapMaker.plotXYZData(ratio, ratioCPT, "Rate M≥5 / Avg Rate M≥5");
-				mapMaker.plot(outputDir, prefix+"_ratio", title);
-				table.addColumn("![Map]("+prefix+"_ratio.png)");
-				table.finalizeLine();
-				
-				combinedPDF.log10();
-				table.initNewLine();
-				mapMaker.plotXYZData(combinedPDF, logCPT, "Log10(Rate M≥5)");
-				mapMaker.plot(outputDir, prefix+"_log", title);
-				table.addColumn("![Map]("+prefix+"_log.png)");
-				
-				ratio.log10();
-				mapMaker.plotXYZData(ratio, logRatioCPT, "Log10(Rate M≥5 / Avg Rate M≥5)");
-				mapMaker.plot(outputDir, prefix+"_log_ratio", title);
-				table.addColumn("![Map]("+prefix+"_log_ratio.png)");
-				table.finalizeLine();
-				lines.addAll(table.build());
-				lines.add("");
+				for (NSHM23_SeisSmoothingAlgorithms smooth : NSHM23_SeisSmoothingAlgorithms.values()) {
+					if (smooth.getNodeWeight(null) == 0d)
+						continue;
+					lines.add("### "+smooth.getName()+", "+seisRates.getName());
+					lines.add(topLink); lines.add("");
+					System.out.println("Processing "+smooth.getName()+", "+seisRates.getName());
+					table = MarkdownUtils.tableBuilder();
+					table.addLine(MarkdownUtils.boldCentered(smooth.getName()), "Ratio to Mean");
+					
+					GriddedGeoDataSet combinedPDF = buildPDF(seisRates, declustering, smooth, maxMagOff, gridReg, refMFD, seisRegions);
+					
+					String title = smooth.getName()+", "+seisRates.getName();
+					
+					table.initNewLine();
+					mapMaker.plotXYZData(combinedPDF, linearCPT, "Rate M≥5");
+					prefix = seisRates.getFilePrefix()+"_"+smooth.getFilePrefix();
+					mapMaker.plot(outputDir, prefix, title);
+					table.addColumn("![Map]("+prefix+".png)");
+					
+					GeoDataSet ratio = GeoDataSetMath.divide(combinedPDF, averagePDF);
+					mapMaker.plotXYZData(ratio, ratioCPT, "Rate M≥5 / Avg Rate M≥5");
+					mapMaker.plot(outputDir, prefix+"_ratio", title);
+					table.addColumn("![Map]("+prefix+"_ratio.png)");
+					table.finalizeLine();
+					
+					combinedPDF.log10();
+					table.initNewLine();
+					mapMaker.plotXYZData(combinedPDF, logCPT, "Log10(Rate M≥5)");
+					mapMaker.plot(outputDir, prefix+"_log", title);
+					table.addColumn("![Map]("+prefix+"_log.png)");
+					
+					ratio.log10();
+					mapMaker.plotXYZData(ratio, logRatioCPT, "Log10(Rate M≥5 / Avg Rate M≥5)");
+					mapMaker.plot(outputDir, prefix+"_log_ratio", title);
+					table.addColumn("![Map]("+prefix+"_log_ratio.png)");
+					table.finalizeLine();
+					lines.addAll(table.build());
+					lines.add("");
+				}
 			}
 		}
 		
@@ -140,7 +146,7 @@ public class SeisGridPlotter {
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
 	}
 	
-	private static GriddedGeoDataSet buildPDF(NSHM23_RegionalSeismicity seisRates, NSHM23_SpatialSeisPDFs pdf,
+	private static GriddedGeoDataSet buildPDF(NSHM23_RegionalSeismicity seisRates, NSHM23_DeclusteringAlgorithms declusteringAlg, NSHM23_SeisSmoothingAlgorithms smooth,
 			double maxMagOff, GriddedRegion gridReg, EvenlyDiscretizedFunc refMFD, List<SeismicityRegions> seisRegions) throws IOException {
 		GriddedGeoDataSet combinedPDF = new GriddedGeoDataSet(gridReg, false);
 		for (int i=0; i<combinedPDF.size(); i++)
@@ -150,7 +156,7 @@ public class SeisGridPlotter {
 			GutenbergRichterMagFreqDist totalGR = seisRates.build(primaryReg, refMFD, maxMagOff);
 			double rateM5 = totalGR.getCumRate(totalGR.getClosestXIndex(5.01));
 			
-			GriddedGeoDataSet regPDF = pdf.loadXYZ(primaryReg);
+			GriddedGeoDataSet regPDF = smooth.loadXYZ(primaryReg, declusteringAlg);
 			regPDF.scale(rateM5);
 			
 			for (int i=0; i<regPDF.size(); i++) {
