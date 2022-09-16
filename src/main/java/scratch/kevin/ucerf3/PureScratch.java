@@ -47,7 +47,10 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
 import org.opensha.commons.geo.json.FeatureProperties;
+import org.opensha.commons.geo.json.GeoJSON_Type;
 import org.opensha.commons.geo.json.Geometry;
+import org.opensha.commons.geo.json.Geometry.GeometryCollection;
+import org.opensha.commons.geo.json.Geometry.MultiPoint;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -1914,12 +1917,32 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test169() throws IOException {
+		File jsonFile = new File("C:\\Users\\Kevin Milner\\Downloads\\grid_region.geojson");
+		Feature feature = Feature.read(jsonFile);
+		for (Geometry geom : ((GeometryCollection)feature.geometry).geometries) {
+			if (geom.type == GeoJSON_Type.MultiPoint) {
+				System.out.println("MultiPoint has "+((MultiPoint)geom).points.size()+" nodes");
+			}
+		}
+		GriddedRegion gridReg = GriddedRegion.fromFeature(feature);
+		System.out.println("Grid reg has "+gridReg.getNodeCount()+" nodes");
+	}
+	
+	private static void test170() throws IOException {
+		File outputDir = new File("C:\\Users\\Kevin Milner\\Downloads");
+		List<? extends FaultSection> geoSects = DeformationModels.GEOLOGIC.build(FaultModels.FM3_1);
+		GeoJSONFaultReader.writeFaultSections(new File(outputDir, "u3_fm3_1_geol_sub_sects.geojson"), geoSects);
+		geoSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2);
+		GeoJSONFaultReader.writeFaultSections(new File(outputDir, "nshm23_geol_sub_sects.geojson"), geoSects);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test168();
+		test170();
 	}
 
 }

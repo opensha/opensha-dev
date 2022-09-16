@@ -351,7 +351,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// DEFORMATION MODELS
 //				U3_UncertAddDeformationModels.U3_ZENG,
 //				U3_UncertAddDeformationModels.U3_MEAN,
-				NSHM23_DeformationModels.AVERAGE,
+//				NSHM23_DeformationModels.AVERAGE,
 //				NSHM23_DeformationModels.GEOLOGIC,
 				
 				// SCALING RELATIONSHIPS
@@ -380,12 +380,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SupraSeisBValues.B_0p5,
 				
 				// PALEO UNCERT
-				NSHM23_PaleoUncertainties.EVEN_FIT,
+//				NSHM23_PaleoUncertainties.EVEN_FIT,
 				
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,
 //				NSHM23_SegmentationModels.AVERAGE,
-				NSHM23_SegmentationModels.MID,
+//				NSHM23_SegmentationModels.MID,
 //				NSHM23_SegmentationModels.CLASSIC_FULL,
 				
 				// SEG-SHIFT
