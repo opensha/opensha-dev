@@ -16,6 +16,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
@@ -180,6 +181,8 @@ public class LogicTreeBranchAverageWriter {
 			
 			if (cmd.hasOption("plot-level"))
 				plt = PlotLevel.valueOf(cmd.getOptionValue("plot-level").trim().toUpperCase());
+			
+			skipSectBySect = cmd.hasOption("skip-sect-by-sect");
 		}
 		
 		if (asyncThreads < 1) {
@@ -245,7 +248,9 @@ public class LogicTreeBranchAverageWriter {
 			}
 		}
 		
-		int maxTasks = asyncThreads * 2;
+		// this dicates how far ahead we will read in solutions, needs to be > asyncThreads to make use of parallel
+		// reading, but should be small enough soas to not use too much memory storing to-be-processed solutions
+		int maxTasks = Integer.min(asyncThreads * 2, asyncThreads + 2);
 		ExecutorService exec = new ThreadPoolExecutor(asyncThreads, asyncThreads,
                 0L, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<Runnable>(maxTasks), new ThreadPoolExecutor.CallerRunsPolicy());
@@ -296,6 +301,8 @@ public class LogicTreeBranchAverageWriter {
 		
 		List<AbstractRupSetPlot> plots = ReportPageGen.getDefaultSolutionPlots(plt);
 		
+		final boolean doSkipSectBySect = skipSectBySect;
+		
 		for (LogicTreeNode node : nodeBACreators.keySet()) {
 			Runnable run = new Runnable() {
 				
@@ -326,7 +333,7 @@ public class LogicTreeBranchAverageWriter {
 						
 						ReportMetadata meta = new ReportMetadata(primary, myComp);
 						ReportPageGen pageGen = new ReportPageGen(meta, reportDir, plots);
-						if (skipSectBySect)
+						if (doSkipSectBySect)
 							pageGen.skipSectBySect();
 						pageGen.setReplot(replot);
 						pageGen.setNumThreads(threadsEach);
@@ -372,6 +379,8 @@ public class LogicTreeBranchAverageWriter {
 				+ "reduce memory usage or I/O load");
 		ops.addOption("pl", "plot-level", true, "This determins which set of plots should be included. One of: "
 						+FaultSysTools.enumOptions(PlotLevel.class)+". Default: "+ReportPageGen.PLOT_LEVEL_DEFAULT.name());
+		ops.addOption("ssbs", "skip-sect-by-sect", false,
+				"Flag to skip section-by-section plots, regardless of selected plot level");
 		
 		return ops;
 	}

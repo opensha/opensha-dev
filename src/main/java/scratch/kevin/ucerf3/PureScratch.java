@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -1718,8 +1719,8 @@ public class PureScratch {
 	
 	private static void test154() throws IOException {
 		// fix bruce's weird CSVs
-//		File inputFile = new File("/tmp/slipLengthScaling.csv");
-		File inputFile = new File("C:\\Users\\Kevin Milner\\Downloads\\slipLengthScaling.csv");
+		File inputFile = new File("/tmp/slipLengthScaling.csv");
+//		File inputFile = new File("C:\\Users\\Kevin Milner\\Downloads\\slipLengthScaling.csv");
 		CSVFile<String> csv = CSVFile.readFile(inputFile, true);
 		
 		int numFixed = 0;
@@ -1878,16 +1879,20 @@ public class PureScratch {
 	}
 	
 	private static void test166() throws IOException {
+		EvenlyDiscretizedFunc refMFD = new EvenlyDiscretizedFunc(
+				0.05, 120, 0.1);
+		System.out.println(refMFD);
 		File dir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2022_08_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR-360_samples");
 		File resultsFile = new File(dir, "results.zip");
 		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
 		LogicTree<?> tree = slt.getLogicTree();
-		tree = tree.sample(10, false);
+		tree = tree.sample(10, false, new Random(tree.size()));
+		boolean process = false;
 		File outputFile = new File(dir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_rebuild.zip");
 		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(tree.getWeightProvider());
 		for (LogicTreeBranch<?> branch : tree)
-			baCreator.addSolution(slt.forBranch(branch, true), branch);
+			baCreator.addSolution(slt.forBranch(branch, process), branch);
 		FaultSystemSolution ba = baCreator.build();
 		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(ba.getRupSet());
 		ba.write(outputFile);
@@ -1942,7 +1947,7 @@ public class PureScratch {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test170();
+		test154();
 	}
 
 }

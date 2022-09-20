@@ -1048,7 +1048,7 @@ public class LogicTreeHazardCompare {
 				table.addLine(MarkdownUtils.boldCentered("Median Map"), MarkdownUtils.boldCentered("Mean vs Median"));
 				GriddedGeoDataSet meanMedDiff = buildPDiff(median, mean);
 				File meanMedDiffMap = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_mean_median_diff",
-						meanMedDiff, pDiffCPT, TITLES ? name : " ", "Mean - Median, % Difference, "+label, true);
+						meanMedDiff, pDiffCPT, TITLES ? name : " ", "Mean - Median, % Change, "+label, true);
 				table.addLine("![BA Median map]("+resourcesDir.getName()+"/"+medianMapFile.getName()+")",
 						"![Median vs Mean]("+resourcesDir.getName()+"/"+meanMedDiffMap.getName()+")");
 //				File meanMap = new File(outputDir, prefix+"_median.png");
@@ -1111,7 +1111,7 @@ public class LogicTreeHazardCompare {
 						lines.add("");
 						
 						TableBuilder mapTable = MarkdownUtils.tableBuilder();
-						mapTable.addLine("", "Choice Mean vs Full Mean, % Difference", "Choice Mean - Full Mean",
+						mapTable.addLine("", "Choice Mean vs Full Mean, % Change", "Choice Mean - Full Mean",
 								"Choice Percentile in Full Dist", "Choice Percentile in Dist Without");
 						
 						MinMaxAveTracker runningDiffAvg = new MinMaxAveTracker();
@@ -1143,7 +1143,7 @@ public class LogicTreeHazardCompare {
 									GriddedGeoDataSet pDiff = buildPDiff(oChoiceMap, choiceMap);
 									File map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_"+choice.getFilePrefix()+"_vs_"+oChoice.getFilePrefix(),
 											pDiff, pDiffCPT, TITLES ? choice.getShortName()+" vs "+oChoice.getShortName() : " ",
-											choice.getShortName()+" - "+oChoice.getShortName()+", % Difference, "+label, true);
+											choice.getShortName()+" - "+oChoice.getShortName()+", % Change, "+label, true);
 									mapVsChoiceTable.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
 								}
 							}
@@ -1159,7 +1159,7 @@ public class LogicTreeHazardCompare {
 							GriddedGeoDataSet pDiff = buildPDiff(mean, choiceMap);
 							MapPlot pDiffMap = mapper.buildMapPlot(resourcesDir, prefix+"_"+choice.getFilePrefix()+"_pDiff",
 									pDiff, pDiffCPT, TITLES ? choice.getShortName()+" Comparison" : " ",
-									choice.getShortName()+" - Mean, % Difference, "+label, true);
+									choice.getShortName()+" - Mean, % Change, "+label, true);
 							branchPDiffPlots.add(pDiffMap);
 							File map = new File(resourcesDir, pDiffMap.prefix+".png");
 							mapTable.addColumn("![Percent Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
@@ -1220,12 +1220,12 @@ public class LogicTreeHazardCompare {
 					String combPrefix = prefix+"_branches_combined";
 					writeCombinedBranchMap(resourcesDir, combPrefix, name+", Logic Tree Comparison",
 							meanMapPlot, branchLevels, branchLevelValues,
-							branchLevelPDiffPlots, "Branch Choice vs Mean, % Difference",
+							branchLevelPDiffPlots, "Branch Choice vs Mean, % Change",
 							branchLevelDiffPlots, "Branch Choice - Mean (g)");
 					combPrefix = prefix+"_branches_combined_pDiff";
 					writeCombinedBranchMap(resourcesDir, combPrefix, name+", Logic Tree Comparison",
 							meanMapPlot, branchLevels, branchLevelValues, branchLevelPDiffPlots,
-							"Branch Choice vs Mean, % Difference");
+							"Branch Choice vs Mean, % Change");
 					table = MarkdownUtils.tableBuilder();
 					table.addLine("Combined Summary Maps");
 					table.addLine("![Combined Map]("+resourcesDir.getName()+"/"+combPrefix+".png)");
@@ -1386,11 +1386,11 @@ public class LogicTreeHazardCompare {
 		
 		GriddedGeoDataSet pDiff = buildPDiff(comparison, primary);
 		File map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_comp_pDiff", pDiff, pDiffCPT, TITLES ? name+" vs "+compName : " ",
-				(TITLES ? "Primary - Comparison, " : "")+"% Difference, "+label, true);
+				(TITLES ? "Primary - Comparison, " : "")+"% Change, "+label, true);
 		table.addColumn("![Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
 		GriddedGeoDataSet pDiffFromRange = buildPDiffFromRange(min, max, comparison);
 		map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix+"_comp_pDiff_range", pDiffFromRange, pDiffCPT, TITLES ? name+" vs "+compName : " ",
-				"Comparison - Extremes, % Difference, "+label, true);
+				"Comparison - Extremes, % Change, "+label, true);
 		table.addColumn("![Range Difference Map]("+resourcesDir.getName()+"/"+map.getName()+")");
 		table.finalizeLine();
 	}
@@ -1413,11 +1413,11 @@ public class LogicTreeHazardCompare {
 			primary = log10(primary);
 			comparison = log10(comparison);
 			diffCPT = pDiffCPT;
-			diffLabel = "Primary - Comparison, % Difference, "+label;
+			diffLabel = "Primary - Comparison, % Change, "+label;
 		}
 		
 		table.addLine(MarkdownUtils.boldCentered("Primary "+type), MarkdownUtils.boldCentered("Comparison "+type),
-				MarkdownUtils.boldCentered(spread ? "Difference" : "% Difference"));
+				MarkdownUtils.boldCentered(spread ? "Difference" : "% Change"));
 		
 		table.initNewLine();
 		File map = submitMapFuture(mapper, exec, futures, resourcesDir, prefix, primary, cpt, name, (spread ? "" : "Log10 ")+label);

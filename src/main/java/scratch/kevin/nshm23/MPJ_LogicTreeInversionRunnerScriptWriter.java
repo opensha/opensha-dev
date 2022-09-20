@@ -560,7 +560,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		mins += Integer.max(60, invMins);
 		mins += (nodeRounds-1)*10; // add a little extra for overhead associated with each round
 		System.out.println("Total job time: "+mins+" mins = "+(float)((double)mins/60d)+" hours");
-		
+		// make sure to not exceed 1 week
+		mins = Integer.min(mins, 60*24*7 - 1);
 		pbsWrite.writeScript(new File(localDir, "batch_inversion.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 		
 		// now write hazard script
@@ -585,7 +586,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 		script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 		
-		mins = (int)60*10;
+		// lesser of 10 hours, and 45 minutes per round
+		mins = Integer.max(60*10, 45*nodeRounds);
+		// make sure to not exceed 1 week
+		mins = Integer.min(mins, 60*24*7 - 1);
 		nodes = Integer.min(40, nodes);
 		if (queue != null && queue.equals("scec"))
 			// run hazard in the high priority queue
@@ -619,7 +623,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				argz += " --max-distance 200";
 				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 				script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
-				pbsWrite.writeScript(jobFile, script, mins*5, nodes, remoteTotalThreads, queue);
+				int myMins = mins;
+				if (!avgGridded)
+					 myMins = Integer.min(mins*5, 60*24*7 - 1);
+				pbsWrite.writeScript(jobFile, script, myMins, nodes, remoteTotalThreads, queue);
 			}
 		}
 		
@@ -637,7 +644,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " --branch-averaged-file "+baFiles.get(0).getAbsolutePath();
 		script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), argz);
 		
-		mins = (int)60*10;
 		if (queue != null && queue.equals("scec"))
 			// run hazard in the high priority queue
 			queue = "scec_hiprio";
@@ -701,7 +707,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			script = mpjWrite.buildScript(MPJ_StrictSegLogicTreeTranslation.class.getName(), argz);
 			
 			int transNodes = Integer.min(16, nodes);
-			mins = (int)60*10;
 			pbsWrite.writeScript(new File(modLocalDir, "batch_strict_branch_translate.slurm"), script, mins, transNodes,
 					remoteTotalThreads, queue);
 			
@@ -711,7 +716,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 			script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 			
-			mins = (int)60*10;
 			nodes = Integer.min(40, nodes);
 			pbsWrite.writeScript(new File(modLocalDir, "batch_hazard.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 		}
