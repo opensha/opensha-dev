@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -47,7 +48,10 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
 import org.opensha.commons.geo.json.FeatureProperties;
+import org.opensha.commons.geo.json.GeoJSON_Type;
 import org.opensha.commons.geo.json.Geometry;
+import org.opensha.commons.geo.json.Geometry.GeometryCollection;
+import org.opensha.commons.geo.json.Geometry.MultiPoint;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -1715,8 +1719,8 @@ public class PureScratch {
 	
 	private static void test154() throws IOException {
 		// fix bruce's weird CSVs
-//		File inputFile = new File("/tmp/slipLengthScaling.csv");
-		File inputFile = new File("C:\\Users\\Kevin Milner\\Downloads\\slipLengthScaling.csv");
+		File inputFile = new File("/tmp/slipLengthScaling.csv");
+//		File inputFile = new File("C:\\Users\\Kevin Milner\\Downloads\\slipLengthScaling.csv");
 		CSVFile<String> csv = CSVFile.readFile(inputFile, true);
 		
 		int numFixed = 0;
@@ -1875,16 +1879,20 @@ public class PureScratch {
 	}
 	
 	private static void test166() throws IOException {
+		EvenlyDiscretizedFunc refMFD = new EvenlyDiscretizedFunc(
+				0.05, 120, 0.1);
+		System.out.println(refMFD);
 		File dir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2022_08_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-SubB1-ThreshAvgIterRelGR-360_samples");
 		File resultsFile = new File(dir, "results.zip");
 		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
 		LogicTree<?> tree = slt.getLogicTree();
-		tree = tree.sample(10, false);
+		tree = tree.sample(10, false, new Random(tree.size()));
+		boolean process = false;
 		File outputFile = new File(dir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_rebuild.zip");
 		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(tree.getWeightProvider());
 		for (LogicTreeBranch<?> branch : tree)
-			baCreator.addSolution(slt.forBranch(branch, true), branch);
+			baCreator.addSolution(slt.forBranch(branch, process), branch);
 		FaultSystemSolution ba = baCreator.build();
 		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(ba.getRupSet());
 		ba.write(outputFile);
@@ -1905,12 +1913,41 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test168() throws IOException {
+		for (FaultSection sect : NSHM23_FaultModels.NSHM23_v2.getFaultSections()) {
+			if (sect.getAveDip() < 30) {
+				System.out.println(sect.getName()+": dip="+(float)sect.getAveDip()+"; depths=["
+						+(float)sect.getOrigAveUpperDepth()+","+(float)sect.getAveLowerDepth()+"]");
+			}
+		}
+	}
+	
+	private static void test169() throws IOException {
+		File jsonFile = new File("C:\\Users\\Kevin Milner\\Downloads\\grid_region.geojson");
+		Feature feature = Feature.read(jsonFile);
+		for (Geometry geom : ((GeometryCollection)feature.geometry).geometries) {
+			if (geom.type == GeoJSON_Type.MultiPoint) {
+				System.out.println("MultiPoint has "+((MultiPoint)geom).points.size()+" nodes");
+			}
+		}
+		GriddedRegion gridReg = GriddedRegion.fromFeature(feature);
+		System.out.println("Grid reg has "+gridReg.getNodeCount()+" nodes");
+	}
+	
+	private static void test170() throws IOException {
+		File outputDir = new File("C:\\Users\\Kevin Milner\\Downloads");
+		List<? extends FaultSection> geoSects = DeformationModels.GEOLOGIC.build(FaultModels.FM3_1);
+		GeoJSONFaultReader.writeFaultSections(new File(outputDir, "u3_fm3_1_geol_sub_sects.geojson"), geoSects);
+		geoSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2);
+		GeoJSONFaultReader.writeFaultSections(new File(outputDir, "nshm23_geol_sub_sects.geojson"), geoSects);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test167();
+		test154();
 	}
 
 }
