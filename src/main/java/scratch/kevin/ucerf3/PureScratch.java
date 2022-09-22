@@ -1942,12 +1942,27 @@ public class PureScratch {
 		GeoJSONFaultReader.writeFaultSections(new File(outputDir, "nshm23_geol_sub_sects.geojson"), geoSects);
 	}
 	
+	private static void test171() throws IOException {
+		int branchCount = 2250*54;
+		int nodeCount = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.2, GriddedRegion.ANCHOR_0_0).getNodeCount();
+		long valCount = nodeCount * branchCount;
+		System.out.println(branchCount+" branches x "+nodeCount+" nodes = "+valCount+" values");
+		long bytes = valCount * 8l;
+		long kb = bytes / 1024l;
+		long mb = kb / 1024l;
+		long gb = mb / 1024l;
+		System.out.println("\t"+bytes+" bytes");
+		System.out.println("\t"+kb+" kb");
+		System.out.println("\t"+mb+" mb");
+		System.out.println("\t"+gb+" gb");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test154();
+		test171();
 	}
 
 }

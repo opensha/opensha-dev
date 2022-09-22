@@ -22,11 +22,13 @@ import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.util.ClassUtils;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
+import org.opensha.sha.earthquake.faultSysSolution.hazard.FaultAndGriddedSeparateTreeHazardCombiner;
+import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.ClusterSpecificInversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.AbstractAsyncLogicTreeWriter;
-import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeInversionRunner;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
@@ -58,6 +60,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultM
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
@@ -114,8 +117,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		boolean griddedJob = false;
 
-		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2022_08_22";
+//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+		String dirName = "2022_09_16";
 		
 		/*
 		 * UCERF3 logic tree
@@ -596,6 +599,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			queue = "scec_hiprio";
 		pbsWrite.writeScript(new File(localDir, "batch_hazard.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 		
+		JavaShellScriptWriter javaWrite = new JavaShellScriptWriter(
+				mpjWrite.getJavaBin(), remoteTotalMemGB*1024, classpath);
+		
 		if (griddedJob) {
 			argz = "--logic-tree "+remoteLogicTree.getAbsolutePath();
 			argz += " --sol-dir "+resultsDir.getAbsolutePath();
@@ -605,34 +611,55 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			script = mpjWrite.buildScript(MPJ_GridSeisBranchBuilder.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "batch_grid_calc.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 			
+			String resultsPefix = new File(remoteDir, resultsDir.getName()).getAbsolutePath();
 			// now add hazard calc job with gridded
-			for (boolean avgGridded : new boolean[] {true, false}) {
+			for (int i=0; i<3; i++) {
+//			for (boolean avgGridded : new boolean[] {true, false}) {
 				File jobFile;
-				if (avgGridded) {
-					argz = "--input-file "+new File(resultsDir.getAbsolutePath()+"_avg_gridded.zip");
-					argz += " --output-file "+new File(remoteDir, "results_hazard_avg_gridded.zip").getAbsolutePath();
+				if (i == 0) {
+					argz = "--input-file "+resultsPefix+"_avg_gridded.zip";
+					argz += " --output-file "+resultsPefix+"_hazard_avg_gridded.zip";
+					argz += " --output-dir "+resultsDir.getAbsolutePath();
+					argz += " --gridded-seis INCLUDE";
 					jobFile = new File(localDir, "batch_hazard_avg_gridded.slurm");
-				} else {
-					argz = "--input-file "+new File(resultsDir.getAbsolutePath()+"_full_gridded.zip");
-					argz += " --output-file "+new File(resultsDir, "results_hazard_full_gridded.zip").getAbsolutePath();
+				} else if (i == 1) {
+					argz = "--input-file "+resultsPefix+"_full_gridded.zip";
+					argz += " --output-file "+resultsPefix+"_hazard_full_gridded.zip";
+					argz += " --output-dir "+resultsDir.getAbsolutePath();
+					argz += " --gridded-seis INCLUDE";
 					jobFile = new File(localDir, "batch_hazard_full_gridded.slurm");
+				} else {
+					argz = "--input-file "+resultsPefix+"_gridded_branches.zip";
+					argz += " --output-file "+resultsPefix+"_hazard_gridded_only.zip";
+					argz += " --output-dir "+resultsPefix+"_gridded_only";
+					argz += " --gridded-seis ONLY";
+					jobFile = new File(localDir, "batch_hazard_gridded_only.slurm");
 				}
-				argz += " --output-dir "+resultsDir.getAbsolutePath();
-				argz += " --gridded-seis INCLUDE";
 				argz += " --grid-spacing "+(float)gridSpacing;
 				argz += " --max-distance 200";
 				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 				script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 				int myMins = mins;
-				if (!avgGridded)
+				if (i == 1)
 					 myMins = Integer.min(mins*5, 60*24*7 - 1);
 				pbsWrite.writeScript(jobFile, script, myMins, nodes, remoteTotalThreads, queue);
 			}
+			
+			// write out gridded seismicity combiner script
+			argz = resultsPefix+".zip";
+			argz += " "+resultsDir.getAbsolutePath();
+			argz += " "+resultsPefix+"_gridded_branches.zip";
+			argz += " "+resultsPefix+"_gridded_only";
+			argz += " "+new File(remoteDir, resultsDir.getName()+"_comb_branches.zip");
+			argz += " "+new File(remoteDir, resultsDir.getName()+"_comb_hazard.zip");
+			// this one is just for the gridded region
+			argz += " "+resultsPefix+"_hazard.zip";
+			script = javaWrite.buildScript(FaultAndGriddedSeparateTreeHazardCombiner.class.getName(), argz);
+			
+			pbsWrite.writeScript(new File(localDir, "fault_grid_hazard_combine.slurm"), script, mins, 1, remoteTotalThreads, queue);
 		}
 		
 		// write node branch averaged script
-		JavaShellScriptWriter javaWrite = new JavaShellScriptWriter(
-				mpjWrite.getJavaBin(), remoteTotalMemGB*1024, classpath);
 		argz = "--input-file "+resultsDir.getAbsolutePath();
 		argz += " --logic-tree "+remoteLogicTree.getAbsolutePath();
 		argz += " --output-dir "+new File(remoteDir, "node_branch_averaged");
@@ -644,10 +671,35 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " --branch-averaged-file "+baFiles.get(0).getAbsolutePath();
 		script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), argz);
 		
-		if (queue != null && queue.equals("scec"))
-			// run hazard in the high priority queue
-			queue = "scec_hiprio";
-		pbsWrite.writeScript(new File(localDir, "node_ba.slurm"), script, mins, 1, remoteTotalThreads, queue);
+		pbsWrite.writeScript(new File(localDir, "full_node_ba.slurm"), script, mins, 1, remoteTotalThreads, queue);
+		
+		// write out individual node BA scripts (useful if the tree is enormous
+		File baIndvLocalDir = new File(localDir, "indv_node_ba_scripts");
+		Preconditions.checkArgument(baIndvLocalDir.exists() || baIndvLocalDir.mkdir());
+		for (int l=0; l<levels.size(); l++) {
+			LogicTreeNode first = null;
+			boolean same = true;
+			for (LogicTreeBranch<?> branch : logicTree) {
+				LogicTreeNode node = branch.getValue(l);
+				if (first == null) {
+					first = node;
+				} else {
+					if (!first.equals(node)) {
+						same = false;
+						break;
+					}
+				}
+			}
+			if (!same) {
+				// we have variations for this level
+				LogicTreeLevel<? extends LogicTreeNode> level = levels.get(l);
+				String levelArgs = argz+" --level-class "+level.getType().getName();
+				script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), levelArgs);
+				
+				String scriptName = "node_ba_"+ClassUtils.getClassNameWithoutPackage(level.getType()).replace("$", "_")+".slurm";
+				pbsWrite.writeScript(new File(baIndvLocalDir, scriptName), script, mins, 1, remoteTotalThreads, queue);
+			}
+		}
 		
 		if (strictSeg) {
 			// write strict segmentation branch translation job

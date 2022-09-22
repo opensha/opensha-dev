@@ -183,6 +183,17 @@ public class LogicTreeBranchAverageWriter {
 				plt = PlotLevel.valueOf(cmd.getOptionValue("plot-level").trim().toUpperCase());
 			
 			skipSectBySect = cmd.hasOption("skip-sect-by-sect");
+			
+			if (cmd.hasOption("level-class")) {
+				try {
+					Class<? extends LogicTreeNode> clazz = (Class<? extends LogicTreeNode>) Class.forName(cmd.getOptionValue("level-class"));
+					restrictBAClasses = new HashSet<>();
+					restrictBAClasses.add(clazz);
+				} catch (ClassNotFoundException | ClassCastException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+				
+			}
 		}
 		
 		if (asyncThreads < 1) {
@@ -381,6 +392,8 @@ public class LogicTreeBranchAverageWriter {
 						+FaultSysTools.enumOptions(PlotLevel.class)+". Default: "+ReportPageGen.PLOT_LEVEL_DEFAULT.name());
 		ops.addOption("ssbs", "skip-sect-by-sect", false,
 				"Flag to skip section-by-section plots, regardless of selected plot level");
+		ops.addOption("lc", "level-class", true,
+				"Flag to limit aggregation to only the given level, specified as a fully-qualified class name");
 		
 		return ops;
 	}
