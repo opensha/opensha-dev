@@ -10,8 +10,17 @@ ext {
 
 apply from: '../opensha/build-common.gradle'
 
+repositories {
+    maven {
+        url "https://code.usgs.gov/api/v4/groups/1352/-/packages/maven"
+        name "NSHMP GitLab Group"
+    }
+}
+
 dependencies {
 
+    implementation "ghsc:nshmp-lib:1.1.14"
+    
     implementation 'org.apache.pdfbox:pdfbox:2.0.6'
     implementation 'org.apache.commons:commons-collections4:4.1'
     api 'uk.me.berndporr:iirj:1.0'
