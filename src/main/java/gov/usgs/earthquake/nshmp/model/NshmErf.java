@@ -29,13 +29,18 @@ public class NshmErf extends AbstractERF {
   private final List<NshmSource> allSources;
   private final Multimap<TectonicRegionType, NshmSource> sourceMap;
 
-  public NshmErf(Path path) {
+  private final boolean subduction;
+  private final boolean grid;
+
+  public NshmErf(Path path, boolean subduction, boolean grid) {
     model = HazardModel.load(path);
     allSources = new ArrayList<>();
     sourceMap = MultimapBuilder
         .enumKeys(TectonicRegionType.class)
         .arrayListValues()
         .build();
+    this.subduction = subduction;
+    this.grid = grid;
     init();
     System.out.println(allSources.size());
   }
@@ -51,6 +56,9 @@ public class NshmErf extends AbstractERF {
     Multimap<TectonicSetting, SourceTree> trees = model.trees();
     for (Entry<TectonicSetting, SourceTree> entry : trees.entries()) {
       TectonicSetting setting = entry.getKey();
+      if (setting == TectonicSetting.SUBDUCTION && !subduction) {
+        continue;
+      }
       SourceTree tree = entry.getValue();
       SourceType type = tree.type();
       TectonicRegionType trt = NshmUtil.tectonicSettingToType(setting, type);
@@ -73,19 +81,25 @@ public class NshmErf extends AbstractERF {
     List<NshmSource> sources = new ArrayList<>();
     double duration = getTimeSpan().getDuration();
     tree.stream()
-        .map(branch -> sourcesFromBranch(branch, duration))
+        .map(branch -> sourcesFromBranch(branch, duration, grid))
         .forEach(sources::addAll);
     return sources;
   }
 
   private static List<NshmSource> sourcesFromBranch(
       Branch<RuptureSet<? extends Source>> branch,
-      double duration) {
+      double duration,
+      boolean grid) {
 
     RuptureSet<? extends Source> ruptureSet = branch.value();
     double weight = branch.weight();
 
     switch (ruptureSet.type()) {
+
+      case GRID:
+        return (!grid)
+            ? List.of()
+            : ruptureSetToSources(ruptureSet, weight, duration);
 
       // custom cluster and system handlers
       case FAULT_CLUSTER:
@@ -96,6 +110,7 @@ public class NshmErf extends AbstractERF {
         return systemRuptureSetToSources(srs, weight, duration);
 
       default:
+        System.out.println("Yo: " + ruptureSet.type());
         return ruptureSetToSources(ruptureSet, weight, duration);
     }
   }
