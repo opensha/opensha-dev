@@ -19,11 +19,11 @@ public class NshmErfTest {
 
   // private static final Path MODEL =
   // Path.of("../nshmp-lib/src/test/resources/model/test-model");
-  private static final Path MODEL = Path.of("../nshm-conus-2018-5.1-maint");
+  private static final Path MODEL = Path.of("../nshm-conus-2018-5.x-maint");
 
   public static void main(String[] args) {
 
-    NshmErf erf = new NshmErf(MODEL);
+    NshmErf erf = new NshmErf(MODEL, false, false);
     System.out.println("NSHM ERF size: " + erf.getNumSources());
     erf.getTimeSpan().setDuration(50.0);
     erf.updateForecast();
