@@ -10,7 +10,10 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
+import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
@@ -23,9 +26,11 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ClassUtils;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.FaultAndGriddedSeparateTreeHazardCombiner;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
+import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_SiteLogicTreeHazardCurveCalc;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.ClusterSpecificInversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.AbstractAsyncLogicTreeWriter;
@@ -58,6 +63,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBVal
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.util.NEHRP_TestCity;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -218,6 +225,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
+//		double avgNumRups = 100000;
+		
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levelsNewScale;
+//		dirName += "-nshm18_branches-new_scale";
 //		double avgNumRups = 100000;
 		
 //		levels = new ArrayList<>(levels);
@@ -605,6 +616,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		if (griddedJob) {
 			argz = "--logic-tree "+remoteLogicTree.getAbsolutePath();
 			argz += " --sol-dir "+resultsDir.getAbsolutePath();
+			boolean averageOnly = logicTree.size() > 1000;
+			if (averageOnly)
+				argz += " --average-only";
 			// these calculations can take a lot of memory
 			int gridThreads = Integer.max(1, remoteTotalThreads/2);
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(gridThreads).build();
@@ -623,6 +637,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --gridded-seis INCLUDE";
 					jobFile = new File(localDir, "batch_hazard_avg_gridded.slurm");
 				} else if (i == 1) {
+					if (averageOnly)
+						continue;
 					argz = "--input-file "+resultsPefix+"_full_gridded.zip";
 					argz += " --output-file "+resultsPefix+"_hazard_full_gridded.zip";
 					argz += " --output-dir "+resultsDir.getAbsolutePath();
@@ -657,6 +673,47 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			script = javaWrite.buildScript(FaultAndGriddedSeparateTreeHazardCombiner.class.getName(), argz);
 			
 			pbsWrite.writeScript(new File(localDir, "fault_grid_hazard_combine.slurm"), script, mins, 1, remoteTotalThreads, queue);
+		}
+		
+		// site hazard job
+		RupSetFaultModel fm = logicTree.getBranch(0).getValue(RupSetFaultModel.class);
+		if (fm != null) {
+			Set<NEHRP_TestCity> sites;
+			if (fm instanceof FaultModels) {
+				// CA
+				sites = NEHRP_TestCity.getCA();
+			} else {
+				// filter out CEUS for now
+				Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
+				sites = new HashSet<>();
+				for (NEHRP_TestCity site : NEHRP_TestCity.values()) {
+					if (reg.contains(site.location()))
+						sites.add(site);
+				}
+			}
+			CSVFile<String> csv = new CSVFile<>(true);
+			csv.addLine("Name", "Latitude", "Longitude");
+			for (NEHRP_TestCity site : sites)
+				csv.addLine(site.toString(), site.location().lat+"", site.location().lon+"");
+			File localSitesFile = new File(localDir, "hazard_sites.csv");
+			csv.writeToFile(localSitesFile);
+			
+			argz = "--input-file "+new File(resultsDir.getAbsolutePath()+".zip");
+			argz += " --output-dir "+new File(resultsDir.getParentFile(), resultsDir.getName()+"_hazard_sites").getAbsolutePath();
+			argz += " --sites-file "+new File(remoteDir, localSitesFile.getName()).getAbsolutePath();
+			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+			script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
+			pbsWrite.writeScript(new File(localDir, "batch_hazard_sites.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+			
+			if (griddedJob) {
+				argz = "--input-file "+new File(resultsDir.getAbsolutePath()+"_full_gridded.zip");
+				argz += " --output-dir "+new File(resultsDir.getParentFile(), resultsDir.getName()+"_hazard_sites_full_gridded").getAbsolutePath();
+				argz += " --sites-file "+new File(remoteDir, localSitesFile.getName()).getAbsolutePath();
+				argz += " --gridded-seis INCLUDE";
+				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+				script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
+				pbsWrite.writeScript(new File(localDir, "batch_hazard_sites_full_gridded.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+			}
 		}
 		
 		// write node branch averaged script

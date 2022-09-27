@@ -47,29 +47,33 @@ public class NodeBA_MFDComparePlot {
 		File mainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/");
 		
 		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.SUPRA_B;
+//		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.SEG;
 		File invDir = new File(mainDir, 
 //				"2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
-				"2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
+//				"2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
+				"2022_09_16-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
 //		LogicTreeLevel<?> level = LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist");
 ////		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.MAX_DIST;
 //		File invDir = new File(mainDir, 
 //				"2022_05_09-nshm23_u3_hybrid_branches-strict_cutoff_seg-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1");
 		
-		File baSolFile = new File(invDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+//		File baSolFile = new File(invDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip");
+		File baSolFile = new File(invDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
 		
 		File nodeBAdir = new File(invDir, "node_branch_averaged");
 		
 		FaultSystemSolution baSol = FaultSystemSolution.load(baSolFile);
 		
 		Range xRange = new Range(5.8d, 8.8d);
-		Range yRange = new Range(1e-5, 1e-1);
-		Range yRangeCml = new Range(1e-5, 1e0);
-		IncrementalMagFreqDist[] dataMFDs = {
-				new GutenbergRichterMagFreqDist(1.0, TotalMag5Rate.RATE_6p5.getRateMag5(), 5.05, 9.95, 50),
-				new GutenbergRichterMagFreqDist(1.0, TotalMag5Rate.RATE_7p9.getRateMag5(), 5.05, 9.95, 50),
-				new GutenbergRichterMagFreqDist(1.0, TotalMag5Rate.RATE_9p6.getRateMag5(), 5.05, 9.95, 50)
-		};
+		Range yRange = new Range(1e-5, 1e-0);
+		Range yRangeCml = new Range(1e-5, 1e1);
+		IncrementalMagFreqDist[] dataMFDs = null;
+//		IncrementalMagFreqDist[] dataMFDs = {
+//				new GutenbergRichterMagFreqDist(1.0, TotalMag5Rate.RATE_6p5.getRateMag5(), 5.05, 9.95, 50),
+//				new GutenbergRichterMagFreqDist(1.0, TotalMag5Rate.RATE_7p9.getRateMag5(), 5.05, 9.95, 50),
+//				new GutenbergRichterMagFreqDist(1.0, TotalMag5Rate.RATE_9p6.getRateMag5(), 5.05, 9.95, 50)
+//		};
 		
 		PlotCurveCharacterstics dataChar = new PlotCurveCharacterstics(PlotLineType.DOTTED, 1f, Color.GREEN.darker());
 		
@@ -77,7 +81,7 @@ public class NodeBA_MFDComparePlot {
 			
 			@Override
 			public int compare(LogicTreeNode o1, LogicTreeNode o2) {
-				if (o1.getClass().isEnum())
+				if (o1.getClass().isEnum() || o1.getClass().getSuperclass().isEnum())
 					return Integer.compare(((Enum<?>)o1).ordinal(), ((Enum<?>)o2).ordinal());
 				return o1.getShortName().compareTo(o2.getShortName());
 			}
@@ -135,27 +139,29 @@ public class NodeBA_MFDComparePlot {
 		List<IncrementalMagFreqDist> incrFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		for (IncrementalMagFreqDist dataMFD : dataMFDs) {
-			if (incrFuncs.isEmpty())
-				dataMFD.setName("UCERF3 Data Constraints");
-			else
-				dataMFD.setName(null);
-			incrFuncs.add(dataMFD);
-			chars.add(dataChar);
+		if (dataMFDs != null) {
+			for (IncrementalMagFreqDist dataMFD : dataMFDs) {
+				if (incrFuncs.isEmpty())
+					dataMFD.setName("UCERF3 Data Constraints");
+				else
+					dataMFD.setName(null);
+				incrFuncs.add(dataMFD);
+				chars.add(dataChar);
+			}
 		}
 		
 		IncrementalMagFreqDist baMFD = loadMFD(baSol, xRange);
 		baMFD.setName("Full Branch-Average");
 		
 		incrFuncs.add(baMFD);
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK));
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		
 		if (!allSameWeight) {
 			IncrementalMagFreqDist avgMFD = loadMFD(straightAvg, xRange);
 			avgMFD.setName("Even-Weight Average");
 			
 			incrFuncs.add(avgMFD);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GRAY));
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.GRAY));
 		}
 		
 		for (int i=0; i<nodeVals.size(); i++) {
@@ -164,7 +170,7 @@ public class NodeBA_MFDComparePlot {
 			
 			mfd.setName(value.getShortName());
 			incrFuncs.add(mfd);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, bCPT.getColor((float)i)));
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, bCPT.getColor((float)i)));
 		}
 		
 //		if (baSol.getRupSet().hasModule(InversionTargetMFDs.class)) {

@@ -1891,8 +1891,13 @@ public class PureScratch {
 		boolean process = false;
 		File outputFile = new File(dir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_rebuild.zip");
 		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(tree.getWeightProvider());
-		for (LogicTreeBranch<?> branch : tree)
-			baCreator.addSolution(slt.forBranch(branch, process), branch);
+		for (LogicTreeBranch<?> branch : tree) {
+			FaultSystemSolution sol = slt.forBranch(branch, process);
+			if (!process)
+				// add ROI, etc
+				NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(sol.getRupSet());
+			baCreator.addSolution(sol, branch);
+		}
 		FaultSystemSolution ba = baCreator.build();
 		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(ba.getRupSet());
 		ba.write(outputFile);
@@ -1962,7 +1967,7 @@ public class PureScratch {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test171();
+		test166();
 	}
 
 }
