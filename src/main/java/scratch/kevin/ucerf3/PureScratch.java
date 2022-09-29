@@ -1996,12 +1996,35 @@ public class PureScratch {
 		sol.write(new File("/tmp/reprocessed.zip"));
 	}
 	
+	private static void test173() throws IOException {
+		Gson gson = new GsonBuilder().create();
+		
+		String file = "/data/erf/nshm23/fault_models/v2/special_faults.json";
+		
+		BufferedReader reader = new BufferedReader(
+				new InputStreamReader(NSHM23_FaultModels.class.getResourceAsStream(file)));
+		Type type = TypeToken.getParameterized(Map.class, String.class,
+				TypeToken.getParameterized(List.class, Integer.class).getType()).getType();
+		Map<String, List<Integer>> namedFaults = gson.fromJson(reader, type);
+		
+		Preconditions.checkState(!namedFaults.isEmpty(), "No named faults found");
+		NamedFaults named = new NamedFaults(null, namedFaults);
+		
+		Map<Integer, FaultSection> idMap = NSHM23_FaultModels.NSHM23_v2.getFaultSectionIDMap();
+		for (String name : named.getFaultNames()) {
+			System.out.println(name);
+			for (int parentID : named.getParentIDsForFault(name)) {
+				System.out.println("\t"+parentID+". "+idMap.get(parentID).getName());
+			}
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test172();
+		test173();
 	}
 
 }
