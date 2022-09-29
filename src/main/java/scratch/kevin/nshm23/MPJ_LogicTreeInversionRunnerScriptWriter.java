@@ -124,8 +124,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		boolean griddedJob = false;
 
-//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		String dirName = "2022_09_16";
+		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+//		String dirName = "2022_09_16";
 		
 		/*
 		 * UCERF3 logic tree
@@ -616,6 +616,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		if (griddedJob) {
 			argz = "--logic-tree "+remoteLogicTree.getAbsolutePath();
 			argz += " --sol-dir "+resultsDir.getAbsolutePath();
+			argz += " --write-full-tree "+new File(remoteDir, "logic_tree_full_gridded.json").getAbsolutePath();
 			boolean averageOnly = logicTree.size() > 1000;
 			if (averageOnly)
 				argz += " --average-only";
@@ -706,11 +707,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			pbsWrite.writeScript(new File(localDir, "batch_hazard_sites.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 			
 			if (griddedJob) {
-				argz = "--input-file "+new File(resultsDir.getAbsolutePath()+"_full_gridded.zip");
+				argz = "--input-file "+resultsDir.getAbsolutePath();
+				argz += " --logic-tree "+new File(remoteDir, "logic_tree_full_gridded.json").getAbsolutePath();
 				argz += " --output-dir "+new File(resultsDir.getParentFile(), resultsDir.getName()+"_hazard_sites_full_gridded").getAbsolutePath();
 				argz += " --sites-file "+new File(remoteDir, localSitesFile.getName()).getAbsolutePath();
 				argz += " --gridded-seis INCLUDE";
-				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+				argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(2).maxDispatch(10).threads(remoteTotalThreads).build();
 				script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
 				pbsWrite.writeScript(new File(localDir, "batch_hazard_sites_full_gridded.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 			}

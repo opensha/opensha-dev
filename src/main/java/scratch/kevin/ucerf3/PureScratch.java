@@ -82,6 +82,8 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ConnectivityClusters;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ConnectivityClusters.ConnectivityClusterSolutionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
@@ -93,6 +95,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel.Tapered;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
@@ -1962,12 +1965,43 @@ public class PureScratch {
 		System.out.println("\t"+gb+" gb");
 	}
 	
+	private static void test172() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/solution.zip"));
+//		sol.getModule(ConnectivityClusters.class);
+//		sol.getModule(ConnectivityClusterSolutionMisfits.class);
+		
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		
+		FaultSystemRupSet origRupSet = sol.getRupSet();
+		LogicTreeBranch<?> branch = origRupSet.requireModule(LogicTreeBranch.class);
+		
+		SolutionProcessor processor = factory.getSolutionLogicTreeProcessor();
+		// process the rupture set
+		FaultSystemRupSet rpRupSet = factory.updateRuptureSetForBranch(sol.getRupSet(), branch);
+		// build an inversion configuration so that any adjustments at that stage are processed
+		factory.buildInversionConfig(rpRupSet, branch, 8);
+		if (rpRupSet != origRupSet) {
+			// replaced the rupture set, need to copy the solution over to use the new rup set
+			for (OpenSHA_Module module : origRupSet.getModules()) {
+				if (!rpRupSet.hasModuleSuperclass(module.getClass())) {
+//					System.out.println("Adding module to replacement rupture set: "+module.getName()+" ("+module.getClass()+")");
+					// this is a module not present in the reproduction and won't evict anything, add it
+					rpRupSet.addModule(module);
+				}
+			}
+			sol = sol.copy(rpRupSet.getArchive());
+		}
+		// process the solution
+		sol = processor.processSolution(sol, branch);
+		sol.write(new File("/tmp/reprocessed.zip"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test166();
+		test172();
 	}
 
 }
