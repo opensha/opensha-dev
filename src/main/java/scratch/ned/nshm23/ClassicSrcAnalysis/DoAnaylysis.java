@@ -13,6 +13,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -85,7 +86,7 @@ public class DoAnaylysis {
 	public final static String ROOT_PATH = "src/main/java/scratch/ned/nshm23/ClassicSrcAnalysis/Results/";
 
 	
-	final static double hazGridSpacing = 0.1;
+	final static double hazGridSpacing = 0.05;
 	
 	final static double[] hazardProbArray = {0.02, 0.10};
 	final static String[] hazardProbNameArray = {"2in50", "10in50"};
@@ -1032,21 +1033,13 @@ public class DoAnaylysis {
 				false, true, 3.5, 3.0, fileNameMFD, true);	
 	}
 	
-
-
-	public static void main(String[] args) {
-		
-		mkMFD_PlotForSSA_Talk();
-		System.exit(0);
-		
-//		equivBvalVsMmax();
-//		System.exit(0);
-		
+	
+	public static void classicModelComparison(double grTargetMagMax) {
 		boolean makeMapData=true;
 		double grMagMin = 6.55;
 //		double grTargetMagMax = 6.95;
 //		double grTargetMagMax = 7.45;
-		double grTargetMagMax = 7.95;
+//		double grTargetMagMax = 7.95;
 		double grBval = 1d;
 		double toMoRate = 1e19;  // 1e18 has problems with 10% in 50 yr
 		double floatOffset = 1;
@@ -1284,5 +1277,265 @@ public class DoAnaylysis {
 			makeHazardMapRatio(fileName1, fileName2, label, dirName, true, region, faultTrace);		
 
 		}
+
+	}
+	
+	public static void dipUncertaintyModelComparison() {
+		boolean makeMapData=true;
+		double grMagMin = 6.55;
+//		double grMagMax = 6.95;
+		double grMagMax = 7.45;
+//		double grMagMax = 7.95;
+		double grBval = 1d;
+		double toMoRate = 1e19;  // 1e18 has problems with 10% in 50 yr
+		double floatOffset = 1;
+		double lowerSeisDepth = 15;
+		double rake = -90;
+		double duration = hazardDurationYrs;
+		double[] dipArray = {35., 50., 65.};
+		double[] dipWtsArray = {0.2, 0.6, 0.2};
+		
+		WC1994_MagLengthRelationship wc_magLengthRel = new WC1994_MagLengthRelationship();
+		
+		double faultLength = wc_magLengthRel.getMedianLength(grMagMax);
+
+		FaultTrace faultTrace = new FaultTrace("FaultTrace");
+		faultTrace.add(new Location(33d,-117d));
+		faultTrace.add(new Location(33d+faultLength/111.195052,-117));
+		System.out.println("Fault trace length: "+faultTrace.getTraceLength());
+		System.out.println("faultTrace.getDipDirection(): "+faultTrace.getDipDirection());
+		
+		// Middle surface
+		FaultSectionPrefData faultData = new FaultSectionPrefData();
+		faultData.setFaultTrace(faultTrace);
+		faultData.setAveDip(dipArray[1]); // use central dip
+		faultData.setAveRake(rake);
+		faultData.setAveUpperDepth(0.0);
+		faultData.setAveLowerDepth(lowerSeisDepth);
+		double ddw = faultData.getOrigDownDipWidth();
+		System.out.println("ddw ="+ddw);
+		StirlingGriddedSurface faultSurf = faultData.getFaultSurface(1.0, false, false);
+		System.out.println("faultData.getAveDip() = "+faultData.getAveDip());
+		System.out.println("faultData.getDipDirection() = "+faultData.getDipDirection());
+		System.out.println("faultSurf.getAveDip() = "+faultSurf.getAveDip());
+		System.out.println("faultSurf.getAveDipDirection() = "+faultSurf.getAveDipDirection());
+
+		// Low dip surface
+		FaultSectionPrefData faultDataLow = new FaultSectionPrefData();
+		faultDataLow.setFaultTrace(faultTrace);
+		faultDataLow.setAveDip(dipArray[0]); // use central dip
+		faultDataLow.setAveRake(rake);
+		faultDataLow.setAveUpperDepth(0.0);
+		faultDataLow.setAveLowerDepth(lowerSeisDepth);
+		double ddwLowDip = faultDataLow.getOrigDownDipWidth();
+		System.out.println("ddwLowDip ="+ddwLowDip);
+		StirlingGriddedSurface faultSurfLow = faultDataLow.getFaultSurface(1.0, false, false);
+		System.out.println("dipLow ="+faultSurfLow.getAveDip());
+
+		
+		// High dip surface
+		FaultSectionPrefData faultDataHigh = new FaultSectionPrefData();
+		faultDataHigh.setFaultTrace(faultTrace);
+		faultDataHigh.setAveDip(dipArray[2]); // use central dip
+		faultDataHigh.setAveRake(rake);
+		faultDataHigh.setAveUpperDepth(0.0);
+		faultDataHigh.setAveLowerDepth(lowerSeisDepth);
+		double ddwHighDip = faultDataHigh.getOrigDownDipWidth();
+		System.out.println("ddwHighDip ="+ddwHighDip);
+		StirlingGriddedSurface faultSurfHigh = faultDataHigh.getFaultSurface(1.0, false, false);
+		System.out.println("dipHigh ="+faultDataHigh.getAveDip());
+		
+		// 45 degree dip surface
+		FaultSectionPrefData faultData45 = new FaultSectionPrefData();
+		faultData45.setFaultTrace(faultTrace);
+		faultData45.setAveDip(45); // use central dip
+		faultData45.setAveRake(rake);
+		faultData45.setAveUpperDepth(0.0);
+		faultData45.setAveLowerDepth(lowerSeisDepth);
+		double ddwDip45 = faultData45.getOrigDownDipWidth();
+		System.out.println("ddwDip45 ="+ddwDip45);
+		StirlingGriddedSurface faultSurf45 = faultData45.getFaultSurface(1.0, false, false);
+		System.out.println("dip45 ="+faultSurf45.getAveDip());
+
+
+
+		GutenbergRichterMagFreqDist grMFD_Full = new GutenbergRichterMagFreqDist(grMagMin,20,0.1); // up to M ~8.5
+		grMFD_Full.setAllButTotCumRate(grMagMin, grMagMax, toMoRate/3.0, grBval);
+		grMFD_Full.setName("grMFD_Full");
+
+		GaussianMagFreqDist charMFD_Full = new GaussianMagFreqDist(grMagMin, 20, 0.1, 
+				grMagMax, 0.12, 2.0*toMoRate/3.0, 2.0, 2);
+		
+		
+		FaultRuptureSource charSrc = new FaultRuptureSource(charMFD_Full, faultSurf, rake, duration);
+		
+		FloatingPoissonFaultSource grSrc = new FloatingPoissonFaultSource(grMFD_Full, faultSurf,
+				wc_magLengthRel, 0d, 1d, floatOffset, rake, duration, grMagMin, 0, grMagMax);
+		
+		
+		ArrayList<ProbEqkSource> sourceList = new ArrayList<ProbEqkSource>();
+		sourceList.add(charSrc);
+		sourceList.add(grSrc);
+		ArbSrcListERF erf = new ArbSrcListERF(sourceList, duration);
+		erf.getTimeSpan().setDuration(50);
+		System.out.println("erf.getNumSources = "+erf.getNumSources());
+//		for(int s=0;s<erf.getNumSources();s++) {
+//			ProbEqkSource src = erf.getSource(s);
+//			for(int r=0;r<src.getNumRuptures();r++) {
+//				ProbEqkRupture rup = src.getRupture(r);
+//				System.out.println((float)rup.getMag()+"\t"+(float)rup.getProbability()+"\t"+(float)rup.getRuptureSurface().getFirstLocOnUpperEdge().getLatitude());
+//			}
+//		}
+		System.out.println("ERF calc MoRate = "+(float)ERF_Calculator.getTotalMomentRateInRegion(erf, null));
+//		System.exit(0);
+		
+		
+		// 45 degree dip
+		FaultRuptureSource charSrc45 = new FaultRuptureSource(charMFD_Full, faultSurf45, rake, duration);
+		FloatingPoissonFaultSource grSrc45 = new FloatingPoissonFaultSource(grMFD_Full, faultSurf45,
+				wc_magLengthRel, 0d, 1d, floatOffset, rake, duration, grMagMin, 0, grMagMax);
+		ArrayList<ProbEqkSource> sourceList45 = new ArrayList<ProbEqkSource>();
+		sourceList45.add(charSrc45);
+		sourceList45.add(grSrc45);
+		ArbSrcListERF erf45 = new ArbSrcListERF(sourceList45, duration);
+		erf45.getTimeSpan().setDuration(50);
+		System.out.println("erf45.getNumSources = "+erf45.getNumSources());
+		System.out.println("erf45 calc MoRate = "+(float)ERF_Calculator.getTotalMomentRateInRegion(erf45, null));
+
+		
+		// erf with dip uncertainties:
+		GutenbergRichterMagFreqDist grMFD_20p = new GutenbergRichterMagFreqDist(grMagMin,20,0.1); // up to M ~8.5
+		grMFD_20p.setAllButTotCumRate(grMagMin, grMagMax, 0.2*toMoRate/3.0, grBval);
+		grMFD_20p.setName("grMFD_20p");
+
+		GaussianMagFreqDist charMFD_20p = new GaussianMagFreqDist(grMagMin, 20, 0.1, 
+				grMagMax, 0.12, 0.2*2.0*toMoRate/3.0, 2.0, 2);
+
+		FaultRuptureSource charSrcLow = new FaultRuptureSource(charMFD_20p, faultSurfLow, rake, duration);
+		
+		FloatingPoissonFaultSource grSrcLow = new FloatingPoissonFaultSource(grMFD_20p, faultSurfLow,
+				wc_magLengthRel, 0d, 1d, floatOffset, rake, duration, grMagMin, 0, grMagMax);
+
+		FaultRuptureSource charSrcHigh = new FaultRuptureSource(charMFD_20p, faultSurfHigh, rake, duration);
+		
+		FloatingPoissonFaultSource grSrcHigh = new FloatingPoissonFaultSource(grMFD_20p, faultSurfHigh,
+				wc_magLengthRel, 0d, 1d, floatOffset, rake, duration, grMagMin, 0, grMagMax);
+		
+		
+		GutenbergRichterMagFreqDist grMFD_60p = new GutenbergRichterMagFreqDist(grMagMin,20,0.1); // up to M ~8.5
+		grMFD_60p.setAllButTotCumRate(grMagMin, grMagMax, 0.6*toMoRate/3.0, grBval);
+		grMFD_60p.setName("grMFD_60p");
+
+		GaussianMagFreqDist charMFD_60p = new GaussianMagFreqDist(grMagMin, 20, 0.1, 
+				grMagMax, 0.12, 0.6*2.0*toMoRate/3.0, 2.0, 2);
+		
+		FaultRuptureSource charSrcMid = new FaultRuptureSource(charMFD_60p, faultSurf, rake, duration);
+		
+		FloatingPoissonFaultSource grSrcMid = new FloatingPoissonFaultSource(grMFD_60p, faultSurf,
+				wc_magLengthRel, 0d, 1d, floatOffset, rake, duration, grMagMin, 0, grMagMax);
+	
+		ArrayList<ProbEqkSource> sourceListDipVar = new ArrayList<ProbEqkSource>();
+		sourceListDipVar.add(charSrcLow);
+		sourceListDipVar.add(grSrcLow);
+		sourceListDipVar.add(charSrcHigh);
+		sourceListDipVar.add(grSrcHigh);
+		sourceListDipVar.add(charSrcMid);
+		sourceListDipVar.add(grSrcMid);
+		ArbSrcListERF erfDipVar = new ArbSrcListERF(sourceListDipVar, duration);
+		erfDipVar.getTimeSpan().setDuration(50);
+		System.out.println("erfDipVar.getNumSources = "+erfDipVar.getNumSources());
+		System.out.println("ERF Dip Var calc MoRate = "+(float)ERF_Calculator.getTotalMomentRateInRegion(erfDipVar, null));
+
+		
+		ScalarIMR imr = AttenRelRef.NGAWest_2014_AVG_NOIDRISS.instance(null);
+
+		
+		double[] saPeriodForHazArray = {0.0, 1.0};
+//		double[] saPeriodForHazArray = {0.0};
+		boolean popupWindow = true;
+		GriddedRegion region = getGriddedRegion(faultTrace,hazGridSpacing);
+		
+		String solutionName1 = "NoDipVarClassicNSHMP_Mmax"+(float)grMagMax; 
+		String dirName = ROOT_PATH+solutionName1;
+
+		for(double saPeriodForHaz : saPeriodForHazArray) {
+			String hazDirName = null;
+			if(dirName != null) {
+				hazDirName = dirName+"/hazardMaps";
+			}
+			// make mean map
+			
+//			if(makeMapData)
+//				makeHazardMaps(erf, saPeriodForHaz, hazDirName, popupWindow, region, imr, faultTrace);
+		}
+		
+		// NOW do dip var Case
+		String solutionName2 = "WithDipVarClassicNSHMP_Mmax"+(float)grMagMax; 
+		dirName = ROOT_PATH+solutionName2;
+		for(double saPeriodForHaz : saPeriodForHazArray) {
+			String hazDirName = null;
+			if(dirName != null) {
+				hazDirName = dirName+"/hazardMaps";
+			}
+			// make mean map
+			
+//			if(makeMapData)
+//				makeHazardMaps(erfDipVar, saPeriodForHaz, hazDirName, popupWindow, region, imr, faultTrace);
+		}
+		
+		// NOW do 45 deg dip  Case
+		String solutionName3 = "Dip45_ClassicNSHMP_Mmax"+(float)grMagMax; 
+		dirName = ROOT_PATH+solutionName3;
+		for(double saPeriodForHaz : saPeriodForHazArray) {
+			String hazDirName = null;
+			if(dirName != null) {
+				hazDirName = dirName+"/hazardMaps";
+			}
+			// make mean map
+			if(makeMapData)
+				makeHazardMaps(erf45, saPeriodForHaz, hazDirName, popupWindow, region, imr, faultTrace);
+		}
+
+				
+		
+		String[] nameArray = {"PGA_2in50", "PGA_10in50", "1.0secSA_2in50", "1.0secSA_10in50", "1.0secSA_RTGM"};
+		for(String name: nameArray) {
+		    String fileName1 = ROOT_PATH+solutionName1+"/hazardMaps/"+name+".txt";
+		    String fileName2 = ROOT_PATH+solutionName2+"/hazardMaps/"+name+".txt";
+		    dirName = ROOT_PATH+solutionName2+"/hazardMaps";
+		    String label = name+"_RatioToNoDipVar";
+//			makeHazardMapRatio(fileName2, fileName1, label, dirName, true, region, faultTrace);	
+			
+		    String fileName3 = ROOT_PATH+solutionName3+"/hazardMaps/"+name+".txt";
+		    dirName = ROOT_PATH+solutionName3+"/hazardMaps";
+		    label = name+"_RatioToDipVar";
+			makeHazardMapRatio(fileName3, fileName2, label, dirName, true, region, faultTrace);	
+
+			
+		}
+
+	}
+
+	
+
+
+	public static void main(String[] args) {
+		
+		// set: hazGridSpacing = 0.05
+//		dipUncertaintyModelComparison();
+		
+//		mkMFD_PlotForSSA_Talk();
+//		System.exit(0);
+		
+		
+//		double grTargetMagMax = 6.95;
+//		double grTargetMagMax = 7.45;
+//		double grTargetMagMax = 7.95;
+//		// set: hazGridSpacing = 1.0
+//		classicModelComparison(grTargetMagMax);
+		
+		equivBvalVsMmax();
+//		System.exit(0);
+		
 	}
 }
