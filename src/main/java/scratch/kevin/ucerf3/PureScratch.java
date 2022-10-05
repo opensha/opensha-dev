@@ -62,6 +62,7 @@ import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.BranchWeightProvider.OriginalWeights;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
+import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -1891,14 +1892,16 @@ public class PureScratch {
 		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
 		LogicTree<?> tree = slt.getLogicTree();
 		tree = tree.sample(10, false, new Random(tree.size()));
-		boolean process = false;
+		boolean process = true;
 		File outputFile = new File(dir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_rebuild.zip");
 		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(tree.getWeightProvider());
 		for (LogicTreeBranch<?> branch : tree) {
 			FaultSystemSolution sol = slt.forBranch(branch, process);
-			if (!process)
+			if (!process) {
 				// add ROI, etc
 				NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(sol.getRupSet());
+				sol.getRupSet().addModule(AveSlipModule.forModel(sol.getRupSet(), branch.requireValue(RupSetScalingRelationship.class)));
+			}
 			baCreator.addSolution(sol, branch);
 		}
 		FaultSystemSolution ba = baCreator.build();
@@ -2019,12 +2022,69 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test174() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/"
+				+ "FM3_1_branch_averaged.zip"));
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		
+		int parentID = -1;
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
+			if (sect.getName().toLowerCase().contains("palos") && sect.getParentSectionId() != parentID) {
+				parentID = sect.getParentSectionId();
+				System.out.println(parentID+". "+sect.getSectionName());
+			}
+		}
+		
+		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(rupSet);
+		System.out.println(sol.calcParticipationMFD_forParentSect(parentID, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size()));
+	}
+	
+	private static void test175() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_08_18-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
+		
+		FaultModels.FM3_1.attachDefaultModules(sol.getRupSet());
+		
+		sol.write(new File("/tmp/test_sol.zip"));
+	}
+	
+	private static void test176() throws IOException {
+//		File treeFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+//				+ "2022_10_03-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+//				+ "logic_tree_full_gridded.json");
+//		LogicTree<?> tree = LogicTree.read(treeFile);
+		File sltFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_10_03-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_gridded_branches.zip");
+		LogicTree<?> tree = SolutionLogicTree.load(sltFile).getLogicTree();
+		
+		List<LogicTreeLevel<?>> levels = new ArrayList<>();
+		for (LogicTreeLevel<?> level : tree.getLevels()) {
+			levels.add(level);
+			System.out.println(level.getName());
+			System.out.println("\tAffects:");
+			for (String val : level.getAffected())
+				System.out.println("\t\t"+val);
+			System.out.println("\tDoesn't Affect:");
+			for (String val : level.getNotAffected())
+				System.out.println("\t\t"+val);
+		}
+		
+		System.out.println("");
+		System.out.println("Levels affecting "+FaultSystemSolution.RATES_FILE_NAME+":");
+		for (LogicTreeLevel<?> level : SolutionLogicTree.getLevelsAffectingFile(FaultSystemSolution.RATES_FILE_NAME, true, levels)) {
+			System.out.println("\t"+level.getName());
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test173();
+		test166();
 	}
 
 }

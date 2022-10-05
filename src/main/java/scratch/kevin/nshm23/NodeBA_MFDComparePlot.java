@@ -46,12 +46,12 @@ public class NodeBA_MFDComparePlot {
 	public static void main(String[] args) throws IOException {
 		File mainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/");
 		
-		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.SUPRA_B;
-//		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.SEG;
+//		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.SUPRA_B;
+		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.SEG;
 		File invDir = new File(mainDir, 
 //				"2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
 //				"2022_05_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvg");
-				"2022_09_16-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				"2022_09_28-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
 //		LogicTreeLevel<?> level = LogicTreeLevel.forEnum(MaxJumpDistModels.class, "Max Dist Segmentation", "MaxDist");
 ////		LogicTreeLevel<?> level = NSHM23_LogicTreeBranch.MAX_DIST;

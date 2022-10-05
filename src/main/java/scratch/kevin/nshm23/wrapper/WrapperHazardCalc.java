@@ -56,17 +56,17 @@ public class WrapperHazardCalc {
 		GriddedRegion gridReg = new GriddedRegion(modelReg, 0.2d,
 				GriddedRegion.ANCHOR_0_0);
 		File outputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_09_23-nshm18-hazard-ask2014-noSub/results");
-//				+ "2022_09_23-nshm18-hazard-ask2014-noSub-faultOnly/results");
+				+ "2022_09_30-nshm18-hazard-ask2014-noSub/results");
+//				+ "2022_09_30-nshm18-hazard-ask2014-noSub-faultOnly/results");
 
 //		Region modelReg = new CaliforniaRegions.RELM_TESTING();
 //		GriddedRegion gridReg = new GriddedRegion(modelReg, 0.2d, GriddedRegion.ANCHOR_0_0);
 //		File outputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-////				+ "2022_09_21-nshm18-ca-hazard-ask2014/results");
-////				+ "2022_09_23-nshm18-ca-hazard-ask2014-noSub-faultOnly/results");
-//				+ "2022_09_23-nshm18-ca-hazard-ask2014-noSub/results");
+////				+ "2022_09_29-nshm18-ca-hazard-ask2014/results");
+//				+ "2022_09_29-nshm18-ca-hazard-ask2014-noSub-faultOnly/results");
+////				+ "2022_09_29-nshm18-ca-hazard-ask2014-noSub/results");
 		
-		int threads = 8;
+		int threads = 16;
 		
 		Preconditions.checkState(outputDir.getParentFile().exists() || outputDir.getParentFile().mkdir());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());

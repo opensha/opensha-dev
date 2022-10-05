@@ -703,6 +703,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " --output-dir "+new File(resultsDir.getParentFile(), resultsDir.getName()+"_hazard_sites").getAbsolutePath();
 			argz += " --sites-file "+new File(remoteDir, localSitesFile.getName()).getAbsolutePath();
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+			argz += " --gridded-seis EXCLUDE";
 			script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "batch_hazard_sites.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 			
