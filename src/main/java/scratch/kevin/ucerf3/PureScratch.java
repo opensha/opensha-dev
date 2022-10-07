@@ -79,6 +79,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.Inversi
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.U3MFDSubSectNuclInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint.SectMappedUncertainDataConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeBranchAverageBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
@@ -125,6 +126,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_Hyb
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
@@ -2079,12 +2082,94 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test178() throws IOException {
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+		LogicTreeNode[] required = {
+				// FAULT MODELS
+				NSHM23_FaultModels.NSHM23_v2,
+
+				// RUPTURE SETS
+				RupturePlausibilityModels.COULOMB,
+				
+				// SUB-SECT CONSTRAINT
+				SubSectConstraintModels.TOT_NUCL_RATE,
+				
+				// SUB-SEIS MO REDUCTION
+				SubSeisMoRateReductions.NONE,
+				
+				// SEG ADJUSTMENT
+				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG,
+				};
+		LogicTree<LogicTreeNode> logicTree = LogicTree.buildExhaustive(levels, true, required);
+		System.out.println("Built "+logicTree.size()+" branches");
+		
+		List<LogicTreeNode[]> combinations = MPJ_LogicTreeBranchAverageBuilder.buildCombinations(logicTree, 3);
+		
+		System.out.println("Would build "+combinations.size()+" BAs:");
+		for (LogicTreeNode[] combination : combinations) {
+			String str = "";
+			for (int i=0; i<combination.length; i++) {
+				if (i > 0)
+					str += ", ";
+				str += combination[i].getShortName();
+			}
+			System.out.println(str);
+		}
+		
+//		List<List<LogicTreeNode>> levelNodesUsed = new ArrayList<>();
+//		for (LogicTreeLevel<?> level : logicTree.getLevels()) {
+//			List<LogicTreeNode> myNodes = new ArrayList<>();
+//			levelNodesUsed.add(myNodes);
+//			for (LogicTreeNode node : level.getNodes()) {
+//				for (LogicTreeBranch<?> branch : logicTree) {
+//					if (branch.hasValue(node)) {
+//						myNodes.add(node);
+//						break;
+//					}
+//				}
+//			}
+//		}
+//		
+//		int numLevels = logicTree.getLevels().size();
+//		int num = 0;
+//		for (int l1=0; l1<numLevels-1; l1++) {
+//			LogicTreeLevel<? extends LogicTreeNode> level1 = logicTree.getLevels().get(l1);
+//			List<LogicTreeNode> nodes1 = levelNodesUsed.get(l1);
+//			if (nodes1.size() < 2)
+//				continue;
+//			for (int l2=l1+1; l2<numLevels; l2++) {
+//				LogicTreeLevel<? extends LogicTreeNode> level2 = logicTree.getLevels().get(l2);
+//				List<LogicTreeNode> nodes2 = levelNodesUsed.get(l2);
+//				if (nodes2.size() < 2)
+//					continue;
+//				System.out.println(level1.getShortName()+", "+level2.getShortName());
+//				for (LogicTreeNode node1 : nodes1) {
+//					for (LogicTreeNode node2 : nodes2) {
+//						// make sure we have any branches
+//						boolean match = false;
+//						for (LogicTreeBranch<?> branch : logicTree) {
+//							if (branch.hasValue(node1) && branch.hasValue(node2)) {
+//								match = true;
+//								break;
+//							}
+//						}
+//						if (match) {
+//							System.out.println("\t"+node1.getShortName()+", "+node2.getShortName());
+//							num++;
+//						}
+//					}
+//				}
+//			}
+//		}
+//		System.out.println("Found "+num+" combinations");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test166();
+		test178();
 	}
 
 }

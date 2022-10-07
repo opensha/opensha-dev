@@ -34,12 +34,14 @@ import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_SiteLogicTreeH
 import org.opensha.sha.earthquake.faultSysSolution.inversion.ClusterSpecificInversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.AbstractAsyncLogicTreeWriter;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeBranchAverageBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeInversionRunner;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.CompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.CoolingScheduleType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
+import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.MPJ_GridSeisBranchBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
@@ -433,9 +435,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		LogicTree<LogicTreeNode> logicTree;
 		if (forceRequiredNonzeroWeight)
-			logicTree = LogicTree.buildExhaustive(levels, true, new BranchWeightProvider.NodeWeightOverrides(required, 1d));
+			logicTree = LogicTree.buildExhaustive(levels, true, new BranchWeightProvider.NodeWeightOverrides(required, 1d), required);
 		else
-			logicTree = LogicTree.buildExhaustive(levels, true);
+			logicTree = LogicTree.buildExhaustive(levels, true, required);
 		
 		int rounds = 2000;
 		String completionArg = null;
@@ -468,7 +470,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		if (required != null && required.length > 0) {
 			for (LogicTreeNode node : required)
 				dirName += "-"+node.getFilePrefix();
-			logicTree = logicTree.matchingAll(required);
 		}
 		
 		if (numSamples > 0) {
@@ -733,32 +734,52 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		pbsWrite.writeScript(new File(localDir, "full_node_ba.slurm"), script, mins, 1, remoteTotalThreads, queue);
 		
-		// write out individual node BA scripts (useful if the tree is enormous
-		File baIndvLocalDir = new File(localDir, "indv_node_ba_scripts");
-		Preconditions.checkArgument(baIndvLocalDir.exists() || baIndvLocalDir.mkdir());
-		for (int l=0; l<levels.size(); l++) {
-			LogicTreeNode first = null;
-			boolean same = true;
-			for (LogicTreeBranch<?> branch : logicTree) {
-				LogicTreeNode node = branch.getValue(l);
-				if (first == null) {
-					first = node;
-				} else {
-					if (!first.equals(node)) {
-						same = false;
-						break;
-					}
-				}
-			}
-			if (!same) {
-				// we have variations for this level
-				LogicTreeLevel<? extends LogicTreeNode> level = levels.get(l);
-				String levelArgs = argz+" --level-class "+level.getType().getName();
-				script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), levelArgs);
-				
-				String scriptName = "node_ba_"+ClassUtils.getClassNameWithoutPackage(level.getType()).replace("$", "_")+".slurm";
-				pbsWrite.writeScript(new File(baIndvLocalDir, scriptName), script, mins, 1, remoteTotalThreads, queue);
-			}
+//		// write out individual node BA scripts (useful if the tree is enormous
+//		File baIndvLocalDir = new File(localDir, "indv_node_ba_scripts");
+//		Preconditions.checkArgument(baIndvLocalDir.exists() || baIndvLocalDir.mkdir());
+//		for (int l=0; l<levels.size(); l++) {
+//			LogicTreeNode first = null;
+//			boolean same = true;
+//			for (LogicTreeBranch<?> branch : logicTree) {
+//				LogicTreeNode node = branch.getValue(l);
+//				if (first == null) {
+//					first = node;
+//				} else {
+//					if (!first.equals(node)) {
+//						same = false;
+//						break;
+//					}
+//				}
+//			}
+//			if (!same) {
+//				// we have variations for this level
+//				LogicTreeLevel<? extends LogicTreeNode> level = levels.get(l);
+//				String levelArgs = argz+" --level-class "+level.getType().getName();
+//				script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), levelArgs);
+//				
+//				String scriptName = "node_ba_"+ClassUtils.getClassNameWithoutPackage(level.getType()).replace("$", "_")+".slurm";
+//				pbsWrite.writeScript(new File(baIndvLocalDir, scriptName), script, mins, 1, remoteTotalThreads, queue);
+//			}
+//		}
+		
+		if (logicTree.size() > 100) {
+			// write out parallel version
+			int totNum = MPJ_LogicTreeBranchAverageBuilder.buildCombinations(logicTree, 1).size();
+			Preconditions.checkState(totNum > 1);
+			int myNodes = Integer.min(nodes, totNum);
+			
+			argz = "--input-dir "+resultsDir.getAbsolutePath();
+			argz += " --logic-tree "+new File(remoteDir, "logic_tree_full_gridded.json").getAbsolutePath();
+			argz += " --output-dir "+new File(remoteDir, "node_branch_averaged").getAbsolutePath();
+			if (totNum > 5)
+				argz += " --skip-sect-by-sect";
+			argz += " --plot-level "+PlotLevel.REVIEW.name();
+			argz += " --depth 1";
+			if (baFiles != null && baFiles.size() == 1)
+				argz += " --compare-to "+baFiles.get(0).getAbsolutePath();
+			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+			script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
+			pbsWrite.writeScript(new File(localDir, "batch_node_ba.slurm"), script, mins, myNodes, remoteTotalThreads, queue);
 		}
 		
 		if (strictSeg) {
