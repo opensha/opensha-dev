@@ -127,7 +127,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		boolean griddedJob = false;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2022_09_16";
+//		String dirName = "2022_10_08";
 		
 		/*
 		 * UCERF3 logic tree
@@ -259,10 +259,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ConstantSlipRateStdDev0p1.class;
+//		dirName += "-const_slip_sd_0p1";
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ConstantSlipRateStdDev0p2.class;
+		dirName += "-const_slip_sd_0p2";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.FullSysInv.class;
 //		dirName += "-full_sys_inv";
@@ -769,7 +775,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			int myNodes = Integer.min(nodes, totNum);
 			
 			argz = "--input-dir "+resultsDir.getAbsolutePath();
-			argz += " --logic-tree "+new File(remoteDir, "logic_tree_full_gridded.json").getAbsolutePath();
+			argz += " --logic-tree "+new File(remoteDir, "logic_tree.json").getAbsolutePath();
 			argz += " --output-dir "+new File(remoteDir, "node_branch_averaged").getAbsolutePath();
 			if (totNum > 5)
 				argz += " --skip-sect-by-sect";

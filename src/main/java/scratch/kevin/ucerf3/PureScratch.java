@@ -135,6 +135,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -2164,12 +2165,31 @@ public class PureScratch {
 //		System.out.println("Found "+num+" combinations");
 	}
 	
+	private static final void test179() throws IOException {
+		for (FaultSection sect : NSHM23_FaultModels.NSHM23_v2.getFaultSections()) {
+			boolean check = false;
+			for (Location loc : sect.getFaultTrace())
+				if (loc.lon > -110)
+					check = true;
+			if (check) {
+				RuptureSurface surf = sect.getFaultSurface(1d);
+				double maxLon = Double.NEGATIVE_INFINITY;
+				for (Location loc : surf.getEvenlyDiscritizedListOfLocsOnSurface())
+					maxLon = Math.max(maxLon, loc.getLongitude());
+				
+				if (maxLon > -105) {
+					System.out.println(sect.getName()+" maxLon="+maxLon);
+				}
+			}
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test178();
+		test179();
 	}
 
 }

@@ -29,6 +29,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausi
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
+import org.opensha.sha.magdist.SparseGutenbergRichterSolver.SpreadingMethod;
 
 import com.google.common.base.Preconditions;
 
@@ -66,6 +68,15 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
 		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
+		branch = branch.copy();
+		
+//		NSHM23_InvConfigFactory.MFD_MIN_FRACT_UNCERT = 0.1;
+//		dirName += "-mfd_min_uncert_0.1";
+//		NSHM23_InvConfigFactory.MFD_MIN_FRACT_UNCERT = 0.2;
+//		dirName += "-mfd_min_uncert_0.2";
+		
+		SparseGutenbergRichterSolver.METHOD_DEFAULT = SpreadingMethod.NEAREST;
+		dirName += "-sparse_gr_nearest";
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
 //		levels = new ArrayList<>(levels);
@@ -101,17 +112,17 @@ public class HardcodedInversionFactoryRunner {
 //		branch.setValue(NSHM23_DeformationModels.ZENG);
 //		branch.setValue(NSHM23_DeformationModels.EVANS);
 //		branch.setValue(NSHM23_DeformationModels.SHEN_BIRD);
-//		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
+		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
 		
 //		branch.setValue(ScalingRelationships.MEAN_UCERF3);
 		
 //		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		
-//		branch.setValue(NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD);
+		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p1);
 		
-//		branch.setValue(SupraSeisBValues.B_0p0);
+		branch.setValue(SupraSeisBValues.B_0p5);
 		
-//		branch.setValue(NSHM23_PaleoUncertainties.OVER_FIT);
+		branch.setValue(NSHM23_PaleoUncertainties.EVEN_FIT);
 		
 ////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p1);
 ////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p2);
