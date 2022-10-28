@@ -26,11 +26,14 @@ import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.stat.StatUtils;
+import org.jfree.chart.ui.RectangleEdge;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.IntegerSampler.ExclusionIntegerSampler;
+import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -52,7 +55,9 @@ import org.opensha.commons.geo.json.GeoJSON_Type;
 import org.opensha.commons.geo.json.Geometry;
 import org.opensha.commons.geo.json.Geometry.GeometryCollection;
 import org.opensha.commons.geo.json.Geometry.MultiPoint;
+import org.opensha.commons.gui.plot.GraphPanel;
 import org.opensha.commons.gui.plot.GraphWindow;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
@@ -60,6 +65,7 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.BranchWeightProvider.OriginalWeights;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
@@ -68,6 +74,7 @@ import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -2184,12 +2191,39 @@ public class PureScratch {
 		}
 	}
 	
+	private static final void test180() throws IOException {
+		CPT cpt = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(-6d, -2d);
+		
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		
+		DiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
+		func.set(0d, 0d);
+		
+		funcs.add(func);
+		
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_CROSS, 1f, Color.BLACK));
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, "", "", "");
+		
+		spec.addSubtitle(GraphPanel.getLegendForCPT(cpt, "Log10 M≥6.5 Participation Rate (/yr)",
+				28, 22, 1d, RectangleEdge.BOTTOM));
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		
+		gp.setBackground(null);
+		
+		gp.drawGraphPanel(spec);
+		
+		PlotUtils.writePlots(new File("/home/kevin/SCEC/2022_10-yehuda-vdo"), "cpt", gp, 650, 1200, true, false, false);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test179();
+		test166();
 	}
 
 }
