@@ -63,24 +63,60 @@ public class TimJonEpistemicCurveCalc {
 				AttenRelRef.CY_2014
 		};
 		double[] periods = { 0.2, 1d };
-		boolean[] vsInferreds = {false, true};
+//		boolean[] vsInferreds = {false, true};
 		
 //		String sitePrefix = "Davis";
 //		Location siteLoc = new Location(38.3210, -121.4530);
+//		
+//		boolean[] vsInferreds = {false};
+//		double[] vs30Vals = {
+//				216,
+//				236,
+//				251,
+//				266,
+//				281,
+//				299,
+//				327
+//		};
+//		
+////		boolean[] vsInferreds = {true};
+////		double[] vs30Vals = {
+////				179,
+////				212,
+////				238,
+////				266,
+////				296,
+////				333,
+////				394
+////		};
 		
 		String sitePrefix = "Berkeley";
 		Location siteLoc = new Location(37.5216, -122.1527);
 		
+//		boolean[] vsInferreds = {false};
+//		double[] vs30Vals = {
+//				514,
+//				562,
+//				598,
+//				633,
+//				670,
+//				713,
+//				779
+//		};
+		
+		boolean[] vsInferreds = {true};
 		double[] vs30Vals = {
-				// current set
-				179,
-				212,
-				238,
-				266,
-				296,
-				333,
-				394
-				// previous set
+				288,
+				402,
+				510,
+				633,
+				785,
+				996,
+				1393
+		};
+		
+//		double[] vs30Vals = {
+//				// original set
 //				139.3,
 //				171.8,
 //				199.4,
@@ -88,7 +124,7 @@ public class TimJonEpistemicCurveCalc {
 //				261.2,
 //				303.2,
 //				373.9
-		};
+//		};
 		
 		double[] percentiles = {
 				0.1,
@@ -138,7 +174,7 @@ public class TimJonEpistemicCurveCalc {
 		
 		File outputDir = new File("/home/kevin/OpenSHA/UCERF3/2022_10-tim-jon-calcs");
 		
-		int threads = 28;
+		int threads = 10;
 		ExecutorService exec = Executors.newFixedThreadPool(threads);
 		
 		DecimalFormat oDF = new DecimalFormat("0.##");

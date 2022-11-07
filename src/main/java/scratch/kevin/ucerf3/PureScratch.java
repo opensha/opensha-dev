@@ -41,9 +41,11 @@ import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.uncertainty.BoundedUncertainty;
+import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.Uncertainty;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
+import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
@@ -90,6 +92,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeBr
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ConnectivityClusters;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ConnectivityClusters.ConnectivityClusterSolutionMisfits;
@@ -123,11 +126,13 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder.ParkfieldSelectionCriteria;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
@@ -139,6 +144,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBVal
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -1833,7 +1839,7 @@ public class PureScratch {
 	
 	private static void test160() throws IOException {
 		GriddedRegion relm1 = new CaliforniaRegions.RELM_TESTING_GRIDDED(0.1d);
-		GriddedRegion relm2 = new GriddedRegion(SeismicityRegions.CONUS_U3_RELM.load(), 0.1d, GriddedRegion.ANCHOR_0_0);
+		GriddedRegion relm2 = new GriddedRegion(AnalysisRegions.CONUS_U3_RELM.load(), 0.1d, GriddedRegion.ANCHOR_0_0);
 		
 		System.out.println("orig has "+relm1.getNodeCount()+" locs");
 		System.out.println("new has "+relm2.getNodeCount()+" locs");
@@ -2218,12 +2224,109 @@ public class PureScratch {
 		PlotUtils.writePlots(new File("/home/kevin/SCEC/2022_10-yehuda-vdo"), "cpt", gp, 650, 1200, true, false, false);
 	}
 	
+	private static final void test181() throws IOException {
+//		File outputDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/nshm23/seismicity/regions/nshm-regions-seismicity");
+//		
+//		Region reg = new Region(new Location(23.95, -126.05), new Location(50.05, -103.95));
+//		reg.setName("NSHM23 CONUS WUS Seismicity");
+//		
+//		FeatureCollection features = new FeatureCollection(reg.toFeature());
+//		FeatureCollection.write(features, new File(outputDir, "conus-west.geojson"));
+//		
+//		reg = new Region(new Location(23.95, -104.05), new Location(50.05, -65.95));
+//		reg.setName("NSHM23 CONUS EUS Seismicity");
+//		
+//		features = new FeatureCollection(reg.toFeature());
+//		FeatureCollection.write(features, new File(outputDir, "conus-east.geojson"));
+	}
+	
+	private static void test182() throws IOException {
+		File solFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_10_24-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		
+		// won't apply anymore, new indexing
+		sol.removeModuleInstances(BranchRegionalMFDs.class);
+		
+		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(sol.getRupSet());
+		
+		sol.write(new File(solFile.getAbsolutePath().replace(".zip", "_mod.zip")));
+	}
+	
+	private static void test183() throws IOException {
+		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		for (SeismicityRegions seis : SeismicityRegions.values()) {
+			Region seisReg = seis.load();
+			
+			System.out.println(seisReg.getName());
+			System.out.println("intersects: "+reg.intersects(seisReg));
+		}
+	}
+	
+	private static void test184() throws IOException {
+		File solFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_10_24-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_mod.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		
+		RegionsOfInterest roi = sol.getRupSet().requireModule(RegionsOfInterest.class);
+		
+		List<Region> regions = roi.getRegions();
+		List<IncrementalMagFreqDist> mfds = roi.getMFDs();
+		
+		for (int i=0; i<regions.size(); i++) {
+			System.out.println(regions.get(i).getName());
+			IncrementalMagFreqDist mfd = mfds.get(i);
+			if (mfd != null) {
+				System.out.println("\t"+mfd.getName());
+				if (mfd instanceof UncertainBoundedDiscretizedFunc) {
+					System.out.println("\t"+((UncertainBoundedDiscretizedFunc)mfd).getBoundName());
+				}
+			}
+		}
+	}
+	
+	private static void test185() {
+		System.out.println(Long.MAX_VALUE);
+		System.out.println(684170778191l);
+	}
+	
+	private static void test186() throws IOException {
+		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		GriddedGeoDataSet pdf = NSHM23_SeisSmoothingAlgorithms.AVERAGE.loadXYZ(
+				SeismicityRegions.CONUS_WEST, NSHM23_DeclusteringAlgorithms.AVERAGE);
+		
+		double fract = 0d;
+		
+		for (int i=0; i<pdf.size(); i++)
+			if (region.contains(pdf.getLocation(i)))
+				fract += pdf.get(i);
+		
+		System.out.println((float)fract+" of WUS Collection in WUS Conterminous");
+	}
+	
+	private static void test187() throws IOException {
+		Region wus = NSHM23_RegionLoader.SeismicityRegions.CONUS_WEST.load();
+		Region eus = NSHM23_RegionLoader.SeismicityRegions.CONUS_EAST.load();
+		
+		Region union = Region.union(wus, eus);
+		System.out.println(union.toFeature().toJSON());
+		
+		Region modelReg = NSHM23_RegionLoader.loadFullConterminousUS();
+		List<SeismicityRegions> seisRegions = NSHM23_InvConfigFactory.getSeismicityRegions(modelReg);
+		for (SeismicityRegions seisRegion : seisRegions)
+			System.out.println(seisRegion);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test166();
+		test187();
 	}
 
 }

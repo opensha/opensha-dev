@@ -32,6 +32,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 public class SeisGridPlotter {
 
@@ -46,7 +47,7 @@ public class SeisGridPlotter {
 		
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		List<SeismicityRegions> seisRegions = NSHM23_InvConfigFactory.getSeismicityRegions(region);
-		GriddedRegion gridReg = NSHM23_InvConfigFactory.getGriddedSeisRegion(region); 
+		GriddedRegion gridReg = NSHM23_InvConfigFactory.getGriddedSeisRegion(seisRegions); 
 		RupSetMapMaker mapMaker = new RupSetMapMaker(subSects, region);
 		mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.5f, new Color(0, 0, 0, 80)));
 		mapMaker.setSectOutlineChar(null);
@@ -92,6 +93,46 @@ public class SeisGridPlotter {
 			lines.addAll(table.build());
 			lines.add("");
 			
+			// plot moment rate
+			GriddedGeoDataSet moRates = calcMoRate(seisRates, NSHM23_DeclusteringAlgorithms.AVERAGE, NSHM23_SeisSmoothingAlgorithms.AVERAGE,
+					maxMagOff, gridReg, refMFD, seisRegions);
+			
+			double minMoRate = Double.POSITIVE_INFINITY;
+			double maxMoRate = Double.NEGATIVE_INFINITY;
+			for (int i=0; i<moRates.size(); i++) {
+				double val = moRates.get(i);
+				if (val > 0d) {
+					minMoRate = Math.min(minMoRate, val);
+					maxMoRate = Math.max(maxMoRate, val);
+				}
+			}
+			
+			double logMaxMo = Math.ceil(Math.log10(maxMoRate));
+			double logMinMo = Math.max(logMaxMo-10d, Math.floor(Math.log10(minMoRate)));
+			
+			CPT moCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(logMinMo, logMaxMo);
+			moCPT.setNanColor(Color.WHITE);
+			
+			File moRatesXYZ = new File(outputDir, prefix+"_mo_rates.xyz");
+			GriddedGeoDataSet.writeXYZFile(moRates, moRatesXYZ);
+			
+			// log10
+			moRates.log10();
+			
+			table = MarkdownUtils.tableBuilder();
+			
+			table.addLine("Total Moment Rate");
+			
+			mapMaker.plotXYZData(moRates, moCPT, "Log10 Total Moment Rate (N-m/yr)");
+			mapMaker.plot(outputDir, prefix+"_mo_rates", " ");
+			
+			table.addLine("![Map]("+prefix+"_mo_rates.png)");
+			
+			lines.add("");
+			lines.add("Download moment rate XYZ data: "+ "["+moRatesXYZ.getName()+"]("+moRatesXYZ.getName()+")");
+			lines.add("");
+			lines.addAll(table.build());
+			lines.add("");
 
 			for (NSHM23_DeclusteringAlgorithms declustering : NSHM23_DeclusteringAlgorithms.values()) {
 				if (declustering.getNodeWeight(null) == 0d)
@@ -99,7 +140,7 @@ public class SeisGridPlotter {
 				for (NSHM23_SeisSmoothingAlgorithms smooth : NSHM23_SeisSmoothingAlgorithms.values()) {
 					if (smooth.getNodeWeight(null) == 0d)
 						continue;
-					lines.add("### "+smooth.getName()+", "+seisRates.getName());
+					lines.add("### "+declustering.getName()+", "+smooth.getName()+", "+seisRates.getName());
 					lines.add(topLink); lines.add("");
 					System.out.println("Processing "+smooth.getName()+", "+seisRates.getName());
 					table = MarkdownUtils.tableBuilder();
@@ -107,11 +148,11 @@ public class SeisGridPlotter {
 					
 					GriddedGeoDataSet combinedPDF = buildPDF(seisRates, declustering, smooth, maxMagOff, gridReg, refMFD, seisRegions);
 					
-					String title = smooth.getName()+", "+seisRates.getName();
+					String title = declustering.getName()+", "+smooth.getName()+", "+seisRates.getName();
 					
 					table.initNewLine();
 					mapMaker.plotXYZData(combinedPDF, linearCPT, "Rate M≥5");
-					prefix = seisRates.getFilePrefix()+"_"+smooth.getFilePrefix();
+					prefix = declustering.getFilePrefix()+"_"+seisRates.getFilePrefix()+"_"+smooth.getFilePrefix();
 					mapMaker.plot(outputDir, prefix, title);
 					table.addColumn("![Map]("+prefix+".png)");
 					
@@ -153,7 +194,7 @@ public class SeisGridPlotter {
 			combinedPDF.set(i, Double.NaN);
 		
 		for (SeismicityRegions primaryReg : seisRegions) {
-			GutenbergRichterMagFreqDist totalGR = seisRates.build(primaryReg, refMFD, maxMagOff);
+			IncrementalMagFreqDist totalGR = seisRates.build(primaryReg, refMFD, maxMagOff);
 			double rateM5 = totalGR.getCumRate(totalGR.getClosestXIndex(5.01));
 			
 			GriddedGeoDataSet regPDF = smooth.loadXYZ(primaryReg, declusteringAlg);
@@ -167,6 +208,27 @@ public class SeisGridPlotter {
 			}
 		}
 		return combinedPDF;
+	}
+	
+	private static GriddedGeoDataSet calcMoRate(NSHM23_RegionalSeismicity seisRates, NSHM23_DeclusteringAlgorithms declusteringAlg, NSHM23_SeisSmoothingAlgorithms smooth,
+			double maxMagOff, GriddedRegion gridReg, EvenlyDiscretizedFunc refMFD, List<SeismicityRegions> seisRegions) throws IOException {
+		GriddedGeoDataSet moRates = new GriddedGeoDataSet(gridReg, false);
+		for (int i=0; i<moRates.size(); i++)
+			moRates.set(i, Double.NaN);
+		
+		for (SeismicityRegions primaryReg : seisRegions) {
+			IncrementalMagFreqDist totalGR = seisRates.build(primaryReg, refMFD, maxMagOff);
+			double totMoment = totalGR.getTotalMomentRate();
+			GriddedGeoDataSet regPDF = smooth.loadXYZ(primaryReg, declusteringAlg);
+			
+			for (int i=0; i<regPDF.size(); i++) {
+				Location loc = regPDF.getLocation(i);
+				int index = gridReg.indexForLocation(loc);
+				if (index >= 0)
+					moRates.set(index, totMoment*regPDF.get(i));
+			}
+		}
+		return moRates;
 	}
 
 }

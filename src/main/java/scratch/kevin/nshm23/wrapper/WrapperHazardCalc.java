@@ -4,8 +4,10 @@ import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -44,20 +46,33 @@ public class WrapperHazardCalc {
 
 	public static void main(String[] args) throws IOException {
 		Path erfPath = Path.of("/home/kevin/git/nshm-conus");
-		NshmErf erf = new NshmErf(erfPath, false, true);
+		boolean gridded = true;
+		boolean subduction = false;
+		
+		NshmErf erf = new NshmErf(erfPath, subduction, gridded);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
+		
+		String dateStr = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+//		String dateStr = "2022_10_08";
+
+		String nameAdd = "-"+gmpeRef.getShortName().toLowerCase();
+		if (!subduction)
+			nameAdd += "-noSub";
+		if (!gridded)
+			nameAdd += "-faultOnly";
 
 		Region modelReg = NSHM23_RegionLoader.loadFullConterminousWUS();
 		// Region modelReg = new Region(new Location(34, -118), 10d);
 		GriddedRegion gridReg = new GriddedRegion(modelReg, 0.2d,
 				GriddedRegion.ANCHOR_0_0);
 		File outputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_09_30-nshm18-hazard-ask2014-noSub/results");
-//				+ "2022_09_30-nshm18-hazard-ask2014-noSub-faultOnly/results");
+				+ dateStr+"-nshm18-hazard"+nameAdd+"/results");
+		System.out.println("Output dir: "+outputDir.getAbsolutePath());
+//		System.exit(0);
 
 //		Region modelReg = new CaliforniaRegions.RELM_TESTING();
 //		GriddedRegion gridReg = new GriddedRegion(modelReg, 0.2d, GriddedRegion.ANCHOR_0_0);
@@ -66,7 +81,7 @@ public class WrapperHazardCalc {
 //				+ "2022_09_29-nshm18-ca-hazard-ask2014-noSub-faultOnly/results");
 ////				+ "2022_09_29-nshm18-ca-hazard-ask2014-noSub/results");
 		
-		int threads = 16;
+		int threads = 30;
 		
 		Preconditions.checkState(outputDir.getParentFile().exists() || outputDir.getParentFile().mkdir());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());

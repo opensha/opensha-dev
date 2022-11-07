@@ -661,6 +661,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				}
 				argz += " --grid-spacing "+(float)gridSpacing;
 				argz += " --max-distance 200";
+				// use fault-only hazard as source for region
+				argz += " --region "+resultsPefix+"_hazard.zip";
 				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 				script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 				int myMins = mins;

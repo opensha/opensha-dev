@@ -17,6 +17,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurat
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_WasatchSegmentationData;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
@@ -67,16 +68,17 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
-		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
-		branch = branch.copy();
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
+//		branch = branch.copy();
+		
 		
 //		NSHM23_InvConfigFactory.MFD_MIN_FRACT_UNCERT = 0.1;
 //		dirName += "-mfd_min_uncert_0.1";
 //		NSHM23_InvConfigFactory.MFD_MIN_FRACT_UNCERT = 0.2;
 //		dirName += "-mfd_min_uncert_0.2";
 		
-		SparseGutenbergRichterSolver.METHOD_DEFAULT = SpreadingMethod.NEAREST;
-		dirName += "-sparse_gr_nearest";
+//		SparseGutenbergRichterSolver.METHOD_DEFAULT = SpreadingMethod.NEAREST;
+//		dirName += "-sparse_gr_nearest";
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
 //		levels = new ArrayList<>(levels);
@@ -91,16 +93,19 @@ public class HardcodedInversionFactoryRunner {
 //			if (!(node instanceof ScalingRelationships))
 //				branch.setValue(node);
 		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levels;
-//		dirName += "-single_state";
-//		levels = new ArrayList<>(levels);
-//		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
-//		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
-//		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT)
-//			branch.setValue(node);
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+		dirName += "-single_state";
+		levels = new ArrayList<>(levels);
+		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
+		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
+		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT)
+			branch.setValue(node);
 		
-//		branch.setValue(NSHM23_SingleStates.UT);
+		branch.setValue(NSHM23_SingleStates.UT);
 //		branch.setValue(NSHM23_SingleStates.NM);
+		
+		NSHM23_WasatchSegmentationData.APPLY_TO_ALL_JUMPS_FROM_LOC = false;
+		dirName += "-prevWasatchSeg";
 		
 //		branch.setValue(RupturePlausibilityModels.UCERF3);
 //		branch.setValue(RupturePlausibilityModels.UCERF3_REDUCED);
@@ -112,13 +117,15 @@ public class HardcodedInversionFactoryRunner {
 //		branch.setValue(NSHM23_DeformationModels.ZENG);
 //		branch.setValue(NSHM23_DeformationModels.EVANS);
 //		branch.setValue(NSHM23_DeformationModels.SHEN_BIRD);
-		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
+//		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
+		branch.setValue(NSHM23_DeformationModels.AVERAGE);
 		
 //		branch.setValue(ScalingRelationships.MEAN_UCERF3);
 		
 //		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		
-		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p1);
+//		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p1);
+		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
 		
 		branch.setValue(SupraSeisBValues.B_0p5);
 		
