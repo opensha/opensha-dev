@@ -2321,12 +2321,78 @@ public class PureScratch {
 			System.out.println(seisRegion);
 	}
 	
+	private static void test188() throws IOException {
+		File runDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions/"
+				+ "2022_11_07-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		LogicTree<?> tree = LogicTree.read(new File(runDir, "logic_tree.json"));
+		
+		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(new BranchWeightProvider.OriginalWeights());
+		
+		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
+//		NSHM23_DeformationModels dm = NSHM23_DeformationModels.EVANS;
+		
+		File resultsDir = new File(runDir, "results");
+		
+		for (LogicTreeBranch<?> branch : tree) {
+			if (branch.hasValue(fm) && branch.hasValue(dm)) {
+				File branchDir = new File(resultsDir, branch.buildFileName());
+				Preconditions.checkState(branchDir.exists(), "Branch dir doesn't exist: %s", branchDir.getName());
+				File solFile = new File(branchDir, "solution.zip");
+				Preconditions.checkState(branchDir.exists(), "Branch solution doesn't exist: %s", solFile.getAbsolutePath());
+				FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+				// re-attach modules
+//				sol.getRupSet().removeModuleInstances(RegionsOfInterest.class);
+//				fm.attachDefaultModules(sol.getRupSet());
+				
+				baCreator.addSolution(sol, branch);
+			}
+		}
+		
+		FaultSystemSolution baSol = baCreator.build();
+		
+		baSol.write(new File(runDir, "results_"+fm.getFilePrefix()+"_CoulombRupSet_"+dm.getFilePrefix()+"_branch_averaged.zip"));
+	}
+	
+	private static void test189() throws IOException {
+		File solFile = new File("/project/scec_608/kmilner/nshm23/batch_inversions/"
+				+ "2022_11_08-nshm23_branches-remove_isolated_faults-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-"
+				+ "NoRed-SupraB0.5-EvenFitPaleo-MidSeg-ThreshAvgIterRelGR/results/"
+				+ "NSHM23_v2_CoulombRupSet_GEOLOGIC_NSHM23_Avg_DsrUni_SupraB0.5_TotNuclRate_NoRed_E"
+				+ "venFitPaleo_MidSeg_ThreshAvgIterRelGR/solution.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		FaultSystemRupSet origRupSet = sol.getRupSet();
+		
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.RemoveIsolatedFaults();
+		
+		LogicTreeBranch<LogicTreeNode> branch = sol.getRupSet().requireModule(LogicTreeBranch.class);
+		
+		SolutionProcessor processor = factory.getSolutionLogicTreeProcessor();
+		// process the rupture set
+		FaultSystemRupSet rpRupSet = factory.updateRuptureSetForBranch(origRupSet, branch);
+		// build an inversion configuration so that any adjustments at that stage are processed
+		factory.buildInversionConfig(rpRupSet, branch, 8);
+		if (rpRupSet != origRupSet) {
+			// replaced the rupture set, need to copy the solution over to use the new rup set
+			for (OpenSHA_Module module : origRupSet.getModules()) {
+				if (!rpRupSet.hasModuleSuperclass(module.getClass())) {
+//					System.out.println("Adding module to replacement rupture set: "+module.getName()+" ("+module.getClass()+")");
+					// this is a module not present in the reproduction and won't evict anything, add it
+					rpRupSet.addModule(module);
+				}
+			}
+			sol = sol.copy(rpRupSet.getArchive());
+		}
+		// process the solution
+		sol = processor.processSolution(sol, branch);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test187();
+		test189();
 	}
 
 }

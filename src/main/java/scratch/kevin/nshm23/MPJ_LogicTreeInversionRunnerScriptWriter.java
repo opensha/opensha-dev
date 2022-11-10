@@ -337,6 +337,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ScaleSurfSlipUseActualWidths.class;
 //		dirName += "-surf_slip_use_actual_w";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.RemoveIsolatedFaults.class;
+//		dirName += "-remove_isolated_faults";
+		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
 //		dirName += "-exp_perturb";
@@ -350,6 +353,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
 //		dirName += "-single_state";
 		
+//		dirName += "-mod_west_valley_ddw";
+		
 		forceRequiredNonzeroWeight = true;
 		griddedJob = true;
 		LogicTreeNode[] required = {
@@ -361,6 +366,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
+//				NSHM23_SingleStates.UT,
 
 				// RUPTURE SETS
 				RupturePlausibilityModels.COULOMB,
