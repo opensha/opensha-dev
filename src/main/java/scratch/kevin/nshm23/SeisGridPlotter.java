@@ -19,6 +19,7 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
@@ -45,7 +46,9 @@ public class SeisGridPlotter {
 		double maxMagOff = NSHM23_MaxMagOffFault.MAG_7p6.getMaxMagOffFault();
 		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2);
 		
-		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+//		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		Region region = Region.union(SeismicityRegions.CONUS_WEST.load(), SeismicityRegions.CONUS_EAST.load());
 		List<SeismicityRegions> seisRegions = NSHM23_InvConfigFactory.getSeismicityRegions(region);
 		GriddedRegion gridReg = NSHM23_InvConfigFactory.getGriddedSeisRegion(seisRegions); 
 		RupSetMapMaker mapMaker = new RupSetMapMaker(subSects, region);
@@ -56,10 +59,36 @@ public class SeisGridPlotter {
 		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8d);
 		
 		CPT linearCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, 0.01);
-		CPT logCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-6, -1);
+		CPT logCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-7, -1);
 		
-		CPT ratioCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(0.5, 2d);
-		CPT logRatioCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);
+		CPT rawRatioCPT = GMT_CPT_Files.DIVERGING_BLUE_RED_UNIFORM.instance().rescale(0d, 1d);
+		CPT ratioCPT = new CPT();
+		double prevX = Double.NaN;
+		Color prevColor = null;
+		for (double x=0.5d; (float)x<1f; x+=0.01) {
+			double remappedX = x-0.5d;
+			Color color = rawRatioCPT.getColor((float)remappedX);
+			
+			if (prevColor != null)
+				ratioCPT.add(new CPTVal((float)prevX, prevColor, (float)x, color));
+			
+			prevColor = color;
+			prevX = x;
+		}
+		for (double x=1d; (float)x<=2f; x+=0.01) {
+			double remappedX = 0.5*x;
+			Color color = rawRatioCPT.getColor((float)remappedX);
+			
+			ratioCPT.add(new CPTVal((float)prevX, prevColor, (float)x, color));
+			
+			prevColor = color;
+			prevX = x;
+		}
+		ratioCPT.setBelowMinColor(rawRatioCPT.getBelowMinColor());
+		ratioCPT.setAboveMaxColor(rawRatioCPT.getAboveMaxColor());
+		ratioCPT.setNanColor(rawRatioCPT.getNanColor());
+//		CPT ratioCPT = GMT_CPT_Files.DIVERGING_BLUE_RED_UNIFORM.instance().rescale(0.5, 2d);
+		CPT logRatioCPT = GMT_CPT_Files.DIVERGING_BLUE_RED_UNIFORM.instance().rescale(-1d, 1d);
 		
 		lines.add("# NSHM23 Spatial Seismicity PDFs");
 		lines.add("");
@@ -79,19 +108,38 @@ public class SeisGridPlotter {
 			lines.add("### Average PDF, "+seisRates.getName());
 			lines.add(topLink); lines.add("");
 			
-			TableBuilder table = MarkdownUtils.tableBuilder();
-			table.addLine("Linear", "Log10");
-			String prefix = seisRates.getFilePrefix()+"_average";
-			mapMaker.plotXYZData(averagePDF, linearCPT, "Rate M≥5");
-			mapMaker.plot(outputDir, prefix, "Average PDF, "+seisRates.getName());
-			table.initNewLine();
-			table.addColumn("![Map]("+prefix+".png)");
-			mapMaker.plotXYZData(logAveragePDF, logCPT, "Log10 (Rate M≥5)");
-			mapMaker.plot(outputDir, prefix+"_log", "Average PDF, "+seisRates.getName());
-			table.addColumn("![Map]("+prefix+"_log.png)");
-			table.finalizeLine();
-			lines.addAll(table.build());
-			lines.add("");
+			TableBuilder linearRatioTable = null;
+			int linearTableIndex = -1;
+			TableBuilder logRatioTable = null;
+			int logTableIndex = -1;
+			
+			for (boolean log : new boolean[] {false,true}) {
+				TableBuilder table = MarkdownUtils.tableBuilder();
+				table.addLine(log ? "Log10, Average PDF" : "Linear, Average PDF");
+				
+				String prefix = seisRates.getFilePrefix()+"_average";
+				if (log)
+					prefix += "_log";
+				if (log) {
+					mapMaker.plotXYZData(logAveragePDF, logCPT, "Log10 (Rate M≥5)");
+					mapMaker.plot(outputDir, prefix, "Average PDF, "+seisRates.getName());
+				} else {
+					mapMaker.plotXYZData(averagePDF, linearCPT, "Rate M≥5");
+					mapMaker.plot(outputDir, prefix, "Average PDF, "+seisRates.getName());
+				}
+				table.addLine("![Map]("+prefix+".png)");
+				
+				lines.addAll(table.build());
+				lines.add("");
+				if (log) {
+					logTableIndex = lines.size();
+					logRatioTable = MarkdownUtils.tableBuilder();
+				} else {
+					linearTableIndex = lines.size();
+					linearRatioTable = MarkdownUtils.tableBuilder();
+				}
+				lines.add("");
+			}
 			
 			// plot moment rate
 			GriddedGeoDataSet moRates = calcMoRate(seisRates, NSHM23_DeclusteringAlgorithms.AVERAGE, NSHM23_SeisSmoothingAlgorithms.AVERAGE,
@@ -113,13 +161,15 @@ public class SeisGridPlotter {
 			CPT moCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(logMinMo, logMaxMo);
 			moCPT.setNanColor(Color.WHITE);
 			
+			String prefix = seisRates.getFilePrefix()+"_average";
+			
 			File moRatesXYZ = new File(outputDir, prefix+"_mo_rates.xyz");
 			GriddedGeoDataSet.writeXYZFile(moRates, moRatesXYZ);
 			
 			// log10
 			moRates.log10();
 			
-			table = MarkdownUtils.tableBuilder();
+			TableBuilder table = MarkdownUtils.tableBuilder();
 			
 			table.addLine("Total Moment Rate");
 			
@@ -134,13 +184,14 @@ public class SeisGridPlotter {
 			lines.addAll(table.build());
 			lines.add("");
 
-			for (NSHM23_DeclusteringAlgorithms declustering : NSHM23_DeclusteringAlgorithms.values()) {
-				if (declustering.getNodeWeight(null) == 0d)
+			for (NSHM23_SeisSmoothingAlgorithms smooth : NSHM23_SeisSmoothingAlgorithms.values()) {
+				if (smooth.getNodeWeight(null) == 0d)
 					continue;
-				for (NSHM23_SeisSmoothingAlgorithms smooth : NSHM23_SeisSmoothingAlgorithms.values()) {
-					if (smooth.getNodeWeight(null) == 0d)
+				for (NSHM23_DeclusteringAlgorithms declustering : NSHM23_DeclusteringAlgorithms.values()) {
+					if (declustering.getNodeWeight(null) == 0d)
 						continue;
-					lines.add("### "+declustering.getName()+", "+smooth.getName()+", "+seisRates.getName());
+					lines.add("### "+declustering.getName()+", "+smooth.getName()+
+							(seisRates == NSHM23_RegionalSeismicity.PREFFERRED ? "" : ", "+seisRates.getName()));
 					lines.add(topLink); lines.add("");
 					System.out.println("Processing "+smooth.getName()+", "+seisRates.getName());
 					table = MarkdownUtils.tableBuilder();
@@ -148,7 +199,9 @@ public class SeisGridPlotter {
 					
 					GriddedGeoDataSet combinedPDF = buildPDF(seisRates, declustering, smooth, maxMagOff, gridReg, refMFD, seisRegions);
 					
-					String title = declustering.getName()+", "+smooth.getName()+", "+seisRates.getName();
+					String title = declustering.getName()+", "+smooth.getName();
+					if (seisRates != NSHM23_RegionalSeismicity.PREFFERRED)
+						title += ", "+seisRates.getName();
 					
 					table.initNewLine();
 					mapMaker.plotXYZData(combinedPDF, linearCPT, "Rate M≥5");
@@ -157,10 +210,12 @@ public class SeisGridPlotter {
 					table.addColumn("![Map]("+prefix+".png)");
 					
 					GeoDataSet ratio = GeoDataSetMath.divide(combinedPDF, averagePDF);
-					mapMaker.plotXYZData(ratio, ratioCPT, "Rate M≥5 / Avg Rate M≥5");
+					mapMaker.plotXYZData(ratio, ratioCPT, "Rate / Avg Rate");
 					mapMaker.plot(outputDir, prefix+"_ratio", title);
 					table.addColumn("![Map]("+prefix+"_ratio.png)");
 					table.finalizeLine();
+					
+					linearRatioTable.addColumn("![Map]("+prefix+"_ratio.png)");
 					
 					combinedPDF.log10();
 					table.initNewLine();
@@ -169,14 +224,23 @@ public class SeisGridPlotter {
 					table.addColumn("![Map]("+prefix+"_log.png)");
 					
 					ratio.log10();
-					mapMaker.plotXYZData(ratio, logRatioCPT, "Log10(Rate M≥5 / Avg Rate M≥5)");
+					mapMaker.plotXYZData(ratio, logRatioCPT, "Log10(Rate / Avg Rate)");
 					mapMaker.plot(outputDir, prefix+"_log_ratio", title);
 					table.addColumn("![Map]("+prefix+"_log_ratio.png)");
 					table.finalizeLine();
+					
+					logRatioTable.addColumn("![Map]("+prefix+"_log_ratio.png)");
+					
 					lines.addAll(table.build());
 					lines.add("");
 				}
 			}
+			
+			// add ratio tables
+			
+			// log first as it's further down
+			lines.addAll(logTableIndex, logRatioTable.wrap(3, 0).build());
+			lines.addAll(linearTableIndex, linearRatioTable.wrap(3, 0).build());
 		}
 		
 		// add TOC

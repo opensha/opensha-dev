@@ -17,6 +17,7 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
+import org.opensha.commons.hpc.mpj.NoMPJSingleNodeShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
@@ -107,6 +108,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
 		JavaShellScriptWriter mpjWrite = new FastMPJShellScriptWriter(
 				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.FMPJ_HOME);
+//		JavaShellScriptWriter mpjWrite = new NoMPJSingleNodeShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN,
+//				remoteTotalMemGB*1024, null); nodes = 1; remoteInversionsPerBundle = 2;
 		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
 		
 //		File remoteMainDir = new File("/work/00950/kevinm/stampede2/nshm23/batch_inversions");
@@ -127,7 +130,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		boolean griddedJob = false;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2022_10_08";
+//		String dirName = "2022_11_11";
 		
 		/*
 		 * UCERF3 logic tree
@@ -217,13 +220,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * NSHM23 logic tree
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-//		dirName += "-nshm23_u3_hybrid_branches";
-//		double avgNumRups = 325000;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+		dirName += "-nshm23_u3_hybrid_branches";
+		double avgNumRups = 325000;
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-		dirName += "-nshm23_branches";
-		double avgNumRups = 600000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+//		dirName += "-nshm23_branches";
+//		double avgNumRups = 600000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
@@ -339,6 +342,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.RemoveIsolatedFaults.class;
 //		dirName += "-remove_isolated_faults";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.RemoveProxyFaults.class;
+//		dirName += "-remove_proxy_faults";
 		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
@@ -553,6 +559,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
+		if (mpjWrite instanceof NoMPJSingleNodeShellScriptWriter)
+			classpath.add(new File("/project/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
 		
 		File localLogicTree = new File(localDir, "logic_tree.json");
 		logicTree.write(localLogicTree);
@@ -792,7 +800,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			if (baFiles != null && baFiles.size() == 1)
 				argz += " --compare-to "+baFiles.get(0).getAbsolutePath();
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
-			script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
+			script = mpjWrite.buildScript(MPJ_LogicTreeBranchAverageBuilder.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "batch_node_ba.slurm"), script, mins, myNodes, remoteTotalThreads, queue);
 		}
 		

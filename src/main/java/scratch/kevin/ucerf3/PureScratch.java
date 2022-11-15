@@ -2387,12 +2387,45 @@ public class PureScratch {
 		sol = processor.processSolution(sol, branch);
 	}
 	
+	private static void test190() throws IOException {
+		for (FaultSection sect : NSHM23_FaultModels.NSHM23_v2.getFaultSections()) {
+			String proxy = ((GeoJSONFaultSection)sect).getProperty("Proxy", null);
+			if (proxy != null)
+				System.out.println(sect.getName()+": proxy="+proxy);
+		}
+	}
+	
+	private static void test191() throws IOException {
+		LogicTree<?> lt1 = LogicTree.read(new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2022_10_03-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "logic_tree.json"));
+		LogicTree<?> lt2 = LogicTree.read(new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2022_11_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "logic_tree.json"));
+		HashSet<String> br1 = new HashSet<>();
+		for (LogicTreeBranch<?> br : lt1)
+			br1.add(br.buildFileName());
+		HashSet<String> br2 = new HashSet<>();
+		for (LogicTreeBranch<?> br : lt2)
+			br2.add(br.buildFileName());
+		
+		System.out.println("LT1 has "+lt1.size()+" branches ("+br1.size()+")");
+		System.out.println("LT2 has "+lt2.size()+" branches ("+br2.size()+")");
+		
+		for (String f1 : br1)
+			if (!br2.contains(f1))
+				System.out.println("LT2 does not contain: "+f1);
+		for (String f2 : br2)
+			if (!br1.contains(f2))
+				System.out.println("LT1 does not contain: "+f2);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test189();
+		test191();
 	}
 
 }
