@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -220,13 +221,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * NSHM23 logic tree
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-		dirName += "-nshm23_u3_hybrid_branches";
-		double avgNumRups = 325000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+//		dirName += "-nshm23_u3_hybrid_branches";
+//		double avgNumRups = 325000;
 		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-//		dirName += "-nshm23_branches";
-//		double avgNumRups = 600000;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+		dirName += "-nshm23_branches";
+		double avgNumRups = 600000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
@@ -391,7 +392,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
 //				ScalingRelationships.MEAN_UCERF3,
-//				NSHM23_ScalingRelationships.AVERAGE,
+				NSHM23_ScalingRelationships.AVERAGE,
 //				NSHM23_ScalingRelationships.LOGA_C4p2_SQRT_LEN,
 //				NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD,
 				
@@ -411,15 +412,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SubSeisMoRateReductions.SYSTEM_AVG_SUB_B_1,
 				
 				// SUPRA-SEIS-B
-//				SupraSeisBValues.B_0p5,
+				SupraSeisBValues.B_0p5,
 				
 				// PALEO UNCERT
-//				NSHM23_PaleoUncertainties.EVEN_FIT,
+				NSHM23_PaleoUncertainties.EVEN_FIT,
 				
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,
 //				NSHM23_SegmentationModels.AVERAGE,
 //				NSHM23_SegmentationModels.MID,
+				NSHM23_SegmentationModels.CLASSIC,
 //				NSHM23_SegmentationModels.CLASSIC_FULL,
 				
 				// SEG-SHIFT
@@ -555,16 +557,19 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		File localDir = new File(localMainDir, dirName);
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
-		File remoteDir = new File(remoteMainDir, dirName);
+		
+		mpjWrite.setEnvVar("MAIN_DIR", remoteMainDir.getAbsolutePath());
+		String mainDirPath = "$MAIN_DIR";
+		mpjWrite.setEnvVar("DIR", mainDirPath+"/"+dirName);
+		String dirPath = "$DIR";
 		
 		List<File> classpath = new ArrayList<>();
-		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
+		classpath.add(new File(dirPath+"/opensha-dev-all.jar"));
 		if (mpjWrite instanceof NoMPJSingleNodeShellScriptWriter)
 			classpath.add(new File("/project/scec_608/kmilner/git/opensha/lib/mpj-0.38.jar"));
 		
 		File localLogicTree = new File(localDir, "logic_tree.json");
 		logicTree.write(localLogicTree);
-		File remoteLogicTree = new File(remoteDir, localLogicTree.getName());
 		
 		mpjWrite.setClasspath(classpath);
 		if (mpjWrite instanceof MPJExpressShellScriptWriter)
@@ -574,12 +579,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		int annealingThreads = remoteTotalThreads/remoteInversionsPerBundle;
 		
-		File resultsDir = new File(remoteDir, "results");
-		String argz = "--logic-tree "+remoteLogicTree.getAbsolutePath();
-		argz += " --output-dir "+resultsDir.getAbsolutePath();
+		String resultsPath = dirPath+"/results";
+		String ltPath = dirPath+"/"+localLogicTree.getName();
+		
+		String argz = "--logic-tree "+ltPath;
+		argz += " --output-dir "+resultsPath;
 		argz += " --inversion-factory '"+factoryClass.getName()+"'"; // surround in single quotes to escape $'s
 		argz += " --annealing-threads "+annealingThreads;
-		argz += " --cache-dir "+new File(remoteMainDir, "cache").getAbsolutePath();
+		argz += " --cache-dir "+mainDirPath+"/cache";
 		if (remoteInversionsPerBundle > 0)
 			argz += " --runs-per-bundle "+remoteInversionsPerBundle;
 		if (completionArg != null)
@@ -600,8 +607,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		pbsWrite.writeScript(new File(localDir, "batch_inversion.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 		
 		// now write hazard script
-		argz = "--input-file "+new File(resultsDir.getAbsolutePath()+".zip");
-		argz += " --output-dir "+resultsDir.getAbsolutePath();
+		argz = "--input-file "+resultsPath+".zip";
+		argz += " --output-dir "+resultsPath;
 		if (hazardGridded) {
 			argz += " --gridded-seis INCLUDE";
 			argz += " --max-distance 200";
@@ -633,11 +640,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		JavaShellScriptWriter javaWrite = new JavaShellScriptWriter(
 				mpjWrite.getJavaBin(), remoteTotalMemGB*1024, classpath);
+		Map<String, String> envVars = mpjWrite.getEnvVars();
+		for (String varName : envVars.keySet())
+			javaWrite.setEnvVar(varName, envVars.get(varName));
 		
 		if (griddedJob) {
-			argz = "--logic-tree "+remoteLogicTree.getAbsolutePath();
-			argz += " --sol-dir "+resultsDir.getAbsolutePath();
-			argz += " --write-full-tree "+new File(remoteDir, "logic_tree_full_gridded.json").getAbsolutePath();
+			argz = "--logic-tree "+ltPath;
+			argz += " --sol-dir "+resultsPath;
+			argz += " --write-full-tree "+dirPath+"/logic_tree_full_gridded.json";
 			boolean averageOnly = logicTree.size() > 1000;
 			if (averageOnly)
 				argz += " --average-only";
@@ -647,36 +657,35 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			script = mpjWrite.buildScript(MPJ_GridSeisBranchBuilder.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "batch_grid_calc.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 			
-			String resultsPefix = new File(remoteDir, resultsDir.getName()).getAbsolutePath();
 			// now add hazard calc job with gridded
 			for (int i=0; i<3; i++) {
 //			for (boolean avgGridded : new boolean[] {true, false}) {
 				File jobFile;
 				if (i == 0) {
-					argz = "--input-file "+resultsPefix+"_avg_gridded.zip";
-					argz += " --output-file "+resultsPefix+"_hazard_avg_gridded.zip";
-					argz += " --output-dir "+resultsDir.getAbsolutePath();
+					argz = "--input-file "+resultsPath+"_avg_gridded.zip";
+					argz += " --output-file "+resultsPath+"_hazard_avg_gridded.zip";
+					argz += " --output-dir "+resultsPath;
 					argz += " --gridded-seis INCLUDE";
 					jobFile = new File(localDir, "batch_hazard_avg_gridded.slurm");
 				} else if (i == 1) {
 					if (averageOnly)
 						continue;
-					argz = "--input-file "+resultsPefix+"_full_gridded.zip";
-					argz += " --output-file "+resultsPefix+"_hazard_full_gridded.zip";
-					argz += " --output-dir "+resultsDir.getAbsolutePath();
+					argz = "--input-file "+resultsPath+"_full_gridded.zip";
+					argz += " --output-file "+resultsPath+"_hazard_full_gridded.zip";
+					argz += " --output-dir "+resultsPath;
 					argz += " --gridded-seis INCLUDE";
 					jobFile = new File(localDir, "batch_hazard_full_gridded.slurm");
 				} else {
-					argz = "--input-file "+resultsPefix+"_gridded_branches.zip";
-					argz += " --output-file "+resultsPefix+"_hazard_gridded_only.zip";
-					argz += " --output-dir "+resultsPefix+"_gridded_only";
+					argz = "--input-file "+resultsPath+"_gridded_branches.zip";
+					argz += " --output-file "+resultsPath+"_hazard_gridded_only.zip";
+					argz += " --output-dir "+resultsPath+"_gridded_only";
 					argz += " --gridded-seis ONLY";
 					jobFile = new File(localDir, "batch_hazard_gridded_only.slurm");
 				}
 				argz += " --grid-spacing "+(float)gridSpacing;
 				argz += " --max-distance 200";
 				// use fault-only hazard as source for region
-				argz += " --region "+resultsPefix+"_hazard.zip";
+				argz += " --region "+resultsPath+"_hazard.zip";
 				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 				script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 				int myMins = mins;
@@ -686,14 +695,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			}
 			
 			// write out gridded seismicity combiner script
-			argz = resultsPefix+".zip";
-			argz += " "+resultsDir.getAbsolutePath();
-			argz += " "+resultsPefix+"_gridded_branches.zip";
-			argz += " "+resultsPefix+"_gridded_only";
-			argz += " "+new File(remoteDir, resultsDir.getName()+"_comb_branches.zip");
-			argz += " "+new File(remoteDir, resultsDir.getName()+"_comb_hazard.zip");
+			argz = resultsPath+".zip";
+			argz += " "+resultsPath;
+			argz += " "+resultsPath+"_gridded_branches.zip";
+			argz += " "+resultsPath+"_gridded_only";
+			argz += " "+resultsPath+"_comb_branches.zip";
+			argz += " "+resultsPath+"_comb_hazard.zip";
 			// this one is just for the gridded region
-			argz += " "+resultsPefix+"_hazard.zip";
+			argz += " "+resultsPath+"_hazard.zip";
 			script = javaWrite.buildScript(FaultAndGriddedSeparateTreeHazardCombiner.class.getName(), argz);
 			
 			pbsWrite.writeScript(new File(localDir, "fault_grid_hazard_combine.slurm"), script, mins, 1, remoteTotalThreads, queue);
@@ -722,19 +731,19 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			File localSitesFile = new File(localDir, "hazard_sites.csv");
 			csv.writeToFile(localSitesFile);
 			
-			argz = "--input-file "+new File(resultsDir.getAbsolutePath()+".zip");
-			argz += " --output-dir "+new File(resultsDir.getParentFile(), resultsDir.getName()+"_hazard_sites").getAbsolutePath();
-			argz += " --sites-file "+new File(remoteDir, localSitesFile.getName()).getAbsolutePath();
+			argz = "--input-file "+resultsPath+".zip";
+			argz += " --output-dir "+resultsPath+"_hazard_sites";
+			argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 			argz += " --gridded-seis EXCLUDE";
 			script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "batch_hazard_sites.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 			
 			if (griddedJob) {
-				argz = "--input-file "+resultsDir.getAbsolutePath();
-				argz += " --logic-tree "+new File(remoteDir, "logic_tree_full_gridded.json").getAbsolutePath();
-				argz += " --output-dir "+new File(resultsDir.getParentFile(), resultsDir.getName()+"_hazard_sites_full_gridded").getAbsolutePath();
-				argz += " --sites-file "+new File(remoteDir, localSitesFile.getName()).getAbsolutePath();
+				argz = "--input-file "+resultsPath;
+				argz += " --logic-tree "+dirPath+"/logic_tree_full_gridded.json";
+				argz += " --output-dir "+resultsPath+"_hazard_sites_full_gridded";
+				argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
 				argz += " --gridded-seis INCLUDE";
 				argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(2).maxDispatch(10).threads(remoteTotalThreads).build();
 				script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
@@ -743,15 +752,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		}
 		
 		// write node branch averaged script
-		argz = "--input-file "+resultsDir.getAbsolutePath();
-		argz += " --logic-tree "+remoteLogicTree.getAbsolutePath();
-		argz += " --output-dir "+new File(remoteDir, "node_branch_averaged");
+		argz = "--input-file "+resultsPath;
+		argz += " --logic-tree "+ltPath;
+		argz += " --output-dir "+dirPath+"/node_branch_averaged";
 		argz += " --threads "+Integer.min(8, remoteTotalThreads);
 		argz += " --async-threads "+nodeBAAsyncThreads;
 		// see if we have a single BA file to use as a comparison
-		List<File> baFiles = AbstractAsyncLogicTreeWriter.getBranchAverageSolutionFiles(resultsDir, logicTree);
+		List<File> baFiles = AbstractAsyncLogicTreeWriter.getBranchAverageSolutionFiles(new File("results"), logicTree);
 		if (baFiles != null && baFiles.size() == 1)
-			argz += " --branch-averaged-file "+baFiles.get(0).getAbsolutePath();
+			argz += " --branch-averaged-file "+dirPath+"/"+baFiles.get(0).getName();
 		script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), argz);
 		
 		pbsWrite.writeScript(new File(localDir, "full_node_ba.slurm"), script, mins, 1, remoteTotalThreads, queue);
@@ -790,15 +799,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			Preconditions.checkState(totNum > 1);
 			int myNodes = Integer.min(nodes, totNum);
 			
-			argz = "--input-dir "+resultsDir.getAbsolutePath();
-			argz += " --logic-tree "+new File(remoteDir, "logic_tree.json").getAbsolutePath();
-			argz += " --output-dir "+new File(remoteDir, "node_branch_averaged").getAbsolutePath();
+			argz = "--input-dir "+resultsPath;
+			argz += " --logic-tree "+ltPath;
+			argz += " --output-dir "+dirPath+"/node_branch_averaged";
 			if (totNum > 5)
 				argz += " --skip-sect-by-sect";
 			argz += " --plot-level "+PlotLevel.REVIEW.name();
 			argz += " --depth 1";
 			if (baFiles != null && baFiles.size() == 1)
-				argz += " --compare-to "+baFiles.get(0).getAbsolutePath();
+				argz += " --compare-to "+dirPath+"/"+baFiles.get(0).getName();
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 			script = mpjWrite.buildScript(MPJ_LogicTreeBranchAverageBuilder.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "batch_node_ba.slurm"), script, mins, myNodes, remoteTotalThreads, queue);
@@ -811,10 +820,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				modDirName += "-min"+new DecimalFormat("0.#").format(segTransMaxDist)+"km";
 			File modLocalDir = new File(localMainDir, modDirName);
 			Preconditions.checkState(modLocalDir.exists() || modLocalDir.mkdir());
-			File modRemoteDir = new File(remoteMainDir, modLocalDir.getName());
+			
+			mpjWrite.setEnvVar("SEG_DIR", mainDirPath+"/"+modDirName);
+			String modDirPath = "$SEG_DIR";
 			
 			classpath = new ArrayList<>();
-			classpath.add(new File(modRemoteDir, "opensha-dev-all.jar"));
+			classpath.add(new File(modDirPath+"/opensha-dev-all.jar"));
 			mpjWrite.setClasspath(classpath);
 			
 			List<LogicTreeLevel<? extends LogicTreeNode>> modLevels = new ArrayList<>();
@@ -846,16 +857,17 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			
 			System.out.println("Translating "+logicTree.size()+" branches to "+modBranches.size());
 			LogicTree<LogicTreeNode> modTree = LogicTree.fromExisting(modLevels, modBranches);
-			File modLocalLogicTree = new File(modLocalDir, remoteLogicTree.getName());
+			File modLocalLogicTree = new File(modLocalDir, localLogicTree.getName());
 			modTree.write(modLocalLogicTree);
-			File modRemoteLogicTree = new File(modRemoteDir, modLocalLogicTree.getName());
+//			File modRemoteLogicTree = new File(modRemoteDir, modLocalLogicTree.getName());
+			String modLTPath = modDirPath+"/"+modLocalLogicTree.getName();
 			
-			File modOutputDir = new File(modRemoteDir, "results");
-			argz = "--input-dir "+resultsDir.getAbsolutePath();
-			argz += " --input-logic-tree "+remoteLogicTree.getAbsolutePath();
-			argz += " --output-logic-tree "+modRemoteLogicTree.getAbsolutePath();
+			String modResultsPath = modDirPath+"/results";
+			argz = "--input-dir "+resultsPath;
+			argz += " --input-logic-tree "+ltPath;
+			argz += " --output-logic-tree "+modLTPath;
 			argz += " --inversion-factory '"+factoryClass.getName()+"'"; // surround in single quotes to escape $'s
-			argz += " --output-dir "+modOutputDir.getAbsolutePath();
+			argz += " --output-dir "+modResultsPath;
 			if (segTransMaxDist > 0d)
 				argz += " --min-distance "+segTransMaxDist;
 			argz += " "+MPJTaskCalculator.argumentBuilder().threads(Integer.min(10, remoteTotalThreads)).build();
@@ -866,8 +878,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					remoteTotalThreads, queue);
 			
 			// now write hazard script
-			argz = "--input-file "+new File(modOutputDir.getAbsolutePath()+".zip");
-			argz += " --output-dir "+modOutputDir.getAbsolutePath();
+			argz = "--input-file "+modResultsPath+".zip";
+			argz += " --output-dir "+modResultsPath;
 			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 			script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 			
