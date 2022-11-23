@@ -38,6 +38,7 @@ import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
+import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.uncertainty.BoundedUncertainty;
@@ -1773,7 +1774,7 @@ public class PureScratch {
 			if (data.sectionName.contains("Mojave")) {
 				System.out.println("Paleo slip for "+data.name+" mapped to "+data.sectionName);
 				
-				PaleoseismicConstraintData.inferRatesFromSlipConstraints(rupSet.requireModule(SectSlipRates.class), List.of(data), true);
+				PaleoseismicConstraintData.inferRatesFromSlipConstraints(rupSet, List.of(data), true);
 			}
 		}
 	}
@@ -2420,12 +2421,85 @@ public class PureScratch {
 				System.out.println("LT1 does not contain: "+f2);
 	}
 	
+	private static void test192() throws IOException {
+		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_11_10-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		LogicTree<?> tree = LogicTree.read(new File(inputDir, "logic_tree.json"));
+		
+		int origCount = tree.size();
+		tree = tree.matchingNone(NSHM23_SegmentationModels.NONE, NSHM23_SegmentationModels.CLASSIC);
+		
+		System.out.println("Retainted "+tree.size()+"/"+origCount+" branches");
+		
+		tree.write(new File("/tmp/logic_tree.json"));
+	}
+	
+	private static void test193() throws IOException {
+		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(10d);
+		
+		GutenbergRichterMagFreqDist gr1 = new GutenbergRichterMagFreqDist(
+				refMFD.getMinX(), refMFD.size(), refMFD.getDelta(), 1e16, 1d);
+		GutenbergRichterMagFreqDist gr0 = new GutenbergRichterMagFreqDist(
+				refMFD.getMinX(), refMFD.size(), refMFD.getDelta(), 1e16, 0d);
+		
+		double ratio1 = gr1.getY(7.05d)/gr1.getY(8.05d);
+		double ratio0 = gr0.getY(7.05d)/gr0.getY(8.05d);
+		System.out.println("Ratio1: "+ratio1);
+		System.out.println("Ratio0: "+ratio0);		
+	}
+	
+	private static void test194() throws IOException {
+		double compVal = 0.5d;
+		List<LightFixedXFunc> ncdfsList = new ArrayList<>();
+		List<Double> weights = new ArrayList<>();
+		
+		ncdfsList.add(new LightFixedXFunc(
+				new double[] {0d,2d}, new double[] {0d,1d}));
+		weights.add(1d);
+		ncdfsList.add(new LightFixedXFunc(
+				new double[] {0d,2d}, new double[] {0d,1d}));
+		weights.add(1d);
+		double minVal = 0d;
+		double maxVal = 2d;
+		
+		double sumWeights = 0d;
+		for (double weight : weights)
+			sumWeights += weight;
+		double weightScale = 1d/sumWeights;
+		
+		// we're contained within the dist
+		double sumY = 0d;
+		for (int n=0; n<ncdfsList.size(); n++) {
+			double weight = weights.get(n);
+			LightFixedXFunc ncdfs = ncdfsList.get(n);
+			if ((float)compVal > (float)ncdfs.getMaxX())
+				// we're above this whole one
+				sumY += weight;
+			else if ((float)compVal < (float)ncdfs.getMinX())
+				// we're below this whole one, do nothing
+				sumY += 0d;
+			else if ((float)compVal == (float)minVal && ncdfs.size() == 1)
+				// only one value here, and we're at it, 50th percentile
+				sumY += 0.5*weight;
+			else
+				sumY += ncdfs.getInterpolatedY(compVal)*weight;
+			System.out.println("n="+n+", sumY="+sumY);
+		}
+		double percentile = 100d * sumY * weightScale;
+		System.out.println("Percentile: "+percentile);
+		
+		GriddedRegion gridReg = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1d, null);
+		System.out.println(gridReg.getSpacing()+": "+gridReg.getNodeCount());
+		gridReg = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.2d, null);
+		System.out.println(gridReg.getSpacing()+": "+gridReg.getNodeCount());
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test191();
+		test194();
 	}
 
 }
