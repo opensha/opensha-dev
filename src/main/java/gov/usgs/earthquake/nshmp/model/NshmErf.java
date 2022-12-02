@@ -59,6 +59,9 @@ public class NshmErf extends AbstractERF {
       if (setting == TectonicSetting.SUBDUCTION && !subduction) {
         continue;
       }
+      if (setting == TectonicSetting.ACTIVE_CRUST) {
+        continue;
+      }
       SourceTree tree = entry.getValue();
       SourceType type = tree.type();
       TectonicRegionType trt = NshmUtil.tectonicSettingToType(setting, type);
