@@ -59,7 +59,7 @@ public class NshmErf extends AbstractERF {
       if (setting == TectonicSetting.SUBDUCTION && !subduction) {
         continue;
       }
-      if (setting == TectonicSetting.ACTIVE_CRUST) {
+      if (setting == TectonicSetting.STABLE_CRUST) {
         continue;
       }
       SourceTree tree = entry.getValue();
@@ -100,9 +100,10 @@ public class NshmErf extends AbstractERF {
     switch (ruptureSet.type()) {
 
       case GRID:
-        return (!grid)
-            ? List.of()
-            : ruptureSetToSources(ruptureSet, weight, duration);
+        System.out.println(branch.value().name());
+        return (grid)
+            ? ruptureSetToSources(ruptureSet, weight, duration)
+            : List.of();
 
       // custom cluster and system handlers
       case FAULT_CLUSTER:
@@ -113,7 +114,7 @@ public class NshmErf extends AbstractERF {
         return systemRuptureSetToSources(srs, weight, duration);
 
       default:
-        System.out.println("Yo: " + ruptureSet.type());
+        // System.out.println("Yo: " + ruptureSet.type());
         return ruptureSetToSources(ruptureSet, weight, duration);
     }
   }
