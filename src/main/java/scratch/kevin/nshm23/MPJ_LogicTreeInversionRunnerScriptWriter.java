@@ -263,7 +263,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -347,8 +347,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.RemoveProxyFaults.class;
 //		dirName += "-remove_proxy_faults";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoPaleoSlip.class;
-//		dirName += "-no_paleo_slip";
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoPaleoSlip.class;
+		dirName += "-no_paleo_slip";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.PaleoSlipInequality.class;
+//		dirName += "-paleo_slip_ineq";
 		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
@@ -391,6 +394,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3_UncertAddDeformationModels.U3_MEAN,
 //				NSHM23_DeformationModels.AVERAGE,
 //				NSHM23_DeformationModels.GEOLOGIC,
+				NSHM23_DeformationModels.MEDIAN,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,

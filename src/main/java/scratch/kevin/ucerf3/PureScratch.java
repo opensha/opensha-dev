@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
+import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.ui.RectangleEdge;
+import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
@@ -46,10 +48,13 @@ import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.Uncertainty;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
+import org.opensha.commons.data.xyz.GeoDataSet;
+import org.opensha.commons.data.xyz.GeoDataSetMath;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
@@ -57,7 +62,9 @@ import org.opensha.commons.geo.json.FeatureProperties;
 import org.opensha.commons.geo.json.GeoJSON_Type;
 import org.opensha.commons.geo.json.Geometry;
 import org.opensha.commons.geo.json.Geometry.GeometryCollection;
+import org.opensha.commons.geo.json.Geometry.LineString;
 import org.opensha.commons.geo.json.Geometry.MultiPoint;
+import org.opensha.commons.geo.json.Geometry.Polygon;
 import org.opensha.commons.gui.plot.GraphPanel;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -66,6 +73,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.BranchWeightProvider.OriginalWeights;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
@@ -79,6 +87,8 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.OpenSHA_Module;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
@@ -86,6 +96,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurat
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.U3MFDSubSectNuclInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.UncertainDataConstraint.SectMappedUncertainDataConstraint;
@@ -122,6 +133,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
@@ -149,7 +161,11 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
+import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -163,6 +179,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
+import gov.usgs.earthquake.nshmp.model.NshmErf;
+import gov.usgs.earthquake.nshmp.model.NshmSurface;
 import scratch.UCERF3.analysis.FaultSystemRupSetCalc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
@@ -2494,12 +2512,256 @@ public class PureScratch {
 		System.out.println(gridReg.getSpacing()+": "+gridReg.getNodeCount());
 	}
 	
+	private static void test195() throws IOException {
+		// commerce, which is a polygon
+		File commerceFile = new File("/tmp/commerce-lineament.geojson");
+		
+		System.out.println("Reading: "+commerceFile.getAbsolutePath());
+		Feature commerceFeature = Feature.read(commerceFile);
+		
+		System.out.println("Geometry type: "+commerceFeature.geometry.type);
+		
+		// get the location list for the outline
+		// note that polygons can have holes as well which will be in the "holes" object, but this one doesn't
+		LocationList polyLocs = ((Polygon)commerceFeature.geometry).polygon;
+		System.out.println("Polygon:");
+		for (Location loc : polyLocs)
+			System.out.println("\t"+loc);
+		
+		// can also just convert it to a region
+		Region region = Region.fromFeature(commerceFeature);
+		System.out.println("Region contains test? "+region.contains(new Location(36.75, -90)));
+		
+		System.out.println("Properties:");
+		// iterate over properties
+		FeatureProperties commerceProps = commerceFeature.properties;
+		for (String key : commerceProps.keySet()) {
+			Object val = commerceProps.get(key);
+			System.out.println("\t"+key+": "+val+" (object type: "+(val == null ? "null" : val.getClass()+")"));
+		}
+		
+		// now new madrid
+		File nmFile = new File("/tmp/New Madrid - SSCn (Bootheel).geojson");
+		System.out.println("Reading: "+nmFile.getAbsolutePath());
+		Feature nmFeature = Feature.read(nmFile);
+		
+		System.out.println("Geometry type: "+nmFeature.geometry.type);
+		
+		// get the location list for the trace
+		LocationList traceLocs = ((LineString)nmFeature.geometry).line;
+		System.out.println("Trace:");
+		for (Location loc : traceLocs)
+			System.out.println("\t"+loc);
+		
+		System.out.println("Properties:");
+		// iterate over properties
+		FeatureProperties nmProps = nmFeature.properties;
+		for (String key : nmProps.keySet()) {
+			Object val = nmProps.get(key);
+			System.out.println("\t"+key+": "+val+" (object type: "+(val == null ? "null" : val.getClass()+")"));
+		}
+		
+		// here's how to load dip as a number
+		// the second argument is what is returned if "dip" doesn't exist
+		double dip = nmProps.getDouble("dip", Double.NaN);
+		System.out.println("Dip test: "+dip);
+		double doesNotExist = nmProps.getDouble("doesNotExist", Double.NaN);
+		System.out.println("DoesNotExist test: "+doesNotExist);
+	}
+	
+	private static void test196() {
+		ScalarIMR gmpe = AttenRelRef.ASK_2014.instance(null);
+		gmpe.setParamDefaults();
+		System.out.println(gmpe.getIntensityMeasure().getName());
+		System.out.println(SA_Param.getPeriodInSA_Param(gmpe.getIntensityMeasure()));
+	}
+	
+	private static void test197() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2022_11_22-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+		List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
+		List<SectMappedUncertainDataConstraint> aveSlipDatas = NSHM23_PaleoDataLoader.loadU3PaleoSlipData(subSects);
+		List<SectMappedUncertainDataConstraint> inferred = PaleoseismicConstraintData.inferRatesFromSlipConstraints(rupSet, aveSlipDatas, true);
+		
+		MinMaxAveTracker trackSlip = new MinMaxAveTracker();
+		MinMaxAveTracker trackRate = new MinMaxAveTracker();
+		for (int i=0; i<aveSlipDatas.size(); i++) {
+			SectMappedUncertainDataConstraint slip = aveSlipDatas.get(i);
+			SectMappedUncertainDataConstraint rate = inferred.get(i);
+			
+			trackSlip.addValue(slip.getPreferredStdDev()/slip.bestEstimate);
+			trackRate.addValue(rate.getPreferredStdDev()/rate.bestEstimate);
+		}
+		System.out.println("Slip fractional: "+trackSlip);
+		System.out.println("Rate fractional: "+trackRate);
+		
+		MinMaxAveTracker trackPaleoRate = new MinMaxAveTracker();
+		
+		for (SectMappedUncertainDataConstraint paleoRate : NSHM23_PaleoDataLoader.loadCAPaleoRateData(subSects))
+			trackPaleoRate.addValue(paleoRate.getPreferredStdDev()/paleoRate.bestEstimate);
+		
+		MinMaxAveTracker trackWasatch = new MinMaxAveTracker();
+		for (SectMappedUncertainDataConstraint paleoRate : NSHM23_PaleoDataLoader.loadWasatchPaleoRateData(subSects))
+			trackWasatch.addValue(paleoRate.getPreferredStdDev()/paleoRate.bestEstimate);
+		
+		System.out.println("Paleo rate fractional: "+trackPaleoRate);
+		System.out.println("Wasatch fractional: "+trackWasatch);
+	}
+	
+	private static void test198() throws IOException {
+		String erfPrefix = "nshm23-wrapped";
+		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.a.3");
+		boolean gridded = true;
+		boolean subduction = false;
+		
+		NshmErf erf = new NshmErf(erfPath, subduction, gridded);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		
+		GriddedRegion nuclReg = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1, GriddedRegion.ANCHOR_0_0);
+		
+		Range xRange = new Range(-126, -104);
+		Range yRange = new Range(29, 49);
+		
+		GriddedGeoDataSet wrapperXYZ = new GriddedGeoDataSet(nuclReg, false);
+		
+//		Location testLoc = new Location(37.5, -110);
+		Location testLoc = new Location(39, -122);
+		int testIndex = nuclReg.indexForLocation(testLoc);
+		ProbEqkSource wrapperTestSrc = null;
+		
+		for (ProbEqkSource source : erf) {
+			for (ProbEqkRupture rup : source) {
+				if (rup.getMag() >= 5d) {
+					RuptureSurface surf = rup.getRuptureSurface();
+					Location centroid;
+					if (surf instanceof NshmSurface)
+						centroid = ((NshmSurface)rup.getRuptureSurface()).centroid();
+					else
+						continue;
+					int index = nuclReg.indexForLocation(centroid);
+					if (index >= 0) {
+						if (index == testIndex) {
+							Preconditions.checkState(wrapperTestSrc == source || wrapperTestSrc == null);
+							wrapperTestSrc = source;
+						}
+						double rate = rup.getMeanAnnualRate(1d);
+						wrapperXYZ.set(index, wrapperXYZ.get(index)+rate);
+					}
+				}
+			}
+		}
+		
+		GriddedGeoDataSet logXYZ = wrapperXYZ.copy();
+		logXYZ.log10();
+		
+		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-7d, -1d);
+		
+		XYZPlotSpec xyzPlot = new XYZPlotSpec(logXYZ, cpt, "NSHM23 Wrapper", "Longitude", "Latitude", "Log10 Rate M>=5");
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		
+		gp.drawGraphPanel(xyzPlot, false, false, xRange, yRange);
+		
+		PlotUtils.writePlots(new File("/tmp"), "wrapper_test", gp, 1000, true, true, false, false);
+		
+		GridSourceProvider gridProv = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_11_10-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip")).getGridSourceProvider();
+		
+		GriddedGeoDataSet modelXYZ = new GriddedGeoDataSet(nuclReg, false);
+		
+		ProbEqkSource modelTestSrc = null;
+		
+		for (int i=0; i<modelXYZ.size(); i++) {
+			int gridIndex = gridProv.getGriddedRegion().indexForLocation(nuclReg.getLocation(i));
+			IncrementalMagFreqDist mfd = gridProv.getMFD(gridIndex);
+			double rate = mfd.getCumRate(mfd.getClosestXIndex(5.001));
+			modelXYZ.set(i, rate);
+			
+			if (i == testIndex) {
+				Preconditions.checkState(modelTestSrc == null);
+				modelTestSrc = gridProv.getSource(gridIndex, 1d, false, BackgroundRupType.POINT);
+			}
+		}
+		
+		logXYZ = modelXYZ.copy();
+		logXYZ.log10();
+		xyzPlot = new XYZPlotSpec(logXYZ, cpt, "NSHM23 Grid Source Provider", "Longitude", "Latitude", "Log10 Rate M>=5");
+		
+		gp.drawGraphPanel(xyzPlot, false, false, xRange, yRange);
+		
+		PlotUtils.writePlots(new File("/tmp"), "wrapper_test_orig", gp, 1000, true, true, false, false);
+		
+		GeoDataSet ratioXYZ = GeoDataSetMath.divide(modelXYZ, wrapperXYZ);
+		GriddedGeoDataSet pDiff = new GriddedGeoDataSet(nuclReg, false);
+		
+		for (int i=0; i<pDiff.size(); i++) {
+			double v1 = wrapperXYZ.get(i);
+			double v2 = modelXYZ.get(i);
+			pDiff.set(i, 100d*(v1-v2)/v2);
+		}
+		
+		CPT ratioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
+		
+		xyzPlot = new XYZPlotSpec(pDiff, ratioCPT, "Grid Source Ratio", "Longitude", "Latitude", "Wrapper vs Orig, % Diff");
+		
+		gp.drawGraphPanel(xyzPlot, false, false, xRange, yRange);
+		
+		PlotUtils.writePlots(new File("/tmp"), "wrapper_test_pDiff", gp, 1000, true, true, false, false);
+
+		System.out.println("Test location: "+nuclReg.getLocation(nuclReg.indexForLocation(testLoc)));
+		System.out.println("Wrapper Test Source");
+		System.out.println("Class: "+wrapperTestSrc.getClass());
+		System.out.println("Surface: "+wrapperTestSrc.getRupture(0).getRuptureSurface().getClass());
+		for (ProbEqkRupture rup : wrapperTestSrc) {
+			System.out.println("\tmag="+(float)rup.getMag()+"\trate="+(float)rup.getMeanAnnualRate(1d)+"\trake="
+					+(float)rup.getAveRake()+"\tdip="+(float)rup.getRuptureSurface().getAveDip()
+					+"\tzTOR="+(float)rup.getRuptureSurface().getAveRupTopDepth());
+		}
+		System.out.println("Model Test Source");
+		System.out.println("Class: "+modelTestSrc.getClass());
+		System.out.println("Surface: "+modelTestSrc.getRupture(0).getRuptureSurface().getClass());
+		for (ProbEqkRupture rup : modelTestSrc) {
+			System.out.println("\tmag="+(float)rup.getMag()+"\trate="+(float)rup.getMeanAnnualRate(1d)+"\trake="
+					+(float)rup.getAveRake()+"\tdip="+(float)rup.getRuptureSurface().getAveDip()
+					+"\tzTOR="+(float)rup.getRuptureSurface().getAveRupTopDepth());
+		}
+	}
+	
+	private static void test199() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_11_10-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+		
+		List<IncrementalMagFreqDist> mfds = new ArrayList<>();
+		
+		IncrementalMagFreqDist mfd = new GutenbergRichterMagFreqDist(5.05, 40, 0.1, 1e17, 1d);
+		mfd.setName("MFD1");
+		mfd.setInfo(null);
+		mfd.setRegion(new CaliforniaRegions.RELM_TESTING());
+		mfds.add(mfd);
+		mfd = new GutenbergRichterMagFreqDist(5.05, 40, 0.1, 1e16, 1d);
+		mfd.setName("MFD2");
+		mfd.setInfo(null);
+		mfd.setRegion(new CaliforniaRegions.LA_BOX());
+		mfds.add(mfd);
+		MFDInversionConstraint constr = new MFDInversionConstraint(rupSet, 1d, false, mfds);
+		
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		
+		String json = gson.toJson(constr, InversionConstraint.class);
+		
+		System.out.println(json);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test194();
+		test199();
 	}
 
 }

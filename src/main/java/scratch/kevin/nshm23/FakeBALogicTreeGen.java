@@ -42,7 +42,7 @@ public class FakeBALogicTreeGen {
 //		SolutionProcessor processor = null;
 		
 		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_11_10-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2022_11_22-nshm23_branches-no_paleo_slip-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
 		nodes.add(NSHM23_FaultModels.NSHM23_v2);
 		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip")));

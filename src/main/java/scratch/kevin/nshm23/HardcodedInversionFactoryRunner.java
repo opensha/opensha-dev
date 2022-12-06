@@ -60,10 +60,14 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-nshm23-full_sys";
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
 		dirName += "-nshm23";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.PaleoSlipInequality();
+//		dirName += "-nshm23-paleo_slip_ineq";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
 //		dirName += "-nshm23-new_paleo";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
+		
+		boolean writeRS = true;
 		
 //		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
@@ -94,18 +98,21 @@ public class HardcodedInversionFactoryRunner {
 //				branch.setValue(node);
 		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-		dirName += "-single_state";
-		levels = new ArrayList<>(levels);
-		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
+		
+//		dirName += "-single_state";
+//		levels = new ArrayList<>(levels);
+//		levels.add(NSHM23_LogicTreeBranch.SINGLE_STATES);
+		
 		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
 		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT)
 			branch.setValue(node);
 		
-		branch.setValue(NSHM23_SingleStates.UT);
+//		branch.setValue(NSHM23_SingleStates.UT);
 //		branch.setValue(NSHM23_SingleStates.NM);
+//		branch.setValue(NSHM23_SingleStates.CA);
 		
-		NSHM23_WasatchSegmentationData.APPLY_TO_ALL_JUMPS_FROM_LOC = false;
-		dirName += "-prevWasatchSeg";
+//		NSHM23_WasatchSegmentationData.APPLY_TO_ALL_JUMPS_FROM_LOC = false;
+//		dirName += "-prevWasatchSeg";
 		
 //		branch.setValue(RupturePlausibilityModels.UCERF3);
 //		branch.setValue(RupturePlausibilityModels.UCERF3_REDUCED);
@@ -118,7 +125,8 @@ public class HardcodedInversionFactoryRunner {
 //		branch.setValue(NSHM23_DeformationModels.EVANS);
 //		branch.setValue(NSHM23_DeformationModels.SHEN_BIRD);
 //		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
-		branch.setValue(NSHM23_DeformationModels.AVERAGE);
+//		branch.setValue(NSHM23_DeformationModels.AVERAGE);
+		branch.setValue(NSHM23_DeformationModels.MEDIAN);
 		
 //		branch.setValue(ScalingRelationships.MEAN_UCERF3);
 		
@@ -168,7 +176,18 @@ public class HardcodedInversionFactoryRunner {
 		File outputDir = new File(parentDir, dirName);
 		System.out.println("Will save results in: "+outputDir.getAbsolutePath());
 		
-		FaultSystemSolution solution = Inversions.run(factory, branch, threads);
+		FaultSystemSolution solution;
+		if (writeRS) {
+			FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, threads);
+			
+			Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+			
+			rupSet.write(new File(outputDir, "rupSet.zip"));
+			
+			solution = Inversions.run(rupSet, factory, branch, threads, null);
+		} else {
+			solution = Inversions.run(factory, branch, threads);
+		}
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		

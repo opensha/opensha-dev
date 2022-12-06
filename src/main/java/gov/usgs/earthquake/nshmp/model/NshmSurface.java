@@ -36,7 +36,7 @@ public class NshmSurface implements CacheEnabledSurface {
 
   // return nshmp-haz rupture centroid as OpenSHA location for
   // use in computing min distance to a fault system subsection
-  Location centroid() {
+  public Location centroid() {
     return NshmUtil.toOpenShaLocation(delegate.centroid());
   }
 

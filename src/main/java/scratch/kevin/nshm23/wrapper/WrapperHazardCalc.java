@@ -45,9 +45,13 @@ import gov.usgs.earthquake.nshmp.model.NshmErf;
 public class WrapperHazardCalc {
 
 	public static void main(String[] args) throws IOException {
-		Path erfPath = Path.of("/home/kevin/git/nshm-conus");
-		boolean gridded = true;
+		String erfPrefix = "nshm18";
+		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.2.0");
+//		String erfPrefix = "nshm23-wrapped";
+//		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.a.2");
+		boolean gridded = false;
 		boolean subduction = false;
+		double gridSpacing = 0.2;
 		
 		NshmErf erf = new NshmErf(erfPath, subduction, gridded);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
@@ -59,7 +63,7 @@ public class WrapperHazardCalc {
 		String dateStr = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 //		String dateStr = "2022_10_08";
 
-		String nameAdd = "-"+gmpeRef.getShortName().toLowerCase();
+		String nameAdd = "-"+gmpeRef.getShortName().toLowerCase()+"-"+(float)gridSpacing+"deg";
 		if (!subduction)
 			nameAdd += "-noSub";
 		if (!gridded)
@@ -67,21 +71,21 @@ public class WrapperHazardCalc {
 
 		Region modelReg = NSHM23_RegionLoader.loadFullConterminousWUS();
 		// Region modelReg = new Region(new Location(34, -118), 10d);
-		GriddedRegion gridReg = new GriddedRegion(modelReg, 0.2d,
+		GriddedRegion gridReg = new GriddedRegion(modelReg, gridSpacing,
 				GriddedRegion.ANCHOR_0_0);
 		File outputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ dateStr+"-nshm18-hazard"+nameAdd+"/results");
+				+ dateStr+"-"+erfPrefix+"-hazard"+nameAdd+"/results");
 		System.out.println("Output dir: "+outputDir.getAbsolutePath());
 //		System.exit(0);
 
 //		Region modelReg = new CaliforniaRegions.RELM_TESTING();
-//		GriddedRegion gridReg = new GriddedRegion(modelReg, 0.2d, GriddedRegion.ANCHOR_0_0);
+//		GriddedRegion gridReg = new GriddedRegion(modelReg, gridSpacing, GriddedRegion.ANCHOR_0_0);
 //		File outputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 ////				+ "2022_09_29-nshm18-ca-hazard-ask2014/results");
 //				+ "2022_09_29-nshm18-ca-hazard-ask2014-noSub-faultOnly/results");
 ////				+ "2022_09_29-nshm18-ca-hazard-ask2014-noSub/results");
 		
-		int threads = 30;
+		int threads = 7;
 		
 		Preconditions.checkState(outputDir.getParentFile().exists() || outputDir.getParentFile().mkdir());
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
