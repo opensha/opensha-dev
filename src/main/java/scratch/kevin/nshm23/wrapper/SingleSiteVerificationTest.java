@@ -108,6 +108,9 @@ public class SingleSiteVerificationTest {
 					int index = gridReg.indexForLocation(centroid);
 					if (index == testIndex) {
 						Preconditions.checkState(wrapperTestSrc == source || wrapperTestSrc == null);
+						double dist = LocationUtils.linearDistanceFast(centroid, testLoc);
+						Preconditions.checkState(dist < 0.01,
+								"Wrapper test source distance: %s, centroid=%s, testLoc=%s", dist, centroid, testLoc);
 						wrapperTestSrc = source;
 					}
 				}

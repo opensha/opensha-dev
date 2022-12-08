@@ -55,6 +55,7 @@ import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
@@ -2637,6 +2638,12 @@ public class PureScratch {
 		
 //		Location testLoc = new Location(37.5, -110);
 		Location testLoc = new Location(39, -122);
+		
+		double[] distTests = { 0d, 1d, 10d, 50d, 100d };
+		Location[] distLocs = new Location[distTests.length];
+		for (int i=0; i<distTests.length; i++)
+			distLocs[i] = LocationUtils.location(testLoc, 0d, distTests[i]);
+		
 		int testIndex = nuclReg.indexForLocation(testLoc);
 		ProbEqkSource wrapperTestSrc = null;
 		
@@ -2722,20 +2729,37 @@ public class PureScratch {
 
 		System.out.println("Test location: "+nuclReg.getLocation(nuclReg.indexForLocation(testLoc)));
 		System.out.println("Wrapper Test Source");
-		System.out.println("Class: "+wrapperTestSrc.getClass());
-		System.out.println("Surface: "+wrapperTestSrc.getRupture(0).getRuptureSurface().getClass());
-		for (ProbEqkRupture rup : wrapperTestSrc) {
-			System.out.println("\tmag="+(float)rup.getMag()+"\trate="+(float)rup.getMeanAnnualRate(1d)+"\trake="
-					+(float)rup.getAveRake()+"\tdip="+(float)rup.getRuptureSurface().getAveDip()
-					+"\tzTOR="+(float)rup.getRuptureSurface().getAveRupTopDepth());
-		}
+		printSourceInfo(wrapperTestSrc, distTests, distLocs);
+		
 		System.out.println("Model Test Source");
-		System.out.println("Class: "+modelTestSrc.getClass());
-		System.out.println("Surface: "+modelTestSrc.getRupture(0).getRuptureSurface().getClass());
-		for (ProbEqkRupture rup : modelTestSrc) {
+		printSourceInfo(modelTestSrc, distTests, distLocs);
+	}
+	
+	private static void printSourceInfo(ProbEqkSource source, double[] distTests, Location[] distLocs) {
+		System.out.println("Class: "+source.getClass());
+		System.out.println("Surface: "+source.getRupture(0).getRuptureSurface().getClass());
+		for (ProbEqkRupture rup : source) {
 			System.out.println("\tmag="+(float)rup.getMag()+"\trate="+(float)rup.getMeanAnnualRate(1d)+"\trake="
 					+(float)rup.getAveRake()+"\tdip="+(float)rup.getRuptureSurface().getAveDip()
 					+"\tzTOR="+(float)rup.getRuptureSurface().getAveRupTopDepth());
+			System.out.print("\tDistRups: ");
+			for (int i=0; i<distTests.length; i++) {
+				double targetDist = distTests[i];
+				double srcDist = rup.getRuptureSurface().getDistanceRup(distLocs[i]);
+				if (i > 0)
+					System.out.print(", ");
+				System.out.print((float)targetDist+"->"+(float)srcDist);
+			}
+			System.out.println();
+			System.out.print("\tDistJBs: ");
+			for (int i=0; i<distTests.length; i++) {
+				double targetDist = distTests[i];
+				double srcDist = rup.getRuptureSurface().getDistanceJB(distLocs[i]);
+				if (i > 0)
+					System.out.print(", ");
+				System.out.print((float)targetDist+"->"+(float)srcDist);
+			}
+			System.out.println();
 		}
 	}
 	
