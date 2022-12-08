@@ -9,6 +9,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.param.Parameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers.ASK_2014_Wrapper;
@@ -19,15 +20,46 @@ public class NshmErfTest {
 
   // private static final Path MODEL =
   // Path.of("../nshmp-lib/src/test/resources/model/test-model");
-  private static final Path MODEL = Path.of("../nshm-conus-2018-5.x-maint");
+  // private static final Path MODEL = Path.of("../nshm-conus-2018-5.x-maint");
+  private static final Path MODEL = Path.of("../nshm-conus");
+
+  static gov.usgs.earthquake.nshmp.geo.Location testLoc =
+      gov.usgs.earthquake.nshmp.geo.Location.create(-122, 39.0);
+
+  // static gov.usgs.earthquake.nshmp.geo.Location testLoc =
+  // gov.usgs.earthquake.nshmp.geo.Location.create(-110, 37.5);
 
   public static void main(String[] args) {
 
-    NshmErf erf = new NshmErf(MODEL, false, false);
+    NshmErf erf = new NshmErf(MODEL, false, true);
     System.out.println("NSHM ERF size: " + erf.getNumSources());
     erf.getTimeSpan().setDuration(50.0);
     erf.updateForecast();
 
+    for (ProbEqkSource src : erf) {
+      Source nshmSrc = ((NshmSource) src).delegate;
+      // if (nshmSrc instanceof PointSourceFinite) {
+      // PointSourceFinite ptSrc = (PointSourceFinite) nshmSrc;
+      // if (ptSrc.loc.equals(testLoc)) {
+      // System.out.println(testLoc);
+      // System.out.println(ptSrc.mfd);
+      // for (Rupture rup : ptSrc) {
+      // PointSourceFinite.FiniteSurface surf =
+      // (PointSourceFinite.FiniteSurface) rup.surface();
+      // System.out.println(surf.mag + " " + surf.zTor + " " + surf.dip());
+      // }
+      //
+      // for (ProbEqkRupture rup : src) {
+      // System.out.println(rup.getRuptureSurface().getAveRupTopDepth());
+      // }
+      // }
+      // }
+    }
+
+    calcHazard(erf);
+  }
+
+  private static void calcHazard(NshmErf erf) {
     ScalarIMR gmpe = new ASK_2014_Wrapper();
     gmpe.setParamDefaults();
     gmpe.setIntensityMeasure(PGA_Param.NAME);
@@ -51,6 +83,7 @@ public class NshmErfTest {
 
     System.out.println("DONE");
     System.out.println(hazardCurve);
+
   }
 
 }
