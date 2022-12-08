@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opensha.commons.calc.FaultMomentCalc;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
@@ -38,7 +39,8 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 
 public class MomentRateCompNSHM18 {
 	
-	private static final boolean LINEAR_RAMP = true;
+	private static final boolean LINEAR_RAMP = false
+			;
 	private static final boolean GEO_ONLY = true;
 
 	public static void main(String[] args) throws IOException {
@@ -104,6 +106,10 @@ public class MomentRateCompNSHM18 {
 		GriddedGeoDataSet diff = new GriddedGeoDataSet(gridReg, false);
 		GriddedGeoDataSet pDiff = new GriddedGeoDataSet(gridReg, false);
 		GriddedGeoDataSet ratio = new GriddedGeoDataSet(gridReg, false);
+		
+		CSVFile<String> csv = new CSVFile<>(true);
+		csv.addLine("Location Index", "Latitutde", "Longitude", "NSHM23 Moment Rate (N-m)", "NSHM18 Moment Rate (N-m)");
+		
 		double maxDiff = 0d;
 		for (int i=0; i<nshm23.size(); i++) {
 			double v1 = nshm23.get(i);
@@ -119,6 +125,15 @@ public class MomentRateCompNSHM18 {
 			maxDiff = Math.max(maxDiff, Math.abs(v1 - v2));
 			ratio.set(i, v1/v2);
 			pDiff.set(i, 100d*(v1 - v2)/v2);
+			
+			List<String> line = new ArrayList<>();
+			line.add(i+"");
+			Location loc = gridReg.getLocation(i);
+			line.add((float)loc.getLatitude()+"");
+			line.add((float)loc.getLongitude()+"");
+			line.add((float)v1+"");
+			line.add((float)v2+"");
+			csv.addLine(line);
 		}
 		
 		double logMaxMo = Math.ceil(Math.log10(maxMoRate));
@@ -138,6 +153,12 @@ public class MomentRateCompNSHM18 {
 		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
 		
 		CPT logRatioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-1d, 1d);
+//		logRatioCPT.setAboveMaxColor(Color.BLACK);
+//		logRatioCPT.setBelowMinColor(Color.GREEN);
+//		logRatioCPT.setAboveMaxColor(diffCPT.getMaxColor().brighter());
+//		logRatioCPT.setBelowMinColor(diffCPT.getMinColor().brighter());
+		logRatioCPT.setAboveMaxColor(Color.YELLOW);
+		logRatioCPT.setBelowMinColor(Color.GREEN);
 		
 		GriddedGeoDataSet logNSHM23 = nshm23.copy();
 		logNSHM23.log10();
@@ -166,6 +187,11 @@ public class MomentRateCompNSHM18 {
 		List<String> lines = new ArrayList<>();
 		
 		lines.add("# NSHM23 vs NSHM18 Fault Moment Comparison"+(GEO_ONLY ? ", Geologic DM Only" : ""));
+		lines.add("");
+		
+		File csvFile = new File(outputDir, "moment_rates.csv");
+		csv.writeToFile(csvFile);
+		lines.add("Download CSV: ["+csvFile.getName()+"]("+csvFile.getName()+")");
 		lines.add("");
 		
 		TableBuilder table = MarkdownUtils.tableBuilder();
@@ -205,8 +231,23 @@ public class MomentRateCompNSHM18 {
 		mapMaker23.plotXYZData(zeroAsNan(diff), diffCPT, "NSHM23 - NSHM18 (N-m)");
 		mapMaker23.plot(outputDir, "diff", " ", width);
 		table.addColumn("![Difference](diff.png)");
-		ratio.log10();
-		mapMaker23.plotXYZData(ratio, logRatioCPT, "Log10(NSHM23 / NSHM18)");
+		
+		// build log ratio, with saturation
+		GriddedGeoDataSet logRatio = new GriddedGeoDataSet(gridReg, false);
+		for (int i=0; i<logRatio.size(); i++) {
+			double val = ratio.get(i);
+			double logVal = Math.log10(val);
+			if (Double.isFinite(logVal)) {
+				// neither one was zero
+				// check to see if we should saturate it
+				if ((float)logVal > logRatioCPT.getMaxValue())
+					logVal = (double)logRatioCPT.getMaxValue();
+				else if ((float)logVal < logRatioCPT.getMinValue())
+					logVal = (double)logRatioCPT.getMinValue();
+			}
+			logRatio.set(i, logVal);
+		}
+		mapMaker23.plotXYZData(logRatio, logRatioCPT, "Log10(NSHM23 / NSHM18)");
 		mapMaker23.plot(outputDir, "log_ratio", " ", width);
 		table.addColumn("![Ratio](log_ratio.png)");
 		table.finalizeLine();

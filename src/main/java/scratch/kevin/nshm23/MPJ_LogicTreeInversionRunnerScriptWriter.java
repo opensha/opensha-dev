@@ -368,6 +368,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		dirName += "-mod_west_valley_ddw";
 		
+//		dirName += "-mod_dm_weights";
+		
 		forceRequiredNonzeroWeight = true;
 		griddedJob = true;
 		LogicTreeNode[] required = {

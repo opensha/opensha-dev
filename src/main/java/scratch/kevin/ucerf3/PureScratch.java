@@ -111,6 +111,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.ConnectivityClusters.
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
@@ -134,6 +135,10 @@ import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCre
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
+import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
@@ -156,6 +161,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRate
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.Builder;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.ScalingRelSlipRateMFD_Estimator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
@@ -186,10 +193,12 @@ import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
+import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.inversion.U3InversionTargetMFDs;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.utils.FaultSectionDataWriter;
+import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -2756,12 +2765,157 @@ public class PureScratch {
 		System.out.println(json);
 	}
 	
+	private static void test200() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_11_22-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+		
+		PaleoseismicConstraintData paleoData = rupSet.requireModule(PaleoseismicConstraintData.class);
+		
+		// rebuild the rup set for geologic
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT.copy();
+		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
+		rupSet = new NSHM23_InvConfigFactory().updateRuptureSetForBranch(rupSet, branch);
+		
+		for (SectMappedUncertainDataConstraint constr : paleoData.getPaleoSlipConstraints()) {
+//			if (constr.sectionName.toLowerCase().contains("cholame")) {
+			if (constr.sectionName.toLowerCase().contains("garlock")) {
+				SectMappedUncertainDataConstraint expanded = PaleoseismicConstraintData.inferRatesFromSlipConstraints(
+						rupSet, List.of(constr), true).get(0);
+				SectMappedUncertainDataConstraint orig = PaleoseismicConstraintData.inferRatesFromSlipConstraints(
+						rupSet, List.of(constr), false).get(0);
+				GeoJSONFaultSection sect = (GeoJSONFaultSection) rupSet.getFaultSectionData(constr.sectionIndex);
+				System.out.println(constr.getName());
+				System.out.println("AveSlip = "+(float)constr.bestEstimate+" +/- "+constr.getPreferredStdDev());
+				double slipRate = sect.getReducedAveSlipRate()*1e-3;
+				double origFractSlip = ((GeoJSONFaultSection)sect).getProperty(
+						NSHM23_DeformationModels.ORIG_FRACT_STD_DEV_PROPERTY_NAME, Double.NaN);
+				double slipSD = slipRate*origFractSlip;
+				System.out.println("SlipRate = "+(float)slipRate+" +/- "+(float)slipSD);
+				System.out.println("Proxy Rate (orig bounds) = "+(float)orig.bestEstimate+" +/- "+(float)orig.getPreferredStdDev());
+				System.out.println("Proxy Rate (expanded bounds) = "+(float)expanded.bestEstimate+" +/- "+(float)expanded.getPreferredStdDev());
+			}
+		}
+	}
+	
+	private static void test201() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_11_22-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+		
+		List<NSHM23_ScalingRelationships> scales = new ArrayList<>();
+		List<ScalingRelSlipRateMFD_Estimator> estimators = new ArrayList<>();
+		
+		for (NSHM23_ScalingRelationships scale : NSHM23_ScalingRelationships.values()) {
+			if (scale.getNodeWeight(null) > 0d) {
+				scales.add(scale);
+				ScalingRelSlipRateMFD_Estimator estimator = new ScalingRelSlipRateMFD_Estimator(false);
+				
+				rupSet = FaultSystemRupSet.buildFromExisting(rupSet, false).forScalingRelationship(scale).build();
+				Builder mfdBuilder = new SupraSeisBValInversionTargetMFDs.Builder(rupSet, 0.5d);
+				mfdBuilder.adjustTargetsForData(estimator);
+				mfdBuilder.build();
+				
+				estimators.add(estimator);
+			}
+		}
+		
+		for (int i=0; i<scales.size(); i++) {
+			System.out.println(scales.get(i).getName());
+			estimators.get(i).printStats();
+			System.out.println();
+		}
+	}
+	
+	private static void test202() throws IOException {
+//		File solFile = new File("/tmp/FM3_1_branch_averaged.zip");
+//		File solFile = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip");
+		File solFile = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/orig/branch_averaged_ucerf3_sol_FM3_1.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		
+		sol.removeAvailableModuleInstances(RupMFDsModule.class);
+		
+		LastEventData.populateSubSects(sol.getRupSet().getFaultSectionDataList(), LastEventData.load());
+		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
+		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
+		erf.getTimeSpan().setDuration(1d);
+		
+		erf.updateForecast();
+		
+		int numSourcesTI = erf.getNumSources();
+		int numRupsTI = 0;
+		int numNonzeroRupsTI = 0;
+		double totRateTI = 0d;
+		
+		for (ProbEqkSource source : erf) {
+			for (ProbEqkRupture rup : source) {
+				double rate = rup.getMeanAnnualRate(1d);
+				numRupsTI++;
+				if (rate > 0d) {
+					numNonzeroRupsTI++;
+					totRateTI += rate;
+				}
+			}
+		}
+		
+		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.U3_PREF_BLEND);
+		erf.getTimeSpan().setDuration(1d);
+		
+		erf.updateForecast();
+		
+		int numSourcesTD = erf.getNumSources();
+		int numRupsTD = 0;
+		int numNonzeroRupsTD = 0;
+		double totRateTD = 0d;
+		
+		for (ProbEqkSource source : erf) {
+			for (ProbEqkRupture rup : source) {
+				double rate = rup.getMeanAnnualRate(1d);
+				numRupsTD++;
+				if (rate > 0d) {
+					numNonzeroRupsTD++;
+					totRateTD += rate;
+				}
+			}
+		}
+		
+		ModSectMinMags modMinMags = sol.getRupSet().getModule(ModSectMinMags.class);
+		System.out.println(solFile.getAbsolutePath()+" is "+sol.getClass().getName());
+		System.out.println("Rupture set size: "+sol.getRupSet().getNumRuptures());
+		System.out.println("\tRupture set sum rate: "+(float)sol.getTotalRateForAllFaultSystemRups());
+		if (modMinMags != null) {
+			double rateBelow = 0d;
+			double rateAbove = 0d;
+			for (int r=0; r<sol.getRupSet().getNumRuptures(); r++) {
+				if (modMinMags.isRupBelowSectMinMag(r))
+					rateBelow += sol.getRateForRup(r);
+				else
+					rateAbove += sol.getRateForRup(r);
+			}
+			System.out.println("\tRate above sect min mag: "+(float)rateAbove);
+			System.out.println("\tRate below sect min mag: "+(float)rateBelow);
+		}
+		System.out.println("UCERF3 FM3.1 TI:");
+		System.out.println("\tNum sources in ERF: "+numSourcesTI);
+		System.out.println("\tNum ruptures in ERF: "+numRupsTI);
+		System.out.println("\tNum nonzero ruptures in ERF: "+numNonzeroRupsTI);
+		System.out.println("\tSum rate in ERF: "+(float)totRateTI);
+		System.out.println("UCERF3 FM3.1 TD:");
+		System.out.println("\tNum sources in ERF: "+numSourcesTD);
+		System.out.println("\tNum ruptures in ERF: "+numRupsTD);
+		System.out.println("\tNum nonzero ruptures in ERF: "+numNonzeroRupsTD);
+		System.out.println("\tSum rate in ERF: "+(float)totRateTD);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test199();
+		test198();
 	}
 
 }
