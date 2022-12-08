@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23;
+package scratch.kevin.nshm23.figures;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
