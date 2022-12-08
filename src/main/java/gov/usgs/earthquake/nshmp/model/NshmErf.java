@@ -18,7 +18,6 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 
-import gov.usgs.earthquake.nshmp.Maths;
 import gov.usgs.earthquake.nshmp.data.Indexing;
 import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemSource;
 import gov.usgs.earthquake.nshmp.tree.Branch;
@@ -42,7 +41,7 @@ public class NshmErf extends AbstractERF {
     this.subduction = subduction;
     this.grid = grid;
     init();
-    System.out.println(allSources.size());
+    // System.out.println(allSources.size());
   }
 
   private void init() {
@@ -100,12 +99,11 @@ public class NshmErf extends AbstractERF {
     switch (ruptureSet.type()) {
 
       case GRID:
-        System.out.println(branch.value().name());
+        GridRuptureSet grs = (GridRuptureSet) ruptureSet;
         return (grid)
-            ? ruptureSetToSources(ruptureSet, weight, duration)
+            ? pointRuptureSetToSources(grs, weight, duration)
             : List.of();
 
-      // custom cluster and system handlers
       case FAULT_CLUSTER:
         ClusterRuptureSet crs = (ClusterRuptureSet) ruptureSet;
         return clusterRuptureSetToSources(crs, weight, duration);
@@ -114,9 +112,18 @@ public class NshmErf extends AbstractERF {
         return systemRuptureSetToSources(srs, weight, duration);
 
       default:
-        // System.out.println("Yo: " + ruptureSet.type());
         return ruptureSetToSources(ruptureSet, weight, duration);
     }
+  }
+
+  private static List<NshmSource> pointRuptureSetToSources(
+      GridRuptureSet ruptureSet,
+      double weight,
+      double duration) {
+
+    return ruptureSet.stream()
+        .map(ptSrc -> new NshmSource.Point(ptSrc, weight, duration))
+        .collect(toList());
   }
 
   private static List<NshmSource> ruptureSetToSources(
@@ -125,7 +132,7 @@ public class NshmErf extends AbstractERF {
       double duration) {
 
     return ruptureSet.stream()
-        .map(src -> new NshmSource(src, weight, duration))
+        .map(src -> new NshmSource.Fault(src, weight, duration))
         .collect(toList());
   }
 
@@ -149,7 +156,7 @@ public class NshmErf extends AbstractERF {
       List<NshmSurface> ruptureSurfaces = IntStream.of(sectionIndices)
           .mapToObj(surfaces::get)
           .collect(Collectors.toList());
-      sources.add(new NshmSource(source, ruptureSurfaces, weight, duration));
+      sources.add(new NshmSource.System(source, weight, duration, ruptureSurfaces));
     }
     return sources;
   }
@@ -163,7 +170,7 @@ public class NshmErf extends AbstractERF {
     double rate = cs.rate();
     return cs.ruptureSets().stream()
         .map(rs -> (FaultRuptureSet) rs)
-        .map(frs -> new NshmSource(frs.get(0), weight * rate, duration))
+        .map(frs -> new NshmSource.Fault(frs.get(0), weight * rate, duration))
         .collect(toList());
   }
 
@@ -180,11 +187,7 @@ public class NshmErf extends AbstractERF {
   @Override
   public void updateForecast() {
     double duration = getTimeSpan().getDuration();
-    allSources.stream()
-        .map(NshmSource::ruptures)
-        .flatMap(List::stream)
-        .forEach(rup -> rup.setProbability(
-            Maths.rateToProbability(rup.rate * rup.weight, duration)));
+    allSources.forEach(src -> src.setDuration(duration));
   }
 
   @Override
