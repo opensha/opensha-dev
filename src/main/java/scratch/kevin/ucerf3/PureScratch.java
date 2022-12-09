@@ -2728,39 +2728,77 @@ public class PureScratch {
 		PlotUtils.writePlots(new File("/tmp"), "wrapper_test_pDiff", gp, 1000, true, true, false, false);
 
 		System.out.println("Test location: "+nuclReg.getLocation(nuclReg.indexForLocation(testLoc)));
-		System.out.println("Wrapper Test Source");
-		printSourceInfo(wrapperTestSrc, distTests, distLocs);
 		
-		System.out.println("Model Test Source");
-		printSourceInfo(modelTestSrc, distTests, distLocs);
+		if (wrapperTestSrc.getNumRuptures() == modelTestSrc.getNumRuptures()) {
+			// side by side
+			System.out.println("Wrapper Class: "+wrapperTestSrc.getClass());
+			System.out.println("Wrapper Surface: "+wrapperTestSrc.getRupture(0).getRuptureSurface().getClass());
+			System.out.println("Model Class: "+modelTestSrc.getClass());
+			System.out.println("Model Surface: "+modelTestSrc.getRupture(0).getRuptureSurface().getClass());
+			
+			for (int i=0; i<wrapperTestSrc.getNumRuptures(); i++) {
+				System.out.println("Rupture "+i);
+				System.out.println("WRAPPER");
+				printRupInfo(wrapperTestSrc.getRupture(i), distTests, distLocs);
+				System.out.println("MODEL");
+				printRupInfo(modelTestSrc.getRupture(i), distTests, distLocs);
+				System.out.println();
+			}
+		} else {
+			System.out.println("Wrapper Test Source");
+			printSourceInfo(wrapperTestSrc, distTests, distLocs);
+			
+			System.out.println("Model Test Source");
+			printSourceInfo(modelTestSrc, distTests, distLocs);
+		}
 	}
 	
 	private static void printSourceInfo(ProbEqkSource source, double[] distTests, Location[] distLocs) {
 		System.out.println("Class: "+source.getClass());
 		System.out.println("Surface: "+source.getRupture(0).getRuptureSurface().getClass());
 		for (ProbEqkRupture rup : source) {
-			System.out.println("\tmag="+(float)rup.getMag()+"\trate="+(float)rup.getMeanAnnualRate(1d)+"\trake="
-					+(float)rup.getAveRake()+"\tdip="+(float)rup.getRuptureSurface().getAveDip()
-					+"\tzTOR="+(float)rup.getRuptureSurface().getAveRupTopDepth());
-			System.out.print("\tDistRups: ");
-			for (int i=0; i<distTests.length; i++) {
-				double targetDist = distTests[i];
-				double srcDist = rup.getRuptureSurface().getDistanceRup(distLocs[i]);
-				if (i > 0)
-					System.out.print(", ");
-				System.out.print((float)targetDist+"->"+(float)srcDist);
-			}
-			System.out.println();
-			System.out.print("\tDistJBs: ");
-			for (int i=0; i<distTests.length; i++) {
-				double targetDist = distTests[i];
-				double srcDist = rup.getRuptureSurface().getDistanceJB(distLocs[i]);
-				if (i > 0)
-					System.out.print(", ");
-				System.out.print((float)targetDist+"->"+(float)srcDist);
-			}
-			System.out.println();
+			printRupInfo(rup, distTests, distLocs);
 		}
+	}
+	
+	private static void printRupInfo(ProbEqkRupture rup, double[] distTests, Location[] distLocs) {
+		RuptureSurface surf = rup.getRuptureSurface();
+		double hypoDep;
+		if (rup.getHypocenterLocation() == null)
+			hypoDep = Double.NaN;
+		else
+			hypoDep = rup.getHypocenterLocation().getDepth();
+		System.out.println("mag="+(float)rup.getMag()+"\trate="+(float)rup.getMeanAnnualRate(1d)+"\trake="
+				+(float)rup.getAveRake()+"\tdip="+(float)rup.getRuptureSurface().getAveDip()
+				+"\tzTOR="+(float)surf.getAveRupTopDepth()
+				+"\twidth="+(float)surf.getAveWidth()+"\tzHYP="+(float)hypoDep);
+		System.out.print("\tDistRups: ");
+		for (int i=0; i<distTests.length; i++) {
+			double targetDist = distTests[i];
+			double srcDist = rup.getRuptureSurface().getDistanceRup(distLocs[i]);
+			if (i > 0)
+				System.out.print(", ");
+			System.out.print((float)targetDist+"->"+(float)srcDist);
+		}
+		System.out.println();
+		System.out.print("\tDistJBs: ");
+		for (int i=0; i<distTests.length; i++) {
+			double targetDist = distTests[i];
+			double srcDist = rup.getRuptureSurface().getDistanceJB(distLocs[i]);
+			if (i > 0)
+				System.out.print(", ");
+			System.out.print((float)targetDist+"->"+(float)srcDist);
+		}
+		System.out.println();
+		System.out.print("\tDistXs: ");
+		for (int i=0; i<distTests.length; i++) {
+			double targetDist = distTests[i];
+			double srcDist = rup.getRuptureSurface().getDistanceX(distLocs[i]);
+			if (i > 0)
+				System.out.print(", ");
+			System.out.print((float)targetDist+"->"+(float)srcDist);
+		}
+		System.out.println();
 	}
 	
 	private static void test199() throws IOException {
