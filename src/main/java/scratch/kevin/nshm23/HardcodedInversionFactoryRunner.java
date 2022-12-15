@@ -13,8 +13,15 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.InversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.MFDInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.PaleoRateInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.ParkfieldInversionConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SectionTotalRateConstraint;
+import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.impl.SlipRateInversionConstraint;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
@@ -29,6 +36,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Single
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
@@ -59,8 +67,41 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-u3-new_paleo";
 		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
 		dirName += "-nshm23-full_sys";
-		NSHM23_PaleoDataLoader.INCLUDE_U3_PALEO_SLIP = false;
-		dirName += "-no_paleo_slip";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv() {
+//
+//			@Override
+//			public InversionConfiguration buildInversionConfig(FaultSystemRupSet rupSet, LogicTreeBranch<?> branch,
+//					int threads) {
+//				InversionConfiguration config = super.buildInversionConfig(rupSet, branch, threads);
+//				// disable reweighting
+//				config = InversionConfiguration.builder(config).reweight(null).build();
+//				// override weights
+//				// these are from the 2022_12_08 U3 ref branch runs, top is even fit paleo, bottom under fit
+//				for (InversionConstraint constr : config.getConstraints()) {
+//					if (constr instanceof SlipRateInversionConstraint)
+////						constr.setWeight(0.9081427);
+//						constr.setWeight(0.92429525);
+//					else if (constr instanceof PaleoRateInversionConstraint)
+////						constr.setWeight(8.173598);
+//						constr.setWeight(0.05);
+//					else if (constr instanceof ParkfieldInversionConstraint)
+////						constr.setWeight(15.864809);
+//						constr.setWeight(17.998356);
+//					else if (constr instanceof MFDInversionConstraint)
+////						constr.setWeight(7.9695096);
+//						constr.setWeight(6.446304);
+//					else if (constr instanceof SectionTotalRateConstraint)
+////						constr.setWeight(0.57912546);
+//						constr.setWeight(0.67924696);
+//				}
+//				
+//				return config;
+//			}
+//			
+//		};
+//		dirName += "-nshm23-full_sys-prev_weights";
+//		NSHM23_PaleoDataLoader.INCLUDE_U3_PALEO_SLIP = false;
+//		dirName += "-no_paleo_slip";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
 //		dirName += "-nshm23";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.PaleoSlipInequality();
@@ -87,11 +128,26 @@ public class HardcodedInversionFactoryRunner {
 //		SparseGutenbergRichterSolver.METHOD_DEFAULT = SpreadingMethod.NEAREST;
 //		dirName += "-sparse_gr_nearest";
 		
+//		dirName += "-quick_phase_in";
+		
+//		NSHM23_InvConfigFactory.PARKFIELD_INITIAL = false;
+//		dirName += "-no_parkfield_initial";
+		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-		dirName += "-u3_ref";
+//		dirName += "-u3_ref";
 		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
 		for (LogicTreeNode node : NSHM23_U3_HybridLogicTreeBranch.DEFAULT)
 			branch.setValue(node);
+//		branch.setValue(U3_UncertAddDeformationModels.U3_GEOL);
+//		branch.setValue(ScalingRelationships.HANKS_BAKUN_08);
+//		branch.setValue(SupraSeisBValues.B_0p0);
+//		branch.setValue(NSHM23_PaleoUncertainties.OVER_FIT);
+//		branch.setValue(NSHM23_SegmentationModels.MID);
+		branch.setValue(U3_UncertAddDeformationModels.U3_ZENG);
+		branch.setValue(ScalingRelationships.ELLB_SQRT_LENGTH);
+		branch.setValue(SupraSeisBValues.B_0p0);
+		branch.setValue(NSHM23_PaleoUncertainties.OVER_FIT);
+		branch.setValue(NSHM23_SegmentationModels.NONE);
 		
 //		levels = new ArrayList<>(levels);
 //		int origSize = levels.size();
@@ -146,7 +202,7 @@ public class HardcodedInversionFactoryRunner {
 //		branch.setValue(SupraSeisBValues.B_0p5);
 		
 //		branch.setValue(NSHM23_PaleoUncertainties.EVEN_FIT);
-		branch.setValue(NSHM23_PaleoUncertainties.UNDER_FIT);
+//		branch.setValue(NSHM23_PaleoUncertainties.UNDER_FIT);
 		
 ////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p1);
 ////		branch.setValue(NSHM23_ScalingRelationships.LOGA_C4p2);

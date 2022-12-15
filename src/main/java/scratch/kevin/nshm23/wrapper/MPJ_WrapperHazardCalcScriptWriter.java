@@ -45,13 +45,16 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
-		String extGridProvPath = null;
+//		String extGridProvPath = null;
 //		String extGridProvPath = "2022_11_22-nshm23_branches-no_paleo_slip-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 //				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
 //		erfPrefix += "-grid_src_from_23"; gridded = true;
-//		String extGridProvPath = "2022_12_02-nshm23_branches-no_paleo_slip-NSHM23_v2-CoulombRupSet-MEDIAN-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+//		String extGridProvPath = "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 //				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
-//		erfPrefix += "-grid_src_from_medDM_23"; gridded = true;
+//		erfPrefix += "-grid_src_from_modWeightDM_23"; gridded = true;
+		String extGridProvPath = "2022_12_07-nshm23_branches-no_paleo_slip-NSHM23_v2-CoulombRupSet-MEDIAN-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
+		erfPrefix += "-grid_src_from_medDM_23"; gridded = true;
 		
 		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
 		int remoteTotalThreads = 20;

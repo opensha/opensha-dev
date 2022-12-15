@@ -221,13 +221,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * NSHM23 logic tree
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-//		dirName += "-nshm23_u3_hybrid_branches";
-//		double avgNumRups = 325000;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+		dirName += "-nshm23_u3_hybrid_branches";
+		double avgNumRups = 325000;
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-		dirName += "-nshm23_branches";
-		double avgNumRups = 600000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+//		dirName += "-nshm23_branches";
+//		double avgNumRups = 600000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
@@ -292,8 +292,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
 //		dirName += "-no_reweight_use_prev";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjustFullSys.class;
-//		dirName += "-full_sys_inv-no_reweight_use_prev";
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjustFullSys.class;
+		dirName += "-full_sys_inv-no_reweight_use_prev";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedOrigWeights.class;
 //		dirName += "-no_reweight_use_orig";
@@ -347,8 +347,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.RemoveProxyFaults.class;
 //		dirName += "-remove_proxy_faults";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoPaleoSlip.class;
-		dirName += "-no_paleo_slip";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NoPaleoSlip.class;
+//		dirName += "-no_paleo_slip";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.PaleoSlipInequality.class;
 //		dirName += "-paleo_slip_ineq";
@@ -374,10 +374,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		griddedJob = true;
 		LogicTreeNode[] required = {
 				// FAULT MODELS
-//				FaultModels.FM3_1,
+				FaultModels.FM3_1,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 //				NSHM23_FaultModels.NSHM23_v1p4,
-				NSHM23_FaultModels.NSHM23_v2,
+//				NSHM23_FaultModels.NSHM23_v2,
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
@@ -396,7 +396,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3_UncertAddDeformationModels.U3_MEAN,
 //				NSHM23_DeformationModels.AVERAGE,
 //				NSHM23_DeformationModels.GEOLOGIC,
-				NSHM23_DeformationModels.MEDIAN,
+//				NSHM23_DeformationModels.MEDIAN,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
@@ -407,7 +407,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
-//				SlipAlongRuptureModels.UNIFORM,
+				SlipAlongRuptureModels.UNIFORM,
 //				SlipAlongRuptureModels.TAPERED,
 				
 				// SUB-SECT CONSTRAINT
@@ -657,7 +657,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz = "--logic-tree "+ltPath;
 			argz += " --sol-dir "+resultsPath;
 			argz += " --write-full-tree "+dirPath+"/logic_tree_full_gridded.json";
-			boolean averageOnly = logicTree.size() > 1000;
+			boolean averageOnly = logicTree.size() > 400;
 			if (averageOnly)
 				argz += " --average-only";
 			// these calculations can take a lot of memory

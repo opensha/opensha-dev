@@ -23,7 +23,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Scalin
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
-public class SupraBValFigure {
+class SupraBValFigure {
 
 	public static void main(String[] args) throws IOException {
 		EvenlyDiscretizedFunc refMFD = new EvenlyDiscretizedFunc(6.55, 10, 0.1);

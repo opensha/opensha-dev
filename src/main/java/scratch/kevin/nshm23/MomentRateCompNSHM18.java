@@ -39,9 +39,8 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 
 public class MomentRateCompNSHM18 {
 	
-	private static final boolean LINEAR_RAMP = false
-			;
-	private static final boolean GEO_ONLY = true;
+	private static final boolean LINEAR_RAMP = true;
+	private static final boolean GEO_ONLY = false;
 
 	public static void main(String[] args) throws IOException {
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();

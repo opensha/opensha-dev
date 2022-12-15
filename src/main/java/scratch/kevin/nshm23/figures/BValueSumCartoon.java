@@ -37,7 +37,7 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Preconditions;
 
-public class BValueSumCartoon {
+class BValueSumCartoon {
 	
 	private static boolean CARTOON = false;
 

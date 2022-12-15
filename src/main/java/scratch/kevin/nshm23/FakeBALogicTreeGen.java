@@ -9,6 +9,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.FileBuilder;
@@ -31,15 +32,25 @@ public class FakeBALogicTreeGen {
 		
 		boolean stripRupMFDs = true;
 
-		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_U3_HybridLogicTreeBranch.U3_FM;
-		nodes.add(FaultModels.FM3_1);
-		nodeSols.add(FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip")));
-		
-//		nodes.add(FaultModels.FM3_2);
-//		nodeSols.add(FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_2_branch_averaged.zip")));
-		
-		File outputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/2022_12_08-u3-FM3_1-ba_only");
-		SolutionProcessor processor = null;
+//		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_U3_HybridLogicTreeBranch.U3_FM;
+//		nodes.add(FaultModels.FM3_1);
+//		nodeSols.add(FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip")));
+//		
+////		nodes.add(FaultModels.FM3_2);
+////		nodeSols.add(FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_2_branch_averaged.zip")));
+//		
+////		File outputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/2022_12_08-u3-FM3_1-ba_only");
+//		
+//		File outputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/2022_12_13-u3-FM3_1-ba_only-nshm23_gridded");
+//		GridSourceProvider gridProv = FaultSystemSolution.load(new File("/data/kevin/nshm23/batch_inversions/"
+//				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+//				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip")).getGridSourceProvider();
+//		for (FaultSystemSolution sol : nodeSols)
+//			sol.setGridSourceProvider(gridProv);
+//		
+//		SolutionProcessor processor = null;
+//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+//		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
 		
 //		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 //				+ "2022_03_24-u3_branches-FM3_1-2000ip");
@@ -49,21 +60,43 @@ public class FakeBALogicTreeGen {
 //		SolutionProcessor processor = null;
 //		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only");
 		
+		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_12_13-nshm23_u3_hybrid_branches-full_sys_inv-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_U3_HybridLogicTreeBranch.U3_FM;
+		nodes.add(FaultModels.FM3_1);
+		FaultSystemSolution tmpSol = FaultSystemSolution.load(new File(inputDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
+//		FaultSystemSolution tmpSol = FaultSystemSolution.load(new File(inputDir, "results_FM3_1_CoulombRupSet_NoClassic_branch_averaged.zip"));
+		tmpSol.setGridSourceProvider(FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip")).getGridSourceProvider());
+//		tmpSol.setGridSourceProvider(FaultSystemSolution.load(new File("/data/kevin/nshm23/batch_inversions/"
+//				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+//				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip")).getGridSourceProvider());
+		nodeSols.add(tmpSol);
+//
+		SolutionProcessor processor = null;
+		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only");
+//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-no_classic");
+//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-nshm23_gridded");
+//
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
+		
 //		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-//				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2022_12_07-nshm23_branches-no_paleo_slip-NSHM23_v2-CoulombRupSet-MEDIAN-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
 //		nodes.add(NSHM23_FaultModels.NSHM23_v2);
 //		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip")));
-		
+//		
 //		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
 //		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only");
-		
-		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
+//		
+//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+//		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
 		
 		for (int i=0; i<nodes.size(); i++) {
 			LogicTreeNode node = nodes.get(i);
 			FaultSystemSolution sol = nodeSols.get(i);
+			
+			System.out.println("Writing "+node+" (has gridded? "+(sol.getGridSourceProvider() != null)+")");
 			
 			if (stripRupMFDs)
 				sol.removeModuleInstances(RupMFDsModule.class);

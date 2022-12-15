@@ -5,6 +5,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -47,6 +48,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.MisfitStats;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats.Quantity;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -92,19 +94,22 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2022_07_29-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2022_11_10-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-		File mainDir = new File(invDir, "2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//		File mainDir = new File(invDir, "2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File mainDir = new File(invDir, "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		boolean currentWeights = false;
 		
-		File outputDir = new File(mainDir, "logic_tree_misfits");
+		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
+		LogicTree<?> tree = slt.getLogicTree();
+		
+//		File outputDir = new File(mainDir, "logic_tree_misfits");
+		tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
+		File outputDir = new File(mainDir, "logic_tree_misfits_no_classic");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
-		
-		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
-		LogicTree<?> tree = slt.getLogicTree();
 		if (currentWeights)
 			tree.setWeightProvider(new BranchWeightProvider.CurrentWeights());
 		Map<LogicTreeLevel<?>, HashSet<LogicTreeNode>> levelNodes = new HashMap<>();
@@ -366,6 +371,57 @@ public class LogicTreeMisfitPageGen {
 						}
 						
 						// plot distributions here?
+						double min = avgTrack.min;
+						if (min > 0)
+							min = 0;
+						double max = avgTrack.max;
+						double span = max - min;
+						Preconditions.checkState(span > 0d, "max == min: %s %s", max, min);
+						double histDelta = (max - min)/40d;
+						double roundOrder = Math.pow(10,  Math.floor(Math.log10(0.5*(max - min))-2));
+						histDelta = roundOrder * Math.floor(histDelta/roundOrder);
+						if ((float)max < (float)(min+histDelta))
+							max = min+histDelta*1.1;
+						
+						HistogramFunction hist = HistogramFunction.getEncompassingHistogram(min, max, histDelta);
+						for (double avg : averages)
+							hist.add(hist.getClosestXIndex(avg), 1d);
+						
+						List<XY_DataSet> funcs = new ArrayList<>();
+						List<PlotCurveCharacterstics> chars = new ArrayList<>();
+						
+						Range yRange = new Range(0, 1.1*hist.getMaxY());
+						Range xRange = new Range(hist.getMinX()-0.5*hist.getDelta(), hist.getMaxX()+0.5*hist.getDelta());
+						
+						hist.setName("Distribution");
+						funcs.add(hist);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+						
+						double avg = avgTrack.average();
+						DefaultXY_DataSet fullMean = new DefaultXY_DataSet();
+						fullMean.set(avg, 0d);
+						fullMean.set(avg, yRange.getUpperBound());
+						
+						fullMean.setName("Average: "+new DecimalFormat("0.##").format(avg));
+						funcs.add(fullMean);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.DARK_GRAY));
+						
+						HeadlessGraphPanel gp = PlotUtils.initHeadless();
+						
+						PlotSpec spec = new PlotSpec(funcs, chars, quantity+" Distribution",
+								"Constraint "+quantity, "Count");
+						spec.setLegendInset(true);
+						
+						gp.drawGraphPanel(spec, false, false, xRange, yRange);
+						
+						String prefix = quantity.name()+"_dist_hist";
+						prefix = prefix.replaceAll("\\W+", "_");
+						PlotUtils.writePlots(resourcesDir, prefix, gp, 800, 650, true, true, false);
+						
+						lines.add("**Distribution of branch "+quantity+" values, averaged accross constraints:**");
+						lines.add("");
+						lines.add("![histogram]("+resourcesDir.getName()+"/"+prefix+".png)");
+						lines.add("");
 					}
 					
 					// average values
@@ -575,7 +631,9 @@ public class LogicTreeMisfitPageGen {
 			} else {
 				double span = max - min;
 				Preconditions.checkState(span > 0d, "max == min: %s %s", max, min);
-				double histDelta = Math.max(1e-6, Math.pow(10, Math.floor(Math.log10(span))-1)/2);
+				double histDelta = (max - min)/40d;
+				double roundOrder = Math.pow(10,  Math.floor(Math.log10(0.5*(max - min))-2));
+				histDelta = roundOrder * Math.floor(histDelta/roundOrder);
 				if ((float)max < (float)(min+histDelta))
 					max = min+histDelta*1.1;
 				HistogramFunction hist = HistogramFunction.getEncompassingHistogram(min, max, histDelta);
@@ -588,6 +646,7 @@ public class LogicTreeMisfitPageGen {
 				Range yRange = new Range(0, 1.1*hist.getMaxY());
 				Range xRagne = new Range(hist.getMinX()-0.5*hist.getDelta(), hist.getMaxX()+0.5*hist.getDelta());
 				
+				hist.setName("Weight Distribution");
 				funcs.add(hist);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
 				
@@ -595,13 +654,19 @@ public class LogicTreeMisfitPageGen {
 				fullMean.set(track.getAverage(), 0d);
 				fullMean.set(track.getAverage(), yRange.getUpperBound());
 				
+				fullMean.setName("Average Weight: "+new DecimalFormat("0.##").format(track.getAverage()));
 				funcs.add(fullMean);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.DARK_GRAY));
 				
 				HeadlessGraphPanel gp = PlotUtils.initHeadless();
 				
 				String shortName = constraintShortNames.get(constraintName);
-				PlotSpec spec = new PlotSpec(funcs, chars, shortName+" Weights", "", "Count");
+				String title = constraintName;
+				if (title.startsWith("Uncertain "))
+					title = title.substring(10);
+				title = title.trim();
+				PlotSpec spec = new PlotSpec(funcs, chars, title, "Constraint Weight", "Count");
+				spec.setLegendInset(true);
 				
 				gp.drawGraphPanel(spec, false, false, xRagne, yRange);
 				
