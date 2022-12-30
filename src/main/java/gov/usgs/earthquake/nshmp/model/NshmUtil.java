@@ -4,6 +4,7 @@ import org.opensha.commons.data.Site;
 import org.opensha.sha.util.TectonicRegionType;
 
 import gov.usgs.earthquake.nshmp.geo.Location;
+import gov.usgs.earthquake.nshmp.geo.LocationList;
 import gov.usgs.earthquake.nshmp.geo.Locations;
 
 class NshmUtil {
@@ -16,6 +17,12 @@ class NshmUtil {
 
   static org.opensha.commons.geo.Location toOpenShaLocation(Location loc) {
     return new org.opensha.commons.geo.Location(loc.latitude, loc.longitude, loc.depth);
+  }
+
+  static org.opensha.commons.geo.LocationList toOpenShaLocationList(LocationList locs) {
+    org.opensha.commons.geo.LocationList out = new org.opensha.commons.geo.LocationList();
+    locs.forEach(loc -> out.add(toOpenShaLocation(loc)));
+    return out;
   }
 
   static Location fromOpenShaLocation(org.opensha.commons.geo.Location loc) {
