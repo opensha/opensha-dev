@@ -7,8 +7,10 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.param.Parameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.ScalarIMR;
@@ -37,7 +39,7 @@ public class NshmErfTest {
     erf.updateForecast();
 
     for (ProbEqkSource src : erf) {
-      Source nshmSrc = ((NshmSource) src).delegate;
+      // Source nshmSrc = ((NshmSource) src).delegate;
       // if (nshmSrc instanceof PointSourceFinite) {
       // PointSourceFinite ptSrc = (PointSourceFinite) nshmSrc;
       // if (ptSrc.loc.equals(testLoc)) {
@@ -54,9 +56,17 @@ public class NshmErfTest {
       // }
       // }
       // }
+
+      for (ProbEqkRupture rup : src) {
+        LocationList locs = rup.getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface();
+        if (locs.size() < 1) {
+          System.out.println("Problem rupture: " + src.getName() + " " + locs.size());
+          break;
+        }
+      }
     }
 
-    calcHazard(erf);
+    // calcHazard(erf);
   }
 
   private static void calcHazard(NshmErf erf) {
