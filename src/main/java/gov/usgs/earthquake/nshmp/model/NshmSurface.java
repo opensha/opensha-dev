@@ -13,6 +13,8 @@ import org.opensha.sha.faultSurface.cache.CacheEnabledSurface;
 import org.opensha.sha.faultSurface.cache.SurfaceDistances;
 
 import gov.usgs.earthquake.nshmp.fault.surface.DefaultGriddedSurface;
+import gov.usgs.earthquake.nshmp.fault.surface.GriddedSurface;
+import gov.usgs.earthquake.nshmp.model.PointSourceFinite.FiniteSurface;
 
 /**
  * Rupture surface implementation for USGS NSHMs. Most methods throw an
@@ -136,6 +138,19 @@ public class NshmSurface implements CacheEnabledSurface {
 		this.distance = null;
 	}
 
+	// ERF Calculations
+
+	 @Override
+	 public LocationList getEvenlyDiscritizedListOfLocsOnSurface() {
+	   if (delegate instanceof FiniteSurface) {
+	     LocationList locs = new LocationList();
+	     locs.add(NshmUtil.toOpenShaLocation(((FiniteSurface) delegate).loc));
+	     return locs;
+	   }
+	   return NshmUtil.toOpenShaLocationList(
+	       ((GriddedSurface) delegate).getEvenlyDiscritizedListOfLocsOnSurface());
+	 }
+
 	// Unnecessary methods for hazard calculations
 
 	@Override public ListIterator<Location> getLocationsIterator() { throw new UnsupportedOperationException(); }
@@ -145,7 +160,6 @@ public class NshmSurface implements CacheEnabledSurface {
 	@Override public double getAveStrike() { throw new UnsupportedOperationException(); }
 	@Override public double getAveLength() { throw new UnsupportedOperationException(); }
 	@Override public double getAreaInsideRegion(Region region) { throw new UnsupportedOperationException(); }
-	@Override public LocationList getEvenlyDiscritizedListOfLocsOnSurface() { throw new UnsupportedOperationException(); }
 	@Override public FaultTrace getEvenlyDiscritizedUpperEdge() { throw new UnsupportedOperationException(); }
 	@Override public LocationList getEvenlyDiscritizedLowerEdge() { throw new UnsupportedOperationException(); }
 	@Override public double getAveGridSpacing() { throw new UnsupportedOperationException(); }
