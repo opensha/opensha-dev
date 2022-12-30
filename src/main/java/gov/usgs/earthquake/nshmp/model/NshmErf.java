@@ -166,11 +166,11 @@ public class NshmErf extends AbstractERF {
       double weight,
       double duration) {
 
-    ClusterSource cs = crs.get(0); // known to be only one
+    // cluster and fault rupture sets are both known to have only one source
+    ClusterSource cs = crs.get(0);
     double rate = cs.rate();
     return cs.ruptureSets().stream()
-        .map(rs -> (FaultRuptureSet) rs)
-        .map(frs -> new NshmSource.Fault(frs.get(0), weight * rate, duration))
+        .map(rs -> new NshmSource.Fault(rs.get(0), weight * rate, duration))
         .collect(toList());
   }
 
