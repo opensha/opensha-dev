@@ -8,7 +8,9 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,6 +48,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
@@ -198,7 +201,13 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 			zip.close();
 		}
 		
-		erf = new NshmErf(erfPath, !noSubduction, !faultOnly);
+    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+    if (!noSubduction) {
+      trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+      trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+    }
+
+		erf = new NshmErf(erfPath, trts, !faultOnly);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();

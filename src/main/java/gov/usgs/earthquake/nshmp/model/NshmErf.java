@@ -1,12 +1,18 @@
 package gov.usgs.earthquake.nshmp.model;
 
 import static java.util.stream.Collectors.toList;
+import static org.opensha.sha.util.TectonicRegionType.ACTIVE_SHALLOW;
+import static org.opensha.sha.util.TectonicRegionType.STABLE_SHALLOW;
+import static org.opensha.sha.util.TectonicRegionType.SUBDUCTION_INTERFACE;
+import static org.opensha.sha.util.TectonicRegionType.SUBDUCTION_SLAB;
+import static org.opensha.sha.util.TectonicRegionType.VOLCANIC;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -28,20 +34,29 @@ public class NshmErf extends AbstractERF {
   private final List<NshmSource> allSources;
   private final Multimap<TectonicRegionType, NshmSource> sourceMap;
 
-  private final boolean subduction;
+  private final boolean activeCrust;
+  private final boolean stableCrust;
+  private final boolean subInterface;
+  private final boolean subSlab;
+  private final boolean volcanic;
   private final boolean grid;
 
-  public NshmErf(Path path, boolean subduction, boolean grid) {
+  public NshmErf(Path path, Set<TectonicRegionType> trts, boolean grid) {
     model = HazardModel.load(path);
     allSources = new ArrayList<>();
     sourceMap = MultimapBuilder
         .enumKeys(TectonicRegionType.class)
         .arrayListValues()
         .build();
-    this.subduction = subduction;
+
+    activeCrust = trts.contains(ACTIVE_SHALLOW) || trts.isEmpty();
+    stableCrust = trts.contains(STABLE_SHALLOW) || trts.isEmpty();
+    subInterface = trts.contains(SUBDUCTION_INTERFACE) || trts.isEmpty();
+    subSlab = trts.contains(SUBDUCTION_SLAB) || trts.isEmpty();
+    volcanic = trts.contains(VOLCANIC) || trts.isEmpty();
     this.grid = grid;
+
     init();
-    // System.out.println(allSources.size());
   }
 
   private void init() {
@@ -55,12 +70,19 @@ public class NshmErf extends AbstractERF {
     Multimap<TectonicSetting, SourceTree> trees = model.trees();
     for (Entry<TectonicSetting, SourceTree> entry : trees.entries()) {
       TectonicSetting setting = entry.getKey();
-      if (setting == TectonicSetting.SUBDUCTION && !subduction) {
+      if (setting == TectonicSetting.SUBDUCTION && !subInterface && !subSlab) {
         continue;
       }
-      if (setting == TectonicSetting.STABLE_CRUST) {
+      if (setting == TectonicSetting.STABLE_CRUST && !stableCrust) {
         continue;
       }
+      if (setting == TectonicSetting.ACTIVE_CRUST && !activeCrust) {
+        continue;
+      }
+      if (setting == TectonicSetting.VOLCANIC && !volcanic) {
+        continue;
+      }
+
       SourceTree tree = entry.getValue();
       SourceType type = tree.type();
       TectonicRegionType trt = NshmUtil.tectonicSettingToType(setting, type);
@@ -83,15 +105,14 @@ public class NshmErf extends AbstractERF {
     List<NshmSource> sources = new ArrayList<>();
     double duration = getTimeSpan().getDuration();
     tree.stream()
-        .map(branch -> sourcesFromBranch(branch, duration, grid))
+        .map(branch -> sourcesFromBranch(branch, duration))
         .forEach(sources::addAll);
     return sources;
   }
 
-  private static List<NshmSource> sourcesFromBranch(
+  private List<NshmSource> sourcesFromBranch(
       Branch<RuptureSet<? extends Source>> branch,
-      double duration,
-      boolean grid) {
+      double duration) {
 
     RuptureSet<? extends Source> ruptureSet = branch.value();
     double weight = branch.weight();
@@ -110,6 +131,16 @@ public class NshmErf extends AbstractERF {
       case FAULT_SYSTEM:
         SystemRuptureSet srs = (SystemRuptureSet) ruptureSet;
         return systemRuptureSetToSources(srs, weight, duration);
+
+      case INTERFACE:
+        return (subInterface)
+            ? ruptureSetToSources(ruptureSet, weight, duration)
+            : List.of();
+
+      case SLAB:
+        return (subSlab)
+            ? ruptureSetToSources(ruptureSet, weight, duration)
+            : List.of();
 
       default:
         return ruptureSetToSources(ruptureSet, weight, duration);

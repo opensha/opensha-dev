@@ -1,7 +1,11 @@
 package gov.usgs.earthquake.nshmp.model;
 
+import static org.opensha.sha.util.TectonicRegionType.ACTIVE_SHALLOW;
+
 import java.awt.geom.Point2D;
 import java.nio.file.Path;
+import java.util.EnumSet;
+import java.util.Set;
 
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -17,6 +21,7 @@ import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers.ASK_2014_Wrapper;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.util.TectonicRegionType;
 
 public class NshmErfTest {
 
@@ -33,7 +38,8 @@ public class NshmErfTest {
 
   public static void main(String[] args) {
 
-    NshmErf erf = new NshmErf(MODEL, false, true);
+    Set<TectonicRegionType> trts = EnumSet.of(ACTIVE_SHALLOW);
+    NshmErf erf = new NshmErf(MODEL, trts, true);
     System.out.println("NSHM ERF size: " + erf.getNumSources());
     erf.getTimeSpan().setDuration(50.0);
     erf.updateForecast();

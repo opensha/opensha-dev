@@ -6,7 +6,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
@@ -39,6 +41,7 @@ import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
@@ -61,7 +64,13 @@ public class SingleSiteVerificationTest {
 		boolean subduction = false;
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		NshmErf erf = new NshmErf(erfPath, subduction, gridded);
+    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+    if (subduction) {
+      trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+      trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+    }
+
+		NshmErf erf = new NshmErf(erfPath, trts, gridded);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 		
@@ -128,7 +137,7 @@ public class SingleSiteVerificationTest {
 		}
 		
 		gridded = false;
-		erf = new NshmErf(erfPath, subduction, gridded);
+		erf = new NshmErf(erfPath, trts, gridded);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 		calc.getHazardCurve(logXVals, site, gmpe, erf);
