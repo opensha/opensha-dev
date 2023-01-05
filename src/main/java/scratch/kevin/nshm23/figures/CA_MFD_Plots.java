@@ -42,7 +42,7 @@ class CA_MFD_Plots {
 	public static void main(String[] args) throws IOException {
 		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
 		
-		File outputDir = new File("/tmp/u3_reg_mfds");
+		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/u3_reg_mfds");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		AnalysisRegions analysis = AnalysisRegions.CONUS_U3_RELM;

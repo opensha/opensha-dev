@@ -221,13 +221,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * NSHM23 logic tree
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-		dirName += "-nshm23_u3_hybrid_branches";
-		double avgNumRups = 325000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+//		dirName += "-nshm23_u3_hybrid_branches";
+//		double avgNumRups = 325000;
 		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-//		dirName += "-nshm23_branches";
-//		double avgNumRups = 600000;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+		dirName += "-nshm23_branches";
+		double avgNumRups = 600000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
@@ -263,7 +263,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -292,8 +292,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
 //		dirName += "-no_reweight_use_prev";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjustFullSys.class;
-		dirName += "-full_sys_inv-no_reweight_use_prev";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjustFullSys.class;
+//		dirName += "-full_sys_inv-no_reweight_use_prev";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedOrigWeights.class;
 //		dirName += "-no_reweight_use_orig";
@@ -353,6 +353,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.PaleoSlipInequality.class;
 //		dirName += "-paleo_slip_ineq";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.TenThousandItersPerRup.class;
+//		dirName += "-10000ip";
+		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
 //		dirName += "-exp_perturb";
@@ -374,10 +377,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		griddedJob = true;
 		LogicTreeNode[] required = {
 				// FAULT MODELS
-				FaultModels.FM3_1,
+//				FaultModels.FM3_1,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 //				NSHM23_FaultModels.NSHM23_v1p4,
-//				NSHM23_FaultModels.NSHM23_v2,
+				NSHM23_FaultModels.NSHM23_v2,
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
@@ -407,12 +410,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
-				SlipAlongRuptureModels.UNIFORM,
+//				SlipAlongRuptureModels.UNIFORM,
 //				SlipAlongRuptureModels.TAPERED,
 				
 				// SUB-SECT CONSTRAINT
-				SubSectConstraintModels.TOT_NUCL_RATE,
-//				SubSectConstraintModels.NUCL_MFD,
+//				SubSectConstraintModels.TOT_NUCL_RATE,
+				SubSectConstraintModels.NUCL_MFD,
 				
 				// SUB-SEIS MO REDUCTION
 //				SubSeisMoRateReductions.SUB_B_1,

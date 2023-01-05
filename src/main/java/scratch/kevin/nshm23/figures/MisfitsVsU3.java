@@ -35,7 +35,7 @@ class MisfitsVsU3 {
 //				+ "node_branch_averaged/PaleoUncert_EvenFitPaleo.zip");
 //		String newName = "NSHM23 Methodology"; String prefixAdd = "_even_paleo";
 		
-		File outputDir = new File("/tmp/u3_misfit_hists");
+		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/u3_misfit_hists");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		FaultSystemSolution u3Sol = FaultSystemSolution.load(u3File);

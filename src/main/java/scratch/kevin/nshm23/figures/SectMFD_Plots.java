@@ -31,7 +31,7 @@ public class SectMFD_Plots {
 	public static void main(String[] args) throws IOException {
 		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
 		
-		File outputDir = new File("/tmp/sect_mfds");
+		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/sect_mfds");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		FaultSystemSolution u3Sol = FaultSystemSolution.load(

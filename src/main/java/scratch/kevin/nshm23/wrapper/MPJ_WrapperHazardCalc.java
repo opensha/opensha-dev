@@ -201,11 +201,11 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 			zip.close();
 		}
 		
-    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
-    if (!noSubduction) {
-      trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
-      trts.add(TectonicRegionType.SUBDUCTION_SLAB);
-    }
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+		if (!noSubduction) {
+			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+		}
 
 		erf = new NshmErf(erfPath, trts, !faultOnly);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());

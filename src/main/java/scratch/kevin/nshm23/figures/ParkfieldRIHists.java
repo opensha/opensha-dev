@@ -49,7 +49,7 @@ public class ParkfieldRIHists {
 		HistogramFunction histModel = initHist();
 		double riModel = calcBranchParkfieldHist(modelFile, histModel);
 		
-		File outputDir = new File("/tmp");
+		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures");
 		
 		List<XY_DataSet> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
