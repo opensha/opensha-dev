@@ -40,12 +40,12 @@ public class ParkfieldRIHists {
 		double riU3 = calcBranchParkfieldHist(u3ResultsFile, histU3);
 		
 		File ingredientsFile = new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/results.zip");
+				+ "2022_12_20-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/results.zip");
 		HistogramFunction histIngred = initHist();
 		double riIngred = calcBranchParkfieldHist(ingredientsFile, histIngred);
 		
 		File modelFile = new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/results.zip");
+				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/results.zip");
 		HistogramFunction histModel = initHist();
 		double riModel = calcBranchParkfieldHist(modelFile, histModel);
 		

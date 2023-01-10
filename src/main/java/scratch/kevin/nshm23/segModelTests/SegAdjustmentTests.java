@@ -180,40 +180,12 @@ public class SegAdjustmentTests {
 				"      }\n"+
 				"    }";
 		sects.add(GeoJSONFaultSection.fromFeature(Feature.fromJSON(sect3JSON)));
-		String sect4JSON =
-				"    {\n"+
-				"      \"type\": \"Feature\",\n"+
-				"      \"id\": 3,\n"+
-				"      \"properties\": {\n"+
-				"        \"FaultID\": 0,\n"+
-				"        \"FaultName\": \"Test Fault 4\",\n"+
-				"        \"DipDeg\": 90.0,\n"+
-				"        \"Rake\": 0.0,\n"+
-				"        \"LowDepth\": 10.0,\n"+
-				"        \"UpDepth\": 0.0,\n"+
-				"        \"SlipRate\": 1\n"+
-				"      },\n"+
-				"      \"geometry\": {\n"+
-				"        \"type\": \"LineString\",\n"+
-				"        \"coordinates\": [\n"+
-				"          [\n"+
-				"            "+l30.getLongitude()+",\n"+
-				"            "+l30.getLatitude()+"\n"+
-				"          ],\n"+
-				"          [\n"+
-				"            "+l31.getLongitude()+",\n"+
-				"            "+l31.getLatitude()+"\n"+
-				"          ]\n"+
-				"        ]\n"+
-				"      }\n"+
-				"    }";
-		sects.add(GeoJSONFaultSection.fromFeature(Feature.fromJSON(sect4JSON)));
 		
 		double minSupraMag = 6.05d;
 		double maxSingleFaultMag = 6.95d;
 //		double[] maxMultiFaultMags = { 7.95d, 7.25d };
 //		double[] maxMultiFaultMags = { 7.95d, 7.95d };
-		double[] maxMultiFaultMags = { 7.45d, 7.45d, 7.45d };
+		double[] maxMultiFaultMags = { 7.45d, 7.45d };
 		
 		double maxMag = StatUtils.max(maxMultiFaultMags);
 		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(maxMag);
@@ -293,6 +265,7 @@ public class SegAdjustmentTests {
 		segPrefixes.add("passthrough_rate_mfd_avg");
 		segColors.add(Color.BLUE.darker());
 		
+		ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb.D = true;
 		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(segModel, 50, true));
 		segNames.add("Relative GR MFD Averaging");
 		segPrefixes.add("rel_gr_mfd_avg");
@@ -321,6 +294,8 @@ public class SegAdjustmentTests {
 		
 		double minNonZero = Double.POSITIVE_INFINITY;
 		double maxY = 0d;
+		
+		List<PlotSpec> cleanOrigSpecs = new ArrayList<>();
 		
 		for (int m=0; m<segAdjusters.size(); m++) {
 			SectNucleationMFD_Estimator segAdjuster = segAdjusters.get(m);
@@ -412,6 +387,22 @@ public class SegAdjustmentTests {
 				origMFD.setName("Full GR Target");
 				funcs.add(origMFD);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, origColor));
+				
+				List<XY_DataSet> cleanFuncs = null;
+				List<PlotCurveCharacterstics> cleanChars = null;
+				PlotSpec cleanSpec = null;
+				if (m == 0) {
+					cleanFuncs = new ArrayList<>();
+					cleanChars = new ArrayList<>();
+					cleanFuncs.add(singleFaultMFD);
+					cleanChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, singleFaultColor));
+					cleanFuncs.add(origMFD);
+					cleanChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, origColor));
+					cleanSpec= new PlotSpec(cleanFuncs, cleanChars, "Original Targets",
+							"Magnitude", "Target Nucleation Rate");
+					cleanSpec.setLegendVisible(true);
+					cleanOrigSpecs.add(cleanSpec);
+				}
 				
 				if (excess != null) {
 					excess.setName("Excess");
@@ -533,6 +524,12 @@ public class SegAdjustmentTests {
 						ann.setPaint(annColor);
 						ann.setTextAnchor(TextAnchor.BASELINE_CENTER);
 						spec.addPlotAnnotation(ann);
+						
+						if (cleanSpec != null) {
+							cleanFuncs.add(xy);
+							cleanChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, annColor));
+							cleanSpec.addPlotAnnotation(ann);
+						}
 					}
 					
 				}
@@ -713,6 +710,14 @@ public class SegAdjustmentTests {
 				gp.drawGraphPanel(spec, false, true, xRange, yRange);
 				
 				PlotUtils.writePlots(outputDir, plotPrefix, gp, 800, 650, true, false, false);
+				
+				if (m == 0) {
+					// also create a clean one with just the original and single fault MFDs
+					spec = cleanOrigSpecs.get(s);
+					gp.drawGraphPanel(spec, false, true, xRange, yRange);
+					
+					PlotUtils.writePlots(outputDir, "sect_"+s+"_clean", gp, 800, 650, true, false, false);
+				}
 			}
 		}
 	}

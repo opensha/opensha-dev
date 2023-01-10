@@ -55,11 +55,11 @@ public class WrapperHazardCalc {
 		boolean subduction = false;
 		double gridSpacing = 0.2;
 		
-    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
-    if (subduction) {
-      trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
-      trts.add(TectonicRegionType.SUBDUCTION_SLAB);
-    }
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+		if (subduction) {
+			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+		}
 
 		NshmErf erf = new NshmErf(erfPath, trts, gridded);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
