@@ -17,6 +17,7 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.CubedGriddedRegion;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
@@ -42,12 +43,12 @@ public class WUS_HazardChangePageGen {
 				+ "results_hazard_include_0.1deg.zip");
 		GriddedGeoDataSet modelHazard = CA_HazardChangeFigures.loadXYZ(modelHazardFile, entryName);
 		
-//		File modelGridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-//				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
-//				+ "results_hazard_only_0.1deg.zip");
-//		GriddedGeoDataSet modelGridHazard = CA_HazardChangeFigures.loadXYZ(modelGridHazardFile, entryName);
-//		Preconditions.checkState(modelGridHazard.size() == modelHazard.size());
-		GriddedGeoDataSet modelGridHazard = null;
+		File modelGridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				+ "results_hazard_only_0.1deg.zip");
+		GriddedGeoDataSet modelGridHazard = CA_HazardChangeFigures.loadXYZ(modelGridHazardFile, entryName);
+		Preconditions.checkState(modelGridHazard.size() == modelHazard.size());
+//		GriddedGeoDataSet modelGridHazard = null;
 		
 		File nshm18_23gridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2023_01_04-nshm18-grid_src_from_23-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
@@ -59,11 +60,11 @@ public class WUS_HazardChangePageGen {
 		GriddedGeoDataSet nshm18Hazard = CA_HazardChangeFigures.loadXYZ(nshm18HazardFile, wrapperEntryName);
 		Preconditions.checkState(nshm18Hazard.size() == modelHazard.size());
 		
-//		File nshm18GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-//				+ "2023_01_18-nshm18-hazard-ask2014-0.1deg-noSub-griddedOnly/results_hazard.zip");
-//		GriddedGeoDataSet nshm18GridHazard = CA_HazardChangeFigures.loadXYZ(nshm18GridHazardFile, wrapperEntryName);
-//		Preconditions.checkState(nshm18GridHazard.size() == modelHazard.size());
-		GriddedGeoDataSet nshm18GridHazard = null;
+		File nshm18GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2023_01_18-nshm18-hazard-ask2014-0.1deg-noSub-griddedOnly/results_hazard.zip");
+		GriddedGeoDataSet nshm18GridHazard = CA_HazardChangeFigures.loadXYZ(nshm18GridHazardFile, wrapperEntryName);
+		Preconditions.checkState(nshm18GridHazard.size() == modelHazard.size());
+//		GriddedGeoDataSet nshm18GridHazard = null;
 		
 		// load moment change
 		MomentRateCompNSHM18.LINEAR_RAMP = true;
@@ -133,7 +134,7 @@ public class WUS_HazardChangePageGen {
 			
 			if (gridded) {
 				double grid23 = modelGridHazard.get(i);
-				double grid18 = nshm18_23gridHazard.get(i);
+				double grid18 = nshm18GridHazard.get(i);
 				
 				// add fault contributions to highlight only gridded
 				double faultAdd = Math.max(0, full23 - grid23);
@@ -307,6 +308,22 @@ public class WUS_HazardChangePageGen {
 		lines.addAll(table.build());
 		lines.add("");
 		
+		lines.add("### Fault-Based Hazard Comparisons, Moment Chage Masked");
+		lines.add(topLink); lines.add("");
+		
+		lines.add("This section masks hazard changes, only showing them near faults where NSHM23 fault-moment is within "
+				+ "a given factor of NSHM18 fault-moment. Various thresholds are used, starting with one that only "
+				+ "includes areas with faults in both models, and then the threshold decreases to only show areas where "
+				+ "moment is similar in the two models. Areas where the sign of the hazard change differs from the "
+				+ "sign of moment change are shown regardless of the threshold.");
+		lines.add("");
+		
+		TableBuilder threshMapTable = MarkdownUtils.tableBuilder();
+		threshMapTable.addLine("Ratio", "Difference");
+		
+		List<String> threshLabels = new ArrayList<>();
+		List<ChangeStats> threshStats = new ArrayList<>();
+		
 		for (double threshold : momentThresholds) {
 			String threshLabel, threshPrefix;
 			if (Double.isFinite(threshold)) {
@@ -317,22 +334,12 @@ public class WUS_HazardChangePageGen {
 				threshPrefix = "mom_thresh_inf";
 			}
 			
-			lines.add("### Fault-Based Hazard Comparisons, "+threshLabel);
-			lines.add(topLink); lines.add("");
-			
-			if (Double.isFinite(threshold)) {
-				lines.add("Here, we mask hazard changes only showing them near faults where NSHM23 moment is within a "
-						+ "factor of "+oDF.format(threshold)+" of that from NSHM18. Areas where the sign of hazard change "
-						+ "differs from the sign of moment change are shown regardless of the threshold.");
-			} else {
-				lines.add("Here, we mask hazard changes only showing them near faults with nonzero moment in both "
-						+ "NSHM23 and NSHM18 (this ignores added faults).");
-			}
-			lines.add("");
+			threshLabels.add(threshLabel);
 			
 			double lowerThresh = 1d/threshold;
 			
 			ChangeStats stats = new ChangeStats();
+			threshStats.add(stats);
 			GriddedGeoDataSet maskedPDiff = new GriddedGeoDataSet(gridReg, false);
 			GriddedGeoDataSet maskedDiff = new GriddedGeoDataSet(gridReg, false);
 			for (int i=0; i<modelHazard.size(); i++) {
@@ -361,45 +368,52 @@ public class WUS_HazardChangePageGen {
 				}
 			}
 			
-			table = MarkdownUtils.tableBuilder();
-			table.addLine("Ratio", "Difference");
-			
-			table.initNewLine();
+			threshMapTable.initNewLine();
 			
 			mapMaker.plotXYZData(maskedPDiff, pDiffCPT, "NSHM23 vs NSHM18 (w/ '23 Grid), % Change, "+hazLabel);
 			mapMaker.plot(resourcesDir, "fault_hazard_pDiff_"+threshPrefix, threshLabel);
-			table.addColumn("![Map]("+resourcesDir.getName()+"/fault_hazard_pDiff_"+threshPrefix+".png)");
+			threshMapTable.addColumn("![Map]("+resourcesDir.getName()+"/fault_hazard_pDiff_"+threshPrefix+".png)");
 			
 			mapMaker.plotXYZData(maskedDiff, diffCPT, "NSHM23 - NSHM18 (w/ '23 Grid), "+hazLabel+" (g)");
 			mapMaker.plot(resourcesDir, "fault_hazard_diff_"+threshPrefix, threshLabel);
-			table.addColumn("![Map]("+resourcesDir.getName()+"/fault_hazard_diff_"+threshPrefix+".png)");
+			threshMapTable.addColumn("![Map]("+resourcesDir.getName()+"/fault_hazard_diff_"+threshPrefix+".png)");
 			
-			table.finalizeLine();
-			
-			lines.addAll(table.build());
-			lines.add("");
-			
-			String withinLabel = MarkdownUtils.boldCentered("% Locs Within Moment Threshold");
-			table = MarkdownUtils.tableBuilder();
+			threshMapTable.finalizeLine();
+		}
+		
+		lines.addAll(threshMapTable.build());
+		lines.add("");
+		
+		String withinLabel = MarkdownUtils.boldCentered("% Locs Within Moment Threshold");
+		table = MarkdownUtils.tableBuilder();
+		table.initNewLine();
+		table.addColumns("Threshold", withinLabel);
+		table.addColumns(threshStats.get(0).pDiffTableHeader());
+		table.finalizeLine();
+		for (int i=0; i<threshLabels.size(); i++) {
 			table.initNewLine();
-			table.addColumn(withinLabel);
-			table.addColumns(stats.pDiffTableHeader());
-			table.finalizeLine().initNewLine();
-			table.addColumn(pDF.format((double)stats.totalNum/(double)maskedPDiff.size()));
+			table.addColumn(threshLabels.get(i));
+			ChangeStats stats = threshStats.get(i);
+			table.addColumn(pDF.format((double)stats.totalNum/(double)gridReg.getNodeCount()));
 			table.addColumns(stats.pDiffTableLine());
 			table.finalizeLine();
+		}
+		table.initNewLine();
+		table.addColumns("Threshold", withinLabel);
+		table.addColumns(threshStats.get(0).diffTableHeader());
+		table.finalizeLine();
+		for (int i=0; i<threshLabels.size(); i++) {
 			table.initNewLine();
-			table.addColumn(withinLabel);
-			table.addColumns(stats.diffTableHeader());
-			table.finalizeLine().initNewLine();
-			table.addColumn(pDF.format((double)stats.totalNum/(double)maskedPDiff.size()));
+			table.addColumn(threshLabels.get(i));
+			ChangeStats stats = threshStats.get(i);
+			table.addColumn(pDF.format((double)stats.totalNum/(double)gridReg.getNodeCount()));
 			table.addColumns(stats.diffTableLine());
 			table.finalizeLine();
-			lines.add("__Near-Fault Hazard Comparison Statistics, "+threshLabel+":__");
-			lines.add("");
-			lines.addAll(table.build());
-			lines.add("");
 		}
+		lines.add("__Near-Fault Hazard Comparison Statistics:__");
+		lines.add("");
+		lines.addAll(table.build());
+		lines.add("");
 		
 		ChangeStats griddedStats = null;
 		if (gridded) {
@@ -477,9 +491,13 @@ public class WUS_HazardChangePageGen {
 					maskedPDiff.set(i, Double.NaN);
 					maskedDiff.set(i, Double.NaN);
 				} else {
-					stats.addValue(modelHazard.get(i), nshm18_23gridHazard.get(i));
-					maskedPDiff.set(i, faultHazardPDiff.get(i));
-					maskedDiff.set(i, faultHazardDiff.get(i));
+					double haz23 = modelHazard.get(i);
+					double grid23 = modelGridHazard.get(i);
+					double fault23 = Math.max(0, haz23 - grid23);
+					double grid18 = nshm18GridHazard.get(i);
+					stats.addValue(haz23, grid18+fault23);
+					maskedPDiff.set(i, griddedHazardPDiff.get(i));
+					maskedDiff.set(i, griddedHazardDiff.get(i));
 				}
 			}
 			
@@ -501,7 +519,7 @@ public class WUS_HazardChangePageGen {
 			lines.addAll(table.build());
 			lines.add("");
 			
-			String withinLabel = MarkdownUtils.boldCentered("% Locs Away From Faults");
+			withinLabel = MarkdownUtils.boldCentered("% Locs Away From Faults");
 			table = MarkdownUtils.tableBuilder();
 			table.initNewLine();
 			table.addColumn(withinLabel);
@@ -540,7 +558,7 @@ public class WUS_HazardChangePageGen {
 		// this is already plotted
 		table.addColumn("![Map]("+resourcesDir.getName()+"/hazard_nshm23.png)");
 		
-		mapMaker18.plotXYZData(asLog10(nshm18_23gridHazard), hazCPT, "NSHM18, "+hazLabel+" (g)");
+		mapMaker18.plotXYZData(asLog10(nshm18Hazard), hazCPT, "NSHM18, "+hazLabel+" (g)");
 		mapMaker18.plot(resourcesDir, "hazard_nshm18", " ");
 		table.addColumn("![Map]("+resourcesDir.getName()+"/hazard_nshm18.png)");
 		
@@ -619,10 +637,31 @@ public class WUS_HazardChangePageGen {
 		if (gridded) {
 			// add fault/grid attribution plots
 			
-			CPT pDiffAttributionCPT = CA_HazardChangeFigures.getAttributionCPT(
-					GMT_CPT_Files.DIVERGING_CORK_UNIFORM.instance(), 10d, 50d);
-			CPT diffAttributionCPT = CA_HazardChangeFigures.getAttributionCPT(
-					GMT_CPT_Files.DIVERGING_BROC_UNIFORM.instance(), 0.05, 0.2d);
+			CPT cork = GMT_CPT_Files.DIVERGING_CORK_UNIFORM.instance();
+			CPT broc = GMT_CPT_Files.DIVERGING_BROC_UNIFORM.instance();
+			// they get too dark at the edges (hard to tell color), trim them
+			cork = cork.rescale(-1d, 1d);
+			broc = broc.rescale(-1d, 1d);
+			CPT modCork = new CPT();
+			CPT modBroc = new CPT();
+			for (double v=-0.81; (float)v<=0.8f; v+=0.01) {
+				float start = (float)(v-0.01);
+				Color startColorCorc = cork.getColor(start);
+				Color startColorBroc = broc.getColor(start);
+				float end = (float)v;
+				Color endColorCorc = cork.getColor(end);
+				Color endColorBroc = broc.getColor(end);
+				modCork.add(new CPTVal(start, startColorCorc, end, endColorCorc));
+				modBroc.add(new CPTVal(start, startColorBroc, end, endColorBroc));
+			}
+			modCork.setBelowMinColor(modCork.getMinColor());
+			modCork.setAboveMaxColor(modCork.getMaxColor());
+			modBroc.setBelowMinColor(modBroc.getMinColor());
+			modBroc.setAboveMaxColor(modBroc.getMaxColor());
+			
+			
+			CPT pDiffAttributionCPT = CA_HazardChangeFigures.getAttributionCPT(modCork, 10d, 50d);
+			CPT diffAttributionCPT = CA_HazardChangeFigures.getAttributionCPT(modBroc, 0.05, 0.2d);
 			
 			GriddedGeoDataSet pDiffAttribution = new GriddedGeoDataSet(gridReg, false);
 			GriddedGeoDataSet diffAttribution = new GriddedGeoDataSet(gridReg, false);
@@ -663,8 +702,8 @@ public class WUS_HazardChangePageGen {
 				}
 			}
 			
-			String pDiffLabel = "Gridded     ←     |Hazard % Change|     →      Faults";
-			String diffLabel  = "Gridded     ←    |Hazard Difference|    →      Faults";
+			String pDiffLabel = "Gridded       ←       |Hazard % Change|       →        Faults";
+			String diffLabel  = "Gridded       ←      |Hazard Difference|      →        Faults";
 			
 			// full hazard difference
 			lines.add("### Fault vs Gridded, Hazard Change Attribution");

@@ -195,8 +195,8 @@ public class CA_HazardChangeFigures {
 	}
 	
 	static CPT getAttributionCPT(CPT cptBasis, double maskRange, double fullRange) {
-		CPT leftCPT = getHalfCPT(cptBasis.reverse(), 10d, 50d);
-		CPT rightCPT = getHalfCPT(cptBasis, 10d, 50d);
+		CPT leftCPT = getHalfCPT(cptBasis.reverse(), maskRange, fullRange);
+		CPT rightCPT = getHalfCPT(cptBasis, maskRange, fullRange);
 		
 		CPT attributionCPT = new CPT();
 		for (int i=leftCPT.size(); --i>=0;) {
