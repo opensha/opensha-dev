@@ -34,11 +34,11 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
 		
-//		String erfPrefix = "nshm18";
-//		String tagName = "nshm-conus-5.2.0"; // NSHM18
+		String erfPrefix = "nshm18";
+		String tagName = "nshm-conus-5.2.0"; // NSHM18
 		
-		String erfPrefix = "nshm23-wrapped";
-		String tagName = "nshm-conus-6.a.5"; // NSHM23 draft
+//		String erfPrefix = "nshm23-wrapped";
+//		String tagName = "nshm-conus-6.a.5"; // NSHM23 draft
 		
 //		double gridSpacing = 0.2d; int mins = 600;
 		double gridSpacing = 0.1d; int mins = 2000;

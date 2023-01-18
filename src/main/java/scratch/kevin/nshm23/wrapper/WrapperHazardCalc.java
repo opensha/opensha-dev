@@ -65,6 +65,7 @@ public class WrapperHazardCalc {
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
+		System.exit(0);
 
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
 		

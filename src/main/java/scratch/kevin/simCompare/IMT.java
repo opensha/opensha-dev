@@ -10,6 +10,9 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SignificantDurationParam
 public enum IMT {
 	PGV(PGV_Param.NAME, PGV_Param.NAME, PGV_Param.NAME, "pgv", "cm/s", -1d),
 	PGA(PGA_Param.NAME, PGA_Param.NAME, PGA_Param.NAME, "pga", "g", 0d),
+	SA0P1(SA_Param.NAME, "0.1s SA", "0.1s", "0.1s", "g", 0.1d),
+	SA0P2(SA_Param.NAME, "0.2s SA", "0.2s", "0.2s", "g", 0.2d),
+	SA0P5(SA_Param.NAME, "0.5s SA", "0.5s", "0.5s", "g", 0.5d),
 	SA1P0(SA_Param.NAME, "1s SA", "1s", "1s", "g", 1d),
 	SA2P0(SA_Param.NAME, "2s SA", "2s", "2s", "g", 2d),
 	SA3P0(SA_Param.NAME, "3s SA", "3s", "3s", "g", 3d),

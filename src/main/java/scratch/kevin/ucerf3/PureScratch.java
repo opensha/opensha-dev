@@ -129,6 +129,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
@@ -194,6 +195,7 @@ import scratch.UCERF3.utils.FaultSectionDataWriter;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
+import scratch.kevin.simCompare.SiteHazardCurveComarePageGen;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class PureScratch {
@@ -2970,12 +2972,116 @@ public class PureScratch {
 		System.out.println("\tSum rate in ERF: "+(float)totRateTD);
 	}
 	
+	private static void test203() throws IOException {
+		// this is the file at https://opensha.usc.edu/ftp/kmilner/markdown/batch_inversions/nshm23-draft-latest/results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip
+		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+		FaultSystemSolution fss = FaultSystemSolution.load(solFile);
+		
+		GridSourceProvider gridProv = fss.getGridSourceProvider();
+		double directRate = 0d;
+		for (int i=0; i<gridProv.size(); i++) {
+			IncrementalMagFreqDist mfd = gridProv.getMFD(i, 5.05d);
+			directRate += mfd.calcSumOfY_Vals();
+		}
+
+		fss.removeAvailableModuleInstances(RupMFDsModule.class);
+
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fss);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
+		erf.getTimeSpan().setDuration(1d);
+		erf.updateForecast();
+		
+		double erfRate = 0d;
+		for (ProbEqkSource source : erf)
+			for (ProbEqkRupture rup : source)
+				if (rup.getMag() > 5d)
+					erfRate += rup.getMeanAnnualRate(1d);
+		
+		System.out.println("Total gridded seismicity rate M>5");
+		System.out.println("\tDirectly from FSS: "+(float)directRate);
+		System.out.println("\tFrom FSS ERF: "+(float)erfRate);
+	}
+	
+	private static void test204() throws IOException {
+		Location loc = new Location(34, -118);
+		System.out.println(SiteHazardCurveComarePageGen.getMiniMap(loc));
+	}
+	
+	private static void test205() throws IOException {
+//		File rebuildSolFile = new File("/tmp/rup_set_CoulombRupSet_5572_sects_19455_trace_locs_682615862169_area.zip");
+		File rebuildSolFile = new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+				+ "NSHM23_v2_plausibleMulti15km_adaptive6km_direct_cmlRake360_jumpP0.001_slipP0.05incrCapDist_"
+				+ "cff0.75IntsPos_comb2Paths_cffFavP0.01_cffFavRatioN2P0.5_sectFractGrow0.1.zip");
+		FaultSystemRupSet rebuildRupSet = FaultSystemRupSet.load(rebuildSolFile);
+		
+		File withCherawSolFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
+		FaultSystemRupSet withCherawRupSet = FaultSystemRupSet.load(withCherawSolFile);
+		
+		HashSet<Integer> retained = new HashSet<>();
+		for (FaultSection sect : withCherawRupSet.getFaultSectionDataList())
+			if (sect.getParentSectionId() != 2180)
+				retained.add(sect.getSectionId());
+		
+		FaultSystemRupSet subsetRupSet = withCherawRupSet.getForSectionSubSet(retained);
+		
+		System.out.println("Rebuild has "+rebuildRupSet.getNumSections()+" sections and "+rebuildRupSet.getNumRuptures()+" ruptures");
+		System.out.println("Original has "+withCherawRupSet.getNumSections()+" sections and "+withCherawRupSet.getNumRuptures()+" ruptures");
+		System.out.println("Subset has "+subsetRupSet.getNumSections()+" sections and "+subsetRupSet.getNumRuptures()+" ruptures");
+		
+		for (int s=0; s<subsetRupSet.getNumSections(); s++) {
+			FaultSection sect1 = rebuildRupSet.getFaultSectionData(s);
+			FaultSection sect2 = subsetRupSet.getFaultSectionData(s);
+			Preconditions.checkState(sect1.getSectionName().equals(sect2.getSectionName()),
+					"Name mismatch for %s:\n\tRebuild: %s\n\tSubset: %s", s, sect1.getSectionName(), sect2.getSectionName());
+			Preconditions.checkState(sect1.getParentSectionId() == sect2.getParentSectionId(),
+					"Parent ID mismatch for %s:\n\tRebuild: %s\n\tSubset: %s", s, sect1.getParentSectionId(), sect2.getParentSectionId());
+		}
+		
+		Preconditions.checkState(subsetRupSet.areSectionsEquivalentTo(rebuildRupSet));
+		
+		Map<UniqueRupture, Integer> rebuildUniques = new HashMap<>();
+		ClusterRuptures rebuildClusterRups = rebuildRupSet.requireModule(ClusterRuptures.class);
+		for (int r=0; r<rebuildRupSet.getNumRuptures(); r++)
+			rebuildUniques.put(rebuildClusterRups.get(r).unique, r);
+		
+		Map<UniqueRupture, Integer> subsetUniques = new HashMap<>();
+		ClusterRuptures subsetClusterRups = subsetRupSet.requireModule(ClusterRuptures.class);
+		for (int r=0; r<subsetRupSet.getNumRuptures(); r++)
+			subsetUniques.put(subsetClusterRups.get(r).unique, r);
+		
+		int numUniqueToRebuild = 0;
+		int numUniqueToSubset = 0;
+		for (UniqueRupture unique : rebuildUniques.keySet())
+			if (!subsetUniques.containsKey(unique))
+				numUniqueToRebuild++;
+		for (UniqueRupture unique : subsetUniques.keySet())
+			if (!rebuildUniques.containsKey(unique))
+				numUniqueToSubset++;
+		
+		System.out.println(numUniqueToRebuild+" are unique to the rebuild");
+		System.out.println(numUniqueToSubset+" are unique to the subset");
+		
+//		rebuildRupSet.write(new File("/tmp/carc_rebuild_rup_set.zip"));
+//		subsetRupSet.write(new File("/tmp/subset_rup_set.zip"));
+	}
+	
+	private static void test206() throws IOException {
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		
+		factory.setCacheDir(new File("/home/kevin/workspace/opensha/src/main/resources/scratchData/rupture_sets/caches"));
+		
+		factory.buildRuptureSet(NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT, 30);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test198();
+		test206();
 	}
 
 }

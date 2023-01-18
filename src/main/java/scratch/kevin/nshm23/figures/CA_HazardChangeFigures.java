@@ -172,7 +172,7 @@ public class CA_HazardChangeFigures {
 		mapMaker23.plot(outputDir, "comb_hazard_attribution", " ");
 	}
 	
-	private static GriddedGeoDataSet loadXYZ(File zipFile, String entryName) throws IOException {
+	static GriddedGeoDataSet loadXYZ(File zipFile, String entryName) throws IOException {
 		ZipFile zip = new ZipFile(zipFile);
 		
 		ZipEntry regEntry = zip.getEntry(MPJ_LogicTreeHazardCalc.GRID_REGION_ENTRY_NAME);

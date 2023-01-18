@@ -201,7 +201,9 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 			zip.close();
 		}
 		
-		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+		Set<TectonicRegionType> trts = EnumSet.of(
+				TectonicRegionType.ACTIVE_SHALLOW,
+				TectonicRegionType.STABLE_SHALLOW);
 		if (!noSubduction) {
 			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
 			trts.add(TectonicRegionType.SUBDUCTION_SLAB);

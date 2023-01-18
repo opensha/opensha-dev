@@ -264,7 +264,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -357,8 +357,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.TenThousandItersPerRup.class;
 //		dirName += "-10000ip";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OriginalWeights.class;
-		dirName += "-dm_orig_weights"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OriginalWeights.class;
+//		dirName += "-dm_orig_weights"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierlMinimizationWeights.class;
 //		dirName += "-dm_outlier_minimize_weights"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = false;
@@ -371,6 +371,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierReplacementYc5p0.class;
 //		dirName += "-dm_outlier_sub_yc_5"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierLogReplacementYc2p0.class;
+//		dirName += "-dm_outlier_log_sub_yc_2"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierLogReplacementYc3p5.class;
+//		dirName += "-dm_outlier_log_sub_yc_3p5"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierLogReplacementYc5p0.class;
+//		dirName += "-dm_outlier_log_sub_yc_5"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
 		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
@@ -422,7 +431,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
 //				ScalingRelationships.MEAN_UCERF3,
-				NSHM23_ScalingRelationships.AVERAGE,
+//				NSHM23_ScalingRelationships.AVERAGE,
 //				NSHM23_ScalingRelationships.LOGA_C4p2_SQRT_LEN,
 //				NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD,
 				
@@ -442,15 +451,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SubSeisMoRateReductions.SYSTEM_AVG_SUB_B_1,
 				
 				// SUPRA-SEIS-B
-				SupraSeisBValues.B_0p5,
+//				SupraSeisBValues.B_0p5,
 				
 				// PALEO UNCERT
-				NSHM23_PaleoUncertainties.EVEN_FIT,
+//				NSHM23_PaleoUncertainties.EVEN_FIT,
 				
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,
 //				NSHM23_SegmentationModels.AVERAGE,
-				NSHM23_SegmentationModels.MID,
+//				NSHM23_SegmentationModels.MID,
 //				NSHM23_SegmentationModels.CLASSIC,
 //				NSHM23_SegmentationModels.CLASSIC_FULL,
 				
@@ -576,6 +585,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		nodes = Integer.min(nodes, (int)calcNodes);
 		if (origNodes != nodes)
 			System.out.println("Adjusted "+origNodes+" to "+nodes+" nodes to evenly divide "+numCalcs+" calcs");
+		
+		if (origNodes > 1 && nodes < 2) {
+			System.out.println("Forcing 2 nodes");
+			nodes = 2;
+		}
 		
 		if (completionArg != null)
 			dirName += "-"+completionArg;
