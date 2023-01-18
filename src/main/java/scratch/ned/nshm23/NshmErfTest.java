@@ -11,6 +11,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.param.Parameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers.ASK_2014_Wrapper;
@@ -31,7 +32,7 @@ public class NshmErfTest {
   public static void main(String[] args) {
 
     Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
-    NshmErf erf = new NshmErf(MODEL, trts, false);
+    NshmErf erf = new NshmErf(MODEL, trts, IncludeBackgroundOption.INCLUDE);
     System.out.println("NSHM ERF size: " + erf.getNumSources());
     erf.getTimeSpan().setDuration(1.0);
     erf.updateForecast();

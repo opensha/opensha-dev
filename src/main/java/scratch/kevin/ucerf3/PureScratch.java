@@ -2616,16 +2616,16 @@ public class PureScratch {
 	private static void test198() throws IOException {
 		String erfPrefix = "nshm23-wrapped";
 		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.a.3");
-		boolean gridded = true;
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
 		boolean subduction = false;
 		
-    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
-    if (subduction) {
-      trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
-      trts.add(TectonicRegionType.SUBDUCTION_SLAB);
-    }
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+		if (subduction) {
+			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+		}
 
-		NshmErf erf = new NshmErf(erfPath, trts, gridded);
+		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 		

@@ -112,20 +112,7 @@ public class CA_HazardChangeFigures {
 				"NSHM23 vs UCERF3, % Change, "+hazLabel);
 		
 		// attribution
-		CPT methodsCPT = getHalfCPT(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance(), 10d, 50d);
-		CPT modelCPT = getHalfCPT(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse(), 10d, 50d);
-		
-		CPT attributionCPT = new CPT();
-		for (int i=methodsCPT.size(); --i>=0;) {
-			CPTVal val = methodsCPT.get(i);
-			attributionCPT.add(new CPTVal(-val.end, val.maxColor, -val.start, val.minColor));
-		}
-		for (CPTVal val : modelCPT)
-			attributionCPT.add(val);
-		attributionCPT.setBelowMinColor(methodsCPT.getAboveMaxColor());
-		attributionCPT.setAboveMaxColor(modelCPT.getAboveMaxColor());
-		attributionCPT.setNanColor(new Color(255, 255, 255, 0));
-//		System.out.println(combCPT);
+		CPT attributionCPT = getAttributionCPT(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse(), 10d, 50d);
 		
 		GriddedGeoDataSet attXYZ = new GriddedGeoDataSet(u3Map.getRegion(), false);
 		
@@ -205,6 +192,24 @@ public class CA_HazardChangeFigures {
 		zip.close();
 		
 		return xyz;
+	}
+	
+	static CPT getAttributionCPT(CPT cptBasis, double maskRange, double fullRange) {
+		CPT leftCPT = getHalfCPT(cptBasis.reverse(), 10d, 50d);
+		CPT rightCPT = getHalfCPT(cptBasis, 10d, 50d);
+		
+		CPT attributionCPT = new CPT();
+		for (int i=leftCPT.size(); --i>=0;) {
+			CPTVal val = leftCPT.get(i);
+			attributionCPT.add(new CPTVal(-val.end, val.maxColor, -val.start, val.minColor));
+		}
+		for (CPTVal val : rightCPT)
+			attributionCPT.add(val);
+		attributionCPT.setBelowMinColor(leftCPT.getAboveMaxColor());
+		attributionCPT.setAboveMaxColor(rightCPT.getAboveMaxColor());
+		attributionCPT.setNanColor(new Color(255, 255, 255, 0));
+		
+		return attributionCPT;
 	}
 	
 	private static CPT getHalfCPT(CPT cpt, double maskRange, double fullRange) {

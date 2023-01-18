@@ -7,6 +7,7 @@ import java.util.Set;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
@@ -17,7 +18,7 @@ public class WrapperSumMFD {
 
 	public static void main(String[] args) {
 		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.2.0-wasatch");
-		boolean gridded = false;
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.EXCLUDE;
 		boolean subduction = false;
 		
 		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
@@ -26,7 +27,7 @@ public class WrapperSumMFD {
 			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
 		}
 
-		NshmErf erf = new NshmErf(erfPath, trts, gridded);
+		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();

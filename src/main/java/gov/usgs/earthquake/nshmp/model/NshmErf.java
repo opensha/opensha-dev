@@ -19,6 +19,7 @@ import java.util.stream.IntStream;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.collect.Multimap;
@@ -40,8 +41,10 @@ public class NshmErf extends AbstractERF {
   private final boolean subSlab;
   private final boolean volcanic;
   private final boolean grid;
+  private final boolean faults;
 
-  public NshmErf(Path path, Set<TectonicRegionType> trts, boolean grid) {
+  public NshmErf(Path path, Set<TectonicRegionType> trts,
+		  IncludeBackgroundOption gridOption) {
     model = HazardModel.load(path);
     allSources = new ArrayList<>();
     sourceMap = MultimapBuilder
@@ -54,7 +57,9 @@ public class NshmErf extends AbstractERF {
     subInterface = trts.contains(SUBDUCTION_INTERFACE) || trts.isEmpty();
     subSlab = trts.contains(SUBDUCTION_SLAB) || trts.isEmpty();
     volcanic = trts.contains(VOLCANIC) || trts.isEmpty();
-    this.grid = grid;
+    this.grid = gridOption == IncludeBackgroundOption.INCLUDE
+    		|| gridOption == IncludeBackgroundOption.ONLY;
+    this.faults = gridOption != IncludeBackgroundOption.ONLY;
 
     init();
   }
@@ -127,18 +132,22 @@ public class NshmErf extends AbstractERF {
 
       case FAULT_CLUSTER:
         ClusterRuptureSet crs = (ClusterRuptureSet) ruptureSet;
-        return clusterRuptureSetToSources(crs, weight, duration);
+        return (faults)
+            ? clusterRuptureSetToSources(crs, weight, duration)
+            : List.of();
       case FAULT_SYSTEM:
         SystemRuptureSet srs = (SystemRuptureSet) ruptureSet;
-        return systemRuptureSetToSources(srs, weight, duration);
+        return (faults)
+            ? systemRuptureSetToSources(srs, weight, duration)
+            : List.of();
 
       case INTERFACE:
-        return (subInterface)
+        return (subInterface && faults)
             ? ruptureSetToSources(ruptureSet, weight, duration)
             : List.of();
 
       case SLAB:
-        return (subSlab)
+        return (subSlab && faults)
             ? ruptureSetToSources(ruptureSet, weight, duration)
             : List.of();
 

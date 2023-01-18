@@ -42,10 +42,12 @@ public class WUS_HazardChangePageGen {
 				+ "results_hazard_include_0.1deg.zip");
 		GriddedGeoDataSet modelHazard = CA_HazardChangeFigures.loadXYZ(modelHazardFile, entryName);
 		
-		File modelGridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
-				+ "results_hazard_only_0.1deg.zip");
-		GriddedGeoDataSet modelGridHazard = CA_HazardChangeFigures.loadXYZ(modelHazardFile, entryName);
+//		File modelGridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+//				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+//				+ "results_hazard_only_0.1deg.zip");
+//		GriddedGeoDataSet modelGridHazard = CA_HazardChangeFigures.loadXYZ(modelGridHazardFile, entryName);
+//		Preconditions.checkState(modelGridHazard.size() == modelHazard.size());
+		GriddedGeoDataSet modelGridHazard = null;
 		
 		File nshm18_23gridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2023_01_04-nshm18-grid_src_from_23-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
@@ -56,6 +58,12 @@ public class WUS_HazardChangePageGen {
 				+ "2023_01_17-nshm18-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
 		GriddedGeoDataSet nshm18Hazard = CA_HazardChangeFigures.loadXYZ(nshm18HazardFile, wrapperEntryName);
 		Preconditions.checkState(nshm18Hazard.size() == modelHazard.size());
+		
+//		File nshm18GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+//				+ "2023_01_18-nshm18-hazard-ask2014-0.1deg-noSub-griddedOnly/results_hazard.zip");
+//		GriddedGeoDataSet nshm18GridHazard = CA_HazardChangeFigures.loadXYZ(nshm18GridHazardFile, wrapperEntryName);
+//		Preconditions.checkState(nshm18GridHazard.size() == modelHazard.size());
+		GriddedGeoDataSet nshm18GridHazard = null;
 		
 		// load moment change
 		MomentRateCompNSHM18.LINEAR_RAMP = true;
@@ -87,12 +95,21 @@ public class WUS_HazardChangePageGen {
 		GriddedGeoDataSet faultHazardRatio = new GriddedGeoDataSet(gridReg, false);
 		GriddedGeoDataSet faultHazardPDiff = new GriddedGeoDataSet(gridReg, false);
 		GriddedGeoDataSet faultHazardDiff = new GriddedGeoDataSet(gridReg, false);
-//		GriddedGeoDataSet griddedHazardRatio = new GriddedGeoDataSet(gridReg, false);
-//		GriddedGeoDataSet griddedHazardPDiff = new GriddedGeoDataSet(gridReg, false);
-//		GriddedGeoDataSet griddedHazardDiff = new GriddedGeoDataSet(gridReg, false);
 		GriddedGeoDataSet fullHazardRatio = new GriddedGeoDataSet(gridReg, false);
 		GriddedGeoDataSet fullHazardPDiff = new GriddedGeoDataSet(gridReg, false);
 		GriddedGeoDataSet fullHazardDiff = new GriddedGeoDataSet(gridReg, false);
+		
+		boolean gridded = modelGridHazard != null && nshm18GridHazard != null;
+		GriddedGeoDataSet griddedHazardRatio, griddedHazardPDiff, griddedHazardDiff;
+		if (gridded) {
+			griddedHazardRatio = new GriddedGeoDataSet(gridReg, false);
+			griddedHazardPDiff = new GriddedGeoDataSet(gridReg, false);
+			griddedHazardDiff = new GriddedGeoDataSet(gridReg, false);
+		} else {
+			griddedHazardRatio = null;
+			griddedHazardPDiff = null;
+			griddedHazardDiff = null;
+		}
 		
 		for (int i=0; i<gridReg.getNodeCount(); i++) {
 			double full23 = modelHazard.get(i);
@@ -114,13 +131,22 @@ public class WUS_HazardChangePageGen {
 			fullHazardPDiff.set(i, 100d*(full23 - full18)/full18);
 			fullHazardDiff.set(i, fullDiff);
 			
-			// TODO gridded
-//			double griddedRatio = fullRatio / faultRatio;
-//			double griddedDiff = fullDiff - faultDiff;
-//			
-//			griddedHazardRatio.set(i, griddedRatio);
-//			griddedHazardPDiff.set(i, i)
-//			griddedHazardDiff.set(i, griddedDiff);
+			if (gridded) {
+				double grid23 = modelGridHazard.get(i);
+				double grid18 = nshm18_23gridHazard.get(i);
+				
+				// add fault contributions to highlight only gridded
+				double faultAdd = Math.max(0, full23 - grid23);
+				grid23 += faultAdd;
+				grid18 += faultAdd;
+				
+				double griddedRatio = grid23 / grid18;
+				double griddedDiff = grid23 - grid18;
+				
+				griddedHazardRatio.set(i, griddedRatio);
+				griddedHazardPDiff.set(i, 100d*(grid23 - grid18)/grid18);
+				griddedHazardDiff.set(i, griddedDiff);
+			}
 		}
 		
 		Color transparent = new Color(255, 255, 255, 0);
@@ -186,7 +212,7 @@ public class WUS_HazardChangePageGen {
 		
 		table.finalizeLine();
 		
-		table.addLine("Ratio", "Difference");
+		table.addLine(MarkdownUtils.boldCentered("Ratio"), MarkdownUtils.boldCentered("Difference"));
 		
 		table.initNewLine();
 		
@@ -203,15 +229,15 @@ public class WUS_HazardChangePageGen {
 		lines.addAll(table.build());
 		lines.add("");
 		
-		ChangeStats stats = new ChangeStats();
+		ChangeStats faultStats = new ChangeStats();
 		for (int i=0; i<modelHazard.size(); i++)
-			stats.addValue(modelHazard.get(i), nshm18_23gridHazard.get(i));
+			faultStats.addValue(modelHazard.get(i), nshm18_23gridHazard.get(i));
 		
 		table = MarkdownUtils.tableBuilder();
-		table.addLine(stats.pDiffTableHeader());
-		table.addLine(stats.pDiffTableLine());
-		table.addLine(stats.diffTableHeader());
-		table.addLine(stats.diffTableLine());
+		table.addLine(faultStats.pDiffTableHeader());
+		table.addLine(faultStats.pDiffTableLine());
+		table.addLine(faultStats.diffTableHeader());
+		table.addLine(faultStats.diffTableLine());
 		
 		lines.add("__Hazard Comparison Statistics:__");
 		lines.add("");
@@ -306,7 +332,7 @@ public class WUS_HazardChangePageGen {
 			
 			double lowerThresh = 1d/threshold;
 			
-			stats = new ChangeStats();
+			ChangeStats stats = new ChangeStats();
 			GriddedGeoDataSet maskedPDiff = new GriddedGeoDataSet(gridReg, false);
 			GriddedGeoDataSet maskedDiff = new GriddedGeoDataSet(gridReg, false);
 			for (int i=0; i<modelHazard.size(); i++) {
@@ -369,7 +395,129 @@ public class WUS_HazardChangePageGen {
 			table.addColumn(pDF.format((double)stats.totalNum/(double)maskedPDiff.size()));
 			table.addColumns(stats.diffTableLine());
 			table.finalizeLine();
-			lines.add("__Hazard Comparison Statistics, "+threshLabel+":__");
+			lines.add("__Near-Fault Hazard Comparison Statistics, "+threshLabel+":__");
+			lines.add("");
+			lines.addAll(table.build());
+			lines.add("");
+		}
+		
+		ChangeStats griddedStats = null;
+		if (gridded) {
+			// gridded differences
+			lines.add("## Gridded Seismicity Model Hazard Changes");
+			lines.add(topLink); lines.add("");
+			
+			lines.add("These plots compare the gridded seismicity components of the models. For the ratio and "
+					+ "difference maps, the contributions of NSHM23 fault sources is held constant (added to both "
+					+ "models).");
+			lines.add("");
+			
+			table = MarkdownUtils.tableBuilder();
+			
+			table.addLine("NSHM23, Gridded Only", "NSHM18, Gridded Only");
+			
+			table.initNewLine();
+			
+			mapMaker.plotXYZData(asLog10(modelGridHazard), hazCPT, "NSHM23, Gridded Only, "+hazLabel+" (g)");
+			mapMaker.plot(resourcesDir, "hazard_gridded_nshm23", " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/hazard_gridded_nshm23.png)");
+			
+			mapMaker18.plotXYZData(asLog10(nshm18GridHazard), hazCPT, "NSHM18, Gridded Only, "+hazLabel+" (g)");
+			mapMaker18.plot(resourcesDir, "hazard_gridded_nshm18", " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/hazard_gridded_nshm18.png)");
+			
+			table.finalizeLine();
+			
+			table.addLine(MarkdownUtils.boldCentered("Ratio"), MarkdownUtils.boldCentered("Difference"));
+			
+			table.initNewLine();
+			
+			mapMaker.plotXYZData(griddedHazardPDiff, pDiffCPT, "NSHM23 vs NSHM18, Gridded Only, % Change, "+hazLabel);
+			mapMaker.plot(resourcesDir, "gridded_hazard_pDiff", " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/gridded_hazard_pDiff.png)");
+			
+			mapMaker.plotXYZData(griddedHazardDiff, diffCPT, "NSHM23 - NSHM18, Gridded Only, "+hazLabel+" (g)");
+			mapMaker.plot(resourcesDir, "gridded_hazard_diff", " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/gridded_hazard_diff.png)");
+			
+			table.finalizeLine();
+			
+			lines.addAll(table.build());
+			lines.add("");
+			
+			griddedStats = new ChangeStats();
+			for (int i=0; i<modelHazard.size(); i++)
+				griddedStats.addValue(modelHazard.get(i), nshm18Hazard.get(i));
+			
+			table = MarkdownUtils.tableBuilder();
+			table.addLine(griddedStats.pDiffTableHeader());
+			table.addLine(griddedStats.pDiffTableLine());
+			table.addLine(griddedStats.diffTableHeader());
+			table.addLine(griddedStats.diffTableLine());
+			
+			lines.add("__Hazard Comparison Statistics:__");
+			lines.add("");
+			lines.addAll(table.build());
+			lines.add("");
+			
+			// now mask outside of faults
+			lines.add("### Gridded Seismicity Model Hazard Changes, Away From Faults");
+			lines.add(topLink); lines.add("");
+			
+			lines.add("Here, we mask hazard changes only showing them away from faults in either model.");
+			lines.add("");
+			
+			ChangeStats stats = new ChangeStats();
+			GriddedGeoDataSet maskedPDiff = new GriddedGeoDataSet(gridReg, false);
+			GriddedGeoDataSet maskedDiff = new GriddedGeoDataSet(gridReg, false);
+			for (int i=0; i<modelHazard.size(); i++) {
+				double mo23 = momentRates23.get(i);
+				double mo18 = momentRates18.get(i);
+				if (mo23 > 0 || mo18 > 0) {
+					maskedPDiff.set(i, Double.NaN);
+					maskedDiff.set(i, Double.NaN);
+				} else {
+					stats.addValue(modelHazard.get(i), nshm18_23gridHazard.get(i));
+					maskedPDiff.set(i, faultHazardPDiff.get(i));
+					maskedDiff.set(i, faultHazardDiff.get(i));
+				}
+			}
+			
+			table = MarkdownUtils.tableBuilder();
+			table.addLine("Ratio", "Difference");
+			
+			table.initNewLine();
+			
+			mapMaker.plotXYZData(maskedPDiff, pDiffCPT, "NSHM23 vs NSHM18, Gridded Only, % Change, "+hazLabel);
+			mapMaker.plot(resourcesDir, "gridded_hazard_pDiff_away_from_faults", "Gridded Hazard Away From Faults");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/gridded_hazard_pDiff_away_from_faults.png)");
+			
+			mapMaker.plotXYZData(maskedDiff, diffCPT, "NSHM23 - NSHM18, Gridded Only, "+hazLabel+" (g)");
+			mapMaker.plot(resourcesDir, "gridded_hazard_diff_away_from_faults", "Gridded Hazard Away From Faults");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/gridded_hazard_diff_away_from_faults.png)");
+			
+			table.finalizeLine();
+			
+			lines.addAll(table.build());
+			lines.add("");
+			
+			String withinLabel = MarkdownUtils.boldCentered("% Locs Away From Faults");
+			table = MarkdownUtils.tableBuilder();
+			table.initNewLine();
+			table.addColumn(withinLabel);
+			table.addColumns(stats.pDiffTableHeader());
+			table.finalizeLine().initNewLine();
+			table.addColumn(pDF.format((double)stats.totalNum/(double)maskedPDiff.size()));
+			table.addColumns(stats.pDiffTableLine());
+			table.finalizeLine();
+			table.initNewLine();
+			table.addColumn(withinLabel);
+			table.addColumns(stats.diffTableHeader());
+			table.finalizeLine().initNewLine();
+			table.addColumn(pDF.format((double)stats.totalNum/(double)maskedPDiff.size()));
+			table.addColumns(stats.diffTableLine());
+			table.finalizeLine();
+			lines.add("__Gridded Hazard Comparison Statistics Away From Faults:__");
 			lines.add("");
 			lines.addAll(table.build());
 			lines.add("");
@@ -385,7 +533,7 @@ public class WUS_HazardChangePageGen {
 		
 		table = MarkdownUtils.tableBuilder();
 		
-		table.addLine("NSHM23", "NSHM18");
+		table.addLine("Full NSHM23", "Full NSHM18");
 		
 		table.initNewLine();
 		
@@ -398,7 +546,7 @@ public class WUS_HazardChangePageGen {
 		
 		table.finalizeLine();
 		
-		table.addLine("Ratio", "Difference");
+		table.addLine(MarkdownUtils.boldCentered("Full Ratio"), MarkdownUtils.boldCentered("Full Difference"));
 		
 		table.initNewLine();
 		
@@ -412,23 +560,164 @@ public class WUS_HazardChangePageGen {
 		
 		table.finalizeLine();
 		
+		// add already plotted fault-only comparison
+		table.addLine(MarkdownUtils.boldCentered("Fault-Only Ratio"), MarkdownUtils.boldCentered("Fault-Only Difference"));
+		
+		table.initNewLine();
+		table.addColumn("![Map]("+resourcesDir.getName()+"/fault_hazard_pDiff.png)");
+		table.addColumn("![Map]("+resourcesDir.getName()+"/fault_hazard_diff.png)");
+		table.finalizeLine();
+		
+		if (gridded) {
+			// add already plotted gridded-only comparison
+			table.addLine(MarkdownUtils.boldCentered("Gridded-Only Ratio"), MarkdownUtils.boldCentered("Gridded-Only Difference"));
+			
+			table.initNewLine();
+			table.addColumn("![Map]("+resourcesDir.getName()+"/gridded_hazard_pDiff.png)");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/gridded_hazard_diff.png)");
+			
+			table.finalizeLine();
+		}
+		
 		lines.addAll(table.build());
 		lines.add("");
 		
-		stats = new ChangeStats();
+		ChangeStats fullStats = new ChangeStats();
 		for (int i=0; i<modelHazard.size(); i++)
-			stats.addValue(modelHazard.get(i), nshm18Hazard.get(i));
+			fullStats.addValue(modelHazard.get(i), nshm18Hazard.get(i));
 		
 		table = MarkdownUtils.tableBuilder();
-		table.addLine(stats.pDiffTableHeader());
-		table.addLine(stats.pDiffTableLine());
-		table.addLine(stats.diffTableHeader());
-		table.addLine(stats.diffTableLine());
+		table.initNewLine().addColumn("");
+		table.addColumns(fullStats.pDiffTableHeader()).finalizeLine();
+		
+		table.initNewLine().addColumn("Full Models");
+		table.addColumns(fullStats.pDiffTableLine()).finalizeLine();
+		table.initNewLine().addColumn("Faults Only");
+		table.addColumns(faultStats.pDiffTableLine()).finalizeLine();
+		if (gridded) {
+			table.initNewLine().addColumn("Gridded Only");
+			table.addColumns(griddedStats.pDiffTableLine()).finalizeLine();
+		}
+		
+		table.initNewLine().addColumn("");
+		table.addColumns(fullStats.diffTableHeader()).finalizeLine();
+		
+		table.initNewLine().addColumn("Full Models");
+		table.addColumns(fullStats.diffTableLine()).finalizeLine();
+		table.initNewLine().addColumn("Faults Only");
+		table.addColumns(faultStats.diffTableLine()).finalizeLine();
+		if (gridded) {
+			table.initNewLine().addColumn("Gridded Only");
+			table.addColumns(griddedStats.diffTableLine()).finalizeLine();
+		}
 		
 		lines.add("__Hazard Comparison Statistics:__");
 		lines.add("");
 		lines.addAll(table.build());
 		lines.add("");
+		
+		if (gridded) {
+			// add fault/grid attribution plots
+			
+			CPT pDiffAttributionCPT = CA_HazardChangeFigures.getAttributionCPT(
+					GMT_CPT_Files.DIVERGING_CORK_UNIFORM.instance(), 10d, 50d);
+			CPT diffAttributionCPT = CA_HazardChangeFigures.getAttributionCPT(
+					GMT_CPT_Files.DIVERGING_BROC_UNIFORM.instance(), 0.05, 0.2d);
+			
+			GriddedGeoDataSet pDiffAttribution = new GriddedGeoDataSet(gridReg, false);
+			GriddedGeoDataSet diffAttribution = new GriddedGeoDataSet(gridReg, false);
+			
+			int totFaultAttributed = 0;
+			int totGridAttributed = 0;
+			
+			int faultAbove10percent = 0;
+			int gridAbove10percent = 0;
+			
+			int faultAbove0p05 = 0;
+			int gridAbove0p05 = 0;
+			
+			for (int i=0; i<diffAttribution.size(); i++) {
+				double fullPDiff = Math.abs(fullHazardPDiff.get(i));
+				double fullDiff = Math.abs(fullHazardDiff.get(i));
+				
+				double faultDiff = Math.abs(faultHazardDiff.get(i));
+				double gridDiff = Math.abs(griddedHazardDiff.get(i));
+				
+				double sign = faultDiff > gridDiff ? 1d : -1d;
+				
+				pDiffAttribution.set(i, sign*fullPDiff);
+				diffAttribution.set(i, sign*fullDiff);
+				
+				if (faultDiff > gridDiff) {
+					totFaultAttributed++;
+					if (fullPDiff > 10d)
+						faultAbove10percent++;
+					if (fullDiff > 0.05)
+						faultAbove0p05++;
+				} else {
+					totGridAttributed++;
+					if (fullPDiff > 10d)
+						gridAbove10percent++;
+					if (fullDiff > 0.05)
+						gridAbove0p05++;
+				}
+			}
+			
+			String pDiffLabel = "Gridded     ←     |Hazard % Change|     →      Faults";
+			String diffLabel  = "Gridded     ←    |Hazard Difference|    →      Faults";
+			
+			// full hazard difference
+			lines.add("### Fault vs Gridded, Hazard Change Attribution");
+			lines.add(topLink); lines.add("");
+			
+			lines.add("This section shows hazard changes, colored by their primary contribution (fault or gridded) "
+					+ "rather than their sign. Small changes are masked out.");
+			lines.add("");
+			
+			table = MarkdownUtils.tableBuilder();
+			
+			table.addLine("Ratio Attribution", "Difference Attribution");
+			
+			mapMaker.plotXYZData(pDiffAttribution, pDiffAttributionCPT, pDiffLabel);
+			mapMaker.plot(resourcesDir, "ratio_attribution", "Hazard Change Attribution");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/ratio_attribution.png)");
+			
+			mapMaker.plotXYZData(diffAttribution, diffAttributionCPT, diffLabel);
+			mapMaker.plot(resourcesDir, "diff_attribution", "Hazard Change Attribution");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/diff_attribution.png)");
+			
+			table.finalizeLine();
+			
+			lines.addAll(table.build());
+			lines.add("");
+			
+			table = MarkdownUtils.tableBuilder();
+			
+			table.addLine("", "Attributed to Faults", "Attributed to Gridded", "Sum");
+			
+			double numLocs = gridReg.getNodeCount();
+			
+			table.initNewLine().addColumn("Full Map");
+			table.addColumn(pDF.format((double)totFaultAttributed/numLocs));
+			table.addColumn(pDF.format((double)totGridAttributed/numLocs));
+			table.addColumn(pDF.format(1d));
+			table.finalizeLine();
+			
+			table.initNewLine().addColumn("> 10% Change");
+			table.addColumn(pDF.format((double)faultAbove10percent/numLocs));
+			table.addColumn(pDF.format((double)gridAbove10percent/numLocs));
+			table.addColumn(pDF.format((double)(faultAbove10percent + gridAbove10percent)/numLocs));
+			table.finalizeLine();
+			
+			table.initNewLine().addColumn("> 0.05g Change");
+			table.addColumn(pDF.format((double)faultAbove0p05/numLocs));
+			table.addColumn(pDF.format((double)gridAbove0p05/numLocs));
+			table.addColumn(pDF.format((double)(faultAbove0p05 + gridAbove0p05)/numLocs));
+			table.finalizeLine();
+			
+			lines.addAll(table.build());
+			lines.add("");
+		}
 		
 		// add TOC
 		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));

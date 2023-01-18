@@ -26,6 +26,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
@@ -491,11 +492,11 @@ public class MiscPlots {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		boolean gridded = true;
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
 //		boolean subduction = false;
 		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
 		Path erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.2.0");
-		NshmErf erf = new NshmErf(erfPath, trts, gridded);
+		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 		SummedMagFreqDist mfd2018 = getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);

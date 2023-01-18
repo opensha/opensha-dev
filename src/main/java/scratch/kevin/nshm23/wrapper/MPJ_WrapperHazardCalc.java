@@ -40,9 +40,11 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -80,7 +82,9 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	
 	private ReturnPeriods[] rps = ReturnPeriods.values();
 	
-	private boolean faultOnly = false;
+	private static final IncludeBackgroundOption GRID_SEIS_DEFAULT = IncludeBackgroundOption.INCLUDE;
+	private IncludeBackgroundOption gridSeisOp = GRID_SEIS_DEFAULT;
+	
 	private boolean noSubduction = false;
 	
 	private GridSourceProvider externalGridProv; // TODO
@@ -108,7 +112,10 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 		
 		outputDir = new File(cmd.getOptionValue("output-dir"));
 		
-		faultOnly = cmd.hasOption("faults-only");
+		if (cmd.hasOption("faults-only"))
+			gridSeisOp = IncludeBackgroundOption.EXCLUDE;
+		if (cmd.hasOption("gridded-seis"))
+			gridSeisOp = IncludeBackgroundOption.valueOf(cmd.getOptionValue("gridded-seis"));
 		noSubduction = cmd.hasOption("no-subduction");
 		
 		if (cmd.hasOption("grid-spacing"))
@@ -196,7 +203,9 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 				ModuleArchive<OpenSHA_Module> avgArchive = new ModuleArchive<>(zip);
 				externalGridProv = avgArchive.requireModule(GridSourceProvider.class);
 			}
-			faultOnly = true;
+			Preconditions.checkState(gridSeisOp != IncludeBackgroundOption.ONLY,
+					"Background seismicity was set to ONLY, but is being overridden?");
+			gridSeisOp = IncludeBackgroundOption.EXCLUDE;
 			
 			zip.close();
 		}
@@ -209,7 +218,7 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
 		}
 
-		erf = new NshmErf(erfPath, trts, !faultOnly);
+		erf = new NshmErf(erfPath, trts, gridSeisOp);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
@@ -547,6 +556,8 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 		ops.addOption("smd", "skip-max-distance", true, "Skip sites with no source-site distances below this value, in km. "
 				+ "Default: "+(float)SKIP_MAX_DIST_DEFAULT);
 		ops.addOption("fo", "faults-only", false, "Flag to disable model gridded seismicity sources.");
+		ops.addOption("gs", "gridded-seis", true, "Gridded seismicity option. One of "
+				+FaultSysTools.enumOptions(IncludeBackgroundOption.class)+". Default: "+GRID_SEIS_DEFAULT.name());
 		ops.addOption("ns", "no-subduction", false, "Flag to disable subduction sources.");
 		ops.addOption("egp", "external-grid-prov", true, "Path to external grid source provider to use for hazard "
 				+ "calculations. Can be either a fault system solution, or a zip file containing just a grid source "

@@ -60,17 +60,17 @@ public class SingleSiteVerificationTest {
 		Location testLoc = new Location(39, -122);
 //		Location testLoc = new Location(37.5, -110);
 		
-		boolean gridded = true;
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
 		boolean subduction = false;
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
-    if (subduction) {
-      trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
-      trts.add(TectonicRegionType.SUBDUCTION_SLAB);
-    }
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+		if (subduction) {
+			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+		}
 
-		NshmErf erf = new NshmErf(erfPath, trts, gridded);
+		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 		
@@ -136,8 +136,8 @@ public class SingleSiteVerificationTest {
 			wrapperSourceDistCurves[i] = toLinear(logXVals, xVals);
 		}
 		
-		gridded = false;
-		erf = new NshmErf(erfPath, trts, gridded);
+		griddedOp = IncludeBackgroundOption.EXCLUDE;
+		erf = new NshmErf(erfPath, trts, griddedOp);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 		calc.getHazardCurve(logXVals, site, gmpe, erf);

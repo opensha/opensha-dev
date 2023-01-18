@@ -30,6 +30,7 @@ import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
@@ -51,7 +52,7 @@ public class WrapperHazardCalc {
 		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.2.0");
 //		String erfPrefix = "nshm23-wrapped";
 //		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.a.2");
-		boolean gridded = false;
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.EXCLUDE;
 		boolean subduction = false;
 		double gridSpacing = 0.2;
 		
@@ -61,7 +62,7 @@ public class WrapperHazardCalc {
 			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
 		}
 
-		NshmErf erf = new NshmErf(erfPath, trts, gridded);
+		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
@@ -75,7 +76,7 @@ public class WrapperHazardCalc {
 		String nameAdd = "-"+gmpeRef.getShortName().toLowerCase()+"-"+(float)gridSpacing+"deg";
 		if (!subduction)
 			nameAdd += "-noSub";
-		if (!gridded)
+		if (griddedOp == IncludeBackgroundOption.EXCLUDE)
 			nameAdd += "-faultOnly";
 
 		Region modelReg = NSHM23_RegionLoader.loadFullConterminousWUS();

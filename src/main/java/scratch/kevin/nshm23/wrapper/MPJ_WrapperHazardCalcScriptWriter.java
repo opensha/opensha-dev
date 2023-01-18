@@ -16,6 +16,7 @@ import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.mpj.NoMPJSingleNodeShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.imr.AttenRelRef;
 
@@ -29,7 +30,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		File localMainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
 		int nodes = 36;
-		boolean gridded = true;
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.ONLY;
 		boolean subduction = false;
 		
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
@@ -73,8 +74,10 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		dirName += "-"+erfPrefix+"-hazard-"+gmpeRef.getShortName().toLowerCase()+"-"+(float)gridSpacing+"deg";
 		if (!subduction)
 			dirName += "-noSub";
-		if (!gridded)
+		if (griddedOp == IncludeBackgroundOption.EXCLUDE)
 			dirName += "-faultOnly";
+		else if (griddedOp == IncludeBackgroundOption.ONLY)
+			dirName += "-griddedOnly";
 		
 		System.out.println(dirName);
 		
@@ -110,13 +113,13 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		
 		String argz = "--input-dir "+remoteERFsPath+" --region "+regPath;
 		argz += " --output-dir "+resultsPath;
-		if (gridded || extGridProvPath != null) {
+		if (griddedOp == IncludeBackgroundOption.INCLUDE || griddedOp == IncludeBackgroundOption.ONLY
+				|| extGridProvPath != null) {
 //			argz += " --max-distance 200";
 			if (extGridProvPath != null)
 				argz += " --external-grid-prov $MAIN_DIR/"+extGridProvPath;
-		} else {
-			argz += " --faults-only";
 		}
+		argz += " --gridded-seis "+griddedOp.name();
 		if (!subduction)
 			argz += " --no-subduction";
 		argz += " --gmpe "+gmpeRef.name();
