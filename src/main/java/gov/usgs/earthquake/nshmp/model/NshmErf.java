@@ -152,7 +152,9 @@ public class NshmErf extends AbstractERF {
             : List.of();
 
       default:
-        return ruptureSetToSources(ruptureSet, weight, duration);
+        return (faults)
+            ? ruptureSetToSources(ruptureSet, weight, duration)
+            : List.of();
     }
   }
 
