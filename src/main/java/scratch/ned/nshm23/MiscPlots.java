@@ -26,6 +26,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
@@ -479,6 +480,34 @@ public class MiscPlots {
 
 	}
 	
+	public static void listSrcClassesForERF(NshmErf erf) {
+		
+		ArrayList<String> stringSrcTypesList = new ArrayList<String>();
+		ArrayList<String> stringSurfTypesList = new ArrayList<String>();
+		int totNum=0;
+
+		for (int s = 0; s < erf.getNumSources(); ++s) {
+			ProbEqkSource source = erf.getSource(s);
+			if(!stringSrcTypesList.contains(source.getClass().toString()))
+				stringSrcTypesList.add(source.getClass().toString());
+			
+			for (int r = 0; r < source.getNumRuptures(); ++r) {
+				ProbEqkRupture rupture = source.getRupture(r);
+				RuptureSurface surf = rupture.getRuptureSurface();
+				if(!stringSurfTypesList.contains(surf.getClass().toString()))
+					stringSurfTypesList.add(surf.getClass().toString());
+				int numPts = surf.getEvenlyDiscritizedListOfLocsOnSurface().size();
+				if(numPts==1)
+					totNum+=1;
+			}
+		}
+		System.out.println(stringSrcTypesList);
+		System.out.println("\n"+stringSurfTypesList);
+		System.out.println("\ntotNum="+totNum);
+		return;
+	}
+
+	
 	
 	public static void makeCEUS_ModelMFD_Plots(boolean saveFiles) {
 		
@@ -488,61 +517,61 @@ public class MiscPlots {
 		Region region=null;
 		try {
 			region = AnalysisRegions.CONUS_EAST.load();
+//			region = SeismicityRegions.CONUS_EAST.load();
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
-//		boolean subduction = false;
-		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+		IncludeBackgroundOption bgOption = IncludeBackgroundOption.INCLUDE;
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,TectonicRegionType.STABLE_SHALLOW);
 		Path erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.2.0");
-		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
+		NshmErf erf = new NshmErf(erfPath, trts, bgOption);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
-		SummedMagFreqDist mfd2018 = getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+		SummedMagFreqDist mfd2018 = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
 		mfd2018.setName("2018 CEUS MFD full model");
 		
-		GraphWindow graph = new GraphWindow(mfd2018, "Test"); 
-		graph.setX_AxisLabel("Magnitude");
-		graph.setY_AxisLabel("Cumulative Rate (per yr)");
-		graph.setYLog(true);
-		graph.setY_AxisRange(0.00001,20);
-		graph.setPlotLabelFontSize(18);
-		graph.setAxisLabelFontSize(18);
-		graph.setTickLabelFontSize(16);
-
-		
-//		
-//		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.a.3");
-//		erf = new NshmErf(erfPath, subduction, gridded);
-//		erf.getTimeSpan().setDuration(1.0);
-//		erf.updateForecast();
-//		SummedMagFreqDist mfd2023 = getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
-////		SummedMagFreqDist mfd2023 = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
-//		mfd2023.setName("2023 CEUS MFD full model");
-//
-//		ArrayList<EvenlyDiscretizedFunc> funcs = new ArrayList<EvenlyDiscretizedFunc>();
-//    	funcs.add(mfd2018);
-//    	funcs.add(mfd2018.getCumRateDistWithOffset());
-//    	funcs.add(mfd2023);
-//    	funcs.add(mfd2023.getCumRateDistWithOffset());
-//     	
-//    	ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
-//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.BLUE));
-//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.BLUE));
-//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.RED));
-//		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.RED));
-//
-//    	
-//		GraphWindow graph = new GraphWindow(funcs, "CEUS Model MFDs",plotChars); 
+//		GraphWindow graph = new GraphWindow(mfd2018, "mfd2018"); 
 //		graph.setX_AxisLabel("Magnitude");
-//		graph.setY_AxisLabel("Cumulative Rate (per yr)");
+//		graph.setY_AxisLabel("Rate (per yr)");
 //		graph.setYLog(true);
-////		graph.setX_AxisRange(50, 2e4);
 //		graph.setY_AxisRange(0.00001,20);
 //		graph.setPlotLabelFontSize(18);
 //		graph.setAxisLabelFontSize(18);
 //		graph.setTickLabelFontSize(16);
+
+		
+		
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.a.5");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		SummedMagFreqDist mfd2023 = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+		mfd2023.setName("2023 CEUS MFD full model");
+
+		ArrayList<EvenlyDiscretizedFunc> funcs = new ArrayList<EvenlyDiscretizedFunc>();
+    	funcs.add(mfd2018);
+    	funcs.add(mfd2018.getCumRateDistWithOffset());
+    	funcs.add(mfd2023);
+    	funcs.add(mfd2023.getCumRateDistWithOffset());
+     	
+    	ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.RED));
+
+    	
+		GraphWindow graph = new GraphWindow(funcs, "CEUS Model MFDs",plotChars); 
+		graph.setX_AxisLabel("Magnitude");
+		graph.setY_AxisLabel("Incr. & Cumulative Rate (per yr)");
+		graph.setYLog(true);
+//		graph.setX_AxisRange(50, 2e4);
+		graph.setY_AxisRange(0.00001,20);
+		graph.setPlotLabelFontSize(18);
+		graph.setAxisLabelFontSize(18);
+		graph.setTickLabelFontSize(16);
 //		
 //		if(saveFiles) {
 //			try {
@@ -568,7 +597,7 @@ public class MiscPlots {
 	 * @param preserveRates
 	 * @return
 	 */
-	public static SummedMagFreqDist getMagFreqDistInRegion(NshmErf erf, Region region,
+	public static SummedMagFreqDist OLDgetMagFreqDistInRegion(NshmErf erf, Region region,
 			double minMag,int numMag,double deltaMag, boolean preserveRates) {
 		
 		String tempString="";
@@ -1063,16 +1092,16 @@ public class MiscPlots {
 	public static void main(String[] args) {
 		
 		
-		double wtArray[] = {0.1,0.2,0.2,0.25,0.25};
-		defModelAnalysis(wtArray, "OrigWts");
-
-		double wtArray2[] = {0.02,0.08,0.26,0.32,0.32};
-		defModelAnalysis(wtArray2, "RevisedWts");
+//		double wtArray[] = {0.1,0.2,0.2,0.25,0.25};
+//		defModelAnalysis(wtArray, "OrigWts");
+//
+//		double wtArray2[] = {0.02,0.08,0.26,0.32,0.32};
+//		defModelAnalysis(wtArray2, "RevisedWts");
 
 //		double wtArray[] = {0.0,0.1,0.26,0.32,0.32};
 
 		
-//		makeCEUS_ModelMFD_Plots(true);
+		makeCEUS_ModelMFD_Plots(true);
 		
 //		makeRegMFD_Plots(true);
 		

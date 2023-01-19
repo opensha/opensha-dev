@@ -38,39 +38,39 @@ public class WUS_HazardChangePageGen {
 		String dirPrefix = "pga_2in50";
 		
 		// load hazard maps
-		File modelHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+		File nshm23HazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
-		GriddedGeoDataSet modelHazard = CA_HazardChangeFigures.loadXYZ(modelHazardFile, entryName);
+		GriddedGeoDataSet nshm23Hazard = CA_HazardChangeFigures.loadXYZ(nshm23HazardFile, entryName);
 		
-		File modelGridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+		File nshm23GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_only_0.1deg.zip");
-		GriddedGeoDataSet modelGridHazard = CA_HazardChangeFigures.loadXYZ(modelGridHazardFile, entryName);
-		Preconditions.checkState(modelGridHazard.size() == modelHazard.size());
-//		GriddedGeoDataSet modelGridHazard = null;
+		GriddedGeoDataSet nshm23GridHazard = CA_HazardChangeFigures.loadXYZ(nshm23GridHazardFile, entryName);
+		Preconditions.checkState(nshm23GridHazard.size() == nshm23Hazard.size());
+//		GriddedGeoDataSet nshm23GridHazard = null;
 		
 		File nshm18_23gridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2023_01_04-nshm18-grid_src_from_23-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
 		GriddedGeoDataSet nshm18_23gridHazard = CA_HazardChangeFigures.loadXYZ(nshm18_23gridHazardFile, wrapperEntryName);
-		Preconditions.checkState(nshm18_23gridHazard.size() == modelHazard.size());
+		Preconditions.checkState(nshm18_23gridHazard.size() == nshm23Hazard.size());
 		
 		File nshm18HazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2023_01_17-nshm18-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
 		GriddedGeoDataSet nshm18Hazard = CA_HazardChangeFigures.loadXYZ(nshm18HazardFile, wrapperEntryName);
-		Preconditions.checkState(nshm18Hazard.size() == modelHazard.size());
+		Preconditions.checkState(nshm18Hazard.size() == nshm23Hazard.size());
 		
 		File nshm18GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2023_01_18-nshm18-hazard-ask2014-0.1deg-noSub-griddedOnly/results_hazard.zip");
 		GriddedGeoDataSet nshm18GridHazard = CA_HazardChangeFigures.loadXYZ(nshm18GridHazardFile, wrapperEntryName);
-		Preconditions.checkState(nshm18GridHazard.size() == modelHazard.size());
+		Preconditions.checkState(nshm18GridHazard.size() == nshm23Hazard.size());
 //		GriddedGeoDataSet nshm18GridHazard = null;
 		
-		// load moment change
+		// load moment rates from NSHM18 and NSHM23 deformation models
 		MomentRateCompNSHM18.LINEAR_RAMP = true;
 		MomentRateCompNSHM18.GEO_ONLY = false;
 		
-		GriddedRegion gridReg = modelHazard.getRegion();
+		GriddedRegion gridReg = nshm23Hazard.getRegion();
 		
 		CubedGriddedRegion cgr = new CubedGriddedRegion(gridReg);
 		GriddedGeoDataSet momentRates23 = MomentRateCompNSHM18.getMomentRatesNSHM23(gridReg, cgr);
@@ -100,7 +100,7 @@ public class WUS_HazardChangePageGen {
 		GriddedGeoDataSet fullHazardPDiff = new GriddedGeoDataSet(gridReg, false);
 		GriddedGeoDataSet fullHazardDiff = new GriddedGeoDataSet(gridReg, false);
 		
-		boolean gridded = modelGridHazard != null && nshm18GridHazard != null;
+		boolean gridded = nshm23GridHazard != null && nshm18GridHazard != null;
 		GriddedGeoDataSet griddedHazardRatio, griddedHazardPDiff, griddedHazardDiff;
 		if (gridded) {
 			griddedHazardRatio = new GriddedGeoDataSet(gridReg, false);
@@ -113,7 +113,7 @@ public class WUS_HazardChangePageGen {
 		}
 		
 		for (int i=0; i<gridReg.getNodeCount(); i++) {
-			double full23 = modelHazard.get(i);
+			double full23 = nshm23Hazard.get(i);
 			double fault18 = nshm18_23gridHazard.get(i);
 			double full18 = nshm18Hazard.get(i);
 			
@@ -133,13 +133,13 @@ public class WUS_HazardChangePageGen {
 			fullHazardDiff.set(i, fullDiff);
 			
 			if (gridded) {
-				double grid23 = modelGridHazard.get(i);
+				double grid23 = nshm23GridHazard.get(i);
 				double grid18 = nshm18GridHazard.get(i);
 				
 				// add fault contributions to highlight only gridded
-				double faultAdd = Math.max(0, full23 - grid23);
-				grid23 += faultAdd;
-				grid18 += faultAdd;
+				double faultPortion = Math.max(0, full23 - grid23);
+				grid23 += faultPortion;
+				grid18 += faultPortion;
 				
 				double griddedRatio = grid23 / grid18;
 				double griddedDiff = grid23 - grid18;
@@ -173,10 +173,11 @@ public class WUS_HazardChangePageGen {
 			map.setWriteGeoJSON(false);
 			map.setWritePDFs(true);
 			map.setSectOutlineChar(null);
+			map.setRegionOutlineChar(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, new Color(0, 0, 0, 180)));
 			map.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(100, 100, 100, 127)));
 		}
 		
-		File outputDir = new File(modelHazardFile.getParentFile(), "hazard_comparisons_nshm18_"+dirPrefix);
+		File outputDir = new File(nshm23HazardFile.getParentFile(), "hazard_comparisons_nshm18_"+dirPrefix);
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		File resourcesDir = new File(outputDir, "resources");
@@ -203,7 +204,7 @@ public class WUS_HazardChangePageGen {
 		
 		table.initNewLine();
 		
-		mapMaker.plotXYZData(asLog10(modelHazard), hazCPT, "NSHM23, "+hazLabel+" (g)");
+		mapMaker.plotXYZData(asLog10(nshm23Hazard), hazCPT, "NSHM23, "+hazLabel+" (g)");
 		mapMaker.plot(resourcesDir, "hazard_nshm23", " ");
 		table.addColumn("![Map]("+resourcesDir.getName()+"/hazard_nshm23.png)");
 		
@@ -231,8 +232,8 @@ public class WUS_HazardChangePageGen {
 		lines.add("");
 		
 		ChangeStats faultStats = new ChangeStats();
-		for (int i=0; i<modelHazard.size(); i++)
-			faultStats.addValue(modelHazard.get(i), nshm18_23gridHazard.get(i));
+		for (int i=0; i<nshm23Hazard.size(); i++)
+			faultStats.addValue(nshm23Hazard.get(i), nshm18_23gridHazard.get(i));
 		
 		table = MarkdownUtils.tableBuilder();
 		table.addLine(faultStats.pDiffTableHeader());
@@ -342,7 +343,7 @@ public class WUS_HazardChangePageGen {
 			threshStats.add(stats);
 			GriddedGeoDataSet maskedPDiff = new GriddedGeoDataSet(gridReg, false);
 			GriddedGeoDataSet maskedDiff = new GriddedGeoDataSet(gridReg, false);
-			for (int i=0; i<modelHazard.size(); i++) {
+			for (int i=0; i<nshm23Hazard.size(); i++) {
 				double moRatio = momentRatio.get(i);
 				boolean skip = Double.isNaN(moRatio) || (Double.isInfinite(threshold) && Double.isInfinite(moRatio));
 				if (!skip) {
@@ -362,7 +363,7 @@ public class WUS_HazardChangePageGen {
 					maskedPDiff.set(i, Double.NaN);
 					maskedDiff.set(i, Double.NaN);
 				} else {
-					stats.addValue(modelHazard.get(i), nshm18_23gridHazard.get(i));
+					stats.addValue(nshm23Hazard.get(i), nshm18_23gridHazard.get(i));
 					maskedPDiff.set(i, faultHazardPDiff.get(i));
 					maskedDiff.set(i, faultHazardDiff.get(i));
 				}
@@ -432,7 +433,7 @@ public class WUS_HazardChangePageGen {
 			
 			table.initNewLine();
 			
-			mapMaker.plotXYZData(asLog10(modelGridHazard), hazCPT, "NSHM23, Gridded Only, "+hazLabel+" (g)");
+			mapMaker.plotXYZData(asLog10(nshm23GridHazard), hazCPT, "NSHM23, Gridded Only, "+hazLabel+" (g)");
 			mapMaker.plot(resourcesDir, "hazard_gridded_nshm23", " ");
 			table.addColumn("![Map]("+resourcesDir.getName()+"/hazard_gridded_nshm23.png)");
 			
@@ -460,8 +461,8 @@ public class WUS_HazardChangePageGen {
 			lines.add("");
 			
 			griddedStats = new ChangeStats();
-			for (int i=0; i<modelHazard.size(); i++)
-				griddedStats.addValue(modelHazard.get(i), nshm18Hazard.get(i));
+			for (int i=0; i<nshm23Hazard.size(); i++)
+				griddedStats.addValue(nshm23Hazard.get(i), nshm18Hazard.get(i));
 			
 			table = MarkdownUtils.tableBuilder();
 			table.addLine(griddedStats.pDiffTableHeader());
@@ -484,15 +485,15 @@ public class WUS_HazardChangePageGen {
 			ChangeStats stats = new ChangeStats();
 			GriddedGeoDataSet maskedPDiff = new GriddedGeoDataSet(gridReg, false);
 			GriddedGeoDataSet maskedDiff = new GriddedGeoDataSet(gridReg, false);
-			for (int i=0; i<modelHazard.size(); i++) {
+			for (int i=0; i<nshm23Hazard.size(); i++) {
 				double mo23 = momentRates23.get(i);
 				double mo18 = momentRates18.get(i);
 				if (mo23 > 0 || mo18 > 0) {
 					maskedPDiff.set(i, Double.NaN);
 					maskedDiff.set(i, Double.NaN);
 				} else {
-					double haz23 = modelHazard.get(i);
-					double grid23 = modelGridHazard.get(i);
+					double haz23 = nshm23Hazard.get(i);
+					double grid23 = nshm23GridHazard.get(i);
 					double fault23 = Math.max(0, haz23 - grid23);
 					double grid18 = nshm18GridHazard.get(i);
 					stats.addValue(haz23, grid18+fault23);
@@ -601,8 +602,8 @@ public class WUS_HazardChangePageGen {
 		lines.add("");
 		
 		ChangeStats fullStats = new ChangeStats();
-		for (int i=0; i<modelHazard.size(); i++)
-			fullStats.addValue(modelHazard.get(i), nshm18Hazard.get(i));
+		for (int i=0; i<nshm23Hazard.size(); i++)
+			fullStats.addValue(nshm23Hazard.get(i), nshm18Hazard.get(i));
 		
 		table = MarkdownUtils.tableBuilder();
 		table.initNewLine().addColumn("");
