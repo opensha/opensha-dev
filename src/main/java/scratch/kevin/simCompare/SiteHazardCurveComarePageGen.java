@@ -363,6 +363,10 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			if (hasMultiple) {
 				lines.add("#### "+imt.getDisplayName()+" Percentile Curves");
 				lines.add(topLink); lines.add("");
+				lines.add("Here, we calculate hazard curves at various percentiles of the rupture variation "
+						+ "distribution for each rupture. For example, the p50 curve shows the hazard curve using only "
+						+ "the median ground motion for each rupture from the rupture variation distribution.");
+				lines.add("");
 				lines.addAll(curvePlotter.getCurveLegend(false, false, false, true, 0));
 				lines.add("");
 				
@@ -901,7 +905,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		String locStr = loc.getLatitude()+","+loc.getLongitude();
 //		return "https://maps.googleapis.com/maps/api/staticmap?center="+locStr+"&zoom=9"
 //				+ "&size=400x300&maptype=roadmap&markers="+locStr+"&key="+GMAPS_API;
-		return "https://open.mapquestapi.com/staticmap/v4/getmap?key="+MAPQUEST_API
-				+"&size=400,300&zoom=9&center="+locStr+"&pois=red_1,"+locStr+"&imagetype=png";
+		return "https://www.mapquestapi.com/staticmap/v5/map?key="+MAPQUEST_API
+				+"&size=400,300&zoom=9&center="+locStr+"&locations="+locStr+"|marker-end&imagetype=png";
 	}
 }

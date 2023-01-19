@@ -28,7 +28,7 @@ class FaultParticipationPlots {
 		
 		double[] minMags = { 0, 6, 6.7, 7.5, 7.8 };
 		
-		File outputDir = new File("/tmp/partic_plot");
+		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/partic_plot");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		RupSetMapMaker mapMaker = new RupSetMapMaker(sol.getRupSet(), NSHM23_RegionLoader.loadFullConterminousWUS());

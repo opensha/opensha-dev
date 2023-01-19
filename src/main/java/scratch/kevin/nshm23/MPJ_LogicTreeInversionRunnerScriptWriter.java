@@ -94,6 +94,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		double segTransMaxDist = 3d;
 		boolean hazardGridded = false;
 		boolean forceRequiredNonzeroWeight = false;
+		Double forceHazardGridSpacing = null;
 		
 		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
 		int remoteTotalThreads = 20;
@@ -221,13 +222,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * NSHM23 logic tree
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-		dirName += "-nshm23_u3_hybrid_branches";
-		double avgNumRups = 325000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+//		dirName += "-nshm23_u3_hybrid_branches";
+//		double avgNumRups = 325000;
 		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-//		dirName += "-nshm23_branches";
-//		double avgNumRups = 600000;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+		dirName += "-nshm23_branches";
+		double avgNumRups = 600000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches";
@@ -263,7 +264,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -292,8 +293,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjust.class;
 //		dirName += "-no_reweight_use_prev";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjustFullSys.class;
-		dirName += "-full_sys_inv-no_reweight_use_prev";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedPrevWeightAdjustFullSys.class;
+//		dirName += "-full_sys_inv-no_reweight_use_prev";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.HardcodedOrigWeights.class;
 //		dirName += "-no_reweight_use_orig";
@@ -353,6 +354,33 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.PaleoSlipInequality.class;
 //		dirName += "-paleo_slip_ineq";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.TenThousandItersPerRup.class;
+//		dirName += "-10000ip";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OriginalWeights.class;
+//		dirName += "-dm_orig_weights"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierlMinimizationWeights.class;
+//		dirName += "-dm_outlier_minimize_weights"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = false;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierReplacementYc2p0.class;
+//		dirName += "-dm_outlier_sub_yc_2"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierReplacementYc3p5.class;
+//		dirName += "-dm_outlier_sub_yc_3p5"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierReplacementYc5p0.class;
+//		dirName += "-dm_outlier_sub_yc_5"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierLogReplacementYc2p0.class;
+//		dirName += "-dm_outlier_log_sub_yc_2"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierLogReplacementYc3p5.class;
+//		dirName += "-dm_outlier_log_sub_yc_3p5"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.DM_OutlierLogReplacementYc5p0.class;
+//		dirName += "-dm_outlier_log_sub_yc_5"; NSHM23_DeformationModels.ORIGINAL_WEIGHTS = true;
+		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
 //		dirName += "-exp_perturb";
@@ -370,14 +398,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		dirName += "-mod_dm_weights";
 		
+		forceHazardGridSpacing = 0.1;
+		
 		forceRequiredNonzeroWeight = true;
 		griddedJob = true;
 		LogicTreeNode[] required = {
 				// FAULT MODELS
-				FaultModels.FM3_1,
+//				FaultModels.FM3_1,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 //				NSHM23_FaultModels.NSHM23_v1p4,
-//				NSHM23_FaultModels.NSHM23_v2,
+				NSHM23_FaultModels.NSHM23_v2,
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
@@ -407,7 +437,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
-				SlipAlongRuptureModels.UNIFORM,
+//				SlipAlongRuptureModels.UNIFORM,
 //				SlipAlongRuptureModels.TAPERED,
 				
 				// SUB-SECT CONSTRAINT
@@ -556,6 +586,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		if (origNodes != nodes)
 			System.out.println("Adjusted "+origNodes+" to "+nodes+" nodes to evenly divide "+numCalcs+" calcs");
 		
+		if (origNodes > 1 && nodes < 2) {
+			System.out.println("Forcing 2 nodes");
+			nodes = 2;
+		}
+		
 		if (completionArg != null)
 			dirName += "-"+completionArg;
 		
@@ -632,6 +667,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			if (NSHM23_SingleStates.class.isAssignableFrom(level.getType()))
 				// but it's actually a single state, nevermind
 				gridSpacing = 0.1;
+		}
+		if (forceHazardGridSpacing != null && forceHazardGridSpacing != gridSpacing) {
+			System.out.println("Using hardcoded grid spacing of "+forceHazardGridSpacing.floatValue()
+				+" (would have otherwise used "+(float)gridSpacing+")");
+			gridSpacing = forceHazardGridSpacing;
 		}
 		argz += " --grid-spacing "+(float)gridSpacing;
 		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();

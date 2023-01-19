@@ -30,7 +30,7 @@ class SupraBValFigure {
 		RupSetScalingRelationship scale = NSHM23_ScalingRelationships.LOGA_C4p2;
 		boolean cmlOffset = false;
 		
-		File outputDir = new File("/tmp");
+		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures");
 		String prefix = "supra_mfd_sweep";
 		
 		double areaMinRup = Math.pow(10, refMFD.getMinX() - 4.2);

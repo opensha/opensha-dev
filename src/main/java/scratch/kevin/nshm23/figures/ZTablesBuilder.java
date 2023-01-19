@@ -30,6 +30,8 @@ class ZTablesBuilder {
 		File nshm23ModelDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
+		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures");
+		
 		CSVFile<String> csv = new CSVFile<>(true);
 		
 		csv.addLine("Model", "Average z-score", "Average Absolute z-score");
@@ -85,7 +87,7 @@ class ZTablesBuilder {
 			csv.addLine(wasatchNames.get(i), zDF.format(avg), zDF.format(avgAbs));
 		}
 		
-		csv.writeToFile(new File("/tmp/paleo_z_scores.csv"));
+		csv.writeToFile(new File(outputDir, "paleo_z_scores.csv"));
 		
 		// now paleo slips (only U3)
 		csv = new CSVFile<>(true);
@@ -96,7 +98,7 @@ class ZTablesBuilder {
 		double avg = avgPaleoSlipZScore(u3Sol, false);
 		double avgAbs = avgPaleoSlipZScore(u3Sol, true);
 		csv.addLine("UCERF3", zDF.format(avg), zDF.format(avgAbs));
-		csv.writeToFile(new File("/tmp/paleo_slip_z_scores.csv"));
+		csv.writeToFile(new File(outputDir, "paleo_slip_z_scores.csv"));
 	}
 	
 	private static double avgZScore(FaultSystemSolution sol, boolean abs, Region region) {

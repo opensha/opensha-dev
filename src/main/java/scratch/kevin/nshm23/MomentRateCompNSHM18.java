@@ -39,8 +39,8 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 
 public class MomentRateCompNSHM18 {
 	
-	private static final boolean LINEAR_RAMP = true;
-	private static final boolean GEO_ONLY = false;
+	public static boolean LINEAR_RAMP = true;
+	public static boolean GEO_ONLY = false;
 
 	public static void main(String[] args) throws IOException {
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
@@ -343,6 +343,57 @@ public class MomentRateCompNSHM18 {
 				xyz.set(nodeIndex, xyz.get(nodeIndex) + fract*moRate);
 			}
 		}
+	}
+	
+	public static GriddedGeoDataSet getMomentRatesNSHM18(GriddedRegion gridReg, CubedGriddedRegion cgr) throws IOException {
+		return getMomentRatesNSHM18(gridReg, cgr, null);
+	}
+	
+	public static GriddedGeoDataSet getMomentRatesNSHM18(GriddedRegion gridReg, CubedGriddedRegion cgr,
+			List<FaultSection> sectsList) throws IOException {
+		GriddedGeoDataSet nshm18 = new GriddedGeoDataSet(gridReg, false);
+
+		// NSHM18 outside of CA
+		NSHM18_DeformationModels dm18 = GEO_ONLY ? NSHM18_DeformationModels.GEOL : NSHM18_DeformationModels.BRANCH_AVERAGED;
+		List<? extends FaultSection> nshm18sectsNoCA = dm18.build(NSHM18_FaultModels.NSHM18_WUS_NoCA);
+		addFaultMoRates(nshm18, cgr, nshm18sectsNoCA, 1d);
+
+		// UCERF3
+		if (sectsList != null)
+			sectsList.addAll(nshm18sectsNoCA);
+		DeformationModels u3DM = GEO_ONLY ? DeformationModels.GEOLOGIC : DeformationModels.MEAN_UCERF3;
+		for (FaultModels u3fm : FaultModels.values()) {
+			double fmWeight = u3fm.getNodeWeight(null);
+			if (fmWeight == 0d)
+				continue;
+
+			List<? extends FaultSection> fullDM = u3DM.build(u3fm);
+
+			List<FaultSection> modDM = new ArrayList<>();
+			for (FaultSection sect : fullDM) {
+				if (sect.getParentSectionId() == 721 || sect.getParentSectionId() == 719)
+					continue;
+				sect.setSectionId(modDM.size());
+				modDM.add(sect);
+			}
+
+			addFaultMoRates(nshm18, cgr, modDM, fmWeight);
+			if (sectsList != null)
+				sectsList.addAll(modDM);
+		}
+		
+		return nshm18;
+	}
+	
+	public static GriddedGeoDataSet getMomentRatesNSHM23(GriddedRegion gridReg, CubedGriddedRegion cgr) throws IOException {
+		GriddedGeoDataSet nshm23 = new GriddedGeoDataSet(gridReg, false);
+		
+		NSHM23_DeformationModels dm23 = GEO_ONLY ? NSHM23_DeformationModels.GEOLOGIC : NSHM23_DeformationModels.AVERAGE;
+		List<? extends FaultSection> nshm23sects = dm23.build(NSHM23_FaultModels.NSHM23_v2);
+		
+		addFaultMoRates(nshm23, cgr, nshm23sects, 1d);
+		
+		return nshm23;
 	}
 
 }

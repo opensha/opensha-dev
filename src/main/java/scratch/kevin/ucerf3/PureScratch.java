@@ -9,11 +9,13 @@ import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -34,14 +36,12 @@ import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.IntegerSampler.ExclusionIntegerSampler;
-import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.LightFixedXFunc;
-import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.uncertainty.BoundedUncertainty;
 import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
@@ -77,11 +77,11 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.BranchWeightProvider.OriginalWeights;
-import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.ExceptionUtils;
@@ -107,8 +107,6 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeC
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
-import org.opensha.sha.earthquake.faultSysSolution.modules.ConnectivityClusters;
-import org.opensha.sha.earthquake.faultSysSolution.modules.ConnectivityClusters.ConnectivityClusterSolutionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
@@ -131,7 +129,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
-import org.opensha.sha.earthquake.faultSysSolution.util.AverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
@@ -141,10 +139,9 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder.ParkfieldSelectionCriteria;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder.ParkfieldSelectionCriteria;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
@@ -153,13 +150,10 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Scalin
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.Builder;
@@ -169,7 +163,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
-import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -177,6 +170,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -189,7 +183,6 @@ import com.google.gson.reflect.TypeToken;
 
 import gov.usgs.earthquake.nshmp.model.NshmErf;
 import gov.usgs.earthquake.nshmp.model.NshmSurface;
-import scratch.UCERF3.analysis.FaultSystemRupSetCalc;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
@@ -202,6 +195,7 @@ import scratch.UCERF3.utils.FaultSectionDataWriter;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
+import scratch.kevin.simCompare.SiteHazardCurveComarePageGen;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class PureScratch {
@@ -2625,7 +2619,13 @@ public class PureScratch {
 		boolean gridded = true;
 		boolean subduction = false;
 		
-		NshmErf erf = new NshmErf(erfPath, subduction, gridded);
+    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+    if (subduction) {
+      trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+      trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+    }
+
+		NshmErf erf = new NshmErf(erfPath, trts, gridded);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 		
@@ -2972,12 +2972,116 @@ public class PureScratch {
 		System.out.println("\tSum rate in ERF: "+(float)totRateTD);
 	}
 	
+	private static void test203() throws IOException {
+		// this is the file at https://opensha.usc.edu/ftp/kmilner/markdown/batch_inversions/nshm23-draft-latest/results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip
+		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+		FaultSystemSolution fss = FaultSystemSolution.load(solFile);
+		
+		GridSourceProvider gridProv = fss.getGridSourceProvider();
+		double directRate = 0d;
+		for (int i=0; i<gridProv.size(); i++) {
+			IncrementalMagFreqDist mfd = gridProv.getMFD(i, 5.05d);
+			directRate += mfd.calcSumOfY_Vals();
+		}
+
+		fss.removeAvailableModuleInstances(RupMFDsModule.class);
+
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fss);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
+		erf.getTimeSpan().setDuration(1d);
+		erf.updateForecast();
+		
+		double erfRate = 0d;
+		for (ProbEqkSource source : erf)
+			for (ProbEqkRupture rup : source)
+				if (rup.getMag() > 5d)
+					erfRate += rup.getMeanAnnualRate(1d);
+		
+		System.out.println("Total gridded seismicity rate M>5");
+		System.out.println("\tDirectly from FSS: "+(float)directRate);
+		System.out.println("\tFrom FSS ERF: "+(float)erfRate);
+	}
+	
+	private static void test204() throws IOException {
+		Location loc = new Location(34, -118);
+		System.out.println(SiteHazardCurveComarePageGen.getMiniMap(loc));
+	}
+	
+	private static void test205() throws IOException {
+//		File rebuildSolFile = new File("/tmp/rup_set_CoulombRupSet_5572_sects_19455_trace_locs_682615862169_area.zip");
+		File rebuildSolFile = new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
+				+ "NSHM23_v2_plausibleMulti15km_adaptive6km_direct_cmlRake360_jumpP0.001_slipP0.05incrCapDist_"
+				+ "cff0.75IntsPos_comb2Paths_cffFavP0.01_cffFavRatioN2P0.5_sectFractGrow0.1.zip");
+		FaultSystemRupSet rebuildRupSet = FaultSystemRupSet.load(rebuildSolFile);
+		
+		File withCherawSolFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
+		FaultSystemRupSet withCherawRupSet = FaultSystemRupSet.load(withCherawSolFile);
+		
+		HashSet<Integer> retained = new HashSet<>();
+		for (FaultSection sect : withCherawRupSet.getFaultSectionDataList())
+			if (sect.getParentSectionId() != 2180)
+				retained.add(sect.getSectionId());
+		
+		FaultSystemRupSet subsetRupSet = withCherawRupSet.getForSectionSubSet(retained);
+		
+		System.out.println("Rebuild has "+rebuildRupSet.getNumSections()+" sections and "+rebuildRupSet.getNumRuptures()+" ruptures");
+		System.out.println("Original has "+withCherawRupSet.getNumSections()+" sections and "+withCherawRupSet.getNumRuptures()+" ruptures");
+		System.out.println("Subset has "+subsetRupSet.getNumSections()+" sections and "+subsetRupSet.getNumRuptures()+" ruptures");
+		
+		for (int s=0; s<subsetRupSet.getNumSections(); s++) {
+			FaultSection sect1 = rebuildRupSet.getFaultSectionData(s);
+			FaultSection sect2 = subsetRupSet.getFaultSectionData(s);
+			Preconditions.checkState(sect1.getSectionName().equals(sect2.getSectionName()),
+					"Name mismatch for %s:\n\tRebuild: %s\n\tSubset: %s", s, sect1.getSectionName(), sect2.getSectionName());
+			Preconditions.checkState(sect1.getParentSectionId() == sect2.getParentSectionId(),
+					"Parent ID mismatch for %s:\n\tRebuild: %s\n\tSubset: %s", s, sect1.getParentSectionId(), sect2.getParentSectionId());
+		}
+		
+		Preconditions.checkState(subsetRupSet.areSectionsEquivalentTo(rebuildRupSet));
+		
+		Map<UniqueRupture, Integer> rebuildUniques = new HashMap<>();
+		ClusterRuptures rebuildClusterRups = rebuildRupSet.requireModule(ClusterRuptures.class);
+		for (int r=0; r<rebuildRupSet.getNumRuptures(); r++)
+			rebuildUniques.put(rebuildClusterRups.get(r).unique, r);
+		
+		Map<UniqueRupture, Integer> subsetUniques = new HashMap<>();
+		ClusterRuptures subsetClusterRups = subsetRupSet.requireModule(ClusterRuptures.class);
+		for (int r=0; r<subsetRupSet.getNumRuptures(); r++)
+			subsetUniques.put(subsetClusterRups.get(r).unique, r);
+		
+		int numUniqueToRebuild = 0;
+		int numUniqueToSubset = 0;
+		for (UniqueRupture unique : rebuildUniques.keySet())
+			if (!subsetUniques.containsKey(unique))
+				numUniqueToRebuild++;
+		for (UniqueRupture unique : subsetUniques.keySet())
+			if (!rebuildUniques.containsKey(unique))
+				numUniqueToSubset++;
+		
+		System.out.println(numUniqueToRebuild+" are unique to the rebuild");
+		System.out.println(numUniqueToSubset+" are unique to the subset");
+		
+//		rebuildRupSet.write(new File("/tmp/carc_rebuild_rup_set.zip"));
+//		subsetRupSet.write(new File("/tmp/subset_rup_set.zip"));
+	}
+	
+	private static void test206() throws IOException {
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		
+		factory.setCacheDir(new File("/home/kevin/workspace/opensha/src/main/resources/scratchData/rupture_sets/caches"));
+		
+		factory.buildRuptureSet(NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT, 30);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test198();
+		test206();
 	}
 
 }

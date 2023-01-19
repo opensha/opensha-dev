@@ -64,7 +64,7 @@ class BValueSumCartoon {
 		
 		File outputDir;
 		if (CARTOON) {
-			outputDir = new File("/tmp/b_val_sums_cartoon");
+			outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/b_val_sums_cartoon");
 			
 			int numSects = 100;
 			Range slipRateRange = new Range(1d, 15d);
@@ -109,7 +109,7 @@ class BValueSumCartoon {
 				}
 			}
 		} else {
-			outputDir = new File("/tmp/b_val_sums");
+			outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/b_val_sums");
 			
 			isParents = true;
 			

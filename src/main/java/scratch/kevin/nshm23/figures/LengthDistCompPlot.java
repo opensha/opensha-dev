@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23;
+package scratch.kevin.nshm23.figures;
 
 import java.awt.Color;
 import java.io.File;
@@ -27,7 +27,7 @@ public class LengthDistCompPlot {
 
 	public static void main(String[] args) throws IOException {
 		File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
 		File outputDir = new File(invDir, "misc_plots");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());

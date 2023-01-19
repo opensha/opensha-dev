@@ -1,20 +1,14 @@
 package scratch.ned.nshm23;
 
 import java.awt.Color;
-import java.io.BufferedOutputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
+import java.util.Set;
 
-import org.apache.commons.math3.distribution.GammaDistribution;
-import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.jfree.data.Range;
@@ -25,30 +19,27 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
-import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSymbol;
-import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
-import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships_StableContinental;
-import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
-import org.opensha.sha.magdist.SummedMagFreqDist;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.magdist.SummedMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
 
-import gov.usgs.earthquake.nshmp.model.NshmSurface;
 import gov.usgs.earthquake.nshmp.model.NshmErf;
+import gov.usgs.earthquake.nshmp.model.NshmSurface;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.ned.FSS_Inversion2019.PlottingUtils;
 
@@ -531,9 +522,10 @@ public class MiscPlots {
 			e.printStackTrace();
 		}
 		boolean gridded = true;
-		boolean subduction = false;
+//		boolean subduction = false;
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
 		Path erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.2.0");
-		NshmErf erf = new NshmErf(erfPath, subduction, gridded);
+		NshmErf erf = new NshmErf(erfPath, trts, gridded);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 		SummedMagFreqDist mfd2018 = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);

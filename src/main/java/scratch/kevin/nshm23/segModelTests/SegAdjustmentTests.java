@@ -23,8 +23,10 @@ import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.json.Feature;
@@ -61,7 +63,7 @@ import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 public class SegAdjustmentTests {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File("/tmp/seg_tests");
+		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/seg_adjustments");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		// create fake rupture set
@@ -80,8 +82,8 @@ public class SegAdjustmentTests {
 		
 //		double dist2 = 10d;
 //		double dist3 = 5d;
-		double dist2 = segModel.calcJumpDistance(0.1);
-		double dist3 = segModel.calcJumpDistance(0.5);
+		double dist2 = segModel.calcJumpDistance(0.5);
+		double dist3 = segModel.calcJumpDistance(0.1);
 		
 		Location l10 = new Location(34, -118);
 		Location l11 = LocationUtils.location(l10, az1, len1);
@@ -104,7 +106,7 @@ public class SegAdjustmentTests {
 				"        \"Rake\": 0.0,\n"+
 				"        \"LowDepth\": 10.0,\n"+
 				"        \"UpDepth\": 0.0,\n"+
-				"        \"SlipRate\": 1\n"+
+				"        \"SlipRate\": 10\n"+
 				"      },\n"+
 				"      \"geometry\": {\n"+
 				"        \"type\": \"LineString\",\n"+
@@ -133,7 +135,7 @@ public class SegAdjustmentTests {
 				"        \"Rake\": 0.0,\n"+
 				"        \"LowDepth\": 10.0,\n"+
 				"        \"UpDepth\": 0.0,\n"+
-				"        \"SlipRate\": 1\n"+
+				"        \"SlipRate\": 10\n"+
 				"      },\n"+
 				"      \"geometry\": {\n"+
 				"        \"type\": \"LineString\",\n"+
@@ -161,7 +163,7 @@ public class SegAdjustmentTests {
 				"        \"Rake\": 0.0,\n"+
 				"        \"LowDepth\": 10.0,\n"+
 				"        \"UpDepth\": 0.0,\n"+
-				"        \"SlipRate\": 1\n"+
+				"        \"SlipRate\": 10\n"+
 				"      },\n"+
 				"      \"geometry\": {\n"+
 				"        \"type\": \"LineString\",\n"+
@@ -259,21 +261,23 @@ public class SegAdjustmentTests {
 		List<Color> segColors = new ArrayList<>();
 		
 		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.WorstAvgJumpProb(segModel));
-		segNames.add("Jump Probability Threshold Averaging");
-		segPrefixes.add("thresh_avg");
+		segNames.add("Passthrough Rate MFD Averaging");
+		segPrefixes.add("passthrough_rate_mfd_avg");
 		segColors.add(Color.BLUE.darker());
 		
+		ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb.D = true;
 		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(segModel, 50, true));
-		segNames.add("Relative GR Threshold Averaging");
-		segPrefixes.add("thresh_avg_rel_gr");
+		segNames.add("Relative GR MFD Averaging");
+		segPrefixes.add("rel_gr_mfd_avg");
 		segColors.add(Color.GREEN.darker());
 		
-		segAdjusters.add(new SegmentationImpliedSectNuclMFD_Estimator(segModel, MultiBinDistributionMethod.CAPPED_DISTRIBUTED, false));
-		segNames.add("Capped-Redistribution");
-		segPrefixes.add("capped_redist");
-		segColors.add(Color.RED.darker());
+//		segAdjusters.add(new SegmentationImpliedSectNuclMFD_Estimator(segModel, MultiBinDistributionMethod.CAPPED_DISTRIBUTED, false));
+//		segNames.add("Capped-Redistribution");
+//		segPrefixes.add("capped_redist");
+//		segColors.add(Color.RED.darker());
 		
 		Color singleFaultColor = Color.CYAN.darker();
+		Color multiFaultRangeColor = Color.RED.darker();
 		Color origColor = Color.LIGHT_GRAY;
 		
 		SupraSeisBValInversionTargetMFDs singleFaultMFDs = new SupraSeisBValInversionTargetMFDs.Builder(
@@ -290,6 +294,8 @@ public class SegAdjustmentTests {
 		
 		double minNonZero = Double.POSITIVE_INFINITY;
 		double maxY = 0d;
+		
+		List<PlotSpec> cleanOrigSpecs = new ArrayList<>();
 		
 		for (int m=0; m<segAdjusters.size(); m++) {
 			SectNucleationMFD_Estimator segAdjuster = segAdjusters.get(m);
@@ -328,7 +334,7 @@ public class SegAdjustmentTests {
 						excess = null;
 				}
 				
-				List<DiscretizedFunc> funcs = new ArrayList<>();
+				List<XY_DataSet> funcs = new ArrayList<>();
 				List<PlotCurveCharacterstics> chars = new ArrayList<>();
 				
 				IncrementalMagFreqDist origSingleFault = origMFD.deepClone();
@@ -340,21 +346,33 @@ public class SegAdjustmentTests {
 				
 				// figure out jump bins, and add placeholder funcs
 				Map<Jump, EvenlyDiscretizedFunc> jumpBins = new HashMap<>();
+				int minBinOverall = Integer.MAX_VALUE;
+				int maxBinOverall = 0;
+				int maxBinSingleFault = 0;
+				int minBinMultiFault = Integer.MAX_VALUE;
 				for (int r : rupSet.getRupturesForSection(s)) {
 					double mag = rupSet.getMagForRup(r);
 					int bin = adjMFD.getClosestXIndex(mag);
-					for (Jump jump : rups.get(r).getJumpsIterable()) {
-						if (jump.toSection.getSectionId() < jump.fromSection.getSectionId())
-							jump = jump.reverse();
-						EvenlyDiscretizedFunc myJumpBins = jumpBins.get(jump);
-						if (myJumpBins == null) {
-							myJumpBins = new EvenlyDiscretizedFunc(adjMFD.getMinX(), adjMFD.getMaxX(), adjMFD.size());
-							funcs.add(myJumpBins);
-							chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.BLACK)); // will get shaded by box a bit
-							jumpBins.put(jump, myJumpBins);
+					ClusterRupture rup = rups.get(r);
+					if (rup.getTotalNumJumps() > 0) {
+						for (Jump jump : rup.getJumpsIterable()) {
+							if (jump.toSection.getSectionId() < jump.fromSection.getSectionId())
+								jump = jump.reverse();
+							EvenlyDiscretizedFunc myJumpBins = jumpBins.get(jump);
+							if (myJumpBins == null) {
+								myJumpBins = new EvenlyDiscretizedFunc(adjMFD.getMinX(), adjMFD.getMaxX(), adjMFD.size());
+								funcs.add(myJumpBins);
+								chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.BLACK)); // will get shaded by box a bit
+								jumpBins.put(jump, myJumpBins);
+							}
+							myJumpBins.set(bin, 1d);
 						}
-						myJumpBins.set(bin, 1d);
+						minBinMultiFault = Integer.min(minBinMultiFault, bin);
+					} else {
+						maxBinSingleFault = Integer.max(maxBinSingleFault, bin);
 					}
+					minBinOverall = Integer.min(minBinOverall, bin);
+					maxBinOverall = Integer.max(maxBinOverall, bin);
 				}
 				jumpFuncsTable.put(s, name, jumpBins);
 				
@@ -369,6 +387,22 @@ public class SegAdjustmentTests {
 				origMFD.setName("Full GR Target");
 				funcs.add(origMFD);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, origColor));
+				
+				List<XY_DataSet> cleanFuncs = null;
+				List<PlotCurveCharacterstics> cleanChars = null;
+				PlotSpec cleanSpec = null;
+				if (m == 0) {
+					cleanFuncs = new ArrayList<>();
+					cleanChars = new ArrayList<>();
+					cleanFuncs.add(singleFaultMFD);
+					cleanChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, singleFaultColor));
+					cleanFuncs.add(origMFD);
+					cleanChars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, origColor));
+					cleanSpec= new PlotSpec(cleanFuncs, cleanChars, "Original Targets",
+							"Magnitude", "Target Nucleation Rate");
+					cleanSpec.setLegendVisible(true);
+					cleanOrigSpecs.add(cleanSpec);
+				}
 				
 				if (excess != null) {
 					excess.setName("Excess");
@@ -440,7 +474,7 @@ public class SegAdjustmentTests {
 					}
 				}
 				
-				for (DiscretizedFunc func : funcs) {
+				for (XY_DataSet func : funcs) {
 					if (func instanceof IncrementalMagFreqDist) {
 						for (Point2D pt : func) {
 							if (pt.getY() > 0d) {
@@ -454,6 +488,51 @@ public class SegAdjustmentTests {
 				PlotSpec spec = new PlotSpec(funcs, chars, name,
 						"Magnitude", "Target Nucleation Rate");
 				spec.setLegendVisible(true);
+				
+				if (jumpBins.keySet().size() == 1) {
+					// annotate portion of the MFD using jump
+					
+					double logDeltaFirstY = 0.05;
+					double logDeltaUpY = 0.15;
+					double logDeltaTextY = 0.2;
+					
+					for (boolean single : new boolean[] {true, false}) {
+						DefaultXY_DataSet xy = new DefaultXY_DataSet();
+						IncrementalMagFreqDist mfd = single ? singleFaultMFD : origMFD;
+						int leftBin = single ? minBinOverall : minBinMultiFault;
+						int rightBin = single ? maxBinSingleFault : maxBinOverall;
+						double leftX = mfd.getX(leftBin) - 0.4*mfd.getDelta();
+						double rightX = mfd.getX(rightBin) + 0.4*mfd.getDelta();
+						double binTop = singleFaultMFD.getY(minBinOverall);
+						double startY = Math.pow(10, Math.log10(binTop)+logDeltaFirstY);
+						double topY = Math.pow(10, Math.log10(binTop)+logDeltaUpY);
+						
+						xy.set(leftX, startY);
+						xy.set(leftX, topY);
+						xy.set(rightX, topY);
+						xy.set(rightX, startY);
+						
+						Color annColor = single ? singleFaultColor : multiFaultRangeColor;
+						funcs.add(xy);
+						chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, annColor));
+						
+						double textX = 0.5*(leftX+rightX);
+						double textY = Math.pow(10, Math.log10(binTop)+logDeltaTextY);
+						String label = single ? "Single-Fault Ruptures" : "Multi-Fault Ruptures";
+						XYTextAnnotation ann = new XYTextAnnotation(label, textX, textY);
+						ann.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+						ann.setPaint(annColor);
+						ann.setTextAnchor(TextAnchor.BASELINE_CENTER);
+						spec.addPlotAnnotation(ann);
+						
+						if (cleanSpec != null) {
+							cleanFuncs.add(xy);
+							cleanChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, annColor));
+							cleanSpec.addPlotAnnotation(ann);
+						}
+					}
+					
+				}
 				
 				plotsTable.put(s, name, spec);
 				targetsTable.put(s, name, adjMFD);
@@ -526,7 +605,6 @@ public class SegAdjustmentTests {
 				Font font2 = new Font(Font.SANS_SERIF, Font.BOLD, 18);
 				double yCount = 0.75; // start a bit down
 				double yDeltaEach = logYspan*yDeltaFract;
-				List<XYAnnotation> anns = new ArrayList<>();
 				for (int j=0; j<jumps.size(); j++) {
 					Jump jump = jumps.get(j);
 					
@@ -539,7 +617,7 @@ public class SegAdjustmentTests {
 					XYTextAnnotation nameAnn = new XYTextAnnotation(nameStr, leftX, y);
 					nameAnn.setFont(font1);
 					nameAnn.setTextAnchor(TextAnchor.CENTER_LEFT);
-					anns.add(nameAnn);
+					spec.addPlotAnnotation(nameAnn);
 					
 					logY = logMaxY - yDeltaEach*yCount;
 					y = Math.pow(10, logY);
@@ -577,7 +655,10 @@ public class SegAdjustmentTests {
 						if (jumpFunc.getY(i) > 0) {
 							// affects this bin
 							// move to correct y value
-							jumpFunc.set(i, y);
+							if (jumps.size() > 1)
+								jumpFunc.set(i, y);
+							else
+								jumpFunc.set(i, Double.NaN); // don't show in single jump mode
 							sumJumpPartic += target.getY(i)*nuclToParticScalars[i];
 							sumOrigJumpPartic += origMFD.getY(i)*nuclToParticScalars[i];
 						}
@@ -586,7 +667,8 @@ public class SegAdjustmentTests {
 					}
 					
 					List<String[]> insetLines = new ArrayList<>();
-					insetLines.add(new String[] {"Jump Magnitudes:"});
+					if (jumps.size() > 1)
+						insetLines.add(new String[] {"Jump Magnitudes:"});
 					insetLines.add(new String[] {"Original Jump Rate Share:",
 							eDF.format(sumOrigJumpPartic)+" / "+eDF.format(sumOrigPartic)+" = "+fractDF.format(sumOrigJumpPartic/sumOrigPartic)});
 					insetLines.add(new String[] {"Adjusted Jump Rate Share:",
@@ -604,12 +686,12 @@ public class SegAdjustmentTests {
 						XYTextAnnotation left = new XYTextAnnotation(insetLine[0], insetLeftX, y);
 						left.setFont(font2);
 						left.setTextAnchor(TextAnchor.CENTER_LEFT);
-						anns.add(left);
+						spec.addPlotAnnotation(left);
 						if (insetLine.length > 1) {
 							XYTextAnnotation right = new XYTextAnnotation(insetLine[1], rightX, y);
 							right.setFont(font2);
 							right.setTextAnchor(TextAnchor.CENTER_RIGHT);
-							anns.add(right);
+							spec.addPlotAnnotation(right);
 						}
 					}
 					
@@ -621,14 +703,21 @@ public class SegAdjustmentTests {
 				double y = Math.pow(10, logY);
 				XYBoxAnnotation box = new XYBoxAnnotation(xRange.getLowerBound(), y,
 						xRange.getUpperBound(), yRange.getUpperBound(), null, null, new Color(255, 255, 255, 120));
-				anns.add(0, box);
-				spec.setPlotAnnotations(anns);
+				spec.addPlotAnnotation(0, box);
 				
 				String plotPrefix = "sect_"+s+"_target_"+segPrefixes.get(m);
 				
 				gp.drawGraphPanel(spec, false, true, xRange, yRange);
 				
 				PlotUtils.writePlots(outputDir, plotPrefix, gp, 800, 650, true, false, false);
+				
+				if (m == 0) {
+					// also create a clean one with just the original and single fault MFDs
+					spec = cleanOrigSpecs.get(s);
+					gp.drawGraphPanel(spec, false, true, xRange, yRange);
+					
+					PlotUtils.writePlots(outputDir, "sect_"+s+"_clean", gp, 800, 650, true, false, false);
+				}
 			}
 		}
 	}
