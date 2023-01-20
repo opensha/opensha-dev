@@ -3076,12 +3076,24 @@ public class PureScratch {
 		factory.buildRuptureSet(NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT, 30);
 	}
 	
+	private static void test207() throws IOException {
+		NSHM23_SeisSmoothingAlgorithms smooth = NSHM23_SeisSmoothingAlgorithms.AVERAGE;
+		NSHM23_DeclusteringAlgorithms decluster = NSHM23_DeclusteringAlgorithms.AVERAGE;
+		GriddedGeoDataSet pdf = smooth.loadXYZ(SeismicityRegions.CONUS_EAST, decluster);
+		Region reg = AnalysisRegions.CONUS_EAST.load();
+		double sumInReg = 0d;
+		for (int i=0; i<pdf.size(); i++)
+			if (reg.contains(pdf.getLocation(i)))
+				sumInReg += pdf.get(i);
+		System.out.println(sumInReg+" fract in EAST");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test206();
+		test207();
 	}
 
 }

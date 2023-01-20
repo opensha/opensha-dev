@@ -426,7 +426,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3_UncertAddDeformationModels.U3_MEAN,
 //				NSHM23_DeformationModels.AVERAGE,
 //				NSHM23_DeformationModels.GEOLOGIC,
-//				NSHM23_DeformationModels.MEDIAN,
+				NSHM23_DeformationModels.MEDIAN,
 				
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,

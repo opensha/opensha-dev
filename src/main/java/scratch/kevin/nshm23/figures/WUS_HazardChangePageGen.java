@@ -1,17 +1,28 @@
 package scratch.kevin.nshm23.figures;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
+import org.jfree.data.Range;
+import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -20,6 +31,8 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.CubedGriddedRegion;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_FaultCubeAssociations;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -37,14 +50,25 @@ public class WUS_HazardChangePageGen {
 		String hazLabel = "PGA, 2% in 50 yrs";
 		String dirPrefix = "pga_2in50";
 		
+//		String entryName = "mean_map_1.0s_TWO_IN_50.txt";
+//		String wrapperEntryName = "map_1.0s_TWO_IN_50.txt";
+//		String hazLabel = "1s SA, 2% in 50 yrs";
+//		String dirPrefix = "sa_1s_2in50";
+		
+		String gmpeName = "ASK (2014)";
+		boolean hasSubduction = false;
+		
 		// load hazard maps
 		File nshm23HazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		GriddedGeoDataSet nshm23Hazard = CA_HazardChangeFigures.loadXYZ(nshm23HazardFile, entryName);
 		
+//		File outputDir = new File(nshm23HazardFile.getParentFile(), "hazard_comparisons_nshm18_"+dirPrefix);
+		File outputDir = new File(nshm23HazardFile.getParent().replace("-ba_only", ""), "hazard_comparisons_nshm18_"+dirPrefix);
+		
 		File nshm23GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_only_0.1deg.zip");
 		GriddedGeoDataSet nshm23GridHazard = CA_HazardChangeFigures.loadXYZ(nshm23GridHazardFile, entryName);
 		Preconditions.checkState(nshm23GridHazard.size() == nshm23Hazard.size());
@@ -91,7 +115,7 @@ public class WUS_HazardChangePageGen {
 				momentRatio.set(i, rate23/rate18);
 		}
 		
-		double[] momentThresholds = { Double.POSITIVE_INFINITY, 10d, 5d, 2d, 1.5d };
+		double[] momentThresholdPercents = { Double.POSITIVE_INFINITY, 100d, 50d, 20d };
 		
 		GriddedGeoDataSet faultHazardRatio = new GriddedGeoDataSet(gridReg, false);
 		GriddedGeoDataSet faultHazardPDiff = new GriddedGeoDataSet(gridReg, false);
@@ -177,7 +201,6 @@ public class WUS_HazardChangePageGen {
 			map.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(100, 100, 100, 127)));
 		}
 		
-		File outputDir = new File(nshm23HazardFile.getParentFile(), "hazard_comparisons_nshm18_"+dirPrefix);
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		File resourcesDir = new File(outputDir, "resources");
@@ -185,7 +208,16 @@ public class WUS_HazardChangePageGen {
 		
 		List<String> lines = new ArrayList<>();
 		
+		String cascadiaSentence = hasSubduction ? "" : " The Cascadia subduction zone implementation is excluded in these comparisons.";
+		
 		lines.add("# Hazard Comparisons with NSHM18");
+		lines.add("");
+		lines.add("This report compares hazard between the NSHM23 and NSHM18 WUS ERFs, attempting to tease apart the "
+				+ "contributions from the fault and gridded seismicity models to overall hazard changes.");
+		lines.add("");
+		lines.add("All comparisons are done with a branch-averaged mean ERF model (as is used in the final NSHM), and a "
+				+ "single ground motion model, "+gmpeName+", using uniform and default site conditions. All maps are for "
+				+ hazLabel+"."+cascadiaSentence);
 		lines.add("");
 		
 		int tocIndex = lines.size();
@@ -195,7 +227,8 @@ public class WUS_HazardChangePageGen {
 		lines.add(topLink); lines.add("");
 		
 		lines.add("This section compares NSHM23 with NSHM18, but holding the gridded seismicity model constant in "
-				+ "order to focus on fault-based changes (due both to ingredient and methodological changes).");
+				+ "order to focus on fault-based changes (due both to ingredient and methodological changes) in areas "
+				+ "where hazard is dominated by modeled faults.");
 		lines.add("");
 		
 		TableBuilder table = MarkdownUtils.tableBuilder();
@@ -255,6 +288,14 @@ public class WUS_HazardChangePageGen {
 				+ "are shown in yellow (i.e., a fault was added), and those with moment in NSHM18 but not in NSHM23 are "
 				+ "shown in green (i.e., a fault was removed).");
 		lines.add("");
+		if (MomentRateCompNSHM18.LINEAR_RAMP) {
+			lines.add("To smooth out minor geometry changes between the two models, moment is distributed around "
+					+ "faults using a linear ramp in (3-D) up to "
+					+ oDF.format(NSHM23_SingleRegionGridSourceProvider.DEFAULT_MAX_FAULT_NUCL_DIST)+" km; this is the "
+					+ "same ramp used to carve out gridded seismicity near faults when constructing the NSHM23 gridded "
+					+ "seismicity model.");
+			lines.add("");
+		}
 		
 		CPT logMomentRatioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-1d, 1d);
 		logMomentRatioCPT.setAboveMaxColor(Color.YELLOW);
@@ -297,11 +338,11 @@ public class WUS_HazardChangePageGen {
 		table.initNewLine();
 		
 		mapMaker.plotXYZData(logMomentRatio, logMomentRatioCPT, "Log10 (NSHM23 Fault Moment) / (NSHM18 Fault Moment)");
-		mapMaker.plot(resourcesDir, "moment_ratio", " ");
+		mapMaker.plot(resourcesDir, "moment_ratio", "Fault Moment Change, Ratio");
 		table.addColumn("![Map]("+resourcesDir.getName()+"/moment_ratio.png)");
 		
 		mapMaker.plotXYZData(momentDiff, momentDiffCPT, "NSHM23 Fault Moment) - (NSHM18 Fault Moment)");
-		mapMaker.plot(resourcesDir, "moment_diff", " ");
+		mapMaker.plot(resourcesDir, "moment_diff", "Fault Moment Change, Difference");
 		table.addColumn("![Map]("+resourcesDir.getName()+"/moment_diff.png)");
 		
 		table.finalizeLine();
@@ -313,10 +354,14 @@ public class WUS_HazardChangePageGen {
 		lines.add(topLink); lines.add("");
 		
 		lines.add("This section masks hazard changes, only showing them near faults where NSHM23 fault-moment is within "
-				+ "a given factor of NSHM18 fault-moment. Various thresholds are used, starting with one that only "
-				+ "includes areas with faults in both models, and then the threshold decreases to only show areas where "
-				+ "moment is similar in the two models. Areas where the sign of the hazard change differs from the "
-				+ "sign of moment change are shown regardless of the threshold.");
+				+ "a given factor of NSHM18 fault-moment. Hazard changes in areas that remain may still be largely due "
+				+ "to moment changes, but this helps to narrow the search space for identification of areas where "
+				+ "methodological changes may dominate hazard changes.");
+		lines.add("");
+		lines.add("Various thresholds are used, starting with one that only includes areas with faults in both models, "
+				+ "and then the threshold decreases to only show areas where moment is similar in the two models. Areas "
+				+ "where the sign of the hazard change differs from the sign of moment change are shown regardless of "
+				+ "the threshold value.");
 		lines.add("");
 		
 		TableBuilder threshMapTable = MarkdownUtils.tableBuilder();
@@ -325,31 +370,30 @@ public class WUS_HazardChangePageGen {
 		List<String> threshLabels = new ArrayList<>();
 		List<ChangeStats> threshStats = new ArrayList<>();
 		
-		for (double threshold : momentThresholds) {
+		for (double pThresh : momentThresholdPercents) {
 			String threshLabel, threshPrefix;
-			if (Double.isFinite(threshold)) {
-				threshLabel = oDF.format(threshold)+"x Moment Threshold";
-				threshPrefix = "mom_thresh_"+oDF.format(threshold);
+			if (Double.isFinite(pThresh)) {
+				threshLabel = "<"+oDF.format(pThresh)+"% Moment Change Threshold";
+				threshPrefix = "mom_thresh_p"+oDF.format(pThresh);
 			} else {
-				threshLabel = "Any Moment Threshold";
+				threshLabel = "Areas w/ Moment in Both Models";
 				threshPrefix = "mom_thresh_inf";
 			}
 			
 			threshLabels.add(threshLabel);
-			
-			double lowerThresh = 1d/threshold;
 			
 			ChangeStats stats = new ChangeStats();
 			threshStats.add(stats);
 			GriddedGeoDataSet maskedPDiff = new GriddedGeoDataSet(gridReg, false);
 			GriddedGeoDataSet maskedDiff = new GriddedGeoDataSet(gridReg, false);
 			for (int i=0; i<nshm23Hazard.size(); i++) {
-				double moRatio = momentRatio.get(i);
-				boolean skip = Double.isNaN(moRatio) || (Double.isInfinite(threshold) && Double.isInfinite(moRatio));
+				double mom23 = momentRates23.get(i);
+				double mom18 = momentRates18.get(i);
+				boolean skip = Double.isNaN(mom23) || Double.isNaN(mom18) || mom23 == 0d || mom18 == 0d;
 				if (!skip) {
 					// check the threshold
-					boolean outside = moRatio > threshold || moRatio < lowerThresh;
-					if (outside) {
+					double pDiff = Math.abs(100d*(mom23 - mom18)/mom18);
+					if (pDiff > pThresh) {
 						// make sure the sign is the same
 						double hazDiff = faultHazardDiff.get(i);
 						double moDiff = momentDiff.get(i);
@@ -416,6 +460,125 @@ public class WUS_HazardChangePageGen {
 		lines.addAll(table.build());
 		lines.add("");
 		
+		lines.add("### Fault-Based Hazard and Moment Change Ratios");
+		lines.add(topLink); lines.add("");
+		
+		CSVFile<String> csv = new CSVFile<>(false);
+		csv.addLine("Grid Cell Index", "Latitude", "Longitude",
+				"NSHM23 Fault Moment (N-m)", "NSHM18 Fault Moment (N-m)", "Moment Change Ratio",
+				"NSHM23 Fault Hazard, "+hazLabel+" (g)", "NSHM18 Fault Hazard, "+hazLabel+" (g)", "Fault Hazard Ratio",
+				"Fault(s) Associated");
+		
+		GriddedGeoDataSet hazMomRatioMap = new GriddedGeoDataSet(gridReg, false);
+		DefaultXY_DataSet hazMomScatter = new DefaultXY_DataSet();
+		
+		List<? extends FaultSection> nshm23Faults = NSHM23_DeformationModels.AVERAGE.build(NSHM23_FaultModels.NSHM23_v2);
+		NSHM23_FaultCubeAssociations assoc23 = new NSHM23_FaultCubeAssociations(
+				nshm23Faults, cgr, NSHM23_SingleRegionGridSourceProvider.DEFAULT_MAX_FAULT_NUCL_DIST);
+		
+		for (int i=0; i<hazMomRatioMap.size(); i++) {
+			double mom23 = momentRates23.get(i);
+			double mom18 = momentRates18.get(i);
+			
+			if (mom23 > 0d && mom18 > 0d) {
+				List<String> line = new ArrayList<>();
+				line.add(i+"");
+				Location loc = gridReg.getLocation(i);
+				line.add((float)loc.getLatitude()+"");
+				line.add((float)loc.getLongitude()+"");
+				line.add((float)mom23+"");
+				line.add((float)mom18+"");
+				double momRatio = mom23/mom18;
+				line.add((float)momRatio+"");
+				double haz23 = nshm23Hazard.get(i);
+				double haz18 = nshm18_23gridHazard.get(i);
+				double hazRatio = haz23/haz18;
+				line.add((float)haz23+"");
+				line.add((float)haz18+"");
+				line.add((float)hazRatio+"");
+				
+				Map<Integer, Double> assocSects = assoc23.getSectionFracsOnNode(i);
+				HashSet<String> faultNames = new HashSet<>();
+				if (assocSects != null) {
+					for (Integer id : assocSects.keySet()) {
+						FaultSection sect = nshm23Faults.get(id);
+						if (!faultNames.contains(sect.getParentSectionName())) {
+							faultNames.add(sect.getParentSectionName());
+							line.add(sect.getParentSectionName());
+						}
+					}
+				}
+				csv.addLine(line);
+				
+				hazMomScatter.set(momRatio, hazRatio);
+				hazMomRatioMap.set(i, Math.log10(hazRatio)/Math.log10(momRatio));
+			} else {
+				hazMomRatioMap.set(i, Double.NaN);
+			}
+		}
+		
+		csv.writeToFile(new File(resourcesDir, "fault_moment_hazard_comparison.csv"));
+		
+		lines.add("This section shows the relationship between near-fault moment changes and hazard changes.");
+		lines.add("");
+		lines.add("The map shows a ratio of ratios in an attempt to identify areas where the Log10 hazard change ratio "
+				+ "differes in sign or scale from the Log10 moment change ratio:");
+		lines.add("");
+		lines.add("* Dark red areas: places where hazard change was greater than moment change, but they were in the "
+				+ "same direction (i.e., both increasing, or both decreasing)");
+		lines.add("* Dark blue areas: places where hazard change was greater than moment change, but they were in the "
+				+ "different directions (i.e., one increased and the other decreased)");
+		lines.add("* Lightly colored areas: places where hazard change was smaller than moment change");
+		lines.add("");
+		lines.add("");
+		lines.add("Download Data: [fault_moment_hazard_comparison.csv]("+resourcesDir.getName()
+			+"/fault_moment_hazard_comparison.csv)");
+		lines.add("");
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		Range range = new Range(1e-1, 1e1);
+		DefaultXY_DataSet oneToOne = new DefaultXY_DataSet();
+		oneToOne.set(range.getLowerBound(), range.getLowerBound());
+		oneToOne.set(range.getUpperBound(), range.getUpperBound());
+		
+		funcs.add(oneToOne);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+		
+		DefaultXY_DataSet boundedScatter = new DefaultXY_DataSet();
+		for (Point2D pt : hazMomScatter)
+			boundedScatter.set(Math.max(range.getLowerBound(), Math.min(range.getUpperBound(), pt.getX())),
+					Math.max(range.getLowerBound(), Math.min(range.getUpperBound(), pt.getY())));
+		
+//		funcs.add(hazMomScatter);
+		funcs.add(boundedScatter);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_CROSS, 3f, new Color(0, 0, 0, 60)));
+		
+		PlotSpec scatterSpec = new PlotSpec(funcs, chars, "Fault Hazard and Moment Comparison", "Moment Ratio", "Hazard Ratio");
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		gp.drawGraphPanel(scatterSpec, true, true, range, range);
+		
+		table = MarkdownUtils.tableBuilder();
+		
+		table.addLine("Scatter Plot", "Map View");
+		
+		table.initNewLine();
+		PlotUtils.writePlots(resourcesDir, "haz_mom_ratios_scatter", gp, 1000, false, true, false, false);
+		table.addColumn("![scatter plot]("+resourcesDir.getName()+"/haz_mom_ratios_scatter.png)");
+		
+		CPT hazMomRatioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-2d, 2d);
+		hazMomRatioCPT.setNanColor(transparent);
+		mapMaker.plotXYZData(hazMomRatioMap, hazMomRatioCPT, "Log10(Hazard Change Ratio) / Log10(Moment Change Ratio)");
+		
+		mapMaker.plot(resourcesDir, "haz_mom_ratios_map", "Fault Hazard and Moment Comparison");
+		table.addColumn("![map plot]("+resourcesDir.getName()+"/haz_mom_ratios_map.png)");
+		table.finalizeLine();
+		
+		lines.addAll(table.build());
+		lines.add("");
+		
 		ChangeStats griddedStats = null;
 		if (gridded) {
 			// gridded differences
@@ -423,7 +586,7 @@ public class WUS_HazardChangePageGen {
 			lines.add(topLink); lines.add("");
 			
 			lines.add("These plots compare the gridded seismicity components of the models. For the ratio and "
-					+ "difference maps, the contributions of NSHM23 fault sources is held constant (added to both "
+					+ "difference maps, the contributions of NSHM23 fault sources are held constant (added to both "
 					+ "models).");
 			lines.add("");
 			
@@ -479,7 +642,7 @@ public class WUS_HazardChangePageGen {
 			lines.add("### Gridded Seismicity Model Hazard Changes, Away From Faults");
 			lines.add(topLink); lines.add("");
 			
-			lines.add("Here, we mask hazard changes only showing them away from faults in either model.");
+			lines.add("Here, we mask gridded seismicity hazard changes only showing them away from faults in either model.");
 			lines.add("");
 			
 			ChangeStats stats = new ChangeStats();
@@ -703,15 +866,15 @@ public class WUS_HazardChangePageGen {
 				}
 			}
 			
-			String pDiffLabel = "Gridded       ←       |Hazard % Change|       →        Faults";
-			String diffLabel  = "Gridded       ←      |Hazard Difference|      →        Faults";
+			String pDiffLabel = "Gridded      ←        |Hazard % Change|        →       Faults";
+			String diffLabel  = "Gridded      ←     |Hazard Difference (g)|     →       Faults";
 			
 			// full hazard difference
 			lines.add("### Fault vs Gridded, Hazard Change Attribution");
 			lines.add(topLink); lines.add("");
 			
-			lines.add("This section shows hazard changes, colored by their primary contribution (fault or gridded) "
-					+ "rather than their sign. Small changes are masked out.");
+			lines.add("This section shows hazard changes, colored by the primary contributor to hazard change (faults "
+					+ "or gridded seismicity) rather than the sign of that change. Small changes are masked out.");
 			lines.add("");
 			
 			table = MarkdownUtils.tableBuilder();
