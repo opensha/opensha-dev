@@ -45,7 +45,12 @@ public class NshmErf extends AbstractERF {
 
   public NshmErf(Path path, Set<TectonicRegionType> trts,
 		  IncludeBackgroundOption gridOption) {
-    model = HazardModel.load(path);
+    this(HazardModel.load(path), trts, gridOption);
+  }
+
+  public NshmErf(HazardModel model, Set<TectonicRegionType> trts,
+		  IncludeBackgroundOption gridOption) {
+    this.model = model;
     allSources = new ArrayList<>();
     sourceMap = MultimapBuilder
         .enumKeys(TectonicRegionType.class)
