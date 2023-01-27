@@ -30,10 +30,11 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		File localMainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
 		int nodes = 36;
-		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.ONLY;
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.EXCLUDE;
 		boolean subduction = false;
 		
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
+//		AttenRelRef gmpeRef = AttenRelRef.NGAWest_2014_AVG;
 		
 		String erfPrefix = "nshm18";
 		String tagName = "nshm-conus-5.2.0"; // NSHM18

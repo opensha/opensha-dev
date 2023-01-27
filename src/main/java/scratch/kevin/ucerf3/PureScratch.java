@@ -144,6 +144,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels.MinisectionSlipRecord;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
@@ -3088,12 +3090,76 @@ public class PureScratch {
 		System.out.println(sumInReg+" fract in EAST");
 	}
 	
+	private static void test208() throws IOException {
+		Map<Integer, List<MinisectionSlipRecord>> minis = NSHM23_DeformationModels.GEOLOGIC.getMinisections(NSHM23_FaultModels.NSHM23_v2);
+		MinMaxAveTracker track = new MinMaxAveTracker();
+		for (List<MinisectionSlipRecord> recs : minis.values()) {
+			for (MinisectionSlipRecord mini : recs) {
+				track.addValue(LocationUtils.horzDistanceFast(mini.startLoc, mini.endLoc));
+			}
+		}
+		System.out.println("Minisection lengths: "+track);
+	}
+	
+	private static void test209() throws IOException {
+		String erfPrefix = "nshm23-wrapped";
+//		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.a.3");
+		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.2.0");
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.ONLY;
+		boolean subduction = false;
+		
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW, TectonicRegionType.STABLE_SHALLOW);
+		if (subduction) {
+			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+		}
+
+		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		
+		double maxMag = 0d;
+		Location maxMagLoc = null;
+		boolean allPtSurf = true;
+		
+		for (ProbEqkSource source : erf) {
+			for (ProbEqkRupture rup : source) {
+				allPtSurf = allPtSurf && rup.getRuptureSurface().isPointSurface();
+				double mag = rup.getMag();
+				if (mag > maxMag) {
+					maxMag = mag;
+					maxMagLoc = rup.getRuptureSurface().getEvenlyDiscretizedLocation(0);
+				}
+			}
+		}
+		
+		System.out.println("Max gridded mag is "+(float)maxMag+", first encountered at "+maxMagLoc);
+		System.out.println("All point sources? "+allPtSurf);
+	}
+	
+	private static void test210() throws IOException {
+		List<? extends FaultSection> sects = NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1.getFaultSections();
+		System.out.println("Wasatch:");
+		for (FaultSection sect : sects)
+			if (sect.getName().toLowerCase().contains("wasatch"))
+				System.out.println("    "+sect.getSectionId()+",");
+		System.out.println("Pleasant Valley:");
+		for (FaultSection sect : sects)
+			if (sect.getName().toLowerCase().contains("pleasant") && sect.getName().toLowerCase().contains("valley"))
+				System.out.println("    "+sect.getSectionId()+",");
+		System.out.println("Fairview:");
+		for (FaultSection sect : sects)
+			if (sect.getName().toLowerCase().contains("fairview") ||
+					(sect.getName().toLowerCase().contains("west") && sect.getName().toLowerCase().contains("gate")))
+				System.out.println("    "+sect.getSectionId()+",");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test207();
+		test210();
 	}
 
 }

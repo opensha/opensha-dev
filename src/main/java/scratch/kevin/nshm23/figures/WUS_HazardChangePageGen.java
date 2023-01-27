@@ -4,12 +4,16 @@ import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -25,36 +29,58 @@ import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.MarkdownUtils;
-import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
+import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.CubedGriddedRegion;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_FaultCubeAssociations;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
 
+import gov.usgs.earthquake.nshmp.model.HazardModel;
+import gov.usgs.earthquake.nshmp.model.NshmErf;
+import scratch.kevin.nshm23.DistWeightedMomentMapSmoothing;
 import scratch.kevin.nshm23.MomentRateCompNSHM18;
+import scratch.kevin.nshm23.SingleSiteHazardAndDataComparisonPageGen;
+import scratch.kevin.nshm23.SingleSiteHazardAndDataComparisonPageGen.RegionalParticipationResult;
 
 public class WUS_HazardChangePageGen {
 
 	public static void main(String[] args) throws IOException {
 		
-		String entryName = "mean_map_pga_TWO_IN_50.txt";
-		String wrapperEntryName = "map_pga_TWO_IN_50.txt";
-		String hazLabel = "PGA, 2% in 50 yrs";
-		String dirPrefix = "pga_2in50";
+		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
+		double period = 1d;
 		
-//		String entryName = "mean_map_1.0s_TWO_IN_50.txt";
-//		String wrapperEntryName = "map_1.0s_TWO_IN_50.txt";
-//		String hazLabel = "1s SA, 2% in 50 yrs";
-//		String dirPrefix = "sa_1s_2in50";
+		String entryName, wrapperEntryName, hazLabel, dirPrefix;
+		if (period == 0d) {
+			entryName = "mean_map_pga_"+rp.name()+".txt";
+			wrapperEntryName = "map_pga_"+rp.name()+".txt";
+			hazLabel = "PGA, "+rp.label;
+			dirPrefix = "pga";
+		} else {
+			entryName = "mean_map_"+(float)period+"s_"+rp.name()+".txt";
+			wrapperEntryName = "map_"+(float)period+"s_"+rp.name()+".txt";
+			hazLabel = oDF.format(period)+"s SA, "+rp.label;
+			dirPrefix = "sa_"+oDF.format(period)+"s";
+		}
 		
+		dirPrefix += "_"+rp.name().toLowerCase().replace("two", "2").replace("ten", "10").replace("_", "");
+		
+		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
+		ScalarIMR gmpe = gmpeRef.get();
 		String gmpeName = "ASK (2014)";
 		boolean hasSubduction = false;
 		
@@ -73,6 +99,10 @@ public class WUS_HazardChangePageGen {
 		GriddedGeoDataSet nshm23GridHazard = CA_HazardChangeFigures.loadXYZ(nshm23GridHazardFile, entryName);
 		Preconditions.checkState(nshm23GridHazard.size() == nshm23Hazard.size());
 //		GriddedGeoDataSet nshm23GridHazard = null;
+		
+		FaultSystemSolution nshm23BASol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		File nshm18_23gridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2023_01_04-nshm18-grid_src_from_23-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
@@ -473,7 +503,7 @@ public class WUS_HazardChangePageGen {
 		DefaultXY_DataSet hazMomScatter = new DefaultXY_DataSet();
 		
 		List<? extends FaultSection> nshm23Faults = NSHM23_DeformationModels.AVERAGE.build(NSHM23_FaultModels.NSHM23_v2);
-		NSHM23_FaultCubeAssociations assoc23 = new NSHM23_FaultCubeAssociations(
+		FaultGridAssociations assoc23 = new NSHM23_FaultCubeAssociations(
 				nshm23Faults, cgr, NSHM23_SingleRegionGridSourceProvider.DEFAULT_MAX_FAULT_NUCL_DIST);
 		
 		for (int i=0; i<hazMomRatioMap.size(); i++) {
@@ -565,7 +595,7 @@ public class WUS_HazardChangePageGen {
 		table.addLine("Scatter Plot", "Map View");
 		
 		table.initNewLine();
-		PlotUtils.writePlots(resourcesDir, "haz_mom_ratios_scatter", gp, 1000, false, true, false, false);
+		PlotUtils.writePlots(resourcesDir, "haz_mom_ratios_scatter", gp, 800, false, true, false, false);
 		table.addColumn("![scatter plot]("+resourcesDir.getName()+"/haz_mom_ratios_scatter.png)");
 		
 		CPT hazMomRatioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-2d, 2d);
@@ -922,6 +952,399 @@ public class WUS_HazardChangePageGen {
 			lines.add("");
 		}
 		
+		double[] magThresholds = {5d, 6.5d, 7.5};
+		
+		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.2.0");
+		boolean subduction = false;
+		
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW, TectonicRegionType.STABLE_SHALLOW);
+		if (subduction) {
+			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+		}
+
+		HazardModel model = HazardModel.load(erfPath);
+		NshmErf faultERF = new NshmErf(model, trts, IncludeBackgroundOption.EXCLUDE);
+		System.out.println("NSHM Fault ERF size: " + faultERF.getNumSources());
+		faultERF.getTimeSpan().setDuration(1.0);
+		faultERF.updateForecast();
+		NshmErf gridERF = new NshmErf(model, trts, IncludeBackgroundOption.ONLY);
+		System.out.println("NSHM Grid ERF size: " + gridERF.getNumSources());
+		gridERF.getTimeSpan().setDuration(1.0);
+		gridERF.updateForecast();
+		
+		RegionalParticipationResult nshm18FaultPartic = SingleSiteHazardAndDataComparisonPageGen.calcNshmErfPartic(
+				faultERF, gridReg, magThresholds, null);
+		RegionalParticipationResult nshm18GridPartic = SingleSiteHazardAndDataComparisonPageGen.calcNshmErfPartic(
+				gridERF, gridReg, magThresholds, null);
+		
+		GriddedGeoDataSet[] nshm18Rates = new GriddedGeoDataSet[magThresholds.length];
+		for (int m=0; m<magThresholds.length; m++)
+			nshm18Rates[m] = sumMap(nshm18FaultPartic.particRateMaps[m], nshm18GridPartic.particRateMaps[m]);
+		GriddedGeoDataSet nshm18MomentRate = sumMap(nshm18FaultPartic.momentRateMap, nshm18GridPartic.momentRateMap);
+		
+		System.out.println("Building NSHM23 rate maps");
+		RegionalParticipationResult nshm23FaultPartic = SingleSiteHazardAndDataComparisonPageGen.calcFSSFaultPartic(
+				nshm23BASol, gridReg, magThresholds, null);
+		RegionalParticipationResult nshm23GridPartic = SingleSiteHazardAndDataComparisonPageGen.calcFSSGriddedPartic(
+				nshm23BASol, gridReg, magThresholds, null);
+		
+		GriddedGeoDataSet[] nshm23Rates = new GriddedGeoDataSet[magThresholds.length];
+		for (int m=0; m<magThresholds.length; m++)
+			nshm23Rates[m] = sumMap(nshm23FaultPartic.particRateMaps[m], nshm23GridPartic.particRateMaps[m]);
+		GriddedGeoDataSet nshm23MomentRate = sumMap(nshm23FaultPartic.momentRateMap, nshm23GridPartic.momentRateMap);
+		
+		GriddedGeoDataSet[] ratePDiffs = new GriddedGeoDataSet[magThresholds.length];
+		GriddedGeoDataSet[] rateDiffs = new GriddedGeoDataSet[magThresholds.length];
+		
+		for (int m=0; m<magThresholds.length; m++) {
+			ratePDiffs[m] = new GriddedGeoDataSet(gridReg, false);
+			rateDiffs[m] = new GriddedGeoDataSet(gridReg, false);
+		}
+		
+		GriddedGeoDataSet erfMomentPDiff = new GriddedGeoDataSet(gridReg, false);
+		GriddedGeoDataSet erfMomentDiff = new GriddedGeoDataSet(gridReg, false);
+		for (int i=0; i<gridReg.getNodeCount(); i++) {
+			for (int m=0; m<magThresholds.length; m++) {
+				ratePDiffs[m].set(i, 100d*(nshm23Rates[m].get(i) - nshm18Rates[m].get(i))/nshm18Rates[m].get(i));
+				rateDiffs[m].set(i, nshm23Rates[m].get(i) - nshm18Rates[m].get(i));
+			}
+			erfMomentPDiff.set(i, 100d*(nshm23MomentRate.get(i) - nshm18MomentRate.get(i))/nshm18MomentRate.get(i));
+			erfMomentDiff.set(i, nshm23MomentRate.get(i) - nshm18MomentRate.get(i));
+		}
+		
+		CPT moCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(10d, 18d);
+		moCPT.setNanColor(transparent);
+		
+		CPT moRateDiffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-1e16, 1e16);
+		moRateDiffCPT.setNanColor(transparent);
+		
+		CPT pDiff100CPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-100d, 100d);
+		pDiff100CPT.setNanColor(transparent);
+		
+		lines.add("## Full Model Rate and Moment Rate Comparisons");
+		lines.add(topLink); lines.add("");
+		
+		lines.add("### Full Model Rate Comparisons");
+		lines.add(topLink); lines.add("");
+		
+		table = MarkdownUtils.tableBuilder();
+		
+		for (int m=0; m<magThresholds.length; m++) {
+			String magPrefix = "m"+oDF.format(magThresholds[m]);
+			String magLabel = "M≥"+oDF.format(magThresholds[m]);
+			table.addLine(MarkdownUtils.boldCentered("NSHM23, "+magLabel), MarkdownUtils.boldCentered("NSHM18, "+magLabel));
+			
+			double maxRate = 0d;
+			double[] allRateDiffs = new double[gridReg.getNodeCount()];
+			for (int i=0; i<allRateDiffs.length; i++) {
+				double rate23 = nshm23Rates[m].get(i);
+				double rate18 = nshm18Rates[m].get(i);
+				maxRate = Math.max(maxRate, Math.max(rate23, rate18));
+				allRateDiffs[i] = Math.abs(rate23-rate18);
+				
+				if (rate23 == 0d)
+					nshm23Rates[m].set(i, Double.NaN);
+				if (rate18 == 0d)
+					nshm18Rates[m].set(i, Double.NaN);
+			}
+			double diffStat = StatUtils.percentile(allRateDiffs, 95d);
+			double logMax = Math.ceil(Math.log10(maxRate));
+			
+			CPT nuclCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(logMax-6d, logMax);
+			nuclCPT.setNanColor(transparent);
+			
+//			double diffMax = Math.pow(10, (int)(Math.log10(diffStat)+0.5));
+			double diffMax = Math.pow(10, logMax-2);
+			
+			CPT rateDiffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-diffMax, diffMax);
+			rateDiffCPT.setNanColor(transparent);
+			
+			table.initNewLine();
+			
+			mapMaker.plotXYZData(asLog10(nshm23Rates[m]), nuclCPT, "Participation Rate, "+magLabel);
+			mapMaker.plot(resourcesDir, "nshm23_rate_"+magPrefix, " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/nshm23_rate_"+magPrefix+".png)");
+			
+			mapMaker18.plotXYZData(asLog10(nshm18Rates[m]), nuclCPT, "Participation Rate, "+magLabel);
+			mapMaker18.plot(resourcesDir, "nshm18_rate_"+magPrefix, " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/nshm18_rate_"+magPrefix+".png)");
+			
+			table.finalizeLine();
+			
+			table.addLine(MarkdownUtils.boldCentered("Ratio"), MarkdownUtils.boldCentered("Difference"));
+			
+			table.initNewLine();
+			
+			mapMaker.plotXYZData(ratePDiffs[m], pDiff100CPT, "% Change in Participation Rate, "+magLabel);
+			mapMaker.plot(resourcesDir, "rate_pDiff_"+magPrefix, " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/rate_pDiff_"+magPrefix+".png)");
+			
+			mapMaker.plotXYZData(rateDiffs[m], rateDiffCPT, "Participation Rate Difference, "+magLabel);
+			mapMaker.plot(resourcesDir, "rate_diff_"+magPrefix, " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/rate_diff_"+magPrefix+".png)");
+			
+			table.finalizeLine();
+		}
+		
+		lines.addAll(table.build());
+		
+		lines.add("### Full Model Moment Rate Comparison");
+		lines.add(topLink); lines.add("");
+		
+		table = MarkdownUtils.tableBuilder();
+		
+		table.addLine(MarkdownUtils.boldCentered("NSHM23"), MarkdownUtils.boldCentered("NSHM18"));
+		
+		table.initNewLine();
+		
+		mapMaker.plotXYZData(asLog10(nshm23MomentRate), moCPT, "Log10 Moment Rate (N-m)");
+		mapMaker.plot(resourcesDir, "full_nshm23_moment_rate", " ");
+		table.addColumn("![Map]("+resourcesDir.getName()+"/full_nshm23_moment_rate.png)");
+		
+		mapMaker18.plotXYZData(asLog10(nshm18MomentRate), moCPT, "Log10 Moment Rate (N-m)");
+		mapMaker18.plot(resourcesDir, "full_nshm18_moment_rate", " ");
+		table.addColumn("![Map]("+resourcesDir.getName()+"/full_nshm18_moment_rate.png)");
+		
+		table.finalizeLine();
+		
+		table.addLine(MarkdownUtils.boldCentered("Ratio"), MarkdownUtils.boldCentered("Difference"));
+		
+		table.initNewLine();
+		
+		mapMaker.plotXYZData(erfMomentPDiff, pDiff100CPT, "% Change in Moment Rate");
+		mapMaker.plot(resourcesDir, "full_moment_rate_pDiff", " ");
+		table.addColumn("![Map]("+resourcesDir.getName()+"/full_moment_rate_pDiff.png)");
+		
+		mapMaker.plotXYZData(erfMomentDiff, moRateDiffCPT, "Moment Rate Difference (N-m)");
+		mapMaker.plot(resourcesDir, "full_moment_rate_diff", " ");
+		table.addColumn("![Map]("+resourcesDir.getName()+"/full_moment_rate_diff.png)");
+		
+		table.finalizeLine();
+		
+		lines.addAll(table.build());
+		
+		lines.add("## Smoothed Moment and Hazard Change Comparisons");
+		lines.add(topLink); lines.add("");
+		
+		System.out.println("Distance-smoothing moment rate map...");
+		// always include fault and gridded, but only variying the one we care about at a time
+		
+		// add '23 grid to '18 fault for fault comparisons
+		GriddedGeoDataSet input18FaultMomentRate = sumMap(nshm18FaultPartic.momentRateMap, nshm23GridPartic.momentRateMap);
+		
+		// add '23 faults to '18 gridded for gridded comparisons
+		GriddedGeoDataSet input18GridMomentRate = sumMap(nshm23FaultPartic.momentRateMap, nshm18GridPartic.momentRateMap);
+		
+		boolean hazSmooth = true;
+		
+		GriddedGeoDataSet nshm23SmoothedTotalMomentRate;
+		GriddedGeoDataSet nshm23SmoothedFaultMomentRate;
+		GriddedGeoDataSet nshm23SmoothedGridMomentRate;
+		GriddedGeoDataSet nshm18SmoothedTotalMomentRate;
+		GriddedGeoDataSet nshm18SmoothedFaultMomentRate;
+		GriddedGeoDataSet nshm18SmoothedGridMomentRate;
+		
+		GriddedGeoDataSet[] inputSmoothMaps = {
+				nshm23MomentRate, nshm18MomentRate, input18FaultMomentRate, input18GridMomentRate};
+		GriddedGeoDataSet[] smoothedMaps;
+		
+		if (hazSmooth) {
+			boolean doMFD = true;
+//			GutenbergRichterMagFreqDist mfdShape = new GutenbergRichterMagFreqDist(6.5d, 5, 0.25, 1e16, 1d);
+			GutenbergRichterMagFreqDist mfdShape = new GutenbergRichterMagFreqDist(6d, 7, 0.25, 1e16, 1d);
+			double refMag = 7d;
+			gmpe.setParamDefaults();
+			
+			smoothedMaps = new GriddedGeoDataSet[inputSmoothMaps.length];
+			String magDescription;
+			if (doMFD) {
+				for (int i=0; i<inputSmoothMaps.length; i++)
+					smoothedMaps[i] = DistWeightedMomentMapSmoothing.hazMapSmooth(inputSmoothMaps[i], gmpeRef, mfdShape, period, rp);
+				magDescription = "a G-R b="+oDF.format(mfdShape.get_bValue())+" MFD with magnitudes in the range ["
+						+oDF.format(mfdShape.getMinX())+","+oDF.format(mfdShape.getMaxX())+"] that satisfies each cell's "
+						+ "moment rate.";
+			} else {
+				for (int i=0; i<inputSmoothMaps.length; i++)
+					smoothedMaps[i] = DistWeightedMomentMapSmoothing.hazMapSmooth(inputSmoothMaps[i], gmpeRef, refMag, period, rp);
+				magDescription = "fixed M="+oDF.format(refMag)+" ruptures that satisfy each cell's moment rate.";
+			}
+			lines.add("Here, we calculate simple hazard maps by placing point sources at every grid location with "
+					+ magDescription+" We then compare hazard changes from this simple model to the actual model hazard "
+					+ "change. Areas where simplified model hazard change is similar to full model hazard change are "
+					+ "likely dominated by ingredient (moment rate) changes, and those that differ may be affected by "
+					+ "methodological changes (although this simplified comparison is not definitive).");
+			lines.add("");
+		} else {
+			double refMag = 6d;
+			gmpe.setParamDefaults();
+			lines.add("Here, we distribute moment from each model using the distance kernel for the "+gmpeName+" GMPE "
+					+ "for M"+oDF.format(refMag)+" ruptures. This may be better for comparing moment changes to "
+					+ "hazard changes.");
+			lines.add("");
+			
+			
+			smoothedMaps = DistWeightedMomentMapSmoothing.distKernelSmooth(
+					inputSmoothMaps, gmpe, refMag, period, true);
+		}
+		
+		lines.add("Note that these comparisons use final model moent rate maps, as opposed to the prior moment "
+				+ "comparisons that used deformation model moment rates directly. Thus, any slip rate misfits will be "
+				+ "incorporated into these comparisons.");
+		lines.add("");
+		
+		nshm23SmoothedTotalMomentRate = smoothedMaps[0];
+		nshm23SmoothedFaultMomentRate = smoothedMaps[0];
+		nshm23SmoothedGridMomentRate = smoothedMaps[0];
+		nshm18SmoothedTotalMomentRate = smoothedMaps[1];
+		nshm18SmoothedFaultMomentRate = smoothedMaps[2];
+		nshm18SmoothedGridMomentRate = smoothedMaps[3];
+		
+		for (int n=0; n<3; n++) {
+			String label, prefix;
+			GriddedGeoDataSet nshm23Smoothed, nshm18Smoothed;
+			GriddedGeoDataSet hazardPDiff, hazardRatio;
+			
+			GriddedGeoDataSet origHaz18;
+			
+			// TODO haz from full curves? wrapperCurvesEntryName
+			
+			if (n == 0) {
+				label = "Full Model";
+				prefix = "smoothed_full";
+				nshm23Smoothed = nshm23SmoothedTotalMomentRate;
+				nshm18Smoothed = nshm18SmoothedTotalMomentRate;
+				hazardPDiff = fullHazardPDiff;
+				hazardRatio = fullHazardRatio;
+				origHaz18 = nshm18Hazard;
+			} else if (n == 1) {
+				label = "Fault";
+				prefix = "smoothed_fault";
+				nshm23Smoothed = nshm23SmoothedFaultMomentRate;
+				nshm18Smoothed = nshm18SmoothedFaultMomentRate;
+				hazardPDiff = faultHazardPDiff;
+				hazardRatio = faultHazardRatio;
+				origHaz18 = nshm18_23gridHazard;
+			} else {
+				label = "Gridded";
+				prefix = "smoothed_gridded";
+				nshm23Smoothed = nshm23SmoothedGridMomentRate;
+				nshm18Smoothed = nshm18SmoothedGridMomentRate;
+				hazardPDiff = griddedHazardPDiff;
+				hazardRatio = griddedHazardRatio;
+				origHaz18 = nshm18GridHazard;
+			}
+			
+			GriddedGeoDataSet smoothedMomentPDiff = new GriddedGeoDataSet(gridReg);
+			GriddedGeoDataSet smoothedMomentRatio = new GriddedGeoDataSet(gridReg);
+			GriddedGeoDataSet smoothedMomentDiff = new GriddedGeoDataSet(gridReg);
+			GriddedGeoDataSet methodologyPDiff = new GriddedGeoDataSet(gridReg);
+			for (int i=0; i<gridReg.getNodeCount(); i++) {
+				double moment23 = nshm23Smoothed.get(i);
+				double moment18 = nshm18Smoothed.get(i);
+				smoothedMomentPDiff.set(i, 100d*(moment23-moment18)/moment18);
+				smoothedMomentRatio.set(i, moment23/moment18);
+				smoothedMomentDiff.set(i, moment23-moment18);
+				
+				// estimate the change from methodological sources only
+				double haz18 = origHaz18.get(i);
+				double haz23 = nshm23Hazard.get(i);
+				// estimate of what things would be like in 18 if we had 23 moment
+				double modModHaz18 = haz18*moment23/moment18;
+				methodologyPDiff.set(i, 100d*(haz23-modModHaz18)/modModHaz18);
+			}
+			
+			table = MarkdownUtils.tableBuilder();
+			
+			String moLabel, moShortLabel;
+			if (hazSmooth) {
+				moLabel = "Simplified "+label+" Moment Hazard";
+				moShortLabel = "Simplified Moment Hazard";
+			} else {
+				moLabel = "Smoothed "+label+" Moment";
+				moShortLabel = "Smoothed Moment";
+			}
+			
+			table.addLine(moLabel+" Ratio", label+" Hazard Ratio");
+			
+			table.initNewLine();
+			
+			mapMaker.plotXYZData(smoothedMomentPDiff, pDiffCPT, "% Change in "+moLabel);
+			mapMaker.plot(resourcesDir, prefix+"_moment_rate_pDiff", " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_moment_rate_pDiff.png)");
+			
+			mapMaker.plotXYZData(hazardPDiff, pDiffCPT, "% Change in "+label+" Hazard");
+			mapMaker.plot(resourcesDir, prefix+"_hazard_pDiff", " ");
+			table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_hazard_pDiff.png)");
+			
+			table.finalizeLine();
+			
+			hazMomRatioMap = new GriddedGeoDataSet(gridReg, false);
+			GriddedGeoDataSet hazMomDiffMap = new GriddedGeoDataSet(gridReg, false);
+			hazMomScatter = new DefaultXY_DataSet();
+			
+			for (int i=0; i<hazMomRatioMap.size(); i++) {
+				double momPDiff = smoothedMomentPDiff.get(i);
+				double hazPDiff = hazardPDiff.get(i);
+				hazMomScatter.set(momPDiff, hazPDiff);
+				hazMomRatioMap.set(i, Math.log10(hazardRatio.get(i))/Math.log10(smoothedMomentRatio.get(i)));
+				hazMomDiffMap.set(i, hazPDiff - momPDiff);
+			}
+			
+			funcs = new ArrayList<>();
+			chars = new ArrayList<>();
+			
+			range = new Range(-100d, 100d);
+			oneToOne = new DefaultXY_DataSet();
+			oneToOne.set(range.getLowerBound(), range.getLowerBound());
+			oneToOne.set(range.getUpperBound(), range.getUpperBound());
+			
+			boundedScatter = new DefaultXY_DataSet();
+			for (Point2D pt : hazMomScatter)
+				boundedScatter.set(Math.max(range.getLowerBound(), Math.min(range.getUpperBound(), pt.getX())),
+						Math.max(range.getLowerBound(), Math.min(range.getUpperBound(), pt.getY())));
+			
+//			funcs.add(hazMomScatter);
+			funcs.add(boundedScatter);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.BOLD_CROSS, 3f, new Color(0, 0, 0, 60)));
+			
+			funcs.add(oneToOne);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+			
+			scatterSpec = new PlotSpec(funcs, chars, label+" Hazard and Moment Change Comparison",
+					moLabel+" % Change", label+" Hazard % Change");
+			
+			gp = PlotUtils.initHeadless();
+			gp.drawGraphPanel(scatterSpec, false, false, range, range);
+			
+			table.addLine(MarkdownUtils.boldCentered("Scatter Plot"), MarkdownUtils.boldCentered("Hazard Change Comparison"));
+			
+			table.initNewLine();
+			PlotUtils.writePlots(resourcesDir, prefix+"_haz_mom_ratios_scatter", gp, 800, false, true, false, false);
+			table.addColumn("![scatter plot]("+resourcesDir.getName()+"/"+prefix+"_haz_mom_ratios_scatter.png)");
+			
+//			mapMaker.plotXYZData(hazMomRatioMap, hazMomRatioCPT, "Log10 (Hazard Ratio) / Log10 ("+moShortLabel+" Ratio)");
+//			mapMaker.plot(resourcesDir, prefix+"_haz_mom_ratios_map", label+" Hazard and Moment Change Comparison");
+//			table.addColumn("![map plot]("+resourcesDir.getName()+"/"+prefix+"_haz_mom_ratios_map.png)");
+			
+			CPT hazMomDiffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-50d, 50d);
+			hazMomDiffCPT.setNanColor(transparent);
+			mapMaker.plotXYZData(hazMomDiffMap, hazMomDiffCPT, "Hazard % Change - "+moShortLabel+" % Change");
+			mapMaker.plot(resourcesDir, prefix+"_haz_mom_diffs_map", label+" Hazard and Moment Change Comparison");
+			table.addColumn("![map plot]("+resourcesDir.getName()+"/"+prefix+"_haz_mom_diffs_map.png)");
+			
+//			CPT hazMomDiffCPT = GMT_CPT_Files.DIVERGING_BROC_UNIFORM.instance().rescale(-50d, 50d);
+//			hazMomDiffCPT.setNanColor(transparent);
+//			mapMaker.plotXYZData(hazMomDiffMap, hazMomDiffCPT, "Estimated Methodological % Change");
+//			mapMaker.plot(resourcesDir, prefix+"_haz_mom_method_est_pDiff", " ");
+//			table.addColumn("![map plot]("+resourcesDir.getName()+"/"+prefix+"_haz_mom_method_est_pDiff.png)");
+			
+			table.finalizeLine();
+			
+			lines.addAll(table.build());
+			lines.add("");
+		}
+		
 		// add TOC
 		lines.addAll(tocIndex, MarkdownUtils.buildTOC(lines, 2));
 		lines.add(tocIndex, "## Table Of Contents");
@@ -938,6 +1361,30 @@ public class WUS_HazardChangePageGen {
 		xyz = xyz.copy();
 		xyz.log10();
 		return xyz;
+	}
+	
+	private static GriddedGeoDataSet sumMap(GriddedGeoDataSet map1, GriddedGeoDataSet map2) {
+		Preconditions.checkState(map1.size() == map2.size());
+		GriddedGeoDataSet ret = new GriddedGeoDataSet(map1.getRegion());
+		for (int i=0; i<ret.size(); i++)
+			ret.set(i, map1.get(i)+map2.get(i));
+		return ret;
+	}
+	
+	private static GriddedGeoDataSet mapPDiff(GriddedGeoDataSet map1, GriddedGeoDataSet map2) {
+		Preconditions.checkState(map1.size() == map2.size());
+		GriddedGeoDataSet ret = new GriddedGeoDataSet(map1.getRegion());
+		for (int i=0; i<ret.size(); i++)
+			ret.set(i, 100d*(map1.get(i)-map2.get(i))/map2.get(i));
+		return ret;
+	}
+	
+	private static GriddedGeoDataSet mapDiff(GriddedGeoDataSet map1, GriddedGeoDataSet map2) {
+		Preconditions.checkState(map1.size() == map2.size());
+		GriddedGeoDataSet ret = new GriddedGeoDataSet(map1.getRegion());
+		for (int i=0; i<ret.size(); i++)
+			ret.set(i, map1.get(i)-map2.get(i));
+		return ret;
 	}
 	
 	private static class ChangeStats {

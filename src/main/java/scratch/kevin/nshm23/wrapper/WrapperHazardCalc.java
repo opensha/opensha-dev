@@ -56,7 +56,8 @@ public class WrapperHazardCalc {
 		boolean subduction = false;
 		double gridSpacing = 0.2;
 		
-		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,
+				TectonicRegionType.STABLE_SHALLOW);
 		if (subduction) {
 			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
 			trts.add(TectonicRegionType.SUBDUCTION_SLAB);

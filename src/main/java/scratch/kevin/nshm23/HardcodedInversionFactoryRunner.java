@@ -37,6 +37,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_Hyb
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_DeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
@@ -133,21 +135,29 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory.PARKFIELD_INITIAL = false;
 //		dirName += "-no_parkfield_initial";
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-//		dirName += "-u3_ref";
-		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
-		for (LogicTreeNode node : NSHM23_U3_HybridLogicTreeBranch.DEFAULT)
-			branch.setValue(node);
-//		branch.setValue(U3_UncertAddDeformationModels.U3_GEOL);
-//		branch.setValue(ScalingRelationships.HANKS_BAKUN_08);
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+////		dirName += "-u3_ref";
+//		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
+//		for (LogicTreeNode node : NSHM23_U3_HybridLogicTreeBranch.DEFAULT)
+//			branch.setValue(node);
+////		branch.setValue(U3_UncertAddDeformationModels.U3_GEOL);
+////		branch.setValue(ScalingRelationships.HANKS_BAKUN_08);
+////		branch.setValue(SupraSeisBValues.B_0p0);
+////		branch.setValue(NSHM23_PaleoUncertainties.OVER_FIT);
+////		branch.setValue(NSHM23_SegmentationModels.MID);
+//		branch.setValue(U3_UncertAddDeformationModels.U3_ZENG);
+//		branch.setValue(ScalingRelationships.ELLB_SQRT_LENGTH);
 //		branch.setValue(SupraSeisBValues.B_0p0);
 //		branch.setValue(NSHM23_PaleoUncertainties.OVER_FIT);
-//		branch.setValue(NSHM23_SegmentationModels.MID);
-		branch.setValue(U3_UncertAddDeformationModels.U3_ZENG);
-		branch.setValue(ScalingRelationships.ELLB_SQRT_LENGTH);
-		branch.setValue(SupraSeisBValues.B_0p0);
-		branch.setValue(NSHM23_PaleoUncertainties.OVER_FIT);
-		branch.setValue(NSHM23_SegmentationModels.NONE);
+//		branch.setValue(NSHM23_SegmentationModels.NONE);
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levelsNewScale;
+		dirName += "-nshm18_dms";
+		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
+		for (LogicTreeNode node : NSHM18_LogicTreeBranch.DEFAULT_NEW_SCALE)
+			branch.setValue(node);
+		branch.setValue(NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1);
+		branch.setValue(NSHM18_DeformationModels.BRANCH_AVERAGED);
 		
 //		levels = new ArrayList<>(levels);
 //		int origSize = levels.size();

@@ -33,6 +33,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Region
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.LocalRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.NSHM23_BaseRegion;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
@@ -45,10 +47,12 @@ class Regional_MFD_Plots {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/reg_mfds");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		AnalysisRegions[] analysis = {
+		NSHM23_BaseRegion[] analysis = {
 				AnalysisRegions.CONUS_U3_RELM,
 				AnalysisRegions.CONUS_IMW,
-				AnalysisRegions.CONUS_PNW
+				AnalysisRegions.CONUS_PNW,
+				LocalRegions.CONUS_SF_BAY,
+				LocalRegions.CONUS_LA_BASIN
 		};
 		
 		FaultSystemSolution u3Sol = FaultSystemSolution.load(
@@ -62,7 +66,7 @@ class Regional_MFD_Plots {
 				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-"
 				+ "ThreshAvgIterRelGR/results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
-		for (AnalysisRegions aReg : analysis) {
+		for (NSHM23_BaseRegion aReg : analysis) {
 			Region region = aReg.load();
 			
 			UncertainBoundedIncrMagFreqDist dataBounds = NSHM23_RegionalSeismicity.getRemapped(region,
@@ -160,7 +164,8 @@ class Regional_MFD_Plots {
 			cmlChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Color.GRAY));
 			
 			// now add again on top without names
-			if (aReg == AnalysisRegions.CONUS_U3_RELM) {
+			if (aReg == AnalysisRegions.CONUS_U3_RELM || aReg == LocalRegions.CONUS_LA_BASIN
+					|| aReg == LocalRegions.CONUS_SF_BAY) {
 				addMFDs(u3Sol, region, refMFD, Color.BLUE, null, incrFuncs, incrChars, cmlFuncs, cmlChars);
 				addMFDs(methodsSol, region, refMFD, Color.GREEN.darker(), null, incrFuncs, incrChars, cmlFuncs, cmlChars);
 			}
