@@ -265,21 +265,21 @@ public class RSQSimCatalog implements XMLSaveable {
 		BRUCE_2769("bruce/rundir2769", "Bruce 2769", "Bruce Shaw", cal(2018, 8, 14),
 				"FinitePatch fracArea=0.95, 48Hr, all else same as r2585",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
-		JG_SWEEPTEST_2763V2("test25a589d_2763V2", "JG Test Rerun 2763", "Jacqui Gilchrist", cal(2018, 8, 21),
-				"Rerun test of Bruce's rundir2763, reading new stiffness matrices",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
-		JG_SWEEPTEST_J("test25a589d_J", "JG Test Calc Siffness", "Jacqui Gilchrist", cal(2018, 8, 21),
-				"Test of calculating and writing new stiffness matrices",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
-		JG_SWEEPTEST_J2("test25a589d_J2", "JG Test Calc Siffness 2", "Jacqui Gilchrist", cal(2018, 8, 22),
-				"Test of reading in the stiffness files written by previous run test25a589d_J using my executable",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
-		JG_SWEEPTEST_2763V3("test25a589d_flt2763V3", "JG Test Rerun 2763 V3", "Jacqui Gilchrist", cal(2018, 8, 22),
-				"Test of reading in the stiffness files written by previous run test25a589d_J using Bruce's executable",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
-		JG_SWEEPTEST_MASTER_EXEC("defaultModel_JfM", "JG Test Master Exec", "Jacqui Gilchrist", cal(2018, 8, 23),
-				"Calculating stiffness files using the executable from the master branch",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+//		JG_SWEEPTEST_2763V2("test25a589d_2763V2", "JG Test Rerun 2763", "Jacqui Gilchrist", cal(2018, 8, 21),
+//				"Rerun test of Bruce's rundir2763, reading new stiffness matrices",
+//				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+//		JG_SWEEPTEST_J("test25a589d_J", "JG Test Calc Siffness", "Jacqui Gilchrist", cal(2018, 8, 21),
+//				"Test of calculating and writing new stiffness matrices",
+//				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+//		JG_SWEEPTEST_J2("test25a589d_J2", "JG Test Calc Siffness 2", "Jacqui Gilchrist", cal(2018, 8, 22),
+//				"Test of reading in the stiffness files written by previous run test25a589d_J using my executable",
+//				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+//		JG_SWEEPTEST_2763V3("test25a589d_flt2763V3", "JG Test Rerun 2763 V3", "Jacqui Gilchrist", cal(2018, 8, 22),
+//				"Test of reading in the stiffness files written by previous run test25a589d_J using Bruce's executable",
+//				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+//		JG_SWEEPTEST_MASTER_EXEC("defaultModel_JfM", "JG Test Master Exec", "Jacqui Gilchrist", cal(2018, 8, 23),
+//				"Calculating stiffness files using the executable from the master branch",
+//				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_2829("bruce/rundir2829", "Bruce 2829", "Bruce Shaw", cal(2018, 10, 18),
 				"fracArea=0.95 ; NEW variableSpeed  s2ddf=.9 ddfmin=.1;  b=.01 a=.001",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
@@ -2108,7 +2108,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 		
 		if (plotsSet.contains(StandardPlots.SLIP_RATE) && hasFM) {
-			if (replot || !new File(outputDir, "slip_rate_sim_map.png").exists()) {
+			if (replot || !new File(outputDir, "slip_rate_table.csv").exists()) {
 				SlipRateComparePlot plot = new SlipRateComparePlot(getSubSectMapper(), getFaultModel(), getDeformationModel(),
 						getComparisonSolution());
 				plot.initialize(getName(), outputDir, "slip_rate");
@@ -2126,6 +2126,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				slipRateDesc += " Post-UCERF3 inversion slip rates (which will not perfectly match the target) are also included and labeled as "
 					+ "'UCERF3 Solution'.";
 			lines.add(slipRateDesc);
+			lines.add("");
+			String csvLink = outputDir.getName()+"/slip_rate_table.csv";
+			lines.add("Download slip rate data: ["+csvLink+"]("+csvLink+")");
 			lines.add("");
 			table = MarkdownUtils.tableBuilder();
 			table.initNewLine();
@@ -3126,8 +3129,9 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
-		GregorianCalendar minDate = cal(2021, 10, 1);
-		for (Catalogs cat : cats) {
+////		GregorianCalendar minDate = cal(2021, 10, 1);
+//		GregorianCalendar minDate = cal(2020, 10, 1);
+//		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : new Catalogs[] {
@@ -3141,8 +3145,8 @@ public class RSQSimCatalog implements XMLSaveable {
 ////				Catalogs.JG_tuneBase1m,
 //				}) {
 		// all catalogs
-//		GregorianCalendar minDate = cal(2000, 1, 1);
-//		for (Catalogs cat : cats) {
+		GregorianCalendar minDate = cal(2000, 1, 1);
+		for (Catalogs cat : cats) {
 			
 			if (cat.catalog.getDate().before(minDate))
 				continue;

@@ -18,6 +18,7 @@ import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.data.Range;
 import org.jfree.chart.ui.TextAnchor;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
@@ -119,6 +120,18 @@ public class SlipRateComparePlot extends AbstractPlot {
 		double[] ratioSimToU3 = new double[subSects.size()];
 		double[] ratioU3SolToTarget = compSol == null ? null : new double[subSects.size()];
 		
+		CSVFile<String> csv = new CSVFile<>(true);
+		
+		List<String> header = new ArrayList<>();
+		header.add("Subsection Index");
+		header.add("Subsection Name");
+		header.add("UCERF3 Target (mm/yr)");
+		if (u3SolSlipRates != null)
+			header.add("UCERF3 Solution (mm/yr)");
+		header.add("RSQSim Target (mm/yr)");
+		header.add("RSQSim Output (mm/yr)");
+		csv.addLine(header);
+		
 		double durationYears = getCurrentDurationYears();
 		List<LocationList> faults = new ArrayList<>();
 		for (int i=0; i<subSects.size(); i++) {
@@ -129,6 +142,13 @@ public class SlipRateComparePlot extends AbstractPlot {
 			} else {
 				u3TargetSlipRates[i] = subSect.getReducedAveSlipRate();
 			}
+			
+			List<String> line = new ArrayList<>();
+			line.add(i+"");
+			line.add(subSect.getSectionName());
+			line.add((float)u3TargetSlipRates[i]+"");
+			if (u3SolSlipRates != null)
+				line.add((float)u3SolSlipRates[i]+"");
 			
 			if (mapper.isMapped(subSect)) {
 				double totArea = 0d;
@@ -149,17 +169,23 @@ public class SlipRateComparePlot extends AbstractPlot {
 					ratioU3SolToTarget[i] = u3SolSlipRates[i] / u3TargetSlipRates[i];
 				ratioSimToTarget[i] = simSlipRates[i] / simTargetSlipRates[i];
 				ratioSimToU3[i] = simSlipRates[i] / u3TargetSlipRates[i];
+				line.add(simTargetSlipRates[i]+"");
+				line.add(simSlipRates[i]+"");
 			} else {
 				if (u3SolSlipRates != null)
 					ratioU3SolToTarget[i] = Double.NaN;
 				ratioSimToTarget[i] = Double.NaN;
 				ratioSimToU3[i] = Double.NaN;
+				line.add(Double.NaN+"");
+				line.add(Double.NaN+"");
 			}
 			faults.add(subSect.getFaultTrace());
+			csv.addLine(line);
 		}
 
 		plotMaps(simSlipRates, u3TargetSlipRates, u3SolSlipRates, ratioSimToTarget, ratioSimToU3, ratioU3SolToTarget, faults);
 		plotFaults(simSlipRates, simTargetSlipRates, u3TargetSlipRates, u3SolSlipRates);
+		csv.writeToFile(new File(getOutputDir(), getOutputPrefix()+"_table.csv"));
 	}
 
 	private void plotMaps(double[] simSlipRates, double[] u3TargetSlipRates, double[] u3SolutionSlipRates, double[] ratioSimToTarget,
