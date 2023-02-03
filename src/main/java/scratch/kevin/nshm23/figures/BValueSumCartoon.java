@@ -297,7 +297,7 @@ class BValueSumCartoon {
 		}
 	}
 	
-	private static void addMFDFuncs(List<? super ArbitrarilyDiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars,
+	static void addMFDFuncs(List<? super ArbitrarilyDiscretizedFunc> funcs, List<PlotCurveCharacterstics> chars,
 			EvenlyDiscretizedFunc mfd, PlotCurveCharacterstics pChar, double bVal) {
 		double halfDelta = 0.5*mfd.getDelta();
 		double halfDeltaScalar = 1d/Math.pow(10, -bVal*halfDelta);

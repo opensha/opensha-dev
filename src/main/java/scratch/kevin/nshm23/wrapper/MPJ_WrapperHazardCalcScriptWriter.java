@@ -30,14 +30,14 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		File localMainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
 		int nodes = 36;
-		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.EXCLUDE;
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.ONLY;
 		boolean subduction = false;
 		
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
 //		AttenRelRef gmpeRef = AttenRelRef.NGAWest_2014_AVG;
 		
 		String erfPrefix = "nshm18";
-		String tagName = "nshm-conus-5.2.0"; // NSHM18
+		String tagName = "nshm-conus-5.3.0"; // NSHM18
 		
 //		String erfPrefix = "nshm23-wrapped";
 //		String tagName = "nshm-conus-6.a.5"; // NSHM23 draft
@@ -48,9 +48,9 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
 		String extGridProvPath = null;
-//		String extGridProvPath = "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+//		String extGridProvPath = "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 //				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
-//		erfPrefix += "-grid_src_from_23"; gridded = true;
+//		erfPrefix += "-grid_src_from_23"; griddedOp = IncludeBackgroundOption.INCLUDE;
 //		String extGridProvPath = "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 //				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
 //		erfPrefix += "-grid_src_from_modWeightDM_23"; gridded = true;

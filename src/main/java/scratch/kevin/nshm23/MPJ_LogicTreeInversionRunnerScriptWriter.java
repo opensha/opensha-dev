@@ -653,6 +653,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		mins = Integer.min(mins, 60*24*7 - 1);
 		pbsWrite.writeScript(new File(localDir, "batch_inversion.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 		
+		List<File> baFiles = AbstractAsyncLogicTreeWriter.getBranchAverageSolutionFiles(new File("results"), logicTree);
+		
 		// now write hazard script
 		argz = "--input-file "+resultsPath+".zip";
 		argz += " --output-dir "+resultsPath;
@@ -718,6 +720,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --output-file "+resultsPath+"_hazard_avg_gridded.zip";
 					argz += " --output-dir "+resultsPath;
 					argz += " --gridded-seis INCLUDE";
+					if (baFiles != null && baFiles.size() == 1) {
+						// just one BA solution file, use that for gridded
+						String griddedBAName = baFiles.get(0).getName().replace(".zip", "")+"_gridded.zip"; 
+						argz += " --external-grid-prov "+dirPath+"/"+griddedBAName;
+					}
 					jobFile = new File(localDir, "batch_hazard_avg_gridded.slurm");
 				} else if (i == 1) {
 					if (averageOnly)
@@ -810,7 +817,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		argz += " --threads "+Integer.min(8, remoteTotalThreads);
 		argz += " --async-threads "+nodeBAAsyncThreads;
 		// see if we have a single BA file to use as a comparison
-		List<File> baFiles = AbstractAsyncLogicTreeWriter.getBranchAverageSolutionFiles(new File("results"), logicTree);
 		if (baFiles != null && baFiles.size() == 1)
 			argz += " --branch-averaged-file "+dirPath+"/"+baFiles.get(0).getName();
 		script = javaWrite.buildScript(LogicTreeBranchAverageWriter.class.getName(), argz);

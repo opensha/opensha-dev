@@ -1,6 +1,7 @@
 package scratch.kevin.ucerf3;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -36,6 +37,7 @@ import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.IntegerSampler.ExclusionIntegerSampler;
+import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -84,10 +86,13 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
+import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.OpenSHA_Module;
+import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
@@ -166,12 +171,15 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Joiner;
@@ -3154,12 +3162,78 @@ public class PureScratch {
 				System.out.println("    "+sect.getSectionId()+",");
 	}
 	
+	private static void test211() throws IOException {
+		// this is the file at https://opensha.usc.edu/ftp/kmilner/markdown/batch_inversions/nshm23-draft-latest/results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip
+		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+		FaultSystemSolution fss = FaultSystemSolution.load(solFile);
+
+		// remove rupture MFDs to make it a fairer comparison to NSHM18
+		fss.removeAvailableModuleInstances(RupMFDsModule.class);
+
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fss);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
+		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
+		erf.getTimeSpan().setDuration(1d);
+		erf.updateForecast();
+		
+		ScalarIMR gmpe = AttenRelRef.ASK_2014.get();
+		gmpe.setParamDefaults();
+		
+		gmpe.setIntensityMeasure(PGA_Param.NAME);
+		
+		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(gmpe.getIntensityMeasure());
+		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
+		for (Point2D pt : xVals)
+			logXVals.set(Math.log(pt.getX()), 0d);
+		
+		HazardCurveCalculator calc = new HazardCurveCalculator();
+		
+		for (NEHRP_TestCity city : NEHRP_TestCity.values()) {
+			Site site = new Site(city.location());
+			site.addParameterList(gmpe.getSiteParams());
+			
+			System.out.println("Calculating for "+city);
+			calc.getHazardCurve(logXVals, site, gmpe, erf);
+			
+			DiscretizedFunc curve = new ArbitrarilyDiscretizedFunc();
+			for (int i=0; i<xVals.size(); i++)
+				curve.set(xVals.getX(i), logXVals.getY(i));
+			
+			System.out.println("Hazard curve:\n"+curve);
+		}
+	}
+	
+	private static final void test212() {
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		
+		table.addLine("Header Row 1", "Col 1", "Col 2", "Col 3", "Col 4", "Col 5", "Col 6");
+		table.addLine("Header Row 2", "Col 1.1", "Col 2.1", "Col 3.1", "Col 4.1", "Col 5.1", "Col 6.1");
+		table.addLine("Header Row 3", "Col 1.2", "Col 2.2", "Col 3.2", "Col 4.2", "Col 5.2", "Col 6.2");
+		
+		table = table.wrap(3, 1);
+		System.out.println(table);
+	}
+	
+	private static final void test213() throws IOException {
+		File solFile = new File("/project/scec_608/kmilner/nshm23/batch_inversions/"
+				+ "2021_11_30-u3_branches-orig_calcs-5h/branch_avgs_combined.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		sol.getRupSet().addModule(new RegionsOfInterest(
+				new CaliforniaRegions.RELM_NOCAL(),
+				new CaliforniaRegions.RELM_SOCAL(),
+				new CaliforniaRegions.SF_BOX(),
+				new CaliforniaRegions.LA_BOX()));
+		sol.write(solFile);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test210();
+		test213();
 	}
 
 }

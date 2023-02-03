@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23.segModelTests;
+package scratch.kevin.nshm23.figures;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -60,7 +60,7 @@ import com.google.common.primitives.Doubles;
 
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 
-public class SegAdjustmentTests {
+public class SegAdjustmentPlots {
 
 	public static void main(String[] args) throws IOException {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/seg_adjustments");
@@ -261,13 +261,13 @@ public class SegAdjustmentTests {
 		List<Color> segColors = new ArrayList<>();
 		
 		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.WorstAvgJumpProb(segModel));
-		segNames.add("Passthrough Rate MFD Averaging");
+		segNames.add("Passthrough Rate MFD Adjustment");
 		segPrefixes.add("passthrough_rate_mfd_avg");
 		segColors.add(Color.BLUE.darker());
 		
 		ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb.D = true;
 		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(segModel, 50, true));
-		segNames.add("Relative GR MFD Averaging");
+		segNames.add("Relative G-R MFD Adjustment");
 		segPrefixes.add("rel_gr_mfd_avg");
 		segColors.add(Color.GREEN.darker());
 		
@@ -384,7 +384,7 @@ public class SegAdjustmentTests {
 				funcs.add(singleFaultMFD);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, singleFaultColor));
 				
-				origMFD.setName("Full GR Target");
+				origMFD.setName("Original G-R Target");
 				funcs.add(origMFD);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, origColor));
 				
@@ -518,7 +518,7 @@ public class SegAdjustmentTests {
 						
 						double textX = 0.5*(leftX+rightX);
 						double textY = Math.pow(10, Math.log10(binTop)+logDeltaTextY);
-						String label = single ? "Single-Fault Ruptures" : "Multi-Fault Ruptures";
+						String label = single ? "Single-Fault Ruptures" : "Multifault Ruptures";
 						XYTextAnnotation ann = new XYTextAnnotation(label, textX, textY);
 						ann.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
 						ann.setPaint(annColor);
@@ -613,7 +613,7 @@ public class SegAdjustmentTests {
 					yCount ++;
 					
 					String nameStr = jumps.size() > 1 ? "Jump "+(j+1) : "Jump";
-					nameStr += ": "+distDF.format(jump.distance)+" km, P≤"+fractDF.format(segModel.calcJumpProbability(jump.distance));
+					nameStr += ": "+distDF.format(jump.distance)+" km, F≤"+fractDF.format(segModel.calcJumpProbability(jump.distance));
 					XYTextAnnotation nameAnn = new XYTextAnnotation(nameStr, leftX, y);
 					nameAnn.setFont(font1);
 					nameAnn.setTextAnchor(TextAnchor.CENTER_LEFT);
@@ -669,9 +669,9 @@ public class SegAdjustmentTests {
 					List<String[]> insetLines = new ArrayList<>();
 					if (jumps.size() > 1)
 						insetLines.add(new String[] {"Jump Magnitudes:"});
-					insetLines.add(new String[] {"Original Jump Rate Share:",
+					insetLines.add(new String[] {"Orig. Fract. Participation:",
 							eDF.format(sumOrigJumpPartic)+" / "+eDF.format(sumOrigPartic)+" = "+fractDF.format(sumOrigJumpPartic/sumOrigPartic)});
-					insetLines.add(new String[] {"Adjusted Jump Rate Share:",
+					insetLines.add(new String[] {"Adj. Fract. Participation:",
 							eDF.format(sumJumpPartic)+" / "+eDF.format(sumPartic)+" = "+fractDF.format(sumJumpPartic/sumPartic)});
 //					insetLines.add(new String[] {"Total Target Participation Rate:", eDF.format(sumPartic)});
 //					insetLines.add(new String[] {"Jump Participation Rate:", eDF.format(sumJumpPartic)});

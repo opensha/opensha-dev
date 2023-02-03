@@ -57,6 +57,12 @@ public class SectMFD_Plots {
 //		Range xRange = new Range(6.5d, 8.6);
 //		Range yRange = new Range(1e-8, 1e-2);
 		
+//		String faultName = "San Cayetano";
+//		String[] faultSearch = { "Cayetano" };
+//		String prefix = "san_cayetano";
+//		Range xRange = new Range(6.5d, 8.6);
+//		Range yRange = new Range(1e-8, 1e-2);
+		
 		List<FaultSystemSolution> sols = new ArrayList<>();
 		List<String> names = new ArrayList<>();
 		List<Color> colors = new ArrayList<>();

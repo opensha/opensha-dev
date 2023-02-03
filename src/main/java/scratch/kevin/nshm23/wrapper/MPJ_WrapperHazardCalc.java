@@ -87,7 +87,7 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	
 	private boolean noSubduction = false;
 	
-	private GridSourceProvider externalGridProv; // TODO
+	private GridSourceProvider externalGridProv;
 	
 	private GriddedRegion gridRegion;
 

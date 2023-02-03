@@ -42,6 +42,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_FaultCub
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.SpecialCases;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -62,7 +63,7 @@ public class WUS_HazardChangePageGen {
 	public static void main(String[] args) throws IOException {
 		
 		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
-		double period = 1d;
+		double period = 0d;
 		
 		String entryName, wrapperEntryName, hazLabel, dirPrefix;
 		if (period == 0d) {
@@ -105,17 +106,17 @@ public class WUS_HazardChangePageGen {
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		File nshm18_23gridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_01_04-nshm18-grid_src_from_23-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
+				+ "2023_01_27-nshm18-grid_src_from_23-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
 		GriddedGeoDataSet nshm18_23gridHazard = CA_HazardChangeFigures.loadXYZ(nshm18_23gridHazardFile, wrapperEntryName);
 		Preconditions.checkState(nshm18_23gridHazard.size() == nshm23Hazard.size());
 		
 		File nshm18HazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_01_17-nshm18-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
+				+ "2023_01_27-nshm18-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
 		GriddedGeoDataSet nshm18Hazard = CA_HazardChangeFigures.loadXYZ(nshm18HazardFile, wrapperEntryName);
 		Preconditions.checkState(nshm18Hazard.size() == nshm23Hazard.size());
 		
 		File nshm18GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_01_18-nshm18-hazard-ask2014-0.1deg-noSub-griddedOnly/results_hazard.zip");
+				+ "2023_01_27-nshm18-hazard-ask2014-0.1deg-noSub-griddedOnly/results_hazard.zip");
 		GriddedGeoDataSet nshm18GridHazard = CA_HazardChangeFigures.loadXYZ(nshm18GridHazardFile, wrapperEntryName);
 		Preconditions.checkState(nshm18GridHazard.size() == nshm23Hazard.size());
 //		GriddedGeoDataSet nshm18GridHazard = null;
@@ -607,6 +608,20 @@ public class WUS_HazardChangePageGen {
 		table.finalizeLine();
 		
 		lines.addAll(table.build());
+		lines.add("");
+		
+		lines.add("### NSHM18 Special Cases");
+		lines.add(topLink); lines.add("");
+		
+		lines.add("NSHM18 includes a number of special cases that are not carried forward. These also affect hazard "
+				+ "comparisons beyond the moment changes shown above, and are plotted below.");
+		lines.add("");
+		
+		SpecialCases.plotSpecialCases(resourcesDir, "nshm18_special_cases", gridReg);
+		lines.add("![Special Cases]("+resourcesDir.getName()+"/nshm18_special_cases.png)");
+		lines.add("");
+		lines.add(RupSetMapMaker.getGeoJSONViewerRelativeLink("View GeoJSON",
+				resourcesDir.getName()+"/nshm18_special_cases.geojson"));
 		lines.add("");
 		
 		ChangeStats griddedStats = null;
