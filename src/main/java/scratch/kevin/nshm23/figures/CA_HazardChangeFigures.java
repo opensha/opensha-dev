@@ -8,10 +8,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.DecimalFormat;
+import java.text.FieldPosition;
+import java.text.NumberFormat;
+import java.text.ParsePosition;
+import java.util.List;
 import java.util.StringTokenizer;
+import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.title.PaintScaleLegend;
+import org.jfree.chart.title.Title;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.BorderType;
@@ -21,8 +29,11 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -48,7 +59,7 @@ public class CA_HazardChangeFigures {
 				"2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
-		File u3HazFile = new File(invsDir,
+		File u3Haz31File = new File(invsDir,
 				"2022_12_08-u3-FM3_1-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
@@ -56,20 +67,24 @@ public class CA_HazardChangeFigures {
 				"2022_03_24-u3_branches-FM3_1-2000ip-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
+		File u3HazFile = new File(invsDir,
+				"2023_02_09-u3-both_fms-ba_only/"
+				+ "results_hazard_include_0.1deg.zip");
+		
 		File u3_23GridHazFile = new File(invsDir,
-				"2022_12_13-u3-FM3_1-ba_only-nshm23_gridded/"
+				"2023_02_09-u3-both_fms-ba_only-nshm23_gridded/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File methodsU3GridHazFile = new File(invsDir,
-				"2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				"2023_02_09-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-u3_gridded/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File methods23GridHazFile = new File(invsDir,
-				"2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded/"
+				"2023_02_09-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File modelHazFile = new File(invsDir,
-				"2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				"2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		String entryName = "mean_map_pga_TWO_IN_50.txt";
@@ -83,8 +98,9 @@ public class CA_HazardChangeFigures {
 				outline.add(new Location(pt.getY(), pt.getX()));
 			caRegions[i] = new Region(outline, BorderType.MERCATOR_LINEAR);
 		}
-		
+
 		GriddedGeoDataSet u3Map = mask(caRegions, loadXYZ(u3HazFile, entryName));
+		GriddedGeoDataSet u3fm31Map = mask(caRegions, loadXYZ(u3Haz31File, entryName));
 		GriddedGeoDataSet u3ConvergedMap = mask(caRegions, loadXYZ(u3ConvergedHazFile, entryName));
 		GriddedGeoDataSet u3_23GridMap = mask(caRegions, loadXYZ(u3_23GridHazFile, entryName));
 		GriddedGeoDataSet methodsU3GridMap = mask(caRegions, loadXYZ(methodsU3GridHazFile, entryName));
@@ -102,7 +118,7 @@ public class CA_HazardChangeFigures {
 		
 		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
 		pDiffCPT.setNanColor(new Color(255, 255, 255, 0));
-		plotHazardChange(outputDir, "u3_converged_vs_u3", mapMakerU3, pDiffCPT, refReg, u3ConvergedMap, u3Map,
+		plotHazardChange(outputDir, "u3_converged_vs_u3", mapMakerU3, pDiffCPT, refReg, u3ConvergedMap, u3fm31Map,
 				"Converged UCERF3 vs UCERF3, % Change, "+hazLabel);
 		plotHazardChange(outputDir, "methodology_vs_u3", mapMakerU3, pDiffCPT, refReg, methodsU3GridMap, u3Map,
 				"NSHM23 Methodology vs UCERF3, % Change, "+hazLabel);
@@ -110,9 +126,11 @@ public class CA_HazardChangeFigures {
 				"NSHM23 vs UCERF3 Ingredients, % Change, "+hazLabel);
 		plotHazardChange(outputDir, "full_change", mapMaker23, pDiffCPT, refReg, modelMap, u3_23GridMap,
 				"NSHM23 vs UCERF3, % Change, "+hazLabel);
+		plotHazardChange(outputDir, "test_method_grid_change", mapMakerU3, pDiffCPT, refReg, methods23GridMap, methodsU3GridMap,
+				"Methods, Grid23 vs GridU3, % Change, "+hazLabel);
 		
 		// attribution
-		CPT attributionCPT = getAttributionCPT(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse(), 10d, 50d);
+		CPT attributionCPT = getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse(), 10d, 50d);
 		
 		GriddedGeoDataSet attXYZ = new GriddedGeoDataSet(u3Map.getRegion(), false);
 		
@@ -154,9 +172,50 @@ public class CA_HazardChangeFigures {
 		System.out.println("\tWithin 10%: "+pDF.format((double)numWithin/(double)totNum));
 		System.out.println("\tMethodology: "+pDF.format((double)numMethod/(double)totNum));
 		System.out.println("\tIngredients: "+pDF.format((double)numIngredient/(double)totNum));
+		System.out.println("Attribution stats, of those exceeding 10%:");
+		int numExceeding = totNum - numWithin;
+		System.out.println("\tMethodology: "+pDF.format((double)numMethod/(double)numExceeding));
+		System.out.println("\tIngredients: "+pDF.format((double)numIngredient/(double)numExceeding));
 		
 		mapMaker23.plotXYZData(attXYZ, attributionCPT, "Methodology     ←     |Hazard % Change|     →     Ingredients");
-		mapMaker23.plot(outputDir, "comb_hazard_attribution", " ");
+		PlotSpec plot = mapMaker23.buildPlot(" ");
+		int width = mapMaker23.getDefaultPlotWidth();
+		// plot both sides as positive
+		DecimalFormat intDF = new DecimalFormat("0");
+		NumberFormat format = new NumberFormat() {
+			
+			@Override
+			public Number parse(String source, ParsePosition parsePosition) {
+				return intDF.parse(source, parsePosition);
+			}
+			
+			@Override
+			public StringBuffer format(long number, StringBuffer toAppendTo, FieldPosition pos) {
+				if (number < 0l)
+					number = -number;
+				if (number == -0l)
+					number = 0l;
+				return intDF.format(number, toAppendTo, pos);
+			}
+			
+			@Override
+			public StringBuffer format(double number, StringBuffer toAppendTo, FieldPosition pos) {
+				return intDF.format(Math.abs(number), toAppendTo, pos);
+			}
+		};
+		mapMaker23.plot(outputDir, "comb_hazard_attribution", plot, width, new Consumer<HeadlessGraphPanel>() {
+
+			@Override
+			public void accept(HeadlessGraphPanel gp) {
+				for (Title subtitle : (List<Title>)gp.getPlot().getChart().getSubtitles()) {
+					if (subtitle instanceof PaintScaleLegend) {
+						NumberAxis axis = ((NumberAxis)((PaintScaleLegend)subtitle).getAxis());
+						PlotUtils.setTick(axis, 10d);
+						axis.setNumberFormatOverride(format);
+					}
+				}
+			}
+		});
 	}
 	
 	static GriddedGeoDataSet loadXYZ(File zipFile, String entryName) throws IOException {
@@ -194,7 +253,7 @@ public class CA_HazardChangeFigures {
 		return xyz;
 	}
 	
-	static CPT getAttributionCPT(CPT cptBasis, double maskRange, double fullRange) {
+	static CPT getCenterMaskedCPT(CPT cptBasis, double maskRange, double fullRange) {
 		CPT leftCPT = getHalfCPT(cptBasis.reverse(), maskRange, fullRange);
 		CPT rightCPT = getHalfCPT(cptBasis, maskRange, fullRange);
 		

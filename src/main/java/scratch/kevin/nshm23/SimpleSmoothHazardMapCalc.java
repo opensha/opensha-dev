@@ -41,11 +41,12 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
 
-public class DistWeightedMomentMapSmoothing {
+public class SimpleSmoothHazardMapCalc {
 	
 	public static GriddedGeoDataSet distKernelSmooth(GriddedGeoDataSet momentMap, ScalarIMR gmpe, double refMag, double period,
 			boolean normalize) {
@@ -162,25 +163,58 @@ public class DistWeightedMomentMapSmoothing {
 		return ret;
 	}
 	
-	public static GriddedGeoDataSet hazMapSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef, double refMag,
+	public static GriddedGeoDataSet hazMapMomentSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef, double refMag,
 			double period, ReturnPeriods rp) {
+		return hazMapMomentSmooth(momentMap, gmpeRef, refMag, period, rp, momentMap.getRegion());
+	}
+	
+	public static GriddedGeoDataSet hazMapMomentSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef, double refMag,
+			double period, ReturnPeriods rp, GriddedRegion gridReg) {
 		AbstractERF erf = new MomentScaledFixedMagERF(momentMap, refMag);
 		
-		return hazMapSmooth(momentMap, gmpeRef, period, rp, erf);
+		return hazMapSmooth(gridReg, gmpeRef, period, rp, erf);
 	}
 	
-	public static GriddedGeoDataSet hazMapSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef,
+	public static GriddedGeoDataSet hazMapMomentSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef,
 			IncrementalMagFreqDist mfdShape, double period, ReturnPeriods rp) {
+		return hazMapMomentSmooth(momentMap, gmpeRef, mfdShape, period, rp, momentMap.getRegion());
+	}
+	
+	public static GriddedGeoDataSet hazMapMomentSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef,
+			IncrementalMagFreqDist mfdShape, double period, ReturnPeriods rp, GriddedRegion gridReg) {
 		AbstractERF erf = new MomentScaledMFDShapeERF(momentMap, mfdShape);
 		
-		return hazMapSmooth(momentMap, gmpeRef, period, rp, erf);
+		return hazMapSmooth(gridReg, gmpeRef, period, rp, erf);
 	}
 	
-	private static GriddedGeoDataSet hazMapSmooth(GriddedGeoDataSet momentMap, AttenRelRef gmpeRef, double period,
-			ReturnPeriods rp, AbstractERF erf) {
-		GriddedGeoDataSet ret = new GriddedGeoDataSet(momentMap.getRegion());
+	public static GriddedGeoDataSet hazMapRateSmooth(GriddedGeoDataSet rateMap, AttenRelRef gmpeRef, double refMag,
+			double period, ReturnPeriods rp) {
+		return hazMapRateSmooth(rateMap, gmpeRef, refMag, period, rp, rateMap.getRegion());
+	}
+	
+	public static GriddedGeoDataSet hazMapRateSmooth(GriddedGeoDataSet rateMap, AttenRelRef gmpeRef, double refMag,
+			double period, ReturnPeriods rp, GriddedRegion gridReg) {
+		AbstractERF erf = new RateScaledFixedMagERF(rateMap, refMag);
 		
-		GriddedRegion gridReg = momentMap.getRegion();
+		return hazMapSmooth(gridReg, gmpeRef, period, rp, erf);
+	}
+	
+	public static GriddedGeoDataSet hazMapRateSmooth(GriddedGeoDataSet rateMap, AttenRelRef gmpeRef,
+			IncrementalMagFreqDist mfdShape, double period, ReturnPeriods rp) {
+		return hazMapRateSmooth(rateMap, gmpeRef, mfdShape, period, rp, rateMap.getRegion());
+	}
+	
+	public static GriddedGeoDataSet hazMapRateSmooth(GriddedGeoDataSet rateMap, AttenRelRef gmpeRef,
+			IncrementalMagFreqDist mfdShape, double period, ReturnPeriods rp, GriddedRegion gridReg) {
+		AbstractERF erf = new RateScaledMFDShapeERF(rateMap, mfdShape);
+		
+		return hazMapSmooth(gridReg, gmpeRef, period, rp, erf);
+	}
+	
+	private static GriddedGeoDataSet hazMapSmooth(GriddedRegion gridReg, AttenRelRef gmpeRef, double period,
+			ReturnPeriods rp, AbstractERF erf) {
+		GriddedGeoDataSet ret = new GriddedGeoDataSet(gridReg);
+		
 		double maxDist = Math.min(500d, LocationUtils.horzDistanceFast(new Location(gridReg.getMinGridLat(), gridReg.getMinGridLon()),
 				new Location(gridReg.getMaxGridLat(), gridReg.getMaxGridLon())));
 		
@@ -347,8 +381,133 @@ public class DistWeightedMomentMapSmoothing {
 				for (Point2D pt : myMFD) {
 					double rate = pt.getY();
 					double prob = 1d - Math.exp(-rate);
+					if (rate > 0d && prob > 0d && Double.isFinite(prob)) {
+						rateTrack.addValue(rate);
+						probTrack.addValue(prob);
+						
+						ProbEqkRupture rup = new ProbEqkRupture(pt.getX(), 0d, prob, rupSurf, rupLoc);
+						rups.add(rup);
+					} else {
+						System.err.println("Skipping bad rate/prob for "+rupLoc+" w/ moment="+momentRate
+								+", mag="+(float)pt.getX()+", rate="+(float)rate+", prob="+(float)prob);
+					}
+				}
+				
+				if (!rups.isEmpty())
+					sources.add(new SingleLocSource(rups, rupLoc));
+			}
+			
+			System.out.println("\tRate range: "+rateTrack);
+			System.out.println("\tProb range: "+probTrack);
+		}
+
+		@Override
+		public int getNumSources() {
+			return sources.size();
+		}
+
+		@Override
+		public ProbEqkSource getSource(int idx) {
+			return sources.get(idx);
+		}
+
+		@Override
+		public void updateForecast() {}
+
+		@Override
+		public String getName() {
+			return null;
+		}
+		
+	}
+	
+	private static class RateScaledFixedMagERF extends AbstractERF {
+		
+		private List<ProbEqkSource> sources;
+		
+		public RateScaledFixedMagERF(GriddedGeoDataSet rateMap, double refMag) {
+			sources = new ArrayList<>();
+			
+			System.out.println("Building rate-based ERF for M"+(float)refMag);
+			
+			MinMaxAveTracker rateTrack = new MinMaxAveTracker();
+			MinMaxAveTracker probTrack = new MinMaxAveTracker();
+			
+			for (int i=0; i<rateMap.size(); i++) {
+				double rate = rateMap.get(i);
+				if (rate == 0d || !Double.isFinite(rate))
+					continue;
+				double prob = 1d - Math.exp(-rate);
+				
+				rateTrack.addValue(rate);
+				probTrack.addValue(prob);
+				
+				Location rupLoc = rateMap.getLocation(i);
+				PointSurface rupSurf = new PointSurface(rupLoc);
+				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
+				rupSurf.setAveDip(90d);
+				rupSurf.setAveStrike(0d);
+				
+				ProbEqkRupture rup = new ProbEqkRupture(refMag, 0d, prob, rupSurf, rupLoc);
+				sources.add(new SingleLocSource(rup, rupLoc));
+			}
+			
+			System.out.println("\tRate range: "+rateTrack);
+			System.out.println("\tProb range: "+probTrack);
+		}
+
+		@Override
+		public int getNumSources() {
+			return sources.size();
+		}
+
+		@Override
+		public ProbEqkSource getSource(int idx) {
+			return sources.get(idx);
+		}
+
+		@Override
+		public void updateForecast() {}
+
+		@Override
+		public String getName() {
+			return null;
+		}
+		
+	}
+	
+	private static class RateScaledMFDShapeERF extends AbstractERF {
+		
+		private List<ProbEqkSource> sources;
+		
+		public RateScaledMFDShapeERF(GriddedGeoDataSet rateMap, IncrementalMagFreqDist mfd) {
+			sources = new ArrayList<>();
+			
+			System.out.println("Building MFD-shaped rate-based ERF");
+			
+			MinMaxAveTracker rateTrack = new MinMaxAveTracker();
+			MinMaxAveTracker probTrack = new MinMaxAveTracker();
+			
+			for (int i=0; i<rateMap.size(); i++) {
+				double totRate = rateMap.get(i);
+				if (totRate == 0d || !Double.isFinite(totRate))
+					continue;
+				
+				Location rupLoc = rateMap.getLocation(i);
+				PointSurface rupSurf = new PointSurface(rupLoc);
+				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
+				rupSurf.setAveDip(90d);
+				rupSurf.setAveStrike(0d);
+				
+				IncrementalMagFreqDist myMFD = mfd.deepClone();
+				myMFD.scaleToCumRate(0, totRate);
+				
+				List<ProbEqkRupture> rups = new ArrayList<>();
+				for (Point2D pt : myMFD) {
+					double rupRate = pt.getY();
+					double prob = 1d - Math.exp(-rupRate);
 					
-					rateTrack.addValue(rate);
+					rateTrack.addValue(rupRate);
 					probTrack.addValue(prob);
 					
 					ProbEqkRupture rup = new ProbEqkRupture(pt.getX(), 0d, prob, rupSurf, rupLoc);
@@ -471,10 +630,17 @@ public class DistWeightedMomentMapSmoothing {
 				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
-		GriddedRegion gridReg = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1d, GriddedRegion.ANCHOR_0_0);
-		GriddedGeoDataSet moRates = SingleSiteHazardAndDataComparisonPageGen.calcFSSPartic(sol, gridReg, new double[0], null).momentRateMap;
+//		GriddedRegion gridReg = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1d, GriddedRegion.ANCHOR_0_0);
+//		GriddedGeoDataSet moRates = SingleSiteHazardAndDataComparisonPageGen.calcFSSPartic(sol, gridReg, new double[0], null).momentRateMap;
+//		
+//		hazMapMomentSmooth(moRates, AttenRelRef.ASK_2014, 7d, 0d, ReturnPeriods.TWO_IN_50);
 		
-		hazMapSmooth(moRates, AttenRelRef.ASK_2014, 7d, 0d, ReturnPeriods.TWO_IN_50);
+		GriddedRegion gridReg = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1d, GriddedRegion.ANCHOR_0_0);
+		GriddedGeoDataSet ratesM5 = SingleSiteHazardAndDataComparisonPageGen.calcFSSPartic(sol, gridReg, new double[] {5d}, null).nuclRateMaps[0];
+		
+//		hazMapRateSmooth(ratesM5, AttenRelRef.ASK_2014, 5d, 0d, ReturnPeriods.TWO_IN_50);
+		GutenbergRichterMagFreqDist mfdShape = new GutenbergRichterMagFreqDist(5d, 6, 0.5, 1e16, 1d);
+		hazMapRateSmooth(ratesM5, AttenRelRef.ASK_2014, mfdShape, 0d, ReturnPeriods.TWO_IN_50);
 	}
 
 }

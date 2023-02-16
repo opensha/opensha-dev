@@ -38,12 +38,12 @@ public class SectMFD_Plots {
 				new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip")); // must be 3.1 for Pitas
 		
 		FaultSystemSolution methodsSol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "2022_12_20-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
 		
 		FaultSystemSolution modelSol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-"
-				+ "ThreshAvgIterRelGR/results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR"
+				+ "/results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		String faultName = "Pitas Point (lower, Montalvo)";
 		String[] faultSearch = { "Pitas", "Montalvo" };
@@ -57,10 +57,16 @@ public class SectMFD_Plots {
 //		Range xRange = new Range(6.5d, 8.6);
 //		Range yRange = new Range(1e-8, 1e-2);
 		
-//		String faultName = "San Cayetano";
-//		String[] faultSearch = { "Cayetano" };
-//		String prefix = "san_cayetano";
-//		Range xRange = new Range(6.5d, 8.6);
+//		String faultName = "Death Valley (No)";
+//		String[] faultSearch = { "Death", "Valley", "No" };
+//		String prefix = "death_valley_no";
+//		Range xRange = new Range(6d, 8.2);
+//		Range yRange = new Range(1e-8, 1e-2);
+		
+//		String faultName = "Death Valley (Black Mtns Frontal)";
+//		String[] faultSearch = { "Death", "Valley", "Black" };
+//		String prefix = "death_valley_black_mtns";
+//		Range xRange = new Range(6d, 8.2);
 //		Range yRange = new Range(1e-8, 1e-2);
 		
 		List<FaultSystemSolution> sols = new ArrayList<>();

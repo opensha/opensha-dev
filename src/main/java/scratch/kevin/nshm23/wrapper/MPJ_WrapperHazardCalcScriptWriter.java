@@ -36,16 +36,20 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
 //		AttenRelRef gmpeRef = AttenRelRef.NGAWest_2014_AVG;
 		
-		String erfPrefix = "nshm18";
-		String tagName = "nshm-conus-5.3.0"; // NSHM18
+//		String erfPrefix = "nshm18";
+//		String tagName = "nshm-conus-5.3.0"; // NSHM18
 		
-//		String erfPrefix = "nshm23-wrapped";
-//		String tagName = "nshm-conus-6.a.5"; // NSHM23 draft
+		String erfPrefix = "nshm23-wrapped";
+		String tagName = "nshm-conus-6.a.6"; // NSHM23 draft
 		
-//		double gridSpacing = 0.2d; int mins = 600;
-		double gridSpacing = 0.1d; int mins = 2000;
+		double gridSpacing = 0.2d; int mins = 2000;
+//		double gridSpacing = 0.1d; int mins = 2000;
 		
-		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+//		String regName = "wus";
+//		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		String regName = "conus";
+		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
 		
 		String extGridProvPath = null;
 //		String extGridProvPath = "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
@@ -72,7 +76,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 		
-		dirName += "-"+erfPrefix+"-hazard-"+gmpeRef.getShortName().toLowerCase()+"-"+(float)gridSpacing+"deg";
+		dirName += "-"+erfPrefix+"-"+regName+"-hazard-"+gmpeRef.getShortName().toLowerCase()+"-"+(float)gridSpacing+"deg";
 		if (!subduction)
 			dirName += "-noSub";
 		if (griddedOp == IncludeBackgroundOption.EXCLUDE)

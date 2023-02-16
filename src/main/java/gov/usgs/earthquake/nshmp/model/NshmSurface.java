@@ -140,16 +140,21 @@ public class NshmSurface implements CacheEnabledSurface {
 
 	// ERF Calculations
 
-	 @Override
-	 public LocationList getEvenlyDiscritizedListOfLocsOnSurface() {
-	   if (delegate instanceof FiniteSurface) {
-	     LocationList locs = new LocationList();
-	     locs.add(NshmUtil.toOpenShaLocation(((FiniteSurface) delegate).loc));
-	     return locs;
-	   }
-	   return NshmUtil.toOpenShaLocationList(
-	       ((GriddedSurface) delegate).getEvenlyDiscritizedListOfLocsOnSurface());
-	 }
+	@Override
+	public LocationList getEvenlyDiscritizedListOfLocsOnSurface() {
+		if (delegate instanceof FiniteSurface) {
+			LocationList locs = new LocationList();
+			locs.add(NshmUtil.toOpenShaLocation(((FiniteSurface) delegate).loc));
+			return locs;
+		}
+		return NshmUtil.toOpenShaLocationList(
+				((GriddedSurface) delegate).getEvenlyDiscritizedListOfLocsOnSurface());
+	}
+	
+	@Override
+	public double getAveLength() {
+		return delegate.length();
+	}
 
 	// Unnecessary methods for hazard calculations
 
@@ -158,7 +163,6 @@ public class NshmSurface implements CacheEnabledSurface {
 	@Override public LocationList getPerimeter() { throw new UnsupportedOperationException(); }
 	@Override public boolean isPointSurface() { throw new UnsupportedOperationException(); }
 	@Override public double getAveStrike() { throw new UnsupportedOperationException(); }
-	@Override public double getAveLength() { throw new UnsupportedOperationException(); }
 	@Override public double getAreaInsideRegion(Region region) { throw new UnsupportedOperationException(); }
 	@Override public FaultTrace getEvenlyDiscritizedUpperEdge() { throw new UnsupportedOperationException(); }
 	@Override public LocationList getEvenlyDiscritizedLowerEdge() { throw new UnsupportedOperationException(); }

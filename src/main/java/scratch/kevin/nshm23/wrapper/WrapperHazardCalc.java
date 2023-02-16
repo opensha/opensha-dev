@@ -27,6 +27,8 @@ import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.AbstractERF;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
@@ -67,6 +69,9 @@ public class WrapperHazardCalc {
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
+		for (ProbEqkSource source : erf)
+			for (ProbEqkRupture rup : source)
+				System.out.println("Len: "+rup.getRuptureSurface().getAveLength()+" km");
 		System.exit(0);
 
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;

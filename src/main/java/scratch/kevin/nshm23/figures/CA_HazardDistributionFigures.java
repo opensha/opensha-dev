@@ -55,7 +55,7 @@ class CA_HazardDistributionFigures {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/u3_haz_distribution_maps");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		File modelDir = new File(invsDir, "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File modelDir = new File(invsDir, "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		LogicTree<?> modelTree = LogicTree.read(new File(modelDir, "logic_tree.json"));
 		ZipFile modelZip = new ZipFile(new File(modelDir, "results_hazard_avg_gridded.zip"));
 		FaultSystemRupSet rupSet23 = FaultSystemRupSet.load(new File(modelDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
@@ -64,7 +64,7 @@ class CA_HazardDistributionFigures {
 		LogicTree<?> u3Tree = LogicTree.read(new File(u3Dir, "logic_tree.json"));
 		ZipFile u3Zip = new ZipFile(new File(u3Dir, "results_hazard_avg_gridded.zip"));
 		
-		File methodologyDir = new File(invsDir, "2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File methodologyDir = new File(invsDir, "2023_02_09-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		LogicTree<?> methodologyTree = LogicTree.read(new File(methodologyDir, "logic_tree.json"));
 		ZipFile methodologyZip = new ZipFile(new File(methodologyDir, "results_hazard_avg_nshm23_gridded.zip"));
 		FaultSystemRupSet rupSetU3 = FaultSystemRupSet.load(new File(methodologyDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
@@ -123,14 +123,14 @@ class CA_HazardDistributionFigures {
 		GriddedGeoDataSet modelCOV = calcCOV(modelMean, modelStdDevs);
 		GriddedGeoDataSet methodologyCOV = calcCOV(methodologyMean, methodologyStdDevs);
 		
-		plotMap(outputDir, "cov_u3", mapMakerU3, caRegions, u3COV, rainbow_0_1, "UCERF3 COV "+units);
-		plotMap(outputDir, "cov_methodology", mapMakerU3, caRegions, methodologyCOV, rainbow_0_1, "NSHM23 Methodology COV "+units);
-		plotMap(outputDir, "cov_model", mapMaker23, caRegions, modelCOV, rainbow_0_1, "NSHM23 COV "+units);
+		plotMap(outputDir, "cov_u3", mapMakerU3, caRegions, u3COV, rainbow_0_1, "UCERF3 COV");
+		plotMap(outputDir, "cov_methodology", mapMakerU3, caRegions, methodologyCOV, rainbow_0_1, "NSHM23 Methodology COV");
+		plotMap(outputDir, "cov_model", mapMaker23, caRegions, modelCOV, rainbow_0_1, "NSHM23 COV");
 		
 		plotMap(outputDir, "cov_diff_methodolgy_u3", mapMakerU3, caRegions, diff(methodologyCOV, u3COV), diffCPT_0p2,
-				"NSHM23 Methodology - UCERF3, COV "+units);
+				"NSHM23 Methodology COV - UCERF3 COV");
 		plotMap(outputDir, "cov_diff_model_u3", mapMaker23, caRegions, diff(modelCOV, u3COV), diffCPT_0p2,
-				"NSHM23 - UCERF3, COV "+units);
+				"NSHM23 COV - UCERF3 COV");
 		
 		GriddedGeoDataSet u3Spread = logSpreadCOV(gridReg, u3NormCDFs);
 		GriddedGeoDataSet modelSpread = logSpreadCOV(gridReg, modelNormCDFs);

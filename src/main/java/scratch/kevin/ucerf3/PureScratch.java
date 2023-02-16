@@ -138,6 +138,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
@@ -3228,12 +3229,200 @@ public class PureScratch {
 		sol.write(solFile);
 	}
 	
+	private static final void test214() throws IOException {
+//		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0");
+//		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
+//		boolean subduction = false;
+//		
+//		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW, TectonicRegionType.STABLE_SHALLOW);
+//		if (subduction) {
+//			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
+//			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
+//		}
+//
+//		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
+//		erf.getTimeSpan().setDuration(1.0);
+//		erf.updateForecast();
+		
+		// this is the file at https://opensha.usc.edu/ftp/kmilner/markdown/batch_inversions/nshm23-draft-latest/results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip
+		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+		FaultSystemSolution fss = FaultSystemSolution.load(solFile);
+
+		// remove rupture MFDs to make it a fairer comparison to NSHM18
+		fss.removeAvailableModuleInstances(RupMFDsModule.class);
+
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(fss);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
+		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
+		System.out.println("Original duration: "+erf.getTimeSpan().getDuration());
+		erf.getTimeSpan().setDuration(1d);
+		erf.updateForecast();
+		
+//		ScalarIMR gmpe = AttenRelRef.ASK_2014.get();
+		ScalarIMR gmpe = AttenRelRef.NGAWest_2014_AVG.get();
+		gmpe.setParamDefaults();
+		
+		gmpe.setIntensityMeasure(PGA_Param.NAME);
+		
+		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(gmpe.getIntensityMeasure());
+		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
+		for (Point2D pt : xVals)
+			logXVals.set(Math.log(pt.getX()), 0d);
+		
+		HazardCurveCalculator calc = new HazardCurveCalculator();
+		
+		NEHRP_TestCity city = NEHRP_TestCity.RENO;
+		Site site = new Site(city.location());
+		site.addParameterList(gmpe.getSiteParams());
+
+		System.out.println("Calculating for "+city);
+		calc.getHazardCurve(logXVals, site, gmpe, erf);
+
+		DiscretizedFunc curve = new ArbitrarilyDiscretizedFunc();
+		for (int i=0; i<xVals.size(); i++)
+			curve.set(xVals.getX(i), logXVals.getY(i));
+
+		System.out.println("Hazard curve:\n"+curve);
+		System.out.println("2 in 50: "+curve.getFirstInterpolatedX_inLogXLogYDomain(ReturnPeriods.TWO_IN_50.oneYearProb));
+	}
+	
+	private static final void test215() throws IOException {
+		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
+		
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		
+		HashSet<Integer> zeroIDs = new HashSet<>();
+		for (int r=0; r<rupSet.getNumRuptures(); r++)
+			if (sol.getRateForRup(r) == 0d)
+				zeroIDs.add(r);
+		
+		FaultSystemRupSet zerosRupSet = rupSet.getForRuptureSubSet(zeroIDs);
+		zerosRupSet.write(new File(solFile.getParentFile(), "zeros_rs.zip"));
+	}
+	
+	private static final void test216() throws IOException {
+		TableBuilder table = MarkdownUtils.tableBuilder();
+		
+		table.addLine("Peak Ground Acceleration", "1s Spectral Acceleration");
+		table.addLine("[__2% POE in 50 years__](hazard_comparisons_nshm18_pga_2in50/)", "[__2% POE in 50 years__](hazard_comparisons_nshm18_sa_1s_2in50/)");
+		table.addLine("[__10% POE in 50 years__](hazard_comparisons_nshm18_pga_10in50/)", "[__10% POE in 50 years__](hazard_comparisons_nshm18_sa_1s_10in50/)");
+		
+		System.out.println(table);
+	}
+	
+	private static final void test217() throws IOException {
+		File NSHM23_WRAPPED = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.a.6");
+		NshmErf erf = new NshmErf(NSHM23_WRAPPED.toPath(), Set.of(TectonicRegionType.SUBDUCTION_SLAB), IncludeBackgroundOption.EXCLUDE);
+		erf.getTimeSpan().setDuration(1d);
+		erf.updateForecast();
+		
+		double overallMaxMag = 0d;
+		int sourceID = 0;
+		for (ProbEqkSource source : erf) {
+			double maxMag = 0d;
+			RuptureSurface largestSurf = null;
+			for (ProbEqkRupture rup : source) {
+				if (rup.getMag() > maxMag) {
+					maxMag = rup.getMag();
+					largestSurf = rup.getRuptureSurface();
+				}
+			}
+			overallMaxMag = Math.max(maxMag, overallMaxMag);
+			if (maxMag > 8d)
+				System.out.println("Source "+sourceID+". "+source.getName()+": Mmax="+(float)maxMag
+						+"; numRups="+source.getNumRuptures()+"; totRate="+(float)source.computeTotalEquivMeanAnnualRate(1d)
+						+"; Largest surface type="+largestSurf.getClass()+", numLocs="+largestSurf.getEvenlyDiscretizedNumLocs());
+			sourceID++;
+		}
+		System.out.println("Overall Mmax="+(float)overallMaxMag);
+	}
+	
+	private static final void test218() throws IOException {
+		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(solFile);
+		
+		double maxMmin = 0d;
+		FaultSection maxMminSect = null;
+		double minMmin = Double.POSITIVE_INFINITY;
+		FaultSection minMminSect = null;
+		
+		for (int s=0; s<rupSet.getNumSections(); s++) {
+			double minMag = rupSet.getMinMagForSection(s);
+			
+			if (minMag > maxMmin) {
+				maxMmin = minMag;
+				maxMminSect = rupSet.getFaultSectionData(s);
+			}
+			if (minMag < minMmin) {
+				minMmin = minMag;
+				minMminSect = rupSet.getFaultSectionData(s);
+			}
+		}
+		
+		System.out.println("Largest sect Mmin: "+(float)maxMmin+" on "+maxMminSect.getSectionId()+". "+maxMminSect.getSectionName());
+		System.out.println("Smallest sect Mmin: "+(float)minMmin+" on "+minMminSect.getSectionId()+". "+minMminSect.getSectionName());
+	}
+	
+	private static final void test219() throws IOException {
+		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
+		
+		IncrementalMagFreqDist supraMFD = sol.calcNucleationMFD_forRegion(region,
+				refMFD.getMinX(), refMFD.getMaxX(), refMFD.getDelta(), false);
+		IncrementalMagFreqDist gridMFD = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		GridSourceProvider prov = sol.getGridSourceProvider();
+		double minX = refMFD.getMinX()-0.5*refMFD.getDelta();
+		double maxX = refMFD.getMaxX()+0.5*refMFD.getDelta();
+		for (int i=0; i<prov.size(); i++) {
+			if (region.contains(prov.getGriddedRegion().getLocation(i))) {
+				IncrementalMagFreqDist mfd = prov.getMFD(i);
+				for (int j=0; j<mfd.size(); j++) {
+					double x = mfd.getX(j);
+					double y = mfd.getY(j);
+					if (y > 0 && (float)x >= (float)minX && (float)x <= (float)maxX) {
+						gridMFD.add(gridMFD.getClosestXIndex(x), y);
+					}
+				}
+			}
+		}
+		
+		EvenlyDiscretizedFunc cmlSupraMFD = supraMFD.getCumRateDistWithOffset();
+		EvenlyDiscretizedFunc cmlGridMFD = gridMFD.getCumRateDistWithOffset();
+		
+		for (int i=refMFD.getClosestXIndex(5.05); i<refMFD.size() && cmlSupraMFD.getY(i)>0; i++) {
+			double supraIncr = supraMFD.getY(i);
+			double gridIncr = gridMFD.getY(i);
+			double sumIncr = supraIncr + gridIncr;
+			
+			double supraCml = cmlSupraMFD.getY(i);
+			double gridCml = cmlGridMFD.getY(i);
+			double sumCml = supraCml + gridCml;
+			
+			double mag = cmlSupraMFD.getX(i);
+			System.out.println("M"+(float)mag+" supra-seis fract:\tincr="
+					+(float)(supraIncr/sumIncr)+"\tcml="+(float)(supraCml/sumCml));
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test213();
+		test219();
 	}
 
 }

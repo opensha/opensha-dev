@@ -380,7 +380,7 @@ public class SegAdjustmentPlots {
 //				funcs.add(origMultiFault);
 //				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, Color.LIGHT_GRAY));
 
-				singleFaultMFD.setName(jumpBins.size() > 1 ? "Single Fault" : "Without Jump");
+				singleFaultMFD.setName(jumpBins.size() > 1 ? "Single-Fault" : "Without Jump");
 				funcs.add(singleFaultMFD);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 3f, singleFaultColor));
 				

@@ -227,13 +227,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-nshm23_u3_hybrid_branches";
 //		double avgNumRups = 325000;
 		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-//		dirName += "-nshm23_branches";
-//		double avgNumRups = 600000;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+		dirName += "-nshm23_branches";
+		double avgNumRups = 600000;
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
-		dirName += "-nshm18_branches-wc_94";
-		double avgNumRups = 500000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
+//		dirName += "-nshm18_branches-wc_94";
+//		double avgNumRups = 500000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levelsNewScale;
 //		dirName += "-nshm18_branches-new_scale";
@@ -406,10 +406,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		LogicTreeNode[] required = {
 				// FAULT MODELS
 //				FaultModels.FM3_1,
+//				FaultModels.FM3_2,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
-				NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1,
+//				NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1,
 //				NSHM23_FaultModels.NSHM23_v1p4,
-//				NSHM23_FaultModels.NSHM23_v2,
+				NSHM23_FaultModels.NSHM23_v2,
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
@@ -426,7 +427,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// DEFORMATION MODELS
 //				U3_UncertAddDeformationModels.U3_ZENG,
 //				U3_UncertAddDeformationModels.U3_MEAN,
-				NSHM18_DeformationModels.BRANCH_AVERAGED,
+//				NSHM18_DeformationModels.BRANCH_AVERAGED,
 //				NSHM23_DeformationModels.AVERAGE,
 //				NSHM23_DeformationModels.GEOLOGIC,
 //				NSHM23_DeformationModels.MEDIAN,

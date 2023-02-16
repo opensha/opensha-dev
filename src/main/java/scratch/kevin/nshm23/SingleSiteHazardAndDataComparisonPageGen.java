@@ -889,14 +889,17 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 	
 	public static class RegionalParticipationResult {
 		public final double[] magThresholds;
-		public final GriddedGeoDataSet[] particRateMaps; 
+		public final GriddedGeoDataSet[] particRateMaps;
+		public final GriddedGeoDataSet[] nuclRateMaps;
 		public final GriddedGeoDataSet momentRateMap;
 		public final IncrementalMagFreqDist particMFD;
 		
 		public RegionalParticipationResult(double[] magThresholds, GriddedGeoDataSet[] particRateMaps,
+				GriddedGeoDataSet[] nuclRateMaps,
 				GriddedGeoDataSet momentRateMap, IncrementalMagFreqDist particMFD) {
 			this.magThresholds = magThresholds;
 			this.particRateMaps = particRateMaps;
+			this.nuclRateMaps = nuclRateMaps;
 			this.momentRateMap = momentRateMap;
 			this.particMFD = particMFD;
 		}
@@ -916,10 +919,13 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		Region largerTestReg = new Region(botLeft, topRight);
 		
 		Map<RuptureSurface, int[]> mappedIndexes = new ConcurrentHashMap<>();
-		
+
 		GriddedGeoDataSet[] particRateMaps = new GriddedGeoDataSet[magThresholds.length];
 		for (int m=0; m<magThresholds.length; m++)
 			particRateMaps[m] = new GriddedGeoDataSet(gridReg);
+		GriddedGeoDataSet[] nuclRateMaps = new GriddedGeoDataSet[magThresholds.length];
+		for (int m=0; m<magThresholds.length; m++)
+			nuclRateMaps[m] = new GriddedGeoDataSet(gridReg);
 		GriddedGeoDataSet momentRateMap = new GriddedGeoDataSet(gridReg);
 		IncrementalMagFreqDist particMFD = refMFD == null ? null :
 			new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
@@ -940,7 +946,8 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 					}
 					if (skip)
 						return;
-					double[][] sourceRates = new double[gridReg.getNodeCount()][magThresholds.length];
+					double[][] sourceParticRates = new double[gridReg.getNodeCount()][magThresholds.length];
+					double[][] sourceNuclRates = new double[gridReg.getNodeCount()][magThresholds.length];
 					double[] sourceMoRates = new double[gridReg.getNodeCount()];
 					double[] mfdRates = refMFD == null ? null : new double[refMFD.size()];
 					for (ProbEqkRupture rup : source) {
@@ -976,6 +983,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 							fullIndexCount += indexes.length;
 						}
 						double momentEach = moment/(double)fullIndexCount;
+						double rateEach = rate/(double)fullIndexCount;
 						BitSet cellParticipation = new BitSet(sourceMoRates.length);
 						boolean any = false;
 						for (int[] indexes : fullIndexes) {
@@ -983,6 +991,9 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 								if (idx >= 0d) {
 									cellParticipation.set(idx);
 									sourceMoRates[idx] += momentEach;
+									for (int m=0; m<magThresholds.length; m++)
+										if (mag >= magThresholds[m])
+											sourceNuclRates[idx][m] += rateEach;
 									any = true;
 								}
 							}
@@ -990,16 +1001,19 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 						for (int i = cellParticipation.nextSetBit(0); i >= 0; i = cellParticipation.nextSetBit(i+1))
 							for (int m=0; m<magThresholds.length; m++)
 								if (mag >= magThresholds[m])
-									sourceRates[i][m] += rate;
+									sourceParticRates[i][m] += rate;
 						if (any && mfdRates != null)
 							mfdRates[refMFD.getClosestXIndex(mag)] += rate;
 					}
 					synchronized (particRateMaps) {
-						for (int i=0; i<sourceRates.length; i++) {
+						for (int i=0; i<sourceParticRates.length; i++) {
 							if (sourceMoRates[i] > 0) {
-								for (int m=0; m<magThresholds.length; m++)
-									if (sourceRates[i][m] > 0)
-										particRateMaps[m].set(i, particRateMaps[m].get(i)+sourceRates[i][m]);
+								for (int m=0; m<magThresholds.length; m++) {
+									if (sourceParticRates[i][m] > 0)
+										particRateMaps[m].set(i, particRateMaps[m].get(i)+sourceParticRates[i][m]);
+									if (sourceNuclRates[i][m] > 0)
+										nuclRateMaps[m].set(i, particRateMaps[m].get(i)+sourceNuclRates[i][m]);
+								}
 								momentRateMap.set(i, momentRateMap.get(i)+sourceMoRates[i]);
 							}
 						}
@@ -1022,10 +1036,10 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		
 		exec.shutdown();
 		
-		return new RegionalParticipationResult(magThresholds, particRateMaps, momentRateMap, particMFD);
+		return new RegionalParticipationResult(magThresholds, particRateMaps, nuclRateMaps, momentRateMap, particMFD);
 	}
 	
-	private static boolean canSkipNshmSurf(Region reg, RuptureSurface surf) {
+	static boolean canSkipNshmSurf(Region reg, RuptureSurface surf) {
 		if (surf instanceof NshmSurface) {
 			NshmSurface nshmSurf = (NshmSurface)surf;
 			Location centroid;
@@ -1053,9 +1067,13 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		FaultGridAssociations assoc = FaultGridAssociations.getIntersectionAssociations(rupSet, gridReg);
 		List<IncrementalMagFreqDist> sectNuclMFDs = NucleationRatePlot.calcNuclMFDs(sol);
-		GriddedGeoDataSet[] faultRates = new GriddedGeoDataSet[magThresholds.length];
+		GriddedGeoDataSet[] faultParticRates = new GriddedGeoDataSet[magThresholds.length];
 		for (int m=0; m<magThresholds.length; m++)
-			faultRates[m] = new GriddedGeoDataSet(gridReg, false);
+			faultParticRates[m] = new GriddedGeoDataSet(gridReg, false);
+		GriddedGeoDataSet[] faultNuclRates = new GriddedGeoDataSet[magThresholds.length];
+		for (int m=0; m<magThresholds.length; m++)
+//			faultNuclRates[m] = new GriddedGeoDataSet(gridReg, false);
+			faultNuclRates[m] = NucleationRatePlot.calcFaultNucleationRates(gridReg, sol, assoc, sectNuclMFDs, magThresholds[m]);
 		IncrementalMagFreqDist mfd = refMFD == null ? null :
 			new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
 		// now do fault participation
@@ -1072,7 +1090,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 				any = true;
 				for (int m=0; m<magThresholds.length; m++) {
 					if (mag >= magThresholds[m])
-						faultRates[m].set(i, faultRates[m].get(i)+rate);
+						faultParticRates[m].set(i, faultParticRates[m].get(i)+rate);
 				}
 			}
 			if (any && mfd != null)
@@ -1081,7 +1099,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		GriddedGeoDataSet faultMoRates = NucleationRatePlot.calcFaultNucleationMomentRates(
 				gridReg, sol, assoc, sectNuclMFDs);
 		
-		return new RegionalParticipationResult(magThresholds, faultRates, faultMoRates, mfd);
+		return new RegionalParticipationResult(magThresholds, faultParticRates, faultNuclRates, faultMoRates, mfd);
 	}
 	
 	public static RegionalParticipationResult calcFSSGriddedPartic(FaultSystemSolution sol, GriddedRegion gridReg,
@@ -1096,7 +1114,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 			IncrementalMagFreqDist mfd = null;
 			if (refMFD != null)
 				mfd = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
-			return new RegionalParticipationResult(magThresholds, griddedRates, griddedMoRates, mfd);
+			return new RegionalParticipationResult(magThresholds, griddedRates, griddedRates, griddedMoRates, mfd);
 		}
 		GriddedGeoDataSet[] griddedRates = new GriddedGeoDataSet[magThresholds.length];
 		for (int m=0; m<magThresholds.length; m++)
@@ -1122,7 +1140,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 			}
 		}
 		
-		return new RegionalParticipationResult(magThresholds, griddedRates, griddedMoRates, mfd);
+		return new RegionalParticipationResult(magThresholds, griddedRates, griddedRates, griddedMoRates, mfd);
 	}
 	
 	public static RegionalParticipationResult calcFSSPartic(FaultSystemSolution sol, GriddedRegion gridReg,
@@ -1130,15 +1148,20 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		RegionalParticipationResult faultPartic = calcFSSFaultPartic(sol, gridReg, magThresholds, refMFD);
 		RegionalParticipationResult gridPartic = calcFSSGriddedPartic(sol, gridReg, magThresholds, refMFD);
 		
-		GriddedGeoDataSet[] sumRates = new GriddedGeoDataSet[magThresholds.length];
+		GriddedGeoDataSet[] sumParticRates = new GriddedGeoDataSet[magThresholds.length];
 		for (int m=0; m<magThresholds.length; m++)
-			sumRates[m] = new GriddedGeoDataSet(gridReg);
+			sumParticRates[m] = new GriddedGeoDataSet(gridReg);
+		GriddedGeoDataSet[] sumNuclRates = new GriddedGeoDataSet[magThresholds.length];
+		for (int m=0; m<magThresholds.length; m++)
+			sumNuclRates[m] = new GriddedGeoDataSet(gridReg);
 		GriddedGeoDataSet sumMomentRate = new GriddedGeoDataSet(gridReg, false);
 		
 		for (int i=0; i<sumMomentRate.size(); i++) {
 			sumMomentRate.set(i, faultPartic.momentRateMap.get(i)+gridPartic.momentRateMap.get(i));
-			for (int m=0; m<magThresholds.length; m++)
-				sumRates[m].set(i, faultPartic.particRateMaps[m].get(i)+gridPartic.particRateMaps[m].get(i));
+			for (int m=0; m<magThresholds.length; m++) {
+				sumParticRates[m].set(i, faultPartic.particRateMaps[m].get(i)+gridPartic.particRateMaps[m].get(i));
+				sumNuclRates[m].set(i, faultPartic.nuclRateMaps[m].get(i)+gridPartic.nuclRateMaps[m].get(i));
+			}
 		}
 		
 		IncrementalMagFreqDist mfd = null;
@@ -1148,7 +1171,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 				mfd.set(i, faultPartic.particMFD.getY(i)+gridPartic.particMFD.getY(i));
 		}
 		
-		return new RegionalParticipationResult(magThresholds, sumRates, sumMomentRate, mfd);
+		return new RegionalParticipationResult(magThresholds, sumParticRates, sumNuclRates, sumMomentRate, mfd);
 	}
 	
 	private static DiscretizedFunc toLinearCurve(DiscretizedFunc curve, DiscretizedFunc xVals) {

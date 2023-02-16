@@ -204,11 +204,13 @@ class BValueSumCartoon {
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
 			
 			if (bValSum instanceof UncertainIncrMagFreqDist) {
-				UncertainBoundedIncrMagFreqDist bounded;
-				if (bValSum instanceof UncertainBoundedIncrMagFreqDist)
-					bounded = (UncertainBoundedIncrMagFreqDist)bValSum;
-				else
-					bounded = ((UncertainIncrMagFreqDist)bValSum).estimateBounds(UncertaintyBoundType.ONE_SIGMA);
+//				UncertainBoundedIncrMagFreqDist bounded;
+//				if (bValSum instanceof UncertainBoundedIncrMagFreqDist)
+//					bounded = (UncertainBoundedIncrMagFreqDist)bValSum;
+//				else
+//					bounded = ((UncertainIncrMagFreqDist)bValSum).estimateBounds(UncertaintyBoundType.ONE_SIGMA);
+				// always force it to rebuild the bounds as we're plotting +/- sigma, not the possibly asymmetrical bounds
+				UncertainBoundedIncrMagFreqDist bounded = ((UncertainIncrMagFreqDist)bValSum).estimateBounds(UncertaintyBoundType.ONE_SIGMA);
 				System.out.println("b="+(float)bVal+" MFD & bounds:");
 				boolean first = true;
 				for (int i=0; i<bounded.size(); i++) {
@@ -218,7 +220,9 @@ class BValueSumCartoon {
 						double up = bounded.getUpperY(i);
 						double low = bounded.getLowerY(i);
 						first = false;
-						System.out.println(i+".\tx="+(float)x+"\ty="+(float)y+"\tbounds=["+(float)low+", "+(float)up+"]");
+						double sd = bounded.getStdDev(i);
+						System.out.println(i+".\tx="+(float)x+"\ty="+(float)y+"\tbounds=["+(float)low+", "+(float)up
+								+"]\tstdDev="+(float)sd+"\tcov="+(float)(sd/y));
 					}
 				}
 				// adjust upper to not fall off a cliff above max val
@@ -292,8 +296,8 @@ class BValueSumCartoon {
 			gp.drawGraphPanel(List.of(spec, countSpec), List.of(false), List.of(true, false),
 					List.of(magRange), List.of(yRange, countRange));
 			
-			PlotUtils.setSubPlotWeights(gp, 10, 3);
-			PlotUtils.writePlots(outputDir, prefix+"_count", gp, 800, 1100, true, true, false);
+			PlotUtils.setSubPlotWeights(gp, 20, 7);
+			PlotUtils.writePlots(outputDir, prefix+"_count", gp, 800, 1000, true, true, false);
 		}
 	}
 	
