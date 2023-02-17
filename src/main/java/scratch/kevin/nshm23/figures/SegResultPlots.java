@@ -46,6 +46,8 @@ public class SegResultPlots {
 				"middle"
 		};
 		
+		SegmentationCalculator.WRITE_PDFS = true;
+		
 		for (int i=0; i<sols.length; i++) {
 			SegmentationCalculator segCalc = new SegmentationCalculator(sols[i], cRups.getAll(),
 					connStrat, config.getDistAzCalc(), new double[] { 0d });
@@ -54,6 +56,13 @@ public class SegResultPlots {
 			segCalc.plotConnectionFracts(outputDir, "passthrough_map_"+prefix, " ");
 			
 			segCalc.plotDistDependComparison(outputDir, "dist_dependence_"+prefix, true, null, " ");
+			
+			if (i == 0) {
+				// write an empty plot for Ned
+				segCalc = new SegmentationCalculator(sols[i], cRups.getAll(),
+						connStrat, config.getDistAzCalc(), new double[] { 10d });
+				segCalc.plotDistDependComparison(outputDir, "dist_dependence_empty", true, null, " ");
+			}
 		}
 	}
 

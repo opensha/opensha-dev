@@ -267,7 +267,8 @@ public class SegAdjustmentPlots {
 		
 		ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb.D = true;
 		segAdjusters.add(new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(segModel, 50, true));
-		segNames.add("Relative G-R MFD Adjustment");
+//		segNames.add("Relative G-R MFD Adjustment");
+		segNames.add(" ");
 		segPrefixes.add("rel_gr_mfd_avg");
 		segColors.add(Color.GREEN.darker());
 		

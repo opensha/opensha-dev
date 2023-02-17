@@ -96,11 +96,11 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2022_11_10-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File mainDir = new File(invDir, "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2022_12_20-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2022_12_27-nshm23_u3_hybrid_branches-10000ip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2023_01_06-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-NoAdj");
-		File mainDir = new File(invDir, "2023_01_01-nshm23_branches-NSHM23_v2-CoulombRupSet-NuclMFD-NoRed-ThreshAvgIterRelGR");
+//		File mainDir = new File(invDir, "2023_01_01-nshm23_branches-NSHM23_v2-CoulombRupSet-NuclMFD-NoRed-ThreshAvgIterRelGR");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		boolean currentWeights = false;
@@ -413,7 +413,7 @@ public class LogicTreeMisfitPageGen {
 						
 						HeadlessGraphPanel gp = PlotUtils.initHeadless();
 						
-						PlotSpec spec = new PlotSpec(funcs, chars, quantity+" Distribution",
+						PlotSpec spec = new PlotSpec(funcs, chars, " ",
 								"Constraint "+quantity, "Count");
 						spec.setLegendInset(true);
 						

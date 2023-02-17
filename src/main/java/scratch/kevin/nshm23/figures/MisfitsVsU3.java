@@ -27,7 +27,7 @@ class MisfitsVsU3 {
 	public static void main(String[] args) throws IOException {
 		File u3File = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged_full_modules.zip");
 		File newFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "2022_12_20-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_FM3_1_CoulombRupSet_NoClassic_branch_averaged.zip");
 		String newName = "NSHM23 Methodology"; String prefixAdd = "_no_classic";
 //				+ "results_FM3_1_CoulombRupSet_branch_averaged.zip");
@@ -66,7 +66,7 @@ class MisfitsVsU3 {
 			populateHist(u3Hist, u3Ratios);
 			populateHist(newHist, newRatios);
 			
-			plotComparisonHists(outputDir, prefix+prefixAdd, "Slip Rate Misfits", xAxisLabel, "Subsection Count",
+			plotComparisonHists(outputDir, prefix+prefixAdd, " ", xAxisLabel, "Subsection Count",
 					u3Hist, newHist, pDiff ? 10d : 0.2d);
 		}
 		
@@ -107,7 +107,7 @@ class MisfitsVsU3 {
 		System.out.println("\tAvg: "+(float)avg);
 		System.out.println("\tAvg Absolute: "+(float)absAvg);
 		
-		plotComparisonHists(outputDir, "paleo_z_scores"+prefixAdd, "Paleoseismic Data Misfits", "Paleoseismic Rate z-score",
+		plotComparisonHists(outputDir, "paleo_z_scores"+prefixAdd, " ", "Paleoseismic Rate z-score",
 				"Paleoseismic Constraint Count", u3ZHist, newZHist, 0.5);
 	}
 	
