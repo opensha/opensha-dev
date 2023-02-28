@@ -21,7 +21,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Single
 import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint;
 import scratch.UCERF3.utils.aveSlip.U3AveSlipConstraint.U3AveSlipProbModel;
 
-class ZTablesBuilder {
+class PaleoZTablesBuilder {
 
 	public static void main(String[] args) throws IOException {
 		File u3SolFile = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged_full_modules.zip");

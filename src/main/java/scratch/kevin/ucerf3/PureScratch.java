@@ -120,6 +120,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel.Tapered;
@@ -179,6 +180,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sha.util.TectonicRegionType;
@@ -3417,12 +3419,133 @@ public class PureScratch {
 		}
 	}
 	
+	private static final void test220() throws IOException {
+		File dir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File ltFile = new File(dir, "logic_tree.json");
+		LogicTree<?> tree = LogicTree.read(ltFile);
+		tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
+		
+		tree.write(new File(dir, "logic_tree_no_classic.json"));
+	}
+	
+	private static final void test221() throws IOException {
+		File dir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File nodesDir = new File(dir, "node_branch_averaged");
+		
+		NSHM23_SegmentationModels[] segModels = {
+				NSHM23_SegmentationModels.NONE,
+				NSHM23_SegmentationModels.LOW,
+				NSHM23_SegmentationModels.MID,
+				NSHM23_SegmentationModels.HIGH
+		};
+		
+		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(new BranchWeightProvider.CurrentWeights());
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = List.of(NSHM23_LogicTreeBranch.SEG);
+		for (NSHM23_SegmentationModels model : segModels) {
+			LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<LogicTreeNode>(levels, List.of(model));
+			
+			FaultSystemSolution sol = FaultSystemSolution.load(
+					new File(nodesDir, "SegModel_"+model.getFilePrefix()+".zip"));
+			
+			baCreator.addSolution(sol, branch);
+		}
+		
+		FaultSystemSolution sol = baCreator.build();
+		sol.write(new File(dir, "tmp_ba_no_classic.zip"));
+	}
+	
+	private static final void test222() throws IOException {
+		EvenlyDiscretizedFunc refMFD = new EvenlyDiscretizedFunc(6.05, 15, 0.1);
+		
+		List<Double> mags = new ArrayList<>();
+		mags.add(6.05);
+//		mags.add(6.15);
+		mags.add(6.25);
+		mags.add(6.35);
+		mags.add(6.45);
+		mags.add(6.55);
+//		mags.add(6.65);
+		mags.add(6.75);
+		mags.add(6.85);
+		mags.add(6.95);
+		double maxSingleFault = 6.4;
+
+		IncrementalMagFreqDist fullSpreadGR = SparseGutenbergRichterSolver.getEquivGR(
+				refMFD, mags, 1e16, 1d);
+		IncrementalMagFreqDist noSpreadSingleMultiGR = SparseGutenbergRichterSolver.getEquivGR(
+				refMFD, mags, List.of(maxSingleFault), true, 1e16, 1d);
+		
+		System.out.println("Mag\tRate1\tRate2\tGain");
+		for (int i=0; i<refMFD.size(); i++) {
+			double x = refMFD.getX(i);
+			double y1 = fullSpreadGR.getY(i);
+			double y2 = noSpreadSingleMultiGR.getY(i);
+			System.out.println((float)x+"\t"+(float)y1+"\t"+(float)y2+"\t"+(float)(y2/y1));
+		}
+	}
+	
+	private static final void test223() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2023_02_21-nshm23_branches-seg_limit_max_length-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-"
+				+ "NoRed-EvenFitPaleo-ThreshAvgIterRelGR/results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+		
+		SupraSeisBValInversionTargetMFDs.SPARSE_GR_DONT_SPREAD_SINGLE_TO_MULTI = true;
+		
+		SupraSeisBValInversionTargetMFDs.Builder build = new Builder(rupSet, 0.5);
+		
+		SupraSeisBValInversionTargetMFDs mod = build.build();
+		SupraSeisBValInversionTargetMFDs.SPARSE_GR_DONT_SPREAD_SINGLE_TO_MULTI = false;
+		SupraSeisBValInversionTargetMFDs orig = build.build();
+		
+		MinMaxAveTracker track = new MinMaxAveTracker();
+		for (int s=0; s<rupSet.getNumSections(); s++) {
+			double rate1 = mod.getOnFaultSupraSeisNucleationMFDs().get(s).calcSumOfY_Vals();
+			double rate2 = orig.getOnFaultSupraSeisNucleationMFDs().get(s).calcSumOfY_Vals();
+			track.addValue(rate1/rate2);
+			if ((float)rate1 != (float)rate2) {
+				System.out.println(s+". "+rupSet.getFaultSectionData(s).getSectionName()+": "+(float)rate1
+						+" vs "+(float)rate2+", ratio="+(float)(rate1/rate2));
+			}
+		}
+		System.out.println(track);
+	}
+	
+	private static final void test224() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2023_02_21-nshm23_branches-seg_limit_max_length-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-"
+				+ "NoRed-EvenFitPaleo-ThreshAvgIterRelGR/results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+		rupSet = FaultSystemRupSet.buildFromExisting(rupSet, false).build();
+		
+		Region stableReg = NSHM23_RegionLoader.GridSystemRegions.CEUS_STABLE.load();
+		Map<Region, TectonicRegionType> regRegimes = Map.of(stableReg, TectonicRegionType.STABLE_SHALLOW);
+		RupSetTectonicRegimes rupSetRegimes = RupSetTectonicRegimes.forRegions(
+				rupSet, regRegimes, TectonicRegionType.ACTIVE_SHALLOW, 0.5);
+		
+		rupSet.addModule(rupSetRegimes);
+		File tmpFile = new File("/tmp/rup_set.zip");
+		rupSet.write(tmpFile);
+		rupSet = FaultSystemRupSet.load(tmpFile);
+		
+		rupSetRegimes = rupSet.requireModule(RupSetTectonicRegimes.class);
+		
+		int numStable = 0;
+		for (int r=0; r<rupSet.getNumRuptures(); r++) {
+			if (rupSetRegimes.get(r) == TectonicRegionType.STABLE_SHALLOW)
+				numStable++;
+		}
+		
+		System.out.println(numStable+"/"+rupSet.getNumRuptures()+" are stable");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test219();
+		test224();
 	}
 
 }

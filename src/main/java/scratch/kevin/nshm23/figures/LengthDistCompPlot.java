@@ -58,7 +58,9 @@ public class LengthDistCompPlot {
 
 	public static void main(String[] args) throws IOException {
 		File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_02_21-nshm23_branches-seg_limit_max_length-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
+				+ "2023_02_25-nshm23_branches-seg_limit_max_length_600-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
 		
 		boolean noCA = false;
 		File outputDir = new File(invDir, "misc_plots/wells_2013_length_dists");
@@ -182,6 +184,10 @@ public class LengthDistCompPlot {
 		HistogramFunction upperHist = new HistogramFunction(ref.getMinX(), ref.size(), ref.getDelta());
 		HistogramFunction lowerCmlHist = new HistogramFunction(cmlRef.getMinX(), cmlRef.size(), cmlRef.getDelta());
 		HistogramFunction upperCmlHist = new HistogramFunction(cmlRef.getMinX(), cmlRef.size(), cmlRef.getDelta());
+		for (int i=0; i<lowerHist.size(); i++) {
+			lowerHist.set(i, Double.POSITIVE_INFINITY);
+			lowerCmlHist.set(i, Double.POSITIVE_INFINITY);
+		}
 		for (int index=0; index<tree.size(); index++) {
 			LogicTreeBranch<?> branch = tree.getBranch(index);
 			System.out.println("Processing branch "+index+"/"+tree.size());
@@ -226,26 +232,29 @@ public class LengthDistCompPlot {
 				meanHistWeightsMap.put(node, meanHistWeightsMap.get(node)+weight);
 				for (int i=0; i<myHist.size(); i++) {
 					double val = myHist.getY(i);
-					if (val > 0d) {
-						meanHist.add(i, weight*val);
-						if (val > upperHist.getY(i))
-							upperHist.set(i, val);
-						if (val < lowerHist.getY(i) || lowerHist.getY(i) == 0d)
-							lowerHist.set(i, val);
-					}
+					meanHist.add(i, weight*val);
+					if (val > upperHist.getY(i))
+						upperHist.set(i, val);
+					if (val < lowerHist.getY(i))
+						lowerHist.set(i, val);
 					double cmlVal = myCmlHist.getY(i);
-					if (cmlVal > 0d) {
-						meanCmlHist.add(i, weight*cmlVal);
-						if (cmlVal > upperCmlHist.getY(i))
-							upperCmlHist.set(i, cmlVal);
-						if (cmlVal < lowerCmlHist.getY(i) || lowerCmlHist.getY(i) == 0d)
-							lowerCmlHist.set(i, cmlVal);
-					}
+					meanCmlHist.add(i, weight*cmlVal);
+					if (cmlVal > upperCmlHist.getY(i))
+						upperCmlHist.set(i, cmlVal);
+					if (cmlVal < lowerCmlHist.getY(i))
+						lowerCmlHist.set(i, cmlVal);
 				}
 			}
 		}
 		HistogramFunction data = TablesAndPlotsGen.loadSurfaceRupData();
 		HistogramFunction cmlData = getInvCml(data);
+		
+		for (int i=0; i<lowerHist.size(); i++) {
+			if (Double.isInfinite(lowerHist.getY(i)))
+				lowerHist.set(i, 0d);
+			if (Double.isInfinite(lowerCmlHist.getY(i)))
+				lowerCmlHist.set(i, 0d);
+		}
 		
 		for (LogicTreeNode node : meanHistMap.keySet()) {
 			meanHistMap.get(node).scale(1d/meanHistWeightsMap.get(node));
