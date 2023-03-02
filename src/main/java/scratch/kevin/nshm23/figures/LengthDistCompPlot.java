@@ -59,13 +59,16 @@ public class LengthDistCompPlot {
 	public static void main(String[] args) throws IOException {
 		File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 //				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//				+ "2023_02_21-nshm23_branches-seg_limit_max_length-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
-				+ "2023_02_25-nshm23_branches-seg_limit_max_length_600-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
+				+ "2023_02_28-nshm23_branches-seg_limit_max_length-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
+//				+ "2023_02_25-nshm23_branches-seg_limit_max_length_600-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
+		
+		File miscPlotsDir = new File(invDir, "misc_plots");
+		Preconditions.checkState(miscPlotsDir.exists() || miscPlotsDir.mkdir());
 		
 		boolean noCA = false;
-		File outputDir = new File(invDir, "misc_plots/wells_2013_length_dists");
+		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists");
 //		boolean noCA = true;
-//		File outputDir = new File(invDir, "misc_plots/wells_2013_length_dists_noCA");
+//		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists_noCA");
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		

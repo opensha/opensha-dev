@@ -10,6 +10,7 @@ import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -134,6 +135,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetai
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupCartoonGenerator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
@@ -3458,25 +3460,41 @@ public class PureScratch {
 	}
 	
 	private static final void test222() throws IOException {
-		EvenlyDiscretizedFunc refMFD = new EvenlyDiscretizedFunc(6.05, 15, 0.1);
+		EvenlyDiscretizedFunc refMFD = new EvenlyDiscretizedFunc(6.05, 20, 0.1);
+		
+		SparseGutenbergRichterSolver.D = true;
+		double bVal = 0.5;
 		
 		List<Double> mags = new ArrayList<>();
-		mags.add(6.05);
+//		mags.add(6.05);
 //		mags.add(6.15);
-		mags.add(6.25);
-		mags.add(6.35);
-		mags.add(6.45);
+//		mags.add(6.25);
+//		mags.add(6.35);
+//		mags.add(6.45);
 		mags.add(6.55);
-//		mags.add(6.65);
-		mags.add(6.75);
+		mags.add(6.65);
+//		mags.add(6.75);
 		mags.add(6.85);
 		mags.add(6.95);
-		double maxSingleFault = 6.4;
+		mags.add(7.05);
+		mags.add(7.15);
+		mags.add(7.25);
+		mags.add(7.35);
+		mags.add(7.45);
+		mags.add(7.55);
+		mags.add(7.65);
+		mags.add(7.75);
+		mags.add(7.85);
+		mags.add(7.95);
+		double maxSingleFault = 6.9;
 
 		IncrementalMagFreqDist fullSpreadGR = SparseGutenbergRichterSolver.getEquivGR(
-				refMFD, mags, 1e16, 1d);
+				refMFD, mags, 1e16, bVal);
 		IncrementalMagFreqDist noSpreadSingleMultiGR = SparseGutenbergRichterSolver.getEquivGR(
-				refMFD, mags, List.of(maxSingleFault), true, 1e16, 1d);
+				refMFD, mags, List.of(maxSingleFault), true, 1e16, bVal);
+		
+		System.out.println("Full Spread Mo Rate: "+(float)fullSpreadGR.getTotalMomentRate());
+		System.out.println("No Spread Mo Rate: "+(float)noSpreadSingleMultiGR.getTotalMomentRate());
 		
 		System.out.println("Mag\tRate1\tRate2\tGain");
 		for (int i=0; i<refMFD.size(); i++) {
@@ -3489,12 +3507,15 @@ public class PureScratch {
 	
 	private static final void test223() throws IOException {
 		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_02_21-nshm23_branches-seg_limit_max_length-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-"
-				+ "NoRed-EvenFitPaleo-ThreshAvgIterRelGR/results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+//				+ "2023_02_21-nshm23_branches-seg_limit_max_length-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-"
+//				+ "NoRed-EvenFitPaleo-ThreshAvgIterRelGR/results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
 		
 		SupraSeisBValInversionTargetMFDs.SPARSE_GR_DONT_SPREAD_SINGLE_TO_MULTI = true;
 		
 		SupraSeisBValInversionTargetMFDs.Builder build = new Builder(rupSet, 0.5);
+		build.adjustTargetsForData(new ScalingRelSlipRateMFD_Estimator(false));
 		
 		SupraSeisBValInversionTargetMFDs mod = build.build();
 		SupraSeisBValInversionTargetMFDs.SPARSE_GR_DONT_SPREAD_SINGLE_TO_MULTI = false;
@@ -3540,12 +3561,138 @@ public class PureScratch {
 		System.out.println(numStable+"/"+rupSet.getNumRuptures()+" are stable");
 	}
 	
+	private static final void test225() throws IOException {
+		FaultSystemRupSet rupSet1 = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2023_02_21-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR/"
+//				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+//				+ "results/NSHM23_v2_CoulombRupSet_GEOLOGIC_NSHM23_Avg_DsrUni_SupraB0.5_TotNuclRate_NoRed_EvenFitPaleo_MidSeg_ThreshAvgIterRelGR/solution.zip"));
+				+ "node_branch_averaged/SegModel_None.zip"));
+//				+ "node_branch_averaged/SegModel_HighSeg.zip"));
+		FaultSystemRupSet rupSet2 = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+//				+ "2023_02_21-nshm23_branches-slip_rate_sd_ceil_0p1-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR/"
+				+ "2023_02_25-nshm23_branches-sparse_gr_dont_spread_single_multi-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR/"
+//				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+//				+ "results/NSHM23_v2_CoulombRupSet_GEOLOGIC_NSHM23_Avg_DsrUni_SupraB0.5_TotNuclRate_NoRed_EvenFitPaleo_MidSeg_ThreshAvgIterRelGR/solution.zip"));
+				+ "node_branch_averaged/SegModel_None.zip"));
+//				+ "node_branch_averaged/SegModel_HighSeg.zip"));
+		
+		InversionTargetMFDs orig = rupSet1.requireModule(InversionTargetMFDs.class);
+		InversionTargetMFDs mod = rupSet2.requireModule(InversionTargetMFDs.class);
+		
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+//		SupraSeisBValInversionTargetMFDs.SPARSE_GR_DONT_SPREAD_SINGLE_TO_MULTI = false;
+//		InversionTargetMFDs orig = factory.updateRuptureSetForBranch(
+//				rupSet1, rupSet1.requireModule(LogicTreeBranch.class)).requireModule(InversionTargetMFDs.class);
+//		SupraSeisBValInversionTargetMFDs.SPARSE_GR_DONT_SPREAD_SINGLE_TO_MULTI = true;
+//		InversionTargetMFDs mod = factory.updateRuptureSetForBranch(
+//				rupSet2, rupSet2.requireModule(LogicTreeBranch.class)).requireModule(InversionTargetMFDs.class);
+		
+		MinMaxAveTracker track = new MinMaxAveTracker();
+		double maxRatio = 1d;
+		int maxRatioSect = 1261;
+		for (int s=0; s<rupSet1.getNumSections(); s++) {
+			double rate1 = mod.getOnFaultSupraSeisNucleationMFDs().get(s).calcSumOfY_Vals();
+			double rate2 = orig.getOnFaultSupraSeisNucleationMFDs().get(s).calcSumOfY_Vals();
+			if (rate2 > 0d)
+				track.addValue(rate1/rate2);
+			if ((float)rate1 != (float)rate2) {
+				System.out.println(s+". "+rupSet1.getFaultSectionData(s).getSectionName()+": "+(float)rate1
+						+" vs "+(float)rate2+", ratio="+(float)(rate1/rate2));
+			}
+//			double myRatio = Math.max(rate1/rate2, rate2/rate1);
+//			if (myRatio > maxRatio && Double.isFinite(myRatio)) {
+//				maxRatio = myRatio;
+//				maxRatioSect = s;
+//			}
+		}
+		System.out.println(track);
+		
+		FaultSection sect = rupSet1.getFaultSectionData(maxRatioSect);
+		System.out.println("Max ratio is for "+sect.getSectionId()+". "+sect.getSectionName());
+		IncrementalMagFreqDist origMFD = orig.getOnFaultSupraSeisNucleationMFDs().get(maxRatioSect);
+		IncrementalMagFreqDist modMFD = mod.getOnFaultSupraSeisNucleationMFDs().get(maxRatioSect);
+		double modRate = modMFD.calcSumOfY_Vals();
+		double origRate = origMFD.calcSumOfY_Vals();
+		double origCreepReducedSlipRate = rupSet1.getFaultSectionData(maxRatioSect).getReducedAveSlipRate()*1e-3; // mm/yr -> m/yr
+		double modCreepReducedSlipRate = rupSet2.getFaultSectionData(maxRatioSect).getReducedAveSlipRate()*1e-3; // mm/yr -> m/yr
+		double origArea = rupSet1.getAreaForSection(maxRatioSect);
+		double modArea = rupSet2.getAreaForSection(maxRatioSect);
+		double slipOrig = rupSet1.getSlipRateForSection(maxRatioSect);
+		double slipMod = rupSet2.getSlipRateForSection(maxRatioSect);
+		double modMoRate = modMFD.getTotalMomentRate();
+		double origMoRate = origMFD.getTotalMomentRate();
+		double calcModMoRate = FaultMomentCalc.getMoment(modArea, modCreepReducedSlipRate);
+		double calcOrigMoRate = FaultMomentCalc.getMoment(origArea, origCreepReducedSlipRate);
+		System.out.println("MFDs:");
+		int minIndex = Integer.MAX_VALUE;
+		int maxIndex = 0;
+		for (int i=0; i<origMFD.size(); i++) {
+			boolean hasRate = origMFD.getY(i) > 0d || modMFD.getY(0) > 0d;
+			if (hasRate) {
+				minIndex = Integer.min(minIndex, i);
+				maxIndex = i;
+			}
+		}
+		for (int i=minIndex; i<=maxIndex; i++) {
+			double origY = origMFD.getY(i);
+			double modY = modMFD.getY(i);
+			System.out.println("M"+(float)origMFD.getX(i)+".\t"+(float)modY+"\t"+(float)origY+"\t"+(float)(modY/origY));
+		}
+		System.out.println("MFD rates: "+(float)modRate+" / "+(float)origRate+" = "+(float)(modRate/origRate));
+		System.out.println("MFD mo rates: "+(float)modMoRate+" / "+(float)origMoRate+" = "+(float)(modMoRate/origMoRate));
+		System.out.println("Calc mo rates: "+(float)calcModMoRate+" / "+(float)calcOrigMoRate+" = "+(float)(calcModMoRate/calcOrigMoRate));
+		System.out.println("Slip rates: "+(float)slipMod+" / "+(float)slipOrig+" = "+(float)(slipMod/slipOrig));
+	}
+	
+	private static final void test226() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+		
+		int sect1 = 4249;
+//		int sect2 = 3957;
+		int sect2 = 3958;
+		HashSet<Integer> rups1 = new HashSet<>(rupSet.getRupturesForSection(sect1));
+		HashSet<Integer> rups2 = new HashSet<>(rupSet.getRupturesForSection(sect2));
+		HashSet<Integer> combined = new HashSet<>(rups1);
+		combined.retainAll(rups2);
+		System.out.println("section "+sect1+" has "+rups1.size()+" ruptures");
+		System.out.println("section "+sect2+" has "+rups2.size()+" ruptures");
+		System.out.println(combined.size()+" ruptures corupture both");
+		
+		File outputDir = new File("/tmp/rup_examples_"+sect1+"_"+sect2);
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		ClusterRuptures cRups = rupSet.requireModule(ClusterRuptures.class);
+		
+		List<Integer> combSorted = new ArrayList<>(combined);
+		Collections.sort(combSorted);
+		
+		int mod;
+		if (combSorted.size() > 5000)
+			mod = 50;
+		else if (combSorted.size() > 1000)
+			mod = 10;
+		else if (combSorted.size() > 500)
+			mod = 5;
+		else
+			mod = 1;
+		
+		for (int i=0; i<combSorted.size(); i++) {
+			if (i % mod != 0)
+				continue;
+			int rupIndex = combSorted.get(i);
+			
+			ClusterRupture rup = cRups.get(rupIndex);
+			RupCartoonGenerator.plotRupture(outputDir, "rup_"+rupIndex, rup, "Rupture "+rupIndex, false, true);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test224();
+		test225();
 	}
 
 }

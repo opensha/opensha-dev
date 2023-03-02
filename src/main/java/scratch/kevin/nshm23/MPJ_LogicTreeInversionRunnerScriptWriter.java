@@ -265,7 +265,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -391,8 +391,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SegModelMaxLen600.class;
 //		dirName += "-seg_limit_max_length_600";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SparseGRDontSpreadSingleToMulti.class;
-		dirName += "-sparse_gr_dont_spread_single_multi";
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.SparseGRDontSpreadSingleToMulti.class;
+//		dirName += "-sparse_gr_dont_spread_single_multi";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ModDepthGV08.class;
+//		dirName += "-gv_08_mod_depth";
 		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
@@ -447,7 +450,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// SCALING RELATIONSHIPS
 //				ScalingRelationships.SHAW_2009_MOD,
 //				ScalingRelationships.MEAN_UCERF3,
-				NSHM23_ScalingRelationships.AVERAGE,
+//				NSHM23_ScalingRelationships.AVERAGE,
 //				NSHM23_ScalingRelationships.LOGA_C4p2_SQRT_LEN,
 //				NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD,
 				
@@ -470,7 +473,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SupraSeisBValues.B_0p5,
 				
 				// PALEO UNCERT
-				NSHM23_PaleoUncertainties.EVEN_FIT,
+//				NSHM23_PaleoUncertainties.EVEN_FIT,
 				
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,
