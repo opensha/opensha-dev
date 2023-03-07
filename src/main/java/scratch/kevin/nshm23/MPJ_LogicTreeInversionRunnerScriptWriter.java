@@ -717,9 +717,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		if (griddedJob) {
 			argz = "--logic-tree "+ltPath;
 			argz += " --sol-dir "+resultsPath;
-			argz += " --write-full-tree "+dirPath+"/logic_tree_full_gridded.json";
-			boolean averageOnly = logicTree.size() > 400;
-			if (averageOnly)
+			String fullLTPath = dirPath+"/logic_tree_full_gridded.json";
+			argz += " --write-full-tree "+fullLTPath;
+//			boolean averageOnly = logicTree.size() > 400;
+//			if (averageOnly)
 				argz += " --average-only";
 			// these calculations can take a lot of memory
 			int gridThreads = Integer.max(1, remoteTotalThreads/2);
@@ -743,11 +744,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					}
 					jobFile = new File(localDir, "batch_hazard_avg_gridded.slurm");
 				} else if (i == 1) {
-					if (averageOnly)
-						continue;
-					argz = "--input-file "+resultsPath+"_full_gridded.zip";
+//					if (averageOnly)
+//						continue;
+					argz = "--input-file "+resultsPath;
+					argz += " --logic-tree "+fullLTPath;
 					argz += " --output-file "+resultsPath+"_hazard_full_gridded.zip";
-					argz += " --output-dir "+resultsPath;
+					argz += " --output-dir "+resultsPath+"_full_gridded";
 					argz += " --gridded-seis INCLUDE";
 					jobFile = new File(localDir, "batch_hazard_full_gridded.slurm");
 				} else {
