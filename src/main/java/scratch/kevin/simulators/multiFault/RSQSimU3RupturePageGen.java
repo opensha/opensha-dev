@@ -42,6 +42,9 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.FaultSectionConnectionsPlot;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.JumpAzimuthsPlot;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.JumpCountsOverDistancePlot;
@@ -74,14 +77,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
 
-import scratch.UCERF3.U3FaultSystemRupSet;
-import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.inversion.coulomb.CoulombRates;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester;
 import scratch.UCERF3.inversion.coulomb.CoulombRatesTester.TestType;
-import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.RSQSimCatalog.Loader;
@@ -151,19 +151,19 @@ public class RSQSimU3RupturePageGen {
 		
 		String catParams = "m"+(float)minMag+"_skip"+skipYears+"_sectArea"+(float)minFractForInclusion;
 		File solFile = new File(fssDir, "rsqsim_sol_"+catParams+".zip");
-		U3FaultSystemSolution sol;
+		FaultSystemSolution sol;
 		if (solFile.exists() && !rebuildSol) {
 			System.out.println("Loading solution from: "+solFile.getAbsolutePath());
-			sol = U3FaultSystemIO.loadSol(solFile);
+			sol = FaultSystemSolution.load(solFile);
 		} else {
 			System.out.println("Loading events from: "+catalogDir.getAbsolutePath());
 			Loader loader = catalog.loader().minMag(minMag).skipYears(skipYears);
 			sol = catalog.buildSolution(loader, minMag);
 			System.out.println("Writing solution to: "+solFile.getAbsolutePath());
-			U3FaultSystemIO.writeSol(sol, solFile);
+			sol.write(solFile);
 		}
 		
-		U3FaultSystemRupSet rupSet = sol.getRupSet();
+		FaultSystemRupSet rupSet = sol.getRupSet();
 		System.out.println(rupSet.getNumRuptures()+" ruptures");
 		
 		SectionDistanceAzimuthCalculator distAzCalc = new SectionDistanceAzimuthCalculator(
@@ -176,11 +176,9 @@ public class RSQSimU3RupturePageGen {
 		
 		System.out.println("Building ClusterRuptures for RSQSim");
 //		List<ClusterRupture> rsClusterRups = RupSetDiagnosticsPageGen.buildClusterRups(rupSet, rsConnSearch);
-		List<ClusterRupture> rsClusterRups = rupSet.getClusterRuptures();
-		if (rsClusterRups == null) {
-			rupSet.buildClusterRups(rsConnSearch);
-			rsClusterRups = rupSet.getClusterRuptures();
-		}
+		if (!rupSet.hasModule(ClusterRuptures.class))
+			rupSet.addModule(ClusterRuptures.instance(rupSet, rsConnSearch));
+		List<ClusterRupture> rsClusterRups = rupSet.requireModule(ClusterRuptures.class).getAll();
 		Map<Jump, List<Integer>> rsJumpsToRupsMap = new HashMap<>();
 		Map<Jump, Double> rsJumps = FaultSectionConnectionsPlot.getJumps(sol, rsClusterRups, rsJumpsToRupsMap);
 		HashSet<UniqueRupture> rsUniqueRups = new HashSet<>();
@@ -190,8 +188,8 @@ public class RSQSimU3RupturePageGen {
 		System.out.println("Detected "+rsJumps.size()+" RSQSim connections");
 		
 		System.out.println("Building ClusterRuptures for UCERF3");
-		U3FaultSystemSolution u3Sol = catalog.getComparisonSolution();
-		U3FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
+		FaultSystemSolution u3Sol = catalog.getComparisonSolution();
+		FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
 		RuptureConnectionSearch u3ConnSearch = new RuptureConnectionSearch(u3RupSet, distAzCalc,
 				15d, RuptureConnectionSearch.CUMULATIVE_JUMPS_DEFAULT);
 		List<ClusterRupture> u3ClusterRups = new ArrayList<>();
@@ -761,14 +759,14 @@ public class RSQSimU3RupturePageGen {
 		distAzCalc.writeCacheFile(distAzCacheFile);
 	}
 	
-	static void plotCumulantMags(U3FaultSystemSolution u3Sol, U3FaultSystemSolution rsSol,
+	static void plotCumulantMags(FaultSystemSolution u3Sol, FaultSystemSolution rsSol,
 			String catalogName, File outputDir) throws IOException, GMT_MapException, RuntimeException {
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine("Sect Index", "Sect Name", catalogName+" Median", catalogName+" IQR",
 				"UCERF3 Median", "UCERF3 IQR");
 		
-		U3FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
-		U3FaultSystemRupSet rsRupSet = rsSol.getRupSet();
+		FaultSystemRupSet u3RupSet = u3Sol.getRupSet();
+		FaultSystemRupSet rsRupSet = rsSol.getRupSet();
 		
 		Preconditions.checkState(u3RupSet.getNumSections() == rsRupSet.getNumSections());
 		
@@ -975,7 +973,7 @@ public class RSQSimU3RupturePageGen {
 		return Doubles.toArray(ret);
 	}
 	
-	private static EvenlyDiscretizedFunc calcCumulantMagFunc(U3FaultSystemSolution sol, int s) {
+	private static EvenlyDiscretizedFunc calcCumulantMagFunc(FaultSystemSolution sol, int s) {
 		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(5d, 9d, (int)((9d-5d)/0.01) + 1);
 		for (int r : sol.getRupSet().getRupturesForSection(s)) {
 			double mag = sol.getRupSet().getMagForRup(r);
@@ -989,7 +987,7 @@ public class RSQSimU3RupturePageGen {
 		return func;
 	}
 	
-	static void plotConnectivity(U3FaultSystemRupSet rupSet, File outputDir, String prefix, String title)
+	static void plotConnectivity(FaultSystemRupSet rupSet, File outputDir, String prefix, String title)
 			throws IOException, GMT_MapException, RuntimeException {
 		List<HashSet<Integer>> clusters = new ArrayList<>();
 		Map<Integer, Integer> sectIndexToClusterIndexMap = new HashMap<>();
@@ -1041,7 +1039,7 @@ public class RSQSimU3RupturePageGen {
 				prefix, false, false, title+" ("+colorValues.size()+" largest)");
 	}
 	
-	private static void processClusterRecursive(U3FaultSystemRupSet rupSet, int sect, int clusterIndex, List<HashSet<Integer>> clusters,
+	private static void processClusterRecursive(FaultSystemRupSet rupSet, int sect, int clusterIndex, List<HashSet<Integer>> clusters,
 			Map<Integer, Integer> sectIndexToClusterIndexMap) {
 		if (sectIndexToClusterIndexMap.containsKey(sect))
 			// we've already done this one

@@ -43,6 +43,7 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
@@ -1791,15 +1792,15 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 	}
 	
-	public U3FaultSystemSolution buildSolution(Loader loader, double minMag) throws IOException {
+	public FaultSystemSolution buildSolution(Loader loader, double minMag) throws IOException {
 		return buildSolution(loader.load(), minMag);
 	}
 	
-	public U3FaultSystemSolution buildSolution(List<RSQSimEvent> events, double minMag) throws IOException {
+	public FaultSystemSolution buildSolution(List<RSQSimEvent> events, double minMag) throws IOException {
 		return RSQSimUtils.buildFaultSystemSolution(getU3SubSects(), getElements(), events, minMag, minFractForInclusion);
 	}
 	
-	public U3FaultSystemSolution getComparisonSolution() throws IOException {
+	public FaultSystemSolution getComparisonSolution() throws IOException {
 		File solFile = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
 				+"_"+getDeformationModel().encodeChoiceString()+"_MEAN_BRANCH_AVG_SOL.zip");
 		if (solFile.exists()) {
