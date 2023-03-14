@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
@@ -46,6 +47,8 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.data.siteData.impl.ThompsonVs30_2018;
+import org.opensha.commons.data.siteData.impl.ThompsonVs30_2020;
 import org.opensha.commons.data.uncertainty.BoundedUncertainty;
 import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
@@ -3687,12 +3690,85 @@ public class PureScratch {
 		}
 	}
 	
+	private static final void test227() throws IOException {
+		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
+		double dist = 200d;
+		
+		double middleLat = 0.5*(reg.getMaxLat()+reg.getMinLat());
+		double middleLon = 0.5*(reg.getMaxLon()+reg.getMinLon());
+		
+		Region circle = new Region(new Location(middleLat, middleLon), dist);
+		
+		double[] spacings = {0.1, 0.2, 0.33333};
+		
+		for (double spacing : spacings) {
+			GriddedRegion gridReg = new GriddedRegion(reg, spacing, GriddedRegion.ANCHOR_0_0);
+			
+			int numWithin = 0;
+			for (int i=0; i<gridReg.getNodeCount(); i++)
+				if (circle.contains(gridReg.getLocation(i)))
+					numWithin++;
+			
+			System.out.println(numWithin+" within "+(float)dist+" for "+(float)spacing);
+		}
+	}
+	
+	private static final void test228() throws IOException {
+		Location loc = new Location(34.09791, -118.4113);
+		
+		ThompsonVs30_2020 thompson = new ThompsonVs30_2020();
+//		ThompsonVs30_2018 thompson = new ThompsonVs30_2018();
+		
+		double val = thompson.getValue(loc);
+		System.out.println(val);
+	}
+	
+	private static final void test229() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
+		
+		File outputDir = new File("/tmp");
+		
+		Map<String, Integer> rupsMap = new HashMap<>();
+		rupsMap.put("n_saf", 125999);
+		rupsMap.put("s_saf", 20750);
+		rupsMap.put("san_jacinto", 235745);
+		rupsMap.put("hayward_calaveras", 43348);
+		
+		for (String prefix : rupsMap.keySet()) {
+			int rupIndex = rupsMap.get(prefix);
+			
+			FileWriter fw = new FileWriter(new File(outputDir, "rup_"+prefix+".txt"));
+			
+			List<FaultSection> rupSects = rupSet.getFaultSectionDataForRupture(rupIndex);
+			
+			Location prevLoc = null;
+			int prevParent = -1;
+			for (FaultSection sect : rupSects) {
+				if (sect.getParentSectionId() != prevParent) {
+					prevLoc = null;
+					fw.write("# "+sect.getParentSectionName()+"\n");
+				}
+				for (Location loc : sect.getFaultTrace()) {
+					if (prevLoc == null || !LocationUtils.areSimilar(loc, prevLoc))
+						fw.write((float)loc.getLatitude()+"\t"+(float)loc.getLongitude()+"\n");
+					prevLoc = loc;
+				}
+				prevParent = sect.getParentSectionId();
+			}
+			
+			fw.close();
+		}
+		
+		List<FaultSection> fullSects = FaultModels.FM3_1.getFaultSections();
+		GeoJSONFaultReader.writeFaultSections(new File(outputDir, "ucerf3_sects.geojson"), fullSects);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test225();
+		test229();
 	}
 
 }

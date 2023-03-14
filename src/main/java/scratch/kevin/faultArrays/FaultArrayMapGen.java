@@ -19,6 +19,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.GMT_Map;
 import org.opensha.commons.mapping.gmt.elements.CoastAttributes;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
@@ -42,6 +43,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
+import scratch.kevin.miscFigures.U3vsPopulationMap;
 
 public class FaultArrayMapGen {
 	
@@ -63,7 +65,10 @@ public class FaultArrayMapGen {
 //	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
 //	private static Region region = new Region(new Location(35.5, -114), new Location(31.5, -121));
 //	private static Region region = new Region(new Location(36.5, -114), new Location(31.5, -121));
-	private static Region region = new Region(new Location(36, -114), new Location(31.5, -120.5)); // max upper left of Yehuda's GRD file
+//	private static Region region = new Region(new Location(36, -114), new Location(31.5, -120.5)); // max upper left of Yehuda's GRD file
+	private static Region region = new Region(new Location(31.75, -125), new Location(42.5, -114));
+	
+	private static boolean srtm = true;
 	private static GriddedGeoDataSet topoXYZ = null;
 	
 	private static synchronized GriddedGeoDataSet fetchTopo(TopographicSlopeFile topoRes) throws IOException {
@@ -93,34 +98,65 @@ public class FaultArrayMapGen {
 	private static final double magForProbs = 6.5;
 	private static final double durationForProbs = 30d;
 	
-	private static void plotMap(File outputDir, String prefix, double arraySpacing, FaultModels fm,
-			MeanUCERF3 meanU3, ScalarType scalarType, boolean plotLinearTrace) throws IOException, GMT_MapException {
+	private static GriddedGeoDataSet cachedPopData = null;
+	
+	private static void plotMap(File outputDir, String prefix, double arraySpacingSolid, double arraySpacingDashed,
+			FaultModels fm, MeanUCERF3 meanU3, ScalarType scalarType, boolean plotLinearTrace,
+			boolean topo, boolean population) throws IOException, GMT_MapException {
 		CPT topoCPT = getTopoCPT();
-//		TopographicSlopeFile topoRes = TopographicSlopeFile.SRTM_30_PLUS;
-////		TopographicSlopeFile topoRes = TopographicSlopeFile.US_SIX;
+		TopographicSlopeFile topoRes = topo ? TopographicSlopeFile.SRTM_30_PLUS : null;
+//		TopographicSlopeFile topoRes = TopographicSlopeFile.US_SIX;
 //		GriddedGeoDataSet gridData = fetchTopo(topoRes);
 		GriddedGeoDataSet gridData = null;
-		TopographicSlopeFile topoRes = null;
-		GMT_Map map = new GMT_Map(region, gridData, 3d/3600d, topoCPT);
+		String label = null;
+		CPT mapCPT = topoCPT;
+		double mapSpacing = 3d/3600d;
+		if (population) {
+			if (cachedPopData == null) {
+//				mapSpacing = U3vsPopulationMap.cellsize*5d;
+				mapSpacing = U3vsPopulationMap.cellsize;
+				gridData = U3vsPopulationMap.fetchPopData(region, mapSpacing);
+				cachedPopData = gridData.copy();
+			} else {
+				gridData = cachedPopData.copy();
+			}
+			mapCPT = U3vsPopulationMap.getLogPopCPT();
+			
+			gridData.log10();
+			for (int i=0; i<gridData.size(); i++)
+				if (!Double.isFinite(gridData.get(i)))
+					gridData.set(i, -1d);
+			
+			label = "Log10 Population Per Cell";
+		} else if (srtm && topo) {
+			gridData = fetchTopo(topoRes);
+		}
+//		TopographicSlopeFile topoRes = null;
+		GMT_Map map = new GMT_Map(region, gridData, mapSpacing, mapCPT);
 		
 		map.setBlackBackground(false);
 		map.setRescaleCPT(false);
-		map.setCustomScaleMin((double)topoCPT.getMinValue());
-		map.setCustomScaleMax((double)topoCPT.getMaxValue());
+		map.setCustomScaleMin((double)mapCPT.getMinValue());
+		map.setCustomScaleMax((double)mapCPT.getMaxValue());
 //		map.setCoast(new CoastAttributes(Color.BLACK, 0.6d, new Color(160, 200, 200)));
 		map.setCoast(new CoastAttributes(Color.BLACK, 0.6d, new Color(112, 131, 147)));
 		map.setCustomLabel(null);
 		map.setUseGMTSmoothing(true);
-		if (gridData != null) {
-			map.setTopoResolution(topoRes);
+		if (topo) {
+			if (gridData != null) {
+				map.setTopoResolution(topoRes);
+			} else {
+				map.setCustomIntenPath("/home/kevin/SCEC/2019_fault_array_proposal/origGMT/socal_mex.grad");
+				map.setCustomGRDPath("/home/kevin/SCEC/2019_fault_array_proposal/origGMT/socal_mex.grd");
+			}
 		} else {
-			map.setCustomIntenPath("/home/kevin/SCEC/2019_fault_array_proposal/origGMT/socal_mex.grad");
-			map.setCustomGRDPath("/home/kevin/SCEC/2019_fault_array_proposal/origGMT/socal_mex.grd");
+			map.setTopoResolution(null);
 		}
 //		map.setLabelSize(MAP_LABEL_SIZE);
 //		map.setLabelTickSize(MAP_LABEL_TICK_SIZE);
-//		map.setlabel
-		map.setDpi(150);
+		if (label != null)
+			map.setCustomLabel(label);
+		map.setDpi(300);
 //		map.setImageWidth(imageWidth);
 		map.setDrawScaleKM(false);
 		map.setGMT_Param("MAP_FRAME_TYPE", "FANCY");
@@ -138,9 +174,13 @@ public class FaultArrayMapGen {
 		if (scalarType != null) {
 			List<FaultSection> sects = new ArrayList<>();
 			HashSet<Integer> parentsToPlot = new HashSet<>();
-			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.SAF_PARENTS));
+			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.S_SAF_PARENTS));
 			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.SJC_PARENTS));
-			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.ELSINORE_PARENTS));
+//			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.ELSINORE_PARENTS));
+			if (region.getMaxLat() > 38) {
+				parentsToPlot.addAll(Ints.asList(FaultArrayCalc.N_SAF_PARENTS));
+				parentsToPlot.addAll(Ints.asList(FaultArrayCalc.CALAVERAS_HAYWARD_PARENTS));
+			}
 			for (FaultSection sect : meanU3.getSolution().getRupSet().getFaultSectionDataList())
 				if (parentsToPlot.contains(sect.getParentSectionId()))
 					sects.add(sect);
@@ -174,7 +214,7 @@ public class FaultArrayMapGen {
 					parentColorVals.put(parentID, 2d);
 				for (Integer parentID : FaultArrayCalc.SJC_PARENTS)
 					parentColorVals.put(parentID, 3d);
-				for (Integer parentID : FaultArrayCalc.SAF_PARENTS)
+				for (Integer parentID : FaultArrayCalc.S_SAF_PARENTS)
 					parentColorVals.put(parentID, 4d);
 				break;
 			case ALL_GRAY:
@@ -229,7 +269,7 @@ public class FaultArrayMapGen {
 		}
 		
 		if (plotLinearTrace) {
-			for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(FaultArrayCalc.getSAF_LinearTrace(allParents), Color.BLACK, 1))
+			for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(FaultArrayCalc.getS_SAF_LinearTrace(allParents), Color.BLACK, 1))
 				map.addPolys(poly);
 			for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(FaultArrayCalc.getSJC_LinearTrace(allParents), Color.BLACK, 1))
 				map.addPolys(poly);
@@ -237,23 +277,44 @@ public class FaultArrayMapGen {
 				map.addPolys(poly);
 		}
 		
-		if (arraySpacing > 0) {
-			addArrayPolys(map, FaultArrayCalc.getSAF_LinearTrace(allParents), arraySpacing, Color.GREEN.darker());
-			addArrayPolys(map, FaultArrayCalc.getSJC_LinearTrace(allParents), arraySpacing, Color.MAGENTA.darker());
-//			addArrayPolys(map, FaultArrayCalc.getElsinoreLinearTrace(allParents), arraySpacing, Color.BLUE);
+		List<LocationList> arrayLocLists = new ArrayList<>();
+		arrayLocLists.add(FaultArrayCalc.getS_SAF_LinearTrace(allParents));
+		arrayLocLists.add(FaultArrayCalc.getSJC_LinearTrace(allParents));
+		if (region.getMaxLat() > 38) {
+			arrayLocLists.add(FaultArrayCalc.getN_SAF_LinearTrace(allParents));
+			arrayLocLists.add(FaultArrayCalc.getHaywardCalaverasLinearTrace(allParents));
 		}
 		
-		for (String city : cities.keySet()) {
-			Location loc = cities.get(city);
-			Point2D.Double pt = new Point2D.Double(loc.getLongitude(), loc.getLatitude());
-			Point2D.Double textPT = new Point2D.Double(loc.getLongitude()+0.08, loc.getLatitude());
-			
-			map.addSymbol(new PSXYSymbol(pt, PSXYSymbol.Symbol.CIRCLE, 0.05, 0.01, Color.BLACK, Color.BLACK));
-			map.addText(new PSText(textPT, Color.BLACK, 10, city, Justify.LEFT_BOTTOM));
+		if (arraySpacingDashed > 0) {
+			for (LocationList trace : arrayLocLists) {
+				addArrayPolys(map, trace, arraySpacingDashed, Color.BLACK, PlotLineType.DASHED, dashed_array_plot_len_km);
+			}
+//			addArrayPolys(map, FaultArrayCalc.getS_SAF_LinearTrace(allParents), arraySpacingDashed, Color.GREEN.darker(), PlotLineType.DASHED);
+//			addArrayPolys(map, FaultArrayCalc.getSJC_LinearTrace(allParents), arraySpacingDashed, Color.MAGENTA.darker(), PlotLineType.DASHED);
+//			addArrayPolys(map, FaultArrayCalc.getElsinoreLinearTrace(allParents), arraySpacing, Color.BLUE);
+		}
+		if (arraySpacingSolid > 0d) {
+			for (LocationList trace : arrayLocLists) {
+				addArrayPolys(map, trace, arraySpacingSolid, Color.GREEN.darker(), PlotLineType.SOLID, array_plot_len_km);
+			}
+		}
+		
+		if (region.getMaxLat() < 38) {
+			// so cal zoomed
+			for (String city : cities.keySet()) {
+				Location loc = cities.get(city);
+				Point2D.Double pt = new Point2D.Double(loc.getLongitude(), loc.getLatitude());
+				Point2D.Double textPT = new Point2D.Double(loc.getLongitude()+0.08, loc.getLatitude());
+				
+				map.addSymbol(new PSXYSymbol(pt, PSXYSymbol.Symbol.CIRCLE, 0.05, 0.01, Color.BLACK, Color.BLACK));
+				map.addText(new PSText(textPT, Color.BLACK, 10, city, Justify.LEFT_BOTTOM));
+			}
 		}
 		
 		FaultBasedMapGen.plotMap(outputDir, prefix, false, map);
+		convertHiRes(outputDir, prefix);
 		if (scalarType != null) {
+			// also write version with just CPT files
 			map.setGriddedData(null);
 			map.setCpt(cpt);
 			map.setCustomGRDPath(null);
@@ -262,6 +323,23 @@ public class FaultArrayMapGen {
 			map.setCustomScaleMax((double)cpt.getMaxValue());
 			map.setCustomLabel(scalarType.label);
 			FaultBasedMapGen.plotMap(outputDir, prefix+"_cpt", false, map);
+			convertHiRes(outputDir, prefix+"_cpt");
+		}
+	}
+	
+	private static void convertHiRes(File outputDir, String prefix) throws IOException {
+		File pdfFile = new File(outputDir, prefix+".pdf");
+		File hiresFile = new File(outputDir, prefix+"_hires.png");
+		// convert hi res
+		String[] command = { "/bin/bash", "-c", "convert -density 300 "
+				+pdfFile.getAbsolutePath()+" "+hiresFile.getAbsolutePath() };
+		
+		Process p = Runtime.getRuntime().exec(command);
+		try {
+			int exit = p.waitFor();
+			System.out.println("Converted, exit code: "+exit);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -278,26 +356,29 @@ public class FaultArrayMapGen {
 		
 	}
 	
-	private static final double array_plot_len_km = 15;
+	private static final double dashed_array_plot_len_km = 15;
+	private static final double array_plot_len_km = 30;
 //	private static final Color array_color = Color.RED.darker();
 //	private static final Color array_color = new Color(0, 200, 70);
 	
-	private static void addArrayPolys(GMT_Map map, LocationList linearTrace, double arraySpacing, Color color) {
+	private static void addArrayPolys(GMT_Map map, LocationList linearTrace, double arraySpacing, Color color,
+			PlotLineType lineType, double arrayLen) {
 		List<Location> arrayLocs = FaultArrayCalc.calcArrayLocations(linearTrace, arraySpacing);
 		
 		for (Location arrayLoc : arrayLocs) {
 			double normalAz = FaultArrayCalc.calcFaultNormalAzimuth(linearTrace, arrayLoc, 5d);
 			
 			LocationList line = new LocationList();
-			line.add(LocationUtils.location(arrayLoc, Math.toRadians(normalAz), 0.5*array_plot_len_km));
-			line.add(LocationUtils.location(arrayLoc, Math.toRadians(normalAz), -0.5*array_plot_len_km));
-			for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(line, color, 1))
+			line.add(LocationUtils.location(arrayLoc, Math.toRadians(normalAz), 0.5*arrayLen));
+			line.add(LocationUtils.location(arrayLoc, Math.toRadians(normalAz), -0.5*arrayLen));
+			for (PSXYPolygon poly : FaultBasedMapGen.getPolygons(line, color, 1, lineType))
 				map.addPolys(poly);
 		}
 	}
 
 	public static void main(String[] args) throws IOException, GMT_MapException {
-		File outputDir = new File("/home/kevin/SCEC/2021_fault_array_proposal/plots");
+//		File outputDir = new File("/home/kevin/SCEC/2021_fault_array_proposal/plots");
+		File outputDir = new File("/home/kevin/SCEC/2023_fault_array_proposal/plots");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdirs());
 		FaultBasedMapGen.LOCAL_MAPGEN = true;
 		
@@ -308,6 +389,9 @@ public class FaultArrayMapGen {
 		meanU3.getTimeSpan().setStartTime(2019);
 		meanU3.getTimeSpan().setDuration(durationForProbs);
 		meanU3.updateForecast();
+		
+		boolean topo = false;
+		boolean popData = true;
 
 //		plotMap(outputDir, "linearized_trace_test", 0d, fm, null, null, true);
 //		plotMap(outputDir, "linearized_trace_20km", 20d, fm, null, null, true);
@@ -315,17 +399,19 @@ public class FaultArrayMapGen {
 		
 		ScalarType[] types = {
 				ScalarType.PARENT_PARTIC_PROB,
-				ScalarType.SUBSECT_PARTIC_PROB,
-				ScalarType.SOLID,
-				ScalarType.TIME_SINCE_LAST,
-				ScalarType.ALL_GRAY,
+//				ScalarType.SUBSECT_PARTIC_PROB,
+//				ScalarType.SOLID,
+//				ScalarType.TIME_SINCE_LAST,
+//				ScalarType.ALL_GRAY,
 				};
 		for (ScalarType type : types) {
 			String prefix = type.name().toLowerCase();
-			plotMap(outputDir, prefix+"_20km", 20d, fm, meanU3, type, false);
-			plotMap(outputDir, prefix+"_30km", 30d, fm, meanU3, type, false);
-			plotMap(outputDir, prefix+"_40km", 40d, fm, meanU3, type, false);
-			plotMap(outputDir, prefix+"_60km", 60d, fm, meanU3, type, false);
+//			plotMap(outputDir, prefix+"_20km", 20d, fm, meanU3, type, false, srtm, popData);
+//			plotMap(outputDir, prefix+"_30km", 30d, fm, meanU3, type, false, srtm, popData);
+//			plotMap(outputDir, prefix+"_40km", 40d, fm, meanU3, type, false, srtm, popData);
+//			plotMap(outputDir, prefix+"_60km", 60d, fm, meanU3, type, false, srtm, popData);
+			
+			plotMap(outputDir, prefix+"_80_40km", 80d, 40d, fm, meanU3, type, false, topo, popData);
 		}
 	}
 

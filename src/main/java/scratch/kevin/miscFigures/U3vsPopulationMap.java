@@ -56,20 +56,15 @@ public class U3vsPopulationMap {
 		HIGH_PROB_COLORED,
 		MAJOR
 	}
-
-	public static void main(String[] args) throws IOException, GMT_MapException {
-		File popDataFile = new File("/home/kevin/Downloads/gpw-v4/gpw_v4_population_density_rev11_2020_30_sec_1.asc");
-		File outputDir = new File("/home/kevin/SCEC/2022_scec_proposal/population_faults_fig");
-		
-		Region mapRegion = new Region(new Location(31.75, -125), new Location(42.5, -114));
-//		Region mapRegion = new Region(new Location(32.5, -121), new Location(36, -115));
-		
-		int ncols = 10800;
-		int nrows = 10800;
-		double xll = -180;
-		double yll = -4.2632564145606e-14;
-		double cellsize = 0.0083333333333333;
-		
+	
+	private static final File popDataFile = new File("/home/kevin/Downloads/gpw-v4/gpw_v4_population_density_rev11_2020_30_sec_1.asc");
+	private static final int ncols = 10800;
+	private static final int nrows = 10800;
+	private static final double xll = -180;
+	private static final double yll = -4.2632564145606e-14;
+	public static final double cellsize = 0.0083333333333333;
+	
+	public static GriddedGeoDataSet fetchPopData(Region mapRegion, double mapSpacing) throws NumberFormatException, IOException {
 		double[][] data = new double[nrows][];
 		int row = nrows-1;
 		
@@ -106,10 +101,7 @@ public class U3vsPopulationMap {
 		System.out.println("done reading data, skipped "+skippedRows+"/"+nrows+" rows");
 		System.out.println("\t"+numFirstDataVals+" lines start with a real data val");
 		System.out.println("\n\t"+track);
-//		System.exit(0);
 		
-		double mapSpacing = cellsize;
-//		mapSpacing *= 5;
 		GriddedRegion gridReg = new GriddedRegion(mapRegion, mapSpacing, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" grid vals");
 		GriddedGeoDataSet popData = new GriddedGeoDataSet(gridReg, false);
@@ -123,14 +115,10 @@ public class U3vsPopulationMap {
 			popData.set(i, data[row][col]);
 		}
 		
-//		CPT popCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse();
-//		popCPT = popCPT.rescale(0, 4);
-//		for (int i=0; i<popCPT.size(); i++) {
-//			double weight =  (double)i/(double)(popCPT.size()-1);
-//			CPTVal val = popCPT.get(i);
-//			val.minColor = blend(val.minColor, saturate(val.minColor), weight);
-//			val.maxColor = blend(val.maxColor, saturate(val.maxColor), weight);
-//		}
+		return popData;
+	}
+	
+	public static CPT getLogPopCPT() {
 		CPT popCPT = new CPT(0d, 4d,
 				new Color(224,243,248),
 				new Color(171,217,233),
@@ -144,6 +132,31 @@ public class U3vsPopulationMap {
 		popCPT.setNanColor(zeroColor);
 		popCPT.setBelowMinColor(zeroColor);
 		popCPT.setAboveMaxColor(popCPT.getMaxColor());
+		return popCPT;
+	}
+
+	public static void main(String[] args) throws IOException, GMT_MapException {
+		File outputDir = new File("/home/kevin/SCEC/2022_scec_proposal/population_faults_fig");
+		
+		Region mapRegion = new Region(new Location(31.75, -125), new Location(42.5, -114));
+//		Region mapRegion = new Region(new Location(32.5, -121), new Location(36, -115));
+		
+		double mapSpacing = cellsize;
+//		mapSpacing *= 5;
+		
+		GriddedGeoDataSet popData = fetchPopData(mapRegion, mapSpacing);
+		GriddedRegion gridReg = popData.getRegion();
+		
+//		CPT popCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse();
+//		popCPT = popCPT.rescale(0, 4);
+//		for (int i=0; i<popCPT.size(); i++) {
+//			double weight =  (double)i/(double)(popCPT.size()-1);
+//			CPTVal val = popCPT.get(i);
+//			val.minColor = blend(val.minColor, saturate(val.minColor), weight);
+//			val.maxColor = blend(val.maxColor, saturate(val.maxColor), weight);
+//		}
+		CPT popCPT = getLogPopCPT();
+		
 		popData.log10();
 		for (int i=0; i<popData.size(); i++)
 			if (!Double.isFinite(popData.get(i)))

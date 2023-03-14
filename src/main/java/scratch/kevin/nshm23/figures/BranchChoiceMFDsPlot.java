@@ -38,8 +38,8 @@ class BranchChoiceMFDsPlot {
 
 	public static void main(String[] args) throws IOException {
 		File solDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/");
-		File baFile = new File(solDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
+				+ "2023_03_01-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/");
+		File baFile = new File(solDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
 		
 		File nodesDir = new File(solDir, "node_branch_averaged");
 		File plotsDir = new File(solDir, "misc_plots");

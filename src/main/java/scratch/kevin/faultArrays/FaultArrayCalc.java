@@ -16,8 +16,8 @@ import com.google.common.base.Preconditions;
 
 public class FaultArrayCalc {
 	
-	public static int[] SAF_PARENTS = {
-			97,		// Imperial
+	public static int[] S_SAF_PARENTS = {
+//			97,		// Imperial
 			170,	// Brawley (Seismic Zone) alt 1
 			295,	// San Andreas (Coachella) rev
 			284,	// San Andreas (San Gorgonio Pass-Garnet HIll)
@@ -29,6 +29,12 @@ public class FaultArrayCalc {
 			300,	// San Andreas (Carrizo)
 			285,	// San Andreas (Cholame)
 			32,		// San Andreas (Parkfield)
+	};
+	
+	public static int[] N_SAF_PARENTS = {
+			657,	// Santa Cruz Mts) 2011
+			655,	// San Andreas (Peninsula) 2011 CFM
+			654,	// San Andreas (North Coast) 2011 CFM
 	};
 	
 	public static int[] SJC_PARENTS = {
@@ -51,10 +57,24 @@ public class FaultArrayCalc {
 			236,	// Whittier alt 1
 	};
 	
+	public static int[] CALAVERAS_HAYWARD_PARENTS = {
+			621,	// Calaveras (So) - Paicines extension 2011 CFM
+			603,	// Calaveras (So) 2011 CFM
+			602,	// Calaveras (Central) 2011 CFM
+			638,	// Hayward (So) 2011 CFM
+			639,	// Hayward (No) 2011 CFM
+	};
+	
 	private static final double trace_discr = 0.1;
 	
-	public static LocationList getSAF_LinearTrace(Map<Integer, FaultSection> allParents) {
-		return getLinearMultiParentTrace(allParents, SAF_PARENTS);
+	public static LocationList getS_SAF_LinearTrace(Map<Integer, FaultSection> allParents) {
+		return getLinearMultiParentTrace(allParents, S_SAF_PARENTS);
+	}
+	
+	public static LocationList getN_SAF_LinearTrace(Map<Integer, FaultSection> allParents) {
+		LocationList list = getLinearMultiParentTrace(allParents, N_SAF_PARENTS);
+		list.reverse();
+		return list;
 	}
 	
 	public static LocationList getSJC_LinearTrace(Map<Integer, FaultSection> allParents) {
@@ -63,6 +83,12 @@ public class FaultArrayCalc {
 	
 	public static LocationList getElsinoreLinearTrace(Map<Integer, FaultSection> allParents) {
 		return getLinearMultiParentTrace(allParents, ELSINORE_PARENTS);
+	}
+	
+	public static LocationList getHaywardCalaverasLinearTrace(Map<Integer, FaultSection> allParents) {
+		LocationList list = getLinearMultiParentTrace(allParents, CALAVERAS_HAYWARD_PARENTS);
+		list.reverse();
+		return list;
 	}
 	
 	private static LocationList getLinearMultiParentTrace(Map<Integer, FaultSection> allParents, int[] parentIDs) {

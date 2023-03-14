@@ -751,6 +751,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --output-file "+resultsPath+"_hazard_full_gridded.zip";
 					argz += " --output-dir "+resultsPath+"_full_gridded";
 					argz += " --gridded-seis INCLUDE";
+					if (logicTree.size() > 100)
+						argz += " --quick-grid-calc";
 					jobFile = new File(localDir, "batch_hazard_full_gridded.slurm");
 				} else {
 					argz = "--input-file "+resultsPath+"_gridded_branches.zip";
@@ -763,7 +765,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				argz += " --max-distance 200";
 				// use fault-only hazard as source for region
 				argz += " --region "+resultsPath+"_hazard.zip";
-				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+				if (logicTree.size() > 400 && i == 1)
+					argz += " "+MPJTaskCalculator.argumentBuilder().maxDispatch(100).threads(remoteTotalThreads).build();
+				else
+					argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 				script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 				int myMins = mins;
 				if (i == 1)
