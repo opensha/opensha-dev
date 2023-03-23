@@ -32,7 +32,7 @@ public class RSQSimSubSectMappingTest {
 		
 		RSQSimSubSectionMapper mapper = catalog.getSubSectMapper();
 		
-		List<? extends FaultSection> subSects = catalog.getU3SubSects();
+		List<? extends FaultSection> subSects = catalog.getSubSects();
 		List<SimulatorElement> elems = catalog.getElements();
 		int offset = RSQSimUtils.getSubSectIndexOffset(elems, subSects);
 		fw.write("Catalog: "+catalog.getName()+"\n");

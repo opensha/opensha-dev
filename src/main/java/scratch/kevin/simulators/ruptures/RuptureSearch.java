@@ -38,7 +38,7 @@ public class RuptureSearch {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_5044.instance(baseDir);
 		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance(baseDir);
 		
-		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
+		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getSubSects());
 		
 		int parentID = 301; // Mojave S
 		String parentName = "SAF South Mojave";
@@ -84,7 +84,7 @@ public class RuptureSearch {
 		double aveElemArea = catalog.getAveArea();
 		double aveSectArea = 0d;
 		int numSects = 0;
-		for (FaultSection sect : catalog.getU3SubSects()) {
+		for (FaultSection sect : catalog.getSubSects()) {
 			if (sect.getParentSectionId() == parentID) {
 				aveSectArea += sect.getTraceLength() * sect.getOrigDownDipWidth();
 				numSects++;

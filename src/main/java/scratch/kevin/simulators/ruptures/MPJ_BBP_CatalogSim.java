@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
@@ -82,6 +83,21 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 				Thread.sleep(5000);
 			} catch (InterruptedException e1) {}
 		}
+		
+		// sort by magnitude such that long running tasks are bundled with other long running tasks
+		events.sort(new Comparator<RSQSimEvent>() {
+
+			@Override
+			public int compare(RSQSimEvent o1, RSQSimEvent o2) {
+				float mag1 = (float)o1.getMagnitude();
+				float mag2 = (float)o2.getMagnitude();
+				// 2 first so that we sort decreasing
+				int ret = Float.compare(mag2, mag1);
+				if (ret == 0)
+					ret = Integer.compare(o1.getID(), o2.getID());
+				return ret;
+			}
+		});
 	}
 	
 	@Override

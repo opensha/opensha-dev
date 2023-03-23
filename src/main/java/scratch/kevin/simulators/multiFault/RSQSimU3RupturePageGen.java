@@ -147,7 +147,7 @@ public class RSQSimU3RupturePageGen {
 		int tocIndex = lines.size();
 		String topLink = "*[(top)](#table-of-contents)*";
 		
-		FaultModels fm = catalog.getFaultModel();
+		FaultModels fm = (FaultModels)catalog.getFaultModel();
 		
 		String catParams = "m"+(float)minMag+"_skip"+skipYears+"_sectArea"+(float)minFractForInclusion;
 		File solFile = new File(fssDir, "rsqsim_sol_"+catParams+".zip");
@@ -694,7 +694,7 @@ public class RSQSimU3RupturePageGen {
 //		lines.add("");
 		
 		System.out.println("Plotting connectivity clusters");
-		plotConnectivity(catalog.getU3CompareSol().getRupSet(), resourcesDir, "connectivity_ucerf3", "UCERF3 Connectivity");
+		plotConnectivity(catalog.getCompareSol().getRupSet(), resourcesDir, "connectivity_ucerf3", "UCERF3 Connectivity");
 		plotConnectivity(sol.getRupSet(), resourcesDir, "connectivity_"+catalogTypeFileName, catalogName+" Connectivity");
 		
 		lines.add("## Fault Connectivity Clusters");
@@ -713,7 +713,7 @@ public class RSQSimU3RupturePageGen {
 		
 		// cumulant mag
 		System.out.println("Plotting cumulant mag");
-		plotCumulantMags(catalog.getU3CompareSol(), sol, catalogType, resourcesDir);
+		plotCumulantMags(catalog.getCompareSol(), sol, catalogType, resourcesDir);
 
 		lines.add("## Cumulant Magnitude");
 		lines.add(topLink); lines.add("");

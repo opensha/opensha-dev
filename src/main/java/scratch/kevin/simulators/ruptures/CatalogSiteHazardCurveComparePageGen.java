@@ -14,11 +14,13 @@ import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.FileNameComparator;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.RegionIden;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
@@ -157,8 +159,14 @@ public class CatalogSiteHazardCurveComparePageGen extends SiteHazardCurveComareP
 		CatalogGMPE_Compare gmpeComp = new CatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
 				gmpeCacheDir, null, bbpVM);
 		
-		Table<String, RSQSimEvent, Double> sourceContribFracts =
-				getSourceContribFracts(catalog, gmpeComp.getEvents(), sourceFractional);
+		Table<String, RSQSimEvent, Double> sourceContribFracts = null;
+		// make sure we can...
+		RSQSimSubSectionMapper mapper = null;
+		try {
+			mapper = catalog.getSubSectMapper();
+		} catch (Exception e) {}
+		if (mapper != null)
+			sourceContribFracts = getSourceContribFracts(catalog, gmpeComp.getEvents(), sourceFractional);
 		
 		CatalogSiteHazardCurveComparePageGen pageGen = new CatalogSiteHazardCurveComparePageGen(
 				gmpeComp.getSimProv(), catalog.getName());
@@ -197,15 +205,15 @@ public class CatalogSiteHazardCurveComparePageGen extends SiteHazardCurveComareP
 
 	private static Table<String, RSQSimEvent, Double> getSourceContribFracts(RSQSimCatalog catalog,
 			List<RSQSimEvent> events, boolean sourceFractional) {
-		Map<String, List<Integer>> faultNamesToIDsMap = catalog.getFaultModel().getNamedFaultsMapAlt();
+		NamedFaults faultNamesToIDsMap = catalog.getFaultModel().getNamedFaults();
 		Map<Integer, String> idsToFaultNamesMap = new HashMap<>();
-		for (String faultName : faultNamesToIDsMap.keySet()) {
+		for (String faultName : faultNamesToIDsMap.getFaultNames()) {
 			String name = faultName;
 			if (name.startsWith("San Andreas"))
 				name = "San Andreas";
 			else if (name.startsWith("San Jacinto"))
 				name = "San Jacinto";
-			for (Integer id : faultNamesToIDsMap.get(faultName))
+			for (Integer id : faultNamesToIDsMap.getParentIDsForFault(faultName))
 				idsToFaultNamesMap.put(id, name);
 		}
 		

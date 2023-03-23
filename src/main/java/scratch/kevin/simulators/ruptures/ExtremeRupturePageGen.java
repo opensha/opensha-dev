@@ -365,7 +365,7 @@ public class ExtremeRupturePageGen {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
 		RSQSimCatalog catalog = Catalogs.BRUCE_5042.instance();
 		
-		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getU3SubSects());
+		RSQSimUtils.populateFaultIDWithParentIDs(catalog.getElements(), catalog.getSubSects());
 		
 		double skipYears = 5000d;
 		double minMag = 7d;
@@ -391,7 +391,7 @@ public class ExtremeRupturePageGen {
 		Map<IDPairing, Double> sectDistsCache = catalog.getSubSectDistsCache();
 		Map<IDPairing, Double> elemDistsCache = new HashMap<>();
 		
-		int subSectIDOffset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), catalog.getU3SubSects());
+		int subSectIDOffset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), catalog.getSubSects());
 		
 		for (RSQSimEvent event : events) {
 			Map<Metric, Double> scores = new HashMap<>();

@@ -29,6 +29,11 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.distCalc.SimEventCumDistFuncSurface;
+import org.opensha.sha.simulators.distCalc.SimRuptureDistCalcUtils;
+import org.opensha.sha.simulators.distCalc.SimRuptureDistCalcUtils.DistanceType;
+import org.opensha.sha.simulators.distCalc.SimRuptureDistCalcUtils.LocationElementDistanceCache;
+import org.opensha.sha.simulators.distCalc.SimRuptureDistCalcUtils.Scalar;
 import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimUtils;
@@ -37,9 +42,6 @@ import com.google.common.base.Preconditions;
 
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
-import scratch.kevin.simulators.ruptures.distCalc.SimRuptureDistCalcUtils.DistanceType;
-import scratch.kevin.simulators.ruptures.distCalc.SimRuptureDistCalcUtils.LocationElementDistanceCache;
-import scratch.kevin.simulators.ruptures.distCalc.SimRuptureDistCalcUtils.Scalar;
 
 public class DistanceMethodsComparePageGen {
 	
@@ -135,6 +137,9 @@ public class DistanceMethodsComparePageGen {
 							case R_RUP:
 								dists[j] = mapped.getRuptureSurface().getDistanceRup(siteLoc);
 								break;
+							case R_SEIS:
+								dists[j] = mapped.getRuptureSurface().getDistanceSeis(siteLoc);
+								break;
 
 							default:
 								throw new IllegalStateException("Not yet implemented");
@@ -142,6 +147,8 @@ public class DistanceMethodsComparePageGen {
 						} else {
 							DiscretizedFunc distScalarFunc = SimRuptureDistCalcUtils.calcDistScalarFunc(
 									event, siteLoc, siteDistCache, type, scalar);
+							if (distScalarFunc == null)
+								continue;
 							double maxVal = distScalarFunc.getMaxY();
 							double targetVal = threshold*maxVal;
 							dists[j] = Double.NaN;
@@ -246,9 +253,13 @@ public class DistanceMethodsComparePageGen {
 						// sub sections
 						surf = subSectRup.getRuptureSurface();
 					} else {
-						// TODO DistanceX
-						surf = new RSQSimCumDistFuncSurface(
-								event, scalar, threshold, catalog.getSubSectsForRupture(event));
+						double xThreshold;
+						if (threshold >= 0.5)
+							xThreshold = threshold;
+						else
+							xThreshold = Math.min(0.5d, 2*threshold);
+						surf = new SimEventCumDistFuncSurface(
+								event, scalar, threshold, 0d, xThreshold);
 					}
 					EqkRupture rup = new EqkRupture(event.getMagnitude(), subSectRup.getAveRake(), surf, null);
 					gmpe.setAll(rup, site, gmpe.getIntensityMeasure());

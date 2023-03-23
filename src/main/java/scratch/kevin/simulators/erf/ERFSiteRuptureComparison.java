@@ -32,12 +32,12 @@ public class ERFSiteRuptureComparison {
 		
 		File mappingFile1 = new File(catalog1.getCatalogDir(), "erf_mappings.bin");
 		RSQSimSectBundledERF erf1 = new RSQSimSectBundledERF(mappingFile1, null,
-				catalog1.getFaultModel(), catalog1.getDeformationModel(), catalog1.getU3SubSects(), catalog1.getElements());
+				catalog1.getFaultModel(), catalog1.getDeformationModel(), catalog1.getSubSects(), catalog1.getElements());
 		erf1.updateForecast();
 		
 		File mappingFile2 = new File(catalog2.getCatalogDir(), "erf_mappings.bin");
 		RSQSimSectBundledERF erf2 = new RSQSimSectBundledERF(mappingFile2, null,
-				catalog2.getFaultModel(), catalog2.getDeformationModel(), catalog2.getU3SubSects(), catalog2.getElements());
+				catalog2.getFaultModel(), catalog2.getDeformationModel(), catalog2.getSubSects(), catalog2.getElements());
 		erf2.updateForecast();
 		
 		double distCutoff = 200d;

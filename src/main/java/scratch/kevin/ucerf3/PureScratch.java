@@ -187,6 +187,7 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -214,6 +215,7 @@ import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
 import scratch.kevin.simCompare.SiteHazardCurveComarePageGen;
+import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 
 public class PureScratch {
@@ -3763,12 +3765,115 @@ public class PureScratch {
 		GeoJSONFaultReader.writeFaultSections(new File(outputDir, "ucerf3_sects.geojson"), fullSects);
 	}
 	
+	private static final void test230() throws IOException {
+		Location l1 = new Location(-60, -179);
+		Location l2 = new Location(-60, 180);
+		System.out.println(LocationUtils.horzDistance(l1, l2));
+		System.out.println(LocationUtils.horzDistanceFast(l1, l2));
+		RSQSimCatalog catalog = Catalogs.BRUCE_5552.instance();
+		
+		List<SimulatorElement> elems = catalog.getElements();
+		
+		HashSet<Integer> ids = new HashSet<>();
+		int maxIndex = 0;
+		int minIndex = Integer.MAX_VALUE;
+		
+		MinMaxAveTracker latRange = new MinMaxAveTracker();
+		MinMaxAveTracker lonRange = new MinMaxAveTracker();
+		
+		for (SimulatorElement elem : elems) {
+			int id = elem.getSectionID();
+			if (!ids.contains(id)) {
+				ids.add(id);
+				minIndex = Integer.min(id, minIndex);
+				maxIndex = Integer.max(id, maxIndex);
+			}
+			for (Location loc : elem.getVertices()) {
+				latRange.addValue(loc.lat);
+				lonRange.addValue(loc.lon);
+			}
+		}
+		
+		System.out.println("Latitude range: "+latRange);
+		System.out.println("Longitude range: "+lonRange);
+		System.out.println("Index range: ["+minIndex+","+maxIndex+"]");
+		for (int i=minIndex; i<=maxIndex; i++)
+			if (!ids.contains(i))
+				System.out.println("Index "+i+" is missing");
+	}
+	
+	private static final void test231() throws IOException {
+		EvenlyDiscretizedFunc func = new EvenlyDiscretizedFunc(6d, 20, 0.1);
+		double fract = 0.05;
+		
+		for (int i=0; i<func.size(); i++) {
+			double mag = func.getX(i);
+			double moment = MagUtils.magToMoment(mag);
+			double fractMoment = fract*moment;
+			double fractMag = MagUtils.momentToMag(fractMoment);
+			System.out.println("M"+(float)mag+"\torigMoment="+(float)moment+"\tfractMo="
+					+(float)fractMoment+"\tequivFractMag="+(float)fractMag);
+		}
+	}
+	
+	private static final void test232() throws IOException {
+		List<String> names = new ArrayList<>();
+		List<Integer> ids = new ArrayList<>();
+		List<Double> mags = new ArrayList<>();
+		
+		names.add("SAF Mojave");
+		ids.add(301);
+		mags.add(7.7d);
+		
+		names.add("Puente Hills");
+		ids.add(240);
+		mags.add(7.2d);
+		
+		names.add("SJ SB");
+		ids.add(119);
+		mags.add(7.5);
+		
+		names.add("Sierra Madre");
+		ids.add(113);
+		mags.add(7.45);
+		
+		names.add("Newport Inglewood");
+		ids.add(235);
+		mags.add(7.6);
+		
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
+		
+		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.55);
+		
+		for (int i=0; i<names.size(); i++) {
+			IncrementalMagFreqDist mfd = sol.calcParticipationMFD_forParentSect(ids.get(i), refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
+			EvenlyDiscretizedFunc cml = mfd.getCumRateDistWithOffset();
+			double mag = mags.get(i);
+			
+			double rate = cml.getY(cml.getClosestXIndex(mag));
+			System.out.println(names.get(i));
+			System.out.println("\tRate: "+(float)rate);
+			System.out.println("\tRI: "+(float)(1d/rate));
+			System.out.println("\t10yr prob: "+(float)(1d-Math.exp(-rate*10d)));
+			System.out.println("\t15yr prob: "+(float)(1d-Math.exp(-rate*15d)));
+			System.out.println("\t30yr prob: "+(float)(1d-Math.exp(-rate*30d)));
+		}
+	}
+	
+	private static final void test233() throws IOException {
+		RSQSimCatalog catalog = Catalogs.BRUCE_5552.instance();
+		
+		RSQSimEvent event = catalog.loader().byID(75032);
+		
+		System.out.println("Event "+event.getID()+", M"+(float)event.getMagnitude()+", "+event.getAllElements().size()+" elements");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test229();
+		test233();
 	}
 
 }

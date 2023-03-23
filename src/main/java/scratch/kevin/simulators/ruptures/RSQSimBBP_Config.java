@@ -1,5 +1,6 @@
 package scratch.kevin.simulators.ruptures;
 
+import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -7,12 +8,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -320,6 +325,26 @@ public class RSQSimBBP_Config {
 	
 	public static List<BBP_Site> getSoCalGriddedSites(double spacing) {
 		return getGriddedSites(new CaliforniaRegions.RELM_SOCAL(), spacing);
+	}
+	
+	public static List<BBP_Site> getNZGriddedSites(double spacing) throws IOException {
+		List<BBP_Site> sites = new ArrayList<>();
+		int gridIndex = 0;
+		for (XY_DataSet outlinePts : PoliticalBoundariesData.loadNZOutlines()) {
+			LocationList outline = new LocationList();
+			for (Point2D pt : outlinePts)
+				outline.add(new Location(pt.getY(), pt.getX()));
+			Region reg = new Region(outline, BorderType.MERCATOR_LINEAR);
+			
+			GriddedRegion gridReg = new GriddedRegion(reg, spacing, null);
+			for (int i=0; i<gridReg.getNodeCount(); i++) {
+				String name = "grid"+(gridIndex++);
+				Preconditions.checkState(name.length() <= 10);
+				sites.add(new BBP_Site(name, gridReg.getLocation(i), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+			}
+		}
+		System.out.println(sites.size()+" total NZ sites for spacing="+spacing);
+		return sites;
 	}
 	
 	public static List<BBP_Site> getGriddedSites(Region region, double spacing) {

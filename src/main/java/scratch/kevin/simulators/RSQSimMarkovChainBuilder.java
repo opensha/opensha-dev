@@ -36,7 +36,7 @@ public class RSQSimMarkovChainBuilder {
 		for (int i=0; i<parentIDs.length; i++) {
 			String name = u3ParentSectionNames[i];
 			parentIDs[i] = -1;
-			for (FaultSection sect : catalog.getU3SubSects()) {
+			for (FaultSection sect : catalog.getSubSects()) {
 				if (sect.getParentSectionName().equals(name)) {
 					parentIDs[i] = sect.getParentSectionId();
 					break;
@@ -49,7 +49,7 @@ public class RSQSimMarkovChainBuilder {
 	
 	public static SectionIDIden getU3_SectionIdentifier(RSQSimCatalog catalog, double minAreaFract, boolean middleSubSectOnly,
 			int... u3ParentSectionIDs) throws IOException {
-		List<? extends FaultSection> subSects = catalog.getU3SubSects();
+		List<? extends FaultSection> subSects = catalog.getSubSects();
 		// sometimes the RSQSim section numbers are 1-based inssead of 0-based, this is used to convert to UCERF3 convention
 		int subSectOffset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), subSects);
 		

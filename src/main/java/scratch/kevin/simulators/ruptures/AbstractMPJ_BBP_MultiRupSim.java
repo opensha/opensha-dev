@@ -93,8 +93,17 @@ public abstract class AbstractMPJ_BBP_MultiRupSim extends AbstractMPJ_BBP_Sim {
 		}
 		
 		// load the catalog
-		catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
-				null, null, null, FaultModels.FM3_1, DeformationModels.GEOLOGIC); // TODO make option
+		if (cmd.hasOption("utm-zone") || cmd.hasOption("utm-band")) {
+			Preconditions.checkState(cmd.hasOption("utm-zone") && cmd.hasOption("utm-band"),
+					"Must supply both UTM zone and band if either is supplied.");
+			int zone = Integer.parseInt(cmd.getOptionValue("utm-zone"));
+			char band = cmd.getOptionValue("utm-band").trim().charAt(0);
+			catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
+					null, null, null, null, null, zone, band);
+		} else {
+			catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
+					null, null, null, FaultModels.FM3_1, DeformationModels.GEOLOGIC); // TODO make option
+		}
 
 		if (cmd.hasOption("time-scalar"))
 			timeScalarFactor = Double.parseDouble(cmd.getOptionValue("time-scalar"));
@@ -190,6 +199,9 @@ public abstract class AbstractMPJ_BBP_MultiRupSim extends AbstractMPJ_BBP_Sim {
 				+ "Otherwise slip events are sooner, but the same speed/duration.");
 		velScale.setRequired(false);
 		ops.addOption(velScale);
+		
+		ops.addOption("uz", "utm-zone", true, "UTM zone (integer). Optional, but must also supply --utm-band if used.");
+		ops.addOption("ub", "utm-band", true, "UTM band (character). Optional, but must also supply --utm-zone if used.");
 		
 		return ops;
 	}

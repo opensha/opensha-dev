@@ -389,13 +389,20 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	
 	private static DecimalFormat twoSigFig = new DecimalFormat("0.00");
 	
-	private static List<String> getZscoreTableLine(String siteName, ZScoreResult[] scores) {
+	private static List<String> getZscoreTableLine(String siteName, ZScoreResult[] scores, IMT[] imts) {
 		List<String> line = new ArrayList<>();
 		
 		line.add(siteName);
-		for (ZScoreResult score : scores) {
-			line.add(twoSigFig.format(score.mean));
-			line.add(twoSigFig.format(score.stdDevFract));
+		if (scores == null) {
+			for (int i=0; i<imts.length; i++) {
+				line.add("__N/A__");
+				line.add("__N/A__");
+			}
+		} else {
+			for (ZScoreResult score : scores) {
+				line.add(twoSigFig.format(score.mean));
+				line.add(twoSigFig.format(score.stdDevFract));
+			}
 		}
 		
 		return line;
@@ -441,7 +448,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		table.finalizeLine();
 		
 		ZScoreResult[] scores = ZScoreHistPlot.calcZScores(simProv, comps, this.sites, imts, null);
-		table.addLine(getZscoreTableLine("All Sites", scores));
+		table.addLine(getZscoreTableLine("All Sites", scores, imts));
 		
 		List<List<RuptureComparison<E>>> bundleSiteComps = null;
 		if (this.sites.size() > 1) {
@@ -465,7 +472,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 					bundleSiteComps.add(siteComps);
 					
 					scores = ZScoreHistPlot.calcZScores(simProv, siteComps, scatterSites, imts, null);
-					table.addLine(getZscoreTableLine(name, scores));
+					table.addLine(getZscoreTableLine(name, scores, imts));
 				}
 			}
 			for (Site site : this.sites) {
@@ -476,7 +483,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				
 				List<? extends RuptureComparison<E>> siteComps = siteFilter.getMatches(comps, site);
 				scores = ZScoreHistPlot.calcZScores(simProv, siteComps, mySites, imts, null);
-				table.addLine(getZscoreTableLine(site.getName(), scores));
+				table.addLine(getZscoreTableLine(site.getName(), scores, imts));
 			}
 		}
 		

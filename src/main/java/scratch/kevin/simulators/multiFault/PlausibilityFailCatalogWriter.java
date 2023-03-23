@@ -47,7 +47,7 @@ public class PlausibilityFailCatalogWriter {
 		String prefix = "filtered";
 		
 		RuptureConnectionSearch connSearch = new RuptureConnectionSearch(
-				null, new SectionDistanceAzimuthCalculator(catalog.getU3SubSects()), 100d, false);
+				null, new SectionDistanceAzimuthCalculator(catalog.getSubSects()), 100d, false);
 		
 		FilterIden iden = new FilterIden(filter, catalog.getSubSectMapper(), true, connSearch);
 		

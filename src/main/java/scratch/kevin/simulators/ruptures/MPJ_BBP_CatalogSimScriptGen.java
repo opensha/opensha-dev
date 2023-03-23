@@ -31,8 +31,9 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		@SuppressWarnings("unused")
 //		String catalogDirName = "rundir2585_1myrs";
 //		String catalogDirName = "rundir4860_multi_combine";
-		String catalogDirName = "rundir5450";
+//		String catalogDirName = "rundir5450";
 //		String catalogDirName = "rundir4983_stitched";
+		String catalogDirName = "rundir5554";
 		
 //		int skipYears = 20000;
 		int skipYears = 5000;
@@ -40,11 +41,21 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		
 		boolean standardSites = false;
 		boolean csInitialLASites = false;
-		boolean cs500LASites = true;
+		boolean cs500LASites = false;
 		boolean csLAMapSites = false;
 		boolean griddedCASites = false;
 		boolean griddedSoCalSites = false;
+		boolean griddedNZSites = true;
 		double griddedSpacing = 1d;
+		
+//		Integer utmZone = null;
+//		Character utmBand = null;
+//		Preconditions.checkState(!griddedNZSites);
+		
+		Integer utmZone = 59;
+		Character utmBand = 'G';
+		System.out.println("New Zealand!");
+		Preconditions.checkState(griddedNZSites);
 		
 //		double minMag = 6;
 		double minMag = 6.5;
@@ -127,8 +138,11 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-csLAMapSites";
 		if (griddedCASites || griddedSoCalSites)
 			jobName += "-griddedSites";
+		if (griddedNZSites)
+			jobName += "-griddedSitesNZ";
 		Preconditions.checkArgument(!(griddedSoCalSites && griddedCASites));
-		Preconditions.checkState(standardSites || griddedCASites || griddedSoCalSites || csInitialLASites || cs500LASites || csLAMapSites);
+		Preconditions.checkState(standardSites || griddedCASites || griddedSoCalSites || csInitialLASites
+				|| cs500LASites || csLAMapSites || griddedNZSites);
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -149,6 +163,10 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			sites.addAll(RSQSimBBP_Config.getCAGriddedSites(griddedSpacing));
 		if (griddedSoCalSites)
 			sites.addAll(RSQSimBBP_Config.getSoCalGriddedSites(griddedSpacing));
+		if (griddedNZSites) {
+			Preconditions.checkState(sites.isEmpty());
+			sites.addAll(RSQSimBBP_Config.getNZGriddedSites(griddedSpacing));
+		}
 		
 		boolean rdOnly = sites.size() < 100;
 		if (rdOnly)
@@ -180,6 +198,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		}
 		if (rdOnly)
 			argz += " --rd-only";
+		if (utmZone != null)
+			argz += " --utm-zone "+utmZone+" --utm-band "+utmBand;
 		List<String> addLines = new ArrayList<>();
 		argz = addBBP_EnvArgs(argz, addLines, remoteJobDir, nodeScratchDir, sharedScratchDir, bbpCopyParentDir, bbpEnvFile);
 		

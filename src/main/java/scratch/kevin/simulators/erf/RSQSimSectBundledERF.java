@@ -47,6 +47,8 @@ import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.FocalMechanism;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
 import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -123,7 +125,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 	private Location prevElemDistLoc = null;
 	private Map<SimulatorElement, Double> elemSiteDistances = null;
 
-	public RSQSimSectBundledERF(List<SimulatorElement> elements, List<RSQSimEvent> events, FaultModels fm, DeformationModels dm,
+	public RSQSimSectBundledERF(List<SimulatorElement> elements, List<RSQSimEvent> events, RupSetFaultModel fm, RupSetDeformationModel dm,
 			List<? extends FaultSection> subSects, double minMag, double minFractForInclusion, double sourceBuffer, double dt,
 			double skipYears) {
 		double surfRes = 0d;
@@ -147,7 +149,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		buildSources(allRuptures, sourceBuffer);
 	}
 
-	public RSQSimSectBundledERF(File mappingFile, File geometryFile, FaultModels fm, DeformationModels dm,
+	public RSQSimSectBundledERF(File mappingFile, File geometryFile, RupSetFaultModel fm, RupSetDeformationModel dm,
 			List<? extends FaultSection> subSects, List<SimulatorElement> elements) throws IOException {
 		Preconditions.checkNotNull(mappingFile);
 		Preconditions.checkState(geometryFile != null || elements != null);
@@ -160,7 +162,7 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		init(null, null, null, null, null, null, Double.NaN, Double.NaN, Double.NaN);
 	}
 	
-	private void init(File mappingFile, File geometryFile, FaultModels fm, DeformationModels dm,
+	private void init(File mappingFile, File geometryFile, RupSetFaultModel fm, RupSetDeformationModel dm,
 			List<? extends FaultSection> subSects, List<SimulatorElement> elements, double dt,
 			double skipYears, double surfRes) {
 		mappingFileParam = new FileParameter(MAPPING_FILE_PARAM_NAME, mappingFile);
@@ -173,17 +175,25 @@ public class RSQSimSectBundledERF extends AbstractERF {
 		
 		if (fm == null)
 			fm = FAULT_MODEL_DEFAULT;
-		faultModelParam = new EnumParameter<FaultModels>(FAULT_MODEL_PARAM_NAME,
-				EnumSet.allOf(FaultModels.class), fm, null);
-		faultModelParam.addParameterChangeListener(this);
-		adjustableParams.addParameter(faultModelParam);
+		if (fm instanceof FaultModels) {
+			faultModelParam = new EnumParameter<FaultModels>(FAULT_MODEL_PARAM_NAME,
+					EnumSet.allOf(FaultModels.class), (FaultModels)fm, null);
+			faultModelParam.addParameterChangeListener(this);
+			adjustableParams.addParameter(faultModelParam);
+		} else {
+			System.err.println("FM not yet supported: "+fm);
+		}
 		
 		if (dm == null)
 			dm = DEF_MODEL_DEFAULT;
-		defModelParam = new EnumParameter<DeformationModels>(DEF_MODEL_PARAM_NAME,
-				EnumSet.allOf(DeformationModels.class), dm, null);
-		defModelParam.addParameterChangeListener(this);
-		adjustableParams.addParameter(defModelParam);
+		if (dm instanceof DeformationModels) {
+			defModelParam = new EnumParameter<DeformationModels>(DEF_MODEL_PARAM_NAME,
+					EnumSet.allOf(DeformationModels.class), (DeformationModels)dm, null);
+			defModelParam.addParameterChangeListener(this);
+			adjustableParams.addParameter(defModelParam);
+		} else {
+			System.err.println("DM not yet supported: "+dm);
+		}
 		
 		rupSurfResParam = new DoubleParameter(RUP_SURF_RESOLUTION_PARAM_NAME, 0d, 100d);
 		rupSurfResParam.getConstraint().setNullAllowed(true);
@@ -1202,9 +1212,9 @@ public class RSQSimSectBundledERF extends AbstractERF {
 			maxDuration = 0;
 		}
 		
-		FaultModels fm = catalog.getFaultModel();
-		DeformationModels dm = catalog.getDeformationModel();
-		List<? extends FaultSection> subSects = catalog.getU3SubSects();
+		RupSetFaultModel fm = catalog.getFaultModel();
+		RupSetDeformationModel dm = catalog.getDeformationModel();
+		List<? extends FaultSection> subSects = catalog.getSubSects();
 		List<SimulatorElement> elements = catalog.getElements();
 		
 		if (testReadOnly) {

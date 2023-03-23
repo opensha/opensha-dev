@@ -235,7 +235,7 @@ class RupSpectraPageGen {
 		double[] elemSlips = event.getAllElementSlips();
 		double[] elemTimes = event.getAllElementTimes();
 		double eventTime = event.getTime();
-		List<? extends FaultSection> u3SubSects = catalog.getU3SubSects();
+		List<? extends FaultSection> u3SubSects = catalog.getSubSects();
 		int subSectOffset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), u3SubSects);
 		for (int i=0; i<elems.size(); i++) {
 			SimulatorElement elem = elems.get(i);
@@ -1156,7 +1156,7 @@ class RupSpectraPageGen {
 		
 //		if ((refBBPDir != null && gmpes != null && gmpes.length > 0)
 //				|| (refShakeMapZip != null && shakemapGMPE != null))
-			gmpeRup = catalog.getMappedSubSectRupture(event);
+			gmpeRup = catalog.getEqkRupture(event);
 		
 		if (refBBPDir != null)
 			gen.setRefBBP(refBBPDir, refName, gmpes, gmpeRup);

@@ -37,7 +37,14 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
+import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -51,6 +58,8 @@ import scratch.UCERF3.U3SlipEnabledSolution;
 import scratch.UCERF3.analysis.FaultBasedMapGen;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
+import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
+import scratch.UCERF3.enumTreeBranches.SlipAlongRuptureModels;
 import scratch.UCERF3.inversion.InversionFaultSystemRupSet;
 import scratch.UCERF3.inversion.InversionFaultSystemSolution;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -61,17 +70,17 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 public class SlipRateComparePlot extends AbstractPlot {
 	
 	private RSQSimSubSectionMapper mapper;
-	private FaultModels fm;
-	private DeformationModels dm;
+	private RupSetFaultModel fm;
+	private RupSetDeformationModel dm;
 	
 	private Map<SimulatorElement, Double> elemTotalSlipsMap;
-	private U3SlipEnabledSolution compSol;
+	private FaultSystemSolution compSol;
 
-	public SlipRateComparePlot(RSQSimSubSectionMapper mapper, FaultModels fm, DeformationModels dm) {
+	public SlipRateComparePlot(RSQSimSubSectionMapper mapper, RupSetFaultModel fm, RupSetDeformationModel dm) {
 		this(mapper, fm, dm, null);
 	}
 
-	public SlipRateComparePlot(RSQSimSubSectionMapper mapper, FaultModels fm, DeformationModels dm, FaultSystemSolution compSol) {
+	public SlipRateComparePlot(RSQSimSubSectionMapper mapper, RupSetFaultModel fm, RupSetDeformationModel dm, FaultSystemSolution compSol) {
 		this.mapper = mapper;
 		this.fm = fm;
 		this.dm = dm;
@@ -80,11 +89,16 @@ public class SlipRateComparePlot extends AbstractPlot {
 			if (compSol instanceof U3SlipEnabledSolution) {
 				this.compSol = (U3SlipEnabledSolution)compSol;
 			} else {
-				// make it slip enabled, assuming mean UCERF3
-				U3LogicTreeBranch branch = U3LogicTreeBranch.getMEAN_UCERF3(fm, dm);
-				InversionFaultSystemRupSet iRupSet = new InversionFaultSystemRupSet(compSol.getRupSet(),
-						branch, null, null, null, null, null);
-				this.compSol = new InversionFaultSystemSolution(iRupSet, compSol.getRateForAllRups());
+				FaultSystemRupSet rupSet = compSol.getRupSet();
+				SlipAlongRuptureModel slipAlong = rupSet.requireModule(SlipAlongRuptureModel.class);
+				if (slipAlong instanceof SlipAlongRuptureModel.Default && fm instanceof FaultModels && dm instanceof DeformationModels) {
+					// assume mean UCERF3
+					rupSet.addModule(SlipAlongRuptureModels.MEAN_UCERF3.getModel());
+					if (!rupSet.hasModule(AveSlipModule.class))
+						rupSet.addModule(AveSlipModule.forModel(rupSet, ScalingRelationships.MEAN_UCERF3));
+				}
+				if (compSol.hasModule(AveSlipModule.class))
+					this.compSol = compSol;
 			}
 		}
 		
@@ -113,8 +127,21 @@ public class SlipRateComparePlot extends AbstractPlot {
 		double[] simSlipRates = new double[subSects.size()];
 		double[] simTargetSlipRates = new double[subSects.size()];
 		
-		double[] u3TargetSlipRates = new double[subSects.size()];
-		double[] u3SolSlipRates = compSol == null ? null : new double[subSects.size()];
+		double[] compTargetSlipRates = new double[subSects.size()];
+		double[] compSolSlipRates = null;
+		SolutionSlipRates compSolSlipRatesModule = null;
+		if (compSol != null) {
+			compSolSlipRatesModule = compSol.getModule(SolutionSlipRates.class);
+			if (compSolSlipRatesModule == null) {
+				FaultSystemRupSet rupSet = compSol.getRupSet();
+				compSolSlipRatesModule = SolutionSlipRates.calc(compSol, rupSet.requireModule(AveSlipModule.class),
+						rupSet.requireModule(SlipAlongRuptureModel.class));
+				compSol.addModule(compSolSlipRatesModule);
+			}
+			compSolSlipRates = new double[subSects.size()];
+			for (int i=0; i<compSolSlipRates.length; i++)
+				compSolSlipRates[i] = compSolSlipRatesModule.get(i)*1e3; // m/yr -> mm/yr
+		}
 		
 		double[] ratioSimToTarget = new double[subSects.size()];
 		double[] ratioSimToU3 = new double[subSects.size()];
@@ -126,7 +153,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 		header.add("Subsection Index");
 		header.add("Subsection Name");
 		header.add("UCERF3 Target (mm/yr)");
-		if (u3SolSlipRates != null)
+		if (compSolSlipRates != null)
 			header.add("UCERF3 Solution (mm/yr)");
 		header.add("RSQSim Target (mm/yr)");
 		header.add("RSQSim Output (mm/yr)");
@@ -136,19 +163,18 @@ public class SlipRateComparePlot extends AbstractPlot {
 		List<LocationList> faults = new ArrayList<>();
 		for (int i=0; i<subSects.size(); i++) {
 			FaultSection subSect = subSects.get(i);
-			if (u3SolSlipRates != null) {
-				u3SolSlipRates[i] = 1e3 * compSol.calcSlipRateForSect(i);
-				u3TargetSlipRates[i] = 1e3 * compSol.getRupSet().getSlipRateForSection(i);
+			if (compSolSlipRates != null) {
+				compTargetSlipRates[i] = 1e3 * compSol.getRupSet().getSlipRateForSection(i);
 			} else {
-				u3TargetSlipRates[i] = subSect.getReducedAveSlipRate();
+				compTargetSlipRates[i] = subSect.getReducedAveSlipRate();
 			}
 			
 			List<String> line = new ArrayList<>();
 			line.add(i+"");
 			line.add(subSect.getSectionName());
-			line.add((float)u3TargetSlipRates[i]+"");
-			if (u3SolSlipRates != null)
-				line.add((float)u3SolSlipRates[i]+"");
+			line.add((float)compTargetSlipRates[i]+"");
+			if (compSolSlipRates != null)
+				line.add((float)compSolSlipRates[i]+"");
 			
 			if (mapper.isMapped(subSect)) {
 				double totArea = 0d;
@@ -165,14 +191,14 @@ public class SlipRateComparePlot extends AbstractPlot {
 				// convert these to mm/yr
 				simSlipRates[i] = 1e3 * totAreaWeightedSlip / totArea;
 				simTargetSlipRates[i] = 1e3 * totAreaWeightedTargets / totArea;
-				if (u3SolSlipRates != null)
-					ratioU3SolToTarget[i] = u3SolSlipRates[i] / u3TargetSlipRates[i];
+				if (compSolSlipRates != null)
+					ratioU3SolToTarget[i] = compSolSlipRates[i] / compTargetSlipRates[i];
 				ratioSimToTarget[i] = simSlipRates[i] / simTargetSlipRates[i];
-				ratioSimToU3[i] = simSlipRates[i] / u3TargetSlipRates[i];
+				ratioSimToU3[i] = simSlipRates[i] / compTargetSlipRates[i];
 				line.add(simTargetSlipRates[i]+"");
 				line.add(simSlipRates[i]+"");
 			} else {
-				if (u3SolSlipRates != null)
+				if (compSolSlipRates != null)
 					ratioU3SolToTarget[i] = Double.NaN;
 				ratioSimToTarget[i] = Double.NaN;
 				ratioSimToU3[i] = Double.NaN;
@@ -183,8 +209,8 @@ public class SlipRateComparePlot extends AbstractPlot {
 			csv.addLine(line);
 		}
 
-		plotMaps(simSlipRates, u3TargetSlipRates, u3SolSlipRates, ratioSimToTarget, ratioSimToU3, ratioU3SolToTarget, faults);
-		plotFaults(simSlipRates, simTargetSlipRates, u3TargetSlipRates, u3SolSlipRates);
+		plotMaps(simSlipRates, compTargetSlipRates, compSolSlipRates, ratioSimToTarget, ratioSimToU3, ratioU3SolToTarget, faults);
+		plotFaults(simSlipRates, simTargetSlipRates, compTargetSlipRates, compSolSlipRates);
 		csv.writeToFile(new File(getOutputDir(), getOutputPrefix()+"_table.csv"));
 	}
 
@@ -240,12 +266,14 @@ public class SlipRateComparePlot extends AbstractPlot {
 	
 	private void plotFaults(double[] simSlipRates, double[] simSlipTargets, double[] u3TargetSlipRates, double[] u3SolSlipRates)
 			throws IOException {
-		Map<String, List<Integer>> namedFaults = fm.getNamedFaultsMapAlt();
+		NamedFaults namedFaults = fm.getNamedFaults();
+		if (namedFaults == null)
+			return;
 		
 		List<? extends FaultSection> allSubSects = mapper.getSubSections();
 		
-		for (String fault : namedFaults.keySet()) {
-			HashSet<Integer> parentIDs = new HashSet<>(namedFaults.get(fault));
+		for (String fault : namedFaults.getFaultNames()) {
+			HashSet<Integer> parentIDs = new HashSet<>(namedFaults.getParentIDsForFault(fault));
 			
 			MinMaxAveTracker latTrack = new MinMaxAveTracker();
 			MinMaxAveTracker lonTrack = new MinMaxAveTracker();
@@ -276,7 +304,7 @@ public class SlipRateComparePlot extends AbstractPlot {
 			
 			// find common prefix if any
 			List<String> parentNames = Lists.newArrayList();
-			for (Integer parentID : namedFaults.get(fault)) {
+			for (Integer parentID : namedFaults.getParentIDsForFault(fault)) {
 				List<FaultSection> sectionsForParent = sectionsForFault.get(parentID);
 				if (sectionsForParent == null)
 					continue;

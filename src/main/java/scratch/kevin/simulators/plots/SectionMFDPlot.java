@@ -28,6 +28,7 @@ import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
@@ -292,7 +293,7 @@ public class SectionMFDPlot extends AbstractPlot {
 		int tocIndex = lines.size();
 		String topLink = "*[(top)](#table-of-contents)*";
 		
-		Map<String, List<Integer>> namedFaultsMap = new HashMap<>(catalog.getFaultModel().getNamedFaultsMapAlt());
+		Map<String, List<Integer>> namedFaultsMap = new HashMap<>(catalog.getFaultModel().getNamedFaults().get());
 		
 		List<String> namedFaults = new ArrayList<>(namedFaultsMap.keySet());
 		Collections.sort(namedFaults);

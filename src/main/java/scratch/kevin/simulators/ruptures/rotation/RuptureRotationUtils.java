@@ -324,10 +324,11 @@ public class RuptureRotationUtils {
 	
 	public static RSQSimEvent getInitiallyOriented(RSQSimCatalog catalog, RSQSimEvent rupture,
 			Location centroid) {
-		List<? extends FaultSection> allSubSects = catalog.getU3SubSects();
+		List<? extends FaultSection> allSubSects;
 		int offset;
 		try {
-			offset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), catalog.getU3SubSects());
+			allSubSects = catalog.getSubSects();
+			offset = RSQSimUtils.getSubSectIndexOffset(catalog.getElements(), catalog.getSubSects());
 		} catch (IOException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}

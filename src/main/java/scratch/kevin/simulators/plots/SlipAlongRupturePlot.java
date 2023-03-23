@@ -29,6 +29,8 @@ import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.Interpolate;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
+import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
@@ -64,14 +66,14 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 	
 	public static final double SQRT_SINE_SCALAR = 1.311;
 
-	public SlipAlongRupturePlot(RSQSimSubSectionMapper mapper, double minMag, SlipAlongSectAlgorithm slipAlg, FaultModels fm,
+	public SlipAlongRupturePlot(RSQSimSubSectionMapper mapper, double minMag, SlipAlongSectAlgorithm slipAlg, NamedFaults namedFaults,
 			List<Range> lengthBins) {
 		this.mapper = mapper;
 		this.minMag = minMag;
 		this.slipAlg = slipAlg;
 		this.lengthBins = lengthBins;
 		
-		Map<String, List<Integer>> fmNamesMap = fm.getNamedFaultsMapAlt();
+		Map<String, List<Integer>> fmNamesMap = namedFaults.get();
 		faultParentIDsMap = new HashMap<>();
 		for (List<Integer> parentIDs : fmNamesMap.values()) {
 			HashSet<Integer> set = new HashSet<>(parentIDs);
@@ -908,7 +910,7 @@ public class SlipAlongRupturePlot extends AbstractPlot {
 			lengthBins.add(new Range(100, Double.POSITIVE_INFINITY));
 			
 			SlipAlongRupturePlot plot = new SlipAlongRupturePlot(catalog.getSubSectMapper(), minMag,
-					SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN, FaultModels.FM3_1, lengthBins);
+					SlipAlongSectAlgorithm.MID_SEIS_SLIPPED_LEN, new NamedFaults(null, FaultModels.FM3_1.getNamedFaultsMapAlt()), lengthBins);
 			plot.initialize(catalog.getName(), outputDir, "slip_along_rup");
 			
 			for (RSQSimEvent e : catalog.loader().skipYears(skipYears).iterable())

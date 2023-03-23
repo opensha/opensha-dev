@@ -21,6 +21,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.dom4j.Attribute;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -44,11 +45,16 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
+import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
+import org.opensha.sha.simulators.distCalc.SimRuptureDistCalcUtils.LocationElementDistanceCacheFactory;
 import org.opensha.sha.simulators.iden.CatalogLengthLoadIden;
 import org.opensha.sha.simulators.iden.EventIDsRangeIden;
 import org.opensha.sha.simulators.iden.EventIDsRupIden;
@@ -65,6 +71,7 @@ import org.opensha.sha.simulators.srf.RSQSimEventSlipTimeFunc;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader.TransVersion;
 import org.opensha.sha.simulators.srf.RSQSimTransValidIden;
+import org.opensha.sha.simulators.utils.RSQSimEqkRupture;
 import org.opensha.sha.simulators.utils.RSQSimSubSectEqkRupture;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper.SlipAlongSectAlgorithm;
@@ -78,12 +85,12 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 
-import scratch.UCERF3.U3FaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
-import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
 import scratch.kevin.bbp.BBP_Module.VelocityModel;
+import scratch.kevin.simulators.nz.NZ_CompModels.NZ_CompDefModel;
+import scratch.kevin.simulators.nz.NZ_CompModels.NZ_CompFaultModel;
 import scratch.kevin.simulators.plots.AbstractPlot;
 import scratch.kevin.simulators.plots.MFDPlot;
 import scratch.kevin.simulators.plots.MagAreaScalingPlot;
@@ -647,15 +654,40 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_5450("bruce/rundir5450", "Bruce 5450", "Bruce Shaw", cal(2022, 5, 22),
 				"high res delta=1.0km, b_shallow= .004, b_deep=.013, h_shallow=3.0km, state2minf= .20, state2f=.8, tdelay= 0.67",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5552("bruce/rundir5552", "Bruce 5552", "Bruce Shaw", cal(2023, 2, 25),
+				"NZ model.  default single layer dynamic friction",
+				59, 'G'),
+		BRUCE_5554("bruce/rundir5554", "Bruce 5554", "Bruce Shaw", cal(2023, 2, 25),
+				"NZ two layer.  b_shallow= .004, b_deep=.013, h_shallow=3.0km, state2minf= .30, state2f=.8, tdelay= 0.67",
+				59, 'G');
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
 		
 		private Catalogs(String dirName, String name, String author, GregorianCalendar date, String metadata,
-				FaultModels fm, DeformationModels dm) {
+				RupSetFaultModel fm, RupSetDeformationModel dm) {
+			this(dirName, name, author, date, metadata, fm, dm, -1, '0');
+		}
+		
+		private Catalogs(String dirName, String name, String author, GregorianCalendar date, String metadata,
+				int utmZone, char utmBand) {
+			this(dirName, name, author, date, metadata, null, null, utmZone, utmBand);
+		}
+		
+		private Catalogs(String dirName, String name, String author, GregorianCalendar date, String metadata,
+				RupSetFaultModel fm, RupSetDeformationModel dm, int utmZone, char utmBand) {
 			this.dirName = dirName;
-			catalog = new RSQSimCatalog(name, author, date, metadata, fm, dm);
+			if (utmZone < 0) {
+				if (fm != null && fm instanceof NZ_CompFaultModel) {
+					utmZone = 59;
+					utmBand = 'G';
+				} else {
+					utmZone = 11;
+					utmBand = 'N';
+				}
+			}
+			catalog = new RSQSimCatalog(name, author, date, metadata, fm, dm, utmZone, utmBand);
 		}
 		
 		public RSQSimCatalog instance() {
@@ -682,8 +714,11 @@ public class RSQSimCatalog implements XMLSaveable {
 	private String author;
 	private GregorianCalendar date;
 	private String metadata;
-	private FaultModels fm;
-	private DeformationModels dm;
+	private RupSetFaultModel fm;
+	private RupSetDeformationModel dm;
+	
+	private int utmZone;
+	private char utmBand;
 	
 	private double constSlipVel = Double.NaN;
 	private Map<Integer, Double> slipVels = null;
@@ -701,29 +736,29 @@ public class RSQSimCatalog implements XMLSaveable {
 	private RSQSimSubSectionMapper subSectMapper;
 	
 	private static final File fmDmSolDir = new File(System.getProperty("user.home"), ".opensha/ucerf3_fm_dm_sols/");
-	private U3FaultSystemSolution compSol;
+	private FaultSystemSolution compSol;
 	
 	public static final double MIN_SUB_SECT_FRACT_DEFAULT = 0.2;
 	
 	private double minFractForInclusion = MIN_SUB_SECT_FRACT_DEFAULT;
 	
-	private static Table<FaultModels, DeformationModels, U3FaultSystemSolution> compSolsTable = HashBasedTable.create();
+	private static Table<RupSetFaultModel, RupSetDeformationModel, FaultSystemSolution> compSolsTable = HashBasedTable.create();
 	
 	public static final String XML_METADATA_NAME = "RSQSimCatalog";
 	
 	private RSQSimCatalog(String name, String author, GregorianCalendar date, String metadata,
-			FaultModels fm, DeformationModels dm) {
-		this(null, name, author, date, metadata, fm, dm);
+			RupSetFaultModel fm, RupSetDeformationModel dm, int utmZone, char utmBand) {
+		this(null, name, author, date, metadata, fm, dm, utmZone, utmBand);
 	}
 	
 	/**
 	 * Creates a new RSQSimCatalog instance without any the metadata
 	 * @param dir directory containing the list/geometry files
 	 * @param name name of this catalog
-	 * @param fm UCERF3 fault model for comparisons
-	 * @param dm UCERF3 defomration model for comparisons
+	 * @param fm fault model for comparisons
+	 * @param dm defomration model for comparisons
 	 */
-	public RSQSimCatalog(File dir, String name, FaultModels fm, DeformationModels dm) {
+	public RSQSimCatalog(File dir, String name, RupSetFaultModel fm, RupSetDeformationModel dm) {
 		this(dir, name, null, null, null, fm, dm);
 	}
 
@@ -735,11 +770,27 @@ public class RSQSimCatalog implements XMLSaveable {
 	 * @param author author of this catalog
 	 * @param date creation date for this catalog
 	 * @param metadata description of this catalog
-	 * @param fm UCERF3 fault model for comparisons
-	 * @param dm UCERF3 defomration model for comparisons
+	 * @param fm fault model for comparisons
+	 * @param dm defomration model for comparisons
 	 */
 	public RSQSimCatalog(File dir, String name, String author, GregorianCalendar date, String metadata,
-			FaultModels fm, DeformationModels dm) {
+			RupSetFaultModel fm, RupSetDeformationModel dm) {
+		this(dir, name, author, date, metadata, fm, dm, 11, 'N');
+	}
+
+	/**
+	 * Creates a new RSQSimCatalog instance with all metadata
+	 * 
+	 * @param dir directory containing the list/geometry files
+	 * @param name name of this catalog
+	 * @param author author of this catalog
+	 * @param date creation date for this catalog
+	 * @param metadata description of this catalog
+	 * @param fm fault model for comparisons
+	 * @param dm defomration model for comparisons
+	 */
+	public RSQSimCatalog(File dir, String name, String author, GregorianCalendar date, String metadata,
+			RupSetFaultModel fm, RupSetDeformationModel dm, int utmZone, char utmBand) {
 		this.dir = dir;
 		this.name = name;
 		this.author = author;
@@ -747,6 +798,8 @@ public class RSQSimCatalog implements XMLSaveable {
 		this.metadata = metadata;
 		this.fm = fm;
 		this.dm = dm;
+		this.utmZone = utmZone;
+		this.utmBand = utmBand;
 	}
 	
 	public File getCatalogDir() {
@@ -769,11 +822,11 @@ public class RSQSimCatalog implements XMLSaveable {
 		return metadata;
 	}
 	
-	public FaultModels getFaultModel() {
+	public RupSetFaultModel getFaultModel() {
 		return fm;
 	}
 
-	public DeformationModels getDeformationModel() {
+	public RupSetDeformationModel getDeformationModel() {
 		return dm;
 	}
 	
@@ -1480,7 +1533,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	public synchronized List<SimulatorElement> getElements() throws IOException {
 		if (elements == null) {
 			File geomFile = getGeomFile();
-			elements = RSQSimFileReader.readGeometryFile(geomFile, 11, 'N');
+			elements = RSQSimFileReader.readGeometryFile(geomFile, utmZone, utmBand);
 		}
 		return elements;
 	}
@@ -1557,9 +1610,9 @@ public class RSQSimCatalog implements XMLSaveable {
 		this.minFractForInclusion = minFractForInclusion;
 	}
 	
-	public synchronized List<? extends FaultSection> getU3SubSects() {
+	public synchronized List<? extends FaultSection> getSubSects() throws IOException {
 		if (subSects == null)
-			subSects = RSQSimUtils.getUCERF3SubSectsForComparison(getFaultModel(), getDeformationModel());
+			subSects = getDeformationModel().build(getFaultModel());
 		return subSects;
 	}
 	
@@ -1588,25 +1641,21 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 	}
 	
-	public U3FaultSystemSolution getU3CompareSol() throws IOException {
+	public FaultSystemSolution getCompareSol() throws IOException {
 		synchronized (compSolsTable) {
-			U3FaultSystemSolution sol = compSolsTable.get(fm, dm);
+			FaultSystemSolution sol = compSolsTable.get(fm, dm);
 			
 			if (sol == null) {
 				File solDir = getSolCacheDir();
-				File solFile = new File(solDir, fm.encodeChoiceString()+"_"+dm.encodeChoiceString()+"_MEAN_BRANCH_AVG_SOL.zip");
+				File solFile = new File(solDir, fm.getFilePrefix()+"_"+dm.getFilePrefix()+"_MEAN_BRANCH_AVG_SOL.zip");
 				if (!solFile.exists()) {
 					// download it
 					String addr = "http://opensha.usc.edu/ftp/kmilner/ucerf3/2013_05_10-ucerf3p3-production-10runs_fm_dm_sub_plots/"
-							+ fm.encodeChoiceString()+"_"+dm.encodeChoiceString()+"/"+solFile.getName();
+							+ fm.getFilePrefix()+"_"+dm.getFilePrefix()+"/"+solFile.getName();
 					FileUtils.downloadURL(addr, solFile);
 				}
 				
-				try {
-					sol = U3FaultSystemIO.loadSol(solFile);
-				} catch (DocumentException e) {
-					throw ExceptionUtils.asRuntimeException(e);
-				}
+				sol = FaultSystemSolution.load(solFile);
 				compSolsTable.put(fm, dm, sol);
 			}
 			
@@ -1616,7 +1665,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	
 	private synchronized Map<Integer, Double> getSubSectAreas() throws IOException {
 		if (subSectAreas == null)
-			subSectAreas = RSQSimUtils.calcSubSectAreas(getElements(), getU3SubSects());
+			subSectAreas = RSQSimUtils.calcSubSectAreas(getElements(), getSubSects());
 		return subSectAreas;
 	}
 	
@@ -1628,9 +1677,30 @@ public class RSQSimCatalog implements XMLSaveable {
 	
 	public synchronized RSQSimSubSectionMapper getSubSectMapper() throws IOException {
 		if (subSectMapper == null)
-			subSectMapper = new RSQSimSubSectionMapper(getU3SubSects(), getElements(), minFractForInclusion,
+			subSectMapper = new RSQSimSubSectionMapper(getSubSects(), getElements(), minFractForInclusion,
 					getSubSectAreas(), getSubSectDistsCache());
 		return subSectMapper;
+	}
+	
+	public RSQSimEqkRupture getEqkRupture(RSQSimEvent event) {
+//		if (getFaultModel() != null) {
+//			try {
+//				getMappedSubSectRupture(event);
+//			} catch (Exception e) {}
+//		}
+		return getCumDistCalcRupture(event);
+	}
+	
+	private LocationElementDistanceCacheFactory locElemDistCacheFactory = null;
+	
+	public RSQSimEqkRupture getCumDistCalcRupture(RSQSimEvent event) {
+		if (locElemDistCacheFactory == null) {
+			synchronized (this) {
+				if (locElemDistCacheFactory == null)
+					locElemDistCacheFactory = new LocationElementDistanceCacheFactory();
+			}
+		}
+		return RSQSimUtils.buildCumDistRupture(event, locElemDistCacheFactory);
 	}
 	
 	public RSQSimSubSectEqkRupture getMappedSubSectRupture(RSQSimEvent event) {
@@ -1733,7 +1803,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		public Loader forParentSections(boolean calcU3Offset, int... parentIDs) throws IOException {
 			List<Integer> sectionIDs = new ArrayList<>();
-			for (FaultSection sect : getU3SubSects())
+			for (FaultSection sect : getSubSects())
 				if (Ints.contains(parentIDs, sect.getParentSectionId()))
 					sectionIDs.add(sect.getSectionId());
 			return forSections(calcU3Offset, Ints.toArray(sectionIDs));
@@ -1741,7 +1811,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		public Loader forSections(boolean calcU3Offset, int... sectionIDs) throws IOException {
 			if (calcU3Offset) {
-				int offset = RSQSimUtils.getSubSectIndexOffset(getElements(), getU3SubSects());
+				int offset = RSQSimUtils.getSubSectIndexOffset(getElements(), getSubSects());
 				if (offset != 0) {
 					for (int i=0; i<sectionIDs.length; i++)
 						sectionIDs[i] -= offset;
@@ -1797,19 +1867,16 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public FaultSystemSolution buildSolution(List<RSQSimEvent> events, double minMag) throws IOException {
-		return RSQSimUtils.buildFaultSystemSolution(getU3SubSects(), getElements(), events, minMag, minFractForInclusion);
+		return RSQSimUtils.buildFaultSystemSolution(getSubSects(), getElements(), events, minMag, minFractForInclusion);
 	}
 	
+	// TODO duplicate with getCompareSol()?
 	public FaultSystemSolution getComparisonSolution() throws IOException {
-		File solFile = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
-				+"_"+getDeformationModel().encodeChoiceString()+"_MEAN_BRANCH_AVG_SOL.zip");
+		File solFile = new File(fmDmSolDir, getFaultModel().getFilePrefix()
+				+"_"+getDeformationModel().getFilePrefix()+"_MEAN_BRANCH_AVG_SOL.zip");
 		if (solFile.exists()) {
 			System.out.println("Loading comparison FSS from "+solFile.getAbsolutePath());
-			try {
-				compSol = U3FaultSystemIO.loadSol(solFile);
-			} catch (DocumentException e) {
-				throw ExceptionUtils.asRuntimeException(e);
-			}
+			compSol = FaultSystemSolution.load(solFile);
 		} else {
 			System.out.println("Comparison sol file doesn't exist: "+solFile.getAbsolutePath());;
 		}
@@ -1850,8 +1917,8 @@ public class RSQSimCatalog implements XMLSaveable {
 				MFDPlot mfdPlot = new MFDPlot(minMag);
 				File mfdCSV = null;
 				if (hasFM)
-					mfdCSV = new File(fmDmSolDir, getFaultModel().encodeChoiceString()
-							+"_"+getDeformationModel().encodeChoiceString()+"_supra_plus_sub_seis_cumulative.csv");
+					mfdCSV = new File(fmDmSolDir, getFaultModel().getFilePrefix()
+							+"_"+getDeformationModel().getFilePrefix()+"_supra_plus_sub_seis_cumulative.csv");
 //				System.out.println(mfdCSV.getAbsolutePath()+" ? "+mfdCSV.exists());
 				if (mfdCSV != null && mfdCSV.exists()) {
 					System.out.println("Loading UCERF3 comparison MFD: "+mfdCSV.getAbsolutePath());
@@ -2032,7 +2099,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		lengthBins.add(new Range(100, Double.POSITIVE_INFINITY));
 		if (plotsSet.contains(StandardPlots.SLIP_ALONG_RUPTURE) && hasFM) {
 			if (replot || !new File(outputDir, "slip_along_rupture_multi_norm.png").exists()) {
-				SlipAlongRupturePlot slipAlongPlot = new SlipAlongRupturePlot(getSubSectMapper(), 6.5, defaultSlipAlg, fm, lengthBins);
+				SlipAlongRupturePlot slipAlongPlot = new SlipAlongRupturePlot(getSubSectMapper(), 6.5, defaultSlipAlg, fm.getNamedFaults(), lengthBins);
 				slipAlongPlot.initialize(getName(), outputDir, "slip_along_rupture");
 				plots.add(slipAlongPlot);
 			}
@@ -2154,27 +2221,30 @@ public class RSQSimCatalog implements XMLSaveable {
 			table.finalizeLine();
 			lines.addAll(table.wrap(4, 0).build());
 			
-			Map<String, String> slipFaultPlotMap = new HashMap<>();
-			for (String fault : getFaultModel().getNamedFaultsMapAlt().keySet()) {
-				File faultPlot = new File(outputDir, "slip_rate_fault_"+fault.replaceAll("\\W+", "_")+".png");
-				if (faultPlot.exists())
-					slipFaultPlotMap.put(fault, faultPlot.getName());
-			}
-			if (slipFaultPlotMap.size() > 0) {
-				lines.add("#### Slip Rate Fault Plots");
-				lines.add(topLink);
-				lines.add("");
-				table = MarkdownUtils.tableBuilder();
-				List<String> sortedNames = ComparablePairing.getSortedData(slipFaultPlotMap);
-				table.initNewLine();
-				for (String faultName : sortedNames)
-					table.addColumn("<p align=\"center\">**"+faultName+"**</p>");
-				table.finalizeLine();
-				table.initNewLine();
-				for (String faultName : sortedNames)
-					table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/"+slipFaultPlotMap.get(faultName)+")");
-				table.finalizeLine();
-				lines.addAll(table.wrap(3, 0).build());
+			NamedFaults named = getFaultModel().getNamedFaults();
+			if (named != null) {
+				Map<String, String> slipFaultPlotMap = new HashMap<>();
+				for (String fault : named.getFaultNames()) {
+					File faultPlot = new File(outputDir, "slip_rate_fault_"+fault.replaceAll("\\W+", "_")+".png");
+					if (faultPlot.exists())
+						slipFaultPlotMap.put(fault, faultPlot.getName());
+				}
+				if (slipFaultPlotMap.size() > 0) {
+					lines.add("#### Slip Rate Fault Plots");
+					lines.add(topLink);
+					lines.add("");
+					table = MarkdownUtils.tableBuilder();
+					List<String> sortedNames = ComparablePairing.getSortedData(slipFaultPlotMap);
+					table.initNewLine();
+					for (String faultName : sortedNames)
+						table.addColumn("<p align=\"center\">**"+faultName+"**</p>");
+					table.finalizeLine();
+					table.initNewLine();
+					for (String faultName : sortedNames)
+						table.addColumn("![Slip Rate Plot]("+outputDir.getName()+"/"+slipFaultPlotMap.get(faultName)+")");
+					table.finalizeLine();
+					lines.addAll(table.wrap(3, 0).build());
+				}
 			}
 		}
 		
@@ -2364,12 +2434,12 @@ public class RSQSimCatalog implements XMLSaveable {
 		if (plotsSet.contains(StandardPlots.SECTION_RECURRENCE) && hasFM) {
 			if (replot || !new File(outputDir, "interevent_elements_m"+testMagStr+"_scatter.png").exists()) {
 				RSQSimSubSectionMapper mapper = getSubSectMapper();
-				SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
+				SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getCompareSol(), "UCERF3",
 						SectionRecurrenceComparePlot.SectType.ELEMENT, mapper, riMinMags);
 				elemCompare.initialize(getName(), outputDir, "interevent_elements");
 				plots.add(elemCompare);
 				
-				SectionRecurrenceComparePlot subSectCompare = new SectionRecurrenceComparePlot(getElements(), getU3CompareSol(), "UCERF3",
+				SectionRecurrenceComparePlot subSectCompare = new SectionRecurrenceComparePlot(getElements(), getCompareSol(), "UCERF3",
 						SectionRecurrenceComparePlot.SectType.SUBSECTION, mapper, riMinMags);
 				subSectCompare.initialize(getName(), outputDir, "interevent_sub_sects");
 				plots.add(subSectCompare);
@@ -2418,8 +2488,10 @@ public class RSQSimCatalog implements XMLSaveable {
 			}
 			lines.addAll(table.build());
 		}
+		
+		boolean ca = fm instanceof FaultModels || fm instanceof NSHM23_FaultModels;
 
-		if (plotsSet.contains(StandardPlots.PALEO_RECURRENCE) && hasFM) {
+		if (ca && plotsSet.contains(StandardPlots.PALEO_RECURRENCE) && hasFM) {
 			File paleoCSVFile = new File(outputDir, "paleo_recurrence.csv");
 			if (replot || !paleoCSVFile.exists()) {
 				PaleoRecurrencePlot plot = new PaleoRecurrencePlot(getElements(), getSubSectMapper());
@@ -2443,7 +2515,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 
 		lines.add("");
-		if (plotsSet.contains(StandardPlots.PALEO_OPEN_INTERVAL)) {
+		if (ca && plotsSet.contains(StandardPlots.PALEO_OPEN_INTERVAL)) {
 			lines.add("### Paleo Open Interval Plots");
 			lines.add(topLink); lines.add("");
 			lines.add("#### Paleo Open Interval Plots, Biasi and Sharer 2019");
@@ -2652,10 +2724,16 @@ public class RSQSimCatalog implements XMLSaveable {
 		el.addAttribute("author", author);
 		el.addAttribute("dateMillis", date == null ? "0" : date.getTimeInMillis()+"");
 		el.addAttribute("metadata", metadata);
-		if (fm != null)
-			el.addAttribute("fm", fm.name());
-		if (dm != null)
-			el.addAttribute("dm", dm.name());
+		if (fm != null && fm instanceof Enum<?>) {
+			el.addAttribute("fm", ((Enum<?>)fm).name());
+			el.addAttribute("fmClass", fm.getClass().getName());
+		}
+		if (dm != null && dm instanceof Enum<?>) {
+			el.addAttribute("dm", ((Enum<?>)dm).name());
+			el.addAttribute("dmClass", dm.getClass().getName());
+		}
+		el.addAttribute("utmZone", utmZone+"");
+		el.addAttribute("utmBand", utmBand+"");
 		try {
 			Map<Integer, Double> slipVels = getSlipVelocities();
 			el.addAttribute("slipVel", constSlipVel+"");
@@ -2683,12 +2761,48 @@ public class RSQSimCatalog implements XMLSaveable {
 		GregorianCalendar cal = new GregorianCalendar();
 		cal.setTimeInMillis(dateMillis);
 		String metadata = el.attributeValue("metadata");
-		FaultModels fm = null;
-		if (el.attribute("fm") != null)
-			fm = FaultModels.valueOf(el.attributeValue("fm"));
-		DeformationModels dm = null;
-		if (el.attribute("dm") != null)
-			dm = DeformationModels.valueOf(el.attributeValue("dm"));
+		RupSetFaultModel fm = null;
+		if (el.attribute("fm") != null) {
+			Attribute classAtt = el.attribute("fmClass");
+			String enumName = el.attributeValue("fm");
+			if (classAtt == null) {
+				// assume U3
+				fm = FaultModels.valueOf(enumName);
+			} else {
+				try {
+					Class<? extends Enum<?>> fmClass = (Class<? extends Enum<?>>) Class.forName(classAtt.getValue());
+					for (Enum<?> eConst : fmClass.getEnumConstants()) {
+						if (eConst.name().equals(enumName)) {
+							fm = (RupSetFaultModel)eConst;
+							break;
+						}
+					}
+				} catch (ClassNotFoundException | ClassCastException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		RupSetDeformationModel dm = null;
+		if (el.attribute("dm") != null) {
+			Attribute classAtt = el.attribute("dmClass");
+			String enumName = el.attributeValue("dm");
+			if (classAtt == null) {
+				// assume U3
+				dm = DeformationModels.valueOf(enumName);
+			} else {
+				try {
+					Class<? extends Enum<?>> fmClass = (Class<? extends Enum<?>>) Class.forName(classAtt.getValue());
+					for (Enum<?> eConst : fmClass.getEnumConstants()) {
+						if (eConst.name().equals(enumName)) {
+							dm = (RupSetDeformationModel)eConst;
+							break;
+						}
+					}
+				} catch (ClassNotFoundException | ClassCastException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 		double constSlipVel = Double.parseDouble(el.attributeValue("slipVel"));
 		Map<Integer, Double> slipVels = null;
 		if (!Double.isFinite(constSlipVel)) {
@@ -2712,7 +2826,15 @@ public class RSQSimCatalog implements XMLSaveable {
 		if (el.attribute("durationYears") != null)
 			durationYears = Double.parseDouble(el.attributeValue("durationYears"));
 		
-		RSQSimCatalog cat = new RSQSimCatalog(name, author, cal, metadata, fm, dm);
+		int utmZone = 11;
+		char utmBand = 'N';
+		
+		if (el.attribute("utmZone") != null)
+			utmZone = Integer.parseInt(el.attributeValue("utmZone"));
+		if (el.attribute("utmBand") != null)
+			utmBand = el.attributeValue("utmBand").charAt(0);
+		
+		RSQSimCatalog cat = new RSQSimCatalog(name, author, cal, metadata, fm, dm, utmZone, utmBand);
 		cat.aveArea = aveArea;
 		cat.numEvents = numEvents;
 		cat.durationYears = durationYears;
@@ -3130,24 +3252,25 @@ public class RSQSimCatalog implements XMLSaveable {
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
-////		GregorianCalendar minDate = cal(2021, 10, 1);
-//		GregorianCalendar minDate = cal(2020, 10, 1);
-//		for (Catalogs cat : cats) {
+//		GregorianCalendar minDate = cal(2021, 10, 1);
+		GregorianCalendar minDate = cal(2023, 1, 1);
+		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : new Catalogs[] {
-//				Catalogs.BRUCE_4983_STITCHED,
-////				Catalogs.BRUCE_2585,
-////				Catalogs.BRUCE_2585_1MYR,
-////				Catalogs.BRUCE_2740,
-////				Catalogs.BRUCE_3062,
-////				Catalogs.BRUCE_4860,
-////				Catalogs.JG_tunedBase1m_ddotEQmod,
-////				Catalogs.JG_tuneBase1m,
+////				Catalogs.BRUCE_4983_STITCHED,
+//////				Catalogs.BRUCE_2585,
+//////				Catalogs.BRUCE_2585_1MYR,
+//////				Catalogs.BRUCE_2740,
+//////				Catalogs.BRUCE_3062,
+//////				Catalogs.BRUCE_4860,
+//////				Catalogs.JG_tunedBase1m_ddotEQmod,
+//////				Catalogs.JG_tuneBase1m,
+//				Catalogs.BRUCE_5552
 //				}) {
 		// all catalogs
-		GregorianCalendar minDate = cal(2000, 1, 1);
-		for (Catalogs cat : cats) {
+//		GregorianCalendar minDate = cal(2000, 1, 1);
+//		for (Catalogs cat : cats) {
 			
 			if (cat.catalog.getDate().before(minDate))
 				continue;

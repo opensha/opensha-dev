@@ -208,7 +208,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 							plane.getQuadSurface(), source.getHypoLoc());
 					rup.setRuptureSurface(plane.getQuadSurface());
 				} else {
-					rup = catalog.getMappedSubSectRupture(event);
+					rup = catalog.getEqkRupture(event);
 				}
 				gmpeRupsMap.put(event.getID(), rup);
 			}
@@ -566,16 +566,16 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_5413.instance();
-		RSQSimCatalog catalog = Catalogs.BRUCE_5450.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5554.instance();
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
-		boolean doNonErgodicMaps = true;
+		boolean doNonErgodicMaps = false;
 		
 		Region siteMapRegion = new CaliforniaRegions.CYBERSHAKE_MAP_REGION();
 		Region sourceMapRegion = bufferRegion(siteMapRegion, 200d);
 		
-		boolean doGridded = false;
+		boolean doGridded = true;
 		
 		double timeScale = 1d;
 		boolean scaleVelocities = false;
@@ -584,13 +584,13 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 		VelocityModel forceVM = null;
 		
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
-//				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
+				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 //		IMT[] imts = { IMT.SA3P0 };
-		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
 		IMT[] imts = { IMT.PGV, IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
 		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
 		
@@ -780,7 +780,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 							Preconditions.checkState(catalogGMPEDir.exists() || catalogGMPEDir.mkdir());
 							
 							if (subSects == null) {
-								subSects = catalog.getU3SubSects();
+								subSects = catalog.getSubSects();
 								rupSectMappings = new HashMap<>();
 								rupSectNucleations = new HashMap<>();
 								for (RSQSimEvent event : comp.events) {
