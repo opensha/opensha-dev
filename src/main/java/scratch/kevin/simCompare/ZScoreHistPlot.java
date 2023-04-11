@@ -44,6 +44,7 @@ import com.google.common.primitives.Doubles;
 public class ZScoreHistPlot {
 	
 	private static final boolean rate_weighted = true;
+	public static boolean D = false;
 	
 	public static class ZScoreResult {
 		
@@ -100,6 +101,7 @@ public class ZScoreHistPlot {
 		
 		for (int p=0; p<imts.length; p++) {
 			IMT imt = imts[p];
+			if (D) System.out.println("Calculating for "+imt);
 			HistogramFunction hist = new HistogramFunction(-numStdDev, numStdDev, numBins);
 			
 			Map<String, HistogramFunction> sourceHists = sourceRupContribFracts == null ? null : new HashMap<>();
@@ -107,7 +109,9 @@ public class ZScoreHistPlot {
 			List<Double> allVals = new ArrayList<>();
 			List<Double> allWeights = rate_weighted ? new ArrayList<>() : null;
 			int count = 0;
-			for (Site site : sites) {
+			for (int s=0; s<sites.size(); s++) {
+				Site site = sites.get(s);
+				if (D) System.out.println("Calculating for "+imt+", site "+s+"/"+sites.size()+", "+site.getName());
 				for (RuptureComparison<E> comp : eventComps) {
 					if (!comp.hasSite(site))
 						continue;

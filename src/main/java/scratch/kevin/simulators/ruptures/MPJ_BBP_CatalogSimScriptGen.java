@@ -33,12 +33,31 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir4860_multi_combine";
 //		String catalogDirName = "rundir5450";
 //		String catalogDirName = "rundir4983_stitched";
-		String catalogDirName = "rundir5554";
+		String catalogDirName = "rundir5566";
 		
 //		int skipYears = 20000;
 		int skipYears = 5000;
 //		int skipYears = 65000;
 		
+		double griddedSpacing = 1d;
+		
+		// CA
+//		Integer utmZone = null;
+//		Character utmBand = null;
+//		Preconditions.checkState(!griddedNZSites);
+//		boolean standardSites = false;
+//		boolean csInitialLASites = false;
+//		boolean cs500LASites = true;
+//		boolean csLAMapSites = false;
+//		boolean griddedCASites = false;
+//		boolean griddedSoCalSites = false;
+//		boolean griddedNZSites = false;
+//		boolean nzStandardSites = false;
+		
+		// NZ
+		Integer utmZone = 59;
+		Character utmBand = 'G';
+		System.out.println("New Zealand!");
 		boolean standardSites = false;
 		boolean csInitialLASites = false;
 		boolean cs500LASites = false;
@@ -46,16 +65,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		boolean griddedCASites = false;
 		boolean griddedSoCalSites = false;
 		boolean griddedNZSites = true;
-		double griddedSpacing = 1d;
-		
-//		Integer utmZone = null;
-//		Character utmBand = null;
-//		Preconditions.checkState(!griddedNZSites);
-		
-		Integer utmZone = 59;
-		Character utmBand = 'G';
-		System.out.println("New Zealand!");
-		Preconditions.checkState(griddedNZSites);
+		boolean nzStandardSites = true;
 		
 //		double minMag = 6;
 		double minMag = 6.5;
@@ -138,11 +148,13 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-csLAMapSites";
 		if (griddedCASites || griddedSoCalSites)
 			jobName += "-griddedSites";
+		if (nzStandardSites)
+			jobName += "-standardSitesNZ";
 		if (griddedNZSites)
 			jobName += "-griddedSitesNZ";
 		Preconditions.checkArgument(!(griddedSoCalSites && griddedCASites));
 		Preconditions.checkState(standardSites || griddedCASites || griddedSoCalSites || csInitialLASites
-				|| cs500LASites || csLAMapSites || griddedNZSites);
+				|| cs500LASites || csLAMapSites || griddedNZSites || nzStandardSites);
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -163,10 +175,10 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			sites.addAll(RSQSimBBP_Config.getCAGriddedSites(griddedSpacing));
 		if (griddedSoCalSites)
 			sites.addAll(RSQSimBBP_Config.getSoCalGriddedSites(griddedSpacing));
-		if (griddedNZSites) {
-			Preconditions.checkState(sites.isEmpty());
+		if (nzStandardSites)
+			sites.addAll(RSQSimBBP_Config.getNZStandardSites());
+		if (griddedNZSites)
 			sites.addAll(RSQSimBBP_Config.getNZGriddedSites(griddedSpacing));
-		}
 		
 		boolean rdOnly = sites.size() < 100;
 		if (rdOnly)

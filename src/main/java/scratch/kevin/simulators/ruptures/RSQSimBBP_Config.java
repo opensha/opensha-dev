@@ -327,6 +327,12 @@ public class RSQSimBBP_Config {
 		return getGriddedSites(new CaliforniaRegions.RELM_SOCAL(), spacing);
 	}
 	
+	public static List<BBP_Site> getNZStandardSites() {
+		List<BBP_Site> sites = new ArrayList<>();
+		sites.add(new BBP_Site("WLG", new Location(-41.2924, 174.7787), VM.getVs30(), SITE_LO_PASS_FREQ, SITE_HI_PASS_FREQ));
+		return sites;
+	}
+	
 	public static List<BBP_Site> getNZGriddedSites(double spacing) throws IOException {
 		List<BBP_Site> sites = new ArrayList<>();
 		int gridIndex = 0;

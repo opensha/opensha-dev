@@ -660,6 +660,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				59, 'G'),
 		BRUCE_5554("bruce/rundir5554", "Bruce 5554", "Bruce Shaw", cal(2023, 2, 25),
 				"NZ two layer.  b_shallow= .004, b_deep=.013, h_shallow=3.0km, state2minf= .30, state2f=.8, tdelay= 0.67",
+				59, 'G'),
+		BRUCE_5566("bruce/rundir5566", "Bruce 5566", "Bruce Shaw", cal(2023, 3, 25),
+				"NZ dynamic,  bdeep=.01, bshallow=.003,  alpha=0.25",
 				59, 'G');
 		
 		private String dirName;
