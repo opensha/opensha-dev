@@ -18,7 +18,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 
 public class SiteHazardDurationFix {
-
+	
 	public static void main(String[] args) throws ZipException, IOException {
 		File input = new File(args[0]);
 		Preconditions.checkState(input.exists());
