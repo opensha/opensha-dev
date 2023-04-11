@@ -45,9 +45,14 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 
 import com.google.common.base.Preconditions;
 
-public class CA_HazardChangeFigures {
+public class MethodsAndIngredientsHazChangeFigures {
 	
 	public static void main(String[] args) throws IOException {
+//		doCA();
+		doWUS();
+	}
+	
+	public static void doCA() throws IOException {
 		File invsDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/u3_haz_change_maps");
@@ -63,7 +68,7 @@ public class CA_HazardChangeFigures {
 				"2022_12_08-u3-FM3_1-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
-		File u3ConvergedHazFile = new File(invsDir,
+		File u3Converged31HazFile = new File(invsDir,
 				"2022_03_24-u3_branches-FM3_1-2000ip-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
@@ -101,7 +106,7 @@ public class CA_HazardChangeFigures {
 
 		GriddedGeoDataSet u3Map = mask(caRegions, loadXYZ(u3HazFile, entryName));
 		GriddedGeoDataSet u3fm31Map = mask(caRegions, loadXYZ(u3Haz31File, entryName));
-		GriddedGeoDataSet u3ConvergedMap = mask(caRegions, loadXYZ(u3ConvergedHazFile, entryName));
+		GriddedGeoDataSet u3ConvergedMap = mask(caRegions, loadXYZ(u3Converged31HazFile, entryName));
 		GriddedGeoDataSet u3_23GridMap = mask(caRegions, loadXYZ(u3_23GridHazFile, entryName));
 		GriddedGeoDataSet methodsU3GridMap = mask(caRegions, loadXYZ(methodsU3GridHazFile, entryName));
 		GriddedGeoDataSet methods23GridMap = mask(caRegions, loadXYZ(methods23GridHazFile, entryName));
@@ -218,7 +223,156 @@ public class CA_HazardChangeFigures {
 		});
 	}
 	
+	public static void doWUS() throws IOException {
+		File invsDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
+		
+		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/wus_haz_change_maps");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		FaultSystemRupSet rupSet18 = FaultSystemRupSet.load(new File(invsDir,
+				"2023_01_25-nshm18_branches-new_scale-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM18_WUS_PlusU3_FM_3p1_CoulombRupSet_branch_averaged.zip"));
+		FaultSystemRupSet rupSet23 = FaultSystemRupSet.load(new File(invsDir,
+				"2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+		
+		File nshm18HazFile = new File(invsDir,
+				"2023_01_27-nshm18-hazard-ask2014-0.1deg-noSub/"
+				+ "results_hazard.zip");
+		
+		File nshm18_23GridHazFile = new File(invsDir,
+				"2023_01_27-nshm18-grid_src_from_23-hazard-ask2014-0.1deg-noSub/"
+				+ "results_hazard.zip");
+		
+		File methods23GridHazFile = new File(invsDir,
+				"2023_01_25-nshm18_branches-new_scale-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded/"
+				+ "results_hazard_include_0.1deg.zip");
+		
+		File modelHazFile = new File(invsDir,
+				"2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				+ "results_hazard_include_0.1deg.zip");
+		
+		String nshmHazEntryName = "map_pga_TWO_IN_50.txt";
+		String entryName = "mean_map_pga_TWO_IN_50.txt";
+		String hazLabel = "PGA, 2% in 50 yrs";
+
+		GriddedGeoDataSet nshm18Map = loadXYZ(nshm18HazFile, nshmHazEntryName);
+		GriddedGeoDataSet u3_23GridMap = loadXYZ(nshm18_23GridHazFile, nshmHazEntryName);
+//		GriddedGeoDataSet methodsU3GridMap = mask(caRegions, loadXYZ(methodsU3GridHazFile, entryName));
+		GriddedGeoDataSet methods23GridMap = loadXYZ(methods23GridHazFile, entryName);
+		GriddedGeoDataSet modelMap = loadXYZ(modelHazFile, entryName);
+		
+		GriddedRegion refReg = nshm18Map.getRegion();
+		RupSetMapMaker mapMaker18 = new RupSetMapMaker(rupSet18, refReg);
+		RupSetMapMaker mapMaker23 = new RupSetMapMaker(rupSet23, refReg);
+		
+		for (RupSetMapMaker mapMaker : new RupSetMapMaker[] {mapMaker18, mapMaker23}) {
+			mapMaker.setSectOutlineChar(null);
+			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(100, 100, 100, 127)));
+		}
+		
+		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
+		pDiffCPT.setNanColor(new Color(255, 255, 255, 0));
+//		plotHazardChange(outputDir, "methodology_vs_u3", mapMaker18, pDiffCPT, refReg, methodsU3GridMap, u3Map,
+//				"NSHM23 Methodology vs UCERF3, % Change, "+hazLabel);
+		plotHazardChange(outputDir, "ingredients", mapMaker23, pDiffCPT, refReg, modelMap, methods23GridMap,
+				"NSHM23 vs UCERF3 Ingredients, % Change, "+hazLabel);
+		plotHazardChange(outputDir, "full_change", mapMaker23, pDiffCPT, refReg, modelMap, u3_23GridMap,
+				"NSHM23 vs UCERF3, % Change, "+hazLabel);
+//		plotHazardChange(outputDir, "test_method_grid_change", mapMaker18, pDiffCPT, refReg, methods23GridMap, methodsU3GridMap,
+//				"Methods, Grid23 vs GridU3, % Change, "+hazLabel);
+		
+		// attribution
+		CPT attributionCPT = getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse(), 10d, 50d);
+		
+		GriddedGeoDataSet attXYZ = new GriddedGeoDataSet(nshm18Map.getRegion(), false);
+		
+		int numMethod = 0;
+		int numIngredient = 0;
+		int numWithin = 0;
+		for (int i=0; i<attXYZ.size(); i++) {
+//			double u3Val = nshm18Map.get(i);
+			Location loc = attXYZ.getLocation(i);
+			
+			double u3_23GridVal = u3_23GridMap.get(u3_23GridMap.indexOf(loc));
+//			double methodsU3GridVal = methodsU3GridMap.get(methodsU3GridMap.indexOf(loc));
+			double methods23GridVal = methods23GridMap.get(methods23GridMap.indexOf(loc));
+			double modelVal = modelMap.get(modelMap.indexOf(loc));
+			
+			double totalDiff = Math.abs(modelVal - u3_23GridVal);
+			double modelDiff = Math.abs(modelVal - methods23GridVal);
+			double methodsDiff = Math.abs(methods23GridVal - u3_23GridVal);
+			
+			double pDiff = 100d*totalDiff/u3_23GridVal;
+			if (modelDiff < methodsDiff)
+				// when methods dominate, go negative
+				pDiff = -pDiff;
+			attXYZ.set(i, pDiff);
+			if (Double.isFinite(pDiff)) {
+				if (Math.abs(pDiff) > 10d) {
+					if (modelDiff > methodsDiff)
+						numIngredient++;
+					else
+						numMethod++;
+				} else {
+					numWithin++;
+				}
+			}
+		}
+		
+		int totNum = numMethod + numIngredient + numWithin;
+		System.out.println("Attribution stats:");
+		System.out.println("\tWithin 10%: "+pDF.format((double)numWithin/(double)totNum));
+		System.out.println("\tMethodology: "+pDF.format((double)numMethod/(double)totNum));
+		System.out.println("\tIngredients: "+pDF.format((double)numIngredient/(double)totNum));
+		System.out.println("Attribution stats, of those exceeding 10%:");
+		int numExceeding = totNum - numWithin;
+		System.out.println("\tMethodology: "+pDF.format((double)numMethod/(double)numExceeding));
+		System.out.println("\tIngredients: "+pDF.format((double)numIngredient/(double)numExceeding));
+		
+		mapMaker23.plotXYZData(attXYZ, attributionCPT, "Methodology     ←     |Hazard % Change|     →     Ingredients");
+		PlotSpec plot = mapMaker23.buildPlot(" ");
+		int width = mapMaker23.getDefaultPlotWidth();
+		// plot both sides as positive
+		DecimalFormat intDF = new DecimalFormat("0");
+		NumberFormat format = new NumberFormat() {
+			
+			@Override
+			public Number parse(String source, ParsePosition parsePosition) {
+				return intDF.parse(source, parsePosition);
+			}
+			
+			@Override
+			public StringBuffer format(long number, StringBuffer toAppendTo, FieldPosition pos) {
+				if (number < 0l)
+					number = -number;
+				if (number == -0l)
+					number = 0l;
+				return intDF.format(number, toAppendTo, pos);
+			}
+			
+			@Override
+			public StringBuffer format(double number, StringBuffer toAppendTo, FieldPosition pos) {
+				return intDF.format(Math.abs(number), toAppendTo, pos);
+			}
+		};
+		mapMaker23.plot(outputDir, "comb_hazard_attribution", plot, width, new Consumer<HeadlessGraphPanel>() {
+
+			@Override
+			public void accept(HeadlessGraphPanel gp) {
+				for (Title subtitle : (List<Title>)gp.getPlot().getChart().getSubtitles()) {
+					if (subtitle instanceof PaintScaleLegend) {
+						NumberAxis axis = ((NumberAxis)((PaintScaleLegend)subtitle).getAxis());
+						PlotUtils.setTick(axis, 10d);
+						axis.setNumberFormatOverride(format);
+					}
+				}
+			}
+		});
+	}
+	
 	static GriddedGeoDataSet loadXYZ(File zipFile, String entryName) throws IOException {
+		System.out.println("Loading "+entryName+" from "+zipFile.getAbsolutePath());
 		ZipFile zip = new ZipFile(zipFile);
 		
 		ZipEntry regEntry = zip.getEntry(MPJ_LogicTreeHazardCalc.GRID_REGION_ENTRY_NAME);

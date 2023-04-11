@@ -160,6 +160,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Deform
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
@@ -3868,12 +3869,31 @@ public class PureScratch {
 		System.out.println("Event "+event.getID()+", M"+(float)event.getMagnitude()+", "+event.getAllElements().size()+" elements");
 	}
 	
+	private static final void test234() throws IOException {
+		double m5Rate = 11.4;
+		double b = 0.82;
+		
+		GutenbergRichterMagFreqDist mfd1 = new GutenbergRichterMagFreqDist(b, m5Rate, 5.05, 7.95, 30);
+		System.out.println(mfd1);
+		
+		GutenbergRichterMagFreqDist mfd2 = new GutenbergRichterMagFreqDist(b, m5Rate, 5d, 7.9, 30);
+		System.out.println(mfd2);
+		
+		double cml1 = mfd1.getTotCumRate();
+		double cml2 = mfd2.getCumRateDistWithOffset().getInterpolatedY_inLogYDomain(5d);
+		
+		System.out.println("CML1: "+(float)cml1);
+		System.out.println("CML2: "+(float)cml2);
+		System.out.println("Ratio cml2/cml1: "+(float)(cml2/cml1));
+		System.out.println("PDiff: "+(float)(100d*(cml1-cml2)/cml1)+"%");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test233();
+		test234();
 	}
 
 }

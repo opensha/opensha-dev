@@ -329,7 +329,7 @@ class CA_HazardDistributionFigures {
 	private static void plotMap(File outputDir, String prefix, RupSetMapMaker mapMaker, Region[] maskRegions,
 			GriddedGeoDataSet map, CPT cpt, String label) throws IOException {
 		System.out.println("Plotting "+label);
-		map = CA_HazardChangeFigures.mask(maskRegions, map);
+		map = MethodsAndIngredientsHazChangeFigures.mask(maskRegions, map);
 		
 		mapMaker.plotXYZData(map, cpt, label);
 		

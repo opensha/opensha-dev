@@ -397,6 +397,22 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ModDepthGV08.class;
 //		dirName += "-gv_08_mod_depth";
 		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.OrigDraftScaling.class;
+//		dirName += "-orig_draft_scaling";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ModScalingAdd4p3.class;
+//		dirName += "-mod_scaling";
+		
+		if (!factoryClass.equals(NSHM23_InvConfigFactory.class)) {
+			// try instantiate it to make sure we get any static modifiers that might change branch weights
+			try {
+				System.out.println("Instantiating factory class: "+factoryClass.getName());
+				factoryClass.getDeclaredConstructor().newInstance();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
 //		dirName += "-exp_perturb";
@@ -750,8 +766,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --logic-tree "+fullLTPath;
 					argz += " --output-file "+resultsPath+"_hazard_full_gridded.zip";
 					argz += " --output-dir "+resultsPath+"_full_gridded";
+					argz += " --combine-with-dir "+resultsPath;
 					argz += " --gridded-seis INCLUDE";
-					if (logicTree.size() > 100)
+					if (logicTree.size() > 60)
 						argz += " --quick-grid-calc";
 					jobFile = new File(localDir, "batch_hazard_full_gridded.slurm");
 				} else {

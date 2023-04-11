@@ -61,7 +61,11 @@ public class LengthDistCompPlot {
 //				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //				+ "2023_02_28-nshm23_branches-seg_limit_max_length-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
 //				+ "2023_02_25-nshm23_branches-seg_limit_max_length_600-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
-				+ "2023_03_01-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_03_01-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_02_21-nshm23_branches-NSHM23_v2-CoulombRupSet-NSHM23_Avg-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
+//				+ "2023_03_31-nshm23_branches-mod_scaling-NSHM23_v2-CoulombRupSet-AVERAGE-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
+//				+ "2023_03_31-nshm23_branches-orig_draft_scaling-NSHM23_v2-CoulombRupSet-AVERAGE-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
+				+ "2023_04_06-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
 		File miscPlotsDir = new File(invDir, "misc_plots");
 		Preconditions.checkState(miscPlotsDir.exists() || miscPlotsDir.mkdir());
