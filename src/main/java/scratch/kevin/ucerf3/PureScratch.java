@@ -3888,12 +3888,19 @@ public class PureScratch {
 		System.out.println("PDiff: "+(float)(100d*(cml1-cml2)/cml1)+"%");
 	}
 	
+	private static final void test235() throws IOException {
+		RSQSimCatalog catalog = Catalogs.BRUCE_5450.instance();
+		
+		int count = catalog.loader().skipYears(2000).minMag(6.5d).load().size();
+		System.out.println("Count >6.5: "+count);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test234();
+		test235();
 	}
 
 }

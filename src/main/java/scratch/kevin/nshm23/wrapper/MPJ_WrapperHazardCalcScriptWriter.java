@@ -52,7 +52,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 //		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
 		
 //		String extGridProvPath = null;
-		String extGridProvPath = "2023_03_01-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+		String extGridProvPath = "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
 		erfPrefix += "-grid_src_from_23"; griddedOp = IncludeBackgroundOption.INCLUDE;
 //		String extGridProvPath = "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"

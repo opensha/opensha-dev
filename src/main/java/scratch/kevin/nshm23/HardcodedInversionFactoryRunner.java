@@ -67,8 +67,10 @@ public class HardcodedInversionFactoryRunner {
 
 //		InversionConfigurationFactory factory = new U3InversionConfigFactory.ForceNewPaleo();
 //		dirName += "-u3-new_paleo";
-		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
-		dirName += "-nshm23-full_sys";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
+//		dirName += "-nshm23-full_sys";
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.NSHM18_UseU3Paleo();
+		dirName += "-nshm18-u3_paleo";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv() {
 //
 //			@Override

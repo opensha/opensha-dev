@@ -11,6 +11,7 @@ import java.text.DecimalFormat;
 import java.text.FieldPosition;
 import java.text.NumberFormat;
 import java.text.ParsePosition;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 import java.util.function.Consumer;
@@ -42,6 +43,7 @@ import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 
 import com.google.common.base.Preconditions;
 
@@ -240,6 +242,10 @@ public class MethodsAndIngredientsHazChangeFigures {
 				"2023_01_27-nshm18-hazard-ask2014-0.1deg-noSub/"
 				+ "results_hazard.zip");
 		
+		File nshm18GridOnlyHazFile = new File(invsDir,
+				"2023_01_27-nshm18-hazard-ask2014-0.1deg-noSub-griddedOnly/"
+				+ "results_hazard.zip");
+		
 		File nshm18_23GridHazFile = new File(invsDir,
 				"2023_01_27-nshm18-grid_src_from_23-hazard-ask2014-0.1deg-noSub/"
 				+ "results_hazard.zip");
@@ -252,15 +258,32 @@ public class MethodsAndIngredientsHazChangeFigures {
 				"2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
+		File modelGridOnlyHazFile = new File(invsDir,
+				"2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				+ "results_hazard_only_0.1deg.zip");
+		
 		String nshmHazEntryName = "map_pga_TWO_IN_50.txt";
 		String entryName = "mean_map_pga_TWO_IN_50.txt";
 		String hazLabel = "PGA, 2% in 50 yrs";
+		
+		List<Region> wusRegionsList = new ArrayList<>();
+		for (NSHM23_SingleStates state : NSHM23_SingleStates.values()) {
+			XY_DataSet[] outlines = PoliticalBoundariesData.loadUSState(state.getStateName());
+			for (int i=0; i<outlines.length; i++) {
+				LocationList outline = new LocationList();
+				for (Point2D pt : outlines[i])
+					outline.add(new Location(pt.getY(), pt.getX()));
+				wusRegionsList.add(new Region(outline, BorderType.MERCATOR_LINEAR));
+			}
+		}
+		Region[] wusRegions = wusRegionsList.toArray(new Region[0]);
 
-		GriddedGeoDataSet nshm18Map = loadXYZ(nshm18HazFile, nshmHazEntryName);
-		GriddedGeoDataSet u3_23GridMap = loadXYZ(nshm18_23GridHazFile, nshmHazEntryName);
-//		GriddedGeoDataSet methodsU3GridMap = mask(caRegions, loadXYZ(methodsU3GridHazFile, entryName));
-		GriddedGeoDataSet methods23GridMap = loadXYZ(methods23GridHazFile, entryName);
-		GriddedGeoDataSet modelMap = loadXYZ(modelHazFile, entryName);
+		GriddedGeoDataSet nshm18Map = mask(wusRegions, loadXYZ(nshm18HazFile, nshmHazEntryName));
+		GriddedGeoDataSet nshm18GridOnlyMap = mask(wusRegions, loadXYZ(nshm18GridOnlyHazFile, nshmHazEntryName));
+		GriddedGeoDataSet u3_23GridMap = mask(wusRegions, loadXYZ(nshm18_23GridHazFile, nshmHazEntryName));
+		GriddedGeoDataSet methods23GridMap = mask(wusRegions, loadXYZ(methods23GridHazFile, entryName));
+		GriddedGeoDataSet modelMap = mask(wusRegions, loadXYZ(modelHazFile, entryName));
+		GriddedGeoDataSet modelGridOnlyMap = mask(wusRegions, loadXYZ(modelGridOnlyHazFile, entryName));
 		
 		GriddedRegion refReg = nshm18Map.getRegion();
 		RupSetMapMaker mapMaker18 = new RupSetMapMaker(rupSet18, refReg);
@@ -273,12 +296,12 @@ public class MethodsAndIngredientsHazChangeFigures {
 		
 		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
 		pDiffCPT.setNanColor(new Color(255, 255, 255, 0));
-//		plotHazardChange(outputDir, "methodology_vs_u3", mapMaker18, pDiffCPT, refReg, methodsU3GridMap, u3Map,
-//				"NSHM23 Methodology vs UCERF3, % Change, "+hazLabel);
+		plotHazardChange(outputDir, "methodology", mapMaker18, pDiffCPT, refReg, methods23GridMap, u3_23GridMap,
+				"NSHM23 Methodology vs NSHM18, % Change, "+hazLabel);
 		plotHazardChange(outputDir, "ingredients", mapMaker23, pDiffCPT, refReg, modelMap, methods23GridMap,
-				"NSHM23 vs UCERF3 Ingredients, % Change, "+hazLabel);
+				"NSHM23 vs NSHM18 Ingredients, % Change, "+hazLabel);
 		plotHazardChange(outputDir, "full_change", mapMaker23, pDiffCPT, refReg, modelMap, u3_23GridMap,
-				"NSHM23 vs UCERF3, % Change, "+hazLabel);
+				"NSHM23 vs NSHM18, % Change, "+hazLabel);
 //		plotHazardChange(outputDir, "test_method_grid_change", mapMaker18, pDiffCPT, refReg, methods23GridMap, methodsU3GridMap,
 //				"Methods, Grid23 vs GridU3, % Change, "+hazLabel);
 		
@@ -286,6 +309,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 		CPT attributionCPT = getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse(), 10d, 50d);
 		
 		GriddedGeoDataSet attXYZ = new GriddedGeoDataSet(nshm18Map.getRegion(), false);
+		GriddedGeoDataSet grid18PlusFaults23 = new GriddedGeoDataSet(nshm18Map.getRegion(), false);
 		
 		int numMethod = 0;
 		int numIngredient = 0;
@@ -318,7 +342,17 @@ public class MethodsAndIngredientsHazChangeFigures {
 					numWithin++;
 				}
 			}
+			
+			double grid18val = nshm18GridOnlyMap.get(nshm18GridOnlyMap.indexOf(loc));
+			double grid23val = modelGridOnlyMap.get(modelGridOnlyMap.indexOf(loc));
+			double faultAdd = Math.max(0d, modelVal - grid23val);
+			grid18PlusFaults23.set(i, grid18val+faultAdd);
 		}
+
+		plotHazardChange(outputDir, "grid_change", mapMaker23, pDiffCPT, refReg, modelMap, grid18PlusFaults23,
+				"NSHM23 vs NSHM18, Gridded, % Change, "+hazLabel);
+		plotHazardChange(outputDir, "total_change", mapMaker23, pDiffCPT, refReg, modelMap, nshm18Map,
+				"NSHM23 vs NSHM18, Total, % Change, "+hazLabel);
 		
 		int totNum = numMethod + numIngredient + numWithin;
 		System.out.println("Attribution stats:");

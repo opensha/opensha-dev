@@ -49,7 +49,8 @@ public class ObservedUncertainMFDComparisons {
 	
 	public static void main(String[] args) throws IOException {
 		File invDir = new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File nodeDir = new File(invDir, "node_branch_averaged");
 		File meanSolFile = new File(invDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
 		File ltFile = new File(invDir, "logic_tree.json");
@@ -71,12 +72,14 @@ public class ObservedUncertainMFDComparisons {
 		int endYear = 2023;
 		int[] startYears = { 1850, 1900, 1930 };
 		
+		int maxZeroBins = 2;
+		
 		ArbitrarilyDiscretizedFunc[] obsMFDs = new ArbitrarilyDiscretizedFunc[startYears.length];
 		UncertainArbDiscFunc[] bounds95 = new UncertainArbDiscFunc[startYears.length];
 		UncertainArbDiscFunc[] bounds68 = new UncertainArbDiscFunc[startYears.length];
 		
 		for (int i=0; i<startYears.length; i++) {
-			String path = pathPrefix+"/WUS-Other-"+startYears[i]+"-2023-direct-rates.txt";
+			String path = pathPrefix+"/WUS-Other-"+startYears[i]+"-2023-direct-rates-v2.txt";
 			
 			InputStream stream = NSHM23_RegionLoader.class.getResourceAsStream(path);
 			BufferedReader read = new BufferedReader(new InputStreamReader(stream));
@@ -86,7 +89,9 @@ public class ObservedUncertainMFDComparisons {
 			ArbitrarilyDiscretizedFunc obs = new ArbitrarilyDiscretizedFunc();
 			ArbitrarilyDiscretizedFunc p84 = new ArbitrarilyDiscretizedFunc();
 			ArbitrarilyDiscretizedFunc p97p5 = new ArbitrarilyDiscretizedFunc();
+			ArbitrarilyDiscretizedFunc middle = new ArbitrarilyDiscretizedFunc();
 			
+			int numZeroBins = 0;
 			String line = read.readLine();
 			while (line != null) {
 				line = line.trim();
@@ -96,7 +101,7 @@ public class ObservedUncertainMFDComparisons {
 					try {
 						int index = 0;
 						double mag = Double.parseDouble(split[index++]);
-						index++; // count
+						int count = Integer.parseInt(split[index++]);
 						index++; // duration
 						double rate = Double.parseDouble(split[index++]);
 						double lower2p5 = Double.parseDouble(split[index++]);
@@ -104,11 +109,21 @@ public class ObservedUncertainMFDComparisons {
 						double upper84 = Double.parseDouble(split[index++]);
 						double upper97p5 = Double.parseDouble(split[index++]);
 						
-						obs.set(mag, rate);
+						if (count == 0 && maxZeroBins == 0)
+							break;
+						
+						obs.set(mag, count>0 ? rate : 0d);
 						p2p5.set(mag, lower2p5);
 						p16.set(mag, lower16);
 						p84.set(mag, upper84);
 						p97p5.set(mag, upper97p5);
+						middle.set(mag, 0.5*(lower16+upper84));
+						
+						if (count == 0) {
+							numZeroBins++;
+							if (numZeroBins == maxZeroBins)
+								break;
+						}
 					} catch (NumberFormatException e) {}
 				} 
 				
@@ -118,8 +133,8 @@ public class ObservedUncertainMFDComparisons {
 			read.close();
 			
 			obsMFDs[i] = obs;
-			bounds95[i] = new UncertainArbDiscFunc(obs, p2p5, p97p5, UncertaintyBoundType.CONF_95);
-			bounds68[i] = new UncertainArbDiscFunc(obs, p16, p84, UncertaintyBoundType.CONF_68);
+			bounds95[i] = new UncertainArbDiscFunc(middle, p2p5, p97p5, UncertaintyBoundType.CONF_95);
+			bounds68[i] = new UncertainArbDiscFunc(middle, p16, p84, UncertaintyBoundType.CONF_68);
 		}
 		
 		UncertainBoundedIncrMagFreqDist estIncrMFD = NSHM23_RegionalSeismicity.getRemapped(wusReg,

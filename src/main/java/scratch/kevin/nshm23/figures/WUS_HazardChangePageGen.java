@@ -96,7 +96,7 @@ public class WUS_HazardChangePageGen {
 		
 		// load hazard maps
 		File nshm23HazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_03_01-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		GriddedGeoDataSet nshm23Hazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm23HazardFile, entryName);
 		
@@ -104,18 +104,18 @@ public class WUS_HazardChangePageGen {
 		File outputDir = new File(nshm23HazardFile.getParent().replace("-ba_only", ""), "hazard_comparisons_nshm18_"+dirPrefix);
 		
 		File nshm23GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_03_01-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_only_0.1deg.zip");
 		GriddedGeoDataSet nshm23GridHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm23GridHazardFile, entryName);
 		Preconditions.checkState(nshm23GridHazard.size() == nshm23Hazard.size());
 //		GriddedGeoDataSet nshm23GridHazard = null;
 		
 		FaultSystemSolution nshm23BASol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_03_01-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		File nshm18_23gridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_03_10-nshm18-grid_src_from_23-wus-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
+				+ "2023_04_12-nshm18-grid_src_from_23-wus-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
 		GriddedGeoDataSet nshm18_23gridHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18_23gridHazardFile, wrapperEntryName);
 		Preconditions.checkState(nshm18_23gridHazard.size() == nshm23Hazard.size());
 		
