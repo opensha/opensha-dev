@@ -66,14 +66,15 @@ public class FakeBALogicTreeGen {
 		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 //				+ "2022_12_20-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //				+ "2023_01_25-nshm18_branches-new_scale-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-				+ "2023_04_13-nshm18_branches-new_scale-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_04_13-nshm18_branches-new_scale-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_04_14-nshm18_branches-wc_94-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_U3_HybridLogicTreeBranch.U3_FM;
 //		nodes.add(FaultModels.FM3_1);
 		LogicTreeLevel<? extends LogicTreeNode> level = NSHM18_LogicTreeBranch.FM;
 		nodes.add(NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1);
 //		FaultSystemSolution tmpSol = FaultSystemSolution.load(new File(inputDir, "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
-		FaultSystemSolution tmpSol = FaultSystemSolution.load(new File(inputDir, "results_NSHM18_WUS_PlusU3_FM_3p1_CoulombRupSet_branch_averaged.zip"));
-//		FaultSystemSolution tmpSol = FaultSystemSolution.load(new File(inputDir, "node_branch_averaged/SegModel_Classic.zip"));
+//		FaultSystemSolution tmpSol = FaultSystemSolution.load(new File(inputDir, "results_NSHM18_WUS_PlusU3_FM_3p1_CoulombRupSet_branch_averaged.zip"));
+		FaultSystemSolution tmpSol = FaultSystemSolution.load(new File(inputDir, "node_branch_averaged/SegModel_Classic.zip"));
 //		FaultSystemSolution tmpSol = FaultSystemSolution.load(new File(inputDir, "results_FM3_1_CoulombRupSet_NoClassic_branch_averaged.zip"));
 //		tmpSol.setGridSourceProvider(FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip")).getGridSourceProvider());
 		tmpSol.setGridSourceProvider(FaultSystemSolution.load(new File("/data/kevin/nshm23/batch_inversions/"
@@ -85,8 +86,8 @@ public class FakeBALogicTreeGen {
 		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
 //		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only");
 //		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-no_classic");
-		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-nshm23_gridded");
-//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-nshm23_gridded-classic_only");
+//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-nshm23_gridded");
+		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-nshm23_gridded-classic_only");
 		
 //		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_U3_HybridLogicTreeBranch.U3_FM;
 //		nodes.add(FaultModels.FM3_1);

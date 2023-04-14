@@ -235,7 +235,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 				"2023_01_25-nshm18_branches-new_scale-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM18_WUS_PlusU3_FM_3p1_CoulombRupSet_branch_averaged.zip"));
 		FaultSystemRupSet rupSet23 = FaultSystemRupSet.load(new File(invsDir,
-				"2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		File nshm18HazFile = new File(invsDir,
@@ -247,19 +247,19 @@ public class MethodsAndIngredientsHazChangeFigures {
 				+ "results_hazard.zip");
 		
 		File nshm18_23GridHazFile = new File(invsDir,
-				"2023_01_27-nshm18-grid_src_from_23-hazard-ask2014-0.1deg-noSub/"
+				"2023_04_12-nshm18-grid_src_from_23-wus-hazard-ask2014-0.1deg-noSub/"
 				+ "results_hazard.zip");
 		
 		File methods23GridHazFile = new File(invsDir,
-				"2023_01_25-nshm18_branches-new_scale-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded/"
+				"2023_04_13-nshm18_branches-new_scale-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File modelHazFile = new File(invsDir,
-				"2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File modelGridOnlyHazFile = new File(invsDir,
-				"2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_only_0.1deg.zip");
 		
 		String nshmHazEntryName = "map_pga_TWO_IN_50.txt";

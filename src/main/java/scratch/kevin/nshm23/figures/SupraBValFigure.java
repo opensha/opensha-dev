@@ -1,17 +1,22 @@
 package scratch.kevin.nshm23.figures;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.geom.Point2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -166,10 +171,102 @@ class SupraBValFigure {
 		
 		PlotUtils.writePlots(outputDir, prefix+"_cml", gp, 800, 750, true, true, false);
 		
+		// now plot tot rate as a function of bval
+		xRange = new Range(-1d, 2d);
+		yRange = new Range(1e-3, 1e-1);
+		EvenlyDiscretizedFunc bRateFunc = new EvenlyDiscretizedFunc(xRange.getLowerBound(), xRange.getUpperBound(), 1000);
+		for (int i=0; i<bRateFunc.size(); i++) {
+			double bVal = bRateFunc.getX(i);
+			GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(
+					refMFD.getMinX(), refMFD.size(), refMFD.getDelta(), moRate, bVal);
+			double totRate = gr.calcSumOfY_Vals();
+			bRateFunc.set(i, totRate);
+		}
+		
+		List<XY_DataSet> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+		DefaultXY_DataSet maxFunc = new DefaultXY_DataSet();
+		maxFunc.set(xRange.getLowerBound(), rateMaxRup);
+		maxFunc.set(xRange.getUpperBound(), rateMaxRup);
+		funcs.add(maxFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLUE));
+		
+		DefaultXY_DataSet minFunc = new DefaultXY_DataSet();
+		minFunc.set(xRange.getLowerBound(), rateMinRup);
+		minFunc.set(xRange.getUpperBound(), rateMinRup);
+		funcs.add(minFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.RED));
+		
+		funcs.add(bRateFunc);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		
+		List<XYTextAnnotation> anns = new ArrayList<>();
+		
+		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 20);
+		
+		for (double bVal : bVals) {
+			GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(
+					refMFD.getMinX(), refMFD.size(), refMFD.getDelta(), moRate, bVal);
+			double totRate = gr.calcSumOfY_Vals();
+			DefaultXY_DataSet xy = new DefaultXY_DataSet();
+			xy.set(xRange.getLowerBound(), totRate);
+			xy.set(bVal, totRate);
+			xy.set(bVal, yRange.getLowerBound());
+			
+			funcs.add(xy);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY));
+			
+			xy = new DefaultXY_DataSet();
+			xy.set(bVal, totRate);
+			
+			funcs.add(xy);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, Color.GRAY));
+			
+			String text = (int)(1d/totRate+0.5)+" yrs  ";
+			XYTextAnnotation ann = new XYTextAnnotation(text, bVal, logShift(totRate, 0.01));
+			ann.setTextAnchor(TextAnchor.BASELINE_RIGHT);
+			ann.setFont(font);
+			anns.add(ann);
+			
+			text = "  b="+(float)bVal;
+			ann = new XYTextAnnotation(text, bVal+0.015, totRate);
+			ann.setTextAnchor(TextAnchor.BASELINE_LEFT);
+			ann.setRotationAnchor(TextAnchor.BASELINE_LEFT);
+			ann.setRotationAngle(Math.PI/2d);
+			ann.setFont(font);
+			anns.add(ann);
+		}
+		
+		XYTextAnnotation ann = new XYTextAnnotation("  Max Rate: "+(int)(1d/rateMinRup+0.5)+" yrs",
+				xRange.getLowerBound(), logShift(rateMinRup, 0.01));
+		ann.setTextAnchor(TextAnchor.BASELINE_LEFT);
+		ann.setFont(font);
+		anns.add(ann);
+		ann = new XYTextAnnotation("  Min Rate: "+(int)(1d/rateMaxRup+0.5)+" yrs",
+				xRange.getLowerBound(), rateMaxRup);
+		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+		ann.setFont(font);
+		anns.add(ann);
+		
+		spec = new PlotSpec(funcs, chars, " ", "G-R b-value", "Cumulative Rate (1/yr)");
+		spec.setPlotAnnotations(anns);
+		
+		gp.drawGraphPanel(spec, false, true, xRange, yRange);
+		PlotUtils.setXTick(gp, 0.5);
+		
+		PlotUtils.writePlots(outputDir, prefix+"_cml_bVal", gp, 800, 750, true, true, false);
+		
 //		scale.getma
 		
 //		scale.get
 //		double minRateSlip = scale.getAveSlip(slipRate, slipRate, slipRate, slipRate, slipRate)
+	}
+	
+	private static double logShift(double x, double delta) {
+		double logX = Math.log10(x);
+		logX += delta;
+		return Math.pow(10, logX);
 	}
 	
 	private static EvenlyDiscretizedFunc cml(IncrementalMagFreqDist mfd, boolean offset) {
