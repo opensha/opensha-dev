@@ -70,11 +70,19 @@ public class LengthDistCompPlot {
 		File miscPlotsDir = new File(invDir, "misc_plots");
 		Preconditions.checkState(miscPlotsDir.exists() || miscPlotsDir.mkdir());
 		
-		boolean noCA = false;
-		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists");
+//		boolean onlyCA = false;
+//		boolean noCA = false;
+//		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists");
+		
+//		boolean onlyCA = false;
 //		boolean noCA = true;
 //		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists_noCA");
 		
+		boolean onlyCA = true;
+		boolean noCA = false;
+		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists_onlyCA");
+		
+		Preconditions.checkState(!onlyCA || !noCA);
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		String prefix = "wells_2013_length_dist_compare";
@@ -97,50 +105,65 @@ public class LengthDistCompPlot {
 				xRangeFull.getLowerBound(), xRangeFull.getUpperBound(), 50);
 		HistogramFunction cmlRef = getInvCml(ref);
 		
-		Region[] skipRegions = null;
 		boolean[] includeRups = null;
-		if (noCA) {
+		if (noCA || onlyCA) {
 			XY_DataSet[] caOutlines = PoliticalBoundariesData.loadCAOutlines();
-			skipRegions = new Region[caOutlines.length];
+			Region[] caRegions = new Region[caOutlines.length];
 			for (int i=0; i<caOutlines.length; i++) {
 				LocationList outline = new LocationList();
 				for (Point2D pt : caOutlines[i])
 					outline.add(new Location(pt.getY(), pt.getX()));
-				skipRegions[i] = new Region(outline, BorderType.MERCATOR_LINEAR);
+				caRegions[i] = new Region(outline, BorderType.MERCATOR_LINEAR);
 			}
-			Arrays.sort(skipRegions, new Comparator<Region>() {
+			Arrays.sort(caRegions, new Comparator<Region>() {
 
 				@Override
 				public int compare(Region o1, Region o2) {
 					return -Double.compare(o1.getExtent(), o2.getExtent());
 				}
 			});
-			skipRegions = new Region[] {skipRegions[0]};
+			caRegions = new Region[] {caRegions[0]};
 			
-			boolean[] skipSects = new boolean[rupSet0.getNumSections()];
-			for (int s=0; s<skipSects.length; s++) {
+			boolean[] caSects = new boolean[rupSet0.getNumSections()];
+			for (int s=0; s<caSects.length; s++) {
 				boolean skip = false;
 				locLoop:
 					for (Location loc : rupSet0.getFaultSectionData(s).getFaultTrace()) {
-						for (Region reg : skipRegions) {
+						for (Region reg : caRegions) {
 							if (reg.contains(loc)) {
 								skip = true;
 								break locLoop;
 							}
 						}
 					}
-				skipSects[s] = skip;
+				caSects[s] = skip;
 			}
-			includeRups = new boolean[rupSet0.getNumRuptures()];
-			for (int r=0; r<includeRups.length; r++) {
-				boolean include = true;
-				for (int s : rupSet0.getSectionsIndicesForRup(r)) {
-					if (skipSects[s]) {
-						include = false;
-						break;
+			if (onlyCA) {
+				// include only ruptures that touch CA (including partial)
+				includeRups = new boolean[rupSet0.getNumRuptures()];
+				for (int r=0; r<includeRups.length; r++) {
+					boolean include = false;
+					for (int s : rupSet0.getSectionsIndicesForRup(r)) {
+						if (caSects[s]) {
+							include = true;
+							break;
+						}
 					}
+					includeRups[r] = include;
 				}
-				includeRups[r] = include;
+			} else {
+				// exclude anything that touches CA (also excludes partial)
+				includeRups = new boolean[rupSet0.getNumRuptures()];
+				for (int r=0; r<includeRups.length; r++) {
+					boolean include = true;
+					for (int s : rupSet0.getSectionsIndicesForRup(r)) {
+						if (caSects[s]) {
+							include = false;
+							break;
+						}
+					}
+					includeRups[r] = include;
+				}
 			}
 		}
 		
@@ -148,6 +171,8 @@ public class LengthDistCompPlot {
 		Path erfPath;
 		if (noCA)
 			erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0-noCA/");
+		else if (onlyCA)
+			erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0-onlyCA/");
 		else
 			erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0/");
 		NshmErf nshmErf = new NshmErf(erfPath,
