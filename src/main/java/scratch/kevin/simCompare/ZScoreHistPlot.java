@@ -67,13 +67,13 @@ public class ZScoreHistPlot {
 	}
 	
 	public static <E> ZScoreResult[] calcZScores(SimulationRotDProvider<E> simProv,
-			Collection<? extends RuptureComparison<E>> eventComps, List<Site> sites, IMT[] imts,
+			Collection<? extends RuptureComparison<E>> eventComps, List<? extends Site> sites, IMT[] imts,
 					RuptureComparisonFilter<E> filter) throws IOException {
 		return calcZScores(simProv, eventComps, sites, imts, filter, null);
 	}
 	
 	public static <E> ZScoreResult[] calcZScores(SimulationRotDProvider<E> simProv,
-			Collection<? extends RuptureComparison<E>> eventComps, List<Site> sites, IMT[] imts,
+			Collection<? extends RuptureComparison<E>> eventComps, List<? extends Site> sites, IMT[] imts,
 					RuptureComparisonFilter<E> filter, Table<String, E, Double> sourceRupContribFracts) throws IOException {
 		int numComputed = 0;
 		int numMatches = 0;

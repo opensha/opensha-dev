@@ -40,13 +40,13 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 public class SourceSiteDistPageGen<E> {
 	
 	private SimulationRotDProvider<E> simProv;
-	private List<Site> sites;
+	private List<? extends Site> sites;
 	
 	private static double simLogHistDelta = 0.1;
 	private static double gmpeLogHistDelta = 0.01;
 	private static double gmpeTruncLevel = 4;
 
-	public SourceSiteDistPageGen(SimulationRotDProvider<E> simProv, List<Site> sites) {
+	public SourceSiteDistPageGen(SimulationRotDProvider<E> simProv, List<? extends Site> sites) {
 		this.simProv = simProv;
 		this.sites = sites;
 	}

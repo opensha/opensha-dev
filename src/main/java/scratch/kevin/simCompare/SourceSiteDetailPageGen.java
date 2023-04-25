@@ -72,7 +72,7 @@ public abstract class SourceSiteDetailPageGen {
 	private String sourceName;
 	private RSQSimCatalog catalog;
 	private List<RSQSimEvent> events;
-	private List<Site> sites;
+	private List<? extends Site> sites;
 	
 	private Location refFrame1;
 	private Location refFrame2;
@@ -85,7 +85,7 @@ public abstract class SourceSiteDetailPageGen {
 	private double maxDeltaY = 70d;
 
 	public SourceSiteDetailPageGen(SimulationRotDProvider<RSQSimEvent> simProv, String sourceName,
-			int[] parentSectIDs, RSQSimCatalog catalog, List<RSQSimEvent> events, List<Site> sites)
+			int[] parentSectIDs, RSQSimCatalog catalog, List<RSQSimEvent> events, List<? extends Site> sites)
 					throws IOException {
 		this.simProv = simProv;
 		this.sourceName = sourceName;

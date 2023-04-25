@@ -30,6 +30,8 @@ public class SimulationHazardCurveCalc<E> {
 
 	private Map<String, DiscretizedFunc> xValsMap;
 	
+	public static int DEFAULT_X_VAL_MULT = 4;
+	
 	public static DiscretizedFunc getDefaultHazardCurve(String paramName, int xValMult) {
 		ArbitrarilyDiscretizedFunc xValues = new IMT_Info().getDefaultHazardCurve(paramName);
 		if (xValMult > 0) {
@@ -56,13 +58,13 @@ public class SimulationHazardCurveCalc<E> {
 		if (xValsMap == null)
 			xValsMap = new HashMap<>();
 		if (!xValsMap.containsKey(SA_Param.NAME))
-			xValsMap.put(SA_Param.NAME, getDefaultHazardCurve(SA_Param.NAME, 4));
+			xValsMap.put(SA_Param.NAME, getDefaultHazardCurve(SA_Param.NAME, DEFAULT_X_VAL_MULT));
 		if (!xValsMap.containsKey(PGV_Param.NAME))
-			xValsMap.put(PGV_Param.NAME, getDefaultHazardCurve(PGV_Param.NAME, 4));
+			xValsMap.put(PGV_Param.NAME, getDefaultHazardCurve(PGV_Param.NAME, DEFAULT_X_VAL_MULT));
 		if (!xValsMap.containsKey(PGA_Param.NAME))
-			xValsMap.put(PGA_Param.NAME, getDefaultHazardCurve(PGA_Param.NAME, 4));
+			xValsMap.put(PGA_Param.NAME, getDefaultHazardCurve(PGA_Param.NAME, DEFAULT_X_VAL_MULT));
 		if (!xValsMap.containsKey(SignificantDurationParam.NAME))
-			xValsMap.put(SignificantDurationParam.NAME, getDefaultHazardCurve(SignificantDurationParam.NAME, 4));
+			xValsMap.put(SignificantDurationParam.NAME, getDefaultHazardCurve(SignificantDurationParam.NAME, DEFAULT_X_VAL_MULT));
 		this.xValsMap = xValsMap;
 	}
 	

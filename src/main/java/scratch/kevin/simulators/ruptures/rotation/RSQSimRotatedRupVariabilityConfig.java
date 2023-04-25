@@ -420,7 +420,7 @@ public class RSQSimRotatedRupVariabilityConfig extends RotatedRupVariabilityConf
 		RupturePlotGenerator.writeMapPlot(plotElems, first, null, outputDir, prefix, null, null, null, null, null, null, null, anns, " ");
 	}
 	
-	public RSQSimRotatedRupVariabilityConfig forSites(List<Site> sites) {
+	public RSQSimRotatedRupVariabilityConfig forSites(List<? extends Site> sites) {
 		List<RotationSpec> masterRotations = new ArrayList<>();
 		for (Site site : sites) {
 			List<RotationSpec> siteRotations = getRotationsForQuantities(Quantity.SITE, site);

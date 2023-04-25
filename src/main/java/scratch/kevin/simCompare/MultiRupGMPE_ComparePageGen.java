@@ -73,7 +73,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	
 	private SimulationRotDProvider<E> simProv;
 	private String simName;
-	private List<Site> sites;
+	private List<? extends Site> sites;
 	private boolean distJB;
 	private double cutoffDist;
 	private double minMag;
@@ -105,7 +105,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	private int sourceRupContributionNum;
 	private Table<String, E, Double> sourceRupContributionFracts;
 	
-	protected void init(SimulationRotDProvider<E> simProv, List<Site> sites, boolean distJB, double cutoffDist,
+	protected void init(SimulationRotDProvider<E> simProv, List<? extends Site> sites, boolean distJB, double cutoffDist,
 			double minMag, double maxMag) {
 		this.simProv = simProv;
 		this.simName = simProv.getName();
@@ -132,7 +132,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		siteBundleNames.add(name);
 	}
 	
-	protected List<Site> getSites() {
+	protected List<? extends Site> getSites() {
 		return sites;
 	}
 	
@@ -618,7 +618,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				lines.addAll(table.build());
 				siteComps = comps;
 				siteName = "All Sites";
-				scatterSites = this.sites;
+				scatterSites = new ArrayList<>(this.sites);
 				lines.add("");
 				lines.add(siteComps.size()+" ruptures within "+optionalDigitDF.format(cutoffDist)+" km of *any* site");
 			} else {
@@ -826,7 +826,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		if (this.sites.size() > 20 && highlightSites != null)
 			curveSites = highlightSites;
 		else
-			curveSites = this.sites;
+			curveSites = new ArrayList<>(this.sites);
 		System.out.println("Have "+curveSites.size()+" curve sites (from "+sites.size()+" total sites)");
 		
 		if (curveSites != null && !curveSites.isEmpty()) {
@@ -892,7 +892,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		if (tempGMPE.getPropagationEffectParams().containsParameter(DistanceRupParameter.NAME))
 			residualTypes.add(ResidualType.DIST_RUP);
 		checkInGMPE(gmpeRef, tempGMPE);
-		sites = this.sites; // we previously added a null element for all sites above
+		sites = new ArrayList<>(this.sites); // we previously added a null element for all sites above
 		if (tempGMPE.getSiteParams().containsParameter(Vs30_Param.NAME) && doesParameterVary(Vs30_Param.NAME, sites))
 			residualTypes.add(ResidualType.VS30);
 		if (tempGMPE.getSiteParams().containsParameter(DepthTo1pt0kmPerSecParam.NAME) && doesParameterVary(DepthTo1pt0kmPerSecParam.NAME, sites))
