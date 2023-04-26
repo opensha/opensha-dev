@@ -271,6 +271,10 @@ public class SpatialVarCalc {
 	}
 	
 	public GeoDataSet calcRandomShakeMap(GeoDataSet input, Matrix S, int p) {
+		return calcRandomShakeMap(input, S, p, Double.NaN);
+	}
+	
+	public GeoDataSet calcRandomShakeMap(GeoDataSet input, Matrix S, int p, double truncation) {
 		Preconditions.checkState(S.getRowDimension() == periods.length);
 		Preconditions.checkState(S.getColumnDimension() == numSites);
 		Preconditions.checkState(p >= 0 && p < periods.length);
@@ -280,6 +284,12 @@ public class SpatialVarCalc {
 			double lnOrig = Math.log(ret.get(i));
 //			double lnRes = Math.log(S.get(p, i));
 			double lnRes = S.get(p, i);
+			if (truncation > 0) {
+				if (lnRes >= 0)
+					lnRes = Math.min(truncation, lnRes);
+				else
+					lnRes = Math.max(-truncation, lnRes);
+			}
 			ret.set(i, Math.exp(lnOrig+lnRes));
 		}
 		return ret;
