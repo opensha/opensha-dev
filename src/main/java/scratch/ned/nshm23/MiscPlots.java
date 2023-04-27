@@ -33,6 +33,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultM
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships_StableContinental;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -75,6 +76,8 @@ public class MiscPlots {
 		sh09_funcMod.setName("Width Limited, From Moment");
 		ArbitrarilyDiscretizedFunc ellB_func = new ArbitrarilyDiscretizedFunc();
 		ellB_func.setName("LogA+4.2, From Moment");
+		ArbitrarilyDiscretizedFunc ellC_func = new ArbitrarilyDiscretizedFunc();
+		ellC_func.setName("LogA+4.3, From Moment");
 		ArbitrarilyDiscretizedFunc hb_func = new ArbitrarilyDiscretizedFunc();
 		hb_func.setName("HANKS_BAKUN_08, From Moment");
 		ArbitrarilyDiscretizedFunc ellA_sqrtL_func = new ArbitrarilyDiscretizedFunc();
@@ -88,6 +91,7 @@ public class MiscPlots {
 		NSHM23_ScalingRelationships ellA = NSHM23_ScalingRelationships.LOGA_C4p1;
 		NSHM23_ScalingRelationships sh09_Mod = NSHM23_ScalingRelationships.WIDTH_LIMITED;
 		NSHM23_ScalingRelationships ellB = NSHM23_ScalingRelationships.LOGA_C4p2;
+		NSHM23_ScalingRelationships ellC = NSHM23_ScalingRelationships.LOGA_C4p3;
 		ScalingRelationships hb = ScalingRelationships.HANKS_BAKUN_08;
 		NSHM23_ScalingRelationships ellA_sqrtL = NSHM23_ScalingRelationships.LOGA_C4p1_SQRT_LEN;
 		NSHM23_ScalingRelationships sh12_csd = NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD;
@@ -103,6 +107,7 @@ public class MiscPlots {
     		ellA_func.set(lengthKm,ellA.getAveSlip(area, length, downDipWidth*1e3, downDipWidth*1e3, rake));
     		sh09_funcMod.set(lengthKm,sh09_Mod.getAveSlip(area, length, downDipWidth*1e3, downDipWidth*1e3, rake));
     		ellB_func.set(lengthKm,ellB.getAveSlip(area, length, downDipWidth*1e3, downDipWidth*1e3, rake));
+    		ellC_func.set(lengthKm,ellC.getAveSlip(area, length, downDipWidth*1e3, downDipWidth*1e3, rake));
     		hb_func.set(lengthKm,hb.getAveSlip(area, length, downDipWidth*1e3, downDipWidth*1e3, rake));
     		ellA_sqrtL_func.set(lengthKm,ellA_sqrtL.getAveSlip(area, length, downDipWidth*1e3, downDipWidth*1e3, rake));
     		ellB_sqrtL_func.set(lengthKm,ellB_sqrtL.getAveSlip(area, length, downDipWidth*1e3, downDipWidth*1e3, rake));
@@ -114,7 +119,8 @@ public class MiscPlots {
     	funcs.add(ellA_func);
     	funcs.add(ellB_func);
     	funcs.add(hb_func);
-    	funcs.add(sh12_csd_func);
+    	funcs.add(ellC_func);
+//    	funcs.add(sh12_csd_func);
     	funcs.add(ellA_sqrtL_func);
     	funcs.add(ellB_sqrtL_func);
     	
@@ -162,12 +168,15 @@ public class MiscPlots {
 		ellA_func.setName("LogA+4.1");
 		ArbitrarilyDiscretizedFunc ellB_func = new ArbitrarilyDiscretizedFunc();
 		ellB_func.setName("LogA+4.2");
+		ArbitrarilyDiscretizedFunc ellC_func = new ArbitrarilyDiscretizedFunc();
+		ellB_func.setName("LogA+4.3");
 		ArbitrarilyDiscretizedFunc hb_func = new ArbitrarilyDiscretizedFunc();
 		hb_func.setName("HANKS_BAKUN_08");
 		
 		NSHM23_ScalingRelationships sh09mod = NSHM23_ScalingRelationships.WIDTH_LIMITED;
 		NSHM23_ScalingRelationships ellA = NSHM23_ScalingRelationships.LOGA_C4p1;
 		NSHM23_ScalingRelationships ellB = NSHM23_ScalingRelationships.LOGA_C4p2;
+		NSHM23_ScalingRelationships ellC = NSHM23_ScalingRelationships.LOGA_C4p3;
 		ScalingRelationships hb = ScalingRelationships.HANKS_BAKUN_08;
 		
 		// log10 area from 1 to 5
@@ -177,6 +186,7 @@ public class MiscPlots {
      		sh09mod_func.set(area,sh09mod.getMag(area*1e6,1e3*area/downDipWidth, downDipWidth*1e3, downDipWidth*1e3, rake));
     		ellA_func.set(area,ellA.getMag(area*1e6,1e3*area/downDipWidth, downDipWidth*1e3, downDipWidth*1e3, rake));
     		ellB_func.set(area,ellB.getMag(area*1e6,1e3*area/downDipWidth, downDipWidth*1e3, downDipWidth*1e3, rake));
+    		ellC_func.set(area,ellC.getMag(area*1e6,1e3*area/downDipWidth, downDipWidth*1e3, downDipWidth*1e3, rake));
     		hb_func.set(area,hb.getMag(area*1e6,1e3*area/downDipWidth, downDipWidth*1e3, downDipWidth*1e3, rake));
     	}
     	
@@ -184,12 +194,14 @@ public class MiscPlots {
     	funcs.add(sh09mod_func);
     	funcs.add(ellA_func);
     	funcs.add(ellB_func);
+    	funcs.add(ellC_func);
     	funcs.add(hb_func);
     	
     	ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.BLUE));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.BLACK));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.MAGENTA));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.GREEN));
 
     	
@@ -509,82 +521,359 @@ public class MiscPlots {
 
 	
 	
-	public static void makeCEUS_ModelMFD_Plots(boolean saveFiles) {
+	public static void OLDmakeCEUS_ModelMFD_Plots(boolean saveFiles) {
 		
 //		File outputDir = new File("/tmp/wrapper_tests");
 //		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		Region region=null;
 		try {
-			region = AnalysisRegions.CONUS_EAST.load();
-//			region = SeismicityRegions.CONUS_EAST.load();
+//			region = AnalysisRegions.CONUS_EAST.load();
+			region = SeismicityRegions.CONUS_WEST.load();
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	
+		// Full MFDs
 		IncludeBackgroundOption bgOption = IncludeBackgroundOption.INCLUDE;
+		
 		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,TectonicRegionType.STABLE_SHALLOW);
-		Path erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.2.0");
+		Path erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.3.0");
 		NshmErf erf = new NshmErf(erfPath, trts, bgOption);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
-		SummedMagFreqDist mfd2018 = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
-		mfd2018.setName("2018 CEUS MFD full model");
-		
-//		GraphWindow graph = new GraphWindow(mfd2018, "mfd2018"); 
-//		graph.setX_AxisLabel("Magnitude");
-//		graph.setY_AxisLabel("Rate (per yr)");
-//		graph.setYLog(true);
-//		graph.setY_AxisRange(0.00001,20);
-//		graph.setPlotLabelFontSize(18);
-//		graph.setAxisLabelFontSize(18);
-//		graph.setTickLabelFontSize(16);
-
+		SummedMagFreqDist mfd2018_both = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+		mfd2018_both.setName("2018 CEUS MFD full model");
+		mfd2018_both.setInfo("rate >= m5 = "+(float)mfd2018_both.getTotalIncrRate());
 		
 		
-		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.a.5");
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.a.6");
 		erf = new NshmErf(erfPath, trts, bgOption);
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
-		SummedMagFreqDist mfd2023 = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
-		mfd2023.setName("2023 CEUS MFD full model");
+		SummedMagFreqDist mfd2023_both = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+		mfd2023_both.setName("2023 CEUS MFD full model");
+		mfd2023_both.setInfo("rate >= m5 = "+(float)mfd2023_both.getTotalIncrRate());
+		
+		
+		// Background MFDs
+		bgOption = IncludeBackgroundOption.ONLY;
+		trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,TectonicRegionType.STABLE_SHALLOW);
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.3.0");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		SummedMagFreqDist mfd2018_bg = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+		mfd2018_bg.setName("2018 CEUS MFD background only");
+		mfd2018_bg.setInfo("rate >= m5 = "+(float)mfd2018_bg.getTotalIncrRate());
+		
+		
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.a.6");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		SummedMagFreqDist mfd2023_bg = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+		mfd2023_bg.setName("2023 CEUS MFD background only");
+		mfd2023_bg.setInfo("rate >= m5 = "+(float)mfd2023_bg.getTotalIncrRate());
+
+		
+		// Fault MFDs
+		bgOption = IncludeBackgroundOption.EXCLUDE;
+		trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,TectonicRegionType.STABLE_SHALLOW);
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.3.0");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		SummedMagFreqDist mfd2018_faults = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+		mfd2018_faults.setName("2018 CEUS MFD faults only");
+		mfd2018_faults.setInfo("rate >= m5 = "+(float)mfd2018_faults.getTotalIncrRate());
+		
+		
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.a.6");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		SummedMagFreqDist mfd2023_faults = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+		mfd2023_faults.setName("2023 CEUS MFD faults only");
+		mfd2023_faults.setInfo("rate >= m5 = "+(float)mfd2023_faults.getTotalIncrRate());
+
+		
+//		// TEMP
+		GutenbergRichterMagFreqDist gr_CEUS = new GutenbergRichterMagFreqDist(5.05, 8.95, 40);
+//		GutenbergRichterMagFreqDist gr_CEUS_low = new GutenbergRichterMagFreqDist(5.05, 8.95, 40);
+//		GutenbergRichterMagFreqDist gr_CEUS_high = new GutenbergRichterMagFreqDist(5.05, 8.95, 40);
+//		gr_CEUS.setAllButTotMoRate(5.05, 8.95, 0.43,0.94);
+		gr_CEUS.setAllButTotMoRate(5.05, 8.95, mfd2023_both.getTotalIncrRate(),0.94);
+//		gr_CEUS_low.setAllButTotMoRate(5.05, 8.45, 0.37,0.98);
+//		gr_CEUS_high.setAllButTotMoRate(5.05, 8.45, 0.51,0.90);
+
 
 		ArrayList<EvenlyDiscretizedFunc> funcs = new ArrayList<EvenlyDiscretizedFunc>();
-    	funcs.add(mfd2018);
-    	funcs.add(mfd2018.getCumRateDistWithOffset());
-    	funcs.add(mfd2023);
-    	funcs.add(mfd2023.getCumRateDistWithOffset());
+    	funcs.add(mfd2018_both);
+    	funcs.add(mfd2023_both);
+    	funcs.add(mfd2018_bg);
+    	funcs.add(mfd2023_bg);
+    	funcs.add(mfd2018_faults);
+    	funcs.add(mfd2023_faults);
+    	funcs.add(gr_CEUS);
+    	
+		ArrayList<EvenlyDiscretizedFunc> funcsCumulative = new ArrayList<EvenlyDiscretizedFunc>();
+		funcsCumulative.add(mfd2018_both.getCumRateDistWithOffset());
+		funcsCumulative.add(mfd2023_both.getCumRateDistWithOffset());
+		funcsCumulative.add(mfd2018_bg.getCumRateDistWithOffset());
+		funcsCumulative.add(mfd2023_bg.getCumRateDistWithOffset());
+		funcsCumulative.add(mfd2018_faults.getCumRateDistWithOffset());
+		funcsCumulative.add(mfd2023_faults.getCumRateDistWithOffset());
+		funcsCumulative.add(gr_CEUS.getCumRateDistWithOffset());
+
      	
     	ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.BLUE));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.BLUE));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.BLUE));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, null, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, null, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.BLACK));
 
     	
 		GraphWindow graph = new GraphWindow(funcs, "CEUS Model MFDs",plotChars); 
 		graph.setX_AxisLabel("Magnitude");
-		graph.setY_AxisLabel("Incr. & Cumulative Rate (per yr)");
+		graph.setY_AxisLabel("Incremental Rate (per yr)");
 		graph.setYLog(true);
-//		graph.setX_AxisRange(50, 2e4);
-		graph.setY_AxisRange(0.00001,20);
+		graph.setX_AxisRange(5, 8.5);
+		graph.setY_AxisRange(1e-6,1);
 		graph.setPlotLabelFontSize(18);
 		graph.setAxisLabelFontSize(18);
 		graph.setTickLabelFontSize(16);
-//		
-//		if(saveFiles) {
-//			try {
-//				graph.saveAsPDF("CEUS_Model_MFDs_Plot.pdf");
-//			} catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
-	
+		
+		if(saveFiles) {
+			try {
+				graph.saveAsPDF("CEUS_Model_IncrMFDs_Plot.pdf");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		GraphWindow graphCum = new GraphWindow(funcsCumulative, "CEUS Model MFDs",plotChars); 
+		graphCum.setX_AxisLabel("Magnitude");
+		graphCum.setY_AxisLabel("Cumulative Rate (per yr)");
+		graphCum.setYLog(true);
+		graphCum.setX_AxisRange(5, 8.5);
+		graphCum.setY_AxisRange(1e-6,1);
+		graphCum.setPlotLabelFontSize(18);
+		graphCum.setAxisLabelFontSize(18);
+		graphCum.setTickLabelFontSize(16);
+		
+		if(saveFiles) {
+			try {
+				graphCum.saveAsPDF("CEUS_Model_CumMFDs_Plot.pdf");
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 
 	}
 	
+	
+	
+	public static void makeModelMFD_Plots(ArrayList<Region> regionList, boolean saveFiles) {
+		
+//		File outputDir = new File("/tmp/wrapper_tests");
+//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+			
+		// Full MFDs
+		IncludeBackgroundOption bgOption = IncludeBackgroundOption.INCLUDE;
+		
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,TectonicRegionType.STABLE_SHALLOW);
+		Path erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.3.0");
+		NshmErf erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		System.out.println("Done with ERF1");
+		ArrayList<SummedMagFreqDist> mfd2018_bothList= new ArrayList<SummedMagFreqDist>();
+		for(Region region:regionList) {
+			System.out.println("\tworking on "+region.getName());
+			SummedMagFreqDist mfd2018_both = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+			mfd2018_both.setName("2018 full model MFD, "+region.getName());
+			mfd2018_both.setInfo("rate >= m5 = "+(float)mfd2018_both.getTotalIncrRate());
+			mfd2018_bothList.add(mfd2018_both);
+		}
+		
+		
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.a.6");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		System.out.println("Done with ERF2");
+		ArrayList<SummedMagFreqDist> mfd2023_bothList= new ArrayList<SummedMagFreqDist>();
+		for(Region region:regionList) {
+			System.out.println("\tworking on "+region.getName());
+			SummedMagFreqDist mfd2023_both = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+			mfd2023_both.setName("2023 full model MFD, "+region.getName());
+			mfd2023_both.setInfo("rate >= m5 = "+(float)mfd2023_both.getTotalIncrRate());
+			mfd2023_bothList.add(mfd2023_both);
+		}
+		
+		
+		// Background MFDs
+		bgOption = IncludeBackgroundOption.ONLY;
+		trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,TectonicRegionType.STABLE_SHALLOW);
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.3.0");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		System.out.println("Done with ERF3");
+		ArrayList<SummedMagFreqDist> mfd2018_bgList= new ArrayList<SummedMagFreqDist>();
+		for(Region region:regionList) {
+			System.out.println("\tworking on "+region.getName());
+			SummedMagFreqDist mfd2018_bg = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+			mfd2018_bg.setName("2018 background only MFD, "+region.getName());
+			mfd2018_bg.setInfo("rate >= m5 = "+(float)mfd2018_bg.getTotalIncrRate());	
+			mfd2018_bgList.add(mfd2018_bg);
+		}
+
+		
+		
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.a.6");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		System.out.println("Done with ERF4");
+		ArrayList<SummedMagFreqDist> mfd2023_bgList= new ArrayList<SummedMagFreqDist>();
+		for(Region region:regionList) {
+			System.out.println("\tworking on "+region.getName());
+			SummedMagFreqDist mfd2023_bg = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+			mfd2023_bg.setName("2023 background only MFD, "+region.getName());
+			mfd2023_bg.setInfo("rate >= m5 = "+(float)mfd2023_bg.getTotalIncrRate());	
+			mfd2023_bgList.add(mfd2023_bg);
+		}
+
+		
+		// Fault MFDs
+		bgOption = IncludeBackgroundOption.EXCLUDE;
+		trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW,TectonicRegionType.STABLE_SHALLOW);
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-5.3.0");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		System.out.println("Done with ERF5");
+		ArrayList<SummedMagFreqDist> mfd2018_faultsList= new ArrayList<SummedMagFreqDist>();
+		for(Region region:regionList) {
+			System.out.println("\tworking on "+region.getName());
+			SummedMagFreqDist mfd2018_faults = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+			mfd2018_faults.setName("2018 faults only MFD, "+region.getName());
+			mfd2018_faults.setInfo("rate >= m5 = "+(float)mfd2018_faults.getTotalIncrRate());
+			mfd2018_faultsList.add(mfd2018_faults);
+		}
+
+		
+		
+		erfPath = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.a.6");
+		erf = new NshmErf(erfPath, trts, bgOption);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		System.out.println("Done with ERF6");
+		ArrayList<SummedMagFreqDist> mfd2023_faultsList= new ArrayList<SummedMagFreqDist>();
+		for(Region region:regionList) {
+			System.out.println("\tworking on "+region.getName());
+			SummedMagFreqDist mfd2023_faults = ERF_Calculator.getMagFreqDistInRegion(erf, region, 5.05,40,0.1, true);
+			mfd2023_faults.setName("2023 faults only MFD, "+region.getName());
+			mfd2023_faults.setInfo("rate >= m5 = "+(float)mfd2023_faults.getTotalIncrRate());
+			mfd2023_faultsList.add(mfd2023_faults);
+		}
+
+    	ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, null, 1f, Color.BLUE));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, null, 1f, Color.RED));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, null, 1f, Color.BLACK));
+
+		
+//		// TEMP
+//		GutenbergRichterMagFreqDist gr_CEUS = new GutenbergRichterMagFreqDist(5.05, 8.95, 40);
+//		GutenbergRichterMagFreqDist gr_CEUS_low = new GutenbergRichterMagFreqDist(5.05, 8.95, 40);
+//		GutenbergRichterMagFreqDist gr_CEUS_high = new GutenbergRichterMagFreqDist(5.05, 8.95, 40);
+//		gr_CEUS.setAllButTotMoRate(5.05, 8.95, 0.43,0.94);
+//		gr_CEUS.setAllButTotMoRate(5.05, 8.95, mfd2023_both.getTotalIncrRate(),0.94);
+//		gr_CEUS_low.setAllButTotMoRate(5.05, 8.45, 0.37,0.98);
+//		gr_CEUS_high.setAllButTotMoRate(5.05, 8.45, 0.51,0.90);
+
+		for(int i=0;i<regionList.size();i++) {
+
+			Region region = regionList.get(i);
+
+
+
+			ArrayList<EvenlyDiscretizedFunc> funcs = new ArrayList<EvenlyDiscretizedFunc>();
+			funcs.add(mfd2018_bothList.get(i));
+			funcs.add(mfd2023_bothList.get(i));
+			funcs.add(mfd2018_bgList.get(i));
+			funcs.add(mfd2023_bgList.get(i));
+			funcs.add(mfd2018_faultsList.get(i));
+			funcs.add(mfd2023_faultsList.get(i));
+			//  	funcs.add(gr_CEUS);
+
+			ArrayList<EvenlyDiscretizedFunc> funcsCumulative = new ArrayList<EvenlyDiscretizedFunc>();
+			funcsCumulative.add(mfd2018_bothList.get(i).getCumRateDistWithOffset());
+			funcsCumulative.add(mfd2023_bothList.get(i).getCumRateDistWithOffset());
+			funcsCumulative.add(mfd2018_bgList.get(i).getCumRateDistWithOffset());
+			funcsCumulative.add(mfd2023_bgList.get(i).getCumRateDistWithOffset());
+			funcsCumulative.add(mfd2018_faultsList.get(i).getCumRateDistWithOffset());
+			funcsCumulative.add(mfd2023_faultsList.get(i).getCumRateDistWithOffset());
+			//		funcsCumulative.add(gr_CEUS.getCumRateDistWithOffset());
+			
+			GraphWindow graph = new GraphWindow(funcs, region.getName(),plotChars); 
+			graph.setX_AxisLabel("Magnitude");
+			graph.setY_AxisLabel("Incremental Rate (per yr)");
+			graph.setYLog(true);
+			graph.setX_AxisRange(5, 8.5);
+			graph.setY_AxisRange(1e-6,20);
+			graph.setPlotLabelFontSize(18);
+			graph.setAxisLabelFontSize(18);
+			graph.setTickLabelFontSize(16);
+			
+			if(saveFiles) {
+				try {
+					graph.saveAsPDF(region.getName().replace(" ", "_")+"_MFD_Plot.pdf");
+					graph.saveAsTXT(region.getName().replace(" ", "_")+"_MFD_Plot.txt");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			GraphWindow graphCum = new GraphWindow(funcsCumulative, region.getName(),plotChars); 
+			graphCum.setX_AxisLabel("Magnitude");
+			graphCum.setY_AxisLabel("Cumulative Rate (per yr)");
+			graphCum.setYLog(true);
+			graphCum.setX_AxisRange(5, 8.5);
+			graphCum.setY_AxisRange(1e-6,20);
+			graphCum.setPlotLabelFontSize(18);
+			graphCum.setAxisLabelFontSize(18);
+			graphCum.setTickLabelFontSize(16);
+			
+			if(saveFiles) {
+				try {
+					graphCum.saveAsPDF(region.getName().replace(" ", "_")+"_CumMFD_Plot.pdf");
+					graphCum.saveAsTXT(region.getName().replace(" ", "_")+"_CumMFD_Plot.txt");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+
+    	
+
+	}
 	
 	
 	/**
@@ -1088,8 +1377,9 @@ public class MiscPlots {
 
 
 
-
 	public static void main(String[] args) {
+		
+
 		
 		
 //		double wtArray[] = {0.1,0.2,0.2,0.25,0.25};
@@ -1100,18 +1390,54 @@ public class MiscPlots {
 
 //		double wtArray[] = {0.0,0.1,0.26,0.32,0.32};
 
+//		test();
 		
-		makeCEUS_ModelMFD_Plots(true);
+//		// Model MFD plots
+//		ArrayList<Region> regionList = new ArrayList<Region>();
+//		try {
+//			regionList.add(SeismicityRegions.CONUS_WEST.load());
+//			regionList.add(SeismicityRegions.CONUS_EAST.load());
+//			regionList.add(AnalysisRegions.CONUS_EAST.load());
+//			regionList.add(AnalysisRegions.CONUS_IMW.load());
+//			regionList.add(AnalysisRegions.CONUS_PNW.load());
+//			regionList.add(AnalysisRegions.CONUS_U3_RELM.load());
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//		makeModelMFD_Plots(regionList, true);
 		
 //		makeRegMFD_Plots(true);
 		
 //		makeMagAreaPlot(true);
-//		makeSlipLengthPlot(11, 1000, true);
+		makeSlipLengthPlot(11, 1000, true);
 		
 //		makeMagAreaPlot_StableContinental(true);
 //		
 //		PoissonDistribution pd;
 //		GammaDistribution gd;
+		
+		
+//		// write out region names
+//		Region region;
+//		try {
+//			region = SeismicityRegions.CONUS_WEST.load();
+//			System.out.println(region.getName());
+//			region = SeismicityRegions.CONUS_EAST.load();
+//			System.out.println(region.getName());
+//			region = AnalysisRegions.CONUS_EAST.load();
+//			System.out.println(region.getName());
+//			region = AnalysisRegions.CONUS_IMW.load();
+//			System.out.println(region.getName());
+//			region = AnalysisRegions.CONUS_PNW.load();
+//			System.out.println(region.getName());
+//			region = AnalysisRegions.CONUS_U3_RELM.load();
+//			System.out.println(region.getName());
+//
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//		System.exit(0);
+
 		
 
 	}
