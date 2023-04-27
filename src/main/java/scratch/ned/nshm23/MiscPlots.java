@@ -119,9 +119,9 @@ public class MiscPlots {
     	funcs.add(ellA_func);
     	funcs.add(ellB_func);
     	funcs.add(hb_func);
+    	funcs.add(sh12_csd_func);
+//    	funcs.add(ellA_sqrtL_func);
     	funcs.add(ellC_func);
-//    	funcs.add(sh12_csd_func);
-    	funcs.add(ellA_sqrtL_func);
     	funcs.add(ellB_sqrtL_func);
     	
     	ArrayList<PlotCurveCharacterstics> plotChars = new ArrayList<PlotCurveCharacterstics>();
@@ -130,7 +130,7 @@ public class MiscPlots {
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.RED));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.GREEN));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.MAGENTA));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.CYAN));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.GRAY));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.CYAN)); // this is same as the one above
 
     	
@@ -201,7 +201,7 @@ public class MiscPlots {
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.BLUE));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.BLACK));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.RED));
-		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.MAGENTA));
+		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.GRAY));
 		plotChars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, null, 1f, Color.GREEN));
 
     	
@@ -1408,7 +1408,7 @@ public class MiscPlots {
 		
 //		makeRegMFD_Plots(true);
 		
-//		makeMagAreaPlot(true);
+		makeMagAreaPlot(true);
 		makeSlipLengthPlot(11, 1000, true);
 		
 //		makeMagAreaPlot_StableContinental(true);
