@@ -136,6 +136,28 @@ public interface SimulationRotDProvider<E> extends Named {
 	/**
 	 * @param site
 	 * @param rupture
+	 * @param index
+	 * @return RotD50 PGA for the index-th simulation of rupture E at the given site
+	 * @throws IOException
+	 */
+	public double getPGA(Site site, E rupture, int index) throws IOException;
+	
+	/**
+	 * @param site
+	 * @param rupture
+	 * @return RotD50 PGA for each simulation of rupture E at the given site
+	 * @throws IOException
+	 */
+	public default List<Double> getPGAs(Site site, E rupture) throws IOException {
+		ArrayList<Double> list = new ArrayList<>();
+		for (int i=0; i<getNumSimulations(site, rupture); i++)
+			list.add(getPGA(site, rupture, i));
+		return list;
+	}
+	
+	/**
+	 * @param site
+	 * @param rupture
 	 * @param interval
 	 * @param index
 	 * @return RotD50 PGV for the index-th simulation of rupture E at the given site
@@ -165,6 +187,10 @@ public interface SimulationRotDProvider<E> extends Named {
 		if (imt == IMT.PGV) {
 			Preconditions.checkState(hasPGV(), "PGV not supported by this provider");
 			return getPGVs(site, rupture);
+		}
+		if (imt == IMT.PGA) {
+			Preconditions.checkState(hasPGA(), "PGA not supported by this provider");
+			return getPGAs(site, rupture);
 		}
 		if (imt.getParamName().equals(SA_Param.NAME)) {
 			double period = imt.getPeriod();
@@ -199,7 +225,7 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @param site
 	 * @return all ruptures which were simulated at the given site
 	 */
-	public Collection<E> getRupturesForSite(Site site);
+	public Collection<? extends E> getRupturesForSite(Site site);
 	
 	/**
 	 * @param site
@@ -226,6 +252,11 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @return true if PGV is available from this source
 	 */
 	public boolean hasPGV();
+	
+	/**
+	 * @return true if PGA is available from this source
+	 */
+	public boolean hasPGA();
 	
 	/**
 	 * @return true if significant durations are available from this source

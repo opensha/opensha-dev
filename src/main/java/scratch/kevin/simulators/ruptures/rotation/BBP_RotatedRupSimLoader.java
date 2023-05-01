@@ -112,5 +112,15 @@ public class BBP_RotatedRupSimLoader extends BBP_SimZipLoader implements Simulat
 			throws IOException {
 		throw new UnsupportedOperationException("not implemented");
 	}
+	
+	@Override
+	public double getPGA(Site site, RotationSpec rupture, int index) throws IOException {
+		throw new UnsupportedOperationException();
+	}
+	
+	@Override
+	public boolean hasPGA() {
+		return false;
+	}
 
 }

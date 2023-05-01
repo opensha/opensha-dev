@@ -61,6 +61,12 @@ public class SubSetSimulationRotDProvider<E> implements SimulationRotDProvider<E
 	}
 
 	@Override
+	public double getPGA(Site site, E rupture, int index) throws IOException {
+		Preconditions.checkState(ruptures.contains(rupture));
+		return simProv.getPGA(site, rupture, index);
+	}
+
+	@Override
 	public double getDuration(Site site, E rupture, DurationTimeInterval interval, int index) throws IOException {
 		Preconditions.checkState(ruptures.contains(rupture));
 		return simProv.getDuration(site, rupture, interval, index);
@@ -92,6 +98,11 @@ public class SubSetSimulationRotDProvider<E> implements SimulationRotDProvider<E
 	@Override
 	public boolean hasPGV() {
 		return simProv.hasPGV();
+	}
+
+	@Override
+	public boolean hasPGA() {
+		return simProv.hasPGA();
 	}
 
 	@Override

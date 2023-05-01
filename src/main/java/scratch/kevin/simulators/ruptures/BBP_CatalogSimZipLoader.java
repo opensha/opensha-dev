@@ -275,4 +275,14 @@ public class BBP_CatalogSimZipLoader extends BBP_SimZipLoader implements Simulat
 		return RSQSimUtils.getHypocenter(rupture);
 	}
 
+	@Override
+	public double getPGA(Site site, RSQSimEvent rupture, int index) throws IOException {
+		throw new UnsupportedOperationException();
+	}
+	
+	@Override
+	public boolean hasPGA() {
+		return false;
+	}
+
 }

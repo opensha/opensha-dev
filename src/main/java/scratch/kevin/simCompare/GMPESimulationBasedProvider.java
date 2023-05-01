@@ -30,12 +30,14 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 	private IMT[] saIMTs;
 	private double[] saPeriods;
 	private boolean hasPGV = false;
+	private boolean hasPGA = false;
 	private boolean hasDur = false;
 	
 	private NormalDistribution stdNorm;
 
 	private Table<Site, E, DiscretizedFunc[]> cache;
 	private Table<Site, E, double[]> pgvCache;
+	private Table<Site, E, double[]> pgaCache;
 	
 	public GMPESimulationBasedProvider(SimulationRotDProvider<E> simProv, List<? extends RuptureComparison<E>> comps,
 			String name, IMT[] imts) {
@@ -50,6 +52,8 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 				saIMTs.add(imt);
 			} else if (imt == IMT.PGV) {
 				hasPGV = true;
+			} else if (imt == IMT.PGA) {
+				hasPGA = true;
 			}
 		}
 		this.saPeriods = Doubles.toArray(saPeriods);
@@ -60,6 +64,7 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 		stdNorm = new NormalDistribution(new Well19937c(comps.size()), 0d, 1d);
 		cache = HashBasedTable.create();
 		pgvCache = HashBasedTable.create();
+		pgaCache = HashBasedTable.create();
 	}
 	
 	public void clearCache() {
@@ -125,12 +130,29 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 	}
 
 	@Override
+	public double getPGA(Site site, E rupture, int index) throws IOException {
+		if (pgaCache.contains(site, rupture))
+			return pgaCache.get(site, rupture)[index];
+		double[] pgas = new double[getNumSimulations(site, rupture)];
+		RuptureComparison<E> comp = compsMap.get(rupture);
+		Preconditions.checkNotNull(comp, "Comp not found for rupture: %s", rupture);
+		for (int i=0; i<pgas.length; i++) {
+			double logMean = comp.getLogMean(site, IMT.PGA);
+			double stdDev = comp.getStdDev(site, IMT.PGA);
+			double sample = stdNorm.sample();
+			pgas[i] = Math.exp(logMean + stdDev*sample);
+		}
+		pgvCache.put(site, rupture, pgas);
+		return pgas[index];
+	}
+
+	@Override
 	public int getNumSimulations(Site site, E rupture) {
 		return simProv.getNumSimulations(site, rupture);
 	}
 
 	@Override
-	public Collection<E> getRupturesForSite(Site site) {
+	public Collection<? extends E> getRupturesForSite(Site site) {
 		return simProv.getRupturesForSite(site);
 	}
 
@@ -147,6 +169,11 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 	@Override
 	public boolean hasPGV() {
 		return hasPGV;
+	}
+
+	@Override
+	public boolean hasPGA() {
+		return hasPGA;
 	}
 
 	@Override

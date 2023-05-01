@@ -74,8 +74,8 @@ import gov.usgs.earthquake.nshmp.model.NshmErf;
 class Regional_MFD_Plots {
 	
 	private static final File NSHM18 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0");
-	// TODO update
-	private static final File NSHM23_WRAPPED = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.a.6");
+	
+	private static final File NSHM23_WRAPPED = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.b.1");
 	
 	private static final File NSHM23_DIR = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 			+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
@@ -86,14 +86,14 @@ class Regional_MFD_Plots {
 	
 	// TODO update
 	private static final File METHODS_SOL = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_02_09-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/branch_avgs_combined.zip");
+				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/branch_avgs_combined.zip");
 
 	public static void main(String[] args) throws IOException {
-//		doCompCascadia();
+		doCompCascadia();
 		doCompU3();
 		doCompNSHM18();
-//		doCompEast();
-//		doMethodsCompU3();
+		doCompEast();
+		doMethodsCompU3();
 	}
 	
 	private static void doCompEast() throws IOException {

@@ -150,6 +150,11 @@ public class LightweightBBP_CatalogSimZipLoader extends BBP_SimZipLoader impleme
 	}
 
 	@Override
+	public double getPGA(Site site, Integer eventID, int index) throws IOException {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
 	public double getDuration(Site site, Integer eventID, DurationTimeInterval interval, int index)
 			throws IOException {
 		Preconditions.checkState(index == 0);
@@ -198,6 +203,11 @@ public class LightweightBBP_CatalogSimZipLoader extends BBP_SimZipLoader impleme
 	@Override
 	public Location getHypocenter(Integer rupture, int index) {
 		return null;
+	}
+
+	@Override
+	public boolean hasPGA() {
+		return false;
 	}
 
 }

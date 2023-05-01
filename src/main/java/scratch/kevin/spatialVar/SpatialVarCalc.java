@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.opensha.commons.data.CSVFile;
@@ -64,6 +65,23 @@ public class SpatialVarCalc {
 		Matrix B1 = new Matrix(periods.length, periods.length);
 		Matrix B2 = new Matrix(periods.length, periods.length);
 		Matrix B3 = new Matrix(periods.length, periods.length);
+		
+		double minSupportedPeriod = StatUtils.min(LothBaker2013_SpatialVarCalc.periods);
+		double maxSupportedPeriod = StatUtils.max(LothBaker2013_SpatialVarCalc.periods);
+		double[] modPeriods = new double[periods.length];
+		for (int i=0; i<modPeriods.length; i++) {
+			double period = periods[i];
+			Preconditions.checkState(period >= 0d);
+			if (period < minSupportedPeriod)
+				period = minSupportedPeriod;
+			if (period > maxSupportedPeriod)
+				period = maxSupportedPeriod;
+			if (period != periods[i])
+				System.out.println("WARNING: period of "+(float)periods[i]
+						+" out of range from Loth-Baker, using "+(float)period);
+			modPeriods[i] = period;
+		}
+		periods = modPeriods;
 		
 		// interpolate b matrices at the given periods
 		for (int i=0; i<periods.length; i++) {

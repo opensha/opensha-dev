@@ -9,7 +9,7 @@ public class LothBaker2013_SpatialVarCalc {
 	 */
 	static final double[][] b1, b2, b3;
 	
-	private static final double[] periods = { 0.01, 0.1, 0.2, 0.5, 1, 2, 5, 7.5, 10};
+	static final double[] periods = { 0.01, 0.1, 0.2, 0.5, 1, 2, 5, 7.5, 10};
 	
 	static {
 		b1 = new double[periods.length][];
