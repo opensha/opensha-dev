@@ -1114,7 +1114,7 @@ public class WUS_HazardChangePageGen {
 		
 		double[] magThresholds = {5d, 6.5d, 7.5};
 		
-		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.2.0");
+		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0");
 		boolean subduction = false;
 		
 		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW, TectonicRegionType.STABLE_SHALLOW);

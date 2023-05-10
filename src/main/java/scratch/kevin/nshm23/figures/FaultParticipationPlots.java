@@ -17,7 +17,7 @@ class FaultParticipationPlots {
 
 	public static void main(String[] args) throws IOException {
 		File solFile = new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
 		
 		FaultSystemSolution sol = FaultSystemSolution.load(solFile);

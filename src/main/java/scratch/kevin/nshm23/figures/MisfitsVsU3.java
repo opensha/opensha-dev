@@ -27,7 +27,7 @@ class MisfitsVsU3 {
 	public static void main(String[] args) throws IOException {
 		File u3File = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged_full_modules.zip");
 		File newFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_20-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_FM3_1_CoulombRupSet_NoClassic_branch_averaged.zip");
 		String newName = "NSHM23 Methodology"; String prefixAdd = "_no_classic";
 //				+ "results_FM3_1_CoulombRupSet_branch_averaged.zip");

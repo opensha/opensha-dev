@@ -26,9 +26,9 @@ class PaleoZTablesBuilder {
 	public static void main(String[] args) throws IOException {
 		File u3SolFile = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged_full_modules.zip");
 		File nshm23MethodologyDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File nshm23ModelDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures");
 		
@@ -47,7 +47,7 @@ class PaleoZTablesBuilder {
 		caNames.add("NSHM23 Methodology");
 		
 		for (NSHM23_PaleoUncertainties uncert : NSHM23_PaleoUncertainties.values()) {
-			File solFile = new File(nshm23MethodologyDir, "node_branch_averaged/PaleoUncert_"+uncert.getFilePrefix()+".zip");
+			File solFile = new File(nshm23MethodologyDir, "node_branch_averaged_FM3_1/PaleoUncert_"+uncert.getFilePrefix()+".zip");
 			caSols.add(FaultSystemSolution.load(solFile));
 			caNames.add("NSHM23 Methodology, "+uncert.getShortName().replace("F", "-F"));
 		}

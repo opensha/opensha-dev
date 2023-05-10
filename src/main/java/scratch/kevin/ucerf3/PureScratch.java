@@ -3429,12 +3429,22 @@ public class PureScratch {
 	
 	private static final void test220() throws IOException {
 		File dir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File ltFile = new File(dir, "logic_tree.json");
 		LogicTree<?> tree = LogicTree.read(ltFile);
-		tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
 		
-		tree.write(new File(dir, "logic_tree_no_classic.json"));
+//		tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
+//		tree.write(new File(dir, "logic_tree_no_classic.json"));
+		
+//		tree = tree.matchingNone(FaultModels.FM3_2).matchingNone(NSHM23_SegmentationModels.CLASSIC);
+//		tree.write(new File(dir, "logic_tree_FM3_1_no_classic.json"));
+		
+//		tree = tree.matchingNone(FaultModels.FM31_2);
+//		tree.write(new File(dir, "logic_tree_FM3_1.json"));
+		
+		tree = tree.matchingNone(FaultModels.FM3_1);
+		tree.write(new File(dir, "logic_tree_FM3_2.json"));
 	}
 	
 	private static final void test221() throws IOException {
@@ -3900,7 +3910,7 @@ public class PureScratch {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test235();
+		test220();
 	}
 
 }

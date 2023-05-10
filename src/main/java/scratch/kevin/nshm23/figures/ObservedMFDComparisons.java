@@ -47,7 +47,7 @@ public class ObservedMFDComparisons {
 	
 	public static void main(String[] args) throws IOException {
 		File invDir = new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File nodeDir = new File(invDir, "node_branch_averaged");
 		File meanSolFile = new File(invDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
 		File ltFile = new File(invDir, "logic_tree.json");

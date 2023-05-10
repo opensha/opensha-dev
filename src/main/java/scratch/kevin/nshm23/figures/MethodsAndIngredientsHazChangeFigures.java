@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -50,8 +51,8 @@ import com.google.common.base.Preconditions;
 public class MethodsAndIngredientsHazChangeFigures {
 	
 	public static void main(String[] args) throws IOException {
-//		doCA();
-		doWUS();
+		doCA();
+//		doWUS();
 	}
 	
 	public static void doCA() throws IOException {
@@ -60,10 +61,12 @@ public class MethodsAndIngredientsHazChangeFigures {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/u3_haz_change_maps");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
+		FileWriter logFW = new FileWriter(new File(outputDir, "log.txt"));
+		
 		FaultSystemRupSet rupSetU3 = FaultSystemRupSet.load(new File(
 				"/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip"));
 		FaultSystemRupSet rupSet23 = FaultSystemRupSet.load(new File(invsDir,
-				"2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		File u3Haz31File = new File(invsDir,
@@ -79,19 +82,19 @@ public class MethodsAndIngredientsHazChangeFigures {
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File u3_23GridHazFile = new File(invsDir,
-				"2023_02_09-u3-both_fms-ba_only-nshm23_gridded/"
+				"2023_05_08-u3-both_fms-ba_only-nshm23_gridded/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File methodsU3GridHazFile = new File(invsDir,
-				"2023_02_09-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-u3_gridded/"
+				"2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-u3_gridded/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File methods23GridHazFile = new File(invsDir,
-				"2023_02_09-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded/"
+				"2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File modelHazFile = new File(invsDir,
-				"2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		String entryName = "mean_map_pga_TWO_IN_50.txt";
@@ -126,15 +129,15 @@ public class MethodsAndIngredientsHazChangeFigures {
 		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
 		pDiffCPT.setNanColor(new Color(255, 255, 255, 0));
 		plotHazardChange(outputDir, "u3_converged_vs_u3", mapMakerU3, pDiffCPT, refReg, u3ConvergedMap, u3fm31Map,
-				"Converged UCERF3 vs UCERF3, % Change, "+hazLabel);
+				"Converged UCERF3 vs UCERF3, % Change, "+hazLabel, logFW);
 		plotHazardChange(outputDir, "methodology_vs_u3", mapMakerU3, pDiffCPT, refReg, methodsU3GridMap, u3Map,
-				"NSHM23 Methodology vs UCERF3, % Change, "+hazLabel);
+				"NSHM23 Methodology vs UCERF3, % Change, "+hazLabel, logFW);
 		plotHazardChange(outputDir, "ingredients", mapMaker23, pDiffCPT, refReg, modelMap, methods23GridMap,
-				"NSHM23 vs UCERF3 Ingredients, % Change, "+hazLabel);
+				"NSHM23 vs UCERF3 Ingredients, % Change, "+hazLabel, logFW);
 		plotHazardChange(outputDir, "full_change", mapMaker23, pDiffCPT, refReg, modelMap, u3_23GridMap,
-				"NSHM23 vs UCERF3, % Change, "+hazLabel);
+				"NSHM23 vs UCERF3, % Change, "+hazLabel, logFW);
 		plotHazardChange(outputDir, "test_method_grid_change", mapMakerU3, pDiffCPT, refReg, methods23GridMap, methodsU3GridMap,
-				"Methods, Grid23 vs GridU3, % Change, "+hazLabel);
+				"Methods, Grid23 vs GridU3, % Change, "+hazLabel, logFW);
 		
 		// attribution
 		CPT attributionCPT = getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse(), 10d, 50d);
@@ -175,14 +178,14 @@ public class MethodsAndIngredientsHazChangeFigures {
 		}
 		
 		int totNum = numMethod + numIngredient + numWithin;
-		System.out.println("Attribution stats:");
-		System.out.println("\tWithin 10%: "+pDF.format((double)numWithin/(double)totNum));
-		System.out.println("\tMethodology: "+pDF.format((double)numMethod/(double)totNum));
-		System.out.println("\tIngredients: "+pDF.format((double)numIngredient/(double)totNum));
-		System.out.println("Attribution stats, of those exceeding 10%:");
+		logPrint(logFW, "Attribution stats:");
+		logPrint(logFW, "\tWithin 10%: "+pDF.format((double)numWithin/(double)totNum));
+		logPrint(logFW, "\tMethodology: "+pDF.format((double)numMethod/(double)totNum));
+		logPrint(logFW, "\tIngredients: "+pDF.format((double)numIngredient/(double)totNum));
+		logPrint(logFW, "Attribution stats, of those exceeding 10%:");
 		int numExceeding = totNum - numWithin;
-		System.out.println("\tMethodology: "+pDF.format((double)numMethod/(double)numExceeding));
-		System.out.println("\tIngredients: "+pDF.format((double)numIngredient/(double)numExceeding));
+		logPrint(logFW, "\tMethodology: "+pDF.format((double)numMethod/(double)numExceeding));
+		logPrint(logFW, "\tIngredients: "+pDF.format((double)numIngredient/(double)numExceeding));
 		
 		mapMaker23.plotXYZData(attXYZ, attributionCPT, "Methodology     ←     |Hazard % Change|     →     Ingredients");
 		PlotSpec plot = mapMaker23.buildPlot(" ");
@@ -223,6 +226,8 @@ public class MethodsAndIngredientsHazChangeFigures {
 				}
 			}
 		});
+		
+		logFW.close();
 	}
 	
 	public static void doWUS() throws IOException {
@@ -231,8 +236,10 @@ public class MethodsAndIngredientsHazChangeFigures {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/wus_haz_change_maps");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
+		FileWriter logFW = new FileWriter(new File(outputDir, "log.txt"));
+		
 		FaultSystemRupSet rupSet18 = FaultSystemRupSet.load(new File(invsDir,
-				"2023_01_25-nshm18_branches-new_scale-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				"2023_04_13-nshm18_branches-new_scale-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM18_WUS_PlusU3_FM_3p1_CoulombRupSet_branch_averaged.zip"));
 		FaultSystemRupSet rupSet23 = FaultSystemRupSet.load(new File(invsDir,
 				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
@@ -297,11 +304,11 @@ public class MethodsAndIngredientsHazChangeFigures {
 		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
 		pDiffCPT.setNanColor(new Color(255, 255, 255, 0));
 		plotHazardChange(outputDir, "methodology", mapMaker18, pDiffCPT, refReg, methods23GridMap, u3_23GridMap,
-				"NSHM23 Methodology vs NSHM18, % Change, "+hazLabel);
+				"NSHM23 Methodology vs NSHM18, % Change, "+hazLabel, logFW);
 		plotHazardChange(outputDir, "ingredients", mapMaker23, pDiffCPT, refReg, modelMap, methods23GridMap,
-				"NSHM23 vs NSHM18 Ingredients, % Change, "+hazLabel);
+				"NSHM23 vs NSHM18 Ingredients, % Change, "+hazLabel, logFW);
 		plotHazardChange(outputDir, "full_change", mapMaker23, pDiffCPT, refReg, modelMap, u3_23GridMap,
-				"NSHM23 vs NSHM18, % Change, "+hazLabel);
+				"NSHM23 vs NSHM18, % Change, "+hazLabel, logFW);
 //		plotHazardChange(outputDir, "test_method_grid_change", mapMaker18, pDiffCPT, refReg, methods23GridMap, methodsU3GridMap,
 //				"Methods, Grid23 vs GridU3, % Change, "+hazLabel);
 		
@@ -350,19 +357,19 @@ public class MethodsAndIngredientsHazChangeFigures {
 		}
 
 		plotHazardChange(outputDir, "grid_change", mapMaker23, pDiffCPT, refReg, modelMap, grid18PlusFaults23,
-				"NSHM23 vs NSHM18, Gridded, % Change, "+hazLabel);
+				"NSHM23 vs NSHM18, Gridded, % Change, "+hazLabel, logFW);
 		plotHazardChange(outputDir, "total_change", mapMaker23, pDiffCPT, refReg, modelMap, nshm18Map,
-				"NSHM23 vs NSHM18, Total, % Change, "+hazLabel);
+				"NSHM23 vs NSHM18, Total, % Change, "+hazLabel, logFW);
 		
 		int totNum = numMethod + numIngredient + numWithin;
-		System.out.println("Attribution stats:");
-		System.out.println("\tWithin 10%: "+pDF.format((double)numWithin/(double)totNum));
-		System.out.println("\tMethodology: "+pDF.format((double)numMethod/(double)totNum));
-		System.out.println("\tIngredients: "+pDF.format((double)numIngredient/(double)totNum));
-		System.out.println("Attribution stats, of those exceeding 10%:");
+		logPrint(logFW, "Attribution stats:");
+		logPrint(logFW, "\tWithin 10%: "+pDF.format((double)numWithin/(double)totNum));
+		logPrint(logFW, "\tMethodology: "+pDF.format((double)numMethod/(double)totNum));
+		logPrint(logFW, "\tIngredients: "+pDF.format((double)numIngredient/(double)totNum));
+		logPrint(logFW, "Attribution stats, of those exceeding 10%:");
 		int numExceeding = totNum - numWithin;
-		System.out.println("\tMethodology: "+pDF.format((double)numMethod/(double)numExceeding));
-		System.out.println("\tIngredients: "+pDF.format((double)numIngredient/(double)numExceeding));
+		logPrint(logFW, "\tMethodology: "+pDF.format((double)numMethod/(double)numExceeding));
+		logPrint(logFW, "\tIngredients: "+pDF.format((double)numIngredient/(double)numExceeding));
 		
 		mapMaker23.plotXYZData(attXYZ, attributionCPT, "Methodology     ←     |Hazard % Change|     →     Ingredients");
 		PlotSpec plot = mapMaker23.buildPlot(" ");
@@ -403,6 +410,13 @@ public class MethodsAndIngredientsHazChangeFigures {
 				}
 			}
 		});
+		
+		logFW.close();
+	}
+	
+	private static void logPrint(FileWriter fw, String line) throws IOException {
+		System.out.println(line);
+		fw.write(line+"\n");
 	}
 	
 	static GriddedGeoDataSet loadXYZ(File zipFile, String entryName) throws IOException {
@@ -520,7 +534,8 @@ public class MethodsAndIngredientsHazChangeFigures {
 	private static final DecimalFormat pDF = new DecimalFormat("0.00%");
 	
 	private static void plotHazardChange(File outputDir, String prefix, RupSetMapMaker mapMaker, CPT pDiffCPT,
-			GriddedRegion refReg, GriddedGeoDataSet numerator, GriddedGeoDataSet denominator, String label) throws IOException {
+			GriddedRegion refReg, GriddedGeoDataSet numerator, GriddedGeoDataSet denominator, String label,
+			FileWriter logFW) throws IOException {
 		GriddedGeoDataSet pDiff = new GriddedGeoDataSet(refReg, false);
 		
 		MinMaxAveTracker meanAbsTrack = new MinMaxAveTracker();
@@ -554,13 +569,13 @@ public class MethodsAndIngredientsHazChangeFigures {
 			}
 		}
 		
-		System.out.println("Plotting "+prefix+", "+label);
-		System.out.println("\tRange: ["+twoDigits.format(meanTrack.getMin())+"%, "+twoDigits.format(meanTrack.getMax())+"%]");
-		System.out.println("\tAverage: "+twoDigits.format(meanTrack.getAverage())+"%");
-		System.out.println("\tAverage Absolute: "+twoDigits.format(meanAbsTrack.getAverage())+"%");
-		System.out.println("\tWithin 1%: "+pDF.format((double)numWithin1/(double)numValid));
-		System.out.println("\tWithin 5%: "+pDF.format((double)numWithin5/(double)numValid));
-		System.out.println("\tWithin 10%: "+pDF.format((double)numWithin10/(double)numValid));
+		logPrint(logFW, "Plotting "+prefix+", "+label);
+		logPrint(logFW, "\tRange: ["+twoDigits.format(meanTrack.getMin())+"%, "+twoDigits.format(meanTrack.getMax())+"%]");
+		logPrint(logFW, "\tAverage: "+twoDigits.format(meanTrack.getAverage())+"%");
+		logPrint(logFW, "\tAverage Absolute: "+twoDigits.format(meanAbsTrack.getAverage())+"%");
+		logPrint(logFW, "\tWithin 1%: "+pDF.format((double)numWithin1/(double)numValid));
+		logPrint(logFW, "\tWithin 5%: "+pDF.format((double)numWithin5/(double)numValid));
+		logPrint(logFW, "\tWithin 10%: "+pDF.format((double)numWithin10/(double)numValid));
 		
 		
 		mapMaker.plotXYZData(pDiff, pDiffCPT, label);

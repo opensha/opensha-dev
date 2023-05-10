@@ -18,7 +18,7 @@ public class SlipZTablesBuilder {
 
 	public static void main(String[] args) throws IOException {
 		File mainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		boolean excludeClassic = true;
 		
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures");
@@ -28,7 +28,7 @@ public class SlipZTablesBuilder {
 		File nodeBADir;
 		if (excludeClassic) {
 			prefix += "_no_classic";
-			baSolFile = new File(mainDir, "tmp_ba_no_classic.zip");
+			baSolFile = new File(mainDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_no_classic.zip");
 			nodeBADir = new File(mainDir, "node_branch_averaged_no_classic");
 		} else {
 			baSolFile = new File(mainDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
@@ -67,6 +67,7 @@ public class SlipZTablesBuilder {
 				double[] slipSDs;
 				if (origUncert) {
 					NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV = Double.NaN;
+					NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV_UPPER_BOUND = Double.NaN;
 					List<? extends FaultSection> subSects = dm.build(fm);
 					slipSDs = new double[subSects.size()];
 					for (int s=0; s<slipSDs.length; s++)

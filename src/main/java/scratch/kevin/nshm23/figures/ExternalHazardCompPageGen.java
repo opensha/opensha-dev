@@ -33,31 +33,41 @@ public class ExternalHazardCompPageGen {
 	};
 	
 	public static void main(String[] args) throws IOException {
-//		String imtName = "PGA";
-//		String imtDir = "PGA";
+		String imtName = "PGA";
+		String imtDir = "PGA";
 		
-		String imtName = "1s SA";
-		String imtDir = "SA1P0";
+//		String imtName = "1s SA";
+//		String imtDir = "SA1P0";
 		
 		ReturnPeriods[] rps = ReturnPeriods.values();
 		
 		String name23 = "NSHM23";
 		String name18 = "NSHM18";
 		
+//		File outputDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+//				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+//				+ "nshmp-haz-comparisons-"+imtDir);
+//		double sourceSpacing = 0.1;
+//		File sourcesDir23 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
+//				+ "conus-2023-erf-6a6-all-vs760-0p1-20230203-fb449bf7b93c9c/vs30-760/"+imtDir+"/source");
+//		File sourcesDir18 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
+//				+ "conus-2018-530-all-vs760-0p1-20230203-3e0458e688c967/vs30-760/"+imtDir+"/source");
+		
 		File outputDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "nshmp-haz-comparisons-"+imtDir);
+		double sourceSpacing = 0.2;
 		File sourcesDir23 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
-				+ "conus-2023-erf-6a6-all-vs760-0p1-20230203-fb449bf7b93c9c/vs30-760/"+imtDir+"/source");
+				+ "2023_CONUS_v2_with_2018_GMMs_vs30_760_260_0p2_degree_map-0a280c9e774e8f/vs30-760/"+imtDir+"/source");
 		File sourcesDir18 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
-				+ "conus-2018-530-all-vs760-0p1-20230203-3e0458e688c967/vs30-760/"+imtDir+"/source");
+				+ "2018_CONUS_vs30_760_260_0p2_degree_map-8ff9f12645b149/vs30-760/"+imtDir+"/source");
 
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
 		GriddedRegion mapReg = new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousUS(),
-				0.1d, GriddedRegion.ANCHOR_0_0);
+				sourceSpacing, GriddedRegion.ANCHOR_0_0);
 		
 		List<Location> curveLocs = new ArrayList<>();
 		
