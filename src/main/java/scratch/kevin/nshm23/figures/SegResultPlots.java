@@ -28,8 +28,17 @@ public class SegResultPlots {
 		FaultSystemSolution noneSol = FaultSystemSolution.load(
 				new File(modelDir, "node_branch_averaged/SegModel_None.zip"));
 		
+		FaultSystemSolution lowSol = FaultSystemSolution.load(
+				new File(modelDir, "node_branch_averaged/SegModel_LowSeg.zip"));
+		
 		FaultSystemSolution middleSol = FaultSystemSolution.load(
 				new File(modelDir, "node_branch_averaged/SegModel_MidSeg.zip"));
+		
+		FaultSystemSolution highSol = FaultSystemSolution.load(
+				new File(modelDir, "node_branch_averaged/SegModel_HighSeg.zip"));
+		
+		FaultSystemSolution classicSol = FaultSystemSolution.load(
+				new File(modelDir, "node_branch_averaged/SegModel_ClassicSeg.zip"));
 		
 		ClusterRuptures cRups = fullSol.getRupSet().requireModule(ClusterRuptures.class);
 		PlausibilityConfiguration config = fullSol.getRupSet().requireModule(PlausibilityConfiguration.class);
@@ -38,12 +47,18 @@ public class SegResultPlots {
 		FaultSystemSolution[] sols = {
 				fullSol,
 				noneSol,
-				middleSol
+				lowSol,
+				middleSol,
+				highSol,
+				classicSol
 		};
 		String[] prefixes = {
 				"full_ba",
 				"none",
-				"middle"
+				"low",
+				"middle",
+				"high",
+				"classic"
 		};
 		
 		SegmentationCalculator.WRITE_PDFS = true;
