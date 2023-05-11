@@ -54,7 +54,7 @@ public class SeisGridPlotter {
 		RupSetMapMaker mapMaker = new RupSetMapMaker(subSects, region);
 		mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.5f, new Color(0, 0, 0, 80)));
 		mapMaker.setSectOutlineChar(null);
-		mapMaker.setWritePDFs(false);
+		mapMaker.setWritePDFs(true);
 		
 		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8d);
 		
