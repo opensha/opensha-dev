@@ -1,20 +1,17 @@
 package gov.usgs.earthquake.nshmp.model;
 
-import static org.opensha.sha.util.TectonicRegionType.ACTIVE_SHALLOW;
-
 import java.awt.geom.Point2D;
 import java.nio.file.Path;
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.Set;
 
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
-import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.param.Parameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
-import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -39,11 +36,17 @@ public class NshmErfTest {
 
   public static void main(String[] args) {
 
-    Set<TectonicRegionType> trts = EnumSet.of(ACTIVE_SHALLOW);
-    NshmErf erf = new NshmErf(MODEL, trts, IncludeBackgroundOption.EXCLUDE);
+    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.SUBDUCTION_INTERFACE);
+    HazardModel model = HazardModel.load(MODEL);
+    NshmErf erf = new NshmErf(model, trts, IncludeBackgroundOption.EXCLUDE);
     System.out.println("NSHM ERF size: " + erf.getNumSources());
-    erf.getTimeSpan().setDuration(50.0);
+    erf.getTimeSpan().setDuration(1.0);
     erf.updateForecast();
+    
+    System.out.println(Models.mfd(
+        model,
+        TectonicSetting.SUBDUCTION,
+        Optional.of(SourceType.INTERFACE)));
 
     for (ProbEqkSource src : erf) {
       // Source nshmSrc = ((NshmSource) src).delegate;
@@ -64,13 +67,13 @@ public class NshmErfTest {
       // }
       // }
 
-      for (ProbEqkRupture rup : src) {
-        LocationList locs = rup.getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface();
-        if (locs.size() < 1) {
-          System.out.println("Problem rupture: " + src.getName() + " " + locs.size());
-          break;
-        }
-      }
+//      for (ProbEqkRupture rup : src) {
+//        LocationList locs = rup.getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface();
+//        if (locs.size() < 1) {
+//          System.out.println("Problem rupture: " + src.getName() + " " + locs.size());
+//          break;
+//        }
+//      }
     }
 
     // calcHazard(erf);

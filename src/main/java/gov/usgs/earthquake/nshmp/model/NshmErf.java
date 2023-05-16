@@ -79,9 +79,18 @@ public class NshmErf extends AbstractERF {
     // nshmp-haz initializers
     Multimap<TectonicSetting, SourceTree> trees = model.trees();
     for (Entry<TectonicSetting, SourceTree> entry : trees.entries()) {
+      
       TectonicSetting setting = entry.getKey();
-      if (setting == TectonicSetting.SUBDUCTION && !subInterface && !subSlab) {
-        continue;
+      SourceTree tree = entry.getValue();
+      SourceType type = tree.type();
+      
+      if (setting == TectonicSetting.SUBDUCTION) {
+        if (type == SourceType.INTERFACE && !subInterface ) {
+          continue;
+        }
+        if (type == SourceType.SLAB && !subSlab) {
+          continue;
+        }
       }
       if (setting == TectonicSetting.STABLE_CRUST && !stableCrust) {
         continue;
@@ -93,8 +102,6 @@ public class NshmErf extends AbstractERF {
         continue;
       }
 
-      SourceTree tree = entry.getValue();
-      SourceType type = tree.type();
       TectonicRegionType trt = NshmUtil.tectonicSettingToType(setting, type);
       List<NshmSource> sources = initTree(tree);
       sources.forEach(s -> s.setTectonicRegionType(trt));
@@ -117,6 +124,21 @@ public class NshmErf extends AbstractERF {
     tree.stream()
         .map(branch -> sourcesFromBranch(branch, duration))
         .forEach(sources::addAll);
+    
+//    tree.stream()
+//        .map(branch -> {
+//          List<NshmSource> brSrcs = sourcesFromBranch(branch, duration);
+//          if (brSrcs.size() > 0) {
+//            System.out.println("type: " + branch.value().type());
+//          }
+//          return brSrcs;
+//        })
+//        .forEach(list -> {
+////          if (list.size() > 0) {
+////            System.out.println("br: " + list.get(0).getTectonicRegionType());
+////          }
+//          sources.addAll(list);
+//        });
     return sources;
   }
 
