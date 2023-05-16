@@ -117,6 +117,21 @@ public class NshmErf extends AbstractERF {
     tree.stream()
         .map(branch -> sourcesFromBranch(branch, duration))
         .forEach(sources::addAll);
+    
+//    tree.stream()
+//        .map(branch -> {
+//          List<NshmSource> brSrcs = sourcesFromBranch(branch, duration);
+//          if (brSrcs.size() > 0) {
+//            System.out.println("type: " + branch.value().type());
+//          }
+//          return brSrcs;
+//        })
+//        .forEach(list -> {
+////          if (list.size() > 0) {
+////            System.out.println("br: " + list.get(0).getTectonicRegionType());
+////          }
+//          sources.addAll(list);
+//        });
     return sources;
   }
 
