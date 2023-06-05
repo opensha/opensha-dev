@@ -59,6 +59,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.LocalRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.NSHM23_BaseRegion;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.StitchedRegions;
 import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -90,10 +91,10 @@ class Regional_MFD_Plots {
 
 	public static void main(String[] args) throws IOException {
 		doCompCascadia();
-		doCompU3();
+//		doCompU3();
 		doCompNSHM18();
 		doCompEast();
-		doMethodsCompU3();
+//		doMethodsCompU3();
 	}
 	
 	private static void doCompEast() throws IOException {
@@ -184,7 +185,8 @@ class Regional_MFD_Plots {
 				LocalRegions.CONUS_LA_BASIN,
 				LocalRegions.CONUS_NEW_MADRID,
 				LocalRegions.CONUS_PUGET,
-				LocalRegions.CONUS_WASATCH
+				LocalRegions.CONUS_WASATCH,
+				StitchedRegions.CONUS_WEST
 		};
 		
 		FaultSystemSolution modelSol = FaultSystemSolution.load(NSHM23_SOL);

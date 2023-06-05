@@ -173,7 +173,8 @@ class SupraBValFigure {
 		
 		// now plot tot rate as a function of bval
 		xRange = new Range(-1d, 2d);
-		yRange = new Range(1e-3, 1e-1);
+//		yRange = new Range(1e-3, 1e-1);
+		yRange = new Range(2e-3, 1e-1);
 		EvenlyDiscretizedFunc bRateFunc = new EvenlyDiscretizedFunc(xRange.getLowerBound(), xRange.getUpperBound(), 1000);
 		for (int i=0; i<bRateFunc.size(); i++) {
 			double bVal = bRateFunc.getX(i);
@@ -200,6 +201,72 @@ class SupraBValFigure {
 		
 		funcs.add(bRateFunc);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		
+		// now add the char+GR sums
+		double totRateGR1 = grPlusChar1.calcSumOfY_Vals();
+		double totRateGR2 = grPlusChar2.calcSumOfY_Vals();
+		System.out.println("GR+char rate1: "+totRateGR1);
+		System.out.println("GR+char rate2: "+totRateGR2);
+		double transBCrossover = 1.12;
+		DefaultXY_DataSet grPlusCharXY1 = new DefaultXY_DataSet();
+		double grB1 = bRateFunc.getFirstInterpolatedX(totRateGR1);
+		grPlusCharXY1.set(transBCrossover, totRateGR1);
+		grPlusCharXY1.set(xRange.getUpperBound(), totRateGR1);
+		DefaultXY_DataSet grPlusCharXY2 = new DefaultXY_DataSet();
+		double grB2 = bRateFunc.getFirstInterpolatedX(totRateGR2);
+		grPlusCharXY2.set(transBCrossover, totRateGR2);
+		grPlusCharXY2.set(xRange.getUpperBound(), totRateGR2);
+		Color darkGreen = Color.GREEN.darker();
+		Color brightGreen = Color.GREEN.brighter();
+		funcs.add(grPlusCharXY1);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, darkGreen));
+		funcs.add(grPlusCharXY2);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, brightGreen));
+		grPlusCharXY1 = new DefaultXY_DataSet();
+		grPlusCharXY1.set(grB1, totRateGR1);
+		grPlusCharXY1.set(transBCrossover, totRateGR1);
+		grPlusCharXY2 = new DefaultXY_DataSet();
+		grPlusCharXY2.set(grB2, totRateGR2);
+		grPlusCharXY2.set(transBCrossover, totRateGR2);
+		funcs.add(grPlusCharXY1);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f,
+				new Color(darkGreen.getRed(), darkGreen.getGreen(), darkGreen.getBlue(), 120)));
+		funcs.add(grPlusCharXY2);
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f,
+				new Color(brightGreen.getRed(), brightGreen.getGreen(), brightGreen.getBlue(), 120)));
+		DefaultXY_DataSet grDot1 = new DefaultXY_DataSet();
+		grDot1.set(grB1, totRateGR1);
+		DefaultXY_DataSet grDot2 = new DefaultXY_DataSet();
+		grDot2.set(grB2, totRateGR2);
+		funcs.add(grDot1);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 4f, darkGreen));
+		funcs.add(grDot2);
+		chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 4f, brightGreen));
+//		double transBCrossover = 1.12;
+//		DefaultXY_DataSet grPlusCharXY1 = new DefaultXY_DataSet();
+//		grPlusCharXY1.set(transBCrossover, totRateGR1);
+//		grPlusCharXY1.set(xRange.getUpperBound(), totRateGR1);
+//		DefaultXY_DataSet grPlusCharXY2 = new DefaultXY_DataSet();
+//		grPlusCharXY2.set(transBCrossover, totRateGR2);
+//		grPlusCharXY2.set(xRange.getUpperBound(), totRateGR2);
+//		Color darkGreen = Color.GREEN.darker();
+//		Color brightGreen = Color.GREEN.brighter();
+//		funcs.add(grPlusCharXY1);
+//		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, darkGreen));
+//		funcs.add(grPlusCharXY2);
+//		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, brightGreen));
+//		grPlusCharXY1 = new DefaultXY_DataSet();
+//		grPlusCharXY1.set(xRange.getLowerBound(), totRateGR1);
+//		grPlusCharXY1.set(transBCrossover, totRateGR1);
+//		grPlusCharXY2 = new DefaultXY_DataSet();
+//		grPlusCharXY2.set(xRange.getLowerBound(), totRateGR2);
+//		grPlusCharXY2.set(transBCrossover, totRateGR2);
+//		funcs.add(grPlusCharXY1);
+//		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f,
+//				new Color(darkGreen.getRed(), darkGreen.getGreen(), darkGreen.getBlue(), 120)));
+//		funcs.add(grPlusCharXY2);
+//		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f,
+//				new Color(brightGreen.getRed(), brightGreen.getGreen(), brightGreen.getBlue(), 120)));
 		
 		List<XYTextAnnotation> anns = new ArrayList<>();
 		
@@ -244,9 +311,21 @@ class SupraBValFigure {
 		ann.setFont(font);
 		anns.add(ann);
 		ann = new XYTextAnnotation("  Min Rate: "+(int)(1d/rateMaxRup+0.5)+" yrs",
-				xRange.getLowerBound(), rateMaxRup);
-		ann.setTextAnchor(TextAnchor.TOP_LEFT);
+				xRange.getLowerBound(), logShift(rateMaxRup, 0.01));
+		ann.setTextAnchor(TextAnchor.BASELINE_LEFT);
 		ann.setFont(font);
+		anns.add(ann);
+		
+		ann = new XYTextAnnotation("½ G-R, ½ Char ",
+				xRange.getUpperBound(), logShift(totRateGR1, 0.01));
+		ann.setTextAnchor(TextAnchor.BASELINE_RIGHT);
+		ann.setFont(font);
+		anns.add(ann);
+		ann = new XYTextAnnotation("⅔ G-R, ⅓ Char ",
+				xRange.getUpperBound(), logShift(totRateGR2, 0.01));
+		ann.setTextAnchor(TextAnchor.BASELINE_RIGHT);
+		ann.setFont(font);
+		anns.add(ann);
 		anns.add(ann);
 		
 		spec = new PlotSpec(funcs, chars, " ", "G-R b-value", "Cumulative Rate (1/yr)");
@@ -255,7 +334,7 @@ class SupraBValFigure {
 		gp.drawGraphPanel(spec, false, true, xRange, yRange);
 		PlotUtils.setXTick(gp, 0.5);
 		
-		PlotUtils.writePlots(outputDir, prefix+"_cml_bVal", gp, 800, 750, true, true, false);
+		PlotUtils.writePlots(outputDir, prefix+"_cml_bVal", gp, 850, 800, true, true, false);
 		
 //		scale.getma
 		

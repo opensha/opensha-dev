@@ -12,6 +12,7 @@ import java.util.Set;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
@@ -22,8 +23,11 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -41,6 +45,20 @@ public class WUS_EastOfAttenBoundaryMFDs {
 		File outputDir = new File("/tmp");
 		
 		Region stableWUS = Region.intersect(stableReg, wusReg);
+		
+		SeismicityRegions seisReg = SeismicityRegions.CONUS_WEST;
+		for (NSHM23_DeclusteringAlgorithms decluster : NSHM23_DeclusteringAlgorithms.values()) {
+			for (NSHM23_SeisSmoothingAlgorithms smooth : NSHM23_SeisSmoothingAlgorithms.values()) {
+				GriddedGeoDataSet pdf = smooth.loadXYZ(seisReg, decluster);
+				double fractInReg = 0d;
+				for (int i=0; i<pdf.size(); i++) {
+					if (stableWUS.contains(pdf.getLocation(i)))
+						fractInReg += pdf.get(i);
+				}
+				fractInReg /= pdf.getSumZ();
+				System.out.println(decluster.getShortName()+", "+smooth.getShortName()+":\t"+(float)fractInReg);
+			}
+		}
 		
 		Feature.write(stableWUS.toFeature(), new File(outputDir, "wus_reg_east_of_atten.geojson"));
 		

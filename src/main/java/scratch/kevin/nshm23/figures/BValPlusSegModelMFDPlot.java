@@ -1,16 +1,23 @@
 package scratch.kevin.nshm23.figures;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.ChartRenderingInfo;
+import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -49,6 +56,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.S
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
@@ -107,11 +115,15 @@ public class BValPlusSegModelMFDPlot {
 //				new PlotCurveCharacterstics(PlotLineType.DASHED, lineThickness, PlotSymbol.BOLD_CROSS, symbolWidth, null),
 //		};
 		
+		boolean includeObsUncert = false;
+		
 		double[] sectFractsInReg = region == null ? null : fullRupSet.getFractSectsInsideRegion(region, false);
 		UncertainBoundedIncrMagFreqDist observedIncr = null;
 		UncertainIncrMagFreqDist observedIncrBounds = null;
 		EvenlyDiscretizedFunc observedCml = null;
 		UncertainArbDiscFunc observedCmlBounds = null;
+		double obsRateM5 = Double.NaN;
+		double obsBVal = Double.NaN;
 		if (region != null) {
 			EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
 			observedIncr = NSHM23_RegionalSeismicity.getRemapped(region,
@@ -120,6 +132,10 @@ public class BValPlusSegModelMFDPlot {
 			observedIncr.setBoundName("95% Bounds");
 			observedIncrBounds = observedIncr.deepClone();
 			observedIncrBounds.setName(observedIncr.getBoundName());
+			
+			obsRateM5 = observedIncr.getCumRate(observedIncr.getClosestXIndex(5.01));
+			obsBVal = ((GutenbergRichterMagFreqDist)NSHM23_RegionalSeismicity.PREFFERRED.build(
+					NSHM23_RegionLoader.SeismicityRegions.CONUS_WEST, refMFD, 8.95)).get_bValue();
 			
 			// add observed bounds
 			observedCml = Regional_MFD_Plots.getCmlAsFakeIncr(observedIncr);
@@ -177,30 +193,39 @@ public class BValPlusSegModelMFDPlot {
 			List<DiscretizedFunc> segCmlFuncs = new ArrayList<>();
 			List<PlotCurveCharacterstics> segCmlChars = new ArrayList<>();
 			
+			Color obsColor = null;
 			if (!mini && observedIncr != null) {
-				Color obsColor = new Color(125, 80, 145); // "indigo"
+				obsColor = new Color(125, 80, 145); // "indigo"
 				PlotCurveCharacterstics obsChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, obsColor);
 				PlotCurveCharacterstics obsBoundsChar = new PlotCurveCharacterstics(
 						PlotLineType.SHADED_UNCERTAIN, 1f, new Color(obsColor.getRed(), obsColor.getGreen(), obsColor.getBlue(), 40));
 				bValIncrFuncs.add(observedIncr);
 				bValIncrChars.add(obsChar);
-				bValIncrFuncs.add(observedIncrBounds);
-				bValIncrChars.add(obsBoundsChar);
+				if (includeObsUncert) {
+					bValIncrFuncs.add(observedIncrBounds);
+					bValIncrChars.add(obsBoundsChar);
+				}
 				
 				segIncrFuncs.add(observedIncr);
 				segIncrChars.add(obsChar);
-				segIncrFuncs.add(observedIncrBounds);
-				segIncrChars.add(obsBoundsChar);
+				if (includeObsUncert) {
+					segIncrFuncs.add(observedIncrBounds);
+					segIncrChars.add(obsBoundsChar);
+				}
 				
 				bValCmlFuncs.add(observedCml);
 				bValCmlChars.add(obsChar);
-				bValCmlFuncs.add(observedCmlBounds);
-				bValCmlChars.add(obsBoundsChar);
+				if (includeObsUncert) {
+					bValCmlFuncs.add(observedCmlBounds);
+					bValCmlChars.add(obsBoundsChar);
+				}
 				
 				segCmlFuncs.add(observedCml);
 				segCmlChars.add(obsChar);
-				segCmlFuncs.add(observedCmlBounds);
-				segCmlChars.add(obsBoundsChar);
+				if (includeObsUncert) {
+					segCmlFuncs.add(observedCmlBounds);
+					segCmlChars.add(obsBoundsChar);
+				}
 			}
 			
 			for (int b=0; b<bVals.length; b++) {
@@ -305,6 +330,8 @@ public class BValPlusSegModelMFDPlot {
 			String xAxisName = "Magnitude";
 			Range xRange = mini ? new Range(6.5d, 7.5d) : new Range(6d, 8.5d);
 			Range yRange = mini ? new Range(1e-8, 1e-3) : new Range(1e-4, 2e0);
+			int width = 800;
+			int height = 750;
 			
 			for (boolean seg : new boolean[] {true,false}) {
 				List<DiscretizedFunc> incrFuncs = seg ? segIncrFuncs : bValIncrFuncs;
@@ -360,7 +387,7 @@ public class BValPlusSegModelMFDPlot {
 					avg.scale(1d/binnedIncrs.size());
 					
 					Color color = colors.get(i);
-					color = new Color(color.getRed()*0.95f/255f, color.getGreen()*0.95f/255f, color.getBlue()*0.95f/255f);
+//					color = new Color(color.getRed()*0.95f/255f, color.getGreen()*0.95f/255f, color.getBlue()*0.95f/255f);
 					PlotCurveCharacterstics pChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, color);
 					
 					avg.setName(names.get(i));
@@ -410,17 +437,75 @@ public class BValPlusSegModelMFDPlot {
 				gp.setAxisLabelFontSize(26);
 				gp.setTickLabelFontSize(22);
 				
+				if (obsColor != null) {
+					// figure out angle corresponding to b-value
+					double obsAtX0 = observedCml.getInterpolatedY(xRange.getLowerBound());
+					double obsAtX1 = observedCml.getInterpolatedY(xRange.getUpperBound());
+					
+					double fractDeltaX = 1d; // full x-range
+					double logYRange = Math.log10(yRange.getUpperBound()) - Math.log10(yRange.getLowerBound());
+					double fractDeltaY = (Math.log10(obsAtX0) - Math.log10(obsAtX1)) / logYRange;
+					System.out.println("Calculated fractDeltaX="+(float)fractDeltaX+", fractDeltaY="+(float)fractDeltaY);
+					
+					// figure out actual widths
+					gp.drawGraphPanel(incrSpec, false, true, xRange, yRange);
+					
+					ChartRenderingInfo chartInfo = new ChartRenderingInfo();
+					// this forces it to actually render
+					ChartPanel cp = gp.getChartPanel();
+					cp.getChart().createBufferedImage(width, height, chartInfo);
+					Rectangle2D plotArea = chartInfo.getPlotInfo().getDataArea();
+					double myWidth = plotArea.getWidth();
+					double myHeight = plotArea.getHeight();
+					
+					System.out.println("Calculated plot area width="+(float)myWidth+", height="+(float)myHeight);
+					
+					double rise = fractDeltaY*myHeight;
+					double run = fractDeltaX*myWidth;
+					System.out.println("Calculated rise="+(float)rise+", run="+(float)run);
+					
+					double angle = Math.atan(rise/run);
+					System.out.println("Calculated angle: "+(float)angle+" rad, "+(float)Math.toDegrees(angle)+" deg");
+					
+					DecimalFormat oDF = new DecimalFormat("0.##");
+					String text = "Extrapolated from N5="+oDF.format(obsRateM5)+", b="+oDF.format(obsBVal)+"  ";
+					
+					double x = xRange.getUpperBound();
+					double y = Math.pow(10, Math.log10(obsAtX1) + 0.02*logYRange);
+					XYTextAnnotation ann = new XYTextAnnotation(text, x, y);
+					ann.setTextAnchor(TextAnchor.BASELINE_RIGHT);
+					ann.setRotationAnchor(TextAnchor.BASELINE_RIGHT);
+					ann.setRotationAngle(angle);
+					ann.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+					ann.setPaint(obsColor);
+					
+					cmlSpec.addPlotAnnotation(ann);
+					
+					if (seg) {
+						System.out.println("\nFull average fractions of observed:");
+						int startIndex = observedCml.getClosestXIndex(5.01);
+						System.out.println("Mag\tObs\tFault\tFract");
+						for (int i=startIndex; i<observedCml.size(); i++) {
+							double mag = observedCml.getX(i);
+							double obsRate = observedCml.getY(i);
+							double faultRate = cml.getY(cml.getClosestXIndex(mag));
+							System.out.println(oDF.format(mag)+"\t"+(float)obsRate+"\t"+(float)faultRate+"\t"+(float)(faultRate/obsRate));
+						}
+						System.out.println();
+					}
+				}
+				
 				gp.drawGraphPanel(incrSpec, false, true, xRange, yRange);
 				
 				String prefix = (mini ? "mini" : "full")+"_"+(seg ? "seg" : "bval")+"_mfds";
 				if (regPrefix != null)
 					prefix = regPrefix+"_"+prefix;
 				
-				PlotUtils.writePlots(outputDir, prefix+"_incr", gp, 800, 750, true, true, false);
+				PlotUtils.writePlots(outputDir, prefix+"_incr", gp, width, height, true, true, false);
 				
 				gp.drawGraphPanel(cmlSpec, false, true, xRange, yRange);
 				
-				PlotUtils.writePlots(outputDir, prefix+"_cml", gp, 800, 750, true, true, false);
+				PlotUtils.writePlots(outputDir, prefix+"_cml", gp, width, height, true, true, false);
 			}
 		}
 	}

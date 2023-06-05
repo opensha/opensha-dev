@@ -215,6 +215,7 @@ import scratch.UCERF3.utils.FaultSectionDataWriter;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
+import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 import scratch.kevin.simCompare.SiteHazardCurveComarePageGen;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -2883,8 +2884,8 @@ public class PureScratch {
 	
 	private static void test201() throws IOException {
 		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_11_22-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
-				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		List<NSHM23_ScalingRelationships> scales = new ArrayList<>();
 		List<ScalingRelSlipRateMFD_Estimator> estimators = new ArrayList<>();
@@ -3905,12 +3906,99 @@ public class PureScratch {
 		System.out.println("Count >6.5: "+count);
 	}
 	
+	private static final void test236() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+		
+		double[] minLengths = { 500d, 600d, 700d, 800d };
+		
+		double[] allLenghts = rupSet.getLengthForAllRups();
+		double[] allMags = rupSet.getMagForAllRups();
+		
+		for (int i=0; i<minLengths.length; i++) {
+			double minLength = minLengths[i];
+			MinMaxAveTracker track = new MinMaxAveTracker();
+			MinMaxAveTracker rangeTrack = new MinMaxAveTracker();
+			MinMaxAveTracker ddwTrack = new MinMaxAveTracker();
+			double minLenthM = minLength*1e3;
+			double nextLenM = i == minLengths.length-1 ? Double.POSITIVE_INFINITY : minLengths[i+1]*1e3;
+			for (int r=0; r<allLenghts.length; r++) {
+				if (allLenghts[r] >= minLenthM) {
+					track.addValue(allMags[r]);
+					if (allLenghts[r] <= nextLenM) {
+						rangeTrack.addValue(allMags[r]);
+						List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(r);
+						double ddw = 0d;
+						double totLen = 0d;
+						for (FaultSection sect : sects) {
+							double sectLen = sect.getFaultTrace().getTraceLength();
+							ddw += sect.getReducedDownDipWidth()*sectLen;
+							totLen += sectLen;
+						}
+						ddw /= totLen;
+						ddwTrack.addValue(ddw);;
+					}
+				}
+			}
+			
+			System.out.println("Min Length: "+(float)minLength+" km");
+			System.out.println("\tMags: "+track);
+			System.out.println("\tMags Until Next: "+rangeTrack);
+			System.out.println("\tDDWs: "+ddwTrack);
+		}
+		
+		double ddw = 12d;
+		NSHM23_ScalingRelationships[] scales = {
+				NSHM23_ScalingRelationships.LOGA_C4p2,
+				NSHM23_ScalingRelationships.AVERAGE
+		};
+		
+		for (NSHM23_ScalingRelationships scale : scales) {
+			System.out.println(scale.getName()+", "+(float)ddw+" km DDW");
+			for (double minLength : minLengths) {
+				double area = ddw*minLength*1e6;
+				double mag = scale.getMag(area, minLength*1e3, ddw*1e3, ddw*1e3, 90d);
+				System.out.println("\t"+(float)minLength+" km: "+(float)mag);
+			}
+		}
+	}
+	
+	private static final void test237() throws IOException {
+		File dir = new File("/home/kevin/git/opensha-fault-sys-tools/data");
+		
+		List<GeoJSONFaultSection> ssafSects = GeoJSONFaultReader.readFaultSections(new File(dir, "u3_ssaf_sub_sects.geojson"));
+		
+		FaultSystemRupSet u3RS = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip"));
+		PaleoseismicConstraintData u3Datas = PaleoseismicConstraintData.loadUCERF3(u3RS);
+		
+		CSVFile<String> csv = new CSVFile<>(true);
+		
+		csv.addLine("Site Name", "Subsection Index", "Latitude", "Longitude", "Rate", "Rate Std Dev");
+		
+		HashSet<Integer> parents = new HashSet<>();
+		for (FaultSection sect : ssafSects)
+			parents.add(sect.getParentSectionId());
+		
+		for (SectMappedUncertainDataConstraint constr : u3Datas.getPaleoRateConstraints()) {
+			FaultSection sect = u3RS.getFaultSectionData(constr.sectionIndex);
+			if (parents.contains(sect.getParentSectionId())) {
+				// match
+				csv.addLine(constr.name, "-1", (float)constr.dataLocation.getLatitude()+"",
+						(float)constr.dataLocation.getLongitude()+"", (float)constr.bestEstimate+"",
+						(float)constr.getPreferredStdDev()+"");
+			}
+		}
+		
+		csv.writeToFile(new File(dir, "u3_ssaf_paleo_data.csv"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test220();
+		test237();
 	}
 
 }

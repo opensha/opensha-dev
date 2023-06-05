@@ -223,13 +223,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * NSHM23 logic tree
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
-		dirName += "-nshm23_u3_hybrid_branches";
-		double avgNumRups = 325000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
+//		dirName += "-nshm23_u3_hybrid_branches";
+//		double avgNumRups = 325000;
 		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-//		dirName += "-nshm23_branches";
-//		double avgNumRups = 600000;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+		dirName += "-nshm23_branches";
+		double avgNumRups = 600000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches-wc_94";
@@ -444,7 +444,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 //				NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1,
 //				NSHM23_FaultModels.NSHM23_v1p4,
-//				NSHM23_FaultModels.NSHM23_v2,
+				NSHM23_FaultModels.NSHM23_v2,
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
@@ -475,7 +475,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
-				SlipAlongRuptureModels.UNIFORM,
+//				SlipAlongRuptureModels.UNIFORM,
 //				SlipAlongRuptureModels.TAPERED,
 				
 				// SUB-SECT CONSTRAINT
