@@ -24,7 +24,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
@@ -50,7 +50,7 @@ public class MagExceedProbFigure {
 		
 		Range xRange = new Range(5d, 8.25d);
 		
-		EvenlyDiscretizedFunc refIncrFunc = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.5);
+		EvenlyDiscretizedFunc refIncrFunc = FaultSysTools.initEmptyMFD(8.5);
 		EvenlyDiscretizedFunc refCmlFunc = null;
 		
 		ArbDiscrEmpiricalDistFunc[][] dists = new ArbDiscrEmpiricalDistFunc[durations.length][refIncrFunc.size()];

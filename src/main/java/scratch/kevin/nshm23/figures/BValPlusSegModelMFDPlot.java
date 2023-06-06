@@ -40,6 +40,7 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
@@ -125,7 +126,7 @@ public class BValPlusSegModelMFDPlot {
 		double obsRateM5 = Double.NaN;
 		double obsBVal = Double.NaN;
 		if (region != null) {
-			EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
+			EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.95);
 			observedIncr = NSHM23_RegionalSeismicity.getRemapped(region,
 					NSHM23_DeclusteringAlgorithms.AVERAGE, NSHM23_SeisSmoothingAlgorithms.AVERAGE, refMFD, refMFD.getMaxX());
 			observedIncr.setName("Observed");

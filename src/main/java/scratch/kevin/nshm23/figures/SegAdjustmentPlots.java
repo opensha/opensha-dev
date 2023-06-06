@@ -43,6 +43,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionClust
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.SectNucleationMFD_Estimator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.SegmentationImpliedSectNuclMFD_Estimator;
@@ -188,7 +189,7 @@ public class SegAdjustmentPlots {
 		double[] maxMultiFaultMags = { 7.45d, 7.45d };
 		
 		double maxMag = StatUtils.max(maxMultiFaultMags);
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(maxMag);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(maxMag);
 		
 		int maxSingleIndex = refMFD.getClosestXIndex(maxSingleFaultMag);
 		int maxMagIndex = refMFD.getClosestXIndex(maxMag);

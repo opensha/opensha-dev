@@ -21,7 +21,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchParentSectParticMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 import com.google.common.base.Preconditions;
@@ -29,7 +29,7 @@ import com.google.common.base.Preconditions;
 public class SectMFD_Plots {
 	
 	public static void main(String[] args) throws IOException {
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.95);
 		
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/sect_mfds");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());

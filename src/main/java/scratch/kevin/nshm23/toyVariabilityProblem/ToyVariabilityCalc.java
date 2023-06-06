@@ -56,6 +56,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.ModelRegion;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SectSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
@@ -183,7 +184,7 @@ public class ToyVariabilityCalc {
 		
 		System.out.println("build "+rupSet.getNumRuptures()+" ruptures. Mag range: "+rupSet.getMinMag()+", "+rupSet.getMaxMag());
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(rupSet);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(rupSet);
 		int minMagIndex = refMFD.getClosestXIndex(rupSet.getMinMag());
 		int maxMagIndex = refMFD.getClosestXIndex(rupSet.getMaxMag());
 		int[] mfdRupCounts = new int[refMFD.size()];

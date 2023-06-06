@@ -23,13 +23,13 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchAveragingOrder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs.MFDType;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -58,7 +58,7 @@ public class EndMemberBranchMFDs {
 		BranchRegionalMFDs regMFDs = baSol.requireModule(BranchRegionalMFDs.class);
 		RegionsOfInterest roi = baSol.getRupSet().getModule(RegionsOfInterest.class);
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.45);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.45);
 		
 		Region fullRegion = NSHM23_RegionLoader.loadFullConterminousWUS();
 		IncrementalMagFreqDist obsMFD = NSHM23_RegionalSeismicity.getRemapped(fullRegion,

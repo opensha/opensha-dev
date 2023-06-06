@@ -36,10 +36,10 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeBranchAverageBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
@@ -67,7 +67,7 @@ public class ObservedUncertainMFDComparisons {
 		
 		Range magRage = new Range(6d, 8.5d);
 		Range yRange = new Range(1e-6, 2e0);
-		EvenlyDiscretizedFunc refIncrMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.45);
+		EvenlyDiscretizedFunc refIncrMFD = FaultSysTools.initEmptyMFD(8.45);
 		
 		int endYear = 2023;
 		int[] startYears = { 1850, 1900, 1930 };

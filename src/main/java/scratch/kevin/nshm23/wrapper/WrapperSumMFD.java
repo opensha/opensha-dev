@@ -7,8 +7,8 @@ import java.util.Set;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -32,7 +32,7 @@ public class WrapperSumMFD {
 		erf.getTimeSpan().setDuration(1.0);
 		erf.updateForecast();
 		
-		EvenlyDiscretizedFunc refXVals = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.5);
+		EvenlyDiscretizedFunc refXVals = FaultSysTools.initEmptyMFD(8.5);
 		IncrementalMagFreqDist mfd = new IncrementalMagFreqDist(refXVals.getMinX(), refXVals.getMaxX(), refXVals.size());
 		
 		for (ProbEqkSource src : erf) {

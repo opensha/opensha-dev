@@ -27,6 +27,7 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
@@ -46,7 +47,7 @@ class BValueSumCartoon {
 		
 		double[] bVals = { 0d, 0.5d, 1d };
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(magRange.getUpperBound()+0.1);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(magRange.getUpperBound()+0.1);
 		
 		List<List<IncrementalMagFreqDist>> bValSectGRs = new ArrayList<>();
 		List<IncrementalMagFreqDist> bValSums = new ArrayList<>();

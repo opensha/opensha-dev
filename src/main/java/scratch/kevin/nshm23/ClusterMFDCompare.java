@@ -21,7 +21,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 
@@ -93,7 +92,7 @@ public class ClusterMFDCompare {
 	
 	private static void mfdComparison(FaultSystemSolution sol, ConnectivityCluster cluster) {
 		FaultSystemRupSet rupSet = sol.getRupSet();
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(rupSet);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(rupSet);
 		
 		SummedMagFreqDist summedTarget = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
 		SummedMagFreqDist summedSolution = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());

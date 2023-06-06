@@ -44,6 +44,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.pr
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.ConnectivityCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RuptureTreeNavigator;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
@@ -188,7 +189,7 @@ public class SegAdjustPageGen {
 		
 		Map<Jump, BitSet> jumpMagBins = new HashMap<>();
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(rupSet);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(rupSet);
 		// figure out which jumps use which mag bins
 		for (int r=0; r<cRups.size(); r++) {
 			int magBin = refMFD.getClosestXIndex(rupSet.getMagForRup(r));

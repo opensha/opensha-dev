@@ -1360,7 +1360,7 @@ public class PureScratch {
 				funcs.add(target);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, color));
 			} else {
-				refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(sol.getRupSet());
+				refMFD = FaultSysTools.initEmptyMFD(sol.getRupSet());
 			}
 			IncrementalMagFreqDist nucl = sol.calcNucleationMFD_forSect(
 					sectIndex, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
@@ -1849,7 +1849,7 @@ public class PureScratch {
 	}
 	
 	private static void test158() {
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.5d);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.5d);
 		double totMoRate = 1e17;
 		GutenbergRichterMagFreqDist gr1 = new GutenbergRichterMagFreqDist(
 				refMFD.getMinX(), refMFD.size(), refMFD.getDelta(), totMoRate, -0.5);
@@ -1972,7 +1972,7 @@ public class PureScratch {
 	}
 	
 	private static void test167() throws IOException {
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8d);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8d);
 		
 		int index5 = refMFD.getClosestXIndex(5.01d);
 		GutenbergRichterMagFreqDist fullGR = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
@@ -2098,7 +2098,7 @@ public class PureScratch {
 			}
 		}
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(rupSet);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(rupSet);
 		System.out.println(sol.calcParticipationMFD_forParentSect(parentID, refMFD.getMinX(), refMFD.getMaxX(), refMFD.size()));
 	}
 	
@@ -2479,7 +2479,7 @@ public class PureScratch {
 	}
 	
 	private static void test193() throws IOException {
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(10d);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(10d);
 		
 		GutenbergRichterMagFreqDist gr1 = new GutenbergRichterMagFreqDist(
 				refMFD.getMinX(), refMFD.size(), refMFD.getDelta(), 1e16, 1d);
@@ -3389,7 +3389,7 @@ public class PureScratch {
 		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
 		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.95);
 		
 		IncrementalMagFreqDist supraMFD = sol.calcNucleationMFD_forRegion(region,
 				refMFD.getMinX(), refMFD.getMaxX(), refMFD.getDelta(), false);
@@ -3855,7 +3855,7 @@ public class PureScratch {
 		
 		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/fm3_1_ucerf3.zip"));
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.55);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.55);
 		
 		for (int i=0; i<names.size(); i++) {
 			IncrementalMagFreqDist mfd = sol.calcParticipationMFD_forParentSect(ids.get(i), refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
@@ -3993,12 +3993,78 @@ public class PureScratch {
 		csv.writeToFile(new File(dir, "u3_ssaf_paleo_data.csv"));
 	}
 	
+	private static EvenlyDiscretizedFunc origBuildRefXValues(double maxRupSetMag) {
+		// figure out MFD bounds
+		// go up to at least ceil(maxMag)
+		int NUM_MAG = 0;
+		double MIN_MAG = 0.05;
+		double DELTA_MAG = 0.1;
+		
+		while (true) {
+			double nextMag = MIN_MAG + (NUM_MAG+1)*DELTA_MAG;
+			double nextMagLower = nextMag - 0.5*DELTA_MAG;
+			NUM_MAG++;
+//			System.out.println("nextMag="+nextMag+", nextMagLower="+nextMagLower);
+			if ((float)nextMagLower > (float)maxRupSetMag)
+				// done
+				break;
+		}
+		
+		NUM_MAG++; // pad by a bin, it makes plots prettier
+		EvenlyDiscretizedFunc ret = new EvenlyDiscretizedFunc(MIN_MAG, NUM_MAG, DELTA_MAG);
+		
+		double upperBin = ret.getMaxX() + 0.5*DELTA_MAG;
+		Preconditions.checkState((float)maxRupSetMag <= (float)upperBin,
+				"Bad MFD gridding with maxMag=%s, upperBinCenter=%s, upperBinEdge=%s",
+				maxRupSetMag, ret.get(NUM_MAG-1).getX(), upperBin);
+		
+		return ret;
+	}
+	
+	private static final void test238() {
+		double DELTA_MAG = 0.1;
+		
+		// round to DELTA_MAG precision and place in the closest bin center
+		Random rand = new Random();
+		
+		int num = 100000;
+		int printNum = 50;
+		int printMod = Integer.max(1, num/printNum);
+		
+		for (int i=0; i<10000; i++) {
+			double minMag = (rand.nextInt(4))+rand.nextDouble();
+//			double minMag = (rand.nextInt(6)-1)+rand.nextDouble();
+			double maxMag = (rand.nextInt(4)+5)+rand.nextDouble();
+			
+			EvenlyDiscretizedFunc mfd = FaultSysTools.initEmptyMFD(minMag, maxMag);
+			if (i % printNum == 0) {
+				System.out.println("min="+(float)minMag+"\tmax="+(float)maxMag);
+				System.out.println("\tSnapped:\tmin="+(float)mfd.getMinX()+"\tmax="+(float)mfd.getMaxX()+"\tsize="+mfd.size());
+			}
+			
+			// now make sure it returns the same as before, but just with maxMag moving
+			mfd = FaultSysTools.initEmptyMFD(maxMag);
+			EvenlyDiscretizedFunc prevMFD = origBuildRefXValues(maxMag);
+			Preconditions.checkState(mfd.getMinX() == prevMFD.getMinX());
+			Preconditions.checkState(mfd.getMaxX() == prevMFD.getMaxX());
+			Preconditions.checkState(mfd.size() == prevMFD.size());
+			
+			// now snap to nearest 0.05 and test again
+			maxMag = Math.round(maxMag*20d)/20d;
+			mfd = FaultSysTools.initEmptyMFD(maxMag);
+			prevMFD = origBuildRefXValues(maxMag);
+			Preconditions.checkState(mfd.getMinX() == prevMFD.getMinX());
+			Preconditions.checkState(mfd.getMaxX() == prevMFD.getMaxX());
+			Preconditions.checkState(mfd.size() == prevMFD.size());
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test237();
+		test238();
 	}
 
 }

@@ -54,7 +54,6 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.LocalRegions;
@@ -116,7 +115,7 @@ class Regional_MFD_Plots {
 			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
 		}
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.95);
 
 		System.out.println("Calculating NSHM23 MFDs");
 		Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> modelMFDs = calcModelMFDs(nshm23, trts, analysis, refMFD);
@@ -150,7 +149,7 @@ class Regional_MFD_Plots {
 		HazardModel nshm23 = HazardModel.load(NSHM23_WRAPPED.toPath());
 		HazardModel nshm18 = HazardModel.load(NSHM18.toPath());
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(9.45);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(9.45);
 
 		System.out.println("Calculating NSHM23 MFDs");
 		Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> modelMFDs = calcCascadiaModelMFDs(nshm23, analysis, refMFD);
@@ -191,7 +190,7 @@ class Regional_MFD_Plots {
 		
 		FaultSystemSolution modelSol = FaultSystemSolution.load(NSHM23_SOL);
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.95);
 		
 		System.out.println("Calculating Model MFDs");
 		Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> modelMFDs = calcSolMFDs(modelSol, analysis, refMFD);
@@ -245,7 +244,7 @@ class Regional_MFD_Plots {
 		
 		FaultSystemSolution modelSol = FaultSystemSolution.load(NSHM23_SOL);
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.95);
 		
 		System.out.println("Calculating U3 MFDs");
 		Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> u3MFDs = calcSolMFDs(u3Sol, analysis, refMFD);
@@ -290,7 +289,7 @@ class Regional_MFD_Plots {
 		
 		FaultSystemSolution modelSol = FaultSystemSolution.load(NSHM23_SOL);
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(8.95);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.95);
 		
 		System.out.println("Calculating U3 MFDs");
 		Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> u3MFDs = calcSolMFDs(u3Sol, analysis, refMFD);

@@ -15,7 +15,7 @@ import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.util.Interpolate;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
@@ -51,7 +51,7 @@ public class SubSeisReductionTests {
 		double slipRate = 10e-3; // 10 mm/yr
 		double area = 15d*7.5d*1e6; // m^2
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(supraMMax+0.2);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(supraMMax+0.2);
 		
 		int minSubIndex = refMFD.getClosestXIndex(minReductionMag);
 		int minMagIndex = refMFD.getClosestXIndex(supraMMin);

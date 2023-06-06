@@ -63,7 +63,6 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -197,7 +196,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 			hasComp = true;
 		}
 		
-		EvenlyDiscretizedFunc refMFD = SupraSeisBValInversionTargetMFDs.buildRefXValues(maxMag);
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(maxMag);
 		
 		HazardCurveCalculator curveCalc = new HazardCurveCalculator();
 		
