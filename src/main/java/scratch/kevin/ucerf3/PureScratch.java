@@ -49,6 +49,7 @@ import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.siteData.impl.ThompsonVs30_2018;
 import org.opensha.commons.data.siteData.impl.ThompsonVs30_2020;
+import org.opensha.commons.data.siteData.impl.WaldAllenGlobalVs30;
 import org.opensha.commons.data.uncertainty.BoundedUncertainty;
 import org.opensha.commons.data.uncertainty.UncertainBoundedDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
@@ -95,6 +96,7 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.modules.ModuleArchive;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.ProbEqkRupture;
@@ -116,10 +118,13 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeC
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultCubeAssociations;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfits;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionTargetMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ModelRegion;
 import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
@@ -154,6 +159,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilde
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder.ParkfieldSelectionCriteria;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_FaultCubeAssociations;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels.MinisectionSlipRecord;
@@ -4059,12 +4065,127 @@ public class PureScratch {
 		}
 	}
 	
+	private static final void test239() throws IOException {
+		FaultSystemSolution fss = FaultSystemSolution.load(new File("/path/to/FM3_1_branch_averaged.zip"));
+
+		int fssIndex = 1234;
+		
+		// the solution has rate information
+		double rate = fss.getRateForRup(fssIndex);
+		
+		// the solution contains a rupture set that has rupture information
+		FaultSystemRupSet rupSet = fss.getRupSet();
+		double mag = rupSet.getMagForRup(fssIndex);
+		// rupture geometry
+		RuptureSurface surface = rupSet.getSurfaceForRupture(fssIndex, 1d);
+		// etc, we need to document this better but haven't yet
+	}
+	
+	private static final void test240() throws IOException {
+		NSHM23_LogicTreeBranch branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
+		System.out.println("Building ref branch rup set");
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		File testCacheDir = new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache");
+		if (testCacheDir.exists())
+			factory.setCacheDir(testCacheDir);
+		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
+		System.out.println("Building ref branch assoc");
+		Region region = rupSet.requireModule(ModelRegion.class).getRegion();
+		NSHM23_FaultCubeAssociations assoc = NSHM23_InvConfigFactory.buildFaultCubeAssociations(rupSet, branch, region);
+		
+		ModuleArchive<OpenSHA_Module> archive = new ModuleArchive<>();
+		archive.addModule(new FaultGridAssociations.Precomputed(assoc));
+		archive.write(new File("/tmp/fault_grid_assoc.zip"));
+		
+		archive = new ModuleArchive<>();
+		archive.addModule(new FaultCubeAssociations.Precomputed(assoc));
+		File cubeFile = new File("/tmp/fault_cube_assoc.zip");
+		archive.write(cubeFile);
+		
+		// now lazily load
+		archive = new ModuleArchive<>(cubeFile);
+		FaultCubeAssociations loaded = archive.requireModule(FaultCubeAssociations.class);
+		// and write without fully loading
+		archive.write(new File("/tmp/fault_cube_assoc_lazy_load.zip"));
+		// fully load it
+		loaded.getSectsAtCube(0);
+		archive.write(new File("/tmp/fault_cube_assoc_full_load.zip"));
+	}
+	
+	private static final void test241() throws IOException {
+		WaldAllenGlobalVs30 waldAllen = new WaldAllenGlobalVs30();
+		waldAllen.setStableCoefficients();
+		
+		File inputFile = new File("/tmp/sue_site_list.csv");
+		File outputFile = new File("/tmp/sue_site_list_vs30.csv");
+		CSVFile<String> csv = CSVFile.readFile(inputFile, false);
+		
+		LocationList locs = new LocationList();
+		List<Integer> rowIndexes = new ArrayList<>();
+		
+		int lonCol = 0;
+		int latCol = 1;
+		int dataCol = 5;
+		
+		for (int row=1; row<csv.getNumRows(); row++) {
+			List<String> line = csv.getLine(row);
+			System.out.println(line);
+			String latStr = line.get(latCol);
+			String lonStr = line.get(lonCol);
+			if (line.size() > 1 && !latStr.isBlank() && !lonStr.isBlank()) {
+				if (latStr.equals("NA"))
+					continue;
+				double lon = Double.parseDouble(lonStr);
+				double lat = Double.parseDouble(latStr);
+				if ((float)lat == 99.9999f || (float)lat == -99.9999f)
+					continue;
+				Location loc = new Location(lat, lon);
+				locs.add(loc);
+				rowIndexes.add(row);
+			}
+		}
+		
+		System.out.println(locs.size()+"/"+(csv.getNumRows()-1)+" rows have locations");
+		
+		System.out.println("Fetching Vs30");
+		ArrayList<Double> vals = waldAllen.getValues(locs);
+		Preconditions.checkState(vals.size() == locs.size());
+		
+		System.out.println("Writing CSV");
+		CSVFile<String> outputCSV = new CSVFile<>(true);
+		List<String> header = new ArrayList<>();
+		for (int i=0; i<dataCol; i++)
+			header.add(csv.get(0, i));
+		header.add("Wald/Allen Topographic Slope Vs30, Stable Continental");
+		outputCSV.addLine(header);
+		for (int row=1; row<csv.getNumRows(); row++) {
+			List<String> origLine = csv.getLine(row);
+			List<String> modLine = new ArrayList<>(header.size());
+			for (int i=0; i<header.size(); i++) {
+				String str = origLine.size() > i ? origLine.get(i) : "";
+				modLine.add(str);
+			}
+			outputCSV.addLine(modLine);
+		}
+		
+		// now set data
+		for (int i=0; i<locs.size(); i++) {
+			Double val = vals.get(i);
+			if (waldAllen.isValueValid(val)) {
+				int row = rowIndexes.get(i);
+				outputCSV.set(row, dataCol, val.floatValue()+"");
+			}
+		}
+		
+		outputCSV.writeToFile(outputFile);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test238();
+		test241();
 	}
 
 }
