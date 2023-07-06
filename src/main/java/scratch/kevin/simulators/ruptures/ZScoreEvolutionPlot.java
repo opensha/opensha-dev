@@ -50,6 +50,7 @@ public class ZScoreEvolutionPlot {
 		int skipYears = 0;
 		double maxYears = 100000;
 		double binDeltaYears = 5000d;
+		double maxDist = MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT;
 		
 		File bbpDir = new File("/data/kevin/bbp/parallel/"
 				+ "2020_09_01-rundir4983-all-m6.5-skipYears0-noHF-vmLA_BASIN_500-cs500Sites");
@@ -69,7 +70,7 @@ public class ZScoreEvolutionPlot {
 		CatalogLengthLoadIden lenIden = new CatalogLengthLoadIden(maxYears);
 		
 		CatalogGMPE_Compare gmpePageGen = new CatalogGMPE_Compare(catalog, new ZipFile(bbpFile),
-				sites, minMag, skipYears, gmpeCacheDir, lenIden, vm);
+				sites, minMag, skipYears, gmpeCacheDir, lenIden, vm, maxDist);
 		
 		List<EventComparison> comps = gmpePageGen.loadCalcComps(gmpeRef, imts);
 		

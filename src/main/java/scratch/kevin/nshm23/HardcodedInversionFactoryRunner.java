@@ -69,8 +69,8 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-u3-new_paleo";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv();
 //		dirName += "-nshm23-full_sys";
-		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.NSHM18_UseU3Paleo();
-		dirName += "-nshm18-u3_paleo";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.NSHM18_UseU3Paleo();
+//		dirName += "-nshm18-u3_paleo";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.FullSysInv() {
 //
 //			@Override
@@ -106,12 +106,14 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-nshm23-full_sys-prev_weights";
 //		NSHM23_PaleoDataLoader.INCLUDE_U3_PALEO_SLIP = false;
 //		dirName += "-no_paleo_slip";
-//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-//		dirName += "-nshm23";
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		dirName += "-nshm23";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.PaleoSlipInequality();
 //		dirName += "-nshm23-paleo_slip_ineq";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
 //		dirName += "-nshm23-new_paleo";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.MatchFullBA();
+//		dirName += "-nshm23-nucl_match_ba";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
@@ -120,9 +122,16 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
-//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
-//		branch = branch.copy();
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
+		branch = branch.copy();
 		
+		// all branch averaged
+		dirName += "-all_ba";
+		branch.setValue(NSHM23_DeformationModels.AVERAGE);
+		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+		branch.setValue(SupraSeisBValues.AVERAGE);
+		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
+		branch.setValue(NSHM23_PaleoUncertainties.AVERAGE);
 		
 //		NSHM23_InvConfigFactory.MFD_MIN_FRACT_UNCERT = 0.1;
 //		dirName += "-mfd_min_uncert_0.1";
@@ -153,13 +162,13 @@ public class HardcodedInversionFactoryRunner {
 //		branch.setValue(NSHM23_PaleoUncertainties.OVER_FIT);
 //		branch.setValue(NSHM23_SegmentationModels.NONE);
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levelsNewScale;
-		dirName += "-nshm18_dms";
-		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
-		for (LogicTreeNode node : NSHM18_LogicTreeBranch.DEFAULT_NEW_SCALE)
-			branch.setValue(node);
-		branch.setValue(NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1);
-		branch.setValue(NSHM18_DeformationModels.BRANCH_AVERAGED);
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levelsNewScale;
+//		dirName += "-nshm18_dms";
+//		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels);
+//		for (LogicTreeNode node : NSHM18_LogicTreeBranch.DEFAULT_NEW_SCALE)
+//			branch.setValue(node);
+//		branch.setValue(NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1);
+//		branch.setValue(NSHM18_DeformationModels.BRANCH_AVERAGED);
 		
 //		levels = new ArrayList<>(levels);
 //		int origSize = levels.size();

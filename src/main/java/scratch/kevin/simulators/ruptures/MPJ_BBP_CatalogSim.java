@@ -27,7 +27,7 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 	
 	private List<RSQSimEvent> events;
 	
-	public static final double CUTOFF_DIST = 200d;
+	public static final double CUTOFF_DIST_DEFAULT = 200d;
 	
 	private List<BBP_Site> sites;
 	private List<RegionIden> siteRegIdens;
@@ -48,8 +48,11 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 		Preconditions.checkState(sitesFile.exists());
 		sites = BBP_Site.readFile(sitesFile);
 		siteRegIdens = new ArrayList<>();
+		double maxDist = CUTOFF_DIST_DEFAULT;
+		if (cmd.hasOption("max-distance"))
+			maxDist = Double.parseDouble(cmd.getOptionValue("max-distance"));
 		for (BBP_Site site : sites)
-			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), CUTOFF_DIST)));
+			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), maxDist)));
 		
 		// load the catalog
 		Loader loader = catalog.loader().hasTransitions();
@@ -174,6 +177,10 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 		Option skipYears = new Option("skip", "skip-years", true, "Skip the given number of years at the start");
 		skipYears.setRequired(false);
 		ops.addOption(skipYears);
+		
+		Option maxDist = new Option("md", "max-distance", true, "Maximum source-site distance");
+		maxDist.setRequired(false);
+		ops.addOption(maxDist);
 		
 		return ops;
 	}

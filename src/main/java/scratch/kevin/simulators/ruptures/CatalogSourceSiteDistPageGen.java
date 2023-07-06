@@ -214,6 +214,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 		double minMag = 6.5d;
 		int skipYears = 5000;
 		boolean hypoSort = true;
+		double maxDist = MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT;
 		
 		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014, AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 		IMT[] imts = { IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
@@ -237,7 +238,7 @@ public class CatalogSourceSiteDistPageGen extends SourceSiteDistPageGen<RSQSimEv
 				if (!found)
 					continue;
 			}
-			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), MPJ_BBP_CatalogSim.CUTOFF_DIST)));
+			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), maxDist)));
 			Site gmpeSite = site.buildGMPE_Site(vm);
 			gmpeSite.setName(RSQSimBBP_Config.siteCleanName(site));
 			gmpeSites.add(gmpeSite);

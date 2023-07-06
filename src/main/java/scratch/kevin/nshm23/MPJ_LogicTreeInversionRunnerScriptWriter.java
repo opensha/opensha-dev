@@ -253,6 +253,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 ////		dirName += "-strict_cutoff_seg"; strictSeg = true;
 		
 		
+//		dirName += "-pre_zero_slip_parent_fix";
 //		dirName += "-reweight_seg_2_3_4";
 		
 //		levels = new ArrayList<>(levels);
@@ -464,6 +465,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM18_DeformationModels.BRANCH_AVERAGED,
 //				NSHM23_DeformationModels.AVERAGE,
 //				NSHM23_DeformationModels.GEOLOGIC,
+//				NSHM23_DeformationModels.EVANS,
 //				NSHM23_DeformationModels.MEDIAN,
 				
 				// SCALING RELATIONSHIPS
@@ -475,6 +477,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// SLIP ALONG RUPTURE
 //				NSHM23_SlipAlongRuptureModels.UNIFORM,
+				NSHM23_SlipAlongRuptureModels.TAPERED,
 //				SlipAlongRuptureModels.UNIFORM,
 //				SlipAlongRuptureModels.TAPERED,
 				

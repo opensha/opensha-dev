@@ -94,7 +94,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	private File gmpeCacheDir;
 
 	public CatalogGMPE_Compare(RSQSimCatalog catalog, ZipFile bbpZipFile, List<BBP_Site> sites, double minMag, int skipYears,
-			File gmpeCacheDir, RuptureIdentifier loadCriteria, VelocityModel vm) throws IOException {
+			File gmpeCacheDir, RuptureIdentifier loadCriteria, VelocityModel vm, double maxDist) throws IOException {
 		this.catalog = catalog;
 		this.sites = sites;
 		this.minMag = minMag;
@@ -120,7 +120,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		if (sites.size() < 20) {
 			ArrayList<RegionIden> siteRegIdens = new ArrayList<>();
 			for (BBP_Site site : sites)
-				siteRegIdens.add(new RegionIden(new Region(site.getLoc(), MPJ_BBP_CatalogSim.CUTOFF_DIST)));
+				siteRegIdens.add(new RegionIden(new Region(site.getLoc(), maxDist)));
 			loader.matches(new LogicalOrRupIden(siteRegIdens));
 		}
 		System.out.println("Loading events...");
@@ -566,7 +566,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_5413.instance();
-		RSQSimCatalog catalog = Catalogs.BRUCE_5566.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5566.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5566_CRUSTAL.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5566_SUB.instance();
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -584,19 +586,23 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 		VelocityModel forceVM = null;
 		
-		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
-				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-//		IMT[] imts = { IMT.SA3P0 };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
-		IMT[] imts = { IMT.PGV, IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
-		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
+//				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+////		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
+////		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
+////		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+////		IMT[] imts = { IMT.SA3P0 };
+////		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
+//		IMT[] imts = { IMT.PGV, IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
+//		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.AFSHARI_STEWART_2016 };
 //		IMT[] imts = { IMT.DUR_5_75, IMT.DUR_5_95, IMT.DUR_20_80 };
 //		AttenRelRef rotDGMPE = null;
+		
+		AttenRelRef[] gmpeRefs = { AttenRelRef.ZHAO_2006 };
+		IMT[] imts = { IMT.SA2P0, IMT.SA3P0, IMT.SA5P0 };
+		AttenRelRef rotDGMPE = null;
 		
 		String[] highlightNames;
 		if (doGridded)
@@ -717,6 +723,15 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			System.out.println("Detected skipYears="+skipYears);
 		}
 		
+		double maxDist = MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT;
+		if (bbpDirName.contains("-maxDist")) {
+			String distStr = bbpDirName.substring(bbpDirName.indexOf("-maxDist")+"-maxDist".length());
+			if (distStr.contains("-"))
+				distStr = distStr.substring(0, distStr.indexOf("-"));
+			maxDist = Double.parseDouble(distStr);
+			System.out.println("Detected maxDist="+maxDist);
+		}
+		
 		boolean hasRG = bbpDirName.contains("-rg");
 		
 		List<BBP_Site> sites = BBP_Site.readFile(bbpDir);
@@ -725,13 +740,16 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		ZipFile zipFile = new ZipFile(bbpZipFile);
 		
 		CatalogGMPE_Compare comp = new CatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
-				gmpeCacheDir, loadIden, bbpVM);
+				gmpeCacheDir, loadIden, bbpVM, maxDist);
 		comp.setReplotCurves(replotCurves);
 		comp.setReplotResiduals(replotResiduals);
 		comp.setReplotScatters(replotScatters);
 		comp.setReplotZScores(replotZScores);
 		System.out.println("Has RotD100? "+comp.bbpZipFile.hasRotD100());
 		doRotD = doRotD && comp.bbpZipFile.hasRotD100();
+		
+		for (AttenRelRef ref : gmpeRefs)
+			comp.checkTransSiteParams(ref);
 //		comp.testPlotRupAzDiffs();
 		
 		File catalogOutputDir = new File(outputDir, catalog.getCatalogDir().getName());

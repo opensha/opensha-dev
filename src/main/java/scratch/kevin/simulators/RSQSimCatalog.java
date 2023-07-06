@@ -661,8 +661,14 @@ public class RSQSimCatalog implements XMLSaveable {
 		BRUCE_5554("bruce/rundir5554", "Bruce 5554", "Bruce Shaw", cal(2023, 2, 25),
 				"NZ two layer.  b_shallow= .004, b_deep=.013, h_shallow=3.0km, state2minf= .30, state2f=.8, tdelay= 0.67",
 				59, 'G'),
-		BRUCE_5566("bruce/rundir5566", "Bruce 5566", "Bruce Shaw", cal(2023, 3, 25),
+		BRUCE_5566("rundir5566", "Bruce 5566", "Bruce Shaw", cal(2023, 3, 25),
 				"NZ dynamic,  bdeep=.01, bshallow=.003,  alpha=0.25",
+				59, 'G'),
+		BRUCE_5566_SUB("rundir5566_subduction", "Bruce 5566 (Subduction Only)", "Bruce Shaw", cal(2023, 3, 25),
+				"NZ dynamic,  bdeep=.01, bshallow=.003,  alpha=0.25; Filtered for slip on subduction patches only;",
+				59, 'G'),
+		BRUCE_5566_CRUSTAL("rundir5566_crustal", "Bruce 5566 (Crustal Only)", "Bruce Shaw", cal(2023, 3, 25),
+				"NZ dynamic,  bdeep=.01, bshallow=.003,  alpha=0.25; Filtered for slip on crustal patches only;",
 				59, 'G');
 		
 		private String dirName;
@@ -1862,6 +1868,14 @@ public class RSQSimCatalog implements XMLSaveable {
 			List<RuptureIdentifier> rupIdens = new ArrayList<>();
 			rupIdens.add(loadIden);
 			return RSQSimFileReader.getEventsIterable(catalogDir, elements, rupIdens, skipSlipsAndTimes);
+		}
+		
+		public Map<Integer, RSQSimEvent> loadMap() throws IOException {
+			List<RSQSimEvent> events = load();
+			Map<Integer, RSQSimEvent> map = new HashMap<>(events.size());
+			for (RSQSimEvent event : events)
+				map.put(event.getID(), event);
+			return map;
 		}
 	}
 	
@@ -3248,19 +3262,19 @@ public class RSQSimCatalog implements XMLSaveable {
 		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		boolean overwriteIndividual = true;
-		boolean replot = false;
+		boolean replot = true;
 		
-		File baseDir = new File("/data/kevin/simulators/catalogs");
+//		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
 		Catalogs[] cats = Catalogs.values();
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
 //		GregorianCalendar minDate = cal(2021, 10, 1);
-		GregorianCalendar minDate = cal(2023, 1, 1);
-		for (Catalogs cat : cats) {
+//		GregorianCalendar minDate = cal(2023, 1, 1);
+//		for (Catalogs cat : cats) {
 		// specific catalog
-//		GregorianCalendar minDate = cal(2000, 1, 1);
-//		for (Catalogs cat : new Catalogs[] {
+		GregorianCalendar minDate = cal(2000, 1, 1);
+		for (Catalogs cat : new Catalogs[] {
 ////				Catalogs.BRUCE_4983_STITCHED,
 //////				Catalogs.BRUCE_2585,
 //////				Catalogs.BRUCE_2585_1MYR,
@@ -3269,15 +3283,16 @@ public class RSQSimCatalog implements XMLSaveable {
 //////				Catalogs.BRUCE_4860,
 //////				Catalogs.JG_tunedBase1m_ddotEQmod,
 //////				Catalogs.JG_tuneBase1m,
-//				Catalogs.BRUCE_5552
-//				}) {
+				Catalogs.BRUCE_5566,
+				Catalogs.BRUCE_5566_CRUSTAL
+				}) {
 		// all catalogs
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : cats) {
 			
 			if (cat.catalog.getDate().before(minDate))
 				continue;
-			RSQSimCatalog catalog = cat.instance(baseDir);
+			RSQSimCatalog catalog = cat.instance();
 			System.out.print(catalog.getName()+" ? ");
 			File catGitDir = new File(gitDir, catalog.getCatalogDir().getName());
 			Preconditions.checkState(catGitDir.exists() || catGitDir.mkdir());

@@ -151,13 +151,22 @@ public class CatalogSiteHazardCurveComparePageGen extends SiteHazardCurveComareP
 			System.out.println("Detected skipYears="+skipYears);
 		}
 		
+		double maxDist = MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT;
+		if (bbpDirName.contains("-maxDist")) {
+			String distStr = bbpDirName.substring(bbpDirName.indexOf("-maxDist")+"-maxDist".length());
+			if (distStr.contains("-"))
+				distStr = distStr.substring(0, distStr.indexOf("-"));
+			maxDist = Double.parseDouble(distStr);
+			System.out.println("Detected maxDist="+maxDist);
+		}
+		
 		List<BBP_Site> sites = BBP_Site.readFile(bbpDir);
 		
 		System.out.println("Zip file: "+bbpZipFile.getAbsolutePath());
 		ZipFile zipFile = new ZipFile(bbpZipFile);
 		
 		CatalogGMPE_Compare gmpeComp = new CatalogGMPE_Compare(catalog, zipFile, sites, minMag, skipYears,
-				gmpeCacheDir, null, bbpVM);
+				gmpeCacheDir, null, bbpVM, maxDist);
 		
 		Table<String, RSQSimEvent, Double> sourceContribFracts = null;
 		// make sure we can...

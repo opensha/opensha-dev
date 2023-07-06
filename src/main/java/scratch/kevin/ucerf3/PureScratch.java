@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
@@ -59,6 +60,7 @@ import org.opensha.commons.data.xyz.GeoDataSet;
 import org.opensha.commons.data.xyz.GeoDataSetMath;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.geo.CubedGriddedRegion;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -142,6 +144,8 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLev
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetailPlots;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupCartoonGenerator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
@@ -166,6 +170,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Deform
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_PaleoUncertainties;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
@@ -175,10 +180,14 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausi
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.Builder;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.SubSeisMoRateReduction;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.ScalingRelSlipRateMFD_Estimator;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.SectNucleationMFD_Estimator;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.ThresholdAveragingSectNuclMFD_Estimator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
@@ -4180,12 +4189,255 @@ public class PureScratch {
 		outputCSV.writeToFile(outputFile);
 	}
 	
+	private static final void test242() throws IOException {
+		File sltFile = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/full_logic_tree.zip");
+		
+		SolutionLogicTree slt = SolutionLogicTree.load(sltFile);
+		LogicTree<?> tree = slt.getLogicTree();
+		
+		// if you can't handle all 1440 branches, you can sample it by uncommenting this section
+//		int numSamples = 100;
+//		// if false, you may end up with fewer than numSamples if the same branch is randomly sampled twice
+//		boolean redrawDuplicates = false;
+//		tree = tree.sample(numSamples, redrawDuplicates);
+		
+		for (LogicTreeBranch<?> branch : tree) {
+			// weight for this branch. if using these, make sure to normalize such that the sum is 1
+			double weight = tree.getBranchWeight(branch);
+			System.out.println(branch+"; weight="+weight);
+			
+			FaultSystemSolution branchSol = slt.forBranch(branch);
+		}
+	}
+	
+	private static final void test243() throws IOException {
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT.copy();
+		branch.setValue(NSHM23_DeformationModels.AVERAGE);
+		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+		branch.setValue(NSHM23_PaleoUncertainties.AVERAGE);
+		
+		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+		branch.setValue(SupraSeisBValues.B_0p0);
+		int threads = 16;
+		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
+		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, threads);
+		factory.buildInversionConfig(rupSet, branch, threads);
+		SupraSeisBValInversionTargetMFDs targets = rupSet.requireModule(SupraSeisBValInversionTargetMFDs.class);
+		
+		int sectID = 1745;
+		UncertainIncrMagFreqDist target = targets.getOnFaultSupraSeisNucleationMFDs().get(sectID);
+		System.out.println(target);
+		FaultSection sect = rupSet.getFaultSectionData(sectID);
+		System.out.println("Orig slip rate: "+sect.getOrigAveSlipRate());
+		System.out.println("Reduced slip rate: "+sect.getReducedAveSlipRate());
+		System.out.println("RupSet slip rate: "+rupSet.getSlipRateForSection(sectID)*1e3);
+	}
+
+	private static final void test244() throws IOException {
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT.copy();
+		branch.setValue(NSHM23_DeformationModels.EVANS);
+		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+		branch.setValue(NSHM23_PaleoUncertainties.AVERAGE);
+		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+		branch.setValue(SupraSeisBValues.B_0p0);
+		int threads = 16;
+		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
+		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, threads);
+		factory.buildInversionConfig(rupSet, branch, threads);
+		SupraSeisBValInversionTargetMFDs targets = rupSet.requireModule(SupraSeisBValInversionTargetMFDs.class);
+		
+		int sectID = 1745;
+		UncertainIncrMagFreqDist target = targets.getOnFaultSupraSeisNucleationMFDs().get(sectID);
+		System.out.println(target);
+		FaultSection sect = rupSet.getFaultSectionData(sectID);
+		System.out.println("Orig slip rate: "+sect.getOrigAveSlipRate());
+		System.out.println("Reduced slip rate: "+sect.getReducedAveSlipRate());
+		System.out.println("RupSet slip rate: "+rupSet.getSlipRateForSection(sectID)*1e3);
+	}
+	
+	private static final void test245() throws IOException {
+		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		List<NSHM23_DeformationModels> dms = new ArrayList<>();
+		List<List<? extends FaultSection>> dmSects = new ArrayList<>();
+		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values()) {
+			if (dm.getNodeWeight(null) > 0d) {
+				dms.add(dm);
+				dmSects.add(dm.build(fm));
+			}
+		}
+		for (int d=0; d<dms.size(); d++) {
+			NSHM23_DeformationModels dm = dms.get(d);
+			List<? extends FaultSection> sects = dmSects.get(d);
+			Map<Integer, List<FaultSection>> sectsByParent = sects.stream().collect(
+					Collectors.groupingBy(S -> S.getParentSectionId()));
+
+			int[] sizeCounts = new int[5];
+			int parentsWithZeros = 0;
+			int fullyZeroParents = 0;
+			int zeroSubsects = 0;
+			
+			for (int parentID : sectsByParent.keySet()) {
+				List<FaultSection> parentSects = sectsByParent.get(parentID);
+				int curClusterSize = 0;
+				int myNumZero = 0;
+				for (int i=0; i<parentSects.size(); i++) {
+					double slip = parentSects.get(i).getReducedAveSlipRate();
+					if (slip == 0d) {
+						zeroSubsects++;
+						myNumZero++;
+						if (curClusterSize > 0)
+							sizeCounts[Integer.min(curClusterSize-1, sizeCounts.length-1)]++;
+						curClusterSize = 0;
+					} else {
+						curClusterSize++;
+					}
+				}
+				if (curClusterSize > 0 && curClusterSize < parentSects.size())
+					sizeCounts[Integer.min(curClusterSize-1, sizeCounts.length-1)]++;
+				if (myNumZero > 0)
+					parentsWithZeros++;
+				if (myNumZero == parentSects.size())
+					fullyZeroParents++;
+			}
+			System.out.println(dm.getShortName()+" non-zero section sub-clusters");
+			System.out.println("\t"+parentsWithZeros+"/"+sectsByParent.size()+" parents have at least 1 zero ("+fullyZeroParents+" are fully zero)");
+			System.out.println("\t"+zeroSubsects+"/"+sects.size()+" subsects are zero");
+			for (int i=0; i<sizeCounts.length; i++)
+				System.out.println("\t"+(i+1)+(i == sizeCounts.length-1 ? "+" : "")+" Sects: "+sizeCounts[i]);
+		}
+	}
+	
+	private static final void test246() throws IOException {
+		FaultSystemSolution origSol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_06_16-nshm23_branches-pre_zero_slip_parent_fix-NSHM23_v2-CoulombRupSet-EVANS-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+		FaultSystemSolution updatedSol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_06_20-nshm23_branches-NSHM23_v2-CoulombRupSet-EVANS-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+		
+		InversionTargetMFDs origTargets = origSol.getRupSet().requireModule(InversionTargetMFDs.class);
+		IncrementalMagFreqDist origTargetTotal = origTargets.getTotalOnFaultSupraSeisMFD();
+		InversionTargetMFDs updatedTargets = updatedSol.getRupSet().requireModule(InversionTargetMFDs.class);
+		IncrementalMagFreqDist updatedTargetTotal = updatedTargets.getTotalOnFaultSupraSeisMFD();
+		
+		int[] debugSects = { 334 };
+		
+		SectSlipRates origTargetSlips = origSol.getRupSet().getSectSlipRates();
+		SolutionSlipRates origSolSlips = origSol.requireModule(SolutionSlipRates.class);
+		SolutionSlipRates updatedSolSlips = updatedSol.requireModule(SolutionSlipRates.class);
+		
+		for (int debugSect : debugSects) {
+			FaultSection sect = origSol.getRupSet().getFaultSectionData(debugSect);
+			System.out.println("Debug for "+debugSect+". "+sect.getSectionName());
+			
+			System.out.println("Target Slip Rate: "+(float)(origTargetSlips.getSlipRate(debugSect)*1e3));
+			System.out.println("Original Solution Slip Rate: "+(float)(origSolSlips.get(debugSect)*1e3));
+			System.out.println("Updated Solution Slip Rate: "+(float)(updatedSolSlips.get(debugSect)*1e3));
+			
+			IncrementalMagFreqDist origTarget = origTargets.getOnFaultSupraSeisNucleationMFDs().get(debugSect);
+			IncrementalMagFreqDist updatedTarget = updatedTargets.getOnFaultSupraSeisNucleationMFDs().get(debugSect);
+			
+			int minNonZeroIndex = Integer.MAX_VALUE;
+			int maxNonZeroIndex = 0;
+			for (int i=0; i<origTarget.size(); i++) {
+				if (origTarget.getY(i) > 0) {
+					minNonZeroIndex = Integer.min(minNonZeroIndex, i);
+					maxNonZeroIndex = Integer.max(maxNonZeroIndex, i);
+				}
+			}
+			for (int i=0; i<updatedTarget.size(); i++) {
+				if (updatedTarget.getY(i) > 0) {
+					minNonZeroIndex = Integer.min(minNonZeroIndex, i);
+					maxNonZeroIndex = Integer.max(maxNonZeroIndex, i);
+				}
+			}
+			
+			System.out.println("Target MFD");
+			for (int i=minNonZeroIndex; i<=maxNonZeroIndex; i++) {
+				String line = "M"+(float)updatedTarget.getX(i)+"\t";
+				line += "\torig="+(float)origTarget.getY(i)+"\tupdated="+(float)updatedTarget.getY(i);
+				System.out.println(line);
+			}
+			System.out.println();
+		}
+		
+		double[] minMags = { -1, 0d, 6d, 7d, 8d };
+		
+		DecimalFormat pDF = new DecimalFormat("0.00%");
+		for (double minMag : minMags) {
+			double origSolVal, updatedSolVal;
+			double origTargetVal, updatedTargetVal;
+			
+			if (minMag < 0) {
+				// moment
+				System.out.println("Total Moment Rate");
+				origSolVal = origSol.getTotalFaultSolutionMomentRate();
+				updatedSolVal = updatedSol.getTotalFaultSolutionMomentRate();
+				
+				origTargetVal = origTargetTotal.getTotalMomentRate();
+				updatedTargetVal = updatedTargetTotal.getTotalMomentRate();
+			} else if (minMag == 0d) {
+				System.out.println("Total Supra-Seis Rate");
+				origSolVal = origSol.getTotalRateForAllFaultSystemRups();
+				updatedSolVal = updatedSol.getTotalRateForAllFaultSystemRups();
+				
+				origTargetVal = origTargetTotal.getTotalIncrRate();
+				updatedTargetVal = updatedTargetTotal.getTotalIncrRate();
+			} else {
+				System.out.println("Total M>"+(float)minMag+" Rate");
+				origSolVal = origSol.getTotalRateForAllFaultSystemRups();
+				updatedSolVal = updatedSol.getTotalRateForAllFaultSystemRups();
+				
+				origTargetVal = origTargetTotal.getCumRate(origTargetTotal.getClosestXIndex(minMag+0.01));
+				updatedTargetVal = updatedTargetTotal.getCumRate(updatedTargetTotal.getClosestXIndex(minMag+0.01));
+			}
+			
+			double solPDiff = (updatedSolVal-origSolVal)/origSolVal;
+			double targetPDiff = (updatedTargetVal-origTargetVal)/origTargetVal;
+			System.out.println("\tTarget:\torig="+(float)origTargetVal+";\tupdated="+(float)updatedTargetVal
+					+";\tpDiff="+pDF.format(targetPDiff));
+			System.out.println("\tSolution:\torig="+(float)origSolVal+";\tupdated="+(float)updatedSolVal
+					+";\tpDiff="+pDF.format(solPDiff));
+		}
+	}
+	
+	private static final void test247() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_06_20-nshm23_branches-NSHM23_v2-CoulombRupSet-EVANS-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+		FaultSystemRupSet rupSet = sol.getRupSet();
+//		Region reg = NSHM23_Re
+		
+		double bVal = 0.5d;
+		JumpProbabilityCalc segModel = NSHM23_SegmentationModels.MID.getModel(rupSet, sol.requireModule(LogicTreeBranch.class));
+
+//		ThresholdAveragingSectNuclMFD_Estimator improb1 = new ThresholdAveragingSectNuclMFD_Estimator.WorstJumpProb(segModel);
+//		String name1 = "Seg-Prob";
+//		ThresholdAveragingSectNuclMFD_Estimator improb2 = new ThresholdAveragingSectNuclMFD_Estimator.RelGRWorstJumpProb(segModel);
+//		String name2 = "Rel-GR";
+//		String prefix = "thresh_avg_vs_rel_gr";
+		
+		int debugSect = 334;
+
+		SectNucleationMFD_Estimator model = SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG.getAdjustment(segModel);
+		
+		SupraSeisBValInversionTargetMFDs.Builder builder = new SupraSeisBValInversionTargetMFDs.Builder(rupSet, bVal);
+		builder.subSeisMoRateReduction(SubSeisMoRateReduction.SUB_SEIS_B_1);
+		builder.applyDefModelUncertainties(false);
+		builder.adjustTargetsForData(model);
+		List<UncertainIncrMagFreqDist> mfds = builder.build().getOnFaultSupraSeisNucleationMFDs();
+		
+		System.out.println(mfds.get(debugSect));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test241();
+		test245();
 	}
 
 }

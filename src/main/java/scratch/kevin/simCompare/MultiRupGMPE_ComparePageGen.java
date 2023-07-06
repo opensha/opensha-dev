@@ -30,6 +30,8 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.PrimitiveArrayXY_Dataset;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.siteData.SiteData;
+import org.opensha.commons.data.siteData.SiteDataValue;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
@@ -58,6 +60,8 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
+import org.opensha.sha.util.SiteTranslator;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
@@ -408,6 +412,42 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		return line;
 	}
 	
+	protected void checkTransSiteParams(AttenRelRef gmpeRef) {
+		SiteTranslator trans = null;
+		ScalarIMR gmmInstance = gmpeRef.get();
+		Site site0 = sites.get(0);
+		if (site0.containsParameter(Vs30_Param.NAME)) {
+			for (Parameter<?> gmmSiteParam : gmmInstance.getSiteParams()) {
+				if (!site0.containsParameter(gmmSiteParam)) {
+					System.out.println("Trying to translate site params for "+gmmSiteParam.getName()+", required by "+gmmInstance.getName());
+					if (trans == null)
+						trans = new SiteTranslator();
+					
+					for (Site site : sites) {
+						String measurement = null;
+						if (site.containsParameter(Vs30_TypeParam.NAME)) {
+							if (site.getParameter(Vs30_TypeParam.NAME).getValue().equals(Vs30_TypeParam.VS30_TYPE_MEASURED))
+								measurement = SiteData.TYPE_FLAG_MEASURED;
+							else
+								measurement = SiteData.TYPE_FLAG_INFERRED;
+						}
+						SiteDataValue<Double> val = new SiteDataValue<Double>(SiteData.TYPE_VS30, measurement,
+								site.getParameter(Double.class, Vs30_Param.NAME).getValue());
+						trans.setAllSiteParams(gmmInstance, val);
+						for (Parameter<?> param : gmmInstance.getSiteParams()) {
+							if (!site.containsParameter(param)) {
+								Parameter<?> paramClone = (Parameter<?>)param.clone();
+								System.out.println("\tTranslated Vs30="+val.getValue().floatValue()+" to '"
+										+param.getValue()+"' for site "+site.getName());
+								site.addParameter(paramClone);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
 	public void generateGMPE_Page(File outputDir, List<String> headerLines, AttenRelRef gmpeRef, IMT[] imts,
 			List<? extends RuptureComparison<E>> comps, List<Site> highlightSites) throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
@@ -421,6 +461,9 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		
 		int tocIndex = lines.size();
 		String topLink = "*[(top)](#table-of-contents)*";
+		
+		// see if we need to translate any site types
+		checkTransSiteParams(gmpeRef);
 		
 		List<Site> sites = new ArrayList<>();
 		if (highlightSites == null)
