@@ -7,10 +7,17 @@ import java.util.List;
 import java.util.Random;
 
 import org.opensha.commons.data.Site;
+import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.param.Parameter;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.param.BackgroundRupType;
+import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers.ASK_2014_Wrapper;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.ScalarGroundMotion;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -24,8 +31,8 @@ import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO.ETAS_Catalog;
 public class U3CatalogVarCalcDemo {
 
 	public static void main(String[] args) throws IOException {
-		ETAS_Catalog catalog = ETAS_CatalogIO.loadCatalog(new File("/tmp/catalog_test/output_dir/sampledEventsData.txt"));
-		FaultSystemSolution fss = FaultSystemSolution.load(new File("/tmp/catalog_test/FM3_1_branch_averaged.zip"));
+		ETAS_Catalog catalog = ETAS_CatalogIO.loadCatalog(new File("/tmp/sampledEventsData.txt"));
+		FaultSystemSolution fss = FaultSystemSolution.load(new File("/tmp/FM3_1_branch_averaged.zip"));
 		FaultSystemRupSet rupSet = fss.getRupSet();
 		
 		// this uses ASK (2014)
@@ -72,6 +79,9 @@ public class U3CatalogVarCalcDemo {
 		Random rand = new Random();
 		Matrix[] fields = varCalc.computeRandWithinEventResiduals(rand, 1d, catalog.size());
 		
+		GridSourceProvider gridProv = fss.getGridSourceProvider();
+		GriddedRegion gridReg = gridProv.getGriddedRegion();
+		
 		System.out.println("Calculating ground motions for catalog");
 		for (int i=0; i<catalog.size(); i++) {
 			ETAS_EqkRupture rup = catalog.get(i);
@@ -80,12 +90,66 @@ public class U3CatalogVarCalcDemo {
 //			ScalarGroundMotion[][] gms = new ScalarGroundMotion[sites.size()][periods.length];
 			
 			// attach the surface to the rupture
+			Location loc = rup.getHypocenterLocation();
 			if (rup.getFSSIndex() >= 0) {
 				rup.setRuptureSurface(rupSet.getSurfaceForRupture(rup.getFSSIndex(), 1d));
 				rup.setAveRake(rupSet.getAveRakeForRup(rup.getFSSIndex()));
 			} else {
-				rup.setPointSurface(rup.getHypocenterLocation());
-				rup.setAveRake(0d);
+				// try to find the corresponding gridded seismicity rupture
+				int gridIndex = gridReg.indexForLocation(loc);
+				
+				RuptureSurface surf = null;
+				if (gridIndex >= 0) {
+					// match
+					ProbEqkSource gridSource = gridProv.getSource(gridIndex, 1d, false, BackgroundRupType.POINT);
+					
+					// there can be multiple ruptures with that magnitude, possibly with different rakes. randomly choose one
+					double magTol = 0.05;
+					List<ProbEqkRupture> matches = new ArrayList<>();
+					List<Double> matchRates = new ArrayList<>();
+					double sumMatchRate = 0d;
+					for (ProbEqkRupture gridRup : gridSource) {
+						if (Math.abs(gridRup.getMag() - rup.getMag()) <= magTol) {
+							double rate = gridRup.getMeanAnnualRate(1d);
+							matches.add(gridRup);
+							matchRates.add(rate);
+							sumMatchRate += rate;
+						}
+					}
+					System.out.println("\tFound "+matches.size()+" potential grid source matches");
+					ProbEqkRupture match = null;
+					if (matches.size() == 1) {
+						// only one match, simple case
+						match = matches.get(0);
+					} else if (matches.size() > 1) {
+						// randomly draw one
+						double randDouble = rand.nextDouble()*sumMatchRate;
+						double curSum = 0d;
+						for (int j=0; j<matches.size(); j++) {
+							curSum += matchRates.get(j);
+							if (randDouble <= curSum) {
+								match = matches.get(j);
+								break;
+							}
+						}
+					}
+					
+					if (match != null) {
+						surf = match.getRuptureSurface();
+						rup.setAveRake(match.getAveRake());
+						System.out.println("\tChose rupture with rake="+(float)match.getAveRake()
+								+", zTOR="+(float)surf.getAveRupTopDepth());
+					}
+				}
+				if (surf == null) {
+					System.err.println("WARNING: didn't find rupture surface for gridded rup at "+loc
+							+" with M="+(float)rup.getMag()+", assuming dip=90 and rake=0");
+					PointSurface ps = new PointSurface(rup.getHypocenterLocation());
+					ps.setAveDip(90d);
+					surf = ps;
+					rup.setAveRake(0d);
+				}
+				rup.setRuptureSurface(surf);
 			}
 			// set the rupture in the GMM
 			gmm.setEqkRupture(rup);
