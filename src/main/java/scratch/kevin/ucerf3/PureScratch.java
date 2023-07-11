@@ -4100,7 +4100,7 @@ public class PureScratch {
 		FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, FaultSysTools.defaultNumThreads());
 		System.out.println("Building ref branch assoc");
 		Region region = rupSet.requireModule(ModelRegion.class).getRegion();
-		NSHM23_FaultCubeAssociations assoc = NSHM23_InvConfigFactory.buildFaultCubeAssociations(rupSet, branch, region);
+		FaultCubeAssociations assoc = NSHM23_InvConfigFactory.buildFaultCubeAssociations(rupSet, branch, region);
 		
 		ModuleArchive<OpenSHA_Module> archive = new ModuleArchive<>();
 		archive.addModule(new FaultGridAssociations.Precomputed(assoc));

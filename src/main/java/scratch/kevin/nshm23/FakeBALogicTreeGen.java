@@ -113,34 +113,35 @@ public class FakeBALogicTreeGen {
 //		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 //		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
 		
-//		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-//				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
-//		nodes.add(NSHM23_FaultModels.NSHM23_v2);
-//		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip")));
-//		
-//		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
-//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only");
-////		nodes.add(NSHM23_FaultModels.NSHM23_v2);
-////		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "node_branch_averaged/SegModel_Classic.zip")));
-////		
-////		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
-////		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-classic_only");
-//		
-//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-//		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
-		
-		File inputDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_06_16-nshm23-nucl_match_ba-all_ba-AVERAGE_NSHM23_Avg_AvgSupraB_NoRed_AverageFitPaleo_AvgSeg");
+		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
 		nodes.add(NSHM23_FaultModels.NSHM23_v2);
-		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "solution_gridded.zip")));
+//		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip")));
+		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded_with_ceus.zip")));
 		
 		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
-		File outputDir = inputDir;
+		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-with_ceus");
+//		nodes.add(NSHM23_FaultModels.NSHM23_v2);
+//		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "node_branch_averaged/SegModel_Classic.zip")));
+//		
+//		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
+//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-classic_only");
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
+		
+//		File inputDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+//				+ "2023_06_16-nshm23-nucl_match_ba-all_ba-AVERAGE_NSHM23_Avg_AvgSupraB_NoRed_AverageFitPaleo_AvgSeg");
+//		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
+//		nodes.add(NSHM23_FaultModels.NSHM23_v2);
+//		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "solution_gridded.zip")));
+//		
+//		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
+//		File outputDir = inputDir;
+//		
+//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+//		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
 		
 		for (int i=0; i<nodes.size(); i++) {
 			LogicTreeNode node = nodes.get(i);

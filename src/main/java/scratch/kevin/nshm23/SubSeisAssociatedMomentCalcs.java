@@ -9,6 +9,7 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultCubeAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModelRegion;
@@ -122,7 +123,7 @@ public class SubSeisAssociatedMomentCalcs {
 		FaultGridAssociations storedAssoc = rupSet.requireModule(FaultGridAssociations.class);
 		
 		Region region = rupSet.requireModule(ModelRegion.class).getRegion();
-		NSHM23_FaultCubeAssociations calcAssoc = NSHM23_InvConfigFactory.buildFaultCubeAssociations(rupSet, null, region);
+		FaultCubeAssociations calcAssoc = NSHM23_InvConfigFactory.buildFaultCubeAssociations(rupSet, null, region);
 		
 		Preconditions.checkState(calcAssoc.getRegion().equalsRegion(storedAssoc.getRegion()));
 		int nodeCount = calcAssoc.getRegion().getNodeCount();
