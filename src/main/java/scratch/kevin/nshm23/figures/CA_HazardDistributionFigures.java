@@ -28,6 +28,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.logicTree.LogicTree;
@@ -95,10 +96,10 @@ class CA_HazardDistributionFigures {
 		double[] modelStdDevs = new double[gridReg.getNodeCount()];
 		GriddedGeoDataSet modelMean = loadMaps(modelZip, modelTree, gridReg, entryName, modelNormCDFs, modelStdDevs, exec);
 		
-		RupSetMapMaker mapMakerU3 = new RupSetMapMaker(rupSetU3, gridReg);
-		RupSetMapMaker mapMaker23 = new RupSetMapMaker(rupSet23, gridReg);
+		GeographicMapMaker mapMakerU3 = new RupSetMapMaker(rupSetU3, gridReg);
+		GeographicMapMaker mapMaker23 = new RupSetMapMaker(rupSet23, gridReg);
 		
-		for (RupSetMapMaker mapMaker : new RupSetMapMaker[] {mapMakerU3, mapMaker23}) {
+		for (GeographicMapMaker mapMaker : new GeographicMapMaker[] {mapMakerU3, mapMaker23}) {
 			mapMaker.setSectOutlineChar(null);
 			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(100, 100, 100, 127)));
 		}
@@ -326,7 +327,7 @@ class CA_HazardDistributionFigures {
 		return ret;
 	}
 	
-	private static void plotMap(File outputDir, String prefix, RupSetMapMaker mapMaker, Region[] maskRegions,
+	private static void plotMap(File outputDir, String prefix, GeographicMapMaker mapMaker, Region[] maskRegions,
 			GriddedGeoDataSet map, CPT cpt, String label) throws IOException {
 		System.out.println("Plotting "+label);
 		map = MethodsAndIngredientsHazChangeFigures.mask(maskRegions, map);

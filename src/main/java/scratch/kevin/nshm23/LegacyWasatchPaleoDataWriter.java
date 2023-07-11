@@ -9,6 +9,7 @@ import java.util.List;
 
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -85,13 +86,13 @@ lower)/4)
 			geoSects.add(geoSect);
 		}
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(geoSects, RupSetMapMaker.buildBufferedRegion(geoSects));
+		GeographicMapMaker mapMaker = new RupSetMapMaker(geoSects, RupSetMapMaker.buildBufferedRegion(geoSects));
 		
 		HashSet<FaultSection> highlights = new HashSet<>();
 		for (SegRateConstraint segRate : paleo)
 			highlights.add(geoSects.get(segRate.getSegIndex()));
 		
-		mapMaker.highLightSections(highlights, new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		mapMaker.setSectHighlights(highlights, new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		
 		mapMaker.setWriteGeoJSON(true);
 		

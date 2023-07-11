@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
@@ -58,7 +59,7 @@ public class MaxDistSegComparisons {
 				MaxJumpDistModels.WEIGHT_TARGET_R0, a, RateCombiner.MIN);
 		
 		// now map view
-		RupSetMapMaker mapMaker = new RupSetMapMaker(sol.getRupSet(), new CaliforniaRegions.RELM_TESTING());
+		GeographicMapMaker mapMaker = new RupSetMapMaker(sol.getRupSet(), new CaliforniaRegions.RELM_TESTING());
 		CPT minDistCPT = new CPT();
 		double prevDist = 0d;
 		MaxJumpDistModels[] values = MaxJumpDistModels.values();

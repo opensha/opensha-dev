@@ -24,6 +24,7 @@ import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -46,7 +47,6 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.plots.RupHistogramPlo
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.Jump;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityConfiguration;
-import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RuptureConnectionSearch;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
@@ -138,7 +138,7 @@ public class PaperJumpCleanFigureGen {
 		RupHistogramPlots.plotRuptureHistogram(dir, prefix+"b", valsB, valsA, uniquesA, Color.RED, false, false);
 		
 		prefix = "figure_15";
-		RupSetMapMaker.PLOT_PREFS_DEFAULT = prefs;
+		GeographicMapMaker.PLOT_PREFS_DEFAULT = prefs;
 		SectMaxValuesPlot.plotScalarMaxMapView(rupSets[0], dir, prefix+"a", " ", valsA, valsB,
 				new CaliforniaRegions.RELM_TESTING(), Color.BLUE, false, false);
 		SectMaxValuesPlot.plotScalarMaxMapView(rupSets[2], dir, prefix+"b", " ", valsB, valsA,

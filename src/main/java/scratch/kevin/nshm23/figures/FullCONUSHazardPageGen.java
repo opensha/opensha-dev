@@ -22,6 +22,7 @@ import org.opensha.commons.data.xyz.ArbDiscrGeoDataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.CubedGriddedRegion;
 import org.opensha.commons.geo.GriddedRegion;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -61,8 +62,8 @@ public class FullCONUSHazardPageGen {
 	
 	public static void main(String[] args) throws IOException {
 		
-//		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
-		ReturnPeriods rp = ReturnPeriods.TEN_IN_50;
+		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
+//		ReturnPeriods rp = ReturnPeriods.TEN_IN_50;
 		double period = 0d;
 //		double period = 1d;
 		
@@ -112,12 +113,12 @@ public class FullCONUSHazardPageGen {
 		Preconditions.checkState(nshm18_23gridHazard.size() == nshm23Hazard.size());
 		
 		File nshm18HazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_02_06-nshm23-wrapped-conus-hazard-ask2014-0.2deg-noSub/results_hazard.zip");
+				+ "2023_07_11-nshm18-conus-hazard-ask2014-0.2deg-noSub/results_hazard.zip");
 		GriddedGeoDataSet nshm18Hazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18HazardFile, wrapperEntryName);
 		Preconditions.checkState(nshm18Hazard.size() == nshm23Hazard.size());
 		
 		File nshm18GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_02_06-nshm23-wrapped-conus-hazard-ask2014-0.2deg-noSub-griddedOnly/results_hazard.zip");
+				+ "2023_07_11-nshm18-conus-hazard-ask2014-0.2deg-noSub-griddedOnly/results_hazard.zip");
 		GriddedGeoDataSet nshm18GridHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18GridHazardFile, wrapperEntryName);
 		Preconditions.checkState(nshm18GridHazard.size() == nshm23Hazard.size());
 //		GriddedGeoDataSet nshm18GridHazard = null;
@@ -225,10 +226,10 @@ public class FullCONUSHazardPageGen {
 			sectsWithIndexes18.add(sect);
 		}
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2), gridReg);
-		RupSetMapMaker mapMaker18 = new RupSetMapMaker(sectsWithIndexes18, gridReg);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2), gridReg);
+		GeographicMapMaker mapMaker18 = new RupSetMapMaker(sectsWithIndexes18, gridReg);
 		
-		for (RupSetMapMaker map : new RupSetMapMaker[] {mapMaker, mapMaker18}) {
+		for (GeographicMapMaker map : new GeographicMapMaker[] {mapMaker, mapMaker18}) {
 			map.setWriteGeoJSON(false);
 			map.setWritePDFs(true);
 			map.setSectOutlineChar(null);

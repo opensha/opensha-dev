@@ -15,6 +15,7 @@ import org.opensha.commons.geo.CubedGriddedRegion;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
@@ -164,7 +165,7 @@ public class MomentRateCompNSHM18 {
 		GriddedGeoDataSet logNSHM18 = nshm18.copy();
 		logNSHM18.log10();
 		
-		RupSetMapMaker mapMaker23 = new RupSetMapMaker(nshm23sects, region);
+		GeographicMapMaker mapMaker23 = new RupSetMapMaker(nshm23sects, region);
 		mapMaker23.setSectOutlineChar(null);
 		PlotCurveCharacterstics sectChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(0, 0, 00, 127));
 		mapMaker23.setSectTraceChar(sectChar);
@@ -179,7 +180,7 @@ public class MomentRateCompNSHM18 {
 		}
 		for (int i=0; i<allSects18.size(); i++)
 			allSects18.get(i).setSectionId(i);
-		RupSetMapMaker mapMaker18 = new RupSetMapMaker(allSects18, region);
+		GeographicMapMaker mapMaker18 = new RupSetMapMaker(allSects18, region);
 		mapMaker18.setSectOutlineChar(null);
 		mapMaker18.setSectTraceChar(sectChar);
 		

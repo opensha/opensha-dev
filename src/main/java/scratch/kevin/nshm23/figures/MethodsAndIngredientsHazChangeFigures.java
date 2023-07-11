@@ -31,6 +31,7 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -118,10 +119,10 @@ public class MethodsAndIngredientsHazChangeFigures {
 		GriddedGeoDataSet modelMap = mask(caRegions, loadXYZ(modelHazFile, entryName));
 		
 		GriddedRegion refReg = u3Map.getRegion();
-		RupSetMapMaker mapMakerU3 = new RupSetMapMaker(rupSetU3, refReg);
-		RupSetMapMaker mapMaker23 = new RupSetMapMaker(rupSet23, refReg);
+		GeographicMapMaker mapMakerU3 = new RupSetMapMaker(rupSetU3, refReg);
+		GeographicMapMaker mapMaker23 = new RupSetMapMaker(rupSet23, refReg);
 		
-		for (RupSetMapMaker mapMaker : new RupSetMapMaker[] {mapMakerU3, mapMaker23}) {
+		for (GeographicMapMaker mapMaker : new GeographicMapMaker[] {mapMakerU3, mapMaker23}) {
 			mapMaker.setSectOutlineChar(null);
 			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(100, 100, 100, 127)));
 		}
@@ -293,10 +294,10 @@ public class MethodsAndIngredientsHazChangeFigures {
 		GriddedGeoDataSet modelGridOnlyMap = mask(wusRegions, loadXYZ(modelGridOnlyHazFile, entryName));
 		
 		GriddedRegion refReg = nshm18Map.getRegion();
-		RupSetMapMaker mapMaker18 = new RupSetMapMaker(rupSet18, refReg);
-		RupSetMapMaker mapMaker23 = new RupSetMapMaker(rupSet23, refReg);
+		GeographicMapMaker mapMaker18 = new RupSetMapMaker(rupSet18, refReg);
+		GeographicMapMaker mapMaker23 = new RupSetMapMaker(rupSet23, refReg);
 		
-		for (RupSetMapMaker mapMaker : new RupSetMapMaker[] {mapMaker18, mapMaker23}) {
+		for (GeographicMapMaker mapMaker : new GeographicMapMaker[] {mapMaker18, mapMaker23}) {
 			mapMaker.setSectOutlineChar(null);
 			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(100, 100, 100, 127)));
 		}
@@ -533,7 +534,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 	private static final DecimalFormat twoDigits = new DecimalFormat("0.00");
 	private static final DecimalFormat pDF = new DecimalFormat("0.00%");
 	
-	private static void plotHazardChange(File outputDir, String prefix, RupSetMapMaker mapMaker, CPT pDiffCPT,
+	private static void plotHazardChange(File outputDir, String prefix, GeographicMapMaker mapMaker, CPT pDiffCPT,
 			GriddedRegion refReg, GriddedGeoDataSet numerator, GriddedGeoDataSet denominator, String label,
 			FileWriter logFW) throws IOException {
 		GriddedGeoDataSet pDiff = new GriddedGeoDataSet(refReg, false);

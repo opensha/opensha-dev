@@ -13,6 +13,7 @@ import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
@@ -102,7 +103,7 @@ public class ExternalHazardCompPageGen {
 		DiscretizedFunc[] withGrid18 = add(fault23, grid18, sub23);
 		DiscretizedFunc[] withSub18 = add(fault23, grid23, sub18);
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(List.of(), mapReg);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(List.of(), mapReg);
 		mapMaker.setDefaultPlotWidth(1000);
 		
 		Color transparent = new Color(255, 255, 255, 0);

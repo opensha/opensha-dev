@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -31,7 +32,7 @@ class FaultParticipationPlots {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/partic_plot");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(sol.getRupSet(), NSHM23_RegionLoader.loadFullConterminousWUS());
+		GeographicMapMaker mapMaker = new RupSetMapMaker(sol.getRupSet(), NSHM23_RegionLoader.loadFullConterminousWUS());
 		
 		DecimalFormat oDF = new DecimalFormat("0.#");
 		

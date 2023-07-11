@@ -27,6 +27,7 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -265,10 +266,10 @@ public class WUS_HazardChangePageGen {
 			sectsWithIndexes18.add(sect);
 		}
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2), gridReg);
-		RupSetMapMaker mapMaker18 = new RupSetMapMaker(sectsWithIndexes18, gridReg);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2), gridReg);
+		GeographicMapMaker mapMaker18 = new RupSetMapMaker(sectsWithIndexes18, gridReg);
 		
-		for (RupSetMapMaker map : new RupSetMapMaker[] {mapMaker, mapMaker18}) {
+		for (GeographicMapMaker map : new GeographicMapMaker[] {mapMaker, mapMaker18}) {
 			map.setWriteGeoJSON(false);
 			map.setWritePDFs(true);
 			map.setSectOutlineChar(null);

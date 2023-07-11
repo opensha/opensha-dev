@@ -30,7 +30,7 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		File localMainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
 		int nodes = 36;
-		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.ONLY;
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
 		boolean subduction = false;
 		
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
@@ -42,19 +42,19 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 //		String erfPrefix = "nshm23-wrapped";
 //		String tagName = "nshm-conus-6.a.6"; // NSHM23 draft
 		
-		double gridSpacing = 0.1d; int mins = 2000;
-		String regName = "wus";
-		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+//		double gridSpacing = 0.1d; int mins = 2000;
+//		String regName = "wus";
+//		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
-//		double gridSpacing = 0.2d; int mins = 2000;
-//		String regName = "conus";
-//		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
+		double gridSpacing = 0.2d; int mins = 2000;
+		String regName = "conus";
+		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
 		
-//		String extGridProvPath = null;
-		String extGridProvPath = "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
-//				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
-				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded_with_ceus.zip";
-		erfPrefix += "-grid_src_from_23"; griddedOp = IncludeBackgroundOption.INCLUDE;
+		String extGridProvPath = null;
+//		String extGridProvPath = "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+////				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
+//				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded_with_ceus.zip";
+//		erfPrefix += "-grid_src_from_23"; griddedOp = IncludeBackgroundOption.INCLUDE;
 //		String extGridProvPath = "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 //				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
 //		erfPrefix += "-grid_src_from_modWeightDM_23"; gridded = true;

@@ -15,6 +15,7 @@ import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
@@ -60,7 +61,7 @@ public class WrapperComparisonPageGen {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(List.of(), reg);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(List.of(), reg);
 		mapMaker.setDefaultPlotWidth(1200);
 		
 		HazardModel model1 = HazardModel.load(new File(modelsDir, dirName1).toPath());

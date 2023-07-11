@@ -13,6 +13,7 @@ import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
@@ -51,7 +52,7 @@ public class SeisGridPlotter {
 		Region region = Region.union(SeismicityRegions.CONUS_WEST.load(), SeismicityRegions.CONUS_EAST.load());
 		List<SeismicityRegions> seisRegions = NSHM23_InvConfigFactory.getSeismicityRegions(region);
 		GriddedRegion gridReg = NSHM23_InvConfigFactory.getGriddedSeisRegion(seisRegions); 
-		RupSetMapMaker mapMaker = new RupSetMapMaker(subSects, region);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(subSects, region);
 		mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 0.5f, new Color(0, 0, 0, 80)));
 		mapMaker.setSectOutlineChar(null);
 		mapMaker.setWritePDFs(true);

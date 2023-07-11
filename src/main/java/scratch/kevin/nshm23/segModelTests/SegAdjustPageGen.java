@@ -20,6 +20,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -127,7 +128,7 @@ public class SegAdjustPageGen {
 		
 		Region corupReg = RupSetMapMaker.buildBufferedRegion(corupSects, 30d, true);
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, corupReg);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(rupSet, corupReg);
 		
 		List<String> lines = new ArrayList<>();
 		
@@ -233,7 +234,7 @@ public class SegAdjustPageGen {
 		CPT distCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, Math.max(5d, 5d*Math.ceil(maxSectDist/5d)));
 		
 		mapMaker.setSkipNaNs(true);
-		mapMaker.highLightSections(mySects , new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		mapMaker.setSectHighlights(mySects , new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		
 		mapMaker.plotJumpScalars(jumpDists, distCPT, null);
 		

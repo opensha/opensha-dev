@@ -16,6 +16,7 @@ import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -233,7 +234,7 @@ public class OutlierReplacementPageGen {
 					}
 				}
 				
-				RupSetMapMaker mapMaker = new RupSetMapMaker(origSects, mapReg);
+				GeographicMapMaker mapMaker = new RupSetMapMaker(origSects, mapReg);
 				
 				mapMaker.plotSectColors(filterColors, null, null, filterColorComps);
 				
@@ -420,7 +421,7 @@ public class OutlierReplacementPageGen {
 				}
 			}
 			
-			RupSetMapMaker mapMaker = new RupSetMapMaker(sects, mapReg);
+			GeographicMapMaker mapMaker = new RupSetMapMaker(sects, mapReg);
 			
 			table = MarkdownUtils.tableBuilder();
 			
@@ -531,7 +532,7 @@ public class OutlierReplacementPageGen {
 			}
 		}
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(sects, mapReg);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(sects, mapReg);
 		
 		TableBuilder table = MarkdownUtils.tableBuilder();
 		

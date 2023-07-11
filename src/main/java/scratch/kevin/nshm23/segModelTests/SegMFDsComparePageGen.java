@@ -19,6 +19,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -120,7 +121,7 @@ public class SegMFDsComparePageGen {
 		Region mapRegion = ReportMetadata.detectRegion(rupSet);
 		if (mapRegion == null)
 			mapRegion = RupSetMapMaker.buildBufferedRegion(rupSet.getFaultSectionDataList());
-		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, mapRegion);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(rupSet, mapRegion);
 		
 		IncrementalMagFreqDist defaultMFD = SolMFDPlot.initDefaultMFD(rupSet.getMinMag(), rupSet.getMaxMag());
 		Range mfdXRange = new Range(defaultMFD.getMinX()-0.5*defaultMFD.getDelta(),

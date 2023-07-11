@@ -24,6 +24,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -608,7 +609,7 @@ public class PreferredDirectionPageGen {
 		
 		Region region = bufferedRegion(latTrack, lonTrack);
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, region);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(rupSet, region);
 		
 		if (sites != null && !sites.isEmpty()) {
 			mapMaker.plotScatters(sites, Color.BLACK);
@@ -689,9 +690,9 @@ public class PreferredDirectionPageGen {
 		}
 		
 		Region region = bufferedRegion(latTrack, lonTrack);
-		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, region);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(rupSet, region);
 		
-		mapMaker.highLightSections(rupSects, new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		mapMaker.setSectHighlights(rupSects, new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
 		mapMaker.plotScatters(hypos, Color.RED.darker());
 		mapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 3f);
 		

@@ -35,6 +35,7 @@ import org.opensha.commons.data.siteData.SiteDataValue;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -1650,11 +1651,11 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		int tocIndex = lines.size();
 		String topLink = "*[(top)](#table-of-contents)*";
 		
-		RupSetMapMaker siteMapMaker = new RupSetMapMaker(subSects, siteRegion);
+		GeographicMapMaker siteMapMaker = new RupSetMapMaker(subSects, siteRegion);
 		siteMapMaker.setWriteGeoJSON(false);
 //		siteMapMaker.setScatterSymbol(PlotSymbol.FILLED_TRIANGLE, 7f, PlotSymbol.TRIANGLE, new Color(0, 0, 0, 127));
 		siteMapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 10f, PlotSymbol.CIRCLE, new Color(0, 0, 0, 127));
-		RupSetMapMaker sourceMapMaker = new RupSetMapMaker(subSects, sourceRegion);
+		GeographicMapMaker sourceMapMaker = new RupSetMapMaker(subSects, sourceRegion);
 		sourceMapMaker.setSkipNaNs(true);
 		
 		CPT zScoreCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-1d, 1d);

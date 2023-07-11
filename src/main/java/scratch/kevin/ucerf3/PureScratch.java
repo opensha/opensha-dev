@@ -75,6 +75,7 @@ import org.opensha.commons.geo.json.Geometry.GeometryCollection;
 import org.opensha.commons.geo.json.Geometry.LineString;
 import org.opensha.commons.geo.json.Geometry.MultiPoint;
 import org.opensha.commons.geo.json.Geometry.Polygon;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.GraphPanel;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
@@ -1502,7 +1503,7 @@ public class PureScratch {
 		
 		int printMod = 10;
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, RupSetMapMaker.buildBufferedRegion(rupSet.getFaultSectionDataList()));
+		GeographicMapMaker mapMaker = new RupSetMapMaker(rupSet, RupSetMapMaker.buildBufferedRegion(rupSet.getFaultSectionDataList()));
 		mapMaker.setWriteGeoJSON(false);
 		mapMaker.setWritePDFs(false);
 		
@@ -1546,7 +1547,7 @@ public class PureScratch {
 			FaultSection s2 = sect2.clone();
 			s2.setSectionId(1);
 			List<FaultSection> sects = List.of(s1, s2);
-			RupSetMapMaker mapMaker = new RupSetMapMaker(sects, RupSetMapMaker.buildBufferedRegion(sects));
+			GeographicMapMaker mapMaker = new RupSetMapMaker(sects, RupSetMapMaker.buildBufferedRegion(sects));
 			
 			mapMaker.setWritePDFs(false);
 			mapMaker.setWriteGeoJSON(true);

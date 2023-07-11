@@ -36,6 +36,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -247,7 +248,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		plotReg = new Region(new Location(plotGridReg.getMinGridLat()-halfSpacing, plotGridReg.getMinGridLon()-halfSpacing),
 				new Location(plotGridReg.getMaxGridLat()+halfSpacing, plotGridReg.getMaxGridLon()+halfSpacing));
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(sol.getRupSet(), plotReg);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(sol.getRupSet(), plotReg);
 		mapMaker.setWritePDFs(false);
 		mapMaker.plotScatters(List.of(loc), Color.CYAN);
 		mapMaker.setScatterSymbol(PlotSymbol.FILLED_INV_TRIANGLE, 10f, PlotSymbol.INV_TRIANGLE, Color.BLACK);

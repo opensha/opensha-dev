@@ -20,6 +20,7 @@ import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
+import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -347,7 +348,7 @@ public class WestCacheConnectivityFigures {
 		topRight = LocationUtils.location(topRight, Math.PI/4d, 50d);
 		botLeft = LocationUtils.location(botLeft, 5d*Math.PI/4d, 50d);
 		
-		RupSetMapMaker mapMaker = new RupSetMapMaker(rupSet, new Region(botLeft, topRight));
+		GeographicMapMaker mapMaker = new RupSetMapMaker(rupSet, new Region(botLeft, topRight));
 		
 		CPT magCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(xRange.getLowerBound(), xRange.getUpperBound());
 		CPT passthroughCPT = GMT_CPT_Files.GMT_COPPER.instance().rescale(0d, 1d);
@@ -362,7 +363,7 @@ public class WestCacheConnectivityFigures {
 		modPassthroughCPT.setAboveMaxColor(modPassthroughCPT.getMaxColor());
 		passthroughCPT = modPassthroughCPT.rescale(0d, 1d);
 		
-		mapMaker.highLightSections(highlightSects, new PlotCurveCharacterstics(PlotLineType.SOLID, 6f, Color.BLACK));
+		mapMaker.setSectHighlights(highlightSects, new PlotCurveCharacterstics(PlotLineType.SOLID, 6f, Color.BLACK));
 		mapMaker.setSkipNaNs(true);
 		mapMaker.setDefaultPlotWidth(650);
 		
