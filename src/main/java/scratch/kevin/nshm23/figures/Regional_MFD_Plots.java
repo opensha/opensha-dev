@@ -713,7 +713,7 @@ class Regional_MFD_Plots {
 		cmlChars.add(pChar);
 	}
 
-	private static Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> calcSolMFDs(
+	static Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> calcSolMFDs(
 			FaultSystemSolution sol, NSHM23_BaseRegion[] regions, EvenlyDiscretizedFunc refMFD) throws IOException {
 		Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> ret = HashBasedTable.create();
 		
@@ -761,7 +761,7 @@ class Regional_MFD_Plots {
 		return ret;
 	}
 	
-	private static Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> calcModelMFDs(
+	static Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> calcModelMFDs(
 			HazardModel model, Set<TectonicRegionType> trts, NSHM23_BaseRegion[] regions, EvenlyDiscretizedFunc refMFD) throws IOException {
 		ExecutorService exec = Executors.newFixedThreadPool(FaultSysTools.defaultNumThreads());
 		
@@ -789,7 +789,7 @@ class Regional_MFD_Plots {
 		return ret;
 	}
 	
-	private static Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> calcCascadiaModelMFDs(
+	static Table<NSHM23_BaseRegion, MFDType, IncrementalMagFreqDist> calcCascadiaModelMFDs(
 			HazardModel model, NSHM23_BaseRegion[] regions, EvenlyDiscretizedFunc refMFD) throws IOException {
 		ExecutorService exec = Executors.newFixedThreadPool(FaultSysTools.defaultNumThreads());
 		

@@ -4433,12 +4433,24 @@ public class PureScratch {
 		System.out.println(mfds.get(debugSect));
 	}
 	
+	private static final void test248() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/solution.zip"));
+		sol.getRupSet().requireModule(RegionsOfInterest.class);
+	}
+	
+	private static final void test249() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+		FaultSystemSolutionERF u3ERF = new FaultSystemSolutionERF(sol);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test245();
+		test249();
 	}
 
 }

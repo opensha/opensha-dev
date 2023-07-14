@@ -31,9 +31,11 @@ public class DevinSlipRateCSV {
 
 	public static void main(String[] args) throws IOException {
 		File solDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/");
-		FaultSystemSolution sol = FaultSystemSolution.load(new File(solDir,
-				"results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+//				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/");
+				+ "2023_06_29-nshm23_branches-NSHM23_v2-CoulombRupSet-DsrTap-TotNuclRate-NoRed-ThreshAvgIterRelGR/");
+//		File solFile = new File(solDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+		File solFile = new File(solDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
 		
 		SolutionSlipRates solSlips = sol.requireModule(SolutionSlipRates.class);
 		FaultSystemRupSet rupSet = sol.getRupSet();
