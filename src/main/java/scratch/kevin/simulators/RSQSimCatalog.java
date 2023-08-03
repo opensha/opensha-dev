@@ -669,6 +669,9 @@ public class RSQSimCatalog implements XMLSaveable {
 				59, 'G'),
 		BRUCE_5566_CRUSTAL("rundir5566_crustal", "Bruce 5566 (Crustal Only)", "Bruce Shaw", cal(2023, 3, 25),
 				"NZ dynamic,  bdeep=.01, bshallow=.003,  alpha=0.25; Filtered for slip on crustal patches only;",
+				59, 'G'),
+		BRUCE_5585("rundir5585", "Bruce 5585", "Bruce Shaw", cal(2023, 8, 2),
+				"NZ dynamic, bdeep=.009, bRampto=.003, alpha=0.25",
 				59, 'G');
 		
 		private String dirName;
@@ -3270,22 +3273,22 @@ public class RSQSimCatalog implements XMLSaveable {
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
 //		GregorianCalendar minDate = cal(2021, 10, 1);
-//		GregorianCalendar minDate = cal(2023, 1, 1);
-//		for (Catalogs cat : cats) {
+		GregorianCalendar minDate = cal(2023, 1, 1);
+		for (Catalogs cat : cats) {
 		// specific catalog
-		GregorianCalendar minDate = cal(2000, 1, 1);
-		for (Catalogs cat : new Catalogs[] {
-////				Catalogs.BRUCE_4983_STITCHED,
-//////				Catalogs.BRUCE_2585,
-//////				Catalogs.BRUCE_2585_1MYR,
-//////				Catalogs.BRUCE_2740,
-//////				Catalogs.BRUCE_3062,
-//////				Catalogs.BRUCE_4860,
-//////				Catalogs.JG_tunedBase1m_ddotEQmod,
-//////				Catalogs.JG_tuneBase1m,
-				Catalogs.BRUCE_5566,
-				Catalogs.BRUCE_5566_CRUSTAL
-				}) {
+//		GregorianCalendar minDate = cal(2000, 1, 1);
+//		for (Catalogs cat : new Catalogs[] {
+//////				Catalogs.BRUCE_4983_STITCHED,
+////////				Catalogs.BRUCE_2585,
+////////				Catalogs.BRUCE_2585_1MYR,
+////////				Catalogs.BRUCE_2740,
+////////				Catalogs.BRUCE_3062,
+////////				Catalogs.BRUCE_4860,
+////////				Catalogs.JG_tunedBase1m_ddotEQmod,
+////////				Catalogs.JG_tuneBase1m,
+//				Catalogs.BRUCE_5566,
+//				Catalogs.BRUCE_5566_CRUSTAL
+//				}) {
 		// all catalogs
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : cats) {

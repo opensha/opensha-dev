@@ -205,6 +205,9 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
+import org.opensha.sha.simulators.parsers.RSQSimFileReader;
+import org.opensha.sha.simulators.srf.RSQSimStateTime;
+import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
 import org.opensha.sha.util.NEHRP_TestCity;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -4445,12 +4448,131 @@ public class PureScratch {
 		FaultSystemSolutionERF u3ERF = new FaultSystemSolutionERF(sol);
 	}
 	
+	private static final void test250() throws IOException {
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = List.of(
+//				NSHM23_LogicTreeBranch.DM, NSHM23_LogicTreeBranch.SCALE,
+//				NSHM23_LogicTreeBranch.PALEO_UNCERT, NSHM23_LogicTreeBranch.SEG, NSHM23_LogicTreeBranch.SUPRA_B);
+//		SupraSeisBValues.SEG_DEPENDENT_WEIGHTS = true;
+//		LogicTree<?> tree = LogicTree.buildExhaustive(levels, true);
+//		
+//		BranchWeightProvider currentWeights = new BranchWeightProvider.CurrentWeights();
+//		BranchWeightProvider topDownWeights = new BranchWeightProvider.TopDownWeights(tree);
+//		
+//		double sumCurrent = 0d;
+//		double sumTopDown = 0d;
+//		double[] currentWeightsArray = new double[tree.size()];
+//		double[] topDownWeightsArray = new double[tree.size()];
+//		for (int i=0; i<tree.size(); i++) {
+//			LogicTreeBranch<?> branch = tree.getBranch(i);
+//			
+//			currentWeightsArray[i] = currentWeights.getWeight(branch);
+//			sumCurrent += currentWeightsArray[i];
+//			topDownWeightsArray[i] = topDownWeights.getWeight(branch);
+//			sumTopDown += topDownWeightsArray[i];
+//		}
+//		
+//		// make sure they're equal right now
+//		int numEqual = 0;
+//		for (int i=0; i<tree.size(); i++) {
+//			LogicTreeBranch<?> branch = tree.getBranch(i);
+//			
+//			double currentWeight = currentWeightsArray[i]/sumCurrent;
+//			double topDownWeight = topDownWeightsArray[i]/sumTopDown;
+//			System.out.println(i+". current="+(float)currentWeight+"\ttopDown="+(float)topDownWeight+"; \t"+branch);
+//			if ((float)currentWeight == (float)topDownWeight)
+//				numEqual++;
+//		}
+//		
+//		System.out.println("Original sumCurrent="+(float)sumCurrent+", sumTopDown="+(float)sumTopDown);
+//		System.out.println(numEqual+"/"+tree.size()+" weights are equal");
+//		
+//		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+//				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/");
+//		LogicTree<?> origTree = LogicTree.read(new File(dir, "logic_tree.json"));
+//		
+//		// modify weights
+//		Map<LogicTreeBranch<?>, Double> modWeightsMap = new HashMap<>();
+//		// initialize with zeros, then override with matches
+//		for (LogicTreeBranch<?> branch : origTree)
+//			modWeightsMap.put(branch, 0d);
+//		// map in modified weights for branches that exist in the new tree
+//		for (LogicTreeBranch<?> branch : tree) {
+//			// find corresponding branch in original tree
+//			LogicTreeBranch<?> matchingBranch = null;
+//			for (LogicTreeBranch<?> origBranch : origTree) {
+//				boolean match = true;
+//				for (LogicTreeNode node : branch) {
+//					if (!origBranch.hasValue(node)) {
+//						match = false;
+//						break;
+//					}
+//				}
+//				if (match) {
+//					matchingBranch = origBranch;
+//					break;
+//				}
+//			}
+//			Preconditions.checkNotNull(matchingBranch, "No match found for branch %s", branch);
+//			double modWeight = topDownWeights.getWeight(branch);
+//			modWeightsMap.put(matchingBranch, modWeight);
+//		}
+//		for (LogicTreeBranch<?> branch : modWeightsMap.keySet()) {
+//			double weight = modWeightsMap.get(branch);
+//			branch.setOrigBranchWeight(weight);
+//		}
+//		
+//		origTree.setWeightProvider(new BranchWeightProvider.OriginalWeights());
+//		origTree.write(new File(dir, "logic_tree_seg_specific_b_val_weights.json"));
+	}
+
+	private static void test251() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/"
+				+ "FM3_1_branch_averaged.zip"));
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		
+		int rupID = 251641;
+		List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(rupID);
+		System.out.println("Sections for rup "+rupID);
+		for (FaultSection sect : sects) {
+			System.out.println("\t"+sect.getSectionId()+". "+sect.getName());
+			System.out.println("\t\tDip: "+(float)sect.getAveDip());
+			System.out.println("\t\tUpper depth: orig="+(float)sect.getOrigAveUpperDepth()
+				+", reduced="+(float)sect.getReducedAveUpperDepth());
+			System.out.println("\t\tLower depth: "+(float)sect.getAveLowerDepth());
+			System.out.println("\t\tDDW: orig="+(float)sect.getOrigDownDipWidth()
+				+", reduced="+(float)sect.getReducedDownDipWidth());
+			System.out.println("\t\tLength: "+(float)sect.getTraceLength());
+			System.out.println("\t\tArea: orig="+(float)(sect.getArea(false)*1e-6)
+				+", reduced="+(float)(sect.getArea(true)*1e-6));
+		}
+		System.out.println("Area: "+rupSet.getAreaForRup(rupID)*1e-6);
+	}
+
+	private static void test252() throws IOException {
+		File dir = new File("/data/kevin/simulators/catalogs/bruce/rundir5413_multifault_separate");
+		RSQSimCatalog catalog = new RSQSimCatalog(dir, "Test Catalog", FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+		RSQSimEvent event = catalog.loader().byID(202);
+		System.out.println("Magnitude: "+event.getMagnitude());
+		RSQSimStateTransitionFileReader transReader = catalog.getTransitions();
+		List<RSQSimStateTime> transitions = new ArrayList<>();
+		transReader.getTransitions(event, transitions);
+		System.out.println("Read "+transitions.size()+" transitions for event "+event.getID()+":");
+		for (RSQSimStateTime trans : transitions)
+			System.out.println(trans);
+		
+		List<RSQSimEvent> withTrans = catalog.loader().hasTransitions().minMag(5d).load();
+		System.out.println("Loaded "+withTrans.size()+" events with valid transitions");
+		for (RSQSimEvent e2 : withTrans)
+			System.out.println(e2.getID()+" is a M"+e2.getMagnitude()+" at "+e2.getTimeInYears()+" yrs");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test249();
+		test252();
 	}
 
 }

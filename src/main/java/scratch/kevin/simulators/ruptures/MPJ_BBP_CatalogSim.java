@@ -171,7 +171,7 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 		addCommonOptions(ops);
 		
 		Option mag = new Option("mag", "min-mag", true, "Minimum magnitude");
-		mag.setRequired(true);
+		mag.setRequired(false);
 		ops.addOption(mag);
 		
 		Option skipYears = new Option("skip", "skip-years", true, "Skip the given number of years at the start");

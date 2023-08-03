@@ -34,11 +34,14 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir5450";
 //		String catalogDirName = "rundir4983_stitched";
 //		String catalogDirName = "rundir5566";
-		String catalogDirName = "rundir5566_subduction_corupture";
+		String catalogDirName = "rundir5585";
+//		String catalogDirName = "rundir5566_subduction_corupture";
+//		String catalogDirName = "rundir5413_multifault_separate";
 //		String catalogDirName = "rundir5566_crustal_corupture";
 		
 //		int skipYears = 20000;
 		int skipYears = 5000;
+//		int skipYears = 0;
 //		int skipYears = 65000;
 		
 		double maxDist = MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT;
@@ -49,7 +52,6 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		// CA
 //		Integer utmZone = null;
 //		Character utmBand = null;
-//		Preconditions.checkState(!griddedNZSites);
 //		boolean standardSites = false;
 //		boolean csInitialLASites = false;
 //		boolean cs500LASites = true;
@@ -72,9 +74,10 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		boolean griddedNZSites = true;
 		boolean nzStandardSites = true;
 		
-		double minMag = 5;
+//		double minMag = 0d;
+//		double minMag = 5;
 //		double minMag = 6;
-//		double minMag = 6.5;
+		double minMag = 6.5;
 //		double minMag = 7;
 		int numRG = 0;
 //		double minMag = 7;
@@ -91,7 +94,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 18;
+		int nodes = 36;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
@@ -133,7 +136,11 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		((FastMPJShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		jobName += "-"+catalogDirName+"-all-m"+(float)minMag+"-skipYears"+skipYears;
+		jobName += "-"+catalogDirName+"-all";
+		if (minMag > 0d)
+			jobName += "-m"+(float)minMag;
+		if (skipYears > 0)
+			jobName += "-skipYears"+skipYears;
 		if (maxDist != MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT)
 			jobName += "-maxDist"+(int)maxDist;
 		if (!RSQSimBBP_Config.DO_HF)
@@ -203,7 +210,10 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		argz += " --catalog-dir "+catalogDirName;
 		argz += " --output-dir "+remoteJobDir.getAbsolutePath();
 		argz += " --time-step "+(float)RSQSimBBP_Config.SRF_DT+" --srf-interp "+RSQSimBBP_Config.SRF_INTERP_MODE.name();
-		argz += " --min-mag "+(float)minMag+" --skip-years "+skipYears;
+		if (minMag > 0d)
+			argz += " --min-mag "+(float)minMag;
+		if (skipYears > 0)
+			argz += " --skip-years "+skipYears;
 		if (maxDist != MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT)
 			argz += " --max-dist "+(float)maxDist;
 		if (!RSQSimBBP_Config.DO_HF)
