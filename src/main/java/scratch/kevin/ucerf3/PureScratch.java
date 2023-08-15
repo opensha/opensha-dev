@@ -4566,13 +4566,32 @@ public class PureScratch {
 		for (RSQSimEvent e2 : withTrans)
 			System.out.println(e2.getID()+" is a M"+e2.getMagnitude()+" at "+e2.getTimeInYears()+" yrs");
 	}
+
+	private static void test253() throws IOException {
+		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only");
+		File treeFile = new File(dir, "logic_tree-nga_w2s-gmm_add_epi.json");
+		
+		File resultsFile = new File(dir, "results.zip");
+		
+		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile, LogicTree.read(treeFile));
+		
+		LogicTree<?> tree = slt.getLogicTree();
+		System.out.println("Tree has "+tree.size()+" branches");
+		
+		for (LogicTreeBranch<?> branch : tree) {
+			System.out.println("Branch: "+branch);
+			FaultSystemSolution sol = slt.forBranch(branch);
+			System.out.println("\tGrid sources? "+sol.hasModule(GridSourceProvider.class));
+		}
+	}
 	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test252();
+		test253();
 	}
 
 }
