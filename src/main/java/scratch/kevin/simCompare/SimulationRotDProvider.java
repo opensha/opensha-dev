@@ -322,5 +322,11 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @return magnitude of rupture E
 	 */
 	public double getMagnitude(E rupture);
+	
+	/**
+	 * @param rupture
+	 * @return rake angle (degrees) of rupture E
+	 */
+	public double getRake(E rupture);
 
 }

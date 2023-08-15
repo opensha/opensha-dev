@@ -210,4 +210,9 @@ public class LightweightBBP_CatalogSimZipLoader extends BBP_SimZipLoader impleme
 		return false;
 	}
 
+	@Override
+	public double getRake(Integer rupture) {
+		return Double.NaN;
+	}
+
 }

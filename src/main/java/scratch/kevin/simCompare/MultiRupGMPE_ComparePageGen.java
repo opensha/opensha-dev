@@ -91,10 +91,16 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	private List<RuptureComparisonFilter<E>> magFilters;
 	private List<String> magLabels;
 	private List<String> magFileLabels;
+	
 	private List<Range> distRanges;
 	private List<RuptureComparisonFilter<E>> distFilters;
 	private List<String> distLabels;
 	private List<String> distFileLabels;
+	
+	private boolean doRakeBinned = true;
+	private List<RuptureComparisonFilter<E>> rakeFilters;
+	private List<String> rakeLabels;
+	private List<String> rakeFileLabels;
 	
 	private Table<E, Site, Map<Integer, Double>> rupSiteAzMap;
 	
@@ -214,28 +220,114 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		distRanges = new ArrayList<>();
 		// 0-10, 10-20, 20-40, 40-80, 80-160
 		distRanges.add(new Range(0d, 10d));
-		distRanges.add(new Range(10d, 20d));
-		distRanges.add(new Range(20d, 40d));
+		distRanges.add(new Range(10d, 40d));
 		distRanges.add(new Range(40d, 80d));
 		distRanges.add(new Range(80d, 160d));
 		distRanges.add(new Range(160d, cutoffDist));
+		distRanges.add(null);
 		distFilters = new ArrayList<>();
-		for (Range distRange : distRanges)
-			if (distJB)
+		for (Range distRange : distRanges) {
+			if (distRange == null)
+				distFilters.add(new RuptureComparisonFilter.AcceptAllFilter<>());
+			else if (distJB)
 				distFilters.add(new RuptureComparisonFilter.DistJBFilter<>(distRange.getLowerBound(),
 						distRange.getUpperBound()));
 			else
 				distFilters.add(new RuptureComparisonFilter.DistRupFilter<>(distRange.getLowerBound(),
 						distRange.getUpperBound()));
+		}
 		distLabels = new ArrayList<>();
-		String distShortName = getDistShortName();
-		for (Range distRange : distRanges)
-			distLabels.add(optionalDigitDF.format(distRange.getLowerBound())+" km < "+distShortName+" < "
-					+optionalDigitDF.format(distRange.getUpperBound())+" km");
 		distFileLabels = new ArrayList<>();
-		for (Range distRange : distRanges)
-			distFileLabels.add("dist_"+optionalDigitDF.format(distRange.getLowerBound())+"_"
-					+optionalDigitDF.format(distRange.getUpperBound()));
+		String distShortName = getDistShortName();
+		for (Range distRange : distRanges) {
+			if (distRange == null) {
+				distLabels.add("All Distances");
+				distFileLabels.add("dist_all");
+			} else {
+				distLabels.add(optionalDigitDF.format(distRange.getLowerBound())+" km < "+distShortName+" < "
+						+optionalDigitDF.format(distRange.getUpperBound())+" km");
+				distFileLabels.add("dist_"+optionalDigitDF.format(distRange.getLowerBound())+"_"
+						+optionalDigitDF.format(distRange.getUpperBound()));
+			}
+		}
+		
+		List<RakeFilter> indvRakeFilters = new ArrayList<>(3);
+		rakeLabels = new ArrayList<>(4);
+		rakeFileLabels = new ArrayList<>(4);
+		
+		indvRakeFilters.add(new RakeFilter(new Range(-180.01, -170), new Range(-10, 10), new Range(170, 180.01)));
+		rakeLabels.add("Strike-Slip");
+		rakeFileLabels.add("rake_ss");
+		
+		indvRakeFilters.add(new RakeFilter(new Range(80, 100)));
+		rakeLabels.add("Reverse");
+		rakeFileLabels.add("rake_reverse");
+		
+		indvRakeFilters.add(new RakeFilter(new Range(-100, -80)));
+		rakeLabels.add("Normal");
+		rakeFileLabels.add("rake_normal");
+		
+		rakeFilters = new ArrayList<>(4);
+		rakeFilters.addAll(indvRakeFilters);
+		rakeFilters.add(new ObliqueFilter(indvRakeFilters));
+		rakeLabels.add("Oblique");
+		rakeFileLabels.add("rake_oblique");
+	}
+	
+	public boolean isDoRakeBinned() {
+		return doRakeBinned;
+	}
+
+	public void setDoRakeBinned(boolean doRakeBinned) {
+		this.doRakeBinned = doRakeBinned;
+	}
+
+	private class RakeFilter extends RuptureComparisonFilter<E> {
+		
+		private Range[] ranges;
+
+		private RakeFilter(Range... ranges) {
+			this.ranges = ranges;
+			
+		}
+
+		@Override
+		public boolean matches(RuptureComparison<E> comp, Site site) {
+			double rake = simProv.getRake(comp.getRupture());
+			
+			for (Range range : ranges)
+				if (range.contains(rake))
+					return true;
+			return false;
+		}
+		
+	}
+	
+	private class ObliqueFilter extends RuptureComparisonFilter<E> {
+		
+		private List<Range> ranges;
+
+		private ObliqueFilter(List<RakeFilter> rakeFilters) {
+			ranges = new ArrayList<>();
+			for (RakeFilter filter : rakeFilters)
+				for (Range range : filter.ranges)
+					ranges.add(range);
+		}
+
+		@Override
+		public boolean matches(RuptureComparison<E> comp, Site site) {
+			double rake = simProv.getRake(comp.getRupture());
+			
+			if (!Double.isFinite(rake))
+				return false;
+			
+			// see if any of our other ranges contain it
+			for (Range range : ranges)
+				if (range.contains(rake))
+					return false;
+			return true;
+		}
+		
 	}
 	
 	private static final int MAX_SCATTER_NUM_POINTS = 100000;
@@ -679,113 +771,136 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				lines.add(siteComps.size()+" ruptures within "+(float)cutoffDist+" km");
 			}
 			
-			for (int m=0; m<magFilters.size(); m++) {
-				RuptureComparisonFilter<E> magFilter = magFilters.get(m);
-				lines.add("#### "+siteName+", "+magLabels.get(m));
+			boolean[] magRakeBools = doRakeBinned ? new boolean[] { false, true } : new boolean[] { false };
+			
+			for (boolean isRake : magRakeBools) {
+				List<RuptureComparisonFilter<E>> filters;
+				List<String> labels;
+				List<String> fileLabels;
 				
-				List<? extends RuptureComparison<E>> magEventComps = magFilter.getMatches(comps, null);
-				lines.add(magEventComps.size()+" Ruptures");
+				if (isRake) {
+					filters = rakeFilters;
+					labels = rakeLabels;
+					fileLabels = rakeFileLabels;
+				} else {
+					filters = magFilters;
+					labels = magLabels;
+					fileLabels = magFileLabels;
+				}
 				
-				lines.add("##### "+siteName+", "+magLabels.get(m)+", Scatter Plots");
-				lines.add(topLink); lines.add("");
-				lines.add("**Legend**");
-				lines.add("* Red +: GMPE Mean/"+simName+" single rupture comparison");
-				lines.add("* Yellow Region: Factor of 2 above & below");
-				lines.add("* Green Line: Linear Regression");
-				
-				table = MarkdownUtils.tableBuilder();
-				table.initNewLine().addColumn("**Distance Bin**");
-				for (IMT imt : imts)
-					table.addColumn("**"+imt.getDisplayName()+"**");
-				table.finalizeLine();
-				
-				for (int d=0; d<distFilters.size(); d++) {
-					RuptureComparisonFilter<E> filter = distFilters.get(d);
-//					if (eventsForMagDist.isEmpty()) {
-//						System.out.println("No events for "+site.getName()+", "+distLabels.get(d)+", "+magLabels.get(m));
-//					}
+				for (int f=0; f<filters.size(); f++) {
+					RuptureComparisonFilter<E> filter = filters.get(f);
+
+					List<? extends RuptureComparison<E>> filteredEventComps = filter.getMatches(comps, null);
+					if (filteredEventComps.isEmpty())
+						continue;
 					
-					table.initNewLine().addColumn("**"+distLabels.get(d)+"**");
+					lines.add("#### "+siteName+", "+labels.get(f));
+					lines.add("");
+					lines.add(filteredEventComps.size()+" Ruptures");
 					
-					for (IMT imt : imts) {
-						String prefix = siteName.replaceAll(" ", "_")+"_"+magFileLabels.get(m)+"_"+distFileLabels.get(d);
-						prefix += "_"+imt.getPrefix()+"_"+gmpeRef.getShortName()+"_scatter";
-				
-						System.out.println("Plotting Scatter: "+prefix);
+					lines.add("##### "+siteName+", "+labels.get(f)+", Scatter Plots");
+					lines.add(topLink); lines.add("");
+					lines.add("**Legend**");
+					lines.add("* Red +: GMPE Mean/"+simName+" single rupture comparison");
+					lines.add("* Yellow Region: Factor of 2 above & below");
+					lines.add("* Green Line: Linear Regression");
+					
+					table = MarkdownUtils.tableBuilder();
+					table.initNewLine().addColumn("**Distance Bin**");
+					for (IMT imt : imts)
+						table.addColumn("**"+imt.getDisplayName()+"**");
+					table.finalizeLine();
+					
+					for (int d=0; d<distFilters.size(); d++) {
+						RuptureComparisonFilter<E> distFilter = distFilters.get(d);
+//						if (eventsForMagDist.isEmpty()) {
+//							System.out.println("No events for "+site.getName()+", "+distLabels.get(d)+", "+magLabels.get(m));
+//						}
 						
-						String label = imt.getShortName();
+						table.initNewLine().addColumn("**"+distLabels.get(d)+"**");
 						
-						List<String> binDescriptions = Lists.newArrayList(distLabels.get(d),
-								magLabels.get(m), label+", "+gmpeRef.getShortName());
-						File scatterPlot = new File(resourcesDir, prefix+".png");
+						for (IMT imt : imts) {
+							String prefix = siteName.replaceAll(" ", "_")+"_"+fileLabels.get(f)+"_"+distFileLabels.get(d);
+							prefix += "_"+imt.getPrefix()+"_"+gmpeRef.getShortName()+"_scatter";
+					
+							System.out.println("Plotting Scatter: "+prefix);
+							
+							String label = imt.getShortName();
+							
+							List<String> binDescriptions = Lists.newArrayList(distLabels.get(d),
+									labels.get(f), label+", "+gmpeRef.getShortName());
+							File scatterPlot = new File(resourcesDir, prefix+".png");
+							boolean success;
+							if (scatterPlot.exists() && !replotScatters)
+								success = true;
+							else
+								success = plotScatter(filteredEventComps, scatterSites, imt, gmpeRef, distFilter,
+									binDescriptions, resourcesDir, prefix);
+							if (success) {
+								Preconditions.checkState(scatterPlot.exists());
+								table.addColumn("![Scatter Plot]("+resourcesDir.getName()
+									+"/"+scatterPlot.getName()+")");
+							} else {
+								table.addColumn("N/A");
+							}
+						}
+						
+						table.finalizeLine();
+					}
+					lines.add("");
+					lines.addAll(table.wrap(max_table_fig_columns, 1).build());
+					
+					lines.add("##### "+siteName+", "+labels.get(f)+", z-Score Histograms");
+					lines.add(topLink); lines.add("");
+					lines.add("These plots compare "+simName+" to the full GMPE log-normal distributions. "
+							+ "Each rupture's GMPE distribution is converted to a standard log-normal "
+							+ "distribution, and the z-score is computed for each rupture:");
+					lines.add("");
+					lines.add("**z-score**: (ln(*"+simName+"*) - ln(*GMPE-mean*)) / *GMPE-sigma*");
+					lines.add("");
+					lines.add("**Legend**");
+					lines.add("* Black Line: Standard Normal distribution (in natural log space)");
+					lines.add("* Gray Histogram: z-score for each rupture");
+					lines.add("* Blue Dashed Line: "+simName+" Mean");
+					
+					table = MarkdownUtils.tableBuilder();
+					table.initNewLine();
+					
+					for (int d=0; d<distFilters.size(); d++)
+						table.addColumn("**"+distLabels.get(d)+"**");
+					table.finalizeLine();
+					
+					table.initNewLine();
+					for (int d=0; d<distFilters.size(); d++) {
+						RuptureComparisonFilter<E> distFilter = distFilters.get(d);
+						String prefix = siteName.replaceAll(" ", "_")+"_"+fileLabels.get(f)+"_"+distFileLabels.get(d)
+							+"_"+gmpeRef.getShortName()+"_std_norm";
+						
+						System.out.println("Plotting Standard Normal: "+prefix);
+						
+						List<String> binDescriptions = Lists.newArrayList(distLabels.get(d), labels.get(f));
+						File plotFile = new File(resourcesDir, prefix+".png");
 						boolean success;
-						if (scatterPlot.exists() && !replotScatters)
+						if (plotFile.exists() && !replotZScores)
 							success = true;
 						else
-							success = plotScatter(magEventComps, scatterSites, imt, gmpeRef, filter,
-								binDescriptions, resourcesDir, prefix);
+							success = ZScoreHistPlot.plotStandardNormal(simProv, filteredEventComps, scatterSites, imts,
+								gmpeRef, distFilter, binDescriptions, resourcesDir, prefix);
 						if (success) {
-							Preconditions.checkState(scatterPlot.exists());
-							table.addColumn("![Scatter Plot]("+resourcesDir.getName()
-								+"/"+scatterPlot.getName()+")");
+							Preconditions.checkState(plotFile.exists());
+							table.addColumn("![Standard Normal Plot]("+resourcesDir.getName()
+								+"/"+plotFile.getName()+")");
 						} else {
 							table.addColumn("N/A");
 						}
 					}
-					
 					table.finalizeLine();
+					lines.add("");
+					lines.addAll(table.wrap(max_table_fig_columns, 0).build());
 				}
-				lines.add("");
-				lines.addAll(table.wrap(max_table_fig_columns, 1).build());
-				
-				lines.add("##### "+siteName+", "+magLabels.get(m)+", z-Score Histograms");
-				lines.add(topLink); lines.add("");
-				lines.add("These plots compare "+simName+" to the full GMPE log-normal distributions. "
-						+ "Each rupture's GMPE distribution is converted to a standard log-normal "
-						+ "distribution, and the z-score is computed for each rupture:");
-				lines.add("");
-				lines.add("**z-score**: (ln(*"+simName+"*) - ln(*GMPE-mean*)) / *GMPE-sigma*");
-				lines.add("");
-				lines.add("**Legend**");
-				lines.add("* Black Line: Standard Normal distribution (in natural log space)");
-				lines.add("* Gray Histogram: z-score for each rupture");
-				lines.add("* Blue Dashed Line: "+simName+" Mean");
-				
-				table = MarkdownUtils.tableBuilder();
-				table.initNewLine();
-				
-				for (int d=0; d<distFilters.size(); d++)
-					table.addColumn("**"+distLabels.get(d)+"**");
-				table.finalizeLine();
-				
-				table.initNewLine();
-				for (int d=0; d<distFilters.size(); d++) {
-					RuptureComparisonFilter<E> filter = distFilters.get(d);
-					String prefix = siteName.replaceAll(" ", "_")+"_"+magFileLabels.get(m)+"_"+distFileLabels.get(d)
-						+"_"+gmpeRef.getShortName()+"_std_norm";
-					
-					System.out.println("Plotting Standard Normal: "+prefix);
-					
-					List<String> binDescriptions = Lists.newArrayList(distLabels.get(d), magLabels.get(m));
-					File plotFile = new File(resourcesDir, prefix+".png");
-					boolean success;
-					if (plotFile.exists() && !replotZScores)
-						success = true;
-					else
-						success = ZScoreHistPlot.plotStandardNormal(simProv, magEventComps, scatterSites, imts,
-							gmpeRef, filter, binDescriptions, resourcesDir, prefix);
-					if (success) {
-						Preconditions.checkState(plotFile.exists());
-						table.addColumn("![Standard Normal Plot]("+resourcesDir.getName()
-							+"/"+plotFile.getName()+")");
-					} else {
-						table.addColumn("N/A");
-					}
-				}
-				table.finalizeLine();
-				lines.add("");
-				lines.addAll(table.wrap(max_table_fig_columns, 0).build());
 			}
+			
 			String prefix = siteName.replaceAll(" ", "_")+"_all_mags_all_dists_"+gmpeRef.getShortName()+"_std_norm";
 			File plotFile = new File(resourcesDir, prefix+".png");
 			boolean success;

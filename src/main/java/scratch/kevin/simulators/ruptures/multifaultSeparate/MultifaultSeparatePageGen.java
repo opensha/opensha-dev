@@ -370,6 +370,7 @@ public class MultifaultSeparatePageGen {
 				
 				for (int p=-1; p<periods.length; p++) {
 					String prefix = "scatter_"+gmmRef.name()+"_"+fractPrefix+"_"+quantities[q].name();
+					String gmmFullPrefix = "scatter_"+gmmRef.name()+"_"+fractPrefix+"_full";
 					
 					System.out.println("Plotting: "+prefix);
 					
@@ -383,12 +384,14 @@ public class MultifaultSeparatePageGen {
 						lines.add("");
 						scatter = union(scatters);
 						prefix += "_all";
+						gmmFullPrefix += "_all";
 						period = Double.NaN;
 					} else {
 						lines.add("__"+oDF.format(periods[p])+"s__");
 						lines.add("");
 						scatter = scatters[p];
 						prefix += "_"+oDF.format(periods[p])+"s";
+						gmmFullPrefix += "_"+oDF.format(periods[p])+"s";
 						period = periods[p];
 					}
 					
@@ -401,7 +404,7 @@ public class MultifaultSeparatePageGen {
 							"![Scatter Plot]("+resourcesDir.getName()+"/"+prefix+".png)",
 							"![Scatter Plot]("+resourcesDir.getName()+"/"+prefix+"_log.png)");
 					
-					String gmmFullPrefix = "scatter_"+gmmRef.name()+"_"+fractPrefix+"_full";
+					
 					if (q == 0) {
 						// plot the full GMM rupture scatter (will reuse later)
 						DefaultXY_DataSet[] fullScatters = gmmFullRupPeriodScatters.get(maxMoFracts[i]);

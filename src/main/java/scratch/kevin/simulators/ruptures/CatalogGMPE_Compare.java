@@ -586,23 +586,23 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 		VelocityModel forceVM = null;
 		
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
-//				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-////		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
-////		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
-////		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-////		IMT[] imts = { IMT.SA3P0 };
-////		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
-//		IMT[] imts = { IMT.PGV, IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
-//		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
+		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
+				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+//		IMT[] imts = { IMT.SA3P0 };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
+		IMT[] imts = { IMT.PGV, IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
+		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.AFSHARI_STEWART_2016 };
 //		IMT[] imts = { IMT.DUR_5_75, IMT.DUR_5_95, IMT.DUR_20_80 };
 //		AttenRelRef rotDGMPE = null;
 		
-		AttenRelRef[] gmpeRefs = { AttenRelRef.ZHAO_2006 };
-		IMT[] imts = { IMT.SA2P0, IMT.SA3P0, IMT.SA5P0 };
-		AttenRelRef rotDGMPE = null;
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.ZHAO_2006 };
+//		IMT[] imts = { IMT.SA2P0, IMT.SA3P0, IMT.SA5P0 };
+//		AttenRelRef rotDGMPE = null;
 		
 		String[] highlightNames;
 		if (doGridded)
@@ -650,7 +650,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		VelocityModel bbpVM = null;
 		for (File dir : allBBPDirs) {
 			String name = dir.getName();
-			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-all")) {
+			if (dir.isDirectory() && name.contains(catalogDirName) && name.contains("-all-m") && !name.contains("-all-maxDist")) {
 				if (skipRGdirs && name.contains("-rg"))
 					continue;
 				if (doGridded && !name.contains("-gridded"))

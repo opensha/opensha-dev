@@ -132,4 +132,9 @@ public class SubSetSimulationRotDProvider<E> implements SimulationRotDProvider<E
 		return simProv.getHypocenter(rupture, index);
 	}
 
+	@Override
+	public double getRake(E rupture) {
+		return simProv.getRake(rupture);
+	}
+
 }

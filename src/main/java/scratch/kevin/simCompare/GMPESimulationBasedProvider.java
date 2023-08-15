@@ -206,4 +206,9 @@ public class GMPESimulationBasedProvider<E> implements SimulationRotDProvider<E>
 		return hasDur;
 	}
 
+	@Override
+	public double getRake(E rupture) {
+		return simProv.getRake(rupture);
+	}
+
 }

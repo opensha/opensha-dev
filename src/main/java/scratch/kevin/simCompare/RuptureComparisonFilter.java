@@ -96,5 +96,14 @@ public abstract class RuptureComparisonFilter<E> {
 		}
 		
 	}
+	
+	public static class AcceptAllFilter<E> extends RuptureComparisonFilter<E> {
+
+		@Override
+		public boolean matches(RuptureComparison<E> comp, Site site) {
+			return true;
+		}
+		
+	}
 
 }
