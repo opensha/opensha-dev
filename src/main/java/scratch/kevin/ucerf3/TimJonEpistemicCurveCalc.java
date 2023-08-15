@@ -40,6 +40,7 @@ import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
@@ -62,8 +63,13 @@ public class TimJonEpistemicCurveCalc {
 				AttenRelRef.CB_2014,
 				AttenRelRef.CY_2014
 		};
-		double[] periods = { 0.2, 1d };
+//		double[] periods = { 0.2, 1d };
+		
+		double[] periods = {0, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75,
+				1, 1.5, 2, 3, 4, 5, 7.5, 10};
 //		boolean[] vsInferreds = {false, true};
+		
+		boolean td = false;
 		
 //		String sitePrefix = "Davis";
 //		Location siteLoc = new Location(38.3210, -121.4530);
@@ -93,37 +99,26 @@ public class TimJonEpistemicCurveCalc {
 		String sitePrefix = "Berkeley";
 		Location siteLoc = new Location(37.5216, -122.1527);
 		
-//		boolean[] vsInferreds = {false};
-//		double[] vs30Vals = {
-//				514,
-//				562,
-//				598,
-//				633,
-//				670,
-//				713,
-//				779
-//		};
-		
-		boolean[] vsInferreds = {true};
+		boolean[] vsInferreds = {false};
 		double[] vs30Vals = {
-				288,
-				402,
-				510,
+				514,
+				562,
+				598,
 				633,
-				785,
-				996,
-				1393
+				670,
+				713,
+				779
 		};
 		
+//		boolean[] vsInferreds = {true};
 //		double[] vs30Vals = {
-//				// original set
-//				139.3,
-//				171.8,
-//				199.4,
-//				228.2,
-//				261.2,
-//				303.2,
-//				373.9
+//				288,
+//				402,
+//				510,
+//				633,
+//				785,
+//				996,
+//				1393
 //		};
 		
 		double[] percentiles = {
@@ -172,9 +167,12 @@ public class TimJonEpistemicCurveCalc {
 		LogicTree<?> tree = slt.getLogicTree();
 //		tree = tree.sample(16, false);
 		
-		File outputDir = new File("/home/kevin/OpenSHA/UCERF3/2022_10-tim-jon-calcs");
+//		File outputDir = new File("/home/kevin/OpenSHA/UCERF3/2022_10-tim-jon-calcs");
+		File outputDir = new File("/home/kevin/OpenSHA/UCERF3/2023_08-tim-jon-calcs");
 		
-		int threads = 10;
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		int threads = 20;
 		ExecutorService exec = Executors.newFixedThreadPool(threads);
 		
 		DecimalFormat oDF = new DecimalFormat("0.##");
@@ -183,7 +181,7 @@ public class TimJonEpistemicCurveCalc {
 			List<Future<Map<CalcKey, DiscretizedFunc>>> futures = new ArrayList<>();
 			List<Double> weights = new ArrayList<>();
 			for (LogicTreeBranch<?> branch : tree) {
-				futures.add(exec.submit(new CurveCalcCallable(slt, branch, siteLoc, gmpeRef, periods, vs30Vals, vsInferreds, xVals)));
+				futures.add(exec.submit(new CurveCalcCallable(slt, branch, siteLoc, gmpeRef, periods, vs30Vals, vsInferreds, xVals, td)));
 				weights.add(tree.getBranchWeight(branch));
 			}
 			
@@ -260,7 +258,12 @@ public class TimJonEpistemicCurveCalc {
 						
 						prefix += "_"+sitePrefix;
 						
-						prefix += "_sa_"+oDF.format(period)+"s";
+						if (period > 0d)
+							prefix += "_sa_"+oDF.format(period)+"s";
+						else if (period == 0d)
+							prefix += "_pga";
+						else
+							throw new IllegalStateException();
 						
 						prefix += "_"+gmpeRef.name();
 						
@@ -320,9 +323,11 @@ public class TimJonEpistemicCurveCalc {
 		private double[] vs30s;
 		private boolean[] vsInfs;
 		private DiscretizedFunc xVals;
+		private boolean td;
 
 		public CurveCalcCallable(SolutionLogicTree slt, LogicTreeBranch<?> branch, Location siteLoc,
-				AttenRelRef gmpeRef, double[] periods, double[] vs30s, boolean[] vsInfs, DiscretizedFunc xVals) {
+				AttenRelRef gmpeRef, double[] periods, double[] vs30s, boolean[] vsInfs, DiscretizedFunc xVals,
+				boolean td) {
 			this.slt = slt;
 			this.branch = branch;
 			this.siteLoc = siteLoc;
@@ -331,6 +336,7 @@ public class TimJonEpistemicCurveCalc {
 			this.vs30s = vs30s;
 			this.vsInfs = vsInfs;
 			this.xVals = xVals;
+			this.td = td;
 		}
 
 		@Override
@@ -346,11 +352,16 @@ public class TimJonEpistemicCurveCalc {
 			FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
 			
 			erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
-			erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.U3_PREF_BLEND);
-			erf.setParameter(HistoricOpenIntervalParam.NAME, 146d);
-			erf.setParameter(BPTAveragingTypeParam.NAME, BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE);
-			erf.getTimeSpan().setDuration(1d);
-			erf.getTimeSpan().setStartTime(2021);
+			if (td) {
+				erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.U3_PREF_BLEND);
+				erf.setParameter(HistoricOpenIntervalParam.NAME, 148d);
+				erf.setParameter(BPTAveragingTypeParam.NAME, BPTAveragingTypeOptions.AVE_RI_AVE_NORM_TIME_SINCE);
+				erf.getTimeSpan().setDuration(1d);
+				erf.getTimeSpan().setStartTime(2023);
+			} else {
+				erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
+				erf.getTimeSpan().setDuration(1d);
+			}
 			erf.updateForecast();
 			
 			HazardCurveCalculator calc = new HazardCurveCalculator();
@@ -376,7 +387,14 @@ public class TimJonEpistemicCurveCalc {
 					Preconditions.checkState(vsSet);
 					Preconditions.checkState(vsInfSet);
 					for (double period : periods) {
-						SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), period);
+						if (period > 0d) {
+							gmpe.setIntensityMeasure(SA_Param.NAME);
+							SA_Param.setPeriodInSA_Param(gmpe.getIntensityMeasure(), period);
+						} else if (period == 0d) {
+							gmpe.setIntensityMeasure(PGA_Param.NAME);
+						} else {
+							throw new IllegalStateException();
+						}
 						
 						DiscretizedFunc logCurve = new ArbitrarilyDiscretizedFunc();
 						for (Point2D pt : xVals)
