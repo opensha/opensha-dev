@@ -17,20 +17,23 @@ import com.google.common.base.Preconditions;
 public class GMM_BranchLogicTreeAdd {
 
 	public static void main(String[] args) throws IOException {
-		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+//				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//		File inputTreeFile = new File(dir, "logic_tree_full_gridded.json");
 		
-		File inputTreeFile = new File(dir, "logic_tree_full_gridded.json");
+		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only");
+		File inputTreeFile = new File(dir, "logic_tree.json");
 		
 		boolean includeIdriss = false;
 		
-//		boolean allNGAs = true;
-//		boolean addEpi = false;
-//		File outputFile = new File(dir, "logic_tree_full_gridded-nga_w2s.json");
-		
 		boolean allNGAs = true;
-		boolean addEpi = true;
-		File outputFile = new File(dir, "logic_tree_full_gridded-nga_w2s-gmm_add_epi.json");
+		boolean addEpi = false;
+		File outputFile = new File(dir, "logic_tree_full_gridded-nga_w2s.json");
+		
+//		boolean allNGAs = true;
+//		boolean addEpi = true;
+//		File outputFile = new File(dir, "logic_tree_full_gridded-nga_w2s-gmm_add_epi.json");
 		
 		LogicTree<?> inputLogicTree = LogicTree.read(inputTreeFile);
 		
