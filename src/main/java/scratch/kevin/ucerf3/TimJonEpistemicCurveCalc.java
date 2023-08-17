@@ -71,55 +71,55 @@ public class TimJonEpistemicCurveCalc {
 		
 		boolean td = false;
 		
-//		String sitePrefix = "Davis";
-//		Location siteLoc = new Location(38.3210, -121.4530);
-//		
-//		boolean[] vsInferreds = {false};
-//		double[] vs30Vals = {
-//				216,
-//				236,
-//				251,
-//				266,
-//				281,
-//				299,
-//				327
-//		};
-//		
-////		boolean[] vsInferreds = {true};
-////		double[] vs30Vals = {
-////				179,
-////				212,
-////				238,
-////				266,
-////				296,
-////				333,
-////				394
-////		};
-		
-		String sitePrefix = "Berkeley";
-		Location siteLoc = new Location(37.5216, -122.1527);
+		String sitePrefix = "Davis";
+		Location siteLoc = new Location(38.3210, -121.4530);
 		
 		boolean[] vsInferreds = {false};
 		double[] vs30Vals = {
-				514,
-				562,
-				598,
-				633,
-				670,
-				713,
-				779
+				216,
+				236,
+				251,
+				266,
+				281,
+				299,
+				327
 		};
 		
 //		boolean[] vsInferreds = {true};
 //		double[] vs30Vals = {
-//				288,
-//				402,
-//				510,
-//				633,
-//				785,
-//				996,
-//				1393
+//				179,
+//				212,
+//				238,
+//				266,
+//				296,
+//				333,
+//				394
 //		};
+		
+//		String sitePrefix = "Berkeley";
+//		Location siteLoc = new Location(37.5216, -122.1527);
+//		
+//		boolean[] vsInferreds = {false};
+//		double[] vs30Vals = {
+//				514,
+//				562,
+//				598,
+//				633,
+//				670,
+//				713,
+//				779
+//		};
+//		
+////		boolean[] vsInferreds = {true};
+////		double[] vs30Vals = {
+////				288,
+////				402,
+////				510,
+////				633,
+////				785,
+////				996,
+////				1393
+////		};
 		
 		double[] percentiles = {
 				0.1,
@@ -172,7 +172,7 @@ public class TimJonEpistemicCurveCalc {
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		int threads = 20;
+		int threads = 10;
 		ExecutorService exec = Executors.newFixedThreadPool(threads);
 		
 		DecimalFormat oDF = new DecimalFormat("0.##");

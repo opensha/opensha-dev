@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 
 import org.opensha.commons.data.comcat.ComcatAccessor;
 import org.opensha.commons.data.comcat.ComcatRegionAdapter;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
@@ -38,7 +39,10 @@ public class SCECStatewide {
 		Region relm = new CaliforniaRegions.RELM_TESTING();
 		Region ca = new Region(new Location(relm.getMinLat(), relm.getMinLon()),
 				new Location(relm.getMaxLat(), relm.getMaxLon()));
-		GeographicMapMaker mapMaker = new GeographicMapMaker(ca, PoliticalBoundariesData.loadCAOutlines());
+		XY_DataSet[] caOutlines = PoliticalBoundariesData.loadCAOutlines();
+		GeographicMapMaker mapMaker = new GeographicMapMaker(ca, caOutlines);
+		
+		File outputDir = new File("/home/kevin/SCEC/2023_annual_meeting_program"); 
 		
 		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
 		boolean subSects = false;
@@ -50,7 +54,7 @@ public class SCECStatewide {
 		NamedFaults namedFaults = fm.getNamedFaults();
 		
 		boolean includeEQs = true;
-		boolean distFadeEQs = true;
+		boolean distFadeEQs = false;
 		
 		HashSet<Integer> namedSects = new HashSet<>();
 		namedSects.addAll(namedFaults.getParentIDsForFault("San Andreas"));
@@ -81,7 +85,7 @@ public class SCECStatewide {
 		}
 		
 		double minSaturateDist = 25d;
-		double maxPlotDist = 350d;
+		double maxPlotDist = 400d;
 		CPT cpt = new CPT(minSaturateDist, maxPlotDist, new Color(127, 127, 127, 120), new Color(127, 127, 127, 0));
 		cpt.setBelowMinColor(cpt.getMinColor());
 		cpt.setAboveMaxColor(cpt.getMaxColor());
@@ -121,61 +125,84 @@ public class SCECStatewide {
 		}
 		System.out.println("Done, now plotting");
 		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		
+		mapMaker.setPoliticalBoundaryChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+		
+		writePlot(outputDir, "ca_only", gp, mapMaker);
+		
 		mapMaker.setFaultSections(sects);
 		
 		mapMaker.setSectOutlineChar(null);
-		mapMaker.setSectHighlights(highlightSects, new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, scecRed));
+		mapMaker.setSectHighlights(highlightSects, new PlotCurveCharacterstics(PlotLineType.SOLID, 7f, scecRed));
 		mapMaker.plotSectScalars(scalars, cpt, null);
-		mapMaker.setScalarThickness(1.5f);
+		mapMaker.setScalarThickness(3f);
 		mapMaker.setSkipNaNs(true);
 		
-		ComcatAccessor comcat = new ComcatAccessor();
-//		long startTime = -3786778739000l; // 1850
-		long startTime = 665413261000l; // 2/2/91 -> SCEC founded
-		long endTime = System.currentTimeMillis();
-		double minMag = 5d;
-		ObsEqkRupList events = comcat.fetchEventList(null, startTime, endTime, -10, 50d,
-				new ComcatRegionAdapter(ca), false, false, minMag, 1000, 100);
-		events.sortByMag();
-		System.out.println("Fetched "+events.size()+" events");
-		List<Location> eqLocs = new ArrayList<>();
-		List<PlotCurveCharacterstics> eqChars = new ArrayList<>();
-		for (ObsEqkRupture event : events) {
-			Location hypo = event.getHypocenterLocation();
-			float thickness = (float)(2d + 6*(Math.min(8d, event.getMag()) - minMag));
-			Color fillColor, outlineColor;
-			if (distFadeEQs) {
-				double minDist = Double.POSITIVE_INFINITY;
-				for (Location loc : highlightLocs)
-					minDist = Math.min(minDist, LocationUtils.horzDistance(loc, hypo));
-				if (minDist > maxPlotDist)
-					continue;
-				fillColor = eqCPT.getColor((float)minDist);
-				outlineColor = new Color(0, 0, 0, fillColor.getAlpha());
-			} else {
-				fillColor = Color.GRAY;
-				outlineColor = Color.BLACK;
-			}
-			eqLocs.add(hypo);
-			eqChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, thickness, fillColor));
-			// add outline on top
-			eqLocs.add(hypo);
-			eqChars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, thickness, outlineColor));
-		}
-		mapMaker.plotScatters(eqLocs, eqChars, null);
+		mapMaker.setPoliticalBoundaries(null);
+		writePlot(outputDir, "faults_only", gp, mapMaker);
 		
-		mapMaker.setDefaultPlotWidth(1200);
+		if (includeEQs) {
+			ComcatAccessor comcat = new ComcatAccessor();
+//			long startTime = -3786778739000l; // 1850
+			long startTime = 665413261000l; // 2/2/91 -> SCEC founded
+			long endTime = System.currentTimeMillis();
+			double minMag = 5d;
+			ObsEqkRupList events = comcat.fetchEventList(null, startTime, endTime, -10, 50d,
+					new ComcatRegionAdapter(ca), false, false, minMag, 1000, 100);
+			events.sortByMag();
+			System.out.println("Fetched "+events.size()+" events");
+			List<Location> eqLocs = new ArrayList<>();
+			List<PlotCurveCharacterstics> eqChars = new ArrayList<>();
+			for (ObsEqkRupture event : events) {
+				Location hypo = event.getHypocenterLocation();
+//				float thickness = (float)(2d + 6*(Math.min(8d, event.getMag()) - minMag));
+				float thickness = (float)(3d + 6*(Math.min(8d, event.getMag()) - minMag));
+				Color fillColor, outlineColor;
+				if (distFadeEQs) {
+					double minDist = Double.POSITIVE_INFINITY;
+					for (Location loc : highlightLocs)
+						minDist = Math.min(minDist, LocationUtils.horzDistance(loc, hypo));
+					if (minDist > maxPlotDist)
+						continue;
+					fillColor = eqCPT.getColor((float)minDist);
+					outlineColor = new Color(0, 0, 0, fillColor.getAlpha());
+				} else {
+					fillColor = Color.GRAY;
+					outlineColor = Color.BLACK;
+				}
+				eqLocs.add(hypo);
+				eqChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, thickness, fillColor));
+//				// add outline on top
+//				eqLocs.add(hypo);
+//				eqChars.add(new PlotCurveCharacterstics(PlotSymbol.CIRCLE, thickness, outlineColor));
+			}
+			mapMaker.plotScatters(eqLocs, eqChars, null);
+			
+			mapMaker.clearSectScalars();
+			mapMaker.clearFaultSections();
+			writePlot(outputDir, "eqs_only", gp, mapMaker);
+		}
+		
+		mapMaker.setPoliticalBoundaries(caOutlines);
+		mapMaker.setFaultSections(sects);
+		mapMaker.setSectHighlights(highlightSects, new PlotCurveCharacterstics(PlotLineType.SOLID, 7f, scecRed));
+		mapMaker.plotSectScalars(scalars, cpt, null);
+		
+		writePlot(outputDir, "full", gp, mapMaker);
+	}
+	
+	private static void writePlot(File outputDir, String prefix, HeadlessGraphPanel gp, GeographicMapMaker mapMaker) throws IOException {
+		System.out.println("Writing plot: "+prefix);
 		
 		PlotSpec spec = mapMaker.buildPlot(" ");
-		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		
 		gp.drawGraphPanel(spec, false, false, mapMaker.getXRange(), mapMaker.getYRange());
 		
 		PlotUtils.setAxisVisible(gp, false, false);
 		PlotUtils.setXTick(gp, 1000);
 		PlotUtils.setYTick(gp, 1000);
-		PlotUtils.writePlots(new File("/tmp"), "scec_statewide", gp, 1200, true, true, true, false);
+		PlotUtils.writePlots(outputDir, prefix, gp, 1200, true, true, true, false);
 	}
 
 }
