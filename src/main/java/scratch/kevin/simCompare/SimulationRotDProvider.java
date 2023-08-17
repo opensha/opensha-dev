@@ -1,5 +1,6 @@
 package scratch.kevin.simCompare;
 
+import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,8 +45,9 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @throws IOException
 	 */
 	public default List<DiscretizedFunc> getRotD50s(Site site, E rupture) throws IOException {
-		ArrayList<DiscretizedFunc> list = new ArrayList<>();
-		for (int i=0; i<getNumSimulations(site, rupture); i++)
+		int num = getNumSimulations(site, rupture);
+		ArrayList<DiscretizedFunc> list = new ArrayList<>(num);
+		for (int i=0; i<num; i++)
 			list.add(getRotD50(site, rupture, i));
 		return list;
 	}
@@ -66,8 +68,9 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @throws IOException
 	 */
 	public default List<DiscretizedFunc> getRotD100s(Site site, E rupture) throws IOException {
-		ArrayList<DiscretizedFunc> list = new ArrayList<>();
-		for (int i=0; i<getNumSimulations(site, rupture); i++)
+		int num = getNumSimulations(site, rupture);
+		ArrayList<DiscretizedFunc> list = new ArrayList<>(num);
+		for (int i=0; i<num; i++)
 			list.add(getRotD100(site, rupture, i));
 		return list;
 	}
@@ -86,8 +89,9 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @throws IOException
 	 */
 	public default List<DiscretizedFunc[]> getRotDs(Site site, E rupture) throws IOException {
-		ArrayList<DiscretizedFunc[]> list = new ArrayList<>();
-		for (int i=0; i<getNumSimulations(site, rupture); i++)
+		int num = getNumSimulations(site, rupture);
+		ArrayList<DiscretizedFunc[]> list = new ArrayList<>(num);
+		for (int i=0; i<num; i++)
 			list.add(getRotD(site, rupture, i));
 		return list;
 	}
@@ -105,8 +109,9 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @return ratio of RotD100 to RotD50 for each simulation of rupture E at the given site
 	 */
 	public default List<DiscretizedFunc> getRotDRatios(Site site, E rupture) throws IOException {
-		ArrayList<DiscretizedFunc> list = new ArrayList<>();
-		for (int i=0; i<getNumSimulations(site, rupture); i++)
+		int num = getNumSimulations(site, rupture);
+		ArrayList<DiscretizedFunc> list = new ArrayList<>(num);
+		for (int i=0; i<num; i++)
 			list.add(getRotDRatio(site, rupture, i));
 		return list;
 	}
@@ -127,8 +132,9 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @throws IOException
 	 */
 	public default List<Double> getPGVs(Site site, E rupture) throws IOException {
-		ArrayList<Double> list = new ArrayList<>();
-		for (int i=0; i<getNumSimulations(site, rupture); i++)
+		int num = getNumSimulations(site, rupture);
+		ArrayList<Double> list = new ArrayList<>(num);
+		for (int i=0; i<num; i++)
 			list.add(getPGV(site, rupture, i));
 		return list;
 	}
@@ -149,8 +155,9 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @throws IOException
 	 */
 	public default List<Double> getPGAs(Site site, E rupture) throws IOException {
+		int num = getNumSimulations(site, rupture);
 		ArrayList<Double> list = new ArrayList<>();
-		for (int i=0; i<getNumSimulations(site, rupture); i++)
+		for (int i=0; i<num; i++)
 			list.add(getPGA(site, rupture, i));
 		return list;
 	}
@@ -173,8 +180,9 @@ public interface SimulationRotDProvider<E> extends Named {
 	 * @throws IOException
 	 */
 	public default List<Double> getDurations(Site site, E rupture, DurationTimeInterval interval) throws IOException {
-		ArrayList<Double> list = new ArrayList<>();
-		for (int i=0; i<getNumSimulations(site, rupture); i++)
+		int num = getNumSimulations(site, rupture);
+		ArrayList<Double> list = new ArrayList<>(num);
+		for (int i=0; i<num; i++)
 			list.add(getDuration(site, rupture, interval, i));
 		return list;
 	}
@@ -195,9 +203,28 @@ public interface SimulationRotDProvider<E> extends Named {
 		if (imt.getParamName().equals(SA_Param.NAME)) {
 			double period = imt.getPeriod();
 			List<DiscretizedFunc> rd50s = getRotD50s(site, rupture);
-			List<Double> ret = new ArrayList<>();
-			for (DiscretizedFunc rd50 : rd50s)
-				ret.add(rd50.getInterpolatedY(period));
+			int num = rd50s.size();
+			List<Double> ret = new ArrayList<>(num);
+			int xIndex = -1;
+			for (int i=0; i<num; i++) {
+				DiscretizedFunc rd50 = rd50s.get(i);
+				if (i == 0)
+					// see if it's an exact match
+					xIndex = rd50.getXIndex(period);
+				
+				if (xIndex >= 0) {
+					Point2D pt = rd50.get(xIndex);
+					if ((float)pt.getX() == (float)period) {
+						ret.add(pt.getY());
+					} else {
+						// have to interpolate
+						xIndex = -1;
+						ret.add(rd50.getInterpolatedY(period));
+					}
+				} else {
+					ret.add(rd50.getInterpolatedY(period));
+				}
+			}
 			return ret;
 		}
 		if (imt.getParamName().equals(SignificantDurationParam.NAME)) {
