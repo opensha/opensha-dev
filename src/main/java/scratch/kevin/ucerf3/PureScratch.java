@@ -48,6 +48,8 @@ import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.IntegerPDF_FunctionSampler;
 import org.opensha.commons.data.function.LightFixedXFunc;
 import org.opensha.commons.data.region.CaliforniaRegions;
+import org.opensha.commons.data.siteData.SiteData;
+import org.opensha.commons.data.siteData.impl.CVM4i26_M01_TaperBasinDepth;
 import org.opensha.commons.data.siteData.impl.ThompsonVs30_2018;
 import org.opensha.commons.data.siteData.impl.ThompsonVs30_2020;
 import org.opensha.commons.data.siteData.impl.WaldAllenGlobalVs30;
@@ -102,6 +104,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.ModuleArchive;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
@@ -157,6 +160,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCre
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
@@ -202,6 +206,8 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
@@ -4649,12 +4655,99 @@ public class PureScratch {
 		System.out.println("Avg DDW:\t"+df.format(avgDDW)+" km");
 	}
 	
+	private static void test255() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+		int parentID = 704;
+		double minMag = 7.5d;
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		List<Integer> rups = rupSet.getRupturesForParentSection(parentID);
+		
+		ScalarIMR gmm = AttenRelRef.ASK_2014.get();
+		Site site = new Site(new Location(34.01933247362704, -118.28641763873607));
+		site.addParameterList(gmm.getSiteParams());
+		ThompsonVs30_2020 vs30Model = new ThompsonVs30_2020();
+		CVM4i26_M01_TaperBasinDepth z10Model = new CVM4i26_M01_TaperBasinDepth(SiteData.TYPE_DEPTH_TO_1_0);
+		
+		double vs30 = vs30Model.getValue(site.getLocation());
+		double z10 = z10Model.getValue(site.getLocation());
+		System.out.println("vs30="+vs30+"\tz10="+z10);
+		site.getParameter(Vs30_Param.NAME).setValue(vs30);
+		site.getParameter(DepthTo1pt0kmPerSecParam.NAME).setValue(z10*1e3); // km -> m
+		gmm.setSite(site);
+		gmm.setIntensityMeasure(PGA_Param.NAME);
+		
+		DiscretizedFunc avgExceedProbs = new IMT_Info().getDefaultHazardCurve(PGA_Param.NAME);
+		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
+		for (Point2D pt : avgExceedProbs)
+			logXVals.set(Math.log(pt.getX()), 1d);
+		for (int i=0; i<avgExceedProbs.size(); i++)
+			avgExceedProbs.set(i, 0d);
+		
+		double rateSum = 0d;
+		double avgMag = 0d;
+		for (int rupIndex : rups) {
+			double mag = rupSet.getMagForRup(rupIndex);
+			if (mag >= minMag) {
+				double rate = sol.getRateForRup(rupIndex);
+				rateSum += rate;
+				avgMag += rate*mag;
+				EqkRupture rup = new EqkRupture(mag, rupSet.getAveRakeForRup(rupIndex), rupSet.getSurfaceForRupture(parentID, 1d), null);
+				gmm.setEqkRupture(rup);
+				gmm.getExceedProbabilities(logXVals);
+				
+				for (int i=0; i<avgExceedProbs.size(); i++)
+					avgExceedProbs.set(i, avgExceedProbs.getY(i) + logXVals.getY(i)*rate);
+			}
+		}
+		avgMag /= rateSum;
+		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
+		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
+		erf.setParameter(ApplyGardnerKnopoffAftershockFilterParam.NAME, false);
+		erf.getTimeSpan().setDuration(30d);
+		erf.updateForecast();
+		
+		HazardCurveCalculator calc = new HazardCurveCalculator();
+		
+		calc.getHazardCurve(logXVals, site, gmm, erf);
+		DiscretizedFunc fullCurve = new ArbitrarilyDiscretizedFunc();
+		for (Point2D pt : logXVals)
+			fullCurve.set(Math.exp(pt.getX()), pt.getY());
+		
+		System.out.println(logXVals);
+		
+		System.out.println("Average mag: "+(float)avgMag);
+		
+		double[] gmLevels = {0.01, 0.05, 0.1, 0.5, 1};
+		
+		avgExceedProbs.scale(1d/rateSum);
+		double prob30 = 1d-Math.exp(-rateSum*30d);
+		System.out.println("Sum rate: "+(float)rateSum);
+		System.out.println("30 year probability: "+(float)prob30);
+		System.out.println("Exceed probs:");
+		DecimalFormat pDF = new DecimalFormat("0.0##%");
+		for (double gmLevel : gmLevels) {
+			double prob = avgExceedProbs.getInterpolatedY_inLogXLogYDomain(gmLevel);
+			System.out.println("\t"+(float)gmLevel+":\t"+(float)prob+" ("+pDF.format(prob)+")");
+		}
+		
+		System.out.println("Full ERF probs:");
+		for (double gmLevel : gmLevels) {
+			double prob = fullCurve.getInterpolatedY_inLogXLogYDomain(gmLevel);
+			System.out.println("\t"+(float)gmLevel+":\t"+(float)prob+" ("+pDF.format(prob)+")");
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test254();
+		test255();
 	}
 
 }

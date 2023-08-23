@@ -37,6 +37,9 @@ public class U3HistoricalRuptureFaultMapGen {
 		CPT yearCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().reverse().rescale(1800, 2023);
 		yearCPT.setNanColor(Color.LIGHT_GRAY);
 		
+		double lenWith = 0d;
+		double lenWithout = 0d;
+		
 		double[] years = new double[subSects.size()];
 		for (int s=0; s<years.length; s++) {
 			FaultSection sect = subSects.get(s);
@@ -46,8 +49,10 @@ public class U3HistoricalRuptureFaultMapGen {
 				GregorianCalendar cal = new GregorianCalendar();
 				cal.setTime(date);
 				years[s] = cal.get(GregorianCalendar.YEAR);
+				lenWith += sect.getTraceLength();
 			} else {
 				years[s] = Double.NaN;
+				lenWithout += sect.getTraceLength();
 			}
 		}
 		
@@ -56,6 +61,7 @@ public class U3HistoricalRuptureFaultMapGen {
 		mapMaker.setSectOutlineChar(null);
 		
 		mapMaker.plot(new File("/tmp"), "faults_date_last", " ");
+		System.out.println("Length fract with: "+(float)(lenWith/(lenWith+lenWithout)));
 	}
 
 }
