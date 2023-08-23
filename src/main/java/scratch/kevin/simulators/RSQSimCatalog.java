@@ -672,6 +672,12 @@ public class RSQSimCatalog implements XMLSaveable {
 				59, 'G'),
 		BRUCE_5585("rundir5585", "Bruce 5585", "Bruce Shaw", cal(2023, 8, 2),
 				"NZ dynamic, bdeep=.009, bRampto=.003, alpha=0.25",
+				59, 'G'),
+		BRUCE_5595("rundir5595", "Bruce 5595", "Bruce Shaw", cal(2023, 8, 17),
+				"NZ dynamic, bdeep=.009, bRampto=.002, alpha=0.25, hload=hst=3.0",
+				59, 'G'),
+		BRUCE_5597("rundir5597", "Bruce 5597", "Bruce Shaw", cal(2023, 8, 17),
+				"NZ dynamic, bdeep=.009, bshallow=.003, alpha=0.25, hload=hst=3.0",
 				59, 'G');
 		
 		private String dirName;

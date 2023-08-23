@@ -106,6 +106,8 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetScalingRelationship;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
@@ -4586,12 +4588,73 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test254() throws IOException {
+//		RupSetFaultModel[] fms = { FaultModels.FM3_1, FaultModels.FM3_2 };
+////		RupSetFaultModel[] fms = { FaultModels.FM3_1 };
+//		RupSetDeformationModel[] dms = DeformationModels.values();
+//		int parentID = 117;
+		
+		RupSetFaultModel[] fms = { NSHM23_FaultModels.NSHM23_v2 };
+		RupSetDeformationModel[] dms = NSHM23_DeformationModels.values();
+		int parentID = 333;
+		
+		List<String> slipLines = new ArrayList<>();
+		List<String> momentLines = new ArrayList<>();
+		
+		DecimalFormat df = new DecimalFormat("0.0");
+		
+		double totSumArea = 0d;
+		double totSumWidthArea = 0d;
+		
+		for (RupSetFaultModel fm : fms) {
+			for (RupSetDeformationModel dm : dms) {
+				if (dm.getNodeWeight(null) == 0d)
+					continue;
+				String line = fms.length == 1 ? "" : fm.getShortName()+", ";
+				List<? extends FaultSection> subSects = dm.build(fm);
+				double sumSlipArea = 0d;
+				double sumArea = 0d;
+				double sumMomentRate = 0d;
+				
+				for (FaultSection sect : subSects) {
+					if (sect.getParentSectionId() == parentID) {
+						double slip = sect.getOrigAveSlipRate();
+						double area = sect.getArea(false);
+						sumSlipArea += slip*area;
+						sumArea += area;
+						double momentRate = FaultMomentCalc.getMoment(area, slip*1e-3);
+						sumMomentRate += momentRate;
+						
+						double ddw = sect.getOrigDownDipWidth();
+						totSumArea += area;
+						totSumWidthArea += ddw*area;
+					}
+				}
+				
+				double avgSlip = sumSlipArea/sumArea;
+				
+				line += dm.getShortName()+":\t";
+				
+				slipLines.add(line+df.format(avgSlip)+" mm/yr");
+				momentLines.add(line+(float)sumMomentRate+" N-m/yr");
+			}
+		}
+		
+		for (String line : slipLines)
+			System.out.println(line);
+		for (String line : momentLines)
+			System.out.println(line);
+		
+		double avgDDW = totSumWidthArea/totSumArea;
+		System.out.println("Avg DDW:\t"+df.format(avgDDW)+" km");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test253();
+		test254();
 	}
 
 }

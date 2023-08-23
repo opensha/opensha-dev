@@ -34,7 +34,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir5450";
 //		String catalogDirName = "rundir4983_stitched";
 //		String catalogDirName = "rundir5566";
-		String catalogDirName = "rundir5585";
+		String catalogDirName = "rundir5595";
 //		String catalogDirName = "rundir5566_subduction_corupture";
 //		String catalogDirName = "rundir5413_multifault_separate";
 //		String catalogDirName = "rundir5566_crustal_corupture";
@@ -94,7 +94,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 36;
+		int nodes = 18;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
