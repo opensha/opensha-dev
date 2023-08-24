@@ -32,6 +32,7 @@ import org.opensha.commons.data.function.PrimitiveArrayXY_Dataset;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.siteData.SiteData;
 import org.opensha.commons.data.siteData.SiteDataValue;
+import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
@@ -1145,6 +1146,56 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		table.finalizeLine();
 		lines.addAll(table.build());
 		lines.add("");
+		if (doRakeBinned) {
+			boolean any = false;
+			table = MarkdownUtils.tableBuilder().initNewLine();
+			for (IMT imt : imts)
+				table.addColumn("**"+imt.getDisplayName()+"**");
+			table.finalizeLine();
+			for (int r=0; r<rakeFilters.size(); r++) {
+				RuptureComparisonFilter<E> rakeFilter = rakeFilters.get(r);
+				Map<Site, List<RuptureComparison<E>>> siteRakeCompsMap = new HashMap<>();
+				for (Site site : siteCompsMap.keySet()) {
+					List<RuptureComparison<E>> siteRakeComps = rakeFilter.getMatches(siteCompsMap.get(site), site);
+					if (siteRakeComps != null && !siteRakeComps.isEmpty())
+						siteRakeCompsMap.put(site, siteRakeComps);
+				}
+				if (!siteRakeCompsMap.isEmpty()) {
+					System.out.println("Calculating detrended residual components for "+rakeLabels.get(r));
+					String prefix = "detrend_"+rakeFileLabels.get(r);
+					boolean needToPlot = replotResiduals;
+					any = true;
+					table.initNewLine().addColumn("__"+rakeLabels.get(r)+"__");
+					for (int i=1; i<imts.length; i++)
+						table.addColumn("");
+					table.finalizeLine().initNewLine();
+					for (IMT imt : imts) {
+						String fName = prefix+"_residuals_"+imt.getPrefix()+".png";
+						needToPlot |= !(new File(resourcesDir, fName).exists());
+						table.addColumn("![Detrend XYZ]("+resourcesDir.getName()+"/"+fName+")");
+					}
+					table.finalizeLine();
+					table.initNewLine();
+					for (IMT imt : imts) {
+						String fName = prefix+"_std_dev_"+imt.getPrefix()+".png";
+						needToPlot |= !(new File(resourcesDir, fName).exists());
+						table.addColumn("![Detrend Std Dev XYZ]("+resourcesDir.getName()+"/"+fName+")");
+					}
+					table.finalizeLine();
+					
+					if (needToPlot) {
+						EvenlyDiscrXYZ_DataSet[][] detrends = ResidualScatterPlot.calcDetrendResiduals(siteRakeCompsMap, simProv, imts);
+						ResidualScatterPlot.plotRedidualScatters(resourcesDir, prefix, imts, detrends[0], detrends[1]);
+					}
+				}
+			}
+			if (any) {
+				lines.add("#### Rake-Specific Residual Scatter Plots");
+				lines.add(topLink); lines.add("");
+				lines.addAll(table.build());
+				lines.add("");
+			}
+		}
 		System.out.println("Calculating detrended residual components");
 		if (replotResiduals || !new File(resourcesDir, "period_residual_detrend_components.png").exists()
 				|| !new File(resourcesDir, "detrend_std_dev_"+imts[0].getPrefix()+".png").exists())

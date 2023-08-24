@@ -705,99 +705,153 @@ public class ResidualScatterPlot {
 		this.plotLinearResidual = plotLinearResidual;
 	}
 	
+	public static <E> EvenlyDiscrXYZ_DataSet[][] calcDetrendResiduals(Map<Site, List<RuptureComparison<E>>> siteCompsMap,
+			SimulationRotDProvider<E> simProv, IMT... imts) throws IOException {
+		EvenlyDiscrXYZ_DataSet detrendXYZ[] = null;
+		EvenlyDiscrXYZ_DataSet detrendStdDevXYZ[] = null;
+		
+		double minMag = Double.POSITIVE_INFINITY;
+		double maxMag = 0d;
+		double minDist = 1;
+		double maxDist = 200;
+		
+		for (Site site : siteCompsMap.keySet()) {
+			for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
+				minMag = Math.min(minMag, comp.getMagnitude());
+				maxMag = Math.max(maxMag, comp.getMagnitude());
+			}
+		}
+		minMag = Math.floor(minMag*10d)/10d;
+		maxMag = Math.ceil(maxMag*10d)/10d;
+		int numDist = 20;
+		int numMag = 15;
+		double distSpacing = (Math.log10(maxDist) - Math.log10(minDist)) / (double)numDist;
+		double magSpacing = (maxMag - minMag) / (double)numMag;
+		detrendXYZ = new EvenlyDiscrXYZ_DataSet[imts.length];
+		detrendStdDevXYZ = new EvenlyDiscrXYZ_DataSet[imts.length];
+		for (int p=0; p<imts.length; p++) {
+			detrendXYZ[p] = new EvenlyDiscrXYZ_DataSet(numDist, numMag, Math.log10(minDist)+0.5*distSpacing,
+					minMag+0.5*magSpacing, distSpacing, magSpacing);
+			detrendStdDevXYZ[p] = detrendXYZ[p].copy();
+		}
+		System.out.println("Detrend distance range: "+(float)Math.pow(10, detrendXYZ[0].getX(0)-0.5*distSpacing)
+			+" => "+(float)Math.pow(10, detrendXYZ[0].getX(numDist-1)+0.5*distSpacing)+". Log10 Spacing: "+(float)distSpacing);
+		System.out.println("Detrend mag range: "+(float)(detrendXYZ[0].getY(0)-0.5*magSpacing)
+			+" => "+(float)(detrendXYZ[0].getY(numMag-1)+0.5*magSpacing)+". Spacing: "+(float)magSpacing);
+		List<List<List<double[]>>> rawVals = new ArrayList<>();
+		for (int i=0; i<detrendXYZ[0].getNumX(); i++) {
+			List<List<double[]>> subList= new ArrayList<>();
+			for (int j=0; j<detrendXYZ[0].getNumY(); j++)
+				subList.add(new ArrayList<>());
+			rawVals.add(subList);
+		}
+		int[][] detrendCounts = new int[numDist][numMag];
+		for (Site site : siteCompsMap.keySet()) {
+			for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
+				double[] gmpeVals = new double[imts.length];
+				for (int p=0; p<imts.length; p++)
+					gmpeVals[p] = comp.getLogMean(site, imts[p]);
+				E rupture = comp.getRupture();
+				int numSims = simProv.getNumSimulations(site, rupture);
+				double dist = comp.getDistanceRup(site);
+				int xInd;
+				if (dist < minDist)
+					xInd = 0;
+				else if (dist > maxDist)
+					xInd = numDist-1;
+				else
+					xInd = detrendXYZ[0].getXIndex(Math.log10(dist));
+				Preconditions.checkState(xInd >= 0 && xInd < numDist,
+						"Bad dist index %s for dist=%s, nDist=%s", xInd, dist, numDist);
+				int yInd = detrendXYZ[0].getYIndex(comp.getMagnitude());
+				Preconditions.checkState(yInd >= 0 && yInd < numMag,
+						"Bad mag index %s for mag=%s, nMag=%s", yInd, comp.getMagnitude(), numMag);
+				for (int i=0; i<numSims; i++) {
+					detrendCounts[xInd][yInd]++;
+					double[] vals = new double[imts.length];
+					for (int p=0; p<imts.length; p++) {
+						double simVal = Math.log(simProv.getValue(site, rupture, imts[p], i));
+						double residual = simVal - gmpeVals[p];
+						vals[p] = residual;
+						detrendXYZ[p].set(xInd, yInd, detrendXYZ[p].get(xInd, yInd)+residual);
+					}
+					rawVals.get(xInd).get(yInd).add(vals);
+				}
+			}
+		}
+		// now convert to average residual
+		for (int x=0; x<numDist; x++) {
+			for (int y=0; y<numMag; y++) {
+				for (int p=0; p<imts.length; p++) {
+					if (detrendCounts[x][y] > 0)
+						detrendXYZ[p].set(x, y, detrendXYZ[p].get(x, y)/(double)detrendCounts[x][y]);
+					if (detrendCounts[x][y] > 1) {
+						// std dev
+						double[] vals = new double[detrendCounts[x][y]];
+						for (int i=0; i<vals.length; i++)
+							vals[i] = rawVals.get(x).get(y).get(i)[p];
+						detrendStdDevXYZ[p].set(x, y, Math.sqrt(StatUtils.variance(vals)));
+					} else {
+						detrendStdDevXYZ[p].set(x, y, Double.NaN);
+					}
+				}
+			}
+		}
+		
+		return new EvenlyDiscrXYZ_DataSet[][] { detrendXYZ, detrendStdDevXYZ };
+	}
+	
+	public static void plotRedidualScatters(File outputDir, String prefix, IMT[] imts,
+			EvenlyDiscrXYZ_DataSet detrendXYZ[], EvenlyDiscrXYZ_DataSet detrendStdDevXYZ[]) throws IOException {
+//		double maxDetrend = 0d;
+//		for (EvenlyDiscrXYZ_DataSet xyz : detrendXYZ)
+//			maxDetrend = Math.max(maxDetrend, Math.max(Math.abs(xyz.getMinZ()), Math.abs(xyz.getMaxZ())));
+		double maxDetrend = 1.5; // fixed as requested by Bruce
+		
+		double minLogDist = detrendXYZ[0].getMinX() - 0.5*detrendXYZ[0].getGridSpacingX();
+		double maxLogDist = detrendXYZ[0].getMaxX() + 0.5*detrendXYZ[0].getGridSpacingX();
+		double minMag = detrendXYZ[0].getMinY() - 0.5*detrendXYZ[0].getGridSpacingY();
+		double maxMag = detrendXYZ[0].getMaxY() + 0.5*detrendXYZ[0].getGridSpacingY();
+		
+		HeadlessGraphPanel gp = initGP();
+		
+//		CPT detrendCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(-maxDetrend, maxDetrend);
+		CPT detrendCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-maxDetrend, maxDetrend);
+		for (int p=0; p<imts.length; p++) {
+			String title = imts[p].getDisplayName()+" Mean Residuals";
+			String detrendPrefix = prefix+"_residuals_"+imts[p].getPrefix();
+			XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendXYZ[p], detrendCPT, title, "Log10 Distance Rup", "Magnitude", "Mean Residual");
+			HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(gp.getPlotPrefs());
+			xyzGP.drawGraphPanel(xyzSpec, false, false, new Range(minLogDist, maxLogDist), new Range(minMag, maxMag));
+			xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
+			xyzGP.getChartPanel().setSize(700, 550);
+			xyzGP.saveAsPNG(new File(outputDir, detrendPrefix+".png").getAbsolutePath());
+		}
+		CPT stdCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0d, 1d);
+		stdCPT.setNanColor(Color.WHITE);
+		for (int p=0; p<imts.length; p++) {
+			String title = imts[p].getDisplayName()+" Standard Deviations";
+			String detrendPrefix = prefix+"_std_dev_"+imts[p].getPrefix();
+			XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendStdDevXYZ[p], stdCPT, title, "Log10 Distance Rup", "Magnitude", 
+					"Residual Standard Deviation");
+			HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(gp.getPlotPrefs());
+			xyzGP.drawGraphPanel(xyzSpec, false, false, new Range(minLogDist, maxLogDist), new Range(minMag, maxMag));
+			xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
+			xyzGP.getChartPanel().setSize(700, 550);
+			xyzGP.saveAsPNG(new File(outputDir, detrendPrefix+".png").getAbsolutePath());
+		}
+	}
+	
 	public static <E> void plotPeriodDependentSigma(File outputDir, String prefix,
 			Map<Site, List<RuptureComparison<E>>> siteCompsMap, SimulationRotDProvider<E> simProv,
 			boolean detrend, IMT... imts) throws IOException {
 		// for detrending
 		EvenlyDiscrXYZ_DataSet detrendXYZ[] = null;
 		EvenlyDiscrXYZ_DataSet detrendStdDevXYZ[] = null;
-		double minMag = Double.POSITIVE_INFINITY;
-		double maxMag = 0d;
-		double minDist = 1;
-		double maxDist = 200;
 		if (detrend) {
-			for (Site site : siteCompsMap.keySet()) {
-				for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
-					minMag = Math.min(minMag, comp.getMagnitude());
-					maxMag = Math.max(maxMag, comp.getMagnitude());
-				}
-			}
-			minMag = Math.floor(minMag*10d)/10d;
-			maxMag = Math.ceil(maxMag*10d)/10d;
-			int numDist = 20;
-			int numMag = 15;
-			double distSpacing = (Math.log10(maxDist) - Math.log10(minDist)) / (double)numDist;
-			double magSpacing = (maxMag - minMag) / (double)numMag;
-			detrendXYZ = new EvenlyDiscrXYZ_DataSet[imts.length];
-			detrendStdDevXYZ = new EvenlyDiscrXYZ_DataSet[imts.length];
-			for (int p=0; p<imts.length; p++) {
-				detrendXYZ[p] = new EvenlyDiscrXYZ_DataSet(numDist, numMag, Math.log10(minDist)+0.5*distSpacing,
-						minMag+0.5*magSpacing, distSpacing, magSpacing);
-				detrendStdDevXYZ[p] = detrendXYZ[p].copy();
-			}
-			System.out.println("Detrend distance range: "+(float)Math.pow(10, detrendXYZ[0].getX(0)-0.5*distSpacing)
-				+" => "+(float)Math.pow(10, detrendXYZ[0].getX(numDist-1)+0.5*distSpacing)+". Log10 Spacing: "+(float)distSpacing);
-			System.out.println("Detrend mag range: "+(float)(detrendXYZ[0].getY(0)-0.5*magSpacing)
-				+" => "+(float)(detrendXYZ[0].getY(numMag-1)+0.5*magSpacing)+". Spacing: "+(float)magSpacing);
-			List<List<List<double[]>>> rawVals = new ArrayList<>();
-			for (int i=0; i<detrendXYZ[0].getNumX(); i++) {
-				List<List<double[]>> subList= new ArrayList<>();
-				for (int j=0; j<detrendXYZ[0].getNumY(); j++)
-					subList.add(new ArrayList<>());
-				rawVals.add(subList);
-			}
-			int[][] detrendCounts = new int[numDist][numMag];
-			for (Site site : siteCompsMap.keySet()) {
-				for (RuptureComparison<E> comp : siteCompsMap.get(site)) {
-					double[] gmpeVals = new double[imts.length];
-					for (int p=0; p<imts.length; p++)
-						gmpeVals[p] = comp.getLogMean(site, imts[p]);
-					E rupture = comp.getRupture();
-					int numSims = simProv.getNumSimulations(site, rupture);
-					double dist = comp.getDistanceRup(site);
-					int xInd;
-					if (dist < minDist)
-						xInd = 0;
-					else if (dist > maxDist)
-						xInd = numDist-1;
-					else
-						xInd = detrendXYZ[0].getXIndex(Math.log10(dist));
-					Preconditions.checkState(xInd >= 0 && xInd < numDist,
-							"Bad dist index %s for dist=%s, nDist=%s", xInd, dist, numDist);
-					int yInd = detrendXYZ[0].getYIndex(comp.getMagnitude());
-					Preconditions.checkState(yInd >= 0 && yInd < numMag,
-							"Bad mag index %s for mag=%s, nMag=%s", yInd, comp.getMagnitude(), numMag);
-					for (int i=0; i<numSims; i++) {
-						detrendCounts[xInd][yInd]++;
-						double[] vals = new double[imts.length];
-						for (int p=0; p<imts.length; p++) {
-							double simVal = Math.log(simProv.getValue(site, rupture, imts[p], i));
-							double residual = simVal - gmpeVals[p];
-							vals[p] = residual;
-							detrendXYZ[p].set(xInd, yInd, detrendXYZ[p].get(xInd, yInd)+residual);
-						}
-						rawVals.get(xInd).get(yInd).add(vals);
-					}
-				}
-			}
-			// now convert to average residual
-			for (int x=0; x<numDist; x++) {
-				for (int y=0; y<numMag; y++) {
-					for (int p=0; p<imts.length; p++) {
-						if (detrendCounts[x][y] > 0)
-							detrendXYZ[p].set(x, y, detrendXYZ[p].get(x, y)/(double)detrendCounts[x][y]);
-						if (detrendCounts[x][y] > 1) {
-							// std dev
-							double[] vals = new double[detrendCounts[x][y]];
-							for (int i=0; i<vals.length; i++)
-								vals[i] = rawVals.get(x).get(y).get(i)[p];
-							detrendStdDevXYZ[p].set(x, y, Math.sqrt(StatUtils.variance(vals)));
-						} else {
-							detrendStdDevXYZ[p].set(x, y, Double.NaN);
-						}
-					}
-				}
-			}
+			EvenlyDiscrXYZ_DataSet[][] detrends = calcDetrendResiduals(siteCompsMap, simProv, imts);
+			detrendXYZ = detrends[0];
+			detrendStdDevXYZ = detrends[1];
 		}
 		Table<RuptureComparison<E>, Integer, List<double[]>> rupResidualsTable = HashBasedTable.create();
 		Variance[] totalVars = new Variance[imts.length];
@@ -921,12 +975,7 @@ public class ResidualScatterPlot {
 		PlotSpec spec = new PlotSpec(funcs, chars, "Sigma Components", "Period", "Standard Deviations");
 		spec.setPlotAnnotations(anns);
 		
-		HeadlessGraphPanel gp = new HeadlessGraphPanel();
-		gp.setTickLabelFontSize(18);
-		gp.setAxisLabelFontSize(20);
-		gp.setPlotLabelFontSize(21);
-		gp.setLegendFontSize(18);
-		gp.setBackgroundColor(Color.WHITE);
+		HeadlessGraphPanel gp = initGP();
 		
 		gp.drawGraphPanel(spec, false, false, xRange, yRange);
 		gp.getXAxis().setTickLabelsVisible(false);
@@ -935,36 +984,19 @@ public class ResidualScatterPlot {
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 		
-		if (detrend) {
-			double maxDetrend = 0d;
-			for (EvenlyDiscrXYZ_DataSet xyz : detrendXYZ)
-				maxDetrend = Math.max(maxDetrend, Math.max(Math.abs(xyz.getMinZ()), Math.abs(xyz.getMaxZ())));
-//			CPT detrendCPT = GMT_CPT_Files.MAX_SPECTRUM.instance().rescale(-maxDetrend, maxDetrend);
-			CPT detrendCPT = GMT_CPT_Files.GMT_POLAR.instance().rescale(-maxDetrend, maxDetrend);
-			for (int p=0; p<imts.length; p++) {
-				String title = imts[p].getDisplayName()+" Mean Residuals";
-				String detrendPrefix = "detrend_residuals_"+imts[p].getPrefix();
-				XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendXYZ[p], detrendCPT, title, "Log10 Distance Rup", "Magnitude", "Mean Residual");
-				HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(gp.getPlotPrefs());
-				xyzGP.drawGraphPanel(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
-				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
-				xyzGP.getChartPanel().setSize(700, 550);
-				xyzGP.saveAsPNG(new File(outputDir, detrendPrefix+".png").getAbsolutePath());
-			}
-			CPT stdCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0d, 1d);
-			stdCPT.setNanColor(Color.WHITE);
-			for (int p=0; p<imts.length; p++) {
-				String title = imts[p].getDisplayName()+" Standard Deviations";
-				String detrendPrefix = "detrend_std_dev_"+imts[p].getPrefix();
-				XYZPlotSpec xyzSpec = new XYZPlotSpec(detrendStdDevXYZ[p], stdCPT, title, "Log10 Distance Rup", "Magnitude", 
-						"Residual Standard Deviation");
-				HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(gp.getPlotPrefs());
-				xyzGP.drawGraphPanel(xyzSpec, false, false, new Range(Math.log10(minDist), Math.log10(maxDist)), new Range(minMag, maxMag));
-				xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
-				xyzGP.getChartPanel().setSize(700, 550);
-				xyzGP.saveAsPNG(new File(outputDir, detrendPrefix+".png").getAbsolutePath());
-			}
-		}
+		if (detrend)
+			plotRedidualScatters(outputDir, "detrend", imts, detrendXYZ, detrendStdDevXYZ);
+	}
+	
+	private static HeadlessGraphPanel initGP() {
+		HeadlessGraphPanel gp = new HeadlessGraphPanel();
+		gp.setTickLabelFontSize(18);
+		gp.setAxisLabelFontSize(20);
+		gp.setPlotLabelFontSize(21);
+		gp.setLegendFontSize(18);
+		gp.setBackgroundColor(Color.WHITE);
+		
+		return gp;
 	}
 	
 	private static void addBoxAnns(List<XYAnnotation> anns, double value, Color color, String symbol, Font font, double x0, double width) {
