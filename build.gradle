@@ -19,7 +19,7 @@ repositories {
 
 dependencies {
 
-    api "ghsc:nshmp-lib:1.3.2"
+    api "ghsc:nshmp-lib:1.3.13"
     
     implementation 'org.apache.pdfbox:pdfbox:2.0.6'
     implementation 'org.apache.commons:commons-collections4:4.1'
