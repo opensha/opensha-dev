@@ -22,7 +22,7 @@ public class SegResultPlots {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/seg_results");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		File modelDir = new File(invsDir, "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File modelDir = new File(invsDir, "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
 		FaultSystemSolution fullSol = FaultSystemSolution.load(
 				new File(modelDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));

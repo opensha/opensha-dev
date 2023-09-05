@@ -103,7 +103,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		int remoteTotalMemGB = 50;
 		String queue = "scec";
 		int nodes = 36;
-//		int nodes = 24;
+//		int nodes = 18;
 		double itersPerSec = 200000;
 		int runsPerBranch = 1;
 		int nodeBAAsyncThreads = 2;
@@ -266,7 +266,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -407,6 +407,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.NSHM18_UseU3Paleo.class;
 //		dirName += "-u3_paleo";
 		
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ModPitasPointDDW.class;
+		dirName += "-mod_pitas_ddw";
+		
 		if (!factoryClass.equals(NSHM23_InvConfigFactory.class)) {
 			// try instantiate it to make sure we get any static modifiers that might change branch weights
 			try {
@@ -476,8 +479,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD,
 				
 				// SLIP ALONG RUPTURE
-//				NSHM23_SlipAlongRuptureModels.UNIFORM,
-				NSHM23_SlipAlongRuptureModels.TAPERED,
+				NSHM23_SlipAlongRuptureModels.UNIFORM,
+//				NSHM23_SlipAlongRuptureModels.TAPERED,
 //				SlipAlongRuptureModels.UNIFORM,
 //				SlipAlongRuptureModels.TAPERED,
 				

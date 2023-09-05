@@ -34,15 +34,17 @@ public class SectMFD_Plots {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/sect_mfds");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
+//		FaultSystemSolution u3Sol = FaultSystemSolution.load(
+//				new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip")); // must be 3.1 for Pitas
 		FaultSystemSolution u3Sol = FaultSystemSolution.load(
-				new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip")); // must be 3.1 for Pitas
+				new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/branch_avgs_combined.zip"));
 		
 		FaultSystemSolution methodsSol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_FM3_1_CoulombRupSet_branch_averaged.zip"));
 		
 		FaultSystemSolution modelSol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR"
+				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR"
 				+ "/results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 //		String faultName = "Pitas Point (lower, Montalvo)";
@@ -51,11 +53,11 @@ public class SectMFD_Plots {
 //		Range xRange = new Range(6.5d, 8.6);
 //		Range yRange = new Range(1e-8, 1e-2);
 		
-//		String faultName = "San Cayetano";
-//		String[] faultSearch = { "Cayetano" };
-//		String prefix = "san_cayetano";
-//		Range xRange = new Range(6.5d, 8.6);
-//		Range yRange = new Range(1e-8, 1e-2);
+		String faultName = "San Cayetano";
+		String[] faultSearch = { "Cayetano" };
+		String prefix = "san_cayetano";
+		Range xRange = new Range(6.5d, 8.6);
+		Range yRange = new Range(1e-8, 1e-2);
 		
 //		String faultName = "Death Valley (No)";
 //		String[] faultSearch = { "Death", "Valley", "No" };
@@ -63,11 +65,11 @@ public class SectMFD_Plots {
 //		Range xRange = new Range(6d, 8.2);
 //		Range yRange = new Range(1e-8, 1e-2);
 		
-		String faultName = "Death Valley (Black Mtns Frontal)";
-		String[] faultSearch = { "Death", "Valley", "Black" };
-		String prefix = "death_valley_black_mtns";
-		Range xRange = new Range(6d, 8.2);
-		Range yRange = new Range(1e-8, 1e-2);
+//		String faultName = "Death Valley (Black Mtns Frontal)";
+//		String[] faultSearch = { "Death", "Valley", "Black" };
+//		String prefix = "death_valley_black_mtns";
+//		Range xRange = new Range(6d, 8.2);
+//		Range yRange = new Range(1e-8, 1e-2);
 		
 		List<FaultSystemSolution> sols = new ArrayList<>();
 		List<String> names = new ArrayList<>();

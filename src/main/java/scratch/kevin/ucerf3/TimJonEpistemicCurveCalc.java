@@ -175,8 +175,6 @@ public class TimJonEpistemicCurveCalc {
 		int threads = 10;
 		ExecutorService exec = Executors.newFixedThreadPool(threads);
 		
-		DecimalFormat oDF = new DecimalFormat("0.##");
-		
 		for (AttenRelRef gmpeRef : gmpeRefs) {
 			List<Future<Map<CalcKey, DiscretizedFunc>>> futures = new ArrayList<>();
 			List<Double> weights = new ArrayList<>();
@@ -205,54 +203,10 @@ public class TimJonEpistemicCurveCalc {
 			for (double vs30 : vs30Vals) {
 				for (boolean vsInf : vsInferreds) {
 					for (double period : periods) {
-						CSVFile<String> csv = new CSVFile<>(true);
-						List<String> header = new ArrayList<>();
-						header.add("Branch Index");
-						header.add("Branch Weight");
-						for (Point2D pt : xVals)
-							header.add((float)pt.getX()+"");
-						csv.addLine(header);
 						
 						List<DiscretizedFunc> curves = curvesMap.get(new CalcKey(period, vs30, vsInf));
-						
 						Preconditions.checkState(curves.size() == slt.getLogicTree().size());
-						
-						ArbDiscrEmpiricalDistFunc[] dists = new ArbDiscrEmpiricalDistFunc[xVals.size()];
-						for (int i=0; i<dists.length; i++)
-							dists[i] = new ArbDiscrEmpiricalDistFunc();
-						
-						for (int b=0; b<curves.size(); b++) {
-							double weight = weights.get(b);
-							DiscretizedFunc curve = curves.get(b);
-							
-							List<String> line = new ArrayList<>();
-							line.add(b+"");
-							line.add(weight+"");
-							for (int i=0; i<curve.size(); i++) {
-								line.add(curve.getY(i)+"");
-								dists[i].set(curve.getY(i), weight);
-							}
-							csv.addLine(line);
-						}
-						
-						List<String> meanLine = new ArrayList<>();
-						meanLine.add("MEAN"); meanLine.add("");
-						List<List<String>> percentileLines = new ArrayList<>();
-						for (double p : percentiles) {
-							List<String> percentileLine = new ArrayList<>();
-							percentileLine.add("p"+oDF.format(p));
-							percentileLine.add("");
-							percentileLines.add(percentileLine);
-						}
-						
-						for (int i=0; i<dists.length; i++) {
-							meanLine.add(dists[i].getMean()+"");
-							for (int p=0; p<percentiles.length; p++)
-								percentileLines.get(p).add(dists[i].getInterpolatedFractile(percentiles[p]/100d)+"");
-						}
-						csv.addLine(meanLine);
-						for (List<String> percentileLine : percentileLines)
-							csv.addLine(percentileLine);
+						CSVFile<String> csv = buildCurvesCSV(percentiles, curves, weights);
 						
 						String prefix = "curves";
 						
@@ -280,6 +234,59 @@ public class TimJonEpistemicCurveCalc {
 		}
 		
 		exec.shutdown();
+	}
+	
+	private static final DecimalFormat oDF = new DecimalFormat("0.##");
+
+	public static CSVFile<String> buildCurvesCSV(double[] percentiles, List<DiscretizedFunc> curves, List<Double> weights) {
+		DiscretizedFunc xVals = curves.get(0);
+		
+		CSVFile<String> csv = new CSVFile<>(true);
+		List<String> header = new ArrayList<>();
+		header.add("Branch Index");
+		header.add("Branch Weight");
+		for (Point2D pt : xVals)
+			header.add((float)pt.getX()+"");
+		csv.addLine(header);
+		
+		ArbDiscrEmpiricalDistFunc[] dists = new ArbDiscrEmpiricalDistFunc[xVals.size()];
+		for (int i=0; i<dists.length; i++)
+			dists[i] = new ArbDiscrEmpiricalDistFunc();
+		
+		for (int b=0; b<curves.size(); b++) {
+			double weight = weights.get(b);
+			DiscretizedFunc curve = curves.get(b);
+			Preconditions.checkState(curve.size() == xVals.size());
+			
+			List<String> line = new ArrayList<>();
+			line.add(b+"");
+			line.add(weight+"");
+			for (int i=0; i<curve.size(); i++) {
+				line.add(curve.getY(i)+"");
+				dists[i].set(curve.getY(i), weight);
+			}
+			csv.addLine(line);
+		}
+		
+		List<String> meanLine = new ArrayList<>();
+		meanLine.add("MEAN"); meanLine.add("");
+		List<List<String>> percentileLines = new ArrayList<>();
+		for (double p : percentiles) {
+			List<String> percentileLine = new ArrayList<>();
+			percentileLine.add("p"+oDF.format(p));
+			percentileLine.add("");
+			percentileLines.add(percentileLine);
+		}
+		
+		for (int i=0; i<dists.length; i++) {
+			meanLine.add(dists[i].getMean()+"");
+			for (int p=0; p<percentiles.length; p++)
+				percentileLines.get(p).add(dists[i].getInterpolatedFractile(percentiles[p]/100d)+"");
+		}
+		csv.addLine(meanLine);
+		for (List<String> percentileLine : percentileLines)
+			csv.addLine(percentileLine);
+		return csv;
 	}
 	
 	private static class CalcKey {

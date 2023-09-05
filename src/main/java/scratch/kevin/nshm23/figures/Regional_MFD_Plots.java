@@ -73,19 +73,18 @@ import gov.usgs.earthquake.nshmp.model.NshmErf;
 
 class Regional_MFD_Plots {
 	
-	private static final File NSHM18 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0");
+	static final File NSHM18 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0");
 	
-	private static final File NSHM23_WRAPPED = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.b.1");
+	static final File NSHM23_WRAPPED = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.b.3");
 	
-	private static final File NSHM23_DIR = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-			+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-	private static final File NSHM23_PLOTS_DIR = new File(NSHM23_DIR, "misc_plots");
-	private static final File NSHM23_SOL = new File(NSHM23_DIR, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+	static final File NSHM23_DIR = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+			+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+	static final File NSHM23_PLOTS_DIR = new File(NSHM23_DIR, "misc_plots");
+	static final File NSHM23_SOL = new File(NSHM23_DIR, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
 	
-	private static final File U3_SOL = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/branch_avgs_combined.zip");
+	static final File U3_SOL = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/branch_avgs_combined.zip");
 	
-	// TODO update
-	private static final File METHODS_SOL = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+	static final File METHODS_SOL = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/branch_avgs_combined.zip");
 
 	public static void main(String[] args) throws IOException {

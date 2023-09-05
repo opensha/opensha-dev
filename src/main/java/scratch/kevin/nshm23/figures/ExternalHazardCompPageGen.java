@@ -34,11 +34,11 @@ public class ExternalHazardCompPageGen {
 	};
 	
 	public static void main(String[] args) throws IOException {
-//		String imtName = "PGA";
-//		String imtDir = "PGA";
+		String imtName = "PGA";
+		String imtDir = "PGA";
 		
-		String imtName = "1s SA";
-		String imtDir = "SA1P0";
+//		String imtName = "1s SA";
+//		String imtDir = "SA1P0";
 		
 		ReturnPeriods[] rps = ReturnPeriods.values();
 		
@@ -55,11 +55,12 @@ public class ExternalHazardCompPageGen {
 //				+ "conus-2018-530-all-vs760-0p1-20230203-3e0458e688c967/vs30-760/"+imtDir+"/source");
 		
 		File outputDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "nshmp-haz-comparisons-"+imtDir);
 		double sourceSpacing = 0.1;
 		File sourcesDir23 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
-				+ "2023_CONUS_v2_with_2018_GMMs_vs30_760_260_0p1_degree_map-baa646aed596a2/vs30-760/"+imtDir+"/source");
+//				+ "2023_CONUS_v2_with_2018_GMMs_vs30_760_260_0p1_degree_map-baa646aed596a2/vs30-760/"+imtDir+"/source");
+				+ "2023_CONUS_with_2018_GMMs_vs30_760_0p1_degree_map-a77b4c1d0a26a7/vs30-760/"+imtDir+"/source");
 		File sourcesDir18 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
 				+ "conus-2018-530-all-vs760-0p1-20230203-3e0458e688c967/vs30-760/"+imtDir+"/source");
 

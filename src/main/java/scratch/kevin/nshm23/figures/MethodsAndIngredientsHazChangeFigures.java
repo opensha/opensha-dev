@@ -52,8 +52,8 @@ import com.google.common.base.Preconditions;
 public class MethodsAndIngredientsHazChangeFigures {
 	
 	public static void main(String[] args) throws IOException {
-		doCA();
-//		doWUS();
+//		doCA();
+		doWUS();
 	}
 	
 	public static void doCA() throws IOException {
@@ -83,7 +83,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File u3_23GridHazFile = new File(invsDir,
-				"2023_05_08-u3-both_fms-ba_only-nshm23_gridded/"
+				"2023_08_29-u3-both_fms-ba_only-nshm23_gridded/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File methodsU3GridHazFile = new File(invsDir,
@@ -95,7 +95,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File modelHazFile = new File(invsDir,
-				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				"2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		String entryName = "mean_map_pga_TWO_IN_50.txt";
@@ -243,7 +243,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 				"2023_04_13-nshm18_branches-new_scale-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM18_WUS_PlusU3_FM_3p1_CoulombRupSet_branch_averaged.zip"));
 		FaultSystemRupSet rupSet23 = FaultSystemRupSet.load(new File(invsDir,
-				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				"2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		File nshm18HazFile = new File(invsDir,
@@ -255,7 +255,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 				+ "results_hazard.zip");
 		
 		File nshm18_23GridHazFile = new File(invsDir,
-				"2023_04_12-nshm18-grid_src_from_23-wus-hazard-ask2014-0.1deg-noSub/"
+				"2023_07_10-nshm18-grid_src_from_23-wus-hazard-ask2014-0.1deg-noSub/"
 				+ "results_hazard.zip");
 		
 		File methods23GridHazFile = new File(invsDir,
@@ -263,11 +263,11 @@ public class MethodsAndIngredientsHazChangeFigures {
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File modelHazFile = new File(invsDir,
-				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				"2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File modelGridOnlyHazFile = new File(invsDir,
-				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				"2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_only_0.1deg.zip");
 		
 		String nshmHazEntryName = "map_pga_TWO_IN_50.txt";
@@ -315,8 +315,23 @@ public class MethodsAndIngredientsHazChangeFigures {
 		
 		// attribution
 		CPT attributionCPT = getCenterMaskedCPT(GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse(), 10d, 50d);
+		CPT cork = GMT_CPT_Files.DIVERGING_CORK_UNIFORM.instance();
+		// CORK gets too dark at the edges (hard to tell color), trim it
+		cork = cork.rescale(-1d, 1d);
+		CPT modCork = new CPT();
+		for (double v=-0.81; (float)v<=0.8f; v+=0.01) {
+			float start = (float)(v-0.01);
+			Color startColorCorc = cork.getColor(start);
+			float end = (float)v;
+			Color endColorCorc = cork.getColor(end);
+			modCork.add(new CPTVal(start, startColorCorc, end, endColorCorc));
+		}
+		modCork.setBelowMinColor(modCork.getMinColor());
+		modCork.setAboveMaxColor(modCork.getMaxColor());
+		CPT faultGridAttributionCPT = getCenterMaskedCPT(modCork, 10d, 50d);
 		
 		GriddedGeoDataSet attXYZ = new GriddedGeoDataSet(nshm18Map.getRegion(), false);
+		GriddedGeoDataSet faultGridAttXYZ = new GriddedGeoDataSet(nshm18Map.getRegion(), false);
 		GriddedGeoDataSet grid18PlusFaults23 = new GriddedGeoDataSet(nshm18Map.getRegion(), false);
 		
 		int numMethod = 0;
@@ -354,7 +369,21 @@ public class MethodsAndIngredientsHazChangeFigures {
 			double grid18val = nshm18GridOnlyMap.get(nshm18GridOnlyMap.indexOf(loc));
 			double grid23val = modelGridOnlyMap.get(modelGridOnlyMap.indexOf(loc));
 			double faultAdd = Math.max(0d, modelVal - grid23val);
-			grid18PlusFaults23.set(i, grid18val+faultAdd);
+			double grid18PlusFaults23val = grid18val+faultAdd;
+			grid18PlusFaults23.set(i, grid18PlusFaults23val);
+			
+			double full18val = nshm18Map.get(nshm18Map.indexOf(loc));
+			
+			double fullDiff = modelVal - full18val;
+			
+			double faultDiff = Math.abs(totalDiff);
+			double gridDiff = Math.abs(u3_23GridVal - full18val);
+			
+			double sign = faultDiff > gridDiff ? 1d : -1d;
+			
+			double fullPDiff = Math.abs(100d*fullDiff/full18val);
+			
+			faultGridAttXYZ.set(i, sign*fullPDiff);
 		}
 
 		plotHazardChange(outputDir, "grid_change", mapMaker23, pDiffCPT, refReg, modelMap, grid18PlusFaults23,
@@ -399,6 +428,22 @@ public class MethodsAndIngredientsHazChangeFigures {
 			}
 		};
 		mapMaker23.plot(outputDir, "comb_hazard_attribution", plot, width, new Consumer<HeadlessGraphPanel>() {
+
+			@Override
+			public void accept(HeadlessGraphPanel gp) {
+				for (Title subtitle : (List<Title>)gp.getPlot().getChart().getSubtitles()) {
+					if (subtitle instanceof PaintScaleLegend) {
+						NumberAxis axis = ((NumberAxis)((PaintScaleLegend)subtitle).getAxis());
+						PlotUtils.setTick(axis, 10d);
+						axis.setNumberFormatOverride(format);
+					}
+				}
+			}
+		});
+		
+		mapMaker23.plotXYZData(faultGridAttXYZ, faultGridAttributionCPT, "Gridded      ←        |Hazard % Change|        →       Faults");
+		plot = mapMaker23.buildPlot(" ");
+		mapMaker23.plot(outputDir, "fault_gridded_hazard_attribution", plot, width, new Consumer<HeadlessGraphPanel>() {
 
 			@Override
 			public void accept(HeadlessGraphPanel gp) {

@@ -56,7 +56,7 @@ class CA_HazardDistributionFigures {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/u3_haz_distribution_maps");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		File modelDir = new File(invsDir, "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File modelDir = new File(invsDir, "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		LogicTree<?> modelTree = LogicTree.read(new File(modelDir, "logic_tree.json"));
 		ZipFile modelZip = new ZipFile(new File(modelDir, "results_hazard_avg_gridded.zip"));
 		FaultSystemRupSet rupSet23 = FaultSystemRupSet.load(new File(modelDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));

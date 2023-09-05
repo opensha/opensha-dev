@@ -678,7 +678,19 @@ public class RSQSimCatalog implements XMLSaveable {
 				59, 'G'),
 		BRUCE_5597("rundir5597", "Bruce 5597", "Bruce Shaw", cal(2023, 8, 17),
 				"NZ dynamic, bdeep=.009, bshallow=.003, alpha=0.25, hload=hst=3.0",
-				59, 'G');
+				59, 'G'),
+		BRUCE_5615("rundir5615", "Bruce 5615", "Bruce Shaw", cal(2023, 8, 24),
+				"CA high res; dynamic, bdeep=.013, bshallow=.003, alpha=0.25, hload=hst=3.0",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5652("rundir5652", "Bruce 5652", "Bruce Shaw", cal(2023, 8, 28),
+				"CA high res; dynamic, bdeep=.012, bshallow=.003, alpha=0.25, hload=hst=3.0",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5653("rundir5653", "Bruce 5653", "Bruce Shaw", cal(2023, 8, 28),
+				"CA high res; dynamic, bdeep=.012, bshallow=.0025, alpha=0.25, hload=hst=3.0",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5654("rundir5654", "Bruce 5654", "Bruce Shaw", cal(2023, 8, 28),
+				"CA high res; dynamic, bdeep=.011, bshallow=.003, alpha=0.25, hload=hst=3.0",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -3271,7 +3283,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		boolean overwriteIndividual = true;
-		boolean replot = true;
+		boolean replot = false;
 		
 //		File baseDir = new File("/data/kevin/simulators/catalogs");
 		

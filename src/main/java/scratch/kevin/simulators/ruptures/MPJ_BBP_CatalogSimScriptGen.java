@@ -34,7 +34,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir5450";
 //		String catalogDirName = "rundir4983_stitched";
 //		String catalogDirName = "rundir5566";
-		String catalogDirName = "rundir5595";
+		String catalogDirName = "rundir5654";
 //		String catalogDirName = "rundir5566_subduction_corupture";
 //		String catalogDirName = "rundir5413_multifault_separate";
 //		String catalogDirName = "rundir5566_crustal_corupture";
@@ -50,29 +50,29 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		double griddedSpacing = 1d;
 		
 		// CA
-//		Integer utmZone = null;
-//		Character utmBand = null;
-//		boolean standardSites = false;
-//		boolean csInitialLASites = false;
-//		boolean cs500LASites = true;
-//		boolean csLAMapSites = false;
-//		boolean griddedCASites = false;
-//		boolean griddedSoCalSites = false;
-//		boolean griddedNZSites = false;
-//		boolean nzStandardSites = false;
-		
-		// NZ
-		Integer utmZone = 59;
-		Character utmBand = 'G';
-		System.out.println("New Zealand!");
+		Integer utmZone = null;
+		Character utmBand = null;
 		boolean standardSites = false;
 		boolean csInitialLASites = false;
 		boolean cs500LASites = false;
 		boolean csLAMapSites = false;
-		boolean griddedCASites = false;
+		boolean griddedCASites = true;
 		boolean griddedSoCalSites = false;
-		boolean griddedNZSites = true;
-		boolean nzStandardSites = true;
+		boolean griddedNZSites = false;
+		boolean nzStandardSites = false;
+		
+		// NZ
+//		Integer utmZone = 59;
+//		Character utmBand = 'G';
+//		System.out.println("New Zealand!");
+//		boolean standardSites = false;
+//		boolean csInitialLASites = false;
+//		boolean cs500LASites = false;
+//		boolean csLAMapSites = false;
+//		boolean griddedCASites = false;
+//		boolean griddedSoCalSites = false;
+//		boolean griddedNZSites = true;
+//		boolean nzStandardSites = true;
 		
 //		double minMag = 0d;
 //		double minMag = 5;
@@ -94,7 +94,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 18;
+		int nodes = 16;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;

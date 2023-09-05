@@ -103,7 +103,8 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2023_01_01-nshm23_branches-NSHM23_v2-CoulombRupSet-NuclMFD-NoRed-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2023_05_15-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-NoAdj");
-		File mainDir = new File(invDir, "2023_03_23-nshm23_branches-10000ip-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//		File mainDir = new File(invDir, "2023_03_23-nshm23_branches-10000ip-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File mainDir = new File(invDir, "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		boolean currentWeights = false;
@@ -111,9 +112,9 @@ public class LogicTreeMisfitPageGen {
 		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
 		LogicTree<?> tree = slt.getLogicTree();
 		
-		File outputDir = new File(mainDir, "logic_tree_misfits");
-//		tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
-//		File outputDir = new File(mainDir, "logic_tree_misfits_no_classic");
+//		File outputDir = new File(mainDir, "logic_tree_misfits");
+		tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
+		File outputDir = new File(mainDir, "logic_tree_misfits_no_classic");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		File resourcesDir = new File(outputDir, "resources");

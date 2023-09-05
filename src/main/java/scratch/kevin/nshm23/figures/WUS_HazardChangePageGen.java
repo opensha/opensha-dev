@@ -72,8 +72,8 @@ public class WUS_HazardChangePageGen {
 		
 		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
 //		ReturnPeriods rp = ReturnPeriods.TEN_IN_50;
-//		double period = 0d;
-		double period = 1d;
+		double period = 0d;
+//		double period = 1d;
 		
 		String entryName, wrapperEntryName, hazLabel, dirPrefix;
 		if (period == 0d) {
@@ -131,7 +131,7 @@ public class WUS_HazardChangePageGen {
 		Preconditions.checkState(nshm18GridHazard.size() == nshm23Hazard.size());
 //		GriddedGeoDataSet nshm18GridHazard = null;
 		
-		boolean doNSHM18Ingredients = false;
+		boolean doNSHM18Ingredients = true;
 		
 		GriddedGeoDataSet nshm18IngredNewScaleHazard = null;
 		GriddedGeoDataSet nshm18IngredNewScaleClassicHazard = null;

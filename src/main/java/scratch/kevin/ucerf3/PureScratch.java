@@ -144,6 +144,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SlipAlongRuptureModel
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.SolutionProcessor;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
+import org.opensha.sha.earthquake.faultSysSolution.modules.TrueMeanRuptureMappings;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
@@ -3458,12 +3459,13 @@ public class PureScratch {
 	private static final void test220() throws IOException {
 		File dir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 //				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File ltFile = new File(dir, "logic_tree.json");
 		LogicTree<?> tree = LogicTree.read(ltFile);
 		
-//		tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
-//		tree.write(new File(dir, "logic_tree_no_classic.json"));
+		tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
+		tree.write(new File(dir, "logic_tree_no_classic.json"));
 		
 //		tree = tree.matchingNone(FaultModels.FM3_2).matchingNone(NSHM23_SegmentationModels.CLASSIC);
 //		tree.write(new File(dir, "logic_tree_FM3_1_no_classic.json"));
@@ -3471,8 +3473,8 @@ public class PureScratch {
 //		tree = tree.matchingNone(FaultModels.FM31_2);
 //		tree.write(new File(dir, "logic_tree_FM3_1.json"));
 		
-		tree = tree.matchingNone(FaultModels.FM3_1);
-		tree.write(new File(dir, "logic_tree_FM3_2.json"));
+//		tree = tree.matchingNone(FaultModels.FM3_1);
+//		tree.write(new File(dir, "logic_tree_FM3_2.json"));
 	}
 	
 	private static final void test221() throws IOException {
@@ -4742,12 +4744,67 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test256() throws IOException {
+		File dir = new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/");
+		FaultSystemSolution sol = FaultSystemSolution.load(new File(dir, "true_mean_solution.zip"));
+		
+		System.out.println("Solution has "+sol.getRupSet().getNumSections()+" sections");
+		System.out.println("Solution has "+sol.getRupSet().getNumRuptures()+" ruptures");
+		
+		SolutionLogicTree slt = SolutionLogicTree.load(new File(dir, "results.zip"));
+		
+		TrueMeanRuptureMappings mappings = sol.getRupSet().requireModule(TrueMeanRuptureMappings.class);
+		
+		double[] origRates = sol.getRateForAllRups();
+		double[] reconstructedRates = new double[origRates.length];
+		
+		LogicTree<?> tree = slt.getLogicTree();
+		double weightSum = 0d;
+		for (LogicTreeBranch<?> branch : tree)
+			weightSum += tree.getBranchWeight(branch);
+		
+		for (LogicTreeBranch<?> branch : tree) {
+			mappings.getSectionMappings(branch);
+			int[] rupMappings = mappings.getRuptureMappings(branch);
+			double[] myRates = slt.loadRatesForBranch(branch);
+			Preconditions.checkState(rupMappings.length == myRates.length);
+			
+			double weight = tree.getBranchWeight(branch)/weightSum;
+			
+			for (int r=0; r<myRates.length; r++)
+				if (myRates[r] > 0)
+					reconstructedRates[rupMappings[r]] += weight*myRates[r];
+		}
+		
+		MinMaxAveTracker absDiffTrack = new MinMaxAveTracker();
+		MinMaxAveTracker diffTrack = new MinMaxAveTracker();
+		MinMaxAveTracker pDiffTrack = new MinMaxAveTracker();
+		
+		double origSum = StatUtils.sum(origRates);
+		double reconstructedSum = StatUtils.sum(reconstructedRates);
+		
+		for (int r=0; r<origRates.length; r++) {
+			double diff = reconstructedRates[r] - origRates[r];
+			diffTrack.addValue(diff);
+			absDiffTrack.addValue(Math.abs(diff));
+			if (origRates[r] > 0)
+				pDiffTrack.addValue(100d*(reconstructedRates[r] - origRates[r])/origRates[r]);
+		}
+		System.out.println("Audit stats:");
+		System.out.println("\tReconstructed Sum:\t"+(float)reconstructedSum);
+		System.out.println("\tOriginal Sum:\t"+(float)origSum);
+		System.out.println("\tDiff stats:\t"+diffTrack);
+		System.out.println("\t|Diff| stats:\t"+absDiffTrack);
+		System.out.println("\t%Diff stats:\t"+pDiffTrack);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test255();
+		test256();
 	}
 
 }

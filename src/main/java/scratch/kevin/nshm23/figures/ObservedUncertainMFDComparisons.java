@@ -63,25 +63,25 @@ public class ObservedUncertainMFDComparisons {
 	public static void main(String[] args) throws IOException {
 		File invDir = new File("/data/kevin/nshm23/batch_inversions/"
 //				+ "2023_01_17-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-		new NSHM23_InvConfigFactory.NSHM23_V2(); // set seis values to V2
+//				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//		new NSHM23_InvConfigFactory.NSHM23_V2(); // set seis values to V2
 		File nodeDir = new File(invDir, "node_branch_averaged");
 		File meanSolFile = new File(invDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
-		File modelDir = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.b.1");
+		File modelDir = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.b.3");
 		File ltFile = new File(invDir, "logic_tree.json");
 
-		boolean wus = true;
-		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
-		File outputDir = new File(invDir, "observed_mfd_uncertainty_comparison");
-		int[] startYears = { 1850, 1900, 1930 };
-		String dataPrefix = "WUS-Other-";
+//		boolean wus = true;
+//		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+//		File outputDir = new File(invDir, "observed_mfd_uncertainty_comparison");
+//		int[] startYears = { 1850, 1900, 1930 };
+//		String dataPrefix = "WUS-Other-";
 		
-//		boolean wus = false;
-//		Region region = AnalysisRegions.CONUS_EAST.load();
-//		File outputDir = new File(invDir, "observed_mfd_uncertainty_comparison_ceus");
-//		int[] startYears = { 1800, 1850 };
-//		String dataPrefix = "CEUS-Other-";
+		boolean wus = false;
+		Region region = AnalysisRegions.CONUS_EAST.load();
+		File outputDir = new File(invDir, "observed_mfd_uncertainty_comparison_ceus");
+		int[] startYears = { 1800, 1850 };
+		String dataPrefix = "CEUS-Other-";
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
@@ -129,7 +129,7 @@ public class ObservedUncertainMFDComparisons {
 						int index = 0;
 						double mag = Double.parseDouble(split[index++]);
 						int count = Integer.parseInt(split[index++]);
-						index++; // duration
+						double duration = Double.parseDouble(split[index++]);
 						double rate = Double.parseDouble(split[index++]);
 						double lower2p5 = Double.parseDouble(split[index++]);
 						double lower16 = Double.parseDouble(split[index++]);
@@ -139,7 +139,10 @@ public class ObservedUncertainMFDComparisons {
 						if (count == 0 && maxZeroBins == 0)
 							break;
 						
-						obs.set(mag, count>0 ? rate : 0d);
+						// originally using Andy's rate which is (1+obs)/duration
+//						obs.set(mag, count>0 ? rate : 0d);
+						// now using direct obs/duration (maximum liklihood)
+						obs.set(mag, (double)count/duration);
 						p2p5.set(mag, lower2p5);
 						p16.set(mag, lower16);
 						p84.set(mag, upper84);
