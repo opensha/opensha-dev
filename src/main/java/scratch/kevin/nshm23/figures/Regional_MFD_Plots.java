@@ -10,6 +10,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,6 +59,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.LocalRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.NSHM23_BaseRegion;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.StitchedRegions;
 import org.opensha.sha.faultSurface.CompoundSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -75,10 +77,10 @@ class Regional_MFD_Plots {
 	
 	static final File NSHM18 = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-5.3.0");
 	
-	static final File NSHM23_WRAPPED = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.b.3");
+	static final File NSHM23_WRAPPED = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.0.0");
 	
 	static final File NSHM23_DIR = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-			+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+			+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 	static final File NSHM23_PLOTS_DIR = new File(NSHM23_DIR, "misc_plots");
 	static final File NSHM23_SOL = new File(NSHM23_DIR, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
 	
@@ -88,11 +90,12 @@ class Regional_MFD_Plots {
 				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/branch_avgs_combined.zip");
 
 	public static void main(String[] args) throws IOException {
-		doCompCascadia();
+//		doCompCascadia();
 //		doCompU3();
 		doCompNSHM18();
-		doCompEast();
+//		doCompEast();
 //		doMethodsCompU3();
+//		doTotalRateModelsOnly();
 	}
 	
 	private static void doCompEast() throws IOException {
@@ -313,6 +316,38 @@ class Regional_MFD_Plots {
 		}
 	}
 	
+	private static void doTotalRateModelsOnly() throws IOException {
+		File outputDir = new File(NSHM23_PLOTS_DIR, "reg_mfds_rate_branches");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		SeismicityRegions[] analysis = {
+				SeismicityRegions.CONUS_WEST,
+				SeismicityRegions.CONUS_EAST
+		};
+		
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.95);
+		
+		String modelName = "NSHM23";
+		String compName = "NSHM18";
+		
+		Range xRange = new Range(5d, 8d);
+		Range yRange = new Range(1e-4, 1e2);
+		
+		boolean plotAllTypes = true;
+		boolean plotTarget = false;
+//		DIST_TRANS_COLOR = TRANS_LIGHT_GRAY;
+		
+		for (SeismicityRegions reg : analysis) {
+			Map<MFDType, IncrementalMagFreqDist> mfds = new HashMap<>();
+			mfds.put(MFDType.SUM, NSHM23_RegionalSeismicity.getBounded(
+					reg, refMFD, refMFD.getX(refMFD.getClosestXIndex(xRange.getUpperBound()))));
+			
+			
+			writePlot(reg, refMFD, null, false, plotAllTypes, null, plotTarget, outputDir, xRange, yRange, " ", modelName, mfds,
+					null, null, null);
+		}
+	}
+	
 	private static enum ModelType {
 		COMP,
 		METHODS,
@@ -339,7 +374,7 @@ class Regional_MFD_Plots {
 		if (aReg != NSHM23_RegionLoader.CATCH_ALL_REGION) {
 			UncertainBoundedIncrMagFreqDist dataBounds = NSHM23_RegionalSeismicity.getRemapped(region,
 					NSHM23_DeclusteringAlgorithms.AVERAGE, NSHM23_SeisSmoothingAlgorithms.AVERAGE, refMFD, refMFD.getMaxX());
-			dataBounds.setName("Observed");
+			dataBounds.setName("Observed (extrapolated)");
 			dataBounds.setBoundName("95% Bounds");
 			UncertainBoundedIncrMagFreqDist dataForBounds = dataBounds.deepClone();
 			dataForBounds.setName(dataBounds.getBoundName());

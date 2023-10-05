@@ -18,7 +18,7 @@ public class SlipZTablesBuilder {
 
 	public static void main(String[] args) throws IOException {
 		File mainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		boolean excludeClassic = true;
 		
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures");

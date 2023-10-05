@@ -40,21 +40,21 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		String tagName = "nshm-conus-5.3.0"; // NSHM18
 		
 //		String erfPrefix = "nshm23-wrapped";
-//		String tagName = "nshm-conus-6.a.6"; // NSHM23 draft
+//		String tagName = "nshm-conus-6.0.0"; // NSHM23 draft
 		
-//		double gridSpacing = 0.1d; int mins = 2000;
-//		String regName = "wus";
-//		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		double gridSpacing = 0.1d; int mins = 2000;
+		String regName = "wus";
+		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
-		double gridSpacing = 0.2d; int mins = 2000;
-		String regName = "conus";
-		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
+//		double gridSpacing = 0.2d; int mins = 2000;
+//		String regName = "conus";
+//		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
 		
-		String extGridProvPath = null;
-//		String extGridProvPath = "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
-////				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
+//		String extGridProvPath = null;
+		String extGridProvPath = "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
 //				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded_with_ceus.zip";
-//		erfPrefix += "-grid_src_from_23"; griddedOp = IncludeBackgroundOption.INCLUDE;
+		erfPrefix += "-grid_src_from_23"; griddedOp = IncludeBackgroundOption.INCLUDE;
 //		String extGridProvPath = "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 //				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
 //		erfPrefix += "-grid_src_from_modWeightDM_23"; gridded = true;

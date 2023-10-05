@@ -326,6 +326,13 @@ class SupraBValFigure {
 		ann.setTextAnchor(TextAnchor.BASELINE_RIGHT);
 		ann.setFont(font);
 		anns.add(ann);
+		
+		// CARTOON annotations
+		ann = new XYTextAnnotation("CARTOON (example fault) ",
+				xRange.getUpperBound(), logShift(yRange.getUpperBound(), -0.02));
+		ann.setTextAnchor(TextAnchor.TOP_RIGHT);
+		ann.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 26));
+		ann.setPaint(Color.GRAY);
 		anns.add(ann);
 		
 		spec = new PlotSpec(funcs, chars, " ", "G-R b-value", "Cumulative Rate (1/yr)");

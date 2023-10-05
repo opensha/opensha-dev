@@ -104,7 +104,8 @@ public class LogicTreeMisfitPageGen {
 //		File mainDir = new File(invDir, "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //		File mainDir = new File(invDir, "2023_05_15-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-NoAdj");
 //		File mainDir = new File(invDir, "2023_03_23-nshm23_branches-10000ip-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-		File mainDir = new File(invDir, "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//		File mainDir = new File(invDir, "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File mainDir = new File(invDir, "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File resultsFile = new File(mainDir, "results.zip");
 		
 		boolean currentWeights = false;

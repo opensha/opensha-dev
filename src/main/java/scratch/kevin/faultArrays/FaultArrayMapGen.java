@@ -21,6 +21,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.mapping.gmt.GMT_Map;
+import org.opensha.commons.mapping.gmt.GMT_MapGenerator;
 import org.opensha.commons.mapping.gmt.elements.CoastAttributes;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.mapping.gmt.elements.PSText;
@@ -62,13 +63,13 @@ public class FaultArrayMapGen {
 		}
 	}
 	
-//	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
+	private static Region region = new Region(new Location(35.1, -114.5), new Location(32, -120));
 //	private static Region region = new Region(new Location(35.5, -114), new Location(31.5, -121));
 //	private static Region region = new Region(new Location(36.5, -114), new Location(31.5, -121));
 //	private static Region region = new Region(new Location(36, -114), new Location(31.5, -120.5)); // max upper left of Yehuda's GRD file
-	private static Region region = new Region(new Location(31.75, -125), new Location(42.5, -114));
+//	private static Region region = new Region(new Location(31.75, -125), new Location(42.5, -114));
 	
-	private static boolean srtm = true;
+	private static boolean srtm = false;
 	private static GriddedGeoDataSet topoXYZ = null;
 	
 	private static synchronized GriddedGeoDataSet fetchTopo(TopographicSlopeFile topoRes) throws IOException {
@@ -176,7 +177,7 @@ public class FaultArrayMapGen {
 			HashSet<Integer> parentsToPlot = new HashSet<>();
 			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.S_SAF_PARENTS));
 			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.SJC_PARENTS));
-//			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.ELSINORE_PARENTS));
+			parentsToPlot.addAll(Ints.asList(FaultArrayCalc.ELSINORE_PARENTS));
 			if (region.getMaxLat() > 38) {
 				parentsToPlot.addAll(Ints.asList(FaultArrayCalc.N_SAF_PARENTS));
 				parentsToPlot.addAll(Ints.asList(FaultArrayCalc.CALAVERAS_HAYWARD_PARENTS));
@@ -310,8 +311,12 @@ public class FaultArrayMapGen {
 				map.addText(new PSText(textPT, Color.BLACK, 10, city, Justify.LEFT_BOTTOM));
 			}
 		}
+		if (FaultBasedMapGen.LOCAL_MAPGEN == true)
+			// do it this way to also write the script for posterity
+			FaultBasedMapGen.plotLocalMap(outputDir, prefix, false, true, map);
+		else
+			FaultBasedMapGen.plotMap(outputDir, prefix, false, map);
 		
-		FaultBasedMapGen.plotMap(outputDir, prefix, false, map);
 		convertHiRes(outputDir, prefix);
 		if (scalarType != null) {
 			// also write version with just CPT files
@@ -378,7 +383,8 @@ public class FaultArrayMapGen {
 
 	public static void main(String[] args) throws IOException, GMT_MapException {
 //		File outputDir = new File("/home/kevin/SCEC/2021_fault_array_proposal/plots");
-		File outputDir = new File("/home/kevin/SCEC/2023_fault_array_proposal/plots");
+//		File outputDir = new File("/home/kevin/SCEC/2023_fault_array_proposal/plots");
+		File outputDir = new File("/home/kevin/SCEC/2023_fault_array_proposal/plots_socal");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdirs());
 		FaultBasedMapGen.LOCAL_MAPGEN = true;
 		
@@ -390,8 +396,8 @@ public class FaultArrayMapGen {
 		meanU3.getTimeSpan().setDuration(durationForProbs);
 		meanU3.updateForecast();
 		
-		boolean topo = false;
-		boolean popData = true;
+		boolean topo = true;
+		boolean popData = false;
 
 //		plotMap(outputDir, "linearized_trace_test", 0d, fm, null, null, true);
 //		plotMap(outputDir, "linearized_trace_20km", 20d, fm, null, null, true);

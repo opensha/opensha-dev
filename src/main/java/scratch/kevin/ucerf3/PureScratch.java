@@ -124,6 +124,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_LogicTreeBr
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchAveragingOrder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultCubeAssociations;
@@ -146,6 +147,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree.Sol
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.TrueMeanRuptureMappings;
 import org.opensha.sha.earthquake.faultSysSolution.modules.WaterLevelRates;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs.MFDType;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetailPlots;
@@ -3460,7 +3462,8 @@ public class PureScratch {
 		File dir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 //				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 //				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File ltFile = new File(dir, "logic_tree.json");
 		LogicTree<?> tree = LogicTree.read(ltFile);
 		
@@ -4799,12 +4802,40 @@ public class PureScratch {
 		System.out.println("\t%Diff stats:\t"+pDiffTrack);
 	}
 	
+	private static void test257() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/solution.zip"));
+		LogicTreeBranch<?> branch = sol.getRupSet().requireModule(LogicTreeBranch.class);
+		
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(8.45);
+		IncrementalMagFreqDist mfd = sol.calcTotalNucleationMFD(refMFD.getMinX(), refMFD.getMaxX(), refMFD.getDelta());
+
+		File invsDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
+		File modelDir = new File(invsDir,
+				"2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		
+		FaultSystemSolution baSol = FaultSystemSolution.load(new File(modelDir,
+				"results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
+		LogicTree<?> tree = LogicTree.read(new File(modelDir, "logic_tree.json"));
+		
+		double minMag = 6d;
+		
+		BranchAveragingOrder order = baSol.requireModule(BranchAveragingOrder.class);
+		BranchRegionalMFDs regMFDs = baSol.requireModule(BranchRegionalMFDs.class);
+		
+		int index = order.getBranchAveragingIndex(branch);
+		IncrementalMagFreqDist regMFD = regMFDs.getTotalBranchMFDs(MFDType.SUPRA_ONLY)[index];
+		
+		System.out.println(branch+" is index "+index);
+		System.out.println("MFD directly from solution:\n\n"+mfd);
+		System.out.println("MFD from BranchRegionalMFDs:\n\n"+regMFD);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test256();
+		test220();
 	}
 
 }

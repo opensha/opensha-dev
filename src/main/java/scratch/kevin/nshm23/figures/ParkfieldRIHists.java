@@ -45,7 +45,7 @@ public class ParkfieldRIHists {
 		double riIngred = calcBranchParkfieldHist(ingredientsFile, histIngred);
 		
 		File modelFile = new File("/data/kevin/nshm23/batch_inversions/"
-				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/results.zip");
+				+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/results.zip");
 		HistogramFunction histModel = initHist();
 		double riModel = calcBranchParkfieldHist(modelFile, histModel);
 		

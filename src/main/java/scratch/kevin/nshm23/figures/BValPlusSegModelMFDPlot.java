@@ -40,6 +40,7 @@ import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.RuptureProbabilityCalc.BinaryRuptureProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
@@ -77,7 +78,7 @@ public class BValPlusSegModelMFDPlot {
 		int[] miniClusterIDs = {2568, 2522, 2582};
 		
 		FaultSystemRupSet fullRupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		FaultSystemRupSet rupSet5km = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/UCERF4/rup_sets/"
@@ -247,6 +248,9 @@ public class BValPlusSegModelMFDPlot {
 					if (model != null) {
 						SectNucleationMFD_Estimator adjustment = segAdjMethod.getAdjustment(model);
 						builder.adjustTargetsForData(adjustment);
+						BinaryRuptureProbabilityCalc rupExclusionModel = segModel.getExclusionModel(rupSet, branch);
+						if (rupExclusionModel != null)
+							builder.forBinaryRupProbModel(rupExclusionModel, false);
 					}
 					
 					mfdFutures.add(CompletableFuture.supplyAsync(new Supplier<IncrementalMagFreqDist>() {

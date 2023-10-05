@@ -22,7 +22,7 @@ public class SegResultPlots {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/seg_results");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		File modelDir = new File(invsDir, "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+		File modelDir = new File(invsDir, "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
 		FaultSystemSolution fullSol = FaultSystemSolution.load(
 				new File(modelDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
@@ -71,6 +71,8 @@ public class SegResultPlots {
 			SegmentationCalculator segCalc = new SegmentationCalculator(sols[i], cRups.getAll(),
 					connStrat, config.getDistAzCalc(), new double[] { 0d });
 			String prefix = prefixes[i];
+			
+			segCalc.setLegendFontSize(24);
 			
 			segCalc.plotConnectionFracts(outputDir, "passthrough_map_"+prefix, " ");
 			

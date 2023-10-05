@@ -1,6 +1,8 @@
 package scratch.kevin.nshm23.figures;
 
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.Stroke;
 import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
@@ -19,9 +21,13 @@ import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYLineAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.chart.title.Title;
+import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.BorderType;
@@ -52,8 +58,8 @@ import com.google.common.base.Preconditions;
 public class MethodsAndIngredientsHazChangeFigures {
 	
 	public static void main(String[] args) throws IOException {
-//		doCA();
-		doWUS();
+		doCA();
+//		doWUS();
 	}
 	
 	public static void doCA() throws IOException {
@@ -67,7 +73,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 		FaultSystemRupSet rupSetU3 = FaultSystemRupSet.load(new File(
 				"/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_branch_averaged.zip"));
 		FaultSystemRupSet rupSet23 = FaultSystemRupSet.load(new File(invsDir,
-				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				"2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
 		
 		File u3Haz31File = new File(invsDir,
@@ -83,7 +89,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File u3_23GridHazFile = new File(invsDir,
-				"2023_08_29-u3-both_fms-ba_only-nshm23_gridded/"
+				"2023_09_21-u3-both_fms-ba_only-nshm23_gridded/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File methodsU3GridHazFile = new File(invsDir,
@@ -95,7 +101,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 				+ "results_hazard_include_0.1deg.zip");
 		
 		File modelHazFile = new File(invsDir,
-				"2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
+				"2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
 				+ "results_hazard_include_0.1deg.zip");
 		
 		String entryName = "mean_map_pga_TWO_IN_50.txt";
@@ -127,14 +133,53 @@ public class MethodsAndIngredientsHazChangeFigures {
 			mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(100, 100, 100, 127)));
 		}
 		
+		List<XYAnnotation> methodAnns = new ArrayList<>();
+		
+		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 24);
+		Stroke baseStroke = PlotLineType.SOLID.buildStroke(2f);
+//		Color lineColor = new Color(0, 0, 0, 127);
+		Color lineColor = Color.BLACK;
+		
+		double annX = -115.7;
+		double annY = 37.75;
+		double lineX = -117;
+		double lineY = 36.8;
+		XYTextAnnotation ann = new XYTextAnnotation("Death Valley (No)", annX, annY);
+		ann.setTextAnchor(TextAnchor.BASELINE_CENTER);
+		ann.setFont(annFont);
+		methodAnns.add(ann);
+		methodAnns.add(new XYLineAnnotation(lineX, lineY, annX, annY-0.1, baseStroke, lineColor));
+		
+		annX = -121.5;
+		annY = 35;
+		lineX = -119.2;
+		lineY = 34.5;
+		ann = new XYTextAnnotation("San Cayetano", annX, annY);
+		ann.setTextAnchor(TextAnchor.CENTER_RIGHT);
+		ann.setFont(annFont);
+		methodAnns.add(ann);
+		methodAnns.add(new XYLineAnnotation(lineX, lineY, annX+0.1, annY-0.1, baseStroke, lineColor));
+		
+		List<XYAnnotation> ingredAnns = new ArrayList<>();
+		
+		annX = -114.8;
+		annY = 36.6;
+		lineX = -116.3;
+		lineY = 35.4;
+		ann = new XYTextAnnotation("E.C.S.Z.", annX, annY);
+		ann.setTextAnchor(TextAnchor.BASELINE_CENTER);
+		ann.setFont(annFont);
+		ingredAnns.add(ann);
+		ingredAnns.add(new XYLineAnnotation(lineX, lineY, annX, annY-0.1, baseStroke, lineColor));
+		
 		CPT pDiffCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-50d, 50d);
 		pDiffCPT.setNanColor(new Color(255, 255, 255, 0));
 		plotHazardChange(outputDir, "u3_converged_vs_u3", mapMakerU3, pDiffCPT, refReg, u3ConvergedMap, u3fm31Map,
 				"Converged UCERF3 vs UCERF3, % Change, "+hazLabel, logFW);
 		plotHazardChange(outputDir, "methodology_vs_u3", mapMakerU3, pDiffCPT, refReg, methodsU3GridMap, u3Map,
-				"NSHM23 Methodology vs UCERF3, % Change, "+hazLabel, logFW);
+				"NSHM23 Methodology vs UCERF3, % Change, "+hazLabel, logFW, methodAnns);
 		plotHazardChange(outputDir, "ingredients", mapMaker23, pDiffCPT, refReg, modelMap, methods23GridMap,
-				"NSHM23 vs UCERF3 Ingredients, % Change, "+hazLabel, logFW);
+				"NSHM23 vs UCERF3 Ingredients, % Change, "+hazLabel, logFW, ingredAnns);
 		plotHazardChange(outputDir, "full_change", mapMaker23, pDiffCPT, refReg, modelMap, u3_23GridMap,
 				"NSHM23 vs UCERF3, % Change, "+hazLabel, logFW);
 		plotHazardChange(outputDir, "test_method_grid_change", mapMakerU3, pDiffCPT, refReg, methods23GridMap, methodsU3GridMap,
@@ -582,6 +627,12 @@ public class MethodsAndIngredientsHazChangeFigures {
 	private static void plotHazardChange(File outputDir, String prefix, GeographicMapMaker mapMaker, CPT pDiffCPT,
 			GriddedRegion refReg, GriddedGeoDataSet numerator, GriddedGeoDataSet denominator, String label,
 			FileWriter logFW) throws IOException {
+		plotHazardChange(outputDir, prefix, mapMaker, pDiffCPT, refReg, numerator, denominator, label, logFW, null);
+	}
+	
+	private static void plotHazardChange(File outputDir, String prefix, GeographicMapMaker mapMaker, CPT pDiffCPT,
+			GriddedRegion refReg, GriddedGeoDataSet numerator, GriddedGeoDataSet denominator, String label,
+			FileWriter logFW, List<? extends XYAnnotation> anns) throws IOException {
 		GriddedGeoDataSet pDiff = new GriddedGeoDataSet(refReg, false);
 		
 		MinMaxAveTracker meanAbsTrack = new MinMaxAveTracker();
@@ -626,7 +677,10 @@ public class MethodsAndIngredientsHazChangeFigures {
 		
 		mapMaker.plotXYZData(pDiff, pDiffCPT, label);
 		
+		if (anns != null)
+			mapMaker.setAnnotations(anns);
 		mapMaker.plot(outputDir, prefix, " ");
+		mapMaker.clearAnnotations();
 	}
 
 }

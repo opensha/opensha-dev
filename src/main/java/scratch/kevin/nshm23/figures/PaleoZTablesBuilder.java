@@ -28,7 +28,7 @@ class PaleoZTablesBuilder {
 		File nshm23MethodologyDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File nshm23ModelDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures");
 		

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.jfree.chart.plot.DatasetRenderingOrder;
+import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -29,9 +30,13 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_RegionalSeismicity;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -57,6 +62,8 @@ class BValueSumCartoon {
 			bValSums.add(new SummedMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta()));
 			bValSectCounts.add(refMFD.deepClone());
 		}
+		IncrementalMagFreqDist totRegMFD;
+		double offFaultMmax = 7.6;
 		
 		boolean isParents = false;
 		
@@ -77,6 +84,8 @@ class BValueSumCartoon {
 			double areaKM = 14d*8d;
 			double area = areaKM*1e6;
 			
+			double sumMoment = 0d;
+			
 			for (int s=0; s<numSects; s++) {
 				// randomly sample mag range
 				double minMag = minMagRange.getLowerBound() + rand.nextDouble()*minMagRange.getLength();
@@ -95,6 +104,8 @@ class BValueSumCartoon {
 				double moRate = FaultMomentCalc.getMoment(area, slipRate*1e-3);
 				System.out.println("\tMoment rate: "+(float)moRate);
 				
+				sumMoment += moRate;
+				
 				for (int b=0; b<bVals.length; b++) {
 					GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
 					gr.setAllButTotCumRate(minMag, maxMag, moRate, bVals[b]);
@@ -109,6 +120,11 @@ class BValueSumCartoon {
 							bValSectCounts.get(b).add(i, 1d);
 				}
 			}
+			
+			double totMoment = sumMoment*3.5;
+			totRegMFD = new GutenbergRichterMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta(),
+					refMFD.getX(refMFD.getClosestXIndex(magRange.getLowerBound())),
+					refMFD.getX(refMFD.getClosestXIndex(magRange.getUpperBound())), totMoment, 1d);
 		} else {
 			outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/b_val_sums");
 			
@@ -119,6 +135,7 @@ class BValueSumCartoon {
 //			NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.NoIncompatibleDataAdjust();
 			NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
 			factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
+			double maxMag = 0d;
 			
 			for (int b=0; b<bVals.length; b++) {
 				SupraSeisBValues bVal = null;
@@ -165,6 +182,7 @@ class BValueSumCartoon {
 						if (pt.getY() > 0) {
 							minNonZero = Math.min(minNonZero, pt.getY());
 							maxVal = Math.max(maxVal, pt.getY());
+							maxMag = Math.max(maxMag, pt.getX());
 						}
 					}
 					
@@ -174,6 +192,9 @@ class BValueSumCartoon {
 				}
 				bValSums.set(b, targetMFDs.getTotalOnFaultSupraSeisMFD());
 			}
+			
+			totRegMFD = NSHM23_RegionalSeismicity.getRemapped(NSHM23_RegionLoader.loadFullConterminousWUS(),
+					NSHM23_DeclusteringAlgorithms.AVERAGE, NSHM23_SeisSmoothingAlgorithms.AVERAGE, refMFD, maxMag);
 		}
 		
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -200,7 +221,7 @@ class BValueSumCartoon {
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
 			
 			IncrementalMagFreqDist bValSum = bValSums.get(b);
-			bValSum.setName("Regional Sum");
+			bValSum.setName("Fault MFD Sum");
 			funcs.add(bValSum);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLACK));
 			
@@ -285,20 +306,75 @@ class BValueSumCartoon {
 			
 			PlotUtils.writePlots(outputDir, prefix, gp, 800, 750, true, true, false);
 			
+			// now version with total and gridded seismicity carveout
+			List<DiscretizedFunc> funcs2 = new ArrayList<>();
+			List<PlotCurveCharacterstics> chars2 = new ArrayList<>();
+			
+			totRegMFD.setName("Total Regional Target");
+			funcs2.add(totRegMFD);
+			chars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Color.BLUE));
+			
+			IncrementalMagFreqDist griddedMFD = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+			for (int i=0; i<griddedMFD.size(); i++) {
+				double mag = griddedMFD.getX(i);
+				if (mag > offFaultMmax)
+					break;
+				double target = totRegMFD.getY(i);
+				double supra = bValSum.getY(i);
+				if (target > supra)
+					griddedMFD.set(i, target-supra);
+			}
+			griddedMFD.setName("Gridded Seismicity MFD");
+			funcs2.add(griddedMFD);
+			chars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.GREEN.darker()));
+			
+			funcs2.addAll(funcs);
+			chars2.addAll(chars);
+			
+			IncrementalMagFreqDist sumMFD = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+			for (int i=0; i<sumMFD.size(); i++) {
+				Preconditions.checkState(sumMFD.getX(i) == griddedMFD.getX(i));
+				double gridded = griddedMFD.getY(i);
+				double supra;
+				if (bValSum.size() > i) {
+					Preconditions.checkState(sumMFD.getX(i) == bValSum.getX(i));
+					supra = bValSum.getY(i);
+				} else {
+					supra = 0d;
+				}
+				sumMFD.set(i, gridded+supra);
+			}
+			sumMFD.setName("Total Summed MFD");
+			funcs2.add(sumMFD);
+			chars2.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 4f, Color.GRAY));
+			
+			PlotSpec spec2 = new PlotSpec(funcs2, chars2, "b="+(float)bVal, "Magnitude", "Incremental Nucleation Rate (1/yr)");
+			spec2.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
+			
+			gp.drawGraphPanel(spec2, false, true, magRange, yRange);
+			
+			PlotUtils.writePlots(outputDir, prefix+"_gridded", gp, 800, 750, true, true, false);
+			
 			// now write combined plot with section counts
-			funcs = new ArrayList<>();
-			chars = new ArrayList<>();
+			List<DiscretizedFunc> funcs3 = new ArrayList<>();
+			List<PlotCurveCharacterstics> chars3 = new ArrayList<>();
 			
-			funcs.add(bValSectCounts.get(b));
-			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
+			funcs3.add(bValSectCounts.get(b));
+			chars3.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, Color.GRAY));
 			
-			PlotSpec countSpec = new PlotSpec(funcs, chars, spec.getTitle(), spec.getXAxisLabel(), "Subsection Count");
+			PlotSpec countSpec = new PlotSpec(funcs3, chars3, spec.getTitle(), spec.getXAxisLabel(), "Subsection Count");
 			
 			gp.drawGraphPanel(List.of(spec, countSpec), List.of(false), List.of(true, false),
 					List.of(magRange), List.of(yRange, countRange));
 			
 			PlotUtils.setSubPlotWeights(gp, 20, 7);
 			PlotUtils.writePlots(outputDir, prefix+"_count", gp, 800, 1000, true, true, false);
+			
+			// now write count only
+			
+			gp.drawGraphPanel(countSpec, false, false, magRange, countRange);
+			
+			PlotUtils.writePlots(outputDir, prefix+"_count_only", gp, 800, 450, true, true, false);
 		}
 	}
 	

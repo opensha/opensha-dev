@@ -43,7 +43,7 @@ public class MFD_ExceedObsStats {
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		File modelDir = new File(invsDir,
-				"2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				"2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		
 		FaultSystemSolution baSol = FaultSystemSolution.load(new File(modelDir,
 				"results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
@@ -115,22 +115,33 @@ public class MFD_ExceedObsStats {
 		
 		System.out.println("Obs MFD: "+obsMFD);
 		
-		for (LogicTreeBranch<?> branch : tree) {
+		for (int t=0; t<tree.size(); t++) {
+			LogicTreeBranch<?> branch = tree.getBranch(t);
 			int index = order.getBranchAveragingIndex(branch);
 			IncrementalMagFreqDist mfd = branchMFDs[index];
 			
 			int numExceeds = 0;
 			for (int i=startBinIndex; i<obsMFD.size(); i++) {
 				double obsRate = obsMFD.getY(i);
-				double supraRate = mfd.getY(mfd.getClosestXIndex(obsMFD.getX(i)));
-				if (obsRate > 0 && supraRate > obsRate)
+				int mfdXIndex = mfd.getClosestXIndex(obsMFD.getX(i));
+				double supraRate = mfd.getY(mfdXIndex);
+				boolean exceeds = obsRate > 0 && supraRate > obsRate;
+				if (exceeds)
 					numExceeds++;
 			}
 			
-			if (index == 0) {
-				System.out.println("Branch "+index+" is "+branch);
-				System.out.println("MFD: "+mfd);
-				System.out.println("Exceeds: "+numExceeds);
+			System.out.println("Branch "+t+"->"+index+" is "+branch);
+			System.out.println("\tExceeds: "+numExceeds);
+			if (t == 0 || numExceeds > 0) {
+				for (int i=startBinIndex; i<obsMFD.size(); i++) {
+					double obsRate = obsMFD.getY(i);
+					int mfdXIndex = mfd.getClosestXIndex(obsMFD.getX(i));
+					double supraRate = mfd.getY(mfdXIndex);
+					boolean exceeds = obsRate > 0 && supraRate > obsRate;
+					if (exceeds)
+						System.out.println("\t"+(float)mfd.getX(mfdXIndex)+"->"+(float)obsMFD.getX(i)
+							+":\tobs="+(float)obsRate+"\tsupra="+(float)supraRate+"\texeeds="+exceeds);
+				}
 			}
 			
 			allTrack.add(numExceeds);
