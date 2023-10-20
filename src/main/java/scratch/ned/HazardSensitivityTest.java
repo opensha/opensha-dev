@@ -2092,7 +2092,6 @@ public static void epsilon_test_oneVsManySrc(String dirName, boolean popupWindow
 		
 		doit3();
 		
-		
 //		slipPDFatPoint_ForGR_Fault();
 		
 //		writeAveLengthForMag(8.0, 11.0);
