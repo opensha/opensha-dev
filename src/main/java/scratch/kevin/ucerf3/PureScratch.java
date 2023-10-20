@@ -76,6 +76,7 @@ import org.opensha.commons.geo.json.Geometry;
 import org.opensha.commons.geo.json.Geometry.GeometryCollection;
 import org.opensha.commons.geo.json.Geometry.LineString;
 import org.opensha.commons.geo.json.Geometry.MultiPoint;
+import org.opensha.commons.geo.json.Geometry.MultiPolygon;
 import org.opensha.commons.geo.json.Geometry.Polygon;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.GraphPanel;
@@ -125,7 +126,11 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.ConstraintRange;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.completion.TimeCompletionCriteria;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AveSlipModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchAveragingOrder;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchParentSectParticMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectBVals;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectNuclMFDs;
+import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectParticMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultCubeAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
@@ -136,6 +141,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModelRegion;
 import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PaleoseismicConstraintData;
+import org.opensha.sha.earthquake.faultSysSolution.modules.PolygonFaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
@@ -238,6 +244,9 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Config;
+import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture;
+import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture.EdgeFault;
 import scratch.UCERF3.inversion.U3InversionTargetMFDs;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -4830,12 +4839,73 @@ public class PureScratch {
 		System.out.println("MFD from BranchRegionalMFDs:\n\n"+regMFD);
 	}
 	
+	private static void test258() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/"
+				+ "FM3_1_SpatSeisU3_branch_averaged_full_modules.zip"));
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		
+		PolygonFaultGridAssociations polyAssoc = rupSet.getModule(PolygonFaultGridAssociations.class);
+		System.out.println("Poly assoc type: "+polyAssoc.getClass().getName());
+	}
+	
+	private static void test259() throws IOException {
+		File solFile = new File("/data/kevin/git/ucerf3-etas-launcher/inputs/"
+				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip");
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		
+		sol.removeModuleInstances(RupMFDsModule.class);
+		sol.removeModuleInstances(BranchAveragingOrder.class);
+		sol.removeModuleInstances(BranchRegionalMFDs.class);
+		sol.removeModuleInstances(BranchSectNuclMFDs.class);
+		sol.removeModuleInstances(BranchSectParticMFDs.class);
+		sol.removeModuleInstances(BranchParentSectParticMFDs.class);
+		sol.removeModuleInstances(BranchSectBVals.class);
+		sol.getArchive().write(solFile, false); // don't copy extra source files
+	}
+	
+	private static void test260() throws IOException {
+		ETAS_Config config = ETAS_Config.readJSON(new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
+				+ "2023_10_19-ComCatM7p1_ci38457511_ShakeMapSurfaces/config.json"));
+		
+		for (TriggerRupture trigger : config.getTriggerRuptures()) {
+			if (trigger instanceof EdgeFault) {
+				EdgeFault edge = (EdgeFault)trigger;
+				System.out.println("M"+(float)edge.mag+" is an EdgeFault");
+				List<LocationList> outlines = new ArrayList<>();
+				for (LocationList outline : edge.outlines)
+					outlines.add(outline);
+				Geometry geom = new Geometry.MultiLineString(outlines);
+				Feature feature = new Feature(geom, null);
+				System.out.println("\n\n"+feature.toJSON()+"\n");
+			}
+		}
+	}
+	
+	private static void test261() throws IOException {
+		FeatureCollection features = FeatureCollection.read(new File("/tmp/rupture.json"));
+		for (Feature feature : features) {
+			System.out.println("Feature with ID "+feature.id);
+			Geometry geom = feature.geometry;
+			System.out.println("Geometry is a "+geom.type);
+			if (geom.type == GeoJSON_Type.MultiPolygon) {
+				MultiPolygon multiPoly = (MultiPolygon)geom;
+				System.out.println("MultiPolygon has "+multiPoly.polygons.size()+" polys");
+				for (Polygon poly : multiPoly.polygons) {
+					System.out.println("**********");
+					System.out.println(poly.toJSON());
+					
+					System.out.println("**********");
+				}
+			}
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test220();
+		test261();
 	}
 
 }
