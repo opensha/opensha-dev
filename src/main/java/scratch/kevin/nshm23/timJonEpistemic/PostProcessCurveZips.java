@@ -151,11 +151,14 @@ public class PostProcessCurveZips {
 							double[] xVals = null;
 							int colStart = -1;
 							
-							for (int i=0; i<tree.size(); i++) {
-								LogicTreeBranch<?> branch = tree.getBranch(i);
+							int skipped = 0;
+							for (int row=1; row<csv.getNumRows(); row++) {
+								int branchIndex = csv.getInt(row, 1);
+								LogicTreeBranch<?> branch = tree.getBranch(branchIndex);
 								NGAW2_LogicTreeNode gmmNode = branch.requireValue(NGAW2_LogicTreeNode.class);
+								
 								if (gmmNode.getRef() == gmmRef) {
-									weights.add(tree.getBranchWeight(i));
+									weights.add(tree.getBranchWeight(branchIndex));
 									
 									if (xVals == null) {
 										colStart = 3+branch.size();
@@ -165,14 +168,23 @@ public class PostProcessCurveZips {
 											xVals[j] = csv.getDouble(0, colStart+j);
 									}
 									
-									int row = i+1;
+									for (int n=0; n<branch.size(); n++) {
+										String branchVal = branch.getValue(n).getShortName();
+										String csvVal = csv.get(row, 3+n);
+										Preconditions.checkState(branchVal.equals(csvVal),
+												"Branch value mismatch: %s != %s\nBranch: %s\nLine: %s",
+												branchVal, csvVal, branch, csv.getLine(row));
+									}
+									
 									double[] yVals = new double[xVals.length];
 									for (int j=0; j<xVals.length; j++)
 										yVals[j] = csv.getDouble(row, colStart+j);
 									curves.add(new LightFixedXFunc(xVals, yVals));
+								} else {
+									skipped++;
 								}
 							}
-							System.out.println("Loaded "+curves.size()+" curves for "+outputName);
+							System.out.println("Loaded "+curves.size()+" curves for "+outputName+" (skipped "+skipped+" for other GMMs)");
 							CSVFile<String> csvOut = TimJonEpistemicCurveCalc.buildCurvesCSV(percentiles, curves, weights);
 							csvOut.writeToFile(new File(outputDir, outputName));
 						}
