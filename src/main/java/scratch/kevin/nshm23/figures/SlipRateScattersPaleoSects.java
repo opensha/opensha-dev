@@ -67,18 +67,18 @@ public class SlipRateScattersPaleoSects {
 		zScatterColors.add(Color.BLACK);
 		
 		prefixes.add("even_fit");
-		names.add("Even-Fit Paleo Branch");
+		names.add("Even-Fit Branch");
 		sols.add(FaultSystemSolution.load(evenFile));
 		PaleoseismicConstraintData evenPaleoData = sols.get(sols.size()-1).getRupSet().requireModule(PaleoseismicConstraintData.class);
 		zScatterColors.add(Color.BLUE.darker());
 		
 		prefixes.add("under_fit");
-		names.add("Under-Fit Paleo Branch");
+		names.add("Under-Fit Branch");
 		sols.add(FaultSystemSolution.load(underFile));
 		zScatterColors.add(Color.RED.darker());
 		
 		prefixes.add("over_fit");
-		names.add("Over-Fit Paleo Branch");
+		names.add("Over-Fit Branch");
 		sols.add(FaultSystemSolution.load(overFile));
 		zScatterColors.add(Color.GREEN.darker());
 		
@@ -436,7 +436,7 @@ public class SlipRateScattersPaleoSects {
 		
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		
-		gp.getPlotPrefs().scaleFontSizes(1.15d);
+		gp.getPlotPrefs().scaleFontSizes(1.4d);
 		
 //		gp.setRenderingOrder(DatasetRenderingOrder.REVERSE);
 		gp.drawGraphPanel(spec, false, false, range, range);
