@@ -2,6 +2,7 @@ package scratch.kevin.nshm23.figures;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Stroke;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYLineAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
@@ -350,6 +352,23 @@ public class WestCacheConnectivityFigures {
 		
 		GeographicMapMaker mapMaker = new RupSetMapMaker(rupSet, new Region(botLeft, topRight));
 		
+		mapMaker.setSectOutlineChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, new Color(210, 210, 210)));
+		
+		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 18);
+		Stroke baseStroke = PlotLineType.SOLID.buildStroke(2f);
+//		Color lineColor = new Color(0, 0, 0, 127);
+		Color lineColor = Color.BLACK;
+		
+		double annX = -111.8;
+		annY = 42.3;
+		double lineX = -112.01;
+		double lineY = 42.05;
+		XYTextAnnotation ann = new XYTextAnnotation("West Cache (Clarkston)", annX, annY);
+		ann.setTextAnchor(TextAnchor.BASELINE_CENTER);
+		ann.setFont(annFont);
+		mapMaker.addAnnotation(ann);
+		mapMaker.addAnnotation(new XYLineAnnotation(lineX, lineY, annX, annY-0.02, baseStroke, lineColor));
+		
 		CPT magCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(xRange.getLowerBound(), xRange.getUpperBound());
 		CPT passthroughCPT = GMT_CPT_Files.GMT_COPPER.instance().rescale(0d, 1d);
 		// trim it to not quite be so dark at the low end
@@ -370,6 +389,8 @@ public class WestCacheConnectivityFigures {
 		mapMaker.plotSectScalars(sectMinConnectedMags, magCPT, "Minimum Connected Magnitude");
 		mapMaker.plot(outputDir, "map_min_mag", " ");
 		PlotSpec magSpec = mapMaker.buildPlot(" ");
+		
+		mapMaker.clearAnnotations();
 		
 		mapMaker.plotSectScalars(sectMaxPassthroughRates, passthroughCPT, "Controlling Passthrough Rate");
 		mapMaker.plot(outputDir, "map_passthrough", " ");

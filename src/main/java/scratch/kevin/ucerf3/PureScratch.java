@@ -4900,12 +4900,21 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test262() throws IOException {
+		File jsonFile = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.0.0/"
+				+ "stable-crust/fault/OK/Meers/features/Meers.geojson");
+		Feature feature = Feature.read(jsonFile);
+		
+		GeoJSONFaultSection sect = GeoJSONFaultSection.fromNSHMP_HazFeature(feature);
+		System.out.println(sect.toFeature().toJSON());
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test261();
+		test262();
 	}
 
 }

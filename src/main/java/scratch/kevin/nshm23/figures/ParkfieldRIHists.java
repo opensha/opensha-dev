@@ -91,7 +91,7 @@ public class ParkfieldRIHists {
 		HeadlessGraphPanel gp = PlotUtils.initHeadless();
 		
 		gp.setAxisLabelFontSize(26);
-		gp.setTickLabelFontSize(20);
+		gp.setTickLabelFontSize(24);
 		
 		gp.drawGraphPanel(spec, false, false, xRange, yRange);
 		

@@ -711,14 +711,14 @@ public class SegAdjustmentPlots {
 				
 				gp.drawGraphPanel(spec, false, true, xRange, yRange);
 				
-				PlotUtils.writePlots(outputDir, plotPrefix, gp, 800, 650, true, false, false);
+				PlotUtils.writePlots(outputDir, plotPrefix, gp, 800, 650, true, true, false);
 				
 				if (m == 0) {
 					// also create a clean one with just the original and single fault MFDs
 					spec = cleanOrigSpecs.get(s);
 					gp.drawGraphPanel(spec, false, true, xRange, yRange);
 					
-					PlotUtils.writePlots(outputDir, "sect_"+s+"_clean", gp, 800, 650, true, false, false);
+					PlotUtils.writePlots(outputDir, "sect_"+s+"_clean", gp, 800, 650, true, true, false);
 				}
 			}
 		}

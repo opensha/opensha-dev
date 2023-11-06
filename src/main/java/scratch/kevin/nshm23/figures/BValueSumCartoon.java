@@ -348,7 +348,7 @@ class BValueSumCartoon {
 			funcs2.add(sumMFD);
 			chars2.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 4f, Color.GRAY));
 			
-			PlotSpec spec2 = new PlotSpec(funcs2, chars2, "b="+(float)bVal, "Magnitude", "Incremental Nucleation Rate (1/yr)");
+			PlotSpec spec2 = new PlotSpec(funcs2, chars2, "𝑏="+(float)bVal, "Magnitude", "Incremental Nucleation Rate (1/yr)");
 			spec2.setLegendInset(RectangleAnchor.BOTTOM_LEFT);
 			
 			gp.drawGraphPanel(spec2, false, true, magRange, yRange);

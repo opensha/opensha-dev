@@ -448,7 +448,7 @@ public class ThreeFaultSegAdjPlot {
 		
 		gp.drawGraphPanel(spec, false, true, xRange, yRange);
 
-		PlotUtils.writePlots(outputDir, prefix, gp, 800, 650, true, false, false);
+		PlotUtils.writePlots(outputDir, prefix, gp, 800, 650, true, true, false);
 	}
 	
 	private static void addMFDOverlay(IncrementalMagFreqDist below, Color color, IncrementalMagFreqDist above,
