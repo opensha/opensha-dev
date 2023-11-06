@@ -397,6 +397,7 @@ public class CEUS_FSS_creator {
 		    		}
 		    	}
 		    }
+		    
 		    for(int sectID:sectMfdMapERF.keySet()) {
 		    	SummedMagFreqDist mfd1 = sectMfdMapERF.get(sectID);
 		    	SummedMagFreqDist mfd2 = sectMfdMapFSS.get(newFltIndexMap.get(sectID));
