@@ -15,7 +15,7 @@ import org.opensha.sha.faultSurface.RuptureSurface;
 import gov.usgs.earthquake.nshmp.Maths;
 import gov.usgs.earthquake.nshmp.model.SystemRuptureSet.SystemSource;
 
-abstract class NshmSource extends ProbEqkSource {
+public abstract class NshmSource extends ProbEqkSource {
 
   final Source delegate;
 
@@ -24,6 +24,14 @@ abstract class NshmSource extends ProbEqkSource {
   }
 
   public abstract void setDuration(double duration);
+  
+  public void setName(String name) {
+	  this.name = name;
+  }
+  
+  public int getNSHM_ID() {
+	  return delegate.id();
+  }
 
   @Override
   public double getMinDistance(Site site) {
@@ -55,6 +63,8 @@ abstract class NshmSource extends ProbEqkSource {
         double duration) {
 
       super(delegate);
+//      this.setInfo(Integer.toString(delegate.id()));
+      this.setName(delegate.name());
       this.ruptures = delegate.stream()
           .map(rupture -> new NshmRupture(
               rupture.mag(),

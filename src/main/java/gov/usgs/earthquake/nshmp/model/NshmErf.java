@@ -10,6 +10,7 @@ import static org.opensha.sha.util.TectonicRegionType.VOLCANIC;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -139,6 +140,14 @@ public class NshmErf extends AbstractERF {
 ////          }
 //          sources.addAll(list);
 //        });
+    
+    sources.sort(new Comparator<NshmSource>() {
+    	@Override
+    	public int compare(NshmSource o1, NshmSource o2) {
+    	return Integer.compare(o1.getNSHM_ID(), o2.getNSHM_ID());
+    	}
+    });
+    
     return sources;
   }
 
