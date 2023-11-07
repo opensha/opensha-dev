@@ -8,18 +8,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.random.RandomGenerator;
-import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.calc.cholesky.CholeskyDecomposition;
 import org.opensha.commons.calc.cholesky.NearPD;
 import org.opensha.commons.data.CSVFile;
-import org.opensha.commons.util.ClassUtils;
+import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.Interpolate;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
+import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
@@ -54,13 +58,14 @@ public abstract class SectionCovarianceSampler {
 		int numSects = subSects.size();
 		System.out.println("Calculating covariance for "+numSects+" subsections");
 		double[][] corr = new double[numSects][numSects];
-		List<CompletableFuture<Void>> corrFutures = new ArrayList<>(numSects);
+		ExecutorService exec = Executors.newFixedThreadPool(FaultSysTools.defaultNumThreads());
+		List<Future<?>> corrFutures = new ArrayList<>(numSects);
 		for (int i=0; i<numSects; i++) {
 			FaultSection sect1 = subSects.get(i);
 			corr[i][i] = 1; // always perfectly correlated with itself
 			int myI = i;
 			int startJ = i+1;
-			corrFutures.add(CompletableFuture.runAsync(new Runnable() {
+			corrFutures.add(exec.submit(new Runnable() {
 				
 				@Override
 				public void run() {
@@ -71,8 +76,15 @@ public abstract class SectionCovarianceSampler {
 				}
 			}));
 		}
-		for (CompletableFuture<Void> future : corrFutures)
-			future.join();
+		for (Future<?> future : corrFutures) {
+			try {
+				future.get();
+			} catch (InterruptedException | ExecutionException e) {
+				exec.shutdown();
+				throw ExceptionUtils.asRuntimeException(e);
+			}
+		}
+		exec.shutdown();
 		return corr;
 	}
 	
@@ -90,19 +102,20 @@ public abstract class SectionCovarianceSampler {
 		List<? extends FaultSection> origSects = this.subSects;
 		List<? extends FaultSection> calcSects = interpSkip > 0 ? getSubsampled(origSects, interpSkip) : origSects;
 		
-		int numSects = calcSects.size();
+		Preconditions.checkState(numSamples >= 1, "numSamples must be >=1");
 		
-		double[][] corr = calcCorrs(calcSects);
+		int numCalcSects = calcSects.size();
 		
 		// these are spatially correlated gaussians
 		prevInterpSkip = interpSkip;
-		List<double[]> samples = buildSamples(corr, numSamples, rng);
+		List<double[]> samples = buildSamples(calcSects, numSamples, rng);
 		
 		if (center) {
 			System.out.println("Centering random samples");
+			Preconditions.checkState(numSamples > 1, "Can't center with only 1 sample");
 			MinMaxAveTracker absTrack = new MinMaxAveTracker();
 			MinMaxAveTracker track = new MinMaxAveTracker();
-			for (int i=0; i<numSects; i++) {
+			for (int i=0; i<numCalcSects; i++) {
 				double sampleMean = 0d;
 				for (int n=0; n<numSamples; n++)
 					sampleMean += samples.get(n)[i];
@@ -125,34 +138,45 @@ public abstract class SectionCovarianceSampler {
 		if (interpSkip > 0) {
 			// interpolate the fields
 			List<double[]> interpolatedSamples = new ArrayList<>();
-			int numOrig = origSects.size();
+			int numOrigSects = origSects.size();
 			for (double[] sample : samples) {
+				Preconditions.checkState(sample.length == numCalcSects);
 				double[] interpolated = new double[origSects.size()];
-				int lastI2 = -1;
-				for (int i1=0,i2=0; i1<numSects; i1++,i2++) {
-					Preconditions.checkState(i2 < numOrig);
-					FaultSection sect1 = calcSects.get(i1);
-					FaultSection sect2 = origSects.get(i2);
-					if (sect1 == sect2) {
+				int prevOrigSectIndex = -1;
+				for (int calcSectIndex=0,origSectIndex=0; calcSectIndex<numCalcSects; calcSectIndex++,origSectIndex++) {
+					Preconditions.checkState(origSectIndex < numOrigSects);
+					FaultSection origSect = origSects.get(origSectIndex);
+					FaultSection calcSect = calcSects.get(calcSectIndex);
+					int origSectID = origSect.getSectionId();
+					if (origSect == calcSect) {
 						// direct match
-						interpolated[i2] = sample[i1];
+						interpolated[origSectIndex] = sample[calcSectIndex];
 					} else {
 						// we hit an interior between interpolated points
-						int iStart = i1-1;
-						int iEnd = i1;
+						int iStart = calcSectIndex-1;
+						int iEnd = calcSectIndex;
 						int prevID = calcSects.get(iStart).getSectionId();
 						int nextID = calcSects.get(iEnd).getSectionId();
+						Preconditions.checkState(origSectID < nextID,
+								"origSectID=%s but nextID=%s? calcSectIndex=%s, origSectIndex=%s",
+								origSectID, nextID, calcSectIndex, origSectIndex);
+						Preconditions.checkState(origSectID > prevID,
+								"origSectID=%s but prevID=%s? calcSectIndex=%s, origSectIndex=%s",
+								origSectID, prevID, calcSectIndex, origSectIndex);
 						double sampleStart = sample[iStart];
 						double sampleEnd = sample[iEnd];
-						while (origSects.get(i2).getSectionId() != nextID) {
-							interpolated[i2++] = Interpolate.findY(prevID, sampleStart, nextID, sampleEnd, origSects.get(i2).getSectionId());
-							Preconditions.checkState(i2 < numOrig);
+						while (origSects.get(origSectIndex).getSectionId() != nextID) {
+							interpolated[origSectIndex] = Interpolate.findY(
+									prevID, sampleStart, nextID, sampleEnd, origSects.get(origSectIndex).getSectionId());
+//							interpolated[origSectIndex++] = Double.NaN;
+							origSectIndex++;
+							Preconditions.checkState(origSectIndex < numOrigSects);
 						}
-						interpolated[i2] = sampleEnd;
+						interpolated[origSectIndex] = sampleEnd;
 					}
-					lastI2 = i2;
+					prevOrigSectIndex = origSectIndex;
 				}
-				Preconditions.checkState(lastI2 == numOrig-1, "Last I2 set was %s, expected %s", lastI2, numOrig-1);
+				Preconditions.checkState(prevOrigSectIndex == numOrigSects-1, "Last I2 set was %s, expected %s", prevOrigSectIndex, numOrigSects-1);
 				interpolatedSamples.add(interpolated);
 			}
 			samples = interpolatedSamples;
@@ -273,7 +297,9 @@ public abstract class SectionCovarianceSampler {
 		return retained;
 	}
 	
-	protected List<double[]> buildSamples(double[][] covs, int numSamples, RandomGenerator rng) {
+	protected List<double[]> buildSamples(List<? extends FaultSection> calcSects, int numSamples, RandomGenerator rng) {
+		double[][] covs = calcCorrs(calcSects);
+		
 		Preconditions.checkState(covs.length == covs[0].length);
 		Matrix C = new Matrix(covs);
 		
@@ -450,6 +476,7 @@ public abstract class SectionCovarianceSampler {
 		}
 		long totNum = (long)matrix.getRowDimension()*(long)matrix.getColumnDimension();
 		DecimalFormat pDF = new DecimalFormat("0.00%");
+		System.out.println("\tDimensions:\t"+matrix.getRowDimension()+" x "+matrix.getColumnDimension()+" = "+totNum);
 		System.out.println("\tZeros:\t"+numZeros+" ("+pDF.format((double)numZeros/(double)totNum)+")");
 		System.out.println("\tOnes:\t"+num1s+" ("+pDF.format((double)num1s/(double)totNum)+")");
 		System.out.println("\tOnes on diagonal:\t"+numDiag1s+" ("+pDF.format((double)numDiag1s/(double)matrix.getRowDimension())+")");
@@ -564,6 +591,11 @@ public abstract class SectionCovarianceSampler {
 		if (!cacheDir.exists())
 			return Optional.empty();
 		String prefix = getFullCachePrefix(interpSkip);
+		return loadCached(cacheDir, subSects, prefix, interpSkip);
+	}
+	
+	public static Optional<SectionCovarianceSampler> loadCached(File cacheDir, List<? extends FaultSection> subSects,
+			String prefix, int interpSkip) throws IOException {
 		File lCSVFile = new File(cacheDir, prefix+"_L.csv");
 		File corrCSVFile = new File(cacheDir, prefix+"_corr.csv");
 		if (!lCSVFile.exists() || !corrCSVFile.exists())
@@ -591,7 +623,7 @@ public abstract class SectionCovarianceSampler {
 		return Optional.of(new CachedDecomposition(subSects, L, corrs, interpSkip));
 	}
 	
-	static class CachedDecomposition extends SectionCovarianceSampler {
+	public static class CachedDecomposition extends SectionCovarianceSampler {
 
 		private Matrix L;
 		private int interpSkip;
@@ -632,9 +664,10 @@ public abstract class SectionCovarianceSampler {
 			return super.sample(numSamples, rng, center, interpSkip);
 		}
 
-		protected List<double[]> buildSamples(double[][] covs, int numSamples, RandomGenerator rng) {
-			Preconditions.checkState(L.getRowDimension() == covs.length,
-					"Passed in COVs are an unxpected size. COV len=%s, L len=%s", covs.length, L.getRowDimension());
+		@Override
+		protected List<double[]> buildSamples(List<? extends FaultSection> calcSects, int numSamples, RandomGenerator rng) {
+			Preconditions.checkState(L.getRowDimension() == calcSects.size(),
+					"Passed in sects are an unxpected size. newSects=%s, L len=%s", calcSects.size(), L.getRowDimension());
 			
 			return buildSamples(L, numSamples, rng);
 		}

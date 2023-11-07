@@ -39,17 +39,17 @@ class DecompBenchmark {
 				+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
 		Preconditions.checkState(subSects.size() == sol.getRupSet().getNumSections());
-		SectionCovarianceSampler sampler = new ConnectivityCorrelationSampler(
+		SectionCovarianceSampler sampler = new PrecomputedConnectivityCorrelationSampler(
 				subSects, sol, distAzCalc, 100d, 0.95, 30d);
 		
-		subSects = sampler.getSubsampled(subSects, 2);
+		subSects = sampler.getSubsampled(subSects, 1);
 		System.out.println("Downsampled to "+subSects.size()+" subsects");
 		
 		double[][] corrs = sampler.calcCorrs(subSects);
 		int numEach = 5;
 		
-		benchmarkJama(corrs, numEach);
-//		benchmarkApache(corrs, numEach);
+//		benchmarkJama(corrs, numEach);
+		benchmarkApache(corrs, numEach);
 //		benchmarkColt(corrs, numEach);
 	}
 	
@@ -72,7 +72,7 @@ class DecompBenchmark {
 	}
 	
 	private static void benchmarkApache(double[][] corrs, int num) {
-		RealMatrix C = new Array2DRowRealMatrix(corrs);
+		RealMatrix C = new Array2DRowRealMatrix(corrs, false);
 		
 		Stopwatch totWatch = Stopwatch.createStarted();
 		

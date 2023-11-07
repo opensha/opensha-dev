@@ -10,7 +10,7 @@ import org.opensha.sha.faultSurface.FaultSection;
 
 import com.google.common.base.Preconditions;
 
-public class ConnectivityCorrelationSampler extends SectionCovarianceSampler {
+public class PrecomputedConnectivityCorrelationSampler extends SectionCovarianceSampler {
 
 	private SectionDistanceAzimuthCalculator distCalc;
 	private double maxDist;
@@ -20,7 +20,7 @@ public class ConnectivityCorrelationSampler extends SectionCovarianceSampler {
 	private double[] totRates;
 	private double[][] coruptureRates;
 
-	public ConnectivityCorrelationSampler(List<? extends FaultSection> subSects, FaultSystemSolution sol,
+	public PrecomputedConnectivityCorrelationSampler(List<? extends FaultSection> subSects, FaultSystemSolution sol,
 			SectionDistanceAzimuthCalculator distCalc,
 			double maxDist, double zeroDistCoeff, double negativeCorrMaxDist) {
 		super(subSects);
