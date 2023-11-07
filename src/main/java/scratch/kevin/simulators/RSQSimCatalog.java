@@ -692,7 +692,13 @@ public class RSQSimCatalog implements XMLSaveable {
 				"CA high res; dynamic, bdeep=.011, bshallow=.003, alpha=0.25, hload=hst=3.0",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_5658("rundir5658", "Bruce 5658", "Bruce Shaw", cal(2023, 9, 20),
+				"CA high res; dynamic, bdeep=.012, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, blow=.003, Uniform backslip non-hybrid loaded",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5671("rundir5671", "Bruce 5671", "Bruce Shaw", cal(2023, 11, 6),
 				"CA high res; dynamic, bdeep=.012, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, blow=.003",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5672("rundir5672", "Bruce 5672", "Bruce Shaw", cal(2023, 11, 6),
+				"CA high res; dynamic, bdeep=.014, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, blow=.003",
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
@@ -3307,8 +3313,7 @@ public class RSQSimCatalog implements XMLSaveable {
 ////////				Catalogs.BRUCE_4860,
 ////////				Catalogs.JG_tunedBase1m_ddotEQmod,
 ////////				Catalogs.JG_tuneBase1m,
-//				Catalogs.BRUCE_5566,
-//				Catalogs.BRUCE_5566_CRUSTAL
+//				Catalogs.BRUCE_5658
 //				}) {
 		// all catalogs
 //		GregorianCalendar minDate = cal(2000, 1, 1);
