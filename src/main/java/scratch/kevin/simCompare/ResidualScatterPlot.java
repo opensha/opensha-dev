@@ -27,6 +27,7 @@ import org.jfree.chart.axis.TickUnit;
 import org.jfree.chart.axis.TickUnits;
 import org.jfree.data.Range;
 import org.jfree.chart.ui.TextAnchor;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -706,7 +707,7 @@ public class ResidualScatterPlot {
 	}
 	
 	public static <E> EvenlyDiscrXYZ_DataSet[][] calcDetrendResiduals(Map<Site, List<RuptureComparison<E>>> siteCompsMap,
-			SimulationRotDProvider<E> simProv, IMT... imts) throws IOException {
+			SimulationRotDProvider<E> simProv, List<CSVFile<String>> csvs, IMT... imts) throws IOException {
 		EvenlyDiscrXYZ_DataSet detrendXYZ[] = null;
 		EvenlyDiscrXYZ_DataSet detrendStdDevXYZ[] = null;
 		
@@ -780,17 +781,84 @@ public class ResidualScatterPlot {
 			}
 		}
 		// now convert to average residual
+		if (csvs != null) {
+			Preconditions.checkState(csvs.isEmpty(),
+					"Passed in CSV list must be empty (will be populated for each IMT)");
+			for (int p=0; p<imts.length; p++) {
+				CSVFile<String> csv = new CSVFile<>(true);
+				csv.addLine("Dist Min", "Dist Max", "Mag Min", "Mag Max",
+						"Count", "Mean", "Mean Absolute", "Median", "Min", "Max", "Std Dev", "MAD");
+				csvs.add(csv);
+			}
+		}
 		for (int x=0; x<numDist; x++) {
+			double binMinDist = Math.pow(10, detrendXYZ[0].getX(x)-detrendXYZ[0].getGridSpacingX());
+			double binMaxDist = Math.pow(10, detrendXYZ[0].getX(x)+detrendXYZ[0].getGridSpacingX());
 			for (int y=0; y<numMag; y++) {
+				double binMinMag = detrendXYZ[0].getY(y)-detrendXYZ[0].getGridSpacingY();
+				double binMaxMag = detrendXYZ[0].getY(y)+detrendXYZ[0].getGridSpacingY();
 				for (int p=0; p<imts.length; p++) {
-					if (detrendCounts[x][y] > 0)
-						detrendXYZ[p].set(x, y, detrendXYZ[p].get(x, y)/(double)detrendCounts[x][y]);
-					if (detrendCounts[x][y] > 1) {
-						// std dev
-						double[] vals = new double[detrendCounts[x][y]];
-						for (int i=0; i<vals.length; i++)
+					int count = detrendCounts[x][y];
+					if (count > 0)
+						detrendXYZ[p].set(x, y, detrendXYZ[p].get(x, y)/(double)count);
+					
+					CSVFile<String> csv = csvs == null ? null : csvs.get(p);
+					
+					if (count > 1 || csv != null) {
+						double[] vals = new double[count];
+						for (int i=0; i<count; i++)
 							vals[i] = rawVals.get(x).get(y).get(i)[p];
-						detrendStdDevXYZ[p].set(x, y, Math.sqrt(StatUtils.variance(vals)));
+						if (csv != null) {
+							int numCols = csv.getNumCols();
+							List<String> line = new ArrayList<>(numCols);
+							line.add((float)binMinDist+"");
+							line.add((float)binMaxDist+"");
+							line.add((float)binMinMag+"");
+							line.add((float)binMaxMag+"");
+							line.add(count+"");
+							if (count == 0) {
+								while (line.size() < numCols)
+									line.add("");
+							} else {
+								double min = Double.POSITIVE_INFINITY;
+								double max = Double.NEGATIVE_INFINITY;
+								double absSum = 0d;
+								double sum = 0d;
+								for (double val : vals) {
+									min = Math.min(val, min);
+									max = Math.max(val, max);
+									absSum += Math.abs(val);
+									sum += val;
+								}
+								double meanAbs = absSum/(double)count;
+								double mean = sum/(double)count;
+								
+								line.add((float)mean+"");
+								line.add((float)meanAbs+"");
+								line.add((float)DataUtils.median(vals)+"");
+								line.add((float)min+"");
+								line.add((float)max+"");
+								if (count > 1) {
+									line.add((float)Math.sqrt(StatUtils.variance(vals))+"");
+									// TODO MAD
+									double sumAbsMeanDiffs = 0d;
+									for (double val : vals)
+										sumAbsMeanDiffs += Math.abs(val-mean);
+									double mad = sumAbsMeanDiffs / (double)count;
+									line.add((float)mad+"");
+								} else {
+									while (line.size() < numCols)
+										line.add("");
+								}
+							}
+							csv.addLine(line);
+						}
+						
+						// std dev
+						if (count > 1)
+							detrendStdDevXYZ[p].set(x, y, Math.sqrt(StatUtils.variance(vals)));
+						else
+							detrendStdDevXYZ[p].set(x, y, Double.NaN);
 					} else {
 						detrendStdDevXYZ[p].set(x, y, Double.NaN);
 					}
@@ -848,8 +916,10 @@ public class ResidualScatterPlot {
 		// for detrending
 		EvenlyDiscrXYZ_DataSet detrendXYZ[] = null;
 		EvenlyDiscrXYZ_DataSet detrendStdDevXYZ[] = null;
+		List<CSVFile<String>> detrendCSVs = null;
 		if (detrend) {
-			EvenlyDiscrXYZ_DataSet[][] detrends = calcDetrendResiduals(siteCompsMap, simProv, imts);
+			detrendCSVs = new ArrayList<>();
+			EvenlyDiscrXYZ_DataSet[][] detrends = calcDetrendResiduals(siteCompsMap, simProv, detrendCSVs, imts);
 			detrendXYZ = detrends[0];
 			detrendStdDevXYZ = detrends[1];
 		}
@@ -984,8 +1054,11 @@ public class ResidualScatterPlot {
 		gp.saveAsPNG(new File(outputDir, prefix+".png").getAbsolutePath());
 		gp.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 		
-		if (detrend)
+		if (detrend) {
 			plotRedidualScatters(outputDir, "detrend", imts, detrendXYZ, detrendStdDevXYZ);
+			for (int p=0; p<imts.length; p++)
+				detrendCSVs.get(p).writeToFile(new File(outputDir, "detrend_residuals_"+imts[p].getPrefix()+".csv"));
+		}
 	}
 	
 	private static HeadlessGraphPanel initGP() {

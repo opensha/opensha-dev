@@ -24,6 +24,7 @@ import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.data.Range;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -1144,6 +1145,10 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		for (IMT imt : imts)
 			table.addColumn("![Detrend Std Dev XYZ]("+resourcesDir.getName()+"/detrend_std_dev_"+imt.getPrefix()+".png)");
 		table.finalizeLine();
+		table.initNewLine();
+		for (IMT imt : imts)
+			table.addColumn("[Download CSV]("+resourcesDir.getName()+"/detrend_residuals_"+imt.getPrefix()+".csv)");
+		table.finalizeLine();
 		lines.addAll(table.build());
 		lines.add("");
 		if (doRakeBinned) {
@@ -1182,10 +1187,21 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 						table.addColumn("![Detrend Std Dev XYZ]("+resourcesDir.getName()+"/"+fName+")");
 					}
 					table.finalizeLine();
+					table.initNewLine();
+					for (IMT imt : imts) {
+						String fName = prefix+"_residuals_"+imt.getPrefix()+".csv";
+						needToPlot |= !(new File(resourcesDir, fName).exists());
+						table.addColumn("[Download CSV]("+resourcesDir.getName()+"/"+fName+")");
+					}
+					table.finalizeLine();
 					
 					if (needToPlot) {
-						EvenlyDiscrXYZ_DataSet[][] detrends = ResidualScatterPlot.calcDetrendResiduals(siteRakeCompsMap, simProv, imts);
+						List<CSVFile<String>> csvs = new ArrayList<>();
+						EvenlyDiscrXYZ_DataSet[][] detrends = ResidualScatterPlot.calcDetrendResiduals(siteRakeCompsMap, simProv, csvs, imts);
 						ResidualScatterPlot.plotRedidualScatters(resourcesDir, prefix, imts, detrends[0], detrends[1]);
+						Preconditions.checkState(csvs.size() == imts.length);
+						for (int p=0; p<imts.length; p++)
+							csvs.get(p).writeToFile(new File(resourcesDir, prefix+"_residuals_"+imts[p].getPrefix()+".csv"));
 					}
 				}
 			}
