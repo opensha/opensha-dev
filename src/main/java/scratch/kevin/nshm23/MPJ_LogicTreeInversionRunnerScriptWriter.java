@@ -765,7 +765,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 		script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 		
-		// lesser of 10 hours, and 45 minutes per round
+		// greater of 10 hours, and 45 minutes per round
 		mins = Integer.max(60*10, 45*nodeRounds);
 		// make sure to not exceed 1 week
 		mins = Integer.min(mins, 60*24*7 - 1);

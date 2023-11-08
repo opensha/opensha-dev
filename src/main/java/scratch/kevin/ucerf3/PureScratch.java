@@ -4958,12 +4958,22 @@ public class PureScratch {
 		System.out.println("\tNot affected: "+level.getNotAffected());
 	}
 	
+	private static void test264() throws IOException {
+		int[] testArray = new int[2];
+		int index = 0;
+		while (index < testArray.length) {
+			testArray[index++] = index;
+		}
+		for (int i=0; i<testArray.length; i++)
+			System.out.println("testArray["+i+"] = "+testArray[i]);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test263();
+		test264();
 	}
 
 }

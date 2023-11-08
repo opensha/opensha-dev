@@ -792,11 +792,11 @@ public class ResidualScatterPlot {
 			}
 		}
 		for (int x=0; x<numDist; x++) {
-			double binMinDist = Math.pow(10, detrendXYZ[0].getX(x)-detrendXYZ[0].getGridSpacingX());
-			double binMaxDist = Math.pow(10, detrendXYZ[0].getX(x)+detrendXYZ[0].getGridSpacingX());
+			double binMinDist = Math.pow(10, detrendXYZ[0].getX(x)-0.5*detrendXYZ[0].getGridSpacingX());
+			double binMaxDist = Math.pow(10, detrendXYZ[0].getX(x)+0.5*detrendXYZ[0].getGridSpacingX());
 			for (int y=0; y<numMag; y++) {
-				double binMinMag = detrendXYZ[0].getY(y)-detrendXYZ[0].getGridSpacingY();
-				double binMaxMag = detrendXYZ[0].getY(y)+detrendXYZ[0].getGridSpacingY();
+				double binMinMag = detrendXYZ[0].getY(y)-0.5*detrendXYZ[0].getGridSpacingY();
+				double binMaxMag = detrendXYZ[0].getY(y)+0.5*detrendXYZ[0].getGridSpacingY();
 				for (int p=0; p<imts.length; p++) {
 					int count = detrendCounts[x][y];
 					if (count > 0)
