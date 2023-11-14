@@ -46,7 +46,7 @@ import gov.usgs.earthquake.nshmp.model.NshmSource;
  */
 public class CEUS_FSS_creator {
 	
-	final static boolean D = false;
+	final static boolean D = false; 
 	
 	 private static final Gson GSON = new GsonBuilder().create();
 	 
