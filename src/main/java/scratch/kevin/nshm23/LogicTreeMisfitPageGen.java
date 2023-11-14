@@ -42,6 +42,7 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
 import org.opensha.commons.util.modules.helpers.FileBackedModule;
+import org.opensha.sha.earthquake.faultSysSolution.hazard.LogicTreeCurveAverager;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.ConstraintWeightingType;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitProgress;
 import org.opensha.sha.earthquake.faultSysSolution.modules.InversionMisfitStats;
@@ -59,63 +60,85 @@ import com.google.gson.GsonBuilder;
 public class LogicTreeMisfitPageGen {
 	
 	public static void main(String[] args) throws IOException {
+		String usage = "USAGE: <results.zip> <output-dir> [<filter-prefix1> ... <filter-prefixN>]";
+		usage += "\n\tFor filter prefixes, prepend - for exclusion";
 		File invDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
-
-//		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-FM3_1-CoulombRupSet");
-//		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-max_dist-FM3_1-CoulombRupSet-TotNuclRate");
-//		File mainDir = new File(invDir, "2021_12_17-nshm23_draft_branches-no_seg-FM3_1-CoulombRupSet");
-//		File mainDir = new File(invDir, "2021_12_17-u3_branches-coulomb-FM3_1-5h");
-//		File mainDir = new File(invDir, "2022_01_07-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-CoulombRupSet-SubB1-175_samples");
-//		File mainDir = new File(invDir, "2022_01_10-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-FM3_1-CoulombRupSet-SubB1-105_samples");
-//		File mainDir = new File(invDir, "2022_01_11-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-aggressive-FM3_1-CoulombRupSet-SubB1-105_samples");
-//		File mainDir = new File(invDir, "2022_01_11-nshm23_draft_branches-no_seg-reweighted_even_fit-conserve-aggressiver-FM3_1-CoulombRupSet-SubB1-105_samples");
-//		File mainDir = new File(invDir, "2022_01_18-nshm23_draft_branches-no_seg-reweighted_even_fit-FM3_1-U3RupSet-SubB1-5000ip");
-//		File mainDir = new File(invDir, "2022_01_19-nshm23_branches-reweighted_even_fit-CoulombRupSet-DsrUni-SubB1-ShawR0_3-5000ip");
-//		File mainDir = new File(invDir, "2022_01_19-nshm23_u3_hybrid_branches-reweighted_even_fit-FM3_1-CoulombRupSet-SubB1-5000ip");
-//		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-max_dist-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_01_25-nshm23_u3_hybrid_branches-CoulombRupSet-U3_ZENG-DsrUni-SubB1-ShawR0_3-2000ip");
-//		File mainDir = new File(invDir, "2022_01_27-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-U3_ZENG-Shaw09Mod-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-5000ip");
-//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-no_seg-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_01_28-nshm23_u3_hybrid_branches-max_dist-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_02_08-nshm23_u3_hybrid_branches-seg_bin_dist_capped_distr-FM3_1-CoulombRupSet-DsrUni-SubB1-2000ip");
-//		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
-//		File mainDir = new File(invDir, "2022_02_15-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-CappedRdst-2000ip");
-//		File mainDir = new File(invDir, "2022_02_17-u3_branches-FM3_1-2000ip");
-//		File mainDir = new File(invDir, "2022_02_23-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-JumpProb-2000ip");
-//		File mainDir = new File(invDir, "2022_05_09-nshm23_u3_hybrid_branches-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
-//		File mainDir = new File(invDir, "2022_05_12-nshm23_u3_hybrid_branches-no_mfd_sigma_data_adj-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
-//		File mainDir = new File(invDir, "2022_05_16-nshm23_u3_hybrid_branches-default_uncert_0.05-shift_seg_1km-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvg");
-//		File mainDir = new File(invDir, "2022_05_24-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvg");
-//		File mainDir = new File(invDir, "2022_06_10-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
-//		File mainDir = new File(invDir, "2022_07_21-nshm23_branches-NSHM23_v1p4-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ShawR0_3-Shift2km-ThreshAvgIterRelGR-IncludeThruCreep");
-//		File mainDir = new File(invDir, "2022_07_29-nshm23_branches-NSHM23_v1p4-CoulombRupSet-NSHM23_Avg-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2022_07_29-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-SubB1-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2022_11_10-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2022_12_06-nshm23_u3_hybrid_branches-no_paleo_slip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2022_12_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2022_12_20-nshm23_u3_hybrid_branches-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2022_12_27-nshm23_u3_hybrid_branches-10000ip-FM3_1-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2023_01_06-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-NoAdj");
-//		File mainDir = new File(invDir, "2023_01_01-nshm23_branches-NSHM23_v2-CoulombRupSet-NuclMFD-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2023_05_15-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-NoAdj");
-//		File mainDir = new File(invDir, "2023_03_23-nshm23_branches-10000ip-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		File mainDir = new File(invDir, "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-		File mainDir = new File(invDir, "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-		File resultsFile = new File(mainDir, "results.zip");
 		
+		File resultsFile;
+		SolutionLogicTree slt;
+		LogicTree<?> tree;
+		File outputDir;
 		boolean currentWeights = false;
+		if (args.length == 0 && invDir.exists()) {
+			System.out.println("Assuming hardcoded. Otherwise, usage is:\n"+usage);
+			
+//			File mainDir = new File(invDir, "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//			File mainDir = new File(invDir, "2023_05_15-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-NoAdj");
+//			File mainDir = new File(invDir, "2023_03_23-nshm23_branches-10000ip-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//			File mainDir = new File(invDir, "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+			File mainDir = new File(invDir, "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+			
+			resultsFile = new File(mainDir, "results.zip");
+			
+			slt = SolutionLogicTree.load(resultsFile);
+			tree = slt.getLogicTree();
+			
+//			outputDir = new File(mainDir, "logic_tree_misfits");
+			tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
+			outputDir = new File(mainDir, "logic_tree_misfits_no_classic");
+		} else if (args.length < 2) {
+			System.err.println(usage);
+			System.exit(1);
+			throw new IllegalArgumentException(usage); // won't actually get here
+		} else {
+			resultsFile = new File(args[0]);
+			
+			slt = SolutionLogicTree.load(resultsFile);
+			tree = slt.getLogicTree();
+			
+			outputDir = new File(args[1]);
+			
+			if (args.length > 2) {
+				// filtered
+				for (int i=2; i<args.length; i++) {
+					String prefix = args[i];
+					boolean exclude = false;
+					if (prefix.startsWith("-")) {
+						exclude = true;
+						prefix = prefix.substring(1);
+					}
+					System.out.println("Filtering tree for prefix '"+prefix+"', exclusion="+exclude);
+					LogicTreeNode matchingNode = null;
+					for (LogicTreeBranch<?> branch : tree) {
+						for (LogicTreeNode node : branch) {
+							if (node.getFilePrefix().equals(prefix)) {
+								if (matchingNode == null) {
+									// first occurrence
+									matchingNode = node;
+								} else {
+									// multiple occurrences
+									Preconditions.checkState(matchingNode.equals(node),
+											"Can't filter with prefix '%s' as there are multiple matching nodes:"
+											+ "\n\tNode 1:\tname='%s'\tshortName=\t'%s'"
+											+ "\n\tNode 2:\tname='%s'\tshortName=\t'%s'",
+											prefix, matchingNode.getName(), matchingNode.getShortName(),
+											node.getName(), node.getShortName());
+								}
+							}
+						}
+					}
+					Preconditions.checkNotNull(matchingNode, "No branches found with a node matching '%s'", prefix);
+					LogicTree<?> filtered;
+					if (exclude)
+						filtered = tree.matchingNone(matchingNode);
+					else
+						filtered = tree.matchingAll(matchingNode);
+					System.out.println("Filtered from "+tree.size()+" to "+filtered.size()+" branches");
+					tree = filtered;
+				}
+			}
+		}
 		
-		SolutionLogicTree slt = SolutionLogicTree.load(resultsFile);
-		LogicTree<?> tree = slt.getLogicTree();
-		
-//		File outputDir = new File(mainDir, "logic_tree_misfits");
-		tree = tree.matchingNone(NSHM23_SegmentationModels.CLASSIC);
-		File outputDir = new File(mainDir, "logic_tree_misfits_no_classic");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		File resourcesDir = new File(outputDir, "resources");
@@ -136,13 +159,15 @@ public class LogicTreeMisfitPageGen {
 		
 		int numSummaryBranches = 5;
 		
-		Map<LogicTreeBranch<?>, InversionMisfitStats> branchMisfits = loadBranchMisfits(resultsFile);
+		Map<LogicTreeBranch<?>, InversionMisfitStats> branchMisfits = loadBranchMisfits(resultsFile, tree);
+		System.out.println("Loaded misfit stats for "+branchMisfits.size()+" branches");
 		
 		AveragingAccumulator<InversionMisfitStats> fullAccumulator = null;
 		for (LogicTreeBranch<?> branch : tree) {
 			branches.add(branch);
 			
 			InversionMisfitStats stats = branchMisfits.get(branch);
+			Preconditions.checkNotNull(stats, "Stats is null? branch: %s", branch);
 			branchStats.add(stats);
 			
 			if (fullAccumulator == null)
@@ -251,6 +276,18 @@ public class LogicTreeMisfitPageGen {
 				levelNodes.get(levels.get(i)).add(node);
 				if (!nodeLevels.containsKey(node))
 					nodeLevels.put(node, levels.get(i));
+			}
+		}
+		
+		levels = new ArrayList<>(levels);
+		// see if we should filter any out
+		for (int i=levels.size(); --i>=0;) {
+			LogicTreeLevel<?> level = levels.get(i);
+			int numNodes = levelNodes.get(level).size();
+			if (LogicTreeCurveAverager.shouldSkipLevel(level, numNodes)) {
+				System.out.println("Will skip level: "+level);
+				levels.remove(i);
+				levelNodes.remove(level);
 			}
 		}
 		
@@ -1028,7 +1065,7 @@ public class LogicTreeMisfitPageGen {
 					entryName += branch.getValue(i).getFilePrefix()+"/";
 			}
 			entryName += InversionMisfitStats.MISFIT_STATS_FILE_NAME;
-			System.out.println("Loading "+entryName);
+//			System.out.println("Loading "+entryName);
 			ZipEntry entry = zip.getEntry(entryName);
 			Preconditions.checkNotNull(entry, "Entry not found: %s", entryName);
 			

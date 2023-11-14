@@ -93,6 +93,8 @@ import org.opensha.commons.logicTree.BranchWeightProvider.OriginalWeights;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
+import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
+import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
@@ -231,6 +233,7 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
@@ -255,6 +258,7 @@ import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
+import scratch.kevin.nshm23.dmCovarianceTests.RandomDefModSampleLevel;
 import scratch.kevin.simCompare.SiteHazardCurveComarePageGen;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -4909,12 +4913,67 @@ public class PureScratch {
 		System.out.println(sect.toFeature().toJSON());
 	}
 	
+	private static void test263() throws IOException {
+		LogicTree<LogicTreeNode> tree = LogicTree.read(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2023_11_05-nshm23_branches-dm_sampling-NSHM23_v2-CoulombRupSet-GEOLOGIC-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+				+ "logic_tree.json"));
+		ImmutableList<LogicTreeLevel<? extends LogicTreeNode>> levels = tree.getLevels();
+		for (int l=0; l<levels.size(); l++) {
+			LogicTreeLevel<?> level = levels.get(l);
+			System.out.println("Level "+l+": "+level.getName());
+			if (level.affects(FaultSystemRupSet.RUP_SECTS_FILE_NAME, true)) {
+				System.out.println("\tIt affects rup sects!");
+				System.out.println("\t\tAffected: "+level.getAffected());
+				System.out.println("\t\tNot affected: "+level.getNotAffected());
+			}
+			if (level instanceof RandomlySampledLevel<?>) {
+				System.out.println("\tIt's a random level: "+level.getName());
+				RandomlySampledLevel<? extends RandomlySampledNode> randLevel = (RandomlySampledLevel<?>)level;
+				List<? extends RandomlySampledNode> nodes = randLevel.getNodes();
+				System.out.println("\t\tNode count: "+nodes.size());
+				System.out.println("\t\tNode 0:\tseed="+nodes.get(0).getSeed()+"; weight="+nodes.get(0).getNodeWeight(null));
+				int lastIndex = nodes.size()-1;
+				System.out.println("\t\tNode "+lastIndex+":\tseed="+nodes.get(lastIndex).getSeed()+"; weight="+nodes.get(lastIndex).getNodeWeight(null));
+			}
+		}
+		
+		int[] indexes = {0,tree.size()-1};
+		
+		for (int index : indexes) {
+			LogicTreeBranch<?> branch = tree.getBranch(index);
+			System.out.println("Branch "+index+": "+branch);
+			for (LogicTreeNode val : branch) {
+				if (val instanceof RandomlySampledNode) {
+					RandomlySampledNode randNode = (RandomlySampledNode)val;
+					System.out.println("\t"+val.getName()+":\t"+randNode.getSeed()+"; weight="+(float)randNode.getNodeWeight(null));
+				}
+				
+			}
+		}
+		
+		RandomDefModSampleLevel level = new RandomDefModSampleLevel();
+		level.buildNodes(new Random(), 10);
+		System.out.println("Test level: "+level.getName());
+		System.out.println("\tAffected: "+level.getAffected());
+		System.out.println("\tNot affected: "+level.getNotAffected());
+	}
+	
+	private static void test264() throws IOException {
+		int[] testArray = new int[2];
+		int index = 0;
+		while (index < testArray.length) {
+			testArray[index++] = index;
+		}
+		for (int i=0; i<testArray.length; i++)
+			System.out.println("testArray["+i+"] = "+testArray[i]);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test262();
+		test264();
 	}
 
 }
