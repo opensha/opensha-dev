@@ -55,9 +55,68 @@ import gov.usgs.earthquake.nshmp.model.SystemRuptureSet;
 
 public class CEUS_FSS_creator {
 	
-	final static boolean D = true;
+	final static boolean D = false;
 	
 	 private static final Gson GSON = new GsonBuilder().create();
+	 
+	 public enum FaultModelEnum {
+		 BOTH, PREFERRED, ALTERNATE 
+	 }
+	 
+	 /**
+	  * This map defines the sources unique to the preferred fault model.
+	  * The keys are the NSHM section IDs and the values are the branch wts.
+	  * The first part of comment is why it's here and the second part is the source name
+	  * @return
+	  */
+	 private static HashMap<Integer,Double> getUniqueSourcesForPreferredFaultModelMap() {
+		 HashMap<Integer,Double> map = new HashMap<Integer,Double>();
+		 map.put(2180,0.5); //	2023 update	Cheraw
+		 map.put(3801,0.6); //	more recent;	Eastern Rift Margin (South) (crittenden-co)
+		 map.put(3053,0.5); //	more recent;	SSCn (AxS-AxN: Axial (south), Axial (north))
+		 map.put(3054,0.5); //	more recent;	SSCn (AxS-BL: Axial (south), Bootheel)
+		 map.put(3060,0.5);	//	more recent;	New Madrid - SSCn (New Madrid, north)
+		 map.put(3062,0.5);	//	more recent;	SSCn (NMN-L: north, extended)
+		 map.put(3071,0.5);	//	more recent;	New Madrid - SSCn (Reelfoot, north)
+		 map.put(3073,0.5);	//	more recent;	SSCn (RFT-L: Reelfoot, extended)
+		 return map;
+	 }
+	 
+	 /**
+	  * This map defines the sources unique to the alternative fault model.
+	  * The keys are the NSHM section IDs and the values are the branch wts
+	  * The first part of comment is why it's here and the second part is the source name
+
+	  * @return
+	  */
+
+	 private static HashMap<Integer,Double> getUniqueSourcesForAlternateFaultModelMap() {
+		 HashMap<Integer,Double> map = new HashMap<Integer,Double>();
+		 map.put(3000,0.5);  // outdated;	New Madrid - USGS (west, north)
+		 map.put(3001,0.5);  // outdated;	New Madrid - USGS (west, center)
+		 map.put(3002,0.5);  //	outdated;	New Madrid - USGS (west, south)
+		 map.put(3003,0.5);  //	outdated;	New Madrid - USGS (west)
+		 map.put(3010,0.5);  //	outdated;	New Madrid - USGS (mid-west, north)
+		 map.put(3011,0.5);  //	outdated;	New Madrid - USGS (mid-west, center)
+		 map.put(3012,0.5);  //	outdated;	New Madrid - USGS (mid-west, south)
+		 map.put(3013,0.5);  // outdated;	New Madrid - USGS (mid-west)
+		 map.put(3020,0.5);  // outdated;	New Madrid - USGS (center, north)
+		 map.put(3021,0.5);  // outdated;	New Madrid - USGS (center, center)
+		 map.put(3022,0.5);  // outdated;	New Madrid - USGS (center, south)
+		 map.put(3023,0.5);  // outdated;	New Madrid - USGS (center)
+		 map.put(3030,0.5);  // outdated;	New Madrid - USGS (mid-east, north)
+		 map.put(3031,0.5);  // outdated;	New Madrid - USGS (mid-east, center)
+		 map.put(3032,0.5);  // outdated;	New Madrid - USGS (mid-east, south)
+		 map.put(3033,0.5);  // outdated;	New Madrid - USGS (mid-east)
+		 map.put(3040,0.5);  // outdated;	New Madrid - USGS (east, north)
+		 map.put(3041,0.5);  // outdated;	New Madrid - USGS (east, center)
+		 map.put(3042,0.5);  // outdated;	New Madrid - USGS (east, south)
+		 map.put(3043,0.5);  // outdated;	New Madrid - USGS (east)
+		 map.put(2181,0.5);  // outdated;	Cheraw (SSCn)
+		 map.put(3805,0.4);	//	lower wt;	Eastern Rift Margin (South) (meeman-shelby)
+		 return map;
+	 }
+
 
 	
 	 /**
@@ -147,7 +206,11 @@ public class CEUS_FSS_creator {
 	}
 	
 	
-	public static ArrayList<FaultSystemSolution> getFaultSystemSolutionList(String nshmModelDirPath) {
+	public static ArrayList<FaultSystemSolution> getFaultSystemSolutionList(String nshmModelDirPath, FaultModelEnum fltModel) {
+		
+		if(D) System.out.println("fltModel = "+fltModel);
+
+		ArrayList<FaultSystemSolution> fssList = new ArrayList<FaultSystemSolution>();
 
 		// get parent fault sections from Peter's features files
 		ArrayList<GeoJSONFaultSection> faultSectionData = getFaultSectionList(nshmModelDirPath);
@@ -157,9 +220,8 @@ public class CEUS_FSS_creator {
 //			e1.printStackTrace();
 //		}
 
-		ArrayList<Integer> parSectID_List = new ArrayList<Integer>();
-		
 		// make parSectID_List
+		ArrayList<Integer> parSectID_List = new ArrayList<Integer>(); // this is NSHM ID for each parent section
 		if(D) System.out.println("index\tsectID\trake");
 		for(int s=0;s<faultSectionData.size();s++) {
 			GeoJSONFaultSection sect = faultSectionData.get(s);
@@ -173,7 +235,6 @@ public class CEUS_FSS_creator {
 		if (D)System.out.println("parSectID_List.size()="+parSectID_List.size());
 		
 		// Read from Peter's rupture-set.json and and cluster-set.json files
-//		ArrayList<Integer> srcIDsList = new ArrayList<Integer>();  // a list of all the source IDs (no duplicates)
 		HashMap<Integer,int[]> srcFltSectsMap = new HashMap<Integer,int[]>(); // the fault section used by each source (same order as above)
 		getSrcIDsAndFaultSectionsLists(srcFltSectsMap, nshmModelDirPath);
 		Set<Integer> srcIDsList = srcFltSectsMap.keySet();  // a list of all the source IDs (no duplicates)
@@ -196,7 +257,7 @@ public class CEUS_FSS_creator {
 					testParSectID_List.add(sect);
 			}
 		}
-		System.out.print("\n");
+		if (D) System.out.print("\n");
     	if(parSectID_List.size() != testParSectID_List.size())
     		throw new RuntimeException("parSectID_List.size() != testParSectID_List.size()");
     	for(int id : testParSectID_List)
@@ -209,7 +270,7 @@ public class CEUS_FSS_creator {
 		NshmErf erf = getNshmERF(nshmModelDirPath);
 	    erf.getTimeSpan().setDuration(1.0);
 	    erf.updateForecast();
-		ArrayList<Integer> floaterSrcID_List = new ArrayList<Integer>();
+		ArrayList<Integer> floaterSrcID_List = new ArrayList<Integer>();  // these will have a separate FSS
 
 	    if (D) System.out.println("NSHM ERF NumSources: " + erf.getNumSources());
 		ArrayList<Integer> testSrcIDsList = new ArrayList<Integer>();  // a list of all the source IDs (no duplicates)
@@ -260,7 +321,7 @@ public class CEUS_FSS_creator {
 	    	if(nameForSrcIdMap.keySet().contains(srcID)) { // check for name change
 	    		String firstName = nameForSrcIdMap.get(srcID);
 	    		if(!firstName.equals(src.getName()))  // all pass this test
-	    			System.out.println("WARNING: Soource name change in ERF for ID="+srcID+";\t"+firstName+",\t"+nameForSrcIdMap.get(srcID));
+	    			System.out.println("WARNING: Source name change in ERF for ID="+srcID+";\t"+firstName+",\t"+nameForSrcIdMap.get(srcID));
 	    	}
 	    	else { // add name
 	    		nameForSrcIdMap.put(srcID, src.getName());
@@ -289,47 +350,156 @@ public class CEUS_FSS_creator {
 		    }
 	    }
 	    
+	    // Make the floater FSSs
+	    for(int srcID:floaterSrcID_List) {
+	    	
+	    	double rateWt = 1.0;
+    		HashMap<Integer,Double> prefSrcWtmap = getUniqueSourcesForPreferredFaultModelMap();
+    		HashMap<Integer,Double> altSrcWtmap = getUniqueSourcesForAlternateFaultModelMap();
+    		if (fltModel == FaultModelEnum.PREFERRED) {
+	    		if(prefSrcWtmap.keySet().contains(srcID))  // keep and set rateWt
+	    			rateWt = 1.0/prefSrcWtmap.get(srcID);
+	    		else if (altSrcWtmap.keySet().contains(srcID)) // skip it (not on this branch)
+	    			continue;
+    		}
+    		else if (fltModel == FaultModelEnum.ALTERNATE) {
+	    		if(prefSrcWtmap.keySet().contains(srcID))  // skip it
+	    			continue;
+	    		else if (altSrcWtmap.keySet().contains(srcID)) // keep and set rateWt
+	    			rateWt = 1.0/altSrcWtmap.get(srcID);;
+    		}
+    		// for case BOTH, this will continue with rateWt=1;
+    		if(D)System.out.println("Floater for src "+srcID+" has weight of "+(float) rateWt+" for fault-model branch "+fltModel);
+    		
+    		
+	    	// find fault section (inefficient)
+	    	GeoJSONFaultSection fltSect=null;
+	    	for(GeoJSONFaultSection sect:faultSectionData) {
+	    		if(sect.getSectionId() == srcID) {
+	    			fltSect = sect;
+	    			break;
+	    		}
+	    	}
+
+	    	FaultSystemSolution fss_floater = getFaultSystemSolution(rateWt, fltSect, erf);
+		    
+		    // test total MFD
+	    	Boolean testPassed = true;
+	    	SummedMagFreqDist fssTotalMFD = new SummedMagFreqDist(5.05,40,0.1);
+	    	for(int rup=0;rup<fss_floater.getRupSet().getNumRuptures();rup++) {
+	    		double rate = fss_floater.getRateForRup(rup);
+	    		double mag = fss_floater.getRupSet().getMagForRup(rup);
+	    		int iMag = fssTotalMFD.getClosestXIndex(mag);
+	    		fssTotalMFD.add(iMag, rate);
+	    	}
+		    // compare
+	    	SummedMagFreqDist totSrcMFD = mfdForSrcIdMap.get(srcID);
+		    for(int i=0;i<fssTotalMFD.size();i++) {
+		    	double val1 = fssTotalMFD.getY(i)/rateWt;
+		    	double val2 = totSrcMFD.getY(i);
+		    	if(val1 == 0.0) {
+		    		if(val2 != 0)
+		    			throw new RuntimeException("PROBLEM: zero in one bu not the other at index "+i+"\n"+fssTotalMFD+"\n"+fssTotalMFD);
+		    	}
+		    	else {
+		    		double ratio = val1/val2;
+		    		if(ratio<0.99 || ratio > 1.01) {
+		    			throw new RuntimeException("PROBLEM: >1% difference at index "+i+"\n"+fssTotalMFD+"\n"+totSrcMFD);
+		    		}
+		    	}
+		    }
+		    if (D) System.out.println("MFD test for the following floater FSS passed: "+fltSect.getName());
+
+		    fssList.add(fss_floater);
+	    }
+	    	    
 	    // now make the big fss, we need the following without floater sources and with fault section indices that start from zero
-	    // HashMap<Integer, SummedMagFreqDist> mfdForSrcIdMap, 
-		// HashMap<Integer, ArrayList<Integer>> surfListForSrcIdMap, 
-	    // ArrayList<GeoJSONFaultSection> faultSectionData
-	    
 	    HashMap<Integer, SummedMagFreqDist> mfdForSrcIdMapSubset = new HashMap<Integer, SummedMagFreqDist>();
 	    HashMap<Integer, ArrayList<Integer>> surfListForSrcIdMapSubset = new HashMap<Integer, ArrayList<Integer>>();
 	    ArrayList<GeoJSONFaultSection> faultSectionDataSubset = new ArrayList<GeoJSONFaultSection>();
 	    HashMap<Integer, Integer> newFltIndexMap = new HashMap<Integer, Integer>();
 	    
-	    // get a new instance of fault sections list so we can overide the IDs
+	    // get a list of source rateWts and a list of fault sections used for the specified fault model branch
+	    ArrayList<Integer> srcUsedList = new ArrayList<Integer> ();
+	    HashMap<Integer, Double> srcRateWtMap = new HashMap<Integer, Double>();
+	    for(int srcID:mfdForSrcIdMap.keySet()) {  // set defaults
+	    	if(floaterSrcID_List.contains(srcID)) { // skip floater
+	    		if (D) System.out.println("Skipping fault section/floater "+srcID);
+	    		continue;
+	    	}
+	    	srcUsedList.add(srcID);
+	    	srcRateWtMap.put(srcID, 1.0);
+	    }
+   		HashMap<Integer,Double> prefSrcWtmap = getUniqueSourcesForPreferredFaultModelMap();
+		HashMap<Integer,Double> altSrcWtmap = getUniqueSourcesForAlternateFaultModelMap();
+		if (fltModel == FaultModelEnum.PREFERRED) {
+			for(int srcID:altSrcWtmap.keySet()) { // remove these
+				if(floaterSrcID_List.contains(srcID)) continue;
+				srcUsedList.remove(Integer.valueOf(srcID));
+				srcRateWtMap.remove(Integer.valueOf(srcID));
+			}
+			for(int srcID:prefSrcWtmap.keySet()) { // change these rateWts
+				if(floaterSrcID_List.contains(srcID)) continue;
+				srcRateWtMap.remove(Integer.valueOf(srcID)); // remove
+				srcRateWtMap.put(srcID, 1.0/prefSrcWtmap.get(srcID)); // put correct one back
+			}
+		}
+		if (fltModel == FaultModelEnum.ALTERNATE) {
+			for(int srcID:prefSrcWtmap.keySet()) { // remove these
+				if(floaterSrcID_List.contains(srcID)) continue;
+				srcUsedList.remove(Integer.valueOf(srcID));
+				srcRateWtMap.remove(Integer.valueOf(srcID));
+			}
+			for(int srcID:altSrcWtmap.keySet()) { // change these rateWts
+				if(floaterSrcID_List.contains(srcID)) continue;
+				srcRateWtMap.remove(Integer.valueOf(srcID)); // remove
+				srcRateWtMap.put(srcID, 1.0/altSrcWtmap.get(srcID)); // put correct one back
+			}
+		}
+		
+		if(D) {
+			System.out.println("srcUsedList.size()="+srcUsedList.size()+"\t"+srcRateWtMap.size());
+			System.out.println("srcRateWtMap:");
+			for(int srcID:srcRateWtMap.keySet()) {
+				System.out.println("\t"+srcID+"\t"+srcRateWtMap.get(srcID));
+			}
+
+		}
+		
+		// Now make a list of used fault sections
+	    ArrayList<Integer> usedFaultSectID_List = new ArrayList<Integer>();
+	    for(int srcID:srcUsedList) {
+	    	for(int fltID:srcFltSectsMap.get(srcID))
+	    		if(!usedFaultSectID_List.contains(fltID))
+	    			usedFaultSectID_List.add(fltID);
+	    }
+	    
+	    // get a new instance of fault sections list so we can override the IDs
 	    ArrayList<GeoJSONFaultSection> duplicateFaultSectionList = getFaultSectionList(nshmModelDirPath);
 
 	    // make list of fault sections
 	    int newFltIndex=0;
-	    for(int s=0;s<duplicateFaultSectionList.size();s++) {
-	    	GeoJSONFaultSection fltSection = duplicateFaultSectionList.get(s);
+	    for(GeoJSONFaultSection fltSection:duplicateFaultSectionList) {
 	    	int sectID = fltSection.getSectionId();
-	    	if(floaterSrcID_List.contains(sectID)) { // this assumes floater sources only have one fault section
-	    		if (D) System.out.println("Skipping fault section/floater "+sectID);
-	    		continue;
+	    	if(usedFaultSectID_List.contains(sectID)) { 
+		    	fltSection.setParentSectionId(sectID);
+		    	fltSection.setSectionId(newFltIndex);
+		    	faultSectionDataSubset.add(fltSection);
+		    	newFltIndexMap.put(sectID, newFltIndex);
+		    	newFltIndex+=1;
 	    	}
-	    	fltSection.setParentSectionId(sectID);
-	    	fltSection.setSectionId(newFltIndex);
-	    	faultSectionDataSubset.add(fltSection);
-	    	newFltIndexMap.put(sectID, newFltIndex);
-	    	newFltIndex+=1;
 	    }
-	    // now make HashMaps without floater sources and translated ids:
-	    for(int srcID:mfdForSrcIdMap.keySet()) {
-	    	if(floaterSrcID_List.contains(srcID)) { // this assumes floater sources only have one fault section
-	    		if (D) System.out.println("Skipping fault section/floater "+srcID);
-	    		continue;
-	    	}
+	    
+	    // now make HashMaps needed sources and translated ids:
+	    for(int srcID:srcUsedList) {
 	    	int[] oldSectForSrcArray = srcFltSectsMap.get(srcID);
 	    	ArrayList<Integer> newSectForSrcList = new ArrayList<Integer>();
 	    	for( int oldSectID:oldSectForSrcArray)
 	    		newSectForSrcList.add(newFltIndexMap.get(oldSectID));
 	    	surfListForSrcIdMapSubset.put(srcID, newSectForSrcList);
-	    	mfdForSrcIdMapSubset.put(srcID, mfdForSrcIdMap.get(srcID));
-	    	
+	    	SummedMagFreqDist mfd = mfdForSrcIdMap.get(srcID);
+	    	mfd.scale(srcRateWtMap.get(srcID)); // this permanently changes the mfd
+	    	mfdForSrcIdMapSubset.put(srcID, mfd);
 	    }
 	    
 	    FaultSystemSolution bigFSS = getFaultSystemSolution(mfdForSrcIdMapSubset, 
@@ -367,14 +537,14 @@ public class CEUS_FSS_creator {
 		    	if(isPointSource(src)) 
 		    		continue;	
 		    	Integer srcID = src.getNSHM_ID();
-		    	// skip floaters
-		    	if(floaterSrcID_List.contains(srcID)) { 
+		    	// skip if not used
+		    	if(!srcUsedList.contains(srcID)) { 
 		    		continue;
 		    	}
 		    	for(int r=0;r<src.getNumRuptures();r++) {
 		    		double mag = src.getRupture(r).getMag();
 		    		int iMag = erfTotalMFD.getClosestXIndex(mag);
-		    		double rate = src.getRupture(r).getProbability();  // rate approx equal to prob
+		    		double rate = src.getRupture(r).getProbability()*srcRateWtMap.get(srcID);  // rate approx equal to prob
 		    		erfTotalMFD.add(iMag, rate); // this requires the exact x value (no tolerance)
 			    	for(int sectID:srcFltSectsMap.get(srcID)) {
 				    	SummedMagFreqDist mfd = sectMfdMapERF.get(sectID);
@@ -385,15 +555,15 @@ public class CEUS_FSS_creator {
 		    // compare
 		    for(int i=0;i<fssTotalMFD.size();i++) {
 		    	double val1 = fssTotalMFD.getY(i);
-		    	double val2 = fssTotalMFD.getY(i);
+		    	double val2 = erfTotalMFD.getY(i);
 		    	if(val1 == 0.0) {
 		    		if(val2 != 0)
-		    			throw new RuntimeException("PROBLEM: zero in one bu not the other at index "+i+"\n"+fssTotalMFD+"\n"+fssTotalMFD);
+		    			throw new RuntimeException("PROBLEM: zero in one bu not the other at index "+i+"\n"+fssTotalMFD+"\n"+erfTotalMFD);
 		    	}
 		    	else {
 		    		double ratio = val1/val2;
 		    		if(ratio<0.99 || ratio > 1.01) {
-		    			throw new RuntimeException("PROBLEM: >1% difference at index "+i+"\n"+fssTotalMFD+"\n"+fssTotalMFD);
+		    			throw new RuntimeException("PROBLEM: >1% difference at index "+i+"\n"+fssTotalMFD+"\n"+erfTotalMFD);
 		    		}
 		    	}
 		    }
@@ -420,11 +590,161 @@ public class CEUS_FSS_creator {
 	    }   
 
 	    
-		ArrayList<FaultSystemSolution> fssList = new ArrayList<FaultSystemSolution>();
 		fssList.add(bigFSS);
 		
 		return fssList;
 	}
+	
+	
+	private static FaultSystemSolution getFaultSystemSolution(double rateWt, 
+			GeoJSONFaultSection faultSection, NshmErf erf) {
+	
+    	// compute full rup area
+    	double fullRupArea = 0;
+	    for(int s=0;s<erf.getNumSources();s++) {
+	    	NshmSource src = (NshmSource)erf.getSource(s);
+	    	if(src.getNSHM_ID() == faultSection.getSectionId()) { 
+		    	for(int r=0;r<src.getNumRuptures();r++) {
+		    		double rupArea = src.getRupture(r).getRuptureSurface().getArea();
+		    		if(fullRupArea<rupArea)
+		    			fullRupArea=rupArea;
+		    	}
+	    	}
+	    }
+	    
+	    // now compute full rup vs floater MFDs
+    	SummedMagFreqDist mfd_full = new SummedMagFreqDist(5.05,40,0.1);
+    	SummedMagFreqDist mfd_float = new SummedMagFreqDist(5.05,40,0.1);
+	    for(int s=0;s<erf.getNumSources();s++) {
+	    	NshmSource src = (NshmSource)erf.getSource(s);
+	    	if(src.getNSHM_ID() == faultSection.getSectionId()) { 
+		    	for(int r=0;r<src.getNumRuptures();r++) {
+		    		double mag = src.getRupture(r).getMag();
+		    		int iMag = mfd_full.getClosestXIndex(mag);
+		    		double rate = src.getRupture(r).getProbability();  // rate approx equal to prob
+		    		double rupArea = src.getRupture(r).getRuptureSurface().getArea();
+		    		if(rupArea > 0.99*fullRupArea) {
+		    			mfd_full.add(iMag, rate*rateWt);
+		    		}
+		    		else {
+		    			mfd_float.add(iMag, rate*rateWt);
+		    		}
+		    	}
+
+	    	}
+	    }
+	    
+	    List<List<Integer>> sectionForRups = new ArrayList<>();
+	    ArrayList<Double> magForRupList =new ArrayList<Double>();
+	    ArrayList<Double> rateForRupList =new ArrayList<Double>();
+	    ArrayList<Double> areaForRupList =new ArrayList<Double>();
+	    ArrayList<Double> lengthForRupList =new ArrayList<Double>();
+	    
+		// subsection the fault section
+		double ddw = faultSection.getOrigDownDipWidth();
+		List<? extends FaultSection> subsectionList = faultSection.getSubSectionsList(ddw/4.0, 0);
+		double subSectLen = subsectionList.get(0).getTraceLength();
+		WC1994_MagLengthRelationship wcMagLength = new WC1994_MagLengthRelationship();
+		double fullMag = wcMagLength.getMedianMag(faultSection.getTraceLength());
+		double lengthOfBiggestFloater = wcMagLength.getMedianLength(mfd_float.getMaxMagWithNonZeroRate());
+		if(lengthOfBiggestFloater>faultSection.getTraceLength())
+			throw new RuntimeException("lengthOfBiggestFloater>faultSection.getTraceLength() not supportd");
+		if(D) {
+			System.out.println("working on floater FSS for "+faultSection.getName());
+			System.out.println("\tParent section length: "+faultSection.getTraceLength());
+			System.out.println("\tSub-section length: "+subSectLen);
+			System.out.println("\tNumSub-sections: "+subsectionList.size());
+			System.out.println("\tFull mag: "+fullMag);
+			System.out.println("\tMin full rup mag: "+mfd_full.getMinMagWithNonZeroRate());
+			System.out.println("\tMax full rup mag: "+mfd_full.getMaxMagWithNonZeroRate());
+			System.out.println("\tMin floater mag: "+mfd_float.getMinMagWithNonZeroRate());
+			System.out.println("\tMax floater mag: "+mfd_float.getMaxMagWithNonZeroRate());
+			System.out.println("\tlengthOfBiggestFloater: "+lengthOfBiggestFloater);
+		}
+		int rupIndex = 0;
+		boolean fullFaultFloater = false;
+		for(int i=0;i<mfd_float.size();i++) {
+			double rate = mfd_float.getIncrRate(i);
+			if(rate == 0.0)continue;
+			double mag = mfd_float.getX(i);
+			double length = wcMagLength.getMedianLength(mag);
+			int numSect = (int)Math.round(length/subSectLen);
+			if(numSect==subsectionList.size())
+				fullFaultFloater = true;
+			int numRups = subsectionList.size()-numSect+1;
+			if (D) System.out.println("Floater for M "+(float)mag+"\t"+(float)length+"\t"+numSect+"\t"+numRups);
+			int firstSect = 0;
+			int lastSect = numSect-1;
+			int testNumRups=0;
+			while(lastSect < subsectionList.size()) {
+				testNumRups+=1;
+				if (D) System.out.println("\t"+rupIndex+"\t"+firstSect+"\t"+lastSect);
+				ArrayList<Integer> sectIndexForRupList = new ArrayList<>();
+				for(int s=firstSect; s<=lastSect; s++)
+					sectIndexForRupList.add(s);
+				sectionForRups.add(sectIndexForRupList);
+			    magForRupList.add(mag);
+			    rateForRupList.add(rate/numRups);
+			    areaForRupList.add(subSectLen*numSect*faultSection.getOrigDownDipWidth());
+			    lengthForRupList.add(subSectLen*numSect);
+
+				firstSect+=1;
+				lastSect+=1;
+				rupIndex+=1;
+			}
+			if(testNumRups != numRups)
+				throw new RuntimeException("testNumRups != numRups");
+		}
+		if (D) System.out.println("\n\tfullFaultFloater = "+fullFaultFloater+"\n");
+		
+		// add full fault ruptures, one for each mag in MFD (duplicate here if floater has full rup)
+		double fullLength = faultSection.getTraceLength();
+		double fullArea = faultSection.getTraceLength()*faultSection.getOrigDownDipWidth();
+		ArrayList<Integer> sectIndexForFullRupList = new ArrayList<>();
+		for(int s=0; s<subsectionList.size(); s++)
+			sectIndexForFullRupList.add(s);
+		for(int i=0;i<mfd_full.size();i++) {
+			double rate = mfd_full.getIncrRate(i);
+			if(rate == 0.0)continue;
+			double mag = mfd_full.getX(i);
+			sectionForRups.add(sectIndexForFullRupList);
+		    magForRupList.add(mag);
+		    rateForRupList.add(rate);
+		    areaForRupList.add(fullArea);
+		    lengthForRupList.add(fullLength);
+		}
+
+
+		int numRups = sectionForRups.size();
+		double[] mags = new double[numRups];
+		double[] rakes = new double[numRups];  // defaults to zero here
+		double[] rupAreas = new double[numRups];
+		double[] rupLengths = new double[numRups];
+		double[] rupRates = new double[numRups];
+		for(int r=0;r<numRups;r++) {
+			mags[r] = magForRupList.get(r);
+			rupAreas[r] = areaForRupList.get(r);
+			rupLengths[r] = lengthForRupList.get(r);
+			rupRates[r] = rateForRupList.get(r);
+			rakes[r] = faultSection.getAveRake();
+		}
+
+		ArrayList<GeoJSONFaultSection> faultSectionData = new ArrayList<GeoJSONFaultSection>();
+		faultSectionData.add(faultSection);
+	    FaultSystemRupSet rupSet = new FaultSystemRupSet(
+				faultSectionData,
+				sectionForRups,
+				mags,
+				rakes,
+				rupAreas,
+				rupLengths); 
+	    
+	    FaultSystemSolution fss= new FaultSystemSolution(rupSet, rupRates);
+	    fss.setInfoString("FSS for floater source ID="+faultSection+"; Name: "+faultSection.getName());
+	    return fss;
+	}
+
+	
 	
 	
 	/**
@@ -664,11 +984,10 @@ public class CEUS_FSS_creator {
 	public static void main(String[] args) {
 		
 		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.0.0/";
-
-		getFaultSystemSolutionList(nshmModelDirPath);
+		getFaultSystemSolutionList(nshmModelDirPath,FaultModelEnum.BOTH);
 		
 //	    WC1994_MagLengthRelationship wcMagLength = new WC1994_MagLengthRelationship();
-//	    double mag = 6.55;
+//	    double mag = 7.15;
 //	    System.out.println(wcMagLength.getMedianLength(mag));
 //	    System.out.println(wcMagLength.getMedianLength(mag,0.0));
 //	    System.out.println(wcMagLength.getMedianLength(mag,-90));
