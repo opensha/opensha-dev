@@ -1,12 +1,8 @@
 package scratch.ned.nshm23;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -14,17 +10,12 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nullable;
 
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
-import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
-import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.json.Feature;
-import org.opensha.commons.geo.json.FeatureProperties;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -32,14 +23,9 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
-import org.opensha.sha.faultSurface.StirlingGriddedSurface;
-import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
-import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -47,12 +33,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import gov.usgs.earthquake.nshmp.model.FaultRuptureSet;
 import gov.usgs.earthquake.nshmp.model.NshmErf;
 import gov.usgs.earthquake.nshmp.model.NshmSource;
-import gov.usgs.earthquake.nshmp.model.SystemRuptureSet;
 
-
+/**
+ * This class creates a list of fault system solutions (FSS) out of the 2023 CEUS fault-based sources.  All fault 
+ * sources are in a single FSS except the two Cheraw sources, which are handled separately due to their having 
+ * floating ruptures (and these do not have variable depth to top of rupture in the FSS implementations here).
+ * 
+ * @author field
+ *
+ */
 public class CEUS_FSS_creator {
 	
 	final static boolean D = false;
@@ -596,6 +587,13 @@ public class CEUS_FSS_creator {
 	}
 	
 	
+	/**
+	 * This creates a fault system solution for a floating rupture source/fault
+	 * @param rateWt
+	 * @param faultSection
+	 * @param erf
+	 * @return
+	 */
 	private static FaultSystemSolution getFaultSystemSolution(double rateWt, 
 			GeoJSONFaultSection faultSection, NshmErf erf) {
 	
@@ -818,6 +816,7 @@ public class CEUS_FSS_creator {
 				rupLengths); 
 	    
 	    FaultSystemSolution fss= new FaultSystemSolution(rupSet, rupRates);
+	    fss.setInfoString("Big 2023 CEUS Fault System Solution");
 	    return fss;
 	}
 	
