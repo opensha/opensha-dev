@@ -727,10 +727,8 @@ public class CEUS_FSS_creator {
 			rakes[r] = faultSection.getAveRake();
 		}
 
-		ArrayList<GeoJSONFaultSection> faultSectionData = new ArrayList<GeoJSONFaultSection>();
-		faultSectionData.add(faultSection);
 	    FaultSystemRupSet rupSet = new FaultSystemRupSet(
-				faultSectionData,
+	    		subsectionList,
 				sectionForRups,
 				mags,
 				rakes,
