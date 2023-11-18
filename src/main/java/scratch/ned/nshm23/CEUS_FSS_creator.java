@@ -14,6 +14,7 @@ import java.util.Set;
 
 
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
+import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -302,7 +303,7 @@ public class CEUS_FSS_creator {
     	HashMap<Integer, Double> rakeForSrcIdMap = new HashMap<Integer, Double>();
     	HashMap<Integer, String> nameForSrcIdMap = new HashMap<Integer, String>();
     	for(int id:srcIDsList) {
-        	mfdForSrcIdMap.put(id, new SummedMagFreqDist(5.05,40,0.1));
+        	mfdForSrcIdMap.put(id, getBlankMFD());
     	}
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
@@ -376,7 +377,7 @@ public class CEUS_FSS_creator {
 		    
 		    // test total MFD
 	    	Boolean testPassed = true;
-	    	SummedMagFreqDist fssTotalMFD = new SummedMagFreqDist(5.05,40,0.1);
+	    	SummedMagFreqDist fssTotalMFD = getBlankMFD();
 	    	for(int rup=0;rup<fss_floater.getRupSet().getNumRuptures();rup++) {
 	    		double rate = fss_floater.getRateForRup(rup);
 	    		double mag = fss_floater.getRupSet().getMagForRup(rup);
@@ -500,17 +501,18 @@ public class CEUS_FSS_creator {
 	    if(D) { // test participation mfds for each fault section
 	    	
 	    	// for FSS:
-	    	Boolean testPassed = true;
-	    	SummedMagFreqDist fssTotalMFD = new SummedMagFreqDist(5.05,40,0.1);
+	    	double fssTotalMomentRate = 0;
+	    	SummedMagFreqDist fssTotalMFD = getBlankMFD();
 	    	HashMap<Integer, SummedMagFreqDist> sectMfdMapFSS = new HashMap<Integer, SummedMagFreqDist>();
 	    	for(int rup=0;rup<bigFSS.getRupSet().getNumRuptures();rup++) {
 	    		double rate = bigFSS.getRateForRup(rup);
 	    		double mag = bigFSS.getRupSet().getMagForRup(rup);
+	    		fssTotalMomentRate += MagUtils.magToMoment(mag)*rate;
 	    		int iMag = fssTotalMFD.getClosestXIndex(mag);
 	    		List<Integer> sectsForRupList = bigFSS.getRupSet().getSectionsIndicesForRup(rup);
 	    		for(int i:sectsForRupList) {
 	    			if(!sectMfdMapFSS.keySet().contains(i)) {
-	    				sectMfdMapFSS.put(i, new SummedMagFreqDist(5.05,40,0.1));
+	    				sectMfdMapFSS.put(i, getBlankMFD());
 	    			}
 	    			sectMfdMapFSS.get(i).add(iMag, rate);
 	    		}
@@ -518,10 +520,14 @@ public class CEUS_FSS_creator {
 	    	}
 	    	
 	    	// From ERF:
-	    	SummedMagFreqDist erfTotalMFD = new SummedMagFreqDist(5.05,40,0.1);
+	    	double fssTotalMomentRate2 = 0;
+	    	double origTotalMomentRate = 0;
+		    double aveDeltaMag=0;
+		    double numMag =0;
+	    	SummedMagFreqDist erfTotalMFD = getBlankMFD();
 	    	HashMap<Integer, SummedMagFreqDist> sectMfdMapERF = new HashMap<Integer, SummedMagFreqDist>();
 	    	for(int id:newFltIndexMap.keySet()) {
-	    		sectMfdMapERF.put(id, new SummedMagFreqDist(5.05,40,0.1));
+	    		sectMfdMapERF.put(id, getBlankMFD());
 	    	}
 		    for(int s=0;s<erf.getNumSources();s++) {
 		    	NshmSource src = (NshmSource)erf.getSource(s);
@@ -537,12 +543,25 @@ public class CEUS_FSS_creator {
 		    		int iMag = erfTotalMFD.getClosestXIndex(mag);
 		    		double rate = src.getRupture(r).getProbability()*srcRateWtMap.get(srcID);  // rate approx equal to prob
 		    		erfTotalMFD.add(iMag, rate); // this requires the exact x value (no tolerance)
+		    		origTotalMomentRate += MagUtils.magToMoment(mag)*rate;
+		    		fssTotalMomentRate2 += MagUtils.magToMoment(erfTotalMFD.getX(iMag))*rate;
+		    		aveDeltaMag += erfTotalMFD.getX(iMag)-mag;
+		    		numMag += 1;
 			    	for(int sectID:srcFltSectsMap.get(srcID)) {
 				    	SummedMagFreqDist mfd = sectMfdMapERF.get(sectID);
 				    	mfd.add(iMag, rate);
 			    	}
 		    	}
 		    }
+		    
+		    // compare moments
+		    double tempRatio = fssTotalMomentRate/origTotalMomentRate;
+		    double testRatio = fssTotalMomentRate/fssTotalMomentRate2;
+		    aveDeltaMag /= numMag;
+		    if(D) System.out.println("FSS:\n\tfssTotalMomentRate="+(float)fssTotalMomentRate+
+		    		"\n\torigTotalMomentRate="+(float)origTotalMomentRate+"\n\tratio="+tempRatio+
+		    		"\n\ttestRatio="+(float)testRatio+"\n\taveDeltaMag="+(float)aveDeltaMag);
+		    
 		    // compare
 		    for(int i=0;i<fssTotalMFD.size();i++) {
 		    	double val1 = fssTotalMFD.getY(i);
@@ -611,8 +630,12 @@ public class CEUS_FSS_creator {
 	    }
 	    
 	    // now compute full rup vs floater MFDs
-    	SummedMagFreqDist mfd_full = new SummedMagFreqDist(5.05,40,0.1);
-    	SummedMagFreqDist mfd_float = new SummedMagFreqDist(5.05,40,0.1);
+	    double origTotalMoment = 0;
+	    double fssTotalMoment = 0;
+	    double aveDeltaMag=0;
+	    double numMag =0;
+    	SummedMagFreqDist mfd_full = getBlankMFD();
+    	SummedMagFreqDist mfd_float = getBlankMFD();
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
 	    	if(src.getNSHM_ID() == faultSection.getSectionId()) { 
@@ -621,6 +644,10 @@ public class CEUS_FSS_creator {
 		    		int iMag = mfd_full.getClosestXIndex(mag);
 		    		double rate = src.getRupture(r).getProbability();  // rate approx equal to prob
 		    		double rupArea = src.getRupture(r).getRuptureSurface().getArea();
+		    		origTotalMoment += MagUtils.magToMoment(mag)*rate;
+		    		fssTotalMoment += MagUtils.magToMoment(mfd_full.getX(iMag))*rate;
+		    		aveDeltaMag += mfd_full.getX(iMag)-mag;
+		    		numMag+=1;
 		    		if(rupArea > 0.99*fullRupArea) {
 		    			mfd_full.add(iMag, rate*rateWt);
 		    		}
@@ -631,6 +658,11 @@ public class CEUS_FSS_creator {
 
 	    	}
 	    }
+	    aveDeltaMag /= numMag;
+	    double tempRatio = fssTotalMoment/origTotalMoment;
+	    if(D) System.out.println("FSS:\n\tfssTotalMoment="+(float)fssTotalMoment+
+	    		"\n\torigTotalMoment="+(float)origTotalMoment+"\n\tratio="+tempRatio+
+	    		"\n|taveDeltaMag="+(float)aveDeltaMag);
 	    
 	    List<List<Integer>> sectionForRups = new ArrayList<>();
 	    ArrayList<Double> magForRupList =new ArrayList<Double>();
@@ -975,6 +1007,10 @@ public class CEUS_FSS_creator {
 		parseClusterSetFile(nshmModelDirPath+"stable-crust/fault/MO/New Madrid/usgs/mid-west/cluster-in/center-south/cluster-set.json", srcFltSectsMap);
 		parseClusterSetFile(nshmModelDirPath+"stable-crust/fault/MO/New Madrid/usgs/west/cluster-in/all/cluster-set.json", srcFltSectsMap);
 		parseClusterSetFile(nshmModelDirPath+"stable-crust/fault/MO/New Madrid/usgs/west/cluster-in/center-south/cluster-set.json", srcFltSectsMap);
+	}
+	
+	private static SummedMagFreqDist getBlankMFD() {
+		return new SummedMagFreqDist(5.05,80,0.05);
 	}
 
 	
