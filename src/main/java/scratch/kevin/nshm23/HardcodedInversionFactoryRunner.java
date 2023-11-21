@@ -10,6 +10,7 @@ import java.util.List;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -35,8 +36,11 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Segmen
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_HybridLogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModelBranchNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.RandomBValSampler;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.RandomSegModelSampler;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
@@ -122,16 +126,50 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
-		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
-		branch = branch.copy();
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
+//		branch = branch.copy();
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+		levels = new ArrayList<>(levels);
+		boolean randB = true;
+		boolean randSeg = true;
+		int origSize = levels.size();
+		List<LogicTreeNode> values = new ArrayList<>();
+		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT)
+			values.add(node);
+		for (int i=levels.size(); --i>=0;) {
+			if (randB && SupraSeisBValues.class.isAssignableFrom(levels.get(i).getType())) {
+				levels.remove(i);
+				values.remove(i);
+			}
+			if (randSeg && SegmentationModelBranchNode.class.isAssignableFrom(levels.get(i).getType())) {
+				levels.remove(i);
+				values.remove(i);
+			}
+		}
+		Preconditions.checkState(levels.size() < origSize);
+		if (randB) {
+			dirName += "-randB";
+			RandomBValSampler.Level level = new RandomBValSampler.Level(1);
+			levels.add(level);
+			values.add(level.getNodes().get(0));
+		}
+		if (randSeg) {
+			dirName += "-randSeg";
+			RandomSegModelSampler.Level level = new RandomSegModelSampler.Level(1);
+			levels.add(level);
+			values.add(level.getNodes().get(0));
+		}
+		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels, values);
+		branch.setValue(NSHM23_DeformationModels.EVANS);
 		
 		// all branch averaged
-		dirName += "-all_ba";
-		branch.setValue(NSHM23_DeformationModels.AVERAGE);
-		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
-		branch.setValue(SupraSeisBValues.AVERAGE);
-		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
-		branch.setValue(NSHM23_PaleoUncertainties.AVERAGE);
+//		dirName += "-all_ba";
+//		branch.setValue(NSHM23_DeformationModels.AVERAGE);
+//		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
+//		branch.setValue(SupraSeisBValues.AVERAGE);
+//		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
+//		branch.setValue(NSHM23_PaleoUncertainties.AVERAGE);
 		
 //		NSHM23_InvConfigFactory.MFD_MIN_FRACT_UNCERT = 0.1;
 //		dirName += "-mfd_min_uncert_0.1";
@@ -237,7 +275,7 @@ public class HardcodedInversionFactoryRunner {
 		for (int i=0; i<branch.size(); i++) {
 			LogicTreeNode node = branch.getValue(i);
 			if (node != null) {
-				if (node.getNodeWeight(branch) > 0d) {
+				if (!(node instanceof RandomlySampledNode) && node.getNodeWeight(branch) > 0d) {
 					// only include its name if there are other alternatives (unless we have chosen a zero-weight option)
 					boolean hasOthers = false;
 					for (LogicTreeNode oNode : branch.getLevel(i).getNodes()) {
@@ -258,6 +296,8 @@ public class HardcodedInversionFactoryRunner {
 				dirName += node.getFilePrefix();
 			}
 		}
+		
+		System.out.println("Logic tree branch: "+branch);
 		
 		File outputDir = new File(parentDir, dirName);
 		System.out.println("Will save results in: "+outputDir.getAbsolutePath());

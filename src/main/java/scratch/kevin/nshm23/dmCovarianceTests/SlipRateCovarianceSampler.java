@@ -29,6 +29,7 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SlipRatePlots;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
@@ -58,11 +59,28 @@ public class SlipRateCovarianceSampler {
 		ADJUST_MEAN // this does a better job of preserving variability, but results in mean bias when sigma is greater than mean
 	}
 	
+	/*
+	 * Sigma truncation: don't sample values more than these many std. devs. away from the mean to avoid extremem outliers
+	 */
 	public static double TRUNCATION_DEFAULT = 3d;
 	private double truncation = TRUNCATION_DEFAULT;
+	
+	/*
+	 * Setting many things to zero messes up target MFD calculations. Force each sampled slip rate to be at least this
+	 * fraction of the original slip rate (still allows zero if the original slip rate was zero)
+	 */
+	public static double FRACT_FLOOR_DEFAULT = 1e-2;
+	private double fractFloor = FRACT_FLOOR_DEFAULT;
+
+	private List<? extends FaultSection> refSects;
 
 	public SlipRateCovarianceSampler(SectionCovarianceSampler sampler) {
+		this(sampler, sampler.getSubSects());
+	}
+
+	public SlipRateCovarianceSampler(SectionCovarianceSampler sampler, List<? extends FaultSection> refSects) {
 		this.sampler = sampler;
+		this.refSects = refSects;
 	}
 	
 	public List<List<FaultSection>> buildSamples(int numSamples, RandomGenerator rng, boolean center, int interpSkip) {
@@ -89,11 +107,11 @@ public class SlipRateCovarianceSampler {
 	public List<List<FaultSection>> buildSamples(List<double[]> samples) {
 		List<List<FaultSection>> ret = new ArrayList<>();
 		
-		List<? extends FaultSection> refSects = sampler.getSubSects();
 		int numSects = refSects.size();
 		
 		MinMaxAveTracker overallZTrack = new MinMaxAveTracker();
-		int totNumForcedPositive = 0;
+		int totNumSetToZero = 0;
+		int totNumSetToFloor = 0;
 		int totNumCapped = 0;
 		int totNumTruncated = 0;
 		int totNumZerosCappedAtOneSigma = 0;
@@ -107,6 +125,7 @@ public class SlipRateCovarianceSampler {
 		int numMeanAdj = 0;
 		
 		double[] slipMeans = new double[numSects];
+		double[] slipFloors = new double[numSects];
 		double[] slipSigmas = new double[numSects];
 		ExecutorService exec = null;
 		List<Future<?>> slipAdjFutures = new ArrayList<>();
@@ -115,6 +134,7 @@ public class SlipRateCovarianceSampler {
 			// TODO should this be creep reduced?
 			slipMeans[s] = sect.getOrigAveSlipRate();
 			slipSigmas[s] = sect.getOrigSlipRateStdDev();
+			slipFloors[s] = fractFloor*slipMeans[s];
 			if (meanAdjustment == MeanPreservationAdjustment.ADJUST_MEAN && slipMeans[s] > 0d) {
 				// we can skip the adjustment if mean - trunc*sigma >0
 				// if we're not applying truncation, pretend as though we are at 3 sigma
@@ -138,6 +158,7 @@ public class SlipRateCovarianceSampler {
 							double[] slipSamples = new double[samplesPerIter];
 							double origMean = slipMeans[index];
 							double curMean = origMean;
+							double floor = slipFloors[index];
 							double sigma = slipSigmas[index];
 							for (int i=0; i<iters; i++) {
 								for (int n=0; n<samplesPerIter; n++) {
@@ -146,7 +167,7 @@ public class SlipRateCovarianceSampler {
 										z = -truncation;
 									else if (z > truncation)
 										z = truncation;
-									slipSamples[n] = Math.max(0d, curMean + z*sigma);
+									slipSamples[n] = Math.max(floor, curMean + z*sigma);
 								}
 								double calcMean = StatUtils.mean(slipSamples);
 								double ratio = calcMean / origMean;
@@ -199,16 +220,17 @@ public class SlipRateCovarianceSampler {
 			List<FaultSection> sampledSects = new ArrayList<>(numSects);
 			
 			MinMaxAveTracker zTrack = new MinMaxAveTracker();
-			int numForcedPositive = 0;
+			int numSetToFloor = 0;
+			int numSetToZero = 0;
 			int numCapped = 0;
 			int numTruncated = 0;
 			int numZerosCappedAtOneSigma = 0;
 			
-			for (int i=0; i<sample.length; i++) {
-				FaultSection modSect = refSects.get(i).clone();
-				double origSlipRate = slipMeans[i];
-				double origStdDev = slipSigmas[i];
-				double z = sample[i];
+			for (int s=0; s<sample.length; s++) {
+				FaultSection modSect = refSects.get(s).clone();
+				double origSlipRate = slipMeans[s];
+				double origStdDev = slipSigmas[s];
+				double z = sample[s];
 				if (truncation > 0d && (z > truncation || z < -truncation)) {
 					numTruncated++;
 					z = Math.max(-truncation, z);
@@ -235,9 +257,11 @@ public class SlipRateCovarianceSampler {
 				if (origStdDev > 0d) {
 					// we have a standard deviation, figure out new slip rate
 					double randSlip = origSlipRate + z*origStdDev;
-					if (randSlip < 0d) {
-						numForcedPositive++;
-						randSlip = 0;
+					if (randSlip < slipFloors[s]) {
+						numSetToFloor++;
+						randSlip = slipFloors[s];
+						if (randSlip == 0d)
+							numSetToZero++;
 					}
 					// TODO should this be creep reduced?
 					modSect.setAveSlipRate(randSlip);
@@ -250,8 +274,10 @@ public class SlipRateCovarianceSampler {
 				if (truncation > 0d)
 					System.out.println("\t"+numTruncated+" ("+pDF.format((double)numTruncated/(double)numSects)
 							+") were truncated at sigma="+(float)truncation);
-				System.out.println("\t"+numForcedPositive+" ("+pDF.format((double)numForcedPositive/(double)numSects)
-							+") were forced to be >=0");
+				System.out.println("\t"+numSetToFloor+" ("+pDF.format((double)numSetToFloor/(double)numSects)
+							+") were set to floor values");
+				System.out.println("\t"+numSetToZero+" ("+pDF.format((double)numSetToZero/(double)numSects)
+							+") were set to zero because the sampled slip was negative and the original value was zero");
 				if (capSigma) {
 					System.out.println("\t"+numCapped+" ("+pDF.format((double)numCapped/(double)numSects)
 					+") were capped for symmetry w.r.t zero");
@@ -263,26 +289,32 @@ public class SlipRateCovarianceSampler {
 			totNumCapped += numCapped;
 			totNumZerosCappedAtOneSigma += numZerosCappedAtOneSigma;
 			totNumTruncated += numTruncated;
-			totNumForcedPositive += numForcedPositive;
+			totNumSetToZero += numSetToZero;
+			totNumSetToFloor += numSetToFloor;
 			ret.add(sampledSects);
 		}
 		
 		double avgNumCapped = (double)totNumCapped/(double)samples.size();
 		double avgNumZerosCappedAtOneSigma = (double)totNumZerosCappedAtOneSigma/(double)samples.size();
 		double avgNumTruncated = (double)totNumTruncated/(double)samples.size();
-		double avgNumForcedPositive = (double)totNumForcedPositive/(double)samples.size();
+		double avgNumSetToFloor = (double)totNumSetToFloor/(double)samples.size();
+		double avgNumSetToZero = (double)totNumSetToZero/(double)samples.size();
+		
+		DecimalFormat avgDF = new DecimalFormat("0.0");
 		
 		System.out.println("Slip Sampling Stats");
 		System.out.println("\tz score stats: "+overallZTrack);
 		if (truncation > 0d)
-			System.out.println("\t"+(float)avgNumTruncated+" ("+pDF.format(avgNumTruncated/(double)numSects)
+			System.out.println("\t"+avgDF.format(avgNumTruncated)+" ("+pDF.format(avgNumTruncated/(double)numSects)
 					+") were truncated at sigma="+(float)truncation);
-		System.out.println("\t"+(float)avgNumForcedPositive+" ("+pDF.format(avgNumForcedPositive/(double)numSects)
-					+") were forced to be >=0");
+		System.out.println("\t"+avgDF.format(avgNumSetToFloor)+" ("+pDF.format(avgNumSetToFloor/(double)numSects)
+					+") were set to floor values");
+		System.out.println("\t"+avgDF.format(avgNumSetToZero)+" ("+pDF.format(avgNumSetToZero/(double)numSects)
+					+") were set to zero because the sampled slip was negative and the original value was zero");
 		if (capSigma) {
-			System.out.println("\t"+(float)avgNumCapped+" ("+pDF.format(avgNumCapped/(double)numSects)
+			System.out.println("\t"+avgDF.format(avgNumCapped)+" ("+pDF.format(avgNumCapped/(double)numSects)
 					+") were capped for symmetry w.r.t zero");
-			System.out.println("\t"+(float)avgNumZerosCappedAtOneSigma+" ("+pDF.format(avgNumZerosCappedAtOneSigma/(double)numSects)
+			System.out.println("\t"+avgDF.format(avgNumZerosCappedAtOneSigma)+" ("+pDF.format(avgNumZerosCappedAtOneSigma/(double)numSects)
 			+") were capped at +1 sigma due to zero mean");
 		}
 		
@@ -291,7 +323,7 @@ public class SlipRateCovarianceSampler {
 		return ret;
 	}
 	
-	public void buildDiagnosticPage(File outputDir, int numSamplePlots, int numSectPlots) throws IOException {
+	public void buildDiagnosticPage(File outputDir, RupSetDeformationModel dm, int numSamplePlots, int numSectPlots) throws IOException {
 		System.out.println("Building report in "+outputDir.getAbsolutePath());
 		Preconditions.checkNotNull(prevSampled, "No samples have been built");
 		
@@ -333,6 +365,7 @@ public class SlipRateCovarianceSampler {
 		}
 		CPT linearSlipCPT = SlipRatePlots.linearSlipCPT(maxSlip);
 		CPT logSlipCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-3, 2);
+		logSlipCPT.setNanColor(Color.GRAY);
 		CPT logRatioCPT = GMT_CPT_Files.DIVERGING_VIK_UNIFORM.instance().rescale(-1d, 1d);
 		CPT diffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-maxDiff, maxDiff);
 		CPT covCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(0d, 2d);
@@ -357,7 +390,7 @@ public class SlipRateCovarianceSampler {
 		}
 		
 		List<String> lines = new ArrayList<>();
-		lines.add("# Slip Rate Sampling ("+prevSampled.size()+" samples)");
+		lines.add("# Slip Rate Sampling, "+dm.getShortName()+" ( "+prevSampled.size()+" samples)");
 		lines.add("");
 		
 		int tocIndex = lines.size();
@@ -437,11 +470,11 @@ public class SlipRateCovarianceSampler {
 				
 				table.addColumn(MarkdownUtils.boldCentered("Sample "+i));
 				
-				mapMaker.plotSectScalars(origSlips, linearSlipCPT, "Sample "+i+" Slip Rates (mm/yr)");
+				mapMaker.plotSectScalars(sampleSlips, linearSlipCPT, "Sample "+i+" Slip Rates (mm/yr)");
 				mapMaker.plot(resourcesDir, prefix+"_slips", " ");
 				table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_slips.png)");
 				
-				mapMaker.plotSectScalars(log10(origSlips), logSlipCPT, "Log10 (Sample "+i+" Slip Rates) (mm/yr)");
+				mapMaker.plotSectScalars(log10(sampleSlips), logSlipCPT, "Log10 (Sample "+i+" Slip Rates) (mm/yr)");
 				mapMaker.plot(resourcesDir, prefix+"_slips_log", " ");
 				table.addColumn("![Map]("+resourcesDir.getName()+"/"+prefix+"_slips_log.png)");
 				
@@ -522,8 +555,12 @@ public class SlipRateCovarianceSampler {
 	
 	private double[] log10(double[] orig) {
 		double[] ret = new double[orig.length];
-		for (int i=0; i<orig.length; i++)
-			ret[i] = Math.log10(orig[i]);
+		for (int i=0; i<orig.length; i++) {
+			if (Double.isFinite(orig[i]) && orig[i] > 0d)
+				ret[i] = Math.log10(orig[i]);
+			else
+				ret[i] = Double.NaN;
+		}
 		return ret;
 	}
 	
@@ -536,14 +573,18 @@ public class SlipRateCovarianceSampler {
 
 	public static void main(String[] args) throws IOException {
 		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
-		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
+//		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
+//		NSHM23_DeformationModels dm = NSHM23_DeformationModels.ZENG;
+		NSHM23_DeformationModels dm = NSHM23_DeformationModels.POLLITZ;
+//		NSHM23_DeformationModels dm = NSHM23_DeformationModels.EVANS;
+//		NSHM23_DeformationModels dm = NSHM23_DeformationModels.SHEN_BIRD;
 		
 //		NSHM23_SingleStates state = NSHM23_SingleStates.UT;
 //		NSHM23_SingleStates state = NSHM23_SingleStates.CA;
 		NSHM23_SingleStates state = null;
 //		int interpSkip = 2;
-		int interpSkip = 1;
-//		int interpSkip = 0;
+//		int interpSkip = 1;
+		int interpSkip = 0;
 		
 		boolean ignoreCache = false;
 		
@@ -552,8 +593,18 @@ public class SlipRateCovarianceSampler {
 		
 		File mainOutputDir = new File("/home/kevin/markdown/nshm23-misc/dm_slip_sampling");
 		String dirPrefix = state == null ? "full" : state.getFilePrefix();
-		if (interpSkip > 0)
+		String cacheDirPrefix = dirPrefix;
+		if (dm == fm.getDefaultDeformationModel()) {
+			cacheDirPrefix += "_"+dm.getFilePrefix();
+			dirPrefix += "_"+dm.getFilePrefix();
+		} else {
+			cacheDirPrefix += "_"+fm.getDefaultDeformationModel().getFilePrefix();
+			dirPrefix += "_"+dm.getFilePrefix();
+		}
+		if (interpSkip > 0) {
 			dirPrefix += "_interpSkip"+interpSkip;
+			cacheDirPrefix += "_interpSkip"+interpSkip;
+		}
 		
 		List<? extends FaultSection> subSects = dm.build(fm);
 		List<? extends FaultSection> origSubSects = subSects;
@@ -587,10 +638,13 @@ public class SlipRateCovarianceSampler {
 				subSects, rupSet, distAzCalc, corrDist, zeroDistCoeff, negativeCorrMaxDist, 0.5d, NSHM23_SegmentationModels.MID, true);
 		
 		dirPrefix += "_"+sampler.getSamplerPrefix();
+		cacheDirPrefix += "_"+sampler.getSamplerPrefix();
 		
 		File outputDir = new File(mainOutputDir, dirPrefix);
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-		File cacheDir = new File(outputDir, "cache");
+		File cachedOutputDir = dirPrefix.equals(cacheDirPrefix) ? outputDir : new File(mainOutputDir, cacheDirPrefix);
+		Preconditions.checkState(cachedOutputDir.exists() || cachedOutputDir.mkdir());
+		File cacheDir = new File(cachedOutputDir, "cache");
 		Preconditions.checkState(cacheDir.exists() || cacheDir.mkdir());
 		
 		if (!ignoreCache) {
@@ -616,7 +670,7 @@ public class SlipRateCovarianceSampler {
 
 		sampler.writeCache(cacheDir);
 		
-		slipSampler.buildDiagnosticPage(outputDir, numSamplePlot, numSectPlots);
+		slipSampler.buildDiagnosticPage(outputDir, dm, numSamplePlot, numSectPlots);
 	}
 
 }

@@ -185,7 +185,7 @@ public class InversionsCLI {
 			boolean adjustForIncompatibleData = true;
 			boolean randWeight = true;
 
-			NSHM23_ConstraintBuilder constrBuilder = new NSHM23_ConstraintBuilder(rupSet, supraBVal,
+			NSHM23_ConstraintBuilder constrBuilder = new NSHM23_ConstraintBuilder(rupSet, supraBVal, null,
 					applyDefModelUncertaintiesToNucl, addSectCountUncertaintiesToMFD, adjustForIncompatibleData);
 			constrBuilder.defaultConstraints();
 			

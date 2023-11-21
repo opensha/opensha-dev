@@ -60,7 +60,42 @@ public abstract class DefModSamplingEnabledInvConfig extends NSHM23_InvConfigFac
 		
 	}
 	
-	public static class ConnDistB0p5MidSegCorrInterp1 extends DefModSamplingEnabledInvConfig {
+	private static abstract class AbstractConnDistBValSegCorr extends DefModSamplingEnabledInvConfig {
+		
+		private double bVal;
+		private NSHM23_SegmentationModels segModel;
+		private double maxDist;
+		private double zeroDistCoeff;
+		private double negCorrMaxDist;
+		private boolean fromMFDs;
+
+		protected AbstractConnDistBValSegCorr(int interpSkip, double bVal, NSHM23_SegmentationModels segModel,
+				double maxDist, double zeroDistCoeff, double negCorrMaxDist, boolean fromMFDs) {
+			super(interpSkip);
+			this.bVal = bVal;
+			this.segModel = segModel;
+			this.maxDist = maxDist;
+			this.zeroDistCoeff = zeroDistCoeff;
+			this.negCorrMaxDist = negCorrMaxDist;
+			this.fromMFDs = fromMFDs;
+		}
+		
+		@Override
+		protected SectionCovarianceSampler buildCovarianceSampler(FaultSystemRupSet rupSet, RupSetFaultModel fm,
+				List<? extends FaultSection> subSects) throws IOException {
+			SectionDistanceAzimuthCalculator distCalc = rupSet.getModule(SectionDistanceAzimuthCalculator.class);
+			if (distCalc == null) {
+				distCalc = new SectionDistanceAzimuthCalculator(rupSet.getFaultSectionDataList());
+				rupSet.addModule(distCalc);
+			}
+			BvalAndSegConnectivityCorrelationSampler sampler = new BvalAndSegConnectivityCorrelationSampler(
+					subSects, rupSet, distCalc, maxDist, zeroDistCoeff, negCorrMaxDist, bVal, segModel, fromMFDs);
+			return sampler;
+		}
+		
+	}
+	
+	public static class ConnDistB0p5MidSegCorrInterp1 extends AbstractConnDistBValSegCorr {
 		
 		private static int INTERP_SKIP = 1;
 		private static double B_VAL = 0.5;
@@ -71,20 +106,23 @@ public abstract class DefModSamplingEnabledInvConfig extends NSHM23_InvConfigFac
 		private static boolean FROM_MFDS = true;
 		
 		public ConnDistB0p5MidSegCorrInterp1() {
-			super(INTERP_SKIP);
+			super(INTERP_SKIP, B_VAL, SEG_MODEL, MAX_DIST, ZERO_DIST_COEFF, NEG_CORR_MAX_DIST, FROM_MFDS);
 		}
-
-		@Override
-		protected SectionCovarianceSampler buildCovarianceSampler(FaultSystemRupSet rupSet, RupSetFaultModel fm,
-				List<? extends FaultSection> subSects) throws IOException {
-			SectionDistanceAzimuthCalculator distCalc = rupSet.getModule(SectionDistanceAzimuthCalculator.class);
-			if (distCalc == null) {
-				distCalc = new SectionDistanceAzimuthCalculator(rupSet.getFaultSectionDataList());
-				rupSet.addModule(distCalc);
-			}
-			BvalAndSegConnectivityCorrelationSampler sampler = new BvalAndSegConnectivityCorrelationSampler(
-					subSects, rupSet, distCalc, MAX_DIST, ZERO_DIST_COEFF, NEG_CORR_MAX_DIST, B_VAL, SEG_MODEL, FROM_MFDS);
-			return sampler;
+		
+	}
+	
+	public static class ConnDistB0p5MidSegCorr extends AbstractConnDistBValSegCorr {
+		
+		private static int INTERP_SKIP = 0;
+		private static double B_VAL = 0.5;
+		private static NSHM23_SegmentationModels SEG_MODEL = NSHM23_SegmentationModels.MID;
+		private static double MAX_DIST = 200d;
+		private static double ZERO_DIST_COEFF = 0.95;
+		private static double NEG_CORR_MAX_DIST = 30d;
+		private static boolean FROM_MFDS = true;
+		
+		public ConnDistB0p5MidSegCorr() {
+			super(INTERP_SKIP, B_VAL, SEG_MODEL, MAX_DIST, ZERO_DIST_COEFF, NEG_CORR_MAX_DIST, FROM_MFDS);
 		}
 		
 	}
@@ -155,7 +193,7 @@ public abstract class DefModSamplingEnabledInvConfig extends NSHM23_InvConfigFac
 		}
 		
 		SectionCovarianceSampler sampler = getCovarianceSampler(rupSet, fm, origStdDevSects);
-		SlipRateCovarianceSampler slipSampler = new SlipRateCovarianceSampler(sampler);
+		SlipRateCovarianceSampler slipSampler = new SlipRateCovarianceSampler(sampler, origStdDevSects);
 		List<FaultSection> sampledSects = slipSampler.buildSample(new Well19937c(sample.getSeed()), interpSkip);
 		List<FaultSection> ret = new ArrayList<>();
 		for (int s=0; s<refSects.size(); s++) {

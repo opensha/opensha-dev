@@ -36,6 +36,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
+import org.opensha.commons.calc.WeightedSampler;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.CSVFile;
@@ -75,6 +76,7 @@ import org.opensha.commons.geo.json.GeoJSON_Type;
 import org.opensha.commons.geo.json.Geometry;
 import org.opensha.commons.geo.json.Geometry.GeometryCollection;
 import org.opensha.commons.geo.json.Geometry.LineString;
+import org.opensha.commons.geo.json.Geometry.MultiLineString;
 import org.opensha.commons.geo.json.Geometry.MultiPoint;
 import org.opensha.commons.geo.json.Geometry.MultiPolygon;
 import org.opensha.commons.geo.json.Geometry.Polygon;
@@ -200,6 +202,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstr
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.BranchSamplingManager;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.Builder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.SupraSeisBValInversionTargetMFDs.SubSeisMoRateReduction;
@@ -4968,12 +4971,194 @@ public class PureScratch {
 			System.out.println("testArray["+i+"] = "+testArray[i]);
 	}
 	
+	private static void test265() throws IOException {
+		Random r = new Random();
+		long[] seeds = {
+				
+				0l,
+				0l,
+				
+//				100l,
+//				-100l,
+				
+//				r.nextLong(),
+//				r.nextLong(),
+//				r.nextLong(),
+//				r.nextLong(),
+//				r.nextLong(),
+//				r.nextLong(),
+//				r.nextLong(),
+		};
+		System.out.println("Seeds:");
+		for (long seed : seeds)
+			System.out.println("\t"+seed);
+		long combined = BranchSamplingManager.uniqueSeedCombination(seeds);
+		System.out.println("Combined seed: "+combined);
+	}
+	
+	private static void test266() throws IOException {
+		int numTrials = 100000;
+		Random rand = new Random();
+		
+		List<NSHM23_SegmentationModels> nodes = new ArrayList<>();
+		List<Double> weights = new ArrayList<>();
+		
+		List<NSHM23_SegmentationModels> allowedNodes = new ArrayList<>();
+		List<Double> allowedWeights = new ArrayList<>();
+		
+		for (NSHM23_SegmentationModels node : NSHM23_SegmentationModels.values()) {
+			double weight = node.getNodeWeight(null);
+			if (weight > 0d) {
+				nodes.add(node);
+				weights.add(weight);
+				
+				if (node.isIncludeRupturesThroughCreepingSect()) {
+					allowedNodes.add(node);
+					allowedWeights.add(weight);
+				}
+			}
+		}
+		
+		WeightedSampler<NSHM23_SegmentationModels> sampler = new WeightedSampler<>(nodes, weights, rand);
+		WeightedSampler<NSHM23_SegmentationModels> allowedSampler = new WeightedSampler<>(allowedNodes, allowedWeights, rand);
+		
+		int numAllowedEither = 0;
+		int numAllowedSantaCruz = 0;
+		int numAllowedCalaveras = 0;
+		int numAllowedBoth = 0;
+		double sumFractEither = 0d;
+		double sumFractSantaCruz = 0d;
+		double sumFractCalaveras = 0d;
+		
+		for (int t=0; t<numTrials; t++) {
+			NSHM23_SegmentationModels allowedModel = sampler.nextItem();
+			boolean allowed = allowedModel.isIncludeRupturesThroughCreepingSect();
+			if (allowed) {
+				// now test individual jumps
+				
+				// fully uncorrelated
+//				NSHM23_SegmentationModels parkModel = sampler.nextItem();
+//				NSHM23_SegmentationModels santaCruzModel = sampler.nextItem();
+//				NSHM23_SegmentationModels calaverasModel = sampler.nextItem();
+				
+				// fully correlated
+//				NSHM23_SegmentationModels parkModel = allowedModel;
+//				NSHM23_SegmentationModels santaCruzModel = allowedModel;
+//				NSHM23_SegmentationModels calaverasModel = allowedModel;
+				
+				// correlated with allowed nature but not random within
+				NSHM23_SegmentationModels parkModel = allowedSampler.nextItem();
+				NSHM23_SegmentationModels santaCruzModel = allowedSampler.nextItem();
+				NSHM23_SegmentationModels calaverasModel = allowedSampler.nextItem();
+				
+				boolean allowedPark = parkModel != NSHM23_SegmentationModels.CLASSIC;
+				boolean allowedSantaCruz = santaCruzModel != NSHM23_SegmentationModels.CLASSIC;
+				boolean allowedCalaveras = calaverasModel != NSHM23_SegmentationModels.CLASSIC;
+				double fractPark = parkModel.getCreepingSectPassthrough();
+				double fractSantaCruz = santaCruzModel.getCreepingSectPassthrough();
+				double fractCalaveras = calaverasModel.getCreepingSectPassthrough();
+				if (!allowedPark ||	(!allowedCalaveras && !allowedSantaCruz)) {
+					// not actually possible
+					allowed = false;
+				} else {
+					// possible;
+					numAllowedEither++;
+					if (allowedCalaveras)
+						numAllowedCalaveras++;
+					if (allowedSantaCruz)
+						numAllowedSantaCruz++;
+					if (allowedSantaCruz && allowedCalaveras)
+						numAllowedBoth++;
+					sumFractEither += Math.min(fractPark, fractSantaCruz + fractCalaveras);
+					sumFractSantaCruz += Math.min(fractPark, fractSantaCruz);
+					sumFractCalaveras += Math.min(fractPark, fractCalaveras);
+				}
+			}
+		}
+		DecimalFormat pDF = new DecimalFormat("0.00");
+		System.out.println("Fraction allowed through either:\t"+pDF.format((double)numAllowedEither/(double)numTrials));
+		System.out.println("Fraction allowed through both:\t"+pDF.format((double)numAllowedBoth/(double)numTrials));
+		System.out.println("Fraction allowed Santa Cruz:\t"+pDF.format((double)numAllowedSantaCruz/(double)numTrials));
+		System.out.println("Fraction allowed Calaveras:\t"+pDF.format((double)numAllowedCalaveras/(double)numTrials));
+		System.out.println();
+		System.out.println("Implied passthrough either:\t"+pDF.format(sumFractEither/(double)numTrials));
+		System.out.println("Implied passthrough Santa Cruz:\t"+pDF.format(sumFractSantaCruz/(double)numTrials));
+		System.out.println("Implied passthrough Calaveras:\t"+pDF.format(sumFractCalaveras/(double)numTrials));
+		
+	}
+	
+	private static void test267() throws IOException {
+//		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.0.0");
+//		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.0.0-noZone");
+		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.0.0-ceusZoneOnly");
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.EXCLUDE;
+		boolean subduction = false;
+		
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.STABLE_SHALLOW);
+
+		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		
+		int numSources = 0;
+		int numRups = 0;
+		
+		int numPointSources = 0;
+		int numPointRups = 0;
+		
+		for (ProbEqkSource src : erf) {
+			boolean anyPoint = false;
+			boolean allPoint = true;
+			numSources++;
+			for (ProbEqkRupture rup : src) {
+				boolean point = rup.getRuptureSurface().getEvenlyDiscretizedNumLocs() == 1;
+				anyPoint |= point;
+				allPoint &= point;
+				numRups++;
+				if (point)
+					numPointRups++;
+			}
+			if (anyPoint || allPoint) {
+				System.out.println("Soruce "+src.getName()+" is point source! allPoint="+allPoint);
+				numPointSources++;
+			}
+		}
+		
+		System.out.println("Summary for "+erfPath.getFileName());
+		System.out.println(numSources+" sources and "+numRups+" rups");
+		System.out.println(numPointSources+" point sources and "+numPointRups+" point rups");
+	}
+	
+	private static void test268() throws IOException {
+		File file = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.0.0/subduction/"
+				+ "interface/Cascadia/features/Cascadia 2-1 (top).geojson");
+		Feature feature = Feature.read(file);
+		GeoJSONFaultSection sect = GeoJSONFaultSection.fromNSHMP_HazFeature(feature);
+		String json = sect.toFeature().toJSON();
+		System.out.println("Converted GeoJSONFaultSection feature:");
+		System.out.println(json);
+		// now read from JSON
+		Feature feature2 = Feature.fromJSON(json);
+		GeoJSONFaultSection sect2 = GeoJSONFaultSection.fromFeature(feature2);
+		System.out.println("Converted GeoJSONFaultSection feature after reserialization:");
+		System.out.println(sect2.toFeature().toJSON());
+		System.out.println("Default surface type: "+sect2.getFaultSurface(1d).getClass().getName());
+//		Preconditions.checkState(feature.geometry.type == GeoJSON_Type.MultiLineString);
+//		MultiLineString geom = (MultiLineString)feature.geometry;
+//		Preconditions.checkState(geom.lines.size() == 2);
+//		LocationList upperTrace = geom.lines.get(0);
+//		LocationList lowerTrace = geom.lines.get(1);
+//		int id = ((Number)feature.id).intValue();
+//		String name = feature.properties.get("name", null);
+//		String state = feature.properties.get("state", null);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test264();
+		test268();
 	}
 
 }

@@ -29,32 +29,44 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 	public static void main(String[] args) throws IOException {
 		File localMainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
-		int nodes = 36;
+		int nodes = 22;
 		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
 		boolean subduction = false;
+		boolean active = false;
+		boolean stable = true;
 		
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
 //		AttenRelRef gmpeRef = AttenRelRef.NGAWest_2014_AVG;
 		
-		String erfPrefix = "nshm18";
-		String tagName = "nshm-conus-5.3.0"; // NSHM18
+//		String erfPrefix = "nshm18";
+//		String tagName = "nshm-conus-5.3.0"; // NSHM18
 		
-//		String erfPrefix = "nshm23-wrapped";
-//		String tagName = "nshm-conus-6.0.0"; // NSHM23 draft
+		String erfPrefix = "nshm23-wrapped";
+		String tagName = "nshm-conus-6.0.0"; // NSHM23 draft
+		
+//		String erfPrefix = "nshm23-wrapped-noZone";
+//		String tagName = "nshm-conus-6.0.0-noZone"; // NSHM23 without zone sources
+		
+//		String erfPrefix = "nshm23-wrapped-ceusZoneOnly";
+//		String tagName = "nshm-conus-6.0.0-ceusZoneOnly"; // NSHM23 with only zone sources in CEUS (and gridded)
+		
+//		double gridSpacing = 0.1d; int mins = 2000;
+//		String regName = "wus";
+//		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
 		double gridSpacing = 0.1d; int mins = 2000;
-		String regName = "wus";
-		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		String regName = "ceus";
+		Region region = NSHM23_RegionLoader.AnalysisRegions.CONUS_EAST.load();
 		
 //		double gridSpacing = 0.2d; int mins = 2000;
 //		String regName = "conus";
 //		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
 		
-//		String extGridProvPath = null;
-		String extGridProvPath = "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
-				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
-//				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded_with_ceus.zip";
-		erfPrefix += "-grid_src_from_23"; griddedOp = IncludeBackgroundOption.INCLUDE;
+		String extGridProvPath = null;
+//		String extGridProvPath = "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+//				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
+////				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded_with_ceus.zip";
+//		erfPrefix += "-grid_src_from_23"; griddedOp = IncludeBackgroundOption.INCLUDE;
 //		String extGridProvPath = "2022_12_07-nshm23_branches-no_paleo_slip-mod_dm_weights-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
 //				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
 //		erfPrefix += "-grid_src_from_modWeightDM_23"; gridded = true;
@@ -79,6 +91,10 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		dirName += "-"+erfPrefix+"-"+regName+"-hazard-"+gmpeRef.getShortName().toLowerCase()+"-"+(float)gridSpacing+"deg";
 		if (!subduction)
 			dirName += "-noSub";
+		if (!active)
+			dirName += "-noActive";
+		if (!stable)
+			dirName += "-noStable";
 		if (griddedOp == IncludeBackgroundOption.EXCLUDE)
 			dirName += "-faultOnly";
 		else if (griddedOp == IncludeBackgroundOption.ONLY)
@@ -127,6 +143,10 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 		argz += " --gridded-seis "+griddedOp.name();
 		if (!subduction)
 			argz += " --no-subduction";
+		if (!active)
+			argz += " --no-active";
+		if (!stable)
+			argz += " --no-stable";
 		argz += " --gmpe "+gmpeRef.name();
 		argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(remoteTotalThreads).build();
 		List<String> script = mpjWrite.buildScript(MPJ_WrapperHazardCalc.class.getName(), argz);

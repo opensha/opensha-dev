@@ -62,11 +62,14 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_U3_Hyb
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupsThroughCreepingSect;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.RupturePlausibilityModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationMFD_Adjustment;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SegmentationModelBranchNode;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.ShawSegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSectConstraintModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SubSeisMoRateReductions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.SupraSeisBValues;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.U3_UncertAddDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.RandomBValSampler;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.RandomSegModelSampler;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
@@ -137,6 +140,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		boolean griddedJob = false;
 		
 		List<RandomlySampledLevel<?>> individualRandomLevels = new ArrayList<>();
+		int samplingBranchCountMultiplier = 1;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 //		String dirName = "2022_11_11";
@@ -416,9 +420,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ModPitasPointDDW.class;
 //		dirName += "-mod_pitas_ddw";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrInterp1.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorr.class;
 		dirName += "-dm_sampling";
 		individualRandomLevels.add(new RandomDefModSampleLevel());
+	
 		
 		if (!factoryClass.equals(NSHM23_InvConfigFactory.class)) {
 			// try instantiate it to make sure we get any static modifiers that might change branch weights
@@ -429,6 +434,31 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				e.printStackTrace();
 			}
 		}
+		
+		levels = new ArrayList<>(levels);
+		boolean randB = true;
+		boolean randSeg = true;
+		int origSize = levels.size();
+		for (int i=levels.size(); --i>=0;) {
+			if (randB && SupraSeisBValues.class.isAssignableFrom(levels.get(i).getType()))
+				levels.remove(i);
+			if (randSeg && SegmentationModelBranchNode.class.isAssignableFrom(levels.get(i).getType()))
+				levels.remove(i);
+		}
+		Preconditions.checkState(levels.size() < origSize);
+		if (randB) {
+			samplingBranchCountMultiplier *= 5; // there were originally 5 each
+			dirName += "-randB";
+			individualRandomLevels.add(new RandomBValSampler.Level());
+		}
+		if (randSeg) {
+			samplingBranchCountMultiplier *= 5; // there were originally 5 each
+			dirName += "-randSeg";
+			individualRandomLevels.add(new RandomSegModelSampler.Level());
+		}
+		
+//		dirName += "-mini_one_fifth";
+//		samplingBranchCountMultiplier /= 5;
 		
 //		dirName += "-u3_perturb";
 //		extraArgs.add("--perturb "+GenerationFunctionType.UNIFORM_0p001.name());
@@ -477,7 +507,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				U3_UncertAddDeformationModels.U3_MEAN,
 //				NSHM18_DeformationModels.BRANCH_AVERAGED,
 //				NSHM23_DeformationModels.AVERAGE,
-				NSHM23_DeformationModels.GEOLOGIC,
+//				NSHM23_DeformationModels.GEOLOGIC,
 //				NSHM23_DeformationModels.EVANS,
 //				NSHM23_DeformationModels.MEDIAN,
 				
@@ -578,6 +608,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		long randSeed = System.currentTimeMillis();
 		long randSeed = 12345678l;
 		int numSamples = 0;
+//		int numSamples = 450;
 //		int numSamples = 36*10;
 		
 		Random rand = new Random(randSeed);
@@ -587,24 +618,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				dirName += "-"+node.getFilePrefix();
 		}
 		
-		if (numSamples > 0) {
-			if (numSamples < logicTree.size()) {
-				System.out.println("Reducing tree of size "+logicTree.size()+" to "+numSamples+" samples");
-				dirName += "-"+numSamples+"_samples";
-				randSeed *= numSamples;
-				logicTree = logicTree.sample(numSamples, false, rand);
-			} else {
-				System.out.println("Won't sample logic tree, as tree has "+logicTree.size()+" values, which is fewer "
-						+ "than the specified "+numSamples+" samples.");
-			}
-		}
-		
 		if (!individualRandomLevels.isEmpty()) {
+			System.out.println("Adding "+individualRandomLevels.size()+" random levels, with "
+					+ "samplingBranchCountMultiplier="+samplingBranchCountMultiplier);
+			Preconditions.checkState(samplingBranchCountMultiplier >= 1);
 			List<LogicTreeLevel<? extends LogicTreeNode>> modLevels = new ArrayList<>(levels.size()+individualRandomLevels.size());
 			modLevels.addAll(levels);
 			modLevels.addAll(individualRandomLevels);
 			
-			int numBranches = logicTree.size();
+			int numBranches = logicTree.size()*samplingBranchCountMultiplier;
+			System.out.println("\tnumBranches = "+logicTree.size()+" x "+samplingBranchCountMultiplier+" = "+numBranches);
 			
 			List<List<? extends RandomlySampledNode>> levelNodes = new ArrayList<>();
 			for (RandomlySampledLevel<?> level : individualRandomLevels) {
@@ -615,18 +638,73 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			List<LogicTreeBranch<LogicTreeNode>> modBranches = new ArrayList<>();
 			for (int i=0; i<logicTree.size(); i++) {
 				LogicTreeBranch<LogicTreeNode> branch = logicTree.getBranch(i);
-				List<LogicTreeNode> modValues = new ArrayList<>(modLevels.size());
-				for (LogicTreeNode val : branch)
-					modValues.add(val);
-				for (List<? extends RandomlySampledNode> randNodes : levelNodes)
-					modValues.add(randNodes.get(i));
-				LogicTreeBranch<LogicTreeNode> modBranch = new LogicTreeBranch<>(modLevels, modValues);
-				modBranch.setOrigBranchWeight(branch.getOrigBranchWeight());
-				modBranches.add(modBranch);
+				for (int n=0; n<samplingBranchCountMultiplier; n++) {
+					List<LogicTreeNode> modValues = new ArrayList<>(modLevels.size());
+					for (LogicTreeNode val : branch)
+						modValues.add(val);
+					int randIndex = modBranches.size();
+					for (List<? extends RandomlySampledNode> randNodes : levelNodes)
+						modValues.add(randNodes.get(randIndex));
+					LogicTreeBranch<LogicTreeNode> modBranch = new LogicTreeBranch<>(modLevels, modValues);
+					modBranch.setOrigBranchWeight(branch.getOrigBranchWeight());
+					modBranches.add(modBranch);
+				}
 			}
 			
+			levels = modLevels;
 			logicTree = LogicTree.fromExisting(modLevels, modBranches);
 			logicTree.setWeightProvider(new BranchWeightProvider.OriginalWeights());
+		}
+		
+		LogicTree<?> origTree = logicTree;
+		
+		if (numSamples > 0) {
+			if (numSamples < logicTree.size()) {
+				System.out.println("Reducing tree of size "+logicTree.size()+" to "+numSamples+" samples");
+				// write out the original tree
+				dirName += "-"+numSamples+"_samples";
+				if (!individualRandomLevels.isEmpty() && samplingBranchCountMultiplier > 1) {
+					// see if we can just evenly downsample
+					int sampleDiv = logicTree.size() / numSamples;
+					if (logicTree.size() % numSamples == 0 && samplingBranchCountMultiplier % sampleDiv == 0) {
+						System.out.println("Downsampling exactly by keepking every "
+								+sampleDiv+"th random sampling branch instead of full random");
+						
+						double sampledWeight = 0d;
+						double skippedWeight = 0d;
+						List<LogicTreeBranch<LogicTreeNode>> modBranches = new ArrayList<>();
+						
+						for (int i=0; i<logicTree.size(); i++) {
+							double weight = logicTree.getBranchWeight(i);
+							if (i % sampleDiv == 0) {
+								modBranches.add(logicTree.getBranch(i));
+								sampledWeight += weight;
+							} else {
+								skippedWeight += weight;
+							}
+						}
+						float sampledRatio = (float)(sampledWeight/(sampledWeight+skippedWeight));
+						float testRatio = (float)(1d/(double)sampleDiv);
+						Preconditions.checkState(sampledRatio == testRatio,
+								"Samples don't have equal weight? sampledRatio=%s, testRatio=%s, sampleDiv=%s",
+								sampledRatio, testRatio, sampleDiv);
+						Preconditions.checkState(modBranches.size() == numSamples);
+						
+						dirName += "_mod"+sampleDiv;
+						
+						logicTree = LogicTree.fromExisting(levels, modBranches);
+						logicTree.setWeightProvider(new BranchWeightProvider.OriginalWeights());
+					} else {
+						System.out.println("Still doing random downsampling");
+						logicTree = logicTree.sample(numSamples, true, rand);
+					}
+				} else {
+					logicTree = logicTree.sample(numSamples, true, rand);
+				}
+			} else {
+				System.out.println("Won't sample logic tree, as tree has "+logicTree.size()+" values, which is fewer "
+						+ "than the specified "+numSamples+" samples.");
+			}
 		}
 		
 		if (sortBy != null && remoteInversionsPerBundle > 1) {
@@ -700,6 +778,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		File localLogicTree = new File(localDir, "logic_tree.json");
 		logicTree.write(localLogicTree);
+		
+		if (logicTree != origTree)
+			origTree.write(new File(localDir, "logic_tree_original.json"));
 		
 		mpjWrite.setClasspath(classpath);
 		if (mpjWrite instanceof MPJExpressShellScriptWriter)
@@ -785,7 +866,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz = "--logic-tree "+ltPath;
 			argz += " --sol-dir "+resultsPath;
 			String fullLTPath = dirPath+"/logic_tree_full_gridded.json";
+			String randLTPath = dirPath+"/logic_tree_full_gridded_sampled.json";
 			argz += " --write-full-tree "+fullLTPath;
+			argz += " --write-rand-tree "+randLTPath+" --num-samples-per-sol 5";
 //			boolean averageOnly = logicTree.size() > 400;
 //			if (averageOnly)
 				argz += " --average-only";
@@ -795,8 +878,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			script = mpjWrite.buildScript(MPJ_GridSeisBranchBuilder.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "batch_grid_calc.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 			
-			// now add hazard calc job with gridded
-			for (int i=0; i<3; i++) {
+			// now add hazard calc jobs with gridded
+			for (int i=0; i<4; i++) {
 //			for (boolean avgGridded : new boolean[] {true, false}) {
 				File jobFile;
 				if (i == 0) {
@@ -822,6 +905,17 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					if (logicTree.size() > 60)
 						argz += " --quick-grid-calc";
 					jobFile = new File(localDir, "batch_hazard_full_gridded.slurm");
+				} else if (i == 2) {
+//					if (averageOnly)
+//						continue;
+					argz = "--input-file "+resultsPath;
+					argz += " --logic-tree "+randLTPath;
+					argz += " --output-file "+resultsPath+"_hazard_full_gridded_sampled.zip";
+					argz += " --output-dir "+resultsPath+"_full_gridded";
+					argz += " --combine-with-dir "+resultsPath;
+					argz += " --gridded-seis INCLUDE";
+					argz += " --quick-grid-calc";
+					jobFile = new File(localDir, "batch_hazard_full_gridded_sampled.slurm");
 				} else {
 					argz = "--input-file "+resultsPath+"_gridded_branches.zip";
 					argz += " --output-file "+resultsPath+"_hazard_gridded_only.zip";

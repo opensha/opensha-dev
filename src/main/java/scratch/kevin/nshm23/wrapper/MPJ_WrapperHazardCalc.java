@@ -86,6 +86,8 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	private IncludeBackgroundOption gridSeisOp = GRID_SEIS_DEFAULT;
 	
 	private boolean noSubduction = false;
+	private boolean noActive = false;
+	private boolean noStable = false;
 	
 	private GridSourceProvider externalGridProv;
 	
@@ -117,6 +119,8 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 		if (cmd.hasOption("gridded-seis"))
 			gridSeisOp = IncludeBackgroundOption.valueOf(cmd.getOptionValue("gridded-seis"));
 		noSubduction = cmd.hasOption("no-subduction");
+		noActive = cmd.hasOption("no-active");
+		noStable = cmd.hasOption("no-stable");
 		
 		if (cmd.hasOption("grid-spacing"))
 			gridSpacing = Double.parseDouble(cmd.getOptionValue("grid-spacing"));
@@ -210,13 +214,14 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 			zip.close();
 		}
 		
-		Set<TectonicRegionType> trts = EnumSet.of(
-				TectonicRegionType.ACTIVE_SHALLOW,
-				TectonicRegionType.STABLE_SHALLOW);
+		Set<TectonicRegionType> trts = EnumSet.noneOf(TectonicRegionType.class);
+		if (!noActive) trts.add(TectonicRegionType.ACTIVE_SHALLOW);
+		if (!noStable) trts.add(TectonicRegionType.STABLE_SHALLOW);
 		if (!noSubduction) {
 			trts.add(TectonicRegionType.SUBDUCTION_INTERFACE);
 			trts.add(TectonicRegionType.SUBDUCTION_SLAB);
 		}
+		Preconditions.checkState(!trts.isEmpty(), "Must supply at least one TRT");
 
 		erf = new NshmErf(erfPath, trts, gridSeisOp);
 		System.out.println("NSHM ERF size: " + erf.getNumSources());
@@ -558,7 +563,9 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 		ops.addOption("fo", "faults-only", false, "Flag to disable model gridded seismicity sources.");
 		ops.addOption("gs", "gridded-seis", true, "Gridded seismicity option. One of "
 				+FaultSysTools.enumOptions(IncludeBackgroundOption.class)+". Default: "+GRID_SEIS_DEFAULT.name());
-		ops.addOption("ns", "no-subduction", false, "Flag to disable subduction sources.");
+		ops.addOption(null, "no-subduction", false, "Flag to disable subduction sources.");
+		ops.addOption(null, "no-active", false, "Flag to disable active sources.");
+		ops.addOption(null, "no-stable", false, "Flag to disable stable sources.");
 		ops.addOption("egp", "external-grid-prov", true, "Path to external grid source provider to use for hazard "
 				+ "calculations. Can be either a fault system solution, or a zip file containing just a grid source "
 				+ "provider. Implies --faults-only.");
