@@ -21,6 +21,7 @@ public abstract class NshmSource extends ProbEqkSource {
 
   NshmSource(Source delegate) {
     this.delegate = delegate;
+    this.setName(delegate.name());
   }
 
   public abstract void setDuration(double duration);
@@ -52,6 +53,10 @@ public abstract class NshmSource extends ProbEqkSource {
   public RuptureSurface getSourceSurface() {
     throw new UnsupportedOperationException();
   }
+  
+  public Source getDelegate() {
+	  return delegate;
+  }
 
   static class Fault extends NshmSource {
 
@@ -63,8 +68,6 @@ public abstract class NshmSource extends ProbEqkSource {
         double duration) {
 
       super(delegate);
-//      this.setInfo(Integer.toString(delegate.id()));
-      this.setName(delegate.name());
       this.ruptures = delegate.stream()
           .map(rupture -> new NshmRupture(
               rupture.mag(),

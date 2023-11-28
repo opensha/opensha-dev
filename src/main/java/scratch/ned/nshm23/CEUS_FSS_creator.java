@@ -156,7 +156,7 @@ public class CEUS_FSS_creator {
 	}
 	
 	
-	private static GeoJSONFaultSection getFaultSection(String filePathString) {
+	static GeoJSONFaultSection getFaultSection(String filePathString) {
 		Feature feature=null;
 		try {
 			feature = Feature.read(new File(filePathString));
@@ -189,7 +189,7 @@ public class CEUS_FSS_creator {
 	}
 	
 	
-	private static boolean isPointSource(NshmSource src) {
+	public static boolean isPointSource(NshmSource src) {
     	int numLocs = src.getRupture(0).getRuptureSurface().getEvenlyDiscretizedNumLocs();
     	if(numLocs == 1) 
     		return true;
@@ -607,7 +607,8 @@ public class CEUS_FSS_creator {
 	
 	
 	/**
-	 * This creates a fault system solution for a floating rupture source/fault
+	 * This creates a fault system solution for a floating rupture source/fault.  This assumes 
+	 * the NSHM source ID is the same as the faultSection ID
 	 * @param rateWt
 	 * @param faultSection
 	 * @param erf
@@ -783,7 +784,7 @@ public class CEUS_FSS_creator {
 	 * @param surfListForSrcIdMap
 	 * @return
 	 */
-	private static FaultSystemSolution getFaultSystemSolution(HashMap<Integer, SummedMagFreqDist> mfdForSrcIdMap, 
+	public static FaultSystemSolution getFaultSystemSolution(HashMap<Integer, SummedMagFreqDist> mfdForSrcIdMap, 
 			HashMap<Integer, ArrayList<Integer>> surfListForSrcIdMap, 
 			ArrayList<GeoJSONFaultSection> faultSectionData) {
 
@@ -852,10 +853,16 @@ public class CEUS_FSS_creator {
 	
 	
 	
-	
+	 /**
+	  * This returns the ERF with timespan duration set to 1.0
+	  * @param nshmModelDirPath
+	  * @return
+	  */
 	private static NshmErf getNshmERF(String nshmModelDirPath) {
 	    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.STABLE_SHALLOW);
 	    NshmErf erf = new NshmErf(Path.of(nshmModelDirPath), trts, IncludeBackgroundOption.EXCLUDE);
+	    erf.getTimeSpan().setDuration(1.0);
+	    erf.updateForecast();
 	    return erf;
 	}
 	
@@ -881,7 +888,7 @@ public class CEUS_FSS_creator {
 	 * This is for parsing Peter's cluster-set.json files
 	 * @param filePath
 	 */
-	private static void parseClusterSetFile(String filePath, HashMap<Integer,int[]> srcFltSectsMap) {
+	public static void parseClusterSetFile(String filePath, HashMap<Integer,int[]> srcFltSectsMap) {
 		 String ID = "id";
 		 String NAME = "name";
 		 String SECTIONS = "sections";
@@ -924,7 +931,7 @@ public class CEUS_FSS_creator {
 	 * This is for parsing Peter's rupture-set.json files
 	 * @param filePath
 	 */
-	private static void parseRuptureSetFile(String filePath,HashMap<Integer,int[]> srcFltSectsMap) {
+	public static void parseRuptureSetFile(String filePath,HashMap<Integer,int[]> srcFltSectsMap) {
 		
 		 String ID = "id";
 		 String NAME = "name";
