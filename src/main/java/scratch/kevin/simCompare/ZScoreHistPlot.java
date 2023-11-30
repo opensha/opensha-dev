@@ -36,6 +36,7 @@ import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.AttenRelSupplier;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Table;
@@ -188,7 +189,7 @@ public class ZScoreHistPlot {
 	}
 	
 	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
-			List<Site> sites, IMT[] imts, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
+			List<Site> sites, IMT[] imts, AttenRelSupplier gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
 			File outputDir, String prefix) throws IOException {
 		return plotStandardNormal(simProv, eventComps, sites, imts, gmpe, filter, binDescriptions, outputDir, prefix, null, 0, false);
 	}
@@ -197,7 +198,7 @@ public class ZScoreHistPlot {
 	public static final double numStdDev = 3.75;
 	
 	public static <E> boolean plotStandardNormal(SimulationRotDProvider<E> simProv, Collection<? extends RuptureComparison<E>> eventComps,
-			List<Site> sites, IMT[] imts, AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
+			List<Site> sites, IMT[] imts, AttenRelSupplier gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions,
 			File outputDir, String prefix, Table<String, E, Double> sourceRupContribFracts, int maxNumSourceContribs, boolean pub)
 					throws IOException {
 		
@@ -208,7 +209,7 @@ public class ZScoreHistPlot {
 		return plotStandardNormal(scores, simProv.getName(), imts, gmpe, binDescriptions, outputDir, prefix, maxNumSourceContribs, pub, maxY);
 	}
 	
-	public static <E> boolean plotStandardNormal(ZScoreResult[] scores, String name, IMT[] imts, AttenRelRef gmpe,
+	public static <E> boolean plotStandardNormal(ZScoreResult[] scores, String name, IMT[] imts, AttenRelSupplier gmpe,
 			List<String> binDescriptions, File outputDir, String prefix, int maxNumSourceContribs, boolean pub, double maxY)
 					throws IOException {
 		

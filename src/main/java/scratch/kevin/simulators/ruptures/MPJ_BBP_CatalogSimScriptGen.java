@@ -34,10 +34,10 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir5450";
 //		String catalogDirName = "rundir4983_stitched";
 //		String catalogDirName = "rundir5566";
-		String catalogDirName = "rundir5672";
-//		String catalogDirName = "rundir5566_subduction_corupture";
+//		String catalogDirName = "rundir5597";
 //		String catalogDirName = "rundir5413_multifault_separate";
-//		String catalogDirName = "rundir5566_crustal_corupture";
+//		String catalogDirName = "rundir5597_subduction_corupture";
+		String catalogDirName = "rundir5597_crustal_corupture";
 		
 //		int skipYears = 20000;
 //		int skipYears = 5000;
@@ -51,29 +51,33 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		double griddedSpacing = 1d;
 		
 		// CA
-		Integer utmZone = null;
-		Character utmBand = null;
-		boolean standardSites = false;
-		boolean csInitialLASites = false;
-		boolean cs500LASites = false;
-		boolean csLAMapSites = false;
-		boolean griddedCASites = true;
-		boolean griddedSoCalSites = false;
-		boolean griddedNZSites = false;
-		boolean nzStandardSites = false;
-		
-		// NZ
-//		Integer utmZone = 59;
-//		Character utmBand = 'G';
-//		System.out.println("New Zealand!");
+//		Integer utmZone = null;
+//		Character utmBand = null;
 //		boolean standardSites = false;
 //		boolean csInitialLASites = false;
 //		boolean cs500LASites = false;
 //		boolean csLAMapSites = false;
-//		boolean griddedCASites = false;
+//		boolean griddedCASites = true;
 //		boolean griddedSoCalSites = false;
-//		boolean griddedNZSites = true;
-//		boolean nzStandardSites = true;
+//		boolean griddedNZSites = false;
+//		boolean nzStandardSites = false;
+////		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
+//		VelocityModel vm = VelocityModel.LA_BASIN_500;
+		
+		// NZ
+		Integer utmZone = 59;
+		Character utmBand = 'G';
+		System.out.println("New Zealand!");
+		boolean standardSites = false;
+		boolean csInitialLASites = false;
+		boolean cs500LASites = false;
+		boolean csLAMapSites = false;
+		boolean griddedCASites = false;
+		boolean griddedSoCalSites = false;
+		boolean griddedNZSites = true;
+		boolean nzStandardSites = true;
+		VelocityModel vm = VelocityModel.CENTRAL_JAPAN;
+//		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 //		double minMag = 0d;
 //		double minMag = 5;
@@ -83,11 +87,6 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		int numRG = 0;
 //		double minMag = 7;
 //		int numRG = 20;
-		
-//		RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_863;
-		if (cs500LASites)
-			RSQSimBBP_Config.VM = VelocityModel.LA_BASIN_500;
-		VelocityModel vm = RSQSimBBP_Config.VM;
 		
 		double timeScalar = 1d;
 		boolean scaleVelocities = true;

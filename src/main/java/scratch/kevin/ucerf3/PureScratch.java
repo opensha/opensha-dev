@@ -98,6 +98,7 @@ import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeLevel.RandomlySampledLevel;
 import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
 import org.opensha.commons.logicTree.LogicTreeNode;
+import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
@@ -265,6 +266,7 @@ import scratch.kevin.nshm23.dmCovarianceTests.RandomDefModSampleLevel;
 import scratch.kevin.simCompare.SiteHazardCurveComarePageGen;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
+import scratch.kevin.simulators.ruptures.RSQSimGeographicMapMaker;
 
 public class PureScratch {
 	
@@ -5143,6 +5145,43 @@ public class PureScratch {
 		System.out.println("Converted GeoJSONFaultSection feature after reserialization:");
 		System.out.println(sect2.toFeature().toJSON());
 		System.out.println("Default surface type: "+sect2.getFaultSurface(1d).getClass().getName());
+		
+		List<FaultSection> plotSects = new ArrayList<>();
+		FaultSection fullApproxSect = sect.clone();
+		fullApproxSect.setSectionName("Approx Gridded Sect");
+		fullApproxSect.setSectionId(plotSects.size());
+		plotSects.add(fullApproxSect);
+		
+		Feature stirlingFeature = Feature.fromJSON(sect.toFeature().toJSON());
+		stirlingFeature.properties.remove(GeoJSONFaultSection.LOWER_TRACE);
+		FaultSection stirlingSect = GeoJSONFaultSection.fromFeature(stirlingFeature);
+		stirlingSect.setSectionName("Stirling Sect");
+		stirlingSect.setSectionId(plotSects.size());
+		plotSects.add(stirlingSect);
+		
+		FaultSection fakeAseisApproxSect = sect.clone();
+		fakeAseisApproxSect.setSectionName("Fake Aseis Approx Gridded Sect");
+		fakeAseisApproxSect.setSectionId(plotSects.size());
+		fakeAseisApproxSect.setAseismicSlipFactor(0.25);
+		plotSects.add(fakeAseisApproxSect);
+		
+		FaultSection fakeAseisStirlingSect = stirlingSect.clone();
+		fakeAseisStirlingSect.setSectionName("Fake Aseis Stirling Sect");
+		fakeAseisStirlingSect.setSectionId(plotSects.size());
+		fakeAseisStirlingSect.setAseismicSlipFactor(0.25);
+		plotSects.add(fakeAseisStirlingSect);
+		
+		Region plotReg = GeographicMapMaker.buildBufferedRegion(plotSects);
+		GeographicMapMaker mapMaker = new GeographicMapMaker(plotReg);
+		mapMaker.setPlotAseisReducedSurfaces(true);
+		mapMaker.setWriteGeoJSON(true);
+		
+		for (int i=0; i<plotSects.size(); i++) {
+			mapMaker.setFaultSections(List.of(plotSects.get(i)));
+			mapMaker.plot(new File("/tmp"), "sub_surf_test_"+i, " ");
+		}
+		mapMaker.setFaultSections(plotSects);
+		mapMaker.plot(new File("/tmp"), "sub_surf_tests", " ");
 //		Preconditions.checkState(feature.geometry.type == GeoJSON_Type.MultiLineString);
 //		MultiLineString geom = (MultiLineString)feature.geometry;
 //		Preconditions.checkState(geom.lines.size() == 2);
@@ -5153,12 +5192,55 @@ public class PureScratch {
 //		String state = feature.properties.get("state", null);
 	}
 	
+	private static void test269() throws IOException {
+		Region region = new Region(new Location(-33.5, 165), new Location(-47, 179));
+		RSQSimGeographicMapMaker mapMaker = new RSQSimGeographicMapMaker(region, PoliticalBoundariesData.loadNZOutlines());
+		
+		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5566.instance();
+		RSQSimEvent event = fullCatalog.loader().byID(2983);
+		
+		mapMaker.setWritePDFs(false);
+		mapMaker.setWriteGeoJSON(false);
+//		mapMaker.plotEvent(event, Color.LIGHT_GRAY, Color.BLACK, 1f);
+		List<Double> fakeScalars = new ArrayList<>();
+		for (int i=0; i<event.getNumElements(); i++)
+			fakeScalars.add(Math.random());
+		CPT randCPT = new CPT(0d, 1d, Color.LIGHT_GRAY, Color.GRAY);
+		mapMaker.plotEventFillScalars(event, fakeScalars, randCPT, null);
+		mapMaker.plotEventHypocenter(Color.GREEN.darker());
+		
+		mapMaker.plot(new File("/tmp"), "event_map_debug", " ");
+	}
+	
+	private static void test270() throws IOException {
+		File file = new File("/data/kevin/nshm23/nshmp-haz-models/nshm-conus-6.0.0/stable-crust/zone/AR/"
+				+ "Crowleys Ridge (south)/active/crowleys_ridge_south.geojson");
+		Feature feature = Feature.read(file);
+		// read in the 'mfd-tree' as a list of FeatureProperties instances, which are basically fancy maps
+		// this will return null if an error occurs
+		List<FeatureProperties> treePropsList = feature.properties.getPropertiesList("mfd-tree");
+		System.out.println("Loaded a list of "+treePropsList.size()+" tree properties:");
+		for (FeatureProperties treeProps : treePropsList) {
+			String id = treeProps.getString("id");
+			// need to supply a default value for primitives as null can't be returned if it's not found, thus the Double.NaN
+			double weight = treeProps.getDouble("weight", Double.NaN);
+			System.out.println("\tid="+id+" with weight="+weight);
+			// 'value' is a map, so we'll load it in as its own FeatureProperties
+			FeatureProperties value = treeProps.getProperties("value");
+			String type = value.getString("type");
+			double m = value.getDouble("m", Double.NaN);
+			System.out.println("\t\ttype: "+type+", m="+m);
+		}
+//		FeatureProperties treeProps = feature.properties.getProperties("mfd-tree", null);
+//		System.out.println(feature.toJSON());
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test268();
+		test270();
 	}
 
 }

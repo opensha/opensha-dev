@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.function.Supplier;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
@@ -42,6 +43,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.AttenRelSupplier;
 import org.opensha.sha.imr.IntensityMeasureRelationship;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
@@ -216,7 +218,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		}
 	}
 	
-	private int loadCache(File file, Site site, Map<Integer, EventComparison> eventComps) throws IOException {
+	private static int loadCache(File file, Site site, Map<Integer, EventComparison> eventComps) throws IOException {
 		CSVFile<String> csv = CSVFile.readFile(file, true);
 		
 		int count = 0;
@@ -241,7 +243,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		return count;
 	}
 	
-	private void writeCache(File file, Site site, Map<Integer, EventComparison> comps) throws IOException {
+	private static void writeCache(File file, Site site, Map<Integer, EventComparison> comps) throws IOException {
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine("Event ID", "Period (s)", "Ln(Mean)", "Std Dev", "rRup (km)", "rJB (km)");
 		
@@ -257,19 +259,20 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		csv.writeToFile(file);
 	}
 	
-	private <E extends Comparable<E>> Iterable<E> sorted(Set<E> vals) {
+	private static <E extends Comparable<E>> Iterable<E> sorted(Set<E> vals) {
 		List<E> list = new ArrayList<>(vals);
 		Collections.sort(list);
 		return list;
 	}
 	
-	public synchronized void calcGMPE(Map<Integer, EventComparison> eventComps, Site site, AttenRelRef gmpeRef, IMT... imts) {
+	public synchronized void calcGMPE(Map<Integer, EventComparison> eventComps, Site site, Supplier<ScalarIMR> gmpeRef, IMT... imts) {
 		List<Future<?>> futures = new ArrayList<>();
 		
 		File gmpeCacheFile = null;
 		if (gmpeCacheDir != null) {
 			String siteName = sitesGMPEtoBBP.get(site).getName();
-			gmpeCacheFile = new File(gmpeCacheDir, siteName+"_"+gmpeRef.getShortName()+".csv");
+			String shortName = gmpeRef instanceof AttenRelRef ? ((AttenRelRef)gmpeRef).getShortName() : gmpeRef.get().getShortName();
+			gmpeCacheFile = new File(gmpeCacheDir, siteName+"_"+shortName+".csv");
 			System.out.println(gmpeCacheFile.getAbsolutePath()+" exits ? "+gmpeCacheFile.exists());
 			if (gmpeCacheFile.exists()) {
 				try {
@@ -332,11 +335,11 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 	private class EventComparisonCalc implements Runnable {
 		
 		private EventComparison eventComp;
-		private AttenRelRef gmpeRef;
+		private Supplier<ScalarIMR> gmpeRef;
 		private Site site;
 		private List<IMT> imts;
 		
-		public EventComparisonCalc(EventComparison eventComp, AttenRelRef gmpeRef, Site site, List<IMT> imts) {
+		public EventComparisonCalc(EventComparison eventComp, Supplier<ScalarIMR> gmpeRef, Site site, List<IMT> imts) {
 			this.eventComp = eventComp;
 			this.gmpeRef = gmpeRef;
 			this.site = site;
@@ -398,7 +401,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		}
 	}
 	
-	public List<EventComparison> loadCalcComps(AttenRelRef gmpeRef, IMT[] imts) {
+	public List<EventComparison> loadCalcComps(Supplier<ScalarIMR> gmpeRef, IMT[] imts) {
 		Map<Integer, EventComparison> compsMap = new HashMap<>();
 		
 		for (BBP_Site site : sites) {
@@ -418,7 +421,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		return new ArrayList<>(compsMap.values());
 	}
 	
-	public void generateGMPE_Page(File outputDir, AttenRelRef gmpeRef, IMT[] imts, List<EventComparison> comps)
+	public void generateGMPE_Page(File outputDir, AttenRelSupplier gmpeRef, IMT[] imts, List<EventComparison> comps)
 			throws IOException {
 		LinkedList<String> lines = new LinkedList<>();
 		
@@ -566,9 +569,9 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_2585_1MYR.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_4983_STITCHED.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_5413.instance();
-		RSQSimCatalog catalog = Catalogs.BRUCE_5652.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5652.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_5566_CRUSTAL.instance();
-//		RSQSimCatalog catalog = Catalogs.BRUCE_5585_SUB.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5566_SUB.instance();
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -586,15 +589,15 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		VelocityModel forceVM = VelocityModel.LA_BASIN_863;
 		VelocityModel forceVM = null;
 		
-		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
-				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-//		IMT[] imts = { IMT.SA3P0 };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
-		IMT[] imts = { IMT.PGV, IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
-		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
+//		AttenRelSupplier[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
+//				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+////		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
+////		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
+////		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
+////		IMT[] imts = { IMT.SA3P0 };
+////		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
+//		IMT[] imts = { IMT.PGV, IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
+//		AttenRelRef rotDGMPE = AttenRelRef.ASK_2014;
 		
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.AFSHARI_STEWART_2016 };
 //		IMT[] imts = { IMT.DUR_5_75, IMT.DUR_5_95, IMT.DUR_20_80 };
@@ -603,6 +606,13 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.ZHAO_2006 };
 //		IMT[] imts = { IMT.SA2P0, IMT.SA3P0, IMT.SA5P0 };
 //		AttenRelRef rotDGMPE = null;
+		
+		AttenRelSupplier[] gmpeRefs = {
+				new org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_AttenRelSupplier(
+						gov.usgs.earthquake.nshmp.gmm.Gmm.AG_20_GLOBAL_INTERFACE, "AG2020_Global")
+		};
+		IMT[] imts = { IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
+		AttenRelRef rotDGMPE = null;
 		
 		String[] highlightNames;
 		if (doGridded)
@@ -748,7 +758,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		System.out.println("Has RotD100? "+comp.bbpZipFile.hasRotD100());
 		doRotD = doRotD && comp.bbpZipFile.hasRotD100();
 		
-		for (AttenRelRef ref : gmpeRefs)
+		for (Supplier<ScalarIMR> ref : gmpeRefs)
 			comp.checkTransSiteParams(ref);
 //		comp.testPlotRupAzDiffs();
 		
@@ -766,7 +776,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 			List<EventComparison> rotD_GMPEcomps = null;
 			if (doGMPE || doNonErgodicMaps) {
 				if (!hasRG || !rgOnlyIfPossible) {
-					for (AttenRelRef gmpeRef : gmpeRefs) {
+					for (AttenRelSupplier gmpeRef : gmpeRefs) {
 						if (highlightNames != null) {
 							if (gmpeRef == rotDGMPE)
 								comp.setHighlightSites(highlightNames);

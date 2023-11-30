@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.Supplier;
 
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.jfree.chart.annotations.XYPolygonAnnotation;
@@ -55,6 +56,7 @@ import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupSetMapMaker;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.AttenRelSupplier;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.MultiIMR_Averaged_AttenRel;
 import org.opensha.sha.imr.param.EqkRuptureParams.MagParam;
@@ -108,7 +110,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	
 	protected ExecutorService exec;
 	
-	private Map<AttenRelRef, LinkedList<ScalarIMR>> gmpesInstancesCache;
+	private Map<Supplier<ScalarIMR>, LinkedList<ScalarIMR>> gmpesInstancesCache;
 	
 	private boolean replotScatters = true;
 	private boolean replotZScores = true;
@@ -335,7 +337,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	private static final int MAX_SCATTER_NUM_POINTS = 100000;
 	
 	public boolean plotScatter(Collection<? extends RuptureComparison<E>> eventComps, Collection<Site> sites, IMT imt,
-			AttenRelRef gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions, File outputDir, String prefix)
+			AttenRelSupplier gmpe, RuptureComparisonFilter<E> filter, List<String> binDescriptions, File outputDir, String prefix)
 					throws IOException {
 		DefaultXY_DataSet xy = new DefaultXY_DataSet();
 		
@@ -451,7 +453,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		
 	}
 	
-	protected ScalarIMR checkOutGMPE(AttenRelRef gmpeRef) {
+	protected ScalarIMR checkOutGMPE(Supplier<ScalarIMR> gmpeRef) {
 		synchronized (gmpesInstancesCache) {
 			LinkedList<ScalarIMR> gmpes = gmpesInstancesCache.get(gmpeRef);
 			if (gmpes == null) {
@@ -461,12 +463,12 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 			if (!gmpes.isEmpty())
 				return gmpes.pop();
 		}
-		ScalarIMR gmpe = gmpeRef.instance(null);
+		ScalarIMR gmpe = gmpeRef.get();
 		gmpe.setParamDefaults();
 		return gmpe;
 	}
 	
-	protected void checkInGMPE(AttenRelRef gmpeRef, ScalarIMR gmpe) {
+	protected void checkInGMPE(Supplier<ScalarIMR> gmpeRef, ScalarIMR gmpe) {
 		synchronized (gmpesInstancesCache) {
 			gmpesInstancesCache.get(gmpeRef).push(gmpe);
 		}
@@ -507,7 +509,11 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		return line;
 	}
 	
-	protected void checkTransSiteParams(AttenRelRef gmpeRef) {
+	protected void checkTransSiteParams(Supplier<ScalarIMR>  gmpeRef) {
+		checkTransSiteParams(gmpeRef, sites);
+	}
+	
+	public static void checkTransSiteParams(Supplier<ScalarIMR> gmpeRef, List<? extends Site> sites) {
 		SiteTranslator trans = null;
 		ScalarIMR gmmInstance = gmpeRef.get();
 		Site site0 = sites.get(0);
@@ -543,7 +549,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		}
 	}
 	
-	public void generateGMPE_Page(File outputDir, List<String> headerLines, AttenRelRef gmpeRef, IMT[] imts,
+	public void generateGMPE_Page(File outputDir, List<String> headerLines, AttenRelSupplier gmpeRef, IMT[] imts,
 			List<? extends RuptureComparison<E>> comps, List<Site> highlightSites) throws IOException {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
@@ -1806,7 +1812,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 	}
 	
 	public void generateNonErgodicMapPage(File outputDir, List<String> headerLines, List<? extends FaultSection> subSects,
-			Region siteRegion, Region sourceRegion, AttenRelRef gmpeRef, List<? extends RuptureComparison<E>> comps,
+			Region siteRegion, Region sourceRegion, AttenRelSupplier gmpeRef, List<? extends RuptureComparison<E>> comps,
 			Map<E, List<FaultSection>> rupSectMappings, Map<E, FaultSection> rupNuclSects, IMT[] imts,
 			List<Site> highlightSites) throws IOException {
 		File resourcesDir = new File(outputDir, "resources");

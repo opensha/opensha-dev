@@ -25,7 +25,8 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 public class BruceSubductionFilter {
 
 	public static void main(String[] args) throws IOException {
-		RSQSimCatalog catalog = Catalogs.BRUCE_5566.instance();
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5566.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5597.instance();
 		File catalogDir = catalog.getCatalogDir();
 		
 		HashSet<Integer> subductionPatchIDs = new HashSet<>();
@@ -69,7 +70,6 @@ public class BruceSubductionFilter {
 			System.out.println(numNuclCrustal+"/"+numMatches+" ("
 					+pDF.format((double)numNuclCrustal/(double)numMatches)+") nucleate on crustal");
 		}
-		System.exit(0);
 		
 		RSQSimStateTransitionFileReader trans = catalog.getTransitions();
 		

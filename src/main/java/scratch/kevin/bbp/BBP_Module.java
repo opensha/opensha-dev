@@ -19,7 +19,9 @@ public class BBP_Module implements XMLSaveable {
 		LA_BASIN_863("LA Basin 863 (m/s)", "LABasin863",
 				"$BBP_INSTALL_GF/LABasin863/gp/genslip_nr_generic1d-gp01.vmod", 863, 0.02, 3),
 		LA_BASIN_500("LA Basin 500 (m/s)", "LABasin500",
-				"$BBP_INSTALL_GF/LABasin500/gp/nr02-vs500.fk1d", 500, 0.2, 2.5);
+				"$BBP_INSTALL_GF/LABasin500/gp/nr02-vs500.fk1d", 500, 0.2, 2.5),
+		CENTRAL_JAPAN("Central Japan", "CentralJapan500",
+				"$BBP_INSTALL_GF/CentralJapan500/gp/niigata04-vs500.fk1d", 500, 0.1, 0.9);
 		
 		private String name;
 		private String xmlName;

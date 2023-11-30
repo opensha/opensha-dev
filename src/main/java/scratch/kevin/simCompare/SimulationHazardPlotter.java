@@ -42,6 +42,7 @@ import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.AttenRelRef;
+import org.opensha.sha.imr.AttenRelSupplier;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -100,7 +101,7 @@ public class SimulationHazardPlotter<E> {
 	private List<? extends RuptureComparison<E>> comps;
 	private Site site;
 	private double curveDuration;
-	private AttenRelRef gmpeRef;
+	private AttenRelSupplier gmpeRef;
 	private Map<String, DiscretizedFunc> xValsMap;
 	
 	private Table<String, E, Double> sourceRupContribFracts;
@@ -121,12 +122,12 @@ public class SimulationHazardPlotter<E> {
 	private Table<IMT, String, DiscretizedFunc> gmpeSourceCurves = HashBasedTable.create();
 	
 	public SimulationHazardPlotter(SimulationHazardCurveCalc<E> simCalc, List<? extends RuptureComparison<E>> comps,
-			Site site, double curveDuration, AttenRelRef gmpeRef) {
+			Site site, double curveDuration, AttenRelSupplier gmpeRef) {
 		this(simCalc, null, comps, site, curveDuration, gmpeRef);
 	}
 	
 	public SimulationHazardPlotter(SimulationHazardCurveCalc<E> simCalc, List<SimulationHazardCurveCalc<?>> compCalcs,
-			List<? extends RuptureComparison<E>> comps, Site site, double curveDuration, AttenRelRef gmpeRef) {
+			List<? extends RuptureComparison<E>> comps, Site site, double curveDuration, AttenRelSupplier gmpeRef) {
 		this.simCalc = simCalc;
 		if (compCalcs == null)
 			compCalcs = new ArrayList<>();
@@ -148,7 +149,7 @@ public class SimulationHazardPlotter<E> {
 		return site;
 	}
 	
-	public AttenRelRef getGMPE() {
+	public AttenRelSupplier getGMPE() {
 		return gmpeRef;
 	}
 	

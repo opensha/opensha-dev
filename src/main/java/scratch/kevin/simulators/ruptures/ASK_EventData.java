@@ -18,11 +18,16 @@ import org.jfree.chart.ui.TextAnchor;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
+import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
+import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
 
 import com.google.common.base.Preconditions;
@@ -315,6 +320,64 @@ public class ASK_EventData {
 		gp.saveAsPDF(file.getAbsolutePath()+".pdf");
 	}
 	
+	public static void plotMagDistXYZ(File outputDir, String prefix, String title,
+			Collection<List<ASK_EventData>> data, double minMag, double maxMag, double minDist, double maxDist,
+			boolean rJB, boolean eventCount, boolean logZ) throws IOException {
+		int numDist = 20;
+		int numMag = 15;
+		double distSpacing = (Math.log10(maxDist) - Math.log10(minDist)) / (double)numDist;
+		double magSpacing = (maxMag - minMag) / (double)numMag;
+		EvenlyDiscrXYZ_DataSet xyz = new EvenlyDiscrXYZ_DataSet(numDist, numMag, Math.log10(minDist)+0.5*distSpacing,
+					minMag+0.5*magSpacing, distSpacing, magSpacing);
+		
+		for (List<ASK_EventData> eventData : data) {
+			double mag = eventData.get(0).mag;
+			if (mag < minMag || mag > maxMag)
+				continue;
+			int magBin = xyz.getYIndex(mag);
+			int[] distCounts = new int[xyz.getNumX()];
+			for (ASK_EventData event : eventData) {
+				double dist = rJB ? event.rJB : event.rRup;
+				if (dist < minDist || dist > maxDist)
+					continue;
+				double logDist = Math.log10(dist);
+				int distBin = xyz.getXIndex(logDist);
+				if (eventCount)
+					distCounts[distBin] = 1;
+				else
+					distCounts[distBin]++;
+			}
+			for (int x=0; x<distCounts.length; x++)
+				if (distCounts[x] > 0)
+					xyz.set(x, magBin, xyz.get(x, magBin)+distCounts[x]);
+		}
+		
+		CPT cpt = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse();
+		if (logZ) {
+			xyz.log10();
+			cpt = cpt.rescale(0d, Math.ceil(xyz.getMaxZ()));
+			cpt.setNanColor(Color.WHITE);
+		} else {
+			cpt = cpt.rescale(1d, xyz.getMaxZ());
+		}
+		cpt.setBelowMinColor(Color.WHITE);
+		
+		String xLabel = rJB ? "Log10 Distance JB" : "Log10 Distance Rup";
+		String yLabel = "Magnitude";
+		String zLabel = eventCount ? "Num Events" : "Num Recordings";
+		if (logZ)
+			zLabel = "Lot10 "+zLabel;
+		
+		XYZPlotSpec xyzSpec = new XYZPlotSpec(xyz, cpt, title, xLabel, yLabel, zLabel);
+		xyzSpec.setCPTTickUnit(0.5d);
+		HeadlessGraphPanel xyzGP = PlotUtils.initHeadless();
+		xyzGP.drawGraphPanel(xyzSpec, false, false, new org.jfree.data.Range(Math.log10(minDist), Math.log10(maxDist)),
+				new org.jfree.data.Range(minMag, maxMag));
+//		xyzGP.getChartPanel().getChart().setBackgroundPaint(Color.WHITE);
+		xyzGP.getChartPanel().setSize(700, 550);
+		PlotUtils.writePlots(outputDir, prefix, xyzGP, 700, 550, true, true, false);
+	}
+	
 	private static final DecimalFormat twoDigit = new DecimalFormat("0.00");
 	
 	public static void main(String[] args) throws IOException {
@@ -361,6 +424,17 @@ public class ASK_EventData {
 			System.out.println("Loaded "+totNum+" total records");
 			System.out.println();
 			periodData.put(period, data);
+			
+			double minDist = 1;
+			double maxDist = 200;
+			double minMag = 6.5d;
+			double maxMag = 8.2d;
+			
+			String perStr = new DecimalFormat("0.#").format(period);
+			String title = "ASK (2014) Data, "+perStr+"s";
+			
+			plotMagDistXYZ(new File("/tmp"), "ask_mag_dist_"+perStr+"s", title, data.values(),
+					minMag, maxMag, minDist, maxDist, false, false, true);
 		}
 		
 		for (Range<Double> magRange : magRanges) {
