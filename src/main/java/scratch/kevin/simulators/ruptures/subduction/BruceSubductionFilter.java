@@ -43,10 +43,10 @@ public class BruceSubductionFilter {
 		
 		boolean includeOtherCorupturing = false;
 		
-//		RuptureIdentifier coruptureIden = null;
-		RuptureIdentifier coruptureIden = new LogicalAndRupIden(
-				new ElementIden("Subduction", new ArrayList<>(subductionPatchIDs)),
-				new ElementIden("Crustal", new ArrayList<>(crustalPatchIDs)));
+		RuptureIdentifier coruptureIden = null;
+//		RuptureIdentifier coruptureIden = new LogicalAndRupIden(
+//				new ElementIden("Subduction", new ArrayList<>(subductionPatchIDs)),
+//				new ElementIden("Crustal", new ArrayList<>(crustalPatchIDs)));
 		
 		List<RSQSimEvent> events = catalog.loader().magRange(6.5, 11d).load();
 		System.out.println("Loaded "+events.size()+" events");

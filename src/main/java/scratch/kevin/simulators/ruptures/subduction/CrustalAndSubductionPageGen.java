@@ -150,20 +150,23 @@ public class CrustalAndSubductionPageGen {
 	private static final int DEBUG_EVENT_ID = 152653;
 
 	public static void main(String[] args) throws IOException {
-		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5566.instance();
-		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5566_CRUSTAL.instance();
-		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5566_SUB.instance();
+		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5597.instance();
+		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5597_CRUSTAL.instance();
+		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5597_SUB.instance();
 		
 		File bbpBaseDir = new File("/data/kevin/bbp/parallel");
 		
 		File fullBBPdir = new File(bbpBaseDir,
-				"2023_03_30-rundir5566-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
+//				"2023_03_30-rundir5566-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
+				"2023_11_29-rundir5597-all-m6.5-skipYears2000-noHF-vmCENTRAL_JAPAN-standardSitesNZ-griddedSitesNZ");
 		File crustalBBPdir = new File(bbpBaseDir,
 //				"2023_06_27-rundir5566_crustal-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
-				"2023_06_27-rundir5566_crustal_corupture-all-m5.0-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
+//				"2023_06_27-rundir5566_crustal_corupture-all-m5.0-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
+				"2023_11_29-rundir5597_crustal_corupture-all-m6.5-skipYears2000-noHF-vmCENTRAL_JAPAN-standardSitesNZ-griddedSitesNZ");
 		File subductionBBPdir = new File(bbpBaseDir,
 //				"2023_06_27-rundir5566_subduction-all-m6.5-skipYears5000-maxDist500-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
-				"2023_06_27-rundir5566_subduction_corupture-all-m5.0-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
+//				"2023_06_27-rundir5566_subduction_corupture-all-m5.0-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
+				"2023_11_29-rundir5597_subduction_corupture-all-m6.5-skipYears2000-noHF-vmCENTRAL_JAPAN-standardSitesNZ-griddedSitesNZ");
 		
 //		AttenRelSupplier subductionGMM = AttenRelRef.ZHAO_2006;
 		AttenRelSupplier subductionGMM = new NSHMP_AttenRelSupplier(

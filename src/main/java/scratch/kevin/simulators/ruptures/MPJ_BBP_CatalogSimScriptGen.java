@@ -37,7 +37,9 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir5597";
 //		String catalogDirName = "rundir5413_multifault_separate";
 //		String catalogDirName = "rundir5597_subduction_corupture";
-		String catalogDirName = "rundir5597_crustal_corupture";
+//		String catalogDirName = "rundir5597_crustal_corupture";
+		String catalogDirName = "rundir5597_subduction";
+//		String catalogDirName = "rundir5597_crustal";
 		
 //		int skipYears = 20000;
 //		int skipYears = 5000;
