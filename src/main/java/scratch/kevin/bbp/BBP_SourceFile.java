@@ -189,7 +189,7 @@ public class BBP_SourceFile {
 		double hypoDownDip = Double.parseDouble(vals.get("HYPO_DOWN_DIP"));
 		double dWid = Double.parseDouble(vals.get("DWID"));
 		double dLen = Double.parseDouble(vals.get("DLEN"));
-		double cornerFreq = Double.parseDouble(vals.get("CORNER_FREQ"));
+		double cornerFreq = vals.containsKey("CORNER_FREQ") ? Double.parseDouble(vals.get("CORNER_FREQ")) : Double.NaN;
 		int seed = Integer.parseInt(vals.get("SEED"));
 		
 		BBP_PlanarSurface surface = new BBP_PlanarSurface(topCenter, length, width, mech);
