@@ -12,8 +12,10 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.param.Parameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers.ASK_2014_Wrapper;
@@ -28,52 +30,99 @@ public class NshmErfTest {
   // private static final Path MODEL = Path.of("../nshm-conus-2018-5.x-maint");
   private static final Path MODEL = Path.of("../nshm-conus");
 
+  // static gov.usgs.earthquake.nshmp.geo.Location testLoc =
+  // gov.usgs.earthquake.nshmp.geo.Location.create(-122, 39.0);
   static gov.usgs.earthquake.nshmp.geo.Location testLoc =
-      gov.usgs.earthquake.nshmp.geo.Location.create(-122, 39.0);
+      gov.usgs.earthquake.nshmp.geo.Location.create(-80, 33.2);
 
   // static gov.usgs.earthquake.nshmp.geo.Location testLoc =
   // gov.usgs.earthquake.nshmp.geo.Location.create(-110, 37.5);
 
   public static void main(String[] args) {
 
-    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.SUBDUCTION_INTERFACE);
+    Set<TectonicRegionType> trts =
+        EnumSet.of(TectonicRegionType.STABLE_SHALLOW);
+    // Set<TectonicRegionType> trts = EnumSet.noneOf(TectonicRegionType.class);
+
     HazardModel model = HazardModel.load(MODEL);
     NshmErf erf = new NshmErf(model, trts, IncludeBackgroundOption.EXCLUDE);
     System.out.println("NSHM ERF size: " + erf.getNumSources());
     erf.getTimeSpan().setDuration(1.0);
     erf.updateForecast();
-    
+
     System.out.println(Models.mfd(
         model,
         TectonicSetting.SUBDUCTION,
         Optional.of(SourceType.INTERFACE)));
 
-    for (ProbEqkSource src : erf) {
-      // Source nshmSrc = ((NshmSource) src).delegate;
-      // if (nshmSrc instanceof PointSourceFinite) {
-      // PointSourceFinite ptSrc = (PointSourceFinite) nshmSrc;
-      // if (ptSrc.loc.equals(testLoc)) {
-      // System.out.println(testLoc);
-      // System.out.println(ptSrc.mfd);
-      // for (Rupture rup : ptSrc) {
-      // PointSourceFinite.FiniteSurface surf =
-      // (PointSourceFinite.FiniteSurface) rup.surface();
-      // System.out.println(surf.mag + " " + surf.zTor + " " + surf.dip());
-      // }
-      //
-      // for (ProbEqkRupture rup : src) {
-      // System.out.println(rup.getRuptureSurface().getAveRupTopDepth());
-      // }
-      // }
-      // }
+    // for (ProbEqkSource src : erf) {
+    //
+    // Source nshmSrc = ((NshmSource) src).delegate();
+    // System.out.println(nshmSrc.id() + " " + nshmSrc.name());
+    //
+    // if (nshmSrc instanceof PointSourceFixedStrike) {
+    //
+    // PointSourceFixedStrike ptSrc = (PointSourceFixedStrike) nshmSrc;
+    // if (ptSrc.loc.equals(testLoc)) {
+    // System.out.println(testLoc);
+    // System.out.println(ptSrc.mfd);
+    // for (Rupture rup : ptSrc) {
+    // PointSourceFinite.FiniteSurface surf =
+    // (PointSourceFinite.FiniteSurface) rup.surface();
+    // System.out.println(surf.mag + " " + surf.zTor + " " + surf.dip());
+    // System.out.println(surf);
+    // }
+    // }
+    // }
+    // }
 
-//      for (ProbEqkRupture rup : src) {
-//        LocationList locs = rup.getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface();
-//        if (locs.size() < 1) {
-//          System.out.println("Problem rupture: " + src.getName() + " " + locs.size());
-//          break;
-//        }
-//      }
+    for (ProbEqkSource src : erf) {
+
+      // Source nshmSrc = ((NshmSource) src).delegate();
+      NshmSource nshmSrc = (NshmSource) src;
+      System.out.println(nshmSrc.delegate().id() + " " + nshmSrc.delegate().name());
+
+      System.out.println(nshmSrc.getClass());
+      if (nshmSrc instanceof NshmSource.Point) {
+        System.out.println(true);
+
+        NshmSource.Point ptSrc = (NshmSource.Point) nshmSrc;
+        PointSource nhPtSrc = (PointSource) nshmSrc.delegate();
+
+        // PointSourceFixedStrike ptSrc = (PointSourceFixedStrike) nshmSrc;
+
+        if (nhPtSrc.loc.equals(testLoc)) {
+
+          System.out.println(testLoc);
+          System.out.println(nhPtSrc.mfd);
+
+          for (ProbEqkRupture rup : ptSrc) {
+            RuptureSurface surface = rup.getRuptureSurface();
+
+            // PointSourceFinite.FiniteSurface surf =
+            // (PointSourceFinite.FiniteSurface) rup.surface();
+            System.out.println(
+                rup.getMag() + " " +
+                    surface.getAveRupTopDepth() + " " +
+                    surface.getAveDip());
+            System.out.println(surface);
+          }
+          //
+          // for (ProbEqkRupture rup : src) {
+          // System.out.println(rup.getRuptureSurface().getAveRupTopDepth());
+          // }
+          // }
+          // }
+
+          // for (ProbEqkRupture rup : src) {
+          // LocationList locs =
+          // rup.getRuptureSurface().getEvenlyDiscritizedListOfLocsOnSurface();
+          // if (locs.size() < 1) {
+          // System.out.println("Problem rupture: " + src.getName() + " " +
+          // locs.size());
+          // break;
+        }
+      }
     }
 
     // calcHazard(erf);
