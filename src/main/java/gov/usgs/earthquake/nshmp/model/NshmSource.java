@@ -34,6 +34,10 @@ public abstract class NshmSource extends ProbEqkSource {
 	  return delegate.id();
   }
 
+  public Source delegate() {
+    return delegate;
+  }
+
   @Override
   public double getMinDistance(Site site) {
     return NshmUtil.distance(site, delegate);
