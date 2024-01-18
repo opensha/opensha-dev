@@ -5235,12 +5235,16 @@ public class PureScratch {
 //		System.out.println(feature.toJSON());
 	}
 	
+	private static void test271() throws IOException {
+		System.out.println("Hello, World");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test270();
+		test271();
 	}
 
 }
