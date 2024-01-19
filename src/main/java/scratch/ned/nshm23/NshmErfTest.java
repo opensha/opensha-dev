@@ -2,6 +2,7 @@ package scratch.ned.nshm23;
 
 import java.awt.geom.Point2D;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -20,6 +21,7 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.util.TectonicRegionType;
 
 import gov.usgs.earthquake.nshmp.model.NshmErf;
+import gov.usgs.earthquake.nshmp.model.NshmSource;
 
 public class NshmErfTest {
 
@@ -27,18 +29,28 @@ public class NshmErfTest {
   // Path.of("../nshmp-lib/src/test/resources/model/test-model");
   // private static final Path MODEL = Path.of("../nshm-conus-2018-5.1-maint");
 //  private static final Path MODEL = Path.of("/home/kevin/git/nshm-conus");   
-  private static final Path MODEL = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.0.0");
+//	private static final Path MODEL = Path.of("/Users/field/nshm-haz_data/nshm-conus-6.0.0");
+	private static final Path MODEL = Path.of("/Users/field/nshm-haz_data/nshm-alaska-main_Jan03_2024");
 
   public static void main(String[] args) {
 
-    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.STABLE_SHALLOW);
+    Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
     NshmErf erf = new NshmErf(MODEL, trts, IncludeBackgroundOption.EXCLUDE);
     System.out.println("NSHM ERF NumSources: " + erf.getNumSources());
     erf.getTimeSpan().setDuration(1.0);
     erf.updateForecast();
+    ArrayList<String> uniqueNamesList = new ArrayList<String>();
     for(int i=0;i<erf.getNumSources();i++) {
-    	System.out.println(i+"\t"+erf.getSource(i).getName());
+    	if(isPointSource((NshmSource)erf.getSource(i))) {
+    		continue;
+    	}
+    	String name = erf.getSource(i).getName();
+    	if(!uniqueNamesList.contains(name))
+    		uniqueNamesList.add(name);
     }
+    for(String name:uniqueNamesList)
+    	System.out.println(name);
+
     
     
 
@@ -69,5 +81,14 @@ public class NshmErfTest {
 //    for (Point2D pt : hazardCurve)
 //      System.out.println((float) pt.getX() + "\t" + pt.getY());
   }
+  
+	public static boolean isPointSource(NshmSource src) {
+    	int numLocs = src.getRupture(0).getRuptureSurface().getEvenlyDiscretizedNumLocs();
+    	if(numLocs == 1) 
+    		return true;
+    	else
+    		return false;
+	}
+
 
 }

@@ -42,6 +42,8 @@ import gov.usgs.earthquake.nshmp.model.NshmSource;
  * sources are in a single FSS except the two Cheraw sources, which are handled separately due to their having 
  * floating ruptures (and these do not have variable depth to top of rupture in the FSS implementations here).
  * 
+ * Note that Peter's directory names change in between versions (e.g., nshm-conus-6.b.4 vs nshm-conus-6.0.0)
+ * 
  * @author field
  *
  */
@@ -189,13 +191,13 @@ public class CEUS_FSS_creator {
 	}
 	
 	
-	public static boolean isPointSource(NshmSource src) {
-    	int numLocs = src.getRupture(0).getRuptureSurface().getEvenlyDiscretizedNumLocs();
-    	if(numLocs == 1) 
-    		return true;
-    	else
-    		return false;
-	}
+//	public static boolean isPointSource(NshmSource src) {
+//    	int numLocs = src.getRupture(0).getRuptureSurface().getEvenlyDiscretizedNumLocs();
+//    	if(numLocs == 1) 
+//    		return true;
+//    	else
+//    		return false;
+//	}
 	
 	
 	public static ArrayList<FaultSystemSolution> getFaultSystemSolutionList(String nshmModelDirPath, FaultModelEnum fltModel) {
@@ -203,6 +205,8 @@ public class CEUS_FSS_creator {
 		if(D) System.out.println("fltModel = "+fltModel);
 
 		ArrayList<FaultSystemSolution> fssList = new ArrayList<FaultSystemSolution>();
+		
+		ArrayList<Integer> srcZoneID_List = CEUS_FaultZones_creator.getSourceZoneID_List();
 
 		// get parent fault sections from Peter's features files
 		ArrayList<GeoJSONFaultSection> faultSectionData = getFaultSectionList(nshmModelDirPath);
@@ -266,11 +270,12 @@ public class CEUS_FSS_creator {
 
 	    if (D) System.out.println("NSHM ERF NumSources: " + erf.getNumSources());
 		ArrayList<Integer> testSrcIDsList = new ArrayList<Integer>();  // a list of all the source IDs (no duplicates)
-	    int numPtSrces=0;
+	    int numSrcZones=0;
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
-	    	if(isPointSource(src)) { // skip gridded seismicity sources
-	    		numPtSrces+=1;
+// TODO FIX THIS
+	    	if(srcZoneID_List.contains(src.getNSHM_ID())) { // skip gridded source zones // THIS WON'T WORK WHEN PETER ADD FINITENESS
+	    		numSrcZones+=1;
 	    		continue;
 	    	}
 	    	boolean noFloaters = areSourceRupSurfacesIdentical(src); // look for ruptures that have area less than the full fault
@@ -284,7 +289,7 @@ public class CEUS_FSS_creator {
 	    }
 
 	    if(D) {
-	    	System.out.println("numPtSrces="+numPtSrces+"\tnumFltSrces="+(erf.getNumSources()-numPtSrces));
+	    	System.out.println("numSrcZones="+numSrcZones+"\tnumFltSrces="+(erf.getNumSources()-numSrcZones));
 	    	System.out.println("Floater Source IDs:");
 		    for(int id:floaterSrcID_List)
 		    	System.out.println("\t"+id);
@@ -307,7 +312,7 @@ public class CEUS_FSS_creator {
     	}
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
-	    	if(isPointSource(src)) 
+	    	if(srcZoneID_List.contains(src.getNSHM_ID())) 
 	    		continue;	
 	    	Integer srcID = src.getNSHM_ID();
 	    	if(nameForSrcIdMap.keySet().contains(srcID)) { // check for name change
@@ -531,7 +536,7 @@ public class CEUS_FSS_creator {
 	    	}
 		    for(int s=0;s<erf.getNumSources();s++) {
 		    	NshmSource src = (NshmSource)erf.getSource(s);
-		    	if(isPointSource(src)) 
+		    	if(srcZoneID_List.contains(src.getNSHM_ID())) 
 		    		continue;	
 		    	Integer srcID = src.getNSHM_ID();
 		    	// skip if not used
@@ -608,19 +613,23 @@ public class CEUS_FSS_creator {
 	
 	/**
 	 * This creates a fault system solution for a floating rupture source/fault.  This assumes 
-	 * the NSHM source ID is the same as the faultSection ID
+	 * the NSHM source ID is the same as the faultSection ID.  This does not account for any
+	 * variations in the depth to top of rupture in the NSHM model.
 	 * @param rateWt
 	 * @param faultSection
 	 * @param erf
 	 * @return
 	 */
-	private static FaultSystemSolution getFaultSystemSolution(double rateWt, 
+	protected static FaultSystemSolution getFaultSystemSolution(double rateWt, 
 			GeoJSONFaultSection faultSection, NshmErf erf) {
 	
     	// compute full rup area
     	double fullRupArea = 0;
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
+if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters ID duplicates
+	continue;
+
 	    	if(src.getNSHM_ID() == faultSection.getSectionId()) { 
 		    	for(int r=0;r<src.getNumRuptures();r++) {
 		    		double rupArea = src.getRupture(r).getRuptureSurface().getArea();
@@ -635,10 +644,14 @@ public class CEUS_FSS_creator {
 	    double fssTotalMoment = 0;
 	    double aveDeltaMag=0;
 	    double numMag =0;
+	    ArrayList<Float> rupTopDepthList = new ArrayList<Float>();
     	SummedMagFreqDist mfd_full = getBlankMFD();
     	SummedMagFreqDist mfd_float = getBlankMFD();
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
+if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters ID duplicates
+	continue;
+
 	    	if(src.getNSHM_ID() == faultSection.getSectionId()) { 
 		    	for(int r=0;r<src.getNumRuptures();r++) {
 		    		double mag = src.getRupture(r).getMag();
@@ -649,21 +662,28 @@ public class CEUS_FSS_creator {
 		    		fssTotalMoment += MagUtils.magToMoment(mfd_full.getX(iMag))*rate;
 		    		aveDeltaMag += mfd_full.getX(iMag)-mag;
 		    		numMag+=1;
+// System.out.println(mag+"\t"+rupArea);
+
 		    		if(rupArea > 0.99*fullRupArea) {
 		    			mfd_full.add(iMag, rate*rateWt);
 		    		}
 		    		else {
 		    			mfd_float.add(iMag, rate*rateWt);
 		    		}
+		    		float rupTopDepth = (float)src.getRupture(r).getRuptureSurface().getAveRupTopDepth();
+		    		if(!rupTopDepthList.contains(rupTopDepth))
+		    			rupTopDepthList.add(rupTopDepth);
 		    	}
-
 	    	}
 	    }
+	    
+// System.out.println(mfd_full+"\n\n"+mfd_float);
+
 	    aveDeltaMag /= numMag;
 	    double tempRatio = fssTotalMoment/origTotalMoment;
 	    if(D) System.out.println("FSS:\n\tfssTotalMoment="+(float)fssTotalMoment+
 	    		"\n\torigTotalMoment="+(float)origTotalMoment+"\n\tratio="+tempRatio+
-	    		"\n|taveDeltaMag="+(float)aveDeltaMag);
+	    		"\n\taveDeltaMag="+(float)aveDeltaMag+"\n\tfullRupArea="+fullRupArea);
 	    
 	    List<List<Integer>> sectionForRups = new ArrayList<>();
 	    ArrayList<Double> magForRupList =new ArrayList<Double>();
@@ -678,8 +698,12 @@ public class CEUS_FSS_creator {
 		WC1994_MagLengthRelationship wcMagLength = new WC1994_MagLengthRelationship();
 		double fullMag = wcMagLength.getMedianMag(faultSection.getTraceLength());
 		double lengthOfBiggestFloater = wcMagLength.getMedianLength(mfd_float.getMaxMagWithNonZeroRate());
-		if(lengthOfBiggestFloater>faultSection.getTraceLength())
-			throw new RuntimeException("lengthOfBiggestFloater>faultSection.getTraceLength() not supportd");
+		if(lengthOfBiggestFloater>faultSection.getTraceLength()) {
+			double maxFloatMag= mfd_float.getMaxMagWithNonZeroRate();
+			throw new RuntimeException("lengthOfBiggestFloater>faultSection.getTraceLength() not supported"+
+					"\nlengthOfBiggestFloater="+lengthOfBiggestFloater+"\nTraceLength="+faultSection.getTraceLength()+
+					"\nmaxFloatMag="+maxFloatMag+ "\nFor "+faultSection.getName());
+		}
 		if(D) {
 			System.out.println("working on floater FSS for "+faultSection.getName());
 			System.out.println("\tParent section length: "+faultSection.getTraceLength());
@@ -691,6 +715,9 @@ public class CEUS_FSS_creator {
 			System.out.println("\tMin floater mag: "+mfd_float.getMinMagWithNonZeroRate());
 			System.out.println("\tMax floater mag: "+mfd_float.getMaxMagWithNonZeroRate());
 			System.out.println("\tlengthOfBiggestFloater: "+lengthOfBiggestFloater);
+			System.out.println("\trupTopDepths in ERF Not applied here): ");
+			for(double rupTopDepth:rupTopDepthList)
+				System.out.println("\t\t"+(float)rupTopDepth);
 		}
 		int rupIndex = 0;
 		boolean fullFaultFloater = false;
@@ -958,6 +985,8 @@ public class CEUS_FSS_creator {
 	    }
 //	    for(int sect:fltSectionIDs)
 //	    	System.out.println("\t"+sect);
+//if(fltSectionIDs.length==1)
+//	System.out.println("ONLY ONE SUBSURF: "+srcID+"\t"+fltSectionIDs[0]+"\t"+obj.get(NAME).getAsString());
 	    
 	    if(!srcFltSectsMap.keySet().contains(srcID)) { // no need for redundancies because src IDs have unique rup surface
 	    	srcFltSectsMap.put(srcID, fltSectionIDs);
@@ -972,20 +1001,20 @@ public class CEUS_FSS_creator {
 	 */
 	private static void getSrcIDsAndFaultSectionsLists(HashMap<Integer,int[]> srcFltSectsMap, String nshmModelDirPath) {
 		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/CO/Cheraw/usgs/rupture-set.json", srcFltSectsMap);
-		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/MO/Commerce/2-eqs/rupture-set.json", srcFltSectsMap);
-		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/MO/Commerce/3-eqs/rupture-set.json", srcFltSectsMap);
+		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/MO/Commerce/2-eq/rupture-set.json", srcFltSectsMap);
+		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/MO/Commerce/3-eq/rupture-set.json", srcFltSectsMap);
 		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/OK/Meers/usgs/rupture-set.json", srcFltSectsMap);
 		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (North)/1-eq/rupture-set.json", srcFltSectsMap);
-		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (North)/2-eqs/rupture-set.json", srcFltSectsMap);
+		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (North)/2-eq/rupture-set.json", srcFltSectsMap);
 		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/CO/Cheraw/sscn/recurrence-rate/rupture-set.json", srcFltSectsMap);
 		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/OK/Meers/sscn/cluster-in/rupture-set.json", srcFltSectsMap);
 		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/OK/Meers/sscn/cluster-out/rupture-set.json", srcFltSectsMap);
-		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/2-eqs/rupture-set.json", srcFltSectsMap);
-		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/3-eqs/rupture-set.json", srcFltSectsMap);
-		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/4-eqs/rupture-set.json", srcFltSectsMap);
-		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/meeman-shelby/2-eqs/rupture-set.json", srcFltSectsMap);
-		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/meeman-shelby/3-eqs/rupture-set.json", srcFltSectsMap);
-		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/meeman-shelby/4-eqs/rupture-set.json", srcFltSectsMap);
+		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/2-eq/rupture-set.json", srcFltSectsMap);
+		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/3-eq/rupture-set.json", srcFltSectsMap);
+		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/crittenden-co/4-eq/rupture-set.json", srcFltSectsMap);
+		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/meeman-shelby/2-eq/rupture-set.json", srcFltSectsMap);
+		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/meeman-shelby/3-eq/rupture-set.json", srcFltSectsMap);
+		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/TN/Eastern Rift Margin (South)/meeman-shelby/4-eq/rupture-set.json", srcFltSectsMap);
 		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/CO/Cheraw/sscn/slip-rate/full-rupture/rupture-set.json", srcFltSectsMap);
 		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/CO/Cheraw/sscn/slip-rate/partial-rupture/rupture-set.json", srcFltSectsMap);
 		parseRuptureSetFile(nshmModelDirPath+"stable-crust/fault/MO/New Madrid/sscn/cluster-out/reelfoot-extended/rupture-set.json", srcFltSectsMap);
@@ -1023,7 +1052,8 @@ public class CEUS_FSS_creator {
 	
 	public static void main(String[] args) {
 		
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.0.0/";
+//		String nshmModelDirPath = "/Users/field/nshm-haz_data/oldVersions/nshm-conus-6.0.0/";
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.b.4/";
 		getFaultSystemSolutionList(nshmModelDirPath,FaultModelEnum.BOTH);
 		
 //	    WC1994_MagLengthRelationship wcMagLength = new WC1994_MagLengthRelationship();

@@ -33,7 +33,7 @@ public class Cascadia_FSS_creator {
 		 FaultModelEnum(double weight) {
 			 this.weight=weight;
 		 }
-		 double getWight() {
+		 double getWeight() {
 			 return weight;
 		 }
 	 }
@@ -213,11 +213,11 @@ public class Cascadia_FSS_creator {
 	public static FaultSystemSolution getFaultSystemSolution(String nshmModelDirPath, FaultModelEnum fltModel) {
 		
 		// rate weight for specified fault model branch
-		double rateWt = 1.0/fltModel.getWight();
+		double rateWt = 1.0/fltModel.getWeight();
 		if(D)System.out.println("fltModel="+fltModel+"\nrateWt="+(float)rateWt);
 		
 	    // get fault section list for given fault model
-		HashMap<Integer,GeoJSONFaultSection> faultSectionMap;
+	//	HashMap<Integer,GeoJSONFaultSection> faultSectionMap;
 	    ArrayList<GeoJSONFaultSection> faultSectionList = getFaultSectionList(nshmModelDirPath, fltModel);
 		// make parSectID_List & write attributes
 		ArrayList<Integer> parSectID_List = new ArrayList<Integer>(); // this is NSHM ID for each parent section
@@ -278,14 +278,15 @@ public class Cascadia_FSS_creator {
 		
 		NshmErf erf = getNshmERF(nshmModelDirPath);
 		System.out.println("erf.getNumSources() = "+erf.getNumSources());
-		int numPtSrc=0;
+//		int numPtSrc=0;
 		ArrayList<Integer> testSrcIDsList = new ArrayList<Integer>();
 		for(int s=0;s<erf.getNumSources();s++) {
 			NshmSource src = (NshmSource)erf.getSource(s);
 			int srcID = src.getNSHM_ID();
-			if(CEUS_FSS_creator.isPointSource(src))
-				numPtSrc+=1;
-			else {
+			// Following no longer needed because there are no other sources in ERF
+//			if(CEUS_FSS_creator.isPointSource(src))
+//				numPtSrc+=1;
+//			else {
 				// skip if not on the selected branch
 				if(!srcIDsList.contains(srcID))
 					continue;
@@ -294,10 +295,10 @@ public class Cascadia_FSS_creator {
 					testSrcIDsList.add(srcID);
 				else
 					System.out.println("Duplicate srcID = "+srcID);
-			}
+//			}
 		}
 		System.out.println("srcID_List.size() = "+testSrcIDsList.size());
-		System.out.println("numPtSrc = "+numPtSrc);
+//		System.out.println("numPtSrc = "+numPtSrc);
 		
 	    // run more tests; first make sure ERF sources are consistent with Peter's files
     	if(testSrcIDsList.size() != srcIDsList.size())
@@ -317,8 +318,8 @@ public class Cascadia_FSS_creator {
     	}
 	    for(int s=0;s<erf.getNumSources();s++) {
 	    	NshmSource src = (NshmSource)erf.getSource(s);
-	    	if(CEUS_FSS_creator.isPointSource(src)) 
-	    		continue;	
+//	    	if(CEUS_FSS_creator.isPointSource(src)) 
+//	    		continue;	
 	    	Integer srcID = src.getNSHM_ID();
 	    	// skip if not on the flt mod branch
 			if(!srcIDsList.contains(srcID)) 
@@ -413,8 +414,8 @@ public class Cascadia_FSS_creator {
 	    	}
 		    for(int s=0;s<erf.getNumSources();s++) {
 		    	NshmSource src = (NshmSource)erf.getSource(s);
-		    	if(CEUS_FSS_creator.isPointSource(src)) 
-		    		continue;	
+//		    	if(CEUS_FSS_creator.isPointSource(src)) 
+//		    		continue;	
 		    	Integer srcID = src.getNSHM_ID();
 		    	// skip if not on the flt mod branch
 				if(!srcIDsList.contains(srcID)) 
@@ -494,7 +495,7 @@ public class Cascadia_FSS_creator {
 
 
 	public static void main(String[] args) {
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.0.0/";
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-conus-6.b.4/";
 		
 		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.ALL);
 		getFaultSystemSolution(nshmModelDirPath, FaultModelEnum.TOP);
