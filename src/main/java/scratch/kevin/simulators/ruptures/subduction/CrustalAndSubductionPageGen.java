@@ -150,23 +150,52 @@ public class CrustalAndSubductionPageGen {
 	private static final int DEBUG_EVENT_ID = 152653;
 
 	public static void main(String[] args) throws IOException {
-		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5597.instance();
-		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5597_CRUSTAL.instance();
-		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5597_SUB.instance();
+		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5566.instance();
+		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5566_CRUSTAL.instance();
+		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5566_SUB.instance();
+		String bbpDate = "2024_01_24";
+		
+//		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5597.instance();
+//		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5597_CRUSTAL.instance();
+//		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5597_SUB.instance();
+		
+//		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5684.instance();
+//		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5684_CRUSTAL.instance();
+//		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5684_SUB.instance();
+		
+//		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5685.instance();
+//		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5685_CRUSTAL.instance();
+//		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5685_SUB.instance();
+		
+//		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5691.instance();
+//		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5691_CRUSTAL.instance();
+//		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5691_SUB.instance();
+//		String bbpDate = "2024_01_05";
+		
+//		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5696.instance();
+//		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5696_CRUSTAL.instance();
+//		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5696_SUB.instance();
+//		String bbpDate = "2024_01_22";
+
+//		VelocityModel vm = VelocityModel.LA_BASIN_500;
+		VelocityModel vm = VelocityModel.CENTRAL_JAPAN;
+		
+//		int skipYears = 5000;
+		int skipYears = 2000;
 		
 		File bbpBaseDir = new File("/data/kevin/bbp/parallel");
 		
+		String suffix = "-all-m6.5-skipYears"+skipYears+"-noHF-vm"+vm.name()+"-standardSitesNZ-griddedSitesNZ";
+		
 		File fullBBPdir = new File(bbpBaseDir,
 //				"2023_03_30-rundir5566-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
-				"2023_11_29-rundir5597-all-m6.5-skipYears2000-noHF-vmCENTRAL_JAPAN-standardSitesNZ-griddedSitesNZ");
+				bbpDate+"-"+fullCatalog.getCatalogDir().getName()+suffix);
 		File crustalBBPdir = new File(bbpBaseDir,
 //				"2023_06_27-rundir5566_crustal-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
-//				"2023_06_27-rundir5566_crustal_corupture-all-m5.0-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
-				"2023_11_29-rundir5597_crustal_corupture-all-m6.5-skipYears2000-noHF-vmCENTRAL_JAPAN-standardSitesNZ-griddedSitesNZ");
+				bbpDate+"-"+crustalCatalog.getCatalogDir().getName()+suffix);
 		File subductionBBPdir = new File(bbpBaseDir,
 //				"2023_06_27-rundir5566_subduction-all-m6.5-skipYears5000-maxDist500-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
-//				"2023_06_27-rundir5566_subduction_corupture-all-m5.0-skipYears5000-noHF-vmLA_BASIN_500-standardSitesNZ-griddedSitesNZ");
-				"2023_11_29-rundir5597_subduction_corupture-all-m6.5-skipYears2000-noHF-vmCENTRAL_JAPAN-standardSitesNZ-griddedSitesNZ");
+				bbpDate+"-"+subductionCatalog.getCatalogDir().getName()+suffix);
 		
 //		AttenRelSupplier subductionGMM = AttenRelRef.ZHAO_2006;
 		AttenRelSupplier subductionGMM = new NSHMP_AttenRelSupplier(
@@ -190,7 +219,6 @@ public class CrustalAndSubductionPageGen {
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		
-		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		double minMag = 6.5;
 
 		File fullZip = new File(fullBBPdir, "results_rotD.zip");
@@ -680,6 +708,12 @@ public class CrustalAndSubductionPageGen {
 		MarkdownUtils.writeReadmeAndHTML(lines, outputDir);
 		
 		exec.shutdown();
+		
+		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
+		File catGitDir = new File(gitDir, fullCatalog.getCatalogDir().getName());
+		Preconditions.checkState(catGitDir.exists() || catGitDir.mkdir());
+		System.out.println("\twriting summary");
+		fullCatalog.writeMarkdownSummary(catGitDir, true, false);
 	}
 	
 	private static DefaultXY_DataSet union(DefaultXY_DataSet[] datas) {

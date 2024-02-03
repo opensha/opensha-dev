@@ -94,6 +94,21 @@ public class NZ_CompModels {
 			}
 			return subSects;
 		}
+
+		@Override
+		public List<? extends FaultSection> build(RupSetFaultModel faultModel, int minPerFault, double ddwFract,
+				double fixedLen) throws IOException {
+			Preconditions.checkState(minPerFault == 2, "minPerFault must be 2 for this NZ Test");
+			Preconditions.checkState(ddwFract == 0.5, "ddwFract must be 0.5 for this NZ Test");
+			Preconditions.checkState(!(fixedLen > 0d), "fixedLen must be NaN for this NZ Test");
+			return build(faultModel);
+		}
+
+		@Override
+		public List<? extends FaultSection> buildForSubsects(RupSetFaultModel faultModel,
+				List<? extends FaultSection> subSects) throws IOException {
+			throw new UnsupportedOperationException("Not supported, NZ must build the subsections");
+		}
 		
 	}
 	

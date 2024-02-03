@@ -705,7 +705,70 @@ public class RSQSimCatalog implements XMLSaveable {
 				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
 		BRUCE_5672("rundir5672", "Bruce 5672", "Bruce Shaw", cal(2023, 11, 6),
 				"CA high res; dynamic, bdeep=.014, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, blow=.003",
-				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5684("rundir5684", "Bruce 5684", "Bruce Shaw", cal(2023, 12, 7),
+				"NZ dynamic, bdeep=.010, bshallow=.003, alpha=0.25, hload=hst=3.0",
+				59, 'G'),
+		BRUCE_5684_SUB("rundir5684_subduction", "Bruce 5684 (Subduction Only)", "Bruce Shaw", cal(2023, 12, 7),
+				"NZ dynamic, bdeep=.010, bshallow=.003, alpha=0.25, hload=hst=3.0; Filtered for slip on subduction patches only;",
+				59, 'G'),
+		BRUCE_5684_CRUSTAL("rundir5684_crustal", "Bruce 5684 (Crustal Only)", "Bruce Shaw", cal(2023, 12, 7),
+				"NZ dynamic, bdeep=.010, bshallow=.003, alpha=0.25, hload=hst=3.0; Filtered for slip on crustal patches only;",
+				59, 'G'),
+		BRUCE_5685("rundir5685", "Bruce 5685", "Bruce Shaw", cal(2023, 12, 7),
+				"NZ dynamic, bdeep=.010, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.015",
+				59, 'G'),
+		BRUCE_5685_SUB("rundir5685_subduction", "Bruce 5685 (Subduction Only)", "Bruce Shaw", cal(2023, 12, 7),
+				"NZ dynamic, bdeep=.010, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.015; Filtered for slip on subduction patches only;",
+				59, 'G'),
+		BRUCE_5685_CRUSTAL("rundir5685_crustal", "Bruce 5685 (Crustal Only)", "Bruce Shaw", cal(2023, 12, 7),
+				"NZ dynamic, bdeep=.010, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.015; Filtered for slip on crustal patches only;",
+				59, 'G'),
+		BRUCE_5687("rundir5687", "Bruce 5687", "Bruce Shaw", cal(2023, 12, 26),
+				"NZ dynamic, bdeep=.009, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.018",
+				59, 'G'),
+		BRUCE_5687_SUB("rundir5687_subduction", "Bruce 5687 (Subduction Only)", "Bruce Shaw", cal(2023, 12, 26),
+				"NZ dynamic, bdeep=.009, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.018; Filtered for slip on subduction patches only;",
+				59, 'G'),
+		BRUCE_5687_CRUSTAL("rundir5687_crustal", "Bruce 5687 (Crustal Only)", "Bruce Shaw", cal(2023, 12, 26),
+				"NZ dynamic, bdeep=.009, bshallow=.003, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.018; Filtered for slip on crustal patches only;",
+				59, 'G'),
+		BRUCE_5689("rundir5689", "Bruce 5689", "Bruce Shaw", cal(2023, 12, 26),
+				"NZ dynamic, bdeep=.009, bshallow=.002, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.018",
+				59, 'G'),
+		BRUCE_5689_SUB("rundir5689_subduction", "Bruce 5689 (Subduction Only)", "Bruce Shaw", cal(2023, 12, 26),
+				"NZ dynamic, bdeep=.009, bshallow=.002, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.018; Filtered for slip on subduction patches only;",
+				59, 'G'),
+		BRUCE_5689_CRUSTAL("rundir5689_crustal", "Bruce 5689 (Crustal Only)", "Bruce Shaw", cal(2023, 12, 26),
+				"NZ dynamic, bdeep=.009, bshallow=.002, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.018; Filtered for slip on crustal patches only;",
+				59, 'G'),
+		BRUCE_5691("rundir5691", "Bruce 5691", "Bruce Shaw", cal(2024, 1, 5),
+				"NZ dynamic, bdeep=.009, bshallow=.002, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.019",
+				59, 'G'),
+		BRUCE_5691_SUB("rundir5691_subduction", "Bruce 5691 (Subduction Only)", "Bruce Shaw", cal(2024, 1, 5),
+				"5691, but filtered for slip on subduction patches only;",
+				59, 'G'),
+		BRUCE_5691_CRUSTAL("rundir5691_crustal", "Bruce 5691 (Crustal Only)", "Bruce Shaw", cal(2024, 1, 5),
+				"5691, but filtered for slip on crustal patches only;",
+				59, 'G'),
+		BRUCE_5696("rundir5696", "Bruce 5696", "Bruce Shaw", cal(2024, 1, 19),
+				"NZ dynamic, bdeep=.010, bshallow=.002, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.018",
+				59, 'G'),
+		BRUCE_5696_SUB("rundir5696_subduction", "Bruce 5696 (Subduction Only)", "Bruce Shaw", cal(2024, 1, 19),
+				"5696, but filtered for slip on subduction patches only;",
+				59, 'G'),
+		BRUCE_5696_CRUSTAL("rundir5696_crustal", "Bruce 5696 (Crustal Only)", "Bruce Shaw", cal(2024, 1, 19),
+				"5696, but filtered for slip on crustal patches only;",
+				59, 'G'),
+		BRUCE_5697("rundir5697", "Bruce 5697", "Bruce Shaw", cal(2024, 1, 19),
+				"NZ dynamic, bdeep=.010, bshallow=.0015, alpha=0.25, hload=hst=3.0, fractionLow=.10, bhigh=.018",
+				59, 'G'),
+		BRUCE_5697_SUB("rundir5697_subduction", "Bruce 5697 (Subduction Only)", "Bruce Shaw", cal(2024, 1, 19),
+				"5697, but filtered for slip on subduction patches only;",
+				59, 'G'),
+		BRUCE_5697_CRUSTAL("rundir5697_crustal", "Bruce 5697 (Crustal Only)", "Bruce Shaw", cal(2024, 1, 19),
+				"5697, but filtered for slip on crustal patches only;",
+				59, 'G');
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -1066,6 +1129,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		List<String> multiFaultNames = new ArrayList<>();
 
 		String partBSummaryLink = null;
+		String crustalSubductionGMsLink = null;
 		String vmCompareRotRupLink = null;
 		String extremeEventLink = null;
 		String parentMFDLink = null;
@@ -1146,6 +1210,8 @@ public class RSQSimCatalog implements XMLSaveable {
 				vmCompareRotRupLink = name;
 			} else if (name.equals("bbp_part_b_summary")) {
 				partBSummaryLink = name;
+			} else if (name.equals("crustal_subduction_gms")) {
+				crustalSubductionGMsLink = name;
 			} else if (name.equals("parent_sect_mfds")) {
 				parentMFDLink = name;
 			} else if (name.equals("dist_method_comparisons")) {
@@ -1496,6 +1562,14 @@ public class RSQSimCatalog implements XMLSaveable {
 			lines.add(topLink);
 			lines.add("");
 			lines.add("[BBP PartB Summary Here]("+partBSummaryLink+"/)");
+		}
+		
+		if (crustalSubductionGMsLink != null) {
+			lines.add("");
+			lines.add("## BBP Crustal + Subduction Combined GMs");
+			lines.add(topLink);
+			lines.add("");
+			lines.add("[BBP Crustal + Subduction Combined GMs Here]("+crustalSubductionGMsLink+"/)");
 		}
 		
 		if (vmCompareRotRupLink != null) {
@@ -3306,7 +3380,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
 //		GregorianCalendar minDate = cal(2021, 10, 1);
-		GregorianCalendar minDate = cal(2023, 1, 1);
+		GregorianCalendar minDate = cal(2024, 1, 1);
 		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);

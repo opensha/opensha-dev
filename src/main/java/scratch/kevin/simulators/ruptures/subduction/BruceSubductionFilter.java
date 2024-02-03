@@ -25,8 +25,25 @@ import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 public class BruceSubductionFilter {
 
 	public static void main(String[] args) throws IOException {
-//		RSQSimCatalog catalog = Catalogs.BRUCE_5566.instance();
-		RSQSimCatalog catalog = Catalogs.BRUCE_5597.instance();
+		RSQSimCatalog catalog;
+		
+		// if true, all patches will be included for matching events
+		// if false, only crustal patches for crustal and subduction patches for subduction are retained
+		boolean includeOtherCorupturingElems;
+		
+		// if true, only process events that rupture both crustal and subduction sources
+		boolean onlyCorupturing;
+		
+		if (args.length > 0) {
+			Preconditions.checkState(args.length == 3, "USAGE: <catalog enum name> <includeOtherCorupturingElems> <onlyCorupturing>");
+			catalog = Catalogs.valueOf(args[0]).instance();
+			includeOtherCorupturingElems = Boolean.parseBoolean(args[1]);
+			onlyCorupturing = Boolean.parseBoolean(args[2]);
+		} else {
+			catalog = Catalogs.BRUCE_5597.instance();
+			includeOtherCorupturingElems = false;
+			onlyCorupturing = false;
+		}
 		File catalogDir = catalog.getCatalogDir();
 		
 		HashSet<Integer> subductionPatchIDs = new HashSet<>();
@@ -41,12 +58,11 @@ public class BruceSubductionFilter {
 		System.out.println("Found "+subductionPatchIDs.size()+" subduction elements");
 		System.out.println("Found "+crustalPatchIDs.size()+" crustal elements");
 		
-		boolean includeOtherCorupturing = false;
-		
 		RuptureIdentifier coruptureIden = null;
-//		RuptureIdentifier coruptureIden = new LogicalAndRupIden(
-//				new ElementIden("Subduction", new ArrayList<>(subductionPatchIDs)),
-//				new ElementIden("Crustal", new ArrayList<>(crustalPatchIDs)));
+		if (onlyCorupturing)
+			coruptureIden = new LogicalAndRupIden(
+					new ElementIden("Subduction", new ArrayList<>(subductionPatchIDs)),
+					new ElementIden("Crustal", new ArrayList<>(crustalPatchIDs)));
 		
 		List<RSQSimEvent> events = catalog.loader().magRange(6.5, 11d).load();
 		System.out.println("Loaded "+events.size()+" events");
@@ -93,7 +109,7 @@ public class BruceSubductionFilter {
 			File outputDir = new File(catalogDir.getParentFile(), dirName);
 			Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 			
-			RSQSimFileWriter.patchFilterCatalog(events, catalog.getElements(), includePatches, includeOtherCorupturing,
+			RSQSimFileWriter.patchFilterCatalog(events, catalog.getElements(), includePatches, includeOtherCorupturingElems,
 					coruptureIden, outputDir, prefix, false, trans);
 			
 			Files.copy(paramFile, new File(outputDir, paramFile.getName()));
