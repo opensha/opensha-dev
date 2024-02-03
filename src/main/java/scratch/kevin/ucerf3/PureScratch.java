@@ -13,6 +13,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,6 +42,8 @@ import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.IntegerSampler.ExclusionIntegerSampler;
+import org.opensha.commons.data.comcat.ComcatAccessor;
+import org.opensha.commons.data.comcat.ComcatRegionAdapter;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
@@ -105,6 +108,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
+import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.ModuleArchive;
@@ -165,6 +169,7 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetai
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc.HardcodedJumpProb;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.RupCartoonGenerator;
@@ -174,6 +179,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCre
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
@@ -5239,12 +5245,99 @@ public class PureScratch {
 		System.out.println("Hello, World");
 	}
 	
+	private static void test272() throws IOException {
+		String cell = "5:6-61:57-489:493-5339:5341";
+//		String cell = "5339:5341";
+		System.out.println("Parsing "+cell);
+		
+		String[] dashSplit = cell.split("-");
+		Preconditions.checkState(dashSplit.length >= 1);
+		List<Integer> indexes = new ArrayList<>();
+		
+		for (String split : dashSplit) {
+			String[] colonSplit = split.split(":");
+			Preconditions.checkState(colonSplit.length == 2);
+			int first = Integer.parseInt(colonSplit[0]);
+			int last = Integer.parseInt(colonSplit[1]);
+			Preconditions.checkState(first != last);
+			if (first < last)
+				for (int i=first; i<=last; i++)
+					indexes.add(i);
+			else
+				for (int i=first; i>=last; i--)
+					indexes.add(i);
+		}
+		System.out.println(indexes);
+	}
+	
+	private static void test273() throws IOException {
+		TableBuilder builder = MarkdownUtils.tableBuilder();
+		
+		builder.initNewLine();
+		builder.addColumn("![Figure 22a](/assets/images/0120230122fig22a.png)");
+		builder.addColumn("![Figure 22b](/assets/images/0120230122fig22b.png)");
+		builder.finalizeLine();
+		
+		for (String line : builder.build())
+			System.out.println(line);
+	}
+	
+	private static void test274() throws IOException {
+
+		Region relm = new CaliforniaRegions.RELM_TESTING();
+		
+		ComcatAccessor comcat = new ComcatAccessor();
+		long startTime = new GregorianCalendar(2023, 0, 1).getTimeInMillis();
+		long endTime = new GregorianCalendar(2024, 0, 1).getTimeInMillis();
+		double minMag = 4.5d;
+		ObsEqkRupList events = comcat.fetchEventList(null, startTime, endTime, -10, 50d,
+				new ComcatRegionAdapter(relm), false, false, minMag, 1000, 100);
+		
+		int count = 0;
+		for (EqkRupture rup : events) {
+			if (relm.contains(rup.getHypocenterLocation())) {
+				count++;
+				System.out.println("M"+(float)rup.getMag()+" at "+rup.getHypocenterLocation());
+			}
+		}
+		System.out.println("Found "+count+" events");
+	}
+	
+	private static void test275() throws IOException {
+		Map<IDPairing, Double> idsToProbs = new HashMap<>();
+		Random r = new Random();
+		for (int i=0; i<10; i++)
+			idsToProbs.put(new IDPairing(r.nextInt(), r.nextInt()), r.nextDouble());
+		HardcodedJumpProb prob = new HardcodedJumpProb("MyName", idsToProbs, false);
+		
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		
+		String json = gson.toJson(prob, HardcodedJumpProb.class);
+		
+		System.out.println(json);
+		
+		HardcodedJumpProb parsed = gson.fromJson(json, HardcodedJumpProb.class);
+	}
+	
+	private static void test276() throws IOException {
+		Map<String, Double> idsToProbs = new HashMap<>();
+		Random r = new Random();
+		for (int i=0; i<10; i++)
+			idsToProbs.put(r.nextInt()+"", r.nextDouble());
+		
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
+		
+		String json = gson.toJson(idsToProbs, Map.class);
+		
+		System.out.println(json);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test271();
+		test276();
 	}
 
 }
