@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
-import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
 import org.opensha.sha.earthquake.ProbEqkRupture;
@@ -19,9 +18,6 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sra.gui.portfolioeal.Asset;
 import org.opensha.sra.gui.portfolioeal.PortfolioParser;
-import org.opensha.sra.vulnerability.Vulnerability;
-import org.opensha.sra.vulnerability.VulnerabilityFetcher;
-import org.opensha.sra.vulnerability.models.SimpleVulnerability;
 
 import com.google.common.base.Preconditions;
 
