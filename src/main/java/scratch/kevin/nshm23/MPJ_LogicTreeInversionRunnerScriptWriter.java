@@ -276,7 +276,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -420,10 +420,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.ModPitasPointDDW.class;
 //		dirName += "-mod_pitas_ddw";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorr.class;
-		dirName += "-dm_sampling";
-		individualRandomLevels.add(new RandomDefModSampleLevel());
-	
+//		Class<? extends InversionConfigurationFactory> factoryClass = DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorr.class;
+//		dirName += "-dm_sampling";
+//		individualRandomLevels.add(new RandomDefModSampleLevel());
 		
 		if (!factoryClass.equals(NSHM23_InvConfigFactory.class)) {
 			// try instantiate it to make sure we get any static modifiers that might change branch weights
@@ -435,27 +434,27 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			}
 		}
 		
-		levels = new ArrayList<>(levels);
-		boolean randB = true;
-		boolean randSeg = true;
-		int origSize = levels.size();
-		for (int i=levels.size(); --i>=0;) {
-			if (randB && SupraSeisBValues.class.isAssignableFrom(levels.get(i).getType()))
-				levels.remove(i);
-			if (randSeg && SegmentationModelBranchNode.class.isAssignableFrom(levels.get(i).getType()))
-				levels.remove(i);
-		}
-		Preconditions.checkState(levels.size() < origSize);
-		if (randB) {
-			samplingBranchCountMultiplier *= 5; // there were originally 5 each
-			dirName += "-randB";
-			individualRandomLevels.add(new RandomBValSampler.Level());
-		}
-		if (randSeg) {
-			samplingBranchCountMultiplier *= 5; // there were originally 5 each
-			dirName += "-randSeg";
-			individualRandomLevels.add(new RandomSegModelSampler.Level());
-		}
+//		levels = new ArrayList<>(levels);
+//		boolean randB = true;
+//		boolean randSeg = true;
+//		int origSize = levels.size();
+//		for (int i=levels.size(); --i>=0;) {
+//			if (randB && SupraSeisBValues.class.isAssignableFrom(levels.get(i).getType()))
+//				levels.remove(i);
+//			if (randSeg && SegmentationModelBranchNode.class.isAssignableFrom(levels.get(i).getType()))
+//				levels.remove(i);
+//		}
+//		Preconditions.checkState(levels.size() < origSize);
+//		if (randB) {
+//			samplingBranchCountMultiplier *= 5; // there were originally 5 each
+//			dirName += "-randB";
+//			individualRandomLevels.add(new RandomBValSampler.Level());
+//		}
+//		if (randSeg) {
+//			samplingBranchCountMultiplier *= 5; // there were originally 5 each
+//			dirName += "-randSeg";
+//			individualRandomLevels.add(new RandomSegModelSampler.Level());
+//		}
 		
 //		dirName += "-mini_one_fifth";
 //		samplingBranchCountMultiplier /= 5;
@@ -488,14 +487,15 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 //				NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1,
 //				NSHM23_FaultModels.NSHM23_v1p4,
-				NSHM23_FaultModels.NSHM23_v2,
+//				NSHM23_FaultModels.NSHM23_v2,
+				NSHM23_FaultModels.NSHM23_v3,
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
 //				NSHM23_SingleStates.UT,
 
 				// RUPTURE SETS
-				RupturePlausibilityModels.COULOMB,
+//				RupturePlausibilityModels.COULOMB, // default
 //				RupturePlausibilityModels.COULOMB_5km,
 //				RupturePlausibilityModels.AZIMUTHAL,
 //				RupturePlausibilityModels.SEGMENTED,
@@ -519,18 +519,18 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM23_ScalingRelationships.WIDTH_LIMITED_CSD,
 				
 				// SLIP ALONG RUPTURE
-				NSHM23_SlipAlongRuptureModels.UNIFORM,
+//				NSHM23_SlipAlongRuptureModels.UNIFORM,
 //				NSHM23_SlipAlongRuptureModels.TAPERED,
 //				SlipAlongRuptureModels.UNIFORM,
 //				SlipAlongRuptureModels.TAPERED,
 				
 				// SUB-SECT CONSTRAINT
-				SubSectConstraintModels.TOT_NUCL_RATE,
+//				SubSectConstraintModels.TOT_NUCL_RATE, // default
 //				SubSectConstraintModels.NUCL_MFD,
 				
 				// SUB-SEIS MO REDUCTION
 //				SubSeisMoRateReductions.SUB_B_1,
-				SubSeisMoRateReductions.NONE,
+//				SubSeisMoRateReductions.NONE, // default
 //				SubSeisMoRateReductions.SYSTEM_AVG,
 //				SubSeisMoRateReductions.SYSTEM_AVG_SUB_B_1,
 				
@@ -557,7 +557,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				SegmentationMFD_Adjustment.NONE,
 //				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
 //				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_SINGLE_ITER,
-				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG,
+//				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG, // default
 //				SegmentationMFD_Adjustment.CAPPED_REDIST,
 //				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED,
 //				SegmentationMFD_Adjustment.GREEDY,
