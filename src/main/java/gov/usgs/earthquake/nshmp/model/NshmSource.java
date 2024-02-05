@@ -25,13 +25,13 @@ public abstract class NshmSource extends ProbEqkSource {
   }
 
   public abstract void setDuration(double duration);
-  
+
   public void setName(String name) {
-	  this.name = name;
+    this.name = name;
   }
-  
+
   public int getNSHM_ID() {
-	  return delegate.id();
+    return delegate.id();
   }
 
   public Source delegate() {
@@ -57,9 +57,9 @@ public abstract class NshmSource extends ProbEqkSource {
   public RuptureSurface getSourceSurface() {
     throw new UnsupportedOperationException();
   }
-  
+
   public Source getDelegate() {
-	  return delegate;
+    return delegate;
   }
 
   static class Fault extends NshmSource {
