@@ -5331,13 +5331,55 @@ public class PureScratch {
 		
 		System.out.println(json);
 	}
+	private static void test277() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2024_02_02-nshm23_branches-NSHM23_v3/true_mean_solution.zip"));
+		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.updateForecast();
+		
+		int numFSSRups = 0;
+		int numGriddedRups = 0;
+		int numFSSSources = erf.getNumFaultSystemSources();
+		for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
+			int numRups = erf.getNumRuptures(sourceID);
+			if (sourceID<numFSSSources)
+				numFSSRups += numRups;
+			else
+				numGriddedRups += numRups;
+		}
+		int totRups = numFSSRups + numGriddedRups;
+		System.out.println(totRups+" ruptures ("+numFSSRups+" fault, "+numGriddedRups+" gridded)");
+		
+		int numPerPeriod = 51;
+		int numPeriods = 2;
+		
+		int exceedPointsPerRup = numPeriods * numPerPeriod;
+		long bytesPerRup = exceedPointsPerRup * 8l;
+		
+		long totBytes = bytesPerRup*totRups;
+		long totMB = totBytes / (1024l * 1024l);
+		double totGB = (double)totMB / 1024d;
+		
+		long faultBytes = bytesPerRup*numFSSRups;
+		long faultMB = faultBytes / (1024l * 1024l);
+		double faultGB = (double)faultMB / 1024d;
+		
+		long gridBytes = bytesPerRup*numGriddedRups;
+		long gridMB = gridBytes / (1024l * 1024l);
+		double gridGB = (double)gridMB / 1024d;
+		
+		System.out.println("Total memory:\t"+totMB+" MB = "+(float)totGB+" GB");
+		System.out.println("Fault memory:\t"+faultMB+" MB = "+(float)faultGB+" GB");
+		System.out.println("Grid memory:\t"+gridMB+" MB = "+(float)gridGB+" GB");
+	}
 	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test276();
+		test277();
 	}
 
 }

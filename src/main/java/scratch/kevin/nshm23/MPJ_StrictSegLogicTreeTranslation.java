@@ -100,7 +100,7 @@ public class MPJ_StrictSegLogicTreeTranslation extends MPJTaskCalculator {
 	private class AsyncLogicTreeWriter extends AbstractAsyncLogicTreeWriter {
 		
 		public AsyncLogicTreeWriter(SolutionProcessor processor) {
-			super(outputDir, processor, outputTree.getWeightProvider());
+			super(outputDir, processor, outputTree);
 		}
 
 		@Override

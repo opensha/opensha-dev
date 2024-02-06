@@ -46,6 +46,7 @@ import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.CoolingSc
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.GenerationFunctionType;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.sa.params.NonnegativityConstraintType;
 import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLevel;
+import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.MPJ_GridSeisBranchBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.DistDependSegShift;
@@ -142,8 +143,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		List<RandomlySampledLevel<?>> individualRandomLevels = new ArrayList<>();
 		int samplingBranchCountMultiplier = 1;
 
-		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2022_11_11";
+//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+		String dirName = "2024_02_02";
 		
 		/*
 		 * UCERF3 logic tree
@@ -878,6 +879,18 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			script = mpjWrite.buildScript(MPJ_GridSeisBranchBuilder.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "batch_grid_calc.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 			
+			String griddedBAName = null;
+			if (baFiles != null && baFiles.size() == 1)
+				// just one BA solution file, use that for gridded
+				griddedBAName = baFiles.get(0).getName().replace(".zip", "")+"_gridded.zip"; 
+			
+			// true mean job
+			argz = resultsPath+".zip true_mean_solution.zip";
+			if (griddedBAName != null)
+				argz += dirPath+"/"+griddedBAName;
+			script = javaWrite.buildScript(TrueMeanSolutionCreator.class.getName(), argz);
+			pbsWrite.writeScript(new File(localDir, "true_mean_builder.slurm"), script, mins, 1, remoteTotalThreads, queue);
+			
 			// now add hazard calc jobs with gridded
 			for (int i=0; i<4; i++) {
 //			for (boolean avgGridded : new boolean[] {true, false}) {
@@ -887,11 +900,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --output-file "+resultsPath+"_hazard_avg_gridded.zip";
 					argz += " --output-dir "+resultsPath;
 					argz += " --gridded-seis INCLUDE";
-					if (baFiles != null && baFiles.size() == 1) {
+					if (griddedBAName != null)
 						// just one BA solution file, use that for gridded
-						String griddedBAName = baFiles.get(0).getName().replace(".zip", "")+"_gridded.zip"; 
 						argz += " --external-grid-prov "+dirPath+"/"+griddedBAName;
-					}
 					jobFile = new File(localDir, "batch_hazard_avg_gridded.slurm");
 				} else if (i == 1) {
 //					if (averageOnly)
@@ -950,6 +961,11 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			script = javaWrite.buildScript(FaultAndGriddedSeparateTreeHazardCombiner.class.getName(), argz);
 			
 			pbsWrite.writeScript(new File(localDir, "fault_grid_hazard_combine.slurm"), script, mins, 1, remoteTotalThreads, queue);
+		} else {
+			// true mean without gridded
+			argz = resultsPath+".zip true_mean_solution.zip";
+			script = javaWrite.buildScript(TrueMeanSolutionCreator.class.getName(), argz);
+			pbsWrite.writeScript(new File(localDir, "true_mean_builder.slurm"), script, mins, 1, remoteTotalThreads, queue);
 		}
 		
 		// site hazard job

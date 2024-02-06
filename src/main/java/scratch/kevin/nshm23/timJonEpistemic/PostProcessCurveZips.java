@@ -157,7 +157,7 @@ public class PostProcessCurveZips {
 								LogicTreeBranch<?> branch = tree.getBranch(branchIndex);
 								NGAW2_LogicTreeNode gmmNode = branch.requireValue(NGAW2_LogicTreeNode.class);
 								
-								if (gmmNode.getRef() == gmmRef) {
+								if (gmmNode.getSupplier() == gmmRef) {
 									weights.add(tree.getBranchWeight(branchIndex));
 									
 									if (xVals == null) {
