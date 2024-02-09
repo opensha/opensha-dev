@@ -27,6 +27,7 @@ import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
+import org.opensha.sha.calc.disaggregation.DisaggregationCalculatorAPI;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.imr.AttenRelRef;
@@ -845,7 +846,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 
 		private final double maxZAxis = Double.NaN;
 		
-		private DisaggregationCalculator disaggCalc;
+		private DisaggregationCalculatorAPI disaggCalc;
 		
 		public DisaggCalc(double minMag) {
 			this.minMag = minMag;
@@ -856,7 +857,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			
 			disaggCalc = new DisaggregationCalculator();
 			disaggCalc.setMagRange(minMag, numMags, deltaMag);
-			disaggCalc.setNumSourcestoShow(numSourcesForDisag);
+			disaggCalc.setNumSourcesToShow(numSourcesForDisag);
 			disaggCalc.setShowDistances(showSourceDistances);
 		}
 		

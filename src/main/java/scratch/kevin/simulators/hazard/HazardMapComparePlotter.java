@@ -69,6 +69,7 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
+import org.opensha.sha.calc.disaggregation.DisaggregationCalculatorAPI;
 import org.opensha.sha.calc.hazardMap.BinaryHazardCurveReader;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
 import org.opensha.sha.earthquake.AbstractERF;
@@ -1304,7 +1305,7 @@ public class HazardMapComparePlotter {
 				public void run() {
 					try {
 						HazardCurveCalculator curveCalc = new HazardCurveCalculator();
-						DisaggregationCalculator disaggCalc = new DisaggregationCalculator();
+						DisaggregationCalculatorAPI disaggCalc = new DisaggregationCalculator();
 						
 						System.out.println("Disaggregating for "+siteName);
 						
@@ -1348,7 +1349,7 @@ public class HazardMapComparePlotter {
 
 								System.out.println("Disaggregating for prob="+prob+", iml="+iml);
 								disaggCalc.setMagRange(minMag, numMags, deltaMag);
-								disaggCalc.setNumSourcestoShow(numSourcesForDisag);
+								disaggCalc.setNumSourcesToShow(numSourcesForDisag);
 								disaggCalc.setShowDistances(showSourceDistances);
 								boolean success = disaggCalc.disaggregate(Math.log(iml), site, gmpe, erf, disaggParams);
 								if (!success)
@@ -1372,11 +1373,11 @@ public class HazardMapComparePlotter {
 								File pngFile = new File(outputFile.getAbsolutePath()+".png");
 								DisaggregationPlotViewerWindow.saveAsPDF(
 										address+DisaggregationCalculator.DISAGGREGATION_PLOT_PDF_NAME,
-										pdfFile.getAbsolutePath(), meanModeText, metadataText, binDataText, sourceDataText);
+										pdfFile.getAbsolutePath(), meanModeText, metadataText, binDataText, sourceDataText, null);
 								FileUtils.downloadURL(address+DisaggregationCalculator.DISAGGREGATION_PLOT_PNG_NAME,
 										pngFile);
 								DisaggregationPlotViewerWindow.saveAsTXT(outputFile.getAbsolutePath()+".txt", meanModeText, metadataText,
-										binDataText, sourceDataText);
+										binDataText, sourceDataText, null);
 								
 								if (rs)
 									rsPNGs.add(pngFile);
