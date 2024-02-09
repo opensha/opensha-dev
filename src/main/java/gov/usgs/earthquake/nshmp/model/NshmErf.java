@@ -45,12 +45,12 @@ public class NshmErf extends AbstractERF {
   private final boolean faults;
 
   public NshmErf(Path path, Set<TectonicRegionType> trts,
-		  IncludeBackgroundOption gridOption) {
+      IncludeBackgroundOption gridOption) {
     this(HazardModel.load(path), trts, gridOption);
   }
 
   public NshmErf(HazardModel model, Set<TectonicRegionType> trts,
-		  IncludeBackgroundOption gridOption) {
+      IncludeBackgroundOption gridOption) {
     this.model = model;
     allSources = new ArrayList<>();
     sourceMap = MultimapBuilder
@@ -63,8 +63,8 @@ public class NshmErf extends AbstractERF {
     subInterface = trts.contains(SUBDUCTION_INTERFACE) || trts.isEmpty();
     subSlab = trts.contains(SUBDUCTION_SLAB) || trts.isEmpty();
     volcanic = trts.contains(VOLCANIC) || trts.isEmpty();
-    this.grid = gridOption == IncludeBackgroundOption.INCLUDE
-    		|| gridOption == IncludeBackgroundOption.ONLY;
+    this.grid = gridOption == IncludeBackgroundOption.INCLUDE ||
+        gridOption == IncludeBackgroundOption.ONLY;
     this.faults = gridOption != IncludeBackgroundOption.ONLY;
 
     init();
@@ -80,13 +80,13 @@ public class NshmErf extends AbstractERF {
     // nshmp-haz initializers
     Multimap<TectonicSetting, SourceTree> trees = model.trees();
     for (Entry<TectonicSetting, SourceTree> entry : trees.entries()) {
-      
+
       TectonicSetting setting = entry.getKey();
       SourceTree tree = entry.getValue();
       SourceType type = tree.type();
-      
+
       if (setting == TectonicSetting.SUBDUCTION) {
-        if (type == SourceType.INTERFACE && !subInterface ) {
+        if (type == SourceType.INTERFACE && !subInterface) {
           continue;
         }
         if (type == SourceType.SLAB && !subSlab) {
@@ -125,29 +125,29 @@ public class NshmErf extends AbstractERF {
     tree.stream()
         .map(branch -> sourcesFromBranch(branch, duration))
         .forEach(sources::addAll);
-    
-//    tree.stream()
-//        .map(branch -> {
-//          List<NshmSource> brSrcs = sourcesFromBranch(branch, duration);
-//          if (brSrcs.size() > 0) {
-//            System.out.println("type: " + branch.value().type());
-//          }
-//          return brSrcs;
-//        })
-//        .forEach(list -> {
-////          if (list.size() > 0) {
-////            System.out.println("br: " + list.get(0).getTectonicRegionType());
-////          }
-//          sources.addAll(list);
-//        });
-    
+
+    // tree.stream()
+    // .map(branch -> {
+    // List<NshmSource> brSrcs = sourcesFromBranch(branch, duration);
+    // if (brSrcs.size() > 0) {
+    // System.out.println("type: " + branch.value().type());
+    // }
+    // return brSrcs;
+    // })
+    // .forEach(list -> {
+    //// if (list.size() > 0) {
+    //// System.out.println("br: " + list.get(0).getTectonicRegionType());
+    //// }
+    // sources.addAll(list);
+    // });
+
     sources.sort(new Comparator<NshmSource>() {
-    	@Override
-    	public int compare(NshmSource o1, NshmSource o2) {
-    	return Integer.compare(o1.getNSHM_ID(), o2.getNSHM_ID());
-    	}
+      @Override
+      public int compare(NshmSource o1, NshmSource o2) {
+        return Integer.compare(o1.getNSHM_ID(), o2.getNSHM_ID());
+      }
     });
-    
+
     return sources;
   }
 
@@ -166,11 +166,18 @@ public class NshmErf extends AbstractERF {
             ? pointRuptureSetToSources(grs, weight, duration)
             : List.of();
 
+      case ZONE:
+        ZoneRuptureSet zrs = (ZoneRuptureSet) ruptureSet;
+        return (grid)
+            ? pointRuptureSetToSources(zrs, weight, duration)
+            : List.of();
+
       case FAULT_CLUSTER:
         ClusterRuptureSet crs = (ClusterRuptureSet) ruptureSet;
         return (faults)
             ? clusterRuptureSetToSources(crs, weight, duration)
             : List.of();
+
       case FAULT_SYSTEM:
         SystemRuptureSet srs = (SystemRuptureSet) ruptureSet;
         return (faults)
@@ -195,7 +202,7 @@ public class NshmErf extends AbstractERF {
   }
 
   private static List<NshmSource> pointRuptureSetToSources(
-      GridRuptureSet ruptureSet,
+      RuptureSet<PointSource> ruptureSet,
       double weight,
       double duration) {
 
