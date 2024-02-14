@@ -52,12 +52,13 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 public class SingleSiteVerificationTest {
 
 	public static void main(String[] args) throws IOException {
-		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.a.3");
+		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.b.4");
 		File solFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2022_11_10-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
-				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+//				+ "2022_11_10-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
+//				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+				+ "2024_02_02-nshm23_branches-NSHM23_v3/results_NSHM23_v3_branch_averaged_gridded.zip");
 		File outputDir = new File("/tmp/wrapper_tests");
-		Location testLoc = new Location(39, -122);
+		Location testLoc = new Location(42.5, -115);
 //		Location testLoc = new Location(37.5, -110);
 		
 		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;

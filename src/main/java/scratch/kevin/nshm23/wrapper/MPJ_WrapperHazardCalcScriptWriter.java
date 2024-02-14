@@ -29,20 +29,21 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 	public static void main(String[] args) throws IOException {
 		File localMainDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions");
 		
-		int nodes = 22;
+		int nodes = 37;
 		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
-		boolean subduction = false;
-		boolean active = false;
+		boolean subduction = true;
+		boolean active = true;
 		boolean stable = true;
 		
-		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
+//		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;
+		AttenRelRef gmpeRef = AttenRelRef.WRAPPED_ASK_2014;
 //		AttenRelRef gmpeRef = AttenRelRef.NGAWest_2014_AVG;
 		
 //		String erfPrefix = "nshm18";
 //		String tagName = "nshm-conus-5.3.0"; // NSHM18
 		
 		String erfPrefix = "nshm23-wrapped";
-		String tagName = "nshm-conus-6.0.0"; // NSHM23 draft
+		String tagName = "nshm-conus-6.b.4"; // NSHM23 draft
 		
 //		String erfPrefix = "nshm23-wrapped-noZone";
 //		String tagName = "nshm-conus-6.0.0-noZone"; // NSHM23 without zone sources
@@ -54,13 +55,14 @@ public class MPJ_WrapperHazardCalcScriptWriter {
 //		String regName = "wus";
 //		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		
-		double gridSpacing = 0.1d; int mins = 2000;
-		String regName = "ceus";
-		Region region = NSHM23_RegionLoader.AnalysisRegions.CONUS_EAST.load();
+//		double gridSpacing = 0.1d; int mins = 2000;
+//		String regName = "ceus";
+//		Region region = NSHM23_RegionLoader.AnalysisRegions.CONUS_EAST.load();
 		
 //		double gridSpacing = 0.2d; int mins = 2000;
-//		String regName = "conus";
-//		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
+		double gridSpacing = 0.1d; int mins = 4000;
+		String regName = "conus";
+		Region region = NSHM23_RegionLoader.loadFullConterminousUS();
 		
 		String extGridProvPath = null;
 //		String extGridProvPath = "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/"

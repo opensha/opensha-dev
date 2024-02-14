@@ -37,6 +37,9 @@ import scratch.kevin.nshm23.SimpleSmoothHazardMapCalc;
 import scratch.kevin.nshm23.SingleSiteHazardAndDataComparisonPageGen;
 import scratch.kevin.nshm23.SingleSiteHazardAndDataComparisonPageGen.RegionalParticipationResult;
 
+/**
+ * This compares the wrapper for one model to the wrapper for another model
+ */
 public class WrapperComparisonPageGen {
 
 	public static void main(String[] args) throws IOException {

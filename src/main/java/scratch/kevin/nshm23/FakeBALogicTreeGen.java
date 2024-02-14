@@ -129,29 +129,30 @@ public class FakeBALogicTreeGen {
 		/*
 		 * simple branch averaged
 		 */
-//		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-//				+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-//		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
+		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
+				+ "2024_02_02-nshm23_branches-NSHM23_v3");
+		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
+		nodes.add(NSHM23_FaultModels.NSHM23_v3);
+//		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "results_NSHM23_v3_branch_averaged_gridded.zip")));
+		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "true_mean_solution.zip")));
+		
+		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
+		stripRupMFDs = false;
+//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only");
+//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-with_ceus");
+		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-true_mean");
+//		stripRupMFDs = true;
+////		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-no_mfds");
+//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-true_mean-no_mfds");
+		
 //		nodes.add(NSHM23_FaultModels.NSHM23_v2);
-//		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip")));
-////		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded_with_ceus.zip")));
-////		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "true_mean_solution.zip")));
+//		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "node_branch_averaged/SegModel_Classic.zip")));
 //		
 //		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
-//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only");
-////		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-with_ceus");
-////		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-true_mean");
-//		stripRupMFDs = false;
-////		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-true_mean-with_mfds");
-//		
-////		nodes.add(NSHM23_FaultModels.NSHM23_v2);
-////		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "node_branch_averaged/SegModel_Classic.zip")));
-////		
-////		SolutionProcessor processor = new NSHM23_InvConfigFactory.NSHM23SolProcessor();
-////		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-classic_only");
-//		
-//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-//		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
+//		File outputDir = new File(inputDir.getParentFile(), inputDir.getName()+"-ba_only-classic_only");
+		
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
 		
 //		File inputDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 //				+ "2023_06_16-nshm23-nucl_match_ba-all_ba-AVERAGE_NSHM23_Avg_AvgSupraB_NoRed_AverageFitPaleo_AvgSeg");
@@ -168,28 +169,30 @@ public class FakeBALogicTreeGen {
 		/*
 		 * CEUS FSS tests
 		 */
-		File invsDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/");
-		File inputDir = new File("/data/kevin/nshm23/ceus_converted_fss");
-		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
-		nodes.add(NSHM23_FaultModels.NSHM23_v2);
-		SolutionProcessor processor = null;
+//		File invsDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/");
+//		File inputDir = new File("/data/kevin/nshm23/ceus_converted_fss");
+//		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
+//		nodes.add(NSHM23_FaultModels.NSHM23_v2);
+//		SolutionProcessor processor = null;
+//		
+////		FaultModelEnum fm = FaultModelEnum.BOTH;
+////		FaultModelEnum fm = FaultModelEnum.ALTERNATE;
+//		FaultModelEnum fm = FaultModelEnum.PREFERRED;
+//		
+////		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+//		String dirName = "2023_11_15";
+//		dirName += "-ceus_fss-"+fm.name();
+//		
+//		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "sol_"+fm.name()+"_merged.zip")));
+//		File outputDir = new File(invsDir, dirName);
+//		
+//		Feature.write(NSHM23_RegionLoader.AnalysisRegions.CONUS_EAST.load().toFeature(),
+//				new File(outputDir, "ceus_region.geojson"));
+//		
+//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+//		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
 		
-//		FaultModelEnum fm = FaultModelEnum.BOTH;
-//		FaultModelEnum fm = FaultModelEnum.ALTERNATE;
-		FaultModelEnum fm = FaultModelEnum.PREFERRED;
-		
-//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		String dirName = "2023_11_15";
-		dirName += "-ceus_fss-"+fm.name();
-		
-		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "sol_"+fm.name()+"_merged.zip")));
-		File outputDir = new File(invsDir, dirName);
-		
-		Feature.write(NSHM23_RegionLoader.AnalysisRegions.CONUS_EAST.load().toFeature(),
-				new File(outputDir, "ceus_region.geojson"));
-		
-		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-		FileBuilder builder = new SolutionLogicTree.FileBuilder(processor, new File(outputDir, "results.zip"));
+		// DO NOT COMMENT OUT BELOW (actually build and write)
 		
 		for (int i=0; i<nodes.size(); i++) {
 			LogicTreeNode node = nodes.get(i);
