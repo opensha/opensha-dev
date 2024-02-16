@@ -94,6 +94,8 @@ public class WrapperCompareToExternal {
 					}
 				}
 				System.out.println("Matched "+rp+" with CSV column "+extCSV.get(0, closestCol));
+				Preconditions.checkState(minDiff < 5d, "RP mimatch! |ours (%s = %s) - theirs (%s)| = %s",
+						rp, rp.returnPeriod, extCSV.get(0, closestCol), minDiff);
 				
 				int numSkipped = 0;
 				int numMatched = 0;
