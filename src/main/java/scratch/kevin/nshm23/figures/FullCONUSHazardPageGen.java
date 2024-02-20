@@ -226,7 +226,7 @@ public class FullCONUSHazardPageGen {
 			sectsWithIndexes18.add(sect);
 		}
 		
-		GeographicMapMaker mapMaker = new RupSetMapMaker(NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2), gridReg);
+		GeographicMapMaker mapMaker = new RupSetMapMaker(NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.WUS_FM_v2), gridReg);
 		GeographicMapMaker mapMaker18 = new RupSetMapMaker(sectsWithIndexes18, gridReg);
 		
 		for (GeographicMapMaker map : new GeographicMapMaker[] {mapMaker, mapMaker18}) {

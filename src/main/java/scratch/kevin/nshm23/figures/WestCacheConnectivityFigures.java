@@ -64,7 +64,7 @@ public class WestCacheConnectivityFigures {
 		File outputDir = new File("/home/kevin/Documents/papers/2023_NSHM23_Inversion/figures/west_cache_conn_mfds");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
 		NSHM23_SingleStates state = NSHM23_SingleStates.UT;
 		SupraSeisBValues bVal = SupraSeisBValues.B_0p5;

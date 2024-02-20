@@ -67,7 +67,7 @@ public class InvFileDeadlockScriptWriter {
 		
 		LogicTreeNode[] required = {
 				// FAULT MODELS
-				NSHM23_FaultModels.NSHM23_v2,
+				NSHM23_FaultModels.WUS_FM_v2,
 				
 //				// SINGLE STATE
 				NSHM23_SingleStates.CA,

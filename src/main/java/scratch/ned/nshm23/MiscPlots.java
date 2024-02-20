@@ -956,7 +956,7 @@ public class MiscPlots {
 	public static double[] getSlipRates(NSHM23_DeformationModels dm) {
 		double[] valArray=null;
 		try {
-			List<? extends FaultSection> subSects =dm.build(NSHM23_FaultModels.NSHM23_v1p4);
+			List<? extends FaultSection> subSects =dm.build(NSHM23_FaultModels.WUS_FM_v1p4);
 			valArray = new double[subSects.size()];
 			for(int i=0;i<valArray.length;i++)
 				valArray[i] = subSects.get(i).getOrigAveSlipRate();
@@ -972,7 +972,7 @@ public class MiscPlots {
 		double[] subSectSR=null;
 		HashMap<String,Double> mapAveParSlipRates = new HashMap<String,Double>();
 		try {
-			List<? extends FaultSection> subSects =dm.build(NSHM23_FaultModels.NSHM23_v1p4);
+			List<? extends FaultSection> subSects =dm.build(NSHM23_FaultModels.WUS_FM_v1p4);
 			subSectSR = new double[subSects.size()];
 			for(int i=0;i<subSectSR.length;i++)
 				subSectSR[i] = subSects.get(i).getOrigAveSlipRate();

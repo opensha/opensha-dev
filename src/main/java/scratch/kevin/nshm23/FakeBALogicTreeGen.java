@@ -132,7 +132,7 @@ public class FakeBALogicTreeGen {
 		File inputDir = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 				+ "2024_02_02-nshm23_branches-NSHM23_v3");
 		LogicTreeLevel<? extends LogicTreeNode> level = NSHM23_LogicTreeBranch.FM;
-		nodes.add(NSHM23_FaultModels.NSHM23_v3);
+		nodes.add(NSHM23_FaultModels.WUS_FM_v3);
 //		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "results_NSHM23_v3_branch_averaged_gridded.zip")));
 		nodeSols.add(FaultSystemSolution.load(new File(inputDir, "true_mean_solution.zip")));
 		

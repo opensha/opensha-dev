@@ -143,8 +143,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		List<RandomlySampledLevel<?>> individualRandomLevels = new ArrayList<>();
 		int samplingBranchCountMultiplier = 1;
 
-//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		String dirName = "2024_02_02";
+		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+//		String dirName = "2024_02_02";
 		
 		/*
 		 * UCERF3 logic tree
@@ -487,9 +487,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				FaultModels.FM3_2,
 //				NSHM18_FaultModels.NSHM18_WUS_NoCA,
 //				NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1,
-//				NSHM23_FaultModels.NSHM23_v1p4,
-//				NSHM23_FaultModels.NSHM23_v2,
-				NSHM23_FaultModels.NSHM23_v3,
+//				NSHM23_FaultModels.FM_v1p4,
+//				NSHM23_FaultModels.FM_v2,
+				NSHM23_FaultModels.WUS_FM_v3,
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,

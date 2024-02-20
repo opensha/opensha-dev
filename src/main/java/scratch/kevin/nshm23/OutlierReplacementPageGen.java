@@ -68,7 +68,7 @@ public class OutlierReplacementPageGen {
 		
 		DecimalFormat oDF = new DecimalFormat("0.##");
 		
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 		
 		NSHM23_DeformationModels[] defModels = {
 				NSHM23_DeformationModels.GEOLOGIC,

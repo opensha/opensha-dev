@@ -60,7 +60,7 @@ public class SCECStatewide {
 		File outputDir = new File("/home/kevin/SCEC/2023_statewide_announcement");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 		boolean subSects = faultProbs;
 		List<? extends FaultSection> sects;
 		FaultSystemSolution sol = null;

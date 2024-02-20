@@ -43,7 +43,7 @@ public class ScalingRelCSVGen {
 		}
 		csv.addLine(header);
 		
-		for (FaultSection sect : NSHM23_FaultModels.NSHM23_v1p4.getFaultSections()) {
+		for (FaultSection sect : NSHM23_FaultModels.WUS_FM_v1p4.getFaultSections()) {
 			List<String> line = new ArrayList<>();
 			
 			line.add(sect.getSectionId()+"");

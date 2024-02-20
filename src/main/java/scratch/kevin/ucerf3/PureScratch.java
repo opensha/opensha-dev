@@ -968,7 +968,7 @@ public class PureScratch {
 	}
 	
 	private static void test127() throws IOException {
-		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v1p4);
+		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.WUS_FM_v1p4);
 		
 		FaultSectionDataWriter.writeSectionsToFile(subSects, null, new File("/tmp/nshm23_dm1p3_sub_sects.txt"), false);
 		GeoJSONFaultReader.writeFaultSections(new File("/tmp/nshm23_dm1p3_sub_sects.geojson"), subSects);
@@ -1241,7 +1241,7 @@ public class PureScratch {
 		
 		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(new BranchWeightProvider.OriginalWeights());
 		
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v1p4;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v1p4;
 //		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
 		NSHM23_DeformationModels dm = NSHM23_DeformationModels.EVANS;
 		
@@ -1328,7 +1328,7 @@ public class PureScratch {
 		Map<NSHM23_SegmentationModels, BranchAverageSolutionCreator> segBACreators = new HashMap<>();
 		BranchAverageSolutionCreator fullCreator = new BranchAverageSolutionCreator(weightProv);
 		
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v1p4;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v1p4;
 		
 		File resultsDir = new File(runDir, "results");
 		
@@ -1559,13 +1559,13 @@ public class PureScratch {
 	}
 	
 	private static void test149() throws IOException {
-		Map<Integer, FaultSection> sects1p4 = NSHM23_FaultModels.NSHM23_v1p4.getFaultSectionIDMap();
-		Map<Integer, FaultSection> sects2 = NSHM23_FaultModels.NSHM23_v2.getFaultSectionIDMap();
+		Map<Integer, FaultSection> sects1p4 = NSHM23_FaultModels.WUS_FM_v1p4.getFaultSectionIDMap();
+		Map<Integer, FaultSection> sects2 = NSHM23_FaultModels.WUS_FM_v2.getFaultSectionIDMap();
 		
 		Map<NSHM23_DeformationModels, List<? extends FaultSection>> dmSects = new HashMap<>();
 		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values())
 			if (dm.getNodeWeight(null) > 0)
-				dmSects.put(dm, dm.build(NSHM23_FaultModels.NSHM23_v1p4));
+				dmSects.put(dm, dm.build(NSHM23_FaultModels.WUS_FM_v1p4));
 		
 		for (int id : new int[] {2922, 1098}) {
 			FaultSection sect1p4 = sects1p4.get(id);
@@ -1693,7 +1693,7 @@ public class PureScratch {
 	}
 	
 	private static void test152() throws IOException {
-		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2);
+		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.WUS_FM_v2);
 		List<SectMappedUncertainDataConstraint> slipData = NSHM23_PaleoDataLoader.loadU3PaleoSlipData(subSects);
 
 		boolean applySlipRateUncertainty = true;
@@ -1832,7 +1832,7 @@ public class PureScratch {
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip");
 		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
 		
-		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(sol.getRupSet());
+		NSHM23_FaultModels.WUS_FM_v2.attachDefaultModules(sol.getRupSet());
 		
 		sol.write(new File(solFile.getParentFile(), "mod_"+solFile.getName()));
 	}
@@ -1883,12 +1883,12 @@ public class PureScratch {
 				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"));
 		
 		FaultSystemRupSet rupSet = sol.getRupSet();
-		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(rupSet);
+		NSHM23_FaultModels.WUS_FM_v2.attachDefaultModules(rupSet);
 		rupSet.getModule(RegionsOfInterest.class);
 	}
 	
 	private static void test157() throws IOException {
-		List<? extends FaultSection> allSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2);
+		List<? extends FaultSection> allSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.WUS_FM_v2);
 		System.out.println("State fractional slip std devs (geologic):");
 		for (NSHM23_SingleStates state : NSHM23_SingleStates.values()) {
 			MinMaxAveTracker track = new MinMaxAveTracker();
@@ -1992,7 +1992,7 @@ public class PureScratch {
 	}
 	
 	private static void test165() throws IOException {
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 		System.out.println(fm.getFaultSections().size()+" sections");
 		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
 		System.out.println(dm.build(fm).size()+" subsections");
@@ -2015,13 +2015,13 @@ public class PureScratch {
 			FaultSystemSolution sol = slt.forBranch(branch, process);
 			if (!process) {
 				// add ROI, etc
-				NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(sol.getRupSet());
+				NSHM23_FaultModels.WUS_FM_v2.attachDefaultModules(sol.getRupSet());
 				sol.getRupSet().addModule(AveSlipModule.forModel(sol.getRupSet(), branch.requireValue(RupSetScalingRelationship.class)));
 			}
 			baCreator.addSolution(sol, branch);
 		}
 		FaultSystemSolution ba = baCreator.build();
-		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(ba.getRupSet());
+		NSHM23_FaultModels.WUS_FM_v2.attachDefaultModules(ba.getRupSet());
 		ba.write(outputFile);
 	}
 	
@@ -2041,7 +2041,7 @@ public class PureScratch {
 	}
 	
 	private static void test168() throws IOException {
-		for (FaultSection sect : NSHM23_FaultModels.NSHM23_v2.getFaultSections()) {
+		for (FaultSection sect : NSHM23_FaultModels.WUS_FM_v2.getFaultSections()) {
 			if (sect.getAveDip() < 30) {
 				System.out.println(sect.getName()+": dip="+(float)sect.getAveDip()+"; depths=["
 						+(float)sect.getOrigAveUpperDepth()+","+(float)sect.getAveLowerDepth()+"]");
@@ -2065,7 +2065,7 @@ public class PureScratch {
 		File outputDir = new File("C:\\Users\\Kevin Milner\\Downloads");
 		List<? extends FaultSection> geoSects = DeformationModels.GEOLOGIC.build(FaultModels.FM3_1);
 		GeoJSONFaultReader.writeFaultSections(new File(outputDir, "u3_fm3_1_geol_sub_sects.geojson"), geoSects);
-		geoSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2);
+		geoSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.WUS_FM_v2);
 		GeoJSONFaultReader.writeFaultSections(new File(outputDir, "nshm23_geol_sub_sects.geojson"), geoSects);
 	}
 	
@@ -2129,7 +2129,7 @@ public class PureScratch {
 		Preconditions.checkState(!namedFaults.isEmpty(), "No named faults found");
 		NamedFaults named = new NamedFaults(null, namedFaults);
 		
-		Map<Integer, FaultSection> idMap = NSHM23_FaultModels.NSHM23_v2.getFaultSectionIDMap();
+		Map<Integer, FaultSection> idMap = NSHM23_FaultModels.WUS_FM_v2.getFaultSectionIDMap();
 		for (String name : named.getFaultNames()) {
 			System.out.println(name);
 			for (int parentID : named.getParentIDsForFault(name)) {
@@ -2199,7 +2199,7 @@ public class PureScratch {
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
 		LogicTreeNode[] required = {
 				// FAULT MODELS
-				NSHM23_FaultModels.NSHM23_v2,
+				NSHM23_FaultModels.WUS_FM_v2,
 
 				// RUPTURE SETS
 				RupturePlausibilityModels.COULOMB,
@@ -2278,7 +2278,7 @@ public class PureScratch {
 	}
 	
 	private static final void test179() throws IOException {
-		for (FaultSection sect : NSHM23_FaultModels.NSHM23_v2.getFaultSections()) {
+		for (FaultSection sect : NSHM23_FaultModels.WUS_FM_v2.getFaultSections()) {
 			boolean check = false;
 			for (Location loc : sect.getFaultTrace())
 				if (loc.lon > -110)
@@ -2348,7 +2348,7 @@ public class PureScratch {
 		// won't apply anymore, new indexing
 		sol.removeModuleInstances(BranchRegionalMFDs.class);
 		
-		NSHM23_FaultModels.NSHM23_v2.attachDefaultModules(sol.getRupSet());
+		NSHM23_FaultModels.WUS_FM_v2.attachDefaultModules(sol.getRupSet());
 		
 		sol.write(new File(solFile.getAbsolutePath().replace(".zip", "_mod.zip")));
 	}
@@ -2427,7 +2427,7 @@ public class PureScratch {
 		
 		BranchAverageSolutionCreator baCreator = new BranchAverageSolutionCreator(new BranchWeightProvider.OriginalWeights());
 		
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
 //		NSHM23_DeformationModels dm = NSHM23_DeformationModels.EVANS;
 		
@@ -2487,7 +2487,7 @@ public class PureScratch {
 	}
 	
 	private static void test190() throws IOException {
-		for (FaultSection sect : NSHM23_FaultModels.NSHM23_v2.getFaultSections()) {
+		for (FaultSection sect : NSHM23_FaultModels.WUS_FM_v2.getFaultSections()) {
 			String proxy = ((GeoJSONFaultSection)sect).getProperty("Proxy", null);
 			if (proxy != null)
 				System.out.println(sect.getName()+": proxy="+proxy);
@@ -3165,7 +3165,7 @@ public class PureScratch {
 	}
 	
 	private static void test208() throws IOException {
-		Map<Integer, List<MinisectionSlipRecord>> minis = NSHM23_DeformationModels.GEOLOGIC.getMinisections(NSHM23_FaultModels.NSHM23_v2);
+		Map<Integer, List<MinisectionSlipRecord>> minis = NSHM23_DeformationModels.GEOLOGIC.getMinisections(NSHM23_FaultModels.WUS_FM_v2);
 		MinMaxAveTracker track = new MinMaxAveTracker();
 		for (List<MinisectionSlipRecord> recs : minis.values()) {
 			for (MinisectionSlipRecord mini : recs) {
@@ -4299,7 +4299,7 @@ public class PureScratch {
 	}
 	
 	private static final void test245() throws IOException {
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 		List<NSHM23_DeformationModels> dms = new ArrayList<>();
 		List<List<? extends FaultSection>> dmSects = new ArrayList<>();
 		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values()) {
@@ -4629,7 +4629,7 @@ public class PureScratch {
 //		RupSetDeformationModel[] dms = DeformationModels.values();
 //		int parentID = 117;
 		
-		RupSetFaultModel[] fms = { NSHM23_FaultModels.NSHM23_v2 };
+		RupSetFaultModel[] fms = { NSHM23_FaultModels.WUS_FM_v2 };
 		RupSetDeformationModel[] dms = NSHM23_DeformationModels.values();
 		int parentID = 333;
 		

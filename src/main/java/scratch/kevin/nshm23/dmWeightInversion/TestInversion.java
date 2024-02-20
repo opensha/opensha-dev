@@ -27,7 +27,7 @@ public class TestInversion {
 	public static void main(String[] args) throws IOException {
 		List<double[]> dms = new ArrayList<>();
 		List<String> names = new ArrayList<>();
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 		double[] median = null;
 		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values()) {
 			if (dm == NSHM23_DeformationModels.MEDIAN) {

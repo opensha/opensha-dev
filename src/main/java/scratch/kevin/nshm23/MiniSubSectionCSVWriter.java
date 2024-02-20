@@ -20,7 +20,7 @@ import com.google.common.base.Preconditions;
 public class MiniSubSectionCSVWriter {
 
 	public static void main(String[] args) throws IOException {
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v1p4;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v1p4;
 		
 		List<? extends FaultSection> fullSects = fm.getFaultSections();
 		

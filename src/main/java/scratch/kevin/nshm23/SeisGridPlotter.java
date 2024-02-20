@@ -45,7 +45,7 @@ public class SeisGridPlotter {
 		List<String> lines = new ArrayList<>();
 
 		double maxMagOff = NSHM23_MaxMagOffFault.MAG_7p6.getMaxMagOffFault();
-		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v2);
+		List<? extends FaultSection> subSects = NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.WUS_FM_v2);
 		
 //		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
 		

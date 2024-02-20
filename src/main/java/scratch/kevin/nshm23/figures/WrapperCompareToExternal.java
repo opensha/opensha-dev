@@ -52,7 +52,7 @@ public class WrapperCompareToExternal {
 		ZipFile wrapperZip = new ZipFile(new File(wrapperCalcDir, "results_hazard.zip"));
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(gridReg);
-		mapMaker.setFaultSections(NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.NSHM23_v3));
+		mapMaker.setFaultSections(NSHM23_DeformationModels.GEOLOGIC.build(NSHM23_FaultModels.WUS_FM_v3));
 		mapMaker.setSectOutlineChar(null);
 		mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
 

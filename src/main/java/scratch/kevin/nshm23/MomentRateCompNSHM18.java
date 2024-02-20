@@ -94,7 +94,7 @@ public class MomentRateCompNSHM18 {
 		GriddedGeoDataSet nshm23 = new GriddedGeoDataSet(gridReg, false);
 		
 		NSHM23_DeformationModels dm23 = GEO_ONLY ? NSHM23_DeformationModels.GEOLOGIC : NSHM23_DeformationModels.AVERAGE;
-		List<? extends FaultSection> nshm23sects = dm23.build(NSHM23_FaultModels.NSHM23_v2);
+		List<? extends FaultSection> nshm23sects = dm23.build(NSHM23_FaultModels.WUS_FM_v2);
 		
 		addFaultMoRates(nshm23, cgr, nshm23sects, 1d);
 		
@@ -390,7 +390,7 @@ public class MomentRateCompNSHM18 {
 		GriddedGeoDataSet nshm23 = new GriddedGeoDataSet(gridReg, false);
 		
 		NSHM23_DeformationModels dm23 = GEO_ONLY ? NSHM23_DeformationModels.GEOLOGIC : NSHM23_DeformationModels.AVERAGE;
-		List<? extends FaultSection> nshm23sects = dm23.build(NSHM23_FaultModels.NSHM23_v2);
+		List<? extends FaultSection> nshm23sects = dm23.build(NSHM23_FaultModels.WUS_FM_v2);
 		
 		addFaultMoRates(nshm23, cgr, nshm23sects, 1d);
 		

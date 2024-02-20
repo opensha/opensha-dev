@@ -43,7 +43,7 @@ public class SlipZTablesBuilder {
 				NSHM23_DeformationModels.SHEN_BIRD,
 				NSHM23_DeformationModels.ZENG
 		};
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 
 		double[] origUncertZs = new double[dms.length];
 		double[] origUncertMoWeightedZs = new double[dms.length];

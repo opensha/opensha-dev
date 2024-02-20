@@ -49,7 +49,7 @@ public class DevinSlipRateCSV {
 		header.add("Start Longitude");
 		header.add("End Latitude");
 		header.add("End Longitude");
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values()) {
 			if (dm.getNodeWeight(null) > 0) {
 				dmSubSectsList.add(dm.build(fm));

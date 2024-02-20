@@ -93,7 +93,7 @@ public class SlipRateScattersPaleoSects {
 		List<DefaultXY_DataSet> zScoreScatters = new ArrayList<>();
 		NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV = Double.NaN;
 		NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV_UPPER_BOUND = Double.NaN;
-		List<? extends FaultSection> sectsFullSD = NSHM23_DeformationModels.AVERAGE.build(NSHM23_FaultModels.NSHM23_v2);
+		List<? extends FaultSection> sectsFullSD = NSHM23_DeformationModels.AVERAGE.build(NSHM23_FaultModels.WUS_FM_v2);
 		
 		for (int i=0; i<prefixes.size(); i++) {
 			String prefix = prefixes.get(i);

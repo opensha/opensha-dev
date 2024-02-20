@@ -572,7 +572,7 @@ public class SlipRateCovarianceSampler {
 	}
 
 	public static void main(String[] args) throws IOException {
-		NSHM23_FaultModels fm = NSHM23_FaultModels.NSHM23_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 //		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
 //		NSHM23_DeformationModels dm = NSHM23_DeformationModels.ZENG;
 		NSHM23_DeformationModels dm = NSHM23_DeformationModels.POLLITZ;
