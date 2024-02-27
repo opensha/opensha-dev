@@ -887,7 +887,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			// true mean job
 			argz = resultsPath+".zip true_mean_solution.zip";
 			if (griddedBAName != null)
-				argz += dirPath+"/"+griddedBAName;
+				argz += " "+dirPath+"/"+griddedBAName;
 			script = javaWrite.buildScript(TrueMeanSolutionCreator.class.getName(), argz);
 			pbsWrite.writeScript(new File(localDir, "true_mean_builder.slurm"), script, mins, 1, remoteTotalThreads, queue);
 			

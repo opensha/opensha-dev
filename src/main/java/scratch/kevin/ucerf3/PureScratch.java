@@ -111,6 +111,7 @@ import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.commons.util.modules.ModuleArchive;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.calc.HazardCurveCalculator;
@@ -5374,12 +5375,32 @@ public class PureScratch {
 		System.out.println("Grid memory:\t"+gridMB+" MB = "+(float)gridGB+" GB");
 	}
 	
+	private static void test278() throws IOException {
+		Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
+		GriddedRegion gridReg = new GriddedRegion(reg, 0.1, GriddedRegion.ANCHOR_0_0);
+		System.out.println(gridReg.getNodeCount()+" nodes");
+	}
+	
+	private static void test279() throws IOException {
+		CPT cpt = new CPT();
+		
+		cpt.add(new CPTVal(-1.5f, Color.BLUE, -0.5f, Color.BLUE));
+		cpt.add(new CPTVal(-0.5f, Color.WHITE, 0.5f, Color.WHITE));
+		cpt.add(new CPTVal(0.5f, Color.RED, 1f, Color.RED));
+		
+		cpt.setNanColor(Color.GRAY);
+		cpt.setBelowMinColor(Color.GRAY);
+		cpt.setAboveMaxColor(Color.GRAY);
+		
+		cpt.writeCPTFile(new File("/tmp/for_luis.cpt"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test277();
+		test279();
 	}
 
 }
