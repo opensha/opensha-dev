@@ -55,8 +55,22 @@ public class SlipRateCovarianceSampler {
 	private MeanPreservationAdjustment meanAdjustment = MEAN_ADJUSTMENT_DEFAULT;
 	
 	public enum MeanPreservationAdjustment {
-		CAP_SIGMA, // this preserves mean perfectly, but reduces variability when sigma is near or greater than mean
-		ADJUST_MEAN // this does a better job of preserving variability, but results in mean bias when sigma is greater than mean
+		/**
+		 * This forces random perturbations above the mean to be capped such that the maximum positive z-score is never
+		 * greater than the maximum negative z-score. In other words, large negative z-scores will always be truncated
+		 * as a slip rate can never be negative; this applies that as a two sided truncation so that, on average, the
+		 * mean is preserved. Without an adjustment you can have large positive perturbations when sigma is large that
+		 * are impossible on the lower end, resulting in mean bias.
+		 * 
+		 * The downside of this approach is that variability is not preserved.
+		 */
+		CAP_SIGMA,
+		/**
+		 * This doesn't cap positive z-scores, but rather reduces the mean slip rates such that the average value after
+		 * many samples comes out as close as possible to the original slip rate. This does a better job of preserving
+		 * variability, but can result in mean bias when sigma is greater than the mean.
+		 */
+		ADJUST_MEAN
 	}
 	
 	/*
@@ -73,6 +87,8 @@ public class SlipRateCovarianceSampler {
 	private double fractFloor = FRACT_FLOOR_DEFAULT;
 
 	private List<? extends FaultSection> refSects;
+	
+	private static int DEBUG_PARENT_SECT = -1;
 
 	public SlipRateCovarianceSampler(SectionCovarianceSampler sampler) {
 		this(sampler, sampler.getSubSects());
@@ -81,6 +97,10 @@ public class SlipRateCovarianceSampler {
 	public SlipRateCovarianceSampler(SectionCovarianceSampler sampler, List<? extends FaultSection> refSects) {
 		this.sampler = sampler;
 		this.refSects = refSects;
+	}
+	
+	public void setMeanAdjustment(MeanPreservationAdjustment meanAdjustment) {
+		this.meanAdjustment = meanAdjustment;
 	}
 	
 	public List<List<FaultSection>> buildSamples(int numSamples, RandomGenerator rng, boolean center, int interpSkip) {
@@ -135,6 +155,12 @@ public class SlipRateCovarianceSampler {
 			slipMeans[s] = sect.getOrigAveSlipRate();
 			slipSigmas[s] = sect.getOrigSlipRateStdDev();
 			slipFloors[s] = fractFloor*slipMeans[s];
+			boolean debug = DEBUG_PARENT_SECT >= 0 && sect.getParentSectionId() == DEBUG_PARENT_SECT;
+			if (debug) {
+				System.out.println("Debug for "+s+". "+sect.getSectionName());
+				System.out.println("\tmean: "+(float)slipMeans[s]);
+				System.out.println("\tsigma: "+(float)slipSigmas[s]);
+			}
 			if (meanAdjustment == MeanPreservationAdjustment.ADJUST_MEAN && slipMeans[s] > 0d) {
 				// we can skip the adjustment if mean - trunc*sigma >0
 				// if we're not applying truncation, pretend as though we are at 3 sigma
@@ -160,6 +186,7 @@ public class SlipRateCovarianceSampler {
 							double curMean = origMean;
 							double floor = slipFloors[index];
 							double sigma = slipSigmas[index];
+							double calcMean = Double.NaN;
 							for (int i=0; i<iters; i++) {
 								for (int n=0; n<samplesPerIter; n++) {
 									double z = r.nextGaussian();
@@ -169,7 +196,7 @@ public class SlipRateCovarianceSampler {
 										z = truncation;
 									slipSamples[n] = Math.max(floor, curMean + z*sigma);
 								}
-								double calcMean = StatUtils.mean(slipSamples);
+								calcMean = StatUtils.mean(slipSamples);
 								double ratio = calcMean / origMean;
 								// should never go above the original slip rate
 								curMean = Math.min(origMean, curMean / ratio);
@@ -178,9 +205,13 @@ public class SlipRateCovarianceSampler {
 							double diff = curMean - origMean;
 							
 							synchronized (SlipRateCovarianceSampler.this) {
-//								System.out.println("Adjustment for "+sect.getSectionName());
-//								System.out.println("\tOrig slip:\t"+(float)origMean+" +/- "+(float)sigma);
-//								System.out.println("\tMod slip:\t"+(float)curMean+";\tratio="+(float)ratio+";\tdiff="+(float)diff);
+								if (debug) {
+									System.out.println("Adjustment for "+sect.getSectionName());
+									System.out.println("\tOrig slip:\t"+(float)origMean+" +/- "+(float)sigma);
+									System.out.println("\tMod slip:\t"+(float)curMean+";\tratio="+(float)ratio+";\tdiff="+(float)diff);
+									System.out.println("\tLast calc mean:\t"+(float)calcMean+";\tratio="+(float)(calcMean/origMean)
+											+";\tdiff="+(float)(calcMean - origMean));
+								}
 								if (ratio < 1e-5) {
 									// just set it to zero
 									numMeanAdjToZero.increment();
@@ -231,23 +262,34 @@ public class SlipRateCovarianceSampler {
 				double origSlipRate = slipMeans[s];
 				double origStdDev = slipSigmas[s];
 				double z = sample[s];
+				boolean debug = n < 5 && DEBUG_PARENT_SECT >= 0 && modSect.getParentSectionId() == DEBUG_PARENT_SECT;
+				if (debug) {
+					System.out.println("Debug for field "+n+", sect "+s+". "+modSect.getSectionName());
+					System.out.println("\tslipRate: "+(float)origSlipRate);
+					System.out.println("\tstdDev: "+(float)origStdDev);
+					System.out.println("\tinitial z: "+(float)z);
+				}
 				if (truncation > 0d && (z > truncation || z < -truncation)) {
 					numTruncated++;
 					z = Math.max(-truncation, z);
 					z = Math.min(z, truncation);
+					if (debug) System.out.println("\truncatedZ: "+(float)z);
 				}
 				if (capSigma && origSlipRate > 0d && z > 0d) {
+					// TODO: this logic makes no sense, origSlipRate > 0 above and origSlipRate == 0 in the inner test?
 					if (origSlipRate == 0d) {
 						// for zero slip rate, cap it at +1 sigma (equivalent to what we do when sigma > mean)
 						if (z > 1d) {
 							numZerosCappedAtOneSigma++;
 							z = 1d;
+							if (debug) System.out.println("\tz set to 1 because origSlipRate is zero");
 						}
 					} else {
 						double zeroZ = -origSlipRate/origStdDev;
 						if (z > -zeroZ) {
 							// this is a higher z score than we could go negative, cap it to keep averages in tact
 							z = -zeroZ;
+							if (debug) System.out.println("\tcapped z at at the |zeroZ|: "+(float)z);
 							numCapped++;
 						}
 					}
@@ -257,11 +299,13 @@ public class SlipRateCovarianceSampler {
 				if (origStdDev > 0d) {
 					// we have a standard deviation, figure out new slip rate
 					double randSlip = origSlipRate + z*origStdDev;
+					if (debug) System.out.println("\trandSlip: "+(float)+randSlip);
 					if (randSlip < slipFloors[s]) {
 						numSetToFloor++;
 						randSlip = slipFloors[s];
 						if (randSlip == 0d)
 							numSetToZero++;
+						if (debug) System.out.println("\trandSlip set to floor: "+(float)+randSlip);
 					}
 					// TODO should this be creep reduced?
 					modSect.setAveSlipRate(randSlip);
@@ -316,6 +360,24 @@ public class SlipRateCovarianceSampler {
 					+") were capped for symmetry w.r.t zero");
 			System.out.println("\t"+avgDF.format(avgNumZerosCappedAtOneSigma)+" ("+pDF.format(avgNumZerosCappedAtOneSigma/(double)numSects)
 			+") were capped at +1 sigma due to zero mean");
+		}
+		
+		if (DEBUG_PARENT_SECT >= 0) {
+			for (int s=0; s<numSects; s++) {
+				FaultSection sect = refSects.get(s);
+				if (sect.getParentSectionId() == DEBUG_PARENT_SECT) {
+					System.out.println("Final slip rate stats for "+s+". "+sect.getSectionName());
+					double[] sectSlips = new double[ret.size()];
+					for (int n=0; n<ret.size(); n++)
+						sectSlips[n] = ret.get(n).get(s).getOrigAveSlipRate();
+					double origMean = sect.getOrigAveSlipRate();
+					double finalMean = StatUtils.mean(sectSlips);
+					System.out.println("\tOrig mean: "+(float)origMean);
+					System.out.println("\tMean slip: "+finalMean);
+					System.out.println("\tRatio="+(float)(finalMean/origMean)+";\tdiff="+(float)(finalMean-origMean));
+					System.out.println("\tSlip range: ["+StatUtils.min(sectSlips)+", "+StatUtils.max(sectSlips)+"]");
+				}
+			}
 		}
 		
 		this.prevSamples = samples;
@@ -574,8 +636,8 @@ public class SlipRateCovarianceSampler {
 	public static void main(String[] args) throws IOException {
 		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
 //		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
-//		NSHM23_DeformationModels dm = NSHM23_DeformationModels.ZENG;
-		NSHM23_DeformationModels dm = NSHM23_DeformationModels.POLLITZ;
+		NSHM23_DeformationModels dm = NSHM23_DeformationModels.ZENG;
+//		NSHM23_DeformationModels dm = NSHM23_DeformationModels.POLLITZ;
 //		NSHM23_DeformationModels dm = NSHM23_DeformationModels.EVANS;
 //		NSHM23_DeformationModels dm = NSHM23_DeformationModels.SHEN_BIRD;
 		
@@ -587,6 +649,8 @@ public class SlipRateCovarianceSampler {
 		int interpSkip = 0;
 		
 		boolean ignoreCache = false;
+		
+		DEBUG_PARENT_SECT = 2102;
 		
 		// disable the upper bound
 		NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV_UPPER_BOUND = 0d;

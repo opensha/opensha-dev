@@ -277,7 +277,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -424,6 +424,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Class<? extends InversionConfigurationFactory> factoryClass = DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorr.class;
 //		dirName += "-dm_sampling";
 //		individualRandomLevels.add(new RandomDefModSampleLevel());
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma.class;
+		dirName += "-dm_sampling_cap_sigma";
+		individualRandomLevels.add(new RandomDefModSampleLevel());
 		
 		if (!factoryClass.equals(NSHM23_InvConfigFactory.class)) {
 			// try instantiate it to make sure we get any static modifiers that might change branch weights

@@ -14,6 +14,7 @@ import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfiguration;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.InversionConfigurationFactory;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.Inversions;
@@ -44,6 +45,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.Random
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver.SpreadingMethod;
@@ -54,6 +56,9 @@ import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.inversion.U3InversionConfigFactory;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
+import scratch.kevin.nshm23.dmCovarianceTests.DefModSamplingEnabledInvConfig;
+import scratch.kevin.nshm23.dmCovarianceTests.RandomDefModSampleLevel;
+import scratch.kevin.nshm23.dmCovarianceTests.SectionCovarianceSampler;
 
 public class HardcodedInversionFactoryRunner {
 
@@ -110,14 +115,16 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-nshm23-full_sys-prev_weights";
 //		NSHM23_PaleoDataLoader.INCLUDE_U3_PALEO_SLIP = false;
 //		dirName += "-no_paleo_slip";
-		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-		dirName += "-nshm23";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+//		dirName += "-nshm23";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.PaleoSlipInequality();
 //		dirName += "-nshm23-paleo_slip_ineq";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
 //		dirName += "-nshm23-new_paleo";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.MatchFullBA();
 //		dirName += "-nshm23-nucl_match_ba";
+		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
+		dirName += "-nshm23-dm_sample_cap_sigma";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
@@ -129,39 +136,50 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
 //		branch = branch.copy();
 		
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+//		levels = new ArrayList<>(levels);
+//		boolean randB = true;
+//		boolean randSeg = true;
+//		int origSize = levels.size();
+//		List<LogicTreeNode> values = new ArrayList<>();
+//		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT)
+//			values.add(node);
+//		for (int i=levels.size(); --i>=0;) {
+//			if (randB && SupraSeisBValues.class.isAssignableFrom(levels.get(i).getType())) {
+//				levels.remove(i);
+//				values.remove(i);
+//			}
+//			if (randSeg && SegmentationModelBranchNode.class.isAssignableFrom(levels.get(i).getType())) {
+//				levels.remove(i);
+//				values.remove(i);
+//			}
+//		}
+//		Preconditions.checkState(levels.size() < origSize);
+//		if (randB) {
+//			dirName += "-randB";
+//			RandomBValSampler.Level level = new RandomBValSampler.Level(1);
+//			levels.add(level);
+//			values.add(level.getNodes().get(0));
+//		}
+//		if (randSeg) {
+//			dirName += "-randSeg";
+//			RandomSegModelSampler.Level level = new RandomSegModelSampler.Level(1);
+//			levels.add(level);
+//			values.add(level.getNodes().get(0));
+//		}
+//		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels, values);
+//		branch.setValue(NSHM23_DeformationModels.EVANS);
+		
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
 		levels = new ArrayList<>(levels);
-		boolean randB = true;
-		boolean randSeg = true;
-		int origSize = levels.size();
 		List<LogicTreeNode> values = new ArrayList<>();
 		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT)
 			values.add(node);
-		for (int i=levels.size(); --i>=0;) {
-			if (randB && SupraSeisBValues.class.isAssignableFrom(levels.get(i).getType())) {
-				levels.remove(i);
-				values.remove(i);
-			}
-			if (randSeg && SegmentationModelBranchNode.class.isAssignableFrom(levels.get(i).getType())) {
-				levels.remove(i);
-				values.remove(i);
-			}
-		}
-		Preconditions.checkState(levels.size() < origSize);
-		if (randB) {
-			dirName += "-randB";
-			RandomBValSampler.Level level = new RandomBValSampler.Level(1);
-			levels.add(level);
-			values.add(level.getNodes().get(0));
-		}
-		if (randSeg) {
-			dirName += "-randSeg";
-			RandomSegModelSampler.Level level = new RandomSegModelSampler.Level(1);
-			levels.add(level);
-			values.add(level.getNodes().get(0));
-		}
+		levels.add(new RandomDefModSampleLevel(1));
+		values.add(levels.get(levels.size()-1).getNodes().get(0));
 		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels, values);
-		branch.setValue(NSHM23_DeformationModels.EVANS);
+		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
+		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		
 		// all branch averaged
 //		dirName += "-all_ba";

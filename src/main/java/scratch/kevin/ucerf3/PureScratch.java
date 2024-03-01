@@ -5395,12 +5395,17 @@ public class PureScratch {
 		cpt.writeCPTFile(new File("/tmp/for_luis.cpt"));
 	}
 	
+	private static void test280() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/solution.zip"));
+		sol.getModule(LogicTreeBranch.class);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test279();
+		test280();
 	}
 
 }

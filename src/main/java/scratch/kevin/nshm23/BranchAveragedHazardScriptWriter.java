@@ -125,9 +125,9 @@ public class BranchAveragedHazardScriptWriter {
 				
 				int maxDispatch;
 				if (gridReg.getNodeCount() > 50000)
-					maxDispatch = 1000;
+					maxDispatch = Integer.max(remoteTotalThreads*20, 1000);
 				else if (gridReg.getNodeCount() > 10000)
-					maxDispatch = 500;
+					maxDispatch = Integer.max(remoteTotalThreads*10, 500);
 				else if (gridReg.getNodeCount() > 5000)
 					maxDispatch = remoteTotalThreads*5;
 				else

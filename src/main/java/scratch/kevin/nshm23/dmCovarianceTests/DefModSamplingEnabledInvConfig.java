@@ -22,10 +22,12 @@ import org.opensha.sha.faultSurface.FaultSection;
 import com.google.common.base.Preconditions;
 
 import scratch.kevin.nshm23.dmCovarianceTests.SectionCovarianceSampler.CachedDecomposition;
+import scratch.kevin.nshm23.dmCovarianceTests.SlipRateCovarianceSampler.MeanPreservationAdjustment;
 
 public abstract class DefModSamplingEnabledInvConfig extends NSHM23_InvConfigFactory {
 	
 	protected int interpSkip;
+	protected MeanPreservationAdjustment meanAdj = SlipRateCovarianceSampler.MEAN_ADJUSTMENT_DEFAULT;
 	
 	private abstract static class PreCachedCorrConfig extends DefModSamplingEnabledInvConfig {
 		
@@ -127,6 +129,23 @@ public abstract class DefModSamplingEnabledInvConfig extends NSHM23_InvConfigFac
 		
 	}
 	
+	public static class ConnDistB0p5MidSegCorrCapSigma extends AbstractConnDistBValSegCorr {
+		
+		private static int INTERP_SKIP = 0;
+		private static double B_VAL = 0.5;
+		private static NSHM23_SegmentationModels SEG_MODEL = NSHM23_SegmentationModels.MID;
+		private static double MAX_DIST = 200d;
+		private static double ZERO_DIST_COEFF = 0.95;
+		private static double NEG_CORR_MAX_DIST = 30d;
+		private static boolean FROM_MFDS = true;
+		
+		public ConnDistB0p5MidSegCorrCapSigma() {
+			super(INTERP_SKIP, B_VAL, SEG_MODEL, MAX_DIST, ZERO_DIST_COEFF, NEG_CORR_MAX_DIST, FROM_MFDS);
+			this.meanAdj = MeanPreservationAdjustment.CAP_SIGMA;
+		}
+		
+	}
+	
 	protected DefModSamplingEnabledInvConfig(int interpSkip) {
 		this.interpSkip = interpSkip;
 	}
@@ -194,6 +213,7 @@ public abstract class DefModSamplingEnabledInvConfig extends NSHM23_InvConfigFac
 		
 		SectionCovarianceSampler sampler = getCovarianceSampler(rupSet, fm, origStdDevSects);
 		SlipRateCovarianceSampler slipSampler = new SlipRateCovarianceSampler(sampler, origStdDevSects);
+		slipSampler.setMeanAdjustment(meanAdj);
 		List<FaultSection> sampledSects = slipSampler.buildSample(new Well19937c(sample.getSeed()), interpSkip);
 		List<FaultSection> ret = new ArrayList<>();
 		for (int s=0; s<refSects.size(); s++) {

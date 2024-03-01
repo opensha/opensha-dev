@@ -26,12 +26,14 @@ public class RewriteExternalHazard {
 		File invsDir = new File("/data/kevin/nshm23/batch_inversions");
 		
 		File extCalcDir = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/ext_hazard_calcs/"
-//				+ "conus-6b4-nshmp-haz-grid_smooth_OFF-0p1-vs760-20240213-bbc02463b2e1ff/vs30-760");
-//		File outputDir = new File(invsDir, "2024_02_13-nshmp-haz-external-conus-6b4-ask2014-vs760-grid_smooth_OFF");
-				+ "conus-6b4-nshmp-haz-grid_smooth_optimize_OFF-0p1-vs760-20240213-195bddb0d73730/vs30-760");
-		File outputDir = new File(invsDir, "2024_02_15-nshmp-haz-external-conus-6b4-ask2014-vs760-grid_smooth_optimize_OFF");
+				+ "conus-6b4-nshmp-haz-grid_smooth_OFF-0p1-vs760-20240229-29f879848dc127/vs30-760");
+		File outputDir = new File(invsDir, "2024_02_29-nshmp-haz-external-conus-6b4-ask2014-vs760-grid_smooth_OFF");
+//				+ "conus-6b4-nshmp-haz-grid_smooth_optimize_OFF-0p1-vs760-20240213-195bddb0d73730/vs30-760");
+//		File outputDir = new File(invsDir, "2024_02_15-nshmp-haz-external-conus-6b4-ask2014-vs760-grid_smooth_optimize_OFF");
 //				+ "conus-6b4-nshmp-haz-0p1-vs760-20240208-afaff93cd918f5/vs30-760");
 //		File outputDir = new File(invsDir, "2024_02_08-nshmp-haz-external-conus-6b4-ask2014-vs760");
+//				+ "conus-6b4-nshmp-haz-0p1-vs760-20240228-ef0f647c24c8d1/vs30-760");
+//		File outputDir = new File(invsDir, "2024_02_28-nshmp-haz-external-conus-6b4-ask2014-vs760");
 		
 		GriddedRegion gridReg = new GriddedRegion(
 				NSHM23_RegionLoader.loadFullConterminousUS(),
