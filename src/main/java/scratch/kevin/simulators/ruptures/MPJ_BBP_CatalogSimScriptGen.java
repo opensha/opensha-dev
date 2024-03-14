@@ -33,13 +33,13 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir4860_multi_combine";
 //		String catalogDirName = "rundir5450";
 //		String catalogDirName = "rundir4983_stitched";
-		String catalogDirName = "rundir5566";
+//		String catalogDirName = "rundir5775";
 //		String catalogDirName = "rundir5697";
 //		String catalogDirName = "rundir5413_multifault_separate";
 //		String catalogDirName = "rundir5597_subduction_corupture";
 //		String catalogDirName = "rundir5597_crustal_corupture";
-//		String catalogDirName = "rundir5566_subduction";
-//		String catalogDirName = "rundir5566_crustal";
+		String catalogDirName = "rundir5775_subduction";
+//		String catalogDirName = "rundir5775_crustal";
 		
 //		int skipYears = 20000;
 //		int skipYears = 5000;

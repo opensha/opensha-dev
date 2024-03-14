@@ -150,10 +150,10 @@ public class CrustalAndSubductionPageGen {
 	private static final int DEBUG_EVENT_ID = 152653;
 
 	public static void main(String[] args) throws IOException {
-		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5566.instance();
-		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5566_CRUSTAL.instance();
-		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5566_SUB.instance();
-		String bbpDate = "2024_01_24";
+//		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5566.instance();
+//		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5566_CRUSTAL.instance();
+//		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5566_SUB.instance();
+//		String bbpDate = "2024_01_24";
 		
 //		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5597.instance();
 //		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5597_CRUSTAL.instance();
@@ -176,6 +176,16 @@ public class CrustalAndSubductionPageGen {
 //		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5696_CRUSTAL.instance();
 //		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5696_SUB.instance();
 //		String bbpDate = "2024_01_22";
+		
+		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5774.instance();
+		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5774_CRUSTAL.instance();
+		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5774_SUB.instance();
+		String bbpDate = "2024_03_11";
+		
+//		RSQSimCatalog fullCatalog = Catalogs.BRUCE_5775.instance();
+//		RSQSimCatalog crustalCatalog = Catalogs.BRUCE_5775_CRUSTAL.instance();
+//		RSQSimCatalog subductionCatalog = Catalogs.BRUCE_5775_SUB.instance();
+//		String bbpDate = "2024_03_11";
 
 //		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		VelocityModel vm = VelocityModel.CENTRAL_JAPAN;
