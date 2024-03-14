@@ -546,7 +546,7 @@ public class MethodsAndIngredientsHazChangeFigures {
 		return xyz;
 	}
 	
-	static CPT getCenterMaskedCPT(CPT cptBasis, double maskRange, double fullRange) {
+	public static CPT getCenterMaskedCPT(CPT cptBasis, double maskRange, double fullRange) {
 		CPT leftCPT = getHalfCPT(cptBasis.reverse(), maskRange, fullRange);
 		CPT rightCPT = getHalfCPT(cptBasis, maskRange, fullRange);
 		
