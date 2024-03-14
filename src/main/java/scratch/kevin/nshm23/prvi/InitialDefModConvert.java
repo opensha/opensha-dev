@@ -17,8 +17,9 @@ import com.google.common.base.Preconditions;
 public class InitialDefModConvert {
 
 	public static void main(String[] args) throws IOException {
-		File inputFile = new File("/home/kevin/OpenSHA/nshm23/prvi/2024_02-initial_dm/NSHM2025_GeoDefModel_PRVI.geojson");
-		File outputFile = new File("/home/kevin/OpenSHA/nshm23/prvi/2024_02-initial_dm/NSHM2025_GeoDefModel_PRVI_mod.geojson");
+		File dir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/fault_models/initial");
+		File inputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI.geojson");
+		File outputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_mod.geojson");
 		List<Feature> features = new ArrayList<>(FeatureCollection.read(inputFile).features);
 		
 		features.sort(new Comparator<Feature>() {
@@ -82,6 +83,14 @@ public class InitialDefModConvert {
 			double slip = props.getDouble("PrefSlpRat", Double.NaN);
 			props.remove("PrefSlpRat");
 			props.set(GeoJSONFaultSection.SLIP_RATE, slip);
+			
+			double lowSlip = props.getDouble("MinSlpRat", Double.NaN);
+			props.remove("MinSlpRat");
+			props.set("LowRate", lowSlip);
+			
+			double highSlip = props.getDouble("MaxSlpRat", Double.NaN);
+			props.remove("MaxSlpRat");
+			props.set("HighRate", highSlip);
 			
 			features.set(i, feature);
 		}

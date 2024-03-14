@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
@@ -14,6 +15,8 @@ import java.util.Random;
 import java.util.Set;
 
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.Site;
+import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
@@ -75,6 +78,9 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_Deform
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_FaultModels;
 import org.opensha.sha.util.NEHRP_TestCity;
 
 import com.google.common.base.Preconditions;
@@ -143,8 +149,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		List<RandomlySampledLevel<?>> individualRandomLevels = new ArrayList<>();
 		int samplingBranchCountMultiplier = 1;
 
-		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2024_02_02";
+//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+		String dirName = "2024_03_11";
 		
 		/*
 		 * UCERF3 logic tree
@@ -238,9 +244,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-nshm23_u3_hybrid_branches";
 //		double avgNumRups = 325000;
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-		dirName += "-nshm23_branches";
-		double avgNumRups = 600000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+//		dirName += "-nshm23_branches";
+//		double avgNumRups = 600000;
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+		dirName += "-prvi25_branches";
+		double avgNumRups = 50000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches-wc_94";
@@ -277,7 +287,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-new_scale_rels";
 //		dirName += "-full_set";
 		
-//		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
+		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.MFDUncert0p1.class;
 //		dirName += "-mfd_uncert_0p1";
@@ -425,9 +435,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-dm_sampling";
 //		individualRandomLevels.add(new RandomDefModSampleLevel());
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma.class;
-		dirName += "-dm_sampling_cap_sigma";
-		individualRandomLevels.add(new RandomDefModSampleLevel());
+//		Class<? extends InversionConfigurationFactory> factoryClass = DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma.class;
+//		dirName += "-dm_sampling_cap_sigma";
+//		individualRandomLevels.add(new RandomDefModSampleLevel());
 		
 		if (!factoryClass.equals(NSHM23_InvConfigFactory.class)) {
 			// try instantiate it to make sure we get any static modifiers that might change branch weights
@@ -493,7 +503,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1,
 //				NSHM23_FaultModels.FM_v1p4,
 //				NSHM23_FaultModels.FM_v2,
-				NSHM23_FaultModels.WUS_FM_v3,
+//				NSHM23_FaultModels.WUS_FM_v3,
+				PRVI25_FaultModels.PRVI_FM_INITIAL,
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
@@ -975,43 +986,55 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		// site hazard job
 		RupSetFaultModel fm = logicTree.getBranch(0).getValue(RupSetFaultModel.class);
 		if (fm != null) {
-			Set<NEHRP_TestCity> sites;
+			Collection<Site> sites = null;
 			if (fm instanceof FaultModels) {
 				// CA
-				sites = NEHRP_TestCity.getCA();
-			} else {
+				sites = new ArrayList<>();
+				for (NEHRP_TestCity site : NEHRP_TestCity.getCA())
+					sites.add(new Site(site.location(), site.toString()));
+			} else if (fm instanceof NSHM23_FaultModels) {
 				// filter out CEUS for now
 				Region reg = NSHM23_RegionLoader.loadFullConterminousWUS();
-				sites = new HashSet<>();
+				sites = new ArrayList<>();
 				for (NEHRP_TestCity site : NEHRP_TestCity.values()) {
 					if (reg.contains(site.location()))
-						sites.add(site);
+						sites.add(new Site(site.location(), site.toString()));
+				}
+			} else if (fm instanceof PRVI25_FaultModels) {
+				CSVFile<String> csv = CSVFile.readStream(PRVI25_FaultModels.class.getResourceAsStream("/data/erf/prvi25/sites/prvi_sites.csv"), true);
+				sites = new ArrayList<>();
+				for (int row=1; row<csv.getNumRows(); row++) {
+					String name = csv.get(row, 0);
+					Location loc = new Location(csv.getDouble(row, 1), csv.getDouble(row, 2));
+					sites.add(new Site(loc, name));
 				}
 			}
-			CSVFile<String> csv = new CSVFile<>(true);
-			csv.addLine("Name", "Latitude", "Longitude");
-			for (NEHRP_TestCity site : sites)
-				csv.addLine(site.toString(), site.location().lat+"", site.location().lon+"");
-			File localSitesFile = new File(localDir, "hazard_sites.csv");
-			csv.writeToFile(localSitesFile);
-			
-			argz = "--input-file "+resultsPath+".zip";
-			argz += " --output-dir "+resultsPath+"_hazard_sites";
-			argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
-			argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
-			argz += " --gridded-seis EXCLUDE";
-			script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
-			pbsWrite.writeScript(new File(localDir, "batch_hazard_sites.slurm"), script, mins, nodes, remoteTotalThreads, queue);
-			
-			if (griddedJob) {
-				argz = "--input-file "+resultsPath;
-				argz += " --logic-tree "+dirPath+"/logic_tree_full_gridded.json";
-				argz += " --output-dir "+resultsPath+"_hazard_sites_full_gridded";
+			if (sites != null && !sites.isEmpty()) {
+				CSVFile<String> csv = new CSVFile<>(true);
+				csv.addLine("Name", "Latitude", "Longitude");
+				for (Site site : sites)
+					csv.addLine(site.getName(), site.getLocation().lat+"", site.getLocation().lon+"");
+				File localSitesFile = new File(localDir, "hazard_sites.csv");
+				csv.writeToFile(localSitesFile);
+				
+				argz = "--input-file "+resultsPath+".zip";
+				argz += " --output-dir "+resultsPath+"_hazard_sites";
 				argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
-				argz += " --gridded-seis INCLUDE";
-				argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(2).maxDispatch(10).threads(remoteTotalThreads).build();
+				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+				argz += " --gridded-seis EXCLUDE";
 				script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
-				pbsWrite.writeScript(new File(localDir, "batch_hazard_sites_full_gridded.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+				pbsWrite.writeScript(new File(localDir, "batch_hazard_sites.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+				
+				if (griddedJob) {
+					argz = "--input-file "+resultsPath;
+					argz += " --logic-tree "+dirPath+"/logic_tree_full_gridded.json";
+					argz += " --output-dir "+resultsPath+"_hazard_sites_full_gridded";
+					argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
+					argz += " --gridded-seis INCLUDE";
+					argz += " "+MPJTaskCalculator.argumentBuilder().minDispatch(2).maxDispatch(10).threads(remoteTotalThreads).build();
+					script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
+					pbsWrite.writeScript(new File(localDir, "batch_hazard_sites_full_gridded.slurm"), script, mins, nodes, remoteTotalThreads, queue);
+				}
 			}
 		}
 		
