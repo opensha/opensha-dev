@@ -10,19 +10,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
+import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.eq.MagUtils;
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.json.Feature;
+import org.opensha.commons.geo.json.FeatureCollection;
 import org.opensha.commons.geo.json.FeatureProperties;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
+import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
+
+import com.google.common.base.Preconditions;
 
 import gov.usgs.earthquake.nshmp.model.NshmErf;
 import gov.usgs.earthquake.nshmp.model.NshmSource;
@@ -51,7 +62,7 @@ public class AK_FSS_creator {
 		
 		HashMap<Integer,Double> elliotSlipRateMap = new HashMap<Integer,Double>();
 		HashMap<Integer,Double> geoSlipRateMap = new HashMap<Integer,Double>();
-		ArrayList<GeoJSONFaultSection> fltSectList = getFaultSectionList(nshmModelDirPath, elliotSlipRateMap, geoSlipRateMap);
+		ArrayList<GeoJSONFaultSection> fltSectList = getIsolatedFaultSectionsList(nshmModelDirPath, elliotSlipRateMap, geoSlipRateMap);
 		
 		HashMap<Integer,String> fltNameFromIdMap = new HashMap<Integer,String>();
 		for(GeoJSONFaultSection fltSect:fltSectList)
@@ -165,98 +176,146 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 			}
 			
 		}
-
+		
+		
+		
+		// GET BIG FSS
+		fssList.add(getBigFSS(nshmModelDirPath,defModel,erf));
+		
 		return fssList;
 	}
+	
+	/**
+	 * This assumes the sections.geojson files are identical between deformation models, except for the slip rates.
+	 * @param nshmModelDirPath
+	 * @param defModel
+	 * @return
+	 */
+	private static ArrayList<GeoJSONFaultSection> getFaultSystemSectionsList(String nshmModelDirPath, DeformationModelEnum defModel) {
 
+		ArrayList<GeoJSONFaultSection> listGeol = new ArrayList<GeoJSONFaultSection>();
+		ArrayList<GeoJSONFaultSection> listGeod = new ArrayList<GeoJSONFaultSection>();
+
+		FeatureCollection fcGeol =null, fcGeod =null;
+		String filePathStringGeod = nshmModelDirPath+"active-crust/fault/system/geodetic/sections.geojson";
+		String filePathStringGeol = nshmModelDirPath+"active-crust/fault/system/geologic/sections.geojson";
+		try {
+			fcGeod = FeatureCollection.read(new File(filePathStringGeod));
+			fcGeol = FeatureCollection.read(new File(filePathStringGeol));
+		} catch (IOException e) {
+			System.out.println("Problem with input file: "+filePathStringGeod+" or "+filePathStringGeol);
+			e.printStackTrace();
+		}
+
+		for(Feature feature : fcGeol) {
+			listGeol.add(GeoJSONFaultSection.fromNSHMP_HazFeature(feature));
+		}
+		
+		for(Feature feature : fcGeod) {
+			listGeod.add(GeoJSONFaultSection.fromNSHMP_HazFeature(feature));
+		}
+		
+		if(defModel == DeformationModelEnum.GEO)
+			return listGeol;
+		else if (defModel == DeformationModelEnum.ELLIOT)
+			return listGeod;
+		else { // wt average slip rates
+			for(int i=0;i<listGeol.size(); i++) {
+				double aveSlipRate = listGeol.get(i).getOrigAveSlipRate()*DeformationModelEnum.GEO.getWeight() +
+						listGeod.get(i).getOrigAveSlipRate()*DeformationModelEnum.ELLIOT.getWeight();
+				listGeol.get(i).setAveSlipRate(aveSlipRate);
+			}
+			return listGeol;
+		}
+	}
 
 	
-	private static ArrayList<GeoJSONFaultSection> getFaultSectionList(String nshmModelDirPath, HashMap<Integer,Double> elliotSlipRateMap,
+	private static ArrayList<GeoJSONFaultSection> getIsolatedFaultSectionsList(String nshmModelDirPath, HashMap<Integer,Double> elliotSlipRateMap,
 			HashMap<Integer,Double> geoSlipRateMap) {
 
 		ArrayList<GeoJSONFaultSection> list = new ArrayList<GeoJSONFaultSection>();
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Atsaksovluk.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Bagley (east).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Bagley (middle).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Bagley (west).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Bancas Point.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Bendeleben.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Bering Glacier.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Billy Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Boundary.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Broad Pass Thrust.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Bulchitna Lake.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Bunco Lake.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Camden Bay (east).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Camden Bay (west).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Cape Cleare.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Castle Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Cathedral Rapids.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Chedotlothna.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Chirikof.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Chugach - St.Elias.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Cordova.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Council.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/DOT T Johnson.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Dall Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Decoeli Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Denali (Holitna).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Esker Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Etches.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Foreland Thrust (Khitrov).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Foreland Thrust (Pamplona).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Granite Point.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Gulf of Alaska.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Hanning Bay.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Icy Point.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Iditarod - Nixon Fork (center).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Iditarod - Nixon Fork (east).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Iditarod - Nixon Fork (west).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Kahiltna River.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Kaktovik (east).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Kaktovik (west).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Kaltag.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Kantishna Hills (north).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Kantishna Hills (south).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Kanuti.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Kayak.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Kigluaik.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Lewis River.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Malaspina.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Marsh Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/McCallum Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/McLeod Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Middle Fork.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Minto Flats (north).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Minto Flats (south).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Montague Strait.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Narrow Cape.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Natazhat.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/North Cook Inlet - SRS.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Northern Alaska Range.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Paimute (east).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Paimute (west).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Pass Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Patton Bay.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Peters Dome.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Pivot.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Purcell Mountains.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Purkeypile.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Ragged Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Rude River.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Stevens (east).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Stevens (west).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Suckling Hills.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Susitna Glacier.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Ten Fathom.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Tintina (Medicine Lake - Preacher).geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Transition.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Ugak.geojson", elliotSlipRateMap, geoSlipRateMap));
-		list.add(getFaultSection(nshmModelDirPath+"active-crust/fault/Yakutat Foothills.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Atsaksovluk.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Bagley (east).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Bagley (middle).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Bagley (west).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Bancas Point.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Bendeleben.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Bering Glacier.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Billy Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Boundary.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Broad Pass Thrust.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Bulchitna Lake.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Bunco Lake.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Camden Bay (east).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Camden Bay (west).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Cape Cleare.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Castle Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Cathedral Rapids.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Chedotlothna.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Chirikof.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Chugach - St.Elias.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Cordova.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Council.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/DOT T Johnson.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Dall Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Decoeli Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Denali (Holitna).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Esker Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Etches.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Foreland Thrust (Khitrov).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Foreland Thrust (Pamplona).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Granite Point.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Gulf of Alaska.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Hanning Bay.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Icy Point.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Iditarod - Nixon Fork (center).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Iditarod - Nixon Fork (east).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Iditarod - Nixon Fork (west).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Kahiltna River.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Kaktovik (east).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Kaktovik (west).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Kaltag.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Kantishna Hills (north).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Kantishna Hills (south).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Kanuti.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Kayak.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Kigluaik.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Lewis River.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Malaspina.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Marsh Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/McCallum Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/McLeod Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Middle Fork.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Minto Flats (north).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Minto Flats (south).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Montague Strait.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Narrow Cape.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Natazhat.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/North Cook Inlet - SRS.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Northern Alaska Range.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Paimute (east).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Paimute (west).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Pass Creek.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Patton Bay.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Peters Dome.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Pivot.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Purcell Mountains.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Purkeypile.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Ragged Mountain.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Rude River.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Stevens (east).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Stevens (west).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Suckling Hills.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Susitna Glacier.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Ten Fathom.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Tintina (Medicine Lake - Preacher).geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Transition.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Ugak.geojson", elliotSlipRateMap, geoSlipRateMap));
+		list.add(getIsolatedFaultSection(nshmModelDirPath+"active-crust/fault/Yakutat Foothills.geojson", elliotSlipRateMap, geoSlipRateMap));
 		return list;
 	}
 	
-	static GeoJSONFaultSection getFaultSection(String filePathString, HashMap<Integer,Double> elliotSlipRateMap,
+	static GeoJSONFaultSection getIsolatedFaultSection(String filePathString, HashMap<Integer,Double> elliotSlipRateMap,
 			HashMap<Integer,Double> geoSlipRateMap) {
 		
 		Feature feature=null;
@@ -357,12 +416,176 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 			}
 		}
 	}
+	
+	/**
+	 * This gets the actual AK FSS used in the 2023 NSHM
+	 * 
+	 * This assumes csv files for both deformation models are identical except for rupture rates.
+	 * @param nshmModelDirPath
+	 * @param defModel
+	 */
+	private static FaultSystemSolution getBigFSS(String nshmModelDirPath, DeformationModelEnum defModel, NshmErf erf) {
+
+		ArrayList<GeoJSONFaultSection> sectionList = getFaultSystemSectionsList(nshmModelDirPath, defModel);
+		System.out.println(sectionList.size());
+		for(int s=0;s<sectionList.size();s++) {
+			GeoJSONFaultSection fs = sectionList.get(s);
+			if (D) System.out.println(s+"\t"+fs.getSectionId()+"\t"+fs.getParentSectionId()+"\t"+fs.getOrigAveSlipRate()+"\t"+fs.getAveRake()+
+					"\t"+fs.getAseismicSlipFactor()+"\t"+fs.getAveDip()+"\t"+fs.getOrigAveUpperDepth()+"\t"+fs.getAveLowerDepth()+
+					"\t"+fs.getOrigAveSlipRate()+"\t"+fs.getName());
+		}
+
+		// read csv rate file
+		File fileGeod = new File(nshmModelDirPath+"active-crust/fault/system/geodetic/ruptures.csv");
+		File fileGeol = new File(nshmModelDirPath+"active-crust/fault/system/geologic/ruptures.csv");
+		CSVFile<String> csvFileGeod=null, csvFileGeol=null;
+		try {
+			csvFileGeod = CSVFile.readFile(fileGeod, true);
+			csvFileGeol = CSVFile.readFile(fileGeol, true);
+			if(csvFileGeod.getNumRows() != csvFileGeol.getNumRows())
+				throw new RuntimeException("csvFileGeod and csvFileGeol files have different number of rows");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		int numRups=0;
+		for(int i=1; i<csvFileGeod.getNumRows(); i++) {
+			String firstCell = csvFileGeod.get(i, 0);
+			if(firstCell.charAt(0) != '#')
+				numRups+=1;
+//			else
+//				System.out.println(firstCell);
+		}
+
+		double[] mags = new double[numRups];
+		double[] rakes = new double[numRups];
+		double[] rates = new double[numRups];
+		double[] rupAreas = new double[numRups];
+		double[] rupLengths = new double[numRups];
+		List<List<Integer>> sectionForRups = new ArrayList<List<Integer>>();
+
+		int r=0; // rupIndex
+		//			int testNum=0;
+		for(int i=3; i<csvFileGeod.getNumRows(); i++) {
+			if(csvFileGeod.get(i, 0).charAt(0) == '#') // skip these lines {
+				continue;
+			mags[r] = csvFileGeod.getDouble(i, 0);
+			rakes[r] = csvFileGeod.getDouble(i, 5);
+			if(defModel == DeformationModelEnum.GEO)
+				rates[r] = csvFileGeol.getDouble(i, 1);
+			else if (defModel == DeformationModelEnum.ELLIOT)
+				rates[r] = csvFileGeod.getDouble(i, 1);
+			else
+				rates[r] = csvFileGeod.getDouble(i, 1)*DeformationModelEnum.ELLIOT.getWeight() + csvFileGeol.getDouble(i, 1)*DeformationModelEnum.GEO.getWeight();
+			List<Integer> indexList = parseSectionsInRupture(csvFileGeod.get(i, 6));
+			sectionForRups.add(indexList);
+			//				if(csvFile.get(i, 6).contains("-") && testNum < 100) {
+			//					System.out.println(r+"\t"+indexList);
+			//					testNum+=1;
+			//				}
+			double rupLength=0;
+			double rupArea=0;
+			for(int sectIndex:indexList) {
+				rupLength += sectionList.get(sectIndex).getTraceLength();
+				rupArea += sectionList.get(sectIndex).getArea(false);
+			}
+			rupLengths[r]=rupLength;
+			rupAreas[r]=rupArea;
+			r+=1;
+		}
+
+		FaultSystemRupSet rupSet = new FaultSystemRupSet(
+				sectionList,
+				sectionForRups,
+				mags,
+				rakes,
+				rupAreas,
+				rupLengths); 
+
+		FaultSystemSolution fss= new FaultSystemSolution(rupSet, rates);
+		fss.setInfoString("Big AK Fault System Solution");
+		
+		if(D && erf != null) {
+	    	SummedMagFreqDist fssTotalMFD = new SummedMagFreqDist(6.05,80,0.05);
+	    	double fssTotalMomentRate = 0;
+	    	for(int rup=0;rup<fss.getRupSet().getNumRuptures();rup++) {
+	    		double rate = fss.getRateForRup(rup);
+	    		double mag = fss.getRupSet().getMagForRup(rup);
+	    		fssTotalMomentRate += MagUtils.magToMoment(mag)*rate;
+	    		int iMag = fssTotalMFD.getClosestXIndex(mag);
+	    		fssTotalMFD.add(iMag, rate);
+//	    		fssTotalMFD.add(mag, rate);
+	    	}
+	    	SummedMagFreqDist erfTotalMFD = new SummedMagFreqDist(6.05,80,0.05);
+	    	for(int s=0;s<erf.getNumSources();s++) {
+	    		NshmSource src = (NshmSource)erf.getSource(s);
+	    		if(src.getName().equals("Unnamed fault system source")) {
+	    			for(r=0;r<src.getNumRuptures();r++) {
+	    				double mag = src.getRupture(r).getMag();
+	    	    		int iMag = erfTotalMFD.getClosestXIndex(mag);
+	    				erfTotalMFD.add(iMag, src.getRupture(r).getMeanAnnualRate(1.0));
+	    			}
+	    		}
+	    	}
+	    	
+	    	for(int i=0;i<fssTotalMFD.size();i++) {
+	    		double val1 = fssTotalMFD.getY(i);
+	    		double val2 = erfTotalMFD.getY(i);
+	    		if(val1 == 0.0)
+	    			if(erfTotalMFD.getY(i) != val1)
+	    				throw new RuntimeException("fssTotalMFD.getY(i) is zero but erfTotalMFD.getY(i) = "+val1);
+	    		else if(Math.abs((val1-val2)/val1) > 0.00001)
+    				throw new RuntimeException("fssTotalMFD != erfTotalMFD at M="+erfTotalMFD.getX(i)+"; fssTotalMFD="+val1+"; erfTotalMFD="+val2);
+	    	}
+	    	System.out.println("TEST PASSED: fssTotalMFD equals erfTotalMFD");
+		}
+		
+		return fss;
+	}
+	
+	
+	private static List<Integer> parseSectionsInRupture(String cellString) {
+        String[] dashSplit = cellString.split("-");
+        Preconditions.checkState(dashSplit.length >= 1);
+        List<Integer> indexList = new ArrayList<>();
+
+        for (String split : dashSplit) {
+            String[] colonSplit = split.split(":");
+            Preconditions.checkState(colonSplit.length <= 2);
+            if(colonSplit.length==1) {
+            	indexList.add(Integer.parseInt(colonSplit[0]));
+            }
+            else {
+                int first = Integer.parseInt(colonSplit[0]);
+                int last = Integer.parseInt(colonSplit[1]);
+                Preconditions.checkState(first != last);
+                if (first < last)
+                    for (int i=first; i<=last; i++)
+                    	indexList.add(i);
+                else
+                    for (int i=first; i>=last; i--)
+                    	indexList.add(i);
+            }
+         }
+        return indexList;
+	}
+	
 
 
 	public static void main(String[] args) {
 		
-//		forPeter();
+		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-main_Jan10_2024/";
+		
+		DeformationModelEnum defModel = DeformationModelEnum.BOTH;
+//		getFaultSystemSolutionList(nshmModelDirPath, DeformationModelEnum.BOTH);
+		
+		NshmErf erf = AK_FaultZones_creator.getNshmERF(nshmModelDirPath);
+		getBigFSS(nshmModelDirPath,defModel,erf);
+
 //		System.exit(0);
+
+		
+//		forPeter();
 //		
 //		double length = 34.983*1e3;
 //		double ddw = 15*1e3;
@@ -399,9 +622,6 @@ if(src.getName().equals("Unnamed fault system source")) // temp fix for Peters I
 //		System.out.println(wcMagLength.getMedianMag(131.583));
 		
 		
-		String nshmModelDirPath = "/Users/field/nshm-haz_data/nshm-alaska-main_Jan10_2024/";
-		
-		getFaultSystemSolutionList(nshmModelDirPath, DeformationModelEnum.BOTH);
 		
 	}
 

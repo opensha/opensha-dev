@@ -1529,12 +1529,12 @@ public class DoAnaylysis {
 		
 		
 //		double grTargetMagMax = 6.95;
-//		double grTargetMagMax = 7.45;
+		double grTargetMagMax = 7.45;
 //		double grTargetMagMax = 7.95;
 //		// set: hazGridSpacing = 1.0
-//		classicModelComparison(grTargetMagMax);
+		classicModelComparison(grTargetMagMax);
 		
-		equivBvalVsMmax();
+//		equivBvalVsMmax();
 //		System.exit(0);
 		
 	}
