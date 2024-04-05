@@ -5400,12 +5400,49 @@ public class PureScratch {
 		sol.getModule(LogicTreeBranch.class);
 	}
 	
+	private static void test281() throws IOException {
+		FaultSystemRupSet refRupSet = FaultSystemRupSet.load(
+				new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+						+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged.zip"));
+		FaultSystemRupSet modRupSet = FaultSystemRupSet.load(new File("/tmp/rup_set_tests/mod_rup_set.zip"));
+		
+		// first make sure every mod rup set is actually unique
+		HashMap<UniqueRupture, Integer> prevUnique = new HashMap<>();
+		ClusterRuptures cRups = modRupSet.requireModule(ClusterRuptures.class);
+		System.out.println("Testing mod rup set uniqueness");
+		for (int r=0; r<modRupSet.getNumRuptures(); r++) {
+			ClusterRupture cRup = cRups.get(r);
+			Integer prevIndex = prevUnique.get(cRup.unique);
+			if (prevIndex != null)
+				throw new IllegalStateException("Duplicate rupture found: "+prevIndex+", "+r+
+						"\n\t"+prevIndex+":\t"+modRupSet.getSectionsIndicesForRup(prevIndex)
+						+"\n\t"+r+":\t"+modRupSet.getSectionsIndicesForRup(r));
+		}
+		System.out.println("Uniqueness verified!");
+		
+		System.out.println("Testing that mod rup set is identical to original");
+		Preconditions.checkState(refRupSet.getNumRuptures() == modRupSet.getNumRuptures(),
+				"Rup set mismatch: %s != %s", refRupSet.getNumRuptures(), modRupSet.getNumRuptures());
+		
+		for (int r=0; r<refRupSet.getNumRuptures(); r++) {
+			List<Integer> rupSects1 = refRupSet.getSectionsIndicesForRup(r);
+			List<Integer> rupSects2 = modRupSet.getSectionsIndicesForRup(r);
+			
+			Preconditions.checkState(rupSects1.size() == rupSects2.size(),
+					"Rupture %s size mismatch: %s != %s", r, rupSects1.size(), rupSects2.size());
+			Preconditions.checkState(rupSects1.equals(rupSects2),
+					"Rupture %s data mismatch: %s != %s", r, rupSects1, rupSects2);
+		}
+		
+		System.out.println("Verified!");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test280();
+		test281();
 	}
 
 }

@@ -115,16 +115,16 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-nshm23-full_sys-prev_weights";
 //		NSHM23_PaleoDataLoader.INCLUDE_U3_PALEO_SLIP = false;
 //		dirName += "-no_paleo_slip";
-//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-//		dirName += "-nshm23";
+		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+		dirName += "-nshm23";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.PaleoSlipInequality();
 //		dirName += "-nshm23-paleo_slip_ineq";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
 //		dirName += "-nshm23-new_paleo";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.MatchFullBA();
 //		dirName += "-nshm23-nucl_match_ba";
-		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
-		dirName += "-nshm23-dm_sample_cap_sigma";
+//		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
+//		dirName += "-nshm23-dm_sample_cap_sigma";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
@@ -133,9 +133,10 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
-//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
-//		branch = branch.copy();
+		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
+		branch = branch.copy();
 		
+		// seg/b sampling
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
 //		levels = new ArrayList<>(levels);
 //		boolean randB = true;
@@ -170,16 +171,17 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels, values);
 //		branch.setValue(NSHM23_DeformationModels.EVANS);
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-		levels = new ArrayList<>(levels);
-		List<LogicTreeNode> values = new ArrayList<>();
-		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT)
-			values.add(node);
-		levels.add(new RandomDefModSampleLevel(1));
-		values.add(levels.get(levels.size()-1).getNodes().get(0));
-		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels, values);
-		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
-		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+		// DM sampling
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+//		levels = new ArrayList<>(levels);
+//		List<LogicTreeNode> values = new ArrayList<>();
+//		for (LogicTreeNode node : NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT)
+//			values.add(node);
+//		levels.add(new RandomDefModSampleLevel(1));
+//		values.add(levels.get(levels.size()-1).getNodes().get(0));
+//		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(levels, values);
+//		branch.setValue(NSHM23_DeformationModels.GEOLOGIC);
+//		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		
 		// all branch averaged
 //		dirName += "-all_ba";
