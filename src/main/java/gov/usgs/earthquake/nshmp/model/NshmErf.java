@@ -86,10 +86,11 @@ public class NshmErf extends AbstractERF {
       SourceType type = tree.type();
 
       if (setting == TectonicSetting.SUBDUCTION) {
-        if (type == SourceType.INTERFACE && !subInterface) {
+        if ((type == SourceType.INTERFACE || type == SourceType.INTERFACE_CLUSTER
+        		|| type == SourceType.INTERFACE_GRID || type == SourceType.INTERFACE_SYSTEM) && !subInterface) {
           continue;
         }
-        if (type == SourceType.SLAB && !subSlab) {
+        if ((type == SourceType.SLAB || type == SourceType.SLAB_GRID) && !subSlab) {
           continue;
         }
       }
