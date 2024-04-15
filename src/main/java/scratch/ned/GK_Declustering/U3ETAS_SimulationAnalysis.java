@@ -1518,7 +1518,7 @@ public class U3ETAS_SimulationAnalysis {
 		erf.updateForecast();
 		int numCatalogs = 1000;
 		for(int i=0;i<numCatalogs; i++) {
-			ArrayList<EqkRupture> rupList = erf.drawRandomEventSet();
+			List<EqkRupture> rupList = erf.drawRandomEventSet();
 			ObsEqkRupList obsRupList = new ObsEqkRupList();
 			for(EqkRupture rup:rupList) {
 				if(rup.getMag()<5)
