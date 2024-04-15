@@ -105,7 +105,7 @@ public class WardAnalysis {
           tempInt = (Integer) it.next();
           System.out.println(tempInt+"\t"+info.getPreviousSlipTime(tempInt));
         }
-        System.out.println(info.getPreviousSlipTime(new Integer(12000000)));
+        System.out.println(info.getPreviousSlipTime(Integer.valueOf(12000000)));
  */
   }
 
@@ -116,7 +116,7 @@ public class WardAnalysis {
     int elem;
     ArrayList elems;
     for(int i=0;i<eventYear.length;i++) {
-      year = new Integer(Math.round((float)eventYear[i]));
+      year = Integer.valueOf(Math.round((float)eventYear[i]));
       elems = (ArrayList) eventElems.get(i); // this gets the elements for the event
       totArea = 0.0;
       totPot  = 0.0;
@@ -185,7 +185,7 @@ public class WardAnalysis {
     for(i=0; i <num_events; i++) {
       tempElemList = new ArrayList();
       for(j=eventStartElem[i]; j<=eventEndElem[i];j++)
-        tempElemList.add(new Integer(j));
+        tempElemList.add(Integer.valueOf(j));
       eventElems.add(tempElemList);
     }
 
@@ -200,8 +200,8 @@ public class WardAnalysis {
       tempSlips = new ArrayList();
       for(i=0;i<num_events;i++) {
         if(e >= eventStartElem[i] && e <= eventEndElem[i]) {
-          time = new Integer(Math.round((float)eventYear[i]));
-          slip = new Double(eventAveSlip[i]);
+          time = Integer.valueOf(Math.round((float)eventYear[i]));
+          slip = Double.valueOf(eventAveSlip[i]);
           tempTimes.add(time);
           tempSlips.add(slip);
         }
@@ -438,7 +438,7 @@ public class WardAnalysis {
     FileWriter fw2 = new FileWriter(filename2);
     fw2.write("evSegs\n");
     for(int i=0; i < eventYear.length; i++) {
-      year = new Integer(Math.round((float)eventYear[i]));
+      year = Integer.valueOf(Math.round((float)eventYear[i]));
       if(year.intValue() != lastYear)
         counter = 0;
       else

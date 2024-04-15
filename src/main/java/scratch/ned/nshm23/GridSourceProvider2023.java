@@ -407,7 +407,7 @@ public class GridSourceProvider2023 extends AbstractGridSourceProvider {
 			if(cubeDistMap != null) {	// null if section is outside the region
 				for(int cubeIndex:cubeDistMap.keySet()) {
 					sectAtCubeListTemp.get(cubeIndex).add(sectIndex);
-					sectDistToCubeListTemp.get(cubeIndex).add(new Float(cubeDistMap.get(cubeIndex)));
+					sectDistToCubeListTemp.get(cubeIndex).add(cubeDistMap.get(cubeIndex).floatValue());
 				}			
 			}
 		}

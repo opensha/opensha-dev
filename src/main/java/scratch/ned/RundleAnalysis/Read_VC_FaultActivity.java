@@ -131,7 +131,7 @@ public class Read_VC_FaultActivity {
         //skipping the event number
         st1.nextToken();
         //Reading the time Pd for the segment
-        Integer timePd = new Integer((int)Double.parseDouble(st1.nextToken().trim()));
+        Integer timePd = Integer.valueOf((int)Double.parseDouble(st1.nextToken().trim()));
 
         //Looking in the Treemap if the Time Pd already exists, if it does,
         //then extract the corresponding ArrayList of the Segments have
@@ -140,16 +140,16 @@ public class Read_VC_FaultActivity {
         //Treemap.
         Object timeSegList = timeSegmentMapping.get(timePd);
         if(timeSegList !=null)
-          ((ArrayList)timeSegList).add(new Integer(segmentNum));
+          ((ArrayList)timeSegList).add(Integer.valueOf(segmentNum));
         else{
           ArrayList segList = new ArrayList();
-          segList.add(new Integer(segmentNum));
+          segList.add(Integer.valueOf(segmentNum));
           timeSegmentMapping.put(timePd,segList);
         }
         //getting the time histories and storing it in the Array List
         timeHistories.add(timePd);
         //getting the slip histories and storing it in the Array List
-        slipHistories.add(new Double(st1.nextToken().trim()));
+        slipHistories.add(Double.valueOf(st1.nextToken().trim()));
       }
       //creating the SegmentSlipTimeInfo object
       SegmentSlipTimeInfo  segmentSlipTime = new SegmentSlipTimeInfo(segmentNum,timeHistories,slipHistories);
@@ -271,9 +271,9 @@ public class Read_VC_FaultActivity {
       oldYear = (Integer) it.next();
       tempSegList = (ArrayList) timeSegmentMapping.get(oldYear);
       // get a unique, random year
-      newYear = new Double(lastYear.doubleValue() * Math.random());
+      newYear = Double.valueOf(lastYear.doubleValue() * Math.random());
       while (randomTimeSegmentMapping.get(newYear) != null) { // check that it's unique
-        newYear = new Double(lastYear.doubleValue() * Math.random());
+        newYear = Double.valueOf(lastYear.doubleValue() * Math.random());
       }
       randomTimeSegmentMapping.put(newYear, tempSegList);
       oldToNewYearMap.put(oldYear, newYear);

@@ -72,6 +72,9 @@ import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculatorAPI;
 import org.opensha.sha.calc.hazardMap.BinaryHazardCurveReader;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
+import org.opensha.sha.calc.params.filters.SourceFilter;
+import org.opensha.sha.calc.params.filters.SourceFilterManager;
+import org.opensha.sha.calc.params.filters.SourceFilters;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
@@ -1262,8 +1265,6 @@ public class HazardMapComparePlotter {
 		private final DiscretizedFunc xVals;
 		private final DiscretizedFunc logXVals;
 		
-		private final ParameterList disaggParams;
-		
 		// disagg plot settings
 		private final double minMag;
 		private final int numMags;
@@ -1293,9 +1294,6 @@ public class HazardMapComparePlotter {
 			logXVals = new ArbitrarilyDiscretizedFunc();
 			for (Point2D pt : xVals)
 				logXVals.set(Math.log(pt.getX()), 1d);
-			
-//			DisaggregationCalculator disaggCalc = new DisaggregationCalculator();
-			disaggParams = DisaggregationCalculator.getDefaultParams();
 		}
 		
 		public void calcForSite(String siteName, Location loc) {
@@ -1351,7 +1349,8 @@ public class HazardMapComparePlotter {
 								disaggCalc.setMagRange(minMag, numMags, deltaMag);
 								disaggCalc.setNumSourcesToShow(numSourcesForDisag);
 								disaggCalc.setShowDistances(showSourceDistances);
-								boolean success = disaggCalc.disaggregate(Math.log(iml), site, gmpe, erf, disaggParams);
+								boolean success = disaggCalc.disaggregate(Math.log(iml), site, gmpe, erf,
+										curveCalc.getSourceFilters(), curveCalc.getAdjustableParams());
 								if (!success)
 									throw new RuntimeException("Disagg calc failed (see errors above, if any).");
 								disaggCalc.setMaxZAxisForPlot(maxZAxis);

@@ -123,7 +123,7 @@ public class VC_Analysis {
           tempInt = (Integer) it.next();
           System.out.println(tempInt+"\t"+info.getPreviousSlipTime(tempInt));
         }
-        System.out.println(info.getPreviousSlipTime(new Integer(12000000)));
+        System.out.println(info.getPreviousSlipTime(Integer.valueOf(12000000)));
 
 */
 /*

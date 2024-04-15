@@ -16,8 +16,8 @@ public class SadighTest {
 		SadighEtAl_1997_AttenRel imr = new SadighEtAl_1997_AttenRel(null);
 		imr.setParamDefaults();
 		
-		imr.getParameter(DistanceRupParameter.NAME).setValue(new Double(10.0));
-		imr.getParameter(MagParam.NAME).setValue(new Double(6.5));
+		imr.getParameter(DistanceRupParameter.NAME).setValue(Double.valueOf(10.0));
+		imr.getParameter(MagParam.NAME).setValue(Double.valueOf(6.5));
 		imr.getParameter(FaultTypeParam.NAME).setValue("Reverse");
 		imr.getParameter(SadighEtAl_1997_AttenRel.SITE_TYPE_NAME).setValue("Deep-Soil");
 		imr.getParameter(StdDevTypeParam.NAME).setValue("Total");

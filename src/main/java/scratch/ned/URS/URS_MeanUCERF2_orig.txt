@@ -40,7 +40,7 @@ public class URS_MeanUCERF2 extends MeanUCERF2 {
 	
 	// for Cybershake Correction
 	public final static String FILTER_PARAM_NAME ="URS Filter";
-	public final static Boolean FILTER_PARAM_DEFAULT= new Boolean(false);
+	public final static Boolean FILTER_PARAM_DEFAULT= Boolean.valueOf(false);
 	protected final static String FILTER_PARAM_INFO = "Apply the URS Source Filter";
 	protected BooleanParameter filterParam;
 	

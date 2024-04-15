@@ -208,7 +208,7 @@ public class Analysis {
 //			HashMap<String, Double> test_fracWithIn10percForBrValMap = new HashMap<String, Double>();
 //			HashMap<String, Double> test_factor95percForBrValMap = new HashMap<String, Double>();
 //			for(String key:fracWithIn10percForBrValMap.keySet()) {
-//				double cov = new Double(covForBrValMap.get(key));
+//				double cov = Double.valueOf(covForBrValMap.get(key));
 //				double[] valArray = computeFact95_fract10_fromLogNorm_COV(cov);
 //				test_factor95percForBrValMap.put(key, valArray[0]);
 //				test_fracWithIn10percForBrValMap.put(key, valArray[1]);
@@ -219,7 +219,7 @@ public class Analysis {
 //			HashMap<String, Double> test_fracWithIn10percIfBrRemovedMap = new HashMap<String, Double>();
 //			HashMap<String, Double> test_factor95percIfBrRemovedMap = new HashMap<String, Double>();
 //			for(String key:fracWithIn10percIfBrRemovedMap.keySet()) {
-//				double cov = new Double(covIfBrRemovedMap.get(key));
+//				double cov = Double.valueOf(covIfBrRemovedMap.get(key));
 //				double[] valArray = computeFact95_fract10_fromLogNorm_COV(cov);
 //				test_factor95percIfBrRemovedMap.put(key, valArray[0]);
 //				test_fracWithIn10percIfBrRemovedMap.put(key, valArray[1]);

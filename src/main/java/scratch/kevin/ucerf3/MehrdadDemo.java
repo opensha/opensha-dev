@@ -145,7 +145,7 @@ public class MehrdadDemo {
 		double iml = HazardDataSetLoader.getCurveVal(logHazFunc, true, 0.02); // iml at 2% prob
 		
 		DisaggregationCalculator disaggCalc = new DisaggregationCalculator();
-		disaggCalc.disaggregate(iml, site, imr, erf, calc.getAdjustableParams());
+		disaggCalc.disaggregate(iml, site, imr, erf, calc.getSourceFilters(), calc.getAdjustableParams());
 		DisaggregationPlotData disaggData = disaggCalc.getDisaggPlotData();
 	}
 	

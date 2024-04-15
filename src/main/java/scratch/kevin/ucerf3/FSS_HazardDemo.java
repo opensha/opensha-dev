@@ -58,7 +58,7 @@ public class FSS_HazardDemo {
 			siteParam = (Parameter<?>)siteParam.clone();
 			if (siteParam.getName().equals(Vs30_Param.NAME))
 				// set Vs30 to 600 m/s
-				((Parameter<Double>)siteParam).setValue(new Double(600d));
+				((Parameter<Double>)siteParam).setValue(Double.valueOf(600d));
 			site.addParameter(siteParam);
 			System.out.println(siteParam.getName()+": "+siteParam.getValue());
 		}

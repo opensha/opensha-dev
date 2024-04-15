@@ -92,7 +92,7 @@ public class SegmentSlipTimeInfo {
     Integer lastYear= (Integer)it.next();
     while(it.hasNext()) {
       nextYear = (Integer)it.next();
-      interval = new Integer(nextYear.intValue()-lastYear.intValue());
+      interval = Integer.valueOf(nextYear.intValue()-lastYear.intValue());
       intervalList.add(interval);
       lastYear = nextYear;
     }
@@ -134,7 +134,7 @@ public class SegmentSlipTimeInfo {
     Double lastYear= (Double)it.next();
     while(it.hasNext()) {
       nextYear = (Double)it.next();
-      interval = new Double(nextYear.intValue()-lastYear.intValue());
+      interval = Double.valueOf(nextYear.intValue()-lastYear.intValue());
       intervalList.add(interval);
       lastYear = nextYear;
     }

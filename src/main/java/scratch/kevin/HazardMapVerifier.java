@@ -37,9 +37,9 @@ public class HazardMapVerifier {
 						if(fileName.endsWith(".txt")){
 							
 							int index = fileName.indexOf("_");
-							Double latVal = new Double(fileName.substring(0,index).trim());
+							Double latVal = Double.valueOf(fileName.substring(0,index).trim());
 							int lastIndex = fileName.lastIndexOf(".");
-							Double lonVal = new Double(fileName.substring(index+1,lastIndex).trim());
+							Double lonVal = Double.valueOf(fileName.substring(index+1,lastIndex).trim());
 							
 							String refFileName = refDir + "/" + dir.getName() + "/" + fileName;
 							File refFile = new File(refFileName);

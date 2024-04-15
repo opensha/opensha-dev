@@ -151,7 +151,7 @@ public class Tests extends ArrayList<Integer> {
 		// UCERF 2
 		int duration = 1;
 		MeanUCERF2 meanUCERF2 = new MeanUCERF2();
-		meanUCERF2.setParameter(UCERF2.RUP_OFFSET_PARAM_NAME, new Double(10.0));
+		meanUCERF2.setParameter(UCERF2.RUP_OFFSET_PARAM_NAME, Double.valueOf(10.0));
 		meanUCERF2.getParameter(UCERF2.PROB_MODEL_PARAM_NAME).setValue(UCERF2.PROB_MODEL_POISSON);
 		meanUCERF2.setParameter(UCERF2.BACK_SEIS_NAME, UCERF2.BACK_SEIS_INCLUDE);
 		meanUCERF2.setParameter(UCERF2.BACK_SEIS_RUP_NAME, UCERF2.BACK_SEIS_RUP_POINT);

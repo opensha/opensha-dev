@@ -51,7 +51,7 @@ public class ETAS_RandomizeBinary {
 
 		@Override
 		public int compare(ETAS_EqkRupture o1, ETAS_EqkRupture o2) {
-			return new Long(o1.getOriginTime()).compareTo(o2.getOriginTime());
+			return Long.valueOf(o1.getOriginTime()).compareTo(o2.getOriginTime());
 		}
 		
 	}

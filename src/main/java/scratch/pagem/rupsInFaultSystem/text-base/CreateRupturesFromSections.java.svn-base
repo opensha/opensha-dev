@@ -328,7 +328,7 @@ System.out.println("sectionClusterList.size()="+sectionClusterList.size());
 //    		for(int j=0;j<6; j++) {
     			ArrayList<Integer> indices = sectionClusterList.get(j).getSectionIndicesInCluster();
 //    			System.out.println(indices);
-    			if(indices.contains(new Integer(i)))
+    			if(indices.contains(Integer.valueOf(i)))
     				sum+=1;
     		}
     		if(sum !=1) {
@@ -347,8 +347,8 @@ System.out.println("sectionClusterList.size()="+sectionClusterList.size());
     private void computeSectionClusters() {
     	
     	ArrayList<Integer> test = new ArrayList<Integer> ();
-    	test.add(new Integer(2));
-    	if(test.contains(new Integer(2))) System.out.println("It Works!!!!!!!!!!");
+    	test.add(Integer.valueOf(2));
+    	if(test.contains(Integer.valueOf(2))) System.out.println("It Works!!!!!!!!!!");
     	
     	sectionClusterList = new ArrayList<ArrayList<Integer>>();
     	// add the first end-to-end link as the first cluster
@@ -422,7 +422,7 @@ System.out.println("sectionClusterList.size()="+sectionClusterList.size());
     			}
     			
     			// quit also if the list already has this point (two sections looping around on each other)
-    			if(currentList.contains(new Integer(connectedPtIndex))) {
+    			if(currentList.contains(Integer.valueOf(connectedPtIndex))) {
     				finalList.add((ArrayList)currentList.clone());
 //    				System.out.println("NOTE - quit due to looping "+endPointNames[firstPt]+" and "+endPointNames[connectedPtIndex]);
     				continue;
@@ -524,7 +524,7 @@ System.out.println("sectionClusterList.size()="+sectionClusterList.size());
 				outputString = new String();
 				outputString += endPointNames[i]+"\t";
 				for(int j=0;j<num;j++) {
-					String distString = new Double(Math.round(sectionDistances[i][j])).toString()+"\t";
+					String distString = Double.valueOf(Math.round(sectionDistances[i][j])).toString()+"\t";
 					outputString += distString;
 					if(sectionDistances[i][j] <= 5 && i != j) System.out.println(endPointNames[i]+"\t"+endPointNames[j]+"\t"+
 							Math.round(sectionDistances[i][j])+"\t"+Math.round(sectionAngleDiffs[i][j]));

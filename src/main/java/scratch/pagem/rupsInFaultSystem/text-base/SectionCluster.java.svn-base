@@ -57,7 +57,7 @@ public class SectionCluster {
 		// make hashmap of endToEndSectLinksList to make it easier to remove those used from what's passed back
 		HashMap<Integer, ArrayList<Integer>> endToEndLinkdListHashMap = new HashMap<Integer, ArrayList<Integer>>();
 		for(int i=0;i<endToEndSectLinksList.size();i++)
-			endToEndLinkdListHashMap.put(new Integer(i), endToEndSectLinksList.get(i));
+			endToEndLinkdListHashMap.put(Integer.valueOf(i), endToEndSectLinksList.get(i));
 		
 		allSectEndPtsInCluster = new ArrayList<Integer>();
 		
@@ -96,7 +96,7 @@ public class SectionCluster {
 		ArrayList<ArrayList<Integer>> unusedEndToEndSectLinksList = new ArrayList<ArrayList<Integer>>();
 		for(int i=1; i<endToEndSectLinksList.size();i++)
 			if(!linkIndicesToKeep.contains(i))
-				unusedEndToEndSectLinksList.add(endToEndLinkdListHashMap.get(new Integer(i)));
+				unusedEndToEndSectLinksList.add(endToEndLinkdListHashMap.get(Integer.valueOf(i)));
 		
 		// compute subsection data
 		computeSubsectionData();

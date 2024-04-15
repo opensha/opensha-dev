@@ -63,7 +63,7 @@ public class SAF_Test {
 			Container2DImpl<Double> participationProbs = new Container2DImpl<Double>(surface.getNumRows(), surface.getNumCols());
 			for (int i=0; i<surface.getNumRows(); i++) {
 				for (int j=0; j<surface.getNumCols(); j++) {
-					participationProbs.set(i, j, new Double(0.0));
+					participationProbs.set(i, j, Double.valueOf(0.0));
 				}
 			}
 			for (int sourceID=0; sourceID<ucerf.getNumSources(); sourceID++) {

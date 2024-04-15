@@ -289,8 +289,6 @@ public class HazardMapPlotter {
 					
 					double maxZAxis = Double.NaN;
 					
-					ParameterList disaggParams = DisaggregationCalculator.getDefaultParams();
-					
 					for (int i=0; i<calcProbs.length; i++) {
 						double prob = calcProbs[i];
 						double iml = HazardDataSetLoader.getCurveVal(linearCurve, false, prob); // iml at prob
@@ -303,7 +301,7 @@ public class HazardMapPlotter {
 						disaggCalc.setMagRange(minMag, numMags, deltaMag);
 						disaggCalc.setNumSourcesToShow(numSourcesForDisag);
 						disaggCalc.setShowDistances(showSourceDistances);
-						boolean success = disaggCalc.disaggregate(Math.log(iml), site, gmpe, (AbstractERF)erf, disaggParams);
+						boolean success = disaggCalc.disaggregate(Math.log(iml), site, gmpe, (AbstractERF)erf, calc.getSourceFilters(), calc.getAdjustableParams());
 						if (!success)
 							throw new RuntimeException("Disagg calc failed (see errors above, if any).");
 						disaggCalc.setMaxZAxisForPlot(maxZAxis);

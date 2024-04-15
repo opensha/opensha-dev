@@ -343,10 +343,10 @@ public class SurfDistCacheTestPlotter {
 		}
 		@Override
 		public int compareTo(Config o) {
-			int sizeComp = new Integer(size).compareTo(o.size);
+			int sizeComp = Integer.valueOf(size).compareTo(o.size);
 			if (sizeComp != 0)
 				return sizeComp;
-			return new Boolean(forceMulti).compareTo(o.forceMulti);
+			return Boolean.valueOf(forceMulti).compareTo(o.forceMulti);
 		}
 	}
 

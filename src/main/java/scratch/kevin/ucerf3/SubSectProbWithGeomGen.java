@@ -92,7 +92,7 @@ public class SubSectProbWithGeomGen {
 			int ss1 = getSubsectionNumber(o1);
 			int ss2 = getSubsectionNumber(o2);
 			Preconditions.checkState(ss1 >= 0 && ss2 >= 0);
-			return new Integer(ss1).compareTo(ss2);
+			return Integer.valueOf(ss1).compareTo(ss2);
 		}
 		
 	}

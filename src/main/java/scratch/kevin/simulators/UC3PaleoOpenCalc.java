@@ -380,7 +380,7 @@ public class UC3PaleoOpenCalc {
 
 			@Override
 			public int compare(PaleoOpenIden o1, PaleoOpenIden o2) {
-				return new Long(o2.getDateLastEvent()).compareTo(o1.getDateLastEvent());
+				return Long.valueOf(o2.getDateLastEvent()).compareTo(o1.getDateLastEvent());
 			}
 		});
 		

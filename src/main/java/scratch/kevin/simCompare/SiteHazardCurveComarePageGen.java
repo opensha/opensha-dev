@@ -29,6 +29,8 @@ import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculator;
 import org.opensha.sha.calc.disaggregation.DisaggregationCalculatorAPI;
 import org.opensha.sha.calc.hazardMap.HazardDataSetLoader;
+import org.opensha.sha.calc.params.filters.SourceFilter;
+import org.opensha.sha.calc.params.filters.SourceFiltersParam;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -834,6 +836,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 	
 	private class DisaggCalc {
 		private final ParameterList disaggParams;
+		private final List<SourceFilter> sourceFilters;
 		
 		// disagg plot settings
 		private final double minMag;
@@ -854,6 +857,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 			this.numMags = (int)((8.6d - minMag)/deltaMag + 0.5);
 			
 			disaggParams = DisaggregationCalculator.getDefaultParams();
+			sourceFilters = SourceFiltersParam.getDefault().getEnabledFilters();
 			
 			disaggCalc = new DisaggregationCalculator();
 			disaggCalc.setMagRange(minMag, numMags, deltaMag);
@@ -862,7 +866,7 @@ public abstract class SiteHazardCurveComarePageGen<E> {
 		}
 		
 		public File disagg(ScalarIMR gmpe, Site site, AbstractERF erf, double iml, File outputDir, String prefix) throws IOException {
-			boolean success = disaggCalc.disaggregate(iml, site, gmpe, erf, disaggParams);
+			boolean success = disaggCalc.disaggregate(iml, site, gmpe, erf, sourceFilters, disaggParams);
 			if (!success)
 				throw new RuntimeException("Disagg calc failed for iml="+iml+", prefix='"+prefix+"'(see errors above, if any).");
 			disaggCalc.setMaxZAxisForPlot(maxZAxis);

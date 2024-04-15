@@ -110,7 +110,7 @@ public class SampedeKNLThreadTest {
 			double lon = -120 + 0.05*Math.random();
 			Location loc = new Location(lat, lon);
 			site.setLocation(loc);
-			site.getParameter(Double.class, Vs30_Param.NAME).setValue(new Double(300d + 300d*Math.random()));
+			site.getParameter(Double.class, Vs30_Param.NAME).setValue(Double.valueOf(300d + 300d*Math.random()));
 			calc.getHazardCurve(logXVals.deepClone(), site, gmpe, erf);
 		}
 		
