@@ -5437,12 +5437,51 @@ public class PureScratch {
 		System.out.println("Verified!");
 	}
 	
+	private static void test282() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(
+				new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+						+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged_gridded.zip"));
+		
+		ScalarIMR gmm = AttenRelRef.ASK_2014.get();
+		
+		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(PGA_Param.NAME);
+		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
+		for (Point2D pt : xVals)
+			logXVals.set(Math.log(pt.getX()), 1d);
+		for (int i=0; i<xVals.size(); i++)
+			xVals.set(i, 0d);
+		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
+		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
+		erf.setParameter(ApplyGardnerKnopoffAftershockFilterParam.NAME, false);
+		erf.getTimeSpan().setDuration(30d);
+		erf.updateForecast();
+		
+		HazardCurveCalculator calc = new HazardCurveCalculator();
+		
+		Stopwatch watch = Stopwatch.createStarted();
+		int num = 10;
+		for (int i=0; i<num; i++) {
+			Site site = new Site(new Location(34d + 0.1*Math.random(), -118d + 0.1*Math.random()));
+			site.addParameterList(gmm.getSiteParams());
+			calc.getHazardCurve(logXVals, site, gmm, erf);
+			System.out.println("Done calc "+(i+1)+"/"+num);
+		}
+		watch.stop();
+		
+		double secs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		double secsPer = secs/(double)num;
+		double mins = secs/60d;
+		System.out.println("Took "+(float)secs+" s = "+(float)mins+" m ("+(float)secsPer+" s per curve)");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test281();
+		test282();
 	}
 
 }
