@@ -39,6 +39,7 @@ import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.WeightedSampler;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
+import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Somerville_2006_MagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.IntegerSampler.ExclusionIntegerSampler;
@@ -114,6 +115,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
 import org.opensha.commons.util.modules.ModuleArchive;
 import org.opensha.commons.util.modules.OpenSHA_Module;
+import org.opensha.refFaultParamDb.vo.DeformationModelSummary;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
@@ -187,6 +189,10 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.FaultSegmentData;
+import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
+import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.A_FaultsFetcher;
+import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.finalReferenceFaultParamDb.DeformationModelSummaryFinal;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_ConstraintBuilder.ParkfieldSelectionCriteria;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
@@ -5476,12 +5482,113 @@ public class PureScratch {
 		System.out.println("Took "+(float)secs+" s = "+(float)mins+" m ("+(float)secsPer+" s per curve)");
 	}
 	
+	private static void test283() throws IOException {
+		MeanUCERF2 erf = new MeanUCERF2();
+		erf.updateForecast();
+		MeanUCERF2 csERF = new MeanUCERF2();
+		csERF.setParameter(MeanUCERF2.CYBERSHAKE_DDW_CORR_PARAM_NAME, true);
+		csERF.updateForecast();
+		
+		DeformationModelSummaryFinal dmSummaries = new DeformationModelSummaryFinal();
+		DeformationModelSummary dmSummary = (DeformationModelSummary) dmSummaries.getAllDeformationModels().get(0);
+		Preconditions.checkNotNull(dmSummary, "DM summary is null?");
+		A_FaultsFetcher aFaultsFetcher = new A_FaultsFetcher();
+		aFaultsFetcher.setDeformationModel(dmSummary, false);
+		ArrayList<FaultSegmentData> segments = aFaultsFetcher.getFaultSegmentDataList(true);
+		ArrayList<FaultSection> sjSects = null;
+		for (FaultSegmentData seg : segments) {
+			if (seg.getFaultName().contains("Jacinto")) {
+				System.out.println("Fault: "+seg.getFaultName()+"\ttotArea="+(float)(seg.getTotalArea()*1e-6));
+				sjSects = seg.getPrefFaultSectionDataList();
+				for (FaultSection sect : sjSects) {
+					System.out.println("\t"+sect.getName());
+					double len = sect.getTraceLength();
+					double area = sect.getArea(true)*1e-6;
+					double ddw = sect.getReducedDownDipWidth();
+					System.out.println("\t\tlen="+(float)len+"km, ddw="+(float)ddw+", area="+(float)area);
+				}
+			}
+		}
+		
+		List<int[]> srcRups = new ArrayList<>();
+		List<FaultSection[]> rupSects = new ArrayList<>();
+		
+		srcRups.add(new int[] {98, 3});
+		rupSects.add(new FaultSection[] {
+				FaultSectionUtils.findSection(sjSects, "Anza)"),
+				FaultSectionUtils.findSection(sjSects, "Anza", "stepover")
+		});
+		
+		srcRups.add(new int[] {108, 2});
+		rupSects.add(new FaultSection[] {
+				FaultSectionUtils.findSection(sjSects, "Coyote Creek"),
+				FaultSectionUtils.findSection(sjSects, "Borrego"),
+				FaultSectionUtils.findSection(sjSects, "Superstition")
+		});
+		
+		srcRups.add(new int[] {110, 2});
+		rupSects.add(new FaultSection[] {
+				FaultSectionUtils.findSection(sjSects, "Bernardino"),
+				FaultSectionUtils.findSection(sjSects, "Valley)"),
+				FaultSectionUtils.findSection(sjSects, "Valley", "stepover")
+		});
+		
+		srcRups.add(new int[] {110, 0});
+		rupSects.add(new FaultSection[] {
+				FaultSectionUtils.findSection(sjSects, "Bernardino"),
+				FaultSectionUtils.findSection(sjSects, "Valley)"),
+				FaultSectionUtils.findSection(sjSects, "Valley", "stepover")
+		});
+		
+		ScalingRelationships aveU2 = ScalingRelationships.AVE_UCERF2;
+		
+		Somerville_2006_MagAreaRel ma = new Somerville_2006_MagAreaRel();
+		
+		for (int i=0; i<srcRups.size(); i++) {
+			int[] srcRup = srcRups.get(i);
+			ProbEqkSource source = erf.getSource(srcRup[0]);
+			ProbEqkRupture rup = source.getRupture(srcRup[1]);
+			double len = rup.getRuptureSurface().getAveLength();
+			double mag = rup.getMag();
+			double origDDW = rup.getRuptureSurface().getAveWidth();
+			double origRupArea = len*origDDW;
+			
+			FaultSection[] sects = rupSects.get(i);
+			double origTotArea = 0d;
+			double origTotLen = 0d;
+			for (FaultSection sect : sects) {
+				origTotArea += sect.getArea(true)*1e-6;
+				origTotLen += sect.getTraceLength();
+			}
+			double origTotDDW = origTotArea/origTotLen;
+			
+			double calcMag = aveU2.getMag(origTotArea*1e6, origTotLen*1e3, origTotDDW*1e3, origTotDDW*1e3, rup.getAveRake());
+			
+//			double calcArea = ma.getMedianArea(calcMag);
+			double calcArea = ma.getMedianArea(rup.getMag());
+			double ddwFactor = calcArea/origTotArea;
+			double calcDDW = origDDW*ddwFactor;
+			
+			double csDDW = csERF.getRupture(srcRup[0], srcRup[1]).getRuptureSurface().getAveWidth();
+			double estMagForActualDDW = ma.getMedianMag(csDDW*origTotLen);
+			System.out.println("Source "+srcRup[0]+" ("+source.getName()+"), Rupture "+srcRup[1]+", M"+(float)mag);
+//			System.out.println(source.getClass());
+			System.out.println("\tOriginal Rupture dimensions: "+(float)len+" km long x "+(float)origDDW+" km wide = "+(float)origRupArea+" km^2");
+			System.out.println("\tOriginal section dimensions: "+(float)origTotLen+" km long x "+(float)origTotDDW+" km wide = "+(float)origTotArea+" km^2");
+			System.out.println("\tOriginal median magnitude: "+(float)calcMag);
+			System.out.println("\tSomerville (2006) area for M"+(float)calcMag+": "+(float)calcArea+" km^2");
+			System.out.println("\tCalculated Extended DDW: "+(float)calcDDW+" km");
+			System.out.println("\tCyberShake ERF DDW: "+(float)csDDW+" km (corresponds to M"+(float)estMagForActualDDW+" w/ Somerville)");
+			System.out.println();
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test282();
+		test283();
 	}
 
 }
