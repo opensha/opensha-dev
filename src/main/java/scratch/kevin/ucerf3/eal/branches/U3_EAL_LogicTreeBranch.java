@@ -4,6 +4,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opensha.commons.logicTree.LogicTreeLevel;
+
 import com.google.common.base.Preconditions;
 
 import scratch.UCERF3.enumTreeBranches.InversionModels;
@@ -24,11 +26,32 @@ public class U3_EAL_LogicTreeBranch extends U3LogicTreeBranch {
 
 	public U3_EAL_LogicTreeBranch(U3LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
 			U3_EAL_GMM_Epistemic gmmEpi, U3_EAL_Vs30Model vs30, File fssIndexBinFile, File griddedBinFile, File tractDir) {
-		super(build(tiBranch, probModel, gmm, gmmEpi, vs30));
+		super(getLogicTreeLevels(), build(tiBranch, probModel, gmm, gmmEpi, vs30));
 		this.tiBranch = tiBranch;
 		this.fssIndexBinFile = fssIndexBinFile;
 		this.griddedBinFile = griddedBinFile;
 		this.tractDir = tractDir;
+	}
+	
+	private static List<LogicTreeLevel<? extends U3LogicTreeBranchNode<?>>> levels;
+	
+	public static synchronized List<LogicTreeLevel<? extends U3LogicTreeBranchNode<?>>> getLogicTreeLevels() {
+		if (levels == null) {
+			levels = new ArrayList<>(U3LogicTreeBranch.getLogicTreeLevels());
+			List<Class<? extends U3LogicTreeBranchNode<?>>> ealClasses = new ArrayList<>();
+			ealClasses.add(U3_EAL_ProbModels.class);
+			ealClasses.add(U3_EAL_GMMs.class);
+			ealClasses.add(U3_EAL_GMM_Epistemic.class);
+			ealClasses.add(U3_EAL_Vs30Model.class);
+			for (Class<? extends U3LogicTreeBranchNode<?>> clazz : ealClasses) {
+				U3LogicTreeBranchNode<?> value0 = clazz.getEnumConstants()[0];
+				LogicTreeLevel<U3LogicTreeBranchNode<?>> level = LogicTreeLevel.forEnumUnchecked(
+						value0, value0.getBranchLevelName(), value0.getShortBranchLevelName());
+				levels.add(level);
+			}
+		}
+		
+		return levels;
 	}
 	
 	private static List<U3LogicTreeBranchNode<?>> build(U3LogicTreeBranch tiBranch, U3_EAL_ProbModels probModel, U3_EAL_GMMs gmm,
