@@ -58,7 +58,7 @@ public class InitialDefModConvert {
 			FeatureProperties props = feature.properties;
 			
 			String name = props.getString("Fault");
-			props.remove(name);
+			props.remove("Fault");
 			props.set(GeoJSONFaultSection.FAULT_NAME, name);
 			
 			Preconditions.checkState(!prevNames.contains(name), "Duplicate name: %s", name);

@@ -24,13 +24,18 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 public class BranchAveragedHazardScriptWriter {
 
 	public static void main(String[] args) throws IOException {
-		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
+//		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
+//		String baseDirName = "2023_11_20-nshm23_branches-dm_sampling-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
+//		String baseDirName = "2023_11_17-nshm23_branches-dm_sampling-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
+		String baseDirName = "2023_11_16-nshm23_branches-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
+//		String baseDirName = "2024_05_07-nshm23_branches-WUS_FM_v3-AvgSupraB-AvgSeg";
 		
 //		String suffix = "true_mean";
 //		String solFileName = "true_mean_solution.zip";
 		
 		String suffix = "ba_only";
-		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
+		String solFileName = "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
+//		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
 		
 		boolean noMFDs = false;
 		
@@ -47,35 +52,35 @@ public class BranchAveragedHazardScriptWriter {
 		File localDir = new File(localMainDir, dirName);
 		Preconditions.checkState(localDir.exists() || localDir.mkdir());
 		
-//		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
-//		int remoteTotalThreads = 20;
-//		int remoteTotalMemGB = 50;
-//		String queue = "scec";
-//		int nodes = 36;
-//		int mins = 600;
-////		int nodes = 18;
-////		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-////				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
-//		JavaShellScriptWriter parallelMPJWrite = new FastMPJShellScriptWriter(
-//				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.FMPJ_HOME);
-//		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN,
-//				remoteTotalMemGB*1024, null);
-//		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
-		
-		File remoteMainDir = new File("/caldera/hovenweep/projects/usgs/hazards/ehp/kmilner/nshm23/batch_inversions");
-		int remoteTotalThreads = 128;
-		int remoteTotalMemGB = 448;
-		String queue = null;
-		int nodes = 4;
-		int mins = 180;
+		File remoteMainDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions");
+		int remoteTotalThreads = 20;
+		int remoteTotalMemGB = 50;
+		String queue = "scec";
+		int nodes = 36;
+		int mins = 600;
 //		int nodes = 18;
 //		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
 //				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
 		JavaShellScriptWriter parallelMPJWrite = new FastMPJShellScriptWriter(
-				HovenweepScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, HovenweepScriptWriter.FMPJ_HOME);
-		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(HovenweepScriptWriter.JAVA_BIN,
+				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.FMPJ_HOME);
+		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(USC_CARC_ScriptWriter.JAVA_BIN,
 				remoteTotalMemGB*1024, null);
-		BatchScriptWriter pbsWrite = new HovenweepScriptWriter();
+		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
+		
+//		File remoteMainDir = new File("/caldera/hovenweep/projects/usgs/hazards/ehp/kmilner/nshm23/batch_inversions");
+//		int remoteTotalThreads = 128;
+//		int remoteTotalMemGB = 448;
+//		String queue = null;
+//		int nodes = 4;
+//		int mins = 180;
+////		int nodes = 18;
+////		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
+////				USC_CARC_ScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, USC_CARC_ScriptWriter.MPJ_HOME);
+//		JavaShellScriptWriter parallelMPJWrite = new FastMPJShellScriptWriter(
+//				HovenweepScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, HovenweepScriptWriter.FMPJ_HOME);
+//		JavaShellScriptWriter singleMPJWrite = new NoMPJSingleNodeShellScriptWriter(HovenweepScriptWriter.JAVA_BIN,
+//				remoteTotalMemGB*1024, null);
+//		BatchScriptWriter pbsWrite = new HovenweepScriptWriter();
 		
 		parallelMPJWrite.setEnvVar("MAIN_DIR", remoteMainDir.getAbsolutePath());
 		singleMPJWrite.setEnvVar("MAIN_DIR", remoteMainDir.getAbsolutePath());

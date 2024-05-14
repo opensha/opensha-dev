@@ -149,8 +149,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		List<RandomlySampledLevel<?>> individualRandomLevels = new ArrayList<>();
 		int samplingBranchCountMultiplier = 1;
 
-//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-		String dirName = "2024_03_11";
+		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+//		String dirName = "2024_03_11";
 		
 		/*
 		 * UCERF3 logic tree
@@ -244,13 +244,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-nshm23_u3_hybrid_branches";
 //		double avgNumRups = 325000;
 		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
-//		dirName += "-nshm23_branches";
-//		double avgNumRups = 600000;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
+		dirName += "-nshm23_branches";
+		double avgNumRups = 600000;
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
-		dirName += "-prvi25_branches";
-		double avgNumRups = 50000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+//		dirName += "-prvi25_branches";
+//		double avgNumRups = 50000;
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 //		dirName += "-nshm18_branches-wc_94";
@@ -503,8 +503,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				NSHM18_FaultModels.NSHM18_WUS_PlusU3_FM_3p1,
 //				NSHM23_FaultModels.FM_v1p4,
 //				NSHM23_FaultModels.FM_v2,
-//				NSHM23_FaultModels.WUS_FM_v3,
-				PRVI25_FaultModels.PRVI_FM_INITIAL,
+				NSHM23_FaultModels.WUS_FM_v3,
+//				PRVI25_FaultModels.PRVI_FM_INITIAL,
 				
 //				// SINGLE STATE
 //				NSHM23_SingleStates.NM,
@@ -552,13 +552,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// SUPRA-SEIS-B
 //				SupraSeisBValues.B_0p5,
+				SupraSeisBValues.AVERAGE,
 				
 				// PALEO UNCERT
 //				NSHM23_PaleoUncertainties.EVEN_FIT,
 				
 				// SEGMENTATION
 //				SegmentationModels.SHAW_R0_3,
-//				NSHM23_SegmentationModels.AVERAGE,
+				NSHM23_SegmentationModels.AVERAGE,
 //				NSHM23_SegmentationModels.MID,
 //				NSHM23_SegmentationModels.CLASSIC,
 //				NSHM23_SegmentationModels.CLASSIC_FULL,

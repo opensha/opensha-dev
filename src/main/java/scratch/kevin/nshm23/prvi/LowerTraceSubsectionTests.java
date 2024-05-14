@@ -14,6 +14,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureProperties;
 import org.opensha.commons.geo.json.Geometry;
+import org.opensha.commons.geo.json.Geometry.MultiLineString;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
@@ -91,8 +92,7 @@ public class LowerTraceSubsectionTests {
 		GeoJSONFaultSection origSect = GeoJSONFaultSection.fromFeature(Feature.fromJSON(sectJSON));
 		System.out.println("Parsed JSON:\n"+origSect.toFeature().toJSON());
 		Feature feature = origSect.toFeature();
-		feature = new Feature((Number)feature.id, feature.geometry, new FeatureProperties(feature.properties));
-		feature.properties.put(GeoJSONFaultSection.LOWER_TRACE, new Geometry.LineString(lower));
+		feature = new Feature((Number)feature.id, new MultiLineString(List.of(upper, lower)), new FeatureProperties(feature.properties));
 		GeoJSONFaultSection sect = GeoJSONFaultSection.fromFeature(feature);
 		System.out.println("JSON with lower trace:\n"+sect.toFeature().toJSON());
 		Preconditions.checkNotNull(sect.getLowerFaultTrace());

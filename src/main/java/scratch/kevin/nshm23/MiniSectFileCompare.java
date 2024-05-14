@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.sha.earthquake.faultSysSolution.util.minisections.MinisectionSlipRecord;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels.MinisectionSlipRecord;
 
 public class MiniSectFileCompare {
 
@@ -31,9 +31,9 @@ public class MiniSectFileCompare {
 				+ "fm_v2/EVANS-no_ghost_corr.txt");
 		File compFile = new File("/tmp/Output_noGT_suite_011123.txt");
 		
-		Map<Integer, List<MinisectionSlipRecord>> refMinis = NSHM23_DeformationModels.loadGeodeticModel(
+		Map<Integer, List<MinisectionSlipRecord>> refMinis = MinisectionSlipRecord.readMinisectionsFile(
 				new InputStreamReader(new FileInputStream(refFile)));
-		Map<Integer, List<MinisectionSlipRecord>> compMinis = NSHM23_DeformationModels.loadGeodeticModel(
+		Map<Integer, List<MinisectionSlipRecord>> compMinis = MinisectionSlipRecord.readMinisectionsFile(
 				new InputStreamReader(new FileInputStream(compFile)));
 		
 		int compFaultMissing = 0;

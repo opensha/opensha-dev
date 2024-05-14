@@ -110,6 +110,7 @@ import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.IDPairing;
+import org.opensha.commons.util.Interpolate;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
@@ -181,7 +182,9 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
+import org.opensha.sha.earthquake.faultSysSolution.util.minisections.MinisectionSlipRecord;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
@@ -200,7 +203,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.data.NSHM23_PaleoDataLo
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_FaultCubeAssociations;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
-import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels.MinisectionSlipRecord;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
@@ -5166,7 +5168,7 @@ public class PureScratch {
 		plotSects.add(fullApproxSect);
 		
 		Feature stirlingFeature = Feature.fromJSON(sect.toFeature().toJSON());
-		stirlingFeature.properties.remove(GeoJSONFaultSection.LOWER_TRACE);
+//		stirlingFeature.properties.remove(GeoJSONFaultSection.LOWER_TRACE); // TODO
 		FaultSection stirlingSect = GeoJSONFaultSection.fromFeature(stirlingFeature);
 		stirlingSect.setSectionName("Stirling Sect");
 		stirlingSect.setSectionId(plotSects.size());
@@ -5583,12 +5585,86 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test284() throws IOException {
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v3;
+		// disable caps
+		NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV_UPPER_BOUND = 0d;
+		NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV = 0d;
+		int totNumSubSects = 0;
+		int totNumBelow0p1 = 0;
+		int totNumAbove1 = 0;
+		
+		int avgNumSubSects = 0;
+		int avgNumBelow0p1 = 0;
+		int avgNumAbove1 = 0;
+		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values()) {
+			if (dm != NSHM23_DeformationModels.AVERAGE && dm.getNodeWeight(null) == 0d)
+				continue;
+			List<? extends FaultSection> subSects = dm.build(fm);
+			
+			int myBelow0p1 = 0;
+			int myAbove1 = 0;
+			for (FaultSection sect : subSects) {
+				double slip = sect.getOrigAveSlipRate();
+				double sd = sect.getOrigSlipRateStdDev();
+				double cov = sd/slip;
+				if (cov < 0.1)
+					myBelow0p1++;
+				if (cov > 1d || slip == 0d)
+					myAbove1++;
+			}
+			
+			if (dm == NSHM23_DeformationModels.AVERAGE) {
+				avgNumAbove1 = myAbove1;
+				avgNumBelow0p1 = myBelow0p1;
+				avgNumSubSects = subSects.size();
+			} else {
+				totNumSubSects += subSects.size();
+				totNumBelow0p1 += myBelow0p1;
+				totNumAbove1 += myAbove1;
+			}
+		}
+		
+		DecimalFormat pDF = new DecimalFormat("0.##%");
+		System.out.println(pDF.format((double)totNumBelow0p1/(double)totNumSubSects)+" in total have COV<0.1");
+		System.out.println(pDF.format((double)totNumAbove1/(double)totNumSubSects)+" in total have COV>1");
+		
+		// now average model
+		System.out.println(pDF.format((double)avgNumBelow0p1/(double)avgNumSubSects)+" on average have COV<0.1");
+		System.out.println(pDF.format((double)avgNumAbove1/(double)avgNumSubSects)+" on average have COV>1");
+	}
+	
+	private static void test285() throws IOException {
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v3;
+		NSHM23_DeformationModels dm = NSHM23_DeformationModels.GEOLOGIC;
+		List<? extends FaultSection> allSects = fm.getFaultSections();
+		List<FaultSection> stateSects = new ArrayList<>();
+		NSHM23_SingleStates state = NSHM23_SingleStates.UT;
+		for (FaultSection sect : allSects)
+			if (state.contains((GeoJSONFaultSection)sect))
+				stateSects.add(sect);
+		System.out.println("Retained "+stateSects.size()+"/"+allSects.size()+" sects");
+		List<? extends FaultSection> subSects = dm.buildForSubsects(fm, SubSectionBuilder.buildSubSects(stateSects));
+		GeoJSONFaultReader.writeFaultSections(new File("/tmp/ut_sub_sects.geojson"), subSects);
+	}
+	
+	private static void test286() throws IOException {
+		double[] dists = { 0d, 1d, 10d, 100d, 200d, 300 };
+		double maxDist = 200d;
+		double zeroDistCoeff = 0.95;
+		for (double dist : dists) {
+			System.out.println("Dist: "+(float)dist);
+			System.out.println("\t"+(float)Interpolate.findY(0d, zeroDistCoeff, maxDist, 0d, dist));
+			System.out.println("\t"+(float)(zeroDistCoeff - dist*0.95/200));
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test283();
+		test286();
 	}
 
 }
