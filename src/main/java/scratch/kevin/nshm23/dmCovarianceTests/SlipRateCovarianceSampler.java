@@ -74,7 +74,7 @@ public class SlipRateCovarianceSampler {
 	}
 	
 	/*
-	 * Sigma truncation: don't sample values more than these many std. devs. away from the mean to avoid extremem outliers
+	 * Sigma truncation: don't sample values more than these many std. devs. away from the mean to avoid extreme outliers
 	 */
 	public static double TRUNCATION_DEFAULT = 3d;
 	private double truncation = TRUNCATION_DEFAULT;

@@ -49,20 +49,36 @@ public class BranchMFDFigures {
 		File corrSolDir = new File(invsDir, "2024_02_02-nshm23_branches-WUS_FM_v3");
 		File corrBAFile = new File(corrSolDir, "results_WUS_FM_v3_branch_averaged.zip"); // can't be gridded, need order
 		
+		File avgSolDir = new File(invsDir, "2024_05_07-nshm23_branches-WUS_FM_v3-AvgSupraB-AvgSeg");
+		File avgBAFile = new File(avgSolDir, "results_WUS_FM_v3_branch_averaged.zip"); // can't be gridded, need order
+		
 		File randSolDir = new File(invsDir, "2023_11_16-nshm23_branches-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
 		File randBAFile = new File(randSolDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged.zip"); // can't be gridded, need order
 		
 		File outputDir = new File("/home/kevin/Documents/papers/2024_nshm23_uncert_correlation/figures/branch_mfds");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-		
+
 		LogicTree<?> corrTree = LogicTree.read(new File(corrSolDir, "logic_tree.json"));
 		FaultSystemSolution corrBASol = FaultSystemSolution.load(corrBAFile);
+		LogicTree<?> avgTree = LogicTree.read(new File(avgSolDir, "logic_tree.json"));
+		FaultSystemSolution avgBASol = FaultSystemSolution.load(avgBAFile);
 		LogicTree<?> randTree = LogicTree.read(new File(randSolDir, "logic_tree.json"));
 		FaultSystemSolution randBASol = FaultSystemSolution.load(randBAFile);
 
 		List<EvenlyDiscretizedFunc> corrMFDs = loadCmlMFDs(corrBASol, corrTree);
 		
-		// load random in the background while we plot correlated
+		// load average and random in the background while we plot correlated
+		CompletableFuture<List<EvenlyDiscretizedFunc>> avgMFDsFuture = CompletableFuture.supplyAsync(new Supplier<List<EvenlyDiscretizedFunc>>() {
+
+			@Override
+			public List<EvenlyDiscretizedFunc> get() {
+				try {
+					return loadCmlMFDs(avgBASol, avgTree);
+				} catch (IOException e) {
+					throw ExceptionUtils.asRuntimeException(e);
+				}
+			}
+		});
 		CompletableFuture<List<EvenlyDiscretizedFunc>> randMFDsFuture = CompletableFuture.supplyAsync(new Supplier<List<EvenlyDiscretizedFunc>>() {
 
 			@Override
@@ -126,6 +142,12 @@ public class BranchMFDFigures {
 			.plotHighlight(noneB0, "None, b=0.0", endMemberCPT.getMinColor())
 			.plotHighlight(classicB1, "Classic, b=1.0", endMemberCPT.getMaxColor())
 			.plot(outputDir, "correlated_seg_bval_highlight", "Branch Combinations");
+		
+		List<EvenlyDiscretizedFunc> avgMFDs = avgMFDsFuture.join();
+		EvenlyDiscretizedFunc avgBA = branchAvgMFD(avgMFDs, avgTree);
+		
+		new Plot(avgMFDs, avgBA).plotObsMFD(obsRateM5, obsBVal).plotComparison(corrBA, "Fully Correlated")
+			.plot(outputDir, "average", "Average Seg & b-Value");
 		
 		List<EvenlyDiscretizedFunc> randMFDs = randMFDsFuture.join();
 		EvenlyDiscretizedFunc randBA = branchAvgMFD(randMFDs, randTree);

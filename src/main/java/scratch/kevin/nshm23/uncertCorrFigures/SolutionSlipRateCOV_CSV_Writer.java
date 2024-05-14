@@ -8,6 +8,7 @@ import java.util.zip.ZipFile;
 
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.Variance;
+import org.apache.commons.math3.util.MathArrays;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.logicTree.LogicTree;
 import org.opensha.commons.logicTree.LogicTreeBranch;
@@ -68,8 +69,9 @@ public class SolutionSlipRateCOV_CSV_Writer {
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine("Section Index", "Mean Slip Rate (m/yr)", "Slip Rate Std. Dev. (m/yr)");
 		
+		branchWeights = MathArrays.normalizeArray(branchWeights, branchWeights.length);
+		
 		for (int s=0; s<sectSolSlipRates.length; s++) {
-			Variance var = new Variance();
 			double sd = Math.sqrt(new Variance().evaluate(sectSolSlipRates[s], branchWeights));
 			double mean = new Mean().evaluate(sectSolSlipRates[s], branchWeights);
 			csv.addLine(s+"", mean+"", sd+"");

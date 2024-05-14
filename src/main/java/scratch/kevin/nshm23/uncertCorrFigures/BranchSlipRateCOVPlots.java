@@ -3,11 +3,18 @@ package scratch.kevin.nshm23.uncertCorrFigures;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
+import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.stat.descriptive.moment.Mean;
+import org.apache.commons.math3.stat.descriptive.moment.Variance;
+import org.apache.commons.math3.util.MathArrays;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
+import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
@@ -34,7 +41,7 @@ public class BranchSlipRateCOVPlots {
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		FaultSystemSolution corrBA = FaultSystemSolution.load(corrBAFile);
-		FaultSystemSolution randBA = FaultSystemSolution.load(randBAFile);
+//		FaultSystemSolution randBA = FaultSystemSolution.load(randBAFile);
 		
 		GeographicMapMaker mapMaker = new GeographicMapMaker(NSHM23_RegionLoader.loadFullConterminousWUS());
 		mapMaker.setFaultSections(corrBA.getRupSet().getFaultSectionDataList());
@@ -42,43 +49,93 @@ public class BranchSlipRateCOVPlots {
 		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v3;
 		NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV = Double.NaN;
 		NSHM23_DeformationModels.HARDCODED_FRACTIONAL_STD_DEV_UPPER_BOUND = Double.NaN;
-		List<? extends FaultSection> avgSects = NSHM23_DeformationModels.AVERAGE.build(fm);
+		List<? extends FaultSection> avgSubSects = NSHM23_DeformationModels.AVERAGE.build(fm);
+		List<List<? extends FaultSection>> subSectsList = new ArrayList<>();
+		List<Double> dmWeights = new ArrayList<>();
+		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values()) {
+			double weight = dm.getNodeWeight(null);
+			if (weight > 0d) {
+				subSectsList.add(dm.build(fm));
+				dmWeights.add(weight);
+			}
+		}
 		
-		double[] targetSlips = new double[avgSects.size()];
-		double[] targetSlipCOVs = new double[avgSects.size()];
+		int numSamples = 1000;
 		
+		int numSects = subSectsList.get(0).size();
+		
+		Random r = new Random(numSects*numSamples);
+
+		double[] avgTargetSlipCOVs = new double[numSects];
 		int numOver1 = 0;
-		
-		for (int s=0; s<avgSects.size(); s++) {
-			FaultSection sect = avgSects.get(s);
-			targetSlips[s] = sect.getReducedAveSlipRate();
+		for (int s=0; s<numSects; s++) {
+			FaultSection sect = avgSubSects.get(s);
+			double targetSlip = sect.getReducedAveSlipRate();
 			double sd = sect.getReducedSlipRateStdDev();
-			targetSlipCOVs[s] = sd/targetSlips[s];
-			if (targetSlipCOVs[s] >= 1d)
+			avgTargetSlipCOVs[s] = sd/targetSlip;
+			if (avgTargetSlipCOVs[s] >= 1d)
 				numOver1++;
 		}
-		System.out.println(numOver1+"/"+avgSects.size()+" ("+(float)(100d*numOver1/avgSects.size())+" %) have target COV>1");
+		System.out.println(numOver1+"/"+numSects+" ("+(float)(100d*numOver1/numSects)+" %) have target average COV>1");
 		
-		double[] corrSolSlips = new double[avgSects.size()];
-		double[] corrSolCOVs = new double[avgSects.size()];
+		double[] fullTargetSlipCOVs = new double[numSects];
+		numOver1 = 0;
+		for (int s=0; s<numSects; s++) {
+			double[] samples = new double[numSamples*subSectsList.size()];
+			double[] weights = new double[samples.length];
+			int index = 0;
+			for (int d=0; d<dmWeights.size(); d++) {
+				List<? extends FaultSection> subSects = subSectsList.get(d);
+				double dmWeight = dmWeights.get(d);
+				FaultSection sect = subSects.get(s);
+				double mean = sect.getOrigAveSlipRate();
+				double sd = sect.getOrigSlipRateStdDev();
+				for (int i=0; i<numSamples; i++) {
+					double sample = mean + r.nextGaussian()*sd;
+					Preconditions.checkState(Double.isFinite(sample), "Bad sample %s for mean=%s and sd=%s", sample, mean, sd);
+					samples[index] = sample;
+					weights[index++] = dmWeight;
+				}
+			}
+			Preconditions.checkState(index == samples.length);
+			weights = MathArrays.normalizeArray(weights, weights.length);
+			double mean = new Mean().evaluate(samples, weights);
+			double sd = Math.sqrt(new Variance().evaluate(samples, weights));
+			fullTargetSlipCOVs[s] = sd/mean;
+//			System.out.println("COV["+s+"] = "+(float)sd+" / "+(float)mean+" = "+(float)(targetSlipCOVs[s]));
+			if (fullTargetSlipCOVs[s] >= 1d)
+				numOver1++;
+		}
+		System.out.println(numOver1+"/"+numSects+" ("+(float)(100d*numOver1/numSects)+" %) have target full dist COV>1");
+		
+		double[] corrSolCOVs = new double[numSects];
 		CSVFile<String> corrSlipCSV = CSVFile.readFile(new File(corrSolDir, "misc_plots/sol_slip_rate_sd.csv"), true);
-		Preconditions.checkState(corrSlipCSV.getNumRows() == avgSects.size()+1);
-		for (int s=0; s<avgSects.size(); s++) {
-			corrSolSlips[s] = corrSlipCSV.getDouble(s+1, 1)*1e3;
+		Preconditions.checkState(corrSlipCSV.getNumRows() == numSects+1);
+		for (int s=0; s<numSects; s++) {
+			double corrSolSlip = corrSlipCSV.getDouble(s+1, 1)*1e3;
 			double sd = corrSlipCSV.getDouble(s+1, 2)*1e3;
-			corrSolCOVs[s] = sd/corrSolSlips[s];
+			corrSolCOVs[s] = sd/corrSolSlip;
 //			System.out.println(s+". slip="+(float)corrSolSlips[s]+"\tsd="+(float)sd+"\tcov="+(float)corrSolCOVs[s]);
 		}
 		
-		double[] randSolSlips = new double[avgSects.size()];
-		double[] randSolCOVs = new double[avgSects.size()];
+		double[] randSolCOVs = new double[numSects];
 		CSVFile<String> randSlipCSV = CSVFile.readFile(new File(randSolDir, "misc_plots/sol_slip_rate_sd.csv"), true);
-		Preconditions.checkState(randSlipCSV.getNumRows() == avgSects.size()+1);
-		for (int s=0; s<avgSects.size(); s++) {
-			randSolSlips[s] = randSlipCSV.getDouble(s+1, 1)*1e3;
+		Preconditions.checkState(randSlipCSV.getNumRows() == numSects+1);
+		for (int s=0; s<numSects; s++) {
+			double randSolSlip = randSlipCSV.getDouble(s+1, 1)*1e3;
 			double sd = randSlipCSV.getDouble(s+1, 2)*1e3;
-			randSolCOVs[s] = sd/randSolSlips[s];
+			randSolCOVs[s] = sd/randSolSlip;
 		}
+		
+		System.out.println("Avg avg-target COV: "+StatUtils.mean(avgTargetSlipCOVs));
+		System.out.println("Avg full-target COV: "+StatUtils.mean(fullTargetSlipCOVs));
+		System.out.println("Avg corr model COV: "+StatUtils.mean(corrSolCOVs));
+		System.out.println("Avg rand model COV: "+StatUtils.mean(randSolCOVs));
+		
+		System.out.println("Median avg-target COV: "+DataUtils.median(avgTargetSlipCOVs));
+		System.out.println("Median full-target COV: "+DataUtils.median(fullTargetSlipCOVs));
+		System.out.println("Median corr model COV: "+DataUtils.median(corrSolCOVs));
+		System.out.println("Median rand model COV: "+DataUtils.median(randSolCOVs));
 		
 		CPT covCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0, 2d);
 		covCPT.setNanColor(Color.LIGHT_GRAY);
@@ -88,23 +145,25 @@ public class BranchSlipRateCOVPlots {
 		maskedPDiffCPT.setNanColor(Color.LIGHT_GRAY);
 		CPT covDiffCPT = GMT_CPT_Files.DIVERGING_BAM_UNIFORM.instance().reverse().rescale(-0.3d, 0.3d);
 		covDiffCPT.setNanColor(Color.LIGHT_GRAY);
-		
-		mapMaker.plotSectScalars(targetSlipCOVs, covCPT, "Branch Averaged Target Slip Rate COV");
-		mapMaker.plot(outputDir, "target_cov", " ");
-		mapMaker.plotSectScalars(corrSolCOVs, covCPT, "Original Model Solution Slip Rate COV");
+
+		mapMaker.plotSectScalars(avgTargetSlipCOVs, covCPT, "Branch Averaged Target Slip Rate COV");
+		mapMaker.plot(outputDir, "avg_target_cov", " ");
+		mapMaker.plotSectScalars(fullTargetSlipCOVs, covCPT, "Target Slip Rate COV");
+		mapMaker.plot(outputDir, "full_target_cov", " ");
+		mapMaker.plotSectScalars(corrSolCOVs, covCPT, "NSHM23 Model Solution Slip Rate COV");
 		mapMaker.plot(outputDir, "correlated_sol_cov", " ");
 		mapMaker.plotSectScalars(randSolCOVs, covCPT, "Randomly Sampled Model Solution Slip Rate COV");
 		mapMaker.plot(outputDir, "rand_sol_cov", " ");
 
-		mapMaker.plotSectScalars(diff(targetSlipCOVs, corrSolCOVs), covDiffCPT, "Original Solution - Target Slip Rate COV Difference");
-		mapMaker.plot(outputDir, "correlated_sol_cov_diff", " ");
-		mapMaker.plotSectScalars(pDiff(targetSlipCOVs, corrSolCOVs), maskedPDiffCPT, "Original Solution vs Target Slip Rate COV % Change");
-		mapMaker.plot(outputDir, "correlated_sol_cov_pDiff", " ");
-		
-		mapMaker.plotSectScalars(diff(targetSlipCOVs, randSolCOVs), covDiffCPT, "Randomly Sampled Solution - Target Slip Rate COV Difference");
-		mapMaker.plot(outputDir, "rand_sol_cov_diff", " ");
-		mapMaker.plotSectScalars(pDiff(targetSlipCOVs, randSolCOVs), maskedPDiffCPT, "Randomly Sampled Solution vs Target Slip Rate COV % Change");
-		mapMaker.plot(outputDir, "rand_sol_cov_pDiff", " ");
+//		mapMaker.plotSectScalars(diff(targetSlipCOVs, corrSolCOVs), covDiffCPT, "Original Solution - Target Slip Rate COV Difference");
+//		mapMaker.plot(outputDir, "correlated_sol_cov_diff", " ");
+//		mapMaker.plotSectScalars(pDiff(targetSlipCOVs, corrSolCOVs), maskedPDiffCPT, "Original Solution vs Target Slip Rate COV % Change");
+//		mapMaker.plot(outputDir, "correlated_sol_cov_pDiff", " ");
+//		
+//		mapMaker.plotSectScalars(diff(targetSlipCOVs, randSolCOVs), covDiffCPT, "Randomly Sampled Solution - Target Slip Rate COV Difference");
+//		mapMaker.plot(outputDir, "rand_sol_cov_diff", " ");
+//		mapMaker.plotSectScalars(pDiff(targetSlipCOVs, randSolCOVs), maskedPDiffCPT, "Randomly Sampled Solution vs Target Slip Rate COV % Change");
+//		mapMaker.plot(outputDir, "rand_sol_cov_pDiff", " ");
 	}
 	
 	private static double[] diff(double[] ref, double[] comp) {
