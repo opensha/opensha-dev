@@ -11,7 +11,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_FaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 
@@ -20,7 +20,7 @@ import com.google.common.base.Preconditions;
 public class BunceMainRidgeConnectionTests {
 
 	public static void main(String[] args) throws IOException {
-		PRVI25_FaultModels fm = PRVI25_FaultModels.PRVI_FM_INITIAL;
+		PRVI25_CrustalFaultModels fm = PRVI25_CrustalFaultModels.PRVI_FM_INITIAL;
 		List<? extends FaultSection> allSects = fm.getFaultSections();
 		
 		FaultSection bunce5 = null;

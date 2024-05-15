@@ -172,6 +172,9 @@ import org.opensha.sha.earthquake.faultSysSolution.reports.ReportPageGen.PlotLev
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SectBySectDetailPlots;
 import org.opensha.sha.earthquake.faultSysSolution.reports.plots.SolMFDPlot;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityResult;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.AspectRatioFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc.HardcodedJumpProb;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.Shaw07JumpDistProb;
@@ -5659,12 +5662,60 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test287() throws IOException {
+		Map<Integer, FaultSection> fmSectsMap = NSHM23_FaultModels.WUS_FM_v3.getFaultSectionIDMap();
+		Map<Integer, GeoJSONFaultSection> geoDMSects = NSHM23_DeformationModels.getGeolFullSects(NSHM23_FaultModels.WUS_FM_v3);
+		
+		int numTests = 0;
+		for (int parentID : geoDMSects.keySet()) {
+			GeoJSONFaultSection dmSect = geoDMSects.get(parentID);
+			FaultSection fmSect = fmSectsMap.get(parentID);
+			Preconditions.checkState((float)dmSect.getAveRake() == (float)fmSect.getAveRake());
+			numTests++;
+		}
+		System.out.println("Validated rakes of "+numTests+" sections");
+	}
+	
+	private static void test288() throws IOException {
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/tmp/subduction_rup_set_FULL.zip"));
+		
+		List<? extends FaultSection> subSects = rupSet.getFaultSectionDataList();
+		
+//		int startIndex = 20;
+		int startIndex = 51;
+		
+		AspectRatioFilter filter = new AspectRatioFilter(0.75f, false, false, null);
+		
+		for (int num=1; num<=5; num++) {
+			List<? extends FaultSection> sects = subSects.subList(startIndex, startIndex+num);
+			Preconditions.checkState(sects.size() == num);
+			double aspect = AspectRatioFilter.clusterAspectRatio(sects);
+			
+			ClusterRupture rupture = new ClusterRupture(new FaultSubsectionCluster(sects));
+			System.out.println("=============================================");
+			System.out.println("Calculating for "+sects.size()+" sects: "+rupture);
+			PlausibilityResult result = filter.apply(rupture, true);
+			System.out.println("\tResult: "+result);
+			System.out.println("\tAspect: "+aspect);
+			System.out.println("=============================================");
+		}
+	}
+	
+	private static void test289() throws IOException {
+//		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/tmp/subduction_rup_set_FULL.zip"));
+		FaultSystemRupSet rupSet = FaultSystemRupSet.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_05_15-prvi25_subduction_branches-PRVI_SUB_FM_INITIAL/results_PRVI_SUB_FM_INITIAL_branch_averaged.zip"));
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
+			sect.getFaultSurface(1d, false, false);
+			sect.getFaultSurface(1d, false, true);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test286();
+		test289();
 	}
 
 }
