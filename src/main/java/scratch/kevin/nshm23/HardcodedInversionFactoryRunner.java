@@ -45,6 +45,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.Random
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.prior2018.NSHM18_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SparseGutenbergRichterSolver;
@@ -115,8 +117,8 @@ public class HardcodedInversionFactoryRunner {
 //		dirName += "-nshm23-full_sys-prev_weights";
 //		NSHM23_PaleoDataLoader.INCLUDE_U3_PALEO_SLIP = false;
 //		dirName += "-no_paleo_slip";
-		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
-		dirName += "-nshm23";
+//		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory();
+//		dirName += "-nshm23";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.PaleoSlipInequality();
 //		dirName += "-nshm23-paleo_slip_ineq";
 //		NSHM23_InvConfigFactory factory = new NSHM23_InvConfigFactory.ForceNewPaleo();
@@ -126,6 +128,9 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
 //		dirName += "-nshm23-dm_sample_cap_sigma";
 		
+		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
+		dirName += "-prvi25";
+		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
 		boolean writeRS = true;
@@ -133,8 +138,11 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<U3LogicTreeBranchNode<?>> branch = U3LogicTreeBranch.DEFAULT;
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM18_LogicTreeBranch.DEFAULT; dirName += "-2018_inputs";
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_U3_HybridLogicTreeBranch.DEFAULT; dirName += "-u3";
-		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
+//		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
+		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_ON_FAULT;
 		branch = branch.copy();
+		
+		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		
 		// seg/b sampling
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;
