@@ -231,8 +231,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.T
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -5713,15 +5711,39 @@ public class PureScratch {
 	}
 	
 	private static void test290() throws IOException {
-		List<? extends FaultSection> sects = PRVI25_CrustalDeformationModels.GEOLOGIC.build(PRVI25_CrustalFaultModels.PRVI_FM_INITIAL);
-		for (FaultSection sect : sects) {
-			if (sect.getName().toLowerCase().contains("proxy")) {
-				System.out.println(sect.getName());
-				System.out.println("\tproxy? "+sect.isProxyFault());
-				System.out.println("\thas poly? "+(sect.getZonePolygon() != null));
+		File dir = new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_05_15-prvi25_crustal_branches");
+		SolutionLogicTree slt = SolutionLogicTree.load(new File(dir, "results.zip"));
+		List<LogicTreeBranch<?>> connectedBranches = new ArrayList<>();
+		int parentID = 39;
+		for (LogicTreeBranch<?> branch : slt.getLogicTree()) {
+			FaultSystemSolution sol = slt.forBranch(branch);
+			
+			boolean connected = false;
+			for (int rupIndex : sol.getRupSet().getRupturesForParentSection(parentID)) {
+				if (sol.getRateForRup(rupIndex) > 0d) {
+					for (FaultSection sect : sol.getRupSet().getFaultSectionDataForRupture(rupIndex)) {
+						if (sect.getParentSectionId() != parentID) {
+							connected = true;
+							break;
+						}
+					}
+				}
 			}
+			if (connected)
+				connectedBranches.add(branch);
 		}
-		GeoJSONFaultReader.writeFaultSections(new File("C:\\Users\\kmilner\\Downloads\\prvi_crustal_sub_sects.geojson"), sects);
+		
+		System.out.println(connectedBranches.size()+"/"+slt.getLogicTree().size()+" branches have connected proxy faults:");
+		LogicTreeBranch<?> common = null;
+		for (LogicTreeBranch<?> branch : connectedBranches) {
+			if (common == null)
+				common = branch.copy();
+			for (int i=0; i<branch.size(); i++)
+				if (!common.hasValue(branch.getValue(i)))
+					common.clearValue(i);
+			System.out.println(branch);
+		}
+		System.out.println("Things in common: "+common);
 	}
 	
 	/**

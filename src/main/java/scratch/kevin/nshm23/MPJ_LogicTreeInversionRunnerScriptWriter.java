@@ -602,16 +602,6 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		dirName += "-prvi25_crustal_branches";
 		double avgNumRups = 50000;
 		
-		// random DM sampling
-		levels = new ArrayList<>(levels);
-		int origNumLevels = levels.size();
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
-				levels.remove(i);
-		Preconditions.checkState(levels.size() == origNumLevels -1);
-		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-		samplingBranchCountMultiplier = 5; // 5 for each branch
-		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
 //		dirName += "-prvi25_subduction_branches";
 //		double avgNumRups = 10000;
