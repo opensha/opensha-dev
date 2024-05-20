@@ -84,6 +84,7 @@ import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalRandomlySampledDeformationModelLevel;
 import org.opensha.sha.util.NEHRP_TestCity;
 
 import com.google.common.base.Preconditions;
@@ -597,14 +598,24 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		/*
 		 * PRVI25 logic tree
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
-//		dirName += "-prvi25_crustal_branches";
-//		double avgNumRups = 50000;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+		dirName += "-prvi25_crustal_branches";
+		double avgNumRups = 50000;
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
-		dirName += "-prvi25_subduction_branches";
-		double avgNumRups = 10000;
-		gmpe = AttenRelRef.AG_2020_GLOBAL;
+		// random DM sampling
+		levels = new ArrayList<>(levels);
+		int origNumLevels = levels.size();
+		for (int i=levels.size(); --i>=0;)
+			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
+				levels.remove(i);
+		Preconditions.checkState(levels.size() == origNumLevels -1);
+		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
+		samplingBranchCountMultiplier = 5; // 5 for each branch
+		
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
+//		dirName += "-prvi25_subduction_branches";
+//		double avgNumRups = 10000;
+//		gmpe = AttenRelRef.AG_2020_GLOBAL;
 		
 		levels = new ArrayList<>(levels);
 		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
@@ -628,7 +639,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		LogicTreeNode[] required = {
 				// FAULT MODELS
 //				PRVI25_CrustalFaultModels.PRVI_FM_INITIAL,
-				PRVI25_SubductionFaultModels.PRVI_SUB_FM_INITIAL,
+//				PRVI25_SubductionFaultModels.PRVI_SUB_FM_INITIAL,
 
 				// RUPTURE SETS
 //				RupturePlausibilityModels.COULOMB, // default

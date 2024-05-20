@@ -231,6 +231,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.T
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -5710,12 +5712,24 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test290() throws IOException {
+		List<? extends FaultSection> sects = PRVI25_CrustalDeformationModels.GEOLOGIC.build(PRVI25_CrustalFaultModels.PRVI_FM_INITIAL);
+		for (FaultSection sect : sects) {
+			if (sect.getName().toLowerCase().contains("proxy")) {
+				System.out.println(sect.getName());
+				System.out.println("\tproxy? "+sect.isProxyFault());
+				System.out.println("\thas poly? "+(sect.getZonePolygon() != null));
+			}
+		}
+		GeoJSONFaultReader.writeFaultSections(new File("C:\\Users\\kmilner\\Downloads\\prvi_crustal_sub_sects.geojson"), sects);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test289();
+		test290();
 	}
 
 }
