@@ -605,14 +605,14 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		double avgNumRups = 50000;
 		
 		// random DM sampling
-		levels = new ArrayList<>(levels);
-		int origNumLevels = levels.size();
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
-				levels.remove(i);
-		Preconditions.checkState(levels.size() == origNumLevels -1);
-		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-		samplingBranchCountMultiplier = 5; // 5 for each branch
+//		levels = new ArrayList<>(levels);
+//		int origNumLevels = levels.size();
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
+//				levels.remove(i);
+//		Preconditions.checkState(levels.size() == origNumLevels -1);
+//		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
+//		samplingBranchCountMultiplier = 5; // 5 for each branch
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
 //		dirName += "-prvi25_subduction_branches";
@@ -652,6 +652,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				RupturePlausibilityModels.UCERF3_REDUCED,
 				
 				// DEFORMATION MODELS
+				PRVI25_CrustalDeformationModels.GEOLOGIC,
 				
 				// SCALING RELATIONSHIPS
 				
