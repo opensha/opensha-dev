@@ -619,8 +619,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		double avgNumRups = 10000;
 //		gmpe = AttenRelRef.AG_2020_GLOBAL;
 		
-		levels = new ArrayList<>(levels);
-		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
+//		levels = new ArrayList<>(levels);
+//		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
 		
 		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
 		
