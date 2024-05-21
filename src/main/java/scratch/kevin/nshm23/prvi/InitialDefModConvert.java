@@ -27,11 +27,11 @@ import com.google.common.base.Preconditions;
 public class InitialDefModConvert {
 
 	public static void main(String[] args) throws IOException {
-//		File dir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/fault_models/initial");
-		File dir = new File("C:\\Users\\kmilner\\git\\opensha\\opensha\\src\\main\\resources\\data\\erf\\prvi25\\fault_models\\initial");
-		File inputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI.geojson");
+		File dir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/fault_models/crustal");
+//		File dir = new File("C:\\Users\\kmilner\\git\\opensha\\opensha\\src\\main\\resources\\data\\erf\\prvi25\\fault_models\\initial");
+		File inputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_v1-1.geojson");
 		File inputPolys = new File(dir, "NSHM2025_FaultPolygons_PRVI_v1.geojson");
-		File outputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_mod.geojson");
+		File outputFile = new File(dir, "NSHM2025_GeoDefModel_PRVI_v1-1_mod.geojson");
 		List<Feature> features = new ArrayList<>(FeatureCollection.read(inputFile).features);
 		List<Feature> polyFeatures = new ArrayList<>(FeatureCollection.read(inputPolys).features);
 		
