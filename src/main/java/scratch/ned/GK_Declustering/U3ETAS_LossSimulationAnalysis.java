@@ -45,6 +45,7 @@ import org.opensha.sha.calc.params.PtSrcDistanceCorrectionParam;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.observedEarthquake.Declustering.GardnerKnopoffDeclustering;
@@ -371,6 +372,12 @@ public class U3ETAS_LossSimulationAnalysis {
 		
 		FaultSystemSolutionERF_ETAS erf = ETAS_Launcher.buildERF(sol,false, 1d, 2012);
 		erf.updateForecast();
+		
+		System.out.println("Sol has RupMFDs? "+sol.hasModule(RupMFDsModule.class));
+		System.out.println("ERF totNumRups: "+erf.getTotNumRups());
+		System.out.println("ERF getTotNumRupsFromFaultSystem: "+erf.getTotNumRupsFromFaultSystem());
+		System.out.println("ERF getNumFaultSystemSources: "+erf.getNumFaultSystemSources());
+		System.out.println("ERF getNumSources: "+erf.getNumSources());
 
 		// set the finite rupture surfaces
 		String errorMessage = null;
