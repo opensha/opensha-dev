@@ -245,7 +245,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 
 		/*
 		 * NSHM23 logic tree
-		 * TODO (this is a just a marker to find this part quickly)
+		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
 ////		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_U3_HybridLogicTreeBranch.levels;
 ////		dirName += "-nshm23_u3_hybrid_branches";
@@ -598,7 +598,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 		/*
 		 * PRVI25 logic tree
-		 * TODO (this is a just a marker to find this part quickly)
+		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
 		dirName += "-prvi25_crustal_branches";
@@ -613,6 +613,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		Preconditions.checkState(levels.size() == origNumLevels -1);
 //		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
 //		samplingBranchCountMultiplier = 5; // 5 for each branch
+//		dirName += "-dmSample";
+//		if (samplingBranchCountMultiplier > 1)
+//			dirName += samplingBranchCountMultiplier+"x";
 		
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
 //		dirName += "-prvi25_subduction_branches";
@@ -621,6 +624,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
+		
+//		dirName += "-proxyGriddedTests";
 		
 		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
 		
@@ -646,54 +651,24 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				// RUPTURE SETS
 //				RupturePlausibilityModels.COULOMB, // default
 //				RupturePlausibilityModels.COULOMB_5km,
-//				RupturePlausibilityModels.AZIMUTHAL,
-//				RupturePlausibilityModels.SEGMENTED,
-//				RupturePlausibilityModels.UCERF3,
-//				RupturePlausibilityModels.UCERF3_REDUCED,
 				
 				// DEFORMATION MODELS
-				PRVI25_CrustalDeformationModels.GEOLOGIC,
+//				PRVI25_CrustalDeformationModels.GEOLOGIC,
 				
 				// SCALING RELATIONSHIPS
-				
-				// SLIP ALONG RUPTURE
-//				NSHM23_SlipAlongRuptureModels.UNIFORM,
-//				NSHM23_SlipAlongRuptureModels.TAPERED,
 				
 				// SUB-SECT CONSTRAINT
 //				SubSectConstraintModels.TOT_NUCL_RATE, // default
 //				SubSectConstraintModels.NUCL_MFD,
 				
-				// SUB-SEIS MO REDUCTION
-//				SubSeisMoRateReductions.SUB_B_1,
-//				SubSeisMoRateReductions.NONE, // default
-//				SubSeisMoRateReductions.SYSTEM_AVG,
-//				SubSeisMoRateReductions.SYSTEM_AVG_SUB_B_1,
-				
 				// SUPRA-SEIS-B
 //				SupraSeisBValues.B_0p5,
 //				SupraSeisBValues.AVERAGE,
 				
-				// PALEO UNCERT
-//				NSHM23_PaleoUncertainties.EVEN_FIT,
-				
 				// SEGMENTATION
-//				SegmentationModels.SHAW_R0_3,
 //				NSHM23_SegmentationModels.AVERAGE,
 //				NSHM23_SegmentationModels.MID,
 //				NSHM23_SegmentationModels.CLASSIC,
-//				NSHM23_SegmentationModels.CLASSIC_FULL,
-				
-				// SEG ADJUSTMENT
-//				SegmentationMFD_Adjustment.NONE,
-//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG,
-//				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG_SINGLE_ITER,
-//				SegmentationMFD_Adjustment.REL_GR_THRESHOLD_AVG, // default
-//				SegmentationMFD_Adjustment.CAPPED_REDIST,
-//				SegmentationMFD_Adjustment.CAPPED_REDIST_SELF_CONTAINED,
-//				SegmentationMFD_Adjustment.GREEDY,
-//				SegmentationMFD_Adjustment.GREEDY_SELF_CONTAINED,
-//				SegmentationMFD_Adjustment.JUMP_PROB_THRESHOLD_AVG_MATCH_STRICT,
 				};
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.SYSTEM_AVG };
 //		LogicTreeNode[] required = { FaultModels.FM3_1, SubSeisMoRateReductionNode.FAULT_SPECIFIC };
