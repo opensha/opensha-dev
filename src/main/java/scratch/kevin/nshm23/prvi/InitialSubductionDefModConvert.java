@@ -34,7 +34,7 @@ import com.google.gson.Gson;
 public class InitialSubductionDefModConvert {
 
 	public static void main(String[] args) throws IOException {
-		File fmDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/fault_models/initial");
+		File fmDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/fault_models/subduction");
 		File dmDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/def_models/subduction");
 		File inputFile = new File(fmDir, "PRVI_sub_v2_13May2024.geojson");
 		File fmOutputFile = new File(fmDir, "PRVI_sub_v2_fault_model.geojson");

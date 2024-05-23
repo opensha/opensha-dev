@@ -269,9 +269,12 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
+import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Config;
+import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture;
 import scratch.UCERF3.erf.ETAS.launcher.TriggerRupture.EdgeFault;
+import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.inversion.U3InversionTargetMFDs;
 import scratch.UCERF3.inversion.UCERF3InversionConfiguration;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
@@ -5746,12 +5749,71 @@ public class PureScratch {
 		System.out.println("Things in common: "+common);
 	}
 	
+	private static void test291() throws IOException {
+		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/data/kevin/git/ucerf3-etas-launcher/inputs/"
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/orig/"
+				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip"));
+		
+		FaultSystemSolutionERF_ETAS erf = ETAS_Launcher.buildERF(sol, false, 500d, 2012);
+		
+		erf.updateForecast();
+		
+		System.out.println("RupSet is a "+sol.getRupSet().getClass().getName());
+		System.out.println("Sol is a "+sol.getClass().getName());
+		System.out.println("RupSet has ModSectMinMags? "+sol.getRupSet().hasModule(ModSectMinMags.class));
+		System.out.println("Sol has RupMFDs? "+sol.hasModule(RupMFDsModule.class));
+		System.out.println("ERF totNumRups: "+erf.getTotNumRups());
+		System.out.println("ERF getTotNumRupsFromFaultSystem: "+erf.getTotNumRupsFromFaultSystem());
+		System.out.println("ERF getNumFaultSystemSources: "+erf.getNumFaultSystemSources());
+		System.out.println("ERF getNumSources: "+erf.getNumSources());
+	}
+	
+	private static void test292() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2024_05_21-prvi25_crustal_branches-GEOLOGIC/results_PRVI_FM_INITIAL_branch_averaged.zip"));
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
+		erf.updateForecast();
+		
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		GeographicMapMaker mapMaker = new GeographicMapMaker(rupSet.getFaultSectionDataList());
+		
+		List<LocationList> lines = new ArrayList<>();
+		List<Double> lineMags = new ArrayList<>();
+		double minMag = Double.POSITIVE_INFINITY;
+		double maxMag = Double.NEGATIVE_INFINITY;
+		for (int rupIndex=0; rupIndex<rupSet.getNumRuptures(); rupIndex++) {
+			boolean allProxies = true;
+			for (FaultSection sect : rupSet.getFaultSectionDataForRupture(rupIndex))
+				allProxies &= sect.isProxyFault();
+			int sourceID = erf.getSrcIndexForFltSysRup(rupIndex);
+			if (sourceID > 0 && allProxies) {
+				double mag = rupSet.getMagForRup(rupIndex);
+				for (ProbEqkRupture rup : erf.getSource(sourceID)) {
+					RuptureSurface surf = rup.getRuptureSurface();
+					lines.add(surf.getUpperEdge());
+					lineMags.add(mag);
+					minMag = Double.min(minMag, mag);
+					maxMag = Double.max(maxMag, mag);
+				}
+			}
+		}
+		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(minMag, maxMag);
+		List<Color> colors = new ArrayList<>();
+		for (double mag : lineMags)
+			colors.add(cpt.getColor((float)mag));
+		mapMaker.plotLines(lines, colors, 2f);
+		
+		mapMaker.plot(new File("/tmp"), "proxy_finite_test", " ");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test290();
+		test292();
 	}
 
 }
