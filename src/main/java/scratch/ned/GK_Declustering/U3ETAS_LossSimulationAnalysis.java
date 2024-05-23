@@ -857,6 +857,7 @@ public class U3ETAS_LossSimulationAnalysis {
 //		System.out.println("\tNumRows: "+lossDataCSV_File.getNumRows());
 
 		U3ETAS_LossSimulationAnalysis analysis = new U3ETAS_LossSimulationAnalysis();
+		
 //		Random random = new Random(102553864); // for reproducibility; change argument to get different results
 //		analysis.getRandomizedCatalogs(random);  // make and save the randomized catalogs
 
