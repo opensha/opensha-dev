@@ -96,8 +96,9 @@ public class U3ETAS_LossSimulationAnalysis {
 	static final boolean D = true; // debug flag
 	
 //	static String fssFileName = "/Users/field/workspace/git/opensha-ucerf3/src/scratch/UCERF3/data/scratch/InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip";
-	static String fssFileName = "/Users/field/FilesFromOldComputerTransfer/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip";
-	
+//	static String fssFileName = "/Users/field/FilesFromOldComputerTransfer/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip";
+	static String fssFileName = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnLossAnalysisPaper2024/Data/2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip";
+
 	//	static String catalogsFileName = "/Users/field/Field_Other/CEA_WGCEP/UCERF3/DeclusteringAnalysis/Data/U3ETAS_SimulationData/results_m5_preserve_chain_FullTD_totRateScaleFactor1pt14.bin"; 
 	static String catalogsFileName = "/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnHazardAnalysisPaper/OtherStuff/Data/U3ETAS_SimulationData/results_m5_preserve_chain_FullTD_totRateScaleFactor1pt14.bin";
 	
@@ -122,12 +123,13 @@ public class U3ETAS_LossSimulationAnalysis {
 	public U3ETAS_LossSimulationAnalysis() {
 		
 		try {
+//			this.catalogList = loadCatalogs(new File(fssFileName), new File(catalogsFileName), 0.0);
 			this.catalogList = loadCatalogs(new File(fssFileName), new File(catalogsFileName), 5.0);
 		} catch (IOException | DocumentException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
 		
-		System.out.println("num Catalogs = "+catalogList.size());
+		if (D) System.out.println("num Catalogs = "+catalogList.size());
 		
 		catalogDeclusteredList = getGK_DeclusteredCatalog(catalogList);
 		if(D) System.out.println("Done Declustering");
@@ -364,46 +366,83 @@ public class U3ETAS_LossSimulationAnalysis {
 	public static ArrayList<ObsEqkRupList> loadCatalogs(File fssFile, File catalogsFile, double minMag) throws IOException, DocumentException {
 		
 
+		// temporary hack (this needs to be done first)
+		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
+		
 		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);;
 		List<ETAS_Catalog> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile, minMag); 
 		
-		// temporary hack
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 		
 		FaultSystemSolutionERF_ETAS erf = ETAS_Launcher.buildERF(sol,false, 1d, 2012);
 		erf.updateForecast();
+		int numFSS_Rups = erf.getTotNumRupsFromFaultSystem();
+		
+		double minERF_Mag = 10000;
+		for(int r=0;r<erf.getTotNumRups();r++)
+			if(minERF_Mag>erf.getNthRupture(numFSS_Rups).getMag())
+				minERF_Mag=erf.getNthRupture(numFSS_Rups).getMag();
 		
 		System.out.println("Sol has RupMFDs? "+sol.hasModule(RupMFDsModule.class));
 		System.out.println("ERF totNumRups: "+erf.getTotNumRups());
-		System.out.println("ERF getTotNumRupsFromFaultSystem: "+erf.getTotNumRupsFromFaultSystem());
+		System.out.println("ERF getTotNumRupsFromFaultSystem: "+numFSS_Rups);
 		System.out.println("ERF getNumFaultSystemSources: "+erf.getNumFaultSystemSources());
 		System.out.println("ERF getNumSources: "+erf.getNumSources());
+		System.out.println("ERF minMag: "+minERF_Mag);
 
 		// set the finite rupture surfaces
 		String errorMessage = null;
+		int numProbMags =0;
+		int numProbNodeIndices =0;
+		double minCatalogMag = 10000;
+		int maxCatalogNthIndex = 0;
 		for (ETAS_Catalog catalog : catalogs) {
 			for (ETAS_EqkRupture rup : catalog) {
 				int nth = rup.getNthERF_Index();
-				EqkRupture nthRup = erf.getNthRupture(nth);
+				int rupFSS_Index = rup.getFSSIndex();
 				
-				// verify that magnitudes are the same
-				try {
-					Preconditions.checkState((float)rup.getMag() == (float)nthRup.getMag(), "Nth rupture mag=%s doesn't match ETAS mag=%s",
-							nthRup.getMag(), rup.getMag());
-				} catch (Exception e) {
-					if(errorMessage == null)
-						errorMessage = "ERROR: one or more magnitudes did not match";
-//					System.out.println("Error: "+(float)rup.getMag()+"\t"+(float)nthRup.getMag()+"\t"+
-//							rup.getHypocenterLocation()+"\t"+
-//							nthRup.getHypocenterLocation());
-//					e.printStackTrace();
-//					System.exit(0);
+				if(minCatalogMag>rup.getMag())
+					minCatalogMag=rup.getMag();
+				if(maxCatalogNthIndex<nth)
+					maxCatalogNthIndex=nth;
+
+				EqkRupture nthRupture = erf.getNthRupture(nth);
+
+				
+				//Verify FSS indices are the same
+				if(nth < numFSS_Rups) { // gridded rups come after FSS rups; next method should really return -1 for gridded rups
+					int fssIndexFromERF = erf.getFltSysRupIndexForNthRup(nth);
+					if(fssIndexFromERF != rupFSS_Index)
+						throw new RuntimeException("fssIndexFromERF != rupFSS_Index for nth="+nth+"; fssIndexFromERF="+
+								fssIndexFromERF+" and rupFSS_Index="+rupFSS_Index);
+				}
+				else {  // check that gridded rups are in the same grid cell
+					int nodeIndex1 = erf.getGridSourceProvider().getGriddedRegion().indexForLocation(rup.getHypocenterLocation());
+					int nodeIndex2 = rup.getGridNodeIndex();
+					if(nodeIndex1 != nodeIndex2) {
+						numProbNodeIndices+=1;
+						if(numProbNodeIndices==1)
+							System.out.println("nodeIndex1 != nodeIndex2 for nth="+nth+"; nodeIndex1="+
+									nodeIndex1+" and nodeIndex2="+nodeIndex2);
+//						throw new RuntimeException("nodeIndex1 != nodeIndex2 for nth="+nth+"; nodeIndex1="+
+//						nodeIndex1+" and nodeIndex2="+nodeIndex2);
+					}
 				}
 				
+				// verify that magnitudes are the same
+				double magDiff = Math.abs(rup.getMag()-nthRupture.getMag());
+				if(magDiff>0.001) {
+					numProbMags+=1;
+					if(numProbMags==1)
+						System.out.println("rup.getMag() != nthRupture.getMag() for nth="+nth+"; rup.getMag()="+
+								rup.getMag()+" and nthRupture.getMag()="+nthRupture.getMag());
+//					throw new RuntimeException("rup.getMag() != nthRupture.getMag() for nth="+nth+"; rup.getMag()="+
+//							rup.getMag()+" and nthRupture.getMag()="+nthRupture.getMag());
+				}
+
 				// replace surface if it's a FSS rupture
-				if(rup.getFSSIndex() != -1) {
-					rup.setRuptureSurface(nthRup.getRuptureSurface());
-					rup.setAveRake(nthRup.getAveRake());
+				if(rupFSS_Index != -1) {
+					rup.setRuptureSurface(nthRupture.getRuptureSurface());
+					rup.setAveRake(nthRupture.getAveRake());
 				}
 				else {
 					rup.setAveRake(0.);
@@ -411,9 +450,15 @@ public class U3ETAS_LossSimulationAnalysis {
 				}
 			}
 		}
+		System.out.println("numProbMags="+numProbMags);
+		System.out.println("numProbNodeIndices="+numProbNodeIndices);
+		System.out.println("minCatalogMag="+minCatalogMag);
+		System.out.println("minREF_Mag="+minERF_Mag);
+		System.out.println("maxCatalogNthIndex="+maxCatalogNthIndex);
+
 		
-		if(D && errorMessage != null)
-			System.out.println(errorMessage);
+//		if(D && errorMessage != null)
+//			System.out.println(errorMessage);
 
 				
 		// convert to a list of ObsEqkRupList objects (and filter M≤5 events out)
@@ -805,11 +850,15 @@ public class U3ETAS_LossSimulationAnalysis {
 	
 	public static void main(String[] args) throws IOException, DocumentException {
 
-		
+//		File lossDataCSV_Filename = new File("/Users/field/Library/CloudStorage/OneDrive-DOI/Field_Other/CEA_WGCEP/UCERF3/DeclusteringOnLossAnalysisPaper2024/Data/average_nth_rup_losses.csv");
+//		CSVFile<String> lossDataCSV_File = CSVFile.readFile(lossDataCSV_Filename, true);
+//		System.out.println("Loss Data:");
+//		System.out.println("\tNumCols: "+lossDataCSV_File.getNumCols());
+//		System.out.println("\tNumRows: "+lossDataCSV_File.getNumRows());
 
 		U3ETAS_LossSimulationAnalysis analysis = new U3ETAS_LossSimulationAnalysis();
-		Random random = new Random(102553864); // for reproducibility; change argument to get different results
-		analysis.getRandomizedCatalogs(random);  // make and save the randomized catalogs
+//		Random random = new Random(102553864); // for reproducibility; change argument to get different results
+//		analysis.getRandomizedCatalogs(random);  // make and save the randomized catalogs
 
 		
 		// STUFF FROM U3ETAS_SimulationAnalysis
