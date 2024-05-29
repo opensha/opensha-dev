@@ -34,188 +34,88 @@ import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 public class EAL_NthRupCSVWriter {
 
 	public static void main(String[] args) throws IOException {
-		// these loss results use a true mean solution
-		File trueMeanSolFile = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/orig/"
-				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_TRUE_HAZARD_MEAN_SOL_WITH_MAPPING.zip");
-		File compoundSolFile = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/orig/full_ucerf3_compound_sol.zip");
-		FaultSystemSolution trueMeanSol = FaultSystemSolution.load(trueMeanSolFile);
-		Map<U3LogicTreeBranch, List<Integer>> mappings = TrueMeanBuilder.loadRuptureMappings(trueMeanSolFile);
-		U3CompoundFaultSystemSolution cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundSolFile);
-		FaultSystemSolutionERF trueMeanERF = new FaultSystemSolutionERF(trueMeanSol);
-		trueMeanERF.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
-		trueMeanERF.setParameter(BackgroundRupParam.NAME, BackgroundRupType.CROSSHAIR);
-		trueMeanERF.getTimeSpan().setDuration(1d);
-		trueMeanERF.updateForecast();
 		
-		// we'll use this to calculate the FM3.1 only true mean EAL for validation
-		BitSet uniqueToFM31 = new BitSet(trueMeanSol.getRupSet().getNumRuptures());
-		// set all  FM3.1
-		for (U3LogicTreeBranch branch : mappings.keySet()) {
-			if (!branch.hasValue(FaultModels.FM3_1))
-				continue;
-			for (Integer rup : mappings.get(branch)) {
-				if (rup != null && rup >= 0)
-					uniqueToFM31.set(rup);
-			}
-		}
-		// unset all FM3.2
-		for (U3LogicTreeBranch branch : mappings.keySet()) {
-			if (branch.hasValue(FaultModels.FM3_1))
-				continue;
-			for (Integer rup : mappings.get(branch)) {
-				if (rup != null && rup >= 0)
-					uniqueToFM31.clear(rup);
-			}
-		}
-		
-		FaultSystemSolution baSol = FaultSystemSolution.load(
-				new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/FM3_1_SpatSeisU3_branch_averaged.zip"));
-		baSol.removeModuleInstances(RupMFDsModule.class);
-		FaultSystemSolutionERF baERF = new FaultSystemSolutionERF(baSol);
-		baERF.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
-		baERF.setParameter(BackgroundRupParam.NAME, BackgroundRupType.POINT);
-		baERF.getTimeSpan().setDuration(1d);
-		baERF.updateForecast();
-		
-		int[] mappedNthIDs = new int[trueMeanERF.getTotNumRups()];
-		double[] fractMappings = new double[trueMeanERF.getTotNumRups()];
-		calcMeanToBAMappings(trueMeanERF, mappings, cfss, baERF, FaultModels.FM3_1, mappedNthIDs, fractMappings);
-		
-		AttenRelRef[] gmpeRefs = {
-				AttenRelRef.CB_2014,
-				AttenRelRef.ASK_2014,
-				AttenRelRef.BSSA_2014,
-				AttenRelRef.CY_2014,
-				AttenRelRef.IDRISS_2014
-		};
-		double[] gmpeWeights = {
-				0.22,
-				0.22,
-				0.22,
-				0.22,
-				0.12
-		};
-		
-		Preconditions.checkState(gmpeWeights.length == gmpeRefs.length);
+		FaultSystemSolution sol = FaultSystemSolution.load(
+				new File("/home/kevin/git/ucerf3-etas-launcher/inputs/"
+						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip"));
+		sol.removeModuleInstances(RupMFDsModule.class);
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
+		erf.getTimeSpan().setDuration(1d);
 		
 		File ealBaseDir = new File("/home/kevin/OpenSHA/UCERF3/eal");
 		
-		File[] ealSubDirs = {
-				new File(ealBaseDir, "2020_03_17-ucerf3-ngaw2-cea-proxy-100pct-wald2007"),
-				new File(ealBaseDir, "2020_03_17-ucerf3-ngaw2-cea-proxy-100pct-wills2015")
-		};
-		double[] ealWeights = {
-				0.5d,
-				0.5d
-		};
-		Preconditions.checkState(ealWeights.length == ealSubDirs.length);
+//		File ealSubDir = new File(ealBaseDir, "2024_05_24-ucerf3-fm31_ba-pt_gridded-ngaw2-cea-proxy-100pct-wills2015");
+//		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.POINT);
+		File ealSubDir = new File(ealBaseDir, "2024_05_24-ucerf3-fm31_ba-ngaw2-cea-proxy-100pct-wills2015");
+		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.CROSSHAIR);
 		
-		File outputDir = new File(ealBaseDir, "2020_03_27-ucerf3-ngaw2-cea-100pct-consolidate");
+		String binFileName = "NGAWest_2014_AVG_NOIDRISS.bin";
 		
-		double[] nthLosses = new double[baERF.getTotNumRups()];
+		erf.updateForecast();
+		
+		double[] nthLosses = new double[erf.getTotNumRups()];
 		int[] nthFSSIndexes = new int[nthLosses.length];
 		int[] nthGridIndexes = new int[nthLosses.length];
+		double[] covs = new double[nthLosses.length];
 		
 		for (int n=0; n<nthLosses.length; n++) {
-			if (n < baERF.getTotNumRupsFromFaultSystem()) {
-				nthFSSIndexes[n] = baERF.getFltSysRupIndexForNthRup(n);
+			if (n < erf.getTotNumRupsFromFaultSystem()) {
+				nthFSSIndexes[n] = erf.getFltSysRupIndexForNthRup(n);
 				nthGridIndexes[n] = -1;
 			} else {
 				nthFSSIndexes[n] = -1;
-				nthGridIndexes[n] = baERF.getSrcIndexForNthRup(n) - baERF.getNumFaultSystemSources();
+				nthGridIndexes[n] = erf.getSrcIndexForNthRup(n) - erf.getNumFaultSystemSources();
 			}
 		}
 		
-		double totWeight = 0d;
+		File binFile = new File(ealSubDir, binFileName);
+		Preconditions.checkState(binFile.exists());
 		
-		for (int g=0; g<gmpeRefs.length; g++) {
-			String binFileName = gmpeRefs[g].name()+".bin";
-			for (int e=0; e<ealSubDirs.length; e++) {
-				File binFile = new File(ealSubDirs[e], binFileName);
-				Preconditions.checkState(binFile.exists());
-				double weight = gmpeWeights[g] * ealWeights[e];
-				System.out.println("Processing "+binFile.getAbsolutePath()+" with weight="+(float)weight);
-				totWeight += weight;
-				
-				double[][] trueMeanResults = MPJ_CondLossCalc.loadResults(binFile);
-				
-				System.out.println("Mapping True Mean results to BA");
-				// now map from true mean results to ba results
-				double[][] results = new double[baERF.getNumSources()][];
-				for (int sourceID=0; sourceID<baERF.getNumSources(); sourceID++)
-					results[sourceID] = new double[baERF.getSource(sourceID).getNumRuptures()];
-				
-				double trueMeanEAL = 0d;
-				double trueMeanEstFM31_EAL = 0d;
-				for (int trueMeanN=0; trueMeanN<mappedNthIDs.length; trueMeanN++) {
-					int trueMeanSourceID = trueMeanERF.getSrcIndexForNthRup(trueMeanN);
-					int trueMeanRupID = trueMeanERF.getRupIndexInSourceForNthRup(trueMeanN);
-
-					double trueMeanRate = trueMeanERF.getRupture(trueMeanSourceID, trueMeanRupID).getMeanAnnualRate(1d);
-					trueMeanEAL += trueMeanResults[trueMeanSourceID][trueMeanRupID] * trueMeanRate;
-					
-					if (mappedNthIDs[trueMeanN] < 0)
-						// not mapped, probably from another fault model
-						continue;
-
-					if (trueMeanSourceID < trueMeanERF.getNumFaultSystemSources() && uniqueToFM31.get(trueMeanERF.getFltSysRupIndexForNthRup(trueMeanN)))
-						// this ruptures was only on FM3.1, so it's rate was cut in half; double it
-						trueMeanRate *= 2;
-					trueMeanEstFM31_EAL += trueMeanResults[trueMeanSourceID][trueMeanRupID] * trueMeanRate;
-					
-					int baSourceID = baERF.getSrcIndexForNthRup(mappedNthIDs[trueMeanN]);
-					int baRupID = baERF.getRupIndexInSourceForNthRup(mappedNthIDs[trueMeanN]);
-					
-					results[baSourceID][baRupID] += fractMappings[trueMeanN] * trueMeanResults[trueMeanSourceID][trueMeanRupID];
-				}
-				
-				double baEAL = 0d;
-				for (int sourceID=0; sourceID<baERF.getNumSources(); sourceID++) {
-					ProbEqkSource source = baERF.getSource(sourceID);
-					for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
-						double rate = source.getRupture(rupID).getMeanAnnualRate(1d);
-						baEAL += rate*results[sourceID][rupID];
-					}
-				}
-
-				System.out.println("\tTrue mean EAL:\t"+(float)trueMeanEAL);
-				System.out.println("\tTrue mean est FM3.1 EAL:\t"+(float)trueMeanEstFM31_EAL);
-				System.out.println("\tBranch Avg EAL:\t"+(float)baEAL);
-				
-				Preconditions.checkState(results.length == baERF.getNumSources(),
-						"Source count mismatch: file=%s, erf=%s", results.length, baERF.getNumSources());
-				for (int sourceID=0; sourceID<baERF.getNumSources(); sourceID++) {
-					int numRups = baERF.getSource(sourceID).getNumRuptures();
-					Preconditions.checkState(results[sourceID].length == numRups,
-							"Rupture count mismatch for source %s: file=%s, erf=%s", sourceID, results.length, baERF.getNumSources());
-					int fssIndex, gridIndex;
-					if (sourceID < baERF.getNumFaultSystemSources()) {
-						fssIndex = baERF.getFltSysRupIndexForSource(sourceID);
-						gridIndex = -1;
-					} else {
-						fssIndex = -1;
-						gridIndex = sourceID - baERF.getNumFaultSystemSources();
-					}
-					for (int rupID=0; rupID<results[sourceID].length; rupID++) {
-						int n = baERF.get_nthRupIndicesForSource(sourceID)[rupID];
-						Preconditions.checkState(nthFSSIndexes[n] == fssIndex);
-						Preconditions.checkState(nthGridIndexes[n] == gridIndex);
-						nthLosses[n] += results[sourceID][rupID]*weight;
-					}
-				}
+		double[][] results = MPJ_CondLossCalc.loadResults(binFile);
+		
+		Preconditions.checkState(results.length == erf.getNumSources());
+		
+		double baEAL = 0d;
+		for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
+			ProbEqkSource source = erf.getSource(sourceID);
+			for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
+				double rate = source.getRupture(rupID).getMeanAnnualRate(1d);
+				baEAL += rate*results[sourceID][rupID];
 			}
 		}
 		
-		if ((float)totWeight != 1f)
-			for (int n=0; n<nthLosses.length; n++)
-				nthLosses[n] /= totWeight;
+		System.out.println("\tBranch Avg EAL:\t"+(float)baEAL);
+		
+		Preconditions.checkState(results.length == erf.getNumSources(),
+				"Source count mismatch: file=%s, erf=%s", results.length, erf.getNumSources());
+		for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
+			int numRups = erf.getSource(sourceID).getNumRuptures();
+			Preconditions.checkState(results[sourceID].length == numRups,
+					"Rupture count mismatch for source %s: file=%s, erf=%s", sourceID, results.length, erf.getNumSources());
+			int fssIndex, gridIndex;
+			if (sourceID < erf.getNumFaultSystemSources()) {
+				fssIndex = erf.getFltSysRupIndexForSource(sourceID);
+				gridIndex = -1;
+			} else {
+				fssIndex = -1;
+				gridIndex = sourceID - erf.getNumFaultSystemSources();
+			}
+			for (int rupID=0; rupID<results[sourceID].length; rupID++) {
+				int n = erf.get_nthRupIndicesForSource(sourceID)[rupID];
+				Preconditions.checkState(nthFSSIndexes[n] == fssIndex);
+				Preconditions.checkState(nthGridIndexes[n] == gridIndex);
+				nthLosses[n] += results[sourceID][rupID];
+				covs[n] = LossCOV_Model.PORTER_POWER_LAW_2020_09_01.getCOV(nthLosses[n]);
+			}
+		}
 		
 		CSVFile<String> csv = new CSVFile<>(true);
-		csv.addLine("Nth ERF Index", "FSS Index", "Grid Node Index", "Mag", "Conditional Average Loss");
+		csv.addLine("Nth ERF Index", "FSS Index", "Grid Node Index", "Mag", "Conditional Average Loss", "Porter (2020) Loss COV");
 		for (int n=0; n<nthLosses.length; n++)
-			csv.addLine(n+"", nthFSSIndexes[n]+"", nthGridIndexes[n]+"", (float)baERF.getNthRupture(n).getMag()+"", nthLosses[n]+"");
+			csv.addLine(n+"", nthFSSIndexes[n]+"", nthGridIndexes[n]+"", (float)erf.getNthRupture(n).getMag()+"", nthLosses[n]+"", covs[n]+"");
 		
-		csv.writeToFile(new File(outputDir, "average_nth_rup_losses.csv"));
+		csv.writeToFile(new File(ealSubDir, "average_nth_rup_losses.csv"));
 	}
 	
 	private static void calcMeanToBAMappings(FaultSystemSolutionERF trueMeanERF, Map<U3LogicTreeBranch, List<Integer>> mappings,

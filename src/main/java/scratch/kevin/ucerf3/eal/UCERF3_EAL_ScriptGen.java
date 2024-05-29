@@ -9,6 +9,7 @@ import org.dom4j.Element;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
 import org.opensha.commons.hpc.pbs.StampedeScriptWriter;
+import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.commons.util.XMLUtils;
 import org.opensha.sha.earthquake.param.BackgroundRupParam;
@@ -47,42 +48,53 @@ public class UCERF3_EAL_ScriptGen {
 //		String runSubDirName = "2017_05_24-ucerf3-ngaw2-cea-proxy-wills2015";
 //		String runSubDirName = "2017_05_26-ucerf3-ngaw2-cea-proxy-wald";
 //		String runSubDirName = "2020_03_17-ucerf3-ngaw2-cea-proxy-100pct-wills2015";
-		String runSubDirName = "2020_03_17-ucerf3-ngaw2-cea-proxy-100pct-wald2007";
+//		String runSubDirName = "2020_03_17-ucerf3-ngaw2-cea-proxy-100pct-wald2007";
+//		String runSubDirName = "2024_05_24-ucerf3-fm31_ba-ngaw2-cea-proxy-100pct-wills2015";
+		String runSubDirName = "2024_05_24-ucerf3-fm31_ba-pt_gridded-ngaw2-cea-proxy-100pct-wills2015";
 		
-		EpistemicOption ngaEpistemic = EpistemicOption.UPPER;
+//		EpistemicOption ngaEpistemic = EpistemicOption.UPPER;
 //		EpistemicOption ngaEpistemic = EpistemicOption.LOWER;
-//		EpistemicOption ngaEpistemic = null;
+		EpistemicOption ngaEpistemic = null;
 		
 		writeDir = new File(writeDir, runSubDirName);
 		if (!writeDir.exists())
 			writeDir.mkdir();
 		
-//		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
-//		File remoteMainDir = new File("/auto/scec-02/kmilner/ucerf3/eal");
-//		File remoteSubDir = new File(remoteMainDir, runSubDirName);
-//		File javaBin = USC_HPCC_ScriptWriter.JAVA_BIN;
-//		File mpjHome = USC_HPCC_ScriptWriter.FMPJ_HOME;
-//		int maxHeapMB = 12000;
-//		int numThreads = -1;
-//		int bundleSize = 10;
-		
-		BatchScriptWriter pbsWrite = new StampedeScriptWriter(true);
-//		File remoteMainDir = new File("/work/00950/kevinm/ucerf3/eal");
-		File remoteMainDir = new File("/scratch/00950/kevinm/ucerf3/eal");
+		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
+		File remoteMainDir = new File("/project/scec_608/kmilner/ucerf3/eal");
 		File remoteSubDir = new File(remoteMainDir, runSubDirName);
-		File javaBin = StampedeScriptWriter.JAVA_BIN;
-		File mpjHome = StampedeScriptWriter.FMPJ_HOME;
-//		int maxHeapMB = 26000;
-//		int numThreads = -1;
-		int maxHeapMB = 72*1024;
-		int numThreads = 68*2;
+		File javaBin = USC_CARC_ScriptWriter.JAVA_BIN;
+		File mpjHome = USC_CARC_ScriptWriter.FMPJ_HOME;
+		int maxHeapMB = 40000;
+		int numThreads = 20;
 		int maxDispatch = numThreads*5;
+		int nodes = 36;
+		String queue = "scec";
+		int mins = 12*60;
+		int ppn = 20;
+		
+//		BatchScriptWriter pbsWrite = new StampedeScriptWriter(true);
+////		File remoteMainDir = new File("/work/00950/kevinm/ucerf3/eal");
+//		File remoteMainDir = new File("/scratch/00950/kevinm/ucerf3/eal");
+//		File remoteSubDir = new File(remoteMainDir, runSubDirName);
+//		File javaBin = StampedeScriptWriter.JAVA_BIN;
+//		File mpjHome = StampedeScriptWriter.FMPJ_HOME;
+////		int maxHeapMB = 26000;
+////		int numThreads = -1;
+//		int maxHeapMB = 72*1024;
+//		int numThreads = 68*2;
+//		int maxDispatch = numThreads*5;
+//		int nodes = 20;
+//		String queue = "normal";
+//		int mins = 12*60;
 		
 		boolean gzip = false;
-		boolean tractResults = true;
+		boolean tractResults = false;
 		
-		String meanSolFileName = "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_TRUE_HAZARD_MEAN_SOL_WITH_MAPPING.zip";
-		File meanSolFile = new File(remoteMainDir, meanSolFileName);
+//		String meanSolFileName = "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_TRUE_HAZARD_MEAN_SOL_WITH_MAPPING.zip";
+//		File meanSolFile = new File(remoteMainDir, meanSolFileName);
+		File meanSolFile = new File("/project/scec_608/kmilner/ucerf3/ucerf3-etas-launcher/inputs/"
+				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip");
 		
 //		String vulnFileName = "2012_01_02_VUL06.txt";
 		String vulnFileName = "2014_05_16_VUL06.txt"; // updated for 99%
@@ -104,8 +116,8 @@ public class UCERF3_EAL_ScriptGen {
 		// 2017 CEA proxy
 //		String portfolioFileName = "Porter-24May2017-CA-RES1-2017-Wills2015.csv"; // Wills 2015
 //		String portfolioFileName = "Porter-24May2017-CA-RES1-2017-Wald.csv"; // Wald
-//		String portfolioFileName = "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wills2015.csv"; // From Keith 
-		String portfolioFileName = "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wald2007.csv"; // From Keith 
+		String portfolioFileName = "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wills2015.csv"; // From Keith 
+//		String portfolioFileName = "Porter-09-Feb-2020-CEA-100-pct-procy-portfolio-wald2007.csv"; // From Keith 
 		File portfolioFile = new File(remoteMainDir, portfolioFileName);
 		
 		FastMPJShellScriptWriter javaWrite = new FastMPJShellScriptWriter(javaBin, maxHeapMB,
@@ -116,29 +128,30 @@ public class UCERF3_EAL_ScriptGen {
 //		JavaShellScriptWriter javaWrite = new JavaShellScriptWriter(javaBin, maxHeapMB,
 //				LogicTreePBSWriter.getClasspath(remoteDir, remoteDir));
 		
-		int mins = 12*60;
-//		int nodes = 80;
-		int nodes = 20;
-		int ppn = 8;
-		if (numThreads > 0)
-			ppn = numThreads;
-		if (numThreads > 68)
-			ppn = 68;
-		String queue = "normal";
+////		int nodes = 80;
+//		int nodes = 20;
+//		int ppn = 8;
+//		if (numThreads > 0)
+//			ppn = numThreads;
+//		if (numThreads > 68)
+//			ppn = 68;
+//		String queue = "normal";
 		
 		String className = MPJ_CondLossCalc.class.getName();
 		
-		AttenRelRef[] imrs = { AttenRelRef.CB_2014, AttenRelRef.CY_2014,
-				AttenRelRef.ASK_2014, AttenRelRef.BSSA_2014, AttenRelRef.IDRISS_2014 };
+//		AttenRelRef[] imrs = { AttenRelRef.CB_2014, AttenRelRef.CY_2014,
+//				AttenRelRef.ASK_2014, AttenRelRef.BSSA_2014, AttenRelRef.IDRISS_2014 };
 //		AttenRelRef[] imrs = { AttenRelRef.CB_2014 };
 //		AttenRelRef[] imrs = { AttenRelRef.ASK_2014 };
+		AttenRelRef[] imrs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
 //		AttenRelRef[] imrs = { AttenRelRef.CY_2014,
 //				AttenRelRef.ASK_2014, AttenRelRef.BSSA_2014, AttenRelRef.IDRISS_2014 };
 		
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF();
 		erf.setParameter(FaultSystemSolutionERF.FILE_PARAM_NAME, meanSolFile);
 		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
-		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.CROSSHAIR);
+//		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.CROSSHAIR);
+		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.POINT);
 		
 		for (AttenRelRef ref : imrs) {
 			String name = ref.name();
