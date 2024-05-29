@@ -16,6 +16,7 @@ import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -255,7 +256,9 @@ import org.opensha.sha.util.TectonicRegionType;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Table;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
@@ -5808,12 +5811,104 @@ public class PureScratch {
 		mapMaker.plot(new File("/tmp"), "proxy_finite_test", " ");
 	}
 	
+	private static void test293() throws IOException {
+		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_05_21-prvi25_crustal_branches/node_branch_averaged");
+		List<NSHM23_ScalingRelationships> scales = new ArrayList<>();
+		Table<NSHM23_ScalingRelationships, Integer, Double> mmins = HashBasedTable.create();
+		Table<NSHM23_ScalingRelationships, Integer, Double> mminRIs = HashBasedTable.create();
+		Table<NSHM23_ScalingRelationships, Integer, Double> mmaxs = HashBasedTable.create();
+		Table<NSHM23_ScalingRelationships, Integer, Double> mmaxRIs = HashBasedTable.create();
+		
+		Map<Integer, String> proxyNames = new LinkedHashMap<>();
+
+		DecimalFormat magDF = new DecimalFormat("0.00");
+		DecimalFormat riDF = new DecimalFormat("0.0");
+		for (NSHM23_ScalingRelationships scale : NSHM23_ScalingRelationships.values()) {
+			File solFile = new File(dir, "Scale_"+scale.getFilePrefix()+".zip");
+			if (solFile.exists()) {
+				scales.add(scale);
+				FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+				FaultSystemRupSet rupSet = sol.getRupSet();
+				
+				HashSet<Integer> proxyParentIDs = new HashSet<>();
+				for (FaultSection sect : rupSet.getFaultSectionDataList()) {
+					if (sect.isProxyFault()) {
+						proxyParentIDs.add(sect.getParentSectionId());
+						if (!proxyNames.containsKey(sect.getParentSectionId()))
+							proxyNames.put(sect.getParentSectionId(), sect.getParentSectionName());
+					}
+				}
+				
+				System.out.println("Processing "+scale.getName());
+				for (int parentID : proxyParentIDs) {
+					double mMin = Double.POSITIVE_INFINITY;
+					double mMinRate = 0d;
+					double mMax = 0d;
+					double mMaxRate = 0d;
+					for (int rupIndex : rupSet.getRupturesForParentSection(parentID)) {
+						boolean multiParents = false;
+						for (FaultSection sect : rupSet.getFaultSectionDataForRupture(rupIndex)) {
+							if (sect.getParentSectionId() != parentID) {
+								multiParents = true;
+								break;
+							}
+						}
+						if (multiParents) {
+							// this ruptures outside of the zone and is excluded in the inversion
+							Preconditions.checkState(sol.getRateForRup(rupIndex) == 0d);
+							continue;
+						}
+						double mag = rupSet.getMagForRup(rupIndex);
+						mMin = Math.min(mMin, mag);
+						mMinRate += sol.getRateForRup(rupIndex);
+						if (mag > mMax) {
+							mMax = mag;
+							mMaxRate = sol.getRateForRup(rupIndex);
+						} else {
+							Preconditions.checkState(mag < mMax, "more than 1 rup at Mmax?");
+						}
+					}
+					double mMinRI = 1d/mMinRate;
+					double mMaxRI = 1d/mMaxRate;
+					System.out.println("\tMag Range: ["+magDF.format(mMin)+", "+magDF.format(mMax));
+					System.out.println("\tM>="+magDF.format(mMin)+" RI: "+riDF.format(mMinRI)+", rate="+(float)mMinRate);
+					System.out.println("\tM="+magDF.format(mMax)+" RI: "+riDF.format(mMaxRI)+", rate="+(float)mMaxRate);
+					mmins.put(scale, parentID, mMin);
+					mminRIs.put(scale, parentID, mMinRI);
+					mmaxs.put(scale, parentID, mMax);
+					mmaxRIs.put(scale, parentID, mMaxRI);
+				}
+			}
+		}
+		
+		CSVFile<String> csv = new CSVFile<>(false);
+		for (int parentID : proxyNames.keySet()) {
+			String name = proxyNames.get(parentID);
+			System.out.println();
+			System.out.println(name);
+			System.out.println("Scale\tMmin\tRI >= Mmin\tMmax\tRI @ Mmax");
+			csv.addLine(name);
+			csv.addLine("Scaling", "Mmin", "RI>=Mmin", "Mmax", "RI@Mmax");
+			for (NSHM23_ScalingRelationships scale : scales) {
+				double mMin = mmins.get(scale, parentID);
+				double mMinRI = mminRIs.get(scale, parentID);
+				double mMax = mmaxs.get(scale, parentID);
+				double mMaxRI = mmaxRIs.get(scale, parentID);
+				System.out.println(scale.getShortName()+"\t"+magDF.format(mMin)+"\t"+riDF.format(mMinRI)
+					+"\t"+magDF.format(mMax)+"\t"+riDF.format(mMaxRI));
+				csv.addLine(scale.getShortName(), magDF.format(mMin), riDF.format(mMinRI), magDF.format(mMax), riDF.format(mMaxRI));
+			}
+		}
+		
+		csv.writeToFile(new File("/tmp/prvi_proxy_mags.csv"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test292();
+		test293();
 	}
 
 }
