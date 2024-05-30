@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -79,6 +80,7 @@ import org.opensha.commons.geo.json.FeatureCollection;
 import org.opensha.commons.geo.json.FeatureProperties;
 import org.opensha.commons.geo.json.GeoJSON_Type;
 import org.opensha.commons.geo.json.Geometry;
+import org.opensha.commons.geo.json.Geometry.DepthSerializationType;
 import org.opensha.commons.geo.json.Geometry.GeometryCollection;
 import org.opensha.commons.geo.json.Geometry.LineString;
 import org.opensha.commons.geo.json.Geometry.MultiLineString;
@@ -5902,13 +5904,23 @@ public class PureScratch {
 		
 		csv.writeToFile(new File("/tmp/prvi_proxy_mags.csv"));
 	}
+
+	private static void test294() throws IOException {
+		File file = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/fault_models/"
+//				+ "subduction/inputs/PRVI_subduction_FullRate_LargePolys_drape_removeFields.geojson");
+				+ "subduction/inputs/PRVI_subduction_PartRate_LargePolys_drape_removeFields.geojson");
+		Gson inGSON = FeatureCollection.buildGson(DepthSerializationType.DEPTH_M);
+		BufferedReader read = new BufferedReader(new FileReader(file));
+		FeatureCollection features = inGSON.fromJson(read, FeatureCollection.class);
+		FeatureCollection.write(features, new File("/tmp/"+file.getName()));
+	}
 	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test293();
+		test294();
 	}
 
 }

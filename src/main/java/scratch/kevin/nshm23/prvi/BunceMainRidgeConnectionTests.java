@@ -20,7 +20,7 @@ import com.google.common.base.Preconditions;
 public class BunceMainRidgeConnectionTests {
 
 	public static void main(String[] args) throws IOException {
-		PRVI25_CrustalFaultModels fm = PRVI25_CrustalFaultModels.PRVI_FM_INITIAL;
+		PRVI25_CrustalFaultModels fm = PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1;
 		List<? extends FaultSection> allSects = fm.getFaultSections();
 		
 		FaultSection bunce5 = null;
