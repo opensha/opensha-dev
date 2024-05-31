@@ -5920,7 +5920,7 @@ public class PureScratch {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test294();
+		test293();
 	}
 
 }

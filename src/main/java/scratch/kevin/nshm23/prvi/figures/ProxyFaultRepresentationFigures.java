@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23.prvi;
+package scratch.kevin.nshm23.prvi.figures;
 
 import java.awt.Color;
 import java.io.File;
@@ -37,7 +37,7 @@ import org.opensha.sha.faultSurface.RuptureSurface;
 
 import com.google.common.base.Preconditions;
 
-public class ProxyFaultRepresentationTests {
+public class ProxyFaultRepresentationFigures {
 	
 	private enum RupType {
 		PROXY,
@@ -54,13 +54,13 @@ public class ProxyFaultRepresentationTests {
 //		FaultSystemRupSet rupSet = sol.getRupSet();
 		
 		FaultSystemRupSet rupSet = new PRVI25_InvConfigFactory().buildRuptureSet(
-				PRVI25_LogicTreeBranch.DEFAULT_ON_FAULT, FaultSysTools.defaultNumThreads());
+				PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT, FaultSysTools.defaultNumThreads());
 		rupSet.addModule(ProxyFaultSectionInstances.build(rupSet, 5, 5d));
 		
-//		int parentID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "Anegada", "SW");
-//		Region region = new Region(new Location(17.25, -66.25), new Location(18.5, -64));
-		int parentID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "SW", "Puerto", "Rico");
-		Region region = new Region(new Location(17.7, -67.05), new Location(18.1, -66.6));
+		int parentID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "Anegada", "SW");
+		Region region = new Region(new Location(17.25, -66.25), new Location(18.5, -64));
+//		int parentID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "SW", "Puerto", "Rico");
+//		Region region = new Region(new Location(17.7, -67.05), new Location(18.1, -66.6));
 		
 		String parentName = null;
 		

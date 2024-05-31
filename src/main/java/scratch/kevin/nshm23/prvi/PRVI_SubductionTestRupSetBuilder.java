@@ -26,6 +26,7 @@ public class PRVI_SubductionTestRupSetBuilder {
 
 	public static void main(String[] args) throws IOException {
 		PRVI25_SubductionFaultModels fm = PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE;
+//		PRVI25_SubductionFaultModels fm = PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL;
 		PRVI25_SubductionDeformationModels dm = PRVI25_SubductionDeformationModels.FULL;
 		// first just write out the fault model
 		List<? extends FaultSection> sects = fm.getFaultSections();
