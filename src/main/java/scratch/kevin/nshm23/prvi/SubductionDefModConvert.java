@@ -13,12 +13,16 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
+import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
@@ -29,13 +33,20 @@ import org.opensha.commons.geo.json.GeoJSON_Type;
 import org.opensha.commons.geo.json.Geometry.DepthSerializationType;
 import org.opensha.commons.geo.json.Geometry.MultiLineString;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
+import org.opensha.commons.gui.plot.HeadlessGraphPanel;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotSymbol;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
+import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
+import org.opensha.sha.earthquake.faultSysSolution.util.minisections.MinisectionMappings;
 import org.opensha.sha.earthquake.faultSysSolution.util.minisections.MinisectionSlipRecord;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
@@ -44,6 +55,7 @@ import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
@@ -64,6 +76,7 @@ public class SubductionDefModConvert {
 		boolean[] largePolyBools = { true, false };
 		
 		boolean interpolate = true;
+		boolean interpSymmetry = true;
 		
 		File debugDir = new File("/tmp/sub_fm_dm_debug");
 		Preconditions.checkState(debugDir.exists() || debugDir.mkdir());
@@ -123,6 +136,14 @@ public class SubductionDefModConvert {
 					stitchInIDs.put(name2, inIDs2);
 					stitchOutIDs.put(name2, outID2);
 					
+					Map<String, int[]> interpInIDs = null;
+					
+					if (interpolate) {
+						interpInIDs = new HashMap<>();
+						interpInIDs.put("Hispaniola - PRVI - Lesser Antilles", Ints.concat(inIDs0, inIDs1));
+						interpInIDs.put("Muertos", inIDs2);
+					}
+					
 					Map<String, Feature[]> stitchFeatureSets = new HashMap<>();
 					for (String name : stitchInIDs.keySet())
 						stitchFeatureSets.put(name, new Feature[stitchInIDs.get(name).length]);
@@ -147,6 +168,7 @@ public class SubductionDefModConvert {
 					List<Feature> outFeatures = new ArrayList<>();
 					
 					Map<Integer, List<MinisectionSlipRecord>> minisectionRecsMap = new HashMap<>();
+					Map<Integer, List<MinisectionSlipRecord>> minisectionRecsMapToOrigIDs = new HashMap<>();
 					
 					for (String name : stitchInIDs.keySet()) {
 						int outID = stitchOutIDs.get(name);
@@ -161,11 +183,11 @@ public class SubductionDefModConvert {
 						
 						int prevID = -1;
 						
-						List<Double> minisectionDASs = new ArrayList<>();
-						ArbitrarilyDiscretizedFunc dasSlipFunc = new ArbitrarilyDiscretizedFunc();
-						ArbitrarilyDiscretizedFunc dasSlipUncertFunc = new ArbitrarilyDiscretizedFunc();
-						ArbitrarilyDiscretizedFunc dasRakeFunc = new ArbitrarilyDiscretizedFunc();
-						double runningDAS = 0d;
+//						List<Double> minisectionDASs = new ArrayList<>();
+//						ArbitrarilyDiscretizedFunc dasSlipFunc = new ArbitrarilyDiscretizedFunc();
+//						ArbitrarilyDiscretizedFunc dasSlipUncertFunc = new ArbitrarilyDiscretizedFunc();
+//						ArbitrarilyDiscretizedFunc dasRakeFunc = new ArbitrarilyDiscretizedFunc();
+//						double runningDAS = 0d;
 						
 						for (Feature feature : features) {
 							Preconditions.checkState(feature.geometry.type == GeoJSON_Type.MultiLineString);
@@ -235,42 +257,21 @@ public class SubductionDefModConvert {
 							double slipUncert = props.getDouble(rateUncertPropName, Double.NaN);
 							double rake = props.getDouble(rakePropName, Double.NaN);
 							
-							if (runningDAS == 0d) {
-								dasSlipFunc.set(0d, slip);
-								dasSlipUncertFunc.set(0d, slipUncert);
-								dasRakeFunc.set(0d, rake);
-							}
-							
-							double myStartDAS = runningDAS;
+							List<MinisectionSlipRecord> myMinis = new ArrayList<>(upper.size()-1);
 							
 							for (int i=1; i<upper.size(); i++) {
 								Location startLoc = upper.get(i-1);
 								Location endLoc = upper.get(i);
 								int minisectionID = minisectionRecs.size();
-								minisectionRecs.add(new MinisectionSlipRecord(outID, minisectionID, startLoc, endLoc, rake, slip, slipUncert));
-								double len = LocationUtils.horzDistanceFast(startLoc, endLoc);
-								minisectionDASs.add(runningDAS + 0.5*len); // middle
-								runningDAS += len;
+								MinisectionSlipRecord mini = new MinisectionSlipRecord(outID, minisectionID, startLoc, endLoc, rake, slip, slipUncert);
+								minisectionRecs.add(mini);
+								myMinis.add(mini);
 							}
 							
-							double myEndDAS = runningDAS;
-							double middleDAS = myStartDAS + 0.5*(myEndDAS - myStartDAS);
-							
-							System.out.println("\tDAS for "+sectName+": "+middleDAS);
-							
-							dasSlipFunc.set(middleDAS, slip);
-							dasSlipUncertFunc.set(middleDAS, slipUncert);
-							dasRakeFunc.set(middleDAS, rake);
+							minisectionRecsMapToOrigIDs.put(sectID, myMinis);
 							
 							prevID = sectID;
 						}
-						
-						System.out.println("Total DAS for "+name+": "+runningDAS);
-						
-						// add end
-						dasSlipFunc.set(runningDAS, dasSlipFunc.getY(dasSlipFunc.size()-1));
-						dasSlipUncertFunc.set(runningDAS, dasSlipUncertFunc.getY(dasSlipUncertFunc.size()-1));
-						dasRakeFunc.set(runningDAS, dasRakeFunc.getY(dasRakeFunc.size()-1));
 						
 						// build stitched feature
 						MultiLineString geometry = new MultiLineString(List.of(stitchedUpperTrace, stitchedLowerTrace));
@@ -280,22 +281,161 @@ public class SubductionDefModConvert {
 						props.set("PrimState", "PR");
 						outFeatures.add(new Feature(outID, geometry, props));
 						
-						if (interpolate) {
-							// interpolate slips and rakes
-							Preconditions.checkState(minisectionDASs.size() == minisectionRecs.size());
-							for (int i=0; i<minisectionRecs.size(); i++) {
-								MinisectionSlipRecord rec = minisectionRecs.get(i);
-								double das = minisectionDASs.get(i);
-								Preconditions.checkState(das >= 0 && das <= runningDAS);
-								minisectionRecs.set(i, new MinisectionSlipRecord(rec.parentID, rec.minisectionID,
-										rec.startLoc, rec.endLoc,
-										dasRakeFunc.getInterpolatedY(das),
-										dasSlipFunc.getInterpolatedY(das),
-										dasSlipUncertFunc.getInterpolatedY(das)));
-							}
+						minisectionRecsMap.put(outID, minisectionRecs);
+					}
+					
+					if (interpolate) {
+						System.out.println("Interpolating");
+						
+						// build original subsections and calculate original moment rates
+						List<FaultSection> fullSects = new ArrayList<>();
+						for (Feature feature : outFeatures)
+							fullSects.add(GeoJSONFaultSection.fromFeature(feature));
+						List<FaultSection> subSects = SubSectionBuilder.buildSubSects(fullSects, 2, 0.5, 30);
+						MinisectionMappings mappings = new MinisectionMappings(fullSects, subSects);
+						mappings.mapDefModelMinisToSubSects(minisectionRecsMap);
+						Map<String, Double> origMoRates = new HashMap<>();
+						for (FaultSection sect : subSects) {
+							String name = sect.getParentSectionName();
+							Double moRate = origMoRates.get(name);
+							if (moRate == null)
+								moRate = 0d;
+							origMoRates.put(name, moRate+sect.calcMomentRate(false));
 						}
 						
-						minisectionRecsMap.put(outID, minisectionRecs);
+						for (String name : interpInIDs.keySet()) {
+							int[] ids = interpInIDs.get(name);
+							System.out.println("Interpolating "+name);
+							
+							// figure out section bounds in terms of DAS
+							double runningDAS = 0d;
+							List<MinisectionSlipRecord> interpMinis = new ArrayList<>();
+							List<Double> miniMidDASs = new ArrayList<>();
+							
+							List<Double> sectStartDASs = new ArrayList<>();
+							List<Double> sectMidDASs = new ArrayList<>();
+							List<Double> sectEndDASs = new ArrayList<>();
+							List<MinisectionSlipRecord> sectRefMinis = new ArrayList<>();
+							
+							for (int id : ids) {
+								List<MinisectionSlipRecord> minis = minisectionRecsMapToOrigIDs.get(id);
+								Preconditions.checkNotNull(minis);
+								
+								double start = runningDAS;
+								
+								for (MinisectionSlipRecord mini : minis) {
+									double len = LocationUtils.linearDistanceFast(mini.startLoc, mini.endLoc);
+									runningDAS += len;
+									
+									interpMinis.add(mini);
+									miniMidDASs.add(runningDAS - 0.5*len);
+								}
+								double end = runningDAS;
+								double middle = 0.5*(start + end);
+								runningDAS = end;
+								
+								sectRefMinis.add(minis.get(0));
+								sectStartDASs.add(start);
+								sectMidDASs.add(middle);
+								sectEndDASs.add(end);
+							}
+							
+							System.out.println("Total DAS for "+name+": "+runningDAS);
+							
+							// build slip/rake as a function of DAS
+							ArbitrarilyDiscretizedFunc dasSlipFunc = new ArbitrarilyDiscretizedFunc();
+							ArbitrarilyDiscretizedFunc dasSlipUncertFunc = new ArbitrarilyDiscretizedFunc();
+							ArbitrarilyDiscretizedFunc dasRakeFunc = new ArbitrarilyDiscretizedFunc();
+							
+							for (int i=0; i<sectRefMinis.size(); i++) {
+								MinisectionSlipRecord mini = sectRefMinis.get(i);
+								double start = sectStartDASs.get(i);
+								double middle = sectMidDASs.get(i);
+								double end = sectEndDASs.get(i);
+								
+								if (i == 0) {
+									// first, start at the beginning not the middle
+									Preconditions.checkState(start == 0d);
+									dasSlipFunc.set(0d, mini.slipRate);
+									dasSlipUncertFunc.set(0d, mini.slipRateStdDev);
+									dasRakeFunc.set(0d, mini.rake);
+								} else if (interpSymmetry) {
+									// enforce symmetry
+									double prevHalfLen = sectEndDASs.get(i-1) - sectMidDASs.get(i-1);
+									double myHalfLen = middle - start;
+									if (myHalfLen > prevHalfLen) {
+										// my portion is longer, truncate
+										double interpX = start + prevHalfLen;
+										dasSlipFunc.set(interpX, mini.slipRate);
+										dasSlipUncertFunc.set(interpX, mini.slipRateStdDev);
+										dasRakeFunc.set(interpX, mini.rake);
+									} else {
+										// previous portion was longer, truncate
+										MinisectionSlipRecord prev = sectRefMinis.get(i-1);
+										double interpX = start - myHalfLen;
+										dasSlipFunc.set(interpX, prev.slipRate);
+										dasSlipUncertFunc.set(interpX, prev.slipRateStdDev);
+										dasRakeFunc.set(interpX, prev.rake);
+									}
+								}
+								
+								// add the middle
+								dasSlipFunc.set(middle, mini.slipRate);
+								dasSlipUncertFunc.set(middle, mini.slipRateStdDev);
+								dasRakeFunc.set(middle, mini.rake);
+								
+								if (i == sectRefMinis.size()-1) {
+									// last, extend to the end
+									dasSlipFunc.set(end, mini.slipRate);
+									dasSlipUncertFunc.set(end, mini.slipRateStdDev);
+									dasRakeFunc.set(end, mini.rake);
+								}
+							}
+							
+							// apply interpolation
+							for (int i=0; i<interpMinis.size(); i++) {
+								MinisectionSlipRecord mini = interpMinis.get(i);
+								double middle = miniMidDASs.get(i);
+								
+								double slip = dasSlipFunc.getInterpolatedY(middle);
+								double slipUncert = dasSlipUncertFunc.getInterpolatedY(middle);
+								double rake = dasRakeFunc.getInterpolatedY(middle);
+								
+								MinisectionSlipRecord modMini = new MinisectionSlipRecord(
+										mini.parentID, mini.minisectionID, mini.startLoc, mini.endLoc,
+										rake, slip, slipUncert);
+								
+								// find the match
+								List<MinisectionSlipRecord> origRecs = minisectionRecsMap.get(mini.parentID);
+								Preconditions.checkState(mini.minisectionID < origRecs.size());
+								MinisectionSlipRecord orig = origRecs.get(mini.minisectionID);
+								Preconditions.checkState(orig.equals(mini));
+								origRecs.set(mini.minisectionID, modMini);
+							}
+							
+							// plot them
+							String interpPrefix = prefix+"_interp_"+name.replaceAll("\\W+", "_");
+							debugWriteInterpFuncsOrders(debugDir, interpPrefix, name,
+									dasSlipFunc, dasSlipUncertFunc, dasRakeFunc, sectStartDASs);
+						}
+						
+						// calculate modified moment rates
+						mappings.mapDefModelMinisToSubSects(minisectionRecsMap);
+						Map<String, Double> modMoRates = new LinkedHashMap<>();
+						for (FaultSection sect : subSects) {
+							String name = sect.getParentSectionName();
+							Double moRate = modMoRates.get(name);
+							if (moRate == null)
+								moRate = 0d;
+							modMoRates.put(name, moRate+sect.calcMomentRate(false));
+						}
+						
+						System.out.println("Interpolation Mo-Rate changes for "+title);
+						for (String name : modMoRates.keySet()) {
+							double orig = origMoRates.get(name);
+							double mod = modMoRates.get(name);
+							System.out.println("\t"+name+":\t"+moDF.format(orig)+" -> "+moDF.format(mod)+" ("+pDF.format((mod-orig)/orig)+")");
+						}
 					}
 
 					if (fmOutputFile != null)
@@ -359,6 +499,9 @@ public class SubductionDefModConvert {
 		// write markdown
 		MarkdownUtils.writeReadmeAndHTML(lines, debugDir);
 	}
+	
+	private static final DecimalFormat moDF = new DecimalFormat("0.00E0");
+	private static final DecimalFormat pDF = new DecimalFormat("0.00%");
 	
 	private static String depthStr(FaultTrace trace) {
 		MinMaxAveTracker track = new MinMaxAveTracker();
@@ -450,5 +593,62 @@ public class SubductionDefModConvert {
 		mapMaker.plotSectScalars(rakes, rakeCPT, "Rake Angle");
 		mapMaker.plot(outputDir, prefix+"_rakes", title);
 	}
+	
+	private static void debugWriteInterpFuncsOrders(File outputDir, String prefix, String name,
+			ArbitrarilyDiscretizedFunc dasSlipFunc, ArbitrarilyDiscretizedFunc dasSlipUncertFunc,
+			ArbitrarilyDiscretizedFunc dasRakeFunc, List<Double> sectStartDASs) throws IOException {
+		
+		List<PlotSpec> specs = new ArrayList<>(3);
+		List<Range> yRanges = new ArrayList<>(3);
+		
+		PlotCurveCharacterstics startChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.GRAY);
+		
+		for (int i=0; i<3; i++) {
+			ArbitrarilyDiscretizedFunc inFunc;
+			String yAxisLabel;
+			switch (i) {
+			case 0:
+				inFunc = dasSlipFunc;
+				yAxisLabel = "Slip Rate (mm/yr)";
+				break;
+			case 1:
+				inFunc = dasSlipUncertFunc;
+				yAxisLabel = "Slip Rate Uncertainty (mm/yr)";
+				break;
+			case 2:
+				inFunc = dasRakeFunc;
+				yAxisLabel = "Rake Angle";
+				break;
 
+			default:
+				throw new IllegalStateException();
+			}
+			
+			double maxY = inFunc.getMaxY()*1.05;
+			yRanges.add(new Range(0d, maxY));
+			
+			List<XY_DataSet> funcs = new ArrayList<>();
+			List<PlotCurveCharacterstics> chars = new ArrayList<>();
+			
+			for (int s=1; s<sectStartDASs.size(); s++) {
+				DefaultXY_DataSet xy = new DefaultXY_DataSet();
+				double start = sectStartDASs.get(s);
+				xy.set(start, 0d);
+				xy.set(start, maxY);
+				
+				funcs.add(xy);
+				chars.add(startChar);
+			}
+			
+			funcs.add(inFunc);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+			
+			specs.add(new PlotSpec(funcs, chars, name, "Distance Along Strike (km)", yAxisLabel));
+		}
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		gp.drawGraphPanel(specs, false, false, null, yRanges);
+		
+		PlotUtils.writePlots(outputDir, prefix, gp, 1000, 1000, true, true, false);
+	}
 }
