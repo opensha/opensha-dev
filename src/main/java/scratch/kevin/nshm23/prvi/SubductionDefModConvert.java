@@ -18,6 +18,7 @@ import java.util.Map;
 
 import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.ui.TextAnchor;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
@@ -61,6 +62,8 @@ public class SubductionDefModConvert {
 		
 		boolean[] fullRateBools = { true, false };
 		boolean[] largePolyBools = { true, false };
+		
+		boolean interpolate = true;
 		
 		File debugDir = new File("/tmp/sub_fm_dm_debug");
 		Preconditions.checkState(debugDir.exists() || debugDir.mkdir());
@@ -158,6 +161,12 @@ public class SubductionDefModConvert {
 						
 						int prevID = -1;
 						
+						List<Double> minisectionDASs = new ArrayList<>();
+						ArbitrarilyDiscretizedFunc dasSlipFunc = new ArbitrarilyDiscretizedFunc();
+						ArbitrarilyDiscretizedFunc dasSlipUncertFunc = new ArbitrarilyDiscretizedFunc();
+						ArbitrarilyDiscretizedFunc dasRakeFunc = new ArbitrarilyDiscretizedFunc();
+						double runningDAS = 0d;
+						
 						for (Feature feature : features) {
 							Preconditions.checkState(feature.geometry.type == GeoJSON_Type.MultiLineString);
 							MultiLineString geometry = (MultiLineString)feature.geometry;
@@ -226,15 +235,42 @@ public class SubductionDefModConvert {
 							double slipUncert = props.getDouble(rateUncertPropName, Double.NaN);
 							double rake = props.getDouble(rakePropName, Double.NaN);
 							
-							// TODO convert to plane rates
+							if (runningDAS == 0d) {
+								dasSlipFunc.set(0d, slip);
+								dasSlipUncertFunc.set(0d, slipUncert);
+								dasRakeFunc.set(0d, rake);
+							}
+							
+							double myStartDAS = runningDAS;
+							
 							for (int i=1; i<upper.size(); i++) {
 								Location startLoc = upper.get(i-1);
 								Location endLoc = upper.get(i);
 								int minisectionID = minisectionRecs.size();
 								minisectionRecs.add(new MinisectionSlipRecord(outID, minisectionID, startLoc, endLoc, rake, slip, slipUncert));
+								double len = LocationUtils.horzDistanceFast(startLoc, endLoc);
+								minisectionDASs.add(runningDAS + 0.5*len); // middle
+								runningDAS += len;
 							}
+							
+							double myEndDAS = runningDAS;
+							double middleDAS = myStartDAS + 0.5*(myEndDAS - myStartDAS);
+							
+							System.out.println("\tDAS for "+sectName+": "+middleDAS);
+							
+							dasSlipFunc.set(middleDAS, slip);
+							dasSlipUncertFunc.set(middleDAS, slipUncert);
+							dasRakeFunc.set(middleDAS, rake);
+							
 							prevID = sectID;
 						}
+						
+						System.out.println("Total DAS for "+name+": "+runningDAS);
+						
+						// add end
+						dasSlipFunc.set(runningDAS, dasSlipFunc.getY(dasSlipFunc.size()-1));
+						dasSlipUncertFunc.set(runningDAS, dasSlipUncertFunc.getY(dasSlipUncertFunc.size()-1));
+						dasRakeFunc.set(runningDAS, dasRakeFunc.getY(dasRakeFunc.size()-1));
 						
 						// build stitched feature
 						MultiLineString geometry = new MultiLineString(List.of(stitchedUpperTrace, stitchedLowerTrace));
@@ -243,6 +279,21 @@ public class SubductionDefModConvert {
 						props.set(GeoJSONFaultSection.FAULT_NAME, name);
 						props.set("PrimState", "PR");
 						outFeatures.add(new Feature(outID, geometry, props));
+						
+						if (interpolate) {
+							// interpolate slips and rakes
+							Preconditions.checkState(minisectionDASs.size() == minisectionRecs.size());
+							for (int i=0; i<minisectionRecs.size(); i++) {
+								MinisectionSlipRecord rec = minisectionRecs.get(i);
+								double das = minisectionDASs.get(i);
+								Preconditions.checkState(das >= 0 && das <= runningDAS);
+								minisectionRecs.set(i, new MinisectionSlipRecord(rec.parentID, rec.minisectionID,
+										rec.startLoc, rec.endLoc,
+										dasRakeFunc.getInterpolatedY(das),
+										dasSlipFunc.getInterpolatedY(das),
+										dasSlipUncertFunc.getInterpolatedY(das)));
+							}
+						}
 						
 						minisectionRecsMap.put(outID, minisectionRecs);
 					}

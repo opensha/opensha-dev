@@ -24,7 +24,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Subduc
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.faultSurface.FaultSection;
 
-public class SubductionMinMaxMagPlots {
+public class PRVI_SubductionSubSectPlots {
 
 	public static void main(String[] args) throws IOException {
 		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE;
@@ -39,7 +39,12 @@ public class SubductionMinMaxMagPlots {
 		DecimalFormat magDF = new DecimalFormat("0.00");
 		
 		CPT magCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(7.5d, 9d);
+		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 5d);
+		CPT slipUncertCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 2d);
+		CPT rakeCPT = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(0d, 90d);
 		for (PRVI25_SubductionFaultModels fm : PRVI25_SubductionFaultModels.values()) {
+			if (fm.getNodeWeight(branch) == 0d)
+				continue;
 			branch = branch.copy();
 			branch.setValue(fm);
 			branch.requireValue(PRVI25_SubductionDeformationModels.class).build(fm);
@@ -74,7 +79,6 @@ public class SubductionMinMaxMagPlots {
 			mapMaker.addAnnotation(rangeAnn);
 			mapMaker.plot(outputDir, "subduction_min_mag_"+fm.getFilePrefix(), " ");
 			
-			
 			mapMaker.plotSectScalars(maxMags, magCPT, "Maximum Magnitude ("+scale.getShortName()+")");
 			mapMaker.clearAnnotations();
 			rangeAnn = new XYTextAnnotation("["+magDF.format(minMax)+", "+magDF.format(maxMax)+"]", annX, annY);
@@ -82,6 +86,34 @@ public class SubductionMinMaxMagPlots {
 			rangeAnn.setFont(font);
 			mapMaker.addAnnotation(rangeAnn);
 			mapMaker.plot(outputDir, "subduction_max_mag_"+fm.getFilePrefix(), " ");
+			
+			mapMaker.clearAnnotations();
+			
+			for (PRVI25_SubductionDeformationModels dm : PRVI25_SubductionDeformationModels.values()) {
+				if (dm.getNodeWeight(branch) == 0d)
+					continue;
+				sects = dm.build(fm);
+				
+				mapMaker.setFaultSections(sects);
+				List<Double> slips = new ArrayList<>(sects.size());
+				List<Double> slipUncerts = new ArrayList<>(sects.size());
+				List<Double> rakes = new ArrayList<>(sects.size());
+				for (FaultSection sect : sects) {
+					slips.add(sect.getOrigAveSlipRate());
+					slipUncerts.add(sect.getOrigSlipRateStdDev());
+					rakes.add(sect.getAveRake());
+				}
+				
+				mapMaker.plotSectScalars(slips, slipCPT, dm.getShortName()+" Slip Rate (mm/yr)");
+				mapMaker.plot(outputDir, "subduction_slip_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), " ");
+				
+				mapMaker.plotSectScalars(slipUncerts, slipUncertCPT, dm.getShortName()+" Slip Rate Uncertainty (mm/yr)");
+				mapMaker.plot(outputDir, "subduction_slip_uncert_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), " ");
+				
+				mapMaker.plotSectScalars(rakes, rakeCPT, dm.getShortName()+" Rake");
+				mapMaker.plot(outputDir, "subduction_rake_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), " ");
+				
+			}
 		}
 	}
 
