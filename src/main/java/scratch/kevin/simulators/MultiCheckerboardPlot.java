@@ -6,16 +6,26 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.ArbDiscrXYZ_DataSet;
+import org.opensha.commons.gui.plot.GraphPanel;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
@@ -89,7 +99,8 @@ public class MultiCheckerboardPlot {
 		doIndvs.add(false);
 		titles.add(" ");
 		
-		File outputDir = new File("/home/kevin/Documents/papers/2023_Bruce_GMM_Multifault/figures");
+		File outputDir = new File("/home/kevin/Documents/papers/2023_Bruce_GMM_Multifault/figures/checkerboards");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		double[] periods = {-1d, 2, 3, 5, 10};
 		
@@ -97,6 +108,11 @@ public class MultiCheckerboardPlot {
 		residualCPT.setNanColor(Color.WHITE);
 		CPT stdDevCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance().reverse().rescale(0, 1d);
 		stdDevCPT.setNanColor(Color.WHITE);
+		CPT magCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(6.5d, 8d);
+		magCPT.setBelowMinColor(magCPT.getMinColor());
+		magCPT.setAboveMaxColor(magCPT.getMaxColor());
+		
+		Range scatterYRange = new Range(-1.5, 1.5);
 		
 		DecimalFormat oDF = new DecimalFormat("0.##");
 		
@@ -106,6 +122,9 @@ public class MultiCheckerboardPlot {
 		gp.getPlotPrefs().setAxisLabelFontSize(28);
 		gp.getPlotPrefs().setTickLabelFontSize(26);
 		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 36);
+		
+		PaintScaleLegend magSubtitle = GraphPanel.getLegendForCPT(magCPT, "Magnitude", gp.getPlotPrefs().getAxisLabelFontSize(),
+				gp.getPlotPrefs().getTickLabelFontSize(), 0.5, RectangleEdge.LEFT);
 		
 		for (int n=0; n<refDirs.size(); n++) {
 			File refDir = refDirs.get(n);
@@ -121,6 +140,8 @@ public class MultiCheckerboardPlot {
 			Range xRange = null;
 			Range yRange = null;
 			
+			List<PlotSpec> scatterSpecs = new ArrayList<>();
+			
 			for (int p=0; p<periods.length; p++) {
 				String perPrefix;
 				String perLabel;
@@ -135,12 +156,17 @@ public class MultiCheckerboardPlot {
 				File csvFile = new File(refDir, prefix+"_"+perPrefix+".csv");
 				CSVFile<String> csv = CSVFile.readFile(csvFile, true);
 				
+				Map<Double, XY_DataSet> magScatters = new HashMap<>();
+				
 				ArbDiscrXYZ_DataSet xyz = new ArbDiscrXYZ_DataSet();
 				
 				double minDist = Double.POSITIVE_INFINITY;
 				double maxDist = Double.NEGATIVE_INFINITY;
 				double minMag = Double.POSITIVE_INFINITY;
 				double maxMag = Double.NEGATIVE_INFINITY;
+				
+				Map<Double, Double> distAverages = new HashMap<>();
+				Map<Double, Integer> distCounts = new HashMap<>();
 				
 				for (int row=1; row<csv.getNumRows(); row++) {
 					double distMin = csv.getDouble(row, 0);
@@ -168,6 +194,26 @@ public class MultiCheckerboardPlot {
 					double x = 0.5*(Math.log10(distMin) + Math.log10(distMax));
 					double y = 0.5*(magMin + magMax);
 					xyz.set(x, y, val);
+					if (Double.isFinite(val) && !stdDev) {
+						double mag = y;
+						double dist = Math.pow(10, x);
+						double resid = val;
+						XY_DataSet scatter = magScatters.get(mag);
+						if (scatter == null) {
+							scatter = new DefaultXY_DataSet();
+							magScatters.put(mag, scatter);
+						}
+						scatter.set(dist, resid);
+						
+						Double distAvg = distAverages.get(dist);
+						Integer distCount = distCounts.get(dist);
+						if (distAvg == null) {
+							distAvg = 0d;
+							distCount = 0;
+						}
+						distAverages.put(dist, distAvg + count*val);
+						distCounts.put(dist, distCount + count);
+					}
 				}
 				
 				if (xRange == null) {
@@ -176,7 +222,10 @@ public class MultiCheckerboardPlot {
 					yRange = new Range(minMag, maxMag);
 				}
 				
-				XYZPlotSpec spec = new XYZPlotSpec(xyz, cpt, title, "Distance Rup  (km)", "Magnitude", "Mean Residual  (ln)");
+				String xLabel = "Distance Rup  (km)";
+				String zLabel = stdDev ? "Residual Std. Dev." : "Mean Residual  (ln)";
+				
+				XYZPlotSpec spec = new XYZPlotSpec(xyz, cpt, title, xLabel, "Magnitude", zLabel);
 				spec.setCPTPosition(RectangleEdge.LEFT);
 				spec.setCPTTickUnit(stdDev ? 0.2 : 0.5);
 				
@@ -188,12 +237,52 @@ public class MultiCheckerboardPlot {
 				
 				specs.add(spec);
 				
+				List<XY_DataSet> scatterFuncs = new ArrayList<>();
+				List<PlotCurveCharacterstics> scatterChars = new ArrayList<>();
+				List<Double> mags = new ArrayList<>(magScatters.keySet());
+				Collections.sort(mags);
+				DefaultXY_DataSet scatterZeroXY = new DefaultXY_DataSet();
+				scatterZeroXY.set(xRange.getLowerBound(), 0d);
+				scatterZeroXY.set(xRange.getUpperBound(), 0d);
+				scatterFuncs.add(scatterZeroXY);
+				scatterChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, Color.GRAY));
+				
+				// average on bottom
+				XY_DataSet distAvgFunc = new DefaultXY_DataSet();
+				for (Double dist : distAverages.keySet()) {
+					double avg = distAverages.get(dist);
+					int count = distCounts.get(dist);
+					avg /= count;
+					distAvgFunc.set(dist, avg);
+				}
+				scatterFuncs.add(distAvgFunc);
+				scatterChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 8f, Color.DARK_GRAY));
+				
+				for (double mag : mags) {
+					XY_DataSet scatter = magScatters.get(mag);
+					Color color = magCPT.getColor((float)mag);
+					scatterFuncs.add(scatter);
+					scatterChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, color));
+				}
+				PlotSpec scatterSpec = new PlotSpec(scatterFuncs, scatterChars, title, xLabel, zLabel);
+				scatterSpec.addSubtitle(magSubtitle);
+				scatterSpecs.add(scatterSpec);
+				
 				if (doIndv) {
 					gp.drawGraphPanel(spec, true, false, xRange, yRange);
 					PlotUtils.setYTick(gp, 0.2d);
 					
 					PlotUtils.writePlots(outputDir, outPrefix+"_"+perPrefix, gp, 800, 600, true, true, false);
+					
+					if (!stdDev) {
+						gp.drawGraphPanel(scatterSpec, true, false, xRange, scatterYRange);
+						PlotUtils.setYTick(gp, 0.2d);
+						
+						PlotUtils.writePlots(outputDir, outPrefix+"_"+perPrefix+"_scatter", gp, 800, 600, true, true, false);
+					}
 				}
+				if (p > 0)
+					scatterSpec.setSubtitles(null);
 			}
 			
 			int width = 400 + 600*specs.size();
@@ -207,6 +296,15 @@ public class MultiCheckerboardPlot {
 			PlotUtils.setSubplotGap(gp, 80);
 			
 			PlotUtils.writePlots(outputDir, outPrefix+"_combined", gp, width, 600, true, true, false);
+			
+			if (!stdDev) {
+				yRanges = List.of(scatterYRange);
+				gp.drawGraphPanel(scatterSpecs, true, false, xRanges, yRanges);
+				PlotUtils.setYTick(gp, 0.5d);
+				PlotUtils.setSubplotGap(gp, 80);
+				
+				PlotUtils.writePlots(outputDir, outPrefix+"_combined_scatter", gp, width, 600, true, true, false);
+			}
 		}
 	}
 
