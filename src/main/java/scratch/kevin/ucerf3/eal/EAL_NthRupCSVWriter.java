@@ -29,12 +29,15 @@ import scratch.UCERF3.U3CompoundFaultSystemSolution;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
+import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 
 public class EAL_NthRupCSVWriter {
 
 	public static void main(String[] args) throws IOException {
-		
+//		boolean remapToM255 = true;
+//		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
+		boolean remapToM255 = false;
 		FaultSystemSolution sol = FaultSystemSolution.load(
 				new File("/home/kevin/git/ucerf3-etas-launcher/inputs/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip"));
@@ -45,10 +48,10 @@ public class EAL_NthRupCSVWriter {
 		
 		File ealBaseDir = new File("/home/kevin/OpenSHA/UCERF3/eal");
 		
-//		File ealSubDir = new File(ealBaseDir, "2024_05_24-ucerf3-fm31_ba-pt_gridded-ngaw2-cea-proxy-100pct-wills2015");
-//		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.POINT);
-		File ealSubDir = new File(ealBaseDir, "2024_05_24-ucerf3-fm31_ba-ngaw2-cea-proxy-100pct-wills2015");
-		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.CROSSHAIR);
+		File ealSubDir = new File(ealBaseDir, "2024_05_24-ucerf3-fm31_ba-pt_gridded-ngaw2-cea-proxy-100pct-wills2015");
+		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.POINT);
+//		File ealSubDir = new File(ealBaseDir, "2024_05_24-ucerf3-fm31_ba-ngaw2-cea-proxy-100pct-wills2015");
+//		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.CROSSHAIR);
 		
 		String binFileName = "NGAWest_2014_AVG_NOIDRISS.bin";
 		
@@ -75,6 +78,31 @@ public class EAL_NthRupCSVWriter {
 		double[][] results = MPJ_CondLossCalc.loadResults(binFile);
 		
 		Preconditions.checkState(results.length == erf.getNumSources());
+		
+		if (remapToM255) {
+			double[][] remappedResults = new double[results.length][];
+			for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
+				if (sourceID < erf.getNumFaultSystemSources()) {
+					remappedResults[sourceID] = results[sourceID];
+				} else {
+					ProbEqkSource source = erf.getSource(sourceID);
+					int numRups = source.getNumRuptures();
+					remappedResults[sourceID] = new double[numRups];
+					int indexAbove = 0;
+					for (int rupIndex=0; rupIndex<numRups; rupIndex++) {
+						ProbEqkRupture rup = source.getRupture(rupIndex);
+						if (rup.getMag() < 5d)
+							remappedResults[sourceID][rupIndex] = Double.NaN;
+						else
+							remappedResults[sourceID][rupIndex] = results[sourceID][indexAbove++];
+					}
+					Preconditions.checkState(indexAbove == results[sourceID].length,
+							"Remapping to M>=2.55 failed. We have %s ruptures with M>5 for source %s (and %s in total), "
+							+ "the original ERF had %s.", indexAbove, sourceID, numRups, results[sourceID].length);
+				}
+			}
+			results = remappedResults;
+		}
 		
 		double baEAL = 0d;
 		for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
@@ -105,17 +133,24 @@ public class EAL_NthRupCSVWriter {
 				int n = erf.get_nthRupIndicesForSource(sourceID)[rupID];
 				Preconditions.checkState(nthFSSIndexes[n] == fssIndex);
 				Preconditions.checkState(nthGridIndexes[n] == gridIndex);
-				nthLosses[n] += results[sourceID][rupID];
+				Preconditions.checkState(nthLosses[n] == 0d);
+				nthLosses[n] = results[sourceID][rupID];
 				covs[n] = LossCOV_Model.PORTER_POWER_LAW_2020_09_01.getCOV(nthLosses[n]);
 			}
 		}
 		
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine("Nth ERF Index", "FSS Index", "Grid Node Index", "Mag", "Conditional Average Loss", "Porter (2020) Loss COV");
-		for (int n=0; n<nthLosses.length; n++)
+		for (int n=0; n<nthLosses.length; n++) {
+			if (remapToM255 && Double.isNaN(nthLosses[n]))
+				continue;
 			csv.addLine(n+"", nthFSSIndexes[n]+"", nthGridIndexes[n]+"", (float)erf.getNthRupture(n).getMag()+"", nthLosses[n]+"", covs[n]+"");
+		}
 		
-		csv.writeToFile(new File(ealSubDir, "average_nth_rup_losses.csv"));
+		if (remapToM255)
+			csv.writeToFile(new File(ealSubDir, "average_nth_rup_losses_remapped_m2p5.csv"));
+		else
+			csv.writeToFile(new File(ealSubDir, "average_nth_rup_losses.csv"));
 	}
 	
 	private static void calcMeanToBAMappings(FaultSystemSolutionERF trueMeanERF, Map<U3LogicTreeBranch, List<Integer>> mappings,
