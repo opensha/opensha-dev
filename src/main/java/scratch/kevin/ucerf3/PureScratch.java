@@ -36,6 +36,7 @@ import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.util.Precision;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
@@ -121,6 +122,8 @@ import org.opensha.commons.util.modules.ModuleArchive;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.refFaultParamDb.vo.DeformationModelSummary;
 import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.earthquake.AbstractERF;
+import org.opensha.sha.earthquake.AbstractNthRupERF;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -198,6 +201,8 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b.PointSurface13b;
+import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm.PointSurfaceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.FaultSegmentData;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.A_FaultsFetcher;
@@ -274,6 +279,9 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
 import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
+import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
+import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
+import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO.ETAS_Catalog;
 import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Config;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
@@ -5914,13 +5922,186 @@ public class PureScratch {
 		FeatureCollection features = inGSON.fromJson(read, FeatureCollection.class);
 		FeatureCollection.write(features, new File("/tmp/"+file.getName()));
 	}
+
+	private static void test295() throws IOException {
+		// nth rup from catalog and ETAS_Launcher.buildERF
+		File etasDir = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
+				+ "2024_06_06-Start2012_500yr_kCOV1p5_Spontaneous_HistCatalog/");
+		File configFile = new File(etasDir, "config.json");
+		File binFile = new File(etasDir, "results_m5_preserve_chain.bin");
+		
+		ETAS_Config config = ETAS_Config.readJSON(configFile);
+		
+		ETAS_Launcher launcher = new ETAS_Launcher(config, false);
+		AbstractNthRupERF erf = launcher.checkOutERF();
+		
+		// ETAS doesn't seem to track rakes
+		boolean checkRakes = false;
+		boolean primaryOnly = false;
+		
+		int catCount = 0;
+		int rupCount = 0;
+		for (ETAS_Catalog catalog : ETAS_CatalogIO.getBinaryCatalogsIterable(binFile, 0)) {
+			System.out.println("Validating catalog "+catCount);
+			for (ETAS_EqkRupture rup : catalog) {
+				int n = rup.getNthERF_Index();
+				double mag = rup.getMag();
+				double rake = rup.getAveRake();
+				if (primaryOnly && rup.getGeneration() > 0)
+					continue;
+//				System.out.println("Testing rup with M="+(float)rup.getMag()+", n="+n+", fss="+rup.getFSSIndex()
+//						+", grid="+rup.getGridNodeIndex()+", gen="+rup.getGeneration());
+				ProbEqkRupture erfRup = erf.getNthRupture(n);
+				Preconditions.checkState((float)mag == (float)erfRup.getMag(),
+						"Mag mismatch for n=%s (fss=%s, grid=%s, cat=%s, rup=%s, gen=%s): etas=%s, erf=%s",
+						n, rup.getFSSIndex(), rup.getGridNodeIndex(), catCount, rupCount, rup.getGeneration(), mag, erfRup.getMag());
+				Preconditions.checkState(!checkRakes || (float)rake == (float)erfRup.getAveRake(),
+						"Rake mismatch for n=%s (fss=%s, grid=%s, cat=%s, rup=%s, gen=%s): etas=%s, erf=%s",
+						n, rup.getFSSIndex(), rup.getGridNodeIndex(), catCount, rupCount, rup.getGeneration(), rake, erfRup.getAveRake());
+				rupCount++;
+			}
+			catCount++;
+		}
+		System.out.println("DONE, validated "+rupCount+" ruptures in "+catCount+" catalogs");
+	}
+	
+	private static void test296() throws IOException {
+		// nth rup from catalog and ETAS_Launcher.buildERF
+		File etasDir = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
+				+ "2024_05_24-Start2012_500yr_kCOV1p5_Spontaneous_HistCatalog/");
+		File configFile = new File(etasDir, "config.json");
+		File binFile = new File(etasDir, "results_m5_preserve_chain.bin");
+		
+		ETAS_Config config = ETAS_Config.readJSON(configFile);
+		
+		ETAS_Launcher launcher = new ETAS_Launcher(config, false);
+		AbstractNthRupERF erf = launcher.checkOutERF();
+		
+		erf.testNthRupIndicesForSource();
+		
+		int index = 0;
+		for (int sourceID=0; sourceID<erf.getNumSources(); sourceID++) {
+			ProbEqkSource source = erf.getSource(sourceID);
+			for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
+				ProbEqkRupture rup = source.getRupture(rupID);
+				int nthRup = erf.getIndexN_ForSrcAndRupIndices(sourceID, rupID);
+				Preconditions.checkState(nthRup == index,
+						"expected n=%s but erf.getIndexN_ForSrcAndRupIndices(%s, %s)=%s",
+						index, sourceID, rupID, nthRup);
+				index++;
+				ProbEqkRupture rup2 = erf.getNthRupture(nthRup);
+				Preconditions.checkState((float)rup.getMag() == (float)rup2.getMag(),
+						"Mag mismatch for erf.getRupture(%s, %s) vs erf.getRupture(%s=erf.getIndexN_ForSrcAndRupIndices(%s, %s)): %s != %s",
+						sourceID, rupID, nthRup, sourceID, rupID, (float)rup.getMag(), (float)rup2.getMag());
+			}
+		}
+		System.out.println("All nth tests passed");
+	}
+	
+	private static void test297() throws IOException {
+		// nth rup from catalog and ETAS_Launcher.buildERF
+		File etasDir = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
+				+ "2024_05_24-Start2012_500yr_kCOV1p5_Spontaneous_HistCatalog/");
+		File configFile = new File(etasDir, "config.json");
+		File binFile = new File(etasDir, "results_m5_preserve_chain.bin");
+		
+		ETAS_Config config = ETAS_Config.readJSON(configFile);
+		
+		ETAS_Launcher launcher = new ETAS_Launcher(config, false);
+		AbstractNthRupERF erf = launcher.checkOutERF();
+		
+		int randSrcIndex = 252798;
+		int isSubSeismo = 1;
+		int filteredR = 2;
+		Location translatedParLoc = new Location(35, -118);
+		ProbEqkSource src = erf.getSource(randSrcIndex);
+		ProbEqkSource filteredSrc;
+		if(isSubSeismo == 1)
+			filteredSrc = ((FaultSystemSolutionERF)erf).getSourceSubSeisOnly(randSrcIndex);
+		else
+			filteredSrc = ((FaultSystemSolutionERF)erf).getSourceTrulyOffOnly(randSrcIndex);
+		
+		ProbEqkRupture filteredRup = filteredSrc.getRupture(filteredR);
+		System.out.println("Filtered r="+filteredR+", M"+filteredRup.getMag()+", rake="+filteredRup.getAveRake());
+		
+		int r = -1;
+		for (int r2=0; r2<src.getNumRuptures(); r2++) {
+			ProbEqkRupture rup = src.getRupture(r2);
+			System.out.println("Candidate r="+r2+", M"+rup.getMag()+", rake="+rup.getAveRake());
+			if (Precision.equals(rup.getAveRake(), filteredRup.getAveRake()) && Precision.equals(rup.getMag(), filteredRup.getMag())) {
+				boolean match = true;
+				if (rup.getRuptureSurface().getAveDip() < 90d) {
+					// potential match, check footwall
+					if (rup.getRuptureSurface() instanceof PointSurfaceNshm) {
+						Preconditions.checkState(filteredRup.getRuptureSurface() instanceof PointSurfaceNshm);
+						PointSurfaceNshm surf1 = (PointSurfaceNshm) rup.getRuptureSurface();
+						PointSurfaceNshm surf2 = (PointSurfaceNshm) filteredRup.getRuptureSurface();
+						match = surf1.isOnFootwall() == surf2.isOnFootwall();
+					} else if (rup.getRuptureSurface() instanceof PointSurface13b) {
+						Preconditions.checkState(filteredRup.getRuptureSurface() instanceof PointSurface13b);
+						PointSurface13b surf1 = (PointSurface13b) rup.getRuptureSurface();
+						PointSurface13b surf2 = (PointSurface13b) filteredRup.getRuptureSurface();
+						match = surf1.isOnFootwall() == surf2.isOnFootwall();
+					} else {
+						double rx1 = rup.getRuptureSurface().getDistanceX(translatedParLoc); // any loc will do here
+						double rx2 = rup.getRuptureSurface().getDistanceX(translatedParLoc); // any loc will do here
+						match = (rx1 > 0) == (rx2 > 0);
+					}
+				}
+				if (match) {
+					Preconditions.checkState(r < 0, "Multiple rupture mappings? sourceID=%s, subSeismo=%s,"
+							+ "filteredR=%s, mag=%s, rake=%s, sourceType=%s, surfType=%s",
+							randSrcIndex, isSubSeismo, filteredR, filteredRup.getMag(), filteredRup.getAveRake(),
+							filteredSrc.getClass().getName(), filteredRup.getRuptureSurface().getClass().getName());
+					r = r2;
+				}
+			}
+		}
+		Preconditions.checkState(r >= 0, "No rupture mapping found sourceID=%s, subSeismo=%s,"
+				+ "filteredR=%s, mag=%s, rake=%s, sourceType=%s, surfType=%s",
+				randSrcIndex, isSubSeismo, filteredR, filteredRup.getMag(), filteredRup.getAveRake(),
+				filteredSrc.getClass().getName(), filteredRup.getRuptureSurface().getClass().getName());
+		ProbEqkRupture rup = src.getRupture(r);
+		System.out.println("Matched with r="+r+", M"+rup.getMag()+", rake="+rup.getAveRake());
+		
+	}
+	
+	private static void test298() throws IOException {
+		File inDir = new File("/data/kevin/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/node_branch_averaged");
+		
+		BranchAverageSolutionCreator baCreatorWithout = new BranchAverageSolutionCreator(new BranchWeightProvider.CurrentWeights());
+		BranchAverageSolutionCreator baCreatorWith = new BranchAverageSolutionCreator(new BranchWeightProvider.CurrentWeights());
+		
+		LogicTreeBranch<LogicTreeNode> branch = new LogicTreeBranch<>(List.of(NSHM23_LogicTreeBranch.SEG));
+		
+		for (NSHM23_SegmentationModels segModel : NSHM23_SegmentationModels.values()) {
+			File solFile = new File(inDir, "SegModel_"+segModel.getFilePrefix()+".zip");
+			if (!solFile.exists())
+				continue;
+			FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+			sol.removeModuleInstances(RupMFDsModule.class);
+			branch = branch.copy();
+			branch.setValue(segModel);
+			if (segModel != NSHM23_SegmentationModels.CLASSIC)
+				baCreatorWithout.addSolution(sol, branch);
+			baCreatorWith.addSolution(sol, branch);
+		}
+		
+		baCreatorWithout.build().write(new File("/tmp/ba_without_classic.zip"));
+		baCreatorWith.build().write(new File("/tmp/ba_with_classic.zip"));
+	}
 	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		test293();
+		try {
+			test298();
+		} catch (Throwable t) {
+			t.printStackTrace();
+			System.exit(1);
+		}
 	}
 
 }
