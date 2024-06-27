@@ -291,7 +291,7 @@ public class PointSurfaceBuilder {
 		Random rand = getRand();
 		if (strikeRange == null) {
 			// pick a random strike as the initial orientation, then evenly space relatively to that
-			double origStrike = rand.nextDouble(360d);
+			double origStrike = rand.nextDouble()*360d;
 			double delta = 360d/(double)num;
 			for (int i=0; i<num; i++)
 				strikes[i] = origStrike + i*delta;
