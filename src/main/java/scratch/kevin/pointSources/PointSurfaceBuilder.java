@@ -82,8 +82,8 @@ public class PointSurfaceBuilder {
 			int maxNumTries = 100;
 			int tries = 0;
 			while (true) {
-				double lat = minLat + rand.nextDouble(latSpan);
-				double lon = minLon + rand.nextDouble(lonSpan);
+				double lat = minLat + rand.nextDouble()*latSpan;
+				double lon = minLon + rand.nextDouble()*latSpan;
 				Location randLoc = new Location(lat, lon, loc.depth);
 				if (rectangular || sampleFromCell.contains(randLoc))
 					return randLoc;
@@ -302,7 +302,7 @@ public class PointSurfaceBuilder {
 			double span = upper - lower;
 			Preconditions.checkState(span > 0d);
 			for (int i=0; i<num; i++)
-				strikes[i] = lower + rand.nextDouble(span);
+				strikes[i] = lower + rand.nextDouble()*span;
 		}
 		return strikes;
 	}
