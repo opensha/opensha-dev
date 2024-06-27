@@ -36,6 +36,7 @@ import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.util.Precision;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.Range;
@@ -301,6 +302,7 @@ import scratch.kevin.simCompare.SiteHazardCurveComarePageGen;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
 import scratch.kevin.simulators.ruptures.RSQSimGeographicMapMaker;
+import scratch.kevin.ucerf3.eal.LossCOV_Model;
 
 public class PureScratch {
 	
@@ -6091,13 +6093,50 @@ public class PureScratch {
 		baCreatorWith.build().write(new File("/tmp/ba_with_classic.zip"));
 	}
 	
+	private static void test299() throws IOException {
+		double mean = 1e5;
+		LossCOV_Model covModel = LossCOV_Model.PORTER_POWER_LAW_2020_09_01;
+		double cov = covModel.getCOV(mean);
+		double samples[] =      covModel.getDistribution(mean).sample(1000000);
+		DescriptiveStatistics stats = new DescriptiveStatistics(samples);
+		double meanFromDist = stats.getMean();
+		double covFromDist = stats.getStandardDeviation()/meanFromDist;
+
+		System.out.println("mean="+mean+";\tmeanFromDist="+meanFromDist+";\tcov="+cov+";\tcovFromDist="+covFromDist+
+				"; meanRatio="+(float)(meanFromDist/mean)+"; covRatio="+(float)(covFromDist/cov));
+		
+		double sigma = Math.sqrt(Math.log(cov*cov+1));
+		System.out.println("Sigma="+sigma);
+//		double mu = Math.log(mean)-(sigma*sigma/2);
+		double mu = Math.log(mean);
+		LogNormalDistribution dist = new LogNormalDistribution(mu, sigma);
+		double samples2[] = dist.sample(1000000);
+		DescriptiveStatistics stats2 = new DescriptiveStatistics(samples2);
+		double meanFromDist2 = stats2.getMean();
+		double covFromDist2 = stats2.getStandardDeviation()/meanFromDist2;
+
+		System.out.println("mean="+mean+";\tmeanFromDist2="+meanFromDist2+";\tcov="+cov+";\tcovFromDist2="+covFromDist2+
+				"; meanRatio2="+(float)(meanFromDist2/mean)+"; covRatio2="+(float)(covFromDist2/cov));
+		
+		System.out.println("Now calculating mean/COV in log space instead...");
+		for (int i=0; i<samples.length; i++)
+			samples[i] = Math.log(samples2[i]);
+		stats = new DescriptiveStatistics(samples);
+		meanFromDist = stats.getMean();
+		covFromDist = stats.getStandardDeviation()/meanFromDist;
+		meanFromDist = Math.exp(meanFromDist);
+//		covFromDist = Math.exp(stats.getStandardDeviation())/meanFromDist;
+		System.out.println("mean="+mean+";\tmeanFromDist="+meanFromDist+";\tcov="+cov+";\tcovFromDist="+covFromDist+
+				"; meanRatio="+(float)(meanFromDist/mean)+"; covRatio="+(float)(covFromDist/cov));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test298();
+			test299();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
