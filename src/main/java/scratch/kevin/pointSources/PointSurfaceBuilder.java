@@ -1,11 +1,15 @@
 package scratch.kevin.pointSources;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.MagLengthRelationship;
 import org.opensha.commons.calc.magScalingRelations.MagScalingRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
@@ -35,7 +39,18 @@ public class PointSurfaceBuilder {
 	private double dip = 90d;
 	private double length = Double.NaN;
 	private boolean footwall = true;
-	private boolean traceCentered = true;
+	
+	private double zHyp = Double.NaN;
+	private double zHypFract = 0.5;
+	private boolean zHypSample = false;
+	private EvenlyDiscretizedFunc zHypCDF = null;
+	private EvenlyDiscretizedFunc zHypFractCDF = null;
+	
+	private double das = Double.NaN;
+	private double dasFract = 0.5;
+	private boolean dasSample = false;
+	private EvenlyDiscretizedFunc dasCDF = null;
+	private EvenlyDiscretizedFunc dasFractCDF = null;
 	
 	private MagScalingRelationship scale = WC94;
 	private double gridSpacing = 1d;
@@ -45,26 +60,86 @@ public class PointSurfaceBuilder {
 	
 	private static final WC1994_MagLengthRelationship WC94 = new WC1994_MagLengthRelationship();
 
+	/**
+	 * Initialized the point surface with the given location. The depth of the location is initially used as both 
+	 * zTop and zBot (true point source).
+	 * @param loc
+	 */
 	public PointSurfaceBuilder(Location loc) {
 		this.loc = loc;
 		zTop = loc.getDepth();
 		zBot = loc.getDepth();
 	}
 	
+	/**
+	 * If cell is non-null, locations will be be sampled from within the given region rather than always a single
+	 * fixed location
+	 * @param cell
+	 * @return
+	 */
 	public PointSurfaceBuilder sampleFromCell(Region cell) {
 		this.sampleFromCell = cell;
 		return this;
 	}
 	
+	/**
+	 * Sets the random number generator for any randomly-sampled operations. The default implementation uses a unique
+	 * seed based on all information that was set at the time the first randomly-sampled operation was performed.
+	 * @param rand
+	 * @return
+	 */
 	public PointSurfaceBuilder random(Random rand) {
 		this.rand = rand;
 		return this;
 	}
 	
 	private Random getRand() {
-		if (rand == null)
-			rand = new Random(Double.doubleToLongBits(loc.lat) + Double.doubleToLongBits(loc.lon));
+		if (rand == null) {
+			List<Long> seeds = new ArrayList<>();
+			seeds.add(Double.doubleToLongBits(loc.lat));
+			seeds.add(Double.doubleToLongBits(loc.lon));
+			seeds.add(Double.doubleToLongBits(loc.depth));
+			seeds.add(Double.doubleToLongBits(zTop));
+			seeds.add(Double.doubleToLongBits(zBot));
+			if (sampleFromCell != null)
+				seeds.add((long)sampleFromCell.hashCode());
+			if (Double.isFinite(mag))
+				seeds.add(Double.doubleToLongBits(mag));
+			if (Double.isFinite(strike))
+				seeds.add(Double.doubleToLongBits(strike));
+			seeds.add(Double.doubleToLongBits(dip));
+			if (Double.isFinite(length))
+				seeds.add(Double.doubleToLongBits(length));
+			if (footwall)
+				seeds.add(1l);
+			if (Double.isFinite(zHyp))
+				seeds.add(Double.doubleToLongBits(zHyp));
+			if (Double.isFinite(zHypFract))
+				seeds.add(Double.doubleToLongBits(zHypFract));
+			if (scale != WC94 && scale != null && scale.getName() != null)
+				seeds.add((long)scale.getName().hashCode());
+			if (Double.isFinite(gridSpacing))
+				seeds.add(Double.doubleToLongBits(gridSpacing));
+			rand = new Random(uniqueSeedCombination(seeds));
+		}
 		return rand;
+	}
+	
+	/**
+	 * Generates a 64-bit random seed that is a repeatable and psuedo-unique combination of the input seeds.
+	 * 
+	 * This is based on {@link Arrays#hashCode(int[])}, but modified for longs.
+	 * 
+	 * @param seeds
+	 * @return
+	 */
+	private static long uniqueSeedCombination(List<Long> seeds) {
+		Preconditions.checkState(!seeds.isEmpty());
+		
+		long result = 1;
+		for (long element : seeds)
+			result = 31l * result + element;
+		return result;
 	}
 	
 	private Location getLoc() {
@@ -141,6 +216,254 @@ public class PointSurfaceBuilder {
 	}
 	
 	/**
+	 * Sets the fractional hypocentral depth to this value, such that {@code zHyp = zTop + zHypFract*(zBot-zTop)}. Values of
+	 * zero are trace-centered (the trace is coincident with the cell location), and values of 0.5 are surface-centered.
+	 * 
+	 * Setting this will clear any already-set fixed hypocentral depth value (see {@link #hypocentralDepth(double)} or
+	 * distribution.
+	 * @param zHyp
+	 * @return
+	 */
+	public PointSurfaceBuilder fractionalHypocentralDepth(double zHypFract) {
+		Preconditions.checkArgument(zHypFract >= 0d && zHypFract <= 1d, "zHypFract=%s is not within the range [0,1]", zHypFract);
+		this.zHypFract = zHypFract;
+		this.zHyp = Double.NaN;
+		this.zHypSample = false;
+		this.zHypCDF = null;
+		this.zHypFractCDF = null;
+		return this;
+	}
+	
+	/**
+	 * Sets the hypocentral depth to this value in km. If this value is outside the range of the upper and lower depths,
+	 * an exception will be thrown when finite ruptures are built.
+	 * 
+	 * Setting this will clear any already-set fractional hypocentral depth value (see {@link #fractionalHypocentralDepth(double)}
+	 * or distribution.
+	 * @param zHyp
+	 * @return
+	 */
+	public PointSurfaceBuilder hypocentralDepth(double zHyp) {
+		FaultUtils.assertValidDepth(zHyp);
+		this.zHyp = zHyp;
+		this.zHypFract = Double.NaN;
+		this.zHypSample = false;
+		this.zHypCDF = null;
+		this.zHypFractCDF = null;
+		return this;
+	}
+	
+	/**
+	 * If set, hypocentral depths will be sampled from a uniform distribution between zTop and zBot.
+	 * 
+	 * Setting this will clear any already-set fractional or absolute hypocentral depth values or distributions.
+	 * @return
+	 */
+	public PointSurfaceBuilder sampleHypocentralDepths() {
+		this.zHypFract = Double.NaN;
+		this.zHyp = Double.NaN;
+		this.zHypSample = true;
+		this.zHypCDF = null;
+		this.zHypFractCDF = null;
+		return this;
+	}
+	
+	/**
+	 * If set, hypocentral depths will be sampled from this distribution of fractional values.
+	 * 
+	 * Setting this will clear any already-set fractional or absolute hypocentral depth values or distributions.
+	 * @param zHypFractDistribution distribution of fractional zHyp values; y values must sum to 1, and x values must
+	 * not exceed the range [0,1]
+	 * @return
+	 */
+	public PointSurfaceBuilder sampleFractionalHypocentralDepths(EvenlyDiscretizedFunc zHypFractDistribution) {
+		Preconditions.checkNotNull(zHypFractDistribution, "Cannot set the distribution to null. Clear it by setting "
+				+ "zHyp another way.");
+		Preconditions.checkState((float)zHypFractDistribution.getMinX() >= 0f && (float)zHypFractDistribution.getMaxX() <= 1f,
+				"Distribution sum of x values must be in the range [0,1]: [%s,%s]",
+				(float)zHypFractDistribution.getMinX(), (float)zHypFractDistribution.getMaxX());
+		this.zHypFract = Double.NaN;
+		this.zHyp = Double.NaN;
+		this.zHypSample = true;
+		this.zHypCDF = null;
+		this.zHypFractCDF = toCDF(zHypFractDistribution);
+		return this;
+	}
+	
+	/**
+	 * If set, hypocentral depths will be sampled from this distribution. If this distribution contains values is
+	 * outside the range of the upper and lower depths, an exception will be thrown when finite ruptures are built.
+	 * 
+	 * Setting this will clear any already-set fractional or absolute hypocentral depth values or distributions.
+	 * @param zHypFractDistribution distribution of absolute zHyp values; y values must sum to 1.
+	 * @return
+	 */
+	public PointSurfaceBuilder sampleHypocentralDepths(EvenlyDiscretizedFunc zHypDistribution) {
+		Preconditions.checkNotNull(zHypDistribution, "Cannot set the distribution to null. Clear it by setting "
+				+ "zHyp another way.");
+		this.zHypFract = Double.NaN;
+		this.zHyp = Double.NaN;
+		this.zHypSample = true;
+		this.zHypCDF = toCDF(zHypDistribution);
+		this.zHypFractCDF = null;
+		return this;
+	}
+	
+	/**
+	 * Sets the distance along strike to this value, such that {@code das = dasFract*length}. Values of 0.5 are surface-centered.
+	 * 
+	 * Setting this will clear any already-set fixed DAS value (see {@link #hypocentralDepth(double)} or
+	 * distribution.
+	 * @param zHyp
+	 * @return
+	 */
+	public PointSurfaceBuilder fractionalDAS(double dasFract) {
+		Preconditions.checkArgument(dasFract >= 0d && dasFract <= 1d, "dasFract=%s is not within the range [0,1]", dasFract);
+		this.das = Double.NaN;
+		this.dasFract = dasFract;
+		this.dasSample = false;
+		this.dasCDF = null;
+		this.dasFractCDF = null;
+		return this;
+	}
+	
+	/**
+	 * Sets the distance along strike to this value in km. If this value is outside the range of [0, length],
+	 * an exception will be thrown when finite ruptures are built.
+	 * 
+	 * Setting this will clear any already-set fractional DAS value (see {@link #fractionalHypocentralDepth(double)}
+	 * or distribution.
+	 * @param zHyp
+	 * @return
+	 */
+	public PointSurfaceBuilder das(double das) {
+		Preconditions.checkState(das >= 0d);
+		this.das = das;
+		this.dasFract = Double.NaN;
+		this.dasSample = false;
+		this.dasCDF = null;
+		this.dasFractCDF = null;
+		return this;
+	}
+	
+	/**
+	 * If set, distances along strike will be sampled from a uniform distribution between 0 and length.
+	 * 
+	 * Setting this will clear any already-set fractional or absolute DAS values or distributions.
+	 * @return
+	 */
+	public PointSurfaceBuilder sampleDASs() {
+		this.dasFract = Double.NaN;
+		this.das = Double.NaN;
+		this.dasSample = true;
+		this.dasCDF = null;
+		this.dasFractCDF = null;
+		return this;
+	}
+	
+	/**
+	 * If set, distances along strike will be sampled from this distribution of fractional values.
+	 * 
+	 * Setting this will clear any already-set fractional or absolute DAS values or distributions.
+	 * @param dasFractDistribution distribution of fractional DAS values; y values must sum to 1, and x values must
+	 * not exceed the range [0,1]
+	 * @return
+	 */
+	public PointSurfaceBuilder sampleFractionalDASs(EvenlyDiscretizedFunc dasFractDistribution) {
+		Preconditions.checkNotNull(dasFractDistribution, "Cannot set the distribution to null. Clear it by setting "
+				+ "DAS another way.");
+		Preconditions.checkState((float)dasFractDistribution.getMinX() >= 0f && (float)dasFractDistribution.getMaxX() <= 1f,
+				"Distribution sum of x values must be in the range [0,1]: [%s,%s]",
+				(float)dasFractDistribution.getMinX(), (float)dasFractDistribution.getMaxX());
+		this.zHypFract = Double.NaN;
+		this.zHyp = Double.NaN;
+		this.zHypSample = true;
+		this.zHypCDF = null;
+		this.zHypFractCDF = toCDF(dasFractDistribution);
+		return this;
+	}
+	
+	/**
+	 * If set, distances along strike will be sampled from this distribution. If this distribution contains values is
+	 * outside the range of the [0, length], an exception will be thrown when finite ruptures are built.
+	 * 
+	 * Setting this will clear any already-set fractional or absolute DAS values or distributions.
+	 * @param dasDistribution distribution of fractional DAS values; y values must sum to 1.
+	 * @return
+	 */
+	public PointSurfaceBuilder sampleDASs(EvenlyDiscretizedFunc dasDistribution) {
+		Preconditions.checkNotNull(dasDistribution, "Cannot set the distribution to null. Clear it by setting "
+				+ "DAS another way.");
+		this.dasFract = Double.NaN;
+		this.das = Double.NaN;
+		this.dasSample = true;
+		this.dasCDF = toCDF(dasDistribution);
+		this.dasFractCDF = null;
+		return this;
+	}
+	
+	private static EvenlyDiscretizedFunc toCDF(EvenlyDiscretizedFunc dist) {
+		Preconditions.checkState((float)dist.calcSumOfY_Vals() == 1f, "Distribution sum of y values must "
+				+ "sum to 1: %s", (float)dist.calcSumOfY_Vals());
+		EvenlyDiscretizedFunc cdf = new EvenlyDiscretizedFunc(dist.getMinX(), dist.getMaxX(), dist.size());
+		double sumY = 0d;
+		for (int i=0; i<dist.size(); i++) {
+			sumY += dist.getY(i);
+			cdf.set(i, sumY);
+		}
+		return cdf;
+	}
+	
+	private static double sampleFromCDF(EvenlyDiscretizedFunc cdf, double randDouble) {
+		for (int i=0; i<cdf.size(); i++) {
+			double cmlProb = cdf.getY(i);
+			if ((float)randDouble <= (float)cmlProb)
+				return cdf.getX(i);
+		}
+		throw new IllegalStateException("Couldn't sample from CDF with randDouble="+(float)randDouble+"\nCDF:\n"+cdf);
+	}
+	
+	private double getAbsolutelValue(double lowerBound, double upperBound, double fractValue, double absValue,
+			boolean sample, EvenlyDiscretizedFunc fractDist, EvenlyDiscretizedFunc absDist) {
+		fractValue = getFractionalValue(lowerBound, upperBound, fractValue, absValue, sample, fractDist, absDist);
+		return lowerBound + fractValue*(upperBound-lowerBound);
+	}
+	
+	private double getFractionalValue(double lowerBound, double upperBound, double fractValue, double absValue,
+			boolean sample, EvenlyDiscretizedFunc fractDist, EvenlyDiscretizedFunc absDist) {
+		Preconditions.checkState(Double.isFinite(fractValue) || Double.isFinite(absValue) || sample,
+				"Must specify exactly 1 of absolute, fractional, or sampled values");
+		Preconditions.checkState(sample || (absDist == null && fractDist == null),
+				"Samplign is disabled, but a distribution was provided");
+		if (Double.isFinite(fractValue)) {
+			Preconditions.checkState(!Double.isFinite(absValue) && !sample,
+					"Must specify exactly 1 of absolute, fractional, or sampled values");
+			return fractValue;
+		}
+		if (Double.isFinite(absValue)) {
+			Preconditions.checkState(!Double.isFinite(fractValue) && !sample,
+					"Must specify exactly 1 of absolute, fractional, or sampled values");
+			Preconditions.checkState((float)absValue >= (float)lowerBound && (float)absValue <= (float)upperBound,
+					"Supplied absolute value %s is not in the allowed range: [%s, %s]",
+					(float)absValue, (float)lowerBound, (float)upperBound);
+			return (absValue-lowerBound)/(upperBound-lowerBound);
+		}
+		Preconditions.checkState(sample);
+		double randDouble = getRand().nextDouble();
+		if (fractDist != null)
+			return sampleFromCDF(fractDist, randDouble);
+		if (absDist != null) {
+			absValue = sampleFromCDF(absDist, randDouble);
+			Preconditions.checkState((float)absValue >= (float)lowerBound && (float)absValue <= (float)upperBound,
+					"Supplied absolute value %s is not in the allowed range: [%s, %s]",
+					(float)absValue, (float)lowerBound, (float)upperBound);
+			return (absValue-lowerBound)/(upperBound-lowerBound);
+		}
+		// uniform distribution
+		return randDouble;
+	}
+	
+	/**
 	 * Sets the magnitude, used to infer the length if the length is not explicitly set
 	 * @param mag
 	 * @return
@@ -202,17 +525,6 @@ public class PointSurfaceBuilder {
 		return this;
 	}
 	
-	/**
-	 * Sets if the trace should be centered on the grid node (true), or if the middle of the surface should be (false).
-	 * Only affects dipping ruptures.
-	 * @param traceCentered
-	 * @return
-	 */
-	public PointSurfaceBuilder traceCentered(boolean traceCentered) {
-		this.traceCentered = traceCentered;
-		return this;
-	}
-	
 	private double getCalcLength() {
 		if (Double.isFinite(length))
 			return length;
@@ -265,18 +577,19 @@ public class PointSurfaceBuilder {
 		double length = getCalcLength();
 		Preconditions.checkState(length > 0, "Can't build finite surface because length=%s; "
 				+ "set magnitude to infer length from scaling relationship", length);
-		double halfLen = 0.5*length;
+		double dasFract = getFractionalValue(0d, length, this.dasFract, das, dasSample, dasFractCDF, dasCDF);
 		double strikeRad = Math.toRadians(strike);
 		Location loc = getLoc();
-		Location l0 = LocationUtils.location(loc, strikeRad-Math.PI, halfLen);
-		Location l1 = LocationUtils.location(loc, strikeRad, halfLen);
-		if (!traceCentered && zBot > zTop && dip < 90) {
-			// translate it so that the surface is centered rather than the trace
+		Location l0 = LocationUtils.location(loc, strikeRad-Math.PI, length*dasFract);
+		Location l1 = LocationUtils.location(loc, strikeRad, length*(1d-dasFract));
+		if (zBot > zTop && dip < 90) {
+			// translate it for the given zHyp
+			double horzFract = getFractionalValue(zTop, zBot, zHypFract, zHyp, zHypSample, zHypFractCDF, zHypCDF);
 			double horzWidth = (zBot-zTop)/Math.tan(Math.toRadians(dip));
-			// move to the left (so that it dips to the right)
+			// move to the left (so that it follows the RHR and dips to the right)
 			double transAz = strikeRad - 0.5*Math.PI;
-			l0 = LocationUtils.location(l0, transAz, 0.5*horzWidth);
-			l1 = LocationUtils.location(l1, transAz, 0.5*horzWidth);
+			l0 = LocationUtils.location(l0, transAz, horzFract*horzWidth);
+			l1 = LocationUtils.location(l1, transAz, horzFract*horzWidth);
 		}
 		l0 = new Location(l0.lat, l0.lon, zTop);
 		l1 = new Location(l1.lat, l1.lon, zTop);

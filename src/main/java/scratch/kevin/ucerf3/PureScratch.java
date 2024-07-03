@@ -41,6 +41,7 @@ import org.apache.commons.math3.util.Precision;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
+import org.opensha.commons.calc.GaussianDistCalc;
 import org.opensha.commons.calc.WeightedSampler;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Ellsworth_B_WG02_MagAreaRel;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.Somerville_2006_MagAreaRel;
@@ -298,6 +299,7 @@ import scratch.UCERF3.utils.U3SectionMFD_constraint;
 import scratch.UCERF3.utils.UCERF2_A_FaultMapper;
 import scratch.UCERF3.utils.paleoRateConstraints.UCERF3_PaleoRateConstraintFetcher;
 import scratch.kevin.nshm23.dmCovarianceTests.RandomDefModSampleLevel;
+import scratch.kevin.pointSources.InvCDF_RJBCorrPointSurface;
 import scratch.kevin.simCompare.SiteHazardCurveComarePageGen;
 import scratch.kevin.simulators.RSQSimCatalog;
 import scratch.kevin.simulators.RSQSimCatalog.Catalogs;
@@ -6130,13 +6132,28 @@ public class PureScratch {
 				"; meanRatio="+(float)(meanFromDist/mean)+"; covRatio="+(float)(covFromDist/cov));
 	}
 	
+	private static void test300() throws IOException {
+		NormalDistribution normDist = new NormalDistribution();
+		for (int i=0; i<5; i++) {
+			System.out.println("Sigma="+i);
+			System.out.println("\tCDF1: "+(float)GaussianDistCalc.getCDF(i));
+			System.out.println("\tCDF2: "+(float)normDist.cumulativeProbability(i));
+		}
+		for (int i=1; i<6; i++) {
+			System.out.println("Sigmas="+i);
+			DiscretizedFunc func = InvCDF_RJBCorrPointSurface.getSigmaSpacedProbs(i);
+			for (Point2D pt : func)
+				System.out.println("\t"+(float)pt.getX()+": "+(float)pt.getY());
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test299();
+			test300();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
