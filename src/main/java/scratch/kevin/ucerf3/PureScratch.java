@@ -6147,13 +6147,129 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test301() throws IOException {
+		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.0.0");
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.ONLY;
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
+
+		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+
+		Table<Float, Float, Integer> magRakeCounts = HashBasedTable.create();
+		Table<Float, Float, Integer> magRakeCountsRXPos = HashBasedTable.create();
+		Table<Float, Float, Integer> magRakeCountsRXNeg = HashBasedTable.create();
+		Table<Float, Float, Integer> magRakeBugCounts = HashBasedTable.create();
+		Table<Float, Float, Integer> magRakeBugCountsRXPos = HashBasedTable.create();
+		Table<Float, Float, Integer> magRakeBugCountsRXNeg = HashBasedTable.create();
+		
+		Location rxTestLoc = new Location(0d, 0d);
+		
+		for (ProbEqkSource source : erf) {
+			for (ProbEqkRupture rup : source) {
+				RuptureSurface surf = rup.getRuptureSurface();
+				Preconditions.checkState(surf instanceof NshmSurface);
+				NshmSurface nshmSurf = (NshmSurface)surf;
+				LocationList locs = nshmSurf.getEvenlyDiscritizedListOfLocsOnSurface();
+				Preconditions.checkState(locs.size() == 1);
+				Location surfLoc = locs.get(0);
+				Location siteLoc = new Location(surfLoc.lat, surfLoc.lon);
+				double zTOR = surf.getAveRupTopDepth();
+				double rRup = surf.getDistanceRup(siteLoc);
+				float rake = (float)rup.getAveRake();
+				float mag = (float)rup.getMag();
+				int prevCount = magRakeCounts.contains((float)mag, (float)rake) ? magRakeCounts.get(mag, rake) : 0;
+				magRakeCounts.put(mag, rake, prevCount+1);
+				boolean rxNeg = surf.getDistanceX(rxTestLoc) < 0d;
+				if (rxNeg) {
+					prevCount = magRakeCountsRXNeg.contains((float)mag, (float)rake) ? magRakeCountsRXNeg.get(mag, rake) : 0;
+					magRakeCountsRXNeg.put(mag, rake, prevCount+1);
+				} else {
+					prevCount = magRakeCountsRXPos.contains((float)mag, (float)rake) ? magRakeCountsRXPos.get(mag, rake) : 0;
+					magRakeCountsRXPos.put(mag, rake, prevCount+1);
+				}
+				if ((float)rRup < (float)zTOR) {
+//					System.out.println("rRup bug! zTOR="+(float)zTOR+", rRup="+(float)rRup+", M="+mag+", rake="+rake);
+					prevCount = magRakeBugCounts.contains((float)mag, (float)rake) ? magRakeBugCounts.get(mag, rake) : 0;
+					magRakeBugCounts.put(mag, rake, prevCount+1);
+					if (rxNeg) {
+						prevCount = magRakeBugCountsRXNeg.contains((float)mag, (float)rake) ? magRakeBugCountsRXNeg.get(mag, rake) : 0;
+						magRakeBugCountsRXNeg.put(mag, rake, prevCount+1);
+					} else {
+						prevCount = magRakeBugCountsRXPos.contains((float)mag, (float)rake) ? magRakeBugCountsRXPos.get(mag, rake) : 0;
+						magRakeBugCountsRXPos.put(mag, rake, prevCount+1);
+					}
+				}
+			}
+		}
+		List<Float> mags = new ArrayList<>(magRakeCounts.rowKeySet());
+		Collections.sort(mags);
+		DecimalFormat pDF = new DecimalFormat("0.00%");
+		for (float mag : mags) {
+			Map<Float, Integer> countMap = magRakeCounts.row(mag);
+			List<Float> rakes = new ArrayList<>(countMap.keySet());
+			Collections.sort(rakes);
+			System.out.println("M"+mag);
+			for (float rake : rakes) {
+				int count = countMap.get(rake);
+				int bugCount = magRakeBugCounts.contains(mag, rake) ? magRakeBugCounts.get(mag, rake) : 0;
+				System.out.println("\trake="+rake+":\t"+pDF.format((double)bugCount/(double)count)+" buggy rRup");
+				if (rake != 0f) {
+					int countRXNeg = magRakeCountsRXNeg.get(mag, rake);
+					int countRXPos = magRakeCountsRXPos.get(mag, rake);
+					int bugCountRXNeg = magRakeBugCountsRXNeg.contains(mag, rake) ? magRakeBugCountsRXNeg.get(mag, rake) : 0;
+					int bugCountRXPos = magRakeBugCountsRXPos.contains(mag, rake) ? magRakeBugCountsRXPos.get(mag, rake) : 0;
+					System.out.println("\t\t"+pDF.format((double)bugCountRXPos/(double)countRXNeg)+" buggy rRup when rX>=0");
+					System.out.println("\t\t"+pDF.format((double)bugCountRXNeg/(double)countRXNeg)+" buggy rRup when rX<0");
+				}
+			}
+		}
+	}
+	
+	private static void test302() throws IOException {
+		List<DiscretizedFunc> funcs = new ArrayList<>();
+		List<PlotCurveCharacterstics> chars = new ArrayList<>();
+		
+//		CPT cpt = GMT_CPT_Files.CATEGORICAL_TAB10.instance();
+//		double delta = 1d;
+//		int num = 10;
+		
+//		CPT cpt = GMT_CPT_Files.CATEGORICAL_TAB10_LIGHT.instance();
+//		double delta = 1d;
+//		int num = 10;
+		
+		CPT cpt = GMT_CPT_Files.CATEGORICAL_TAB20.instance();
+		double delta = 0.5d;
+		int num = 20;
+		
+		for (int i=0; i<num; i++) {
+			double val = i*delta;
+			
+			ArbitrarilyDiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
+			func.set(0d, 0d);
+			func.set(1d, val);
+			
+			Color color = cpt.getColor((float)val);
+			funcs.add(func);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
+		}
+		
+		PlotSpec spec = new PlotSpec(funcs, chars, " ", "X", "Y");
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		
+		gp.drawGraphPanel(spec);
+		
+		PlotUtils.writePlots(new File("/tmp"), "cpt_test.png", gp, 800, 800, true, false, false);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test300();
+			test302();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

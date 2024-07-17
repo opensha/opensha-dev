@@ -102,6 +102,7 @@ class DistCalcBenchmark {
 				watch.stop();
 				
 				double secs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+				System.out.println(types[t].label+":\t"+(float)secs+" s");
 				if (i >= 0)
 					timeFuncs[t].set(i, secs);
 			}

@@ -70,6 +70,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm.PointSurfaceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.PointToFiniteSource;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_AbstractGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.PointSurface;
@@ -89,7 +90,12 @@ import org.opensha.sha.util.FocalMech;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Table;
+
+import net.mahdilamb.colormap.Colors;
+
+import com.google.common.collect.ImmutableMap.Builder;
 
 import scratch.kevin.pointSources.InvCDF_RJBCorrPointSurface.RJBCorrInvPDFs;
 import scratch.kevin.pointSources.TableBackedDistCorrPointSurface.DistanceCorrTables;
@@ -217,6 +223,17 @@ public class PointSourceHazardComparison {
 				builder.fractionalHypocentralDepth(0.5d);
 				builder.random(r);
 				return buildQuadSource(builder, mfd, aveRake, aveDip, 2);
+			}
+		},
+		QUAD_QUAD("4x Quad Surface", true, Type.NONE) {
+			@Override
+			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
+					double aveDip, boolean isSupersample, Random r) {
+				PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
+				builder.dip(aveDip);
+				builder.fractionalHypocentralDepth(0.5d);
+				builder.random(r);
+				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 4);
 			}
 		},
 		OCT_QUAD("8x Quad Surface", true, Type.NONE) {
@@ -934,6 +951,8 @@ public class PointSourceHazardComparison {
 //		PointSourceType mainType = PointSourceType.OCT_QUAD;
 //		PointSourceType mainType = PointSourceType.APROX_SUPERSAMPLE_POINT_SOURCE_NSHM;
 //		PointSourceType mainType = PointSourceType.POINT_TO_FINITE;
+//		PointSourceType mainType = PointSourceType.CROSSHAIR_QUAD;
+//		PointSourceType mainType = PointSourceType.QUAD_QUAD;
 //		PointSourceType compType = null;
 //		PointSourceType compType = PointSourceType.TABLE_FINITE_APPROX_POINT_SOURCE;
 //		PointSourceType compType = PointSourceType.HAZ_EQUIV_APPROX_POINT_SOURCE;
@@ -942,9 +961,9 @@ public class PointSourceHazardComparison {
 //		PointSourceType compType = PointSourceType.SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR;
 //		PointSourceType compType = PointSourceType.SIMPLE_APPROX_FINITE_POINT_NO_CORR;
 //		PointSourceType compType = PointSourceType.TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE;
-//		PointSourceType compType = PointSourceType.OCT_QUAD;
+		PointSourceType compType = PointSourceType.OCT_QUAD;
 //		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_CELL;
-		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_DAS_DD;
+//		PointSourceType compType = PointSourceType.OCT_QUAD_RAND_DAS_DD;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_NSHM;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_13b_NSHMP_CORR;
 //		PointSourceType compType = PointSourceType.POINT_SOURCE_13b_NO_CORR;
@@ -962,12 +981,13 @@ public class PointSourceHazardComparison {
 		boolean doNSHMModelHazard = true;
 		boolean doHighRes = false;
 		boolean doSupersample = true;
-		boolean forceWriteIntermediate = false;
+		boolean forceWriteIntermediate = true;
 		boolean writeTables = false;
+		boolean strikeSlipOnly = true;
 		
 		AttenRelRef gmmRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
 		double[] periods = {0d, 1d};
-		double[] rakes = {0d, 90d};
+		double[] rakes = strikeSlipOnly ? new double[] {0d} : new double[] {0d, 90d};
 		
 		ReturnPeriods[] rps = { ReturnPeriods.TWO_IN_50, ReturnPeriods.TEN_IN_50 };
 		
@@ -983,6 +1003,10 @@ public class PointSourceHazardComparison {
 			outputDir = new File(mainOutputDir, mainType.name());
 		else
 			outputDir = new File(mainOutputDir, mainType.name()+"_vs_"+compType.name());
+		if (!doSupersample)
+			outputDir = new File(mainOutputDir, outputDir.getName()+"_no_supersample");
+		if (strikeSlipOnly)
+			outputDir = new File(mainOutputDir, outputDir.getName()+"_ss_only");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		boolean writeIntermediate = forceWriteIntermediate || !new File(outputDir, "index.html").exists();
@@ -1132,9 +1156,16 @@ public class PointSourceHazardComparison {
 		Deque<ScalarIMR> gmmDeque = new ArrayDeque<>();
 		ExecutorService exec = Executors.newFixedThreadPool(FaultSysTools.defaultNumThreads());
 		
-		CPT batlowCategorical = GMT_CPT_Files.CATEGORICAL_BATLOW_UNIFORM.instance();
-		Color mainColor = batlowCategorical.get(0).minColor;
-		Color compColor = batlowCategorical.get(1).minColor;
+//		CPT batlowCategorical = GMT_CPT_Files.CATEGORICAL_BATLOW_UNIFORM.instance();
+//		Color mainColor = batlowCategorical.get(0).minColor;
+//		Color compColor = batlowCategorical.get(1).minColor;
+		
+//		CPT tab10 = GMT_CPT_Files.CATEGORICAL_TAB10.instance();
+//		Color mainColor = tab10.getColor(0);
+//		Color compColor = tab10.getColor(1);
+		
+		Color mainColor = Colors.tab_blue;
+		Color compColor = Colors.tab_orange;
 		
 		Range curveYRange = new Range(1e-5, 1e0);
 		GeographicMapMaker mapMaker = new GeographicMapMaker(calcRegion);
@@ -1637,8 +1668,8 @@ public class PointSourceHazardComparison {
 					}
 				}
 				
-				if (compType == null && !doSupersample)
-					table.finalizeLine();
+//				if (compType == null && !doSupersample)
+//					table.finalizeLine();
 				lines.addAll(table.build());
 				lines.add("");
 				
@@ -1946,11 +1977,37 @@ public class PointSourceHazardComparison {
 			GridSourceProvider gridProv = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
 					+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged_gridded.zip")).getGridSourceProvider();
 			
+			if (strikeSlipOnly) {
+				GriddedRegion region = gridProv.getGriddedRegion();
+				int nodeCount = region.getNodeCount();
+				Builder<Integer, IncrementalMagFreqDist> subSeisBuilder = ImmutableMap.builder();
+				Builder<Integer, IncrementalMagFreqDist> unassociatedBuilder = ImmutableMap.builder();
+				double[] fracStrikeSlip = new double[nodeCount];
+				double[] fracNormal = new double[nodeCount];
+				double[] fracReverse = new double[nodeCount];
+				for (int i=0; i<nodeCount; i++) {
+					IncrementalMagFreqDist subSeis = gridProv.getMFD_SubSeisOnFault(i);
+					if (subSeis != null)
+						subSeisBuilder.put(i, subSeis);
+					IncrementalMagFreqDist unassociated = gridProv.getMFD_Unassociated(i);
+					if (unassociated != null)
+						unassociatedBuilder.put(i, unassociated);
+					fracStrikeSlip[i] = 1d;
+					fracNormal[i] = 0d;
+					fracReverse[i] = 0d;
+				}
+				ImmutableMap<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs = subSeisBuilder.build();
+				ImmutableMap<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs = unassociatedBuilder.build();
+				gridProv = new NSHM23_AbstractGridSourceProvider.Precomputed(region, nodeSubSeisMFDs, nodeUnassociatedMFDs,
+						fracStrikeSlip, fracNormal, fracReverse);
+			}
+			
 			lines.add("## "+modelLabel+" Gridded Seismicity Hazard");
 			lines.add(topLink); lines.add("");
 			
 //			calcRegion = NSHM23_SingleStates.UT.loadRegion();
-			calcRegion = new Region(new Location(37, -120), new Location(39, -118));
+			calcRegion = new Region(new Location(37, -120), new Location(39, -118)); // SS and Reverse, CA-NV Border
+//			calcRegion = new Region(new Location(42, -109), new Location(44, -107)); // SS-only region, Wyoming
 			
 			colocatedGridded = new GriddedRegion(calcRegion, spacing, GriddedRegion.ANCHOR_0_0);
 			
