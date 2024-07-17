@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,14 +15,22 @@ import java.util.function.Consumer;
 
 import org.apache.commons.math3.stat.StatUtils;
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
+import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
+import org.opensha.commons.gui.plot.GraphPanel;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
+import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
+import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
@@ -247,7 +256,7 @@ public class BBPStandaloneCheckerboardPlots {
 	private static CPT getLogValCPT() {
 		CPT cpt;
 		try {
-			cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-6, 4);
+			cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(-8, 6);
 		} catch (IOException e) {
 			throw ExceptionUtils.asRuntimeException(e);
 		}
@@ -263,18 +272,24 @@ public class BBPStandaloneCheckerboardPlots {
 		String prefix = "r5652";
 		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
-//		PlotType[] types = PlotType.values();
-//		AttenRelRef gmmRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
-//		prefix += "_ngaw2";
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5672.instance();
+//		File bbpDir = new File("/data/kevin/bbp/parallel/2023_11_06-rundir5672-all-m6.5-skipYears2000-noHF-vmLA_BASIN_500-griddedSites");
+//		File bbpFile = new File(bbpDir, "results_rotD.zip");
+//		String prefix = "r5672";
+//		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
-		PlotType[] types = {
-				PlotType.MEAN_SIM,
-				PlotType.MEAN_RESIDUAL,
-				PlotType.RESIDUAL_STD_DEV,
-				PlotType.BIN_STD_DEV
-		};
-		AttenRelRef gmmRef = AttenRelRef.ASK_2014;
-		prefix += "_ask2014";
+		PlotType[] types = PlotType.values();
+		AttenRelRef gmmRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
+		prefix += "_ngaw2";
+		
+//		PlotType[] types = {
+//				PlotType.MEAN_SIM,
+//				PlotType.MEAN_RESIDUAL,
+//				PlotType.RESIDUAL_STD_DEV,
+//				PlotType.BIN_STD_DEV
+//		};
+//		AttenRelRef gmmRef = AttenRelRef.ASK_2014;
+//		prefix += "_ask2014";
 		
 		File outputDir = new File("/home/kevin/Documents/papers/2023_Bruce_GMM_Multifault/figures/checkerboards");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
@@ -471,6 +486,13 @@ public class BBPStandaloneCheckerboardPlots {
 		gp.getPlotPrefs().setTickLabelFontSize(26);
 		Font annFont = new Font(Font.SANS_SERIF, Font.BOLD, 36);
 		
+
+		CPT magCPT = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(6.5d, 8d);
+		magCPT.setBelowMinColor(magCPT.getMinColor());
+		magCPT.setAboveMaxColor(magCPT.getMaxColor());
+		PaintScaleLegend magSubtitle = GraphPanel.getLegendForCPT(magCPT, "Magnitude", gp.getPlotPrefs().getAxisLabelFontSize(),
+				gp.getPlotPrefs().getTickLabelFontSize(), 0.5, RectangleEdge.LEFT);
+		
 		List<String> lines = new ArrayList<>();
 		
 		lines.add("# Checkerboard Plots");
@@ -491,11 +513,18 @@ public class BBPStandaloneCheckerboardPlots {
 			
 			TableBuilder table = MarkdownUtils.tableBuilder();
 			
-			for (PlotType type : types) {
+			double[][][][] distMagTypePerVals = new double[refXYZ.getNumX()][refXYZ.getNumY()][types.length][];
+			
+			for (int t=0; t<types.length; t++) {
+				PlotType type = types[t];
 				System.out.println("\t"+type);
 				EvenlyDiscrXYZ_DataSet[] xyzs = new EvenlyDiscrXYZ_DataSet[periods.length];
 				for (int p=0; p<periods.length; p++)
 					xyzs[p] = refXYZ.copy();
+				
+				Map<Double, XY_DataSet[]> magScatters = new HashMap<>();
+				Map<Double, double[]> distAverages = new HashMap<>();
+				Map<Double, int[]> distCounts = new HashMap<>();
 				
 				for (int x=0; x<refXYZ.getNumX(); x++) {
 					for (int y=0; y<refXYZ.getNumY(); y++) {
@@ -532,18 +561,53 @@ public class BBPStandaloneCheckerboardPlots {
 							continue;
 						}
 						double[] perVals = type.calc(simVals, gmmCompTable);
-						for (int p=0; p<periods.length; p++)
+						for (int p=0; p<periods.length; p++) {
 							xyzs[p].set(x, y, perVals[p]);
+							if (Double.isFinite(perVals[p])) {
+								double mag = refXYZ.getY(y);
+								double dist = Math.pow(10, refXYZ.getX(x));
+								XY_DataSet[] scatters = magScatters.get(mag);
+								if (scatters == null) {
+									scatters = new DefaultXY_DataSet[periods.length];
+									magScatters.put(mag, scatters);
+								}
+								if (scatters[p] == null)
+									scatters[p] = new DefaultXY_DataSet();
+								scatters[p].set(dist, perVals[p]);
+								
+								if (distAverages.get(dist) == null) {
+									distAverages.put(dist, new double[periods.length]);
+									distCounts.put(dist, new int[periods.length]);
+								}
+								double[] distAvgs = distAverages.get(dist);
+								int[] distCnts = distCounts.get(dist);
+								distAvgs[p] += numSims*perVals[p];
+								distCnts[p] += numSims;
+							}
+						}
+						
+						distMagTypePerVals[x][y][t] = perVals;
 					}
 				}
-				
+
 				List<PlotSpec> specs = new ArrayList<>();
+				List<PlotSpec> scatterSpecs = new ArrayList<>();
 				Range xRange = null;
 				Range yRange = null;
 				
 				String plotPrefix = rakePrefix+"_"+type.prefix+"_combined";
 				
-				String links = "[PDF Link]("+resourcesDir.getName()+"/"+plotPrefix+".pdf), Individual Periods:";
+				String links = "[PDF Link]("+resourcesDir.getName()+"/"+plotPrefix+".pdf), Individual Periods: ";
+				String scatterLinks = "[PDF Link]("+resourcesDir.getName()+"/"+plotPrefix+"_scatter.pdf), Individual Periods: ";
+				Range scatterYRange = new Range(type.cpt.getMinValue(), type.cpt.getMaxValue());
+				double scatterYTick;
+
+				if (scatterYRange.getLength() > 4d)
+					scatterYTick = 1d;
+				else if (scatterYRange.getLength() > 2d)
+					scatterYTick = 0.5d;
+				else
+					scatterYTick = 0.2d;
 				
 				for (int p=0; p<periods.length; p++) {
 					String perPrefix;
@@ -554,7 +618,7 @@ public class BBPStandaloneCheckerboardPlots {
 					} else {
 						Preconditions.checkState(periods[p] > 0d);
 						perPrefix = oDF.format(periods[p])+"s";
-						perLabel = oDF.format(periods[p])+"s SA";
+						perLabel = oDF.format(periods[p])+"s PSA";
 					}
 					
 //					ArbDiscrXYZ_DataSet xyz = new ArbDiscrXYZ_DataSet();
@@ -592,9 +656,62 @@ public class BBPStandaloneCheckerboardPlots {
 					
 					PlotUtils.writePlots(resourcesDir, plotPrefix+"_"+perPrefix, gp, 800, 600, true, true, false);
 					
-					links += " ["+perLabel+"]("+resourcesDir.getName()+"/"+plotPrefix+"_"+perPrefix+".png)";
+					if (p > 0)
+						links += ", ";
+					links += "["+perLabel+"]("+resourcesDir.getName()+"/"+plotPrefix+"_"+perPrefix+".png)";
 					
 					specs.add(spec);
+					
+					List<XY_DataSet> scatterFuncs = new ArrayList<>();
+					List<PlotCurveCharacterstics> scatterChars = new ArrayList<>();
+					List<Double> mags = new ArrayList<>(magScatters.keySet());
+					Collections.sort(mags);
+					
+					if (type == PlotType.MEAN_RESIDUAL || type == PlotType.RESIDUAL_TO_EPISTEMIC) {
+						DefaultXY_DataSet scatterZeroXY = new DefaultXY_DataSet();
+						scatterZeroXY.set(xRange.getLowerBound(), 0d);
+						scatterZeroXY.set(xRange.getUpperBound(), 0d);
+						scatterFuncs.add(scatterZeroXY);
+						scatterChars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 2f, Color.GRAY));
+					}
+					
+					// average on bottom
+					XY_DataSet distAvgFunc = new DefaultXY_DataSet();
+					for (Double dist : distAverages.keySet()) {
+						double[] avgs = distAverages.get(dist);
+						int[] counts = distCounts.get(dist);
+						if (avgs == null)
+							continue;
+						double avg = avgs[p]/counts[p];
+						distAvgFunc.set(dist, avg);
+					}
+					scatterFuncs.add(distAvgFunc);
+					scatterChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_SQUARE, 8f, Color.DARK_GRAY));
+					
+					for (double mag : mags) {
+						XY_DataSet[] scatters = magScatters.get(mag);
+						if (scatters == null || scatters[p] == null)
+							continue;
+						XY_DataSet scatter = scatters[p];
+						Color color = magCPT.getColor((float)mag);
+						scatterFuncs.add(scatter);
+						scatterChars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 4f, color));
+					}
+					PlotSpec scatterSpec = new PlotSpec(scatterFuncs, scatterChars, title, xLabel, zLabel);
+					scatterSpec.addSubtitle(magSubtitle);
+					scatterSpecs.add(scatterSpec);
+					
+					gp.drawGraphPanel(scatterSpec, true, false, xRange, scatterYRange);
+					PlotUtils.setYTick(gp, scatterYTick);
+					
+					PlotUtils.writePlots(resourcesDir, plotPrefix+"_scatter_"+perPrefix, gp, 800, 600, true, true, false);
+					
+					if (p > 0) {
+						scatterSpec.setSubtitles(null);
+						scatterLinks += ", ";
+					}
+					
+					scatterLinks += "["+perLabel+"]("+resourcesDir.getName()+"/"+plotPrefix+"_scatter_"+perPrefix+".png)";
 				}
 				
 				int width = 400 + 600*specs.size();
@@ -612,7 +729,70 @@ public class BBPStandaloneCheckerboardPlots {
 				table.addLine(MarkdownUtils.boldCentered(type.label));
 				table.addLine("![Checkerboards]("+resourcesDir.getName()+"/"+plotPrefix+".png)");
 				table.addLine(links);
+				
+				yRanges = List.of(scatterYRange);
+				gp.drawGraphPanel(scatterSpecs, true, false, xRanges, yRanges);
+				PlotUtils.setYTick(gp, scatterYTick);
+				PlotUtils.setSubplotGap(gp, 80);
+				
+				PlotUtils.writePlots(resourcesDir, plotPrefix+"_scatter", gp, width, 600, true, true, false);
+				
+				table.addLine("![Checkerboards]("+resourcesDir.getName()+"/"+plotPrefix+"_scatter.png)");
+				table.addLine(scatterLinks);
 			}
+			List<CSVFile<String>> csvs = new ArrayList<>();
+			for (int p=0; p<periods.length; p++)
+				csvs.add(new CSVFile<>(true));
+			List<String> header = new ArrayList<>(List.of("Dist Min", "Dist Max", "Mag Min", "Mag Max"));
+			for (PlotType type : types)
+				header.add(type.label);
+			for (CSVFile<String> csv : csvs)
+				csv.addLine(header);
+
+			for (int x=0; x<refXYZ.getNumX(); x++) {
+				for (int y=0; y<refXYZ.getNumY(); y++) {
+					boolean any = false;
+					for (int t=0; t<types.length && !any; t++)
+						any = distMagTypePerVals[x][y][t] != null;
+					if (any) {
+						for (int p=0; p<periods.length; p++) {
+							List<String> line = new ArrayList<>(header.size());
+							double distCenter = refXYZ.getX(x);
+							double binMinDist = Math.pow(10, distCenter-0.5*refXYZ.getGridSpacingX());
+							double binMaxDist = Math.pow(10, distCenter+0.5*refXYZ.getGridSpacingX());
+							line.add((float)binMinDist+"");
+							line.add((float)binMaxDist+"");
+							double magCenter = refXYZ.getY(y);
+							line.add((float)(magCenter-0.5*refXYZ.getGridSpacingY())+"");
+							line.add((float)(magCenter+0.5*refXYZ.getGridSpacingY())+"");
+							for (int t=0; t<types.length; t++) {
+								double val = distMagTypePerVals[x][y][t] == null ? Double.NaN : distMagTypePerVals[x][y][t][p];
+								line.add((float)val+"");
+							}
+							csvs.get(p).addLine(line);
+						}
+					}
+				}
+			}
+			
+			String csvLinks = "CSV Files:";
+			for (int p=0; p<periods.length; p++) {
+				String perPrefix;
+				String perLabel;
+				if (periods[p] == -1) {
+					perPrefix = "pgv";
+					perLabel = "PGV";
+				} else {
+					Preconditions.checkState(periods[p] > 0d);
+					perPrefix = oDF.format(periods[p])+"s";
+					perLabel = oDF.format(periods[p])+"s PSA";
+				}
+				File outputFile = new File(resourcesDir, rakePrefix+"_"+perPrefix+".csv");
+				csvLinks += " ["+perLabel+"]("+resourcesDir.getName()+"/"+outputFile.getName()+")";
+				csvs.get(p).writeToFile(outputFile);
+			}
+			table.addLine(csvLinks);
+			
 			lines.addAll(table.build());
 			lines.add("");
 		}
