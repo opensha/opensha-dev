@@ -66,22 +66,23 @@ public class LengthDistCompPlot {
 //				+ "2023_03_31-nshm23_branches-mod_scaling-NSHM23_v2-CoulombRupSet-AVERAGE-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
 //				+ "2023_03_31-nshm23_branches-orig_draft_scaling-NSHM23_v2-CoulombRupSet-AVERAGE-TotNuclRate-NoRed-EvenFitPaleo-ThreshAvgIterRelGR");
 //				+ "2023_04_11-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
-				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+//				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2024_02_02-nshm23_branches-WUS_FM_v3");
 		
 		File miscPlotsDir = new File(invDir, "misc_plots");
 		Preconditions.checkState(miscPlotsDir.exists() || miscPlotsDir.mkdir());
 		
-//		boolean onlyCA = false;
-//		boolean noCA = false;
-//		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists");
+		boolean onlyCA = false;
+		boolean noCA = false;
+		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists");
 		
 //		boolean onlyCA = false;
 //		boolean noCA = true;
 //		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists_noCA");
 		
-		boolean onlyCA = true;
-		boolean noCA = false;
-		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists_onlyCA");
+//		boolean onlyCA = true;
+//		boolean noCA = false;
+//		File outputDir = new File(miscPlotsDir, "wells_2013_length_dists_onlyCA");
 		
 		Preconditions.checkState(!onlyCA || !noCA);
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());

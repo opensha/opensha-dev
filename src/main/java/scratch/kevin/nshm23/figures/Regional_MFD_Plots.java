@@ -80,9 +80,9 @@ class Regional_MFD_Plots {
 	static final File NSHM23_WRAPPED = new File("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.0.0");
 	
 	static final File NSHM23_DIR = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-			+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+			+ "2024_02_02-nshm23_branches-WUS_FM_v3");
 	static final File NSHM23_PLOTS_DIR = new File(NSHM23_DIR, "misc_plots");
-	static final File NSHM23_SOL = new File(NSHM23_DIR, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+	static final File NSHM23_SOL = new File(NSHM23_DIR, "results_WUS_FM_v3_branch_averaged_gridded.zip");
 	
 	static final File U3_SOL = new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/branch_avgs_combined.zip");
 	
@@ -90,10 +90,10 @@ class Regional_MFD_Plots {
 				+ "2023_04_14-nshm23_u3_hybrid_branches-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR/branch_avgs_combined.zip");
 
 	public static void main(String[] args) throws IOException {
-//		doCompCascadia();
-//		doCompU3();
+		doCompCascadia();
+		doCompU3();
 		doCompNSHM18();
-//		doCompEast();
+		doCompEast();
 //		doMethodsCompU3();
 //		doTotalRateModelsOnly();
 	}

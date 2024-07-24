@@ -45,9 +45,9 @@ public class SlipRateScattersPaleoSects {
 
 	public static void main(String[] args) throws IOException {
 		File mainDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_09_01-nshm23_branches-mod_pitas_ddw-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR");
+				+ "2024_02_02-nshm23_branches-WUS_FM_v3");
 		
-		File solFile = new File(mainDir, "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip");
+		File solFile = new File(mainDir, "results_WUS_FM_v3_branch_averaged.zip");
 		
 		File evenFile = new File(mainDir, "node_branch_averaged/PaleoUncert_EvenFitPaleo.zip");
 		File underFile = new File(mainDir, "node_branch_averaged/PaleoUncert_UnderFitPaleo.zip");

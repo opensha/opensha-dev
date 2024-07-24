@@ -72,21 +72,23 @@ public class WUS_HazardChangePageGen {
 		
 		ReturnPeriods rp = ReturnPeriods.TWO_IN_50;
 //		ReturnPeriods rp = ReturnPeriods.TEN_IN_50;
-		double period = 0d;
-//		double period = 1d;
+//		double period = 0d;
+		double period = 1d;
 		
 		String entryName, wrapperEntryName, hazLabel, dirPrefix;
 		if (period == 0d) {
-			entryName = "mean_map_pga_"+rp.name()+".txt";
+			entryName = "map_pga_"+rp.name()+".txt";
 			wrapperEntryName = "map_pga_"+rp.name()+".txt";
 			hazLabel = "PGA, "+rp.label;
 			dirPrefix = "pga";
 		} else {
-			entryName = "mean_map_"+(float)period+"s_"+rp.name()+".txt";
+			entryName = "map_"+(float)period+"s_"+rp.name()+".txt";
 			wrapperEntryName = "map_"+(float)period+"s_"+rp.name()+".txt";
 			hazLabel = oDF.format(period)+"s SA, "+rp.label;
 			dirPrefix = "sa_"+oDF.format(period)+"s";
 		}
+		// this still uses old naming
+		String ingredEntryName = "mean_"+entryName;
 		
 		dirPrefix += "_"+rp.name().toLowerCase().replace("two", "2").replace("ten", "10").replace("_", "");
 		
@@ -97,26 +99,26 @@ public class WUS_HazardChangePageGen {
 		
 		// load hazard maps
 		File nshm23HazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
-				+ "results_hazard_include_0.1deg.zip");
+				+ "2024_02_02-nshm23_branches-WUS_FM_v3-ba_only/"
+				+ "results_hazard_INCLUDE.zip");
 		GriddedGeoDataSet nshm23Hazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm23HazardFile, entryName);
 		
 //		File outputDir = new File(nshm23HazardFile.getParentFile(), "hazard_comparisons_nshm18_"+dirPrefix);
 		File outputDir = new File(nshm23HazardFile.getParent().replace("-ba_only", ""), "hazard_comparisons_nshm18_"+dirPrefix);
 		
 		File nshm23GridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only/"
-				+ "results_hazard_only_0.1deg.zip");
+				+ "2024_02_02-nshm23_branches-WUS_FM_v3-ba_only/"
+				+ "results_hazard_ONLY.zip");
 		GriddedGeoDataSet nshm23GridHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm23GridHazardFile, entryName);
 		Preconditions.checkState(nshm23GridHazard.size() == nshm23Hazard.size());
 //		GriddedGeoDataSet nshm23GridHazard = null;
 		
 		FaultSystemSolution nshm23BASol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2023_06_23-nshm23_branches-NSHM23_v2-CoulombRupSet-TotNuclRate-NoRed-ThreshAvgIterRelGR/"
-				+ "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip"));
+				+ "2024_02_02-nshm23_branches-WUS_FM_v3/"
+				+ "results_WUS_FM_v3_branch_averaged_gridded.zip"));
 		
 		File nshm18_23gridHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
-				+ "2023_07_10-nshm18-grid_src_from_23-wus-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
+				+ "2023_09_21-nshm18-grid_src_from_23-wus-hazard-ask2014-0.1deg-noSub/results_hazard.zip");
 		GriddedGeoDataSet nshm18_23gridHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18_23gridHazardFile, wrapperEntryName);
 		Preconditions.checkState(nshm18_23gridHazard.size() == nshm23Hazard.size());
 		
@@ -141,25 +143,25 @@ public class WUS_HazardChangePageGen {
 			File nshm18IngredNewScaleHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 					+ "2023_04_13-nshm18_branches-new_scale-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED"
 					+ "-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded/results_hazard_include_0.1deg.zip");
-			nshm18IngredNewScaleHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18IngredNewScaleHazardFile, entryName);
+			nshm18IngredNewScaleHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18IngredNewScaleHazardFile, ingredEntryName);
 			Preconditions.checkState(nshm18IngredNewScaleHazard.size() == nshm23Hazard.size());
 			
 			File nshm18IngredNewScaleClassicHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 					+ "2023_04_13-nshm18_branches-new_scale-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED"
 					+ "-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded-classic_only/results_hazard_include_0.1deg.zip");
-			nshm18IngredNewScaleClassicHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18IngredNewScaleClassicHazardFile, entryName);
+			nshm18IngredNewScaleClassicHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18IngredNewScaleClassicHazardFile, ingredEntryName);
 			Preconditions.checkState(nshm18IngredNewScaleClassicHazard.size() == nshm23Hazard.size());
 			
 			File nshm18IngredWCHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 					+ "2023_04_14-nshm18_branches-wc_94-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED"
 					+ "-TotNuclRate-NoRed-ThreshAvgIterRelGR-ba_only-nshm23_gridded/results_hazard_include_0.1deg.zip");
-			nshm18IngredWCHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18IngredWCHazardFile, entryName);
+			nshm18IngredWCHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18IngredWCHazardFile, ingredEntryName);
 			Preconditions.checkState(nshm18IngredWCHazard.size() == nshm23Hazard.size());
 			
 			File nshm18IngredWCClassicHazardFile = new File("/home/kevin/OpenSHA/UCERF4/batch_inversions/"
 					+ "2023_04_14-nshm18_branches-wc_94-u3_paleo-NSHM18_WUS_PlusU3_FM_3p1-CoulombRupSet-BRANCH_AVERAGED-TotNuclRate-NoRed"
 					+ "-ThreshAvgIterRelGR-ba_only-nshm23_gridded-classic_only/results_hazard_include_0.1deg.zip");
-			nshm18IngredWCClassicHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18IngredWCClassicHazardFile, entryName);
+			nshm18IngredWCClassicHazard = MethodsAndIngredientsHazChangeFigures.loadXYZ(nshm18IngredWCClassicHazardFile, ingredEntryName);
 			Preconditions.checkState(nshm18IngredWCClassicHazard.size() == nshm23Hazard.size());
 		}
 		
