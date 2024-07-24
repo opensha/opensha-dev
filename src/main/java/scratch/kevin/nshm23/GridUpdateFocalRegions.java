@@ -8,7 +8,8 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Region;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
-import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider.AbstractPrecomputed;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider.AbstractPrecomputed;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_AbstractGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_GridFocalMechs;
@@ -37,7 +38,7 @@ public class GridUpdateFocalRegions {
 		sol.getRupSet().addModule(regimes);
 		
 		// now do focal mechanisms
-		AbstractPrecomputed gridProv = (AbstractPrecomputed)solGridded.getGridSourceProvider();
+		MFDGridSourceProvider.AbstractPrecomputed gridProv = (MFDGridSourceProvider.AbstractPrecomputed)solGridded.getGridSourceProvider();
 		System.out.println("Grid prov is of type: "+gridProv.getClass().getName());
 		
 		SeismicityRegions region = SeismicityRegions.CONUS_WEST;

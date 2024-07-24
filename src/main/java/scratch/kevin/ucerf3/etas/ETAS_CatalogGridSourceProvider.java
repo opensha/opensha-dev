@@ -15,6 +15,7 @@ import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
@@ -357,7 +358,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 	}
 
 	@Override
-	public GridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
+	public MFDGridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
 			Map<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs, double[] fracStrikeSlip, double[] fracNormal,
 			double[] fracReverse) {
 		throw new UnsupportedOperationException("Not implemented");

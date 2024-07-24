@@ -37,6 +37,7 @@ import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -904,7 +905,7 @@ public class GridSourceProvider2023 extends AbstractGridSourceProvider {
 	}
 
 	@Override
-	public GridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
+	public MFDGridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
 			Map<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs, double[] fracStrikeSlip, double[] fracNormal,
 			double[] fracReverse) {
 		throw new UnsupportedOperationException("Not implemented");
