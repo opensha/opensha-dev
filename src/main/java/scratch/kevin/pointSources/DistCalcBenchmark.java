@@ -21,6 +21,7 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 
 import com.google.common.base.Stopwatch;
 

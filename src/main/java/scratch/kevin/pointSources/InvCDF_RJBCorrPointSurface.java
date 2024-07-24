@@ -7,6 +7,7 @@ import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 
 import com.google.common.base.Preconditions;
 
