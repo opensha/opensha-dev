@@ -610,7 +610,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		AttenRelRef rotDGMPE = null;
 		
 		AttenRelSupplier[] gmpeRefs = {
-				new NSHMP_AttenRelSupplier(Gmm.AG_20_GLOBAL_INTERFACE, "AG2020_Global")
+				new NSHMP_AttenRelSupplier(Gmm.AG_20_GLOBAL_INTERFACE, "AG2020_Global", false)
 		};
 		IMT[] imts = { IMT.SA2P0, IMT.SA3P0, IMT.SA5P0, IMT.SA10P0 };
 		AttenRelRef rotDGMPE = null;

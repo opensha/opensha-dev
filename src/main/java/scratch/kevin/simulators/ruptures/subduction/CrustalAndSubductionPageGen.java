@@ -209,7 +209,7 @@ public class CrustalAndSubductionPageGen {
 		
 //		AttenRelSupplier subductionGMM = AttenRelRef.ZHAO_2006;
 		AttenRelSupplier subductionGMM = new NSHMP_AttenRelSupplier(
-				Gmm.AG_20_GLOBAL_INTERFACE, "AG2020 (Global)");
+				Gmm.AG_20_GLOBAL_INTERFACE, "AG2020 (Global)", false);
 		AttenRelSupplier crustalGMM = AttenRelRef.ASK_2014;
 		
 		Quantity[] mapQuantities = {Quantity.SUM_SQ};

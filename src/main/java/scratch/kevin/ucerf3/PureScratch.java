@@ -198,11 +198,13 @@ import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnP
 import org.opensha.sha.earthquake.faultSysSolution.util.minisections.MinisectionSlipRecord;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
+import org.opensha.sha.earthquake.param.BackgroundRupParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.earthquake.param.UseRupMFDsParam;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b.PointSurface13b;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm.PointSurfaceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.FaultSegmentData;
@@ -241,6 +243,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.targetMFDs.estimators.T
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.AnalysisRegions;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader.SeismicityRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -6230,28 +6233,28 @@ public class PureScratch {
 		List<DiscretizedFunc> funcs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-//		CPT cpt = GMT_CPT_Files.CATEGORICAL_TAB10.instance();
-//		double delta = 1d;
-//		int num = 10;
+		CPT cpt = GMT_CPT_Files.CATEGORICAL_TAB10.instance();
+		double delta = 1d;
+		int num = 10;
 		
 //		CPT cpt = GMT_CPT_Files.CATEGORICAL_TAB10_LIGHT.instance();
 //		double delta = 1d;
 //		int num = 10;
 		
-		CPT cpt = GMT_CPT_Files.CATEGORICAL_TAB20.instance();
-		double delta = 0.5d;
-		int num = 20;
+//		CPT cpt = GMT_CPT_Files.CATEGORICAL_TAB20.instance();
+//		double delta = 0.5d;
+//		int num = 20;
 		
 		for (int i=0; i<num; i++) {
 			double val = i*delta;
 			
 			ArbitrarilyDiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
 			func.set(0d, 0d);
-			func.set(1d, val);
+			func.set(1d, val+1);
 			
 			Color color = cpt.getColor((float)val);
 			funcs.add(func);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, color));
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, color));
 		}
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, " ", "X", "Y");
@@ -6260,7 +6263,27 @@ public class PureScratch {
 		
 		gp.drawGraphPanel(spec);
 		
-		PlotUtils.writePlots(new File("/tmp"), "cpt_test.png", gp, 800, 800, true, false, false);
+		PlotUtils.writePlots(new File("/tmp"), "cpt_test", gp, 800, 800, true, false, false);
+	}
+	
+	private static void test303() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(
+				new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+						+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged_gridded.zip"));
+		
+		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
+		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
+		erf.setParameter(BackgroundRupParam.NAME, BackgroundRupType.POINT);
+		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
+		erf.setParameter(UseRupMFDsParam.NAME, false);
+		erf.updateForecast();
+		
+		System.out.println("ERF has "+erf.getTotNumRups()+" ruptures");
+		System.out.println("ERF has "+erf.getTotNumRupsFromFaultSystem()+" fss ruptures");
+		System.out.println("ERF has "+(erf.getTotNumRups() - erf.getTotNumRupsFromFaultSystem())+" gridded ruptures");
+		
+		System.out.println("WUS Gridded Sites: "+new GriddedRegion(NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1, null).getNodeCount());
+		System.out.println("PRVI Gridded Sites: "+new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.1, null).getNodeCount());
 	}
 	
 	/**
@@ -6269,7 +6292,7 @@ public class PureScratch {
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test302();
+			test303();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

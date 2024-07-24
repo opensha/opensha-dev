@@ -266,17 +266,17 @@ public class BBPStandaloneCheckerboardPlots {
 	}
 
 	public static void main(String[] args) throws IOException {
-		RSQSimCatalog catalog = Catalogs.BRUCE_5652.instance();
-		File bbpDir = new File("/data/kevin/bbp/parallel/2023_08_29-rundir5652-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-griddedSites");
-		File bbpFile = new File(bbpDir, "results_rotD.zip");
-		String prefix = "r5652";
-		VelocityModel vm = VelocityModel.LA_BASIN_500;
-		
-//		RSQSimCatalog catalog = Catalogs.BRUCE_5672.instance();
-//		File bbpDir = new File("/data/kevin/bbp/parallel/2023_11_06-rundir5672-all-m6.5-skipYears2000-noHF-vmLA_BASIN_500-griddedSites");
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5652.instance();
+//		File bbpDir = new File("/data/kevin/bbp/parallel/2023_08_29-rundir5652-all-m6.5-skipYears5000-noHF-vmLA_BASIN_500-griddedSites");
 //		File bbpFile = new File(bbpDir, "results_rotD.zip");
-//		String prefix = "r5672";
+//		String prefix = "r5652";
 //		VelocityModel vm = VelocityModel.LA_BASIN_500;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_5672.instance();
+		File bbpDir = new File("/data/kevin/bbp/parallel/2023_11_06-rundir5672-all-m6.5-skipYears2000-noHF-vmLA_BASIN_500-griddedSites");
+		File bbpFile = new File(bbpDir, "results_rotD.zip");
+		String prefix = "r5672";
+		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 		PlotType[] types = PlotType.values();
 		AttenRelRef gmmRef = AttenRelRef.NGAWest_2014_AVG_NOIDRISS;
@@ -700,6 +700,12 @@ public class BBPStandaloneCheckerboardPlots {
 					PlotSpec scatterSpec = new PlotSpec(scatterFuncs, scatterChars, title, xLabel, zLabel);
 					scatterSpec.addSubtitle(magSubtitle);
 					scatterSpecs.add(scatterSpec);
+					
+					perAnn = new XYTextAnnotation("  "+perLabel, xRange.getLowerBound(),
+							scatterYRange.getLowerBound() + 0.98*scatterYRange.getLength());
+					perAnn.setFont(annFont);
+					perAnn.setTextAnchor(TextAnchor.TOP_LEFT);
+					scatterSpec.addPlotAnnotation(perAnn);
 					
 					gp.drawGraphPanel(scatterSpec, true, false, xRange, scatterYRange);
 					PlotUtils.setYTick(gp, scatterYTick);
