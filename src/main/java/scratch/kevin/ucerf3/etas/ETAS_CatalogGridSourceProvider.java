@@ -258,7 +258,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 		
 		// this generates a new source instance, but the ruptures in that source
 		// reuse properties. so we can only iterate over it, thus the custom iterable
-		ProbEqkSource source = getSource(node, 1d, false, BackgroundRupType.POINT);
+		ProbEqkSource source = getSource(node, 1d, null, BackgroundRupType.POINT);
 		SubsetIterable iterable = new SubsetIterable(source);
 		
 		List<Double> rupMags = Lists.newArrayList();
@@ -335,7 +335,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 			
 			@Override
 			public ProbEqkSource getSource(int idx) {
-				return gridProv.getSource(sourceIndexes.get(idx), 1d, false, BackgroundRupType.POINT);
+				return gridProv.getSource(sourceIndexes.get(idx), 1d, null, BackgroundRupType.POINT);
 			}
 			
 			@Override

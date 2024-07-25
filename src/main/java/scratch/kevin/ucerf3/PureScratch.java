@@ -2809,7 +2809,7 @@ public class PureScratch {
 			
 			if (i == testIndex) {
 				Preconditions.checkState(modelTestSrc == null);
-				modelTestSrc = gridProv.getSource(gridIndex, 1d, false, BackgroundRupType.POINT);
+				modelTestSrc = gridProv.getSource(gridIndex, 1d, null, BackgroundRupType.POINT);
 			}
 		}
 		
@@ -6286,13 +6286,22 @@ public class PureScratch {
 		System.out.println("PRVI Gridded Sites: "+new GriddedRegion(PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.1, null).getNodeCount());
 	}
 	
+	private static void test304() throws IOException {
+		System.out.println(com.google.common.collect.Range.closed(0d, 5d));
+		System.out.println(com.google.common.collect.Range.open(0d, 5d));
+		System.out.println(com.google.common.collect.Range.closedOpen(0d, 5d));
+		System.out.println(com.google.common.collect.Range.openClosed(0d, 5d));
+		System.out.println(com.google.common.collect.Range.atMost(5d));
+		System.out.println(com.google.common.collect.Range.atLeast(0d));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test303();
+			test304();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

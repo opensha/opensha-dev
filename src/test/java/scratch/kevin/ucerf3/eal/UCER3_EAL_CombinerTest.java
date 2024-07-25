@@ -437,7 +437,7 @@ public class UCER3_EAL_CombinerTest {
 			int numNonZeroLoss = 0;
 			int numMFDNonZero = 0;
 			for (int n=0; n<reg.getNodeCount(); n++) {
-				ProbEqkSource src = gridProv.getSource(n, 1d, false, bgType);
+				ProbEqkSource src = gridProv.getSource(n, 1d, null, bgType);
 				// make sure not nan
 				for (Point2D pt : gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF))
 					Preconditions.checkState(!Double.isNaN(pt.getY()));
