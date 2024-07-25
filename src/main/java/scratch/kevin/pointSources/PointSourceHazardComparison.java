@@ -750,7 +750,7 @@ public class PointSourceHazardComparison {
 			sourceCalls = new ArrayList<>();
 			this.distCorrType = type.distCorrType;
 			GriddedRegion gridReg = gridProv.getGriddedRegion();
-			for (int i=0; i<gridProv.size(); i++) {
+			for (int i=0; i<gridProv.getNumLocations(); i++) {
 				Location centerLoc = gridReg.getLocation(i);
 				if (calcRegion.distanceToLocation(centerLoc) > maxDist)
 					continue;

@@ -1125,7 +1125,7 @@ public class SingleSiteHazardAndDataComparisonPageGen {
 		IncrementalMagFreqDist mfd = null;
 		if (refMFD != null) {
 			mfd = new IncrementalMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
-			for (int i=0; i<gridProv.size(); i++) {
+			for (int i=0; i<gridProv.getNumLocations(); i++) {
 				Location gridLoc = gridProv.getGriddedRegion().getLocation(i);
 				int index = gridReg.indexForLocation(gridLoc);
 				if (index >= 0) {

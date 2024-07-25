@@ -825,7 +825,7 @@ public class GridSourceProvider2023_Analysis {
 	public  static void compareU3_InitialAndFinalSpatialPDF(double[] spatialPDF, GridSourceProvider gridSrcProviderU3, String folderName) {
 		double[] spatialPDF_Test = new double[spatialPDF.length];
 		double sum=0;
-		for(int i=0;i<gridSrcProviderU3.size();i++) {
+		for(int i=0;i<gridSrcProviderU3.getNumLocations();i++) {
 			double rate = gridSrcProviderU3.getMFD(i).getCumRate(4.05);
 			spatialPDF_Test[i] =  rate;
 			sum += rate;
@@ -889,7 +889,7 @@ public class GridSourceProvider2023_Analysis {
 		GridSourceProvider gridSrcProviderU3 = fss.getGridSourceProvider();
 		IncrementalMagFreqDist tempMFD = gridSrcProviderU3.getMFD(0);
 		SummedMagFreqDist totGriddedSeisMFD = new SummedMagFreqDist(tempMFD.getMinX(), tempMFD.size(),tempMFD.getDelta());
-		for(int i=0;i<gridSrcProviderU3.size();i++) {
+		for(int i=0;i<gridSrcProviderU3.getNumLocations();i++) {
 			totGriddedSeisMFD.addIncrementalMagFreqDist(gridSrcProviderU3.getMFD(i));	
 		}
 		

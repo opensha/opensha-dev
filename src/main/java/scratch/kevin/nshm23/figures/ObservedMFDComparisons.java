@@ -232,7 +232,7 @@ public class ObservedMFDComparisons {
 				GridSourceProvider gridProv = baSol.getGridSourceProvider();
 				if (gridProv != null) {
 					IncrementalMagFreqDist baTotIncr = baIncr.deepClone();
-					for (int i=0; i<gridProv.size(); i++) {
+					for (int i=0; i<gridProv.getNumLocations(); i++) {
 						Location loc = gridProv.getGriddedRegion().getLocation(i);
 						if (reg.contains(loc)) {
 							IncrementalMagFreqDist gridMFD = gridProv.getMFD(i);

@@ -72,7 +72,7 @@ public class CatalogMFDInRegionTest {
 				if (fractsInside[fssIndex] > 0)
 					compPartMFD.add(compPartMFD.getClosestXIndex(compRupSet.getMagForRup(fssIndex)),
 							compSol.getRateForRup(fssIndex));
-			for (int index=0; index<gridProv.size(); index++) {
+			for (int index=0; index<gridProv.getNumLocations(); index++) {
 				Location loc = gridProv.getGriddedRegion().getLocation(index);
 				if (!region.contains(loc))
 					continue;

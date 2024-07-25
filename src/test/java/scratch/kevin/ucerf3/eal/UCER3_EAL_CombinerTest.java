@@ -256,10 +256,10 @@ public class UCER3_EAL_CombinerTest {
 		trueMeanSol.setGridSourceProvider(meanGridProv);
 		// now create losses for each rup type
 		griddedLossFuncs = Maps.newHashMap();
-		griddedLossFuncs.put(FocalMech.NORMAL, new DiscretizedFunc[meanGridProv.size()]);
-		griddedLossFuncs.put(FocalMech.REVERSE, new DiscretizedFunc[meanGridProv.size()]);
-		griddedLossFuncs.put(FocalMech.STRIKE_SLIP, new DiscretizedFunc[meanGridProv.size()]);
-		for (int n=0; n<meanGridProv.size(); n++) {
+		griddedLossFuncs.put(FocalMech.NORMAL, new DiscretizedFunc[meanGridProv.getNumLocations()]);
+		griddedLossFuncs.put(FocalMech.REVERSE, new DiscretizedFunc[meanGridProv.getNumLocations()]);
+		griddedLossFuncs.put(FocalMech.STRIKE_SLIP, new DiscretizedFunc[meanGridProv.getNumLocations()]);
+		for (int n=0; n<meanGridProv.getNumLocations(); n++) {
 			// make sure not nan
 			for (Point2D pt : meanGridProv.getMFD(n))
 				Preconditions.checkState(!Double.isNaN(pt.getY()));

@@ -409,7 +409,7 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 
 		@Override
 		public int getNumSources() {
-			return externalGridProv.size();
+			return externalGridProv.getNumSources();
 		}
 
 		@Override

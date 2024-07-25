@@ -223,8 +223,8 @@ public class EAL_NthRupCSVWriter {
 		// now do gridded
 		int firstTrueMeanGridSourceID = trueMeanERF.getNumFaultSystemSources();
 		int firstBAGridSoruceID = baERF.getNumFaultSystemSources();
-		int numGridSources = trueMeanERF.getGridSourceProvider().size();
-		Preconditions.checkState(numGridSources == baERF.getGridSourceProvider().size());
+		int numGridSources = trueMeanERF.getGridSourceProvider().getNumSources();
+		Preconditions.checkState(numGridSources == baERF.getGridSourceProvider().getNumSources());
 		for (int g=0; g<numGridSources; g++) {
 			int trueMeanSourceID = firstTrueMeanGridSourceID + g;
 			int baSourceID = firstBAGridSoruceID + g;

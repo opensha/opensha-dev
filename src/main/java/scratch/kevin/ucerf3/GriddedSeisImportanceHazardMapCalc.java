@@ -23,6 +23,7 @@ import org.opensha.sha.calc.hazardMap.components.CalculationSettings;
 import org.opensha.sha.calc.hazardMap.components.CurveResultsArchiver;
 import org.opensha.sha.calc.hazardMap.mpj.MPJHazardCurveDriver;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
@@ -103,7 +104,7 @@ public class GriddedSeisImportanceHazardMapCalc {
 		String queue = "scec";
 		
 		// build solution with only sub seismogenic, no unsassociated
-		GridSourceProvider origProv = u3Sol.getGridSourceProvider();
+		MFDGridSourceProvider origProv = u3Sol.requireModule(MFDGridSourceProvider.class);
 		GriddedRegion seisReg = origProv.getGriddedRegion();
 		Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs = new HashMap<>();
 		Map<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs = new HashMap<>();

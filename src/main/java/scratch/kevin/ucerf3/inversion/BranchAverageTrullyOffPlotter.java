@@ -36,7 +36,7 @@ public class BranchAverageTrullyOffPlotter {
 		GridSourceProvider u3p2Grid = u3p2Sol.getGridSourceProvider();
 		GridSourceProvider u3p3Grid = u3p3Sol.getGridSourceProvider();
 		
-		for (int i=0; i<u3p2Grid.size(); i++) {
+		for (int i=0; i<u3p2Grid.getNumLocations(); i++) {
 			IncrementalMagFreqDist u3p2MFD = u3p2Grid.getMFD_Unassociated(i);
 			IncrementalMagFreqDist u3p3MFD = u3p3Grid.getMFD_Unassociated(i);
 			

@@ -884,7 +884,7 @@ public class GridSourceProvider2023 extends AbstractGridSourceProvider {
 		GridSourceProvider gridSrcProviderU3 = fss.getGridSourceProvider();
 		IncrementalMagFreqDist tempMFD = gridSrcProviderU3.getMFD(0);
 		SummedMagFreqDist totGriddedSeisMFD = new SummedMagFreqDist(tempMFD.getMinX(), tempMFD.size(),tempMFD.getDelta());
-		for(int i=0;i<gridSrcProviderU3.size();i++) {
+		for(int i=0;i<gridSrcProviderU3.getNumLocations();i++) {
 			totGriddedSeisMFD.addIncrementalMagFreqDist(gridSrcProviderU3.getMFD(i));	
 		}
 		

@@ -9,6 +9,7 @@ import java.util.zip.ZipException;
 
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 
 import com.google.common.collect.Lists;
 
@@ -89,7 +90,7 @@ public class CompoundGriddedRecalc {
 				}
 				
 				InversionFaultSystemSolution sol = cfss.getSolution(branch);
-				GridSourceProvider gridSources = sol.getGridSourceProvider();
+				MFDGridSourceProvider gridSources = sol.requireModule(MFDGridSourceProvider.class);
 				
 				File regXMLFile = null;
 				if (!isRegionWritten())

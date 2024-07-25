@@ -14,6 +14,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.mpj.MPJ_GridSeisBranchBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModelRegion;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_FaultCubeAssociations;
@@ -63,8 +64,8 @@ public class GridAssocDebug {
 		File beforeProvFile = new File(beforeDir, MPJ_GridSeisBranchBuilder.AVG_GRID_SIE_PROV_ARCHIVE_NAME);
 		File afterProvFile = new File(afterDir, MPJ_GridSeisBranchBuilder.AVG_GRID_SIE_PROV_ARCHIVE_NAME);
 		
-		GridSourceProvider provBefore = new ModuleArchive<>(beforeProvFile).requireModule(GridSourceProvider.class);
-		GridSourceProvider provAfter = new ModuleArchive<>(afterProvFile).requireModule(GridSourceProvider.class);
+		MFDGridSourceProvider provBefore = new ModuleArchive<>(beforeProvFile).requireModule(MFDGridSourceProvider.class);
+		MFDGridSourceProvider provAfter = new ModuleArchive<>(afterProvFile).requireModule(MFDGridSourceProvider.class);
 		
 		MinMaxAveTracker nodeRatePDiffTrack = new MinMaxAveTracker();
 		MinMaxAveTracker nodeMoRatePDiffTrack = new MinMaxAveTracker();
@@ -73,7 +74,7 @@ public class GridAssocDebug {
 		MinMaxAveTracker nodeSubSeisMoRatePDiffTrack = new MinMaxAveTracker();
 		
 		int numDiff = 0;
-		for (int n=0; n<provBefore.size(); n++) {
+		for (int n=0; n<provBefore.getNumLocations(); n++) {
 			IncrementalMagFreqDist mfdBefore = provBefore.getMFD(n);
 			IncrementalMagFreqDist subSeisBefore = provBefore.getMFD_SubSeisOnFault(n);
 			IncrementalMagFreqDist mfdAfter = provAfter.getMFD(n);
@@ -93,7 +94,7 @@ public class GridAssocDebug {
 			nodeSubSeisMoRatePDiffTrack.addValue(subMoRatePDiff);
 		}
 		
-		System.out.println(numDiff+"/"+provBefore.size()+" nodes differ");
+		System.out.println(numDiff+"/"+provBefore.getNumLocations()+" nodes differ");
 		System.out.println("Node total rate % diffs:\t"+nodeRatePDiffTrack);
 		System.out.println("Node total moment rate % diffs:\t"+nodeMoRatePDiffTrack);
 		System.out.println("Node sub seis rate % diffs:\t"+nodeSubSeisRatePDiffTrack);
