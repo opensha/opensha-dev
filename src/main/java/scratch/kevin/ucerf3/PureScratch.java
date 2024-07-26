@@ -26,6 +26,8 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.util.Precision;
+import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.data.Range;
 import org.opensha.commons.calc.FaultMomentCalc;
 import org.opensha.commons.calc.GaussianDistCalc;
 import org.opensha.commons.calc.WeightedSampler;
@@ -41,6 +43,9 @@ import org.opensha.commons.data.region.CaliforniaRegions;
 import org.opensha.commons.data.siteData.SiteData;
 import org.opensha.commons.data.siteData.impl.CVM4i26_M01_TaperBasinDepth;
 import org.opensha.commons.data.siteData.impl.ThompsonVs30_2020;
+import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
+import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
+import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -144,6 +149,7 @@ import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.srf.RSQSimStateTime;
@@ -158,8 +164,10 @@ import com.google.common.collect.Table;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import gov.usgs.earthquake.nshmp.mfd.Mfd.Properties.GutenbergRichter;
 import gov.usgs.earthquake.nshmp.model.NshmErf;
 import gov.usgs.earthquake.nshmp.model.NshmSurface;
+import net.mahdilamb.colormap.Colors;
 import scratch.UCERF3.enumTreeBranches.DeformationModels;
 import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.enumTreeBranches.ScalingRelationships;
@@ -1989,13 +1997,88 @@ public class PureScratch {
 		System.out.println("Loaded gridProv '"+gridProv.getName()+"' of type "+gridProv.getClass().getName());
 	}
 	
+	private static void test307() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2024_06_03-prvi25_subduction_branches/true_mean_solution.zip"));
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		String prevName = null;
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
+			if (prevName == null || !sect.getParentSectionName().equals(prevName))
+				System.out.println(sect.getParentSectionName());
+			prevName = sect.getParentSectionName();
+		}
+		
+		IncrementalMagFreqDist mueIncr = new IncrementalMagFreqDist(5.05d, 46, 0.1);
+		IncrementalMagFreqDist carIncr = new IncrementalMagFreqDist(5.05d, 46, 0.1);
+		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
+			IncrementalMagFreqDist mfd;
+			if (sect.getParentSectionName().toLowerCase().contains("thrust")) {
+				mfd = mueIncr;
+			} else {
+				mfd = carIncr;
+			}
+			IncrementalMagFreqDist sectMFD = sol.calcNucleationMFD_forSect(sect.getSectionId(), mfd.getMinX(), mfd.getMaxX(), mfd.size());
+			for (int i=0; i<sectMFD.size(); i++)
+				mfd.add(i, sectMFD.getY(i));
+		}
+		
+		for (boolean mue : new boolean[] {false, true}) {
+			List<DiscretizedFunc> funcs = new ArrayList<>();
+			List<PlotCurveCharacterstics> chars = new ArrayList<>();
+			
+			IncrementalMagFreqDist mfd = mue ? mueIncr : carIncr;
+			int faultMMinIndex = -1;
+			for (int i=0; i<mfd.size(); i++) {
+				if (mfd.getY(i) > 0d) {
+					faultMMinIndex = i;
+					break;
+				}
+			}
+			double[] rates;
+			double[] bs;
+			if (mue) {
+				rates = new double[] {0.019, 0.219, 0.735};
+				bs = new double[] {1.21, 0.97, 0.73};
+			} else {
+				rates = new double[] {0.83, 1.99, 4.02};
+				bs = new double[] {1.21, 0.97, 0.73};
+			}
+			GutenbergRichterMagFreqDist[] griddedMFDs = new GutenbergRichterMagFreqDist[rates.length];
+			for (int i=0; i<rates.length; i++)
+				griddedMFDs[i] = new GutenbergRichterMagFreqDist(bs[i], rates[i],
+						mfd.getMinX(), mfd.getX(faultMMinIndex), faultMMinIndex+1);
+			UncertainBoundedIncrMagFreqDist griddedMFD = new UncertainBoundedIncrMagFreqDist(
+					griddedMFDs[1], griddedMFDs[0], griddedMFDs[2], UncertaintyBoundType.CONF_95);
+			
+			griddedMFD.setName("Gridded "+griddedMFD.getDefaultBoundName());
+			funcs.add(griddedMFD);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, Colors.tab_lightblue));
+			griddedMFDs[1].setName("Gridded Preferred");
+			funcs.add(griddedMFDs[1]);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_blue));
+			
+			mfd.setName("Inversion MFD");
+			funcs.add(mfd);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, Colors.tab_orange));
+			
+			PlotSpec spec = new PlotSpec(funcs, chars, mue ? "Muertos" : "CAR", "Magnitude", "Incremental Rate (1/yr)");
+			spec.setLegendInset(RectangleAnchor.TOP_RIGHT);
+			
+			HeadlessGraphPanel gp = PlotUtils.initHeadless();
+			
+			gp.drawGraphPanel(spec, false, true, new Range(5d, 9.5d), new Range(1e-6, 1));
+			
+			PlotUtils.writePlots(new File("/tmp"), mue ? "mue_mfds" : "car_mfds", gp, 800, 800, true, false, false);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test306();
+			test307();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
