@@ -1962,7 +1962,7 @@ public class PureScratch {
 	}
 	
 	private static void test305() throws IOException {
-		double minMag = 5.0000001d;
+		double minMag = 5.0;
 		double maxMag = 8.1999999d;
 		boolean magsTenthAligned = false;
 		
@@ -1983,13 +1983,19 @@ public class PureScratch {
 				+", "+(float)(refMFD.getMaxX()+0.5*refMFD.getDelta())+"]");
 	}
 	
+	private static void test306() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/data/kevin/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged_mod_gridded.zip"));
+		GridSourceProvider gridProv = sol.getGridSourceProvider();
+		System.out.println("Loaded gridProv '"+gridProv.getName()+"' of type "+gridProv.getClass().getName());
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test305();
+			test306();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

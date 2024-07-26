@@ -24,18 +24,21 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 public class BranchAveragedHazardScriptWriter {
 
 	public static void main(String[] args) throws IOException {
-//		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
+		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
 //		String baseDirName = "2023_11_20-nshm23_branches-dm_sampling-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2023_11_17-nshm23_branches-dm_sampling-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
-		String baseDirName = "2023_11_16-nshm23_branches-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
+//		String baseDirName = "2023_11_16-nshm23_branches-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2024_05_07-nshm23_branches-WUS_FM_v3-AvgSupraB-AvgSeg";
 		
 //		String suffix = "true_mean";
 //		String solFileName = "true_mean_solution.zip";
 		
-		String suffix = "ba_only";
-		String solFileName = "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
-//		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
+//		String suffix = "ba_only";
+//		String solFileName = "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
+////		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
+		
+		String suffix = "ba_only-mod_gridded";
+		String solFileName = "results_WUS_FM_v3_branch_averaged_mod_gridded.zip";
 		
 		boolean noMFDs = false;
 		

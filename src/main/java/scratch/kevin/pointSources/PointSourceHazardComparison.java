@@ -429,7 +429,7 @@ public class PointSourceHazardComparison {
 			double probEach = 1-Math.exp(-rateEach);
 			for (boolean footwall : footwalls) {
 				builder.footwall(footwall);
-				FiniteApproxPointSurface surf = builder.buildPointSurface();
+				FiniteApproxPointSurface surf = builder.buildFiniteApproxPointSurface();
 				surf.setDistCorrMagAndType(mag, corrType);
 				rups.add(new ProbEqkRupture(mag, aveRake, probEach, surf, null));
 			}

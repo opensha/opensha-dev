@@ -43,10 +43,10 @@ class DistCalcBenchmark {
 			switch (this) {
 			case PT_SURF_FOOTWALL:
 				builder.footwall(true);
-				return builder.buildPointSurface();
+				return builder.buildFiniteApproxPointSurface();
 			case PT_SURF_HANGING_WALL:
 				builder.footwall(false);
-				return builder.buildPointSurface();
+				return builder.buildFiniteApproxPointSurface();
 			case FINITE_GRIDDED:
 				return builder.buildGriddedSurface();
 			case FINITE_QUAD:
