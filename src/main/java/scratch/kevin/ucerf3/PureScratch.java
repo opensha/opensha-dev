@@ -139,6 +139,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Segmen
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.BranchSamplingManager;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
@@ -2072,13 +2074,49 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test308() throws IOException {
+		PRVI25_CrustalFaultModels fm = PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1;
+		PRVI25_CrustalDeformationModels dm = PRVI25_CrustalDeformationModels.GEOLOGIC;
+		
+		List<? extends FaultSection> sects = dm.build(fm);
+		
+		double momentSS = 0d;
+		double momentRev = 0d;
+		double momentNorm = 0d;
+		double momentTot = 0d;
+		
+		for (FaultSection sect : sects) {
+			double moment = sect.calcMomentRate(false);
+			double rake = sect.getAveRake();
+			System.out.println(sect.getSectionId()+". "+sect.getSectionName()+": rake="+(int)rake+", moment="+(float)rake);
+			if ((int)rake == -135 || (int)rake == -45) {
+				momentNorm += 0.5*moment;
+				momentSS += 0.5*moment;
+			} else if ((int)rake == 45 || (int)rake == 135) {
+				momentRev += 0.5*moment;
+				momentSS += 0.5*moment;
+			} else if (rake >= -135 && rake < -45d) {
+				momentNorm += moment;
+			} else if (rake >= 45 && rake < 135d) {
+				momentRev += moment;
+			} else {
+				momentSS += moment;
+			}
+			momentTot += moment;
+		}
+		System.out.println("Fractional moments:");
+		System.out.println("\tSS:\t"+(float)(momentSS/momentTot));
+		System.out.println("\tRev:\t"+(float)(momentRev/momentTot));
+		System.out.println("\tNorm:\t"+(float)(momentNorm/momentTot));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test307();
+			test308();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
