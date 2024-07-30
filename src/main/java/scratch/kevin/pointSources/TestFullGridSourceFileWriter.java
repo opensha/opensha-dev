@@ -49,7 +49,8 @@ public class TestFullGridSourceFileWriter {
 			double lower = depth + ddWidth * Math.sin(dipRad);
 			
 			return new GriddedRupture(gridIndex, loc, magnitude, rate, focalMech.rake(), focalMech.dip(), Double.NaN,
-					null, depth, lower, length, TectonicRegionType.ACTIVE_SHALLOW, associatedSections, associatedSectionFracts);
+					null, depth, lower, length, Double.NaN, Double.NaN,
+					TectonicRegionType.ACTIVE_SHALLOW,associatedSections, associatedSectionFracts);
 		}
 		
 	}

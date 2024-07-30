@@ -16,6 +16,8 @@ import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_SingleSolHazardCalc;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
+import org.opensha.sha.imr.AttenRelRef;
 
 import com.google.common.base.Preconditions;
 
@@ -24,11 +26,12 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 public class BranchAveragedHazardScriptWriter {
 
 	public static void main(String[] args) throws IOException {
-		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
+//		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
 //		String baseDirName = "2023_11_20-nshm23_branches-dm_sampling-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2023_11_17-nshm23_branches-dm_sampling-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2023_11_16-nshm23_branches-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2024_05_07-nshm23_branches-WUS_FM_v3-AvgSupraB-AvgSeg";
+		String baseDirName = "2024_07_26-prvi25_subduction_branches";
 		
 //		String suffix = "true_mean";
 //		String solFileName = "true_mean_solution.zip";
@@ -37,13 +40,22 @@ public class BranchAveragedHazardScriptWriter {
 //		String solFileName = "results_NSHM23_v2_CoulombRupSet_branch_averaged_gridded.zip";
 ////		String solFileName = "results_WUS_FM_v3_branch_averaged_gridded.zip";
 		
-		String suffix = "ba_only-mod_gridded";
-		String solFileName = "results_WUS_FM_v3_branch_averaged_mod_gridded.zip";
+//		String suffix = "ba_only-mod_gridded";
+//		String solFileName = "results_WUS_FM_v3_branch_averaged_mod_gridded.zip";
+		
+//		String suffix = "ba_only-LARGE";
+//		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
+		
+		String suffix = "ba_only-LARGE-true_pt_src";
+		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded_true_pt_src.zip";
 		
 		boolean noMFDs = false;
 		
+//		GriddedRegion gridReg = new GriddedRegion(
+//				NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1, GriddedRegion.ANCHOR_0_0);
 		GriddedRegion gridReg = new GriddedRegion(
-				NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1, GriddedRegion.ANCHOR_0_0);
+				PRVI25_RegionLoader.loadPRVI_ModelBroad(), 0.1, GriddedRegion.ANCHOR_0_0);
+		AttenRelRef gmm = AttenRelRef.AG_2020_GLOBAL;
 		
 		IncludeBackgroundOption[] bgOps = IncludeBackgroundOption.values();
 		
@@ -151,6 +163,8 @@ public class BranchAveragedHazardScriptWriter {
 			if (noMFDs)
 				argz += " --no-mfds";
 			argz += " --gridded-seis "+bgOp.name();
+			if (gmm != null)
+				argz += " --gmpe "+gmm.name();
 			argz += " "+dispatchArgs;
 			
 			File jobFile = new File(localDir, "batch_hazard_"+bgOp.name()+".slurm");

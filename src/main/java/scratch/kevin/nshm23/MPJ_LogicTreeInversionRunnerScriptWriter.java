@@ -598,27 +598,27 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
-		dirName += "-prvi25_crustal_branches";
-		double avgNumRups = 50000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+//		dirName += "-prvi25_crustal_branches";
+//		double avgNumRups = 50000;
+//		
+//		// random DM sampling
+//		levels = new ArrayList<>(levels);
+//		int origNumLevels = levels.size();
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
+//				levels.remove(i);
+//		Preconditions.checkState(levels.size() == origNumLevels -1);
+//		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
+//		samplingBranchCountMultiplier = 5; // 5 for each branch
+//		dirName += "-dmSample";
+//		if (samplingBranchCountMultiplier > 1)
+//			dirName += samplingBranchCountMultiplier+"x";
 		
-		// random DM sampling
-		levels = new ArrayList<>(levels);
-		int origNumLevels = levels.size();
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
-				levels.remove(i);
-		Preconditions.checkState(levels.size() == origNumLevels -1);
-		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-		samplingBranchCountMultiplier = 5; // 5 for each branch
-		dirName += "-dmSample";
-		if (samplingBranchCountMultiplier > 1)
-			dirName += samplingBranchCountMultiplier+"x";
-		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
-//		dirName += "-prvi25_subduction_branches";
-//		double avgNumRups = 10000;
-//		gmpe = AttenRelRef.AG_2020_GLOBAL;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
+		dirName += "-prvi25_subduction_branches";
+		double avgNumRups = 10000;
+		gmpe = AttenRelRef.AG_2020_GLOBAL;
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
