@@ -618,7 +618,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
 		dirName += "-prvi25_subduction_branches";
 		double avgNumRups = 10000;
-		gmpe = AttenRelRef.AG_2020_GLOBAL;
+		gmpe = AttenRelRef.AG_2020_GLOBAL_INTERFACE;
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);

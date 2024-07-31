@@ -55,7 +55,7 @@ public class BranchAveragedHazardScriptWriter {
 //				NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1, GriddedRegion.ANCHOR_0_0);
 		GriddedRegion gridReg = new GriddedRegion(
 				PRVI25_RegionLoader.loadPRVI_ModelBroad(), 0.1, GriddedRegion.ANCHOR_0_0);
-		AttenRelRef gmm = AttenRelRef.AG_2020_GLOBAL;
+		AttenRelRef gmm = AttenRelRef.AG_2020_GLOBAL_INTERFACE;
 		
 		IncludeBackgroundOption[] bgOps = IncludeBackgroundOption.values();
 		

@@ -3,6 +3,7 @@ package scratch.kevin.prvi25;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -17,6 +18,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Stopwatch;
 
@@ -47,9 +49,9 @@ class GmmInputCacheBenchmark {
 				AttenRelRef.ASK_2014, periods, bgOp, 200d) {
 			
 			@Override
-			public Site siteForIndex(int siteIndex, ScalarIMR gmm) {
+			public Site siteForIndex(int siteIndex, Map<TectonicRegionType, ScalarIMR> gmms) {
 				Site site = new Site(loc);
-				site.addParameterList(gmm.getSiteParams());
+				site.addParameterList(gmms.values().iterator().next().getSiteParams());
 				return site;
 			}
 			
