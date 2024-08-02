@@ -66,7 +66,6 @@ public class BValSweepHazardComparison {
 		
 		double[] periods = { 0d, 0.2d, 1d };
 		AttenRelRef gmpeRef = AttenRelRef.ASK_2014;;
-		double maxDistance = 500d;
 		double gridSpacing = 0.1;
 		
 		Region region = new ReportMetadata(new RupSetMetadata(null, compSol)).region;
@@ -75,7 +74,7 @@ public class BValSweepHazardComparison {
 		
 		// calculate comparison hazard
 		System.out.println("Calculating comparison hazard...");
-		SolHazardMapCalc compCalc = getCalcCurves(new File(compDir, "hazard"), compSol, gmpeRef, periods, gridReg, maxDistance);
+		SolHazardMapCalc compCalc = getCalcCurves(new File(compDir, "hazard"), compSol, gmpeRef, periods, gridReg);
 		
 		ReturnPeriods[] rps = ReturnPeriods.values();
 		
@@ -96,7 +95,7 @@ public class BValSweepHazardComparison {
 			File hazardDir = new File(subSweepDir, "hazard");
 			
 			System.out.println("Calculating b="+(float)bVal+" sweep hazard...");
-			SolHazardMapCalc sweepCalc = getCalcCurves(hazardDir, sweepSol, gmpeRef, periods, gridReg, maxDistance);
+			SolHazardMapCalc sweepCalc = getCalcCurves(hazardDir, sweepSol, gmpeRef, periods, gridReg);
 			
 			System.out.println("Calculating maps...");
 			for (int p=0; p<periods.length; p++)
@@ -203,7 +202,7 @@ public class BValSweepHazardComparison {
 	}
 	
 	private static SolHazardMapCalc getCalcCurves(File hazardDir, FaultSystemSolution sol, AttenRelRef gmpeRef,
-			double[] periods, GriddedRegion gridReg, double maxDistance) throws IOException {
+			double[] periods, GriddedRegion gridReg) throws IOException {
 		// see if we already have curves
 		SolHazardMapCalc calc = null;
 		if (hazardDir.exists()) {
@@ -220,8 +219,6 @@ public class BValSweepHazardComparison {
 			
 			// need to calculate
 			calc = new SolHazardMapCalc(sol, gmpeRef, gridReg, periods);
-			
-			calc.setMaxSourceSiteDist(maxDistance);
 			
 			calc.calcHazardCurves(FaultSysTools.defaultNumThreads());
 			

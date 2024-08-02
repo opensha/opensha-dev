@@ -149,13 +149,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				StampedeScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, StampedeScriptWriter.FMPJ_HOME);
 //		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
 		
-		AttenRelRef gmpe = AttenRelRef.ASK_2014;
+		AttenRelRef gmpe = null;
 		
 		List<RandomlySampledLevel<?>> individualRandomLevels = new ArrayList<>();
 		int samplingBranchCountMultiplier = 1;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2024_03_11";
+//		String dirName = "2024_07_31";
 		
 		/*
 		 * UCERF3 logic tree
@@ -618,7 +618,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
 		dirName += "-prvi25_subduction_branches";
 		double avgNumRups = 10000;
-		gmpe = AttenRelRef.AG_2020_GLOBAL_INTERFACE;
+		gmpe = null;
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
@@ -925,7 +925,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			argz += " --gmpe "+gmpe.name();
 		if (hazardGridded) {
 			argz += " --gridded-seis INCLUDE";
-			argz += " --max-distance 200";
+//			argz += " --max-distance 200";
 		}
 		// figure out if CA or full WUS
 		// also use coarse if logic tree is enormous
@@ -995,6 +995,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			
 			// now add hazard calc jobs with gridded
 			for (int i=0; i<4; i++) {
+				int myNodes = nodes;
 //			for (boolean avgGridded : new boolean[] {true, false}) {
 				File jobFile;
 				if (i == 0) {
@@ -1015,9 +1016,10 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --output-dir "+resultsPath+"_full_gridded";
 					argz += " --combine-with-dir "+resultsPath;
 					argz += " --gridded-seis INCLUDE";
-					if (logicTree.size() > 60)
+					if (logicTree.size() > 50)
 						argz += " --quick-grid-calc";
 					jobFile = new File(localDir, "batch_hazard_full_gridded.slurm");
+					myNodes = origNodes;
 				} else if (i == 2) {
 //					if (averageOnly)
 //						continue;
@@ -1029,6 +1031,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					argz += " --gridded-seis INCLUDE";
 					argz += " --quick-grid-calc";
 					jobFile = new File(localDir, "batch_hazard_full_gridded_sampled.slurm");
+					myNodes = origNodes;
 				} else {
 					argz = "--input-file "+resultsPath+"_gridded_branches.zip";
 					argz += " --output-file "+resultsPath+"_hazard_gridded_only.zip";
@@ -1037,7 +1040,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					jobFile = new File(localDir, "batch_hazard_gridded_only.slurm");
 				}
 				argz += " --grid-spacing "+(float)gridSpacing;
-				argz += " --max-distance 200";
+//				argz += " --max-distance 200";
 				if (gmpe != null)
 					argz += " --gmpe "+gmpe.name();
 				// use fault-only hazard as source for region

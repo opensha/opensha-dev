@@ -80,6 +80,7 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
+import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
 import org.opensha.refFaultParamDb.vo.DeformationModelSummary;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.AbstractNthRupERF;
@@ -98,10 +99,13 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectBVals;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectNuclMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectParticMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
 import org.opensha.sha.earthquake.faultSysSolution.modules.PolygonFaultGridAssociations;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.TrueMeanRuptureMappings;
@@ -139,9 +143,12 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Segmen
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.BranchSamplingManager;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -153,6 +160,7 @@ import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.srf.RSQSimStateTime;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
@@ -2110,13 +2118,329 @@ public class PureScratch {
 		System.out.println("\tNorm:\t"+(float)(momentNorm/momentTot));
 	}
 	
+	private static void test309() throws IOException {
+		Path erfPath = Path.of("/home/kevin/OpenSHA/nshm23/nshmp-haz-models/nshm-conus-6.0.0");
+		IncludeBackgroundOption griddedOp = IncludeBackgroundOption.INCLUDE;
+		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.SUBDUCTION_INTERFACE, TectonicRegionType.SUBDUCTION_SLAB);
+
+		NshmErf erf = new NshmErf(erfPath, trts, griddedOp);
+		erf.getTimeSpan().setDuration(1.0);
+		erf.updateForecast();
+		
+		Table<TectonicRegionType, Float, Integer> trtRakeCounts = HashBasedTable.create();
+		Table<TectonicRegionType, Float, Integer> trtDipCounts = HashBasedTable.create();
+		
+		Map<TectonicRegionType, Integer> trtRupCounts = new HashMap<>();
+		int rupCount = 0;
+		int sourceCount = 0;
+		for (ProbEqkSource source : erf) {
+			TectonicRegionType trt = source.getTectonicRegionType();
+			Preconditions.checkNotNull(trt, "TRT is null!");
+			for (ProbEqkRupture rup : source) {
+				float rake = (float)rup.getAveRake();
+				float dip = (float)rup.getRuptureSurface().getAveDip();
+				Integer count = trtRakeCounts.get(trt, rake);
+				if (count == null)
+					count = 0;
+				trtRakeCounts.put(trt, rake, count+1);
+				count = trtDipCounts.get(trt, dip);
+				if (count == null)
+					count = 0;
+				trtDipCounts.put(trt, dip, count+1);
+				rupCount++;
+				count = trtRupCounts.get(trt);
+				if (count == null)
+					count = 0;
+				trtRupCounts.put(trt, count+1);
+			}
+			sourceCount++;
+		}
+		System.out.println("Processed "+rupCount+" ruptures in "+sourceCount+" sources");
+		for (TectonicRegionType trt : trts) {
+			System.out.println(trt+": "+trtRupCounts.get(trt)+" ruptures");
+			System.out.println("\tRAKES:");
+			Map<Float, Integer> rakeMap = trtRakeCounts.row(trt);
+			for (float rake : rakeMap.keySet())
+				System.out.println("\t\trake="+rake+": "+rakeMap.get(rake)+" occurrences");
+			System.out.println("\tDIPS:");
+			Map<Float, Integer> dipMap = trtDipCounts.row(trt);
+			for (float dip : dipMap.keySet())
+				System.out.println("\t\tdip="+dip+": "+dipMap.get(dip)+" occurrences");
+		}
+	}
+	
+	private static void test310() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/PRVI_SUB_FM_LARGE_with_gridded.zip"));
+		GridSourceList gridSources = sol.requireModule(GridSourceList.class);
+		for (TectonicRegionType trt : gridSources.getTectonicRegionTypes()) {
+			System.out.println(trt);
+			for (int gridIndex=0; gridIndex<gridSources.getNumLocations(); gridIndex++) {
+				for (GriddedRupture rup : gridSources.getRuptures(trt, gridIndex))
+					Preconditions.checkState(rup.tectonicRegionType == trt);
+				ProbEqkSource source = gridSources.getSource(trt, gridIndex, 1d, null, BackgroundRupType.FINITE);
+				if (source != null)
+					Preconditions.checkState(source.getTectonicRegionType() == trt,
+							"Source TRT is %s, expected %s", source.getTectonicRegionType(), trt);
+			}
+		}
+		for (int sourceIndex=0; sourceIndex<gridSources.getNumSources(); sourceIndex++) {
+			ProbEqkSource source = gridSources.getSource(sourceIndex, 1d, null, BackgroundRupType.FINITE);
+			Preconditions.checkState(gridSources.getTectonicRegionTypes().contains(source.getTectonicRegionType()));
+		}
+	}
+	
+	private static void test311() throws IOException {
+		SolutionLogicTree slt = SolutionLogicTree.load(new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2024_08_01-prvi25_subduction_branches/results_avg_gridded.zip"));
+		for (LogicTreeBranch<?> branch : slt.getLogicTree()) {
+			System.out.println(branch);
+			FaultSystemSolution sol = slt.forBranch(branch);
+			GridSourceProvider gridProv = sol.getGridSourceProvider();
+			Preconditions.checkNotNull(gridProv);
+		}
+	}
+	
+	private static void test312() throws IOException {
+		double OVERALL_MMIN = 2.55;
+		double maxMagOff = 7.95;
+		SeismicityRegions seisRegion = SeismicityRegions.CAR_INTRASLAB;
+		
+//		PRVI25_RegionalSeismicity seisBranch = PRVI25_RegionalSeismicity.HIGH;
+//		PRVI25_DeclusteringAlgorithms declusteringAlg = branch.requireValue(PRVI25_DeclusteringAlgorithms.class);
+//		PRVI25_SeisSmoothingAlgorithms seisSmooth = branch.requireValue(PRVI25_SeisSmoothingAlgorithms.class);
+		
+		for (PRVI25_RegionalSeismicity seisBranch : PRVI25_RegionalSeismicity.values()) {
+			// total G-R up to Mmax
+			IncrementalMagFreqDist totalGR = seisBranch.build(seisRegion, FaultSysTools.initEmptyMFD(OVERALL_MMIN, maxMagOff), maxMagOff);
+//			System.out.println("Gridded style GR:\n"+totalGR);
+			System.out.println(seisBranch+" M5 rate: "+(float)totalGR.getCumRateDistWithOffset().getY(5d));
+		}
+		
+//		double maxMinMag = 8.05;
+//		IncrementalMagFreqDist interfaceRefMFD = FaultSysTools.initEmptyMFD(maxMinMag);
+//		IncrementalMagFreqDist slabRefMFD = FaultSysTools.initEmptyMFD(PRVI25_GridSourceBuilder.SLAB_MMAX);
+//		UncertainBoundedIncrMagFreqDist buggy = PRVI25_RegionalSeismicity.getBounded(seisRegion,
+//				slabRefMFD, slabRefMFD.getX(interfaceRefMFD.getClosestXIndex(PRVI25_GridSourceBuilder.SLAB_MMAX)));
+//		System.out.println("Buggy M5 rate: "+(float)buggy.getCumRateDistWithOffset().getY(5d));
+	}
+	
+	private static void test313() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/data/kevin/nshm23/batch_inversions/"
+				+ "2024_08_01-prvi25_subduction_branches/results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip"));
+		FaultSystemRupSet rupSet = sol.getRupSet();
+		RegionsOfInterest roi = rupSet.requireModule(RegionsOfInterest.class);
+		List<Region> regions = roi.getRegions();
+		List<IncrementalMagFreqDist> mfds = roi.getMFDs();
+		List<TectonicRegionType> trts = roi.getTRTs();
+		GridSourceList gridSources = sol.requireModule(GridSourceList.class);
+		BranchRegionalMFDs branchMFDs = sol.requireModule(BranchRegionalMFDs.class);
+		for (int r=0; r<regions.size(); r++) {
+			IncrementalMagFreqDist mfd = mfds.get(r);
+			if (mfd != null) {
+				Preconditions.checkState(mfd instanceof UncertainBoundedIncrMagFreqDist);
+				UncertainBoundedIncrMagFreqDist uncertMFD = (UncertainBoundedIncrMagFreqDist)mfd;
+				Region region = regions.get(r);
+				System.out.println();
+				System.out.println("MFD for "+region.getName()
+						+"; lowM5="+(float)uncertMFD.getLower().getCumRateDistWithOffset().getY(5d)
+						+"; prefM5="+(float)mfd.getCumRateDistWithOffset().getY(5d)
+						+"; highM5="+(float)uncertMFD.getUpper().getCumRateDistWithOffset().getY(5d));
+				IncrementalMagFreqDist[] solBranchMFDs = branchMFDs.getGriddedRegionalBranchMFDs(r);
+				double[] weights = branchMFDs.getBranchWeights();
+				double solMin = Double.POSITIVE_INFINITY;
+				double solMax = 0d;
+				double weightAvg = 0d;
+				double sumWeight = 0d;
+				for (int i=0; i<solBranchMFDs.length; i++) {
+					IncrementalMagFreqDist branchMFD = solBranchMFDs[i];
+					double rate = branchMFD.getCumRateDistWithOffset().getY(5d);
+					solMin = Math.min(solMin, rate);
+					solMax = Math.max(solMax, rate);
+					weightAvg += rate*weights[i];
+					sumWeight += weights[i];
+				}
+				weightAvg /= sumWeight;
+				System.out.println("Branch range: ["+(float)solMin+", "+(float)solMax+"], avg="+(float)weightAvg+" across "+solBranchMFDs.length+" MFDs");
+				SummedMagFreqDist gridMFD = null;
+				GriddedRegion gridReg = gridSources.getGriddedRegion();
+				TectonicRegionType trt = trts.get(r);
+				System.out.println("TRT: "+trt);
+				boolean regionTest = region != null && region != gridReg && !region.getBorder().equals(gridReg.getBorder());
+				int includedNodes = 0;
+				double rupSumM5 = 0d;
+				for (int i=0; i<gridReg.getNodeCount(); i++) {
+					IncrementalMagFreqDist nodeMFD = gridSources.getMFD(trt, i);
+					if (nodeMFD == null)
+						continue;
+					if (regionTest && !region.contains(gridReg.getLocation(i)))
+						continue;
+					if (gridMFD == null) {
+						gridMFD = new SummedMagFreqDist(nodeMFD.getMinX(), nodeMFD.getMaxX(), nodeMFD.size());
+					} else {
+						Preconditions.checkState((float)gridMFD.getMinX() == (float)nodeMFD.getMinX());
+						if (gridMFD.size() < nodeMFD.size()) {
+							SummedMagFreqDist tempMFD = new SummedMagFreqDist(nodeMFD.getMinX(), nodeMFD.getMaxX(), nodeMFD.size());
+							tempMFD.addIncrementalMagFreqDist(gridMFD);
+							gridMFD = tempMFD;
+						}
+					}
+					includedNodes++;
+					gridMFD.addIncrementalMagFreqDist(nodeMFD);
+					for (GriddedRupture rup : gridSources.getRuptures(trt, i)) {
+						Preconditions.checkState(trt == null || rup.tectonicRegionType == trt);
+						if (rup.magnitude >= 5d)
+							rupSumM5 += rup.rate;
+					}
+				}
+				System.out.println("RegionTest="+regionTest+", included "+includedNodes+"/"+gridReg.getNodeCount());
+				System.out.println("GridProv M5="+(float)gridMFD.getCumRateDistWithOffset().getY(5d)+" rupSumM5="+(float)rupSumM5);
+			}
+		}
+	}
+	
+	private static void test314() throws IOException {
+		File dir = new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_08_01-prvi25_subduction_branches");
+		File resultsDir = new File(dir, "results");
+		File ltFile = new File(dir, "logic_tree_full_gridded.json");
+		SeismicityRegions seisReg = SeismicityRegions.CAR_INTERFACE;
+		TectonicRegionType trt = TectonicRegionType.SUBDUCTION_INTERFACE;
+		Region region = seisReg.load();
+		SolutionLogicTree slt = new SolutionLogicTree.ResultsDirReader(resultsDir, LogicTree.read(ltFile));
+		for (LogicTreeBranch<?> branch : slt.getLogicTree()) {
+			System.out.println(branch);
+			GridSourceList gridSources = (GridSourceList)slt.loadGridProvForBranch(branch);
+			
+			SummedMagFreqDist gridMFD = null;
+			double rupSumM5 = 0d;
+			for (int i=0; i<gridSources.getNumLocations(); i++) {
+				IncrementalMagFreqDist nodeMFD = gridSources.getMFD(trt, i);
+				if (nodeMFD == null)
+					continue;
+				if (!region.contains(gridSources.getLocation(i)))
+					continue;
+				if (gridMFD == null) {
+					gridMFD = new SummedMagFreqDist(nodeMFD.getMinX(), nodeMFD.getMaxX(), nodeMFD.size());
+				} else {
+					Preconditions.checkState((float)gridMFD.getMinX() == (float)nodeMFD.getMinX());
+					if (gridMFD.size() < nodeMFD.size()) {
+						SummedMagFreqDist tempMFD = new SummedMagFreqDist(nodeMFD.getMinX(), nodeMFD.getMaxX(), nodeMFD.size());
+						tempMFD.addIncrementalMagFreqDist(gridMFD);
+						gridMFD = tempMFD;
+					}
+				}
+				gridMFD.addIncrementalMagFreqDist(nodeMFD);
+				for (GriddedRupture rup : gridSources.getRuptures(trt, i)) {
+					Preconditions.checkState(trt == null || rup.tectonicRegionType == trt);
+					if (rup.magnitude >= 5d)
+						rupSumM5 += rup.rate;
+				}
+			}
+			System.out.println("GridProv M5="+(float)gridMFD.getCumRateDistWithOffset().getY(5d)+" rupSumM5="+(float)rupSumM5);
+			
+			System.out.println();
+		}
+	}
+	
+	private static void test315() throws IOException {
+		SeismicityRegions seisReg = SeismicityRegions.CAR_INTERFACE;
+		TectonicRegionType trt = TectonicRegionType.SUBDUCTION_INTERFACE;
+		Region region = seisReg.load();
+		SolutionLogicTree slt = SolutionLogicTree.load(new File("/data/kevin/nshm23/batch_inversions/2024_08_01-prvi25_subduction_branches/results_avg_gridded.zip"));
+		
+		AveragingAccumulator<GridSourceProvider> averager = null;
+		for (LogicTreeBranch<?> branch : slt.getLogicTree()) {
+			System.out.println(branch);
+			GridSourceList gridSources = (GridSourceList)slt.loadGridProvForBranch(branch);
+			
+			if (averager == null)
+				averager = gridSources.averagingAccumulator();
+			averager.process(gridSources, branch.getBranchWeight());
+			
+			SummedMagFreqDist gridMFD = null;
+			double rupSumM5 = 0d;
+			double totTRTSumM5 = 0d;
+			double totSumM5 = 0d;
+			for (int i=0; i<gridSources.getNumLocations(); i++) {
+				for (GriddedRupture rup : gridSources.getRuptures(null, i))
+					if (rup.magnitude >= 5d)
+						totSumM5 += rup.rate;
+				for (GriddedRupture rup : gridSources.getRuptures(trt, i))
+					if (rup.magnitude >= 5d)
+						totTRTSumM5 += rup.rate;
+				IncrementalMagFreqDist nodeMFD = gridSources.getMFD(trt, i);
+				if (nodeMFD == null)
+					continue;
+				if (!region.contains(gridSources.getLocation(i)))
+					continue;
+				if (gridMFD == null) {
+					gridMFD = new SummedMagFreqDist(nodeMFD.getMinX(), nodeMFD.getMaxX(), nodeMFD.size());
+				} else {
+					Preconditions.checkState((float)gridMFD.getMinX() == (float)nodeMFD.getMinX());
+					if (gridMFD.size() < nodeMFD.size()) {
+						SummedMagFreqDist tempMFD = new SummedMagFreqDist(nodeMFD.getMinX(), nodeMFD.getMaxX(), nodeMFD.size());
+						tempMFD.addIncrementalMagFreqDist(gridMFD);
+						gridMFD = tempMFD;
+					}
+				}
+				gridMFD.addIncrementalMagFreqDist(nodeMFD);
+				for (GriddedRupture rup : gridSources.getRuptures(trt, i)) {
+					Preconditions.checkState(trt == null || rup.tectonicRegionType == trt);
+					if (rup.magnitude >= 5d)
+						rupSumM5 += rup.rate;
+				}
+			}
+			System.out.println("GridProv match M5="+(float)gridMFD.getCumRateDistWithOffset().getY(5d)+" rupSumM5="+(float)rupSumM5);
+			System.out.println("\ttot M5="+(float)totSumM5+", trtSum="+(float)totTRTSumM5);
+			
+			System.out.println();
+		}
+		
+		System.out.println("AVERAGE");
+		GridSourceList gridSources = (GridSourceList)averager.getAverage();
+		SummedMagFreqDist gridMFD = null;
+		double rupSumM5 = 0d;
+		double totTRTSumM5 = 0d;
+		double totSumM5 = 0d;
+		for (int i=0; i<gridSources.getNumLocations(); i++) {
+			for (GriddedRupture rup : gridSources.getRuptures(null, i))
+				if (rup.magnitude >= 5d)
+					totSumM5 += rup.rate;
+			for (GriddedRupture rup : gridSources.getRuptures(trt, i))
+				if (rup.magnitude >= 5d)
+					totTRTSumM5 += rup.rate;
+			IncrementalMagFreqDist nodeMFD = gridSources.getMFD(trt, i);
+			if (nodeMFD == null)
+				continue;
+			if (!region.contains(gridSources.getLocation(i)))
+				continue;
+			if (gridMFD == null) {
+				gridMFD = new SummedMagFreqDist(nodeMFD.getMinX(), nodeMFD.getMaxX(), nodeMFD.size());
+			} else {
+				Preconditions.checkState((float)gridMFD.getMinX() == (float)nodeMFD.getMinX());
+				if (gridMFD.size() < nodeMFD.size()) {
+					SummedMagFreqDist tempMFD = new SummedMagFreqDist(nodeMFD.getMinX(), nodeMFD.getMaxX(), nodeMFD.size());
+					tempMFD.addIncrementalMagFreqDist(gridMFD);
+					gridMFD = tempMFD;
+				}
+			}
+			gridMFD.addIncrementalMagFreqDist(nodeMFD);
+			for (GriddedRupture rup : gridSources.getRuptures(trt, i)) {
+				Preconditions.checkState(trt == null || rup.tectonicRegionType == trt);
+				if (rup.magnitude >= 5d)
+					rupSumM5 += rup.rate;
+			}
+		}
+		System.out.println("GridProv match M5="+(float)gridMFD.getCumRateDistWithOffset().getY(5d)+" rupSumM5="+(float)rupSumM5);
+		System.out.println("\ttot M5="+(float)totSumM5+", trtSum="+(float)totTRTSumM5);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test308();
+			test315();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

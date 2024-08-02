@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -16,9 +17,14 @@ import com.google.common.collect.ImmutableList;
 public class ConvertToTruePointSource {
 
 	public static void main(String[] args) throws IOException {
-		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_07_26-prvi25_subduction_branches");
-		File inputFile = new File(dir, "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip");
-		File outputFile = new File(dir, "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded_true_pt_src.zip");
+		File inputDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_07_31-prvi25_subduction_branches");
+		File inputFile = new File(inputDir, "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip");
+		
+//		EnumSet<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.SUBDUCTION_SLAB);
+//		File outputDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_07_31-prvi25_subduction_branches-ba_only-LARGE-slab_pt_src");
+		EnumSet<TectonicRegionType> trts = EnumSet.allOf(TectonicRegionType.class);
+		File outputDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_07_31-prvi25_subduction_branches-ba_only-LARGE-true_pt_src");
+		File outputFile = new File(outputDir, inputFile.getName());
 		
 		FaultSystemSolution sol = FaultSystemSolution.load(inputFile);
 		GridSourceList gridSources = sol.requireModule(GridSourceList.class);
@@ -33,10 +39,14 @@ public class ConvertToTruePointSource {
 					continue;
 				} else {
 					List<GriddedRupture> ptRuptures = new ArrayList<>(ruptures.size());
-					for (GriddedRupture rup : ruptures)
-						ptRuptures.add(new GriddedRupture(gridIndex, rup.location, rup.magnitude, rup.rate,
-								rup.rake, rup.dip, Double.NaN, null, rup.upperDepth, rup.upperDepth, 0d,
-								Double.NaN, Double.NaN, trt));
+					for (GriddedRupture rup : ruptures) {
+						if (trts.contains(rup.tectonicRegionType))
+							ptRuptures.add(new GriddedRupture(gridIndex, rup.location, rup.magnitude, rup.rate,
+									rup.rake, rup.dip, Double.NaN, null, rup.upperDepth, rup.upperDepth, 0d,
+									Double.NaN, Double.NaN, trt));
+						else
+							ptRuptures.add(rup);
+					}
 					ruptureLists.add(ptRuptures);
 				}
 			}
