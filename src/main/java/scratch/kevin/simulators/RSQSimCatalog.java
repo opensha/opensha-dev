@@ -49,6 +49,7 @@ import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
 import org.opensha.sha.earthquake.faultSysSolution.modules.NamedFaults;
 import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.FaultStyle;
@@ -786,7 +787,10 @@ public class RSQSimCatalog implements XMLSaveable {
 				59, 'G'),
 		BRUCE_5775_CRUSTAL("rundir5775_crustal", "Bruce 5775 (Crustal Only)", "Bruce Shaw", cal(2024, 3, 5),
 				"5775, but filtered for slip on crustal patches only;",
-				59, 'G');
+				59, 'G'),
+		BRUCE_5844("rundir5844", "Bruce 5844", "Bruce Shaw", cal(2024, 6, 21),
+				"WesternUS, deltax=2.0km, b=.009, alpha=0.25, hload=3.0",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.GEOLOGIC);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -2916,13 +2920,15 @@ public class RSQSimCatalog implements XMLSaveable {
 			} else {
 				try {
 					Class<? extends Enum<?>> fmClass = (Class<? extends Enum<?>>) Class.forName(classAtt.getValue());
+					if (!fmClass.isEnum())
+						fmClass = (Class<? extends Enum<?>>) fmClass.getEnclosingClass();
 					for (Enum<?> eConst : fmClass.getEnumConstants()) {
 						if (eConst.name().equals(enumName)) {
 							fm = (RupSetFaultModel)eConst;
 							break;
 						}
 					}
-				} catch (ClassNotFoundException | ClassCastException e) {
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
@@ -2936,8 +2942,10 @@ public class RSQSimCatalog implements XMLSaveable {
 				dm = DeformationModels.valueOf(enumName);
 			} else {
 				try {
-					Class<? extends Enum<?>> fmClass = (Class<? extends Enum<?>>) Class.forName(classAtt.getValue());
-					for (Enum<?> eConst : fmClass.getEnumConstants()) {
+					Class<? extends Enum<?>> dmClass = (Class<? extends Enum<?>>) Class.forName(classAtt.getValue());
+					if (!dmClass.isEnum())
+						dmClass = (Class<? extends Enum<?>>) dmClass.getEnclosingClass();
+					for (Enum<?> eConst : dmClass.getEnumConstants()) {
 						if (eConst.name().equals(enumName)) {
 							dm = (RupSetDeformationModel)eConst;
 							break;
@@ -3003,6 +3011,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			File xmlFile = new File(subDir, "catalog.xml");
 			if (!xmlFile.exists())
 				continue;
+			System.out.println("Writing catalog XML to "+xmlFile.getAbsolutePath());
 			Document doc = XMLUtils.loadDocument(xmlFile);
 			Element root = doc.getRootElement();
 			Element el = root.element(XML_METADATA_NAME);
@@ -3390,7 +3399,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		boolean overwriteIndividual = true;
-		boolean replot = false;
+		boolean replot = true;
 		
 //		File baseDir = new File("/data/kevin/simulators/catalogs");
 		
@@ -3398,20 +3407,20 @@ public class RSQSimCatalog implements XMLSaveable {
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
 //		GregorianCalendar minDate = cal(2021, 10, 1);
-		GregorianCalendar minDate = cal(2023, 1, 1);
+		GregorianCalendar minDate = cal(2024, 6, 1);
 		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);
 //		for (Catalogs cat : new Catalogs[] {
 //////				Catalogs.BRUCE_4983_STITCHED,
-////////				Catalogs.BRUCE_2585,
-////////				Catalogs.BRUCE_2585_1MYR,
-////////				Catalogs.BRUCE_2740,
-////////				Catalogs.BRUCE_3062,
-////////				Catalogs.BRUCE_4860,
-////////				Catalogs.JG_tunedBase1m_ddotEQmod,
-////////				Catalogs.JG_tuneBase1m,
-//				Catalogs.BRUCE_5658
+//////////				Catalogs.BRUCE_2585,
+//////////				Catalogs.BRUCE_2585_1MYR,
+//////////				Catalogs.BRUCE_2740,
+//////////				Catalogs.BRUCE_3062,
+//////////				Catalogs.BRUCE_4860,
+//////////				Catalogs.JG_tunedBase1m_ddotEQmod,
+//////////				Catalogs.JG_tuneBase1m,
+//				Catalogs.BRUCE_5672
 //				}) {
 		// all catalogs
 //		GregorianCalendar minDate = cal(2000, 1, 1);
