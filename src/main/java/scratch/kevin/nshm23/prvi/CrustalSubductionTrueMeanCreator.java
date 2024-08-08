@@ -18,6 +18,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
@@ -46,7 +47,7 @@ public class CrustalSubductionTrueMeanCreator {
 					GridSourceList gridSources = GridSourceList.convert(
 							(MFDGridSourceProvider)sol.getGridSourceProvider(),
 							sol.getRupSet().requireModule(FaultGridAssociations.class),
-							new PRVI25_GridSourceBuilder.NSHM23_WUS_FiniteRuptureConverter());
+							new NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter());
 					sol.setGridSourceProvider(gridSources);
 				}
 				crustalBASols.put(fm, sol);

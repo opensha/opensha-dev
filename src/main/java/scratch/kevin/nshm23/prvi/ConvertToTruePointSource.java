@@ -10,6 +10,7 @@ import java.util.List;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.collect.ImmutableList;
@@ -40,19 +41,21 @@ public class ConvertToTruePointSource {
 				} else {
 					List<GriddedRupture> ptRuptures = new ArrayList<>(ruptures.size());
 					for (GriddedRupture rup : ruptures) {
-						if (trts.contains(rup.tectonicRegionType))
-							ptRuptures.add(new GriddedRupture(gridIndex, rup.location, rup.magnitude, rup.rate,
-									rup.rake, rup.dip, Double.NaN, null, rup.upperDepth, rup.upperDepth, 0d,
-									Double.NaN, Double.NaN, trt));
-						else
+						if (trts.contains(rup.properties.tectonicRegionType)) {
+							GriddedRuptureProperties props = new GriddedRuptureProperties(gridIndex, rup.properties.location, rup.properties.magnitude,
+									rup.properties.rake, rup.properties.dip, Double.NaN, null, rup.properties.upperDepth, rup.properties.upperDepth, 0d,
+									Double.NaN, Double.NaN, trt);
+							ptRuptures.add(new GriddedRupture(props, rup.rate));
+						} else {
 							ptRuptures.add(rup);
+						}
 					}
 					ruptureLists.add(ptRuptures);
 				}
 			}
 			trtRuptureLists.put(trt, ruptureLists);
 		}
-		GridSourceList pointSources = new GridSourceList(gridSources.getGriddedRegion(), trtRuptureLists);
+		GridSourceList pointSources = new GridSourceList.Precomputed(gridSources.getGriddedRegion(), trtRuptureLists);
 		sol.setGridSourceProvider(pointSources);
 		
 		sol.write(outputFile);

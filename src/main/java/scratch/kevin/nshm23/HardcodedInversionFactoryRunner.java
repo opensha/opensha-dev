@@ -130,6 +130,7 @@ public class HardcodedInversionFactoryRunner {
 		
 		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
 		dirName += "-prvi25";
+		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
@@ -142,7 +143,7 @@ public class HardcodedInversionFactoryRunner {
 		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
 		branch = branch.copy();
 		
-		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
+//		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		
 		// seg/b sampling
 //		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM23_LogicTreeBranch.levelsOnFault;

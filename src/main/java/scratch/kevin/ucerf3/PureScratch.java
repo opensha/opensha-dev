@@ -2,10 +2,13 @@ package scratch.kevin.ucerf3;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -80,7 +83,10 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
+import org.opensha.commons.util.modules.ArchivableModule;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
+import org.opensha.commons.util.modules.ModuleArchive;
+import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.refFaultParamDb.vo.DeformationModelSummary;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.AbstractNthRupERF;
@@ -99,6 +105,8 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectBVals;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectNuclMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchSectParticMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ClusterRuptures;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultCubeAssociations;
+import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
@@ -2176,7 +2184,7 @@ public class PureScratch {
 			System.out.println(trt);
 			for (int gridIndex=0; gridIndex<gridSources.getNumLocations(); gridIndex++) {
 				for (GriddedRupture rup : gridSources.getRuptures(trt, gridIndex))
-					Preconditions.checkState(rup.tectonicRegionType == trt);
+					Preconditions.checkState(rup.properties.tectonicRegionType == trt);
 				ProbEqkSource source = gridSources.getSource(trt, gridIndex, 1d, null, BackgroundRupType.FINITE);
 				if (source != null)
 					Preconditions.checkState(source.getTectonicRegionType() == trt,
@@ -2287,8 +2295,8 @@ public class PureScratch {
 					includedNodes++;
 					gridMFD.addIncrementalMagFreqDist(nodeMFD);
 					for (GriddedRupture rup : gridSources.getRuptures(trt, i)) {
-						Preconditions.checkState(trt == null || rup.tectonicRegionType == trt);
-						if (rup.magnitude >= 5d)
+						Preconditions.checkState(trt == null || rup.properties.tectonicRegionType == trt);
+						if (rup.properties.magnitude >= 5d)
 							rupSumM5 += rup.rate;
 					}
 				}
@@ -2330,8 +2338,8 @@ public class PureScratch {
 				}
 				gridMFD.addIncrementalMagFreqDist(nodeMFD);
 				for (GriddedRupture rup : gridSources.getRuptures(trt, i)) {
-					Preconditions.checkState(trt == null || rup.tectonicRegionType == trt);
-					if (rup.magnitude >= 5d)
+					Preconditions.checkState(trt == null || rup.properties.tectonicRegionType == trt);
+					if (rup.properties.magnitude >= 5d)
 						rupSumM5 += rup.rate;
 				}
 			}
@@ -2362,10 +2370,10 @@ public class PureScratch {
 			double totSumM5 = 0d;
 			for (int i=0; i<gridSources.getNumLocations(); i++) {
 				for (GriddedRupture rup : gridSources.getRuptures(null, i))
-					if (rup.magnitude >= 5d)
+					if (rup.properties.magnitude >= 5d)
 						totSumM5 += rup.rate;
 				for (GriddedRupture rup : gridSources.getRuptures(trt, i))
-					if (rup.magnitude >= 5d)
+					if (rup.properties.magnitude >= 5d)
 						totTRTSumM5 += rup.rate;
 				IncrementalMagFreqDist nodeMFD = gridSources.getMFD(trt, i);
 				if (nodeMFD == null)
@@ -2384,8 +2392,8 @@ public class PureScratch {
 				}
 				gridMFD.addIncrementalMagFreqDist(nodeMFD);
 				for (GriddedRupture rup : gridSources.getRuptures(trt, i)) {
-					Preconditions.checkState(trt == null || rup.tectonicRegionType == trt);
-					if (rup.magnitude >= 5d)
+					Preconditions.checkState(trt == null || rup.properties.tectonicRegionType == trt);
+					if (rup.properties.magnitude >= 5d)
 						rupSumM5 += rup.rate;
 				}
 			}
@@ -2403,10 +2411,10 @@ public class PureScratch {
 		double totSumM5 = 0d;
 		for (int i=0; i<gridSources.getNumLocations(); i++) {
 			for (GriddedRupture rup : gridSources.getRuptures(null, i))
-				if (rup.magnitude >= 5d)
+				if (rup.properties.magnitude >= 5d)
 					totSumM5 += rup.rate;
 			for (GriddedRupture rup : gridSources.getRuptures(trt, i))
-				if (rup.magnitude >= 5d)
+				if (rup.properties.magnitude >= 5d)
 					totTRTSumM5 += rup.rate;
 			IncrementalMagFreqDist nodeMFD = gridSources.getMFD(trt, i);
 			if (nodeMFD == null)
@@ -2425,13 +2433,75 @@ public class PureScratch {
 			}
 			gridMFD.addIncrementalMagFreqDist(nodeMFD);
 			for (GriddedRupture rup : gridSources.getRuptures(trt, i)) {
-				Preconditions.checkState(trt == null || rup.tectonicRegionType == trt);
-				if (rup.magnitude >= 5d)
+				Preconditions.checkState(trt == null || rup.properties.tectonicRegionType == trt);
+				if (rup.properties.magnitude >= 5d)
 					rupSumM5 += rup.rate;
 			}
 		}
 		System.out.println("GridProv match M5="+(float)gridMFD.getCumRateDistWithOffset().getY(5d)+" rupSumM5="+(float)rupSumM5);
 		System.out.println("\ttot M5="+(float)totSumM5+", trtSum="+(float)totTRTSumM5);
+	}
+	
+	private static void test316() throws IOException {
+		File file = new File("/tmp/PRVI_CRUSTAL_FM_V1p1_avg_grid_seis.zip");
+		Class<? extends OpenSHA_Module> clazz = GridSourceList.class;
+		
+//		File file = new File("/tmp/PRVI_CRUSTAL_FM_V1p1_fault_grid_associations.zip");
+//		Class<? extends OpenSHA_Module> clazz = FaultGridAssociations.class;
+		
+//		File file = new File("/tmp/PRVI_CRUSTAL_FM_V1p1_grid_branch_regional_mfds.zip");
+//		Class<? extends OpenSHA_Module> clazz = BranchRegionalMFDs.class;
+		
+		ModuleArchive.VERBOSE_DEFAULT = false;
+		
+		int num = 100;
+		Stopwatch watch = Stopwatch.createStarted();
+		
+		DecimalFormat twoDigits = new DecimalFormat("0.00");
+		
+		double prevSecs = 0d;
+		for (int i=0; i<num; i++) {
+			ModuleArchive<OpenSHA_Module> archive = new ModuleArchive<>(file);
+			OpenSHA_Module module = archive.requireModule(clazz);
+			if (module instanceof FaultCubeAssociations)
+				((FaultCubeAssociations)module).getCubedGriddedRegion();
+			double totSecs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+			double secs = totSecs - prevSecs;
+			prevSecs = totSecs;
+			double rate = (i+1d)/totSecs;
+			double secsEach = totSecs/(i+1d);
+			System.out.println("Loaded "+(i+1)+"/"+num+" in "+twoDigits.format(secs)+" s;\t"
+					+ "rate: "+twoDigits.format(rate)+" load/s\t"+twoDigits.format(secsEach)+" s/load");
+		}
+		watch.stop();
+	}
+	
+	private static void test317() throws IOException {
+		File file = new File("/tmp/PRVI_CRUSTAL_FM_V1p1_avg_grid_seis.zip");
+		
+		ModuleArchive<OpenSHA_Module> archive = new ModuleArchive<>(file);
+//		GridSourceList gridSources = archive.requireModule(GridSourceList.class);
+		GridSourceList gridSources = archive.loadUnlistedModule(GridSourceList.Precomputed.class, "");
+		AveragingAccumulator<GridSourceProvider> accumulator = gridSources.averagingAccumulator();
+		
+		int num = 1000;
+		Stopwatch watch = Stopwatch.createStarted();
+		
+		DecimalFormat twoDigits = new DecimalFormat("0.00");
+		
+		double prevSecs = 0d;
+		for (int i=0; i<num; i++) {
+			accumulator.process(gridSources, 1d);
+		
+			double totSecs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+			double secs = totSecs - prevSecs;
+			prevSecs = totSecs;
+			double rate = (i+1d)/totSecs;
+			double secsEach = totSecs/(i+1d);
+			System.out.println("Averaged "+(i+1)+"/"+num+" in "+twoDigits.format(secs)+" s;\t"
+					+ "rate: "+twoDigits.format(rate)+" avg/s\t"+twoDigits.format(secsEach)+" s/avg");
+		}
+		watch.stop();
 	}
 	
 	/**
@@ -2440,7 +2510,7 @@ public class PureScratch {
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test315();
+			test317();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

@@ -22,6 +22,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.Finite
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.FocalMech;
 import org.opensha.sha.util.TectonicRegionType;
@@ -31,29 +32,6 @@ import com.google.common.base.Preconditions;
 public class TestFullGridSourceFileWriter {
 	
 	private static WC1994_MagLengthRelationship WC94 = new WC1994_MagLengthRelationship();
-	
-	public static class NSHM23_WUS_FiniteRuptureConverter implements FiniteRuptureConverter {
-
-		@Override
-		public GriddedRupture buildFiniteRupture(int gridIndex, Location loc, double magnitude, double rate,
-				FocalMech focalMech, int[] associatedSections, double[] associatedSectionFracts) {
-			// TODO Auto-generated method stub
-			
-			double dipRad = Math.toRadians(focalMech.dip());
-			
-			double depth = (float)magnitude < 6.5f ? 5d : 1d;
-			double length = WC94.getMedianLength(magnitude);
-			double aspectWidth = length / 1.5;
-			double ddWidth = (14.0 - depth) / Math.sin(dipRad);
-			ddWidth = Math.min(aspectWidth, ddWidth);
-			double lower = depth + ddWidth * Math.sin(dipRad);
-			
-			return new GriddedRupture(gridIndex, loc, magnitude, rate, focalMech.rake(), focalMech.dip(), Double.NaN,
-					null, depth, lower, length, Double.NaN, Double.NaN,
-					TectonicRegionType.ACTIVE_SHALLOW,associatedSections, associatedSectionFracts);
-		}
-		
-	}
 
 	public static void main(String[] args) throws IOException {
 		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
@@ -98,8 +76,8 @@ public class TestFullGridSourceFileWriter {
 		System.out.println("Originally had "+gridProv.getNumSources()+" sources ("+origNumNonNullMFDs+" non-null) with totRate="+(float)totRateOrig);
 		System.out.println("Now have "+rupCount+" rups across "+gridSources.getNumSources()+" sources with totRate="+(float)totRateMod);
 		if (rupWithMostAssociations != null)
-			System.out.println("Most associations: "+mostAssociations+" (gridIndex="+rupWithMostAssociations.gridIndex
-					+", M="+(float)rupWithMostAssociations.magnitude);
+			System.out.println("Most associations: "+mostAssociations+" (gridIndex="+rupWithMostAssociations.properties.gridIndex
+					+", M="+(float)rupWithMostAssociations.properties.magnitude);
 		System.out.println("******************************");
 		
 		ModuleArchive<OpenSHA_Module> archive = new ModuleArchive<>();
