@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23.prvi.figures;
+package scratch.kevin.prvi25.figures;
 
 import java.awt.Font;
 import java.io.File;

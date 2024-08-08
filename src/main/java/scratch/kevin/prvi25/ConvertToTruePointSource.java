@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23.prvi;
+package scratch.kevin.prvi25;
 
 import java.io.File;
 import java.io.IOException;

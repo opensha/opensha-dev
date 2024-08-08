@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23.prvi;
+package scratch.kevin.prvi25;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +29,10 @@ import com.google.common.base.Preconditions;
 public class CrustalSubductionTrueMeanCreator {
 
 	public static void main(String[] args) throws IOException {
+		if (args.length < 3 || args.length > 4) {
+			System.err.println("USAGE: <crustal-dir> <subduction-dir> <output-file> [<gridded?>]");
+			System.exit(2);
+		}
 		File crustalDir = new File(args[0]);
 		File subductionDir = new File(args[1]);
 		File outputFile = new File(args[2]);
@@ -43,12 +47,21 @@ public class CrustalSubductionTrueMeanCreator {
 			File crustalBA = new File(crustalDir, "results_"+fm.getFilePrefix()+suffix);
 			if (crustalBA.exists()) {
 				FaultSystemSolution sol = FaultSystemSolution.load(crustalBA);
-				if (gridded && sol.getGridSourceProvider() instanceof MFDGridSourceProvider) {
-					GridSourceList gridSources = GridSourceList.convert(
-							(MFDGridSourceProvider)sol.getGridSourceProvider(),
-							sol.getRupSet().requireModule(FaultGridAssociations.class),
-							new NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter());
-					sol.setGridSourceProvider(gridSources);
+				if (gridded) {
+					GridSourceProvider gridProv = sol.getGridSourceProvider();
+					if (gridProv == null) {
+						// could be pre-abstarct/precomputed refactor
+						gridProv = sol.getArchive().loadUnlistedModule(GridSourceList.Precomputed.class, FaultSystemSolution.NESTING_PREFIX);
+						Preconditions.checkNotNull(gridProv);
+						sol.setGridSourceProvider(gridProv);
+					}
+					if (gridProv instanceof MFDGridSourceProvider) {
+						gridProv = GridSourceList.convert(
+								(MFDGridSourceProvider)sol.getGridSourceProvider(),
+								sol.getRupSet().requireModule(FaultGridAssociations.class),
+								new NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter());
+						sol.setGridSourceProvider(gridProv);
+					}
 				}
 				crustalBASols.put(fm, sol);
 			}
@@ -57,8 +70,19 @@ public class CrustalSubductionTrueMeanCreator {
 		
 		for (PRVI25_SubductionFaultModels fm : PRVI25_SubductionFaultModels.values()) {
 			File subductionBA = new File(subductionDir, "results_"+fm.getFilePrefix()+suffix);
-			if (subductionBA.exists())
-				subductionBASols.put(fm, FaultSystemSolution.load(subductionBA));
+			if (subductionBA.exists()) {
+				FaultSystemSolution sol = FaultSystemSolution.load(subductionBA);
+				if (gridded) {
+					GridSourceProvider gridProv = sol.getGridSourceProvider();
+					if (gridProv == null) {
+						// could be pre-abstarct/precomputed refactor
+						gridProv = sol.getArchive().loadUnlistedModule(GridSourceList.Precomputed.class, FaultSystemSolution.NESTING_PREFIX);
+						Preconditions.checkNotNull(gridProv);
+						sol.setGridSourceProvider(gridProv);
+					}
+				}
+				subductionBASols.put(fm, sol);
+			}
 		}
 		Preconditions.checkState(!subductionBASols.isEmpty());
 		

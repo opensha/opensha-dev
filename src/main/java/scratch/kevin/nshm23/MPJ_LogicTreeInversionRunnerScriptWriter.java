@@ -1060,7 +1060,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				int myMins = mins;
 				if (i == 1)
 					 myMins = Integer.min(mins*5, 60*24*7 - 1);
-				pbsWrite.writeScript(jobFile, script, myMins, nodes, remoteTotalThreads, queue);
+				pbsWrite.writeScript(jobFile, script, myMins, myNodes, remoteTotalThreads, queue);
 			}
 			
 			// write out gridded seismicity combiner script

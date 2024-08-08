@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23.prvi;
+package scratch.kevin.prvi25;
 
 import java.io.BufferedReader;
 import java.io.File;
