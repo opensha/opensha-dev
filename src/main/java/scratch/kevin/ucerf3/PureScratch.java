@@ -2504,13 +2504,86 @@ public class PureScratch {
 		watch.stop();
 	}
 	
+	private static void test318() throws IOException {
+		File dir = new File("/tmp/grid_prov_tests");
+		int numTimes = 100;
+		boolean doAverage = true;
+		boolean keepInMemory = false;
+		LogicTree<LogicTreeNode> tree = LogicTree.buildExhaustive(NSHM23_LogicTreeBranch.levelsOffFault, true);
+		ModuleArchive.VERBOSE_DEFAULT = false;
+		AveragingAccumulator<GridSourceProvider> accumulator = null;
+		Map<String, AveragingAccumulator<GridSourceProvider>> branchAccumulators = new HashMap<>(tree.size());
+		Map<String, GridSourceProvider> inMemory = new HashMap<>(tree.size());
+		
+		double[] doubleTests = {0d, 5d, 15d, 0.123, 0.567 };
+		for (double d : doubleTests) {
+			float f = (float)d;
+			double d2 = (double)f;
+			System.out.println(d+"\t"+f+"\t"+d2);
+		}
+		
+		DecimalFormat countDF = new DecimalFormat();
+		countDF.setGroupingSize(3);
+		countDF.setGroupingUsed(true);
+		for (int i=0; i<numTimes; i++) {
+			System.out.println("Round "+i);
+			Stopwatch roundWatch = Stopwatch.createStarted();
+			long totRupCount = 0;
+			for (int b=0; b<tree.size(); b++) {
+				LogicTreeBranch<?> branch = tree.getBranch(b);
+				Stopwatch indvWatch = Stopwatch.createStarted();
+				double weight = branch.getBranchWeight();
+				String prefix = branch.buildFileName();
+				File file = new File(dir, prefix+".zip");
+				Preconditions.checkState(file.exists());
+				ModuleArchive<OpenSHA_Module> archive = new ModuleArchive<>(file);
+				GridSourceList gridProv = archive.requireModule(GridSourceList.class);
+				double minMag = Double.POSITIVE_INFINITY;
+				int rupCount = 0;
+				for (TectonicRegionType trt : gridProv.getTectonicRegionTypes()) {
+					for (int gridIndex=0; gridIndex<gridProv.getNumLocations(); gridIndex++) {
+						for (GriddedRupture rup : gridProv.getRuptures(trt, gridIndex)) {
+							minMag = Math.min(minMag, rup.properties.magnitude);
+							rupCount++;
+						}
+					}
+				}
+				if (i == 0 && b == 0)
+					System.out.println("Mmin="+minMag);
+				totRupCount += rupCount;
+				if (doAverage) {
+					if (accumulator == null)
+						accumulator = gridProv.averagingAccumulator();
+					accumulator.process(gridProv, weight);
+					AveragingAccumulator<GridSourceProvider> branchAccumulator = branchAccumulators.get(prefix);
+					if (branchAccumulator == null) {
+						branchAccumulator = gridProv.averagingAccumulator();
+						branchAccumulators.put(prefix, branchAccumulator);
+					}
+					branchAccumulator.process(gridProv, weight);
+				}
+				if (keepInMemory)
+					inMemory.put(prefix, gridProv);
+				indvWatch.stop();
+				double secs = indvWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+				double avgSecs = (roundWatch.elapsed(TimeUnit.MILLISECONDS)/1000d)/(b+1d);
+				System.out.println("\tDONE "+b+"/"+tree.size()+" "+prefix+" in "+(float)secs+" s (avg="+(float)avgSecs+" s)"
+						+ "; "+countDF.format(rupCount)+" ruptures ("+countDF.format(totRupCount)+" total)");
+				gridProv = null;
+				System.gc();
+			}
+			double secs = roundWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+			System.out.println("\tDONE ROUND"+i+" in "+(float)secs+" s");
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test317();
+			test318();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

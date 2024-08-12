@@ -45,6 +45,7 @@ import org.opensha.sha.gui.infoTools.CalcProgressBar;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
 
 import scratch.UCERF3.analysis.GMT_CA_Maps;
 import scratch.UCERF3.enumTreeBranches.SpatialSeisPDF;
@@ -907,7 +908,7 @@ public class GridSourceProvider2023 extends AbstractGridSourceProvider {
 	@Override
 	public MFDGridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
 			Map<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs, double[] fracStrikeSlip, double[] fracNormal,
-			double[] fracReverse) {
+			double[] fracReverse, TectonicRegionType[] trts) {
 		throw new UnsupportedOperationException("Not implemented");
 	}
 

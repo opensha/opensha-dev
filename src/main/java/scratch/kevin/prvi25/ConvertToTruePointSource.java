@@ -42,10 +42,10 @@ public class ConvertToTruePointSource {
 					List<GriddedRupture> ptRuptures = new ArrayList<>(ruptures.size());
 					for (GriddedRupture rup : ruptures) {
 						if (trts.contains(rup.properties.tectonicRegionType)) {
-							GriddedRuptureProperties props = new GriddedRuptureProperties(gridIndex, rup.properties.location, rup.properties.magnitude,
+							GriddedRuptureProperties props = new GriddedRuptureProperties(rup.properties.magnitude,
 									rup.properties.rake, rup.properties.dip, Double.NaN, null, rup.properties.upperDepth, rup.properties.upperDepth, 0d,
 									Double.NaN, Double.NaN, trt);
-							ptRuptures.add(new GriddedRupture(props, rup.rate));
+							ptRuptures.add(new GriddedRupture(gridIndex, rup.location, props, rup.rate));
 						} else {
 							ptRuptures.add(rup);
 						}

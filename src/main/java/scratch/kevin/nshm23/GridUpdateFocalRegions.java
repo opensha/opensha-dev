@@ -50,7 +50,7 @@ public class GridUpdateFocalRegions {
 		
 		NSHM23_AbstractGridSourceProvider.Precomputed updated = new NSHM23_AbstractGridSourceProvider.Precomputed(
 				gridReg, gridProv.getNodeSubSeisMFDs(), gridProv.getNodeUnassociatedMFDs(),
-				fractStrikeSlip, fractNormal, fractReverse);
+				fractStrikeSlip, fractNormal, fractReverse, gridProv.getTectonicRegionTypeArray());
 		
 		solGridded.setGridSourceProvider(updated);
 		solGridded.write(new File(dir, "updated_"+solFileGridded.getName()));

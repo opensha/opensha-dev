@@ -76,7 +76,7 @@ public class TestFullGridSourceFileWriter {
 		System.out.println("Originally had "+gridProv.getNumSources()+" sources ("+origNumNonNullMFDs+" non-null) with totRate="+(float)totRateOrig);
 		System.out.println("Now have "+rupCount+" rups across "+gridSources.getNumSources()+" sources with totRate="+(float)totRateMod);
 		if (rupWithMostAssociations != null)
-			System.out.println("Most associations: "+mostAssociations+" (gridIndex="+rupWithMostAssociations.properties.gridIndex
+			System.out.println("Most associations: "+mostAssociations+" (gridIndex="+rupWithMostAssociations.gridIndex
 					+", M="+(float)rupWithMostAssociations.properties.magnitude);
 		System.out.println("******************************");
 		

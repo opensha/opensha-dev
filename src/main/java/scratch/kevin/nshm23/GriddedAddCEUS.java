@@ -13,6 +13,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultCubeAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModelRegion;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.NSHM23_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_CombinedRegionGridSourceProvider;
@@ -33,7 +34,7 @@ public class GriddedAddCEUS {
 		FaultSystemSolution sol = FaultSystemSolution.load(baSolFile);
 		FaultSystemRupSet rupSet = sol.getRupSet();
 		
-		GridSourceProvider wusProv = sol.getGridSourceProvider();
+		MFDGridSourceProvider wusProv = sol.requireModule(MFDGridSourceProvider.class);
 		FaultCubeAssociations wusCubes = rupSet.requireModule(FaultCubeAssociations.class);
 		
 		// average across Mmax
@@ -60,7 +61,7 @@ public class GriddedAddCEUS {
 		}
 		
 		System.out.println("Building averaged CEUS grid prov");
-		GridSourceProvider ceusProv = ceusProvAccumulator.getAverage();
+		MFDGridSourceProvider ceusProv = (MFDGridSourceProvider)ceusProvAccumulator.getAverage();
 		
 		System.out.println("Building stitched cubes");
 		GriddedRegion stitchedReg = NSHM23_InvConfigFactory.getGriddedSeisRegion(

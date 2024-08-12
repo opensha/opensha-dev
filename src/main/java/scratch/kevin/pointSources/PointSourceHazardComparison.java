@@ -63,6 +63,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.rupForecastImpl.PointEqkSource;
@@ -2001,7 +2002,7 @@ public class PointSourceHazardComparison {
 				ImmutableMap<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs = subSeisBuilder.build();
 				ImmutableMap<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs = unassociatedBuilder.build();
 				gridProv = new NSHM23_AbstractGridSourceProvider.Precomputed(region, nodeSubSeisMFDs, nodeUnassociatedMFDs,
-						fracStrikeSlip, fracNormal, fracReverse);
+						fracStrikeSlip, fracNormal, fracReverse, ((MFDGridSourceProvider)gridProv).getTectonicRegionTypeArray());
 			}
 			
 			lines.add("## "+modelLabel+" Gridded Seismicity Hazard");
