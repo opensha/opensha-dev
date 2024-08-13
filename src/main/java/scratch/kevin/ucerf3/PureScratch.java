@@ -109,6 +109,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.FaultCubeAssociations
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupture;
+import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRupturePropertiesCache;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ModSectMinMags;
@@ -143,6 +144,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.FaultSegme
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.A_FaultsFetcher;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.finalReferenceFaultParamDb.DeformationModelSummaryFinal;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider.NSHM23_WUS_FiniteRuptureConverter;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
@@ -172,6 +174,7 @@ import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.srf.RSQSimStateTime;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
+import org.opensha.sha.util.FocalMech;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Preconditions;
@@ -2577,13 +2580,107 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test319() throws IOException {
+		FaultSystemSolution sol1 = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged_gridded.zip"));
+		FaultSystemSolution sol2 = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2024_02_02-nshm23_branches-WUS_FM_v3-gridded_rebuild/results_WUS_FM_v3_branch_averaged_gridded.zip"));
+		
+		MFDGridSourceProvider mfdProv = sol1.requireModule(MFDGridSourceProvider.class);
+		FaultCubeAssociations assoc = sol1.getRupSet().requireModule(FaultCubeAssociations.class);
+		GridSourceList sourceList = sol2.requireModule(GridSourceList.class);
+		
+		// filter the MFD provider to be the same minimum magnitude
+		double sourceListMinMag = Double.POSITIVE_INFINITY;
+		for (int i=0; i<mfdProv.getNumLocations(); i++)
+			for (GriddedRupture rup : sourceList.getRuptures(mfdProv.getTectonicRegionType(i), i))
+				sourceListMinMag = Math.min(sourceListMinMag, rup.properties.magnitude);
+		mfdProv = (MFDGridSourceProvider) mfdProv.getAboveMinMag((float)sourceListMinMag);
+		
+		for (int i=0; i<mfdProv.getNumLocations(); i++) {
+			TectonicRegionType trt = mfdProv.getTectonicRegionType(i);
+			IncrementalMagFreqDist mfdSubSeis1 = mfdProv.getMFD_SubSeisOnFault(i);
+			IncrementalMagFreqDist mfdSubSeis2 = sourceList.getMFD_SubSeisOnFault(trt, i);
+			IncrementalMagFreqDist mfdUnassoc1 = mfdProv.getMFD_Unassociated(i);
+			IncrementalMagFreqDist mfdUnassoc2 = sourceList.getMFD_Unassociated(trt, i);
+			
+		}
+	}
+	
+	private static void test320() throws IOException {
+		Location loc = new Location(0d, 0d);
+		LocationList locs = new LocationList();
+		locs.add(loc);
+		
+		GutenbergRichterMagFreqDist gr1 = new GutenbergRichterMagFreqDist(5.05, 21, 0.1);
+		gr1.setAllButTotMoRate(gr1.getMinX(), gr1.getMaxX(), 1d, 1d);
+		GutenbergRichterMagFreqDist gr2 = new GutenbergRichterMagFreqDist(5.05, 31, 0.1);
+		gr2.setAllButTotMoRate(gr2.getMinX(), gr2.getMaxX(), 1d, 1d);
+		
+		NSHM23_WUS_FiniteRuptureConverter conv = new NSHM23_WUS_FiniteRuptureConverter();
+		GriddedRupturePropertiesCache cache = new GriddedRupturePropertiesCache();
+		
+		int[] assocIDs = {0};
+		double[] assocFracts = {0.5d};
+		
+		List<GriddedRupture> rupList1 = new ArrayList<>(1);
+		for (int i=0; i<gr1.size(); i++)
+			rupList1.add(conv.buildFiniteRupture(0, loc, gr1.getX(i), gr1.getY(i),
+					FocalMech.STRIKE_SLIP, TectonicRegionType.ACTIVE_SHALLOW, assocIDs, assocFracts, cache));
+		GridSourceList list1 = new GridSourceList.Precomputed(locs, TectonicRegionType.ACTIVE_SHALLOW, List.of(rupList1));
+		
+		List<GriddedRupture> rupList2 = new ArrayList<>(1);
+		for (int i=0; i<gr2.size(); i++)
+			rupList2.add(conv.buildFiniteRupture(0, loc, gr2.getX(i), gr2.getY(i),
+					FocalMech.STRIKE_SLIP, TectonicRegionType.ACTIVE_SHALLOW, assocIDs, assocFracts, cache));
+		GridSourceList list2 = new GridSourceList.Precomputed(locs, TectonicRegionType.ACTIVE_SHALLOW, List.of(rupList2));
+		
+		AveragingAccumulator<GridSourceProvider> averager = list1.averagingAccumulator();
+		averager.process(list1, 0.5);
+		averager.process(list2, 0.5);
+		GridSourceList average = (GridSourceList)averager.getAverage();
+		
+		IncrementalMagFreqDist refMFD = gr2;
+		IncrementalMagFreqDist mfdSubSeis1 = list1.getMFD_SubSeisOnFault(0);
+		IncrementalMagFreqDist mfdSubSeis2 = list2.getMFD_SubSeisOnFault(0);
+		IncrementalMagFreqDist mfdSubSeis3 = average.getMFD_SubSeisOnFault(0);
+		IncrementalMagFreqDist mfdUnassoc1 = list1.getMFD_Unassociated(0);
+		IncrementalMagFreqDist mfdUnassoc2 = list2.getMFD_Unassociated(0);
+		IncrementalMagFreqDist mfdUnassoc3 = average.getMFD_Unassociated(0);
+		
+		System.out.println("MFDs\tUnAssoc1\tUnAssoc2\tUnAssoc3\tSubSeis1\tSubSeis2\tSubSeis3");
+		for (int x=0; x<refMFD.size(); x++) {
+			double unassoc1 = 0d;
+			if (mfdUnassoc1 != null && mfdUnassoc1.size() > x)
+				unassoc1 = mfdUnassoc1.getY(x);
+			double unassoc2 = 0d;
+			if (mfdUnassoc2 != null && mfdUnassoc2.size() > x)
+				unassoc2 = mfdUnassoc2.getY(x);
+			double unassoc3 = 0d;
+			if (mfdUnassoc3 != null && mfdUnassoc3.size() > x)
+				unassoc3 = mfdUnassoc3.getY(x);
+			double subSeis1 = 0d;
+			if (mfdSubSeis1 != null && mfdSubSeis1.size() > x)
+				subSeis1 = mfdSubSeis1.getY(x);
+			double subSeis2 = 0d;
+			if (mfdSubSeis2 != null && mfdSubSeis2.size() > x)
+				subSeis2 = mfdSubSeis2.getY(x);
+			double subSeis3 = 0d;
+			if (mfdSubSeis3 != null && mfdSubSeis3.size() > x)
+				subSeis3 = mfdSubSeis3.getY(x);
+			
+			System.out.println((float)refMFD.getX(x)+"\t"+(float)unassoc1+"\t"+(float)unassoc2+"\t"+(float)unassoc3
+					+"\t"+(float)subSeis1+"\t"+(float)subSeis2+"\t"+(float)subSeis3);
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test318();
+			test320();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
