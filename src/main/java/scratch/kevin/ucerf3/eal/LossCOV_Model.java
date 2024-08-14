@@ -3,6 +3,7 @@ package scratch.kevin.ucerf3.eal;
 import java.awt.Color;
 
 import org.apache.commons.math3.distribution.LogNormalDistribution;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -15,18 +16,36 @@ import com.google.common.base.Preconditions;
 
 public enum LossCOV_Model {
 	
-	PORTER_POWER_LAW_2020_09_01 {
+//	// not implementing this because it requires the x-axis values of the func supplied in calcLossExceedanceProbs to be modified too
+//	PORTER_POWER_LAW_2024_08_09 { // meanLoss is loss (in dollars) divided by total portfolio value in units of $1000
+//		@Override
+//		public double getCOV(double meanLoss) {
+//			return Math.min(2.026, 0.9832*Math.pow(meanLoss, -0.117));
+//		}
+//	},
+	PORTER_POWER_LAW_2020_09_01 { // Here, meanLoss is loss in units of $1000
 		@Override
 		public double getCOV(double meanLoss) {
 			return 4.4751*Math.pow(Math.max(1000, meanLoss), -0.1152);
 		}
+	},
+	PORTER_POWER_LAW_2020_09_01_fixed { // fixed to be consistent with Keith's manuscripts; Here, meanLoss is loss in units of $1000
+		@Override
+		public double getCOV(double meanLoss) {
+			return 4.546*Math.pow(Math.max(1000, meanLoss), -0.117);
+		}
 	};
+
 	
 	public abstract double getCOV(double meanLoss);
 	
 	public LogNormalDistribution getDistribution(double meanLoss) {
 		Preconditions.checkState(meanLoss > 0d);
-		return new LogNormalDistribution(Math.log(meanLoss), getCOV(meanLoss));
+		double cov = getCOV(meanLoss);
+		double sigma = Math.sqrt(Math.log(cov*cov+1));
+		double mu = Math.log(meanLoss)-(sigma*sigma/2);
+
+		return new LogNormalDistribution(mu, sigma);
 	}
 	
 	public DiscretizedFunc calcLossExceedanceProbs(DiscretizedFunc xVals, double meanLoss) {
@@ -46,7 +65,17 @@ public enum LossCOV_Model {
 	}
 	
 	public static void main(String[] args) {
-		LossCOV_Model model = PORTER_POWER_LAW_2020_09_01;
+		LossCOV_Model model = PORTER_POWER_LAW_2020_09_01_fixed;
+		
+		// test lognormal distribution
+        double mean = 1e5;
+        double cov = model.getCOV(mean);
+        double samples[] =      model.getDistribution(mean).sample(100000000);
+        DescriptiveStatistics stats = new DescriptiveStatistics(samples);
+        double meanFromDist = stats.getMean();
+        double covFromDist = stats.getStandardDeviation()/meanFromDist;
+       System.out.println("mean="+mean+";\tmeanFromDist="+meanFromDist+";\tcov="+cov+";\tcovFromDist="+
+    		   covFromDist+"; meanRatio="+(float)(meanFromDist/mean)+"; covRatio="+(float)(covFromDist/cov));
 		
 		EvenlyDiscretizedFunc logFunc = new EvenlyDiscretizedFunc(0d, 8d, 500);
 		ArbitrarilyDiscretizedFunc func = new ArbitrarilyDiscretizedFunc();
