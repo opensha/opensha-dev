@@ -13,7 +13,7 @@ import org.opensha.commons.logicTree.LogicTreeLevel.EnumBackedLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.sha.imr.AttenRelSupplier;
 import org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_AttenRelSupplier;
-import org.opensha.sha.imr.logicTree.ScalarIMR_LogicTreeNode;
+import org.opensha.sha.imr.logicTree.ScalarIMRsLogicTreeNode;
 import org.opensha.sha.imr.logicTree.ScalarIMR_ParamsLogicTreeNode;
 
 import com.google.common.base.Preconditions;
@@ -77,12 +77,12 @@ public class GMMLogicTreeWriter {
 	}
 	
 	private static boolean isGMMLevel(LogicTreeLevel<?> level) {
-		return ScalarIMR_LogicTreeNode.class.isAssignableFrom(level.getType()) ||
+		return ScalarIMRsLogicTreeNode.class.isAssignableFrom(level.getType()) ||
 				ScalarIMR_ParamsLogicTreeNode.class.isAssignableFrom(level.getType());
 	}
 	
 	@AffectsNone
-	public static enum NGAW2_Node implements ScalarIMR_LogicTreeNode {
+	public static enum NGAW2_Node implements ScalarIMRsLogicTreeNode.Single {
 		ASK(Gmm.ASK_14_BASE),
 		BSSA(Gmm.BSSA_14_BASE),
 		CB(Gmm.CB_14_BASE),

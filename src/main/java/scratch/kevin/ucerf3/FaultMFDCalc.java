@@ -22,6 +22,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
@@ -42,7 +43,7 @@ public class FaultMFDCalc {
 				new File("/home/kevin/workspace/OpenSHA/dev/scratch/UCERF3/data/scratch/InversionSolutions/"
 						+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_MEAN_BRANCH_AVG_SOL.zip"));
 		FaultSystemRupSet rupSet = sol.getRupSet();
-		GridSourceProvider gridProv = sol.getGridSourceProvider();
+		MFDGridSourceProvider gridProv = sol.requireModule(MFDGridSourceProvider.class);
 		FaultGridAssociations polyMgr = FaultPolyMgr.create(rupSet.getFaultSectionDataList(), U3InversionTargetMFDs.FAULT_BUFFER);
 		
 		Map<String, int[]> parentIDsMap = new HashMap<>();
@@ -93,7 +94,7 @@ public class FaultMFDCalc {
 			offMFD.setName("Sub-Seimogenic");
 			int numMatches = 0;
 			double totFractMatch = 0;
-			for (int i=0; i<gridProv.size(); i++) {
+			for (int i=0; i<gridProv.getNumLocations(); i++) {
 				IncrementalMagFreqDist subSeisMFD = gridProv.getMFD_SubSeisOnFault(i);
 				if (subSeisMFD == null)
 					continue;

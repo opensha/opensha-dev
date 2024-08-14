@@ -15,8 +15,10 @@ import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -257,7 +259,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 		
 		// this generates a new source instance, but the ruptures in that source
 		// reuse properties. so we can only iterate over it, thus the custom iterable
-		ProbEqkSource source = getSource(node, 1d, false, BackgroundRupType.POINT);
+		ProbEqkSource source = getSource(node, 1d, null, BackgroundRupType.POINT);
 		SubsetIterable iterable = new SubsetIterable(source);
 		
 		List<Double> rupMags = Lists.newArrayList();
@@ -334,7 +336,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 			
 			@Override
 			public ProbEqkSource getSource(int idx) {
-				return gridProv.getSource(sourceIndexes.get(idx), 1d, false, BackgroundRupType.POINT);
+				return gridProv.getSource(sourceIndexes.get(idx), 1d, null, BackgroundRupType.POINT);
 			}
 			
 			@Override
@@ -357,9 +359,9 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 	}
 
 	@Override
-	public GridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
+	public MFDGridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
 			Map<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs, double[] fracStrikeSlip, double[] fracNormal,
-			double[] fracReverse) {
+			double[] fracReverse, TectonicRegionType[] trts) {
 		throw new UnsupportedOperationException("Not implemented");
 	}
 

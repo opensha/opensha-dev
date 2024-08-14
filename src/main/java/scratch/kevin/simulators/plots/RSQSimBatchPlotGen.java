@@ -648,7 +648,7 @@ public class RSQSimBatchPlotGen {
 		IncrementalMagFreqDist u3MFD = u3Sol.calcTotalNucleationMFD(u3MinMag, u3MaxMag, u3Delta);
 		if (u3Sol.getGridSourceProvider() != null) {
 			GridSourceProvider gridProv = u3Sol.getGridSourceProvider();
-			for (int i=0; i<gridProv.size(); i++) {
+			for (int i=0; i<gridProv.getNumLocations(); i++) {
 				IncrementalMagFreqDist nodeMFD;
 				if (offFault)
 					nodeMFD = gridProv.getMFD(i);

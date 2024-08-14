@@ -144,7 +144,7 @@ public class SingleSiteVerificationTest {
 		calc.getHazardCurve(logXVals, site, gmpe, erf);
 		DiscretizedFunc wrapperFaultCurve = toLinear(logXVals, xVals);
 		
-		ProbEqkSource modelTestSrc = gridProv.getSource(testIndex, 1d, false, BackgroundRupType.POINT);
+		ProbEqkSource modelTestSrc = gridProv.getSource(testIndex, 1d, null, BackgroundRupType.POINT);
 		FaultSystemSolutionERF modelERF = new FaultSystemSolutionERF(baSol);
 		modelERF.setParameter(ApplyGardnerKnopoffAftershockFilterParam.NAME, false);
 		modelERF.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);

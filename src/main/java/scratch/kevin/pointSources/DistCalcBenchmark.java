@@ -21,6 +21,7 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 
 import com.google.common.base.Stopwatch;
 
@@ -42,10 +43,10 @@ class DistCalcBenchmark {
 			switch (this) {
 			case PT_SURF_FOOTWALL:
 				builder.footwall(true);
-				return builder.buildPointSurface();
+				return builder.buildFiniteApproxPointSurface();
 			case PT_SURF_HANGING_WALL:
 				builder.footwall(false);
-				return builder.buildPointSurface();
+				return builder.buildFiniteApproxPointSurface();
 			case FINITE_GRIDDED:
 				return builder.buildGriddedSurface();
 			case FINITE_QUAD:

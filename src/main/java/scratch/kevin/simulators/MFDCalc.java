@@ -220,7 +220,7 @@ public class MFDCalc {
 				GriddedRegion reg = prov.getGriddedRegion();
 				compSubSeis = new SummedMagFreqDist(compSupraSeis.getMinX(), compSupraSeis.size(), compSupraSeis.getDelta());
 				compTotal = new SummedMagFreqDist(compSupraSeis.getMinX(), compSupraSeis.size(), compSupraSeis.getDelta());
-				for (int index=0; index<prov.size(); index++) {
+				for (int index=0; index<prov.getNumLocations(); index++) {
 					if (region == null || region.contains(reg.getLocation(index))) {
 						IncrementalMagFreqDist associatedMFD = prov.getMFD_SubSeisOnFault(index);
 						if (associatedMFD != null)

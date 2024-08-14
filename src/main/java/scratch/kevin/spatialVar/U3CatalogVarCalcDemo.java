@@ -101,7 +101,7 @@ public class U3CatalogVarCalcDemo {
 				RuptureSurface surf = null;
 				if (gridIndex >= 0) {
 					// match
-					ProbEqkSource gridSource = gridProv.getSource(gridIndex, 1d, false, BackgroundRupType.POINT);
+					ProbEqkSource gridSource = gridProv.getSource(gridIndex, 1d, null, BackgroundRupType.POINT);
 					
 					// there can be multiple ruptures with that magnitude, possibly with different rakes. randomly choose one
 					double magTol = 0.05;

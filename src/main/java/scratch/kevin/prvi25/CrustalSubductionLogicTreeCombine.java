@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23.prvi;
+package scratch.kevin.prvi25;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -63,8 +63,20 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		if (cmd.hasOption("gridded-seis"))
 			bgOp = IncludeBackgroundOption.valueOf(cmd.getOptionValue("gridded-seis"));
 		
-		SolutionLogicTree crustalSLT = SolutionLogicTree.load(new File(crustalDir, resultsFileName));
-		SolutionLogicTree subductionSLT = SolutionLogicTree.load(new File(subductionDir, resultsFileName));
+		SolutionLogicTree crustalSLT;
+		SolutionLogicTree subductionSLT;
+		if (cmd.hasOption("logic-tree-file-name")) {
+			String logicTreeFileName = cmd.getOptionValue("logic-tree-file-name");
+			File crustalLogicTreefile = new File(crustalDir, logicTreeFileName);
+			LogicTree<?> crustalTree = LogicTree.read(crustalLogicTreefile);
+			File subductionLogicTreeFile = new File(subductionDir, logicTreeFileName);
+			LogicTree<?> subductionTree = LogicTree.read(subductionLogicTreeFile);
+			crustalSLT = SolutionLogicTree.load(new File(crustalDir, resultsFileName), crustalTree);
+			subductionSLT = SolutionLogicTree.load(new File(subductionDir, resultsFileName), subductionTree);
+		} else {
+			crustalSLT = SolutionLogicTree.load(new File(crustalDir, resultsFileName));
+			subductionSLT = SolutionLogicTree.load(new File(subductionDir, resultsFileName));
+		}
 		
 		crustalSLT.setVerbose(false);
 		subductionSLT.setVerbose(false);
@@ -74,7 +86,9 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 				"Crustal and subduction gridded regions differ");
 		
 		String outputHazardFileName;
-		if (bgOp == IncludeBackgroundOption.EXCLUDE)
+		if (cmd.hasOption("output-hazard-file-name"))
+			outputHazardFileName = cmd.getOptionValue("output-hazard-file-name");
+		else if (bgOp == IncludeBackgroundOption.EXCLUDE)
 			outputHazardFileName = "results_hazard.zip";
 		else if (bgOp == IncludeBackgroundOption.INCLUDE)
 			outputHazardFileName = "results_hazard_gridded.zip";
@@ -83,10 +97,12 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		else
 			throw new IllegalStateException();
 		
+		File resultsOutputFile = cmd.hasOption("disable-write-results") ? null : new File(outputDir, resultsFileName);
+		
 		CrustalSubductionLogicTreeCombine combiner = new CrustalSubductionLogicTreeCombine(
 				crustalSLT, new File(crustalDir, hazardDirName), bgOp,
 				subductionSLT, new File(subductionDir, hazardDirName), bgOp,
-				new File(outputDir, resultsFileName),
+				resultsOutputFile,
 				new File(outputDir, outputHazardFileName), gridReg);
 		
 		if (cmd.hasOption("samples")) {
@@ -109,8 +125,11 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		ops.addOption(null, "gridded-seis", true, "Gridded seismicity option. One of "
 				+FaultSysTools.enumOptions(IncludeBackgroundOption.class)+". Default: "+GRID_SEIS_DEFAULT.name());
 		ops.addOption(null, "results-file-name", true, "Results file name. Default: "+RESULTS_FILE_NAME_DEFAULT);
+		ops.addOption(null, "logic-tree-file-name", true, "Logic tree file name. Default uses that from results file");
 		ops.addOption(null, "hazard-dir-name", true, "Hazard dir name. Default: "+HAZARD_DIR_NAME_DEFAULT);
 		ops.addOption(null, "grid-reg-file-name", true, "Gridded region file name. Default: "+GRID_REG_FILE_NAME_DEFAULT);
+		ops.addOption(null, "disable-write-results", false, "Flag to disable writing the combined solution logic tree fule");
+		ops.addOption(null, "output-hazard-file-name", true, "Name for output hazard file; default depends on background seismicity.");
 		
 		return ops;
 	}

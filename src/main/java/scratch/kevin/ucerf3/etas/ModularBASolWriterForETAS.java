@@ -208,7 +208,7 @@ public class ModularBASolWriterForETAS {
 	
 	private static IncrementalMagFreqDist gridSourceTotMFD(GridSourceProvider gridSources) {
 		IncrementalMagFreqDist totMFD = null;
-		for (int i=0; i<gridSources.size(); i++) {
+		for (int i=0; i<gridSources.getNumLocations(); i++) {
 			IncrementalMagFreqDist mfd = gridSources.getMFD(i);
 			if (mfd == null)
 				continue;

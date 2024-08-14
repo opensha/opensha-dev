@@ -207,7 +207,7 @@ public class ObservedUncertainMFDComparisons {
 			GridSourceProvider gridProv = baSol.getGridSourceProvider();
 			if (gridProv != null) {
 				IncrementalMagFreqDist baTotIncr = modelSupraIncr.deepClone();
-				for (int i=0; i<gridProv.size(); i++) {
+				for (int i=0; i<gridProv.getNumLocations(); i++) {
 					Location loc = gridProv.getGriddedRegion().getLocation(i);
 					if (region.contains(loc)) {
 						IncrementalMagFreqDist gridMFD = gridProv.getMFD(i);
@@ -319,7 +319,7 @@ public class ObservedUncertainMFDComparisons {
 					GridSourceProvider gridProv = nodeSol.getGridSourceProvider();
 					if (gridProv != null) {
 						// add gridded seismicity
-						for (int i=0; i<gridProv.size(); i++) {
+						for (int i=0; i<gridProv.getNumLocations(); i++) {
 							Location loc = gridProv.getGriddedRegion().getLocation(i);
 							if (region.contains(loc)) {
 								IncrementalMagFreqDist gridMFD = gridProv.getMFD(i);

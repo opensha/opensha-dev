@@ -390,8 +390,8 @@ public class UCERF3_EAL_Combiner {
 		if (griddedLosses != null) {
 			// do gridded
 			GridSourceProvider gridProv = trueMeanSol.getGridSourceProvider();
-			Preconditions.checkState(gridProv.size() == griddedLosses.length,
-					"Have %s giddedLosses but grid prov has %s nodes", gridProv.size(), griddedLosses.length);
+			Preconditions.checkState(gridProv.getNumLocations() == griddedLosses.length,
+					"Have %s giddedLosses but grid prov has %s nodes", gridProv.getNumLocations(), griddedLosses.length);
 			for (int n=0; n<griddedLosses.length; n++) {
 				DiscretizedFunc griddedLossDist = griddedLosses[n];
 				IncrementalMagFreqDist mfd = gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF);

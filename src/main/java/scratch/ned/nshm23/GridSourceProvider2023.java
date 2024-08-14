@@ -37,6 +37,7 @@ import org.opensha.commons.util.FileUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -44,6 +45,7 @@ import org.opensha.sha.gui.infoTools.CalcProgressBar;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
 
 import scratch.UCERF3.analysis.GMT_CA_Maps;
 import scratch.UCERF3.enumTreeBranches.SpatialSeisPDF;
@@ -883,7 +885,7 @@ public class GridSourceProvider2023 extends AbstractGridSourceProvider {
 		GridSourceProvider gridSrcProviderU3 = fss.getGridSourceProvider();
 		IncrementalMagFreqDist tempMFD = gridSrcProviderU3.getMFD(0);
 		SummedMagFreqDist totGriddedSeisMFD = new SummedMagFreqDist(tempMFD.getMinX(), tempMFD.size(),tempMFD.getDelta());
-		for(int i=0;i<gridSrcProviderU3.size();i++) {
+		for(int i=0;i<gridSrcProviderU3.getNumLocations();i++) {
 			totGriddedSeisMFD.addIncrementalMagFreqDist(gridSrcProviderU3.getMFD(i));	
 		}
 		
@@ -904,9 +906,9 @@ public class GridSourceProvider2023 extends AbstractGridSourceProvider {
 	}
 
 	@Override
-	public GridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
+	public MFDGridSourceProvider newInstance(Map<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs,
 			Map<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs, double[] fracStrikeSlip, double[] fracNormal,
-			double[] fracReverse) {
+			double[] fracReverse, TectonicRegionType[] trts) {
 		throw new UnsupportedOperationException("Not implemented");
 	}
 

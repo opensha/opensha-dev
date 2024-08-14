@@ -64,7 +64,7 @@ public class MagExceedProbFigure {
 			IncrementalMagFreqDist fullMFD = sol.calcTotalNucleationMFD(
 					refIncrFunc.getMinX(), refIncrFunc.getMaxX(), refIncrFunc.getDelta());
 			GridSourceProvider prov = sol.getGridSourceProvider();
-			for (int i=0; i<prov.size(); i++) {
+			for (int i=0; i<prov.getNumLocations(); i++) {
 				IncrementalMagFreqDist mfd = prov.getMFD(i);
 				if (mfd == null)
 					continue;

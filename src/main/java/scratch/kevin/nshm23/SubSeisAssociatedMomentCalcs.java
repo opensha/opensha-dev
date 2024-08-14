@@ -39,7 +39,7 @@ public class SubSeisAssociatedMomentCalcs {
 		double totAssocSubSeisMo = 0d;
 		double[] sectAssocSubSeisMos = new double[rupSet.getNumSections()];
 		
-		for (int i=0; i<gridProv.size(); i++) {
+		for (int i=0; i<gridProv.getNumLocations(); i++) {
 			Map<Integer, Double> sectFracts = assoc.getScaledSectFracsOnNode(i);
 			if (sectFracts != null && !sectFracts.isEmpty()) {
 				double sumFract = 0d;

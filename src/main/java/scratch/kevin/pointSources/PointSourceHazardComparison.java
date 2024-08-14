@@ -63,6 +63,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.rupForecastImpl.PointEqkSource;
@@ -73,9 +74,11 @@ import org.opensha.sha.earthquake.rupForecastImpl.PointToFiniteSource;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_AbstractGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
+import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 import org.opensha.sha.faultSurface.utils.PtSrcDistCorr.Type;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
@@ -427,7 +430,7 @@ public class PointSourceHazardComparison {
 			double probEach = 1-Math.exp(-rateEach);
 			for (boolean footwall : footwalls) {
 				builder.footwall(footwall);
-				FiniteApproxPointSurface surf = builder.buildPointSurface();
+				FiniteApproxPointSurface surf = builder.buildFiniteApproxPointSurface();
 				surf.setDistCorrMagAndType(mag, corrType);
 				rups.add(new ProbEqkRupture(mag, aveRake, probEach, surf, null));
 			}
@@ -748,7 +751,7 @@ public class PointSourceHazardComparison {
 			sourceCalls = new ArrayList<>();
 			this.distCorrType = type.distCorrType;
 			GriddedRegion gridReg = gridProv.getGriddedRegion();
-			for (int i=0; i<gridProv.size(); i++) {
+			for (int i=0; i<gridProv.getNumLocations(); i++) {
 				Location centerLoc = gridReg.getLocation(i);
 				if (calcRegion.distanceToLocation(centerLoc) > maxDist)
 					continue;
@@ -1999,7 +2002,7 @@ public class PointSourceHazardComparison {
 				ImmutableMap<Integer, IncrementalMagFreqDist> nodeSubSeisMFDs = subSeisBuilder.build();
 				ImmutableMap<Integer, IncrementalMagFreqDist> nodeUnassociatedMFDs = unassociatedBuilder.build();
 				gridProv = new NSHM23_AbstractGridSourceProvider.Precomputed(region, nodeSubSeisMFDs, nodeUnassociatedMFDs,
-						fracStrikeSlip, fracNormal, fracReverse);
+						fracStrikeSlip, fracNormal, fracReverse, ((MFDGridSourceProvider)gridProv).getTectonicRegionTypeArray());
 			}
 			
 			lines.add("## "+modelLabel+" Gridded Seismicity Hazard");

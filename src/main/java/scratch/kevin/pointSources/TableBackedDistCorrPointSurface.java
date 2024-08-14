@@ -8,6 +8,7 @@ import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 
 import com.google.common.base.Preconditions;
 
