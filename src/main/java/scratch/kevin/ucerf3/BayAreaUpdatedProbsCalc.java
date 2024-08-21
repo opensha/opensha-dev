@@ -40,12 +40,18 @@ public class BayAreaUpdatedProbsCalc {
 	static Map<String, List<Integer>> loadFaultParentSectMappings() {
 		Map<String, List<Integer>> map = new HashMap<>();
 		
-		map.put("San Andreas", List.of(654, 655, 657, 658));
-		map.put("Hayward-Rodgers Creek", List.of(637, 638, 639, 651));
-		map.put("Calaveras", List.of(601, 602, 603, 621));
-		map.put("Concord", List.of(635, 636, 711, 713, 2, 622, 623, 640, 677));
-		map.put("San Gregorio", List.of(660, 661));
-		map.put("Maacama", List.of(644));
+//		map.put("San Andreas", List.of(654, 655, 657, 658));
+//		map.put("Hayward-Rodgers Creek", List.of(637, 638, 639, 651));
+//		map.put("Calaveras", List.of(601, 602, 603, 621));
+//		map.put("Concord", List.of(635, 636, 711, 713, 2, 622, 623, 640, 677));
+//		map.put("San Gregorio", List.of(660, 661));
+//		map.put("Maacama", List.of(644));
+		// these aren't bay area, but from Ruth's 8/15/24 e-mail
+		map.put("SAF Creeping", List.of(658));
+		map.put("SAF Parkfield", List.of(32));
+		map.put("Imperial", List.of(97));
+		map.put("Superstition Hills", List.of(98));
+		map.put("S. SAF", List.of(285, 300, 287, 286, 301, 282, 283, 284, 295));
 		
 		return map;
 	}
@@ -55,7 +61,8 @@ public class BayAreaUpdatedProbsCalc {
 //		int year = 2014;
 		int duration = 30;
 		
-		File outputDir = new File("/home/kevin/OpenSHA/UCERF3/bay_area_updated_probs");
+//		File outputDir = new File("/home/kevin/OpenSHA/UCERF3/bay_area_updated_probs");
+		File outputDir = new File("/tmp/ruth_probs");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		double[] minMags = {6.7, 7, 7.5};
@@ -67,7 +74,10 @@ public class BayAreaUpdatedProbsCalc {
 		MeanUCERF3 erf = new MeanUCERF3();
 		erf.setPreset(presets[0]);
 		
-		Region reg = new CaliforniaRegions.SF_BOX();
+//		String regName = "Bay Area Region";
+//		Region reg = new CaliforniaRegions.SF_BOX();
+		String regName = null;
+		Region reg = null;
 		Map<String, List<Integer>> faultIDs = loadFaultParentSectMappings();
 		
 		List<String> faultsSorted = new ArrayList<>();
@@ -77,7 +87,7 @@ public class BayAreaUpdatedProbsCalc {
 		Map<String, double[]> faultProbs = new HashMap<>();
 		for (String faultName : faultsSorted)
 			faultProbs.put(faultName, new double[minMags.length]);
-		double[] regProbs = new double[minMags.length];
+		double[] regProbs = reg == null ? new double[minMags.length] : null;
 		
 		DecimalFormat pDF = new DecimalFormat("0.00%");
 		
@@ -115,9 +125,12 @@ public class BayAreaUpdatedProbsCalc {
 				
 				List<BitSet> faultRupMappings = new ArrayList<>();
 				
-				List<List<Double>> regionalRupProbs = new ArrayList<>();
-				for (int m=0; m<minMags.length; m++)
-					regionalRupProbs.add(new ArrayList<>());
+				List<List<Double>> regionalRupProbs = null;
+				if (reg != null) {
+					regionalRupProbs = new ArrayList<>();
+					for (int m=0; m<minMags.length; m++)
+						regionalRupProbs.add(new ArrayList<>());
+				}
 				List<List<List<Double>>> faultRupProbs = new ArrayList<>();
 				
 				for (String faultName : faultsSorted) {
@@ -137,7 +150,7 @@ public class BayAreaUpdatedProbsCalc {
 					}
 				}
 				
-				double[] rupsInRegion = rupSet.getFractRupsInsideRegion(reg, false);
+				double[] rupsInRegion = reg == null ? null : rupSet.getFractRupsInsideRegion(reg, false);
 				
 				double minMinMag = StatUtils.min(minMags);
 				
@@ -147,9 +160,6 @@ public class BayAreaUpdatedProbsCalc {
 					if (sourceID < numFSS) {
 						// fault-based
 						int rupIndex = erf.getFltSysRupIndexForSource(sourceID);
-						if (rupsInRegion[rupIndex] == 0d)
-							// not in region
-							continue;
 						// see if it matches any of our faults
 						for (int i=0; i<faultRupMappings.size(); i++) {
 							if (faultRupMappings.get(i).get(rupIndex)) {
@@ -164,20 +174,25 @@ public class BayAreaUpdatedProbsCalc {
 								}
 							}
 						}
+						if (rupsInRegion != null && rupsInRegion[rupIndex] == 0d)
+							// not in region
+							continue;
 					} else {
 						Preconditions.checkState(source.getSourceSurface().isPointSurface());
 						Location loc = source.getSourceSurface().getLocationsIterator().next();
-						if (!reg.contains(loc))
+						if (reg == null || !reg.contains(loc))
 							continue;
 					}
-					// if we're here, it's contained
-					for (ProbEqkRupture rup : source) {
-						double mag = rup.getMag();
-						if (mag < minMinMag)
-							continue;
-						for (int m=0; m<minMags.length; m++)
-							if ((float)mag >= (float)minMags[m])
-								regionalRupProbs.get(m).add(rup.getProbability());
+					if (reg != null) {
+						// if we're here, it's contained
+						for (ProbEqkRupture rup : source) {
+							double mag = rup.getMag();
+							if (mag < minMinMag)
+								continue;
+							for (int m=0; m<minMags.length; m++)
+								if ((float)mag >= (float)minMags[m])
+									regionalRupProbs.get(m).add(rup.getProbability());
+						}
 					}
 				}
 				
@@ -185,9 +200,11 @@ public class BayAreaUpdatedProbsCalc {
 				System.out.println("Probabilities for "+presets[p]+", "+covs[c]);
 				for (int m=0; m<minMags.length; m++) {
 					System.out.println("M>="+(float)minMags[m]);
-					double regProb = FaultSysSolutionERF_Calc.calcSummedProbs(regionalRupProbs.get(m));
-					System.out.println("Region:\t"+pDF.format(regProb));
-					regProbs[m] += weight*regProb;
+					if (reg != null) {
+						double regProb = FaultSysSolutionERF_Calc.calcSummedProbs(regionalRupProbs.get(m));
+						System.out.println("Region:\t"+pDF.format(regProb));
+						regProbs[m] += weight*regProb;
+					}
 					for (int i=0; i<faultsSorted.size(); i++) {
 						double faultProb = FaultSysSolutionERF_Calc.calcSummedProbs(faultRupProbs.get(i).get(m));
 						System.out.println(faultsSorted.get(i)+":\t"+pDF.format(faultProb));
@@ -206,11 +223,13 @@ public class BayAreaUpdatedProbsCalc {
 			header.add("M>="+(float)minMag);
 		csv.addLine(header);
 		
-		List<String> regLine = new ArrayList<>();
-		regLine.add("Bay Area Region");
-		for (int m=0; m<minMags.length; m++)
-			regLine.add(pDF.format(regProbs[m]));
-		csv.addLine(regLine);
+		if (reg != null) {
+			List<String> regLine = new ArrayList<>();
+			regLine.add(regName);
+			for (int m=0; m<minMags.length; m++)
+				regLine.add(pDF.format(regProbs[m]));
+			csv.addLine(regLine);
+		}
 		
 		for (String faultName : faultsSorted) {
 			List<String> line = new ArrayList<>();

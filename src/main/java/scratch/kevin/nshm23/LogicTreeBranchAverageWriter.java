@@ -23,6 +23,7 @@ import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeLevel;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.util.ExceptionUtils;
+import org.opensha.commons.util.ExecutorUtils;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchAverageableModule;
@@ -262,9 +263,7 @@ public class LogicTreeBranchAverageWriter {
 		// this dicates how far ahead we will read in solutions, needs to be > asyncThreads to make use of parallel
 		// reading, but should be small enough soas to not use too much memory storing to-be-processed solutions
 		int maxTasks = Integer.min(asyncThreads * 2, asyncThreads + 2);
-		ExecutorService exec = new ThreadPoolExecutor(asyncThreads, asyncThreads,
-                0L, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<Runnable>(maxTasks), new ThreadPoolExecutor.CallerRunsPolicy());
+		ExecutorService exec = ExecutorUtils.newBlockingThreadPool(asyncThreads, maxTasks);
 		
 		int count = 0;
 		List<Future<?>> futures = new ArrayList<>();

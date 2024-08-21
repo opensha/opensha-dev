@@ -63,23 +63,37 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		if (cmd.hasOption("gridded-seis"))
 			bgOp = IncludeBackgroundOption.valueOf(cmd.getOptionValue("gridded-seis"));
 		
+		LogicTree<?> crustalLT;
 		SolutionLogicTree crustalSLT;
+		LogicTree<?> subductionLT;
 		SolutionLogicTree subductionSLT;
 		if (cmd.hasOption("logic-tree-file-name")) {
 			String logicTreeFileName = cmd.getOptionValue("logic-tree-file-name");
 			File crustalLogicTreefile = new File(crustalDir, logicTreeFileName);
-			LogicTree<?> crustalTree = LogicTree.read(crustalLogicTreefile);
+			crustalLT = LogicTree.read(crustalLogicTreefile);
 			File subductionLogicTreeFile = new File(subductionDir, logicTreeFileName);
-			LogicTree<?> subductionTree = LogicTree.read(subductionLogicTreeFile);
-			crustalSLT = SolutionLogicTree.load(new File(crustalDir, resultsFileName), crustalTree);
-			subductionSLT = SolutionLogicTree.load(new File(subductionDir, resultsFileName), subductionTree);
+			subductionLT = LogicTree.read(subductionLogicTreeFile);
+			File crustalSLTFile = new File(crustalDir, resultsFileName);
+			if (crustalSLTFile.exists())
+				crustalSLT = SolutionLogicTree.load(crustalSLTFile, crustalLT);
+			else
+				crustalSLT = null;
+			File subductionSLTFile = new File(subductionDir, resultsFileName);
+			if (subductionSLTFile.exists())
+				subductionSLT = SolutionLogicTree.load(subductionSLTFile, subductionLT);
+			else
+				subductionSLT = null;
 		} else {
 			crustalSLT = SolutionLogicTree.load(new File(crustalDir, resultsFileName));
+			crustalLT = crustalSLT.getLogicTree();
 			subductionSLT = SolutionLogicTree.load(new File(subductionDir, resultsFileName));
+			subductionLT = subductionSLT.getLogicTree();
 		}
 		
-		crustalSLT.setVerbose(false);
-		subductionSLT.setVerbose(false);
+		if (crustalSLT != null)
+			crustalSLT.setVerbose(false);
+		if (subductionSLT != null)
+			subductionSLT.setVerbose(false);
 		
 		GriddedRegion gridReg = loadGridReg(new File(crustalDir, gridRegFileName));
 		Preconditions.checkState(gridReg.equals(loadGridReg(new File(subductionDir, gridRegFileName))),
@@ -91,35 +105,67 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		else if (bgOp == IncludeBackgroundOption.EXCLUDE)
 			outputHazardFileName = "results_hazard.zip";
 		else if (bgOp == IncludeBackgroundOption.INCLUDE)
-			outputHazardFileName = "results_hazard_gridded.zip";
+			outputHazardFileName = "results_hazard_full_gridded.zip";
 		else if (bgOp == IncludeBackgroundOption.ONLY)
 			outputHazardFileName = "results_hazard_gridded_only.zip";
 		else
 			throw new IllegalStateException();
 		
-		File resultsOutputFile = cmd.hasOption("disable-write-results") ? null : new File(outputDir, resultsFileName);
-		
+//		CrustalSubductionLogicTreeCombine combiner = new CrustalSubductionLogicTreeCombine(
+//				crustalLT, crustalSLT, new File(crustalDir, hazardDirName), bgOp,
+//				subductionLT, subductionSLT, new File(subductionDir, hazardDirName), bgOp,
+//				resultsOutputFile,
+//				new File(outputDir, outputHazardFileName), gridReg);
 		CrustalSubductionLogicTreeCombine combiner = new CrustalSubductionLogicTreeCombine(
-				crustalSLT, new File(crustalDir, hazardDirName), bgOp,
-				subductionSLT, new File(subductionDir, hazardDirName), bgOp,
-				resultsOutputFile,
-				new File(outputDir, outputHazardFileName), gridReg);
+				crustalLT, subductionLT);
+		
+		if (!cmd.hasOption("disable-write-results")) {
+			File resultsOutputFile = new File(outputDir, resultsFileName);
+			Preconditions.checkNotNull(crustalSLT);
+			Preconditions.checkNotNull(subductionSLT);
+			combiner.setWriteSLTs(crustalSLT, subductionSLT, resultsOutputFile);
+		}
+		
+		combiner.setCombineHazardMaps(new File(crustalDir, hazardDirName), bgOp,
+				new File(subductionDir, hazardDirName), bgOp, new File(outputDir, outputHazardFileName), gridReg);
+		
+		long treeSize = (long)crustalLT.size()*(long)subductionLT.size();
+		if (cmd.hasOption("pre-samples")) {
+			// more memory efficient pre-sampling version
+			int samples = Integer.parseInt(cmd.getOptionValue("pre-samples"));
+			long seed = cmd.hasOption("rand-seed") ? Long.parseLong(cmd.getOptionValue("rand-seed")) : treeSize*(long)samples;
+			combiner.pairwiseSampleTree(samples, seed);
+		}
 		
 		if (cmd.hasOption("samples")) {
 			int samples = Integer.parseInt(cmd.getOptionValue("samples"));
-			int treeSize = combiner.getCombTree().size();
 			if (samples < treeSize) {
-				long seed = cmd.hasOption("rand-seed") ? Long.parseLong(cmd.getOptionValue("rand-seed")) : (long)treeSize*(long)samples;
+				long seed = cmd.hasOption("rand-seed") ? Long.parseLong(cmd.getOptionValue("rand-seed")) : treeSize*(long)samples;
 				combiner.sampleTree(samples, seed);
 			}
 		}
 		
-		combiner.build();
+		LogicTree<LogicTreeNode> combTree = combiner.getCombTree();
+		File treeOutputFile;
+		if (cmd.hasOption("logic-tree-file-name"))
+			treeOutputFile = new File(outputDir, cmd.getOptionValue("logic-tree-file-name"));
+		else
+			treeOutputFile = new File(outputDir, "logic_tree_"+bgOp.name()+".json");
+		combTree.write(treeOutputFile);
+		
+		try {
+			combiner.build();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 	
 	public static Options createOptions() {
 		Options ops = new Options();
-		
+
+		ops.addOption(null, "pre-samples", true, "Number of pre-samples to draw. This is more memory efficient and doesn't require "
+				+ "instantiating the entire tree in memory first.");
 		ops.addOption(null, "samples", true, "Number of samples to draw");
 		ops.addOption(null, "rand-seed", true, "Random seed for use when sampling");
 		ops.addOption(null, "gridded-seis", true, "Gridded seismicity option. One of "
@@ -134,11 +180,8 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		return ops;
 	}
 
-	public CrustalSubductionLogicTreeCombine(SolutionLogicTree outerSLT, File outerHazardDir,
-			IncludeBackgroundOption outerBGOp, SolutionLogicTree innerSLT, File innerHazardDir,
-			IncludeBackgroundOption innerBGOp, File outputSLTFile, File outputHazardFile, GriddedRegion gridReg) {
-		super(outerSLT, outerHazardDir, outerBGOp, innerSLT, innerHazardDir, innerBGOp, outputSLTFile, outputHazardFile,
-				gridReg);
+	public CrustalSubductionLogicTreeCombine(LogicTree<?> outerLT, LogicTree<?> innerLT) {
+		super(outerLT, innerLT);
 	}
 	
 	private static GriddedRegion loadGridReg(File regFile) throws IOException {
@@ -212,8 +255,8 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 	}
 
 	@Override
-	protected boolean canSkipLevel(LogicTreeLevel<?> level, boolean inner) {
-		return false;
+	protected List<LogicTreeLevel<?>> getCommonLevels() {
+		return List.of();
 	}
 
 }

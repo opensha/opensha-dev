@@ -8,7 +8,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
+import java.io.StringReader;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -23,6 +25,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
@@ -97,6 +102,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
+import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchAveragingOrder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchParentSectParticMFDs;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchRegionalMFDs;
@@ -156,6 +162,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoade
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalGMMs;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.SeismicityRegions;
@@ -165,7 +173,11 @@ import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.nshmp.NSHMP_GMM_Wrapper;
+import org.opensha.sha.imr.attenRelImpl.nshmp.util.NSHMP_GMM_Branch;
+import org.opensha.sha.imr.attenRelImpl.nshmp.util.NSHMP_GMM_EpistemicBranchLevel;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.OtherParams.TectonicRegionTypeParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -185,6 +197,7 @@ import com.google.common.collect.Table;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import gov.usgs.earthquake.nshmp.gmm.Gmm;
 import gov.usgs.earthquake.nshmp.mfd.Mfd.Properties.GutenbergRichter;
 import gov.usgs.earthquake.nshmp.model.NshmErf;
 import gov.usgs.earthquake.nshmp.model.NshmSurface;
@@ -2674,13 +2687,82 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test321() throws IOException {
+//		NSHMP_GMM_EpistemicBranchLevel level = new NSHMP_GMM_EpistemicBranchLevel(
+//				NSHMP_GMM_EpistemicBranchLevel.buildNodes(Gmm.USGS_PRVI_ACTIVE_CRUST, "Active", true), "Crustal GMM", "CrustalGMM");
+//		System.out.println("Level name: "+level.getName());
+//		System.out.println("Level short name: "+level.getShortName());
+//		for (NSHMP_GMM_Branch branch : level.getNodes()) {
+//			System.out.println(branch.getName());
+//			System.out.println("\tshortName="+branch.getShortName());
+//			System.out.println("\tfileName="+branch.getFilePrefix());
+//			System.out.println("\tweight="+branch.getNodeWeight(null));
+//			
+//			System.out.println("\ttrt="+branch.getTectonicRegion());
+//			ScalarIMR gmm = branch.get();
+//			System.out.println("\tgmmName="+gmm.getName());
+//			System.out.println("\tgmmShortName="+gmm.getShortName());
+//			System.out.println("\tgmmTRT="+gmm.getParameter(TectonicRegionTypeParam.NAME).getValue());
+//			System.out.println("\tgmmFilter="+((NSHMP_GMM_Wrapper)gmm).getGroundMotionTreeFilter());
+//		}
+		
+		LogicTree<?> tree = LogicTree.buildExhaustive(PRVI25_LogicTreeBranch.levelsCrustalGMM, true);
+		String json = tree.getJSON();
+		System.out.println(json);
+		System.out.println("Reading from JSON");
+		tree = LogicTree.read(new StringReader(json));
+		String json2 = tree.getJSON();
+		System.out.println("Making sure deserialized produces the same JSON");
+		Preconditions.checkState(json.equals(json2));
+		System.out.println("All good!");
+		
+		for (LogicTreeBranch<?> branch : tree) {
+			Map<TectonicRegionType, ? extends Supplier<ScalarIMR>> suppliers = MPJ_LogicTreeHazardCalc.getGMM_Suppliers(branch, null);
+			System.out.println(branch+", weight="+branch.getBranchWeight());
+			for (TectonicRegionType trt : suppliers.keySet()) {
+				System.out.println("\tTRT: "+trt);
+				NSHMP_GMM_Wrapper gmm = (NSHMP_GMM_Wrapper)suppliers.get(trt).get();
+				System.out.println("\tGMM: "+gmm.getName()+" ["+gmm.getShortName()+"]");
+				System.out.println("\tFilter: "+gmm.getGroundMotionTreeFilter());
+			}
+		}
+	}
+	
+	private static void test322() throws IOException {
+		LogicTree<?> tree = LogicTree.read(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2024_08_15-prvi25_subduction_branches/logic_tree.json"));
+		for (LogicTreeLevel<?> level : tree.getLevels())
+			System.out.println(level.getName()+" affects gridded? "+GridSourceProvider.affectedByLevel(level));
+	}
+	
+	private static void test323() throws IOException {
+		File[] files = {
+				new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_08_15-prvi25_subduction_branches-gmTreeCalcs/results_hazard.zip"),
+				new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_08_15-prvi25_subduction_branches-gmTreeCalcs/results_full_gridded_interface.zip"),
+				new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_08_15-prvi25_subduction_branches-gmTreeCalcs/results_gridded_only_interface.zip"),
+				new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_08_15-prvi25_subduction_branches-gmTreeCalcs/results_gridded_only_slab.zip"),
+				new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_08_05-prvi25_crustal_branches-dmSample5x-gmTreeCalcs/results_full_gridded_hazard.zip")
+		};
+		
+		for (File file : files) {
+			System.out.println(file.getAbsolutePath());
+			ZipFile zip = new ZipFile(file);
+			ZipEntry entry = zip.getEntry(MPJ_LogicTreeHazardCalc.GRID_REGION_ENTRY_NAME);
+			Feature feature = Feature.read(new BufferedReader(new InputStreamReader(zip.getInputStream(entry))));
+			GriddedRegion gridReg = GriddedRegion.fromFeature(feature);
+			System.out.println("\t"+gridReg.getNodeCount()+" nodes");
+			System.out.println("\tfist: "+gridReg.getLocation(0));
+			System.out.println("\tlast: "+gridReg.getLocation(gridReg.getNodeCount()-1));
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test320();
+			test323();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
