@@ -123,6 +123,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.PolygonFaultGridAssoc
 import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
+import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.TrueMeanRuptureMappings;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
@@ -194,6 +195,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -2756,13 +2758,71 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test324() throws IOException {
+		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged.zip"));
+		List<? extends FaultSection> sects = sol.getRupSet().getFaultSectionDataList();
+		int sofParent = FaultSectionUtils.findParentSectionID(sects, "Sylvain", "Oatfield");
+		int phnParent = FaultSectionUtils.findParentSectionID(sects, "Portland", "Hills", "north");
+		int phsParent = FaultSectionUtils.findParentSectionID(sects, "Portland", "Hills", "south");
+
+		
+		List<int[]> ratePairs = new ArrayList<>();
+		List<String> rateNames = new ArrayList<>();
+		ratePairs.add(new int[] {sofParent});
+		rateNames.add("Sylvain - Oatfield");
+		ratePairs.add(new int[] {phnParent});
+		rateNames.add("Portland Hills (north)");
+		ratePairs.add(new int[] {phsParent});
+		rateNames.add("Portland Hills (south)");
+		ratePairs.add(new int[] {phnParent, phsParent});
+		rateNames.add("Portland Hills (combined)");
+		SolutionSlipRates solSlips = sol.requireModule(SolutionSlipRates.class);
+		
+		for (int i=0; i<ratePairs.size(); i++) {
+			int[] parents = ratePairs.get(i);
+			double sumTargets = 0d;
+			double sumSols = 0d;
+			double sumArea = 0d;
+			double momentRate = 0d;
+			HashSet<Integer> rups = new HashSet<>();
+			for (FaultSection sect : sects) {
+				if (Ints.contains(parents, sect.getParentSectionId())) {
+					rups.addAll(sol.getRupSet().getRupturesForSection(sect.getSectionId()));
+					double area = sect.getArea(false);
+					sumSols += area*solSlips.get(sect.getSectionId())*1e3;
+					sumTargets += area*sect.getOrigAveSlipRate();
+					sumArea += area;
+					momentRate += FaultMomentCalc.getMoment(area, solSlips.get(sect.getSectionId()));
+				}
+			}
+			double rate = 0d;
+			double mMin = Double.POSITIVE_INFINITY;
+			double mMax = 0d;
+			for (int rupIndex : rups) {
+				double mag = sol.getRupSet().getMagForRup(rupIndex);
+				mMin = Math.min(mMin, mag);
+				mMax = Math.max(mMax, mag);
+				rate += sol.getRateForRup(rupIndex);
+			}
+			System.out.println(rateNames.get(i));
+			System.out.println("\tDM Slip Rate:\t"+(float)(sumTargets/sumArea)+" (mm/yr)");
+			System.out.println("\tSol Slip Rate:\t"+(float)(sumSols/sumArea)+" (mm/yr)");
+			System.out.println("\tArea:\t"+(float)sumArea+" (m^2)");
+			System.out.println("\tMag Range:\t["+(float)mMin+", "+(float)mMax+"]");
+			System.out.println("\tSol Moment Rate:\t"+(float)(momentRate)+" (N*m/yr)");
+			System.out.println("\tSol Participation Rate: "+(float)rate);
+			System.out.println("\tSol Participation RI: "+(float)(1d/rate));
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test323();
+			test324();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

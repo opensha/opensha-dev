@@ -58,8 +58,8 @@ public class GMMLogicTreeWriter {
 //		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
 		// including gridded
 		int mins = 1440*5;
-//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
-		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_sampled.json"); jobSuffix = "_sampled";
+		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
+//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded_sampled.json"); jobSuffix = "_sampled";
 		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
 		
 		/*
@@ -68,10 +68,10 @@ public class GMMLogicTreeWriter {
 //		List<LogicTreeLevel<? extends LogicTreeNode>> gmmLevels = PRVI25_LogicTreeBranch.levelsInterfaceGMM;
 //		File sourceDir = new File(baseDir, "2024_08_16-prvi25_subduction_branches");
 //		File outputDir = new File(baseDir, sourceDir.getName()+"-gmTreeCalcs");
-////		// supra-seis only
-////		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
-////		int mins = 1440;
-////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
+//		// supra-seis only
+//		File sourceTreeFile = new File(sourceDir, "logic_tree.json");
+//		int mins = 1440;
+//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.EXCLUDE;
 //		// interface gridded only
 ////		int mins = 1440;
 ////		File sourceTreeFile = new File(sourceDir, "logic_tree_gridded_only.json");
@@ -81,14 +81,14 @@ public class GMMLogicTreeWriter {
 ////		jobSuffix = "_interface";
 ////		outputSuffix = jobSuffix;
 //		// interface both (combine only)
-//		combineOnly = true;
-//		int mins = 1440;
-//		forceInputFileName = "results_full_gridded_interface_only.zip";
-//		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
-//		logicTreeOutputName = "logic_tree_full_gridded_interface_only.json";
-//		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
-//		jobSuffix = "_interface";
-//		outputSuffix = jobSuffix;
+////		combineOnly = true;
+////		int mins = 1440;
+////		forceInputFileName = "results_full_gridded_interface_only.zip";
+////		File sourceTreeFile = new File(sourceDir, "logic_tree_full_gridded.json");
+////		logicTreeOutputName = "logic_tree_full_gridded_interface_only.json";
+////		IncludeBackgroundOption bgOp = IncludeBackgroundOption.INCLUDE;
+////		jobSuffix = "_interface";
+////		outputSuffix = jobSuffix;
 		
 		/*
 		 * Slab

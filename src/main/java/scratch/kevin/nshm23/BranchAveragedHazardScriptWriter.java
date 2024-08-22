@@ -31,7 +31,8 @@ public class BranchAveragedHazardScriptWriter {
 //		String baseDirName = "2023_11_17-nshm23_branches-dm_sampling-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2023_11_16-nshm23_branches-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2024_05_07-nshm23_branches-WUS_FM_v3-AvgSupraB-AvgSeg";
-		String baseDirName = "2024_07_31-prvi25_subduction_branches";
+//		String baseDirName = "2024_07_31-prvi25_subduction_branches";
+		String baseDirName = "2024_08_16-prvi25_crustal_subduction_combined_branches";
 		
 //		String suffix = "true_mean";
 //		String solFileName = "true_mean_solution.zip";
@@ -43,20 +44,29 @@ public class BranchAveragedHazardScriptWriter {
 //		String suffix = "ba_only-mod_gridded";
 //		String solFileName = "results_WUS_FM_v3_branch_averaged_mod_gridded.zip";
 		
-		String suffix = "ba_only-LARGE";
-		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
+//		String suffix = "ba_only-LARGE";
+//		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
 		
 //		String suffix = "ba_only-LARGE-true_pt_src";
 //		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
+		
+		String suffix = "ba_only";
+		String solFileName = "combined_branch_averaged_solution.zip";
 		
 		boolean noMFDs = false;
 		
 //		GriddedRegion gridReg = new GriddedRegion(
 //				NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1, GriddedRegion.ANCHOR_0_0);
+//		GriddedRegion gridReg = new GriddedRegion(
+//				PRVI25_RegionLoader.loadPRVI_ModelBroad(), 0.1, GriddedRegion.ANCHOR_0_0);
 		GriddedRegion gridReg = new GriddedRegion(
-				PRVI25_RegionLoader.loadPRVI_ModelBroad(), 0.1, GriddedRegion.ANCHOR_0_0);
+				PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.01, GriddedRegion.ANCHOR_0_0);
+		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
+		
+		double[] periods = { 0d, 0.2d, 1d, 5d };
 //		AttenRelRef gmm = AttenRelRef.AG_2020_GLOBAL_INTERFACE;
-		AttenRelRef gmm = null;
+		AttenRelRef[] gmms = { AttenRelRef.USGS_PRVI_AVTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+//		AttenRelRef[] gmms = null;
 		
 		IncludeBackgroundOption[] bgOps = IncludeBackgroundOption.values();
 		
@@ -164,8 +174,17 @@ public class BranchAveragedHazardScriptWriter {
 			if (noMFDs)
 				argz += " --no-mfds";
 			argz += " --gridded-seis "+bgOp.name();
-			if (gmm != null)
-				argz += " --gmpe "+gmm.name();
+			if (gmms != null)
+				for (AttenRelRef gmm : gmms)
+					argz += " --gmpe "+gmm.name();
+			if (periods != null) {
+				argz += " --periods ";
+				for (int p=0; p<periods.length; p++) {
+					if (p > 0)
+						argz += ",";
+					argz += (float)periods[p];
+				}
+			}
 			argz += " "+dispatchArgs;
 			
 			File jobFile = new File(localDir, "batch_hazard_"+bgOp.name()+".slurm");

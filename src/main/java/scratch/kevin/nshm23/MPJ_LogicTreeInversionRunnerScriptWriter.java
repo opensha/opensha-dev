@@ -150,13 +150,13 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //				StampedeScriptWriter.JAVA_BIN, remoteTotalMemGB*1024, null, StampedeScriptWriter.FMPJ_HOME);
 //		BatchScriptWriter pbsWrite = new StampedeScriptWriter();
 		
-		AttenRelRef gmpe = null;
+		AttenRelRef[] gmpes = null;
 		
 		List<RandomlySampledLevel<?>> individualRandomLevels = new ArrayList<>();
 		int samplingBranchCountMultiplier = 1;
 
-		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2024_02_02";
+//		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+		String dirName = "2024_08_16";
 		String dirSuffix = null;
 		
 		/*
@@ -602,28 +602,28 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
-		dirName += "-prvi25_crustal_branches";
-		double avgNumRups = 50000;
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+//		dirName += "-prvi25_crustal_branches";
+//		double avgNumRups = 50000;
+//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_AVTIVE };
+//		
+//		// random DM sampling
+//		levels = new ArrayList<>(levels);
+//		int origNumLevels = levels.size();
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
+//				levels.remove(i);
+//		Preconditions.checkState(levels.size() == origNumLevels -1);
+//		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
+//		samplingBranchCountMultiplier = 5; // 5 for each branch
+//		dirName += "-dmSample";
+//		if (samplingBranchCountMultiplier > 1)
+//			dirName += samplingBranchCountMultiplier+"x";
 		
-		// random DM sampling
-		levels = new ArrayList<>(levels);
-		int origNumLevels = levels.size();
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
-				levels.remove(i);
-		Preconditions.checkState(levels.size() == origNumLevels -1);
-		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-		samplingBranchCountMultiplier = 5; // 5 for each branch
-		dirName += "-dmSample";
-		if (samplingBranchCountMultiplier > 1)
-			dirName += samplingBranchCountMultiplier+"x";
-		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
-//		dirName += "-prvi25_subduction_branches";
-//		double avgNumRups = 10000;
-		
-		gmpe = null;
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
+		dirName += "-prvi25_subduction_branches";
+		double avgNumRups = 10000;
+		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
@@ -930,8 +930,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		// now write hazard script
 		argz = "--input-file "+resultsPath+".zip";
 		argz += " --output-dir "+resultsPath;
-		if (gmpe != null)
-			argz += " --gmpe "+gmpe.name();
+		if (gmpes != null)
+			for (AttenRelRef gmpe : gmpes)
+				argz += " --gmpe "+gmpe.name();
 		if (hazardGridded) {
 			argz += " --gridded-seis INCLUDE";
 //			argz += " --max-distance 200";
@@ -1066,8 +1067,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				}
 				argz += " --grid-spacing "+(float)gridSpacing;
 //				argz += " --max-distance 200";
-				if (gmpe != null)
-					argz += " --gmpe "+gmpe.name();
+				if (gmpes != null)
+					for (AttenRelRef gmpe : gmpes)
+						argz += " --gmpe "+gmpe.name();
 				// use fault-only hazard as source for region
 				argz += " --region "+resultsPath+"_hazard.zip";
 				if (logicTree.size() > 400 && i == 1)
@@ -1139,8 +1141,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				argz += " --sites-file "+dirPath+"/"+localSitesFile.getName();
 				argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
 				argz += " --gridded-seis EXCLUDE";
-				if (gmpe != null)
-					argz += " --gmpe "+gmpe.name();
+				if (gmpes != null)
+					for (AttenRelRef gmpe : gmpes)
+						argz += " --gmpe "+gmpe.name();
 				script = mpjWrite.buildScript(MPJ_SiteLogicTreeHazardCurveCalc.class.getName(), argz);
 				pbsWrite.writeScript(new File(localDir, "batch_hazard_sites.slurm"), script, mins, nodes, remoteTotalThreads, queue);
 				
