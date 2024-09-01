@@ -362,13 +362,12 @@ public class U3ETAS_SimulationAnalysis {
 	
 	public static ArrayList<ObsEqkRupList> loadCatalogs(File fssFile, File catalogsFile, double minMag) throws IOException, DocumentException {
 		
+		// temporary hack
+		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 
 		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);;
 		List<ETAS_Catalog> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile, minMag); 
-		
-		// temporary hack
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
-		
+				
 		FaultSystemSolutionERF_ETAS erf = ETAS_Launcher.buildERF(sol,false, 1d, 2012);
 		erf.updateForecast();
 
