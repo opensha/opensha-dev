@@ -3,6 +3,7 @@ package scratch.kevin.ucerf3.eal;
 import java.awt.Color;
 
 import org.apache.commons.math3.distribution.LogNormalDistribution;
+import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -34,19 +35,37 @@ public enum LossCOV_Model {
 		public double getCOV(double meanLoss) {
 			return 4.546*Math.pow(Math.max(1000, meanLoss), -0.117);
 		}
+	},
+	PORTER_POWER_LAW_2020_09_01_DOLLARS { // here, meanLoss is in dollars (not units of $1000)
+		@Override
+		public double getCOV(double meanLoss) {
+			return 4.546*Math.pow(Math.max(1000, meanLoss/1000d), -0.117);
+		}
 	};
 
 	
 	public abstract double getCOV(double meanLoss);
 	
 	public LogNormalDistribution getDistribution(double meanLoss) {
+		return getDistribution(meanLoss, null);
+	}
+	
+	public LogNormalDistribution getDistribution(double meanLoss, RandomGenerator randomGen) {
 		Preconditions.checkState(meanLoss > 0d);
 		double cov = getCOV(meanLoss);
 		double sigma = Math.sqrt(Math.log(cov*cov+1));
 		double mu = Math.log(meanLoss)-(sigma*sigma/2);
-
-		return new LogNormalDistribution(mu, sigma);
+		if(randomGen == null)
+			return new LogNormalDistribution(mu, sigma);
+		else
+			return new LogNormalDistribution(randomGen, mu, sigma);
 	}
+
+	
+	
+	
+	
+	
 	
 	public DiscretizedFunc calcLossExceedanceProbs(DiscretizedFunc xVals, double meanLoss) {
 		ArbitrarilyDiscretizedFunc ret = new ArbitrarilyDiscretizedFunc();
