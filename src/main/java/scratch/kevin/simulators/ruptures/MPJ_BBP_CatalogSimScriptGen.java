@@ -38,19 +38,31 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir5413_multifault_separate";
 //		String catalogDirName = "rundir5597_subduction_corupture";
 //		String catalogDirName = "rundir5597_crustal_corupture";
-		String catalogDirName = "rundir5775_subduction";
+//		String catalogDirName = "rundir5775_subduction";
 //		String catalogDirName = "rundir5775_crustal";
+		String catalogDirName = "rundir5892";
 		
-//		int skipYears = 20000;
+		int skipYears = 20000;
 //		int skipYears = 5000;
-		int skipYears = 2000;
+//		int skipYears = 2000;
 //		int skipYears = 0;
 //		int skipYears = 65000;
 		
-		double maxDist = MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT;
-//		double maxDist = 500d;
+//		double maxDist = MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT;
+		double maxDist = 300d;
 		
 		double griddedSpacing = 1d;
+		
+		// init all to false
+		boolean standardSites = false;
+		boolean csInitialLASites = false;
+		boolean cs500LASites = false;
+		boolean csLAMapSites = false;
+		boolean griddedCASites = false;
+		boolean griddedWUSSites = false;
+		boolean griddedSoCalSites = false;
+		boolean griddedNZSites = false;
+		boolean nzStandardSites = false;
 		
 		// CA
 //		Integer utmZone = null;
@@ -66,20 +78,27 @@ public class MPJ_BBP_CatalogSimScriptGen {
 ////		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
 //		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
+		// NSHM23-wUS
+		Integer utmZone = null;
+		Character utmBand = null;
+		griddedWUSSites = true;
+//		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
+		VelocityModel vm = VelocityModel.LA_BASIN_500;
+		
 		// NZ
-		Integer utmZone = 59;
-		Character utmBand = 'G';
-		System.out.println("New Zealand!");
-		boolean standardSites = false;
-		boolean csInitialLASites = false;
-		boolean cs500LASites = false;
-		boolean csLAMapSites = false;
-		boolean griddedCASites = false;
-		boolean griddedSoCalSites = false;
-		boolean griddedNZSites = true;
-		boolean nzStandardSites = true;
-		VelocityModel vm = VelocityModel.CENTRAL_JAPAN;
-//		VelocityModel vm = VelocityModel.LA_BASIN_500;
+//		Integer utmZone = 59;
+//		Character utmBand = 'G';
+//		System.out.println("New Zealand!");
+//		boolean standardSites = false;
+//		boolean csInitialLASites = false;
+//		boolean cs500LASites = false;
+//		boolean csLAMapSites = false;
+//		boolean griddedCASites = false;
+//		boolean griddedSoCalSites = false;
+//		boolean griddedNZSites = true;
+//		boolean nzStandardSites = true;
+//		VelocityModel vm = VelocityModel.CENTRAL_JAPAN;
+////		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 //		double minMag = 0d;
 //		double minMag = 5;
@@ -169,9 +188,9 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-standardSitesNZ";
 		if (griddedNZSites)
 			jobName += "-griddedSitesNZ";
+		if (griddedWUSSites)
+			jobName += "-griddedSitesWUS";
 		Preconditions.checkArgument(!(griddedSoCalSites && griddedCASites));
-		Preconditions.checkState(standardSites || griddedCASites || griddedSoCalSites || csInitialLASites
-				|| cs500LASites || csLAMapSites || griddedNZSites || nzStandardSites);
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -192,10 +211,14 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			sites.addAll(RSQSimBBP_Config.getCAGriddedSites(griddedSpacing));
 		if (griddedSoCalSites)
 			sites.addAll(RSQSimBBP_Config.getSoCalGriddedSites(griddedSpacing));
+		if (griddedWUSSites)
+			sites.addAll(RSQSimBBP_Config.getNSHM23_WUS_GriddedSites(griddedSpacing));
 		if (nzStandardSites)
 			sites.addAll(RSQSimBBP_Config.getNZStandardSites());
 		if (griddedNZSites)
 			sites.addAll(RSQSimBBP_Config.getNZGriddedSites(griddedSpacing));
+		
+		Preconditions.checkState(!sites.isEmpty());
 		
 		boolean rdOnly = sites.size() < 100;
 		if (rdOnly)

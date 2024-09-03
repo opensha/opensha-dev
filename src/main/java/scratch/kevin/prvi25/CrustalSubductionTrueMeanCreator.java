@@ -17,6 +17,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
 import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
@@ -41,10 +42,14 @@ public class CrustalSubductionTrueMeanCreator {
 		Map<PRVI25_CrustalFaultModels, FaultSystemSolution> crustalBASols = new HashMap<>();
 		Map<PRVI25_SubductionFaultModels, FaultSystemSolution> subductionBASols = new HashMap<>();
 		
+		String simplifiedSuffix = gridded ? "_branch_averaged_gridded_simplified.zip" : "_branch_averaged_simplified.zip";
 		String suffix = gridded ? "_branch_averaged_gridded.zip" : "_branch_averaged.zip";
 		
 		for (PRVI25_CrustalFaultModels fm : PRVI25_CrustalFaultModels.values()) {
-			File crustalBA = new File(crustalDir, "results_"+fm.getFilePrefix()+suffix);
+			File crustalBA = new File(crustalDir, "results_"+fm.getFilePrefix()+simplifiedSuffix);
+			if (!crustalBA.exists())
+				// try non-simplified
+				crustalBA = new File(crustalDir, "results_"+fm.getFilePrefix()+suffix);
 			if (crustalBA.exists()) {
 				FaultSystemSolution sol = FaultSystemSolution.load(crustalBA);
 				if (gridded) {
@@ -69,7 +74,10 @@ public class CrustalSubductionTrueMeanCreator {
 		Preconditions.checkState(!crustalBASols.isEmpty());
 		
 		for (PRVI25_SubductionFaultModels fm : PRVI25_SubductionFaultModels.values()) {
-			File subductionBA = new File(subductionDir, "results_"+fm.getFilePrefix()+suffix);
+			File subductionBA = new File(subductionDir, "results_"+fm.getFilePrefix()+simplifiedSuffix);
+			if (!subductionBA.exists())
+				// try non-simplified
+				subductionBA = new File(subductionDir, "results_"+fm.getFilePrefix()+suffix);
 			if (subductionBA.exists()) {
 				FaultSystemSolution sol = FaultSystemSolution.load(subductionBA);
 				if (gridded) {
@@ -102,9 +110,12 @@ public class CrustalSubductionTrueMeanCreator {
 		creator.setDoGridProv(gridded);
 		for (LogicTreeBranch<?> branch : tree) {
 			FaultSystemSolution crustalSol = crustalBASols.get(branch.requireValue(PRVI25_CrustalFaultModels.class));
+			Preconditions.checkState(crustalSol.getRupSet().hasModule(RupSetTectonicRegimes.class), "Crustal solution doesn't have TRTs");
 			FaultSystemSolution subductionSol = subductionBASols.get(branch.requireValue(PRVI25_SubductionFaultModels.class));
+			Preconditions.checkState(subductionSol.getRupSet().hasModule(RupSetTectonicRegimes.class), "Subduction solution doesn't have TRTs");
 			
 			FaultSystemSolution combined = AbstractLogicTreeHazardCombiner.combineSols(crustalSol, subductionSol, true);
+			Preconditions.checkState(combined.getRupSet().hasModule(RupSetTectonicRegimes.class), "Combined solution doesn't have TRTs");
 			if (gridded) {
 				GridSourceList crustalGridded = crustalSol.requireModule(GridSourceList.class);
 				GridSourceList subductionGridded = subductionSol.requireModule(GridSourceList.class);
@@ -115,6 +126,7 @@ public class CrustalSubductionTrueMeanCreator {
 		}
 		
 		FaultSystemSolution trueMean = creator.build();
+		Preconditions.checkState(trueMean.getRupSet().hasModule(RupSetTectonicRegimes.class), "True mean solution doesn't have TRTs");
 		trueMean.write(outputFile);
 	}
 

@@ -29,7 +29,6 @@ public class InterfaceSlabSLT_Splitter {
 		} else if (args.length == 2) {
 			dir = new File(args[0]);
 			griddedOnly = Boolean.parseBoolean(args[1]);
-			
 		} else {
 			throw new IllegalArgumentException("USAGE: <dir> <gridded-only?>");
 		}

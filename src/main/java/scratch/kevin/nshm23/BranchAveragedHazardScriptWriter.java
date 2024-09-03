@@ -26,6 +26,9 @@ import edu.usc.kmilner.mpj.taskDispatch.MPJTaskCalculator;
 public class BranchAveragedHazardScriptWriter {
 
 	public static void main(String[] args) throws IOException {
+		
+		IncludeBackgroundOption[] bgOps = IncludeBackgroundOption.values();
+		
 //		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
 //		String baseDirName = "2023_11_20-nshm23_branches-dm_sampling-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2023_11_17-nshm23_branches-dm_sampling-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
@@ -33,6 +36,8 @@ public class BranchAveragedHazardScriptWriter {
 //		String baseDirName = "2024_05_07-nshm23_branches-WUS_FM_v3-AvgSupraB-AvgSeg";
 //		String baseDirName = "2024_07_31-prvi25_subduction_branches";
 		String baseDirName = "2024_08_16-prvi25_crustal_subduction_combined_branches";
+//		String baseDirName = "2024_08_16-prvi25_crustal_branches-dmSample5x";
+//		String baseDirName = "2024_08_16-prvi25_subduction_branches";
 		
 //		String suffix = "true_mean";
 //		String solFileName = "true_mean_solution.zip";
@@ -53,6 +58,19 @@ public class BranchAveragedHazardScriptWriter {
 		String suffix = "ba_only";
 		String solFileName = "combined_branch_averaged_solution.zip";
 		
+//		String suffix = "ba_only";
+//		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
+		
+//		String suffix = "ba_only-SLAB_only";
+//		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
+//		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
+		
+//		String suffix = "ba_only-INTERFACE_only";
+//		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
+		
+//		String suffix = "ba_only-both_fms";
+//		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
+		
 		boolean noMFDs = false;
 		
 //		GriddedRegion gridReg = new GriddedRegion(
@@ -65,10 +83,8 @@ public class BranchAveragedHazardScriptWriter {
 		
 		double[] periods = { 0d, 0.2d, 1d, 5d };
 //		AttenRelRef gmm = AttenRelRef.AG_2020_GLOBAL_INTERFACE;
-		AttenRelRef[] gmms = { AttenRelRef.USGS_PRVI_AVTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+		AttenRelRef[] gmms = { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 //		AttenRelRef[] gmms = null;
-		
-		IncludeBackgroundOption[] bgOps = IncludeBackgroundOption.values();
 		
 		String dirName = baseDirName+"-"+suffix;
 		if (noMFDs)

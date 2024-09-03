@@ -208,7 +208,7 @@ public class GMMLogicTreeWriter {
 		if (combineOnly)
 			argz += " --combine-only";
 		argz += " --region "+dirPath+"/"+gridRegFile.getName();
-		argz += " "+MPJTaskCalculator.argumentBuilder().exactDispatch(1).threads(remoteTotalThreads).build();
+		argz += " "+MPJTaskCalculator.argumentBuilder().maxDispatch(100).threads(remoteTotalThreads).build();
 		List<String> script = mpjWrite.buildScript(MPJ_LogicTreeHazardCalc.class.getName(), argz);
 		pbsWrite.writeScript(new File(localDir, mapScriptName), script, mins, nodes, remoteTotalThreads, queue);
 		

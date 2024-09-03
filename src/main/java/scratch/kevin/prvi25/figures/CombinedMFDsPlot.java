@@ -1,5 +1,6 @@
 package scratch.kevin.prvi25.figures;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.SeismicityRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
@@ -27,12 +28,17 @@ import net.mahdilamb.colormap.Colors;
 public class CombinedMFDsPlot {
 
 	public static void main(String[] args) throws IOException {
-		FaultSystemSolution crustalSol = FaultSystemSolution.load(new File(""
-				+ "/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_07_26-prvi25_crustal_branches-dmSample5x/results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
-		FaultSystemSolution subductionSol = FaultSystemSolution.load(new File(""
-				+ "/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_08_01-prvi25_subduction_branches/results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip"));
+		File crustalDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2024_08_16-prvi25_crustal_branches-dmSample5x");
+		FaultSystemSolution crustalSol = FaultSystemSolution.load(new File(crustalDir,
+				"results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
+		
+		File subductionDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+				+ "2024_08_16-prvi25_subduction_branches");
+		FaultSystemSolution subductionSol1 = FaultSystemSolution.load(new File(subductionDir,
+				"results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip"));
+		FaultSystemSolution subductionSol2 = FaultSystemSolution.load(new File(subductionDir,
+				"results_PRVI_SUB_FM_SMALL_branch_averaged_gridded.zip"));
 		
 		
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(9.45);
@@ -41,7 +47,7 @@ public class CombinedMFDsPlot {
 		List<EvenlyDiscretizedFunc> cmlFuncs = new ArrayList<>();
 		List<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
-		Region crustalReg = SeismicityRegions.CRUSTAL.load();
+		Region crustalReg = PRVI25_SeismicityRegions.CRUSTAL.load();
 		
 		IncrementalMagFreqDist crustalFault = calcFaultMFD(crustalReg, crustalSol, refMFD);
 		crustalFault.setName("Crustal, Fault");
@@ -55,46 +61,59 @@ public class CombinedMFDsPlot {
 		cmlFuncs.add(crustalGrid.getCumRateDistWithOffset());
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_lightblue));
 		
-		IncrementalMagFreqDist slabMuertos = calcGriddedMFD(SeismicityRegions.MUE_INTRASLAB.load(),
-				TectonicRegionType.SUBDUCTION_SLAB, subductionSol, refMFD);
-		slabMuertos.setName("Muertos, Slab");
-		incrFuncs.add(slabMuertos);
-		cmlFuncs.add(slabMuertos.getCumRateDistWithOffset());
-		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Colors.tab_lightgreen));
-		
-		IncrementalMagFreqDist griddedMuertos = calcGriddedMFD(SeismicityRegions.MUE_INTERFACE.load(),
-				TectonicRegionType.SUBDUCTION_INTERFACE, subductionSol, refMFD);
-		griddedMuertos.setName("Muertos, Interface Gridded");
-		incrFuncs.add(griddedMuertos);
-		cmlFuncs.add(griddedMuertos.getCumRateDistWithOffset());
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_lightgreen));
-		
-		IncrementalMagFreqDist faultMuertos = calcFaultMFD(SeismicityRegions.MUE_INTERFACE.load(), subductionSol, refMFD);
+		IncrementalMagFreqDist faultMuertos = average(
+				calcFaultMFD(PRVI25_SeismicityRegions.MUE_INTERFACE.load(), subductionSol1, refMFD),
+				calcFaultMFD(PRVI25_SeismicityRegions.MUE_INTERFACE.load(), subductionSol2, refMFD));
 		faultMuertos.setName("Muertos, Interface Fault");
 		incrFuncs.add(faultMuertos);
 		cmlFuncs.add(faultMuertos.getCumRateDistWithOffset());
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_green));
 		
+		IncrementalMagFreqDist griddedMuertos = average(
+				calcGriddedMFD(PRVI25_SeismicityRegions.MUE_INTERFACE.load(), TectonicRegionType.SUBDUCTION_INTERFACE, subductionSol1, refMFD),
+				calcGriddedMFD(PRVI25_SeismicityRegions.MUE_INTERFACE.load(), TectonicRegionType.SUBDUCTION_INTERFACE, subductionSol2, refMFD));
+		griddedMuertos.setName("Muertos, Interface Gridded");
+		incrFuncs.add(griddedMuertos);
+		cmlFuncs.add(griddedMuertos.getCumRateDistWithOffset());
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_lightgreen));
 		
-		IncrementalMagFreqDist slabCar = calcGriddedMFD(SeismicityRegions.CAR_INTRASLAB.load(),
-				TectonicRegionType.SUBDUCTION_SLAB, subductionSol, refMFD);
-		slabCar.setName("Caribbean, Slab");
-		incrFuncs.add(slabCar);
-		cmlFuncs.add(slabCar.getCumRateDistWithOffset());
-		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Colors.tab_lightorange));
+		IncrementalMagFreqDist slabMuertos = calcGriddedMFD(PRVI25_SeismicityRegions.MUE_INTRASLAB.load(),
+				TectonicRegionType.SUBDUCTION_SLAB, subductionSol1, refMFD);
+		slabMuertos.setName("Muertos, Slab");
+		incrFuncs.add(slabMuertos);
+		cmlFuncs.add(slabMuertos.getCumRateDistWithOffset());
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Colors.tab_lightgreen));
 		
-		IncrementalMagFreqDist griddedCar = calcGriddedMFD(SeismicityRegions.CAR_INTERFACE.load(),
-				TectonicRegionType.SUBDUCTION_INTERFACE, subductionSol, refMFD);
+		IncrementalMagFreqDist faultCar = average(
+				calcFaultMFD(PRVI25_SeismicityRegions.CAR_INTERFACE.load(), subductionSol1, refMFD),
+				calcFaultMFD(PRVI25_SeismicityRegions.CAR_INTERFACE.load(), subductionSol2, refMFD));
+		faultCar.setName("Caribbean, Interface Fault");
+		incrFuncs.add(faultCar);
+		cmlFuncs.add(faultCar.getCumRateDistWithOffset());
+		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_orange));
+		
+		IncrementalMagFreqDist griddedCar = average(
+				calcGriddedMFD(PRVI25_SeismicityRegions.CAR_INTERFACE.load(), TectonicRegionType.SUBDUCTION_INTERFACE, subductionSol1, refMFD),
+				calcGriddedMFD(PRVI25_SeismicityRegions.CAR_INTERFACE.load(), TectonicRegionType.SUBDUCTION_INTERFACE, subductionSol2, refMFD));
 		griddedCar.setName("Caribbean, Interface Gridded");
 		incrFuncs.add(griddedCar);
 		cmlFuncs.add(griddedCar.getCumRateDistWithOffset());
 		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_lightorange));
 		
-		IncrementalMagFreqDist faultCar = calcFaultMFD(SeismicityRegions.CAR_INTERFACE.load(), subductionSol, refMFD);
-		faultCar.setName("Caribbean, Interface Fault");
-		incrFuncs.add(faultCar);
-		cmlFuncs.add(faultCar.getCumRateDistWithOffset());
-		chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Colors.tab_orange));
+		IncrementalMagFreqDist slabCar = calcGriddedMFD(PRVI25_SeismicityRegions.CAR_INTRASLAB.load(),
+				TectonicRegionType.SUBDUCTION_SLAB, subductionSol1, refMFD);
+		slabCar.setName("Caribbean, Slab");
+		incrFuncs.add(slabCar);
+		cmlFuncs.add(slabCar.getCumRateDistWithOffset());
+		chars.add(new PlotCurveCharacterstics(PlotLineType.DOTTED, 3f, Colors.tab_lightorange));
+		
+		SummedMagFreqDist sum = new SummedMagFreqDist(refMFD.getMinX(), refMFD.size(), refMFD.getDelta());
+		for (IncrementalMagFreqDist mfd : incrFuncs)
+			sum.addIncrementalMagFreqDist(mfd);
+		sum.setName("Total");
+		incrFuncs.add(0, sum);
+		cmlFuncs.add(0, sum.getCumRateDistWithOffset());
+		chars.add(0, new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, Color.BLACK));
 		
 		PlotSpec incrSpec = new PlotSpec(incrFuncs, chars, " ", "Magnitude", "Incremental Rate (1/yr)");
 		incrSpec.setLegendInset(RectangleAnchor.TOP_RIGHT);

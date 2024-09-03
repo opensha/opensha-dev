@@ -18,10 +18,12 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
+import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.refFaultParamDb.vo.FaultSectionPrefData;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.FocalMechanism;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.simulators.EventRecord;
@@ -325,6 +327,14 @@ public class RSQSimBBP_Config {
 	
 	public static List<BBP_Site> getSoCalGriddedSites(double spacing) {
 		return getGriddedSites(new CaliforniaRegions.RELM_SOCAL(), spacing);
+	}
+	
+	public static List<BBP_Site> getNSHM23_WUS_GriddedSites(double spacing) {
+		try {
+			return getGriddedSites(NSHM23_RegionLoader.loadFullConterminousWUS(), spacing);
+		} catch (IOException e) {
+			throw ExceptionUtils.asRuntimeException(e);
+		}
 	}
 	
 	public static List<BBP_Site> getNZStandardSites() {

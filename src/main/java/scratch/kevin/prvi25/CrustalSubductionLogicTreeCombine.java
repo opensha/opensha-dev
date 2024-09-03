@@ -25,11 +25,14 @@ import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazar
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.imr.logicTree.ScalarIMR_ParamsLogicTreeNode;
+import org.opensha.sha.imr.logicTree.ScalarIMRsLogicTreeNode;
 
 import com.google.common.base.Preconditions;
 
 public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCombiner {
 	
+	private static final boolean REVERSE = false;
 	private static final IncludeBackgroundOption GRID_SEIS_DEFAULT = IncludeBackgroundOption.EXCLUDE;
 	private static final String RESULTS_FILE_NAME_DEFAULT = "results.zip";
 	private static final String HAZARD_DIR_NAME_DEFAULT = "results";
@@ -111,28 +114,96 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		else
 			throw new IllegalStateException();
 		
+		boolean averageERF = cmd.hasOption("average-erf");
+		boolean averageGMM = cmd.hasOption("average-gmm");
+		boolean averageEither = averageERF || averageGMM;
+		
+		List<LogicTreeLevel<? extends LogicTreeNode>> averageAcrossLevels = null;
+		
+		if (averageERF) {
+			Preconditions.checkState(!averageGMM);
+			averageAcrossLevels = new ArrayList<>();
+			for (LogicTreeLevel<?> level : crustalLT.getLevels())
+				if (!isLevelGMM(level))
+					averageAcrossLevels.add(level);
+			for (LogicTreeLevel<?> level : subductionLT.getLevels())
+				if (!isLevelGMM(level))
+					averageAcrossLevels.add(level);
+			System.out.println("Will average across "+averageAcrossLevels.size()+" ERF levels");
+		} else if (averageGMM) {
+			averageAcrossLevels = new ArrayList<>();
+			for (LogicTreeLevel<?> level : crustalLT.getLevels())
+				if (isLevelGMM(level))
+					averageAcrossLevels.add(level);
+			for (LogicTreeLevel<?> level : subductionLT.getLevels())
+				if (isLevelGMM(level))
+					averageAcrossLevels.add(level);
+			System.out.println("Will average across "+averageAcrossLevels.size()+" GMM levels");
+		}
+		
 //		CrustalSubductionLogicTreeCombine combiner = new CrustalSubductionLogicTreeCombine(
 //				crustalLT, crustalSLT, new File(crustalDir, hazardDirName), bgOp,
 //				subductionLT, subductionSLT, new File(subductionDir, hazardDirName), bgOp,
 //				resultsOutputFile,
 //				new File(outputDir, outputHazardFileName), gridReg);
-		CrustalSubductionLogicTreeCombine combiner = new CrustalSubductionLogicTreeCombine(
-				crustalLT, subductionLT);
+		CrustalSubductionLogicTreeCombine combiner;
+		if (REVERSE)
+			combiner = new CrustalSubductionLogicTreeCombine(subductionLT, crustalLT, averageAcrossLevels);
+		else
+			combiner = new CrustalSubductionLogicTreeCombine(crustalLT, subductionLT, averageAcrossLevels);
 		
-		if (!cmd.hasOption("disable-write-results")) {
+		if (cmd.hasOption("disable-preload"))
+			combiner.setPreloadInnerCurves(false);
+		
+		if (!cmd.hasOption("disable-write-results") && !averageEither) {
 			File resultsOutputFile = new File(outputDir, resultsFileName);
 			Preconditions.checkNotNull(crustalSLT);
 			Preconditions.checkNotNull(subductionSLT);
-			combiner.setWriteSLTs(crustalSLT, subductionSLT, resultsOutputFile);
+			if (REVERSE)
+				combiner.setWriteSLTs(subductionSLT, crustalSLT, resultsOutputFile);
+			else
+				combiner.setWriteSLTs(crustalSLT, subductionSLT, resultsOutputFile);
 		}
 		
-		combiner.setCombineHazardMaps(new File(crustalDir, hazardDirName), bgOp,
-				new File(subductionDir, hazardDirName), bgOp, new File(outputDir, outputHazardFileName), gridReg);
+		File crustalHazardDir = new File(crustalDir, hazardDirName);
+		File subductionHazardDir = new File(subductionDir, hazardDirName);
+		if (!cmd.hasOption("no-maps") && crustalHazardDir.exists() && subductionHazardDir.exists()) {
+			System.out.println("Will combine hazard maps");
+			if (REVERSE)
+				combiner.setCombineHazardMaps(subductionHazardDir, bgOp,
+						crustalHazardDir, bgOp, new File(outputDir, outputHazardFileName), gridReg);
+			else
+				combiner.setCombineHazardMaps(crustalHazardDir, bgOp,
+						subductionHazardDir, bgOp, new File(outputDir, outputHazardFileName), gridReg);
+		}
+		
+		String siteHazardFileName;
+		if (cmd.hasOption("site-hazard-file-name"))
+			siteHazardFileName = cmd.getOptionValue("site-hazard-file-name");
+		else if (bgOp == IncludeBackgroundOption.EXCLUDE)
+			siteHazardFileName = "results_hazard_sites.zip";
+		else if (bgOp == IncludeBackgroundOption.INCLUDE)
+			siteHazardFileName = "results_full_gridded_sites.zip";
+		else if (bgOp == IncludeBackgroundOption.ONLY)
+			siteHazardFileName = "results_gridded_only_sites.zip";
+		else
+			throw new IllegalStateException();
+		
+		File crustalSiteFile = new File(crustalDir, siteHazardFileName);
+		File subductionSiteFile = new File(subductionDir, siteHazardFileName);
+		if (!cmd.hasOption("no-curves") && crustalHazardDir.exists() && subductionHazardDir.exists() && !averageEither) {
+			System.out.println("Will combine site hazard curves");
+			File sitesOutputFile = new File(outputDir, siteHazardFileName);
+			if (REVERSE)
+				combiner.setCombineHazardCurves(subductionSiteFile, crustalSiteFile, sitesOutputFile);
+			else
+				combiner.setCombineHazardCurves(crustalSiteFile, subductionSiteFile, sitesOutputFile);
+		}
 		
 		long treeSize = (long)crustalLT.size()*(long)subductionLT.size();
-		if (cmd.hasOption("pre-samples")) {
-			// more memory efficient pre-sampling version
-			int samples = Integer.parseInt(cmd.getOptionValue("pre-samples"));
+		if (cmd.hasOption("pairwise-samples")) {
+			// more memory efficient pairwise-sampling version
+			int samples = Integer.parseInt(cmd.getOptionValue("pairwise-samples"));
 			long seed = cmd.hasOption("rand-seed") ? Long.parseLong(cmd.getOptionValue("rand-seed")) : treeSize*(long)samples;
 			combiner.pairwiseSampleTree(samples, seed);
 		}
@@ -146,12 +217,14 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		}
 		
 		LogicTree<LogicTreeNode> combTree = combiner.getCombTree();
-		File treeOutputFile;
-		if (cmd.hasOption("logic-tree-file-name"))
-			treeOutputFile = new File(outputDir, cmd.getOptionValue("logic-tree-file-name"));
-		else
-			treeOutputFile = new File(outputDir, "logic_tree_"+bgOp.name()+".json");
-		combTree.write(treeOutputFile);
+		if (!averageERF && !averageGMM) {
+			File treeOutputFile;
+			if (cmd.hasOption("logic-tree-file-name"))
+				treeOutputFile = new File(outputDir, cmd.getOptionValue("logic-tree-file-name"));
+			else
+				treeOutputFile = new File(outputDir, "logic_tree_"+bgOp.name()+".json");
+			combTree.write(treeOutputFile);
+		}
 		
 		try {
 			combiner.build();
@@ -164,7 +237,7 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 	public static Options createOptions() {
 		Options ops = new Options();
 
-		ops.addOption(null, "pre-samples", true, "Number of pre-samples to draw. This is more memory efficient and doesn't require "
+		ops.addOption(null, "pairwise-samples", true, "Number of pairwise-samples to draw. This is more memory efficient and doesn't require "
 				+ "instantiating the entire tree in memory first.");
 		ops.addOption(null, "samples", true, "Number of samples to draw");
 		ops.addOption(null, "rand-seed", true, "Random seed for use when sampling");
@@ -176,12 +249,25 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		ops.addOption(null, "grid-reg-file-name", true, "Gridded region file name. Default: "+GRID_REG_FILE_NAME_DEFAULT);
 		ops.addOption(null, "disable-write-results", false, "Flag to disable writing the combined solution logic tree fule");
 		ops.addOption(null, "output-hazard-file-name", true, "Name for output hazard file; default depends on background seismicity.");
+		ops.addOption(null, "site-hazard-file-name", true, "Name of site hazard file; default depends on background seismicity.");
+		ops.addOption(null, "disable-preload", false, "Flag to disable pre-loading of slab hazard curves (to quickly get to the build loop)");
+		ops.addOption(null, "no-maps", false, "Flag to disable combining hazard maps");
+		ops.addOption(null, "no-curves", false, "Flag to disable combining site hazard curves");
+		ops.addOption(null, "average-erf", false, "Flag to average all ERF branches (retain GMM variability only)");
+		ops.addOption(null, "average-gmm", false, "Flag to average all GMM branches (retain ERF variability only)");
 		
 		return ops;
 	}
 
-	public CrustalSubductionLogicTreeCombine(LogicTree<?> outerLT, LogicTree<?> innerLT) {
-		super(outerLT, innerLT);
+	public CrustalSubductionLogicTreeCombine(LogicTree<?> outerLT, LogicTree<?> innerLT, List<LogicTreeLevel<?>> averageAcrossLevels) {
+		super(outerLT, innerLT, null, averageAcrossLevels);
+	}
+	
+	private static boolean isLevelGMM(LogicTreeLevel<?> level) {
+		return ScalarIMR_ParamsLogicTreeNode.class.isAssignableFrom(level.getType())
+				|| ScalarIMRsLogicTreeNode.class.isAssignableFrom(level.getType())
+				|| level.getName().contains("GMM Epistemic")
+				|| level.getName().contains("GMM Sigma");
 	}
 	
 	private static GriddedRegion loadGridReg(File regFile) throws IOException {
@@ -229,13 +315,19 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 	@Override
 	protected void remapOuterTree(LogicTree<?> tree, Map<LogicTreeLevel<?>, LogicTreeLevel<?>> levelRemaps,
 			Map<LogicTreeNode, LogicTreeNode> nodeRemaps) {
-		remapTree(tree, levelRemaps, nodeRemaps, "Crustal", "Crust");
+		if (REVERSE)
+			remapTree(tree, levelRemaps, nodeRemaps, "Subduction", "Sub");
+		else
+			remapTree(tree, levelRemaps, nodeRemaps, "Crustal", "Crust");
 	}
 
 	@Override
 	protected void remapInnerTree(LogicTree<?> tree, Map<LogicTreeLevel<?>, LogicTreeLevel<?>> levelRemaps,
 			Map<LogicTreeNode, LogicTreeNode> nodeRemaps) {
-		remapTree(tree, levelRemaps, nodeRemaps, "Subduction", "Sub");
+		if (REVERSE)
+			remapTree(tree, levelRemaps, nodeRemaps, "Crustal", "Crust");
+		else
+			remapTree(tree, levelRemaps, nodeRemaps, "Subduction", "Sub");
 	}
 
 	@Override
@@ -252,11 +344,6 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 	protected boolean isSerializeGridded() {
 		// TODO
 		return false;
-	}
-
-	@Override
-	protected List<LogicTreeLevel<?>> getCommonLevels() {
-		return List.of();
 	}
 
 }

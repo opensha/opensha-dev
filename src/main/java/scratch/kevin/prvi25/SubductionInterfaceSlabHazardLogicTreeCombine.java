@@ -70,7 +70,7 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 		}
 		
 		System.out.println();
-		List<LogicTreeLevel<?>> commonLevels = combiner.getCommonLevels();
+		List<LogicTreeLevel<?>> commonLevels = getCommonLevels(slabTree);
 		System.out.println("Interface tree has "+interfaceTree.size()+" branches; Levels:");
 		for (LogicTreeLevel<?> level : interfaceTree.getLevels())
 			System.out.println("\t"+level.getName()+" (common="+commonLevels.contains(level)+")");
@@ -99,7 +99,7 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 	}
 
 	public SubductionInterfaceSlabHazardLogicTreeCombine(LogicTree<?> interfaceTree, LogicTree<?> slabTree) {
-		super(interfaceTree, slabTree);
+		super(interfaceTree, slabTree, getCommonLevels(slabTree), null);
 //		super(interfaceTree, interfaceHazardDir, IncludeBackgroundOption.INCLUDE,
 //				slabTree, slabHazardDir, IncludeBackgroundOption.ONLY,
 //				outputHazardFile, gridReg);
@@ -186,10 +186,9 @@ public class SubductionInterfaceSlabHazardLogicTreeCombine extends AbstractLogic
 		return false;
 	}
 	
-	@Override
-	protected List<LogicTreeLevel<?>> getCommonLevels() {
+	private static List<LogicTreeLevel<?>> getCommonLevels(LogicTree<?> innerTree) {
 		List<LogicTreeLevel<?>> commonLevels = new ArrayList<>();
-		for (LogicTreeLevel<?> level : getInnerTree().getLevels()) {
+		for (LogicTreeLevel<?> level : innerTree.getLevels()) {
 			// everything is common except GMM branches
 			if (!ScalarIMRsLogicTreeNode.class.isAssignableFrom(level.getType())
 					&& !ScalarIMR_ParamsLogicTreeNode.class.isAssignableFrom(level.getType()))

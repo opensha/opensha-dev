@@ -167,7 +167,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Crusta
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.SeismicityRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
 import org.opensha.sha.faultSurface.RuptureSurface;
@@ -2229,7 +2229,7 @@ public class PureScratch {
 	private static void test312() throws IOException {
 		double OVERALL_MMIN = 2.55;
 		double maxMagOff = 7.95;
-		SeismicityRegions seisRegion = SeismicityRegions.CAR_INTRASLAB;
+		PRVI25_SeismicityRegions seisRegion = PRVI25_SeismicityRegions.CAR_INTRASLAB;
 		
 //		PRVI25_RegionalSeismicity seisBranch = PRVI25_RegionalSeismicity.HIGH;
 //		PRVI25_DeclusteringAlgorithms declusteringAlg = branch.requireValue(PRVI25_DeclusteringAlgorithms.class);
@@ -2328,7 +2328,7 @@ public class PureScratch {
 		File dir = new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_08_01-prvi25_subduction_branches");
 		File resultsDir = new File(dir, "results");
 		File ltFile = new File(dir, "logic_tree_full_gridded.json");
-		SeismicityRegions seisReg = SeismicityRegions.CAR_INTERFACE;
+		PRVI25_SeismicityRegions seisReg = PRVI25_SeismicityRegions.CAR_INTERFACE;
 		TectonicRegionType trt = TectonicRegionType.SUBDUCTION_INTERFACE;
 		Region region = seisReg.load();
 		SolutionLogicTree slt = new SolutionLogicTree.ResultsDirReader(resultsDir, LogicTree.read(ltFile));
@@ -2368,7 +2368,7 @@ public class PureScratch {
 	}
 	
 	private static void test315() throws IOException {
-		SeismicityRegions seisReg = SeismicityRegions.CAR_INTERFACE;
+		PRVI25_SeismicityRegions seisReg = PRVI25_SeismicityRegions.CAR_INTERFACE;
 		TectonicRegionType trt = TectonicRegionType.SUBDUCTION_INTERFACE;
 		Region region = seisReg.load();
 		SolutionLogicTree slt = SolutionLogicTree.load(new File("/data/kevin/nshm23/batch_inversions/2024_08_01-prvi25_subduction_branches/results_avg_gridded.zip"));
@@ -2816,13 +2816,22 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test325() throws IOException {
+		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_08_16-prvi25_crustal_branches-dmSample5x-gmTreeCalcs/");
+		File inFile = new File(dir, "logic_tree_full_gridded.json");
+		File outFile = new File(dir, "logic_tree_full_gridded_sampled_100k.json");
+		LogicTree<?> tree = LogicTree.read(inFile);
+		tree = tree.sample(100000, true, new Random(tree.size()*100000l));
+		tree.write(outFile);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test324();
+			test325();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

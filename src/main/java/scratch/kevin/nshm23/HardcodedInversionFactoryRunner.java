@@ -128,9 +128,11 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
 //		dirName += "-nshm23-dm_sample_cap_sigma";
 		
-		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
-		dirName += "-prvi25";
-		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
+//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
+//		dirName += "-prvi25";
+		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved();
+		dirName += "-prvi25-limit_below_obs";
+//		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
 		
@@ -142,6 +144,10 @@ public class HardcodedInversionFactoryRunner {
 //		LogicTreeBranch<LogicTreeNode> branch = NSHM23_LogicTreeBranch.DEFAULT_ON_FAULT;
 		LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT;
 		branch = branch.copy();
+
+		branch.setValue(NSHM23_SegmentationModels.AVERAGE);
+		branch.setValue(SupraSeisBValues.AVERAGE);
+		branch.setValue(NSHM23_ScalingRelationships.AVERAGE);
 		
 //		branch.setValue(NSHM23_SegmentationModels.CLASSIC);
 		

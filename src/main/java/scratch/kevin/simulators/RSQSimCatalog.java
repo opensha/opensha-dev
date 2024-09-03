@@ -788,9 +788,9 @@ public class RSQSimCatalog implements XMLSaveable {
 		BRUCE_5775_CRUSTAL("rundir5775_crustal", "Bruce 5775 (Crustal Only)", "Bruce Shaw", cal(2024, 3, 5),
 				"5775, but filtered for slip on crustal patches only;",
 				59, 'G'),
-		BRUCE_5844("rundir5844", "Bruce 5844", "Bruce Shaw", cal(2024, 6, 21),
-				"WesternUS, deltax=2.0km, b=.009, alpha=0.25, hload=3.0",
-				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.GEOLOGIC);
+		BRUCE_5844("rundir5892", "Bruce 5892", "Bruce Shaw", cal(2024, 8, 25),
+				"WUSav, delta=2.0km, sigma0=100, b=.008, alpha=0.25",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -2027,7 +2027,7 @@ public class RSQSimCatalog implements XMLSaveable {
 			System.out.println("Loading comparison FSS from "+solFile.getAbsolutePath());
 			compSol = FaultSystemSolution.load(solFile);
 		} else {
-			System.out.println("Comparison sol file doesn't exist: "+solFile.getAbsolutePath());;
+			System.out.println("Comparison sol file doesn't exist: "+solFile.getAbsolutePath());
 		}
 		return compSol;
 	}
@@ -3407,7 +3407,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		Arrays.sort(cats, new CatEnumDateComparator());
 		// new catalogs
 //		GregorianCalendar minDate = cal(2021, 10, 1);
-		GregorianCalendar minDate = cal(2024, 6, 1);
+		GregorianCalendar minDate = cal(2024, 8, 1);
 		for (Catalogs cat : cats) {
 		// specific catalog
 //		GregorianCalendar minDate = cal(2000, 1, 1);

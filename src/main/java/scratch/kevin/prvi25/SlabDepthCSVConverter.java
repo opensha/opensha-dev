@@ -13,7 +13,7 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.FaultUtils.AngleAverager;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.SeismicityRegions;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 
 import com.google.common.base.Preconditions;
 
@@ -23,18 +23,18 @@ public class SlabDepthCSVConverter {
 		File inputDir = new File("/tmp/slab_depths");
 		File outputDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/seismicity/depths");
 		
-		Map<SeismicityRegions, File> inputDepthCSVs = new HashMap<>();
-		Map<SeismicityRegions, File> inputStrikeCSVs = new HashMap<>();
+		Map<PRVI25_SeismicityRegions, File> inputDepthCSVs = new HashMap<>();
+		Map<PRVI25_SeismicityRegions, File> inputStrikeCSVs = new HashMap<>();
 		
-		inputDepthCSVs.put(SeismicityRegions.CAR_INTERFACE, new File(inputDir, "apdf_car_interface_gk_adN4.csv"));
-		inputDepthCSVs.put(SeismicityRegions.CAR_INTRASLAB, new File(inputDir, "apdf_car_intraslab_gk_adN4.csv"));
-		inputDepthCSVs.put(SeismicityRegions.MUE_INTERFACE, new File(inputDir, "apdf_mue_interface_gk_adN3.csv"));
-		inputDepthCSVs.put(SeismicityRegions.MUE_INTRASLAB, new File(inputDir, "apdf_mue_intraslab_gk_adN2.csv"));
+		inputDepthCSVs.put(PRVI25_SeismicityRegions.CAR_INTERFACE, new File(inputDir, "apdf_car_interface_gk_adN4.csv"));
+		inputDepthCSVs.put(PRVI25_SeismicityRegions.CAR_INTRASLAB, new File(inputDir, "apdf_car_intraslab_gk_adN4.csv"));
+		inputDepthCSVs.put(PRVI25_SeismicityRegions.MUE_INTERFACE, new File(inputDir, "apdf_mue_interface_gk_adN3.csv"));
+		inputDepthCSVs.put(PRVI25_SeismicityRegions.MUE_INTRASLAB, new File(inputDir, "apdf_mue_intraslab_gk_adN2.csv"));
 		
-		inputStrikeCSVs.put(SeismicityRegions.CAR_INTERFACE, new File(inputDir, "strike_car_interface_gk_adN4.csv"));
-		inputStrikeCSVs.put(SeismicityRegions.MUE_INTERFACE, new File(inputDir, "strike_mue_interface_gk_adN3.csv"));
+		inputStrikeCSVs.put(PRVI25_SeismicityRegions.CAR_INTERFACE, new File(inputDir, "strike_car_interface_gk_adN4.csv"));
+		inputStrikeCSVs.put(PRVI25_SeismicityRegions.MUE_INTERFACE, new File(inputDir, "strike_mue_interface_gk_adN3.csv"));
 		
-		for (SeismicityRegions seisReg : inputDepthCSVs.keySet()) {
+		for (PRVI25_SeismicityRegions seisReg : inputDepthCSVs.keySet()) {
 			System.out.println("Doing "+seisReg);
 			Region reg = seisReg.load();
 			GriddedRegion gridReg = new GriddedRegion(reg, 0.1, GriddedRegion.ANCHOR_0_0);
