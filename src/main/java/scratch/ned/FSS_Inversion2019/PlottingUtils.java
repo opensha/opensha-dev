@@ -10,10 +10,12 @@ import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.XY_DataSet;
+import org.opensha.commons.data.uncertainty.UncertainArbDiscFunc;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.gui.plot.GraphWindow;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
+import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotPreferences;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.jfreechart.xyzPlot.XYZPlotSpec;
@@ -58,6 +60,49 @@ public class PlottingUtils {
 		writeAndOrPlotFuncs(funcs, plotChars, plotName, xAxisLabel, yAxisLabel, xAxisRange, yAxisRange, 
 				logX, logY, defaultWidthInches, defaultHeightInches, fileNamePrefix,  popupWindow);
 	}
+	
+	
+	/**
+	 * Plotting method for a list of UncertainArbDiscFunc with default width and height
+	 * @param funcs
+	 * @param plotChars
+	 * @param plotName
+	 * @param xAxisLabel
+	 * @param yAxisLabel
+	 * @param xAxisRange
+	 * @param yAxisRange
+	 * @param logX
+	 * @param logY
+	 * @param fileNamePrefix - set a null if you don't want to save to files
+	 * @param popupWindow - set as false if you don't want a pop-up windows with the plots
+	 */
+	public static void writeAndOrPlotUncertFuncs(
+			ArrayList<UncertainArbDiscFunc> uncertFuncs, 
+			ArrayList<PlotCurveCharacterstics> plotChars, 
+			String plotName,
+			String xAxisLabel,
+			String yAxisLabel,
+			Range xAxisRange,
+			Range yAxisRange,
+			boolean logX,
+			boolean logY,
+			String fileNamePrefix, 
+			boolean popupWindow) {
+		// make the douplicates for shaded regions
+		ArrayList<XY_DataSet> funcs = new ArrayList<XY_DataSet>();
+		ArrayList<PlotCurveCharacterstics> plotChars2 = new ArrayList<PlotCurveCharacterstics>();
+		for(int i=0; i<uncertFuncs.size(); i++) {
+			UncertainArbDiscFunc func = uncertFuncs.get(i);
+			funcs.add(func);
+			funcs.add(func);
+			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, plotChars.get(i).getColor()));
+			plotChars2.add(new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN_TRANS, 1f, plotChars.get(i).getColor()));
+		}
+		
+		writeAndOrPlotFuncs(funcs, plotChars2, plotName, xAxisLabel, yAxisLabel, xAxisRange, yAxisRange, 
+				logX, logY, defaultWidthInches, defaultHeightInches, fileNamePrefix,  popupWindow);
+	}
+
 	
 	
 	/**
