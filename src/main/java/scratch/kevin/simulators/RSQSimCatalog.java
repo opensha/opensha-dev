@@ -865,7 +865,7 @@ public class RSQSimCatalog implements XMLSaveable {
 	private Map<IDPairing, Double> subSectDistsCache;
 	private RSQSimSubSectionMapper subSectMapper;
 	
-	private static final File fmDmSolDir = new File(System.getProperty("user.home"), ".opensha/ucerf3_fm_dm_sols/");
+//	private static final File fmDmSolDir = new File(System.getProperty("user.home"), ".opensha/ucerf3_fm_dm_sols/");
 	private FaultSystemSolution compSol;
 	
 	public static final double MIN_SUB_SECT_FRACT_DEFAULT = 0.2;
@@ -1782,28 +1782,6 @@ public class RSQSimCatalog implements XMLSaveable {
 		}
 	}
 	
-	public FaultSystemSolution getCompareSol() throws IOException {
-		synchronized (compSolsTable) {
-			FaultSystemSolution sol = compSolsTable.get(fm, dm);
-			
-			if (sol == null) {
-				File solDir = getSolCacheDir();
-				File solFile = new File(solDir, fm.getFilePrefix()+"_"+dm.getFilePrefix()+"_MEAN_BRANCH_AVG_SOL.zip");
-				if (!solFile.exists()) {
-					// download it
-					String addr = "http://opensha.usc.edu/ftp/kmilner/ucerf3/2013_05_10-ucerf3p3-production-10runs_fm_dm_sub_plots/"
-							+ fm.getFilePrefix()+"_"+dm.getFilePrefix()+"/"+solFile.getName();
-					FileUtils.downloadURL(addr, solFile);
-				}
-				
-				sol = FaultSystemSolution.load(solFile);
-				compSolsTable.put(fm, dm, sol);
-			}
-			
-			return sol;
-		}
-	}
-	
 	private synchronized Map<Integer, Double> getSubSectAreas() throws IOException {
 		if (subSectAreas == null)
 			subSectAreas = RSQSimUtils.calcSubSectAreas(getElements(), getSubSects());
@@ -2019,15 +1997,39 @@ public class RSQSimCatalog implements XMLSaveable {
 		return RSQSimUtils.buildFaultSystemSolution(getSubSects(), getElements(), events, minMag, minFractForInclusion);
 	}
 	
-	// TODO duplicate with getCompareSol()?
-	public FaultSystemSolution getComparisonSolution() throws IOException {
-		File solFile = new File(fmDmSolDir, getFaultModel().getFilePrefix()
-				+"_"+getDeformationModel().getFilePrefix()+"_MEAN_BRANCH_AVG_SOL.zip");
-		if (solFile.exists()) {
-			System.out.println("Loading comparison FSS from "+solFile.getAbsolutePath());
-			compSol = FaultSystemSolution.load(solFile);
-		} else {
-			System.out.println("Comparison sol file doesn't exist: "+solFile.getAbsolutePath());
+	public synchronized FaultSystemSolution getComparisonSolution() throws IOException {
+		if (compSol != null)
+			return compSol;
+		File solFile = null;
+		if (getCatalogDir() != null) {
+			solFile = new File(getCatalogDir(), "comparison_solution.zip");
+			if (!solFile.exists())
+				solFile = null;
+		}
+		if (solFile == null && fm != null && dm != null) {
+			File solDir = getSolCacheDir();
+			solFile = new File(solDir, fm.getFilePrefix()+"_"+dm.getFilePrefix()+"_MEAN_BRANCH_AVG_SOL.zip");
+			if (!solFile.exists()) {
+				// download it
+				String addr = "http://data.opensha.org/ftp/kmilner/ucerf3/2013_05_10-ucerf3p3-production-10runs_fm_dm_sub_plots/"
+						+ fm.getFilePrefix()+"_"+dm.getFilePrefix()+"/"+solFile.getName();
+				try {
+					FileUtils.downloadURL(addr, solFile);
+				} catch (IOException e) {
+					System.err.println("Failed to download comparison solution from: "+addr);
+					e.printStackTrace();
+					solFile = null;
+				}
+			}
+		}
+		
+		if (solFile != null) {
+			if (solFile.exists()) {
+				System.out.println("Loading comparison FSS from "+solFile.getAbsolutePath());
+				compSol = FaultSystemSolution.load(solFile);
+			} else {
+				System.out.println("Comparison sol file doesn't exist: "+solFile.getAbsolutePath());
+			}
 		}
 		return compSol;
 	}
@@ -2059,6 +2061,14 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		boolean hasFM = getFaultModel() != null && getDeformationModel() != null;
 		
+		String compSolName;
+		if (fm != null && fm instanceof FaultModels)
+			compSolName = "UCERF3";
+		else if (fm != null && fm instanceof NSHM23_FaultModels)
+			compSolName = "NSHM23";
+		else
+			compSolName = "Comparison";
+		
 		TableBuilder table;
 		
 		if (plotsSet.contains(StandardPlots.MFD)) {
@@ -2066,7 +2076,7 @@ public class RSQSimCatalog implements XMLSaveable {
 				MFDPlot mfdPlot = new MFDPlot(minMag);
 				File mfdCSV = null;
 				if (hasFM)
-					mfdCSV = new File(fmDmSolDir, getFaultModel().getFilePrefix()
+					mfdCSV = new File(getSolCacheDir(), getFaultModel().getFilePrefix()
 							+"_"+getDeformationModel().getFilePrefix()+"_supra_plus_sub_seis_cumulative.csv");
 //				System.out.println(mfdCSV.getAbsolutePath()+" ? "+mfdCSV.exists());
 				if (mfdCSV != null && mfdCSV.exists()) {
@@ -2583,12 +2593,12 @@ public class RSQSimCatalog implements XMLSaveable {
 		if (plotsSet.contains(StandardPlots.SECTION_RECURRENCE) && hasFM) {
 			if (replot || !new File(outputDir, "interevent_elements_m"+testMagStr+"_scatter.png").exists()) {
 				RSQSimSubSectionMapper mapper = getSubSectMapper();
-				SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getCompareSol(), "UCERF3",
+				SectionRecurrenceComparePlot elemCompare = new SectionRecurrenceComparePlot(getElements(), getComparisonSolution(), compSolName,
 						SectionRecurrenceComparePlot.SectType.ELEMENT, mapper, riMinMags);
 				elemCompare.initialize(getName(), outputDir, "interevent_elements");
 				plots.add(elemCompare);
 				
-				SectionRecurrenceComparePlot subSectCompare = new SectionRecurrenceComparePlot(getElements(), getCompareSol(), "UCERF3",
+				SectionRecurrenceComparePlot subSectCompare = new SectionRecurrenceComparePlot(getElements(), getComparisonSolution(), compSolName,
 						SectionRecurrenceComparePlot.SectType.SUBSECTION, mapper, riMinMags);
 				subSectCompare.initialize(getName(), outputDir, "interevent_sub_sects");
 				plots.add(subSectCompare);

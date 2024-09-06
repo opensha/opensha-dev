@@ -694,7 +694,7 @@ public class RSQSimU3RupturePageGen {
 //		lines.add("");
 		
 		System.out.println("Plotting connectivity clusters");
-		plotConnectivity(catalog.getCompareSol().getRupSet(), resourcesDir, "connectivity_ucerf3", "UCERF3 Connectivity");
+		plotConnectivity(catalog.getComparisonSolution().getRupSet(), resourcesDir, "connectivity_ucerf3", "UCERF3 Connectivity");
 		plotConnectivity(sol.getRupSet(), resourcesDir, "connectivity_"+catalogTypeFileName, catalogName+" Connectivity");
 		
 		lines.add("## Fault Connectivity Clusters");
@@ -713,7 +713,7 @@ public class RSQSimU3RupturePageGen {
 		
 		// cumulant mag
 		System.out.println("Plotting cumulant mag");
-		plotCumulantMags(catalog.getCompareSol(), sol, catalogType, resourcesDir);
+		plotCumulantMags(catalog.getComparisonSolution(), sol, catalogType, resourcesDir);
 
 		lines.add("## Cumulant Magnitude");
 		lines.add(topLink); lines.add("");

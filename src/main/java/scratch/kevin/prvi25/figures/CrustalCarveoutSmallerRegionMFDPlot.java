@@ -18,9 +18,12 @@ import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
 import org.opensha.commons.gui.plot.PlotUtils;
+import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_MaxMagOffFault;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
@@ -49,7 +52,8 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 		
 		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(sol.getRupSet());
 		
-		double mMax = 7.6;
+		NSHM23_MaxMagOffFault mMax = NSHM23_MaxMagOffFault.MAG_7p6;
+		
 		DecimalFormat fractDF = new DecimalFormat("0.###");
 		
 		for (int r=0; r<regions.size(); r++) {
@@ -71,9 +75,9 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 			
 			System.out.println("fractN="+(float)fractN+" for "+names.get(r));
 			
-			IncrementalMagFreqDist lower = PRVI25_RegionalSeismicity.LOW.build(PRVI25_SeismicityRegions.CRUSTAL, refMFD, mMax);
-			IncrementalMagFreqDist upper = PRVI25_RegionalSeismicity.HIGH.build(PRVI25_SeismicityRegions.CRUSTAL, refMFD, mMax);
-			IncrementalMagFreqDist pref = PRVI25_RegionalSeismicity.PREFFERRED.build(PRVI25_SeismicityRegions.CRUSTAL, refMFD, mMax);
+			IncrementalMagFreqDist lower = PRVI25_RegionalSeismicity.LOW.build(PRVI25_SeismicityRegions.CRUSTAL, refMFD, mMax.getMaxMagOffFault());
+			IncrementalMagFreqDist upper = PRVI25_RegionalSeismicity.HIGH.build(PRVI25_SeismicityRegions.CRUSTAL, refMFD, mMax.getMaxMagOffFault());
+			IncrementalMagFreqDist pref = PRVI25_RegionalSeismicity.PREFFERRED.build(PRVI25_SeismicityRegions.CRUSTAL, refMFD, mMax.getMaxMagOffFault());
 			IncrementalMagFreqDist origPref = pref.deepClone();
 			if (remapped) {
 				lower.scale(fractN);

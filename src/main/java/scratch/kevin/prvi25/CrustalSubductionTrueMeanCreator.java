@@ -37,7 +37,7 @@ public class CrustalSubductionTrueMeanCreator {
 		File crustalDir = new File(args[0]);
 		File subductionDir = new File(args[1]);
 		File outputFile = new File(args[2]);
-		boolean gridded = args.length < 4 ? false : Boolean.parseBoolean(args[3]);
+		boolean gridded = args.length < 4 ? true : Boolean.parseBoolean(args[3]);
 		
 		Map<PRVI25_CrustalFaultModels, FaultSystemSolution> crustalBASols = new HashMap<>();
 		Map<PRVI25_SubductionFaultModels, FaultSystemSolution> subductionBASols = new HashMap<>();

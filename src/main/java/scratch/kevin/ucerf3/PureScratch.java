@@ -155,6 +155,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRe
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_DeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_FaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_LogicTreeBranch;
+import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_MaxMagOffFault;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_ScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SegmentationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
@@ -164,8 +165,10 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSour
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalGMMs;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_DeclusteringAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -2825,13 +2828,31 @@ public class PureScratch {
 		tree.write(outFile);
 	}
 	
+	private static void test326() throws IOException {
+		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_08_16-prvi25_crustal_branches-dmSample5x/");
+		File baSolFile = new File(dir, "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged.zip");
+		FaultSystemSolution baSol = FaultSystemSolution.load(baSolFile);
+		
+		LogicTreeBranch<?> gridBranch = PRVI25_LogicTreeBranch.fromValues(PRVI25_LogicTreeBranch.levelsCrustalOffFault,
+				PRVI25_RegionalSeismicity.PREFFERRED,
+				PRVI25_DeclusteringAlgorithms.AVERAGE,
+				PRVI25_SeisSmoothingAlgorithms.AVERAGE,
+				NSHM23_MaxMagOffFault.MAG_7p6);
+		
+		PRVI25_GridSourceBuilder.doPreGridBuildHook(baSol, baSol.requireModule(LogicTreeBranch.class));
+		GridSourceList gridSources = PRVI25_GridSourceBuilder.buildCrustalGridSourceProv(baSol, gridBranch);
+		baSol.setGridSourceProvider(gridSources);
+		
+		baSol.write(new File("/tmp/prvi_test_grid.zip"));
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test325();
+			test326();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

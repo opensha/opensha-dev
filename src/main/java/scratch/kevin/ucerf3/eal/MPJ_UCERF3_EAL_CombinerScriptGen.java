@@ -11,6 +11,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.MPJExpressShellScriptWriter;
 import org.opensha.commons.hpc.pbs.BatchScriptWriter;
+import org.opensha.commons.hpc.pbs.USC_CARC_ScriptWriter;
 import org.opensha.commons.hpc.pbs.USC_HPCC_ScriptWriter;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 
@@ -22,12 +23,12 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 
 	public static void main(String[] args) throws IOException {
 		File localDir = new File("/home/kevin/OpenSHA/UCERF3/eal");
-		File remoteDir = new File("/home/scec-02/kmilner/ucerf3/eal");
+		File remoteDir = new File("/project/scec_608/kmilner/ucerf3/eal");
 		
 		String jobName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
 		
 		File trueMeanFile = new File(remoteDir, "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_TRUE_HAZARD_MEAN_SOL_WITH_MAPPING.zip");
-		File cfssFile = new File("/home/scec-02/kmilner/ucerf3/inversion_compound_plots/2013_05_10-ucerf3p3-production-10runs/"
+		File cfssFile = new File("/project/scec_608/kmilner/ucerf3/inversion_compound_plots/2013_05_10-ucerf3p3-production-10runs/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL.zip");
 		
 //		File willsDir = new File(remoteDir, "2017_05_24-ucerf3-ngaw2-cea-proxy-wills2015");
@@ -44,7 +45,7 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		
 		BackgroundRupType bgType = BackgroundRupType.CROSSHAIR;
 		
-		File erfProbsDir = new File("/home/scec-02/kmilner/ucerf3/erf_probs/2014_10_07-ucerf3-erf-probs");
+		File erfProbsDir = new File("/project/scec_608/kmilner/ucerf3/erf_probs/2014_10_07-ucerf3-erf-probs");
 		double erfProbsDuration = 1d;
 		
 		Location tractLoc = null;
@@ -52,7 +53,8 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		double tractRadius = 0;
 		boolean tractIndividual = false;
 		boolean lec = true;
-		LossCOV_Model covModel = LossCOV_Model.PORTER_POWER_LAW_2020_09_01;
+//		LossCOV_Model covModel = LossCOV_Model.PORTER_POWER_LAW_2020_09_01;
+		LossCOV_Model covModel = LossCOV_Model.PORTER_POWER_LAW_2020_09_01_fixed;
 		
 //		Location tractLoc = new Location(34.108300, -117.289646);
 //		String cityPrefix = "san-bernardino";
@@ -89,11 +91,11 @@ public class MPJ_UCERF3_EAL_CombinerScriptGen {
 		if (tractIndividual)
 			mins = mins*7;
 		int heapSizeMB = 55*1024;
-		BatchScriptWriter pbsWrite = new USC_HPCC_ScriptWriter();
+		BatchScriptWriter pbsWrite = new USC_CARC_ScriptWriter();
 		List<File> classpath = new ArrayList<>();
 		classpath.add(new File(remoteDir, "opensha-dev-all.jar"));
 		JavaShellScriptWriter mpjWrite = new MPJExpressShellScriptWriter(
-				USC_HPCC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_HPCC_ScriptWriter.MPJ_HOME);
+				USC_CARC_ScriptWriter.JAVA_BIN, heapSizeMB, classpath, USC_CARC_ScriptWriter.MPJ_HOME);
 		((MPJExpressShellScriptWriter)mpjWrite).setUseLaunchWrapper(true);
 		
 		File localJobDir = new File(localDir, jobName);
