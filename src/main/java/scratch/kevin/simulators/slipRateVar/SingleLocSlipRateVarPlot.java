@@ -92,6 +92,7 @@ public class SingleLocSlipRateVarPlot {
 				double endTime = startTime + windowSize;
 				DiscretizedFunc subFunc = new ArbitrarilyDiscretizedFunc();
 				double slipAtStart = prevLastSlip;
+				subFunc.set(0d, 0d);
 				for (int i=prevIndex; i<cumulativeSlipFunc.size(); i++) {
 					double time = cumulativeSlipFunc.getX(i);
 					if (time < startTime)
@@ -106,7 +107,6 @@ public class SingleLocSlipRateVarPlot {
 					Preconditions.checkState(relTime >= 0d);
 					subFunc.set(relTime, relSlip);
 				}
-				subFunc.set(0d, slipAtStart);
 				funcs.add(subFunc);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
 			}
