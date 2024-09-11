@@ -98,10 +98,11 @@ public class SingleLocSlipRateVarPlot {
 					if (time > endTime)
 						break;
 					prevIndex = i;
-					if (slipAtStart==0 && i > 0)
+					if (slipAtStart==0 && startTime > firstEventTime)
 						slipAtStart = cumulativeSlipFunc.getY(i-1);
 					double slip = cumulativeSlipFunc.getY(i) - slipAtStart;
-					double relTime = cumulativeSlipFunc.getX(i) - startTime;
+					double relTime = time - startTime;
+					Preconditions.checkState(relTime >= 0d);
 					subFunc.set(relTime, slip);
 				}
 				funcs.add(subFunc);
