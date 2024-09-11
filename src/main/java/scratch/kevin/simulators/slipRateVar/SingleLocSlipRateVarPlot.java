@@ -87,10 +87,11 @@ public class SingleLocSlipRateVarPlot {
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
 			
 			int prevIndex = 0;
+			double prevLastSlip = 0d;
 			for (double startTime=firstEventTime; startTime+windowSize<lastEventTime; startTime+=windowSize) {
 				double endTime = startTime + windowSize;
 				DiscretizedFunc subFunc = new ArbitrarilyDiscretizedFunc();
-				double slipAtStart = 0d;
+				double slipAtStart = prevLastSlip;
 				for (int i=prevIndex; i<cumulativeSlipFunc.size(); i++) {
 					double time = cumulativeSlipFunc.getX(i);
 					if (time < startTime)
@@ -98,13 +99,14 @@ public class SingleLocSlipRateVarPlot {
 					if (time > endTime)
 						break;
 					prevIndex = i;
-					if (slipAtStart==0 && startTime > firstEventTime)
-						slipAtStart = cumulativeSlipFunc.getY(i-1);
-					double slip = cumulativeSlipFunc.getY(i) - slipAtStart;
+					double slip = cumulativeSlipFunc.getY(i);
+					prevLastSlip = slip;
+					double relSlip = slip - slipAtStart;
 					double relTime = time - startTime;
 					Preconditions.checkState(relTime >= 0d);
-					subFunc.set(relTime, slip);
+					subFunc.set(relTime, relSlip);
 				}
+				subFunc.set(0d, slipAtStart);
 				funcs.add(subFunc);
 				chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.GRAY));
 			}
@@ -116,7 +118,7 @@ public class SingleLocSlipRateVarPlot {
 			funcs.add(oneToOne);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.BLACK));
 			
-			PlotSpec spec = new PlotSpec(funcs, chars, middle.getParentSectionName(), "Windowed Time (years)", "Cumulative Slip (mm/yr)");
+			PlotSpec spec = new PlotSpec(funcs, chars, middle.getParentSectionName(), "Windowed Time (years)", "Cumulative Slip (m)");
 			
 			HeadlessGraphPanel gp = PlotUtils.initHeadless();
 			
