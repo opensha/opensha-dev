@@ -93,7 +93,7 @@ public class SingleLocSlipRateVarPlot {
 				double slipAtStart = 0d;
 				for (int i=prevIndex; i<cumulativeSlipFunc.size(); i++) {
 					double time = cumulativeSlipFunc.getX(i);
-					if (time < prevIndex)
+					if (time < startTime)
 						continue;
 					if (time > endTime)
 						break;
