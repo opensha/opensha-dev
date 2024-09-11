@@ -788,7 +788,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		BRUCE_5775_CRUSTAL("rundir5775_crustal", "Bruce 5775 (Crustal Only)", "Bruce Shaw", cal(2024, 3, 5),
 				"5775, but filtered for slip on crustal patches only;",
 				59, 'G'),
-		BRUCE_5844("rundir5892", "Bruce 5892", "Bruce Shaw", cal(2024, 8, 25),
+		BRUCE_5892("rundir5892", "Bruce 5892", "Bruce Shaw", cal(2024, 8, 25),
 				"WUSav, delta=2.0km, sigma0=100, b=.008, alpha=0.25",
 				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE);
 		
