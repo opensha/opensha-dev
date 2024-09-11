@@ -7,7 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
+import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
@@ -83,16 +85,19 @@ public class SingleLocSlipRateVarPlot {
 			
 			double slipRate = cumulativeSlip/duration; // m/yr
 			
-			List<DiscretizedFunc> funcs = new ArrayList<>();
+			System.out.println("Slip rate: "+(slipRate*1e3)+" mm/yr");
+			
+			List<XY_DataSet> funcs = new ArrayList<>();
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
 			
 			int prevIndex = 0;
 			double prevLastSlip = 0d;
 			for (double startTime=firstEventTime; startTime+windowSize<lastEventTime; startTime+=windowSize) {
 				double endTime = startTime + windowSize;
-				DiscretizedFunc subFunc = new ArbitrarilyDiscretizedFunc();
+				DefaultXY_DataSet subFunc = new DefaultXY_DataSet();
 				double slipAtStart = prevLastSlip;
 				subFunc.set(0d, 0d);
+				double prevRelSlip = 0d;
 				for (int i=prevIndex; i<cumulativeSlipFunc.size(); i++) {
 					double time = cumulativeSlipFunc.getX(i);
 					if (time < startTime)
@@ -104,6 +109,8 @@ public class SingleLocSlipRateVarPlot {
 					prevLastSlip = slip;
 					double relSlip = slip - slipAtStart;
 					double relTime = time - startTime;
+					subFunc.set(relTime, prevRelSlip);
+					prevRelSlip = relSlip;
 					Preconditions.checkState(relTime >= 0d);
 					subFunc.set(relTime, relSlip);
 				}
