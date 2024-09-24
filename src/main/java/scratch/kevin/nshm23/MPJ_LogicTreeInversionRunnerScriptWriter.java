@@ -985,6 +985,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 			String randLTPath = dirPath+"/logic_tree_full_gridded_sampled.json";
 			argz += " --write-full-tree "+fullLTPath;
 			argz += " --write-rand-tree "+randLTPath+" --num-samples-per-sol 5";
+			argz += " --slt-min-mag 5";
 			String onlyLTPath;
 			if (allLevelsAffected) {
 				onlyLTPath = fullLTPath;

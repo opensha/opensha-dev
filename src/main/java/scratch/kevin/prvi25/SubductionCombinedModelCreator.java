@@ -17,6 +17,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.RegionsOfInterest;
 import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
@@ -26,7 +27,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Subduc
 
 import com.google.common.base.Preconditions;
 
-public class SubductionTrueMeanCreator {
+public class SubductionCombinedModelCreator {
 
 	public static void main(String[] args) throws IOException {
 		if (args.length != 1) {
@@ -74,6 +75,9 @@ public class SubductionTrueMeanCreator {
 		}
 		
 		FaultSystemSolution trueMean = creator.build();
+		RegionsOfInterest roi = subductionBASols.values().iterator().next().getRupSet().getModule(RegionsOfInterest.class);
+		if (roi != null)
+			trueMean.getRupSet().addModule(roi);
 		trueMean.write(outputFile);
 	}
 

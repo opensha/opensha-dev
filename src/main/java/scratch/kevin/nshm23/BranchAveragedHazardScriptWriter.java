@@ -35,9 +35,9 @@ public class BranchAveragedHazardScriptWriter {
 //		String baseDirName = "2023_11_16-nshm23_branches-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2024_05_07-nshm23_branches-WUS_FM_v3-AvgSupraB-AvgSeg";
 //		String baseDirName = "2024_07_31-prvi25_subduction_branches";
-		String baseDirName = "2024_08_16-prvi25_crustal_subduction_combined_branches";
-//		String baseDirName = "2024_08_16-prvi25_crustal_branches-dmSample5x";
-//		String baseDirName = "2024_08_16-prvi25_subduction_branches";
+//		String baseDirName = "2024_09_04-prvi25_crustal_subduction_combined_branches";
+//		String baseDirName = "2024_09_04-prvi25_crustal_branches-dmSample5x";
+		String baseDirName = "2024_09_04-prvi25_subduction_branches";
 		
 //		String suffix = "true_mean";
 //		String solFileName = "true_mean_solution.zip";
@@ -55,8 +55,8 @@ public class BranchAveragedHazardScriptWriter {
 //		String suffix = "ba_only-LARGE-true_pt_src";
 //		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
 		
-		String suffix = "ba_only";
-		String solFileName = "combined_branch_averaged_solution.zip";
+//		String suffix = "ba_only";
+//		String solFileName = "combined_branch_averaged_solution.zip";
 		
 //		String suffix = "ba_only";
 //		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
@@ -68,8 +68,8 @@ public class BranchAveragedHazardScriptWriter {
 //		String suffix = "ba_only-INTERFACE_only";
 //		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
 		
-//		String suffix = "ba_only-both_fms";
-//		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
+		String suffix = "ba_only-both_fms";
+		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
 		
 		boolean noMFDs = false;
 		
