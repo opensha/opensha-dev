@@ -8,8 +8,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 
-import org.opensha.commons.util.modules.ModuleArchiveInput;
-import org.opensha.commons.util.modules.ModuleArchiveOutput;
+import org.opensha.commons.util.modules.ArchiveInput;
+import org.opensha.commons.util.modules.ArchiveOutput;
 import org.opensha.sha.earthquake.faultSysSolution.modules.AbstractLogicTreeModule;
 
 public class HazardZipLogicTreeSegModelRename {
@@ -18,8 +18,8 @@ public class HazardZipLogicTreeSegModelRename {
 		File inputFile = new File(args[0]);
 		File outputFile = new File(args[1]);
 		
-		ModuleArchiveInput.ApacheZipFileInput input = new ModuleArchiveInput.ApacheZipFileInput(inputFile);
-		ModuleArchiveOutput.ApacheZipFileOutput output = new ModuleArchiveOutput.ApacheZipFileOutput(outputFile);
+		ArchiveInput.ApacheZipFileInput input = new ArchiveInput.ApacheZipFileInput(inputFile);
+		ArchiveOutput.ApacheZipFileOutput output = new ArchiveOutput.ApacheZipFileOutput(outputFile);
 		
 		for (String entry : input.getEntries()) {
 			if (entry.equals(AbstractLogicTreeModule.LOGIC_TREE_FILE_NAME) || entry.equals(AbstractLogicTreeModule.LOGIC_TREE_MAPPINGS_FILE_NAME)) {

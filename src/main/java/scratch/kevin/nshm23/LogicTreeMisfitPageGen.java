@@ -41,7 +41,7 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
-import org.opensha.commons.util.modules.ModuleArchiveInput;
+import org.opensha.commons.util.modules.ArchiveInput;
 import org.opensha.commons.util.modules.helpers.FileBackedModule;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.LogicTreeCurveAverager;
 import org.opensha.sha.earthquake.faultSysSolution.inversion.constraints.ConstraintWeightingType;
@@ -1049,7 +1049,7 @@ public class LogicTreeMisfitPageGen {
 	
 	public static Map<LogicTreeBranch<?>, InversionMisfitStats> loadBranchMisfits(File resultsFile, LogicTree<?> tree)
 			throws IOException {
-		ModuleArchiveInput input = new ModuleArchiveInput.ZipFileInput(resultsFile);
+		ArchiveInput input = new ArchiveInput.ZipFileInput(resultsFile);
 		
 		if (tree == null) {
 			BufferedInputStream logicTreeIS = FileBackedModule.getInputStream(input, "solution_logic_tree/", "logic_tree.json");
