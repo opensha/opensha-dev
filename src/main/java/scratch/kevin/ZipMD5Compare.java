@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.opensha.commons.util.ExceptionUtils;
-import org.opensha.commons.util.modules.ArchiveInput;
+import org.opensha.commons.util.io.archive.ArchiveInput;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 
 public class ZipMD5Compare {
