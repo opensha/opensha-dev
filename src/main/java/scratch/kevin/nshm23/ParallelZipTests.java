@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -23,8 +24,9 @@ public class ParallelZipTests {
 //		File inFile = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/results_gridded_branches_simplified.zip");
 		ArchiveInput input = new ArchiveInput.ZipFileInput(inFile); // don't use apache, we want to de/recompress for this test
 //		ModuleArchiveOutput output = new ModuleArchiveOutput.ZipFileOutput(new File("/tmp/benchmark_output-java_zip.zip"));
-//		ModuleArchiveOutput output = new ModuleArchiveOutput.ApacheZipFileOutput(new File("/tmp/benchmark_output-apache_zip.zip"));
-		ArchiveOutput output = new ArchiveOutput.ParallelZipFileOutput(new File("/tmp/benchmark_output-apache_parallel_zip.zip"), 32, true);
+//		ArchiveOutput output = new ArchiveOutput.ApacheZipFileOutput(new File("/tmp/benchmark_output-apache_zip.zip"));
+//		ArchiveOutput output = new ArchiveOutput.ParallelZipFileOutput(new File("/tmp/benchmark_output-apache_parallel_zip.zip"), 1, true);
+		ArchiveOutput output = new ArchiveOutput.AsynchronousZipFileOutput(new File("/tmp/benchmark_output-apache_async_zip.zip"));
 		
 		System.out.println("Pre-reading and calculating input MD5s");
 		ExecutorService exec = Executors.newFixedThreadPool(8);
@@ -35,9 +37,30 @@ public class ParallelZipTests {
 			((ArchiveOutput.ParallelZipFileOutput)output).setTrackBlockingTimes(true);
 		List<String> entries = input.entryStream().toList();
 		int numDone = 0;
+		Random rand = new Random();
 		for (String entry : entries) {
-			System.out.println("Processing "+entry);
-			output.transferFrom(input.getInputStream(entry), entry);
+			int method = rand.nextInt(4);
+			System.out.println("Processing "+entry+"\t[method "+method+"]");
+			// try all of the different methods randomly
+			switch (method) {
+			case 0:
+				output.transferFrom(input.getInputStream(entry), entry);
+				break;
+			case 1:
+				output.transferFrom(input, entry);
+				break;
+			case 2:
+				output.transferFrom(input, entry, entry);
+				break;
+			case 3:
+				output.putNextEntry(entry);
+				input.getInputStream(entry).transferTo(output.getOutputStream());
+				output.closeEntry();
+				break;
+
+			default:
+				throw new IllegalStateException();
+			}
 			numDone++;
 			double secs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
 			double secsEach = secs/(double)numDone;

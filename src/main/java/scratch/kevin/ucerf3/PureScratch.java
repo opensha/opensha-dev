@@ -2941,9 +2941,9 @@ public class PureScratch {
 		File solZipFile = new File("/tmp/test_output_sol.zip");
 		File solDir = new File("/tmp/test_output_sol");
 		Stopwatch loadWatch = Stopwatch.createStarted();
-//		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
 //		FaultSystemSolution sol = FaultSystemSolution.load(solTarFile);
-		FaultSystemSolution sol = FaultSystemSolution.load(solDir);
+//		FaultSystemSolution sol = FaultSystemSolution.load(solDir);
 //		FaultSystemSolution sol = FaultSystemSolution.load(new ArchiveInput.ApacheZipFileInput(solFile));
 //		FaultSystemSolution sol = FaultSystemSolution.load(new ArchiveInput.ZipFileSystemInput(solFile.toPath()));
 		double initialLoadSecs = loadWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
@@ -2952,10 +2952,10 @@ public class PureScratch {
 		double totalLoadSecs = loadWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
 		loadWatch.stop();
 		Stopwatch writeWatch = Stopwatch.createStarted();
-//		sol.write(solZipFile);
+		sol.write(solZipFile);
 //		sol.write(new ArchiveOutput.DirectoryOutput(Path.of("/tmp/test_output_sol")));
 //		sol.write(solTarFile);
-		sol.write(new ArchiveOutput.ParallelZipFileOutput(solZipFile, 5, false));
+//		sol.write(new ArchiveOutput.ParallelZipFileOutput(solZipFile, 5, false));
 //		sol.write(new ModuleArchiveOutput.LZ4CompressedTarFileOutput(new File("/tmp/test_output_sol.lz4.tar")));
 //		ArchiveOutput inMemory = new ArchiveOutput.InMemoryZipOutput(false);
 //		sol.write(inMemory);
