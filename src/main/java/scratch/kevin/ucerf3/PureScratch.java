@@ -2936,7 +2936,8 @@ public class PureScratch {
 	
 	private static void test330() throws IOException {
 		File solFile = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/"
-				+ "results_WUS_FM_v3_branch_averaged_gridded_simplified.zip");
+//				+ "results_WUS_FM_v3_branch_averaged_gridded_simplified.zip");
+				+ "results_WUS_FM_v3_branch_averaged_gridded.zip");
 		File solTarFile = new File("/tmp/test_output_sol.tar");
 		File solZipFile = new File("/tmp/test_output_sol.zip");
 		File solDir = new File("/tmp/test_output_sol");
@@ -2951,11 +2952,13 @@ public class PureScratch {
 		sol.getModules(true);
 		double totalLoadSecs = loadWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
 		loadWatch.stop();
+		System.out.println("Loading took "+(float)totalLoadSecs+" s ("+(float)initialLoadSecs+" s without extra modules)");
 		Stopwatch writeWatch = Stopwatch.createStarted();
 		sol.write(solZipFile);
 //		sol.write(new ArchiveOutput.DirectoryOutput(Path.of("/tmp/test_output_sol")));
 //		sol.write(solTarFile);
 //		sol.write(new ArchiveOutput.ParallelZipFileOutput(solZipFile, 5, false));
+//		sol.write(new ArchiveOutput.AsynchronousZipFileOutput(solZipFile));
 //		sol.write(new ModuleArchiveOutput.LZ4CompressedTarFileOutput(new File("/tmp/test_output_sol.lz4.tar")));
 //		ArchiveOutput inMemory = new ArchiveOutput.InMemoryZipOutput(false);
 //		sol.write(inMemory);
