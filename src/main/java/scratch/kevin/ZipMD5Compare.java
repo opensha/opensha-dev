@@ -16,6 +16,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.io.archive.ArchiveInput;
@@ -59,7 +60,7 @@ public class ZipMD5Compare {
 	public static Map<String, String> loadCalcMD5s(ArchiveInput input, ExecutorService exec) throws IOException {
 		ArrayDeque<MessageDigest> mds = new ArrayDeque<>();
 		
-		List<String> entries = input.entryStream().toList();
+		List<String> entries = input.entryStream().collect(Collectors.toList());
 		List<Future<byte[]>> futures = new ArrayList<>(entries.size());
 		
 		for (String entry : entries) {

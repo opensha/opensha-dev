@@ -8,6 +8,7 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.opensha.commons.util.io.archive.ArchiveInput;
 import org.opensha.commons.util.io.archive.ArchiveOutput;
@@ -35,7 +36,7 @@ public class ParallelZipTests {
 		Stopwatch watch = Stopwatch.createStarted();
 		if (output instanceof ArchiveOutput.ParallelZipFileOutput)
 			((ArchiveOutput.ParallelZipFileOutput)output).setTrackBlockingTimes(true);
-		List<String> entries = input.entryStream().toList();
+		List<String> entries = input.entryStream().collect(Collectors.toList());
 		int numDone = 0;
 		Random rand = new Random();
 		for (String entry : entries) {
