@@ -21,7 +21,11 @@ import org.opensha.sha.util.TectonicRegionType;
 public class InterfaceSlabOnlyBASolWriter {
 
 	public static void main(String[] args) throws IOException {
-		File dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_08_16-prvi25_subduction_branches");
+		File dir;
+		if (args.length == 0)
+			dir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_09_04-prvi25_subduction_branches");
+		else
+			dir = new File(args[0]);
 		File largeInputFile = new File(dir, "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip");
 		File smallInputFile = new File(dir, "results_PRVI_SUB_FM_SMALL_branch_averaged_gridded.zip");
 		File slabOutputFile = new File(dir, "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip");

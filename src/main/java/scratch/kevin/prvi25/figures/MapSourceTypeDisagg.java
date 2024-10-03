@@ -78,15 +78,19 @@ public class MapSourceTypeDisagg {
 		double[] periods = {0d, 1d, 5d};
 		ReturnPeriods[] rps = SolHazardMapCalc.MAP_RPS;
 		
-		dirs.put(MapType.COMBINED, new File(baseDir, "2024_08_16-prvi25_crustal_subduction_combined_branches-ba_only"));
-		dirs.put(MapType.CRUSTAL, new File(baseDir, "2024_08_16-prvi25_crustal_branches-dmSample5x-ba_only"));
-		dirs.put(MapType.SUBDUCTION, new File(baseDir, "2024_08_16-prvi25_subduction_branches-ba_only-both_fms"));
-		dirs.put(MapType.SUBDUCTION_INTERFACE, new File(baseDir, "2024_08_16-prvi25_subduction_branches-ba_only-INTERFACE_only"));
-		dirs.put(MapType.SUBDUCTION_SLAB, new File(baseDir, "2024_08_16-prvi25_subduction_branches-ba_only-SLAB_only"));
+		dirs.put(MapType.COMBINED, new File(baseDir, "2024_09_04-prvi25_crustal_subduction_combined_branches-ba_only"));
+		dirs.put(MapType.CRUSTAL, new File(baseDir, "2024_09_04-prvi25_crustal_branches-dmSample5x-ba_only"));
+		dirs.put(MapType.SUBDUCTION, new File(baseDir, "2024_09_04-prvi25_subduction_branches-ba_only-both_fms"));
+		dirs.put(MapType.SUBDUCTION_INTERFACE, new File(baseDir, "2024_09_04-prvi25_subduction_branches-ba_only-INTERFACE_only"));
+		dirs.put(MapType.SUBDUCTION_SLAB, new File(baseDir, "2024_09_04-prvi25_subduction_branches-ba_only-SLAB_only"));
 		
 		double debugPeriod = 5d;
-		ReturnPeriods debugRP = ReturnPeriods.TWO_IN_50;;
-		Location debugLoc = new Location(17.75, -64.7);
+		ReturnPeriods debugRP = ReturnPeriods.TWO_IN_50;
+//		Location debugLoc = new Location(17.75, -64.7);
+		Location debugLoc = null;
+		
+		double cptMax = 100; // percent
+		double discreteDelta = 5d;
 		
 		MapType refType = MapType.COMBINED;
 		IncludeBackgroundOption refBGType = IncludeBackgroundOption.INCLUDE;
@@ -242,8 +246,6 @@ public class MapSourceTypeDisagg {
 			}
 		}
 		
-		double cptMax = 100; // percent
-		
 		System.out.println("Done loading rates");
 		
 		if (debugIndex >= 0) {
@@ -332,6 +334,8 @@ public class MapSourceTypeDisagg {
 					CPT cpt = new CPT(0, cptMax, Color.WHITE, maxColor);
 					cpt.setNanColor(Color.WHITE);
 					cpt.setAboveMaxColor(cpt.getMaxColor());
+					if (discreteDelta > 0d)
+						cpt = cpt.asDiscrete(discreteDelta, false);
 					System.out.println("------------------");
 					
 					String includeLabel, excludeLabel, onlyLabel;

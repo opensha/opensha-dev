@@ -11,6 +11,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.io.StringReader;
+import java.net.URI;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -88,6 +92,8 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.commons.util.cpt.CPTVal;
+import org.opensha.commons.util.io.archive.ArchiveInput;
+import org.opensha.commons.util.io.archive.ArchiveOutput;
 import org.opensha.commons.util.modules.ArchivableModule;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
 import org.opensha.commons.util.modules.ModuleArchive;
@@ -102,6 +108,8 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetFaultModel;
+import org.opensha.sha.earthquake.faultSysSolution.RuptureSets;
+import org.opensha.sha.earthquake.faultSysSolution.RuptureSets.CoulombRupSetConfig;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.mpj.MPJ_LogicTreeHazardCalc;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchAveragingOrder;
 import org.opensha.sha.earthquake.faultSysSolution.modules.BranchParentSectParticMFDs;
@@ -131,6 +139,7 @@ import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.Plausib
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.AspectRatioFilter;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.impl.prob.JumpProbabilityCalc.HardcodedJumpProb;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.GeoJSONFaultReader;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.SectionDistanceAzimuthCalculator;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.BranchAverageSolutionCreator;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
@@ -169,6 +178,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Declus
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_LogicTreeBranch;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_RegionalSeismicity;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
@@ -2846,13 +2857,135 @@ public class PureScratch {
 		baSol.write(new File("/tmp/prvi_test_grid.zip"));
 	}
 	
+	private static void test327() throws IOException {
+		File dir = new File("/data/kevin/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3");
+		FaultSystemSolution listedSol = FaultSystemSolution.load(new File(dir, "results_WUS_FM_v3_branch_averaged_gridded_simplified.zip"));
+		FaultSystemSolution unlistedSol = FaultSystemSolution.load(new File(dir, "results_WUS_FM_v3_branch_averaged_gridded_simplified_unlisted.zip"));
+		
+		Map<OpenSHA_Module, OpenSHA_Module> listedToUnlisted = new HashMap<>();
+		for (OpenSHA_Module listedModule : listedSol.getRupSet().getModules(true))
+			listedToUnlisted.put(listedModule, unlistedSol.getRupSet().getModule(listedModule.getClass()));
+		for (OpenSHA_Module listedModule : listedSol.getModules(true))
+			listedToUnlisted.put(listedModule, unlistedSol.getModule(listedModule.getClass()));
+		
+		System.out.println("\n=== MODULE MAPPINGS ===");
+		for (OpenSHA_Module listedModule : listedToUnlisted.keySet()) {
+			System.out.println(listedModule.getName()+" ("+listedModule.getClass()+")");
+			OpenSHA_Module unlistedModule = listedToUnlisted.get(listedModule);
+			if (unlistedModule == null)
+				System.out.println("\tUnlisted:\tNONE");
+			else
+				System.out.println("\tUnlisted:\t"+unlistedModule.getName()+" ("+unlistedModule.getClass()+")");
+		}
+	}
+	
+	private static void test328() throws IOException {
+		List<? extends FaultSection> crustalSubSects = PRVI25_CrustalDeformationModels.GEOLOGIC.build(
+				PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1);
+		List<? extends FaultSection> subductionSubSects = PRVI25_SubductionDeformationModels.FULL.build(
+				PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE);
+		List<FaultSection> combSects = new ArrayList<>(crustalSubSects);
+		int firstMuertosIndex = -1;
+		for (FaultSection subductionSect : subductionSubSects) {
+			if (subductionSect.getName().toLowerCase().contains("muertos")) {
+				System.out.println("Adding "+subductionSect.getName());
+				subductionSect.setSectionId(combSects.size());
+				combSects.add(subductionSect);
+				if (firstMuertosIndex < 0)
+					firstMuertosIndex = subductionSect.getSectionId();
+			}
+		}
+		SectionDistanceAzimuthCalculator distAz = new SectionDistanceAzimuthCalculator(combSects);
+		HashMap<String, Double> nearbyParents = new HashMap<>();
+		for (int m=firstMuertosIndex; m<combSects.size(); m++) {
+			FaultSection muertos = combSects.get(m);
+			for (int c=0; c<firstMuertosIndex; c++) {
+				FaultSection crustal = combSects.get(c);
+				if (crustal.isProxyFault())
+					continue;
+				double dist = distAz.getDistance(muertos, crustal);
+				if (dist < 15d) {
+					double prevDist = nearbyParents.containsKey(crustal.getParentSectionName()) ?
+							nearbyParents.get(crustal.getParentSectionName()) : Double.POSITIVE_INFINITY;
+					nearbyParents.put(crustal.getParentSectionName(), Math.min(dist, prevDist));
+				}
+			}
+		}
+		System.out.println("Nearby (<15 km) crustal sections to Muertos:");
+		for (String name : nearbyParents.keySet())
+			System.out.println("\t"+name+" ("+nearbyParents.get(name).floatValue()+" km away)");
+		
+		CoulombRupSetConfig rsConfig = new RuptureSets.CoulombRupSetConfig(combSects, null, NSHM23_ScalingRelationships.LOGA_C4p2);
+		FaultSystemRupSet rupSet = rsConfig.build(30);
+		rupSet.write(new File("/tmp/prvi_crsustal_plus_muertos"));
+	}
+	
+	private static void test329() throws IOException {
+		Path zipPath = Path.of("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/results.zip");
+		URI uri = URI.create("jar:file:"+zipPath.toAbsolutePath().toString());
+		Map<String, String> env = Map.of("create", "false");
+		FileSystem fs = FileSystems.newFileSystem(uri, env);
+		
+		Path modulesPath = fs.getPath("modules.json");
+		System.out.println(modulesPath.toString()+" exists? "+Files.exists(modulesPath));
+		Path treePath = fs.getPath("solution_logic_tree/logic_tree.json");
+		System.out.println(treePath.toString()+" exists? "+Files.exists(treePath));
+		Path badPath = fs.getPath("file_that_doesnt_exist.txt");
+		System.out.println(badPath.toString()+" exists? "+Files.exists(badPath));
+	}
+	
+	private static void test330() throws IOException {
+		File solFile = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/"
+//				+ "results_WUS_FM_v3_branch_averaged_gridded_simplified.zip");
+				+ "results_WUS_FM_v3_branch_averaged_gridded.zip");
+		File solTarFile = new File("/tmp/test_output_sol.tar");
+		File solZipFile = new File("/tmp/test_output_sol.zip");
+		File solDir = new File("/tmp/test_output_sol");
+		Stopwatch loadWatch = Stopwatch.createStarted();
+		FaultSystemSolution sol = FaultSystemSolution.load(solFile);
+//		FaultSystemSolution sol = FaultSystemSolution.load(solTarFile);
+//		FaultSystemSolution sol = FaultSystemSolution.load(solDir);
+//		FaultSystemSolution sol = FaultSystemSolution.load(new ArchiveInput.ApacheZipFileInput(solFile));
+//		FaultSystemSolution sol = FaultSystemSolution.load(new ArchiveInput.ZipFileSystemInput(solFile.toPath()));
+		double initialLoadSecs = loadWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		sol.getRupSet().getModules(true);
+		sol.getModules(true);
+		double totalLoadSecs = loadWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		loadWatch.stop();
+		System.out.println("Loading took "+(float)totalLoadSecs+" s ("+(float)initialLoadSecs+" s without extra modules)");
+		Stopwatch writeWatch = Stopwatch.createStarted();
+		sol.write(solZipFile);
+//		sol.write(new ArchiveOutput.DirectoryOutput(Path.of("/tmp/test_output_sol")));
+//		sol.write(solTarFile);
+//		sol.write(new ArchiveOutput.ParallelZipFileOutput(solZipFile, 5, false));
+//		sol.write(new ArchiveOutput.AsynchronousZipFileOutput(solZipFile));
+//		sol.write(new ModuleArchiveOutput.LZ4CompressedTarFileOutput(new File("/tmp/test_output_sol.lz4.tar")));
+//		ArchiveOutput inMemory = new ArchiveOutput.InMemoryZipOutput(false);
+//		sol.write(inMemory);
+		writeWatch.stop();
+		double writeSecs = writeWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+		System.out.println("Loading took "+(float)totalLoadSecs+" s ("+(float)initialLoadSecs+" s without extra modules)");
+		System.out.println("Writing took "+(float)writeSecs+" s");
+		
+//		System.out.println("Now loading from memory");
+//		loadWatch = Stopwatch.createStarted();
+//		ArchiveInput fromMemory = inMemory.getCompletedInput();
+//		FaultSystemSolution.load(fromMemory);
+//		initialLoadSecs = loadWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+//		sol.getRupSet().getModules(true);
+//		sol.getModules(true);
+//		totalLoadSecs = loadWatch.elapsed(TimeUnit.MILLISECONDS)/1000d;
+//		loadWatch.stop();
+//		System.out.println("InMemory Loading took "+(float)totalLoadSecs+" s ("+(float)initialLoadSecs+" s without extra modules)");
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test326();
+			test330();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

@@ -40,6 +40,7 @@ import org.opensha.commons.util.MarkdownUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.MarkdownUtils.TableBuilder;
 import org.opensha.commons.util.cpt.CPT;
+import org.opensha.commons.util.io.archive.ArchiveInput;
 import org.opensha.commons.util.modules.AverageableModule.AveragingAccumulator;
 import org.opensha.commons.util.modules.helpers.FileBackedModule;
 import org.opensha.sha.earthquake.faultSysSolution.hazard.LogicTreeCurveAverager;
@@ -1048,10 +1049,10 @@ public class LogicTreeMisfitPageGen {
 	
 	public static Map<LogicTreeBranch<?>, InversionMisfitStats> loadBranchMisfits(File resultsFile, LogicTree<?> tree)
 			throws IOException {
-		ZipFile	zip = new ZipFile(resultsFile);
+		ArchiveInput input = new ArchiveInput.ZipFileInput(resultsFile);
 		
 		if (tree == null) {
-			BufferedInputStream logicTreeIS = FileBackedModule.getInputStream(zip, "solution_logic_tree/", "logic_tree.json");
+			BufferedInputStream logicTreeIS = FileBackedModule.getInputStream(input, "solution_logic_tree/", "logic_tree.json");
 			Gson gson = new GsonBuilder().registerTypeAdapter(LogicTree.class, new LogicTree.Adapter<>()).create();
 			InputStreamReader reader = new InputStreamReader(logicTreeIS);
 			tree = gson.fromJson(reader, LogicTree.class);
@@ -1066,16 +1067,15 @@ public class LogicTreeMisfitPageGen {
 			}
 			entryName += InversionMisfitStats.MISFIT_STATS_FILE_NAME;
 //			System.out.println("Loading "+entryName);
-			ZipEntry entry = zip.getEntry(entryName);
-			Preconditions.checkNotNull(entry, "Entry not found: %s", entryName);
+			Preconditions.checkNotNull(input.hasEntry(entryName), "Entry not found: %s", entryName);
 			
-			CSVFile<String> csv = CSVFile.readStream(zip.getInputStream(entry), true);
+			CSVFile<String> csv = CSVFile.readStream(input.getInputStream(entryName), true);
 			InversionMisfitStats stats = new InversionMisfitStats(null);
 			stats.initFromCSV(csv);
 			ret.put(branch, stats);
 		}
 		
-		zip.close();
+		input.close();
 		return ret;
 	}
 	
