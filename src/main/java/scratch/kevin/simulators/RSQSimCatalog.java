@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipFile;
 
 import org.dom4j.Attribute;
 import org.dom4j.Document;
@@ -790,7 +791,16 @@ public class RSQSimCatalog implements XMLSaveable {
 				59, 'G'),
 		BRUCE_5892("rundir5892", "Bruce 5892", "Bruce Shaw", cal(2024, 8, 25),
 				"WUSav, delta=2.0km, sigma0=100, b=.008, alpha=0.25",
-				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE);
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_5895("rundir5895", "Bruce 5895", "Bruce Shaw", cal(2024, 9, 12),
+				"WUSav, delta=2.0km, sigma0=100, b=.008, alpha=0.25, dynamic",
+				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
+		BRUCE_5932("rundir5932", "Bruce 5932", "Bruce Shaw", cal(2024, 9, 12),
+				"CA, delta=1.0km, sigma0=100, bdeep=.013 bshallow=.003,  alpha=0.25, hload=hst=3, dynamic tcausalFactor=.60",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC),
+		BRUCE_5935("rundir5935", "Bruce 5935", "Bruce Shaw", cal(2024, 9, 12),
+				"CA, delta=1.0km, sigma0=100, bdeep=.013 bshallow=.003,  alpha=0.25, hload=hst=3, dynamic tcausalFactor=.75",
+				FaultModels.FM3_1, DeformationModels.GEOLOGIC);
 		
 		private String dirName;
 		private RSQSimCatalog catalog;
@@ -2013,12 +2023,26 @@ public class RSQSimCatalog implements XMLSaveable {
 				// download it
 				String addr = "http://data.opensha.org/ftp/kmilner/ucerf3/2013_05_10-ucerf3p3-production-10runs_fm_dm_sub_plots/"
 						+ fm.getFilePrefix()+"_"+dm.getFilePrefix()+"/"+solFile.getName();
+				boolean validate = false;
 				try {
 					FileUtils.downloadURL(addr, solFile);
+					validate = true;
 				} catch (IOException e) {
 					System.err.println("Failed to download comparison solution from: "+addr);
 					e.printStackTrace();
 					solFile = null;
+				}
+				if (validate) {
+					// make sure the file we just downloaded actually works
+					try {
+						ZipFile zip = new ZipFile(solFile);
+						zip.close();
+					} catch (Exception e) {
+						// failed
+						System.err.println("Failed to download comparison solution from: "+addr+" (bad zip file)");
+						solFile.delete();
+						solFile = null;
+					}
 				}
 			}
 		}
@@ -3409,7 +3433,7 @@ public class RSQSimCatalog implements XMLSaveable {
 		File gitDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
 		
 		boolean overwriteIndividual = true;
-		boolean replot = true;
+		boolean replot = false;
 		
 //		File baseDir = new File("/data/kevin/simulators/catalogs");
 		

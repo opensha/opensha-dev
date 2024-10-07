@@ -40,11 +40,11 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir5597_crustal_corupture";
 //		String catalogDirName = "rundir5775_subduction";
 //		String catalogDirName = "rundir5775_crustal";
-		String catalogDirName = "rundir5892";
+		String catalogDirName = "rundir5932";
 		
-		int skipYears = 20000;
+//		int skipYears = 20000;
 //		int skipYears = 5000;
-//		int skipYears = 2000;
+		int skipYears = 2000;
 //		int skipYears = 0;
 //		int skipYears = 65000;
 		
@@ -65,25 +65,18 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		boolean nzStandardSites = false;
 		
 		// CA
-//		Integer utmZone = null;
-//		Character utmBand = null;
-//		boolean standardSites = false;
-//		boolean csInitialLASites = false;
-//		boolean cs500LASites = false;
-//		boolean csLAMapSites = false;
-//		boolean griddedCASites = true;
-//		boolean griddedSoCalSites = false;
-//		boolean griddedNZSites = false;
-//		boolean nzStandardSites = false;
-////		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
-//		VelocityModel vm = VelocityModel.LA_BASIN_500;
-		
-		// NSHM23-wUS
 		Integer utmZone = null;
 		Character utmBand = null;
-		griddedWUSSites = true;
+		griddedCASites = true;
 //		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
 		VelocityModel vm = VelocityModel.LA_BASIN_500;
+		
+		// NSHM23-wUS
+//		Integer utmZone = null;
+//		Character utmBand = null;
+//		griddedWUSSites = true;
+////		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
+//		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 		// NZ
 //		Integer utmZone = 59;

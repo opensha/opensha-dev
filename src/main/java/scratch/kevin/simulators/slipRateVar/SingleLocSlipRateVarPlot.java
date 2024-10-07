@@ -39,6 +39,9 @@ public class SingleLocSlipRateVarPlot {
 
 	public static void main(String[] args) throws IOException {
 		RSQSimCatalog catalog = Catalogs.BRUCE_5892.instance();
+		int skipYears = 20000;
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5895.instance();
+//		int skipYears = 5000;
 		List<? extends FaultSection> subSects = catalog.getSubSects();
 		
 		int[] parentIDs = {
@@ -68,7 +71,7 @@ public class SingleLocSlipRateVarPlot {
 			DiscretizedFunc cumulativeSlipFunc = new ArbitrarilyDiscretizedFunc();
 			double cumulativeSlip = 0d;
 			
-			List<RSQSimEvent> events = catalog.loader().skipYears(20000).forSections(false, middle.getSectionId()).minMag(5d).load();
+			List<RSQSimEvent> events = catalog.loader().skipYears(skipYears).forSections(false, middle.getSectionId()).minMag(5d).load();
 			System.out.println("Loaded "+events.size()+" events for "+middle.getSectionName());
 			
 			double firstEventTime = 0d;

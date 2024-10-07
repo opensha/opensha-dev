@@ -272,10 +272,16 @@ public class BBPStandaloneCheckerboardPlots {
 //		String prefix = "r5652";
 //		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
-		RSQSimCatalog catalog = Catalogs.BRUCE_5672.instance();
-		File bbpDir = new File("/data/kevin/bbp/parallel/2023_11_06-rundir5672-all-m6.5-skipYears2000-noHF-vmLA_BASIN_500-griddedSites");
+//		RSQSimCatalog catalog = Catalogs.BRUCE_5672.instance();
+//		File bbpDir = new File("/data/kevin/bbp/parallel/2023_11_06-rundir5672-all-m6.5-skipYears2000-noHF-vmLA_BASIN_500-griddedSites");
+//		File bbpFile = new File(bbpDir, "results_rotD.zip");
+//		String prefix = "r5672";
+//		VelocityModel vm = VelocityModel.LA_BASIN_500;
+		
+		RSQSimCatalog catalog = Catalogs.BRUCE_5935.instance();
+		File bbpDir = new File("/data/kevin/bbp/parallel/2024_10_04-rundir5935-all-m6.5-skipYears2000-maxDist300-noHF-vmLA_BASIN_500-griddedSites");
 		File bbpFile = new File(bbpDir, "results_rotD.zip");
-		String prefix = "r5672";
+		String prefix = "r5935";
 		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 		PlotType[] types = PlotType.values();
@@ -291,10 +297,19 @@ public class BBPStandaloneCheckerboardPlots {
 //		AttenRelRef gmmRef = AttenRelRef.ASK_2014;
 //		prefix += "_ask2014";
 		
-		File outputDir = new File("/home/kevin/Documents/papers/2023_Bruce_GMM_Multifault/figures/checkerboards");
+//		File outputDir = new File("/home/kevin/Documents/papers/2023_Bruce_GMM_Multifault/figures/checkerboards");
+//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+//		outputDir = new File(outputDir, prefix);
+//		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
+		File markdownDir = new File("/home/kevin/markdown/rsqsim-analysis/catalogs");
+		File mdCatalogDir = new File(markdownDir, catalog.getCatalogDir().getName());
+		Preconditions.checkState(mdCatalogDir.exists());
+		File mdBBPDir = new File(mdCatalogDir, "bbp_"+vm.name());
+		Preconditions.checkState(mdCatalogDir.exists() || mdCatalogDir.mkdir());
+		File outputDir = new File(mdBBPDir, "standalone_gmpe_checkerboards");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
-		outputDir = new File(outputDir, prefix);
-		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
 		File resourcesDir = new File(outputDir, "resources");
 		Preconditions.checkState(resourcesDir.exists() || resourcesDir.mkdir());
 		

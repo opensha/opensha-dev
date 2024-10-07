@@ -40,10 +40,12 @@ public class UCERF3_LEC_TreeTrimmer {
 		File inputDir = new File("/home/kevin/OpenSHA/UCERF3/eal/"
 //				+ "2020_04_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC");
 //				+ "2020_07_08-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-gmVar");
-				+ "2020_09_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-covModel");
-		List<U3LogicTreeBranchNode<?>> fixedBranches = new ArrayList<>();
-		fixedBranches.add(U3_EAL_GMMs.BSSA_2014);
-		fixedBranches.add(U3_EAL_GMM_Epistemic.NONE);
+//				+ "2020_09_03-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-covModel");
+				+ "2024_09_05-ucerf3-ngaw2-cea-100pct-consolidate-calcLEC-covModel");
+		List<U3LogicTreeBranchNode<?>> fixedBranches = null;
+//		List<U3LogicTreeBranchNode<?>> fixedBranches = new ArrayList<>();
+//		fixedBranches.add(U3_EAL_GMMs.BSSA_2014);
+//		fixedBranches.add(U3_EAL_GMM_Epistemic.NONE);
 		
 		File outputDir = new File(inputDir, "tree_trimming");
 		if (fixedBranches != null && !fixedBranches.isEmpty()) {
