@@ -10,7 +10,7 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.rupForecastImpl.FaultRuptureSource;
-import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
+import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.griddedSeis.Point2Vert_FaultPoisSource;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FourPointEvenlyGriddedSurface;
@@ -67,7 +67,6 @@ public class Idriss2013Debug {
 		double fracReverse = 0d;
 		WC1994_MagLengthRelationship magLenRel = new WC1994_MagLengthRelationship();
 		double ptSrcCutoff = 6.0;
-		double[] DEPTHS = new double[] {5.0, 1.0};
 		
 		ProbEqkSource pointSource;
 
@@ -87,7 +86,7 @@ public class Idriss2013Debug {
 			mechMap.put(FocalMech.STRIKE_SLIP, fracStrikeSlip);
 			mechMap.put(FocalMech.REVERSE, fracReverse);
 			mechMap.put(FocalMech.NORMAL, fracNormal);
-			pointSource = new PointSource13b(faultLoc, mfd, duration, DEPTHS, mechMap, PointSourceDistanceCorrections.NONE);
+			pointSource = new PointSourceNshm(faultLoc, mfd, duration, mechMap, PointSourceDistanceCorrections.NONE);
 			break;
 		default:
 			throw new IllegalStateException("Unknown Background Rup Type: "+bgRupType);

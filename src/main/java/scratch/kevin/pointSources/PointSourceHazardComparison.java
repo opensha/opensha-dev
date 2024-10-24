@@ -69,7 +69,6 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.rupForecastImpl.PointEqkSource;
-import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.PointToFiniteSource;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_AbstractGridSourceProvider;
@@ -114,21 +113,6 @@ public class PointSourceHazardComparison {
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
 				return new PointEqkSource(centerLoc, mfd, 1d, aveRake, aveDip);
-			}
-		},
-		POINT_SOURCE_13b_NO_CORR("PointSource13b (no distance correction)", false, PointSourceDistanceCorrections.NONE) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
-					double aveRake, double aveDip, boolean isSupersample, Random r) {
-				return new PointSource13b(centerLoc, mfd, 1d, new double[] {5.0, 1.0}, mechWtMapForRake(aveRake), getDistCorrs());
-			}
-		},
-		POINT_SOURCE_13b_NSHMP_CORR("PointSource13b (NSHMP08 distance correction)", false, PointSourceDistanceCorrections.NSHM_2008) {
-			@Override
-			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
-					double aveRake, double aveDip, boolean isSupersample, Random r) {
-				return new CorrOverrideProbEqkSource(POINT_SOURCE_13b_NO_CORR.buildSource(
-						centerLoc, mfd, aveRake, aveDip, isSupersample, r), getDistCorrs());
 			}
 		},
 		POINT_SOURCE_NSHM("PointSourceNshm", false, PointSourceDistanceCorrections.NSHM_2013) {
