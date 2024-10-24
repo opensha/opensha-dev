@@ -8,12 +8,12 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm.DistanceCorrection2013;
-import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm.PointSurfaceNshm;
+import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 import org.opensha.sha.faultSurface.PointSurface;
 
 public class SupersampledApproxPointSurfaceNshm extends PointSurface {
 
-	private PointSurfaceNshm ptSurf;
+	private FiniteApproxPointSurface ptSurf;
 	private Location centerLoc;
 	private Region cell;
 	private GriddedRegion supersampledCell;
@@ -27,7 +27,7 @@ public class SupersampledApproxPointSurfaceNshm extends PointSurface {
 	// if false, calculate raw to each supersampled location, average, then correct that
 	private static final boolean AVERAGE_CORRECTED = true;
 
-	public SupersampledApproxPointSurfaceNshm(PointSurfaceNshm ptSurf, double mag, double gridSpacing, double superSampleGridSpacing) {
+	public SupersampledApproxPointSurfaceNshm(FiniteApproxPointSurface ptSurf, double mag, double gridSpacing, double superSampleGridSpacing) {
 		super(ptSurf.getLocation());
 		this.ptSurf = ptSurf;
 		this.mag = mag;

@@ -71,7 +71,6 @@ import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnP
 import org.opensha.sha.earthquake.rupForecastImpl.PointEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
-import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm.PointSurfaceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.PointToFiniteSource;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_AbstractGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
@@ -148,7 +147,7 @@ public class PointSourceHazardComparison {
 					// not externally supersampled, approximate it here
 					List<ProbEqkRupture> modRups = new ArrayList<>();
 					for (ProbEqkRupture rup : source) {
-						PointSurfaceNshm ptSurf = (PointSurfaceNshm)rup.getRuptureSurface();
+						FiniteApproxPointSurface ptSurf = (FiniteApproxPointSurface)rup.getRuptureSurface();
 						rup.setRuptureSurface(new SupersampledApproxPointSurfaceNshm(ptSurf, rup.getMag(), 0.1, SUPERSAMPLE_SPACING));
 						modRups.add(rup);
 					}
