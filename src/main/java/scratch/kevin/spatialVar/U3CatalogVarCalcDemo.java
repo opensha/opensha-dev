@@ -14,10 +14,13 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers.ASK_2014_Wrapper;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.ScalarGroundMotion;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -82,6 +85,8 @@ public class U3CatalogVarCalcDemo {
 		GridSourceProvider gridProv = fss.getGridSourceProvider();
 		GriddedRegion gridReg = gridProv.getGriddedRegion();
 		
+		PointSourceDistanceCorrections distCorr = BaseFaultSystemSolutionERF.DIST_CORR_TYPE_DEFAULT;
+		
 		System.out.println("Calculating ground motions for catalog");
 		for (int i=0; i<catalog.size(); i++) {
 			ETAS_EqkRupture rup = catalog.get(i);
@@ -101,7 +106,7 @@ public class U3CatalogVarCalcDemo {
 				RuptureSurface surf = null;
 				if (gridIndex >= 0) {
 					// match
-					ProbEqkSource gridSource = gridProv.getSource(gridIndex, 1d, null, BackgroundRupType.POINT);
+					ProbEqkSource gridSource = gridProv.getSource(gridIndex, 1d, null, BackgroundRupType.POINT, distCorr);
 					
 					// there can be multiple ruptures with that magnitude, possibly with different rakes. randomly choose one
 					double magTol = 0.05;

@@ -134,7 +134,7 @@ public class Tests extends ArrayList<Integer> {
 		Location[] locs;
 		int numLocs;
 		
-		NSHMP_GridSourceGenerator nshmpGen = new NSHMP_GridSourceGenerator();
+		NSHMP_GridSourceGenerator nshmpGen = new NSHMP_GridSourceGenerator(null);
 		GriddedRegion region = nshmpGen.getGriddedRegion();	
 //		GriddedRegion region = new GriddedRegion(new Location(32.5,-118), new Location(35.5,-114), 0.1, null);
 		numLocs = region.getNodeCount();

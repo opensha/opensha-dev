@@ -31,7 +31,10 @@ import org.opensha.sha.earthquake.param.BackgroundRupParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.earthquake.param.PointSourceDistanceCorrectionParam;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.FocalMech;
@@ -428,6 +431,10 @@ public class UCER3_EAL_CombinerTest {
 		assertEquals(branches.size(), numSols);
 		assertEquals(branches.size(), griddedEALs.length);
 		
+		PointSourceDistanceCorrections distCorr = null;
+		if (bgType == BackgroundRupType.POINT)
+			distCorr = (PointSourceDistanceCorrections) erf.getParameter(PointSourceDistanceCorrectionParam.NAME).getValue();
+		
 		for (int i=0; i<numSols; i++) {
 			InversionFaultSystemSolution sol = fetch.getSolution(branches.get(i));
 			// calculate my own gridded eal
@@ -437,7 +444,7 @@ public class UCER3_EAL_CombinerTest {
 			int numNonZeroLoss = 0;
 			int numMFDNonZero = 0;
 			for (int n=0; n<reg.getNodeCount(); n++) {
-				ProbEqkSource src = gridProv.getSource(n, 1d, null, bgType);
+				ProbEqkSource src = gridProv.getSource(n, 1d, null, bgType, distCorr);
 				// make sure not nan
 				for (Point2D pt : gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF))
 					Preconditions.checkState(!Double.isNaN(pt.getY()));

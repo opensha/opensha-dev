@@ -21,6 +21,7 @@ import org.dom4j.DocumentException;
 import org.jfree.data.Range;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.AbstractDiscretizedFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
@@ -62,6 +63,9 @@ import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.faultSurface.utils.PtSrcDistCorr;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -1214,9 +1218,14 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
+		WeightedList<PointSourceDistanceCorrection> distCorrs = PointSourceDistanceCorrections.NSHM_2013.get();
+		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
-		for(ObsEqkRupture rup: obsQkList)
+		for(ObsEqkRupture rup: obsQkList) {
+			if (rup.getRuptureSurface() instanceof PointSurface)
+				((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorrs.sample(), rup);
 			eqkRupList.add(rup);
+		}
 		
 		if(randomIML)
 			calc.getEventSetHazardCurveRandomIML(curveLogXvalues, site, imr, eqkRupList, false, random);
@@ -1235,7 +1244,6 @@ public class U3ETAS_SimulationAnalysis {
 	 */
 	private static HazardCurveCalculator getHazardCurveCalculator() {
 		HazardCurveCalculator calc = new HazardCurveCalculator();
-		calc.setPtSrcDistCorrType(PtSrcDistCorr.Type.NSHMP08);
 		calc.setMinMagnitude(5.0);
 		return calc;
 	}
@@ -1271,15 +1279,19 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
+		WeightedList<PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
+		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
-		for(ObsEqkRupture rup: obsQkList)
+		for(ObsEqkRupture rup: obsQkList) {
+			if (rup.getRuptureSurface() instanceof PointSurface)
+				((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr.sample(), rup);
 			eqkRupList.add(rup);
+		}
 		
 		calc.getEventSetExpNumExceedCurve(curveLogXvalues, site, imr, eqkRupList, false);
 
 		return curveLogXvalues;
 	}
-	
 	
 	/**
 	 */
@@ -1311,9 +1323,14 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
+		WeightedList<PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
+		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
-		for(ObsEqkRupture rup: obsQkList)
+		for(ObsEqkRupture rup: obsQkList) {
+			if (rup.getRuptureSurface() instanceof PointSurface)
+				((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr.sample(), rup);
 			eqkRupList.add(rup);
+		}
 		
 		calc.getEventSetNumExceedCurveRandomIML(curveLogXvalues, site, imr, eqkRupList, false, random);
 

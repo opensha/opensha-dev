@@ -89,7 +89,6 @@ public class SimpleSmoothHazardMapCalc {
 			
 			Location rupLoc = dist == 0d ? siteLoc : LocationUtils.location(siteLoc, 0d, dist);
 			PointSurface rupSurf = new PointSurface(rupLoc);
-			rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 			rupSurf.setAveDip(90d);
 			rupSurf.setAveStrike(0d);
 			
@@ -319,7 +318,6 @@ public class SimpleSmoothHazardMapCalc {
 				
 				Location rupLoc = momentMap.getLocation(i);
 				PointSurface rupSurf = new PointSurface(rupLoc);
-				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 				rupSurf.setAveDip(90d);
 				rupSurf.setAveStrike(0d);
 				
@@ -370,7 +368,6 @@ public class SimpleSmoothHazardMapCalc {
 				
 				Location rupLoc = momentMap.getLocation(i);
 				PointSurface rupSurf = new PointSurface(rupLoc);
-				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 				rupSurf.setAveDip(90d);
 				rupSurf.setAveStrike(0d);
 				
@@ -444,7 +441,6 @@ public class SimpleSmoothHazardMapCalc {
 				
 				Location rupLoc = rateMap.getLocation(i);
 				PointSurface rupSurf = new PointSurface(rupLoc);
-				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 				rupSurf.setAveDip(90d);
 				rupSurf.setAveStrike(0d);
 				
@@ -495,7 +491,6 @@ public class SimpleSmoothHazardMapCalc {
 				
 				Location rupLoc = rateMap.getLocation(i);
 				PointSurface rupSurf = new PointSurface(rupLoc);
-				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 				rupSurf.setAveDip(90d);
 				rupSurf.setAveStrike(0d);
 				

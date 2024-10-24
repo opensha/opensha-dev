@@ -14,6 +14,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.griddedSeis.Point2Vert_FaultPoisSource;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FourPointEvenlyGriddedSurface;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.attenRelImpl.ngaw2.NGAW2_Wrappers.Idriss_2014_Wrapper;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
@@ -86,7 +87,7 @@ public class Idriss2013Debug {
 			mechMap.put(FocalMech.STRIKE_SLIP, fracStrikeSlip);
 			mechMap.put(FocalMech.REVERSE, fracReverse);
 			mechMap.put(FocalMech.NORMAL, fracNormal);
-			pointSource = new PointSource13b(faultLoc, mfd, duration, DEPTHS, mechMap);
+			pointSource = new PointSource13b(faultLoc, mfd, duration, DEPTHS, mechMap, PointSourceDistanceCorrections.NONE);
 			break;
 		default:
 			throw new IllegalStateException("Unknown Background Rup Type: "+bgRupType);

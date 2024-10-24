@@ -31,6 +31,8 @@ import org.jfree.data.Range;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.WeightedList;
+import org.opensha.commons.data.WeightedValue;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
@@ -78,6 +80,8 @@ import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.QuadSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.faultSurface.utils.PointSurfaceBuilder;
 import org.opensha.sha.faultSurface.utils.PtSrcDistCorr.Type;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -106,36 +110,36 @@ import scratch.kevin.pointSources.TableBackedDistCorrPointSurface.DistanceCorrTa
 public class PointSourceHazardComparison {
 	
 	enum PointSourceType {
-		TRUE_POINT_SOURCE("True Point Source", false, Type.NONE) {
+		TRUE_POINT_SOURCE("True Point Source", false, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
 				return new PointEqkSource(centerLoc, mfd, 1d, aveRake, aveDip);
 			}
 		},
-		POINT_SOURCE_13b_NO_CORR("PointSource13b (no distance correction)", false, Type.NONE) {
+		POINT_SOURCE_13b_NO_CORR("PointSource13b (no distance correction)", false, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
-				return new PointSource13b(centerLoc, mfd, 1d, new double[] {5.0, 1.0}, mechWtMapForRake(aveRake));
+				return new PointSource13b(centerLoc, mfd, 1d, new double[] {5.0, 1.0}, mechWtMapForRake(aveRake), getDistCorrs());
 			}
 		},
-		POINT_SOURCE_13b_NSHMP_CORR("PointSource13b (NSHMP08 distance correction)", false, Type.NSHMP08) {
+		POINT_SOURCE_13b_NSHMP_CORR("PointSource13b (NSHMP08 distance correction)", false, PointSourceDistanceCorrections.NSHM_2008) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
 				return new CorrOverrideProbEqkSource(POINT_SOURCE_13b_NO_CORR.buildSource(
-						centerLoc, mfd, aveRake, aveDip, isSupersample, r), Type.NSHMP08);
+						centerLoc, mfd, aveRake, aveDip, isSupersample, r), getDistCorrs());
 			}
 		},
-		POINT_SOURCE_NSHM("PointSourceNshm", false, Type.NONE) { // none is fine here, it's baked in
+		POINT_SOURCE_NSHM("PointSourceNshm", false, PointSourceDistanceCorrections.NSHM_2013) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
-				return new PointSourceNshm(centerLoc, mfd, 1d, mechWtMapForRake(aveRake));
+				return new PointSourceNshm(centerLoc, mfd, 1d, mechWtMapForRake(aveRake), getDistCorrs());
 			}
 		},
-		APROX_SUPERSAMPLE_POINT_SOURCE_NSHM("Approx. Supersampled PointSourceNshm", false, Type.NONE) { // none is fine here, it's baked in
+		APROX_SUPERSAMPLE_POINT_SOURCE_NSHM("Approx. Supersampled PointSourceNshm", false, PointSourceDistanceCorrections.NONE) { // none is fine here, it's baked in
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
 					double aveRake, double aveDip, boolean isSupersample, Random r) {
@@ -153,7 +157,7 @@ public class PointSourceHazardComparison {
 				return source;
 			}
 		},
-		POINT_TO_FINITE("PointToFiniteSource", true, Type.NONE) {
+		POINT_TO_FINITE("PointToFiniteSource", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -181,21 +185,21 @@ public class PointSourceHazardComparison {
 				return new RupListSource(rups, source0);
 			}
 		},
-		SIMPLE_APPROX_FINITE_POINT_NO_CORR("Simple Approx. Finite, No Dist. Corr.", true, Type.NONE) {
+		SIMPLE_APPROX_FINITE_POINT_NO_CORR("Simple Approx. Finite, No Dist. Corr.", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorrType());
+				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorrs());
 			}
 		},
-		SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR("Simple Approx. Finite, NSHMP08 Dist. Corr.", true, Type.NSHMP08) {
+		SIMPLE_APPROX_FINITE_POINT_NSHMP_CORR("Simple Approx. Finite, NSHMP08 Dist. Corr.", true, PointSourceDistanceCorrections.NSHM_2008) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
-				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorrType());
+				return buildPointSource(centerLoc, null, mfd, aveRake, aveDip, r, getDistCorrs());
 			}
 		},
-		SINGLE_QUAD_TRACE_CENTERED("Single Quad Surface, Trace Centered", true, Type.NONE) {
+		SINGLE_QUAD_TRACE_CENTERED("Single Quad Surface, Trace Centered", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -206,7 +210,7 @@ public class PointSourceHazardComparison {
 				return buildQuadSource(builder, mfd, aveRake, aveDip, 1);
 			}
 		},
-		SINGLE_QUAD_SURF_CENTER("Single Quad Surface", true, Type.NONE) {
+		SINGLE_QUAD_SURF_CENTER("Single Quad Surface", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -217,7 +221,7 @@ public class PointSourceHazardComparison {
 				return buildQuadSource(builder, mfd, aveRake, aveDip, 1);
 			}
 		},
-		CROSSHAIR_QUAD("Crosshair Quad Surface", true, Type.NONE) {
+		CROSSHAIR_QUAD("Crosshair Quad Surface", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -228,7 +232,7 @@ public class PointSourceHazardComparison {
 				return buildQuadSource(builder, mfd, aveRake, aveDip, 2);
 			}
 		},
-		QUAD_QUAD("4x Quad Surface", true, Type.NONE) {
+		QUAD_QUAD("4x Quad Surface", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -239,7 +243,7 @@ public class PointSourceHazardComparison {
 				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 4);
 			}
 		},
-		OCT_QUAD("8x Quad Surface", true, Type.NONE) {
+		OCT_QUAD("8x Quad Surface", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -250,7 +254,7 @@ public class PointSourceHazardComparison {
 				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
 			}
 		},
-		OCT_QUAD_RAND_DAS_DD("8x Quad Surface, Random DAS & DD", true, Type.NONE) {
+		OCT_QUAD_RAND_DAS_DD("8x Quad Surface, Random DAS & DD", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -261,7 +265,7 @@ public class PointSourceHazardComparison {
 				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
 			}
 		},
-		OCT_QUAD_RAND_CELL("8x Quad Surface, Random Cell Locations", true, Type.NONE) {
+		OCT_QUAD_RAND_CELL("8x Quad Surface, Random Cell Locations", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -274,7 +278,7 @@ public class PointSourceHazardComparison {
 				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
 			}
 		},
-		OCT_QUAD_RAND_DAS_DD_CELL("8x Quad Surface, Random DAS, DD, & Cell Locations", true, Type.NONE) {
+		OCT_QUAD_RAND_DAS_DD_CELL("8x Quad Surface, Random DAS, DD, & Cell Locations", true, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -287,35 +291,35 @@ public class PointSourceHazardComparison {
 				return buildQuadSource(builder, mfd, aveRake, aveDip, isSupersample ? 2 : 8);
 			}
 		},
-		TABLE_FINITE_APPROX_POINT_SOURCE("Table-Based Finite Approx", false, Type.NONE) {
+		TABLE_FINITE_APPROX_POINT_SOURCE("Table-Based Finite Approx", false, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 				return buildTableBackedSource(centerLoc, mfd, aveRake, aveDip, false, r);
 			}
 		},
-		TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE("Table-Based Finite Supersample Approx", false, Type.NONE) {
+		TABLE_FINITE_APPROX_POINT_SOURCE_SUPERSAMPLE("Table-Based Finite Supersample Approx", false, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 				return buildTableBackedSource(centerLoc, mfd, aveRake, aveDip, isSupersample ? false : true, r);
 			}
 		},
-		HAZ_EQUIV_APPROX_POINT_SOURCE("Hazard Equivalent Finite Approx", false, Type.NONE) {
+		HAZ_EQUIV_APPROX_POINT_SOURCE("Hazard Equivalent Finite Approx", false, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 				return buildHazEquivSource(centerLoc, mfd, aveRake, aveDip, this);
 			}
 		},
-		CDF_BASED_RJB_CORR_APPROX_POINT_SOURCE("RJB Distribution Approx Finite Point Source", false, Type.NONE) {
+		CDF_BASED_RJB_CORR_APPROX_POINT_SOURCE("RJB Distribution Approx Finite Point Source", false, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
 				return buildRJBCorrSource(centerLoc, mfd, aveRake, aveDip, OCT_QUAD, 5);
 			}
 		},
-		CDF_BASED_RJB_CORR_APPROX_SUPERSAMPLED_POINT_SOURCE("RJB Distribution Approx Supersampled Finite Point Source", false, Type.NONE) {
+		CDF_BASED_RJB_CORR_APPROX_SUPERSAMPLED_POINT_SOURCE("RJB Distribution Approx Supersampled Finite Point Source", false, PointSourceDistanceCorrections.NONE) {
 			@Override
 			public ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd, double aveRake,
 					double aveDip, boolean isSupersample, Random r) {
@@ -325,17 +329,21 @@ public class PointSourceHazardComparison {
 		
 		private String label;
 		private boolean stochastic;
-		private Type distCorrType;
+		private WeightedList<PointSourceDistanceCorrection> distCorrs;
 
-		private PointSourceType(String label, boolean stochastic, Type distCorrType) {
+		private PointSourceType(String label, boolean stochastic, PointSourceDistanceCorrections distCorrType) {
+			this(label, stochastic, distCorrType.get());
+		}
+
+		private PointSourceType(String label, boolean stochastic, WeightedList<PointSourceDistanceCorrection> distCorrs) {
 			this.label = label;
 			this.stochastic = stochastic;
-			Preconditions.checkNotNull(distCorrType);
-			this.distCorrType = distCorrType;
+			Preconditions.checkNotNull(distCorrs);
+			this.distCorrs = distCorrs;
 		}
 		
-		public Type getDistCorrType() {
-			return distCorrType;
+		public WeightedList<PointSourceDistanceCorrection> getDistCorrs() {
+			return distCorrs;
 		}
 		
 		public abstract ProbEqkSource buildSource(Location centerLoc, IncrementalMagFreqDist mfd,
@@ -405,14 +413,18 @@ public class PointSourceHazardComparison {
 	}
 	
 	private static ProbEqkSource buildPointSource(Location centerLoc, Region cell, IncrementalMagFreqDist mfd,
-			double aveRake, double aveDip, Random r, Type corrType) {
+			double aveRake, double aveDip, Random r, WeightedList<PointSourceDistanceCorrection> distCorrs) {
 		PointSurfaceBuilder builder = new PointSurfaceBuilder(centerLoc);
 		builder.dip(aveDip);
 		builder.random(r);
 		builder.sampleFromCell(cell);
 		double dipRad = Math.toRadians(aveDip);
-		boolean[] footwalls = aveDip == 90 ? new boolean[] {true} : new boolean[] {false, true};
-		List<ProbEqkRupture> rups = new ArrayList<>(mfd.size()*footwalls.length);
+		int expectedSize = mfd.size();
+		if (aveDip != 90d)
+			expectedSize *= 2;
+		if (distCorrs != null)
+			expectedSize *= distCorrs.size();
+		List<ProbEqkRupture> rups = new ArrayList<>(expectedSize);
 		for (int i=0; i<mfd.size(); i++) {
 			double mag = mfd.getX(i);
 			double depth = (float)mag < 6.5f ? 5d : 1d;
@@ -425,14 +437,14 @@ public class PointSourceHazardComparison {
 			builder.length(length);
 			builder.upperDepth(depth).lowerDepth(lower);
 			
+			double totRate = mfd.getY(i);
+			WeightedList<FiniteApproxPointSurface> surfs = builder.buildFiniteApproxPointSurfaces(distCorrs);
 			
-			double rateEach = mfd.getY(i)/(double)footwalls.length;
-			double probEach = 1-Math.exp(-rateEach);
-			for (boolean footwall : footwalls) {
-				builder.footwall(footwall);
-				FiniteApproxPointSurface surf = builder.buildFiniteApproxPointSurface();
-				surf.setDistCorrMagAndType(mag, corrType);
-				rups.add(new ProbEqkRupture(mag, aveRake, probEach, surf, null));
+			for (WeightedValue<FiniteApproxPointSurface> surfWeight : surfs) {
+				double myRate = totRate*surfWeight.weight;
+				double myProb = 1-Math.exp(-myRate);
+				ProbEqkRupture rup = new ProbEqkRupture(mag, aveRake, myProb, surfWeight.value, null);
+				rups.add(rup);
 			}
 		}
 		return new RupListSource(rups, null);
@@ -671,11 +683,12 @@ public class PointSourceHazardComparison {
 	private static class CorrOverrideProbEqkSource extends ProbEqkSource {
 		
 		private ProbEqkSource source;
-		private Type corrType;
+		private PointSourceDistanceCorrection distCorr;
 
-		public CorrOverrideProbEqkSource(ProbEqkSource source, Type corrType) {
+		public CorrOverrideProbEqkSource(ProbEqkSource source, WeightedList<PointSourceDistanceCorrection> distCorrs) {
 			this.source = source;
-			this.corrType = corrType;
+			Preconditions.checkState(distCorrs.size() == 1);
+			this.distCorr = distCorrs.getValue(0);
 		}
 
 		@Override
@@ -702,7 +715,7 @@ public class PointSourceHazardComparison {
 		public ProbEqkRupture getRupture(int nRupture) {
 			ProbEqkRupture rup = source.getRupture(nRupture);
 			Preconditions.checkState(rup.getRuptureSurface() instanceof PointSurface);
-			((PointSurface)rup.getRuptureSurface()).setDistCorrMagAndType(rup.getMag(), corrType);
+			((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr, rup);
 			return rup;
 		}
 		
@@ -710,13 +723,11 @@ public class PointSourceHazardComparison {
 	
 	static class PointSourceCalcERF extends AbstractERF {
 		
-		private Type distCorrType;
 		private List<ProbEqkSource> sources;
 		private List<Callable<ProbEqkSource>> sourceCalls;
 		
 		public PointSourceCalcERF(PointSourceType type, Location loc, IncrementalMagFreqDist mfd,
 				double rake, double dip, int numPerStochastic, Random r) {
-			this.distCorrType = type.distCorrType;
 			if (type.stochastic) {
 				sources = new ArrayList<>(numPerStochastic);
 				IncrementalMagFreqDist mfdEach = mfd.deepClone();
@@ -730,7 +741,6 @@ public class PointSourceHazardComparison {
 		
 		public PointSourceCalcERF(PointSourceType type, GriddedRegion locs, IncrementalMagFreqDist mfd,
 				double rake, double dip, int numPerStochastic, Random r) {
-			this.distCorrType = type.distCorrType;
 			IncrementalMagFreqDist mfdEach = mfd.deepClone();
 			sources = new ArrayList<>(type.stochastic ? numPerStochastic*locs.getNodeCount() : locs.getNodeCount());
 			mfdEach.scale(1d/locs.getNodeCount());
@@ -749,7 +759,6 @@ public class PointSourceHazardComparison {
 		public PointSourceCalcERF(PointSourceType type, GridSourceProvider gridProv, double supersampleDisc,
 				int numPerStochastic, Random r, Region calcRegion, double maxDist) {
 			sourceCalls = new ArrayList<>();
-			this.distCorrType = type.distCorrType;
 			GriddedRegion gridReg = gridProv.getGriddedRegion();
 			for (int i=0; i<gridProv.getNumLocations(); i++) {
 				Location centerLoc = gridReg.getLocation(i);
@@ -2476,7 +2485,6 @@ public class PointSourceHazardComparison {
 			Site site = new Site(loc);
 			site.addParameterList(gmm.getSiteParams());
 			
-			calc.setPtSrcDistCorrType(erf.distCorrType);
 			calc.getHazardCurve(logCurve, site, gmm, erf);
 			
 			synchronized (calcDeque) {

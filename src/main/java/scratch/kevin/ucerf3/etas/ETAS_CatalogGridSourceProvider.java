@@ -14,9 +14,12 @@ import org.opensha.commons.geo.Region;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -42,6 +45,8 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 	private static final double MIN_CATALOG_MAG = MIN_MAG - 0.5*DELTA_MAG;
 	private static final IncrementalMagFreqDist sampleMFD = 
 			new IncrementalMagFreqDist(MIN_MAG, NUM_MAG, DELTA_MAG);
+	
+	private PointSourceDistanceCorrections distCorr = BaseFaultSystemSolutionERF.DIST_CORR_TYPE_DEFAULT;
 	
 	private GriddedRegion highResRegion;
 	// high res to low res
@@ -259,7 +264,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 		
 		// this generates a new source instance, but the ruptures in that source
 		// reuse properties. so we can only iterate over it, thus the custom iterable
-		ProbEqkSource source = getSource(node, 1d, null, BackgroundRupType.POINT);
+		ProbEqkSource source = getSource(node, 1d, null, BackgroundRupType.POINT, distCorr);
 		SubsetIterable iterable = new SubsetIterable(source);
 		
 		List<Double> rupMags = Lists.newArrayList();
@@ -336,7 +341,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 			
 			@Override
 			public ProbEqkSource getSource(int idx) {
-				return gridProv.getSource(sourceIndexes.get(idx), 1d, null, BackgroundRupType.POINT);
+				return gridProv.getSource(sourceIndexes.get(idx), 1d, null, BackgroundRupType.POINT, distCorr);
 			}
 			
 			@Override
