@@ -602,28 +602,28 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
-//		dirName += "-prvi25_crustal_branches";
-//		double avgNumRups = 50000;
-//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
-//		
-//		// random DM sampling
-//		levels = new ArrayList<>(levels);
-//		int origNumLevels = levels.size();
-//		for (int i=levels.size(); --i>=0;)
-//			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
-//				levels.remove(i);
-//		Preconditions.checkState(levels.size() == origNumLevels -1);
-//		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-//		samplingBranchCountMultiplier = 5; // 5 for each branch
-//		dirName += "-dmSample";
-//		if (samplingBranchCountMultiplier > 1)
-//			dirName += samplingBranchCountMultiplier+"x";
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+		dirName += "-prvi25_crustal_branches";
+		double avgNumRups = 50000;
+		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
 		
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
-		dirName += "-prvi25_subduction_branches";
-		double avgNumRups = 10000;
-		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+		// random DM sampling
+		levels = new ArrayList<>(levels);
+		int origNumLevels = levels.size();
+		for (int i=levels.size(); --i>=0;)
+			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
+				levels.remove(i);
+		Preconditions.checkState(levels.size() == origNumLevels -1);
+		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
+		samplingBranchCountMultiplier = 5; // 5 for each branch
+		dirName += "-dmSample";
+		if (samplingBranchCountMultiplier > 1)
+			dirName += samplingBranchCountMultiplier+"x";
+		
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
+//		dirName += "-prvi25_subduction_branches";
+//		double avgNumRups = 10000;
+//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
@@ -976,8 +976,12 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		boolean griddedJob = GridSourceProviderFactory.class.isAssignableFrom(factoryClass);
 		if (griddedJob) {
 			boolean allLevelsAffected = true;
-			for (LogicTreeLevel<?> level : levels)
-				allLevelsAffected &= GridSourceProvider.affectedByLevel(level);
+			for (LogicTreeLevel<?> level : levels) {
+				if (!GridSourceProvider.affectedByLevel(level)) {
+					System.out.println(level.getShortName()+" isn't affected by gridded seismicity");
+					allLevelsAffected = false;
+				}
+			}
 			argz = "--factory '"+factoryClass.getName()+"'"; // surround in single quotes to escape $'s
 			argz += " --logic-tree "+ltPath;
 			argz += " --sol-dir "+resultsPath;
