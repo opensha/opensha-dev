@@ -133,6 +133,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.TrueMeanRuptureMappings;
+import org.opensha.sha.earthquake.faultSysSolution.reports.ReportMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityResult;
@@ -2979,13 +2980,40 @@ public class PureScratch {
 //		System.out.println("InMemory Loading took "+(float)totalLoadSecs+" s ("+(float)initialLoadSecs+" s without extra modules)");
 	}
 	
+	private static void test331() throws IOException {
+//		Feature feature = Feature.read(new File("/tmp/gridded_region.geojson"));
+//		GriddedRegion.fromFeature(feature);
+		
+		LogicTree.read(new File("/tmp/gridded_region.geojson"));
+		
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+//				+ "2024_10_24-prvi25_crustal_branches-dmSample5x/results_PRVI_CRUSTAL_FM_V1p1_branch_averaged.zip"));
+//		Region region = ReportMetadata.detectRegion(sol);
+//		GriddedRegion gridReg = new GriddedRegion(region, 0.1, GriddedRegion.ANCHOR_0_0);
+//		Feature feature = gridReg.toFeature();
+//		String json = feature.toJSON();
+//		Feature.fromJSON(json);
+	}
+	
+	private static void test332() throws IOException {
+		MeanUCERF2 u2 = new MeanUCERF2();
+		u2.setParameter(MeanUCERF2.CYBERSHAKE_DDW_CORR_PARAM_NAME, true);
+		u2.updateForecast();
+		ProbEqkSource source = u2.getSource(136);
+		System.out.println("Source 136 is "+source.getName());
+		for (int r=0; r<source.getNumRuptures(); r++) {
+			ProbEqkRupture rup = source.getRupture(r);
+			System.out.println(r+". M="+(float)rup.getMag()+"; surface is "+rup.getRuptureSurface().getClass().getName());
+		}
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test330();
+			test332();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);
