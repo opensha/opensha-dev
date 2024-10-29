@@ -99,7 +99,7 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 			subductionSLT.setVerbose(false);
 		
 		GriddedRegion gridReg = loadGridReg(new File(crustalDir, gridRegFileName));
-		Preconditions.checkState(gridReg.equals(loadGridReg(new File(subductionDir, gridRegFileName))),
+		Preconditions.checkState(gridReg.equalsRegion(loadGridReg(new File(subductionDir, gridRegFileName))),
 				"Crustal and subduction gridded regions differ");
 		
 		String outputHazardFileName;
