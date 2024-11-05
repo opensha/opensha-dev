@@ -82,6 +82,8 @@ public class ToyInversionModelBuilder {
 			rupSet.write(rsFile);
 		}
 		
+		
+		
 		// write out a-priori connectivity estimates
 		GRParticRateEstimator estimator = new GRParticRateEstimator(rupSet, 0.5, NSHM23_SegmentationModels.MID.getModel(rupSet, null));
 		double[][] estCoeffs = calcConnCoeffs(rupSet, estimator.estimateRuptureRates());
