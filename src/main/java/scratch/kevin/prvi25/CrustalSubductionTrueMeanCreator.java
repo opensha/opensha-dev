@@ -17,7 +17,9 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.FaultGridAssociations
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
+import org.opensha.sha.earthquake.faultSysSolution.modules.ProxyFaultSectionInstances;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupSetTectonicRegimes;
+import org.opensha.sha.earthquake.faultSysSolution.util.SolModuleStripper;
 import org.opensha.sha.earthquake.faultSysSolution.util.TrueMeanSolutionCreator;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.gridded.NSHM23_SingleRegionGridSourceProvider;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
@@ -47,9 +49,12 @@ public class CrustalSubductionTrueMeanCreator {
 		
 		for (PRVI25_CrustalFaultModels fm : PRVI25_CrustalFaultModels.values()) {
 			File crustalBA = new File(crustalDir, "results_"+fm.getFilePrefix()+simplifiedSuffix);
-			if (!crustalBA.exists())
+			boolean simplify = false;
+			if (!crustalBA.exists()) {
 				// try non-simplified
 				crustalBA = new File(crustalDir, "results_"+fm.getFilePrefix()+suffix);
+				simplify = true;
+			}
 			if (crustalBA.exists()) {
 				FaultSystemSolution sol = FaultSystemSolution.load(crustalBA);
 				if (gridded) {
@@ -68,6 +73,9 @@ public class CrustalSubductionTrueMeanCreator {
 						sol.setGridSourceProvider(gridProv);
 					}
 				}
+				if (simplify)
+					// simplify it (removes proxies)
+					sol = SolModuleStripper.stripModules(sol, 5d, true, false);
 				crustalBASols.put(fm, sol);
 			}
 		}

@@ -48,9 +48,9 @@ public class CrustalCarveoutSmallerRegionMFDPlot {
 		prefixes.add("smaller_map_region");
 		
 		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_08_16-prvi25_crustal_branches-dmSample5x/results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
+				+ "2024_10_24-prvi25_crustal_branches-dmSample5x/results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
 		
-		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(sol.getRupSet());
+		EvenlyDiscretizedFunc refMFD = FaultSysTools.initEmptyMFD(2.55, sol.getRupSet().getMaxMag());
 		
 		NSHM23_MaxMagOffFault mMax = NSHM23_MaxMagOffFault.MAG_7p6;
 		
