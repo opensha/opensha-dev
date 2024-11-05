@@ -61,7 +61,6 @@ import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
-import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.geo.json.FeatureCollection;
@@ -76,7 +75,6 @@ import org.opensha.commons.gui.plot.HeadlessGraphPanel;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
 import org.opensha.commons.gui.plot.PlotSpec;
-import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.logicTree.BranchWeightProvider;
 import org.opensha.commons.logicTree.LogicTree;
@@ -87,7 +85,6 @@ import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.logicTree.LogicTreeNode.RandomlySampledNode;
 import org.opensha.commons.mapping.PoliticalBoundariesData;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
-import org.opensha.commons.util.ComparablePairing;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.commons.util.IDPairing;
 import org.opensha.commons.util.Interpolate;
@@ -103,13 +100,10 @@ import org.opensha.commons.util.modules.ModuleArchive;
 import org.opensha.commons.util.modules.OpenSHA_Module;
 import org.opensha.refFaultParamDb.vo.DeformationModelSummary;
 import org.opensha.sha.calc.HazardCurveCalculator;
-import org.opensha.sha.calc.params.filters.SourceFilter;
-import org.opensha.sha.calc.params.filters.SourceFilterManager;
 import org.opensha.sha.earthquake.AbstractNthRupERF;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
-import org.opensha.sha.earthquake.SiteAdaptiveSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.RupSetDeformationModel;
@@ -139,6 +133,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionLogicTree;
 import org.opensha.sha.earthquake.faultSysSolution.modules.SolutionSlipRates;
 import org.opensha.sha.earthquake.faultSysSolution.modules.TrueMeanRuptureMappings;
+import org.opensha.sha.earthquake.faultSysSolution.reports.ReportMetadata;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.ClusterRupture;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.FaultSubsectionCluster;
 import org.opensha.sha.earthquake.faultSysSolution.ruptures.plausibility.PlausibilityResult;
@@ -161,7 +156,6 @@ import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.earthquake.param.UseRupMFDsParam;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.FaultSegmentData;
-import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.UCERF2;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.A_FaultsFetcher;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.finalReferenceFaultParamDb.DeformationModelSummaryFinal;
@@ -175,7 +169,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Segmen
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_SingleStates;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.random.BranchSamplingManager;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.gridded.PRVI25_GridSourceBuilder;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
@@ -186,15 +179,11 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Region
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SeisSmoothingAlgorithms;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
-import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionScalingRelationships;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader.PRVI25_SeismicityRegions;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
-import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
-import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -208,7 +197,6 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
-import org.opensha.sha.magdist.TaperedGR_MagFreqDist;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.srf.RSQSimStateTime;
 import org.opensha.sha.simulators.srf.RSQSimStateTransitionFileReader;
@@ -1755,14 +1743,13 @@ public class PureScratch {
 //		int filteredR = 2;
 //		Location translatedParLoc = new Location(35, -118);
 //		ProbEqkSource src = erf.getSource(randSrcIndex);
-//		PointSourceDistanceCorrections distCorr = PointSourceDistanceCorrections.NSHM_2013;
 //		ProbEqkSource filteredSrc;
 //		if(isSubSeismo == 1)
 //			filteredSrc = gridProv.getSourceSubSeisOnFault(gridRegionIndex,
-//					erf.getTimeSpan().getDuration(), null, BackgroundRupType.POINT, distCorr);
+//					erf.getTimeSpan().getDuration(), null, BackgroundRupType.POINT);
 //		else
 //			filteredSrc = gridProv.getSourceUnassociated(gridRegionIndex,
-//					erf.getTimeSpan().getDuration(), null, BackgroundRupType.POINT, distCorr);
+//					erf.getTimeSpan().getDuration(), null, BackgroundRupType.POINT);
 //		
 //		ProbEqkRupture filteredRup = filteredSrc.getRupture(filteredR);
 //		System.out.println("Filtered r="+filteredR+", M"+filteredRup.getMag()+", rake="+filteredRup.getAveRake());
@@ -2221,25 +2208,25 @@ public class PureScratch {
 		}
 	}
 	
-	private static void test310() throws IOException {
-		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/PRVI_SUB_FM_LARGE_with_gridded.zip"));
-		GridSourceList gridSources = sol.requireModule(GridSourceList.class);
-		for (TectonicRegionType trt : gridSources.getTectonicRegionTypes()) {
-			System.out.println(trt);
-			for (int gridIndex=0; gridIndex<gridSources.getNumLocations(); gridIndex++) {
-				for (GriddedRupture rup : gridSources.getRuptures(trt, gridIndex))
-					Preconditions.checkState(rup.properties.tectonicRegionType == trt);
-				ProbEqkSource source = gridSources.getSource(trt, gridIndex, 1d, null, BackgroundRupType.FINITE, null);
-				if (source != null)
-					Preconditions.checkState(source.getTectonicRegionType() == trt,
-							"Source TRT is %s, expected %s", source.getTectonicRegionType(), trt);
-			}
-		}
-		for (int sourceIndex=0; sourceIndex<gridSources.getNumSources(); sourceIndex++) {
-			ProbEqkSource source = gridSources.getSource(sourceIndex, 1d, null, BackgroundRupType.FINITE, null);
-			Preconditions.checkState(gridSources.getTectonicRegionTypes().contains(source.getTectonicRegionType()));
-		}
-	}
+//	private static void test310() throws IOException {
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/PRVI_SUB_FM_LARGE_with_gridded.zip"));
+//		GridSourceList gridSources = sol.requireModule(GridSourceList.class);
+//		for (TectonicRegionType trt : gridSources.getTectonicRegionTypes()) {
+//			System.out.println(trt);
+//			for (int gridIndex=0; gridIndex<gridSources.getNumLocations(); gridIndex++) {
+//				for (GriddedRupture rup : gridSources.getRuptures(trt, gridIndex))
+//					Preconditions.checkState(rup.properties.tectonicRegionType == trt);
+//				ProbEqkSource source = gridSources.getSource(trt, gridIndex, 1d, null, BackgroundRupType.FINITE);
+//				if (source != null)
+//					Preconditions.checkState(source.getTectonicRegionType() == trt,
+//							"Source TRT is %s, expected %s", source.getTectonicRegionType(), trt);
+//			}
+//		}
+//		for (int sourceIndex=0; sourceIndex<gridSources.getNumSources(); sourceIndex++) {
+//			ProbEqkSource source = gridSources.getSource(sourceIndex, 1d, null, BackgroundRupType.FINITE);
+//			Preconditions.checkState(gridSources.getTectonicRegionTypes().contains(source.getTectonicRegionType()));
+//		}
+//	}
 	
 	private static void test311() throws IOException {
 		SolutionLogicTree slt = SolutionLogicTree.load(new File("/data/kevin/nshm23/batch_inversions/"
@@ -2992,559 +2979,30 @@ public class PureScratch {
 	}
 	
 	private static void test331() throws IOException {
-		MeanUCERF2 u2 = new MeanUCERF2();
-		u2.setParameter(UCERF2.BACK_SEIS_NAME, UCERF2.BACK_SEIS_ONLY);
-//		u2.setParameter(UCERF2.BACK_SEIS_RUP_NAME, UCERF2.BACK_SEIS_RUP_FINITE);
-		u2.setParameter(UCERF2.BACK_SEIS_RUP_NAME, UCERF2.BACK_SEIS_RUP_CROSSHAIR);
-		u2.updateForecast();
+//		Feature feature = Feature.read(new File("/tmp/gridded_region.geojson"));
+//		GriddedRegion.fromFeature(feature);
 		
-		HashMap<Integer, Integer> strikes = new HashMap<>();
-		MinMaxAveTracker strikeTrack = new MinMaxAveTracker();
-		int rupCount = 0;
-		int sourceCount = 0;
-		HashMap<String, Integer> classes = new HashMap<>();
-		for (ProbEqkSource source : u2) {
-			String className = source.getClass().getName();
-			int prevClassCount = classes.containsKey(className) ? classes.get(className) : 0;
-			classes.put(className, prevClassCount+1);
-			sourceCount++;
-			for (ProbEqkRupture rup : source) {
-				RuptureSurface surf = rup.getRuptureSurface();
-				if (surf instanceof PointSurface)
-					continue;
-				double strike = surf.getAveStrike();
-				int roundStrike = (int)Math.round(strike);
-				int prevCount = strikes.containsKey(roundStrike) ? strikes.get(roundStrike) : 0;
-				if (prevCount == 0) {
-					System.out.println("First for strike="+roundStrike+" ("+(float)strike+")");
-					System.out.println("\tsource="+source.getName());
-					System.out.println("\tsurfType="+surf.getClass().getName());
-					System.out.println("\tlength="+surf.getAveLength());
-					try {
-						System.out.println("\ttraceSize="+surf.getUpperEdge().size());
-					} catch (Exception e) {}
-				}
-				strikes.put(roundStrike, prevCount+1);
-				strikeTrack.addValue(strike);
-				rupCount++;
-			}
-		}
-		DecimalFormat pDF = new DecimalFormat("0.##%");
-		List<String> allClasses = ComparablePairing.getSortedData(classes);
-		Collections.reverse(allClasses);
-		System.out.println("Source classes");
-		for (String name : allClasses) {
-			int count = classes.get(name);
-			System.out.println("\t"+name+": "+count+" ("+pDF.format((double)count/(double)sourceCount)+")");
-		}
-		System.out.println("Have "+strikes.size()+" unique strikes");
-		System.out.println(strikeTrack);
-		List<Integer> allStrikes = ComparablePairing.getSortedData(strikes);
-		Collections.reverse(allStrikes);
-		System.out.println("Strikes:");
-		for (int i=0; i<allStrikes.size()&&i<50; i++) {
-			Integer strike = allStrikes.get(i);
-			int count = strikes.get(strike);
-			System.out.println("\t"+strike+": "+count+" ("+pDF.format((double)count/(double)rupCount)+")");
-		}
+		LogicTree.read(new File("/tmp/gridded_region.geojson"));
+		
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
+//				+ "2024_10_24-prvi25_crustal_branches-dmSample5x/results_PRVI_CRUSTAL_FM_V1p1_branch_averaged.zip"));
+//		Region region = ReportMetadata.detectRegion(sol);
+//		GriddedRegion gridReg = new GriddedRegion(region, 0.1, GriddedRegion.ANCHOR_0_0);
+//		Feature feature = gridReg.toFeature();
+//		String json = feature.toJSON();
+//		Feature.fromJSON(json);
 	}
 	
 	private static void test332() throws IOException {
-		PointSourceDistanceCorrection corr = PointSourceDistanceCorrections.NSHM_2008.get().getValue(0);
-		for (double mag=6d; mag<9d; mag+=0.01) {
-			double myMag = Math.nextUp(Math.nextUp(Math.nextUp(mag)));
-			System.out.print(myMag+": ");
-			try {
-				System.out.println("corr="+(float)corr.getCorrectedDistanceJB(myMag, null, 10d));
-			} catch (Exception e) {
-				System.out.println(e.getMessage());
-			}
+		MeanUCERF2 u2 = new MeanUCERF2();
+		u2.setParameter(MeanUCERF2.CYBERSHAKE_DDW_CORR_PARAM_NAME, true);
+		u2.updateForecast();
+		ProbEqkSource source = u2.getSource(136);
+		System.out.println("Source 136 is "+source.getName());
+		for (int r=0; r<source.getNumRuptures(); r++) {
+			ProbEqkRupture rup = source.getRupture(r);
+			System.out.println(r+". M="+(float)rup.getMag()+"; surface is "+rup.getRuptureSurface().getClass().getName());
 		}
-	}
-	
-	private static void test333() throws IOException {
-		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/modular/"
-				+ "FM3_1_branch_averaged.zip"));
-		FaultSystemRupSet rupSet = sol.getRupSet();
-		List<FaultSection> sects = rupSet.getFaultSectionDataForRupture(187455);
-		for (FaultSection sect : sects)
-			System.out.println(sect.getSectionId()+". "+sect.getSectionName());
-		
-	}
-	
-	private static void test334() throws IOException {
-		double gridSpacing = 0.1;
-//		Location loc = new Location(36, -118);
-		Location loc = new Location(0, 0);
-		double gridWidth = LocationUtils.horzDistanceFast(new Location(loc.lat-0.5*gridSpacing, loc.lon), new Location(loc.lat+0.5*gridSpacing, loc.lon));
-		System.out.println("Grid of "+(float)+gridSpacing+" = "+(float)gridWidth+" km");
-		
-		int sample0 = (int)Math.round(gridWidth);
-		double dist0 = 0;
-		int sample1 = 1;
-		double dist1 = 100;
-		
-		for (double dist=0; (float)dist<=(float)dist1; dist+= 1) {
-			int samples = (int)Math.ceil(Interpolate.findY(dist0, sample0, dist1, sample1, dist));
-			System.out.println((float)dist+" km: "+samples+" samples");
-		}
-		
-		Region cell = new Region(new Location(loc.lat-0.5*gridSpacing, loc.lon-0.5*gridSpacing),
-				new Location(loc.lat+0.5*gridSpacing, loc.lon+0.5*gridSpacing));
-		
-		int samples = 100000000;
-		Location[] testLocs = new Location[Integer.min(10000, samples)];
-		for (int i=0; i<testLocs.length; i++) {
-			double dist = Math.random() * 300d;
-			double az = Math.random() * 2d * Math.PI;
-			testLocs[i] = LocationUtils.location(loc, az, dist);
-		}
-		Stopwatch watch = Stopwatch.createStarted();
-		for (int i=0; i<samples; i++) {
-			LocationUtils.linearDistanceFast(loc, testLocs[i % testLocs.length]);
-		}
-		watch.stop();
-		double locDistSecs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
-		watch.reset().start();
-		for (int i=0; i<samples; i++) {
-			cell.distanceToLocation(testLocs[i % testLocs.length]);
-		}
-		watch.stop();
-		double regDistSecs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
-		Location p00 = new Location(cell.getMinLat(), cell.getMinLon());
-		Location p01 = new Location(cell.getMinLat(), cell.getMaxLon());
-		Location p10 = new Location(cell.getMaxLat(), cell.getMinLon());
-		Location p11 = new Location(cell.getMaxLat(), cell.getMaxLon());
-		watch.reset().start();
-		for (int i=0; i<samples; i++) {
-			Location testLoc = testLocs[i % testLocs.length];
-			double dist;
-			if (!cell.contains(testLoc)) {
-				dist = LocationUtils.linearDistanceFast(testLoc, p00);
-				dist = Math.min(LocationUtils.linearDistanceFast(testLoc, p01), dist);
-				dist = Math.min(LocationUtils.linearDistanceFast(testLoc, p10), dist);
-				dist = Math.min(LocationUtils.linearDistanceFast(testLoc, p11), dist);
-			} else {
-				dist = 0;
-			}
-		}
-		watch.stop();
-		double fastRegDistSecs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
-		watch.reset().start();
-		for (int i=0; i<samples; i++) {
-			Location testLoc = testLocs[i % testLocs.length];
-			double dist = LocationUtils.linearDistanceFast(testLoc, loc);
-			for (Location borderLoc : cell.getBorder())
-				dist = Math.min(LocationUtils.linearDistanceFast(testLoc, borderLoc), dist);
-//			dist = Math.min(LocationUtils.linearDistanceFast(testLoc, p00), dist);
-//			dist = Math.min(LocationUtils.linearDistanceFast(testLoc, p01), dist);
-//			dist = Math.min(LocationUtils.linearDistanceFast(testLoc, p10), dist);
-//			dist = Math.min(LocationUtils.linearDistanceFast(testLoc, p11), dist);
-		}
-		watch.stop();
-		double cornerMidpointDistSecs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
-		DecimalFormat df = new DecimalFormat("0.00");
-		System.out.println("Loc-to-loc:\t"+df.format(locDistSecs)+" s");
-		System.out.println("Loc-to-reg:\t"+df.format(regDistSecs)+" s;\t"+df.format(regDistSecs/locDistSecs)+" x slower");
-		System.out.println("Loc-to-fast-reg:\t"+df.format(fastRegDistSecs)+" s;\t"+df.format(fastRegDistSecs/locDistSecs)+" x slower");
-		System.out.println("Loc-to-corner-midpt:\t"+df.format(cornerMidpointDistSecs)+" s;\t"+df.format(cornerMidpointDistSecs/locDistSecs)+" x slower");
-	}
-	
-	private static void test335() throws IOException {
-		Table<PRVI25_SubductionFaultModels, PRVI25_SubductionScalingRelationships, Double> mMinTableCAR = HashBasedTable.create();
-		Table<PRVI25_SubductionFaultModels, PRVI25_SubductionScalingRelationships, Double> mMinTableMUE = HashBasedTable.create();
-		PRVI25_SubductionDeformationModels.ASEIS = 0d;
-		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
-		for (PRVI25_SubductionFaultModels fm : PRVI25_SubductionFaultModels.values()) {
-			if (fm.getNodeWeight(null) == 0d)
-				continue;
-			for (PRVI25_SubductionScalingRelationships scale : PRVI25_SubductionScalingRelationships.values()) {
-				if (scale.getNodeWeight(null) == 0d)
-					continue;LogicTreeBranch<LogicTreeNode> branch = PRVI25_LogicTreeBranch.DEFAULT_SUBDUCTION_INTERFACE.copy();
-				branch.setValue(fm);
-				branch.setValue(scale);
-				FaultSystemRupSet rupSet = factory.buildRuptureSet(branch, 10);
-				double largestCarMmin = 0;
-				double largestMueMmin = 0;
-				for (FaultSection sect : rupSet.getFaultSectionDataList()) {
-					double mMin = rupSet.getMinMagForSection(sect.getSectionId());
-					if (sect.getSectionName().toLowerCase().contains("muertos"))
-						largestMueMmin = Math.max(largestMueMmin, mMin);
-					else
-						largestCarMmin = Math.max(largestCarMmin, mMin);
-				}
-				mMinTableCAR.put(fm, scale, largestCarMmin);
-				mMinTableMUE.put(fm, scale, largestMueMmin);
-			}
-		}
-		for (boolean car : new boolean[] {true,false}) {
-			Table<PRVI25_SubductionFaultModels, PRVI25_SubductionScalingRelationships, Double> table;
-			if (car) {
-				table = mMinTableCAR;
-				System.out.println("Caribbean");
-			} else {
-				table = mMinTableMUE;
-				System.out.println("Muertos");
-			}
-			DecimalFormat magDF = new DecimalFormat("0.00");
-			for (PRVI25_SubductionFaultModels fm : PRVI25_SubductionFaultModels.values()) {
-				if (fm.getNodeWeight(null) == 0d)
-					continue;
-				System.out.println(fm.getName());
-				for (PRVI25_SubductionScalingRelationships scale : PRVI25_SubductionScalingRelationships.values()) {
-					if (scale.getNodeWeight(null) == 0d)
-						continue;
-					System.out.println("\t"+scale.getName()+":\t"+magDF.format(table.get(fm, scale)));
-				}
-			}
-		}
-		
-	}
-	
-	private static void test336() throws IOException {
-		FaultSystemSolution sol = FaultSystemSolution.load(
-				new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-						+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged_gridded.zip"));
-		
-		ScalarIMR gmm = AttenRelRef.ASK_2014.get();
-		
-		DiscretizedFunc xVals = new IMT_Info().getDefaultHazardCurve(PGA_Param.NAME);
-		DiscretizedFunc logXVals = new ArbitrarilyDiscretizedFunc();
-		for (Point2D pt : xVals)
-			logXVals.set(Math.log(pt.getX()), 1d);
-		for (int i=0; i<xVals.size(); i++)
-			xVals.set(i, 0d);
-		
-		boolean cache = true;
-		
-		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
-		erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.ONLY);
-		erf.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);
-		erf.setParameter(ApplyGardnerKnopoffAftershockFilterParam.NAME, false);
-		erf.getTimeSpan().setDuration(1d);
-		erf.setCacheGridSources(cache);
-		erf.updateForecast();
-		
-		HazardCurveCalculator calc = new HazardCurveCalculator();
-		calc.setTrackProgress(false);
-		List<SourceFilter> filters = calc.getSourceFilterManager().getEnabledFilters();
-		
-		Site site = new Site(new Location(34d, -118d));
-		site.addParameterList(gmm.getSiteParams());
-		
-		double rateOrig = 0d;
-		int rupsOrig = 0;
-		int rupsIncludedOrig = 0;
-		for (ProbEqkSource source : erf) {
-			int myNumRups = 0;
-			for (ProbEqkRupture rup : source) {
-				myNumRups++;
-				rateOrig += rup.getMeanAnnualRate(1d);
-			}
-			rupsOrig += myNumRups;
-			if (!HazardCurveCalculator.canSkipSource(filters, source, site))
-				rupsIncludedOrig += myNumRups;
-		}
-		calc.getHazardCurve(logXVals, site, gmm, erf);
-		
-		System.out.println("Calculating w/o");
-		Stopwatch watch = Stopwatch.createStarted();
-		int num = 20;
-		for (int i=0; i<num; i++) {
-			calc.getHazardCurve(logXVals, site, gmm, erf);
-		}
-		watch.stop();
-		
-		DiscretizedFunc curveWithout = new ArbitrarilyDiscretizedFunc();
-		for (int i=0; i<logXVals.size(); i++)
-			curveWithout.set(xVals.getX(i), logXVals.getY(i));
-		
-		double oSecs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
-		double oSecsPer = oSecs/(double)num;
-		double oMins = oSecs/60d;
-		sol.requireModule(GridSourceList.class).setSupersamplingParams(1d, 30d, 60d, 120d);
-		
-		double rateMod = 0d;
-		int rupsMod = 0;
-		int rupsIncludedMod = 0;
-		for (ProbEqkSource source : erf) {
-			if (source instanceof SiteAdaptiveSource)
-				source = ((SiteAdaptiveSource)source).getForSite(site);
-			int myNumRups = 0;
-			for (ProbEqkRupture rup : source) {
-				myNumRups++;
-				rateMod += rup.getMeanAnnualRate(1d);
-			}
-			rupsMod += myNumRups;
-			if (!HazardCurveCalculator.canSkipSource(filters, source, site))
-				rupsIncludedMod += myNumRups;
-		}
-
-		if (cache) {
-			// need to clear the cache
-			erf.setCacheGridSources(false);
-			erf.setCacheGridSources(true);
-		}
-		calc.getHazardCurve(logXVals, site, gmm, erf);
-		
-		System.out.println("Calculating w/");
-		watch = Stopwatch.createStarted();
-		for (int i=0; i<num; i++) {
-			calc.getHazardCurve(logXVals, site, gmm, erf);
-		}
-		watch.stop();
-		
-		DiscretizedFunc curveWith = new ArbitrarilyDiscretizedFunc();
-		for (int i=0; i<logXVals.size(); i++)
-			curveWith.set(xVals.getX(i), logXVals.getY(i));
-		
-		double mSecs = watch.elapsed(TimeUnit.MILLISECONDS)/1000d;
-		double mSecsPer = mSecs/(double)num;
-		double mMins = mSecs/60d;
-		
-		DecimalFormat pDF = new DecimalFormat("0.00%");
-		DecimalFormat oDF = new DecimalFormat("0.##");
-		
-		for (int i=0; i<xVals.size(); i++) {
-			double x = xVals.getX(i);
-			double y1 = curveWithout.getY(i);
-			double y2 = curveWith.getY(i);
-			double pDiff = (y1-y2)/y1;
-			System.out.println((float)x+"\t"+(float)y1+"\t"+(float)y2+"\t("+(pDiff >= 0d ? "+" : "")+pDF.format(pDiff)+")");
-		}
-		
-		System.out.println("Took "+(float)oSecs+" s = "+(float)oMins+" m ("+(float)oSecsPer+" s per curve) w/o supersampling");
-		System.out.println("Took "+(float)mSecs+" s = "+(float)mMins+" m ("+(float)mSecsPer+" s per curve) w/ supersampling; "
-				+oDF.format(mSecs/oSecs)+"x slower");
-		int rupDiff = (rupsMod-rupsOrig);
-		System.out.println("Have "+rupsMod+" ruptures (+"+rupDiff+", "+pDF.format((double)rupDiff/(double)rupsOrig)+")");
-		int rupIncludeDiff = (rupsIncludedMod-rupsIncludedOrig);
-		System.out.println("Used "+rupsIncludedMod+" ruptures (+"+rupIncludeDiff+", "+pDF.format((double)rupIncludeDiff/(double)rupsIncludedOrig)+")");
-		System.out.println("Rate orig:\t"+(float)rateOrig);
-		System.out.println("Rate mod:\t"+(float)rateMod);
-	}
-	
-	private static void test337() throws IOException {
-		// treat this as a cumulative
-		int sizeToBuild = 91;
-		int sizeToUse = 29;
-		boolean rescale = true;
-		boolean bendy1 = true;
-		boolean bendy2 = false;
-		
-		Preconditions.checkState(!(bendy1 && bendy2));
-		
-//		GutenbergRichterMagFreqDist inputCml = new GutenbergRichterMagFreqDist(5.0, sizeToBuild, 0.1);
-//		inputCml.setAllButTotMoRate(inputCml.getMinX(), inputCml.getMaxX(), 10d, 1d);
-//		String suffix = "";
-		double targetTotal = 2d;
-		EvenlyDiscretizedFunc inputCml;
-		String suffix;
-		if (bendy1) {
-//			GutenbergRichterMagFreqDist gr1 = new GutenbergRichterMagFreqDist(5.0, sizeToUse+1, 0.1);
-//			gr1.setAllButTotMoRate(gr1.getMinX(), gr1.getMaxX(), 9d, 1d);
-//			GutenbergRichterMagFreqDist gr2 = new GutenbergRichterMagFreqDist(gr1.getMinX(), gr1.size(), gr1.getDelta());
-//			gr2.setAllButTotMoRate(gr2.getMinX(), gr2.getMaxX(), 0.2d, 0d);
-//			inputCml = new EvenlyDiscretizedFunc(gr1.getMinX(), gr1.size(), gr1.getDelta());
-//			for (int i=0; i<inputCml.size(); i++)
-//				inputCml.set(i, gr1.getY(i) + gr2.getY(i));
-			GutenbergRichterMagFreqDist gr1 = new GutenbergRichterMagFreqDist(5.05, sizeToBuild+1, 0.1);
-			gr1.setAllButTotMoRate(gr1.getMinX(), gr1.getMaxX(), 9d, 1d);
-			GutenbergRichterMagFreqDist gr2 = new GutenbergRichterMagFreqDist(gr1.getMinX(), gr1.size(), gr1.getDelta());
-			gr2.setAllButTotMoRate(gr2.getMinX(), gr2.getMaxX(), 0.3d, 0d);
-			SummedMagFreqDist summedIncr = new SummedMagFreqDist(gr1.getMinX(), gr1.size(), gr1.getDelta());
-			summedIncr.addIncrementalMagFreqDist(gr1);
-			summedIncr.addIncrementalMagFreqDist(gr2);
-			inputCml = summedIncr.getCumRateDistWithOffset();
-			suffix = "_bendy";
-		} else if (bendy2) {
-//			inputCml = new EvenlyDiscretizedFunc(5d, sizeToUse+1, 0.1);
-//			int max = 11;
-//			for (int n=0; n<max; n++) {
-//				GutenbergRichterMagFreqDist gr = new GutenbergRichterMagFreqDist(5.0, inputCml.size()-n, 0.1);
-//				gr.setAllButTotMoRate(gr.getMinX(), gr.getMaxX(), 1 + (max-n), 1d);
-//				for (int i=0; i<gr.size(); i++)
-//					inputCml.add(i, gr.getY(i));
-//			}
-			TaperedGR_MagFreqDist taper = new TaperedGR_MagFreqDist(5d, sizeToUse+1, 0.1);
-			taper.setAllButTotMoRate(taper.getMinX(), 7.5d, 1d, 1d);
-			inputCml = new EvenlyDiscretizedFunc(taper.getMinX(), taper.size(), taper.getDelta());
-			for (int i=0; i<taper.size(); i++)
-				inputCml.set(i, taper.getY(i));
-			suffix = "_bendy_down";
-		} else {
-			inputCml = new GutenbergRichterMagFreqDist(5.0, sizeToBuild, 0.1);
-			((GutenbergRichterMagFreqDist)inputCml).setAllButTotMoRate(inputCml.getMinX(), inputCml.getMaxX(), 1d, 1d);
-			suffix = "";
-		}
-		inputCml.scale(targetTotal/inputCml.getY(0));
-		System.out.println("Total rate: "+(float)inputCml.getY(0));
-		
-//		for (boolean cmlLop : new boolean[] {false,true}) {
-		for (boolean cmlLop : new boolean[] {true}) {
-			IncrementalMagFreqDist incrFull = new IncrementalMagFreqDist(
-					inputCml.getMinX()+0.5*inputCml.getDelta(), sizeToUse, inputCml.getDelta());
-			IncrementalMagFreqDist incrPartial = new IncrementalMagFreqDist(
-					inputCml.getMinX()+0.5*inputCml.getDelta(), sizeToUse-3, inputCml.getDelta());
-			
-			if (cmlLop) {
-				// convert to incremental
-				for (int i=0; i<incrFull.size(); i++) {
-					double binStart = inputCml.getY(i);
-					double binEnd = i<inputCml.size()-1 ? inputCml.getY(i+1) : 0;
-					incrFull.set(i, binStart - binEnd);
-					if (i < incrPartial.size())
-						incrPartial.set(i, incrFull.getY(i));
-				}
-			} else {
-				// build full incremental
-				IncrementalMagFreqDist incrGR = new IncrementalMagFreqDist(
-						inputCml.getMinX()+0.5*inputCml.getDelta(), inputCml.size()-1, inputCml.getDelta());
-				for (int i=0; i<incrGR.size(); i++) {
-					double binStart = inputCml.getY(i);
-					double binEnd = i<inputCml.size()-1 ? inputCml.getY(i+1) : 0;
-					incrGR.set(i, binStart - binEnd);
-				}
-				
-				for (int i=0; i<incrFull.size(); i++)
-					incrFull.set(i, incrGR.getY(i));
-				
-				for (int i=0; i<incrPartial.size(); i++)
-					incrPartial.set(i, incrGR.getY(i));
-			}
-			
-			if (rescale) {
-				double factor = inputCml.getY(0)/incrFull.calcSumOfY_Vals();
-				System.out.println("Scaling by "+(float)factor);
-				incrFull.scale(factor);
-				factor = inputCml.getY(0)/incrPartial.calcSumOfY_Vals();
-				System.out.println("Scaling by "+(float)factor);
-				incrPartial.scale(factor);
-			}
-			
-			EvenlyDiscretizedFunc cmlFull = incrFull.getCumRateDistWithOffset();
-			EvenlyDiscretizedFunc cmlPartial = incrPartial.getCumRateDistWithOffset();
-			
-			List<EvenlyDiscretizedFunc> funcs = new ArrayList<>();
-			List<PlotCurveCharacterstics> chars = new ArrayList<>();
-			
-			CPT cpt = GMT_CPT_Files.CATEGORICAL_TAB10.instance();
-			
-			inputCml.setName("Original (Input) Cumulative MFD");
-			funcs.add(inputCml);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 7f, cpt.get(chars.size()).minColor));
-			
-			incrFull.setName("Converted to Incremental (Mmax=7.9)");
-			funcs.add(incrFull);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 7f, cpt.get(chars.size()).minColor));
-			
-			cmlFull.setName("Back to Cumulative (Mmax=7.9)");
-			funcs.add(cmlFull);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, cpt.get(chars.size()).minColor));
-			
-			incrPartial.setName("Converted to Incremental (Mmax=7.6)");
-			funcs.add(incrPartial);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, cpt.get(chars.size()).minColor));
-			
-			cmlPartial.setName("Back to Cumulative (Mmax=7.6)");
-			funcs.add(cmlPartial);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 4f, cpt.get(chars.size()).minColor));
-			
-//			String title = cmlLop ? "Cumulative Lopping" : "Incremental Lopping";
-			String title = " ";
-			String prefix = "mfd_lop_tests";
-			if (!cmlLop)
-				prefix += "_incr_lop";
-			prefix += suffix;
-			
-			PlotSpec spec = new PlotSpec(funcs, chars, title, "Magnitude", "Rate");
-			spec.setLegendInset(true);
-			
-			HeadlessGraphPanel gp = PlotUtils.initHeadless();
-			
-			gp.drawGraphPanel(spec, false, true, new Range(5d, 8.1d), new Range(1e-4, 10));
-			
-			PlotUtils.writePlots(new File("/tmp"), prefix, gp, 1000, 900, true, false, false);
-		}
-	}
-	
-	private static void test338() throws IOException {
-		FaultSystemSolution sol = FaultSystemSolution.load(
-				new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-						+ "2024_02_02-nshm23_branches-WUS_FM_v3/results_WUS_FM_v3_branch_averaged_gridded.zip"));
-		
-		boolean cache = true;
-		
-		GridSourceList gridSources = sol.requireModule(GridSourceList.class);
-		
-		Site site = new Site(new Location(34d, -118d));
-		
-		int nearestGridCell = gridSources.getLocationIndex(site.getLocation());
-		Preconditions.checkState(nearestGridCell >= 0);
-		
-		gridSources.setSupersamplingParams(1d, 100d, 0d, 0d);
-		
-		ProbEqkSource sourceFull = ((SiteAdaptiveSource)gridSources.getSource(TectonicRegionType.ACTIVE_SHALLOW,
-				nearestGridCell, 1d, null, BackgroundRupType.POINT, null)).getForSite(site);
-		
-		gridSources.setSupersamplingParams(1d, 0d, 100d, 0d);
-		
-		ProbEqkSource sourceBorder = ((SiteAdaptiveSource)gridSources.getSource(TectonicRegionType.ACTIVE_SHALLOW,
-				nearestGridCell, 1d, null, BackgroundRupType.POINT, null)).getForSite(site);
-		
-		gridSources.setSupersamplingParams(1d, 0d, 0d, 100d);
-		
-		ProbEqkSource sourceCorner = ((SiteAdaptiveSource)gridSources.getSource(TectonicRegionType.ACTIVE_SHALLOW,
-				nearestGridCell, 1d, null, BackgroundRupType.POINT, null)).getForSite(site);
-		
-		Location gridLoc = gridSources.getLocation(nearestGridCell);
-		
-		Region reg = new Region(gridLoc, 12d);
-		
-		GeographicMapMaker mapMaker = new GeographicMapMaker(reg);
-		
-		List<Location> locs = new ArrayList<>();
-		List<PlotCurveCharacterstics> chars = new ArrayList<>();
-		
-		HashSet<Location> prevLocs = new HashSet<>();
-		
-		System.out.println("Corners has "+sourceCorner.getNumRuptures()+" ruptures");
-		for (ProbEqkRupture rup : sourceCorner) {
-			Location loc = ((PointSurface)rup.getRuptureSurface()).getLocation();
-			if (!prevLocs.contains(loc)) {
-				locs.add(loc);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, Color.RED.darker()));
-				prevLocs.add(loc);
-			}
-		}
-		
-		System.out.println("Broders has "+sourceBorder.getNumRuptures()+" ruptures");
-		for (ProbEqkRupture rup : sourceBorder) {
-			Location loc = ((PointSurface)rup.getRuptureSurface()).getLocation();
-			if (!prevLocs.contains(loc)) {
-				locs.add(loc);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, Color.BLUE.darker()));
-				prevLocs.add(loc);
-			}
-		}
-		
-		System.out.println("Full has "+sourceFull.getNumRuptures()+" ruptures");
-		for (ProbEqkRupture rup : sourceFull) {
-			Location loc = ((PointSurface)rup.getRuptureSurface()).getLocation();
-			loc = new Location(loc.lat, loc.lon);
-			if (!prevLocs.contains(loc)) {
-				locs.add(loc);
-				chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 5f, Color.GREEN.darker()));
-				prevLocs.add(loc);
-			}
-		}
-		
-		Collections.reverse(locs);
-		Collections.reverse(chars);
-		
-		mapMaker.plotScatters(locs, chars);
-		
-		mapMaker.plot(new File("/tmp"), "grid_source_locs_debug", " ");
 	}
 	
 	/**
@@ -3553,7 +3011,7 @@ public class PureScratch {
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test338();
+			test332();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

@@ -128,10 +128,10 @@ public class HardcodedInversionFactoryRunner {
 //		NSHM23_InvConfigFactory factory = new DefModSamplingEnabledInvConfig.ConnDistB0p5MidSegCorrCapSigma();
 //		dirName += "-nshm23-dm_sample_cap_sigma";
 		
-//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
-//		dirName += "-prvi25";
-		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved();
-		dirName += "-prvi25-limit_below_obs";
+		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
+		dirName += "-prvi25";
+//		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory.LimitCrustalBelowObserved();
+//		dirName += "-prvi25-limit_below_obs";
 //		PRVI25_InvConfigFactory.SUB_SECT_DDW_FRACT = 0.25; dirName += "-quarter_len_sub_sects";
 		
 		factory.setCacheDir(new File("/home/kevin/OpenSHA/nshm23/rup_sets/cache"));
