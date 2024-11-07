@@ -636,15 +636,15 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		RuptureIdentifier loadIden = FocalMechIden.builder().forRake(-105, -75).forDip(35, 55).build();
 //		String loadIdenPrefix = "mech_normal";
 
-		boolean replotScatters = true;
-		boolean replotZScores = true;
-		boolean replotCurves = true;
-		boolean replotResiduals = true;
-		
 //		boolean replotScatters = true;
 //		boolean replotZScores = true;
 //		boolean replotCurves = true;
 //		boolean replotResiduals = true;
+		
+		boolean replotScatters = false;
+		boolean replotZScores = false;
+		boolean replotCurves = false;
+		boolean replotResiduals = true;
 		
 		if (timeScale != 1d)
 			doRotD = false;

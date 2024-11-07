@@ -150,7 +150,7 @@ public class ResidualScatterPlot {
 		else
 			xRange = new Range(minX, maxX);
 		
-		SimpleRegression linearRegression = getRegression(xy, logX, xRange);
+		SimpleRegression linearRegression = getRegression(xy, logX, xRange, true, true);
 		regressionIntercept = linearRegression.getIntercept();
 		regressionLinearSlope = linearRegression.getSlope();
 		System.out.println("Linear regression yInt: "+linearRegression.getIntercept());
@@ -168,7 +168,7 @@ public class ResidualScatterPlot {
 			Range regressRange = new Range(binCenter - 0.5*deltaX, binCenter + 0.5*deltaX);
 			if (logX)
 				regressRange = new Range(Math.pow(10, regressRange.getLowerBound()), Math.pow(10, regressRange.getUpperBound()));
-			regressionBinned[i] = getRegressionFit(xy, logX, regressRange);
+			regressionBinned[i] = getRegressionFit(xy, logX, regressRange, i == 0, i == numRegressionBins-1);
 			if (regressionBinned[i] != null)
 				dataSigmaBinned[i] = calcSigma(regressionBinned[i], xy);
 		}
@@ -239,11 +239,11 @@ public class ResidualScatterPlot {
 		funcs.add(zeroLine);
 		chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.DARK_GRAY));
 		
-		addResidualFuncs(funcs, chars, true);
+		addResidualFuncs(funcs, chars);
 		
 		PlotSpec spec = new PlotSpec(funcs, chars, title, xAxisLabel, residualLabel);
 		spec.setLegendVisible(true);
-		List<XYTextAnnotation> anns = buildAnnotations(false);
+		List<XYTextAnnotation> anns = buildAnnotations();
 		if (isFiltered) {
 			// add filtered note
 			Font font = new Font(Font.SANS_SERIF, Font.BOLD, 20);
@@ -355,8 +355,9 @@ public class ResidualScatterPlot {
 		ArrayList<PlotCurveCharacterstics> chars = new ArrayList<>();
 		
 		Range xRange = this.xRange;
-		if (logX)
-			xRange = new Range(Math.log10(xRange.getLowerBound()), Math.log10(xRange.getUpperBound()));
+		// now plotting with log axis; XYZ is still in log spacing, but range in linear
+//		if (logX)
+//			xRange = new Range(Math.log10(xRange.getLowerBound()), Math.log10(xRange.getUpperBound()));
 		
 		DefaultXY_DataSet zeroLine = new DefaultXY_DataSet();
 		zeroLine.set(xRange.getLowerBound(), 0d);
@@ -365,7 +366,7 @@ public class ResidualScatterPlot {
 		funcs.add(0, zeroLine);
 		chars.add(0, new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.DARK_GRAY));
 		
-		addResidualFuncs(funcs, chars, false);
+		addResidualFuncs(funcs, chars);
 		
 		// add custom y axis guides
 		for (int i=(int)Math.round(yRange.getLowerBound()); i<=(int)Math.round(yRange.getUpperBound()); i++) {
@@ -381,7 +382,7 @@ public class ResidualScatterPlot {
 		
 		xyzSpec.setXYElems(funcs);
 		xyzSpec.setXYChars(chars);
-		xyzSpec.setPlotAnnotations(buildAnnotations(true));
+		xyzSpec.setPlotAnnotations(buildAnnotations());
 		
 		PlotPreferences plotPrefs = PlotPreferences.getDefault();
 		plotPrefs.setTickLabelFontSize(18);
@@ -390,7 +391,7 @@ public class ResidualScatterPlot {
 		plotPrefs.setBackgroundColor(Color.WHITE);
 		HeadlessGraphPanel xyzGP = new HeadlessGraphPanel(plotPrefs);
 		System.out.println("Plotting with xRange: "+xRange);
-		xyzGP.drawGraphPanel(xyzSpec, false, false, xRange, yRange);
+		xyzGP.drawGraphPanel(xyzSpec, logX, false, xRange, yRange);
 		// write plot
 		xyzGP.getYAxis().setStandardTickUnits(getYTickUnits());
 		xyzGP.getChartPanel().setSize(plotWidth, plotWidth-100);
@@ -399,7 +400,7 @@ public class ResidualScatterPlot {
 			xyzGP.saveAsPDF(new File(outputDir, prefix+".pdf").getAbsolutePath());
 	}
 	
-	private List<XYTextAnnotation> buildAnnotations(boolean doLog) {
+	private List<XYTextAnnotation> buildAnnotations() {
 		List<XYTextAnnotation> anns = new ArrayList<>();
 		
 		double yPos = yRange.getUpperBound() * 0.95;
@@ -412,7 +413,8 @@ public class ResidualScatterPlot {
 			xMin = Math.log10(xMin);
 		}
 		double xPos = xMin + 0.95*(xMax - xMin);
-		if (logX && !doLog)
+//		if (logX && !doLog)
+		if (logX)
 			xPos = Math.pow(10, xPos);
 		
 		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 24);
@@ -448,7 +450,8 @@ public class ResidualScatterPlot {
 		if (plotLinearResidual) {
 			yPos = yRange.getUpperBound() * 0.95;
 			xPos = xMin + 0.05*(xMax - xMin);
-			if (logX && !doLog)
+//			if (logX && !doLog)
+			if (logX)
 				xPos = Math.pow(10, xPos);
 
 			ann = new XYTextAnnotation("Linear LSQ Fit", xPos, yPos);
@@ -478,7 +481,7 @@ public class ResidualScatterPlot {
 	private static final DecimalFormat annDF = new DecimalFormat("0.00");
 	private static final DecimalFormat regressionDF = new DecimalFormat("0.00E0");
 	
-	private void addResidualFuncs(List<XY_DataSet> funcs, List<PlotCurveCharacterstics> chars, boolean scatter) {
+	private void addResidualFuncs(List<XY_DataSet> funcs, List<PlotCurveCharacterstics> chars) {
 		Color linearColor = Color.BLACK;
 		Color binnedColor = Color.BLACK;
 		Color gmpeColor = new Color(35, 72, 132);
@@ -489,9 +492,9 @@ public class ResidualScatterPlot {
 		// linear fit
 		if (plotLinearResidual) {
 			regressionLinear.setName("Linear LS Fit");
-			if (!scatter && logX)
-				funcs.add(getInLogX(regressionLinear));
-			else
+//			if (!scatter && logX)
+//				funcs.add(getInLogX(regressionLinear));
+//			else
 				funcs.add(regressionLinear);
 			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, residualThickness, linearColor));
 		}
@@ -530,11 +533,11 @@ public class ResidualScatterPlot {
 				tickEnd = binMiddle + binFractEachSide*delta;
 			}
 			
-			if (!scatter && logX) {
-				binMiddle = Math.log10(binMiddle);
-				tickStart = Math.log10(tickStart);
-				tickEnd = Math.log10(tickEnd);
-			}
+//			if (!scatter && logX) {
+//				binMiddle = Math.log10(binMiddle);
+//				tickStart = Math.log10(tickStart);
+//				tickEnd = Math.log10(tickEnd);
+//			}
 			
 			binnedPoints.set(binMiddle, binY);
 			addSigmaFuncs(funcs, chars, binMiddle, binY, tickStart, tickEnd, dataSigmaBinned[i],
@@ -608,23 +611,26 @@ public class ResidualScatterPlot {
 		return tus;
 	}
 	
-	private static SimpleRegression getRegression(XY_DataSet xy, boolean logX, Range xRange) {
+	private static SimpleRegression getRegression(XY_DataSet xy, boolean logX, Range xRange, boolean includeBelow, boolean includeAbove) {
 		// regression
 		SimpleRegression regression = new SimpleRegression();
 		for (Point2D pt : xy) {
-			if (!xRange.contains(pt.getX()))
-				continue;
-			if (logX)
-				pt = new Point2D.Double(Math.log10(pt.getX()), pt.getY());
-			regression.addData(pt.getX(), pt.getY());
+			boolean contains = xRange.contains(pt.getX());
+			contains |= includeBelow && pt.getX() <= xRange.getLowerBound();
+			contains |= includeAbove && pt.getX() >= xRange.getUpperBound();
+			if (contains) {
+				if (logX)
+					pt = new Point2D.Double(Math.log10(pt.getX()), pt.getY());
+				regression.addData(pt.getX(), pt.getY());
+			}
 		}
 		if (regression.getN() == 0l)
 			return null;
 		return regression;
 	}
 	
-	private static ArbitrarilyDiscretizedFunc getRegressionFit(XY_DataSet xy, boolean logX, Range xRange) {
-		SimpleRegression regression = getRegression(xy, logX, xRange);
+	private static ArbitrarilyDiscretizedFunc getRegressionFit(XY_DataSet xy, boolean logX, Range xRange, boolean includeBelow, boolean includeAbove) {
+		SimpleRegression regression = getRegression(xy, logX, xRange, includeBelow, includeAbove);
 		if (regression == null)
 			return null;
 		return getRegressionFit(regression, xy, logX, xRange);
