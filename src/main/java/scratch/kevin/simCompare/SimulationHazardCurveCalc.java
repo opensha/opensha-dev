@@ -3,6 +3,7 @@ package scratch.kevin.simCompare;
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,7 +108,10 @@ public class SimulationHazardCurveCalc<E> {
 //		double minRate = Double.POSITIVE_INFINITY;
 		simProv.getMinimumCurvePlotRate(site);
 		boolean allRatesSame = true;
-		for (E rupture : simProv.getRupturesForSite(site)) {
+		Collection<? extends E> rups = simProv.getRupturesForSite(site);
+		if (rups == null)
+			return null;
+		for (E rupture : rups) {
 			double rupRate = simProv.getAnnualRate(rupture);
 			if (rupRateScalars != null) {
 				Double scale = rupRateScalars.get(rupture);

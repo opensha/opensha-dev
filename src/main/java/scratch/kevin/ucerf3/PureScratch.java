@@ -58,6 +58,7 @@ import org.opensha.commons.data.siteData.impl.ThompsonVs30_2020;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
+import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -3007,13 +3008,35 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test333() throws IOException {
+		double A1 = 10*10;
+		double A2 = 10*10;
+		double C = 4.2;
+		
+		double M1 = Math.log10(A1) + C;
+		double M2 = Math.log10(A2) + C;
+		System.out.println("M1="+(float)M1);
+		System.out.println("M2="+(float)M2);
+		
+		double moment1 = MagUtils.magToMoment(M1);
+		double moment2 = MagUtils.magToMoment(M2);
+		
+		double momentSum = moment1 + moment2;
+		
+		double MfromMoSum = MagUtils.momentToMag(momentSum);
+		System.out.println("MfromMoSum="+(float)MfromMoSum);
+		
+		double MfromAsum = Math.log10(A1+A2) + C;
+		System.out.println("MfromAsum="+(float)MfromAsum);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test332();
+			test333();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

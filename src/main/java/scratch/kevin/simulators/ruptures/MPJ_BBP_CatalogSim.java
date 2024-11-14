@@ -6,15 +6,19 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.opensha.commons.geo.Region;
 import org.opensha.sha.simulators.RSQSimEvent;
+import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.SimulatorEvent;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.RegionIden;
+import org.opensha.sha.simulators.utils.RSQSimSubSectionMapper;
 
 import com.google.common.base.Preconditions;
 
@@ -51,8 +55,27 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 		double maxDist = CUTOFF_DIST_DEFAULT;
 		if (cmd.hasOption("max-distance"))
 			maxDist = Double.parseDouble(cmd.getOptionValue("max-distance"));
-		for (BBP_Site site : sites)
-			siteRegIdens.add(new RegionIden(new Region(site.getLoc(), maxDist)));
+		List<Future<?>> idenFutures = new ArrayList<>();
+		List<SimulatorElement> elems = catalog.getElements();
+		for (BBP_Site site : sites) {
+			RegionIden iden = new RegionIden(new Region(site.getLoc(), maxDist));
+			idenFutures.add(getExec().submit(new Runnable() {
+				
+				@Override
+				public void run() {
+					iden.cacheForElements(elems);
+				}
+			}));
+			siteRegIdens.add(iden);
+		}
+		debug("Waiting on "+idenFutures.size()+" site region iden futures");
+		for (Future<?> future : idenFutures) {
+			try {
+				future.get();
+			} catch (InterruptedException | ExecutionException e) {
+				abortAndExit(e);
+			}
+		}
 		
 		// load the catalog
 		Loader loader = catalog.loader().hasTransitions();
@@ -60,6 +83,15 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 			loader.minMag(Double.parseDouble(cmd.getOptionValue("min-mag")));
 		if (cmd.hasOption("skip-years"))
 			loader.skipYears(Integer.parseInt(cmd.getOptionValue("skip-years")));
+		if (cmd.hasOption("min-mapped-sects")) {
+			int minSects = Integer.parseInt(cmd.getOptionValue("min-mapped-sects"));
+			if (minSects > 0) {
+				RSQSimSubSectionMapper mapper = catalog.getSubSectMapper();
+				if (cmd.hasOption("sect-area-fract"))
+					mapper.setMinFractForInclusion(Double.parseDouble(cmd.getOptionValue("sect-area-fract")));
+				loader.minMappedSubSects(minSects, mapper);
+			}
+		}
 		loader.matches(new LogicalOrRupIden(siteRegIdens));
 		events = loader.load();
 		
@@ -173,6 +205,14 @@ public class MPJ_BBP_CatalogSim extends AbstractMPJ_BBP_MultiRupSim {
 		Option mag = new Option("mag", "min-mag", true, "Minimum magnitude");
 		mag.setRequired(false);
 		ops.addOption(mag);
+		
+		Option minSects = new Option(null, "min-mapped-sects", true, "Min number of mapped subsections");
+		minSects.setRequired(false);
+		ops.addOption(minSects);
+		
+		Option mappedSectFract = new Option(null, "sect-area-fract", true, "Minimum fractional area for subsection mapping");
+		mappedSectFract.setRequired(false);
+		ops.addOption(mappedSectFract);
 		
 		Option skipYears = new Option("skip", "skip-years", true, "Skip the given number of years at the start");
 		skipYears.setRequired(false);

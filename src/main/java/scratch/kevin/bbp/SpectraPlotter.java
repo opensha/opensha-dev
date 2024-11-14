@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,12 +76,18 @@ public class SpectraPlotter {
 		return loadAll(Files.readLines(file, Charset.defaultCharset()));
 	}
 	
+	private static double[] PREV_X_VALUES;
+	
 	private static DiscretizedFunc[] loadAll(List<String> lines) {
-		DiscretizedFunc[] ret = null;
+//		DiscretizedFunc[] ret = null;
 		String[] names = null;
+		
+		List<String[]> dataSplits = new ArrayList<>(lines.size());
+		
+		boolean parsedNames = false;
 		for (String line : lines) {
 			line = line.trim();
-			if (names == null && line.startsWith("#")) {
+			if (!parsedNames && names == null && line.startsWith("#")) {
 				String nameStr = line.substring(1).trim();
 				if (line.contains("\t"))
 					names = nameStr.split("\t");
@@ -89,33 +96,65 @@ public class SpectraPlotter {
 //				System.out.println("Names:");
 //				for (String name : names)
 //					System.out.println("\t"+name);
+				parsedNames = true;
 			}
 			if (line.startsWith("#") || line.isEmpty())
 				continue;
 			String[] split = line.split("\\s+");
-			if (ret == null) {
-				Preconditions.checkState(split.length > 1);
-				ret = new DiscretizedFunc[split.length - 1];
-				for (int i=0; i<ret.length; i++) {
-					ret[i] = new ArbitrarilyDiscretizedFunc();
-					if (names != null) {
-						if (names.length == ret.length)
-							ret[i].setName(names[i].trim());
-						else if (names.length == ret.length+1) // has x axis
-							ret[i].setName(names[i+1].trim());
-					}
+			Preconditions.checkState(split.length > 1);
+			if (dataSplits.isEmpty() && names != null) {
+				// first time through, see if x axis is labeled or not
+				if (names.length != split.length) {
+					if (names.length == split.length+1) // has x axis
+						names = Arrays.copyOfRange(names, 1, names.length);
+					else
+						names = null;
 				}
-			} else {
-				Preconditions.checkState(ret.length == split.length-1);
 			}
+			dataSplits.add(split);
+		}
+		Preconditions.checkState(!dataSplits.isEmpty());
+		double[] prevXValues = SpectraPlotter.PREV_X_VALUES;
+		if (prevXValues != null && prevXValues.length != dataSplits.size())
+			prevXValues = null;
+		
+		double[] xValues = prevXValues == null ? new double[dataSplits.size()] : null;
+		double[][] yValues = new double[dataSplits.get(0).length-1][dataSplits.size()];
+		
+		for (int i=0; i<dataSplits.size(); i++) {
+			String[] split = dataSplits.get(i);
+			Preconditions.checkState(split.length == yValues.length+1);
+			
 			double x = Double.parseDouble(split[0]);
-			for (int i=0; i<ret.length; i++) {
-				// *'s mean zero seimograms, which should never happen
-//				if (split[i+1].startsWith("***"))
-//					ret[i].set(x, 0d);
-//				else
-					ret[i].set(x, Double.parseDouble(split[i+1]));
+			if (prevXValues != null && x != prevXValues[i]) {
+				Preconditions.checkState(xValues == null);
+				// need to keep track of our own x-values
+				if (i > 0)
+					// copy over what we had before
+					xValues = Arrays.copyOf(prevXValues, prevXValues.length);
+				else
+					xValues = new double[dataSplits.size()];
+				prevXValues = null;
 			}
+			if (xValues != null)
+				xValues[i] = x;
+			
+			for (int j=0; j<split.length-1; j++)
+				yValues[j][i] = Double.parseDouble(split[j+1]);
+		}
+		
+		if (xValues == null) {
+			Preconditions.checkNotNull(prevXValues);
+			xValues = prevXValues;
+		} else {
+			// cache for future use
+			SpectraPlotter.PREV_X_VALUES = xValues;
+		}
+		DiscretizedFunc[] ret = new DiscretizedFunc[yValues.length];
+		for (int i=0; i<ret.length; i++) {
+			ret[i] = new LightFixedXFunc(xValues, yValues[i]);
+			if (names != null)
+				ret[i].setName(names[i]);
 		}
 		return ret;
 	}

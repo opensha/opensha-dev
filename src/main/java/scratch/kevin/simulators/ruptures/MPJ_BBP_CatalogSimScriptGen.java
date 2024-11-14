@@ -2,6 +2,7 @@ package scratch.kevin.simulators.ruptures;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -40,18 +41,21 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		String catalogDirName = "rundir5597_crustal_corupture";
 //		String catalogDirName = "rundir5775_subduction";
 //		String catalogDirName = "rundir5775_crustal";
-		String catalogDirName = "rundir5932";
+		String catalogDirName = "rundir5895";
 		
 //		int skipYears = 20000;
+		int skipYears = 10000;
 //		int skipYears = 5000;
-		int skipYears = 2000;
+//		int skipYears = 2000;
 //		int skipYears = 0;
 //		int skipYears = 65000;
 		
 //		double maxDist = MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT;
 		double maxDist = 300d;
 		
-		double griddedSpacing = 1d;
+//		double griddedSpacing = 1d;
+//		double griddedSpacing = 0.5;
+		double griddedSpacing = 0.2;
 		
 		// init all to false
 		boolean standardSites = false;
@@ -65,18 +69,18 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		boolean nzStandardSites = false;
 		
 		// CA
-		Integer utmZone = null;
-		Character utmBand = null;
-		griddedCASites = true;
-//		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
-		VelocityModel vm = VelocityModel.LA_BASIN_500;
-		
-		// NSHM23-wUS
 //		Integer utmZone = null;
 //		Character utmBand = null;
-//		griddedWUSSites = true;
+//		griddedCASites = true;
 ////		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
 //		VelocityModel vm = VelocityModel.LA_BASIN_500;
+		
+		// NSHM23-wUS
+		Integer utmZone = null;
+		Character utmBand = null;
+		griddedWUSSites = true;
+//		VelocityModel vm = VelocityModel.LA_BASIN_863; // uncomment only if you need the old 863
+		VelocityModel vm = VelocityModel.LA_BASIN_500;
 		
 		// NZ
 //		Integer utmZone = 59;
@@ -98,6 +102,11 @@ public class MPJ_BBP_CatalogSimScriptGen {
 //		double minMag = 6;
 		double minMag = 6.5;
 //		double minMag = 7;
+		
+		int minMappedSubSects = 2;
+		double sectAreaFract = 0.5;
+		minMag = 6;
+		
 		int numRG = 0;
 //		double minMag = 7;
 //		int numRG = 20;
@@ -108,7 +117,7 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		File localDir = new File("/home/kevin/bbp/parallel");
 		
 		int threads = 20;
-		int nodes = 16;
+		int nodes = 36;
 		String queue = "scec";
 		int mins = 24*60;
 		int heapSizeMB = 45*1024;
@@ -155,6 +164,8 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			jobName += "-m"+(float)minMag;
 		if (skipYears > 0)
 			jobName += "-skipYears"+skipYears;
+		if (minMappedSubSects > 0)
+			jobName += "-minSubSects"+minMappedSubSects;
 		if (maxDist != MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT)
 			jobName += "-maxDist"+(int)maxDist;
 		if (!RSQSimBBP_Config.DO_HF)
@@ -184,6 +195,9 @@ public class MPJ_BBP_CatalogSimScriptGen {
 		if (griddedWUSSites)
 			jobName += "-griddedSitesWUS";
 		Preconditions.checkArgument(!(griddedSoCalSites && griddedCASites));
+		
+		if (griddedSpacing != 1d && jobName.contains("gridded"))
+			jobName += "-gridSpacing"+new DecimalFormat("0.#").format(griddedSpacing);
 		
 		File localJobDir = new File(localDir, jobName);
 		System.out.println(localJobDir.getAbsolutePath());
@@ -232,6 +246,10 @@ public class MPJ_BBP_CatalogSimScriptGen {
 			argz += " --min-mag "+(float)minMag;
 		if (skipYears > 0)
 			argz += " --skip-years "+skipYears;
+		if (minMappedSubSects > 0) {
+			argz += " --min-mapped-sects "+minMappedSubSects;
+			argz += " --sect-area-fract "+(float)sectAreaFract;
+		}
 		if (maxDist != MPJ_BBP_CatalogSim.CUTOFF_DIST_DEFAULT)
 			argz += " --max-dist "+(float)maxDist;
 		if (!RSQSimBBP_Config.DO_HF)

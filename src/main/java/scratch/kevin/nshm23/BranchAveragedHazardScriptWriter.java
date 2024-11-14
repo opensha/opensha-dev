@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensha.commons.geo.GriddedRegion;
+import org.opensha.commons.geo.Region;
 import org.opensha.commons.geo.json.Feature;
 import org.opensha.commons.hpc.JavaShellScriptWriter;
 import org.opensha.commons.hpc.mpj.FastMPJShellScriptWriter;
@@ -29,15 +30,23 @@ public class BranchAveragedHazardScriptWriter {
 		
 		IncludeBackgroundOption[] bgOps = IncludeBackgroundOption.values();
 		
+		boolean linkFromBase = true;
+		Double vs30 = null;
+		double gridSpacing = 0.1;
+		
+		double[] periods = { 0d, 0.2d, 1d, 5d };
+		AttenRelRef[] gmms = null;
+		
+		Region region = NSHM23_RegionLoader.loadFullConterminousWUS();
+		
+		/*
+		 * NSHM23
+		 */
 //		String baseDirName = "2024_02_02-nshm23_branches-WUS_FM_v3";
 //		String baseDirName = "2023_11_20-nshm23_branches-dm_sampling-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2023_11_17-nshm23_branches-dm_sampling-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2023_11_16-nshm23_branches-randB-randSeg-NSHM23_v2-CoulombRupSet-DsrUni-TotNuclRate-NoRed-ThreshAvgIterRelGR";
 //		String baseDirName = "2024_05_07-nshm23_branches-WUS_FM_v3-AvgSupraB-AvgSeg";
-//		String baseDirName = "2024_07_31-prvi25_subduction_branches";
-//		String baseDirName = "2024_09_04-prvi25_crustal_subduction_combined_branches";
-//		String baseDirName = "2024_09_04-prvi25_crustal_branches-dmSample5x";
-		String baseDirName = "2024_09_04-prvi25_subduction_branches";
 		
 //		String suffix = "true_mean";
 //		String solFileName = "true_mean_solution.zip";
@@ -49,44 +58,68 @@ public class BranchAveragedHazardScriptWriter {
 //		String suffix = "ba_only-mod_gridded";
 //		String solFileName = "results_WUS_FM_v3_branch_averaged_mod_gridded.zip";
 		
-//		String suffix = "ba_only-LARGE";
-//		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
+		/*
+		 * PRVI
+		 */
+////		String baseDirName = "2024_07_31-prvi25_subduction_branches";
+////		String baseDirName = "2024_09_04-prvi25_crustal_subduction_combined_branches";
+////		String baseDirName = "2024_09_04-prvi25_crustal_branches-dmSample5x";
+//		String baseDirName = "2024_09_04-prvi25_subduction_branches";
+//		region = PRVI25_RegionLoader.loadPRVI_ModelBroad();
+//		gridSpacing = 0.01;
+//		
+//		gmms = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+//		
+////		String suffix = "ba_only-LARGE";
+////		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
+//		
+////		String suffix = "ba_only-LARGE-true_pt_src";
+////		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
+//		
+////		String suffix = "ba_only";
+////		String solFileName = "combined_branch_averaged_solution.zip";
+//		
+////		String suffix = "ba_only";
+////		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
+//		
+////		String suffix = "ba_only-SLAB_only";
+////		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
+////		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
+//		
+////		String suffix = "ba_only-INTERFACE_only";
+////		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
+//		
+//		String suffix = "ba_only-both_fms";
+//		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
 		
-//		String suffix = "ba_only-LARGE-true_pt_src";
-//		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
+		/*
+		 * RSQSim
+		 */
+		String suffix = null;
 		
-//		String suffix = "ba_only";
-//		String solFileName = "combined_branch_averaged_solution.zip";
+		String baseDirName = "2024_11_12-rsqsim-wus-5895";
+		String solFileName = "fss_m6_skip10000_sectArea0.5_minSubSects2.zip";
 		
-//		String suffix = "ba_only";
-//		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
+//		String baseDirName = "2024_11_12-rsqsim-wus-5892";
+//		String solFileName = "fss_m6_skip20000_sectArea0.5_minSubSects2.zip";
+		linkFromBase = false;
 		
-//		String suffix = "ba_only-SLAB_only";
-//		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
-//		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
-		
-//		String suffix = "ba_only-INTERFACE_only";
-//		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
-		
-		String suffix = "ba_only-both_fms";
-		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
+//		periods = new double[] {0d, 1d, 2d, 3d, 5d};
+//		vs30 = 500d; suffix = "vs30_500";
+		periods = new double[] {2d, 3d, 5d};
+		gridSpacing = 0.5; suffix = "bbp_"+(float)gridSpacing;
 		
 		boolean noMFDs = false;
 		
-//		GriddedRegion gridReg = new GriddedRegion(
-//				NSHM23_RegionLoader.loadFullConterminousWUS(), 0.1, GriddedRegion.ANCHOR_0_0);
-//		GriddedRegion gridReg = new GriddedRegion(
-//				PRVI25_RegionLoader.loadPRVI_ModelBroad(), 0.1, GriddedRegion.ANCHOR_0_0);
 		GriddedRegion gridReg = new GriddedRegion(
-				PRVI25_RegionLoader.loadPRVI_MapExtents(), 0.01, GriddedRegion.ANCHOR_0_0);
+				region, gridSpacing, GriddedRegion.ANCHOR_0_0);
+//		GriddedRegion gridReg = new GriddedRegion(
+//				PRVI25_RegionLoader.loadPRVI_ModelBroad(), gridSpacing, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Region has "+gridReg.getNodeCount()+" nodes");
 		
-		double[] periods = { 0d, 0.2d, 1d, 5d };
-//		AttenRelRef gmm = AttenRelRef.AG_2020_GLOBAL_INTERFACE;
-		AttenRelRef[] gmms = { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
-//		AttenRelRef[] gmms = null;
-		
-		String dirName = baseDirName+"-"+suffix;
+		String dirName = baseDirName;
+		if (suffix != null && !suffix.isBlank())
+			dirName += "-"+suffix;
 		if (noMFDs)
 			dirName += "-no_mfds";
 		
@@ -149,9 +182,11 @@ public class BranchAveragedHazardScriptWriter {
 		String solFilePath = "$DIR/"+solFileName;
 		
 		List<String> setupLines = new ArrayList<>();
-		setupLines.add("if [[ ! -e "+solFilePath+" ]];then");
-		setupLines.add("  ln -s $MAIN_DIR/"+baseDirName+"/"+solFileName+" "+solFilePath);
-		setupLines.add("fi");
+		if (linkFromBase) {
+			setupLines.add("if [[ ! -e "+solFilePath+" ]];then");
+			setupLines.add("  ln -s $MAIN_DIR/"+baseDirName+"/"+solFileName+" "+solFilePath);
+			setupLines.add("fi");
+		}
 		parallelMPJWrite.setCustomSetupLines(setupLines);
 		singleMPJWrite.setCustomSetupLines(setupLines);
 		
@@ -189,6 +224,8 @@ public class BranchAveragedHazardScriptWriter {
 			argz += " --region "+regPath;
 			if (noMFDs)
 				argz += " --no-mfds";
+			if (vs30 != null)
+				argz += " --vs30 "+vs30.floatValue();
 			argz += " --gridded-seis "+bgOp.name();
 			if (gmms != null)
 				for (AttenRelRef gmm : gmms)

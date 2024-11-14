@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.opensha.commons.exceptions.GMT_MapException;
+import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.simulators.RSQSimEvent;
 import org.opensha.sha.simulators.SimulatorElement;
 import org.opensha.sha.simulators.iden.EventTimeIdentifier;
@@ -75,7 +76,7 @@ public class RSQSimUCERF3ComparisonPlotGen {
 		
 		FaultModels fm = FaultModels.FM3_1;
 		DeformationModels dm = DeformationModels.GEOLOGIC;
-		U3SlipEnabledSolution sol = RSQSimUtils.buildFaultSystemSolution(RSQSimUtils.getUCERF3SubSectsForComparison(
+		FaultSystemSolution sol = RSQSimUtils.buildFaultSystemSolution(RSQSimUtils.getUCERF3SubSectsForComparison(
 				fm, dm), elements, events, minMag);
 		
 		Preconditions.checkState(plotDir.exists() ||  plotDir.mkdir());

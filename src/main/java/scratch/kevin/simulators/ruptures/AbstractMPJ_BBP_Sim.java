@@ -299,6 +299,10 @@ public abstract class AbstractMPJ_BBP_Sim extends MPJTaskCalculator {
 	
 	protected abstract List<BBP_Site> sitesForIndex(int index);
 	protected abstract File runDirForIndex(int index);
+	
+	protected ExecutorService getExec() {
+		return exec;
+	}
 
 	@Override
 	protected void calculateBatch(int[] batch) throws Exception {
