@@ -4,7 +4,9 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.opensha.commons.data.CSVWriter;
@@ -35,10 +37,27 @@ public class ToyRuptureSetBuilder {
 	public static void main(String[] args) throws IOException {
 		boolean rebuildRupSet = false;
 		
-		File outputDir = new File("/home/kevin/markdown/inversions/2024_10_31-quantum_test_rup_set_problem");
+		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
+//		String dirName = "2024_11_06";
+		
+		dirName += "-quantum_test_rup_set_problem";
+		
+//		String[] nameSearches = { "Likely" };
+//		dirName += "-70_sects";
+		
+//		String[] nameSearches = { "Cedar", "Mountain", "Mahogany" };
+//		dirName += "-124_sects";
+		
+		String[] nameSearches = { "San", "Felipe", "proxy" };
+		dirName += "-213_sects";
+		
+		System.out.println(dirName);
+		
+		File outputDir = new File("/home/kevin/markdown/inversions/"+dirName);
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		File rsFile = new File(outputDir, "orig_rup_set.zip");
+		File exhaustiveFile = new File(outputDir, "exhaustive_rup_set.zip");
 		FaultSystemRupSet origRupSet;
 		if (rsFile.exists() && !rebuildRupSet) {
 			origRupSet = FaultSystemRupSet.load(rsFile);
@@ -51,7 +70,7 @@ public class ToyRuptureSetBuilder {
 			System.out.println("Building connectivity clusters");
 			ConnectivityClusters clusters = ConnectivityClusters.build(origRupSet);
 			
-			int targetParentID = FaultSectionUtils.findParentSectionID(origRupSet.getFaultSectionDataList(), "Likely");
+			int targetParentID = FaultSectionUtils.findParentSectionID(origRupSet.getFaultSectionDataList(), nameSearches);
 			FaultSection targetSect = null;
 			for (FaultSection sect : origRupSet.getFaultSectionDataList()) {
 				if (sect.getParentSectionId() == targetParentID) {
@@ -116,7 +135,14 @@ public class ToyRuptureSetBuilder {
 		// if true, allow splays (using default settings)
 		rsConfig.setSplays(true); // enabled
 		
-		FaultSystemRupSet rupSet = rsConfig.build(FaultSysTools.defaultNumThreads());
+		FaultSystemRupSet rupSet;
+		if (exhaustiveFile.exists() && !rebuildRupSet) {
+			rupSet = FaultSystemRupSet.load(exhaustiveFile);
+		} else {
+			rupSet = rsConfig.build(FaultSysTools.defaultNumThreads());
+			
+			rupSet.write(exhaustiveFile);
+		}
 		System.out.println("Original had "+origRupSet.getNumRuptures());
 		System.out.println("New has "+rupSet.getNumRuptures());
 		
@@ -171,8 +197,6 @@ public class ToyRuptureSetBuilder {
 		// now write the actual ruptures
 		writeRuptures(rupSet.getSectionIndicesForAllRups(), new File(outputDir, "orig_ruptures.csv"), subSects.size());
 		writeRuptures(rupSet.getSectionIndicesForAllRups(), new File(outputDir, "exhaustive_ruptures.csv"), subSects.size());
-		
-		rupSet.write(new File(outputDir, "exhaustive_rup_set.zip"));
 	}
 	
 	private static void writeMatrix(double[][] mat, File file) throws IOException {

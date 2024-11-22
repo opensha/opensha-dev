@@ -364,7 +364,7 @@ public class RSQSimBBP_Config {
 	}
 	
 	public static List<BBP_Site> getGriddedSites(Region region, double spacing) {
-		GriddedRegion gridReg = new GriddedRegion(region, spacing, null);
+		GriddedRegion gridReg = new GriddedRegion(region, spacing, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Creating "+gridReg.getNodeCount()+" gridded BBP sites");
 		
 		List<BBP_Site> sites = new ArrayList<>();

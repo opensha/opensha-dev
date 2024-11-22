@@ -58,6 +58,7 @@ import org.opensha.commons.data.siteData.impl.ThompsonVs30_2020;
 import org.opensha.commons.data.uncertainty.UncertainBoundedIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.UncertainIncrMagFreqDist;
 import org.opensha.commons.data.uncertainty.UncertaintyBoundType;
+import org.opensha.commons.eq.MagUtils;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -3005,13 +3006,81 @@ public class PureScratch {
 		}
 	}
 	
+	private static void test333() throws IOException {
+		double A1 = 10*10;
+		double A2 = 10*10;
+		double C = 4.2;
+		
+		double M1 = Math.log10(A1) + C;
+		double M2 = Math.log10(A2) + C;
+		System.out.println("M1="+(float)M1);
+		System.out.println("M2="+(float)M2);
+		
+		double moment1 = MagUtils.magToMoment(M1);
+		double moment2 = MagUtils.magToMoment(M2);
+		
+		double momentSum = moment1 + moment2;
+		
+		double MfromMoSum = MagUtils.momentToMag(momentSum);
+		System.out.println("MfromMoSum="+(float)MfromMoSum);
+		
+		double MfromAsum = Math.log10(A1+A2) + C;
+		System.out.println("MfromAsum="+(float)MfromAsum);
+	}
+	
+	private static void test334() throws IOException {
+		File baseDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_10_24-prvi25_crustal_branches-dmSample5x/results");
+		AveragingAccumulator<RegionsOfInterest> accumulator = null;
+		for (File subDir : baseDir.listFiles()) {
+			if (!subDir.isDirectory())
+				continue;
+			File solFile = new File(subDir, "solution.zip");
+			if (!solFile.exists())
+				continue;
+			System.out.println("Processing "+solFile.getAbsolutePath());
+			ModuleArchive<OpenSHA_Module> archive = new ModuleArchive<>(solFile);
+			RegionsOfInterest roi = archive.loadUnlistedModule(RegionsOfInterest.class, FaultSystemRupSet.NESTING_PREFIX);
+			if (accumulator == null)
+				accumulator = roi.averagingAccumulator();
+			accumulator.process(roi, 1d);
+		}
+		accumulator.getAverage();
+	}
+	
+	private static void test335() throws IOException {
+		double vertSlipRate = 1d;
+		double dipDeg = 50;
+		double dipRad = Math.toRadians(dipDeg);
+		// sin(dip) = vertical / plane
+		// plane = vertical / sin(dip)
+		double onPlaneSlip = vertSlipRate / Math.sin(dipRad);
+		System.out.println("Verical slip rate: "+(float)vertSlipRate);
+		System.out.println("On-plane slip rate: "+(float)onPlaneSlip);
+	}
+	
+	private static void test336() throws IOException {
+//		double slip = 10d;
+//		double dip = 45d;
+//		double rake = 0d;
+		
+		// bunce 6 upper
+		double slip = 5d;
+		double dip = 90d;
+		double rake = 0d;
+		
+		double projected = PRVI25_CrustalFaultModels.projectSlip(slip, dip, rake);
+		System.out.println("Dip: "+(float)dip);
+		System.out.println("Rake: "+(float)rake);
+		System.out.println("Slip: "+(float)slip+" -> "+(float)projected);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test332();
+			test336();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

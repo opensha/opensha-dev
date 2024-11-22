@@ -574,7 +574,7 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		RSQSimCatalog catalog = Catalogs.BRUCE_5774.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_5775_CRUSTAL.instance();
 //		RSQSimCatalog catalog = Catalogs.BRUCE_5775_SUB.instance();
-		RSQSimCatalog catalog = Catalogs.BRUCE_5935.instance();
+		RSQSimCatalog catalog = Catalogs.BRUCE_5895.instance();
 		
 		boolean doGMPE = true;
 		boolean doRotD = false;
@@ -598,8 +598,8 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 		
 //		AttenRelSupplier[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014,
 //				AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
-		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
-//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
+//		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS, AttenRelRef.ASK_2014 };
+		AttenRelRef[] gmpeRefs = { AttenRelRef.NGAWest_2014_AVG_NOIDRISS };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.BSSA_2014, AttenRelRef.CB_2014, AttenRelRef.CY_2014 };
 //		IMT[] imts = { IMT.SA3P0 };
 //		AttenRelRef[] gmpeRefs = { AttenRelRef.ASK_2014 };
@@ -636,15 +636,15 @@ class CatalogGMPE_Compare extends MultiRupGMPE_ComparePageGen<RSQSimEvent> {
 //		RuptureIdentifier loadIden = FocalMechIden.builder().forRake(-105, -75).forDip(35, 55).build();
 //		String loadIdenPrefix = "mech_normal";
 
-		boolean replotScatters = true;
-		boolean replotZScores = true;
-		boolean replotCurves = true;
-		boolean replotResiduals = true;
-		
 //		boolean replotScatters = true;
 //		boolean replotZScores = true;
 //		boolean replotCurves = true;
 //		boolean replotResiduals = true;
+		
+		boolean replotScatters = false;
+		boolean replotZScores = false;
+		boolean replotCurves = false;
+		boolean replotResiduals = true;
 		
 		if (timeScale != 1d)
 			doRotD = false;

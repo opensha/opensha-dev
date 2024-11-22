@@ -1,4 +1,4 @@
-package scratch.kevin.nshm23;
+package scratch.kevin.nshm23.devinSlipRateTests;
 
 import java.awt.Color;
 import java.io.File;
@@ -27,7 +27,9 @@ import org.opensha.sha.earthquake.rupForecastImpl.nshm23.logicTree.NSHM23_Segmen
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
-public class DevinSlipRateCSV {
+import com.google.common.base.Preconditions;
+
+public class SlipRateCSVWriter {
 
 	public static void main(String[] args) throws IOException {
 		File solDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
@@ -51,15 +53,15 @@ public class DevinSlipRateCSV {
 		header.add("Start Longitude");
 		header.add("End Latitude");
 		header.add("End Longitude");
-		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v2;
+		NSHM23_FaultModels fm = NSHM23_FaultModels.WUS_FM_v3;
 		for (NSHM23_DeformationModels dm : NSHM23_DeformationModels.values()) {
 			if (dm.getNodeWeight(null) > 0) {
 				dmSubSectsList.add(dm.build(fm));
 				header.add(dm.getShortName()+" Slip Rate (mm/yr)");
 			}
 		}
-		header.add("Branch-Averagea Target Slip Rate (mm/yr)");
-		header.add("Branch-Averagea Solution Slip Rate (mm/yr)");
+		header.add("Branch-Averaged Target Slip Rate (mm/yr)");
+		header.add("Branch-Averaged Solution Slip Rate (mm/yr)");
 		CSVFile<String> csv = new CSVFile<>(true);
 		csv.addLine(header);
 		
@@ -76,7 +78,11 @@ public class DevinSlipRateCSV {
 			line.add((float)last.lat+"");
 			line.add((float)last.lon+"");
 			for (List<? extends FaultSection> dmSubSects : dmSubSectsList) {
+				Preconditions.checkState(dmSubSects.size() == rupSet.getNumSections(),
+						"Section list size mismatch? %s != %s", dmSubSects.size(), rupSet.getNumSections());
 				FaultSection dmSect = dmSubSects.get(s);
+				Preconditions.checkState(dmSect.getSectionName().equals(sect.getSectionName()),
+						"Name msimatch for %s: '%s' != '%s'", s, sect.getSectionName(), dmSect.getSectionName());
 				line.add((float)dmSect.getOrigAveSlipRate()+"");
 			}
 			double target = slipRates.getSlipRate(s)*1e3;

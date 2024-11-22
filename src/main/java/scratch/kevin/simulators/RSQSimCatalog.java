@@ -64,6 +64,7 @@ import org.opensha.sha.simulators.iden.EventTimeIdentifier;
 import org.opensha.sha.simulators.iden.LogicalAndRupIden;
 import org.opensha.sha.simulators.iden.LogicalOrRupIden;
 import org.opensha.sha.simulators.iden.MagRangeRuptureIdentifier;
+import org.opensha.sha.simulators.iden.MinNumMappedSubSectsIden;
 import org.opensha.sha.simulators.iden.RegionIden;
 import org.opensha.sha.simulators.iden.RuptureIdentifier;
 import org.opensha.sha.simulators.iden.SectionIDIden;
@@ -793,7 +794,7 @@ public class RSQSimCatalog implements XMLSaveable {
 				"WUSav, delta=2.0km, sigma0=100, b=.008, alpha=0.25",
 				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
 		BRUCE_5895("rundir5895", "Bruce 5895", "Bruce Shaw", cal(2024, 9, 12),
-				"WUSav, delta=2.0km, sigma0=100, b=.008, alpha=0.25, dynamic",
+				"WUSav, delta=2.0km, sigma0=100, bdeep=.009 bshallow=.003, alpha=0.25, hload=hst=3, dynamic",
 				NSHM23_FaultModels.WUS_FM_v3, NSHM23_DeformationModels.AVERAGE),
 		BRUCE_5932("rundir5932", "Bruce 5932", "Bruce Shaw", cal(2024, 9, 12),
 				"CA, delta=1.0km, sigma0=100, bdeep=.013 bshallow=.003,  alpha=0.25, hload=hst=3, dynamic tcausalFactor=.60",
@@ -1762,8 +1763,16 @@ public class RSQSimCatalog implements XMLSaveable {
 	}
 	
 	public synchronized List<? extends FaultSection> getSubSects() throws IOException {
-		if (subSects == null)
-			subSects = getDeformationModel().build(getFaultModel());
+		if (subSects == null) {
+			if (getDeformationModel() != null && getFaultModel() != null) {
+				subSects = getDeformationModel().build(getFaultModel());
+			} else {
+				FaultSystemSolution compSol = getComparisonSolution();
+				Preconditions.checkNotNull(compSol,
+						"Can't get subsections without a fault model and deformation model nor comparison sol");
+				subSects = compSol.getRupSet().getFaultSectionDataList();
+			}
+		}
 		return subSects;
 	}
 	
@@ -1973,6 +1982,15 @@ public class RSQSimCatalog implements XMLSaveable {
 		
 		public Loader forEventIDRange(com.google.common.collect.Range<Integer> range) {
 			loadIdens.add(new EventIDsRangeIden(range));
+			return this;
+		}
+		
+		public Loader minMappedSubSects(int minSubSects) throws IOException {
+			return minMappedSubSects(minSubSects, getSubSectMapper());
+		}
+		
+		public Loader minMappedSubSects(int minSubSects, RSQSimSubSectionMapper subSectMapper) {
+			loadIdens.add(new MinNumMappedSubSectsIden(minSubSects, subSectMapper));
 			return this;
 		}
 		

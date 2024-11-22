@@ -102,7 +102,8 @@ public abstract class AbstractMPJ_BBP_MultiRupSim extends AbstractMPJ_BBP_Sim {
 					null, null, null, null, null, zone, band);
 		} else {
 			catalog = new RSQSimCatalog(catalogDir, catalogDir.getName(),
-					null, null, null, FaultModels.FM3_1, DeformationModels.GEOLOGIC); // TODO make option
+//					null, null, null, FaultModels.FM3_1, DeformationModels.GEOLOGIC); // TODO make option
+					null, null, null, null, null); // TODO make option
 		}
 
 		if (cmd.hasOption("time-scalar"))

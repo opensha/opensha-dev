@@ -634,14 +634,18 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		lines.addAll(table.build());
 		lines.add("");
 		
-		if (!siteBundles.isEmpty() && sites.size() > 1) {
-			System.out.println("All sites aggregated");
+		if (!siteBundles.isEmpty() && this.sites.size() > 1) {
+			System.out.println("Bundled sites aggregated");
 			lines.add("### Bundled z-scores");
 			lines.add(topLink); lines.add("");
 			
 			for (int s=0; s<siteBundles.size(); s++) {
 				String name = siteBundleNames.get(s);
-				String prefix = "site_bundle_"+name.replaceAll("\\W+", "_")+"_std_norm";
+				String sanitizedName = name.replace("<=", "_le_").replace("<", "_less_")
+						.replace(">=", "_ge_").replace(">", "_greater_").replaceAll("\\W+", "_");
+				while (sanitizedName.contains("__"))
+					sanitizedName = sanitizedName.replace("__", "_");
+				String prefix = "site_bundle_"+sanitizedName+"_std_norm";
 				
 				System.out.println("Processing site bundle: "+name);
 				
@@ -1054,9 +1058,12 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 		List<ResidualType> residualTypes = new ArrayList<>();
 		residualTypes.add(ResidualType.MAG);
 		ScalarIMR tempGMPE = checkOutGMPE(gmpeRef);
-		if (tempGMPE.getPropagationEffectParams().containsParameter(DistanceJBParameter.NAME))
+		ScalarIMR subGMPE = tempGMPE instanceof MultiIMR_Averaged_AttenRel ? ((MultiIMR_Averaged_AttenRel)tempGMPE).getIMRs().get(0) : null;
+		if (tempGMPE.getPropagationEffectParams().containsParameter(DistanceJBParameter.NAME)
+				|| (subGMPE != null && subGMPE.getPropagationEffectParams().containsParameter(DistanceJBParameter.NAME)))
 			residualTypes.add(ResidualType.DIST_JB);
-		if (tempGMPE.getPropagationEffectParams().containsParameter(DistanceRupParameter.NAME))
+		if (tempGMPE.getPropagationEffectParams().containsParameter(DistanceRupParameter.NAME)
+				|| (subGMPE != null && subGMPE.getPropagationEffectParams().containsParameter(DistanceRupParameter.NAME)))
 			residualTypes.add(ResidualType.DIST_RUP);
 		checkInGMPE(gmpeRef, tempGMPE);
 		sites = new ArrayList<>(this.sites); // we previously added a null element for all sites above
@@ -1389,7 +1396,7 @@ public abstract class MultiRupGMPE_ComparePageGen<E> {
 				return comp.getDistanceJB(site);
 			}
 		},
-		VS30("Vs30", "m/s", Vs30_Param.NAME, true, 200d, Double.NaN) {
+		VS30("Vs30", "m/s", Vs30_Param.NAME, false, 200d, Double.NaN) {
 			@Override
 			public Double getValue(RuptureComparison<?> comp, Site site) {
 				return site.getParameter(Double.class, Vs30_Param.NAME).getValue();

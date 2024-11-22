@@ -101,6 +101,8 @@ import scratch.UCERF3.enumTreeBranches.TotalMag5Rate;
 import scratch.UCERF3.inversion.U3InversionConfigFactory;
 import scratch.UCERF3.logicTree.U3LogicTreeBranch;
 import scratch.UCERF3.logicTree.U3LogicTreeBranchNode;
+import scratch.kevin.nshm23.devinSlipRateTests.DevinModDeformationModels;
+import scratch.kevin.nshm23.devinSlipRateTests.TaperOverrideSlipAlongRuptureModels;
 import scratch.kevin.nshm23.dmCovarianceTests.DefModSamplingEnabledInvConfig;
 import scratch.kevin.nshm23.dmCovarianceTests.RandomDefModSampleLevel;
 
@@ -156,7 +158,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		int samplingBranchCountMultiplier = 1;
 
 		String dirName = new SimpleDateFormat("yyyy_MM_dd").format(new Date());
-//		String dirName = "2024_09_04";
+//		String dirName = "2024_11_19";
 		String dirSuffix = null;
 		
 		/*
@@ -256,7 +258,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //		dirName += "-nshm23_branches";
 //		double avgNumRups = 600000;
 //		
-//		dirSuffix = "-gridded_rebuild";
+////		dirSuffix = "-gridded_rebuild";
 //		
 ////		List<LogicTreeLevel<? extends LogicTreeNode>> levels = NSHM18_LogicTreeBranch.levels;
 ////		dirName += "-nshm18_branches-wc_94";
@@ -292,6 +294,22 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 ////		levels.add(NSHM23_LogicTreeBranch.SCALE);
 ////		dirName += "-new_scale_rels";
 ////		dirName += "-full_set";
+//		
+//		levels = new ArrayList<>(levels);
+//		boolean dmReplaced = false;
+//		for (int l=levels.size(); --l >= 0;) {
+//			LogicTreeLevel<? extends LogicTreeNode> level = levels.get(l);
+//			System.out.println("Level "+l+": name='"+level.getName()+"'; type='"+level.getType()+"'");
+//			if (NSHM23_DeformationModels.class.isAssignableFrom(level.getType())) {
+//				dmReplaced = true;
+//				levels.set(l, LogicTreeLevel.forEnum(DevinModDeformationModels.class, "Custom Deformation Model", "CustomDM"));
+//			} else if (SlipAlongRuptureModels.class.isAssignableFrom(level.getType())) {
+//				levels.remove(l);
+//			}
+//		}
+//		Preconditions.checkState(dmReplaced);
+//		levels.add(LogicTreeLevel.forEnum(TaperOverrideSlipAlongRuptureModels.class, "Taper-Override Slip Along Rupture Models", "SlipAlong"));
+//		dirName += "-devin_tapered_slip_tests";
 //		
 //		Class<? extends InversionConfigurationFactory> factoryClass = NSHM23_InvConfigFactory.class;
 //		
@@ -531,6 +549,8 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 ////				NSHM23_DeformationModels.GEOLOGIC,
 ////				NSHM23_DeformationModels.EVANS,
 ////				NSHM23_DeformationModels.MEDIAN,
+////				DevinModDeformationModels.GEO_AVG_FROM_DEVIN,
+//				DevinModDeformationModels.GEO_FROM_DEVIN,
 //				
 //				// SCALING RELATIONSHIPS
 ////				ScalingRelationships.SHAW_2009_MOD,
@@ -544,6 +564,9 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 ////				NSHM23_SlipAlongRuptureModels.TAPERED,
 ////				SlipAlongRuptureModels.UNIFORM,
 ////				SlipAlongRuptureModels.TAPERED,
+////				TaperOverrideSlipAlongRuptureModels.UNIFORM,
+////				TaperOverrideSlipAlongRuptureModels.TAPER_OVERRIDE_COMBINED,
+//				TaperOverrideSlipAlongRuptureModels.TAPER_OVERRIDE_INDIVIDUAL,
 //				
 //				// SUB-SECT CONSTRAINT
 ////				SubSectConstraintModels.TOT_NUCL_RATE, // default
@@ -602,28 +625,28 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		 * PRVI25 logic tree
 		 * TODO (this is a just a marker to find this part quickly, not an actual todo)
 		 */
-		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
-		dirName += "-prvi25_crustal_branches";
-		double avgNumRups = 50000;
-		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
+//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsOnFault;
+//		dirName += "-prvi25_crustal_branches";
+//		double avgNumRups = 50000;
+//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE };
+//		
+//		// random DM sampling
+//		levels = new ArrayList<>(levels);
+//		int origNumLevels = levels.size();
+//		for (int i=levels.size(); --i>=0;)
+//			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
+//				levels.remove(i);
+//		Preconditions.checkState(levels.size() == origNumLevels -1);
+//		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
+//		samplingBranchCountMultiplier = 5; // 5 for each branch
+//		dirName += "-dmSample";
+//		if (samplingBranchCountMultiplier > 1)
+//			dirName += samplingBranchCountMultiplier+"x";
 		
-		// random DM sampling
-		levels = new ArrayList<>(levels);
-		int origNumLevels = levels.size();
-		for (int i=levels.size(); --i>=0;)
-			if (levels.get(i).getNodes().get(0) instanceof PRVI25_CrustalDeformationModels)
-				levels.remove(i);
-		Preconditions.checkState(levels.size() == origNumLevels -1);
-		individualRandomLevels.add(new PRVI25_CrustalRandomlySampledDeformationModelLevel());
-		samplingBranchCountMultiplier = 5; // 5 for each branch
-		dirName += "-dmSample";
-		if (samplingBranchCountMultiplier > 1)
-			dirName += samplingBranchCountMultiplier+"x";
-		
-//		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
-//		dirName += "-prvi25_subduction_branches";
-//		double avgNumRups = 10000;
-//		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+		List<LogicTreeLevel<? extends LogicTreeNode>> levels = PRVI25_LogicTreeBranch.levelsSubduction;
+		dirName += "-prvi25_subduction_branches";
+		double avgNumRups = 10000;
+		gmpes = new AttenRelRef[] { AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		
 //		levels = new ArrayList<>(levels);
 //		levels.add(NSHM23_LogicTreeBranch.SUB_SECT_CONSTR);
@@ -632,11 +655,23 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.class;
 		
-		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedUseM1Bounds.class;
-		dirName += "-grid_bounds_m1";
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedUseM1Bounds.class;
+//		dirName += "-grid_bounds_m1";
 		
 //		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedUseM1toMmaxBounds.class;
 //		dirName += "-grid_bounds_m1_to_mmax";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedForceCrustalRateBalancing.class;
+//		dirName += "-grided_rate_balancing";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.LimitCrustalBelowObserved_0p9.class;
+//		dirName += "-limit_below_obs_constraint";
+		
+//		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.RateBalanceAndLimitCrustalBelowObserved_0p9.class;
+//		dirName += "-limit_below_obs_constraint-grided_rate_balancing";
+		
+		Class<? extends InversionConfigurationFactory> factoryClass = PRVI25_InvConfigFactory.GriddedForceSlab2Depths.class;
+		dirName += "-gridded_use_slab2";
 		
 		if (!factoryClass.equals(PRVI25_InvConfigFactory.class)) {
 			// try instantiate it to make sure we get any static modifiers that might change branch weights
@@ -662,6 +697,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 				
 				// DEFORMATION MODELS
 //				PRVI25_CrustalDeformationModels.GEOLOGIC,
+//				PRVI25_CrustalDeformationModels.GEOLOGIC_DIST_AVG,
 				
 				// SCALING RELATIONSHIPS
 				
@@ -1030,13 +1066,16 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 //			for (boolean avgGridded : new boolean[] {true, false}) {
 				File jobFile;
 				if (i == 0) {
-					argz = "--input-file "+resultsPath+"_avg_gridded.zip";
+					if (griddedBAName != null) {
+						// just one BA solution file, use that for gridded
+						argz = "--input-file "+resultsPath+".zip";
+						argz += " --external-grid-prov "+dirPath+"/"+griddedBAName;
+					} else {
+						argz = "--input-file "+resultsPath+"_avg_gridded.zip";
+					}
 					argz += " --output-file "+resultsPath+"_hazard_avg_gridded.zip";
 					argz += " --output-dir "+resultsPath;
 					argz += " --gridded-seis INCLUDE";
-					if (griddedBAName != null)
-						// just one BA solution file, use that for gridded
-						argz += " --external-grid-prov "+dirPath+"/"+griddedBAName;
 					jobFile = new File(localDir, "batch_hazard_avg_gridded.slurm");
 				} else if (i == 1) {
 					argz = "--input-file "+resultsPath;
@@ -1130,7 +1169,7 @@ public class MPJ_LogicTreeInversionRunnerScriptWriter {
 					if (reg.contains(site.location()))
 						sites.add(new Site(site.location(), site.toString()));
 				}
-			} else if (fm instanceof PRVI25_CrustalFaultModels) {
+			} else if (fm instanceof PRVI25_CrustalFaultModels || fm instanceof PRVI25_SubductionFaultModels) {
 				CSVFile<String> csv = CSVFile.readStream(PRVI25_CrustalFaultModels.class.getResourceAsStream("/data/erf/prvi25/sites/prvi_sites.csv"), true);
 				sites = new ArrayList<>();
 				for (int row=1; row<csv.getNumRows(); row++) {

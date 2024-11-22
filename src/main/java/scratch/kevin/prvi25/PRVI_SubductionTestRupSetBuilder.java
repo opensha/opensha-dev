@@ -22,12 +22,20 @@ import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_Subduc
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 
+import com.google.common.base.Preconditions;
+
+import scratch.kevin.prvi25.figures.PRVI_SubductionSubSectPlots;
+
 public class PRVI_SubductionTestRupSetBuilder {
 
 	public static void main(String[] args) throws IOException {
 		PRVI25_SubductionFaultModels fm = PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE;
 //		PRVI25_SubductionFaultModels fm = PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL;
 		PRVI25_SubductionDeformationModels dm = PRVI25_SubductionDeformationModels.FULL;
+		
+		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/fault_model");
+		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
+		
 		// first just write out the fault model
 		List<? extends FaultSection> sects = fm.getFaultSections();
 		for (FaultSection sect : sects) {
@@ -38,8 +46,8 @@ public class PRVI_SubductionTestRupSetBuilder {
 			System.out.println("\tLower trace: depth="+depthStr(lower)+"; strike="+oneDigit.format(lower.getAveStrike()));
 			System.out.println("\tdip="+(float)sect.getAveDip()+"; dipDir="+sect.getDipDirection());
 		}
-		GeographicMapMaker mapMaker = new GeographicMapMaker(sects);
-		mapMaker.plot(new File("/tmp"), "subduction_sections", "PRVI Subduction Fault Model");
+		GeographicMapMaker mapMaker = new GeographicMapMaker(PRVI_SubductionSubSectPlots.plotReg, sects);
+		mapMaker.plot(outputDir, "subduction_sections", "PRVI Subduction Fault Model");
 		PRVI25_SubductionScalingRelationships scale = PRVI25_SubductionScalingRelationships.LOGA_C4p0;
 		List<? extends FaultSection> subSects = dm.build(fm);
 //		RupSetConfig config = new CoulombRupSetConfig(subSects, scale);
@@ -55,10 +63,10 @@ public class PRVI_SubductionTestRupSetBuilder {
 			System.out.println("\tUpper trace: depth="+depthStr(upper)+"; strike="+oneDigit.format(upper.getAveStrike()));
 			System.out.println("\tLower trace: depth="+depthStr(lower)+"; strike="+oneDigit.format(lower.getAveStrike()));
 		}
-		mapMaker = new GeographicMapMaker(subSects);
-		mapMaker.plot(new File("/tmp"), "subduction_subsections", "PRVI Subduction Fault Model");
+		mapMaker = new GeographicMapMaker(PRVI_SubductionSubSectPlots.plotReg, subSects);
+		mapMaker.plot(outputDir, "subduction_subsections", "PRVI Subduction Fault Model");
 		
-		rupSet.write(new File("/tmp/subduction_rup_set_"+dm.getFilePrefix()+".zip"));
+		rupSet.write(new File(outputDir, "subduction_rup_set_"+dm.getFilePrefix()+".zip"));
 		
 		double minMag = Double.POSITIVE_INFINITY;
 		double maxMag = Double.NEGATIVE_INFINITY;
@@ -82,14 +90,14 @@ public class PRVI_SubductionTestRupSetBuilder {
 		
 		// now write surface debug GeoJSON
 		List<Feature> features = new ArrayList<>();
-		features.addAll(FeatureCollection.read(new File("/tmp/subduction_subsections.geojson")).features);
+		features.addAll(FeatureCollection.read(new File(outputDir, "subduction_subsections.geojson")).features);
 		for (FaultSection sect : rupSet.getFaultSectionDataList()) {
 			MultiPoint geom = new MultiPoint(sect.getFaultSurface(15d, false, false).getEvenlyDiscritizedListOfLocsOnSurface());
 			Feature points = new Feature(geom, new FeatureProperties());
 			features.add(points);
 		}
 		
-		FeatureCollection.write(new FeatureCollection(features), new File("/tmp/subduction_subsection_points.geojson"));
+		FeatureCollection.write(new FeatureCollection(features), new File(outputDir, "subduction_subsection_points.geojson"));
 	}
 	
 	private static String depthStr(FaultTrace trace) {

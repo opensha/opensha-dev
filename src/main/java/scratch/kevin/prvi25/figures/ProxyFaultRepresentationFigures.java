@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.ProxyFaultSectionInstances;
+import org.opensha.sha.earthquake.faultSysSolution.ruptures.util.UniqueRupture;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.PRVI25_InvConfigFactory;
@@ -57,10 +59,12 @@ public class ProxyFaultRepresentationFigures {
 				PRVI25_LogicTreeBranch.DEFAULT_CRUSTAL_ON_FAULT, FaultSysTools.defaultNumThreads());
 		rupSet.addModule(ProxyFaultSectionInstances.build(rupSet, 5, 5d));
 		
-		int parentID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "Anegada", "SW");
-		Region region = new Region(new Location(17.25, -66.25), new Location(18.5, -64));
+//		int parentID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "Anegada", "SW");
+//		Region region = new Region(new Location(17.25, -66.25), new Location(18.5, -64));
 //		int parentID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "SW", "Puerto", "Rico");
 //		Region region = new Region(new Location(17.7, -67.05), new Location(18.1, -66.6));
+		int parentID = FaultSectionUtils.findParentSectionID(rupSet.getFaultSectionDataList(), "Cerro", "Goden");
+		Region region = new Region(new Location(18.08, -67.4), new Location(18.4, -66.95));
 		
 		String parentName = null;
 		
@@ -75,11 +79,21 @@ public class ProxyFaultRepresentationFigures {
 			}
 		}
 		
-		int allSectsRupID = -1;
-		for (int rupIndex : rupSet.getRupturesForParentSection(parentID)) {
-			List<FaultSection> rupSects = rupSet.getFaultSectionDataForRupture(rupIndex);
-			if (rupSects.size() != proxySects.size())
+		double lengthLimit = PRVI25_InvConfigFactory.MAX_PROXY_FAULT_RUP_LEN_DEFAULT*1e3; // km -> m
+		
+		int rupID = -1;
+		double maxRupMag = 0d;
+		List<Integer> allRups = new ArrayList<>(rupSet.getRupturesForParentSection(parentID));
+		Collections.reverse(allRups);
+		for (int rupIndex : allRups) {
+			double mag = rupSet.getMagForRup(rupIndex);
+			if ((float)mag < (float)maxRupMag)
 				continue;
+			if (rupSet.getLengthForRup(rupIndex) > lengthLimit)
+				continue;
+			List<FaultSection> rupSects = rupSet.getFaultSectionDataForRupture(rupIndex);
+//			if (rupSects.size() != proxySects.size())
+//				continue;
 			boolean allMatch = true;
 			for (FaultSection sect : rupSects) {
 				if (sect.getParentSectionId() != parentID) {
@@ -87,23 +101,31 @@ public class ProxyFaultRepresentationFigures {
 					break;
 				}
 			}
-			if (allMatch)
-				allSectsRupID = rupIndex;
+			if (allMatch) {
+				rupID = rupIndex;
+				maxRupMag = mag;
+			}
 		}
-		Preconditions.checkState(allSectsRupID >= 0);
+		Preconditions.checkState(rupID >= 0);
+		
+		System.out.println(parentName);
+		System.out.println("Using an M"+(float)maxRupMag+" rupture, len="+(float)rupSet.getLengthForRup(rupID)*1e-3);
 		
 		File outputDiur = new File("/tmp/");
 		
+		UniqueRupture rupUnique = UniqueRupture.forIDs(rupSet.getSectionsIndicesForRup(rupID));
 		
 		LocationList gridLocs = new LocationList();
 		for (FaultSection sect : proxySects) {
-			GriddedRegion grid = new GriddedRegion(sect.getZonePolygon(), 0.1d, GriddedRegion.ANCHOR_0_0);
-			gridLocs.addAll(grid.getNodeList());
+			if (rupUnique.contains(sect.getSectionId())) {
+				GriddedRegion grid = new GriddedRegion(sect.getZonePolygon(), 0.05d, GriddedRegion.ANCHOR_0_0);
+				gridLocs.addAll(grid.getNodeList());
+			}
 		}
 		
 		ProxyFaultSectionInstances proxyModule = rupSet.requireModule(ProxyFaultSectionInstances.class);
 		
-		RuptureSurface rup = rupSet.getSurfaceForRupture(allSectsRupID, 1d);
+		RuptureSurface rup = rupSet.getSurfaceForRupture(rupID, 1d);
 		
 		for (RupType type : RupType.values()) {
 			GeographicMapMaker mapMaker = new GeographicMapMaker(region);
@@ -112,8 +134,12 @@ public class ProxyFaultRepresentationFigures {
 				mapMaker.setFaultSections(proxySects);
 				Color color = color(colors, 0);
 				List<Color> sectColors = new ArrayList<>();
-				for (int i=0; i<proxySects.size(); i++)
-					sectColors.add(color);
+				for (int i=0; i<proxySects.size(); i++) {
+					if (rupUnique.contains(proxySects.get(i).getSectionId()))
+						sectColors.add(color);
+					else
+						sectColors.add(null);
+				}
 				mapMaker.plotSectColors(sectColors);
 				mapMaker.plot(outputDiur, "zone_rups_proxy_fault", "Proxy Fault Rupture");
 			} else if (type == RupType.GRIDDED) {
@@ -138,7 +164,7 @@ public class ProxyFaultRepresentationFigures {
 				for (int i=0; i<combFaultSects.size(); i++)
 					sectColors.add(null);
 				
-				List<List<Integer>> rupProxyIndexes = proxyModule.getRupProxySectIndexes(allSectsRupID);
+				List<List<Integer>> rupProxyIndexes = proxyModule.getRupProxySectIndexes(rupID);
 				for (int i=0; i<rupProxyIndexes.size(); i++) {
 					Color color = color(colors, i);
 					for (int index : rupProxyIndexes.get(i))
