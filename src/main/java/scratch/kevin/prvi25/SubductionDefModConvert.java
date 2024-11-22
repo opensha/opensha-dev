@@ -17,11 +17,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jfree.chart.annotations.XYAnnotation;
+import org.jfree.chart.annotations.XYBoxAnnotation;
+import org.jfree.chart.annotations.XYPolygonAnnotation;
 import org.jfree.chart.annotations.XYTextAnnotation;
+import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.Range;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DefaultXY_DataSet;
+import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
+import org.opensha.commons.data.function.HistogramFunction;
 import org.opensha.commons.data.function.XY_DataSet;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -48,24 +54,35 @@ import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.earthquake.faultSysSolution.util.SubSectionBuilder;
 import org.opensha.sha.earthquake.faultSysSolution.util.minisections.MinisectionMappings;
 import org.opensha.sha.earthquake.faultSysSolution.util.minisections.MinisectionSlipRecord;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionDeformationModels;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.GeoJSONFaultSection;
+import org.opensha.sha.faultSurface.RuptureSurface;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
+
+import net.mahdilamb.colormap.Colors;
+import scratch.kevin.prvi25.figures.PRVI_SubductionSubSectPlots;
 
 public class SubductionDefModConvert {
+	
+	private static boolean WRITE_SECT_INDEXES = false;
 
 	public static void main(String[] args) throws IOException {
 		File fmDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/fault_models/subduction");
 		File dmDir = new File("/home/kevin/workspace/opensha/src/main/resources/data/erf/prvi25/def_models/subduction");
 		File inputsDir = new File(fmDir, "inputs");
+		
+		// disable writing outputs (only plots)
+		fmDir = null;
+		dmDir = null;
 		
 //		File inputFile = new File(fmDir, "PRVI_sub_v2_13May2024.geojson");
 //		File fmOutputFile = new File(fmDir, "PRVI_sub_v2_fault_model.geojson");
@@ -78,7 +95,7 @@ public class SubductionDefModConvert {
 		boolean interpolate = true;
 		boolean interpSymmetry = true;
 		
-		File debugDir = new File("/tmp/sub_fm_dm_debug");
+		File debugDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/def_model");
 		Preconditions.checkState(debugDir.exists() || debugDir.mkdir());
 		
 		Table<Boolean, Boolean, String> debugPrefixes = HashBasedTable.create();
@@ -86,17 +103,25 @@ public class SubductionDefModConvert {
 		for (boolean largePolys : largePolyBools) {
 			for (boolean fullRate : fullRateBools) {
 				String inRatePrefix = fullRate ? "FullRate" : "PartRate";
+				String rateTitle = fullRate ? PRVI25_SubductionDeformationModels.FULL.getName() : PRVI25_SubductionDeformationModels.PARTIAL.getName();
 				String outRatePrefix = fullRate ? "full" : "part";
 				String inGeomPrefix = largePolys ? "LargePolys" : "SmallPolys";
+				String geomTitle = largePolys ? PRVI25_SubductionFaultModels.PRVI_SUB_FM_LARGE.getShortName() : PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL.getShortName();
+				geomTitle += " Fault Model";
 				String outGeomPrefix = largePolys ? "large" : "small";
 				File inputFile = new File(inputsDir, "PRVI_subduction_"+inRatePrefix+"_"+inGeomPrefix+"_drape_removeFields.geojson");
 				File fmOutputFile;
-				if (fullRate)
+				if (fullRate && fmDir != null)
 					fmOutputFile = new File(fmDir, "PRVI_sub_v1_fault_model_"+outGeomPrefix+".geojson");
 				else
 //					fmOutputFile = new File(fmDir, "PRVI_sub_v1_fault_model_"+outGeomPrefix+"_dup.geojson");
 					fmOutputFile = null;
-				File dmOutputFile = new File(dmDir, "PRVI_sub_v1_"+outGeomPrefix+"_"+outRatePrefix+"_rate_minisections.txt");
+				File dmOutputFile;
+				if (dmDir == null)
+					// plot only
+					dmOutputFile = null;
+				else
+					dmOutputFile = new File(dmDir, "PRVI_sub_v1_"+outGeomPrefix+"_"+outRatePrefix+"_rate_minisections.txt");
 				String ratePropName = fullRate ? "RateF_Proj" : "RateP_Proj";
 				String rateUncertPropName = fullRate ? "RateF_Unc" : "RateP_Unc";
 				String rakePropName = fullRate ? "RakeRateF" : "RakeRateP";
@@ -110,9 +135,10 @@ public class SubductionDefModConvert {
 					read.close();
 					
 					String prefix = "geom_"+inGeomPrefix+"_"+inRatePrefix;
-					String title = inRatePrefix+", "+inGeomPrefix;
+					String fmTitle = geomTitle;
+					String fmDmTitle = geomTitle+", "+rateTitle;
 					debugPrefixes.put(fullRate, largePolys, prefix);
-					debugWriteSectOrders(inFeatures, debugDir, prefix, title,
+					debugWriteSectOrders(inFeatures, debugDir, prefix, fmTitle, fmDmTitle,
 							ratePropName, rateUncertPropName, rakePropName);
 					
 					Map<String, int[]> stitchInIDs = new HashMap<>();
@@ -347,6 +373,8 @@ public class SubductionDefModConvert {
 							ArbitrarilyDiscretizedFunc dasSlipUncertFunc = new ArbitrarilyDiscretizedFunc();
 							ArbitrarilyDiscretizedFunc dasRakeFunc = new ArbitrarilyDiscretizedFunc();
 							
+							List<double[]> interpRanges = new ArrayList<>();
+							
 							for (int i=0; i<sectRefMinis.size(); i++) {
 								MinisectionSlipRecord mini = sectRefMinis.get(i);
 								double start = sectStartDASs.get(i);
@@ -363,6 +391,8 @@ public class SubductionDefModConvert {
 									// enforce symmetry
 									double prevHalfLen = sectEndDASs.get(i-1) - sectMidDASs.get(i-1);
 									double myHalfLen = middle - start;
+									double interpLen = Math.min(prevHalfLen, myHalfLen);
+									interpRanges.add(new double[] {start - interpLen, start + interpLen});
 									if (myHalfLen > prevHalfLen) {
 										// my portion is longer, truncate
 										double interpX = start + prevHalfLen;
@@ -377,6 +407,8 @@ public class SubductionDefModConvert {
 										dasSlipUncertFunc.set(interpX, prev.slipRateStdDev);
 										dasRakeFunc.set(interpX, prev.rake);
 									}
+								} else {
+									interpRanges.add(new double[] {sectMidDASs.get(i-1), middle});
 								}
 								
 								// add the middle
@@ -416,7 +448,8 @@ public class SubductionDefModConvert {
 							// plot them
 							String interpPrefix = prefix+"_interp_"+name.replaceAll("\\W+", "_");
 							debugWriteInterpFuncsOrders(debugDir, interpPrefix, name,
-									dasSlipFunc, dasSlipUncertFunc, dasRakeFunc, sectStartDASs);
+									dasSlipFunc, dasSlipUncertFunc, dasRakeFunc, sectStartDASs,
+									sectMidDASs, interpRanges);
 						}
 						
 						// calculate modified moment rates
@@ -430,7 +463,7 @@ public class SubductionDefModConvert {
 							modMoRates.put(name, moRate+sect.calcMomentRate(false));
 						}
 						
-						System.out.println("Interpolation Mo-Rate changes for "+title);
+						System.out.println("Interpolation Mo-Rate changes for "+fmDmTitle);
 						for (String name : modMoRates.keySet()) {
 							double orig = origMoRates.get(name);
 							double mod = modMoRates.get(name);
@@ -441,7 +474,8 @@ public class SubductionDefModConvert {
 					if (fmOutputFile != null)
 						FeatureCollection.write(new FeatureCollection(outFeatures), fmOutputFile);
 					
-					MinisectionSlipRecord.writeMinisectionsFile(dmOutputFile, minisectionRecsMap);
+					if (dmOutputFile != null)
+						MinisectionSlipRecord.writeMinisectionsFile(dmOutputFile, minisectionRecsMap);
 				} catch (Exception e) {
 					System.err.println("WARNING: Exception with "+inputFile.getName()+", skipping");
 					e.printStackTrace();
@@ -523,8 +557,8 @@ public class SubductionDefModConvert {
 		return new Location(latTrack.getAverage(), lonTrack.getAverage(), depTrack.getAverage());
 	}
 	
-	private static void debugWriteSectOrders(List<Feature> features, File outputDir, String prefix, String title,
-			String slipProp, String slipUncertProp, String rakeProp) throws IOException {
+	private static void debugWriteSectOrders(List<Feature> features, File outputDir, String prefix, String fmTitle,
+			String fmDmTitle, String slipProp, String slipUncertProp, String rakeProp) throws IOException {
 		List<FaultSection> sects = new ArrayList<>();
 		List<Location> directionLocs = new ArrayList<>();
 		List<Double> directionFracts = new ArrayList<>();
@@ -533,9 +567,11 @@ public class SubductionDefModConvert {
 		List<Double> slipUncerts = new ArrayList<>();
 		List<Double> rakes = new ArrayList<>();
 		CPT orderCPT = new CPT(0d, 1d, Color.RED, Color.GREEN);
+		
 		for (Feature feature : features) {
 			Feature copy = new Feature(feature.properties.getNumber("id"), feature.geometry, feature.properties);
-			sects.add(GeoJSONFaultSection.fromFeature(copy));
+			GeoJSONFaultSection sect = GeoJSONFaultSection.fromFeature(copy);
+			sects.add(sect);
 			Preconditions.checkState(feature.geometry.type == GeoJSON_Type.MultiLineString);
 			MultiLineString multi = (MultiLineString)feature.geometry;
 			for (LocationList line : multi.lines) {
@@ -548,34 +584,56 @@ public class SubductionDefModConvert {
 					depths.add(trace.get(l).depth);
 				}
 			}
-			slips.add(feature.properties.getDouble(slipProp, Double.NaN));
+			double slip = feature.properties.getDouble(slipProp, Double.NaN);
+			slips.add(slip);
+			sect.setAveSlipRate(slip);
 			slipUncerts.add(feature.properties.getDouble(slipUncertProp, Double.NaN));
-			rakes.add(feature.properties.getDouble(rakeProp, Double.NaN));
+			double rake = feature.properties.getDouble(rakeProp, Double.NaN);
+			rakes.add(rake);
+			sect.setAveRake(rake);
 		}
 		
-		GeographicMapMaker mapMaker = new GeographicMapMaker(sects);
+		GeographicMapMaker mapMaker = new GeographicMapMaker(PRVI_SubductionSubSectPlots.plotReg, sects);
 		
 		mapMaker.setScatterSymbol(PlotSymbol.FILLED_CIRCLE, 0.3f);
 		mapMaker.plotScatterScalars(directionLocs, directionFracts, orderCPT, "First ----------> Last");
-		
-		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 18);
-		
+
+		List<Location> centerLocs = new ArrayList<>();
 		for (FaultSection sect : sects) {
-			LocationList locs = sect.getFaultSurface(1d).getEvenlyDiscritizedListOfLocsOnSurface();
+			RuptureSurface surf = sect.getFaultSurface(1d);
+			LocationList locs = surf.getEvenlyDiscritizedListOfLocsOnSurface();
 			double avgLat = locs.stream().mapToDouble(L->L.lat).average().getAsDouble();
 			double avgLon = locs.stream().mapToDouble(L->L.lon).average().getAsDouble();
-			XYTextAnnotation idAnn = new XYTextAnnotation(sect.getSectionId()+"", avgLon, avgLat);
-			idAnn.setFont(font);;
-			idAnn.setTextAnchor(TextAnchor.CENTER);
-			mapMaker.addAnnotation(idAnn);
+			centerLocs.add(new Location(avgLat, avgLon));
 		}
 		
-		mapMaker.plot(outputDir, prefix+"_order", title);
+		
+		if (WRITE_SECT_INDEXES) {
+			Font font = new Font(Font.SANS_SERIF, Font.BOLD, 16);
+			
+			for (int i = 0; i < sects.size(); i++) {
+				FaultSection sect = sects.get(i);
+				Location centerLoc = centerLocs.get(i);
+				XYTextAnnotation idAnn = new XYTextAnnotation(sect.getSectionId()+"", centerLoc.lon, centerLoc.lat);
+				idAnn.setFont(font);
+				idAnn.setTextAnchor(TextAnchor.CENTER);
+				mapMaker.addAnnotation(idAnn);
+			}
+		}
+		
+		mapMaker.plot(outputDir, prefix+"_order", fmTitle);
+		
+		// add crustal fault lines
+		List<LocationList> crustalTraces = new ArrayList<>();
+		for (FaultSection sect : PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1.getFaultSections())
+			crustalTraces.add(sect.getFaultTrace());
+		mapMaker.plotLines(crustalTraces, Color.BLACK, 1f);
 		
 		CPT depthCPT = GMT_CPT_Files.BLACK_RED_YELLOW_UNIFORM.instance();
 		depthCPT = depthCPT.rescale(0d, 50d);
 		mapMaker.plotScatterScalars(directionLocs, depths, depthCPT, "Depth (km)");
-		mapMaker.plot(outputDir, prefix+"_depth", title);
+		mapMaker.plot(outputDir, prefix+"_depth", fmTitle);
+		mapMaker.clearLines();
 		
 		mapMaker.clearScatters();
 		
@@ -584,24 +642,36 @@ public class SubductionDefModConvert {
 		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 5d);
 		CPT slipUncertCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 2d);
 		CPT rakeCPT = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(0d, 90d);
-		mapMaker.plotSectScalars(slips, slipCPT, "Slip Rate (mm/yr)");
-		mapMaker.plot(outputDir, prefix+"_slips", title);
 		
 		mapMaker.plotSectScalars(slipUncerts, slipUncertCPT, "Slip Rate Uncertainty (mm/yr)");
-		mapMaker.plot(outputDir, prefix+"_slip_uncerts", title);
+		mapMaker.plot(outputDir, prefix+"_slip_uncerts", fmDmTitle);
 		
+		if (!WRITE_SECT_INDEXES) {
+			// add vectors for rake and slip
+			List<LocationList> arrows = new ArrayList<>();
+			for (int s=0; s<sects.size(); s++) {
+				arrows.addAll(PRVI_SubductionSubSectPlots.buildRakeArrows(sects.get(s), slipCPT.getMaxValue()));
+			}
+			System.out.println("Plotting "+arrows.size()+" arrow lines");
+			mapMaker.plotLines(arrows, Color.BLACK, 2f);
+		}
+		
+		mapMaker.plotSectScalars(slips, slipCPT, "Slip Rate (mm/yr)");
+		mapMaker.plot(outputDir, prefix+"_slips", fmDmTitle);
 		mapMaker.plotSectScalars(rakes, rakeCPT, "Rake Angle");
-		mapMaker.plot(outputDir, prefix+"_rakes", title);
+		mapMaker.plot(outputDir, prefix+"_rakes", fmDmTitle);
 	}
 	
 	private static void debugWriteInterpFuncsOrders(File outputDir, String prefix, String name,
 			ArbitrarilyDiscretizedFunc dasSlipFunc, ArbitrarilyDiscretizedFunc dasSlipUncertFunc,
-			ArbitrarilyDiscretizedFunc dasRakeFunc, List<Double> sectStartDASs) throws IOException {
+			ArbitrarilyDiscretizedFunc dasRakeFunc, List<Double> sectStartDASs,
+			List<Double> sectMidDASs, List<double[]> interpRanges) throws IOException {
 		
 		List<PlotSpec> specs = new ArrayList<>(3);
 		List<Range> yRanges = new ArrayList<>(3);
-		
-		PlotCurveCharacterstics startChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 1f, Color.GRAY);
+
+		PlotCurveCharacterstics startChar = new PlotCurveCharacterstics(PlotLineType.SOLID, 2f, Color.BLACK);
+		PlotCurveCharacterstics middleChar = new PlotCurveCharacterstics(PlotLineType.DASHED, 2f, Color.GRAY);
 		
 		for (int i=0; i<3; i++) {
 			ArbitrarilyDiscretizedFunc inFunc;
@@ -630,6 +700,19 @@ public class SubductionDefModConvert {
 			List<XY_DataSet> funcs = new ArrayList<>();
 			List<PlotCurveCharacterstics> chars = new ArrayList<>();
 			
+			for (int s=0; s<sectMidDASs.size(); s++) {
+				DefaultXY_DataSet xy = new DefaultXY_DataSet();
+				double middle = sectMidDASs.get(s);
+				xy.set(middle, 0d);
+				xy.set(middle, maxY);
+				
+				funcs.add(xy);
+				chars.add(middleChar);
+				
+				if (s == 0)
+					xy.setName("Section Middles");
+			}
+			
 			for (int s=1; s<sectStartDASs.size(); s++) {
 				DefaultXY_DataSet xy = new DefaultXY_DataSet();
 				double start = sectStartDASs.get(s);
@@ -638,17 +721,75 @@ public class SubductionDefModConvert {
 				
 				funcs.add(xy);
 				chars.add(startChar);
+				
+				if (s == 1)
+					xy.setName("Section Ends");
 			}
 			
+			inFunc.setName("Interpolated");
 			funcs.add(inFunc);
-			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+			chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 5f, Color.BLACK));
 			
-			specs.add(new PlotSpec(funcs, chars, name, "Distance Along Strike (km)", yAxisLabel));
+			DefaultXY_DataSet midFunc = new DefaultXY_DataSet();
+			for (double das : sectMidDASs)
+				midFunc.set(das, inFunc.getInterpolatedY(das));
+			
+			midFunc.setName("Raw Values");
+			funcs.add(midFunc);
+			chars.add(new PlotCurveCharacterstics(PlotSymbol.FILLED_CIRCLE, 9f, Color.GRAY));
+
+			// add interpolation annotations
+			int interpAlpha = 40;
+			Color interpColor1 = Colors.tab_orange;
+			Color interpColor2 = Colors.tab_blue;
+			interpColor1 = new Color(interpColor1.getRed(), interpColor1.getGreen(), interpColor1.getBlue(), interpAlpha);
+			interpColor2 = new Color(interpColor2.getRed(), interpColor2.getGreen(), interpColor2.getBlue(), interpAlpha);
+
+			double interpMinY = 0d;
+			double interpMaxY = maxY;
+
+			List<XYAnnotation> anns = new ArrayList<>();
+
+			for (double[] interpRange : interpRanges) {
+				XYBoxAnnotation boxAnn = new XYBoxAnnotation(interpRange[0], interpMinY, interpRange[1], interpMaxY,
+						null, null, anns.size() % 2 == 0 ? interpColor1 : interpColor2);
+				anns.add(boxAnn);
+			}
+			
+			// annotate interpolation ranges
+			// use darker color
+			interpColor1 = new Color(interpColor1.getRed(), interpColor1.getGreen(), interpColor1.getBlue(), Integer.min(150, interpAlpha*4));
+			interpColor2 = new Color(interpColor2.getRed(), interpColor2.getGreen(), interpColor2.getBlue(), Integer.min(150, interpAlpha*4));
+			EvenlyDiscretizedFunc fakeHist = new EvenlyDiscretizedFunc(0d, 1d, 10);
+			fakeHist.setName(" ");
+			funcs.add(fakeHist);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, interpColor1));
+			fakeHist = fakeHist.deepClone();
+			fakeHist.setName("Interpolation Regions");
+			funcs.add(fakeHist);
+			chars.add(new PlotCurveCharacterstics(PlotLineType.HISTOGRAM, 1f, interpColor2));
+			
+			PlotSpec spec = new PlotSpec(funcs, chars, name, "Distance Along Strike (km)", yAxisLabel);
+			if (i == 0)
+//				spec.setLegendInset(RectangleAnchor.TOP_LEFT);
+				spec.setLegendVisible(true);
+
+			spec.setPlotAnnotations(anns);
+			
+			specs.add(spec);
 		}
 		
-		HeadlessGraphPanel gp = PlotUtils.initHeadless();
-		gp.drawGraphPanel(specs, false, false, null, yRanges);
+		int width = 1000;
+		int height = width;
 		
-		PlotUtils.writePlots(outputDir, prefix, gp, 1000, 1000, true, true, false);
+		// on second though, we don't care about the uncertainty one
+		specs.remove(1);
+		yRanges.remove(1);
+		height = 800;
+		
+		HeadlessGraphPanel gp = PlotUtils.initHeadless();
+		gp.drawGraphPanel(specs, false, false, List.of(new Range(0d, dasSlipFunc.getMaxX())), yRanges);
+		
+		PlotUtils.writePlots(outputDir, prefix, gp, width, height, true, true, false);
 	}
 }

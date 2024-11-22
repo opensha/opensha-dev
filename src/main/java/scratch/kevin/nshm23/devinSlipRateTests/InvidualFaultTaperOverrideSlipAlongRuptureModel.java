@@ -66,7 +66,7 @@ public class InvidualFaultTaperOverrideSlipAlongRuptureModel extends SlipAlongRu
 			boolean prevTaper = bundleTapers.get(0);
 			for (int i=1; i<parentBundles.size(); i++) {
 				List<Integer> bundle = parentBundles.get(i);
-				boolean taper = compBundleTapers.get(i);
+				boolean taper = bundleTapers.get(i);
 				if (taper && prevTaper) {
 					// add it into the previous one
 					combParentBundles.get(combParentBundles.size()-1).addAll(bundle);

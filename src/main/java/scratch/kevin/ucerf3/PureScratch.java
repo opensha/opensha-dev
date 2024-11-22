@@ -3030,13 +3030,59 @@ public class PureScratch {
 		System.out.println("MfromAsum="+(float)MfromAsum);
 	}
 	
+	private static void test334() throws IOException {
+		File baseDir = new File("/project/scec_608/kmilner/nshm23/batch_inversions/2024_10_24-prvi25_crustal_branches-dmSample5x/results");
+		AveragingAccumulator<RegionsOfInterest> accumulator = null;
+		for (File subDir : baseDir.listFiles()) {
+			if (!subDir.isDirectory())
+				continue;
+			File solFile = new File(subDir, "solution.zip");
+			if (!solFile.exists())
+				continue;
+			System.out.println("Processing "+solFile.getAbsolutePath());
+			ModuleArchive<OpenSHA_Module> archive = new ModuleArchive<>(solFile);
+			RegionsOfInterest roi = archive.loadUnlistedModule(RegionsOfInterest.class, FaultSystemRupSet.NESTING_PREFIX);
+			if (accumulator == null)
+				accumulator = roi.averagingAccumulator();
+			accumulator.process(roi, 1d);
+		}
+		accumulator.getAverage();
+	}
+	
+	private static void test335() throws IOException {
+		double vertSlipRate = 1d;
+		double dipDeg = 50;
+		double dipRad = Math.toRadians(dipDeg);
+		// sin(dip) = vertical / plane
+		// plane = vertical / sin(dip)
+		double onPlaneSlip = vertSlipRate / Math.sin(dipRad);
+		System.out.println("Verical slip rate: "+(float)vertSlipRate);
+		System.out.println("On-plane slip rate: "+(float)onPlaneSlip);
+	}
+	
+	private static void test336() throws IOException {
+//		double slip = 10d;
+//		double dip = 45d;
+//		double rake = 0d;
+		
+		// bunce 6 upper
+		double slip = 5d;
+		double dip = 90d;
+		double rake = 0d;
+		
+		double projected = PRVI25_CrustalFaultModels.projectSlip(slip, dip, rake);
+		System.out.println("Dip: "+(float)dip);
+		System.out.println("Rake: "+(float)rake);
+		System.out.println("Slip: "+(float)slip+" -> "+(float)projected);
+	}
+	
 	/**
 	 * @param args
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
-			test333();
+			test336();
 		} catch (Throwable t) {
 			t.printStackTrace();
 			System.exit(1);

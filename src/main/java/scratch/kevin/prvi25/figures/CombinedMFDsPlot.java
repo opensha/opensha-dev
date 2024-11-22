@@ -29,12 +29,12 @@ public class CombinedMFDsPlot {
 
 	public static void main(String[] args) throws IOException {
 		File crustalDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_08_16-prvi25_crustal_branches-dmSample5x");
+				+ "2024_11_19-prvi25_crustal_branches-dmSample5x");
 		FaultSystemSolution crustalSol = FaultSystemSolution.load(new File(crustalDir,
 				"results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip"));
 		
 		File subductionDir = new File("/home/kevin/OpenSHA/nshm23/batch_inversions/"
-				+ "2024_08_16-prvi25_subduction_branches");
+				+ "2024_11_19-prvi25_subduction_branches");
 		FaultSystemSolution subductionSol1 = FaultSystemSolution.load(new File(subductionDir,
 				"results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip"));
 		FaultSystemSolution subductionSol2 = FaultSystemSolution.load(new File(subductionDir,

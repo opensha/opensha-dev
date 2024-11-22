@@ -61,53 +61,54 @@ public class BranchAveragedHazardScriptWriter {
 		/*
 		 * PRVI
 		 */
-////		String baseDirName = "2024_07_31-prvi25_subduction_branches";
-////		String baseDirName = "2024_09_04-prvi25_crustal_subduction_combined_branches";
-////		String baseDirName = "2024_09_04-prvi25_crustal_branches-dmSample5x";
-//		String baseDirName = "2024_09_04-prvi25_subduction_branches";
+//		String baseDirName = "2024_07_31-prvi25_subduction_branches";
+//		String baseDirName = "2024_10_24-prvi25_crustal_subduction_combined_branches";
+		
 //		region = PRVI25_RegionLoader.loadPRVI_ModelBroad();
-//		gridSpacing = 0.01;
-//		
-//		gmms = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
-//		
-////		String suffix = "ba_only-LARGE";
-////		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
-//		
-////		String suffix = "ba_only-LARGE-true_pt_src";
-////		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
-//		
-////		String suffix = "ba_only";
-////		String solFileName = "combined_branch_averaged_solution.zip";
-//		
-////		String suffix = "ba_only";
-////		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
-//		
-////		String suffix = "ba_only-SLAB_only";
-////		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
-////		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
-//		
+		region = PRVI25_RegionLoader.loadPRVI_MapExtents();
+		gridSpacing = 0.01;
+		
+		gmms = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
+		
+//		String suffix = "ba_only-LARGE";
+//		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
+		
+//		String suffix = "ba_only-LARGE-true_pt_src";
+//		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
+		
+		String baseDirName = "2024_11_19-prvi25_crustal_subduction_combined_branches";
+		String suffix = "ba_only";
+		String solFileName = "combined_branch_averaged_solution.zip";
+		
+//		String baseDirName = "2024_11_19-prvi25_crustal_branches-dmSample5x";
+//		String suffix = "ba_only";
+//		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
+		
+//		String baseDirName = "2024_11_19-prvi25_subduction_branches";
+//		String suffix = "ba_only-SLAB_only";
+//		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
+//		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
 ////		String suffix = "ba_only-INTERFACE_only";
 ////		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
-//		
-//		String suffix = "ba_only-both_fms";
-//		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
+////		String suffix = "ba_only-both_fms";
+////		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
 		
 		/*
 		 * RSQSim
 		 */
-		String suffix = null;
-		
-		String baseDirName = "2024_11_12-rsqsim-wus-5895";
-		String solFileName = "fss_m6_skip10000_sectArea0.5_minSubSects2.zip";
-		
-//		String baseDirName = "2024_11_12-rsqsim-wus-5892";
-//		String solFileName = "fss_m6_skip20000_sectArea0.5_minSubSects2.zip";
-		linkFromBase = false;
-		
-//		periods = new double[] {0d, 1d, 2d, 3d, 5d};
-//		vs30 = 500d; suffix = "vs30_500";
-		periods = new double[] {2d, 3d, 5d};
-		gridSpacing = 0.5; suffix = "bbp_"+(float)gridSpacing;
+//		String suffix = null;
+//		
+//		String baseDirName = "2024_11_12-rsqsim-wus-5895";
+//		String solFileName = "fss_m6_skip10000_sectArea0.5_minSubSects2.zip";
+//		
+////		String baseDirName = "2024_11_12-rsqsim-wus-5892";
+////		String solFileName = "fss_m6_skip20000_sectArea0.5_minSubSects2.zip";
+//		linkFromBase = false;
+//		
+////		periods = new double[] {0d, 1d, 2d, 3d, 5d};
+////		vs30 = 500d; suffix = "vs30_500";
+//		periods = new double[] {2d, 3d, 5d};
+//		gridSpacing = 0.5; suffix = "bbp_"+(float)gridSpacing;
 		
 		boolean noMFDs = false;
 		

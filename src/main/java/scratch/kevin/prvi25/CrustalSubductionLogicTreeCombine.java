@@ -183,9 +183,9 @@ public class CrustalSubductionLogicTreeCombine extends AbstractLogicTreeHazardCo
 		else if (bgOp == IncludeBackgroundOption.EXCLUDE)
 			siteHazardFileName = "results_hazard_sites.zip";
 		else if (bgOp == IncludeBackgroundOption.INCLUDE)
-			siteHazardFileName = "results_full_gridded_sites.zip";
+			siteHazardFileName = "results_hazard_sites_full_gridded.zip";
 		else if (bgOp == IncludeBackgroundOption.ONLY)
-			siteHazardFileName = "results_gridded_only_sites.zip";
+			siteHazardFileName = "results_hazard_sites_only.zip";
 		else
 			throw new IllegalStateException();
 		
