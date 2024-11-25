@@ -157,7 +157,8 @@ public class TestModel1_ERF extends FaultSystemSolutionERF {
 		double magCutOff =8.0; // all rups below are treated a point sources
 		boolean isCrossHair=true;
 		return new Point2Vert_FaultPoisSource(griddedRegion.getLocation(regionIndex), mfd,
-				magLengthRel,timeSpan.getDuration(), magCutOff ,1.0, 0.0,0.0, isCrossHair);
+				magLengthRel,timeSpan.getDuration(), magCutOff ,1.0, 0.0,0.0, isCrossHair,
+				/* no dist corrs */ null);
 	}
 
 

@@ -74,12 +74,12 @@ public class Idriss2013Debug {
 		case CROSSHAIR:
 			pointSource = new Point2Vert_FaultPoisSource(faultLoc, mfd, magLenRel, duration,
 					ptSrcCutoff, fracStrikeSlip, fracNormal,
-					fracReverse, true);
+					fracReverse, true, null);
 			break;
 		case FINITE:
 			pointSource = new Point2Vert_FaultPoisSource(faultLoc, mfd, magLenRel, duration,
 					ptSrcCutoff, fracStrikeSlip, fracNormal,
-					fracReverse, false);
+					fracReverse, false, null);
 			break;
 		case POINT:
 			Map<FocalMech, Double> mechMap = Maps.newHashMap();
