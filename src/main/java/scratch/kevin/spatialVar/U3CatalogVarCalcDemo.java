@@ -17,6 +17,7 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
@@ -85,7 +86,7 @@ public class U3CatalogVarCalcDemo {
 		GridSourceProvider gridProv = fss.getGridSourceProvider();
 		GriddedRegion gridReg = gridProv.getGriddedRegion();
 		
-		PointSourceDistanceCorrections distCorr = BaseFaultSystemSolutionERF.DIST_CORR_TYPE_DEFAULT;
+		GriddedSeismicitySettings gridSettings = GriddedSeismicitySettings.DEFAULT;
 		
 		System.out.println("Calculating ground motions for catalog");
 		for (int i=0; i<catalog.size(); i++) {
@@ -106,7 +107,7 @@ public class U3CatalogVarCalcDemo {
 				RuptureSurface surf = null;
 				if (gridIndex >= 0) {
 					// match
-					ProbEqkSource gridSource = gridProv.getSource(gridIndex, 1d, null, BackgroundRupType.POINT, distCorr);
+					ProbEqkSource gridSource = gridProv.getSource(gridIndex, 1d, null, gridSettings);
 					
 					// there can be multiple ruptures with that magnitude, possibly with different rakes. randomly choose one
 					double magTol = 0.05;

@@ -1221,8 +1221,6 @@ public class U3ETAS_LossSimulationAnalysis {
 	
 	public static FaultSystemSolutionERF_ETAS getERF() {
 		
-		// temporary hack (this needs to be done first)
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 		FaultSystemSolution sol=null;
 		try {
 			sol = FaultSystemSolution.load(new File(fssFileName));

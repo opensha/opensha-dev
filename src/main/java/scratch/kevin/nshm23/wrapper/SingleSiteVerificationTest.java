@@ -36,6 +36,7 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
@@ -67,7 +68,7 @@ public class SingleSiteVerificationTest {
 		boolean subduction = false;
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
-		PointSourceDistanceCorrections distCorr = PointSourceDistanceCorrections.NSHM_2013;
+		GriddedSeismicitySettings gridSettings = GriddedSeismicitySettings.DEFAULT;
 		
 		Set<TectonicRegionType> trts = EnumSet.of(TectonicRegionType.ACTIVE_SHALLOW);
 		if (subduction) {
@@ -148,7 +149,7 @@ public class SingleSiteVerificationTest {
 		calc.getHazardCurve(logXVals, site, gmpe, erf);
 		DiscretizedFunc wrapperFaultCurve = toLinear(logXVals, xVals);
 		
-		ProbEqkSource modelTestSrc = gridProv.getSource(testIndex, 1d, null, BackgroundRupType.POINT, distCorr);
+		ProbEqkSource modelTestSrc = gridProv.getSource(testIndex, 1d, null, gridSettings);
 		FaultSystemSolutionERF modelERF = new FaultSystemSolutionERF(baSol);
 		modelERF.setParameter(ApplyGardnerKnopoffAftershockFilterParam.NAME, false);
 		modelERF.setParameter(ProbabilityModelParam.NAME, ProbabilityModelOptions.POISSON);

@@ -45,6 +45,7 @@ import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.PointSource;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.griddedSeis.Point2Vert_FaultPoisSource;
 import org.opensha.sha.faultSurface.FaultSection;
 import org.opensha.sha.imr.AttenRelRef;
@@ -59,6 +60,7 @@ import scratch.UCERF3.erf.ETAS.ETAS_MultiSimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.ETAS_Simulator.TestScenario;
 import scratch.UCERF3.erf.ETAS.ETAS_Utils;
+import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
 import scratch.UCERF3.erf.mean.TrueMeanBuilder;
 import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
@@ -111,10 +113,12 @@ public class ETAS_CatalogEALCalculator {
 	
 	private static int id_for_scenario = 0;
 	
+	private static final double LOSS_CALC_MIN_MAG = BaseFaultSystemSolutionERF.GRID_SETTINGS_DEFAULT.minimumMagnitude;
+	
 	private static List<? extends List<ETAS_EqkRupture>> loadCatalogs(File resultsBinFile) throws IOException {
 		Preconditions.checkArgument(resultsBinFile.exists(), "catalog file doesn't exist");
 		
-		return loadCatalogs(resultsBinFile, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF-0.05);
+		return loadCatalogs(resultsBinFile, LOSS_CALC_MIN_MAG-0.05);
 	}
 	
 	public ETAS_CatalogEALCalculator(UCERF3_BranchAvgLossFetcher fetcher, U3FaultSystemSolution meanSol,
@@ -142,11 +146,8 @@ public class ETAS_CatalogEALCalculator {
 		LastEventData.populateSubSects(meanSol.getRupSet().getFaultSectionDataList(), LastEventData.load());
 		this.meanSol = meanSol;
 		System.out.println("Loading ERF");
-		double origMinMag = AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF;
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 		erf = ETAS_Launcher.buildERF(meanSol, false, 1d, 2014);
 		erf.updateForecast();
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = origMinMag;
 		System.out.println("Done loading ERF");
 	}
 	
@@ -513,7 +514,7 @@ public class ETAS_CatalogEALCalculator {
 	double calcGridSourceLoss(ETAS_EqkRupture rup, GriddedRegion region,
 			DiscretizedFunc[] griddedMagLossDists, String catName) {
 		double mag = rup.getMag();
-		if ((float)mag < (float)AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF)
+		if ((float)mag < (float)LOSS_CALC_MIN_MAG)
 			// below our min mag
 			return 0;
 		Location loc = rup.getHypocenterLocation();
@@ -1401,7 +1402,7 @@ public class ETAS_CatalogEALCalculator {
 		
 		CSVFile<String> csv = new CSVFile<String>(true);
 		
-		double cutoffMag = AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF;
+		double cutoffMag = LOSS_CALC_MIN_MAG;
 		csv.addLine("Index", "Total Mean Loss", "# FSS Ruptures",
 				"# M>="+(float)cutoffMag, "Max Mag");
 		

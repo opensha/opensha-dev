@@ -67,7 +67,6 @@ public class MPJ_ETAS_CharFactorCalc extends MPJTaskCalculator {
 	public MPJ_ETAS_CharFactorCalc(CommandLine cmd, File compoundFile, File outputDir) throws ZipException, IOException {
 		super(cmd);
 		
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 		weightProv = new U3APrioriBranchWeightProvider();
 		
 		cfss = U3CompoundFaultSystemSolution.fromZipFile(compoundFile);

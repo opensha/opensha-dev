@@ -38,6 +38,8 @@ import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnP
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
+import org.opensha.sha.earthquake.util.GridCellSupersamplingSettings;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -53,8 +55,9 @@ public class SuperSamplingResolutionTests {
 
 	public static void main(String[] args) throws IOException {
 		Region testReg = NSHM23_RegionLoader.loadFullConterminousWUS();
-		double testSpacing = 0.33d;
+//		double testSpacing = 0.33d;
 //		double testSpacing = 3d;
+		double testSpacing = 1;
 		GriddedRegion testGridded = new GriddedRegion(testReg, testSpacing, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Have "+testGridded.getNodeCount()+" test sites");
 		
@@ -153,6 +156,8 @@ public class SuperSamplingResolutionTests {
 		List<Double> times = new ArrayList<>(samplingParams.size());
 		List<Integer> indexes = new ArrayList<>(samplingCurves.size());
 		
+		GriddedSeismicitySettings gridSettings = GriddedSeismicitySettings.DEFAULT;
+		
 		DiscretizedFunc[] refCurves = null;
 		
 		for (int s=0; s<samplingParams.size(); s++) {
@@ -179,9 +184,10 @@ public class SuperSamplingResolutionTests {
 			
 			if (curves == null) {
 				if (params == null)
-					gridSources.setSupersamplingParams(0d, 0d, 0d, 0d);
+					gridSettings = gridSettings.forSupersamplingSettings(null);
 				else
-					gridSources.setSupersamplingParams(params[0], params[1], params[2], params[3]);
+					gridSettings = gridSettings.forSupersamplingSettings(new GridCellSupersamplingSettings(params[0], params[1], params[2], params[3]));
+				erf.setGriddedSeismicitySettings(gridSettings);
 				erf.clearCachedGridSources();
 				Stopwatch watch = Stopwatch.createStarted();
 				curves = calcCurves(siteLocs, erf, period, gmmRef, gmmDeque, calcDeque, xVals, exec, sourceFilters, faultCurves);

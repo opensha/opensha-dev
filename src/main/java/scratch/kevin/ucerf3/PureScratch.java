@@ -1490,7 +1490,6 @@ public class PureScratch {
 	}
 	
 	private static void test291() throws IOException {
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 		FaultSystemSolution sol = FaultSystemSolution.load(new File("/data/kevin/git/ucerf3-etas-launcher/inputs/"
 //		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/orig/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip"));

@@ -33,6 +33,7 @@ public class BranchAveragedHazardScriptWriter {
 		boolean linkFromBase = true;
 		Double vs30 = null;
 		double gridSpacing = 0.1;
+		boolean supersample = false;
 		
 		double[] periods = { 0d, 0.2d, 1d, 5d };
 		AttenRelRef[] gmms = null;
@@ -77,7 +78,9 @@ public class BranchAveragedHazardScriptWriter {
 //		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
 		
 		String baseDirName = "2024_11_19-prvi25_crustal_subduction_combined_branches";
-		String suffix = "ba_only";
+//		String suffix = "ba_only";
+//		String suffix = "ba_only-test_grid_branch";
+		String suffix = "ba_only-test_grid_branch-supersample"; supersample = true;
 		String solFileName = "combined_branch_averaged_solution.zip";
 		
 //		String baseDirName = "2024_11_19-prvi25_crustal_branches-dmSample5x";
@@ -239,6 +242,8 @@ public class BranchAveragedHazardScriptWriter {
 					argz += (float)periods[p];
 				}
 			}
+			if (supersample)
+				argz += " --supersample";
 			argz += " "+dispatchArgs;
 			
 			File jobFile = new File(localDir, "batch_hazard_"+bgOp.name()+".slurm");

@@ -46,6 +46,7 @@ import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
 import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
@@ -88,7 +89,8 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	private static final IncludeBackgroundOption GRID_SEIS_DEFAULT = IncludeBackgroundOption.INCLUDE;
 	private IncludeBackgroundOption gridSeisOp = GRID_SEIS_DEFAULT;
 	
-	private PointSourceDistanceCorrections distCorrType = PointSourceDistanceCorrections.NSHM_2013; 
+	// TODO: CLI
+	private GriddedSeismicitySettings gridSettings = GriddedSeismicitySettings.DEFAULT;
 	
 	private boolean noSubduction = false;
 	private boolean noActive = false;
@@ -419,7 +421,7 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 
 		@Override
 		public ProbEqkSource getSource(int idx) {
-			return externalGridProv.getSource(idx, 1d, null, BackgroundRupType.POINT, distCorrType);
+			return externalGridProv.getSource(idx, 1d, null, gridSettings);
 		}
 
 		@Override

@@ -26,7 +26,6 @@ import scratch.UCERF3.utils.RELM_RegionUtils;
 public class CacheSpeedTester {
 
 	public static void main(String[] args) throws IOException, DocumentException {
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 		double size = 0d;
 		File mainResultsDir = null;
 		int forceRunNum = -1;

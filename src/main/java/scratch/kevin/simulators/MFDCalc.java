@@ -211,7 +211,7 @@ public class MFDCalc {
 		
 		if (fssForComparison != null) {
 			IncrementalMagFreqDist compSupraSeis = fssForComparison.calcTotalNucleationMFD(
-					AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF, 8.55, 0.1);
+					5.05, 8.55, 0.1);
 			compSupraSeis.setName("UCERF3 Supra-Seis");
 			SummedMagFreqDist compSubSeis = null;
 			SummedMagFreqDist compTotal = null;
