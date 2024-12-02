@@ -56,8 +56,8 @@ public class SuperSamplingResolutionTests {
 	public static void main(String[] args) throws IOException {
 		Region testReg = NSHM23_RegionLoader.loadFullConterminousWUS();
 //		double testSpacing = 0.33d;
-//		double testSpacing = 3d;
-		double testSpacing = 1;
+		double testSpacing = 3d;
+//		double testSpacing = 1;
 		GriddedRegion testGridded = new GriddedRegion(testReg, testSpacing, GriddedRegion.ANCHOR_0_0);
 		System.out.println("Have "+testGridded.getNodeCount()+" test sites");
 		
@@ -74,8 +74,6 @@ public class SuperSamplingResolutionTests {
 		
 		File outputDir = new File("/tmp");
 		String csvPrefix = "super_sampling_results_"+siteLocs.size()+"sites";
-		
-		GridSourceList gridSources = sol.requireModule(GridSourceList.class);
 		
 		ReturnPeriods[] testRPs = ReturnPeriods.values();
 		
@@ -186,7 +184,7 @@ public class SuperSamplingResolutionTests {
 				if (params == null)
 					gridSettings = gridSettings.forSupersamplingSettings(null);
 				else
-					gridSettings = gridSettings.forSupersamplingSettings(new GridCellSupersamplingSettings(params[0], params[1], params[2], params[3]));
+					gridSettings = gridSettings.forSupersamplingSettings(new GridCellSupersamplingSettings(params[0], params[1], params[2], params[3], true));
 				erf.setGriddedSeismicitySettings(gridSettings);
 				erf.clearCachedGridSources();
 				Stopwatch watch = Stopwatch.createStarted();

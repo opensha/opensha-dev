@@ -161,6 +161,9 @@ public class BranchAveragedHazardScriptWriter {
 //				remoteTotalMemGB*1024, null);
 //		BatchScriptWriter pbsWrite = new HovenweepScriptWriter();
 		
+		if (parallelMPJWrite instanceof FastMPJShellScriptWriter)
+			((FastMPJShellScriptWriter)parallelMPJWrite).setUseLaunchWrapper(true);
+		
 		parallelMPJWrite.setEnvVar("MAIN_DIR", remoteMainDir.getAbsolutePath());
 		singleMPJWrite.setEnvVar("MAIN_DIR", remoteMainDir.getAbsolutePath());
 		String mainDirPath = "$MAIN_DIR";

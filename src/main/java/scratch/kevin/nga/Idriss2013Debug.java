@@ -86,7 +86,7 @@ public class Idriss2013Debug {
 			mechMap.put(FocalMech.STRIKE_SLIP, fracStrikeSlip);
 			mechMap.put(FocalMech.REVERSE, fracReverse);
 			mechMap.put(FocalMech.NORMAL, fracNormal);
-			pointSource = new PointSourceNshm(faultLoc, mfd, duration, mechMap, PointSourceDistanceCorrections.NONE);
+			pointSource = new PointSourceNshm(faultLoc, mfd, duration, mechMap, PointSourceDistanceCorrections.NONE.get());
 			break;
 		default:
 			throw new IllegalStateException("Unknown Background Rup Type: "+bgRupType);
