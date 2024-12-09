@@ -43,17 +43,21 @@ import scratch.kevin.prvi25.FaultSystemLineIntegralCalculator.VectorComponent;
 public class DefModelSampleLineIntegralsPlot {
 
 	public static void main(String[] args) throws IOException {
-		File outputDir = new File("/tmp");
+//		File outputDir = new File("/tmp");
+		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/crustal_dm");
 		String prefix = "prvi_dm_sample_line_integrals";
 		
 		LogicTree<?> randTree = LogicTree.read(new File(
 				"/home/kevin/OpenSHA/nshm23/batch_inversions/2024_10_24-prvi25_crustal_branches-dmSample5x/logic_tree.json"));
 		
 		PRVI25_CrustalFaultModels fm = PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1;
-		VectorComponent[] components = VectorComponent.values();
+//		VectorComponent[] components = VectorComponent.values();
+		VectorComponent[] components = { VectorComponent.FULL_HORIZONTAL };
 		
 		double[] fractiles = {0d, 0.025, 0.16, 0.84, 0.975d, 1d};
 		String fractileLabel = "Sample p[0,2.5,16,84,97.5,100]";
+		
+		boolean titles = false;
 		
 		boolean plotOrig = true;
 		
@@ -153,7 +157,7 @@ public class DefModelSampleLineIntegralsPlot {
 //				Color distColor = Colors.tab_red;
 				Color distColor = Colors.tab_grey;
 				Color origColor = Colors.tab_green;
-				Color transColor = new Color(distColor.getRed(), distColor.getGreen(), distColor.getBlue(), 30);
+				Color transColor = new Color(distColor.getRed(), distColor.getGreen(), distColor.getBlue(), 60);
 				PlotCurveCharacterstics minMaxChar = new PlotCurveCharacterstics(PlotLineType.SHADED_UNCERTAIN, 1f, transColor);
 				
 				funcs.add(bounds);
@@ -170,6 +174,10 @@ public class DefModelSampleLineIntegralsPlot {
 					lowerIntegrals[c].setName("Original Extrema");
 					funcs.add(lowerIntegrals[c]);
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, Color.BLACK));
+					
+					avgIntegral.setName("Average");
+					funcs.add(avgIntegral);
+					chars.add(new PlotCurveCharacterstics(PlotLineType.DASHED, 3f, Color.BLACK));
 					
 					upperIntegrals[c].setName(null);
 					funcs.add(upperIntegrals[c]);
@@ -203,7 +211,7 @@ public class DefModelSampleLineIntegralsPlot {
 					chars.add(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, upperColor));
 				}
 				
-				PlotSpec plot = new PlotSpec(funcs, chars, "Deformation Model Line Integrals", "Longitude",
+				PlotSpec plot = new PlotSpec(funcs, chars, titles ? "Deformation Model Line Integrals" : " ", "Longitude",
 						components[c].label+" Summed Rate (mm/yr)");
 				plot.setLegendInset(RectangleAnchor.TOP_RIGHT, 0.975, 0.975, 0.9, false);
 				
@@ -254,17 +262,23 @@ public class DefModelSampleLineIntegralsPlot {
 		return ret;
 	}
 	
-	private static double minLat = 16;
-	private static double maxLat = 21;
-	private static double minLon = -71d;
-	private static double maxLon = -60.5d;
+//	private static double minLat = 16;
+//	private static double maxLat = 21;
+//	private static double minLon = -71d;
+//	private static double maxLon = -60.5d;
+	
+	private static double minLat = SlipRateFigures.CRUSTAL_FAULT_MAP_REG.getMinLat();
+	private static double maxLat = SlipRateFigures.CRUSTAL_FAULT_MAP_REG.getMaxLat();
+	private static double minLon = SlipRateFigures.CRUSTAL_FAULT_MAP_REG.getMinLon();
+	private static double maxLon = SlipRateFigures.CRUSTAL_FAULT_MAP_REG.getMaxLon();
 	
 	private static List<LineIntegralResult> calcLineIntegrals(FaultSystemLineIntegralCalculator calc, double delta) {
 		List<LineIntegralResult> integrals = new ArrayList<>();
 		
 		double minLon = DefModelSampleLineIntegralsPlot.minLon;
 		if (delta == 1d)
-			minLon += 1d;
+//			minLon += 1d;
+			minLon = Math.ceil(minLon);
 		
 		for (double lon=minLon; (float)lon<=(float)maxLon; lon += delta)
 			integrals.add(calc.calcLineIntegral(new Location(minLat, lon), new Location(maxLat, lon)));

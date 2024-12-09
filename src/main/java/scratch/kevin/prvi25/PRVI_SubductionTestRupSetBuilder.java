@@ -33,7 +33,8 @@ public class PRVI_SubductionTestRupSetBuilder {
 //		PRVI25_SubductionFaultModels fm = PRVI25_SubductionFaultModels.PRVI_SUB_FM_SMALL;
 		PRVI25_SubductionDeformationModels dm = PRVI25_SubductionDeformationModels.FULL;
 		
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/fault_model");
+//		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/fault_model");
+		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/sub_fm");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		// first just write out the fault model

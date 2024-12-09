@@ -483,10 +483,12 @@ public class FaultSystemLineIntegralCalculator {
 				if (result == integrals.get(0)) {
 					double integralMiddleLat = 0.5*(result.startLoc.lat + result.endLoc.lat);
 					double integralMiddleLon = 0.5*(result.startLoc.lon + result.endLoc.lon);
+					double furthestLeftLon = Math.max(lowerLeft.lon+0.25, lowerLeft.lon + 0.05*(upperRight.lon - lowerLeft.lon));
+					System.out.println("Furthest left="+furthestLeftLon+", integral left="+integralMiddleLon);
 					XYTextAnnotation ann = new XYTextAnnotation("Summation Direction", integralMiddleLon, integralMiddleLat);
 					ann.setFont(textAnnFont);
-					ann.setTextAnchor(TextAnchor.TOP_CENTER);
-					ann.setRotationAnchor(TextAnchor.TOP_CENTER);
+					ann.setTextAnchor(TextAnchor.BOTTOM_CENTER);
+					ann.setRotationAnchor(TextAnchor.BOTTOM_CENTER);
 					double vectorAngle = result.azimuth;
 					while (vectorAngle > 180d)
 						vectorAngle -= 360d;
@@ -496,6 +498,13 @@ public class FaultSystemLineIntegralCalculator {
 						ann.setTextAnchor(TextAnchor.BOTTOM_CENTER);
 						ann.setRotationAnchor(TextAnchor.BOTTOM_CENTER);
 					}
+//					} else if (integralMiddleLon < furthestLeftLon) {
+////					} else {
+//						// too far to the left, put it on the other side
+////						vectorAngle -= 180;
+//						ann.setTextAnchor(TextAnchor.BOTTOM_CENTER);
+//						ann.setRotationAnchor(TextAnchor.BOTTOM_CENTER);
+//					}
 					double angleRad = Math.toRadians(vectorAngle + 90);
 					ann.setRotationAngle(mapMaker.getRotationAngleCorrectedForAspectRatio(angleRad));
 					mapMaker.addAnnotation(ann);
@@ -587,7 +596,7 @@ public class FaultSystemLineIntegralCalculator {
 				arrowLen = 0.2*maxVectDist;
 				arrowThickness = 4f;
 			} else {
-				arrowLen = 0.2*maxVectDist;
+				arrowLen = 0.15*maxVectDist;
 				arrowThickness = 2f;
 			}
 			mapMaker.setFillArrowheads(true);
