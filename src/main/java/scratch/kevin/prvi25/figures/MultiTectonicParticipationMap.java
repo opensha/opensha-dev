@@ -15,6 +15,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.jfree.chart.title.PaintScaleLegend;
 import org.opensha.commons.data.xyz.EvenlyDiscrXYZ_DataSet;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
 import org.opensha.commons.geo.GriddedRegion;
@@ -24,6 +25,7 @@ import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
 import org.opensha.commons.util.cpt.CPT;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
@@ -54,7 +56,9 @@ public class MultiTectonicParticipationMap {
 		File crustalDir = new File(invsDir, "2024_11_19-prvi25_crustal_branches-dmSample5x");
 		File subductionDir = new File(invsDir, "2024_11_19-prvi25_subduction_branches");
 		File combDir = new File(invsDir, "2024_11_19-prvi25_crustal_subduction_combined_branches");
-		File outputDir = new File(combDir, "misc_plots/combined_participation");
+		
+//		File outputDir = new File(combDir, "misc_plots/combined_participation");
+		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/combined_partic_rate_maps");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdirs());
 		
 		FaultSystemSolution crustalSol = FaultSystemSolution.load(new File(crustalDir,
@@ -72,6 +76,9 @@ public class MultiTectonicParticipationMap {
 		double cptMax = -2d;
 		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(cptMin, cptMax);
 //		CPT cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(cptMin, cptMax);
+//		CPT cpt = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(cptMin, cptMax);
+//		CPT cpt = GMT_CPT_Files.SEQUENTIAL_LAJOLLA_UNIFORM.instance().rescale(cptMin, cptMax);
+//		CPT cpt = GMT_CPT_Files.SEQUENTIAL_OSLO_UNIFORM.instance().rescale(cptMin, cptMax);
 //		CPT cpt = new CPT(cptMin, cptMax, new Color(0, 0, 255, 40), new Color(255, 0, 0, 40));
 		cpt.setBelowMinColor(cpt.getMinColor());
 		cpt.setNanColor(Color.GRAY);
@@ -251,7 +258,16 @@ public class MultiTectonicParticipationMap {
 		mapMaker.setAbsoluteSort(false);
 		mapMaker.setSectNaNChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, new Color(160, 160, 160, 140)));
 		mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, Color.DARK_GRAY));
+		mapMaker.setScalarThickness(4f);
 		mapMaker.setFaultSections(combSects);
+		
+		// write generic cpt only first
+		PlotUtils.writeScaleLegendOnly(outputDir, "participation_cpt",
+				GeographicMapMaker.buildCPTLegend(cpt, "Log10 Participation Rate (/yr)"),
+				mapMaker.getDefaultPlotWidth(), true, true);
+		PlotUtils.writeScaleLegendOnly(outputDir, "nucleation_cpt",
+				GeographicMapMaker.buildCPTLegend(cpt, "Log10 Nucleation Rate (/yr)"),
+				mapMaker.getDefaultPlotWidth(), true, true);
 		
 		DecimalFormat oDF = new DecimalFormat("0.##");
 		
@@ -262,19 +278,26 @@ public class MultiTectonicParticipationMap {
 		for (int m=0; m<minMags.length; m++) {
 			String label = "Log10 ";
 			String prefix = "multi_tect_partic_";
+			String noLegendTitle;
 			if (minMags[m] > 0d) {
 				label += "M>"+oDF.format(minMags[m]);
 				prefix += "m"+(float)minMags[m];
+				noLegendTitle = "Fault, M>"+oDF.format(minMags[m]);
 			} else {
 				label += "Supra-Seismogenic";
 				prefix += "supra_seis";
+				noLegendTitle = "Fault, Supra-Seismogenic";
 			}
 			if (includeInterfaceGridded)
 				prefix += "_incl_interface_gridded";
 			label += " Fault Participation Rate (/yr)";
-			mapMaker.plotSectScalars(combSectRates.get(m), combSectSortables.get(m), cpt, label);
 			
+			mapMaker.plotSectScalars(combSectRates.get(m), combSectSortables.get(m), cpt, label);
 			mapMaker.plot(outputDir, prefix, " ");
+			
+			// now again without a CPT legend
+			mapMaker.plotSectScalars(combSectRates.get(m), combSectSortables.get(m), cpt, null);
+			mapMaker.plot(outputDir, prefix+"_no_cpt", noLegendTitle);
 		}
 		
 		// now gridded
@@ -395,6 +418,7 @@ public class MultiTectonicParticipationMap {
 
 					xyzs[m].log10();
 
+					String noLegendTitle = "Gridded";
 					String label = "Log10 ";
 					String prefix = "gridded_";
 					label += "M>"+oDF.format(gridMinMags[m]);
@@ -403,14 +427,17 @@ public class MultiTectonicParticipationMap {
 						switch (trt) {
 						case ACTIVE_SHALLOW:
 							label += " Crustal";
+							noLegendTitle += ", Crustal";
 							prefix += "_crustal";
 							break;
 						case SUBDUCTION_INTERFACE:
 							label += " Interface";
+							noLegendTitle += ", Interface";
 							prefix += "_interface";
 							break;
 						case SUBDUCTION_SLAB:
 							label += " Slab";
+							noLegendTitle += ", Slab";
 							prefix += "_slab";
 							break;
 
@@ -418,6 +445,7 @@ public class MultiTectonicParticipationMap {
 							throw new IllegalStateException();
 						}
 					}
+					noLegendTitle += ", M>"+oDF.format(gridMinMags[m]);
 					if (psuedoPartic) {
 						prefix += "_partic";
 						label += " Gridded Participation Rate (/yr)";
@@ -426,8 +454,13 @@ public class MultiTectonicParticipationMap {
 					}
 
 					mapMaker.plotXYZData(xyzs[m], cpt, label);
-
 					mapMaker.plot(outputDir, prefix, " ");
+					
+					if (trt == null) {
+						// now again without a CPT legend
+						mapMaker.plotXYZData(xyzs[m], cpt, null);
+						mapMaker.plot(outputDir, prefix+"_no_cpt", noLegendTitle);
+					}
 				}
 			}
 		}
