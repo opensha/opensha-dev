@@ -10,5 +10,4 @@ Scratch*.java
 .DS_Store
 *.log
 build.date
-build.githash
-build.gitbranch
+build.git*
