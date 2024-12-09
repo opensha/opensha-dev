@@ -132,11 +132,11 @@ public class CombinedMFDsPlot {
 		PlotUtils.writePlots(outputDir, "combined_mfds_cml", gp, 800, 750, true, false, false);
 	}
 	
-	private static IncrementalMagFreqDist calcFaultMFD(Region region, FaultSystemSolution sol, EvenlyDiscretizedFunc refMFD) {
+	static IncrementalMagFreqDist calcFaultMFD(Region region, FaultSystemSolution sol, EvenlyDiscretizedFunc refMFD) {
 		return sol.calcNucleationMFD_forRegion(region, refMFD.getMinX(), refMFD.getMaxX(), refMFD.getDelta(), false);
 	}
 	
-	private static IncrementalMagFreqDist calcGriddedMFD(Region region, TectonicRegionType trt,
+	static IncrementalMagFreqDist calcGriddedMFD(Region region, TectonicRegionType trt,
 			FaultSystemSolution sol, EvenlyDiscretizedFunc refMFD) {
 		GridSourceProvider gridProv = sol.getGridSourceProvider();
 		SummedMagFreqDist ret = new SummedMagFreqDist(refMFD.getMinX(), refMFD.getMaxX(), refMFD.size());
@@ -149,7 +149,7 @@ public class CombinedMFDsPlot {
 		return ret;
 	}
 	
-	private static IncrementalMagFreqDist average(IncrementalMagFreqDist mfd1, IncrementalMagFreqDist mfd2) {
+	static IncrementalMagFreqDist average(IncrementalMagFreqDist mfd1, IncrementalMagFreqDist mfd2) {
 		IncrementalMagFreqDist ret = new IncrementalMagFreqDist(mfd1.getMinX(), mfd1.size(), mfd1.getDelta());
 		for (int i=0; i<ret.size(); i++)
 			ret.set(i, 0.5*mfd1.getY(i) + 0.5*mfd2.getY(i));

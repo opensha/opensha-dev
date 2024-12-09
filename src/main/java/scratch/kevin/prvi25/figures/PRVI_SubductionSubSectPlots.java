@@ -16,6 +16,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.gui.plot.GeographicMapMaker;
+import org.opensha.commons.gui.plot.PlotUtils;
 import org.opensha.commons.logicTree.LogicTreeBranch;
 import org.opensha.commons.logicTree.LogicTreeNode;
 import org.opensha.commons.mapping.gmt.elements.GMT_CPT_Files;
@@ -48,7 +49,8 @@ public class PRVI_SubductionSubSectPlots {
 		branch.setValue(scale);
 		PRVI25_InvConfigFactory factory = new PRVI25_InvConfigFactory();
 		
-		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/fault_model");
+//		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/fault_model");
+		File outputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/sub_fm");
 		Preconditions.checkState(outputDir.exists() || outputDir.mkdir());
 		
 		Font font = new Font(Font.SANS_SERIF, Font.BOLD, 24);
@@ -58,6 +60,10 @@ public class PRVI_SubductionSubSectPlots {
 		CPT slipCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 5d);
 		CPT slipUncertCPT = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(0d, 2d);
 		CPT rakeCPT = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(0d, 90d);
+		
+		PlotUtils.writeScaleLegendOnly(outputDir, "slip_cpt",
+				GeographicMapMaker.buildCPTLegend(slipCPT, "Slip Rate (mm/yr)"),
+				GeographicMapMaker.PLOT_WIDTH_DEFAULT, true, true);
 		for (PRVI25_SubductionFaultModels fm : PRVI25_SubductionFaultModels.values()) {
 			if (fm.getNodeWeight(branch) == 0d)
 				continue;
@@ -71,6 +77,7 @@ public class PRVI_SubductionSubSectPlots {
 			
 			List<? extends FaultSection> sects = rupSet.getFaultSectionDataList();
 			GeographicMapMaker mapMaker = new GeographicMapMaker(plotReg);
+			mapMaker.setWriteGeoJSON(false);
 			mapMaker.setFaultSections(sects);
 			mapMaker.setFillSurfaces(true);
 			
@@ -125,24 +132,32 @@ public class PRVI_SubductionSubSectPlots {
 					rakes.add(sect.getAveRake());
 				}
 				
-				mapMaker.plotSectScalars(slips, slipCPT, dm.getShortName()+" Slip Rate (mm/yr)");
-				mapMaker.plot(outputDir, "subduction_slip_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), fmName+", "+dmName);
+//				mapMaker.plotSectScalars(slipUncerts, slipUncertCPT, dm.getShortName()+" Slip Rate Uncertainty (mm/yr)");
+//				mapMaker.plot(outputDir, "subduction_slip_uncert_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), fmName+", "+dmName);
 				
-				mapMaker.plotSectScalars(slipUncerts, slipUncertCPT, dm.getShortName()+" Slip Rate Uncertainty (mm/yr)");
-				mapMaker.plot(outputDir, "subduction_slip_uncert_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), fmName+", "+dmName);
-				
-				mapMaker.plotSectScalars(rakes, rakeCPT, dm.getShortName()+" Rake");
 				// draw rake lines
 				int rakeMod = 3;
 				List<LocationList> rakeArrows = new ArrayList<>();
 				for (FaultSection sect : sects)
 					if (sect.getSectionId() % rakeMod == 0)
 						rakeArrows.addAll(buildRakeArrows(sect, slipCPT.getMaxValue()));
+				mapMaker.plotArrows(rakeArrows, 20d, Color.BLACK, 2f);
+				mapMaker.setFillArrowheads(true);
 				mapMaker.plotLines(rakeArrows, Color.BLACK, 2f);
-				mapMaker.plot(outputDir, "subduction_rake_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), fmName+", "+dmName);
+				
+				mapMaker.plotSectScalars(slips, slipCPT, dm.getShortName()+" Slip Rate (mm/yr)");
+				mapMaker.plot(outputDir, "subduction_slip_"+fm.getFilePrefix()+"_"+dm.getFilePrefix(), fmName+", "+dmName);
+				
+				mapMaker.plotSectScalars(slips, slipCPT, null);
+				mapMaker.plot(outputDir, "subduction_slip_"+fm.getFilePrefix()+"_"+dm.getFilePrefix()+"_no_cpt", fmName+", "+dmName);
+				
+				mapMaker.plotSectScalars(rakes, rakeCPT, dm.getShortName()+" Rake");
+				String prefix = "subduction_rake_"+fm.getFilePrefix()+"_"+dm.getFilePrefix();;
+				System.out.println("Plotting "+prefix);
+				mapMaker.plot(outputDir, prefix, fmName+", "+dmName);
 				
 				mapMaker.clearLines();
-				
+				mapMaker.clearArrows();
 			}
 		}
 	}
@@ -173,9 +188,9 @@ public class PRVI_SubductionSubSectPlots {
 		Location lineEnd = FaultSystemLineIntegralCalculator.locConstPlotDist(center, refLoc,
 				az, len);
 		rakeArrows.add(LocationList.of(center, lineEnd));
-		Location arrowStart = FaultSystemLineIntegralCalculator.locConstPlotDist(lineEnd, center, az - 135, 0.2*len);
-		Location arrowEnd = FaultSystemLineIntegralCalculator.locConstPlotDist(lineEnd, center, az + 135, 0.2*len);
-		rakeArrows.add(LocationList.of(arrowStart, lineEnd, arrowEnd));
+//		Location arrowStart = FaultSystemLineIntegralCalculator.locConstPlotDist(lineEnd, center, az - 135, 0.2*len);
+//		Location arrowEnd = FaultSystemLineIntegralCalculator.locConstPlotDist(lineEnd, center, az + 135, 0.2*len);
+//		rakeArrows.add(LocationList.of(arrowStart, lineEnd, arrowEnd));
 		return rakeArrows;
 	}
 

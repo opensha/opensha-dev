@@ -95,8 +95,9 @@ public class SubductionDefModConvert {
 		boolean interpolate = true;
 		boolean interpSymmetry = true;
 		
-		File debugDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/def_model");
-		Preconditions.checkState(debugDir.exists() || debugDir.mkdir());
+//		File plotOutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_Subduction/figures/def_model");
+		File plotOutputDir = new File("/home/kevin/Documents/papers/2024_PRVI_ERF/prvi25-erf-paper/Figures/sub_dm");
+		Preconditions.checkState(plotOutputDir.exists() || plotOutputDir.mkdir());
 		
 		Table<Boolean, Boolean, String> debugPrefixes = HashBasedTable.create();
 		
@@ -138,7 +139,7 @@ public class SubductionDefModConvert {
 					String fmTitle = geomTitle;
 					String fmDmTitle = geomTitle+", "+rateTitle;
 					debugPrefixes.put(fullRate, largePolys, prefix);
-					debugWriteSectOrders(inFeatures, debugDir, prefix, fmTitle, fmDmTitle,
+					debugWriteSectOrders(inFeatures, plotOutputDir, prefix, fmTitle, fmDmTitle,
 							ratePropName, rateUncertPropName, rakePropName);
 					
 					Map<String, int[]> stitchInIDs = new HashMap<>();
@@ -447,7 +448,7 @@ public class SubductionDefModConvert {
 							
 							// plot them
 							String interpPrefix = prefix+"_interp_"+name.replaceAll("\\W+", "_");
-							debugWriteInterpFuncsOrders(debugDir, interpPrefix, name,
+							debugWriteInterpFuncsOrders(plotOutputDir, interpPrefix, name,
 									dasSlipFunc, dasSlipUncertFunc, dasRakeFunc, sectStartDASs,
 									sectMidDASs, interpRanges);
 						}
@@ -531,7 +532,7 @@ public class SubductionDefModConvert {
 		lines.add(tocIndex, "## Table Of Contents");
 
 		// write markdown
-		MarkdownUtils.writeReadmeAndHTML(lines, debugDir);
+		MarkdownUtils.writeReadmeAndHTML(lines, plotOutputDir);
 	}
 	
 	private static final DecimalFormat moDF = new DecimalFormat("0.00E0");
@@ -652,8 +653,13 @@ public class SubductionDefModConvert {
 			for (int s=0; s<sects.size(); s++) {
 				arrows.addAll(PRVI_SubductionSubSectPlots.buildRakeArrows(sects.get(s), slipCPT.getMaxValue()));
 			}
-			System.out.println("Plotting "+arrows.size()+" arrow lines");
-			mapMaker.plotLines(arrows, Color.BLACK, 2f);
+			System.out.println("Plotting "+arrows.size()+" arrow lines for "+prefix);
+//			mapMaker.plotLines(arrows, Color.BLACK, 2f);
+			mapMaker.plotArrows(arrows, 20d, Color.BLACK, 2f);
+			mapMaker.setFillArrowheads(true);
+			
+			mapMaker.plotSectScalars(slips, slipCPT, null);
+			mapMaker.plot(outputDir, prefix+"_slips_no_cpt", fmDmTitle);
 		}
 		
 		mapMaker.plotSectScalars(slips, slipCPT, "Slip Rate (mm/yr)");
