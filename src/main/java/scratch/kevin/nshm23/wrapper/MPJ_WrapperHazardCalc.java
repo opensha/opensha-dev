@@ -23,6 +23,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.xyz.GriddedGeoDataSet;
@@ -45,6 +46,9 @@ import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc;
 import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnPeriods;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -84,6 +88,9 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 	
 	private static final IncludeBackgroundOption GRID_SEIS_DEFAULT = IncludeBackgroundOption.INCLUDE;
 	private IncludeBackgroundOption gridSeisOp = GRID_SEIS_DEFAULT;
+	
+	// TODO: CLI
+	private GriddedSeismicitySettings gridSettings = GriddedSeismicitySettings.DEFAULT;
 	
 	private boolean noSubduction = false;
 	private boolean noActive = false;
@@ -414,7 +421,7 @@ public class MPJ_WrapperHazardCalc extends MPJTaskCalculator {
 
 		@Override
 		public ProbEqkSource getSource(int idx) {
-			return externalGridProv.getSource(idx, 1d, null, BackgroundRupType.POINT);
+			return externalGridProv.getSource(idx, 1d, null, gridSettings);
 		}
 
 		@Override

@@ -31,6 +31,7 @@ import org.opensha.commons.util.DataUtils;
 import org.opensha.commons.util.DataUtils.MinMaxAveTracker;
 import org.opensha.sha.calc.params.MagDistCutoffParam;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -264,7 +265,7 @@ public class UCERF3_EAL_Combiner {
 					float[] lossMags = new float[lossDist.size()];
 					for (int j=0; j<lossDist.size(); j++)
 						lossMags[j] = (float)lossDist.getX(j);
-					IncrementalMagFreqDist mfd = gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF);
+					IncrementalMagFreqDist mfd = gridProv.getMFD(n, BaseFaultSystemSolutionERF.GRID_SETTINGS_DEFAULT.minimumMagnitude);
 					for (int j=0; j<mfd.size(); j++) {
 						double mag = mfd.getX(j);
 						double rate = mfd.getY(j);
@@ -394,7 +395,7 @@ public class UCERF3_EAL_Combiner {
 					"Have %s giddedLosses but grid prov has %s nodes", gridProv.getNumLocations(), griddedLosses.length);
 			for (int n=0; n<griddedLosses.length; n++) {
 				DiscretizedFunc griddedLossDist = griddedLosses[n];
-				IncrementalMagFreqDist mfd = gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF);
+				IncrementalMagFreqDist mfd = gridProv.getMFD(n, BaseFaultSystemSolutionERF.GRID_SETTINGS_DEFAULT.minimumMagnitude);
 				Preconditions.checkState(griddedLossDist.size() == mfd.size());
 				for (int i=0; i<griddedLossDist.size(); i++)
 					func.add(func.getClosestXIndex(griddedLossDist.getX(i)), griddedLossDist.getY(i)*lossScale*mfd.getY(i));

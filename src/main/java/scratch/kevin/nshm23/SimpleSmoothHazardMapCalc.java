@@ -35,7 +35,6 @@ import org.opensha.sha.earthquake.faultSysSolution.util.SolHazardMapCalc.ReturnP
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_RegionLoader;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.RuptureSurface;
-import org.opensha.sha.faultSurface.utils.PtSrcDistCorr;
 import org.opensha.sha.gui.infoTools.IMT_Info;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -89,7 +88,6 @@ public class SimpleSmoothHazardMapCalc {
 			
 			Location rupLoc = dist == 0d ? siteLoc : LocationUtils.location(siteLoc, 0d, dist);
 			PointSurface rupSurf = new PointSurface(rupLoc);
-			rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 			rupSurf.setAveDip(90d);
 			rupSurf.setAveStrike(0d);
 			
@@ -319,7 +317,6 @@ public class SimpleSmoothHazardMapCalc {
 				
 				Location rupLoc = momentMap.getLocation(i);
 				PointSurface rupSurf = new PointSurface(rupLoc);
-				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 				rupSurf.setAveDip(90d);
 				rupSurf.setAveStrike(0d);
 				
@@ -370,7 +367,6 @@ public class SimpleSmoothHazardMapCalc {
 				
 				Location rupLoc = momentMap.getLocation(i);
 				PointSurface rupSurf = new PointSurface(rupLoc);
-				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 				rupSurf.setAveDip(90d);
 				rupSurf.setAveStrike(0d);
 				
@@ -444,7 +440,6 @@ public class SimpleSmoothHazardMapCalc {
 				
 				Location rupLoc = rateMap.getLocation(i);
 				PointSurface rupSurf = new PointSurface(rupLoc);
-				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 				rupSurf.setAveDip(90d);
 				rupSurf.setAveStrike(0d);
 				
@@ -495,7 +490,6 @@ public class SimpleSmoothHazardMapCalc {
 				
 				Location rupLoc = rateMap.getLocation(i);
 				PointSurface rupSurf = new PointSurface(rupLoc);
-				rupSurf.setDistCorrMagAndType(Double.NaN, PtSrcDistCorr.Type.NONE);
 				rupSurf.setAveDip(90d);
 				rupSurf.setAveStrike(0d);
 				

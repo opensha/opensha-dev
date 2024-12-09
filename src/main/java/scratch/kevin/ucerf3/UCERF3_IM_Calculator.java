@@ -24,6 +24,7 @@ import org.opensha.commons.util.ClassUtils;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
@@ -60,12 +61,14 @@ public class UCERF3_IM_Calculator {
 	private File outputFile;
 	private List<ETAS_EqkRupture> etasCatalog;
 	private boolean fullTraces;
+	private double minMag;
 	
 	public UCERF3_IM_Calculator(CommandLine cmd) throws IOException, DocumentException {
 		if (cmd.hasOption("min-mag")) {
-			double minMag = Double.parseDouble(cmd.getOptionValue("min-mag"));
+			minMag = Double.parseDouble(cmd.getOptionValue("min-mag"));
 			System.out.println("Setting UCERF3 minimum magnitude to: "+(float)minMag);
-			AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = minMag;
+		} else {
+			minMag = BaseFaultSystemSolutionERF.GRID_SETTINGS_DEFAULT.minimumMagnitude;
 		}
 		File fssFile = new File(cmd.getOptionValue("sol-file"));
 		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);
@@ -139,10 +142,12 @@ public class UCERF3_IM_Calculator {
 	
 	public void calculate() throws IOException {
 		FaultSystemSolutionERF erf = new FaultSystemSolutionERF(sol);
-		if (doGridded)
+		if (doGridded) {
 			erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.INCLUDE);
-		else
+			erf.setGriddedSeismicitySettings(erf.getGriddedSeismicitySettings().forMinimumMagnitude(minMag));
+		} else {
 			erf.setParameter(IncludeBackgroundParam.NAME, IncludeBackgroundOption.EXCLUDE);
+		}
 		erf.getTimeSpan().setDuration(ERF_DURATION);
 		erf.updateForecast();
 		
@@ -225,7 +230,7 @@ public class UCERF3_IM_Calculator {
 						csv.addLine(processRupture(rup, site, gmpe, etasRup,
 								fssIndex, gridNodeIndex, hasInterStdDev, hasIntraStdDev, hasRrup, hasRJB));
 				} else if (doGridded) {
-					if (etasRup.getMag() < AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF)
+					if (etasRup.getMag() < minMag)
 						continue;
 					int sourceID = gridNodeIndex + numSourcesFSS;
 					Preconditions.checkState(sourceID >= numSourcesFSS && sourceID < erf.getNumSources(),

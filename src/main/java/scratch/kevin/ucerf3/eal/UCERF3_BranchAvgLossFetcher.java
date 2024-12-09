@@ -11,6 +11,7 @@ import org.dom4j.DocumentException;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.geo.GriddedRegion;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -260,7 +261,7 @@ public class UCERF3_BranchAvgLossFetcher {
 		watch.reset();
 		double totGriddedLosses = 0;
 		for (int i=0; i<griddedDists.length; i++) {
-			IncrementalMagFreqDist mfd = prov.getMFD(i, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF);
+			IncrementalMagFreqDist mfd = prov.getMFD(i, BaseFaultSystemSolutionERF.GRID_SETTINGS_DEFAULT.minimumMagnitude);
 			for (Point2D pt : mfd) {
 				double mag = pt.getX();
 				double rate = pt.getY();

@@ -31,7 +31,11 @@ import org.opensha.sha.earthquake.param.BackgroundRupParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
+import org.opensha.sha.earthquake.param.PointSourceDistanceCorrectionParam;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
 import org.opensha.sha.faultSurface.FaultSection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.magdist.SummedMagFreqDist;
 import org.opensha.sha.util.FocalMech;
@@ -228,9 +232,9 @@ public class UCER3_EAL_CombinerTest {
 					((SummedMagFreqDist)meanSubMFD).addIncrementalMagFreqDist(subMFD);
 				}
 				
-				if (gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF).calcSumOfY_Vals()>0)
+				if (gridProv.getMFD(n, 5d).calcSumOfY_Vals()>0)
 					numAboveZero++;
-				Preconditions.checkState(gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF).size() > 0);
+				Preconditions.checkState(gridProv.getMFD(n, 5d).size() > 0);
 			}
 			Preconditions.checkState(numAboveZero>0, "Sol "+i+" has all zero mfd nodes!");
 			
@@ -425,6 +429,8 @@ public class UCER3_EAL_CombinerTest {
 		double[] griddedEALs = comb.getGriddedEALs();
 		List<U3LogicTreeBranch> branches = comb.getBranches();
 		
+		GriddedSeismicitySettings gridSettings = erf.getGriddedSeismicitySettings();
+		
 		assertEquals(branches.size(), numSols);
 		assertEquals(branches.size(), griddedEALs.length);
 		
@@ -437,11 +443,11 @@ public class UCER3_EAL_CombinerTest {
 			int numNonZeroLoss = 0;
 			int numMFDNonZero = 0;
 			for (int n=0; n<reg.getNodeCount(); n++) {
-				ProbEqkSource src = gridProv.getSource(n, 1d, null, bgType);
+				ProbEqkSource src = gridProv.getSource(n, 1d, null, gridSettings);
 				// make sure not nan
-				for (Point2D pt : gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF))
+				for (Point2D pt : gridProv.getMFD(n, gridSettings.minimumMagnitude))
 					Preconditions.checkState(!Double.isNaN(pt.getY()));
-				if (gridProv.getMFD(n, AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF).calcSumOfY_Vals() > 0)
+				if (gridProv.getMFD(n, gridSettings.minimumMagnitude).calcSumOfY_Vals() > 0)
 					numMFDNonZero++;
 				for (ProbEqkRupture rup : src) {
 					double loss = lossForGridRup(rup, n);

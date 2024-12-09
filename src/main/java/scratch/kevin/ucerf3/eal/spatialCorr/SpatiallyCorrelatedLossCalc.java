@@ -14,11 +14,10 @@ import org.opensha.commons.geo.utm.UTM;
 import org.opensha.commons.geo.utm.WGS84;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.util.ExceptionUtils;
-import org.opensha.nshmp2.erf.source.PointSource;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.earthquake.PointSource;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemRupSet;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
-import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b;
 import org.opensha.sha.faultSurface.RuptureSurface;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
@@ -51,8 +50,6 @@ public class SpatiallyCorrelatedLossCalc {
 	public static Location calcRupCentroid(RuptureSurface surf) {
 		if (surf instanceof PointSource)
 			return ((PointSource)surf).getLocation();
-		if (surf instanceof PointSource13b)
-			return ((PointSource13b)surf).getLocation();
 		double totWeight = 0d;
 		double northing = 0d;
 		double easting = 0d;

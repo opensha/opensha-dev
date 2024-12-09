@@ -1,31 +1,21 @@
 package scratch.ned.GK_Declustering;
 
 import java.awt.Color;
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Random;
-import java.util.TimeZone;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.dom4j.DocumentException;
 import org.jfree.data.Range;
-import org.opensha.commons.data.CSVFile;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.WeightedList;
 import org.opensha.commons.data.function.AbstractDiscretizedFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc_3D;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
-import org.opensha.commons.data.function.DefaultXY_DataSet;
 import org.opensha.commons.data.function.DiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.data.function.HistogramFunction;
@@ -36,33 +26,26 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.gui.plot.PlotCurveCharacterstics;
 import org.opensha.commons.gui.plot.PlotLineType;
-import org.opensha.commons.gui.plot.PlotSymbol;
 import org.opensha.commons.param.Parameter;
 import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.sha.calc.HazardCurveCalculator;
-import org.opensha.sha.calc.params.PtSrcDistanceCorrectionParam;
 import org.opensha.sha.earthquake.EqkRupture;
-import org.opensha.sha.earthquake.calc.ERF_Calculator;
 import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupList;
 import org.opensha.sha.earthquake.observedEarthquake.ObsEqkRupture;
 import org.opensha.sha.earthquake.observedEarthquake.Declustering.GardnerKnopoffDeclustering;
-import org.opensha.sha.earthquake.observedEarthquake.parsers.USGS_NSHMP_CatalogParser;
 import org.opensha.sha.earthquake.param.AleatoryMagAreaStdDevParam;
 import org.opensha.sha.earthquake.param.ApplyGardnerKnopoffAftershockFilterParam;
-import org.opensha.sha.earthquake.param.BPTAveragingTypeOptions;
-import org.opensha.sha.earthquake.param.BPTAveragingTypeParam;
 import org.opensha.sha.earthquake.param.BackgroundRupParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
-import org.opensha.sha.earthquake.param.HistoricOpenIntervalParam;
 import org.opensha.sha.earthquake.param.IncludeBackgroundOption;
 import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
-import org.opensha.sha.earthquake.param.MagDependentAperiodicityOptions;
-import org.opensha.sha.earthquake.param.MagDependentAperiodicityParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
-import org.opensha.sha.faultSurface.utils.PtSrcDistCorr;
+import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
@@ -70,7 +53,6 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
-import org.opensha.sha.magdist.SummedMagFreqDist;
 
 import com.google.common.base.Preconditions;
 import com.google.common.math.Quantiles;
@@ -79,16 +61,12 @@ import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO;
 import scratch.UCERF3.erf.ETAS.ETAS_CatalogIO.ETAS_Catalog;
 import scratch.UCERF3.erf.ETAS.ETAS_EqkRupture;
-import scratch.UCERF3.erf.ETAS.ETAS_SimAnalysisTools;
 import scratch.UCERF3.erf.ETAS.FaultSystemSolutionERF_ETAS;
 import scratch.UCERF3.erf.ETAS.launcher.ETAS_Launcher;
-import scratch.UCERF3.erf.utils.ProbabilityModelsCalc;
 import scratch.UCERF3.griddedSeismicity.AbstractGridSourceProvider;
-import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.UCERF3.utils.GardnerKnopoffAftershockFilter;
-import scratch.ned.FSS_Inversion2019.FaultSystemRuptureRateInversion;
+import scratch.UCERF3.utils.U3FaultSystemIO;
 import scratch.ned.FSS_Inversion2019.PlottingUtils;
-import scratch.ned.GK_Declustering.MakeFigures;
 
 public class U3ETAS_SimulationAnalysis {
 	
@@ -361,9 +339,6 @@ public class U3ETAS_SimulationAnalysis {
 	
 	
 	public static ArrayList<ObsEqkRupList> loadCatalogs(File fssFile, File catalogsFile, double minMag) throws IOException, DocumentException {
-		
-		// temporary hack
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 
 		FaultSystemSolution sol = U3FaultSystemIO.loadSol(fssFile);;
 		List<ETAS_Catalog> catalogs = ETAS_CatalogIO.loadCatalogsBinary(catalogsFile, minMag); 
@@ -1214,9 +1189,14 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
+		WeightedList<PointSourceDistanceCorrection> distCorrs = PointSourceDistanceCorrections.NSHM_2013.get();
+		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
-		for(ObsEqkRupture rup: obsQkList)
+		for(ObsEqkRupture rup: obsQkList) {
+			if (rup.getRuptureSurface() instanceof PointSurface)
+				((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorrs.sample(), rup);
 			eqkRupList.add(rup);
+		}
 		
 		if(randomIML)
 			calc.getEventSetHazardCurveRandomIML(curveLogXvalues, site, imr, eqkRupList, false, random);
@@ -1235,7 +1215,6 @@ public class U3ETAS_SimulationAnalysis {
 	 */
 	private static HazardCurveCalculator getHazardCurveCalculator() {
 		HazardCurveCalculator calc = new HazardCurveCalculator();
-		calc.setPtSrcDistCorrType(PtSrcDistCorr.Type.NSHMP08);
 		calc.setMinMagnitude(5.0);
 		return calc;
 	}
@@ -1271,15 +1250,19 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
+		WeightedList<PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
+		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
-		for(ObsEqkRupture rup: obsQkList)
+		for(ObsEqkRupture rup: obsQkList) {
+			if (rup.getRuptureSurface() instanceof PointSurface)
+				((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr.sample(), rup);
 			eqkRupList.add(rup);
+		}
 		
 		calc.getEventSetExpNumExceedCurve(curveLogXvalues, site, imr, eqkRupList, false);
 
 		return curveLogXvalues;
 	}
-	
 	
 	/**
 	 */
@@ -1311,9 +1294,14 @@ public class U3ETAS_SimulationAnalysis {
 		
 		HazardCurveCalculator calc = getHazardCurveCalculator();
 		
+		WeightedList<PointSourceDistanceCorrection> distCorr = PointSourceDistanceCorrections.NSHM_2013.get();
+		
 		ArrayList<EqkRupture> eqkRupList = new ArrayList<EqkRupture>();
-		for(ObsEqkRupture rup: obsQkList)
+		for(ObsEqkRupture rup: obsQkList) {
+			if (rup.getRuptureSurface() instanceof PointSurface)
+				((PointSurface)rup.getRuptureSurface()).setDistanceCorrection(distCorr.sample(), rup);
 			eqkRupList.add(rup);
+		}
 		
 		calc.getEventSetNumExceedCurveRandomIML(curveLogXvalues, site, imr, eqkRupList, false, random);
 

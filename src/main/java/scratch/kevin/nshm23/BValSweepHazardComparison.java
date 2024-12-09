@@ -1,4 +1,4 @@
-package scratch.nshm23;
+package scratch.kevin.nshm23;
 
 import java.awt.Color;
 import java.io.File;

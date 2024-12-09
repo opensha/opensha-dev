@@ -14,9 +14,13 @@ import org.opensha.commons.geo.Region;
 import org.opensha.sha.earthquake.AbstractERF;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.faultSysSolution.erf.BaseFaultSystemSolutionERF;
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceProvider;
 import org.opensha.sha.earthquake.faultSysSolution.modules.MFDGridSourceProvider;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
+import org.opensha.sha.earthquake.util.GriddedSeismicitySettings;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrection;
+import org.opensha.sha.faultSurface.utils.PointSourceDistanceCorrections;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -48,6 +52,8 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 	private Map<Integer, Integer> nodeIndexMap;
 	
 	private Map<Integer, IncrementalMagFreqDist> nodeMFDs;
+	
+	private GriddedSeismicitySettings gridSeisSettings = GriddedSeismicitySettings.DEFAULT;
 	
 	/**
 	 * If true, then this class is just used to create ruptures with correct focal mechanisms and such, and
@@ -244,7 +250,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 		IncrementalMagFreqDist nodeMFD = getMFD_Unassociated(node);
 		Preconditions.checkNotNull(nodeMFD, "Rupture maps to uninitialized node!");
 		Preconditions.checkState(nodeMFD.getY(mfdIndex) > 0, "Mag uninitialized in MFD node!");
-		IncrementalMagFreqDist trimmedMFD = getMFD(node, SOURCE_MIN_MAG_CUTOFF);
+		IncrementalMagFreqDist trimmedMFD = getMFD(node, gridSeisSettings.minimumMagnitude);
 //		Preconditions.checkState(trimmedMFD.size() > mfdIndex,
 //				"Trimmed MFD cuts it off! WTF?\n\nOrig MFD:\n%s\n\nTrimmedMFD\n%s", nodeMFD, trimmedMFD);
 		if (trimmedMFD.size() <= mfdIndex) {
@@ -259,7 +265,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 		
 		// this generates a new source instance, but the ruptures in that source
 		// reuse properties. so we can only iterate over it, thus the custom iterable
-		ProbEqkSource source = getSource(node, 1d, null, BackgroundRupType.POINT);
+		ProbEqkSource source = getSource(node, 1d, null, gridSeisSettings);
 		SubsetIterable iterable = new SubsetIterable(source);
 		
 		List<Double> rupMags = Lists.newArrayList();
@@ -336,7 +342,7 @@ public class ETAS_CatalogGridSourceProvider extends AbstractGridSourceProvider {
 			
 			@Override
 			public ProbEqkSource getSource(int idx) {
-				return gridProv.getSource(sourceIndexes.get(idx), 1d, null, BackgroundRupType.POINT);
+				return gridProv.getSource(sourceIndexes.get(idx), 1d, null, gridSeisSettings);
 			}
 			
 			@Override

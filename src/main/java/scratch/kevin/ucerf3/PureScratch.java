@@ -156,8 +156,6 @@ import org.opensha.sha.earthquake.param.IncludeBackgroundParam;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
 import org.opensha.sha.earthquake.param.UseRupMFDsParam;
-import org.opensha.sha.earthquake.rupForecastImpl.PointSource13b.PointSurface13b;
-import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm.PointSurfaceNshm;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.FaultSegmentData;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.data.A_FaultsFetcher;
@@ -1492,7 +1490,6 @@ public class PureScratch {
 	}
 	
 	private static void test291() throws IOException {
-		AbstractGridSourceProvider.SOURCE_MIN_MAG_CUTOFF = 2.55;
 		FaultSystemSolution sol = FaultSystemSolution.load(new File("/data/kevin/git/ucerf3-etas-launcher/inputs/"
 //		FaultSystemSolution sol = FaultSystemSolution.load(new File("/home/kevin/OpenSHA/UCERF3/rup_sets/orig/"
 				+ "2013_05_10-ucerf3p3-production-10runs_COMPOUND_SOL_FM3_1_SpatSeisU3_MEAN_BRANCH_AVG_SOL.zip"));
@@ -1727,77 +1724,77 @@ public class PureScratch {
 		System.out.println("All nth tests passed");
 	}
 	
-	private static void test297() throws IOException {
-		// nth rup from catalog and ETAS_Launcher.buildERF
-		File etasDir = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
-				+ "2024_05_24-Start2012_500yr_kCOV1p5_Spontaneous_HistCatalog/");
-		File configFile = new File(etasDir, "config.json");
-		File binFile = new File(etasDir, "results_m5_preserve_chain.bin");
-		
-		ETAS_Config config = ETAS_Config.readJSON(configFile);
-		
-		ETAS_Launcher launcher = new ETAS_Launcher(config, false);
-		FaultSystemSolutionERF erf = (FaultSystemSolutionERF) launcher.checkOutERF();
-		MFDGridSourceProvider gridProv = erf.getSolution().requireModule(MFDGridSourceProvider.class);
-		
-		int randSrcIndex = 252798;
-		int gridRegionIndex = randSrcIndex - erf.getNumFaultSystemSources();
-		int isSubSeismo = 1;
-		int filteredR = 2;
-		Location translatedParLoc = new Location(35, -118);
-		ProbEqkSource src = erf.getSource(randSrcIndex);
-		ProbEqkSource filteredSrc;
-		if(isSubSeismo == 1)
-			filteredSrc = gridProv.getSourceSubSeisOnFault(gridRegionIndex,
-					erf.getTimeSpan().getDuration(), null, BackgroundRupType.POINT);
-		else
-			filteredSrc = gridProv.getSourceUnassociated(gridRegionIndex,
-					erf.getTimeSpan().getDuration(), null, BackgroundRupType.POINT);
-		
-		ProbEqkRupture filteredRup = filteredSrc.getRupture(filteredR);
-		System.out.println("Filtered r="+filteredR+", M"+filteredRup.getMag()+", rake="+filteredRup.getAveRake());
-		
-		int r = -1;
-		for (int r2=0; r2<src.getNumRuptures(); r2++) {
-			ProbEqkRupture rup = src.getRupture(r2);
-			System.out.println("Candidate r="+r2+", M"+rup.getMag()+", rake="+rup.getAveRake());
-			if (Precision.equals(rup.getAveRake(), filteredRup.getAveRake()) && Precision.equals(rup.getMag(), filteredRup.getMag())) {
-				boolean match = true;
-				if (rup.getRuptureSurface().getAveDip() < 90d) {
-					// potential match, check footwall
-					if (rup.getRuptureSurface() instanceof PointSurfaceNshm) {
-						Preconditions.checkState(filteredRup.getRuptureSurface() instanceof PointSurfaceNshm);
-						PointSurfaceNshm surf1 = (PointSurfaceNshm) rup.getRuptureSurface();
-						PointSurfaceNshm surf2 = (PointSurfaceNshm) filteredRup.getRuptureSurface();
-						match = surf1.isOnFootwall() == surf2.isOnFootwall();
-					} else if (rup.getRuptureSurface() instanceof PointSurface13b) {
-						Preconditions.checkState(filteredRup.getRuptureSurface() instanceof PointSurface13b);
-						PointSurface13b surf1 = (PointSurface13b) rup.getRuptureSurface();
-						PointSurface13b surf2 = (PointSurface13b) filteredRup.getRuptureSurface();
-						match = surf1.isOnFootwall() == surf2.isOnFootwall();
-					} else {
-						double rx1 = rup.getRuptureSurface().getDistanceX(translatedParLoc); // any loc will do here
-						double rx2 = rup.getRuptureSurface().getDistanceX(translatedParLoc); // any loc will do here
-						match = (rx1 > 0) == (rx2 > 0);
-					}
-				}
-				if (match) {
-					Preconditions.checkState(r < 0, "Multiple rupture mappings? sourceID=%s, subSeismo=%s,"
-							+ "filteredR=%s, mag=%s, rake=%s, sourceType=%s, surfType=%s",
-							randSrcIndex, isSubSeismo, filteredR, filteredRup.getMag(), filteredRup.getAveRake(),
-							filteredSrc.getClass().getName(), filteredRup.getRuptureSurface().getClass().getName());
-					r = r2;
-				}
-			}
-		}
-		Preconditions.checkState(r >= 0, "No rupture mapping found sourceID=%s, subSeismo=%s,"
-				+ "filteredR=%s, mag=%s, rake=%s, sourceType=%s, surfType=%s",
-				randSrcIndex, isSubSeismo, filteredR, filteredRup.getMag(), filteredRup.getAveRake(),
-				filteredSrc.getClass().getName(), filteredRup.getRuptureSurface().getClass().getName());
-		ProbEqkRupture rup = src.getRupture(r);
-		System.out.println("Matched with r="+r+", M"+rup.getMag()+", rake="+rup.getAveRake());
-		
-	}
+//	private static void test297() throws IOException {
+//		// nth rup from catalog and ETAS_Launcher.buildERF
+//		File etasDir = new File("/home/kevin/OpenSHA/UCERF3/etas/simulations/"
+//				+ "2024_05_24-Start2012_500yr_kCOV1p5_Spontaneous_HistCatalog/");
+//		File configFile = new File(etasDir, "config.json");
+//		File binFile = new File(etasDir, "results_m5_preserve_chain.bin");
+//		
+//		ETAS_Config config = ETAS_Config.readJSON(configFile);
+//		
+//		ETAS_Launcher launcher = new ETAS_Launcher(config, false);
+//		FaultSystemSolutionERF erf = (FaultSystemSolutionERF) launcher.checkOutERF();
+//		MFDGridSourceProvider gridProv = erf.getSolution().requireModule(MFDGridSourceProvider.class);
+//		
+//		int randSrcIndex = 252798;
+//		int gridRegionIndex = randSrcIndex - erf.getNumFaultSystemSources();
+//		int isSubSeismo = 1;
+//		int filteredR = 2;
+//		Location translatedParLoc = new Location(35, -118);
+//		ProbEqkSource src = erf.getSource(randSrcIndex);
+//		ProbEqkSource filteredSrc;
+//		if(isSubSeismo == 1)
+//			filteredSrc = gridProv.getSourceSubSeisOnFault(gridRegionIndex,
+//					erf.getTimeSpan().getDuration(), null, BackgroundRupType.POINT);
+//		else
+//			filteredSrc = gridProv.getSourceUnassociated(gridRegionIndex,
+//					erf.getTimeSpan().getDuration(), null, BackgroundRupType.POINT);
+//		
+//		ProbEqkRupture filteredRup = filteredSrc.getRupture(filteredR);
+//		System.out.println("Filtered r="+filteredR+", M"+filteredRup.getMag()+", rake="+filteredRup.getAveRake());
+//		
+//		int r = -1;
+//		for (int r2=0; r2<src.getNumRuptures(); r2++) {
+//			ProbEqkRupture rup = src.getRupture(r2);
+//			System.out.println("Candidate r="+r2+", M"+rup.getMag()+", rake="+rup.getAveRake());
+//			if (Precision.equals(rup.getAveRake(), filteredRup.getAveRake()) && Precision.equals(rup.getMag(), filteredRup.getMag())) {
+//				boolean match = true;
+//				if (rup.getRuptureSurface().getAveDip() < 90d) {
+//					// potential match, check footwall
+//					if (rup.getRuptureSurface() instanceof PointSurfaceNshm) {
+//						Preconditions.checkState(filteredRup.getRuptureSurface() instanceof PointSurfaceNshm);
+//						PointSurfaceNshm surf1 = (PointSurfaceNshm) rup.getRuptureSurface();
+//						PointSurfaceNshm surf2 = (PointSurfaceNshm) filteredRup.getRuptureSurface();
+//						match = surf1.isOnFootwall() == surf2.isOnFootwall();
+//					} else if (rup.getRuptureSurface() instanceof PointSurface13b) {
+//						Preconditions.checkState(filteredRup.getRuptureSurface() instanceof PointSurface13b);
+//						PointSurface13b surf1 = (PointSurface13b) rup.getRuptureSurface();
+//						PointSurface13b surf2 = (PointSurface13b) filteredRup.getRuptureSurface();
+//						match = surf1.isOnFootwall() == surf2.isOnFootwall();
+//					} else {
+//						double rx1 = rup.getRuptureSurface().getDistanceX(translatedParLoc); // any loc will do here
+//						double rx2 = rup.getRuptureSurface().getDistanceX(translatedParLoc); // any loc will do here
+//						match = (rx1 > 0) == (rx2 > 0);
+//					}
+//				}
+//				if (match) {
+//					Preconditions.checkState(r < 0, "Multiple rupture mappings? sourceID=%s, subSeismo=%s,"
+//							+ "filteredR=%s, mag=%s, rake=%s, sourceType=%s, surfType=%s",
+//							randSrcIndex, isSubSeismo, filteredR, filteredRup.getMag(), filteredRup.getAveRake(),
+//							filteredSrc.getClass().getName(), filteredRup.getRuptureSurface().getClass().getName());
+//					r = r2;
+//				}
+//			}
+//		}
+//		Preconditions.checkState(r >= 0, "No rupture mapping found sourceID=%s, subSeismo=%s,"
+//				+ "filteredR=%s, mag=%s, rake=%s, sourceType=%s, surfType=%s",
+//				randSrcIndex, isSubSeismo, filteredR, filteredRup.getMag(), filteredRup.getAveRake(),
+//				filteredSrc.getClass().getName(), filteredRup.getRuptureSurface().getClass().getName());
+//		ProbEqkRupture rup = src.getRupture(r);
+//		System.out.println("Matched with r="+r+", M"+rup.getMag()+", rake="+rup.getAveRake());
+//		
+//	}
 	
 	private static void test298() throws IOException {
 		File inDir = new File("/data/kevin/nshm23/batch_inversions/2024_02_02-nshm23_branches-WUS_FM_v3/node_branch_averaged");
@@ -2211,25 +2208,25 @@ public class PureScratch {
 		}
 	}
 	
-	private static void test310() throws IOException {
-		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/PRVI_SUB_FM_LARGE_with_gridded.zip"));
-		GridSourceList gridSources = sol.requireModule(GridSourceList.class);
-		for (TectonicRegionType trt : gridSources.getTectonicRegionTypes()) {
-			System.out.println(trt);
-			for (int gridIndex=0; gridIndex<gridSources.getNumLocations(); gridIndex++) {
-				for (GriddedRupture rup : gridSources.getRuptures(trt, gridIndex))
-					Preconditions.checkState(rup.properties.tectonicRegionType == trt);
-				ProbEqkSource source = gridSources.getSource(trt, gridIndex, 1d, null, BackgroundRupType.FINITE);
-				if (source != null)
-					Preconditions.checkState(source.getTectonicRegionType() == trt,
-							"Source TRT is %s, expected %s", source.getTectonicRegionType(), trt);
-			}
-		}
-		for (int sourceIndex=0; sourceIndex<gridSources.getNumSources(); sourceIndex++) {
-			ProbEqkSource source = gridSources.getSource(sourceIndex, 1d, null, BackgroundRupType.FINITE);
-			Preconditions.checkState(gridSources.getTectonicRegionTypes().contains(source.getTectonicRegionType()));
-		}
-	}
+//	private static void test310() throws IOException {
+//		FaultSystemSolution sol = FaultSystemSolution.load(new File("/tmp/PRVI_SUB_FM_LARGE_with_gridded.zip"));
+//		GridSourceList gridSources = sol.requireModule(GridSourceList.class);
+//		for (TectonicRegionType trt : gridSources.getTectonicRegionTypes()) {
+//			System.out.println(trt);
+//			for (int gridIndex=0; gridIndex<gridSources.getNumLocations(); gridIndex++) {
+//				for (GriddedRupture rup : gridSources.getRuptures(trt, gridIndex))
+//					Preconditions.checkState(rup.properties.tectonicRegionType == trt);
+//				ProbEqkSource source = gridSources.getSource(trt, gridIndex, 1d, null, BackgroundRupType.FINITE);
+//				if (source != null)
+//					Preconditions.checkState(source.getTectonicRegionType() == trt,
+//							"Source TRT is %s, expected %s", source.getTectonicRegionType(), trt);
+//			}
+//		}
+//		for (int sourceIndex=0; sourceIndex<gridSources.getNumSources(); sourceIndex++) {
+//			ProbEqkSource source = gridSources.getSource(sourceIndex, 1d, null, BackgroundRupType.FINITE);
+//			Preconditions.checkState(gridSources.getTectonicRegionTypes().contains(source.getTectonicRegionType()));
+//		}
+//	}
 	
 	private static void test311() throws IOException {
 		SolutionLogicTree slt = SolutionLogicTree.load(new File("/data/kevin/nshm23/batch_inversions/"

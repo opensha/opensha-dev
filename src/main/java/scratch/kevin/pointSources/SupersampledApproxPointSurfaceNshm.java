@@ -7,16 +7,19 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.util.DataUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm;
-import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm.PointSurfaceNshm;
+import org.opensha.sha.earthquake.rupForecastImpl.PointSourceNshm.DistanceCorrection2013;
+import org.opensha.sha.faultSurface.FiniteApproxPointSurface;
 import org.opensha.sha.faultSurface.PointSurface;
 
 public class SupersampledApproxPointSurfaceNshm extends PointSurface {
 
-	private PointSurfaceNshm ptSurf;
+	private FiniteApproxPointSurface ptSurf;
 	private Location centerLoc;
 	private Region cell;
 	private GriddedRegion supersampledCell;
 	private double mag;
+	
+	private DistanceCorrection2013 distCorr = new DistanceCorrection2013();
 	
 	// should we use the mean or the median?
 	private static final boolean MEDIAN_DIST = false;
@@ -24,7 +27,7 @@ public class SupersampledApproxPointSurfaceNshm extends PointSurface {
 	// if false, calculate raw to each supersampled location, average, then correct that
 	private static final boolean AVERAGE_CORRECTED = true;
 
-	public SupersampledApproxPointSurfaceNshm(PointSurfaceNshm ptSurf, double mag, double gridSpacing, double superSampleGridSpacing) {
+	public SupersampledApproxPointSurfaceNshm(FiniteApproxPointSurface ptSurf, double mag, double gridSpacing, double superSampleGridSpacing) {
 		super(ptSurf.getLocation());
 		this.ptSurf = ptSurf;
 		this.mag = mag;
@@ -61,7 +64,7 @@ public class SupersampledApproxPointSurfaceNshm extends PointSurface {
 			dists[i] = LocationUtils.horzDistanceFast(supersampledCell.getLocation(i), siteLoc);
 		if (AVERAGE_CORRECTED)
 			for (int i=0; i<dists.length; i++)
-				dists[i] = PointSourceNshm.correctedRjb(mag, dists[i]);
+				dists[i] = distCorr.getCorrectedDistanceJB(mag, ptSurf, dists[i]);
 		double avg;
 		if (MEDIAN_DIST)
 			avg = DataUtils.median(dists);
@@ -69,7 +72,7 @@ public class SupersampledApproxPointSurfaceNshm extends PointSurface {
 			avg = StatUtils.mean(dists);
 		if (!AVERAGE_CORRECTED)
 			// correct the average
-			avg = PointSourceNshm.correctedRjb(mag, avg);
+			avg = distCorr.getCorrectedDistanceJB(mag, ptSurf, avg);
 		return avg;
 	}
 
