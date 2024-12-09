@@ -9,7 +9,6 @@ ext {
 }
 
 apply from: '../opensha/build-common.gradle'
-apply from: '../opensha/build-git.gradle'
 
 dependencies {
 
