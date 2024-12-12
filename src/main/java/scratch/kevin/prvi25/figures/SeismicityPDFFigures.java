@@ -51,13 +51,13 @@ class SeismicityPDFFigures {
 				"Crustal", PRVI25_SeismicityRegions.CRUSTAL);
 //		plotPDFs(crustalOutputDir, "crustal_m5", 5d, avgDecluster, avgSmooth, fullGrid,
 //				"Crustal", PRVI25_SeismicityRegions.CRUSTAL);
-		plotNucleationRates(crustalOutputDir, "crustal_m5", crustalGridProv, 5d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "Crustal", null);
-		plotNucleationRates(crustalOutputDir, "crustal_m7", crustalGridProv, 7d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "Crustal", null);
+		plotNucleationRates(crustalOutputDir, "crustal_m5", crustalGridProv, 5d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "Crustal Gridded", null);
+		plotNucleationRates(crustalOutputDir, "crustal_m7", crustalGridProv, 7d, TectonicRegionType.ACTIVE_SHALLOW, fullGrid, "Crustal Gridded", null);
 		
 		plotPDFs(subOutputDir, "sub_interface_pdf", 0, avgDecluster, avgSmooth, fullGrid,
-				"Interface", PRVI25_SeismicityRegions.CAR_INTERFACE, PRVI25_SeismicityRegions.MUE_INTERFACE);
+				"Interface Gridded", PRVI25_SeismicityRegions.CAR_INTERFACE, PRVI25_SeismicityRegions.MUE_INTERFACE);
 		plotPDFs(subOutputDir, "sub_interface_m5", 5, avgDecluster, avgSmooth, fullGrid,
-				"Interface", PRVI25_SeismicityRegions.CAR_INTERFACE, PRVI25_SeismicityRegions.MUE_INTERFACE);
+				"Interface Gridded", PRVI25_SeismicityRegions.CAR_INTERFACE, PRVI25_SeismicityRegions.MUE_INTERFACE);
 		plotPDFs(subOutputDir, "sub_slab_pdf", 0, avgDecluster, avgSmooth, fullGrid,
 				"Intraslab", PRVI25_SeismicityRegions.CAR_INTRASLAB, PRVI25_SeismicityRegions.MUE_INTRASLAB);
 		plotPDFs(subOutputDir, "sub_slab_m5", 5, avgDecluster, avgSmooth, fullGrid,

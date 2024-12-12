@@ -6,7 +6,9 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -34,6 +36,7 @@ import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.Gridde
 import org.opensha.sha.earthquake.faultSysSolution.modules.GridSourceList.GriddedRuptureProperties;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSectionUtils;
 import org.opensha.sha.earthquake.faultSysSolution.util.FaultSysTools;
+import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_CrustalFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.logicTree.PRVI25_SubductionFaultModels;
 import org.opensha.sha.earthquake.rupForecastImpl.prvi25.util.PRVI25_RegionLoader;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurface;
@@ -65,8 +68,8 @@ public class MultiTectonicParticipationMap {
 		
 		double cptMin = -6d;
 		double cptMax = -2d;
-		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(cptMin, cptMax);
-//		CPT cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(cptMin, cptMax);
+//		CPT cpt = GMT_CPT_Files.RAINBOW_UNIFORM.instance().rescale(cptMin, cptMax);
+		CPT cpt = GMT_CPT_Files.SEQUENTIAL_BATLOW_UNIFORM.instance().rescale(cptMin, cptMax);
 //		CPT cpt = GMT_CPT_Files.SEQUENTIAL_NAVIA_UNIFORM.instance().rescale(cptMin, cptMax);
 //		CPT cpt = GMT_CPT_Files.SEQUENTIAL_LAJOLLA_UNIFORM.instance().rescale(cptMin, cptMax);
 //		CPT cpt = GMT_CPT_Files.SEQUENTIAL_OSLO_UNIFORM.instance().rescale(cptMin, cptMax);
@@ -238,19 +241,39 @@ public class MultiTectonicParticipationMap {
 			for (int r=0; r<rates.size(); r++)
 				rates.set(r, Math.log10(rates.get(r)));
 		
-		Region mapReg = PRVI25_RegionLoader.loadPRVI_ModelBroad();
-		GeographicMapMaker mapMaker = new GeographicMapMaker(mapReg);
+		Region gridMapReg = PRVI25_RegionLoader.loadPRVI_ModelBroad();
+		Region faultMapReg = new Region(new Location(16.3, gridMapReg.getMinLon()), new Location(20.4, gridMapReg.getMaxLon()));
+		GeographicMapMaker mapMaker = new GeographicMapMaker(faultMapReg);
 		
 		mapMaker.setWriteGeoJSON(false);
 		mapMaker.setWritePDFs(true);
 		mapMaker.setFillSurfaces(true);
 		mapMaker.setSectOutlineChar(null);
+		mapMaker.setSectPolygonChar(new PlotCurveCharacterstics(PlotLineType.SHORT_DASHED, 1f, Color.DARK_GRAY));
+		mapMaker.setPlotSectPolysOnTop(true);
 		mapMaker.setReverseSort(false);
 		mapMaker.setAbsoluteSort(false);
 		mapMaker.setSectNaNChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 3f, new Color(160, 160, 160, 140)));
 		mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1.5f, Color.DARK_GRAY));
 		mapMaker.setScalarThickness(4f);
 		mapMaker.setFaultSections(combSects);
+		
+		// swap out subsection polys with full sect polys (but only for the first)
+		Map<Integer, Region> parentPolys = new HashMap<>();
+		for (FaultSection sect : PRVI25_CrustalFaultModels.PRVI_CRUSTAL_FM_V1p1.getFaultSections())
+			if (sect.isProxyFault() && sect.getZonePolygon() != null)
+				parentPolys.put(sect.getSectionId(), sect.getZonePolygon());
+		for (FaultSection sect : combSects) {
+			if (sect.isProxyFault() && sect.getZonePolygon() != null) {
+				int parentID = sect.getParentSectionId();
+				if (parentPolys.containsKey(parentID)) {
+					sect.setZonePolygon(parentPolys.get(parentID));
+					parentPolys.remove(parentID); // only do this once per parent
+				} else {
+					sect.setZonePolygon(null);
+				}
+			}
+		}
 		
 		// write generic cpt only first
 		PlotUtils.writeScaleLegendOnly(outputDir, "participation_cpt",
@@ -299,6 +322,7 @@ public class MultiTectonicParticipationMap {
 				TectonicRegionType.SUBDUCTION_SLAB
 		};
 		
+		mapMaker.setRegion(gridMapReg);
 		mapMaker.clearSectScalars();
 		mapMaker.setSectTraceChar(new PlotCurveCharacterstics(PlotLineType.SOLID, 1f, Color.DARK_GRAY));
 		GridSourceList gridProv = combSol.requireModule(GridSourceList.class);

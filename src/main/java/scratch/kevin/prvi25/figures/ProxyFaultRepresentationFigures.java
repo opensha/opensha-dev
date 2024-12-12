@@ -73,10 +73,12 @@ public class ProxyFaultRepresentationFigures {
 		double lengthLimit = 75d;
 		
 //		RupType[] types = RupType.values();
+//		double lenFractBuffer = 1.05;
 		RupType[] types = {
 				RupType.PROXY,
 				RupType.SPLIT_PROXIES
 		};
+		double lenFractBuffer = 0.5;
 		
 		CPT colors = GMT_CPT_Files.CATEGORICAL_BATLOW_UNIFORM.instance();
 
@@ -134,7 +136,7 @@ public class ProxyFaultRepresentationFigures {
 			int rupID = -1;
 			double maxRupMag = 0d;
 			List<Integer> allRups = new ArrayList<>(rupSet.getRupturesForParentSection(parentID));
-			Collections.reverse(allRups);
+//			Collections.reverse(allRups); // this makes it the left side of Anegada zones
 			for (int rupIndex : allRups) {
 				double mag = rupSet.getMagForRup(rupIndex);
 				if ((float)mag < (float)maxRupMag)
@@ -164,7 +166,7 @@ public class ProxyFaultRepresentationFigures {
 			System.out.println("Using an M"+(float)maxRupMag+" rupture, len="+(float)rupSet.getLengthForRup(rupID)*1e-3);
 			
 			double rupLen = rupSet.getLengthForRup(rupID)*1e-3;
-			double regBuffer = Math.min(60d, Double.max(30d, rupLen+5d));
+			double regBuffer = Math.min(60d, Double.max(30d, rupLen*lenFractBuffer));
 			lowerLeft = LocationUtils.location(lowerLeft, 5d*Math.PI/4d, regBuffer);
 			upperRight = LocationUtils.location(upperRight, Math.PI/4d, regBuffer);
 			

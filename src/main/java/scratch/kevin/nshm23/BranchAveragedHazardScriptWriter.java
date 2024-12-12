@@ -32,6 +32,7 @@ public class BranchAveragedHazardScriptWriter {
 		
 		boolean linkFromBase = true;
 		Double vs30 = null;
+		Double sigmaTrunc = null;
 		double gridSpacing = 0.1;
 		boolean supersample = false;
 		
@@ -62,9 +63,6 @@ public class BranchAveragedHazardScriptWriter {
 		/*
 		 * PRVI
 		 */
-//		String baseDirName = "2024_07_31-prvi25_subduction_branches";
-//		String baseDirName = "2024_10_24-prvi25_crustal_subduction_combined_branches";
-		
 //		region = PRVI25_RegionLoader.loadPRVI_ModelBroad();
 		region = PRVI25_RegionLoader.loadPRVI_MapExtents();
 		gridSpacing = 0.01;
@@ -72,32 +70,30 @@ public class BranchAveragedHazardScriptWriter {
 		gmms = new AttenRelRef[] { AttenRelRef.USGS_PRVI_ACTIVE, AttenRelRef.USGS_PRVI_INTERFACE, AttenRelRef.USGS_PRVI_SLAB };
 		periods = new double[] { 0d, 0.2d, 1d, 5d };
 		supersample = true;
+		sigmaTrunc = 3d;
 		
-//		String suffix = "ba_only-LARGE";
-//		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
-		
-//		String suffix = "ba_only-LARGE-true_pt_src";
-//		String solFileName = "results_PRVI_SUB_FM_LARGE_branch_averaged_gridded.zip";
-		
-//		String baseDirName = "2024_12_12-prvi25_crustal_subduction_combined_branches";
-//		String suffix = "ba_only";
-//		String solFileName = "combined_branch_averaged_solution.zip";
+		String baseDirName = "2024_12_12-prvi25_crustal_subduction_combined_branches";
+		String suffix = "ba_only";
+		String solFileName = "combined_branch_averaged_solution.zip";
 		
 //		String baseDirName = "2024_12_12-prvi25_crustal_branches-dmSample5x";
 //		String suffix = "ba_only";
 //		String solFileName = "results_PRVI_CRUSTAL_FM_V1p1_branch_averaged_gridded.zip";
 		
-		String baseDirName = "2024_12_12-prvi25_subduction_branches";
-		String suffix = "ba_only-SLAB_only";
-		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
-		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
-//		String suffix = "ba_only-INTERFACE_only";
-//		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
-//		String suffix = "ba_only-both_fms";
-//		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
+//		String baseDirName = "2024_12_12-prvi25_subduction_branches";
+//		// slab (gridded only)
+//		String suffix = "ba_only-SLAB_only";
+//		String solFileName = "results_PRVI_SLAB_ONLY_branch_averaged_gridded.zip";
+//		bgOps = new IncludeBackgroundOption[] { IncludeBackgroundOption.ONLY };
+//		// interface (will do fault + gridded)
+////		String suffix = "ba_only-INTERFACE_only";
+////		String solFileName = "results_PRVI_INTERFACE_ONLY_branch_averaged_gridded.zip";
+//		// both
+////		String suffix = "ba_only-both_fms";
+////		String solFileName = "results_PRVI_SUB_FMs_combined_branch_averaged_gridded.zip";
 		
-//		vs30 = 760d; suffix += "-vs760";
-		vs30 = 260d; suffix += "-vs260";
+		vs30 = 760d; suffix += "-vs760";
+//		vs30 = 260d; suffix += "-vs260";
 		
 		/*
 		 * RSQSim
@@ -250,6 +246,8 @@ public class BranchAveragedHazardScriptWriter {
 			}
 			if (supersample)
 				argz += " --supersample";
+			if (sigmaTrunc != null)
+				argz += " --gmm-sigma-trunc-one-sided "+sigmaTrunc.floatValue();
 			argz += " "+dispatchArgs;
 			
 			File jobFile = new File(localDir, "batch_hazard_"+bgOp.name()+".slurm");

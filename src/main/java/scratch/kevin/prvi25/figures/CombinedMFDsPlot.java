@@ -125,9 +125,9 @@ public class CombinedMFDsPlot {
 		Range xRange = new Range(5d, 9.5d);
 
 		gp.drawGraphPanel(incrSpec, false, true, xRange, yRange);
-		PlotUtils.writePlots(outputDir, "combined_mfds", gp, 800, 750, true, false, false);
+		PlotUtils.writePlots(outputDir, "combined_mfds", gp, 800, 750, true, true, false);
 		gp.drawGraphPanel(cmlSpec, false, true, xRange, yRange);
-		PlotUtils.writePlots(outputDir, "combined_mfds_cml", gp, 800, 750, true, false, false);
+		PlotUtils.writePlots(outputDir, "combined_mfds_cml", gp, 800, 750, true, true, false);
 	}
 	
 	static IncrementalMagFreqDist calcFaultMFD(Region region, FaultSystemSolution sol, EvenlyDiscretizedFunc refMFD) {
